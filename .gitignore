@@ -39,3 +39,17 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# ── Agent system (local tooling only — not for public repo) ──
+docs/agents/
+docs/decisions/
+docs/bugs/
+docs/superpowers/
+
+# Path-scoped CLAUDE.md (agent configs per directory)
+app/CLAUDE.md
+services/**/CLAUDE.md
+infra/CLAUDE.md
+lib/**/CLAUDE.md
+observability/CLAUDE.md
+docs-site/CLAUDE.md
