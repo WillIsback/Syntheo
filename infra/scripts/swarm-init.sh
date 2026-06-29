@@ -39,7 +39,7 @@ done
 
 # ── Backup cron ───────────────────────────────────────────────────────────────
 CRON_LINE="0 2 * * * $(pwd)/infra/scripts/backup.sh >> /var/log/syntheo-backup.log 2>&1"
-( crontab -l 2>/dev/null | grep -v "backup.sh"; echo "${CRON_LINE}" ) | crontab -
+( crontab -l 2>/dev/null | grep -v "backup.sh" || true; echo "${CRON_LINE}" ) | crontab -
 echo "Backup cron installed: daily at 02:00"
 
 echo "swarm-init complete."
