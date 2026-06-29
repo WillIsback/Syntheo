@@ -1,0 +1,29 @@
+version: "3.9"
+
+services:
+  vault:
+    image: hashicorp/vault:1.17.2
+    command: server
+    cap_add:
+      - IPC_LOCK
+    environment:
+      VAULT_ADDR: "http://0.0.0.0:8200"
+    volumes:
+      - type: bind
+        source: /mnt/syntheo_data/vault
+        target: /vault/data
+      - type: bind
+        source: ./config/vault/vault.hcl
+        target: /vault/config/vault.hcl
+        read_only: true
+    networks:
+      - vault_net
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+
+networks:
+  vault_net:
+    external: true
