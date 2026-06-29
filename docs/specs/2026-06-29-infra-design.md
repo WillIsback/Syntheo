@@ -298,6 +298,53 @@ pg_dump -U $POSTGRES_USER $POSTGRES_DB \
 - Cron job installed on the VPS host by `swarm-init.sh`
 - **Upgrade path:** replace the GPG file write with an OVH Object Storage upload (`s3cmd put`) keeping French jurisdiction
 
+## Renovate — Dependency Pinning and Updates
+
+Renovate is self-hosted on the VPS and connected to the GitHub repo via a GitHub token. It opens PRs automatically when Docker images, npm packages, or other dependencies have new versions.
+
+**Why this matters for compliance:**
+- Trivy scans pinned image digests — `hashicorp/vault:latest` is unscannable because the digest changes silently. Renovate pins every image to a digest and opens a PR when a new one is available, so Trivy always has a concrete target.
+- The MVP risk matrix lists "Vulnérabilités images Docker" as mitigated by Trivy. That mitigation only holds if images are pinned.
+
+**`renovate.json` (repo root):**
+```json
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:best-practices"],
+  "pinDigests": true,
+  "docker": {
+    "fileMatch": ["infra/stacks/.+\\.yml$"]
+  },
+  "packageRules": [
+    {
+      "matchManagers": ["docker-compose"],
+      "matchUpdateTypes": ["major"],
+      "automerge": false,
+      "labels": ["dependency-major", "requires-review"]
+    },
+    {
+      "matchManagers": ["docker-compose"],
+      "matchUpdateTypes": ["minor", "patch", "digest"],
+      "automerge": false,
+      "labels": ["dependency-update"]
+    },
+    {
+      "matchManagers": ["npm"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": false,
+      "labels": ["dependency-update"]
+    }
+  ]
+}
+```
+
+**What Renovate manages in this repo:**
+- Docker image versions + SHA digests in `infra/stacks/*.yml`
+- CrowdSec Traefik plugin version in `config/traefik/traefik.yml`
+- npm packages in `package.json` (Next.js app — handled in the app sub-project)
+
+**All Renovate PRs go through the normal contribution process** (branch → PR → review) — no auto-merge. Every image update re-runs Trivy in the PR CI before merge.
+
 ## Trivy — Image Security Scanning
 
 Integrated as a pre-deploy gate in `deploy.sh`, not a running container:
