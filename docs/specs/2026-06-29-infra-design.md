@@ -53,16 +53,19 @@ infra/
 │   ├── grafana/      # provisioning/ (datasources, dashboards)
 │   └── keycloak/     # syntheo realm export JSON
 ├── scripts/
-│   ├── swarm-init.sh    # One-time: swarm init + overlay network creation + LUKS doc
-│   ├── vault-init.sh    # One-time: vault init + unseal + AppRole policies
-│   ├── deploy.sh        # Deploy all stacks in order
-│   └── teardown.sh      # Reverse-order teardown
-└── .env.example         # All env vars documented; no secret defaults
+│   ├── swarm-init.sh       # One-time: swarm init + overlay network creation + LUKS doc
+│   ├── vault-init.sh       # One-time: vault init + unseal + AppRole policies
+│   ├── crowdsec-setup.sh   # One-time: configure CrowdSec LAPI bind + Traefik bouncer key
+│   ├── deploy.sh           # Trivy pre-flight + deploy all stacks in order
+│   ├── backup.sh           # Daily encrypted pg_dump → local LUKS volume (cron target)
+│   └── teardown.sh         # Reverse-order teardown
+└── .env.example            # All env vars documented; no secret defaults
 ```
 
 ### Deployment order
 
 Enforced by `deploy.sh`:
+0. **Trivy pre-flight** — scan all images; abort if CVSSv3 ≥ 9.0 critical found
 1. `core.yml` — Traefik + Vault must be up first
 2. `data.yml` — PostgreSQL + Keycloak (depend on Vault)
 3. `obs.yml` — Observability stack (depends on Vault + PostgreSQL for MLflow)
@@ -111,9 +114,65 @@ Internet
 - Let's Encrypt ACME (HTTP-01 challenge), cert stored in named volume `traefik_certs`
 - Dashboard enabled behind BasicAuth (credentials from Vault at `secret/syntheo/traefik`)
 - Dynamic config middlewares:
+  - `crowdsec`: CrowdSec bouncer plugin (see below) — applied first on all routers
   - `ratelimit`: 100 req/s per IP
   - `secure-headers`: HSTS (1 year, includeSubDomains), CSP strict, X-Frame-Options DENY, X-Content-Type-Options nosniff
 - **Migration:** remove `core.yml`, point company reverse proxy at `app` and `keycloak` on `frontend_net`. No labels or Traefik-specific config in any other stack file.
+
+### CrowdSec — brute-force and WAF protection (host + Traefik plugin)
+
+CrowdSec is already installed on the VPS host (systemd). It is **not** a Docker container — it runs at the OS level alongside Docker Swarm.
+
+**Integration model:**
+- Traefik loads the plugin `maxlerebourg/crowdsec-bouncer-traefik-plugin` (Yaegi middleware — no separate binary, no extra container)
+- The plugin queries CrowdSec LAPI over `host.docker.internal:8080` (Docker `extra_hosts` → host gateway)
+- CrowdSec LAPI must bind `0.0.0.0:8080` (not `127.0.0.1`) — configured in `crowdsec-setup.sh`
+- AppSec/WAF enabled: CrowdSec listens on `0.0.0.0:7422`, plugin forwards every request for inline inspection before it reaches Next.js
+
+**Traefik static config (`config/traefik/traefik.yml`):**
+```yaml
+experimental:
+  plugins:
+    bouncer:
+      moduleName: github.com/maxlerebourg/crowdsec-bouncer-traefik-plugin
+      version: v1.6.0
+entryPoints:
+  web:
+    address: ":80"
+    forwardedHeaders:
+      trustedIPs: ["172.16.0.0/12"]   # Docker overlay range — real client IP passthrough
+  websecure:
+    address: ":443"
+    forwardedHeaders:
+      trustedIPs: ["172.16.0.0/12"]
+```
+
+**Traefik dynamic config (`config/traefik/dynamic.yml`):**
+```yaml
+http:
+  middlewares:
+    crowdsec:
+      plugin:
+        bouncer:
+          enabled: true
+          crowdsecMode: stream
+          updateIntervalSeconds: 10
+          crowdsecLapiScheme: http
+          crowdsecLapiHost: host.docker.internal:8080   # host LAPI via gateway
+          crowdsecAppsecEnabled: true
+          crowdsecAppsecHost: host.docker.internal:7422
+          forwardedHeadersTrustedIPs: ["172.16.0.0/12"]
+```
+
+Bouncer key: registered by `crowdsec-setup.sh` via `cscli bouncers add traefik -o raw` on the host and stored in Vault at `secret/syntheo/traefik` (alongside the dashboard BasicAuth hash). The plugin reads it from the Vault-Agent-injected env file.
+
+**`crowdsec-setup.sh` responsibilities (one-time, run on VPS host):**
+1. Edit `/etc/crowdsec/config.yaml` → set `listen_uri: 0.0.0.0:8200` for LAPI and `listen_addr: 0.0.0.0:7422` for AppSec
+2. Install collections: `cscli collections install crowdsecurity/traefik crowdsecurity/http-cve crowdsecurity/appsec-virtual-patching`
+3. Register Traefik bouncer key: `cscli bouncers add traefik -o raw` → output stored in Vault
+4. `systemctl restart crowdsec`
+
+**Migration:** CrowdSec stays on the host regardless of which reverse proxy is used. When Traefik is replaced, remove the plugin middleware from Traefik config and wire the new proxy's native CrowdSec bouncer (nginx, haproxy, caddy) or the firewall bouncer.
 
 ### HashiCorp Vault (`core.yml`)
 
@@ -160,8 +219,14 @@ Internet
 - Provisioned datasources: Loki, Prometheus, Tempo, MLflow (no manual UI setup)
 - Pre-built dashboards: Syntheo app metrics, WhisperX job latency, PostgreSQL health
 - Admin password from Vault
+- Compliance alerts provisioned from `config/grafana/alerts/` (no manual UI setup):
+  - **cross-user-access** — fires if a query hits a row belonging to another `user_id` (RLS bypass or error) → severity critical
+  - **deletion-spike** — fires if DELETE count in 5 min > 3× rolling average → severity warning
+  - **auth-failure-burst** — fires if Keycloak login failures > 5 in 5 min on same account → severity warning, feeds CrowdSec decision via webhook
 
-**Loki:** log aggregation, 30-day retention, append-only policy (RGPD audit trail)
+**Loki:** two streams with separate retention policies (RGPD requirement):
+- `audit` stream (consent logs, data access events) — **12-month retention**, append-only, read access restricted to admin role
+- `app` stream (errors, performance, debug) — **7-day retention**, normal policy
 
 **Prometheus:** metrics scrape, 15-day retention
 
@@ -216,6 +281,40 @@ mount /dev/mapper/syntheo_data /mnt/syntheo_data
 
 PostgreSQL and Vault data volumes are bind-mounted to `/mnt/syntheo_data/postgres` and `/mnt/syntheo_data/vault`.
 
+## Backup Strategy (MVP)
+
+Daily encrypted local backup — minimal but compliant for MVP. Off-VPS backup is a post-MVP upgrade.
+
+**`scripts/backup.sh`** (cron target, runs daily at 02:00):
+```bash
+pg_dump -U $POSTGRES_USER $POSTGRES_DB \
+  | gpg --batch --symmetric --passphrase-file /run/secrets/backup_passphrase \
+  > /mnt/syntheo_data/backups/syntheo_latest.sql.gpg
+```
+
+- Overwrites the previous day's file (`syntheo_latest.sql.gpg`) — single rotating backup, no accumulation
+- Backup passphrase stored in Vault at `secret/syntheo/backup`, injected at cron runtime via a wrapper that fetches it from Vault
+- Backup stored on the LUKS-encrypted volume (`/mnt/syntheo_data/backups/`) — encrypted at rest by the underlying disk, plus GPG symmetric encryption for the file itself
+- Cron job installed on the VPS host by `swarm-init.sh`
+- **Upgrade path:** replace the GPG file write with an OVH Object Storage upload (`s3cmd put`) keeping French jurisdiction
+
+## Trivy — Image Security Scanning
+
+Integrated as a pre-deploy gate in `deploy.sh`, not a running container:
+
+```bash
+# deploy.sh — step 0
+for image in traefik:v3 hashicorp/vault:latest postgres:16-alpine \
+             quay.io/keycloak/keycloak:24 syntheo/app:$VERSION; do
+  trivy image --exit-code 1 --severity CRITICAL "$image" || {
+    echo "CRITICAL CVE found in $image — deploy aborted"
+    exit 1
+  }
+done
+```
+
+Trivy must be installed on the VPS host (`apt install trivy`). Documented in `swarm-init.sh`.
+
 ## Out of Scope for this Sub-project
 
 - Database schema, RLS policies, pgcrypto column encryption — DB layer sub-project
@@ -232,3 +331,5 @@ PostgreSQL and Vault data volumes are bind-mounted to `/mnt/syntheo_data/postgre
 - [ ] Replace OTel exporter block with company OTLP endpoint
 - [ ] Update `ACME_EMAIL` or remove ACME (company may manage certs)
 - [ ] Review Vault policies — company may have a central Vault
+- [ ] Wire company reverse proxy to CrowdSec (firewall bouncer or native plugin)
+- [ ] Replace local backup cron with company backup infrastructure
