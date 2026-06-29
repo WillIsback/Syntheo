@@ -15,6 +15,7 @@ fi
 
 # ── Configure AppSec listener ──────────────────────────────────────────────────
 APPSEC_CFG=/etc/crowdsec/acquis.d/appsec.yaml
+mkdir -p "$(dirname "${APPSEC_CFG}")"
 if [ ! -f "${APPSEC_CFG}" ]; then
 cat > "${APPSEC_CFG}" <<'YAML'
 listen_addr: 0.0.0.0:7422
@@ -35,7 +36,7 @@ cscli collections install \
   --force
 
 # ── Register Traefik bouncer key ───────────────────────────────────────────────
-if cscli bouncers list -o json | grep -q '"name":"traefik"'; then
+if cscli bouncers list -o json | grep -qE '"name":\s*"traefik"'; then
   echo "INFO: Traefik bouncer already registered — delete it first to regenerate:"
   echo "  cscli bouncers delete traefik"
 else
