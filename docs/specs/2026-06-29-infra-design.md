@@ -343,7 +343,12 @@ Renovate is self-hosted on the VPS and connected to the GitHub repo via a GitHub
 - CrowdSec Traefik plugin version in `config/traefik/traefik.yml`
 - npm packages in `package.json` (Next.js app — handled in the app sub-project)
 
-**All Renovate PRs go through the normal contribution process** (branch → PR → review) — no auto-merge. Every image update re-runs Trivy in the PR CI before merge.
+**Auto-merge policy:**
+- `patch` / `digest` updates → **auto-merge when CI passes** (Trivy gate in CI is the human proxy — if no CRITICAL CVE, it merges automatically)
+- `minor` npm updates → **auto-merge when CI passes**
+- `major` (Docker or npm) → **never auto-merge** — requires human review regardless of Trivy result
+
+Trivy and Renovate are complementary: Trivy is the gate that makes auto-merge safe. A digest update that introduces a CRITICAL CVE fails Trivy → PR is blocked → human gets notified. A clean digest merges within minutes of Renovate opening the PR.
 
 ## Trivy — Image Security Scanning
 

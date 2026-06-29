@@ -15,13 +15,23 @@
     {
       "matchManagers": ["docker-compose"],
       "matchUpdateTypes": ["minor", "patch", "digest"],
-      "automerge": false,
+      "automerge": true,
+      "automergeType": "pr",
+      "platformAutomerge": true,
       "labels": ["dependency-update"]
     },
     {
       "matchManagers": ["npm"],
-      "matchUpdateTypes": ["minor", "patch"],
+      "matchUpdateTypes": ["major"],
       "automerge": false,
+      "labels": ["dependency-major", "requires-review"]
+    },
+    {
+      "matchManagers": ["npm"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true,
+      "automergeType": "pr",
+      "platformAutomerge": true,
       "labels": ["dependency-update"]
     }
   ]
