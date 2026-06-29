@@ -53,3 +53,8 @@ infra/CLAUDE.md
 lib/**/CLAUDE.md
 observability/CLAUDE.md
 docs-site/CLAUDE.md
+
+# Local tooling — credentials and internal config (never commit) / Outillage local — credentials et config interne (ne jamais commiter)
+.claude/
+.mcp.json
+opencode.jsonc
