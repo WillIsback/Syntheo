@@ -40,8 +40,9 @@ fi
 
 # ── Firewall rules — block public access to LAPI and AppSec ──────────────────
 if command -v ufw >/dev/null 2>&1; then
-  ufw deny in on eth0 to any port 8080 comment "block public crowdsec-lapi" 2>/dev/null || true
-  ufw deny in on eth0 to any port 7422 comment "block public crowdsec-appsec" 2>/dev/null || true
+  # Interface-agnostic deny — blocks all interfaces, not just eth0 (OVH may use ens3/enp1s0)
+  ufw deny to any port 8080 comment "block public crowdsec-lapi" 2>/dev/null || true
+  ufw deny to any port 7422 comment "block public crowdsec-appsec" 2>/dev/null || true
   echo "ufw rules added for ports 8080 and 7422"
 fi
 

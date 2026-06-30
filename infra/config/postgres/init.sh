@@ -1,12 +1,16 @@
 #!/bin/bash
 set -e
 
-psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+# :'var' syntax passes values as SQL literals — psql quotes and escapes them,
+# preventing SQL injection regardless of special characters in passwords.
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" \
+  --set keycloak_pw="${KEYCLOAK_DB_PASSWORD}" \
+  --set mlflow_pw="${MLFLOW_DB_PASSWORD}" <<-EOSQL
     CREATE DATABASE keycloak_db;
     CREATE DATABASE mlflow_db;
-    CREATE ROLE keycloak WITH LOGIN PASSWORD '${KEYCLOAK_DB_PASSWORD}';
+    CREATE ROLE keycloak WITH LOGIN PASSWORD :'keycloak_pw';
     GRANT ALL PRIVILEGES ON DATABASE keycloak_db TO keycloak;
-    CREATE ROLE mlflow WITH LOGIN PASSWORD '${MLFLOW_DB_PASSWORD}';
+    CREATE ROLE mlflow WITH LOGIN PASSWORD :'mlflow_pw';
     GRANT ALL PRIVILEGES ON DATABASE mlflow_db TO mlflow;
 EOSQL
 
