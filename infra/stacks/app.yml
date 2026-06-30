@@ -1,15 +1,59 @@
 version: "3.9"
 
 services:
-  app:
-    image: nginx:alpine
+  vault-agent-app:
+    image: hashicorp/vault:1.17.2
+    command: ["agent", "-config=/vault/config/agent.hcl"]
+    environment:
+      VAULT_ADDR: "https://vault:8200"
+      VAULT_SKIP_VERIFY: "true"
     volumes:
       - type: bind
-        source: ./config/app/placeholder.html
-        target: /usr/share/nginx/html/index.html
+        source: ./config/vault/agents/app.hcl
+        target: /vault/config/agent.hcl
         read_only: true
+      - app_secrets:/run/vault
+    secrets:
+      - vault_app_role_id
+      - vault_app_secret_id
+    networks:
+      - vault_net
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  app:
+    image: syntheo/app:${APP_VERSION:-latest}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        until [ -f /run/vault/app.env ]; do
+          echo "Waiting for Vault Agent..."; sleep 2;
+        done
+        set -a; . /run/vault/app.env; set +a
+        exec node server.js
+    environment:
+      NODE_ENV: production
+      DOMAIN: "${DOMAIN}"
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: "${POSTGRES_DB}"
+      KEYCLOAK_ISSUER: "https://${DOMAIN}/realms/syntheo"
+      KEYCLOAK_CLIENT_ID: "${KEYCLOAK_CLIENT_ID}"
+      VLLM_BASE_URL: "http://vllm:8000/v1"
+      VLLM_MODEL: "${VLLM_MODEL:-mistral-7b-instruct}"
+      WHISPERX_URL: "${WHISPERX_URL}"
+      MLFLOW_TRACKING_URI: "http://mlflow:5000"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
+      OTEL_SERVICE_NAME: "syntheo-app"
+      NEXT_PUBLIC_VLLM_MODEL_LABEL: "${VLLM_MODEL_LABEL:-Mistral 7B}"
+    volumes:
+      - app_secrets:/run/vault:ro
     networks:
       - frontend_net
+      - data_net
+      - vault_net
+      - obs_net
     deploy:
       replicas: 1
       restart_policy:
@@ -21,8 +65,23 @@ services:
         - "traefik.http.routers.app.rule=Host(`${DOMAIN}`)"
         - "traefik.http.routers.app.entrypoints=websecure"
         - "traefik.http.routers.app.middlewares=crowdsec,ratelimit,secure-headers"
-        - "traefik.http.services.app.loadbalancer.server.port=80"
+        - "traefik.http.services.app.loadbalancer.server.port=3000"
+
+secrets:
+  vault_app_role_id:
+    external: true
+  vault_app_secret_id:
+    external: true
+
+volumes:
+  app_secrets:
 
 networks:
   frontend_net:
+    external: true
+  data_net:
+    external: true
+  vault_net:
+    external: true
+  obs_net:
     external: true
