@@ -1,0 +1,88 @@
+apiVersion: 1
+groups:
+  - orgId: 1
+    name: compliance
+    folder: compliance
+    interval: 1m
+    rules:
+      - uid: cross-user-access
+        title: "RGPD: Cross-User Data Access Detected"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: loki
+            model:
+              expr: 'count_over_time({stream="audit"} |= "RLS_VIOLATION" [5m])'
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - { evaluator: { type: gt, params: [0] }, operator: { type: and }, query: { params: [A] }, reducer: { type: last } }
+              refId: C
+        noDataState: OK
+        execErrState: Error
+        for: 0s
+        labels:
+          severity: critical
+        annotations:
+          summary: "A cross-user data access (RLS bypass) was detected. Investigate immediately."
+
+      - uid: deletion-spike
+        title: "RGPD: Abnormal Deletion Volume"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: loki
+            model:
+              expr: 'count_over_time({stream="audit"} |= "DELETE" [5m])'
+              refId: A
+          - refId: B
+            relativeTimeRange: { from: 3600, to: 0 }
+            datasourceUid: loki
+            model:
+              expr: 'avg_over_time(count_over_time({stream="audit"} |= "DELETE" [5m])[1h:])'
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: math
+              expression: "$A > $B * 3"
+              refId: C
+        noDataState: OK
+        execErrState: Error
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Deletion rate is 3× the 1-hour rolling average. Possible mass erasure or attack."
+
+      - uid: auth-failure-burst
+        title: "SecNumCloud: Auth Failure Burst"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: loki
+            model:
+              expr: 'count_over_time({job="keycloak"} |= "LOGIN_ERROR" [5m])'
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - { evaluator: { type: gt, params: [5] }, operator: { type: and }, query: { params: [A] }, reducer: { type: last } }
+              refId: C
+        noDataState: OK
+        execErrState: Error
+        for: 0s
+        labels:
+          severity: warning
+        annotations:
+          summary: "More than 5 Keycloak login failures in 5 minutes. CrowdSec may auto-ban the IP."

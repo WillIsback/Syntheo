@@ -1,0 +1,196 @@
+version: "3.9"
+
+services:
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.103.0
+    volumes:
+      - type: bind
+        source: ./config/otel/otel-collector-config.yaml
+        target: /etc/otelcol-contrib/config.yaml
+        read_only: true
+    networks:
+      - obs_net
+      - vault_net
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  loki:
+    image: grafana/loki:3.0.0
+    command: ["-config.file=/etc/loki/config.yaml"]
+    volumes:
+      - type: bind
+        source: ./config/loki/loki-config.yaml
+        target: /etc/loki/config.yaml
+        read_only: true
+      - loki_data:/loki
+    networks:
+      - obs_net
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=15d"
+      - "--web.enable-remote-write-receiver"
+    volumes:
+      - type: bind
+        source: ./config/prometheus/prometheus.yml
+        target: /etc/prometheus/prometheus.yml
+        read_only: true
+      - prometheus_data:/prometheus
+    networks:
+      - obs_net
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  tempo:
+    image: grafana/tempo:2.5.0
+    command: ["-config.file=/etc/tempo/config.yaml"]
+    volumes:
+      - tempo_data:/var/tempo
+    networks:
+      - obs_net
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  vault-agent-mlflow:
+    image: hashicorp/vault:1.17.2
+    command: ["agent", "-config=/vault/config/agent.hcl"]
+    environment:
+      VAULT_ADDR: "http://vault:8200"
+    volumes:
+      - type: bind
+        source: ./config/vault/agents/mlflow.hcl
+        target: /vault/config/agent.hcl
+        read_only: true
+      - mlflow_secrets:/run/vault
+    secrets:
+      - vault_mlflow_role_id
+      - vault_mlflow_secret_id
+    networks:
+      - vault_net
+    deploy:
+      replicas: 1
+
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.14.1
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        until [ -f /run/vault/MLFLOW_DB_PASSWORD ]; do sleep 2; done
+        MLFLOW_DB_PASSWORD=$(cat /run/vault/MLFLOW_DB_PASSWORD)
+        mlflow server \
+          --host 0.0.0.0 \
+          --port 5000 \
+          --backend-store-uri "postgresql://mlflow:${MLFLOW_DB_PASSWORD}@postgres:5432/${MLFLOW_DB}" \
+          --default-artifact-root /mlflow/artifacts \
+          --serve-artifacts
+    environment:
+      MLFLOW_DB: "${MLFLOW_DB}"
+    volumes:
+      - mlflow_secrets:/run/vault:ro
+      - mlflow_artifacts:/mlflow/artifacts
+    networks:
+      - obs_net
+      - data_net
+      - vault_net
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+
+  vault-agent-grafana:
+    image: hashicorp/vault:1.17.2
+    command: ["agent", "-config=/vault/config/agent.hcl"]
+    environment:
+      VAULT_ADDR: "http://vault:8200"
+    volumes:
+      - type: bind
+        source: ./config/vault/agents/grafana.hcl
+        target: /vault/config/agent.hcl
+        read_only: true
+      - grafana_secrets:/run/vault
+    secrets:
+      - vault_grafana_role_id
+      - vault_grafana_secret_id
+    networks:
+      - vault_net
+    deploy:
+      replicas: 1
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        until [ -f /run/vault/GF_SECURITY_ADMIN_PASSWORD ]; do sleep 2; done
+        export GF_SECURITY_ADMIN_PASSWORD=$(cat /run/vault/GF_SECURITY_ADMIN_PASSWORD)
+        exec /run.sh
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SERVER_ROOT_URL: "https://${DOMAIN}/grafana"
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+    volumes:
+      - grafana_secrets:/run/vault:ro
+      - grafana_data:/var/lib/grafana
+      - type: bind
+        source: ./config/grafana/provisioning
+        target: /etc/grafana/provisioning
+        read_only: true
+    networks:
+      - obs_net
+      - frontend_net
+      - vault_net
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.grafana.rule=Host(`${DOMAIN}`) && PathPrefix(`/grafana`)"
+        - "traefik.http.routers.grafana.entrypoints=websecure"
+        - "traefik.http.routers.grafana.middlewares=crowdsec,secure-headers"
+        - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+
+secrets:
+  vault_mlflow_role_id:
+    external: true
+  vault_mlflow_secret_id:
+    external: true
+  vault_grafana_role_id:
+    external: true
+  vault_grafana_secret_id:
+    external: true
+
+volumes:
+  loki_data:
+  prometheus_data:
+  tempo_data:
+  mlflow_secrets:
+  mlflow_artifacts:
+  grafana_secrets:
+  grafana_data:
+
+networks:
+  obs_net:
+    external: true
+  data_net:
+    external: true
+  frontend_net:
+    external: true
+  vault_net:
+    external: true
