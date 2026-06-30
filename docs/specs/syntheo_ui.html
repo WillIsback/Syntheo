@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Syntheo</title>
+<style>
+  /* ── Reset & base ── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --blue:        #1A73E8;
+    --blue-light:  #E8F0FE;
+    --blue-dark:   #1557B0;
+    --surface:     #FFFFFF;
+    --bg:          #F8F9FA;
+    --sidebar-bg:  #FFFFFF;
+    --border:      #E0E0E0;
+    --border-soft: #F1F3F4;
+    --text:        #202124;
+    --text-2:      #5F6368;
+    --text-3:      #9AA0A6;
+    --radius:      6px;
+
+    /* Speaker colours — distinct, accessible */
+    --s1: #1A73E8;  --s1-bg: #E8F0FE;  /* blue  */
+    --s2: #0F9D58;  --s2-bg: #E6F4EA;  /* green */
+    --s3: #E37400;  --s3-bg: #FEF3E2;  /* amber */
+    --s4: #A142F4;  --s4-bg: #F3E8FD;  /* purple */
+
+    --topbar-h: 52px;
+    --sidebar-w: 256px;
+  }
+
+  body {
+    font-family: 'Google Sans', 'Segoe UI', Roboto, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Topbar ── */
+  .topbar {
+    height: var(--topbar-h);
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    gap: 8px;
+    flex-shrink: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    text-decoration: none;
+    transition: background .12s;
+  }
+  .logo:hover { background: var(--bg); }
+
+  .logo-icon {
+    width: 30px;
+    height: 30px;
+    background: var(--blue);
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .logo-icon svg { width: 16px; height: 16px; fill: white; }
+  .logo-name { font-size: 18px; font-weight: 400; color: var(--text-2); letter-spacing: -.01em; }
+  .logo-name span { color: var(--blue); font-weight: 500; }
+
+  .topbar-sep { width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
+
+  .topbar-nav {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+  .topbar-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    border: none;
+    background: none;
+    font-size: 13px;
+    color: var(--text-2);
+    cursor: pointer;
+    transition: background .12s;
+    font-family: inherit;
+  }
+  .topbar-btn:hover { background: var(--bg); }
+  .topbar-btn.primary {
+    background: var(--blue);
+    color: white;
+  }
+  .topbar-btn.primary:hover { background: var(--blue-dark); }
+  .topbar-btn.icon-only { padding: 6px 8px; border-radius: 50%; }
+
+  .topbar-actions { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+
+  /* Session status pill */
+  .status-pill {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .status-pill.recording { background: #FCE8E6; color: #C5221F; }
+  .status-pill.processing { background: #FEF3E2; color: #E37400; }
+  .status-pill.done { background: #E6F4EA; color: #137333; }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .status-pill.recording .status-dot { animation: blink 1s ease-in-out infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+  /* Avatar */
+  .avatar {
+    width: 30px; height: 30px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 600; color: white; flex-shrink: 0;
+    cursor: pointer;
+  }
+
+  /* ── Body layout ── */
+  .body { display: flex; flex: 1; overflow: hidden; }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: var(--sidebar-w);
+    flex-shrink: 0;
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    padding: 12px 8px;
+  }
+
+  .sidebar-new {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    background: var(--surface);
+    margin-bottom: 16px;
+    transition: box-shadow .12s;
+    font-family: inherit;
+  }
+  .sidebar-new:hover { box-shadow: 0 1px 4px rgba(0,0,0,.12); }
+  .sidebar-new-icon {
+    width: 28px; height: 28px; border-radius: 50%; background: var(--blue);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .sidebar-new-icon svg { width: 14px; height: 14px; fill: white; }
+
+  .sidebar-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 12px;
+    background: var(--bg);
+    border: 1px solid transparent;
+    border-radius: var(--radius);
+    font-size: 13px;
+    color: var(--text-3);
+    cursor: pointer;
+    margin-bottom: 16px;
+    transition: border-color .12s;
+    font-family: inherit;
+  }
+  .sidebar-search:hover { border-color: var(--border); background: var(--surface); }
+
+  .sidebar-section-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    padding: 4px 8px 8px;
+  }
+
+  .session-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: background .1s;
+    position: relative;
+  }
+  .session-item:hover { background: var(--bg); }
+  .session-item.active { background: var(--blue-light); }
+
+  .session-icon {
+    width: 32px; height: 32px; border-radius: 5px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; font-size: 14px;
+    background: var(--bg);
+  }
+  .session-item.active .session-icon { background: rgba(26,115,232,.12); }
+
+  .session-meta { flex: 1; min-width: 0; }
+  .session-name {
+    font-size: 13px; font-weight: 500; color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .session-item.active .session-name { color: var(--blue-dark); }
+  .session-date { font-size: 11px; color: var(--text-3); margin-top: 1px; }
+
+  /* Nested segments in sidebar */
+  .segment-list { padding-left: 20px; margin-bottom: 4px; }
+  .segment-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 8px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--text-2);
+    transition: background .1s;
+  }
+  .segment-item:hover { background: var(--bg); }
+  .segment-item.active { color: var(--blue); font-weight: 500; }
+  .seg-bullet { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .seg-in-progress {
+    font-size: 10px; color: #E37400; font-weight: 600;
+    background: #FEF3E2; padding: 1px 5px; border-radius: 8px; margin-left: auto;
+  }
+
+  /* Chevron */
+  .chevron { color: var(--text-3); font-size: 12px; transition: transform .15s; }
+  .chevron.open { transform: rotate(90deg); }
+
+  /* ── Main editor area ── */
+  .editor-wrap { flex: 1; overflow-y: auto; background: var(--bg); }
+
+  .editor-inner {
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 32px 48px 80px;
+  }
+
+  /* Document header */
+  .doc-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+
+  .doc-title {
+    font-size: 28px;
+    font-weight: 400;
+    color: var(--text);
+    letter-spacing: -.02em;
+    line-height: 1.25;
+    flex: 1;
+  }
+
+  .doc-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+    flex-shrink: 0;
+    margin-left: 24px;
+  }
+
+  .doc-action-btn {
+    display: flex; align-items: center; gap: 5px;
+    padding: 7px 14px; border-radius: 20px;
+    border: 1px solid var(--border); background: var(--surface);
+    font-size: 13px; font-weight: 500; color: var(--blue);
+    cursor: pointer; transition: background .12s;
+    font-family: inherit;
+  }
+  .doc-action-btn:hover { background: var(--blue-light); }
+  .doc-action-btn.filled { background: var(--blue); color: white; border-color: var(--blue); }
+  .doc-action-btn.filled:hover { background: var(--blue-dark); }
+  .doc-action-icon { font-size: 16px; }
+
+  .doc-meta {
+    font-size: 12px;
+    color: var(--text-3);
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .doc-meta-sep { width: 3px; height: 3px; border-radius: 50%; background: var(--text-3); }
+
+  /* AI disclaimer bar */
+  .disclaimer-bar {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 14px;
+    background: #FEF3E2;
+    border: 1px solid #F9AB00;
+    border-radius: var(--radius);
+    margin-bottom: 20px;
+    font-size: 12px;
+    color: #7A4300;
+    line-height: 1.5;
+  }
+  .disclaimer-bar svg { flex-shrink: 0; margin-top: 1px; }
+
+  /* Audio waveform placeholder */
+  .waveform {
+    width: 100%;
+    height: 64px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 12px;
+    overflow: hidden;
+    position: relative;
+  }
+  .wave-ctrl {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--blue); display: flex; align-items: center;
+    justify-content: center; flex-shrink: 0; cursor: pointer;
+    border: none;
+  }
+  .wave-ctrl svg { fill: white; width: 14px; height: 14px; }
+  .wave-bars {
+    flex: 1; display: flex; align-items: center; gap: 2px; height: 36px;
+  }
+  .wave-bar {
+    width: 3px; border-radius: 2px; background: var(--border);
+    flex-shrink: 0;
+  }
+  .wave-bar.played { background: var(--blue); }
+  .wave-time { font-size: 12px; color: var(--text-3); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+
+  /* Speaker legend */
+  .speaker-legend {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .speaker-tag {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 14px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1.5px solid transparent;
+    transition: border-color .12s;
+    user-select: none;
+  }
+  .speaker-tag:hover { border-color: currentColor; }
+  .speaker-tag .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+
+  /* Section title (timestamp) */
+  .segment-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 28px 0 10px;
+  }
+  .segment-header:first-child { margin-top: 0; }
+  .seg-ts {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-3);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: .03em;
+    flex-shrink: 0;
+  }
+  .seg-divider { flex: 1; height: 1px; background: var(--border-soft); }
+  .seg-label {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 10px;
+  }
+
+  /* Transcript paragraphs */
+  .transcript-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin-bottom: 8px;
+    position: relative;
+    transition: border-color .12s;
+  }
+  .transcript-block:hover { border-color: var(--blue); }
+
+  .block-speaker {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .block-speaker-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  .block-text {
+    font-size: 14px;
+    color: var(--text);
+    line-height: 1.75;
+    font-family: Georgia, 'Times New Roman', serif;
+  }
+
+  /* Inline speaker cursor (like collaborative editing) */
+  .cursor-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 1px 7px;
+    border-radius: 3px 3px 3px 0;
+    color: white;
+    margin: 0 2px;
+    vertical-align: middle;
+    line-height: 1.4;
+    position: relative;
+    top: -2px;
+  }
+
+  /* Highlight spans */
+  .hl { border-radius: 2px; padding: 1px 0; }
+  .hl-s1 { background: var(--s1-bg); }
+  .hl-s2 { background: var(--s2-bg); }
+  .hl-s3 { background: var(--s3-bg); }
+  .hl-s4 { background: var(--s4-bg); }
+
+  /* Edit icon on block hover */
+  .block-edit-btn {
+    position: absolute;
+    top: 10px; right: 10px;
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--surface); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 13px; opacity: 0; transition: opacity .12s;
+    color: var(--text-2);
+  }
+  .transcript-block:hover .block-edit-btn { opacity: 1; }
+
+  /* Account-rendu section */
+  .cr-section {
+    margin-top: 36px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .cr-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .cr-header h3 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .cr-body { padding: 18px; }
+  .cr-body p { font-size: 13.5px; line-height: 1.75; color: var(--text); font-family: Georgia, serif; margin-bottom: 14px; }
+  .cr-body p:last-child { margin-bottom: 0; }
+  .cr-body strong { font-family: 'Google Sans', sans-serif; }
+
+  /* Right panel — speakers */
+  .right-panel {
+    width: 240px;
+    flex-shrink: 0;
+    border-left: 1px solid var(--border);
+    background: var(--surface);
+    overflow-y: auto;
+    padding: 16px;
+  }
+
+  .panel-section-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--text-3);
+    margin-bottom: 12px;
+    margin-top: 8px;
+  }
+  .panel-section-title:first-child { margin-top: 0; }
+
+  .speaker-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: var(--radius);
+    margin-bottom: 6px;
+    cursor: pointer;
+    transition: background .1s;
+    border: 1.5px solid transparent;
+  }
+  .speaker-card:hover { background: var(--bg); }
+  .speaker-card.active { border-color: var(--s1); background: var(--s1-bg); }
+  .speaker-card.s2.active { border-color: var(--s2); background: var(--s2-bg); }
+  .speaker-card.s3.active { border-color: var(--s3); background: var(--s3-bg); }
+  .speaker-card.s4.active { border-color: var(--s4); background: var(--s4-bg); }
+
+  .speaker-card .av {
+    width: 32px; height: 32px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; color: white; flex-shrink: 0;
+  }
+  .speaker-card-meta { flex: 1; min-width: 0; }
+  .speaker-card-name { font-size: 12px; font-weight: 600; color: var(--text); }
+  .speaker-card-share { font-size: 11px; color: var(--text-3); margin-top: 1px; }
+
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+  .stat-cell {
+    background: var(--bg);
+    border-radius: var(--radius);
+    padding: 10px;
+    text-align: center;
+  }
+  .stat-val { font-size: 18px; font-weight: 600; color: var(--text); letter-spacing: -.01em; }
+  .stat-label { font-size: 10px; color: var(--text-3); margin-top: 2px; }
+
+  .ai-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 10px;
+    background: #FEF3E2;
+    border: 1px solid #F9AB00;
+    border-radius: var(--radius);
+    font-size: 11px;
+    color: #7A4300;
+    line-height: 1.4;
+    margin-top: 10px;
+  }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-3); }
+</style>
+</head>
+<body>
+
+<!-- ── Topbar ── -->
+<header class="topbar">
+  <a class="logo" href="#">
+    <div class="logo-icon">
+      <svg viewBox="0 0 20 20"><path d="M3 4h14v2H3V4zm0 5h14v2H3V9zm0 5h9v2H3v-2z"/></svg>
+    </div>
+    <span class="logo-name"><span>Syntheo</span></span>
+  </a>
+
+  <div class="topbar-sep"></div>
+
+  <div class="topbar-nav">
+    <button class="topbar-btn">
+      <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a8 8 0 100 16A8 8 0 0010 2zm1 11H9V9h2v4zm0-6H9V5h2v2z"/></svg>
+      Sessions
+    </button>
+    <button class="topbar-btn">
+      <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path d="M4 4h12v2H4V4zm0 5h8v2H4V9zm0 5h12v2H4v-2z"/></svg>
+      Comptes rendus
+    </button>
+  </div>
+
+  <div class="topbar-actions">
+    <div class="status-pill done">
+      <div class="status-dot"></div>
+      Transcription terminée
+    </div>
+
+    <button class="topbar-btn icon-only" title="Notifications">
+      <svg width="18" height="18" viewBox="0 0 20 20" fill="#5F6368"><path d="M10 2a6 6 0 00-6 6v3l-1.7 2.55A1 1 0 003 15h14a1 1 0 00.7-1.71L16 11V8a6 6 0 00-6-6zm0 16a2 2 0 01-2-2h4a2 2 0 01-2 2z"/></svg>
+    </button>
+    <button class="topbar-btn icon-only" title="Applications">
+      <svg width="18" height="18" viewBox="0 0 20 20" fill="#5F6368"><circle cx="4" cy="4" r="2"/><circle cx="10" cy="4" r="2"/><circle cx="16" cy="4" r="2"/><circle cx="4" cy="10" r="2"/><circle cx="10" cy="10" r="2"/><circle cx="16" cy="10" r="2"/><circle cx="4" cy="16" r="2"/><circle cx="10" cy="16" r="2"/><circle cx="16" cy="16" r="2"/></svg>
+    </button>
+    <div class="avatar" style="background:#1A73E8" title="Mon compte">MR</div>
+  </div>
+</header>
+
+<div class="body">
+
+  <!-- ── Sidebar ── -->
+  <nav class="sidebar">
+    <button class="sidebar-new">
+      <div class="sidebar-new-icon">
+        <svg viewBox="0 0 20 20"><path d="M11 9V5H9v4H5v2h4v4h2v-4h4V9h-4z"/></svg>
+      </div>
+      Nouvelle session
+    </button>
+
+    <button class="sidebar-search">
+      <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path d="M8.5 3a5.5 5.5 0 014.227 9.02l3.626 3.627-1.414 1.414-3.627-3.626A5.5 5.5 0 118.5 3zm0 2a3.5 3.5 0 100 7 3.5 3.5 0 000-7z"/></svg>
+      Rechercher
+    </button>
+
+    <div class="sidebar-section-label">Récentes</div>
+
+    <!-- Active session -->
+    <div class="session-item active" onclick="toggleExpand(this)">
+      <div class="session-icon">🎙</div>
+      <div class="session-meta">
+        <div class="session-name">Réunion cadrage MVP</div>
+        <div class="session-date">Il y a 3 min · 42 min</div>
+      </div>
+      <span class="chevron open">›</span>
+    </div>
+    <div class="segment-list" id="expand-1">
+      <div class="segment-item active">
+        <div class="seg-bullet" style="background:var(--s1)"></div>
+        Introduction
+      </div>
+      <div class="segment-item">
+        <div class="seg-bullet" style="background:var(--s2)"></div>
+        Architecture stack
+      </div>
+      <div class="segment-item">
+        <div class="seg-bullet" style="background:var(--s3)"></div>
+        Conformité RGPD
+      </div>
+      <div class="segment-item">
+        <div class="seg-bullet" style="background:var(--s4)"></div>
+        Plan d'action
+        <span class="seg-in-progress">en cours</span>
+      </div>
+    </div>
+
+    <div class="session-item" onclick="toggleExpand(this)">
+      <div class="session-icon">📋</div>
+      <div class="session-meta">
+        <div class="session-name">Revue technique backend</div>
+        <div class="session-date">Hier · 1h 08 min</div>
+      </div>
+      <span class="chevron">›</span>
+    </div>
+
+    <div class="session-item" onclick="toggleExpand(this)">
+      <div class="session-icon">🔒</div>
+      <div class="session-meta">
+        <div class="session-name">Point DPD — conformité</div>
+        <div class="session-date">12 juin · 28 min</div>
+      </div>
+      <span class="chevron">›</span>
+    </div>
+
+    <div class="session-item" onclick="toggleExpand(this)">
+      <div class="session-icon">📋</div>
+      <div class="session-meta">
+        <div class="session-name">Kick-off projet Syntheo</div>
+        <div class="session-date">5 juin · 54 min</div>
+      </div>
+      <span class="chevron">›</span>
+    </div>
+
+    <div class="sidebar-section-label" style="margin-top:12px">Cette semaine</div>
+
+    <div class="session-item">
+      <div class="session-icon">🎙</div>
+      <div class="session-meta">
+        <div class="session-name">Démo client Ministère</div>
+        <div class="session-date">10 juin · 37 min</div>
+      </div>
+    </div>
+    <div class="session-item">
+      <div class="session-icon">📋</div>
+      <div class="session-meta">
+        <div class="session-name">Standup équipe</div>
+        <div class="session-date">10 juin · 12 min</div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ── Editor ── -->
+  <main class="editor-wrap">
+    <div class="editor-inner">
+
+      <!-- Document header -->
+      <div class="doc-header">
+        <h1 class="doc-title">Réunion cadrage MVP<br><span style="font-size:18px;color:var(--text-2);font-weight:400">Syntheo — 14 juin 2025</span></h1>
+        <div class="doc-actions">
+          <button class="doc-action-btn">
+            <span class="doc-action-icon">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path d="M6 4v2H4v10h12V6h-2V4h2a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2h2zm2 0h4v4H8V4zm2 2V4h-2v2h2z"/></svg>
+            </span>
+            Exporter
+          </button>
+          <button class="doc-action-btn">
+            <span class="doc-action-icon">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path d="M13 2a3 3 0 012.995 2.824L16 5v1.17a3.001 3.001 0 01-.997 5.654L15 12H5v-1h-.17A3.001 3.001 0 014 5.17V5a3 3 0 013-3h6zM7 4a1 1 0 00-1 1v1h8V5a1 1 0 00-1-1H7z"/></svg>
+            </span>
+            Partager
+          </button>
+          <button class="doc-action-btn filled">
+            <span class="doc-action-icon">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a8 8 0 100 16A8 8 0 0010 2zm1 11H9V9h2v4zm0-6H9V5h2v2z"/></svg>
+            </span>
+            Compte rendu
+          </button>
+          <button class="doc-action-btn" style="padding:7px 8px;border-radius:50%">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><circle cx="4" cy="10" r="2"/><circle cx="10" cy="10" r="2"/><circle cx="16" cy="10" r="2"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="doc-meta">
+        <span>Marianne Rousseau</span>
+        <div class="doc-meta-sep"></div>
+        <span>Dernière mise à jour : il y a 3 minutes</span>
+        <div class="doc-meta-sep"></div>
+        <span>4 intervenants · 42 min</span>
+      </div>
+
+      <!-- AI disclaimer -->
+      <div class="disclaimer-bar">
+        <svg width="15" height="15" viewBox="0 0 20 20" fill="#E37400"><path d="M10 2a8 8 0 100 16A8 8 0 0010 2zm1 11H9V9h2v4zm0-6H9V5h2v2z"/></svg>
+        <span><strong>Transcription générée par IA</strong> (WhisperX large-v3 · run #a3f8b2c · 14 juin 2025 10:47). Susceptible d'erreurs — vérifiez avant tout usage officiel. Les noms d'intervenants ont été renseignés manuellement.</span>
+      </div>
+
+      <!-- Waveform -->
+      <div class="waveform">
+        <button class="wave-ctrl" aria-label="Lecture">
+          <svg viewBox="0 0 20 20"><path d="M6 4l12 6-12 6V4z"/></svg>
+        </button>
+        <div class="wave-bars" id="wavebars"></div>
+        <span class="wave-time">08:24 / 42:17</span>
+      </div>
+
+      <!-- Speaker legend -->
+      <div class="speaker-legend">
+        <span style="font-size:12px;color:var(--text-3);margin-right:4px">Intervenants :</span>
+        <div class="speaker-tag" style="background:var(--s1-bg);color:var(--s1)">
+          <div class="dot"></div>Marianne R.
+        </div>
+        <div class="speaker-tag" style="background:var(--s2-bg);color:var(--s2)">
+          <div class="dot"></div>Thomas V.
+        </div>
+        <div class="speaker-tag" style="background:var(--s3-bg);color:var(--s3)">
+          <div class="dot"></div>Julie P.
+        </div>
+        <div class="speaker-tag" style="background:var(--s4-bg);color:var(--s4)">
+          <div class="dot"></div>DPD — Henri L.
+        </div>
+      </div>
+
+      <!-- ── Segment 1 : Introduction ── -->
+      <div class="segment-header">
+        <div class="seg-ts">00:00</div>
+        <div class="seg-divider"></div>
+        <div class="seg-label" style="background:var(--s1-bg);color:var(--s1)">Introduction</div>
+      </div>
+
+      <div class="transcript-block">
+        <div class="block-speaker" style="color:var(--s1)">
+          <div class="block-speaker-dot" style="background:var(--s1)"></div>
+          Marianne R.
+          <span style="font-size:10px;font-weight:400;color:var(--text-3);margin-left:4px">00:12</span>
+        </div>
+        <div class="block-text">
+          Bonjour à tous. Avant de commencer, je vous rappelle que cette réunion est enregistrée et transcrite par Syntheo, un système d'intelligence artificielle. <span class="hl hl-s1">Vous avez tous été informés de cet enregistrement</span> et avez donné votre accord. Le compte rendu sera disponible dans les minutes qui suivent la fin de la réunion.
+        </div>
+        <button class="block-edit-btn" title="Modifier">✎</button>
+      </div>
+
+      <div class="transcript-block">
+        <div class="block-speaker" style="color:var(--s2)">
+          <div class="block-speaker-dot" style="background:var(--s2)"></div>
+          Thomas V.
+          <span style="font-size:10px;font-weight:400;color:var(--text-3);margin-left:4px">01:03</span>
+        </div>
+        <div class="block-text">
+          Parfait. L'ordre du jour d'aujourd'hui couvre trois points : <span class="hl hl-s2">la validation de l'architecture technique du MVP</span>, le cadrage réglementaire avec Henri, et la définition du plan d'action priorisé. On a environ quarante minutes.
+        </div>
+        <button class="block-edit-btn" title="Modifier">✎</button>
+      </div>
+
+      <!-- ── Segment 2 : Architecture ── -->
+      <div class="segment-header">
+        <div class="seg-ts">04:17</div>
+        <div class="seg-divider"></div>
+        <div class="seg-label" style="background:var(--s2-bg);color:var(--s2)">Architecture stack</div>
+      </div>
+
+      <div class="transcript-block">
+        <div class="block-speaker" style="color:var(--s3)">
+          <div class="block-speaker-dot" style="background:var(--s3)"></div>
+          Julie P.
+          <span style="font-size:10px;font-weight:400;color:var(--text-3);margin-left:4px">04:22</span>
+        </div>
+        <div class="block-text">
+          Donc côté technique, on reste sur le VPS OVH. <span class="hl hl-s3">Tout tourne en Docker Swarm avec un rolling release pour le zéro downtime.</span> WhisperX et vLLM sont dans des containers isolés, sans aucun port exposé à l'extérieur. Le frontend Next.js est le seul point d'entrée, via Traefik en reverse proxy avec TLS 1.3.
+        </div>
+        <button class="block-edit-btn" title="Modifier">✎</button>
+      </div>
+
+      <div class="transcript-block">
+        <div class="block-speaker" style="color:var(--s2)">
+          <div class="block-speaker-dot" style="background:var(--s2)"></div>
+          Thomas V.
+          <span style="font-size:10px;font-weight:400;color:var(--text-3);margin-left:4px">05:44</span>
+        </div>
+        <div class="block-text">
+          Et pour l'observabilité, on a choisi OpenTelemetry comme collecteur central, <span class="hl hl-s2">avec Grafana pour les dashboards, Loki pour les logs et Tempo pour les traces distribuées.</span> MLflow gère la traçabilité des inférences — chaque compte rendu sera lié à un run_id précis. C'est ce qui nous couvre sur l'IA Act.
+        </div>
+        <button class="block-edit-btn" title="Modifier">✎</button>
+      </div>
+
+      <!-- ── Segment 3 : RGPD ── -->
+      <div class="segment-header">
+        <div class="seg-ts">18:31</div>
+        <div class="seg-divider"></div>
+        <div class="seg-label" style="background:var(--s4-bg);color:var(--s4)">Conformité RGPD</div>
+      </div>
+
+      <div class="transcript-block">
+        <div class="block-speaker" style="color:var(--s4)">
+          <div class="block-speaker-dot" style="background:var(--s4)"></div>
+          DPD — Henri L.
+          <span style="font-size:10px;font-weight:400;color:var(--text-3);margin-left:4px">18:45</span>
+          <span style="cursor-tag" style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:600;padding:1px 7px;border-radius:3px;background:var(--s4);color:white;margin-left:8px">● Henri L.</span>
+        </div>
+        <div class="block-text">
+          Ce qui me rassure c'est l'absence de conservation audio. <span class="hl hl-s4">C'est la décision la plus déterminante pour le périmètre de l'AIPD.</span> On reste sur des données biométriques traitées de manière éphémère — ça change complètement le niveau de risque. Le point qui restera toujours en risque résiduel modéré, c'est le consentement des participants tiers. La dialog box est nécessaire, mais ce n'est pas une base légale en soi.
+        </div>
+        <button class="block-edit-btn" title="Modifier">✎</button>
+      </div>
+
+      <div class="transcript-block">
+        <div class="block-speaker" style="color:var(--s1)">
+          <div class="block-speaker-dot" style="background:var(--s1)"></div>
+          Marianne R.
+          <span style="font-size:10px;font-weight:400;color:var(--text-3);margin-left:4px">20:12</span>
+        </div>
+        <div class="block-text">
+          On a prévu de traiter ça dans les CGU — l'utilisateur reconnaît explicitement être responsable d'avoir informé ses interlocuteurs. <span class="hl hl-s1">Le timestamp et le hash du consentement sont loggés en base à chaque session.</span> Est-ce que ça vous convient comme mécanisme de preuve ?
+        </div>
+        <button class="block-edit-btn" title="Modifier">✎</button>
+      </div>
+
+      <div class="transcript-block">
+        <div class="block-speaker" style="color:var(--s4)">
+          <div class="block-speaker-dot" style="background:var(--s4)"></div>
+          DPD — Henri L.
+          <span style="font-size:10px;font-weight:400;color:var(--text-3);margin-left:4px">20:58</span>
+        </div>
+        <div class="block-text">
+          C'est le mécanisme raisonnable que la CNIL attend. <span class="hl hl-s4">Ce qu'il faut impérativement ajouter dans les CGU, c'est une clause qui décrit les conséquences pour l'utilisateur en cas de non-respect</span> — perte de responsabilité de Syntheo, engagement de l'utilisateur à assumer les réclamations. Et je veux voir l'AIPD finalisée avant toute mise en production publique. C'est non-négociable.
+        </div>
+        <button class="block-edit-btn" title="Modifier">✎</button>
+      </div>
+
+      <!-- ── Segment 4 (in progress) ── -->
+      <div class="segment-header">
+        <div class="seg-ts">38:05</div>
+        <div class="seg-divider"></div>
+        <div class="seg-label" style="background:#FEF3E2;color:#E37400">
+          Plan d'action &nbsp;<span style="font-size:10px;background:#E37400;color:white;padding:1px 6px;border-radius:8px">en cours</span>
+        </div>
+      </div>
+
+      <div class="transcript-block">
+        <div class="block-speaker" style="color:var(--s3)">
+          <div class="block-speaker-dot" style="background:var(--s3)"></div>
+          Julie P.
+          <span style="font-size:10px;font-weight:400;color:var(--text-3);margin-left:4px">38:10</span>
+        </div>
+        <div class="block-text">
+          Pour le plan d'action, on a huit points. Les trois bloquants avant production : l'AIPD, le déploiement de Vault pour la gestion des clés, et le chiffrement LUKS du volume PostgreSQL. <span class="hl hl-s3">Tout le reste — CGU, droits utilisateurs, MFA, Loki append-only — c'est la V1 mais pas bloquant à proprement parler.</span>
+        </div>
+        <button class="block-edit-btn" title="Modifier">✎</button>
+      </div>
+
+      <!-- Compte rendu généré -->
+      <div class="cr-section">
+        <div class="cr-header">
+          <h3>
+            <svg width="15" height="15" viewBox="0 0 20 20" fill="#1A73E8"><path d="M4 4h12v2H4V4zm0 5h8v2H4V9zm0 5h12v2H4v-2z"/></svg>
+            Compte rendu — généré par IA
+          </h3>
+          <div style="display:flex;gap:6px;align-items:center">
+            <span style="font-size:11px;background:var(--s4-bg);color:var(--s4);padding:2px 8px;border-radius:10px;font-weight:600">Mistral 7B · run #7c2e91</span>
+            <button style="padding:4px 10px;border:1px solid var(--border);border-radius:14px;font-size:12px;background:none;color:var(--blue);cursor:pointer;font-family:inherit">Exporter</button>
+          </div>
+        </div>
+        <div class="cr-body">
+          <div class="disclaimer-bar" style="margin-bottom:14px">
+            <svg width="13" height="13" viewBox="0 0 20 20" fill="#E37400"><path d="M10 2a8 8 0 100 16A8 8 0 0010 2zm1 11H9V9h2v4zm0-6H9V5h2v2z"/></svg>
+            <span style="font-size:11px"><strong>Document généré par intelligence artificielle.</strong> Peut être incomplet ou inexact — ne pas utiliser comme seul référentiel de décision.</span>
+          </div>
+          <p><strong>Participants :</strong> Marianne Rousseau, Thomas Valentin, Julie Pelletier, Henri Lefèvre (DPD).</p>
+          <p><strong>Décisions actées :</strong> La stack technique est validée — VPS OVH, Docker Swarm, WhisperX + vLLM isolés, OpenTelemetry + MLflow pour l'observabilité et la traçabilité IA. Aucune conservation de l'audio brut.</p>
+          <p><strong>Points bloquants avant production :</strong> (1) AIPD complète cosignée par le DPD — obligatoire. (2) Déploiement de Vault pour la gestion des secrets de chiffrement. (3) Chiffrement LUKS du volume PostgreSQL.</p>
+          <p><strong>Actions V1 :</strong> Rédaction des CGU avec clause de responsabilité tiers, interface droits utilisateurs (export / suppression / rectification), MFA admin VPS, politique Loki append-only.</p>
+          <p><strong>Prochaine étape :</strong> Julie transmet le draft AIPD à Henri avant le 21 juin pour relecture. Mise en production cible : début juillet sous réserve de validation DPD.</p>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- ── Right panel ── -->
+  <aside class="right-panel">
+    <div class="panel-section-title">Intervenants</div>
+
+    <div class="speaker-card active">
+      <div class="av" style="background:var(--s1)">MR</div>
+      <div class="speaker-card-meta">
+        <div class="speaker-card-name">Marianne R.</div>
+        <div class="speaker-card-share">34 % · 14 min</div>
+      </div>
+    </div>
+    <div class="speaker-card s2">
+      <div class="av" style="background:var(--s2)">TV</div>
+      <div class="speaker-card-meta">
+        <div class="speaker-card-name">Thomas V.</div>
+        <div class="speaker-card-share">28 % · 12 min</div>
+      </div>
+    </div>
+    <div class="speaker-card s3">
+      <div class="av" style="background:var(--s3)">JP</div>
+      <div class="speaker-card-meta">
+        <div class="speaker-card-name">Julie P.</div>
+        <div class="speaker-card-share">22 % · 9 min</div>
+      </div>
+    </div>
+    <div class="speaker-card s4">
+      <div class="av" style="background:var(--s4)">HL</div>
+      <div class="speaker-card-meta">
+        <div class="speaker-card-name">Henri L. (DPD)</div>
+        <div class="speaker-card-share">16 % · 7 min</div>
+      </div>
+    </div>
+
+    <div class="panel-section-title" style="margin-top:20px">Session</div>
+    <div class="stats-grid">
+      <div class="stat-cell">
+        <div class="stat-val">42</div>
+        <div class="stat-label">min enregistrées</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-val">4</div>
+        <div class="stat-label">intervenants</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-val">6 214</div>
+        <div class="stat-label">mots transcrits</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-val">98%</div>
+        <div class="stat-label">confiance WER</div>
+      </div>
+    </div>
+
+    <div class="ai-badge">
+      <svg width="13" height="13" viewBox="0 0 20 20" fill="#E37400"><path d="M10 2a8 8 0 100 16A8 8 0 0010 2zm1 11H9V9h2v4zm0-6H9V5h2v2z"/></svg>
+      <span>Produit par IA · WhisperX large-v3 · Mistral 7B</span>
+    </div>
+
+    <div class="panel-section-title" style="margin-top:20px">Actions rapides</div>
+    <button style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);font-size:12px;color:var(--text-2);cursor:pointer;font-family:inherit;text-align:left;display:flex;align-items:center;gap:8px;margin-bottom:6px;transition:background .1s" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='var(--surface)'">
+      <svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path d="M4 5h12v2H4V5zm0 4h8v2H4V9zm0 4h12v2H4v-2z"/></svg>
+      Exporter la transcription
+    </button>
+    <button style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);font-size:12px;color:var(--text-2);cursor:pointer;font-family:inherit;text-align:left;display:flex;align-items:center;gap:8px;margin-bottom:6px;transition:background .1s" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='var(--surface)'">
+      <svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a8 8 0 100 16A8 8 0 0010 2zM9 9V5h2v4H9zm0 4v-2h2v2H9z"/></svg>
+      Exporter mes données
+    </button>
+    <button style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);font-size:12px;color:var(--red-text,#C5221F);cursor:pointer;font-family:inherit;text-align:left;display:flex;align-items:center;gap:8px;transition:background .1s" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='var(--surface)'">
+      <svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path d="M6 4V3a1 1 0 011-1h6a1 1 0 011 1v1h4v2H3V4h3zm1 0h6V3H7v1zM5 8h2v8H5V8zm4 0h2v8H9V8zm4 0h2v8h-2V8z"/></svg>
+      Supprimer cette session
+    </button>
+  </aside>
+
+</div>
+
+<script>
+  /* Waveform bars */
+  const wb = document.getElementById('wavebars');
+  const total = 120;
+  const played = 24;
+  for (let i = 0; i < total; i++) {
+    const b = document.createElement('div');
+    b.className = 'wave-bar' + (i < played ? ' played' : '');
+    const h = 8 + Math.abs(Math.sin(i * 0.4 + i * 0.1) * 22) + Math.random() * 6;
+    b.style.height = h + 'px';
+    wb.appendChild(b);
+  }
+
+  /* Sidebar expand/collapse */
+  function toggleExpand(el) {
+    const ch = el.querySelector('.chevron');
+    if (!ch) return;
+    const next = el.nextElementSibling;
+    if (!next || !next.classList.contains('segment-list')) return;
+    const open = ch.classList.toggle('open');
+    next.style.display = open ? 'block' : 'none';
+  }
+
+  /* Init hidden segments */
+  document.querySelectorAll('.segment-list').forEach((sl, i) => {
+    if (i > 0) sl.style.display = 'none';
+  });
+</script>
+</body>
+</html>

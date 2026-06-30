@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   vault:
-    image: hashicorp/vault:1.17.2
+    image: hashicorp/vault:1.21.4
     command: server
     cap_add:
       - IPC_LOCK
@@ -32,7 +32,7 @@ services:
         delay: 5s
 
   vault-agent-traefik:
-    image: hashicorp/vault:1.17.2
+    image: hashicorp/vault:1.21.4
     command: ["agent", "-config=/vault/config/agent.hcl"]
     environment:
       VAULT_ADDR: "https://vault:8200"
@@ -55,7 +55,7 @@ services:
         delay: 5s
 
   traefik:
-    image: traefik:v3.1
+    image: traefik:v3.7.5
     ports:
       - target: 80
         published: 80

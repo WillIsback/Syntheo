@@ -1,38 +1,38 @@
 {
-  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:best-practices"],
-  "pinDigests": true,
-  "docker": {
-    "fileMatch": ["infra/stacks/.+\\.yml$"]
-  },
-  "packageRules": [
-    {
-      "matchManagers": ["docker-compose"],
-      "matchUpdateTypes": ["major"],
-      "automerge": false,
-      "labels": ["dependency-major", "requires-review"]
-    },
-    {
-      "matchManagers": ["docker-compose"],
-      "matchUpdateTypes": ["minor", "patch", "digest"],
-      "automerge": true,
-      "automergeType": "pr",
-      "platformAutomerge": true,
-      "labels": ["dependency-update"]
-    },
-    {
-      "matchManagers": ["npm"],
-      "matchUpdateTypes": ["major"],
-      "automerge": false,
-      "labels": ["dependency-major", "requires-review"]
-    },
-    {
-      "matchManagers": ["npm"],
-      "matchUpdateTypes": ["minor", "patch"],
-      "automerge": true,
-      "automergeType": "pr",
-      "platformAutomerge": true,
-      "labels": ["dependency-update"]
-    }
-  ]
+	"$schema": "https://docs.renovatebot.com/renovate-schema.json",
+	"extends": ["config:best-practices"],
+	"pinDigests": true,
+	"docker": {
+		"fileMatch": ["infra/stacks/.+\\.yml$"]
+	},
+	"packageRules": [
+		{
+			"matchManagers": ["docker-compose"],
+			"matchUpdateTypes": ["major"],
+			"automerge": false,
+			"labels": ["dependency-major", "requires-review"]
+		},
+		{
+			"matchManagers": ["docker-compose"],
+			"matchUpdateTypes": ["minor", "patch", "digest"],
+			"automerge": true,
+			"automergeType": "pr",
+			"platformAutomerge": true,
+			"labels": ["dependency-update"]
+		},
+		{
+			"matchManagers": ["npm"],
+			"matchUpdateTypes": ["major"],
+			"automerge": false,
+			"labels": ["dependency-major", "requires-review"]
+		},
+		{
+			"matchManagers": ["npm"],
+			"matchUpdateTypes": ["minor", "patch"],
+			"automerge": true,
+			"automergeType": "pr",
+			"platformAutomerge": true,
+			"labels": ["dependency-update"]
+		}
+	]
 }
