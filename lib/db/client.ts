@@ -19,10 +19,17 @@ export function getPool(): Pool {
 
 export async function getDb(userId?: string): Promise<PoolClient> {
 	const client = await getPool().connect();
-	const encKey = await getEncryptionKey();
-	await client.query(`SET LOCAL app.enc_key = '${encKey.replace(/'/g, "''")}'`);
-	if (userId) {
-		await client.query(`SET LOCAL app.current_user_id = '${userId}'`);
+	try {
+		const encKey = await getEncryptionKey();
+		await client.query(
+			`SET LOCAL app.enc_key = '${encKey.replace(/'/g, "''")}'`,
+		);
+		if (userId) {
+			await client.query(`SET LOCAL app.current_user_id = '${userId}'`);
+		}
+		return client;
+	} catch (err) {
+		client.release();
+		throw err;
 	}
-	return client;
 }

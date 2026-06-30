@@ -12,8 +12,10 @@ CREATE TABLE IF NOT EXISTS sessions (
   ip_address      TEXT NOT NULL
 );
 ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS user_isolation ON sessions;
 CREATE POLICY user_isolation ON sessions
-  USING (user_id = current_setting('app.current_user_id')::UUID);
+  USING (user_id = current_setting('app.current_user_id', true)::UUID)
+  WITH CHECK (user_id = current_setting('app.current_user_id', true)::UUID);
 
 -- Encrypted transcriptions
 CREATE TABLE IF NOT EXISTS transcriptions (
@@ -25,11 +27,18 @@ CREATE TABLE IF NOT EXISTS transcriptions (
   created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ALTER TABLE transcriptions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS user_isolation ON transcriptions;
 CREATE POLICY user_isolation ON transcriptions
   USING (
     session_id IN (
       SELECT id FROM sessions
-      WHERE user_id = current_setting('app.current_user_id')::UUID
+      WHERE user_id = current_setting('app.current_user_id', true)::UUID
+    )
+  )
+  WITH CHECK (
+    session_id IN (
+      SELECT id FROM sessions
+      WHERE user_id = current_setting('app.current_user_id', true)::UUID
     )
   );
 
@@ -43,10 +52,17 @@ CREATE TABLE IF NOT EXISTS reports (
   created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ALTER TABLE reports ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS user_isolation ON reports;
 CREATE POLICY user_isolation ON reports
   USING (
     session_id IN (
       SELECT id FROM sessions
-      WHERE user_id = current_setting('app.current_user_id')::UUID
+      WHERE user_id = current_setting('app.current_user_id', true)::UUID
+    )
+  )
+  WITH CHECK (
+    session_id IN (
+      SELECT id FROM sessions
+      WHERE user_id = current_setting('app.current_user_id', true)::UUID
     )
   );

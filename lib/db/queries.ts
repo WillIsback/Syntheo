@@ -198,9 +198,14 @@ export async function deleteUserCascade(
 	userId: string,
 ): Promise<void> {
 	await client.query("BEGIN");
-	await client.query({
-		text: `DELETE FROM sessions WHERE user_id = $1`,
-		values: [userId],
-	});
-	await client.query("COMMIT");
+	try {
+		await client.query({
+			text: `DELETE FROM sessions WHERE user_id = $1`,
+			values: [userId],
+		});
+		await client.query("COMMIT");
+	} catch (err) {
+		await client.query("ROLLBACK");
+		throw err;
+	}
 }
