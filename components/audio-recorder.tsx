@@ -57,7 +57,9 @@ export default function AudioRecorder({
 			await new Promise((r) => setTimeout(r, 3000));
 			attempts++;
 			try {
-				const res = await fetch(`/api/jobs/${jobId}`);
+				const res = await fetch(
+					`/api/jobs/${jobId}?session_id=${encodeURIComponent(sessionId ?? "")}`,
+				);
 				if (!res.ok) {
 					setState("error");
 					return;

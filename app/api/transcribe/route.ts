@@ -8,11 +8,12 @@ export async function POST(req: NextRequest) {
 
 	const form = await req.formData();
 	const audioBlob = form.get("audio_blob") as Blob | null;
+	const sessionId = (form.get("session_id") as string | null) ?? "";
 	const language = (form.get("language") as string) ?? "fr";
 
 	if (!audioBlob)
 		return NextResponse.json({ error: "No audio" }, { status: 400 });
 
 	const { jobId } = await submitTranscription(audioBlob, language);
-	return NextResponse.json({ jobId }, { status: 202 });
+	return NextResponse.json({ jobId, sessionId }, { status: 202 });
 }
