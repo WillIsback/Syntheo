@@ -41,8 +41,8 @@ services:
         target: /var/lib/postgresql/data
       - postgres_secrets:/run/vault:ro
       - type: bind
-        source: ./config/postgres/init.sql
-        target: /docker-entrypoint-initdb.d/init.sql
+        source: ./config/postgres/init.sh
+        target: /docker-entrypoint-initdb.d/init.sh
         read_only: true
     networks:
       - data_net
@@ -92,6 +92,7 @@ services:
           --db-url=jdbc:postgresql://postgres:5432/${KEYCLOAK_DB} \
           --db-username=keycloak \
           --db-password="${KC_DB_PASSWORD}" \
+          --proxy-headers=xforwarded \
           --import-realm
     environment:
       KC_DB: postgres

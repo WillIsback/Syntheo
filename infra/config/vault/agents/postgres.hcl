@@ -22,6 +22,7 @@ template {
 {{ with secret "secret/data/syntheo/postgres" -}}
 POSTGRES_USER={{ .Data.data.username }}
 POSTGRES_PASSWORD={{ .Data.data.password }}
+KEYCLOAK_DB_PASSWORD={{ .Data.data.keycloak_db_password }}
 {{- end }}
 EOT
   destination = "/run/vault/postgres.env"
