@@ -1,0 +1,1424 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Syntheo — Plan MVP Conformité</title>
+<style>
+  :root {
+    --bg: #F8F7F4;
+    --surface: #FFFFFF;
+    --surface-2: #F1EFE8;
+    --border: #E2E0D8;
+    --border-strong: #C8C6BE;
+    --text: #1A1A18;
+    --text-2: #5C5B56;
+    --text-3: #8C8B85;
+    --accent: #185FA5;
+    --accent-bg: #E6F1FB;
+    --accent-text: #0C447C;
+    --green: #3B6D11;
+    --green-bg: #EAF3DE;
+    --amber: #854F0B;
+    --amber-bg: #FAEEDA;
+    --amber-text: #633806;
+    --red: #A32D2D;
+    --red-bg: #FCEBEB;
+    --red-text: #791F1F;
+    --purple: #3C3489;
+    --purple-bg: #EEEDFE;
+    --purple-text: #26215C;
+    --teal: #0F6E56;
+    --teal-bg: #E1F5EE;
+    --teal-text: #04342C;
+    --radius: 8px;
+    --radius-lg: 14px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  /* Layout */
+  .layout { display: flex; min-height: 100vh; }
+
+  /* Sidebar */
+  .sidebar {
+    width: 240px;
+    flex-shrink: 0;
+    background: var(--surface);
+    border-right: 0.5px solid var(--border);
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    padding: 24px 0;
+  }
+
+  .sidebar-logo {
+    padding: 0 20px 20px;
+    border-bottom: 0.5px solid var(--border);
+    margin-bottom: 12px;
+  }
+  .sidebar-logo h1 { font-size: 15px; font-weight: 600; letter-spacing: -.01em; }
+  .sidebar-logo p { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+
+  .nav-section { padding: 4px 12px; margin-top: 8px; }
+  .nav-label { font-size: 10px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: .06em; padding: 4px 8px 8px; }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text-2);
+    transition: all .12s;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+  }
+  .nav-item:hover { background: var(--surface-2); color: var(--text); }
+  .nav-item.active { background: var(--accent-bg); color: var(--accent-text); font-weight: 500; }
+  .nav-icon { font-size: 15px; width: 18px; text-align: center; flex-shrink: 0; }
+
+  /* Main content */
+  .main { flex: 1; overflow-y: auto; padding: 40px 48px; max-width: 900px; }
+
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* Page header */
+  .page-header { margin-bottom: 32px; }
+  .page-header .eyebrow { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--text-3); margin-bottom: 6px; }
+  .page-header h2 { font-size: 24px; font-weight: 600; letter-spacing: -.02em; color: var(--text); margin-bottom: 8px; }
+  .page-header p { font-size: 14px; color: var(--text-2); max-width: 600px; line-height: 1.7; }
+
+  /* Cards */
+  .card {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px 24px;
+    margin-bottom: 16px;
+  }
+  .card-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+
+  /* Status row */
+  .status-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 0.5px solid var(--border);
+  }
+  .status-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .status-row:first-child { padding-top: 0; }
+
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 6px; }
+  .dot-g { background: var(--green); }
+  .dot-a { background: #EF9F27; }
+  .dot-r { background: var(--red); }
+
+  .status-row h4 { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 2px; }
+  .status-row p { font-size: 12px; color: var(--text-2); line-height: 1.55; }
+
+  /* Badges */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 4px;
+    letter-spacing: .01em;
+  }
+  .b-green { background: var(--green-bg); color: var(--green); }
+  .b-amber { background: var(--amber-bg); color: var(--amber-text); }
+  .b-red { background: var(--red-bg); color: var(--red-text); }
+  .b-blue { background: var(--accent-bg); color: var(--accent-text); }
+  .b-purple { background: var(--purple-bg); color: var(--purple-text); }
+  .b-teal { background: var(--teal-bg); color: var(--teal-text); }
+  .b-gray { background: var(--surface-2); color: var(--text-2); border: 0.5px solid var(--border-strong); }
+
+  /* Timeline */
+  .timeline { position: relative; }
+  .tl-item { display: flex; gap: 16px; margin-bottom: 0; }
+  .tl-left { display: flex; flex-direction: column; align-items: center; width: 32px; flex-shrink: 0; }
+  .tl-num {
+    width: 28px; height: 28px; border-radius: 50%;
+    font-size: 12px; font-weight: 600;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    border: 0.5px solid var(--border-strong);
+    background: var(--surface);
+    color: var(--text-2);
+  }
+  .tl-num.done { background: var(--green-bg); border-color: var(--green); color: var(--green); }
+  .tl-num.critical { background: var(--red-bg); border-color: var(--red); color: var(--red); }
+  .tl-num.warn { background: var(--amber-bg); border-color: #EF9F27; color: var(--amber-text); }
+  .tl-line { width: 1px; flex: 1; background: var(--border); min-height: 24px; margin: 4px 0; }
+  .tl-body { padding-bottom: 24px; flex: 1; padding-top: 4px; }
+  .tl-body h4 { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 4px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .tl-body p { font-size: 12px; color: var(--text-2); line-height: 1.6; }
+  .tl-body .sub { margin-top: 8px; background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 10px 12px; font-size: 12px; color: var(--text-2); line-height: 1.6; }
+  .tl-body .sub strong { color: var(--text); }
+  .tl-item:last-child .tl-line { display: none; }
+
+  /* Risk matrix */
+  .risk-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .risk-table th { background: var(--surface-2); color: var(--text-3); font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: .05em; padding: 8px 12px; text-align: left; border: 0.5px solid var(--border); }
+  .risk-table td { padding: 9px 12px; border: 0.5px solid var(--border); vertical-align: middle; }
+  .risk-table tr:hover td { background: var(--bg); }
+  .pill { display: inline-block; padding: 2px 9px; border-radius: 10px; font-size: 10px; font-weight: 600; }
+  .pill-g { background: var(--green-bg); color: var(--green); }
+  .pill-a { background: var(--amber-bg); color: var(--amber-text); }
+  .pill-r { background: var(--red-bg); color: var(--red-text); }
+
+  /* Architecture diagram */
+  .arch-layer {
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    margin-bottom: 8px;
+    overflow: hidden;
+  }
+  .arch-layer-header {
+    padding: 8px 16px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .arch-layer-body { padding: 12px 16px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .arch-component {
+    background: var(--surface);
+    border: 0.5px solid var(--border-strong);
+    border-radius: var(--radius);
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .arch-component .status-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+  .layer-front { background: var(--accent-bg); border-color: #B5D4F4; }
+  .layer-front .arch-layer-header { background: var(--accent-bg); color: var(--accent-text); }
+  .layer-back { background: var(--purple-bg); border-color: #CECBF6; }
+  .layer-back .arch-layer-header { background: var(--purple-bg); color: var(--purple-text); }
+  .layer-data { background: var(--teal-bg); border-color: #9FE1CB; }
+  .layer-data .arch-layer-header { background: var(--teal-bg); color: var(--teal-text); }
+  .layer-ops { background: var(--amber-bg); border-color: #FAC775; }
+  .layer-ops .arch-layer-header { background: var(--amber-bg); color: var(--amber-text); }
+  .layer-sec { background: var(--red-bg); border-color: #F7C1C1; }
+  .layer-sec .arch-layer-header { background: var(--red-bg); color: var(--red-text); }
+
+  /* Code block */
+  .code-block {
+    background: #1A1A18;
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    font-family: 'SF Mono', 'Cascadia Code', Consolas, monospace;
+    font-size: 11.5px;
+    line-height: 1.7;
+    color: #C8C6BE;
+    margin-top: 8px;
+    overflow-x: auto;
+  }
+  .code-block .cm { color: #5C5B56; }
+  .code-block .ck { color: #9FE1CB; }
+  .code-block .cv { color: #FAC775; }
+  .code-block .cs { color: #AFA9EC; }
+
+  /* AIPD checklist */
+  .checklist { margin: 0; padding: 0; list-style: none; }
+  .checklist li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 0.5px solid var(--border);
+    font-size: 12px;
+    color: var(--text-2);
+  }
+  .checklist li:last-child { border-bottom: none; }
+  .checklist li strong { color: var(--text); }
+  .check-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+
+  /* Metric cards */
+  .metric-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
+  .metric {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 16px 18px;
+  }
+  .metric .label { font-size: 11px; color: var(--text-3); margin-bottom: 6px; }
+  .metric .value { font-size: 22px; font-weight: 600; letter-spacing: -.02em; }
+  .metric .sub-label { font-size: 11px; color: var(--text-3); margin-top: 3px; }
+  .metric.g .value { color: var(--green); }
+  .metric.a .value { color: var(--amber-text); }
+  .metric.r .value { color: var(--red); }
+  .metric.b .value { color: var(--accent); }
+
+  /* UX mockups */
+  .mockup-frame {
+    background: var(--surface-2);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+  }
+  .mockup-window {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+  .mockup-titlebar {
+    background: var(--surface-2);
+    padding: 8px 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border-bottom: 0.5px solid var(--border);
+  }
+  .mockup-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .mockup-content { padding: 20px; }
+
+  .dialog-modal {
+    background: var(--surface);
+    border: 0.5px solid var(--border-strong);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    max-width: 420px;
+    margin: 0 auto;
+  }
+  .dialog-modal h3 { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+  .dialog-modal p { font-size: 12px; color: var(--text-2); line-height: 1.6; margin-bottom: 12px; }
+  .check-item {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    background: var(--bg);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    margin-bottom: 8px;
+  }
+  .check-item input { margin-top: 2px; flex-shrink: 0; accent-color: var(--accent); }
+  .check-item label { font-size: 12px; color: var(--text-2); line-height: 1.5; }
+  .btn-row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
+  .btn { padding: 7px 16px; border-radius: var(--radius); font-size: 12px; font-weight: 500; cursor: pointer; border: none; }
+  .btn-ghost { background: none; border: 0.5px solid var(--border-strong); color: var(--text-2); }
+  .btn-primary { background: var(--text); color: white; }
+  .disclaimer {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 9px 12px;
+    background: var(--amber-bg);
+    border: 0.5px solid #EF9F27;
+    border-radius: var(--radius);
+    margin-top: 10px;
+  }
+  .disclaimer-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+  .disclaimer p { font-size: 11px; color: var(--amber-text); line-height: 1.5; }
+
+  /* Separator */
+  .sep { height: 0.5px; background: var(--border); margin: 24px 0; }
+
+  /* Section title */
+  .sec-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--text-3);
+    margin-bottom: 14px;
+    margin-top: 24px;
+  }
+  .sec-title:first-child { margin-top: 0; }
+
+  /* Note box */
+  .note {
+    background: var(--bg);
+    border: 0.5px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    padding: 10px 14px;
+    font-size: 12px;
+    color: var(--text-2);
+    line-height: 1.6;
+    margin-top: 12px;
+  }
+  .note strong { color: var(--text); }
+
+  .note-warn {
+    border-left-color: #EF9F27;
+  }
+  .note-red {
+    border-left-color: var(--red);
+  }
+
+  @media print {
+    .sidebar { display: none; }
+    .main { padding: 20px; }
+    .page { display: block !important; page-break-before: always; }
+    .page:first-child { page-break-before: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<div class="layout">
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-logo">
+      <h1>Syntheo</h1>
+      <p>Plan MVP — Conformité</p>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Vue d'ensemble</div>
+      <button class="nav-item active" onclick="show('overview')">
+        <span class="nav-icon">◎</span> Tableau de bord
+      </button>
+      <button class="nav-item" onclick="show('arch')">
+        <span class="nav-icon">⬡</span> Architecture
+      </button>
+      <button class="nav-item" onclick="show('flux')">
+        <span class="nav-icon">⇀</span> Flux de données
+      </button>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Conformité</div>
+      <button class="nav-item" onclick="show('rgpd')">
+        <span class="nav-icon">🔒</span> RGPD
+      </button>
+      <button class="nav-item" onclick="show('iaact')">
+        <span class="nav-icon">⚖</span> IA Act
+      </button>
+      <button class="nav-item" onclick="show('secnum')">
+        <span class="nav-icon">🛡</span> SecNumCloud
+      </button>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Implémentation</div>
+      <button class="nav-item" onclick="show('ux')">
+        <span class="nav-icon">□</span> UX conformité
+      </button>
+      <button class="nav-item" onclick="show('security')">
+        <span class="nav-icon">◈</span> Sécurité technique
+      </button>
+      <button class="nav-item" onclick="show('ops')">
+        <span class="nav-icon">◉</span> Observabilité
+      </button>
+      <button class="nav-item" onclick="show('aipd')">
+        <span class="nav-icon">✦</span> AIPD
+      </button>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Planning</div>
+      <button class="nav-item" onclick="show('plan')">
+        <span class="nav-icon">▷</span> Plan d'action
+      </button>
+      <button class="nav-item" onclick="show('residuel')">
+        <span class="nav-icon">△</span> Risques résiduels
+      </button>
+    </div>
+  </nav>
+
+  <!-- Main -->
+  <main class="main">
+
+    <!-- OVERVIEW -->
+    <div class="page active" id="page-overview">
+      <div class="page-header">
+        <div class="eyebrow">Vue d'ensemble</div>
+        <h2>Tableau de bord conformité MVP</h2>
+        <p>Cadrage réglementaire complet pour la présentation DPD — RGPD, IA Act, SecNumCloud, architecture technique et plan d'action priorisé.</p>
+      </div>
+
+      <div class="metric-grid">
+        <div class="metric g">
+          <div class="label">Risques éliminés</div>
+          <div class="value">6</div>
+          <div class="sub-label">par les choix MVP</div>
+        </div>
+        <div class="metric a">
+          <div class="label">Actions restantes</div>
+          <div class="value">8</div>
+          <div class="sub-label">avant production</div>
+        </div>
+        <div class="metric r">
+          <div class="label">Points critiques</div>
+          <div class="value">3</div>
+          <div class="sub-label">à traiter en priorité</div>
+        </div>
+        <div class="metric b">
+          <div class="label">Risque résiduel</div>
+          <div class="value">Faible</div>
+          <div class="sub-label">post-implémentation</div>
+        </div>
+      </div>
+
+      <p class="sec-title">Décisions architecturales clés et impact conformité</p>
+      <div class="card">
+        <div class="status-row">
+          <div class="dot dot-g"></div>
+          <div>
+            <h4>Pas de conservation audio <span class="badge b-green">Art. 5 RGPD — Minimisation</span></h4>
+            <p>L'audio est traité en mémoire par WhisperX puis immédiatement supprimé. Élimine la catégorie de données biométriques persistées et réduit massivement le périmètre de l'AIPD.</p>
+          </div>
+        </div>
+        <div class="status-row">
+          <div class="dot dot-g"></div>
+          <div>
+            <h4>Pas d'enrollment biométrique <span class="badge b-green">Art. 9 RGPD</span></h4>
+            <p>Identification manuelle des speakers par l'utilisateur. Zéro base de profils vocaux. L'art. 9 s'applique avec une intensité très réduite sur le périmètre du traitement.</p>
+          </div>
+        </div>
+        <div class="status-row">
+          <div class="dot dot-g"></div>
+          <div>
+            <h4>VPS OVH — juridiction française <span class="badge b-green">SecNumCloud compatible</span></h4>
+            <p>OVH SAS, droit français, aucune soumission au CLOUD Act américain. Toutes les données restent physiquement en France. Critère de souveraineté satisfait pour le MVP.</p>
+          </div>
+        </div>
+        <div class="status-row">
+          <div class="dot dot-g"></div>
+          <div>
+            <h4>Docker Swarm + rolling release <span class="badge b-blue">Art. 32 RGPD — Disponibilité</span></h4>
+            <p>Zéro downtime lors des mises à jour. Répond à l'exigence de disponibilité continue des systèmes de traitement. Isolation des services par container.</p>
+          </div>
+        </div>
+        <div class="status-row">
+          <div class="dot dot-g"></div>
+          <div>
+            <h4>OpenTelemetry + Grafana + MLflow <span class="badge b-blue">IA Act art. 9 — Traçabilité</span></h4>
+            <p>Traçabilité complète des inférences IA. Chaque compte rendu lié à un model_run_id MLflow. Répond aux exigences de journalisation de l'IA Act pour les systèmes à risque limité.</p>
+          </div>
+        </div>
+        <div class="status-row">
+          <div class="dot dot-a"></div>
+          <div>
+            <h4>Dialog de consentement <span class="badge b-amber">Art. 13 RGPD — Nécessaire mais incomplet seul</span></h4>
+            <p>Mécanisme correct de transfert de responsabilité vers l'utilisateur. Doit être complété par des CGU explicites sur les obligations de l'utilisateur envers les tiers enregistrés.</p>
+          </div>
+        </div>
+        <div class="status-row">
+          <div class="dot dot-r"></div>
+          <div>
+            <h4>AIPD <span class="badge b-red">Art. 35 RGPD — Obligatoire avant production</span></h4>
+            <p>Traitement de données biométriques (voix), même sans conservation. La liste CNIL rend l'AIPD systématiquement requise. À réaliser et cosigner avec le DPD avant tout accès public.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ARCHITECTURE -->
+    <div class="page" id="page-arch">
+      <div class="page-header">
+        <div class="eyebrow">Architecture</div>
+        <h2>Stack technique MVP</h2>
+        <p>Architecture cible sur VPS OVH — tous les composants sur juridiction française, isolation par container Docker Swarm.</p>
+      </div>
+
+      <div class="arch-layer layer-front">
+        <div class="arch-layer-header">⬡ Couche présentation — Next.js</div>
+        <div class="arch-layer-body">
+          <div class="arch-component"><div class="status-dot" style="background:var(--green)"></div> Next.js 14 App Router</div>
+          <div class="arch-component"><div class="status-dot" style="background:var(--green)"></div> TLS 1.3 (Traefik)</div>
+          <div class="arch-component"><div class="status-dot" style="background:var(--green)"></div> CSP strict + HSTS</div>
+          <div class="arch-component"><div class="status-dot" style="background:var(--green)"></div> Auth JWT (courte durée)</div>
+          <div class="arch-component"><div class="status-dot" style="background:#EF9F27)"></div> Keycloak (auto-hébergé)</div>
+        </div>
+      </div>
+
+      <div class="arch-layer layer-back">
+        <div class="arch-layer-header">⬡ Couche IA — services Docker</div>
+        <div class="arch-layer-body">
+          <div class="arch-component"><div class="status-dot" style="background:var(--green)"></div> WhisperX (STT + diarisation)</div>
+          <div class="arch-component"><div class="status-dot" style="background:var(--green)"></div> vLLM (compte rendu)</div>
+          <div class="arch-component"><div class="status-dot" style="background:var(--green)"></div> MLflow (traçabilité inférence)</div>
+          <div class="arch-component"><div class="status-dot" style="background:var(--green)"></div> API REST interne uniquement</div>
+          <div class="arch-component"><div class="status-dot" style="background:var(--green)"></div> Réseau Docker privé</div>
+        </div>
+      </div>
+
+      <div class="arch-layer layer-data">
+        <div class="arch-layer-header">⬡ Couche données — PostgreSQL</div>
+        <div class="arch-layer-body">
+          <div class="arch-component"><div class="status-dot" style="background:var(--green)"></div> PostgreSQL + Row-Level Security</div>
+          <div class="arch-component"><div class="status-dot" style="background:var(--green)"></div> Chiffrement colonnes (pgcrypto)</div>
+          <div class="arch-component"><div class="status-dot" style="background:var(--green)"></div> Volume LUKS chiffré</div>
+          <div class="arch-component"><div class="status-dot" style="background:#EF9F27"></div> Vault / Infisical (clés)</div>
+          <div class="arch-component"><div class="status-dot" style="background:#EF9F27"></div> Backup chiffré hors VPS</div>
+        </div>
+      </div>
+
+      <div class="arch-layer layer-ops">
+        <div class="arch-layer-header">⬡ Couche observabilité — OTel stack</div>
+        <div class="arch-layer-body">
+          <div class="arch-component"><div class="status-dot" style="background:var(--green)"></div> OpenTelemetry Collector</div>
+          <div class="arch-component"><div class="status-dot" style="background:var(--green)"></div> Grafana (dashboards)</div>
+          <div class="arch-component"><div class="status-dot" style="background:var(--green)"></div> Loki (logs applicatifs)</div>
+          <div class="arch-component"><div class="status-dot" style="background:var(--green)"></div> Prometheus (métriques)</div>
+          <div class="arch-component"><div class="status-dot" style="background:var(--green)"></div> Tempo (traces distribuées)</div>
+        </div>
+      </div>
+
+      <div class="arch-layer layer-sec">
+        <div class="arch-layer-header">⬡ Couche sécurité — périmètre</div>
+        <div class="arch-layer-body">
+          <div class="arch-component"><div class="status-dot" style="background:var(--green)"></div> Traefik (reverse proxy + TLS)</div>
+          <div class="arch-component"><div class="status-dot" style="background:var(--green)"></div> Fail2ban (brute force)</div>
+          <div class="arch-component"><div class="status-dot" style="background:var(--green)"></div> SSH par clé uniquement</div>
+          <div class="arch-component"><div class="status-dot" style="background:#EF9F27"></div> MFA admin VPS</div>
+          <div class="arch-component"><div class="status-dot" style="background:#EF9F27"></div> Trivy (scan images)</div>
+        </div>
+      </div>
+
+      <div class="note">
+        <strong>Légende :</strong> point vert = implémenté / prévu dans la stack. Point orange = à ajouter avant production. Tous les composants sont déployés sur le VPS OVH FR — aucune dépendance cloud américaine.
+      </div>
+
+      <p class="sec-title" style="margin-top:24px">Isolation Docker Swarm</p>
+      <div class="card">
+        <div class="code-block">
+<span class="cm"># docker-compose.yml — réseau interne isolé</span>
+networks:
+  <span class="ck">frontend_net</span>:   <span class="cm"># Next.js ↔ Internet</span>
+  <span class="ck">backend_net</span>:    <span class="cm"># Next.js ↔ WhisperX, vLLM</span>
+    internal: <span class="cv">true</span>    <span class="cm"># jamais exposé à l'extérieur</span>
+  <span class="ck">data_net</span>:       <span class="cm"># Backend ↔ PostgreSQL</span>
+    internal: <span class="cv">true</span>
+  <span class="ck">obs_net</span>:        <span class="cm"># OTel Collector ↔ Grafana stack</span>
+    internal: <span class="cv">true</span>
+
+services:
+  <span class="ck">whisperx</span>:
+    networks: [backend_net]  <span class="cm"># inaccessible depuis Internet</span>
+  <span class="ck">vllm</span>:
+    networks: [backend_net, data_net]
+  <span class="ck">postgres</span>:
+    networks: [data_net]     <span class="cm"># aucun port exposé</span>
+        </div>
+        <div class="note">WhisperX et vLLM ne sont jamais exposés sur un port public — toutes les requêtes passent par le frontend Next.js qui agit comme proxy authentifié. Réduction maximale de la surface d'attaque.</div>
+      </div>
+    </div>
+
+    <!-- FLUX -->
+    <div class="page" id="page-flux">
+      <div class="page-header">
+        <div class="eyebrow">Flux de données</div>
+        <h2>Cycle de vie — zéro donnée audio persistée</h2>
+        <p>Traçabilité complète de chaque étape, de la capture micro à la persistance du compte rendu.</p>
+      </div>
+
+      <div class="card">
+        <div class="timeline">
+          <div class="tl-item">
+            <div class="tl-left"><div class="tl-num done">1</div><div class="tl-line"></div></div>
+            <div class="tl-body">
+              <h4>Dialog de consentement <span class="badge b-green">RGPD art. 13</span> <span class="badge b-amber">CGU obligatoires</span></h4>
+              <p>L'utilisateur coche deux cases : (1) avoir informé les participants, (2) assumer la responsabilité légale de l'enregistrement. Le timestamp et le hash des cases cochées sont loggés en BDD. La dialog est bloquante — aucune capture possible sans validation.</p>
+              <div class="sub"><strong>Log persisté :</strong> user_id · timestamp · version_cgu · hash_consentement · ip_address</div>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-left"><div class="tl-num done">2</div><div class="tl-line"></div></div>
+            <div class="tl-body">
+              <h4>Permission navigateur (natif) <span class="badge b-green">Garde-fou navigateur</span></h4>
+              <p>Le navigateur déclenche sa propre dialog d'autorisation d'accès au microphone et à la sortie audio. Ce mécanisme est hors du contrôle de Syntheo — il constitue un second niveau de consentement indépendant. Aucun audio n'est accessible sans cette validation.</p>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-left"><div class="tl-num done">3</div><div class="tl-line"></div></div>
+            <div class="tl-body">
+              <h4>Capture audio — mémoire navigateur uniquement <span class="badge b-green">Jamais persisté</span></h4>
+              <p>L'audio est capturé via Web Audio API et maintenu en mémoire vive côté client. Il est envoyé en streaming HTTPS (TLS 1.3 + certificat Traefik) vers le backend WhisperX. Il ne touche jamais le disque du client ni du serveur avant traitement.</p>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-left"><div class="tl-num done">4</div><div class="tl-line"></div></div>
+            <div class="tl-body">
+              <h4>Transcription WhisperX — in-memory <span class="badge b-green">Audio supprimé post-traitement</span></h4>
+              <p>WhisperX traite l'audio en RAM. Résultat : transcription texte + horodatages + labels Speaker N. L'audio est libéré de la mémoire immédiatement après retour de la transcription. Zéro persistance sur disque.</p>
+              <div class="sub"><strong>MLflow log :</strong> model_name · model_version · duration_ms · wer_estimate · run_id</div>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-left"><div class="tl-num done">5</div><div class="tl-line"></div></div>
+            <div class="tl-body">
+              <h4>Identification speakers — saisie manuelle <span class="badge b-green">Pas de biométrie</span></h4>
+              <p>L'utilisateur renomme optionnellement "Speaker 1" en "Prénom Nom". Donnée saisie volontairement, sous responsabilité de l'utilisateur. Aucun traitement biométrique d'identification — les labels sont purement textuels.</p>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-left"><div class="tl-num done">6</div><div class="tl-line"></div></div>
+            <div class="tl-body">
+              <h4>Génération compte rendu — vLLM <span class="badge b-purple">IA Act art. 50</span></h4>
+              <p>La transcription (texte uniquement) est envoyée à vLLM via le réseau Docker interne. Le compte rendu est généré et retourné. Le model_run_id MLflow est lié à ce document pour traçabilité complète.</p>
+              <div class="sub"><strong>MLflow log :</strong> model_name · model_version · prompt_tokens · completion_tokens · run_id · latency_ms</div>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-left"><div class="tl-num done">7</div><div class="tl-line"></div></div>
+            <div class="tl-body">
+              <h4>Persistance BDD — RLS PostgreSQL <span class="badge b-green">Isolation par utilisateur</span></h4>
+              <p>Transcription + compte rendu + métadonnées stockés en PostgreSQL avec Row-Level Security. Colonnes sensibles chiffrées avec pgcrypto. Chaque ligne est inaccessible aux autres utilisateurs au niveau moteur de BDD.</p>
+              <div class="sub">
+                <strong>Schéma :</strong> sessions(id, user_id, created_at, consent_hash, consent_version) · transcriptions(id, session_id, content_encrypted, whisper_run_id) · reports(id, session_id, content_encrypted, vllm_run_id, model_version)
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="note note-warn">
+        <strong>Ce qui n'est jamais stocké :</strong> fichier audio brut, embeddings vocaux, données biométriques, hash vocal, localisation, données comportementales. Le système ne produit et ne conserve que du texte et des métadonnées d'usage.
+      </div>
+    </div>
+
+    <!-- RGPD -->
+    <div class="page" id="page-rgpd">
+      <div class="page-header">
+        <div class="eyebrow">Conformité</div>
+        <h2>RGPD — couverture article par article</h2>
+        <p>Règlement (UE) 2016/679 — analyse des obligations applicables au périmètre Syntheo MVP.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Registre des traitements — 3 fiches à rédiger</div>
+        <div class="status-row">
+          <div class="dot dot-r"></div>
+          <div>
+            <h4>Traitement 1 — Transcription audio <span class="badge b-red">Art. 9 — Données biométriques</span></h4>
+            <p>Finalité : transcription d'enregistrements audio. Base légale : exécution du contrat (art. 6.1.b) + consentement explicite pour les données biométriques vocales (art. 9.2.a). Durée : audio non conservé — transcription jusqu'à suppression par l'utilisateur ou 12 mois. Destinataires : uniquement l'utilisateur propriétaire.</p>
+          </div>
+        </div>
+        <div class="status-row">
+          <div class="dot dot-a"></div>
+          <div>
+            <h4>Traitement 2 — Génération de compte rendu IA <span class="badge b-amber">Art. 6.1.b</span></h4>
+            <p>Finalité : résumé automatique de transcription. Base légale : exécution du contrat. Durée : jusqu'à suppression par l'utilisateur ou 24 mois. Mention modèle IA + date de génération systématiques. Métadonnées MLflow liées à chaque document.</p>
+          </div>
+        </div>
+        <div class="status-row">
+          <div class="dot dot-a"></div>
+          <div>
+            <h4>Traitement 3 — Authentification utilisateur <span class="badge b-amber">Art. 6.1.b</span></h4>
+            <p>Finalité : gestion des comptes et accès. Données : email, hash mot de passe, tokens JWT, logs de connexion. Durée : durée du compte + 30 jours après suppression. Keycloak auto-hébergé — aucune donnée chez un tiers américain.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Droits des personnes — interface à prévoir en V1</div>
+        <div class="status-row">
+          <div class="dot dot-a"></div>
+          <div><h4>Droit à l'effacement (art. 17) <span class="badge b-amber">Cascade obligatoire</span></h4>
+          <p>Suppression du compte → cascade sur sessions, transcriptions, comptes rendus, logs de consentement, tokens. À implémenter avec une transaction SQL atomique. Délai de traitement : immédiat. À documenter dans la politique de confidentialité.</p></div>
+        </div>
+        <div class="status-row">
+          <div class="dot dot-a"></div>
+          <div><h4>Portabilité (art. 20) <span class="badge b-amber">Export JSON/CSV</span></h4>
+          <p>Export de l'ensemble des données de l'utilisateur : transcriptions, comptes rendus, métadonnées de sessions, speakers renseignés. Format : JSON structuré ou CSV. Bouton "Exporter mes données" dans les paramètres du compte.</p></div>
+        </div>
+        <div class="status-row">
+          <div class="dot dot-a"></div>
+          <div><h4>Rectification (art. 16) <span class="badge b-amber">Édition transcription</span></h4>
+          <p>L'utilisateur peut modifier les noms de speakers et corriger la transcription. Chaque modification est horodatée. À prévoir dans l'interface de la transcription.</p></div>
+        </div>
+        <div class="status-row">
+          <div class="dot dot-g"></div>
+          <div><h4>Information (art. 13) <span class="badge b-green">Dialog + CGU</span></h4>
+          <p>Dialog de consentement avant enregistrement. Politique de confidentialité accessible depuis toutes les pages. CGU avec mention explicite de la responsabilité de l'utilisateur envers les tiers enregistrés.</p></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">DPA sous-traitants — à signer avant production</div>
+        <div class="status-row">
+          <div class="dot dot-a"></div>
+          <div><h4>OVH SAS <span class="badge b-amber">DPA standard disponible</span></h4>
+          <p>OVH propose un DPA conforme art. 28. Vérifier que le contrat couvre le traitement de données de catégorie particulière (voix). Addendum spécifique si nécessaire. URL : ovhcloud.com/fr/personal-data-protection/</p></div>
+        </div>
+        <div class="status-row">
+          <div class="dot dot-g"></div>
+          <div><h4>Composants auto-hébergés <span class="badge b-green">Pas de DPA requis</span></h4>
+          <p>WhisperX, vLLM, PostgreSQL, Keycloak, MLflow, Grafana stack sont tous auto-hébergés sur le VPS. Aucun transfert de données vers un tiers. Pas de DPA nécessaire pour ces composants.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- IA ACT -->
+    <div class="page" id="page-iaact">
+      <div class="page-header">
+        <div class="eyebrow">Conformité</div>
+        <h2>IA Act — classification et obligations</h2>
+        <p>Règlement (UE) 2024/1689 — applicable par phases. Syntheo MVP = système IA à risque limité pour le cas d'usage entreprise standard.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Classification du risque — décision documentée</div>
+        <div class="status-row">
+          <div class="dot dot-g"></div>
+          <div>
+            <h4>Risque limité — cas d'usage cible <span class="badge b-green">Art. 50 uniquement</span></h4>
+            <p>Usage : transcription et synthèse de réunions professionnelles internes. Pas de décision automatisée affectant des personnes physiques. Pas de scoring, pas de profilage. La diarisation est sans enrollment — aucun profil biométrique créé. Classification : système IA à risque limité.</p>
+          </div>
+        </div>
+        <div class="status-row">
+          <div class="dot dot-r"></div>
+          <div>
+            <h4>Risque élevé — usage à exclure ou à encadrer strictement <span class="badge b-red">Annexe III</span></h4>
+            <p>Si Syntheo est utilisé pour des décisions RH (recrutement, évaluation), des contextes médicaux, judiciaires ou scolaires, la classification passe en risque élevé. Obligations : documentation technique complète, supervision humaine obligatoire, enregistrement dans la base UE. À exclure des CGU V1 ou à traiter séparément.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Obligations art. 50 — transparence (risque limité)</div>
+        <div class="status-row">
+          <div class="dot dot-g"></div>
+          <div><h4>Mention "généré par IA" <span class="badge b-green">Implémenté — disclaimer</span></h4>
+          <p>Chaque transcription et compte rendu affiche un bandeau disclaimer avec : nature IA du document, nom et version du modèle (WhisperX v3, modèle vLLM), date de génération. Ces métadonnées sont également persistées en BDD via le model_run_id MLflow.</p></div>
+        </div>
+        <div class="status-row">
+          <div class="dot dot-g"></div>
+          <div><h4>Information initiale de l'utilisateur <span class="badge b-green">Onboarding</span></h4>
+          <p>À la première connexion, l'utilisateur est informé que Syntheo est un système IA susceptible d'erreurs et de biais. Cette information est tracée (timestamp d'acceptation).</p></div>
+        </div>
+        <div class="status-row">
+          <div class="dot dot-a"></div>
+          <div><h4>Note de classification documentée <span class="badge b-amber">À rédiger</span></h4>
+          <p>Rédiger et archiver un document d'une page justifiant la classification "risque limité" : périmètre d'usage, absence de décision automatisée, absence de biométrie persistée, exclusion des cas d'usage à risque élevé. Cosigné par le DPD.</p></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Pratiques interdites — vérification (art. 5)</div>
+        <div class="status-row">
+          <div class="dot dot-g"></div>
+          <div><h4>Aucun scoring ou notation sociale <span class="badge b-green">Confirmé</span></h4>
+          <p>Syntheo ne produit pas de score, note, ou classement de personnes basé sur les transcriptions. Interdit par art. 5.1.c.</p></div>
+        </div>
+        <div class="status-row">
+          <div class="dot dot-g"></div>
+          <div><h4>Pas de profilage émotionnel <span class="badge b-green">Confirmé</span></h4>
+          <p>Aucune analyse du ton, de l'émotion ou de l'état psychologique via l'audio. Interdit par art. 5.1.f (inférence d'émotions sur le lieu de travail).</p></div>
+        </div>
+        <div class="status-row">
+          <div class="dot dot-g"></div>
+          <div><h4>Pas d'identification biométrique temps réel <span class="badge b-green">Confirmé</span></h4>
+          <p>La diarisation segmente les tours de parole sans identifier biométriquement les locuteurs. Identification uniquement manuelle par l'utilisateur. Hors du périmètre art. 5.1.h.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECNUM -->
+    <div class="page" id="page-secnum">
+      <div class="page-header">
+        <div class="eyebrow">Conformité</div>
+        <h2>SecNumCloud — positionnement MVP</h2>
+        <p>Référentiel ANSSI v3.2. Le VPS OVH satisfait les critères de souveraineté pour un MVP. La qualification formelle est une étape ultérieure si clients OIV ou administration.</p>
+      </div>
+
+      <div class="card">
+        <table class="risk-table">
+          <thead>
+            <tr><th>Critère SecNumCloud</th><th>Statut MVP</th><th>Niveau</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Immunité lois extraterritoriales (CLOUD Act)</td><td>OVH SAS — droit français</td><td><span class="pill pill-g">Satisfait</span></td></tr>
+            <tr><td>Localisation données en France</td><td>VPS OVH datacenter FR</td><td><span class="pill pill-g">Satisfait</span></td></tr>
+            <tr><td>Capital majoritairement européen</td><td>OVH Group — France</td><td><span class="pill pill-g">Satisfait</span></td></tr>
+            <tr><td>Chiffrement au repos</td><td>LUKS volume + pgcrypto colonnes</td><td><span class="pill pill-a">À implémenter</span></td></tr>
+            <tr><td>Gestion des clés (KMS)</td><td>Vault/Infisical self-hosted</td><td><span class="pill pill-a">À déployer</span></td></tr>
+            <tr><td>MFA administrateurs</td><td>SSH clé + MFA à configurer</td><td><span class="pill pill-a">Partiel</span></td></tr>
+            <tr><td>Logs non altérables (WORM)</td><td>Loki + politique append-only</td><td><span class="pill pill-a">À configurer</span></td></tr>
+            <tr><td>PCA/PRA documenté</td><td>À rédiger</td><td><span class="pill pill-a">À faire</span></td></tr>
+            <tr><td>Audit/pentest tiers</td><td>Prévu avant V1 publique</td><td><span class="pill pill-a">Planifié</span></td></tr>
+            <tr><td>Qualification ANSSI formelle</td><td>Non requise pour MVP B2B standard</td><td><span class="pill pill-a">Étape suivante</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="note note-warn">
+        <strong>Pour les clients publics ou OIV :</strong> la qualification SecNumCloud formelle nécessite un audit par un PASSI missionné par l'ANSSI, un contrat d'hébergement dédié (pas mutualisé), et un processus de 12 à 18 mois. À initier si ce segment devient stratégique. Le MVP actuel est "SecNumCloud-compatible" mais pas "qualifié SecNumCloud".
+      </div>
+    </div>
+
+    <!-- UX CONFORMITE -->
+    <div class="page" id="page-ux">
+      <div class="page-header">
+        <div class="eyebrow">Implémentation</div>
+        <h2>UX conformité — composants à intégrer</h2>
+        <p>Trois moments clés dans le parcours utilisateur où la conformité devient visible et prouvable.</p>
+      </div>
+
+      <p class="sec-title">1. Dialog de consentement — avant tout enregistrement</p>
+      <div class="mockup-frame">
+        <div class="mockup-window">
+          <div class="mockup-titlebar">
+            <div class="mockup-dot" style="background:#FF5F57"></div>
+            <div class="mockup-dot" style="background:#FFBD2E"></div>
+            <div class="mockup-dot" style="background:#28CA41"></div>
+            <span style="font-size:11px;color:var(--text-3);margin-left:8px">Syntheo — Nouvelle session</span>
+          </div>
+          <div class="mockup-content" style="background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;min-height:320px">
+            <div class="dialog-modal">
+              <div style="width:36px;height:36px;border-radius:50%;background:var(--amber-bg);display:flex;align-items:center;justify-content:center;margin-bottom:12px;font-size:16px">🛡</div>
+              <h3>Avant de démarrer l'enregistrement</h3>
+              <p>Syntheo va transcrire l'audio de votre session. L'audio n'est <strong>jamais conservé</strong>. Seule la transcription textuelle est sauvegardée, accessible uniquement par vous.</p>
+              <div class="check-item">
+                <input type="checkbox" id="c1">
+                <label for="c1">J'ai informé l'ensemble des participants que cette session sera enregistrée et transcrite par un système d'intelligence artificielle, conformément au RGPD.</label>
+              </div>
+              <div class="check-item">
+                <input type="checkbox" id="c2">
+                <label for="c2">Je reconnais être seul responsable du respect des obligations légales liées à cet enregistrement envers les tiers concernés.</label>
+              </div>
+              <div class="btn-row">
+                <button class="btn btn-ghost">Annuler</button>
+                <button class="btn btn-primary">Démarrer la session</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="note" style="margin-top:10px"><strong>Ce qui est loggé :</strong> user_id · timestamp ISO · version_cgu · hash des deux cases cochées · user_agent · ip_address. Ces logs sont append-only (Loki) et constituent la preuve de consentement opposable.</div>
+
+      <p class="sec-title">2. Disclaimer transcription — affiché en permanence</p>
+      <div class="card">
+        <div style="background:var(--surface-2);border:0.5px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <span style="font-size:13px;font-weight:600">Transcription</span>
+            <div style="display:flex;gap:6px">
+              <span class="badge b-gray">WhisperX large-v3</span>
+              <span class="badge b-gray">14 juin 2025 · 42 min</span>
+            </div>
+          </div>
+          <div style="font-size:12px;color:var(--text-2);line-height:1.7;border-top:0.5px solid var(--border);padding-top:10px">
+            <span style="color:var(--text-3)">[Speaker 1 — 09:02]</span> Bonjour à tous, on commence la réunion de cadrage…<br>
+            <span style="color:var(--text-3)">[Speaker 2 — 09:03]</span> Parfait. Je voulais revenir sur les points de la semaine dernière…
+          </div>
+          <div class="disclaimer">
+            <span class="disclaimer-icon">🤖</span>
+            <p><strong>Transcription générée par IA</strong> (WhisperX large-v3 · exécution #a3f8b2). Susceptible d'erreurs, d'omissions ou d'imprécisions — à vérifier avant tout usage officiel ou contractuel.</p>
+          </div>
+        </div>
+      </div>
+
+      <p class="sec-title">3. Disclaimer compte rendu — IA Act art. 50</p>
+      <div class="card">
+        <div style="background:var(--surface-2);border:0.5px solid var(--border);border-radius:var(--radius);padding:14px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <span style="font-size:13px;font-weight:600">Compte rendu</span>
+            <div style="display:flex;gap:6px">
+              <span class="badge b-purple">Mistral 7B Instruct v0.3</span>
+              <span class="badge b-gray">Généré le 14 juin 2025 à 10:47</span>
+            </div>
+          </div>
+          <div style="font-size:12px;color:var(--text-2);line-height:1.7;border-top:0.5px solid var(--border);padding-top:10px">
+            <strong style="font-size:12px">Points abordés</strong><br>
+            Budget Q3 : validation du prévisionnel à 240 k€…<br>
+            Planning de livraison : jalon principal déplacé au 15 juillet…
+          </div>
+          <div class="disclaimer">
+            <span class="disclaimer-icon">⚖</span>
+            <p><strong>Document généré par intelligence artificielle</strong> (Mistral 7B · run #7c2e91). Le contenu peut être incomplet, inexact ou biaisé. Ce document ne remplace pas les notes officielles de réunion et ne doit pas être utilisé comme seule source de décision.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECURITE -->
+    <div class="page" id="page-security">
+      <div class="page-header">
+        <div class="eyebrow">Implémentation</div>
+        <h2>Sécurité technique</h2>
+        <p>Chiffrement, gestion des secrets, isolation réseau et durcissement du VPS.</p>
+      </div>
+
+      <p class="sec-title">Chiffrement en profondeur</p>
+      <div class="card">
+        <div class="status-row">
+          <div class="dot dot-a"></div>
+          <div>
+            <h4>Volume Docker PostgreSQL — LUKS <span class="badge b-amber">À implémenter</span></h4>
+            <p>Le volume Docker qui héberge les données PostgreSQL doit être chiffré au niveau disque avec LUKS (Linux Unified Key Setup). Protège les données physiques si le disque du VPS est accédé directement.</p>
+            <div class="code-block">
+<span class="cm"># Création du volume LUKS pour PostgreSQL</span>
+cryptsetup luksFormat /dev/sdb
+cryptsetup luksOpen /dev/sdb pg_encrypted
+mkfs.ext4 /dev/mapper/pg_encrypted
+<span class="cm"># Montage automatique via /etc/crypttab</span>
+            </div>
+          </div>
+        </div>
+        <div class="status-row">
+          <div class="dot dot-a"></div>
+          <div>
+            <h4>Chiffrement colonnes — pgcrypto <span class="badge b-amber">À implémenter</span></h4>
+            <p>Les colonnes content (transcription et compte rendu) sont chiffrées avec pgcrypto. La clé n'est jamais stockée dans la BDD — elle est injectée depuis Vault/Infisical au moment de la requête.</p>
+            <div class="code-block">
+<span class="cm">-- Chiffrement à l'écriture</span>
+INSERT INTO transcriptions (session_id, content_encrypted)
+VALUES ($1, pgp_sym_encrypt($2, <span class="cs">current_setting('app.enc_key')</span>));
+
+<span class="cm">-- Déchiffrement à la lecture (avec RLS actif)</span>
+SELECT pgp_sym_decrypt(content_encrypted, <span class="cs">current_setting('app.enc_key')</span>)
+FROM transcriptions WHERE session_id = $1;
+            </div>
+          </div>
+        </div>
+        <div class="status-row">
+          <div class="dot dot-a"></div>
+          <div>
+            <h4>Gestion des clés — Vault (HashiCorp) <span class="badge b-amber">Critique</span></h4>
+            <p>La clé de chiffrement ne doit jamais vivre dans les variables d'environnement du même container que la BDD. Vault (ou Infisical) tourne dans un container dédié sur un réseau isolé. Les secrets sont injectés dynamiquement avec une durée de vie courte (lease TTL).</p>
+            <div class="code-block">
+<span class="cm"># Architecture Vault dans le Swarm</span>
+<span class="ck">vault</span>:
+  image: hashicorp/vault:latest
+  networks: [vault_net]  <span class="cm"># réseau dédié, pas exposé</span>
+  volumes:
+    - vault_data:/vault/data  <span class="cm"># volume LUKS recommandé</span>
+  environment:
+    VAULT_ADDR: <span class="cv">'http://127.0.0.1:8200'</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p class="sec-title">Isolation réseau et durcissement VPS</p>
+      <div class="card">
+        <div class="status-row">
+          <div class="dot dot-a"></div>
+          <div>
+            <h4>SSH par clé uniquement — root désactivé <span class="badge b-amber">Configuration requise</span></h4>
+            <div class="code-block">
+<span class="cm"># /etc/ssh/sshd_config</span>
+PasswordAuthentication <span class="cv">no</span>
+PermitRootLogin <span class="cv">no</span>
+PubkeyAuthentication <span class="cv">yes</span>
+AllowUsers <span class="cs">deploy_user</span>
+Port <span class="cv">2222</span>  <span class="cm"># port non-standard</span>
+            </div>
+          </div>
+        </div>
+        <div class="status-row">
+          <div class="dot dot-a"></div>
+          <div>
+            <h4>MFA pour accès admin <span class="badge b-amber">À configurer</span></h4>
+            <p>Configurer Google Authenticator PAM ou TOTP pour tout accès SSH admin. La clé SSH seule n'est pas suffisante pour une cible SecNumCloud. En cas de compromission de la clé, le MFA est le dernier rempart.</p>
+          </div>
+        </div>
+        <div class="status-row">
+          <div class="dot dot-g"></div>
+          <div>
+            <h4>Fail2ban — protection brute force <span class="badge b-green">À déployer</span></h4>
+            <p>Fail2ban surveille les tentatives de connexion SSH et les requêtes HTTP suspectes (Traefik logs). Bannissement automatique après 5 échecs en 10 minutes. Intégration avec les alertes Grafana.</p>
+          </div>
+        </div>
+        <div class="status-row">
+          <div class="dot dot-a"></div>
+          <div>
+            <h4>Scan d'images Docker — Trivy <span class="badge b-amber">CI/CD pipeline</span></h4>
+            <p>Trivy analyse les images Docker avant déploiement. Intégration dans le pipeline de rolling release. Blocage du déploiement si vulnérabilité critique (CVSSv3 ≥ 9.0) détectée.</p>
+            <div class="code-block">
+<span class="cm"># Dans le pipeline de déploiement</span>
+trivy image --exit-code 1 --severity CRITICAL syntheo/backend:latest
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- OBSERVABILITE -->
+    <div class="page" id="page-ops">
+      <div class="page-header">
+        <div class="eyebrow">Implémentation</div>
+        <h2>Observabilité — OTel + Grafana + MLflow</h2>
+        <p>Stack complète : traces distribuées, métriques, logs applicatifs et traçabilité des inférences IA.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Architecture observabilité</div>
+        <div class="code-block">
+<span class="cm"># Stack OpenTelemetry dans Docker Swarm</span>
+services:
+  <span class="ck">otel-collector</span>:         <span class="cm"># point d'entrée unique OTel</span>
+    image: otel/opentelemetry-collector-contrib
+    <span class="cm"># reçoit traces, métriques, logs depuis Next.js, WhisperX, vLLM</span>
+
+  <span class="ck">prometheus</span>:             <span class="cm"># métriques système et applicatives</span>
+  <span class="ck">loki</span>:                   <span class="cm"># logs applicatifs (append-only)</span>
+  <span class="ck">tempo</span>:                  <span class="cm"># traces distribuées</span>
+  <span class="ck">grafana</span>:                <span class="cm"># dashboards (sources: Prometheus, Loki, Tempo)</span>
+  <span class="ck">mlflow</span>:                 <span class="cm"># traçabilité inférences IA (art. 9 IA Act)</span>
+    volumes:
+      - mlflow_data:/mlflow  <span class="cm"># persistance des runs</span>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="card">
+          <div class="card-title">MLflow — traçabilité IA Act</div>
+          <div class="status-row" style="padding-top:0">
+            <div class="dot dot-g"></div>
+            <div>
+              <h4>model_run_id lié à chaque document</h4>
+              <p>Chaque inférence WhisperX et vLLM crée un run MLflow. L'ID est stocké dans la BDD (champ whisper_run_id et vllm_run_id). Traçabilité complète : quelle version de quel modèle a produit quel document, quand.</p>
+            </div>
+          </div>
+          <div class="status-row">
+            <div class="dot dot-g"></div>
+            <div>
+              <h4>Métriques loggées par run</h4>
+              <p>WhisperX : durée_audio, durée_inférence, nombre_speakers, langue_détectée, version_modèle. vLLM : prompt_tokens, completion_tokens, latency_ms, temperature, version_modèle.</p>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Loki — logs RGPD (append-only)</div>
+          <div class="status-row" style="padding-top:0">
+            <div class="dot dot-a"></div>
+            <div>
+              <h4>Politique append-only obligatoire</h4>
+              <p>Configurer Loki avec retention policy et interdiction de suppression des logs d'accès aux données. Ces logs sont la preuve d'auditabilité RGPD. Conservation : 12 mois minimum.</p>
+            </div>
+          </div>
+          <div class="status-row">
+            <div class="dot dot-a"></div>
+            <div>
+              <h4>Logs d'accès applicatifs séparés</h4>
+              <p>Distinguer les logs techniques (erreurs, performance) des logs d'accès aux données (qui a accédé à quelle transcription, quand). Ces derniers sont sensibles et à accès restreint.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Alertes Grafana — incidents réglementaires</div>
+        <div class="status-row" style="padding-top:0">
+          <div class="dot dot-a"></div>
+          <div><h4>Alerte : accès croisé inter-utilisateurs détecté</h4>
+          <p>Si une requête SQL contourne le RLS ou génère une erreur d'isolation, une alerte critique est envoyée immédiatement. C'est l'indicateur de violation de données le plus critique pour Syntheo.</p></div>
+        </div>
+        <div class="status-row">
+          <div class="dot dot-a"></div>
+          <div><h4>Alerte : volume de suppressions anormal</h4>
+          <p>Pic de suppression de données → possible incident de sécurité (suppression malveillante) ou demande de droit à l'effacement en masse à investiguer.</p></div>
+        </div>
+        <div class="status-row">
+          <div class="dot dot-a"></div>
+          <div><h4>Alerte : échec d'authentification répété</h4>
+          <p>Plus de 5 échecs de connexion en 5 minutes sur un même compte → tentative de brute force → blocage automatique Fail2ban + notification.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AIPD -->
+    <div class="page" id="page-aipd">
+      <div class="page-header">
+        <div class="eyebrow">Implémentation</div>
+        <h2>AIPD — Analyse d'Impact sur la Protection des Données</h2>
+        <p>Obligatoire avant production (art. 35 RGPD). Outil gratuit : pia.cnil.fr — à réaliser avec le DPD, cosignature requise.</p>
+      </div>
+
+      <div class="note note-red" style="margin-bottom:20px">
+        <strong>Attention :</strong> la CNIL peut prononcer des amendes jusqu'à 10 M€ ou 2 % du CA mondial en cas de mise en production sans AIPD obligatoire. Le traitement de données biométriques (voix) figure explicitement sur la liste des traitements requérant systématiquement une AIPD.
+      </div>
+
+      <div class="card">
+        <div class="card-title">Checklist AIPD — sections à compléter</div>
+        <ul class="checklist">
+          <li>
+            <span class="check-icon">◻</span>
+            <div><strong>Description du traitement</strong> — Finalité, catégories de données (voix/transcription), catégories de personnes concernées (utilisateurs + participants tiers), destinataires, sous-traitants (OVH), durées de conservation.</div>
+          </li>
+          <li>
+            <span class="check-icon">◻</span>
+            <div><strong>Évaluation de la nécessité et proportionnalité</strong> — Justifier que le traitement est limité au strict nécessaire. Argument fort : audio non conservé, pas d'enrollment biométrique, accès strictement limité à l'utilisateur propriétaire.</div>
+          </li>
+          <li>
+            <span class="check-icon">◻</span>
+            <div><strong>Identification des risques</strong> — Accès non autorisé aux transcriptions, violation de confidentialité des réunions, identification indirecte des participants via les transcriptions, non-consentement des participants tiers.</div>
+          </li>
+          <li>
+            <span class="check-icon">◻</span>
+            <div><strong>Mesures techniques documentées</strong> — RLS PostgreSQL, chiffrement LUKS + pgcrypto, Vault KMS, TLS 1.3, Docker réseau interne isolé, audit logs Loki append-only, MFA admin, Fail2ban, Trivy scanning.</div>
+          </li>
+          <li>
+            <span class="check-icon">◻</span>
+            <div><strong>Mesures organisationnelles documentées</strong> — Dialog de consentement + CGU, procédure de notification de violation (72h CNIL), droits des personnes (export/suppression/rectification), formation de l'équipe.</div>
+          </li>
+          <li>
+            <span class="check-icon">◻</span>
+            <div><strong>Évaluation du risque résiduel</strong> — Après mesures : risque résiduel sur le consentement des tiers (modéré — mitigé par la dialog + CGU). Conclusion attendue : risque résiduel acceptable, pas de consultation CNIL préalable requise.</div>
+          </li>
+          <li>
+            <span class="check-icon">◻</span>
+            <div><strong>Validation DPD</strong> — L'AIPD doit être soumise au DPD pour avis avant toute mise en production. Si le DPD émet des réserves, les mesures complémentaires doivent être documentées et implémentées.</div>
+          </li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Procédure de notification de violation — document à rédiger</div>
+        <div class="status-row" style="padding-top:0">
+          <div class="dot dot-a"></div>
+          <div>
+            <h4>Délai : 72h pour notifier la CNIL (art. 33)</h4>
+            <p>Dès la découverte d'une violation potentielle, le chronomètre tourne. Documenter : qui est responsable de la notification, quelles informations rassembler (nature de la violation, données concernées, nombre de personnes, mesures prises), via quel canal (notifications.cnil.fr).</p>
+          </div>
+        </div>
+        <div class="status-row">
+          <div class="dot dot-a"></div>
+          <div>
+            <h4>Notification aux utilisateurs (art. 34)</h4>
+            <p>Si la violation est susceptible d'engendrer un risque élevé pour les personnes : notification directe aux utilisateurs concernés. Critère : données sensibles exposées (transcriptions, comptes rendus). Moyen : email depuis l'adresse de contact DPD.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PLAN -->
+    <div class="page" id="page-plan">
+      <div class="page-header">
+        <div class="eyebrow">Planning</div>
+        <h2>Plan d'action priorisé</h2>
+        <p>8 actions avant production publique. Critiques (rouge) = bloquants. Hautes (orange) = V1. Normales (vert) = amélioration continue.</p>
+      </div>
+
+      <div class="card">
+        <div class="timeline">
+
+          <div class="tl-item">
+            <div class="tl-left"><div class="tl-num critical">1</div><div class="tl-line"></div></div>
+            <div class="tl-body">
+              <h4>AIPD complète — cosignée DPD <span class="badge b-red">Bloquant avant production</span></h4>
+              <p>Réaliser l'AIPD via l'outil PIA CNIL (pia.cnil.fr, gratuit). Durée estimée : 2 à 4 jours avec le DPD. Soumettre pour validation avant toute ouverture d'accès public. Sans AIPD validée, la mise en production est illégale pour ce type de traitement.</p>
+              <div class="sub"><strong>Livrable :</strong> rapport AIPD exporté depuis l'outil PIA, signé par le RT et le DPD, archivé.</div>
+            </div>
+          </div>
+
+          <div class="tl-item">
+            <div class="tl-left"><div class="tl-num critical">2</div><div class="tl-line"></div></div>
+            <div class="tl-body">
+              <h4>Vault / Infisical — gestion des clés <span class="badge b-red">Critique — sécurité</span></h4>
+              <p>Déployer HashiCorp Vault (ou Infisical) dans un container dédié sur réseau isolé. Migrer toutes les clés de chiffrement et secrets applicatifs hors des variables d'environnement. Configurer un lease TTL court (1h) pour les secrets injectés aux services.</p>
+              <div class="sub"><strong>Livrable :</strong> zéro secret dans les docker-compose env ou .env files. Tous les secrets via Vault dynamic secrets.</div>
+            </div>
+          </div>
+
+          <div class="tl-item">
+            <div class="tl-left"><div class="tl-num critical">3</div><div class="tl-line"></div></div>
+            <div class="tl-body">
+              <h4>Chiffrement LUKS volume PostgreSQL <span class="badge b-red">Critique — données au repos</span></h4>
+              <p>Chiffrer le volume Docker hébergeant PostgreSQL avec LUKS avant toute donnée utilisateur réelle. Complémentaire au chiffrement colonne pgcrypto — les deux niveaux sont requis pour une couverture complète.</p>
+              <div class="sub"><strong>Livrable :</strong> volume LUKS monté, script de déchiffrement au démarrage documenté, clé LUKS stockée dans Vault.</div>
+            </div>
+          </div>
+
+          <div class="tl-item">
+            <div class="tl-left"><div class="tl-num warn">4</div><div class="tl-line"></div></div>
+            <div class="tl-body">
+              <h4>CGU et politique de confidentialité <span class="badge b-amber">Haute priorité</span></h4>
+              <p>Rédiger et faire valider par le DPD les deux documents. Points critiques des CGU : obligation de l'utilisateur d'informer les tiers, responsabilités en cas de non-respect, exclusion des cas d'usage à risque élevé (RH, médical, judiciaire). La politique de confidentialité doit couvrir les 3 traitements du registre.</p>
+              <div class="sub"><strong>Livrable :</strong> CGU v1.0 + politique de confidentialité v1.0, validées DPD, datées et versionnées. Consentement tracé à l'inscription.</div>
+            </div>
+          </div>
+
+          <div class="tl-item">
+            <div class="tl-left"><div class="tl-num warn">5</div><div class="tl-line"></div></div>
+            <div class="tl-body">
+              <h4>Interface droits utilisateurs <span class="badge b-amber">V1 obligatoire</span></h4>
+              <p>Trois fonctions dans les paramètres du compte : (1) "Exporter mes données" → JSON avec toutes transcriptions, CRs, métadonnées de sessions. (2) "Supprimer mon compte" → cascade SQL atomique sur toutes les tables. (3) édition des transcriptions (correction speakers, texte). Délai de traitement tracé ≤ 30 jours.</p>
+            </div>
+          </div>
+
+          <div class="tl-item">
+            <div class="tl-left"><div class="tl-num warn">6</div><div class="tl-line"></div></div>
+            <div class="tl-body">
+              <h4>MFA admin VPS + durcissement SSH <span class="badge b-amber">Sécurité opérationnelle</span></h4>
+              <p>Configurer Google Authenticator PAM ou YubiKey pour accès SSH admin. Désactiver le login root. Passer SSH sur port non-standard. Configurer Fail2ban sur SSH et sur Traefik (endpoints applicatifs). Documenter la procédure de récupération d'accès si perte du second facteur.</p>
+            </div>
+          </div>
+
+          <div class="tl-item">
+            <div class="tl-left"><div class="tl-num warn">7</div><div class="tl-line"></div></div>
+            <div class="tl-body">
+              <h4>Loki append-only + politique de rétention <span class="badge b-amber">Auditabilité RGPD</span></h4>
+              <p>Configurer Loki avec compaction et retention rule (12 mois minimum pour les logs d'accès aux données). Activer la politique append-only pour les streams de logs réglementaires. Séparer les logs techniques (7 jours) des logs d'accès aux données utilisateur (12 mois).</p>
+            </div>
+          </div>
+
+          <div class="tl-item">
+            <div class="tl-left"><div class="tl-num">8</div><div class="tl-line"></div></div>
+            <div class="tl-body">
+              <h4>Pentest applicatif ciblé <span class="badge b-green">Avant V1 publique</span></h4>
+              <p>Mandater un prestataire pour un test d'intrusion applicatif ciblé sur : (1) l'isolation multi-tenant — tentative d'accès aux données d'un autre utilisateur. (2) l'exposition des endpoints WhisperX et vLLM — vérifier qu'ils sont inaccessibles depuis l'extérieur. (3) l'injection SQL et les mécanismes d'authentification JWT. Documenter les résultats dans l'AIPD comme mesure testée.</p>
+              <div class="sub"><strong>Budget estimé :</strong> 3 000 à 8 000 € pour un pentest applicatif ciblé (non-PASSI). PASSI requis uniquement pour qualification SecNumCloud formelle.</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- RISQUES RESIDUELS -->
+    <div class="page" id="page-residuel">
+      <div class="page-header">
+        <div class="eyebrow">Planning</div>
+        <h2>Risques résiduels — matrice finale</h2>
+        <p>État post-implémentation des 8 actions du plan. Ce tableau est la synthèse à présenter au DPD.</p>
+      </div>
+
+      <div class="card">
+        <table class="risk-table">
+          <thead>
+            <tr>
+              <th style="width:35%">Risque</th>
+              <th style="width:15%">Avant MVP</th>
+              <th style="width:20%">Mesure mise en place</th>
+              <th style="width:15%">Résiduel</th>
+              <th style="width:15%">Statut</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Conservation audio biométrique</td>
+              <td><span class="pill pill-r">Élevé</span></td>
+              <td>Audio non persisté</td>
+              <td><span class="pill pill-g">Nul</span></td>
+              <td><span class="badge b-green">Éliminé</span></td>
+            </tr>
+            <tr>
+              <td>Base de profils biométriques</td>
+              <td><span class="pill pill-r">Élevé</span></td>
+              <td>Pas d'enrollment</td>
+              <td><span class="pill pill-g">Nul</span></td>
+              <td><span class="badge b-green">Éliminé</span></td>
+            </tr>
+            <tr>
+              <td>Transfert données hors UE</td>
+              <td><span class="pill pill-r">Élevé</span></td>
+              <td>VPS OVH France</td>
+              <td><span class="pill pill-g">Nul</span></td>
+              <td><span class="badge b-green">Éliminé</span></td>
+            </tr>
+            <tr>
+              <td>Accès croisé inter-utilisateurs</td>
+              <td><span class="pill pill-r">Élevé</span></td>
+              <td>RLS + chiffrement colonnes</td>
+              <td><span class="pill pill-g">Très faible</span></td>
+              <td><span class="badge b-green">Mitigé</span></td>
+            </tr>
+            <tr>
+              <td>Opacité origine IA documents</td>
+              <td><span class="pill pill-a">Modéré</span></td>
+              <td>Disclaimer + MLflow</td>
+              <td><span class="pill pill-g">Nul</span></td>
+              <td><span class="badge b-green">Éliminé</span></td>
+            </tr>
+            <tr>
+              <td>Absence consentement tiers enregistrés</td>
+              <td><span class="pill pill-r">Élevé</span></td>
+              <td>Dialog + CGU + log</td>
+              <td><span class="pill pill-a">Modéré résiduel</span></td>
+              <td><span class="badge b-amber">Mitigé partiellement</span></td>
+            </tr>
+            <tr>
+              <td>Compromission clés de chiffrement</td>
+              <td><span class="pill pill-r">Élevé</span></td>
+              <td>Vault KMS + LUKS</td>
+              <td><span class="pill pill-g">Faible</span></td>
+              <td><span class="badge b-green">Mitigé</span></td>
+            </tr>
+            <tr>
+              <td>Accès non autorisé admin VPS</td>
+              <td><span class="pill pill-a">Modéré</span></td>
+              <td>SSH clé + MFA + Fail2ban</td>
+              <td><span class="pill pill-g">Très faible</span></td>
+              <td><span class="badge b-green">Mitigé</span></td>
+            </tr>
+            <tr>
+              <td>Absence traçabilité inférences IA</td>
+              <td><span class="pill pill-a">Modéré</span></td>
+              <td>MLflow + model_run_id BDD</td>
+              <td><span class="pill pill-g">Nul</span></td>
+              <td><span class="badge b-green">Éliminé</span></td>
+            </tr>
+            <tr>
+              <td>Absence AIPD</td>
+              <td><span class="pill pill-r">Critique</span></td>
+              <td>AIPD à réaliser (action 1)</td>
+              <td><span class="pill pill-r">Critique si non fait</span></td>
+              <td><span class="badge b-red">Bloquant</span></td>
+            </tr>
+            <tr>
+              <td>Vulnérabilités images Docker</td>
+              <td><span class="pill pill-a">Modéré</span></td>
+              <td>Trivy dans pipeline CI/CD</td>
+              <td><span class="pill pill-g">Faible</span></td>
+              <td><span class="badge b-green">Mitigé</span></td>
+            </tr>
+            <tr>
+              <td>Pratiques IA interdites (art. 5)</td>
+              <td><span class="pill pill-a">À vérifier</span></td>
+              <td>Exclusion par design + CGU</td>
+              <td><span class="pill pill-g">Nul</span></td>
+              <td><span class="badge b-green">Éliminé</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="note note-warn">
+        <strong>Risque résiduel non éliminable :</strong> le consentement des participants tiers à un enregistrement ne peut jamais être garanti à 100 % par un système technique. La dialog + les CGU constituent le mécanisme raisonnable requis par la CNIL. Ce risque résiduel modéré est inhérent à tout outil de transcription et est reconnu comme tel dans les lignes directrices CNIL sur les outils IA de réunion.
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+  function show(id) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('page-' + id).classList.add('active');
+    event.currentTarget.classList.add('active');
+    document.querySelector('.main').scrollTop = 0;
+  }
+</script>
+
+</body>
+</html>

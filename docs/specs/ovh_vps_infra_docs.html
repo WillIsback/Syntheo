@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI API Docs · willisback.fr</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       #0f172a;
+  --surface:  #1e293b;
+  --border:   #334155;
+  --text:     #e2e8f0;
+  --muted:    #64748b;
+  --accent:   #6366f1;
+  --accent2:  #8b5cf6;
+  --green:    #22c55e;
+  --yellow:   #eab308;
+  --red:      #ef4444;
+  --cyan:     #22d3ee;
+  --sidebar-w: 260px;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  display: flex;
+  min-height: 100vh;
+}
+
+/* ── Sidebar ─────────────────────────────────────────────── */
+nav {
+  width: var(--sidebar-w);
+  min-width: var(--sidebar-w);
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: 28px 0;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.nav-logo {
+  padding: 0 20px 24px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+.nav-logo h2 { font-size: 15px; font-weight: 700; color: #f8fafc; }
+.nav-logo p  { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+.nav-section {
+  padding: 6px 20px 2px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--muted);
+  margin-top: 12px;
+}
+
+nav a {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 20px;
+  font-size: 13px;
+  color: #94a3b8;
+  text-decoration: none;
+  border-left: 2px solid transparent;
+  transition: color .15s, border-color .15s, background .15s;
+}
+nav a:hover        { color: var(--text); background: #ffffff08; }
+nav a.active       { color: var(--accent); border-left-color: var(--accent); background: #6366f108; }
+nav a .dot {
+  width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+}
+
+/* ── Main ────────────────────────────────────────────────── */
+main {
+  flex: 1;
+  padding: 48px 56px;
+  max-width: 860px;
+}
+
+/* ── Hero ────────────────────────────────────────────────── */
+.hero { margin-bottom: 48px; }
+.hero h1 { font-size: 28px; font-weight: 800; color: #f8fafc; }
+.hero p  { margin-top: 8px; color: #94a3b8; font-size: 15px; max-width: 560px; }
+
+.base-url-box {
+  margin-top: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: "JetBrains Mono", "Fira Mono", monospace;
+  font-size: 13px;
+}
+.base-url-box .label {
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  min-width: 60px;
+}
+.base-url-box code { color: var(--cyan); flex: 1; }
+
+/* ── Section ─────────────────────────────────────────────── */
+.section {
+  margin-bottom: 64px;
+  scroll-margin-top: 24px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+.section-icon {
+  width: 36px; height: 36px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+.section-header h2 { font-size: 19px; font-weight: 700; color: #f8fafc; }
+.section-header .endpoint {
+  margin-left: auto;
+  font-family: "JetBrains Mono", "Fira Mono", monospace;
+  font-size: 11px;
+  color: var(--muted);
+  background: var(--bg);
+  padding: 3px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+}
+
+.section p { color: #94a3b8; font-size: 14px; margin-bottom: 16px; }
+
+/* ── Auth callout ────────────────────────────────────────── */
+.callout {
+  display: flex;
+  gap: 12px;
+  background: #1e1e3a;
+  border: 1px solid #4338ca44;
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+  font-size: 13px;
+}
+.callout-icon { font-size: 16px; flex-shrink: 0; }
+.callout p { color: #a5b4fc; margin: 0; }
+.callout code { background: #312e81; padding: 1px 6px; border-radius: 3px; color: #c7d2fe; }
+
+/* ── Lang toggle ─────────────────────────────────────────── */
+.lang-toggle {
+  display: flex;
+  gap: 2px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 3px;
+  margin-bottom: 12px;
+  width: fit-content;
+}
+.lang-toggle button {
+  padding: 5px 14px;
+  border-radius: 5px;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  background: transparent;
+  color: var(--muted);
+  transition: all .15s;
+}
+.lang-toggle button.active { background: var(--surface); color: var(--text); }
+
+/* ── Code block ──────────────────────────────────────────── */
+.code-wrap { position: relative; margin-bottom: 20px; }
+
+.code-wrap pre {
+  background: #020817;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px;
+  overflow-x: auto;
+  font-family: "JetBrains Mono", "Fira Mono", "Cascadia Code", monospace;
+  font-size: 13px;
+  line-height: 1.7;
+  color: #e2e8f0;
+}
+
+.code-wrap .copy-btn {
+  position: absolute;
+  top: 10px; right: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 4px 10px;
+  border-radius: 5px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all .15s;
+}
+.code-wrap .copy-btn:hover { color: var(--text); border-color: #64748b; }
+.code-wrap .copy-btn.copied { color: var(--green); border-color: var(--green); }
+
+/* Syntax colouring — manual classes */
+.k  { color: #c084fc; }   /* keyword */
+.s  { color: #86efac; }   /* string */
+.n  { color: #7dd3fc; }   /* name/var */
+.c  { color: #475569; font-style: italic; } /* comment */
+.f  { color: #fcd34d; }   /* function */
+.p  { color: var(--text); }               /* punctuation */
+.num{ color: #fb923c; }   /* number */
+
+/* ── Table ───────────────────────────────────────────────── */
+.params-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 13px; }
+.params-table th {
+  text-align: left;
+  padding: 8px 12px;
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  border-bottom: 1px solid var(--border);
+}
+.params-table td { padding: 8px 12px; border-bottom: 1px solid #1e293b; }
+.params-table td:first-child { font-family: monospace; color: var(--cyan); font-size: 12px; }
+.params-table .req { color: var(--red); font-size: 10px; font-weight: 700; }
+.params-table .opt { color: var(--muted); font-size: 10px; }
+
+/* ── Misc ────────────────────────────────────────────────── */
+.tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-right: 6px;
+}
+.tag-post   { background: #14532d; color: #86efac; }
+.tag-get    { background: #1e3a5f; color: #93c5fd; }
+
+.hidden { display: none !important; }
+
+/* Toast */
+#toast {
+  position: fixed; bottom: 24px; right: 24px;
+  background: var(--green); color: #fff;
+  padding: 10px 18px; border-radius: 8px;
+  font-size: 13px; font-weight: 500;
+  opacity: 0; transform: translateY(6px);
+  transition: opacity .2s, transform .2s;
+  pointer-events: none;
+}
+#toast.show { opacity: 1; transform: translateY(0); }
+
+@media (max-width: 768px) {
+  nav { display: none; }
+  main { padding: 24px 20px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── Sidebar ──────────────────────────────────────────── -->
+<nav>
+  <div class="nav-logo">
+    <h2>AI API Docs</h2>
+    <p>api.willisback.fr</p>
+  </div>
+
+  <div class="nav-section">Getting started</div>
+  <a href="#auth"><span class="dot" style="background:#6366f1"></span>Authentication</a>
+  <a href="#quickstart"><span class="dot" style="background:#6366f1"></span>Quickstart</a>
+
+  <div class="nav-section">Services</div>
+  <a href="#llm"><span class="dot" style="background:#f59e0b"></span>LLM · Qwen3-35B</a>
+  <a href="#embedding"><span class="dot" style="background:#22d3ee"></span>Embedding · BGE-M3</a>
+  <a href="#reranking"><span class="dot" style="background:#a78bfa"></span>Reranking</a>
+  <a href="#ocr"><span class="dot" style="background:#f472b6"></span>OCR · LightOn</a>
+  <a href="#whisper"><span class="dot" style="background:#34d399"></span>WhisperX</a>
+
+  <div class="nav-section">Reference</div>
+  <a href="#errors"><span class="dot" style="background:#ef4444"></span>Error codes</a>
+  <a href="#ratelimits"><span class="dot" style="background:#f97316"></span>Rate limits</a>
+</nav>
+
+<!-- ── Main ─────────────────────────────────────────────── -->
+<main>
+
+<!-- Hero -->
+<div class="hero">
+  <h1>AI API Reference</h1>
+  <p>All DGX Spark AI services exposed through a single authenticated gateway. One API key, five services.</p>
+  <div class="base-url-box">
+    <span class="label">Base URL</span>
+    <code>https://api.willisback.fr/{service}/v1</code>
+  </div>
+  <div class="base-url-box" style="margin-top:8px">
+    <span class="label">Keys</span>
+    <code>https://apikeys.willisback.fr</code>
+    &nbsp;<span style="color:var(--muted);font-size:12px">→ create &amp; manage your keys</span>
+  </div>
+</div>
+
+<!-- Global lang toggle -->
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:32px;">
+  <span style="font-size:13px;color:var(--muted)">Language:</span>
+  <div class="lang-toggle" id="global-toggle">
+    <button class="active" onclick="setLang('py')">Python</button>
+    <button onclick="setLang('js')">JavaScript</button>
+  </div>
+</div>
+
+<!-- ── Authentication ──────────────────────────────────── -->
+<section class="section" id="auth">
+  <div class="section-header">
+    <div class="section-icon" style="background:#312e81">🔑</div>
+    <div><h2>Authentication</h2></div>
+  </div>
+
+  <p>All requests require a <strong>Bearer token</strong> in the <code>Authorization</code> header. Get your key at <a href="https://apikeys.willisback.fr" style="color:var(--accent)">apikeys.willisback.fr</a>.</p>
+
+  <div class="callout">
+    <span class="callout-icon">ℹ️</span>
+    <p>The gateway translates your key to the correct upstream service key automatically — you never need the raw DGX keys.</p>
+  </div>
+
+  <div class="code-wrap">
+    <pre><span class="c"># Every request needs this header</span>
+Authorization: Bearer sk-xxxxxxxxxxxxxxxxxxxx</pre>
+    <button class="copy-btn" onclick="copyBlock(this)">Copy</button>
+  </div>
+</section>
+
+<!-- ── Quickstart ─────────────────────────────────────── -->
+<section class="section" id="quickstart">
+  <div class="section-header">
+    <div class="section-icon" style="background:#1e3a5f">⚡</div>
+    <div><h2>Quickstart</h2></div>
+  </div>
+
+  <p>Install the OpenAI SDK — it works for LLM, embedding, and OCR out of the box.</p>
+
+  <div class="code-wrap lang-py">
+    <pre><span class="c"># pip install openai httpx</span>
+<span class="k">from</span> openai <span class="k">import</span> OpenAI
+
+client <span class="p">=</span> OpenAI(
+    base_url<span class="p">=</span><span class="s">"https://api.willisback.fr/llm/v1"</span>,
+    api_key<span class="p">=</span><span class="s">"sk-your-key-here"</span>,
+<span class="p">)</span>
+
+resp <span class="p">=</span> client.chat.completions.<span class="f">create</span><span class="p">(</span>
+    model<span class="p">=</span><span class="s">"nvidia/Qwen3.6-35B-A3B-NVFP4"</span>,
+    messages<span class="p">=[{</span><span class="s">"role"</span><span class="p">:</span> <span class="s">"user"</span><span class="p">,</span> <span class="s">"content"</span><span class="p">:</span> <span class="s">"Hello!"</span><span class="p">}]</span>,
+    extra_body<span class="p">={</span><span class="s">"chat_template_kwargs"</span><span class="p">: {</span><span class="s">"enable_thinking"</span><span class="p">:</span> <span class="k">False</span><span class="p">}}</span>,
+<span class="p">)</span>
+<span class="f">print</span><span class="p">(</span>resp.choices<span class="p">[</span><span class="num">0</span><span class="p">]</span>.message.content<span class="p">)</span></pre>
+    <button class="copy-btn" onclick="copyBlock(this)">Copy</button>
+  </div>
+
+  <div class="code-wrap lang-js hidden">
+    <pre><span class="c">// npm install openai</span>
+<span class="k">import</span> OpenAI <span class="k">from</span> <span class="s">"openai"</span><span class="p">;</span>
+
+<span class="k">const</span> <span class="n">client</span> <span class="p">=</span> <span class="k">new</span> <span class="f">OpenAI</span><span class="p">({</span>
+  baseURL<span class="p">:</span> <span class="s">"https://api.willisback.fr/llm/v1"</span><span class="p">,</span>
+  apiKey<span class="p">:</span>  <span class="s">"sk-your-key-here"</span><span class="p">,</span>
+<span class="p">});</span>
+
+<span class="k">const</span> <span class="n">resp</span> <span class="p">=</span> <span class="k">await</span> client.chat.completions.<span class="f">create</span><span class="p">({</span>
+  model<span class="p">:</span>    <span class="s">"nvidia/Qwen3.6-35B-A3B-NVFP4"</span><span class="p">,</span>
+  messages<span class="p">: [{</span> role<span class="p">:</span> <span class="s">"user"</span><span class="p">,</span> content<span class="p">:</span> <span class="s">"Hello!"</span> <span class="p">}]</span>
+<span class="p">});</span>
+console.<span class="f">log</span><span class="p">(</span>resp.choices<span class="p">[</span><span class="num">0</span><span class="p">]</span>.message.content<span class="p">);</span></pre>
+    <button class="copy-btn" onclick="copyBlock(this)">Copy</button>
+  </div>
+</section>
+
+<!-- ── LLM ────────────────────────────────────────────── -->
+<section class="section" id="llm">
+  <div class="section-header">
+    <div class="section-icon" style="background:#78350f">🤖</div>
+    <div><h2>LLM · Qwen3-35B</h2></div>
+    <code class="endpoint">/llm/v1</code>
+  </div>
+
+  <p>OpenAI-compatible chat completions via vLLM. Supports streaming, system prompts, and extended thinking mode.</p>
+
+  <table class="params-table">
+    <tr><th>Parameter</th><th>Type</th><th></th><th>Description</th></tr>
+    <tr><td>model</td><td>string</td><td><span class="req">required</span></td><td><code>nvidia/Qwen3.6-35B-A3B-NVFP4</code></td></tr>
+    <tr><td>messages</td><td>array</td><td><span class="req">required</span></td><td>Conversation history</td></tr>
+    <tr><td>stream</td><td>boolean</td><td><span class="opt">optional</span></td><td>Server-sent events streaming</td></tr>
+    <tr><td>max_tokens</td><td>integer</td><td><span class="opt">optional</span></td><td>Max completion tokens</td></tr>
+    <tr><td>temperature</td><td>float</td><td><span class="opt">optional</span></td><td>0 = deterministic, 1 = creative</td></tr>
+    <tr><td>enable_thinking</td><td>boolean</td><td><span class="opt">optional</span></td><td>Chain-of-thought (slower, more accurate)</td></tr>
+  </table>
+
+  <h3 style="font-size:14px;color:#94a3b8;margin-bottom:10px;">Basic chat</h3>
+  <div class="code-wrap lang-py">
+    <pre><span class="k">from</span> openai <span class="k">import</span> OpenAI
+
+llm <span class="p">=</span> OpenAI(
+    base_url<span class="p">=</span><span class="s">"https://api.willisback.fr/llm/v1"</span>,
+    api_key<span class="p">=</span><span class="s">"sk-your-key"</span>,
+<span class="p">)</span>
+
+resp <span class="p">=</span> llm.chat.completions.<span class="f">create</span><span class="p">(</span>
+    model<span class="p">=</span><span class="s">"nvidia/Qwen3.6-35B-A3B-NVFP4"</span>,
+    messages<span class="p">=[</span>
+        <span class="p">{</span><span class="s">"role"</span><span class="p">:</span> <span class="s">"system"</span><span class="p">,</span> <span class="s">"content"</span><span class="p">:</span> <span class="s">"You are a helpful assistant."</span><span class="p">},</span>
+        <span class="p">{</span><span class="s">"role"</span><span class="p">:</span> <span class="s">"user"</span><span class="p">,</span>   <span class="s">"content"</span><span class="p">:</span> <span class="s">"Explain RAG in 2 sentences."</span><span class="p">},</span>
+    <span class="p">],</span>
+    max_tokens<span class="p">=</span><span class="num">256</span><span class="p">,</span>
+    temperature<span class="p">=</span><span class="num">0.7</span><span class="p">,</span>
+    extra_body<span class="p">={</span><span class="s">"chat_template_kwargs"</span><span class="p">: {</span><span class="s">"enable_thinking"</span><span class="p">:</span> <span class="k">False</span><span class="p">}},</span>
+<span class="p">)</span>
+<span class="f">print</span><span class="p">(</span>resp.choices<span class="p">[</span><span class="num">0</span><span class="p">]</span>.message.content<span class="p">)</span></pre>
+    <button class="copy-btn" onclick="copyBlock(this)">Copy</button>
+  </div>
+
+  <div class="code-wrap lang-js hidden">
+    <pre><span class="k">import</span> OpenAI <span class="k">from</span> <span class="s">"openai"</span><span class="p">;</span>
+
+<span class="k">const</span> <span class="n">llm</span> <span class="p">=</span> <span class="k">new</span> <span class="f">OpenAI</span><span class="p">({</span>
+  baseURL<span class="p">:</span> <span class="s">"https://api.willisback.fr/llm/v1"</span><span class="p">,</span>
+  apiKey<span class="p">:</span>  <span class="s">"sk-your-key"</span><span class="p">,</span>
+<span class="p">});</span>
+
+<span class="k">const</span> <span class="n">resp</span> <span class="p">=</span> <span class="k">await</span> llm.chat.completions.<span class="f">create</span><span class="p">({</span>
+  model<span class="p">:</span>       <span class="s">"nvidia/Qwen3.6-35B-A3B-NVFP4"</span><span class="p">,</span>
+  messages<span class="p">: [</span>
+    <span class="p">{</span> role<span class="p">:</span> <span class="s">"system"</span><span class="p">,</span> content<span class="p">:</span> <span class="s">"You are a helpful assistant."</span> <span class="p">},</span>
+    <span class="p">{</span> role<span class="p">:</span> <span class="s">"user"</span><span class="p">,</span>   content<span class="p">:</span> <span class="s">"Explain RAG in 2 sentences."</span>   <span class="p">},</span>
+  <span class="p">],</span>
+  max_tokens<span class="p">:</span>  <span class="num">256</span><span class="p">,</span>
+  temperature<span class="p">: </span><span class="num">0.7</span><span class="p">,</span>
+<span class="p">});</span>
+console.<span class="f">log</span><span class="p">(</span>resp.choices<span class="p">[</span><span class="num">0</span><span class="p">]</span>.message.content<span class="p">);</span></pre>
+    <button class="copy-btn" onclick="copyBlock(this)">Copy</button>
+  </div>
+
+  <h3 style="font-size:14px;color:#94a3b8;margin:16px 0 10px;">Streaming</h3>
+  <div class="code-wrap lang-py">
+    <pre><span class="k">with</span> llm.chat.completions.<span class="f">stream</span><span class="p">(</span>
+    model<span class="p">=</span><span class="s">"nvidia/Qwen3.6-35B-A3B-NVFP4"</span><span class="p">,</span>
+    messages<span class="p">=[{</span><span class="s">"role"</span><span class="p">:</span> <span class="s">"user"</span><span class="p">,</span> <span class="s">"content"</span><span class="p">:</span> <span class="s">"Write a haiku about AI."</span><span class="p">}]</span>,
+    extra_body<span class="p">={</span><span class="s">"chat_template_kwargs"</span><span class="p">: {</span><span class="s">"enable_thinking"</span><span class="p">:</span> <span class="k">False</span><span class="p">}}</span>,
+<span class="p">)</span> <span class="k">as</span> stream<span class="p">:</span>
+    <span class="k">for</span> chunk <span class="k">in</span> stream<span class="p">:</span>
+        <span class="f">print</span><span class="p">(</span>chunk.choices<span class="p">[</span><span class="num">0</span><span class="p">]</span>.delta.content <span class="k">or</span> <span class="s">""</span><span class="p">,</span> end<span class="p">=</span><span class="s">""</span><span class="p">,</span> flush<span class="p">=</span><span class="k">True</span><span class="p">)</span></pre>
+    <button class="copy-btn" onclick="copyBlock(this)">Copy</button>
+  </div>
+
+  <div class="code-wrap lang-js hidden">
+    <pre><span class="k">const</span> <span class="n">stream</span> <span class="p">=</span> <span class="k">await</span> llm.chat.completions.<span class="f">create</span><span class="p">({</span>
+  model<span class="p">:</span>    <span class="s">"nvidia/Qwen3.6-35B-A3B-NVFP4"</span><span class="p">,</span>
+  messages<span class="p">: [{</span> role<span class="p">:</span> <span class="s">"user"</span><span class="p">,</span> content<span class="p">:</span> <span class="s">"Write a haiku about AI."</span> <span class="p">}],</span>
+  stream<span class="p">:</span>   <span class="k">true</span><span class="p">,</span>
+<span class="p">});</span>
+<span class="k">for await</span> <span class="p">(</span><span class="k">const</span> <span class="n">chunk</span> <span class="k">of</span> stream<span class="p">)</span> <span class="p">{</span>
+  process.stdout.<span class="f">write</span><span class="p">(</span>chunk.choices<span class="p">[</span><span class="num">0</span><span class="p">]</span>?.delta?.content <span class="p">??</span> <span class="s">""</span><span class="p">);</span>
+<span class="p">}</span></pre>
+    <button class="copy-btn" onclick="copyBlock(this)">Copy</button>
+  </div>
+
+  <h3 style="font-size:14px;color:#94a3b8;margin:16px 0 10px;">Thinking mode (chain-of-thought)</h3>
+  <div class="code-wrap lang-py">
+    <pre><span class="c"># enable_thinking=True → slower but more accurate on complex tasks</span>
+<span class="c"># extra_body merges the dict into the request body — vLLM reads it</span>
+resp <span class="p">=</span> llm.chat.completions.<span class="f">create</span><span class="p">(</span>
+    model<span class="p">=</span><span class="s">"nvidia/Qwen3.6-35B-A3B-NVFP4"</span><span class="p">,</span>
+    messages<span class="p">=[{</span><span class="s">"role"</span><span class="p">:</span> <span class="s">"user"</span><span class="p">,</span> <span class="s">"content"</span><span class="p">:</span> <span class="s">"Solve: 17 × 23 step by step"</span><span class="p">}]</span>,
+    extra_body<span class="p">={</span><span class="s">"chat_template_kwargs"</span><span class="p">: {</span><span class="s">"enable_thinking"</span><span class="p">:</span> <span class="k">True</span><span class="p">}}</span>,
+<span class="p">)</span>
+<span class="c"># content holds the final answer; reasoning holds the thinking trace</span>
+<span class="f">print</span><span class="p">(</span>resp.choices<span class="p">[</span><span class="num">0</span><span class="p">]</span>.message.content<span class="p">)</span></pre>
+    <button class="copy-btn" onclick="copyBlock(this)">Copy</button>
+  </div>
+
+  <div class="code-wrap lang-js hidden">
+    <pre><span class="c">// JS SDK: pass vLLM-specific params with "as any" to bypass TS types</span>
+<span class="k">const</span> <span class="n">resp</span> <span class="p">=</span> <span class="k">await</span> llm.chat.completions.<span class="f">create</span><span class="p">({</span>
+  model<span class="p">:</span>    <span class="s">"nvidia/Qwen3.6-35B-A3B-NVFP4"</span><span class="p">,</span>
+  messages<span class="p">: [{</span> role<span class="p">:</span> <span class="s">"user"</span><span class="p">,</span> content<span class="p">:</span> <span class="s">"Solve: 17 × 23 step by step"</span> <span class="p">}],</span>
+  chat_template_kwargs<span class="p">: {</span> enable_thinking<span class="p">:</span> <span class="k">true</span> <span class="p">},</span>  <span class="c">// vLLM extension</span>
+<span class="p">}</span> <span class="k">as</span> <span class="n">any</span><span class="p">);</span>
+<span class="f">console</span>.<span class="f">log</span><span class="p">(</span>resp.choices<span class="p">[</span><span class="num">0</span><span class="p">]</span>.message.content<span class="p">);</span></pre>
+    <button class="copy-btn" onclick="copyBlock(this)">Copy</button>
+  </div>
+</section>
+
+<!-- ── Embedding ──────────────────────────────────────── -->
+<section class="section" id="embedding">
+  <div class="section-header">
+    <div class="section-icon" style="background:#164e63">〰️</div>
+    <div><h2>Embedding · BGE-M3</h2></div>
+    <code class="endpoint">/embed/v1</code>
+  </div>
+
+  <p>Multilingual dense embeddings (1024 dimensions) via BAAI/bge-m3. Works with the OpenAI SDK <code>embeddings.create()</code>.</p>
+
+  <table class="params-table">
+    <tr><th>Parameter</th><th>Type</th><th></th><th>Description</th></tr>
+    <tr><td>model</td><td>string</td><td><span class="req">required</span></td><td><code>bge-m3</code></td></tr>
+    <tr><td>input</td><td>string | string[]</td><td><span class="req">required</span></td><td>Text(s) to embed — batch up to 32</td></tr>
+  </table>
+
+  <div class="code-wrap lang-py">
+    <pre><span class="k">from</span> openai <span class="k">import</span> OpenAI
+
+emb <span class="p">=</span> OpenAI(
+    base_url<span class="p">=</span><span class="s">"https://api.willisback.fr/embed/v1"</span><span class="p">,</span>
+    api_key<span class="p">=</span><span class="s">"sk-your-key"</span><span class="p">,</span>
+<span class="p">)</span>
+
+resp <span class="p">=</span> emb.embeddings.<span class="f">create</span><span class="p">(</span>
+    model<span class="p">=</span><span class="s">"bge-m3"</span><span class="p">,</span>
+    input<span class="p">=[</span>
+        <span class="s">"What is retrieval-augmented generation?"</span><span class="p">,</span>
+        <span class="s">"RAG combines retrieval with generation."</span><span class="p">,</span>
+    <span class="p">],</span>
+<span class="p">)</span>
+
+<span class="k">for</span> item <span class="k">in</span> resp.data<span class="p">:</span>
+    <span class="f">print</span><span class="p">(</span><span class="f">f</span><span class="s">"index {item.index}: dim={</span><span class="f">len</span><span class="p">(</span>item.embedding<span class="p">)</span><span class="s">}"</span><span class="p">)</span>
+<span class="c"># → index 0: dim=1024</span>
+<span class="c"># → index 1: dim=1024</span></pre>
+    <button class="copy-btn" onclick="copyBlock(this)">Copy</button>
+  </div>
+
+  <div class="code-wrap lang-js hidden">
+    <pre><span class="k">import</span> OpenAI <span class="k">from</span> <span class="s">"openai"</span><span class="p">;</span>
+
+<span class="k">const</span> <span class="n">emb</span> <span class="p">=</span> <span class="k">new</span> <span class="f">OpenAI</span><span class="p">({</span>
+  baseURL<span class="p">:</span> <span class="s">"https://api.willisback.fr/embed/v1"</span><span class="p">,</span>
+  apiKey<span class="p">:</span>  <span class="s">"sk-your-key"</span><span class="p">,</span>
+<span class="p">});</span>
+
+<span class="k">const</span> <span class="n">resp</span> <span class="p">=</span> <span class="k">await</span> emb.embeddings.<span class="f">create</span><span class="p">({</span>
+  model<span class="p">:</span> <span class="s">"bge-m3"</span><span class="p">,</span>
+  input<span class="p">: [</span>
+    <span class="s">"What is retrieval-augmented generation?"</span><span class="p">,</span>
+    <span class="s">"RAG combines retrieval with generation."</span><span class="p">,</span>
+  <span class="p">],</span>
+<span class="p">});</span>
+
+resp.data.<span class="f">forEach</span><span class="p">(</span><span class="n">item</span> <span class="p">=></span>
+  console.<span class="f">log</span><span class="p">(</span><span class="s">`index </span><span class="p">${</span>item.index<span class="p">}</span><span class="s">: dim=</span><span class="p">${</span>item.embedding.length<span class="p">}</span><span class="s">`</span><span class="p">)</span>
+<span class="p">);</span></pre>
+    <button class="copy-btn" onclick="copyBlock(this)">Copy</button>
+  </div>
+</section>
+
+<!-- ── Reranking ──────────────────────────────────────── -->
+<section class="section" id="reranking">
+  <div class="section-header">
+    <div class="section-icon" style="background:#3b0764">📊</div>
+    <div><h2>Reranking · BGE-Reranker</h2></div>
+    <code class="endpoint">/rerank/v1</code>
+  </div>
+
+  <p>Cross-encoder reranking — score and reorder documents by relevance to a query. Not part of the OpenAI SDK; use <code>httpx</code> / <code>fetch</code> directly.</p>
+
+  <table class="params-table">
+    <tr><th>Parameter</th><th>Type</th><th></th><th>Description</th></tr>
+    <tr><td>model</td><td>string</td><td><span class="req">required</span></td><td><code>bge-reranker</code></td></tr>
+    <tr><td>query</td><td>string</td><td><span class="req">required</span></td><td>The search query</td></tr>
+    <tr><td>documents</td><td>string[]</td><td><span class="req">required</span></td><td>Documents to rank</td></tr>
+    <tr><td>top_n</td><td>integer</td><td><span class="opt">optional</span></td><td>Return top N results (default: all)</td></tr>
+  </table>
+
+  <div class="code-wrap lang-py">
+    <pre><span class="k">import</span> httpx
+
+resp <span class="p">=</span> httpx.<span class="f">post</span><span class="p">(</span>
+    <span class="s">"https://api.willisback.fr/rerank/v1/rerank"</span><span class="p">,</span>
+    headers<span class="p">={</span><span class="s">"Authorization"</span><span class="p">:</span> <span class="s">"Bearer sk-your-key"</span><span class="p">},</span>
+    json<span class="p">={</span>
+        <span class="s">"model"</span><span class="p">:</span>     <span class="s">"bge-reranker"</span><span class="p">,</span>
+        <span class="s">"query"</span><span class="p">:</span>     <span class="s">"What is the capital of France?"</span><span class="p">,</span>
+        <span class="s">"documents"</span><span class="p">: [</span>
+            <span class="s">"Paris is the capital of France."</span><span class="p">,</span>
+            <span class="s">"Berlin is the capital of Germany."</span><span class="p">,</span>
+            <span class="s">"Madrid is the capital of Spain."</span><span class="p">,</span>
+        <span class="p">],</span>
+        <span class="s">"top_n"</span><span class="p">:</span> <span class="num">3</span><span class="p">,</span>
+    <span class="p">},</span>
+    timeout<span class="p">=</span><span class="num">15</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="k">for</span> result <span class="k">in</span> resp.<span class="f">json</span><span class="p">()[</span><span class="s">"results"</span><span class="p">]:</span>
+    <span class="f">print</span><span class="p">(</span><span class="f">f</span><span class="s">"{result['relevance_score']:.4f}  {result['document']['text']}"</span><span class="p">)</span>
+<span class="c"># → 0.9821  Paris is the capital of France.</span>
+<span class="c"># → 0.0043  Berlin is the capital of Germany.</span></pre>
+    <button class="copy-btn" onclick="copyBlock(this)">Copy</button>
+  </div>
+
+  <div class="code-wrap lang-js hidden">
+    <pre><span class="k">const</span> <span class="n">resp</span> <span class="p">=</span> <span class="k">await</span> <span class="f">fetch</span><span class="p">(</span><span class="s">"https://api.willisback.fr/rerank/v1/rerank"</span><span class="p">, {</span>
+  method<span class="p">:</span>  <span class="s">"POST"</span><span class="p">,</span>
+  headers<span class="p">: {</span>
+    <span class="s">"Authorization"</span><span class="p">:</span> <span class="s">"Bearer sk-your-key"</span><span class="p">,</span>
+    <span class="s">"Content-Type"</span><span class="p">:</span>  <span class="s">"application/json"</span><span class="p">,</span>
+  <span class="p">},</span>
+  body<span class="p">:</span> <span class="f">JSON.stringify</span><span class="p">({</span>
+    model<span class="p">:</span>     <span class="s">"bge-reranker"</span><span class="p">,</span>
+    query<span class="p">:</span>     <span class="s">"What is the capital of France?"</span><span class="p">,</span>
+    documents<span class="p">: [</span>
+      <span class="s">"Paris is the capital of France."</span><span class="p">,</span>
+      <span class="s">"Berlin is the capital of Germany."</span><span class="p">,</span>
+    <span class="p">],</span>
+    top_n<span class="p">:</span> <span class="num">2</span><span class="p">,</span>
+  <span class="p">}),</span>
+<span class="p">});</span>
+
+<span class="k">const</span> <span class="n">data</span> <span class="p">=</span> <span class="k">await</span> resp.<span class="f">json</span><span class="p">();</span>
+data.results.<span class="f">forEach</span><span class="p">(</span><span class="n">r</span> <span class="p">=></span>
+  console.<span class="f">log</span><span class="p">(</span>r.relevance_score.<span class="f">toFixed</span><span class="p">(</span><span class="num">4</span><span class="p">),</span> r.document.text<span class="p">)</span>
+<span class="p">);</span></pre>
+    <button class="copy-btn" onclick="copyBlock(this)">Copy</button>
+  </div>
+</section>
+
+<!-- ── OCR ────────────────────────────────────────────── -->
+<section class="section" id="ocr">
+  <div class="section-header">
+    <div class="section-icon" style="background:#4a044e">🔍</div>
+    <div><h2>OCR · LightOn</h2></div>
+    <code class="endpoint">/ocr/v1</code>
+  </div>
+
+  <p>Vision-based OCR via LightOn. Send an image as a base64 data URL or HTTP URL and receive the extracted text. Uses the OpenAI vision message format.</p>
+
+  <table class="params-table">
+    <tr><th>Parameter</th><th>Type</th><th></th><th>Description</th></tr>
+    <tr><td>model</td><td>string</td><td><span class="req">required</span></td><td><code>lighton-ocr</code></td></tr>
+    <tr><td>image_url.url</td><td>string</td><td><span class="req">required</span></td><td>HTTP URL or <code>data:image/...;base64,...</code></td></tr>
+    <tr><td>max_tokens</td><td>integer</td><td><span class="opt">optional</span></td><td>Max output tokens (default 512)</td></tr>
+  </table>
+
+  <div class="code-wrap lang-py">
+    <pre><span class="k">import</span> base64
+<span class="k">from</span> pathlib <span class="k">import</span> Path
+<span class="k">from</span> openai <span class="k">import</span> OpenAI
+
+ocr <span class="p">=</span> OpenAI(
+    base_url<span class="p">=</span><span class="s">"https://api.willisback.fr/ocr/v1"</span><span class="p">,</span>
+    api_key<span class="p">=</span><span class="s">"sk-your-key"</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c"># From local file</span>
+img_b64 <span class="p">=</span> base64.<span class="f">b64encode</span><span class="p">(</span>Path<span class="p">(</span><span class="s">"document.png"</span><span class="p">).</span><span class="f">read_bytes</span><span class="p">()).</span><span class="f">decode</span><span class="p">()</span>
+
+resp <span class="p">=</span> ocr.chat.completions.<span class="f">create</span><span class="p">(</span>
+    model<span class="p">=</span><span class="s">"lighton-ocr"</span><span class="p">,</span>
+    messages<span class="p">=[{</span>
+        <span class="s">"role"</span><span class="p">:</span> <span class="s">"user"</span><span class="p">,</span>
+        <span class="s">"content"</span><span class="p">: [</span>
+            <span class="p">{</span><span class="s">"type"</span><span class="p">:</span> <span class="s">"text"</span><span class="p">,</span> <span class="s">"text"</span><span class="p">:</span> <span class="s">"Transcribe all text in this image."</span><span class="p">},</span>
+            <span class="p">{</span><span class="s">"type"</span><span class="p">:</span> <span class="s">"image_url"</span><span class="p">,</span> <span class="s">"image_url"</span><span class="p">: {</span>
+                <span class="s">"url"</span><span class="p">:</span> <span class="f">f</span><span class="s">"data:image/png;base64,{img_b64}"</span>
+            <span class="p">}},</span>
+        <span class="p">],</span>
+    <span class="p">}]</span>,
+    max_tokens<span class="p">=</span><span class="num">1024</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="f">print</span><span class="p">(</span>resp.choices<span class="p">[</span><span class="num">0</span><span class="p">]</span>.message.content<span class="p">)</span></pre>
+    <button class="copy-btn" onclick="copyBlock(this)">Copy</button>
+  </div>
+
+  <div class="code-wrap lang-js hidden">
+    <pre><span class="k">import</span> OpenAI <span class="k">from</span> <span class="s">"openai"</span><span class="p">;</span>
+<span class="k">import</span> fs     <span class="k">from</span> <span class="s">"fs"</span><span class="p">;</span>
+
+<span class="k">const</span> <span class="n">ocr</span> <span class="p">=</span> <span class="k">new</span> <span class="f">OpenAI</span><span class="p">({</span>
+  baseURL<span class="p">:</span> <span class="s">"https://api.willisback.fr/ocr/v1"</span><span class="p">,</span>
+  apiKey<span class="p">:</span>  <span class="s">"sk-your-key"</span><span class="p">,</span>
+<span class="p">});</span>
+
+<span class="c">// From local file (Node.js)</span>
+<span class="k">const</span> <span class="n">b64</span> <span class="p">=</span> fs.<span class="f">readFileSync</span><span class="p">(</span><span class="s">"document.png"</span><span class="p">).</span><span class="f">toString</span><span class="p">(</span><span class="s">"base64"</span><span class="p">);</span>
+
+<span class="k">const</span> <span class="n">resp</span> <span class="p">=</span> <span class="k">await</span> ocr.chat.completions.<span class="f">create</span><span class="p">({</span>
+  model<span class="p">:</span>    <span class="s">"lighton-ocr"</span><span class="p">,</span>
+  messages<span class="p">: [{</span>
+    role<span class="p">:</span>    <span class="s">"user"</span><span class="p">,</span>
+    content<span class="p">: [</span>
+      <span class="p">{</span> type<span class="p">:</span> <span class="s">"text"</span><span class="p">,</span>      text<span class="p">:</span> <span class="s">"Transcribe all text in this image."</span> <span class="p">},</span>
+      <span class="p">{</span> type<span class="p">:</span> <span class="s">"image_url"</span><span class="p">,</span> image_url<span class="p">: {</span> url<span class="p">:</span> <span class="s">`data:image/png;base64,</span><span class="p">${</span>b64<span class="p">}</span><span class="s">`</span> <span class="p">}},</span>
+    <span class="p">],</span>
+  <span class="p">}]</span>,
+  max_tokens<span class="p">: </span><span class="num">1024</span><span class="p">,</span>
+<span class="p">});</span>
+console.<span class="f">log</span><span class="p">(</span>resp.choices<span class="p">[</span><span class="num">0</span><span class="p">]</span>.message.content<span class="p">);</span></pre>
+    <button class="copy-btn" onclick="copyBlock(this)">Copy</button>
+  </div>
+</section>
+
+<!-- ── WhisperX ───────────────────────────────────────── -->
+<section class="section" id="whisper">
+  <div class="section-header">
+    <div class="section-icon" style="background:#064e3b">🎙️</div>
+    <div><h2>WhisperX</h2></div>
+    <code class="endpoint">/whisper/asr/v1</code>
+  </div>
+
+  <p>Async transcription with speaker diarization. Submit a job → receive a <code>job_id</code> → poll until <code>done</code>. Also exports SRT / VTT / TXT subtitle files.</p>
+
+  <h3 style="font-size:14px;color:#94a3b8;margin-bottom:10px;">Endpoints</h3>
+  <table class="params-table">
+    <tr><th>Method</th><th>Path</th><th>Description</th></tr>
+    <tr><td><span class="tag tag-post">POST</span></td><td><code>/whisper/asr/v1/transcribe</code></td><td>Submit audio → returns <code>job_id</code> (202)</td></tr>
+    <tr><td><span class="tag tag-get">GET</span></td><td><code>/whisper/asr/v1/jobs/{job_id}</code></td><td>Poll status + full JSON result</td></tr>
+    <tr><td><span class="tag tag-get">GET</span></td><td><code>/whisper/asr/v1/jobs/{job_id}/srt</code></td><td>Download SRT subtitle file</td></tr>
+    <tr><td><span class="tag tag-get">GET</span></td><td><code>/whisper/asr/v1/jobs/{job_id}/vtt</code></td><td>Download VTT subtitle file</td></tr>
+    <tr><td><span class="tag tag-get">GET</span></td><td><code>/whisper/asr/v1/jobs/{job_id}/txt</code></td><td>Download plain text transcript</td></tr>
+  </table>
+
+  <h3 style="font-size:14px;color:#94a3b8;margin:16px 0 10px;">POST /transcribe — multipart/form-data fields</h3>
+  <table class="params-table">
+    <tr><th>Field</th><th>Type</th><th></th><th>Description</th></tr>
+    <tr><td>audio_file</td><td>binary</td><td><span class="req">required</span></td><td>Audio file (mp3, wav, m4a, ogg, webm, flac)</td></tr>
+    <tr><td>language</td><td>string</td><td><span class="opt">optional</span></td><td>ISO-639-1 code — default <code>fr</code></td></tr>
+    <tr><td>initial_prompt</td><td>string</td><td><span class="opt">optional</span></td><td>Context hint to guide transcription quality</td></tr>
+    <tr><td>hotwords</td><td>string</td><td><span class="opt">optional</span></td><td>Comma-separated keywords to favour</td></tr>
+    <tr><td>num_speakers</td><td>integer</td><td><span class="opt">optional</span></td><td>Expected speaker count (improves diarization)</td></tr>
+  </table>
+
+  <div class="code-wrap lang-py">
+    <pre><span class="k">import</span> httpx<span class="p">,</span> time
+
+BASE <span class="p">=</span> <span class="s">"https://api.willisback.fr/whisper/asr/v1"</span>
+HDR  <span class="p">=</span> <span class="p">{</span><span class="s">"Authorization"</span><span class="p">:</span> <span class="s">"Bearer sk-your-key"</span><span class="p">}</span>
+
+<span class="c"># 1 — Submit job (returns immediately with job_id)</span>
+<span class="k">with</span> <span class="f">open</span><span class="p">(</span><span class="s">"meeting.mp3"</span><span class="p">,</span> <span class="s">"rb"</span><span class="p">)</span> <span class="k">as</span> f<span class="p">:</span>
+    r <span class="p">=</span> httpx.<span class="f">post</span><span class="p">(</span>
+        <span class="f">f</span><span class="s">"{BASE}/transcribe"</span><span class="p">,</span>
+        headers<span class="p">=</span>HDR<span class="p">,</span>
+        files<span class="p">={</span><span class="s">"audio_file"</span><span class="p">: (</span><span class="s">"meeting.mp3"</span><span class="p">,</span> f<span class="p">,</span> <span class="s">"audio/mpeg"</span><span class="p">)},</span>
+        data<span class="p">={</span><span class="s">"language"</span><span class="p">:</span> <span class="s">"fr"</span><span class="p">,</span> <span class="s">"num_speakers"</span><span class="p">:</span> <span class="num">2</span><span class="p">},</span>
+        timeout<span class="p">=</span><span class="num">30</span><span class="p">,</span>
+    <span class="p">)</span>
+job_id <span class="p">=</span> r.<span class="f">json</span><span class="p">()[</span><span class="s">"job_id"</span><span class="p">]</span>
+<span class="f">print</span><span class="p">(</span><span class="f">f</span><span class="s">"Submitted: {job_id}"</span><span class="p">)</span>
+
+<span class="c"># 2 — Poll until completed (transcription + alignment + diarization run server-side)</span>
+<span class="k">while</span> <span class="k">True</span><span class="p">:</span>
+    result <span class="p">=</span> httpx.<span class="f">get</span><span class="p">(</span><span class="f">f</span><span class="s">"{BASE}/jobs/{job_id}"</span><span class="p">,</span> headers<span class="p">=</span>HDR<span class="p">).</span><span class="f">json</span><span class="p">()</span>
+    <span class="k">if</span> result<span class="p">[</span><span class="s">"status"</span><span class="p">]</span> <span class="k">in</span> <span class="p">(</span><span class="s">"completed"</span><span class="p">,</span> <span class="s">"failed"</span><span class="p">):</span>
+        <span class="k">break</span>
+    time.<span class="f">sleep</span><span class="p">(</span><span class="num">3</span><span class="p">)</span>
+
+<span class="c"># 3 — Per-speaker segments (no top-level text field — use segments)</span>
+<span class="k">for</span> seg <span class="k">in</span> result<span class="p">[</span><span class="s">"segments"</span><span class="p">]:</span>
+    <span class="f">print</span><span class="p">(</span><span class="f">f</span><span class="s">"[{seg['speaker']}] {seg['start']:.1f}s–{seg['end']:.1f}s  {seg['text'].strip()}"</span><span class="p">)</span>
+<span class="c"># → [SPEAKER_00]  0.6s–8.6s   Ce que nous appelons grippe tropicale…</span>
+<span class="c"># → [SPEAKER_00]  8.7s–19.9s  La dengue est un arbovirus…</span>
+
+<span class="c"># Assemble full transcript from segments</span>
+full_text <span class="p">=</span> <span class="s">" "</span>.<span class="f">join</span><span class="p">(</span>s<span class="p">[</span><span class="s">"text"</span><span class="p">].</span><span class="f">strip</span><span class="p">()</span> <span class="k">for</span> s <span class="k">in</span> result<span class="p">[</span><span class="s">"segments"</span><span class="p">])</span>
+
+<span class="c"># 4 — Download SRT subtitles</span>
+<span class="k">from</span> pathlib <span class="k">import</span> Path
+srt <span class="p">=</span> httpx.<span class="f">get</span><span class="p">(</span><span class="f">f</span><span class="s">"{BASE}/jobs/{job_id}/srt"</span><span class="p">,</span> headers<span class="p">=</span>HDR<span class="p">).</span>text
+Path<span class="p">(</span><span class="s">"meeting.srt"</span><span class="p">).</span><span class="f">write_text</span><span class="p">(</span>srt<span class="p">)</span></pre>
+    <button class="copy-btn" onclick="copyBlock(this)">Copy</button>
+  </div>
+
+  <div class="code-wrap lang-js hidden">
+    <pre><span class="k">import</span> fs <span class="k">from</span> <span class="s">"fs"</span><span class="p">;</span>
+
+<span class="k">const</span> <span class="n">BASE</span> <span class="p">=</span> <span class="s">"https://api.willisback.fr/whisper/asr/v1"</span><span class="p">;</span>
+<span class="k">const</span> <span class="n">HDR</span>  <span class="p">= {</span> Authorization<span class="p">:</span> <span class="s">"Bearer sk-your-key"</span> <span class="p">};</span>
+
+<span class="c">// 1 — Submit job</span>
+<span class="k">const</span> <span class="n">form</span> <span class="p">=</span> <span class="k">new</span> <span class="f">FormData</span><span class="p">();</span>
+form.<span class="f">append</span><span class="p">(</span><span class="s">"audio_file"</span><span class="p">,</span>
+  <span class="k">new</span> <span class="f">Blob</span><span class="p">([</span>fs.<span class="f">readFileSync</span><span class="p">(</span><span class="s">"meeting.mp3"</span><span class="p">)],</span> <span class="p">{</span> type<span class="p">:</span> <span class="s">"audio/mpeg"</span> <span class="p">}),</span>
+  <span class="s">"meeting.mp3"</span>
+<span class="p">);</span>
+form.<span class="f">append</span><span class="p">(</span><span class="s">"language"</span><span class="p">,</span>     <span class="s">"fr"</span><span class="p">);</span>
+form.<span class="f">append</span><span class="p">(</span><span class="s">"num_speakers"</span><span class="p">,</span> <span class="s">"2"</span><span class="p">);</span>
+
+<span class="k">const</span> <span class="p">{</span> <span class="n">job_id</span> <span class="p">} =</span> <span class="k">await</span> <span class="p">(</span><span class="k">await</span> <span class="f">fetch</span><span class="p">(</span><span class="s">`</span><span class="p">${</span>BASE<span class="p">}</span><span class="s">/transcribe`</span><span class="p">, {</span>
+  method<span class="p">:</span> <span class="s">"POST"</span><span class="p">,</span> headers<span class="p">:</span> HDR<span class="p">,</span> body<span class="p">:</span> form<span class="p">,</span>
+<span class="p">})).</span><span class="f">json</span><span class="p">();</span>
+
+<span class="c">// 2 — Poll until done</span>
+<span class="k">let</span> <span class="n">result</span><span class="p">;</span>
+<span class="k">do</span> <span class="p">{</span>
+  <span class="k">await</span> <span class="k">new</span> <span class="f">Promise</span><span class="p">(</span><span class="n">r</span> <span class="p">=></span> <span class="f">setTimeout</span><span class="p">(</span>r<span class="p">,</span> <span class="num">3000</span><span class="p">));</span>
+  result <span class="p">=</span> <span class="k">await</span> <span class="p">(</span><span class="k">await</span> <span class="f">fetch</span><span class="p">(</span><span class="s">`</span><span class="p">${</span>BASE<span class="p">}</span><span class="s">/jobs/</span><span class="p">${</span>job_id<span class="p">}</span><span class="s">`</span><span class="p">, {</span> headers<span class="p">:</span> HDR <span class="p">})).</span><span class="f">json</span><span class="p">();</span>
+<span class="p">}</span> <span class="k">while</span> <span class="p">(![</span><span class="s">"completed"</span><span class="p">,</span> <span class="s">"failed"</span><span class="p">].</span><span class="f">includes</span><span class="p">(</span>result.status<span class="p">));</span>
+
+<span class="c">// 3 — Per-speaker segments (no top-level text field — use segments)</span>
+result.segments.<span class="f">forEach</span><span class="p">(</span><span class="n">seg</span> <span class="p">=></span>
+  console.<span class="f">log</span><span class="p">(</span><span class="s">`[</span><span class="p">${</span>seg.speaker<span class="p">}</span><span class="s">] </span><span class="p">${</span>seg.start.<span class="f">toFixed</span><span class="p">(</span><span class="num">1</span><span class="p">)</span><span class="s">}s–</span><span class="p">${</span>seg.end.<span class="f">toFixed</span><span class="p">(</span><span class="num">1</span><span class="p">)</span><span class="s">}s  </span><span class="p">${</span>seg.text.<span class="f">trim</span><span class="p">()}</span><span class="s">`</span><span class="p">)</span>
+<span class="p">);</span>
+
+<span class="c">// Assemble full transcript</span>
+<span class="k">const</span> <span class="n">fullText</span> <span class="p">=</span> result.segments.<span class="f">map</span><span class="p">(</span><span class="n">s</span> <span class="p">=></span> s.text.<span class="f">trim</span><span class="p">()).</span><span class="f">join</span><span class="p">(</span><span class="s">" "</span><span class="p">);</span>
+
+<span class="c">// 4 — Download SRT</span>
+<span class="k">const</span> <span class="n">srt</span> <span class="p">=</span> <span class="k">await</span> <span class="p">(</span><span class="k">await</span> <span class="f">fetch</span><span class="p">(</span><span class="s">`</span><span class="p">${</span>BASE<span class="p">}</span><span class="s">/jobs/</span><span class="p">${</span>job_id<span class="p">}</span><span class="s">/srt`</span><span class="p">, {</span> headers<span class="p">:</span> HDR <span class="p">})).</span><span class="f">text</span><span class="p">();</span>
+fs.<span class="f">writeFileSync</span><span class="p">(</span><span class="s">"meeting.srt"</span><span class="p">,</span> srt<span class="p">);</span></pre>
+    <button class="copy-btn" onclick="copyBlock(this)">Copy</button>
+  </div>
+</section>
+
+<!-- ── Errors ─────────────────────────────────────────── -->
+<section class="section" id="errors">
+  <div class="section-header">
+    <div class="section-icon" style="background:#450a0a">⚠️</div>
+    <div><h2>Error codes</h2></div>
+  </div>
+
+  <table class="params-table">
+    <tr><th>HTTP</th><th>Code</th><th>Cause</th></tr>
+    <tr><td>401</td><td><code>invalid_api_key</code></td><td>Missing, wrong, or revoked key</td></tr>
+    <tr><td>429</td><td><code>rate_limit_exceeded</code></td><td>Over 60 requests / minute per key</td></tr>
+    <tr><td>502</td><td>—</td><td>DGX service temporarily unavailable</td></tr>
+    <tr><td>504</td><td>—</td><td>DGX inference timeout (long audio / large prompt)</td></tr>
+  </table>
+
+  <div class="code-wrap lang-py">
+    <pre><span class="k">from</span> openai <span class="k">import</span> OpenAI, AuthenticationError, RateLimitError
+
+<span class="k">try</span><span class="p">:</span>
+    resp <span class="p">=</span> client.chat.completions.<span class="f">create</span><span class="p">(...)</span>
+<span class="k">except</span> AuthenticationError<span class="p">:</span>
+    <span class="f">print</span><span class="p">(</span><span class="s">"Invalid or revoked key"</span><span class="p">)</span>
+<span class="k">except</span> RateLimitError<span class="p">:</span>
+    <span class="f">print</span><span class="p">(</span><span class="s">"Rate limit hit — wait and retry"</span><span class="p">)</span></pre>
+    <button class="copy-btn" onclick="copyBlock(this)">Copy</button>
+  </div>
+
+  <div class="code-wrap lang-js hidden">
+    <pre><span class="k">try</span> <span class="p">{</span>
+  <span class="k">const</span> <span class="n">resp</span> <span class="p">=</span> <span class="k">await</span> client.chat.completions.<span class="f">create</span><span class="p">(...);</span>
+<span class="p">}</span> <span class="k">catch</span> <span class="p">(</span><span class="n">e</span><span class="p">) {</span>
+  <span class="k">if</span> <span class="p">(</span>e.status <span class="p">===</span> <span class="num">401</span><span class="p">)</span> console.<span class="f">error</span><span class="p">(</span><span class="s">"Invalid or revoked key"</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span>e.status <span class="p">===</span> <span class="num">429</span><span class="p">)</span> console.<span class="f">error</span><span class="p">(</span><span class="s">"Rate limit — wait and retry"</span><span class="p">);</span>
+<span class="p">}</span></pre>
+    <button class="copy-btn" onclick="copyBlock(this)">Copy</button>
+  </div>
+</section>
+
+<!-- ── Rate limits ────────────────────────────────────── -->
+<section class="section" id="ratelimits">
+  <div class="section-header">
+    <div class="section-icon" style="background:#431407">⏱️</div>
+    <div><h2>Rate limits</h2></div>
+  </div>
+
+  <table class="params-table">
+    <tr><th>Limit</th><th>Value</th><th>Scope</th></tr>
+    <tr><td>Requests</td><td>60 / min</td><td>Per API key</td></tr>
+    <tr><td>Burst</td><td>20 requests</td><td>Instantaneous</td></tr>
+    <tr><td>Timeout</td><td>30 s (LLM/embed/OCR) · 60 s (WhisperX submit)</td><td>Per request</td></tr>
+  </table>
+
+  <p>Rate limits are enforced per key at the gateway. Contact the admin at <a href="https://apikeys.willisback.fr" style="color:var(--accent)">apikeys.willisback.fr</a> to adjust limits for specific use cases.</p>
+</section>
+
+</main>
+
+<div id="toast">Copied!</div>
+
+<script>
+// Language toggle
+function setLang(lang) {
+  localStorage.setItem('lang', lang);
+  document.querySelectorAll('.lang-py, .lang-js').forEach(el => {
+    el.classList.toggle('hidden',
+      (lang === 'py' && el.classList.contains('lang-js')) ||
+      (lang === 'js' && el.classList.contains('lang-py'))
+    );
+  });
+  document.querySelectorAll('#global-toggle button').forEach((btn, i) => {
+    btn.classList.toggle('active', (lang === 'py' && i === 0) || (lang === 'js' && i === 1));
+  });
+}
+
+// Restore preference
+setLang(localStorage.getItem('lang') || 'py');
+
+// Copy button
+function copyBlock(btn) {
+  const text = btn.previousElementSibling.innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    const toast = document.getElementById('toast');
+    toast.classList.add('show');
+    setTimeout(() => {
+      btn.textContent = 'Copy';
+      btn.classList.remove('copied');
+      toast.classList.remove('show');
+    }, 2000);
+  });
+}
+
+// Sidebar active link on scroll
+const sections = document.querySelectorAll('.section');
+const navLinks  = document.querySelectorAll('nav a');
+const observer  = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      navLinks.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + e.target.id));
+    }
+  });
+}, { rootMargin: '-20% 0px -70% 0px' });
+sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>
+
