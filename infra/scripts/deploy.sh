@@ -19,6 +19,7 @@ IMAGES=(
   "grafana/tempo:2.5.0"
   "ghcr.io/mlflow/mlflow:v2.14.1"
   "grafana/grafana:11.1.0"
+  "curlimages/curl:8.8.0"
 )
 
 echo "── Trivy pre-flight ──────────────────────────────────────────────────────"
@@ -55,7 +56,7 @@ docker stack deploy -c stacks/core.yml syntheo-core --with-registry-auth
 
 echo "Waiting for Vault to be ready..."
 until docker run --rm --network vault_net curlimages/curl:8.8.0 \
-  curl -sf http://vault:8200/v1/sys/health >/dev/null 2>&1; do sleep 3; done
+  -sf http://vault:8200/v1/sys/health >/dev/null 2>&1; do sleep 3; done
 
 # ── 2. Data (PostgreSQL + Keycloak) ──────────────────────────────────────────
 echo "── Deploying data stack ─────────────────────────────────────────────────"

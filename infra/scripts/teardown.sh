@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+INFRA_DIR="$(dirname "${SCRIPT_DIR}")"
+if [ -f "${INFRA_DIR}/../.env" ]; then
+  set -a; source "${INFRA_DIR}/../.env"; set +a
+fi
+
 echo "This will remove all Syntheo stacks. Data volumes are NOT deleted."
 read -rp "Type 'yes' to confirm: " CONFIRM
 [ "${CONFIRM}" = "yes" ] || { echo "Aborted."; exit 0; }
