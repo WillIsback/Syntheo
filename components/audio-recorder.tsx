@@ -12,7 +12,7 @@ export default function AudioRecorder({
 	onComplete,
 }: AudioRecorderProps) {
 	const [state, setState] = useState<
-		"idle" | "recording" | "uploading" | "processing"
+		"idle" | "recording" | "uploading" | "processing" | "error"
 	>("idle");
 	const mediaRef = useRef<MediaRecorder | null>(null);
 	const chunksRef = useRef<Blob[]>([]);
@@ -44,7 +44,6 @@ export default function AudioRecorder({
 		form.append("audio_blob", blob);
 		form.append("session_id", sessionId);
 
-		setState("uploading");
 		const res = await fetch("/api/transcribe", { method: "POST", body: form });
 		const { jobId } = await res.json();
 		setState("processing");
@@ -52,15 +51,28 @@ export default function AudioRecorder({
 	}
 
 	async function pollUntilDone(jobId: string) {
-		while (true) {
+		const MAX_POLLS = 120; // 6 minutes at 3s intervals
+		let attempts = 0;
+		while (attempts < MAX_POLLS) {
 			await new Promise((r) => setTimeout(r, 3000));
-			const res = await fetch(`/api/jobs/${jobId}`);
-			const data = await res.json();
-			if (data.status !== "pending" && data.status !== "processing") {
-				onComplete(jobId);
+			attempts++;
+			try {
+				const res = await fetch(`/api/jobs/${jobId}`);
+				if (!res.ok) {
+					setState("error");
+					return;
+				}
+				const data = await res.json();
+				if (data.status !== "pending" && data.status !== "processing") {
+					onComplete(jobId);
+					return;
+				}
+			} catch {
+				setState("error");
 				return;
 			}
 		}
+		setState("error"); // timeout
 	}
 
 	return (
@@ -91,6 +103,11 @@ export default function AudioRecorder({
 			{state === "processing" && (
 				<p className="text-[var(--color-text-2)]">
 					Transcription en cours… / Transcribing…
+				</p>
+			)}
+			{state === "error" && (
+				<p className="text-[var(--color-danger)] text-sm">
+					Erreur de transcription / Transcription error
 				</p>
 			)}
 		</div>
