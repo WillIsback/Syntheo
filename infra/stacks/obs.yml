@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.103.0
+    image: otel/opentelemetry-collector-contrib:0.155.0
     volumes:
       - type: bind
         source: ./config/otel/otel-collector-config.yaml
@@ -16,7 +16,7 @@ services:
         condition: on-failure
 
   loki:
-    image: grafana/loki:3.0.0
+    image: grafana/loki:3.7.3
     command: ["-config.file=/etc/loki/config.yaml"]
     volumes:
       - type: bind
@@ -34,7 +34,7 @@ services:
         condition: on-failure
 
   prometheus:
-    image: prom/prometheus:v2.53.0
+    image: prom/prometheus:v3.12.0
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
@@ -56,7 +56,7 @@ services:
         condition: on-failure
 
   tempo:
-    image: grafana/tempo:2.5.0
+    image: grafana/tempo:3.0.2
     command: ["-config.file=/etc/tempo/config.yaml"]
     volumes:
       - type: bind
@@ -74,7 +74,7 @@ services:
         condition: on-failure
 
   vault-agent-mlflow:
-    image: hashicorp/vault:1.17.2
+    image: hashicorp/vault:1.21.4
     command: ["agent", "-config=/vault/config/agent.hcl"]
     environment:
       VAULT_ADDR: "https://vault:8200"
@@ -97,7 +97,7 @@ services:
         delay: 5s
 
   mlflow:
-    image: ghcr.io/mlflow/mlflow:v2.14.1
+    image: ghcr.io/mlflow/mlflow:v3.14.0
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
@@ -127,7 +127,7 @@ services:
         delay: 10s
 
   vault-agent-grafana:
-    image: hashicorp/vault:1.17.2
+    image: hashicorp/vault:1.21.4
     command: ["agent", "-config=/vault/config/agent.hcl"]
     environment:
       VAULT_ADDR: "https://vault:8200"
@@ -150,7 +150,7 @@ services:
         delay: 5s
 
   grafana:
-    image: grafana/grafana:11.1.0
+    image: grafana/grafana:11.6.16
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
