@@ -6,10 +6,16 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
     CREATE DATABASE mlflow_db;
     CREATE ROLE keycloak WITH LOGIN PASSWORD '${KEYCLOAK_DB_PASSWORD}';
     GRANT ALL PRIVILEGES ON DATABASE keycloak_db TO keycloak;
+    CREATE ROLE mlflow WITH LOGIN PASSWORD '${MLFLOW_DB_PASSWORD}';
+    GRANT ALL PRIVILEGES ON DATABASE mlflow_db TO mlflow;
 EOSQL
 
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "keycloak_db" <<-EOSQL
     GRANT CREATE ON SCHEMA public TO keycloak;
+EOSQL
+
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "mlflow_db" <<-EOSQL
+    GRANT CREATE ON SCHEMA public TO mlflow;
 EOSQL
 
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "syntheo_db" <<-EOSQL

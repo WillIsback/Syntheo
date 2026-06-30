@@ -1,5 +1,8 @@
 vault {
-  address = "http://vault:8200"
+  address = "https://vault:8200"
+  tls {
+    tls_skip_verify = true
+  }
 }
 
 auto_auth {
@@ -12,7 +15,8 @@ auto_auth {
   }
   sink "file" {
     config = {
-      path = "/tmp/.vault-token"
+      path  = "/run/vault/.vault-token"
+      perms = "0600"
     }
   }
 }
@@ -23,6 +27,7 @@ template {
 POSTGRES_USER={{ .Data.data.username }}
 POSTGRES_PASSWORD={{ .Data.data.password }}
 KEYCLOAK_DB_PASSWORD={{ .Data.data.keycloak_db_password }}
+MLFLOW_DB_PASSWORD={{ .Data.data.mlflow_db_password }}
 {{- end }}
 EOT
   destination = "/run/vault/postgres.env"

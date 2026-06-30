@@ -6,12 +6,19 @@ services:
     command: server
     cap_add:
       - IPC_LOCK
+    ports:
+      - "127.0.0.1:8200:8200"
     environment:
-      VAULT_ADDR: "http://0.0.0.0:8200"
+      VAULT_ADDR: "https://127.0.0.1:8200"
+      VAULT_SKIP_VERIFY: "true"
     volumes:
       - type: bind
-        source: /mnt/syntheo_data/vault
+        source: /mnt/syntheo_data/vault/data
         target: /vault/data
+      - type: bind
+        source: /mnt/syntheo_data/vault/tls
+        target: /vault/tls
+        read_only: true
       - type: bind
         source: ./config/vault/vault.hcl
         target: /vault/config/vault.hcl
@@ -28,7 +35,8 @@ services:
     image: hashicorp/vault:1.17.2
     command: ["agent", "-config=/vault/config/agent.hcl"]
     environment:
-      VAULT_ADDR: "http://vault:8200"
+      VAULT_ADDR: "https://vault:8200"
+      VAULT_SKIP_VERIFY: "true"
     volumes:
       - type: bind
         source: ./config/vault/agents/traefik.hcl
