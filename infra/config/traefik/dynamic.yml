@@ -1,0 +1,45 @@
+http:
+  middlewares:
+    crowdsec:
+      plugin:
+        bouncer:
+          enabled: true
+          crowdsecMode: stream
+          updateIntervalSeconds: 10
+          crowdsecLapiScheme: http
+          crowdsecLapiHost: host.docker.internal:8080
+          crowdsecLapiKey: "{{ env `CROWDSEC_BOUNCER_KEY` }}"
+          crowdsecAppsecEnabled: true
+          crowdsecAppsecHost: host.docker.internal:7422
+          forwardedHeadersTrustedIPs:
+            - "10.0.0.0/8"
+            - "172.16.0.0/12"
+
+    ratelimit:
+      rateLimit:
+        average: 100
+        burst: 50
+        period: 1s
+
+    secure-headers:
+      headers:
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        stsPreload: true
+        forceSTSHeader: true
+        contentTypeNosniff: true
+        frameDeny: true
+        customFrameOptionsValue: "DENY"
+        referrerPolicy: "strict-origin-when-cross-origin"
+        contentSecurityPolicy: >-
+          default-src 'self';
+          script-src 'self';
+          style-src 'self' 'unsafe-inline';
+          img-src 'self' data:;
+          font-src 'self';
+          connect-src 'self' https://api.willisback.fr;
+          frame-ancestors 'none'
+
+    dashboard-auth:
+      basicAuth:
+        usersFile: /run/secrets/traefik_htpasswd

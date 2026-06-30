@@ -24,6 +24,80 @@ services:
         condition: on-failure
         delay: 5s
 
+  vault-agent-traefik:
+    image: hashicorp/vault:1.17.2
+    command: ["agent", "-config=/vault/config/agent.hcl"]
+    environment:
+      VAULT_ADDR: "http://vault:8200"
+    volumes:
+      - type: bind
+        source: ./config/vault/agents/traefik.hcl
+        target: /vault/config/agent.hcl
+        read_only: true
+      - traefik_secrets:/run/vault
+    secrets:
+      - vault_traefik_role_id
+      - vault_traefik_secret_id
+    networks:
+      - vault_net
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  traefik:
+    image: traefik:v3.1
+    ports:
+      - target: 80
+        published: 80
+        protocol: tcp
+        mode: host
+      - target: 443
+        published: 443
+        protocol: tcp
+        mode: host
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      ACME_EMAIL: "${ACME_EMAIL}"
+      CROWDSEC_BOUNCER_KEY_FILE: /run/vault/CROWDSEC_BOUNCER_KEY
+    volumes:
+      - type: bind
+        source: ./config/traefik/traefik.yml
+        target: /etc/traefik/traefik.yml
+        read_only: true
+      - type: bind
+        source: ./config/traefik/dynamic.yml
+        target: /etc/traefik/dynamic.yml
+        read_only: true
+      - traefik_certs:/certs
+      - traefik_secrets:/run/vault:ro
+      - traefik_logs:/var/log/traefik
+    networks:
+      - frontend_net
+      - vault_net
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      update_config:
+        order: start-first
+    depends_on:
+      - vault-agent-traefik
+
+secrets:
+  vault_traefik_role_id:
+    external: true
+  vault_traefik_secret_id:
+    external: true
+
+volumes:
+  traefik_certs:
+  traefik_secrets:
+  traefik_logs:
+
 networks:
+  frontend_net:
+    external: true
   vault_net:
     external: true
