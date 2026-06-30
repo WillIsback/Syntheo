@@ -9,7 +9,7 @@ describe("logWhisperXRun", () => {
 		(fetch as ReturnType<typeof vi.fn>)
 			.mockResolvedValueOnce({
 				ok: true,
-				json: async () => ({ experiment_id: "exp-1" }),
+				json: async () => ({ experiment: { experiment_id: "exp-1" } }),
 			})
 			.mockResolvedValueOnce({
 				ok: true,

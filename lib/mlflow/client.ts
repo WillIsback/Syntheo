@@ -7,7 +7,7 @@ async function getOrCreateExperiment(): Promise<string> {
 	);
 	if (res.ok) {
 		const data = await res.json();
-		return data.experiment_id as string;
+		return data.experiment.experiment_id as string;
 	}
 	const create = await fetch(
 		`${MLFLOW_URI}/api/2.0/mlflow/experiments/create`,
