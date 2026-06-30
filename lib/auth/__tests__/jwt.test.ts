@@ -1,6 +1,10 @@
 import { exportJWK, generateKeyPair, SignJWT } from "jose";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { verifyJwt } from "../jwt";
+
+afterEach(() => {
+	vi.unstubAllGlobals();
+});
 
 describe("verifyJwt", () => {
 	it("accepts a valid RS256 JWT", async () => {

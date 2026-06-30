@@ -16,7 +16,8 @@ export async function middleware(req: NextRequest) {
 		const res = NextResponse.next();
 		res.headers.set("x-user-id", payload.sub);
 		res.headers.set("x-user-email", payload.email);
-		res.headers.set("x-user-name", payload.name);
+		const name = payload.name;
+		if (name) res.headers.set("x-user-name", name);
 		return res;
 	} catch {
 		const res = NextResponse.redirect(new URL("/login", req.url));

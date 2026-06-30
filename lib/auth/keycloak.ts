@@ -3,12 +3,13 @@ const KEYCLOAK_BASE =
 const CLIENT_ID = process.env.KEYCLOAK_CLIENT_ID ?? "syntheo-app";
 const CLIENT_SECRET = process.env.KEYCLOAK_CLIENT_SECRET ?? "";
 
-export function getLoginUrl(redirectUri: string): string {
+export function getLoginUrl(redirectUri: string, state: string): string {
 	const params = new URLSearchParams({
 		client_id: CLIENT_ID,
 		redirect_uri: redirectUri,
 		response_type: "code",
 		scope: "openid email profile",
+		state,
 	});
 	return `${KEYCLOAK_BASE}/protocol/openid-connect/auth?${params}`;
 }
@@ -31,4 +32,10 @@ export async function exchangeCode(
 	if (!res.ok) throw new Error(`Token exchange failed: ${res.status}`);
 	const data = await res.json();
 	return { accessToken: data.access_token, refreshToken: data.refresh_token };
+}
+
+if (process.env.NODE_ENV !== "test" && !CLIENT_SECRET) {
+	console.error(
+		"[auth] KEYCLOAK_CLIENT_SECRET is not set — token exchange will fail",
+	);
 }

@@ -25,6 +25,8 @@ export async function verifyJwt(
 	return {
 		sub: payload.sub as string,
 		email: payload.email as string,
-		name: (payload.name ?? payload.preferred_username) as string,
+		name:
+			((payload.name ?? payload.preferred_username) as string | undefined) ??
+			"",
 	};
 }
