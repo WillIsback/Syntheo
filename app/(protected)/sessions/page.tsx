@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import SessionList from "@/components/session-list";
 import { getDb } from "@/lib/db/client";
 import { getSessionsForUser } from "@/lib/db/queries";
+import { logDataAccess } from "@/lib/otel/logger";
 
 export default async function SessionsPage() {
 	const headersList = await headers();
@@ -15,6 +16,8 @@ export default async function SessionsPage() {
 	} finally {
 		client.release();
 	}
+
+	logDataAccess(userId, "read", "sessions_list");
 
 	return (
 		<div className="max-w-2xl mx-auto">

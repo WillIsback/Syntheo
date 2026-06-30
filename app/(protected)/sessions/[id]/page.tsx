@@ -4,6 +4,7 @@ import ReportView from "@/components/report-view";
 import TranscriptView from "@/components/transcript-view";
 import { getDb } from "@/lib/db/client";
 import { getSessionDetail } from "@/lib/db/queries";
+import { logDataAccess } from "@/lib/otel/logger";
 
 interface Props {
 	params: Promise<{ id: string }>;
@@ -24,6 +25,8 @@ export default async function SessionDetailPage({ params }: Props) {
 	}
 
 	if (!detail) return notFound();
+
+	logDataAccess(userId, "read", `session:${id}`);
 
 	const transcriptionText = detail.transcription
 		? detail.transcription.segments
@@ -53,7 +56,11 @@ export default async function SessionDetailPage({ params }: Props) {
 			</div>
 			<div>
 				{transcriptionText && (
-					<ReportView transcriptionText={transcriptionText} sessionId={id} />
+					<ReportView
+						transcriptionText={transcriptionText}
+						sessionId={id}
+						savedContent={detail.report?.content}
+					/>
 				)}
 			</div>
 		</div>

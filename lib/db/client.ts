@@ -21,11 +21,13 @@ export async function getDb(userId?: string): Promise<PoolClient> {
 	const client = await getPool().connect();
 	try {
 		const encKey = await getEncryptionKey();
-		await client.query(
-			`SET LOCAL app.enc_key = '${encKey.replace(/'/g, "''")}'`,
-		);
+		// set_config works outside transactions (unlike SET LOCAL which is a no-op in autocommit)
+		await client.query("SELECT set_config('app.enc_key', $1, false)", [encKey]);
 		if (userId) {
-			await client.query(`SET LOCAL app.current_user_id = '${userId}'`);
+			await client.query(
+				"SELECT set_config('app.current_user_id', $1, false)",
+				[userId],
+			);
 		}
 		return client;
 	} catch (err) {

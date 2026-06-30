@@ -25,6 +25,12 @@ EOSQL
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "syntheo_db" <<-EOSQL
     CREATE EXTENSION IF NOT EXISTS pgcrypto;
     CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+    -- Non-owner app role with least-privilege access; table owner bypasses RLS by default,
+    -- so the app must connect as this role (FORCE RLS in schema.sql covers the owner too).
+    CREATE ROLE app_user NOLOGIN;
+    GRANT CONNECT ON DATABASE syntheo_db TO app_user;
+    GRANT USAGE ON SCHEMA public TO app_user;
+    GRANT SELECT, INSERT, UPDATE, DELETE ON sessions, transcriptions, reports TO app_user;
 EOSQL
 
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "mlflow_db" <<-EOSQL

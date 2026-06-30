@@ -13,12 +13,15 @@ export async function middleware(req: NextRequest) {
 
 	try {
 		const payload = await verifyJwt(token);
-		const res = NextResponse.next();
-		res.headers.set("x-user-id", payload.sub);
-		res.headers.set("x-user-email", payload.email);
-		const name = payload.name;
-		if (name) res.headers.set("x-user-name", name);
-		return res;
+		// Strip inbound spoofable identity headers before setting verified values
+		const requestHeaders = new Headers(req.headers);
+		requestHeaders.delete("x-user-id");
+		requestHeaders.delete("x-user-email");
+		requestHeaders.delete("x-user-name");
+		requestHeaders.set("x-user-id", payload.sub);
+		requestHeaders.set("x-user-email", payload.email ?? "");
+		requestHeaders.set("x-user-name", payload.name ?? "");
+		return NextResponse.next({ request: { headers: requestHeaders } });
 	} catch {
 		const res = NextResponse.redirect(new URL("/login", req.url));
 		res.cookies.delete("access_token");

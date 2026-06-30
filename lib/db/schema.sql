@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS sessions (
   ip_address      TEXT NOT NULL
 );
 ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sessions FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS user_isolation ON sessions;
 CREATE POLICY user_isolation ON sessions
   USING (user_id = current_setting('app.current_user_id', true)::UUID)
@@ -27,6 +28,7 @@ CREATE TABLE IF NOT EXISTS transcriptions (
   created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ALTER TABLE transcriptions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE transcriptions FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS user_isolation ON transcriptions;
 CREATE POLICY user_isolation ON transcriptions
   USING (
@@ -52,6 +54,7 @@ CREATE TABLE IF NOT EXISTS reports (
   created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ALTER TABLE reports ENABLE ROW LEVEL SECURITY;
+ALTER TABLE reports FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS user_isolation ON reports;
 CREATE POLICY user_isolation ON reports
   USING (

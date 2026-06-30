@@ -120,7 +120,9 @@ export async function getSessionsForUser(
 ): Promise<Session[]> {
 	const { rows } = await client.query(
 		`SELECT id, created_at AS "createdAt", consent_version AS "consentVersion"
-     FROM sessions ORDER BY created_at DESC`,
+     FROM sessions
+     WHERE user_id = current_setting('app.current_user_id', true)::uuid
+     ORDER BY created_at DESC`,
 	);
 	return rows;
 }
@@ -131,7 +133,9 @@ export async function getSessionDetail(
 ): Promise<SessionDetail | null> {
 	const { rows: sessionRows } = await client.query({
 		text: `SELECT id, created_at AS "createdAt", consent_version AS "consentVersion"
-           FROM sessions WHERE id = $1`,
+           FROM sessions
+           WHERE id = $1
+             AND user_id = current_setting('app.current_user_id', true)::uuid`,
 		values: [sessionId],
 	});
 	if (!sessionRows.length) return null;
@@ -166,30 +170,40 @@ export async function updateTranscriptionSpeakers(
 	segments: Segment[],
 ): Promise<void> {
 	await client.query({
-		text: `UPDATE transcriptions SET speakers = $2 WHERE id = $1`,
+		text: `UPDATE transcriptions SET speakers = $2
+           WHERE id = $1
+             AND session_id IN (
+               SELECT id FROM sessions
+               WHERE user_id = current_setting('app.current_user_id', true)::uuid
+             )`,
 		values: [transcriptionId, JSON.stringify(segments)],
 	});
 }
 
 export async function exportUserData(
 	client: PoolClient,
-	_userId: string,
+	userId: string,
 ): Promise<UserExport> {
-	const { rows: sessions } = await client.query(
-		`SELECT id, created_at AS "createdAt", consent_version AS "consentVersion"
-     FROM sessions`,
-	);
-	const { rows: transcriptions } = await client.query(
-		`SELECT t.id, t.session_id AS "sessionId", t.speakers AS segments,
+	const { rows: sessions } = await client.query({
+		text: `SELECT id, created_at AS "createdAt", consent_version AS "consentVersion"
+     FROM sessions WHERE user_id = $1`,
+		values: [userId],
+	});
+	const { rows: transcriptions } = await client.query({
+		text: `SELECT t.id, t.session_id AS "sessionId", t.speakers AS segments,
             t.whisper_run_id AS "whisperRunId"
-     FROM transcriptions t JOIN sessions s ON s.id = t.session_id`,
-	);
-	const { rows: reports } = await client.query(
-		`SELECT r.id, r.session_id AS "sessionId", r.vllm_run_id AS "vllmRunId",
+     FROM transcriptions t JOIN sessions s ON s.id = t.session_id
+     WHERE s.user_id = $1`,
+		values: [userId],
+	});
+	const { rows: reports } = await client.query({
+		text: `SELECT r.id, r.session_id AS "sessionId", r.vllm_run_id AS "vllmRunId",
             r.model_version AS "modelVersion",
             pgp_sym_decrypt(r.content_encrypted, current_setting('app.enc_key')) AS content
-     FROM reports r JOIN sessions s ON s.id = r.session_id`,
-	);
+     FROM reports r JOIN sessions s ON s.id = r.session_id
+     WHERE s.user_id = $1`,
+		values: [userId],
+	});
 	return { sessions, transcriptions, reports };
 }
 
