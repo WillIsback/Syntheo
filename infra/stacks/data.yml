@@ -1,0 +1,142 @@
+version: "3.9"
+
+services:
+  vault-agent-postgres:
+    image: hashicorp/vault:1.17.2
+    command: ["agent", "-config=/vault/config/agent.hcl"]
+    environment:
+      VAULT_ADDR: "http://vault:8200"
+    volumes:
+      - type: bind
+        source: ./config/vault/agents/postgres.hcl
+        target: /vault/config/agent.hcl
+        read_only: true
+      - postgres_secrets:/run/vault
+    secrets:
+      - vault_postgres_role_id
+      - vault_postgres_secret_id
+    networks:
+      - vault_net
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  postgres:
+    image: postgres:16-alpine
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        until [ -f /run/vault/postgres.env ]; do
+          echo "Waiting for Vault Agent to render secrets..."; sleep 2;
+        done
+        set -a; . /run/vault/postgres.env; set +a
+        exec /usr/local/bin/docker-entrypoint.sh postgres
+    environment:
+      POSTGRES_DB: "${POSTGRES_DB}"
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - type: bind
+        source: /mnt/syntheo_data/postgres
+        target: /var/lib/postgresql/data
+      - postgres_secrets:/run/vault:ro
+      - type: bind
+        source: ./config/postgres/init.sql
+        target: /docker-entrypoint-initdb.d/init.sql
+        read_only: true
+    networks:
+      - data_net
+      - vault_net
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+
+  vault-agent-keycloak:
+    image: hashicorp/vault:1.17.2
+    command: ["agent", "-config=/vault/config/agent.hcl"]
+    environment:
+      VAULT_ADDR: "http://vault:8200"
+    volumes:
+      - type: bind
+        source: ./config/vault/agents/keycloak.hcl
+        target: /vault/config/agent.hcl
+        read_only: true
+      - keycloak_secrets:/run/vault
+    secrets:
+      - vault_keycloak_role_id
+      - vault_keycloak_secret_id
+    networks:
+      - vault_net
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        until [ -f /run/vault/keycloak.env ]; do
+          echo "Waiting for Vault Agent..."; sleep 2;
+        done
+        set -a; . /run/vault/keycloak.env; set +a
+        exec /opt/keycloak/bin/kc.sh start \
+          --hostname=https://${DOMAIN} \
+          --hostname-backchannel-dynamic=true \
+          --http-enabled=true \
+          --http-port=8080 \
+          --db=postgres \
+          --db-url=jdbc:postgresql://postgres:5432/${KEYCLOAK_DB} \
+          --db-username=keycloak \
+          --db-password="${KC_DB_PASSWORD}" \
+          --import-realm
+    environment:
+      KC_DB: postgres
+      KEYCLOAK_DB: "${KEYCLOAK_DB}"
+      DOMAIN: "${DOMAIN}"
+    volumes:
+      - keycloak_secrets:/run/vault:ro
+      - type: bind
+        source: ./config/keycloak/syntheo-realm.json
+        target: /opt/keycloak/data/import/syntheo-realm.json
+        read_only: true
+    networks:
+      - data_net
+      - frontend_net
+      - vault_net
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 15s
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.keycloak.rule=Host(`${DOMAIN}`) && PathPrefix(`/realms`, `/resources`, `/js`)"
+        - "traefik.http.routers.keycloak.entrypoints=websecure"
+        - "traefik.http.routers.keycloak.middlewares=crowdsec,secure-headers"
+        - "traefik.http.services.keycloak.loadbalancer.server.port=8080"
+
+secrets:
+  vault_postgres_role_id:
+    external: true
+  vault_postgres_secret_id:
+    external: true
+  vault_keycloak_role_id:
+    external: true
+  vault_keycloak_secret_id:
+    external: true
+
+volumes:
+  postgres_secrets:
+  keycloak_secrets:
+
+networks:
+  data_net:
+    external: true
+  frontend_net:
+    external: true
+  vault_net:
+    external: true
