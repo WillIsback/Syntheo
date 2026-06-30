@@ -9,7 +9,10 @@
 		"lint": "eslint"
 	},
 	"dependencies": {
+		"@ai-sdk/openai-compatible": "^3.0.2",
+		"@ai-sdk/react": "^4.0.9",
 		"@types/pg": "^8.20.0",
+		"ai": "^7.0.8",
 		"jose": "^6.2.3",
 		"next": "16.2.9",
 		"pg": "^8.22.0",
