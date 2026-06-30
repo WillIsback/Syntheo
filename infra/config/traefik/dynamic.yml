@@ -8,7 +8,7 @@ http:
           updateIntervalSeconds: 10
           crowdsecLapiScheme: http
           crowdsecLapiHost: host.docker.internal:8080
-          crowdsecLapiKey: "{{ env `CROWDSEC_BOUNCER_KEY` }}"
+          crowdsecLapiKeyFile: /run/vault/CROWDSEC_BOUNCER_KEY
           crowdsecAppsecEnabled: true
           crowdsecAppsecHost: host.docker.internal:7422
           forwardedHeadersTrustedIPs:
@@ -42,4 +42,4 @@ http:
 
     dashboard-auth:
       basicAuth:
-        usersFile: /run/secrets/traefik_htpasswd
+        usersFile: /run/vault/traefik_htpasswd

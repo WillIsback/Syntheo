@@ -44,6 +44,7 @@ services:
       replicas: 1
       restart_policy:
         condition: on-failure
+        delay: 5s
 
   traefik:
     image: traefik:v3.1
@@ -82,8 +83,6 @@ services:
         condition: on-failure
       update_config:
         order: start-first
-    depends_on:
-      - vault-agent-traefik
 
 secrets:
   vault_traefik_role_id:
