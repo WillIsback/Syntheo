@@ -99,7 +99,7 @@ export default function TranscriptView({
 					return (
 						<article
 							key={`${seg.start}-${seg.end}-${seg.speaker}`}
-							className="rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] p-[var(--space-4)] transition-colors hover:border-[var(--color-primary)]"
+							className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-[var(--space-4)] transition-colors hover:border-[var(--color-primary)]"
 						>
 							<div
 								className="mb-[var(--space-2)] flex items-center gap-[var(--space-2)] text-[11px] font-bold uppercase tracking-wide"

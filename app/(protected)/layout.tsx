@@ -14,6 +14,10 @@ export default async function ProtectedLayout({
 
 	let recentSessions: { id: string; createdAt: string }[] = [];
 	if (userId) {
+		// Lecture de métadonnées de navigation uniquement (id + date, aucun contenu) —
+		// volontairement non journalisée pour éviter de saturer l'audit RGPD à chaque navigation.
+		// Navigation metadata only (id + date, no content) — intentionally not audit-logged
+		// to avoid flooding the RGPD audit trail on every navigation.
 		const client = await getDb(userId);
 		try {
 			const sessions = await getSessionsForUser(client);
