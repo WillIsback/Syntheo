@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
-import Header from "@/components/layout/header";
-import Sidebar from "@/components/layout/sidebar";
+import AppShell from "@/components/layout/app-shell";
+import { getDb } from "@/lib/db/client";
+import { getSessionsForUser } from "@/lib/db/queries";
 
 export default async function ProtectedLayout({
 	children,
@@ -9,14 +10,28 @@ export default async function ProtectedLayout({
 }) {
 	const headersList = await headers();
 	const userName = headersList.get("x-user-name") ?? undefined;
+	const userId = headersList.get("x-user-id");
+
+	let recentSessions: { id: string; createdAt: string }[] = [];
+	if (userId) {
+		const client = await getDb(userId);
+		try {
+			const sessions = await getSessionsForUser(client);
+			recentSessions = sessions.slice(0, 6).map((s) => ({
+				id: s.id,
+				createdAt:
+					s.createdAt instanceof Date
+						? s.createdAt.toISOString()
+						: String(s.createdAt),
+			}));
+		} finally {
+			client.release();
+		}
+	}
 
 	return (
-		<div className="flex h-screen overflow-hidden">
-			<Sidebar />
-			<div className="flex flex-col flex-1 overflow-hidden">
-				<Header userName={userName} />
-				<main className="flex-1 overflow-y-auto p-6">{children}</main>
-			</div>
-		</div>
+		<AppShell userName={userName} recentSessions={recentSessions}>
+			{children}
+		</AppShell>
 	);
 }
