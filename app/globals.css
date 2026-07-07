@@ -3,6 +3,7 @@
 :root {
 	--color-primary: #1a73e8;
 	--color-primary-light: #e8f0fe;
+	--color-primary-dark: #1557b0;
 	--color-bg: #f8f9fa;
 	--color-surface: #ffffff;
 	--color-border: #e0e0e0;
@@ -17,7 +18,23 @@
 	--color-danger: #d93025;
 	--color-warning: #f29900;
 	--radius: 6px;
-	--font-sans: "Segoe UI", Roboto, Arial, sans-serif;
+	--radius-lg: 10px;
+	--font-sans: "Google Sans", "Segoe UI", Roboto, Arial, sans-serif;
+	--font-serif: Georgia, "Times New Roman", serif;
+
+	--space-1: 4px;
+	--space-2: 8px;
+	--space-3: 12px;
+	--space-4: 16px;
+	--space-5: 24px;
+	--space-6: 32px;
+	--space-7: 48px;
+	--space-8: 64px;
+
+	--sidebar-w: 264px;
+	--panel-w: 256px;
+	--doc-max-w: 820px;
+	--topbar-h: 56px;
 }
 
 * {
@@ -32,4 +49,19 @@ body {
 	font-family: var(--font-sans);
 	font-size: 14px;
 	line-height: 1.5;
+}
+
+::-webkit-scrollbar {
+	width: 8px;
+	height: 8px;
+}
+::-webkit-scrollbar-track {
+	background: transparent;
+}
+::-webkit-scrollbar-thumb {
+	background: var(--color-border);
+	border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+	background: var(--color-text-3);
 }
