@@ -32,6 +32,24 @@ describe("computeStats", () => {
 		expect(s.speakers[1].index).toBe(1);
 	});
 
+	it("preserves first-appearance order in index when sort order differs", () => {
+		// Fixture: SPEAKER_00 appears first but talks less, SPEAKER_01 appears second but talks more
+		const discriminatingSegments: Segment[] = [
+			{ start: 0, end: 5, speaker: "SPEAKER_00", text: "hi" }, // 5s, appears first
+			{ start: 5, end: 55, speaker: "SPEAKER_01", text: "ok thanks a lot" }, // 50s, appears second
+		];
+		const s = computeStats(discriminatingSegments);
+		expect(s.speakers).toHaveLength(2);
+		// Sorted by talk time: SPEAKER_01 (50s) comes first
+		expect(s.speakers[0].speaker).toBe("SPEAKER_01");
+		expect(s.speakers[0].seconds).toBe(50);
+		expect(s.speakers[0].index).toBe(1); // appeared second
+		// SPEAKER_00 (5s) comes second in sorted order
+		expect(s.speakers[1].speaker).toBe("SPEAKER_00");
+		expect(s.speakers[1].seconds).toBe(5);
+		expect(s.speakers[1].index).toBe(0); // appeared first — index NOT post-sort position
+	});
+
 	it("handles empty input without dividing by zero", () => {
 		const s = computeStats([]);
 		expect(s).toEqual({
