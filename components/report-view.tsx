@@ -28,7 +28,7 @@ const AI_DISCLAIMER = (
 
 function SavedReport({ content }: { content: string }) {
 	return (
-		<div className="bg-[var(--color-surface)] rounded-[var(--radius)] border border-[var(--color-border)] p-4">
+		<div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-[var(--space-5)]">
 			<div className="flex items-center justify-between mb-3">
 				<h3 className="font-medium text-[var(--color-text)]">
 					Compte rendu / Report
@@ -38,7 +38,10 @@ function SavedReport({ content }: { content: string }) {
 				</span>
 			</div>
 			{AI_DISCLAIMER}
-			<div className="text-sm text-[var(--color-text)] whitespace-pre-wrap leading-relaxed">
+			<div
+				className="text-sm text-[var(--color-text)] whitespace-pre-wrap leading-[1.75]"
+				style={{ fontFamily: "var(--font-serif)" }}
+			>
 				{content}
 			</div>
 		</div>
@@ -68,7 +71,7 @@ export default function ReportView({
 	}
 
 	return (
-		<div className="bg-[var(--color-surface)] rounded-[var(--radius)] border border-[var(--color-border)] p-4">
+		<div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-[var(--space-5)]">
 			<div className="flex items-center justify-between mb-3">
 				<h3 className="font-medium text-[var(--color-text)]">
 					Compte rendu / Report
@@ -80,7 +83,10 @@ export default function ReportView({
 
 			{AI_DISCLAIMER}
 
-			<div className="text-sm text-[var(--color-text)] whitespace-pre-wrap leading-relaxed">
+			<div
+				className="text-sm text-[var(--color-text)] whitespace-pre-wrap leading-[1.75]"
+				style={{ fontFamily: "var(--font-serif)" }}
+			>
 				{isLoading && !completion ? (
 					<span className="text-[var(--color-text-3)]">
 						Génération… / Generating…
