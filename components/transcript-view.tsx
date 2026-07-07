@@ -1,8 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { Segment } from "@/lib/db/queries";
+import { formatClock } from "@/lib/transcript/stats";
 import SpeakerChip from "./speaker-chip";
+
+const SPEAKER_COLORS = [
+	"var(--color-speaker-1)",
+	"var(--color-speaker-2)",
+	"var(--color-speaker-3)",
+	"var(--color-speaker-4)",
+];
 
 interface TranscriptViewProps {
 	transcriptionId: string;
@@ -20,10 +28,16 @@ export default function TranscriptView({
 	const [segments, setSegments] = useState(initialSegments);
 	const [saving, setSaving] = useState(false);
 
-	const speakerNames = new Map<string, string>();
-	segments.forEach((s) => {
-		if (!speakerNames.has(s.speaker)) speakerNames.set(s.speaker, s.speaker);
-	});
+	// Stable first-appearance order -> color index (shared with panel).
+	const speakerIndex = useMemo(() => {
+		const order = new Map<string, number>();
+		for (const s of segments) {
+			if (!order.has(s.speaker)) order.set(s.speaker, order.size);
+		}
+		return order;
+	}, [segments]);
+
+	const speakerNames = [...speakerIndex.keys()];
 
 	async function renameSpeaker(oldLabel: string, newName: string) {
 		const updated = segments.map((s) =>
@@ -39,10 +53,18 @@ export default function TranscriptView({
 		setSaving(false);
 	}
 
+	function colorFor(speaker: string) {
+		return SPEAKER_COLORS[
+			(speakerIndex.get(speaker) ?? 0) % SPEAKER_COLORS.length
+		];
+	}
+
 	return (
-		<div className="bg-[var(--color-surface)] rounded-[var(--radius)] border border-[var(--color-border)] p-4">
-			<div className="flex items-center justify-between mb-3">
-				<h3 className="font-medium text-[var(--color-text)]">Transcription</h3>
+		<section>
+			<div className="mb-[var(--space-3)] flex items-center justify-between">
+				<h2 className="text-sm font-semibold text-[var(--color-text)]">
+					Transcription
+				</h2>
 				{saving && (
 					<span className="text-xs text-[var(--color-text-3)]">
 						Sauvegarde… / Saving…
@@ -50,62 +72,58 @@ export default function TranscriptView({
 				)}
 			</div>
 
-			<div className="bg-blue-50 border border-blue-100 rounded-[var(--radius)] p-3 mb-4 flex gap-2 text-xs text-blue-800">
-				<span>🤖</span>
+			<div className="mb-[var(--space-4)] flex gap-[var(--space-2)] rounded-[var(--radius)] border border-[#f9ab00] bg-[#fef3e2] p-[var(--space-3)] text-xs leading-relaxed text-[#7a4300]">
+				<span>⚠</span>
 				<span>
-					Transcription générée par IA (WhisperX large-v3 · run #{whisperRunId}{" "}
-					· {new Date(createdAt).toLocaleDateString("fr-FR")}). Susceptible
-					d'erreurs — vérifiez avant tout usage officiel. / AI-generated
-					transcription. May contain errors.
+					<strong>Transcription générée par IA</strong> (WhisperX large-v3 · run
+					#{whisperRunId} · {new Date(createdAt).toLocaleDateString("fr-FR")}).
+					Susceptible d'erreurs — vérifiez avant tout usage officiel. /
+					AI-generated transcription. May contain errors.
 				</span>
 			</div>
 
-			<div className="flex flex-wrap gap-2 mb-4">
-				{[...speakerNames.entries()].map(([orig, name], i) => (
+			<div className="mb-[var(--space-4)] flex flex-wrap gap-[var(--space-2)]">
+				{speakerNames.map((name) => (
 					<SpeakerChip
-						key={orig}
+						key={name}
 						label={name}
-						index={i}
-						onChange={(newName) => renameSpeaker(orig, newName)}
+						index={speakerIndex.get(name) ?? 0}
+						onChange={(newName) => renameSpeaker(name, newName)}
 					/>
 				))}
 			</div>
 
-			<div className="space-y-3 text-sm">
+			<div className="flex flex-col gap-[var(--space-2)]">
 				{segments.map((seg) => {
-					const speakerIndex = [...speakerNames.keys()].indexOf(
-						initialSegments.find((s) => s === seg)?.speaker ?? seg.speaker,
-					);
-					const color = [
-						"var(--color-speaker-1)",
-						"var(--color-speaker-2)",
-						"var(--color-speaker-3)",
-						"var(--color-speaker-4)",
-					][speakerIndex % 4];
+					const color = colorFor(seg.speaker);
 					return (
-						<div
+						<article
 							key={`${seg.start}-${seg.end}-${seg.speaker}`}
-							className="flex gap-3"
+							className="rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] p-[var(--space-4)] transition-colors hover:border-[var(--color-primary)]"
 						>
-							<div className="flex-shrink-0 text-xs text-[var(--color-text-3)] pt-0.5 w-10 text-right">
-								{formatTime(seg.start)}
-							</div>
-							<div>
-								<span className="text-xs font-medium mr-2" style={{ color }}>
-									{seg.speaker}
+							<div
+								className="mb-[var(--space-2)] flex items-center gap-[var(--space-2)] text-[11px] font-bold uppercase tracking-wide"
+								style={{ color }}
+							>
+								<span
+									className="h-2 w-2 rounded-full"
+									style={{ background: color }}
+								/>
+								{seg.speaker}
+								<span className="font-normal text-[var(--color-text-3)]">
+									{formatClock(seg.start)}
 								</span>
-								<span className="text-[var(--color-text)]">{seg.text}</span>
 							</div>
-						</div>
+							<p
+								className="text-[14px] leading-[1.75] text-[var(--color-text)]"
+								style={{ fontFamily: "var(--font-serif)" }}
+							>
+								{seg.text}
+							</p>
+						</article>
 					);
 				})}
 			</div>
-		</div>
+		</section>
 	);
-}
-
-function formatTime(s: number): string {
-	const m = Math.floor(s / 60);
-	const sec = Math.floor(s % 60);
-	return `${m}:${sec.toString().padStart(2, "0")}`;
 }
