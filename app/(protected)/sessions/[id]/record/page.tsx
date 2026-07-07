@@ -12,7 +12,7 @@ export default function RecordPage({
 	const { id } = use(params);
 	const router = useRouter();
 	return (
-		<div className="max-w-lg mx-auto mt-16">
+		<div className="max-w-lg mx-auto px-[var(--space-5)] py-[var(--space-8)]">
 			<h1 className="text-xl font-semibold mb-6 text-center">
 				Enregistrement en cours / Recording
 			</h1>

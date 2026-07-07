@@ -78,7 +78,7 @@ export default function AudioRecorder({
 	}
 
 	return (
-		<div className="flex flex-col items-center gap-4 p-6">
+		<div className="flex flex-col items-center gap-[var(--space-5)] p-[var(--space-6)]">
 			{state === "idle" && (
 				<button
 					type="button"

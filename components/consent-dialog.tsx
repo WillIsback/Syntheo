@@ -42,7 +42,7 @@ export default function ConsentDialog({
 
 	return (
 		<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-			<div className="bg-[var(--color-surface)] rounded-[var(--radius)] p-6 max-w-md w-full mx-4 shadow-xl">
+			<div className="bg-[var(--color-surface)] rounded-[var(--radius-lg)] p-[var(--space-6)] max-w-md w-full mx-[var(--space-4)] shadow-xl">
 				<div className="flex items-center gap-2 mb-4">
 					<span className="text-xl">🛡</span>
 					<h2 className="font-semibold text-[var(--color-text)]">

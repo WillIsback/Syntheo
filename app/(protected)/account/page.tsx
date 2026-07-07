@@ -23,10 +23,10 @@ export default function AccountPage() {
 	}
 
 	return (
-		<div className="max-w-lg mx-auto">
+		<div className="max-w-lg mx-auto px-[var(--space-5)] py-[var(--space-6)]">
 			<h1 className="text-xl font-semibold mb-6">Compte / Account</h1>
 
-			<section className="bg-[var(--color-surface)] rounded-[var(--radius)] border border-[var(--color-border)] p-4 mb-4">
+			<section className="bg-[var(--color-surface)] rounded-[var(--radius-lg)] border border-[var(--color-border)] p-[var(--space-5)] mb-4">
 				<h2 className="font-medium mb-2">Mes données / My data</h2>
 				<p className="text-sm text-[var(--color-text-2)] mb-4">
 					Exportez toutes vos transcriptions, comptes rendus et métadonnées de
@@ -42,7 +42,7 @@ export default function AccountPage() {
 				</button>
 			</section>
 
-			<section className="bg-[var(--color-surface)] rounded-[var(--radius)] border border-[var(--color-danger)] p-4">
+			<section className="bg-[var(--color-surface)] rounded-[var(--radius-lg)] border border-[var(--color-danger)] p-[var(--space-5)]">
 				<h2 className="font-medium text-[var(--color-danger)] mb-2">
 					Supprimer mon compte / Delete account
 				</h2>
