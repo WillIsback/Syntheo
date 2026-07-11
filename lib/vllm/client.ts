@@ -7,6 +7,11 @@ export function getVllmProvider() {
 		name: "vllm",
 		baseURL: process.env.VLLM_BASE_URL ?? "http://vllm:8000/v1",
 		apiKey: process.env.VLLM_API_KEY ?? "none",
+		// Disable Qwen3 chain-of-thought thinking mode for report generation
+		transformRequestBody: (body) => ({
+			...body,
+			chat_template_kwargs: { enable_thinking: false },
+		}),
 	});
 }
 

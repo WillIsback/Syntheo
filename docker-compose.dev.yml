@@ -1,0 +1,40 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: syntheo-dev-postgres
+    environment:
+      POSTGRES_USER: syntheo
+      POSTGRES_PASSWORD: syntheo_dev_pass
+      POSTGRES_DB: syntheo_dev
+    ports:
+      - "5433:5432"
+    volumes:
+      - syntheo_dev_postgres:/var/lib/postgresql/data
+      - ./lib/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U syntheo -d syntheo_dev"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0
+    container_name: syntheo-dev-keycloak
+    command: start-dev --import-realm
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_DB: dev-file
+    ports:
+      - "8090:8080"
+    volumes:
+      - ./infra/config/keycloak/syntheo-realm-dev.json:/opt/keycloak/data/import/syntheo-realm.json:ro
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/realms/syntheo || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+volumes:
+  syntheo_dev_postgres:

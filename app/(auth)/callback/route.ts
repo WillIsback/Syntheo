@@ -18,27 +18,36 @@ export async function GET(req: NextRequest) {
 		);
 	}
 
+	const pkceVerifier = req.cookies.get("pkce_verifier")?.value;
+	if (!pkceVerifier) {
+		return NextResponse.redirect(
+			new URL("/login?error=missing_verifier", req.nextUrl.origin),
+		);
+	}
+
 	const origin = req.nextUrl.origin;
 	const redirectUri = `${origin}/callback`;
 
 	try {
-		const { accessToken, refreshToken } = await exchangeCode(code, redirectUri);
+		const { accessToken, refreshToken } = await exchangeCode(code, redirectUri, pkceVerifier);
+		const secure = process.env.NODE_ENV === "production";
 		const res = NextResponse.redirect(new URL("/sessions", origin));
 		res.cookies.set("access_token", accessToken, {
 			httpOnly: true,
-			secure: true,
+			secure,
 			sameSite: "lax",
 			maxAge: 3600,
 			path: "/",
 		});
 		res.cookies.set("refresh_token", refreshToken, {
 			httpOnly: true,
-			secure: true,
+			secure,
 			sameSite: "lax",
 			maxAge: 86400 * 30,
 			path: "/",
 		});
 		res.cookies.delete("oidc_state");
+		res.cookies.delete("pkce_verifier");
 		return res;
 	} catch {
 		return NextResponse.redirect(

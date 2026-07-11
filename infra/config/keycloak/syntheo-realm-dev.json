@@ -8,16 +8,9 @@
 	"duplicateEmailsAllowed": false,
 	"resetPasswordAllowed": true,
 	"rememberMe": false,
-	"bruteForceProtected": true,
-	"permanentLockout": false,
-	"maxFailureWaitSeconds": 900,
-	"minimumQuickLoginWaitSeconds": 60,
-	"waitIncrementSeconds": 60,
-	"quickLoginCheckMilliSeconds": 1000,
-	"maxDeltaTimeSeconds": 43200,
-	"failureFactor": 5,
-	"sslRequired": "all",
-	"accessTokenLifespan": 300,
+	"bruteForceProtected": false,
+	"sslRequired": "external",
+	"accessTokenLifespan": 3600,
 	"clients": [
 		{
 			"clientId": "syntheo-app",
@@ -28,8 +21,15 @@
 			"implicitFlowEnabled": false,
 			"directAccessGrantsEnabled": false,
 			"serviceAccountsEnabled": false,
-			"redirectUris": [],
-			"webOrigins": [],
+			"secret": "dev-syntheo-secret",
+			"redirectUris": [
+				"http://localhost:3000/*",
+				"http://localhost:3001/*"
+			],
+			"webOrigins": [
+				"http://localhost:3000",
+				"http://localhost:3001"
+			],
 			"attributes": {
 				"pkce.code.challenge.method": "S256",
 				"post.logout.redirect.uris": "+"
@@ -44,6 +44,15 @@
 						"id.token.claim": "true",
 						"access.token.claim": "true",
 						"claim.name": "email"
+					}
+				},
+				{
+					"name": "full name",
+					"protocol": "openid-connect",
+					"protocolMapper": "oidc-full-name-mapper",
+					"config": {
+						"id.token.claim": "true",
+						"access.token.claim": "true"
 					}
 				},
 				{
@@ -65,5 +74,23 @@
 			{ "name": "admin", "description": "Syntheo administrator" }
 		]
 	},
-	"defaultRoles": ["user"]
+	"defaultRoles": ["user"],
+	"users": [
+		{
+			"username": "testuser",
+			"email": "test@syntheo.dev",
+			"firstName": "Test",
+			"lastName": "User",
+			"enabled": true,
+			"emailVerified": true,
+			"credentials": [
+				{
+					"type": "password",
+					"value": "Test1234!",
+					"temporary": false
+				}
+			],
+			"realmRoles": ["user"]
+		}
+	]
 }

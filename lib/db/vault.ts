@@ -25,6 +25,8 @@ async function getVaultToken(): Promise<string> {
 }
 
 export async function getEncryptionKey(): Promise<string> {
+	// Dev bypass: use DEV_ENC_KEY env var to skip Vault
+	if (process.env.DEV_ENC_KEY) return process.env.DEV_ENC_KEY;
 	const token = await getVaultToken();
 	const res = await fetch(`${VAULT_ADDR}/v1/secret/data/syntheo/enc_key`, {
 		headers: { "X-Vault-Token": token },

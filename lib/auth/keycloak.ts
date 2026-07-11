@@ -3,13 +3,41 @@ const KEYCLOAK_BASE =
 const CLIENT_ID = process.env.KEYCLOAK_CLIENT_ID ?? "syntheo-app";
 const CLIENT_SECRET = process.env.KEYCLOAK_CLIENT_SECRET ?? "";
 
-export function getLoginUrl(redirectUri: string, state: string): string {
+export async function generatePkce(): Promise<{
+	verifier: string;
+	challenge: string;
+}> {
+	const verifierBytes = crypto.getRandomValues(new Uint8Array(32));
+	const verifier = btoa(String.fromCharCode(...verifierBytes))
+		.replace(/\+/g, "-")
+		.replace(/\//g, "_")
+		.replace(/=/g, "");
+	const challengeBytes = await crypto.subtle.digest(
+		"SHA-256",
+		new TextEncoder().encode(verifier),
+	);
+	const challenge = btoa(
+		String.fromCharCode(...new Uint8Array(challengeBytes)),
+	)
+		.replace(/\+/g, "-")
+		.replace(/\//g, "_")
+		.replace(/=/g, "");
+	return { verifier, challenge };
+}
+
+export function getLoginUrl(
+	redirectUri: string,
+	state: string,
+	codeChallenge: string,
+): string {
 	const params = new URLSearchParams({
 		client_id: CLIENT_ID,
 		redirect_uri: redirectUri,
 		response_type: "code",
 		scope: "openid email profile",
 		state,
+		code_challenge: codeChallenge,
+		code_challenge_method: "S256",
 	});
 	return `${KEYCLOAK_BASE}/protocol/openid-connect/auth?${params}`;
 }
@@ -17,6 +45,7 @@ export function getLoginUrl(redirectUri: string, state: string): string {
 export async function exchangeCode(
 	code: string,
 	redirectUri: string,
+	codeVerifier: string,
 ): Promise<{ accessToken: string; refreshToken: string }> {
 	const res = await fetch(`${KEYCLOAK_BASE}/protocol/openid-connect/token`, {
 		method: "POST",
@@ -27,6 +56,7 @@ export async function exchangeCode(
 			client_secret: CLIENT_SECRET,
 			code,
 			redirect_uri: redirectUri,
+			code_verifier: codeVerifier,
 		}),
 	});
 	if (!res.ok) throw new Error(`Token exchange failed: ${res.status}`);

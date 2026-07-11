@@ -3,7 +3,7 @@ import { verifyJwt } from "@/lib/auth/jwt";
 
 const PUBLIC_PATHS = ["/login", "/callback", "/api/health"];
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
 	const { pathname } = req.nextUrl;
 	if (PUBLIC_PATHS.some((p) => pathname.startsWith(p)))
 		return NextResponse.next();

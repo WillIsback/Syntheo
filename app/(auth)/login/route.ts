@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { getLoginUrl } from "@/lib/auth/keycloak";
+import { generatePkce, getLoginUrl } from "@/lib/auth/keycloak";
 
-export function GET(req: NextRequest) {
+export async function GET(req: NextRequest) {
 	const origin = req.nextUrl.origin;
 	const redirectUri = `${origin}/callback`;
 
@@ -10,13 +10,13 @@ export function GET(req: NextRequest) {
 		.map((b) => b.toString(16).padStart(2, "0"))
 		.join("");
 
-	const res = NextResponse.redirect(getLoginUrl(redirectUri, state));
-	res.cookies.set("oidc_state", state, {
-		httpOnly: true,
-		secure: true,
-		sameSite: "lax",
-		maxAge: 600, // 10 minutes — code must be exchanged within this window
-		path: "/",
-	});
+	const { verifier, challenge } = await generatePkce();
+
+	const secure = process.env.NODE_ENV === "production";
+	const cookieOpts = { httpOnly: true, secure, sameSite: "lax" as const, path: "/" };
+
+	const res = NextResponse.redirect(getLoginUrl(redirectUri, state, challenge));
+	res.cookies.set("oidc_state", state, { ...cookieOpts, maxAge: 600 });
+	res.cookies.set("pkce_verifier", verifier, { ...cookieOpts, maxAge: 600 });
 	return res;
 }
