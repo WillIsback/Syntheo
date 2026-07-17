@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: syntheo_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: syntheo
+      POSTGRES_USER: syntheo
+      POSTGRES_PASSWORD: syntheo_dev_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - syntheo_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U syntheo -d syntheo"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  syntheo_postgres_data:

@@ -1,0 +1,20 @@
+[
+  {
+    "email": "alice@syntheo.demo",
+    "firstname": "Alice",
+    "lastname": "Test",
+    "role": "admin"
+  },
+  {
+    "email": "bob@syntheo.demo",
+    "firstname": "Bob",
+    "lastname": "Test",
+    "role": "user"
+  },
+  {
+    "email": "generic@syntheo.demo",
+    "firstname": "Generic",
+    "lastname": "Account",
+    "role": "user"
+  }
+]

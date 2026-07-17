@@ -1,0 +1,77 @@
+/**
+ * Syntheo design tokens — CSS custom properties.
+ * Import once in app/globals.css: @import "../design-system/tokens.css";
+ */
+:root {
+  /* Brand / surfaces */
+  --syn-blue: #1a73e8;
+  --syn-blue-light: #e8f0fe;
+  --syn-blue-dark: #1557b0;
+  --syn-surface: #ffffff;
+  --syn-bg: #f8f9fa;
+  --syn-border: #e0e0e0;
+  --syn-border-soft: #f1f3f4;
+
+  /* Text */
+  --syn-text: #202124;
+  --syn-text-2: #5f6368;
+  --syn-text-3: #9aa0a6;
+
+  /* Speaker palette — distinct, accessible, cycle s1..s4 */
+  --syn-s1: #1a73e8;
+  --syn-s1-bg: #e8f0fe; /* blue */
+  --syn-s2: #0f9d58;
+  --syn-s2-bg: #e6f4ea; /* green */
+  --syn-s3: #e37400;
+  --syn-s3-bg: #fef3e2; /* amber */
+  --syn-s4: #a142f4;
+  --syn-s4-bg: #f3e8fd; /* purple */
+
+  /* Status */
+  --syn-status-recording-bg: #fce8e6;
+  --syn-status-recording-fg: #c5221f;
+  --syn-status-processing-bg: #fef3e2;
+  --syn-status-processing-fg: #e37400;
+  --syn-status-done-bg: #e6f4ea;
+  --syn-status-done-fg: #137333;
+  --syn-warn-bg: #fef3e2;
+  --syn-warn-border: #f9ab00;
+  --syn-warn-fg: #7a4300;
+
+  /* Radius */
+  --syn-radius-sm: 6px;
+  --syn-radius-md: 8px;
+  --syn-radius-lg: 10px;
+  --syn-radius-xl: 12px;
+  --syn-radius-pill: 999px;
+
+  /* Spacing scale (px) */
+  --syn-space-1: 4px;
+  --syn-space-2: 8px;
+  --syn-space-3: 12px;
+  --syn-space-4: 16px;
+  --syn-space-5: 20px;
+  --syn-space-6: 24px;
+  --syn-space-8: 32px;
+
+  /* Typography */
+  --syn-font-ui: "Google Sans", "Segoe UI", Roboto, Arial, sans-serif;
+  --syn-font-serif: Georgia, "Times New Roman", serif;
+  --syn-fs-11: 11px;
+  --syn-fs-12: 12px;
+  --syn-fs-13: 13px;
+  --syn-fs-14: 14px;
+  --syn-fs-15: 15px;
+  --syn-fs-18: 18px;
+  --syn-fs-20: 20px;
+  --syn-fs-28: 28px;
+
+  /* Shadows */
+  --syn-shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.12);
+  --syn-shadow-md: 0 2px 8px rgba(0, 0, 0, 0.08);
+
+  /* Layout constants */
+  --syn-topbar-h: 52px;
+  --syn-sidebar-w: 256px;
+  --syn-rightpanel-w: 240px;
+}
