@@ -6,8 +6,15 @@ import { resolveAuthSecret } from "./auth-secret.js";
  * DB-backed Credentials provider) and the Edge Runtime config (auth-edge.ts,
  * session verification only — no provider, since `pg` can't run on Edge).
  */
+// Passed as literal `process.env.X` (not the `env` indirection param) so
+// Next.js's Edge Runtime bundler statically detects and inlines these vars —
+// this file is imported by the Edge-safe auth-edge.ts too.
 export const authConfig = {
-  secret: resolveAuthSecret(),
+  secret: resolveAuthSecret({
+    AUTH_SECRET: process.env.AUTH_SECRET,
+    NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
+    NODE_ENV: process.env.NODE_ENV,
+  }),
   session: {
     strategy: "jwt",
   },
