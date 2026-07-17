@@ -15,6 +15,7 @@
     "db:seed-user": "node --env-file=.env scripts/seed-dev-user.mjs",
     "db:seed": "node --env-file=.env scripts/seed-dev-user.mjs && node --env-file=.env scripts/seed-dev-sessions.mjs",
     "db:seed-users": "node --env-file=.env scripts/seed-users.mjs",
+    "db:seed-mock-sessions": "node --env-file=.env scripts/seed-mock-sessions.mjs",
     "db:migrate": "drizzle-kit migrate",
     "db:drizzle:generate": "drizzle-kit generate",
     "db:drizzle:migrate": "drizzle-kit migrate",
