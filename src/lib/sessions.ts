@@ -4,31 +4,29 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import * as schema from "@/db/schema";
 import { appSession } from "@/db/schema";
 import { type DbTransaction, getDb, withUserDbContext } from "@/lib/db";
-import type {
-  SessionExportsPayload,
-  SessionInputMetadata,
-  SessionTranscriptPayload,
-} from "@/schemas/postgresql.server.schema";
 import {
-  SessionExportsPayloadSchema,
+  buildPendingTranscriptPayload,
+  mergeCompletedTranscriptPayload,
+  mergeFailedTranscriptPayload,
+  parseSessionRow,
+} from "@/lib/session-payload";
+import type { SessionInputMetadata } from "@/schemas/postgresql.server.schema";
+import {
   SessionInsertSchema,
   SessionTranscriptPayloadSchema,
 } from "@/schemas/postgresql.server.schema";
-import type { JobStatus } from "@/schemas/whisperx.server.schema";
 import {
   getFormattedExport,
   getJobStatus,
 } from "@/services/transcribe.service";
 
-type CompletedJobStatus = Extract<JobStatus, { status: "completed" }>;
-type SessionRow = typeof appSession.$inferSelect;
-export type ParsedSessionRow = Omit<
-  SessionRow,
-  "exportsPayload" | "transcriptPayload"
-> & {
-  transcriptPayload: SessionTranscriptPayload;
-  exportsPayload: SessionExportsPayload;
-};
+export type { ParsedSessionRow } from "@/lib/session-payload";
+export {
+  buildPendingTranscriptPayload,
+  mergeCompletedTranscriptPayload,
+  mergeFailedTranscriptPayload,
+  parseSessionRow,
+} from "@/lib/session-payload";
 
 export const sessionsStore = {
   getDb,
@@ -36,22 +34,6 @@ export const sessionsStore = {
   getScopedDb: (client: Parameters<DbTransaction<unknown>>[0]) =>
     drizzle(client, { schema }),
 };
-
-export const parseSessionRow = (row: SessionRow): ParsedSessionRow => ({
-  ...row,
-  transcriptPayload: SessionTranscriptPayloadSchema.parse(
-    row.transcriptPayload,
-  ),
-  exportsPayload: SessionExportsPayloadSchema.parse(row.exportsPayload),
-});
-
-export const buildPendingTranscriptPayload = (
-  input: SessionInputMetadata,
-): SessionTranscriptPayload => ({
-  input,
-  job: null,
-  error: null,
-});
 
 const validatePendingInsert = (params: {
   userUid: string;
@@ -73,27 +55,6 @@ const validatePendingInsert = (params: {
 
   return transcriptPayload;
 };
-
-export const mergeCompletedTranscriptPayload = (
-  existing: SessionTranscriptPayload,
-  job: CompletedJobStatus,
-): SessionTranscriptPayload => ({
-  ...existing,
-  job,
-  error: null,
-});
-
-export const mergeFailedTranscriptPayload = (
-  existing: SessionTranscriptPayload,
-  message: string,
-): SessionTranscriptPayload => ({
-  ...existing,
-  job: null,
-  error: {
-    message,
-    at: new Date().toISOString(),
-  },
-});
 
 export const createPendingSession = async (params: {
   userUid: string;

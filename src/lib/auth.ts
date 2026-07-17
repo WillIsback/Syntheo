@@ -3,7 +3,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { z } from "zod";
 import { findUserByEmail } from "@/lib/users";
-import { resolveAuthSecret } from "./auth-secret.js";
+import { authConfig } from "./auth.config";
 
 const CredentialsSchema = z.object({
   email: z.email(),
@@ -11,10 +11,7 @@ const CredentialsSchema = z.object({
 });
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  secret: resolveAuthSecret(),
-  session: {
-    strategy: "jwt",
-  },
+  ...authConfig,
   providers: [
     Credentials({
       credentials: {
@@ -50,28 +47,4 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
     }),
   ],
-  callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.sub = user.id;
-        token.email = user.email;
-        token.name = user.name;
-        token.role = user.role;
-      }
-      return token;
-    },
-    async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.sub ?? "";
-        session.user.email = token.email ?? "";
-        session.user.name = token.name;
-        session.user.role =
-          (token.role as "admin" | "user" | undefined) ?? "user";
-      }
-      return session;
-    },
-  },
-  pages: {
-    signIn: "/signin",
-  },
 });

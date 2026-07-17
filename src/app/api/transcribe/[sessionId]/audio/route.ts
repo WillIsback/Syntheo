@@ -1,21 +1,25 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { authEdge } from "@/lib/auth-edge";
 import {
-  attachRemoteJobId,
-  getOwnedSession,
-  markPendingSessionFailed,
-} from "@/lib/sessions";
+  attachRemoteJobIdEdge,
+  getOwnedSessionEdge,
+  markPendingSessionFailedEdge,
+} from "@/lib/sessions-edge";
 import { transcribeAudioStream } from "@/services/transcribe.service";
+
+// Edge Runtime has no Vercel body-size cap (Node functions are capped at
+// 4.5MB), needed here since meeting recordings routinely exceed that.
+export const runtime = "edge";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export const audioRouteDeps = {
-  auth,
-  getOwnedSession,
+  auth: authEdge,
+  getOwnedSession: getOwnedSessionEdge,
   transcribeAudioStream,
-  attachRemoteJobId,
-  markPendingSessionFailed,
+  attachRemoteJobId: attachRemoteJobIdEdge,
+  markPendingSessionFailed: markPendingSessionFailedEdge,
 };
 
 export async function PUT(

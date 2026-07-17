@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import {
   type JobStatus,
   JobStatusSchema,
@@ -124,7 +123,7 @@ const transcribeAudioStream = async (
     hotwords?: string;
   } = {},
 ): Promise<TranscribeResponse> => {
-  const boundary = `SyntheoUpload${randomUUID().replaceAll("-", "")}`;
+  const boundary = `SyntheoUpload${crypto.randomUUID().replaceAll("-", "")}`;
 
   const textFields: [string, string][] = [];
   if (options.language) textFields.push(["language", options.language]);
