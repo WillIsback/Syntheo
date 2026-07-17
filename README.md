@@ -38,6 +38,11 @@ cp .env.example .env
 | `AUTH_URL` | URL publique de l'app (ex. `http://localhost:3000`) |
 | `WHISPERX_BASE_URL` | URL de l'API WhisperX (ex. `http://localhost:30000/asr/v1`) |
 | `WHISPERX_API_KEY` | Clé d'accès à l'API WhisperX si protégée |
+| `S3_ENDPOINT` | URL du stockage S3-compatible (MinIO) pour l'upload direct des fichiers audio |
+| `S3_BUCKET` | Nom du bucket d'upload |
+| `S3_ACCESS_KEY` | Clé d'accès S3 |
+| `S3_SECRET_KEY` | Clé secrète S3 |
+| `S3_REGION` | Région S3 (optionnel, défaut `us-east-1` — sans effet réel sur MinIO) |
 
 ---
 

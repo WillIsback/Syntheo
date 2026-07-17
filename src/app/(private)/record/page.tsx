@@ -60,17 +60,30 @@ export default function RecordPage() {
       });
       if (!initRes.ok) throw new Error("Échec de la création de session.");
       const { sessionId } = (await initRes.json()) as { sessionId: string };
+      const mimeType = file.type || "application/octet-stream";
 
-      // Phase 2 : streamer le fichier audio avec progression XHR
+      // Phase 2 : demander une URL présignée puis uploader directement vers
+      // le stockage (contourne la limite de payload des Vercel Functions)
+      const uploadUrlRes = await fetch(
+        `/api/transcribe/${sessionId}/upload-url`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mimeType }),
+        },
+      );
+      if (!uploadUrlRes.ok)
+        throw new Error("Échec de la préparation de l'envoi.");
+      const { uploadUrl, objectKey } = (await uploadUrlRes.json()) as {
+        uploadUrl: string;
+        objectKey: string;
+      };
+
       setUploadState("uploading");
       await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
-        xhr.open("PUT", `/api/transcribe/${sessionId}/audio`);
-        xhr.setRequestHeader(
-          "Content-Type",
-          file.type || "application/octet-stream",
-        );
-        xhr.setRequestHeader("x-filename", file.name);
+        xhr.open("PUT", uploadUrl);
+        xhr.setRequestHeader("Content-Type", mimeType);
         xhr.upload.onprogress = (e) => {
           if (e.lengthComputable) {
             setUploadProgress(Math.round((e.loaded / e.total) * 100));
@@ -84,6 +97,15 @@ export default function RecordPage() {
           reject(new Error("Échec de l'envoi du fichier audio."));
         xhr.send(file);
       });
+
+      // Phase 3 : déclencher la transcription à partir du fichier uploadé
+      const audioRes = await fetch(`/api/transcribe/${sessionId}/audio`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ objectKey, filename: file.name, mimeType }),
+      });
+      if (!audioRes.ok)
+        throw new Error("Échec du lancement de la transcription.");
 
       setUploadState("done");
       router.refresh();
@@ -114,8 +136,9 @@ export default function RecordPage() {
           Nouvelle transcription
         </h1>
         <p className="mb-6 text-[13px] text-(--syn-text-3)">
-          Importez un fichier audio ou vidéo. Le fichier est traité en mémoire
-          puis immédiatement supprimé — aucun enregistrement n&apos;est stocké.
+          Importez un fichier audio ou vidéo. Le fichier transite par un
+          stockage temporaire chiffré puis est immédiatement supprimé après
+          traitement — aucun enregistrement n&apos;est conservé.
         </p>
 
         <label
