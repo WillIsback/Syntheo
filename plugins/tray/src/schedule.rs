@@ -72,9 +72,9 @@ fn agenda_day_label(event: &TrayScheduleEvent, now_ms: f64) -> Option<&'static s
     }
 
     if now_ms >= event.day_start_ms {
-        Some("Today")
+        Some("Aujourd’hui")
     } else if now_ms >= event.previous_day_start_ms {
-        Some("Tomorrow")
+        Some("Demain")
     } else {
         None
     }
@@ -397,14 +397,14 @@ mod tests {
             agenda_sections(&events, now, true),
             vec![
                 TrayAgendaSection {
-                    label: "Today".to_string(),
+                    label: "Aujourd’hui".to_string(),
                     events: vec![TrayAgendaEvent {
                         id: "active".to_string(),
                         label: "Active · 9:00 AM".to_string(),
                     }],
                 },
                 TrayAgendaSection {
-                    label: "Tomorrow".to_string(),
+                    label: "Demain".to_string(),
                     events: vec![
                         TrayAgendaEvent {
                             id: "next".to_string(),
@@ -429,11 +429,11 @@ mod tests {
 
         assert_eq!(
             agenda_sections(&[next_day.clone()], midnight - 1.0, true)[0].label,
-            "Tomorrow"
+            "Demain"
         );
         assert_eq!(
             agenda_sections(&[next_day], midnight, true)[0].label,
-            "Today"
+            "Aujourd’hui"
         );
     }
 }
