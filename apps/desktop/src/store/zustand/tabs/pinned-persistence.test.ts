@@ -90,6 +90,35 @@ describe("pinned tab persistence", () => {
     ]);
   });
 
+  // Issue 403 : l'onglet « task » (tickets GitHub) est retiré. Un onglet
+  // épinglé enregistré avant le retrait est ignoré sans faire planter l'app.
+  it("ignores a pinned task tab saved before its removal", async () => {
+    vi.mocked(commands.getPinnedTabs).mockResolvedValue({
+      status: "ok",
+      data: JSON.stringify([
+        {
+          type: "task",
+          id: "task-1",
+          resources: [
+            { type: "github_issue", owner: "acme", repo: "app", number: 12 },
+          ],
+          pinned: true,
+        },
+        { type: "sessions", id: "session-1", pinned: true },
+      ]),
+    });
+
+    await restorePinnedTabsToStore(
+      useTabs.getState().openNew,
+      useTabs.getState().pin,
+      () => useTabs.getState().tabs,
+    );
+
+    expect(useTabs.getState().tabs).toMatchObject([
+      { type: "sessions", id: "session-1", pinned: true, active: true },
+    ]);
+  });
+
   it("never serializes an ephemeral shared-note preview", async () => {
     await savePinnedTabs([
       {

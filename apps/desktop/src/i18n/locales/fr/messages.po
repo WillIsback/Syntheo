@@ -2679,10 +2679,6 @@ msgstr "Ouvrir dans votre navigateur"
 msgid "Open meeting"
 msgstr "Ouvrir la réunion"
 
-#: src/task/resource-view.tsx
-msgid "Open on GitHub"
-msgstr "Ouvrir sur GitHub"
-
 #: src/stt/start-failure.ts
 msgid "Open permissions"
 msgstr "Ouvrir les autorisations"
@@ -2704,14 +2700,6 @@ msgstr "Ouvrez Syntheo depuis la barre des menus."
 #: src/settings/general/meeting-settings.tsx
 msgid "Open the meeting link when a scheduled meeting begins."
 msgstr "Ouvrez le lien de la réunion lorsqu'une réunion programmée commence."
-
-#: src/task/resource-view.tsx
-msgid "Open this issue on GitHub to see its details."
-msgstr "Ouvrez ce ticket sur GitHub pour en voir le détail."
-
-#: src/task/resource-view.tsx
-msgid "Open this pull request on GitHub to see its details."
-msgstr "Ouvrez cette pull request sur GitHub pour en voir le détail."
 
 #: src/settings/ai/stt/server-card.tsx
 msgid "OpenAI · Realtime and batch"
@@ -4630,10 +4618,6 @@ msgstr "Les mots s'affichent dans une petite bulle pendant que vous parlez. Le t
 #: src/settings/dictation.tsx
 msgid "Words specific to you go in your"
 msgstr "Vos mots à vous vont dans votre"
-
-#: src/task/tab-content.tsx
-msgid "Work on this task"
-msgstr "Travailler sur cette tâche"
 
 #: src/settings/automations/workflow-builder.tsx
 msgid "Workflow"
