@@ -258,15 +258,20 @@ impl Actor for SessionActor {
     ) -> Result<(), ActorProcessingErr> {
         children::shutdown_children(state, "session_stop").await;
         if state.ctx.params.retain_audio == Some(false) {
-            let dir = crate::actors::audio_sweep::find_session_dir(
+            let result = match crate::actors::audio_sweep::find_session_dir(
                 &state.ctx.app_dir,
                 &state.ctx.params.session_id,
-            );
-            if let Err(error) = tokio::task::spawn_blocking(move || {
-                crate::actors::audio_sweep::delete_transcribed_capture_audio(&dir).map(|_| ())
-            })
-            .await?
-            {
+            ) {
+                Ok(dir) => {
+                    tokio::task::spawn_blocking(move || {
+                        crate::actors::audio_sweep::delete_transcribed_capture_audio(&dir)
+                            .map(|_| ())
+                    })
+                    .await?
+                }
+                Err(error) => Err(error),
+            };
+            if let Err(error) = result {
                 let error = format!("audio_deletion_failed: {error}");
                 state
                     .ctx

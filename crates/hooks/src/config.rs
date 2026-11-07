@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::path::Path;
 
 use crate::error::{Error, Result};
 
@@ -31,12 +30,6 @@ impl HooksConfig {
         let value: serde_json::Value =
             serde_json::from_str(s).map_err(|e| Error::ConfigParse(e.to_string()))?;
         Self::from_value(value)
-    }
-
-    pub fn from_path(path: &Path) -> Result<Self> {
-        let content =
-            std::fs::read_to_string(path).map_err(|e| Error::ConfigLoad(e.to_string()))?;
-        Self::from_str(&content)
     }
 
     pub fn empty() -> Self {
