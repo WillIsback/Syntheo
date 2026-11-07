@@ -8,14 +8,10 @@ import { forwardRef } from "react";
 import {
   getAppLinkDisplayParts,
   getAppLinkLabel,
-  type GitHubAttrs,
   type AppLinkAttrs,
 } from "@syntheo/editor/app-link";
-import { getSafeNodePos } from "@syntheo/editor/node-views";
 import { commands as openerCommands } from "@syntheo/plugin-opener2";
 import { cn } from "@syntheo/utils";
-
-import { collectSiblingResources, openTaskTab } from "~/task/open-task-tab";
 
 function SlackIcon({ className }: { className?: string }) {
   return (
@@ -213,46 +209,17 @@ function BrandIcon({ attrs }: { attrs: AppLinkAttrs }) {
   }
 }
 
-function isGitHubCheckboxKind(attrs: AppLinkAttrs): attrs is GitHubAttrs {
-  return (
-    attrs.provider === "github" &&
-    (attrs.kind === "issue" || attrs.kind === "pull_request")
-  );
-}
-
-// L'état distant du ticket n'est plus disponible : les commandes GitHub du
-// plugin todo ont été retirées côté Rust (issue 84).
-function Checkbox() {
-  return (
-    <span className="border-border bg-card flex size-5 shrink-0 items-center justify-center rounded-md border-2" />
-  );
-}
-
 export const AppLinkView = forwardRef<HTMLSpanElement, NodeViewComponentProps>(
   function AppLinkView({ nodeProps, ...htmlAttrs }, ref) {
     const attrs = nodeProps.node.attrs as AppLinkAttrs;
     const { header, subline } = getAppLinkDisplayParts(attrs);
     const href = attrs.url;
-    const showCheckbox = isGitHubCheckboxKind(attrs);
 
-    const handleClick = useEditorEventCallback(async (view) => {
+    // Un lien GitHub (ticket, PR…) est un lien ordinaire : il s'ouvre dans le
+    // navigateur comme les autres fournisseurs (issue 403).
+    const handleClick = useEditorEventCallback(async () => {
       if (!href) {
         return;
-      }
-
-      if (
-        attrs.provider === "github" &&
-        (attrs.kind === "issue" || attrs.kind === "pull_request") &&
-        attrs.owner &&
-        attrs.repo &&
-        attrs.number
-      ) {
-        const pos = getSafeNodePos(nodeProps.getPos);
-        if (pos !== null) {
-          const resources = collectSiblingResources(view.state.doc, pos);
-          openTaskTab(resources);
-          return;
-        }
       }
 
       await openerCommands.openUrl(href, null);
@@ -280,7 +247,7 @@ export const AppLinkView = forwardRef<HTMLSpanElement, NodeViewComponentProps>(
             "hover:bg-accent transition-colors",
           ])}
         >
-          {showCheckbox ? <Checkbox /> : <BrandIcon attrs={attrs} />}
+          <BrandIcon attrs={attrs} />
           <span className="flex min-w-0 items-baseline gap-1.5">
             <span className="text-foreground truncate text-sm leading-none font-medium">
               {header}

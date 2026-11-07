@@ -67,6 +67,8 @@ const deserializePinnedTabs = (data: string): PinnedTab[] => {
           return [tab as PinnedTab];
         case "empty":
         case "daily":
+        // Onglet des tickets GitHub retiré (issue 403) : ignoré à la lecture.
+        case "task":
         case "extension":
         case "extensions":
         default:
