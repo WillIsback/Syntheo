@@ -14,8 +14,7 @@ async fn initial_sink_failure_rolls_back_registration() {
 
     let error = subscribe_all_daily_notes(&runtime, sink)
         .await
-        .err()
-        .expect("subscription should fail when the sink rejects the initial result");
+        .expect_err("subscription should fail when the sink rejects the initial result");
 
     assert!(matches!(error, Error::Sink(message) if message == "sink closed"));
 }

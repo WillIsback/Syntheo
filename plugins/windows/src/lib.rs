@@ -78,11 +78,14 @@ impl PendingPositions {
     }
 }
 
+/// Width expansion to undo: `(previous_width, expanded_width, origin_shift)`.
+pub type WindowExpansion = (f64, f64, f64);
+
 #[derive(Default)]
-pub struct WindowExpansions(pub Mutex<HashMap<String, Vec<(f64, f64, f64)>>>);
+pub struct WindowExpansions(pub Mutex<HashMap<String, Vec<WindowExpansion>>>);
 
 impl WindowExpansions {
-    fn pop(&self, label: &str) -> Option<(f64, f64, f64)> {
+    fn pop(&self, label: &str) -> Option<WindowExpansion> {
         let mut expansions = self.0.lock().unwrap();
         let entry = expansions.get_mut(label).and_then(Vec::pop);
 
@@ -98,7 +101,7 @@ impl WindowExpansions {
     }
 
     #[cfg(target_os = "macos")]
-    fn take(&self, label: &str) -> Vec<(f64, f64, f64)> {
+    fn take(&self, label: &str) -> Vec<WindowExpansion> {
         self.0.lock().unwrap().remove(label).unwrap_or_default()
     }
 }
@@ -134,10 +137,15 @@ pub struct WindowReadyState {
     pending: Mutex<HashMap<String, (u64, oneshot::Sender<()>)>>,
 }
 
+/// Pending health probe: `(registration_id, request_id, ack_sender)`.
+type HealthProbe = (u64, String, oneshot::Sender<()>);
+
 #[derive(Default)]
 struct WebviewHealthState {
+    // Health probes only run on macOS (see `ext::check_webview_health`).
+    #[cfg(any(target_os = "macos", test))]
     next_registration_id: AtomicU64,
-    pending: Mutex<HashMap<String, (u64, String, oneshot::Sender<()>)>>,
+    pending: Mutex<HashMap<String, HealthProbe>>,
     recovering: Mutex<HashMap<String, u8>>,
     rebuilt: Mutex<std::collections::HashSet<String>>,
 }
@@ -171,6 +179,7 @@ fn take_main_window_show_requested() -> bool {
 }
 
 impl WebviewHealthState {
+    #[cfg(any(target_os = "macos", test))]
     fn register(&self, label: String) -> Option<(u64, String, oneshot::Receiver<()>)> {
         let mut pending = self.pending.lock().unwrap();
         if pending.contains_key(&label) {
@@ -201,6 +210,7 @@ impl WebviewHealthState {
         true
     }
 
+    #[cfg(any(target_os = "macos", test))]
     fn unregister(&self, label: &str, registration_id: u64) -> bool {
         let mut pending = self.pending.lock().unwrap();
         let is_match = pending
@@ -213,6 +223,7 @@ impl WebviewHealthState {
         is_match
     }
 
+    #[cfg(any(target_os = "macos", test))]
     fn retry_recovery(&self, label: &str) -> u8 {
         let mut recovering = self.recovering.lock().unwrap();
         let attempt = recovering.entry(label.to_string()).or_insert(0);
@@ -222,6 +233,7 @@ impl WebviewHealthState {
         attempt
     }
 
+    #[cfg(any(target_os = "macos", test))]
     fn resume_recovery(&self, label: &str) -> u8 {
         let attempt = *self
             .recovering
@@ -417,6 +429,14 @@ pub fn extend_builder(builder: tauri::Builder<tauri::Wry>) -> tauri::Builder<tau
     }
 }
 
+pub fn hide_floating_bar() -> Result<(), Error> {
+    window::floating_bar::hide()
+}
+
+pub fn floating_bar_session_id() -> Option<String> {
+    window::floating_bar::session_id()
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -510,12 +530,4 @@ mod test {
         let content = std::fs::read_to_string(OUTPUT_FILE).unwrap();
         std::fs::write(OUTPUT_FILE, format!("// @ts-nocheck\n{content}")).unwrap();
     }
-}
-
-pub fn hide_floating_bar() -> Result<(), Error> {
-    window::floating_bar::hide()
-}
-
-pub fn floating_bar_session_id() -> Option<String> {
-    window::floating_bar::session_id()
 }

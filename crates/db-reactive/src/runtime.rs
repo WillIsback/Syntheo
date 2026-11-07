@@ -284,12 +284,7 @@ fn rerun_all_batch(
 }
 
 fn clear_lagged_changes(change_rx: &mut tokio::sync::broadcast::Receiver<TableChange>) {
-    loop {
-        match change_rx.try_recv() {
-            Ok(_) | Err(TryRecvError::Lagged(_)) => {}
-            Err(TryRecvError::Empty) | Err(TryRecvError::Closed) => break,
-        }
-    }
+    while let Ok(_) | Err(TryRecvError::Lagged(_)) = change_rx.try_recv() {}
 }
 
 async fn collect_refresh_jobs<S>(
@@ -526,7 +521,6 @@ mod tests {
     fn live_query_test_schema() -> syntheo_db_migrate::DbSchema {
         syntheo_db_migrate::DbSchema {
             steps: LIVE_QUERY_TEST_MIGRATION_STEPS,
-            validate_cloudsync_table: |_| false,
         }
     }
 
@@ -539,7 +533,6 @@ mod tests {
         let db_path = dir.path().join("app.db");
         let db = syntheo_db_core::Db::open(DbOpenOptions {
             storage: DbStorage::Local(&db_path),
-            cloudsync_enabled: false,
             journal_mode_wal: true,
             foreign_keys: true,
             max_connections: Some(4),

@@ -106,7 +106,11 @@ direct-distribution = [
 ]
 app-store = ["tauri-plugin-icon/app-store"]
 dev = ["dep:syntheo-audio-mock"]
-devtools = ["tauri/devtools", "dep:syntheo-audio-mock"]
+devtools = [
+  "tauri/devtools",
+  "dep:syntheo-audio-mock",
+  "tauri-plugin-tracing/console-payload",
+]
 automation = ["tauri-plugin-automation"]
 
 [target.'cfg(target_os = "macos")'.dependencies]

@@ -217,7 +217,10 @@ impl FsSyncCore {
         let attachments_dir = session_dir.join("attachments");
         let safe_attachment_id = sanitize_filename(attachment_id)?;
 
-        Ok(std::fs::read(attachments_dir.join(safe_attachment_id))?)
+        Ok(std::fs::read(join_under(
+            &attachments_dir,
+            &safe_attachment_id,
+        )?)?)
     }
 
     pub fn attachment_remove(&self, session_id: &str, attachment_id: &str) -> Result<()> {
@@ -257,7 +260,10 @@ impl FsSyncCore {
         let materials_dir = self.resolve_folder_materials_dir(folder_path)?;
         let safe_attachment_id = sanitize_filename(attachment_id)?;
 
-        Ok(std::fs::read(materials_dir.join(safe_attachment_id))?)
+        Ok(std::fs::read(join_under(
+            &materials_dir,
+            &safe_attachment_id,
+        )?)?)
     }
 
     pub fn folder_attachment_remove(&self, folder_path: &str, attachment_id: &str) -> Result<()> {
@@ -352,6 +358,13 @@ fn remove_named_file(dir: &std::path::Path, attachment_id: &str) -> Result<()> {
     Ok(())
 }
 
+/// Garantit, au point d'accès, que `name` reste sous `dir` (voir
+/// `syntheo_storage::safe_path::join_under_base`).
+fn join_under(dir: &std::path::Path, name: &str) -> Result<PathBuf> {
+    syntheo_storage::safe_path::join_under_base(dir, name)
+        .map_err(|error| Error::from(std::io::Error::from(error)))
+}
+
 fn sanitize_filename(filename: &str) -> Result<String> {
     let path = std::path::Path::new(filename);
 
@@ -408,7 +421,7 @@ fn write_unique_file_with(
             }
         };
 
-        let candidate_path = dir.join(&candidate_filename);
+        let candidate_path = join_under(dir, &candidate_filename)?;
 
         match OpenOptions::new()
             .write(true)
@@ -745,6 +758,24 @@ mod tests {
         let bytes = core.attachment_read(UUID_1, "image.png").unwrap();
 
         assert_eq!(bytes, b"hello");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn attachment_read_refuses_a_symlink_leaving_the_attachments_dir() {
+        let temp = TempDir::new().unwrap();
+        let attachments = temp.child("sessions").child(UUID_1).child("attachments");
+        attachments.create_dir_all().unwrap();
+        temp.child("secret.txt").write_str("secret").unwrap();
+        std::os::unix::fs::symlink(
+            temp.child("secret.txt").path(),
+            attachments.child("link.txt").path(),
+        )
+        .unwrap();
+
+        let core = FsSyncCore::new(temp.path().to_path_buf());
+
+        assert!(core.attachment_read(UUID_1, "link.txt").is_err());
     }
 
     #[test]

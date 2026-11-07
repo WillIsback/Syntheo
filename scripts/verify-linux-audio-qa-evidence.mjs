@@ -3,6 +3,8 @@ import { lstat, readFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
+import { existingDirectory, existingFile } from "./lib/cli-paths.mjs";
+
 // Shared with scripts/qa/verify_linux_audio_tracks.py so the producer and
 // release verifier apply identical thresholds and phase rules.
 export const linuxAudioQaPolicy = JSON.parse(
@@ -424,8 +426,8 @@ export async function verifyLinuxAudioQaEvidence({
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const results = await verifyLinuxAudioQaEvidence({
-    evidenceDir: args["evidence-dir"],
-    manifest: await readJson(args.manifest),
+    evidenceDir: existingDirectory(args["evidence-dir"], "--evidence-dir"),
+    manifest: await readJson(existingFile(args.manifest, "--manifest")),
     version: args.version,
     candidateSha: args["candidate-sha"],
     dryRunId: args["dry-run-id"],

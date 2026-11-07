@@ -1,3 +1,5 @@
+import { t } from "@lingui/core/macro";
+
 import { commands as notificationCommands } from "@syntheo/plugin-notification";
 import { parseEventInstant } from "@syntheo/utils";
 
@@ -6,6 +8,7 @@ import {
   cancelAutoStopEndedNotification,
   createAutoStopEndedNotificationKey,
   isAutoStopEndedNotificationKeyActive,
+  STOP_COUNTDOWN_SECONDS_PLACEHOLDER,
 } from "./auto-stop-notification";
 import {
   BROWSER_AUTO_STOP_APP_IDS,
@@ -185,17 +188,18 @@ export async function showMeetingEndedPrompt({
     return;
   }
 
+  const seconds = STOP_COUNTDOWN_SECONDS_PLACEHOLDER;
   try {
     await notificationCommands.showNotification({
       key,
-      title: "Did your meeting end?",
-      message: `Syntheo will stop listening in ${AUTO_STOP_CONFIRM_TIMEOUT_SECONDS} seconds.`,
+      title: t`Did your meeting end?`,
+      message: t`Syntheo will stop listening in ${seconds} seconds.`,
       timeout: { secs: AUTO_STOP_CONFIRM_TIMEOUT_SECONDS, nanos: 0 },
       source: null,
       start_time: null,
       participants: null,
       event_details: null,
-      action_label: "Stop",
+      action_label: t`Stop`,
       action: null,
       action_menu: null,
       action_variant: "destructive",

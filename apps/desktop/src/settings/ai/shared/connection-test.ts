@@ -24,7 +24,9 @@ export type ServerProbeResult =
   | {
       ok: true;
       latencyMs: number;
-      protocol: ServerProtocol;
+      // `null` : la clé est acceptée mais le protocole n'a pas pu être
+      // reconnu (seule la route temps réel répond).
+      protocol: ServerProtocol | null;
       models: string[];
     }
   | { ok: false; reason: "invalid_url"; message: string }
@@ -84,7 +86,7 @@ export async function probeServer(
 
   const models = await request(`${base}/models`);
   if (models.kind === "network") return { ok: false, reason: "unreachable" };
-  if (models.status === 401 || models.status === 403) {
+  if (type === "llm" && isRefusal(models.status)) {
     return { ok: false, reason: "unauthorized", status: models.status };
   }
   if (models.ok) {
@@ -102,11 +104,15 @@ export async function probeServer(
   // NVIDIA NIM ne publie pas de liste de modèles, mais expose sa sonde de
   // disponibilité standard à la racine du serveur.
   if (type === "stt") {
+    // Un 401/403 sur une route annexe (`/models`, sonde de santé) ne prouve
+    // pas un refus de clé : un proxy (tailnet…) peut n'exposer que la route
+    // temps réel et refuser tout le reste, même avec la bonne clé (issue 348).
+    // On le note, et la route de transcription tranche plus bas.
+    let refusal = isRefusal(models.status) ? models.status : undefined;
+    let protocol: ServerProtocol | null = null;
     const health = await request(`${url.origin}/v1/health/ready`);
     if (health.kind === "response") {
-      if (health.status === 401 || health.status === 403) {
-        return { ok: false, reason: "unauthorized", status: health.status };
-      }
+      if (isRefusal(health.status)) refusal ??= health.status;
       if (health.ok) {
         // La sonde de santé reste souvent ouverte derrière un proxy
         // authentifié (Caddy…) : elle ne dit rien de la clé. On interroge
@@ -121,16 +127,41 @@ export async function probeServer(
         if (auth.kind === "network") {
           return { ok: false, reason: "unreachable" };
         }
-        if (auth.status === 401 || auth.status === 403) {
-          return { ok: false, reason: "unauthorized", status: auth.status };
+        if (!isRefusal(auth.status)) {
+          return {
+            ok: true,
+            latencyMs: health.latencyMs,
+            protocol: "nvidia",
+            models: [],
+          };
         }
-        return {
-          ok: true,
-          latencyMs: health.latencyMs,
-          protocol: "nvidia",
-          models: [],
-        };
+        protocol = "nvidia";
+        refusal = auth.status;
       }
+    }
+
+    if (refusal !== undefined) {
+      // La clé voyage dans l'en-tête `Authorization` de la poignée de main
+      // WebSocket : un GET simple sur cette même route passe par le même
+      // contrôle (proxy ou serveur) sans ouvrir de session. Seul un 401/403
+      // ici est un vrai refus de clé ; toute autre réponse (426, 400, 404 d'une
+      // route réservée au WebSocket…) montre que la clé a passé le contrôle.
+      const realtime = await request(realtimeUrl(url, protocol));
+      if (realtime.kind === "network") {
+        return { ok: false, reason: "unreachable" };
+      }
+      if (isRefusal(realtime.status)) {
+        return { ok: false, reason: "unauthorized", status: realtime.status };
+      }
+      if (realtime.status >= 500) {
+        return { ok: false, reason: "server_error", status: realtime.status };
+      }
+      return {
+        ok: true,
+        latencyMs: realtime.latencyMs,
+        protocol,
+        models: [],
+      };
     }
   }
 
@@ -219,6 +250,27 @@ function modelIds(body: unknown): string[] | null {
     )
     .filter((id) => id.length > 0)
     .slice(0, MAX_MODELS);
+}
+
+function isRefusal(status: number) {
+  return status === 401 || status === 403;
+}
+
+// Même route que l'adaptateur owhisper-client : `/v1/realtime` à la racine
+// pour NIM, sinon l'adresse saisie suivie de `/realtime`.
+function realtimeUrl(url: URL, protocol: ServerProtocol | null) {
+  const target = new URL(url.toString());
+  const path = trimTrailingSlashes(target.pathname);
+  target.pathname =
+    protocol === "nvidia"
+      ? "/v1/realtime"
+      : path.endsWith("/realtime")
+        ? path
+        : `${path}/realtime`;
+  target.search = "";
+  target.hash = "";
+  target.searchParams.set("intent", "transcription");
+  return target.toString();
 }
 
 function trimTrailingSlashes(value: string) {

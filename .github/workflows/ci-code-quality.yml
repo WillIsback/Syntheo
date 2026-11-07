@@ -54,7 +54,8 @@ jobs:
         uses: ./.github/actions/rust_install
 
       # Sur une PR, seuls les fichiers modifiés sont vérifiés (le code hérité
-      # n'est pas entièrement formaté) ; sinon, tout le dépôt.
+      # n'est pas entièrement formaté) ; sinon, tout le dépôt. Les .swift
+      # sont exclus : `swift format` n'existe pas sur ce runner Linux.
       - name: Formatage (dprint)
         shell: bash
         env:
@@ -63,6 +64,7 @@ jobs:
           set -euo pipefail
           if [ -n "${BASE_SHA:-}" ]; then
             git diff --name-only --diff-filter=ACMR -z "$BASE_SHA" HEAD \
+              | { grep -zv '\.swift$' || true; } \
               | xargs -0 --no-run-if-empty pnpm exec dprint check --allow-no-files
           else
             pnpm fmt:check

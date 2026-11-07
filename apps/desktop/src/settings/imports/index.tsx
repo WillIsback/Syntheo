@@ -20,7 +20,14 @@ export function SettingsImports() {
           variant="ghost"
           size="sm"
           onClick={() =>
-            void openerCommands.openUrl(IMPORTS_DOCUMENTATION_URL, null)
+            void openerCommands
+              .openUrl(IMPORTS_DOCUMENTATION_URL, null)
+              .catch((error) =>
+                console.error(
+                  "[settings] failed to open imports documentation",
+                  error,
+                ),
+              )
           }
         >
           <Trans>Documentation</Trans>

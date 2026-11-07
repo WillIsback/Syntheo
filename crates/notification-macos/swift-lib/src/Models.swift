@@ -241,7 +241,7 @@ struct NotificationPayload: Codable {
   }
 
   var showsStopCountdown: Bool {
-    return isDestructiveAction && actionLabel == "Stop" && timeoutSeconds > 0
+    return isDestructiveAction && timeoutSeconds > 0
   }
 
   var hasOptions: Bool {

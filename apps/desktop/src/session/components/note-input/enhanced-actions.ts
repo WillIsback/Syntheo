@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { useCallback } from "react";
 
 import { toast } from "@syntheo/ui/components/ui/toast";
@@ -10,7 +11,10 @@ import {
   requestMainEnhance,
 } from "~/ai/task-window-sync";
 import { getEnhancerService } from "~/services/enhancer";
-import { getEligibility } from "~/services/enhancer/eligibility";
+import {
+  getEligibility,
+  getSummaryIneligibilityReason,
+} from "~/services/enhancer/eligibility";
 import { loadSessionContentSnapshot } from "~/session/content-queries";
 import { useEnhancedNote } from "~/session/queries";
 import { createTaskId } from "~/store/zustand/ai-task/task-configs";
@@ -40,7 +44,7 @@ export function useEnhancedNoteActions({
 
       if (!model) {
         toast.error(
-          "Set up Intelligence in Settings before regenerating this summary.",
+          t`Set up Intelligence in Settings before regenerating this summary.`,
         );
         return;
       }
@@ -52,9 +56,9 @@ export function useEnhancedNoteActions({
           !eligibility.eligible &&
           eligibility.code === "transcript_too_short"
         ) {
-          toast.warning("Summary wasn't generated", {
+          toast.warning(t`Summary wasn't generated`, {
             id: `auto-summary-too-short-${sessionId}`,
-            description: eligibility.reason,
+            description: getSummaryIneligibilityReason(eligibility),
           });
           return;
         }

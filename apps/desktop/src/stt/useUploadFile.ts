@@ -263,7 +263,7 @@ export function useUploadFile(sessionId: string) {
         }
 
         const program = pipe(
-          fromResult(listener2Commands.parseSubtitle(filePath)),
+          fromResult(() => listener2Commands.parseSubtitle(filePath)),
           Effect.tap((subtitle) => {
             if (subtitle.tokens.length === 0) {
               return Effect.void;

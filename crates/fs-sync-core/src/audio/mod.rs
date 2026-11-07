@@ -227,7 +227,9 @@ fn delete_orphaned_expired_in_dir(
     for entry in entries {
         let entry = entry?;
         let path = entry.path();
-        if !path.is_dir() {
+        // `file_type` ne suit pas les liens : un lien vers un dossier hors de
+        // `sessions` n'est ni parcouru ni purgé.
+        if !entry.file_type()?.is_dir() {
             continue;
         }
 
@@ -577,6 +579,23 @@ mod tests {
         assert!(!orphan_dir.join("audio_mic.wav").exists());
         assert!(known_dir.join("audio.wav").exists());
         assert!(meta_dir.join("audio.wav").exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn delete_orphaned_expired_ignores_symlinked_session_dirs() {
+        let temp = TempDir::new().unwrap();
+        let sessions_dir = temp.path().join("sessions");
+        let outside_dir = temp.path().join("outside");
+        std::fs::create_dir_all(&sessions_dir).unwrap();
+        std::fs::create_dir_all(&outside_dir).unwrap();
+        write_audio(&outside_dir.join("audio.wav"));
+        std::os::unix::fs::symlink(&outside_dir, sessions_dir.join(ORPHAN_SESSION_ID)).unwrap();
+
+        let deleted = delete_orphaned_expired(&sessions_dir, &[], 0, now_ms()).unwrap();
+
+        assert!(deleted.is_empty());
+        assert!(outside_dir.join("audio.wav").exists());
     }
 
     #[test]

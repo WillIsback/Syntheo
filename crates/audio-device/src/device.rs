@@ -42,6 +42,7 @@ pub enum TransportType {
 /// Bluetooth outputs default to "headphone" because most Bluetooth audio on a laptop is, and
 /// popular headphones (Sony WH-*, Bose QC*) carry no headphone keyword in their name. This
 /// denylist catches the common Bluetooth speakers so they keep echo cancellation.
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) fn name_suggests_speaker(name: &str) -> bool {
     const SPEAKER_MARKERS: &[&str] = &[
         "speaker",
@@ -94,6 +95,7 @@ pub(crate) fn name_suggests_microphone(name: &str) -> bool {
 }
 
 /// Hands-Free / HFP capture endpoints created after an A2DP→SCO handoff.
+#[cfg(any(target_os = "macos", test))]
 pub(crate) fn name_suggests_hands_free(name: &str) -> bool {
     let name_lower = name.to_lowercase();
     name_lower.contains("hands-free")

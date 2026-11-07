@@ -336,7 +336,11 @@ export async function startScheduledMeeting(
   // meeting is due, while listening still has to wait for the session tab,
   // the STT connection, and capture readiness (and may be abandoned).
   if (autoJoin) {
-    void openerCommands.openUrl(currentRow.meeting_link, null);
+    void openerCommands
+      .openUrl(currentRow.meeting_link, null)
+      .catch((error) =>
+        console.error("[calendar] failed to open meeting link", error),
+      );
   }
 
   useTabs.getState().openNew({

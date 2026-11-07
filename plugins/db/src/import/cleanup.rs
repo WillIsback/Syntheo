@@ -316,7 +316,10 @@ fn safe_source_path(source_root: &Path, relative_path: &str) -> std::io::Result<
         return Err(std::io::Error::other("unsafe legacy source path"));
     }
 
-    Ok(source_root.join(relative))
+    // Le chemin relatif vient de la base de données : on garantit aussi qu'un
+    // lien symbolique du dossier hérité ne mène pas hors de `source_root`.
+    syntheo_storage::safe_path::join_under_base(source_root, relative)
+        .map_err(|_| std::io::Error::other("unsafe legacy source path"))
 }
 
 fn is_legacy_text_source(relative_path: &str) -> bool {
@@ -489,5 +492,22 @@ mod tests {
             safe_source_path(Path::new("/vault"), "sessions/one/note.md").unwrap(),
             Path::new("/vault/sessions/one/note.md")
         );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn rejects_symlinks_leaving_the_source_root() {
+        let temp = tempfile::tempdir().unwrap();
+        let vault = temp.path().join("vault");
+        std::fs::create_dir_all(&vault).unwrap();
+        std::fs::write(temp.path().join("outside.json"), "{}").unwrap();
+        std::os::unix::fs::symlink(
+            temp.path().join("outside.json"),
+            vault.join("settings.json"),
+        )
+        .unwrap();
+
+        let error = safe_source_path(&vault, "settings.json").unwrap_err();
+        assert_eq!(error.to_string(), "unsafe legacy source path");
     }
 }

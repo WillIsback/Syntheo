@@ -13,9 +13,9 @@ import {
 } from "./capture-completion";
 import { saveIncompleteCapture } from "./capture-result";
 import {
-  BATCH_ONLY_CAPTURE_MESSAGE,
-  CAPTURE_REMINDER_MESSAGE,
-  NO_TRANSCRIPTION_PROVIDER_MESSAGE,
+  getBatchOnlyCaptureMessage,
+  getCaptureReminderMessage,
+  getNoTranscriptionProviderMessage,
   CLOUDSYNC_CAPTURE_LEASE_ATTEMPTS,
   getPostCaptureAction,
   getPostCaptureRepairReasons,
@@ -649,7 +649,7 @@ describe("useStartListening", () => {
       await result.current();
     });
     expect(toastInfoMock).toHaveBeenCalledWith(
-      CAPTURE_REMINDER_MESSAGE,
+      getCaptureReminderMessage(),
       expect.objectContaining({ id: "capture-reminder" }),
     );
   });
@@ -903,7 +903,7 @@ describe("useStartListening", () => {
 
     expect(startMock).not.toHaveBeenCalled();
     expect(toastErrorMock).toHaveBeenCalledWith(
-      NO_TRANSCRIPTION_PROVIDER_MESSAGE,
+      getNoTranscriptionProviderMessage(),
       expect.objectContaining({
         id: "recording-without-transcription",
         action: expect.anything(),
@@ -2427,7 +2427,7 @@ describe("useStartListening", () => {
     });
     expect(startMock).not.toHaveBeenCalled();
     expect(toastErrorMock).toHaveBeenCalledWith(
-      BATCH_ONLY_CAPTURE_MESSAGE,
+      getBatchOnlyCaptureMessage(),
       expect.anything(),
     );
   });

@@ -12,6 +12,7 @@ tauri-event = ["dep:tauri-specta"]
 syntheo-audio-utils = { workspace = true }
 syntheo-frontmatter = { workspace = true }
 syntheo-fs-format = { workspace = true }
+syntheo-storage = { workspace = true }
 syntheo-tiptap = { workspace = true }
 syntheo-vad = { workspace = true, features = ["earshot"] }
 

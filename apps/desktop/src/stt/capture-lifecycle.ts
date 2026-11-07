@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { useCallback, useRef } from "react";
 
 import { beginCloudsyncActivity } from "@syntheo/plugin-db";
@@ -410,10 +411,9 @@ export function useCaptureLifecycle(sessionId: string) {
         onError: (error) => {
           transcriptWriteError = error;
           audioRecovery.persistenceFailed();
-          toast.error("Your transcript could not be saved", {
+          toast.error(t`Your transcript could not be saved`, {
             id: `transcript-storage-${sessionId}`,
-            description:
-              "Free up disk space. Syntheo will try to recover the missing text while this meeting is still recording.",
+            description: t`Free up disk space. Syntheo will try to recover the missing text while this meeting is still recording.`,
           });
           console.error("[listener] failed to persist transcript", error);
         },
@@ -935,12 +935,12 @@ export function useCaptureLifecycle(sessionId: string) {
             });
             if (transcriptWriteError || !details.liveTranscriptionActive) {
               await notifyFailure(
-                "Syntheo could not finish saving the transcript. The recording was kept so you can try again.",
+                t`Syntheo could not finish saving the transcript. The recording was kept so you can try again.`,
                 "post-capture-transcript-incomplete",
               );
             } else {
               await notifyFailure(
-                "Post-meeting transcription failed. The recording was kept so you can try again.",
+                t`Post-meeting transcription failed. The recording was kept so you can try again.`,
                 "post-capture-batch-failed",
               );
             }
@@ -969,8 +969,8 @@ export function useCaptureLifecycle(sessionId: string) {
         ) {
           await notifyFailure(
             details.audioPath
-              ? "Syntheo could not finish saving the transcript. The recording was kept so you can try again."
-              : "Syntheo could not save part of the live transcript.",
+              ? t`Syntheo could not finish saving the transcript. The recording was kept so you can try again.`
+              : t`Syntheo could not save part of the live transcript.`,
             details.audioPath
               ? "post-capture-transcript-incomplete"
               : "live-transcript-persist-failed",
@@ -1073,7 +1073,7 @@ export function useCaptureLifecycle(sessionId: string) {
                 error,
               );
               await notifyFailure(
-                "The transcript was saved, but Syntheo could not start the summary. Try generating it again.",
+                t`The transcript was saved, but Syntheo could not start the summary. Try generating it again.`,
                 "post-capture-summary-failed",
               );
               await requestRecovery();
@@ -1091,7 +1091,7 @@ export function useCaptureLifecycle(sessionId: string) {
             summaryScheduled = false;
             console.error("[listener] failed to schedule summary", error);
             await notifyFailure(
-              "The transcript was saved, but Syntheo could not start the summary. Try generating it again.",
+              t`The transcript was saved, but Syntheo could not start the summary. Try generating it again.`,
               "post-capture-summary-failed",
             );
           }
@@ -1220,11 +1220,10 @@ export function useCaptureLifecycle(sessionId: string) {
             );
           }
           if (details.audioDeletionFailed) {
-            toast.error("Audio could not be deleted", {
+            toast.error(t`Audio could not be deleted`, {
               id: `audio-deletion-${sessionId}`,
               duration: Infinity,
-              description:
-                "Syntheo could not remove the temporary audio. Cleanup will be retried automatically.",
+              description: t`Syntheo could not remove the temporary audio. Cleanup will be retried automatically.`,
             });
           }
         } else {

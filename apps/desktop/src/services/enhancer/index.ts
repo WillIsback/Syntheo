@@ -5,7 +5,11 @@ import {
   resolveSummaryDocument,
 } from "@syntheo/utils/session";
 
-import { type EnhanceEligibilitySkipCode, getEligibility } from "./eligibility";
+import {
+  type EnhanceEligibilitySkipCode,
+  getEligibility,
+  getSummaryIneligibilityReason,
+} from "./eligibility";
 import {
   discardPendingAutoEnhanceJob,
   type EnhancerNote,
@@ -343,7 +347,7 @@ export class EnhancerService {
       this.emit({
         type: "auto-enhance-skipped",
         sessionId,
-        reason: eligibility.reason,
+        reason: getSummaryIneligibilityReason(eligibility),
         reasonCode: eligibility.code,
       });
       return;
@@ -489,7 +493,7 @@ export class EnhancerService {
       this.emit({
         type: "auto-enhance-skipped",
         sessionId,
-        reason: eligibility.reason,
+        reason: getSummaryIneligibilityReason(eligibility),
         reasonCode: eligibility.code,
       });
       return { type: "too_short" };

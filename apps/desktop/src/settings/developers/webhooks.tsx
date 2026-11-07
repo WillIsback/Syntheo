@@ -17,12 +17,9 @@ import { copyText } from "./clipboard";
 
 const WEBHOOKS_QUERY_KEY = ["webhooks"] as const;
 
-async function unwrap<T>(
-  promise: Promise<
-    { status: "ok"; data: T } | { status: "error"; error: string }
-  >,
-): Promise<T> {
-  const result = await promise;
+function unwrap<T>(
+  result: { status: "ok"; data: T } | { status: "error"; error: string },
+): T {
   if (result.status === "error") {
     throw new Error(result.error);
   }
@@ -33,29 +30,32 @@ export function WebhooksSection() {
   const queryClient = useQueryClient();
   const webhooksQuery = useQuery({
     queryKey: WEBHOOKS_QUERY_KEY,
-    queryFn: () => unwrap(webhookCommands.listWebhooks()),
+    queryFn: async () => unwrap(await webhookCommands.listWebhooks()),
   });
   const createMutation = useMutation({
-    mutationFn: (url: string) => unwrap(webhookCommands.createWebhook(url, [])),
+    mutationFn: async (url: string) =>
+      unwrap(await webhookCommands.createWebhook(url, [])),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: WEBHOOKS_QUERY_KEY }),
     onError: (error) => toast.error(error.message),
   });
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => unwrap(webhookCommands.deleteWebhook(id)),
+    mutationFn: async (id: string) =>
+      unwrap(await webhookCommands.deleteWebhook(id)),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: WEBHOOKS_QUERY_KEY }),
     onError: (error) => toast.error(error.message),
   });
   const setActiveMutation = useMutation({
-    mutationFn: ({ id, active }: { id: string; active: boolean }) =>
-      unwrap(webhookCommands.setWebhookActive(id, active)),
+    mutationFn: async ({ id, active }: { id: string; active: boolean }) =>
+      unwrap(await webhookCommands.setWebhookActive(id, active)),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: WEBHOOKS_QUERY_KEY }),
     onError: (error) => toast.error(error.message),
   });
   const testMutation = useMutation({
-    mutationFn: (id: string) => unwrap(webhookCommands.testWebhook(id)),
+    mutationFn: async (id: string) =>
+      unwrap(await webhookCommands.testWebhook(id)),
     onSuccess: (delivery) => {
       if (delivery.delivered) {
         toast.success(t`Test delivered (${delivery.status})`);

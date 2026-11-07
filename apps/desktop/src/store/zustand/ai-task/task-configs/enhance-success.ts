@@ -183,7 +183,14 @@ export const runEnhanceSuccess = async ({
     }
 
     if (!signal.aborted) {
-      void localApiCommands.dispatchEvent("note.enhanced", args.sessionId);
+      void localApiCommands
+        .dispatchEvent("note.enhanced", args.sessionId)
+        .catch((error) =>
+          console.error(
+            "[enhancer] failed to dispatch note.enhanced event",
+            error,
+          ),
+        );
       void runNoteEnhancedAutomations(args.sessionId);
       void showSummaryReadyNotification(args.sessionId, trimmedTitle);
       void playCompletionSound();

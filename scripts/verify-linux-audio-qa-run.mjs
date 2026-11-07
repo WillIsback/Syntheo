@@ -2,6 +2,8 @@ import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
+import { existingFile, outputFile } from "./lib/cli-paths.mjs";
+
 const WORKFLOW = ".github/workflows/desktop_linux_audio_qa.yaml";
 const ARCHITECTURES = ["x64", "arm64"];
 
@@ -144,15 +146,18 @@ export function verifyLinuxAudioQaRun({
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   invariant(args.output, "Missing --output");
+  const output = outputFile(args.output, "--output");
   const result = verifyLinuxAudioQaRun({
-    run: JSON.parse(await readFile(args.run, "utf8")),
-    artifacts: JSON.parse(await readFile(args.artifacts, "utf8")),
+    run: JSON.parse(await readFile(existingFile(args.run, "--run"), "utf8")),
+    artifacts: JSON.parse(
+      await readFile(existingFile(args.artifacts, "--artifacts"), "utf8"),
+    ),
     repository: args.repository,
     version: args.version,
     candidateSha: args["candidate-sha"],
     runId: args["run-id"],
   });
-  await writeFile(args.output, `${JSON.stringify(result, null, 2)}\n`);
+  await writeFile(output, `${JSON.stringify(result, null, 2)}\n`);
   console.log("Verified exact x64 and arm64 Linux audio QA artifacts");
 }
 

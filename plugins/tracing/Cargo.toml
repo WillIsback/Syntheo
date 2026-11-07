@@ -8,6 +8,11 @@ license = "MIT"
 links = "tauri-plugin-tracing"
 description = ""
 
+[features]
+# Builds devtools seulement : écrit le texte des messages console dans
+# app.log (masqué et tronqué). Jamais activée dans une version publiée.
+console-payload = []
+
 [build-dependencies]
 tauri-plugin = { workspace = true, features = ["build"] }
 
