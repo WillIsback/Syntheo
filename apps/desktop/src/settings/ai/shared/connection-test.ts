@@ -106,7 +106,7 @@ export async function probeServer(
   if (type === "stt") {
     // Un 401/403 sur une route annexe (`/models`, sonde de santé) ne prouve
     // pas un refus de clé : un proxy (tailnet…) peut n'exposer que la route
-    // temps réel et refuser tout le reste, même avec la bonne clé (#348).
+    // temps réel et refuser tout le reste, même avec la bonne clé (issue 348).
     // On le note, et la route de transcription tranche plus bas.
     let refusal = isRefusal(models.status) ? models.status : undefined;
     let protocol: ServerProtocol | null = null;
