@@ -23,7 +23,7 @@ export type ServerConnectionState =
   | {
       status: "connected";
       latencyMs: number;
-      protocol: ServerProtocol;
+      protocol: ServerProtocol | null;
       models: string[];
     }
   | { status: "failed"; failure: ServerFailure };
