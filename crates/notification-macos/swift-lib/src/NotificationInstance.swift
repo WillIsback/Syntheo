@@ -95,8 +95,8 @@ class NotificationInstance {
     let remaining = startTime.timeIntervalSinceNow
 
     if remaining <= 0 {
-      compactMessageLabel?.stringValue = "Started"
-      timerLabel?.stringValue = "Started"
+      compactMessageLabel?.stringValue = payload.resolvedLabels.started
+      timerLabel?.stringValue = payload.resolvedLabels.started
       countdownTimer?.invalidate()
       countdownTimer = nil
       scheduleStartedDismiss()
@@ -124,13 +124,16 @@ class NotificationInstance {
 
   private func compactScheduleText(_ remaining: TimeInterval) -> String {
     let minutes = max(1, Int(ceil(remaining / 60)))
-    return "Starting in \(minutes) minute\(minutes == 1 ? "" : "s")"
+    let labels = payload.resolvedLabels
+    if minutes == 1 { return labels.startingInOne }
+    return labels.startingInOther.replacingOccurrences(of: "{minutes}", with: String(minutes))
   }
 
   private func expandedScheduleText(_ remaining: TimeInterval) -> String {
     let minutes = Int(remaining) / 60
     let seconds = Int(remaining) % 60
-    return "Begins in \(minutes):\(String(format: "%02d", seconds))"
+    let time = "\(minutes):\(String(format: "%02d", seconds))"
+    return payload.resolvedLabels.beginsIn.replacingOccurrences(of: "{time}", with: time)
   }
 
   func startDismissTimer(timeoutSeconds: Double) {

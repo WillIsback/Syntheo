@@ -558,6 +558,10 @@ msgstr "Before the meeting, choose its type and add the participants."
 msgid "Begin listening"
 msgstr "Begin listening"
 
+#: src/services/notification-labels.ts
+msgid "Begins in {time}"
+msgstr "Begins in {time}"
+
 #: src/chat/components/body/empty.tsx
 msgid "Beta"
 msgstr "Beta"
@@ -2694,6 +2698,10 @@ msgstr "Opens System Settings and guides you to add Syntheo to the {0} list"
 msgid "Opens System Settings and guides you to add Syntheo to the {0} list."
 msgstr "Opens System Settings and guides you to add Syntheo to the {0} list."
 
+#: src/services/notification-labels.ts
+msgid "Options"
+msgstr "Options"
+
 #: src/calendar/components/apple/permission.tsx
 msgid "or"
 msgstr "or"
@@ -3586,17 +3594,30 @@ msgstr "Start with permissions"
 msgid "Start writing..."
 msgstr "Start writing..."
 
+#: src/services/notification-labels.ts
+msgid "Started"
+msgstr "Started"
+
+#: src/services/notification-labels.ts
+msgid "Starting in {minutes} minutes"
+msgstr "Starting in {minutes} minutes"
+
 #: src/services/event-notification/index.ts
 msgid "Starting in {minutesUntil} minutes"
 msgstr "Starting in {minutesUntil} minutes"
 
 #: src/services/event-notification/index.ts
+#: src/services/notification-labels.ts
 msgid "Starting in 1 minute"
 msgstr "Starting in 1 minute"
 
 #: src/settings/dictation.tsx
 msgid "Starting microphone…"
 msgstr "Starting microphone…"
+
+#: src/services/notification-labels.ts
+msgid "Starting soon"
+msgstr "Starting soon"
 
 #: src/chat/components/input/index.tsx
 msgid "Starting voice input"

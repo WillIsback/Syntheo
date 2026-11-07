@@ -5,6 +5,7 @@ import { parseEventInstant } from "@syntheo/utils";
 
 import { getIgnoredEventSets } from "~/calendar/ignored-events";
 import { liveQueryClient } from "~/db";
+import { nativeNotificationLabels } from "~/services/notification-labels";
 
 export const EVENT_NOTIFICATION_TASK_ID = "eventNotification";
 export const EVENT_NOTIFICATION_INTERVAL = 30 * 1000;
@@ -77,6 +78,7 @@ function showUpcomingEventNotification(
       options: null,
       footer: null,
       icon: null,
+      labels: nativeNotificationLabels(),
     })
     .catch((error) =>
       console.error("[notification] failed to show event notification", error),

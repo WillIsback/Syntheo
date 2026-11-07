@@ -215,6 +215,26 @@ enum NotificationSchedule {
   }
 }
 
+/// Libellés traduits fournis par l'application (issue 408). Jetons remplacés :
+/// `{minutes}` dans `startingInOther`, `{time}` (« m:ss ») dans `beginsIn`.
+struct NotificationLabels: Codable {
+  let options: String
+  let startingSoon: String
+  let started: String
+  let startingInOne: String
+  let startingInOther: String
+  let beginsIn: String
+
+  static let english = NotificationLabels(
+    options: "Options",
+    startingSoon: "Starting soon",
+    started: "Started",
+    startingInOne: "Starting in 1 minute",
+    startingInOther: "Starting in {minutes} minutes",
+    beginsIn: "Begins in {time}"
+  )
+}
+
 struct NotificationPayload: Codable {
   let key: String
   let title: String
@@ -231,6 +251,12 @@ struct NotificationPayload: Codable {
   let options: [String]?
   let footer: NotificationFooter?
   let icon: NotificationIcon?
+  // `var` avec valeur par défaut : facultatif dans le JSON et dans l'init.
+  var labels: NotificationLabels? = nil
+
+  var resolvedLabels: NotificationLabels {
+    return labels ?? NotificationLabels.english
+  }
 
   var isPersistent: Bool {
     return timeoutSeconds <= 0

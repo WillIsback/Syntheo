@@ -1,6 +1,10 @@
 use std::collections::BTreeSet;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
+mod labels;
+
+pub use labels::{MINUTES_PLACEHOLDER, NotificationLabels, TIME_PLACEHOLDER};
+
 pub const STARTED_NOTIFICATION_LINGER: Duration = Duration::from_secs(5 * 60);
 
 pub fn unix_now() -> i64 {
@@ -213,6 +217,10 @@ pub struct Notification {
     pub options: Option<Vec<String>>,
     pub footer: Option<NotificationFooter>,
     pub icon: Option<NotificationIcon>,
+    /// Libellés traduits des surfaces natives ; facultatifs, anglais sinon.
+    #[serde(default)]
+    #[specta(optional)]
+    pub labels: Option<NotificationLabels>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -288,6 +296,18 @@ impl DismissTimer {
 impl Notification {
     pub fn builder() -> NotificationBuilder {
         NotificationBuilder::default()
+    }
+
+    /// Libellés fournis par l'application, ou les libellés anglais historiques.
+    pub fn labels(&self) -> &NotificationLabels {
+        self.labels
+            .as_ref()
+            .unwrap_or_else(|| NotificationLabels::english())
+    }
+
+    /// Décompte de la vue dépliée d'un rappel de réunion.
+    pub fn expanded_schedule_message(&self, remaining: Duration) -> String {
+        self.labels().expanded_schedule(remaining)
     }
 
     pub fn is_persistent(&self) -> bool {
@@ -371,9 +391,9 @@ impl Notification {
     pub fn compact_message(&self, remaining: Option<Duration>) -> String {
         if self.start_time.is_some() {
             return match remaining {
-                Some(value) if value.is_zero() => "Started".to_string(),
-                Some(value) => compact_schedule_text(value),
-                None => "Starting soon".to_string(),
+                Some(value) if value.is_zero() => self.labels().started.clone(),
+                Some(value) => self.labels().compact_schedule(value),
+                None => self.labels().starting_soon.clone(),
             };
         }
 
@@ -385,22 +405,14 @@ impl Notification {
     }
 }
 
+/// Texte compact anglais historique ; voir [`NotificationLabels::compact_schedule`].
 pub fn compact_schedule_text(remaining: Duration) -> String {
-    let minutes = (remaining.as_secs_f64() / 60.0).ceil().max(1.0) as u64;
-    if minutes == 1 {
-        "Starting in 1 minute".to_string()
-    } else {
-        format!("Starting in {minutes} minutes")
-    }
+    NotificationLabels::english().compact_schedule(remaining)
 }
 
+/// Décompte anglais historique ; voir [`Notification::expanded_schedule_message`].
 pub fn expanded_schedule_text(remaining: Duration) -> String {
-    if remaining.is_zero() {
-        return "Started".to_string();
-    }
-
-    let total_seconds = remaining.as_secs();
-    format!("Begins in {}:{:02}", total_seconds / 60, total_seconds % 60)
+    NotificationLabels::english().expanded_schedule(remaining)
 }
 
 pub fn stop_countdown_text(remaining: Duration) -> String {
@@ -492,6 +504,7 @@ pub struct NotificationBuilder {
     options: Option<Vec<String>>,
     footer: Option<NotificationFooter>,
     icon: Option<NotificationIcon>,
+    labels: Option<NotificationLabels>,
 }
 
 impl NotificationBuilder {
@@ -573,6 +586,11 @@ impl NotificationBuilder {
         self
     }
 
+    pub fn labels(mut self, labels: NotificationLabels) -> Self {
+        self.labels = Some(labels);
+        self
+    }
+
     pub fn build(self) -> Notification {
         let source = self.source;
         let icon = self
@@ -595,6 +613,7 @@ impl NotificationBuilder {
             options: self.options,
             footer: self.footer,
             icon,
+            labels: self.labels,
         }
     }
 }
@@ -884,5 +903,42 @@ mod tests {
                 .build()
                 .should_dismiss_started(start_time + 5 * 60)
         );
+    }
+
+    #[test]
+    fn schedule_messages_use_the_labels_sent_by_the_app() {
+        let start_time = 1_700_000_000;
+        let english = Notification::builder()
+            .title("Standup")
+            .message("")
+            .start_time(start_time)
+            .build();
+        assert_eq!(english.compact_message(None), "Starting soon");
+        assert_eq!(english.compact_message(Some(Duration::ZERO)), "Started");
+
+        let french = Notification::builder()
+            .title("Standup")
+            .message("")
+            .start_time(start_time)
+            .labels(NotificationLabels {
+                options: "Options".to_string(),
+                starting_soon: "Démarrage imminent".to_string(),
+                started: "En cours".to_string(),
+                starting_in_one: "Démarrage dans 1 minute".to_string(),
+                starting_in_other: "Démarrage dans {minutes} minutes".to_string(),
+                begins_in: "Début dans {time}".to_string(),
+            })
+            .build();
+        assert_eq!(french.compact_message(None), "Démarrage imminent");
+        assert_eq!(french.compact_message(Some(Duration::ZERO)), "En cours");
+        assert_eq!(
+            french.compact_message(Some(Duration::from_secs(150))),
+            "Démarrage dans 3 minutes"
+        );
+        assert_eq!(
+            french.expanded_schedule_message(Duration::from_secs(75)),
+            "Début dans 1:15"
+        );
+        assert_eq!(french.labels().options, "Options");
     }
 }
