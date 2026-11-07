@@ -14,9 +14,9 @@ async setTrayIconVisible(visible: boolean) : Promise<Result<null, string>> {
     else return { status: "error", error: e  as any };
 }
 },
-async setTraySchedule(events: TrayScheduleEvent[]) : Promise<Result<null, string>> {
+async setTraySchedule(events: TrayScheduleEvent[], labels: TrayScheduleLabels) : Promise<Result<null, string>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("plugin:syntheo-tray|set_tray_schedule", { events }) };
+    return { status: "ok", data: await TAURI_INVOKE("plugin:syntheo-tray|set_tray_schedule", { events, labels }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -43,6 +43,12 @@ async setTrayRecordingTitle(title: string | null) : Promise<Result<null, string>
 /** user-defined types **/
 
 export type TrayScheduleEvent = { id: string; title: string; meetingLink: string | null; startsAtMs: number; endsAtMs: number | null; dayStartMs: number; previousDayStartMs: number; timeLabel: string }
+/**
+ * Libellés traduits par Lingui côté application et envoyés avec le planning.
+ * Le calcul des délais reste ici : seuls les gabarits de texte changent.
+ * Jetons remplacés : `{duration}`, `{count}`, `{hours}` et `{minutes}`.
+ */
+export type TrayScheduleLabels = { untitledEvent: string; startsIn: string; remainingOne: string; remainingOther: string; seconds: string; minutes: string; hours: string; hoursMinutes: string }
 
 /** tauri-specta globals **/
 

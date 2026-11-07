@@ -1,8 +1,22 @@
-import { describe, expect, test } from "vitest";
+import { i18n } from "@lingui/core";
+import { afterEach, describe, expect, test } from "vitest";
 
-import { buildTrayScheduleEvents } from "./tray-schedule";
+import {
+  buildTrayScheduleEvents,
+  buildTrayScheduleLabels,
+} from "./tray-schedule";
 
+import { messages as frMessages } from "~/i18n/locales/fr/messages";
 import type { TimelineEventRow } from "~/sidebar/timeline/utils";
+
+function activateFrench() {
+  i18n.load("fr", frMessages);
+  i18n.activate("fr");
+}
+
+afterEach(() => {
+  i18n.activate("en");
+});
 
 const NOW = Date.parse("2026-07-17T00:00:00.000Z");
 
@@ -114,4 +128,54 @@ describe("buildTrayScheduleEvents", () => {
       expect(events[0].timeLabel).toBe(timeLabel);
     },
   );
+});
+
+describe("buildTrayScheduleLabels", () => {
+  test("keeps the English menu bar labels", () => {
+    expect(buildTrayScheduleLabels()).toEqual({
+      untitledEvent: "Untitled event",
+      startsIn: "in {duration}",
+      remainingOne: "{duration} left",
+      remainingOther: "{duration} left",
+      seconds: "{count}s",
+      minutes: "{count}m",
+      hours: "{count}h",
+      hoursMinutes: "{hours}h {minutes}m",
+    });
+  });
+
+  test("translates the menu bar labels into French", () => {
+    activateFrench();
+
+    expect(buildTrayScheduleLabels()).toEqual({
+      untitledEvent: "Événement sans titre",
+      startsIn: "dans {duration}",
+      remainingOne: "{duration} restante",
+      remainingOther: "{duration} restantes",
+      seconds: "{count} s",
+      minutes: "{count} min",
+      hours: "{count} h",
+      hoursMinutes: "{hours} h {minutes} min",
+    });
+  });
+});
+
+describe("untitled tray events", () => {
+  const rows = {
+    blank: event({
+      title: "   ",
+      started_at: "2026-07-17T01:00:00.000Z",
+    }),
+  };
+
+  test("names a blank event in English", () => {
+    const events = buildTrayScheduleEvents(rows, () => false, NOW, "UTC");
+    expect(events[0].title).toBe("Untitled event");
+  });
+
+  test("names a blank event in French", () => {
+    activateFrench();
+    const events = buildTrayScheduleEvents(rows, () => false, NOW, "UTC");
+    expect(events[0].title).toBe("Événement sans titre");
+  });
 });
