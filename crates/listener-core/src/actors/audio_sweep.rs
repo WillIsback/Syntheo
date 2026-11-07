@@ -26,16 +26,25 @@ pub struct RecoveryAudioChunk {
 }
 
 /// Finds a session directory beneath the vault, following nested folders.
-pub fn find_session_dir(sessions_base: &Path, session_id: &str) -> PathBuf {
-    if let Some(found) = find_session_dir_recursive(sessions_base, session_id) {
-        return found;
+///
+/// Refuses any `session_id` that is not a UUID: the id comes from the
+/// frontend (`start_capture`) and must never name a path outside `sessions`.
+pub fn find_session_dir(sessions_base: &Path, session_id: &str) -> std::io::Result<PathBuf> {
+    if uuid::Uuid::try_parse(session_id).is_err() {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "session_id_invalid",
+        ));
     }
-    sessions_base.join(session_id)
+    if let Some(found) = find_session_dir_recursive(sessions_base, session_id) {
+        return Ok(found);
+    }
+    Ok(sessions_base.join(session_id))
 }
 
 /// The primary audio artifact a legacy session may still hold, if any.
 pub fn resolve_final_audio_path(sessions_base: &Path, session_id: &str) -> Option<PathBuf> {
-    let session_dir = find_session_dir(sessions_base, session_id);
+    let session_dir = find_session_dir(sessions_base, session_id).ok()?;
     for name in ["audio.mp3", "audio.wav", "audio.ogg"] {
         let path = session_dir.join(name);
         if path.exists() {
@@ -426,11 +435,26 @@ mod tests {
         let session_id = uuid::Uuid::new_v4().to_string();
         let nested = root.path().join("projects").join(&session_id);
         std::fs::create_dir_all(&nested).unwrap();
-        assert_eq!(find_session_dir(root.path(), &session_id), nested);
+        assert_eq!(find_session_dir(root.path(), &session_id).unwrap(), nested);
         std::fs::write(nested.join("audio.mp3"), b"x").unwrap();
         assert_eq!(
             resolve_final_audio_path(root.path(), &session_id),
             Some(nested.join("audio.mp3"))
         );
+    }
+
+    #[test]
+    fn find_session_dir_refuses_ids_that_are_not_uuids() {
+        let root = tempfile::tempdir().unwrap();
+        let sessions = root.path().join("sessions");
+        std::fs::create_dir_all(&sessions).unwrap();
+        let outside = root.path().join("outside");
+        std::fs::create_dir_all(&outside).unwrap();
+        std::fs::write(outside.join("audio.mp3"), b"keep").unwrap();
+
+        assert_eq!(resolve_final_audio_path(&sessions, "../outside"), None);
+        let error = find_session_dir(&sessions, "../outside").unwrap_err();
+        assert_eq!(error.kind(), std::io::ErrorKind::InvalidInput);
+        assert!(outside.join("audio.mp3").exists());
     }
 }
