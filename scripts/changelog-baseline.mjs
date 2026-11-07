@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync, readdirSync } from "node:fs";
+import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { resolveExecutable } from "./lib/resolve-executable.mjs";
@@ -46,11 +47,21 @@ export function changelogBaseline(
           : [];
       });
   } else {
-    const directory = `${cwd}/packages/changelog/content/mobile`;
+    const directory = path.join(
+      path.resolve(cwd),
+      "packages",
+      "changelog",
+      "content",
+      "mobile",
+    );
     releases = readdirSync(directory)
+      // Seuls des noms simples `x.y.z.json` sont lus : aucun séparateur ni
+      // `..` ne peut faire sortir la lecture de `directory`.
       .filter((file) => /^\d+\.\d+\.\d+\.json$/.test(file))
       .map((file) => {
-        const record = JSON.parse(readFileSync(`${directory}/${file}`, "utf8"));
+        const record = JSON.parse(
+          readFileSync(path.join(directory, file), "utf8"),
+        );
         if (
           record.version !== file.replace(/\.json$/, "") ||
           !/^[a-f0-9]{40}$/.test(record.sourceSha) ||

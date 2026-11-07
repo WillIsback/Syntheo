@@ -106,6 +106,12 @@ fn collect_files(
 
     for entry in entries {
         let path = entry.path();
+        // Un lien symbolique du dossier hérité qui mène hors de celui-ci n'est
+        // ni parcouru ni importé.
+        if entry.file_type()?.is_symlink() && !stays_inside(vault_base, &path) {
+            tracing::warn!(path = %path.display(), "legacy_vault_symlink_outside_ignored");
+            continue;
+        }
         if path.is_dir() {
             collect_files(vault_base, &path, files, summary_pairs)?;
             continue;
@@ -131,6 +137,12 @@ fn collect_files(
     Ok(())
 }
 
+fn stays_inside(vault_base: &Path, path: &Path) -> bool {
+    path.strip_prefix(vault_base).is_ok_and(|relative| {
+        syntheo_storage::safe_path::join_under_base(vault_base, relative).is_ok()
+    })
+}
+
 fn classify_source(relative_path: &str) -> Option<SourceKind> {
     let parts = relative_path.split('/').collect::<Vec<_>>();
     let filename = parts.last().copied()?;
@@ -154,5 +166,39 @@ fn classify_source(relative_path: &str) -> Option<SourceKind> {
         Some("sessions") if filename == "transcript.json" => Some(SourceKind::Transcript),
         Some("sessions") if filename.ends_with(".md") => Some(SourceKind::SessionDocument),
         _ => None,
+    }
+}
+
+#[cfg(all(test, unix))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn symlinks_leaving_the_vault_are_not_imported() {
+        let temp = tempfile::tempdir().unwrap();
+        let vault = temp.path().join("vault");
+        let outside = temp.path().join("outside");
+        std::fs::create_dir_all(vault.join("humans")).unwrap();
+        std::fs::create_dir_all(&outside).unwrap();
+        std::fs::write(vault.join("humans").join("alice.md"), "# Alice").unwrap();
+        std::fs::write(outside.join("bob.md"), "# Bob").unwrap();
+        std::fs::write(outside.join("settings.json"), "{}").unwrap();
+        std::os::unix::fs::symlink(&outside, vault.join("organizations")).unwrap();
+        std::os::unix::fs::symlink(outside.join("settings.json"), vault.join("settings.json"))
+            .unwrap();
+        std::os::unix::fs::symlink(
+            vault.join("humans").join("alice.md"),
+            vault.join("humans").join("alias.md"),
+        )
+        .unwrap();
+
+        let discovery = discover_sources(&vault).unwrap();
+        let relative_paths: Vec<_> = discovery
+            .files
+            .iter()
+            .map(|file| file.relative_path.as_str())
+            .collect();
+
+        assert_eq!(relative_paths, ["humans/alias.md", "humans/alice.md"]);
     }
 }
