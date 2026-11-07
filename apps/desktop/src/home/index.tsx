@@ -1,4 +1,3 @@
-import { platform } from "@tauri-apps/plugin-os";
 import { useCallback, useMemo, useState } from "react";
 
 import { HomeView } from "./home-view";
@@ -7,22 +6,15 @@ import { useNextMeeting, useOwnerFirstName, useRecentNotes } from "./queries";
 
 import { getOrCreateSessionForEventId } from "~/session/queries";
 import { useOpenNoteDialog } from "~/shared/open-note-dialog";
+import { getShortcutPlatform } from "~/shared/shortcuts";
 import { useNewNote } from "~/shared/useNewNote";
 import { useTabs } from "~/store/zustand/tabs";
 
 export { HomeView } from "./home-view";
 
-function getPrimaryModifierLabel() {
-  try {
-    return platform() === "macos" ? "⌘" : "Ctrl";
-  } catch {
-    return "Ctrl";
-  }
-}
-
 // Démarrer : si une réunion de l'agenda est imminente (ou en cours), on
 // reprend la logique existante de création depuis un événement (titre et
-// participants) ; sinon, une note vierge comme Ctrl N.
+// participants) ; sinon, une note vierge comme Ctrl+N.
 export function useStartMeeting(nextMeeting: NextMeeting | null) {
   const openCurrent = useTabs((state) => state.openCurrent);
   const newNote = useNewNote({ behavior: "current" });
@@ -58,10 +50,10 @@ export function HomePage() {
   const nextMeeting = useNextMeeting();
   const recentNotes = useRecentNotes();
   const openCurrent = useTabs((state) => state.openCurrent);
-  // Ouvre la palette de recherche existante (même action que Ctrl K).
+  // Ouvre la palette de recherche existante (même action que Ctrl+K).
   const { open: openSearch } = useOpenNoteDialog();
   const { start, starting } = useStartMeeting(nextMeeting);
-  const modifierLabel = useMemo(() => getPrimaryModifierLabel(), []);
+  const os = useMemo(() => getShortcutPlatform(), []);
 
   const openNote = useCallback(
     (sessionId: string) => openCurrent({ type: "sessions", id: sessionId }),
@@ -74,7 +66,7 @@ export function HomePage() {
       nextMeeting={nextMeeting}
       recentNotes={recentNotes}
       starting={starting}
-      modifierLabel={modifierLabel}
+      os={os}
       onStart={start}
       onOpenNote={openNote}
       onSearch={openSearch}

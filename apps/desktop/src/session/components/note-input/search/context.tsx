@@ -16,6 +16,8 @@ import {
   type SearchOptions,
 } from "./matching";
 
+import { getShortcut } from "~/shared/shortcuts";
+
 interface SearchContextValue {
   query: string;
   isVisible: boolean;
@@ -26,6 +28,7 @@ interface SearchContextValue {
   wholeWord: boolean;
   showReplace: boolean;
   replaceQuery: string;
+  selectRequest: number;
   onNext: () => void;
   onPrev: () => void;
   close: () => void;
@@ -52,10 +55,12 @@ interface SearchState {
   wholeWord: boolean;
   showReplace: boolean;
   replaceQuery: string;
+  // Incrémenté à chaque Ctrl+F : la barre resélectionne son texte.
+  selectRequest: number;
 }
 
 type SearchAction =
-  | { type: "toggle_visible" }
+  | { type: "open_and_select" }
   | { type: "open_visible" }
   | { type: "close" }
   | { type: "set_query"; query: string }
@@ -85,18 +90,23 @@ const initialState: SearchState = {
   wholeWord: false,
   showReplace: false,
   replaceQuery: "",
+  selectRequest: 0,
 };
 
 function searchReducer(state: SearchState, action: SearchAction): SearchState {
   switch (action.type) {
-    case "toggle_visible":
-      return state.isVisible
-        ? { ...initialState }
-        : { ...state, isVisible: true };
+    // Ctrl+F, comme dans Word : ouvre la barre et sélectionne son texte ; un
+    // second appui ne la ferme plus (Échap la ferme).
+    case "open_and_select":
+      return {
+        ...state,
+        isVisible: true,
+        selectRequest: state.selectRequest + 1,
+      };
     case "open_visible":
       return { ...state, isVisible: true };
     case "close":
-      return { ...initialState };
+      return { ...initialState, selectRequest: state.selectRequest };
     case "set_query":
       return { ...state, query: action.query };
     case "set_replace_query":
@@ -133,10 +143,10 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
   );
 
   useHotkeys(
-    "mod+f",
+    getShortcut("findInNote").hotkeys ?? "",
     (event) => {
       event.preventDefault();
-      dispatch({ type: "toggle_visible" });
+      dispatch({ type: "open_and_select" });
     },
     {
       preventDefault: true,
@@ -147,7 +157,7 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
   );
 
   useHotkeys(
-    "mod+h",
+    getShortcut("replaceInNote").hotkeys ?? "",
     (event) => {
       event.preventDefault();
       dispatch({ type: "open_visible" });
@@ -241,6 +251,26 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
     });
   }, [state.currentMatchIndex]);
 
+  // F3 / Maj+F3 : occurrence suivante / précédente, barre ouverte.
+  const findOptions = {
+    enabled: state.isVisible,
+    preventDefault: true,
+    enableOnFormTags: true,
+    enableOnContentEditable: true,
+  };
+  useHotkeys(
+    getShortcut("findNext").hotkeys ?? "",
+    onNext,
+    findOptions,
+    [onNext],
+  );
+  useHotkeys(
+    getShortcut("findPrevious").hotkeys ?? "",
+    onPrev,
+    findOptions,
+    [onPrev],
+  );
+
   useEffect(() => {
     if (!state.isVisible || !state.activeMatchId) return;
 
@@ -267,6 +297,7 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
       wholeWord: state.wholeWord,
       showReplace: state.showReplace,
       replaceQuery: state.replaceQuery,
+      selectRequest: state.selectRequest,
       onNext,
       onPrev,
       close: () => dispatch({ type: "close" }),

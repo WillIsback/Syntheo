@@ -81,6 +81,8 @@ export function SettingsNav() {
                 setSearch("");
               }
             }}
+            // Ctrl+F sur l'écran Paramètres (useMainShortcuts, issue 372).
+            data-page-search=""
             placeholder={t`Search settings...`}
             aria-label={t`Search settings...`}
             className="placeholder:text-faint min-w-0 flex-1 bg-transparent text-sm focus:outline-hidden"

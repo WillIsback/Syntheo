@@ -5,6 +5,7 @@ import { useHotkeys } from "react-hotkeys-hook";
 import { create } from "zustand";
 
 import {
+  BookOpen,
   FileText,
   Folder,
   Gear,
@@ -27,7 +28,9 @@ import { cn } from "@syntheo/utils";
 import { useBillingAccess } from "~/billing/billing-context";
 import { useFolderSelection } from "~/folders/selection";
 import { useFolderPaths, useSessionSummaries } from "~/session/queries";
+import { openHelpDialog } from "~/shared/help-dialog";
 import { useMainContentCenterOffset } from "~/shared/main/content-offset";
+import { formatShortcutKeys } from "~/shared/shortcuts";
 import { useNewNote } from "~/shared/useNewNote";
 import { useSettingsNavGroups } from "~/sidebar/settings-nav-groups";
 import { type TabInput, useTabs } from "~/store/zustand/tabs";
@@ -126,7 +129,7 @@ function preventCloseWhenOnDragRegion(event: {
   }
 }
 
-// Palette `Ctrl K` : seul point d'entrée vers l'historique des notes depuis la
+// Palette `Ctrl+K` : seul point d'entrée vers l'historique des notes depuis la
 // disparition de la barre latérale. Son état vit dans un store pour qu'on
 // puisse l'ouvrir de n'importe où (accueil, barre de titre, raccourcis) sans
 // dépendre d'un contexte React.
@@ -138,7 +141,7 @@ const useOpenNoteDialogStore = create<{
   setOpen: (open) => set({ open }),
 }));
 
-/** Ouvre la palette de recherche (`Ctrl K`). Stable, utilisable hors React. */
+/** Ouvre la palette de recherche (`Ctrl+K`). Stable, utilisable hors React. */
 export function openNoteDialog() {
   useOpenNoteDialogStore.getState().setOpen(true);
 }
@@ -158,7 +161,7 @@ const OPEN_NOTE_DIALOG_API: OpenNoteDialogApi = { open: openNoteDialog };
 /**
  * API historique : renvoie `{ open }`, une référence stable. Fonctionne aussi
  * hors de `OpenNoteDialogProvider` ; le provider ne fait que monter la palette
- * et le raccourci `Ctrl K`.
+ * et le raccourci `Ctrl+K`.
  */
 export function useOpenNoteDialog(): OpenNoteDialogApi {
   return OPEN_NOTE_DIALOG_API;
@@ -313,6 +316,12 @@ export function OpenNoteDialog({
   const matchesQuery = (label: string) =>
     !query.trim() || label.toLowerCase().includes(query.trim().toLowerCase());
   const showNewNote = matchesQuery(newNoteLabel);
+  // Aide F1 (issue 372) : proposée dès qu'on tape « aide » ou « raccourcis »,
+  // pour ne pas encombrer la palette vide.
+  const helpLabel = t`Help and shortcuts`;
+  const showHelp =
+    query.trim() !== "" &&
+    (matchesQuery(helpLabel) || matchesQuery(t`Keyboard shortcuts`));
 
   // Commande contextuelle de l'écoute (issue 353), sans raccourci dédié.
   const activeSessionId = useListener((state) =>
@@ -347,6 +356,7 @@ export function OpenNoteDialog({
 
   const hasAnyResults =
     showNewNote ||
+    showHelp ||
     showListeningCommand ||
     filteredPages.length > 0 ||
     filteredRecentSessions.length > 0 ||
@@ -402,6 +412,11 @@ export function OpenNoteDialog({
     createNewNote();
   }, [createNewNote, handleOpenChange]);
 
+  const handleHelp = useCallback(() => {
+    handleOpenChange(false);
+    openHelpDialog();
+  }, [handleOpenChange]);
+
   const handleListeningCommand = useCallback(() => {
     if (!listeningCommand) return;
     handleOpenChange(false);
@@ -411,7 +426,7 @@ export function OpenNoteDialog({
     );
   }, [handleOpenChange, listeningCommand]);
 
-  const actionGroup = (showNewNote || showListeningCommand) && (
+  const actionGroup = (showNewNote || showListeningCommand || showHelp) && (
     <CommandPrimitive.Group className="pb-1.5">
       {showListeningCommand && listeningCommand ? (
         <CommandPrimitive.Item
@@ -432,7 +447,20 @@ export function OpenNoteDialog({
           <NotePencil className="text-muted-foreground h-4 w-4 shrink-0" />
           <span className="truncate">{newNoteLabel}</span>
           <kbd className="text-muted-foreground ml-auto shrink-0 font-sans text-xs">
-            Ctrl N
+            {formatShortcutKeys("newNote")}
+          </kbd>
+        </CommandPrimitive.Item>
+      ) : null}
+      {showHelp ? (
+        <CommandPrimitive.Item
+          value="action-help"
+          onSelect={handleHelp}
+          className={PALETTE_ITEM_CLASS}
+        >
+          <BookOpen className="text-muted-foreground h-4 w-4 shrink-0" />
+          <span className="truncate">{helpLabel}</span>
+          <kbd className="text-muted-foreground ml-auto shrink-0 font-sans text-xs">
+            {formatShortcutKeys("help")}
           </kbd>
         </CommandPrimitive.Item>
       ) : null}

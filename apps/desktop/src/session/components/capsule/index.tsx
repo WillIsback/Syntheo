@@ -7,6 +7,13 @@ import { cn } from "@syntheo/utils";
 import { LevelMeter } from "./level-meter";
 import { NOTE_STAGES, type NoteStage } from "./stage";
 
+import {
+  ariaShortcut,
+  formatShortcutKeys,
+  type ShortcutId,
+  type ShortcutPlatform,
+} from "~/shared/shortcuts";
+
 export { getNoteStage, type NoteStage } from "./stage";
 
 // Kanji d'ornement devant chaque étape (identite.md § Clins d'œil).
@@ -55,12 +62,12 @@ export function NoteCapsule({
   stage,
   listening,
   actions,
-  modifierLabel = "Ctrl",
+  os = "pc",
 }: {
   stage: NoteStage;
   listening?: CapsuleListening;
   actions: CapsuleActions;
-  modifierLabel?: string;
+  os?: ShortcutPlatform;
 }) {
   const { t } = useLingui();
 
@@ -88,7 +95,8 @@ export function NoteCapsule({
             tone="recording"
             onClick={actions.onStart}
             disabled={actions.startDisabled}
-            shortcut={`${modifierLabel} ⇧ N`}
+            shortcut="startListening"
+            os={os}
           >
             <Trans>Begin listening</Trans>
           </CapsuleButton>
@@ -125,7 +133,8 @@ export function NoteCapsule({
             <CapsuleButton
               tone="primary"
               onClick={actions.onAsk}
-              shortcut={`${modifierLabel} J`}
+              shortcut="askNote"
+              os={os}
             >
               <Trans>Ask the note</Trans>
             </CapsuleButton>
@@ -272,13 +281,16 @@ function CapsuleButton({
   onClick,
   disabled,
   shortcut,
+  os = "pc",
   tone = "ghost",
   ariaLabel,
 }: {
   children: ReactNode;
   onClick: () => void;
   disabled?: boolean;
-  shortcut?: string;
+  // Raccourci de la table unique (puce « Ctrl Maj N », aria-keyshortcuts).
+  shortcut?: ShortcutId;
+  os?: ShortcutPlatform;
   tone?: "ghost" | "primary" | "recording";
   ariaLabel?: string;
 }) {
@@ -288,7 +300,7 @@ function CapsuleButton({
       onClick={onClick}
       disabled={disabled}
       aria-label={ariaLabel}
-      aria-keyshortcuts={shortcut ? toAriaShortcut(shortcut) : undefined}
+      aria-keyshortcuts={shortcut ? ariaShortcut(shortcut, os) : undefined}
       className={cn([
         "rounded-pill inline-flex items-center px-3.5 py-[7px] transition-colors",
         "focus-visible:ring-primary-foreground focus-visible:ring-offset-primary focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
@@ -306,20 +318,11 @@ function CapsuleButton({
           aria-hidden="true"
           className="ml-1.5 font-[inherit] text-[11px] font-normal opacity-60"
         >
-          {shortcut}
+          {formatShortcutKeys(shortcut, os)}
         </kbd>
       ) : null}
     </button>
   );
-}
-
-function toAriaShortcut(shortcut: string) {
-  return shortcut
-    .replace("⌘", "Meta")
-    .replace("⇧", "Shift")
-    .split(" ")
-    .filter(Boolean)
-    .join("+");
 }
 
 export function formatElapsed(totalSeconds: number) {

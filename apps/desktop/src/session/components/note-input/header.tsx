@@ -16,6 +16,7 @@ import {
   useHasTranscript,
 } from "~/session/components/shared";
 import { useEnhancedNotes } from "~/session/hooks/useEnhancedNotes";
+import { ariaShortcut, formatShortcut } from "~/shared/shortcuts";
 import { deleteEnhancedNote } from "~/session/queries";
 import { type EditorView } from "~/store/zustand/tabs/schema";
 import { useListener } from "~/stt/contexts";
@@ -55,10 +56,16 @@ export function SessionViewSwitcher({
     return null;
   }
 
+  // Ctrl+Pg.Préc / Ctrl+Pg.Suiv : vue précédente / suivante (issue 372).
+  const previousViewKeys = formatShortcut("previousView");
+  const nextViewKeys = formatShortcut("nextView");
+
   return (
     <div
       role="group"
       aria-label={t`Session note views`}
+      title={t`Switch view (${previousViewKeys}, ${nextViewKeys})`}
+      aria-keyshortcuts={`${ariaShortcut("previousView")} ${ariaShortcut("nextView")}`}
       data-tauri-drag-region="false"
       className={cn([
         "pointer-events-auto relative z-10 w-fit max-w-full shrink-0 overflow-visible",

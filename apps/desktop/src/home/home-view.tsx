@@ -7,6 +7,7 @@ import { NoteIndex } from "./note-index";
 import type { RecentNote } from "./queries";
 import { StartButton } from "./start-button";
 
+import type { ShortcutPlatform } from "~/shared/shortcuts";
 import { type PaletteId, useDocumentPalette } from "~/shared/theme/palette";
 
 // Filigrane de l'accueil selon la palette (maquette, objet PAL) : 茶 Thé vert,
@@ -22,7 +23,7 @@ export type HomeViewProps = {
   nextMeeting: NextMeeting | null;
   recentNotes: readonly RecentNote[];
   starting?: boolean;
-  modifierLabel?: string;
+  os?: ShortcutPlatform;
   onStart: () => void;
   onOpenNote: (sessionId: string) => void;
   onSearch: () => void;
@@ -35,7 +36,7 @@ export function HomeView({
   nextMeeting,
   recentNotes,
   starting = false,
-  modifierLabel = "Ctrl",
+  os = "pc",
   onStart,
   onOpenNote,
   onSearch,
@@ -70,7 +71,7 @@ export function HomeView({
           <StartButton
             onStart={onStart}
             busy={starting}
-            modifierLabel={modifierLabel}
+            os={os}
           />
           <NoteIndex notes={recentNotes} onOpen={onOpenNote} />
           <p className="text-muted-foreground flex items-center gap-2 text-[13px]">
@@ -82,7 +83,7 @@ export function HomeView({
           </p>
         </div>
       </div>
-      <HomeCapsule onSearch={onSearch} modifierLabel={modifierLabel} />
+      <HomeCapsule onSearch={onSearch} os={os} />
     </div>
   );
 }

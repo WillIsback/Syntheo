@@ -315,6 +315,10 @@ msgstr "Ajouté :"
 msgid "Additional spoken languages"
 msgstr "Langues parlées supplémentaires"
 
+#: src/shared/shortcuts.ts
+msgid "Adjust"
+msgstr "Régler"
+
 #: src/settings/ai/shared/server-address.tsx
 #: src/sidebar/settings-nav-groups.ts
 msgid "Advanced"
@@ -448,6 +452,7 @@ msgid "Ask Syntheo anything"
 msgstr "Posez toutes vos questions à Syntheo"
 
 #: src/session/components/capsule/index.tsx
+#: src/shared/shortcuts.ts
 msgid "Ask the note"
 msgstr "Demander à la note"
 
@@ -562,6 +567,7 @@ msgstr "Automatisations"
 #: src/calendar/components/apple/permission.tsx
 #: src/calendar/components/event-chip.tsx
 #: src/instruction/index.tsx
+#: src/shared/shortcuts.ts
 #: src/sidebar/custom-sidebar-header.tsx
 msgid "Back"
 msgstr "Retour"
@@ -575,6 +581,7 @@ msgid "Before the meeting, choose its type and add the participants."
 msgstr "Avant la réunion, choisissez son type et ajoutez les participants."
 
 #: src/session/components/capsule/index.tsx
+#: src/shared/shortcuts.ts
 msgid "Begin listening"
 msgstr "Commencer l'écoute"
 
@@ -832,6 +839,10 @@ msgstr "Fermer le journal des modifications"
 #: src/chat/components/toolbar-controls.tsx
 msgid "Close chat"
 msgstr "Fermer la discussion"
+
+#: src/shared/shortcuts.ts
+msgid "Close the open panel, or go home"
+msgstr "Fermer le panneau ouvert, sinon revenir à l'accueil"
 
 #: src/settings/general/notification.tsx
 msgid "Cloud sync complete"
@@ -1401,6 +1412,10 @@ msgstr "Améliorer le contact"
 msgid "Enhance contact {label}"
 msgstr "Améliorer le contact {label}"
 
+#: src/shared/shortcuts.ts
+msgid "Enter"
+msgstr "Entrée"
+
 #: src/settings/ai/shared/server-address.tsx
 msgid "Enter a full address, for example {placeholder}."
 msgstr "Saisissez une adresse complète, par exemple {placeholder}."
@@ -1417,6 +1432,10 @@ msgstr "Saisissez un nom de dossier valide."
 #: src/settings/ai/shared/server-card.tsx
 msgid "Enter another name"
 msgstr "Saisir un autre nom"
+
+#: src/shared/shortcuts.ts
+msgid "Esc"
+msgstr "Échap"
 
 #: src/composer/index.tsx
 msgid "Esc to dismiss"
@@ -1453,6 +1472,7 @@ msgstr "Sortie attendue"
 #: src/session/components/capsule/index.tsx
 #: src/session/components/outer-header/overflow/export-modal.tsx
 #: src/session/components/outer-header/overflow/index.tsx
+#: src/shared/shortcuts.ts
 msgid "Export"
 msgstr "Exporter"
 
@@ -1467,6 +1487,10 @@ msgstr "Dossier d'export"
 #: src/settings/general/storage/export-location.tsx
 msgid "Export location"
 msgstr "Emplacement d'export"
+
+#: src/shared/shortcuts.ts
+msgid "Export or print"
+msgstr "Exporter ou imprimer"
 
 #: src/settings/automations/workflow-builder.tsx
 msgid "Export the meeting as Markdown"
@@ -1507,6 +1531,10 @@ msgstr "Nom de fichier"
 #: src/session/components/note-input/transcript/screens/listening.tsx
 msgid "Finalizing transcription…"
 msgstr "Finalisation de la transcription…"
+
+#: src/shared/shortcuts.ts
+msgid "Find in the note"
+msgstr "Rechercher dans la note"
 
 #: src/chat/components/body/empty.tsx
 msgid "Find key decisions."
@@ -1592,6 +1620,10 @@ msgstr "Libérez de l'espace disque. Syntheo tentera de récupérer le texte man
 msgid "Frequently used"
 msgstr "Fréquemment utilisés"
 
+#: src/shared/shortcuts.ts
+msgid "Full screen"
+msgstr "Plein écran"
+
 #: src/main/windows-title-bar.tsx
 msgid "Full Screen"
 msgstr "Plein écran"
@@ -1616,6 +1648,10 @@ msgstr "Génération du titre..."
 #: src/session/components/note-input/transcript/screens/empty.tsx
 msgid "Generating transcript..."
 msgstr "Génération du transcript..."
+
+#: src/shared/shortcuts.ts
+msgid "Get around"
+msgstr "Se déplacer"
 
 #: src/sidebar/automations.tsx
 msgid "Get started"
@@ -1648,6 +1684,10 @@ msgstr "Aller à la section précédente"
 #: src/chat/components/body/index.tsx
 msgid "Go to recent"
 msgstr "Aller aux récents"
+
+#: src/shared/shortcuts.ts
+msgid "Go to the File menu"
+msgstr "Aller au menu Fichier"
 
 #: src/settings/ai/stt/language-warning.tsx
 msgid "Got it"
@@ -1685,6 +1725,13 @@ msgstr "Bonjour."
 #: src/settings/ai/shared/server-card.tsx
 msgid "Help"
 msgstr "Aide"
+
+#: src/main/windows-title-bar.tsx
+#: src/shared/help-dialog.tsx
+#: src/shared/open-note-dialog.tsx
+#: src/shared/shortcuts.ts
+msgid "Help and shortcuts"
+msgstr "Aide et raccourcis"
 
 #: src/onboarding/permissions.tsx
 msgid "Help Syntheo listen to others"
@@ -1735,10 +1782,6 @@ msgstr "Maintenez votre raccourci pendant que vous parlez, puis relâchez-le pou
 #: src/main/windows-title-bar.tsx
 msgid "Home"
 msgstr "Accueil"
-
-#: src/main/windows-title-bar.tsx
-msgid "Home · Esc"
-msgstr "Accueil · Échap"
 
 #: src/home/home-capsule.tsx
 msgid "Home capsule"
@@ -1881,6 +1924,10 @@ msgstr "Conserver cette version"
 msgid "Key refused"
 msgstr "Clé refusée"
 
+#: src/shared/open-note-dialog.tsx
+msgid "Keyboard shortcuts"
+msgstr "Raccourcis clavier"
+
 #: src/settings/appearance/palette.tsx
 msgid "Lacquer and ink"
 msgstr "Laque et encre"
@@ -1964,6 +2011,7 @@ msgstr "Listez les éléments d'action."
 #: src/home/start-button.tsx
 #: src/onboarding/final.tsx
 #: src/session/components/capsule/index.tsx
+#: src/shared/shortcuts.ts
 msgid "Listen"
 msgstr "Écouter"
 
@@ -2349,6 +2397,7 @@ msgid "New folder"
 msgstr "Nouveau dossier"
 
 #: src/shared/open-note-dialog.tsx
+#: src/shared/shortcuts.ts
 msgid "New note"
 msgstr "Nouvelle note"
 
@@ -2369,12 +2418,17 @@ msgid "Newest"
 msgstr "Plus récents"
 
 #: src/session/components/note-input/search/bar.tsx
+#: src/shared/shortcuts.ts
 msgid "Next match"
-msgstr "Correspondance suivante"
+msgstr "Occurrence suivante"
 
 #: src/sidebar/timeline/utils/index.ts
 msgid "next month"
 msgstr "mois prochain"
+
+#: src/shared/shortcuts.ts
+msgid "Next view of the note"
+msgstr "Vue suivante de la note"
 
 #: src/sidebar/timeline/utils/index.ts
 msgid "next week"
@@ -2701,6 +2755,14 @@ msgstr "Ouvrez Syntheo depuis la barre des menus."
 msgid "Open the meeting link when a scheduled meeting begins."
 msgstr "Ouvrez le lien de la réunion lorsqu'une réunion programmée commence."
 
+#: src/shared/help-dialog.tsx
+msgid "Open the online documentation"
+msgstr "Ouvrir la documentation en ligne"
+
+#: src/shared/help-dialog.tsx
+msgid "Open the online documentation (opens your web browser)"
+msgstr "Ouvrir la documentation en ligne (ouvre votre navigateur)"
+
 #: src/settings/ai/stt/server-card.tsx
 msgid "OpenAI · Realtime and batch"
 msgstr "OpenAI · temps réel et par lots"
@@ -2718,6 +2780,10 @@ msgstr "Ouvre les Réglages système et vous guide pour ajouter Syntheo à la li
 #: src/settings/general/permissions.tsx
 msgid "Opens System Settings and guides you to add Syntheo to the {0} list."
 msgstr "Ouvre les Réglages système et vous guide pour ajouter Syntheo à la liste {0}."
+
+#: src/shared/help-dialog.tsx
+msgid "Opens your web browser."
+msgstr "Ouvre votre navigateur."
 
 #: src/services/notification-labels.ts
 msgid "Options"
@@ -2811,6 +2877,14 @@ msgstr "Autorisations"
 msgid "Permissions granted"
 msgstr "Autorisations accordées"
 
+#: src/shared/shortcuts.ts
+msgid "PgDn"
+msgstr "Pg.Suiv"
+
+#: src/shared/shortcuts.ts
+msgid "PgUp"
+msgstr "Pg.Préc"
+
 #: src/contacts/details.tsx
 msgid "Phone"
 msgstr "Téléphone"
@@ -2842,6 +2916,7 @@ msgstr "La transcription après la réunion a échoué. L'enregistrement est con
 #: src/home/start-button.tsx
 #: src/onboarding/final.tsx
 #: src/session/components/capsule/index.tsx
+#: src/shared/shortcuts.ts
 msgid "Prepare"
 msgstr "Préparer"
 
@@ -2880,8 +2955,13 @@ msgid "Preview"
 msgstr "Aperçu"
 
 #: src/session/components/note-input/search/bar.tsx
+#: src/shared/shortcuts.ts
 msgid "Previous match"
-msgstr "Match précédent"
+msgstr "Occurrence précédente"
+
+#: src/shared/shortcuts.ts
+msgid "Previous view of the note"
+msgstr "Vue précédente de la note"
 
 #: src/settings/general/app-settings.tsx
 msgid "Privacy"
@@ -3075,6 +3155,7 @@ msgid "Repair Keychain Access"
 msgstr "Réparer l'accès au trousseau"
 
 #: src/session/components/note-input/search/bar.tsx
+#: src/shared/shortcuts.ts
 msgid "Replace"
 msgstr "Remplacer"
 
@@ -3134,6 +3215,10 @@ msgstr "Réinitialiser au format par défaut"
 msgid "Reset to Downloads"
 msgstr "Réinitialiser vers Téléchargements"
 
+#: src/shared/shortcuts.ts
+msgid "Reset zoom"
+msgstr "Taille normale"
+
 #: src/settings/general/notification.tsx
 msgid "Respect Do-Not-Disturb mode"
 msgstr "Respecter le mode Ne pas déranger"
@@ -3173,6 +3258,10 @@ msgstr "Réessayer"
 msgid "Retry setup"
 msgstr "Réessayer la configuration"
 
+#: src/shared/shortcuts.ts
+msgid "Review"
+msgstr "Relire"
+
 #: src/session/components/pending-proposals-banner.tsx
 msgid "Review memo"
 msgstr "Vérifier la note"
@@ -3193,6 +3282,10 @@ msgstr "Commande droite"
 #: src/templates/auto-form.tsx
 msgid "Save"
 msgstr "Enregistrer"
+
+#: src/shared/shortcuts.ts
+msgid "Save (automatic)"
+msgstr "Enregistrer (automatique)"
 
 #: src/settings/automations/index.tsx
 msgid "Save & enable"
@@ -3244,8 +3337,13 @@ msgid "Search a meeting type"
 msgstr "Rechercher un type de réunion"
 
 #: src/home/home-capsule.tsx
+#: src/shared/shortcuts.ts
 msgid "Search a note"
 msgstr "Rechercher une note"
+
+#: src/shared/shortcuts.ts
+msgid "Search a setting"
+msgstr "Rechercher un paramètre"
 
 #: src/templates/template-sidebar.tsx
 msgid "Search a template"
@@ -3444,6 +3542,7 @@ msgstr "Configuration de la dictée…"
 
 #: src/main/windows-title-bar.tsx
 #: src/shared/open-note-dialog.tsx
+#: src/shared/shortcuts.ts
 #: src/sidebar/settings.tsx
 #: src/sidebar/toast/registry.tsx
 msgid "Settings"
@@ -3460,6 +3559,10 @@ msgstr "Écrans partagés"
 #: src/session/components/note-input/header-shared-note.tsx
 msgid "Shared summary"
 msgstr "Résumé partagé"
+
+#: src/shared/shortcuts.ts
+msgid "Shift"
+msgstr "Maj"
 
 #: src/settings/general/meeting-settings.tsx
 msgid "Show a reminder when a recording starts."
@@ -3803,6 +3906,10 @@ msgstr "Le résumé n'a pas été généré"
 #: src/settings/general/week-start.tsx
 msgid "Sunday"
 msgstr "Dimanche"
+
+#: src/session/components/note-input/header.tsx
+msgid "Switch view ({previousViewKeys}, {nextViewKeys})"
+msgstr "Changer de vue ({previousViewKeys}, {nextViewKeys})"
 
 #: src/templates/template-icon-picker.tsx
 msgid "Symbols"
@@ -4611,6 +4718,10 @@ msgstr "Lorsque cela se produit"
 msgid "Wisteria"
 msgstr "Glycine"
 
+#: src/shared/help-dialog.tsx
+msgid "Without a mouse: Tab moves to the next field, Shift+Tab to the previous one, Enter confirms."
+msgstr "Sans souris : Tab passe au champ suivant, Maj+Tab au précédent, Entrée valide."
+
 #: src/settings/dictation.tsx
 msgid "Words appear in a small bubble while you speak. Text is inserted when you finish."
 msgstr "Les mots s'affichent dans une petite bulle pendant que vous parlez. Le texte s'insère quand vous avez terminé."
@@ -4676,6 +4787,11 @@ msgstr "Votre prochaine réunion :"
 msgid "Your notes"
 msgstr "Vos notes"
 
+#: src/shared/help-dialog.tsx
+#: src/shared/useMainShortcuts.tsx
+msgid "Your notes are saved automatically."
+msgstr "Vos notes sont enregistrées automatiquement."
+
 #: src/services/enhancer/summary-notification.ts
 msgid "Your summary is ready."
 msgstr "Votre résumé est prêt."
@@ -4683,3 +4799,11 @@ msgstr "Votre résumé est prêt."
 #: src/stt/capture-lifecycle.ts
 msgid "Your transcript could not be saved"
 msgstr "Votre transcription n'a pas pu être enregistrée"
+
+#: src/shared/shortcuts.ts
+msgid "Zoom in"
+msgstr "Agrandir"
+
+#: src/shared/shortcuts.ts
+msgid "Zoom out"
+msgstr "Réduire"

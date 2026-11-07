@@ -66,14 +66,14 @@ describe("NoteCapsule", () => {
     expect(capsule.className).toContain("shadow-capsule");
   });
 
-  it("offers Cancel and Start listening (Ctrl ⇧ N) while preparing", () => {
+  it("offers Cancel and Start listening (Ctrl+Shift+N) while preparing", () => {
     const actions = makeActions();
     render(<NoteCapsule stage="prepare" actions={actions} />);
 
     const start = screen.getByRole("button", { name: /Begin listening/ });
     expect(start.className).toContain("bg-recording");
-    expect(start.textContent).toContain("Ctrl ⇧ N");
-    expect(start.getAttribute("aria-keyshortcuts")).toBe("Ctrl+Shift+N");
+    expect(start.textContent).toContain("Ctrl Shift N");
+    expect(start.getAttribute("aria-keyshortcuts")).toBe("Control+Shift+N");
 
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     fireEvent.click(start);
@@ -264,7 +264,7 @@ describe("NoteCapsule", () => {
   it("offers Copy, Export and Ask the note (Ctrl J) for the synthesis", () => {
     const actions = makeActions();
     render(
-      <NoteCapsule stage="synthesis" actions={actions} modifierLabel="⌘" />,
+      <NoteCapsule stage="synthesis" actions={actions} os="mac" />,
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Copy" }));
