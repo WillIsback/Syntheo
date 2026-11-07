@@ -1,3 +1,4 @@
+import { i18n } from "@lingui/core";
 import { renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -41,6 +42,8 @@ import {
   searchCalendarEvents,
   useCalendarRows,
 } from "./queries";
+
+import { messages as frMessages } from "~/i18n/locales/fr/messages";
 
 describe("calendar SQLite selection", () => {
   beforeEach(() => {
@@ -117,6 +120,33 @@ describe("calendar SQLite selection", () => {
       },
     ]);
     expect(mocks.execute.mock.calls[0][1]).toEqual(["plan", "plan", 5]);
+  });
+
+  test("names untitled search results in the active locale", async () => {
+    const untitledRow = {
+      id: "event-2",
+      title: "",
+      started_at: "",
+      ended_at: "",
+      location: "",
+      meeting_link: "",
+      description: "",
+      participant_count: 0,
+      linked_session_id: "",
+    };
+    mocks.execute.mockResolvedValue([untitledRow]);
+
+    const [english] = await searchCalendarEvents("", 5);
+    expect(english.title).toBe("Untitled event");
+
+    i18n.load("fr", frMessages);
+    i18n.activate("fr");
+    try {
+      const [french] = await searchCalendarEvents("", 5);
+      expect(french.title).toBe("Événement sans titre");
+    } finally {
+      i18n.activate("en");
+    }
   });
 
   test("returns nearby event participant names without the current user", async () => {

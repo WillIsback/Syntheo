@@ -235,7 +235,9 @@ pub fn main() {
 
     #[cfg(all(not(debug_assertions), not(feature = "devtools")))]
     {
-        let plugin = tauri_plugin_prevent_default::init();
+        let plugin = tauri_plugin_prevent_default::Builder::new()
+            .with_flags(prevent_default_flags())
+            .build();
         builder = builder.plugin(plugin);
     }
 
@@ -430,6 +432,18 @@ pub fn main() {
     drop(runtime);
 }
 
+/// Raccourcis natifs de la webview bloqués en version publiée.
+///
+/// Tous les drapeaux du plugin restent actifs (F5, Ctrl+R, recherche, impression,
+/// clic droit, etc.), sauf `FOCUS_MOVE` : celui-ci annule `Maj+Tab` et empêche de
+/// revenir au champ précédent au clavier (issue 395).
+#[cfg(any(test, all(not(debug_assertions), not(feature = "devtools"))))]
+fn prevent_default_flags() -> tauri_plugin_prevent_default::Flags {
+    use tauri_plugin_prevent_default::Flags;
+
+    Flags::all().difference(Flags::FOCUS_MOVE)
+}
+
 fn startup_failure_message(error: &impl std::fmt::Display) -> String {
     format!("Syntheo failed to start: {error}")
 }
@@ -554,6 +568,32 @@ mod test {
         assert!(!should_allow_immediate_exit());
         syntheo_intercept::set_force_quit();
         assert!(should_allow_immediate_exit());
+    }
+
+    #[test]
+    fn prevent_default_flags_keep_shift_tab_focus_move() {
+        use tauri_plugin_prevent_default::Flags;
+
+        let flags = prevent_default_flags();
+
+        // Maj+Tab n'est plus bloqué : on peut revenir au champ précédent.
+        assert!(!flags.contains(Flags::FOCUS_MOVE));
+
+        // Tous les autres raccourcis restent bloqués, clic droit compris.
+        assert_eq!(flags | Flags::FOCUS_MOVE, Flags::all());
+        for flag in [
+            Flags::FIND,
+            Flags::CARET_BROWSING,
+            Flags::DEV_TOOLS,
+            Flags::DOWNLOADS,
+            Flags::RELOAD,
+            Flags::SOURCE,
+            Flags::OPEN,
+            Flags::PRINT,
+            Flags::CONTEXT_MENU,
+        ] {
+            assert!(flags.contains(flag), "{flag:?} doit rester actif");
+        }
     }
 
     #[test]

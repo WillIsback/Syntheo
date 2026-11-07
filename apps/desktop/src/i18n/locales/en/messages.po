@@ -67,6 +67,10 @@ msgstr "{0}% complete"
 msgid "{absDays} days ago"
 msgstr "{absDays} days ago"
 
+#: src/services/tray-schedule.tsx
+msgid "{count, plural, one {{duration} left} other {{duration} left}}"
+msgstr "{count, plural, one {{duration} left} other {{duration} left}}"
+
 #: src/contacts/details.tsx
 msgid "{count} contacts share the same name or email. Merge them to consolidate all related notes and information."
 msgstr "{count} contacts share the same name or email. Merge them to consolidate all related notes and information."
@@ -75,9 +79,25 @@ msgstr "{count} contacts share the same name or email. Merge them to consolidate
 msgid "{count} more"
 msgstr "{count} more"
 
+#: src/services/tray-schedule.tsx
+msgid "{count}h"
+msgstr "{count}h"
+
+#: src/services/tray-schedule.tsx
+msgid "{count}m"
+msgstr "{count}m"
+
+#: src/services/tray-schedule.tsx
+msgid "{count}s"
+msgstr "{count}s"
+
 #: src/session/components/note-input/transcript/renderer/selection-menu.tsx
 msgid "{entryCount} selected"
 msgstr "{entryCount} selected"
+
+#: src/services/tray-schedule.tsx
+msgid "{hours}h {minutes}m"
+msgstr "{hours}h {minutes}m"
 
 #: src/settings/ai/stt/language-warning.tsx
 msgid "{model} can't transcribe {languages}. Try another model or change your spoken languages."
@@ -1784,6 +1804,10 @@ msgstr "Improve with examples"
 #: src/sidebar/timeline/utils/index.ts
 msgid "in {absDays} days"
 msgstr "in {absDays} days"
+
+#: src/services/tray-schedule.tsx
+msgid "in {duration}"
+msgstr "in {duration}"
 
 #: src/sidebar/timeline/utils/index.ts
 msgid "in {months} months"
@@ -4383,6 +4407,11 @@ msgstr "Untitled"
 #: src/sidebar/automations.tsx
 msgid "Untitled automation"
 msgstr "Untitled automation"
+
+#: src/calendar/queries.ts
+#: src/services/tray-schedule.tsx
+msgid "Untitled event"
+msgstr "Untitled event"
 
 #: src/home/home-view.tsx
 msgid "Untitled meeting"
