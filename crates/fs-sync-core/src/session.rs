@@ -87,7 +87,7 @@ mod tests {
 
     #[test]
     fn find_session_at_root() {
-        let env = TestEnv::new()
+        let env = TestEnv::builder()
             .folder("sessions")
             .session(UUID_1)
             .done_folder()
@@ -100,7 +100,7 @@ mod tests {
 
     #[test]
     fn find_session_in_nested_folder() {
-        let env = TestEnv::new()
+        let env = TestEnv::builder()
             .folder("sessions")
             .done()
             .folder("sessions/work")
@@ -141,7 +141,7 @@ mod tests {
 
     #[test]
     fn delete_session_dir_removes_directory() {
-        let env = TestEnv::new().session(UUID_1).done().build();
+        let env = TestEnv::builder().session(UUID_1).done().build();
 
         delete_session_dir(&env.session_path(UUID_1)).unwrap();
         env.child(UUID_1).assert(predicate::path::missing());
@@ -168,7 +168,7 @@ mod tests {
 
     #[test]
     fn list_uuid_files_returns_only_uuid_files_with_extension() {
-        let env = TestEnv::new()
+        let env = TestEnv::builder()
             .file(&format!("{UUID_1}.md"), "content1")
             .file(&format!("{UUID_2}.md"), "content2")
             .file("not-a-uuid.md", "skip")

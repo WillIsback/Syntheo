@@ -114,6 +114,7 @@ fn wired_input_rank(transport: TransportType) -> Option<u8> {
     }
 }
 
+#[cfg(any(target_os = "macos", test))]
 fn bluetooth_input_named<'a>(name: &str, inputs: &'a [AudioDevice]) -> Option<&'a AudioDevice> {
     inputs.iter().find(|device| {
         device.direction == AudioDirection::Input
@@ -147,11 +148,13 @@ fn bluetooth_names_share_headset(left: &str, right: &str) -> bool {
     bluetooth_base_name(left) == bluetooth_base_name(right)
 }
 
+#[cfg(any(target_os = "macos", test))]
 fn bluetooth_handoff_ready(requested: &AudioDevice, default: &AudioDevice) -> bool {
     related_bluetooth_endpoint(requested, default)
         && (default.id != requested.id || device::name_suggests_hands_free(&default.name))
 }
 
+#[cfg(any(target_os = "macos", test))]
 fn listed_hands_free_capture<'a>(
     requested: &AudioDevice,
     inputs: &'a [AudioDevice],
@@ -162,6 +165,7 @@ fn listed_hands_free_capture<'a>(
     })
 }
 
+#[cfg(any(target_os = "macos", test))]
 fn resolved_capture_name(
     requested: &AudioDevice,
     default_after: Option<&AudioDevice>,
@@ -187,6 +191,7 @@ struct BluetoothDefaultOwnership {
 }
 
 impl BluetoothDefaultOwnership {
+    #[cfg(any(target_os = "macos", test))]
     fn finish_handoff(
         &self,
         default_after: Option<&AudioDevice>,

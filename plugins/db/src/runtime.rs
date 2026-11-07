@@ -100,10 +100,6 @@ pub struct PluginDbRuntime {
     executor: DbExecutor,
     live_query_runtime: LiveQueryRuntime<QueryEventChannel>,
     renderer_subscriptions: renderer::RendererSubscriptions,
-    #[cfg(test)]
-    pause_transaction_after_begin: std::sync::atomic::AtomicBool,
-    #[cfg(test)]
-    transaction_started: tokio::sync::Notify,
 }
 
 impl PluginDbRuntime {
@@ -120,26 +116,11 @@ impl PluginDbRuntime {
             executor: DbExecutor::new(std::sync::Arc::clone(&db)),
             live_query_runtime: LiveQueryRuntime::new(db),
             renderer_subscriptions: Default::default(),
-            #[cfg(test)]
-            pause_transaction_after_begin: Default::default(),
-            #[cfg(test)]
-            transaction_started: Default::default(),
         }
     }
 
     pub fn pool(&self) -> &sqlx::SqlitePool {
         self.db.pool()
-    }
-
-    #[cfg(test)]
-    pub(crate) fn pause_next_transaction_after_begin(&self) {
-        self.pause_transaction_after_begin
-            .store(true, std::sync::atomic::Ordering::Release);
-    }
-
-    #[cfg(test)]
-    pub(crate) async fn wait_for_transaction_after_begin(&self) {
-        self.transaction_started.notified().await;
     }
 
     pub async fn synced_write_guard(&self) -> tokio::sync::RwLockReadGuard<'_, ()> {
@@ -233,14 +214,6 @@ impl PluginDbRuntime {
         self.ensure_app_schema().await?;
         let mut transaction =
             ExplicitRollbackTransaction::new(self.db.pool().begin_with("BEGIN IMMEDIATE").await?);
-        #[cfg(test)]
-        if self
-            .pause_transaction_after_begin
-            .swap(false, std::sync::atomic::Ordering::AcqRel)
-        {
-            self.transaction_started.notify_one();
-            std::future::pending::<()>().await;
-        }
         let mut rows_affected = Vec::with_capacity(statements.len());
 
         for (statement_index, statement) in statements.into_iter().enumerate() {
