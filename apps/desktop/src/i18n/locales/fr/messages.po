@@ -26,6 +26,10 @@ msgstr ", à {time}."
 msgid ", in progress."
 msgstr ", en cours."
 
+#: src/session/components/speaker-naming/speaker-card.tsx
+msgid "“{excerpt}”"
+msgstr "« {excerpt} »"
+
 #: src/services/enhancer/summary-notification.ts
 msgid "\"{title}\" is ready to read."
 msgstr "\"{title}\" est prêt à être lu."
@@ -75,6 +79,10 @@ msgstr "il y a {absDays} jours"
 #: src/services/tray-schedule.tsx
 msgid "{count, plural, one {{duration} left} other {{duration} left}}"
 msgstr "{count, plural, one {{duration} restante} other {{duration} restantes}}"
+
+#: src/session/components/speaker-naming/bar.tsx
+msgid "{count, plural, one {# speaker to name} other {# speakers to name}}"
+msgstr "{count, plural, one {# intervenant à nommer} other {# intervenants à nommer}}"
 
 #: src/contacts/details.tsx
 msgid "{count} contacts share the same name or email. Merge them to consolidate all related notes and information."
@@ -143,6 +151,10 @@ msgstr "{providerName} n'envoie plus de texte"
 #: src/sidebar/toast/undo-delete-toast.tsx
 msgid "{title} deleted"
 msgstr "{title} supprimé"
+
+#: src/session/components/speaker-naming/speaker-card.tsx
+msgid "{turns, plural, one {# turn} other {# turns}}"
+msgstr "{turns, plural, one {# intervention} other {# interventions}}"
 
 #: src/sidebar/timeline/utils/index.ts
 msgid "{weeks} weeks ago"
@@ -492,6 +504,10 @@ msgstr "Posez toutes vos questions à Syntheo"
 msgid "Ask the note"
 msgstr "Demander à la note"
 
+#: src/session/components/speaker-naming/speaker-card.tsx
+msgid "Assigned to {assignedName}"
+msgstr "Attribué à {assignedName}"
+
 #: src/templates/auto-format-examples-dialog.tsx
 msgid "Attach Markdown or text"
 msgstr "Joindre du Markdown ou du texte"
@@ -732,6 +748,10 @@ msgstr "Modifier l’orateur"
 #: src/session/components/note-input/transcript/renderer/selection-menu.tsx
 msgid "Change speaker from here"
 msgstr "Modifier l’orateur depuis ici"
+
+#: src/session/components/speaker-naming/speaker-card.tsx
+msgid "Change the name"
+msgstr "Changer le nom"
 
 #: src/chat/components/toolbar-controls.tsx
 msgid "Chat history"
@@ -1171,6 +1191,11 @@ msgstr "Impossible d'enregistrer votre profil. Réessayez."
 msgid "Create"
 msgstr "Créer"
 
+#. placeholder {0}: option.name
+#: src/session/components/speaker-naming/speaker-card.tsx
+msgid "Create “{0}”"
+msgstr "Créer « {0} »"
+
 #: src/session/components/folder-picker.tsx
 msgid "Create \"{folderName}\""
 msgstr "Créer \"{folderName}\""
@@ -1415,6 +1440,7 @@ msgid "Documentation"
 msgstr "Documentation"
 
 #: src/session/components/living-document/transcript-margin.tsx
+#: src/session/components/speaker-naming/dialog.tsx
 msgid "Done"
 msgstr "Terminé"
 
@@ -1596,6 +1622,10 @@ msgstr "Échap pour fermer"
 #: src/settings/search-index.ts
 msgid "Event notifications"
 msgstr "Notifications d'événements"
+
+#: src/session/components/speaker-naming/dialog.tsx
+msgid "Every speaker has a name."
+msgstr "Tous les intervenants ont un nom."
 
 #: src/home/home-view.tsx
 msgid "Everything is processed on your local server"
@@ -2612,6 +2642,12 @@ msgstr "Mes serveurs"
 msgid "Name"
 msgstr "Nom"
 
+#: src/session/components/speaker-naming/bar.tsx
+#: src/session/components/speaker-naming/dialog.tsx
+#: src/shared/open-note-dialog.tsx
+msgid "Name speakers"
+msgstr "Nommer les intervenants"
+
 #: src/settings/automations/workflow-builder.tsx
 msgid "Needs setup"
 msgstr "Configuration requise"
@@ -2656,7 +2692,7 @@ msgstr "Plus récents"
 #: src/session/components/note-input/search/bar.tsx
 #: src/shared/shortcuts.ts
 msgid "Next match"
-msgstr "Occurrence suivante"
+msgstr "Correspondance suivante"
 
 #: src/sidebar/timeline/utils/index.ts
 msgid "next month"
@@ -3232,7 +3268,7 @@ msgstr "Aperçu"
 #: src/session/components/note-input/search/bar.tsx
 #: src/shared/shortcuts.ts
 msgid "Previous match"
-msgstr "Occurrence précédente"
+msgstr "Match précédent"
 
 #: src/shared/shortcuts.ts
 msgid "Previous view of the note"
@@ -3271,6 +3307,10 @@ msgstr "Lire les contrôles de réunion et le chat visible"
 #: src/settings/general/permissions.tsx
 msgid "Read meeting controls and visible chat."
 msgstr "Lire les contrôles de réunion et le chat visible."
+
+#: src/session/components/speaker-naming/dialog.tsx
+msgid "Read what each speaker said, then say who it is. Tab moves to the next speaker, Enter confirms."
+msgstr "Lisez ce que chaque intervenant a dit, puis indiquez qui c’est. Tab passe à l’intervenant suivant, Entrée valide."
 
 #: src/settings/general/notification.tsx
 msgid "Ready"
@@ -3351,6 +3391,10 @@ msgstr "Régénérer"
 #: src/chat/components/message/normal.tsx
 msgid "Regenerate message"
 msgstr "Régénérer le message"
+
+#: src/session/components/speaker-naming/bar.tsx
+msgid "Regenerate summary with names"
+msgstr "Régénérer la synthèse avec les noms"
 
 #: src/settings/developers/cli.tsx
 msgid "Reinstall"
@@ -4025,6 +4069,14 @@ msgstr "Étincelle"
 msgid "Speak into any text field, in any app. The text is inserted when you finish."
 msgstr "Parlez dans n'importe quel champ de texte, dans n'importe quelle application. Le texte s'insère quand vous avez terminé."
 
+#: src/session/components/speaker-naming/speaker-card.tsx
+msgid "Speaker {number}"
+msgstr "Locuteur {number}"
+
+#: src/session/components/speaker-naming/speaker-card.tsx
+msgid "Speaker {number} · part {part}"
+msgstr "Locuteur {number} · partie {part}"
+
 #: src/settings/general/storage/legacy-cleanup.tsx
 msgid "SQLite migration verification is incomplete"
 msgstr "La vérification de la migration SQLite est incomplète"
@@ -4191,6 +4243,10 @@ msgstr "Modèles suggérés"
 #: src/templates/template-generator-bar.tsx
 msgid "Suggesting…"
 msgstr "Proposition en cours…"
+
+#: src/session/components/speaker-naming/speaker-card.tsx
+msgid "Suggestions"
+msgstr "Suggestions"
 
 #: src/contacts/details.tsx
 #: src/edit/tab-content.tsx
@@ -4515,6 +4571,10 @@ msgstr "Le modèle de transcription en direct ne gère qu'une langue à la fois.
 msgid "The memo edit could not be prepared."
 msgstr "La modification du mémo n'a pas pu être préparée."
 
+#: src/session/components/speaker-naming/speaker-card.tsx
+msgid "The name could not be saved. Try again."
+msgstr "Le nom n’a pas pu être enregistré. Réessayez."
+
 #: src/settings/dictation.tsx
 msgid "The one that captures your voice."
 msgstr "Celui qui capte votre voix."
@@ -4571,6 +4631,10 @@ msgstr "La modification du résumé n'a pas pu être préparée."
 #: src/templates/template-generator-bar.tsx
 msgid "The summary server did not respond. Check that it is running, then try again."
 msgstr "Le serveur de synthèse n'a pas répondu. Vérifiez qu'il est démarré, puis réessayez."
+
+#: src/session/components/speaker-naming/bar.tsx
+msgid "The summary still mentions unnamed speakers."
+msgstr "La synthèse mentionne encore des locuteurs sans nom."
 
 #: src/stt/capture-lifecycle.ts
 #: src/stt/pause-listening.ts
@@ -4823,6 +4887,10 @@ msgstr "Activez Syntheo dans Réglages système → Confidentialité et sécurit
 msgid "Type"
 msgstr "Type"
 
+#: src/session/components/speaker-naming/speaker-card.tsx
+msgid "Type a name"
+msgstr "Saisissez un nom"
+
 #: src/settings/developers/cli.tsx
 msgid "Unavailable"
 msgstr "Indisponible"
@@ -4836,7 +4904,7 @@ msgstr "Annuler"
 msgid "Unfiled"
 msgstr "Non classé"
 
-#: src/session/components/note-input/transcript/renderer/speaker-assign.tsx
+#: src/session/components/note-input/transcript/renderer/speaker-participants.ts
 msgid "Unknown"
 msgstr "Inconnu"
 
@@ -5101,6 +5169,10 @@ msgstr "Lorsque cela se produit"
 #: src/services/notification-labels.ts
 msgid "Where:"
 msgstr "Où :"
+
+#: src/session/components/speaker-naming/speaker-card.tsx
+msgid "Who is it?"
+msgstr "Qui est-ce ?"
 
 #: src/services/notification-labels.ts
 msgid "Who:"

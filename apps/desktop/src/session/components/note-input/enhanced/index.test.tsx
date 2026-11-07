@@ -124,6 +124,10 @@ vi.mock("./editor", () => ({
   },
 }));
 
+vi.mock("~/session/components/speaker-naming/bar", () => ({
+  SpeakerNamingBar: () => null,
+}));
+
 vi.mock("./enhance-error", () => ({
   EnhanceError: () => <div>Enhance error</div>,
 }));

@@ -95,6 +95,7 @@ import {
   useOpenNoteDialog,
 } from "./open-note-dialog";
 
+import { useSpeakerNamingStore } from "~/session/components/speaker-naming/store";
 import { useSettingFocus } from "~/settings/setting-focus";
 import { openSettingsSearch } from "~/shared/palette-store";
 
@@ -217,6 +218,27 @@ describe("OpenNoteDialog", () => {
       "resume",
       "session-1",
     );
+  });
+
+  // Issue 321 : seulement quand la note affichée a des locuteurs anonymes.
+  it("propose « Nommer les intervenants » pour la note affichée", () => {
+    useSpeakerNamingStore.setState({
+      available: { sessionId: "session-9", count: 2 },
+      requested: null,
+    });
+    render(<OpenNoteDialog open onOpenChange={mocks.onOpenChange} />);
+
+    fireEvent.click(screen.getByRole("option", { name: /Name speakers/ }));
+
+    expect(mocks.onOpenChange).toHaveBeenCalledWith(false);
+    expect(useSpeakerNamingStore.getState().requested).toBe("session-9");
+  });
+
+  it("ne propose pas « Nommer les intervenants » sans locuteur anonyme", () => {
+    useSpeakerNamingStore.setState({ available: null, requested: null });
+    render(<OpenNoteDialog open onOpenChange={mocks.onOpenChange} />);
+
+    expect(screen.queryByRole("option", { name: /Name speakers/ })).toBeNull();
   });
 
   it("ne propose aucune commande d'écoute hors écoute", () => {
