@@ -29,6 +29,7 @@ use crate::icon::{destroy_icon, header_title, load_notification_icon};
 use crate::layout::{
     HitTarget, MAX_NOTIFICATIONS, NotificationLayout, fit_stack, stacked_origin, try_expand,
 };
+use crate::reentrance::Reentrant;
 use crate::render::{Frame, FrameKey, render, system_prefers_dark};
 use crate::theme::ActionStyle;
 
@@ -398,8 +399,10 @@ enum DismissReason {
 }
 
 thread_local! {
-    static MANAGER: std::cell::RefCell<NotificationManager> =
-        std::cell::RefCell::new(NotificationManager::new());
+    /// Le gestionnaire peut être demandé pendant qu'il est déjà emprunté : la
+    /// boucle modale du menu « Options » rappelle le `wndproc` (identifié par
+    /// lecture, non reproduit, issue 410). Voir `crate::reentrance`.
+    static MANAGER: Reentrant<NotificationManager> = Reentrant::new(NotificationManager::new());
 }
 
 fn ensure_ui_thread() {
@@ -430,13 +433,20 @@ fn ui_thread(rx: Receiver<Command>, ready: Sender<()>) {
             if status.0 <= 0 {
                 break;
             }
+            // La file est vidée à chaque message, pas seulement sur `WM_APP` :
+            // pendant le menu « Options », la boucle modale de `TrackPopupMenu`
+            // reçoit ce message de thread et le jette. Les commandes restées en
+            // attente passent donc au message suivant (au plus tard le prochain
+            // `WM_TIMER`, toutes les 50 ms).
+            while let Ok(command) = rx.try_recv() {
+                MANAGER.with(|manager| {
+                    manager.with_or_defer(move |manager| match command {
+                        Command::Show(notification) => manager.show(*notification),
+                        Command::DismissAll => manager.dismiss_all(),
+                    })
+                });
+            }
             if msg.message == WM_APP {
-                while let Ok(command) = rx.try_recv() {
-                    MANAGER.with(|manager| match command {
-                        Command::Show(notification) => manager.borrow_mut().show(*notification),
-                        Command::DismissAll => manager.borrow_mut().dismiss_all(),
-                    });
-                }
                 continue;
             }
             let _ = TranslateMessage(&msg);
@@ -504,6 +514,16 @@ fn create_overlay_window(x: i32, y: i32, width: i32, height: i32) -> Option<HWND
     }
 }
 
+/// Les messages ci-dessous peuvent arriver pendant que le gestionnaire est
+/// emprunté (boucle modale du menu « Options », identifié par lecture, non
+/// reproduit, issue 410) :
+/// - `WM_TIMER`, `WM_MOUSEMOVE` et `WM_LBUTTONUP` sont ignorés : le timer n'est
+///   pas suspendu et le tick suivant reprend le travail, le prochain mouvement
+///   redonne le survol, et le clic qui ferme le menu ne doit pas déclencher en
+///   plus une action de la notification ;
+/// - `WM_MOUSELEAVE` est différé : le perdre laisserait la notification
+///   « survolée » avec son compte à rebours en pause ;
+/// - `WM_PAINT` n'utilise pas le gestionnaire.
 unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
     match msg {
         WM_PAINT => {
@@ -513,45 +533,51 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: 
         WM_LBUTTONUP => {
             let x = loword(lparam);
             let y = hiword(lparam);
-            MANAGER.with(|manager| manager.borrow_mut().handle_click(hwnd, x, y));
+            MANAGER.with(|manager| manager.try_with(|manager| manager.handle_click(hwnd, x, y)));
             LRESULT(0)
         }
         WM_MOUSEMOVE => {
             MANAGER.with(|manager| {
-                let mut manager = manager.borrow_mut();
-                if let Some(instance) = manager.instance_by_hwnd_mut(hwnd)
-                    && !instance.tracking_leave
-                {
-                    instance.tracking_leave = true;
-                    let mut event = TRACKMOUSEEVENT {
-                        cbSize: std::mem::size_of::<TRACKMOUSEEVENT>() as u32,
-                        dwFlags: TME_LEAVE,
-                        hwndTrack: hwnd,
-                        dwHoverTime: 0,
-                    };
-                    let _ = unsafe { TrackMouseEvent(&mut event) };
-                }
-                manager.set_hover(hwnd, true);
+                manager.try_with(|manager| on_mouse_move(manager, hwnd));
             });
             LRESULT(0)
         }
         WM_MOUSELEAVE => {
             MANAGER.with(|manager| {
-                let mut manager = manager.borrow_mut();
-                if let Some(instance) = manager.instance_by_hwnd_mut(hwnd) {
-                    instance.tracking_leave = false;
-                }
-                manager.set_hover(hwnd, false);
+                manager.with_or_defer(move |manager| on_mouse_leave(manager, hwnd))
             });
             LRESULT(0)
         }
         WM_TIMER => {
-            MANAGER.with(|manager| manager.borrow_mut().tick(hwnd));
+            MANAGER.with(|manager| manager.try_with(|manager| manager.tick(hwnd)));
             LRESULT(0)
         }
         WM_DESTROY => LRESULT(0),
         _ => unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) },
     }
+}
+
+fn on_mouse_move(manager: &mut NotificationManager, hwnd: HWND) {
+    if let Some(instance) = manager.instance_by_hwnd_mut(hwnd)
+        && !instance.tracking_leave
+    {
+        instance.tracking_leave = true;
+        let mut event = TRACKMOUSEEVENT {
+            cbSize: std::mem::size_of::<TRACKMOUSEEVENT>() as u32,
+            dwFlags: TME_LEAVE,
+            hwndTrack: hwnd,
+            dwHoverTime: 0,
+        };
+        let _ = unsafe { TrackMouseEvent(&mut event) };
+    }
+    manager.set_hover(hwnd, true);
+}
+
+fn on_mouse_leave(manager: &mut NotificationManager, hwnd: HWND) {
+    if let Some(instance) = manager.instance_by_hwnd_mut(hwnd) {
+        instance.tracking_leave = false;
+    }
+    manager.set_hover(hwnd, false);
 }
 
 /// Le contenu est poussé par `UpdateLayeredWindow` ; il suffit de valider la

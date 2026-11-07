@@ -4,6 +4,8 @@ mod callbacks;
 mod icon;
 mod layout;
 mod raster;
+#[cfg(any(target_os = "windows", test))]
+mod reentrance;
 mod surface;
 mod theme;
 
