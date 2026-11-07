@@ -28,6 +28,7 @@ import {
   useSettingsSearchIndex,
 } from "~/settings/search";
 import { requestSettingFocus } from "~/settings/setting-focus";
+import { ariaShortcut } from "~/shared/shortcuts";
 import { type SettingsTab, useTabs } from "~/store/zustand/tabs";
 
 export function SettingsNav() {
@@ -133,9 +134,11 @@ export function SettingsNav() {
                 selectHit(hits[0]);
               }
             }}
+            // Ctrl+F sur l'écran Paramètres (useMainShortcuts, issue 372).
+            data-page-search=""
             placeholder={t`Search settings`}
             aria-label={t`Search settings`}
-            aria-keyshortcuts="Control+Shift+P"
+            aria-keyshortcuts={ariaShortcut("searchSettings")}
             className="placeholder:text-faint min-w-0 flex-1 bg-transparent text-sm focus:outline-hidden"
           />
           {search ? (

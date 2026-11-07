@@ -2,15 +2,21 @@ import { Trans, useLingui } from "@lingui/react/macro";
 
 import { cn } from "@syntheo/utils";
 
+import {
+  ariaShortcut,
+  formatShortcutKeys,
+  type ShortcutPlatform,
+} from "~/shared/shortcuts";
+
 // Capsule de l'accueil, réduite à « Rechercher une note » (maquette piste C,
 // écran Accueil). Même forme que la capsule de note (lot 2) : pilule
 // `primary`, `shadow-capsule`, centrée en bas ; bouton fantôme à l'intérieur.
 export function HomeCapsule({
   onSearch,
-  modifierLabel = "Ctrl",
+  os = "pc",
 }: {
   onSearch: () => void;
-  modifierLabel?: string;
+  os?: ShortcutPlatform;
 }) {
   const { t } = useLingui();
 
@@ -28,7 +34,7 @@ export function HomeCapsule({
         <button
           type="button"
           onClick={onSearch}
-          aria-keyshortcuts={modifierLabel === "⌘" ? "Meta+K" : "Control+K"}
+          aria-keyshortcuts={ariaShortcut("searchNotes", os)}
           className={cn([
             "rounded-pill hover:bg-primary-foreground/10 inline-flex items-center px-3.5 py-[7px] motion-safe:transition-colors",
             "focus-visible:ring-primary-foreground focus-visible:ring-offset-primary focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
@@ -39,7 +45,7 @@ export function HomeCapsule({
             aria-hidden="true"
             className="ml-1.5 font-[inherit] text-[11px] font-normal opacity-60"
           >
-            {`${modifierLabel} K`}
+            {formatShortcutKeys("searchNotes", os)}
           </kbd>
         </button>
       </div>

@@ -169,6 +169,12 @@ describe("useZoomShortcuts", () => {
       init: { key: "0", metaKey: true },
       expected: DEFAULT_ZOOM_FACTOR,
     },
+    // AZERTY : Ctrl+0 tape « à » sur la touche physique Digit0 (issue 372).
+    {
+      stored: "2",
+      init: { key: "à", code: "Digit0", ctrlKey: true },
+      expected: DEFAULT_ZOOM_FACTOR,
+    },
   ])(
     "updates zoom from the $stored stored value",
     ({ stored, init, expected }) => {

@@ -87,13 +87,15 @@ describe("SearchBar", () => {
 
     const { container } = render(<SearchBar editorRef={editorRef} />);
 
-    expect(container.textContent).toContain("Ctrl H");
+    expect(container.textContent).toContain("Replace (Ctrl+H)");
+    expect(container.textContent).toContain("Next match (F3)");
+    expect(container.textContent).toContain("Previous match (Shift+F3)");
   });
 
   it("hides replace controls for find-only surfaces", () => {
     const { container } = render(<SearchBar allowReplace={false} />);
 
     expect(container.textContent).not.toContain("Replace");
-    expect(container.textContent).not.toContain("⌘ H");
+    expect(container.textContent).not.toContain("⌘+H");
   });
 });

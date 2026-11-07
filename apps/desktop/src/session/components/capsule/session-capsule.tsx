@@ -1,5 +1,4 @@
 import { useLingui } from "@lingui/react/macro";
-import { platform } from "@tauri-apps/plugin-os";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 
@@ -24,6 +23,7 @@ import {
   useSession,
 } from "~/session/queries";
 import { leaveOverlayTab } from "~/shared/leave-overlay-tab";
+import { getShortcut, getShortcutPlatform } from "~/shared/shortcuts";
 import type { EditorView, Tab } from "~/store/zustand/tabs/schema";
 import { useListener } from "~/stt/contexts";
 import { useLiveAmplitude, useLiveSeconds } from "~/stt/live-meters";
@@ -58,14 +58,6 @@ function useSummaryExists(sessionId: string, sessionTitle?: string) {
   );
 }
 
-function getPrimaryModifierLabel() {
-  try {
-    return platform() === "macos" ? "⌘" : "Ctrl";
-  } catch {
-    return "Ctrl";
-  }
-}
-
 export function SessionCapsule({
   tab,
   stage,
@@ -80,7 +72,7 @@ export function SessionCapsule({
   const { t } = useLingui();
   const sessionId = tab.id;
   const { chat } = useShell();
-  const modifierLabel = useMemo(() => getPrimaryModifierLabel(), []);
+  const os = useMemo(() => getShortcutPlatform(), []);
 
   const startListening = useStartListening(sessionId);
   const stopListening = useListener((state) => state.stop);
@@ -145,7 +137,7 @@ export function SessionCapsule({
     void startListening();
   }, [sessionId, startListening]);
 
-  // Ctrl ⇧ N lance l'écoute de cette note tant qu'elle est en préparation.
+  // Ctrl+Maj+N lance l'écoute de cette note tant qu'elle est en préparation.
   const canStartFromShortcut = tab.active && stage === "prepare";
   useEffect(() => {
     if (!canStartFromShortcut || standaloneWindow) {
@@ -156,7 +148,7 @@ export function SessionCapsule({
   }, [canStartFromShortcut, standaloneWindow, start]);
   // Les fenêtres de note autonomes n'ont pas les raccourcis globaux.
   useHotkeys(
-    "mod+shift+n",
+    getShortcut("startListening").hotkeys ?? "",
     start,
     {
       enabled: canStartFromShortcut && standaloneWindow,
@@ -205,7 +197,7 @@ export function SessionCapsule({
     });
   }, [summary]);
 
-  // « Demander à la note » réutilise le chat existant (Ctrl J).
+  // « Demander à la note » réutilise le chat existant (Ctrl+J).
   const ask = useCallback(() => {
     chat.sendEvent({ type: "OPEN" });
   }, [chat]);
@@ -214,7 +206,7 @@ export function SessionCapsule({
     <>
       <NoteCapsule
         stage={stage}
-        modifierLabel={modifierLabel}
+        os={os}
         listening={{
           elapsed: <SessionElapsed sessionId={sessionId} />,
           meter: <SessionLevelMeter sessionId={sessionId} muted={muted} />,

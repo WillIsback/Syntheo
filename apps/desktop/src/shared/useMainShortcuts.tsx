@@ -1,15 +1,61 @@
+import { t } from "@lingui/core/macro";
 import { useCallback, useRef } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 
+import { toast } from "@syntheo/ui/components/ui/toast";
 import { useMountEffect } from "@syntheo/ui/hooks/use-mount-effect";
 
 import { useShell } from "~/contexts/shell";
 import { startPreparedNoteFromShortcut } from "~/session/components/capsule/start-shortcut";
+import { openHelpDialog } from "~/shared/help-dialog";
 import { usesWindowsStyleTitleBar } from "~/shared/hooks/useWindowControlsGutter";
 import { goBackOrHome, leaveOverlayTab } from "~/shared/leave-overlay-tab";
+import { runShortcutAction } from "~/shared/shortcut-actions";
+import {
+  getShortcut,
+  NEUTRALIZED_HOTKEYS,
+  SHORTCUTS,
+  type ShortcutId,
+} from "~/shared/shortcuts";
+import { ignoreUnlessTyped } from "~/shared/typed-key";
 import { openSettingsSearch } from "~/shared/palette-store";
 import { useNewNote, useNewNoteAndListen } from "~/shared/useNewNote";
+import { focusTitleBarMenu, toggleFullscreen } from "~/shared/window-shortcuts";
 import { useTabs } from "~/store/zustand/tabs";
+
+// Raccourcis enregistrés en permanence, avec `preventDefault` : en
+// développement, le plugin prevent-default est absent et WebView2 reprendrait
+// sinon la touche (Ctrl+F, F3, Ctrl+S…). Les touches viennent de la table
+// unique `shared/shortcuts.ts`.
+const ALWAYS_ON = {
+  preventDefault: true,
+  enableOnFormTags: true,
+  enableOnContentEditable: true,
+} as const;
+
+function hotkeysOf(id: ShortcutId) {
+  return getShortcut(id).hotkeys ?? "";
+}
+
+// Raccourcis de la note : la note ouverte les traite ; ici, on ne fait
+// qu'empêcher WebView2 de les prendre quand aucune note n'est affichée.
+export const NOTE_GUARD_HOTKEYS = SHORTCUTS.filter(
+  (def) => def.available && def.scope === "note" && def.hotkeys,
+)
+  .map((def) => def.hotkeys)
+  .join(", ");
+
+// Ctrl+F hors d'une note : focus sur le champ de recherche de l'écran
+// (Paramètres), texte sélectionné.
+export const PAGE_SEARCH_ATTRIBUTE = "data-page-search";
+
+function focusPageSearch() {
+  const input = document.querySelector<HTMLInputElement>(
+    `[${PAGE_SEARCH_ATTRIBUTE}]`,
+  );
+  input?.focus();
+  input?.select();
+}
 
 export function useMainShortcuts() {
   const runEscapeShortcut = useMainEscapeShortcutAction();
@@ -54,7 +100,7 @@ export function useMainShortcuts() {
   });
 
   useHotkeys(
-    "mod+n",
+    hotkeysOf("newNote"),
     () => {
       if (isPersistentChatInputFocused(chat.mode)) {
         chat.startNewChat();
@@ -80,7 +126,7 @@ export function useMainShortcuts() {
   // aux champs de saisie et à l'éditeur.
   const altLeftInTextFields = usesWindowsStyleTitleBar();
   useHotkeys(
-    "alt+left",
+    hotkeysOf("back"),
     () => {
       goBackOrHome();
     },
@@ -92,10 +138,22 @@ export function useMainShortcuts() {
     [],
   );
 
+  // Alt+→ : pas d'historique « suivant » ; on évite la navigation WebView2.
+  useHotkeys(
+    NEUTRALIZED_HOTKEYS.join(", "),
+    () => {},
+    {
+      preventDefault: true,
+      enableOnFormTags: altLeftInTextFields,
+      enableOnContentEditable: altLeftInTextFields,
+    },
+    [],
+  );
+
   const newNoteAndListen = useNewNoteAndListen();
 
   useHotkeys(
-    "mod+shift+n",
+    hotkeysOf("startListening"),
     () => {
       // Note en préparation ouverte : « Commencer l'écoute » de cette note.
       if (startPreparedNoteFromShortcut()) {
@@ -112,6 +170,58 @@ export function useMainShortcuts() {
     [newNoteAndListen],
   );
 
+  const openNew = useTabs((state) => state.openNew);
+  useHotkeys(
+    hotkeysOf("settings"),
+    () => openNew({ type: "settings" }),
+    {
+      ...ALWAYS_ON,
+      ignoreEventWhen: ignoreUnlessTyped(getShortcut("settings").typedKey),
+    },
+    [openNew],
+  );
+
+  useHotkeys(hotkeysOf("help"), openHelpDialog, ALWAYS_ON, []);
+
+  useHotkeys(
+    hotkeysOf("fullScreen"),
+    () => {
+      void toggleFullscreen().catch((error) =>
+        console.error("[shortcuts] failed to toggle full screen", error),
+      );
+    },
+    ALWAYS_ON,
+    [],
+  );
+
+  useHotkeys(hotkeysOf("menuBar"), focusTitleBarMenu, ALWAYS_ON, []);
+
+  // Ctrl+S : l'enregistrement est automatique, on le dit. L'édition de la
+  // transcription prend la main pour sortir de ce mode.
+  useHotkeys(
+    hotkeysOf("save"),
+    () => {
+      if (runShortcutAction("save")) {
+        return;
+      }
+
+      toast.info(t`Your notes are saved automatically.`);
+    },
+    ALWAYS_ON,
+    [],
+  );
+
+  useHotkeys(
+    NOTE_GUARD_HOTKEYS,
+    (_event, hotkey) => {
+      if (hotkey.hotkey.trim() === hotkeysOf("findInNote")) {
+        focusPageSearch();
+      }
+    },
+    ALWAYS_ON,
+    [],
+  );
+
   // Ctrl+Maj+P : rechercher un paramètre (issue 373), la palette filtrée.
   // Enregistré en permanence avec preventDefault : en développement, rien
   // d'autre n'empêche Chromium d'ouvrir l'impression système. En version
@@ -119,11 +229,7 @@ export function useMainShortcuts() {
   // arrêter la propagation : l'événement arrive bien ici. react-hotkeys-hook
   // compare `event.code` (KeyP) ou `event.key` (« P ») : la touche P est au
   // même endroit en AZERTY et en QWERTY, les deux voies concordent.
-  useHotkeys("mod+shift+p", openSettingsSearch, {
-    preventDefault: true,
-    enableOnFormTags: true,
-    enableOnContentEditable: true,
-  });
+  useHotkeys(hotkeysOf("searchSettings"), openSettingsSearch, ALWAYS_ON, []);
 
   return { runEscapeShortcut };
 }

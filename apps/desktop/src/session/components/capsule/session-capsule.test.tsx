@@ -156,7 +156,7 @@ describe("SessionCapsule", () => {
     expect(mocks.startListening).toHaveBeenCalledTimes(1);
   });
 
-  it("starts listening on this note with Ctrl ⇧ N while preparing", () => {
+  it("starts listening on this note with Ctrl+Shift+N while preparing", () => {
     const view = renderCapsule();
 
     expect(startPreparedNoteFromShortcut()).toBe(true);
@@ -168,7 +168,7 @@ describe("SessionCapsule", () => {
     expect(startPreparedNoteFromShortcut()).toBe(false);
   });
 
-  it("leaves Ctrl ⇧ N to the global shortcut for inactive tabs", () => {
+  it("leaves Ctrl+Shift+N to the global shortcut for inactive tabs", () => {
     renderCapsule({ tab: { ...tab, active: false } });
 
     expect(startPreparedNoteFromShortcut()).toBe(false);

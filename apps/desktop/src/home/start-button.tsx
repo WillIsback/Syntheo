@@ -3,6 +3,12 @@ import { Trans, useLingui } from "@lingui/react/macro";
 import { Microphone } from "@syntheo/ui/components/icons";
 import { cn } from "@syntheo/utils";
 
+import {
+  ariaShortcut,
+  formatShortcutKeys,
+  type ShortcutPlatform,
+} from "~/shared/shortcuts";
+
 // Les trois étapes, numérotées comme dans la maquette (piste C). Les kanji
 // d'étape sont réservés à la capsule : l'accueil porte déjà son filigrane, et
 // identite.md limite les clins d'œil à un par zone.
@@ -16,11 +22,11 @@ const STEPS = [
 export function StartButton({
   onStart,
   busy = false,
-  modifierLabel = "Ctrl",
+  os = "pc",
 }: {
   onStart: () => void;
   busy?: boolean;
-  modifierLabel?: string;
+  os?: ShortcutPlatform;
 }) {
   const { t } = useLingui();
   const labels: Record<(typeof STEPS)[number]["key"], string> = {
@@ -28,7 +34,7 @@ export function StartButton({
     listen: t`Listen`,
     synthesis: t`Synthesis`,
   };
-  const shortcut = `${modifierLabel} N`;
+  const shortcut = formatShortcutKeys("newNote", os);
 
   return (
     <button
@@ -36,7 +42,7 @@ export function StartButton({
       onClick={onStart}
       disabled={busy}
       aria-busy={busy || undefined}
-      aria-keyshortcuts={modifierLabel === "⌘" ? "Meta+N" : "Control+N"}
+      aria-keyshortcuts={ariaShortcut("newNote", os)}
       data-start-button
       className={cn([
         "bg-primary text-primary-foreground hover:bg-primary-hover",

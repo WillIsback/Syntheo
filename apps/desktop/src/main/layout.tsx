@@ -10,6 +10,7 @@ import { ShellProvider } from "~/contexts/shell";
 import { ToolRegistryProvider } from "~/contexts/tool";
 import { useStoreBackedTaskStorage } from "~/editor-bridge/task-storage";
 import { SearchEngineProvider } from "~/search/contexts/engine";
+import { HelpDialogHost } from "~/shared/help-dialog";
 import { OpenNoteDialogProvider } from "~/shared/open-note-dialog";
 
 export function ClassicMainLayout({
@@ -38,6 +39,7 @@ export function ClassicMainLayout({
                 <NotificationProvider>
                   {includeServices ? <ClassicMainServices /> : null}
                   {children}
+                  <HelpDialogHost />
                 </NotificationProvider>
               </AITaskProvider>
             </ToolRegistryProvider>
