@@ -1,3 +1,5 @@
+import { useRef } from "react";
+
 import { cn } from "@syntheo/utils";
 
 import {
@@ -17,6 +19,7 @@ import { SettingsDictionary } from "~/settings/dictionary";
 import { SettingsHydrationBoundary } from "~/settings/hydration-boundary";
 import { SettingsImports } from "~/settings/imports";
 import { SettingsPrivacy } from "~/settings/privacy";
+import { usePendingSettingFocus } from "~/settings/setting-focus";
 import { StandardContentWrapper } from "~/shared/main";
 import { type Tab } from "~/store/zustand/tabs";
 
@@ -35,6 +38,8 @@ export function TabContentSettings({
 }
 
 function SettingsView({ tab }: { tab: Extract<Tab, { type: "settings" }> }) {
+  const contentRef = useRef<HTMLDivElement>(null);
+  usePendingSettingFocus(contentRef);
   const requestedTab = tab.state.tab as string | undefined;
   const activeTab =
     requestedTab === "data"
@@ -89,7 +94,10 @@ function SettingsView({ tab }: { tab: Extract<Tab, { type: "settings" }> }) {
             "scroll-fade-y scrollbar-hide h-full min-h-0 w-full min-w-0 overflow-x-hidden overflow-y-auto",
           ])}
         >
-          <div className="flex max-w-[720px] flex-col gap-[26px] px-12 pt-9 pb-16">
+          <div
+            ref={contentRef}
+            className="flex max-w-[720px] flex-col gap-[26px] px-12 pt-9 pb-16"
+          >
             {renderContent()}
           </div>
         </div>

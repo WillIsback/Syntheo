@@ -3992,6 +3992,10 @@ msgstr "Les réunions auxquelles ce modèle est destiné (équipe, rôle, fréqu
 msgid "The language model that writes your meeting notes and answers when you ask a note a question."
 msgstr "Le modèle de langage qui rédige vos comptes-rendus et répond quand vous interrogez une note."
 
+#: src/settings/general/single-language-model-hint.tsx
+msgid "The live transcription model handles one language at a time. To transcribe several, <0>change models</0>."
+msgstr "Le modèle de transcription en direct ne gère qu'une langue à la fois. Pour en transcrire plusieurs, <0>changez de modèle</0>."
+
 #: src/chat/components/message/tool/edit-summary.tsx
 msgid "The memo edit could not be prepared."
 msgstr "La modification du mémo n'a pas pu être préparée."
