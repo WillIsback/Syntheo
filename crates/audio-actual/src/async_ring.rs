@@ -7,15 +7,9 @@ use std::time::{Duration, Instant};
 
 pub(crate) struct PollNextSample {
     pub(crate) poll: Poll<Option<f32>>,
-    pub(crate) did_pop_chunk: bool,
-}
-
-#[cfg_attr(
-    not(any(target_os = "linux", target_os = "windows", test)),
-    allow(dead_code)
-)]
-pub(crate) struct PollNextChunk {
-    pub(crate) poll: Poll<Option<Vec<f32>>>,
+    // Seul le flux haut-parleur macOS a besoin de savoir qu'un nouveau bloc a été lu
+    // (pour figer la fréquence d'échantillonnage du bloc courant).
+    #[cfg(target_os = "macos")]
     pub(crate) did_pop_chunk: bool,
 }
 
@@ -75,6 +69,7 @@ where
         self
     }
 
+    #[cfg(target_os = "macos")]
     pub(crate) fn has_buffered_samples(&self) -> bool {
         self.read_idx < self.read_len
     }
@@ -165,6 +160,7 @@ where
             self.read_idx += 1;
             return PollNextSample {
                 poll: Poll::Ready(Some(sample)),
+                #[cfg(target_os = "macos")]
                 did_pop_chunk: false,
             };
         }
@@ -175,15 +171,18 @@ where
                 self.read_idx = 1;
                 PollNextSample {
                     poll: Poll::Ready(Some(sample)),
+                    #[cfg(target_os = "macos")]
                     did_pop_chunk: true,
                 }
             }
             Some(false) => PollNextSample {
                 poll: Poll::Ready(None),
+                #[cfg(target_os = "macos")]
                 did_pop_chunk: false,
             },
             None => PollNextSample {
                 poll: Poll::Pending,
+                #[cfg(target_os = "macos")]
                 did_pop_chunk: false,
             },
         }
@@ -193,33 +192,21 @@ where
         not(any(target_os = "linux", target_os = "windows", test)),
         allow(dead_code)
     )]
-    pub(crate) fn poll_next_chunk(&mut self, cx: &mut Context<'_>) -> PollNextChunk {
+    pub(crate) fn poll_next_chunk(&mut self, cx: &mut Context<'_>) -> Poll<Option<Vec<f32>>> {
         if self.read_idx < self.read_len {
             let chunk = self.read_buffer[self.read_idx..self.read_len].to_vec();
             self.clear_buffered();
-            return PollNextChunk {
-                poll: Poll::Ready(Some(chunk)),
-                did_pop_chunk: false,
-            };
+            return Poll::Ready(Some(chunk));
         }
 
         match self.poll_ready_chunk(cx) {
             Some(true) => {
                 let chunk = self.read_buffer[..self.read_len].to_vec();
                 self.clear_buffered();
-                PollNextChunk {
-                    poll: Poll::Ready(Some(chunk)),
-                    did_pop_chunk: true,
-                }
+                Poll::Ready(Some(chunk))
             }
-            Some(false) => PollNextChunk {
-                poll: Poll::Ready(None),
-                did_pop_chunk: false,
-            },
-            None => PollNextChunk {
-                poll: Poll::Pending,
-                did_pop_chunk: false,
-            },
+            Some(false) => Poll::Ready(None),
+            None => Poll::Pending,
         }
     }
 }
@@ -246,9 +233,9 @@ mod tests {
         reader.wake_pending.store(true, Ordering::Release);
         producer.push_slice(&[1.0, 2.0, 3.0]);
 
+        // Le tampon de lecture était vide : un bloc complet ne peut venir que du ring buffer.
         let res = reader.poll_next_chunk(&mut cx);
-        assert!(res.did_pop_chunk);
-        assert_eq!(res.poll, Poll::Ready(Some(vec![1.0, 2.0, 3.0])));
+        assert_eq!(res, Poll::Ready(Some(vec![1.0, 2.0, 3.0])));
     }
 
     #[test]
@@ -265,7 +252,6 @@ mod tests {
         let mut cx = Context::from_waker(&waker);
 
         let res = reader.poll_next_chunk(&mut cx);
-        assert!(!res.did_pop_chunk);
-        assert_eq!(res.poll, Poll::Ready(None));
+        assert_eq!(res, Poll::Ready(None));
     }
 }
