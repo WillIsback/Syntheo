@@ -231,6 +231,11 @@ class NotificationInstance {
 
   func stopCountdownText(_ remainingSeconds: Double) -> String {
     let seconds = max(0, Int(ceil(remainingSeconds)))
+    // Le front fournit le message traduit avec le repère {seconds}.
+    let placeholder = "{seconds}"
+    if payload.message.contains(placeholder) {
+      return payload.message.replacingOccurrences(of: placeholder, with: String(seconds))
+    }
     return "Syntheo will stop listening in \(seconds) seconds."
   }
 

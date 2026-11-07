@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { useEffect, useState } from "react";
 
 import { toast } from "@syntheo/ui/components/ui/toast";
@@ -17,7 +18,7 @@ export function useAutoEnhance(tab: Extract<Tab, { type: "sessions" }>) {
       if (event.type === "auto-enhance-skipped") {
         setSkipReason(event.reason);
         if (event.reasonCode === "transcript_too_short") {
-          toast.warning("Summary wasn't generated", {
+          toast.warning(t`Summary wasn't generated`, {
             id: `auto-summary-too-short-${sessionId}`,
             description: event.reason,
           });

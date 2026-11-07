@@ -1,3 +1,5 @@
+import { useLingui } from "@lingui/react/macro";
+
 import type { FloatingBarState } from "@syntheo/plugin-windows";
 
 import { tokensFor } from "./palette";
@@ -9,16 +11,17 @@ export function DictationTranscript({
   dictation: NonNullable<FloatingBarState["dictation"]>;
   colorScheme: FloatingBarState["colorScheme"];
 }) {
+  const { t } = useLingui();
   const status =
     dictation.phase === "transcribing"
-      ? "Finishing…"
+      ? t`Finishing…`
       : dictation.phase === "starting"
-        ? "Starting…"
-        : "Listening…";
+        ? t`Starting…`
+        : t`Listening…`;
   const empty = dictation.previewUnavailable
-    ? "Live preview is unavailable. Your text will appear when you finish."
+    ? t`Live preview is unavailable. Your text will appear when you finish.`
     : !dictation.previewEnabled
-      ? "Enable Live transcript preview in Settings → Dictation to see words as you speak."
+      ? t`Enable Live transcript preview in Settings → Dictation to see words as you speak.`
       : status;
 
   return (

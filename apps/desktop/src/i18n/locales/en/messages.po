@@ -96,6 +96,10 @@ msgstr "{model} can't transcribe all selected languages together. Try another mo
 msgid "{months} months ago"
 msgstr "{months} months ago"
 
+#: src/stt/meeting-apps.ts
+msgid "{otherAppCount, plural, one {Ignore {firstName} and # other app?} other {Ignore {firstName} and # other apps?}}"
+msgstr "{otherAppCount, plural, one {Ignore {firstName} and # other app?} other {Ignore {firstName} and # other apps?}}"
+
 #: src/composer/index.tsx
 msgid "{primaryModifier} ↩ to send"
 msgstr "{primaryModifier} ↩ to send"
@@ -155,6 +159,10 @@ msgstr "A meeting can't be replayed: audio is never kept, only the note remains.
 #: src/sidebar/timeline/utils/index.ts
 msgid "a month ago"
 msgstr "a month ago"
+
+#: src/stt/useStartListening.ts
+msgid "A participant declined recording. Syntheo stopped listening."
+msgstr "A participant declined recording. Syntheo stopped listening."
 
 #: src/sidebar/timeline/utils/index.ts
 msgid "a week ago"
@@ -330,6 +338,10 @@ msgstr "All Notes"
 msgid "All templates"
 msgstr "All templates"
 
+#: src/stt/start-failure.ts
+msgid "Allow microphone access for Syntheo, then try again."
+msgstr "Allow microphone access for Syntheo, then try again."
+
 #: src/session/components/outer-header/overflow/always-on-top.tsx
 msgid "Always on Top"
 msgstr "Always on Top"
@@ -349,6 +361,10 @@ msgstr "Animals & Nature"
 #: src/contacts/details.tsx
 msgid "Another contact shares the same name or email. Merge them to consolidate all related notes and information."
 msgstr "Another contact shares the same name or email. Merge them to consolidate all related notes and information."
+
+#: src/stt/start-failure.ts
+msgid "Another recording is still running"
+msgstr "Another recording is still running"
 
 #: src/settings/ai/shared/server-address.tsx
 msgid "API key (optional)"
@@ -382,6 +398,22 @@ msgstr "Apply to memo"
 #: src/session/components/living-document/summary-review.tsx
 msgid "Apply to summary"
 msgstr "Apply to summary"
+
+#: src/stt/detect-events.ts
+msgid "Are you in {eventTitle} right now?"
+msgstr "Are you in {eventTitle} right now?"
+
+#: src/stt/detect-events.ts
+msgid "Are you in a meeting?"
+msgstr "Are you in a meeting?"
+
+#: src/stt/detect-events.ts
+msgid "Are you talking to {firstName} and {secondName} right now?"
+msgstr "Are you talking to {firstName} and {secondName} right now?"
+
+#: src/stt/detect-events.ts
+msgid "Are you talking to {firstName} right now?"
+msgstr "Are you talking to {firstName} right now?"
 
 #: src/chat/components/input/index.tsx
 #: src/shared/chat-cta.tsx
@@ -420,6 +452,30 @@ msgstr "Attach up to three past summaries you like. Syntheo will learn how you p
 #: src/settings/general/permissions.tsx
 msgid "Audio"
 msgstr "Audio"
+
+#: src/store/zustand/listener/general-shared.ts
+msgid "Audio capture was interrupted"
+msgstr "Audio capture was interrupted"
+
+#: src/stt/capture-lifecycle.ts
+msgid "Audio could not be deleted"
+msgstr "Audio could not be deleted"
+
+#: src/store/zustand/listener/general-live.ts
+msgid "Audio retry failed"
+msgstr "Audio retry failed"
+
+#: src/store/zustand/listener/general-live.ts
+msgid "Audio saving is delayed"
+msgstr "Audio saving is delayed"
+
+#: src/store/zustand/listener/general-live.ts
+msgid "Audio saving was interrupted"
+msgstr "Audio saving was interrupted"
+
+#: src/stt/start-failure.ts
+msgid "Audio settings"
+msgstr "Audio settings"
 
 #: src/lock/screen.tsx
 msgid "Authenticate to continue."
@@ -575,6 +631,10 @@ msgstr "Capture meeting chat in Memos"
 msgid "Capture shared screens in Memos"
 msgstr "Capture shared screens in Memos"
 
+#: src/stt/useStartListening.ts
+msgid "Change"
+msgstr "Change"
+
 #: src/calendar/components/event-chip.tsx
 msgid "Change auto-add folder"
 msgstr "Change auto-add folder"
@@ -600,6 +660,10 @@ msgstr "Chat history"
 #: src/chat/components/input/use-dictation.ts
 msgid "Check microphone permission and the selected input device, then try again."
 msgstr "Check microphone permission and the selected input device, then try again."
+
+#: src/stt/start-failure.ts
+msgid "Check that your vault folder is available and your disk has free space, then try again."
+msgstr "Check that your vault folder is available and your disk has free space, then try again."
 
 #: src/imports/screen.tsx
 msgid "Checking installed meeting assistants…"
@@ -629,6 +693,10 @@ msgstr "Choose a file format and what to include."
 #: src/settings/automations/index.tsx
 msgid "Choose a starter from the sidebar, or create a workflow and add steps like Zapier."
 msgstr "Choose a starter from the sidebar, or create a workflow and add steps like Zapier."
+
+#: src/store/zustand/listener/general-live.ts
+msgid "Choose a working audio device and retry. Audio missing during this interruption cannot be recovered."
+msgstr "Choose a working audio device and retry. Audio missing during this interruption cannot be recovered."
 
 #: src/templates/auto-format-examples-dialog.tsx
 msgid "Choose an AI model before generating a format."
@@ -1142,6 +1210,10 @@ msgstr "Developers"
 msgid "Device authentication is not available on this computer."
 msgstr "Device authentication is not available on this computer."
 
+#: src/store/zustand/listener/general-live.ts
+msgid "Device settings"
+msgstr "Device settings"
+
 #: src/settings/dictation.tsx
 #: src/sidebar/settings-nav-groups.ts
 msgid "Dictation"
@@ -1164,6 +1236,10 @@ msgstr "dictionary"
 msgid "Dictionary"
 msgstr "Dictionary"
 
+#: src/stt/auto-stop.ts
+msgid "Did your meeting end?"
+msgstr "Did your meeting end?"
+
 #: src/settings/automations/index.tsx
 msgid "Disable"
 msgstr "Disable"
@@ -1175,6 +1251,10 @@ msgstr "Disable all notifications"
 #: src/calendar/components/sidebar.tsx
 msgid "Disconnect"
 msgstr "Disconnect"
+
+#: src/store/zustand/listener/general-live.ts
+msgid "Disk almost full"
+msgstr "Disk almost full"
 
 #: src/templates/template-form.tsx
 msgid "Display mode"
@@ -1295,6 +1375,10 @@ msgstr "Enable {0}"
 #: src/settings/dictation.tsx
 msgid "Enable dictation"
 msgstr "Enable dictation"
+
+#: src/meeting-float/overlay/dictation.tsx
+msgid "Enable Live transcript preview in Settings → Dictation to see words as you speak."
+msgstr "Enable Live transcript preview in Settings → Dictation to see words as you speak."
 
 #: src/settings/automations/index.tsx
 #: src/settings/automations/workflow-builder.tsx
@@ -1437,6 +1521,7 @@ msgstr "Find key decisions."
 msgid "Finish"
 msgstr "Finish"
 
+#: src/meeting-float/overlay/dictation.tsx
 #: src/session/components/capsule/index.tsx
 msgid "Finishing…"
 msgstr "Finishing…"
@@ -1490,6 +1575,18 @@ msgstr "For enabled notifications"
 #: src/settings/ai/shared/server-address.tsx
 msgid "Forget this server's address and key?"
 msgstr "Forget this server's address and key?"
+
+#: src/store/zustand/listener/general-live.ts
+msgid "Free up disk space. Audio is kept in memory and saved once storage is available. Live transcription continues."
+msgstr "Free up disk space. Audio is kept in memory and saved once storage is available. Live transcription continues."
+
+#: src/store/zustand/listener/general-live.ts
+msgid "Free up disk space. Audio saving stops if the disk fills up. Live transcription continues."
+msgstr "Free up disk space. Audio saving stops if the disk fills up. Live transcription continues."
+
+#: src/stt/capture-lifecycle.ts
+msgid "Free up disk space. Syntheo will try to recover the missing text while this meeting is still recording."
+msgstr "Free up disk space. Syntheo will try to recover the missing text while this meeting is still recording."
 
 #: src/templates/template-icon-picker.tsx
 msgid "Frequently used"
@@ -1654,6 +1751,22 @@ msgstr "Icons"
 #: src/settings/general/account-profile.tsx
 msgid "Identity"
 msgstr "Identity"
+
+#: src/stt/meeting-apps.ts
+msgid "Ignore {firstName} and {secondName}?"
+msgstr "Ignore {firstName} and {secondName}?"
+
+#: src/stt/meeting-apps.ts
+msgid "Ignore {firstName}?"
+msgstr "Ignore {firstName}?"
+
+#: src/stt/meeting-apps.ts
+msgid "Ignore these apps?"
+msgstr "Ignore these apps?"
+
+#: src/stt/meeting-apps.ts
+msgid "Ignore this app?"
+msgstr "Ignore this app?"
 
 #: src/onboarding/index.tsx
 msgid "Import notes and transcripts from the meeting apps you already use."
@@ -1854,14 +1967,35 @@ msgstr "Listening"
 msgid "Listening time"
 msgstr "Listening time"
 
+#: src/meeting-float/overlay/dictation.tsx
 #: src/session/components/note-input/transcript/screens/listening.tsx
 #: src/settings/dictation.tsx
 msgid "Listening…"
 msgstr "Listening…"
 
+#: src/meeting-float/overlay/dictation.tsx
+msgid "Live preview is unavailable. Your text will appear when you finish."
+msgstr "Live preview is unavailable. Your text will appear when you finish."
+
+#: src/meeting-float/route-state.ts
+msgid "Live transcript"
+msgstr "Live transcript"
+
 #: src/settings/dictation.tsx
 msgid "Live transcript preview"
 msgstr "Live transcript preview"
+
+#: src/store/zustand/listener/general-live.ts
+msgid "Live transcription continues. Free up disk space to resume audio saving. Audio missing during this interruption cannot be recovered."
+msgstr "Live transcription continues. Free up disk space to resume audio saving. Audio missing during this interruption cannot be recovered."
+
+#: src/store/zustand/listener/general-live.ts
+msgid "Live transcription interrupted"
+msgstr "Live transcription interrupted"
+
+#: src/stt/useStartListening.ts
+msgid "Live transcription is using {primaryLanguageName}"
+msgstr "Live transcription is using {primaryLanguageName}"
 
 #: src/stt/live-transcript-interrupted.ts
 msgid "Live transcription paused: {cause}. No audio is kept: this passage will be missing from the transcription. Check the transcription server settings."
@@ -1874,6 +2008,10 @@ msgstr "Live transcription paused: {cause}. No audio is kept: this passage will 
 #: src/stt/live-transcript-interrupted.ts
 msgid "Live transcription resumed."
 msgstr "Live transcription resumed."
+
+#: src/stt/useStartListening.ts
+msgid "Live transcription won't include {omittedLanguageNames}."
+msgstr "Live transcription won't include {omittedLanguageNames}."
 
 #: src/templates/auto-form.tsx
 msgid "Loading Auto format..."
@@ -2094,6 +2232,14 @@ msgstr "Microphone access turned on"
 msgid "Microphone detection"
 msgstr "Microphone detection"
 
+#: src/store/zustand/listener/general-shared.ts
+msgid "Microphone unavailable"
+msgstr "Microphone unavailable"
+
+#: src/store/zustand/listener/general-shared.ts
+msgid "Microphone unavailable. System audio continues"
+msgstr "Microphone unavailable. System audio continues"
+
 #: src/settings/general/storage/legacy-cleanup.tsx
 msgid "Migration complete"
 msgstr "Migration complete"
@@ -2248,6 +2394,10 @@ msgstr "No"
 msgid "No apps found."
 msgstr "No apps found."
 
+#: src/store/zustand/listener/general-shared.ts
+msgid "No audio is being captured"
+msgstr "No audio is being captured"
+
 #: src/settings/automations/index.tsx
 msgid "No automation draft yet"
 msgstr "No automation draft yet"
@@ -2384,6 +2534,18 @@ msgstr "No templates yet"
 #: src/session/components/note-input/transcript/screens/empty.tsx
 msgid "No transcript available"
 msgstr "No transcript available"
+
+#: src/services/enhancer/eligibility.ts
+msgid "No transcript recorded"
+msgstr "No transcript recorded"
+
+#: src/stt/useStartListening.ts
+msgid "No transcription provider is set up. Syntheo does not keep audio: set up a transcription endpoint before recording."
+msgstr "No transcription provider is set up. Syntheo does not keep audio: set up a transcription endpoint before recording."
+
+#: src/services/enhancer/eligibility.ts
+msgid "Not enough words recorded ({wordCount}/{minWords} minimum)"
+msgstr "Not enough words recorded ({wordCount}/{minWords} minimum)"
 
 #: src/settings/developers/cli.tsx
 msgid "Not installed"
@@ -2531,6 +2693,10 @@ msgstr "Open meeting"
 msgid "Open on GitHub"
 msgstr "Open on GitHub"
 
+#: src/stt/start-failure.ts
+msgid "Open permissions"
+msgstr "Open permissions"
+
 #: src/calendar/components/apple/permission.tsx
 msgid "Open Settings"
 msgstr "Open Settings"
@@ -2663,6 +2829,10 @@ msgstr "Play from here"
 msgid "Post recording disclosure in meeting chat"
 msgstr "Post recording disclosure in meeting chat"
 
+#: src/stt/capture-lifecycle.ts
+msgid "Post-meeting transcription failed. The recording was kept so you can try again."
+msgstr "Post-meeting transcription failed. The recording was kept so you can try again."
+
 #: src/home/start-button.tsx
 #: src/onboarding/final.tsx
 #: src/session/components/capsule/index.tsx
@@ -2785,6 +2955,14 @@ msgstr "Record other participants in meetings."
 msgid "Record your voice in meetings and calls."
 msgstr "Record your voice in meetings and calls."
 
+#: src/store/zustand/listener/general-live.ts
+msgid "Recording could not start. Check your audio permissions and devices."
+msgstr "Recording could not start. Check your audio permissions and devices."
+
+#: src/stt/start-failure.ts
+msgid "Recording couldn't start"
+msgstr "Recording couldn't start"
+
 #: src/settings/general/notification.tsx
 msgid "Recording status prompts"
 msgstr "Recording status prompts"
@@ -2817,6 +2995,10 @@ msgstr "Related Notes"
 #: src/settings/general/meeting-settings.tsx
 msgid "Remind participants about recording"
 msgstr "Remind participants about recording"
+
+#: src/stt/useStartListening.ts
+msgid "Remind participants that the meeting is being transcribed."
+msgstr "Remind participants that the meeting is being transcribed."
 
 #: src/settings/todo/provider-content.tsx
 msgid "Reminders"
@@ -2969,6 +3151,7 @@ msgstr "Resume listening"
 #: src/session/components/note-input/enhanced/enhance-error.tsx
 #: src/settings/general/account-profile.tsx
 #: src/settings/general/storage/legacy-cleanup.tsx
+#: src/store/zustand/listener/general-live.ts
 msgid "Retry"
 msgstr "Retry"
 
@@ -3225,9 +3408,17 @@ msgstr "Session note views"
 msgid "Session title"
 msgstr "Session title"
 
+#: src/stt/useStartListening.ts
+msgid "Set up"
+msgstr "Set up"
+
 #: src/session/components/note-input/enhanced/config-error.tsx
 msgid "Set up AI summaries"
 msgstr "Set up AI summaries"
+
+#: src/session/components/note-input/enhanced-actions.ts
+msgid "Set up Intelligence in Settings before regenerating this summary."
+msgstr "Set up Intelligence in Settings before regenerating this summary."
 
 #: src/settings/dictation.tsx
 msgid "Setting up dictation…"
@@ -3443,6 +3634,7 @@ msgid "Starting voice input"
 msgstr "Starting voice input"
 
 #: src/chat/components/input/index.tsx
+#: src/meeting-float/overlay/dictation.tsx
 msgid "Starting…"
 msgstr "Starting…"
 
@@ -3455,6 +3647,7 @@ msgid "Steps run from top to bottom."
 msgstr "Steps run from top to bottom."
 
 #: src/composer/index.tsx
+#: src/stt/auto-stop.ts
 msgid "Stop"
 msgstr "Stop"
 
@@ -3473,6 +3666,10 @@ msgstr "Stop listening when your call ends."
 #: src/chat/components/input/index.tsx
 msgid "Stop response"
 msgstr "Stop response"
+
+#: src/stt/start-failure.ts
+msgid "Stop the current recording, or wait for it to finish saving, then try again."
+msgstr "Stop the current recording, or wait for it to finish saving, then try again."
 
 #: src/session/components/note-input/transcript/screens/empty.tsx
 msgid "Stop transcription"
@@ -3567,6 +3764,11 @@ msgstr "Summary templates"
 msgid "Summary updated"
 msgstr "Summary updated"
 
+#: src/session/components/note-input/enhanced-actions.ts
+#: src/session/hooks/useAutoEnhance.ts
+msgid "Summary wasn't generated"
+msgstr "Summary wasn't generated"
+
 #: src/settings/general/week-start.tsx
 msgid "Sunday"
 msgstr "Sunday"
@@ -3611,9 +3813,37 @@ msgstr "Syntheo completes your notes into a meeting summary."
 msgid "Syntheo could not find this summary in the note. Ask again from the note."
 msgstr "Syntheo could not find this summary in the note. Ask again from the note."
 
+#: src/stt/capture-lifecycle.ts
+msgid "Syntheo could not finish saving the transcript. The recording was kept so you can try again."
+msgstr "Syntheo could not finish saving the transcript. The recording was kept so you can try again."
+
+#: src/stt/capture-lifecycle.ts
+msgid "Syntheo could not remove the temporary audio. Cleanup will be retried automatically."
+msgstr "Syntheo could not remove the temporary audio. Cleanup will be retried automatically."
+
+#: src/stt/capture-lifecycle.ts
+msgid "Syntheo could not save part of the live transcript."
+msgstr "Syntheo could not save part of the live transcript."
+
+#: src/stt/start-failure.ts
+msgid "Syntheo couldn't open your audio input. Check your microphone selection, then try again."
+msgstr "Syntheo couldn't open your audio input. Check your microphone selection, then try again."
+
+#: src/stt/start-failure.ts
+msgid "Syntheo couldn't prepare storage for this recording"
+msgstr "Syntheo couldn't prepare storage for this recording"
+
+#: src/stt/start-failure.ts
+msgid "Syntheo doesn't have microphone access"
+msgstr "Syntheo doesn't have microphone access"
+
 #: src/lock/gate.tsx
 msgid "Syntheo is Locked"
 msgstr "Syntheo is Locked"
+
+#: src/store/zustand/listener/general-live.ts
+msgid "Syntheo keeps listening while live transcription reconnects. No audio is kept: the missing passage will not be recovered."
+msgstr "Syntheo keeps listening while live transcription reconnects. No audio is kept: the missing passage will not be recovered."
 
 #: src/onboarding/index.tsx
 msgid "Syntheo lit votre calendrier local pour vous rappeler vos réunions"
@@ -3648,6 +3878,10 @@ msgstr "Syntheo uses it to recognize you among the attendees of your calendar me
 #: src/settings/general/storage/legacy-cleanup.tsx
 msgid "Syntheo will retry automatically. This does not affect your notes."
 msgstr "Syntheo will retry automatically. This does not affect your notes."
+
+#: src/stt/auto-stop.ts
+msgid "Syntheo will stop listening in {seconds} seconds."
+msgstr "Syntheo will stop listening in {seconds} seconds."
 
 #: src/home/start-button.tsx
 #: src/onboarding/final.tsx
@@ -3690,6 +3924,14 @@ msgstr "System audio"
 #: src/onboarding/permissions.tsx
 msgid "System audio enabled"
 msgstr "System audio enabled"
+
+#: src/store/zustand/listener/general-shared.ts
+msgid "System audio unavailable"
+msgstr "System audio unavailable"
+
+#: src/store/zustand/listener/general-shared.ts
+msgid "System audio unavailable. Microphone capture continues"
+msgstr "System audio unavailable. Microphone capture continues"
 
 #: src/settings/dictation.tsx
 msgid "System permissions"
@@ -3793,6 +4035,10 @@ msgstr "The one that captures your voice."
 msgid "The page you're looking for doesn't exist."
 msgstr "The page you're looking for doesn't exist."
 
+#: src/store/zustand/listener/general-live.ts
+msgid "The previous recording needs recovery"
+msgstr "The previous recording needs recovery"
+
 #: src/chat/components/message/tool/edit-summary.tsx
 msgid "The proposed edit could not be saved."
 msgstr "The proposed edit could not be saved."
@@ -3838,6 +4084,10 @@ msgstr "The summary edit could not be prepared."
 msgid "The summary server did not respond. Check that it is running, then try again."
 msgstr "The summary server did not respond. Check that it is running, then try again."
 
+#: src/stt/capture-lifecycle.ts
+msgid "The transcript was saved, but Syntheo could not start the summary. Try generating it again."
+msgstr "The transcript was saved, but Syntheo could not start the summary. Try generating it again."
+
 #: src/session/components/note-input/transcript/screens/listening.tsx
 msgid "The transcription is still being written."
 msgstr "The transcription is still being written."
@@ -3849,6 +4099,10 @@ msgstr "the transcription service"
 #: src/session/components/note-input/transcript/screens/listening.tsx
 msgid "The transcription will appear here as soon as the first words arrive."
 msgstr "The transcription will appear here as soon as the first words arrive."
+
+#: src/store/zustand/listener/general-live.ts
+msgid "The unreadable audio was preserved in this note's folder as an audio.recovery-*.wav file. New audio will be recorded separately. Your transcript is unchanged."
+msgstr "The unreadable audio was preserved in this note's folder as an audio.recovery-*.wav file. New audio will be recorded separately. Your transcript is unchanged."
 
 #: src/settings/appearance/theme.tsx
 msgid "Theme"
@@ -3881,6 +4135,10 @@ msgstr "This edit is no longer pending."
 #: src/settings/general/index.tsx
 msgid "This information stays on your computer. It is used to recognize you in transcripts and to sign your meeting notes."
 msgstr "This information stays on your computer. It is used to recognize you in transcripts and to sign your meeting notes."
+
+#: src/stt/useStartListening.ts
+msgid "This model only transcribes after the recording, which would require keeping the audio. Choose a real-time transcription model."
+msgstr "This model only transcribes after the recording, which would require keeping the audio. Choose a real-time transcription model."
 
 #: src/calendar/components/event-chip.tsx
 msgid "This note"
@@ -3974,6 +4232,10 @@ msgstr "Transcript"
 #: src/session/components/note-input/header-transcript.tsx
 msgid "Transcript copied to clipboard"
 msgstr "Transcript copied to clipboard"
+
+#: src/services/enhancer/eligibility.ts
+msgid "Transcript too short to summarize ({characterCount}/{minCharacters} characters minimum)"
+msgstr "Transcript too short to summarize ({characterCount}/{minCharacters} characters minimum)"
 
 #: src/session/components/living-document/index.tsx
 #: src/session/components/living-document/transcript-margin.tsx
@@ -4340,6 +4602,10 @@ msgstr "Writing"
 msgid "Written by Syntheo"
 msgstr "Written by Syntheo"
 
+#: src/stt/detect-events.ts
+msgid "Yes"
+msgstr "Yes"
+
 #: src/sidebar/timeline/utils/index.ts
 msgid "Yesterday"
 msgstr "Yesterday"
@@ -4376,3 +4642,7 @@ msgstr "Your notes"
 #: src/services/enhancer/summary-notification.ts
 msgid "Your summary is ready."
 msgstr "Your summary is ready."
+
+#: src/stt/capture-lifecycle.ts
+msgid "Your transcript could not be saved"
+msgstr "Your transcript could not be saved"
