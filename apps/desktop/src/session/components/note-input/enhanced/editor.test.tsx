@@ -97,6 +97,19 @@ function EnhancedEditor(
   );
 }
 
+// Rend explicite le cas où NoteEditor n'a pas été rendu ou n'a pas reçu le
+// rappel attendu : le test échoue avec un message clair au lieu d'un TypeError.
+function requireCallback<T extends (...args: never[]) => unknown>(
+  props: Record<string, unknown> | undefined,
+  name: string,
+): T {
+  const callback = props?.[name];
+  if (typeof callback !== "function") {
+    throw new Error(`NoteEditor n'a pas reçu de rappel « ${name} »`);
+  }
+  return callback as T;
+}
+
 describe("EnhancedEditor", () => {
   afterEach(() => {
     cleanup();
@@ -185,7 +198,7 @@ describe("EnhancedEditor", () => {
       ],
     };
 
-    (props?.handleChange as (input: unknown) => void)(input);
+    requireCallback<(input: unknown) => void>(props, "handleChange")(input);
 
     expect(hoisted.persistContent).toHaveBeenCalledWith(
       JSON.stringify(input),
@@ -214,7 +227,7 @@ describe("EnhancedEditor", () => {
       ],
     };
 
-    (props?.handleChange as (input: unknown) => void)(input);
+    requireCallback<(input: unknown) => void>(props, "handleChange")(input);
 
     expect(hoisted.persistContent).not.toHaveBeenCalled();
   });
@@ -244,7 +257,7 @@ describe("EnhancedEditor", () => {
       ],
     };
 
-    (props?.handleChange as (input: unknown) => void)(input);
+    requireCallback<(input: unknown) => void>(props, "handleChange")(input);
 
     expect(hoisted.persistContent).not.toHaveBeenCalled();
   });
@@ -280,7 +293,7 @@ describe("EnhancedEditor", () => {
       ],
     };
 
-    (props?.handleChange as (input: unknown) => void)(input);
+    requireCallback<(input: unknown) => void>(props, "handleChange")(input);
 
     expect(hoisted.persistContent).toHaveBeenCalledWith(
       JSON.stringify(input),
@@ -318,7 +331,7 @@ describe("EnhancedEditor", () => {
       ],
     };
 
-    (props?.handleChange as (input: unknown) => void)(input);
+    requireCallback<(input: unknown) => void>(props, "handleChange")(input);
 
     expect(hoisted.persistContent).toHaveBeenCalledWith(
       JSON.stringify(input),
@@ -350,7 +363,7 @@ describe("EnhancedEditor", () => {
       ],
     };
 
-    (props?.handleChange as (input: unknown) => void)(input);
+    requireCallback<(input: unknown) => void>(props, "handleChange")(input);
 
     expect(hoisted.persistContent).toHaveBeenCalledWith(
       JSON.stringify(input),

@@ -460,23 +460,26 @@ export function ExportModal({
                 <Trans>Include</Trans>
               </span>
               <div className="flex justify-center gap-4">
-                {(
-                  [
-                    ["memo", <Trans>Memo</Trans>, includeMemo, setIncludeMemo],
-                    [
-                      "summary",
-                      <Trans>Summary</Trans>,
-                      includeSummary,
-                      setIncludeSummary,
-                    ],
-                    [
-                      "transcript",
-                      <Trans>Transcript</Trans>,
-                      includeTranscript,
-                      setIncludeTranscript,
-                    ],
-                  ] as const
-                ).map(([id, label, checked, setter]) => (
+                {[
+                  {
+                    id: "memo",
+                    label: <Trans>Memo</Trans>,
+                    checked: includeMemo,
+                    setter: setIncludeMemo,
+                  },
+                  {
+                    id: "summary",
+                    label: <Trans>Summary</Trans>,
+                    checked: includeSummary,
+                    setter: setIncludeSummary,
+                  },
+                  {
+                    id: "transcript",
+                    label: <Trans>Transcript</Trans>,
+                    checked: includeTranscript,
+                    setter: setIncludeTranscript,
+                  },
+                ].map(({ id, label, checked, setter }) => (
                   <label
                     key={id}
                     className="flex cursor-pointer items-center gap-1.5 text-sm"

@@ -211,6 +211,19 @@ vi.mock("~/stt/useUploadFile", () => ({
   useUploadFile: () => ({ processAudioFile: hoisted.processAudioFile }),
 }));
 
+// Rend explicite le cas où NoteEditor n'a pas été rendu ou n'a pas reçu le
+// rappel attendu : le test échoue avec un message clair au lieu d'un TypeError.
+function requireCallback<T extends (...args: never[]) => unknown>(
+  props: Record<string, unknown> | undefined,
+  name: string,
+): T {
+  const callback = props?.[name];
+  if (typeof callback !== "function") {
+    throw new Error(`NoteEditor n'a pas reçu de rappel « ${name} »`);
+  }
+  return callback as T;
+}
+
 describe("RawEditor", () => {
   afterEach(() => {
     cleanup();
@@ -287,7 +300,7 @@ describe("RawEditor", () => {
         },
       ],
     };
-    (props?.handleChange as (content: unknown) => void)(content);
+    requireCallback<(content: unknown) => void>(props, "handleChange")(content);
 
     await waitFor(() =>
       expect(hoisted.persistChange).toHaveBeenCalledWith({
@@ -640,7 +653,7 @@ describe("RawEditor", () => {
     render(<RawEditor sessionId="session-1" />);
 
     const props = hoisted.noteEditorProps[hoisted.noteEditorProps.length - 1];
-    expect((props?.placeholderComponent as () => string)()).toBe(
+    expect(requireCallback<() => string>(props, "placeholderComponent")()).toBe(
       "Creating brief...",
     );
     expect(props?.readOnly).toBe(true);
