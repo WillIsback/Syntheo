@@ -13,6 +13,7 @@ import {
   Pause,
   Play,
   Users,
+  UsersThree,
   X,
   type Icon,
 } from "@syntheo/ui/components/icons";
@@ -25,6 +26,10 @@ import { cn } from "@syntheo/utils";
 
 import { useBillingAccess } from "~/billing/billing-context";
 import { useFolderSelection } from "~/folders/selection";
+import {
+  requestSpeakerNaming,
+  useSpeakerNamingStore,
+} from "~/session/components/speaker-naming/store";
 import { useFolderPaths, useSessionSummaries } from "~/session/queries";
 import {
   normalizeSearchText,
@@ -349,9 +354,19 @@ export function OpenNoteDialog({
   const showListeningCommand =
     listeningCommand !== null && matchesQuery(listeningCommand.label);
 
+  // « Nommer les intervenants » (issue 321), seulement quand la note
+  // affichée a des locuteurs anonymes.
+  const speakerNamingSessionId = useSpeakerNamingStore(
+    (state) => state.available?.sessionId ?? null,
+  );
+  const speakerNamingLabel = t`Name speakers`;
+  const showSpeakerNaming =
+    speakerNamingSessionId !== null && matchesQuery(speakerNamingLabel);
+
   const hasAnyResults =
     showNewNote ||
     showListeningCommand ||
+    showSpeakerNaming ||
     filteredPages.length > 0 ||
     settingResults.length > 0 ||
     filteredRecentSessions.length > 0 ||
@@ -427,8 +442,26 @@ export function OpenNoteDialog({
     );
   }, [handleOpenChange, listeningCommand]);
 
-  const actionGroup = (showNewNote || showListeningCommand) && (
+  const handleSpeakerNaming = useCallback(() => {
+    if (!speakerNamingSessionId) return;
+    handleOpenChange(false);
+    requestSpeakerNaming(speakerNamingSessionId);
+  }, [handleOpenChange, speakerNamingSessionId]);
+
+  const actionGroup = (showNewNote ||
+    showListeningCommand ||
+    showSpeakerNaming) && (
     <CommandPrimitive.Group className="pb-1.5">
+      {showSpeakerNaming ? (
+        <CommandPrimitive.Item
+          value="action-name-speakers"
+          onSelect={handleSpeakerNaming}
+          className={PALETTE_ITEM_CLASS}
+        >
+          <UsersThree className="text-muted-foreground h-4 w-4 shrink-0" />
+          <span className="truncate">{speakerNamingLabel}</span>
+        </CommandPrimitive.Item>
+      ) : null}
       {showListeningCommand && listeningCommand ? (
         <CommandPrimitive.Item
           value={`action-${listeningCommand.action}-listening`}

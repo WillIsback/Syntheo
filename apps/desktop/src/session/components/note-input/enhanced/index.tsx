@@ -13,7 +13,9 @@ import { StreamingView } from "./streaming";
 
 import { useAITaskTask } from "~/ai/hooks";
 import { useLLMConnectionStatus } from "~/ai/hooks";
+import { getStoredNoteMarkdown } from "~/session/components/note-input/header-shared";
 import { hasStoredNoteContent } from "~/session/components/shared";
+import { SpeakerNamingBar } from "~/session/components/speaker-naming/bar";
 import { shouldShowEmptySummaryConfigError } from "~/session/enhance-config";
 import { useGenerateSummary } from "~/session/hooks/useGenerateSummary";
 import { useEnhancedNote } from "~/session/queries";
@@ -96,17 +98,24 @@ export const Enhanced = forwardRef<
     }
 
     return (
-      <EnhancedEditor
-        ref={ref}
-        sessionId={sessionId}
-        sessionTitle={sessionTitle}
-        enhancedNoteId={enhancedNoteId}
-        content={enhancedNote.content}
-        noteLines={noteLines}
-        onNavigateToTitle={onNavigateToTitle}
-        onViewReady={onViewReady}
-        onViewDisposed={onViewDisposed}
-      />
+      <>
+        <SpeakerNamingBar
+          sessionId={sessionId}
+          enhancedNoteId={enhancedNoteId}
+          summaryMarkdown={getStoredNoteMarkdown(enhancedNote.content)}
+        />
+        <EnhancedEditor
+          ref={ref}
+          sessionId={sessionId}
+          sessionTitle={sessionTitle}
+          enhancedNoteId={enhancedNoteId}
+          content={enhancedNote.content}
+          noteLines={noteLines}
+          onNavigateToTitle={onNavigateToTitle}
+          onViewReady={onViewReady}
+          onViewDisposed={onViewDisposed}
+        />
+      </>
     );
   },
 );

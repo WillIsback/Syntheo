@@ -26,6 +26,10 @@ msgstr ", at {time}."
 msgid ", in progress."
 msgstr ", in progress."
 
+#: src/session/components/speaker-naming/speaker-card.tsx
+msgid "“{excerpt}”"
+msgstr "“{excerpt}”"
+
 #: src/services/enhancer/summary-notification.ts
 msgid "\"{title}\" is ready to read."
 msgstr "\"{title}\" is ready to read."
@@ -75,6 +79,10 @@ msgstr "{absDays} days ago"
 #: src/services/tray-schedule.tsx
 msgid "{count, plural, one {{duration} left} other {{duration} left}}"
 msgstr "{count, plural, one {{duration} left} other {{duration} left}}"
+
+#: src/session/components/speaker-naming/bar.tsx
+msgid "{count, plural, one {# speaker to name} other {# speakers to name}}"
+msgstr "{count, plural, one {# speaker to name} other {# speakers to name}}"
 
 #: src/contacts/details.tsx
 msgid "{count} contacts share the same name or email. Merge them to consolidate all related notes and information."
@@ -143,6 +151,10 @@ msgstr "{providerName} stopped sending text"
 #: src/sidebar/toast/undo-delete-toast.tsx
 msgid "{title} deleted"
 msgstr "{title} deleted"
+
+#: src/session/components/speaker-naming/speaker-card.tsx
+msgid "{turns, plural, one {# turn} other {# turns}}"
+msgstr "{turns, plural, one {# turn} other {# turns}}"
 
 #: src/sidebar/timeline/utils/index.ts
 msgid "{weeks} weeks ago"
@@ -483,6 +495,10 @@ msgstr "Ask Syntheo anything"
 msgid "Ask the note"
 msgstr "Ask the note"
 
+#: src/session/components/speaker-naming/speaker-card.tsx
+msgid "Assigned to {assignedName}"
+msgstr "Assigned to {assignedName}"
+
 #: src/templates/auto-format-examples-dialog.tsx
 msgid "Attach Markdown or text"
 msgstr "Attach Markdown or text"
@@ -721,6 +737,10 @@ msgstr "Change speaker"
 #: src/session/components/note-input/transcript/renderer/selection-menu.tsx
 msgid "Change speaker from here"
 msgstr "Change speaker from here"
+
+#: src/session/components/speaker-naming/speaker-card.tsx
+msgid "Change the name"
+msgstr "Change the name"
 
 #: src/chat/components/toolbar-controls.tsx
 msgid "Chat history"
@@ -1156,6 +1176,11 @@ msgstr "Couldn't save your profile. Try again."
 msgid "Create"
 msgstr "Create"
 
+#. placeholder {0}: option.name
+#: src/session/components/speaker-naming/speaker-card.tsx
+msgid "Create “{0}”"
+msgstr "Create “{0}”"
+
 #: src/session/components/folder-picker.tsx
 msgid "Create \"{folderName}\""
 msgstr "Create \"{folderName}\""
@@ -1396,6 +1421,7 @@ msgid "Documentation"
 msgstr "Documentation"
 
 #: src/session/components/living-document/transcript-margin.tsx
+#: src/session/components/speaker-naming/dialog.tsx
 msgid "Done"
 msgstr "Done"
 
@@ -1575,6 +1601,10 @@ msgstr "Esc to dismiss"
 #: src/settings/search-index.ts
 msgid "Event notifications"
 msgstr "Event notifications"
+
+#: src/session/components/speaker-naming/dialog.tsx
+msgid "Every speaker has a name."
+msgstr "Every speaker has a name."
 
 #: src/home/home-view.tsx
 msgid "Everything is processed on your local server"
@@ -2558,6 +2588,12 @@ msgstr "My servers"
 msgid "Name"
 msgstr "Name"
 
+#: src/session/components/speaker-naming/bar.tsx
+#: src/session/components/speaker-naming/dialog.tsx
+#: src/shared/open-note-dialog.tsx
+msgid "Name speakers"
+msgstr "Name speakers"
+
 #: src/settings/automations/workflow-builder.tsx
 msgid "Needs setup"
 msgstr "Needs setup"
@@ -3186,6 +3222,10 @@ msgstr "Read meeting controls and visible chat"
 msgid "Read meeting controls and visible chat."
 msgstr "Read meeting controls and visible chat."
 
+#: src/session/components/speaker-naming/dialog.tsx
+msgid "Read what each speaker said, then say who it is. Tab moves to the next speaker, Enter confirms."
+msgstr "Read what each speaker said, then say who it is. Tab moves to the next speaker, Enter confirms."
+
 #: src/settings/general/notification.tsx
 msgid "Ready"
 msgstr "Ready"
@@ -3265,6 +3305,10 @@ msgstr "Regenerate"
 #: src/chat/components/message/normal.tsx
 msgid "Regenerate message"
 msgstr "Regenerate message"
+
+#: src/session/components/speaker-naming/bar.tsx
+msgid "Regenerate summary with names"
+msgstr "Regenerate summary with names"
 
 #: src/settings/developers/cli.tsx
 msgid "Reinstall"
@@ -3912,6 +3956,14 @@ msgstr "Sparkle"
 msgid "Speak into any text field, in any app. The text is inserted when you finish."
 msgstr "Speak into any text field, in any app. The text is inserted when you finish."
 
+#: src/session/components/speaker-naming/speaker-card.tsx
+msgid "Speaker {number}"
+msgstr "Speaker {number}"
+
+#: src/session/components/speaker-naming/speaker-card.tsx
+msgid "Speaker {number} · part {part}"
+msgstr "Speaker {number} · part {part}"
+
 #: src/settings/general/storage/legacy-cleanup.tsx
 msgid "SQLite migration verification is incomplete"
 msgstr "SQLite migration verification is incomplete"
@@ -4078,6 +4130,10 @@ msgstr "Suggested templates"
 #: src/templates/template-generator-bar.tsx
 msgid "Suggesting…"
 msgstr "Suggesting…"
+
+#: src/session/components/speaker-naming/speaker-card.tsx
+msgid "Suggestions"
+msgstr "Suggestions"
 
 #: src/contacts/details.tsx
 #: src/edit/tab-content.tsx
@@ -4398,6 +4454,10 @@ msgstr "The live transcription model handles one language at a time. To transcri
 msgid "The memo edit could not be prepared."
 msgstr "The memo edit could not be prepared."
 
+#: src/session/components/speaker-naming/speaker-card.tsx
+msgid "The name could not be saved. Try again."
+msgstr "The name could not be saved. Try again."
+
 #: src/settings/dictation.tsx
 msgid "The one that captures your voice."
 msgstr "The one that captures your voice."
@@ -4454,6 +4514,10 @@ msgstr "The summary edit could not be prepared."
 #: src/templates/template-generator-bar.tsx
 msgid "The summary server did not respond. Check that it is running, then try again."
 msgstr "The summary server did not respond. Check that it is running, then try again."
+
+#: src/session/components/speaker-naming/bar.tsx
+msgid "The summary still mentions unnamed speakers."
+msgstr "The summary still mentions unnamed speakers."
 
 #: src/stt/capture-lifecycle.ts
 #: src/stt/pause-listening.ts
@@ -4706,6 +4770,10 @@ msgstr "Turn on Syntheo in System Settings → Privacy & Security → Calendars,
 msgid "Type"
 msgstr "Type"
 
+#: src/session/components/speaker-naming/speaker-card.tsx
+msgid "Type a name"
+msgstr "Type a name"
+
 #: src/settings/developers/cli.tsx
 msgid "Unavailable"
 msgstr "Unavailable"
@@ -4719,7 +4787,7 @@ msgstr "Undo"
 msgid "Unfiled"
 msgstr "Unfiled"
 
-#: src/session/components/note-input/transcript/renderer/speaker-assign.tsx
+#: src/session/components/note-input/transcript/renderer/speaker-participants.ts
 msgid "Unknown"
 msgstr "Unknown"
 
@@ -4976,6 +5044,10 @@ msgstr "When off, summaries follow the detected meeting language."
 #: src/settings/automations/workflow-builder.tsx
 msgid "When this happens"
 msgstr "When this happens"
+
+#: src/session/components/speaker-naming/speaker-card.tsx
+msgid "Who is it?"
+msgstr "Who is it?"
 
 #: src/settings/appearance/palette.tsx
 msgid "Wisteria"
