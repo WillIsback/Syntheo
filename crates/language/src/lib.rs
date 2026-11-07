@@ -129,8 +129,8 @@ fn titlecase(part: &str) -> String {
 }
 
 impl specta::Type for Language {
-    fn inline(_: &mut specta::TypeCollection, _: specta::Generics) -> specta::DataType {
-        specta::DataType::Primitive(specta::datatype::PrimitiveType::String)
+    fn definition(types: &mut specta::Types) -> specta::datatype::DataType {
+        <String as specta::Type>::definition(types)
     }
 }
 

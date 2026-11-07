@@ -7,7 +7,6 @@ import { useState } from "react";
 import {
   commands as detectCommands,
   type InstalledApp,
-  type Result,
 } from "@syntheo/plugin-detect";
 import { commands as notificationCommands } from "@syntheo/plugin-notification";
 import { X } from "@syntheo/ui/components/icons";
@@ -52,6 +51,7 @@ import {
   previewCompletionSound,
 } from "~/shared/completion-sound";
 import { useConfigValues } from "~/shared/config";
+import type { Result } from "~/types";
 
 type CompletionSoundRowProps = {
   sound: CompletionSoundName;

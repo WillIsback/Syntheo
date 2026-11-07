@@ -6,7 +6,7 @@ import { z } from "zod";
 
 import {
   commands as templateCommands,
-  type JsonValue,
+  type Value as JsonValue,
 } from "@syntheo/plugin-template";
 import { toast } from "@syntheo/ui/components/ui/toast";
 import { format, safeParseDate } from "@syntheo/utils";
@@ -630,7 +630,7 @@ async function generatePastSessionKeyFacts({
   return normalizeFacts(result.output?.facts ?? []).join("\n");
 }
 
-type TemplateContext = Partial<{ [key: string]: JsonValue }>;
+type TemplateContext = { [key: string]: JsonValue };
 
 async function renderJinja(templateContent: string, ctx: TemplateContext) {
   const result = await templateCommands.renderCustom(templateContent, ctx);

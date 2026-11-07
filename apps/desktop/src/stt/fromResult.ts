@@ -1,6 +1,6 @@
 import { Effect } from "effect";
 
-import { type Result } from "@syntheo/plugin-transcription";
+import type { Result } from "~/types";
 
 export const fromResult = <A, E>(
   run: () => Promise<Result<A, E>>,

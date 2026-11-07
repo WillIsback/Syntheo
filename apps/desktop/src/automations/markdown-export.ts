@@ -33,10 +33,13 @@ export function parseMarkdownExportOptions(
 export function hasMarkdownExportContent(
   options: MarkdownExportOptions,
 ): boolean {
+  // `#[serde(default)]` côté Rust : un champ absent vaut sa valeur par défaut.
+  const included = (key: Exclude<keyof MarkdownExportOptions, "filename">) =>
+    options[key] ?? DEFAULT_MARKDOWN_EXPORT_OPTIONS[key] ?? false;
   return (
-    options.include_memo ||
-    options.include_summary ||
-    options.include_transcript ||
-    options.include_action_items
+    included("include_memo") ||
+    included("include_summary") ||
+    included("include_transcript") ||
+    included("include_action_items")
   );
 }

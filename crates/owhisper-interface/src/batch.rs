@@ -5,7 +5,7 @@ use crate::stream;
 // https://developers.deepgram.com/reference/speech-to-text/listen-pre-recorded
 
 common_derives! {
-    #[specta(rename = "BatchWord")]
+    #[serde(rename = "BatchWord")]
     #[cfg_attr(feature = "openapi", schema(as = BatchWord))]
     pub struct Word {
         pub word: String,
@@ -20,7 +20,7 @@ common_derives! {
 }
 
 common_derives! {
-    #[specta(rename = "BatchAlternatives")]
+    #[serde(rename = "BatchAlternatives")]
     #[cfg_attr(feature = "openapi", schema(as = BatchAlternatives))]
     pub struct Alternatives {
         pub transcript: String,
@@ -31,7 +31,7 @@ common_derives! {
 }
 
 common_derives! {
-    #[specta(rename = "BatchChannel")]
+    #[serde(rename = "BatchChannel")]
     #[cfg_attr(feature = "openapi", schema(as = BatchChannel))]
     pub struct Channel {
         pub alternatives: Vec<Alternatives>,
@@ -39,7 +39,7 @@ common_derives! {
 }
 
 common_derives! {
-    #[specta(rename = "BatchResults")]
+    #[serde(rename = "BatchResults")]
     #[cfg_attr(feature = "openapi", schema(as = BatchResults))]
     pub struct Results {
         pub channels: Vec<Channel>,
@@ -47,7 +47,7 @@ common_derives! {
 }
 
 common_derives! {
-    #[specta(rename = "BatchResponse")]
+    #[serde(rename = "BatchResponse")]
     #[cfg_attr(feature = "openapi", schema(as = BatchResponse))]
     pub struct Response {
         #[cfg_attr(feature = "openapi", schema(value_type = Object))]
