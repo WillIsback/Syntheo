@@ -147,6 +147,23 @@ export const getLiveStartBlockReason = (
   return null;
 };
 
+// A recording is in progress, broadly: starting, capturing, or finalizing
+// (including a previous session still finalizing in the background). Post-stop
+// processing such as the summary is not part of it. Callers that must stay
+// quiet during a recording (the mic-detected prompt, issue 349) rely on this
+// rather than listing states, so a future paused state only needs to be added
+// here (issue 353).
+export const isLiveRecordingInProgress = (
+  live: Pick<
+    LiveState,
+    "status" | "loading" | "sessionId" | "finalizingBySession"
+  >,
+) =>
+  live.status === "active" ||
+  live.status === "finalizing" ||
+  (live.status === "inactive" && live.loading && !!live.sessionId) ||
+  Object.keys(live.finalizingBySession).length > 0;
+
 export const setLiveState = <T extends GeneralState>(
   set: StoreApi<T>["setState"],
   update: (live: LiveState) => void,

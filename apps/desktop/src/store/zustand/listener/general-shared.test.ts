@@ -6,6 +6,7 @@ import {
   type GeneralState,
   initialGeneralState,
   isBatchTranscriptionPending,
+  isLiveRecordingInProgress,
   markLiveCaptureStarted,
   markLiveFinalizing,
   markLiveStartRequested,
@@ -71,6 +72,45 @@ function createActiveLive(): GeneralState["live"] {
     amplitude: { mic: 0.4, speaker: 0.4 },
   };
 }
+
+describe("isLiveRecordingInProgress", () => {
+  const liveState = () => structuredClone(initialGeneralState.live);
+
+  it("is false when nothing is recording", () => {
+    expect(isLiveRecordingInProgress(liveState())).toBe(false);
+  });
+
+  it("covers the start, capture and finalizing phases of a recording", () => {
+    const live = liveState();
+
+    markLiveStartRequested(live, "session-1");
+    expect(isLiveRecordingInProgress(live)).toBe(true);
+
+    markLiveCaptureStarted(live, "session-1");
+    expect(isLiveRecordingInProgress(live)).toBe(true);
+
+    markLiveFinalizing(live, "session-1");
+    expect(isLiveRecordingInProgress(live)).toBe(true);
+  });
+
+  it("covers a session still finalizing in the background", () => {
+    const live = liveState();
+    live.finalizingBySession["session-1"] = {
+      startedAtMs: 0,
+      seconds: 12,
+      needsBatchRepair: false,
+    };
+
+    expect(isLiveRecordingInProgress(live)).toBe(true);
+  });
+
+  it("does not treat post-stop processing as a recording", () => {
+    const live = liveState();
+    live.postStopProcessingBySession["session-1"] = true;
+
+    expect(isLiveRecordingInProgress(live)).toBe(false);
+  });
+});
 
 describe("markLiveCaptureStarted", () => {
   it("keeps one generation per capture across lifecycle observations", () => {
