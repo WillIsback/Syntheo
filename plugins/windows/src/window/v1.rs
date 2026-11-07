@@ -367,10 +367,12 @@ impl AppWindow {
             })
             .collect::<Vec<_>>();
         let position = staggered_note_window_position(
-            monitor_position.x,
-            monitor_position.y,
-            monitor_size.width,
-            monitor_size.height,
+            WindowFrame::new(
+                monitor_position.x,
+                monitor_position.y,
+                monitor_size.width,
+                monitor_size.height,
+            ),
             window_size.width,
             window_size.height,
             &open_note_positions,
@@ -386,21 +388,18 @@ impl AppWindow {
 }
 
 fn staggered_note_window_position(
-    monitor_x: f64,
-    monitor_y: f64,
-    monitor_width: f64,
-    monitor_height: f64,
+    monitor: WindowFrame,
     window_width: f64,
     window_height: f64,
     occupied_positions: &[(f64, f64)],
     slot_index: usize,
 ) -> (f64, f64) {
-    let base_x = monitor_x + ((monitor_width - window_width) / 2.0);
-    let base_y = monitor_y + ((monitor_height - window_height) / 2.0);
+    let base_x = monitor.x + ((monitor.width - window_width) / 2.0);
+    let base_y = monitor.y + ((monitor.height - window_height) / 2.0);
     let candidate_for_offset = |offset: (f64, f64)| {
         (
-            clamp_to_monitor(base_x + offset.0, monitor_x, monitor_width, window_width),
-            clamp_to_monitor(base_y + offset.1, monitor_y, monitor_height, window_height),
+            clamp_to_monitor(base_x + offset.0, monitor.x, monitor.width, window_width),
+            clamp_to_monitor(base_y + offset.1, monitor.y, monitor.height, window_height),
         )
     };
     let candidate_for_slot = |index: usize| {
@@ -577,10 +576,7 @@ mod tests {
         for (monitor_width, monitor_height, occupied, index, expected) in cases {
             assert_eq!(
                 staggered_note_window_position(
-                    0.0,
-                    0.0,
-                    monitor_width,
-                    monitor_height,
+                    WindowFrame::new(0.0, 0.0, monitor_width, monitor_height),
                     720.0,
                     820.0,
                     occupied,
