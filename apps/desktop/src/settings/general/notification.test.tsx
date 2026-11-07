@@ -62,6 +62,7 @@ vi.mock("~/shared/completion-sound", () => ({
   previewCompletionSound: mocks.previewCompletionSound,
 }));
 
+import { SETTING_DEFINITIONS } from "../schema";
 import { NotificationSettingsView } from "./notification";
 
 const baseConfig = {
@@ -116,6 +117,32 @@ describe("NotificationSettingsView", () => {
 
     await waitFor(() =>
       expect(screen.getByText("Ting Aqua Bridge")).toBeTruthy(),
+    );
+  });
+
+  it("turns microphone detection off by default", () => {
+    expect(SETTING_DEFINITIONS.notification_detect.default).toBe(false);
+  });
+
+  it("keeps microphone detection available to turn on", async () => {
+    mocks.useConfigValues.mockReturnValue({
+      ...baseConfig,
+      notification_detect: false,
+    });
+    render(<NotificationSettingsView />);
+
+    const detectSwitch = screen.getByRole("switch", {
+      name: "Microphone detection",
+    });
+    expect(detectSwitch.getAttribute("aria-checked")).toBe("false");
+    expect(detectSwitch.hasAttribute("disabled")).toBe(false);
+
+    fireEvent.click(detectSwitch);
+
+    await waitFor(() =>
+      expect(mocks.setSettingValues).toHaveBeenLastCalledWith(
+        expect.objectContaining({ notification_detect: true }),
+      ),
     );
   });
 

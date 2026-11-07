@@ -41,6 +41,7 @@ import {
 } from "~/calendar/queries";
 import { useConfigValue } from "~/shared/config";
 import type { ListenerStore } from "~/store/zustand/listener";
+import { isLiveRecordingInProgress } from "~/store/zustand/listener/general-shared";
 
 const MAX_TIMEOUT_DELAY_MS = 2_147_483_647;
 
@@ -172,6 +173,10 @@ export const useHandleDetectEvents = (store: ListenerStore) => {
         (live.status === "inactive" && live.loading && !!live.sessionId)
       );
     };
+    // Never prompt "Are you in a meeting?" while a note is recording, from
+    // start to the end of finalizing (issue 349).
+    const isRecordingInProgress = () =>
+      isLiveRecordingInProgress(store.getState().live);
     const captureTriggerApps = (apps: { id: string; name: string }[]) => {
       const appIds = apps.map((app) => app.id);
       if (appIds.length === 0) {
@@ -444,6 +449,10 @@ export const useHandleDetectEvents = (store: ListenerStore) => {
             return;
           }
 
+          if (isRecordingInProgress()) {
+            return;
+          }
+
           if (!notificationDetectRef.current) {
             return;
           }
@@ -494,6 +503,9 @@ export const useHandleDetectEvents = (store: ListenerStore) => {
 
               if (shouldCaptureMicDetectedTriggerApps()) {
                 captureTriggerApps(ignorableApps);
+                return;
+              }
+              if (isRecordingInProgress()) {
                 return;
               }
 
