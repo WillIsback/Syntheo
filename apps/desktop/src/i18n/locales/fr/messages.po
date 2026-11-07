@@ -192,6 +192,10 @@ msgstr "Un participant a refusé l'enregistrement. Syntheo a arrêté l'écoute.
 msgid "a week ago"
 msgstr "il y a une semaine"
 
+#: src/services/notification-labels.ts
+msgid "Accept"
+msgstr "Accepter"
+
 #: src/settings/search-index.ts
 msgid "access, authorize, Apple Calendar, events"
 msgstr "accès, autoriser, Calendrier Apple, événements, agenda"
@@ -1175,6 +1179,10 @@ msgstr "Créer \"{folderName}\""
 msgid "Create a brief to prepare this meeting"
 msgstr "Créer un brief pour préparer cette réunion"
 
+#: src/services/notification-labels.ts
+msgid "Create New Note..."
+msgstr "Créer une note…"
+
 #: src/session/components/note-input/transcript/renderer/speaker-assign.tsx
 msgid "Create new speaker"
 msgstr "Créer un nouvel intervenant"
@@ -2061,6 +2069,10 @@ msgstr "Installé"
 #: src/settings/ai/shared/server-card.tsx
 msgid "Invalid address"
 msgstr "Adresse invalide"
+
+#: src/services/notification-labels.ts
+msgid "Invitee Time Zone:"
+msgstr "Fuseau horaire de l'invité :"
 
 #: src/contacts/details.tsx
 #: src/settings/general/account-profile.tsx
@@ -3884,6 +3896,10 @@ msgstr "Afficher dans le Finder"
 msgid "Show in folder"
 msgstr "Afficher dans le dossier"
 
+#: src/services/notification-labels.ts
+msgid "Show less"
+msgstr "Afficher moins"
+
 #: src/settings/appearance/time-format.tsx
 msgid "Show meeting times as 14:00 instead of 2:00 PM."
 msgstr "Afficher les heures de réunion au format 14:00 au lieu de 2:00 PM."
@@ -5062,6 +5078,10 @@ msgstr "Sujet habituel de ces notes"
 msgid "What were the key decisions that have been made?"
 msgstr "Quelles ont été les décisions clés prises ?"
 
+#: src/services/notification-labels.ts
+msgid "What:"
+msgstr "Quoi :"
+
 #: src/changelog/index.tsx
 msgid "What's new in {version}?"
 msgstr "Nouveautés de {version} ?"
@@ -5077,6 +5097,14 @@ msgstr "Lorsque l'option est désactivée, les résumés suivent la langue déte
 #: src/settings/automations/workflow-builder.tsx
 msgid "When this happens"
 msgstr "Lorsque cela se produit"
+
+#: src/services/notification-labels.ts
+msgid "Where:"
+msgstr "Où :"
+
+#: src/services/notification-labels.ts
+msgid "Who:"
+msgstr "Qui :"
 
 #: src/settings/appearance/palette.tsx
 msgid "Wisteria"

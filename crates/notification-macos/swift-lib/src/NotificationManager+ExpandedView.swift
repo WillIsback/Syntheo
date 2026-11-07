@@ -56,6 +56,7 @@ extension NotificationManager {
 
     let collapseButton = CollapseButton()
     collapseButton.notification = notification
+    collapseButton.title = notification.payload.resolvedLabels.showLess
     collapseButton.setContentHuggingPriority(.required, for: .horizontal)
 
     headerStack.addArrangedSubview(titleLabel)
@@ -77,7 +78,8 @@ extension NotificationManager {
     if let eventDetails = notification.payload.eventDetails {
       let detailsStack = createDetailsSection(
         eventDetails: eventDetails,
-        participants: notification.payload.participants
+        participants: notification.payload.participants,
+        labels: notification.payload.resolvedLabels
       )
       container.addArrangedSubview(detailsStack)
     }
@@ -128,19 +130,20 @@ extension NotificationManager {
     return row
   }
 
-  func createDetailsSection(eventDetails: EventDetails, participants: [Participant]?)
-    -> NSStackView
+  func createDetailsSection(
+    eventDetails: EventDetails, participants: [Participant]?, labels: NotificationLabels
+  ) -> NSStackView
   {
     let stack = NSStackView()
     stack.orientation = .vertical
     stack.alignment = .leading
     stack.spacing = 8
 
-    let whatRow = createDetailRow(label: "What:", value: eventDetails.what)
+    let whatRow = createDetailRow(label: labels.what, value: eventDetails.what)
     stack.addArrangedSubview(whatRow)
 
     if let timezone = eventDetails.timezone {
-      let timezoneRow = createDetailRow(label: "Invitee Time Zone:", value: timezone)
+      let timezoneRow = createDetailRow(label: labels.inviteeTimeZone, value: timezone)
       stack.addArrangedSubview(timezoneRow)
     }
 
@@ -149,12 +152,12 @@ extension NotificationManager {
         let name = p.name ?? ""
         return name.isEmpty ? p.email : "\(name)\n\(p.email)"
       }.joined(separator: "\n")
-      let whoRow = createDetailRow(label: "Who:", value: whoValue)
+      let whoRow = createDetailRow(label: labels.who, value: whoValue)
       stack.addArrangedSubview(whoRow)
     }
 
     if let location = eventDetails.location {
-      let whereRow = createDetailRow(label: "Where:", value: location)
+      let whereRow = createDetailRow(label: labels.location, value: location)
       stack.addArrangedSubview(whereRow)
     }
 
@@ -192,7 +195,7 @@ extension NotificationManager {
     stack.spacing = 8
 
     let actionButton = ActionButton()
-    let actionLabel = notification.payload.actionLabel ?? "Accept"
+    let actionLabel = notification.payload.actionLabel ?? notification.payload.resolvedLabels.accept
     if notification.payload.isDestructiveAction {
       actionButton.configureDestructiveAction(label: actionLabel)
     } else {

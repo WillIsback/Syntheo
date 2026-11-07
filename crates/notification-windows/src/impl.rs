@@ -25,6 +25,7 @@ use windows::core::{PCWSTR, w};
 use syntheo_notification_interface::{DismissTimer, Notification, PrimaryAction, unix_now};
 
 use crate::callbacks;
+use crate::expanded::expanded_body;
 use crate::icon::{destroy_icon, header_title, load_notification_icon};
 use crate::layout::{
     HitTarget, MAX_NOTIFICATIONS, NotificationLayout, fit_stack, stacked_origin, try_expand,
@@ -348,6 +349,7 @@ impl NotificationManager {
             PrimaryAction::Accept { .. } => return,
         };
         let key = instance.key.clone();
+        let instance_labels = instance.payload.labels().clone();
         let menu = unsafe { CreatePopupMenu().ok() };
         let Some(menu) = menu else {
             return;
@@ -359,7 +361,7 @@ impl NotificationManager {
             }
         }
         if semantic_menu.is_none() {
-            let mut create_new = wide("Create New Note...");
+            let mut create_new = wide(&instance_labels.create_new_note);
             unsafe {
                 let _ = AppendMenuW(
                     menu,
@@ -590,38 +592,6 @@ fn paint(hwnd: HWND) {
     }
 }
 
-fn expanded_body(notification: &Notification, remaining: Option<Duration>) -> String {
-    let mut lines = Vec::new();
-    if let Some(details) = &notification.event_details {
-        lines.push(format!("What: {}", details.what));
-        if let Some(timezone) = &details.timezone {
-            lines.push(format!("Invitee Time Zone: {timezone}"));
-        }
-        if let Some(location) = &details.location {
-            lines.push(format!("Where: {location}"));
-        }
-    }
-    if let Some(participants) = &notification.participants {
-        for participant in participants {
-            let name = participant.name.clone().unwrap_or_default();
-            let display = if name.is_empty() {
-                participant.email.clone()
-            } else {
-                format!("{name} ({})", participant.email)
-            };
-            lines.push(display);
-        }
-    }
-    if let Some(remaining) = remaining {
-        lines.push(notification.expanded_schedule_message(remaining));
-    }
-    if lines.is_empty() {
-        notification.message.clone()
-    } else {
-        lines.join("\n")
-    }
-}
-
 impl NotificationInstance {
     fn action(&self) -> Option<(&str, ActionStyle)> {
         self.layout.action?;
@@ -654,7 +624,10 @@ impl NotificationInstance {
             expanded: self.is_expanded,
             action: self.action(),
             action_menu: self.payload.has_action_menu(),
-            collapse_label: self.layout.collapse.map(|_| "Show less"),
+            collapse_label: self
+                .layout
+                .collapse
+                .map(|_| self.payload.labels().show_less.as_str()),
             footer: self
                 .payload
                 .footer

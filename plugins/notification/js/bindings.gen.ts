@@ -91,6 +91,22 @@ export type NotificationLabels = {
 	startingInOther: string,
 	/**  Gabarit avec `{time}` (« m:ss »). */
 	beginsIn: string,
+	/**  Bouton qui replie la vue dépliée (issue 412). */
+	showLess: string,
+	/**
+	 *  Intitulés des détails d'événement de la vue dépliée, deux-points compris
+	 *  (« Quoi : » en français) ; la valeur suit après une espace.
+	 */
+	what: string,
+	/**  Intitulé de la liste des participants (macOS seulement). */
+	who: string,
+	/**  Intitulé du lieu (« Where: »). */
+	location: string,
+	inviteeTimeZone: string,
+	/**  Bouton de la vue dépliée quand l'application ne donne pas de libellé. */
+	accept: string,
+	/**  Dernière entrée du menu d'options. */
+	createNewNote: string,
 };
 
 export type NotificationSource = { type: "calendar_event"; event_id: string } | { type: "session"; session_id: string } | { type: "mic_detected"; app_names: string[]; app_ids?: string[]; event_ids?: string[] };

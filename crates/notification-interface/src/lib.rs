@@ -353,7 +353,9 @@ impl Notification {
     }
 
     pub fn expanded_action_label(&self) -> &str {
-        self.action_label.as_deref().unwrap_or("Accept")
+        self.action_label
+            .as_deref()
+            .unwrap_or(self.labels().accept.as_str())
     }
 
     pub fn primary_action(&self) -> PrimaryAction<'_> {
@@ -927,6 +929,13 @@ mod tests {
                 starting_in_one: "Démarrage dans 1 minute".to_string(),
                 starting_in_other: "Démarrage dans {minutes} minutes".to_string(),
                 begins_in: "Début dans {time}".to_string(),
+                show_less: "Afficher moins".to_string(),
+                what: "Quoi :".to_string(),
+                who: "Qui :".to_string(),
+                location: "Où :".to_string(),
+                invitee_time_zone: "Fuseau horaire de l'invité :".to_string(),
+                accept: "Accepter".to_string(),
+                create_new_note: "Créer une note…".to_string(),
             })
             .build();
         assert_eq!(french.compact_message(None), "Démarrage imminent");
@@ -940,5 +949,28 @@ mod tests {
             "Début dans 1:15"
         );
         assert_eq!(french.labels().options, "Options");
+    }
+
+    #[test]
+    fn expanded_action_label_falls_back_to_the_translated_accept() {
+        let english = Notification::builder().title("Invite").message("").build();
+        assert_eq!(english.expanded_action_label(), "Accept");
+
+        let mut labels = NotificationLabels::english().clone();
+        labels.accept = "Accepter".to_string();
+        let french = Notification::builder()
+            .title("Invite")
+            .message("")
+            .labels(labels.clone())
+            .build();
+        assert_eq!(french.expanded_action_label(), "Accepter");
+
+        let explicit = Notification::builder()
+            .title("Invite")
+            .message("")
+            .action_label("Rejoindre")
+            .labels(labels)
+            .build();
+        assert_eq!(explicit.expanded_action_label(), "Rejoindre");
     }
 }
