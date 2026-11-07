@@ -139,7 +139,14 @@ export function WindowsTitleBar() {
           <TitleBarMenu label={t`Help`} onPointerDown={rememberEditTarget}>
             <DropdownMenuItem
               onSelect={() =>
-                void openerCommands.openUrl(documentationUrl(), null)
+                void openerCommands
+                  .openUrl(documentationUrl(), null)
+                  .catch((error) =>
+                    console.error(
+                      "[title-bar] failed to open documentation",
+                      error,
+                    ),
+                  )
               }
             >
               {t`Documentation`}
@@ -147,20 +154,34 @@ export function WindowsTitleBar() {
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onSelect={() =>
-                void openerCommands.openUrl(
-                  "https://github.com/WillIsback/syntheo-desktop/issues",
-                  null,
-                )
+                void openerCommands
+                  .openUrl(
+                    "https://github.com/WillIsback/syntheo-desktop/issues",
+                    null,
+                  )
+                  .catch((error) =>
+                    console.error(
+                      "[title-bar] failed to open issue tracker",
+                      error,
+                    ),
+                  )
               }
             >
               {t`Report a Bug`}
             </DropdownMenuItem>
             <DropdownMenuItem
               onSelect={() =>
-                void openerCommands.openUrl(
-                  "https://github.com/WillIsback/syntheo-desktop/issues",
-                  null,
-                )
+                void openerCommands
+                  .openUrl(
+                    "https://github.com/WillIsback/syntheo-desktop/issues",
+                    null,
+                  )
+                  .catch((error) =>
+                    console.error(
+                      "[title-bar] failed to open issue tracker",
+                      error,
+                    ),
+                  )
               }
             >
               {t`Suggest a Feature`}

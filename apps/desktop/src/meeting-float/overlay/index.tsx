@@ -18,12 +18,20 @@ export function FloatingBarOverlayScreen() {
     let cancelled = false;
     const unlisteners: Array<() => void> = [];
 
-    void windowsCommands.floatingBarCurrentState().then((result) => {
-      if (cancelled || result.status === "error" || !result.data) {
-        return;
-      }
-      setState(result.data);
-    });
+    void windowsCommands
+      .floatingBarCurrentState()
+      .then((result) => {
+        if (cancelled || result.status === "error" || !result.data) {
+          return;
+        }
+        setState(result.data);
+      })
+      .catch((error) =>
+        console.error(
+          "[meeting-float] failed to read floating bar state",
+          error,
+        ),
+      );
 
     windowsEvents.floatingBarOverlayState
       .listen((event) => {

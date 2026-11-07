@@ -54,7 +54,15 @@ export function ExportLocationRow() {
           className="hover:bg-muted/40 flex min-w-0 items-center gap-2 rounded-lg px-2 py-2 text-left transition-colors"
           disabled={settings.isLoading || !!settings.error || !path}
           onClick={() => {
-            if (path) void openerCommands.openPath(path, null);
+            if (path)
+              void openerCommands
+                .openPath(path, null)
+                .catch((error) =>
+                  console.error(
+                    "[settings] failed to open export location",
+                    error,
+                  ),
+                );
           }}
         >
           <FolderSimple className="text-muted-foreground size-4 shrink-0" />

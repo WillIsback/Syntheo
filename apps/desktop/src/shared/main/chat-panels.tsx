@@ -159,7 +159,11 @@ function useNoteSurfaceWindowWidthGuard({
     restorableExpansionCountRef.current = 0;
 
     for (let i = 0; i < restoreCount; i += 1) {
-      void windowsCommands.windowRestoreWidth();
+      void windowsCommands
+        .windowRestoreWidth()
+        .catch((error) =>
+          console.error("[chat-panels] failed to restore window width", error),
+        );
     }
   }, []);
 
@@ -239,13 +243,17 @@ function expandWindowForRightPanel({
 
   onRestoreScheduled();
 
-  void windowsCommands.windowExpandWidth(
-    Math.ceil(widthDeficit * readZoomFactor()),
-    null,
-    false,
-    false,
-    true,
-  );
+  void windowsCommands
+    .windowExpandWidth(
+      Math.ceil(widthDeficit * readZoomFactor()),
+      null,
+      false,
+      false,
+      true,
+    )
+    .catch((error) =>
+      console.error("[chat-panels] failed to expand window width", error),
+    );
 }
 
 function getRightPanelWidth(bodyPanel: HTMLElement, rightPanelOpen: boolean) {

@@ -70,7 +70,11 @@ function MeetingChatText({ record }: { record: MeetingChatRecord }) {
         className="text-primary underline underline-offset-2"
         onClick={(event) => {
           event.preventDefault();
-          void openerCommands.openUrl(segment.link!, null);
+          void openerCommands
+            .openUrl(segment.link!, null)
+            .catch((error) =>
+              console.error("[session] failed to open link", error),
+            );
         }}
       >
         {segment.text}

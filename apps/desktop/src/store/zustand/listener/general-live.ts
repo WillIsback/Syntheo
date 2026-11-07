@@ -168,12 +168,13 @@ const listenToAllSessionEvents = (
   });
 
 const startSessionEffect = (params: CaptureParams) =>
-  fromResult(listenerCommands.startCapture(params));
+  fromResult(() => listenerCommands.startCapture(params));
 
-const stopSessionEffect = () => fromResult(listenerCommands.stopCapture());
+const stopSessionEffect = () =>
+  fromResult(() => listenerCommands.stopCapture());
 
 export const updateLiveSessionConfig = (update: CaptureConfigUpdate) =>
-  fromResult(listenerCommands.updateCaptureConfig(update));
+  fromResult(() => listenerCommands.updateCaptureConfig(update));
 
 const getCaptureStartErrorMessage = (cause: Cause.Cause<unknown>): string => {
   const failure = Cause.squash(cause);
@@ -346,7 +347,11 @@ const createSessionEventHandlers = <T extends LiveStore>(
 
       const intervalId = createLiveSecondsInterval(set);
 
-      void iconCommands.setRecordingIndicator(true);
+      void iconCommands
+        .setRecordingIndicator(true)
+        .catch((error) =>
+          console.error("[listener] failed to set recording indicator", error),
+        );
 
       setLiveState(set, (live) => {
         markLiveActive(
@@ -411,7 +416,14 @@ const createSessionEventHandlers = <T extends LiveStore>(
     });
 
     if (currentLive.sessionId === targetSessionId) {
-      void iconCommands.setRecordingIndicator(false);
+      void iconCommands
+        .setRecordingIndicator(false)
+        .catch((error) =>
+          console.error(
+            "[listener] failed to clear recording indicator",
+            error,
+          ),
+        );
       get().resetTranscript();
     }
 
@@ -419,7 +431,14 @@ const createSessionEventHandlers = <T extends LiveStore>(
     }
 
     const dispatchMeetingCompleted = () => {
-      void localApiCommands.dispatchEvent("meeting.completed", targetSessionId);
+      void localApiCommands
+        .dispatchEvent("meeting.completed", targetSessionId)
+        .catch((error) =>
+          console.error(
+            "[listener] failed to dispatch meeting.completed event",
+            error,
+          ),
+        );
       void runMeetingCompletedAutomations(targetSessionId);
     };
 

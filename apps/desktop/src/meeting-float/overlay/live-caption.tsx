@@ -33,12 +33,20 @@ export function LiveCaptionOverlayScreen() {
     let cancelled = false;
     const unlisteners: Array<() => void> = [];
 
-    void windowsCommands.liveCaptionCurrentState().then((result) => {
-      if (cancelled || result.status === "error" || !result.data) {
-        return;
-      }
-      setState(result.data);
-    });
+    void windowsCommands
+      .liveCaptionCurrentState()
+      .then((result) => {
+        if (cancelled || result.status === "error" || !result.data) {
+          return;
+        }
+        setState(result.data);
+      })
+      .catch((error) =>
+        console.error(
+          "[meeting-float] failed to read live caption state",
+          error,
+        ),
+      );
 
     windowsEvents.liveCaptionOverlayState
       .listen((event) => {

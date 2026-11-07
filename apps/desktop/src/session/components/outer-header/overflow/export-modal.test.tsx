@@ -13,7 +13,7 @@ const mocks = vi.hoisted(() => ({
   downloadDir: vi.fn(),
   exportPdf: vi.fn(),
   writeTextFile: vi.fn(),
-  revealItemInDir: vi.fn(),
+  revealItemInDir: vi.fn(async () => ({ status: "ok" as const, data: null })),
   onOpenChange: vi.fn(),
   save: vi.fn(),
   isAppStoreBuild: vi.fn(),
