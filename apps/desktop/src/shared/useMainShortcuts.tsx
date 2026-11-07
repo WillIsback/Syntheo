@@ -7,9 +7,11 @@ import { useMountEffect } from "@syntheo/ui/hooks/use-mount-effect";
 
 import { useShell } from "~/contexts/shell";
 import { startPreparedNoteFromShortcut } from "~/session/components/capsule/start-shortcut";
+import { exportNoteFromShortcut } from "~/shared/export-shortcut";
 import { openHelpDialog } from "~/shared/help-dialog";
 import { usesWindowsStyleTitleBar } from "~/shared/hooks/useWindowControlsGutter";
 import { goBackOrHome, leaveOverlayTab } from "~/shared/leave-overlay-tab";
+import { openSettingsSearch } from "~/shared/palette-store";
 import { runShortcutAction } from "~/shared/shortcut-actions";
 import {
   getShortcut,
@@ -18,7 +20,6 @@ import {
   type ShortcutId,
 } from "~/shared/shortcuts";
 import { ignoreUnlessTyped } from "~/shared/typed-key";
-import { openSettingsSearch } from "~/shared/palette-store";
 import { useNewNote, useNewNoteAndListen } from "~/shared/useNewNote";
 import { focusTitleBarMenu, toggleFullscreen } from "~/shared/window-shortcuts";
 import { useTabs } from "~/store/zustand/tabs";
@@ -230,6 +231,11 @@ export function useMainShortcuts() {
   // compare `event.code` (KeyP) ou `event.key` (« P ») : la touche P est au
   // même endroit en AZERTY et en QWERTY, les deux voies concordent.
   useHotkeys(hotkeysOf("searchSettings"), openSettingsSearch, ALWAYS_ON, []);
+
+  // Ctrl+P : exporter ou imprimer la note (issue 374), et jamais l'impression
+  // de la page entière par WebView2. Même protection que Ctrl+Maj+P (drapeau
+  // PRINT du plugin en version publiée, preventDefault ici en développement).
+  useHotkeys(hotkeysOf("exportNote"), exportNoteFromShortcut, ALWAYS_ON, []);
 
   return { runEscapeShortcut };
 }

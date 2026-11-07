@@ -22,7 +22,9 @@ import {
   useEnhancedNoteRecords,
   useSession,
 } from "~/session/queries";
+import { showFinishListeningToExport } from "~/shared/export-shortcut";
 import { leaveOverlayTab } from "~/shared/leave-overlay-tab";
+import { registerShortcutAction } from "~/shared/shortcut-actions";
 import { getShortcut, getShortcutPlatform } from "~/shared/shortcuts";
 import type { EditorView, Tab } from "~/store/zustand/tabs/schema";
 import { useListener } from "~/stt/contexts";
@@ -182,6 +184,30 @@ export function SessionCapsule({
     setExportMounted(true);
     requestAnimationFrame(() => setExportOpen(true));
   }, []);
+
+  // Ctrl+P (issue 374) : la note active ouvre « Exporter ou imprimer » en
+  // Préparer et en Synthèse ; pendant l'écoute, un message. Fenêtre de note
+  // autonome : même raccourci, déclaré localement.
+  const exportFromShortcut =
+    stage === "listen" ? showFinishListeningToExport : openExport;
+  useEffect(() => {
+    if (!tab.active || standaloneWindow) {
+      return;
+    }
+
+    return registerShortcutAction("exportNote", exportFromShortcut);
+  }, [exportFromShortcut, standaloneWindow, tab.active]);
+  useHotkeys(
+    getShortcut("exportNote").hotkeys ?? "",
+    exportFromShortcut,
+    {
+      enabled: tab.active && standaloneWindow,
+      preventDefault: true,
+      enableOnFormTags: true,
+      enableOnContentEditable: true,
+    },
+    [exportFromShortcut],
+  );
 
   // Note sans compte rendu (par exemple après avoir quitté l'application
   // pendant une pause) : reprendre l'écoute ou générer le compte rendu. Le

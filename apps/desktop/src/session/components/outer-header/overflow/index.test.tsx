@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { OverflowButton } from "./index";
 
 import { openFloatingMeetingPanel } from "~/meeting-float/host";
+import { formatShortcut } from "~/shared/shortcuts";
 import type { EditorView } from "~/store/zustand/tabs/schema";
 
 const {
@@ -339,7 +340,12 @@ describe("OverflowButton", () => {
 
     expect(exportModalMock).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole("button", { name: "Export" }));
+    const item = screen.getByRole("button", { name: "Export" });
+    // Infobulle « Exporter (Ctrl+P) » (issue 374), notation de la plateforme.
+    expect(item.getAttribute("title")).toBe(
+      `Export (${formatShortcut("exportNote")})`,
+    );
+    fireEvent.click(item);
 
     expect(exportModalMock).toHaveBeenLastCalledWith(
       expect.objectContaining({ open: true }),

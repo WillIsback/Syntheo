@@ -65,7 +65,11 @@ vi.mock("~/store/zustand/tabs", () => {
 });
 
 import { registerShortcutAction } from "~/shared/shortcut-actions";
-import { getShortcut, NEUTRALIZED_HOTKEYS, SHORTCUTS } from "~/shared/shortcuts";
+import {
+  getShortcut,
+  NEUTRALIZED_HOTKEYS,
+  SHORTCUTS,
+} from "~/shared/shortcuts";
 import {
   NOTE_GUARD_HOTKEYS,
   PAGE_SEARCH_ATTRIBUTE,
@@ -105,7 +109,7 @@ describe("useMainShortcuts : table des raccourcis (issue 372)", () => {
     const guarded = NOTE_GUARD_HOTKEYS.split(",").map((key) => key.trim());
     for (const def of SHORTCUTS) {
       if (!def.available || !def.hotkeys) {
-        // Réservé (issue 374) : aucun écouteur.
+        // Réservé à une issue à venir : aucun écouteur.
         if (def.hotkeys) {
           expect(hoisted.handlers.has(def.hotkeys), def.id).toBe(false);
         }
@@ -160,6 +164,28 @@ describe("useMainShortcuts : table des raccourcis (issue 372)", () => {
     void run("save");
 
     expect(exitEdit).toHaveBeenCalledOnce();
+    expect(hoisted.toastInfo).not.toHaveBeenCalled();
+    unregister();
+  });
+
+  it("Ctrl+P hors d'une note affiche un message court (issue 374)", () => {
+    renderHook(() => useMainShortcuts());
+    void run("exportNote");
+    expect(hoisted.toastInfo).toHaveBeenCalledWith("Open a note to export it.");
+    expect(
+      hoisted.options.get(getShortcut("exportNote").hotkeys ?? "")
+        ?.preventDefault,
+    ).toBe(true);
+  });
+
+  it("Ctrl+P laisse la main à la note ouverte (issue 374)", () => {
+    const openExport = vi.fn();
+    const unregister = registerShortcutAction("exportNote", openExport);
+    renderHook(() => useMainShortcuts());
+
+    void run("exportNote");
+
+    expect(openExport).toHaveBeenCalledOnce();
     expect(hoisted.toastInfo).not.toHaveBeenCalled();
     unregister();
   });

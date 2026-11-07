@@ -19,6 +19,7 @@ import { hasViewNavigation } from "./view-navigation";
 import { WindowsWindowControls } from "./windows-window-controls";
 
 import { documentationUrl } from "~/shared/documentation";
+import { exportNoteFromShortcut } from "~/shared/export-shortcut";
 import { openHelpDialog } from "~/shared/help-dialog";
 import { goHome } from "~/shared/leave-overlay-tab";
 import { openNoteDialog, openSettingsSearch } from "~/shared/open-note-dialog";
@@ -48,6 +49,8 @@ export function WindowsTitleBar() {
   const showViewActionsSlot = hasViewNavigation(currentTab);
   const showHomeButton = currentTab?.type !== "onboarding";
   const isHome = currentTab === null || currentTab.type === "empty";
+  // « Exporter… » : grisé hors d'une note (issue 374).
+  const isNote = currentTab?.type === "sessions";
   const editTargetRef = useRef<HTMLElement | null>(null);
 
   const rememberEditTarget = useCallback(() => {
@@ -104,6 +107,15 @@ export function WindowsTitleBar() {
             >
               {t`Search for a Setting…`}
             </ShortcutMenuItem>
+            <DropdownMenuSeparator />
+            <ShortcutMenuItem
+              shortcut="exportNote"
+              onSelect={exportNoteFromShortcut}
+              disabled={!isNote}
+            >
+              {t`Export…`}
+            </ShortcutMenuItem>
+            <DropdownMenuSeparator />
             <ShortcutMenuItem
               shortcut="settings"
               onSelect={() =>
@@ -220,14 +232,17 @@ function ShortcutMenuItem({
   children,
   onSelect,
   shortcut,
+  disabled,
 }: {
   children: React.ReactNode;
   onSelect: () => void;
   shortcut: ShortcutId;
+  disabled?: boolean;
 }) {
   return (
     <DropdownMenuItem
       onSelect={onSelect}
+      disabled={disabled}
       aria-keyshortcuts={ariaShortcut(shortcut)}
       className="whitespace-nowrap"
     >

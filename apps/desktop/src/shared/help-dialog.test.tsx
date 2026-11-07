@@ -16,7 +16,11 @@ vi.mock("@syntheo/plugin-opener2", () => ({
 }));
 
 import { DOCUMENTATION_URL } from "~/shared/documentation";
-import { HelpDialog, HelpDialogHost, openHelpDialog } from "~/shared/help-dialog";
+import {
+  HelpDialog,
+  HelpDialogHost,
+  openHelpDialog,
+} from "~/shared/help-dialog";
 import {
   formatShortcut,
   SHORTCUT_GROUPS,
@@ -33,7 +37,9 @@ describe("Aide et raccourcis (F1, issue 372)", () => {
   it("liste les raccourcis disponibles de la table, rangés par tâche", () => {
     render(<HelpDialog open onOpenChange={vi.fn()} />);
 
-    expect(screen.getByRole("dialog", { name: "Help and shortcuts" })).toBeTruthy();
+    expect(
+      screen.getByRole("dialog", { name: "Help and shortcuts" }),
+    ).toBeTruthy();
     for (const group of SHORTCUT_GROUPS) {
       expect(
         screen.getByRole("region", { name: shortcutGroupLabel(group) }),
@@ -43,9 +49,11 @@ describe("Aide et raccourcis (F1, issue 372)", () => {
       const shown = screen.queryAllByLabelText(formatShortcut(def.id));
       if (def.available) {
         expect(shown.length, def.id).toBeGreaterThan(0);
-        expect(screen.getAllByText(def.label()).length, def.id).toBeGreaterThan(0);
+        expect(screen.getAllByText(def.label()).length, def.id).toBeGreaterThan(
+          0,
+        );
       } else {
-        // Ctrl+P (issue 374) : pas encore.
+        // Raccourci réservé à une issue à venir : pas encore affiché.
         expect(shown, def.id).toHaveLength(0);
       }
     }
@@ -56,7 +64,9 @@ describe("Aide et raccourcis (F1, issue 372)", () => {
   it("rappelle l'enregistrement automatique", () => {
     render(<HelpDialog open onOpenChange={vi.fn()} />);
 
-    expect(screen.getByText("Your notes are saved automatically.")).toBeTruthy();
+    expect(
+      screen.getByText("Your notes are saved automatically."),
+    ).toBeTruthy();
   });
 
   it("ouvre la documentation en ligne dans le navigateur", () => {

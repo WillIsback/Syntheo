@@ -151,13 +151,14 @@ export const SHORTCUTS: readonly ShortcutDef[] = [
     label: () => t`Ask the note`,
   },
   {
-    // Issue 374 : l'action et l'écouteur viendront avec l'export.
+    // Issue 374 : la note ouverte prend la main (registerShortcutAction) ;
+    // sinon un message court (exportNoteFromShortcut).
     id: "exportNote",
     keys: ["Mod", "P"],
     hotkeys: "mod+p",
     group: "export",
     scope: "main",
-    available: false,
+    available: true,
     label: () => t`Export or print`,
   },
   {

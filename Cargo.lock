@@ -12306,7 +12306,9 @@ dependencies = [
  "tauri",
  "tauri-plugin",
  "tauri-specta",
+ "tempfile",
  "tokio",
+ "uuid",
 ]
 
 [[package]]
