@@ -4,6 +4,8 @@ const MAX_MENU_BAR_LABEL_WIDTH: usize = 30;
 
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
+pub use crate::schedule_labels::{TrayScheduleLabels, apply_untitled_fallback};
+
 #[derive(Debug, Clone, serde::Deserialize, specta::Type, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct TrayScheduleEvent {
@@ -86,6 +88,7 @@ pub fn menu_bar_title(
     show_events: bool,
     is_recording: bool,
     recording_title: Option<&str>,
+    labels: &TrayScheduleLabels,
 ) -> Option<String> {
     if is_recording {
         let title = recording_title?.trim();
@@ -104,15 +107,15 @@ pub fn menu_bar_title(
 
     if let Some(event) = active {
         let suffix = format!(
-            " • {} left",
-            duration_label(event.ends_at_ms.unwrap_or(now_ms) - now_ms)
+            " • {}",
+            labels.remaining(event.ends_at_ms.unwrap_or(now_ms) - now_ms)
         );
         return Some(menu_bar_label(&event.title, &suffix));
     }
 
     let event = upcoming_event(events, now_ms)?;
 
-    let suffix = format!(" • in {}", duration_label(event.starts_at_ms - now_ms));
+    let suffix = format!(" • {}", labels.starts_in(event.starts_at_ms - now_ms));
     Some(menu_bar_label(&event.title, &suffix))
 }
 
@@ -199,12 +202,9 @@ fn menu_bar_label(title: &str, suffix: &str) -> String {
 }
 
 fn compact_title(title: &str, max_width: usize) -> String {
+    // Les titres vides sont déjà remplacés à la réception du planning
+    // (apply_untitled_fallback), avec le libellé traduit.
     let title = title.split_whitespace().collect::<Vec<_>>().join(" ");
-    let title = if title.is_empty() {
-        "Untitled event".to_string()
-    } else {
-        title
-    };
 
     if title.width() <= max_width {
         return title;
@@ -241,27 +241,6 @@ fn compact_agenda_label(event: &TrayScheduleEvent) -> String {
     format!("{}{suffix}", compact_title(&event.title, title_limit))
 }
 
-fn duration_label(diff_ms: f64) -> String {
-    let total_seconds = (diff_ms / 1000.0).floor().max(1.0) as u64;
-
-    if total_seconds < 60 {
-        return format!("{total_seconds}s");
-    }
-
-    let total_minutes = total_seconds / 60;
-    if total_minutes < 60 {
-        return format!("{total_minutes}m");
-    }
-
-    let hours = total_minutes / 60;
-    let minutes = total_minutes % 60;
-    if minutes == 0 {
-        format!("{hours}h")
-    } else {
-        format!("{hours}h {minutes}m")
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -279,6 +258,10 @@ mod tests {
         }
     }
 
+    fn labels() -> TrayScheduleLabels {
+        TrayScheduleLabels::default()
+    }
+
     #[test]
     fn shows_the_nearest_event_within_a_day() {
         let now = 1_000_000.0;
@@ -289,7 +272,7 @@ mod tests {
         ];
 
         assert_eq!(
-            menu_bar_title(&events, now, true, false, None),
+            menu_bar_title(&events, now, true, false, None, &labels()),
             Some("Standup • in 5m".to_string())
         );
     }
@@ -323,7 +306,7 @@ mod tests {
         ];
 
         assert_eq!(
-            menu_bar_title(&events, now, true, false, None),
+            menu_bar_title(&events, now, true, false, None, &labels()),
             Some("Active meeting • 10m left".to_string())
         );
     }
@@ -344,7 +327,7 @@ mod tests {
             ),
         ] {
             let events = vec![event(title, now + starts_in_ms, None)];
-            let label = menu_bar_title(&events, now, true, false, None).unwrap();
+            let label = menu_bar_title(&events, now, true, false, None, &labels()).unwrap();
 
             assert_eq!(label, expected);
             assert_eq!(label.width(), MAX_MENU_BAR_LABEL_WIDTH);
@@ -357,15 +340,21 @@ mod tests {
         let events = vec![event("Unrelated event", now + 60_000.0, None)];
 
         assert_eq!(
-            menu_bar_title(&events, now, true, true, Some("Customer call")),
+            menu_bar_title(&events, now, true, true, Some("Customer call"), &labels()),
             Some("Customer call".to_string())
         );
         assert_eq!(
-            menu_bar_title(&events, now, false, true, Some("Customer call")),
+            menu_bar_title(&events, now, false, true, Some("Customer call"), &labels()),
             Some("Customer call".to_string())
         );
-        assert_eq!(menu_bar_title(&events, now, true, true, None), None);
-        assert_eq!(menu_bar_title(&events, now, true, true, Some("  ")), None);
+        assert_eq!(
+            menu_bar_title(&events, now, true, true, None, &labels()),
+            None
+        );
+        assert_eq!(
+            menu_bar_title(&events, now, true, true, Some("  "), &labels()),
+            None
+        );
     }
 
     #[test]
@@ -374,8 +363,14 @@ mod tests {
         let finished = vec![event("Finished", now - 60_000.0, Some(now - 1.0))];
         let upcoming = vec![event("Standup", now + 5.0 * 60.0 * 1000.0, None)];
 
-        assert_eq!(menu_bar_title(&finished, now, true, false, None), None);
-        assert_eq!(menu_bar_title(&upcoming, now, false, false, None), None);
+        assert_eq!(
+            menu_bar_title(&finished, now, true, false, None, &labels()),
+            None
+        );
+        assert_eq!(
+            menu_bar_title(&upcoming, now, false, false, None, &labels()),
+            None
+        );
     }
 
     #[test]
@@ -417,6 +412,27 @@ mod tests {
                     ],
                 },
             ]
+        );
+    }
+
+    #[test]
+    fn formats_the_menu_bar_title_with_translated_labels() {
+        let now = 1_000_000.0;
+        let labels = crate::schedule_labels::fr_labels();
+        let upcoming = vec![event("Standup", now + 5.0 * 60.0 * 1000.0, None)];
+        let active = vec![event(
+            "Réunion",
+            now - 1_000.0,
+            Some(now + (10.0 * 60.0 + 59.0) * 1000.0),
+        )];
+
+        assert_eq!(
+            menu_bar_title(&upcoming, now, true, false, None, &labels),
+            Some("Standup • dans 5 min".to_string())
+        );
+        assert_eq!(
+            menu_bar_title(&active, now, true, false, None, &labels),
+            Some("Réunion • 10 min restantes".to_string())
         );
     }
 

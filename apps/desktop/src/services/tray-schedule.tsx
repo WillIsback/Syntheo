@@ -1,8 +1,11 @@
+import { plural, t } from "@lingui/core/macro";
+import { useLingui } from "@lingui/react";
 import { useMemo } from "react";
 
 import {
   commands as trayCommands,
   type TrayScheduleEvent,
+  type TrayScheduleLabels,
 } from "@syntheo/plugin-tray";
 import { getCurrentWebviewWindowLabel } from "@syntheo/plugin-windows";
 import { useMountEffect } from "@syntheo/ui/hooks/use-mount-effect";
@@ -16,6 +19,39 @@ import type { TimelineEventRow } from "~/sidebar/timeline/utils";
 
 const PUBLISHED_SCHEDULE_HORIZON_MS = 7 * 24 * 60 * 60 * 1000;
 
+// Le titre de la barre de menus est recalculé par le Rust à chaque minute :
+// on lui envoie des gabarits traduits dont il remplace les jetons.
+const DURATION_TOKEN = "{duration}";
+const COUNT_TOKEN = "{count}";
+const HOURS_TOKEN = "{hours}";
+const MINUTES_TOKEN = "{minutes}";
+
+function remainingLabel(count: number): string {
+  const duration = DURATION_TOKEN;
+  return plural(count, {
+    one: `${duration} left`,
+    other: `${duration} left`,
+  });
+}
+
+export function buildTrayScheduleLabels(): TrayScheduleLabels {
+  const duration = DURATION_TOKEN;
+  const count = COUNT_TOKEN;
+  const hours = HOURS_TOKEN;
+  const minutes = MINUTES_TOKEN;
+
+  return {
+    untitledEvent: t`Untitled event`,
+    startsIn: t`in ${duration}`,
+    remainingOne: remainingLabel(1),
+    remainingOther: remainingLabel(2),
+    seconds: t`${count}s`,
+    minutes: t`${count}m`,
+    hours: t`${count}h`,
+    hoursMinutes: t`${hours}h ${minutes}m`,
+  };
+}
+
 export function buildTrayScheduleEvents(
   rows: Record<string, TimelineEventRow> | null | undefined,
   isIgnored: (
@@ -26,6 +62,7 @@ export function buildTrayScheduleEvents(
   timezone?: string,
   locale?: string,
   use24HourTime = false,
+  untitledTitle = t`Untitled event`,
 ): TrayScheduleEvent[] {
   const upperBoundMs = nowMs + PUBLISHED_SCHEDULE_HORIZON_MS;
   const timeFormatter = new Intl.DateTimeFormat(locale, {
@@ -75,7 +112,7 @@ export function buildTrayScheduleEvents(
       return [
         {
           id: eventId,
-          title: row.title?.trim() || "Untitled event",
+          title: row.title?.trim() || untitledTitle,
           meetingLink: row.meeting_link || null,
           startsAtMs,
           endsAtMs,
@@ -98,6 +135,11 @@ export function TrayScheduleSync() {
   const timezone = useConfigValue("timezone") || undefined;
   const currentDay = useCurrentDay(timezone);
   const use24HourTime = useConfigValue("use_24_hour_time");
+  // S'abonne au changement de langue : les libellés envoyés au menu en
+  // dépendent, et ce composant n'a pas d'autre raison d'être rendu à nouveau.
+  useLingui();
+  const labels = buildTrayScheduleLabels();
+  const untitledTitle = labels.untitledEvent;
   const events = useMemo(
     () =>
       buildTrayScheduleEvents(
@@ -107,25 +149,45 @@ export function TrayScheduleSync() {
         timezone,
         undefined,
         use24HourTime,
+        untitledTitle,
       ),
-    [currentDay, isIgnored, timelineEventsTable, timezone, use24HourTime],
+    [
+      currentDay,
+      isIgnored,
+      timelineEventsTable,
+      timezone,
+      untitledTitle,
+      use24HourTime,
+    ],
   );
 
-  return <TraySchedulePublisher key={JSON.stringify(events)} events={events} />;
+  return (
+    <TraySchedulePublisher
+      key={JSON.stringify([events, labels])}
+      events={events}
+      labels={labels}
+    />
+  );
 }
 
 function toTimezone(date: Date, timezone?: string): Date {
   return timezone ? new TZDate(date, timezone) : date;
 }
 
-function TraySchedulePublisher({ events }: { events: TrayScheduleEvent[] }) {
+function TraySchedulePublisher({
+  events,
+  labels,
+}: {
+  events: TrayScheduleEvent[];
+  labels: TrayScheduleLabels;
+}) {
   useMountEffect(() => {
     if (getCurrentWebviewWindowLabel() !== "main") {
       return;
     }
 
     void trayCommands
-      .setTraySchedule(events)
+      .setTraySchedule(events, labels)
       .then((result) => {
         if (result.status === "error") {
           console.error("[tray] failed to publish schedule", result.error);

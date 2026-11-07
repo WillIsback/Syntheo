@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { useMemo } from "react";
 
 import { commands as calendarCommands } from "@syntheo/plugin-calendar";
@@ -436,7 +437,7 @@ export async function searchCalendarEvents(
 
   return rows.map((row) => ({
     id: row.id,
-    title: row.title || "Untitled event",
+    title: row.title || t`Untitled event`,
     startedAt: row.started_at || null,
     endedAt: row.ended_at || null,
     location: row.location || null,
