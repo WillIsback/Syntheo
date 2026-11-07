@@ -105,7 +105,7 @@ describe("useMainShortcuts : table des raccourcis (issue 372)", () => {
     const guarded = NOTE_GUARD_HOTKEYS.split(",").map((key) => key.trim());
     for (const def of SHORTCUTS) {
       if (!def.available || !def.hotkeys) {
-        // Réservés (issues 373 et 374) : aucun écouteur.
+        // Réservé (issue 374) : aucun écouteur.
         if (def.hotkeys) {
           expect(hoisted.handlers.has(def.hotkeys), def.id).toBe(false);
         }

@@ -70,7 +70,7 @@ export function DictationShortcut({ shortcut }: { shortcut: string }) {
   };
 
   return (
-    <div className="flex flex-col gap-2">
+    <div data-setting-id="dictation-shortcut" className="flex flex-col gap-2">
       <div className="flex items-center justify-between gap-5">
         <div className="min-w-0 flex-1">
           <span

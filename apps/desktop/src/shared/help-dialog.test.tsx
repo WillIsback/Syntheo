@@ -45,7 +45,7 @@ describe("Aide et raccourcis (F1, issue 372)", () => {
         expect(shown.length, def.id).toBeGreaterThan(0);
         expect(screen.getAllByText(def.label()).length, def.id).toBeGreaterThan(0);
       } else {
-        // Ctrl+P (issue 374), Ctrl+Maj+P (issue 373) : pas encore.
+        // Ctrl+P (issue 374) : pas encore.
         expect(shown, def.id).toHaveLength(0);
       }
     }

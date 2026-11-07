@@ -21,7 +21,7 @@ import { WindowsWindowControls } from "./windows-window-controls";
 import { documentationUrl } from "~/shared/documentation";
 import { openHelpDialog } from "~/shared/help-dialog";
 import { goHome } from "~/shared/leave-overlay-tab";
-import { openNoteDialog } from "~/shared/open-note-dialog";
+import { openNoteDialog, openSettingsSearch } from "~/shared/open-note-dialog";
 import {
   ariaShortcut,
   formatShortcut,
@@ -97,6 +97,12 @@ export function WindowsTitleBar() {
             </ShortcutMenuItem>
             <ShortcutMenuItem shortcut="searchNotes" onSelect={openNoteDialog}>
               {t`Search Notes…`}
+            </ShortcutMenuItem>
+            <ShortcutMenuItem
+              shortcut="searchSettings"
+              onSelect={openSettingsSearch}
+            >
+              {t`Search for a Setting…`}
             </ShortcutMenuItem>
             <ShortcutMenuItem
               shortcut="settings"

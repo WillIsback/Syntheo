@@ -187,6 +187,17 @@ export function useZoomShortcuts() {
         return;
       }
 
+      // Ctrl+0 en AZERTY : la touche 0 tape « à » sans Maj. On reconnaît la
+      // touche physique du 0 (rangée des chiffres ou pavé numérique).
+      if (
+        !event.shiftKey &&
+        (event.code === "Digit0" || event.code === "Numpad0")
+      ) {
+        event.preventDefault();
+        setFactor(stepZoomFactor(factor, "reset"), true);
+        return;
+      }
+
       switch (event.key) {
         case "-":
         case "_":

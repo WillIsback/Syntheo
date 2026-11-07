@@ -18,6 +18,7 @@ import {
   type ShortcutId,
 } from "~/shared/shortcuts";
 import { ignoreUnlessTyped } from "~/shared/typed-key";
+import { openSettingsSearch } from "~/shared/palette-store";
 import { useNewNote, useNewNoteAndListen } from "~/shared/useNewNote";
 import { focusTitleBarMenu, toggleFullscreen } from "~/shared/window-shortcuts";
 import { useTabs } from "~/store/zustand/tabs";
@@ -220,6 +221,15 @@ export function useMainShortcuts() {
     ALWAYS_ON,
     [],
   );
+
+  // Ctrl+Maj+P : rechercher un paramètre (issue 373), la palette filtrée.
+  // Enregistré en permanence avec preventDefault : en développement, rien
+  // d'autre n'empêche Chromium d'ouvrir l'impression système. En version
+  // publiée, tauri-plugin-prevent-default l'annule aussi (drapeau PRINT) sans
+  // arrêter la propagation : l'événement arrive bien ici. react-hotkeys-hook
+  // compare `event.code` (KeyP) ou `event.key` (« P ») : la touche P est au
+  // même endroit en AZERTY et en QWERTY, les deux voies concordent.
+  useHotkeys(hotkeysOf("searchSettings"), openSettingsSearch, ALWAYS_ON, []);
 
   return { runEscapeShortcut };
 }

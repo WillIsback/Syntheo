@@ -181,13 +181,13 @@ export const SHORTCUTS: readonly ShortcutDef[] = [
     label: () => t`Settings`,
   },
   {
-    // Issue 373 : la recherche de paramètres apporte l'écouteur.
+    // Issue 373 : palette filtrée sur les paramètres (openSettingsSearch).
     id: "searchSettings",
     keys: ["Mod", "Shift", "P"],
     hotkeys: "mod+shift+p",
     group: "settings",
     scope: "main",
-    available: false,
+    available: true,
     label: () => t`Search a setting`,
   },
   {

@@ -58,6 +58,11 @@ msgstr "{0} est prêt à être utilisé"
 msgid "{0} pending edits"
 msgstr "{0} modifications en attente"
 
+#. placeholder {0}: hits.length
+#: src/sidebar/settings-search-results.tsx
+msgid "{0} results"
+msgstr "{0} résultats"
+
 #. placeholder {0}: Math.round((percentage ?? 0) * 100)
 #: src/session/components/note-input/transcript/screens/empty.tsx
 msgid "{0}% complete"
@@ -159,6 +164,10 @@ msgstr "+ Nouveau modèle"
 msgid "1 pending edit"
 msgstr "1 modification en attente"
 
+#: src/sidebar/settings-search-results.tsx
+msgid "1 result"
+msgstr "1 résultat"
+
 #: src/sidebar/folder-name-dialog.tsx
 msgid "A folder with this name already exists."
 msgstr "Un dossier portant ce nom existe déjà."
@@ -183,8 +192,17 @@ msgstr "Un participant a refusé l'enregistrement. Syntheo a arrêté l'écoute.
 msgid "a week ago"
 msgstr "il y a une semaine"
 
+#: src/settings/search-index.ts
+msgid "access, authorize, Apple Calendar, events"
+msgstr "accès, autoriser, Calendrier Apple, événements, agenda"
+
+#: src/settings/search-index.ts
+msgid "access, authorize, meeting controls, chat"
+msgstr "accès, autoriser, commandes de réunion, discussion, accessibilité"
+
 #: src/onboarding/permissions.tsx
 #: src/settings/general/permissions.tsx
+#: src/settings/search-index.ts
 msgid "Accessibility"
 msgstr "Accessibilité"
 
@@ -312,6 +330,7 @@ msgid "Added:"
 msgstr "Ajouté :"
 
 #: src/settings/general/spoken-languages.tsx
+#: src/settings/search-index.ts
 msgid "Additional spoken languages"
 msgstr "Langues parlées supplémentaires"
 
@@ -333,6 +352,7 @@ msgid "After the meeting summary is ready"
 msgstr "Après la disponibilité du compte rendu de la réunion"
 
 #: src/settings/developers/skills.tsx
+#: src/settings/search-index.ts
 msgid "Agent skills"
 msgstr "Compétences de l'agent"
 
@@ -343,6 +363,18 @@ msgstr "Étape IA"
 #: src/contacts/details.tsx
 msgid "AI-generated summary of all interactions and notes with this contact will appear here. This will synthesize key discussion points, action items, and relationship context across all meetings and notes."
 msgstr "Le résumé généré par l'IA de toutes les interactions et notes avec ce contact apparaîtra ici. Il synthétisera les points clés de discussion, les actions à mener et le contexte relationnel de l'ensemble des réunions et notes."
+
+#: src/settings/search-index.ts
+msgid "AI, artificial intelligence, language model, Mistral, Llama"
+msgstr "IA, intelligence artificielle, modèle de langage, Mistral, Llama"
+
+#: src/settings/search-index.ts
+msgid "AI, artificial intelligence, language model, Ollama, vLLM, URL, API key"
+msgstr "IA, intelligence artificielle, modèle de langage, serveur de synthèse, Ollama, vLLM, URL, clé API"
+
+#: src/settings/search-index.ts
+msgid "AI, reasoning, quality, speed, thinking"
+msgstr "IA, raisonnement, qualité, rapidité, réflexion"
 
 #: src/settings/developers/webhooks.tsx
 msgid "All events"
@@ -466,6 +498,7 @@ msgstr "Joignez jusqu'à trois résumés antérieurs que vous appréciez. Synthe
 
 #: src/settings/general/index.tsx
 #: src/settings/general/permissions.tsx
+#: src/settings/search-index.ts
 msgid "Audio"
 msgstr "Audio"
 
@@ -527,7 +560,20 @@ msgstr "Automatisez ce qui se passe avant, pendant ou après les réunions en fo
 msgid "Automatic"
 msgstr "Automatique"
 
+#: src/settings/search-index.ts
+msgid "automatic, meeting link, Teams, Zoom, calendar"
+msgstr "automatique, lien de réunion, rejoindre, Teams, Zoom, agenda"
+
+#: src/settings/search-index.ts
+msgid "automatic, start, calendar, scheduled meeting"
+msgstr "automatique, démarrer, agenda, réunion prévue"
+
+#: src/settings/search-index.ts
+msgid "automatic, stop, end of call, hang up"
+msgstr "automatique, arrêter, fin d'appel, raccrocher"
+
 #: src/settings/general/app-settings.tsx
+#: src/settings/search-index.ts
 msgid "Automatically install updates"
 msgstr "Installer automatiquement les mises à jour"
 
@@ -572,6 +618,10 @@ msgstr "Automatisations"
 msgid "Back"
 msgstr "Retour"
 
+#: src/settings/search-index.ts
+msgid "bar, small window, control, always on top"
+msgstr "barre, petite fenêtre, commandes, toujours au premier plan"
+
 #: src/chat/components/body/empty.tsx
 msgid "Based on the conversation so far, suggest a few questions I could ask next."
 msgstr "Sur la base de la conversation jusqu'à présent, suggérez quelques questions que je pourrais poser ensuite."
@@ -598,6 +648,7 @@ msgid "Bloom"
 msgstr "Bloom"
 
 #: src/settings/general/notification.tsx
+#: src/settings/search-index.ts
 msgid "Bounce app icon"
 msgstr "Icône d'application avec rebond"
 
@@ -618,6 +669,7 @@ msgid "by {name}"
 msgstr "par {name}"
 
 #: src/settings/general/permissions.tsx
+#: src/settings/search-index.ts
 #: src/sidebar/settings-nav-groups.ts
 msgid "Calendar"
 msgstr "Calendrier"
@@ -646,10 +698,12 @@ msgid "Cancel dictation"
 msgstr "Annuler la dictée"
 
 #: src/settings/general/meeting-settings.tsx
+#: src/settings/search-index.ts
 msgid "Capture meeting chat in Memos"
 msgstr "Capturer le chat de réunion dans Memos"
 
 #: src/settings/general/meeting-settings.tsx
+#: src/settings/search-index.ts
 msgid "Capture shared screens in Memos"
 msgstr "Capturer les écrans partagés dans Memos"
 
@@ -679,6 +733,10 @@ msgstr "Modifier l’orateur depuis ici"
 msgid "Chat history"
 msgstr "Historique de chat"
 
+#: src/settings/search-index.ts
+msgid "chat, messages, memos, Teams, Zoom"
+msgstr "discussion, messages, mémos, Teams, Zoom"
+
 #: src/chat/components/input/use-dictation.ts
 msgid "Check microphone permission and the selected input device, then try again."
 msgstr "Vérifiez l'autorisation du microphone et le périphérique d'entrée sélectionné, puis réessayez."
@@ -686,6 +744,10 @@ msgstr "Vérifiez l'autorisation du microphone et le périphérique d'entrée s�
 #: src/stt/start-failure.ts
 msgid "Check that your vault folder is available and your disk has free space, then try again."
 msgstr "Vérifiez que votre dossier de notes est accessible et que le disque a de l'espace libre, puis réessayez."
+
+#: src/shared/palette-settings-group.tsx
+msgid "Check the spelling, or try a shorter word."
+msgstr "Vérifiez l'orthographe, ou essayez un mot plus court."
 
 #: src/imports/screen.tsx
 msgid "Checking installed meeting assistants…"
@@ -702,6 +764,10 @@ msgstr "Vérification…"
 #: src/settings/general/notification.tsx
 msgid "Chime"
 msgstr "Carillon"
+
+#: src/shared/open-note-dialog.tsx
+msgid "Choose"
+msgstr "Choisir"
 
 #. placeholder {0}: provider.name
 #: src/imports/screen.tsx
@@ -809,6 +875,7 @@ msgid "Clear selection"
 msgstr "Effacer la sélection"
 
 #: src/settings/developers/cli.tsx
+#: src/settings/search-index.ts
 msgid "CLI & MCP"
 msgstr "CLI & MCP"
 
@@ -845,6 +912,7 @@ msgid "Close the open panel, or go home"
 msgstr "Fermer le panneau ouvert, sinon revenir à l'accueil"
 
 #: src/settings/general/notification.tsx
+#: src/settings/search-index.ts
 msgid "Cloud sync complete"
 msgstr "Synchronisation cloud terminée"
 
@@ -853,6 +921,7 @@ msgid "Collect action items"
 msgstr "Collecter les points d'action"
 
 #: src/settings/appearance/note-ink.tsx
+#: src/settings/search-index.ts
 msgid "Color my notes in the summary"
 msgstr "Colorer mes notes dans le compte rendu"
 
@@ -864,12 +933,21 @@ msgstr "Palette de couleurs"
 msgid "Color theme"
 msgstr "Thème de couleurs"
 
+#: src/settings/search-index.ts
+msgid "colors, color, green tea, wisteria, contrast"
+msgstr "couleurs, couleur, thé vert, glycine, contraste"
+
 #: src/automations/starters.tsx
 msgid "Combine metadata, summary, notes, and transcript."
 msgstr "Combinez les métadonnées, le résumé, les notes et le transcript."
 
+#: src/settings/search-index.ts
+msgid "command line, terminal, install"
+msgstr "ligne de commande, terminal, installer"
+
 #: src/contacts/details.tsx
 #: src/settings/general/account-profile.tsx
+#: src/settings/search-index.ts
 msgid "Company"
 msgstr "Entreprise"
 
@@ -878,6 +956,7 @@ msgid "Completed by Syntheo"
 msgstr "Complété par Syntheo"
 
 #: src/settings/general/notification.tsx
+#: src/settings/search-index.ts
 msgid "Completion sound"
 msgstr "Son de fin"
 
@@ -932,6 +1011,14 @@ msgstr "Connecté · {0} modèles disponibles"
 #: src/settings/ai/shared/server-card.tsx
 msgid "Connected · {0} ms"
 msgstr "Connecté · {0} ms"
+
+#: src/settings/search-index.ts
+msgid "consent, announce, participants, chat, inform"
+msgstr "consentement, annoncer, participants, discussion, prévenir"
+
+#: src/settings/search-index.ts
+msgid "consent, reminder, inform participants, recording"
+msgstr "consentement, rappel, prévenir les participants, enregistrement"
 
 #: src/contacts/contact-page-header.tsx
 msgid "Contact options"
@@ -1133,6 +1220,10 @@ msgstr "Couper"
 msgid "Dark"
 msgstr "Sombre"
 
+#: src/settings/search-index.ts
+msgid "dark, light, color, night mode, system"
+msgstr "sombre, clair, couleur, mode nuit, système"
+
 #: src/settings/automations/markdown-export-options.tsx
 msgid "Date"
 msgstr "Date"
@@ -1212,6 +1303,7 @@ msgid "detected automatically"
 msgstr "détecté automatiquement"
 
 #: src/settings/general/notification.tsx
+#: src/settings/search-index.ts
 msgid "Detection delay"
 msgstr "Délai de détection"
 
@@ -1234,6 +1326,7 @@ msgid "Dictation"
 msgstr "Dictée"
 
 #: src/settings/dictation-shortcut.tsx
+#: src/settings/search-index.ts
 msgid "Dictation shortcut"
 msgstr "Raccourci"
 
@@ -1241,11 +1334,36 @@ msgstr "Raccourci"
 msgid "Dictation uses your microphone, transcription provider, languages, and dictionary. Audio is never written to disk; it only passes through memory. Your last transcript stays in memory until dictation is disabled or Syntheo closes."
 msgstr "La dictée utilise votre microphone, le fournisseur de transcription, les langues et le dictionnaire. L'audio n'est jamais enregistré sur le disque : il ne transite qu'en mémoire. Votre dernier transcript reste en mémoire jusqu'à ce que la dictée soit désactivée ou que Syntheo se ferme."
 
+#: src/settings/search-index.ts
+msgid "dictation, bubble, preview, live text"
+msgstr "dictée, bulle, aperçu, texte en direct"
+
+#: src/settings/search-index.ts
+msgid "dictation, hands-free, hold, press"
+msgstr "dictée, mains libres, maintenir, appuyer"
+
+#: src/settings/search-index.ts
+msgid "dictation, language, words, vocabulary"
+msgstr "dictée, langue, mots, vocabulaire"
+
+#: src/settings/search-index.ts
+msgid "dictation, mic, headset, sound, audio device"
+msgstr "dictée, micro, casque, son, périphérique audio"
+
+#: src/settings/search-index.ts
+msgid "dictation, shortcut, key, keyboard"
+msgstr "dictée, raccourci, touche, clavier"
+
+#: src/settings/search-index.ts
+msgid "dictation, voice typing, speak, text, write"
+msgstr "dictée, saisie vocale, parler, texte, écrire"
+
 #: src/settings/dictation.tsx
 msgid "dictionary"
 msgstr "dictionnaire"
 
 #: src/settings/dictionary/index.tsx
+#: src/settings/search-index.ts
 #: src/sidebar/settings-nav-groups.ts
 msgid "Dictionary"
 msgstr "Dictionnaire"
@@ -1259,6 +1377,7 @@ msgid "Disable"
 msgstr "Désactiver"
 
 #: src/settings/general/notification.tsx
+#: src/settings/search-index.ts
 msgid "Disable all notifications"
 msgstr "Désactiver toutes les notifications"
 
@@ -1274,6 +1393,14 @@ msgstr "Disque presque plein"
 msgid "Display mode"
 msgstr "Mode d'affichage"
 
+#: src/settings/search-index.ts
+msgid "do not disturb, focus, silence, quiet"
+msgstr "ne pas déranger, concentration, silence, calme"
+
+#: src/settings/search-index.ts
+msgid "Dock, app switcher, icon"
+msgstr "Dock, sélecteur d'apps, icône"
+
 #: src/main/windows-title-bar.tsx
 #: src/settings/imports/index.tsx
 msgid "Documentation"
@@ -1282,6 +1409,10 @@ msgstr "Documentation"
 #: src/session/components/living-document/transcript-margin.tsx
 msgid "Done"
 msgstr "Terminé"
+
+#: src/settings/search-index.ts
+msgid "Downloads, PDF, folder, export, save, Markdown, text file"
+msgstr "Téléchargements, PDF, dossier, export, exporter, enregistrer, Markdown, fichier texte"
 
 #: src/settings/automations/index.tsx
 #: src/settings/automations/workflow-builder.tsx
@@ -1366,8 +1497,13 @@ msgstr "Violet d'Edo et glycine pâle. Élégant, un peu plus singulier."
 
 #: src/contacts/details.tsx
 #: src/settings/general/account-profile.tsx
+#: src/settings/search-index.ts
 msgid "Email"
 msgstr "E-mail"
+
+#: src/settings/search-index.ts
+msgid "email address, mail, calendar, attendees"
+msgstr "adresse e-mail, courriel, mail, agenda, participants"
 
 #: src/templates/template-icon-picker.tsx
 msgid "Emojis"
@@ -1387,6 +1523,7 @@ msgid "Enable {0}"
 msgstr "Activer {0}"
 
 #: src/settings/dictation.tsx
+#: src/settings/search-index.ts
 msgid "Enable dictation"
 msgstr "Activer la dictée"
 
@@ -1400,6 +1537,10 @@ msgstr "Activez « Voir le texte en direct » dans Paramètres → Dictée pour 
 msgid "Enabled"
 msgstr "Activé"
 
+#: src/settings/search-index.ts
+msgid "end of meeting, stop, question, alert"
+msgstr "fin de réunion, arrêter, question, alerte"
+
 #: src/settings/ai/stt/server-card.tsx
 msgid "English"
 msgstr "Anglais"
@@ -1412,6 +1553,7 @@ msgstr "Améliorer le contact"
 msgid "Enhance contact {label}"
 msgstr "Améliorer le contact {label}"
 
+#: src/shared/open-note-dialog.tsx
 #: src/shared/shortcuts.ts
 msgid "Enter"
 msgstr "Entrée"
@@ -1433,6 +1575,7 @@ msgstr "Saisissez un nom de dossier valide."
 msgid "Enter another name"
 msgstr "Saisir un autre nom"
 
+#: src/shared/open-note-dialog.tsx
 #: src/shared/shortcuts.ts
 msgid "Esc"
 msgstr "Échap"
@@ -1442,6 +1585,7 @@ msgid "Esc to dismiss"
 msgstr "Échap pour fermer"
 
 #: src/settings/general/notification.tsx
+#: src/settings/search-index.ts
 msgid "Event notifications"
 msgstr "Notifications d'événements"
 
@@ -1462,6 +1606,7 @@ msgid "Examples must be Markdown or plain text files."
 msgstr "Les exemples doivent être des fichiers Markdown ou texte brut."
 
 #: src/settings/general/notification.tsx
+#: src/settings/search-index.ts
 msgid "Exclude apps from detection"
 msgstr "Exclure les applications de la détection"
 
@@ -1485,6 +1630,7 @@ msgid "Export folder"
 msgstr "Dossier d'export"
 
 #: src/settings/general/storage/export-location.tsx
+#: src/settings/search-index.ts
 msgid "Export location"
 msgstr "Emplacement d'export"
 
@@ -1553,6 +1699,10 @@ msgstr "Terminer la réunion"
 #: src/session/components/capsule/index.tsx
 msgid "Finishing…"
 msgstr "Finalisation…"
+
+#: src/settings/search-index.ts
+msgid "first name, last name, identity, signature"
+msgstr "prénom, nom de famille, identité, signature"
 
 #: src/templates/template-icon-picker.tsx
 msgid "Flags"
@@ -1697,11 +1847,16 @@ msgstr "Compris"
 msgid "Green tea"
 msgstr "Thé vert"
 
+#: src/settings/search-index.ts
+msgid "green, color, my notes, summary, highlight"
+msgstr "vert, couleur, mes notes, synthèse, compte rendu, surligner"
+
 #: src/settings/developers/index.tsx
 msgid "Guide"
 msgstr "Guide"
 
 #: src/settings/dictation.tsx
+#: src/settings/search-index.ts
 msgid "Hands-free dictation"
 msgstr "Mode mains libres"
 
@@ -1791,11 +1946,16 @@ msgstr "Capsule de l'accueil"
 msgid "Human"
 msgstr "Humain"
 
+#: src/settings/search-index.ts
+msgid "icon, taskbar, Dock, attention, flash"
+msgstr "icône, barre des tâches, Dock, attention, clignoter"
+
 #: src/templates/template-icon-picker.tsx
 msgid "Icons"
 msgstr "Icônes"
 
 #: src/settings/general/account-profile.tsx
+#: src/settings/search-index.ts
 msgid "Identity"
 msgstr "Identité"
 
@@ -1818,6 +1978,14 @@ msgstr "Ignorer cette app ?"
 #: src/onboarding/index.tsx
 msgid "Import notes and transcripts from the meeting apps you already use."
 msgstr "Importez des notes et des transcripts depuis les applications de réunion que vous utilisez déjà."
+
+#: src/settings/search-index.ts
+msgid "Import recordings"
+msgstr "Importer des enregistrements"
+
+#: src/settings/search-index.ts
+msgid "import, file, audio file, video, recording, meeting assistant"
+msgstr "importer, fichier, fichier audio, vidéo, enregistrement, assistant de réunion"
 
 #. placeholder {0}: result.imported
 #. placeholder {1}: result.matched
@@ -1896,6 +2064,7 @@ msgstr "Adresse invalide"
 
 #: src/contacts/details.tsx
 #: src/settings/general/account-profile.tsx
+#: src/settings/search-index.ts
 msgid "Job Title"
 msgstr "Intitulé du poste"
 
@@ -1909,6 +2078,7 @@ msgid "Join meeting and record"
 msgstr "Rejoindre la réunion et enregistrer"
 
 #: src/settings/general/meeting-settings.tsx
+#: src/settings/search-index.ts
 msgid "Join scheduled meetings"
 msgstr "Rejoindre les réunions programmées"
 
@@ -1937,16 +2107,30 @@ msgid "Lacquer red and cherry blossom pink. The most contrasted."
 msgstr "Rouge laque et rose cerisier. Le plus contrasté."
 
 #: src/settings/general/index.tsx
+#: src/settings/search-index.ts
 msgid "Language & Region"
 msgstr "Langue et région"
 
 #: src/settings/dictation.tsx
+#: src/settings/search-index.ts
 msgid "Language and vocabulary"
 msgstr "Langue et vocabulaire"
 
 #: src/sidebar/toast/registry.tsx
 msgid "Language model needed"
 msgstr "Modèle de langue requis"
+
+#: src/settings/search-index.ts
+msgid "language, French, English, translation"
+msgstr "langue, français, anglais, traduction"
+
+#: src/settings/search-index.ts
+msgid "language, summary, translation"
+msgstr "langue, synthèse, compte rendu, traduction"
+
+#: src/settings/search-index.ts
+msgid "languages, multilingual, foreign language, English, Spanish, German"
+msgstr "langues, multilingue, langue étrangère, anglais, espagnol, allemand"
 
 #. placeholder {0}: webhook.last_delivery_status
 #: src/settings/developers/webhooks.tsx
@@ -2038,6 +2222,7 @@ msgid "Live transcript"
 msgstr "Transcription en direct"
 
 #: src/settings/dictation.tsx
+#: src/settings/search-index.ts
 msgid "Live transcript preview"
 msgstr "Voir le texte en direct"
 
@@ -2089,6 +2274,7 @@ msgid "Loading..."
 msgstr "Chargement..."
 
 #: src/settings/privacy/index.tsx
+#: src/settings/search-index.ts
 msgid "Lock app"
 msgstr "Verrouiller l'application"
 
@@ -2109,6 +2295,7 @@ msgid "macOS cannot access your login Keychain. Repairing briefly locks it and a
 msgstr "macOS ne peut pas accéder à votre trousseau de connexion. La réparation le verrouille brièvement et demande votre mot de passe Mac avant que Syntheo ne réessaie cette clé API."
 
 #: src/settings/general/main-language.tsx
+#: src/settings/search-index.ts
 msgid "Main language"
 msgstr "Langue principale"
 
@@ -2161,8 +2348,13 @@ msgid "MCP configuration copied"
 msgstr "Configuration MCP copiée"
 
 #: src/settings/developers/cli.tsx
+#: src/settings/search-index.ts
 msgid "MCP server"
 msgstr "Serveur MCP"
+
+#: src/settings/search-index.ts
+msgid "MCP, configuration, AI agent, assistant"
+msgstr "MCP, configuration, agent IA, assistant"
 
 #: src/sidebar/settings-nav-groups.ts
 msgid "Me"
@@ -2243,6 +2435,10 @@ msgstr "Échec de la modification du mémo"
 msgid "Memo updated"
 msgstr "Mémo mis à jour"
 
+#: src/settings/search-index.ts
+msgid "memo, about me, description"
+msgstr "mémo, à propos de moi, description"
+
 #: src/session/components/note-input/header-raw.tsx
 msgid "Memos"
 msgstr "Mémos"
@@ -2264,10 +2460,31 @@ msgstr "Métadonnées"
 msgid "Mic"
 msgstr "Micro"
 
+#: src/settings/search-index.ts
+msgid "mic, access, authorize, allow, privacy"
+msgstr "micro, accès, autoriser, permettre, confidentialité"
+
+#: src/settings/search-index.ts
+msgid "mic, apps, ignore, exclude, software"
+msgstr "micro, applications, ignorer, exclure, logiciels"
+
+#: src/settings/search-index.ts
+msgid "mic, delay, wait, seconds"
+msgstr "micro, délai, attendre, secondes"
+
+#: src/settings/search-index.ts
+msgid "mic, detect, automatic, meeting, call"
+msgstr "micro, détecter, automatique, réunion, appel"
+
+#: src/settings/search-index.ts
+msgid "mic, headset, earphones, sound, audio device, webcam"
+msgstr "micro, casque, écouteurs, son, périphérique audio, webcam"
+
 #: src/onboarding/permissions.tsx
 #: src/settings/dictation.tsx
 #: src/settings/general/audio-settings.tsx
 #: src/settings/general/permissions.tsx
+#: src/settings/search-index.ts
 msgid "Microphone"
 msgstr "Microphone"
 
@@ -2276,6 +2493,7 @@ msgid "Microphone access turned on"
 msgstr "Accès au microphone activé"
 
 #: src/settings/general/notification.tsx
+#: src/settings/search-index.ts
 msgid "Microphone detection"
 msgstr "Détection du microphone"
 
@@ -2305,6 +2523,7 @@ msgstr "Réduire"
 
 #: src/settings/ai/llm/server-card.tsx
 #: src/settings/ai/stt/server-card.tsx
+#: src/settings/search-index.ts
 msgid "Model"
 msgstr "Modèle"
 
@@ -2323,6 +2542,10 @@ msgstr "Nom du modèle servi par votre serveur"
 #: src/settings/general/week-start.tsx
 msgid "Monday"
 msgstr "Lundi"
+
+#: src/settings/search-index.ts
+msgid "Monday, Sunday, calendar, week"
+msgstr "lundi, dimanche, agenda, semaine"
 
 #: src/templates/template-form.tsx
 msgid "More actions"
@@ -2373,6 +2596,7 @@ msgstr "Mes serveurs"
 #: src/contacts/details.tsx
 #: src/contacts/organization-details.tsx
 #: src/settings/general/account-profile.tsx
+#: src/settings/search-index.ts
 msgid "Name"
 msgstr "Nom"
 
@@ -2555,13 +2779,20 @@ msgstr "Aucune note associée trouvée"
 #: src/contacts/related-notes.tsx
 #: src/settings/general/searchable-select.tsx
 #: src/shared/open-note-dialog.tsx
-#: src/sidebar/settings.tsx
 msgid "No results found."
 msgstr "Aucun résultat trouvé."
 
 #: src/settings/ai/shared/server-card.tsx
 msgid "No server yet"
 msgstr "Aucun serveur"
+
+#: src/shared/palette-settings-group.tsx
+msgid "No setting found."
+msgstr "Aucun paramètre trouvé."
+
+#: src/shared/palette-settings-group.tsx
+msgid "No setting matches “{trimmed}”."
+msgstr "Aucun paramètre ne correspond à « {trimmed} »."
 
 #: src/chat/components/input/use-dictation.ts
 msgid "No speech detected"
@@ -2634,6 +2865,7 @@ msgstr "notes"
 
 #: src/contacts/details.tsx
 #: src/settings/general/account-profile.tsx
+#: src/settings/search-index.ts
 msgid "Notes"
 msgstr "Notes"
 
@@ -2641,6 +2873,18 @@ msgstr "Notes"
 #: src/folders/folder-editor.tsx
 msgid "Notes stay in All notes. Materials in this folder will be deleted."
 msgstr "Les notes restent dans Toutes les notes. Ce dossier, ses sous-dossiers et tous leurs éléments seront supprimés."
+
+#: src/settings/search-index.ts
+msgid "notification area, taskbar, menu bar, icon, clock"
+msgstr "zone de notification, barre des tâches, barre des menus, icône, horloge"
+
+#: src/settings/search-index.ts
+msgid "notification, alert, summary ready"
+msgstr "notification, alerte, synthèse prête, compte rendu"
+
+#: src/settings/search-index.ts
+msgid "notification, alert, synchronization, cloud"
+msgstr "notification, alerte, synchronisation, cloud"
 
 #: src/settings/general/index.tsx
 #: src/sidebar/settings-nav-groups.ts
@@ -2685,6 +2929,7 @@ msgid "Only on-premise OpenAI-compatible servers are supported (vLLM, Ollama, ll
 msgstr "Seuls les serveurs compatibles OpenAI hébergés chez vous sont pris en charge (vLLM, Ollama, serveur llama.cpp, LM Studio…). L'adresse se termine en général par /v1, par exemple http://localhost:8000/v1."
 
 #: src/calendar/components/apple/permission.tsx
+#: src/shared/open-note-dialog.tsx
 msgid "Open"
 msgstr "Ouvrir"
 
@@ -2767,6 +3012,10 @@ msgstr "Ouvrir la documentation en ligne (ouvre votre navigateur)"
 msgid "OpenAI · Realtime and batch"
 msgstr "OpenAI · temps réel et par lots"
 
+#: src/settings/search-index.ts
+msgid "OpenAI, NVIDIA, NIM, transcription server"
+msgstr "OpenAI, NVIDIA, NIM, serveur de transcription"
+
 #: src/settings/ai/stt/server-card.tsx
 msgid "OpenAI: a server that speaks the OpenAI speech protocol (vLLM, speaches, faster-whisper-server), for example http://localhost:8000/v1. Live transcription uses /v1/realtime, imported files /v1/audio/transcriptions."
 msgstr "OpenAI : un serveur qui parle le protocole vocal d'OpenAI (vLLM, speaches, faster-whisper-server), par exemple http://localhost:8000/v1. La transcription en direct passe par /v1/realtime, les fichiers importés par /v1/audio/transcriptions."
@@ -2801,6 +3050,10 @@ msgstr "Organisation"
 msgid "Organization name"
 msgstr "Nom de l'organisation"
 
+#: src/settings/search-index.ts
+msgid "organization, employer, department, administration"
+msgstr "organisation, employeur, service, administration, entreprise"
+
 #: src/session/components/version-history-dialog.tsx
 msgid "Other device's version"
 msgstr "Version de l'autre appareil"
@@ -2818,6 +3071,7 @@ msgid "Page not found"
 msgstr "Page introuvable"
 
 #: src/settings/appearance/palette.tsx
+#: src/settings/search-index.ts
 msgid "Palette"
 msgstr "Palette"
 
@@ -2826,6 +3080,10 @@ msgstr "Palette"
 #: src/session/components/outer-header/overflow/export-modal.tsx
 msgid "Participants"
 msgstr "Participants"
+
+#: src/settings/search-index.ts
+msgid "password, PIN, Windows Hello, security, fingerprint, privacy"
+msgstr "mot de passe, code PIN, Windows Hello, sécurité, empreinte, verrouiller, confidentialité"
 
 #: src/main/windows-title-bar.tsx
 msgid "Paste"
@@ -2905,7 +3163,12 @@ msgstr "Émettre un son à la fin de la transcription, des résumés ou de la sy
 msgid "Play from here"
 msgstr "Lire à partir d'ici"
 
+#: src/settings/search-index.ts
+msgid "position, role, function, job"
+msgstr "poste, rôle, fonction, métier"
+
 #: src/settings/general/meeting-settings.tsx
+#: src/settings/search-index.ts
 msgid "Post recording disclosure in meeting chat"
 msgstr "Publier la mention d'enregistrement dans le chat de la réunion"
 
@@ -2981,6 +3244,7 @@ msgid "Proposed summary edit"
 msgstr "Modification proposée du résumé"
 
 #: src/settings/ai/stt/server-card.tsx
+#: src/settings/search-index.ts
 msgid "Protocol"
 msgstr "Protocole"
 
@@ -3010,6 +3274,7 @@ msgstr "Prêt à démarrer"
 
 #: src/settings/ai/llm/index.tsx
 #: src/settings/ai/llm/server-card.tsx
+#: src/settings/search-index.ts
 msgid "Reasoning effort"
 msgstr "Effort de raisonnement"
 
@@ -3054,6 +3319,7 @@ msgid "Recording couldn't start"
 msgstr "L'enregistrement n'a pas pu démarrer"
 
 #: src/settings/general/notification.tsx
+#: src/settings/search-index.ts
 msgid "Recording status prompts"
 msgstr "Invites d'état d'enregistrement"
 
@@ -3083,12 +3349,17 @@ msgid "Related Notes"
 msgstr "Notes associées"
 
 #: src/settings/general/meeting-settings.tsx
+#: src/settings/search-index.ts
 msgid "Remind participants about recording"
 msgstr "Rappeler aux participants l'enregistrement"
 
 #: src/stt/useStartListening.ts
 msgid "Remind participants that the meeting is being transcribed."
 msgstr "Rappelez aux participants que la réunion est transcrite."
+
+#: src/settings/search-index.ts
+msgid "reminder, calendar, meeting, 5 minutes, alert"
+msgstr "rappel, agenda, réunion, 5 minutes, alerte"
 
 #: src/settings/todo/provider-content.tsx
 msgid "Reminders"
@@ -3133,6 +3404,10 @@ msgstr "Retirer des favoris"
 #: src/contacts/profile-photo.tsx
 msgid "Remove photo"
 msgstr "Supprimer la photo"
+
+#: src/shared/open-note-dialog.tsx
+msgid "Remove the Settings filter"
+msgstr "Retirer le filtre Paramètres"
 
 #: src/session/components/living-document/summary-review.tsx
 msgid "Removed text is struck through, added text is highlighted."
@@ -3194,6 +3469,8 @@ msgid "Require Windows Hello face, PIN, or password when opening Syntheo."
 msgstr "Exiger la reconnaissance faciale Windows Hello, le code PIN ou le mot de passe à l'ouverture de Syntheo."
 
 #: src/shared/open-note-dialog.tsx
+#: src/shared/palette-settings-group.tsx
+#: src/sidebar/settings-search-results.tsx
 #: src/sidebar/settings.tsx
 msgid "Requires Syntheo Pro"
 msgstr "Nécessite Syntheo Pro"
@@ -3220,6 +3497,7 @@ msgid "Reset zoom"
 msgstr "Taille normale"
 
 #: src/settings/general/notification.tsx
+#: src/settings/search-index.ts
 msgid "Respect Do-Not-Disturb mode"
 msgstr "Respecter le mode Ne pas déranger"
 
@@ -3324,6 +3602,10 @@ msgstr "Enregistré"
 msgid "Saving..."
 msgstr "Enregistrement..."
 
+#: src/settings/search-index.ts
+msgid "screen, slides, screenshot, presentation, screen sharing"
+msgstr "écran, diapositives, capture d'écran, présentation, partage d'écran"
+
 #: src/session/components/note-input/transcript/renderer/index.tsx
 msgid "Scroll to bottom"
 msgstr "Faire défiler jusqu'en bas"
@@ -3365,6 +3647,10 @@ msgstr "Rechercher des emojis..."
 msgid "Search folders..."
 msgstr "Rechercher des dossiers..."
 
+#: src/main/windows-title-bar.tsx
+msgid "Search for a Setting…"
+msgstr "Rechercher un paramètre…"
+
 #: src/templates/template-icon-picker.tsx
 msgid "Search icons..."
 msgstr "Rechercher des icônes..."
@@ -3393,9 +3679,10 @@ msgstr "Rechercher ou ajouter une entreprise"
 msgid "Search or create folder"
 msgstr "Rechercher ou créer un dossier"
 
+#: src/shared/open-note-dialog.tsx
 #: src/sidebar/settings.tsx
-msgid "Search settings..."
-msgstr "Rechercher des paramètres..."
+msgid "Search settings"
+msgstr "Rechercher un paramètre"
 
 #: src/templates/template-sidebar.tsx
 msgid "Search templates"
@@ -3434,6 +3721,11 @@ msgstr "Titre de la section"
 #: src/templates/sections-editor.tsx
 msgid "Sections"
 msgstr "Sections"
+
+#. placeholder {0}: results.length
+#: src/shared/palette-settings-group.tsx
+msgid "See all {0} settings"
+msgstr "Voir les {0} paramètres"
 
 #: src/session/components/folder-picker.tsx
 msgid "See all folders"
@@ -3496,6 +3788,7 @@ msgid "Sentences that come from your notes appear in green. When off, your notes
 msgstr "Les phrases tirées de vos notes s'affichent en vert. Désactivé, vos notes apparaissent dans un bloc séparé."
 
 #: src/settings/ai/stt/server-card.tsx
+#: src/settings/search-index.ts
 msgid "Server address"
 msgstr "Adresse du serveur"
 
@@ -3542,6 +3835,7 @@ msgstr "Configuration de la dictée…"
 
 #: src/main/windows-title-bar.tsx
 #: src/shared/open-note-dialog.tsx
+#: src/shared/palette-settings-group.tsx
 #: src/shared/shortcuts.ts
 #: src/sidebar/settings.tsx
 #: src/sidebar/toast/registry.tsx
@@ -3569,6 +3863,7 @@ msgid "Show a reminder when a recording starts."
 msgstr "Affichez un rappel lorsqu'un enregistrement commence."
 
 #: src/settings/general/app-settings.tsx
+#: src/settings/search-index.ts
 msgid "Show app in Dock"
 msgstr "Afficher l'application dans le Dock"
 
@@ -3577,6 +3872,7 @@ msgid "Show Apple Calendar events in Syntheo."
 msgstr "Afficher les événements Apple Calendar dans Syntheo."
 
 #: src/settings/general/meeting-settings.tsx
+#: src/settings/search-index.ts
 msgid "Show floating bar"
 msgstr "Afficher la barre flottante"
 
@@ -3593,6 +3889,7 @@ msgid "Show meeting times as 14:00 instead of 2:00 PM."
 msgstr "Afficher les heures de réunion au format 14:00 au lieu de 2:00 PM."
 
 #: src/settings/general/app-settings.tsx
+#: src/settings/search-index.ts
 msgid "Show release notes"
 msgstr "Afficher les notes de version"
 
@@ -3609,6 +3906,7 @@ msgid "Show transcript"
 msgstr "Afficher la transcription"
 
 #: src/settings/general/app-settings.tsx
+#: src/settings/search-index.ts
 msgid "Show tray icon"
 msgstr "Afficher l'icône de la zone de notification"
 
@@ -3624,9 +3922,17 @@ msgstr "Afficher lorsque la synchronisation initiale dans le cloud se termine."
 msgid "Signing secret copied"
 msgstr "Secret de signature copié"
 
+#: src/settings/search-index.ts
+msgid "silence, mute, alerts, quiet, do not disturb"
+msgstr "silence, muet, alertes, calme, ne pas déranger"
+
 #: src/settings/developers/skills.tsx
 msgid "Skill installed"
 msgstr "Compétence installée"
+
+#: src/settings/search-index.ts
+msgid "skill, AI agent, assistant, install"
+msgstr "compétence, agent IA, assistant, installer"
 
 #: src/onboarding/shared.tsx
 msgid "Skip"
@@ -3659,8 +3965,21 @@ msgid "Sort options"
 msgstr "Options de tri"
 
 #: src/settings/general/notification.tsx
+#: src/settings/search-index.ts
 msgid "Sound"
 msgstr "Son"
+
+#: src/settings/search-index.ts
+msgid "sound, beep, ring, chime, preview"
+msgstr "son, bip, sonnerie, carillon, écouter"
+
+#: src/settings/search-index.ts
+msgid "sound, beep, ring, volume, audio"
+msgstr "son, bip, sonnerie, volume, audio"
+
+#: src/settings/search-index.ts
+msgid "sound, speakers, participants, access, authorize"
+msgstr "son, haut-parleurs, participants, accès, autoriser"
 
 #: src/session/components/note-input/enhanced/enhance-error.tsx
 msgid "Source: {provider} (AI model provider)"
@@ -3715,6 +4034,7 @@ msgid "Start recording"
 msgstr "Démarrer l'enregistrement"
 
 #: src/settings/general/app-settings.tsx
+#: src/settings/search-index.ts
 msgid "Start Syntheo at login"
 msgstr "Démarrer Syntheo à la connexion"
 
@@ -3723,6 +4043,7 @@ msgid "Start voice input"
 msgstr "Démarrer la saisie vocale"
 
 #: src/settings/general/meeting-settings.tsx
+#: src/settings/search-index.ts
 msgid "Start when meeting begins"
 msgstr "Démarrer au début de la réunion"
 
@@ -3772,6 +4093,10 @@ msgstr "Démarrage de la saisie vocale"
 msgid "Starting…"
 msgstr "Démarrage…"
 
+#: src/settings/search-index.ts
+msgid "startup, turn on the computer, launch, open automatically, boot"
+msgstr "démarrage, allumer le PC, lancement, ouverture automatique, ouverture de session"
+
 #: src/settings/general/app-settings.tsx
 msgid "Stay current with updates installed the next time Syntheo opens."
 msgstr "Restez à jour grâce aux mises à jour installées lors de la prochaine ouverture de Syntheo."
@@ -3818,10 +4143,12 @@ msgid "Stop voice input"
 msgstr "Arrêter la saisie vocale"
 
 #: src/settings/general/meeting-settings.tsx
+#: src/settings/search-index.ts
 msgid "Stop when meeting ends"
 msgstr "Arrêter à la fin de la réunion"
 
 #: src/settings/general/storage/index.tsx
+#: src/settings/search-index.ts
 msgid "Storage"
 msgstr "Stockage"
 
@@ -3858,6 +4185,7 @@ msgid "Summary"
 msgstr "Résumé"
 
 #: src/settings/general/notification.tsx
+#: src/settings/search-index.ts
 msgid "Summary complete"
 msgstr "Résumé terminé"
 
@@ -3940,6 +4268,7 @@ msgid "Syntheo cannot reach {providerName}"
 msgstr "Syntheo ne parvient pas à joindre {providerName}"
 
 #: src/settings/developers/cli.tsx
+#: src/settings/search-index.ts
 msgid "Syntheo CLI"
 msgstr "Syntheo CLI"
 
@@ -4056,6 +4385,7 @@ msgstr "Système"
 
 #: src/onboarding/permissions.tsx
 #: src/settings/general/permissions.tsx
+#: src/settings/search-index.ts
 msgid "System audio"
 msgstr "Audio système"
 
@@ -4248,6 +4578,7 @@ msgid "The unreadable audio was preserved in this note's folder as an audio.reco
 msgstr "L'audio illisible est conservé dans le dossier de cette note, sous forme de fichier audio.recovery-*.wav. Le nouvel audio sera enregistré à part. Votre transcription n'a pas changé."
 
 #: src/settings/appearance/theme.tsx
+#: src/settings/search-index.ts
 msgid "Theme"
 msgstr "Thème"
 
@@ -4329,7 +4660,16 @@ msgstr "Trois réglages pour bien démarrer"
 msgid "Ticket"
 msgstr "Ticket"
 
+#: src/settings/search-index.ts
+msgid "time, clock, hour, AM, PM"
+msgstr "heure, horloge, format, AM, PM"
+
+#: src/settings/search-index.ts
+msgid "time, hour, country, time difference"
+msgstr "heure, fuseau, pays, décalage horaire"
+
 #: src/settings/general/timezone.tsx
+#: src/settings/search-index.ts
 msgid "Timezone"
 msgstr "Fuseau horaire"
 
@@ -4412,6 +4752,10 @@ msgstr "Transcription · injoignable"
 msgid "Transcription failed"
 msgstr "Échec de la transcription"
 
+#: src/settings/search-index.ts
+msgid "transcription model, Whisper, Parakeet, speech recognition"
+msgstr "modèle de transcription, Whisper, Parakeet, reconnaissance vocale"
+
 #: src/sidebar/toast/registry.tsx
 msgid "Transcription provider needed"
 msgstr "Fournisseur de transcription requis"
@@ -4419,6 +4763,10 @@ msgstr "Fournisseur de transcription requis"
 #: src/settings/dictation.tsx
 msgid "Transcription server ›"
 msgstr "Serveur de transcription ›"
+
+#: src/settings/search-index.ts
+msgid "transcription server, speech recognition, URL, API key, Whisper"
+msgstr "serveur de transcription, reconnaissance vocale, URL, clé API, Whisper"
 
 #: src/sidebar/toast/registry.tsx
 msgid "Transcription unavailable"
@@ -4549,6 +4897,10 @@ msgstr "Session sans titre"
 msgid "Upcoming Event"
 msgstr "Événement à venir"
 
+#: src/settings/search-index.ts
+msgid "update, new version, upgrade"
+msgstr "mise à jour, nouvelle version, actualiser"
+
 #: src/settings/plan-gate.tsx
 msgid "Upgrade"
 msgstr "Mettre à niveau"
@@ -4568,6 +4920,7 @@ msgid "Upload transcript"
 msgstr "Téléverser un transcript"
 
 #: src/settings/appearance/time-format.tsx
+#: src/settings/search-index.ts
 msgid "Use 24-hour time"
 msgstr "Utilisez le format 24 heures"
 
@@ -4582,6 +4935,7 @@ msgid "Use by default"
 msgstr "Utiliser par défaut"
 
 #: src/settings/general/index.tsx
+#: src/settings/search-index.ts
 msgid "Use main language for summaries"
 msgstr "Utiliser la langue principale pour les résumés"
 
@@ -4662,11 +5016,17 @@ msgstr "Attendez avant de considérer l'activité du microphone comme une réuni
 msgid "Wait until the transcript and note are complete."
 msgstr "Attendez que le transcript et la note soient terminés."
 
+#: src/settings/search-index.ts
+msgid "webhook, URL, events, integration, automation"
+msgstr "webhook, URL, événements, intégration, automatisation"
+
 #: src/settings/developers/webhooks.tsx
+#: src/settings/search-index.ts
 msgid "Webhooks"
 msgstr "Webhooks"
 
 #: src/settings/general/week-start.tsx
+#: src/settings/search-index.ts
 msgid "Week starts on"
 msgstr "La semaine commence le"
 
@@ -4706,6 +5066,10 @@ msgstr "Quelles ont été les décisions clés prises ?"
 msgid "What's new in {version}?"
 msgstr "Nouveautés de {version} ?"
 
+#: src/settings/search-index.ts
+msgid "what's new, changes, version, changelog"
+msgstr "nouveautés, changements, version, notes de version"
+
 #: src/settings/general/index.tsx
 msgid "When off, summaries follow the detected meeting language."
 msgstr "Lorsque l'option est désactivée, les résumés suivent la langue détectée de la réunion."
@@ -4729,6 +5093,10 @@ msgstr "Les mots s'affichent dans une petite bulle pendant que vous parlez. Le t
 #: src/settings/dictation.tsx
 msgid "Words specific to you go in your"
 msgstr "Vos mots à vous vont dans votre"
+
+#: src/settings/search-index.ts
+msgid "words, vocabulary, names, jargon, spelling, acronyms"
+msgstr "mots, vocabulaire, noms propres, jargon, orthographe, sigles"
 
 #: src/settings/automations/workflow-builder.tsx
 msgid "Workflow"

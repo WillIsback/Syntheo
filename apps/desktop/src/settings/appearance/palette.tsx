@@ -73,7 +73,7 @@ export function PaletteSelector() {
   };
 
   return (
-    <section className="flex flex-col gap-4">
+    <section data-setting-id="palette" className="flex flex-col gap-4">
       <div>
         <h3 className="text-lg font-semibold">
           <Trans>Palette</Trans>

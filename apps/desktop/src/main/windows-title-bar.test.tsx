@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   openNew: vi.fn(),
   openNoteDialog: vi.fn(),
   openHelpDialog: vi.fn(),
+  openSettingsSearch: vi.fn(),
   openUrl: vi.fn().mockResolvedValue({ status: "ok", data: null }),
   setFullscreen: vi.fn().mockResolvedValue(undefined),
   toggleMaximize: vi.fn().mockResolvedValue(undefined),
@@ -53,6 +54,7 @@ vi.mock("~/shared/useNewNote", () => ({
 
 vi.mock("~/shared/open-note-dialog", () => ({
   openNoteDialog: mocks.openNoteDialog,
+  openSettingsSearch: mocks.openSettingsSearch,
 }));
 
 vi.mock("~/shared/help-dialog", () => ({
@@ -113,6 +115,7 @@ describe("WindowsTitleBar", () => {
     mocks.openNew.mockClear();
     mocks.openNoteDialog.mockClear();
     mocks.openHelpDialog.mockClear();
+    mocks.openSettingsSearch.mockClear();
     mocks.openUrl.mockClear();
     mocks.setFullscreen.mockClear();
     mocks.toggleMaximize.mockClear();
@@ -207,6 +210,23 @@ describe("WindowsTitleBar", () => {
         expect(mocks.setFullscreen).toHaveBeenCalledWith(true),
       );
     });
+  });
+
+  it("propose « Rechercher un paramètre… » avec Ctrl+Maj+P dans le menu Fichier (issue 373)", async () => {
+    render(<WindowsTitleBar />);
+
+    fireEvent.keyDown(screen.getByRole("menuitem", { name: "File" }), {
+      key: "Enter",
+    });
+    const item = await screen.findByRole("menuitem", {
+      name: /Search for a Setting…/,
+    });
+    expect(item.textContent).toContain(formatShortcut("searchSettings"));
+    expect(item.getAttribute("aria-keyshortcuts")).toBe("Control+Shift+P");
+
+    fireEvent.click(item);
+
+    expect(mocks.openSettingsSearch).toHaveBeenCalledOnce();
   });
 
   describe("bouton Accueil (issue 315)", () => {

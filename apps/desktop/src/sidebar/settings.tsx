@@ -1,5 +1,5 @@
-import { Trans, useLingui } from "@lingui/react/macro";
-import { useCallback, useState } from "react";
+import { useLingui } from "@lingui/react/macro";
+import { useCallback, useMemo, useRef, useState } from "react";
 
 import {
   CaretDown,
@@ -15,16 +15,30 @@ import {
   type SettingsNavGroup,
   useSettingsNavGroups,
 } from "./settings-nav-groups";
+import {
+  type SettingsSearchHit,
+  SettingsSearchResults,
+} from "./settings-search-results";
 import { ServersHealthFooter, ServerStatusDot } from "./settings-server-status";
 
 import { useBillingAccess } from "~/billing/billing-context";
+import {
+  normalizeSearchText,
+  searchSettings,
+  useSettingsSearchIndex,
+} from "~/settings/search";
+import { requestSettingFocus } from "~/settings/setting-focus";
+import { ariaShortcut } from "~/shared/shortcuts";
 import { type SettingsTab, useTabs } from "~/store/zustand/tabs";
 
 export function SettingsNav() {
   const { t } = useLingui();
   const { isPro } = useBillingAccess();
   const groups = useSettingsNavGroups();
+  const settingsIndex = useSettingsSearchIndex();
   const [search, setSearch] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+  const resultsRef = useRef<HTMLUListElement>(null);
   const currentTab = useTabs((state) => state.currentTab);
   const updateSettingsTabState = useTabs(
     (state) => state.updateSettingsTabState,
@@ -36,30 +50,62 @@ export function SettingsNav() {
   const activeTab: string =
     requestedTab === "audio" ? "meetings" : requestedTab;
 
-  const setActiveTab = useCallback(
+  const openSettingsPage = useCallback(
     (tab: SettingsTab) => {
       if (currentTab?.type === "settings") {
         updateSettingsTabState(currentTab, { tab });
+        return;
       }
+      openNew({ type: "settings", state: { tab } });
     },
-    [currentTab, updateSettingsTabState],
+    [currentTab, openNew, updateSettingsTabState],
   );
 
-  const query = search.trim().toLowerCase();
-  const visibleGroups = query
-    ? groups
-        .map((group) =>
-          group.label.toLowerCase().includes(query)
-            ? group
-            : {
-                ...group,
-                items: group.items.filter((item) =>
-                  item.label.toLowerCase().includes(query),
-                ),
-              },
+  const selectNavItem = useCallback(
+    (item: NavItem) => {
+      if ("destination" in item) {
+        openNew(item.destination);
+        return;
+      }
+      openSettingsPage(item.id);
+    },
+    [openNew, openSettingsPage],
+  );
+
+  // Même index que la palette (issue 373) : les pages d'abord (nom ou groupe),
+  // puis chaque réglage, sans tenir compte des accents.
+  const query = normalizeSearchText(search);
+  const hits = useMemo<SettingsSearchHit[]>(() => {
+    if (!query) {
+      return [];
+    }
+    const pages = groups.flatMap((group) => {
+      const groupMatches = normalizeSearchText(group.label).includes(query);
+      return group.items
+        .filter(
+          (item) =>
+            groupMatches || normalizeSearchText(item.label).includes(query),
         )
-        .filter((group) => group.items.length > 0)
-    : groups;
+        .map((item): SettingsSearchHit => ({
+          kind: "page",
+          item,
+          groupLabel: group.label,
+        }));
+    });
+    const settings = searchSettings(settingsIndex, query).map(
+      (result): SettingsSearchHit => ({ kind: "setting", result }),
+    );
+    return [...pages, ...settings];
+  }, [groups, query, settingsIndex]);
+
+  const selectHit = (hit: SettingsSearchHit) => {
+    if (hit.kind === "page") {
+      selectNavItem(hit.item);
+      return;
+    }
+    requestSettingFocus(hit.result.id);
+    openSettingsPage(hit.result.page);
+  };
 
   return (
     <div className="flex h-full w-full flex-col overflow-hidden">
@@ -73,18 +119,26 @@ export function SettingsNav() {
         >
           <MagnifyingGlass className="text-faint size-[15px] shrink-0" />
           <input
+            ref={inputRef}
             type="text"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             onKeyDown={(event) => {
               if (event.key === "Escape") {
                 setSearch("");
+              } else if (event.key === "ArrowDown") {
+                event.preventDefault();
+                resultsRef.current?.querySelector("button")?.focus();
+              } else if (event.key === "Enter" && hits[0]) {
+                event.preventDefault();
+                selectHit(hits[0]);
               }
             }}
             // Ctrl+F sur l'écran Paramètres (useMainShortcuts, issue 372).
             data-page-search=""
-            placeholder={t`Search settings...`}
-            aria-label={t`Search settings...`}
+            placeholder={t`Search settings`}
+            aria-label={t`Search settings`}
+            aria-keyshortcuts={ariaShortcut("searchSettings")}
             className="placeholder:text-faint min-w-0 flex-1 bg-transparent text-sm focus:outline-hidden"
           />
           {search ? (
@@ -104,36 +158,27 @@ export function SettingsNav() {
         className="scrollbar-hide flex flex-1 flex-col overflow-y-auto"
       >
         <div className="flex flex-col gap-3.5 pb-4">
-          {visibleGroups.length === 0 ? (
-            <div className="text-muted-foreground px-3 py-8 text-center">
-              <MagnifyingGlass
-                size={32}
-                className="text-faint mx-auto mb-2"
-                aria-hidden
-              />
-              <p className="text-sm">
-                <Trans>No results found.</Trans>
-              </p>
-            </div>
-          ) : null}
-          {visibleGroups.map((group) => (
-            <NavGroup
-              key={group.label}
-              group={group}
-              forceOpen={
-                !!query || group.items.some((item) => item.id === activeTab)
-              }
-              activeTab={activeTab}
+          {query ? (
+            <SettingsSearchResults
+              hits={hits}
+              query={search}
               isPro={isPro}
-              onSelect={(item) => {
-                if ("destination" in item) {
-                  openNew(item.destination);
-                  return;
-                }
-                setActiveTab(item.id);
-              }}
+              listRef={resultsRef}
+              inputRef={inputRef}
+              onSelect={selectHit}
             />
-          ))}
+          ) : (
+            groups.map((group) => (
+              <NavGroup
+                key={group.label}
+                group={group}
+                forceOpen={group.items.some((item) => item.id === activeTab)}
+                activeTab={activeTab}
+                isPro={isPro}
+                onSelect={selectNavItem}
+              />
+            ))
+          )}
         </div>
         <ServersHealthFooter />
       </nav>

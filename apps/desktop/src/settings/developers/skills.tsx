@@ -113,7 +113,10 @@ export function SkillsRow() {
   const detected = agents.filter((agent) => agent.detected);
 
   return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div
+      data-setting-id="agent-skills"
+      className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+    >
       <div className="min-w-0">
         <h3 className="text-sm font-medium">
           <Trans>Agent skills</Trans>

@@ -33,7 +33,7 @@ export function ThemeSelector() {
   }[];
 
   return (
-    <section className="flex flex-col gap-4">
+    <section data-setting-id="theme" className="flex flex-col gap-4">
       <div>
         <h3 className="text-lg font-semibold">
           <Trans>Theme</Trans>
