@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 
 import { toast } from "@syntheo/ui/components/ui/toast";
+import { hasSummaryContent } from "@syntheo/utils/session";
 
 import { formatElapsed, NoteCapsule, type NoteStage } from "./index";
 import { LevelMeter } from "./level-meter";
@@ -15,8 +16,13 @@ import {
   getStoredNoteMarkdown,
 } from "~/session/components/note-input/header-shared";
 import { ExportModal } from "~/session/components/outer-header/overflow/export-modal";
+import { useIsSessionEnhancing } from "~/session/hooks/useEnhancedNotes";
 import { useGenerateSummary } from "~/session/hooks/useGenerateSummary";
-import { useEnhancedNote, useSession } from "~/session/queries";
+import {
+  useEnhancedNote,
+  useEnhancedNoteRecords,
+  useSession,
+} from "~/session/queries";
 import { leaveOverlayTab } from "~/shared/leave-overlay-tab";
 import type { EditorView, Tab } from "~/store/zustand/tabs/schema";
 import { useListener } from "~/stt/contexts";
@@ -40,6 +46,16 @@ function SessionLevelMeter({
   muted: boolean;
 }) {
   return <LevelMeter amplitude={useLiveAmplitude(sessionId)} muted={muted} />;
+}
+
+// Un compte rendu existe s'il a du contenu, ou s'il est en cours d'écriture.
+function useSummaryExists(sessionId: string, sessionTitle?: string) {
+  const notes = useEnhancedNoteRecords(sessionId);
+  const enhancing = useIsSessionEnhancing(sessionId);
+  return (
+    enhancing ||
+    notes.some((note) => hasSummaryContent(note.content, sessionTitle))
+  );
 }
 
 function getPrimaryModifierLabel() {
@@ -176,10 +192,13 @@ export function SessionCapsule({
   }, []);
 
   // Note sans compte rendu (par exemple après avoir quitté l'application
-  // pendant une pause) : reprendre l'écoute ou générer le compte rendu.
+  // pendant une pause) : reprendre l'écoute ou générer le compte rendu. Le
+  // choix porte sur l'existence d'un compte rendu, pas sur l'onglet affiché :
+  // une note transcrite sans compte rendu affiche déjà l'onglet vide du compte
+  // rendu par défaut.
   const summary = useGenerateSummary(sessionId);
-  const withoutSummary =
-    stage === "synthesis" && currentView.type !== "enhanced";
+  const summaryExists = useSummaryExists(sessionId, session?.title);
+  const withoutSummary = stage === "synthesis" && !summaryExists;
   const generateSummary = useCallback(() => {
     summary.generate(undefined, {
       onError: (error) => toast.error(error.message),

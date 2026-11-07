@@ -36,6 +36,10 @@ vi.mock("~/session/hooks/useGenerateSummary", () => ({
 vi.mock("~/session/queries", () => ({
   useSession: () => ({ raw_md: "" }),
   useEnhancedNote: () => undefined,
+  useEnhancedNoteRecords: () => [],
+}));
+vi.mock("~/session/hooks/useEnhancedNotes", () => ({
+  useIsSessionEnhancing: () => false,
 }));
 vi.mock("~/session/components/note-input/header-shared", () => ({
   copyTextToClipboard: vi.fn(),
