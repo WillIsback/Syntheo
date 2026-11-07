@@ -12,12 +12,14 @@ import type { BatchActions, BatchState } from "./batch";
 import { hasConflictingBatchSession, runBatchSession } from "./general-batch";
 import {
   attachLiveSession,
+  pauseLiveSession,
   startLiveSession,
   stopLiveSession,
   updateLiveSessionConfig,
 } from "./general-live";
 import {
   type GeneralState,
+  type LivePause,
   type SessionMode,
   getLiveStartBlockReason,
   initialGeneralState,
@@ -45,6 +47,14 @@ export type GeneralActions = {
     },
   ) => Promise<boolean>;
   stop: () => void;
+  // Pause dans la même session (issue 353) : capture native arrêtée, session
+  // gardée en pause jusqu'à la reprise ou « Terminer ».
+  pause: () => void;
+  // Sort de la pause pour terminer la réunion ; `false` si `sessionId` n'est
+  // pas en pause (ou encore en cours de mise en pause).
+  takePausedSession: (sessionId: string) => boolean;
+  // Fenêtres secondaires : état de pause tenu par la fenêtre principale.
+  syncPauseState: (pause: LivePause | null) => void;
   attachLiveSession: (
     sessionId: string,
     options?: {
@@ -134,6 +144,24 @@ export const createGeneralSlice = <
   },
   stop: () => {
     stopLiveSession(set, get);
+  },
+  pause: () => {
+    pauseLiveSession(set, get);
+  },
+  takePausedSession: (sessionId) => {
+    const pause = get().live.pause;
+    if (pause?.sessionId !== sessionId || pause.phase !== "paused") {
+      return false;
+    }
+    setLiveState(set, (live) => {
+      live.pause = null;
+    });
+    return true;
+  },
+  syncPauseState: (pause) => {
+    setLiveState(set, (live) => {
+      live.pause = pause;
+    });
   },
   attachLiveSession: async (sessionId, options) => {
     if (!sessionId) {

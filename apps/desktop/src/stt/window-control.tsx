@@ -1,4 +1,4 @@
-import { emitTo, listen } from "@tauri-apps/api/event";
+import { emit, emitTo, listen } from "@tauri-apps/api/event";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { commands as listenerCommands } from "@syntheo/plugin-transcription";
@@ -6,16 +6,28 @@ import { getCurrentWebviewWindowLabel } from "@syntheo/plugin-windows";
 import { useMountEffect } from "@syntheo/ui/hooks/use-mount-effect";
 
 import { useListener } from "./contexts";
+import { finishPausedListening } from "./pause-listening";
 import { useStartListeningWithBatchOverride } from "./useStartListeningWithBatchOverride";
 
+import { useLatestRef } from "~/shared/hooks/useLatestRef";
+import type { LivePause } from "~/store/zustand/listener/general-shared";
 import { listenerStore } from "~/store/zustand/listener/instance";
 
 const LISTENER_CONTROL_EVENT = "syntheo:listener-control";
+// Pause de l'écoute (issue 353) : la fenêtre principale tient l'état et le
+// diffuse aux autres fenêtres, qui ne voient que la capture native.
+const LISTENER_PAUSE_STATE_EVENT = "syntheo:listener-pause-state";
 // The main webview may be dead or reloading; if it hasn't stopped the
 // capture by then, stop it natively.
 const MAIN_STOP_FALLBACK_DELAY_MS = 1_500;
 
-type ListenerControlAction = "start" | "stop";
+type ListenerControlAction =
+  | "start"
+  | "stop"
+  | "pause"
+  | "resume"
+  | "finish"
+  | "sync";
 
 type ListenerControlRequest = {
   action: ListenerControlAction;
@@ -27,23 +39,36 @@ export function isMainWebviewWindow() {
   return getCurrentWebviewWindowLabel() === "main";
 }
 
+// File d'attente de la fenêtre principale, pour ses propres demandes (palette,
+// bandeau flottant) sans passer par un événement.
+let enqueueLocalRequest: ((request: ListenerControlRequest) => void) | null =
+  null;
+
 export async function requestMainListenerControl(
   action: ListenerControlAction,
   sessionId: string,
 ) {
-  const request = emitTo("main", LISTENER_CONTROL_EVENT, {
+  const payload = {
     action,
     requestId: crypto.randomUUID(),
     sessionId,
-  } satisfies ListenerControlRequest);
+  } satisfies ListenerControlRequest;
+  if (enqueueLocalRequest && isMainWebviewWindow()) {
+    enqueueLocalRequest(payload);
+    return;
+  }
 
-  if (action !== "stop") {
+  const request = emitTo("main", LISTENER_CONTROL_EVENT, payload);
+
+  // Une pause promet que le micro est fermé : comme pour l'arrêt, la capture
+  // est coupée nativement si la fenêtre principale ne l'a pas fait.
+  if (action !== "stop" && action !== "pause") {
     await request;
     return;
   }
 
   await request.catch((error) => {
-    console.error("Failed to request stop from the main window:", error);
+    console.error(`Failed to request ${action} from the main window:`, error);
   });
   await new Promise((resolve) =>
     setTimeout(resolve, MAIN_STOP_FALLBACK_DELAY_MS),
@@ -58,19 +83,70 @@ async function stopCaptureForSession(sessionId: string) {
   }
 }
 
+function broadcastPauseState(pause: LivePause | null) {
+  void emit(LISTENER_PAUSE_STATE_EVENT, pause).catch((error) => {
+    console.error("Failed to broadcast the listening pause state:", error);
+  });
+}
+
+/**
+ * Fenêtres secondaires (note détachée) : suit l'état de pause tenu par la
+ * fenêtre principale.
+ */
+export function useMainListenerPauseState() {
+  const syncRef = useLatestRef(useListener((state) => state.syncPauseState));
+
+  useMountEffect(() => {
+    if (isMainWebviewWindow()) {
+      return;
+    }
+
+    let active = true;
+    let unlisten: (() => void) | undefined;
+    void listen<LivePause | null>(LISTENER_PAUSE_STATE_EVENT, (event) => {
+      if (active) {
+        syncRef.current(event.payload);
+      }
+    }).then((fn) => {
+      if (active) {
+        unlisten = fn;
+        void requestMainListenerControl("sync", "");
+      } else {
+        fn();
+      }
+    });
+
+    return () => {
+      active = false;
+      unlisten?.();
+    };
+  });
+}
+
 export function MainListenerControlBridge() {
   const [requests, setRequests] = useState<ListenerControlRequest[]>([]);
 
   useMountEffect(() => {
     let active = true;
     let unlisten: (() => void) | undefined;
+    let pause = listenerStore.getState().live.pause;
+    const unsubscribe = listenerStore.subscribe((state) => {
+      if (state.live.pause !== pause) {
+        pause = state.live.pause;
+        broadcastPauseState(pause);
+      }
+    });
+    const enqueue = (request: ListenerControlRequest) => {
+      setRequests((current) => [...current, request]);
+    };
+    enqueueLocalRequest = enqueue;
 
     void listen<ListenerControlRequest>(LISTENER_CONTROL_EVENT, (event) => {
       if (!active) {
         return;
       }
 
-      setRequests((current) => [...current, event.payload]);
+      enqueue(event.payload);
     }).then((fn) => {
       if (active) {
         unlisten = fn;
@@ -82,6 +158,10 @@ export function MainListenerControlBridge() {
     return () => {
       active = false;
       unlisten?.();
+      unsubscribe();
+      if (enqueueLocalRequest === enqueue) {
+        enqueueLocalRequest = null;
+      }
     };
   });
 
@@ -131,15 +211,39 @@ function MainListenerControlRequestRunner({
     const run = async () => {
       const live = listenerStore.getState().live;
       const isStartingOrActive = live.loading || live.status === "active";
+      const isTarget = live.sessionId === request.sessionId;
+      const isPaused =
+        live.pause?.sessionId === request.sessionId &&
+        live.pause.phase === "paused";
 
-      if (request.action === "start") {
-        // Non-main windows cannot see this window's state, so they can send
-        // duplicate start requests for a session that is already starting.
-        if (live.sessionId !== request.sessionId || !isStartingOrActive) {
-          await startListeningRef.current();
-        }
-      } else if (live.sessionId === request.sessionId) {
-        stopRef.current();
+      switch (request.action) {
+        case "start":
+        case "resume":
+          // Non-main windows cannot see this window's state, so they can send
+          // duplicate start requests for a session that is already starting.
+          if (
+            (request.action === "start" || isPaused) &&
+            (!isTarget || !isStartingOrActive)
+          ) {
+            await startListeningRef.current();
+          }
+          break;
+        case "pause":
+          if (isTarget && live.status === "active") {
+            listenerStore.getState().pause();
+          }
+          break;
+        case "stop":
+        case "finish":
+          if (isTarget) {
+            stopRef.current();
+          } else if (isPaused) {
+            await finishPausedListening(request.sessionId);
+          }
+          break;
+        case "sync":
+          broadcastPauseState(live.pause);
+          break;
       }
 
       if (!cancelled) {

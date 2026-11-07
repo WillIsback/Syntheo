@@ -324,6 +324,7 @@ fn make_specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             events::WebviewHealthCheck,
             events::FloatingBarStop,
             events::FloatingBarDictationAction,
+            events::FloatingBarListeningAction,
             events::FloatingBarOpenMain,
             events::FloatingBarOverlayState,
             events::FloatingBarOverlayAmplitude,

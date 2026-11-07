@@ -27,6 +27,15 @@ export type LiveStartBlockReason =
 
 export type LiveIntervalId = ReturnType<typeof setInterval>;
 
+// Pause de l'écoute (issue 353) : la capture native est arrêtée (micro et
+// audio système fermés), la session reste ouverte pour une reprise.
+// « pausing » couvre l'arrêt de la capture et l'enregistrement du transcript.
+export type LivePause = {
+  sessionId: string;
+  elapsedSeconds: number;
+  phase: "pausing" | "paused";
+};
+
 const TRANSCRIPTION_STALL_AMPLITUDE_THRESHOLD = 0.05;
 export const TRANSCRIPTION_STALL_AUDIBLE_SECONDS = 45;
 export const TRANSCRIPTION_FINAL_STALL_AUDIBLE_SECONDS = 90;
@@ -67,6 +76,9 @@ export type GeneralState = {
     batchTranscriptionPendingBySession: Record<string, boolean>;
     postStopProcessingBySession: Record<string, boolean>;
     triggerAppIds: string[] | null;
+    pause: LivePause | null;
+    // Durée écoutée avant la dernière reprise : le minuteur exclut les pauses.
+    elapsedOffsetSeconds: number;
   };
 };
 
@@ -99,6 +111,8 @@ const initialLiveState: LiveState = {
   batchTranscriptionPendingBySession: {},
   postStopProcessingBySession: {},
   triggerAppIds: null,
+  pause: null,
+  elapsedOffsetSeconds: 0,
 };
 
 export const initialGeneralState: GeneralState = {
@@ -147,6 +161,33 @@ export const getLiveStartBlockReason = (
   return null;
 };
 
+/**
+ * Écoute en pause (ou en cours de mise en pause) : `sessionId` omis, toutes
+ * sessions confondues. Aucune capture n'est ouverte, mais la réunion continue.
+ */
+export const isListeningPaused = (
+  live: Pick<LiveState, "pause">,
+  sessionId?: string,
+): boolean =>
+  live.pause !== null &&
+  (sessionId === undefined || live.pause.sessionId === sessionId);
+
+/** Durée écoutée de `sessionId`, pauses exclues (0 hors écoute et hors pause). */
+export const getListeningElapsedSeconds = (
+  live: Pick<
+    LiveState,
+    "pause" | "sessionId" | "seconds" | "elapsedOffsetSeconds"
+  >,
+  sessionId: string,
+): number => {
+  if (live.pause?.sessionId === sessionId) {
+    return live.pause.elapsedSeconds;
+  }
+  return live.sessionId === sessionId
+    ? live.elapsedOffsetSeconds + live.seconds
+    : 0;
+};
+
 export const setLiveState = <T extends GeneralState>(
   set: StoreApi<T>["setState"],
   update: (live: LiveState) => void,
@@ -180,6 +221,11 @@ export const markLiveCaptureStarted = (live: LiveState, sessionId: string) => {
     live.lastErrorIsAudioRelated = false;
   }
   ensureLiveCaptureGeneration(live, sessionId);
+  // Une reprise continue le minuteur là où la pause l'a arrêté.
+  if (live.pause?.sessionId === sessionId) {
+    live.elapsedOffsetSeconds = live.pause.elapsedSeconds;
+    live.pause = null;
+  }
   live.status = "active";
   live.loading = false;
   live.sessionId = sessionId;
@@ -275,6 +321,7 @@ export const markLiveInactive = (
   live.transcriptionStalled = false;
   live.muted = initialLiveState.muted;
   live.triggerAppIds = null;
+  live.elapsedOffsetSeconds = 0;
 };
 
 export const markLiveStartFailed = (
@@ -309,6 +356,7 @@ export const markLiveStartFailed = (
   live.finalStallAudibleSeconds = 0;
   live.transcriptionStalled = false;
   live.triggerAppIds = null;
+  live.elapsedOffsetSeconds = 0;
 };
 
 // Live STT can hang mid-session without any error or degraded event from the

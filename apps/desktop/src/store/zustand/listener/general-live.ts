@@ -26,6 +26,7 @@ import { toast } from "@syntheo/ui/components/ui/toast";
 import {
   type GeneralState,
   getCaptureWarning,
+  getListeningElapsedSeconds,
   type LiveIntervalId,
   markLiveActive,
   markLiveCaptureStarted,
@@ -397,6 +398,12 @@ const createSessionEventHandlers = <T extends LiveStore>(
         : (currentLive.finalizingBySession[targetSessionId]?.needsBatchRepair ??
           false);
 
+    // Arrêt demandé par « Mettre en pause » : la capture est close, mais la
+    // réunion continue (pas de synthèse, pas de « meeting.completed »).
+    const pausing =
+      currentLive.pause?.sessionId === targetSessionId &&
+      currentLive.pause.phase === "pausing";
+
     clearLiveEventUnlisteners(unlisteners);
     toast.dismiss(`audio-saving-delayed-${targetSessionId}`);
     toast.dismiss(`audio-disk-low-${targetSessionId}`);
@@ -412,6 +419,10 @@ const createSessionEventHandlers = <T extends LiveStore>(
       if (live.sessionId === targetSessionId) {
         clearLiveInterval(live.intervalId);
         markLiveInactive(live, targetSessionId, payload.error ?? null);
+      }
+      // Une reprise arrêtée par « Terminer » finit la réunion : plus de pause.
+      if (!pausing && live.pause?.sessionId === targetSessionId) {
+        live.pause = null;
       }
     });
 
@@ -430,16 +441,16 @@ const createSessionEventHandlers = <T extends LiveStore>(
     if (payload.audio_path) {
     }
 
-    const dispatchMeetingCompleted = () => {
-      void localApiCommands
-        .dispatchEvent("meeting.completed", targetSessionId)
-        .catch((error) =>
-          console.error(
-            "[listener] failed to dispatch meeting.completed event",
-            error,
-          ),
-        );
-      void runMeetingCompletedAutomations(targetSessionId);
+    const finishMeetingOrPause = () => {
+      if (!pausing) {
+        dispatchMeetingCompleted(targetSessionId);
+        return;
+      }
+      setLiveState(set, (live) => {
+        if (live.pause?.sessionId === targetSessionId) {
+          live.pause.phase = "paused";
+        }
+      });
     };
 
     const acknowledgeStoppedCapture = () => {
@@ -469,7 +480,7 @@ const createSessionEventHandlers = <T extends LiveStore>(
         if (acknowledge) {
           acknowledgeStoppedCapture();
         }
-        dispatchMeetingCompleted();
+        finishMeetingOrPause();
       };
       try {
         const stopped = onStopped(targetSessionId, {
@@ -482,6 +493,7 @@ const createSessionEventHandlers = <T extends LiveStore>(
           requestedLiveTranscription: payload.requested_live_transcription,
           liveTranscriptionActive: payload.live_transcription_active,
           needsBatchRepair,
+          paused: pausing,
         });
         void Promise.resolve(stopped).then(
           () => finishPostStopProcessing(true),
@@ -496,7 +508,7 @@ const createSessionEventHandlers = <T extends LiveStore>(
       }
     } else {
       acknowledgeStoppedCapture();
-      dispatchMeetingCompleted();
+      finishMeetingOrPause();
     }
   },
   progress: (payload) => {
@@ -1061,6 +1073,46 @@ function applyCaptureSnapshot<T extends LiveStore>(
   });
 }
 
+/** Fin de réunion : événement local « meeting.completed » et automatisations. */
+export const dispatchMeetingCompleted = (sessionId: string) => {
+  void localApiCommands
+    .dispatchEvent("meeting.completed", sessionId)
+    .catch((error) =>
+      console.error(
+        "[listener] failed to dispatch meeting.completed event",
+        error,
+      ),
+    );
+  void runMeetingCompletedAutomations(sessionId);
+};
+
+/**
+ * Met l'écoute en pause : la capture native est arrêtée comme pour « Terminer »
+ * (micro et audio système fermés, plus rien n'est envoyé à la transcription),
+ * mais la session reste en pause pour une reprise. Retourne `false` sans
+ * écoute active.
+ */
+export const pauseLiveSession = <T extends GeneralState>(
+  set: StoreApi<T>["setState"],
+  get: StoreApi<T>["getState"],
+): boolean => {
+  const { live } = get();
+  const sessionId = live.sessionId;
+  if (live.status !== "active" || !sessionId) {
+    return false;
+  }
+
+  setLiveState(set, (draft) => {
+    draft.pause = {
+      sessionId,
+      elapsedSeconds: getListeningElapsedSeconds(draft, sessionId),
+      phase: "pausing",
+    };
+  });
+  stopLiveSession(set, get);
+  return true;
+};
+
 export const stopLiveSession = <T extends GeneralState>(
   set: StoreApi<T>["setState"],
   get: StoreApi<T>["getState"],
@@ -1087,6 +1139,14 @@ export const stopLiveSession = <T extends GeneralState>(
       onFailure: (cause) => {
         console.error("Failed to stop session:", cause);
         setLiveState(set, (live) => {
+          // La capture tourne toujours : la pause demandée n'a pas eu lieu.
+          if (
+            sessionId &&
+            live.pause?.sessionId === sessionId &&
+            live.pause.phase === "pausing"
+          ) {
+            live.pause = null;
+          }
           if (sessionId && live.sessionId === sessionId) {
             delete live.finalizingBySession[sessionId];
             if (live.status === "finalizing") {

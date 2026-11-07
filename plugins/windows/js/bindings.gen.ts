@@ -35,6 +35,7 @@ export const commands = {
 /** Events */
 export const events = {
 	floatingBarDictationAction: makeEvent<FloatingBarDictationAction, FloatingBarDictationAction>("plugin:windows:floating-bar-dictation-action"),
+	floatingBarListeningAction: makeEvent<FloatingBarListeningAction, FloatingBarListeningAction>("plugin:windows:floating-bar-listening-action"),
 	floatingBarOpenMain: makeEvent<FloatingBarOpenMain, FloatingBarOpenMain>("plugin:windows:floating-bar-open-main"),
 	floatingBarOverlayAmplitude: makeEvent<FloatingBarOverlayAmplitude, FloatingBarOverlayAmplitude>("plugin:windows:floating-bar-overlay-amplitude"),
 	floatingBarOverlayState: makeEvent<FloatingBarOverlayState, FloatingBarOverlayState>("plugin:windows:floating-bar-overlay-state"),
@@ -77,6 +78,11 @@ export type FloatingBarColorScheme = "light" | "dark";
 export type FloatingBarDictationAction = {
 	sessionId: string,
 	action: DictationPanelAction,
+};
+
+/**  « Mettre en pause » ou « Reprendre l'écoute » depuis le bandeau flottant (issue 353). */
+export type FloatingBarListeningAction = {
+	action: ListeningPanelAction,
 };
 
 export type FloatingBarOpenMain = Record<string, never>;
@@ -122,7 +128,9 @@ export type FloatingBarState = {
 	sessionId?: string | null,
 };
 
-export type FloatingBarStatus = "recording" | "reconnecting" | "error";
+export type FloatingBarStatus = "recording" | "reconnecting" | "error" | 
+/**  Écoute en pause (issue 353) : aucune capture ouverte, « Reprendre » et « Terminer ». */
+"paused";
 
 export type FloatingBarStop = Record<string, never>;
 
@@ -147,6 +155,8 @@ export type FloatingTranscriptBubble = {
 	overlapsPrevious: boolean,
 	overlapsNext: boolean,
 };
+
+export type ListeningPanelAction = "pause" | "resume";
 
 export type LiveCaptionOverlayState = {
 	state: LiveCaptionState,

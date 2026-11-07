@@ -28,6 +28,11 @@ import { useListener } from "./contexts";
 import { discardEmptyAutomaticCapture } from "./empty-automatic-capture";
 import { cancelMeetingRecordingDisclosure } from "./meeting-disclosure";
 import { createNativeTranscriptPersistence } from "./native-transcript-persistence";
+import {
+  deferPausedSummary,
+  strongerSummaryMode,
+  takePausedSummary,
+} from "./pause-listening";
 import { persistTranscriptWrite } from "./persist-retry";
 import {
   canRunBatchTranscription,
@@ -996,9 +1001,13 @@ export function useCaptureLifecycle(sessionId: string) {
           return;
         }
 
+        // Une pause (issue 353) n'est pas la fin de la réunion : ni son de fin,
+        // ni synthèse ; le transcript de la capture est enregistré normalement.
+        const paused = details.paused === true;
         // Batch repair already plays the sound when runBatchSession
         // finishes; a recovered summary-only pass has no new transcript.
         if (
+          !paused &&
           !batchCompleted &&
           !pendingSummaryMode &&
           (transcriptTouched || preserveExistingTranscript)
@@ -1042,24 +1051,34 @@ export function useCaptureLifecycle(sessionId: string) {
             }
           }
         }
+        // Synthèse gardée par les captures mises en pause de cette réunion.
+        const pausedSummaryMode = paused
+          ? undefined
+          : takePausedSummary(sessionId);
         const shouldEnhance =
-          hasTranscriptEvidence &&
-          (transcriptIsComplete ||
-            (postCaptureAction === "none" &&
-              preserveExistingTranscript &&
-              !transcriptWriteError));
+          (hasTranscriptEvidence &&
+            (transcriptIsComplete ||
+              (postCaptureAction === "none" &&
+                preserveExistingTranscript &&
+                !transcriptWriteError))) ||
+          pausedSummaryMode !== undefined;
+        const captureSummaryMode =
+          refreshSummaryAfterRepair ||
+          (preserveExistingTranscript && (transcriptTouched || batchCompleted))
+            ? ("regenerate" as const)
+            : batchCompleted
+              ? ("refresh" as const)
+              : ("if_empty" as const);
 
         let summaryScheduled = true;
-        if (shouldEnhance) {
+        if (shouldEnhance && paused) {
+          // Rien n'est écrit dans le marqueur : quitter l'application pendant
+          // la pause termine la session sans synthèse.
+          deferPausedSummary(sessionId, captureSummaryMode);
+        } else if (shouldEnhance) {
           const summaryMode =
             pendingSummaryMode ??
-            (refreshSummaryAfterRepair ||
-            (preserveExistingTranscript &&
-              (transcriptTouched || batchCompleted))
-              ? "regenerate"
-              : batchCompleted
-                ? "refresh"
-                : "if_empty");
+            strongerSummaryMode(captureSummaryMode, pausedSummaryMode);
           if (!pendingSummaryMode) {
             pendingSummaryMode = summaryMode;
             try {

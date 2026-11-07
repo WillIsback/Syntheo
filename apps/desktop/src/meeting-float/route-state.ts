@@ -19,7 +19,7 @@ import { SegmentKeyUtils, type RenderLabelContext } from "~/stt/live-segment";
 import { getLiveTranscriptPausedMessage } from "~/stt/live-transcript-interrupted";
 
 export type ListenerState = ReturnType<ListenerStore["getState"]>;
-type FloatingBarStatus = "recording" | "reconnecting" | "error";
+type FloatingBarStatus = "recording" | "reconnecting" | "error" | "paused";
 type FloatingBarColorScheme = "light" | "dark";
 
 export type FloatingTranscriptBubble = {
@@ -65,8 +65,11 @@ export function getFloatingRouteState(
     speakerLabels,
     transcriptBubbles,
     sttProvider,
+    pausedSupported = true,
   }: {
     sttProvider?: string | null;
+    // Le panneau natif macOS n'affiche pas la pause : il reste masqué.
+    pausedSupported?: boolean;
     sessionId?: string;
     colorScheme?: FloatingBarColorScheme;
     settings?: FloatingOverlaySettings;
@@ -77,6 +80,31 @@ export function getFloatingRouteState(
     transcriptBubbles?: FloatingTranscriptBubble[];
   } = {},
 ): FloatingRouteState | null {
+  // Pause (issue 353) : plus de capture, le bandeau propose « Reprendre » et
+  // « Terminer » même quand la note est fermée.
+  const pause = state.live.pause;
+  if (pause && state.live.status !== "active") {
+    if (!pausedSupported || (sessionId && pause.sessionId !== sessionId)) {
+      return null;
+    }
+    return {
+      sessionId: pause.sessionId,
+      title: getFloatingTitle(sessionTitle),
+      amplitude: 0,
+      status: "paused",
+      colorScheme,
+      opacity: settings.floatingBarOpacity,
+      liveCaptionOpacity: settings.liveCaptionOpacity,
+      liveCaptionWidth: settings.liveCaptionWidth,
+      liveCaptionLineCount: settings.liveCaptionLineCount,
+      liveCaptionPosition: settings.liveCaptionPosition,
+      liveCaptionMinimized: true,
+      liveCaptionToggleVisible: false,
+      transcriptBubbles: [],
+      transcriptNotice: null,
+    };
+  }
+
   if (state.live.status !== "active") {
     return null;
   }

@@ -1488,9 +1488,14 @@ msgstr "Finalisation de la transcription…"
 msgid "Find key decisions."
 msgstr "Trouvez les décisions clés."
 
+#: src/meeting-float/overlay/bar.tsx
 #: src/session/components/capsule/index.tsx
 msgid "Finish"
 msgstr "Terminer"
+
+#: src/meeting-float/overlay/bar.tsx
+msgid "Finish the meeting"
+msgstr "Terminer la réunion"
 
 #: src/meeting-float/overlay/dictation.tsx
 #: src/session/components/capsule/index.tsx
@@ -1574,6 +1579,10 @@ msgstr "Réunions à venir"
 #: src/session/components/note-input/enhanced/index.tsx
 msgid "Generate summary"
 msgstr "Générer un résumé"
+
+#: src/session/components/capsule/index.tsx
+msgid "Generate the summary"
+msgstr "Générer le compte rendu"
 
 #: src/session/components/note-input/enhanced/streaming.tsx
 #: src/session/components/title-input.tsx
@@ -2748,9 +2757,21 @@ msgstr "Pause"
 msgid "Pause alerts while Do Not Disturb is on."
 msgstr "Suspendre les alertes lorsque Ne pas déranger est activé."
 
+#: src/meeting-float/overlay/bar.tsx
+#: src/session/components/capsule/index.tsx
+#: src/shared/open-note-dialog.tsx
+msgid "Pause listening"
+msgstr "Mettre en pause l'écoute"
+
+#: src/meeting-float/overlay/bar.tsx
+#: src/session/components/capsule/index.tsx
 #: src/settings/developers/webhooks.tsx
 msgid "Paused"
 msgstr "En pause"
+
+#: src/session/components/capsule/index.tsx
+msgid "Pausing…"
+msgstr "Mise en pause…"
 
 #: src/contacts/organization-details.tsx
 #: src/session/components/note-input/transcript/renderer/speaker-assign.tsx
@@ -2862,6 +2883,10 @@ msgstr "Modification proposée du résumé"
 #: src/settings/ai/stt/server-card.tsx
 msgid "Protocol"
 msgstr "Protocole"
+
+#: src/session/components/capsule/index.tsx
+msgid "Put on pause"
+msgstr "Mettre en pause"
 
 #: src/onboarding/permissions.tsx
 msgid "Read meeting controls and visible chat"
@@ -3103,11 +3128,15 @@ msgid "Restore"
 msgstr "Restaurer"
 
 #: src/home/note-index.tsx
+#: src/meeting-float/overlay/bar.tsx
 msgid "Resume"
 msgstr "Reprendre"
 
+#: src/meeting-float/overlay/bar.tsx
+#: src/session/components/capsule/index.tsx
 #: src/session/components/note-input/header-transcript.tsx
 #: src/session/components/outer-header/overflow/listening.tsx
+#: src/shared/open-note-dialog.tsx
 msgid "Resume listening"
 msgstr "Reprendre l'écoute"
 
@@ -4054,6 +4083,7 @@ msgid "The summary server did not respond. Check that it is running, then try ag
 msgstr "Le serveur de synthèse n'a pas répondu. Vérifiez qu'il est démarré, puis réessayez."
 
 #: src/stt/capture-lifecycle.ts
+#: src/stt/pause-listening.ts
 msgid "The transcript was saved, but Syntheo could not start the summary. Try generating it again."
 msgstr "La transcription est enregistrée, mais Syntheo n'a pas pu lancer le résumé. Relancez sa génération."
 

@@ -61,6 +61,7 @@ vi.mock("@syntheo/plugin-windows", () => ({
   },
   events: {
     floatingBarOpenMain: { listen: mocks.listen },
+    floatingBarListeningAction: { listen: mocks.listen },
     floatingBarSettingsChange: { listen: mocks.listen },
     floatingBarStop: {
       listen: vi.fn(async (callback) => {

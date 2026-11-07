@@ -23,6 +23,17 @@ describe("getNoteStage", () => {
       stage,
     );
   });
+
+  it("reste à l'écoute pendant la pause, même sans capture en cours", () => {
+    expect(
+      getNoteStage({
+        sessionMode: "inactive",
+        hasTranscript: true,
+        hasEnhancedNotes: false,
+        paused: true,
+      }),
+    ).toBe("listen");
+  });
 });
 
 describe("getLivingDocumentView", () => {

@@ -66,6 +66,55 @@ describe("FloatingBarOverlay", () => {
     },
   );
 
+  // Issue 353 : « Mettre en pause » pendant l'écoute ; en pause, l'état est
+  // écrit en toutes lettres avec « Reprendre » et « Terminer ».
+  it("pauses the listening from the floating bar", () => {
+    const onPause = vi.fn();
+    render(
+      <FloatingBarOverlay
+        state={state()}
+        onStop={vi.fn()}
+        onPause={onPause}
+        onResume={vi.fn()}
+        onToggleExpanded={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Pause listening" }));
+
+    expect(onPause).toHaveBeenCalledOnce();
+  });
+
+  it("shows Paused with Resume and Finish while paused", () => {
+    const onResume = vi.fn();
+    const onStop = vi.fn();
+    render(
+      <FloatingBarOverlay
+        state={state({
+          status: "paused",
+          amplitude: 0,
+          liveCaptionToggleVisible: false,
+          transcriptBubbles: [],
+        })}
+        onStop={onStop}
+        onPause={vi.fn()}
+        onResume={onResume}
+        onToggleExpanded={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("status").textContent).toBe("Paused");
+    expect(screen.queryByTestId("waveform")).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Pause listening" }),
+    ).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Resume listening" }));
+    fireEvent.click(screen.getByRole("button", { name: "Finish the meeting" }));
+
+    expect(onResume).toHaveBeenCalledOnce();
+    expect(onStop).toHaveBeenCalledOnce();
+  });
+
   it("expands to the live transcript and can collapse again", () => {
     const onToggleExpanded = vi.fn();
 
