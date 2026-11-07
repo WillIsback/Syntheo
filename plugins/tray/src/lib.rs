@@ -5,6 +5,7 @@ mod linux_frames;
 mod macos_position;
 mod menu_items;
 mod schedule;
+mod schedule_labels;
 mod tray_icon;
 
 pub use ext::*;

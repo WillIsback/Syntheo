@@ -16,8 +16,8 @@ use tauri::{
 
 use crate::{
     schedule::{
-        TrayAgendaSection, TrayScheduleEvent, agenda_sections, menu_bar_title,
-        next_schedule_refresh_ms,
+        TrayAgendaSection, TrayScheduleEvent, TrayScheduleLabels, agenda_sections,
+        apply_untitled_fallback, menu_bar_title, next_schedule_refresh_ms,
     },
     tray_icon::{RECORDING_FRAMES, TrayIconState, show_recording_frame},
 };
@@ -38,6 +38,7 @@ static SHOW_EVENTS: AtomicBool = AtomicBool::new(true);
 static START_DISABLED: AtomicBool = AtomicBool::new(false);
 static ANIMATION_TASK: Mutex<Option<JoinHandle<()>>> = Mutex::new(None);
 static SCHEDULE: Mutex<Vec<TrayScheduleEvent>> = Mutex::new(Vec::new());
+static SCHEDULE_LABELS: Mutex<Option<TrayScheduleLabels>> = Mutex::new(None);
 static SCHEDULE_TASK: Mutex<Option<JoinHandle<()>>> = Mutex::new(None);
 static MENU_BAR_TITLE: Mutex<Option<String>> = Mutex::new(None);
 static RECORDING_TITLE: Mutex<Option<String>> = Mutex::new(None);
@@ -255,8 +256,14 @@ impl<'a, M: tauri::Manager<tauri::Wry>> Tray<'a, tauri::Wry, M> {
         })
     }
 
-    pub fn set_schedule(&self, mut events: Vec<TrayScheduleEvent>) -> Result<()> {
+    pub fn set_schedule(
+        &self,
+        mut events: Vec<TrayScheduleEvent>,
+        labels: TrayScheduleLabels,
+    ) -> Result<()> {
         events.retain(|event| event.starts_at_ms.is_finite());
+        apply_untitled_fallback(&mut events, &labels);
+        *SCHEDULE_LABELS.lock().unwrap() = Some(labels);
         events.sort_by(|left, right| {
             left.starts_at_ms
                 .partial_cmp(&right.starts_at_ms)
@@ -328,12 +335,14 @@ impl<'a, M: tauri::Manager<tauri::Wry>> Tray<'a, tauri::Wry, M> {
             .unwrap_or_default()
             .as_millis() as f64;
         let recording_title = RECORDING_TITLE.lock().unwrap().clone();
+        let labels = SCHEDULE_LABELS.lock().unwrap().clone().unwrap_or_default();
         let title = menu_bar_title(
             &SCHEDULE.lock().unwrap(),
             now_ms,
             SHOW_EVENTS.load(Ordering::SeqCst),
             IS_RECORDING.load(Ordering::SeqCst),
             recording_title.as_deref(),
+            &labels,
         );
         let mut current_title = MENU_BAR_TITLE.lock().unwrap();
 
