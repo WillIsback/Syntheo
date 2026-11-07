@@ -28,6 +28,13 @@
   color: hsl(var(--foreground));
 }
 
+/* Compte rendu fusionné (issue 365) : les phrases rapprochées d'une note de
+ * l'utilisateur (décoration note-ink-user, calculée à l'affichage) prennent
+ * l'encre user-ink ; tout le reste garde l'encre foreground. */
+[data-provenance="ai"] .note-typography .note-ink-user {
+  color: hsl(var(--user-ink));
+}
+
 /* Revue d'une proposition (summary-review.tsx) : le texte retiré reste
  * lisible mais s'efface (muted-foreground, barré), le texte ajouté garde
  * l'encre du compte-rendu. */

@@ -126,6 +126,14 @@ export const SETTING_DEFINITIONS = {
     default: "cha" as string,
     synced: true,
   },
+  // Synthèse : colorer en vert (user-ink), dans le compte rendu, les phrases
+  // qui viennent des notes de l'utilisateur. Désactivé, les notes s'affichent
+  // dans un bloc séparé sous le compte rendu.
+  color_notes_in_summary: {
+    type: "boolean",
+    path: ["general", "color_notes_in_summary"],
+    default: true as boolean,
+  },
   sidebar_show_folder: {
     type: "boolean",
     path: ["general", "sidebar_show_folder"],

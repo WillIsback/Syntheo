@@ -30,6 +30,7 @@ export const Enhanced = forwardRef<
     sessionId: string;
     sessionTitle: string;
     enhancedNoteId: string;
+    noteLines?: readonly string[];
     onNavigateToTitle?: (pixelWidth?: number) => void;
     onViewReady?: (view: EditorView) => void;
     onViewDisposed?: (view: EditorView) => void;
@@ -40,6 +41,7 @@ export const Enhanced = forwardRef<
       sessionId,
       sessionTitle,
       enhancedNoteId,
+      noteLines,
       onNavigateToTitle,
       onViewReady,
       onViewDisposed,
@@ -105,6 +107,7 @@ export const Enhanced = forwardRef<
         sessionTitle={sessionTitle}
         enhancedNoteId={enhancedNoteId}
         content={enhancedNote.content}
+        noteLines={noteLines}
         onNavigateToTitle={onNavigateToTitle}
         onViewReady={onViewReady}
         onViewDisposed={onViewDisposed}
