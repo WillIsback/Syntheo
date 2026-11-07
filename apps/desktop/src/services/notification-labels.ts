@@ -5,7 +5,7 @@ import type { NotificationLabels } from "@syntheo/plugin-notification";
 /**
  * Libellés des notifications natives (Windows, Linux, macOS) que le Rust ou le
  * Swift recalculent pendant l'affichage (décompte d'un rappel de réunion,
- * bouton d'options). Les gabarits gardent les repères `{minutes}` et `{time}`
+ * bouton d'options, vue dépliée). Les gabarits gardent les repères `{minutes}` et `{time}`
  * que le natif remplace (issue 408).
  */
 export function nativeNotificationLabels(): NotificationLabels {
@@ -18,5 +18,14 @@ export function nativeNotificationLabels(): NotificationLabels {
     startingInOne: t`Starting in 1 minute`,
     startingInOther: t`Starting in ${minutes} minutes`,
     beginsIn: t`Begins in ${time}`,
+    // Vue dépliée et menu d'options (issue 412) ; les intitulés de détail
+    // gardent leurs deux-points, la valeur suit après une espace.
+    showLess: t`Show less`,
+    what: t`What:`,
+    who: t`Who:`,
+    location: t`Where:`,
+    inviteeTimeZone: t`Invitee Time Zone:`,
+    accept: t`Accept`,
+    createNewNote: t`Create New Note...`,
   };
 }

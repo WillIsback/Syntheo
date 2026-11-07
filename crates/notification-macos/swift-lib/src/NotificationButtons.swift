@@ -581,8 +581,9 @@ class OptionsButton: NotificationButton {
 
     menu.addItem(NSMenuItem.separator())
 
+    let labels = notification?.payload.resolvedLabels ?? NotificationLabels.english
     let createNewItem = NSMenuItem(
-      title: "Create New Note...", action: #selector(optionSelected(_:)), keyEquivalent: "")
+      title: labels.createNewNote, action: #selector(optionSelected(_:)), keyEquivalent: "")
     createNewItem.target = self
     createNewItem.tag = options.count
     createNewItem.isEnabled = true

@@ -192,6 +192,10 @@ msgstr "A participant declined recording. Syntheo stopped listening."
 msgid "a week ago"
 msgstr "a week ago"
 
+#: src/services/notification-labels.ts
+msgid "Accept"
+msgstr "Accept"
+
 #: src/settings/search-index.ts
 msgid "access, authorize, Apple Calendar, events"
 msgstr "access, authorize, Apple Calendar, events"
@@ -1164,6 +1168,10 @@ msgstr "Create \"{folderName}\""
 msgid "Create a brief to prepare this meeting"
 msgstr "Create a brief to prepare this meeting"
 
+#: src/services/notification-labels.ts
+msgid "Create New Note..."
+msgstr "Create New Note..."
+
 #: src/session/components/note-input/transcript/renderer/speaker-assign.tsx
 msgid "Create new speaker"
 msgstr "Create new speaker"
@@ -2024,6 +2032,10 @@ msgstr "Installed"
 #: src/settings/ai/shared/server-card.tsx
 msgid "Invalid address"
 msgstr "Invalid address"
+
+#: src/services/notification-labels.ts
+msgid "Invitee Time Zone:"
+msgstr "Invitee Time Zone:"
 
 #: src/contacts/details.tsx
 #: src/settings/general/account-profile.tsx
@@ -3787,6 +3799,10 @@ msgstr "Show in Finder"
 msgid "Show in folder"
 msgstr "Show in folder"
 
+#: src/services/notification-labels.ts
+msgid "Show less"
+msgstr "Show less"
+
 #: src/settings/appearance/time-format.tsx
 msgid "Show meeting times as 14:00 instead of 2:00 PM."
 msgstr "Show meeting times as 14:00 instead of 2:00 PM."
@@ -4961,6 +4977,10 @@ msgstr "What these notes are usually about"
 msgid "What were the key decisions that have been made?"
 msgstr "What were the key decisions that have been made?"
 
+#: src/services/notification-labels.ts
+msgid "What:"
+msgstr "What:"
+
 #: src/changelog/index.tsx
 msgid "What's new in {version}?"
 msgstr "What's new in {version}?"
@@ -4976,6 +4996,14 @@ msgstr "When off, summaries follow the detected meeting language."
 #: src/settings/automations/workflow-builder.tsx
 msgid "When this happens"
 msgstr "When this happens"
+
+#: src/services/notification-labels.ts
+msgid "Where:"
+msgstr "Where:"
+
+#: src/services/notification-labels.ts
+msgid "Who:"
+msgstr "Who:"
 
 #: src/settings/appearance/palette.tsx
 msgid "Wisteria"

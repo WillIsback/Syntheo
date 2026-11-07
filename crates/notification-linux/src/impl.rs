@@ -221,7 +221,7 @@ impl NotificationInstance {
                     menu.append(&menu_item);
                 }
 
-                let create_new_item = MenuItem::with_label("Create New Note...");
+                let create_new_item = MenuItem::with_label(&payload.labels().create_new_note);
                 let create_new_index = options.len() as i32;
                 let option_key = self.key.clone();
                 create_new_item.connect_activate(move |_| {
@@ -347,7 +347,7 @@ impl NotificationInstance {
         title.style_context().add_class("notification-title");
         header.pack_start(&title, true, true, 0);
 
-        let collapse = Button::with_label("Show less");
+        let collapse = Button::with_label(&payload.labels().show_less);
         let collapse_key = self.key.clone();
         collapse.connect_clicked(move |_| {
             NotificationManager::toggle_expanded_global(&collapse_key);
@@ -388,12 +388,18 @@ impl NotificationInstance {
         }
 
         if let Some(details) = &payload.event_details {
-            container.pack_start(&detail_row("What:", &details.what), false, false, 0);
+            let labels = payload.labels();
+            container.pack_start(&detail_row(&labels.what, &details.what), false, false, 0);
             if let Some(timezone) = &details.timezone {
-                container.pack_start(&detail_row("Invitee Time Zone:", timezone), false, false, 0);
+                container.pack_start(
+                    &detail_row(&labels.invitee_time_zone, timezone),
+                    false,
+                    false,
+                    0,
+                );
             }
             if let Some(location) = &details.location {
-                container.pack_start(&detail_row("Where:", location), false, false, 0);
+                container.pack_start(&detail_row(&labels.location, location), false, false, 0);
             }
         }
 

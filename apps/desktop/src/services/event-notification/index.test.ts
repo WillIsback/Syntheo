@@ -69,6 +69,13 @@ describe("checkEventNotifications", () => {
           startingInOne: "Starting in 1 minute",
           startingInOther: "Starting in {minutes} minutes",
           beginsIn: "Begins in {time}",
+          showLess: "Show less",
+          what: "What:",
+          who: "Who:",
+          location: "Where:",
+          inviteeTimeZone: "Invitee Time Zone:",
+          accept: "Accept",
+          createNewNote: "Create New Note...",
         },
       }),
     );

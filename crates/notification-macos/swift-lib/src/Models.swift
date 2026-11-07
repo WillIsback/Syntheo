@@ -224,6 +224,15 @@ struct NotificationLabels: Codable {
   let startingInOne: String
   let startingInOther: String
   let beginsIn: String
+  // Vue dépliée et menu d'options (issue 412). Les intitulés de détail
+  // incluent les deux-points (« Quoi : » en français).
+  let showLess: String
+  let what: String
+  let who: String
+  let location: String
+  let inviteeTimeZone: String
+  let accept: String
+  let createNewNote: String
 
   static let english = NotificationLabels(
     options: "Options",
@@ -231,7 +240,14 @@ struct NotificationLabels: Codable {
     started: "Started",
     startingInOne: "Starting in 1 minute",
     startingInOther: "Starting in {minutes} minutes",
-    beginsIn: "Begins in {time}"
+    beginsIn: "Begins in {time}",
+    showLess: "Show less",
+    what: "What:",
+    who: "Who:",
+    location: "Where:",
+    inviteeTimeZone: "Invitee Time Zone:",
+    accept: "Accept",
+    createNewNote: "Create New Note..."
   )
 }
 

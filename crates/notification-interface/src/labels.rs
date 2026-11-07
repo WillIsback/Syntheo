@@ -25,6 +25,20 @@ pub struct NotificationLabels {
     pub starting_in_other: String,
     /// Gabarit avec `{time}` (« m:ss »).
     pub begins_in: String,
+    /// Bouton qui replie la vue dépliée (issue 412).
+    pub show_less: String,
+    /// Intitulés des détails d'événement de la vue dépliée, deux-points compris
+    /// (« Quoi : » en français) ; la valeur suit après une espace.
+    pub what: String,
+    /// Intitulé de la liste des participants (macOS seulement).
+    pub who: String,
+    /// Intitulé du lieu (« Where: »).
+    pub location: String,
+    pub invitee_time_zone: String,
+    /// Bouton de la vue dépliée quand l'application ne donne pas de libellé.
+    pub accept: String,
+    /// Dernière entrée du menu d'options.
+    pub create_new_note: String,
 }
 
 impl Default for NotificationLabels {
@@ -36,6 +50,13 @@ impl Default for NotificationLabels {
             starting_in_one: "Starting in 1 minute".to_string(),
             starting_in_other: format!("Starting in {MINUTES_PLACEHOLDER} minutes"),
             begins_in: format!("Begins in {TIME_PLACEHOLDER}"),
+            show_less: "Show less".to_string(),
+            what: "What:".to_string(),
+            who: "Who:".to_string(),
+            location: "Where:".to_string(),
+            invitee_time_zone: "Invitee Time Zone:".to_string(),
+            accept: "Accept".to_string(),
+            create_new_note: "Create New Note...".to_string(),
         }
     }
 }
@@ -82,7 +103,26 @@ mod tests {
             starting_in_one: "Démarrage dans 1 minute".to_string(),
             starting_in_other: "Démarrage dans {minutes} minutes".to_string(),
             begins_in: "Début dans {time}".to_string(),
+            show_less: "Afficher moins".to_string(),
+            what: "Quoi :".to_string(),
+            who: "Qui :".to_string(),
+            location: "Où :".to_string(),
+            invitee_time_zone: "Fuseau horaire de l'invité :".to_string(),
+            accept: "Accepter".to_string(),
+            create_new_note: "Créer une note…".to_string(),
         }
+    }
+
+    #[test]
+    fn english_defaults_keep_the_historical_expanded_view_copy() {
+        let labels = NotificationLabels::english();
+        assert_eq!(labels.show_less, "Show less");
+        assert_eq!(labels.what, "What:");
+        assert_eq!(labels.who, "Who:");
+        assert_eq!(labels.location, "Where:");
+        assert_eq!(labels.invitee_time_zone, "Invitee Time Zone:");
+        assert_eq!(labels.accept, "Accept");
+        assert_eq!(labels.create_new_note, "Create New Note...");
     }
 
     #[test]

@@ -1,6 +1,8 @@
 pub use syntheo_notification_interface::*;
 
 mod callbacks;
+#[cfg(any(target_os = "windows", test))]
+mod expanded;
 mod icon;
 mod layout;
 mod raster;
