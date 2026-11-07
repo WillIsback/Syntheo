@@ -25,6 +25,8 @@ import {
   useStartListeningState,
 } from "./useStartListening";
 
+import { useLiveTranscriptionLanguages } from "~/store/zustand/live-transcription-languages";
+
 vi.mock("./capture-completion", () => ({
   completeCaptureTranscript: vi.fn().mockResolvedValue(undefined),
   loadCaptureStop: vi.fn().mockResolvedValue(null),
@@ -2129,22 +2131,28 @@ describe("useStartListening", () => {
       languages: ["en"],
       transcription_mode: undefined,
     });
-    expect(toastWarningMock).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.objectContaining({
-        id: "recording-with-limited-transcription-languages",
-        action: expect.anything(),
-      }),
-    );
+    // Issue 351 : plus de toast, l'indication vit dans la marge de la note.
+    expect(toastWarningMock).not.toHaveBeenCalled();
+    expect(
+      useLiveTranscriptionLanguages.getState().bySession["session-1"],
+    ).toEqual({ primary: "en", omitted: ["ko"] });
+  });
 
-    const warningCalls = toastWarningMock.mock.calls;
-    const warningOptions = warningCalls[warningCalls.length - 1]?.[1];
-    warningOptions?.action.onClick();
-
-    expect(openNewMock).toHaveBeenCalledWith({
-      type: "settings",
-      state: { tab: "transcription" },
+  test("forgets omitted languages when every spoken language is transcribed live", async () => {
+    useLiveTranscriptionLanguages.getState().setLanguages("session-1", {
+      languages: ["en"],
+      omittedLanguages: ["ko"],
     });
+
+    const { result } = renderHook(() => useStartListening("session-1"));
+
+    await act(async () => {
+      await result.current();
+    });
+
+    expect(
+      useLiveTranscriptionLanguages.getState().bySession["session-1"],
+    ).toBeUndefined();
   });
 
   test("does not send the recording disclosure when auto-post is disabled", async () => {

@@ -24,8 +24,8 @@ import {
   type StartFailureStage,
 } from "./start-failure";
 
-import { getBaseLanguageDisplayName } from "~/settings/general/language";
 import { useConfigValue } from "~/shared/config";
+import { useLiveTranscriptionLanguages } from "~/store/zustand/live-transcription-languages";
 import { useTabs } from "~/store/zustand/tabs";
 import {
   getLiveTranscriptionConfig,
@@ -276,31 +276,11 @@ export function useStartListeningState(
       });
     }
 
-    const openTranscriptionSettings = () => {
-      openNew({
-        type: "settings",
-        state: { tab: "transcription" },
-      });
-    };
-
-    const primaryLanguage = liveTranscriptionConfig.languages[0];
-    const omittedLanguages = liveTranscriptionConfig.omittedLanguages ?? [];
-    if (primaryLanguage && omittedLanguages.length > 0) {
-      const primaryLanguageName = getBaseLanguageDisplayName(primaryLanguage);
-      const omittedLanguageNames = omittedLanguages
-        .map((language) => getBaseLanguageDisplayName(language))
-        .join(", ");
-
-      toast.warning(t`Live transcription is using ${primaryLanguageName}`, {
-        id: "recording-with-limited-transcription-languages",
-        duration: Infinity,
-        description: t`Live transcription won't include ${omittedLanguageNames}.`,
-        action: {
-          label: t`Change`,
-          onClick: openTranscriptionSettings,
-        },
-      });
-    }
+    // Pas de toast (issue 351) : la marge de transcription indique la langue
+    // retenue quand d'autres langues parlées sont omises.
+    useLiveTranscriptionLanguages
+      .getState()
+      .setLanguages(sessionId, liveTranscriptionConfig);
 
     const stopChatCapture = startMeetingChatCapture({
       sessionId,

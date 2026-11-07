@@ -622,7 +622,7 @@ msgstr "Capturer le chat de réunion dans Memos"
 msgid "Capture shared screens in Memos"
 msgstr "Capturer les écrans partagés dans Memos"
 
-#: src/stt/useStartListening.ts
+#: src/session/components/living-document/live-transcription-language.tsx
 msgid "Change"
 msgstr "Modifier"
 
@@ -1964,10 +1964,6 @@ msgstr "La transcription en direct continue. Libérez de l'espace disque pour re
 msgid "Live transcription interrupted"
 msgstr "Transcription en direct interrompue"
 
-#: src/stt/useStartListening.ts
-msgid "Live transcription is using {primaryLanguageName}"
-msgstr "La transcription en direct utilise : {primaryLanguageName}"
-
 #: src/stt/live-transcript-interrupted.ts
 msgid "Live transcription paused: {cause}. No audio is kept: this passage will be missing from the transcription. Check the transcription server settings."
 msgstr "Transcription en direct en pause : {cause}. Aucun audio n'est conservé : ce passage manquera à la transcription. Vérifiez les réglages du serveur de transcription."
@@ -1980,9 +1976,9 @@ msgstr "Transcription en direct en pause : {cause}. Aucun audio n'est conservé 
 msgid "Live transcription resumed."
 msgstr "Transcription en direct reprise."
 
-#: src/stt/useStartListening.ts
-msgid "Live transcription won't include {omittedLanguageNames}."
-msgstr "La transcription en direct n'inclura pas : {omittedLanguageNames}."
+#: src/session/components/living-document/live-transcription-language.tsx
+msgid "Live transcription: {language}"
+msgstr "Transcription en direct : {language}"
 
 #: src/templates/auto-form.tsx
 msgid "Loading Auto format..."
@@ -2713,6 +2709,10 @@ msgstr "Nom de l'organisation"
 #: src/session/components/version-history-dialog.tsx
 msgid "Other device's version"
 msgstr "Version de l'autre appareil"
+
+#: src/session/components/living-document/live-transcription-language.tsx
+msgid "Other languages ({omittedLanguages}) won't be transcribed live."
+msgstr "Les autres langues ({omittedLanguages}) ne seront pas transcrites en direct."
 
 #: src/settings/general/permissions.tsx
 msgid "Others"

@@ -27,6 +27,7 @@ import { setSettingValue } from "~/settings/queries";
 import { useConfigValue, useConfigValues } from "~/shared/config";
 import { useLatestRef } from "~/shared/hooks/useLatestRef";
 import { listenerStore } from "~/store/zustand/listener/instance";
+import { useLiveTranscriptionLanguages } from "~/store/zustand/live-transcription-languages";
 import { useTabs } from "~/store/zustand/tabs";
 import {
   consumeAutoStopEndedNotificationKey,
@@ -421,6 +422,10 @@ function LiveCaptureConfigSyncReady({
       if (liveConfig.transcriptionMode === "batch") {
         return;
       }
+      // Les langues parlées ont pu changer pendant l'écoute : la marge suit.
+      useLiveTranscriptionLanguages
+        .getState()
+        .setLanguages(live.sessionId, liveConfig);
 
       const session = rows.find((row) => row.session_id === live.sessionId);
       const participantHumanIds = getSessionParticipantHumanIds(

@@ -622,7 +622,7 @@ msgstr "Capture meeting chat in Memos"
 msgid "Capture shared screens in Memos"
 msgstr "Capture shared screens in Memos"
 
-#: src/stt/useStartListening.ts
+#: src/session/components/living-document/live-transcription-language.tsx
 msgid "Change"
 msgstr "Change"
 
@@ -1964,10 +1964,6 @@ msgstr "Live transcription continues. Free up disk space to resume audio saving.
 msgid "Live transcription interrupted"
 msgstr "Live transcription interrupted"
 
-#: src/stt/useStartListening.ts
-msgid "Live transcription is using {primaryLanguageName}"
-msgstr "Live transcription is using {primaryLanguageName}"
-
 #: src/stt/live-transcript-interrupted.ts
 msgid "Live transcription paused: {cause}. No audio is kept: this passage will be missing from the transcription. Check the transcription server settings."
 msgstr "Live transcription paused: {cause}. No audio is kept: this passage will be missing from the transcription. Check the transcription server settings."
@@ -1980,9 +1976,9 @@ msgstr "Live transcription paused: {cause}. No audio is kept: this passage will 
 msgid "Live transcription resumed."
 msgstr "Live transcription resumed."
 
-#: src/stt/useStartListening.ts
-msgid "Live transcription won't include {omittedLanguageNames}."
-msgstr "Live transcription won't include {omittedLanguageNames}."
+#: src/session/components/living-document/live-transcription-language.tsx
+msgid "Live transcription: {language}"
+msgstr "Live transcription: {language}"
 
 #: src/templates/auto-form.tsx
 msgid "Loading Auto format..."
@@ -2713,6 +2709,10 @@ msgstr "Organization name"
 #: src/session/components/version-history-dialog.tsx
 msgid "Other device's version"
 msgstr "Other device's version"
+
+#: src/session/components/living-document/live-transcription-language.tsx
+msgid "Other languages ({omittedLanguages}) won't be transcribed live."
+msgstr "Other languages ({omittedLanguages}) won't be transcribed live."
 
 #: src/settings/general/permissions.tsx
 msgid "Others"
