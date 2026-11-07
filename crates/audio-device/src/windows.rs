@@ -17,58 +17,59 @@ use windows::core::{GUID, Interface, PCWSTR, PWSTR};
 pub struct WindowsBackend;
 
 const CLSID_POLICY_CONFIG: GUID = GUID::from_u128(0x870af99c_171d_4f9e_af0d_e63df40c2bc9);
-const IID_IPOLICY_CONFIG: GUID = GUID::from_u128(0xf8679f50_850a_41cf_9c72_430f290290c8);
 
+// Undocumented COM interface: only the method order matters (it defines the vtable
+// layout), so the methods follow Rust naming rather than the original PascalCase names.
 #[windows::core::interface("f8679f50-850a-41cf-9c72-430f290290c8")]
 unsafe trait IPolicyConfig: windows::core::IUnknown {
-    unsafe fn GetMixFormat(
+    unsafe fn get_mix_format(
         &self,
         device_id: PCWSTR,
         format: *mut *mut std::ffi::c_void,
     ) -> windows::core::HRESULT;
-    unsafe fn GetDeviceFormat(
+    unsafe fn get_device_format(
         &self,
         device_id: PCWSTR,
         default: i32,
         format: *mut *mut std::ffi::c_void,
     ) -> windows::core::HRESULT;
-    unsafe fn ResetDeviceFormat(&self, device_id: PCWSTR) -> windows::core::HRESULT;
-    unsafe fn SetDeviceFormat(
+    unsafe fn reset_device_format(&self, device_id: PCWSTR) -> windows::core::HRESULT;
+    unsafe fn set_device_format(
         &self,
         device_id: PCWSTR,
         format: *const std::ffi::c_void,
         mix_format: *const std::ffi::c_void,
     ) -> windows::core::HRESULT;
-    unsafe fn GetProcessingPeriod(
+    unsafe fn get_processing_period(
         &self,
         device_id: PCWSTR,
         default: i32,
         default_period: *mut i64,
         min_period: *mut i64,
     ) -> windows::core::HRESULT;
-    unsafe fn SetProcessingPeriod(
+    unsafe fn set_processing_period(
         &self,
         device_id: PCWSTR,
         period: *const i64,
     ) -> windows::core::HRESULT;
-    unsafe fn GetShareMode(&self, device_id: PCWSTR, mode: *mut i32) -> windows::core::HRESULT;
-    unsafe fn SetShareMode(&self, device_id: PCWSTR, mode: i32) -> windows::core::HRESULT;
-    unsafe fn GetPropertyValue(
+    unsafe fn get_share_mode(&self, device_id: PCWSTR, mode: *mut i32) -> windows::core::HRESULT;
+    unsafe fn set_share_mode(&self, device_id: PCWSTR, mode: i32) -> windows::core::HRESULT;
+    unsafe fn get_property_value(
         &self,
         device_id: PCWSTR,
         store_type: i32,
         key: *const std::ffi::c_void,
         value: *mut std::ffi::c_void,
     ) -> windows::core::HRESULT;
-    unsafe fn SetPropertyValue(
+    unsafe fn set_property_value(
         &self,
         device_id: PCWSTR,
         store_type: i32,
         key: *const std::ffi::c_void,
         value: *const std::ffi::c_void,
     ) -> windows::core::HRESULT;
-    unsafe fn SetDefaultEndpoint(&self, device_id: PCWSTR, role: u32) -> windows::core::HRESULT;
-    unsafe fn SetEndpointVisibility(
+    unsafe fn set_default_endpoint(&self, device_id: PCWSTR, role: u32) -> windows::core::HRESULT;
+    unsafe fn set_endpoint_visibility(
         &self,
         device_id: PCWSTR,
         visible: i32,
@@ -262,10 +263,12 @@ impl AudioDeviceBackend for WindowsBackend {
                     Err(_) => continue,
                 };
 
-                let direction = match data_flow {
-                    eRender => AudioDirection::Output,
-                    eCapture => AudioDirection::Input,
-                    _ => continue,
+                let direction = if data_flow == eRender {
+                    AudioDirection::Output
+                } else if data_flow == eCapture {
+                    AudioDirection::Input
+                } else {
+                    continue;
                 };
 
                 let transport_type = get_transport_type(&device, &name);
@@ -398,7 +401,7 @@ impl AudioDeviceBackend for WindowsBackend {
 
             for role in 0..3u32 {
                 policy_config
-                    .SetDefaultEndpoint(PCWSTR(device_id_wide.as_ptr()), role)
+                    .set_default_endpoint(PCWSTR(device_id_wide.as_ptr()), role)
                     .ok()
                     .map_err(|e| {
                         Error::SetDefaultFailed(format!("Failed to set default endpoint: {}", e))

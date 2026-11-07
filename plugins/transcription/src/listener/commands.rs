@@ -20,10 +20,8 @@ fn session_audio_dir<R: tauri::Runtime>(
         .settings()
         .vault_base()
         .map_err(|error| error.to_string())?;
-    Ok(audio_sweep::find_session_dir(
-        base.join("sessions").as_std_path(),
-        session_id,
-    ))
+    audio_sweep::find_session_dir(base.join("sessions").as_std_path(), session_id)
+        .map_err(|error| error.to_string())
 }
 
 #[tauri::command]

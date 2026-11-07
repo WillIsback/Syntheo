@@ -90,6 +90,7 @@ pub async fn read_path<R: tauri::Runtime>(
 
             #[cfg(not(target_os = "macos"))]
             {
+                let _ = path;
                 Err(Error::UnsupportedPlatform)
             }
         }
