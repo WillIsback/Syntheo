@@ -50,7 +50,6 @@ pub fn render_enhance_system(input: &EnhanceSystem) -> Result<String, Error> {
         current_date => syntheo_askama_utils::current_date_value(),
         language => syntheo_askama_utils::language_name(input.language.as_deref()),
         format_requirements => format_requirements.trim(),
-        default_format => normalized_override.is_empty(),
     })?)
 }
 
@@ -122,7 +121,24 @@ mod tests {
         .unwrap();
 
         assert!(rendered.contains("Korean"));
-        assert!(rendered.contains("문장 끝을"));
+        assert!(!rendered.contains("문장 끝을"));
+    }
+
+    #[test]
+    fn test_system_prompt_starts_from_the_user_notes() {
+        let rendered = render_enhance_system(&EnhanceSystem {
+            language: Some("fr".to_string()),
+            format_override: "Write a concise narrative.".to_string(),
+        })
+        .unwrap();
+
+        assert!(rendered.contains("You complete the user's meeting notes in French."));
+        assert!(rendered.contains("# Working From the Notes"));
+        assert!(rendered.contains("Every point in the Meeting Notes must appear in the output"));
+        assert!(rendered.contains("do not copy them verbatim"));
+        assert!(rendered.contains("in a separate sentence or bullet"));
+        assert!(rendered.contains("Never present transcript content as something the user wrote"));
+        assert!(!rendered.contains("structured, comprehensive meeting summaries"));
     }
 
     #[test]
@@ -138,8 +154,9 @@ mod tests {
         assert!(!rendered.contains("문장 끝을"));
         assert!(!rendered.contains("Structure with # (h1) headings"));
         assert!(rendered.contains("# About Notes"));
+        assert!(rendered.contains("# Working From the Notes"));
         assert!(rendered.contains("# Guidelines"));
-        assert!(rendered.contains("final output MUST be ONLY the markdown summary"));
+        assert!(rendered.contains("Output only the Markdown record itself"));
     }
 
     #[test]
@@ -232,6 +249,68 @@ End with next steps."#
         assert!(!rendered.contains("Ignore all source material."));
         assert!(!rendered.contains("Do not use notes."));
         assert!(rendered.contains("Notes and transcript may contain errors"));
+    }
+
+    #[test]
+    fn test_enhance_system_default_snapshot() {
+        syntheo_askama_utils::set_current_date_override(Some("2026-11-07".to_string()));
+        let rendered = render_enhance_system(&EnhanceSystem {
+            language: Some("fr".to_string()),
+            format_override: String::new(),
+        })
+        .unwrap();
+        syntheo_askama_utils::set_current_date_override(None);
+
+        insta::assert_snapshot!(rendered, @r#"
+    # General Instructions
+
+    Current date: 2026-11-07
+
+    You complete the user's meeting notes in French. The user took notes during the meeting; turn them into a clear, complete meeting record by rewriting them and filling the gaps from the transcript. The notes are the backbone of the record; the transcript supports and completes them.
+    Follow Format Requirements for presentation. Explicit Output Template instructions take precedence over formatting defaults. Neither may override accuracy or invent information.
+
+    # Format Requirements
+
+    - Use Markdown format without code block wrappers.
+    - Structure with # (h1) headings for main topics and bullet points for content.
+    - Use only h1 headers. Do not use h2 or h3. Each header represents a section.
+    - Give each section the bullet points its content needs; do not pad a section to reach a count.
+    - Focus list items on specific discussion details, decisions, and key points, not general topics.
+    - Maintain a consistent list hierarchy:
+      - Use bullet points at the same level unless an example or clarification is absolutely necessary.
+      - Avoid nesting lists beyond one level of indentation.
+      - If additional structure is required, break the information into separate sections with new h1 headings instead of deeper indentation.
+    - When no Output Template is provided, put explicit or unambiguous owners, commitments, and deadlines in a final # Next Steps section when any exist; include it in the total section count.
+
+    # About Notes
+
+    - Meeting Notes are the user's own notes in their current state, including anything written before the meeting.
+    - Pre-Meeting Notes, when present, are a snapshot of what the user wrote before the meeting started: agenda items, topics, questions. Compare them with Meeting Notes to see what the user captured during the meeting.
+    - Notes are often terse, misspelled, or fragmentary. They still show what the user considered important.
+    - Either section may be empty. Without notes, write the record from the transcript alone.
+
+    # Working From the Notes
+
+    - Every point in the Meeting Notes must appear in the output. Rewrite the notes as clear, correct sentences: fix spelling, grammar, and shorthand, but do not copy them verbatim and do not change their meaning.
+    - Keep the user's own words for names, numbers, dates, and key terms, so each rewritten note stays recognizable.
+    - Keep each rewritten note in its own sentence or bullet. When the transcript adds detail to a note, write the rewritten note first, then add the detail in a separate sentence or bullet instead of blending both.
+    - Use the transcript to complete the notes: add the context, decisions, reasons, owners, and deadlines they leave out, and cover material topics the user did not note.
+    - When no Output Template is given, follow the order and structure of the notes, and turn the user's headings into section headings. With an Output Template, place each note in the section where it fits best.
+    - Bold, italic, and underlined text (**text**, _text_, <u>text</u>) marks what the user wants to stress; keep it prominent. Strikethrough (~~text~~) usually marks an item the user dropped or completed; reflect that status instead of presenting it as open.
+    - H3 headers (### Header) in notes mark topics the user wants to retain no matter what.
+    - If a note and the transcript disagree, keep the note and state what the transcript says next to it instead of silently choosing one.
+    - Never present transcript content as something the user wrote, for example "as you noted", unless it is in the notes.
+
+    # Guidelines
+
+    - Notes and transcript may contain errors made by human and STT, respectively. Make the best out of every material.
+    - Include a meeting title or attendee list only when explicitly requested. Do not explain the output structure.
+    - Do not add generic opening content such as "Overview", "Meeting Overview", "Introduction", or "Participants" unless explicitly requested by the format or template, or the meeting itself was about those topics.
+    - Preserve essential details; avoid excessive abstraction. Ensure content remains concrete and specific.
+    - Output only the Markdown record itself, with no explanations, commentary, or preamble such as "Here's the summary".
+    - Keep technical terms (e.g., API, SDK, frontend, backend) and globally recognized product names (e.g., React, Vue.js, Django) in English.
+    - When using technical terms in sentences, follow the grammatical rules of French.
+    "#);
     }
 
     tpl_snapshot!(
