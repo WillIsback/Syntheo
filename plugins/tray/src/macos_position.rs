@@ -1,24 +1,33 @@
+// Only `set_wanted_visible` and `wanted_visible` are used on every platform.
+// The rest drives the macOS status item placement: it is compiled out
+// elsewhere, except under test so the pure logic stays checked on every host
+// (issue 385).
 use std::sync::atomic::{AtomicBool, Ordering};
 
 static WANTED_VISIBLE: AtomicBool = AtomicBool::new(true);
 
 // Bump when the seeding rule changes so installs placed by an older rule get
 // re-seeded once. 1.4.20 seeded 0, which parked the icon next to Control Center.
+#[cfg(any(target_os = "macos", test))]
 const SEED_VERSION: isize = 2;
 
+#[cfg(any(target_os = "macos", test))]
 pub fn preferred_position_key(autosave_name: &str) -> String {
     format!("NSStatusItem Preferred Position {autosave_name}")
 }
 
+#[cfg(any(target_os = "macos", test))]
 pub fn visibility_key(autosave_name: &str) -> String {
     format!("NSStatusItem Visible {autosave_name}")
 }
 
+#[cfg(any(target_os = "macos", test))]
 pub fn seed_version_key(autosave_name: &str) -> String {
     format!("{autosave_name} position seed version")
 }
 
 // Only seed when unset so a user ⌘-drag keeps winning on later launches.
+#[cfg(any(target_os = "macos", test))]
 pub fn should_seed(has_position: bool, seeded_version: isize) -> bool {
     !has_position || seeded_version < SEED_VERSION
 }
@@ -36,6 +45,7 @@ pub fn wanted_visible() -> bool {
 // left. Without a Wi-Fi reference (key missing, or the sandbox denying reads
 // of Control Center's domain) we leave the position unset and let AppKit use
 // its default slot at the left end of the status items.
+#[cfg(any(target_os = "macos", test))]
 pub fn seed_position(wifi_position: Option<f64>) -> Option<f64> {
     wifi_position.map(|position| position + 1.0)
 }
