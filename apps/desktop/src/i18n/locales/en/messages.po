@@ -830,6 +830,10 @@ msgstr "Cloud sync complete"
 msgid "Collect action items"
 msgstr "Collect action items"
 
+#: src/settings/appearance/note-ink.tsx
+msgid "Color my notes in the summary"
+msgstr "Color my notes in the summary"
+
 #: src/settings/appearance/palette.tsx
 msgid "Color palette"
 msgstr "Color palette"
@@ -3378,6 +3382,10 @@ msgstr "Send message"
 #: src/session/components/note-input/meeting-chat-highlights.tsx
 msgid "sent"
 msgstr "sent"
+
+#: src/settings/appearance/note-ink.tsx
+msgid "Sentences that come from your notes appear in green. When off, your notes are shown in a separate block."
+msgstr "Sentences that come from your notes appear in green. When off, your notes are shown in a separate block."
 
 #: src/settings/ai/stt/server-card.tsx
 msgid "Server address"

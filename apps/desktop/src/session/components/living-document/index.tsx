@@ -8,6 +8,7 @@ import {
   type RefObject,
   type UIEventHandler,
   useCallback,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -24,6 +25,7 @@ import { RawEditor } from "../note-input/raw";
 import { TitleInput } from "../title-input";
 import { PrepareFiche } from "./fiche";
 import { NoteMeta } from "./meta";
+import { extractNoteLines } from "./note-attribution";
 import { NoteSeal, ProvenanceLegend } from "./provenance";
 import { SummaryProposalReview, useSummaryProposal } from "./summary-review";
 import { SummarySwitcher } from "./summary-switcher";
@@ -41,6 +43,7 @@ import {
   useSession,
   useUpdateSession,
 } from "~/session/queries";
+import { useConfigValue } from "~/shared/config";
 import { createTaskId } from "~/store/zustand/ai-task/task-configs";
 import type { SessionMode } from "~/store/zustand/listener/general";
 import type {
@@ -337,8 +340,15 @@ function SynthesisStage(
   );
 }
 
+const NO_NOTE_LINES: readonly string[] = [];
+
 // Le compte-rendu, ou sa revue tant qu'une réécriture (« Demander à la
 // note ») attend d'être appliquée ou refusée.
+//
+// Réglage « Colorer mes notes dans le compte rendu » (issue 365, activé par
+// défaut) : un seul compte rendu où les phrases venues des notes sont en
+// user-ink. Désactivé, ou pendant une revue, les notes restent dans leur
+// propre bloc sous le compte rendu.
 function SummaryWithReview(
   props: LivingDocumentProps & { sessionId: string; enhancedNoteId: string },
 ) {
@@ -346,12 +356,19 @@ function SummaryWithReview(
     sessionId,
     enhancedNoteId,
     editorRef,
+    rawMd,
     sessionTitle,
     onNavigateToTitle,
     onViewReady,
     onViewDisposed,
   } = props;
   const proposal = useSummaryProposal(sessionId, enhancedNoteId);
+  const colorNotes = useConfigValue("color_notes_in_summary");
+  const noteLines = useMemo(
+    () => (colorNotes ? extractNoteLines(rawMd) : NO_NOTE_LINES),
+    [colorNotes, rawMd],
+  );
+  const showNotesBlock = !colorNotes || Boolean(proposal);
 
   return (
     <>
@@ -364,20 +381,21 @@ function SummaryWithReview(
             sessionId={sessionId}
             sessionTitle={sessionTitle}
             enhancedNoteId={enhancedNoteId}
+            noteLines={noteLines}
             onNavigateToTitle={onNavigateToTitle}
             onViewReady={onViewReady}
             onViewDisposed={onViewDisposed}
           />
         )}
       </div>
-      <UserNotesSection {...props} />
+      {showNotesBlock ? <UserNotesSection {...props} /> : null}
       {proposal ? null : <SummarySeal enhancedNoteId={enhancedNoteId} />}
     </>
   );
 }
 
-// Fusion approchée : le compte-rendu généré puis, dans le même document, les
-// notes prises pendant la réunion (encre user-ink).
+// Repli en deux blocs : le compte-rendu généré puis, dans le même document,
+// les notes prises pendant la réunion (encre user-ink).
 function UserNotesSection(props: LivingDocumentProps) {
   const headingId = `user-notes-${props.tab.id}`;
 
