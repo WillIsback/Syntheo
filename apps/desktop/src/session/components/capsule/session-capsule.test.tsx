@@ -1,9 +1,16 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SessionCapsule } from "./session-capsule";
 import { startPreparedNoteFromShortcut } from "./start-shortcut";
 
+import { runShortcutAction } from "~/shared/shortcut-actions";
 import type { Tab } from "~/store/zustand/tabs";
 import type { EditorView } from "~/store/zustand/tabs/schema";
 
@@ -36,9 +43,14 @@ const mocks = vi.hoisted(() => ({
   enhancedNotes: [] as Array<{ id: string; content: string }>,
   enhancing: false,
   exportModal: vi.fn(),
+  toastInfo: vi.fn(),
 }));
 
 vi.mock("@tauri-apps/plugin-os", () => ({ platform: () => "linux" }));
+
+vi.mock("@syntheo/ui/components/ui/toast", () => ({
+  toast: { info: mocks.toastInfo, error: vi.fn() },
+}));
 
 vi.mock("~/contexts/shell", () => ({
   useShell: () => ({
@@ -395,6 +407,65 @@ describe("SessionCapsule", () => {
       (screen.getByRole("button", { name: "Copy" }) as HTMLButtonElement)
         .disabled,
     ).toBe(true);
+  });
+
+  it.each(["prepare", "synthesis"] as const)(
+    "Ctrl+P ouvre « Exporter ou imprimer » sur la note active (%s)",
+    async (stage) => {
+      renderCapsule({ stage });
+
+      act(() => {
+        expect(runShortcutAction("exportNote")).toBe(true);
+      });
+
+      expect(await screen.findByRole("dialog")).not.toBeNull();
+      expect(mocks.toastInfo).not.toHaveBeenCalled();
+    },
+  );
+
+  it("Ctrl+P pendant l'écoute rappelle de terminer l'écoute", () => {
+    mocks.sessionMode = "active";
+    renderCapsule({ stage: "listen" });
+
+    expect(runShortcutAction("exportNote")).toBe(true);
+
+    expect(mocks.toastInfo).toHaveBeenCalledWith(
+      "Finish listening to export the note.",
+    );
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("déclare Ctrl+P localement dans une fenêtre de note autonome", async () => {
+    renderCapsule({ stage: "synthesis", standaloneWindow: true });
+    expect(runShortcutAction("exportNote")).toBe(false);
+
+    const event = new KeyboardEvent("keydown", {
+      key: "p",
+      code: "KeyP",
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    act(() => {
+      document.body.dispatchEvent(event);
+    });
+
+    expect(await screen.findByRole("dialog")).not.toBeNull();
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it("laisse Ctrl+P au raccourci global quand l'onglet n'est pas actif", () => {
+    renderCapsule({ tab: { ...tab, active: false }, stage: "synthesis" });
+
+    expect(runShortcutAction("exportNote")).toBe(false);
+  });
+
+  it("annonce Ctrl+P dans l'infobulle du bouton Exporter", () => {
+    renderCapsule({ stage: "synthesis" });
+
+    const button = screen.getByRole("button", { name: "Export" });
+    expect(button.getAttribute("title")).toBe("Export (Ctrl+P)");
+    expect(button.getAttribute("aria-keyshortcuts")).toBe("Control+P");
   });
 
   it("opens the existing export dialog", async () => {

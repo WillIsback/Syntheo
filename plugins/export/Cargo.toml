@@ -13,6 +13,7 @@ tauri-plugin = { workspace = true, features = ["build"] }
 
 [dev-dependencies]
 specta-typescript = { workspace = true }
+tempfile = { workspace = true }
 tokio = { workspace = true, features = ["macros"] }
 
 [dependencies]
@@ -21,3 +22,4 @@ tauri-specta = { workspace = true, features = ["derive", "typescript"] }
 
 specta = { workspace = true }
 syntheo-export-core = { workspace = true }
+uuid = { workspace = true, features = ["v4"] }

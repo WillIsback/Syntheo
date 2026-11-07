@@ -6,6 +6,8 @@ import { invoke as __TAURI_INVOKE } from "@tauri-apps/api/core";
 /** Commands */
 export const commands = {
 	export: (path: string, input: ExportInput) => typedError<null, string>(__TAURI_INVOKE("plugin:export|export", { path, input })),
+	printPdf: (input: ExportInput) => typedError<string, string>(__TAURI_INVOKE("plugin:export|print_pdf", { input })),
+	cleanupPrintFiles: () => typedError<null, string>(__TAURI_INVOKE("plugin:export|cleanup_print_files")),
 };
 
 /* Types */
