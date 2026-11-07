@@ -229,6 +229,7 @@ function ShortcutMenuItem({
     <DropdownMenuItem
       onSelect={onSelect}
       aria-keyshortcuts={ariaShortcut(shortcut)}
+      className="whitespace-nowrap"
     >
       {children}
       <DropdownMenuShortcut>{formatShortcut(shortcut)}</DropdownMenuShortcut>
@@ -269,7 +270,7 @@ function TitleBarMenu({
       <DropdownMenuContent
         align="start"
         sideOffset={1}
-        className="w-56 rounded-lg"
+        className="w-72 rounded-lg"
       >
         {children}
       </DropdownMenuContent>

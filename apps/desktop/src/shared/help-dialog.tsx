@@ -65,7 +65,7 @@ export function HelpDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] max-w-xl gap-4 overflow-y-auto">
+      <DialogContent className="max-h-[85vh] max-w-2xl gap-4 overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             <Trans>Help and shortcuts</Trans>

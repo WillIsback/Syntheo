@@ -293,6 +293,13 @@ On n'utilise pas `Ctrl+/` (voir 3.3).
 - Interdits : `Ctrl+Alt+lettre`, `Ctrl+W`, `Ctrl+Q`, `Ctrl+/`, `F5`, `Ctrl+R`, `Ctrl+Alt+Espace`.
 - `Ctrl+N` et `Ctrl+F` existent déjà : l'issue ne les recode pas.
 
+**Mise en œuvre (0.6.0)** : la table est `apps/desktop/src/shared/shortcuts.ts`, l'utilitaire `event.key` est `shared/typed-key.ts`. Écarts avec ce qui précède :
+
+- `F1`, `F10`, `F11` et le message de `Ctrl+S` n'existent que dans la fenêtre principale. Une note ouverte dans sa propre fenêtre garde ses raccourcis locaux (`Ctrl+F`, `F3`, `Ctrl+Pg.Préc/Suiv`, `Ctrl+S` en édition de transcription).
+- `Ctrl+Pg.Préc/Suiv` s'affiche dans l'infobulle du groupe d'onglets (« Changer de vue (Ctrl+Pg.Préc, Ctrl+Pg.Suiv) »), pas sur chaque onglet : les onglets de synthèse ont déjà une infobulle (le modèle utilisé).
+- Dans la palette, « Aide et raccourcis » n'apparaît qu'à la saisie (« aide », « raccourcis »), pour ne pas encombrer la palette vide.
+- Le zoom `Ctrl+0` est aussi reconnu par la touche physique du 0 : en AZERTY, cette touche tape « à » sans `Maj`.
+
 ### Issue 373 (recherche de paramètres)
 
 - Index par réglage (`settings/search-index.ts`) avec mots-clés en langage courant, `data-setting-id` sur chaque ligne, test de cohérence.
