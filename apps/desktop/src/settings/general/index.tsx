@@ -264,6 +264,7 @@ function SettingsSectionContent({
                   <form.Field name="summary_use_main_language">
                     {(field) => (
                       <SettingSwitchRow
+                        settingId="summary-language"
                         title={<Trans>Use main language for summaries</Trans>}
                         description={
                           <Trans>

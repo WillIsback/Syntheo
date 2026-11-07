@@ -82,6 +82,7 @@ export function SettingsDictation() {
         <div className="flex flex-col gap-[26px]">
           <SettingRows>
             <SettingSwitchRow
+              settingId="dictation-enabled"
               title={<Trans>Enable dictation</Trans>}
               description={
                 <Trans>
@@ -93,6 +94,7 @@ export function SettingsDictation() {
             />
             <DictationShortcut shortcut={shortcut} />
             <SettingSwitchRow
+              settingId="dictation-hands-free"
               title={<Trans>Hands-free dictation</Trans>}
               description={
                 handsFree ? (
@@ -110,6 +112,7 @@ export function SettingsDictation() {
               onChange={setHandsFree}
             />
             <AudioDeviceRow
+              settingId="dictation-microphone"
               title={<Trans>Microphone</Trans>}
               description={
                 <>
@@ -128,6 +131,7 @@ export function SettingsDictation() {
               onChange={setMicrophone}
             />
             <SettingSwitchRow
+              settingId="dictation-live-preview"
               title={<Trans>Live transcript preview</Trans>}
               description={
                 <Trans>
@@ -140,6 +144,7 @@ export function SettingsDictation() {
             />
             <SettingRow
               controlWidth="content"
+              settingId="dictation-language"
               title={<Trans>Language and vocabulary</Trans>}
               description={
                 <>

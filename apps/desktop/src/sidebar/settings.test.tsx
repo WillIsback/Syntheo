@@ -124,6 +124,8 @@ vi.mock("~/store/zustand/tabs", () => {
 
 import { SettingsNav } from "./settings";
 
+import { useSettingFocus } from "~/settings/setting-focus";
+
 describe("SettingsNav", () => {
   afterEach(cleanup);
 
@@ -186,12 +188,12 @@ describe("SettingsNav", () => {
   it("no longer offers Insights, even via search", () => {
     render(<SettingsNav />);
 
-    fireEvent.change(screen.getByPlaceholderText("Search settings..."), {
+    fireEvent.change(screen.getByPlaceholderText("Search settings"), {
       target: { value: "insights" },
     });
 
-    expect(screen.queryByRole("button", { name: "Insights" })).toBeNull();
-    expect(screen.getByText("No results found.")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Insights/ })).toBeNull();
+    expect(screen.getByText("No setting matches “insights”.")).toBeTruthy();
   });
 
   it("marks the current page and the servers' status", () => {
@@ -276,58 +278,121 @@ describe("SettingsNav", () => {
     expect(mocks.upgradeToPro).not.toHaveBeenCalled();
   });
 
-  it("filters nav items by item or group label", () => {
-    render(<SettingsNav />);
-    const input = screen.getByPlaceholderText("Search settings...");
+  // Issue 373 : le champ cherche dans le même index que la palette.
+  describe("champ « Rechercher un paramètre »", () => {
+    const input = () => screen.getByPlaceholderText("Search settings");
+    const search = (value: string) =>
+      fireEvent.change(input(), { target: { value } });
+    const results = () =>
+      screen.getAllByRole("listitem").map((item) => item.textContent ?? "");
 
-    fireEvent.change(input, { target: { value: "appear" } });
-    expect(screen.getByText("Appearance")).toBeTruthy();
-    expect(screen.queryByText("Meetings")).toBeNull();
-
-    fireEvent.change(input, { target: { value: "my meetings" } });
-    expect(screen.getByText("Meetings")).toBeTruthy();
-    expect(screen.getByText("Templates")).toBeTruthy();
-    expect(screen.queryByText("Appearance")).toBeNull();
-
-    fireEvent.change(input, { target: { value: "develop" } });
-    expect(screen.getByRole("button", { name: "Developers" })).toBeTruthy();
-  });
-
-  it("shows an empty state when no settings match", () => {
-    render(<SettingsNav />);
-
-    fireEvent.change(screen.getByPlaceholderText("Search settings..."), {
-      target: { value: "zzzzzz" },
+    beforeEach(() => {
+      useSettingFocus.getState().clear();
     });
 
-    expect(screen.getByText("No results found.")).toBeTruthy();
-  });
+    it("trouve les pages par leur nom ou leur groupe", () => {
+      render(<SettingsNav />);
 
-  it.each([
-    [
-      "the clear button",
-      () => {
-        fireEvent.click(screen.getByRole("button", { name: "Clear search" }));
-      },
-    ],
-    [
-      "Escape",
-      () => {
-        fireEvent.keyDown(screen.getByPlaceholderText("Search settings..."), {
-          key: "Escape",
-        });
-      },
-    ],
-  ])("restores the full list when search is cleared with %s", (_, clear) => {
-    render(<SettingsNav />);
+      search("my meetings");
+      expect(results()).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining("Templates"),
+          expect.stringContaining("Meetings"),
+        ]),
+      );
 
-    fireEvent.change(screen.getByPlaceholderText("Search settings..."), {
-      target: { value: "audio" },
+      search("develop");
+      expect(
+        screen.getByRole("button", { name: /^DevelopersAdvanced/ }),
+      ).toBeTruthy();
     });
-    expect(screen.queryByText("Appearance")).toBeNull();
 
-    clear();
+    it("trouve chaque réglage, sans tenir compte des accents", () => {
+      render(<SettingsNav />);
 
-    expect(screen.getByText("Appearance")).toBeTruthy();
+      search("dàrk");
+
+      expect(screen.getByText("1 result")).toBeTruthy();
+      expect(results()).toEqual(["ThemeAppearance"]);
+    });
+
+    it("remplace les groupes de la colonne par les résultats", () => {
+      render(<SettingsNav />);
+
+      search("audio");
+
+      expect(screen.queryByText("My servers")).toBeNull();
+      expect(results()).toContain("MicrophoneMeetings › Audio");
+    });
+
+    it("ouvre la page et demande l'arrivée sur le réglage", () => {
+      render(<SettingsNav />);
+
+      search("timezone");
+      fireEvent.click(screen.getByRole("button", { name: /^Timezone/ }));
+
+      expect(useSettingFocus.getState().pending).toBe("timezone");
+      expect(openedSettingsTab()).toEqual({ tab: "app" });
+    });
+
+    it("Entrée ouvre le premier résultat, ↓ entre dans la liste", () => {
+      render(<SettingsNav />);
+
+      search("palette");
+      fireEvent.keyDown(input(), { key: "ArrowDown" });
+      expect(document.activeElement?.textContent).toContain("Palette");
+
+      fireEvent.keyDown(input(), { key: "Enter" });
+      expect(useSettingFocus.getState().pending).toBe("palette");
+      expect(openedSettingsTab()).toEqual({ tab: "appearance" });
+    });
+
+    it("garde les réglages Pro trouvables, avec le cadenas", () => {
+      mocks.isPro = false;
+      render(<SettingsNav />);
+
+      search("hands-free");
+
+      const hit = screen.getByRole("button", { name: /Hands-free dictation/ });
+      expect(
+        hit.querySelector("[aria-label='Requires Syntheo Pro']"),
+      ).toBeTruthy();
+    });
+
+    it("conseille quand rien ne correspond", () => {
+      render(<SettingsNav />);
+
+      search("zzzzzz");
+
+      expect(screen.getByText("No setting matches “zzzzzz”.")).toBeTruthy();
+      expect(
+        screen.getByText("Check the spelling, or try a shorter word."),
+      ).toBeTruthy();
+    });
+
+    it.each([
+      [
+        "the clear button",
+        () => {
+          fireEvent.click(screen.getByRole("button", { name: "Clear search" }));
+        },
+      ],
+      [
+        "Escape",
+        () => {
+          fireEvent.keyDown(input(), { key: "Escape" });
+        },
+      ],
+    ])("restores the full list when search is cleared with %s", (_, clear) => {
+      render(<SettingsNav />);
+
+      search("audio");
+      expect(screen.queryByText("My servers")).toBeNull();
+
+      clear();
+
+      expect(screen.getByText("My servers")).toBeTruthy();
+      expect(screen.queryByText(/^\d+ results?$/)).toBeNull();
+    });
   });
 });

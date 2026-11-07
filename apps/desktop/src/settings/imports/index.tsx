@@ -34,7 +34,9 @@ export function SettingsImports() {
           <ArrowSquareOut className="size-3.5" />
         </Button>
       </div>
-      <MeetingImportScreen />
+      <div data-setting-id="import-recordings">
+        <MeetingImportScreen />
+      </div>
     </div>
   );
 }

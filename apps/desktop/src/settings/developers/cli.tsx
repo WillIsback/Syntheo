@@ -125,7 +125,10 @@ function CliSection({
     <section className="flex flex-col gap-4">
       <h2 className="font-sans text-lg font-semibold">{t`CLI & MCP`}</h2>
       <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div
+          data-setting-id="cli"
+          className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+        >
           <div className="min-w-0">
             <h3 className="flex items-center gap-1.5 text-sm font-medium">
               <Trans>Syntheo CLI</Trans>
@@ -223,7 +226,10 @@ function McpRow({ status }: { status: EmbeddedCliStatus | undefined }) {
   );
 
   return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div
+      data-setting-id="mcp-server"
+      className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+    >
       <div className="min-w-0">
         <h3 className="text-sm font-medium">{t`MCP server`}</h3>
       </div>

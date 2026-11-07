@@ -49,6 +49,7 @@ export function SettingsPrivacy() {
 
       <section className="flex flex-col gap-4">
         <SettingSwitchRow
+          settingId="lock-app"
           title={t`Lock app`}
           description={lockAppDescription}
           checked={lockAppEnabled && authAvailable}

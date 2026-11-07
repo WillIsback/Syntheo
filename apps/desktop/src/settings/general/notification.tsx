@@ -68,6 +68,7 @@ function CompletionSoundRow({
 }: CompletionSoundRowProps) {
   return (
     <SettingRow
+      settingId="completion-sound-name"
       title={<Trans>Sound</Trans>}
       description={<Trans>Choose from five completion sounds.</Trans>}
     >
@@ -408,6 +409,7 @@ export function NotificationSettingsView() {
       <form.Field name="notification_disabled">
         {(field) => (
           <SettingSwitchRow
+            settingId="notifications-disabled"
             title={<Trans>Disable all notifications</Trans>}
             description={
               <Trans>
@@ -439,6 +441,7 @@ export function NotificationSettingsView() {
             <form.Field name="notification_summary_complete">
               {(field) => (
                 <SettingSwitchRow
+                  settingId="notify-summary-complete"
                   title={<Trans>Summary complete</Trans>}
                   description={<Trans>Show when a summary is ready.</Trans>}
                   checked={field.state.value}
@@ -451,6 +454,7 @@ export function NotificationSettingsView() {
             <form.Field name="notification_cloudsync_complete">
               {(field) => (
                 <SettingSwitchRow
+                  settingId="notify-cloud-sync"
                   title={<Trans>Cloud sync complete</Trans>}
                   description={
                     <Trans>Show when initial cloud sync finishes.</Trans>
@@ -465,6 +469,7 @@ export function NotificationSettingsView() {
             <form.Field name="notification_event">
               {(field) => (
                 <SettingSwitchRow
+                  settingId="notify-events"
                   title={<Trans>Event notifications</Trans>}
                   description={
                     <Trans>Prepare for events with a 5-minute reminder.</Trans>
@@ -479,6 +484,7 @@ export function NotificationSettingsView() {
             <form.Field name="notification_recording">
               {(field) => (
                 <SettingSwitchRow
+                  settingId="notify-recording"
                   title={<Trans>Recording status prompts</Trans>}
                   description={
                     <Trans>
@@ -497,6 +503,7 @@ export function NotificationSettingsView() {
               {(field) => (
                 <div className="flex flex-col gap-4">
                   <SettingSwitchRow
+                    settingId="completion-sound"
                     title={<Trans>Completion sound</Trans>}
                     description={
                       <Trans>
@@ -536,6 +543,7 @@ export function NotificationSettingsView() {
               <form.Field name="notification_bounce">
                 {(field) => (
                   <SettingSwitchRow
+                    settingId="notify-bounce"
                     title={<Trans>Bounce app icon</Trans>}
                     description={
                       <Trans>
@@ -557,6 +565,7 @@ export function NotificationSettingsView() {
               {(field) => (
                 <div className="flex flex-col gap-4">
                   <SettingSwitchRow
+                    settingId="mic-detection"
                     title={<Trans>Microphone detection</Trans>}
                     description={
                       <Trans>Detect meetings from microphone activity.</Trans>
@@ -572,7 +581,10 @@ export function NotificationSettingsView() {
                     >
                       <form.Field name="mic_active_threshold">
                         {(thresholdField) => (
-                          <div className="mb-4 flex items-center justify-between gap-4">
+                          <div
+                            data-setting-id="detection-delay"
+                            className="mb-4 flex items-center justify-between gap-4"
+                          >
                             <div className="flex-1">
                               <h4 className="text-sm font-medium">
                                 <Trans>Detection delay</Trans>
@@ -606,32 +618,34 @@ export function NotificationSettingsView() {
                         )}
                       </form.Field>
 
-                      <div className="mb-3 flex flex-col gap-1">
-                        <h4 className="text-sm font-medium">
-                          <Trans>Exclude apps from detection</Trans>
-                        </h4>
-                        <p className="text-muted-foreground text-xs">
-                          <Trans>
-                            Prevent selected apps from triggering meeting
-                            detection.
-                          </Trans>
-                        </p>
+                      <div data-setting-id="excluded-apps">
+                        <div className="mb-3 flex flex-col gap-1">
+                          <h4 className="text-sm font-medium">
+                            <Trans>Exclude apps from detection</Trans>
+                          </h4>
+                          <p className="text-muted-foreground text-xs">
+                            <Trans>
+                              Prevent selected apps from triggering meeting
+                              detection.
+                            </Trans>
+                          </p>
+                        </div>
+                        <form.Subscribe selector={(state) => state.values}>
+                          {(values) => (
+                            <IgnoredAppsSelector
+                              installedApps={installedApps}
+                              defaultIgnoredBundleIds={defaultIgnoredBundleIds}
+                              ignoredPlatforms={values.ignored_platforms}
+                              includedPlatforms={values.included_platforms}
+                              searchOpen={searchOpen}
+                              searchQuery={searchQuery}
+                              onSearchOpenChange={setSearchOpen}
+                              onSearchQueryChange={setSearchQuery}
+                              onToggleApp={handleToggleIgnoredApp}
+                            />
+                          )}
+                        </form.Subscribe>
                       </div>
-                      <form.Subscribe selector={(state) => state.values}>
-                        {(values) => (
-                          <IgnoredAppsSelector
-                            installedApps={installedApps}
-                            defaultIgnoredBundleIds={defaultIgnoredBundleIds}
-                            ignoredPlatforms={values.ignored_platforms}
-                            includedPlatforms={values.included_platforms}
-                            searchOpen={searchOpen}
-                            searchQuery={searchQuery}
-                            onSearchOpenChange={setSearchOpen}
-                            onSearchQueryChange={setSearchQuery}
-                            onToggleApp={handleToggleIgnoredApp}
-                          />
-                        )}
-                      </form.Subscribe>
                     </div>
                   )}
                 </div>
@@ -659,6 +673,7 @@ export function NotificationSettingsView() {
                     <form.Field name="respect_dnd">
                       {(field) => (
                         <SettingSwitchRow
+                          settingId="respect-dnd"
                           title={<Trans>Respect Do-Not-Disturb mode</Trans>}
                           description={
                             <Trans>

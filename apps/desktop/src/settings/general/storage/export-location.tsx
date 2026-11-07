@@ -47,7 +47,7 @@ export function ExportLocationRow() {
     settings.isLoading || !!settings.error || changeMutation.isPending;
 
   return (
-    <div>
+    <div data-setting-id="export-location">
       <div className="grid grid-cols-[minmax(0,1fr)_9rem] items-center gap-3">
         <button
           type="button"

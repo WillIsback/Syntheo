@@ -20,7 +20,7 @@ import { WindowsWindowControls } from "./windows-window-controls";
 
 import { documentationUrl } from "~/shared/documentation";
 import { goHome } from "~/shared/leave-overlay-tab";
-import { openNoteDialog } from "~/shared/open-note-dialog";
+import { openNoteDialog, openSettingsSearch } from "~/shared/open-note-dialog";
 import { useNewNote } from "~/shared/useNewNote";
 import { TITLE_BAR_SIDEBAR_ACTIONS_SLOT_ID } from "~/sidebar/custom-sidebar-header";
 import { useTabs } from "~/store/zustand/tabs";
@@ -88,6 +88,10 @@ export function WindowsTitleBar() {
             <DropdownMenuItem onSelect={openNoteDialog}>
               {t`Search Notes…`}
               <DropdownMenuShortcut>Ctrl+K</DropdownMenuShortcut>
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={openSettingsSearch}>
+              {t`Search for a Setting…`}
+              <DropdownMenuShortcut>Ctrl+Maj+P</DropdownMenuShortcut>
             </DropdownMenuItem>
             <DropdownMenuItem
               onSelect={() =>

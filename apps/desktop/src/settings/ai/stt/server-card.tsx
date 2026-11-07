@@ -133,20 +133,22 @@ export function SttServerCard() {
           baseUrl={baseUrl}
         />
       ) : null}
-      <ServerAddressForm
-        kind="stt"
-        providerId={providerId}
-        label={<Trans>Server address</Trans>}
-        placeholder={
-          providerId === "nvidia"
-            ? STT_NIM_BASE_URL_PLACEHOLDER
-            : STT_OPENAI_BASE_URL_PLACEHOLDER
-        }
-        testing={state.status === "testing"}
-        onTest={connection.test}
-        isCurrentProvider={current_stt_provider === providerId}
-      />
-      <div className="flex flex-col gap-2">
+      <div data-setting-id="stt-server">
+        <ServerAddressForm
+          kind="stt"
+          providerId={providerId}
+          label={<Trans>Server address</Trans>}
+          placeholder={
+            providerId === "nvidia"
+              ? STT_NIM_BASE_URL_PLACEHOLDER
+              : STT_OPENAI_BASE_URL_PLACEHOLDER
+          }
+          testing={state.status === "testing"}
+          onTest={connection.test}
+          isCurrentProvider={current_stt_provider === providerId}
+        />
+      </div>
+      <div data-setting-id="stt-protocol" className="flex flex-col gap-2">
         <span
           id={protocolLabelId}
           className="text-muted-foreground text-[13px] font-medium"
@@ -200,25 +202,27 @@ export function SttServerCard() {
         ) : null}
       </div>
       {baseUrl ? (
-        <ModelRadioList
-          key={providerId}
-          label={t`Model`}
-          models={models}
-          value={model}
-          onChange={(next) =>
-            setSelection({
-              current_stt_provider: providerId,
-              current_stt_model: next,
-            })
-          }
-          footer={
-            providerId === "nvidia"
-              ? t`NIM does not publish its model list: these are the models known for this protocol.`
-              : state.status === "connected"
-                ? undefined
-                : t`Test the connection to list the models served.`
-          }
-        />
+        <div data-setting-id="stt-model">
+          <ModelRadioList
+            key={providerId}
+            label={t`Model`}
+            models={models}
+            value={model}
+            onChange={(next) =>
+              setSelection({
+                current_stt_provider: providerId,
+                current_stt_model: next,
+              })
+            }
+            footer={
+              providerId === "nvidia"
+                ? t`NIM does not publish its model list: these are the models known for this protocol.`
+                : state.status === "connected"
+                  ? undefined
+                  : t`Test the connection to list the models served.`
+            }
+          />
+        </div>
       ) : null}
       <ServerHelp>
         <p>

@@ -33,6 +33,7 @@ const mocks = vi.hoisted(() => ({
     pause: null as { sessionId: string; phase: string } | null,
   },
   requestMainListenerControl: vi.fn(),
+  isPro: true,
 }));
 
 vi.mock("~/stt/contexts", () => ({
@@ -45,7 +46,7 @@ vi.mock("~/stt/window-control", () => ({
 }));
 
 vi.mock("~/billing/billing-context", () => ({
-  useBillingAccess: () => ({ isPro: true }),
+  useBillingAccess: () => ({ isPro: mocks.isPro }),
 }));
 
 vi.mock("~/settings/team/mirror", () => ({
@@ -94,6 +95,9 @@ import {
   useOpenNoteDialog,
 } from "./open-note-dialog";
 
+import { useSettingFocus } from "~/settings/setting-focus";
+import { openSettingsSearch } from "~/shared/palette-store";
+
 describe("OpenNoteDialog", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -101,7 +105,9 @@ describe("OpenNoteDialog", () => {
     mocks.sessions = [];
     mocks.folderPaths = [];
     mocks.live = { status: "inactive", sessionId: null, pause: null };
+    mocks.isPro = true;
     closeNoteDialog();
+    useSettingFocus.getState().clear();
     globalThis.ResizeObserver = class {
       observe() {}
       unobserve() {}
@@ -147,7 +153,10 @@ describe("OpenNoteDialog", () => {
     fireEvent.change(screen.getByPlaceholderText("Search notes and pages..."), {
       target: { value: "transcription" },
     });
-    fireEvent.click(screen.getByRole("option", { name: /Transcription/ }));
+    // La page passe avant les réglages de la page (groupe « Aller à »).
+    fireEvent.click(
+      screen.getAllByRole("option", { name: /Transcription/ })[0]!,
+    );
 
     expect(mocks.openNew).toHaveBeenCalledWith({
       type: "settings",
@@ -261,5 +270,132 @@ describe("OpenNoteDialog", () => {
 
     expect(result.current).toBe(first);
     expect(result.current.open).toBe(openNoteDialog);
+  });
+});
+
+// Issue 373 : une seule recherche de paramètres, trois portes d'entrée.
+describe("recherche de paramètres dans la palette", () => {
+  const search = (value: string) =>
+    fireEvent.change(screen.getByRole("combobox"), { target: { value } });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.sessions = [];
+    mocks.folderPaths = [];
+    mocks.live = { status: "inactive", sessionId: null, pause: null };
+    mocks.isPro = true;
+    closeNoteDialog();
+    useSettingFocus.getState().clear();
+    Element.prototype.scrollIntoView = vi.fn();
+  });
+
+  afterEach(cleanup);
+
+  it("Ctrl+K : groupe Paramètres limité à 5, puis « Voir les N paramètres »", () => {
+    render(<OpenNoteDialogProvider>{null}</OpenNoteDialogProvider>);
+    act(() => openNoteDialog());
+
+    search("dictation");
+
+    const settingOptions = screen
+      .getAllByRole("option")
+      .filter((option) =>
+        option.getAttribute("data-value")?.startsWith("setting-"),
+      );
+    expect(settingOptions).toHaveLength(5);
+    expect(screen.getByText("Go to")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("option", { name: "See all 6 settings" }));
+
+    expect(
+      screen.getByRole("button", { name: "Remove the Settings filter" }),
+    ).toBeTruthy();
+    expect(
+      screen
+        .getAllByRole("option")
+        .filter((option) =>
+          option.getAttribute("data-value")?.startsWith("setting-"),
+        ),
+    ).toHaveLength(6);
+  });
+
+  it("Entrée ouvre la page et demande l'arrivée sur le réglage", () => {
+    render(<OpenNoteDialog open onOpenChange={mocks.onOpenChange} />);
+
+    search("dark");
+    fireEvent.click(screen.getByRole("option", { name: /^Theme/ }));
+
+    expect(mocks.onOpenChange).toHaveBeenCalledWith(false);
+    expect(useSettingFocus.getState().pending).toBe("theme");
+    expect(mocks.openNew).toHaveBeenCalledWith({
+      type: "settings",
+      state: { tab: "appearance" },
+    });
+  });
+
+  it("Ctrl+Maj+P : palette filtrée, sans notes ni commandes", () => {
+    render(<OpenNoteDialogProvider>{null}</OpenNoteDialogProvider>);
+    act(() => openSettingsSearch());
+
+    expect(screen.getByPlaceholderText("Search settings")).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Remove the Settings filter" }),
+    ).toBeTruthy();
+    expect(screen.queryByRole("option", { name: /New note/ })).toBeNull();
+
+    search("micro");
+    const [first] = screen.getAllByRole("option");
+    expect(first?.textContent).toContain("Microphone");
+    expect(first?.textContent).toContain("Meetings › Audio");
+  });
+
+  it("annonce l'absence de résultat avec un conseil", () => {
+    render(<OpenNoteDialogProvider>{null}</OpenNoteDialogProvider>);
+    act(() => openSettingsSearch());
+
+    search("micor");
+
+    expect(screen.getByText("No setting matches “micor”.")).toBeTruthy();
+    expect(
+      screen.getByText("Check the spelling, or try a shorter word."),
+    ).toBeTruthy();
+  });
+
+  it("Retour arrière dans un champ vide retire le filtre", () => {
+    render(<OpenNoteDialogProvider>{null}</OpenNoteDialogProvider>);
+    act(() => openSettingsSearch());
+
+    fireEvent.keyDown(screen.getByRole("combobox"), { key: "Backspace" });
+
+    expect(
+      screen.queryByRole("button", { name: "Remove the Settings filter" }),
+    ).toBeNull();
+    expect(
+      screen.getByPlaceholderText("Search notes and pages..."),
+    ).toBeTruthy();
+  });
+
+  it("l'étiquette « Paramètres × » retire aussi le filtre", () => {
+    render(<OpenNoteDialogProvider>{null}</OpenNoteDialogProvider>);
+    act(() => openSettingsSearch());
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Remove the Settings filter" }),
+    );
+
+    expect(screen.getByRole("option", { name: /New note/ })).toBeTruthy();
+  });
+
+  it("garde les réglages Pro trouvables, avec le cadenas", () => {
+    mocks.isPro = false;
+    render(<OpenNoteDialogProvider>{null}</OpenNoteDialogProvider>);
+    act(() => openSettingsSearch());
+
+    search("hands-free");
+
+    const option = screen.getByRole("option", { name: /Hands-free dictation/ });
+    expect(
+      option.querySelector("[aria-label='Requires Syntheo Pro']"),
+    ).toBeTruthy();
   });
 });

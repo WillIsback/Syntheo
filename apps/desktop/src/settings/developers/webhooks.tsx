@@ -83,7 +83,7 @@ export function WebhooksSection() {
   const webhooks = webhooksQuery.data ?? [];
 
   return (
-    <section className="flex flex-col gap-4">
+    <section data-setting-id="webhooks" className="flex flex-col gap-4">
       <h2 className="font-sans text-lg font-semibold">{t`Webhooks`}</h2>
       <div>
         <form

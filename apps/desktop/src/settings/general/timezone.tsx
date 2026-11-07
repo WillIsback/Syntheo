@@ -54,6 +54,7 @@ export function TimezoneSelector() {
 
   return (
     <SettingRow
+      settingId="timezone"
       title={<Trans>Timezone</Trans>}
       description={<Trans>Show the timeline in your preferred timezone.</Trans>}
     >
