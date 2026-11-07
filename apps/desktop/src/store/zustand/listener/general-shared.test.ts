@@ -80,6 +80,13 @@ describe("isLiveRecordingInProgress", () => {
     expect(isLiveRecordingInProgress(liveState())).toBe(false);
   });
 
+  it("stays true while the meeting is paused (issue 353)", () => {
+    const live = liveState();
+    live.pause = { sessionId: "session-1" } as NonNullable<typeof live.pause>;
+
+    expect(isLiveRecordingInProgress(live)).toBe(true);
+  });
+
   it("covers the start, capture and finalizing phases of a recording", () => {
     const live = liveState();
 

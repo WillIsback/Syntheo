@@ -1,5 +1,4 @@
 import { Trans } from "@lingui/react/macro";
-import { useMutation } from "@tanstack/react-query";
 import type { EditorView } from "prosemirror-view";
 import { forwardRef } from "react";
 
@@ -14,13 +13,9 @@ import { StreamingView } from "./streaming";
 
 import { useAITaskTask } from "~/ai/hooks";
 import { useLLMConnectionStatus } from "~/ai/hooks";
-import {
-  isMainAITaskHostWindow,
-  requestMainEnhance,
-} from "~/ai/task-window-sync";
-import { getEnhancerService } from "~/services/enhancer";
 import { hasStoredNoteContent } from "~/session/components/shared";
 import { shouldShowEmptySummaryConfigError } from "~/session/enhance-config";
+import { useGenerateSummary } from "~/session/hooks/useGenerateSummary";
 import { useEnhancedNote } from "~/session/queries";
 import { createTaskId } from "~/store/zustand/ai-task/task-configs";
 
@@ -117,24 +112,10 @@ export const Enhanced = forwardRef<
 );
 
 function EmptySummary({ sessionId }: { sessionId: string }) {
-  const generate = useMutation({
-    mutationFn: async () => {
-      if (!isMainAITaskHostWindow()) {
-        await requestMainEnhance(sessionId);
-        return;
-      }
-      const service = getEnhancerService();
-      if (!service) throw new Error("Summary generation is not ready yet.");
-      const result = await service.enhance(sessionId);
-      if (result.type === "no_model")
-        throw new Error("Set up AI summaries first.");
-      if (result.type === "too_short")
-        throw new Error("Not enough transcript recorded to summarize.");
-    },
-  });
+  const generate = useGenerateSummary(sessionId);
   return (
     <div className="flex h-full flex-col items-center justify-center gap-4 px-6">
-      <Button onClick={() => generate.mutate()} disabled={generate.isPending}>
+      <Button onClick={() => generate.generate()} disabled={generate.pending}>
         <Trans>Generate summary</Trans>
       </Button>
       {generate.error && <p role="alert">{generate.error.message}</p>}

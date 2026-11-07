@@ -30,6 +30,9 @@ vi.mock("~/stt/window-control", () => ({
   requestMainListenerControl: vi.fn(),
 }));
 vi.mock("~/shared/leave-overlay-tab", () => ({ leaveOverlayTab: vi.fn() }));
+vi.mock("~/session/hooks/useGenerateSummary", () => ({
+  useGenerateSummary: () => ({ generate: vi.fn(), pending: false }),
+}));
 vi.mock("~/session/queries", () => ({
   useSession: () => ({ raw_md: "" }),
   useEnhancedNote: () => undefined,

@@ -37,6 +37,9 @@ export type OnStoppedCallback = (
     requestedLiveTranscription: boolean;
     liveTranscriptionActive: boolean;
     needsBatchRepair: boolean;
+    // Arrêt dû à « Mettre en pause » : transcript enregistré, synthèse et fin
+    // de réunion attendent « Terminer » (issue 353).
+    paused?: boolean;
   },
 ) => void | Promise<void>;
 

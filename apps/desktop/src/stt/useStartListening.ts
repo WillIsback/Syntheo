@@ -17,6 +17,7 @@ import {
   startMeetingRecordingDisclosure,
 } from "./meeting-disclosure";
 import { startMeetingScreenCapture } from "./meeting-screen-capture";
+import { finishPausedListening, getPausedSessionId } from "./pause-listening";
 import {
   classifyStartFailure,
   getMicrophonePermission,
@@ -127,6 +128,11 @@ export function useStartListeningState(
     ) {
       toast.error(getBatchOnlyCaptureMessage(), { id: "batch-only-capture" });
       return;
+    }
+    // Une autre réunion restée en pause se termine : une seule écoute à la fois.
+    const pausedSessionId = getPausedSessionId();
+    if (pausedSessionId && pausedSessionId !== sessionId) {
+      await finishPausedListening(pausedSessionId);
     }
     if (captureReminderEnabled) {
       toast.info(getCaptureReminderMessage(), {

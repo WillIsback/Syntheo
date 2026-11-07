@@ -32,7 +32,10 @@ import {
   createFloatingSpeakerLabeler,
   type FloatingSpeakerLabels,
 } from "./speaker-labels";
-import { isFloatingBarSupported } from "./support";
+import {
+  isFloatingBarSupported,
+  isPausedFloatingBarSupported,
+} from "./support";
 import {
   createFloatingMeetingWindowSynchronizer,
   hideFloatingMeetingPanel,
@@ -52,6 +55,8 @@ import { useConfigValue, useConfigValues } from "~/shared/config";
 import { useLatestRef } from "~/shared/hooks/useLatestRef";
 import { listenerStore } from "~/store/zustand/listener/instance";
 import type { RenderLabelContext } from "~/stt/live-segment";
+import { finishPausedListening } from "~/stt/pause-listening";
+import { requestMainListenerControl } from "~/stt/window-control";
 
 export {
   getFloatingRouteState,
@@ -131,7 +136,8 @@ function LiveCaptionDefaultVisibilitySync() {
 
     const applyDefaultVisibility = (state: ListenerState) => {
       if (state.live.status !== "active" || !state.live.sessionId) {
-        appliedSessionId = null;
+        // Une reprise après pause garde le choix fait pour la réunion.
+        if (!state.live.pause) appliedSessionId = null;
         return;
       }
 
@@ -224,7 +230,9 @@ function FloatingMeetingWindowSync({
           ? routeState.transcriptBubbles
           : undefined;
       updateRouteState(
-        state.live.status === "inactive" && !state.live.loading
+        state.live.status === "inactive" &&
+          !state.live.loading &&
+          !state.live.pause
           ? getDictationPanelState()
           : enabledRef.current
             ? getCurrentFloatingRouteState(
@@ -258,12 +266,15 @@ function FloatingMeetingWindowSync({
 
     windowsEvents.floatingBarStop
       .listen(() => {
-        if (
-          !enabledRef.current ||
-          routeState?.dictation ||
-          listenerStore.getState().live.status !== "active"
-        )
+        if (!enabledRef.current || routeState?.dictation) return;
+        const live = listenerStore.getState().live;
+        // « Terminer » pendant la pause : la réunion se termine sans capture.
+        if (live.pause?.phase === "paused" && live.status !== "active") {
+          windowSynchronizer.update(null);
+          void finishPausedListening(live.pause.sessionId);
           return;
+        }
+        if (live.status !== "active") return;
         windowSynchronizer.update(null);
         listenerStore.getState().stop();
       })
@@ -274,6 +285,21 @@ function FloatingMeetingWindowSync({
         }
 
         unlisteners.push(unlisten);
+      });
+
+    windowsEvents.floatingBarListeningAction
+      .listen(({ payload }) => {
+        if (cancelled || !enabledRef.current) return;
+        const live = listenerStore.getState().live;
+        if (payload.action === "pause") {
+          if (live.status === "active") listenerStore.getState().pause();
+        } else if (live.pause?.phase === "paused") {
+          void requestMainListenerControl("resume", live.pause.sessionId);
+        }
+      })
+      .then((unlisten) => {
+        if (cancelled) unlisten();
+        else unlisteners.push(unlisten);
       });
 
     windowsEvents.floatingBarOpenMain
@@ -399,6 +425,7 @@ function getCurrentFloatingRouteState(
     sttProvider,
     sessionId,
     colorScheme: getCurrentFloatingBarColorScheme(),
+    pausedSupported: isPausedFloatingBarSupported(),
     settings,
     liveCaptionToggleVisible,
     sessionTitle: getFloatingSessionTitle(state, meetingData),
@@ -430,6 +457,7 @@ export function haveFloatingRouteInputsChanged(
       previousState.live.requestedLiveTranscription ||
     state.live.transcriptionStalled !==
       previousState.live.transcriptionStalled ||
+    state.live.pause !== previousState.live.pause ||
     state.liveSegments !== previousState.liveSegments
   );
 }
@@ -438,7 +466,7 @@ function getFloatingSessionTitle(
   state: ListenerState,
   meetingData: MeetingFloatData | undefined,
 ) {
-  const sessionId = state.live.sessionId;
+  const sessionId = state.live.sessionId ?? state.live.pause?.sessionId;
   if (!sessionId) {
     return null;
   }

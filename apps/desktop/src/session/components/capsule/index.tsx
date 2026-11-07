@@ -1,6 +1,7 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import type { ReactNode } from "react";
 
+import { Pause } from "@syntheo/ui/components/icons";
 import { cn } from "@syntheo/utils";
 
 import { LevelMeter } from "./level-meter";
@@ -20,6 +21,12 @@ export type CapsuleListening = {
   amplitude?: number;
   muted: boolean;
   finalizing: boolean;
+  // Pause dans la même session (issue 353) : aucune capture ouverte.
+  paused?: boolean;
+  // Arrêt de la capture et enregistrement du transcript avant la pause.
+  pausing?: boolean;
+  // Reprise demandée, nouvelle capture en cours d'ouverture.
+  resuming?: boolean;
   // Chrono et vumètre branchés directement sur l'écoute : ils changent
   // chaque seconde et dix fois par seconde, la capsule n'a pas à suivre.
   elapsed?: ReactNode;
@@ -31,6 +38,13 @@ export type CapsuleActions = {
   onStart: () => void;
   startDisabled?: boolean;
   onStop: () => void;
+  onPause?: () => void;
+  onResume?: () => void;
+  // Note sans compte rendu (par exemple après avoir quitté l'application
+  // pendant une pause) : reprendre l'écoute ou générer le compte rendu.
+  onResumeListening?: () => void;
+  onGenerateSummary?: () => void;
+  generateSummaryDisabled?: boolean;
   onCopy: () => void;
   copyDisabled?: boolean;
   onExport: () => void;
@@ -81,41 +95,15 @@ export function NoteCapsule({
         </>
       ) : null}
       {stage === "listen" ? (
-        <>
-          <span className="flex items-center gap-2 px-2">
-            <span
-              aria-hidden="true"
-              className="bg-recording size-2 rounded-full"
-            />
-            <span
-              role="timer"
-              aria-label={t`Listening time`}
-              className="font-mono text-[13px] tabular-nums"
-            >
-              {listening?.elapsed ?? formatElapsed(listening?.seconds ?? 0)}
-            </span>
-            {listening?.meter ?? (
-              <LevelMeter
-                amplitude={listening?.amplitude ?? 0}
-                muted={listening?.muted}
-              />
-            )}
-          </span>
-          <CapsuleButton
-            tone="primary"
-            onClick={actions.onStop}
-            disabled={listening?.finalizing}
-          >
-            {listening?.finalizing ? (
-              <Trans>Finishing…</Trans>
-            ) : (
-              <Trans>Finish</Trans>
-            )}
-          </CapsuleButton>
-        </>
+        <ListeningControls listening={listening} actions={actions} />
       ) : null}
       {stage === "synthesis" ? (
         <>
+          {actions.onResumeListening ? (
+            <CapsuleButton onClick={actions.onResumeListening}>
+              <Trans>Resume listening</Trans>
+            </CapsuleButton>
+          ) : null}
           <CapsuleButton
             onClick={actions.onCopy}
             disabled={actions.copyDisabled}
@@ -125,16 +113,112 @@ export function NoteCapsule({
           <CapsuleButton onClick={actions.onExport}>
             <Trans>Export</Trans>
           </CapsuleButton>
-          <CapsuleButton
-            tone="primary"
-            onClick={actions.onAsk}
-            shortcut={`${modifierLabel} J`}
-          >
-            <Trans>Ask the note</Trans>
-          </CapsuleButton>
+          {actions.onGenerateSummary ? (
+            <CapsuleButton
+              tone="primary"
+              onClick={actions.onGenerateSummary}
+              disabled={actions.generateSummaryDisabled}
+            >
+              <Trans>Generate the summary</Trans>
+            </CapsuleButton>
+          ) : (
+            <CapsuleButton
+              tone="primary"
+              onClick={actions.onAsk}
+              shortcut={`${modifierLabel} J`}
+            >
+              <Trans>Ask the note</Trans>
+            </CapsuleButton>
+          )}
         </>
       ) : null}
     </div>
+  );
+}
+
+function ListeningControls({
+  listening,
+  actions,
+}: {
+  listening?: CapsuleListening;
+  actions: CapsuleActions;
+}) {
+  const { t } = useLingui();
+  const paused = listening?.paused === true;
+  const pausing = listening?.pausing === true;
+
+  return (
+    <>
+      <span className="flex items-center gap-2 px-2">
+        {paused ? (
+          // Indicateur et texte : l'état ne repose pas sur la seule couleur.
+          <>
+            <Pause
+              aria-hidden="true"
+              data-paused-indicator
+              className="size-3.5"
+            />
+            <span role="status" className="text-[13px] font-semibold">
+              <Trans>Paused</Trans>
+            </span>
+          </>
+        ) : (
+          <span
+            aria-hidden="true"
+            className="bg-recording size-2 rounded-full"
+          />
+        )}
+        <span
+          role="timer"
+          aria-label={t`Listening time`}
+          className={cn([
+            "font-mono text-[13px] tabular-nums",
+            paused && "opacity-70",
+          ])}
+        >
+          {listening?.elapsed ?? formatElapsed(listening?.seconds ?? 0)}
+        </span>
+        {paused
+          ? null
+          : (listening?.meter ?? (
+              <LevelMeter
+                amplitude={listening?.amplitude ?? 0}
+                muted={listening?.muted}
+              />
+            ))}
+      </span>
+      {paused ? (
+        actions.onResume ? (
+          <CapsuleButton
+            tone="recording"
+            onClick={actions.onResume}
+            disabled={listening?.resuming}
+            ariaLabel={t`Resume listening`}
+          >
+            <Trans>Resume listening</Trans>
+          </CapsuleButton>
+        ) : null
+      ) : actions.onPause ? (
+        <CapsuleButton
+          onClick={actions.onPause}
+          disabled={listening?.finalizing || pausing}
+          ariaLabel={t`Pause listening`}
+        >
+          {pausing ? <Trans>Pausing…</Trans> : <Trans>Put on pause</Trans>}
+        </CapsuleButton>
+      ) : null}
+      <CapsuleButton
+        tone="primary"
+        onClick={actions.onStop}
+        disabled={paused ? listening?.resuming : listening?.finalizing}
+      >
+        {listening?.finalizing && !pausing && !paused ? (
+          <Trans>Finishing…</Trans>
+        ) : (
+          <Trans>Finish</Trans>
+        )}
+      </CapsuleButton>
+    </>
   );
 }
 
@@ -189,18 +273,21 @@ function CapsuleButton({
   disabled,
   shortcut,
   tone = "ghost",
+  ariaLabel,
 }: {
   children: ReactNode;
   onClick: () => void;
   disabled?: boolean;
   shortcut?: string;
   tone?: "ghost" | "primary" | "recording";
+  ariaLabel?: string;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
+      aria-label={ariaLabel}
       aria-keyshortcuts={shortcut ? toAriaShortcut(shortcut) : undefined}
       className={cn([
         "rounded-pill inline-flex items-center px-3.5 py-[7px] transition-colors",

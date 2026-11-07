@@ -1,5 +1,7 @@
 import { useListener } from "./contexts";
 
+import { getListeningElapsedSeconds } from "~/store/zustand/listener/general-shared";
+
 export function combineLiveAmplitude(amplitude: {
   mic: number;
   speaker: number;
@@ -20,9 +22,12 @@ export function useLiveAmplitude(sessionId: string): number {
   );
 }
 
-/** Secondes d'écoute de `sessionId` (0 si elle n'est pas écoutée). */
+/**
+ * Secondes d'écoute de `sessionId`, pauses exclues (0 si elle n'est ni
+ * écoutée ni en pause).
+ */
 export function useLiveSeconds(sessionId: string): number {
   return useListener((state) =>
-    state.live.sessionId === sessionId ? state.live.seconds : 0,
+    getListeningElapsedSeconds(state.live, sessionId),
   );
 }

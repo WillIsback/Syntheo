@@ -11,6 +11,8 @@ import {
   NotePencil,
   Lock,
   MagnifyingGlass,
+  Pause,
+  Play,
   Users,
   X,
   type Icon,
@@ -29,6 +31,8 @@ import { useMainContentCenterOffset } from "~/shared/main/content-offset";
 import { useNewNote } from "~/shared/useNewNote";
 import { useSettingsNavGroups } from "~/sidebar/settings-nav-groups";
 import { type TabInput, useTabs } from "~/store/zustand/tabs";
+import { useListener } from "~/stt/contexts";
+import { requestMainListenerControl } from "~/stt/window-control";
 
 const MAX_RECENT_DISPLAY = 5;
 
@@ -306,12 +310,44 @@ export function OpenNoteDialog({
   );
 
   const newNoteLabel = t`New note`;
-  const showNewNote =
-    !query.trim() ||
-    newNoteLabel.toLowerCase().includes(query.trim().toLowerCase());
+  const matchesQuery = (label: string) =>
+    !query.trim() || label.toLowerCase().includes(query.trim().toLowerCase());
+  const showNewNote = matchesQuery(newNoteLabel);
+
+  // Commande contextuelle de l'écoute (issue 353), sans raccourci dédié.
+  const activeSessionId = useListener((state) =>
+    state.live.status === "active" ? state.live.sessionId : null,
+  );
+  const pausedSessionId = useListener((state) =>
+    state.live.pause?.phase === "paused" && state.live.status !== "active"
+      ? state.live.pause.sessionId
+      : null,
+  );
+  const listeningCommand = useMemo(
+    () =>
+      activeSessionId
+        ? {
+            action: "pause" as const,
+            sessionId: activeSessionId,
+            label: t`Pause listening`,
+            icon: Pause,
+          }
+        : pausedSessionId
+          ? {
+              action: "resume" as const,
+              sessionId: pausedSessionId,
+              label: t`Resume listening`,
+              icon: Play,
+            }
+          : null,
+    [activeSessionId, pausedSessionId, t],
+  );
+  const showListeningCommand =
+    listeningCommand !== null && matchesQuery(listeningCommand.label);
 
   const hasAnyResults =
     showNewNote ||
+    showListeningCommand ||
     filteredPages.length > 0 ||
     filteredRecentSessions.length > 0 ||
     filteredOtherNotes.length > 0;
@@ -366,19 +402,40 @@ export function OpenNoteDialog({
     createNewNote();
   }, [createNewNote, handleOpenChange]);
 
-  const actionGroup = showNewNote && (
+  const handleListeningCommand = useCallback(() => {
+    if (!listeningCommand) return;
+    handleOpenChange(false);
+    void requestMainListenerControl(
+      listeningCommand.action,
+      listeningCommand.sessionId,
+    );
+  }, [handleOpenChange, listeningCommand]);
+
+  const actionGroup = (showNewNote || showListeningCommand) && (
     <CommandPrimitive.Group className="pb-1.5">
-      <CommandPrimitive.Item
-        value="action-new-note"
-        onSelect={handleNewNote}
-        className={PALETTE_ITEM_CLASS}
-      >
-        <NotePencil className="text-muted-foreground h-4 w-4 shrink-0" />
-        <span className="truncate">{newNoteLabel}</span>
-        <kbd className="text-muted-foreground ml-auto shrink-0 font-sans text-xs">
-          Ctrl N
-        </kbd>
-      </CommandPrimitive.Item>
+      {showListeningCommand && listeningCommand ? (
+        <CommandPrimitive.Item
+          value={`action-${listeningCommand.action}-listening`}
+          onSelect={handleListeningCommand}
+          className={PALETTE_ITEM_CLASS}
+        >
+          <listeningCommand.icon className="text-muted-foreground h-4 w-4 shrink-0" />
+          <span className="truncate">{listeningCommand.label}</span>
+        </CommandPrimitive.Item>
+      ) : null}
+      {showNewNote ? (
+        <CommandPrimitive.Item
+          value="action-new-note"
+          onSelect={handleNewNote}
+          className={PALETTE_ITEM_CLASS}
+        >
+          <NotePencil className="text-muted-foreground h-4 w-4 shrink-0" />
+          <span className="truncate">{newNoteLabel}</span>
+          <kbd className="text-muted-foreground ml-auto shrink-0 font-sans text-xs">
+            Ctrl N
+          </kbd>
+        </CommandPrimitive.Item>
+      ) : null}
     </CommandPrimitive.Group>
   );
 

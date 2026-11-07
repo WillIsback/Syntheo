@@ -27,6 +27,7 @@ vi.mock("./useStartListeningWithBatchOverride", () => ({
 vi.mock("~/store/zustand/listener/instance", () => ({
   listenerStore: { getState: vi.fn() },
 }));
+vi.mock("./pause-listening", () => ({ finishPausedListening: vi.fn() }));
 
 import { requestMainListenerControl } from "./window-control";
 
@@ -66,6 +67,40 @@ describe("requestMainListenerControl", () => {
     await request;
 
     expect(hoisted.stopCaptureForSession).toHaveBeenCalledWith("session-1");
+  });
+
+  // Issue 353 : une pause est une promesse de confidentialité. Si la fenêtre
+  // principale ne répond pas, la capture est coupée nativement.
+  test("pause from another window still closes the capture natively", async () => {
+    hoisted.emitTo.mockRejectedValueOnce(new Error("window not found"));
+
+    const request = requestMainListenerControl("pause", "session-1");
+    expect(hoisted.emitTo).toHaveBeenCalledWith(
+      "main",
+      "syntheo:listener-control",
+      expect.objectContaining({ action: "pause", sessionId: "session-1" }),
+    );
+    await vi.runAllTimersAsync();
+    await request;
+
+    expect(hoisted.stopCaptureForSession).toHaveBeenCalledWith("session-1");
+  });
+
+  test("routes resume and finish requests to the main webview", async () => {
+    await requestMainListenerControl("resume", "session-1");
+    await requestMainListenerControl("finish", "session-1");
+
+    expect(hoisted.emitTo).toHaveBeenCalledWith(
+      "main",
+      "syntheo:listener-control",
+      expect.objectContaining({ action: "resume", sessionId: "session-1" }),
+    );
+    expect(hoisted.emitTo).toHaveBeenCalledWith(
+      "main",
+      "syntheo:listener-control",
+      expect.objectContaining({ action: "finish", sessionId: "session-1" }),
+    );
+    expect(hoisted.stopCaptureForSession).not.toHaveBeenCalled();
   });
 
   test("still routes start requests to the main webview", async () => {

@@ -19,12 +19,15 @@ export function getNoteStage({
   sessionMode,
   hasTranscript,
   hasEnhancedNotes,
+  paused = false,
 }: {
   sessionMode: SessionMode;
   hasTranscript: boolean;
   hasEnhancedNotes: boolean;
+  // Écoute en pause (issue 353) : la réunion continue sans capture ouverte.
+  paused?: boolean;
 }): NoteStage {
-  if (sessionMode === "active" || sessionMode === "finalizing") {
+  if (paused || sessionMode === "active" || sessionMode === "finalizing") {
     return "listen";
   }
 

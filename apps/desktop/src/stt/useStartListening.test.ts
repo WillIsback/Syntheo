@@ -12,6 +12,7 @@ import {
   saveCaptureStop,
 } from "./capture-completion";
 import { saveIncompleteCapture } from "./capture-result";
+import { takePausedSummary } from "./pause-listening";
 import {
   getBatchOnlyCaptureMessage,
   getCaptureReminderMessage,
@@ -25,6 +26,7 @@ import {
   useStartListeningState,
 } from "./useStartListening";
 
+import { playCompletionSound } from "~/shared/completion-sound";
 import { useLiveTranscriptionLanguages } from "~/store/zustand/live-transcription-languages";
 
 vi.mock("./capture-completion", () => ({
@@ -2520,5 +2522,118 @@ describe("useStartListening", () => {
     });
     expect(outcome).not.toBe("awaiting_user");
     expect(markCaptureAudioSavedMock).not.toHaveBeenCalled();
+  });
+  // Issue 353 : la pause enregistre le transcript de chaque capture mais ne
+  // lance la synthèse qu'à « Terminer ».
+  describe("pause de l'écoute", () => {
+    const word = (id: string) => ({
+      new_words: [{ id, text: id, start_ms: 0, end_ms: 500, channel: 0 }],
+      replaced_ids: [],
+      partials: [],
+    });
+    const stopDetails = (stoppedAtMs: number, paused: boolean) => ({
+      chunkedAudio: true,
+      durationSeconds: 60,
+      stoppedAtMs,
+      audioPath: null,
+      requestedLiveTranscription: true,
+      liveTranscriptionActive: true,
+      needsBatchRepair: false,
+      paused,
+    });
+
+    afterEach(() => {
+      takePausedSummary("session-1");
+    });
+
+    test("une capture mise en pause garde son transcript sans lancer la synthèse", async () => {
+      const stoppedAtMs = Date.now() + 60_000;
+      vi.mocked(loadCaptureStop).mockResolvedValue(stoppedAtMs);
+      const { result } = renderHook(() => useStartListening("session-1"));
+      await act(async () => {
+        await result.current();
+      });
+      const callbacks = startMock.mock.calls[0]?.[1];
+      callbacks.handlePersist(word("Bonjour"));
+
+      await act(async () => {
+        await callbacks.onStopped("session-1", stopDetails(stoppedAtMs, true));
+      });
+
+      expect(requestAutoEnhanceMock).not.toHaveBeenCalled();
+      expect(requestMainAutoEnhanceMock).not.toHaveBeenCalled();
+      expect(playCompletionSound).not.toHaveBeenCalled();
+      expect(completeCaptureTranscript).toHaveBeenCalledWith(
+        "session-1",
+        "generated-id",
+        stoppedAtMs,
+      );
+      expect(softDeleteTranscriptMock).not.toHaveBeenCalled();
+      // Rien n'est laissé pour une reprise après redémarrage : quitter
+      // pendant la pause ne déclenchera aucune synthèse.
+      expect(clearCaptureLifecycleMarkerMock).toHaveBeenCalledWith(
+        "session-1",
+        "generated-id",
+      );
+      expect(
+        saveCaptureLifecycleMarkerMock.mock.calls.some(
+          ([marker]) => marker?.pendingSummaryMode,
+        ),
+      ).toBe(false);
+      expect(requestCaptureRecoveryMock).not.toHaveBeenCalled();
+      expect(takePausedSummary("session-1")).toBe("if_empty");
+    });
+
+    test("pause et reprise deux fois : transcript continu, une seule synthèse à la fin", async () => {
+      let nextId = 0;
+      idMock.mockImplementation(() => `transcript-${++nextId}`);
+      vi.mocked(loadCaptureStop).mockImplementation(
+        async (_sessionId, transcriptId) =>
+          1_000 * Number(String(transcriptId).replace(/\D/g, "")),
+      );
+      const { result, rerender } = renderHook(() =>
+        useStartListening("session-1"),
+      );
+
+      for (const round of [0, 1, 2]) {
+        await act(async () => {
+          await result.current();
+        });
+        const [params, callbacks] = startMock.mock.calls[round]!;
+        expect(params.session_id).toBe("session-1");
+        callbacks.handlePersist(word(`mot-${round}`));
+        await act(async () => {
+          await callbacks.onStopped(
+            "session-1",
+            stopDetails(1_000 * (round + 1), round < 2),
+          );
+        });
+        if (round < 2) {
+          expect(requestAutoEnhanceMock).not.toHaveBeenCalled();
+        }
+        // Après la première capture, la note a un transcript à prolonger.
+        useSessionHasTranscriptMock.mockReturnValue(true);
+        rerender();
+      }
+
+      const transcriptIds = startMock.mock.calls.map(
+        ([params]) => params.live_transcript.transcript_id,
+      );
+      expect(new Set(transcriptIds).size).toBe(3);
+      for (const transcriptId of transcriptIds) {
+        expect(completeCaptureTranscript).toHaveBeenCalledWith(
+          "session-1",
+          transcriptId,
+          expect.any(Number),
+        );
+      }
+      expect(softDeleteTranscriptMock).not.toHaveBeenCalled();
+      expect(requestAutoEnhanceMock).toHaveBeenCalledOnce();
+      expect(requestAutoEnhanceMock).toHaveBeenCalledWith(
+        "session-1",
+        "regenerate",
+      );
+      expect(takePausedSummary("session-1")).toBeUndefined();
+    });
   });
 });

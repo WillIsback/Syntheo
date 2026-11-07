@@ -12,11 +12,20 @@ const mocks = vi.hoisted(() => ({
   live: {
     sessionId: null as string | null,
     seconds: 0,
+    elapsedOffsetSeconds: 0,
     amplitude: { mic: 0, speaker: 0 },
     muted: false,
+    pause: null as {
+      sessionId: string;
+      elapsedSeconds: number;
+      phase: "pausing" | "paused";
+    } | null,
   },
   startListening: vi.fn(),
   stopListening: vi.fn(),
+  pauseListening: vi.fn(),
+  finishPausedListening: vi.fn(),
+  generateSummary: vi.fn(),
   requestMainListenerControl: vi.fn(),
   isMainWebviewWindow: true,
   sendChatEvent: vi.fn(),
@@ -40,8 +49,20 @@ vi.mock("~/stt/contexts", () => ({
     selector({
       getSessionMode: () => mocks.sessionMode,
       stop: mocks.stopListening,
+      pause: mocks.pauseListening,
       live: mocks.live,
     }),
+}));
+
+vi.mock("~/stt/pause-listening", () => ({
+  finishPausedListening: mocks.finishPausedListening,
+}));
+
+vi.mock("~/session/hooks/useGenerateSummary", () => ({
+  useGenerateSummary: () => ({
+    generate: mocks.generateSummary,
+    pending: false,
+  }),
 }));
 
 vi.mock("~/stt/useStartListening", () => ({
@@ -103,8 +124,10 @@ describe("SessionCapsule", () => {
     mocks.live = {
       sessionId: null,
       seconds: 0,
+      elapsedOffsetSeconds: 0,
       amplitude: { mic: 0, speaker: 0 },
       muted: false,
+      pause: null,
     };
     mocks.isMainWebviewWindow = true;
     mocks.rawMd = "";
@@ -155,8 +178,10 @@ describe("SessionCapsule", () => {
     mocks.live = {
       sessionId: "session-1",
       seconds: 65,
+      elapsedOffsetSeconds: 0,
       amplitude: { mic: 0.2, speaker: 0.1 },
       muted: false,
+      pause: null,
     };
     renderCapsule({ stage: "listen" });
 
@@ -164,6 +189,87 @@ describe("SessionCapsule", () => {
     fireEvent.click(screen.getByRole("button", { name: "Finish" }));
 
     expect(mocks.stopListening).toHaveBeenCalledTimes(1);
+  });
+
+  // Issue 353 : pause, reprise et « Terminer » pendant la pause.
+  it("pauses the listening and counts the time listened before a resume", () => {
+    mocks.sessionMode = "active";
+    mocks.live = {
+      ...mocks.live,
+      sessionId: "session-1",
+      seconds: 5,
+      elapsedOffsetSeconds: 60,
+    };
+    renderCapsule({ stage: "listen" });
+
+    expect(screen.getByRole("timer").textContent).toBe("01:05");
+    fireEvent.click(screen.getByRole("button", { name: "Pause listening" }));
+
+    expect(mocks.pauseListening).toHaveBeenCalledTimes(1);
+    expect(mocks.stopListening).not.toHaveBeenCalled();
+  });
+
+  it("resumes or finishes a paused listening", () => {
+    mocks.live = {
+      ...mocks.live,
+      pause: { sessionId: "session-1", elapsedSeconds: 125, phase: "paused" },
+    };
+    renderCapsule({ stage: "listen" });
+
+    expect(screen.getByRole("status").textContent).toBe("Paused");
+    expect(screen.getByRole("timer").textContent).toBe("02:05");
+    fireEvent.click(screen.getByRole("button", { name: "Resume listening" }));
+    fireEvent.click(screen.getByRole("button", { name: "Finish" }));
+
+    expect(mocks.startListening).toHaveBeenCalledTimes(1);
+    expect(mocks.finishPausedListening).toHaveBeenCalledWith("session-1");
+    expect(mocks.stopListening).not.toHaveBeenCalled();
+  });
+
+  it("delegates pause, resume and finish to the main window from standalone windows", () => {
+    mocks.isMainWebviewWindow = false;
+    mocks.sessionMode = "active";
+    mocks.live = { ...mocks.live, sessionId: "session-1" };
+    const view = renderCapsule({ stage: "listen", standaloneWindow: true });
+    fireEvent.click(screen.getByRole("button", { name: "Pause listening" }));
+
+    mocks.sessionMode = "inactive";
+    mocks.live = {
+      ...mocks.live,
+      sessionId: null,
+      pause: { sessionId: "session-1", elapsedSeconds: 3, phase: "paused" },
+    };
+    view.rerender(
+      <SessionCapsule
+        tab={tab}
+        stage="listen"
+        currentView={{ type: "raw" }}
+        standaloneWindow
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Resume listening" }));
+    fireEvent.click(screen.getByRole("button", { name: "Finish" }));
+
+    expect(mocks.requestMainListenerControl.mock.calls).toEqual([
+      ["pause", "session-1"],
+      ["resume", "session-1"],
+      ["finish", "session-1"],
+    ]);
+    expect(mocks.pauseListening).not.toHaveBeenCalled();
+    expect(mocks.finishPausedListening).not.toHaveBeenCalled();
+  });
+
+  it("offers to resume or summarize a note left without a summary", () => {
+    mocks.rawMd = "mes notes";
+    renderCapsule({ stage: "synthesis" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Resume listening" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Generate the summary" }),
+    );
+
+    expect(mocks.startListening).toHaveBeenCalledTimes(1);
+    expect(mocks.generateSummary).toHaveBeenCalledTimes(1);
   });
 
   it("delegates start and stop to the main window from standalone windows", () => {
@@ -195,7 +301,10 @@ describe("SessionCapsule", () => {
   });
 
   it("asks the note through the existing chat", () => {
-    renderCapsule({ stage: "synthesis" });
+    renderCapsule({
+      stage: "synthesis",
+      currentView: { type: "enhanced", id: "note-1" },
+    });
 
     fireEvent.click(screen.getByRole("button", { name: /Ask the note/ }));
 

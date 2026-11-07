@@ -28,6 +28,7 @@ import {
   subscribeCanonicalSessionImportLocks,
 } from "~/session/editor-activity";
 import { useSession } from "~/session/queries";
+import { isListeningPaused } from "~/store/zustand/listener/general-shared";
 import { type Tab, useTabs } from "~/store/zustand/tabs";
 import { useListener } from "~/stt/contexts";
 import { ScheduledSessionAutoStart } from "~/stt/scheduled-session-auto-start";
@@ -132,6 +133,9 @@ function TabContentNoteInner({
 
   const hasTranscript = useHasTranscript(sessionId);
   const sessionMode = useListener((state) => state.getSessionMode(sessionId));
+  const paused = useListener((state) =>
+    isListeningPaused(state.live, sessionId),
+  );
   const enhancedNoteIds = useEnhancedNotes(
     sessionId,
     hasTranscript && sessionMode === "inactive",
@@ -145,6 +149,7 @@ function TabContentNoteInner({
   // Préparer → Écouter → Synthèse, dans le même écran (document vivant).
   const stage = getNoteStage({
     sessionMode,
+    paused,
     hasTranscript,
     hasEnhancedNotes: enhancedNoteIds.length > 0,
   });

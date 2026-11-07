@@ -27,6 +27,21 @@ const mocks = vi.hoisted(() => ({
     title: string;
     created_at: string;
   }>,
+  live: {
+    status: "inactive",
+    sessionId: null as string | null,
+    pause: null as { sessionId: string; phase: string } | null,
+  },
+  requestMainListenerControl: vi.fn(),
+}));
+
+vi.mock("~/stt/contexts", () => ({
+  useListener: (selector: (state: { live: typeof mocks.live }) => unknown) =>
+    selector({ live: mocks.live }),
+}));
+
+vi.mock("~/stt/window-control", () => ({
+  requestMainListenerControl: mocks.requestMainListenerControl,
 }));
 
 vi.mock("~/billing/billing-context", () => ({
@@ -85,6 +100,7 @@ describe("OpenNoteDialog", () => {
     mocks.notes = [];
     mocks.sessions = [];
     mocks.folderPaths = [];
+    mocks.live = { status: "inactive", sessionId: null, pause: null };
     closeNoteDialog();
     globalThis.ResizeObserver = class {
       observe() {}
@@ -156,6 +172,53 @@ describe("OpenNoteDialog", () => {
 
     expect(mocks.onOpenChange).toHaveBeenCalledWith(false);
     expect(mocks.createNewNote).toHaveBeenCalledOnce();
+  });
+
+  // Issue 353 : commande contextuelle, sans raccourci dédié.
+  it("propose « Mettre en pause l'écoute » pendant une écoute", () => {
+    mocks.live = { status: "active", sessionId: "session-1", pause: null };
+    render(<OpenNoteDialog open onOpenChange={mocks.onOpenChange} />);
+
+    expect(
+      screen.queryByRole("option", { name: /Resume listening/ }),
+    ).toBeNull();
+    fireEvent.click(screen.getByRole("option", { name: /Pause listening/ }));
+
+    expect(mocks.onOpenChange).toHaveBeenCalledWith(false);
+    expect(mocks.requestMainListenerControl).toHaveBeenCalledWith(
+      "pause",
+      "session-1",
+    );
+  });
+
+  it("propose « Reprendre l'écoute » pendant une pause", () => {
+    mocks.live = {
+      status: "inactive",
+      sessionId: null,
+      pause: { sessionId: "session-1", phase: "paused" },
+    };
+    render(<OpenNoteDialog open onOpenChange={mocks.onOpenChange} />);
+
+    expect(
+      screen.queryByRole("option", { name: /Pause listening/ }),
+    ).toBeNull();
+    fireEvent.click(screen.getByRole("option", { name: /Resume listening/ }));
+
+    expect(mocks.requestMainListenerControl).toHaveBeenCalledWith(
+      "resume",
+      "session-1",
+    );
+  });
+
+  it("ne propose aucune commande d'écoute hors écoute", () => {
+    render(<OpenNoteDialog open onOpenChange={mocks.onOpenChange} />);
+
+    expect(
+      screen.queryByRole("option", { name: /Pause listening/ }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("option", { name: /Resume listening/ }),
+    ).toBeNull();
   });
 
   it("ouvre un dossier depuis la recherche (ex-filtre de la barre latérale)", () => {
