@@ -21,7 +21,7 @@ use ringbuf::{HeapCons, HeapProd, HeapRb, traits::Split};
 use crate::async_ring::RingbufAsyncReader;
 use crate::rt_ring::push_f32le_bytes_first_channel_to_ringbuf;
 
-use super::{BUFFER_SIZE, CHUNK_SIZE};
+use super::{BUFFER_SIZE, CHUNK_SIZE, CaptureThreadHandles};
 
 const DEFAULT_SAMPLE_RATE: u32 = 48_000;
 
@@ -136,12 +136,14 @@ impl SpeakerStream {
 
             thread::spawn(move || {
                 let result = pipewire_capture_loop(
-                    producer,
-                    Arc::clone(&waker),
-                    wake_pending,
-                    Arc::clone(&alive),
-                    current_sample_rate,
-                    dropped_samples,
+                    CaptureThreadHandles {
+                        producer,
+                        waker: Arc::clone(&waker),
+                        wake_pending,
+                        alive: Arc::clone(&alive),
+                        current_sample_rate,
+                        dropped_samples,
+                    },
                     shutdown_rx,
                     init_tx,
                 );
@@ -207,13 +209,15 @@ impl SpeakerStream {
 
             thread::spawn(move || {
                 let result = pulseaudio_capture_loop(
-                    producer,
-                    Arc::clone(&waker),
-                    wake_pending,
-                    Arc::clone(&alive),
+                    CaptureThreadHandles {
+                        producer,
+                        waker: Arc::clone(&waker),
+                        wake_pending,
+                        alive: Arc::clone(&alive),
+                        current_sample_rate,
+                        dropped_samples,
+                    },
                     running,
-                    current_sample_rate,
-                    dropped_samples,
                     init_tx,
                 );
 
@@ -262,12 +266,7 @@ impl SpeakerStream {
 }
 
 fn pipewire_capture_loop(
-    producer: HeapProd<f32>,
-    waker: Arc<AtomicWaker>,
-    wake_pending: Arc<AtomicBool>,
-    alive: Arc<AtomicBool>,
-    current_sample_rate: Arc<AtomicU32>,
-    dropped_samples: Arc<AtomicUsize>,
+    handles: CaptureThreadHandles,
     shutdown_rx: pw::channel::Receiver<()>,
     init_tx: std::sync::mpsc::Sender<Result<()>>,
 ) -> Result<()> {
@@ -277,16 +276,7 @@ fn pipewire_capture_loop(
     // After a successful init the receiver is gone and the send is a no-op.
     let setup_err_tx = init_tx.clone();
 
-    let result = pipewire_capture_setup(
-        producer,
-        waker,
-        wake_pending,
-        alive,
-        current_sample_rate,
-        dropped_samples,
-        shutdown_rx,
-        init_tx,
-    );
+    let result = pipewire_capture_setup(handles, shutdown_rx, init_tx);
 
     if let Err(error) = result {
         let _ = setup_err_tx.send(Err(anyhow::anyhow!(error.to_string())));
@@ -296,20 +286,24 @@ fn pipewire_capture_loop(
 }
 
 fn pipewire_capture_setup(
-    producer: HeapProd<f32>,
-    waker: Arc<AtomicWaker>,
-    wake_pending: Arc<AtomicBool>,
-    alive: Arc<AtomicBool>,
-    current_sample_rate: Arc<AtomicU32>,
-    dropped_samples: Arc<AtomicUsize>,
+    handles: CaptureThreadHandles,
     shutdown_rx: pw::channel::Receiver<()>,
     init_tx: std::sync::mpsc::Sender<Result<()>>,
 ) -> Result<()> {
+    let CaptureThreadHandles {
+        producer,
+        waker,
+        wake_pending,
+        alive,
+        current_sample_rate,
+        dropped_samples,
+    } = handles;
+
     ensure_pipewire_initialized();
 
     let mainloop =
         pw::main_loop::MainLoopRc::new(None).context("Failed to create PipeWire main loop")?;
-    let context = pw::context::ContextBox::new(&mainloop.loop_(), None)
+    let context = pw::context::ContextBox::new(mainloop.loop_(), None)
         .context("Failed to create PipeWire context")?;
     let core = context
         .connect(None)
@@ -471,15 +465,19 @@ fn ensure_pipewire_initialized() {
 }
 
 fn pulseaudio_capture_loop(
-    mut producer: HeapProd<f32>,
-    waker: Arc<AtomicWaker>,
-    wake_pending: Arc<AtomicBool>,
-    alive: Arc<AtomicBool>,
+    handles: CaptureThreadHandles,
     running: Arc<AtomicBool>,
-    current_sample_rate: Arc<AtomicU32>,
-    dropped_samples: Arc<AtomicUsize>,
     init_tx: std::sync::mpsc::Sender<Result<()>>,
 ) -> Result<()> {
+    let CaptureThreadHandles {
+        mut producer,
+        waker,
+        wake_pending,
+        alive,
+        current_sample_rate,
+        dropped_samples,
+    } = handles;
+
     let mut mainloop = Mainloop::new().context("Failed to create PulseAudio mainloop")?;
     let mut context = PaContext::new(&mainloop, "syntheo-speaker-capture")
         .context("Failed to create PulseAudio context")?;

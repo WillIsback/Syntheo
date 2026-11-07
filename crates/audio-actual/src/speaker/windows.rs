@@ -21,7 +21,7 @@ use wasapi::{
 use crate::async_ring::RingbufAsyncReader;
 use crate::rt_ring::{PushStats, push_f32le_bytes_first_channel_to_ringbuf};
 
-use super::{BUFFER_SIZE, CHUNK_SIZE};
+use super::{BUFFER_SIZE, CHUNK_SIZE, CaptureThreadHandles};
 
 const DEFAULT_SAMPLE_RATE: u32 = 44_100;
 const ENDPOINT_POLL_INTERVAL: Duration = Duration::from_secs(2);
@@ -62,13 +62,15 @@ impl SpeakerInput {
 
             thread::spawn(move || {
                 let result = capture_audio_loop(
-                    producer,
-                    waker.clone(),
-                    wake_pending.clone(),
-                    alive.clone(),
+                    CaptureThreadHandles {
+                        producer,
+                        waker: waker.clone(),
+                        wake_pending: wake_pending.clone(),
+                        alive: alive.clone(),
+                        current_sample_rate,
+                        dropped_samples,
+                    },
                     running,
-                    current_sample_rate,
-                    dropped_samples,
                     init_tx,
                 );
 
@@ -178,15 +180,19 @@ impl EndpointFollower {
 }
 
 fn capture_audio_loop(
-    mut producer: HeapProd<f32>,
-    waker: Arc<AtomicWaker>,
-    wake_pending: Arc<AtomicBool>,
-    alive: Arc<AtomicBool>,
+    handles: CaptureThreadHandles,
     running: Arc<AtomicBool>,
-    current_sample_rate: Arc<AtomicU32>,
-    dropped_samples: Arc<AtomicUsize>,
     init_tx: std::sync::mpsc::Sender<Result<()>>,
 ) -> Result<()> {
+    let CaptureThreadHandles {
+        mut producer,
+        waker,
+        wake_pending,
+        alive,
+        current_sample_rate,
+        dropped_samples,
+    } = handles;
+
     let setup_result = (|| -> Result<_> {
         initialize_mta()
             .ok()
@@ -517,9 +523,9 @@ fn push_pcm_bytes_first_channel_to_ringbuf(
 
         let convert_count = count.min(vacant);
 
-        for i in 0..convert_count {
+        for (i, slot) in scratch[..convert_count].iter_mut().enumerate() {
             let byte_offset = (offset + i) * frame_size;
-            scratch[i] = convert(&data[byte_offset..byte_offset + sample_bytes]);
+            *slot = convert(&data[byte_offset..byte_offset + sample_bytes]);
         }
 
         let pushed = producer.push_slice(&scratch[..convert_count]);
@@ -543,6 +549,20 @@ impl Stream for SpeakerStream {
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Option<Self::Item>> {
         self.reader.poll_next_chunk(cx)
+    }
+}
+
+#[pin_project::pinned_drop]
+impl PinnedDrop for SpeakerStream {
+    fn drop(self: std::pin::Pin<&mut Self>) {
+        let this = self.project();
+        this.running.store(false, Ordering::Release);
+
+        if let Some(thread) = this.capture_thread.take()
+            && let Err(err) = thread.join()
+        {
+            error!("Failed to join capture thread: {:?}", err);
+        }
     }
 }
 
@@ -593,19 +613,5 @@ mod tests {
             follower.observe("headset".into()),
             Some("headset".to_string())
         );
-    }
-}
-
-#[pin_project::pinned_drop]
-impl PinnedDrop for SpeakerStream {
-    fn drop(self: std::pin::Pin<&mut Self>) {
-        let this = self.project();
-        this.running.store(false, Ordering::Release);
-
-        if let Some(thread) = this.capture_thread.take()
-            && let Err(err) = thread.join()
-        {
-            error!("Failed to join capture thread: {:?}", err);
-        }
     }
 }
