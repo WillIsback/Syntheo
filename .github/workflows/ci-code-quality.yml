@@ -162,6 +162,7 @@ jobs:
           set -euo pipefail
           cargo clippy --locked --no-deps \
             -p desktop -p owhisper-client -p template-app -p db-app -p listener-core \
+            -p audio-actual \
             --all-targets -- -D warnings
 
       # Crates portant les chantiers Syntheo : templates et prompts, schéma
