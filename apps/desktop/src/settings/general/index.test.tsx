@@ -5,7 +5,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import { act } from "react";
+import { act, useRef } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -57,12 +57,30 @@ vi.mock("./meeting-settings", () => ({
 }));
 vi.mock("./notification", () => ({ NotificationSettingsView: () => null }));
 vi.mock("./permissions", () => ({ Permissions: () => null }));
-vi.mock("./spoken-languages", () => ({ SpokenLanguagesView: () => null }));
+vi.mock("./single-language-model-hint", () => ({
+  SingleLanguageModelHint: () => null,
+}));
 vi.mock("./storage", () => ({ StorageSettingsView: () => null }));
 vi.mock("./timezone", () => ({ TimezoneSelector: () => null }));
 vi.mock("./week-start", () => ({ WeekStartSelector: () => null }));
 
 import { SettingsApp, SettingsMeetings } from "./index";
+
+import {
+  requestSettingFocus,
+  usePendingSettingFocus,
+  useSettingFocus,
+} from "~/settings/setting-focus";
+
+function SettingsAppWithFocus() {
+  const ref = useRef<HTMLDivElement>(null);
+  usePendingSettingFocus(ref);
+  return (
+    <div ref={ref}>
+      <SettingsApp />
+    </div>
+  );
+}
 
 describe("SettingsApp", () => {
   afterEach(() => {
@@ -165,5 +183,38 @@ describe("SettingsApp", () => {
         }),
       );
     });
+  });
+
+  // Issue 351 : « Modifier » dans la marge de transcription mène au réglage
+  // des langues parlées, focus compris, une fois les réglages chargés.
+  it("scrolls to and focuses the spoken languages once settings load", async () => {
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    mocks.useStoredSettingValuesQuery.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      error: null,
+    });
+    requestSettingFocus("spoken-languages");
+
+    const { rerender } = render(<SettingsAppWithFocus />);
+    expect(useSettingFocus.getState().pending).toBe("spoken-languages");
+
+    mocks.useStoredSettingValuesQuery.mockReturnValue({
+      data: {
+        values: { ai_language: "en", spoken_languages: '["fr"]' },
+        hasValues: new Set(["ai_language", "spoken_languages"]),
+      },
+      isLoading: false,
+      error: null,
+    });
+    rerender(<SettingsAppWithFocus />);
+
+    const input = screen.getByRole("combobox", { name: "Add spoken language" });
+    await waitFor(() => expect(document.activeElement).toBe(input));
+    const setting = input.closest("[data-setting-id='spoken-languages']");
+    expect(setting).toBeTruthy();
+    expect(scrollIntoView.mock.contexts[0]).toBe(setting);
+    expect(useSettingFocus.getState().pending).toBeNull();
   });
 });

@@ -8,6 +8,7 @@ import {
 import { cn } from "@syntheo/utils";
 
 import { getBaseLanguageDisplayName } from "~/settings/general/language";
+import { requestSettingFocus } from "~/settings/setting-focus";
 import { useLiveTranscriptionLanguages } from "~/store/zustand/live-transcription-languages";
 import { useTabs } from "~/store/zustand/tabs";
 import { useListener } from "~/stt/contexts";
@@ -62,9 +63,10 @@ export function LiveTranscriptionLanguage({
       <span aria-hidden="true">·</span>
       <button
         type="button"
-        onClick={() =>
-          openNew({ type: "settings", state: { tab: "transcription" } })
-        }
+        onClick={() => {
+          requestSettingFocus("spoken-languages");
+          openNew({ type: "settings", state: { tab: "app" } });
+        }}
         className={cn([
           "hover:text-foreground shrink-0 rounded-sm underline-offset-2 transition-colors hover:underline",
           "focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none",

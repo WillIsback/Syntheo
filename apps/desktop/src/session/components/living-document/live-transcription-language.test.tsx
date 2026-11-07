@@ -5,6 +5,7 @@ import { TooltipProvider } from "@syntheo/ui/components/ui/tooltip";
 
 import { LiveTranscriptionLanguage } from "./live-transcription-language";
 
+import { useSettingFocus } from "~/settings/setting-focus";
 import { useLiveTranscriptionLanguages } from "~/store/zustand/live-transcription-languages";
 
 // Issue 351 : la langue de la transcription en direct s'affiche discrètement
@@ -41,6 +42,7 @@ describe("LiveTranscriptionLanguage", () => {
     mocks.live = { status: "active", sessionId: "session-1" };
     mocks.openNew.mockReset();
     useLiveTranscriptionLanguages.setState({ bySession: {} });
+    useSettingFocus.setState({ pending: null });
   });
 
   afterEach(() => {
@@ -96,7 +98,7 @@ describe("LiveTranscriptionLanguage", () => {
     expect(container.textContent).toBe("");
   });
 
-  it("opens the transcription language settings from Change", () => {
+  it("opens General settings on the spoken languages from Change", () => {
     useLiveTranscriptionLanguages.getState().setLanguages("session-1", {
       languages: ["en"],
       omittedLanguages: ["fr"],
@@ -107,7 +109,8 @@ describe("LiveTranscriptionLanguage", () => {
 
     expect(mocks.openNew).toHaveBeenCalledWith({
       type: "settings",
-      state: { tab: "transcription" },
+      state: { tab: "app" },
     });
+    expect(useSettingFocus.getState().pending).toBe("spoken-languages");
   });
 });
