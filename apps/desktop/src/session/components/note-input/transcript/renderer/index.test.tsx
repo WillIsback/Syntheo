@@ -275,6 +275,33 @@ describe("TranscriptViewer", () => {
     expect(transcripts[1]?.getAttribute("data-live-segment-count")).toBe("1");
   });
 
+  // Issue 353 : chaque reprise après une pause ouvre un nouveau transcript.
+  // Les captures s'enchaînent dans la marge comme un seul fil.
+  it("chains the captures of a paused session without a visible break", () => {
+    const { container } = render(
+      <TranscriptViewer
+        transcriptIds={["capture-1", "capture-2", "capture-3"]}
+        liveSegments={[]}
+        currentActive={false}
+        scrollRef={createRef()}
+      />,
+    );
+
+    expect(
+      screen
+        .getAllByTestId("render-transcript")
+        .map((transcript) => transcript.getAttribute("data-transcript-id")),
+    ).toEqual(["capture-1", "capture-2", "capture-3"]);
+    expect(container.textContent).not.toContain("~");
+    // Même écart qu'entre deux tours de parole : rien ne signale la reprise.
+    const captures = [
+      ...container.querySelectorAll<HTMLElement>("[data-transcript-capture]"),
+    ];
+    expect(
+      captures.map((capture) => capture.className.includes("-mt-4")),
+    ).toEqual([false, true, true]);
+  });
+
   it.each([
     ["with command-click", false, "segment-", { metaKey: true }],
     ["without modifiers while editing", true, "segment-header-", {}],

@@ -33,6 +33,8 @@ const mocks = vi.hoisted(() => ({
   copyTextToClipboard: vi.fn(),
   rawMd: "",
   enhancedContent: undefined as string | undefined,
+  enhancedNotes: [] as Array<{ id: string; content: string }>,
+  enhancing: false,
   exportModal: vi.fn(),
 }));
 
@@ -82,6 +84,11 @@ vi.mock("~/session/queries", () => ({
   useSession: () => ({ raw_md: mocks.rawMd }),
   useEnhancedNote: (id: string) =>
     id ? { content: mocks.enhancedContent } : undefined,
+  useEnhancedNoteRecords: () => mocks.enhancedNotes,
+}));
+
+vi.mock("~/session/hooks/useEnhancedNotes", () => ({
+  useIsSessionEnhancing: () => mocks.enhancing,
 }));
 
 vi.mock("~/session/components/note-input/header-shared", () => ({
@@ -132,6 +139,8 @@ describe("SessionCapsule", () => {
     mocks.isMainWebviewWindow = true;
     mocks.rawMd = "";
     mocks.enhancedContent = undefined;
+    mocks.enhancedNotes = [];
+    mocks.enhancing = false;
     vi.clearAllMocks();
   });
 
@@ -272,6 +281,57 @@ describe("SessionCapsule", () => {
     expect(mocks.generateSummary).toHaveBeenCalledTimes(1);
   });
 
+  // Le choix dépend de l'existence d'un compte rendu, pas de l'onglet affiché.
+  it("keeps Ask the note on a note with a summary shown on its raw notes", () => {
+    mocks.rawMd = "mes notes";
+    mocks.enhancedNotes = [{ id: "note-1", content: "## Décisions" }];
+    renderCapsule({ stage: "synthesis", currentView: { type: "raw" } });
+
+    expect(
+      screen.queryByRole("button", { name: "Generate the summary" }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Resume listening" }),
+    ).toBeNull();
+    expect(screen.getByRole("button", { name: /Ask the note/ })).not.toBeNull();
+  });
+
+  it("offers to resume or summarize a transcribed note on its empty summary tab", () => {
+    // Note transcrite sans compte rendu : la vue affichée est l'onglet du
+    // compte rendu par défaut, encore vide, et aucune ligne n'est enregistrée.
+    renderCapsule({
+      stage: "synthesis",
+      currentView: { type: "enhanced", id: "summary-session-1" },
+    });
+
+    expect(
+      screen.getByRole("button", { name: "Generate the summary" }),
+    ).not.toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Resume listening" }),
+    ).not.toBeNull();
+    expect(screen.queryByRole("button", { name: /Ask the note/ })).toBeNull();
+  });
+
+  it("does not count an empty summary document as a summary", () => {
+    mocks.enhancedNotes = [{ id: "note-1", content: "" }];
+    renderCapsule({ stage: "synthesis", currentView: { type: "raw" } });
+
+    expect(
+      screen.getByRole("button", { name: "Generate the summary" }),
+    ).not.toBeNull();
+  });
+
+  it("does not offer to generate a summary while one is being written", () => {
+    mocks.enhancing = true;
+    renderCapsule({ stage: "synthesis", currentView: { type: "raw" } });
+
+    expect(
+      screen.queryByRole("button", { name: "Generate the summary" }),
+    ).toBeNull();
+    expect(screen.getByRole("button", { name: /Ask the note/ })).not.toBeNull();
+  });
+
   it("delegates start and stop to the main window from standalone windows", () => {
     mocks.isMainWebviewWindow = false;
     const view = renderCapsule({ standaloneWindow: true });
@@ -301,6 +361,7 @@ describe("SessionCapsule", () => {
   });
 
   it("asks the note through the existing chat", () => {
+    mocks.enhancedNotes = [{ id: "note-1", content: "## Décisions" }];
     renderCapsule({
       stage: "synthesis",
       currentView: { type: "enhanced", id: "note-1" },
