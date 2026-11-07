@@ -10,6 +10,10 @@
 # compilé (cf. la régression qui a cassé le build desktop, corrigée en #178).
 # À LA DEMANDE : l'étiquette `ci:rust` sur une PR lance aussi le job Rust
 # complet (PR qui touche beaucoup de Rust, correctif avant une release).
+# CIBLE WINDOWS : le job léger `rust-windows` lance le clippy de
+# `audio-device` pour x86_64-pc-windows-msvc (depuis Linux, sans linker) sur
+# les PR qui touchent `crates/audio-device/**` ou `Cargo.lock`, et toujours
+# hors PR (voir issue 382).
 name: ci-code-quality
 
 on:
@@ -167,6 +171,67 @@ jobs:
           set -euo pipefail
           cargo test --locked \
             -p template-app -p db-app -p owhisper-client -p listener-core -p storage
+
+  # Clippy de la cible Windows pour `audio-device` (issue 382) : aucune
+  # autre CI ne compile cette crate pour Windows, et son code `cfg(windows)`
+  # avait dérivé jusqu'à 51 erreurs clippy (issue 369). Job dédié et léger
+  # plutôt qu'une étape du job `rust` : ce dernier ne tourne pas sur les PR
+  # humaines, et ici seule `audio-device` est vérifiée (≈ 1 min à froid,
+  # sans dépendances système ni compilation du reste du workspace).
+  # Sur une PR, les étapes lourdes sont sautées si ni `crates/audio-device/**`
+  # ni `Cargo.lock` ne changent (le job ne coûte alors que le checkout) ;
+  # hors PR (push main, hebdo, manuel), il tourne toujours.
+  rust-windows:
+    name: ci-code-quality (Rust Windows, audio-device)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      SCCACHE_GHA_ENABLED: "true"
+      RUSTC_WRAPPER: sccache
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Historique complet sur une PR seulement, pour comparer à sa base.
+          fetch-depth: ${{ github.event_name == 'pull_request' && '0' || '1' }}
+          persist-credentials: false
+
+      - name: Détection des chemins modifiés
+        id: changes
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          if [ -z "${BASE_SHA:-}" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "Hors PR : clippy Windows exécuté."
+          elif git diff --name-only "$BASE_SHA" HEAD -- 'crates/audio-device/' 'Cargo.lock' | grep -q .; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "audio-device ou Cargo.lock modifié : clippy Windows exécuté."
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "Ni audio-device ni Cargo.lock modifié : clippy Windows sauté."
+          fi
+
+      - name: Toolchain Rust (cible Windows)
+        if: steps.changes.outputs.run == 'true'
+        uses: ./.github/actions/rust_install
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Cache du compilateur (sccache)
+        if: steps.changes.outputs.run == 'true'
+        uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba # v0.0.11
+
+      # `cargo clippy` ne lie rien : la crate `windows` se vérifie depuis Linux
+      # sans compilateur C ni linker MSVC. Bloquant.
+      - name: Lint (cargo clippy, x86_64-pc-windows-msvc)
+        if: steps.changes.outputs.run == 'true'
+        run: |
+          set -euo pipefail
+          cargo clippy --locked --target x86_64-pc-windows-msvc -p audio-device \
+            --all-targets -- -D warnings
 
   meta:
     name: ci-code-quality (PR et workflows)
