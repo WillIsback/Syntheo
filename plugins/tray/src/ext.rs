@@ -58,60 +58,63 @@ pub fn build_app_menu(app: &AppHandle<tauri::Wry>) -> Result<Menu<tauri::Wry>> {
             &AppInfo::build(app)?,
             &TraySettings::build(app)?,
             &PredefinedMenuItem::separator(app)?,
-            &PredefinedMenuItem::services(app, None)?,
+            &PredefinedMenuItem::services(app, Some("Services"))?,
             &PredefinedMenuItem::separator(app)?,
-            &PredefinedMenuItem::hide(app, None)?,
-            &PredefinedMenuItem::hide_others(app, None)?,
-            &PredefinedMenuItem::show_all(app, None)?,
+            &PredefinedMenuItem::hide(
+                app,
+                Some(format!("Masquer {}", app.package_info().name).as_str()),
+            )?,
+            &PredefinedMenuItem::hide_others(app, Some("Masquer les autres"))?,
+            &PredefinedMenuItem::show_all(app, Some("Tout afficher"))?,
             &PredefinedMenuItem::separator(app)?,
             &TrayQuit::build(app)?,
         ],
     )?;
     let file_submenu = Submenu::with_items(
         app,
-        "File",
+        "Fichier",
         true,
         &[
             &AppNew::build(app)?,
-            &PredefinedMenuItem::close_window(app, None)?,
+            &PredefinedMenuItem::close_window(app, Some("Fermer"))?,
         ],
     )?;
     let edit_submenu = Submenu::with_items(
         app,
-        "Edit",
+        "Modifier",
         true,
         &[
-            &PredefinedMenuItem::undo(app, None)?,
-            &PredefinedMenuItem::redo(app, None)?,
+            &PredefinedMenuItem::undo(app, Some("Annuler"))?,
+            &PredefinedMenuItem::redo(app, Some("Rétablir"))?,
             &PredefinedMenuItem::separator(app)?,
-            &PredefinedMenuItem::cut(app, None)?,
-            &PredefinedMenuItem::copy(app, None)?,
-            &PredefinedMenuItem::paste(app, None)?,
-            &PredefinedMenuItem::select_all(app, None)?,
+            &PredefinedMenuItem::cut(app, Some("Couper"))?,
+            &PredefinedMenuItem::copy(app, Some("Copier"))?,
+            &PredefinedMenuItem::paste(app, Some("Coller"))?,
+            &PredefinedMenuItem::select_all(app, Some("Tout sélectionner"))?,
         ],
     )?;
     let view_submenu = Submenu::with_items(
         app,
-        "View",
+        "Afficher",
         true,
-        &[&PredefinedMenuItem::fullscreen(app, None)?],
+        &[&PredefinedMenuItem::fullscreen(app, Some("Plein écran"))?],
     )?;
     let window_submenu = Submenu::with_id_and_items(
         app,
         WINDOW_SUBMENU_ID,
-        "Window",
+        "Fenêtre",
         true,
         &[
-            &PredefinedMenuItem::minimize(app, None)?,
-            &PredefinedMenuItem::maximize(app, None)?,
+            &PredefinedMenuItem::minimize(app, Some("Placer dans le Dock"))?,
+            &PredefinedMenuItem::maximize(app, Some("Réduire/agrandir"))?,
             &PredefinedMenuItem::separator(app)?,
-            &PredefinedMenuItem::close_window(app, None)?,
+            &PredefinedMenuItem::close_window(app, Some("Fermer"))?,
         ],
     )?;
     let help_submenu = Submenu::with_id_and_items(
         app,
         HELP_SUBMENU_ID,
-        "Help",
+        "Aide",
         true,
         &[
             &HelpReportBug::build(app)?,

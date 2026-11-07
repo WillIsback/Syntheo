@@ -11,7 +11,7 @@ impl MenuItemHandler for HelpReportBug {
     const ID: &'static str = "syntheo_help_report_bug";
 
     fn build(app: &AppHandle<tauri::Wry>) -> Result<MenuItemKind<tauri::Wry>> {
-        let item = MenuItem::with_id(app, Self::ID, "Report Bug", true, None::<&str>)?;
+        let item = MenuItem::with_id(app, Self::ID, "Signaler un bogue", true, None::<&str>)?;
         Ok(MenuItemKind::MenuItem(item))
     }
 
