@@ -146,6 +146,32 @@ describe("NotificationSettingsView", () => {
     );
   });
 
+  // La détection micro fonctionne sur Windows (issue 407) : l'interrupteur et
+  // la liste des applications à exclure y sont proposés.
+  it.each(["macos", "linux", "windows"])(
+    "shows microphone detection on %s",
+    (os) => {
+      mocks.currentPlatform = os;
+      render(<NotificationSettingsView />);
+
+      expect(
+        screen.getByRole("switch", { name: "Microphone detection" }),
+      ).toBeTruthy();
+      expect(screen.getByText("Exclude apps from detection")).toBeTruthy();
+      for (const queryKey of [
+        "all-installed-applications",
+        "default-ignored-bundle-ids",
+      ]) {
+        expect(mocks.useQuery).toHaveBeenCalledWith(
+          expect.objectContaining({ queryKey: ["settings", queryKey] }),
+        );
+        expect(mocks.useQuery).not.toHaveBeenCalledWith(
+          expect.objectContaining({ enabled: false }),
+        );
+      }
+    },
+  );
+
   it("disables every notification control with the master switch", () => {
     render(<NotificationSettingsView />);
 

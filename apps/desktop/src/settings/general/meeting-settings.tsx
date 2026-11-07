@@ -30,7 +30,6 @@ export function MeetingSettingsView({
   const currentPlatform = platform();
   const supportsMeetingAx =
     currentPlatform === "macos" || currentPlatform === "linux";
-  const supportsMicDetection = currentPlatform !== "windows";
   const supportsScreenCapture =
     currentPlatform === "macos" || currentPlatform === "windows";
   // Seul Apple Calendar fournit un agenda (macOS) : ailleurs, aucune réunion
@@ -62,14 +61,14 @@ export function MeetingSettingsView({
           />
         </>
       )}
-      {supportsMicDetection && (
-        <SettingSwitchRow
-          title={<Trans>Stop when meeting ends</Trans>}
-          description={<Trans>Stop listening when your call ends.</Trans>}
-          checked={autoStopMeetings.value}
-          onChange={autoStopMeetings.onChange}
-        />
-      )}
+      {/* La fin d'usage du micro est détectée sur toutes les plateformes, y
+          compris Windows (sessions WASAPI de capture, issue 407). */}
+      <SettingSwitchRow
+        title={<Trans>Stop when meeting ends</Trans>}
+        description={<Trans>Stop listening when your call ends.</Trans>}
+        checked={autoStopMeetings.value}
+        onChange={autoStopMeetings.onChange}
+      />
       {supportsMeetingAx && (
         <>
           <SettingSwitchRow

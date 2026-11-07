@@ -153,7 +153,7 @@ mod capture_lifecycle;
 mod consent;
 mod entities;
 mod legacy_voiceprints;
-
+mod notification_detect_off;
 mod search_index;
 mod session_audio;
 mod shared_session_cache;
