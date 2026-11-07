@@ -5,7 +5,7 @@ const mocks = vi.hoisted(() => ({
   getIgnoredEventSets: vi.fn(() =>
     Promise.resolve({ ignoredIds: new Set(), ignoredSeriesIds: new Set() }),
   ),
-  showNotification: vi.fn(),
+  showNotification: vi.fn(async () => ({ status: "ok" as const, data: null })),
 }));
 
 vi.mock("@syntheo/plugin-notification", () => ({

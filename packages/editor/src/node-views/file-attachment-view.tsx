@@ -129,9 +129,17 @@ export const FileAttachmentView = forwardRef<
   const handleOpen = () => {
     if (path) {
       if (path.startsWith("https://")) {
-        openerCommands.openUrl(path, null);
+        void openerCommands
+          .openUrl(path, null)
+          .catch((error) =>
+            console.error("[editor] failed to open attachment link", error),
+          );
       } else {
-        openerCommands.openPath(path, null);
+        void openerCommands
+          .openPath(path, null)
+          .catch((error) =>
+            console.error("[editor] failed to open attachment file", error),
+          );
       }
     }
   };

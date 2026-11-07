@@ -24,7 +24,14 @@ export function SettingsDevelopers() {
           variant="outline"
           size="sm"
           onClick={() =>
-            void openerCommands.openUrl(DEVELOPERS_GUIDE_URL, null)
+            void openerCommands
+              .openUrl(DEVELOPERS_GUIDE_URL, null)
+              .catch((error) =>
+                console.error(
+                  "[settings] failed to open developers guide",
+                  error,
+                ),
+              )
           }
         >
           {t`Guide`}

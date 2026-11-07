@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import { MeetingChatHighlights } from "./meeting-chat-highlights";
 
 const { openUrlMock, useMeetingChatRecordsMock } = vi.hoisted(() => ({
-  openUrlMock: vi.fn(),
+  openUrlMock: vi.fn(async () => ({ status: "ok" as const, data: null })),
   useMeetingChatRecordsMock: vi.fn(),
 }));
 

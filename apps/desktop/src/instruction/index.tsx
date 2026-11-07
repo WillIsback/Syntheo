@@ -133,7 +133,13 @@ function ExternalInstruction({
             className={cn([
               "bg-card text-muted-foreground hover:bg-background border-border h-10 w-full",
             ])}
-            onClick={() => void openerCommands.openUrl(url, null)}
+            onClick={() =>
+              void openerCommands
+                .openUrl(url, null)
+                .catch((error) =>
+                  console.error("[instruction] failed to open link", error),
+                )
+            }
           >
             {actionLabel}
             <ArrowSquareOut className="size-3.5" />

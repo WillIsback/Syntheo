@@ -129,7 +129,11 @@ export const useHandleDetectEvents = (store: ListenerStore) => {
         if (live.sessionId) {
           cancelAutoStopEndedNotification(live.sessionId);
         }
-        void notificationCommands.clearNotifications();
+        void notificationCommands
+          .clearNotifications()
+          .catch((error) =>
+            console.error("[listener] failed to clear notifications", error),
+          );
       }
     };
     clearNotificationsIfActive();
@@ -141,7 +145,11 @@ export const useHandleDetectEvents = (store: ListenerStore) => {
         if (state.live.sessionId) {
           cancelAutoStopEndedNotification(state.live.sessionId);
         }
-        void notificationCommands.clearNotifications();
+        void notificationCommands
+          .clearNotifications()
+          .catch((error) =>
+            console.error("[listener] failed to clear notifications", error),
+          );
       }
     });
     const clearPendingAutoStop = () => {
@@ -173,7 +181,11 @@ export const useHandleDetectEvents = (store: ListenerStore) => {
           currentLive.sessionId &&
           cancelAutoStopEndedNotification(currentLive.sessionId)
         ) {
-          void notificationCommands.clearNotifications();
+          void notificationCommands
+            .clearNotifications()
+            .catch((error) =>
+              console.error("[listener] failed to clear notifications", error),
+            );
         }
       }
       store
@@ -284,7 +296,14 @@ export const useHandleDetectEvents = (store: ListenerStore) => {
             pending.sessionId &&
             cancelAutoStopEndedNotification(pending.sessionId)
           ) {
-            void notificationCommands.clearNotifications();
+            void notificationCommands
+              .clearNotifications()
+              .catch((error) =>
+                console.error(
+                  "[listener] failed to clear notifications",
+                  error,
+                ),
+              );
           }
           // Track them so the recording stops when the call itself ends.
           captureTriggerApps(meetingAppsStillOnCall);

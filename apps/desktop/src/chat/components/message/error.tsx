@@ -43,7 +43,11 @@ export function ErrorMessage({
   const showContextLengthHelp = isContextLengthError(message);
 
   const handleOpenFaq = () => {
-    void openerCommands.openUrl(CONTEXT_LENGTH_HELP_URL, null);
+    void openerCommands
+      .openUrl(CONTEXT_LENGTH_HELP_URL, null)
+      .catch((error) =>
+        console.error("[chat] failed to open help link", error),
+      );
   };
 
   return (

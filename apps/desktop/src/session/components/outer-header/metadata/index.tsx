@@ -78,7 +78,11 @@ export function EventDisplay({
 
   const handleJoinMeeting = () => {
     if (event.meetingLink) {
-      void openerCommands.openUrl(event.meetingLink, null);
+      void openerCommands
+        .openUrl(event.meetingLink, null)
+        .catch((error) =>
+          console.error("[session] failed to open meeting link", error),
+        );
     }
   };
 
@@ -257,7 +261,11 @@ function renderDescriptionWithLinks(description: string): React.ReactNode {
         className="hover:text-foreground cursor-pointer underline transition-colors"
         onClick={(e) => {
           e.preventDefault();
-          void openerCommands.openUrl(url, null);
+          void openerCommands
+            .openUrl(url, null)
+            .catch((error) =>
+              console.error("[session] failed to open link", error),
+            );
         }}
       >
         {url}

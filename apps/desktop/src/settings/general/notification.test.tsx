@@ -9,7 +9,10 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  clearNotifications: vi.fn(),
+  clearNotifications: vi.fn(async () => ({
+    status: "ok" as const,
+    data: null,
+  })),
   currentPlatform: "macos",
   previewCompletionSound: vi.fn(),
   setSettingValues: vi.fn(),

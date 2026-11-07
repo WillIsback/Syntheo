@@ -55,28 +55,32 @@ function showUpcomingEventNotification(
 ): void {
   const minutesUntil = Math.ceil(timeUntilStart / 60_000);
   const hasMeetingLink = Boolean(event.meeting_link.trim());
-  void notificationCommands.showNotification({
-    key: notificationKey,
-    title: event.title || t`Upcoming Event`,
-    message:
-      minutesUntil === 1
-        ? t`Starting in 1 minute`
-        : t`Starting in ${minutesUntil} minutes`,
-    timeout: null,
-    source: { type: "calendar_event", event_id: event.id },
-    start_time: Math.floor(startTime.getTime() / 1000),
-    participants: null,
-    event_details: null,
-    action_label: hasMeetingLink ? t`Join & record` : t`Start recording`,
-    action: "join_and_record",
-    action_menu: hasMeetingLink
-      ? { label: t`Open meeting`, action: "open_meeting" }
-      : null,
-    action_variant: null,
-    options: null,
-    footer: null,
-    icon: null,
-  });
+  void notificationCommands
+    .showNotification({
+      key: notificationKey,
+      title: event.title || t`Upcoming Event`,
+      message:
+        minutesUntil === 1
+          ? t`Starting in 1 minute`
+          : t`Starting in ${minutesUntil} minutes`,
+      timeout: null,
+      source: { type: "calendar_event", event_id: event.id },
+      start_time: Math.floor(startTime.getTime() / 1000),
+      participants: null,
+      event_details: null,
+      action_label: hasMeetingLink ? t`Join & record` : t`Start recording`,
+      action: "join_and_record",
+      action_menu: hasMeetingLink
+        ? { label: t`Open meeting`, action: "open_meeting" }
+        : null,
+      action_variant: null,
+      options: null,
+      footer: null,
+      icon: null,
+    })
+    .catch((error) =>
+      console.error("[notification] failed to show event notification", error),
+    );
 }
 
 export async function checkEventNotifications(

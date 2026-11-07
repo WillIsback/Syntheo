@@ -33,7 +33,10 @@ const {
   listMicUsingApplicationsMock: vi.fn(),
   inspectMeetingAccessibilityMock: vi.fn(),
   listenMock: vi.fn(),
-  clearNotificationsMock: vi.fn(),
+  clearNotificationsMock: vi.fn(async () => ({
+    status: "ok" as const,
+    data: null,
+  })),
   showNotificationMock: vi.fn(),
   useStoreMock: vi.fn(() => null),
   useConfigValueMock: vi.fn((key: string) => key !== "notification_disabled"),
@@ -234,6 +237,7 @@ describe("ListenerProvider detect events", () => {
     listenMock.mockReset();
     clearNotificationsMock.mockReset();
     showNotificationMock.mockReset();
+    showNotificationMock.mockResolvedValue({ status: "ok", data: null });
     useStoreMock.mockReset();
     useConfigValueMock.mockReset();
     getNearbyCalendarEventsMock.mockReset();

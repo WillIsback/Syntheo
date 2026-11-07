@@ -166,7 +166,11 @@ export const createGeneralSlice = <
     set((state) =>
       mutate(state, (draft) => {
         draft.live.muted = value;
-        void listenerCommands.setMicMuted(value);
+        void listenerCommands
+          .setMicMuted(value)
+          .catch((error) =>
+            console.error("[listener] failed to set microphone mute", error),
+          );
       }),
     );
   },

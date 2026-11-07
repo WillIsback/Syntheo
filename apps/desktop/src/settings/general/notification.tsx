@@ -297,9 +297,17 @@ export function NotificationSettingsView() {
   ] as const);
 
   useMountEffect(() => {
-    void notificationCommands.clearNotifications();
+    void notificationCommands
+      .clearNotifications()
+      .catch((error) =>
+        console.error("[notification] failed to clear notifications", error),
+      );
     return () => {
-      void notificationCommands.clearNotifications();
+      void notificationCommands
+        .clearNotifications()
+        .catch((error) =>
+          console.error("[notification] failed to clear notifications", error),
+        );
     };
   });
 
@@ -414,7 +422,14 @@ export function NotificationSettingsView() {
             onChange={(disabled) => {
               field.handleChange(disabled);
               if (disabled) {
-                void notificationCommands.clearNotifications();
+                void notificationCommands
+                  .clearNotifications()
+                  .catch((error) =>
+                    console.error(
+                      "[notification] failed to clear notifications",
+                      error,
+                    ),
+                  );
               }
             }}
           />

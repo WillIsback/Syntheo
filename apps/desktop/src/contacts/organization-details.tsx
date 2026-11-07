@@ -175,10 +175,14 @@ export function OrganizationDetailsColumn({
                                   size="icon"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    void openerCommands.openUrl(
-                                      `mailto:${human.email}`,
-                                      null,
-                                    );
+                                    void openerCommands
+                                      .openUrl(`mailto:${human.email}`, null)
+                                      .catch((error) =>
+                                        console.error(
+                                          "[contacts] failed to open email client",
+                                          error,
+                                        ),
+                                      );
                                   }}
                                   title={t`Send email`}
                                 >
@@ -195,7 +199,14 @@ export function OrganizationDetailsColumn({
                                     const href = /^https?:\/\//i.test(v)
                                       ? v
                                       : `https://www.linkedin.com/in/${v.replace(/^@/, "")}`;
-                                    void openerCommands.openUrl(href, null);
+                                    void openerCommands
+                                      .openUrl(href, null)
+                                      .catch((error) =>
+                                        console.error(
+                                          "[contacts] failed to open LinkedIn profile",
+                                          error,
+                                        ),
+                                      );
                                   }}
                                   title={t`View LinkedIn profile`}
                                 >

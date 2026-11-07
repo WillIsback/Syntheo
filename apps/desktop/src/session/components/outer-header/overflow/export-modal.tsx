@@ -389,7 +389,11 @@ export function ExportModal({
     },
     onSuccess: (path) => {
       if (!path) return;
-      void openerCommands.revealItemInDir(path);
+      void openerCommands
+        .revealItemInDir(path)
+        .catch((error) =>
+          console.error("[export] failed to reveal exported file", error),
+        );
       onOpenChange(false);
     },
     onError: console.error,

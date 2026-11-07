@@ -59,7 +59,11 @@ function ExternalLink({
       href={href}
       onClick={(e) => {
         e.preventDefault();
-        void openerCommands.openUrl(href, null);
+        void openerCommands
+          .openUrl(href, null)
+          .catch((error) =>
+            console.error("[changelog] failed to open link", error),
+          );
       }}
     >
       {children}

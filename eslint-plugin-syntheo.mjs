@@ -1,3 +1,37 @@
+const PROMISE_CHAIN_METHODS = new Set(["then", "catch", "finally"]);
+
+// Remonte une chaîne `.then/.catch/.finally` à partir de l'appel de commande.
+// La chaîne est considérée comme traitée dès qu'un maillon gère le rejet
+// (`.catch(...)` ou `.then(onFulfilled, onRejected)`).
+function climbPromiseChain(node) {
+  let top = node;
+  let handled = false;
+  for (;;) {
+    const member = top.parent;
+    if (
+      member?.type !== "MemberExpression" ||
+      member.object !== top ||
+      member.computed ||
+      member.property.type !== "Identifier" ||
+      !PROMISE_CHAIN_METHODS.has(member.property.name)
+    ) {
+      break;
+    }
+    const call = member.parent;
+    if (call?.type !== "CallExpression" || call.callee !== member) {
+      break;
+    }
+    if (
+      member.property.name === "catch" ||
+      (member.property.name === "then" && call.arguments.length >= 2)
+    ) {
+      handled = true;
+    }
+    top = call;
+  }
+  return { top, handled };
+}
+
 const awaitTauriCommands = {
   meta: {
     type: "suggestion",
@@ -45,7 +79,12 @@ const awaitTauriCommands = {
           tauriCommandImports.has(node.callee.object.name)
         ) {
           const methodName = node.callee.property.name;
-          const current = node.parent;
+          const { top, handled } = climbPromiseChain(node);
+          const current = top.parent;
+
+          if (handled) {
+            return;
+          }
 
           if (current.type === "AwaitExpression") {
             return;
@@ -70,8 +109,8 @@ const awaitTauriCommands = {
               if (current.type === "ExpressionStatement") {
                 const sourceCode =
                   context.sourceCode || context.getSourceCode();
-                const callText = sourceCode.getText(node);
-                return fixer.replaceText(node, `await ${callText}`);
+                const callText = sourceCode.getText(top);
+                return fixer.replaceText(top, `await ${callText}`);
               }
               return null;
             },
