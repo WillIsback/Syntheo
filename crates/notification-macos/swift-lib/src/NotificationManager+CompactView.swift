@@ -4,7 +4,7 @@ extension NotificationManager {
   private func compactPrimaryButton(notification: NotificationInstance) -> NSView {
     if notification.payload.hasOptions {
       let optionsButton = OptionsButton()
-      optionsButton.title = "Options"
+      optionsButton.title = notification.payload.resolvedLabels.options
       optionsButton.options = notification.payload.options ?? []
       optionsButton.notification = notification
       return optionsButton
@@ -128,7 +128,7 @@ extension NotificationManager {
 
     let compactMessage: String
     if notification.meetingStartTime != nil {
-      compactMessage = "Starting soon"
+      compactMessage = notification.payload.resolvedLabels.startingSoon
     } else if notification.payload.showsStopCountdown {
       compactMessage = notification.stopCountdownText(notification.payload.timeoutSeconds)
     } else {

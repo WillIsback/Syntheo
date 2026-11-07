@@ -43,6 +43,8 @@ export type Notification = {
 	options: string[] | null,
 	footer: NotificationFooter | null,
 	icon: NotificationIcon | null,
+	/**  Libellés traduits des surfaces natives ; facultatifs, anglais sinon. */
+	labels?: NotificationLabels | null,
 };
 
 /**
@@ -69,6 +71,27 @@ export type NotificationFooter = {
 export type NotificationIcon = { type: "hidden" } | { type: "bundle_id"; bundle_id: string } | { type: "system_symbol"; name: string } | { type: "path"; path: string } | { type: "overlay"; base: NotificationIconAsset; badge: NotificationIconAsset };
 
 export type NotificationIconAsset = { type: "app_icon" } | { type: "calendar" } | { type: "system_symbol"; name: string } | { type: "bundle_id"; bundle_id: string } | { type: "path"; path: string };
+
+/**
+ *  Libellés des surfaces natives, traduits par Lingui côté application et
+ *  envoyés avec chaque notification (issue 408, même approche que les libellés
+ *  du planning de la barre système). Les délais restent calculés en Rust :
+ *  seuls les gabarits de texte viennent de l'application. Sans libellés, les
+ *  textes anglais historiques s'appliquent.
+ */
+export type NotificationLabels = {
+	/**  Bouton qui ouvre la liste d'options. */
+	options: string,
+	/**  Rappel de réunion sans décompte connu. */
+	startingSoon: string,
+	/**  Rappel de réunion dont l'heure de début est passée. */
+	started: string,
+	startingInOne: string,
+	/**  Gabarit avec `{minutes}`. */
+	startingInOther: string,
+	/**  Gabarit avec `{time}` (« m:ss »). */
+	beginsIn: string,
+};
 
 export type NotificationSource = { type: "calendar_event"; event_id: string } | { type: "session"; session_id: string } | { type: "mic_detected"; app_names: string[]; app_ids?: string[]; event_ids?: string[] };
 

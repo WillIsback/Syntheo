@@ -22,9 +22,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 use windows::core::{PCWSTR, w};
 
-use syntheo_notification_interface::{
-    DismissTimer, Notification, PrimaryAction, expanded_schedule_text, unix_now,
-};
+use syntheo_notification_interface::{DismissTimer, Notification, PrimaryAction, unix_now};
 
 use crate::callbacks;
 use crate::icon::{destroy_icon, header_title, load_notification_icon};
@@ -589,7 +587,7 @@ fn expanded_body(notification: &Notification, remaining: Option<Duration>) -> St
         }
     }
     if let Some(remaining) = remaining {
-        lines.push(expanded_schedule_text(remaining));
+        lines.push(notification.expanded_schedule_message(remaining));
     }
     if lines.is_empty() {
         notification.message.clone()
@@ -602,7 +600,10 @@ impl NotificationInstance {
     fn action(&self) -> Option<(&str, ActionStyle)> {
         self.layout.action?;
         Some(match self.payload.primary_action() {
-            PrimaryAction::Options(_) if !self.is_expanded => ("Options", ActionStyle::Secondary),
+            PrimaryAction::Options(_) if !self.is_expanded => (
+                self.payload.labels().options.as_str(),
+                ActionStyle::Secondary,
+            ),
             PrimaryAction::Options(_) => (
                 self.payload.expanded_action_label(),
                 action_style(self.payload.is_destructive_action()),

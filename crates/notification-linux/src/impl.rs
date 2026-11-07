@@ -10,9 +10,7 @@ use gtk::{
 };
 use indexmap::IndexMap;
 
-use syntheo_notification_interface::{
-    DismissTimer, ParticipantStatus, PrimaryAction, expanded_schedule_text, unix_now,
-};
+use syntheo_notification_interface::{DismissTimer, ParticipantStatus, PrimaryAction, unix_now};
 
 use crate::callbacks;
 use crate::icon;
@@ -234,7 +232,7 @@ impl NotificationInstance {
                 menu.show_all();
 
                 let menu_button = MenuButton::new();
-                menu_button.set_label("Options");
+                menu_button.set_label(&payload.labels().options);
                 menu_button.style_context().add_class("action-button");
                 menu_button.set_popup(Some(&menu));
                 main_box.pack_start(&menu_button, false, false, 0);
@@ -415,7 +413,7 @@ impl NotificationInstance {
 
         if payload.start_time.is_some() {
             let remaining = self.schedule_remaining().unwrap_or_default();
-            let timer = Label::new(Some(&expanded_schedule_text(remaining)));
+            let timer = Label::new(Some(&payload.expanded_schedule_message(remaining)));
             timer.style_context().add_class("notification-message");
             container.pack_start(&timer, false, false, 0);
             self.expanded_timer_label = Some(timer);
@@ -576,9 +574,11 @@ impl NotificationManager {
             );
         }
         if let Some(label) = &instance.expanded_timer_label {
-            label.set_text(&expanded_schedule_text(
-                instance.schedule_remaining().unwrap_or_default(),
-            ));
+            label.set_text(
+                &instance
+                    .payload
+                    .expanded_schedule_message(instance.schedule_remaining().unwrap_or_default()),
+            );
         }
     }
 
