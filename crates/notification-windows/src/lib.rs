@@ -3,9 +3,14 @@ pub use syntheo_notification_interface::*;
 mod callbacks;
 mod icon;
 mod layout;
+mod raster;
+mod surface;
+mod theme;
 
 #[cfg(target_os = "windows")]
 mod r#impl;
+#[cfg(target_os = "windows")]
+mod render;
 
 pub use callbacks::{
     setup_notification_accept_handler, setup_notification_confirm_handler,

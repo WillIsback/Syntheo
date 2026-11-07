@@ -461,9 +461,8 @@ mod tests {
             Some(home) => unsafe { std::env::set_var("HOME", home) },
             None => unsafe { std::env::remove_var("HOME") },
         }
-        match previous_profile {
-            Some(profile) => unsafe { std::env::set_var("USERPROFILE", profile) },
-            None => {}
+        if let Some(profile) = previous_profile {
+            unsafe { std::env::set_var("USERPROFILE", profile) };
         }
     }
 
