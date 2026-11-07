@@ -4,7 +4,7 @@
 # en conditions réelles : AppImage Linux et installeur Windows, non signés, en
 # artefacts du run (14 jours). Ne publie rien.
 #
-# Lancement : gh workflow run build-devtools --ref v0.5.3 -f version=0.5.3
+# Lancement : gh workflow run build-devtools --ref v0.5.3 -f version=0.5.3 [-f platforms=linux|windows]
 name: build-devtools
 
 on:
@@ -15,6 +15,14 @@ on:
         type: string
         required: false
         default: "0.0.0"
+      platforms:
+        description: "Plateformes à construire"
+        type: choice
+        options:
+          - both
+          - linux
+          - windows
+        default: both
 
 concurrency:
   group: build-devtools-${{ github.ref }}
@@ -26,6 +34,7 @@ permissions:
 jobs:
   linux:
     name: Build devtools Linux
+    if: inputs.platforms != 'windows'
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     env:
@@ -74,9 +83,14 @@ jobs:
           VERSION: ${{ inputs.version }}
         run: |
           set -euo pipefail
+          shopt -s nullglob
           mkdir -p dist
-          src=$(ls target/release/bundle/appimage/*.AppImage apps/desktop/src-tauri/target/release/bundle/appimage/*.AppImage 2>/dev/null | head -n 1)
-          test -n "$src"
+          found=(apps/desktop/src-tauri/target/release/bundle/appimage/*.AppImage target/release/bundle/appimage/*.AppImage)
+          if [ "${#found[@]}" -eq 0 ]; then
+            echo "Aucune AppImage trouvée" >&2
+            exit 1
+          fi
+          src=${found[0]}
           cp "$src" "dist/Syntheo-${VERSION#v}-devtools-linux-x86_64.AppImage"
           (cd dist && sha256sum ./*.AppImage > SHA256SUMS-devtools-linux)
           cat dist/SHA256SUMS-devtools-linux
@@ -90,6 +104,7 @@ jobs:
 
   windows:
     name: Build devtools Windows
+    if: inputs.platforms != 'linux'
     uses: ./.github/workflows/build-windows.yml
     with:
       version: ${{ inputs.version }}
