@@ -6,8 +6,9 @@ import {
   type PermissionGuidance,
   commands as permissionsCommands,
   type PermissionStatus,
-  type Result,
 } from "@syntheo/plugin-permissions";
+
+import type { Result } from "~/types";
 
 function unwrap<T>(result: Result<T, string>): T {
   if (result.status === "error") {

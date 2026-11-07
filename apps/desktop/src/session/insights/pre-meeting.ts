@@ -8,7 +8,7 @@ import { z } from "zod";
 
 import {
   commands as templateCommands,
-  type JsonValue,
+  type Value as JsonValue,
 } from "@syntheo/plugin-template";
 import { parseEventInstant } from "@syntheo/utils";
 
@@ -346,7 +346,7 @@ export async function streamPreMeetingBrief({
   }
 }
 
-type TemplateContext = Partial<{ [key: string]: JsonValue }>;
+type TemplateContext = { [key: string]: JsonValue };
 
 async function renderJinja(templateContent: string, ctx: TemplateContext) {
   const result = await templateCommands.renderCustom(templateContent, ctx);

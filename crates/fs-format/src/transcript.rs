@@ -13,6 +13,7 @@ where
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, Type)]
 pub struct TranscriptJson {
     #[serde(default, deserialize_with = "null_or_default")]
+    #[specta(type = Vec<TranscriptWithData>)]
     pub transcripts: Vec<TranscriptWithData>,
 }
 
@@ -20,19 +21,25 @@ pub struct TranscriptJson {
 pub struct TranscriptWithData {
     pub id: String,
     #[serde(default, deserialize_with = "null_or_default")]
+    #[specta(type = String)]
     pub user_id: String,
     #[serde(default, deserialize_with = "null_or_default")]
+    #[specta(type = String)]
     pub created_at: String,
     pub session_id: String,
     #[serde(default, deserialize_with = "null_or_default")]
+    #[specta(type = f64)]
     pub started_at: f64,
     #[serde(default)]
     pub ended_at: Option<f64>,
     #[serde(default, deserialize_with = "null_or_default")]
+    #[specta(type = String)]
     pub memo_md: String,
     #[serde(default, deserialize_with = "null_or_default")]
+    #[specta(type = Vec<TranscriptWord>)]
     pub words: Vec<TranscriptWord>,
     #[serde(default, deserialize_with = "null_or_default")]
+    #[specta(type = Vec<TranscriptSpeakerHint>)]
     pub speaker_hints: Vec<TranscriptSpeakerHint>,
 }
 
@@ -58,5 +65,6 @@ pub struct TranscriptSpeakerHint {
     #[serde(rename = "type")]
     pub hint_type: String,
     #[serde(default, deserialize_with = "null_or_default")]
+    #[specta(type = Value)]
     pub value: Value,
 }

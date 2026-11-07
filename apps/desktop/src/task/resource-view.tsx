@@ -1,301 +1,51 @@
 import { Trans, useLingui } from "@lingui/react/macro";
-import { useQuery } from "@tanstack/react-query";
-import { defaultRehypePlugins, Streamdown } from "streamdown";
 
 import { commands as openerCommands } from "@syntheo/plugin-opener2";
-import { commands as todoCommands } from "@syntheo/plugin-todo";
 import {
   ArrowSquareOut,
-  Chat,
-  GitMerge,
   GitPullRequest,
   RadioButton,
-  XCircle,
 } from "@syntheo/ui/components/icons";
-import { streamdownIcons } from "@syntheo/ui/components/streamdown-icons";
-import { cn } from "@syntheo/utils";
 
-import { streamdownComponents } from "~/session/components/streamdown";
 import { type TaskResource } from "~/store/zustand/tabs";
 
-const rehypePlugins = [defaultRehypePlugins.raw, defaultRehypePlugins.sanitize];
-
+// Les commandes GitHub du plugin todo ont été retirées côté Rust (issue 84) :
+// la vue ne charge plus le détail du ticket et renvoie vers GitHub.
 export function ResourceView({ resource }: { resource: TaskResource }) {
   const { t } = useLingui();
-  const {
-    data: issue,
-    isLoading,
-    error,
-  } = useQuery({
-    queryKey: [
-      "github-issue-detail",
-      resource.owner,
-      resource.repo,
-      resource.number,
-    ],
-    queryFn: async () => {
-      const result = await todoCommands.githubIssueDetail(
-        resource.owner,
-        resource.repo,
-        resource.number,
-      );
-      if (result.status === "error") {
-        throw new Error(result.error);
-      }
-      return result.data;
-    },
-    staleTime: 60_000,
-  });
-
-  const { data: comments } = useQuery({
-    queryKey: [
-      "github-issue-comments",
-      resource.owner,
-      resource.repo,
-      resource.number,
-    ],
-    queryFn: async () => {
-      const result = await todoCommands.githubIssueComments(
-        resource.owner,
-        resource.repo,
-        resource.number,
-      );
-      if (result.status === "error") {
-        throw new Error(result.error);
-      }
-      return result.data;
-    },
-    staleTime: 60_000,
-    enabled: !!issue,
-  });
-
-  const isPR = resource.type === "github_pr" || issue?.pull_request != null;
+  const isPR = resource.type === "github_pr";
   const urlPath = isPR ? "pull" : "issues";
   const url = `https://github.com/${resource.owner}/${resource.repo}/${urlPath}/${resource.number}`;
-  const isMerged = issue?.pull_request?.merged_at != null;
-  const isClosed = issue?.state === "closed";
+  const Icon = isPR ? GitPullRequest : RadioButton;
 
   return (
     <div className="w-full max-w-3xl px-6 py-6">
-      {isLoading ? (
-        <div className="text-muted-foreground flex items-center justify-center py-12">
-          <Trans>Loading...</Trans>
-        </div>
-      ) : null}
-      {error ? (
-        <div className="text-muted-foreground flex items-center justify-center py-12">
-          {isPR ? (
-            <Trans>Failed to load pull request</Trans>
-          ) : (
-            <Trans>Failed to load issue</Trans>
-          )}
-        </div>
-      ) : null}
-      {issue ? (
-        <>
-          <div className="mb-4">
-            <div className="flex items-start justify-between gap-3">
-              <h1 className="text-foreground text-xl leading-snug font-semibold">
-                {issue.title}
-                <span className="text-muted-foreground ml-2 font-normal">
-                  #{issue.number}
-                </span>
-              </h1>
-              <button
-                type="button"
-                className="text-muted-foreground hover:bg-accent hover:text-muted-foreground shrink-0 rounded-md p-1.5 transition-colors"
-                onClick={() => openerCommands.openUrl(url, null)}
-                title={t`Open on GitHub`}
-              >
-                <ArrowSquareOut className="size-4" />
-              </button>
-            </div>
-            <div className="text-muted-foreground mt-2 flex items-center gap-2 text-sm">
-              <StateBadge isPR={isPR} isMerged={isMerged} isClosed={isClosed} />
-              <span>
-                <Trans>{issue.user?.login} opened on</Trans>{" "}
-                {new Date(issue.created_at).toLocaleDateString(undefined, {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                })}
-              </span>
-              {issue.comments != null && issue.comments > 0 ? (
-                <span>
-                  · {issue.comments}{" "}
-                  {issue.comments === 1 ? t`comment` : t`comments`}
-                </span>
-              ) : null}
-            </div>
-          </div>
-
-          {issue.labels && issue.labels.length > 0 ? (
-            <div className="mb-4 flex flex-wrap gap-1.5">
-              {issue.labels.map((label) => (
-                <span
-                  key={label.id}
-                  className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
-                  style={{
-                    backgroundColor: label.color
-                      ? `#${label.color}20`
-                      : "hsl(var(--muted))",
-                    color: label.color
-                      ? `#${label.color}`
-                      : "hsl(var(--muted-foreground))",
-                    border: `1px solid ${
-                      label.color ? `#${label.color}40` : "hsl(var(--border))"
-                    }`,
-                  }}
-                >
-                  {label.name}
-                </span>
-              ))}
-            </div>
-          ) : null}
-
-          {issue.assignees && issue.assignees.length > 0 ? (
-            <div className="text-muted-foreground mb-4 flex items-center gap-2 text-sm">
-              <span className="text-muted-foreground font-medium">
-                <Trans>Assignees:</Trans>
-              </span>
-              {issue.assignees.map((assignee) => (
-                <span key={assignee.id} className="flex items-center gap-1">
-                  {assignee.avatar_url ? (
-                    <img
-                      src={assignee.avatar_url}
-                      alt={assignee.login}
-                      className="size-5 rounded-full"
-                    />
-                  ) : null}
-                  {assignee.login}
-                </span>
-              ))}
-            </div>
-          ) : null}
-
-          {issue.body ? (
-            <div className="border-border border-t pt-4">
-              <Streamdown
-                icons={streamdownIcons}
-                className="note-typography text-muted-foreground mt-1 [--note-editor-font-size:0.875rem]"
-                components={streamdownComponents}
-                isAnimating={false}
-                rehypePlugins={rehypePlugins}
-              >
-                {issue.body}
-              </Streamdown>
-            </div>
-          ) : (
-            <div className="border-border text-muted-foreground border-t pt-4 text-sm italic">
-              <Trans>No description provided.</Trans>
-            </div>
-          )}
-
-          {comments && comments.length > 0 ? (
-            <div className="border-border mt-6 border-t pt-4">
-              <div className="text-muted-foreground mb-4 flex items-center gap-2 text-sm font-medium">
-                <Chat className="size-4" />
-                <span>
-                  {comments.length}{" "}
-                  {comments.length === 1 ? t`comment` : t`comments`}
-                </span>
-              </div>
-              <div className="space-y-4">
-                {comments.map((comment) => (
-                  <div
-                    key={comment.id}
-                    className="border-border bg-muted/50 rounded-lg border"
-                  >
-                    <div className="border-border flex items-center gap-2 border-b px-4 py-2.5 text-sm">
-                      {comment.user?.avatar_url ? (
-                        <img
-                          src={comment.user.avatar_url}
-                          alt={comment.user.login}
-                          className="size-5 rounded-full"
-                        />
-                      ) : null}
-                      <span className="text-muted-foreground font-medium">
-                        {comment.user?.login}
-                      </span>
-                      <span className="text-muted-foreground">
-                        <Trans>commented on</Trans>{" "}
-                        {new Date(comment.created_at).toLocaleDateString(
-                          undefined,
-                          {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          },
-                        )}
-                      </span>
-                    </div>
-                    <div className="px-4 py-3">
-                      {comment.body ? (
-                        <Streamdown
-                          icons={streamdownIcons}
-                          className="note-typography text-muted-foreground mt-1 [--note-editor-font-size:0.875rem]"
-                          components={streamdownComponents}
-                          isAnimating={false}
-                          rehypePlugins={rehypePlugins}
-                        >
-                          {comment.body}
-                        </Streamdown>
-                      ) : (
-                        <span className="text-muted-foreground text-sm italic">
-                          <Trans>No content.</Trans>
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : null}
-        </>
-      ) : null}
+      <div className="flex items-start justify-between gap-3">
+        <h1 className="text-foreground flex items-center gap-2 text-xl leading-snug font-semibold">
+          <Icon className="text-muted-foreground size-5 shrink-0" />
+          <span>
+            {resource.owner}/{resource.repo}
+            <span className="text-muted-foreground ml-2 font-normal">
+              #{resource.number}
+            </span>
+          </span>
+        </h1>
+        <button
+          type="button"
+          className="text-muted-foreground hover:bg-accent hover:text-muted-foreground shrink-0 rounded-md p-1.5 transition-colors"
+          onClick={() => openerCommands.openUrl(url, null)}
+          title={t`Open on GitHub`}
+        >
+          <ArrowSquareOut className="size-4" />
+        </button>
+      </div>
+      <div className="border-border text-muted-foreground mt-4 border-t pt-4 text-sm">
+        {isPR ? (
+          <Trans>Open this pull request on GitHub to see its details.</Trans>
+        ) : (
+          <Trans>Open this issue on GitHub to see its details.</Trans>
+        )}
+      </div>
     </div>
-  );
-}
-
-function StateBadge({
-  isPR,
-  isMerged,
-  isClosed,
-}: {
-  isPR: boolean;
-  isMerged: boolean;
-  isClosed: boolean;
-}) {
-  const { t } = useLingui();
-  let label: string;
-  let colorClass: string;
-  let Icon: typeof RadioButton;
-
-  if (isPR && isMerged) {
-    label = t`Merged`;
-    colorClass = "bg-chart-4/15 text-chart-4";
-    Icon = GitMerge;
-  } else if (isClosed) {
-    label = t`Closed`;
-    colorClass = isPR
-      ? "bg-alert text-alert-foreground"
-      : "bg-chart-4/15 text-chart-4";
-    Icon = XCircle;
-  } else {
-    label = t`Open`;
-    colorClass = "bg-accent text-accent-foreground";
-    Icon = isPR ? GitPullRequest : RadioButton;
-  }
-
-  return (
-    <span
-      className={cn([
-        "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium",
-        colorClass,
-      ])}
-    >
-      <Icon className="size-3.5" />
-      {label}
-    </span>
   );
 }

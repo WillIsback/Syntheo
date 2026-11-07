@@ -29,6 +29,7 @@ pub enum DependencyAnalysis {
             serialize_with = "serialize_dependency_targets",
             deserialize_with = "deserialize_dependency_targets"
         )]
+        #[cfg_attr(feature = "specta", specta(type = Vec<DependencyTarget>))]
         targets: HashSet<DependencyTarget>,
     },
     #[serde(rename = "non_reactive")]

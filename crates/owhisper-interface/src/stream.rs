@@ -4,7 +4,7 @@ use crate::common_derives;
 // https://developers.deepgram.com/reference/speech-to-text-api/listen-streaming#receive.receiveTranscription
 
 common_derives! {
-    #[specta(rename = "StreamWord")]
+    #[serde(rename = "StreamWord")]
     #[cfg_attr(feature = "openapi", schema(as = StreamWord))]
     pub struct Word {
         pub word: String,
@@ -18,7 +18,7 @@ common_derives! {
 }
 
 common_derives! {
-    #[specta(rename = "StreamAlternatives")]
+    #[serde(rename = "StreamAlternatives")]
     #[cfg_attr(feature = "openapi", schema(as = StreamAlternatives))]
     pub struct Alternatives {
         pub transcript: String,
@@ -30,7 +30,7 @@ common_derives! {
 }
 
 common_derives! {
-    #[specta(rename = "StreamChannel")]
+    #[serde(rename = "StreamChannel")]
     #[cfg_attr(feature = "openapi", schema(as = StreamChannel))]
     pub struct Channel {
         pub alternatives: Vec<Alternatives>,
@@ -38,7 +38,7 @@ common_derives! {
 }
 
 common_derives! {
-    #[specta(rename = "StreamModelInfo")]
+    #[serde(rename = "StreamModelInfo")]
     #[cfg_attr(feature = "openapi", schema(as = StreamModelInfo))]
     pub struct ModelInfo {
         pub name: String,
@@ -48,7 +48,7 @@ common_derives! {
 }
 
 common_derives! {
-    #[specta(rename = "StreamMetadata")]
+    #[serde(rename = "StreamMetadata")]
     #[cfg_attr(feature = "openapi", schema(as = StreamMetadata))]
     pub struct Metadata {
         pub request_id: String,
@@ -62,7 +62,7 @@ common_derives! {
 }
 
 common_derives! {
-    #[specta(rename = "StreamExtra")]
+    #[serde(rename = "StreamExtra")]
     pub struct Extra {
         pub started_unix_millis: u64,
     }

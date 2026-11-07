@@ -53,11 +53,6 @@ msgstr "{0} could not be installed"
 msgid "{0} is ready to use"
 msgstr "{0} is ready to use"
 
-#. placeholder {0}: issue.user?.login
-#: src/task/resource-view.tsx
-msgid "{0} opened on"
-msgstr "{0} opened on"
-
 #. placeholder {0}: proposals.length
 #: src/session/components/pending-proposals-banner.tsx
 msgid "{0} pending edits"
@@ -435,10 +430,6 @@ msgstr "Ask Syntheo anything"
 #: src/session/components/capsule/index.tsx
 msgid "Ask the note"
 msgstr "Ask the note"
-
-#: src/task/resource-view.tsx
-msgid "Assignees:"
-msgstr "Assignees:"
 
 #: src/templates/auto-format-examples-dialog.tsx
 msgid "Attach Markdown or text"
@@ -818,10 +809,6 @@ msgstr "Close changelog"
 msgid "Close chat"
 msgstr "Close chat"
 
-#: src/task/resource-view.tsx
-msgid "Closed"
-msgstr "Closed"
-
 #: src/settings/general/notification.tsx
 msgid "Cloud sync complete"
 msgstr "Cloud sync complete"
@@ -841,18 +828,6 @@ msgstr "Color theme"
 #: src/automations/starters.tsx
 msgid "Combine metadata, summary, notes, and transcript."
 msgstr "Combine metadata, summary, notes, and transcript."
-
-#: src/task/resource-view.tsx
-msgid "comment"
-msgstr "comment"
-
-#: src/task/resource-view.tsx
-msgid "commented on"
-msgstr "commented on"
-
-#: src/task/resource-view.tsx
-msgid "comments"
-msgstr "comments"
 
 #: src/contacts/details.tsx
 #: src/settings/general/account-profile.tsx
@@ -1489,14 +1464,6 @@ msgstr "Failed to copy transcript"
 msgid "Failed to copy: {viewTitle}"
 msgstr "Failed to copy: {viewTitle}"
 
-#: src/task/resource-view.tsx
-msgid "Failed to load issue"
-msgstr "Failed to load issue"
-
-#: src/task/resource-view.tsx
-msgid "Failed to load pull request"
-msgstr "Failed to load pull request"
-
 #: src/main/windows-title-bar.tsx
 msgid "File"
 msgstr "File"
@@ -2033,7 +2000,6 @@ msgstr "Loading settings"
 #: src/changelog/index.tsx
 #: src/contacts/details.tsx
 #: src/settings/general/account-profile.tsx
-#: src/task/resource-view.tsx
 msgid "Loading..."
 msgstr "Loading..."
 
@@ -2200,10 +2166,6 @@ msgstr "Memos"
 #: src/session/components/note-input/transcript/renderer/selection-menu.tsx
 msgid "Merge"
 msgstr "Merge"
-
-#: src/task/resource-view.tsx
-msgid "Merged"
-msgstr "Merged"
 
 #: src/composer/index.tsx
 msgid "Message Syntheo AI"
@@ -2422,14 +2384,6 @@ msgstr "No changelog available for this version."
 msgid "No community templates available"
 msgstr "No community templates available"
 
-#: src/task/resource-view.tsx
-msgid "No content."
-msgstr "No content."
-
-#: src/task/resource-view.tsx
-msgid "No description provided."
-msgstr "No description provided."
-
 #: src/session/components/version-history-dialog.tsx
 msgid "No earlier versions yet."
 msgstr "No earlier versions yet."
@@ -2640,7 +2594,6 @@ msgid "Only on-premise OpenAI-compatible servers are supported (vLLM, Ollama, ll
 msgstr "Only on-premise OpenAI-compatible servers are supported (vLLM, Ollama, llama.cpp server, LM Studio…). The address usually ends with /v1, for example http://localhost:8000/v1."
 
 #: src/calendar/components/apple/permission.tsx
-#: src/task/resource-view.tsx
 msgid "Open"
 msgstr "Open"
 
@@ -2714,6 +2667,14 @@ msgstr "Open Syntheo from the menu bar."
 #: src/settings/general/meeting-settings.tsx
 msgid "Open the meeting link when a scheduled meeting begins."
 msgstr "Open the meeting link when a scheduled meeting begins."
+
+#: src/task/resource-view.tsx
+msgid "Open this issue on GitHub to see its details."
+msgstr "Open this issue on GitHub to see its details."
+
+#: src/task/resource-view.tsx
+msgid "Open this pull request on GitHub to see its details."
+msgstr "Open this pull request on GitHub to see its details."
 
 #: src/settings/ai/stt/server-card.tsx
 msgid "OpenAI · Realtime and batch"
