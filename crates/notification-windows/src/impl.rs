@@ -3,29 +3,18 @@ use std::sync::{Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
 use indexmap::IndexMap;
-use windows::Win32::Foundation::{COLORREF, HWND, LPARAM, LRESULT, POINT, RECT, WPARAM};
-use windows::Win32::Graphics::Dwm::{
-    DWM_WINDOW_CORNER_PREFERENCE, DWMWA_WINDOW_CORNER_PREFERENCE, DWMWCP_ROUND,
-    DwmSetWindowAttribute,
-};
-use windows::Win32::Graphics::Gdi::{
-    BeginPaint, CLEARTYPE_QUALITY, CLIP_DEFAULT_PRECIS, CreateFontW, CreateSolidBrush,
-    DEFAULT_CHARSET, DEFAULT_PITCH, DRAW_TEXT_FORMAT, DT_CENTER, DT_END_ELLIPSIS, DT_LEFT,
-    DT_SINGLELINE, DT_TOP, DT_VCENTER, DT_WORDBREAK, DeleteObject, DrawTextW, EndPaint, FW_NORMAL,
-    FW_SEMIBOLD, FillRect, HDC, HFONT, InvalidateRect, OUT_DEFAULT_PRECIS, PAINTSTRUCT,
-    SelectObject, SetBkMode, SetTextColor, TRANSPARENT,
-};
+use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, POINT, RECT, WPARAM};
+use windows::Win32::Graphics::Gdi::{BeginPaint, EndPaint, PAINTSTRUCT};
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows::Win32::System::Threading::GetCurrentThreadId;
 use windows::Win32::UI::Controls::WM_MOUSELEAVE;
 use windows::Win32::UI::HiDpi::GetDpiForWindow;
 use windows::Win32::UI::Input::KeyboardAndMouse::{TME_LEAVE, TRACKMOUSEEVENT, TrackMouseEvent};
 use windows::Win32::UI::WindowsAndMessaging::{
-    AppendMenuW, CS_HREDRAW, CS_VREDRAW, CreatePopupMenu, CreateWindowExW, DI_NORMAL,
-    DefWindowProcW, DestroyMenu, DestroyWindow, DispatchMessageW, DrawIconEx, GetCursorPos,
-    GetMessageW, HICON, IDC_ARROW, KillTimer, LWA_ALPHA, LoadCursorW, MF_STRING, MSG,
-    PostThreadMessageW, RegisterClassExW, SPI_GETWORKAREA, SW_SHOWNOACTIVATE, SWP_NOACTIVATE,
-    SWP_NOZORDER, SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS, SetLayeredWindowAttributes, SetTimer,
+    AppendMenuW, CS_HREDRAW, CS_VREDRAW, CreatePopupMenu, CreateWindowExW, DefWindowProcW,
+    DestroyMenu, DestroyWindow, DispatchMessageW, GetCursorPos, GetMessageW, HICON, IDC_ARROW,
+    KillTimer, LoadCursorW, MF_STRING, MSG, PostThreadMessageW, RegisterClassExW, SPI_GETWORKAREA,
+    SW_SHOWNOACTIVATE, SWP_NOACTIVATE, SWP_NOZORDER, SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS, SetTimer,
     SetWindowPos, ShowWindow, SystemParametersInfoW, TPM_LEFTALIGN, TPM_RETURNCMD, TPM_RIGHTBUTTON,
     TrackPopupMenu, TranslateMessage, WM_APP, WM_DESTROY, WM_LBUTTONUP, WM_MOUSEMOVE, WM_PAINT,
     WM_TIMER, WNDCLASSEXW, WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TOPMOST,
@@ -40,8 +29,10 @@ use syntheo_notification_interface::{
 use crate::callbacks;
 use crate::icon::{destroy_icon, header_title, load_notification_icon};
 use crate::layout::{
-    HitTarget, MAX_NOTIFICATIONS, NotificationLayout, Rect, fit_stack, stacked_origin, try_expand,
+    HitTarget, MAX_NOTIFICATIONS, NotificationLayout, fit_stack, stacked_origin, try_expand,
 };
+use crate::render::{Frame, FrameKey, render, system_prefers_dark};
+use crate::theme::ActionStyle;
 
 const CLASS_NAME: windows::core::PCWSTR = w!("SyntheoNotification");
 const TIMER_ID: usize = 1;
@@ -64,6 +55,8 @@ struct NotificationInstance {
     is_expanded: bool,
     tracking_leave: bool,
     icon: Option<HICON>,
+    /// Dernière image envoyée à `UpdateLayeredWindow`.
+    rendered: Option<FrameKey>,
 }
 
 struct NotificationManager {
@@ -99,8 +92,10 @@ impl NotificationManager {
         let layout = NotificationLayout::compact(&notification);
         let occupied = self.occupied_height();
         let (work_x, work_y, work_width, _) = work_area();
-        let (x, y) = stacked_origin(work_x, work_y, work_width, occupied, &layout);
-        let hwnd = match create_overlay_window(x, y, layout.width, layout.height) {
+        let (card_x, card_y) = stacked_origin(work_x, work_y, work_width, occupied, &layout);
+        let (x, y) = layout.window_origin(card_x, card_y);
+        let (width, height) = layout.window_size();
+        let hwnd = match create_overlay_window(x, y, width, height) {
             Some(hwnd) => hwnd,
             None => return,
         };
@@ -116,6 +111,7 @@ impl NotificationManager {
             is_expanded: false,
             tracking_leave: false,
             icon,
+            rendered: None,
         };
         unsafe {
             let _ = SetTimer(Some(hwnd), TIMER_ID, 50, None);
@@ -165,20 +161,24 @@ impl NotificationManager {
             .zip(layouts.into_iter().skip(first))
         {
             instance.layout = layout;
-            let (x, y) = stacked_origin(work_x, work_y, work_width, occupied, &instance.layout);
+            let (card_x, card_y) =
+                stacked_origin(work_x, work_y, work_width, occupied, &instance.layout);
             occupied +=
                 instance.layout.height + instance.layout.scale(crate::layout::NOTIFICATION_SPACING);
+            let (x, y) = instance.layout.window_origin(card_x, card_y);
+            let (width, height) = instance.layout.window_size();
             unsafe {
                 let _ = SetWindowPos(
                     instance.hwnd,
                     None,
                     x,
                     y,
-                    instance.layout.width,
-                    instance.layout.height,
+                    width,
+                    height,
                     SWP_NOACTIVATE | SWP_NOZORDER,
                 );
             }
+            instance.redraw();
         }
     }
 
@@ -242,9 +242,7 @@ impl NotificationManager {
             return;
         }
         if let Some(instance) = self.instance_by_hwnd_mut(hwnd) {
-            unsafe {
-                let _ = InvalidateRect(Some(instance.hwnd), None, false);
-            }
+            instance.redraw();
         }
     }
 
@@ -265,18 +263,17 @@ impl NotificationManager {
                 timer.resume(Instant::now());
             }
         }
-        unsafe {
-            let _ = InvalidateRect(Some(hwnd), None, false);
-        }
+        instance.redraw();
     }
 
     fn handle_click(&mut self, hwnd: HWND, x: i32, y: i32) {
         let Some(instance) = self.instance_by_hwnd_mut(hwnd) else {
             return;
         };
-        let target = instance.layout.action_hit(&instance.payload, x, y);
+        let target = instance.layout.window_hit(&instance.payload, x, y);
         let key = instance.key.clone();
         match target {
+            HitTarget::Outside => {}
             HitTarget::Close => self.dismiss(&key, DismissReason::User),
             HitTarget::Action => {
                 callbacks::accept(key.clone());
@@ -337,9 +334,6 @@ impl NotificationManager {
             }
         }
         self.reposition();
-        unsafe {
-            let _ = InvalidateRect(Some(hwnd), None, false);
-        }
     }
 
     fn show_options_menu(&mut self, hwnd: HWND) {
@@ -506,14 +500,8 @@ fn create_overlay_window(x: i32, y: i32, width: i32, height: i32) -> Option<HWND
             None,
         )
         .ok()?;
-        let _ = SetLayeredWindowAttributes(hwnd, COLORREF(0), 242, LWA_ALPHA);
-        let preference = DWMWCP_ROUND;
-        let _ = DwmSetWindowAttribute(
-            hwnd,
-            DWMWA_WINDOW_CORNER_PREFERENCE,
-            &preference as *const DWM_WINDOW_CORNER_PREFERENCE as *const std::ffi::c_void,
-            std::mem::size_of::<DWM_WINDOW_CORNER_PREFERENCE>() as u32,
-        );
+        // Pas de `SetLayeredWindowAttributes` : le contenu (coins arrondis,
+        // ombre) arrive par `UpdateLayeredWindow` avec un alpha par pixel.
         Some(hwnd)
     }
 }
@@ -568,180 +556,13 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: 
     }
 }
 
+/// Le contenu est poussé par `UpdateLayeredWindow` ; il suffit de valider la
+/// zone pour que Windows ne renvoie pas `WM_PAINT` en boucle.
 fn paint(hwnd: HWND) {
     unsafe {
         let mut ps = PAINTSTRUCT::default();
-        let hdc = BeginPaint(hwnd, &mut ps);
-        MANAGER.with(|manager| {
-            if let Some(instance) = manager
-                .borrow()
-                .active
-                .values()
-                .find(|instance| instance.hwnd == hwnd)
-            {
-                draw_notification(hdc, instance);
-            }
-        });
+        let _ = BeginPaint(hwnd, &mut ps);
         let _ = EndPaint(hwnd, &ps);
-    }
-}
-
-fn draw_notification(hdc: HDC, instance: &NotificationInstance) {
-    unsafe {
-        let bg = CreateSolidBrush(rgb(245, 245, 247));
-        let bounds = RECT {
-            left: 0,
-            top: 0,
-            right: instance.layout.width,
-            bottom: instance.layout.height,
-        };
-        let _ = FillRect(hdc, &bounds, bg);
-        let _ = DeleteObject(bg.into());
-        SetBkMode(hdc, TRANSPARENT);
-        SetTextColor(hdc, rgb(26, 26, 26));
-
-        let dpi = instance.layout.dpi;
-        if let (Some(icon), Some(icon_rect)) = (instance.icon, instance.layout.icon) {
-            let _ = DrawIconEx(
-                hdc,
-                icon_rect.x,
-                icon_rect.y,
-                icon,
-                icon_rect.width,
-                icon_rect.height,
-                0,
-                None,
-                DI_NORMAL,
-            );
-        }
-
-        let title_font = create_font(14, true, dpi);
-        let body_font = create_font(11, false, dpi);
-        let previous = SelectObject(hdc, title_font.into());
-        draw_label(
-            hdc,
-            instance.layout.title,
-            header_title(&instance.payload, instance.is_expanded),
-            DT_LEFT | DT_SINGLELINE | DT_END_ELLIPSIS,
-        );
-        let _ = SelectObject(hdc, body_font.into());
-        SetTextColor(hdc, rgb(102, 102, 102));
-        let body = if instance.is_expanded {
-            expanded_body(&instance.payload, instance.schedule_remaining())
-        } else {
-            instance
-                .payload
-                .compact_message(instance.compact_remaining(Instant::now()))
-        };
-        draw_label(
-            hdc,
-            instance.layout.message,
-            &body,
-            if instance.is_expanded {
-                DT_LEFT | DT_TOP | DT_WORDBREAK
-            } else {
-                DT_LEFT | DT_SINGLELINE | DT_END_ELLIPSIS
-            },
-        );
-
-        if let Some(action) = instance.layout.action {
-            let (label, destructive) = match instance.payload.primary_action() {
-                PrimaryAction::Options(_) if !instance.is_expanded => ("Options", false),
-                PrimaryAction::Options(_) => (
-                    instance.payload.expanded_action_label(),
-                    instance.payload.is_destructive_action(),
-                ),
-                PrimaryAction::Accept { label, destructive } => (label, destructive),
-            };
-            let brush = CreateSolidBrush(if destructive {
-                rgb(196, 43, 28)
-            } else {
-                rgb(230, 230, 230)
-            });
-            let rect = rect_from(action);
-            let _ = FillRect(hdc, &rect, brush);
-            let _ = DeleteObject(brush.into());
-            SetTextColor(
-                hdc,
-                if destructive {
-                    rgb(255, 255, 255)
-                } else {
-                    rgb(26, 26, 26)
-                },
-            );
-            draw_label(hdc, action, label, DT_VCENTER | DT_SINGLELINE);
-            if instance.payload.has_action_menu() && !instance.is_expanded {
-                SetTextColor(hdc, rgb(26, 26, 26));
-                draw_label(
-                    hdc,
-                    Rect {
-                        x: action.right() - instance.layout.scale(28),
-                        y: action.y,
-                        width: instance.layout.scale(28),
-                        height: action.height,
-                    },
-                    "▾",
-                    DT_VCENTER | DT_SINGLELINE | DT_CENTER,
-                );
-            }
-        }
-
-        if let Some(collapse) = instance.layout.collapse {
-            SetTextColor(hdc, rgb(26, 26, 26));
-            draw_label(hdc, collapse, "Show less", DT_VCENTER | DT_SINGLELINE);
-        }
-
-        if let Some(footer) = instance.layout.footer_action
-            && let Some(footer_payload) = &instance.payload.footer
-        {
-            SetTextColor(hdc, rgb(26, 26, 26));
-            draw_label(
-                hdc,
-                crate::layout::Rect {
-                    x: instance.layout.scale(12),
-                    y: footer.y,
-                    width: footer.x - instance.layout.scale(20),
-                    height: footer.height,
-                },
-                &footer_payload.text,
-                DT_LEFT | DT_SINGLELINE | DT_END_ELLIPSIS | DT_VCENTER,
-            );
-            draw_label(
-                hdc,
-                footer,
-                &footer_payload.action_label,
-                DT_VCENTER | DT_SINGLELINE,
-            );
-        }
-
-        if let Some(progress) = instance.layout.progress
-            && let Some(timer) = &instance.dismiss_timer
-        {
-            let ratio = timer.progress_ratio(Instant::now()).clamp(0.0, 1.0);
-            let brush = CreateSolidBrush(rgb(102, 153, 230));
-            let width = ((progress.width as f64) * ratio).round() as i32;
-            let rect = RECT {
-                left: progress.x,
-                top: progress.y,
-                right: progress.x + width.max(0),
-                bottom: progress.bottom(),
-            };
-            let _ = FillRect(hdc, &rect, brush);
-            let _ = DeleteObject(brush.into());
-        }
-
-        if instance.is_hovered {
-            let brush = CreateSolidBrush(rgb(255, 255, 255));
-            let rect = rect_from(instance.layout.close);
-            let _ = FillRect(hdc, &rect, brush);
-            let _ = DeleteObject(brush.into());
-            SetTextColor(hdc, rgb(0, 0, 0));
-            draw_label(hdc, instance.layout.close, "×", DT_VCENTER | DT_SINGLELINE);
-        }
-
-        let _ = SelectObject(hdc, previous);
-        let _ = DeleteObject(title_font.into());
-        let _ = DeleteObject(body_font.into());
     }
 }
 
@@ -778,6 +599,56 @@ fn expanded_body(notification: &Notification, remaining: Option<Duration>) -> St
 }
 
 impl NotificationInstance {
+    fn action(&self) -> Option<(&str, ActionStyle)> {
+        self.layout.action?;
+        Some(match self.payload.primary_action() {
+            PrimaryAction::Options(_) if !self.is_expanded => ("Options", ActionStyle::Secondary),
+            PrimaryAction::Options(_) => (
+                self.payload.expanded_action_label(),
+                action_style(self.payload.is_destructive_action()),
+            ),
+            PrimaryAction::Accept { label, destructive } => (label, action_style(destructive)),
+        })
+    }
+
+    /// Redessine la fenêtre si son contenu visible a changé.
+    fn redraw(&mut self) {
+        let now = Instant::now();
+        let body = if self.is_expanded {
+            expanded_body(&self.payload, self.schedule_remaining())
+        } else {
+            self.payload.compact_message(self.compact_remaining(now))
+        };
+        let frame = Frame {
+            layout: &self.layout,
+            icon: self.icon,
+            title: header_title(&self.payload, self.is_expanded),
+            body,
+            expanded: self.is_expanded,
+            action: self.action(),
+            action_menu: self.payload.has_action_menu(),
+            collapse_label: self.layout.collapse.map(|_| "Show less"),
+            footer: self
+                .payload
+                .footer
+                .as_ref()
+                .filter(|_| self.layout.footer_action.is_some())
+                .map(|footer| (footer.text.as_str(), footer.action_label.as_str())),
+            hovered: self.is_hovered,
+            progress: self
+                .dismiss_timer
+                .as_ref()
+                .map(|timer| timer.progress_ratio(now)),
+            dark: system_prefers_dark(),
+        };
+        let key = frame.key();
+        if self.rendered.as_ref() == Some(&key) {
+            return;
+        }
+        render(self.hwnd, &frame);
+        self.rendered = Some(key);
+    }
+
     fn schedule_remaining(&self) -> Option<Duration> {
         let start_time = self.payload.start_time?;
         Some(Duration::from_secs(
@@ -798,50 +669,12 @@ impl NotificationInstance {
     }
 }
 
-fn draw_label(hdc: HDC, rect: crate::layout::Rect, text: &str, format: DRAW_TEXT_FORMAT) {
-    let mut wide_text = wide(text);
-    let mut bounds = rect_from(rect);
-    unsafe {
-        let _ = DrawTextW(hdc, &mut wide_text, &mut bounds, format);
+fn action_style(destructive: bool) -> ActionStyle {
+    if destructive {
+        ActionStyle::Destructive
+    } else {
+        ActionStyle::Primary
     }
-}
-
-fn create_font(size: i32, bold: bool, dpi: u32) -> HFONT {
-    unsafe {
-        CreateFontW(
-            -((size * dpi as i32) / 96),
-            0,
-            0,
-            0,
-            if bold {
-                FW_SEMIBOLD.0 as i32
-            } else {
-                FW_NORMAL.0 as i32
-            },
-            0,
-            0,
-            0,
-            DEFAULT_CHARSET,
-            OUT_DEFAULT_PRECIS,
-            CLIP_DEFAULT_PRECIS,
-            CLEARTYPE_QUALITY,
-            DEFAULT_PITCH.0 as u32,
-            w!("Segoe UI"),
-        )
-    }
-}
-
-fn rect_from(rect: crate::layout::Rect) -> RECT {
-    RECT {
-        left: rect.x,
-        top: rect.y,
-        right: rect.right(),
-        bottom: rect.bottom(),
-    }
-}
-
-fn rgb(r: u32, g: u32, b: u32) -> COLORREF {
-    COLORREF(r | (g << 8) | (b << 16))
 }
 
 fn wide(text: &str) -> Vec<u16> {
