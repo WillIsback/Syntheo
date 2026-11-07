@@ -461,10 +461,7 @@ impl OpenAIAdapter {
 
     fn drain_completed(state: &mut OpenAILiveState) -> Vec<CompletedLiveItem> {
         let mut completed = Vec::new();
-        loop {
-            let Some(next_item_id) = state.item_order.front() else {
-                break;
-            };
+        while let Some(next_item_id) = state.item_order.front() {
             if state
                 .items
                 .get(next_item_id)
