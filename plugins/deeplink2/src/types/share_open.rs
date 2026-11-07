@@ -15,14 +15,7 @@ impl ShareOpenRequest {
     pub(crate) fn parse(parsed: &url::Url) -> Result<Self, crate::Error> {
         if !matches!(
             parsed.scheme(),
-            "syntheo"
-                | "syntheo-staging"
-                | "syntheo-nightly"
-                | "syntheo-dev"
-                | "syntheo"
-                | "syntheo-staging"
-                | "syntheo-nightly"
-                | "hypr"
+            "syntheo" | "syntheo-staging" | "syntheo-nightly" | "syntheo-dev" | "hypr"
         ) || parsed.host_str() != Some("share")
             || parsed.path() != "/open"
             || !parsed.username().is_empty()

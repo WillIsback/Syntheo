@@ -12,6 +12,9 @@ use objc2_app_kit::{
 #[cfg(target_os = "macos")]
 use objc2_foundation::{NSCopying, NSDictionary, NSPoint, NSRect, NSSize, NSString};
 
+// Les badges ne sont dessinés que sur macOS (icône du Dock) : l'énumération
+// n'a pas d'usage sur les autres plateformes.
+#[cfg(target_os = "macos")]
 pub enum Overlay {
     Recording,
     Notification(u8),
@@ -90,6 +93,9 @@ fn draw_badge(
     composite_image
 }
 
+// Utilisée par le dessin macOS et par les tests unitaires, qui tournent sur
+// toutes les plateformes.
+#[cfg(any(target_os = "macos", test))]
 pub(crate) fn notification_badge_label(count: u8) -> Option<String> {
     match count {
         0 => None,
