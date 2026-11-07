@@ -542,7 +542,7 @@ impl Stream for SpeakerStream {
         mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Option<Self::Item>> {
-        self.reader.poll_next_chunk(cx).poll
+        self.reader.poll_next_chunk(cx)
     }
 }
 
