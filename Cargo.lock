@@ -3733,6 +3733,7 @@ dependencies = [
  "serde_yaml",
  "sha2 0.11.1",
  "specta",
+ "storage",
  "tauri-specta",
  "tempfile",
  "thiserror 2.0.21",

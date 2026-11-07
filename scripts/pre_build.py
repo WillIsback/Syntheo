@@ -24,9 +24,18 @@ exports = {
 }
 
 
+REPO_ROOT = Path(__file__).resolve().parent.parent
+
+
 class JsonMidifier:
     def __init__(self, path: str):
-        self.path = path
+        # Le fichier modifié doit exister et rester dans le dépôt.
+        resolved = Path(path).resolve()
+        if not resolved.is_relative_to(REPO_ROOT):
+            raise ValueError(f"refusing to edit a file outside the repository: {path}")
+        if not resolved.is_file():
+            raise FileNotFoundError(f"JSON file not found: {path}")
+        self.path = resolved
         self.content = {}
 
     def __enter__(self) -> "JsonMidifier":

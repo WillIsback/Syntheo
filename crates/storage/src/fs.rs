@@ -37,7 +37,9 @@ pub fn copy_dir_recursive(
         let entry = entry?;
         let src_path = entry.path();
         let file_name = entry.file_name();
-        let dst_path = dst.join(&file_name);
+        // Le nom vient de `read_dir` ; le contrôle refuse surtout d'écrire à
+        // travers un lien symbolique de `dst` qui pointerait ailleurs.
+        let dst_path = crate::safe_path::join_under_base(dst, &file_name)?;
 
         if let Some(skip) = skip_filename
             && file_name == skip
@@ -126,5 +128,23 @@ mod tests {
 
         assert!(dst.join("keep.txt").exists());
         assert!(!dst.join("skip.txt").exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn copy_dir_recursive_refuses_to_write_through_a_symlink_leaving_dst() {
+        let temp = tempdir().unwrap();
+        let src = temp.path().join("src");
+        let dst = temp.path().join("dst");
+        let outside = temp.path().join("outside.json");
+
+        fs::create_dir_all(&src).unwrap();
+        fs::create_dir_all(&dst).unwrap();
+        fs::write(src.join("settings.json"), "new").unwrap();
+        fs::write(&outside, "untouched").unwrap();
+        std::os::unix::fs::symlink(&outside, dst.join("settings.json")).unwrap();
+
+        assert!(copy_dir_recursive(&src, &dst, None).is_err());
+        assert_eq!(fs::read_to_string(&outside).unwrap(), "untouched");
     }
 }

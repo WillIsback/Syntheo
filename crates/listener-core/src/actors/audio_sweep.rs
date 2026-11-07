@@ -117,7 +117,9 @@ pub fn acknowledge_recovery_chunk(session_dir: &Path, id: &str) -> std::io::Resu
     {
         return Err(std::io::Error::other("Invalid recovery chunk"));
     }
-    match std::fs::remove_file(session_dir.join(RECOVERY_DIR).join(id)) {
+    let chunk = syntheo_storage::safe_path::join_under_base(&session_dir.join(RECOVERY_DIR), id)
+        .map_err(|_| std::io::Error::other("Invalid recovery chunk"))?;
+    match std::fs::remove_file(chunk) {
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
         result => result,
     }

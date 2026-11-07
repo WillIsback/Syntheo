@@ -387,7 +387,7 @@ const ic = {
   ok: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M5 12l5 5 9-10"/></svg>'
 };
 
-const esc = s => s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const clock = s => String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
 const stamp = i => "14:" + String(2 + i).padStart(2, "0");
 const wave = n => '<div class="wave" aria-hidden="true">' + Array.from({ length: n }, (_, i) => `<i style="animation-delay:${(i * 97) % 900}ms"></i>`).join("") + "</div>";
@@ -444,7 +444,7 @@ function A(s) {
 }
 function txA() {
   const n = Math.max(1, st.n), from = Math.max(0, n - 3);
-  return D.tx.slice(from, n).map((l, i, a) => `<p class="${i < a.length - 1 ? "old" : ""}"><b>${D.names[l.s]}</b>${l.t}</p>`).join("");
+  return D.tx.slice(from, n).map((l, i, a) => `<p class="${i < a.length - 1 ? "old" : ""}"><b>${esc(D.names[l.s])}</b>${esc(l.t)}</p>`).join("");
 }
 
 /* ---------- Piste B ---------- */
@@ -497,11 +497,11 @@ function B(s) {
   return h + "</section></div>";
 }
 function txB() {
-  return D.tx.slice(0, Math.max(1, st.n)).map((l, i) => `<div class="ln"><time class="mono">${stamp(i)}</time><span><span class="who w${l.s}">${D.names[l.s]}</span>${l.t}</span></div>`).join("");
+  return D.tx.slice(0, Math.max(1, st.n)).map((l, i) => `<div class="ln"><time class="mono">${stamp(i)}</time><span><span class="who w${l.s}">${esc(D.names[l.s])}</span>${esc(l.t)}</span></div>`).join("");
 }
 function keysB() {
   const k = D.keys.filter(k => st.n >= k.at);
-  return k.length ? k.map(k => `<div class="kp"><small>${k.k}</small>${k.t}</div>`).join("") : '<span style="color:var(--b-muted);font-size:13px">Les décisions et actions apparaîtront ici.</span>';
+  return k.length ? k.map(k => `<div class="kp"><small>${esc(k.k)}</small>${esc(k.t)}</div>`).join("") : '<span style="color:var(--b-muted);font-size:13px">Les décisions et actions apparaîtront ici.</span>';
 }
 
 /* ---------- Piste C ---------- */
@@ -546,7 +546,7 @@ function C(s) {
   return h + "</div>" + capsule(s);
 }
 function txC() {
-  return D.tx.slice(0, Math.max(1, st.n)).slice(-6).map(l => `<p><b>${D.names[l.s]}</b> · ${l.t}</p>`).join("");
+  return D.tx.slice(0, Math.max(1, st.n)).slice(-6).map(l => `<p><b>${esc(D.names[l.s])}</b> · ${esc(l.t)}</p>`).join("");
 }
 
 /* ---------- Wiring ---------- */
@@ -556,11 +556,11 @@ function render() {
   mock.className = "mock v" + st.v + (st.v === "c" ? " p-" + st.p : "");
   const pals = document.getElementById("pals");
   pals.hidden = st.v !== "c";
-  pals.innerHTML = Object.entries(PAL).map(([id, p]) => `<button class="pal" data-p="${id}" aria-pressed="${st.p === id}"><span class="hd"><span class="kj">${p.k}</span><b>${p.n}</b></span><span class="sw">${p.sw.map(c => `<i style="background:${c}"></i>`).join("")}</span><small>${p.d}</small></button>`).join("");
+  pals.innerHTML = Object.entries(PAL).map(([id, p]) => `<button class="pal" data-p="${esc(id)}" aria-pressed="${st.p === id}"><span class="hd"><span class="kj">${esc(p.k)}</span><b>${esc(p.n)}</b></span><span class="sw">${p.sw.map(c => `<i style="background:${esc(c)}"></i>`).join("")}</span><small>${esc(p.d)}</small></button>`).join("");
   mock.innerHTML = R[st.v](st.s);
   document.querySelectorAll(".tab").forEach(t => t.setAttribute("aria-selected", String(t.dataset.v === st.v)));
   document.querySelectorAll(".sbtn").forEach(b => b.setAttribute("aria-pressed", String(+b.dataset.s === st.s)));
-  document.getElementById("notes").innerHTML = NOTES[st.v].map(([h, l]) => `<div class="note"><h3>${h}</h3><ul>${l.map(x => `<li>${x}</li>`).join("")}</ul></div>`).join("");
+  document.getElementById("notes").innerHTML = NOTES[st.v].map(([h, l]) => `<div class="note"><h3>${esc(h)}</h3><ul>${l.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>`).join("");
 }
 function live() {
   const t = mock.querySelector('[data-live="timer"]'); if (t) t.textContent = clock(st.sec);
