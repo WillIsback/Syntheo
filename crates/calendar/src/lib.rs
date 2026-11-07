@@ -48,19 +48,22 @@ pub async fn list_connection_ids(
 ) -> Result<Vec<ProviderConnectionIds>, Error> {
     use std::collections::HashMap;
 
-    let mut map: HashMap<CalendarProviderType, Vec<String>> = HashMap::new();
-
     #[cfg(target_os = "macos")]
-    {
+    let map: HashMap<CalendarProviderType, Vec<String>> = {
+        let mut map = HashMap::new();
         // empty vec = provider is available but has no connections (vs absent = unavailable)
         map.entry(CalendarProviderType::Apple).or_default();
         if apple_authorized {
             map.insert(CalendarProviderType::Apple, vec!["apple".to_string()]);
         }
-    }
+        map
+    };
 
     #[cfg(not(target_os = "macos"))]
-    let _ = apple_authorized;
+    let map: HashMap<CalendarProviderType, Vec<String>> = {
+        let _ = apple_authorized;
+        HashMap::new()
+    };
 
     Ok(map
         .into_iter()
