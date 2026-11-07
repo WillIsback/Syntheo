@@ -163,6 +163,17 @@ pub(crate) mod layout {
         (x, y, width, height)
     }
 
+    /// Écran du panneau : le premier trouvé dans l'ordre de préférence, sinon le premier écran
+    /// disponible.
+    ///
+    /// Sous Wayland (#319), un panneau encore jamais affiché n'a pas d'écran courant (sa fenêtre
+    /// GTK n'est pas réalisée) et GDK ne désigne aucun écran principal. Sans ce repli, le premier
+    /// affichage échouait sur « monitor not found » au démarrage de l'écoute et le panneau
+    /// restait masqué jusqu'à la fermeture de l'app.
+    pub fn pick_monitor<M>(preferred: Option<M>, available: impl FnOnce() -> Vec<M>) -> Option<M> {
+        preferred.or_else(|| available().into_iter().next())
+    }
+
     pub fn bottom_center_origin(
         work_x: f64,
         work_y: f64,
@@ -313,6 +324,7 @@ mod cross_platform {
 
     use super::layout::{
         bottom_center_origin, container_size, controls_center_y, frame_at_controls, is_expanded,
+        pick_monitor,
     };
     use super::{FloatingBarOverlayLayout, FloatingBarState, WINDOW_LABEL};
     use crate::Error;
@@ -471,9 +483,12 @@ mod cross_platform {
                     expands_upward: true,
                 });
         if force_default_position {
-            let (x, y) = default_origin(window, size.0, size.1)?;
+            let origin = default_origin(window, size.0, size.1)?;
             window.set_size(Size::Logical(LogicalSize::new(size.0, size.1)))?;
-            window.set_position(Position::Logical(LogicalPosition::new(x, y)))?;
+            // Sans écran connu, le compositeur place la fenêtre lui-même.
+            if let Some((x, y)) = origin {
+                window.set_position(Position::Logical(LogicalPosition::new(x, y)))?;
+            }
             return Ok(FloatingBarOverlayLayout {
                 controls_center_x: size.0 / 2.0,
                 expands_upward: true,
@@ -483,10 +498,20 @@ mod cross_platform {
             current_position.x + old_layout.controls_center_x,
             current_position.y + controls_center_y(current_size.height, old_layout.expands_upward),
         );
-        let monitor = window
+        let preferred = window
             .current_monitor()?
-            .or(window.app_handle().primary_monitor()?)
-            .ok_or(Error::MonitorNotFound)?;
+            .or(window.app_handle().primary_monitor()?);
+        let Some(monitor) = pick_monitor(preferred, || {
+            window.available_monitors().unwrap_or_default()
+        }) else {
+            // Aucun écran pour cadrer : la taille suit l'état, la position reste au compositeur.
+            if (current_size.width - size.0).abs() >= 0.5
+                || (current_size.height - size.1).abs() >= 0.5
+            {
+                window.set_size(Size::Logical(next_size))?;
+            }
+            return Ok(old_layout);
+        };
         let work = monitor.work_area();
         let origin = work.position.to_logical::<f64>(monitor.scale_factor());
         let work_size = work.size.to_logical::<f64>(monitor.scale_factor());
@@ -518,11 +543,13 @@ mod cross_platform {
         })
     }
 
+    /// Position par défaut du panneau, en bas au centre de son écran ; `None` si aucun écran
+    /// n'est connu.
     fn default_origin(
         window: &WebviewWindow<tauri::Wry>,
         width: f64,
         height: f64,
-    ) -> Result<(f64, f64), Error> {
+    ) -> Result<Option<(f64, f64)>, Error> {
         let pointer_monitor = current_state()
             .is_some_and(|state| state.dictation.is_some())
             .then(|| {
@@ -539,22 +566,26 @@ mod cross_platform {
                     })
             })
             .flatten();
-        let monitor = pointer_monitor
+        let preferred = pointer_monitor
             .or_else(|| window.current_monitor().ok().flatten())
-            .or_else(|| window.app_handle().primary_monitor().ok().flatten())
-            .ok_or(Error::MonitorNotFound)?;
+            .or_else(|| window.app_handle().primary_monitor().ok().flatten());
+        let Some(monitor) = pick_monitor(preferred, || {
+            window.available_monitors().unwrap_or_default()
+        }) else {
+            return Ok(None);
+        };
         let scale = monitor.scale_factor();
         let work_area = monitor.work_area();
         let origin = work_area.position.to_logical::<f64>(scale);
         let size = work_area.size.to_logical::<f64>(scale);
-        Ok(bottom_center_origin(
+        Ok(Some(bottom_center_origin(
             origin.x,
             origin.y,
             size.width,
             size.height,
             width,
             height,
-        ))
+        )))
     }
 }
 
@@ -673,5 +704,30 @@ mod tests {
             layout::bottom_center_origin(-1920.0, 40.0, 1920.0, 1040.0, 111.0, 67.0),
             (-1015.5, 1005.0)
         );
+    }
+
+    // #319 : sous Wayland, ni écran courant (fenêtre jamais affichée) ni écran principal. Le
+    // premier écran disponible doit servir, au lieu d'un échec « monitor not found ».
+    #[test]
+    fn panel_without_current_or_primary_monitor_uses_the_first_available_one() {
+        assert_eq!(
+            layout::pick_monitor(None, || vec!["HDMI-A-1", "eDP-1"]),
+            Some("HDMI-A-1")
+        );
+    }
+
+    #[test]
+    fn preferred_monitor_wins_without_listing_the_others() {
+        assert_eq!(
+            layout::pick_monitor(Some("eDP-1"), || -> Vec<&str> {
+                panic!("available monitors must not be listed")
+            }),
+            Some("eDP-1")
+        );
+    }
+
+    #[test]
+    fn no_known_monitor_is_not_an_error() {
+        assert_eq!(layout::pick_monitor::<&str>(None, Vec::new), None);
     }
 }
