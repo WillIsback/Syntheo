@@ -309,6 +309,31 @@ describe("LivingDocument", () => {
     expect(document.querySelector("[data-note-seal]")).toBeNull();
   });
 
+  it("returns to the single colored summary once the edit is accepted or rejected", () => {
+    mocks.proposal = {
+      id: "request-1",
+      currentMarkdown: "Avant",
+      proposedMarkdown: "Après",
+    };
+    const props = makeProps({
+      stage: "synthesis",
+      rawMd: notesMd,
+      editorTabs: [{ type: "enhanced", id: "note-1" }],
+      currentTab: { type: "enhanced", id: "note-1" },
+    });
+    const view = render(<LivingDocument {...props} />);
+    // Exception voulue (issue 365) : deux blocs pendant la revue.
+    expect(screen.getAllByTestId("raw-editor")).toHaveLength(1);
+
+    mocks.proposal = null;
+    view.rerender(<LivingDocument {...props} />);
+
+    const summary = screen.getByTestId("enhanced-editor");
+    expect(summary.getAttribute("data-note-lines")).toBe('["budget ok"]');
+    expect(screen.queryByTestId("raw-editor")).toBeNull();
+    expect(document.querySelector("[data-note-seal]")).not.toBeNull();
+  });
+
   it("shows only the user notes when no summary exists", () => {
     render(<LivingDocument {...makeProps({ stage: "synthesis" })} />);
 
