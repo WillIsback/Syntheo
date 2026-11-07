@@ -71,4 +71,21 @@ describe("TabContentSettings", () => {
       ),
     );
   });
+
+  // Issue 373 : arrivée depuis la recherche, défilement, surbrillance 2 s.
+  it("fait défiler jusqu'au réglage demandé et le surligne", async () => {
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    requestSettingFocus("spoken-languages");
+
+    const { container } = render(
+      <TabContentSettings tab={createSettingsTab({ state: { tab: "app" } })} />,
+    );
+
+    const row = container.querySelector("[data-setting-id='spoken-languages']");
+    await waitFor(() =>
+      expect(row?.hasAttribute("data-setting-highlight")).toBe(true),
+    );
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: "center" });
+  });
 });

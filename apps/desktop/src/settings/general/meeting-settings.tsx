@@ -41,6 +41,7 @@ export function MeetingSettingsView({
       {supportsScheduledMeetings && (
         <>
           <SettingSwitchRow
+            settingId="auto-start-meetings"
             title={<Trans>Start when meeting begins</Trans>}
             description={
               <Trans>Start listening when a scheduled meeting begins.</Trans>
@@ -49,6 +50,7 @@ export function MeetingSettingsView({
             onChange={autoStartScheduledMeetings.onChange}
           />
           <SettingSwitchRow
+            settingId="auto-join-meetings"
             title={<Trans>Join scheduled meetings</Trans>}
             description={
               <Trans>
@@ -64,6 +66,7 @@ export function MeetingSettingsView({
       {/* La fin d'usage du micro est détectée sur toutes les plateformes, y
           compris Windows (sessions WASAPI de capture, issue 407). */}
       <SettingSwitchRow
+        settingId="auto-stop-meetings"
         title={<Trans>Stop when meeting ends</Trans>}
         description={<Trans>Stop listening when your call ends.</Trans>}
         checked={autoStopMeetings.value}
@@ -72,6 +75,7 @@ export function MeetingSettingsView({
       {supportsMeetingAx && (
         <>
           <SettingSwitchRow
+            settingId="meeting-disclosure"
             title={<Trans>Post recording disclosure in meeting chat</Trans>}
             description={
               <Trans>
@@ -83,6 +87,7 @@ export function MeetingSettingsView({
             onChange={meetingDisclosureAutoPost.onChange}
           />
           <SettingSwitchRow
+            settingId="capture-meeting-chat"
             title={<Trans>Capture meeting chat in Memos</Trans>}
             description={
               <Trans>
@@ -96,6 +101,7 @@ export function MeetingSettingsView({
       )}
       {supportsScreenCapture && (
         <SettingSwitchRow
+          settingId="capture-shared-screens"
           title={<Trans>Capture shared screens in Memos</Trans>}
           description={
             <Trans>
@@ -108,12 +114,14 @@ export function MeetingSettingsView({
         />
       )}
       <SettingSwitchRow
+        settingId="capture-reminder"
         title={<Trans>Remind participants about recording</Trans>}
         description={<Trans>Show a reminder when a recording starts.</Trans>}
         checked={captureReminder.value}
         onChange={captureReminder.onChange}
       />
       <SettingSwitchRow
+        settingId="floating-bar"
         title={<Trans>Show floating bar</Trans>}
         description={
           <Trans>Control listening without reopening Syntheo.</Trans>

@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from "@syntheo/ui/components/ui/select";
 
+import type { SettingId } from "~/settings/search-index";
 import { SETTING_CONTROL_CLASS, SettingRow } from "~/settings/setting-row";
 
 // Ni rétention audio ni empreintes vocales : Syntheo ne conserve jamais l'audio.
@@ -24,6 +25,7 @@ export function AudioSettingsView({
   return (
     <div className="flex flex-col gap-4">
       <AudioDeviceRow
+        settingId="meetings-microphone"
         title={<Trans>Microphone</Trans>}
         description={
           <Trans>Choose the microphone that captures your voice.</Trans>
@@ -44,12 +46,14 @@ export function AudioDeviceRow({
   value,
   devices,
   onChange,
+  settingId,
 }: {
   title: ReactNode;
   description: ReactNode;
   value: string;
   devices: string[];
   onChange: (value: string) => void;
+  settingId?: SettingId;
 }) {
   const availableDevices = [...new Set(devices)].sort((a, b) =>
     a.localeCompare(b),
@@ -61,7 +65,7 @@ export function AudioDeviceRow({
   }
 
   return (
-    <SettingRow title={title} description={description}>
+    <SettingRow title={title} description={description} settingId={settingId}>
       {(labelProps) => (
         <Select
           value={value || SYSTEM_DEFAULT_DEVICE}

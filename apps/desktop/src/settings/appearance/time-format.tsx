@@ -10,6 +10,7 @@ export function TimeFormatSettings() {
 
   return (
     <SettingSwitchRow
+      settingId="use-24-hour-time"
       title={<Trans>Use 24-hour time</Trans>}
       description={
         <Trans>Show meeting times as 14:00 instead of 2:00 PM.</Trans>

@@ -21,6 +21,7 @@ export function LLM() {
       <SettingRows>
         <SettingRow
           controlWidth="content"
+          settingId="llm-reasoning-effort"
           title={<Trans>Reasoning effort</Trans>}
           description={
             <Trans>

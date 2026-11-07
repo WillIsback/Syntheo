@@ -85,8 +85,13 @@ function ProfileForm({
     onSubmit: ({ value }) => save.mutate(value),
   });
   const fields = [
-    { name: "name", label: t`Name`, type: "text" },
-    { name: "jobTitle", label: t`Job Title` },
+    {
+      name: "name",
+      label: t`Name`,
+      type: "text",
+      settingId: "profile-name",
+    },
+    { name: "jobTitle", label: t`Job Title`, settingId: "profile-job-title" },
   ] as const;
 
   return (
@@ -113,10 +118,13 @@ function ProfileForm({
             })
           }
         />
-        {fields.map(({ name, label }) => (
+        {fields.map(({ name, label, settingId }) => (
           <form.Field key={name} name={name}>
             {(field) => (
-              <label className="flex flex-col gap-2 text-sm">
+              <label
+                data-setting-id={settingId}
+                className="flex flex-col gap-2 text-sm"
+              >
                 {label}
                 <Input
                   type="text"
@@ -132,7 +140,10 @@ function ProfileForm({
             d'un événement du calendrier, pour ne pas le compter parmi eux. */}
         <form.Field name="email">
           {(field) => (
-            <div className="flex flex-col gap-2 text-sm">
+            <div
+              data-setting-id="profile-email"
+              className="flex flex-col gap-2 text-sm"
+            >
               <label htmlFor="profile-email">
                 <Trans>Email</Trans>
               </label>
@@ -160,7 +171,10 @@ function ProfileForm({
         </form.Field>
         <form.Field name="organizationId">
           {(field) => (
-            <div className="flex flex-col gap-2 text-sm">
+            <div
+              data-setting-id="profile-company"
+              className="flex flex-col gap-2 text-sm"
+            >
               <span>
                 <Trans>Company</Trans>
               </span>
@@ -180,7 +194,10 @@ function ProfileForm({
         </form.Field>
         <form.Field name="memo">
           {(field) => (
-            <label className="flex flex-col gap-2 text-sm">
+            <label
+              data-setting-id="profile-notes"
+              className="flex flex-col gap-2 text-sm"
+            >
               <Trans>Notes</Trans>
               <Textarea
                 value={field.state.value}

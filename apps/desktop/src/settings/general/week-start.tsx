@@ -46,6 +46,7 @@ export function WeekStartSelector() {
 
   return (
     <SettingRow
+      settingId="week-start"
       title={<Trans>Week starts on</Trans>}
       description={<Trans>Choose which day begins your calendar week.</Trans>}
     >

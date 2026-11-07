@@ -12,6 +12,7 @@ export function NoteInkSettings() {
 
   return (
     <SettingSwitchRow
+      settingId="color-notes-in-summary"
       title={<Trans>Color my notes in the summary</Trans>}
       description={
         <Trans>
