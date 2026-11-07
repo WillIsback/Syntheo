@@ -274,7 +274,6 @@ function IgnoredAppsSelector({
 
 export function NotificationSettingsView() {
   const currentPlatform = platform();
-  const supportsMicDetection = currentPlatform !== "windows";
   const supportsDoNotDisturb = currentPlatform === "macos";
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -314,7 +313,6 @@ export function NotificationSettingsView() {
   const { data: installedApps = [] } = useQuery({
     queryKey: ["settings", "all-installed-applications"],
     queryFn: detectCommands.listInstalledApplications,
-    enabled: supportsMicDetection,
     select: (result: Result<InstalledApp[], string>) => {
       if (result.status === "error") {
         throw new Error(result.error);
@@ -326,7 +324,6 @@ export function NotificationSettingsView() {
   const { data: defaultIgnoredBundleIds = [] } = useQuery({
     queryKey: ["settings", "default-ignored-bundle-ids"],
     queryFn: detectCommands.listDefaultIgnoredBundleIds,
-    enabled: supportsMicDetection,
     select: (result: Result<string[], string>) => {
       if (result.status === "error") {
         throw new Error(result.error);
@@ -554,94 +551,92 @@ export function NotificationSettingsView() {
               </form.Field>
             )}
 
-            {supportsMicDetection && (
-              <form.Field name="notification_detect">
-                {(field) => (
-                  <div className="flex flex-col gap-4">
-                    <SettingSwitchRow
-                      title={<Trans>Microphone detection</Trans>}
-                      description={
-                        <Trans>Detect meetings from microphone activity.</Trans>
-                      }
-                      checked={field.state.value}
-                      onChange={field.handleChange}
-                      disabled={notificationsDisabled}
-                    />
+            {/* La détection micro marche sur macOS, Linux et Windows
+                (sessions WASAPI de capture, issue 407). */}
+            <form.Field name="notification_detect">
+              {(field) => (
+                <div className="flex flex-col gap-4">
+                  <SettingSwitchRow
+                    title={<Trans>Microphone detection</Trans>}
+                    description={
+                      <Trans>Detect meetings from microphone activity.</Trans>
+                    }
+                    checked={field.state.value}
+                    onChange={field.handleChange}
+                    disabled={notificationsDisabled}
+                  />
 
-                    {field.state.value && !notificationsDisabled && (
-                      <div
-                        className={cn([
-                          "border-muted ml-3 border-l-2 pt-2 pl-4",
-                        ])}
-                      >
-                        <form.Field name="mic_active_threshold">
-                          {(thresholdField) => (
-                            <div className="mb-4 flex items-center justify-between gap-4">
-                              <div className="flex-1">
-                                <h4 className="text-sm font-medium">
-                                  <Trans>Detection delay</Trans>
-                                </h4>
-                                <p className="text-muted-foreground text-xs">
-                                  <Trans>
-                                    Wait before treating microphone activity as
-                                    a meeting.
-                                  </Trans>
-                                </p>
-                              </div>
-                              <Select
-                                value={String(thresholdField.state.value)}
-                                onValueChange={(v) =>
-                                  thresholdField.handleChange(Number(v))
-                                }
-                              >
-                                <SelectTrigger className="w-[100px]">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent align="end">
-                                  <SelectItem value="5">5 sec</SelectItem>
-                                  <SelectItem value="10">10 sec</SelectItem>
-                                  <SelectItem value="15">15 sec</SelectItem>
-                                  <SelectItem value="30">30 sec</SelectItem>
-                                  <SelectItem value="60">1 min</SelectItem>
-                                  <SelectItem value="120">2 min</SelectItem>
-                                </SelectContent>
-                              </Select>
+                  {field.state.value && !notificationsDisabled && (
+                    <div
+                      className={cn(["border-muted ml-3 border-l-2 pt-2 pl-4"])}
+                    >
+                      <form.Field name="mic_active_threshold">
+                        {(thresholdField) => (
+                          <div className="mb-4 flex items-center justify-between gap-4">
+                            <div className="flex-1">
+                              <h4 className="text-sm font-medium">
+                                <Trans>Detection delay</Trans>
+                              </h4>
+                              <p className="text-muted-foreground text-xs">
+                                <Trans>
+                                  Wait before treating microphone activity as a
+                                  meeting.
+                                </Trans>
+                              </p>
                             </div>
-                          )}
-                        </form.Field>
+                            <Select
+                              value={String(thresholdField.state.value)}
+                              onValueChange={(v) =>
+                                thresholdField.handleChange(Number(v))
+                              }
+                            >
+                              <SelectTrigger className="w-[100px]">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent align="end">
+                                <SelectItem value="5">5 sec</SelectItem>
+                                <SelectItem value="10">10 sec</SelectItem>
+                                <SelectItem value="15">15 sec</SelectItem>
+                                <SelectItem value="30">30 sec</SelectItem>
+                                <SelectItem value="60">1 min</SelectItem>
+                                <SelectItem value="120">2 min</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
+                      </form.Field>
 
-                        <div className="mb-3 flex flex-col gap-1">
-                          <h4 className="text-sm font-medium">
-                            <Trans>Exclude apps from detection</Trans>
-                          </h4>
-                          <p className="text-muted-foreground text-xs">
-                            <Trans>
-                              Prevent selected apps from triggering meeting
-                              detection.
-                            </Trans>
-                          </p>
-                        </div>
-                        <form.Subscribe selector={(state) => state.values}>
-                          {(values) => (
-                            <IgnoredAppsSelector
-                              installedApps={installedApps}
-                              defaultIgnoredBundleIds={defaultIgnoredBundleIds}
-                              ignoredPlatforms={values.ignored_platforms}
-                              includedPlatforms={values.included_platforms}
-                              searchOpen={searchOpen}
-                              searchQuery={searchQuery}
-                              onSearchOpenChange={setSearchOpen}
-                              onSearchQueryChange={setSearchQuery}
-                              onToggleApp={handleToggleIgnoredApp}
-                            />
-                          )}
-                        </form.Subscribe>
+                      <div className="mb-3 flex flex-col gap-1">
+                        <h4 className="text-sm font-medium">
+                          <Trans>Exclude apps from detection</Trans>
+                        </h4>
+                        <p className="text-muted-foreground text-xs">
+                          <Trans>
+                            Prevent selected apps from triggering meeting
+                            detection.
+                          </Trans>
+                        </p>
                       </div>
-                    )}
-                  </div>
-                )}
-              </form.Field>
-            )}
+                      <form.Subscribe selector={(state) => state.values}>
+                        {(values) => (
+                          <IgnoredAppsSelector
+                            installedApps={installedApps}
+                            defaultIgnoredBundleIds={defaultIgnoredBundleIds}
+                            ignoredPlatforms={values.ignored_platforms}
+                            includedPlatforms={values.included_platforms}
+                            searchOpen={searchOpen}
+                            searchQuery={searchQuery}
+                            onSearchOpenChange={setSearchOpen}
+                            onSearchQueryChange={setSearchQuery}
+                            onToggleApp={handleToggleIgnoredApp}
+                          />
+                        )}
+                      </form.Subscribe>
+                    </div>
+                  )}
+                </div>
+              )}
+            </form.Field>
 
             {supportsDoNotDisturb && (
               <div className="flex flex-col gap-6">
