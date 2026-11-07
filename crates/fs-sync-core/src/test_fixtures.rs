@@ -13,15 +13,8 @@ pub fn md_with_frontmatter(frontmatter: &str, content: &str) -> String {
     format!("---\n{frontmatter}\n---\n{content}")
 }
 
-struct Note {
-    id: String,
-    content: String,
-}
-
 struct Session {
     id: String,
-    notes: Vec<Note>,
-    memo: Option<String>,
     has_meta: bool,
 }
 
@@ -44,8 +37,6 @@ impl TestEnvBuilder {
             parent: SessionParent::Root(self),
             session: Session {
                 id: id.to_string(),
-                notes: Vec::new(),
-                memo: None,
                 has_meta: true,
             },
         }
@@ -117,18 +108,6 @@ fn write_session(temp: &TempDir, folder_path: &str, session: &Session) {
     if session.has_meta {
         session_path.child("_meta.json").write_str("{}").unwrap();
     }
-
-    for note in &session.notes {
-        let content = md_with_frontmatter(&format!("id: {}", note.id), &note.content);
-        session_path
-            .child(format!("{}.md", note.id))
-            .write_str(&content)
-            .unwrap();
-    }
-
-    if let Some(memo) = &session.memo {
-        session_path.child("_memo.md").write_str(memo).unwrap();
-    }
 }
 
 enum SessionParent {
@@ -142,19 +121,6 @@ pub struct SessionBuilder {
 }
 
 impl SessionBuilder {
-    pub fn note(mut self, id: &str, content: &str) -> Self {
-        self.session.notes.push(Note {
-            id: id.to_string(),
-            content: content.to_string(),
-        });
-        self
-    }
-
-    pub fn memo(mut self, content: &str) -> Self {
-        self.session.memo = Some(content.to_string());
-        self
-    }
-
     pub fn no_meta(mut self) -> Self {
         self.session.has_meta = false;
         self
@@ -193,8 +159,6 @@ impl FolderBuilder {
             parent: SessionParent::Folder(self),
             session: Session {
                 id: id.to_string(),
-                notes: Vec::new(),
-                memo: None,
                 has_meta: true,
             },
         }
@@ -217,7 +181,7 @@ pub struct TestEnv {
 }
 
 impl TestEnv {
-    pub fn new() -> TestEnvBuilder {
+    pub fn builder() -> TestEnvBuilder {
         TestEnvBuilder::default()
     }
 
