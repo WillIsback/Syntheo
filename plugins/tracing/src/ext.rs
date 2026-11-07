@@ -21,21 +21,23 @@ impl<'a, R: tauri::Runtime, M: tauri::Manager<R>> Tracing<'a, R, M> {
         let argument_count = data.len();
         let diagnostic = diagnostic_message(&data);
         let diagnostic = diagnostic.as_deref();
+        let payload = console_payload(&data);
+        let payload = payload.as_deref();
         match level {
             Level::Trace => {
-                tracing::trace!(target: super::WEBVIEW_CONSOLE_TARGET, argument_count, diagnostic, "webview_console_event");
+                tracing::trace!(target: super::WEBVIEW_CONSOLE_TARGET, argument_count, diagnostic, payload, "webview_console_event");
             }
             Level::Debug => {
-                tracing::debug!(target: super::WEBVIEW_CONSOLE_TARGET, argument_count, diagnostic, "webview_console_event");
+                tracing::debug!(target: super::WEBVIEW_CONSOLE_TARGET, argument_count, diagnostic, payload, "webview_console_event");
             }
             Level::Info => {
-                tracing::info!(target: super::WEBVIEW_CONSOLE_TARGET, argument_count, diagnostic, "webview_console_event");
+                tracing::info!(target: super::WEBVIEW_CONSOLE_TARGET, argument_count, diagnostic, payload, "webview_console_event");
             }
             Level::Warn => {
-                tracing::warn!(target: super::WEBVIEW_CONSOLE_TARGET, argument_count, diagnostic, "webview_console_event");
+                tracing::warn!(target: super::WEBVIEW_CONSOLE_TARGET, argument_count, diagnostic, payload, "webview_console_event");
             }
             Level::Error => {
-                tracing::error!(target: super::WEBVIEW_CONSOLE_TARGET, argument_count, diagnostic, "webview_console_event");
+                tracing::error!(target: super::WEBVIEW_CONSOLE_TARGET, argument_count, diagnostic, payload, "webview_console_event");
             }
         }
         Ok(())
@@ -131,6 +133,67 @@ fn error_kind(value: &serde_json::Value) -> Option<String> {
         Some(code) => format!("{name}({code})"),
         None => name.to_string(),
     })
+}
+
+/// Texte complet des messages console, pour les seuls builds `devtools`
+/// (feature `console-payload`) : les tests en conditions réelles ont besoin du
+/// contenu des erreurs. Il passe par le masquage d'`app.log` (e-mails, IP,
+/// dossier personnel, identifiants, secrets) et reste tronqué. Absent des
+/// versions publiées, où seuls `diagnostic` et `argument_count` sont écrits.
+#[cfg(feature = "console-payload")]
+fn console_payload(data: &[serde_json::Value]) -> Option<String> {
+    const PAYLOAD_MAX_CHARS: usize = 4000;
+
+    if data.is_empty() {
+        return None;
+    }
+    let text = data
+        .iter()
+        .map(console_argument_text)
+        .collect::<Vec<_>>()
+        .join(" ");
+    let truncated: String = text.chars().take(PAYLOAD_MAX_CHARS).collect();
+    let truncated = if truncated.len() < text.len() {
+        format!("{truncated}…")
+    } else {
+        truncated
+    };
+    Some(crate::redaction::redact_text(&truncated))
+}
+
+#[cfg(not(feature = "console-payload"))]
+fn console_payload(_data: &[serde_json::Value]) -> Option<String> {
+    None
+}
+
+#[cfg(feature = "console-payload")]
+fn console_argument_text(value: &serde_json::Value) -> String {
+    if let Some(error) = value.get("$error") {
+        let field = |key: &str| {
+            error
+                .get(key)
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or_default()
+                .to_string()
+        };
+        let mut text = field("name");
+        if let Some(code) = error.get("code").filter(|code| !code.is_null()) {
+            text.push_str(&format!("({})", code.to_string().trim_matches('"')));
+        }
+        let message = field("message");
+        if !message.is_empty() {
+            text.push_str(&format!(": {message}"));
+        }
+        let stack = field("stack");
+        if !stack.is_empty() {
+            text.push_str(&format!("\n{stack}"));
+        }
+        return text;
+    }
+    match value {
+        serde_json::Value::String(text) => text.clone(),
+        other => other.to_string(),
+    }
 }
 
 impl<R: tauri::Runtime, M: tauri::Manager<R>> Tracing<'_, R, M> {
@@ -316,7 +379,10 @@ pub enum Level {
     Error,
 }
 
-pub const JS_INIT_SCRIPT: &str = r#"
+macro_rules! js_init_script {
+    ($details:literal) => {
+        concat!(
+            r#"
 (function() {
     function initConsoleOverride() {
         if (typeof window.__TAURI__ === 'undefined' || 
@@ -334,11 +400,16 @@ pub const JS_INIT_SCRIPT: &str = r#"
         
         const invoke = window.__TAURI__.core.invoke;
         // An Error only keeps its name and code: its message may quote meeting
-        // content and is never logged (see `diagnostic_message`).
+        // content and is never logged (see `diagnostic_message`). Devtools
+        // builds (feature `console-payload`) also send its message and stack.
+        const withDetails = "#,
+            $details,
+            r#";
         const describe = (arg) => {
             if (!(arg instanceof Error)) return arg;
             const code = typeof arg.code === 'string' || typeof arg.code === 'number' ? arg.code : undefined;
-            return { $error: { name: String(arg.name), code } };
+            if (!withDetails) return { $error: { name: String(arg.name), code } };
+            return { $error: { name: String(arg.name), code, message: String(arg.message), stack: String(arg.stack || '') } };
         };
         const log = (level, ...args) => invoke('plugin:tracing|do_log', { level, data: args.map(describe) });
         
@@ -351,7 +422,16 @@ pub const JS_INIT_SCRIPT: &str = r#"
     
     initConsoleOverride();
 })();
-"#;
+"#
+        )
+    };
+}
+
+#[cfg(not(feature = "console-payload"))]
+pub const JS_INIT_SCRIPT: &str = js_init_script!("false");
+
+#[cfg(feature = "console-payload")]
+pub const JS_INIT_SCRIPT: &str = js_init_script!("true");
 
 #[cfg(test)]
 mod tests {
@@ -489,6 +569,81 @@ mod tests {
         );
     }
 
+    #[cfg(not(feature = "console-payload"))]
+    #[test]
+    fn console_payload_is_absent_from_release_builds() {
+        assert_eq!(
+            super::console_payload(&[serde_json::json!("secret meeting title")]),
+            None
+        );
+    }
+
+    #[cfg(feature = "console-payload")]
+    #[test]
+    fn console_payload_keeps_text_errors_and_masks_identifiers() {
+        let payload = super::console_payload(&[
+            serde_json::json!("[meeting-float] show failed for alice@example.com"),
+            serde_json::json!({ "attempt": 2 }),
+            serde_json::json!({ "$error": {
+                "name": "Error",
+                "code": "E1",
+                "message": "monitor not found",
+                "stack": "at show (floating.ts:12)"
+            } }),
+        ])
+        .unwrap();
+        assert_eq!(
+            payload,
+            "[meeting-float] show failed for [EMAIL_REDACTED] {\"attempt\":2} Error(E1): monitor not found\nat show (floating.ts:12)"
+        );
+        assert_eq!(super::console_payload(&[]), None);
+    }
+
+    #[cfg(feature = "console-payload")]
+    #[test]
+    fn console_payload_is_truncated() {
+        let payload = super::console_payload(&[serde_json::json!("é".repeat(5000))]).unwrap();
+        assert_eq!(payload.chars().count(), 4001);
+        assert!(payload.ends_with('…'));
+    }
+
+    #[cfg(feature = "console-payload")]
+    #[test]
+    fn console_override_sends_error_message_and_stack_in_devtools_builds() {
+        let (_rt, ctx) = setup_runtime();
+        ctx.with(|ctx| {
+            ctx.eval::<(), _>(
+                r#"
+                globalThis.window = globalThis;
+                globalThis.setTimeout = function(fn) { fn(); };
+                globalThis.console = { log() {}, debug() {}, info() {}, warn() {}, error() {} };
+                globalThis.sent = [];
+                globalThis.window.__TAURI__ = { core: { invoke: function(_cmd, payload) {
+                    globalThis.sent.push(payload);
+                    return Promise.resolve();
+                } } };
+            "#,
+            )
+            .unwrap();
+            ctx.eval::<(), _>(super::JS_INIT_SCRIPT).unwrap();
+            let sent: String = ctx
+                .eval(
+                    r#"
+                    const error = new TypeError("monitor not found");
+                    console.error("[meeting-float] show failed", error);
+                    const data = globalThis.sent[0].data;
+                    JSON.stringify([data[0], data[1].$error.name, data[1].$error.message, typeof data[1].$error.stack])
+                "#,
+                )
+                .unwrap();
+            assert_eq!(
+                sent,
+                r#"["[meeting-float] show failed","TypeError","monitor not found","string"]"#
+            );
+        });
+    }
+
+    #[cfg(not(feature = "console-payload"))]
     #[test]
     fn console_override_sends_error_kind_but_not_error_message() {
         let (_rt, ctx) = setup_runtime();
