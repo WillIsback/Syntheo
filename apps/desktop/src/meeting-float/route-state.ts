@@ -1,3 +1,5 @@
+import { t } from "@lingui/core/macro";
+
 import type { FloatingDictationState } from "@syntheo/plugin-windows";
 
 import {
@@ -121,9 +123,9 @@ export function getFloatingRouteState(
   };
 }
 
-function getFloatingTitle(title: string | null | undefined) {
+export function getFloatingTitle(title: string | null | undefined) {
   const normalized = title?.trim();
-  return normalized || "Live transcript";
+  return normalized || t`Live transcript`;
 }
 
 export function getFloatingTranscriptBubbles(

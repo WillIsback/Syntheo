@@ -1,6 +1,9 @@
 export const AUTO_STOP_ENDED_NOTIFICATION_KEY_PREFIX =
   "auto-stop-ended:" as const;
 export const AUTO_STOP_CONFIRM_TIMEOUT_SECONDS = 30;
+// Les fenêtres natives remplacent ce repère par le décompte en secondes : le
+// texte traduit du décompte vient ainsi du front, pas du code natif.
+export const STOP_COUNTDOWN_SECONDS_PLACEHOLDER = "{seconds}";
 
 const AUTO_STOP_ENDED_NOTIFICATION_KEY_NONCE_SEPARATOR = ":prompt:";
 const activePromptKeys = new Map<string, string>();

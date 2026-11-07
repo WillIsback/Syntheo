@@ -301,10 +301,10 @@ impl Notification {
         )
     }
 
+    // Le libellé du bouton est traduit par le front : seul le variant
+    // destructif et le délai décident du décompte.
     pub fn shows_stop_countdown(&self) -> bool {
-        self.is_destructive_action()
-            && self.action_label.as_deref() == Some("Stop")
-            && self.timeout.is_some_and(|timeout| !timeout.is_zero())
+        self.is_destructive_action() && self.timeout.is_some_and(|timeout| !timeout.is_zero())
     }
 
     pub fn has_options(&self) -> bool {
@@ -378,7 +378,7 @@ impl Notification {
         }
 
         if self.shows_stop_countdown() {
-            return stop_countdown_text(remaining.unwrap_or(Duration::ZERO));
+            return stop_countdown_message(&self.message, remaining.unwrap_or(Duration::ZERO));
         }
 
         self.message.clone()
@@ -406,6 +406,20 @@ pub fn expanded_schedule_text(remaining: Duration) -> String {
 pub fn stop_countdown_text(remaining: Duration) -> String {
     let seconds = remaining.as_secs_f64().ceil() as u64;
     format!("Syntheo will stop listening in {seconds} seconds.")
+}
+
+/// Repère que le front place dans un message traduit pour recevoir le
+/// décompte en secondes.
+pub const STOP_COUNTDOWN_SECONDS_PLACEHOLDER: &str = "{seconds}";
+
+/// Décompte d'arrêt : le message traduit fourni par le front s'il contient le
+/// repère, sinon le texte anglais historique.
+pub fn stop_countdown_message(message: &str, remaining: Duration) -> String {
+    if !message.contains(STOP_COUNTDOWN_SECONDS_PLACEHOLDER) {
+        return stop_countdown_text(remaining);
+    }
+    let seconds = remaining.as_secs_f64().ceil() as u64;
+    message.replace(STOP_COUNTDOWN_SECONDS_PLACEHOLDER, &seconds.to_string())
 }
 
 impl NotificationSource {
@@ -784,6 +798,39 @@ mod tests {
         assert_eq!(
             expanded_schedule_text(Duration::from_secs(75)),
             "Begins in 1:15"
+        );
+    }
+
+    #[test]
+    fn stop_countdown_uses_translated_label_and_message() {
+        let notification = Notification::builder()
+            .title("La réunion est-elle terminée ?")
+            .message("Syntheo arrêtera l'écoute dans {seconds} s.")
+            .action_label("Arrêter")
+            .action_variant(NotificationActionVariant::Destructive)
+            .timeout(Duration::from_secs(30))
+            .build();
+
+        assert!(notification.shows_stop_countdown());
+        assert_eq!(
+            notification.compact_message(Some(Duration::from_secs_f64(4.2))),
+            "Syntheo arrêtera l'écoute dans 5 s."
+        );
+    }
+
+    #[test]
+    fn stop_countdown_requires_a_timeout() {
+        let notification = Notification::builder()
+            .title("Did your meeting end?")
+            .message("Syntheo will stop listening soon.")
+            .action_label("Stop")
+            .action_variant(NotificationActionVariant::Destructive)
+            .build();
+
+        assert!(!notification.shows_stop_countdown());
+        assert_eq!(
+            notification.compact_message(None),
+            "Syntheo will stop listening soon."
         );
     }
 

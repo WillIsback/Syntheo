@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { useCallback } from "react";
 
 import { toast } from "@syntheo/ui/components/ui/toast";
@@ -36,14 +37,15 @@ import {
   useSessionParticipantHumanIds,
 } from "~/stt/queries";
 
-export const CAPTURE_REMINDER_MESSAGE =
-  "Rappelez aux participants que la réunion est transcrite.";
+// Fonctions et non constantes : le texte suit la langue active à l'affichage.
+export const getCaptureReminderMessage = () =>
+  t`Remind participants that the meeting is being transcribed.`;
 
-export const NO_TRANSCRIPTION_PROVIDER_MESSAGE =
-  "Aucun fournisseur de transcription n'est configuré. Syntheo ne conserve pas l'audio : configurez un endpoint de transcription avant d'enregistrer.";
+export const getNoTranscriptionProviderMessage = () =>
+  t`No transcription provider is set up. Syntheo does not keep audio: set up a transcription endpoint before recording.`;
 
-export const BATCH_ONLY_CAPTURE_MESSAGE =
-  "Ce modèle ne transcrit qu'après l'enregistrement, ce qui supposerait de conserver l'audio. Choisissez un modèle de transcription en temps réel.";
+export const getBatchOnlyCaptureMessage = () =>
+  t`This model only transcribes after the recording, which would require keeping the audio. Choose a real-time transcription model.`;
 
 export {
   CLOUDSYNC_CAPTURE_LEASE_ATTEMPTS,
@@ -107,11 +109,11 @@ export function useStartListeningState(
     }
     // Sans recorder, une capture sans STT ne produirait rien.
     if (!conn) {
-      toast.error(NO_TRANSCRIPTION_PROVIDER_MESSAGE, {
+      toast.error(getNoTranscriptionProviderMessage(), {
         id: "recording-without-transcription",
         duration: Infinity,
         action: {
-          label: "Configurer",
+          label: t`Set up`,
           onClick: () =>
             openNew({ type: "settings", state: { tab: "transcription" } }),
         },
@@ -123,11 +125,11 @@ export function useStartListeningState(
       conn &&
       getSttModelTranscriptionMode(conn.provider, conn.model) === "batch"
     ) {
-      toast.error(BATCH_ONLY_CAPTURE_MESSAGE, { id: "batch-only-capture" });
+      toast.error(getBatchOnlyCaptureMessage(), { id: "batch-only-capture" });
       return;
     }
     if (captureReminderEnabled) {
-      toast.info(CAPTURE_REMINDER_MESSAGE, {
+      toast.info(getCaptureReminderMessage(), {
         id: "capture-reminder",
         duration: 8000,
       });
@@ -289,12 +291,12 @@ export function useStartListeningState(
         .map((language) => getBaseLanguageDisplayName(language))
         .join(", ");
 
-      toast.warning(`Live transcription is using ${primaryLanguageName}`, {
+      toast.warning(t`Live transcription is using ${primaryLanguageName}`, {
         id: "recording-with-limited-transcription-languages",
         duration: Infinity,
-        description: `Live transcription won't include ${omittedLanguageNames}.`,
+        description: t`Live transcription won't include ${omittedLanguageNames}.`,
         action: {
-          label: "Change",
+          label: t`Change`,
           onClick: openTranscriptionSettings,
         },
       });
@@ -305,7 +307,7 @@ export function useStartListeningState(
       excludedTexts: [MEETING_DISCLOSURE_MESSAGE],
       onParticipantDeclined: () => {
         toast.warning(
-          "A participant declined recording. Syntheo stopped listening.",
+          t`A participant declined recording. Syntheo stopped listening.`,
           { id: "meeting-consent-declined", duration: Infinity },
         );
         stop();

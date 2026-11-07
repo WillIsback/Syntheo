@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { useRef } from "react";
 import { useStore } from "zustand";
 
@@ -52,20 +53,24 @@ type PendingAutoStop = {
   networkHoldUntilMs?: number;
 };
 
-function getMicDetectedNotificationTitle(event: NearbyEvent | null): string {
+export function getMicDetectedNotificationTitle(
+  event: NearbyEvent | null,
+): string {
   if (!event) {
-    return "Are you in a meeting?";
+    return t`Are you in a meeting?`;
   }
 
+  const [firstName, secondName] = event.participantNames;
   if (event.participantNames.length === 1) {
-    return `Are you talking to ${event.participantNames[0]} right now?`;
+    return t`Are you talking to ${firstName} right now?`;
   }
 
   if (event.participantNames.length === 2) {
-    return `Are you talking to ${event.participantNames[0]} and ${event.participantNames[1]} right now?`;
+    return t`Are you talking to ${firstName} and ${secondName} right now?`;
   }
 
-  return `Are you in ${event.title} right now?`;
+  const eventTitle = event.title;
+  return t`Are you in ${eventTitle} right now?`;
 }
 
 export const useHandleDetectEvents = (store: ListenerStore) => {
@@ -463,7 +468,7 @@ export const useHandleDetectEvents = (store: ListenerStore) => {
                 displayIgnorableApps.length > 0
                   ? {
                       text: getIgnoreAppsFooterText(displayIgnorableApps),
-                      actionLabel: "Yes",
+                      actionLabel: t`Yes`,
                       icon: footerIcon,
                     }
                   : null;
@@ -489,7 +494,7 @@ export const useHandleDetectEvents = (store: ListenerStore) => {
                 start_time: null,
                 participants: null,
                 event_details: null,
-                action_label: "Yes",
+                action_label: t`Yes`,
                 action: null,
                 action_menu: null,
                 action_variant: null,
