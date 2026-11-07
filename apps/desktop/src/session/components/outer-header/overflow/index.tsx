@@ -1,4 +1,4 @@
-import { Trans } from "@lingui/react/macro";
+import { Trans, useLingui } from "@lingui/react/macro";
 import { useState } from "react";
 
 import {
@@ -42,6 +42,7 @@ import {
 import { VersionHistoryDialog } from "~/session/components/version-history-dialog";
 import { openStandaloneNoteWindow } from "~/session/window";
 import { useConfigValue } from "~/shared/config";
+import { ariaShortcut, shortcutTooltip } from "~/shared/shortcuts";
 import type { EditorView } from "~/store/zustand/tabs/schema";
 import { useListener } from "~/stt/contexts";
 import { useUploadFile } from "~/stt/useUploadFile";
@@ -57,6 +58,7 @@ export function OverflowButton({
   sessionId: string;
   currentView: EditorView;
 }) {
+  const { t } = useLingui();
   const [open, setOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [hasOpenedExportModal, setHasOpenedExportModal] = useState(false);
@@ -192,6 +194,8 @@ export function OverflowButton({
             {hasRecordingActions && <DropdownMenuSeparator />}
             <DropdownMenuItem
               onClick={openExportModal}
+              title={shortcutTooltip(t`Export`, "exportNote")}
+              aria-keyshortcuts={ariaShortcut("exportNote")}
               className="cursor-pointer"
             >
               <FileArrowDown />

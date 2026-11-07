@@ -1,8 +1,8 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { useMutation } from "@tanstack/react-query";
-import { downloadDir, join } from "@tauri-apps/api/path";
+import { join } from "@tauri-apps/api/path";
 import { save } from "@tauri-apps/plugin-dialog";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import { json2md } from "@syntheo/editor/markdown";
 import {
@@ -20,7 +20,18 @@ import {
 } from "@syntheo/ui/components/ui/dialog";
 import { cn } from "@syntheo/utils";
 
-import { formatDate, formatDuration } from "./export-utils";
+import {
+  folderName,
+  resolveExportFolder,
+  useExportFolder,
+} from "./export-folder";
+import {
+  formatDate,
+  formatDuration,
+  markdownToOrg,
+  markdownToText,
+} from "./export-utils";
+import { printPdf } from "./print-pdf";
 
 import { useTranscriptExportSegments } from "~/session/components/note-input/transcript/export-data";
 import {
@@ -29,39 +40,11 @@ import {
   useSessionParticipants,
 } from "~/session/queries";
 import { getSessionEvent } from "~/session/utils";
-import { getStoredSettingValues } from "~/settings/queries";
 import { isAppStoreBuild } from "~/shared/app-store";
 import type { EditorView } from "~/store/zustand/tabs/schema";
 import { useSessionTranscriptMetadata } from "~/stt/queries";
 
 type FileFormat = "pdf" | "txt" | "md" | "org";
-
-function markdownToText(content: string): string {
-  return content
-    .replace(/^#{1,6}\s+/gm, "")
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1 ($2)")
-    .replace(/^\s*[-*+]\s+/gm, "• ")
-    .replace(/^\s*\d+\.\s+/gm, "")
-    .replace(/\*\*(.*?)\*\*/g, "$1")
-    .replace(/\*(.*?)\*/g, "$1")
-    .replace(/__(.*?)__/g, "$1")
-    .replace(/_(.*?)_/g, "$1")
-    .replace(/`([^`]+)`/g, "$1")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
-}
-
-function markdownToOrg(content: string): string {
-  return content
-    .replace(/^(#{1,6})\s+/gm, (_match, hashes: string) => {
-      return `${"*".repeat(hashes.length)} `;
-    })
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "[[$2][$1]]")
-    .replace(/\*\*(.*?)\*\*/g, "*$1*")
-    .replace(/__(.*?)__/g, "*$1*")
-    .replace(/`([^`]+)`/g, "~$1~")
-    .trim();
-}
 
 export function ExportModal({
   sessionId,
@@ -349,8 +332,7 @@ export function ExportModal({
 
   const { mutate, isPending, error } = useMutation({
     mutationFn: async () => {
-      const { values } = await getStoredSettingValues();
-      const directory = values.export_directory || (await downloadDir());
+      const { path: directory } = await resolveExportFolder();
       const sanitizedTitle = (
         (sessionTitle ?? t`Untitled`).trim() || t`Untitled`
       ).replace(/[<>:"/\\|?*]/g, "_");
@@ -399,9 +381,22 @@ export function ExportModal({
     onError: console.error,
   });
 
+  // « Imprimer… » : toujours le PDF, quel que soit le format choisi.
+  const printing = useMutation({
+    mutationFn: () => printPdf(buildPdfContent()),
+    onSuccess: () => onOpenChange(false),
+    onError: console.error,
+  });
+  const exportFolder = useExportFolder(open);
+  const saveButtonRef = useRef<HTMLButtonElement>(null);
+
   const hasAnyContentSelected =
     includeMemo || includeSummary || includeTranscript;
   const isTranscriptPending = includeTranscript && isTranscriptLoading;
+  const busy = isPending || printing.isPending;
+  const actionDisabled = busy || isTranscriptPending || !hasAnyContentSelected;
+  const folder = exportFolder.data;
+  const folderLabel = folder ? folderName(folder.path) : "";
   if (!open) {
     return null;
   }
@@ -410,6 +405,11 @@ export function ExportModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         overlayClassName="bg-scrim backdrop-blur-xs"
+        // « Enregistrer » est l'action principale : Entrée la déclenche.
+        onOpenAutoFocus={(event) => {
+          event.preventDefault();
+          saveButtonRef.current?.focus();
+        }}
         className={cn([
           "w-full max-w-xs gap-0 border-0 bg-transparent p-4 shadow-none sm:rounded-none",
           "[&>button:last-child]:hidden",
@@ -424,7 +424,7 @@ export function ExportModal({
         >
           <div className="flex flex-col gap-1">
             <DialogTitle className="text-base leading-normal font-semibold">
-              <Trans>Export</Trans>
+              <Trans>Export or print</Trans>
             </DialogTitle>
             <DialogDescription className="text-muted-foreground text-sm">
               <Trans>Choose a file format and what to include.</Trans>
@@ -509,19 +509,51 @@ export function ExportModal({
               </Trans>
             </p>
           )}
-          <button
-            onClick={() => mutate(null)}
-            disabled={
-              isPending || isTranscriptPending || !hasAnyContentSelected
-            }
-            className="border-primary bg-primary text-primary-foreground hover:bg-primary/90 h-10 w-full rounded-full border-2 text-sm font-medium shadow-sm transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {isPending
-              ? t`Exporting...`
-              : isTranscriptPending
-                ? t`Preparing transcript...`
-                : t`Export`}
-          </button>
+          {printing.error && (
+            <p role="alert" className="text-destructive text-xs">
+              <Trans>
+                Could not open the PDF to print. Try again, or save it instead.
+              </Trans>
+            </p>
+          )}
+          <div className="flex flex-col gap-1.5">
+            <button
+              ref={saveButtonRef}
+              type="button"
+              onClick={() => mutate(null)}
+              disabled={actionDisabled}
+              className="border-primary bg-primary text-primary-foreground hover:bg-primary/90 h-10 w-full rounded-full border-2 text-sm font-medium shadow-sm transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isPending
+                ? t`Saving...`
+                : isTranscriptPending
+                  ? t`Preparing transcript...`
+                  : t`Save`}
+            </button>
+            {folder ? (
+              <p
+                className="text-muted-foreground truncate text-xs"
+                title={folder.path}
+              >
+                {folder.isDownloads
+                  ? t`Saved in Downloads`
+                  : t`Saved in ${folderLabel}`}
+              </p>
+            ) : null}
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <button
+              type="button"
+              onClick={() => printing.mutate()}
+              disabled={actionDisabled}
+              className="border-border bg-background text-foreground hover:bg-accent h-10 w-full rounded-full border text-sm font-medium transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {printing.isPending ? t`Opening the PDF...` : t`Print…`}
+            </button>
+            <p className="text-muted-foreground text-xs">
+              <Trans>The PDF opens in your reader. Choose Print.</Trans>
+            </p>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

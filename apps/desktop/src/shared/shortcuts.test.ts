@@ -108,8 +108,8 @@ describe("table des raccourcis", () => {
     }
   });
 
-  it("réserve Ctrl+P (issue 374) ; Ctrl+Maj+P (issue 373) est disponible", () => {
-    expect(getShortcut("exportNote").available).toBe(false);
+  it("Ctrl+P (issue 374) et Ctrl+Maj+P (issue 373) sont disponibles", () => {
+    expect(getShortcut("exportNote").available).toBe(true);
     expect(getShortcut("searchSettings").available).toBe(true);
     expect(formatShortcut("exportNote", "pc")).toBe("Ctrl+P");
     expect(formatShortcut("searchSettings", "pc")).toBe("Ctrl+Maj+P");

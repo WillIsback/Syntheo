@@ -83,7 +83,7 @@ describe("Ctrl+Maj+P : rechercher un paramètre", () => {
     expect(usePaletteStore.getState().filter).toBe("settings");
   });
 
-  it("laisse Ctrl+P (export, issue 374) et Maj+P tranquilles", () => {
+  it("n'ouvre pas la palette sur Ctrl+P (export, issue 374) ni Maj+P", () => {
     renderHook(() => useMainShortcuts());
 
     press(document.body, { key: "p", code: "KeyP", ctrlKey: true });

@@ -1116,6 +1116,10 @@ msgstr "Could not export. Check the export location in Settings and try again."
 msgid "Could not generate meeting insights. Try again."
 msgstr "Could not generate meeting insights. Try again."
 
+#: src/session/components/outer-header/overflow/export-modal.tsx
+msgid "Could not open the PDF to print. Try again, or save it instead."
+msgstr "Could not open the PDF to print. Try again, or save it instead."
+
 #: src/automations/actions.ts
 msgid "Could not remove the automation"
 msgstr "Could not remove the automation"
@@ -1615,7 +1619,6 @@ msgid "Expected output"
 msgstr "Expected output"
 
 #: src/session/components/capsule/index.tsx
-#: src/session/components/outer-header/overflow/export-modal.tsx
 #: src/session/components/outer-header/overflow/index.tsx
 #: src/shared/shortcuts.ts
 msgid "Export"
@@ -1634,6 +1637,7 @@ msgstr "Export folder"
 msgid "Export location"
 msgstr "Export location"
 
+#: src/session/components/outer-header/overflow/export-modal.tsx
 #: src/shared/shortcuts.ts
 msgid "Export or print"
 msgstr "Export or print"
@@ -1642,9 +1646,9 @@ msgstr "Export or print"
 msgid "Export the meeting as Markdown"
 msgstr "Export the meeting as Markdown"
 
-#: src/session/components/outer-header/overflow/export-modal.tsx
-msgid "Exporting..."
-msgstr "Exporting..."
+#: src/main/windows-title-bar.tsx
+msgid "Export…"
+msgstr "Export…"
 
 #: src/session/components/note-input/header-raw.tsx
 msgid "Failed to copy memo"
@@ -1690,6 +1694,10 @@ msgstr "Find key decisions."
 #: src/session/components/capsule/index.tsx
 msgid "Finish"
 msgstr "Finish"
+
+#: src/shared/export-shortcut.ts
+msgid "Finish listening to export the note."
+msgstr "Finish listening to export the note."
 
 #: src/meeting-float/overlay/bar.tsx
 msgid "Finish the meeting"
@@ -2949,6 +2957,10 @@ msgstr "Open a note to edit its memo."
 msgid "Open a note to edit its summary."
 msgstr "Open a note to edit its summary."
 
+#: src/shared/export-shortcut.ts
+msgid "Open a note to export it."
+msgstr "Open a note to export it."
+
 #: src/chat/components/body/empty.tsx
 msgid "Open AI Settings"
 msgstr "Open AI Settings"
@@ -3019,6 +3031,10 @@ msgstr "OpenAI, NVIDIA, NIM, transcription server"
 #: src/settings/ai/stt/server-card.tsx
 msgid "OpenAI: a server that speaks the OpenAI speech protocol (vLLM, speaches, faster-whisper-server), for example http://localhost:8000/v1. Live transcription uses /v1/realtime, imported files /v1/audio/transcriptions."
 msgstr "OpenAI: a server that speaks the OpenAI speech protocol (vLLM, speaches, faster-whisper-server), for example http://localhost:8000/v1. Live transcription uses /v1/realtime, imported files /v1/audio/transcriptions."
+
+#: src/session/components/outer-header/overflow/export-modal.tsx
+msgid "Opening the PDF..."
+msgstr "Opening the PDF..."
 
 #. placeholder {0}: accessibilityGuidance.paneTitle ?? "Privacy"
 #: src/onboarding/permissions.tsx
@@ -3225,6 +3241,10 @@ msgstr "Previous match"
 #: src/shared/shortcuts.ts
 msgid "Previous view of the note"
 msgstr "Previous view of the note"
+
+#: src/session/components/outer-header/overflow/export-modal.tsx
+msgid "Print…"
+msgstr "Print…"
 
 #: src/settings/general/app-settings.tsx
 msgid "Privacy"
@@ -3556,6 +3576,7 @@ msgstr "Revoke"
 msgid "Right Command"
 msgstr "Right Command"
 
+#: src/session/components/outer-header/overflow/export-modal.tsx
 #: src/settings/dictionary/index.tsx
 #: src/templates/auto-form.tsx
 msgid "Save"
@@ -3597,7 +3618,16 @@ msgstr "Save visible chat from supported meetings using Accessibility."
 msgid "Saved"
 msgstr "Saved"
 
+#: src/session/components/outer-header/overflow/export-modal.tsx
+msgid "Saved in {folderLabel}"
+msgstr "Saved in {folderLabel}"
+
+#: src/session/components/outer-header/overflow/export-modal.tsx
+msgid "Saved in Downloads"
+msgstr "Saved in Downloads"
+
 #: src/contacts/profile-photo.tsx
+#: src/session/components/outer-header/overflow/export-modal.tsx
 #: src/settings/general/account-profile.tsx
 msgid "Saving..."
 msgstr "Saving..."
@@ -4506,6 +4536,10 @@ msgstr "The one that captures your voice."
 #: src/shared/control.tsx
 msgid "The page you're looking for doesn't exist."
 msgstr "The page you're looking for doesn't exist."
+
+#: src/session/components/outer-header/overflow/export-modal.tsx
+msgid "The PDF opens in your reader. Choose Print."
+msgstr "The PDF opens in your reader. Choose Print."
 
 #: src/store/zustand/listener/general-live.ts
 msgid "The previous recording needs recovery"

@@ -12,6 +12,7 @@ import {
   formatShortcutKeys,
   type ShortcutId,
   type ShortcutPlatform,
+  shortcutTooltip,
 } from "~/shared/shortcuts";
 
 export { getNoteStage, type NoteStage } from "./stage";
@@ -118,7 +119,12 @@ export function NoteCapsule({
           >
             <Trans>Copy</Trans>
           </CapsuleButton>
-          <CapsuleButton onClick={actions.onExport}>
+          <CapsuleButton
+            onClick={actions.onExport}
+            title={shortcutTooltip(t`Export`, "exportNote", os)}
+            keyShortcut="exportNote"
+            os={os}
+          >
             <Trans>Export</Trans>
           </CapsuleButton>
           {actions.onGenerateSummary ? (
@@ -281,6 +287,8 @@ function CapsuleButton({
   onClick,
   disabled,
   shortcut,
+  keyShortcut,
+  title,
   os = "pc",
   tone = "ghost",
   ariaLabel,
@@ -290,17 +298,23 @@ function CapsuleButton({
   disabled?: boolean;
   // Raccourci de la table unique (puce « Ctrl Maj N », aria-keyshortcuts).
   shortcut?: ShortcutId;
+  // Raccourci annoncé sans puce (infobulle et aria-keyshortcuts seulement).
+  keyShortcut?: ShortcutId;
+  title?: string;
   os?: ShortcutPlatform;
   tone?: "ghost" | "primary" | "recording";
   ariaLabel?: string;
 }) {
+  const announced = shortcut ?? keyShortcut;
+
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
       aria-label={ariaLabel}
-      aria-keyshortcuts={shortcut ? ariaShortcut(shortcut, os) : undefined}
+      title={title}
+      aria-keyshortcuts={announced ? ariaShortcut(announced, os) : undefined}
       className={cn([
         "rounded-pill inline-flex items-center px-3.5 py-[7px] transition-colors",
         "focus-visible:ring-primary-foreground focus-visible:ring-offset-primary focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",

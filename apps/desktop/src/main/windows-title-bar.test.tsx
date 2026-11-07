@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   openNoteDialog: vi.fn(),
   openHelpDialog: vi.fn(),
   openSettingsSearch: vi.fn(),
+  exportNoteFromShortcut: vi.fn(),
   openUrl: vi.fn().mockResolvedValue({ status: "ok", data: null }),
   setFullscreen: vi.fn().mockResolvedValue(undefined),
   toggleMaximize: vi.fn().mockResolvedValue(undefined),
@@ -55,6 +56,10 @@ vi.mock("~/shared/useNewNote", () => ({
 vi.mock("~/shared/open-note-dialog", () => ({
   openNoteDialog: mocks.openNoteDialog,
   openSettingsSearch: mocks.openSettingsSearch,
+}));
+
+vi.mock("~/shared/export-shortcut", () => ({
+  exportNoteFromShortcut: mocks.exportNoteFromShortcut,
 }));
 
 vi.mock("~/shared/help-dialog", () => ({
@@ -116,6 +121,7 @@ describe("WindowsTitleBar", () => {
     mocks.openNoteDialog.mockClear();
     mocks.openHelpDialog.mockClear();
     mocks.openSettingsSearch.mockClear();
+    mocks.exportNoteFromShortcut.mockClear();
     mocks.openUrl.mockClear();
     mocks.setFullscreen.mockClear();
     mocks.toggleMaximize.mockClear();
@@ -202,9 +208,7 @@ describe("WindowsTitleBar", () => {
       render(<WindowsTitleBar />);
       openMenu("View");
 
-      fireEvent.click(
-        screen.getByRole("menuitem", { name: "Full ScreenF11" }),
-      );
+      fireEvent.click(screen.getByRole("menuitem", { name: "Full ScreenF11" }));
 
       await vi.waitFor(() =>
         expect(mocks.setFullscreen).toHaveBeenCalledWith(true),
@@ -227,6 +231,36 @@ describe("WindowsTitleBar", () => {
     fireEvent.click(item);
 
     expect(mocks.openSettingsSearch).toHaveBeenCalledOnce();
+  });
+
+  describe("« Exporter… » Ctrl+P dans le menu Fichier (issue 374)", () => {
+    it("exporte la note ouverte", async () => {
+      mocks.currentTab = { type: "sessions", id: "session-1" };
+      render(<WindowsTitleBar />);
+      openMenu("File");
+
+      const item = await screen.findByRole("menuitem", {
+        name: `Export…${formatShortcut("exportNote")}`,
+      });
+      expect(formatShortcut("exportNote")).toBe("Ctrl+P");
+      expect(item.getAttribute("aria-keyshortcuts")).toBe("Control+P");
+      expect(item.hasAttribute("data-disabled")).toBe(false);
+
+      fireEvent.click(item);
+
+      expect(mocks.exportNoteFromShortcut).toHaveBeenCalledOnce();
+    });
+
+    it("est grisé hors d'une note", async () => {
+      mocks.currentTab = { type: "settings" };
+      render(<WindowsTitleBar />);
+      openMenu("File");
+
+      const item = await screen.findByRole("menuitem", { name: /Export…/ });
+      expect(item.getAttribute("aria-disabled")).toBe("true");
+      fireEvent.click(item);
+      expect(mocks.exportNoteFromShortcut).not.toHaveBeenCalled();
+    });
   });
 
   describe("bouton Accueil (issue 315)", () => {

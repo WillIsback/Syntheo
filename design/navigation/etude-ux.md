@@ -314,6 +314,8 @@ On n'utilise pas `Ctrl+/` (voir 3.3).
 - Raccourci global + registre de la note active ; fenêtre « Exporter ou imprimer » ; bouton « Imprimer… » (PDF temporaire ouvert dans le lecteur Windows) ; dossier affiché ; règles par étape de 6.
 - Entrée « Exporter… Ctrl+P » dans le menu Fichier.
 
+**Mise en œuvre (0.6.0)** : la note active s'abonne par `registerShortcutAction("exportNote", …)` (`shared/shortcut-actions.ts`), le raccourci global et le menu Fichier passent par `shared/export-shortcut.ts`. « Imprimer… » appelle la commande `print_pdf` du plugin export : le PDF va dans `<cache de l'app>/print` (dossier privé, 0700 sous Unix), sous un nom suivi d'un UUID, puis le lecteur du système l'ouvre. Nettoyage : les PDF de plus de dix minutes sont supprimés à chaque impression et dix minutes et demie après (commande `cleanup_print_files`), tous les restants au lancement suivant ; un fichier encore verrouillé par le lecteur part au passage suivant. Le dossier affiché sous « Enregistrer » est le dernier élément du chemin (chemin complet en infobulle).
+
 ### Issue 376 (`tauri-plugin-prevent-default`)
 
 - Remplacer `init()` par un `Builder` avec des drapeaux explicites : tout **sauf `FOCUS_MOVE`** (rétablit `Maj+Tab`). Le choix pour `CONTEXT_MENU` dépend du point ouvert 2.
