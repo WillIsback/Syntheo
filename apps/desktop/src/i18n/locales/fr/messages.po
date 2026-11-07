@@ -3078,7 +3078,7 @@ msgstr "Remplacer par..."
 
 #: src/main/windows-title-bar.tsx
 msgid "Report a Bug"
-msgstr "Signaler un bogue"
+msgstr "Signaler un bug"
 
 #: src/calendar/components/apple/permission.tsx
 msgid "Request"
