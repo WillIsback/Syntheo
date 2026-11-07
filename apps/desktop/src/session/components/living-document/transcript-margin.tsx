@@ -3,6 +3,8 @@ import { useRef } from "react";
 
 import { cn } from "@syntheo/utils";
 
+import { LiveTranscriptionLanguage } from "./live-transcription-language";
+
 import { PerfZone } from "~/devtools-bar/perf-zone";
 import { Transcript } from "~/session/components/note-input/transcript";
 
@@ -47,6 +49,7 @@ export function TranscriptMargin({
           </button>
         ) : null}
       </div>
+      <LiveTranscriptionLanguage sessionId={sessionId} />
       <div className="min-h-0 flex-1">
         <PerfZone id="transcript-margin">
           <Transcript

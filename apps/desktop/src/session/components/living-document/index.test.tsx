@@ -84,6 +84,10 @@ vi.mock("~/session/components/note-input/transcript", () => ({
   Transcript: () => <div data-testid="transcript" />,
 }));
 
+vi.mock("./live-transcription-language", () => ({
+  LiveTranscriptionLanguage: () => null,
+}));
+
 vi.mock("~/ai/hooks", () => ({
   useAITaskTask: () => ({ status: mocks.enhanceStatus }),
 }));
