@@ -12,6 +12,7 @@ import {
 import {
   AppFloatingPanel,
   Popover,
+  PopoverAnchor,
   PopoverContent,
   PopoverTrigger,
 } from "@syntheo/ui/components/ui/popover";
@@ -41,15 +42,32 @@ export function TemplatePickerPopover({
   onRegenerateUsed,
   isRegenerating = false,
   trigger,
+  open: controlledOpen,
+  onOpenChange,
 }: {
   onSelectTemplate: (selection: TemplateSelection) => void;
   usedTemplateId?: string | null;
   onRegenerateUsed?: () => void;
   isRegenerating?: boolean;
   trigger: React.ReactNode;
+  // Ouverture pilotée de l'extérieur (menu des versions, issue 415) : le
+  // déclencheur sert alors seulement d'ancre.
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
   const { t } = useLingui();
-  const [open, setOpen] = useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const controlled = controlledOpen !== undefined;
+  const open = controlled ? controlledOpen : uncontrolledOpen;
+  const setOpen = useCallback(
+    (nextOpen: boolean) => {
+      if (!controlled) {
+        setUncontrolledOpen(nextOpen);
+      }
+      onOpenChange?.(nextOpen);
+    },
+    [controlled, onOpenChange],
+  );
   const [search, setSearch] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
   const resultRefs = useRef<Array<HTMLButtonElement | null>>([]);
@@ -75,16 +93,19 @@ export function TemplatePickerPopover({
 
       onSelectTemplate(selection);
     },
-    [onSelectTemplate],
+    [onSelectTemplate, setOpen],
   );
 
-  const handleOpenChange = useCallback((nextOpen: boolean) => {
-    setOpen(nextOpen);
-    if (!nextOpen) {
-      setSearch("");
-      resultRefs.current = [];
-    }
-  }, []);
+  const handleOpenChange = useCallback(
+    (nextOpen: boolean) => {
+      setOpen(nextOpen);
+      if (!nextOpen) {
+        setSearch("");
+        resultRefs.current = [];
+      }
+    },
+    [setOpen],
+  );
 
   const handleWebTemplateClick = useCallback(
     (template: WebTemplate) => {
@@ -111,7 +132,7 @@ export function TemplatePickerPopover({
         });
       })();
     },
-    [createTemplate, onSelectTemplate],
+    [createTemplate, onSelectTemplate, setOpen],
   );
 
   const handleCreateTemplate = useCallback(
@@ -140,7 +161,7 @@ export function TemplatePickerPopover({
         });
       })();
     },
-    [createTemplate, openTemplatesTab],
+    [createTemplate, openTemplatesTab, setOpen],
   );
   const handleSeeAllTemplates = useCallback(() => {
     setOpen(false);
@@ -152,7 +173,7 @@ export function TemplatePickerPopover({
       selectedMineId: null,
       selectedWebIndex: 0,
     });
-  }, [openTemplatesTab]);
+  }, [openTemplatesTab, setOpen]);
 
   const trimmedSearch = search.trim();
   const searchQuery = search.trim().toLowerCase();
@@ -389,7 +410,11 @@ export function TemplatePickerPopover({
 
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
-      <PopoverTrigger asChild>{trigger}</PopoverTrigger>
+      {controlled ? (
+        <PopoverAnchor asChild>{trigger}</PopoverAnchor>
+      ) : (
+        <PopoverTrigger asChild>{trigger}</PopoverTrigger>
+      )}
       <PopoverContent variant="app" className="w-80 pb-0" align="start">
         <div className="flex flex-col">
           <AppFloatingPanel className="flex flex-col overflow-hidden rounded-[20px]">

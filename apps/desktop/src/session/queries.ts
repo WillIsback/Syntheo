@@ -21,6 +21,10 @@ export {
   useUpdateEnhancedNoteContent,
 } from "./queries/enhanced-notes";
 export {
+  type SummaryVersionRecord,
+  useSummaryVersions,
+} from "./queries/summary-versions";
+export {
   createSession,
   getOrCreateSessionForEventId,
 } from "./queries/creation";

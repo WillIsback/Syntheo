@@ -73,6 +73,7 @@ export function persistGeneratedEnhancedNote({
   note,
   tagNames,
   pendingAutoEnhance,
+  sourceNoteFingerprint,
 }: {
   sessionId: string;
   ownerUserId: string;
@@ -83,6 +84,7 @@ export function persistGeneratedEnhancedNote({
     expectedBody: string;
     expectedContentFormat: string;
   };
+  sourceNoteFingerprint?: string;
 }): Promise<void> {
   return enqueueDatabaseWrite(`session:${sessionId}`, async () => {
     const result = await templateCommands.saveGeneratedSummary({
@@ -100,6 +102,7 @@ export function persistGeneratedEnhancedNote({
             expected_body_format: pendingAutoEnhance.expectedContentFormat,
           }
         : null,
+      source_note_fingerprint: sourceNoteFingerprint ?? null,
     });
     if (result.status === "error") throw new Error(result.error);
   });

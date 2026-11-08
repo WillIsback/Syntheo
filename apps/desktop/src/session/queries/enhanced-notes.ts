@@ -3,6 +3,7 @@ import { useCallback } from "react";
 import { md2json } from "@syntheo/editor/markdown";
 import { visibleSummaryDocuments } from "@syntheo/utils/session";
 
+import { parseSummaryGenerationMetadata } from "./summary-versions";
 import type { EnhancedNoteRecord } from "./types";
 
 import { executeTransaction, useLiveQuery } from "~/db";
@@ -201,5 +202,6 @@ function mapEnhancedNoteRow(row: EnhancedNoteSqlRow): EnhancedNoteRecord {
     content,
     templateId: row.template_id,
     position: Number(row.sort_order),
+    ...parseSummaryGenerationMetadata(row.generation_metadata_json),
   };
 }

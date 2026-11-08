@@ -42,4 +42,23 @@ describe("session content SQLite corrections", () => {
       }),
     ).rejects.toThrow("database is locked");
   });
+
+  it("passes the source note fingerprint to the Rust save", async () => {
+    await persistGeneratedEnhancedNote({
+      sessionId: "session-1",
+      ownerUserId: "user-1",
+      note: {
+        id: "summary-1",
+        currentContent: "old summary",
+        currentContentFormat: "markdown",
+        nextContent: '{"type":"doc"}',
+      },
+      tagNames: [],
+      sourceNoteFingerprint: "v1:note",
+    });
+
+    expect(mocks.saveGeneratedSummary).toHaveBeenCalledWith(
+      expect.objectContaining({ source_note_fingerprint: "v1:note" }),
+    );
+  });
 });

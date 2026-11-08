@@ -1,9 +1,16 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { createRef, useEffect } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LivingDocument, type LivingDocumentProps } from "./index";
 
+import { noteFingerprint } from "~/session/note-fingerprint";
 import type { Tab } from "~/store/zustand/tabs";
 
 const mocks = vi.hoisted(() => ({
@@ -12,6 +19,8 @@ const mocks = vi.hoisted(() => ({
   enhanceStatus: "success" as string,
   colorNotes: true,
   updateSession: vi.fn(() => Promise.resolve()),
+  onRegenerate: vi.fn((_templateId: string | null) => Promise.resolve()),
+  sourceNoteFingerprint: null as string | null,
   proposal: null as null | {
     id: string;
     currentMarkdown: string;
@@ -77,7 +86,51 @@ vi.mock("./meta", () => ({
 }));
 
 vi.mock("./summary-switcher", () => ({
-  SummarySwitcher: () => null,
+  SummarySwitcher: (props: {
+    currentNoteId: string | null;
+    onSelectView: (view: unknown) => void;
+  }) =>
+    props.currentNoteId ? (
+      <div data-testid="summary-switcher">
+        <button
+          type="button"
+          onClick={() => props.onSelectView({ kind: "notes" })}
+        >
+          My notes
+        </button>
+        <button
+          type="button"
+          onClick={() => props.onSelectView({ kind: "summary" })}
+        >
+          Summary
+        </button>
+        <button
+          type="button"
+          onClick={() =>
+            props.onSelectView({ kind: "version", versionId: "version-1" })
+          }
+        >
+          Version 1
+        </button>
+      </div>
+    ) : null,
+}));
+
+vi.mock("streamdown", () => ({
+  Streamdown: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="markdown">{children}</div>
+  ),
+}));
+
+vi.mock("~/session/components/note-input/enhanced-actions", () => ({
+  useEnhancedNoteActions: () => ({
+    isGenerating: false,
+    onRegenerate: mocks.onRegenerate,
+  }),
+}));
+
+vi.mock("~/db/write-queue", () => ({
+  flushDatabaseWrites: () => Promise.resolve(),
 }));
 
 vi.mock("~/session/components/note-input/transcript", () => ({
@@ -93,8 +146,23 @@ vi.mock("~/ai/hooks", () => ({
 }));
 
 vi.mock("~/session/queries", () => ({
-  useEnhancedNote: () => ({ content: mocks.enhancedContent }),
+  useEnhancedNote: () => ({
+    content: mocks.enhancedContent,
+    sourceNoteFingerprint: mocks.sourceNoteFingerprint,
+  }),
   useSession: () => ({ raw_md: '{"type":"doc"}' }),
+  useSummaryVersions: () => [
+    {
+      id: "version-1",
+      documentId: "note-1",
+      version: 1,
+      title: "Summary",
+      templateId: "",
+      markdown: "Ancienne synthèse",
+      generatedAt: "2026-11-08T11:05:00.000Z",
+      supersededAt: "2026-11-08T14:32:00.000Z",
+    },
+  ],
   useUpdateSession: () => mocks.updateSession,
 }));
 
@@ -141,6 +209,8 @@ describe("LivingDocument", () => {
     mocks.enhanceStatus = "success";
     mocks.colorNotes = true;
     mocks.updateSession.mockClear();
+    mocks.onRegenerate.mockClear();
+    mocks.sourceNoteFingerprint = null;
     mocks.proposal = null;
   });
 
@@ -336,6 +406,78 @@ describe("LivingDocument", () => {
     expect(summary.getAttribute("data-note-lines")).toBe('["budget ok"]');
     expect(screen.queryByTestId("raw-editor")).toBeNull();
     expect(document.querySelector("[data-note-seal]")).not.toBeNull();
+  });
+
+  // Issue 415 : « Mes notes | Synthèse · vN ».
+  const synthesisProps = () =>
+    makeProps({
+      stage: "synthesis",
+      rawMd: notesMd,
+      editorTabs: [{ type: "enhanced", id: "note-1" }],
+      currentTab: { type: "enhanced", id: "note-1" },
+    });
+
+  it("shows the raw notes, still editable, from the selector", () => {
+    const props = synthesisProps();
+    render(<LivingDocument {...props} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "My notes" }));
+
+    expect(screen.queryByTestId("enhanced-editor")).toBeNull();
+    const notes = screen.getByTestId("raw-editor");
+    expect(notes.closest("[data-provenance='user']")).not.toBeNull();
+    // Pas de bandeau sans empreinte connue de la note d'origine.
+    expect(document.querySelector("[data-regenerate-banner]")).toBeNull();
+    // L'onglet reste sur la synthèse : export et impression la gardent.
+    expect(props.onSelectView).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Summary" }));
+    expect(screen.getByTestId("enhanced-editor")).not.toBeNull();
+  });
+
+  it("offers to regenerate once the notes changed since the summary", async () => {
+    mocks.sourceNoteFingerprint = noteFingerprint(
+      JSON.stringify({
+        type: "doc",
+        content: [
+          { type: "paragraph", content: [{ type: "text", text: "budget" }] },
+        ],
+      }),
+    );
+    render(<LivingDocument {...synthesisProps()} />);
+    fireEvent.click(screen.getByRole("button", { name: "My notes" }));
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Regenerate with my notes" }),
+    );
+
+    await waitFor(() => expect(mocks.onRegenerate).toHaveBeenCalledWith(null));
+    // Retour sur la synthèse pour suivre la nouvelle version.
+    expect(screen.getByTestId("enhanced-editor")).not.toBeNull();
+  });
+
+  it("hides the banner while the notes match the summary", () => {
+    mocks.sourceNoteFingerprint = noteFingerprint(notesMd);
+    render(<LivingDocument {...synthesisProps()} />);
+    fireEvent.click(screen.getByRole("button", { name: "My notes" }));
+
+    expect(document.querySelector("[data-regenerate-banner]")).toBeNull();
+  });
+
+  it("shows an earlier version read only until going back to the current one", () => {
+    render(<LivingDocument {...synthesisProps()} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Version 1" }));
+
+    expect(screen.queryByTestId("enhanced-editor")).toBeNull();
+    const version = document.querySelector("[data-summary-version]");
+    expect(version?.textContent).toContain("Ancienne synthèse");
+    expect(version?.querySelector("[aria-readonly='true']")).not.toBeNull();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Back to current version" }),
+    );
+    expect(screen.getByTestId("enhanced-editor")).not.toBeNull();
   });
 
   it("shows only the user notes when no summary exists", () => {

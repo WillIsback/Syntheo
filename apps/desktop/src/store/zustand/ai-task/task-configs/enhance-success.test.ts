@@ -162,6 +162,21 @@ describe("enhanceSuccess.onSuccess", () => {
     vi.useRealTimers();
   });
 
+  it("saves the fingerprint of the note the summary was generated from", async () => {
+    await enhanceSuccess.onSuccess?.(
+      createParams({
+        transformedArgs: {
+          ...createTransformedArgs(),
+          sourceNoteFingerprint: "v1:note",
+        },
+      }),
+    );
+
+    expect(mocks.persistGeneratedEnhancedNote).toHaveBeenCalledWith(
+      expect.objectContaining({ sourceNoteFingerprint: "v1:note" }),
+    );
+  });
+
   it("persists generated content and tags through one guarded SQLite write", async () => {
     const params = createParams({
       text: "# Summary\n\nDiscussed #Launch.",

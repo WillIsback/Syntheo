@@ -23,6 +23,7 @@ import {
   loadSessionContentSnapshot,
   type SessionContentSnapshot,
 } from "~/session/content-queries";
+import { noteFingerprint } from "~/session/note-fingerprint";
 import type { AppliedTemplateSnapshot } from "~/session/queries/types";
 import { formatSessionSourceAppsContext } from "~/session/source-apps";
 import { extractSectionHeadings } from "~/session/title-content";
@@ -146,6 +147,10 @@ async function transformArgs(
     lengthPolicy: policyResult.data,
     dictionaryTerms: parseDictionaryTermsJson(
       settingsValues.personalization_dictionary_terms,
+    ),
+    sourceNoteFingerprint: noteFingerprint(
+      snapshot.rawContent,
+      snapshot.rawContentFormat,
     ),
   };
 }
@@ -641,13 +646,11 @@ function formatTranscripts(
 
     return [
       {
-        segments: segments.map(
-          (segment): Segment => ({
-            speaker: segment.speaker_label,
-            text: segment.text,
-            startMs: segment.start_ms,
-          }),
-        ),
+        segments: segments.map((segment): Segment => ({
+          speaker: segment.speaker_label,
+          text: segment.text,
+          startMs: segment.start_ms,
+        })),
         startedAt: Number.isFinite(startedAt) ? startedAt : null,
         endedAt: Number.isFinite(endedAt) ? endedAt : null,
         nowMs: null,

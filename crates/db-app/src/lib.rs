@@ -626,6 +626,11 @@ pub const APP_MIGRATION_STEPS: &[syntheo_db_migrate::MigrationStep] = &[
         scope: syntheo_db_migrate::MigrationScope::Plain,
         sql: include_str!("../migrations/20261107120000_notification_detect_off.sql"),
     },
+    syntheo_db_migrate::MigrationStep {
+        id: "20261108120000_session_summary_versions",
+        scope: syntheo_db_migrate::MigrationScope::Plain,
+        sql: include_str!("../migrations/20261108120000_session_summary_versions.sql"),
+    },
 ];
 
 pub fn schema() -> syntheo_db_migrate::DbSchema {

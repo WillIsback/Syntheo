@@ -169,6 +169,9 @@ export const runEnhanceSuccess = async ({
           nextContent: JSON.stringify(md2json(persistableText)),
         },
         tagNames,
+        ...(transformedArgs.sourceNoteFingerprint
+          ? { sourceNoteFingerprint: transformedArgs.sourceNoteFingerprint }
+          : {}),
         ...(args.pendingAutoEnhance
           ? { pendingAutoEnhance: args.pendingAutoEnhance }
           : {}),

@@ -46,6 +46,8 @@ export interface TaskArgsMapTransformed {
       imageContext: EnhanceImageContext[];
       lengthPolicy: SummaryLengthPolicy | null;
       dictionaryTerms: string[];
+      // Empreinte de la note brute lue au départ (issue 415).
+      sourceNoteFingerprint?: string;
     };
   title: TitleSystem & TitleUser & { dictionaryTerms: string[] };
 }
