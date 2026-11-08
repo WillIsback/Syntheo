@@ -86,6 +86,35 @@ describe("placeholderPlugin", () => {
     );
   });
 
+  it("tells the placeholder whether the whole document is empty (issue 430)", () => {
+    const seen: boolean[] = [];
+    const plugin = placeholderPlugin(({ isEmptyDoc }) => {
+      seen.push(isEmptyDoc);
+      return "Memo";
+    });
+    const emptyState = EditorState.create({
+      schema,
+      doc: schema.node("doc", null, [schema.node("paragraph")]),
+      plugins: [plugin],
+    });
+    plugin.props.decorations?.(emptyState);
+
+    const doc = schema.node("doc", null, [
+      schema.node("paragraph", null, [schema.text("déjà écrit")]),
+      schema.node("paragraph"),
+    ]);
+    const filledState = EditorState.create({ schema, doc, plugins: [plugin] });
+    plugin.props.decorations?.(
+      filledState.apply(
+        filledState.tr.setSelection(
+          TextSelection.create(doc, doc.firstChild!.nodeSize + 1),
+        ),
+      ),
+    );
+
+    expect(seen).toEqual([true, false]);
+  });
+
   it("adds the editor-empty class for an empty document", () => {
     const plugin = placeholderPlugin(() => "Memo");
     const state = EditorState.create({

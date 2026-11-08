@@ -8,6 +8,7 @@ import {
   type JSONContent,
   type NoteEditorRef,
   normalizePortableAttachmentUrls,
+  type PlaceholderFunction,
 } from "@syntheo/editor/note";
 import { Plus } from "@syntheo/ui/components/icons";
 import { cn } from "@syntheo/utils";
@@ -297,11 +298,16 @@ export const RawEditor = forwardRef<
           : undefined,
       [syncTasks, sessionId],
     );
-    const placeholderComponent = useMemo(
-      () => () =>
-        isGenerating
-          ? t`Creating brief...`
-          : (placeholder ?? t`Start writing...`),
+    // La consigne ne s'affiche que dans un mémo vierge : sur une ligne vide
+    // entre des notes, elle recouvrait le texte suivant (issue 430).
+    const placeholderComponent = useMemo<PlaceholderFunction>(
+      () =>
+        ({ isEmptyDoc }) =>
+          !isEmptyDoc
+            ? ""
+            : isGenerating
+              ? t`Creating brief...`
+              : (placeholder ?? t`Start writing...`),
       [isGenerating, placeholder, t],
     );
     return (
