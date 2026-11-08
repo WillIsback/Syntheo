@@ -1372,6 +1372,7 @@ msgid "Device authentication is not available on this computer."
 msgstr "Device authentication is not available on this computer."
 
 #: src/store/zustand/listener/general-live.ts
+#: src/store/zustand/listener/mic-fallback.ts
 msgid "Device settings"
 msgstr "Device settings"
 
@@ -2577,6 +2578,10 @@ msgstr "mic, headset, earphones, sound, audio device, webcam"
 msgid "Microphone"
 msgstr "Microphone"
 
+#: src/store/zustand/listener/mic-fallback.ts
+msgid "Microphone \"{missing}\" not found"
+msgstr "Microphone \"{missing}\" not found"
+
 #: src/onboarding/permissions.tsx
 msgid "Microphone access turned on"
 msgstr "Microphone access turned on"
@@ -3451,6 +3456,14 @@ msgstr "Recording couldn't start"
 #: src/settings/search-index.ts
 msgid "Recording status prompts"
 msgstr "Recording status prompts"
+
+#: src/store/zustand/listener/mic-fallback.ts
+msgid "Recording with \"{opened}\" instead. Check that the microphone is plugged in, or choose another one."
+msgstr "Recording with \"{opened}\" instead. Check that the microphone is plugged in, or choose another one."
+
+#: src/store/zustand/listener/mic-fallback.ts
+msgid "Recording with the default microphone instead. Check that the microphone is plugged in, or choose another one."
+msgstr "Recording with the default microphone instead. Check that the microphone is plugged in, or choose another one."
 
 #: src/main/windows-title-bar.tsx
 msgid "Redo"
