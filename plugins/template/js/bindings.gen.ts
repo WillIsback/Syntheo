@@ -159,6 +159,11 @@ export type SaveGeneratedSummaryRequest = {
 	next_body: string,
 	tag_names: string[],
 	pending_auto_enhance: PendingAutoEnhanceGuard | null,
+	/**
+	 *  Empreinte de la note brute qui a servi à générer la synthèse (issue
+	 *  415) : la note modifiée ensuite propose « Régénérer avec mes notes ».
+	 */
+	source_note_fingerprint?: string | null,
 };
 
 export type SaveGeneratedTitleRequest = {

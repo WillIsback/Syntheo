@@ -638,6 +638,10 @@ msgstr "Automations"
 msgid "Back"
 msgstr "Back"
 
+#: src/session/components/living-document/summary-version.tsx
+msgid "Back to current version"
+msgstr "Back to current version"
+
 #: src/settings/search-index.ts
 msgid "bar, small window, control, always on top"
 msgstr "bar, small window, control, always on top"
@@ -748,6 +752,10 @@ msgstr "Change speaker"
 #: src/session/components/note-input/transcript/renderer/selection-menu.tsx
 msgid "Change speaker from here"
 msgstr "Change speaker from here"
+
+#: src/session/components/living-document/summary-switcher-view.tsx
+msgid "Change template…"
+msgstr "Change template…"
 
 #: src/session/components/speaker-naming/speaker-card.tsx
 msgid "Change the name"
@@ -1073,12 +1081,17 @@ msgstr "Control listening without reopening Syntheo."
 msgid "Copied"
 msgstr "Copied"
 
+#: src/session/components/living-document/summary-switcher.tsx
+msgid "Copied to clipboard"
+msgstr "Copied to clipboard"
+
 #: src/session/components/note-input/header-enhanced.tsx
 msgid "Copied to clipboard: {viewTitle}"
 msgstr "Copied to clipboard: {viewTitle}"
 
 #: src/main/windows-title-bar.tsx
 #: src/session/components/capsule/index.tsx
+#: src/session/components/living-document/summary-switcher-view.tsx
 #: src/session/components/note-input/header-enhanced.tsx
 #: src/session/components/note-input/header-raw.tsx
 #: src/session/components/note-input/header-transcript.tsx
@@ -1236,6 +1249,10 @@ msgstr "Created by {name}"
 #: src/session/components/note-input/raw.tsx
 msgid "Creating brief..."
 msgstr "Creating brief..."
+
+#: src/session/components/living-document/summary-switcher-view.tsx
+msgid "Current"
+msgstr "Current"
 
 #: src/settings/general/audio-settings.tsx
 msgid "Current default"
@@ -1497,6 +1514,10 @@ msgstr "e.g. Weekly, HR team"
 msgid "Each example must be 12,000 characters or fewer."
 msgstr "Each example must be 12,000 characters or fewer."
 
+#: src/session/components/living-document/summary-version.tsx
+msgid "Earlier version, read only. The latest summary stays the current one."
+msgstr "Earlier version, read only. The latest summary stays the current one."
+
 #: src/session/components/version-history-dialog.tsx
 msgid "Earlier versions of this note, newest first."
 msgstr "Earlier versions of this note, newest first."
@@ -1689,6 +1710,10 @@ msgstr "Export the meeting as Markdown"
 #: src/main/windows-title-bar.tsx
 msgid "Export…"
 msgstr "Export…"
+
+#: src/session/components/living-document/summary-switcher.tsx
+msgid "Failed to copy"
+msgstr "Failed to copy"
 
 #: src/session/components/note-input/header-raw.tsx
 msgid "Failed to copy memo"
@@ -2645,6 +2670,10 @@ msgstr "My favorites"
 msgid "My meetings"
 msgstr "My meetings"
 
+#: src/session/components/living-document/summary-switcher-view.tsx
+msgid "My notes"
+msgstr "My notes"
+
 #: src/settings/ai/llm/server-card.tsx
 #: src/settings/ai/stt/server-card.tsx
 msgid "My server"
@@ -2933,6 +2962,10 @@ msgstr "Note is Locked"
 #: src/session/components/capsule/index.tsx
 msgid "Note steps"
 msgstr "Note steps"
+
+#: src/session/components/living-document/summary-switcher-view.tsx
+msgid "Note view"
+msgstr "Note view"
 
 #: src/sidebar/toast/undo-delete-toast.tsx
 msgid "notes"
@@ -3423,6 +3456,7 @@ msgstr "Redo"
 msgid "Refresh calendars"
 msgstr "Refresh calendars"
 
+#: src/session/components/living-document/summary-switcher-view.tsx
 #: src/session/components/note-input/header-enhanced.tsx
 #: src/session/components/note-input/template-picker.tsx
 msgid "Regenerate"
@@ -3435,6 +3469,10 @@ msgstr "Regenerate message"
 #: src/session/components/speaker-naming/bar.tsx
 msgid "Regenerate summary with names"
 msgstr "Regenerate summary with names"
+
+#: src/session/components/living-document/summary-version.tsx
+msgid "Regenerate with my notes"
+msgstr "Regenerate with my notes"
 
 #: src/settings/developers/cli.tsx
 msgid "Reinstall"
@@ -3461,6 +3499,7 @@ msgstr "reminder, calendar, meeting, 5 minutes, alert"
 msgid "Reminders"
 msgstr "Reminders"
 
+#: src/session/components/living-document/summary-switcher-view.tsx
 #: src/session/components/note-input/header-enhanced.tsx
 #: src/sidebar/automations.tsx
 msgid "Remove"
@@ -4302,6 +4341,10 @@ msgstr "Suggesting…"
 msgid "Suggestions"
 msgstr "Suggestions"
 
+#: src/session/components/living-document/summary-switcher-view.tsx
+msgid "Summaries"
+msgstr "Summaries"
+
 #: src/contacts/details.tsx
 #: src/edit/tab-content.tsx
 #: src/session/components/note-input/header-shared.tsx
@@ -4309,6 +4352,10 @@ msgstr "Suggestions"
 #: src/settings/automations/markdown-export-options.tsx
 msgid "Summary"
 msgstr "Summary"
+
+#: src/session/components/living-document/summary-switcher-view.tsx
+msgid "Summary · v{shownVersion}"
+msgstr "Summary · v{shownVersion}"
 
 #: src/settings/general/notification.tsx
 #: src/settings/search-index.ts
@@ -4344,13 +4391,13 @@ msgstr "Summary preview"
 msgid "Summary ready"
 msgstr "Summary ready"
 
-#: src/session/components/living-document/summary-switcher.tsx
-msgid "Summary templates"
-msgstr "Summary templates"
-
 #: src/chat/components/message/tool/edit-summary.tsx
 msgid "Summary updated"
 msgstr "Summary updated"
+
+#: src/session/components/living-document/summary-switcher-view.tsx
+msgid "Summary versions"
+msgstr "Summary versions"
 
 #: src/session/components/note-input/enhanced-actions.ts
 #: src/session/hooks/useAutoEnhance.ts
@@ -5117,10 +5164,22 @@ msgstr "Used for transcription and automatic summary language detection."
 msgid "Verifying the SQLite migration status"
 msgstr "Verifying the SQLite migration status"
 
+#: src/session/components/living-document/summary-version.tsx
+msgid "Version {versionNumber}"
+msgstr "Version {versionNumber}"
+
+#: src/session/components/living-document/summary-version.tsx
+msgid "Version {versionNumber} · {date}"
+msgstr "Version {versionNumber} · {date}"
+
 #: src/session/components/outer-header/overflow/index.tsx
 #: src/session/components/version-history-dialog.tsx
 msgid "Version history"
 msgstr "Version history"
+
+#: src/session/components/living-document/summary-switcher-view.tsx
+msgid "Versions"
+msgstr "Versions"
 
 #: src/main/windows-title-bar.tsx
 msgid "View"
@@ -5317,6 +5376,10 @@ msgstr "Your notes"
 #: src/shared/useMainShortcuts.tsx
 msgid "Your notes are saved automatically."
 msgstr "Your notes are saved automatically."
+
+#: src/session/components/living-document/summary-version.tsx
+msgid "Your notes have changed since this summary."
+msgstr "Your notes have changed since this summary."
 
 #: src/services/enhancer/summary-notification.ts
 msgid "Your summary is ready."
