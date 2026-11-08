@@ -40,7 +40,6 @@ import {
   updateLiveAmplitude,
   updateLiveProgress,
 } from "./general-shared";
-import { notifyMicFallback } from "./mic-fallback";
 import {
   createLiveSegmentDeltaAccumulator,
   createLiveTranscriptBatcher,
@@ -48,6 +47,7 @@ import {
   mergeLiveSegmentDelta,
   takeLiveSegmentDelta,
 } from "./live-transcript-batch";
+import { notifyMicFallback } from "./mic-fallback";
 import {
   LIVE_TRANSCRIPT_PREVIEW_SEGMENT_LIMIT,
   type LiveTranscriptPersistCallback,

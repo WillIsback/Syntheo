@@ -12,6 +12,7 @@ import { useHotkeys } from "react-hotkeys-hook";
 
 import { cn } from "@syntheo/utils";
 
+import { TranscriptScrollControls } from "./scroll-controls";
 import {
   completeTranscriptContextSelection,
   focusTranscriptSelection,
@@ -28,7 +29,6 @@ import {
 } from "./selection-context";
 import { MultiSelectionBar, SelectionMenu } from "./selection-menu";
 import type { TranscriptContextMenuRequest } from "./selection-menu";
-import { TranscriptScrollControls } from "./scroll-controls";
 import { RenderTranscript } from "./transcript";
 import {
   preserveScrollPosition,
