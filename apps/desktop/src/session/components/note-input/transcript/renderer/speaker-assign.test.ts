@@ -5,12 +5,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import {
-  createElement,
-  type MouseEvent,
-  type ReactElement,
-  type ReactNode,
-} from "react";
+import { createElement, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -86,21 +81,7 @@ vi.mock("@syntheo/ui/components/ui/popover", async () => {
           )
         : null;
     },
-    PopoverTrigger: ({
-      children,
-    }: {
-      children: ReactElement<{
-        onClick?: (event: MouseEvent) => void;
-      }>;
-    }) => {
-      const context = React.useContext(PopoverContext);
-      return React.cloneElement(children, {
-        onClick: (event: MouseEvent) => {
-          children.props.onClick?.(event);
-          context?.onOpenChange(true);
-        },
-      });
-    },
+    PopoverAnchor: () => null,
   };
 });
 
