@@ -226,6 +226,10 @@ pub struct TranscriptionParams {
     /// Prioritaire sur `file_path` quand présent.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub audio: Option<TranscriptionAudio>,
+    /// Fichier déposé reçu par morceaux (`begin_audio_upload`), gardé en
+    /// mémoire : prioritaire sur `audio` et `file_path`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub audio_upload_id: Option<String>,
     #[serde(default)]
     pub model: Option<String>,
     pub base_url: String,
@@ -447,6 +451,7 @@ impl From<TranscriptionParams> for listener2::BatchParams {
             provider: value.provider,
             file_path: value.file_path,
             audio: value.audio,
+            audio_buffer: None,
             model: value.model,
             base_url: value.base_url,
             api_key: value.api_key,

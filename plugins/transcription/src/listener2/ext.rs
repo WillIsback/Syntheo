@@ -46,6 +46,17 @@ impl<'a, R: tauri::Runtime, M: tauri::Manager<R>> Listener2<'a, R, M> {
             .map(|elapsed| elapsed.as_millis() as i64)
             .unwrap_or_default();
         let idle_timeout = batch_idle_timeout(&params);
+        // Un fichier déposé sans chemin arrive par morceaux, en mémoire : le
+        // batch reprend ce tampon, rien ne passe par le disque.
+        let audio_buffer = match params.audio_upload_id.as_deref() {
+            Some(upload_id) => Some(
+                self.manager
+                    .state::<crate::audio_upload::AudioUploadRegistry>()
+                    .take(upload_id)
+                    .map_err(core::Error::BatchError)?,
+            ),
+            None => None,
+        };
 
         let (last_activity_tx, _) = tokio::sync::watch::channel(Instant::now());
         let control = Arc::new(BatchSessionControl {
@@ -79,7 +90,10 @@ impl<'a, R: tauri::Runtime, M: tauri::Manager<R>> Listener2<'a, R, M> {
             let control = control.clone();
             let session_id = session_id.clone();
             async move {
-                let batch_params: core::BatchParams = params.into();
+                let mut batch_params: core::BatchParams = params.into();
+                if audio_buffer.is_some() {
+                    batch_params.audio_buffer = audio_buffer;
+                }
                 let _ = core::run_batch(runtime, batch_params).await;
                 finish_batch_session(&registry, &session_id, &control);
             }
@@ -693,6 +707,7 @@ mod tests {
             provider,
             file_path: "/tmp/audio.wav".to_string(),
             audio: None,
+            audio_upload_id: None,
             model: model.map(ToOwned::to_owned),
             base_url: base_url.to_string(),
             api_key: "key".to_string(),

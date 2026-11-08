@@ -530,6 +530,10 @@ msgstr "Audio capture was interrupted"
 msgid "Audio could not be deleted"
 msgstr "Audio could not be deleted"
 
+#: src/stt/audio-import-feedback.ts
+msgid "Audio import failed"
+msgstr "Audio import failed"
+
 #: src/store/zustand/listener/general-live.ts
 msgid "Audio retry failed"
 msgstr "Audio retry failed"
@@ -701,6 +705,10 @@ msgstr "Calendar"
 #: src/onboarding/index.tsx
 msgid "Calendar connected"
 msgstr "Calendar connected"
+
+#: src/stt/audio-import-feedback.ts
+msgid "Can't import this audio"
+msgstr "Can't import this audio"
 
 #: src/calendar/components/apple/permission.tsx
 #: src/session/components/capsule/index.tsx
@@ -2932,6 +2940,10 @@ msgstr "No transcript recorded"
 msgid "No transcription provider is set up. Syntheo does not keep audio: set up a transcription endpoint before recording."
 msgstr "No transcription provider is set up. Syntheo does not keep audio: set up a transcription endpoint before recording."
 
+#: src/stt/audio-import-feedback.ts
+msgid "No transcription service is set up: importing a file requires a batch transcription model."
+msgstr "No transcription service is set up: importing a file requires a batch transcription model."
+
 #: src/services/enhancer/eligibility.ts
 msgid "Not enough words recorded ({wordCount}/{minWords} minimum)"
 msgstr "Not enough words recorded ({wordCount}/{minWords} minimum)"
@@ -4491,6 +4503,10 @@ msgstr "Syntheo couldn't open your audio input. Check your microphone selection,
 msgid "Syntheo couldn't prepare storage for this recording"
 msgstr "Syntheo couldn't prepare storage for this recording"
 
+#: src/stt/audio-import-feedback.ts
+msgid "Syntheo couldn't read this file."
+msgstr "Syntheo couldn't read this file."
+
 #: src/stt/start-failure.ts
 msgid "Syntheo doesn't have microphone access"
 msgstr "Syntheo doesn't have microphone access"
@@ -4809,6 +4825,10 @@ msgstr "This edit could not be saved. Try again."
 msgid "This edit is no longer pending."
 msgstr "This edit is no longer pending."
 
+#: src/stt/audio-import-feedback.ts
+msgid "This file is too large to import (2 GB maximum)."
+msgstr "This file is too large to import (2 GB maximum)."
+
 #: src/settings/general/index.tsx
 msgid "This information stays on your computer. It is used to recognize you in transcripts and to sign your meeting notes."
 msgstr "This information stays on your computer. It is used to recognize you in transcripts and to sign your meeting notes."
@@ -4816,6 +4836,10 @@ msgstr "This information stays on your computer. It is used to recognize you in 
 #: src/stt/useStartListening.ts
 msgid "This model only transcribes after the recording, which would require keeping the audio. Choose a real-time transcription model."
 msgstr "This model only transcribes after the recording, which would require keeping the audio. Choose a real-time transcription model."
+
+#: src/stt/audio-import-feedback.ts
+msgid "This model only transcribes live: importing a file requires a batch transcription model."
+msgstr "This model only transcribes live: importing a file requires a batch transcription model."
 
 #: src/calendar/components/event-chip.tsx
 msgid "This note"
@@ -4974,6 +4998,10 @@ msgstr "Transcription server ›"
 #: src/settings/search-index.ts
 msgid "transcription server, speech recognition, URL, API key, Whisper"
 msgstr "transcription server, speech recognition, URL, API key, Whisper"
+
+#: src/stt/audio-import-feedback.ts
+msgid "Transcription settings"
+msgstr "Transcription settings"
 
 #: src/sidebar/toast/registry.tsx
 msgid "Transcription unavailable"

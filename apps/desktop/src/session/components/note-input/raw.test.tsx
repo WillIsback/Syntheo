@@ -858,6 +858,33 @@ describe("RawEditor", () => {
     expect(hoisted.processAudioFile).not.toHaveBeenCalled();
   });
 
+  it("activates the drop zone for an mp4 announced as video while hovering (issue 464)", () => {
+    render(<RawEditor sessionId="session-1" />);
+
+    const file = new File(["audio"], "archive.mp4", { type: "video/mp4" });
+    // Pendant le survol, WebKitGTK et WebView2 ne livrent pas le fichier.
+    const hovering = {
+      ...audioDataTransfer(file),
+      items: [{ kind: "file", type: "video/mp4", getAsFile: () => null }],
+    } as unknown as DataTransfer;
+    const dropTarget = screen.getByText("Note editor").parentElement;
+
+    expect(dropTarget).not.toBeNull();
+    const dragOver = createEvent.dragOver(dropTarget!, {
+      dataTransfer: hovering,
+    });
+    fireEvent(dropTarget!, dragOver);
+
+    expect(dragOver.defaultPrevented).toBe(true);
+    expect(
+      screen.getByText("Drop to upload and transcribe audio"),
+    ).not.toBeNull();
+
+    fireEvent.drop(dropTarget!, { dataTransfer: audioDataTransfer(file) });
+
+    expect(hoisted.processAudioFile).toHaveBeenCalledWith(file);
+  });
+
   it("uses the drag item MIME when dropped audio has no MIME or extension", async () => {
     render(<RawEditor sessionId="session-1" />);
 
