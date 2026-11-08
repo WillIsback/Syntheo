@@ -132,6 +132,31 @@ mod tests {
 
     #[cfg(unix)]
     #[test]
+    fn atomic_write_replaces_a_symlink_without_touching_its_target() {
+        let temp = tempdir().unwrap();
+        let vault = temp.path().join("vault");
+        let outside = temp.path().join("outside.json");
+        fs::create_dir_all(&vault).unwrap();
+        fs::write(&outside, "sentinel").unwrap();
+        std::os::unix::fs::symlink(&outside, vault.join("settings.json")).unwrap();
+
+        atomic_write(&vault.join("settings.json"), "new").unwrap();
+
+        assert_eq!(fs::read_to_string(&outside).unwrap(), "sentinel");
+        assert!(
+            !fs::symlink_metadata(vault.join("settings.json"))
+                .unwrap()
+                .file_type()
+                .is_symlink()
+        );
+        assert_eq!(
+            fs::read_to_string(vault.join("settings.json")).unwrap(),
+            "new"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
     fn copy_dir_recursive_refuses_to_write_through_a_symlink_leaving_dst() {
         let temp = tempdir().unwrap();
         let src = temp.path().join("src");

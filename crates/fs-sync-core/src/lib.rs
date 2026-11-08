@@ -888,6 +888,131 @@ mod tests {
             .assert(predicates::path::missing());
     }
 
+    /// Coffre temporaire avec un dossier extérieur sentinelle.
+    #[cfg(unix)]
+    fn vault_with_outside_sentinel() -> (TempDir, std::path::PathBuf) {
+        let temp = TempDir::new().unwrap();
+        temp.child("sessions").create_dir_all().unwrap();
+        let outside = temp.path().join("outside");
+        std::fs::create_dir_all(outside.join("nested")).unwrap();
+        std::fs::write(outside.join("sentinel.txt"), "keep").unwrap();
+        std::fs::write(outside.join("nested").join("sentinel.txt"), "keep").unwrap();
+        (temp, outside)
+    }
+
+    #[cfg(unix)]
+    fn assert_sentinel_intact(outside: &std::path::Path) {
+        assert_eq!(
+            std::fs::read_to_string(outside.join("sentinel.txt")).unwrap(),
+            "keep"
+        );
+        assert_eq!(
+            std::fs::read_to_string(outside.join("nested").join("sentinel.txt")).unwrap(),
+            "keep"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn delete_folder_removes_a_linked_folder_but_not_its_target() {
+        let (temp, outside) = vault_with_outside_sentinel();
+        std::os::unix::fs::symlink(&outside, temp.child("sessions").child("linked").path())
+            .unwrap();
+        let core = FsSyncCore::new(temp.path().to_path_buf());
+
+        core.delete_folder("linked").unwrap();
+
+        assert!(std::fs::symlink_metadata(temp.child("sessions").child("linked").path()).is_err());
+        assert_sentinel_intact(&outside);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn delete_folder_does_not_descend_into_a_link_it_contains() {
+        let (temp, outside) = vault_with_outside_sentinel();
+        let work = temp.child("sessions").child("work");
+        work.create_dir_all().unwrap();
+        std::os::unix::fs::symlink(&outside, work.child("escape").path()).unwrap();
+        let core = FsSyncCore::new(temp.path().to_path_buf());
+
+        core.delete_folder("work").unwrap();
+
+        work.assert(predicates::path::missing());
+        assert_sentinel_intact(&outside);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn delete_session_dir_on_a_linked_session_keeps_the_target() {
+        let (temp, outside) = vault_with_outside_sentinel();
+        let link = temp.child("sessions").child(UUID_1);
+        std::os::unix::fs::symlink(&outside, link.path()).unwrap();
+        let core = FsSyncCore::new(temp.path().to_path_buf());
+
+        let session_dir = core.resolve_session_dir(UUID_1).unwrap();
+        crate::session::delete_session_dir(&session_dir).unwrap();
+
+        assert!(std::fs::symlink_metadata(link.path()).is_err());
+        assert_sentinel_intact(&outside);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn rename_folder_moves_the_link_not_its_target() {
+        let (temp, outside) = vault_with_outside_sentinel();
+        std::os::unix::fs::symlink(&outside, temp.child("sessions").child("old").path()).unwrap();
+        let core = FsSyncCore::new(temp.path().to_path_buf());
+
+        core.rename_folder("old", "new").unwrap();
+
+        let renamed = temp.child("sessions").child("new");
+        assert!(
+            std::fs::symlink_metadata(renamed.path())
+                .unwrap()
+                .file_type()
+                .is_symlink()
+        );
+        assert_sentinel_intact(&outside);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn move_session_moves_a_linked_session_without_touching_its_target() {
+        let (temp, outside) = vault_with_outside_sentinel();
+        std::os::unix::fs::symlink(&outside, temp.child("sessions").child(UUID_1).path()).unwrap();
+        let core = FsSyncCore::new(temp.path().to_path_buf());
+
+        core.move_session(UUID_1, "", "work").unwrap();
+
+        let moved = temp.child("sessions").child("work").child(UUID_1);
+        assert!(
+            std::fs::symlink_metadata(moved.path())
+                .unwrap()
+                .file_type()
+                .is_symlink()
+        );
+        assert_sentinel_intact(&outside);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn attachment_remove_removes_the_link_not_its_target() {
+        let (temp, outside) = vault_with_outside_sentinel();
+        let attachments = temp.child("sessions").child(UUID_1).child("attachments");
+        attachments.create_dir_all().unwrap();
+        std::os::unix::fs::symlink(
+            outside.join("sentinel.txt"),
+            attachments.child("link.txt").path(),
+        )
+        .unwrap();
+        let core = FsSyncCore::new(temp.path().to_path_buf());
+
+        core.attachment_remove(UUID_1, "link.txt").unwrap();
+
+        assert!(std::fs::symlink_metadata(attachments.child("link.txt").path()).is_err());
+        assert_sentinel_intact(&outside);
+    }
+
     #[test]
     fn folder_attachment_list_missing_dir_is_empty() {
         let temp = TempDir::new().unwrap();
