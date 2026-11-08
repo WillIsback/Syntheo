@@ -11,6 +11,7 @@ const {
   listenCaptureDataMock,
   listenCaptureLifecycleMock,
   listenCaptureStatusMock,
+  listMicrophoneDevicesMock,
   listMicUsingApplicationsMock,
   runEventHooksMock,
   setRecordingIndicatorMock,
@@ -26,6 +27,7 @@ const {
   listenCaptureDataMock: vi.fn(),
   listenCaptureLifecycleMock: vi.fn(),
   listenCaptureStatusMock: vi.fn(),
+  listMicrophoneDevicesMock: vi.fn(),
   listMicUsingApplicationsMock: vi.fn(),
   runEventHooksMock: vi.fn(),
   setRecordingIndicatorMock: vi.fn(),
@@ -79,6 +81,7 @@ vi.mock("@syntheo/plugin-transcription", () => ({
   commands: {
     acknowledgeStoppedCapture: acknowledgeStoppedCaptureMock,
     getCaptureSnapshot: getCaptureSnapshotMock,
+    listMicrophoneDevices: listMicrophoneDevicesMock,
     setMicMuted: vi.fn(),
     startCapture: startCaptureMock,
     startTranscription: vi.fn(),
@@ -140,6 +143,10 @@ describe("General Listener Slice", () => {
     listenCaptureLifecycleMock.mockResolvedValue(() => {});
     listenCaptureStatusMock.mockResolvedValue(() => {});
     listMicUsingApplicationsMock.mockResolvedValue({ status: "ok", data: [] });
+    listMicrophoneDevicesMock.mockResolvedValue({
+      status: "ok",
+      data: ["Built-in Microphone"],
+    });
     runEventHooksMock.mockResolvedValue({ status: "ok", data: null });
     setRecordingIndicatorMock.mockResolvedValue({ status: "ok", data: null });
     startCaptureMock.mockResolvedValue({ status: "ok", data: null });
@@ -2580,6 +2587,84 @@ describe("General Listener Slice", () => {
       );
       expect(store.getState().live.lastError).toBeNull();
       expect(stopCaptureMock).not.toHaveBeenCalled();
+      warning.mockRestore();
+    });
+
+    // Issue 419 : l'alerte « aucun audio capté » mène à la ligne Microphone.
+    const raiseNoAudioWarning = async () => {
+      await store.getState().start({
+        session_id: "session-a",
+        languages: [],
+        onboarding: false,
+        model: "test-model",
+        base_url: "http://localhost",
+        api_key: "test-key",
+        keywords: [],
+      });
+      const handler =
+        listenCaptureStatusMock.mock.calls[
+          listenCaptureStatusMock.mock.calls.length - 1
+        ]?.[0];
+      const warning = vi
+        .spyOn(toast, "warning")
+        .mockImplementation(() => "warning");
+      handler?.({
+        payload: {
+          type: "audio_error",
+          session_id: "session-a",
+          error: "audio_capture_unavailable",
+          is_fatal: false,
+          device: null,
+        },
+      });
+      await vi.waitFor(() =>
+        expect(listMicrophoneDevicesMock).toHaveBeenCalled(),
+      );
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      return warning;
+    };
+
+    test("device settings opens the meetings page on the microphone row", async () => {
+      const warning = await raiseNoAudioWarning();
+      const options = warning.mock.calls[0]?.[1] as {
+        secondaryAction: { label: string; onClick: () => void };
+      };
+      expect(warning.mock.calls[0]?.[0]).toBe("No audio is being captured");
+      expect(options.secondaryAction.label).toBe("Device settings");
+
+      const { useTabs } = await import("~/store/zustand/tabs");
+      const { useSettingFocus } = await import("~/settings/setting-focus");
+      const openNew = vi.fn();
+      useTabs.setState({ openNew });
+      options.secondaryAction.onClick();
+      await vi.waitFor(() =>
+        expect(openNew).toHaveBeenCalledWith({
+          type: "settings",
+          state: { tab: "meetings" },
+        }),
+      );
+      expect(useSettingFocus.getState().pending).toBe("meetings-microphone");
+      useSettingFocus.getState().clear();
+      warning.mockRestore();
+    });
+
+    test("says no microphone is detected when the input list is empty", async () => {
+      listMicrophoneDevicesMock.mockResolvedValue({ status: "ok", data: [] });
+      const warning = await raiseNoAudioWarning();
+      await vi.waitFor(() => expect(warning).toHaveBeenCalledTimes(2));
+      const description = (warning.mock.calls[1][1] as { description: string })
+        .description;
+      expect(description).toContain("No microphone detected");
+      expect(description).not.toContain("Choose a working audio device");
+      warning.mockRestore();
+    });
+
+    test("keeps the device advice when microphones are listed", async () => {
+      const warning = await raiseNoAudioWarning();
+      expect(warning).toHaveBeenCalledTimes(1);
+      expect(
+        (warning.mock.calls[0][1] as { description: string }).description,
+      ).toContain("Choose a working audio device");
       warning.mockRestore();
     });
 

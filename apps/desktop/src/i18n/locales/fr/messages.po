@@ -2092,6 +2092,14 @@ msgstr "Inclure"
 msgid "Include meeting ID"
 msgstr "Inclure l'ID de réunion"
 
+#: src/settings/general/microphone-level.tsx
+msgid "Input level"
+msgstr "Niveau d'entrée"
+
+#: src/settings/general/microphone-level.tsx
+msgid "Input level unavailable"
+msgstr "Niveau d'entrée indisponible"
+
 #: src/settings/developers/cli.tsx
 msgid "Install"
 msgstr "Installer"
@@ -2815,6 +2823,14 @@ msgstr "Aucune personne correspondante"
 #: src/session/components/living-document/meeting-type-picker.tsx
 msgid "No meeting type found"
 msgstr "Aucun type de réunion trouvé"
+
+#: src/settings/general/audio-settings.tsx
+msgid "No microphone detected. Plug in a microphone or check permissions."
+msgstr "Aucun micro détecté. Branchez un micro ou vérifiez les autorisations."
+
+#: src/store/zustand/listener/general-live.ts
+msgid "No microphone detected. Plug in a microphone, then retry. Audio missing during this interruption cannot be recovered."
+msgstr "Aucun micro détecté. Branchez un micro, puis réessayez. L'audio manquant pendant cette interruption ne peut pas être récupéré."
 
 #: src/session/components/note-input/transcript/renderer/speaker-assign.tsx
 msgid "No people"
@@ -3716,6 +3732,10 @@ msgstr "Rechercher un paramètre"
 #: src/templates/template-sidebar.tsx
 msgid "Search a template"
 msgstr "Rechercher un modèle"
+
+#: src/settings/general/audio-settings.tsx
+msgid "Search again"
+msgstr "Rechercher à nouveau"
 
 #: src/sidebar/automations.tsx
 msgid "Search automations..."
