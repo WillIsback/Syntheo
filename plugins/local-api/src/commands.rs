@@ -209,9 +209,17 @@ pub(crate) fn markdown_export_file(path: &std::path::Path) -> Result<MarkdownExp
 
 // A changed title renames a configured export. Remove the file the same action
 // wrote before, unless it was edited since or is the new file itself, such as
-// a case-only rename on a case-insensitive disk.
+// a case-only rename on a case-insensitive disk. The previous path comes from
+// the front: it must sit directly in the new export's folder (issue 423).
 pub(crate) fn remove_replaced_export(previous: &MarkdownExportFile, current: &MarkdownExportFile) {
     if same_file::is_same_file(&previous.path, &current.path).unwrap_or(true) {
+        return;
+    }
+    if !in_same_folder(
+        std::path::Path::new(&previous.path),
+        std::path::Path::new(&current.path),
+    ) {
+        tracing::warn!("refused to remove a replaced export outside the export folder");
         return;
     }
     let Ok(content) = std::fs::read(&previous.path) else {
@@ -222,6 +230,16 @@ pub(crate) fn remove_replaced_export(previous: &MarkdownExportFile, current: &Ma
     {
         tracing::warn!(%error, "could not remove replaced markdown export");
     }
+}
+
+// Same real parent folder, links resolved: a link placed in the export folder
+// cannot lead the removal elsewhere.
+fn in_same_folder(previous: &std::path::Path, current: &std::path::Path) -> bool {
+    let parent = |path: &std::path::Path| path.parent().and_then(|dir| dir.canonicalize().ok());
+    let is_regular_file = std::fs::symlink_metadata(previous)
+        .map(|metadata| metadata.file_type().is_file())
+        .unwrap_or(false);
+    is_regular_file && parent(previous).is_some_and(|dir| Some(dir) == parent(current))
 }
 
 fn sha256_hex(content: &[u8]) -> String {

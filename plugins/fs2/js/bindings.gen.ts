@@ -7,7 +7,6 @@ import { invoke as __TAURI_INVOKE } from "@tauri-apps/api/core";
 export const commands = {
 	readTextFile: (path: string) => typedError<string, string>(__TAURI_INVOKE("plugin:fs2|read_text_file", { path })),
 	remove: (path: string) => typedError<null, string>(__TAURI_INVOKE("plugin:fs2|remove", { path })),
-	writeTextFile: (path: string, content: string) => typedError<null, string>(__TAURI_INVOKE("plugin:fs2|write_text_file", { path, content })),
 };
 
 /* Tauri Specta runtime */

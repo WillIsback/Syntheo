@@ -461,6 +461,50 @@ mod test {
         }
     }
 
+    // Issue 423 : l'empreinte ne suffit pas, le fichier à supprimer doit être
+    // dans le dossier du nouvel export.
+    #[test]
+    fn replaced_export_outside_the_new_export_folder_is_kept() {
+        let export_dir = tempfile::tempdir().unwrap();
+        let other_dir = tempfile::tempdir().unwrap();
+        let new = export_dir.path().join("Launch.md");
+        std::fs::write(&new, "# Notes\n").unwrap();
+        let outside = other_dir.path().join("Planning.md");
+        std::fs::write(&outside, "# Notes\n").unwrap();
+        let nested_dir = export_dir.path().join("archive");
+        std::fs::create_dir(&nested_dir).unwrap();
+        let nested = nested_dir.join("Planning.md");
+        std::fs::write(&nested, "# Notes\n").unwrap();
+        let current = commands::markdown_export_file(&new).unwrap();
+
+        for victim in [&outside, &nested] {
+            let previous = commands::markdown_export_file(victim).unwrap();
+            assert_eq!(previous.sha256, current.sha256);
+            commands::remove_replaced_export(&previous, &current);
+            assert!(victim.exists(), "{} was removed", victim.display());
+        }
+        assert!(new.exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn replaced_export_reached_through_a_link_outside_the_folder_is_kept() {
+        let export_dir = tempfile::tempdir().unwrap();
+        let other_dir = tempfile::tempdir().unwrap();
+        let new = export_dir.path().join("Launch.md");
+        std::fs::write(&new, "# Notes\n").unwrap();
+        let outside = other_dir.path().join("Planning.md");
+        std::fs::write(&outside, "# Notes\n").unwrap();
+        // Lien vers un dossier extérieur, posé dans le dossier d'export.
+        let link = export_dir.path().join("ailleurs");
+        std::os::unix::fs::symlink(other_dir.path(), &link).unwrap();
+        let previous = commands::markdown_export_file(&link.join("Planning.md")).unwrap();
+
+        commands::remove_replaced_export(&previous, &commands::markdown_export_file(&new).unwrap());
+
+        assert!(outside.exists());
+    }
+
     #[tokio::test]
     async fn changed_filename_pattern_replaces_identical_previous_export() {
         let pool = seeded_pool().await;

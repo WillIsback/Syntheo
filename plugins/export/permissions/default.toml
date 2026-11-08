@@ -1,3 +1,9 @@
 [default]
 description = "Default permissions for the plugin"
-permissions = ["allow-export", "allow-print-pdf", "allow-cleanup-print-files"]
+permissions = [
+  "allow-export",
+  "allow-export-text",
+  "allow-choose-export-path",
+  "allow-print-pdf",
+  "allow-cleanup-print-files",
+]

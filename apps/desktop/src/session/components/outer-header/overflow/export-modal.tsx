@@ -1,7 +1,6 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { useMutation } from "@tanstack/react-query";
 import { join } from "@tauri-apps/api/path";
-import { save } from "@tauri-apps/plugin-dialog";
 import { useMemo, useRef, useState } from "react";
 
 import { json2md } from "@syntheo/editor/markdown";
@@ -10,7 +9,6 @@ import {
   type ExportMetadata,
   type TranscriptItem,
 } from "@syntheo/plugin-export";
-import { commands as fs2Commands } from "@syntheo/plugin-fs2";
 import { commands as openerCommands } from "@syntheo/plugin-opener2";
 import {
   Dialog,
@@ -339,13 +337,20 @@ export function ExportModal({
       const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
       const filename = `${sanitizedTitle}_${timestamp}.${format}`;
       const defaultPath = await join(directory, filename);
-      // App Store sandbox grants must be reacquired after relaunch.
-      const path = isAppStoreBuild()
-        ? await save({
-            defaultPath,
-            filters: [{ name: format.toUpperCase(), extensions: [format] }],
-          })
-        : defaultPath;
+      // App Store sandbox grants must be reacquired after relaunch. Rust opens
+      // the dialog so the chosen path is the only one it accepts outside the
+      // export folder (issue 422).
+      let path: string | null = defaultPath;
+      if (isAppStoreBuild()) {
+        const chosen = await exportCommands.chooseExportPath(
+          defaultPath,
+          format,
+        );
+        if (chosen.status === "error") {
+          throw new Error(chosen.error);
+        }
+        path = chosen.data;
+      }
       if (!path) return null;
 
       if (format === "pdf") {
@@ -361,7 +366,7 @@ export function ExportModal({
             : format === "org"
               ? buildOrgContent()
               : buildTxtContent();
-        const result = await fs2Commands.writeTextFile(path, textContent);
+        const result = await exportCommands.exportText(path, textContent);
         if (result.status === "error") {
           throw new Error(result.error);
         }
