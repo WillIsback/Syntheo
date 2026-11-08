@@ -1,5 +1,5 @@
 import { Menu, MenuItem, PredefinedMenuItem } from "@tauri-apps/api/menu";
-import { type MouseEvent, useCallback } from "react";
+import { type SyntheticEvent, useCallback } from "react";
 
 export type MenuItemDef =
   | {
@@ -11,7 +11,9 @@ export type MenuItemDef =
     }
   | { separator: true };
 
-async function showNativeContextMenu(items: MenuItemDef[], e: MouseEvent) {
+// Clic droit, clic sur un bouton « ⋮ » ou touche menu clavier : tout
+// événement React suffit, seul le comportement par défaut est bloqué.
+async function showNativeContextMenu(items: MenuItemDef[], e: SyntheticEvent) {
   e.preventDefault();
   e.stopPropagation();
 
@@ -35,7 +37,7 @@ async function showNativeContextMenu(items: MenuItemDef[], e: MouseEvent) {
 
 export function useNativeContextMenu(items: MenuItemDef[]) {
   const showMenu = useCallback(
-    async (e: MouseEvent) => {
+    async (e: SyntheticEvent) => {
       await showNativeContextMenu(items, e);
     },
     [items],

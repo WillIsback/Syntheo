@@ -1295,6 +1295,7 @@ msgstr "Modèle par défaut"
 
 #: src/contacts/contact-page-header.tsx
 #: src/folders/folder-editor.tsx
+#: src/home/note-index.tsx
 #: src/session/components/note-input/transcript/renderer/selection-menu.tsx
 #: src/session/components/outer-header/overflow/delete.tsx
 #: src/sidebar/automations.tsx
@@ -1684,6 +1685,7 @@ msgstr "Exporter ou imprimer"
 msgid "Export the meeting as Markdown"
 msgstr "Exporter la réunion au format Markdown"
 
+#: src/home/note-index.tsx
 #: src/main/windows-title-bar.tsx
 msgid "Export…"
 msgstr "Exporter…"
@@ -2597,6 +2599,7 @@ msgstr "Lundi"
 msgid "Monday, Sunday, calendar, week"
 msgstr "lundi, dimanche, agenda, semaine"
 
+#: src/home/note-index.tsx
 #: src/templates/template-form.tsx
 msgid "More actions"
 msgstr "Plus d'actions"
@@ -2985,6 +2988,7 @@ msgid "Only on-premise OpenAI-compatible servers are supported (vLLM, Ollama, ll
 msgstr "Seuls les serveurs compatibles OpenAI hébergés chez vous sont pris en charge (vLLM, Ollama, serveur llama.cpp, LM Studio…). L'adresse se termine en général par /v1, par exemple http://localhost:8000/v1."
 
 #: src/calendar/components/apple/permission.tsx
+#: src/home/note-index.tsx
 #: src/shared/open-note-dialog.tsx
 msgid "Open"
 msgstr "Ouvrir"

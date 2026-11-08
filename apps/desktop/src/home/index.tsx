@@ -2,8 +2,15 @@ import { useCallback, useMemo, useState } from "react";
 
 import { HomeView } from "./home-view";
 import type { NextMeeting } from "./next-meeting";
-import { useNextMeeting, useOwnerFirstName, useRecentNotes } from "./queries";
+import { NoteExportDialog } from "./note-export-dialog";
+import {
+  type RecentNote,
+  useNextMeeting,
+  useOwnerFirstName,
+  useRecentNotes,
+} from "./queries";
 
+import { useDeleteSession } from "~/session/hooks/useDeleteSession";
 import { getOrCreateSessionForEventId } from "~/session/queries";
 import { useOpenNoteDialog } from "~/shared/open-note-dialog";
 import { getShortcutPlatform } from "~/shared/shortcuts";
@@ -60,16 +67,47 @@ export function HomePage() {
     [openCurrent],
   );
 
+  // Menu d'une note (issue 420) : même suppression que partout (toast
+  // « Annuler », sans confirmation) et même fenêtre d'export que dans la
+  // note, sans l'ouvrir.
+  const deleteSession = useDeleteSession();
+  const deleteNote = useCallback(
+    (note: RecentNote) =>
+      deleteSession(note.id, {
+        title: note.title,
+        trackingId: note.trackingId,
+      }),
+    [deleteSession],
+  );
+  const [exportSessionId, setExportSessionId] = useState<string | null>(null);
+  const [exportOpen, setExportOpen] = useState(false);
+  const exportNote = useCallback((sessionId: string) => {
+    setExportSessionId(sessionId);
+    setExportOpen(true);
+  }, []);
+
   return (
-    <HomeView
-      firstName={firstName}
-      nextMeeting={nextMeeting}
-      recentNotes={recentNotes}
-      starting={starting}
-      os={os}
-      onStart={start}
-      onOpenNote={openNote}
-      onSearch={openSearch}
-    />
+    <>
+      <HomeView
+        firstName={firstName}
+        nextMeeting={nextMeeting}
+        recentNotes={recentNotes}
+        starting={starting}
+        os={os}
+        onStart={start}
+        onOpenNote={openNote}
+        onExportNote={exportNote}
+        onDeleteNote={deleteNote}
+        onSearch={openSearch}
+      />
+      {exportSessionId ? (
+        <NoteExportDialog
+          key={exportSessionId}
+          sessionId={exportSessionId}
+          open={exportOpen}
+          onOpenChange={setExportOpen}
+        />
+      ) : null}
+    </>
   );
 }

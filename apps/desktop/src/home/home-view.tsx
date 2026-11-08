@@ -26,6 +26,8 @@ export type HomeViewProps = {
   os?: ShortcutPlatform;
   onStart: () => void;
   onOpenNote: (sessionId: string) => void;
+  onExportNote: (sessionId: string) => void;
+  onDeleteNote: (note: RecentNote) => void;
   onSearch: () => void;
 };
 
@@ -39,6 +41,8 @@ export function HomeView({
   os = "pc",
   onStart,
   onOpenNote,
+  onExportNote,
+  onDeleteNote,
   onSearch,
 }: HomeViewProps) {
   const palette = useDocumentPalette();
@@ -69,7 +73,12 @@ export function HomeView({
             {nextMeeting ? <NextMeetingLine meeting={nextMeeting} /> : null}
           </header>
           <StartButton onStart={onStart} busy={starting} os={os} />
-          <NoteIndex notes={recentNotes} onOpen={onOpenNote} />
+          <NoteIndex
+            notes={recentNotes}
+            onOpen={onOpenNote}
+            onExport={onExportNote}
+            onDelete={onDeleteNote}
+          />
           <p className="text-muted-foreground flex items-center gap-2 text-[13px]">
             <span
               aria-hidden="true"

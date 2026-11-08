@@ -47,15 +47,25 @@ export function useCurrentNoteHasContent(
 
 export function useCurrentNoteTab(
   tab: Extract<Tab, { type: "sessions" }>,
+  options: { audioExists?: boolean } = {},
+): EditorView {
+  return useSessionNoteView(tab.id, tab.state.view ?? null, options);
+}
+
+// Vue affichée pour une note, même quand elle n'est pas ouverte dans un
+// onglet (`view` nul : vue par défaut, comme à l'ouverture de la note).
+export function useSessionNoteView(
+  sessionId: string,
+  view: EditorView | null = null,
   { audioExists = false }: { audioExists?: boolean } = {},
 ): EditorView {
-  const sessionMode = useListener((state) => state.getSessionMode(tab.id));
+  const sessionMode = useListener((state) => state.getSessionMode(sessionId));
   const isLiveSessionActive = sessionMode === "active";
-  const canShowTranscript = useCanShowTranscript(tab.id, { audioExists });
+  const canShowTranscript = useCanShowTranscript(sessionId, { audioExists });
 
-  const hasTranscript = useHasTranscript(tab.id);
+  const hasTranscript = useHasTranscript(sessionId);
   const enhancedNoteIds = useEnhancedNotes(
-    tab.id,
+    sessionId,
     hasTranscript && sessionMode === "inactive",
   );
 
@@ -63,14 +73,14 @@ export function useCurrentNoteTab(
 
   return useMemo(() => {
     return computeCurrentNoteTab(
-      tab.state.view ?? null,
+      view,
       isLiveSessionActive,
       enhancedNoteIds,
       canShowTranscript,
       sharedNoteIds,
     );
   }, [
-    tab.state.view,
+    view,
     isLiveSessionActive,
     enhancedNoteIds,
     canShowTranscript,
