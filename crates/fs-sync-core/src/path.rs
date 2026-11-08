@@ -59,8 +59,11 @@ pub fn resolve_path_inside_base(base: &Path, path: &Path) -> Result<PathBuf> {
     };
     let candidate = normalize_absolute_path(&candidate)?;
 
+    // `symlink_metadata` voit aussi un lien cassé : `exists()` le prendrait
+    // pour un nom libre, et l'écriture suivrait ensuite le lien hors du coffre.
+    // Un lien cassé arrête la remontée et `canonicalize` le refuse.
     let mut existing = candidate.as_path();
-    while !existing.exists() {
+    while std::fs::symlink_metadata(existing).is_err() {
         existing = existing
             .parent()
             .ok_or_else(|| crate::Error::Path("path_parent_missing".into()))?;
@@ -236,6 +239,62 @@ mod tests {
 
         assert!(
             matches!(result, Err(crate::Error::Path(message)) if message == "path_outside_base")
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn resolve_path_inside_base_rejects_dangling_symlink_escape() {
+        let temp = assert_fs::TempDir::new().unwrap();
+        let base = temp.child("vault");
+        let outside = temp.child("outside");
+        base.create_dir_all().unwrap();
+        outside.create_dir_all().unwrap();
+        let sentinel = outside.child("created.md");
+        std::os::unix::fs::symlink(sentinel.path(), base.child("note.md").path()).unwrap();
+
+        // Même enchaînement que `write_document_batch` : résoudre puis écrire.
+        let result = resolve_path_inside_base(base.path(), Path::new("note.md"));
+        if let Ok(resolved) = &result {
+            let _ = std::fs::write(resolved, "contenu");
+        }
+
+        sentinel.assert(predicates::path::missing());
+        assert!(result.is_err());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn resolve_path_inside_base_rejects_dangling_directory_symlink() {
+        let temp = assert_fs::TempDir::new().unwrap();
+        let base = temp.child("vault");
+        base.create_dir_all().unwrap();
+        let missing_dir = temp.child("outside");
+        std::os::unix::fs::symlink(missing_dir.path(), base.child("work").path()).unwrap();
+
+        let result = resolve_path_inside_base(base.path(), Path::new("work/note.md"));
+
+        assert!(result.is_err());
+        missing_dir.assert(predicates::path::missing());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn resolve_path_inside_base_follows_a_symlink_staying_inside() {
+        let temp = assert_fs::TempDir::new().unwrap();
+        let base = temp.child("vault");
+        base.child("real").create_dir_all().unwrap();
+        std::os::unix::fs::symlink(base.child("real").path(), base.child("alias").path()).unwrap();
+
+        let result = resolve_path_inside_base(base.path(), Path::new("alias/note.md")).unwrap();
+
+        assert_eq!(
+            result,
+            base.path()
+                .canonicalize()
+                .unwrap()
+                .join("real")
+                .join("note.md")
         );
     }
 }

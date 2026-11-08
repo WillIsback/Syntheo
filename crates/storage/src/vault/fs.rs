@@ -45,7 +45,10 @@ pub fn copy_vault_items(src: &Path, dst: &Path) -> std::io::Result<()> {
     for file_name in VAULT_FILES {
         let src_file = src.join(file_name);
         if src_file.is_file() {
-            std::fs::copy(&src_file, dst.join(file_name))?;
+            // Comme `copy_dir_recursive` : `fs::copy` suivrait un lien de `dst`
+            // et écraserait le fichier qu'il désigne hors du coffre.
+            let dst_file = crate::safe_path::join_under_base(dst, file_name)?;
+            std::fs::copy(&src_file, dst_file)?;
         }
     }
 
@@ -247,6 +250,53 @@ mod tests {
         remove_owned_items(vault).unwrap();
 
         assert!(vault.join("AGENTS.md").exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn copy_vault_items_refuses_to_overwrite_a_file_reached_through_a_symlink() {
+        let temp = tempdir().unwrap();
+        let src = temp.path().join("src");
+        let dst = temp.path().join("dst");
+        let outside = temp.path().join("outside.json");
+        fs::create_dir_all(&src).unwrap();
+        fs::create_dir_all(&dst).unwrap();
+        fs::write(src.join("settings.json"), "custom vault settings").unwrap();
+        fs::write(&outside, "sentinel").unwrap();
+        std::os::unix::fs::symlink(&outside, dst.join("settings.json")).unwrap();
+
+        assert!(copy_vault_items(&src, &dst).is_err());
+        assert_eq!(fs::read_to_string(&outside).unwrap(), "sentinel");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn remove_owned_items_removes_symlinks_but_not_their_targets() {
+        let temp = tempdir().unwrap();
+        let vault = temp.path().join("vault");
+        let outside = temp.path().join("outside");
+        fs::create_dir_all(&vault).unwrap();
+        fs::create_dir_all(outside.join("sessions")).unwrap();
+        fs::write(outside.join("sessions").join("note.md"), "sentinel").unwrap();
+        fs::write(outside.join("settings.json"), "sentinel").unwrap();
+        std::os::unix::fs::symlink(outside.join("sessions"), vault.join("sessions")).unwrap();
+        std::os::unix::fs::symlink(outside.join("sessions"), vault.join("search_index")).unwrap();
+        std::os::unix::fs::symlink(outside.join("settings.json"), vault.join("settings.json"))
+            .unwrap();
+
+        remove_owned_items(&vault).unwrap();
+        remove_derived_items(&vault).unwrap();
+
+        assert!(fs::symlink_metadata(vault.join("sessions")).is_err());
+        assert!(fs::symlink_metadata(vault.join("settings.json")).is_err());
+        assert_eq!(
+            fs::read_to_string(outside.join("sessions").join("note.md")).unwrap(),
+            "sentinel"
+        );
+        assert_eq!(
+            fs::read_to_string(outside.join("settings.json")).unwrap(),
+            "sentinel"
+        );
     }
 
     #[test]
