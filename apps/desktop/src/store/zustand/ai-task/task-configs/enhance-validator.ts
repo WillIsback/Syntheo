@@ -2,6 +2,7 @@ import levenshtein from "js-levenshtein-esm";
 
 import type { EnhanceTemplate } from "@syntheo/plugin-template";
 
+import { stripNoteMarks } from "~/session/note-marks";
 import type { EarlyValidatorFn } from "~/store/zustand/ai-task/shared/validate";
 
 export function normalizeForComparison(text: string): string {
@@ -85,7 +86,11 @@ export function createEnhanceValidator(
     overrideTemplateFormatting = false,
   }: { overrideTemplateFormatting?: boolean } = {},
 ): EarlyValidatorFn {
-  const steps: PipeStep[] = [stripPreamble()];
+  // Les balises de provenance (issue 417) ne font pas partie du format.
+  const steps: PipeStep[] = [
+    (text) => ({ text: stripNoteMarks(text) }),
+    stripPreamble(),
+  ];
 
   if (!overrideTemplateFormatting) {
     steps.push(requireH1());

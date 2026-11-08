@@ -5,6 +5,7 @@ use tauri::{
 use tauri_plugin_windows::AppWindow;
 
 use super::MenuItemHandler;
+use crate::locale::Label;
 
 pub struct TrayHide;
 
@@ -12,7 +13,7 @@ impl MenuItemHandler for TrayHide {
     const ID: &'static str = "syntheo_tray_hide";
 
     fn build(app: &AppHandle<tauri::Wry>) -> Result<MenuItemKind<tauri::Wry>> {
-        let item = MenuItem::with_id(app, Self::ID, "Masquer la fenêtre", true, None::<&str>)?;
+        let item = MenuItem::with_id(app, Self::ID, Label::TrayHide.text(), true, None::<&str>)?;
         Ok(MenuItemKind::MenuItem(item))
     }
 

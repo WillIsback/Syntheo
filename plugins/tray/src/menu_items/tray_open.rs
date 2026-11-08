@@ -4,6 +4,7 @@ use tauri::{
 };
 
 use super::MenuItemHandler;
+use crate::locale::Label;
 
 pub struct TrayOpen;
 
@@ -14,7 +15,7 @@ impl MenuItemHandler for TrayOpen {
         let item = MenuItem::with_id(
             app,
             Self::ID,
-            format!("Ouvrir {}", app.package_info().name.as_str()),
+            Label::TrayOpen.fill(&[("app", app.package_info().name.as_str())]),
             true,
             None::<&str>,
         )?;

@@ -214,6 +214,20 @@ describe("Enhanced", () => {
     expect(screen.queryByRole("status")).toBeNull();
   });
 
+  it("never shows the note marks while the summary streams (issue 417)", () => {
+    hoisted.enhanceTask = {
+      status: "generating",
+      error: undefined,
+      streamedText: "Validé par ⟦Mme Kowalczyk⟧ et ⟦Jean",
+      currentStep: undefined,
+      isGenerating: true,
+    };
+
+    render(<Enhanced sessionId="session-1" enhancedNoteId="note-1" />);
+
+    expect(screen.getByText("Validé par Mme Kowalczyk et Jean")).not.toBeNull();
+  });
+
   it("keeps the completed stream visible until SQLite content arrives", () => {
     hoisted.enhanceTask = {
       status: "success",

@@ -638,6 +638,10 @@ msgstr "Automations"
 msgid "Back"
 msgstr "Back"
 
+#: src/session/components/living-document/summary-version.tsx
+msgid "Back to current version"
+msgstr "Back to current version"
+
 #: src/settings/search-index.ts
 msgid "bar, small window, control, always on top"
 msgstr "bar, small window, control, always on top"
@@ -748,6 +752,10 @@ msgstr "Change speaker"
 #: src/session/components/note-input/transcript/renderer/selection-menu.tsx
 msgid "Change speaker from here"
 msgstr "Change speaker from here"
+
+#: src/session/components/living-document/summary-switcher-view.tsx
+msgid "Change template…"
+msgstr "Change template…"
 
 #: src/session/components/speaker-naming/speaker-card.tsx
 msgid "Change the name"
@@ -1073,12 +1081,17 @@ msgstr "Control listening without reopening Syntheo."
 msgid "Copied"
 msgstr "Copied"
 
+#: src/session/components/living-document/summary-switcher.tsx
+msgid "Copied to clipboard"
+msgstr "Copied to clipboard"
+
 #: src/session/components/note-input/header-enhanced.tsx
 msgid "Copied to clipboard: {viewTitle}"
 msgstr "Copied to clipboard: {viewTitle}"
 
 #: src/main/windows-title-bar.tsx
 #: src/session/components/capsule/index.tsx
+#: src/session/components/living-document/summary-switcher-view.tsx
 #: src/session/components/note-input/header-enhanced.tsx
 #: src/session/components/note-input/header-raw.tsx
 #: src/session/components/note-input/header-transcript.tsx
@@ -1237,6 +1250,10 @@ msgstr "Created by {name}"
 msgid "Creating brief..."
 msgstr "Creating brief..."
 
+#: src/session/components/living-document/summary-switcher-view.tsx
+msgid "Current"
+msgstr "Current"
+
 #: src/settings/general/audio-settings.tsx
 msgid "Current default"
 msgstr "Current default"
@@ -1295,6 +1312,7 @@ msgstr "Default template"
 
 #: src/contacts/contact-page-header.tsx
 #: src/folders/folder-editor.tsx
+#: src/home/note-index.tsx
 #: src/session/components/note-input/transcript/renderer/selection-menu.tsx
 #: src/session/components/outer-header/overflow/delete.tsx
 #: src/sidebar/automations.tsx
@@ -1496,6 +1514,10 @@ msgstr "e.g. Weekly, HR team"
 msgid "Each example must be 12,000 characters or fewer."
 msgstr "Each example must be 12,000 characters or fewer."
 
+#: src/session/components/living-document/summary-version.tsx
+msgid "Earlier version, read only. The latest summary stays the current one."
+msgstr "Earlier version, read only. The latest summary stays the current one."
+
 #: src/session/components/version-history-dialog.tsx
 msgid "Earlier versions of this note, newest first."
 msgstr "Earlier versions of this note, newest first."
@@ -1684,9 +1706,14 @@ msgstr "Export or print"
 msgid "Export the meeting as Markdown"
 msgstr "Export the meeting as Markdown"
 
+#: src/home/note-index.tsx
 #: src/main/windows-title-bar.tsx
 msgid "Export…"
 msgstr "Export…"
+
+#: src/session/components/living-document/summary-switcher.tsx
+msgid "Failed to copy"
+msgstr "Failed to copy"
 
 #: src/session/components/note-input/header-raw.tsx
 msgid "Failed to copy memo"
@@ -2091,6 +2118,14 @@ msgstr "Include"
 #: src/settings/automations/markdown-export-options.tsx
 msgid "Include meeting ID"
 msgstr "Include meeting ID"
+
+#: src/settings/general/microphone-level.tsx
+msgid "Input level"
+msgstr "Input level"
+
+#: src/settings/general/microphone-level.tsx
+msgid "Input level unavailable"
+msgstr "Input level unavailable"
 
 #: src/settings/developers/cli.tsx
 msgid "Install"
@@ -2597,6 +2632,7 @@ msgstr "Monday"
 msgid "Monday, Sunday, calendar, week"
 msgstr "Monday, Sunday, calendar, week"
 
+#: src/home/note-index.tsx
 #: src/templates/template-form.tsx
 msgid "More actions"
 msgstr "More actions"
@@ -2633,6 +2669,10 @@ msgstr "My favorites"
 #: src/sidebar/settings-nav-groups.ts
 msgid "My meetings"
 msgstr "My meetings"
+
+#: src/session/components/living-document/summary-switcher-view.tsx
+msgid "My notes"
+msgstr "My notes"
 
 #: src/settings/ai/llm/server-card.tsx
 #: src/settings/ai/stt/server-card.tsx
@@ -2816,6 +2856,14 @@ msgstr "No matching people"
 msgid "No meeting type found"
 msgstr "No meeting type found"
 
+#: src/settings/general/audio-settings.tsx
+msgid "No microphone detected. Plug in a microphone or check permissions."
+msgstr "No microphone detected. Plug in a microphone or check permissions."
+
+#: src/store/zustand/listener/general-live.ts
+msgid "No microphone detected. Plug in a microphone, then retry. Audio missing during this interruption cannot be recovered."
+msgstr "No microphone detected. Plug in a microphone, then retry. Audio missing during this interruption cannot be recovered."
+
 #: src/session/components/note-input/transcript/renderer/speaker-assign.tsx
 msgid "No people"
 msgstr "No people"
@@ -2915,6 +2963,10 @@ msgstr "Note is Locked"
 msgid "Note steps"
 msgstr "Note steps"
 
+#: src/session/components/living-document/summary-switcher-view.tsx
+msgid "Note view"
+msgstr "Note view"
+
 #: src/sidebar/toast/undo-delete-toast.tsx
 msgid "notes"
 msgstr "notes"
@@ -2985,6 +3037,7 @@ msgid "Only on-premise OpenAI-compatible servers are supported (vLLM, Ollama, ll
 msgstr "Only on-premise OpenAI-compatible servers are supported (vLLM, Ollama, llama.cpp server, LM Studio…). The address usually ends with /v1, for example http://localhost:8000/v1."
 
 #: src/calendar/components/apple/permission.tsx
+#: src/home/note-index.tsx
 #: src/shared/open-note-dialog.tsx
 msgid "Open"
 msgstr "Open"
@@ -3403,6 +3456,7 @@ msgstr "Redo"
 msgid "Refresh calendars"
 msgstr "Refresh calendars"
 
+#: src/session/components/living-document/summary-switcher-view.tsx
 #: src/session/components/note-input/header-enhanced.tsx
 #: src/session/components/note-input/template-picker.tsx
 msgid "Regenerate"
@@ -3415,6 +3469,10 @@ msgstr "Regenerate message"
 #: src/session/components/speaker-naming/bar.tsx
 msgid "Regenerate summary with names"
 msgstr "Regenerate summary with names"
+
+#: src/session/components/living-document/summary-version.tsx
+msgid "Regenerate with my notes"
+msgstr "Regenerate with my notes"
 
 #: src/settings/developers/cli.tsx
 msgid "Reinstall"
@@ -3441,6 +3499,7 @@ msgstr "reminder, calendar, meeting, 5 minutes, alert"
 msgid "Reminders"
 msgstr "Reminders"
 
+#: src/session/components/living-document/summary-switcher-view.tsx
 #: src/session/components/note-input/header-enhanced.tsx
 #: src/sidebar/automations.tsx
 msgid "Remove"
@@ -3716,6 +3775,10 @@ msgstr "Search a setting"
 #: src/templates/template-sidebar.tsx
 msgid "Search a template"
 msgstr "Search a template"
+
+#: src/settings/general/audio-settings.tsx
+msgid "Search again"
+msgstr "Search again"
 
 #: src/sidebar/automations.tsx
 msgid "Search automations..."
@@ -4278,6 +4341,10 @@ msgstr "Suggesting…"
 msgid "Suggestions"
 msgstr "Suggestions"
 
+#: src/session/components/living-document/summary-switcher-view.tsx
+msgid "Summaries"
+msgstr "Summaries"
+
 #: src/contacts/details.tsx
 #: src/edit/tab-content.tsx
 #: src/session/components/note-input/header-shared.tsx
@@ -4285,6 +4352,10 @@ msgstr "Suggestions"
 #: src/settings/automations/markdown-export-options.tsx
 msgid "Summary"
 msgstr "Summary"
+
+#: src/session/components/living-document/summary-switcher-view.tsx
+msgid "Summary · v{shownVersion}"
+msgstr "Summary · v{shownVersion}"
 
 #: src/settings/general/notification.tsx
 #: src/settings/search-index.ts
@@ -4320,13 +4391,13 @@ msgstr "Summary preview"
 msgid "Summary ready"
 msgstr "Summary ready"
 
-#: src/session/components/living-document/summary-switcher.tsx
-msgid "Summary templates"
-msgstr "Summary templates"
-
 #: src/chat/components/message/tool/edit-summary.tsx
 msgid "Summary updated"
 msgstr "Summary updated"
+
+#: src/session/components/living-document/summary-switcher-view.tsx
+msgid "Summary versions"
+msgstr "Summary versions"
 
 #: src/session/components/note-input/enhanced-actions.ts
 #: src/session/hooks/useAutoEnhance.ts
@@ -5093,10 +5164,22 @@ msgstr "Used for transcription and automatic summary language detection."
 msgid "Verifying the SQLite migration status"
 msgstr "Verifying the SQLite migration status"
 
+#: src/session/components/living-document/summary-version.tsx
+msgid "Version {versionNumber}"
+msgstr "Version {versionNumber}"
+
+#: src/session/components/living-document/summary-version.tsx
+msgid "Version {versionNumber} · {date}"
+msgstr "Version {versionNumber} · {date}"
+
 #: src/session/components/outer-header/overflow/index.tsx
 #: src/session/components/version-history-dialog.tsx
 msgid "Version history"
 msgstr "Version history"
+
+#: src/session/components/living-document/summary-switcher-view.tsx
+msgid "Versions"
+msgstr "Versions"
 
 #: src/main/windows-title-bar.tsx
 msgid "View"
@@ -5293,6 +5376,10 @@ msgstr "Your notes"
 #: src/shared/useMainShortcuts.tsx
 msgid "Your notes are saved automatically."
 msgstr "Your notes are saved automatically."
+
+#: src/session/components/living-document/summary-version.tsx
+msgid "Your notes have changed since this summary."
+msgstr "Your notes have changed since this summary."
 
 #: src/services/enhancer/summary-notification.ts
 msgid "Your summary is ready."

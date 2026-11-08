@@ -6,6 +6,7 @@ use tauri_plugin_windows::{AppWindow, OpenTab, TabInput, WindowsPluginExt};
 use tauri_specta::Event;
 
 use super::MenuItemHandler;
+use crate::locale::Label;
 
 pub struct TraySettings;
 
@@ -13,7 +14,13 @@ impl MenuItemHandler for TraySettings {
     const ID: &'static str = "syntheo_tray_settings";
 
     fn build(app: &AppHandle<tauri::Wry>) -> Result<MenuItemKind<tauri::Wry>> {
-        let item = MenuItem::with_id(app, Self::ID, "Paramètres", true, None::<&str>)?;
+        let item = MenuItem::with_id(
+            app,
+            Self::ID,
+            Label::TraySettings.text(),
+            true,
+            None::<&str>,
+        )?;
         Ok(MenuItemKind::MenuItem(item))
     }
 

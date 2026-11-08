@@ -111,6 +111,7 @@ export const Enhanced = forwardRef<
           enhancedNoteId={enhancedNoteId}
           content={enhancedNote.content}
           noteLines={noteLines}
+          notePassages={enhancedNote.notePassages ?? null}
           onNavigateToTitle={onNavigateToTitle}
           onViewReady={onViewReady}
           onViewDisposed={onViewDisposed}

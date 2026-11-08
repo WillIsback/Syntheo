@@ -29,6 +29,7 @@
     "**/gen/**",
     "**/generated/**",
     "**/permissions/**",
+    "crates/*/tests/fixtures/**",
     "**/migrations/**/*.sql",
     "**/tests/*.sql",
     "**/charts/**",

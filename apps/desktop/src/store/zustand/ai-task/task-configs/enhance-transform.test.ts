@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { enhanceTransform } from "./enhance-transform";
 
+import { noteFingerprint } from "~/session/note-fingerprint";
 import { assertCanonicalTemplateSections } from "~/templates/codec";
 
 const mocks = vi.hoisted(() => ({
@@ -199,6 +200,22 @@ describe("enhanceTransform.transformArgs", () => {
     );
 
     expect(result.preMeetingMemo).toBe("![pre](asset://localhost/pre.png)");
+  });
+
+  // Issue 415 : l'empreinte de la note brute lue au départ de la génération
+  // est gardée avec la synthèse pour savoir si la note a changé depuis.
+  it("fingerprints the raw note the summary is generated from", async () => {
+    const result = await enhanceTransform.transformArgs(
+      {
+        sessionId: "session-1",
+        enhancedNoteId: "note-1",
+      },
+      settingsValues,
+    );
+
+    expect(result.sourceNoteFingerprint).toBe(
+      noteFingerprint("![post](asset://localhost/post.png)", "markdown"),
+    );
   });
 
   it("uses the edited memo headings for its applied template", async () => {

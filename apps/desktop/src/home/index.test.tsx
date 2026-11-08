@@ -9,12 +9,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { NextMeeting } from "./next-meeting";
 
+import type { MenuItemDef } from "~/shared/hooks/useNativeContextMenu";
+
 const mocks = vi.hoisted(() => ({
   platform: vi.fn(() => "linux"),
   openCurrent: vi.fn(),
   newNote: vi.fn(),
   openSearch: vi.fn(),
   getOrCreateSessionForEventId: vi.fn(),
+  deleteSession: vi.fn(),
+  menus: [] as MenuItemDef[][],
   nextMeeting: null as NextMeeting | null,
   firstName: "Camille",
   recentNotes: [
@@ -23,6 +27,7 @@ const mocks = vi.hoisted(() => ({
       title: "Comité projet",
       createdAt: "2024-10-28T10:00:00",
       durationMs: 0,
+      trackingId: "tracking-1",
     },
   ],
 }));
@@ -37,6 +42,34 @@ vi.mock("./queries", () => ({
 
 vi.mock("~/session/queries", () => ({
   getOrCreateSessionForEventId: mocks.getOrCreateSessionForEventId,
+}));
+
+vi.mock("~/session/hooks/useDeleteSession", () => ({
+  useDeleteSession: () => mocks.deleteSession,
+}));
+
+vi.mock("~/shared/hooks/useNativeContextMenu", () => ({
+  useNativeContextMenu:
+    (items: MenuItemDef[]) => (event: { preventDefault: () => void }) => {
+      event.preventDefault();
+      mocks.menus.push(items);
+    },
+}));
+
+// La fenêtre d'export réelle lit la note en base : on vérifie seulement
+// qu'elle est montée pour la bonne note.
+vi.mock("./note-export-dialog", () => ({
+  NoteExportDialog: ({
+    sessionId,
+    open,
+  }: {
+    sessionId: string;
+    open: boolean;
+  }) => (
+    <div data-testid="export-dialog" data-session={sessionId}>
+      {open ? "open" : "closed"}
+    </div>
+  ),
 }));
 
 vi.mock("~/shared/open-note-dialog", () => ({
@@ -69,6 +102,7 @@ function meeting(imminent: boolean): NextMeeting {
 describe("HomePage", () => {
   beforeEach(() => {
     mocks.nextMeeting = null;
+    mocks.menus = [];
     mocks.platform.mockReturnValue("linux");
     mocks.getOrCreateSessionForEventId.mockResolvedValue("session-event");
   });
@@ -127,5 +161,41 @@ describe("HomePage", () => {
     expect(
       screen.getByRole("button", { name: /Start a meeting/ }).textContent,
     ).toContain("⌘ N");
+  });
+
+  it("Supprimer depuis le menu d'une note passe par useDeleteSession", () => {
+    render(<HomePage />);
+    fireEvent.contextMenu(screen.getByRole("row"));
+
+    const item = mocks.menus[mocks.menus.length - 1]?.find(
+      (entry) => !("separator" in entry) && entry.id === "delete",
+    );
+    act(() => {
+      if (item && !("separator" in item)) item.action();
+    });
+
+    expect(mocks.deleteSession).toHaveBeenCalledWith("s1", {
+      title: "Comité projet",
+      trackingId: "tracking-1",
+    });
+    expect(mocks.openCurrent).not.toHaveBeenCalled();
+  });
+
+  it("Exporter… ouvre la fenêtre d'export de la note sans l'ouvrir", () => {
+    render(<HomePage />);
+    expect(screen.queryByTestId("export-dialog")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "More actions" }));
+    const item = mocks.menus[mocks.menus.length - 1]?.find(
+      (entry) => !("separator" in entry) && entry.id === "export",
+    );
+    act(() => {
+      if (item && !("separator" in item)) item.action();
+    });
+
+    const dialog = screen.getByTestId("export-dialog");
+    expect(dialog.getAttribute("data-session")).toBe("s1");
+    expect(dialog.textContent).toBe("open");
+    expect(mocks.openCurrent).not.toHaveBeenCalled();
   });
 });

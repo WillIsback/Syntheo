@@ -43,6 +43,12 @@ export type EnhancedNoteRecord = {
   content: string;
   templateId: string;
   position: number;
+  // Issue 415 : quand la synthèse a été générée, et l'empreinte de la note
+  // brute qui a servi (null pour une synthèse plus ancienne).
+  generatedAt?: string | null;
+  sourceNoteFingerprint?: string | null;
+  // Issue 417 : passages validés venus des notes ; null : aucune balise.
+  notePassages?: string[] | null;
 };
 
 export type SessionParticipantRecord = {

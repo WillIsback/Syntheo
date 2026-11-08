@@ -89,7 +89,25 @@ pub fn copy(source_dir: &Path, target_dir: &Path) -> std::io::Result<bool> {
         ));
     }
 
-    std::fs::copy(&source_path, &target_path)?;
+    // `create_new` refuse tout nom déjà pris, lien cassé compris : `fs::copy`
+    // suivrait un tel lien et créerait ou écraserait un fichier hors du coffre.
+    let mut source = std::fs::File::open(&source_path)?;
+    let mut target = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&target_path)
+        .map_err(|error| {
+            if error.kind() == std::io::ErrorKind::AlreadyExists {
+                std::io::Error::new(std::io::ErrorKind::AlreadyExists, "audio_target_exists")
+            } else {
+                error
+            }
+        })?;
+    if let Err(error) = std::io::copy(&mut source, &mut target) {
+        drop(target);
+        let _ = std::fs::remove_file(&target_path);
+        return Err(error);
+    }
     Ok(true)
 }
 
@@ -596,6 +614,75 @@ mod tests {
 
         assert!(deleted.is_empty());
         assert!(outside_dir.join("audio.wav").exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn copy_refuses_a_dangling_symlink_in_the_target_session() {
+        let temp = TempDir::new().unwrap();
+        let source_dir = temp.path().join("source");
+        let target_dir = temp.path().join("target");
+        let outside = temp.path().join("outside");
+        std::fs::create_dir_all(&source_dir).unwrap();
+        std::fs::create_dir_all(&target_dir).unwrap();
+        std::fs::create_dir_all(&outside).unwrap();
+        write_audio(&source_dir.join("audio.mp3"));
+        let sentinel = outside.join("stolen.mp3");
+        std::os::unix::fs::symlink(&sentinel, target_dir.join("audio.mp3")).unwrap();
+
+        let error = copy(&source_dir, &target_dir).unwrap_err();
+
+        assert_eq!(error.kind(), std::io::ErrorKind::AlreadyExists);
+        assert!(!sentinel.exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn copy_does_not_overwrite_a_file_reached_through_a_symlink() {
+        let temp = TempDir::new().unwrap();
+        let source_dir = temp.path().join("source");
+        let target_dir = temp.path().join("target");
+        let outside = temp.path().join("outside");
+        std::fs::create_dir_all(&source_dir).unwrap();
+        std::fs::create_dir_all(&target_dir).unwrap();
+        std::fs::create_dir_all(&outside).unwrap();
+        write_audio(&source_dir.join("audio.mp3"));
+        std::fs::write(outside.join("keep.mp3"), b"sentinel").unwrap();
+        std::os::unix::fs::symlink(outside.join("keep.mp3"), target_dir.join("audio.mp3")).unwrap();
+
+        assert!(copy(&source_dir, &target_dir).is_err());
+        assert_eq!(
+            std::fs::read(outside.join("keep.mp3")).unwrap(),
+            b"sentinel"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn delete_removes_symlinks_but_not_their_targets() {
+        let temp = TempDir::new().unwrap();
+        let session_dir = temp.path().join("session");
+        let outside = temp.path().join("outside");
+        std::fs::create_dir_all(&session_dir).unwrap();
+        std::fs::create_dir_all(outside.join("recovery")).unwrap();
+        std::fs::write(outside.join("audio.mp3"), b"sentinel").unwrap();
+        std::fs::write(outside.join("recovery").join("chunk.mp3"), b"sentinel").unwrap();
+        std::os::unix::fs::symlink(outside.join("audio.mp3"), session_dir.join("audio.mp3"))
+            .unwrap();
+        std::os::unix::fs::symlink(outside.join("audio.mp3"), session_dir.join("audio_mic.wav"))
+            .unwrap();
+        std::os::unix::fs::symlink(outside.join("recovery"), session_dir.join("audio-recovery"))
+            .unwrap();
+
+        assert!(delete(&session_dir).unwrap());
+
+        assert!(std::fs::symlink_metadata(session_dir.join("audio.mp3")).is_err());
+        assert!(std::fs::symlink_metadata(session_dir.join("audio-recovery")).is_err());
+        assert_eq!(
+            std::fs::read(outside.join("audio.mp3")).unwrap(),
+            b"sentinel"
+        );
+        assert!(outside.join("recovery").join("chunk.mp3").exists());
     }
 
     #[test]

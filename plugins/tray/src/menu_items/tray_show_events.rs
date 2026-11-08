@@ -5,6 +5,7 @@ use tauri::{
 
 use super::MenuItemHandler;
 use crate::TrayPluginExt;
+use crate::locale::Label;
 
 pub struct TrayShowEvents;
 
@@ -15,7 +16,7 @@ impl MenuItemHandler for TrayShowEvents {
         let item = CheckMenuItem::with_id(
             app,
             Self::ID,
-            "Afficher les prochaines réunions",
+            Label::TrayShowEvents.text(),
             true,
             app.tray().shows_events(),
             None::<&str>,

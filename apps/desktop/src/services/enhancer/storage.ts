@@ -383,6 +383,76 @@ function ensureSummaryDocumentWithMetadata(
   });
 }
 
+// Versions remplacées gardées par synthèse (issue 415), comme
+// `MAX_SUMMARY_VERSIONS` côté Rust (crates/db-app/src/summary_ops.rs).
+const MAX_SUMMARY_VERSIONS = 20;
+
+// Changer le modèle d'une synthèse la vide avant de la régénérer : son texte
+// devient d'abord une version remplacée, comme le fait l'enregistrement d'une
+// régénération côté Rust. Une synthèse vide ne crée pas de version.
+function keepReplacedSummaryVersionStatements(
+  sessionId: string,
+  noteId: string,
+  supersededAt: string,
+): Array<{ sql: string; params: unknown[] }> {
+  return [
+    {
+      sql: `
+        INSERT INTO session_summary_versions (
+          id, workspace_id, document_id, session_id, version, template_id,
+          title, body_format, body, generation_metadata_json, generated_at,
+          superseded_at
+        )
+        SELECT
+          lower(hex(randomblob(16))),
+          document.workspace_id,
+          document.id,
+          document.session_id,
+          COALESCE((
+            SELECT MAX(previous.version)
+            FROM session_summary_versions AS previous
+            WHERE previous.document_id = document.id
+          ), 0) + 1,
+          document.template_id,
+          document.title,
+          document.body_format,
+          document.body,
+          document.generation_metadata_json,
+          COALESCE(
+            CASE
+              WHEN json_valid(document.generation_metadata_json)
+              THEN CAST(json_extract(
+                document.generation_metadata_json, '$.generatedAt'
+              ) AS TEXT)
+            END,
+            document.updated_at
+          ),
+          ?
+        FROM session_documents AS document
+        WHERE document.id = ?
+          AND document.session_id = ?
+          AND document.kind IN ('summary', 'template_output')
+          AND document.body <> ''
+          AND document.deleted_at IS NULL
+      `,
+      params: [supersededAt, noteId, sessionId],
+    },
+    {
+      sql: `
+        DELETE FROM session_summary_versions
+        WHERE document_id = ?
+          AND id NOT IN (
+            SELECT id FROM session_summary_versions
+            WHERE document_id = ?
+            ORDER BY version DESC
+            LIMIT ?
+          )
+      `,
+      params: [noteId, noteId, MAX_SUMMARY_VERSIONS],
+    },
+  ];
+}
+
 export function replaceSummaryDocumentTemplate({
   sessionId,
   noteId,
@@ -398,6 +468,7 @@ export function replaceSummaryDocumentTemplate({
     const normalizedTemplateId = templateId ?? "";
     const now = new Date().toISOString();
     await executeTransaction([
+      ...keepReplacedSummaryVersionStatements(sessionId, noteId, now),
       {
         sql: `
           UPDATE session_documents

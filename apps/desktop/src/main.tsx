@@ -26,6 +26,7 @@ import { AppLockGate } from "./lock/gate";
 import { FloatingMeetingWindowHost } from "./meeting-float/host";
 import { routeTree } from "./routeTree.gen";
 import { EventListeners } from "./services/event-listeners";
+import { NativeMenuLocaleSync } from "./services/native-menu-locale";
 import { TaskManager } from "./services/task-manager";
 import {
   createTaskScheduler,
@@ -113,6 +114,7 @@ function ReadyApp() {
   return (
     <AppThemeProvider>
       <AppI18nProvider>
+        {isMainWindow ? <NativeMenuLocaleSync /> : null}
         <TaskSchedulerProvider scheduler={scheduler}>
           <AppLockGate>
             <App />

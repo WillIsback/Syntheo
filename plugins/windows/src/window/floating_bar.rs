@@ -200,6 +200,27 @@ pub(crate) mod layout {
         preferred.or_else(|| available().into_iter().next())
     }
 
+    /// Taille verrouillée (min = max) du panneau sous Linux.
+    ///
+    /// Un compositeur en mosaïque (Hyprland, sway…) décide au premier affichage si une fenêtre
+    /// flotte : seule une fenêtre de taille fixe, min = max et non nulle, y échappe. Or tao
+    /// n'applique `resizable(false)` qu'au premier `configure`, après cette décision : le panneau
+    /// était mis en mosaïque et couvrait tout l'écran (issue 416). Des contraintes posées avant
+    /// l'affichage, puis suivies à chaque redimensionnement, l'annoncent fixe dès le départ.
+    #[cfg(any(test, target_os = "linux"))]
+    pub fn fixed_size_constraints(width: f64, height: f64) -> tauri::WindowSizeConstraints {
+        use tauri::{LogicalUnit, PixelUnit};
+
+        let width = Some(PixelUnit::Logical(LogicalUnit::new(width)));
+        let height = Some(PixelUnit::Logical(LogicalUnit::new(height)));
+        tauri::WindowSizeConstraints {
+            min_width: width,
+            min_height: height,
+            max_width: width,
+            max_height: height,
+        }
+    }
+
     pub fn bottom_center_origin(
         work_x: f64,
         work_y: f64,
@@ -460,6 +481,10 @@ mod cross_platform {
         .visible(false)
         .focused(false)
         .decorations(false);
+        // Taille fixe annoncée avant le premier affichage, pour que Hyprland la fasse flotter.
+        #[cfg(target_os = "linux")]
+        let builder =
+            builder.inner_size_constraints(super::layout::fixed_size_constraints(width, height));
         #[cfg(any(not(target_os = "macos"), feature = "macos-private-api"))]
         let builder = builder.transparent(true);
         let window = builder
@@ -509,7 +534,7 @@ mod cross_platform {
                 });
         if force_default_position {
             let origin = default_origin(window, size.0, size.1)?;
-            window.set_size(Size::Logical(LogicalSize::new(size.0, size.1)))?;
+            set_fixed_size(window, LogicalSize::new(size.0, size.1))?;
             // Sans écran connu, le compositeur place la fenêtre lui-même.
             if let Some((x, y)) = origin {
                 window.set_position(Position::Logical(LogicalPosition::new(x, y)))?;
@@ -533,7 +558,7 @@ mod cross_platform {
             if (current_size.width - size.0).abs() >= 0.5
                 || (current_size.height - size.1).abs() >= 0.5
             {
-                window.set_size(Size::Logical(next_size))?;
+                set_fixed_size(window, next_size)?;
             }
             return Ok(old_layout);
         };
@@ -555,7 +580,7 @@ mod cross_platform {
         if (current_size.width - frame.2).abs() >= 0.5
             || (current_size.height - frame.3).abs() >= 0.5
         {
-            window.set_size(Size::Logical(LogicalSize::new(frame.2, frame.3)))?;
+            set_fixed_size(window, LogicalSize::new(frame.2, frame.3))?;
         }
         if (current_position.x - frame.0).abs() >= 0.5
             || (current_position.y - frame.1).abs() >= 0.5
@@ -566,6 +591,21 @@ mod cross_platform {
             controls_center_x: anchor.0 - frame.0,
             expands_upward: upwards,
         })
+    }
+
+    /// Redimensionne le panneau. Sous Linux, les contraintes min = max suivent la nouvelle taille
+    /// avant le redimensionnement, sans quoi GTK le bornerait à l'ancienne.
+    fn set_fixed_size(
+        window: &WebviewWindow<tauri::Wry>,
+        size: LogicalSize<f64>,
+    ) -> Result<(), Error> {
+        #[cfg(target_os = "linux")]
+        window.set_size_constraints(super::layout::fixed_size_constraints(
+            size.width,
+            size.height,
+        ))?;
+        window.set_size(Size::Logical(size))?;
+        Ok(())
     }
 
     /// Position par défaut du panneau, en bas au centre de son écran ; `None` si aucun écran
@@ -796,5 +836,30 @@ mod tests {
     #[test]
     fn no_known_monitor_is_not_an_error() {
         assert_eq!(layout::pick_monitor::<&str>(None, Vec::new), None);
+    }
+
+    // Issue 416 : Hyprland (et sway) ne laissent flotter qu'une fenêtre de taille fixe, min = max
+    // et non nulle, dès son affichage. Chaque taille du panneau doit donc être verrouillée.
+    #[test]
+    fn every_panel_size_is_locked_so_tiling_compositors_float_it() {
+        use super::FloatingBarStatus::{Paused, Recording};
+        use tauri::{LogicalUnit, PixelUnit};
+
+        let sizes = [
+            layout::container_size(false, false),
+            layout::container_size(true, true),
+            layout::dictation_container_size(false),
+            layout::meeting_container_size(&meeting_state(Recording, false)),
+            layout::meeting_container_size(&meeting_state(Paused, true)),
+        ];
+        for (width, height) in sizes {
+            let constraints = layout::fixed_size_constraints(width, height);
+            let logical = |value: f64| Some(PixelUnit::Logical(LogicalUnit::new(value)));
+            assert!(width > 0.0 && height > 0.0);
+            assert_eq!(constraints.min_width, logical(width));
+            assert_eq!(constraints.max_width, logical(width));
+            assert_eq!(constraints.min_height, logical(height));
+            assert_eq!(constraints.max_height, logical(height));
+        }
     }
 }

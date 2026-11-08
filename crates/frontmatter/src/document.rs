@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
-use serde_yaml::Value;
+use serde_norway::Value;
 
 use crate::Error;
 
@@ -34,7 +34,7 @@ fn sort_value(value: Value) -> Value {
                 let b_str = value_to_sort_key(b);
                 a_str.cmp(&b_str)
             });
-            let mut sorted = serde_yaml::Mapping::new();
+            let mut sorted = serde_norway::Mapping::new();
             for (k, v) in entries {
                 sorted.insert(k, sort_value(v));
             }
@@ -51,7 +51,7 @@ fn value_to_sort_key(value: &Value) -> String {
         Value::Number(n) => n.to_string(),
         Value::Bool(b) => b.to_string(),
         Value::Null => String::new(),
-        _ => serde_yaml::to_string(value).unwrap_or_default(),
+        _ => serde_norway::to_string(value).unwrap_or_default(),
     }
 }
 
@@ -94,9 +94,9 @@ impl<T: DeserializeOwned> FromStr for Document<T> {
             .unwrap_or(after_closing);
 
         let frontmatter: T = if yaml_str.trim().is_empty() {
-            serde_yaml::from_str("{}")?
+            serde_norway::from_str("{}")?
         } else {
-            serde_yaml::from_str(yaml_str)?
+            serde_norway::from_str(yaml_str)?
         };
 
         let content = strip_line_ending(strip_line_ending(after_closing)).to_string();
@@ -110,9 +110,9 @@ impl<T: DeserializeOwned> FromStr for Document<T> {
 
 impl<T: Serialize> Document<T> {
     pub fn render(&self) -> Result<String, Error> {
-        let value = serde_yaml::to_value(&self.frontmatter)?;
+        let value = serde_norway::to_value(&self.frontmatter)?;
         let sorted = sort_value(value);
-        let yaml = serde_yaml::to_string(&sorted)?;
+        let yaml = serde_norway::to_string(&sorted)?;
         let mut output = String::new();
         output.push_str(DELIMITER);
         output.push('\n');

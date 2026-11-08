@@ -8,7 +8,7 @@ pub struct ParsedDocument {
     pub content: String,
 }
 
-fn yaml_to_json(yaml: serde_yaml::Value) -> serde_json::Value {
+fn yaml_to_json(yaml: serde_norway::Value) -> serde_json::Value {
     serde_json::to_value(&yaml).unwrap_or(serde_json::Value::Null)
 }
 
@@ -16,7 +16,7 @@ impl FromStr for ParsedDocument {
     type Err = crate::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match Document::<HashMap<String, serde_yaml::Value>>::from_str(s) {
+        match Document::<HashMap<String, serde_norway::Value>>::from_str(s) {
             Ok(doc) => {
                 let frontmatter: HashMap<String, serde_json::Value> = doc
                     .frontmatter
@@ -44,11 +44,11 @@ impl ParsedDocument {
             return Ok(self.content.clone());
         }
 
-        let frontmatter_yaml: HashMap<String, serde_yaml::Value> = self
+        let frontmatter_yaml: HashMap<String, serde_norway::Value> = self
             .frontmatter
             .iter()
             .map(|(k, v)| {
-                let yaml_value = serde_yaml::to_value(v).unwrap_or(serde_yaml::Value::Null);
+                let yaml_value = serde_norway::to_value(v).unwrap_or(serde_norway::Value::Null);
                 (k.clone(), yaml_value)
             })
             .collect();

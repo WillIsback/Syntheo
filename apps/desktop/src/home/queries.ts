@@ -10,6 +10,7 @@ import { pickNextMeeting, type NextMeeting } from "./next-meeting";
 import { useIgnoredEvents } from "~/calendar/ignored-events";
 import { usePersonalContact } from "~/contacts/queries";
 import { useLiveQuery } from "~/db";
+import { getSessionEvent } from "~/session/utils";
 import { useOwnerUserId } from "~/shared/owner-user";
 import { useUndoDelete } from "~/store/zustand/undo-delete";
 
@@ -108,6 +109,8 @@ export type RecentNote = {
   title: string;
   createdAt: string;
   durationMs: number;
+  // Événement d'agenda lié : la suppression l'ignore, comme ailleurs.
+  trackingId: string | null;
 };
 
 type RecentNoteSqlRow = {
@@ -115,6 +118,7 @@ type RecentNoteSqlRow = {
   title: string | null;
   created_at: string | null;
   duration_ms: number | null;
+  event_json?: string | null;
 };
 
 export function mapRecentNoteRows(
@@ -125,6 +129,7 @@ export function mapRecentNoteRows(
     title: (row.title ?? "").trim(),
     createdAt: row.created_at ?? "",
     durationMs: Math.max(0, Number(row.duration_ms ?? 0)),
+    trackingId: getSessionEvent(row)?.tracking_id || null,
   }));
 }
 
@@ -141,6 +146,7 @@ export function useRecentNotes(limit = RECENT_NOTES_LIMIT): RecentNote[] {
           session.id,
           session.title,
           session.created_at,
+          session.event_json,
           COALESCE((
             SELECT SUM(transcript.ended_at_ms - transcript.started_at_ms)
             FROM transcripts AS transcript

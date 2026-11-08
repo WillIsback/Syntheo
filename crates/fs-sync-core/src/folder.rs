@@ -1,61 +1,74 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
+
+use syntheo_storage::session_tree::{Visit, walk_session_tree};
 
 use crate::path::{get_parent_folder_path, is_uuid};
 use crate::types::{FolderInfo, FolderSessionUpdate, ListFoldersResult};
 
+/// Racine du parcours et préfixe des chemins relatifs qu'il rend.
+fn walk_root(sessions_dir: &Path, current_path: &str) -> PathBuf {
+    if current_path.is_empty() {
+        sessions_dir.to_path_buf()
+    } else {
+        sessions_dir.join(current_path)
+    }
+}
+
+fn join_folder_path(current_path: &str, relative: &str) -> String {
+    if current_path.is_empty() {
+        relative.to_string()
+    } else {
+        format!("{current_path}/{relative}")
+    }
+}
+
+/// Liste les sessions et les dossiers qui en contiennent.
+///
+/// Utilise le parcours partagé `session_tree` : un dossier lié n'est listé que
+/// si sa cible reste dans le coffre, comme pour la recherche d'une session et
+/// les suppressions (issues 426 et 427).
 pub fn scan_directory_recursive(
     sessions_dir: &Path,
     current_path: &str,
     result: &mut ListFoldersResult,
 ) {
-    let full_path = if current_path.is_empty() {
-        sessions_dir.to_path_buf()
-    } else {
-        sessions_dir.join(current_path)
-    };
-
-    let entries = match std::fs::read_dir(&full_path) {
-        Ok(entries) => entries,
-        Err(_) => return,
-    };
-
-    for entry in entries.flatten() {
-        let path = entry.path();
-        if !path.is_dir() {
-            continue;
-        }
-
-        let name = match path.file_name().and_then(|n| n.to_str()) {
-            Some(name) => name.to_string(),
-            None => continue,
-        };
-
-        let entry_path = if current_path.is_empty() {
-            name.clone()
-        } else {
-            format!("{}/{}", current_path, name)
-        };
-
-        let has_meta_json = sessions_dir.join(&entry_path).join("_meta.json").exists();
-
-        if has_meta_json {
+    let root = walk_root(sessions_dir, current_path);
+    let mut session_folders = Vec::new();
+    let _ = walk_session_tree(sessions_dir, &root, |dir| {
+        if dir.path.join("_meta.json").exists() {
+            let parent = get_parent_folder_path(dir.relative)
+                .map(|parent| join_folder_path(current_path, &parent))
+                .unwrap_or_else(|| current_path.to_string());
             result
                 .session_folder_map
-                .insert(name, current_path.to_string());
-        } else if !is_uuid(&name) {
-            let prev_session_count = result.session_folder_map.len();
-            scan_directory_recursive(sessions_dir, &entry_path, result);
-            let has_sessions = result.session_folder_map.len() > prev_session_count;
-
-            if has_sessions {
-                result.folders.insert(
-                    entry_path.clone(),
-                    FolderInfo {
-                        name,
-                        parent_folder_id: get_parent_folder_path(&entry_path),
-                    },
-                );
+                .insert(dir.name.to_string(), parent);
+            if let Some(parent) = get_parent_folder_path(dir.relative) {
+                session_folders.push(parent);
             }
+            Visit::Skip
+        } else if is_uuid(dir.name) {
+            Visit::Skip
+        } else {
+            Visit::Descend
+        }
+    });
+
+    for relative in session_folders {
+        let mut folder = Some(relative);
+        while let Some(current) = folder {
+            let entry_path = join_folder_path(current_path, &current);
+            folder = get_parent_folder_path(&current);
+            if result.folders.contains_key(&entry_path) {
+                continue;
+            }
+            let name = current.rsplit('/').next().unwrap_or(&current).to_string();
+            result.folders.insert(
+                entry_path.clone(),
+                FolderInfo {
+                    name,
+                    parent_folder_id: get_parent_folder_path(&entry_path),
+                },
+            );
         }
     }
 }
@@ -65,46 +78,37 @@ pub fn collect_session_updates(
     current_path: &str,
     result: &mut Vec<FolderSessionUpdate>,
 ) {
-    let full_path = if current_path.is_empty() {
-        sessions_dir.to_path_buf()
-    } else {
-        sessions_dir.join(current_path)
-    };
-
-    let entries = match std::fs::read_dir(&full_path) {
-        Ok(entries) => entries,
-        Err(_) => return,
-    };
-
-    for entry in entries.flatten() {
-        let path = entry.path();
-        if !path.is_dir() {
-            continue;
+    let root = walk_root(sessions_dir, current_path);
+    let _ = walk_session_tree(sessions_dir, &root, |dir| {
+        if !is_uuid(dir.name) {
+            return Visit::Descend;
         }
-
-        let name = match path.file_name().and_then(|n| n.to_str()) {
-            Some(name) => name.to_string(),
-            None => continue,
-        };
-
-        let entry_path = if current_path.is_empty() {
-            name.clone()
-        } else {
-            format!("{}/{}", current_path, name)
-        };
-
-        if is_uuid(&name) && path.join("_meta.json").exists() {
+        if dir.path.join("_meta.json").exists() {
+            let entry_path = join_folder_path(current_path, dir.relative);
             result.push(FolderSessionUpdate {
-                session_id: name,
+                session_id: dir.name.to_string(),
                 folder_id: get_parent_folder_path(&entry_path).unwrap_or_default(),
             });
-            continue;
         }
+        Visit::Skip
+    });
+}
 
-        if !is_uuid(&name) {
-            collect_session_updates(sessions_dir, &entry_path, result);
+/// Vrai si `folder` contient une session, dossiers liés restés dans le coffre
+/// compris.
+pub fn contains_sessions(sessions_dir: &Path, folder: &Path) -> std::io::Result<bool> {
+    let mut found = false;
+    walk_session_tree(sessions_dir, folder, |dir| {
+        if !is_uuid(dir.name) {
+            Visit::Descend
+        } else if dir.path.join("_meta.json").exists() {
+            found = true;
+            Visit::Stop
+        } else {
+            Visit::Skip
         }
-    }
+    })?;
+    Ok(found)
 }
 
 #[cfg(test)]

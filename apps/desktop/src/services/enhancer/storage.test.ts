@@ -220,10 +220,83 @@ describe("enhancer SQLite storage", () => {
       title: "Customer review",
     });
 
-    const statement = mocks.executeTransaction.mock.calls[0][0][0];
+    const statement = mocks.executeTransaction.mock.calls[0][0].at(-1);
     expect(statement.params).toContain("template_output");
     expect(statement.params).toContain("Customer review");
     expect(statement.expectedRowsAffected).toBe(1);
+  });
+
+  // Issue 415 : changer le modèle d'une synthèse la régénère ; l'ancien texte
+  // devient une version remplacée au lieu d'être perdu.
+  it("keeps the replaced summary as a superseded version when its template changes", async () => {
+    const { DatabaseSync } = createRequire(import.meta.url)(
+      "node:sqlite",
+    ) as typeof import("node:sqlite");
+    const database = new DatabaseSync(":memory:");
+    try {
+      for (const migration of [
+        "20260710223922_canonical_data_model.sql",
+        "20261108120000_session_summary_versions.sql",
+      ]) {
+        database.exec(
+          readFileSync(
+            resolve(
+              process.cwd(),
+              `../../crates/db-app/migrations/${migration}`,
+            ),
+            "utf8",
+          ),
+        );
+      }
+      database.exec(
+        `INSERT INTO sessions (id, workspace_id) VALUES ('session-1', 'workspace-1');
+         INSERT INTO session_documents (id, workspace_id, session_id, kind, template_id, title, body, generation_metadata_json, updated_at)
+         VALUES ('existing-note', 'workspace-1', 'session-1', 'template_output', 'template-1', 'One-on-one', '{"type":"doc"}', '{"generatedAt":"2026-11-08T09:00:00.000Z"}', '2026-11-08T09:30:00.000Z');`,
+      );
+      mocks.executeTransaction.mockImplementation(async (statements) =>
+        statements.map(({ sql, params }: { sql: string; params: unknown[] }) =>
+          Number(
+            database
+              .prepare(sql)
+              .run(...(params as import("node:sqlite").SQLInputValue[]))
+              .changes,
+          ),
+        ),
+      );
+
+      await replaceSummaryDocumentTemplate({
+        sessionId: "session-1",
+        noteId: "existing-note",
+        templateId: "template-2",
+        title: "Customer review",
+      });
+
+      expect(
+        database
+          .prepare(
+            "SELECT document_id, version, template_id, title, body, generated_at FROM session_summary_versions",
+          )
+          .all(),
+      ).toEqual([
+        {
+          document_id: "existing-note",
+          version: 1,
+          template_id: "template-1",
+          title: "One-on-one",
+          body: '{"type":"doc"}',
+          generated_at: "2026-11-08T09:00:00.000Z",
+        },
+      ]);
+      expect(
+        database
+          .prepare(
+            "SELECT body, template_id FROM session_documents WHERE id = 'existing-note'",
+          )
+          .get(),
+      ).toEqual({ body: "", template_id: "template-2" });
+    } finally {
+      database.close();
+    }
   });
 
   it("hydrates a title only while template and placeholder title still match", async () => {

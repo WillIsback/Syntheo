@@ -140,6 +140,8 @@ fn make_specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
         .commands(tauri_specta::collect_commands![
             listener::commands::list_microphone_devices::<tauri::Wry>,
             listener::commands::get_current_microphone_device::<tauri::Wry>,
+            listener::commands::start_microphone_level_monitor::<tauri::Wry>,
+            listener::commands::stop_microphone_level_monitor::<tauri::Wry>,
             listener::commands::get_mic_muted::<tauri::Wry>,
             listener::commands::set_mic_muted::<tauri::Wry>,
             listener::commands::start_capture::<tauri::Wry>,
@@ -213,6 +215,7 @@ pub fn init() -> tauri::plugin::TauriPlugin<tauri::Wry> {
             }));
             app.manage(state);
             app.manage(live_journal::LiveJournalRegistry::default());
+            app.manage(listener::level_monitor::MicrophoneLevelMonitor::default());
             let stopped_capture_registry = StoppedCaptureRegistry::default();
             app.manage(stopped_capture_registry.clone());
             let capture_gap_registry = CaptureGapRegistry::default();

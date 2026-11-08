@@ -1,6 +1,8 @@
 const COMMANDS: &[&str] = &[
     "list_microphone_devices",
     "get_current_microphone_device",
+    "start_microphone_level_monitor",
+    "stop_microphone_level_monitor",
     "get_mic_muted",
     "set_mic_muted",
     "start_capture",

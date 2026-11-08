@@ -16,12 +16,102 @@ pub struct GeneratedSummaryBodyUpdate<'a> {
     pub next_body: &'a str,
     pub updated_at: &'a str,
     pub pending_auto_enhance: Option<PendingAutoEnhanceMatch<'a>>,
+    pub source_note_fingerprint: Option<&'a str>,
+    /// Passages validés venus des notes (issue 417), en tableau JSON : la
+    /// synthèse enregistrée n'a aucune balise, sa provenance vit ici. `None`
+    /// quand le modèle n'a rien balisé (l'affichage se replie alors sur les
+    /// fragments).
+    pub note_passages_json: Option<&'a str>,
+}
+
+/// Versions remplacées gardées par synthèse (issue 415) ; au-delà, les plus
+/// anciennes sont effacées.
+pub const MAX_SUMMARY_VERSIONS: i64 = 20;
+
+/// Garde la synthèse sur le point d'être régénérée comme version remplacée,
+/// dans la même transaction que son remplacement. Une synthèse vide (première
+/// génération) ou identique au nouveau texte ne crée pas de version. Si la
+/// mise à jour qui suit échoue, l'appelant annule la transaction et la version
+/// disparaît avec elle.
+async fn keep_replaced_summary_version(
+    conn: &mut SqliteConnection,
+    update: &GeneratedSummaryBodyUpdate<'_>,
+) -> Result<(), sqlx::Error> {
+    let kept = sqlx::query(
+        "INSERT INTO session_summary_versions (
+           id, workspace_id, document_id, session_id, version, template_id,
+           title, body_format, body, generation_metadata_json, generated_at,
+           superseded_at
+         )
+         SELECT
+           lower(hex(randomblob(16))),
+           document.workspace_id,
+           document.id,
+           document.session_id,
+           COALESCE((
+             SELECT MAX(previous.version)
+             FROM session_summary_versions AS previous
+             WHERE previous.document_id = document.id
+           ), 0) + 1,
+           document.template_id,
+           document.title,
+           document.body_format,
+           document.body,
+           document.generation_metadata_json,
+           COALESCE(
+             CASE
+               WHEN json_valid(document.generation_metadata_json)
+               THEN CAST(json_extract(
+                 document.generation_metadata_json, '$.generatedAt'
+               ) AS TEXT)
+             END,
+             document.updated_at
+           ),
+           ?
+         FROM session_documents AS document
+         WHERE document.id = ?
+           AND document.session_id = ?
+           AND document.kind IN ('summary', 'template_output')
+           AND document.body = ?
+           AND document.body_format = ?
+           AND document.body <> ''
+           AND document.body <> ?
+           AND document.deleted_at IS NULL",
+    )
+    .bind(update.updated_at)
+    .bind(update.note_id)
+    .bind(update.session_id)
+    .bind(update.current_body)
+    .bind(update.current_body_format)
+    .bind(update.next_body)
+    .execute(&mut *conn)
+    .await?;
+
+    if kept.rows_affected() > 0 {
+        sqlx::query(
+            "DELETE FROM session_summary_versions
+             WHERE document_id = ?
+               AND id NOT IN (
+                 SELECT id FROM session_summary_versions
+                 WHERE document_id = ?
+                 ORDER BY version DESC
+                 LIMIT ?
+               )",
+        )
+        .bind(update.note_id)
+        .bind(update.note_id)
+        .bind(MAX_SUMMARY_VERSIONS)
+        .execute(&mut *conn)
+        .await?;
+    }
+    Ok(())
 }
 
 pub async fn update_generated_summary_body(
     conn: &mut SqliteConnection,
     update: GeneratedSummaryBodyUpdate<'_>,
 ) -> Result<u64, sqlx::Error> {
+    keep_replaced_summary_version(conn, &update).await?;
     let GeneratedSummaryBodyUpdate {
         note_id,
         session_id,
@@ -30,11 +120,23 @@ pub async fn update_generated_summary_body(
         next_body,
         updated_at,
         pending_auto_enhance,
+        source_note_fingerprint,
+        note_passages_json,
     } = update;
     let result = if let Some(pending) = pending_auto_enhance {
         sqlx::query(
             "UPDATE session_documents
-             SET body = ?, body_format = 'prosemirror_json', updated_at = ?
+             SET body = ?, body_format = 'prosemirror_json', updated_at = ?,
+               generation_metadata_json = json_set(
+                 CASE
+                   WHEN json_valid(generation_metadata_json)
+                   THEN generation_metadata_json
+                   ELSE '{}'
+                 END,
+                 '$.generatedAt', ?,
+                 '$.sourceNoteFingerprint', ?,
+                 '$.notePassages', json(?)
+               )
              WHERE id = ?
                AND session_id = ?
                AND kind IN ('summary', 'template_output')
@@ -62,6 +164,9 @@ pub async fn update_generated_summary_body(
         )
         .bind(next_body)
         .bind(updated_at)
+        .bind(updated_at)
+        .bind(source_note_fingerprint)
+        .bind(note_passages_json)
         .bind(note_id)
         .bind(session_id)
         .bind(current_body)
@@ -77,7 +182,17 @@ pub async fn update_generated_summary_body(
     } else {
         sqlx::query(
             "UPDATE session_documents
-             SET body = ?, body_format = 'prosemirror_json', updated_at = ?
+             SET body = ?, body_format = 'prosemirror_json', updated_at = ?,
+               generation_metadata_json = json_set(
+                 CASE
+                   WHEN json_valid(generation_metadata_json)
+                   THEN generation_metadata_json
+                   ELSE '{}'
+                 END,
+                 '$.generatedAt', ?,
+                 '$.sourceNoteFingerprint', ?,
+                 '$.notePassages', json(?)
+               )
              WHERE id = ?
                AND session_id = ?
                AND kind IN ('summary', 'template_output')
@@ -91,6 +206,9 @@ pub async fn update_generated_summary_body(
         )
         .bind(next_body)
         .bind(updated_at)
+        .bind(updated_at)
+        .bind(source_note_fingerprint)
+        .bind(note_passages_json)
         .bind(note_id)
         .bind(session_id)
         .bind(current_body)

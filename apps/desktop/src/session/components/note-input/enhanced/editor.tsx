@@ -26,9 +26,9 @@ import { openEditorLink } from "~/editor-bridge/open-editor-link";
 import { sessionMentionDropConfig } from "~/editor-bridge/session-mention-drop";
 import { SessionNodeView } from "~/editor-bridge/session-view";
 import {
-  findNoteSentenceRanges,
-  prepareNotes,
-} from "~/session/components/living-document/note-attribution";
+  findNoteInkRanges,
+  prepareNoteInk,
+} from "~/session/components/living-document/note-ink";
 import { hasStoredNoteContent } from "~/session/components/shared";
 import { useAttachmentResolver } from "~/session/hooks/useAttachmentResolver";
 import { useUpdateEnhancedNoteContent } from "~/session/queries";
@@ -42,28 +42,37 @@ import { repairMissingSessionTitle } from "~/session/title-repair";
 const extraNodeViews = { appLink: AppLinkView, session: SessionNodeView };
 const NO_NOTE_LINES: readonly string[] = [];
 
-// Colore en user-ink les phrases du compte rendu qui viennent des notes
-// (issue 365). Simple décoration : le compte rendu enregistré, l'export et le
-// copier-coller restent inchangés.
-function useNoteInk(noteLines: readonly string[]) {
+// Colore en user-ink ce qui, dans le compte rendu, vient des notes : phrases
+// entières (issue 365), passages balisés par le modèle et validés, ou à
+// défaut fragments venus des notes (issue 417). Simple décoration : le compte
+// rendu enregistré, l'export et le copier-coller restent inchangés.
+function useNoteInk(
+  noteLines: readonly string[],
+  notePassages: readonly string[] | null,
+) {
   const notesKey = noteLines.join("\n");
-  const preparedNotes = useMemo(
-    () => prepareNotes(notesKey ? notesKey.split("\n") : NO_NOTE_LINES),
-    [notesKey],
+  const passagesKey = notePassages === null ? "" : JSON.stringify(notePassages);
+  const source = useMemo(
+    () =>
+      prepareNoteInk(
+        notesKey ? notesKey.split("\n") : NO_NOTE_LINES,
+        passagesKey ? (JSON.parse(passagesKey) as string[]) : null,
+      ),
+    [notesKey, passagesKey],
   );
   // Créée une fois (les plugins sont figés au montage de l'éditeur) ; les
   // notes suivantes passent par setData.
   const [ink] = useState(() =>
     createDerivedInk({
       className: "note-ink-user",
-      data: preparedNotes,
-      compute: findNoteSentenceRanges,
+      data: source,
+      compute: findNoteInkRanges,
     }),
   );
   const plugins = useMemo(() => [ink.plugin], [ink]);
   useEffect(() => {
-    ink.setData(preparedNotes);
-  }, [ink, preparedNotes]);
+    ink.setData(source);
+  }, [ink, source]);
   return plugins;
 }
 
@@ -105,6 +114,8 @@ const EnhancedEditorInner = forwardRef<
     contentOverride?: JSONContent;
     /** Lignes des notes brutes à colorer dans le compte rendu (vide : aucune). */
     noteLines?: readonly string[];
+    /** Passages validés venus des notes (issue 417) ; null : repli. */
+    notePassages?: readonly string[] | null;
     onNavigateToTitle?: (pixelWidth?: number) => void;
     onViewReady?: (view: EditorView) => void;
     onViewDisposed?: (view: EditorView) => void;
@@ -118,6 +129,7 @@ const EnhancedEditorInner = forwardRef<
       content,
       contentOverride,
       noteLines = NO_NOTE_LINES,
+      notePassages = null,
       onNavigateToTitle,
       onViewReady,
       onViewDisposed,
@@ -127,7 +139,7 @@ const EnhancedEditorInner = forwardRef<
     const { audioDropTargetProps, fileHandlerConfig, isAudioDragActive } =
       useNoteFileHandlerConfig(sessionId);
     const resolveAttachment = useAttachmentResolver(sessionId);
-    const noteInkPlugins = useNoteInk(noteLines);
+    const noteInkPlugins = useNoteInk(noteLines, notePassages);
     const updateContent = useUpdateEnhancedNoteContent(
       enhancedNoteId,
       sessionId,

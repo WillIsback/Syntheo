@@ -5,6 +5,7 @@ use tauri::{
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons};
 
 use super::MenuItemHandler;
+use crate::locale::Label;
 
 pub struct TrayQuitCompletely;
 
@@ -12,7 +13,13 @@ impl MenuItemHandler for TrayQuitCompletely {
     const ID: &'static str = "syntheo_tray_quit_completely";
 
     fn build(app: &AppHandle<tauri::Wry>) -> Result<MenuItemKind<tauri::Wry>> {
-        let item = MenuItem::with_id(app, Self::ID, "Quitter complètement…", true, None::<&str>)?;
+        let item = MenuItem::with_id(
+            app,
+            Self::ID,
+            Label::TrayQuitCompletely.text(),
+            true,
+            None::<&str>,
+        )?;
         Ok(MenuItemKind::MenuItem(item))
     }
 
@@ -21,11 +28,11 @@ impl MenuItemHandler for TrayQuitCompletely {
         let app = app.clone();
 
         app.dialog()
-            .message(format!("{} ne tournera plus en arrière-plan.", app_name))
-            .title(format!("Quitter complètement {} ?", app_name))
+            .message(Label::QuitCompletelyMessage.fill(&[("app", &app_name)]))
+            .title(Label::QuitCompletelyTitle.fill(&[("app", &app_name)]))
             .buttons(MessageDialogButtons::OkCancelCustom(
-                "Quitter".to_string(),
-                "Annuler".to_string(),
+                Label::Quit.text().to_string(),
+                Label::Cancel.text().to_string(),
             ))
             .show(move |confirmed| {
                 if confirmed {

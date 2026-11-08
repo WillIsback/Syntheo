@@ -5,6 +5,7 @@ use tauri::{
 use tauri_plugin_windows::{AppWindow, WindowsPluginExt};
 
 use super::MenuItemHandler;
+use crate::locale::Label;
 
 pub struct TrayQuit;
 
@@ -12,7 +13,7 @@ impl MenuItemHandler for TrayQuit {
     const ID: &'static str = "syntheo_tray_quit";
 
     fn build(app: &AppHandle<tauri::Wry>) -> Result<MenuItemKind<tauri::Wry>> {
-        let item = MenuItem::with_id(app, Self::ID, "Quitter", true, Some("cmd+q"))?;
+        let item = MenuItem::with_id(app, Self::ID, Label::Quit.text(), true, Some("cmd+q"))?;
         Ok(MenuItemKind::MenuItem(item))
     }
 

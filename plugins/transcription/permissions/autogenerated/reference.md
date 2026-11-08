@@ -6,6 +6,8 @@ Default permissions for the plugin
 
 - `allow-list-microphone-devices`
 - `allow-get-current-microphone-device`
+- `allow-start-microphone-level-monitor`
+- `allow-stop-microphone-level-monitor`
 - `allow-start-capture`
 - `allow-retry-audio-capture`
 - `allow-flush-live-transcript`
@@ -1131,6 +1133,32 @@ Denies the start_capture command without any pre-configured scope.
 <tr>
 <td>
 
+`transcription:allow-start-microphone-level-monitor`
+
+</td>
+<td>
+
+Enables the start_microphone_level_monitor command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:deny-start-microphone-level-monitor`
+
+</td>
+<td>
+
+Denies the start_microphone_level_monitor command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
 `transcription:allow-start-transcription`
 
 </td>
@@ -1202,6 +1230,32 @@ Enables the stop_capture_for_session command without any pre-configured scope.
 <td>
 
 Denies the stop_capture_for_session command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:allow-stop-microphone-level-monitor`
+
+</td>
+<td>
+
+Enables the stop_microphone_level_monitor command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:deny-stop-microphone-level-monitor`
+
+</td>
+<td>
+
+Denies the stop_microphone_level_monitor command without any pre-configured scope.
 
 </td>
 </tr>

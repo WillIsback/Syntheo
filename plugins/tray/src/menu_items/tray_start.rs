@@ -4,6 +4,7 @@ use tauri::{
 };
 
 use super::MenuItemHandler;
+use crate::locale::Label;
 
 pub struct TrayStart;
 
@@ -11,7 +12,7 @@ impl MenuItemHandler for TrayStart {
     const ID: &'static str = "syntheo_tray_start";
 
     fn build(app: &AppHandle<tauri::Wry>) -> Result<MenuItemKind<tauri::Wry>> {
-        let item = MenuItem::with_id(app, Self::ID, "Démarrer une réunion", true, None::<&str>)?;
+        let item = MenuItem::with_id(app, Self::ID, Label::TrayStart.text(), true, None::<&str>)?;
         Ok(MenuItemKind::MenuItem(item))
     }
 
@@ -42,7 +43,7 @@ impl TrayStart {
         MenuItem::with_id(
             app,
             Self::ID,
-            "Démarrer une réunion",
+            Label::TrayStart.text(),
             !disabled,
             None::<&str>,
         )

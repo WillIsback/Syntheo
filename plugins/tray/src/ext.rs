@@ -23,6 +23,9 @@ use crate::{
 };
 
 #[cfg(target_os = "macos")]
+use crate::locale::Label;
+use crate::locale::{self, NativeLocale};
+#[cfg(target_os = "macos")]
 use crate::menu_items::{AppInfo, AppNew, HelpReportBug, HelpSuggestFeature, TrayQuit};
 use crate::menu_items::{
     MenuItemHandler, TrayHide, TrayOpen, TrayQuitCompletely, TraySettings, TrayShowEvents,
@@ -59,63 +62,70 @@ pub fn build_app_menu(app: &AppHandle<tauri::Wry>) -> Result<Menu<tauri::Wry>> {
             &AppInfo::build(app)?,
             &TraySettings::build(app)?,
             &PredefinedMenuItem::separator(app)?,
-            &PredefinedMenuItem::services(app, Some("Services"))?,
+            &PredefinedMenuItem::services(app, Some(Label::Services.text()))?,
             &PredefinedMenuItem::separator(app)?,
             &PredefinedMenuItem::hide(
                 app,
-                Some(format!("Masquer {}", app.package_info().name).as_str()),
+                Some(
+                    Label::HideApp
+                        .fill(&[("app", &app.package_info().name)])
+                        .as_str(),
+                ),
             )?,
-            &PredefinedMenuItem::hide_others(app, Some("Masquer les autres"))?,
-            &PredefinedMenuItem::show_all(app, Some("Tout afficher"))?,
+            &PredefinedMenuItem::hide_others(app, Some(Label::HideOthers.text()))?,
+            &PredefinedMenuItem::show_all(app, Some(Label::ShowAll.text()))?,
             &PredefinedMenuItem::separator(app)?,
             &TrayQuit::build(app)?,
         ],
     )?;
     let file_submenu = Submenu::with_items(
         app,
-        "Fichier",
+        Label::MenuFile.text(),
         true,
         &[
             &AppNew::build(app)?,
-            &PredefinedMenuItem::close_window(app, Some("Fermer"))?,
+            &PredefinedMenuItem::close_window(app, Some(Label::CloseWindow.text()))?,
         ],
     )?;
     let edit_submenu = Submenu::with_items(
         app,
-        "Modifier",
+        Label::MenuEdit.text(),
         true,
         &[
-            &PredefinedMenuItem::undo(app, Some("Annuler"))?,
-            &PredefinedMenuItem::redo(app, Some("Rétablir"))?,
+            &PredefinedMenuItem::undo(app, Some(Label::Undo.text()))?,
+            &PredefinedMenuItem::redo(app, Some(Label::Redo.text()))?,
             &PredefinedMenuItem::separator(app)?,
-            &PredefinedMenuItem::cut(app, Some("Couper"))?,
-            &PredefinedMenuItem::copy(app, Some("Copier"))?,
-            &PredefinedMenuItem::paste(app, Some("Coller"))?,
-            &PredefinedMenuItem::select_all(app, Some("Tout sélectionner"))?,
+            &PredefinedMenuItem::cut(app, Some(Label::Cut.text()))?,
+            &PredefinedMenuItem::copy(app, Some(Label::Copy.text()))?,
+            &PredefinedMenuItem::paste(app, Some(Label::Paste.text()))?,
+            &PredefinedMenuItem::select_all(app, Some(Label::SelectAll.text()))?,
         ],
     )?;
     let view_submenu = Submenu::with_items(
         app,
-        "Afficher",
+        Label::MenuView.text(),
         true,
-        &[&PredefinedMenuItem::fullscreen(app, Some("Plein écran"))?],
+        &[&PredefinedMenuItem::fullscreen(
+            app,
+            Some(Label::Fullscreen.text()),
+        )?],
     )?;
     let window_submenu = Submenu::with_id_and_items(
         app,
         WINDOW_SUBMENU_ID,
-        "Fenêtre",
+        Label::MenuWindow.text(),
         true,
         &[
-            &PredefinedMenuItem::minimize(app, Some("Placer dans le Dock"))?,
-            &PredefinedMenuItem::maximize(app, Some("Réduire/agrandir"))?,
+            &PredefinedMenuItem::minimize(app, Some(Label::Minimize.text()))?,
+            &PredefinedMenuItem::maximize(app, Some(Label::Zoom.text()))?,
             &PredefinedMenuItem::separator(app)?,
-            &PredefinedMenuItem::close_window(app, Some("Fermer"))?,
+            &PredefinedMenuItem::close_window(app, Some(Label::CloseWindow.text()))?,
         ],
     )?;
     let help_submenu = Submenu::with_id_and_items(
         app,
         HELP_SUBMENU_ID,
-        "Aide",
+        Label::MenuHelp.text(),
         true,
         &[
             &HelpReportBug::build(app)?,
@@ -177,6 +187,7 @@ impl<'a, M: tauri::Manager<tauri::Wry>> Tray<'a, tauri::Wry, M> {
         }
 
         SHOW_EVENTS.store(Self::load_show_events(app), Ordering::SeqCst);
+        locale::restore_persisted_locale(app);
 
         let agenda = Self::current_agenda_sections();
         let menu = Self::build_tray_menu(app, &agenda)?;
@@ -280,6 +291,25 @@ impl<'a, M: tauri::Manager<tauri::Wry>> Tray<'a, tauri::Wry, M> {
         Ok(())
     }
 
+    /// Langue d'affichage de l'interface (`fr`, `en`…). Les menus natifs sont
+    /// reconstruits ; une langue inconnue retombe sur le français.
+    pub fn set_locale(&self, tag: &str) -> Result<()> {
+        let locale = NativeLocale::from_tag(tag);
+        locale.make_current();
+
+        let app = self.manager.app_handle();
+        locale::persist_locale(app, locale);
+        Self::rebuild_menu(app)?;
+
+        #[cfg(target_os = "macos")]
+        on_main_thread(app, |app| {
+            app.set_menu(build_app_menu(app)?)?;
+            Ok(())
+        })?;
+
+        Ok(())
+    }
+
     pub fn shows_events(&self) -> bool {
         SHOW_EVENTS.load(Ordering::SeqCst)
     }
@@ -364,6 +394,7 @@ impl<'a, M: tauri::Manager<tauri::Wry>> Tray<'a, tauri::Wry, M> {
             &SCHEDULE.lock().unwrap(),
             now_ms,
             SHOW_EVENTS.load(Ordering::SeqCst),
+            NativeLocale::current(),
         )
     }
 

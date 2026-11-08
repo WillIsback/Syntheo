@@ -28,7 +28,8 @@ import { NoteMeta } from "./meta";
 import { extractNoteLines } from "./note-attribution";
 import { NoteSeal, ProvenanceLegend } from "./provenance";
 import { SummaryProposalReview, useSummaryProposal } from "./summary-review";
-import { SummarySwitcher } from "./summary-switcher";
+import { SummarySwitcher, type SynthesisView } from "./summary-switcher";
+import { NotesChangedBanner, SummaryVersionView } from "./summary-version";
 import { TranscriptMargin } from "./transcript-margin";
 import { WelcomeCard } from "./welcome-card";
 
@@ -41,6 +42,7 @@ import {
 import {
   useEnhancedNote,
   useSession,
+  useSummaryVersions,
   useUpdateSession,
 } from "~/session/queries";
 import { useConfigValue } from "~/shared/config";
@@ -301,6 +303,8 @@ function UserNotes({
   );
 }
 
+const SUMMARY_VIEW: SynthesisView = { kind: "summary" };
+
 function SynthesisStage(
   props: LivingDocumentProps & { metaActions: ReactNode },
 ) {
@@ -314,6 +318,65 @@ function SynthesisStage(
     (id: string) => onSelectView({ type: "enhanced", id }),
     [onSelectView],
   );
+  // Vue choisie dans « Mes notes | Synthèse · vN » (issue 415), propre à la
+  // synthèse affichée : en changer revient à sa version actuelle. L'onglet
+  // garde la synthèse : export et impression ne voient que la version
+  // actuelle.
+  const [viewState, setViewState] = useState<{
+    noteId: string | null;
+    view: SynthesisView;
+  }>({ noteId: currentNoteId, view: SUMMARY_VIEW });
+  const view =
+    viewState.noteId === currentNoteId ? viewState.view : SUMMARY_VIEW;
+  const handleSelectSynthesisView = useCallback(
+    (next: SynthesisView) =>
+      setViewState({ noteId: currentNoteId, view: next }),
+    [currentNoteId],
+  );
+  const showSummary = useCallback(
+    () => handleSelectSynthesisView(SUMMARY_VIEW),
+    [handleSelectSynthesisView],
+  );
+  const versions = useSummaryVersions(currentNoteId);
+  const viewedVersion =
+    view.kind === "version"
+      ? versions.find((version) => version.id === view.versionId)
+      : undefined;
+
+  let content: ReactNode;
+  if (!currentNoteId) {
+    content = <UserNotes {...props} registerAsPrimary />;
+  } else if (view.kind === "notes") {
+    // « Mes notes » : la note telle qu'elle a été tapée, toujours modifiable
+    // (même éditeur, même sauvegarde), avec le bandeau de régénération.
+    content = (
+      <>
+        <NotesChangedBanner
+          sessionId={sessionId}
+          enhancedNoteId={currentNoteId}
+          rawMd={props.rawMd}
+          editorRef={props.editorRef}
+          onShowSummary={showSummary}
+        />
+        <UserNotes {...props} registerAsPrimary />
+      </>
+    );
+  } else if (viewedVersion) {
+    content = (
+      <SummaryVersionView
+        version={viewedVersion}
+        onBackToCurrent={showSummary}
+      />
+    );
+  } else {
+    content = (
+      <SummaryWithReview
+        {...props}
+        sessionId={sessionId}
+        enhancedNoteId={currentNoteId}
+      />
+    );
+  }
 
   return (
     <>
@@ -323,19 +386,13 @@ function SynthesisStage(
           enhancedNoteIds={enhancedNoteIds}
           currentNoteId={currentNoteId}
           onSelectNote={handleSelectNote}
+          view={view}
+          onSelectView={handleSelectSynthesisView}
         />
         {metaActions}
       </NoteMeta>
       <ProvenanceLegend />
-      {currentNoteId ? (
-        <SummaryWithReview
-          {...props}
-          sessionId={sessionId}
-          enhancedNoteId={currentNoteId}
-        />
-      ) : (
-        <UserNotes {...props} registerAsPrimary />
-      )}
+      {content}
     </>
   );
 }

@@ -14,12 +14,15 @@ tauri-plugin = { workspace = true, features = ["build"] }
 [dev-dependencies]
 specta-typescript = { workspace = true }
 tempfile = { workspace = true }
-tokio = { workspace = true, features = ["macros"] }
+tokio = { workspace = true, features = ["macros", "rt"] }
 
 [dependencies]
 tauri = { workspace = true, features = ["test"] }
+tauri-plugin-db = { workspace = true }
+tauri-plugin-dialog = { workspace = true }
 tauri-specta = { workspace = true, features = ["derive", "typescript"] }
 
 specta = { workspace = true }
+sqlx = { workspace = true, features = ["runtime-tokio", "sqlite"] }
 syntheo-export-core = { workspace = true }
 uuid = { workspace = true, features = ["v4"] }
