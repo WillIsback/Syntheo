@@ -11,6 +11,7 @@ use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
 use crate::AsyncSource;
 use crate::async_ring::RingbufAsyncReader;
+use crate::mic_candidates::{candidate_indices, fallback_from};
 
 fn is_tap_device(name: &str) -> bool {
     #[cfg(target_os = "macos")]
@@ -75,36 +76,6 @@ fn rank_input_devices(
         push(name);
     }
     ordered
-}
-
-/// Finds the index in `listed_names` that a ranked candidate should open.
-///
-/// Candidates are normally matched by description (`name`). The default device is a special
-/// case on ALSA: `host.default_input_device()` returns a synthetic device whose description
-/// (e.g. "Default Audio Device") never matches the real ALSA hint description carried by its
-/// entry in the listed devices, so a plain name match misses it even though `rank_input_devices`
-/// ranked it correctly. When `is_default` is set, fall back to matching by stable device id
-/// (`cpal::Device::id()`) against `listed_ids` — on ALSA the "default" pcm id also shows up as
-/// its own listed hint, with the real description, whenever the system defines one.
-fn resolve_ranked_candidate(
-    name: &str,
-    is_default: bool,
-    default_id: Option<&str>,
-    listed_names: &[String],
-    listed_ids: &[Option<String>],
-) -> Option<usize> {
-    listed_names
-        .iter()
-        .position(|listed_name| listed_name == name)
-        .or_else(|| {
-            if !is_default {
-                return None;
-            }
-            let id = default_id?;
-            listed_ids
-                .iter()
-                .position(|listed_id| listed_id.as_deref() == Some(id))
-        })
 }
 
 fn with_cpal_host_lock<T>(f: impl FnOnce() -> T) -> T {
@@ -265,6 +236,10 @@ impl<D, A> CaptureDevice<D, A> {
 pub struct MicInput {
     capture: CaptureDevice<CpalHandles, Arc<syntheo_audio_device::BluetoothInputActivation>>,
     config: cpal::SupportedStreamConfig,
+    /// The listed name this input was opened for. On ALSA the opened PCM can be a sibling of
+    /// the listed one with another description (see `mic_candidates`), so report the name the
+    /// user chose rather than the PCM description.
+    name: String,
 }
 
 const MIC_READ_CHUNK_SIZE: usize = 256;
@@ -290,6 +265,9 @@ fn build_stream_error_type(error: &cpal::BuildStreamError) -> &'static str {
 
 impl MicInput {
     pub fn device_name(&self) -> String {
+        if !self.name.is_empty() {
+            return self.name.clone();
+        }
         self.capture
             .handles
             .device()
@@ -406,54 +384,71 @@ impl MicInput {
                 }
                 let is_default = default_name.as_deref() == Some(name.as_str());
 
-                let device = resolve_ranked_candidate(
+                // One listed name can cover several ALSA PCMs of the same card, and the one
+                // carrying the bare card name may be output-only (issue 433): try them all.
+                let mut devices: Vec<cpal::Device> = candidate_indices(
                     &name,
                     is_default,
                     default_id.as_deref(),
                     &listed_names,
                     &listed_ids,
                 )
+                .into_iter()
                 .map(|index| listed[index].clone())
-                .or_else(|| {
-                    host.input_devices()
+                .collect();
+                if devices.is_empty() {
+                    let device = host
+                        .input_devices()
                         .ok()
                         .and_then(|devices| take_named_device(devices, &name, get_device_name))
-                })
-                .or_else(|| {
-                    // Nothing in `listed` matches this candidate by name or id. For the default
-                    // candidate, open the live default device directly rather than silently
-                    // skipping the user's actual default input device — see
-                    // `resolve_ranked_candidate` for why name matching alone misses it.
-                    is_default.then(|| host.default_input_device()).flatten()
-                });
+                        .or_else(|| {
+                            // Nothing in `listed` matches this candidate by name or id. For the
+                            // default candidate, open the live default device directly rather
+                            // than silently skipping the user's actual default input device —
+                            // see `candidate_indices` for why name matching alone misses it.
+                            is_default.then(|| host.default_input_device()).flatten()
+                        });
+                    devices.extend(device);
+                }
 
-                let Some(device) = device else {
+                if devices.is_empty() {
                     tracing::warn!(device_name = name, "mic_candidate_device_unresolved");
-                    continue;
-                };
-
-                if is_unusable_input_device_with_id(
-                    get_device_id(&device).as_deref(),
-                    &get_device_name(&device),
-                ) {
-                    drop_quietly(device);
                     continue;
                 }
 
-                match device.default_input_config() {
-                    Ok(config) => {
-                        opened = Some((device, config, name));
-                        break;
-                    }
-                    Err(err) => {
-                        tracing::error!(
-                            error = %err,
-                            error.type = default_stream_config_error_type(&err),
-                            device_name = name,
-                            "mic_default_input_config_failed"
-                        );
+                let mut devices = devices.into_iter();
+                for device in devices.by_ref() {
+                    let device_id = get_device_id(&device);
+                    if is_unusable_input_device_with_id(
+                        device_id.as_deref(),
+                        &get_device_name(&device),
+                    ) {
                         drop_quietly(device);
+                        continue;
                     }
+
+                    match device.default_input_config() {
+                        Ok(config) => {
+                            opened = Some((device, config, name.clone()));
+                            break;
+                        }
+                        Err(err) => {
+                            // Not fatal: the next PCM of this card, then the next ranked
+                            // device, is tried. A fallback is reported once below.
+                            tracing::warn!(
+                                error = %err,
+                                error.type = default_stream_config_error_type(&err),
+                                device_name = name,
+                                device_id = device_id.as_deref().unwrap_or_default(),
+                                "mic_default_input_config_failed"
+                            );
+                            drop_quietly(device);
+                        }
+                    }
+                }
+                devices.for_each(drop_quietly);
+                if opened.is_some() {
+                    break;
                 }
             }
             opened
@@ -471,12 +466,23 @@ impl MicInput {
                     default_name.as_deref(),
                     bluetooth.map(|activation| (activation.name.clone(), activation)),
                 );
+                if let Some(requested) = fallback_from(preferred.as_deref(), &name) {
+                    tracing::warn!(
+                        requested_device = requested,
+                        device_name = name,
+                        "mic_requested_device_fallback"
+                    );
+                }
                 tracing::info!(
                     syntheo.audio.sample_rate_hz = ?config.sample_rate(),
                     device_name = name,
                     "mic_input_initialized"
                 );
-                Ok(Self { capture, config })
+                Ok(Self {
+                    capture,
+                    config,
+                    name,
+                })
             }
             None => {
                 drop_quietly(host);
@@ -759,16 +765,6 @@ mod tests {
         &'a [&'a str],
         &'a [&'a str],
     );
-    type ResolveRankedCandidateCase<'a> = (
-        &'a str,
-        &'a str,
-        bool,
-        Option<&'a str>,
-        &'a [&'a str],
-        &'a [Option<&'a str>],
-        Option<usize>,
-    );
-
     #[test]
     fn unusable_input_devices_are_detected_by_id_or_description() {
         for (id, description, expected) in [
@@ -898,68 +894,6 @@ mod tests {
         );
 
         assert!(kept.is_some());
-    }
-
-    #[test]
-    fn resolve_ranked_candidate_cases() {
-        let cases: [ResolveRankedCandidateCase<'_>; 4] = [
-            (
-                "matches default by id when description differs",
-                "Default Audio Device",
-                true,
-                Some("default"),
-                &[
-                    "Discard all samples (playback) or generate zero samples (capture)",
-                    "Default ALSA Output (currently PipeWire Media Server)",
-                    "USB Microphone",
-                ],
-                &[Some("null"), Some("default"), Some("hw:CARD=1,DEV=0")],
-                Some(1),
-            ),
-            (
-                "prefers name match over id match",
-                "USB Microphone",
-                false,
-                Some("default"),
-                &["USB Microphone", "Built-in Audio"],
-                &[Some("hw:CARD=1,DEV=0"), Some("default")],
-                Some(0),
-            ),
-            (
-                "does not id-match non-default candidates",
-                "Some Other Name",
-                false,
-                Some("default"),
-                &["Default ALSA Output"],
-                &[Some("default")],
-                None,
-            ),
-            (
-                "returns none when default id is unavailable",
-                "Default Audio Device",
-                true,
-                None,
-                &["USB Microphone"],
-                &[Some("hw:CARD=1,DEV=0")],
-                None,
-            ),
-        ];
-
-        for (label, name, is_default, default_id, names, ids, expected) in cases {
-            let names = names
-                .iter()
-                .map(|name| (*name).to_string())
-                .collect::<Vec<_>>();
-            let ids = ids
-                .iter()
-                .map(|id| id.map(str::to_string))
-                .collect::<Vec<_>>();
-            assert_eq!(
-                resolve_ranked_candidate(name, is_default, default_id, &names, &ids),
-                expected,
-                "{label}"
-            );
-        }
     }
 
     #[test]

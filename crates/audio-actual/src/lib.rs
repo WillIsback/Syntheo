@@ -1,6 +1,7 @@
 mod async_ring;
 mod capture;
 mod mic;
+mod mic_candidates;
 mod norm;
 mod rt_ring;
 mod speaker;
