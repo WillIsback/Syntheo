@@ -7,6 +7,8 @@ import type {
   LiveTranscriptSegmentDelta,
 } from "@syntheo/plugin-transcription";
 
+import type { LiveTranscriptBatch } from "./live-transcript-batch";
+
 import type { RuntimeSpeakerHint, WordLike } from "~/stt/segment";
 
 type WordsByChannel = Record<number, LiveTranscriptDelta["partials"][number][]>;
@@ -65,6 +67,9 @@ export type TranscriptActions = {
     options?: { updateLivePreview?: boolean },
   ) => void;
   handleTranscriptSegmentDelta: (delta: LiveTranscriptSegmentDelta) => void;
+  // Applique un lot regroupé (`live-transcript-batch.ts`) en un seul `set` :
+  // aperçu (sous-titres, partiels) et segments vivants. Ne persiste rien.
+  applyLiveTranscriptBatch: (batch: LiveTranscriptBatch) => void;
   takeOnStopped: (sessionId: string) => OnStoppedCallback | undefined;
   resetTranscript: () => void;
 };
@@ -111,27 +116,16 @@ export const createTranscriptSlice = <
   handleTranscriptDelta: (sessionId, delta, options) => {
     const state = get();
     const handlePersist = state.handlePersistBySession[sessionId];
-    const { wordsByChannel, hintsByChannel } = groupPartialsByChannel(
-      delta.partials,
-    );
-    const previewChanged =
-      delta.new_words.length > 0 ||
-      delta.replaced_ids.length > 0 ||
-      !partialWordsByChannelEqual(state.partialWordsByChannel, wordsByChannel);
 
-    if (options?.updateLivePreview !== false && previewChanged) {
-      set((state) =>
-        mutate(state, (draft) => {
-          updateLiveCaptionFinalWords(draft.liveCaptionFinalWordsById, delta);
-          draft.liveCaptionText = getCaptionTextFromDelta(
-            delta,
-            draft.liveCaptionFinalWordsById,
-            draft.liveCaptionText,
-          );
-          draft.partialWordsByChannel = wordsByChannel;
-          draft.partialHintsByChannel = hintsByChannel;
-        }),
-      );
+    if (options?.updateLivePreview !== false) {
+      const updates = getPreviewUpdates(state.partialWordsByChannel, [delta]);
+      if (updates.length > 0) {
+        set((state) =>
+          mutate(state, (draft) => {
+            updates.forEach((update) => applyPreviewUpdate(draft, update));
+          }),
+        );
+      }
     }
 
     if (delta.new_words.length === 0 && delta.replaced_ids.length === 0) {
@@ -147,6 +141,29 @@ export const createTranscriptSlice = <
     set((state) =>
       mutate(state, (draft) => {
         draft.liveSegments = applyLiveSegmentDelta(draft.liveSegments, delta);
+      }),
+    );
+  },
+  applyLiveTranscriptBatch: ({ previewDeltas, segmentDelta }) => {
+    const updates = getPreviewUpdates(
+      get().partialWordsByChannel,
+      previewDeltas,
+    );
+    const hasSegmentChanges =
+      segmentDelta !== null &&
+      (segmentDelta.upserts.length > 0 || segmentDelta.removed_ids.length > 0);
+    if (updates.length === 0 && !hasSegmentChanges) {
+      return;
+    }
+    set((state) =>
+      mutate(state, (draft) => {
+        updates.forEach((update) => applyPreviewUpdate(draft, update));
+        if (hasSegmentChanges) {
+          draft.liveSegments = applyLiveSegmentDelta(
+            draft.liveSegments,
+            segmentDelta,
+          );
+        }
       }),
     );
   },
@@ -172,6 +189,50 @@ export const createTranscriptSlice = <
     );
   },
 });
+
+type PreviewUpdate = {
+  delta: LiveTranscriptDelta;
+  wordsByChannel: WordsByChannel;
+  hintsByChannel: Record<number, RuntimeSpeakerHint[]>;
+};
+
+// Les deltas qui changent l'aperçu, dans l'ordre ; un delta dont les partiels
+// sont identiques aux précédents (et sans mot final) ne change rien.
+function getPreviewUpdates(
+  currentPartials: WordsByChannel,
+  deltas: readonly LiveTranscriptDelta[],
+): PreviewUpdate[] {
+  const updates: PreviewUpdate[] = [];
+  let partials = currentPartials;
+  for (const delta of deltas) {
+    const { wordsByChannel, hintsByChannel } = groupPartialsByChannel(
+      delta.partials,
+    );
+    if (
+      delta.new_words.length > 0 ||
+      delta.replaced_ids.length > 0 ||
+      !partialWordsByChannelEqual(partials, wordsByChannel)
+    ) {
+      updates.push({ delta, wordsByChannel, hintsByChannel });
+      partials = wordsByChannel;
+    }
+  }
+  return updates;
+}
+
+function applyPreviewUpdate(
+  draft: TranscriptState,
+  { delta, wordsByChannel, hintsByChannel }: PreviewUpdate,
+) {
+  updateLiveCaptionFinalWords(draft.liveCaptionFinalWordsById, delta);
+  draft.liveCaptionText = getCaptionTextFromDelta(
+    delta,
+    draft.liveCaptionFinalWordsById,
+    draft.liveCaptionText,
+  );
+  draft.partialWordsByChannel = wordsByChannel;
+  draft.partialHintsByChannel = hintsByChannel;
+}
 
 function groupPartialsByChannel(partials: LiveTranscriptDelta["partials"]): {
   wordsByChannel: WordsByChannel;

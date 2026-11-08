@@ -115,6 +115,7 @@ import {
   markLiveStartRequested,
   updateLiveProgress,
 } from "./general-shared";
+import { flushLiveTranscriptBatches } from "./live-transcript-batch";
 
 import { enqueueSessionAudioOperation } from "~/session/audio-operations";
 
@@ -277,6 +278,8 @@ describe("General Listener Slice", () => {
       expect(nextPersist).toHaveBeenCalledTimes(3);
       expect(previousPersist).toHaveBeenCalledOnce();
       expect(batchPersist).toHaveBeenCalledOnce();
+      // L'aperçu est regroupé par fenêtre de 100 ms (issue 444).
+      flushLiveTranscriptBatches();
       expect(store.getState().liveCaptionText).toBe("beforeduringafter");
       expect(stopCaptureMock).not.toHaveBeenCalled();
     } finally {
@@ -1621,9 +1624,10 @@ describe("General Listener Slice", () => {
         handlePersist,
       );
       expect(store.getState().onStoppedBySession["session-a"]).toBe(onStopped);
+      // Trois événements natifs et le vidage du lot de transcription en direct.
       expect(
         store.getState().live.eventUnlistenersBySession["session-a"],
-      ).toHaveLength(3);
+      ).toHaveLength(4);
       expect(store.getState().canStartLiveSession("session-a")).toBe(false);
       expect(store.getState().canStartLiveSession("session-b")).toBe(false);
       await expect(
@@ -2149,6 +2153,7 @@ describe("General Listener Slice", () => {
           type: "transcript_segment_delta",
         },
       });
+      flushLiveTranscriptBatches();
 
       expect(store.getState().liveSegments).toMatchObject([
         { id: "segment-1", text: "hello" },
@@ -2321,7 +2326,12 @@ describe("General Listener Slice", () => {
             },
           ],
         });
-        expect(handleTranscriptSegmentDelta).toHaveBeenCalledTimes(2);
+        // Après l'instantané, les deltas passent par le lot de 100 ms.
+        expect(store.getState().liveSegments).not.toContainEqual(
+          expect.objectContaining({ id: "segment-after-timeout" }),
+        );
+        await vi.advanceTimersByTimeAsync(100);
+        expect(handleTranscriptSegmentDelta).toHaveBeenCalledOnce();
         expect(store.getState().liveSegments).toContainEqual(
           expect.objectContaining({ id: "segment-after-timeout" }),
         );
@@ -2400,6 +2410,7 @@ describe("General Listener Slice", () => {
         },
       });
       await expect(reattachPromise).resolves.toBe("attached");
+      flushLiveTranscriptBatches();
       expect(store.getState().liveSegments).toMatchObject([
         { id: "newer-segment", text: "newer" },
       ]);
