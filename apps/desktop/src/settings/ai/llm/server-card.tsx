@@ -108,32 +108,36 @@ export function LlmServerCard() {
           baseUrl={baseUrl}
         />
       ) : null}
-      <ServerAddressForm
-        kind="llm"
-        providerId={PROVIDER_ID}
-        label={
-          <Trans>
-            Server address (OpenAI-compatible: vLLM, Ollama, llama.cpp, LM
-            Studio)
-          </Trans>
-        }
-        placeholder={LLM_BASE_URL_PLACEHOLDER}
-        testing={state.status === "testing"}
-        onTest={connection.test}
-        isCurrentProvider={current_llm_provider === PROVIDER_ID}
-      />
-      {baseUrl ? (
-        <ModelRadioList
-          label={t`Model`}
-          models={models.map((id) => ({ id }))}
-          value={model}
-          onChange={chooseModel}
-          footer={
-            state.status === "connected"
-              ? undefined
-              : t`Test the connection to list the models served.`
+      <div data-setting-id="llm-server">
+        <ServerAddressForm
+          kind="llm"
+          providerId={PROVIDER_ID}
+          label={
+            <Trans>
+              Server address (OpenAI-compatible: vLLM, Ollama, llama.cpp, LM
+              Studio)
+            </Trans>
           }
+          placeholder={LLM_BASE_URL_PLACEHOLDER}
+          testing={state.status === "testing"}
+          onTest={connection.test}
+          isCurrentProvider={current_llm_provider === PROVIDER_ID}
         />
+      </div>
+      {baseUrl ? (
+        <div data-setting-id="llm-model">
+          <ModelRadioList
+            label={t`Model`}
+            models={models.map((id) => ({ id }))}
+            value={model}
+            onChange={chooseModel}
+            footer={
+              state.status === "connected"
+                ? undefined
+                : t`Test the connection to list the models served.`
+            }
+          />
+        </div>
       ) : null}
       {model && state.status === "connected" && health.status === "error" ? (
         <p role="alert" className="text-alert-foreground text-[13px]">

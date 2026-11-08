@@ -28,6 +28,8 @@ import {
   subscribeCanonicalSessionImportLocks,
 } from "~/session/editor-activity";
 import { useSession } from "~/session/queries";
+import { registerShortcutAction } from "~/shared/shortcut-actions";
+import { isListeningPaused } from "~/store/zustand/listener/general-shared";
 import { type Tab, useTabs } from "~/store/zustand/tabs";
 import { useListener } from "~/stt/contexts";
 import { ScheduledSessionAutoStart } from "~/stt/scheduled-session-auto-start";
@@ -132,6 +134,9 @@ function TabContentNoteInner({
 
   const hasTranscript = useHasTranscript(sessionId);
   const sessionMode = useListener((state) => state.getSessionMode(sessionId));
+  const paused = useListener((state) =>
+    isListeningPaused(state.live, sessionId),
+  );
   const enhancedNoteIds = useEnhancedNotes(
     sessionId,
     hasTranscript && sessionMode === "inactive",
@@ -145,6 +150,7 @@ function TabContentNoteInner({
   // Préparer → Écouter → Synthèse, dans le même écran (document vivant).
   const stage = getNoteStage({
     sessionMode,
+    paused,
     hasTranscript,
     hasEnhancedNotes: enhancedNoteIds.length > 0,
   });
@@ -183,11 +189,29 @@ function TabContentNoteInner({
     [sessionId],
   );
 
+  // Ctrl+S et Échap sortent de l'édition de la transcription. Dans la fenêtre
+  // principale, Ctrl+S est un raccourci global (« Vos notes sont enregistrées
+  // automatiquement. ») : la note en édition prend la main par le registre.
+  const exitTranscriptEditEnabled =
+    tab.active && !lockOverlay && transcriptEditMode;
+  useEffect(() => {
+    if (!exitTranscriptEditEnabled || standaloneWindow) {
+      return;
+    }
+
+    return registerShortcutAction("save", () =>
+      handleTranscriptEditModeChange(false),
+    );
+  }, [
+    exitTranscriptEditEnabled,
+    handleTranscriptEditModeChange,
+    standaloneWindow,
+  ]);
   useHotkeys(
-    "mod+s, escape",
+    standaloneWindow ? "mod+s, escape" : "escape",
     () => handleTranscriptEditModeChange(false),
     {
-      enabled: tab.active && !lockOverlay && transcriptEditMode,
+      enabled: exitTranscriptEditEnabled,
       enableOnContentEditable: true,
       enableOnFormTags: true,
       preventDefault: true,

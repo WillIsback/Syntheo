@@ -62,6 +62,21 @@ describe("checkEventNotifications", () => {
         action_label: "Join & record",
         action: "join_and_record",
         action_menu: { label: "Open meeting", action: "open_meeting" },
+        labels: {
+          options: "Options",
+          startingSoon: "Starting soon",
+          started: "Started",
+          startingInOne: "Starting in 1 minute",
+          startingInOther: "Starting in {minutes} minutes",
+          beginsIn: "Begins in {time}",
+          showLess: "Show less",
+          what: "What:",
+          who: "Who:",
+          location: "Where:",
+          inviteeTimeZone: "Invitee Time Zone:",
+          accept: "Accept",
+          createNewNote: "Create New Note...",
+        },
       }),
     );
   });

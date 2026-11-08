@@ -19,12 +19,15 @@ export function getNoteStage({
   sessionMode,
   hasTranscript,
   hasEnhancedNotes,
+  paused = false,
 }: {
   sessionMode: SessionMode;
   hasTranscript: boolean;
   hasEnhancedNotes: boolean;
+  // Écoute en pause (issue 353) : la réunion continue sans capture ouverte.
+  paused?: boolean;
 }): NoteStage {
-  if (sessionMode === "active" || sessionMode === "finalizing") {
+  if (paused || sessionMode === "active" || sessionMode === "finalizing") {
     return "listen";
   }
 
@@ -57,7 +60,7 @@ export function getLivingDocumentView(
     : { type: "raw" };
 }
 
-// Vues entre lesquelles on peut basculer (Ctrl ⌥ ← / →) : les comptes-rendus.
+// Vues entre lesquelles on peut basculer (Ctrl+Pg.Préc / Ctrl+Pg.Suiv) : les comptes-rendus.
 export function getLivingDocumentViews(
   enhancedNoteIds: readonly string[],
 ): EditorView[] {

@@ -1360,6 +1360,81 @@ describe("enhanceTransform.transformArgs", () => {
     expect(result.formatOverride).toBe("");
   });
 
+  // Issue 353 : une capture par reprise après une pause. La synthèse reçoit
+  // la transcription de toute la note, captures dans l'ordre chronologique
+  // (le rendu natif les ordonne, voir session_transcript.rs).
+  it("sends every capture of the note to the summary in chronological order", async () => {
+    mocks.loadSessionContentSnapshot.mockResolvedValue({
+      ...createSnapshot(),
+      transcripts: [
+        {
+          id: "after-pause",
+          started_at: 120_000,
+          ended_at: 180_000,
+          memo: "",
+          wordsJson: "[]",
+          words: [],
+          speaker_hints: [],
+        },
+        {
+          id: "before-pause",
+          started_at: 0,
+          ended_at: 60_000,
+          memo: "",
+          wordsJson: "[]",
+          words: [],
+          speaker_hints: [],
+        },
+      ],
+    });
+    mocks.renderSessionTranscript.mockResolvedValue({
+      status: "ok",
+      data: {
+        started_at: 0,
+        ended_at: 180_000,
+        segments: [
+          {
+            speaker_label: "Alice",
+            start_ms: 1_000,
+            end_ms: 5_000,
+            text: "Avant la pause",
+            words: [{ text: "Avant", start_ms: 1_000, end_ms: 2_000 }],
+          },
+          {
+            speaker_label: "Alice",
+            start_ms: 121_000,
+            end_ms: 125_000,
+            text: "Après la reprise",
+            words: [{ text: "Après", start_ms: 121_000, end_ms: 122_000 }],
+          },
+        ],
+      },
+    });
+
+    const result = await enhanceTransform.transformArgs(
+      { sessionId: "session-1", enhancedNoteId: "note-1" },
+      settingsValues,
+    );
+
+    expect(mocks.renderSessionTranscript).toHaveBeenCalledWith({
+      session_id: "session-1",
+      self_human_id: "user-1",
+    });
+    expect(result.transcripts).toHaveLength(1);
+    expect(result.transcripts[0]).toMatchObject({
+      startedAt: 0,
+      endedAt: 180_000,
+      segments: [
+        { text: "Avant la pause", startMs: 1_000 },
+        { text: "Après la reprise", startMs: 121_000 },
+      ],
+    });
+    expect(mocks.summaryLengthPolicy).toHaveBeenCalledWith({
+      transcript_texts: ["Avant la pause", "Après la reprise"],
+      template_section_count: 0,
+    });
+  });
+
   it("builds the summary policy from the returned transcript segments", async () => {
     const lengthPolicy = {
       transcript_characters: 27,

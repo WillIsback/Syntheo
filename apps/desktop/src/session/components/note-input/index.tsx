@@ -30,6 +30,7 @@ import {
   unregisterCanonicalSessionEditor,
 } from "~/session/editor-activity";
 import { useScrollPreservation } from "~/shared/hooks/useScrollPreservation";
+import { getShortcut } from "~/shared/shortcuts";
 import type { SessionMode } from "~/store/zustand/listener/general";
 import { type Tab, useTabs } from "~/store/zustand/tabs";
 import { type EditorView as TabEditorView } from "~/store/zustand/tabs/schema";
@@ -245,8 +246,11 @@ const NoteInputContent = forwardRef<
       [editorTabs, handleTabChange, renderedCurrentTab],
     );
 
+    // Ctrl+Pg.Préc / Ctrl+Pg.Suiv (table des raccourcis). Ctrl+Alt+←/→ n'est
+    // plus affiché (rotation d'écran Intel, AltGr) : l'écouteur reste jusqu'à
+    // sa suppression en 0.7.0 (issue 397).
     useHotkeys(
-      "mod+alt+left",
+      `${getShortcut("previousView").hotkeys}, mod+alt+left`,
       () => handleAdjacentViewShortcut("previous"),
       {
         preventDefault: true,
@@ -257,7 +261,7 @@ const NoteInputContent = forwardRef<
     );
 
     useHotkeys(
-      "mod+alt+right",
+      `${getShortcut("nextView").hotkeys}, mod+alt+right`,
       () => handleAdjacentViewShortcut("next"),
       {
         preventDefault: true,

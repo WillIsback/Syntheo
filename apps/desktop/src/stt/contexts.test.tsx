@@ -1415,6 +1415,106 @@ describe("ListenerProvider detect events", () => {
     },
   );
 
+  test.each([
+    {
+      name: "the note recording is finalizing",
+      prime: (store: ReturnType<typeof createListenerStore>) =>
+        store.setState((state) => ({
+          live: {
+            ...state.live,
+            loading: true,
+            sessionId: "session-1",
+            status: "finalizing" as const,
+            finalizingBySession: {
+              "session-1": {
+                startedAtMs: 0,
+                seconds: 42,
+                needsBatchRepair: false,
+              },
+            },
+          },
+        })),
+    },
+    {
+      name: "a previous recording is still finalizing in the background",
+      prime: (store: ReturnType<typeof createListenerStore>) =>
+        store.setState((state) => ({
+          live: {
+            ...state.live,
+            finalizingBySession: {
+              "session-1": {
+                startedAtMs: 0,
+                seconds: 42,
+                needsBatchRepair: false,
+              },
+            },
+          },
+        })),
+    },
+  ])("never shows the mic prompt while $name", async ({ prime }) => {
+    const store = createListenerStore();
+    prime(store);
+
+    const handler = await renderProvider(store);
+    expect(handler).toBeTypeOf("function");
+
+    handler({
+      payload: {
+        type: "micDetected",
+        key: "mic-1",
+        apps: [{ id: "us.zoom.xos", name: "Zoom" }],
+        duration_secs: 15,
+      },
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(getNearbyCalendarEventsMock).not.toHaveBeenCalled();
+    expect(showNotificationMock).not.toHaveBeenCalled();
+  });
+
+  test("does not show a stale mic prompt when a recording reaches finalizing during the calendar lookup", async () => {
+    const store = createListenerStore();
+    let resolveNearbyEvents: (events: never[]) => void = () => {};
+    getNearbyCalendarEventsMock.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveNearbyEvents = resolve;
+        }),
+    );
+
+    const handler = await renderProvider(store);
+    expect(handler).toBeTypeOf("function");
+
+    handler({
+      payload: {
+        type: "micDetected",
+        key: "mic-1",
+        apps: [{ id: "us.zoom.xos", name: "Zoom" }],
+        duration_secs: 15,
+      },
+    });
+
+    await vi.waitFor(() =>
+      expect(getNearbyCalendarEventsMock).toHaveBeenCalledTimes(1),
+    );
+
+    store.setState((state) => ({
+      live: {
+        ...state.live,
+        loading: true,
+        sessionId: "session-1",
+        status: "finalizing" as const,
+      },
+    }));
+    resolveNearbyEvents([]);
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(showNotificationMock).not.toHaveBeenCalled();
+  });
+
   test("auto-stops after a trigger app learned during active listening stops", async () => {
     const store = createListenerStore();
     const stopSpy = vi.fn();

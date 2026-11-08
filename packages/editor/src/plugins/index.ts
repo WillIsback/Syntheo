@@ -12,6 +12,11 @@ export {
   setActiveCommentAnchor,
   setCommentAnchors,
 } from "./comment-anchors";
+export {
+  createDerivedInk,
+  type DerivedInk,
+  type DerivedInkRange,
+} from "./derived-ink";
 export { docChangeListenerPlugin } from "./doc-change-listener";
 export {
   clipNodeSpec,

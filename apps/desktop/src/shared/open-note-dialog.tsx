@@ -2,16 +2,19 @@ import { Trans, useLingui } from "@lingui/react/macro";
 import { Command as CommandPrimitive } from "cmdk";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
-import { create } from "zustand";
 
 import {
+  BookOpen,
   FileText,
   Folder,
   Gear,
   NotePencil,
   Lock,
   MagnifyingGlass,
+  Pause,
+  Play,
   Users,
+  UsersThree,
   X,
   type Icon,
 } from "@syntheo/ui/components/icons";
@@ -24,20 +27,48 @@ import { cn } from "@syntheo/utils";
 
 import { useBillingAccess } from "~/billing/billing-context";
 import { useFolderSelection } from "~/folders/selection";
+import {
+  requestSpeakerNaming,
+  useSpeakerNamingStore,
+} from "~/session/components/speaker-naming/store";
 import { useFolderPaths, useSessionSummaries } from "~/session/queries";
+import {
+  normalizeSearchText,
+  searchSettings,
+  type SettingsSearchResult,
+  useSettingsSearchIndex,
+} from "~/settings/search";
+import { requestSettingFocus } from "~/settings/setting-focus";
+import { openHelpDialog } from "~/shared/help-dialog";
 import { useMainContentCenterOffset } from "~/shared/main/content-offset";
+import {
+  NoSettingMatches,
+  PALETTE_ITEM_CLASS,
+  PALETTE_SETTINGS_LIMIT,
+  PaletteSettingsGroup,
+} from "~/shared/palette-settings-group";
+import {
+  closeNoteDialog,
+  openNoteDialog,
+  openSettingsSearch,
+  useIsNoteDialogOpen,
+  usePaletteStore,
+} from "~/shared/palette-store";
+import { formatShortcutKeys } from "~/shared/shortcuts";
 import { useNewNote } from "~/shared/useNewNote";
 import { useSettingsNavGroups } from "~/sidebar/settings-nav-groups";
 import { type TabInput, useTabs } from "~/store/zustand/tabs";
+import { useListener } from "~/stt/contexts";
+import { requestMainListenerControl } from "~/stt/window-control";
+
+export {
+  closeNoteDialog,
+  openNoteDialog,
+  openSettingsSearch,
+  useIsNoteDialogOpen,
+};
 
 const MAX_RECENT_DISPLAY = 5;
-
-const PALETTE_ITEM_CLASS = cn([
-  "flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2",
-  "text-muted-foreground text-sm",
-  "data-[selected=true]:bg-accent data-[selected=true]:text-foreground",
-  "transition-colors",
-]);
 
 interface OpenNoteDialogProps {
   readonly open: boolean;
@@ -77,15 +108,15 @@ function filterPageResults(
   pageResults: PageResult[],
   topLevelPageIds: Set<string>,
 ): PageResult[] {
-  const normalizedQuery = query.trim().toLowerCase();
+  const normalizedQuery = normalizeSearchText(query);
   if (!normalizedQuery) {
     return pageResults.filter((page) => topLevelPageIds.has(page.id));
   }
+  const matches = (text: string | null) =>
+    text !== null && normalizeSearchText(text).includes(normalizedQuery);
   return pageResults.filter(
     (page) =>
-      page.label.toLowerCase().includes(normalizedQuery) ||
-      page.groupLabel.toLowerCase().includes(normalizedQuery) ||
-      (page.hint?.toLowerCase().includes(normalizedQuery) ?? false),
+      matches(page.label) || matches(page.groupLabel) || matches(page.hint),
   );
 }
 
@@ -122,39 +153,15 @@ function preventCloseWhenOnDragRegion(event: {
   }
 }
 
-// Palette `Ctrl K` : seul point d'entrée vers l'historique des notes depuis la
-// disparition de la barre latérale. Son état vit dans un store pour qu'on
-// puisse l'ouvrir de n'importe où (accueil, barre de titre, raccourcis) sans
-// dépendre d'un contexte React.
-const useOpenNoteDialogStore = create<{
-  open: boolean;
-  setOpen: (open: boolean) => void;
-}>((set) => ({
-  open: false,
-  setOpen: (open) => set({ open }),
-}));
-
-/** Ouvre la palette de recherche (`Ctrl K`). Stable, utilisable hors React. */
-export function openNoteDialog() {
-  useOpenNoteDialogStore.getState().setOpen(true);
-}
-
-/** Ferme la palette de recherche. */
-export function closeNoteDialog() {
-  useOpenNoteDialogStore.getState().setOpen(false);
-}
-
-/** Indique si la palette est ouverte (lecture réactive). */
-export function useIsNoteDialogOpen() {
-  return useOpenNoteDialogStore((state) => state.open);
-}
-
+// Palette `Ctrl+K` : seul point d'entrée vers l'historique des notes depuis la
+// disparition de la barre latérale. Elle cherche aussi les paramètres ; son
+// état vit dans `palette-store.ts`.
 const OPEN_NOTE_DIALOG_API: OpenNoteDialogApi = { open: openNoteDialog };
 
 /**
  * API historique : renvoie `{ open }`, une référence stable. Fonctionne aussi
  * hors de `OpenNoteDialogProvider` ; le provider ne fait que monter la palette
- * et le raccourci `Ctrl K`.
+ * et le raccourci `Ctrl+K`.
  */
 export function useOpenNoteDialog(): OpenNoteDialogApi {
   return OPEN_NOTE_DIALOG_API;
@@ -166,7 +173,7 @@ export function OpenNoteDialogProvider({
   children: React.ReactNode;
 }>) {
   const open = useIsNoteDialogOpen();
-  const setOpen = useOpenNoteDialogStore((state) => state.setOpen);
+  const setOpen = usePaletteStore((state) => state.setOpen);
   const mainContentCenterOffset = useMainContentCenterOffset();
 
   useHotkeys("mod+k", openNoteDialog, {
@@ -194,6 +201,15 @@ export function OpenNoteDialog({
 }: OpenNoteDialogProps) {
   const { t } = useLingui();
   const [query, setQuery] = useState("");
+  // Palette filtrée sur les paramètres (`Ctrl Maj P`, issue 373).
+  const settingsOnly = usePaletteStore((state) => state.filter) === "settings";
+  const setFilter = usePaletteStore((state) => state.setFilter);
+  const settingsIndex = useSettingsSearchIndex();
+  const settingResults = useMemo(
+    () =>
+      settingsOnly || query.trim() ? searchSettings(settingsIndex, query) : [],
+    [query, settingsIndex, settingsOnly],
+  );
   const openCurrent = useTabs((state) => state.openCurrent);
   const openNew = useTabs((state) => state.openNew);
   const recentlyOpenedSessionIds = useTabs(
@@ -306,13 +322,63 @@ export function OpenNoteDialog({
   );
 
   const newNoteLabel = t`New note`;
-  const showNewNote =
-    !query.trim() ||
-    newNoteLabel.toLowerCase().includes(query.trim().toLowerCase());
+  const matchesQuery = (label: string) =>
+    !query.trim() || label.toLowerCase().includes(query.trim().toLowerCase());
+  const showNewNote = matchesQuery(newNoteLabel);
+  // Aide F1 (issue 372) : proposée dès qu'on tape « aide » ou « raccourcis »,
+  // pour ne pas encombrer la palette vide.
+  const helpLabel = t`Help and shortcuts`;
+  const showHelp =
+    query.trim() !== "" &&
+    (matchesQuery(helpLabel) || matchesQuery(t`Keyboard shortcuts`));
+
+  // Commande contextuelle de l'écoute (issue 353), sans raccourci dédié.
+  const activeSessionId = useListener((state) =>
+    state.live.status === "active" ? state.live.sessionId : null,
+  );
+  const pausedSessionId = useListener((state) =>
+    state.live.pause?.phase === "paused" && state.live.status !== "active"
+      ? state.live.pause.sessionId
+      : null,
+  );
+  const listeningCommand = useMemo(
+    () =>
+      activeSessionId
+        ? {
+            action: "pause" as const,
+            sessionId: activeSessionId,
+            label: t`Pause listening`,
+            icon: Pause,
+          }
+        : pausedSessionId
+          ? {
+              action: "resume" as const,
+              sessionId: pausedSessionId,
+              label: t`Resume listening`,
+              icon: Play,
+            }
+          : null,
+    [activeSessionId, pausedSessionId, t],
+  );
+  const showListeningCommand =
+    listeningCommand !== null && matchesQuery(listeningCommand.label);
+
+  // « Nommer les intervenants » (issue 321), seulement quand la note
+  // affichée a des locuteurs anonymes.
+  const speakerNamingSessionId = useSpeakerNamingStore(
+    (state) => state.available?.sessionId ?? null,
+  );
+  const speakerNamingLabel = t`Name speakers`;
+  const showSpeakerNaming =
+    speakerNamingSessionId !== null && matchesQuery(speakerNamingLabel);
 
   const hasAnyResults =
     showNewNote ||
+    showHelp ||
+    showListeningCommand ||
+    showSpeakerNaming ||
     filteredPages.length > 0 ||
+    settingResults.length > 0 ||
     filteredRecentSessions.length > 0 ||
     filteredOtherNotes.length > 0;
 
@@ -361,31 +427,112 @@ export function OpenNoteDialog({
     [handleOpenChange, openNew, query],
   );
 
+  // Arrivée : la page s'ouvre, défile jusqu'au réglage, le surligne et lui
+  // donne le focus (voir setting-focus.ts).
+  const handleSelectSetting = useCallback(
+    (result: SettingsSearchResult) => {
+      handleOpenChange(false);
+      requestSettingFocus(result.id);
+      openNew({ type: "settings", state: { tab: result.page } });
+    },
+    [handleOpenChange, openNew],
+  );
+
   const handleNewNote = useCallback(() => {
     handleOpenChange(false);
     createNewNote();
   }, [createNewNote, handleOpenChange]);
 
-  const actionGroup = showNewNote && (
+  const handleHelp = useCallback(() => {
+    handleOpenChange(false);
+    openHelpDialog();
+  }, [handleOpenChange]);
+
+  const handleListeningCommand = useCallback(() => {
+    if (!listeningCommand) return;
+    handleOpenChange(false);
+    void requestMainListenerControl(
+      listeningCommand.action,
+      listeningCommand.sessionId,
+    );
+  }, [handleOpenChange, listeningCommand]);
+
+  const handleSpeakerNaming = useCallback(() => {
+    if (!speakerNamingSessionId) return;
+    handleOpenChange(false);
+    requestSpeakerNaming(speakerNamingSessionId);
+  }, [handleOpenChange, speakerNamingSessionId]);
+
+  const actionGroup = (showNewNote ||
+    showListeningCommand ||
+    showHelp ||
+    showSpeakerNaming) && (
     <CommandPrimitive.Group className="pb-1.5">
-      <CommandPrimitive.Item
-        value="action-new-note"
-        onSelect={handleNewNote}
-        className={PALETTE_ITEM_CLASS}
-      >
-        <NotePencil className="text-muted-foreground h-4 w-4 shrink-0" />
-        <span className="truncate">{newNoteLabel}</span>
-        <kbd className="text-muted-foreground ml-auto shrink-0 font-sans text-xs">
-          Ctrl N
-        </kbd>
-      </CommandPrimitive.Item>
+      {showSpeakerNaming ? (
+        <CommandPrimitive.Item
+          value="action-name-speakers"
+          onSelect={handleSpeakerNaming}
+          className={PALETTE_ITEM_CLASS}
+        >
+          <UsersThree className="text-muted-foreground h-4 w-4 shrink-0" />
+          <span className="truncate">{speakerNamingLabel}</span>
+        </CommandPrimitive.Item>
+      ) : null}
+      {showListeningCommand && listeningCommand ? (
+        <CommandPrimitive.Item
+          value={`action-${listeningCommand.action}-listening`}
+          onSelect={handleListeningCommand}
+          className={PALETTE_ITEM_CLASS}
+        >
+          <listeningCommand.icon className="text-muted-foreground h-4 w-4 shrink-0" />
+          <span className="truncate">{listeningCommand.label}</span>
+        </CommandPrimitive.Item>
+      ) : null}
+      {showNewNote ? (
+        <CommandPrimitive.Item
+          value="action-new-note"
+          onSelect={handleNewNote}
+          className={PALETTE_ITEM_CLASS}
+        >
+          <NotePencil className="text-muted-foreground h-4 w-4 shrink-0" />
+          <span className="truncate">{newNoteLabel}</span>
+          <kbd className="text-muted-foreground ml-auto shrink-0 font-sans text-xs">
+            {formatShortcutKeys("newNote")}
+          </kbd>
+        </CommandPrimitive.Item>
+      ) : null}
+      {showHelp ? (
+        <CommandPrimitive.Item
+          value="action-help"
+          onSelect={handleHelp}
+          className={PALETTE_ITEM_CLASS}
+        >
+          <BookOpen className="text-muted-foreground h-4 w-4 shrink-0" />
+          <span className="truncate">{helpLabel}</span>
+          <kbd className="text-muted-foreground ml-auto shrink-0 font-sans text-xs">
+            {formatShortcutKeys("help")}
+          </kbd>
+        </CommandPrimitive.Item>
+      ) : null}
     </CommandPrimitive.Group>
   );
 
   const isQueryEmpty = !query.trim();
   const pageGroupHasPadding =
     filteredOtherNotes.length > 0 ||
+    settingResults.length > 0 ||
     (!isQueryEmpty && filteredRecentSessions.length > 0);
+  const settingsGroup = settingResults.length > 0 && (
+    <PaletteSettingsGroup
+      results={settingResults}
+      limit={settingsOnly ? undefined : PALETTE_SETTINGS_LIMIT}
+      isPro={isPro}
+      withDivider={!settingsOnly && filteredPages.length > 0}
+      onSelect={handleSelectSetting}
+      onShowAll={() => setFilter("settings")}
+    />
+  );
+  const settingsLabel = t`Search settings`;
   const pageGroup = filteredPages.length > 0 && (
     <CommandPrimitive.Group
       className={pageGroupHasPadding ? "pb-1.5" : ""}
@@ -448,7 +595,11 @@ export function OpenNoteDialog({
         onPointerDownOutside={preventCloseWhenOnDragRegion}
       >
         <DialogTitle className="sr-only">
-          <Trans>Search notes and pages...</Trans>
+          {settingsOnly ? (
+            settingsLabel
+          ) : (
+            <Trans>Search notes and pages...</Trans>
+          )}
         </DialogTitle>
         <div
           className={cn([
@@ -459,11 +610,37 @@ export function OpenNoteDialog({
           <CommandPrimitive shouldFilter={false} className="flex flex-col">
             <div className="border-border/60 flex items-center gap-3 border-b px-4 py-3">
               <MagnifyingGlass className="text-muted-foreground h-4 w-4 shrink-0" />
+              {settingsOnly ? (
+                <button
+                  type="button"
+                  aria-label={t`Remove the Settings filter`}
+                  onClick={() => setFilter(null)}
+                  className={cn([
+                    "bg-accent text-accent-foreground flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium",
+                    "focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-hidden",
+                  ])}
+                >
+                  <Trans>Settings</Trans>
+                  <X aria-hidden className="h-3 w-3" />
+                </button>
+              ) : null}
               <CommandPrimitive.Input
                 ref={focusInput}
                 value={query}
                 onValueChange={setQuery}
-                placeholder={t`Search notes and pages...`}
+                onKeyDown={(event) => {
+                  // Retour arrière dans un champ vide retire le filtre.
+                  if (event.key === "Backspace" && !query && settingsOnly) {
+                    event.preventDefault();
+                    setFilter(null);
+                  }
+                }}
+                aria-label={
+                  settingsOnly ? settingsLabel : t`Search notes and pages...`
+                }
+                placeholder={
+                  settingsOnly ? settingsLabel : t`Search notes and pages...`
+                }
                 className={cn([
                   "flex-1 bg-transparent text-sm",
                   "placeholder:text-muted-foreground outline-hidden",
@@ -487,7 +664,13 @@ export function OpenNoteDialog({
             </div>
 
             <CommandPrimitive.List className="max-h-80 overflow-y-auto p-2">
-              {!hasAnyResults ? (
+              {settingsOnly ? (
+                settingResults.length > 0 ? (
+                  settingsGroup
+                ) : (
+                  <NoSettingMatches query={query} />
+                )
+              ) : !hasAnyResults ? (
                 <CommandPrimitive.Empty className="text-muted-foreground py-6 text-center text-sm">
                   <Trans>No results found.</Trans>
                 </CommandPrimitive.Empty>
@@ -495,6 +678,7 @@ export function OpenNoteDialog({
                 <>
                   {actionGroup}
                   {isQueryEmpty ? null : pageGroup}
+                  {settingsGroup}
 
                   {filteredRecentSessions.length > 0 && (
                     <CommandPrimitive.Group
@@ -506,9 +690,11 @@ export function OpenNoteDialog({
                       }
                       heading={
                         <div className="flex flex-col gap-3">
-                          {!isQueryEmpty && filteredPages.length > 0 && (
-                            <div className="bg-accent mx-2 h-px" />
-                          )}
+                          {!isQueryEmpty &&
+                            (filteredPages.length > 0 ||
+                              settingResults.length > 0) && (
+                              <div className="bg-accent mx-2 h-px" />
+                            )}
                           <div className="text-muted-foreground px-2 py-1.5 text-xs font-medium tracking-wider uppercase">
                             <Trans>Recent</Trans>
                           </div>
@@ -536,6 +722,7 @@ export function OpenNoteDialog({
                       heading={
                         <div className="flex flex-col gap-3">
                           {(filteredPages.length > 0 ||
+                            settingResults.length > 0 ||
                             filteredRecentSessions.length > 0) && (
                             <div className="bg-accent mx-2 h-px" />
                           )}
@@ -568,6 +755,25 @@ export function OpenNoteDialog({
                 </>
               )}
             </CommandPrimitive.List>
+            {settingsOnly ? (
+              <div className="border-border/60 text-muted-foreground flex gap-4 border-t px-4 py-2 text-xs">
+                <span>
+                  <kbd className="font-sans">↑↓</kbd> <Trans>Choose</Trans>
+                </span>
+                <span>
+                  <kbd className="font-sans">
+                    <Trans>Enter</Trans>
+                  </kbd>{" "}
+                  <Trans>Open</Trans>
+                </span>
+                <span>
+                  <kbd className="font-sans">
+                    <Trans>Esc</Trans>
+                  </kbd>{" "}
+                  <Trans>Close</Trans>
+                </span>
+              </div>
+            ) : null}
           </CommandPrimitive>
         </div>
       </DialogContent>

@@ -44,10 +44,13 @@ mod test {
         const OUTPUT_FILE: &str = "./js/bindings.gen.ts";
 
         make_specta_builder::<tauri::Wry>()
+            .disable_serde_phases()
+            .semantic_types(
+                specta_typescript::semantic::Configuration::empty().enable_lossless_floats(),
+            )
+            .dangerously_cast_bigints_to_number()
             .export(
-                specta_typescript::Typescript::default()
-                    .formatter(specta_typescript::formatter::prettier)
-                    .bigint(specta_typescript::BigIntExportBehavior::Number),
+                specta_typescript::Typescript::default(),
                 OUTPUT_FILE,
             )
             .unwrap();

@@ -9,6 +9,8 @@ pub enum FloatingBarStatus {
     Recording,
     Reconnecting,
     Error,
+    /// Écoute en pause (issue 353) : aucune capture ouverte, « Reprendre » et « Terminer ».
+    Paused,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, specta::Type)]
@@ -81,7 +83,7 @@ pub const WINDOW_LABEL: &str = "floating-bar";
 
 #[cfg(any(test, not(target_os = "macos")))]
 pub(crate) mod layout {
-    use super::FloatingBarState;
+    use super::{FloatingBarState, FloatingBarStatus};
 
     pub const INSET: f64 = 4.0;
     pub const SCREEN_MARGIN: f64 = 8.0;
@@ -91,6 +93,8 @@ pub(crate) mod layout {
     pub const COMPACT_ICON_SIZE: f64 = 30.0;
     pub const COMPACT_GAP: f64 = 0.0;
     pub const COMPACT_HORIZONTAL_PADDING: f64 = 4.0;
+    /// « En pause », « Reprendre » et « Terminer » côte à côte (bar.tsx).
+    pub const PAUSED_CONTROLS_WIDTH: f64 = 232.0;
     pub const EXPANDED_WIDTH: f64 = 360.0;
     pub const EXPANDED_HEIGHT: f64 = 430.0;
     pub const HOVER_HANDLE_TOP_PADDING: f64 = 7.0;
@@ -113,6 +117,28 @@ pub(crate) mod layout {
 
     pub fn compact_width(shows_expand: bool) -> f64 {
         compact_controls_width(shows_expand) + COMPACT_HORIZONTAL_PADDING * 2.0
+    }
+
+    /// Commandes d'une réunion : « Mettre en pause » s'ajoute à l'arrêt pendant l'écoute ; la
+    /// pause affiche son état et ses deux actions.
+    pub fn meeting_controls_width(state: &FloatingBarState) -> f64 {
+        if matches!(state.status, FloatingBarStatus::Paused) {
+            PAUSED_CONTROLS_WIDTH
+        } else {
+            compact_controls_width(state.live_caption_toggle_visible)
+                + COMPACT_GAP
+                + COMPACT_ICON_SIZE
+        }
+    }
+
+    pub fn meeting_container_size(state: &FloatingBarState) -> (f64, f64) {
+        if is_expanded(state) {
+            return container_size(true, true);
+        }
+        (
+            meeting_controls_width(state) + COMPACT_HORIZONTAL_PADDING * 2.0 + INSET * 2.0,
+            COMPACT_HEIGHT + HOVER_HANDLE_RESERVED_HEIGHT + INSET * 2.0,
+        )
     }
 
     pub fn dictation_container_size(expanded: bool) -> (f64, f64) {
@@ -460,13 +486,12 @@ mod cross_platform {
         force_default_position: bool,
     ) -> Result<FloatingBarOverlayLayout, Error> {
         let is_expanded = state.is_some_and(is_expanded);
-        let shows_expand = state.is_some_and(|value| value.live_caption_toggle_visible);
         let dictation = state.is_some_and(|state| state.dictation.is_some());
         window.set_focusable(!dictation)?;
-        let (width, height) = if dictation {
-            super::layout::dictation_container_size(is_expanded)
-        } else {
-            container_size(is_expanded, shows_expand)
+        let (width, height) = match state {
+            _ if dictation => super::layout::dictation_container_size(is_expanded),
+            Some(state) => super::layout::meeting_container_size(state),
+            None => container_size(false, false),
         };
         let next_size = LogicalSize::new(width, height);
         let scale = window.scale_factor()?;
@@ -723,6 +748,48 @@ mod tests {
                 panic!("available monitors must not be listed")
             }),
             Some("eDP-1")
+        );
+    }
+
+    fn meeting_state(status: super::FloatingBarStatus, expand: bool) -> super::FloatingBarState {
+        super::FloatingBarState {
+            dictation: None,
+            amplitude: 0.0,
+            title: String::new(),
+            status,
+            color_scheme: super::FloatingBarColorScheme::Dark,
+            opacity: 1.0,
+            live_caption_opacity: 1.0,
+            live_caption_width: 360.0,
+            live_caption_line_count: 3,
+            live_caption_position: crate::window::live_caption::LiveCaptionPosition::BottomCenter,
+            live_caption_minimized: true,
+            live_caption_toggle_visible: expand,
+            transcript_bubbles: None,
+            transcript_notice: None,
+            layout: None,
+            session_id: None,
+        }
+    }
+
+    // Issue 353 : pendant l'écoute, le bouton « Mettre en pause » s'ajoute ; en pause, la barre
+    // s'élargit pour « En pause », « Reprendre » et « Terminer ».
+    #[test]
+    fn meeting_controls_make_room_for_pause_and_resume() {
+        use super::FloatingBarStatus::{Paused, Recording};
+        assert_eq!(
+            layout::meeting_controls_width(&meeting_state(Recording, false)),
+            layout::COMPACT_SOLO_STOP_WIDTH + layout::COMPACT_ICON_SIZE
+        );
+        assert_eq!(
+            layout::meeting_controls_width(&meeting_state(Recording, true)),
+            layout::COMPACT_STOP_WIDTH + 2.0 * layout::COMPACT_ICON_SIZE
+        );
+        assert_eq!(
+            layout::meeting_container_size(&meeting_state(Paused, false)).0,
+            layout::PAUSED_CONTROLS_WIDTH
+                + layout::COMPACT_HORIZONTAL_PADDING * 2.0
+                + layout::INSET * 2.0
         );
     }
 

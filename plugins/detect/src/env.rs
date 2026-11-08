@@ -85,6 +85,12 @@ pub mod test_support {
         }
     }
 
+    impl Default for TestEnv {
+        fn default() -> Self {
+            Self::new()
+        }
+    }
+
     impl Env for TestEnv {
         fn emit(&self, event: DetectEvent) {
             self.events.lock().unwrap().push(event);

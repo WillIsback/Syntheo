@@ -23,6 +23,8 @@ import { cn } from "@syntheo/utils";
 
 import { useSearch } from "./context";
 
+import { shortcutTooltip } from "~/shared/shortcuts";
+
 function ToggleButton({
   active,
   onClick,
@@ -108,11 +110,16 @@ export function SearchBar({
   const replaceInputRef = useRef<HTMLInputElement>(null);
 
   useMountEffect(() => {
-    searchInputRef.current?.focus();
-
     const editor = editorRef?.current;
     return () => editor?.commands.setSearch("", false);
   });
+
+  // Ctrl+F (ouverture ou nouvel appui) : focus et texte sélectionné, comme Word.
+  const selectRequest = search?.selectRequest;
+  useEffect(() => {
+    searchInputRef.current?.focus();
+    searchInputRef.current?.select();
+  }, [selectRequest]);
 
   useEffect(() => {
     if (allowReplace && search?.showReplace) {
@@ -236,14 +243,7 @@ export function SearchBar({
             <ToggleButton
               active={showReplace}
               onClick={toggleReplace}
-              tooltip={
-                <>
-                  <span>
-                    <Trans>Replace</Trans>
-                  </span>
-                  <Kbd className="animate-kbd-press">{primaryModifier} H</Kbd>
-                </>
-              }
+              tooltip={shortcutTooltip(t`Replace`, "replaceInNote")}
             >
               <Swap className="size-3.5" />
             </ToggleButton>
@@ -256,43 +256,19 @@ export function SearchBar({
           <IconButton
             onClick={onPrev}
             disabled={totalMatches === 0}
-            tooltip={
-              <>
-                <span>
-                  <Trans>Previous match</Trans>
-                </span>
-                <Kbd className="animate-kbd-press">⇧ ↵</Kbd>
-              </>
-            }
+            tooltip={shortcutTooltip(t`Previous match`, "findPrevious")}
           >
             <CaretUp className="size-3.5" />
           </IconButton>
           <IconButton
             onClick={onNext}
             disabled={totalMatches === 0}
-            tooltip={
-              <>
-                <span>
-                  <Trans>Next match</Trans>
-                </span>
-                <Kbd className="animate-kbd-press">↵</Kbd>
-              </>
-            }
+            tooltip={shortcutTooltip(t`Next match`, "findNext")}
           >
             <CaretDown className="size-3.5" />
           </IconButton>
         </div>
-        <IconButton
-          onClick={close}
-          tooltip={
-            <>
-              <span>
-                <Trans>Close</Trans>
-              </span>
-              <Kbd className="animate-kbd-press">Esc</Kbd>
-            </>
-          }
-        >
+        <IconButton onClick={close} tooltip={shortcutTooltip(t`Close`, "home")}>
           <X className="size-3.5" />
         </IconButton>
       </div>

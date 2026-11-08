@@ -246,9 +246,12 @@ mod tests {
         assert_eq!(ignored.len(), deduped.len(), "no duplicate bundle IDs");
     }
 
+    /// Cas de test : ignorés par l'utilisateur, inclus par l'utilisateur, applications, attendu.
+    type TrackCase<'a> = (HashSet<String>, HashSet<String>, &'a [&'a str], bool);
+
     #[test]
     fn test_should_track_app_applies_categories_then_user_overrides() {
-        let cases: [(HashSet<String>, HashSet<String>, &[&str], bool); 6] = [
+        let cases: [TrackCase; 6] = [
             (HashSet::new(), HashSet::new(), &["us.zoom.xos"], true),
             (
                 HashSet::new(),

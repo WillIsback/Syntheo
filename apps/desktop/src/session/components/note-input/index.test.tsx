@@ -244,6 +244,9 @@ describe("NoteInput tab selection", () => {
   });
 
   it.each([
+    ["mod+pagedown", { type: "transcript" }],
+    ["mod+pageup", { type: "enhanced", id: "summary-1" }],
+    // Plus affiché, gardé jusqu'à sa suppression en 0.7.0 (issue 397).
     ["mod+alt+right", { type: "transcript" }],
     ["mod+alt+left", { type: "enhanced", id: "summary-1" }],
   ])("switches note views with %s", (keys, expected) => {
@@ -254,7 +257,14 @@ describe("NoteInput tab selection", () => {
     ];
     const { handleTabChange } = renderNoteInput();
 
-    hoisted.hotkeys.find((hotkey) => hotkey.keys === keys)?.callback();
+    hoisted.hotkeys
+      .find((hotkey) =>
+        hotkey.keys
+          .split(",")
+          .map((key) => key.trim())
+          .includes(keys),
+      )
+      ?.callback();
 
     expect(handleTabChange).toHaveBeenCalledWith(expected);
     expect(hoisted.onBeforeTabChange).toHaveBeenCalledOnce();

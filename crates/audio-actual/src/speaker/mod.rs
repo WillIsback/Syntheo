@@ -1,8 +1,15 @@
 use anyhow::Result;
 #[cfg(any(test, not(target_os = "macos")))]
 use futures_util::Stream;
+#[cfg(any(target_os = "linux", target_os = "windows"))]
+use futures_util::task::AtomicWaker;
 #[cfg(any(test, not(target_os = "macos")))]
 use pin_project::pin_project;
+#[cfg(any(target_os = "linux", target_os = "windows"))]
+use std::sync::{
+    Arc,
+    atomic::{AtomicBool, AtomicU32, AtomicUsize},
+};
 
 pub(super) const CHUNK_SIZE: usize = 256;
 pub(super) const BUFFER_SIZE: usize = CHUNK_SIZE * 256;
@@ -16,24 +23,72 @@ type PlatformSpeakerInput = macos::SpeakerInput;
 mod windows;
 #[cfg(target_os = "windows")]
 type PlatformSpeakerInput = windows::SpeakerInput;
-#[cfg(all(target_os = "windows", not(test)))]
+#[cfg(target_os = "windows")]
 type PlatformSpeakerStream = windows::SpeakerStream;
 
 #[cfg(target_os = "linux")]
 mod linux;
 #[cfg(target_os = "linux")]
 type PlatformSpeakerInput = linux::SpeakerInput;
-#[cfg(all(target_os = "linux", not(test)))]
+#[cfg(target_os = "linux")]
 type PlatformSpeakerStream = linux::SpeakerStream;
 
 #[cfg(test)]
 mod mock;
 
-#[cfg(all(any(target_os = "windows", target_os = "linux"), not(test)))]
-type InnerStream = PlatformSpeakerStream;
+/// Producer-side handles moved into a Linux or Windows capture thread.
+///
+/// They are grouped once, before the thread starts, so the real-time path neither allocates nor
+/// clones anything more than when they were passed one by one.
+#[cfg(any(target_os = "linux", target_os = "windows"))]
+struct CaptureThreadHandles {
+    producer: ringbuf::HeapProd<f32>,
+    waker: Arc<AtomicWaker>,
+    wake_pending: Arc<AtomicBool>,
+    alive: Arc<AtomicBool>,
+    current_sample_rate: Arc<AtomicU32>,
+    dropped_samples: Arc<AtomicUsize>,
+}
 
-#[cfg(test)]
-type InnerStream = mock::MockInnerStream;
+// The real platform stream stays compiled and reachable in test builds too, so clippy checks it in
+// every configuration. Tests add a mock variant to drive `SpeakerStream` without audio hardware.
+#[cfg(any(test, not(target_os = "macos")))]
+#[pin_project(project = InnerStreamProj)]
+enum InnerStream {
+    #[cfg(not(target_os = "macos"))]
+    Platform(#[pin] PlatformSpeakerStream),
+    #[cfg(test)]
+    Mock(#[pin] mock::MockInnerStream),
+}
+
+#[cfg(any(test, not(target_os = "macos")))]
+impl InnerStream {
+    fn sample_rate(&self) -> u32 {
+        match self {
+            #[cfg(not(target_os = "macos"))]
+            Self::Platform(inner) => inner.sample_rate(),
+            #[cfg(test)]
+            Self::Mock(inner) => inner.sample_rate(),
+        }
+    }
+}
+
+#[cfg(any(test, not(target_os = "macos")))]
+impl Stream for InnerStream {
+    type Item = Vec<f32>;
+
+    fn poll_next(
+        self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        match self.project() {
+            #[cfg(not(target_os = "macos"))]
+            InnerStreamProj::Platform(inner) => inner.poll_next(cx),
+            #[cfg(test)]
+            InnerStreamProj::Mock(inner) => inner.poll_next(cx),
+        }
+    }
+}
 
 // https://github.com/floneum/floneum/blob/50afe10/interfaces/kalosm-sound/src/source/mic.rs#L41
 pub struct SpeakerInput {
@@ -58,23 +113,25 @@ impl SpeakerInput {
         self.inner.stream()
     }
 
-    #[cfg(all(not(target_os = "macos"), not(test)))]
+    #[cfg(not(target_os = "macos"))]
     pub fn stream(self) -> Result<SpeakerStream> {
         let inner = self.inner.stream()?;
         let initial_rate = inner.sample_rate();
         Ok(SpeakerStream {
-            inner,
+            inner: InnerStream::Platform(inner),
             buffer: Vec::new(),
             buffer_idx: 0,
             buffer_rate: initial_rate,
         })
     }
 
-    #[cfg(test)]
+    // The macOS platform stream does not go through this wrapper, so macOS test builds keep the
+    // mock-backed stream they always had.
+    #[cfg(all(target_os = "macos", test))]
     pub fn stream(self) -> Result<SpeakerStream> {
         let initial_rate = self.inner.sample_rate();
         Ok(SpeakerStream {
-            inner: mock::MockInnerStream::new(vec![], initial_rate),
+            inner: InnerStream::Mock(mock::MockInnerStream::new(vec![], initial_rate)),
             buffer: Vec::new(),
             buffer_idx: 0,
             buffer_rate: initial_rate,
@@ -104,7 +161,7 @@ impl SpeakerStream {
         let rate = mock.sample_rate();
         (
             Self {
-                inner: mock,
+                inner: InnerStream::Mock(mock),
                 buffer: Vec::new(),
                 buffer_idx: 0,
                 buffer_rate: rate,

@@ -1,5 +1,6 @@
 import { Trans } from "@lingui/react/macro";
 
+import { NoteInkSettings } from "./note-ink";
 import { PaletteSelector } from "./palette";
 import { ThemeSelector } from "./theme";
 import { TimeFormatSettings } from "./time-format";
@@ -13,6 +14,7 @@ export function SettingsAppearance() {
       <ThemeSelector />
       <PaletteSelector />
       <TimeFormatSettings />
+      <NoteInkSettings />
     </div>
   );
 }

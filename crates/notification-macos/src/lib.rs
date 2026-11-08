@@ -87,6 +87,7 @@ struct NotificationPayload<'a> {
     options: Option<&'a [String]>,
     footer: Option<&'a NotificationFooter>,
     icon: Option<&'a NotificationIcon>,
+    labels: &'a syntheo_notification_interface::NotificationLabels,
 }
 
 fn resolve_default_icon(
@@ -129,6 +130,7 @@ pub fn show(notification: &syntheo_notification_interface::Notification) {
         options: notification.options.as_deref(),
         footer: notification.footer.as_ref(),
         icon: notification.icon.as_ref(),
+        labels: notification.labels(),
     };
 
     let json = serde_json::to_string(&payload).unwrap();

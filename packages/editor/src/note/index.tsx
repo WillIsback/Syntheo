@@ -197,6 +197,8 @@ export interface NoteEditorProps {
   linkedItemOpenBehavior?: LinkedItemOpenBehavior;
   taskSource?: TaskSource;
   extraNodeViews?: NodeViewComponents;
+  /** Fixed at mount: plugins are not reconfigurable afterwards. */
+  extraPlugins?: readonly Plugin[];
   sessionMentionDropConfig?: SessionMentionDropConfig;
   showFormatToolbar?: boolean;
   showSlashCommand?: boolean;
@@ -619,6 +621,7 @@ export const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(
       linkedItemOpenBehavior = "current",
       taskSource,
       extraNodeViews,
+      extraPlugins,
       sessionMentionDropConfig,
       showFormatToolbar = true,
       showSlashCommand = true,
@@ -798,8 +801,10 @@ export const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(
           ? [createSessionMentionDropPlugin(sessionMentionDropConfig)]
           : []),
         ...(fileHandlerConfig ? [fileHandlerPlugin(fileHandlerConfig)] : []),
+        ...(extraPlugins ?? []),
       ],
       [
+        extraPlugins,
         placeholderComponent,
         persistentPlaceholderComponent,
         fileHandlerConfig,

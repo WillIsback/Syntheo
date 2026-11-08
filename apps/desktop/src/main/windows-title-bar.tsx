@@ -19,9 +19,21 @@ import { hasViewNavigation } from "./view-navigation";
 import { WindowsWindowControls } from "./windows-window-controls";
 
 import { documentationUrl } from "~/shared/documentation";
+import { exportNoteFromShortcut } from "~/shared/export-shortcut";
+import { openHelpDialog } from "~/shared/help-dialog";
 import { goHome } from "~/shared/leave-overlay-tab";
-import { openNoteDialog } from "~/shared/open-note-dialog";
+import { openNoteDialog, openSettingsSearch } from "~/shared/open-note-dialog";
+import {
+  ariaShortcut,
+  formatShortcut,
+  type ShortcutId,
+  shortcutTooltip,
+} from "~/shared/shortcuts";
 import { useNewNote } from "~/shared/useNewNote";
+import {
+  TITLE_BAR_FIRST_MENU_ATTRIBUTE,
+  toggleFullscreen,
+} from "~/shared/window-shortcuts";
 import { TITLE_BAR_SIDEBAR_ACTIONS_SLOT_ID } from "~/sidebar/custom-sidebar-header";
 import { useTabs } from "~/store/zustand/tabs";
 
@@ -37,6 +49,8 @@ export function WindowsTitleBar() {
   const showViewActionsSlot = hasViewNavigation(currentTab);
   const showHomeButton = currentTab?.type !== "onboarding";
   const isHome = currentTab === null || currentTab.type === "empty";
+  // « Exporter… » : grisé hors d'une note (issue 374).
+  const isNote = currentTab?.type === "sessions";
   const editTargetRef = useRef<HTMLElement | null>(null);
 
   const rememberEditTarget = useCallback(() => {
@@ -52,10 +66,6 @@ export function WindowsTitleBar() {
     }
 
     document.execCommand(command);
-  }, []);
-  const toggleFullscreen = useCallback(async () => {
-    const isFullscreen = await appWindow.isFullscreen();
-    await appWindow.setFullscreen(!isFullscreen);
   }, []);
   return (
     <header
@@ -80,23 +90,40 @@ export function WindowsTitleBar() {
           className="ml-2 flex h-full items-center"
           role="menubar"
         >
-          <TitleBarMenu label={t`File`} onPointerDown={rememberEditTarget}>
-            <DropdownMenuItem onSelect={createNewNote}>
+          <TitleBarMenu
+            label={t`File`}
+            onPointerDown={rememberEditTarget}
+            firstMenu
+          >
+            <ShortcutMenuItem shortcut="newNote" onSelect={createNewNote}>
               {t`New Note`}
-              <DropdownMenuShortcut>Ctrl+N</DropdownMenuShortcut>
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={openNoteDialog}>
+            </ShortcutMenuItem>
+            <ShortcutMenuItem shortcut="searchNotes" onSelect={openNoteDialog}>
               {t`Search Notes…`}
-              <DropdownMenuShortcut>Ctrl+K</DropdownMenuShortcut>
-            </DropdownMenuItem>
-            <DropdownMenuItem
+            </ShortcutMenuItem>
+            <ShortcutMenuItem
+              shortcut="searchSettings"
+              onSelect={openSettingsSearch}
+            >
+              {t`Search for a Setting…`}
+            </ShortcutMenuItem>
+            <DropdownMenuSeparator />
+            <ShortcutMenuItem
+              shortcut="exportNote"
+              onSelect={exportNoteFromShortcut}
+              disabled={!isNote}
+            >
+              {t`Export…`}
+            </ShortcutMenuItem>
+            <DropdownMenuSeparator />
+            <ShortcutMenuItem
+              shortcut="settings"
               onSelect={() =>
                 openNew({ type: "settings", state: { tab: "app" } })
               }
             >
               {t`Settings`}
-              <DropdownMenuShortcut>Ctrl+,</DropdownMenuShortcut>
-            </DropdownMenuItem>
+            </ShortcutMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={() => void appWindow.close()}>
               {t`Close`}
@@ -131,12 +158,17 @@ export function WindowsTitleBar() {
             </DropdownMenuItem>
           </TitleBarMenu>
           <TitleBarMenu label={t`View`} onPointerDown={rememberEditTarget}>
-            <DropdownMenuItem onSelect={() => void toggleFullscreen()}>
+            <ShortcutMenuItem
+              shortcut="fullScreen"
+              onSelect={() => void toggleFullscreen()}
+            >
               {t`Full Screen`}
-              <DropdownMenuShortcut>F11</DropdownMenuShortcut>
-            </DropdownMenuItem>
+            </ShortcutMenuItem>
           </TitleBarMenu>
           <TitleBarMenu label={t`Help`} onPointerDown={rememberEditTarget}>
+            <ShortcutMenuItem shortcut="help" onSelect={openHelpDialog}>
+              {t`Help and shortcuts`}
+            </ShortcutMenuItem>
             <DropdownMenuItem
               onSelect={() =>
                 void openerCommands
@@ -195,14 +227,42 @@ export function WindowsTitleBar() {
   );
 }
 
+// Entrée de menu dont le raccourci vient de la table unique.
+function ShortcutMenuItem({
+  children,
+  onSelect,
+  shortcut,
+  disabled,
+}: {
+  children: React.ReactNode;
+  onSelect: () => void;
+  shortcut: ShortcutId;
+  disabled?: boolean;
+}) {
+  return (
+    <DropdownMenuItem
+      onSelect={onSelect}
+      disabled={disabled}
+      aria-keyshortcuts={ariaShortcut(shortcut)}
+      className="whitespace-nowrap"
+    >
+      {children}
+      <DropdownMenuShortcut>{formatShortcut(shortcut)}</DropdownMenuShortcut>
+    </DropdownMenuItem>
+  );
+}
+
 function TitleBarMenu({
   children,
   label,
   onPointerDown,
+  firstMenu = false,
 }: {
   children: React.ReactNode;
   label: string;
   onPointerDown: () => void;
+  // Menu « Fichier » : cible de F10.
+  firstMenu?: boolean;
 }) {
   return (
     <DropdownMenu>
@@ -211,6 +271,7 @@ function TitleBarMenu({
           type="button"
           data-tauri-drag-region="false"
           role="menuitem"
+          {...(firstMenu ? { [TITLE_BAR_FIRST_MENU_ATTRIBUTE]: "" } : {})}
           className={cn([
             "text-muted-foreground h-7 rounded-md px-2.5 text-sm",
             "hover:bg-accent hover:text-foreground data-[state=open]:bg-accent data-[state=open]:text-foreground",
@@ -224,7 +285,7 @@ function TitleBarMenu({
       <DropdownMenuContent
         align="start"
         sideOffset={1}
-        className="w-56 rounded-lg"
+        className="w-72 rounded-lg"
       >
         {children}
       </DropdownMenuContent>
@@ -242,8 +303,8 @@ function TitleBarHomeButton({ isHome }: { isHome: boolean }) {
       type="button"
       variant="ghost"
       size="sm"
-      title={t`Home · Esc`}
-      aria-keyshortcuts="Escape Alt+ArrowLeft"
+      title={shortcutTooltip(t`Home`, "home")}
+      aria-keyshortcuts={`${ariaShortcut("home")} ${ariaShortcut("back")}`}
       aria-current={isHome ? "page" : undefined}
       disabled={isHome}
       data-tauri-drag-region="false"

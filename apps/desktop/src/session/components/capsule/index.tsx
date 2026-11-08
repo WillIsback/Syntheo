@@ -1,10 +1,19 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import type { ReactNode } from "react";
 
+import { Pause } from "@syntheo/ui/components/icons";
 import { cn } from "@syntheo/utils";
 
 import { LevelMeter } from "./level-meter";
 import { NOTE_STAGES, type NoteStage } from "./stage";
+
+import {
+  ariaShortcut,
+  formatShortcutKeys,
+  type ShortcutId,
+  type ShortcutPlatform,
+  shortcutTooltip,
+} from "~/shared/shortcuts";
 
 export { getNoteStage, type NoteStage } from "./stage";
 
@@ -20,6 +29,12 @@ export type CapsuleListening = {
   amplitude?: number;
   muted: boolean;
   finalizing: boolean;
+  // Pause dans la même session (issue 353) : aucune capture ouverte.
+  paused?: boolean;
+  // Arrêt de la capture et enregistrement du transcript avant la pause.
+  pausing?: boolean;
+  // Reprise demandée, nouvelle capture en cours d'ouverture.
+  resuming?: boolean;
   // Chrono et vumètre branchés directement sur l'écoute : ils changent
   // chaque seconde et dix fois par seconde, la capsule n'a pas à suivre.
   elapsed?: ReactNode;
@@ -31,6 +46,13 @@ export type CapsuleActions = {
   onStart: () => void;
   startDisabled?: boolean;
   onStop: () => void;
+  onPause?: () => void;
+  onResume?: () => void;
+  // Note sans compte rendu (par exemple après avoir quitté l'application
+  // pendant une pause) : reprendre l'écoute ou générer le compte rendu.
+  onResumeListening?: () => void;
+  onGenerateSummary?: () => void;
+  generateSummaryDisabled?: boolean;
   onCopy: () => void;
   copyDisabled?: boolean;
   onExport: () => void;
@@ -41,12 +63,12 @@ export function NoteCapsule({
   stage,
   listening,
   actions,
-  modifierLabel = "Ctrl",
+  os = "pc",
 }: {
   stage: NoteStage;
   listening?: CapsuleListening;
   actions: CapsuleActions;
-  modifierLabel?: string;
+  os?: ShortcutPlatform;
 }) {
   const { t } = useLingui();
 
@@ -74,67 +96,144 @@ export function NoteCapsule({
             tone="recording"
             onClick={actions.onStart}
             disabled={actions.startDisabled}
-            shortcut={`${modifierLabel} ⇧ N`}
+            shortcut="startListening"
+            os={os}
           >
             <Trans>Begin listening</Trans>
           </CapsuleButton>
         </>
       ) : null}
       {stage === "listen" ? (
-        <>
-          <span className="flex items-center gap-2 px-2">
-            <span
-              aria-hidden="true"
-              className="bg-recording size-2 rounded-full"
-            />
-            <span
-              role="timer"
-              aria-label={t`Listening time`}
-              className="font-mono text-[13px] tabular-nums"
-            >
-              {listening?.elapsed ?? formatElapsed(listening?.seconds ?? 0)}
-            </span>
-            {listening?.meter ?? (
-              <LevelMeter
-                amplitude={listening?.amplitude ?? 0}
-                muted={listening?.muted}
-              />
-            )}
-          </span>
-          <CapsuleButton
-            tone="primary"
-            onClick={actions.onStop}
-            disabled={listening?.finalizing}
-          >
-            {listening?.finalizing ? (
-              <Trans>Finishing…</Trans>
-            ) : (
-              <Trans>Finish</Trans>
-            )}
-          </CapsuleButton>
-        </>
+        <ListeningControls listening={listening} actions={actions} />
       ) : null}
       {stage === "synthesis" ? (
         <>
+          {actions.onResumeListening ? (
+            <CapsuleButton onClick={actions.onResumeListening}>
+              <Trans>Resume listening</Trans>
+            </CapsuleButton>
+          ) : null}
           <CapsuleButton
             onClick={actions.onCopy}
             disabled={actions.copyDisabled}
           >
             <Trans>Copy</Trans>
           </CapsuleButton>
-          <CapsuleButton onClick={actions.onExport}>
+          <CapsuleButton
+            onClick={actions.onExport}
+            title={shortcutTooltip(t`Export`, "exportNote", os)}
+            keyShortcut="exportNote"
+            os={os}
+          >
             <Trans>Export</Trans>
           </CapsuleButton>
-          <CapsuleButton
-            tone="primary"
-            onClick={actions.onAsk}
-            shortcut={`${modifierLabel} J`}
-          >
-            <Trans>Ask the note</Trans>
-          </CapsuleButton>
+          {actions.onGenerateSummary ? (
+            <CapsuleButton
+              tone="primary"
+              onClick={actions.onGenerateSummary}
+              disabled={actions.generateSummaryDisabled}
+            >
+              <Trans>Generate the summary</Trans>
+            </CapsuleButton>
+          ) : (
+            <CapsuleButton
+              tone="primary"
+              onClick={actions.onAsk}
+              shortcut="askNote"
+              os={os}
+            >
+              <Trans>Ask the note</Trans>
+            </CapsuleButton>
+          )}
         </>
       ) : null}
     </div>
+  );
+}
+
+function ListeningControls({
+  listening,
+  actions,
+}: {
+  listening?: CapsuleListening;
+  actions: CapsuleActions;
+}) {
+  const { t } = useLingui();
+  const paused = listening?.paused === true;
+  const pausing = listening?.pausing === true;
+
+  return (
+    <>
+      <span className="flex items-center gap-2 px-2">
+        {paused ? (
+          // Indicateur et texte : l'état ne repose pas sur la seule couleur.
+          <>
+            <Pause
+              aria-hidden="true"
+              data-paused-indicator
+              className="size-3.5"
+            />
+            <span role="status" className="text-[13px] font-semibold">
+              <Trans>Paused</Trans>
+            </span>
+          </>
+        ) : (
+          <span
+            aria-hidden="true"
+            className="bg-recording size-2 rounded-full"
+          />
+        )}
+        <span
+          role="timer"
+          aria-label={t`Listening time`}
+          className={cn([
+            "font-mono text-[13px] tabular-nums",
+            paused && "opacity-70",
+          ])}
+        >
+          {listening?.elapsed ?? formatElapsed(listening?.seconds ?? 0)}
+        </span>
+        {paused
+          ? null
+          : (listening?.meter ?? (
+              <LevelMeter
+                amplitude={listening?.amplitude ?? 0}
+                muted={listening?.muted}
+              />
+            ))}
+      </span>
+      {paused ? (
+        actions.onResume ? (
+          <CapsuleButton
+            tone="recording"
+            onClick={actions.onResume}
+            disabled={listening?.resuming}
+            ariaLabel={t`Resume listening`}
+          >
+            <Trans>Resume listening</Trans>
+          </CapsuleButton>
+        ) : null
+      ) : actions.onPause ? (
+        <CapsuleButton
+          onClick={actions.onPause}
+          disabled={listening?.finalizing || pausing}
+          ariaLabel={t`Pause listening`}
+        >
+          {pausing ? <Trans>Pausing…</Trans> : <Trans>Put on pause</Trans>}
+        </CapsuleButton>
+      ) : null}
+      <CapsuleButton
+        tone="primary"
+        onClick={actions.onStop}
+        disabled={paused ? listening?.resuming : listening?.finalizing}
+      >
+        {listening?.finalizing && !pausing && !paused ? (
+          <Trans>Finishing…</Trans>
+        ) : (
+          <Trans>Finish</Trans>
+        )}
+      </CapsuleButton>
+    </>
   );
 }
 
@@ -188,20 +287,34 @@ function CapsuleButton({
   onClick,
   disabled,
   shortcut,
+  keyShortcut,
+  title,
+  os = "pc",
   tone = "ghost",
+  ariaLabel,
 }: {
   children: ReactNode;
   onClick: () => void;
   disabled?: boolean;
-  shortcut?: string;
+  // Raccourci de la table unique (puce « Ctrl Maj N », aria-keyshortcuts).
+  shortcut?: ShortcutId;
+  // Raccourci annoncé sans puce (infobulle et aria-keyshortcuts seulement).
+  keyShortcut?: ShortcutId;
+  title?: string;
+  os?: ShortcutPlatform;
   tone?: "ghost" | "primary" | "recording";
+  ariaLabel?: string;
 }) {
+  const announced = shortcut ?? keyShortcut;
+
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
-      aria-keyshortcuts={shortcut ? toAriaShortcut(shortcut) : undefined}
+      aria-label={ariaLabel}
+      title={title}
+      aria-keyshortcuts={announced ? ariaShortcut(announced, os) : undefined}
       className={cn([
         "rounded-pill inline-flex items-center px-3.5 py-[7px] transition-colors",
         "focus-visible:ring-primary-foreground focus-visible:ring-offset-primary focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
@@ -219,20 +332,11 @@ function CapsuleButton({
           aria-hidden="true"
           className="ml-1.5 font-[inherit] text-[11px] font-normal opacity-60"
         >
-          {shortcut}
+          {formatShortcutKeys(shortcut, os)}
         </kbd>
       ) : null}
     </button>
   );
-}
-
-function toAriaShortcut(shortcut: string) {
-  return shortcut
-    .replace("⌘", "Meta")
-    .replace("⇧", "Shift")
-    .split(" ")
-    .filter(Boolean)
-    .join("+");
 }
 
 export function formatElapsed(totalSeconds: number) {

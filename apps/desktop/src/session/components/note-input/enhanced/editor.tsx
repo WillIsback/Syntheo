@@ -1,5 +1,12 @@
 import type { EditorView } from "prosemirror-view";
-import { forwardRef, memo, useCallback, useMemo } from "react";
+import {
+  forwardRef,
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 import { parseJsonContent } from "@syntheo/editor/markdown";
 import {
@@ -8,6 +15,7 @@ import {
   type NoteEditorRef,
   normalizePortableAttachmentUrls,
 } from "@syntheo/editor/note";
+import { createDerivedInk } from "@syntheo/editor/plugins";
 
 import { AudioDropTarget } from "../audio-drop-target";
 import { useNoteFileHandlerConfig } from "../file-handler";
@@ -17,6 +25,10 @@ import { useMentionConfig } from "~/editor-bridge/mention-config";
 import { openEditorLink } from "~/editor-bridge/open-editor-link";
 import { sessionMentionDropConfig } from "~/editor-bridge/session-mention-drop";
 import { SessionNodeView } from "~/editor-bridge/session-view";
+import {
+  findNoteSentenceRanges,
+  prepareNotes,
+} from "~/session/components/living-document/note-attribution";
 import { hasStoredNoteContent } from "~/session/components/shared";
 import { useAttachmentResolver } from "~/session/hooks/useAttachmentResolver";
 import { useUpdateEnhancedNoteContent } from "~/session/queries";
@@ -28,6 +40,32 @@ import {
 import { repairMissingSessionTitle } from "~/session/title-repair";
 
 const extraNodeViews = { appLink: AppLinkView, session: SessionNodeView };
+const NO_NOTE_LINES: readonly string[] = [];
+
+// Colore en user-ink les phrases du compte rendu qui viennent des notes
+// (issue 365). Simple décoration : le compte rendu enregistré, l'export et le
+// copier-coller restent inchangés.
+function useNoteInk(noteLines: readonly string[]) {
+  const notesKey = noteLines.join("\n");
+  const preparedNotes = useMemo(
+    () => prepareNotes(notesKey ? notesKey.split("\n") : NO_NOTE_LINES),
+    [notesKey],
+  );
+  // Créée une fois (les plugins sont figés au montage de l'éditeur) ; les
+  // notes suivantes passent par setData.
+  const [ink] = useState(() =>
+    createDerivedInk({
+      className: "note-ink-user",
+      data: preparedNotes,
+      compute: findNoteSentenceRanges,
+    }),
+  );
+  const plugins = useMemo(() => [ink.plugin], [ink]);
+  useEffect(() => {
+    ink.setData(preparedNotes);
+  }, [ink, preparedNotes]);
+  return plugins;
+}
 
 function isCanonicalEmptyDocument(
   content: JSONContent,
@@ -65,6 +103,8 @@ const EnhancedEditorInner = forwardRef<
     enhancedNoteId: string;
     content: string;
     contentOverride?: JSONContent;
+    /** Lignes des notes brutes à colorer dans le compte rendu (vide : aucune). */
+    noteLines?: readonly string[];
     onNavigateToTitle?: (pixelWidth?: number) => void;
     onViewReady?: (view: EditorView) => void;
     onViewDisposed?: (view: EditorView) => void;
@@ -77,6 +117,7 @@ const EnhancedEditorInner = forwardRef<
       enhancedNoteId,
       content,
       contentOverride,
+      noteLines = NO_NOTE_LINES,
       onNavigateToTitle,
       onViewReady,
       onViewDisposed,
@@ -86,6 +127,7 @@ const EnhancedEditorInner = forwardRef<
     const { audioDropTargetProps, fileHandlerConfig, isAudioDragActive } =
       useNoteFileHandlerConfig(sessionId);
     const resolveAttachment = useAttachmentResolver(sessionId);
+    const noteInkPlugins = useNoteInk(noteLines);
     const updateContent = useUpdateEnhancedNoteContent(
       enhancedNoteId,
       sessionId,
@@ -159,6 +201,7 @@ const EnhancedEditorInner = forwardRef<
             fileHandlerConfig={fileHandlerConfig}
             taskSource={taskSource}
             extraNodeViews={extraNodeViews}
+            extraPlugins={noteInkPlugins}
             onViewReady={(view) => {
               onViewReady?.(view);
               if (persistChanges && !sessionTitle.trim()) {

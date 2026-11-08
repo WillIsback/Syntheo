@@ -130,7 +130,7 @@ describe("HomeView", () => {
   });
 
   it("affiche ⌘ sur macOS", () => {
-    renderHome({ modifierLabel: "⌘" });
+    renderHome({ os: "mac" });
     expect(
       screen.getByRole("button", { name: /Start a meeting/ }).textContent,
     ).toContain("⌘ N");

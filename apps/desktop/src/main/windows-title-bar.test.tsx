@@ -10,6 +10,9 @@ const mocks = vi.hoisted(() => ({
   onResized: vi.fn().mockResolvedValue(vi.fn()),
   openNew: vi.fn(),
   openNoteDialog: vi.fn(),
+  openHelpDialog: vi.fn(),
+  openSettingsSearch: vi.fn(),
+  exportNoteFromShortcut: vi.fn(),
   openUrl: vi.fn().mockResolvedValue({ status: "ok", data: null }),
   setFullscreen: vi.fn().mockResolvedValue(undefined),
   toggleMaximize: vi.fn().mockResolvedValue(undefined),
@@ -52,6 +55,15 @@ vi.mock("~/shared/useNewNote", () => ({
 
 vi.mock("~/shared/open-note-dialog", () => ({
   openNoteDialog: mocks.openNoteDialog,
+  openSettingsSearch: mocks.openSettingsSearch,
+}));
+
+vi.mock("~/shared/export-shortcut", () => ({
+  exportNoteFromShortcut: mocks.exportNoteFromShortcut,
+}));
+
+vi.mock("~/shared/help-dialog", () => ({
+  openHelpDialog: mocks.openHelpDialog,
 }));
 
 vi.mock("./view-navigation", () => ({
@@ -88,6 +100,14 @@ vi.mock("~/store/zustand/tabs", () => {
 
 import { WindowsTitleBar } from "./windows-title-bar";
 
+import { ariaShortcut, formatShortcut } from "~/shared/shortcuts";
+import { TITLE_BAR_FIRST_MENU_ATTRIBUTE } from "~/shared/window-shortcuts";
+
+function openMenu(name: string) {
+  const trigger = screen.getByRole("menuitem", { name });
+  fireEvent.keyDown(trigger, { key: "Enter" });
+}
+
 describe("WindowsTitleBar", () => {
   beforeEach(() => {
     mocks.close.mockClear();
@@ -99,6 +119,9 @@ describe("WindowsTitleBar", () => {
     mocks.onResized.mockClear();
     mocks.openNew.mockClear();
     mocks.openNoteDialog.mockClear();
+    mocks.openHelpDialog.mockClear();
+    mocks.openSettingsSearch.mockClear();
+    mocks.exportNoteFromShortcut.mockClear();
     mocks.openUrl.mockClear();
     mocks.setFullscreen.mockClear();
     mocks.toggleMaximize.mockClear();
@@ -135,6 +158,109 @@ describe("WindowsTitleBar", () => {
         .getByTestId("windows-title-bar")
         .hasAttribute("data-tauri-drag-region"),
     ).toBe(true);
+  });
+
+  describe("raccourcis des menus (issue 372)", () => {
+    it("affiche les raccourcis du menu Fichier depuis la table", () => {
+      render(<WindowsTitleBar />);
+      openMenu("File");
+
+      for (const [name, id] of [
+        ["New Note", "newNote"],
+        ["Search Notes…", "searchNotes"],
+        ["Settings", "settings"],
+      ] as const) {
+        const item = screen.getByRole("menuitem", {
+          name: `${name}${formatShortcut(id)}`,
+        });
+        expect(item.getAttribute("aria-keyshortcuts")).toBe(ariaShortcut(id));
+      }
+      expect(formatShortcut("settings")).toBe("Ctrl+,");
+    });
+
+    it("le menu Fichier est la cible de F10", () => {
+      render(<WindowsTitleBar />);
+
+      expect(
+        screen
+          .getByRole("menuitem", { name: "File" })
+          .hasAttribute(TITLE_BAR_FIRST_MENU_ATTRIBUTE),
+      ).toBe(true);
+      expect(
+        screen
+          .getByRole("menuitem", { name: "Edit" })
+          .hasAttribute(TITLE_BAR_FIRST_MENU_ATTRIBUTE),
+      ).toBe(false);
+    });
+
+    it("ouvre l'aide F1 depuis le menu Aide", () => {
+      render(<WindowsTitleBar />);
+      openMenu("Help");
+
+      fireEvent.click(
+        screen.getByRole("menuitem", { name: "Help and shortcutsF1" }),
+      );
+
+      expect(mocks.openHelpDialog).toHaveBeenCalledOnce();
+    });
+
+    it("bascule le plein écran depuis le menu Afficher (F11)", async () => {
+      render(<WindowsTitleBar />);
+      openMenu("View");
+
+      fireEvent.click(screen.getByRole("menuitem", { name: "Full ScreenF11" }));
+
+      await vi.waitFor(() =>
+        expect(mocks.setFullscreen).toHaveBeenCalledWith(true),
+      );
+    });
+  });
+
+  it("propose « Rechercher un paramètre… » avec Ctrl+Maj+P dans le menu Fichier (issue 373)", async () => {
+    render(<WindowsTitleBar />);
+
+    fireEvent.keyDown(screen.getByRole("menuitem", { name: "File" }), {
+      key: "Enter",
+    });
+    const item = await screen.findByRole("menuitem", {
+      name: /Search for a Setting…/,
+    });
+    expect(item.textContent).toContain(formatShortcut("searchSettings"));
+    expect(item.getAttribute("aria-keyshortcuts")).toBe("Control+Shift+P");
+
+    fireEvent.click(item);
+
+    expect(mocks.openSettingsSearch).toHaveBeenCalledOnce();
+  });
+
+  describe("« Exporter… » Ctrl+P dans le menu Fichier (issue 374)", () => {
+    it("exporte la note ouverte", async () => {
+      mocks.currentTab = { type: "sessions", id: "session-1" };
+      render(<WindowsTitleBar />);
+      openMenu("File");
+
+      const item = await screen.findByRole("menuitem", {
+        name: `Export…${formatShortcut("exportNote")}`,
+      });
+      expect(formatShortcut("exportNote")).toBe("Ctrl+P");
+      expect(item.getAttribute("aria-keyshortcuts")).toBe("Control+P");
+      expect(item.hasAttribute("data-disabled")).toBe(false);
+
+      fireEvent.click(item);
+
+      expect(mocks.exportNoteFromShortcut).toHaveBeenCalledOnce();
+    });
+
+    it("est grisé hors d'une note", async () => {
+      mocks.currentTab = { type: "settings" };
+      render(<WindowsTitleBar />);
+      openMenu("File");
+
+      const item = await screen.findByRole("menuitem", { name: /Export…/ });
+      expect(item.getAttribute("aria-disabled")).toBe("true");
+      fireEvent.click(item);
+      expect(mocks.exportNoteFromShortcut).not.toHaveBeenCalled();
+    });
   });
 
   describe("bouton Accueil (issue 315)", () => {
@@ -195,7 +321,7 @@ describe("WindowsTitleBar", () => {
       render(<WindowsTitleBar />);
 
       const home = screen.getByRole("button", { name: "Home" });
-      expect(home.getAttribute("title")).toBe("Home · Esc");
+      expect(home.getAttribute("title")).toBe("Home (Esc)");
       expect(home.getAttribute("aria-keyshortcuts")).toBe(
         "Escape Alt+ArrowLeft",
       );

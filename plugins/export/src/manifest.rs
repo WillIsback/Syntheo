@@ -2,4 +2,4 @@
 // this file to drive permission generation, and the lib tests assert the
 // specta bindings and generated permission files stay in sync with it.
 #[cfg_attr(not(test), allow(dead_code))]
-pub(crate) const COMMANDS: &[&str] = &["export"];
+pub(crate) const COMMANDS: &[&str] = &["export", "print_pdf", "cleanup_print_files"];

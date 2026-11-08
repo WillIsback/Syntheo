@@ -126,6 +126,14 @@ export const SETTING_DEFINITIONS = {
     default: "cha" as string,
     synced: true,
   },
+  // Synthèse : colorer en vert (user-ink), dans le compte rendu, les phrases
+  // qui viennent des notes de l'utilisateur. Désactivé, les notes s'affichent
+  // dans un bloc séparé sous le compte rendu.
+  color_notes_in_summary: {
+    type: "boolean",
+    path: ["general", "color_notes_in_summary"],
+    default: true as boolean,
+  },
   sidebar_show_folder: {
     type: "boolean",
     path: ["general", "sidebar_show_folder"],
@@ -171,7 +179,8 @@ export const SETTING_DEFINITIONS = {
   notification_detect: {
     type: "boolean",
     path: ["notification", "detect"],
-    default: true as boolean,
+    // Off by default: the "Are you in a meeting?" prompt felt invasive (issue 349).
+    default: false as boolean,
   },
   notification_summary_complete: {
     type: "boolean",

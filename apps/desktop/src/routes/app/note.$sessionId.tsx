@@ -13,6 +13,7 @@ import {
 import { StandaloneWindowShell } from "~/shared/window-shell";
 import { type Tab, useTabs } from "~/store/zustand/tabs";
 import { useListener } from "~/stt/contexts";
+import { useMainListenerPauseState } from "~/stt/window-control";
 
 const STANDALONE_NOTE_SURFACE_MIN_WIDTH_PX = 420;
 
@@ -33,6 +34,8 @@ function StandaloneNoteWindow() {
 function StandaloneNoteContent({ sessionId }: { sessionId: string }) {
   useCloseStandaloneNoteWindowOnEscape();
   useAttachStandaloneNoteToLiveSession(sessionId);
+  // La pause de l'écoute est tenue par la fenêtre principale (issue 353).
+  useMainListenerPauseState();
   const tab = useStandaloneNoteTab(sessionId);
 
   return (

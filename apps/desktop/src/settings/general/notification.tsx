@@ -7,7 +7,6 @@ import { useState } from "react";
 import {
   commands as detectCommands,
   type InstalledApp,
-  type Result,
 } from "@syntheo/plugin-detect";
 import { commands as notificationCommands } from "@syntheo/plugin-notification";
 import { X } from "@syntheo/ui/components/icons";
@@ -52,6 +51,7 @@ import {
   previewCompletionSound,
 } from "~/shared/completion-sound";
 import { useConfigValues } from "~/shared/config";
+import type { Result } from "~/types";
 
 type CompletionSoundRowProps = {
   sound: CompletionSoundName;
@@ -68,6 +68,7 @@ function CompletionSoundRow({
 }: CompletionSoundRowProps) {
   return (
     <SettingRow
+      settingId="completion-sound-name"
       title={<Trans>Sound</Trans>}
       description={<Trans>Choose from five completion sounds.</Trans>}
     >
@@ -274,7 +275,6 @@ function IgnoredAppsSelector({
 
 export function NotificationSettingsView() {
   const currentPlatform = platform();
-  const supportsMicDetection = currentPlatform !== "windows";
   const supportsDoNotDisturb = currentPlatform === "macos";
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -314,7 +314,6 @@ export function NotificationSettingsView() {
   const { data: installedApps = [] } = useQuery({
     queryKey: ["settings", "all-installed-applications"],
     queryFn: detectCommands.listInstalledApplications,
-    enabled: supportsMicDetection,
     select: (result: Result<InstalledApp[], string>) => {
       if (result.status === "error") {
         throw new Error(result.error);
@@ -326,7 +325,6 @@ export function NotificationSettingsView() {
   const { data: defaultIgnoredBundleIds = [] } = useQuery({
     queryKey: ["settings", "default-ignored-bundle-ids"],
     queryFn: detectCommands.listDefaultIgnoredBundleIds,
-    enabled: supportsMicDetection,
     select: (result: Result<string[], string>) => {
       if (result.status === "error") {
         throw new Error(result.error);
@@ -411,6 +409,7 @@ export function NotificationSettingsView() {
       <form.Field name="notification_disabled">
         {(field) => (
           <SettingSwitchRow
+            settingId="notifications-disabled"
             title={<Trans>Disable all notifications</Trans>}
             description={
               <Trans>
@@ -442,6 +441,7 @@ export function NotificationSettingsView() {
             <form.Field name="notification_summary_complete">
               {(field) => (
                 <SettingSwitchRow
+                  settingId="notify-summary-complete"
                   title={<Trans>Summary complete</Trans>}
                   description={<Trans>Show when a summary is ready.</Trans>}
                   checked={field.state.value}
@@ -454,6 +454,7 @@ export function NotificationSettingsView() {
             <form.Field name="notification_cloudsync_complete">
               {(field) => (
                 <SettingSwitchRow
+                  settingId="notify-cloud-sync"
                   title={<Trans>Cloud sync complete</Trans>}
                   description={
                     <Trans>Show when initial cloud sync finishes.</Trans>
@@ -468,6 +469,7 @@ export function NotificationSettingsView() {
             <form.Field name="notification_event">
               {(field) => (
                 <SettingSwitchRow
+                  settingId="notify-events"
                   title={<Trans>Event notifications</Trans>}
                   description={
                     <Trans>Prepare for events with a 5-minute reminder.</Trans>
@@ -482,6 +484,7 @@ export function NotificationSettingsView() {
             <form.Field name="notification_recording">
               {(field) => (
                 <SettingSwitchRow
+                  settingId="notify-recording"
                   title={<Trans>Recording status prompts</Trans>}
                   description={
                     <Trans>
@@ -500,6 +503,7 @@ export function NotificationSettingsView() {
               {(field) => (
                 <div className="flex flex-col gap-4">
                   <SettingSwitchRow
+                    settingId="completion-sound"
                     title={<Trans>Completion sound</Trans>}
                     description={
                       <Trans>
@@ -539,6 +543,7 @@ export function NotificationSettingsView() {
               <form.Field name="notification_bounce">
                 {(field) => (
                   <SettingSwitchRow
+                    settingId="notify-bounce"
                     title={<Trans>Bounce app icon</Trans>}
                     description={
                       <Trans>
@@ -554,62 +559,66 @@ export function NotificationSettingsView() {
               </form.Field>
             )}
 
-            {supportsMicDetection && (
-              <form.Field name="notification_detect">
-                {(field) => (
-                  <div className="flex flex-col gap-4">
-                    <SettingSwitchRow
-                      title={<Trans>Microphone detection</Trans>}
-                      description={
-                        <Trans>Detect meetings from microphone activity.</Trans>
-                      }
-                      checked={field.state.value}
-                      onChange={field.handleChange}
-                      disabled={notificationsDisabled}
-                    />
+            {/* La détection micro marche sur macOS, Linux et Windows
+                (sessions WASAPI de capture, issue 407). */}
+            <form.Field name="notification_detect">
+              {(field) => (
+                <div className="flex flex-col gap-4">
+                  <SettingSwitchRow
+                    settingId="mic-detection"
+                    title={<Trans>Microphone detection</Trans>}
+                    description={
+                      <Trans>Detect meetings from microphone activity.</Trans>
+                    }
+                    checked={field.state.value}
+                    onChange={field.handleChange}
+                    disabled={notificationsDisabled}
+                  />
 
-                    {field.state.value && !notificationsDisabled && (
-                      <div
-                        className={cn([
-                          "border-muted ml-3 border-l-2 pt-2 pl-4",
-                        ])}
-                      >
-                        <form.Field name="mic_active_threshold">
-                          {(thresholdField) => (
-                            <div className="mb-4 flex items-center justify-between gap-4">
-                              <div className="flex-1">
-                                <h4 className="text-sm font-medium">
-                                  <Trans>Detection delay</Trans>
-                                </h4>
-                                <p className="text-muted-foreground text-xs">
-                                  <Trans>
-                                    Wait before treating microphone activity as
-                                    a meeting.
-                                  </Trans>
-                                </p>
-                              </div>
-                              <Select
-                                value={String(thresholdField.state.value)}
-                                onValueChange={(v) =>
-                                  thresholdField.handleChange(Number(v))
-                                }
-                              >
-                                <SelectTrigger className="w-[100px]">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent align="end">
-                                  <SelectItem value="5">5 sec</SelectItem>
-                                  <SelectItem value="10">10 sec</SelectItem>
-                                  <SelectItem value="15">15 sec</SelectItem>
-                                  <SelectItem value="30">30 sec</SelectItem>
-                                  <SelectItem value="60">1 min</SelectItem>
-                                  <SelectItem value="120">2 min</SelectItem>
-                                </SelectContent>
-                              </Select>
+                  {field.state.value && !notificationsDisabled && (
+                    <div
+                      className={cn(["border-muted ml-3 border-l-2 pt-2 pl-4"])}
+                    >
+                      <form.Field name="mic_active_threshold">
+                        {(thresholdField) => (
+                          <div
+                            data-setting-id="detection-delay"
+                            className="mb-4 flex items-center justify-between gap-4"
+                          >
+                            <div className="flex-1">
+                              <h4 className="text-sm font-medium">
+                                <Trans>Detection delay</Trans>
+                              </h4>
+                              <p className="text-muted-foreground text-xs">
+                                <Trans>
+                                  Wait before treating microphone activity as a
+                                  meeting.
+                                </Trans>
+                              </p>
                             </div>
-                          )}
-                        </form.Field>
+                            <Select
+                              value={String(thresholdField.state.value)}
+                              onValueChange={(v) =>
+                                thresholdField.handleChange(Number(v))
+                              }
+                            >
+                              <SelectTrigger className="w-[100px]">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent align="end">
+                                <SelectItem value="5">5 sec</SelectItem>
+                                <SelectItem value="10">10 sec</SelectItem>
+                                <SelectItem value="15">15 sec</SelectItem>
+                                <SelectItem value="30">30 sec</SelectItem>
+                                <SelectItem value="60">1 min</SelectItem>
+                                <SelectItem value="120">2 min</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
+                      </form.Field>
 
+                      <div data-setting-id="excluded-apps">
                         <div className="mb-3 flex flex-col gap-1">
                           <h4 className="text-sm font-medium">
                             <Trans>Exclude apps from detection</Trans>
@@ -637,11 +646,11 @@ export function NotificationSettingsView() {
                           )}
                         </form.Subscribe>
                       </div>
-                    )}
-                  </div>
-                )}
-              </form.Field>
-            )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </form.Field>
 
             {supportsDoNotDisturb && (
               <div className="flex flex-col gap-6">
@@ -664,6 +673,7 @@ export function NotificationSettingsView() {
                     <form.Field name="respect_dnd">
                       {(field) => (
                         <SettingSwitchRow
+                          settingId="respect-dnd"
                           title={<Trans>Respect Do-Not-Disturb mode</Trans>}
                           description={
                             <Trans>

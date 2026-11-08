@@ -3,22 +3,15 @@ import {
   useEditorEventCallback,
 } from "@handlewithcare/react-prosemirror";
 import { Figma, Github, Google, Notion } from "@lobehub/icons";
-import { useQuery } from "@tanstack/react-query";
 import { forwardRef } from "react";
 
 import {
   getAppLinkDisplayParts,
   getAppLinkLabel,
-  type GitHubAttrs,
   type AppLinkAttrs,
 } from "@syntheo/editor/app-link";
-import { getSafeNodePos } from "@syntheo/editor/node-views";
 import { commands as openerCommands } from "@syntheo/plugin-opener2";
-import { commands as todoCommands } from "@syntheo/plugin-todo";
-import { Check } from "@syntheo/ui/components/icons";
 import { cn } from "@syntheo/utils";
-
-import { collectSiblingResources, openTaskTab } from "~/task/open-task-tab";
 
 function SlackIcon({ className }: { className?: string }) {
   return (
@@ -216,81 +209,17 @@ function BrandIcon({ attrs }: { attrs: AppLinkAttrs }) {
   }
 }
 
-function isGitHubCheckboxKind(attrs: AppLinkAttrs): attrs is GitHubAttrs {
-  return (
-    attrs.provider === "github" &&
-    (attrs.kind === "issue" || attrs.kind === "pull_request")
-  );
-}
-
-function useGitHubIssueState(attrs: AppLinkAttrs) {
-  const gh = isGitHubCheckboxKind(attrs) ? attrs : null;
-  const enabled = !!gh?.number;
-
-  const { data } = useQuery({
-    queryKey: ["github-issue-state", gh?.owner, gh?.repo, gh?.number],
-    queryFn: async () => {
-      const result = await todoCommands.githubIssueState(
-        gh!.owner,
-        gh!.repo,
-        gh!.number!,
-      );
-      if (result.status === "error") {
-        throw new Error(result.error);
-      }
-      return result.data;
-    },
-    enabled,
-    staleTime: 60_000,
-  });
-
-  return data ?? null;
-}
-
-function Checkbox({ checked }: { checked: boolean }) {
-  return (
-    <span
-      className={cn([
-        "flex size-5 shrink-0 items-center justify-center rounded-md border-2",
-        checked
-          ? "border-muted-foreground bg-muted-foreground"
-          : "border-border bg-card",
-      ])}
-    >
-      {checked && (
-        <Check className="text-primary-foreground size-3.5" weight="bold" />
-      )}
-    </span>
-  );
-}
-
 export const AppLinkView = forwardRef<HTMLSpanElement, NodeViewComponentProps>(
   function AppLinkView({ nodeProps, ...htmlAttrs }, ref) {
     const attrs = nodeProps.node.attrs as AppLinkAttrs;
     const { header, subline } = getAppLinkDisplayParts(attrs);
     const href = attrs.url;
-    const ghState = useGitHubIssueState(attrs);
-    const showCheckbox = isGitHubCheckboxKind(attrs);
-    const checked = ghState === "Closed" || ghState === "Merged";
 
-    const handleClick = useEditorEventCallback(async (view) => {
+    // Un lien GitHub (ticket, PR…) est un lien ordinaire : il s'ouvre dans le
+    // navigateur comme les autres fournisseurs (issue 403).
+    const handleClick = useEditorEventCallback(async () => {
       if (!href) {
         return;
-      }
-
-      if (
-        attrs.provider === "github" &&
-        (attrs.kind === "issue" || attrs.kind === "pull_request") &&
-        attrs.owner &&
-        attrs.repo &&
-        attrs.number
-      ) {
-        const pos = getSafeNodePos(nodeProps.getPos);
-        if (pos !== null) {
-          const resources = collectSiblingResources(view.state.doc, pos);
-          openTaskTab(resources);
-          return;
-        }
       }
 
       await openerCommands.openUrl(href, null);
@@ -318,11 +247,7 @@ export const AppLinkView = forwardRef<HTMLSpanElement, NodeViewComponentProps>(
             "hover:bg-accent transition-colors",
           ])}
         >
-          {showCheckbox ? (
-            <Checkbox checked={checked} />
-          ) : (
-            <BrandIcon attrs={attrs} />
-          )}
+          <BrandIcon attrs={attrs} />
           <span className="flex min-w-0 items-baseline gap-1.5">
             <span className="text-foreground truncate text-sm leading-none font-medium">
               {header}

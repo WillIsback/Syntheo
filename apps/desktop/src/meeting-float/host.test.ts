@@ -231,6 +231,65 @@ describe("getFloatingRouteState", () => {
     ).toBe("recording");
   });
 
+  // Issue 353 : la note fermée, le bandeau reste le moyen de reprendre ou
+  // de terminer une réunion en pause.
+  it("shows the paused meeting with no capture, audio level or transcript", () => {
+    const pause = {
+      sessionId: "session-1",
+      elapsedSeconds: 75,
+      phase: "paused" as const,
+    };
+    const state = createListenerState({
+      status: "inactive",
+      sessionId: null,
+      amplitude: { mic: 0.9, speaker: 0.9 },
+      pause,
+    });
+
+    expect(
+      getFloatingRouteState(state, { sessionTitle: "Weekly sync" }),
+    ).toEqual(
+      expect.objectContaining({
+        sessionId: "session-1",
+        title: "Weekly sync",
+        status: "paused",
+        amplitude: 0,
+        liveCaptionToggleVisible: false,
+        transcriptBubbles: [],
+        transcriptNotice: null,
+      }),
+    );
+    expect(getFloatingRouteState(state, { sessionId: "session-2" })).toBeNull();
+    // Le panneau macOS natif ne sait pas encore afficher la pause.
+    expect(getFloatingRouteState(state, { pausedSupported: false })).toBeNull();
+  });
+
+  it("shows the pause as soon as it is requested", () => {
+    expect(
+      getFloatingRouteState(
+        createListenerState({
+          status: "finalizing",
+          sessionId: "session-1",
+          pause: {
+            sessionId: "session-1",
+            elapsedSeconds: 3,
+            phase: "pausing",
+          },
+        }),
+      )?.status,
+    ).toBe("paused");
+  });
+
+  it("refreshes when the pause state changes", () => {
+    const previous = createListenerState({ status: "inactive" });
+    const next = createListenerState({
+      status: "inactive",
+      pause: { sessionId: "session-1", elapsedSeconds: 3, phase: "paused" },
+    });
+
+    expect(haveFloatingRouteInputsChanged(next, previous)).toBe(true);
+  });
+
   it("hides the floating route while the session is finalizing", () => {
     expect(
       getFloatingRouteState(

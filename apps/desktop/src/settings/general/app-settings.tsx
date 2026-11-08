@@ -50,6 +50,7 @@ export function AppSettingsView({
           {!appStoreBuild && (
             <>
               <SettingSwitchRow
+                settingId="autostart"
                 title={<Trans>Start Syntheo at login</Trans>}
                 description={
                   <Trans>Have Syntheo ready when you sign in.</Trans>
@@ -58,6 +59,7 @@ export function AppSettingsView({
                 onChange={autostart.onChange}
               />
               <SettingSwitchRow
+                settingId="automatic-updates"
                 title={<Trans>Automatically install updates</Trans>}
                 description={
                   <Trans>
@@ -71,6 +73,7 @@ export function AppSettingsView({
             </>
           )}
           <Button
+            data-setting-id="release-notes"
             variant="outline"
             className="self-start"
             disabled={!version.data}
@@ -87,6 +90,7 @@ export function AppSettingsView({
           </Button>
           {isMacos && (
             <SettingSwitchRow
+              settingId="show-app-in-dock"
               title={<Trans>Show app in Dock</Trans>}
               description={
                 <Trans>Show Syntheo in the Dock and app switcher.</Trans>
@@ -96,6 +100,7 @@ export function AppSettingsView({
             />
           )}
           <SettingSwitchRow
+            settingId="show-tray-icon"
             title={<Trans>Show tray icon</Trans>}
             description={
               isMacos ? (

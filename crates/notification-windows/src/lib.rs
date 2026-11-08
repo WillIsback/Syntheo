@@ -1,11 +1,20 @@
 pub use syntheo_notification_interface::*;
 
 mod callbacks;
+#[cfg(any(target_os = "windows", test))]
+mod expanded;
 mod icon;
 mod layout;
+mod raster;
+#[cfg(any(target_os = "windows", test))]
+mod reentrance;
+mod surface;
+mod theme;
 
 #[cfg(target_os = "windows")]
 mod r#impl;
+#[cfg(target_os = "windows")]
+mod render;
 
 pub use callbacks::{
     setup_notification_accept_handler, setup_notification_confirm_handler,

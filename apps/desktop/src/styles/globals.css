@@ -330,6 +330,25 @@ html[data-rounded-window] #root {
   [data-settings-content] [data-slot="select-trigger"]:hover {
     box-shadow: none !important;
   }
+
+  /* Arrivée sur un réglage depuis la recherche (issue 373) : fond `accent`
+   * pendant 2 secondes, élargi par une ombre pour ne pas décaler la mise en
+   * page, puis fondu. */
+  [data-setting-id] {
+    border-radius: 10px;
+    transition: background-color 400ms ease-out, box-shadow 400ms ease-out;
+  }
+
+  [data-setting-id][data-setting-highlight] {
+    background-color: hsl(var(--accent));
+    box-shadow: 0 0 0 8px hsl(var(--accent));
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    [data-setting-id] {
+      transition: none;
+    }
+  }
 }
 
 /* Surlignage de recherche, dérivé de chart-3 (山吹) comme le mot actif de la

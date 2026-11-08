@@ -1,3 +1,4 @@
+import { Trans, useLingui } from "@lingui/react/macro";
 import { useEffect, useRef, useState } from "react";
 
 import type {
@@ -8,6 +9,8 @@ import {
   ArrowsInSimple,
   ArrowsOutSimple,
   CaretDown,
+  Pause,
+  Play,
   Square,
   WarningCircle,
 } from "@syntheo/ui/components/icons";
@@ -29,7 +32,7 @@ import {
   FLOATING_BAR_HOVER_HANDLE_TOP_PADDING,
   FLOATING_BAR_HOVER_HANDLE_RESERVED_HEIGHT,
   FLOATING_BAR_INSET,
-  compactControlsWidth,
+  floatingControlsWidth,
 } from "./layout";
 import { tokensFor, withAlpha } from "./palette";
 
@@ -38,10 +41,14 @@ import { type PaletteId, useDocumentPalette } from "~/shared/theme/palette";
 export function FloatingBarOverlay({
   state,
   onStop,
+  onPause,
+  onResume,
   onToggleExpanded,
 }: {
   state: FloatingBarState;
   onStop: () => void;
+  onPause?: () => void;
+  onResume?: () => void;
   onToggleExpanded: (expanded: boolean) => void;
 }) {
   const [hovered, setHovered] = useState(false);
@@ -52,7 +59,7 @@ export function FloatingBarOverlay({
   // la palette change dans les paramètres.
   const palette = useDocumentPalette();
   const colors = barColors(state, palette);
-  const controlsWidth = compactControlsWidth(state.liveCaptionToggleVisible);
+  const controlsWidth = floatingControlsWidth(state);
   const expandsUpward = state.layout?.expandsUpward ?? false;
 
   return (
@@ -126,16 +133,85 @@ export function FloatingBarOverlay({
               height: FLOATING_BAR_COMPACT_HEIGHT,
             }}
           >
-            <FloatingControls
-              state={state}
-              isExpanded={isExpanded}
-              colors={colors}
-              onStop={onStop}
-              onToggleExpanded={onToggleExpanded}
-            />
+            {state.status === "paused" && !state.dictation ? (
+              <PausedControls
+                colors={colors}
+                onResume={onResume}
+                onStop={onStop}
+              />
+            ) : (
+              <FloatingControls
+                state={state}
+                isExpanded={isExpanded}
+                colors={colors}
+                onStop={onStop}
+                onPause={onPause}
+                onToggleExpanded={onToggleExpanded}
+              />
+            )}
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function PausedControls({
+  colors,
+  onResume,
+  onStop,
+}: {
+  colors: BarColors;
+  onResume?: () => void;
+  onStop: () => void;
+}) {
+  const { t } = useLingui();
+  const buttonStyle = {
+    height: FLOATING_BAR_COMPACT_ICON_SIZE,
+    borderRadius: FLOATING_BAR_CONTROL_RADIUS,
+  };
+
+  return (
+    <div className="flex items-center gap-1 text-xs whitespace-nowrap">
+      <span
+        className="flex items-center gap-1 px-1 font-semibold"
+        style={{ color: colors.content }}
+      >
+        <Pause size={12} aria-hidden="true" className="shrink-0" />
+        <span role="status">
+          <Trans>Paused</Trans>
+        </span>
+      </span>
+      <button
+        type="button"
+        data-tauri-drag-region="false"
+        aria-label={t`Resume listening`}
+        onClick={onResume}
+        className="flex items-center gap-1 px-2 font-semibold"
+        style={{
+          ...buttonStyle,
+          background: colors.accentHover,
+          color: colors.accent,
+        }}
+      >
+        <Play size={10} aria-hidden="true" />
+        <Trans>Resume</Trans>
+      </button>
+      <button
+        type="button"
+        data-tauri-drag-region="false"
+        aria-label={t`Finish the meeting`}
+        onClick={onStop}
+        className="flex items-center gap-1 px-2"
+        style={{
+          ...buttonStyle,
+          background: colors.controlFill,
+          color: colors.content,
+        }}
+      >
+        <Square size={9} aria-hidden="true" />
+        <Trans>Finish</Trans>
+      </button>
     </div>
   );
 }
@@ -145,19 +221,41 @@ function FloatingControls({
   isExpanded,
   colors,
   onStop,
+  onPause,
   onToggleExpanded,
 }: {
   state: FloatingBarState;
   isExpanded: boolean;
   colors: BarColors;
   onStop: () => void;
+  onPause?: () => void;
   onToggleExpanded: (expanded: boolean) => void;
 }) {
+  const { t } = useLingui();
+
   return (
     <div
       className="flex items-center"
       style={{ gap: FLOATING_BAR_COMPACT_GAP }}
     >
+      {state.dictation ? null : (
+        <button
+          type="button"
+          data-tauri-drag-region="false"
+          aria-label={t`Pause listening`}
+          title={t`Pause listening`}
+          onClick={onPause}
+          className="flex items-center justify-center"
+          style={{
+            width: FLOATING_BAR_COMPACT_ICON_SIZE,
+            height: FLOATING_BAR_COMPACT_ICON_SIZE,
+            borderRadius: FLOATING_BAR_CONTROL_RADIUS,
+            color: colors.content,
+          }}
+        >
+          <Pause size={14} aria-hidden="true" />
+        </button>
+      )}
       <StopControl state={state} colors={colors} onStop={onStop} />
       {state.liveCaptionToggleVisible ? (
         <button

@@ -82,8 +82,34 @@ describe("MeetingSettingsView", () => {
     ).toBeNull();
     expect(screen.queryByText("Capture meeting chat in Memos")).toBeNull();
     expect(screen.getByText("Show floating bar")).toBeTruthy();
-    expect(screen.queryByText("Stop when meeting ends")).toBeNull();
   });
+
+  // La fin d'usage du micro est détectée sur Windows (sessions WASAPI de
+  // capture, issue 407) : l'arrêt automatique y est donc proposé.
+  it.each(["macos", "linux", "windows"])(
+    "offers stopping when the meeting ends on %s",
+    (os) => {
+      mocks.platform.mockReturnValue(os);
+      const autoStopMeetings = setting(false);
+      render(
+        <MeetingSettingsView
+          autoJoinScheduledMeetings={setting()}
+          autoStartScheduledMeetings={setting()}
+          autoStopMeetings={autoStopMeetings}
+          floatingBar={setting()}
+          meetingDisclosureAutoPost={setting()}
+          captureMeetingChat={setting(false)}
+          captureSharedScreens={setting(false)}
+          captureReminder={setting()}
+        />,
+      );
+
+      fireEvent.click(
+        screen.getByRole("switch", { name: "Stop when meeting ends" }),
+      );
+      expect(autoStopMeetings.onChange).toHaveBeenCalledWith(true);
+    },
+  );
 
   it("shows scheduled meeting options on macOS", () => {
     renderMeetingSettings();

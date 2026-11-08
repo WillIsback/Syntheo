@@ -47,6 +47,7 @@ export function MainLanguageView({
 
   return (
     <SettingRow
+      settingId="main-language"
       title={<Trans>Main language</Trans>}
       description={
         <Trans>Default language for transcription and AI responses.</Trans>

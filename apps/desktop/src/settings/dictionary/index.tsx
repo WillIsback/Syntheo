@@ -35,7 +35,9 @@ export function SettingsDictionary() {
     <div className="flex flex-col gap-8">
       <SettingsPageTitle title={<Trans>Dictionary</Trans>} />
       <PlanGate plan="pro" allowed={isPro}>
-        <DictionarySettings terms={terms} onSave={setTerms} />
+        <div data-setting-id="dictionary-terms">
+          <DictionarySettings terms={terms} onSave={setTerms} />
+        </div>
       </PlanGate>
     </div>
   );

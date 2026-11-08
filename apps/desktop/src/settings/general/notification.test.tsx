@@ -62,6 +62,7 @@ vi.mock("~/shared/completion-sound", () => ({
   previewCompletionSound: mocks.previewCompletionSound,
 }));
 
+import { SETTING_DEFINITIONS } from "../schema";
 import { NotificationSettingsView } from "./notification";
 
 const baseConfig = {
@@ -118,6 +119,58 @@ describe("NotificationSettingsView", () => {
       expect(screen.getByText("Ting Aqua Bridge")).toBeTruthy(),
     );
   });
+
+  it("turns microphone detection off by default", () => {
+    expect(SETTING_DEFINITIONS.notification_detect.default).toBe(false);
+  });
+
+  it("keeps microphone detection available to turn on", async () => {
+    mocks.useConfigValues.mockReturnValue({
+      ...baseConfig,
+      notification_detect: false,
+    });
+    render(<NotificationSettingsView />);
+
+    const detectSwitch = screen.getByRole("switch", {
+      name: "Microphone detection",
+    });
+    expect(detectSwitch.getAttribute("aria-checked")).toBe("false");
+    expect(detectSwitch.hasAttribute("disabled")).toBe(false);
+
+    fireEvent.click(detectSwitch);
+
+    await waitFor(() =>
+      expect(mocks.setSettingValues).toHaveBeenLastCalledWith(
+        expect.objectContaining({ notification_detect: true }),
+      ),
+    );
+  });
+
+  // La détection micro fonctionne sur Windows (issue 407) : l'interrupteur et
+  // la liste des applications à exclure y sont proposés.
+  it.each(["macos", "linux", "windows"])(
+    "shows microphone detection on %s",
+    (os) => {
+      mocks.currentPlatform = os;
+      render(<NotificationSettingsView />);
+
+      expect(
+        screen.getByRole("switch", { name: "Microphone detection" }),
+      ).toBeTruthy();
+      expect(screen.getByText("Exclude apps from detection")).toBeTruthy();
+      for (const queryKey of [
+        "all-installed-applications",
+        "default-ignored-bundle-ids",
+      ]) {
+        expect(mocks.useQuery).toHaveBeenCalledWith(
+          expect.objectContaining({ queryKey: ["settings", queryKey] }),
+        );
+        expect(mocks.useQuery).not.toHaveBeenCalledWith(
+          expect.objectContaining({ enabled: false }),
+        );
+      }
+    },
+  );
 
   it("disables every notification control with the master switch", () => {
     render(<NotificationSettingsView />);

@@ -4,6 +4,9 @@ enum FloatingBarStatus: String, Codable, Equatable {
   case recording
   case reconnecting
   case error
+  // Issue 353 : jamais envoyé au panneau macOS (masqué pendant la pause), mais
+  // décodable pour qu'un état inattendu n'invalide pas toute la mise à jour.
+  case paused
 }
 
 enum FloatingBarColorScheme: String, Codable, Equatable {

@@ -10,9 +10,7 @@ use gtk::{
 };
 use indexmap::IndexMap;
 
-use syntheo_notification_interface::{
-    DismissTimer, ParticipantStatus, PrimaryAction, expanded_schedule_text, unix_now,
-};
+use syntheo_notification_interface::{DismissTimer, ParticipantStatus, PrimaryAction, unix_now};
 
 use crate::callbacks;
 use crate::icon;
@@ -223,7 +221,7 @@ impl NotificationInstance {
                     menu.append(&menu_item);
                 }
 
-                let create_new_item = MenuItem::with_label("Create New Note...");
+                let create_new_item = MenuItem::with_label(&payload.labels().create_new_note);
                 let create_new_index = options.len() as i32;
                 let option_key = self.key.clone();
                 create_new_item.connect_activate(move |_| {
@@ -234,7 +232,7 @@ impl NotificationInstance {
                 menu.show_all();
 
                 let menu_button = MenuButton::new();
-                menu_button.set_label("Options");
+                menu_button.set_label(&payload.labels().options);
                 menu_button.style_context().add_class("action-button");
                 menu_button.set_popup(Some(&menu));
                 main_box.pack_start(&menu_button, false, false, 0);
@@ -349,7 +347,7 @@ impl NotificationInstance {
         title.style_context().add_class("notification-title");
         header.pack_start(&title, true, true, 0);
 
-        let collapse = Button::with_label("Show less");
+        let collapse = Button::with_label(&payload.labels().show_less);
         let collapse_key = self.key.clone();
         collapse.connect_clicked(move |_| {
             NotificationManager::toggle_expanded_global(&collapse_key);
@@ -390,12 +388,18 @@ impl NotificationInstance {
         }
 
         if let Some(details) = &payload.event_details {
-            container.pack_start(&detail_row("What:", &details.what), false, false, 0);
+            let labels = payload.labels();
+            container.pack_start(&detail_row(&labels.what, &details.what), false, false, 0);
             if let Some(timezone) = &details.timezone {
-                container.pack_start(&detail_row("Invitee Time Zone:", timezone), false, false, 0);
+                container.pack_start(
+                    &detail_row(&labels.invitee_time_zone, timezone),
+                    false,
+                    false,
+                    0,
+                );
             }
             if let Some(location) = &details.location {
-                container.pack_start(&detail_row("Where:", location), false, false, 0);
+                container.pack_start(&detail_row(&labels.location, location), false, false, 0);
             }
         }
 
@@ -415,7 +419,7 @@ impl NotificationInstance {
 
         if payload.start_time.is_some() {
             let remaining = self.schedule_remaining().unwrap_or_default();
-            let timer = Label::new(Some(&expanded_schedule_text(remaining)));
+            let timer = Label::new(Some(&payload.expanded_schedule_message(remaining)));
             timer.style_context().add_class("notification-message");
             container.pack_start(&timer, false, false, 0);
             self.expanded_timer_label = Some(timer);
@@ -576,9 +580,11 @@ impl NotificationManager {
             );
         }
         if let Some(label) = &instance.expanded_timer_label {
-            label.set_text(&expanded_schedule_text(
-                instance.schedule_remaining().unwrap_or_default(),
-            ));
+            label.set_text(
+                &instance
+                    .payload
+                    .expanded_schedule_message(instance.schedule_remaining().unwrap_or_default()),
+            );
         }
     }
 

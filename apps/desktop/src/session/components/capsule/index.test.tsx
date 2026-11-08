@@ -14,6 +14,8 @@ function makeActions(): CapsuleActions {
     onCancel: vi.fn(),
     onStart: vi.fn(),
     onStop: vi.fn(),
+    onPause: vi.fn(),
+    onResume: vi.fn(),
     onCopy: vi.fn(),
     onExport: vi.fn(),
     onAsk: vi.fn(),
@@ -64,14 +66,14 @@ describe("NoteCapsule", () => {
     expect(capsule.className).toContain("shadow-capsule");
   });
 
-  it("offers Cancel and Start listening (Ctrl ⇧ N) while preparing", () => {
+  it("offers Cancel and Start listening (Ctrl+Shift+N) while preparing", () => {
     const actions = makeActions();
     render(<NoteCapsule stage="prepare" actions={actions} />);
 
     const start = screen.getByRole("button", { name: /Begin listening/ });
     expect(start.className).toContain("bg-recording");
-    expect(start.textContent).toContain("Ctrl ⇧ N");
-    expect(start.getAttribute("aria-keyshortcuts")).toBe("Ctrl+Shift+N");
+    expect(start.textContent).toContain("Ctrl Shift N");
+    expect(start.getAttribute("aria-keyshortcuts")).toBe("Control+Shift+N");
 
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     fireEvent.click(start);
@@ -117,6 +119,113 @@ describe("NoteCapsule", () => {
     expect(actions.onStop).toHaveBeenCalledTimes(1);
   });
 
+  // Issue 353 : pause dans la même session, visible par un indicateur et un
+  // texte (pas seulement une couleur).
+  it("offers a focusable Pause listening button while listening", () => {
+    const actions = makeActions();
+    render(
+      <NoteCapsule
+        stage="listen"
+        actions={actions}
+        listening={{
+          seconds: 5,
+          amplitude: 0,
+          muted: false,
+          finalizing: false,
+        }}
+      />,
+    );
+
+    const pause = screen.getByRole("button", { name: "Pause listening" });
+    expect(pause.textContent).toBe("Put on pause");
+    pause.focus();
+    expect(document.activeElement).toBe(pause);
+    fireEvent.click(pause);
+    expect(actions.onPause).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("status")).toBeNull();
+  });
+
+  it("shows Paused with a frozen timer, Resume listening and Finish", () => {
+    const actions = makeActions();
+    render(
+      <NoteCapsule
+        stage="listen"
+        actions={actions}
+        listening={{
+          seconds: 754,
+          amplitude: 0.8,
+          muted: false,
+          finalizing: false,
+          paused: true,
+        }}
+      />,
+    );
+
+    expect(screen.getByRole("status").textContent).toBe("Paused");
+    expect(screen.getByRole("timer").textContent).toBe("12:34");
+    expect(document.querySelector("[data-paused-indicator]")).not.toBeNull();
+    // Plus de point d'enregistrement ni de vumètre : rien n'est capté.
+    expect(document.querySelector("span.bg-recording")).toBeNull();
+    expect(document.querySelector("[data-level-meter]")).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Pause listening" }),
+    ).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Resume listening" }));
+    fireEvent.click(screen.getByRole("button", { name: "Finish" }));
+    expect(actions.onResume).toHaveBeenCalledTimes(1);
+    expect(actions.onStop).toHaveBeenCalledTimes(1);
+  });
+
+  it("disables both actions while the pause is being saved", () => {
+    render(
+      <NoteCapsule
+        stage="listen"
+        actions={makeActions()}
+        listening={{
+          seconds: 5,
+          amplitude: 0,
+          muted: false,
+          finalizing: true,
+          pausing: true,
+        }}
+      />,
+    );
+
+    expect(
+      (
+        screen.getByRole("button", {
+          name: "Pause listening",
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(true);
+    expect(
+      screen.getByRole("button", { name: "Pause listening" }).textContent,
+    ).toBe("Pausing…");
+    expect(
+      (screen.getByRole("button", { name: "Finish" }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
+  });
+
+  it("offers Resume listening and Generate the summary when a note has no summary", () => {
+    const actions = {
+      ...makeActions(),
+      onResumeListening: vi.fn(),
+      onGenerateSummary: vi.fn(),
+    };
+    render(<NoteCapsule stage="synthesis" actions={actions} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Resume listening" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Generate the summary" }),
+    );
+    expect(actions.onResumeListening).toHaveBeenCalledTimes(1);
+    expect(actions.onGenerateSummary).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("button", { name: "Copy" })).not.toBeNull();
+    expect(screen.queryByRole("button", { name: /Ask the note/ })).toBeNull();
+  });
+
   it("freezes the sound level when the user prefers reduced motion", () => {
     hoisted.reduceMotion = true;
     render(
@@ -154,9 +263,7 @@ describe("NoteCapsule", () => {
 
   it("offers Copy, Export and Ask the note (Ctrl J) for the synthesis", () => {
     const actions = makeActions();
-    render(
-      <NoteCapsule stage="synthesis" actions={actions} modifierLabel="⌘" />,
-    );
+    render(<NoteCapsule stage="synthesis" actions={actions} os="mac" />);
 
     fireEvent.click(screen.getByRole("button", { name: "Copy" }));
     fireEvent.click(screen.getByRole("button", { name: "Export" }));

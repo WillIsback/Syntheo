@@ -1,7 +1,9 @@
 import { useLingui } from "@lingui/react/macro";
-import { platform } from "@tauri-apps/plugin-os";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
+
+import { toast } from "@syntheo/ui/components/ui/toast";
+import { hasSummaryContent } from "@syntheo/utils/session";
 
 import { formatElapsed, NoteCapsule, type NoteStage } from "./index";
 import { LevelMeter } from "./level-meter";
@@ -13,11 +15,21 @@ import {
   getStoredNoteMarkdown,
 } from "~/session/components/note-input/header-shared";
 import { ExportModal } from "~/session/components/outer-header/overflow/export-modal";
-import { useEnhancedNote, useSession } from "~/session/queries";
+import { useIsSessionEnhancing } from "~/session/hooks/useEnhancedNotes";
+import { useGenerateSummary } from "~/session/hooks/useGenerateSummary";
+import {
+  useEnhancedNote,
+  useEnhancedNoteRecords,
+  useSession,
+} from "~/session/queries";
+import { showFinishListeningToExport } from "~/shared/export-shortcut";
 import { leaveOverlayTab } from "~/shared/leave-overlay-tab";
+import { registerShortcutAction } from "~/shared/shortcut-actions";
+import { getShortcut, getShortcutPlatform } from "~/shared/shortcuts";
 import type { EditorView, Tab } from "~/store/zustand/tabs/schema";
 import { useListener } from "~/stt/contexts";
 import { useLiveAmplitude, useLiveSeconds } from "~/stt/live-meters";
+import { finishPausedListening } from "~/stt/pause-listening";
 import { useStartListening } from "~/stt/useStartListening";
 import {
   isMainWebviewWindow,
@@ -38,12 +50,14 @@ function SessionLevelMeter({
   return <LevelMeter amplitude={useLiveAmplitude(sessionId)} muted={muted} />;
 }
 
-function getPrimaryModifierLabel() {
-  try {
-    return platform() === "macos" ? "⌘" : "Ctrl";
-  } catch {
-    return "Ctrl";
-  }
+// Un compte rendu existe s'il a du contenu, ou s'il est en cours d'écriture.
+function useSummaryExists(sessionId: string, sessionTitle?: string) {
+  const notes = useEnhancedNoteRecords(sessionId);
+  const enhancing = useIsSessionEnhancing(sessionId);
+  return (
+    enhancing ||
+    notes.some((note) => hasSummaryContent(note.content, sessionTitle))
+  );
 }
 
 export function SessionCapsule({
@@ -60,11 +74,21 @@ export function SessionCapsule({
   const { t } = useLingui();
   const sessionId = tab.id;
   const { chat } = useShell();
-  const modifierLabel = useMemo(() => getPrimaryModifierLabel(), []);
+  const os = useMemo(() => getShortcutPlatform(), []);
 
   const startListening = useStartListening(sessionId);
   const stopListening = useListener((state) => state.stop);
+  const pauseListening = useListener((state) => state.pause);
   const sessionMode = useListener((state) => state.getSessionMode(sessionId));
+  const pausePhase = useListener((state) =>
+    state.live.pause?.sessionId === sessionId ? state.live.pause.phase : null,
+  );
+  const resuming = useListener(
+    (state) =>
+      pausePhase === "paused" &&
+      state.live.sessionId === sessionId &&
+      state.live.loading,
+  );
   // Le chrono et le vumètre s'abonnent eux-mêmes (voir plus bas) : la
   // capsule ne se redessine pas à chaque seconde ni à chaque niveau sonore.
   const muted = useListener((state) =>
@@ -82,14 +106,40 @@ export function SessionCapsule({
 
   const stop = useCallback(() => {
     if (!isMainWebviewWindow()) {
-      void requestMainListenerControl("stop", sessionId);
+      void requestMainListenerControl(
+        pausePhase === "paused" ? "finish" : "stop",
+        sessionId,
+      );
       return;
     }
 
+    // « Terminer » pendant la pause : pas de nouvelle capture, la synthèse part.
+    if (pausePhase === "paused") {
+      void finishPausedListening(sessionId);
+      return;
+    }
     stopListening();
-  }, [sessionId, stopListening]);
+  }, [pausePhase, sessionId, stopListening]);
 
-  // Ctrl ⇧ N lance l'écoute de cette note tant qu'elle est en préparation.
+  const pause = useCallback(() => {
+    if (!isMainWebviewWindow()) {
+      void requestMainListenerControl("pause", sessionId);
+      return;
+    }
+
+    pauseListening();
+  }, [pauseListening, sessionId]);
+
+  const resume = useCallback(() => {
+    if (!isMainWebviewWindow()) {
+      void requestMainListenerControl("resume", sessionId);
+      return;
+    }
+
+    void startListening();
+  }, [sessionId, startListening]);
+
+  // Ctrl+Maj+N lance l'écoute de cette note tant qu'elle est en préparation.
   const canStartFromShortcut = tab.active && stage === "prepare";
   useEffect(() => {
     if (!canStartFromShortcut || standaloneWindow) {
@@ -100,7 +150,7 @@ export function SessionCapsule({
   }, [canStartFromShortcut, standaloneWindow, start]);
   // Les fenêtres de note autonomes n'ont pas les raccourcis globaux.
   useHotkeys(
-    "mod+shift+n",
+    getShortcut("startListening").hotkeys ?? "",
     start,
     {
       enabled: canStartFromShortcut && standaloneWindow,
@@ -135,7 +185,45 @@ export function SessionCapsule({
     requestAnimationFrame(() => setExportOpen(true));
   }, []);
 
-  // « Demander à la note » réutilise le chat existant (Ctrl J).
+  // Ctrl+P (issue 374) : la note active ouvre « Exporter ou imprimer » en
+  // Préparer et en Synthèse ; pendant l'écoute, un message. Fenêtre de note
+  // autonome : même raccourci, déclaré localement.
+  const exportFromShortcut =
+    stage === "listen" ? showFinishListeningToExport : openExport;
+  useEffect(() => {
+    if (!tab.active || standaloneWindow) {
+      return;
+    }
+
+    return registerShortcutAction("exportNote", exportFromShortcut);
+  }, [exportFromShortcut, standaloneWindow, tab.active]);
+  useHotkeys(
+    getShortcut("exportNote").hotkeys ?? "",
+    exportFromShortcut,
+    {
+      enabled: tab.active && standaloneWindow,
+      preventDefault: true,
+      enableOnFormTags: true,
+      enableOnContentEditable: true,
+    },
+    [exportFromShortcut],
+  );
+
+  // Note sans compte rendu (par exemple après avoir quitté l'application
+  // pendant une pause) : reprendre l'écoute ou générer le compte rendu. Le
+  // choix porte sur l'existence d'un compte rendu, pas sur l'onglet affiché :
+  // une note transcrite sans compte rendu affiche déjà l'onglet vide du compte
+  // rendu par défaut.
+  const summary = useGenerateSummary(sessionId);
+  const summaryExists = useSummaryExists(sessionId, session?.title);
+  const withoutSummary = stage === "synthesis" && !summaryExists;
+  const generateSummary = useCallback(() => {
+    summary.generate(undefined, {
+      onError: (error) => toast.error(error.message),
+    });
+  }, [summary]);
+
+  // « Demander à la note » réutilise le chat existant (Ctrl+J).
   const ask = useCallback(() => {
     chat.sendEvent({ type: "OPEN" });
   }, [chat]);
@@ -144,17 +232,25 @@ export function SessionCapsule({
     <>
       <NoteCapsule
         stage={stage}
-        modifierLabel={modifierLabel}
+        os={os}
         listening={{
           elapsed: <SessionElapsed sessionId={sessionId} />,
           meter: <SessionLevelMeter sessionId={sessionId} muted={muted} />,
           muted,
           finalizing: sessionMode === "finalizing",
+          paused: pausePhase === "paused",
+          pausing: pausePhase === "pausing",
+          resuming,
         }}
         actions={{
           onCancel: standaloneWindow ? undefined : leaveOverlayTab,
           onStart: start,
           onStop: stop,
+          onPause: pause,
+          onResume: resume,
+          onResumeListening: withoutSummary ? resume : undefined,
+          onGenerateSummary: withoutSummary ? generateSummary : undefined,
+          generateSummaryDisabled: summary.pending,
           onCopy: copy,
           copyDisabled: markdown.length === 0,
           onExport: openExport,

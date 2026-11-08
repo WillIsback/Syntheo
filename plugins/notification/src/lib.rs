@@ -40,10 +40,9 @@ pub fn init() -> tauri::plugin::TauriPlugin<tauri::Wry> {
                 if let Ok(tauri_plugin_windows::AppWindow::Main) =
                     tauri_plugin_windows::AppWindow::from_str(label.as_ref())
                     && let tauri::WindowEvent::Focused(true) = event
+                    && let Err(error) = app.notification().clear()
                 {
-                    if let Err(error) = app.notification().clear() {
-                        tracing::warn!(%error, "failed_to_clear_notifications");
-                    }
+                    tracing::warn!(%error, "failed_to_clear_notifications");
                 }
             }
             _ => {}
@@ -60,12 +59,12 @@ mod test {
         const OUTPUT_FILE: &str = "./js/bindings.gen.ts";
 
         make_specta_builder::<tauri::Wry>()
-            .export(
-                specta_typescript::Typescript::default()
-                    .formatter(specta_typescript::formatter::prettier)
-                    .bigint(specta_typescript::BigIntExportBehavior::Number),
-                OUTPUT_FILE,
+            .disable_serde_phases()
+            .semantic_types(
+                specta_typescript::semantic::Configuration::empty().enable_lossless_floats(),
             )
+            .dangerously_cast_bigints_to_number()
+            .export(specta_typescript::Typescript::default(), OUTPUT_FILE)
             .unwrap();
 
         let content = std::fs::read_to_string(OUTPUT_FILE).unwrap();

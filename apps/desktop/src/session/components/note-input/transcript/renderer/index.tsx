@@ -30,7 +30,6 @@ import {
 } from "./selection-context";
 import { MultiSelectionBar, SelectionMenu } from "./selection-menu";
 import type { TranscriptContextMenuRequest } from "./selection-menu";
-import { TranscriptSeparator } from "./separator";
 import { RenderTranscript } from "./transcript";
 import {
   preserveScrollPosition,
@@ -498,8 +497,15 @@ export function TranscriptViewer({
             const isLastTranscript = index === visibleTranscriptIds.length - 1;
             const isActiveTranscript = currentActive && isLastTranscript;
 
+            // Une capture par reprise après une pause (issue 353) : les
+            // transcripts s'enchaînent comme un seul fil, sans séparateur, à
+            // l'écart d'un changement de tour de parole (`pt-4` d'un segment).
             return (
-              <div key={transcriptId} className="flex flex-col gap-8">
+              <div
+                key={transcriptId}
+                data-transcript-capture={transcriptId}
+                className={cn(["flex flex-col", index > 0 && "-mt-4"])}
+              >
                 <RenderTranscript
                   scrollElement={scrollElement}
                   isLastTranscript={isLastTranscript}
@@ -514,7 +520,6 @@ export function TranscriptViewer({
                   audioExists={audioExists}
                   editMode={editMode}
                 />
-                {!isLastTranscript && <TranscriptSeparator />}
               </div>
             );
           })}

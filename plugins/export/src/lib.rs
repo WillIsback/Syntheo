@@ -1,6 +1,7 @@
 mod commands;
 mod ext;
 mod manifest;
+mod print;
 pub use ext::*;
 pub use syntheo_export_core::{
     Error, ExportInput, ExportMetadata, Result, Transcript, TranscriptItem,
@@ -13,6 +14,8 @@ fn make_specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
         .plugin_name(PLUGIN_NAME)
         .commands(tauri_specta::collect_commands![
             commands::export::<tauri::Wry>,
+            commands::print_pdf::<tauri::Wry>,
+            commands::cleanup_print_files::<tauri::Wry>,
         ])
         .error_handling(tauri_specta::ErrorHandlingMode::Result)
 }
@@ -22,6 +25,17 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
 
     tauri::plugin::Builder::new(PLUGIN_NAME)
         .invoke_handler(specta_builder.invoke_handler())
+        .setup(|app, _api| {
+            // Lancement : les PDF à imprimer de la session précédente ne
+            // servent plus (issue 374). Hors du fil principal.
+            let app = app.clone();
+            std::thread::spawn(move || {
+                if let Err(error) = app.export().cleanup_print_files(std::time::Duration::ZERO) {
+                    eprintln!("[export] failed to clean print files: {error}");
+                }
+            });
+            Ok(())
+        })
         .build()
 }
 
@@ -44,11 +58,12 @@ mod test {
             std::process::id()
         ));
         make_specta_builder::<tauri::Wry>()
-            .export(
-                specta_typescript::Typescript::default()
-                    .bigint(specta_typescript::BigIntExportBehavior::Number),
-                &bindings_path,
+            .disable_serde_phases()
+            .semantic_types(
+                specta_typescript::semantic::Configuration::empty().enable_lossless_floats(),
             )
+            .dangerously_cast_bigints_to_number()
+            .export(specta_typescript::Typescript::default(), &bindings_path)
             .unwrap();
         let bindings = std::fs::read_to_string(&bindings_path).unwrap();
         let _ = std::fs::remove_file(&bindings_path);
@@ -87,12 +102,12 @@ mod test {
         const OUTPUT_FILE: &str = "./js/bindings.gen.ts";
 
         make_specta_builder::<tauri::Wry>()
-            .export(
-                specta_typescript::Typescript::default()
-                    .formatter(specta_typescript::formatter::prettier)
-                    .bigint(specta_typescript::BigIntExportBehavior::Number),
-                OUTPUT_FILE,
+            .disable_serde_phases()
+            .semantic_types(
+                specta_typescript::semantic::Configuration::empty().enable_lossless_floats(),
             )
+            .dangerously_cast_bigints_to_number()
+            .export(specta_typescript::Typescript::default(), OUTPUT_FILE)
             .unwrap();
 
         let content = std::fs::read_to_string(OUTPUT_FILE).unwrap();

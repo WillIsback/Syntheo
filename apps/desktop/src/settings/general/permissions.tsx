@@ -7,6 +7,7 @@ import { Button } from "@syntheo/ui/components/ui/button";
 import { useMountEffect } from "@syntheo/ui/hooks/use-mount-effect";
 import { cn } from "@syntheo/utils";
 
+import type { SettingId } from "~/settings/search-index";
 import {
   closePermissionAssistant,
   usePermission,
@@ -24,6 +25,7 @@ function PermissionRow({
   onOpen,
   assisted = false,
   runtimeCapability = false,
+  settingId,
 }: {
   title: string;
   description: string;
@@ -35,6 +37,7 @@ function PermissionRow({
   onOpen: () => void;
   assisted?: boolean;
   runtimeCapability?: boolean;
+  settingId: SettingId;
 }) {
   const { t } = useLingui();
   const isAuthorized = status === "authorized";
@@ -56,7 +59,10 @@ function PermissionRow({
   };
 
   return (
-    <div className="flex items-center justify-between gap-4">
+    <div
+      data-setting-id={settingId}
+      className="flex items-center justify-between gap-4"
+    >
       <div className="flex-1">
         <div
           className={cn([
@@ -145,6 +151,7 @@ function AudioPermissions({
   return (
     <PermissionGroup title={<Trans>Audio</Trans>}>
       <PermissionRow
+        settingId="permission-microphone"
         permission="microphone"
         title={t`Microphone`}
         description={t`Record your voice in meetings and calls.`}
@@ -156,6 +163,7 @@ function AudioPermissions({
         runtimeCapability={runtimeCapabilities}
       />
       <PermissionRow
+        settingId="permission-system-audio"
         permission="system_audio"
         title={t`System audio`}
         description={t`Record other participants in meetings.`}
@@ -185,6 +193,7 @@ function MacOSPermissions() {
       <AudioPermissions />
 
       <PermissionRow
+        settingId="permission-accessibility"
         permission="accessibility"
         title={t`Accessibility`}
         description={
@@ -201,6 +210,7 @@ function MacOSPermissions() {
 
       <PermissionGroup title={<Trans>Others</Trans>}>
         <PermissionRow
+          settingId="permission-calendar"
           permission="calendar"
           title={t`Calendar`}
           description={t`Show Apple Calendar events in Syntheo.`}

@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   rawMounts: 0,
   enhancedContent: "## Décisions" as string | undefined,
   enhanceStatus: "success" as string,
+  colorNotes: true,
   updateSession: vi.fn(() => Promise.resolve()),
   proposal: null as null | {
     id: string;
@@ -37,9 +38,22 @@ vi.mock("../note-input/raw", () => ({
 }));
 
 vi.mock("../note-input/enhanced", () => ({
-  Enhanced: (props: { enhancedNoteId: string }) => (
-    <div data-testid="enhanced-editor">{props.enhancedNoteId}</div>
+  Enhanced: (props: {
+    enhancedNoteId: string;
+    noteLines?: readonly string[];
+  }) => (
+    <div
+      data-testid="enhanced-editor"
+      data-note-lines={JSON.stringify(props.noteLines ?? [])}
+    >
+      {props.enhancedNoteId}
+    </div>
   ),
+}));
+
+vi.mock("~/shared/config", () => ({
+  useConfigValue: (key: string) =>
+    key === "color_notes_in_summary" ? mocks.colorNotes : undefined,
 }));
 
 vi.mock("../title-input", () => ({
@@ -68,6 +82,10 @@ vi.mock("./summary-switcher", () => ({
 
 vi.mock("~/session/components/note-input/transcript", () => ({
   Transcript: () => <div data-testid="transcript" />,
+}));
+
+vi.mock("./live-transcription-language", () => ({
+  LiveTranscriptionLanguage: () => null,
 }));
 
 vi.mock("~/ai/hooks", () => ({
@@ -121,6 +139,7 @@ describe("LivingDocument", () => {
     mocks.rawMounts = 0;
     mocks.enhancedContent = "## Décisions";
     mocks.enhanceStatus = "success";
+    mocks.colorNotes = true;
     mocks.updateSession.mockClear();
     mocks.proposal = null;
   });
@@ -175,11 +194,19 @@ describe("LivingDocument", () => {
     expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
   });
 
-  it("synthesises: provenance, generated text in foreground, user notes in user-ink and seal", () => {
+  const notesMd = JSON.stringify({
+    type: "doc",
+    content: [
+      { type: "paragraph", content: [{ type: "text", text: "budget ok" }] },
+    ],
+  });
+
+  it("synthesises: one summary where the notes are colored, and the seal", () => {
     render(
       <LivingDocument
         {...makeProps({
           stage: "synthesis",
+          rawMd: notesMd,
           editorTabs: [{ type: "enhanced", id: "note-1" }],
           currentTab: { type: "enhanced", id: "note-1" },
         })}
@@ -188,9 +215,31 @@ describe("LivingDocument", () => {
 
     expect(screen.getByText("Your notes", { selector: "span" })).not.toBeNull();
     expect(screen.getByText("Completed by Syntheo")).not.toBeNull();
-    expect(
-      screen.getByTestId("enhanced-editor").closest("[data-provenance='ai']"),
-    ).not.toBeNull();
+    const summary = screen.getByTestId("enhanced-editor");
+    expect(summary.closest("[data-provenance='ai']")).not.toBeNull();
+    expect(summary.getAttribute("data-note-lines")).toBe('["budget ok"]');
+    // Un seul bloc : pas de section « Vos notes » séparée.
+    expect(screen.queryByTestId("raw-editor")).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Your notes" })).toBeNull();
+    expect(document.querySelector("[data-note-seal]")).not.toBeNull();
+  });
+
+  it("synthesises in two blocks when note coloring is off", () => {
+    mocks.colorNotes = false;
+    render(
+      <LivingDocument
+        {...makeProps({
+          stage: "synthesis",
+          rawMd: notesMd,
+          editorTabs: [{ type: "enhanced", id: "note-1" }],
+          currentTab: { type: "enhanced", id: "note-1" },
+        })}
+      />,
+    );
+
+    const summary = screen.getByTestId("enhanced-editor");
+    expect(summary.closest("[data-provenance='ai']")).not.toBeNull();
+    expect(summary.getAttribute("data-note-lines")).toBe("[]");
     expect(
       screen.getByTestId("raw-editor").closest("[data-provenance='user']"),
     ).not.toBeNull();
@@ -262,6 +311,31 @@ describe("LivingDocument", () => {
     // tant que la proposition attend.
     expect(screen.getAllByTestId("raw-editor")).toHaveLength(1);
     expect(document.querySelector("[data-note-seal]")).toBeNull();
+  });
+
+  it("returns to the single colored summary once the edit is accepted or rejected", () => {
+    mocks.proposal = {
+      id: "request-1",
+      currentMarkdown: "Avant",
+      proposedMarkdown: "Après",
+    };
+    const props = makeProps({
+      stage: "synthesis",
+      rawMd: notesMd,
+      editorTabs: [{ type: "enhanced", id: "note-1" }],
+      currentTab: { type: "enhanced", id: "note-1" },
+    });
+    const view = render(<LivingDocument {...props} />);
+    // Exception voulue (issue 365) : deux blocs pendant la revue.
+    expect(screen.getAllByTestId("raw-editor")).toHaveLength(1);
+
+    mocks.proposal = null;
+    view.rerender(<LivingDocument {...props} />);
+
+    const summary = screen.getByTestId("enhanced-editor");
+    expect(summary.getAttribute("data-note-lines")).toBe('["budget ok"]');
+    expect(screen.queryByTestId("raw-editor")).toBeNull();
+    expect(document.querySelector("[data-note-seal]")).not.toBeNull();
   });
 
   it("shows only the user notes when no summary exists", () => {

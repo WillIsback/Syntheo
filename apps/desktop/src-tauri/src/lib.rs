@@ -239,6 +239,11 @@ pub fn main() {
             .with_flags(prevent_default_flags())
             .build();
         builder = builder.plugin(plugin);
+        builder = builder.plugin(
+            tauri::plugin::Builder::<tauri::Wry>::new("context-menu-guard")
+                .js_init_script(CONTEXT_MENU_GUARD_SCRIPT)
+                .build(),
+        );
     }
 
     #[cfg(target_os = "macos")]
@@ -435,14 +440,23 @@ pub fn main() {
 /// Raccourcis natifs de la webview bloqués en version publiée.
 ///
 /// Tous les drapeaux du plugin restent actifs (F5, Ctrl+R, recherche, impression,
-/// clic droit, etc.), sauf `FOCUS_MOVE` : celui-ci annule `Maj+Tab` et empêche de
-/// revenir au champ précédent au clavier (issue 395).
+/// etc.), sauf deux :
+/// - `FOCUS_MOVE`, qui annule `Maj+Tab` et empêche de revenir au champ précédent
+///   au clavier (issue 395) ;
+/// - `CONTEXT_MENU`, qui bloquerait le clic droit partout : c'est
+///   `CONTEXT_MENU_GUARD_SCRIPT` qui le bloque, sauf dans les champs et
+///   l'éditeur de notes (issue 376).
 #[cfg(any(test, all(not(debug_assertions), not(feature = "devtools"))))]
 fn prevent_default_flags() -> tauri_plugin_prevent_default::Flags {
     use tauri_plugin_prevent_default::Flags;
 
-    Flags::all().difference(Flags::FOCUS_MOVE)
+    Flags::all().difference(Flags::FOCUS_MOVE | Flags::CONTEXT_MENU)
 }
+
+/// Annule le menu contextuel natif hors des éléments éditables (`input` texte,
+/// `textarea`, `[contenteditable]`), injecté dans chaque webview avec le plugin.
+#[cfg(any(test, all(not(debug_assertions), not(feature = "devtools"))))]
+const CONTEXT_MENU_GUARD_SCRIPT: &str = include_str!("context_menu_guard.js");
 
 fn startup_failure_message(error: &impl std::fmt::Display) -> String {
     format!("Syntheo failed to start: {error}")
@@ -579,8 +593,15 @@ mod test {
         // Maj+Tab n'est plus bloqué : on peut revenir au champ précédent.
         assert!(!flags.contains(Flags::FOCUS_MOVE));
 
-        // Tous les autres raccourcis restent bloqués, clic droit compris.
-        assert_eq!(flags | Flags::FOCUS_MOVE, Flags::all());
+        // Le clic droit est confié au script de garde (champs et éditeur seuls).
+        assert!(!flags.contains(Flags::CONTEXT_MENU));
+
+        // Tous les autres raccourcis clavier restent bloqués.
+        assert_eq!(flags, Flags::keyboard().difference(Flags::FOCUS_MOVE));
+        assert_eq!(
+            flags | Flags::FOCUS_MOVE | Flags::CONTEXT_MENU,
+            Flags::all()
+        );
         for flag in [
             Flags::FIND,
             Flags::CARET_BROWSING,
@@ -590,9 +611,27 @@ mod test {
             Flags::SOURCE,
             Flags::OPEN,
             Flags::PRINT,
-            Flags::CONTEXT_MENU,
         ] {
             assert!(flags.contains(flag), "{flag:?} doit rester actif");
+        }
+    }
+
+    #[test]
+    fn prevent_default_context_menu_guard_spares_editable_elements() {
+        let script = CONTEXT_MENU_GUARD_SCRIPT;
+
+        assert!(script.contains("\"contextmenu\""));
+        assert!(script.contains("capture: true"));
+        assert!(script.contains("event.preventDefault()"));
+        // Le script ne doit jamais couper l'événement aux écouteurs de l'app.
+        assert!(!script.contains("stopPropagation"));
+        assert!(!script.contains("stopImmediatePropagation"));
+        for editable in [
+            "HTMLTextAreaElement",
+            "HTMLInputElement",
+            "[contenteditable]",
+        ] {
+            assert!(script.contains(editable), "{editable} doit être épargné");
         }
     }
 
@@ -601,12 +640,12 @@ mod test {
         const OUTPUT_FILE: &str = "../src/types/tauri.gen.ts";
 
         make_specta_builder::<tauri::Wry>()
-            .export(
-                specta_typescript::Typescript::default()
-                    .formatter(specta_typescript::formatter::prettier)
-                    .bigint(specta_typescript::BigIntExportBehavior::Number),
-                OUTPUT_FILE,
+            .disable_serde_phases()
+            .semantic_types(
+                specta_typescript::semantic::Configuration::empty().enable_lossless_floats(),
             )
+            .dangerously_cast_bigints_to_number()
+            .export(specta_typescript::Typescript::default(), OUTPUT_FILE)
             .unwrap();
 
         let content = std::fs::read_to_string(OUTPUT_FILE).unwrap();
