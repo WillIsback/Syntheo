@@ -1,5 +1,5 @@
 use objc2::{msg_send, rc::Retained, runtime::Bool};
-use objc2_event_kit::{EKAlarm, EKCalendarType, EKEvent, EKStructuredLocation};
+use objc2_event_kit::{EKAlarm, EKCalendar, EKCalendarType, EKEvent, EKStructuredLocation};
 use objc2_foundation::{NSArray, NSDate, NSString, NSTimeZone};
 
 use crate::error::Error;
@@ -17,8 +17,14 @@ pub fn transform_event(
     event: &EKEvent,
     contact_fetcher: Option<&dyn ContactFetcher>,
 ) -> Result<AppleEvent, Error> {
+    // EventKit peut renvoyer un événement sans calendrier (calendrier supprimé
+    // pendant la lecture, compte en cours de synchronisation). On renvoie une
+    // erreur au lieu de paniquer : l'appelant ignore l'événement et le trace.
+    let calendar = unsafe { event.calendar() }
+        .ok_or_else(|| Error::TransformError("event has no calendar".to_string()))?;
+
     let identifiers = extract_event_identifiers(event);
-    let calendar_ref = extract_event_calendar_ref(event);
+    let calendar_ref = extract_event_calendar_ref(&calendar);
     let basic_info = extract_event_basic_info(event);
     let dates = extract_event_dates(event);
     let status_info = extract_event_status_info(event);
@@ -27,7 +33,7 @@ pub fn transform_event(
     let location_info = extract_event_location_info(event);
     let recurrence_info = extract_event_recurrence_info(event, flags.has_recurrence_rules);
     let alarm_info = extract_event_alarm_info(event);
-    let birthday_info = extract_event_birthday_info(event, &calendar_ref);
+    let birthday_info = extract_event_birthday_info(event, &calendar);
 
     Ok(AppleEvent {
         event_identifier: identifiers.event_identifier,
@@ -80,11 +86,10 @@ fn extract_event_identifiers(event: &EKEvent) -> EventIdentifiers {
     }
 }
 
-fn extract_event_calendar_ref(event: &EKEvent) -> CalendarRef {
-    let calendar = unsafe { event.calendar() }.unwrap();
+fn extract_event_calendar_ref(calendar: &EKCalendar) -> CalendarRef {
     CalendarRef {
         id: unsafe { calendar.calendarIdentifier() }.to_string(),
-        title: objc_title(&*calendar),
+        title: objc_title(calendar),
     }
 }
 
@@ -244,14 +249,14 @@ struct EventBirthdayInfo {
     is_birthday: bool,
 }
 
-fn extract_event_birthday_info(event: &EKEvent, _calendar_ref: &CalendarRef) -> EventBirthdayInfo {
+fn extract_event_birthday_info(event: &EKEvent, calendar: &EKCalendar) -> EventBirthdayInfo {
     let birthday_contact_identifier = unsafe {
         let id: Option<Retained<NSString>> = msg_send![event, birthdayContactIdentifier];
         id.map(|s| s.to_string())
     };
 
     let is_birthday = birthday_contact_identifier.is_some()
-        || unsafe { event.calendar().unwrap().r#type() } == EKCalendarType::Birthday;
+        || unsafe { calendar.r#type() } == EKCalendarType::Birthday;
 
     EventBirthdayInfo {
         birthday_contact_identifier,
