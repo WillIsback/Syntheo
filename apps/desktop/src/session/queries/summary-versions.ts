@@ -11,6 +11,9 @@ import { useLiveQuery } from "~/db";
 export type SummaryGenerationMetadata = {
   generatedAt: string | null;
   sourceNoteFingerprint: string | null;
+  // Issue 417 : passages validés venus des notes, rangés à part du corps
+  // (aucune balise n'est enregistrée) ; null : aucune balise, repli.
+  notePassages: string[] | null;
 };
 
 export type SummaryVersionRecord = {
@@ -59,6 +62,12 @@ function readText(record: Record<string, unknown>, key: string) {
   return typeof value === "string" && value ? value : null;
 }
 
+function readTextList(record: Record<string, unknown>, key: string) {
+  const value = record[key];
+  if (!Array.isArray(value)) return null;
+  return value.filter((item): item is string => typeof item === "string");
+}
+
 export function parseSummaryGenerationMetadata(
   json: string | null | undefined,
 ): SummaryGenerationMetadata {
@@ -75,6 +84,7 @@ export function parseSummaryGenerationMetadata(
   return {
     generatedAt: readText(record, "generatedAt"),
     sourceNoteFingerprint: readText(record, "sourceNoteFingerprint"),
+    notePassages: readTextList(record, "notePassages"),
   };
 }
 

@@ -10,6 +10,7 @@ import {
   matchSentenceToNote,
   NOTE_MATCH_THRESHOLD,
   prepareNotes,
+  validateNotePassage,
 } from "./note-attribution";
 
 function match(sentence: string, notes: string[]) {
@@ -199,5 +200,47 @@ describe("findNoteSentenceRanges", () => {
     expect(greenTexts("Le budget a été validé par la direction.", [])).toEqual(
       [],
     );
+  });
+});
+
+describe("validateNotePassage", () => {
+  const validate = (passage: string, notes: string[]) =>
+    validateNotePassage(passage, prepareNotes(notes));
+
+  // Exemple réel de William : la note a la bonne orthographe du nom, la
+  // transcription l'avait mal écrite (« Kovalchik »).
+  it("accepts a name spelled as in the notes, even when the transcript misspelled it", () => {
+    const notes = ["rdv Mme Kowalczyk et Jean Dupond", "budget 50k ok"];
+
+    expect(validate("Mme Kowalczyk", notes)).toBe(true);
+    expect(validate("Ms Kowalczyk", notes)).toBe(true);
+    expect(validate("Jean Dupond", notes)).toBe(true);
+    expect(validate("le budget de 50k", notes)).toBe(true);
+  });
+
+  it("rejects a passage the notes do not back", () => {
+    const notes = ["rdv Mme Kowalczyk", "budget 50k ok"];
+
+    // Orthographe de la transcription : absente des notes.
+    expect(validate("Mme Kovalchik", notes)).toBe(false);
+    // Un nombre changé ou ajouté.
+    expect(validate("Le budget de 60k", notes)).toBe(false);
+    // Un nom absent des notes.
+    expect(validate("le budget de Julie", notes)).toBe(false);
+    // Trop peu de mots venus des notes.
+    expect(
+      validate("Le fournisseur démarre en mai avec le budget", notes),
+    ).toBe(false);
+  });
+
+  it("accepts a number taken from the notes", () => {
+    expect(validate("50 000 €", ["budget 50 000 € validé"])).toBe(true);
+    expect(validate("50 000 €", ["budget 60 000 € validé"])).toBe(false);
+  });
+
+  it("rejects everything without notes or without words", () => {
+    expect(validate("Mme Kowalczyk", [])).toBe(false);
+    expect(validate("  ", ["budget"])).toBe(false);
+    expect(validate("le la les", ["le la les budget"])).toBe(false);
   });
 });

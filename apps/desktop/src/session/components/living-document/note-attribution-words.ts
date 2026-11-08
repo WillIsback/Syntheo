@@ -3,7 +3,10 @@
 
 const words = (list: string) => list.trim().split(/\s+/);
 
-/** Mots vides français et anglais, ignorés dans la comparaison. */
+/**
+ * Mots vides français et anglais, ignorés dans la comparaison, civilités
+ * comprises (« Mme Kowalczyk » et « Ms Kowalczyk » désignent le même nom).
+ */
 export const STOPWORDS: ReadonlySet<string> = new Set(
   words(`
     a afin ai aie ainsi alors as au aucun aussi autre aux avait avant avec
@@ -14,6 +17,7 @@ export const STOPWORDS: ReadonlySet<string> = new Set(
     peu peut plus pour qu quand que quel quelle qui s sa sans se sera seront
     ses si son sont sous sur t ta te tes toi ton tous tout toute toutes tres
     tu un une va vers via vont vos votre vous y
+    mme mmes mlle mr mrs ms dr
     about after all also an and any are at be been before being but by can
     could did do does for from had has have he her his how i if in into is it
     its may more must no not of or our out she should so some than that the

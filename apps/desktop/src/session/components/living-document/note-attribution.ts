@@ -26,9 +26,9 @@ const MIN_PREFIX_LENGTH = 4;
 
 const MIN_STEM_LENGTH = 3;
 
-const WORD = /[\p{L}\p{N}]+(?:[-'’][\p{L}\p{N}]+)*/gu;
+export const WORD = /[\p{L}\p{N}]+(?:[-'’][\p{L}\p{N}]+)*/gu;
 // « 50 000 », « 3,5 », « 12 » ; « 12/03 » donne deux nombres.
-const NUMBER = /\d{1,3}(?:[ \u00a0\u202f]\d{3})+(?!\d)|\d+(?:[.,]\d+)?/g;
+export const NUMBER = /\d{1,3}(?:[ \u00a0\u202f]\d{3})+(?!\d)|\d+(?:[.,]\d+)?/g;
 
 export type PreparedNote = {
   stems: string[];
@@ -39,14 +39,14 @@ export type PreparedNote = {
 
 type PreparedSentence = PreparedNote;
 
-function fold(text: string): string {
+export function fold(text: string): string {
   return text
     .normalize("NFD")
     .replace(/\p{M}+/gu, "")
     .toLowerCase();
 }
 
-function stem(word: string): string {
+export function stem(word: string): string {
   for (const suffix of SUFFIXES) {
     if (
       word.endsWith(suffix) &&
@@ -58,7 +58,7 @@ function stem(word: string): string {
   return word;
 }
 
-function normalizeNumber(raw: string): string {
+export function normalizeNumber(raw: string): string {
   const compact = raw.replace(/[ \u00a0\u202f]/g, "").replace(",", ".");
   const [integer = "", decimals] = compact.split(".");
   const trimmed = integer.replace(/^0+(?=\d)/, "");
@@ -72,7 +72,7 @@ type Analysis = {
   names: string[];
 };
 
-function analyze(
+export function analyze(
   text: string,
   { skipLeadingName }: { skipLeadingName: boolean },
 ): Analysis {
@@ -126,7 +126,7 @@ function prepareSentence(text: string): PreparedSentence {
   return { stems, stemSet: new Set(stems), numbers, names };
 }
 
-function wordMatches(noteStem: string, sentenceStem: string): boolean {
+export function wordMatches(noteStem: string, sentenceStem: string): boolean {
   return (
     noteStem === sentenceStem ||
     (noteStem.length >= MIN_PREFIX_LENGTH && sentenceStem.startsWith(noteStem))
@@ -163,6 +163,35 @@ function strictTermsAgree(sentence: PreparedSentence, note: PreparedNote) {
   return sentence.names.every((name) =>
     note.stems.some((n) => wordMatches(n, name)),
   );
+}
+
+/**
+ * Un passage balisé par le modèle (issue 417) est-il appuyé par les notes ?
+ * Ses nombres et ses noms propres doivent tous s'y trouver, et assez de ses
+ * mots (au moins `NOTE_MATCH_THRESHOLD`) doivent venir des notes. Le passage
+ * peut reprendre plusieurs lignes de notes : on compare à l'ensemble des
+ * notes, pas à une seule. Au moindre doute, la balise est rejetée et le
+ * passage reste noir.
+ */
+export function validateNotePassage(
+  passage: string,
+  notes: readonly PreparedNote[],
+): boolean {
+  if (notes.length === 0) return false;
+  const { stems, numbers, names } = analyze(passage, { skipLeadingName: true });
+  if (stems.length === 0 && numbers.size === 0) return false;
+
+  const noteNumbers = new Set(notes.flatMap((note) => [...note.numbers]));
+  if (![...numbers].every((value) => noteNumbers.has(value))) return false;
+
+  const noteStems = [...new Set(notes.flatMap((note) => note.stems))];
+  const backed = (word: string) =>
+    noteStems.some((noteStem) => wordMatches(noteStem, word));
+  if (!names.every(backed)) return false;
+  if (stems.length === 0) return true;
+
+  const words = [...new Set(stems)];
+  return words.filter(backed).length / words.length >= NOTE_MATCH_THRESHOLD;
 }
 
 /**
@@ -267,7 +296,7 @@ export function splitSentences(text: string): Array<[number, number]> {
   return sentences;
 }
 
-function textblockText(node: PMNode, pos: number) {
+export function textblockText(node: PMNode, pos: number) {
   let text = "";
   const positions: number[] = [];
   node.forEach((child, offset) => {

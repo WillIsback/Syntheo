@@ -1,6 +1,8 @@
 import type { LanguageModel } from "ai";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { json2md, md2json } from "@syntheo/editor/markdown";
+
 import type { TaskConfig } from ".";
 import { enhanceSuccess, runEnhanceSuccess } from "./enhance-success";
 
@@ -177,6 +179,50 @@ describe("enhanceSuccess.onSuccess", () => {
     );
   });
 
+  // Issue 417 : les balises de provenance ne sortent jamais. Elles sont
+  // retirées avant le titre, les étiquettes et l'enregistrement ; seuls les
+  // passages appuyés par la note sont gardés, à part du corps.
+  it("removes the note marks before anything else and keeps the backed passages apart", async () => {
+    mocks.loadSessionContentSnapshot.mockResolvedValue({
+      ...createSnapshot(),
+      rawContent: JSON.stringify(md2json("rdv Mme Kowalczyk\n\nbudget 50k ok")),
+    });
+    const startTask = vi.fn().mockResolvedValue(undefined);
+
+    await enhanceSuccess.onSuccess?.(
+      createParams({
+        text: "# Réunion\n\n- Le fournisseur démarre en mai ; ⟦Mme Kowalczyk⟧ enverra le contrat.\n- ⟦Mme Kovalchik⟧ valide ⟦le budget de 50k⟧ et ⟦mal fermé",
+        startTask,
+      }),
+    );
+
+    const cleanText =
+      "# Réunion\n\n- Le fournisseur démarre en mai ; Mme Kowalczyk enverra le contrat.\n- Mme Kovalchik valide le budget de 50k et mal fermé";
+    expect(mocks.prepareGeneratedSummary).toHaveBeenCalledWith(
+      expect.objectContaining({ text: cleanText }),
+    );
+    expect(startTask.mock.calls[0]?.[1]?.args.enhancedNote).toBe(cleanText);
+    const persisted = mocks.persistGeneratedEnhancedNote.mock.calls[0]?.[0];
+    expect(persisted.note.nextContent).not.toMatch(/[⟦⟧]/);
+    // Ce que lisent l'export, la copie, le chat, le MCP et la sync de fichiers.
+    expect(json2md(JSON.parse(persisted.note.nextContent))).toContain(
+      "Mme Kowalczyk enverra le contrat",
+    );
+    expect(json2md(JSON.parse(persisted.note.nextContent))).not.toMatch(/[⟦⟧]/);
+    expect(persisted.notePassages).toEqual([
+      "Mme Kowalczyk",
+      "le budget de 50k",
+    ]);
+  });
+
+  it("records no passages when the model marked nothing", async () => {
+    await enhanceSuccess.onSuccess?.(createParams());
+
+    expect(mocks.persistGeneratedEnhancedNote).toHaveBeenCalledWith(
+      expect.objectContaining({ notePassages: null }),
+    );
+  });
+
   it("persists generated content and tags through one guarded SQLite write", async () => {
     const params = createParams({
       text: "# Summary\n\nDiscussed #Launch.",
@@ -210,6 +256,7 @@ describe("enhanceSuccess.onSuccess", () => {
         nextContent: expect.any(String),
       },
       tagNames: ["launch", "prep"],
+      notePassages: null,
     });
     expect(mocks.composeGeneratedSummary).toHaveBeenCalledWith({
       text: "# Summary\n\nDiscussed #Launch.",

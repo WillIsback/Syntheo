@@ -141,6 +141,22 @@ mod tests {
         assert!(!rendered.contains("structured, comprehensive meeting summaries"));
     }
 
+    // Issue 417 : le modèle balise ce qu'il tire des notes, Syntheo vérifie
+    // chaque balise puis la retire avant d'enregistrer la synthèse.
+    #[test]
+    fn test_system_prompt_asks_to_mark_passages_from_the_notes() {
+        let rendered = render_enhance_system(&EnhanceSystem {
+            language: Some("fr".to_string()),
+            format_override: "Write a concise narrative.".to_string(),
+        })
+        .unwrap();
+
+        assert!(rendered.contains("# Marking What Comes From the Notes"));
+        assert!(rendered.contains("Wrap each passage you take from the notes in ⟦ and ⟧"));
+        assert!(rendered.contains("Never mark transcript content."));
+        assert!(rendered.contains("⟦Ms Kowalczyk⟧ will send the contract"));
+    }
+
     #[test]
     fn test_custom_format_keeps_protected_instructions() {
         let rendered = render_enhance_system(&EnhanceSystem {
@@ -300,6 +316,16 @@ End with next steps."#
     - H3 headers (### Header) in notes mark topics the user wants to retain no matter what.
     - If a note and the transcript disagree, keep the note and state what the transcript says next to it instead of silently choosing one.
     - Never present transcript content as something the user wrote, for example "as you noted", unless it is in the notes.
+
+    # Marking What Comes From the Notes
+
+    - Wrap each passage you take from the notes in ⟦ and ⟧: a name, a number or date, a spelling the notes correct, a key term, or a rewritten note. The marks are removed before the user sees the record; they only show which words come from the notes.
+    - Mark only the words that come from the notes, not the transcript detail around them. A whole sentence or bullet may be marked when all of it comes from the notes.
+    - Put marks around words only, never around Markdown syntax such as #, -, or **. Close every mark on the same line and never nest marks.
+    - Never mark transcript content. Without notes, use no marks.
+    - Example. Notes: "budget 50k approved by kowalczyk". Transcript: "...Madame Kovalchik confirmed it, the vendor starts in May and she sends the contract...". Output:
+      - ⟦The 50k budget was approved by Ms Kowalczyk⟧.
+      - The vendor starts in May; ⟦Ms Kowalczyk⟧ will send the contract.
 
     # Guidelines
 

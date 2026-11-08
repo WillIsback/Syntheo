@@ -61,4 +61,23 @@ describe("session content SQLite corrections", () => {
       expect.objectContaining({ source_note_fingerprint: "v1:note" }),
     );
   });
+
+  it("passes the backed note passages apart from the body (issue 417)", async () => {
+    await persistGeneratedEnhancedNote({
+      sessionId: "session-1",
+      ownerUserId: "user-1",
+      note: {
+        id: "summary-1",
+        currentContent: "old summary",
+        currentContentFormat: "markdown",
+        nextContent: '{"type":"doc"}',
+      },
+      tagNames: [],
+      notePassages: ["Mme Kowalczyk"],
+    });
+
+    expect(mocks.saveGeneratedSummary).toHaveBeenCalledWith(
+      expect.objectContaining({ note_passages: ["Mme Kowalczyk"] }),
+    );
+  });
 });

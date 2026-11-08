@@ -7,6 +7,9 @@ import { cn } from "@syntheo/utils";
 import { streamdownComponents } from "../../streamdown";
 
 import { useAITaskTask, useLLMConnection } from "~/ai/hooks";
+// Issue 417 : pendant la génération, le texte reçu porte encore les balises
+// de provenance ; elles ne s'affichent jamais.
+import { stripNoteMarks } from "~/session/note-marks";
 import { createTaskId } from "~/store/zustand/ai-task/task-configs";
 import { getPersistableGeneratedTitle } from "~/store/zustand/ai-task/task-configs/title-success";
 import { isLocalModelProviderId } from "~/store/zustand/ai-task/tasks";
@@ -108,7 +111,7 @@ export function StreamingView({
           caret="block"
           isAnimating={isGenerating}
         >
-          {streamedText}
+          {stripNoteMarks(streamedText)}
         </Streamdown>
       </div>
     </div>
