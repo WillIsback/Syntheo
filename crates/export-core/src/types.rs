@@ -24,6 +24,31 @@ pub struct ExportMetadata {
     pub duration: Option<String>,
 }
 
+// Section and cover labels, in the interface language (issue 454).
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct ExportLabels {
+    pub memo: String,
+    pub summary: String,
+    pub transcript: String,
+    pub meeting: String,
+    pub participants: String,
+    pub unknown_speaker: String,
+}
+
+impl Default for ExportLabels {
+    fn default() -> Self {
+        Self {
+            memo: "Memo".to_string(),
+            summary: "Summary".to_string(),
+            transcript: "Transcript".to_string(),
+            meeting: "Meeting".to_string(),
+            participants: "Participants".to_string(),
+            unknown_speaker: "Unknown".to_string(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct ExportInput {
@@ -31,4 +56,7 @@ pub struct ExportInput {
     pub memo_md: Option<String>,
     pub transcript: Option<Transcript>,
     pub metadata: Option<ExportMetadata>,
+    // English labels when absent.
+    #[serde(default)]
+    pub labels: Option<ExportLabels>,
 }

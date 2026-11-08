@@ -48,6 +48,8 @@ dependencies = [
 name = "agent-access"
 version = "0.1.0"
 dependencies = [
+ "chrono",
+ "chrono-tz 0.10.4",
  "db-app",
  "db-core",
  "schemars 1.2.3",

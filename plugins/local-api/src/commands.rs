@@ -120,7 +120,12 @@ pub(crate) async fn run_markdown_export_automation(pool: &sqlx::SqlitePool, meet
 
     let result = match syntheo_agent_access::get_meeting_export(pool, meeting_id.to_string()).await
     {
-        Ok(export) => write_markdown_export(std::path::Path::new(&directory), &export),
+        Ok(export) => write_localized_markdown_export(
+            std::path::Path::new(&directory),
+            &export,
+            None,
+            load_export_locale(pool).await,
+        ),
         Err(error) => Err(error.to_string()),
     };
     let (status, detail) = match result {
@@ -151,6 +156,28 @@ pub(crate) async fn run_markdown_export_automation(pool: &sqlx::SqlitePool, meet
     {
         tracing::warn!("[local-api] could not record the markdown export run: {error}");
     }
+}
+
+/// Exports follow the interface language, which the desktop derives from the
+/// main language setting (French when unset).
+pub(crate) async fn load_export_locale(
+    pool: &sqlx::SqlitePool,
+) -> syntheo_agent_access::ExportLocale {
+    let language: Option<String> = sqlx::query_scalar(
+        "SELECT value_json FROM (
+           SELECT value_json, 1 AS source_rank FROM synced_preferences WHERE id = 'ai_language'
+           UNION ALL
+           SELECT value_json, 0 AS source_rank FROM app_settings WHERE id = 'ai_language'
+         ) ORDER BY source_rank DESC LIMIT 1",
+    )
+    .fetch_optional(pool)
+    .await
+    .unwrap_or_else(|error| {
+        tracing::warn!("[local-api] could not load the interface language: {error}");
+        None
+    })
+    .and_then(|raw: String| serde_json::from_str::<String>(&raw).ok());
+    syntheo_agent_access::ExportLocale::from_language(language.as_deref())
 }
 
 async fn load_setting(pool: &sqlx::SqlitePool, id: &str) -> Option<serde_json::Value> {
@@ -186,10 +213,12 @@ pub async fn export_meeting_markdown<R: tauri::Runtime>(
     let export = syntheo_agent_access::get_meeting_export(&pool, meeting_id)
         .await
         .map_err(|error| error.to_string())?;
-    let path = write_markdown_export_with_options(
+    let locale = load_export_locale(&pool).await;
+    let path = write_localized_markdown_export(
         std::path::Path::new(directory),
         &export,
         options.as_ref(),
+        locale,
     )?;
     let file = markdown_export_file(&path)?;
     if let Some(previous) = previous {
@@ -328,6 +357,7 @@ fn sanitize_filename_part(value: &str) -> String {
     sanitized[..end].trim_matches([' ', '.']).to_string()
 }
 
+#[cfg(test)]
 pub(crate) fn write_markdown_export(
     directory: &std::path::Path,
     export: &syntheo_agent_access::MeetingExport,
@@ -335,10 +365,25 @@ pub(crate) fn write_markdown_export(
     write_markdown_export_with_options(directory, export, None)
 }
 
+#[cfg(test)]
 pub(crate) fn write_markdown_export_with_options(
     directory: &std::path::Path,
     export: &syntheo_agent_access::MeetingExport,
     options: Option<&MarkdownExportOptions>,
+) -> Result<std::path::PathBuf, String> {
+    write_localized_markdown_export(
+        directory,
+        export,
+        options,
+        syntheo_agent_access::ExportLocale::En,
+    )
+}
+
+pub(crate) fn write_localized_markdown_export(
+    directory: &std::path::Path,
+    export: &syntheo_agent_access::MeetingExport,
+    options: Option<&MarkdownExportOptions>,
+    locale: syntheo_agent_access::ExportLocale,
 ) -> Result<std::path::PathBuf, String> {
     use std::io::Write;
 
@@ -377,7 +422,7 @@ pub(crate) fn write_markdown_export_with_options(
         configured_markdown_filename(&export.meeting, selected)
     };
     let path = directory.join(&filename);
-    let mut markdown = filtered.to_markdown();
+    let mut markdown = filtered.to_export_markdown(locale);
     markdown.push('\n');
     let legacy_prefix = legacy_export_prefix(&export.meeting.id);
     if options.is_none() {
@@ -385,13 +430,7 @@ pub(crate) fn write_markdown_export_with_options(
     }
     let existing = match std::fs::read_to_string(&path) {
         Ok(content) => {
-            let marker = format!("- ID: `{}`", export.meeting.id);
-            let mut lines = content.lines();
-            let existing_id = lines.find(|line| line.starts_with("- ID: `"));
-            let has_export_date = lines
-                .next()
-                .is_some_and(|line| line.starts_with("- Date: "));
-            if existing_id != Some(marker.as_str()) || !has_export_date {
+            if !syntheo_agent_access::is_markdown_export_for(&content, &export.meeting.id) {
                 return Err(format!(
                     "{filename} already exists for another file; choose a different filename or include the meeting ID suffix"
                 ));

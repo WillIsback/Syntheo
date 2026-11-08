@@ -108,6 +108,10 @@ msgstr "{count}m"
 msgid "{count}s"
 msgstr "{count}s"
 
+#: src/session/components/outer-header/overflow/export-document.ts
+msgid "{day} at {time}"
+msgstr "{day} at {time}"
+
 #: src/session/components/note-input/transcript/renderer/selection-menu.tsx
 msgid "{entryCount} selected"
 msgstr "{entryCount} selected"
@@ -1246,7 +1250,8 @@ msgstr "Create New Note..."
 msgid "Create new speaker"
 msgstr "Create new speaker"
 
-#: src/session/components/outer-header/overflow/export-modal.tsx
+#: src/session/components/outer-header/overflow/export-document.ts
+msgctxt "export field"
 msgid "Created"
 msgstr "Created"
 
@@ -1524,7 +1529,7 @@ msgstr "Duplicate contact found"
 msgid "Duplicate contacts found"
 msgstr "Duplicate contacts found"
 
-#: src/session/components/outer-header/overflow/export-modal.tsx
+#: src/session/components/outer-header/overflow/export-document.ts
 msgid "Duration"
 msgstr "Duration"
 
@@ -2479,6 +2484,11 @@ msgstr "Me"
 msgid "Medium"
 msgstr "Medium"
 
+#: src/session/components/outer-header/overflow/export-document.ts
+msgctxt "export field"
+msgid "Meeting"
+msgstr "Meeting"
+
 #: src/session/components/note-input/meeting-chat-highlights.tsx
 msgid "Meeting chat"
 msgstr "Meeting chat"
@@ -2529,6 +2539,7 @@ msgid "members"
 msgstr "members"
 
 #: src/edit/tab-content.tsx
+#: src/session/components/outer-header/overflow/export-document.ts
 #: src/session/components/outer-header/overflow/export-modal.tsx
 #: src/settings/automations/markdown-export-options.tsx
 msgid "Memo"
@@ -2567,7 +2578,7 @@ msgstr "Merge"
 msgid "Message Syntheo AI"
 msgstr "Message Syntheo AI"
 
-#: src/session/components/outer-header/overflow/export-modal.tsx
+#: src/session/components/outer-header/overflow/export-document.ts
 msgid "Metadata"
 msgstr "Metadata"
 
@@ -3228,7 +3239,7 @@ msgstr "Palette"
 
 #: src/session/components/living-document/fiche.tsx
 #: src/session/components/note-input/transcript/renderer/speaker-assign.tsx
-#: src/session/components/outer-header/overflow/export-modal.tsx
+#: src/session/components/outer-header/overflow/export-document.ts
 msgid "Participants"
 msgstr "Participants"
 
@@ -4410,6 +4421,11 @@ msgstr "Summaries"
 msgid "Summary"
 msgstr "Summary"
 
+#: src/session/components/outer-header/overflow/export-document.ts
+msgctxt "export section"
+msgid "Summary"
+msgstr "Summary"
+
 #: src/session/components/living-document/summary-switcher-view.tsx
 msgid "Summary · v{shownVersion}"
 msgstr "Summary · v{shownVersion}"
@@ -4958,6 +4974,11 @@ msgstr "Transcribing…"
 msgid "Transcript"
 msgstr "Transcript"
 
+#: src/session/components/outer-header/overflow/export-document.ts
+msgctxt "export section"
+msgid "Transcript"
+msgstr "Transcript"
+
 #: src/session/components/note-input/header-transcript.tsx
 msgid "Transcript copied to clipboard"
 msgstr "Transcript copied to clipboard"
@@ -5081,6 +5102,11 @@ msgstr "Unknown"
 #: src/session/components/outer-header/metadata/date.tsx
 msgid "Unknown date"
 msgstr "Unknown date"
+
+#: src/session/components/outer-header/overflow/export-document.ts
+msgctxt "export field"
+msgid "Unknown speaker"
+msgstr "Unknown speaker"
 
 #: src/lock/screen.tsx
 msgid "Unlock"

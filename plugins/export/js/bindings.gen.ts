@@ -18,6 +18,16 @@ export type ExportInput = {
 	memoMd: string | null,
 	transcript: Transcript | null,
 	metadata: ExportMetadata | null,
+	labels: ExportLabels | null,
+};
+
+export type ExportLabels = {
+	memo: string,
+	summary: string,
+	transcript: string,
+	meeting: string,
+	participants: string,
+	unknownSpeaker: string,
 };
 
 export type ExportMetadata = {

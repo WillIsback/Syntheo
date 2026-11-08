@@ -1,4 +1,4 @@
-use crate::ExportInput;
+use crate::{ExportInput, ExportLabels};
 
 use super::markdown::markdown_to_typst;
 use super::utils::{escape_typst_literal, escape_typst_string};
@@ -135,6 +135,7 @@ fn cover_meta_label(value: &str) -> String {
 }
 
 fn build_cover_page(
+    labels: &ExportLabels,
     title: &str,
     created_at: &str,
     participants: &[String],
@@ -185,7 +186,7 @@ fn build_cover_page(
         cover.push_str(
             "    #block(width: 100%, fill: white, stroke: 0.5pt + hairline, radius: 8pt, inset: (x: 16pt, y: 12pt))[\n",
         );
-        cover.push_str(&cover_meta_label("MEETING"));
+        cover.push_str(&cover_meta_label(&labels.meeting.to_uppercase()));
         cover.push('\n');
         cover.push_str("      #v(3pt)\n");
         cover.push_str(&format!(
@@ -205,7 +206,7 @@ fn build_cover_page(
         cover.push_str(
             "    #block(width: 100%, fill: white, stroke: 0.5pt + hairline, radius: 8pt, inset: (x: 16pt, y: 12pt))[\n",
         );
-        cover.push_str(&cover_meta_label("PARTICIPANTS"));
+        cover.push_str(&cover_meta_label(&labels.participants.to_uppercase()));
         cover.push('\n');
         cover.push_str("      #v(3pt)\n");
         cover.push_str(&format!("      #text(size: 11pt, fill: ink)[{}]\n", joined));
@@ -246,8 +247,13 @@ fn build_transcript_item(speaker: &str, text: &str) -> String {
     )
 }
 
+fn section_heading(title: &str) -> String {
+    format!("= {}\n\n", escape_typst_string(title))
+}
+
 pub fn build_typst_content(input: &ExportInput) -> String {
     let mut content = String::new();
+    let labels = input.labels.clone().unwrap_or_default();
 
     let session_title = input
         .metadata
@@ -263,6 +269,7 @@ pub fn build_typst_content(input: &ExportInput) -> String {
 
     if let Some(metadata) = &input.metadata {
         let cover = build_cover_page(
+            &labels,
             &metadata.title,
             &metadata.created_at,
             &metadata.participants,
@@ -275,7 +282,7 @@ pub fn build_typst_content(input: &ExportInput) -> String {
     if let Some(memo_md) = &input.memo_md {
         let memo_content = markdown_to_typst(memo_md);
         if !memo_content.trim().is_empty() {
-            content.push_str("= Memo\n\n");
+            content.push_str(&section_heading(&labels.memo));
             content.push_str(&memo_content);
             content.push_str("\n\n");
         }
@@ -286,7 +293,7 @@ pub fn build_typst_content(input: &ExportInput) -> String {
         if input.memo_md.as_ref().is_some_and(|m| !m.trim().is_empty()) {
             content.push_str("\n#pagebreak()\n\n");
         }
-        content.push_str("= Summary\n\n");
+        content.push_str(&section_heading(&labels.summary));
         content.push_str(&typst_content);
     }
 
@@ -299,13 +306,63 @@ pub fn build_typst_content(input: &ExportInput) -> String {
         {
             content.push_str("\n#pagebreak()\n\n");
         }
-        content.push_str("= Transcript\n\n");
+        content.push_str(&section_heading(&labels.transcript));
 
         for item in &transcript.items {
-            let speaker = item.speaker.as_deref().unwrap_or("Unknown");
+            let speaker = item
+                .speaker
+                .as_deref()
+                .unwrap_or(labels.unknown_speaker.as_str());
             content.push_str(&build_transcript_item(speaker, &item.text));
         }
     }
 
     content
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{Transcript, TranscriptItem};
+
+    fn input(labels: Option<ExportLabels>) -> ExportInput {
+        ExportInput {
+            enhanced_md: "Résumé".to_string(),
+            memo_md: Some("Note".to_string()),
+            transcript: Some(Transcript {
+                items: vec![TranscriptItem {
+                    speaker: None,
+                    text: "Bonjour".to_string(),
+                }],
+            }),
+            metadata: None,
+            labels,
+        }
+    }
+
+    #[test]
+    fn uses_english_labels_by_default() {
+        let content = build_typst_content(&input(None));
+        assert!(content.contains("= Memo\n"));
+        assert!(content.contains("= Summary\n"));
+        assert!(content.contains("= Transcript\n"));
+        assert!(content.contains("#upper[Unknown]"));
+    }
+
+    #[test]
+    fn uses_the_given_labels() {
+        let content = build_typst_content(&input(Some(ExportLabels {
+            memo: "Mémo".to_string(),
+            summary: "Synthèse".to_string(),
+            transcript: "Transcription".to_string(),
+            meeting: "Réunion".to_string(),
+            participants: "Participants".to_string(),
+            unknown_speaker: "Locuteur inconnu".to_string(),
+        })));
+        assert!(content.contains("= Mémo\n"));
+        assert!(content.contains("= Synthèse\n"));
+        assert!(content.contains("= Transcription\n"));
+        assert!(content.contains("#upper[Locuteur inconnu]"));
+        assert!(!content.contains("= Summary"));
+    }
 }
