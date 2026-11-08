@@ -70,6 +70,10 @@ impl FsSyncCore {
             return Err(Error::Path("session_target_exists".into()));
         }
 
+        // Issue 426 : ni la session déplacée ni sa destination ne doivent se
+        // trouver, une fois les liens résolus, hors du dossier des sessions.
+        let source = self.resolve_entry(&source)?;
+        let target = self.resolve_entry(&target)?;
         if let Some(parent) = target.parent() {
             std::fs::create_dir_all(parent)?;
         }
@@ -123,6 +127,10 @@ impl FsSyncCore {
             return Err(Error::Path("folder_target_exists".into()));
         }
 
+        // Issue 426 : un dossier lié se renomme (le lien bouge), mais on ne
+        // déplace rien vers ou depuis un dossier situé hors du coffre.
+        let source = self.resolve_entry(&source)?;
+        let target = self.resolve_entry(&target)?;
         if let Some(parent) = target.parent() {
             std::fs::create_dir_all(parent)?;
         }
@@ -148,41 +156,29 @@ impl FsSyncCore {
             return Ok(());
         }
 
-        if self.folder_contains_sessions(&folder)? {
+        // Issue 426 : un lien se supprime lui-même, mais on ne descend jamais
+        // dans un dossier hors du coffre pour effacer son contenu.
+        let resolved = self.resolve_entry(&folder)?;
+
+        if folder::contains_sessions(&self.sessions_dir, &folder)? {
             return Err(Error::Path(
                 "Cannot delete folder containing sessions. Move or delete sessions first."
                     .to_string(),
             ));
         }
 
-        std::fs::remove_dir_all(&folder)?;
+        std::fs::remove_dir_all(&resolved)?;
         tracing::info!("Deleted folder: {:?}", folder);
         Ok(())
     }
 
-    fn folder_contains_sessions(&self, folder: &PathBuf) -> Result<bool> {
-        let entries = std::fs::read_dir(folder)?;
-
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if !path.is_dir() {
-                continue;
-            }
-
-            let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
-                continue;
-            };
-
-            if is_uuid(name) && path.join("_meta.json").exists() {
-                return Ok(true);
-            }
-
-            if !is_uuid(name) && self.folder_contains_sessions(&path)? {
-                return Ok(true);
-            }
-        }
-
-        Ok(false)
+    /// Emplacement réel d'une entrée à supprimer ou à déplacer, refusé s'il
+    /// sort du dossier des sessions (voir `session_tree::resolve_session_entry`).
+    fn resolve_entry(&self, path: &std::path::Path) -> Result<PathBuf> {
+        Ok(syntheo_storage::session_tree::resolve_session_entry(
+            &self.sessions_dir,
+            path,
+        )?)
     }
 
     pub fn attachment_save(
@@ -949,8 +945,8 @@ mod tests {
         std::os::unix::fs::symlink(&outside, link.path()).unwrap();
         let core = FsSyncCore::new(temp.path().to_path_buf());
 
-        let session_dir = core.resolve_session_dir(UUID_1).unwrap();
-        crate::session::delete_session_dir(&session_dir).unwrap();
+        assert!(core.resolve_session_dir(UUID_1).is_err());
+        crate::session::delete_session(&core.sessions_dir, UUID_1).unwrap();
 
         assert!(std::fs::symlink_metadata(link.path()).is_err());
         assert_sentinel_intact(&outside);
@@ -1011,6 +1007,148 @@ mod tests {
 
         assert!(std::fs::symlink_metadata(attachments.child("link.txt").path()).is_err());
         assert_sentinel_intact(&outside);
+    }
+
+    /// Session réelle `outside/<dir>/<UUID_1>` avec un `_meta.json`.
+    #[cfg(unix)]
+    fn outside_session(outside: &std::path::Path, dir: &str) -> std::path::PathBuf {
+        let session = outside.join(dir).join(UUID_1);
+        std::fs::create_dir_all(&session).unwrap();
+        std::fs::write(session.join("_meta.json"), "{}").unwrap();
+        session
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn delete_folder_refuses_a_folder_reached_through_an_escaping_link() {
+        let (temp, outside) = vault_with_outside_sentinel();
+        std::os::unix::fs::symlink(&outside, temp.child("sessions").child("linked").path())
+            .unwrap();
+        let core = FsSyncCore::new(temp.path().to_path_buf());
+
+        assert!(core.delete_folder("linked/nested").is_err());
+
+        assert_sentinel_intact(&outside);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn rename_folder_refuses_a_source_reached_through_an_escaping_link() {
+        let (temp, outside) = vault_with_outside_sentinel();
+        std::os::unix::fs::symlink(&outside, temp.child("sessions").child("linked").path())
+            .unwrap();
+        let core = FsSyncCore::new(temp.path().to_path_buf());
+
+        assert!(core.rename_folder("linked/nested", "moved").is_err());
+
+        temp.child("sessions")
+            .child("moved")
+            .assert(predicates::path::missing());
+        assert_sentinel_intact(&outside);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn rename_folder_refuses_a_target_under_an_escaping_link() {
+        let (temp, outside) = vault_with_outside_sentinel();
+        std::os::unix::fs::symlink(&outside, temp.child("sessions").child("linked").path())
+            .unwrap();
+        temp.child("sessions")
+            .child("work")
+            .create_dir_all()
+            .unwrap();
+        let core = FsSyncCore::new(temp.path().to_path_buf());
+
+        assert!(core.rename_folder("work", "linked/work").is_err());
+
+        temp.child("sessions")
+            .child("work")
+            .assert(predicates::path::is_dir());
+        assert!(!outside.join("work").exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn move_session_refuses_to_leave_the_vault_through_a_link() {
+        let (temp, outside) = vault_with_outside_sentinel();
+        std::os::unix::fs::symlink(&outside, temp.child("sessions").child("linked").path())
+            .unwrap();
+        let session = temp.child("sessions").child(UUID_1);
+        session.create_dir_all().unwrap();
+        session.child("_meta.json").write_str("{}").unwrap();
+        let core = FsSyncCore::new(temp.path().to_path_buf());
+
+        assert!(core.move_session(UUID_1, "", "linked").is_err());
+
+        session.assert(predicates::path::is_dir());
+        assert!(!outside.join(UUID_1).exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn move_session_refuses_a_source_reached_through_an_escaping_link() {
+        let (temp, outside) = vault_with_outside_sentinel();
+        let external = outside_session(&outside, "work");
+        std::os::unix::fs::symlink(
+            outside.join("work"),
+            temp.child("sessions").child("linked").path(),
+        )
+        .unwrap();
+        let core = FsSyncCore::new(temp.path().to_path_buf());
+
+        assert!(core.move_session(UUID_1, "linked", "").is_err());
+
+        assert!(external.join("_meta.json").exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn delete_session_keeps_a_session_stored_behind_an_escaping_link() {
+        let (temp, outside) = vault_with_outside_sentinel();
+        let external = outside_session(&outside, "work");
+        std::os::unix::fs::symlink(
+            outside.join("work"),
+            temp.child("sessions").child("linked").path(),
+        )
+        .unwrap();
+        let core = FsSyncCore::new(temp.path().to_path_buf());
+
+        crate::session::delete_session(&core.sessions_dir, UUID_1).unwrap();
+
+        assert!(external.join("_meta.json").exists());
+        assert_sentinel_intact(&outside);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn list_folders_only_shows_sessions_that_stay_inside_the_vault() {
+        let (temp, outside) = vault_with_outside_sentinel();
+        outside_session(&outside, "work");
+        let sessions = temp.child("sessions");
+        std::os::unix::fs::symlink(outside.join("work"), sessions.child("external").path())
+            .unwrap();
+        let kept = sessions.child("store").child(UUID_2);
+        kept.create_dir_all().unwrap();
+        kept.child("_meta.json").write_str("{}").unwrap();
+        sessions.child("work").create_dir_all().unwrap();
+        std::os::unix::fs::symlink(
+            sessions.child("store").path(),
+            sessions.child("work").child("old").path(),
+        )
+        .unwrap();
+        let core = FsSyncCore::new(temp.path().to_path_buf());
+
+        let listed = core.list_folders().unwrap();
+
+        assert!(!listed.session_folder_map.contains_key(UUID_1));
+        assert!(!listed.folders.contains_key("external"));
+        assert!(listed.session_folder_map.contains_key(UUID_2));
+        // La session listée derrière un lien resté dans le coffre est utilisable.
+        let found = core.resolve_session_dir(UUID_2).unwrap();
+        assert!(found.join("_meta.json").exists());
+        core.attachment_save(UUID_2, b"x", "note.txt").unwrap();
+        crate::session::delete_session(&core.sessions_dir, UUID_2).unwrap();
+        kept.assert(predicates::path::missing());
     }
 
     #[test]

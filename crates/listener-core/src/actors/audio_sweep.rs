@@ -36,10 +36,12 @@ pub fn find_session_dir(sessions_base: &Path, session_id: &str) -> std::io::Resu
             "session_id_invalid",
         ));
     }
-    if let Some(found) = find_session_dir_recursive(sessions_base, session_id) {
-        return Ok(found);
-    }
-    Ok(sessions_base.join(session_id))
+    // Recherche partagée avec fs-sync et la liste des dossiers (issue 427) :
+    // les dossiers liés ne sont suivis que s'ils restent dans le coffre.
+    Ok(syntheo_storage::session_tree::find_session_dir(
+        sessions_base,
+        session_id,
+    )?)
 }
 
 /// The primary audio artifact a legacy session may still hold, if any.
@@ -51,31 +53,6 @@ pub fn resolve_final_audio_path(sessions_base: &Path, session_id: &str) -> Optio
             return Some(path);
         }
     }
-    None
-}
-
-fn find_session_dir_recursive(dir: &Path, session_id: &str) -> Option<PathBuf> {
-    let entries = std::fs::read_dir(dir).ok()?;
-
-    for entry in entries.flatten() {
-        let path = entry.path();
-        if !path.is_dir() {
-            continue;
-        }
-
-        let name = path.file_name()?.to_str()?;
-
-        if name == session_id {
-            return Some(path);
-        }
-
-        if uuid::Uuid::try_parse(name).is_err()
-            && let Some(found) = find_session_dir_recursive(&path, session_id)
-        {
-            return Some(found);
-        }
-    }
-
     None
 }
 
@@ -441,6 +418,39 @@ mod tests {
             resolve_final_audio_path(root.path(), &session_id),
             Some(nested.join("audio.mp3"))
         );
+    }
+
+    /// Même règle que fs-sync et la liste des dossiers (issue 427) : un dossier
+    /// lié n'est suivi que si sa cible reste dans le coffre.
+    #[cfg(unix)]
+    #[test]
+    fn find_session_dir_follows_only_links_that_stay_inside_the_vault() {
+        let root = tempfile::tempdir().unwrap();
+        let sessions = root.path().join("vault").join("sessions");
+        let outside = root.path().join("outside");
+        let inside_id = uuid::Uuid::new_v4().to_string();
+        let outside_id = uuid::Uuid::new_v4().to_string();
+        std::fs::create_dir_all(sessions.join("store").join(&inside_id)).unwrap();
+        std::fs::create_dir_all(sessions.join("work")).unwrap();
+        std::fs::create_dir_all(outside.join(&outside_id)).unwrap();
+        std::fs::write(outside.join(&outside_id).join("audio.mp3"), b"keep").unwrap();
+        std::os::unix::fs::symlink(sessions.join("store"), sessions.join("work").join("old"))
+            .unwrap();
+        std::os::unix::fs::symlink(&outside, sessions.join("external")).unwrap();
+
+        let found = find_session_dir(&sessions, &inside_id).unwrap();
+        assert!(found.ends_with(&inside_id) && found.is_dir());
+
+        assert_eq!(
+            find_session_dir(&sessions, &outside_id).unwrap(),
+            sessions.join(&outside_id)
+        );
+        assert_eq!(resolve_final_audio_path(&sessions, &outside_id), None);
+        delete_capture_audio(&find_session_dir(&sessions, &outside_id).unwrap()).unwrap();
+        assert!(outside.join(&outside_id).join("audio.mp3").exists());
+
+        std::os::unix::fs::symlink(outside.join(&outside_id), sessions.join(&outside_id)).unwrap();
+        assert!(find_session_dir(&sessions, &outside_id).is_err());
     }
 
     #[test]

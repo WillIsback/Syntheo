@@ -452,8 +452,9 @@ pub(crate) async fn delete_session_folder<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
     session_id: String,
 ) -> Result<(), String> {
-    let session_dir = resolve_session_dir(&app, &session_id)?;
-    crate::session::delete_session_dir(&session_dir).map_err(|e| e.to_string())?;
+    let base = app.settings().vault_base().map_err(|e| e.to_string())?;
+    crate::session::delete_session(&base.join("sessions").into_std_path_buf(), &session_id)
+        .map_err(|e| e.to_string())?;
     remove_audio_peaks_cache(&app, &session_id);
     Ok(())
 }
