@@ -132,4 +132,37 @@ describe("pinned tab persistence", () => {
 
     expect(commands.setPinnedTabs).toHaveBeenCalledWith("[]");
   });
+
+  it("n'enregistre pas l'origine Paramètres d'un écran épinglé (issue 443)", async () => {
+    let stored: string | null = null;
+    vi.mocked(commands.setPinnedTabs).mockImplementation(async (value) => {
+      stored = value;
+      return { status: "ok", data: null };
+    });
+    vi.mocked(commands.getPinnedTabs).mockImplementation(async () => ({
+      status: "ok",
+      data: stored,
+    }));
+    useTabs
+      .getState()
+      .openNew({ type: "settings", state: { tab: "meetings" } });
+    useTabs.getState().openNew({ type: "templates" });
+    expect(useTabs.getState().currentTab?.returnToSettingsTab).toBe("meetings");
+    useTabs.getState().pin(useTabs.getState().currentTab!);
+    await vi.waitFor(() => expect(stored).not.toBeNull());
+    expect(stored).not.toContain("returnToSettingsTab");
+
+    resetTabsStore();
+    await restorePinnedTabsToStore(
+      useTabs.getState().openNew,
+      useTabs.getState().pin,
+      () => useTabs.getState().tabs,
+    );
+    expect(useTabs.getState().currentTab).toMatchObject({
+      type: "templates",
+      pinned: true,
+    });
+    expect(useTabs.getState().currentTab?.returnToSettingsTab).toBeUndefined();
+    vi.mocked(commands.setPinnedTabs).mockReset();
+  });
 });

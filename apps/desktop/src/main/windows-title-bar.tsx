@@ -21,7 +21,11 @@ import { WindowsWindowControls } from "./windows-window-controls";
 import { documentationUrl } from "~/shared/documentation";
 import { exportNoteFromShortcut } from "~/shared/export-shortcut";
 import { openHelpDialog } from "~/shared/help-dialog";
-import { goHome } from "~/shared/leave-overlay-tab";
+import {
+  goBackToSettings,
+  goHome,
+  settingsReturnSection,
+} from "~/shared/leave-overlay-tab";
 import { openNoteDialog, openSettingsSearch } from "~/shared/open-note-dialog";
 import {
   ariaShortcut,
@@ -49,6 +53,9 @@ export function WindowsTitleBar() {
   const showViewActionsSlot = hasViewNavigation(currentTab);
   const showHomeButton = currentTab?.type !== "onboarding";
   const isHome = currentTab === null || currentTab.type === "empty";
+  // Modèles, Calendrier, Dossiers, Contacts, Automatisations ouverts depuis
+  // les Paramètres : le retour ramène à la section d'origine (issue 443).
+  const fromSettings = settingsReturnSection(currentTab) !== null;
   // « Exporter… » : grisé hors d'une note (issue 374).
   const isNote = currentTab?.type === "sessions";
   const editTargetRef = useRef<HTMLElement | null>(null);
@@ -77,7 +84,11 @@ export function WindowsTitleBar() {
         data-tauri-drag-region
         className="flex min-w-0 flex-1 items-center pl-2"
       >
-        {showHomeButton ? <TitleBarHomeButton isHome={isHome} /> : null}
+        {fromSettings ? (
+          <TitleBarSettingsButton />
+        ) : showHomeButton ? (
+          <TitleBarHomeButton isHome={isHome} />
+        ) : null}
         {showViewActionsSlot ? (
           <div
             id={TITLE_BAR_SIDEBAR_ACTIONS_SLOT_ID}
@@ -316,6 +327,30 @@ function TitleBarHomeButton({ isHome }: { isHome: boolean }) {
     >
       <ArrowLeft size={16} aria-hidden />
       {t`Home`}
+    </Button>
+  );
+}
+
+// « ← Paramètres » (issue 443) : à la place de « ← Accueil », même style, sur
+// les écrans ouverts depuis une entrée des Paramètres. Échap et Alt+← y
+// ramènent aussi.
+function TitleBarSettingsButton() {
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="sm"
+      title={shortcutTooltip(t`Back to Settings`, "back")}
+      aria-keyshortcuts={`${ariaShortcut("back")} ${ariaShortcut("home")}`}
+      data-tauri-drag-region="false"
+      className={cn([
+        "text-muted-foreground hover:text-foreground h-7 gap-1.5 px-2.5 text-sm",
+        "focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-hidden",
+      ])}
+      onClick={goBackToSettings}
+    >
+      <ArrowLeft size={16} aria-hidden />
+      {t`Settings`}
     </Button>
   );
 }

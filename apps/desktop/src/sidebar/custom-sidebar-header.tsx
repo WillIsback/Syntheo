@@ -13,7 +13,10 @@ import {
   WINDOW_CONTROLS_GUTTER_CLASS,
   WINDOW_CONTROLS_ROW_PADDING_TOP_CLASS,
 } from "~/shared/hooks/useWindowControlsGutter";
-import { leaveOverlayTab } from "~/shared/leave-overlay-tab";
+import {
+  leaveOverlayTab,
+  settingsReturnSection,
+} from "~/shared/leave-overlay-tab";
 import { useTabs } from "~/store/zustand/tabs";
 
 export const TITLE_BAR_SIDEBAR_ACTIONS_SLOT_ID = "title-bar-sidebar-actions";
@@ -58,6 +61,10 @@ function InlineCustomSidebarHeader({ children }: { children?: ReactNode }) {
   const { t } = useLingui();
   const showWindowControlsGutter = useWindowControlsGutter();
   const handleBack = useCustomSidebarBack();
+  // Ouvert depuis les Paramètres (issue 443) : la flèche y ramène.
+  const fromSettings = useTabs(
+    (state) => settingsReturnSection(state.currentTab) !== null,
+  );
 
   return (
     <div
@@ -77,8 +84,8 @@ function InlineCustomSidebarHeader({ children }: { children?: ReactNode }) {
         className="flex min-w-0 flex-1 items-center gap-1"
       >
         <CustomSidebarHeaderButton
-          label={t`Go home`}
-          title={t`Back`}
+          label={fromSettings ? t`Back to Settings` : t`Go home`}
+          title={fromSettings ? t`Back to Settings` : t`Back`}
           onClick={handleBack}
         >
           <ArrowLeft size={16} />
