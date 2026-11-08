@@ -15,7 +15,6 @@ import {
   getCurrentWebviewWindowLabel,
   init as initWindowsPlugin,
 } from "@syntheo/plugin-windows";
-import { Toaster } from "@syntheo/ui/components/ui/toast";
 import { useMountEffect } from "@syntheo/ui/hooks/use-mount-effect";
 
 import { AITaskWindowSyncBridge } from "./ai/task-window-sync";
@@ -47,6 +46,7 @@ import { startInteractionProfiler } from "./shared/perf/interaction-profiler";
 import { bootstrapThemeFromSettings } from "./shared/theme/apply";
 import { AppThemeProvider } from "./shared/theme/provider";
 import type { ThemePreference } from "./shared/theme/resolve";
+import { LocalizedToaster } from "./shared/ui/localized-toaster";
 import { createAITaskStore } from "./store/zustand/ai-task";
 import { listenerStore } from "./store/zustand/listener/instance";
 import { commands } from "./types/tauri.gen";
@@ -123,7 +123,7 @@ function ReadyApp() {
             {isMainWindow ? <EventListeners /> : null}
             {isMainWindow ? <TrayScheduleSync /> : null}
             {isMainWindow ? <TrayRecordingSync /> : null}
-            <Toaster position="bottom-right" theme={theme} />
+            <LocalizedToaster position="bottom-right" theme={theme} />
           </AppLockGate>
         </TaskSchedulerProvider>
       </AppI18nProvider>

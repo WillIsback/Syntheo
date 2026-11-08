@@ -66,6 +66,42 @@ export type AppToastHandle = Readonly<{
   dismiss: () => void;
 }>;
 
+/**
+ * Texts the toaster renders itself. The package has no i18n, so the app passes
+ * translated values; anything left out falls back to English.
+ */
+export type AppToastLabels = Readonly<{
+  /** Default secondary action when a toast only needs a way to close it. */
+  dismiss: string;
+  expandNotification: string;
+  collapseNotification: string;
+  /** Accessible name of the countdown footer while the timer runs. */
+  pauseAutoDismiss: string;
+  /** Accessible name of the countdown footer while the timer is paused. */
+  resumeAutoDismiss: string;
+  pause: string;
+  resume: string;
+  /** Text before the remaining seconds while the timer runs. */
+  closingIn: string;
+  /** Text before the remaining seconds while the timer is paused. */
+  timerPaused: string;
+  /** Unit after the remaining seconds, pluralised for `count`. */
+  seconds: (count: number) => string;
+}>;
+
+export const DEFAULT_APP_TOAST_LABELS: AppToastLabels = {
+  dismiss: "Dismiss",
+  expandNotification: "Expand notification",
+  collapseNotification: "Collapse notification",
+  pauseAutoDismiss: "Pause auto-dismiss",
+  resumeAutoDismiss: "Resume auto-dismiss",
+  pause: "Pause",
+  resume: "Resume",
+  closingIn: "Closing in",
+  timerPaused: "Timer paused",
+  seconds: (count) => (count === 1 ? "second" : "seconds"),
+};
+
 export type AppToastAlign = "center" | "end";
 /** `compact` matches desktop chrome: `size-8` icon buttons with `size-4` glyphs. */
 export type AppToastSize = "default" | "compact";
@@ -80,6 +116,8 @@ export type AppToasterProps = Readonly<{
   gap?: number;
   className?: string;
   style?: CSSProperties;
+  /** Translated texts; missing keys keep their English default. */
+  labels?: Partial<AppToastLabels>;
 }>;
 
 type AppToastPhase = "visible" | "exiting";
@@ -257,7 +295,12 @@ export function AppToaster({
   gap = 8,
   className,
   style,
+  labels,
 }: AppToasterProps) {
+  const resolvedLabels: AppToastLabels = {
+    ...DEFAULT_APP_TOAST_LABELS,
+    ...labels,
+  };
   const toasts = useSyncExternalStore(
     subscribeToAppToasts,
     getAppToastSnapshot,
@@ -340,6 +383,7 @@ export function AppToaster({
               size={size}
               stackDepth={stackDepth}
               stacked={stacked}
+              labels={resolvedLabels}
             />
           );
         })}
@@ -425,9 +469,10 @@ type AppToastProps = Readonly<{
   size: AppToastSize;
   stackDepth: number;
   stacked: boolean;
+  labels: AppToastLabels;
 }>;
 
-function AppToast({ toast, size, stackDepth, stacked }: AppToastProps) {
+function AppToast({ toast, size, stackDepth, stacked, labels }: AppToastProps) {
   const compact = size === "compact";
   const squircleRef = useSquircleRef<HTMLDivElement>(undefined, {
     ...panelSquircle,
@@ -438,10 +483,11 @@ function AppToast({ toast, size, stackDepth, stacked }: AppToastProps) {
   const detailsId = useId();
   const hasTimer = Number.isFinite(toast.durationMs);
   const hasDetails = hasTimer || toast.description !== undefined;
+  const remainingSeconds = Math.max(0, Math.ceil(toast.remainingMs / 1_000));
   const secondaryAction =
     toast.secondaryAction ??
     (toast.closeButton && toast.dismissible
-      ? { label: "Dismiss", onClick: () => {} }
+      ? { label: labels.dismiss, onClick: () => {} }
       : undefined);
   const actions = [toast.action, secondaryAction].filter(
     (action): action is AppToastAction => action !== undefined,
@@ -557,8 +603,8 @@ function AppToast({ toast, size, stackDepth, stacked }: AppToastProps) {
           aria-label={
             hasDetails
               ? visuallyExpanded
-                ? "Collapse notification"
-                : "Expand notification"
+                ? labels.collapseNotification
+                : labels.expandNotification
               : undefined
           }
           aria-expanded={hasDetails ? visuallyExpanded : undefined}
@@ -670,7 +716,7 @@ function AppToast({ toast, size, stackDepth, stacked }: AppToastProps) {
             type="button"
             id={toast.description === undefined ? detailsId : undefined}
             aria-label={
-              toast.paused ? "Resume auto-dismiss" : "Pause auto-dismiss"
+              toast.paused ? labels.resumeAutoDismiss : labels.pauseAutoDismiss
             }
             onClick={() => toggleAppToastTimer(toast.id)}
             className={cn([
@@ -681,16 +727,14 @@ function AppToast({ toast, size, stackDepth, stacked }: AppToastProps) {
             ])}
           >
             <span aria-hidden>
-              {toast.paused ? "Timer paused" : "Closing in"}{" "}
+              {toast.paused ? labels.timerPaused : labels.closingIn}{" "}
               <span className="text-foreground font-semibold tabular-nums">
-                {Math.max(0, Math.ceil(toast.remainingMs / 1_000))}
+                {remainingSeconds}
               </span>{" "}
-              {Math.ceil(toast.remainingMs / 1_000) === 1
-                ? "second"
-                : "seconds"}
+              {labels.seconds(remainingSeconds)}
             </span>
             <span aria-hidden className="text-foreground font-medium">
-              {toast.paused ? "Resume" : "Pause"}
+              {toast.paused ? labels.resume : labels.pause}
             </span>
             <motion.span
               aria-hidden
