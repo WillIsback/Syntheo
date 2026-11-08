@@ -1,0 +1,5 @@
+---
+{}
+---
+
+Une note sans métadonnées.

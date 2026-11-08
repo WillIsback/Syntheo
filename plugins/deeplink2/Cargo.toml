@@ -16,7 +16,6 @@ specta-typescript = { workspace = true }
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 
 open = { workspace = true }
-serde_yaml = { workspace = true }
 
 [dependencies]
 tauri = { workspace = true, features = ["test"] }
