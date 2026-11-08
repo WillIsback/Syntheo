@@ -78,6 +78,7 @@ fn main() {
                 },
             ],
         }),
+        labels: None,
     }
 }
 
@@ -86,5 +87,20 @@ fn renders_full_document() {
     let path = std::env::temp_dir().join("export-core-render-test.pdf");
     export_pdf(&path, fixture()).unwrap();
     let bytes = std::fs::read(&path).unwrap();
+    assert!(bytes.starts_with(b"%PDF"));
+}
+
+#[test]
+fn renders_localized_labels() {
+    let mut input = fixture();
+    input.labels = Some(ExportLabels {
+        memo: "Mémo".to_string(),
+        summary: "Synthèse".to_string(),
+        transcript: "Transcription".to_string(),
+        meeting: "Réunion".to_string(),
+        participants: "Participants".to_string(),
+        unknown_speaker: "Locuteur inconnu".to_string(),
+    });
+    let bytes = render_pdf(input).unwrap();
     assert!(bytes.starts_with(b"%PDF"));
 }

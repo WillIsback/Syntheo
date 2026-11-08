@@ -4,11 +4,7 @@ import { join } from "@tauri-apps/api/path";
 import { useMemo, useRef, useState } from "react";
 
 import { json2md } from "@syntheo/editor/markdown";
-import {
-  commands as exportCommands,
-  type ExportMetadata,
-  type TranscriptItem,
-} from "@syntheo/plugin-export";
+import { commands as exportCommands } from "@syntheo/plugin-export";
 import { commands as openerCommands } from "@syntheo/plugin-opener2";
 import {
   Dialog,
@@ -19,16 +15,18 @@ import {
 import { cn } from "@syntheo/utils";
 
 import {
+  buildMarkdownExport,
+  buildOrgExport,
+  buildPdfExport,
+  buildTextExport,
+  type ExportDocument,
+  formatExportDuration,
+} from "./export-document";
+import {
   folderName,
   resolveExportFolder,
   useExportFolder,
 } from "./export-folder";
-import {
-  formatDate,
-  formatDuration,
-  markdownToOrg,
-  markdownToText,
-} from "./export-utils";
 import { printPdf } from "./print-pdf";
 
 import { useTranscriptExportSegments } from "~/session/components/note-input/transcript/export-data";
@@ -103,7 +101,7 @@ export function ExportModal({
     }
 
     if (minStartedAt !== null && maxEndedAt !== null) {
-      return formatDuration(minStartedAt, maxEndedAt);
+      return formatExportDuration(minStartedAt, maxEndedAt);
     }
     return null;
   }, [transcripts]);
@@ -128,205 +126,18 @@ export function ExportModal({
     }
   };
 
-  const getTranscriptText = (): string => {
-    if (transcriptItems.length === 0) return "";
-    return transcriptItems
-      .map((item) => {
-        const speaker = item.speaker ? `${item.speaker}: ` : "";
-        return `${speaker}${item.text}`;
-      })
-      .join("\n\n");
-  };
+  const buildDocument = (): ExportDocument => ({
+    title: sessionTitle || t`Untitled`,
+    createdAt: sessionCreatedAt ?? null,
+    participants: participantNames,
+    duration: transcriptDuration,
+    eventTitle: eventTitle || null,
+    memoMd: includeMemo ? getMemoMd() || null : null,
+    summaryMd: includeSummary ? getSummaryMd() || null : null,
+    transcript: includeTranscript ? transcriptItems : null,
+  });
 
-  const buildMdContent = (): string => {
-    const sections: string[] = [];
-    const title = sessionTitle || t`Untitled`;
-    sections.push(`# ${title}`);
-
-    if (sessionCreatedAt) {
-      sections.push(`- ${t`Created`}: ${formatDate(sessionCreatedAt)}`);
-    }
-
-    if (participantNames.length > 0) {
-      sections.push(`- ${t`Participants`}: ${participantNames.join(", ")}`);
-    }
-
-    if (transcriptDuration) {
-      sections.push(`- ${t`Duration`}: ${transcriptDuration}`);
-    }
-
-    if (includeMemo) {
-      const memo = getMemoMd();
-      if (memo) {
-        sections.push("");
-        sections.push(`## ${t`Memo`}`);
-        sections.push(memo);
-      }
-    }
-
-    if (includeSummary) {
-      const summary = getSummaryMd();
-      if (summary) {
-        sections.push("");
-        sections.push(`## ${t`Summary`}`);
-        sections.push(summary);
-      }
-    }
-
-    if (includeTranscript) {
-      const transcript = getTranscriptText();
-      if (transcript) {
-        sections.push("");
-        sections.push(`## ${t`Transcript`}`);
-        sections.push(transcript);
-      }
-    }
-
-    return sections.join("\n");
-  };
-
-  const buildTxtContent = (): string => {
-    const sections: string[] = [];
-    const title = sessionTitle || t`Untitled`;
-    sections.push(title);
-    sections.push("=".repeat(title.length));
-
-    if (sessionCreatedAt) {
-      sections.push(formatDate(sessionCreatedAt));
-    }
-
-    if (participantNames.length > 0) {
-      sections.push(`${t`Participants`}: ${participantNames.join(", ")}`);
-    }
-
-    if (transcriptDuration) {
-      sections.push(`${t`Duration`}: ${transcriptDuration}`);
-    }
-
-    if (includeMemo) {
-      const memo = getMemoMd();
-      if (memo) {
-        sections.push("");
-        sections.push(t`Memo`);
-        sections.push("-".repeat(4));
-        sections.push(markdownToText(memo));
-      }
-    }
-
-    if (includeSummary) {
-      const summary = getSummaryMd();
-      if (summary) {
-        sections.push("");
-        sections.push(t`Summary`);
-        sections.push("-".repeat(7));
-        sections.push(markdownToText(summary));
-      }
-    }
-
-    if (includeTranscript) {
-      const transcript = getTranscriptText();
-      if (transcript) {
-        sections.push("");
-        sections.push(t`Transcript`);
-        sections.push("-".repeat(10));
-        sections.push(transcript);
-      }
-    }
-
-    return sections.join("\n");
-  };
-
-  const buildOrgContent = (): string => {
-    const sections: string[] = [];
-    const title = sessionTitle || t`Untitled`;
-    sections.push(`#+TITLE: ${title}`);
-
-    if (sessionCreatedAt) {
-      sections.push(`#+DATE: ${formatDate(sessionCreatedAt)}`);
-    }
-
-    sections.push("");
-    sections.push(`* ${t`Metadata`}`);
-
-    if (sessionCreatedAt) {
-      sections.push(`- ${t`Created`} :: ${formatDate(sessionCreatedAt)}`);
-    }
-
-    if (participantNames.length > 0) {
-      sections.push(`- ${t`Participants`} :: ${participantNames.join(", ")}`);
-    }
-
-    if (transcriptDuration) {
-      sections.push(`- ${t`Duration`} :: ${transcriptDuration}`);
-    }
-
-    if (includeMemo) {
-      const memo = getMemoMd();
-      if (memo) {
-        sections.push("");
-        sections.push(`* ${t`Memo`}`);
-        sections.push(markdownToOrg(memo));
-      }
-    }
-
-    if (includeSummary) {
-      const summary = getSummaryMd();
-      if (summary) {
-        sections.push("");
-        sections.push(`* ${t`Summary`}`);
-        sections.push(markdownToOrg(summary));
-      }
-    }
-
-    if (includeTranscript) {
-      const transcript = getTranscriptText();
-      if (transcript) {
-        sections.push("");
-        sections.push(`* ${t`Transcript`}`);
-        sections.push(transcript);
-      }
-    }
-
-    return sections.join("\n");
-  };
-
-  const buildPdfContent = (): {
-    enhancedMd: string;
-    memoMd: string | null;
-    transcript: { items: TranscriptItem[] } | null;
-    metadata: ExportMetadata | null;
-  } => {
-    const metadata: ExportMetadata = {
-      title: sessionTitle || t`Untitled`,
-      createdAt: sessionCreatedAt ? formatDate(sessionCreatedAt) : "",
-      participants: participantNames,
-      eventTitle: eventTitle || null,
-      duration: transcriptDuration,
-    };
-
-    let memoMd: string | null = null;
-    if (includeMemo) {
-      const memo = getMemoMd();
-      if (memo) memoMd = memo;
-    }
-
-    const parts: string[] = [];
-
-    if (includeSummary) {
-      const summary = getSummaryMd();
-      if (summary) parts.push(summary);
-    }
-
-    return {
-      enhancedMd: parts.join("\n\n"),
-      memoMd,
-      transcript:
-        includeTranscript && transcriptItems.length > 0
-          ? { items: transcriptItems }
-          : null,
-      metadata,
-    };
-  };
+  const buildPdfContent = () => buildPdfExport(buildDocument());
 
   const { mutate, isPending, error } = useMutation({
     mutationFn: async () => {
@@ -360,12 +171,13 @@ export function ExportModal({
           throw new Error(result.error);
         }
       } else {
+        const exportDocument = buildDocument();
         const textContent =
           format === "md"
-            ? buildMdContent()
+            ? buildMarkdownExport(exportDocument)
             : format === "org"
-              ? buildOrgContent()
-              : buildTxtContent();
+              ? buildOrgExport(exportDocument)
+              : buildTextExport(exportDocument);
         const result = await exportCommands.exportText(path, textContent);
         if (result.status === "error") {
           throw new Error(result.error);

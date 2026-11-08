@@ -7,6 +7,7 @@ import type { RenderTranscriptRequest } from "@syntheo/plugin-transcription";
 import { TRANSCRIPT_RENDER_CACHE_TIME_MS } from "./cache";
 import { useSessionTranscriptRenderData } from "./render-request-hooks";
 
+import { formatExportTranscript } from "~/session/components/outer-header/overflow/export-document";
 import {
   getRenderTranscriptRequestKey,
   renderTranscriptSegments,
@@ -60,7 +61,5 @@ export function useTranscriptExportSegments(sessionId: string): {
 export function formatTranscriptExportSegments(
   segments: Array<{ speaker: string | null; text: string }>,
 ) {
-  return segments
-    .map((segment) => `${segment.speaker ?? "Speaker"}: ${segment.text}`)
-    .join("\n\n");
+  return formatExportTranscript(segments);
 }
