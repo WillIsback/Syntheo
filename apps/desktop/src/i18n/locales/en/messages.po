@@ -4163,6 +4163,7 @@ msgid "Speak into any text field, in any app. The text is inserted when you fini
 msgstr "Speak into any text field, in any app. The text is inserted when you finish."
 
 #: src/session/components/speaker-naming/speaker-card.tsx
+#: src/session/components/speaker-naming/speakers.ts
 msgid "Speaker {number}"
 msgstr "Speaker {number}"
 
@@ -5346,6 +5347,10 @@ msgstr "Yesterday"
 #: src/templates/utils.ts
 msgid "you"
 msgstr "you"
+
+#: src/session/components/speaker-naming/speakers.ts
+msgid "You"
+msgstr "You"
 
 #: src/stt/live-transcript-interrupted.ts
 msgid "you are offline"

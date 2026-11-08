@@ -38,6 +38,7 @@ import { useRegisterTranscriptSelectionSource } from "./selection-context";
 import { useVirtualSegments, VirtualSegmentRow } from "./virtual-segments";
 
 import { nameMemoComponent } from "~/devtools-bar/render-tracker";
+import { displaySpeakerLabel } from "~/session/components/speaker-naming/speakers";
 import {
   getMaxSpeakerNumberForParticipants,
   SegmentKeyUtils,
@@ -288,14 +289,18 @@ const SegmentsList = memo(
     const speakerLabels = useMemo(() => {
       const labels = new Map<Segment, string>();
       for (const segment of segments) {
+        // Traduit à l'affichage seulement : la valeur brute (« Speaker N »)
+        // reste celle des données et du contexte du modèle.
         labels.set(
           segment,
-          segment.speaker_label ??
-            SegmentKeyUtils.renderLabel(
-              segment.key,
-              labelContext,
-              speakerLabelManager,
-            ),
+          displaySpeakerLabel(
+            segment.speaker_label ??
+              SegmentKeyUtils.renderLabel(
+                segment.key,
+                labelContext,
+                speakerLabelManager,
+              ),
+          ),
         );
       }
       return labels;
@@ -434,7 +439,9 @@ const SegmentsList = memo(
                 continuation
                   ? ""
                   : (speakerLabels.get(parent) ??
-                    SegmentKeyUtils.renderLabel(parent.key))
+                    displaySpeakerLabel(
+                      SegmentKeyUtils.renderLabel(parent.key),
+                    ))
               }
               sectionId={segmentKeys[segmentIndex]}
               showHeader={!continuation}
