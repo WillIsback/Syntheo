@@ -51,7 +51,9 @@ export function TemplatePickerPopover({
   isRegenerating?: boolean;
   trigger: React.ReactNode;
   // Ouverture pilotée de l'extérieur (menu des versions, issue 415) : le
-  // déclencheur sert alors seulement d'ancre.
+  // déclencheur sert alors seulement d'ancre. Il doit poser la `ref` reçue
+  // sur un élément du DOM toujours monté, sinon le sélecteur reste hors de
+  // l'écran (issue 431).
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }) {
