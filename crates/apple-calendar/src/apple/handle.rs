@@ -193,14 +193,33 @@ impl Handle {
             let events: Result<Vec<_>, _> = events_array
                 .iter()
                 .filter_map(|event| {
-                    let calendar = unsafe { event.calendar() }?;
+                    let Some(calendar) = (unsafe { event.calendar() }) else {
+                        let item_id = unsafe { event.calendarItemIdentifier() }.to_string();
+                        tracing::warn!(
+                            calendar_item_identifier = %item_id,
+                            "apple_calendar_event_without_calendar_skipped"
+                        );
+                        return None;
+                    };
                     let calendar_id = unsafe { calendar.calendarIdentifier() };
 
                     if !filter.calendar_tracking_id.eq(&calendar_id.to_string()) {
                         return None;
                     }
 
-                    Some(transform_event(&event, contact_fetcher))
+                    match transform_event(&event, contact_fetcher) {
+                        Ok(apple_event) => Some(Ok(apple_event)),
+                        Err(Error::TransformError(reason)) => {
+                            let item_id = unsafe { event.calendarItemIdentifier() }.to_string();
+                            tracing::warn!(
+                                calendar_item_identifier = %item_id,
+                                %reason,
+                                "apple_calendar_event_transform_skipped"
+                            );
+                            None
+                        }
+                        Err(error) => Some(Err(error)),
+                    }
                 })
                 .collect();
 
