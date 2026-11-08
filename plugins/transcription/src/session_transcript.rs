@@ -6,10 +6,10 @@ use syntheo_db_app::{
     load_render_humans, load_session_render_participant_ids, load_session_render_transcripts,
 };
 use syntheo_transcript::{
-    RenderTranscriptHuman, RenderTranscriptRequest, RenderedTranscriptSegment,
-    StoredLiveTranscriptDelta, StoredSpeakerHint, materialize_live_transcript,
-    parse_stored_speaker_hints, parse_stored_transcript_words, render_input_from_stored,
-    render_transcript_segments,
+    RenderTranscriptHuman, RenderTranscriptInput, RenderTranscriptRequest,
+    RenderedTranscriptSegment, StoredLiveTranscriptDelta, StoredSpeakerHint,
+    materialize_live_transcript, parse_stored_speaker_hints, parse_stored_transcript_words,
+    render_input_from_stored, render_transcript_segments,
 };
 
 #[derive(Debug, Clone, serde::Deserialize, specta::Type)]
@@ -101,19 +101,93 @@ pub async fn render_session_transcript(
         .await
         .map_err(|error| error.to_string())?;
 
-    let segments = render_transcript_segments(RenderTranscriptRequest {
-        transcripts,
-        participant_human_ids,
-        self_human_id,
-        humans,
-        speaker_context: None,
-        preview: None,
-    });
+    let segments = render_captures(transcripts, participant_human_ids, self_human_id, humans);
     Ok(Some(RenderedSessionTranscript {
         segments,
         started_at,
         ended_at,
     }))
+}
+
+/// Renders each capture on its own, as the transcript tab and the speaker
+/// naming cards do, then lays every capture on one timeline that starts with
+/// the earliest one. Provider speaker indices restart with each capture (a
+/// pause starts a new one, issue 353), so an anonymous "Speaker 1" of part 2
+/// is not known to be the "Speaker 1" of part 1: when the note has several
+/// captures, anonymous labels carry their part (issue 414). Named speakers are
+/// resolved per capture already and keep their names.
+fn render_captures(
+    transcripts: Vec<RenderTranscriptInput>,
+    participant_human_ids: Vec<String>,
+    self_human_id: Option<String>,
+    humans: Vec<RenderTranscriptHuman>,
+) -> Vec<RenderedTranscriptSegment> {
+    let base_started_at = transcripts
+        .iter()
+        .filter_map(|transcript| transcript.started_at)
+        .min()
+        .unwrap_or(0);
+    let mut captures = transcripts
+        .into_iter()
+        .map(|transcript| {
+            let offset = transcript
+                .started_at
+                .map_or(0, |started_at| started_at - base_started_at);
+            let mut segments = render_transcript_segments(RenderTranscriptRequest {
+                transcripts: vec![transcript],
+                participant_human_ids: participant_human_ids.clone(),
+                self_human_id: self_human_id.clone(),
+                humans: humans.clone(),
+                speaker_context: None,
+                preview: None,
+            });
+            for segment in &mut segments {
+                shift_segment(segment, offset);
+            }
+            (offset, segments)
+        })
+        .filter(|(_, segments)| segments.iter().any(|segment| !segment.words.is_empty()))
+        .collect::<Vec<_>>();
+    captures.sort_by_key(|(offset, _)| *offset);
+
+    let several = captures.len() > 1;
+    let mut segments = Vec::new();
+    for (index, (_, capture)) in captures.into_iter().enumerate() {
+        for mut segment in capture {
+            if several && is_anonymous_speaker(&segment) {
+                segment.speaker_label = format!("{} (part {})", segment.speaker_label, index + 1);
+            }
+            segments.push(segment);
+        }
+    }
+    segments.sort_by_key(|segment| segment.start_ms);
+    segments
+}
+
+fn shift_segment(segment: &mut RenderedTranscriptSegment, offset: i64) {
+    if offset == 0 {
+        return;
+    }
+    segment.start_ms += offset;
+    segment.end_ms += offset;
+    for word in &mut segment.words {
+        word.start_ms += offset;
+        word.end_ms += offset;
+    }
+}
+
+/// Same rule as `isAnonymousSpeakerLabel` on the desktop side.
+fn is_anonymous_speaker(segment: &RenderedTranscriptSegment) -> bool {
+    if segment.key.speaker_human_id.is_some() || segment.provisional_speaker.is_some() {
+        return false;
+    }
+    segment
+        .speaker_label
+        .strip_prefix("Speaker ")
+        .is_some_and(|rest| {
+            matches!(rest, "A" | "B" | "C")
+                || (!rest.is_empty() && rest.chars().all(|c| c.is_ascii_digit()))
+        })
 }
 
 fn assigned_human_id(hint: &StoredSpeakerHint) -> Option<String> {
@@ -329,6 +403,105 @@ mod tests {
         assert_eq!(
             words,
             vec![("before".to_string(), 1000), ("after".to_string(), 121_000)]
+        );
+    }
+
+    fn remote_capture(started_at: i64, id: &str, text: &str) -> RenderTranscriptInput {
+        RenderTranscriptInput {
+            started_at: Some(started_at),
+            words: vec![syntheo_transcript::RenderTranscriptWordInput {
+                id: id.to_string(),
+                text: text.to_string(),
+                start_ms: 1000,
+                end_ms: 1500,
+                channel: 1,
+                speaker_index: Some(0),
+                synthetic_timing: None,
+            }],
+            assignments: vec![],
+        }
+    }
+
+    fn labels(segments: &[RenderedTranscriptSegment]) -> Vec<(String, String, i64)> {
+        segments
+            .iter()
+            .map(|segment| {
+                (
+                    segment.speaker_label.clone(),
+                    segment.text.clone(),
+                    segment.start_ms,
+                )
+            })
+            .collect()
+    }
+
+    // Issue 414 : après une pause, « Locuteur 1 » de la partie 2 n'est pas
+    // forcément « Locuteur 1 » de la partie 1. Chaque capture garde sa propre
+    // numérotation, comme dans la transcription et les cartes de nommage.
+    #[test]
+    fn anonymous_speakers_of_separate_captures_stay_distinct() {
+        let segments = render_captures(
+            vec![
+                remote_capture(1_120_000, "after-word", "after"),
+                remote_capture(1_000_000, "before-word", "before"),
+            ],
+            vec![],
+            Some("owner-human".to_string()),
+            vec![],
+        );
+
+        assert_eq!(
+            labels(&segments),
+            vec![
+                ("Speaker 1 (part 1)".to_string(), "before".to_string(), 1000),
+                (
+                    "Speaker 1 (part 2)".to_string(),
+                    "after".to_string(),
+                    121_000
+                ),
+            ]
+        );
+    }
+
+    #[test]
+    fn single_capture_keeps_plain_anonymous_labels() {
+        let segments = render_captures(
+            vec![remote_capture(1_000_000, "only-word", "only")],
+            vec![],
+            Some("owner-human".to_string()),
+            vec![],
+        );
+
+        assert_eq!(
+            labels(&segments),
+            vec![("Speaker 1".to_string(), "only".to_string(), 1000)]
+        );
+    }
+
+    #[test]
+    fn named_speakers_are_not_suffixed_across_captures() {
+        let mut named = remote_capture(1_000_000, "named-word", "named");
+        named.words[0].channel = 0;
+        let segments = render_captures(
+            vec![named, remote_capture(1_120_000, "anon-word", "anon")],
+            vec![],
+            Some("owner-human".to_string()),
+            vec![RenderTranscriptHuman {
+                human_id: "owner-human".to_string(),
+                name: "Owner".to_string(),
+            }],
+        );
+
+        assert_eq!(
+            labels(&segments),
+            vec![
+                ("Owner".to_string(), "named".to_string(), 1000),
+                (
+                    "Speaker 1 (part 2)".to_string(),
+                    "anon".to_string(),
+                    121_000
+                ),
+            ]
         );
     }
 }

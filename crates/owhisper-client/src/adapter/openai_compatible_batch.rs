@@ -194,6 +194,15 @@ fn convert_response(provider: &str, payload: CompatibleResponse) -> Response {
             word.speaker = segment.speaker;
         }
     }
+    // A diarized response describes one mixed recording: a word the provider
+    // left unlabelled (a gap between segments, a word on a segment's end
+    // boundary) belongs to a voice already heard, not to a new speaker. Left
+    // alone it would land on its own channel with no index and the render
+    // would count it as one more "Speaker N" (issue 418).
+    let diarized = words.iter().any(|word| word.speaker.is_some());
+    if diarized {
+        backfill_speakers_from_nearest_word(&mut words);
+    }
 
     let transcript = if text.trim().is_empty() {
         segments
@@ -228,17 +237,41 @@ fn convert_response(provider: &str, payload: CompatibleResponse) -> Response {
                             // batch upload must use the mixed-capture channel
                             // instead, or the render pipeline collapses every
                             // provider speaker back into one label.
-                            channel: if word.speaker.is_some() {
-                                MIXED_CAPTURE_CHANNEL
-                            } else {
-                                0
-                            },
+                            // The choice is made once for the whole response
+                            // so one recording never straddles two channels.
+                            channel: if diarized { MIXED_CAPTURE_CHANNEL } else { 0 },
                             speaker: word.speaker,
                         })
                         .collect(),
                 }],
             }],
         },
+    }
+}
+
+/// Gives each unlabelled word the speaker of the closest labelled word in
+/// time; on a tie the earlier word wins, so a trailing word stays with the
+/// sentence it ends.
+fn backfill_speakers_from_nearest_word(words: &mut [CompatibleWord]) {
+    let labelled: Vec<(f64, f64, usize)> = words
+        .iter()
+        .filter_map(|word| word.speaker.map(|speaker| (word.start, word.end, speaker)))
+        .collect();
+    for word in words.iter_mut().filter(|word| word.speaker.is_none()) {
+        let (word_start, word_end) = (word.start, word.end);
+        let distance = |(start, end, _): &(f64, f64, usize)| {
+            if *end <= word_start {
+                word_start - end
+            } else if *start >= word_end {
+                start - word_end
+            } else {
+                0.0
+            }
+        };
+        word.speaker = labelled
+            .iter()
+            .min_by(|left, right| distance(left).total_cmp(&distance(right)))
+            .map(|(_, _, speaker)| *speaker);
     }
 }
 
@@ -335,6 +368,61 @@ mod tests {
 
         assert_eq!(words[0].speaker, None);
         assert_eq!(words[0].channel, 0);
+    }
+
+    // Issue 418 : un mot que la diarisation n'a pas couvert (entre deux
+    // segments, ou pile sur la borne de fin) partait seul sur le canal 0 sans
+    // locuteur, et le rendu en faisait un locuteur fantôme de plus.
+    #[test]
+    fn diarized_response_gives_uncovered_words_the_nearest_speaker_on_the_mixed_channel() {
+        let payload: CompatibleResponse = serde_json::from_value(serde_json::json!({
+            "text": "Hello there. Um. Hi, how are you?",
+            "segments": [
+                { "id": 0, "start": 0.0, "end": 1.2, "text": "Hello there.", "speaker": 0 },
+                { "id": 1, "start": 1.5, "end": 3.1, "text": "Hi, how are", "speaker": 1 }
+            ],
+            "words": [
+                { "word": "Hello", "start": 0.0, "end": 0.4 },
+                { "word": "there.", "start": 0.4, "end": 1.2 },
+                { "word": "Um.", "start": 1.25, "end": 1.4 },
+                { "word": "Hi,", "start": 1.5, "end": 1.9 },
+                { "word": "how", "start": 1.9, "end": 2.2 },
+                { "word": "you?", "start": 3.1, "end": 3.4 }
+            ]
+        }))
+        .unwrap();
+
+        let response = convert_response("openrouter", payload);
+        let words = &response.results.channels[0].alternatives[0].words;
+
+        assert_eq!(
+            words.iter().map(|word| word.speaker).collect::<Vec<_>>(),
+            vec![Some(0), Some(0), Some(0), Some(1), Some(1), Some(1)]
+        );
+        assert!(
+            words
+                .iter()
+                .all(|word| word.channel == MIXED_CAPTURE_CHANNEL)
+        );
+    }
+
+    #[test]
+    fn word_level_diarization_keeps_unlabelled_words_with_their_neighbour() {
+        let payload: CompatibleResponse = serde_json::from_value(serde_json::json!({
+            "text": "Hello world.",
+            "words": [
+                { "word": "Hello", "start": 0.1, "end": 0.4 },
+                { "text": "world.", "start": 0.4, "end": 0.8, "speaker": "speaker_2" }
+            ]
+        }))
+        .unwrap();
+
+        let response = convert_response("groq", payload);
+        let words = &response.results.channels[0].alternatives[0].words;
+
+        assert_eq!(words[0].speaker, Some(2));
+        assert_eq!(words[0].channel, MIXED_CAPTURE_CHANNEL);
+        assert_eq!(words[1].channel, MIXED_CAPTURE_CHANNEL);
     }
 
     #[test]
