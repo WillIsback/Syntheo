@@ -6,11 +6,11 @@
 //    réception puis de nouveau ici contre la note actuelle
 //    (`validateNotePassage`). On les retrouve dans l'ordre où le modèle les a
 //    écrits.
-// 3. Repli quand la synthèse n'a aucune balise (modèle peu discipliné,
-//    synthèse antérieure) : les fragments venus des notes, c'est-à-dire les
-//    noms propres, les nombres et les suites d'au moins deux mots
-//    significatifs présents dans une note. Jamais un mot courant isolé : pas
-//    de vert moucheté.
+// 3. Toujours, et seul repli quand la synthèse n'a aucune balise (modèle peu
+//    discipliné, synthèse antérieure) : les fragments venus des notes,
+//    c'est-à-dire les noms propres, les nombres et les suites d'au moins deux
+//    mots significatifs présents dans une note. Jamais un mot courant isolé :
+//    pas de vert moucheté.
 //
 // Au moindre doute, le passage reste noir. Rien n'est écrit dans le compte
 // rendu : export, copie, impression et lecteurs externes n'en voient rien.
@@ -323,13 +323,12 @@ export function findNoteInkRanges(
     return false;
   });
 
-  if (source.passages === null) {
-    for (const block of blocks) {
-      block.ranges.push(...fragmentRanges(block.text, source.fragments));
-    }
-  } else {
-    placePassages(blocks, source.passages);
+  // Les fragments venus des notes sont toujours colorés, balises ou non : un
+  // nom de la note reste vert même pris dans une balise rejetée.
+  for (const block of blocks) {
+    block.ranges.push(...fragmentRanges(block.text, source.fragments));
   }
+  if (source.passages !== null) placePassages(blocks, source.passages);
 
   const ranges = [
     ...findNoteSentenceRanges(doc, source.notes),

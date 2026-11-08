@@ -60,14 +60,26 @@ describe("findNoteInkRanges with passages marked by the model", () => {
     ).toEqual(["Mme Kowalczyk"]);
   });
 
-  it("does not use the fragment fallback when the model marked passages", () => {
+  it("still colors the fragments from the notes when the model marked passages", () => {
     expect(
       greenTexts(
         "- Le contrat de Mme Kowalczyk est signé, budget de 50k.",
         ["rdv Mme Kowalczyk", "budget 50k ok"],
         [],
       ),
-    ).toEqual([]);
+    ).toEqual(["Kowalczyk", "50k"]);
+  });
+
+  // Conception validée : un nom de la note passe en vert dans tous les cas,
+  // même pris dans une balise rejetée ; le reste du passage reste noir.
+  it("keeps a name from the notes green inside a rejected passage", () => {
+    expect(
+      greenTexts(
+        "- Jean Dupuis a validé le planning de livraison du fournisseur.",
+        ["appeler Jean Dupuis"],
+        ["Jean Dupuis a validé le planning de livraison du fournisseur"],
+      ),
+    ).toEqual(["Jean Dupuis"]);
   });
 
   it("still colors a whole sentence that comes from a note", () => {
