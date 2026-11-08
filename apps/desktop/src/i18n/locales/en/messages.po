@@ -646,6 +646,11 @@ msgstr "Back"
 msgid "Back to current version"
 msgstr "Back to current version"
 
+#: src/main/windows-title-bar.tsx
+#: src/sidebar/custom-sidebar-header.tsx
+msgid "Back to Settings"
+msgstr "Back to Settings"
+
 #: src/settings/search-index.ts
 msgid "bar, small window, control, always on top"
 msgstr "bar, small window, control, always on top"

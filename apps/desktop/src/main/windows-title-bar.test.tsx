@@ -17,8 +17,16 @@ const mocks = vi.hoisted(() => ({
   setFullscreen: vi.fn().mockResolvedValue(undefined),
   toggleMaximize: vi.fn().mockResolvedValue(undefined),
   chatMode: "FloatingClosed",
-  currentTab: { type: "empty" } as { id?: string; type: string },
+  currentTab: { type: "empty" } as {
+    id?: string;
+    type: string;
+    slotId?: string;
+    returnToSettingsTab?: string;
+  },
   openCurrent: vi.fn(),
+  select: vi.fn(),
+  updateSettingsTabState: vi.fn(),
+  tabs: [] as { type: string; slotId: string; state?: { tab: string } }[],
   sendEvent: vi.fn(),
   platform: "windows",
 }));
@@ -86,8 +94,9 @@ vi.mock("~/store/zustand/tabs", () => {
     goBack: vi.fn(),
     openCurrent: mocks.openCurrent,
     openNew: mocks.openNew,
-    select: vi.fn(),
-    tabs: [],
+    select: mocks.select,
+    tabs: mocks.tabs,
+    updateSettingsTabState: mocks.updateSettingsTabState,
   });
   const useTabs = Object.assign(
     (selector: (state: ReturnType<typeof getState>) => unknown) =>
@@ -95,7 +104,17 @@ vi.mock("~/store/zustand/tabs", () => {
     { getState },
   );
 
-  return { uniqueIdfromTab: (tab: { type: string }) => tab.type, useTabs };
+  return {
+    SETTINGS_RETURN_TAB_TYPES: [
+      "automations",
+      "calendar",
+      "contacts",
+      "folders",
+      "templates",
+    ],
+    uniqueIdfromTab: (tab: { type: string }) => tab.type,
+    useTabs,
+  };
 });
 
 import { WindowsTitleBar } from "./windows-title-bar";
@@ -126,6 +145,9 @@ describe("WindowsTitleBar", () => {
     mocks.setFullscreen.mockClear();
     mocks.toggleMaximize.mockClear();
     mocks.openCurrent.mockClear();
+    mocks.select.mockClear();
+    mocks.updateSettingsTabState.mockClear();
+    mocks.tabs = [];
     mocks.sendEvent.mockClear();
     mocks.chatMode = "FloatingClosed";
     mocks.currentTab = { type: "empty" };
@@ -345,5 +367,79 @@ describe("WindowsTitleBar", () => {
 
       expect(screen.queryByRole("button", { name: "Home" })).toBeNull();
     });
+  });
+
+  describe("bouton « ← Paramètres » (issue 443)", () => {
+    const fromSettingsScreens = [
+      "templates",
+      "calendar",
+      "folders",
+      "contacts",
+      "automations",
+    ];
+
+    it.each(fromSettingsScreens)(
+      "remplace « ← Accueil » sur %s ouvert depuis les Paramètres et ramène à la section d'origine",
+      (type) => {
+        const settingsTab = {
+          type: "settings",
+          slotId: "settings-slot",
+          state: { tab: "meetings" },
+        };
+        mocks.tabs = [settingsTab];
+        mocks.currentTab = {
+          type,
+          slotId: "screen-slot",
+          returnToSettingsTab: "meetings",
+        };
+
+        render(<WindowsTitleBar />);
+
+        expect(screen.queryByRole("button", { name: "Home" })).toBeNull();
+        const back = screen.getByRole("button", { name: "Settings" });
+        expect(back.getAttribute("title")).toBe("Back to Settings (Alt+←)");
+        expect(back.getAttribute("aria-keyshortcuts")).toBe(
+          "Alt+ArrowLeft Escape",
+        );
+        expect(
+          back.compareDocumentPosition(screen.getByRole("menubar")) &
+            Node.DOCUMENT_POSITION_FOLLOWING,
+        ).toBeTruthy();
+
+        fireEvent.click(back);
+
+        expect(mocks.select).toHaveBeenCalledWith(settingsTab);
+        expect(mocks.updateSettingsTabState).not.toHaveBeenCalled();
+        expect(mocks.openCurrent).not.toHaveBeenCalled();
+      },
+    );
+
+    it("rouvre la section d'origine si l'écran des Paramètres a disparu", () => {
+      mocks.currentTab = {
+        type: "folders",
+        slotId: "screen-slot",
+        returnToSettingsTab: "privacy",
+      };
+
+      render(<WindowsTitleBar />);
+      fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+
+      expect(mocks.openCurrent).toHaveBeenCalledWith({
+        type: "settings",
+        state: { tab: "privacy" },
+      });
+    });
+
+    it.each(fromSettingsScreens)(
+      "garde « ← Accueil » sur %s ouvert hors des Paramètres",
+      (type) => {
+        mocks.currentTab = { type, slotId: "screen-slot" };
+
+        render(<WindowsTitleBar />);
+
+        expect(screen.queryByRole("button", { name: "Settings" })).toBeNull();
+        expect(screen.getByRole("button", { name: "Home" })).toBeTruthy();
+      },
+    );
   });
 });

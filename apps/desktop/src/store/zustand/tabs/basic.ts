@@ -28,6 +28,17 @@ export const RETURN_ORIGIN_TAB_TYPES: Tab["type"][] = [
   "templates",
 ];
 
+// Écrans ouverts depuis une entrée des Paramètres qui remplacent l'écran des
+// Paramètres (issue 443) : ouverts depuis les Paramètres, ils proposent
+// « ← Paramètres » et le raccourci Retour y ramène.
+export const SETTINGS_RETURN_TAB_TYPES: Tab["type"][] = [
+  "automations",
+  "calendar",
+  "contacts",
+  "folders",
+  "templates",
+];
+
 export type BasicState = {
   tabs: Tab[];
   currentTab: Tab | null;
@@ -378,6 +389,10 @@ const openTab = <T extends BasicState & NavigationState>(
       ? {
           returnToSlotId: activeOriginTab.slotId,
           returnToTabId: uniqueIdfromTab(activeOriginTab),
+          ...(activeOriginTab.type === "settings" &&
+          SETTINGS_RETURN_TAB_TYPES.includes(tabWithDefaults.type)
+            ? { returnToSettingsTab: activeOriginTab.state.tab ?? "app" }
+            : {}),
         }
       : undefined;
   const tabWithOrigin = returnOrigin
@@ -547,24 +562,30 @@ const applyReturnOriginForReuse = <T extends Tab>(
   preserveReturnOrigin: boolean,
 ): T => {
   if (requestedTab.returnToSlotId) {
-    return {
+    const nextTab: T = {
       ...existingTab,
       returnToSlotId: requestedTab.returnToSlotId,
       returnToTabId: requestedTab.returnToTabId,
+      returnToSettingsTab: requestedTab.returnToSettingsTab,
     };
+    if (!requestedTab.returnToSettingsTab) {
+      delete nextTab.returnToSettingsTab;
+    }
+    return nextTab;
   }
 
   return preserveReturnOrigin ? existingTab : clearReturnOrigin(existingTab);
 };
 
 const clearReturnOrigin = <T extends Tab>(tab: T): T => {
-  if (!tab.returnToSlotId && !tab.returnToTabId) {
+  if (!tab.returnToSlotId && !tab.returnToTabId && !tab.returnToSettingsTab) {
     return tab;
   }
 
   const nextTab = { ...tab };
   delete nextTab.returnToSlotId;
   delete nextTab.returnToTabId;
+  delete nextTab.returnToSettingsTab;
   return nextTab;
 };
 

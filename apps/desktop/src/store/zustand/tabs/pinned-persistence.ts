@@ -17,14 +17,22 @@ const serializePinnedTabs = (tabs: Tab[]): string => {
   const pinnedTabs = tabs
     .filter((t) => t.pinned && t.type !== "shared_note_preview")
     .map((tab): PinnedTab => {
-      const { active, slotId, pinned, returnToSlotId, returnToTabId, ...rest } =
-        tab as Tab & {
-          active: boolean;
-          slotId: string;
-          pinned: boolean;
-          returnToSlotId?: string;
-          returnToTabId?: string;
-        };
+      const {
+        active,
+        slotId,
+        pinned,
+        returnToSlotId,
+        returnToTabId,
+        returnToSettingsTab,
+        ...rest
+      } = tab as Tab & {
+        active: boolean;
+        slotId: string;
+        pinned: boolean;
+        returnToSlotId?: string;
+        returnToTabId?: string;
+        returnToSettingsTab?: string;
+      };
       return { ...rest, pinned: true } as PinnedTab;
     });
   return JSON.stringify(pinnedTabs);

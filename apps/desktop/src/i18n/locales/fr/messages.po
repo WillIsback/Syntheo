@@ -646,6 +646,11 @@ msgstr "Retour"
 msgid "Back to current version"
 msgstr "Revenir à la version actuelle"
 
+#: src/main/windows-title-bar.tsx
+#: src/sidebar/custom-sidebar-header.tsx
+msgid "Back to Settings"
+msgstr "Retour aux Paramètres"
+
 #: src/settings/search-index.ts
 msgid "bar, small window, control, always on top"
 msgstr "barre, petite fenêtre, commandes, toujours au premier plan"

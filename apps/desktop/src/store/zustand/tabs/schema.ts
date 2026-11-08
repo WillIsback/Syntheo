@@ -103,6 +103,9 @@ type BaseTab = {
   pinned: boolean;
   returnToSlotId?: string;
   returnToTabId?: string;
+  // Section des Paramètres d'où l'on a ouvert Modèles, Calendrier, Dossiers,
+  // Contacts ou Automatisations (issue 443) : le retour y ramène.
+  returnToSettingsTab?: SettingsTab;
 };
 
 export type Tab =
