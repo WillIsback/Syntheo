@@ -40,6 +40,7 @@ import {
   updateLiveAmplitude,
   updateLiveProgress,
 } from "./general-shared";
+import { notifyMicFallback } from "./mic-fallback";
 import {
   LIVE_TRANSCRIPT_PREVIEW_SEGMENT_LIMIT,
   type LiveTranscriptPersistCallback,
@@ -339,6 +340,7 @@ const createSessionEventHandlers = <T extends LiveStore>(
   handleTranscriptSegmentDelta: (
     delta: LiveTranscriptSegmentDelta,
   ) => void = get().handleTranscriptSegmentDelta,
+  requestedMic: string | null = null,
 ): EventListeners => ({
   lifecycle: (payload) => {
     if (payload.session_id !== targetSessionId) {
@@ -629,6 +631,16 @@ const createSessionEventHandlers = <T extends LiveStore>(
       setLiveState(set, (live) => updateLiveProgress(live, payload));
       notifyCaptureWarning(get, targetSessionId);
       if (payload.type === "audio_ready")
+        notifyMicFallback(
+          targetSessionId,
+          requestedMic,
+          payload.device,
+          () =>
+            void openMicrophoneSettings().catch((error) =>
+              console.error("[listener] opening device settings failed", error),
+            ),
+        );
+      if (payload.type === "audio_ready")
         observeSpeakerMicrophone(targetSessionId, {
           device: payload.device,
           available:
@@ -737,7 +749,13 @@ export const startLiveSession = <T extends LiveStore>(
     delete live.eventUnlistenersBySession[targetSessionId];
   });
 
-  const handlers = createSessionEventHandlers(set, get, targetSessionId);
+  const handlers = createSessionEventHandlers(
+    set,
+    get,
+    targetSessionId,
+    undefined,
+    params.mic_device ?? null,
+  );
 
   const program = Effect.gen(function* () {
     const unlisteners = yield* listenToAllSessionEvents(handlers);
