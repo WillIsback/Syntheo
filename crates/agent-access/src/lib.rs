@@ -3,7 +3,12 @@
 mod proposals;
 mod recording_import;
 pub use recording_import::*;
+mod export_markdown;
 mod transcript_render;
+pub use export_markdown::{
+    ExportLocale, format_export_date, format_export_duration, is_markdown_export_for,
+    localize_speaker_label,
+};
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -1180,6 +1185,73 @@ mod tests {
             markdown.ends_with("## Transcript\n\nMe: Hello there\n\nAlice: Hi"),
             "{markdown}"
         );
+    }
+
+    #[tokio::test]
+    async fn meeting_export_markdown_follows_the_interface_language() {
+        let db = test_db().await;
+        sqlx::query(
+            "INSERT INTO sessions (id, title, started_at, ended_at, timezone, owner_user_id)
+             VALUES ('meeting-1', 'Bilan', '2026-11-08T21:28:00Z', '2026-11-08T21:39:00Z',
+                     'Europe/Paris', 'self-1')",
+        )
+        .execute(db.pool())
+        .await
+        .unwrap();
+        let words = serde_json::json!([
+            {"id": "w1", "text": "Bonjour", "start_ms": 0, "end_ms": 400, "channel": 1},
+        ]);
+        sqlx::query(
+            "INSERT INTO transcripts (id, session_id, owner_user_id, started_at_ms, words_json)
+             VALUES ('transcript-1', 'meeting-1', 'self-1', 0, ?)",
+        )
+        .bind(words.to_string())
+        .execute(db.pool())
+        .await
+        .unwrap();
+        let mut export = get_meeting_export(db.pool(), "meeting-1".to_string())
+            .await
+            .unwrap();
+        export.meeting.note = Some(Document {
+            id: "note-1".to_string(),
+            kind: "memo".to_string(),
+            template_id: String::new(),
+            title: String::new(),
+            markdown: "Notes".to_string(),
+            sort_order: 0,
+            created_at: String::new(),
+            updated_at: String::new(),
+        });
+        export.meeting.summaries = vec![Document {
+            title: String::new(),
+            markdown: "# Prochaines étapes".to_string(),
+            ..export.meeting.note.clone().unwrap()
+        }];
+
+        let fr = export.to_export_markdown(ExportLocale::Fr);
+        assert!(
+            fr.starts_with(
+                "# Bilan\n\n- ID\u{a0}: `meeting-1`\n\
+                 - Créé le\u{a0}: dimanche 8 novembre 2026 à 22:28\n\
+                 - Durée\u{a0}: 11 min\n\n## Mémo\n\nNotes\n\n## Synthèse\n\n\
+                 # Prochaines étapes\n\n## Transcription\n\nLocuteur "
+            ),
+            "{fr}"
+        );
+        assert!(fr.ends_with("\u{a0}: Bonjour"), "{fr}");
+        assert!(is_markdown_export_for(&fr, "meeting-1"));
+
+        let en = export.to_export_markdown(ExportLocale::En);
+        assert!(
+            en.starts_with(
+                "# Bilan\n\n- ID: `meeting-1`\n\
+                 - Created: Sunday, November 8, 2026 at 10:28 PM\n\
+                 - Duration: 11 min\n\n## Memo\n\nNotes\n\n## Summary\n\n"
+            ),
+            "{en}"
+        );
+        assert!(en.contains("## Transcript\n\nSpeaker "), "{en}");
+        assert!(is_markdown_export_for(&en, "meeting-1"));
     }
 
     #[tokio::test]

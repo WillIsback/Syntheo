@@ -14,6 +14,15 @@ use crate::{MeetingExport, Transcript};
 /// example in trimmed cloud snapshots) keep their flat text, interleaved with
 /// the rendered segments by start time.
 pub fn render_transcripts_markdown(export: &MeetingExport) -> String {
+    render_transcripts_markdown_with(export, |speaker| format!("{speaker}: "))
+}
+
+/// Same as [`render_transcripts_markdown`], with the `Speaker: ` prefix built
+/// by `speaker_prefix` (localized exports).
+pub(crate) fn render_transcripts_markdown_with(
+    export: &MeetingExport,
+    speaker_prefix: impl Fn(&str) -> String,
+) -> String {
     let mut flat = Vec::new();
     let mut renderable = Vec::new();
     for transcript in &export.transcripts {
@@ -42,7 +51,7 @@ pub fn render_transcripts_markdown(export: &MeetingExport) -> String {
                 .map(|segment| {
                     (
                         base_started_at + segment.start_ms,
-                        format!("{}: {}", segment.speaker_label, segment.text),
+                        format!("{}{}", speaker_prefix(&segment.speaker_label), segment.text),
                     )
                 }),
         );

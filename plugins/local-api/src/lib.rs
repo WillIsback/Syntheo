@@ -120,6 +120,46 @@ mod test {
     }
 
     #[tokio::test]
+    async fn markdown_export_follows_the_interface_language() {
+        use syntheo_agent_access::ExportLocale;
+
+        let pool = seeded_pool().await;
+        assert_eq!(commands::load_export_locale(&pool).await, ExportLocale::Fr);
+        sqlx::query(
+            "INSERT INTO app_settings (id, value_json, updated_at) \
+             VALUES ('ai_language', '\"en\"', '2026-11-09T00:00:00Z')",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        assert_eq!(commands::load_export_locale(&pool).await, ExportLocale::En);
+
+        let export = syntheo_agent_access::get_meeting_export(&pool, "meeting-1".to_string())
+            .await
+            .unwrap();
+        let directory = tempfile::tempdir().unwrap();
+        let options = MarkdownExportOptions::default();
+        // An English export is recognized and rewritten in French.
+        let path =
+            commands::write_markdown_export_with_options(directory.path(), &export, Some(&options))
+                .unwrap();
+        for _ in 0..2 {
+            commands::write_localized_markdown_export(
+                directory.path(),
+                &export,
+                Some(&options),
+                ExportLocale::Fr,
+            )
+            .unwrap();
+        }
+        let written = std::fs::read_to_string(&path).unwrap();
+        assert!(
+            written.contains("- ID\u{a0}: `meeting-1`\n- Créé le\u{a0}: lundi 13 juillet 2026")
+        );
+        assert!(written.contains("## Transcription\n\nhello world"));
+    }
+
+    #[tokio::test]
     async fn markdown_export_writes_stable_file_into_directory() {
         let pool = seeded_pool().await;
         let export = syntheo_agent_access::get_meeting_export(&pool, "meeting-1".to_string())
@@ -577,7 +617,13 @@ mod test {
         let content = written
             .strip_prefix("<!-- syntheo:legacy-markdown-export \"meeting-1\" -->\n\n")
             .unwrap_or(&written);
-        assert_eq!(content, format!("{}\n", export.to_markdown()));
+        assert_eq!(
+            content,
+            format!(
+                "{}\n",
+                export.to_export_markdown(syntheo_agent_access::ExportLocale::En)
+            )
+        );
         assert_eq!(std::fs::read_dir(directory.path()).unwrap().count(), 1);
     }
 
