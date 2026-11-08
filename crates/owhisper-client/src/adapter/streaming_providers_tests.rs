@@ -146,6 +146,77 @@ fn nvidia_without_keywords_disables_boosting() {
     assert_eq!(boosting["word_boosting_list"], serde_json::json!([]));
 }
 
+fn nvidia_diarization(params: &ListenParams) -> serde_json::Value {
+    let initial = NvidiaAdapter::default()
+        .initial_message(None, params, 1)
+        .expect("initial message");
+    json_of(&initial)["session"]["speaker_diarization"].clone()
+}
+
+#[test]
+fn nvidia_sends_the_speaker_bound_as_max_speaker_count() {
+    let params = ListenParams {
+        model: Some("nemotron-asr-streaming".to_string()),
+        max_speakers: Some(5),
+        ..Default::default()
+    };
+    let diarization = nvidia_diarization(&params);
+    assert_eq!(diarization["enable_speaker_diarization"], true);
+    assert_eq!(diarization["max_speaker_count"], 5);
+}
+
+#[test]
+fn nvidia_omits_max_speaker_count_without_a_bound() {
+    let diarization = nvidia_diarization(&ListenParams::default());
+    assert_eq!(diarization["enable_speaker_diarization"], true);
+    assert!(diarization.get("max_speaker_count").is_none());
+}
+
+#[test]
+fn nvidia_omits_a_bound_at_or_above_the_diarizer_capacity() {
+    // Nemotron's diarizer tells at most 8 voices apart, Parakeet's (and any
+    // model we cannot identify) 4: a larger bound is the default anyway and
+    // would risk a rejected session.
+    for (model, max_speakers) in [
+        ("nemotron-asr-streaming", 8),
+        ("nemotron-asr-streaming", 12),
+        ("parakeet-1.1b-rnnt-multilingual-asr", 4),
+        ("custom-asr", 6),
+    ] {
+        let params = ListenParams {
+            model: Some(model.to_string()),
+            max_speakers: Some(max_speakers),
+            ..Default::default()
+        };
+        let diarization = nvidia_diarization(&params);
+        assert!(
+            diarization.get("max_speaker_count").is_none(),
+            "{model} with {max_speakers}"
+        );
+    }
+
+    let params = ListenParams {
+        model: Some("parakeet-1.1b-rnnt-multilingual-asr".to_string()),
+        max_speakers: Some(3),
+        ..Default::default()
+    };
+    assert_eq!(nvidia_diarization(&params)["max_speaker_count"], 3);
+}
+
+#[test]
+fn nvidia_single_voice_stream_disables_diarization_without_a_bound() {
+    // An isolated mic stream carries one voice: diarization stays off.
+    let params = ListenParams {
+        model: Some("nemotron-asr-streaming".to_string()),
+        num_speakers: Some(1),
+        max_speakers: Some(1),
+        ..Default::default()
+    };
+    let diarization = nvidia_diarization(&params);
+    assert_eq!(diarization["enable_speaker_diarization"], false);
+    assert!(diarization.get("max_speaker_count").is_none());
+}
+
 #[test]
 fn nvidia_flushes_with_a_commit_after_each_append() {
     let messages =

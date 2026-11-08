@@ -129,23 +129,22 @@ fn build_listen_params(args: &ListenerArgs) -> owhisper_interface::ListenParams 
         "redemption_time_ms".to_string(),
         redemption_time_ms.to_string(),
     )]);
-    let num_speakers = expected_speakers(args);
 
     owhisper_interface::ListenParams {
         model: Some(args.model.clone()),
         languages: args.languages.clone(),
         sample_rate: super::super::SAMPLE_RATE,
         keywords: args.keywords.clone(),
-        num_speakers,
-        max_speakers: num_speakers,
+        // A bound, never an exact count: attendance says who may speak.
+        max_speakers: max_speakers(args),
         mic_num_speakers: args.mic_isolated.then_some(1),
         custom_query: Some(custom_query),
         ..Default::default()
     }
 }
 
-fn expected_speakers(args: &ListenerArgs) -> Option<u32> {
-    crate::expected_speakers_per_channel(&args.participant_human_ids, args.self_human_id.as_deref())
+fn max_speakers(args: &ListenerArgs) -> Option<u32> {
+    crate::max_speakers_per_stream(&args.participant_human_ids, args.self_human_id.as_deref())
 }
 
 fn build_extra(args: &ListenerArgs) -> (f64, Extra) {
@@ -327,28 +326,15 @@ mod tests {
     }
 
     #[test]
-    fn listen_params_leave_speaker_counts_open() {
-        for (label, base_url, model, participants, self_human_id) in [
+    fn listen_params_bound_speakers_from_participants_without_exact_count() {
+        for (label, base_url, model, participants, self_human_id, expected) in [
             (
                 "openai repeated attendance",
                 "http://192.168.1.87:8000/v1",
                 "mistralai/Voxtral-Mini-4B-Realtime-2602",
                 vec!["remote-a", "self", "remote-b", "remote-a"],
                 Some("self"),
-            ),
-            (
-                "openai no remote participants",
-                "http://192.168.1.87:8000/v1",
-                "mistralai/Voxtral-Mini-4B-Realtime-2602",
-                vec![],
-                Some("self"),
-            ),
-            (
-                "openai self only",
-                "http://192.168.1.87:8000/v1",
-                "mistralai/Voxtral-Mini-4B-Realtime-2602",
-                vec!["self"],
-                Some("self"),
+                Some(3 + crate::UNLISTED_SPEAKER_MARGIN),
             ),
             (
                 "openai one remote",
@@ -356,6 +342,7 @@ mod tests {
                 "mistralai/Voxtral-Mini-4B-Realtime-2602",
                 vec!["remote"],
                 Some("self"),
+                Some(2 + crate::UNLISTED_SPEAKER_MARGIN),
             ),
             (
                 "nvidia",
@@ -363,6 +350,7 @@ mod tests {
                 "nemotron-asr-streaming",
                 vec!["remote"],
                 Some("self"),
+                Some(2 + crate::UNLISTED_SPEAKER_MARGIN),
             ),
             (
                 "syntheo proxy",
@@ -370,25 +358,67 @@ mod tests {
                 "cloud",
                 vec!["self", "remote-a", "remote-b"],
                 Some("self"),
+                Some(3 + crate::UNLISTED_SPEAKER_MARGIN),
             ),
         ] {
             let mut args = listener_args(base_url, model);
             args.participant_human_ids = participants.iter().map(|id| id.to_string()).collect();
             args.self_human_id = self_human_id.map(|id| id.to_string());
 
-            assert_eq!(expected_speakers(&args), None, "case: {label}");
-
             let params = build_listen_params(&args);
             let custom_query = params.custom_query.expect("custom query");
 
-            assert_eq!(params.num_speakers, None, "case: {label}");
-            assert_eq!(params.max_speakers, None, "case: {label}");
+            assert_eq!(params.num_speakers, None, "never an exact count: {label}");
+            assert_eq!(params.min_speakers, None, "case: {label}");
+            assert_eq!(params.max_speakers, expected, "case: {label}");
             assert!(
                 !custom_query.contains_key("speaker_labels"),
                 "case: {label}"
             );
             assert!(!custom_query.contains_key("max_speakers"), "case: {label}");
         }
+    }
+
+    #[test]
+    fn listen_params_leave_speaker_counts_open_without_other_participants() {
+        for (label, participants, self_human_id) in [
+            ("no participants", vec![], Some("self")),
+            ("self only", vec!["self"], Some("self")),
+            ("unknown self, nobody listed", vec![], None),
+        ] {
+            let mut args = listener_args(
+                "https://asr.example/v1/realtime?provider=nvidia",
+                "nemotron-asr-streaming",
+            );
+            args.participant_human_ids = participants.iter().map(|id| id.to_string()).collect();
+            args.self_human_id = self_human_id.map(|id: &str| id.to_string());
+
+            let params = build_listen_params(&args);
+
+            assert_eq!(params.num_speakers, None, "case: {label}");
+            assert_eq!(params.max_speakers, None, "case: {label}");
+        }
+    }
+
+    #[test]
+    fn isolated_mic_keeps_its_single_voice_alongside_the_participant_bound() {
+        let mut args = listener_args(
+            "https://asr.example/v1/realtime?provider=nvidia",
+            "nemotron-asr-streaming",
+        );
+        args.mode = crate::actors::ChannelMode::MicAndSpeaker;
+        args.mic_isolated = true;
+        args.participant_human_ids = vec!["remote-a".to_string(), "remote-b".to_string()];
+        args.self_human_id = Some("self".to_string());
+
+        let params = build_listen_params(&args);
+
+        assert_eq!(params.mic_num_speakers, Some(1));
+        assert_eq!(params.num_speakers, None);
+        assert_eq!(
+            params.max_speakers,
+            Some(3 + crate::UNLISTED_SPEAKER_MARGIN)
+        );
     }
 
     #[test]

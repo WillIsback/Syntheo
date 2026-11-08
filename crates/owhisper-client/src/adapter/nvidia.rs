@@ -106,6 +106,32 @@ fn localized_language(lang: &syntheo_language::Language) -> String {
 /// Builds the `word_boosting` block. The NIM types `word_boosting_list` as a
 /// list of `SpeechContext` objects (`extra="forbid"`), so bare strings are
 /// rejected; phrases are grouped into a single context at the RNNT boost scale.
+/// `session.speaker_diarization.max_speaker_count` is an upper bound on the
+/// voices to tell apart (NIM realtime ASR reference): 1–8 for Nemotron ASR
+/// Streaming, 1–4 for Parakeet, defaulting to the model's capacity. A model
+/// we cannot identify gets the smaller range, and a bound at or above the
+/// capacity is left out: it changes nothing and could get the session rejected.
+fn speaker_diarization(params: &ListenParams) -> Value {
+    let enabled = params.num_speakers != Some(1);
+    let mut config = json!({ "enable_speaker_diarization": enabled });
+    let capacity = if params
+        .model
+        .as_deref()
+        .is_some_and(|model| model.to_ascii_lowercase().contains("nemotron"))
+    {
+        8
+    } else {
+        4
+    };
+    if let Some(max) = params
+        .max_speakers
+        .filter(|max| enabled && (1..capacity).contains(max))
+    {
+        config["max_speaker_count"] = json!(max);
+    }
+    config
+}
+
 fn word_boosting(keywords: &[String]) -> Value {
     let phrases: Vec<&str> = keywords
         .iter()
@@ -242,9 +268,7 @@ impl RealtimeSttAdapter for NvidiaAdapter {
                     "enable_automatic_punctuation": true,
                     "enable_word_time_offsets": true,
                 },
-                "speaker_diarization": {
-                    "enable_speaker_diarization": params.num_speakers != Some(1),
-                },
+                "speaker_diarization": speaker_diarization(params),
                 "word_boosting": word_boosting(&params.keywords),
             }
         })))

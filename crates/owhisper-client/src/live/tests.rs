@@ -296,3 +296,24 @@ async fn empty_endpoint_is_rejected_instead_of_a_cloud_default() {
         crate::Error::ProviderConfiguration { provider, .. } if provider == "openai"
     ));
 }
+
+#[test]
+fn mic_stream_params_keep_the_participant_bound_unless_the_mic_is_isolated() {
+    let params = owhisper_interface::ListenParams {
+        max_speakers: Some(4),
+        ..Default::default()
+    };
+    let mic_params = mic_stream_params(&params);
+    assert_eq!(mic_params.max_speakers, Some(4));
+    assert_eq!(
+        mic_params.num_speakers, None,
+        "a bound, never an exact count"
+    );
+
+    let isolated = owhisper_interface::ListenParams {
+        max_speakers: Some(4),
+        mic_num_speakers: Some(1),
+        ..Default::default()
+    };
+    assert_eq!(mic_stream_params(&isolated).max_speakers, Some(1));
+}
