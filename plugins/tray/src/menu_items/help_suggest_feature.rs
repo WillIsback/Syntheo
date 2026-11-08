@@ -4,6 +4,7 @@ use tauri::{
 };
 
 use super::MenuItemHandler;
+use crate::locale::Label;
 
 pub struct HelpSuggestFeature;
 
@@ -14,7 +15,7 @@ impl MenuItemHandler for HelpSuggestFeature {
         let item = MenuItem::with_id(
             app,
             Self::ID,
-            "Suggérer une fonctionnalité",
+            Label::HelpSuggestFeature.text(),
             true,
             None::<&str>,
         )?;

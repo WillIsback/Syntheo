@@ -8,6 +8,8 @@ export const commands = {
 	setTrayIconVisible: (visible: boolean) => typedError<null, string>(__TAURI_INVOKE("plugin:syntheo-tray|set_tray_icon_visible", { visible })),
 	setTraySchedule: (events: TrayScheduleEvent[], labels: TrayScheduleLabels) => typedError<null, string>(__TAURI_INVOKE("plugin:syntheo-tray|set_tray_schedule", { events, labels })),
 	setTrayRecordingTitle: (title: string | null) => typedError<null, string>(__TAURI_INVOKE("plugin:syntheo-tray|set_tray_recording_title", { title })),
+	/**  Langue d'affichage de l'interface, pour traduire les menus natifs. */
+	setNativeMenuLocale: (locale: string) => typedError<null, string>(__TAURI_INVOKE("plugin:syntheo-tray|set_native_menu_locale", { locale })),
 };
 
 /* Types */

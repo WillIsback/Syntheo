@@ -4,6 +4,7 @@ use tauri::{
 };
 
 use super::MenuItemHandler;
+use crate::locale::Label;
 
 pub struct AppNew;
 
@@ -11,7 +12,13 @@ impl MenuItemHandler for AppNew {
     const ID: &'static str = "syntheo_app_new";
 
     fn build(app: &AppHandle<tauri::Wry>) -> Result<MenuItemKind<tauri::Wry>> {
-        let item = MenuItem::with_id(app, Self::ID, "Nouvelle note", true, Some("CmdOrCtrl+N"))?;
+        let item = MenuItem::with_id(
+            app,
+            Self::ID,
+            Label::AppNew.text(),
+            true,
+            Some("CmdOrCtrl+N"),
+        )?;
         Ok(MenuItemKind::MenuItem(item))
     }
 
