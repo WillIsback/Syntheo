@@ -46,9 +46,10 @@ pub fn copy_vault_items(src: &Path, dst: &Path) -> std::io::Result<()> {
         let src_file = src.join(file_name);
         if src_file.is_file() {
             // Comme `copy_dir_recursive` : `fs::copy` suivrait un lien de `dst`
-            // et écraserait le fichier qu'il désigne hors du coffre.
-            let dst_file = crate::safe_path::join_under_base(dst, file_name)?;
-            std::fs::copy(&src_file, dst_file)?;
+            // et écraserait le fichier qu'il désigne hors du coffre. La copie
+            // ouvre le chemin canonique sans suivre de lien (issue 428).
+            let dst_file = crate::safe_path::resolve_under_base(dst, file_name)?;
+            crate::safe_path::copy_no_follow(&src_file, &dst_file)?;
         }
     }
 

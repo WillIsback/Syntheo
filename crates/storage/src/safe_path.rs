@@ -1,6 +1,8 @@
 //! Garantie, au point d'accès, qu'un chemin construit à partir d'un composant
 //! variable reste sous son dossier de base.
 
+use std::fs::{File, OpenOptions};
+use std::io::Write;
 use std::path::{Component, Path, PathBuf};
 
 /// Raison pour laquelle [`join_under_base`] refuse un chemin.
@@ -39,28 +41,171 @@ impl From<UnsafePath> for std::io::Error {
 /// Si la base n'existe pas encore, seule la vérification lexicale s'applique.
 ///
 /// Renvoie `base.join(relative)` tel quel (non canonique), pour que les
-/// appelants gardent les chemins qu'ils affichent ou comparent.
+/// appelants gardent les chemins qu'ils affichent ou comparent. Pour ouvrir le
+/// fichier, préférer [`resolve_under_base`] puis [`open_no_follow`] (ou
+/// [`open_under_base`]) : le contrôle et l'ouverture portent alors sur le même
+/// objet.
 pub fn join_under_base(base: &Path, relative: impl AsRef<Path>) -> Result<PathBuf, UnsafePath> {
+    let relative = relative.as_ref();
+    resolve_under_base(base, relative)?;
+    Ok(base.join(relative))
+}
+
+/// Comme [`join_under_base`], mais renvoie le chemin **canonique** : la partie
+/// existante du chemin est résolue (liens compris), la partie manquante est
+/// ajoutée telle quelle.
+///
+/// Un lien qui reste sous la base est donc remplacé par sa cible. Ouvrir ce
+/// chemin avec [`open_no_follow`] suit le cas autorisé (la cible a déjà été
+/// résolue) et refuse un lien glissé après le contrôle (TOCTOU, issue 428).
+/// Si la base n'existe pas encore, renvoie `base.join(relative)` (contrôle
+/// lexical seulement).
+pub fn resolve_under_base(base: &Path, relative: impl AsRef<Path>) -> Result<PathBuf, UnsafePath> {
     let relative = relative.as_ref();
     check_relative(relative)?;
 
-    let candidate = base.join(relative);
     let canonical_base = match base.canonicalize() {
         Ok(path) => path,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(candidate),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            return Ok(base.join(relative));
+        }
         Err(error) => return Err(error.into()),
     };
 
+    // `check_relative` n'admet que des segments normaux et `.` : on retire les
+    // `.` pour que `parent` et `file_name` remontent segment par segment.
+    let mut candidate = base.to_path_buf();
+    candidate.extend(
+        relative
+            .components()
+            .filter(|component| matches!(component, Component::Normal(_))),
+    );
+
+    // `symlink_metadata` voit aussi un lien cassé, que `canonicalize` refuse.
     let mut existing = candidate.as_path();
+    let mut missing = Vec::new();
     while std::fs::symlink_metadata(existing).is_err() {
+        missing.push(existing.file_name().ok_or(UnsafePath::OutsideBase)?);
         existing = existing.parent().ok_or(UnsafePath::OutsideBase)?;
     }
 
-    if !existing.canonicalize()?.starts_with(&canonical_base) {
+    let mut resolved = existing.canonicalize()?;
+    if !resolved.starts_with(&canonical_base) {
         return Err(UnsafePath::OutsideBase);
     }
+    resolved.extend(missing.into_iter().rev());
+    Ok(resolved)
+}
 
-    Ok(candidate)
+/// Résout `relative` sous `base` ([`resolve_under_base`]) puis ouvre le
+/// chemin canonique sans suivre de lien ([`open_no_follow`]).
+pub fn open_under_base(
+    base: &Path,
+    relative: impl AsRef<Path>,
+    options: &OpenOptions,
+) -> Result<File, UnsafePath> {
+    let resolved = resolve_under_base(base, relative)?;
+    Ok(open_no_follow(&resolved, options)?)
+}
+
+/// Message de l'erreur renvoyée quand le dernier composant est un lien.
+pub const SYMLINK_NOT_ALLOWED: &str = "symlink_not_allowed";
+
+/// Ouvre `path` sans suivre son dernier composant s'il est un lien
+/// symbolique (issue 428).
+///
+/// À appeler sur un chemin déjà contrôlé et canonique (voir
+/// [`resolve_under_base`]) : si un processus concurrent remplace le fichier
+/// par un lien entre le contrôle et l'ouverture, l'ouverture échoue avec
+/// [`std::io::ErrorKind::InvalidInput`] et le message [`SYMLINK_NOT_ALLOWED`],
+/// au lieu d'agir sur la cible du lien. Un lien cassé est refusé de la même
+/// façon, même avec `create(true)`.
+///
+/// - Unix : `O_NOFOLLOW`. Le noyau refuse lui-même le lien, au moment de
+///   l'ouverture.
+/// - Windows : `FILE_FLAG_OPEN_REPARSE_POINT` ouvre le point d'analyse
+///   lui-même ; le type du handle ouvert est ensuite contrôlé et un lien
+///   symbolique ou une jonction est refusé avant toute lecture ou écriture.
+///   Les autres points d'analyse (fichiers OneDrive à la demande,
+///   déduplication) ne sont pas des liens : ils sont rouverts normalement pour
+///   que le pilote les matérialise. Le seul cas restant est un fichier de ce
+///   type remplacé par un lien entre les deux ouvertures. Créer un lien
+///   symbolique y demande en outre un privilège ou le mode développeur.
+///
+/// Seul le dernier composant est protégé : les dossiers parents sont résolus
+/// normalement. Ils ont été canonisés par le contrôle ; les remplacer exige les
+/// mêmes droits que ceux de l'utilisateur sur son coffre.
+///
+/// Ne pas combiner avec `truncate(true)` pour écrire : sous Windows, la
+/// troncature s'appliquerait avant le contrôle du type. Voir
+/// [`write_no_follow`].
+pub fn open_no_follow(path: &Path, options: &OpenOptions) -> std::io::Result<File> {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        let mut options = options.clone();
+        options.custom_flags(libc::O_NOFOLLOW);
+        options.open(path).map_err(|error| {
+            if error.raw_os_error() == Some(libc::ELOOP) {
+                symlink_not_allowed()
+            } else {
+                error
+            }
+        })
+    }
+
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::{MetadataExt, OpenOptionsExt};
+        const FILE_FLAG_OPEN_REPARSE_POINT: u32 = 0x0020_0000;
+        const FILE_ATTRIBUTE_REPARSE_POINT: u32 = 0x0000_0400;
+
+        let mut reparse_options = options.clone();
+        reparse_options.custom_flags(FILE_FLAG_OPEN_REPARSE_POINT);
+        let file = reparse_options.open(path)?;
+        let metadata = file.metadata()?;
+        if metadata.file_type().is_symlink() {
+            return Err(symlink_not_allowed());
+        }
+        if metadata.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT == 0 {
+            return Ok(file);
+        }
+        drop(file);
+        options.open(path)
+    }
+
+    #[cfg(not(any(unix, windows)))]
+    {
+        options.open(path)
+    }
+}
+
+/// Remplace le contenu de `path` sans suivre de lien (voir
+/// [`open_no_follow`]) ; crée le fichier s'il n'existe pas.
+///
+/// Équivalent de `std::fs::write` pour un chemin du coffre déjà contrôlé.
+pub fn write_no_follow(path: &Path, contents: impl AsRef<[u8]>) -> std::io::Result<()> {
+    let mut file = open_no_follow(path, OpenOptions::new().write(true).create(true))?;
+    // Troncature après l'ouverture, une fois le type contrôlé.
+    file.set_len(0)?;
+    file.write_all(contents.as_ref())
+}
+
+/// Copie `src` vers `dst` sans suivre de lien en `dst` (voir
+/// [`open_no_follow`]). Équivalent de `std::fs::copy` pour une destination du
+/// coffre déjà contrôlée : écrase un fichier ordinaire, refuse un lien.
+pub fn copy_no_follow(src: &Path, dst: &Path) -> std::io::Result<u64> {
+    let mut source = File::open(src)?;
+    let permissions = source.metadata()?.permissions();
+    let mut target = open_no_follow(dst, OpenOptions::new().write(true).create(true))?;
+    target.set_len(0)?;
+    let copied = std::io::copy(&mut source, &mut target)?;
+    target.set_permissions(permissions)?;
+    Ok(copied)
+}
+
+fn symlink_not_allowed() -> std::io::Error {
+    std::io::Error::new(std::io::ErrorKind::InvalidInput, SYMLINK_NOT_ALLOWED)
 }
 
 fn check_relative(relative: &Path) -> Result<(), UnsafePath> {
