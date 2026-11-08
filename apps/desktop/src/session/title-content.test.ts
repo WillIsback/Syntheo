@@ -18,6 +18,7 @@ describe("documentTitlePlaceholder", () => {
         node: schema.node("heading", { level: 1 }),
         pos: 0,
         hasAnchor: true,
+        isEmptyDoc: false,
       }),
     ).toBe("Untitled");
     expect(
@@ -25,6 +26,7 @@ describe("documentTitlePlaceholder", () => {
         node: schema.node("paragraph"),
         pos: 2,
         hasAnchor: true,
+        isEmptyDoc: false,
       }),
     ).toBe("");
   });

@@ -637,6 +637,17 @@ describe("RawEditor", () => {
     expect(screen.queryByRole("button", { name: "Daily Standup" })).toBeNull();
   });
 
+  it("shows the placeholder only while the whole memo is empty (issue 430)", () => {
+    render(<RawEditor sessionId="session-1" />);
+
+    const props = hoisted.noteEditorProps[hoisted.noteEditorProps.length - 1];
+    const placeholder = requireCallback<
+      (props: { isEmptyDoc: boolean }) => string
+    >(props, "placeholderComponent");
+    expect(placeholder({ isEmptyDoc: true })).toBe("Start writing...");
+    expect(placeholder({ isEmptyDoc: false })).toBe("");
+  });
+
   it("locks the memo and shows creating brief while a brief is generated", () => {
     hoisted.briefVisible = true;
     hoisted.briefGenerating = true;
@@ -653,9 +664,12 @@ describe("RawEditor", () => {
     render(<RawEditor sessionId="session-1" />);
 
     const props = hoisted.noteEditorProps[hoisted.noteEditorProps.length - 1];
-    expect(requireCallback<() => string>(props, "placeholderComponent")()).toBe(
-      "Creating brief...",
-    );
+    expect(
+      requireCallback<(props: { isEmptyDoc: boolean }) => string>(
+        props,
+        "placeholderComponent",
+      )({ isEmptyDoc: true }),
+    ).toBe("Creating brief...");
     expect(props?.readOnly).toBe(true);
     expect(screen.queryByText("Prepare for this meeting")).toBeNull();
     expect(screen.queryByText("Suggested templates")).toBeNull();

@@ -1372,6 +1372,7 @@ msgid "Device authentication is not available on this computer."
 msgstr "Device authentication is not available on this computer."
 
 #: src/store/zustand/listener/general-live.ts
+#: src/store/zustand/listener/mic-fallback.ts
 msgid "Device settings"
 msgstr "Device settings"
 
@@ -1818,6 +1819,10 @@ msgstr "Folders"
 #: src/templates/template-icon-picker.tsx
 msgid "Food & Drink"
 msgstr "Food & Drink"
+
+#: src/stt/interruptions.ts
+msgid "for a few seconds at {start}"
+msgstr "for a few seconds at {start}"
 
 #: src/settings/general/notification.tsx
 msgid "For enabled notifications"
@@ -2572,6 +2577,10 @@ msgstr "mic, headset, earphones, sound, audio device, webcam"
 #: src/settings/search-index.ts
 msgid "Microphone"
 msgstr "Microphone"
+
+#: src/store/zustand/listener/mic-fallback.ts
+msgid "Microphone \"{missing}\" not found"
+msgstr "Microphone \"{missing}\" not found"
 
 #: src/onboarding/permissions.tsx
 msgid "Microphone access turned on"
@@ -3448,6 +3457,14 @@ msgstr "Recording couldn't start"
 msgid "Recording status prompts"
 msgstr "Recording status prompts"
 
+#: src/store/zustand/listener/mic-fallback.ts
+msgid "Recording with \"{opened}\" instead. Check that the microphone is plugged in, or choose another one."
+msgstr "Recording with \"{opened}\" instead. Check that the microphone is plugged in, or choose another one."
+
+#: src/store/zustand/listener/mic-fallback.ts
+msgid "Recording with the default microphone instead. Check that the microphone is plugged in, or choose another one."
+msgstr "Recording with the default microphone instead. Check that the microphone is plugged in, or choose another one."
+
 #: src/main/windows-title-bar.tsx
 msgid "Redo"
 msgstr "Redo"
@@ -3751,11 +3768,11 @@ msgstr "Saving..."
 msgid "screen, slides, screenshot, presentation, screen sharing"
 msgstr "screen, slides, screenshot, presentation, screen sharing"
 
-#: src/session/components/note-input/transcript/renderer/index.tsx
+#: src/session/components/note-input/transcript/renderer/scroll-controls.tsx
 msgid "Scroll to bottom"
 msgstr "Scroll to bottom"
 
-#: src/session/components/note-input/transcript/renderer/index.tsx
+#: src/session/components/note-input/transcript/renderer/scroll-controls.tsx
 msgid "Scroll to top"
 msgstr "Scroll to top"
 
@@ -4163,6 +4180,7 @@ msgid "Speak into any text field, in any app. The text is inserted when you fini
 msgstr "Speak into any text field, in any app. The text is inserted when you finish."
 
 #: src/session/components/speaker-naming/speaker-card.tsx
+#: src/session/components/speaker-naming/speakers.ts
 msgid "Speaker {number}"
 msgstr "Speaker {number}"
 
@@ -4937,6 +4955,10 @@ msgstr "Transcription · unreachable"
 msgid "Transcription failed"
 msgstr "Transcription failed"
 
+#: src/stt/interruptions.ts
+msgid "Transcription interrupted {gaps}"
+msgstr "Transcription interrupted {gaps}"
+
 #: src/settings/search-index.ts
 msgid "transcription model, Whisper, Parakeet, speech recognition"
 msgstr "transcription model, Whisper, Parakeet, speech recognition"
@@ -5346,6 +5368,10 @@ msgstr "Yesterday"
 #: src/templates/utils.ts
 msgid "you"
 msgstr "you"
+
+#: src/session/components/speaker-naming/speakers.ts
+msgid "You"
+msgstr "You"
 
 #: src/stt/live-transcript-interrupted.ts
 msgid "you are offline"

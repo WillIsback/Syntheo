@@ -567,4 +567,46 @@ describe("TranscriptViewer", () => {
       expect(mocks.scrollToBottom).toHaveBeenCalledTimes(isAtBottom ? 0 : 1);
     },
   );
+
+  // Issue 436 : les flèches ne flottent plus par-dessus le texte.
+  it("places the scroll controls in the header slot, outside the text", () => {
+    mocks.scrollDetection.canScroll = true;
+    const slot = document.createElement("div");
+    document.body.appendChild(slot);
+
+    render(
+      <TranscriptViewer
+        transcriptIds={["transcript-1"]}
+        liveSegments={[]}
+        currentActive={false}
+        scrollRef={createRef()}
+        scrollControlsSlot={slot}
+      />,
+    );
+
+    const top = screen.getByRole("button", { name: "Scroll to top" });
+    expect(slot.contains(top)).toBe(true);
+    expect(top.closest("[data-transcript-container]")).toBeNull();
+    slot.remove();
+  });
+
+  it("keeps the scroll controls above the text without a header slot", () => {
+    mocks.scrollDetection.canScroll = true;
+
+    render(
+      <TranscriptViewer
+        transcriptIds={["transcript-1"]}
+        liveSegments={[]}
+        currentActive={false}
+        scrollRef={createRef()}
+      />,
+    );
+
+    const controls = document.querySelector(
+      "[data-transcript-scroll-controls]",
+    );
+    expect(controls).not.toBeNull();
+    expect(controls!.closest("[data-transcript-container]")).toBeNull();
+    expect(controls!.closest(".absolute")).toBeNull();
+  });
 });

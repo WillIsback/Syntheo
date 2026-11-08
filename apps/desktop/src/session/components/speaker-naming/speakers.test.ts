@@ -1,12 +1,15 @@
-import { describe, expect, it } from "vitest";
+import { i18n } from "@lingui/core";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
   buildSpeakerCards,
+  displaySpeakerLabel,
   isAnonymousSpeakerLabel,
   pickSpeakerExcerpts,
   summaryMentionsAnonymousSpeakers,
 } from "./speakers";
 
+import { messages as frMessages } from "~/i18n/locales/fr/messages";
 import type { Segment } from "~/stt/live-segment";
 
 let nextWord = 0;
@@ -249,5 +252,27 @@ describe("summaryMentionsAnonymousSpeakers", () => {
     expect(
       summaryMentionsAnonymousSpeakers("Marie Dupont propose 2 dates."),
     ).toBe(false);
+  });
+});
+
+describe("displaySpeakerLabel", () => {
+  beforeEach(() => {
+    i18n.load("fr", frMessages);
+    i18n.activate("fr");
+  });
+
+  afterEach(() => {
+    i18n.activate("en");
+  });
+
+  it("traduit les libellés anonymes produits par le rendu", () => {
+    expect(displaySpeakerLabel("Speaker 2")).toBe("Locuteur 2");
+    expect(displaySpeakerLabel("Speaker B")).toBe("Locuteur B");
+    expect(displaySpeakerLabel("You")).toBe("Vous");
+  });
+
+  it("laisse les noms tels quels", () => {
+    expect(displaySpeakerLabel("Alice")).toBe("Alice");
+    expect(displaySpeakerLabel("Speaker 2 bis")).toBe("Speaker 2 bis");
   });
 });

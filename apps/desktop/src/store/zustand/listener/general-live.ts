@@ -41,6 +41,14 @@ import {
   updateLiveProgress,
 } from "./general-shared";
 import {
+  createLiveSegmentDeltaAccumulator,
+  createLiveTranscriptBatcher,
+  flushLiveTranscriptBatches,
+  mergeLiveSegmentDelta,
+  takeLiveSegmentDelta,
+} from "./live-transcript-batch";
+import { notifyMicFallback } from "./mic-fallback";
+import {
   LIVE_TRANSCRIPT_PREVIEW_SEGMENT_LIMIT,
   type LiveTranscriptPersistCallback,
   type OnStoppedCallback,
@@ -63,16 +71,13 @@ type EventListeners = {
   lifecycle: (payload: CaptureLifecycleEvent) => void;
   progress: (payload: CaptureStatusEvent) => void;
   data: (payload: CaptureDataEvent) => void;
+  // Vide le lot de transcription en direct et l'arrête (désabonnement).
+  dispose: () => void;
 };
 
 type LiveStore = GeneralState & TranscriptState & TranscriptActions;
 
 const CAPTURE_SNAPSHOT_HYDRATION_TIMEOUT_MS = 5_000;
-
-const createLiveSegmentDeltaBuffer = () => ({
-  removedIds: new Set<string>(),
-  upsertsById: new Map<string, LiveTranscriptSegment>(),
-});
 
 const trimLiveSegmentDeltaBuffer = (
   entries: Map<string, LiveTranscriptSegment> | Set<string>,
@@ -87,29 +92,13 @@ const trimLiveSegmentDeltaBuffer = (
 };
 
 const bufferLiveSegmentDelta = (
-  buffer: ReturnType<typeof createLiveSegmentDeltaBuffer>,
+  buffer: ReturnType<typeof createLiveSegmentDeltaAccumulator>,
   delta: LiveTranscriptSegmentDelta,
 ) => {
-  delta.removed_ids.forEach((id) => {
-    buffer.upsertsById.delete(id);
-    buffer.removedIds.delete(id);
-    buffer.removedIds.add(id);
-  });
-  delta.upserts.forEach((segment) => {
-    buffer.removedIds.delete(segment.id);
-    buffer.upsertsById.delete(segment.id);
-    buffer.upsertsById.set(segment.id, segment);
-  });
+  mergeLiveSegmentDelta(buffer, delta);
   trimLiveSegmentDeltaBuffer(buffer.removedIds);
   trimLiveSegmentDeltaBuffer(buffer.upsertsById);
 };
-
-const takeLiveSegmentDelta = (
-  buffer: ReturnType<typeof createLiveSegmentDeltaBuffer>,
-): LiveTranscriptSegmentDelta => ({
-  removed_ids: [...buffer.removedIds],
-  upserts: [...buffer.upsertsById.values()],
-});
 
 const getCaptureSnapshotWithTimeout = (): ReturnType<
   typeof listenerCommands.getCaptureSnapshot
@@ -163,7 +152,7 @@ const listenToAllSessionEvents = (
           handlers.data(payload),
         ),
       ]);
-      return unlisteners;
+      return [...unlisteners, handlers.dispose];
     },
     catch: (error) => error,
   });
@@ -332,18 +321,39 @@ const showCaptureWarning = <T extends GeneralState>(
   });
 };
 
+// Les deltas reçus pendant 100 ms sont appliqués en un seul `set` (issue 444).
+// Une autre session a pu prendre la main entre-temps : son lot est alors
+// ignoré, comme un delta reçu pour une session qui n'est plus suivie.
+const createSessionTranscriptBatcher = <T extends LiveStore>(
+  get: StoreApi<T>["getState"],
+  targetSessionId: string,
+) =>
+  createLiveTranscriptBatcher((batch) => {
+    if (get().live.sessionId !== targetSessionId) {
+      return;
+    }
+    get().applyLiveTranscriptBatch(batch);
+  });
+
 const createSessionEventHandlers = <T extends LiveStore>(
   set: StoreApi<T>["setState"],
   get: StoreApi<T>["getState"],
   targetSessionId: string,
-  handleTranscriptSegmentDelta: (
-    delta: LiveTranscriptSegmentDelta,
-  ) => void = get().handleTranscriptSegmentDelta,
+  // Retourne `true` quand le delta est pris en charge ailleurs (tampon
+  // d'`attachLiveSession` avant l'instantané natif).
+  interceptSegmentDelta?: (delta: LiveTranscriptSegmentDelta) => boolean,
+  requestedMic: string | null = null,
+  batcher = createSessionTranscriptBatcher(get, targetSessionId),
 ): EventListeners => ({
+  dispose: batcher.dispose,
   lifecycle: (payload) => {
     if (payload.session_id !== targetSessionId) {
       return;
     }
+
+    // Tout changement d'état de la capture (démarrage, finalisation, arrêt)
+    // s'appuie sur la transcription complète : aucun mot ne reste en attente.
+    flushLiveTranscriptBatches();
 
     if (payload.type === "stopped")
       toast.dismiss(`audio-capture-${targetSessionId}`);
@@ -629,6 +639,16 @@ const createSessionEventHandlers = <T extends LiveStore>(
       setLiveState(set, (live) => updateLiveProgress(live, payload));
       notifyCaptureWarning(get, targetSessionId);
       if (payload.type === "audio_ready")
+        notifyMicFallback(
+          targetSessionId,
+          requestedMic,
+          payload.device,
+          () =>
+            void openMicrophoneSettings().catch((error) =>
+              console.error("[listener] opening device settings failed", error),
+            ),
+        );
+      if (payload.type === "audio_ready")
         observeSpeakerMicrophone(targetSessionId, {
           device: payload.device,
           available:
@@ -693,11 +713,16 @@ const createSessionEventHandlers = <T extends LiveStore>(
           });
         });
       }
-      get().handleTranscriptDelta(targetSessionId, delta, {
-        updateLivePreview:
-          get().live.sessionId === targetSessionId &&
-          get().live.liveTranscriptionActive === true,
-      });
+      // Persistance des mots finaux : à la réception, sans attendre le lot.
+      if (delta.new_words.length > 0 || delta.replaced_ids.length > 0) {
+        get().handlePersistBySession[targetSessionId]?.(delta);
+      }
+      if (
+        get().live.sessionId === targetSessionId &&
+        get().live.liveTranscriptionActive === true
+      ) {
+        batcher.addPreviewDelta(delta);
+      }
       return;
     }
 
@@ -706,9 +731,10 @@ const createSessionEventHandlers = <T extends LiveStore>(
         return;
       }
 
-      handleTranscriptSegmentDelta(
-        payload.delta as unknown as LiveTranscriptSegmentDelta,
-      );
+      const delta = payload.delta as unknown as LiveTranscriptSegmentDelta;
+      if (!interceptSegmentDelta?.(delta)) {
+        batcher.addSegmentDelta(delta);
+      }
       return;
     }
 
@@ -730,6 +756,7 @@ export const startLiveSession = <T extends LiveStore>(
   targetSessionId: string,
   params: CaptureParams,
 ): Promise<boolean> => {
+  flushLiveTranscriptBatches();
   clearLiveEventUnlisteners(
     get().live.eventUnlistenersBySession[targetSessionId],
   );
@@ -737,7 +764,13 @@ export const startLiveSession = <T extends LiveStore>(
     delete live.eventUnlistenersBySession[targetSessionId];
   });
 
-  const handlers = createSessionEventHandlers(set, get, targetSessionId);
+  const handlers = createSessionEventHandlers(
+    set,
+    get,
+    targetSessionId,
+    undefined,
+    params.mic_device ?? null,
+  );
 
   const program = Effect.gen(function* () {
     const unlisteners = yield* listenToAllSessionEvents(handlers);
@@ -844,6 +877,7 @@ export const attachLiveSession = <T extends LiveStore>(
     onStopped?: OnStoppedCallback;
   },
 ): Promise<"attached" | "inactive" | "error"> => {
+  flushLiveTranscriptBatches();
   if (options?.onStopped) {
     setLiveState(set, (live) => {
       if (
@@ -937,8 +971,8 @@ export const attachLiveSession = <T extends LiveStore>(
   });
 
   let bufferedSegmentDeltas: ReturnType<
-    typeof createLiveSegmentDeltaBuffer
-  > | null = createLiveSegmentDeltaBuffer();
+    typeof createLiveSegmentDeltaAccumulator
+  > | null = createLiveSegmentDeltaAccumulator();
   const replayBufferedSegmentDeltas = () => {
     const buffer = bufferedSegmentDeltas;
     bufferedSegmentDeltas = null;
@@ -946,7 +980,7 @@ export const attachLiveSession = <T extends LiveStore>(
       return;
     }
     const delta = takeLiveSegmentDelta(buffer);
-    if (delta.removed_ids.length > 0 || delta.upserts.length > 0) {
+    if (delta) {
       get().handleTranscriptSegmentDelta(delta);
     }
   };
@@ -955,11 +989,11 @@ export const attachLiveSession = <T extends LiveStore>(
     get,
     targetSessionId,
     (delta) => {
-      if (bufferedSegmentDeltas) {
-        bufferLiveSegmentDelta(bufferedSegmentDeltas, delta);
-        return;
+      if (!bufferedSegmentDeltas) {
+        return false;
       }
-      get().handleTranscriptSegmentDelta(delta);
+      bufferLiveSegmentDelta(bufferedSegmentDeltas, delta);
+      return true;
     },
   );
 
@@ -1154,6 +1188,8 @@ export const stopLiveSession = <T extends GeneralState>(
   set: StoreApi<T>["setState"],
   get: StoreApi<T>["getState"],
 ) => {
+  // L'arrêt et la pause partent de la transcription complète.
+  flushLiveTranscriptBatches();
   const sessionId = get().live.sessionId;
 
   if (sessionId) {

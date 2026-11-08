@@ -2468,7 +2468,11 @@ describe("useStartListening", () => {
       } as never);
       vi.setSystemTime(1_040_000);
       status?.({
-        payload: { type: "connected", session_id: "session-1" },
+        payload: {
+          type: "connected",
+          session_id: "session-1",
+          gap_replayed: false,
+        },
       } as never);
       vi.setSystemTime(1_060_000);
       await act(async () => {
@@ -2491,6 +2495,49 @@ describe("useStartListening", () => {
       expect(saved?.[5]).toEqual([
         expect.objectContaining({ endedAt: 1_040_000 }),
       ]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // Issue #446 : une coupure que le rejeu natif a entièrement rattrapée
+  // n'a rien perdu ; aucun bandeau « Transcription interrompue ».
+  test("stt_interruption_fully_replayed_saves_no_gap", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      vi.setSystemTime(1_000_000);
+      const { result } = renderHook(() => useStartListening("session-1"));
+      await act(async () => {
+        await result.current();
+      });
+      const callbacks = startMock.mock.calls[0]?.[1];
+      const status = vi.mocked(transcriptionEvents.captureStatusEvent.listen)
+        .mock.calls[0]?.[0];
+      vi.setSystemTime(1_010_000);
+      status?.({
+        payload: { type: "connection_error", session_id: "session-1" },
+      } as never);
+      vi.setSystemTime(1_011_000);
+      status?.({
+        payload: {
+          type: "connected",
+          session_id: "session-1",
+          gap_replayed: true,
+        },
+      } as never);
+      vi.setSystemTime(1_060_000);
+      vi.mocked(saveIncompleteCapture).mockClear();
+      await act(async () => {
+        await callbacks.onStopped("session-1", {
+          chunkedAudio: true,
+          durationSeconds: 60,
+          audioPath: null,
+          requestedLiveTranscription: true,
+          liveTranscriptionActive: true,
+          needsBatchRepair: false,
+        });
+      });
+      expect(saveIncompleteCapture).not.toHaveBeenCalled();
     } finally {
       vi.useRealTimers();
     }

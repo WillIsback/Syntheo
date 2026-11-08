@@ -1,5 +1,5 @@
 import { Trans, useLingui } from "@lingui/react/macro";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 
 import { cn } from "@syntheo/utils";
 
@@ -23,6 +23,9 @@ export function TranscriptMargin({
 }) {
   const { t } = useLingui();
   const scrollRef = useRef<HTMLDivElement>(null);
+  // Les flèches ↑↓ de la transcription s'y placent, hors du texte (issue 436).
+  const [scrollControlsSlot, setScrollControlsSlot] =
+    useState<HTMLDivElement | null>(null);
 
   return (
     <aside
@@ -35,19 +38,22 @@ export function TranscriptMargin({
         <h2 className="text-faint text-[11px] font-semibold tracking-[0.08em] uppercase">
           <Trans>Transcription</Trans>
         </h2>
-        {canEdit && onEditModeChange ? (
-          <button
-            type="button"
-            aria-pressed={editMode}
-            onClick={() => onEditModeChange(!editMode)}
-            className={cn([
-              "text-muted-foreground hover:text-foreground hover:bg-accent rounded-md px-1.5 py-0.5 text-xs transition-colors",
-              "focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none",
-            ])}
-          >
-            {editMode ? <Trans>Done</Trans> : <Trans>Edit</Trans>}
-          </button>
-        ) : null}
+        <div className="flex items-center gap-1">
+          <div ref={setScrollControlsSlot} className="flex items-center" />
+          {canEdit && onEditModeChange ? (
+            <button
+              type="button"
+              aria-pressed={editMode}
+              onClick={() => onEditModeChange(!editMode)}
+              className={cn([
+                "text-muted-foreground hover:text-foreground hover:bg-accent rounded-md px-1.5 py-0.5 text-xs transition-colors",
+                "focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none",
+              ])}
+            >
+              {editMode ? <Trans>Done</Trans> : <Trans>Edit</Trans>}
+            </button>
+          ) : null}
+        </div>
       </div>
       <LiveTranscriptionLanguage sessionId={sessionId} />
       <div className="min-h-0 flex-1">
@@ -55,6 +61,7 @@ export function TranscriptMargin({
           <Transcript
             sessionId={sessionId}
             scrollRef={scrollRef}
+            scrollControlsSlot={scrollControlsSlot}
             editMode={editMode}
             onEditModeChange={onEditModeChange}
           />

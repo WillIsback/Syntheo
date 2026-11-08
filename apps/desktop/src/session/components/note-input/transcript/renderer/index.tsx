@@ -1,4 +1,3 @@
-import { t } from "@lingui/core/macro";
 import {
   type MouseEvent as ReactMouseEvent,
   type ReactNode,
@@ -11,9 +10,9 @@ import {
 import { flushSync } from "react-dom";
 import { useHotkeys } from "react-hotkeys-hook";
 
-import { ArrowDown, ArrowUp } from "@syntheo/ui/components/icons";
 import { cn } from "@syntheo/utils";
 
+import { TranscriptScrollControls } from "./scroll-controls";
 import {
   completeTranscriptContextSelection,
   focusTranscriptSelection,
@@ -108,8 +107,11 @@ export function TranscriptViewer({
   editMode = false,
   onEditModeChange,
   footer,
+  scrollControlsSlot,
 }: Readonly<{
   footer?: ReactNode;
+  /** Emplacement des flèches ↑↓ dans l'en-tête du panneau, s'il y en a un. */
+  scrollControlsSlot?: HTMLElement | null;
   transcriptIds: string[];
   liveSegments: Segment[];
   currentActive: boolean;
@@ -480,6 +482,15 @@ export function TranscriptViewer({
       registerSource={registerSource}
     >
       <div className="relative flex h-full flex-col">
+        {canScroll && (
+          <TranscriptScrollControls
+            slot={scrollControlsSlot}
+            isAtTop={isAtTop}
+            isAtBottom={isAtBottom}
+            onScrollToTop={scrollToTop}
+            onScrollToBottom={scrollToBottom}
+          />
+        )}
         <div
           ref={handleContainerRef}
           data-transcript-container
@@ -551,47 +562,6 @@ export function TranscriptViewer({
               editMode && !currentActive ? handleDeleteSelection : undefined
             }
           />
-        )}
-
-        {canScroll && (
-          <div
-            data-transcript-scroll-controls
-            className={cn([
-              "group/scroll-controls absolute top-1/2 right-1 z-40 flex -translate-y-1/2 flex-col overflow-hidden",
-              "text-muted-foreground/45 rounded-full border border-transparent bg-transparent",
-              "transition-[background-color,border-color,color,box-shadow,backdrop-filter] duration-150",
-              "hover:border-border/50 hover:bg-background/65 hover:text-foreground hover:shadow-sm hover:backdrop-blur-md",
-              "focus-within:border-border/50 focus-within:bg-background/65 focus-within:text-foreground focus-within:shadow-sm focus-within:backdrop-blur-md",
-            ])}
-          >
-            <button
-              type="button"
-              aria-label={t`Scroll to top`}
-              onClick={scrollToTop}
-              disabled={isAtTop}
-              className={cn([
-                "flex size-8 items-center justify-center",
-                "hover:bg-muted/55 active:bg-muted/70 focus-visible:bg-muted/55 focus-visible:outline-none",
-                "disabled:pointer-events-none disabled:opacity-30",
-              ])}
-            >
-              <ArrowUp aria-hidden="true" className="size-3.5" />
-            </button>
-            <div className="bg-border/20 group-hover/scroll-controls:bg-border/60 group-focus-within/scroll-controls:bg-border/60 h-px w-full transition-colors" />
-            <button
-              type="button"
-              aria-label={t`Scroll to bottom`}
-              onClick={scrollToBottom}
-              disabled={isAtBottom}
-              className={cn([
-                "flex size-8 items-center justify-center",
-                "hover:bg-muted/55 active:bg-muted/70 focus-visible:bg-muted/55 focus-visible:outline-none",
-                "disabled:pointer-events-none disabled:opacity-30",
-              ])}
-            >
-              <ArrowDown aria-hidden="true" className="size-3.5" />
-            </button>
-          </div>
         )}
       </div>
     </TranscriptSelectionProvider>

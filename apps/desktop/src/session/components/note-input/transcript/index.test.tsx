@@ -315,4 +315,29 @@ describe("Transcript", () => {
     expect(banner).toContain(formatInterruptions(interruptions));
     expect(banner).not.toMatch(/audio|Re-transcribe/i);
   });
+
+  it("keeps the interruption banner out of the transcript's height", () => {
+    listenerState.getSessionMode = () => "inactive";
+    transcripts = [{ id: transcriptId, hasWords: true }];
+    useIncompleteCaptureMock.mockReturnValue({
+      interruptions: [
+        {
+          startedAt: Date.UTC(2026, 10, 8, 18, 49, 19),
+          endedAt: Date.UTC(2026, 10, 8, 18, 49, 20),
+        },
+      ],
+    });
+    render(<Transcript sessionId={sessionId} scrollRef={createRef()} />);
+    const banner = screen.getByRole("status");
+    const viewer = screen.getByTestId("transcript-viewer");
+    const screenArea = viewer.closest("[data-transcript-screen]");
+    // Le bandeau ne rétrécit pas et la vue prend la hauteur restante : elle
+    // ne déborde plus sous le bord et aucune ligne n'est masquée (issue 434).
+    expect(banner.className).toMatch(/\bshrink-0\b/);
+    expect(screenArea).not.toBeNull();
+    expect(screenArea!.className).toMatch(/\bmin-h-0\b/);
+    expect(screenArea!.className).toMatch(/\bflex-1\b/);
+    expect(screenArea!.contains(banner)).toBe(false);
+    expect(banner.parentElement).toBe(screenArea!.parentElement);
+  });
 });

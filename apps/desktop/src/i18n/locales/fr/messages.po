@@ -1372,6 +1372,7 @@ msgid "Device authentication is not available on this computer."
 msgstr "L'authentification de l'appareil n'est pas disponible sur cet ordinateur."
 
 #: src/store/zustand/listener/general-live.ts
+#: src/store/zustand/listener/mic-fallback.ts
 msgid "Device settings"
 msgstr "Réglages des périphériques"
 
@@ -1818,6 +1819,10 @@ msgstr "Dossiers"
 #: src/templates/template-icon-picker.tsx
 msgid "Food & Drink"
 msgstr "Restauration et boissons"
+
+#: src/stt/interruptions.ts
+msgid "for a few seconds at {start}"
+msgstr "quelques secondes à {start}"
 
 #: src/settings/general/notification.tsx
 msgid "For enabled notifications"
@@ -2572,6 +2577,10 @@ msgstr "micro, casque, écouteurs, son, périphérique audio, webcam"
 #: src/settings/search-index.ts
 msgid "Microphone"
 msgstr "Microphone"
+
+#: src/store/zustand/listener/mic-fallback.ts
+msgid "Microphone \"{missing}\" not found"
+msgstr "Micro « {missing} » introuvable"
 
 #: src/onboarding/permissions.tsx
 msgid "Microphone access turned on"
@@ -3448,6 +3457,14 @@ msgstr "L'enregistrement n'a pas pu démarrer"
 msgid "Recording status prompts"
 msgstr "Invites d'état d'enregistrement"
 
+#: src/store/zustand/listener/mic-fallback.ts
+msgid "Recording with \"{opened}\" instead. Check that the microphone is plugged in, or choose another one."
+msgstr "Enregistrement avec « {opened} » à la place. Vérifiez que le micro est branché, ou choisissez-en un autre."
+
+#: src/store/zustand/listener/mic-fallback.ts
+msgid "Recording with the default microphone instead. Check that the microphone is plugged in, or choose another one."
+msgstr "Enregistrement avec le micro par défaut à la place. Vérifiez que le micro est branché, ou choisissez-en un autre."
+
 #: src/main/windows-title-bar.tsx
 msgid "Redo"
 msgstr "Rétablir"
@@ -3751,11 +3768,11 @@ msgstr "Enregistrement..."
 msgid "screen, slides, screenshot, presentation, screen sharing"
 msgstr "écran, diapositives, capture d'écran, présentation, partage d'écran"
 
-#: src/session/components/note-input/transcript/renderer/index.tsx
+#: src/session/components/note-input/transcript/renderer/scroll-controls.tsx
 msgid "Scroll to bottom"
 msgstr "Faire défiler jusqu'en bas"
 
-#: src/session/components/note-input/transcript/renderer/index.tsx
+#: src/session/components/note-input/transcript/renderer/scroll-controls.tsx
 msgid "Scroll to top"
 msgstr "Faire défiler jusqu'en haut"
 
@@ -4163,6 +4180,7 @@ msgid "Speak into any text field, in any app. The text is inserted when you fini
 msgstr "Parlez dans n'importe quel champ de texte, dans n'importe quelle application. Le texte s'insère quand vous avez terminé."
 
 #: src/session/components/speaker-naming/speaker-card.tsx
+#: src/session/components/speaker-naming/speakers.ts
 msgid "Speaker {number}"
 msgstr "Locuteur {number}"
 
@@ -4937,6 +4955,10 @@ msgstr "Transcription · injoignable"
 msgid "Transcription failed"
 msgstr "Échec de la transcription"
 
+#: src/stt/interruptions.ts
+msgid "Transcription interrupted {gaps}"
+msgstr "Transcription interrompue {gaps}"
+
 #: src/settings/search-index.ts
 msgid "transcription model, Whisper, Parakeet, speech recognition"
 msgstr "modèle de transcription, Whisper, Parakeet, reconnaissance vocale"
@@ -5346,6 +5368,10 @@ msgstr "Hier"
 #: src/templates/utils.ts
 msgid "you"
 msgstr "vous"
+
+#: src/session/components/speaker-naming/speakers.ts
+msgid "You"
+msgstr "Vous"
 
 #: src/stt/live-transcript-interrupted.ts
 msgid "you are offline"

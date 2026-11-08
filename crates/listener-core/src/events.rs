@@ -39,7 +39,13 @@ pub enum SessionProgressEvent {
     #[serde(rename = "connecting")]
     Connecting { session_id: String },
     #[serde(rename = "connected")]
-    Connected { session_id: String, adapter: String },
+    Connected {
+        session_id: String,
+        adapter: String,
+        /// Reconnection whose replay carried all the audio of the outage: the
+        /// transcript lost nothing, so the outage is not reported as a gap.
+        gap_replayed: bool,
+    },
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone)]

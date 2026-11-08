@@ -161,6 +161,15 @@ export function LivingDocument(props: LivingDocumentProps) {
   );
 }
 
+// Place réservée sous le document à la capsule flottante (issue 436) : son
+// décalage du bas (`bottom-[22px]`, floating/index.tsx), sa hauteur (46px :
+// p-1.5 autour de boutons de 34px), puis son ombre (--shadow-capsule, ~20px
+// au-dessus) et une respiration. Toutes les étapes ont la même capsule. La
+// dernière ligne défile au-dessus de la barre ; le défilement vers le curseur
+// s'arrête lui aussi au-dessus.
+const CAPSULE_CLEARANCE = "pb-[calc(22px+46px+4rem)]";
+const CAPSULE_SCROLL_PADDING = "scroll-pb-[calc(22px+46px+2rem)]";
+
 function DocumentLayout({
   stage,
   margin,
@@ -199,11 +208,15 @@ function DocumentLayout({
           ref={scrollRef}
           onMouseDown={onMouseDown}
           onScroll={onScroll}
-          className="min-h-0 scroll-pb-20 overflow-x-hidden overflow-y-auto"
+          className={cn([
+            "min-h-0 overflow-x-hidden overflow-y-auto",
+            CAPSULE_SCROLL_PADDING,
+          ])}
         >
           <div
             className={cn([
-              "flex flex-col gap-[18px] pt-6 pb-24",
+              "flex flex-col gap-[18px] pt-6",
+              CAPSULE_CLEARANCE,
               !withMargin && "mx-auto w-full max-w-[760px]",
             ])}
           >

@@ -1,5 +1,5 @@
 import { useLingui } from "@lingui/react/macro";
-import type { ReactNode } from "react";
+import type { ReactNode, Ref } from "react";
 
 import {
   ArrowClockwise,
@@ -61,6 +61,7 @@ export function formatVersionDate(
 // Partie visible du sélecteur « Mes notes | Synthèse · vN ▾ », sans accès aux
 // données : le conteneur (summary-switcher.tsx) lui passe tout.
 export function SummarySwitcherView({
+  ref,
   view,
   onSelectView,
   currentVersion,
@@ -80,6 +81,9 @@ export function SummarySwitcherView({
   menuOpen,
   onMenuOpenChange,
 }: {
+  // Élément d'ancrage du sélecteur de modèle (issue 431) : sans lui, Radix
+  // n'a rien sur quoi placer le sélecteur et le laisse hors de l'écran.
+  ref?: Ref<HTMLDivElement>;
   view: SynthesisView;
   onSelectView: (view: SynthesisView) => void;
   currentVersion: number;
@@ -111,6 +115,7 @@ export function SummarySwitcherView({
 
   return (
     <div
+      ref={ref}
       role="group"
       aria-label={t`Note view`}
       data-tauri-drag-region="false"

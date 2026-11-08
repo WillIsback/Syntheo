@@ -1,3 +1,5 @@
+import { t } from "@lingui/core/macro";
+
 import type { Segment, SegmentKey } from "~/stt/live-segment";
 
 // Issue 321 : « Nommer les intervenants ». Tout est calculé ici, en local et
@@ -114,6 +116,23 @@ export type CaptureSegments = {
 
 export function isAnonymousSpeakerLabel(label: string | undefined): boolean {
   return ANONYMOUS_LABEL.test(label ?? "");
+}
+
+/**
+ * Libellé affiché d'un locuteur. Le rendu (Rust et `SegmentKeyUtils`) produit
+ * « Speaker N » et « You » : ces valeurs restent telles quelles dans les
+ * données, les comparaisons et le contexte du modèle ; seul l'affichage est
+ * traduit.
+ */
+export function displaySpeakerLabel(label: string): string {
+  const number = ANONYMOUS_LABEL.exec(label)?.[1];
+  if (number) {
+    return t`Speaker ${number}`;
+  }
+  if (label === "You") {
+    return t`You`;
+  }
+  return label;
 }
 
 export function summaryMentionsAnonymousSpeakers(markdown: string): boolean {

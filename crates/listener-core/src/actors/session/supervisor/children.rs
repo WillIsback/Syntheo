@@ -3,7 +3,10 @@ use ractor::{Actor, ActorCell, ActorRef};
 use syntheo_supervisor::{RestartBudget, RetryStrategy, spawn_with_retry};
 
 use crate::actors::session::types::SessionContext;
-use crate::actors::{ChannelMode, ListenerActor, ListenerArgs, SourceActor, SourceArgs, SourceMsg};
+use crate::actors::{
+    ChannelMode, ListenerActor, ListenerArgs, ListenerRefreshReplay, SourceActor, SourceArgs,
+    SourceMsg,
+};
 
 use super::SessionState;
 
@@ -83,6 +86,7 @@ pub(super) async fn spawn_listener(
     supervisor_cell: ActorCell,
     ctx: &SessionContext,
     stream_offset_secs: Option<f64>,
+    gap_replayed: bool,
 ) -> Result<(ActorCell, bool), ractor::SpawnErr> {
     let mode = ChannelMode::determine(ctx.params.onboarding);
     let mic_isolated = source_mic_isolated(ctx).await;
@@ -102,6 +106,7 @@ pub(super) async fn spawn_listener(
             session_started_at: ctx.started_at_instant,
             session_started_at_unix: ctx.started_at_system,
             stream_offset_secs,
+            gap_replayed,
             session_id: ctx.params.session_id.clone(),
             participant_human_ids: ctx.params.participant_human_ids.clone(),
             self_human_id: ctx.params.self_human_id.clone(),
@@ -190,24 +195,24 @@ pub(super) async fn attach_listener_to_source(state: &SessionState) {
     }
 }
 
-pub(super) async fn stop_listener(state: &mut SessionState, reason: &str) -> f64 {
+pub(super) async fn stop_listener(state: &mut SessionState, reason: &str) -> ListenerRefreshReplay {
     if let Some(cell) = state.listener_cell.take() {
-        let replay_duration_secs = prepare_listener_refresh(state).await;
+        let replay = prepare_listener_refresh(state).await;
         stop_child(&cell, reason, "listener").await;
-        return replay_duration_secs;
+        return replay;
     }
 
-    0.0
+    ListenerRefreshReplay::NONE
 }
 
-pub(super) async fn prepare_listener_refresh(state: &SessionState) -> f64 {
+pub(super) async fn prepare_listener_refresh(state: &SessionState) -> ListenerRefreshReplay {
     let Some(source_cell) = &state.source_cell else {
-        return 0.0;
+        return ListenerRefreshReplay::NONE;
     };
 
     let source_ref: ActorRef<SourceMsg> = source_cell.clone().into();
     match ractor::call_t!(source_ref, SourceMsg::PrepareListenerRefresh, 500) {
-        Ok(replay) => replay.duration_secs,
+        Ok(replay) => replay,
         Err(error) => {
             tracing::warn!(?error, "failed_to_prepare_listener_refresh");
             if let Some(source_cell) = &state.source_cell {
@@ -216,7 +221,7 @@ pub(super) async fn prepare_listener_refresh(state: &SessionState) -> f64 {
                     state.mode.listener_routing(state.listener_cell.as_ref()),
                 ));
             }
-            0.0
+            ListenerRefreshReplay::NONE
         }
     }
 }

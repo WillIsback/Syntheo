@@ -234,6 +234,32 @@ describe("LivingDocument", () => {
     expect(document.querySelector(".max-w-\\[760px\\]")).not.toBeNull();
   });
 
+  // Issue 436 : la capsule flottante (22px du bas, 46px de haut) ne recouvre
+  // pas la fin du document, quelle que soit l'étape.
+  it.each(["prepare", "listen", "synthesis"] as const)(
+    "%s: leaves room under the document for the floating capsule",
+    (stage) => {
+      render(
+        <LivingDocument
+          {...makeProps({
+            stage,
+            sessionMode: stage === "listen" ? "active" : "inactive",
+            editorTabs: [{ type: "enhanced", id: "note-1" }],
+            currentTab: { type: "enhanced", id: "note-1" },
+          })}
+        />,
+      );
+
+      const scroller = screen
+        .getByRole("textbox", { name: "Session title" })
+        .closest(".overflow-y-auto");
+      expect(scroller?.className).toContain("scroll-pb-[calc(22px+46px+2rem)]");
+      expect(scroller?.firstElementChild?.className).toContain(
+        "pb-[calc(22px+46px+4rem)]",
+      );
+    },
+  );
+
   it("stores the meeting type as the summary template", () => {
     render(<LivingDocument {...makeProps()} />);
 

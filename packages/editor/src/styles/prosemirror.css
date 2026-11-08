@@ -40,12 +40,23 @@
   outline-offset: 1px;
 }
 
+/* La consigne flotte à gauche pour laisser le curseur en début de ligne, mais
+   garde sa hauteur réelle : une marge droite de -100 % annule sa largeur pour
+   la ligne du curseur, et flow-root fait grandir le bloc vide jusqu'au bas de
+   la consigne. Sur plusieurs lignes, elle repousse donc le contenu suivant au
+   lieu de le recouvrir (issue 430). */
+.ProseMirror .is-editor-empty:first-child,
+.ProseMirror .is-empty {
+  display: flow-root;
+}
+
 .ProseMirror .is-editor-empty:first-child::before {
   content: attr(data-placeholder);
   float: left;
   color: #e5e5e5;
   pointer-events: none;
-  height: 0;
+  width: 100%;
+  margin-right: -100%;
 }
 
 .ProseMirror .is-empty::before {
@@ -53,7 +64,8 @@
   float: left;
   color: #e5e5e5;
   pointer-events: none;
-  height: 0;
+  width: 100%;
+  margin-right: -100%;
 }
 
 /* IME composition paints glyphs in the DOM before ProseMirror state updates,
