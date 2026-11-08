@@ -11,6 +11,7 @@ use crate::error::{Error, Result};
 use crate::schema::CatalogStore;
 use crate::subscriptions::{QueryEventPayload, RefreshJob, Registry};
 use crate::types::{DependencyAnalysis, QueryEventSink, SubscriptionRegistration};
+use crate::visibility::wait_for_announced_commits;
 use crate::watch::WatchId;
 use syntheo_db_change::{ChangeNotifier, TableChange};
 
@@ -92,6 +93,9 @@ impl<S: QueryEventSink> LiveQueryRuntime<S> {
         sink: S,
     ) -> Result<SubscriptionRegistration> {
         let baseline_seq = self.change_notifier.current_seq();
+        // Les validations comptées dans `baseline_seq` doivent être visibles par la charge
+        // initiale, sinon elle serait périmée et la séquence ignorée à l'activation.
+        wait_for_announced_commits(self.db.pool()).await;
         let analysis = self.analyze_subscription(&sql).await;
         let registered = self
             .subscriptions
@@ -197,6 +201,7 @@ impl<S: QueryEventSink> LiveQueryRuntime<S> {
             .await;
 
         if latest_dependency_seq > baseline_seq {
+            wait_for_announced_commits(self.db.pool()).await;
             self.subscriptions
                 .refresh(
                     &self.executor,
@@ -229,6 +234,9 @@ async fn next_refresh_jobs<S>(
     subscriptions: &Registry<S>,
 ) -> Option<Vec<RefreshJob>> {
     let batch = receive_change_batch(change_rx, change_notifier).await?;
+    // Les changements sont annoncés depuis le crochet de validation, avant que la validation
+    // soit effective : sans cette barrière, la relecture peut encore voir l'ancien état.
+    wait_for_announced_commits(db.pool()).await;
     Some(collect_refresh_jobs(db, catalog, subscriptions, batch).await)
 }
 

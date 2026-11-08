@@ -8,6 +8,38 @@ use db_reactive::Error;
 use serde_json::json;
 
 #[tokio::test]
+async fn subscription_loads_on_a_read_only_database() {
+    let (dir, pool, runtime) = common::setup_runtime().await;
+    insert_daily_note(&pool, "note-ro", "2026-04-20", "user-1").await;
+    drop(runtime);
+    pool.close().await;
+
+    // La barrière de visibilité ne peut pas prendre le verrou d'écriture d'une base en lecture
+    // seule : son repli doit laisser l'abonnement se charger, sans erreur ni blocage.
+    let read_only = syntheo_db_core::Db::connect_local_read_only(dir.path().join("app.db"))
+        .await
+        .unwrap();
+    let runtime: common::TestRuntime =
+        db_reactive::LiveQueryRuntime::new(std::sync::Arc::new(read_only));
+    let (sink, events) = TestSink::capture();
+
+    tokio::time::timeout(
+        std::time::Duration::from_secs(2),
+        subscribe_all_daily_notes(&runtime, sink),
+    )
+    .await
+    .expect("l'abonnement ne doit pas rester bloqué sur une base en lecture seule")
+    .unwrap();
+
+    expect_result(
+        &events,
+        0,
+        vec![json!({ "id": "note-ro", "date": "2026-04-20" })],
+    )
+    .await;
+}
+
+#[tokio::test]
 async fn initial_sink_failure_rolls_back_registration() {
     let (_dir, _pool, runtime) = common::setup_runtime().await;
     let (sink, _events) = TestSink::fail_after(0);

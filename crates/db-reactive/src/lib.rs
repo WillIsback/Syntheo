@@ -6,6 +6,7 @@ mod runtime;
 mod schema;
 mod subscriptions;
 mod types;
+mod visibility;
 mod watch;
 
 pub use error::{Error, Result};
