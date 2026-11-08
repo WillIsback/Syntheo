@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-stop-microphone-level-monitor"
+description = "Enables the stop_microphone_level_monitor command without any pre-configured scope."
+commands.allow = ["stop_microphone_level_monitor"]
+
+[[permission]]
+identifier = "deny-stop-microphone-level-monitor"
+description = "Denies the stop_microphone_level_monitor command without any pre-configured scope."
+commands.deny = ["stop_microphone_level_monitor"]

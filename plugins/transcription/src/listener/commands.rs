@@ -103,6 +103,40 @@ pub async fn list_microphone_devices<R: tauri::Runtime>(
         .map_err(|e| e.to_string())
 }
 
+// Mètre de niveau des réglages (issue 419) : seul un niveau entre 0 et 1
+// traverse l'IPC, jamais l'audio.
+#[tauri::command]
+#[specta::specta]
+pub async fn start_microphone_level_monitor<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    owner: String,
+    device: Option<String>,
+    levels: tauri::ipc::Channel<f32>,
+) -> Result<(), String> {
+    use tauri::Manager;
+    let audio = app
+        .state::<std::sync::Arc<dyn syntheo_audio::AudioProvider>>()
+        .inner()
+        .clone();
+    app.state::<crate::listener::level_monitor::MicrophoneLevelMonitor>()
+        .start(audio, owner, device, move |level| {
+            levels.send(level).is_ok()
+        })
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn stop_microphone_level_monitor<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    owner: String,
+) -> Result<(), String> {
+    use tauri::Manager;
+    app.state::<crate::listener::level_monitor::MicrophoneLevelMonitor>()
+        .stop(&owner);
+    Ok(())
+}
+
 #[tauri::command]
 #[specta::specta]
 pub async fn get_current_microphone_device<R: tauri::Runtime>(
@@ -152,6 +186,9 @@ pub async fn start_capture<R: tauri::Runtime>(
     use crate::live_journal::{LiveJournalRegistry, register_app_journal};
     use tauri::Manager;
 
+    // Une capture a la priorité sur le mètre des réglages : il libère le micro.
+    app.state::<crate::listener::level_monitor::MicrophoneLevelMonitor>()
+        .stop_all();
     let session_id = params.session_id.clone();
     let _audio_guard = app.fs_sync().lock_session_audio(&session_id).await;
     let live_transcript = params.live_transcript.clone();

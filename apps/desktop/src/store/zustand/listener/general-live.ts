@@ -240,59 +240,96 @@ const clearLiveEventUnlisteners = (unlisteners?: (() => void)[]) => {
   unlisteners?.forEach((fn) => fn());
 };
 
+// Le bouton « Device settings » ouvre la page Réunions sur la ligne
+// Microphone, surlignée comme après une recherche de paramètres (issue 419).
+// L'ancien onglet `general` n'existe plus : il retombait sur Profil.
+export const openMicrophoneSettings = async () => {
+  const [{ requestSettingFocus }, { useTabs }] = await Promise.all([
+    import("~/settings/setting-focus"),
+    import("~/store/zustand/tabs"),
+  ]);
+  requestSettingFocus("meetings-microphone");
+  useTabs.getState().openNew({ type: "settings", state: { tab: "meetings" } });
+};
+
 const notifyCaptureWarning = <T extends GeneralState>(
   get: StoreApi<T>["getState"],
   targetSessionId: string,
 ) => {
   const warning = getCaptureWarning(get().live);
-  if (warning) {
-    toast.warning(warning, {
-      id: `audio-capture-${targetSessionId}`,
-      duration: Infinity,
-      dismissible: false,
-      closeButton: false,
-      description: t`Choose a working audio device and retry. Audio missing during this interruption cannot be recovered.`,
-      action: {
-        label: t`Retry`,
-        dismissOnClick: false,
-        onClick: () => {
-          void import("~/settings/queries")
-            .then(async ({ getStoredSettingValues }) => {
-              const settings = await getStoredSettingValues();
-              if (
-                get().live.sessionId !== targetSessionId ||
-                get().live.status !== "active"
-              )
-                return;
-              const result = await listenerCommands.retryAudioCapture(
-                targetSessionId,
-                settings.values.microphone_device || null,
-              );
-              if (result.status === "error")
-                toast.error(t`Audio retry failed`, {
-                  description: result.error,
-                });
-            })
-            .catch((error) =>
-              console.error("[listener] audio retry failed", error),
-            );
-        },
-      },
-      secondaryAction: {
-        dismissOnClick: false,
-        label: t`Device settings`,
-        onClick: () => {
-          void import("~/store/zustand/tabs").then(({ useTabs }) =>
-            useTabs
-              .getState()
-              .openNew({ type: "settings", state: { tab: "general" } }),
-          );
-        },
-      },
-    });
-  } else {
+  if (!warning) {
     toast.dismiss(`audio-capture-${targetSessionId}`);
+    return;
   }
+
+  showCaptureWarning(get, targetSessionId, warning, false);
+  // Sans aucune entrée audio (PC ou VM sans micro), « choisissez un
+  // périphérique qui fonctionne » n'a pas de sens : on le dit clairement.
+  void Promise.resolve()
+    .then(() => listenerCommands.listMicrophoneDevices())
+    .then((result) => {
+      if (
+        result.status === "ok" &&
+        result.data.length === 0 &&
+        getCaptureWarning(get().live) === warning
+      )
+        showCaptureWarning(get, targetSessionId, warning, true);
+    })
+    .catch((error) =>
+      console.error("[listener] microphone listing failed", error),
+    );
+};
+
+const showCaptureWarning = <T extends GeneralState>(
+  get: StoreApi<T>["getState"],
+  targetSessionId: string,
+  warning: string,
+  noMicrophone: boolean,
+) => {
+  toast.warning(warning, {
+    id: `audio-capture-${targetSessionId}`,
+    duration: Infinity,
+    dismissible: false,
+    closeButton: false,
+    description: noMicrophone
+      ? t`No microphone detected. Plug in a microphone, then retry. Audio missing during this interruption cannot be recovered.`
+      : t`Choose a working audio device and retry. Audio missing during this interruption cannot be recovered.`,
+    action: {
+      label: t`Retry`,
+      dismissOnClick: false,
+      onClick: () => {
+        void import("~/settings/queries")
+          .then(async ({ getStoredSettingValues }) => {
+            const settings = await getStoredSettingValues();
+            if (
+              get().live.sessionId !== targetSessionId ||
+              get().live.status !== "active"
+            )
+              return;
+            const result = await listenerCommands.retryAudioCapture(
+              targetSessionId,
+              settings.values.microphone_device || null,
+            );
+            if (result.status === "error")
+              toast.error(t`Audio retry failed`, {
+                description: result.error,
+              });
+          })
+          .catch((error) =>
+            console.error("[listener] audio retry failed", error),
+          );
+      },
+    },
+    secondaryAction: {
+      dismissOnClick: false,
+      label: t`Device settings`,
+      onClick: () => {
+        openMicrophoneSettings().catch((error) =>
+          console.error("[listener] opening device settings failed", error),
+        );
+      },
+    },
+  });
 };
 
 const createSessionEventHandlers = <T extends LiveStore>(

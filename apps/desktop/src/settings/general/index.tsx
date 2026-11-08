@@ -2,6 +2,7 @@ import { t } from "@lingui/core/macro";
 import { Trans } from "@lingui/react/macro";
 import { useForm } from "@tanstack/react-form";
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 
 import { commands as listenerCommands } from "@syntheo/plugin-transcription";
 import { CircleNotch } from "@syntheo/ui/components/icons";
@@ -189,6 +190,8 @@ function SettingsSectionContent({
     enabled: section === "meetings",
     refetchInterval: 3_000,
   });
+  // « Rechercher à nouveau » (issue 419) : relance la détection tout de suite.
+  const [searchingMicrophones, setSearchingMicrophones] = useState(false);
   return (
     <div className="flex flex-col gap-8">
       {section === "app" ? (
@@ -370,6 +373,14 @@ function SettingsSectionContent({
                 devices: microphoneDevicesQuery.data ?? [],
                 onChange: (value) =>
                   setSettingValues({ microphone_device: value }),
+                devicesLoaded: microphoneDevicesQuery.isSuccess,
+                searching: searchingMicrophones,
+                onSearchAgain: () => {
+                  setSearchingMicrophones(true);
+                  void microphoneDevicesQuery
+                    .refetch()
+                    .finally(() => setSearchingMicrophones(false));
+                },
               }}
             />
           </div>

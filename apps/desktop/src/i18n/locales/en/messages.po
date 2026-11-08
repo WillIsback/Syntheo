@@ -2094,6 +2094,14 @@ msgstr "Include"
 msgid "Include meeting ID"
 msgstr "Include meeting ID"
 
+#: src/settings/general/microphone-level.tsx
+msgid "Input level"
+msgstr "Input level"
+
+#: src/settings/general/microphone-level.tsx
+msgid "Input level unavailable"
+msgstr "Input level unavailable"
+
 #: src/settings/developers/cli.tsx
 msgid "Install"
 msgstr "Install"
@@ -2818,6 +2826,14 @@ msgstr "No matching people"
 #: src/session/components/living-document/meeting-type-picker.tsx
 msgid "No meeting type found"
 msgstr "No meeting type found"
+
+#: src/settings/general/audio-settings.tsx
+msgid "No microphone detected. Plug in a microphone or check permissions."
+msgstr "No microphone detected. Plug in a microphone or check permissions."
+
+#: src/store/zustand/listener/general-live.ts
+msgid "No microphone detected. Plug in a microphone, then retry. Audio missing during this interruption cannot be recovered."
+msgstr "No microphone detected. Plug in a microphone, then retry. Audio missing during this interruption cannot be recovered."
 
 #: src/session/components/note-input/transcript/renderer/speaker-assign.tsx
 msgid "No people"
@@ -3720,6 +3736,10 @@ msgstr "Search a setting"
 #: src/templates/template-sidebar.tsx
 msgid "Search a template"
 msgstr "Search a template"
+
+#: src/settings/general/audio-settings.tsx
+msgid "Search again"
+msgstr "Search again"
 
 #: src/sidebar/automations.tsx
 msgid "Search automations..."
