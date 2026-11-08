@@ -4,6 +4,7 @@ const MAX_MENU_BAR_LABEL_WIDTH: usize = 30;
 
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
+use crate::locale::{Label, NativeLocale};
 pub use crate::schedule_labels::{TrayScheduleLabels, apply_untitled_fallback};
 
 #[derive(Debug, Clone, serde::Deserialize, specta::Type, PartialEq)]
@@ -35,6 +36,7 @@ pub fn agenda_sections(
     events: &[TrayScheduleEvent],
     now_ms: f64,
     show_events: bool,
+    locale: NativeLocale,
 ) -> Vec<TrayAgendaSection> {
     if !show_events {
         return Vec::new();
@@ -49,7 +51,7 @@ pub fn agenda_sections(
                 .ends_at_ms
                 .map_or(event.starts_at_ms > now_ms, |end_ms| end_ms > now_ms)
         })
-        .filter_map(|event| agenda_day_label(event, now_ms).map(|label| (event, label)))
+        .filter_map(|event| agenda_day_label(event, now_ms, locale).map(|label| (event, label)))
         .take(3)
     {
         if sections.last().is_none_or(|section| section.label != label) {
@@ -68,15 +70,19 @@ pub fn agenda_sections(
     sections
 }
 
-fn agenda_day_label(event: &TrayScheduleEvent, now_ms: f64) -> Option<&'static str> {
+fn agenda_day_label(
+    event: &TrayScheduleEvent,
+    now_ms: f64,
+    locale: NativeLocale,
+) -> Option<&'static str> {
     if !event.day_start_ms.is_finite() || !event.previous_day_start_ms.is_finite() {
         return None;
     }
 
     if now_ms >= event.day_start_ms {
-        Some("Aujourd’hui")
+        Some(Label::AgendaToday.text_in(locale))
     } else if now_ms >= event.previous_day_start_ms {
-        Some("Demain")
+        Some(Label::AgendaTomorrow.text_in(locale))
     } else {
         None
     }
@@ -389,7 +395,7 @@ mod tests {
         }
 
         assert_eq!(
-            agenda_sections(&events, now, true),
+            agenda_sections(&events, now, true, NativeLocale::Fr),
             vec![
                 TrayAgendaSection {
                     label: "Aujourd’hui".to_string(),
@@ -444,12 +450,20 @@ mod tests {
         next_day.previous_day_start_ms = midnight - 86_400_000.0;
 
         assert_eq!(
-            agenda_sections(&[next_day.clone()], midnight - 1.0, true)[0].label,
+            agenda_sections(&[next_day.clone()], midnight - 1.0, true, NativeLocale::Fr)[0].label,
             "Demain"
         );
         assert_eq!(
-            agenda_sections(&[next_day], midnight, true)[0].label,
+            agenda_sections(&[next_day.clone()], midnight, true, NativeLocale::Fr)[0].label,
             "Aujourd’hui"
+        );
+        assert_eq!(
+            agenda_sections(&[next_day.clone()], midnight - 1.0, true, NativeLocale::En)[0].label,
+            "Tomorrow"
+        );
+        assert_eq!(
+            agenda_sections(&[next_day], midnight, true, NativeLocale::En)[0].label,
+            "Today"
         );
     }
 }

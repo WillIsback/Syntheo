@@ -4,10 +4,11 @@ use tauri::{
 };
 
 use super::MenuItemHandler;
+use crate::locale::Label;
 
-/// Libellé du menu natif. Il doit rester identique à la traduction française
-/// de « Report a Bug » dans le catalogue Lingui de l'application (issue 400).
-const LABEL: &str = "Signaler un bug";
+/// Libellé du menu natif. Il doit rester identique à « Report a Bug » et à sa
+/// traduction française dans le catalogue Lingui de l'application (issue 400).
+const LABEL: Label = Label::HelpReportBug;
 
 pub struct HelpReportBug;
 
@@ -15,7 +16,7 @@ impl MenuItemHandler for HelpReportBug {
     const ID: &'static str = "syntheo_help_report_bug";
 
     fn build(app: &AppHandle<tauri::Wry>) -> Result<MenuItemKind<tauri::Wry>> {
-        let item = MenuItem::with_id(app, Self::ID, LABEL, true, None::<&str>)?;
+        let item = MenuItem::with_id(app, Self::ID, LABEL.text(), true, None::<&str>)?;
         Ok(MenuItemKind::MenuItem(item))
     }
 
@@ -27,6 +28,7 @@ impl MenuItemHandler for HelpReportBug {
 #[cfg(test)]
 mod tests {
     use super::LABEL;
+    use crate::locale::NativeLocale;
 
     const FR_CATALOG: &str =
         include_str!("../../../../apps/desktop/src/i18n/locales/fr/messages.po");
@@ -40,11 +42,16 @@ mod tests {
 
     #[test]
     fn label_is_signaler_un_bug() {
-        assert_eq!(LABEL, "Signaler un bug");
+        assert_eq!(LABEL.text_in(NativeLocale::Fr), "Signaler un bug");
     }
 
     #[test]
     fn label_matches_app_catalog() {
-        assert_eq!(fr_translation("Report a Bug"), Some(LABEL));
+        let source = LABEL.text_in(NativeLocale::En);
+        assert_eq!(source, "Report a Bug");
+        assert_eq!(
+            fr_translation(source),
+            Some(LABEL.text_in(NativeLocale::Fr))
+        );
     }
 }

@@ -4,6 +4,7 @@ Default permissions for the plugin
 
 #### This default permission set includes the following:
 
+- `allow-set-native-menu-locale`
 - `allow-set-tray-icon-visible`
 - `allow-set-tray-recording-title`
 - `allow-set-tray-schedule`
@@ -16,6 +17,32 @@ Default permissions for the plugin
 <th>Description</th>
 </tr>
 
+
+<tr>
+<td>
+
+`syntheo-tray:allow-set-native-menu-locale`
+
+</td>
+<td>
+
+Enables the set_native_menu_locale command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`syntheo-tray:deny-set-native-menu-locale`
+
+</td>
+<td>
+
+Denies the set_native_menu_locale command without any pre-configured scope.
+
+</td>
+</tr>
 
 <tr>
 <td>

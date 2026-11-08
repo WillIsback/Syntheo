@@ -35,3 +35,15 @@ pub async fn set_tray_recording_title(
         .set_recording_title(title)
         .map_err(|error| error.to_string())
 }
+
+/// Langue d'affichage de l'interface, pour traduire les menus natifs.
+#[tauri::command]
+#[specta::specta]
+pub async fn set_native_menu_locale(
+    app: tauri::AppHandle<tauri::Wry>,
+    locale: String,
+) -> Result<(), String> {
+    app.tray()
+        .set_locale(&locale)
+        .map_err(|error| error.to_string())
+}

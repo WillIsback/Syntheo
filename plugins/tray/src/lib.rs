@@ -2,6 +2,7 @@ mod commands;
 mod ext;
 #[cfg(target_os = "linux")]
 mod linux_frames;
+mod locale;
 mod macos_position;
 mod menu_items;
 mod schedule;
@@ -28,6 +29,7 @@ fn make_specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             commands::set_tray_icon_visible,
             commands::set_tray_schedule,
             commands::set_tray_recording_title,
+            commands::set_native_menu_locale,
         ])
         .error_handling(tauri_specta::ErrorHandlingMode::Result)
 }
