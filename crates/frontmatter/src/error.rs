@@ -7,5 +7,5 @@ pub enum Error {
     #[error("missing closing delimiter")]
     MissingClosingDelimiter,
     #[error("failed to parse YAML frontmatter: {0}")]
-    YamlParse(#[from] serde_yaml::Error),
+    YamlParse(#[from] serde_norway::Error),
 }
