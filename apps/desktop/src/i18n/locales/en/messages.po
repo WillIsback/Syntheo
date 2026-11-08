@@ -84,6 +84,10 @@ msgstr "{count, plural, one {{duration} left} other {{duration} left}}"
 msgid "{count, plural, one {# speaker to name} other {# speakers to name}}"
 msgstr "{count, plural, one {# speaker to name} other {# speakers to name}}"
 
+#: src/shared/ui/localized-toaster.tsx
+msgid "{count, plural, one {second} other {seconds}}"
+msgstr "{count, plural, one {second} other {seconds}}"
+
 #: src/contacts/details.tsx
 msgid "{count} contacts share the same name or email. Merge them to consolidate all related notes and information."
 msgstr "{count} contacts share the same name or email. Merge them to consolidate all related notes and information."
@@ -943,10 +947,18 @@ msgstr "Close chat"
 msgid "Close the open panel, or go home"
 msgstr "Close the open panel, or go home"
 
+#: src/shared/ui/localized-toaster.tsx
+msgid "Closing in"
+msgstr "Closing in"
+
 #: src/settings/general/notification.tsx
 #: src/settings/search-index.ts
 msgid "Cloud sync complete"
 msgstr "Cloud sync complete"
+
+#: src/shared/ui/localized-toaster.tsx
+msgid "Collapse notification"
+msgstr "Collapse notification"
 
 #: src/settings/automations/markdown-export-options.tsx
 msgid "Collect action items"
@@ -1445,6 +1457,10 @@ msgstr "Disconnect"
 msgid "Disk almost full"
 msgstr "Disk almost full"
 
+#: src/shared/ui/localized-toaster.tsx
+msgid "Dismiss"
+msgstr "Dismiss"
+
 #: src/templates/template-form.tsx
 msgid "Display mode"
 msgstr "Display mode"
@@ -1674,6 +1690,10 @@ msgstr "Examples must be Markdown or plain text files."
 #: src/settings/search-index.ts
 msgid "Exclude apps from detection"
 msgstr "Exclude apps from detection"
+
+#: src/shared/ui/localized-toaster.tsx
+msgid "Expand notification"
+msgstr "Expand notification"
 
 #: src/settings/automations/index.tsx
 msgid "Expected output"
@@ -3223,9 +3243,18 @@ msgstr "Paste a past summary you like..."
 msgid "Pause"
 msgstr "Pause"
 
+#: src/shared/ui/localized-toaster.tsx
+msgctxt "toast timer"
+msgid "Pause"
+msgstr "Pause"
+
 #: src/settings/general/notification.tsx
 msgid "Pause alerts while Do Not Disturb is on."
 msgstr "Pause alerts while Do Not Disturb is on."
+
+#: src/shared/ui/localized-toaster.tsx
+msgid "Pause auto-dismiss"
+msgstr "Pause auto-dismiss"
 
 #: src/meeting-float/overlay/bar.tsx
 #: src/session/components/capsule/index.tsx
@@ -3664,8 +3693,13 @@ msgstr "Restore"
 
 #: src/home/note-index.tsx
 #: src/meeting-float/overlay/bar.tsx
+#: src/shared/ui/localized-toaster.tsx
 msgid "Resume"
 msgstr "Resume"
+
+#: src/shared/ui/localized-toaster.tsx
+msgid "Resume auto-dismiss"
+msgstr "Resume auto-dismiss"
 
 #: src/meeting-float/overlay/bar.tsx
 #: src/session/components/capsule/index.tsx
@@ -4870,6 +4904,10 @@ msgstr "time, clock, hour, AM, PM"
 #: src/settings/search-index.ts
 msgid "time, hour, country, time difference"
 msgstr "time, hour, country, time difference"
+
+#: src/shared/ui/localized-toaster.tsx
+msgid "Timer paused"
+msgstr "Timer paused"
 
 #: src/settings/general/timezone.tsx
 #: src/settings/search-index.ts
