@@ -29,6 +29,12 @@ const {
   updateSessionMock,
   useTabsMock,
   updateSessionTabStateMock,
+  beginAudioUploadMock,
+  appendAudioUploadMock,
+  discardAudioUploadMock,
+  toastWarningMock,
+  toastErrorMock,
+  sttConnection,
 } = vi.hoisted(() => ({
   audioSourceMetadataMock: vi.fn(),
   audioImportMock: vi.fn(),
@@ -48,6 +54,17 @@ const {
   updateSessionMock: vi.fn(),
   useTabsMock: vi.fn(),
   updateSessionTabStateMock: vi.fn(),
+  beginAudioUploadMock: vi.fn(),
+  appendAudioUploadMock: vi.fn(),
+  discardAudioUploadMock: vi.fn(),
+  toastWarningMock: vi.fn(),
+  toastErrorMock: vi.fn(),
+  sttConnection: {
+    value: { provider: "openai", model: "whisper-1" } as {
+      provider: string;
+      model: string;
+    } | null,
+  },
 }));
 
 vi.mock("@tauri-apps/api/path", () => ({
@@ -75,7 +92,20 @@ vi.mock("@syntheo/plugin-fs-sync", () => ({
 }));
 
 vi.mock("@syntheo/plugin-transcription", () => ({
-  commands: { parseSubtitle: parseSubtitleMock },
+  commands: {
+    parseSubtitle: parseSubtitleMock,
+    beginAudioUpload: beginAudioUploadMock,
+    appendAudioUpload: appendAudioUploadMock,
+    discardAudioUpload: discardAudioUploadMock,
+  },
+}));
+
+vi.mock("@syntheo/ui/components/ui/toast", () => ({
+  toast: { warning: toastWarningMock, error: toastErrorMock },
+}));
+
+vi.mock("./useSTTConnection", () => ({
+  useSTTConnection: () => ({ conn: sttConnection.value }),
 }));
 
 vi.mock("./contexts", () => ({
@@ -89,6 +119,9 @@ vi.mock("./contexts", () => ({
 }));
 
 vi.mock("./useRunBatch", () => ({
+  // Seul le protocole OpenAI transcrit un fichier ; NVIDIA est temps réel.
+  getBatchProvider: (provider: string) =>
+    provider === "openai" ? "openai" : null,
   isStoppedTranscriptionError: vi.fn(() => false),
   useRunBatch: vi.fn(() => runBatchMock),
 }));
@@ -126,6 +159,10 @@ function createWrapper() {
 describe("useUploadFile", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    sttConnection.value = { provider: "openai", model: "whisper-1" };
+    beginAudioUploadMock.mockResolvedValue({ status: "ok", data: "upload-1" });
+    appendAudioUploadMock.mockResolvedValue({ status: "ok", data: null });
+    discardAudioUploadMock.mockResolvedValue({ status: "ok", data: null });
 
     audioImportMock.mockResolvedValue({
       status: "ok",
@@ -211,30 +248,149 @@ describe("useUploadFile", () => {
     expect(handleBatchFailedMock).not.toHaveBeenCalled();
   });
 
-  test("rejects oversized pathless audio before reading it into IPC memory", async () => {
-    const consoleError = vi
-      .spyOn(console, "error")
-      .mockImplementation(() => {});
+  test("streams a large pathless dropped file into memory by chunks", async () => {
     const { result } = renderHook(() => useUploadFile("session-1"), {
       wrapper: createWrapper(),
     });
+    const size = 4 * 1024 * 1024 + 3;
+    const arrayBuffer = vi.fn();
     const file = {
-      name: "drop.wav",
-      type: "audio/wav",
-      size: 4 * 1024 * 1024 + 1,
-      arrayBuffer: vi.fn(),
+      name: "archive.mp4",
+      type: "video/mp4",
+      size,
+      lastModified: 1_700_000_000_000,
+      arrayBuffer,
+      slice: (start: number, end: number) => ({
+        arrayBuffer: () =>
+          Promise.resolve(new ArrayBuffer(Math.min(end, size) - start)),
+      }),
     } as unknown as File;
 
     act(() => result.current.processAudioFile(file));
 
-    await waitFor(() => {
-      expect(handleBatchFailedMock).toHaveBeenCalledWith(
-        "session-1",
-        "Audio files without a native path must be smaller than 4 MB",
-      );
+    await waitFor(() => expect(runBatchMock).toHaveBeenCalled());
+    expect(beginAudioUploadMock).toHaveBeenCalledWith("archive.mp4", size);
+    expect(appendAudioUploadMock).toHaveBeenCalledTimes(2);
+    expect(appendAudioUploadMock.mock.calls[1]).toEqual(["upload-1", "AAAA"]);
+    // Jamais le fichier entier en mémoire de la webview, jamais de chemin.
+    expect(arrayBuffer).not.toHaveBeenCalled();
+    expect(audioImportMock).not.toHaveBeenCalled();
+    expect(runBatchMock).toHaveBeenCalledWith("", {
+      promotion: { scope: "whole_session" },
+      audioUploadId: "upload-1",
     });
-    expect(file.arrayBuffer).not.toHaveBeenCalled();
+    expect(updateBatchProgressMock).toHaveBeenLastCalledWith("session-1", 1);
+    expect(handleBatchFailedMock).not.toHaveBeenCalled();
+  });
+
+  test("discards the in-memory upload and says so when streaming fails", async () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    appendAudioUploadMock.mockResolvedValueOnce({
+      status: "error",
+      error: "audio_upload_size_mismatch",
+    });
+    const { result } = renderHook(() => useUploadFile("session-1"), {
+      wrapper: createWrapper(),
+    });
+    const size = 4 * 1024 * 1024 + 3;
+    const file = {
+      name: "archive.mp4",
+      type: "video/mp4",
+      size,
+      slice: (start: number, end: number) => ({
+        arrayBuffer: () =>
+          Promise.resolve(new ArrayBuffer(Math.min(end, size) - start)),
+      }),
+    } as unknown as File;
+
+    act(() => result.current.processAudioFile(file));
+
+    await waitFor(() => expect(toastErrorMock).toHaveBeenCalled());
+    expect(discardAudioUploadMock).toHaveBeenCalledWith("upload-1");
     expect(runBatchMock).not.toHaveBeenCalled();
+    expect(toastErrorMock).toHaveBeenCalledWith(
+      "Audio import failed",
+      expect.objectContaining({
+        description: "Syntheo couldn't read this file.",
+      }),
+    );
+    consoleError.mockRestore();
+  });
+
+  test("refuses a live-only model before choosing a file", () => {
+    sttConnection.value = {
+      provider: "nvidia",
+      model: "cache-aware-parakeet-rnnt-multi-asr-streaming-sortformer",
+    };
+    const { result } = renderHook(() => useUploadFile("session-1"), {
+      wrapper: createWrapper(),
+    });
+
+    act(() => result.current.uploadAudio());
+
+    expect(selectFileMock).not.toHaveBeenCalled();
+    expect(toastWarningMock).toHaveBeenCalledWith(
+      "Can't import this audio",
+      expect.objectContaining({
+        description:
+          "This model only transcribes live: importing a file requires a batch transcription model.",
+        action: expect.objectContaining({ label: "Transcription settings" }),
+      }),
+    );
+  });
+
+  test("refuses a dropped file with a live-only model and leaves the note untouched", async () => {
+    sttConnection.value = {
+      provider: "nvidia",
+      model: "cache-aware-parakeet-rnnt-multi-asr-streaming-sortformer",
+    };
+    const { result } = renderHook(() => useUploadFile("session-1"), {
+      wrapper: createWrapper(),
+    });
+    const file = new File([new Uint8Array([1, 2, 3])], "drop.wav", {
+      type: "audio/wav",
+      lastModified: 1_700_000_000_000,
+    });
+
+    act(() => result.current.processAudioFile(file));
+    await act(async () => {});
+
+    expect(toastWarningMock).toHaveBeenCalledTimes(1);
+    expect(updateSessionMock).not.toHaveBeenCalled();
+    expect(handleBatchStartedMock).not.toHaveBeenCalled();
+    expect(audioImportMock).not.toHaveBeenCalled();
+    expect(runBatchMock).not.toHaveBeenCalled();
+    expect(result.current.audioImportAvailability).toEqual({
+      status: "live_only",
+    });
+  });
+
+  test("shows an import error instead of failing silently", async () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    runBatchMock.mockRejectedValueOnce(
+      new Error("whisper-1 is not available for batch transcription."),
+    );
+    const { result } = renderHook(() => useUploadFile("session-1"), {
+      wrapper: createWrapper(),
+    });
+
+    act(() => result.current.uploadAudio());
+
+    await waitFor(() => expect(toastErrorMock).toHaveBeenCalled());
+    expect(toastErrorMock).toHaveBeenCalledWith(
+      "Audio import failed",
+      expect.objectContaining({
+        description: "whisper-1 is not available for batch transcription.",
+      }),
+    );
+    expect(handleBatchFailedMock).toHaveBeenCalledWith(
+      "session-1",
+      "whisper-1 is not available for batch transcription.",
+    );
     consoleError.mockRestore();
   });
 

@@ -15,23 +15,37 @@ use upload::{AudioInputRef, audio_duration, segment_plan};
 
 impl BatchParams {
     /// Source audio de cet envoi : le tampon mémoire prime sur le chemin.
+    /// `run_batch` décode d'abord un éventuel `audio` base64 en tampon.
     pub(in crate::batch) fn audio_input(&self) -> AudioInputRef<'_> {
-        match &self.audio {
-            Some(audio) => AudioInputRef::Bytes {
-                data_base64: &audio.data_base64,
-                file_name: &audio.file_name,
+        match &self.audio_buffer {
+            Some(buffer) => AudioInputRef::Bytes {
+                data: &buffer.data,
+                file_name: &buffer.file_name,
             },
             None => AudioInputRef::Path(&self.file_path),
         }
     }
 
+    /// Décode une seule fois l'audio base64 reçu de l'interface : la suite du
+    /// batch lit le tampon sans le recopier.
+    fn with_decoded_audio(mut self) -> Result<BatchParams, String> {
+        if let Some(audio) = self.audio.take() {
+            self.audio_buffer = Some(AudioBuffer::new(
+                upload::decode_base64(&audio.data_base64)?,
+                audio.file_name,
+            ));
+        }
+        Ok(self)
+    }
+
     /// Copie légère (sans dupliquer un éventuel tampon audio) pour un segment.
-    pub(super) fn with_audio(&self, audio: Option<BatchAudio>) -> BatchParams {
+    pub(super) fn with_audio_buffer(&self, audio_buffer: Option<AudioBuffer>) -> BatchParams {
         BatchParams {
             session_id: self.session_id.clone(),
             provider: self.provider.clone(),
             file_path: self.file_path.clone(),
-            audio,
+            audio: None,
+            audio_buffer,
             model: self.model.clone(),
             base_url: self.base_url.clone(),
             api_key: self.api_key.clone(),
@@ -41,6 +55,47 @@ impl BatchParams {
             min_speakers: self.min_speakers,
             max_speakers: self.max_speakers,
         }
+    }
+}
+
+/// Décode un morceau d'audio reçu en base64 de la webview.
+pub fn decode_audio_base64(data_base64: &str) -> Result<Vec<u8>, String> {
+    upload::decode_base64(data_base64)
+}
+
+/// Audio déjà en mémoire (dictée décodée, fichier déposé reçu par morceaux,
+/// segment) : partagé sans copie et jamais écrit sur le disque.
+#[derive(Clone)]
+pub struct AudioBuffer {
+    data: Arc<[u8]>,
+    file_name: String,
+}
+
+impl AudioBuffer {
+    pub fn new(data: Vec<u8>, file_name: String) -> Self {
+        Self {
+            data: Arc::from(data.into_boxed_slice()),
+            file_name,
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        self.data.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.data.is_empty()
+    }
+}
+
+impl std::fmt::Debug for AudioBuffer {
+    // Jamais le contenu : un enregistrement de plusieurs centaines de Mo
+    // n'a rien à faire dans un journal.
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AudioBuffer")
+            .field("len", &self.data.len())
+            .field("file_name", &self.file_name)
+            .finish()
     }
 }
 
@@ -72,6 +127,10 @@ pub struct BatchParams {
     /// Prioritaire sur `file_path` quand présent : l'audio vient de la mémoire.
     #[serde(default)]
     pub audio: Option<BatchAudio>,
+    /// Tampon déjà en mémoire, posé côté Rust (jamais sérialisé) : prime sur
+    /// `audio` et `file_path`.
+    #[serde(skip)]
+    pub audio_buffer: Option<AudioBuffer>,
     #[serde(default)]
     pub model: Option<String>,
     pub base_url: String,
@@ -154,6 +213,16 @@ async fn run_batch_inner(
     runtime: Arc<dyn BatchRuntime>,
     params: BatchParams,
 ) -> crate::Result<BatchRunOutput> {
+    let params = match params.with_decoded_audio() {
+        Ok(params) => params,
+        Err(raw_error) => {
+            log_batch_failure("audio_decode", &raw_error);
+            return Err(crate::BatchFailure::AudioMetadataReadFailed {
+                message: format_user_friendly_error(&raw_error),
+            }
+            .into());
+        }
+    };
     let metadata = {
         let owned = params.audio_input().into_owned();
         let metadata_joined = tokio::task::spawn_blocking(move || owned.metadata()).await;
@@ -190,7 +259,7 @@ async fn run_batch_inner(
             // Le streaming progressif ne lit qu'un seul fichier : un tampon
             // mémoire (dictée) ou un enregistrement à découper passe par le
             // chemin direct, qui segmente en mémoire.
-            let can_stream = params.audio.is_none() && !needs_split;
+            let can_stream = params.audio_buffer.is_none() && !needs_split;
 
             if can_stream
                 && OpenAIAdapter::supports_progressive_batch_model(listen_params.model.as_deref())
@@ -297,6 +366,7 @@ mod tests {
             provider,
             file_path: "/tmp/audio.wav".to_string(),
             audio: None,
+            audio_buffer: None,
             model: None,
             base_url: base_url.to_string(),
             api_key: "key".to_string(),
@@ -306,6 +376,37 @@ mod tests {
             min_speakers: None,
             max_speakers: None,
         }
+    }
+
+    #[test]
+    fn base64_audio_is_decoded_once_into_a_shared_buffer() {
+        let mut params = batch_params(BatchProvider::OpenAI, "http://localhost:8000/v1");
+        params.audio = Some(BatchAudio {
+            data_base64: "AQID".to_string(),
+            file_name: "dictation.wav".to_string(),
+        });
+
+        let params = params.with_decoded_audio().unwrap();
+
+        assert!(params.audio.is_none());
+        match params.audio_input() {
+            AudioInputRef::Bytes { data, file_name } => {
+                assert_eq!(&data[..], &[1, 2, 3]);
+                assert_eq!(file_name, "dictation.wav");
+            }
+            AudioInputRef::Path(_) => panic!("expected an in-memory source"),
+        }
+    }
+
+    #[test]
+    fn invalid_base64_audio_is_rejected() {
+        let mut params = batch_params(BatchProvider::OpenAI, "http://localhost:8000/v1");
+        params.audio = Some(BatchAudio {
+            data_base64: "not base64!".to_string(),
+            file_name: "dictation.wav".to_string(),
+        });
+
+        assert!(params.with_decoded_audio().is_err());
     }
 
     #[test]

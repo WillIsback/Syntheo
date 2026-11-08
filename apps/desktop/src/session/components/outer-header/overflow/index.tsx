@@ -44,6 +44,7 @@ import { openStandaloneNoteWindow } from "~/session/window";
 import { useConfigValue } from "~/shared/config";
 import { ariaShortcut, shortcutTooltip } from "~/shared/shortcuts";
 import type { EditorView } from "~/store/zustand/tabs/schema";
+import { describeAudioImportUnavailable } from "~/stt/audio-import-feedback";
 import { useListener } from "~/stt/contexts";
 import { useUploadFile } from "~/stt/useUploadFile";
 
@@ -72,7 +73,13 @@ export function OverflowButton({
   // Syntheo ne conserve jamais l'audio d'une capture.
   const audioExists = false;
   const audioExistsResolved = true;
-  const { uploadAudio, uploadTranscript } = useUploadFile(sessionId);
+  const { audioImportAvailability, uploadAudio, uploadTranscript } =
+    useUploadFile(sessionId);
+  // Grisée mais cliquable : l'infobulle et le message expliquent pourquoi,
+  // avec un lien vers les réglages (issue 462).
+  const audioImportUnavailableReason = describeAudioImportUnavailable(
+    audioImportAvailability,
+  );
   const sessionMode = useListener((state) => state.getSessionMode(sessionId));
   const floatingBarEnabled = useConfigValue("floating_bar_enabled");
   const floatingBarSupported = isFloatingBarSupported();
@@ -173,7 +180,15 @@ export function OverflowButton({
               <>
                 <DropdownMenuItem
                   onClick={handleUploadAudio}
-                  className="cursor-pointer"
+                  aria-disabled={
+                    audioImportUnavailableReason ? true : undefined
+                  }
+                  title={audioImportUnavailableReason ?? undefined}
+                  className={
+                    audioImportUnavailableReason
+                      ? "cursor-pointer opacity-50"
+                      : "cursor-pointer"
+                  }
                 >
                   <Waveform />
                   <span>

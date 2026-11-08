@@ -54,6 +54,9 @@ Default permissions for the plugin
 - `allow-refine-batch-transcript`
 - `allow-save-batch-transcript`
 - `allow-reconcile-refined-speaker-clusters`
+- `allow-begin-audio-upload`
+- `allow-append-audio-upload`
+- `allow-discard-audio-upload`
 
 ## Permission Table
 
@@ -171,6 +174,58 @@ Denies the acknowledge_stopped_capture command without any pre-configured scope.
 <tr>
 <td>
 
+`transcription:allow-append-audio-upload`
+
+</td>
+<td>
+
+Enables the append_audio_upload command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:deny-append-audio-upload`
+
+</td>
+<td>
+
+Denies the append_audio_upload command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:allow-begin-audio-upload`
+
+</td>
+<td>
+
+Enables the begin_audio_upload command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:deny-begin-audio-upload`
+
+</td>
+<td>
+
+Denies the begin_audio_upload command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
 `transcription:allow-clear-capture-audio-saved`
 
 </td>
@@ -268,6 +323,32 @@ Enables the delete_transcribed_capture_audio command without any pre-configured 
 <td>
 
 Denies the delete_transcribed_capture_audio command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:allow-discard-audio-upload`
+
+</td>
+<td>
+
+Enables the discard_audio_upload command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:deny-discard-audio-upload`
+
+</td>
+<td>
+
+Denies the discard_audio_upload command without any pre-configured scope.
 
 </td>
 </tr>

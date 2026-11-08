@@ -1,15 +1,10 @@
+use std::sync::Arc;
 use std::time::Duration;
 
 use owhisper_client::BatchUploadLimit;
 use syntheo_audio_utils::Source;
 
-pub(in crate::batch) fn encode_base64(data: &[u8]) -> String {
-    use base64::Engine as _;
-
-    base64::engine::general_purpose::STANDARD.encode(data)
-}
-
-fn decode_base64(data_base64: &str) -> Result<Vec<u8>, String> {
+pub(in crate::batch) fn decode_base64(data_base64: &str) -> Result<Vec<u8>, String> {
     use base64::Engine as _;
 
     base64::engine::general_purpose::STANDARD
@@ -18,14 +13,13 @@ fn decode_base64(data_base64: &str) -> Result<Vec<u8>, String> {
 }
 
 /// Source d'un envoi batch, empruntée : un fichier lu à son emplacement
-/// d'origine, ou un tampon en mémoire (dictée) encodé en base64 — un tableau de
-/// nombres ferait exploser la charge IPC. Dans les deux cas l'audio n'est jamais
-/// copié sur le disque.
+/// d'origine, ou un tampon en mémoire (dictée, fichier déposé, segment). Dans
+/// les deux cas l'audio n'est jamais copié sur le disque.
 #[derive(Debug, Clone, Copy)]
 pub(in crate::batch) enum AudioInputRef<'a> {
     Path(&'a str),
     Bytes {
-        data_base64: &'a str,
+        data: &'a Arc<[u8]>,
         file_name: &'a str,
     },
 }
@@ -34,35 +28,24 @@ impl AudioInputRef<'_> {
     pub(in crate::batch) fn into_owned(self) -> AudioInput {
         match self {
             AudioInputRef::Path(path) => AudioInput::Path(path.to_string()),
-            AudioInputRef::Bytes { data_base64, .. } => AudioInput::Bytes {
-                data_base64: data_base64.to_string(),
-            },
-        }
-    }
-
-    /// Tampon audio décodé, pour le client batch.
-    pub(in crate::batch) fn decode(&self) -> Result<Vec<u8>, String> {
-        match self {
-            AudioInputRef::Path(_) => Err("not an in-memory audio source".to_string()),
-            AudioInputRef::Bytes { data_base64, .. } => decode_base64(data_base64),
+            AudioInputRef::Bytes { data, .. } => AudioInput::Bytes(Arc::clone(data)),
         }
     }
 
     fn byte_len(&self) -> Option<u64> {
         match self {
             AudioInputRef::Path(path) => std::fs::metadata(path).ok().map(|meta| meta.len()),
-            AudioInputRef::Bytes { data_base64, .. } => decode_base64(data_base64)
-                .ok()
-                .map(|data| data.len() as u64),
+            AudioInputRef::Bytes { data, .. } => Some(data.len() as u64),
         }
     }
 }
 
-/// Source possédée, pour le découpage en tâche bloquante.
+/// Source possédée, pour le découpage en tâche bloquante. Le tampon est
+/// partagé : le cloner ne recopie pas l'audio.
 #[derive(Debug, Clone)]
 pub(in crate::batch) enum AudioInput {
     Path(String),
-    Bytes { data_base64: String },
+    Bytes(Arc<[u8]>),
 }
 
 impl AudioInput {
@@ -71,10 +54,8 @@ impl AudioInput {
             AudioInput::Path(path) => {
                 syntheo_audio_utils::audio_file_metadata(path).map_err(|error| error.to_string())
             }
-            AudioInput::Bytes { data_base64 } => {
-                syntheo_audio_utils::audio_bytes_metadata(decode_base64(data_base64)?)
-                    .map_err(|error| error.to_string())
-            }
+            AudioInput::Bytes(data) => syntheo_audio_utils::audio_bytes_metadata(Arc::clone(data))
+                .map_err(|error| error.to_string()),
         }
     }
 
@@ -83,12 +64,9 @@ impl AudioInput {
             AudioInput::Path(path) => syntheo_audio_utils::source_from_path(path)
                 .ok()
                 .and_then(|source| source.total_duration()),
-            AudioInput::Bytes { data_base64 } => {
-                let data = decode_base64(data_base64).ok()?;
-                syntheo_audio_utils::source_from_bytes(data)
-                    .ok()
-                    .and_then(|source| source.total_duration())
-            }
+            AudioInput::Bytes(data) => syntheo_audio_utils::source_from_bytes(Arc::clone(data))
+                .ok()
+                .and_then(|source| source.total_duration()),
         }
     }
 
@@ -101,8 +79,8 @@ impl AudioInput {
                 syntheo_mp3::encode_mono_segments_in_memory(source, segment_duration)
                     .map_err(|error| error.to_string())
             }
-            AudioInput::Bytes { data_base64 } => {
-                let source = syntheo_audio_utils::source_from_bytes(decode_base64(data_base64)?)
+            AudioInput::Bytes(data) => {
+                let source = syntheo_audio_utils::source_from_bytes(Arc::clone(data))
                     .map_err(|error| error.to_string())?;
                 syntheo_mp3::encode_mono_segments_in_memory(source, segment_duration)
                     .map_err(|error| error.to_string())
@@ -208,17 +186,11 @@ mod tests {
         assert_eq!(segment[1] & 0xE0, 0xE0);
     }
 
-    fn base64_of(wav: &[u8]) -> String {
-        use base64::Engine as _;
-
-        base64::engine::general_purpose::STANDARD.encode(wav)
-    }
-
     #[tokio::test]
     async fn in_memory_input_segments_without_touching_the_disk() {
-        let encoded = base64_of(&sine_wav(3, 16_000));
+        let data: Arc<[u8]> = Arc::from(sine_wav(3, 16_000).into_boxed_slice());
         let input = AudioInputRef::Bytes {
-            data_base64: &encoded,
+            data: &data,
             file_name: "dictation.wav",
         };
 
@@ -233,9 +205,9 @@ mod tests {
     #[test]
     fn in_memory_input_reports_duration_and_size() {
         let wav = sine_wav(2, 16_000);
-        let encoded = base64_of(&wav);
+        let data: Arc<[u8]> = Arc::from(wav.clone().into_boxed_slice());
         let input = AudioInputRef::Bytes {
-            data_base64: &encoded,
+            data: &data,
             file_name: "dictation.wav",
         };
 

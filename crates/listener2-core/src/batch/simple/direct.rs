@@ -6,7 +6,7 @@ use tracing::Instrument;
 
 use super::super::upload::{AudioInputRef, audio_duration, segment_plan, split_batch_upload};
 use super::super::{
-    BatchAudio, BatchParams, BatchRunMode, BatchRunOutput, format_user_friendly_error,
+    AudioBuffer, BatchParams, BatchRunMode, BatchRunOutput, format_user_friendly_error,
     log_batch_failure, session_span,
 };
 
@@ -66,10 +66,10 @@ async fn run_segmented_batch<A: BatchSttAdapter>(
 
     let mut responses = Vec::with_capacity(segments.len());
     for (index, data) in segments.into_iter().enumerate() {
-        let segment_params = params.with_audio(Some(BatchAudio {
-            data_base64: super::super::upload::encode_base64(&data),
-            file_name: format!("segment-{index:04}.mp3"),
-        }));
+        let segment_params = params.with_audio_buffer(Some(AudioBuffer::new(
+            data,
+            format!("segment-{index:04}.mp3"),
+        )));
 
         let output = run_direct_batch_with_timeout::<A>(
             provider,
@@ -259,11 +259,10 @@ async fn transcribe_with_rate_limit_retry<A: BatchSttAdapter>(
     loop {
         let result = match audio {
             AudioInputRef::Path(file_path) => client.transcribe_file(file_path).await,
-            AudioInputRef::Bytes { file_name, .. } => {
-                let data = audio
-                    .decode()
-                    .map_err(owhisper_client::Error::AudioProcessing)?;
-                client.transcribe_bytes(data, file_name.to_string()).await
+            AudioInputRef::Bytes { data, file_name } => {
+                client
+                    .transcribe_bytes(data.to_vec(), file_name.to_string())
+                    .await
             }
         };
         let error = match result {

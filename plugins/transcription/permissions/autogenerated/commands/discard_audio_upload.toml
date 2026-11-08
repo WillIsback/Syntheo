@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-discard-audio-upload"
+description = "Enables the discard_audio_upload command without any pre-configured scope."
+commands.allow = ["discard_audio_upload"]
+
+[[permission]]
+identifier = "deny-discard-audio-upload"
+description = "Denies the discard_audio_upload command without any pre-configured scope."
+commands.deny = ["discard_audio_upload"]

@@ -538,6 +538,10 @@ msgstr "La capture audio a été interrompue"
 msgid "Audio could not be deleted"
 msgstr "L'audio n'a pas pu être supprimé"
 
+#: src/stt/audio-import-feedback.ts
+msgid "Audio import failed"
+msgstr "L'import de l'audio a échoué"
+
 #: src/store/zustand/listener/general-live.ts
 msgid "Audio retry failed"
 msgstr "La reprise de l'audio a échoué"
@@ -714,6 +718,10 @@ msgstr "Calendrier"
 #: src/onboarding/index.tsx
 msgid "Calendar connected"
 msgstr "Calendrier connecté"
+
+#: src/stt/audio-import-feedback.ts
+msgid "Can't import this audio"
+msgstr "Impossible d'importer cet audio"
 
 #: src/calendar/components/apple/permission.tsx
 #: src/session/components/capsule/index.tsx
@@ -2968,6 +2976,10 @@ msgstr "Aucune transcription enregistrée"
 msgid "No transcription provider is set up. Syntheo does not keep audio: set up a transcription endpoint before recording."
 msgstr "Aucun fournisseur de transcription n'est configuré. Syntheo ne conserve pas l'audio : configurez un endpoint de transcription avant d'enregistrer."
 
+#: src/stt/audio-import-feedback.ts
+msgid "No transcription service is set up: importing a file requires a batch transcription model."
+msgstr "Aucun service de transcription n'est configuré : importer un fichier demande un modèle de transcription par lot."
+
 #: src/services/enhancer/eligibility.ts
 msgid "Not enough words recorded ({wordCount}/{minWords} minimum)"
 msgstr "Pas assez de mots enregistrés ({wordCount}/{minWords} minimum)"
@@ -4546,6 +4558,10 @@ msgstr "Syntheo n'a pas pu ouvrir votre entrée audio. Vérifiez le micro choisi
 msgid "Syntheo couldn't prepare storage for this recording"
 msgstr "Syntheo n'a pas pu préparer le stockage de cet enregistrement"
 
+#: src/stt/audio-import-feedback.ts
+msgid "Syntheo couldn't read this file."
+msgstr "Syntheo n'a pas pu lire ce fichier."
+
 #: src/stt/start-failure.ts
 msgid "Syntheo doesn't have microphone access"
 msgstr "Syntheo n'a pas accès au micro"
@@ -4864,6 +4880,10 @@ msgstr "Cette modification n'a pas pu être enregistrée. Réessayez."
 msgid "This edit is no longer pending."
 msgstr "Cette modification n'est plus en attente."
 
+#: src/stt/audio-import-feedback.ts
+msgid "This file is too large to import (2 GB maximum)."
+msgstr "Ce fichier est trop lourd pour être importé (2 Go maximum)."
+
 #: src/settings/general/index.tsx
 msgid "This information stays on your computer. It is used to recognize you in transcripts and to sign your meeting notes."
 msgstr "Ces informations restent sur votre poste. Elles servent à vous reconnaître dans les transcriptions et à signer vos comptes-rendus."
@@ -4871,6 +4891,10 @@ msgstr "Ces informations restent sur votre poste. Elles servent à vous reconna�
 #: src/stt/useStartListening.ts
 msgid "This model only transcribes after the recording, which would require keeping the audio. Choose a real-time transcription model."
 msgstr "Ce modèle ne transcrit qu'après l'enregistrement, ce qui supposerait de conserver l'audio. Choisissez un modèle de transcription en temps réel."
+
+#: src/stt/audio-import-feedback.ts
+msgid "This model only transcribes live: importing a file requires a batch transcription model."
+msgstr "Ce modèle ne transcrit qu'en direct : importer un fichier demande un modèle de transcription par lot."
 
 #: src/calendar/components/event-chip.tsx
 msgid "This note"
@@ -5038,6 +5062,10 @@ msgstr "Serveur de transcription ›"
 #: src/settings/search-index.ts
 msgid "transcription server, speech recognition, URL, API key, Whisper"
 msgstr "serveur de transcription, reconnaissance vocale, URL, clé API, Whisper"
+
+#: src/stt/audio-import-feedback.ts
+msgid "Transcription settings"
+msgstr "Réglages de transcription"
 
 #: src/sidebar/toast/registry.tsx
 msgid "Transcription unavailable"

@@ -5,8 +5,8 @@ mod runtime;
 mod subtitle;
 
 pub use batch::{
-    BatchAudio, BatchParams, BatchProvider, BatchRunMode, BatchRunOutput,
-    expects_progressive_batch, run_batch,
+    AudioBuffer, BatchAudio, BatchParams, BatchProvider, BatchRunMode, BatchRunOutput,
+    decode_audio_base64, expects_progressive_batch, run_batch,
 };
 pub use error::*;
 pub use events::*;

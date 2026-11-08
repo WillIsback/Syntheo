@@ -10,7 +10,17 @@ import {
 } from "@syntheo/plugin-fs-sync";
 import { commands as listener2Commands } from "@syntheo/plugin-transcription";
 
+import {
+  ensureAudioImportAvailable,
+  notifyAudioImportFailed,
+  useAudioImportAvailability,
+} from "./audio-import-feedback";
 import { estimateUploadedAudioSessionCreatedAt } from "./audio-note-date";
+import {
+  bytesToBase64,
+  discardAudioUpload,
+  streamAudioFileToMemory,
+} from "./audio-upload-stream";
 import { useListener } from "./contexts";
 import { fromResult } from "./fromResult";
 import { ChannelProfile } from "./segment";
@@ -53,6 +63,13 @@ function isAudioUploadPath(path: string) {
   return AUDIO_EXTENSIONS.includes(fileExtension(path));
 }
 
+/** Ce que l'import remet au batch : un chemin, ou de l'audio en mémoire. */
+type ImportedAudio = {
+  filePath: string;
+  audio?: { data_base64: string; file_name: string };
+  audioUploadId?: string;
+};
+
 export function useUploadFile(sessionId: string) {
   const runBatch = useRunBatch(sessionId);
   const queryClient = useQueryClient();
@@ -63,6 +80,7 @@ export function useUploadFile(sessionId: string) {
 
   const session = useSession(sessionId);
   const updateSession = useUpdateSession(sessionId);
+  const audioImportAvailability = useAudioImportAvailability();
 
   const triggerEnhance = useCallback(async () => {
     const service = getEnhancerService();
@@ -180,10 +198,16 @@ export function useUploadFile(sessionId: string) {
 
   const runAudioImport = useCallback(
     (
-      importAudio: () => Promise<string>,
+      importAudio: () => Promise<ImportedAudio>,
       inspectAudioDate: () => Promise<void>,
-      audio?: { data_base64: string; file_name: string },
+      cleanup?: () => Promise<void>,
     ) => {
+      // Vérifié avant toute écriture : un modèle temps réel seul laisse la
+      // note intacte (issue 462).
+      if (!ensureAudioImportAvailable(audioImportAvailability)) {
+        return;
+      }
+
       const program = pipe(
         Effect.promise(inspectAudioDate),
         Effect.tap(() =>
@@ -209,25 +233,28 @@ export function useUploadFile(sessionId: string) {
           }),
         ),
         Effect.tap(() => Effect.sync(() => clearBatchSession(sessionId))),
-        Effect.flatMap((importedPath) =>
+        Effect.flatMap(({ filePath, audio, audioUploadId }) =>
           Effect.tryPromise({
             try: () =>
-              runBatch(importedPath, {
+              runBatch(filePath, {
                 promotion: { scope: "whole_session" },
-                audio,
+                ...(audio ? { audio } : {}),
+                ...(audioUploadId ? { audioUploadId } : {}),
               }),
             catch: (error) => error,
           }),
         ),
         Effect.tap(() => Effect.promise(triggerEnhanceIfSummaryEmpty)),
         Effect.catch((error: unknown) =>
-          Effect.sync(() => {
+          Effect.promise(async () => {
+            await cleanup?.();
             if (isStoppedTranscriptionError(error)) {
               return;
             }
             const msg = error instanceof Error ? error.message : String(error);
             console.error("[upload] audio import failed:", error);
             handleBatchFailed(sessionId, msg);
+            notifyAudioImportFailed(error);
           }),
         ),
       );
@@ -240,6 +267,7 @@ export function useUploadFile(sessionId: string) {
       });
     },
     [
+      audioImportAvailability,
       clearBatchSession,
       handleBatchFailed,
       handleBatchStarted,
@@ -318,10 +346,11 @@ export function useUploadFile(sessionId: string) {
       }
 
       runAudioImport(
-        () =>
-          importWithProgress(() =>
+        async () => ({
+          filePath: await importWithProgress(() =>
             fsSyncCommands.audioImport(sessionId, filePath),
           ),
+        }),
         () => applyEstimatedAudioNoteDate(filePath),
       );
     },
@@ -347,43 +376,69 @@ export function useUploadFile(sessionId: string) {
       const filePath = audioUploadFilePath(file);
       if (filePath) {
         runAudioImport(
-          () =>
-            importWithProgress(() =>
+          async () => ({
+            filePath: await importWithProgress(() =>
               fsSyncCommands.audioImport(sessionId, filePath),
             ),
+          }),
           () => applyDroppedAudioNoteDate(file),
         );
         return;
       }
 
-      // No native path: the dropped file never touches the disk. Its bytes go
-      // straight to the batch over IPC, base64-encoded.
-      void (async () => {
-        try {
-          const dataBase64 = await readIpcAudioBase64(file);
-          runAudioImport(
-            () => Promise.resolve(""),
-            () => applyDroppedAudioNoteDate(file),
-            { data_base64: dataBase64, file_name: file.name },
-          );
-        } catch (error) {
-          const msg = error instanceof Error ? error.message : String(error);
-          console.error("[upload] audio read failed:", error);
-          handleBatchFailed(sessionId, msg);
-        }
-      })();
+      // Sans chemin disque (WebKitGTK, WebView2), le fichier déposé ne touche
+      // jamais le disque : un petit fichier part en un seul envoi, un gros est
+      // lu par morceaux et gardé en mémoire côté Rust (issue 464).
+      if (file.size <= MAX_IPC_AUDIO_BYTES) {
+        runAudioImport(
+          async () => ({
+            filePath: "",
+            audio: {
+              data_base64: await readIpcAudioBase64(file),
+              file_name: file.name,
+            },
+          }),
+          () => applyDroppedAudioNoteDate(file),
+        );
+        return;
+      }
+
+      let uploadId: string | null = null;
+      runAudioImport(
+        async () =>
+          enqueueSessionAudioOperation(sessionId, async () => {
+            uploadId = await streamAudioFileToMemory(file, (fraction) =>
+              updateBatchProgress(sessionId, fraction),
+            );
+            return { filePath: "", audioUploadId: uploadId };
+          }),
+        () => applyDroppedAudioNoteDate(file),
+        async () => {
+          if (uploadId) {
+            await discardAudioUpload(uploadId);
+          }
+        },
+      );
     },
     [
       applyDroppedAudioNoteDate,
-      handleBatchFailed,
       importWithProgress,
       runAudioImport,
       sessionId,
+      updateBatchProgress,
     ],
   );
 
   const selectAndUpload = useCallback(
     (kind: "audio" | "transcript") => {
+      // Inutile de choisir un fichier que le modèle ne saura pas transcrire.
+      if (
+        kind === "audio" &&
+        !ensureAudioImportAvailable(audioImportAvailability)
+      ) {
+        return;
+      }
+
       const filters =
         kind === "audio"
           ? [{ name: "Audio", extensions: AUDIO_EXTENSIONS }]
@@ -415,7 +470,7 @@ export function useUploadFile(sessionId: string) {
           console.error("[upload] dialog failed:", error);
         });
     },
-    [processFile],
+    [audioImportAvailability, processFile],
   );
 
   const uploadAudio = useCallback(
@@ -427,7 +482,13 @@ export function useUploadFile(sessionId: string) {
     [selectAndUpload],
   );
 
-  return { uploadAudio, uploadTranscript, processFile, processAudioFile };
+  return {
+    audioImportAvailability,
+    uploadAudio,
+    uploadTranscript,
+    processFile,
+    processAudioFile,
+  };
 }
 
 function audioUploadFilePath(file: File) {
@@ -447,13 +508,5 @@ async function readIpcAudioBase64(file: File) {
   assertIpcAudioSize(file.size);
   const arrayBuffer = await file.arrayBuffer();
   assertIpcAudioSize(arrayBuffer.byteLength);
-  const bytes = new Uint8Array(arrayBuffer);
-  let binary = "";
-  const chunkSize = 0x8000;
-  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
-    binary += String.fromCodePoint(
-      ...bytes.subarray(offset, offset + chunkSize),
-    );
-  }
-  return btoa(binary);
+  return bytesToBase64(new Uint8Array(arrayBuffer));
 }
