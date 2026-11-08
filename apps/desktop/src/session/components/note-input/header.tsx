@@ -16,8 +16,8 @@ import {
   useHasTranscript,
 } from "~/session/components/shared";
 import { useEnhancedNotes } from "~/session/hooks/useEnhancedNotes";
-import { ariaShortcut, formatShortcut } from "~/shared/shortcuts";
 import { deleteEnhancedNote } from "~/session/queries";
+import { ariaShortcut, formatShortcut } from "~/shared/shortcuts";
 import { type EditorView } from "~/store/zustand/tabs/schema";
 import { useListener } from "~/stt/contexts";
 

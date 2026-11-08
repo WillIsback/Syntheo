@@ -68,11 +68,7 @@ export function HomeView({
             </h1>
             {nextMeeting ? <NextMeetingLine meeting={nextMeeting} /> : null}
           </header>
-          <StartButton
-            onStart={onStart}
-            busy={starting}
-            os={os}
-          />
+          <StartButton onStart={onStart} busy={starting} os={os} />
           <NoteIndex notes={recentNotes} onOpen={onOpenNote} />
           <p className="text-muted-foreground flex items-center gap-2 text-[13px]">
             <span

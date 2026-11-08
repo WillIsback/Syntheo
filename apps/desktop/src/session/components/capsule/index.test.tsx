@@ -263,9 +263,7 @@ describe("NoteCapsule", () => {
 
   it("offers Copy, Export and Ask the note (Ctrl J) for the synthesis", () => {
     const actions = makeActions();
-    render(
-      <NoteCapsule stage="synthesis" actions={actions} os="mac" />,
-    );
+    render(<NoteCapsule stage="synthesis" actions={actions} os="mac" />);
 
     fireEvent.click(screen.getByRole("button", { name: "Copy" }));
     fireEvent.click(screen.getByRole("button", { name: "Export" }));

@@ -258,18 +258,12 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
     enableOnFormTags: true,
     enableOnContentEditable: true,
   };
-  useHotkeys(
-    getShortcut("findNext").hotkeys ?? "",
+  useHotkeys(getShortcut("findNext").hotkeys ?? "", onNext, findOptions, [
     onNext,
-    findOptions,
-    [onNext],
-  );
-  useHotkeys(
-    getShortcut("findPrevious").hotkeys ?? "",
+  ]);
+  useHotkeys(getShortcut("findPrevious").hotkeys ?? "", onPrev, findOptions, [
     onPrev,
-    findOptions,
-    [onPrev],
-  );
+  ]);
 
   useEffect(() => {
     if (!state.isVisible || !state.activeMatchId) return;

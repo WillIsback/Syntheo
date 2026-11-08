@@ -268,10 +268,7 @@ export function SearchBar({
             <CaretDown className="size-3.5" />
           </IconButton>
         </div>
-        <IconButton
-          onClick={close}
-          tooltip={shortcutTooltip(t`Close`, "home")}
-        >
+        <IconButton onClick={close} tooltip={shortcutTooltip(t`Close`, "home")}>
           <X className="size-3.5" />
         </IconButton>
       </div>
