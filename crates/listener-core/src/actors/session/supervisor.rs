@@ -389,22 +389,12 @@ async fn refresh_listener_on_isolation_change(
     }
 }
 
+// Only a language change reopens the provider stream. The speaker bound derived
+// from the participants is applied when the stream opens: reopening it after an
+// attendance change would restart the provider's diarization and renumber the
+// voices already heard, a worse outcome than a looser bound.
 fn update_requires_listener_refresh(current: &SessionParams, update: &SessionConfigUpdate) -> bool {
     current.languages != update.languages
-        || expected_speaker_count(
-            &current.participant_human_ids,
-            current.self_human_id.as_deref(),
-        ) != expected_speaker_count(
-            &update.participant_human_ids,
-            update.self_human_id.as_deref(),
-        )
-}
-
-fn expected_speaker_count(
-    participant_human_ids: &[String],
-    self_human_id: Option<&str>,
-) -> Option<u32> {
-    crate::expected_speakers_per_channel(participant_human_ids, self_human_id)
 }
 
 async fn handle_listener_failure(
