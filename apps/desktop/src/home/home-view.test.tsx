@@ -10,6 +10,8 @@ function renderHome(overrides: Partial<HomeViewProps> = {}) {
     recentNotes: [],
     onStart: vi.fn(),
     onOpenNote: vi.fn(),
+    onExportNote: vi.fn(),
+    onDeleteNote: vi.fn(),
     onSearch: vi.fn(),
     ...overrides,
   };
