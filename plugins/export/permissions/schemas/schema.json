@@ -295,6 +295,18 @@
       "type": "string",
       "oneOf": [
         {
+          "description": "Enables the choose_export_path command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-choose-export-path",
+          "markdownDescription": "Enables the choose_export_path command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the choose_export_path command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-choose-export-path",
+          "markdownDescription": "Denies the choose_export_path command without any pre-configured scope."
+        },
+        {
           "description": "Enables the cleanup_print_files command without any pre-configured scope.",
           "type": "string",
           "const": "allow-cleanup-print-files",
@@ -319,6 +331,18 @@
           "markdownDescription": "Denies the export command without any pre-configured scope."
         },
         {
+          "description": "Enables the export_text command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-export-text",
+          "markdownDescription": "Enables the export_text command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the export_text command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-export-text",
+          "markdownDescription": "Denies the export_text command without any pre-configured scope."
+        },
+        {
           "description": "Enables the print_pdf command without any pre-configured scope.",
           "type": "string",
           "const": "allow-print-pdf",
@@ -331,10 +355,10 @@
           "markdownDescription": "Denies the print_pdf command without any pre-configured scope."
         },
         {
-          "description": "Default permissions for the plugin\n#### This default permission set includes:\n\n- `allow-export`\n- `allow-print-pdf`\n- `allow-cleanup-print-files`",
+          "description": "Default permissions for the plugin\n#### This default permission set includes:\n\n- `allow-export`\n- `allow-export-text`\n- `allow-choose-export-path`\n- `allow-print-pdf`\n- `allow-cleanup-print-files`",
           "type": "string",
           "const": "default",
-          "markdownDescription": "Default permissions for the plugin\n#### This default permission set includes:\n\n- `allow-export`\n- `allow-print-pdf`\n- `allow-cleanup-print-files`"
+          "markdownDescription": "Default permissions for the plugin\n#### This default permission set includes:\n\n- `allow-export`\n- `allow-export-text`\n- `allow-choose-export-path`\n- `allow-print-pdf`\n- `allow-cleanup-print-files`"
         }
       ]
     }

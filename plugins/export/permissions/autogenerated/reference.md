@@ -5,6 +5,8 @@ Default permissions for the plugin
 #### This default permission set includes the following:
 
 - `allow-export`
+- `allow-export-text`
+- `allow-choose-export-path`
 - `allow-print-pdf`
 - `allow-cleanup-print-files`
 
@@ -16,6 +18,32 @@ Default permissions for the plugin
 <th>Description</th>
 </tr>
 
+
+<tr>
+<td>
+
+`export:allow-choose-export-path`
+
+</td>
+<td>
+
+Enables the choose_export_path command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`export:deny-choose-export-path`
+
+</td>
+<td>
+
+Denies the choose_export_path command without any pre-configured scope.
+
+</td>
+</tr>
 
 <tr>
 <td>
@@ -65,6 +93,32 @@ Enables the export command without any pre-configured scope.
 <td>
 
 Denies the export command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`export:allow-export-text`
+
+</td>
+<td>
+
+Enables the export_text command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`export:deny-export-text`
+
+</td>
+<td>
+
+Denies the export_text command without any pre-configured scope.
 
 </td>
 </tr>

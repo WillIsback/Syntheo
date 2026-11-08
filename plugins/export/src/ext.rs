@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
 
+use crate::destination::{self, ChosenExportPaths, Destination};
 use crate::print;
 
 pub struct Export<'a, R: tauri::Runtime, M: tauri::Manager<R>> {
@@ -9,12 +10,51 @@ pub struct Export<'a, R: tauri::Runtime, M: tauri::Manager<R>> {
 }
 
 impl<'a, R: tauri::Runtime, M: tauri::Manager<R>> Export<'a, R, M> {
-    pub fn export_pdf(
+    // Dossiers où l'export peut créer un fichier (issue 422) : ceux des
+    // paramètres, et Téléchargements, utilisé quand aucun n'est choisi.
+    pub async fn export_folders(&self) -> Vec<PathBuf> {
+        let mut folders = Vec::new();
+        if let Some(db) = self.manager.try_state::<tauri_plugin_db::ManagedState>() {
+            match destination::configured_export_folders(db.pool()).await {
+                Ok(configured) => folders.extend(configured),
+                Err(error) => eprintln!("[export] failed to read the export folder: {error}"),
+            }
+        }
+        if let Ok(downloads) = self.manager.path().download_dir() {
+            folders.push(downloads);
+        }
+        folders
+    }
+
+    // Chemin rendu par la boîte de dialogue « Enregistrer sous ».
+    pub fn remember_chosen_path(&self, path: PathBuf) {
+        if let Some(chosen) = self.manager.try_state::<ChosenExportPaths>() {
+            chosen.remember(path);
+        }
+    }
+
+    async fn authorize(&self, path: &Path, extensions: &[&str]) -> Result<Destination, String> {
+        let folders = self.export_folders().await;
+        let chosen = self
+            .manager
+            .try_state::<ChosenExportPaths>()
+            .ok_or_else(|| "export plugin is not initialized".to_string())?;
+        destination::authorize(path, extensions, &folders, &chosen)
+    }
+
+    pub async fn export_pdf(
         &self,
-        path: impl AsRef<Path>,
+        path: &Path,
         input: impl Into<crate::ExportInput>,
-    ) -> Result<(), crate::Error> {
-        syntheo_export_core::export_pdf(path, input)
+    ) -> Result<(), String> {
+        let pdf = syntheo_export_core::render_pdf(input).map_err(|e| e.to_string())?;
+        let destination = self.authorize(path, destination::PDF_EXTENSIONS).await?;
+        destination::write_export(path, destination, &pdf).map_err(|e| e.to_string())
+    }
+
+    pub async fn export_text(&self, path: &Path, content: &str) -> Result<(), String> {
+        let destination = self.authorize(path, destination::TEXT_EXTENSIONS).await?;
+        destination::write_export(path, destination, content.as_bytes()).map_err(|e| e.to_string())
     }
 
     // Dossier privé des PDF à imprimer, dans le cache de l'app.

@@ -21,16 +21,3 @@ pub(crate) async fn remove<R: tauri::Runtime>(
     let path = PathBuf::from(path);
     app.fs2().remove(&path).map_err(|e| e.to_string())
 }
-
-#[tauri::command]
-#[specta::specta]
-pub(crate) async fn write_text_file(path: PathBuf, content: String) -> Result<(), String> {
-    if let Some(parent) = path.parent() {
-        tokio::fs::create_dir_all(parent)
-            .await
-            .map_err(|e| e.to_string())?;
-    }
-    tokio::fs::write(&path, content)
-        .await
-        .map_err(|e| e.to_string())
-}

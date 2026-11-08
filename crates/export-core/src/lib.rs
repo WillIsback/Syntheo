@@ -4,5 +4,5 @@ mod types;
 mod typst;
 
 pub use error::{Error, Result};
-pub use export::export_pdf;
+pub use export::{export_pdf, render_pdf};
 pub use types::*;

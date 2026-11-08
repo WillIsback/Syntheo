@@ -14,7 +14,6 @@ fn make_specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
         .commands(tauri_specta::collect_commands![
             commands::read_text_file::<tauri::Wry>,
             commands::remove::<tauri::Wry>,
-            commands::write_text_file,
         ])
         .error_handling(tauri_specta::ErrorHandlingMode::Result)
 }
