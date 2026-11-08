@@ -3751,11 +3751,11 @@ msgstr "Enregistrement..."
 msgid "screen, slides, screenshot, presentation, screen sharing"
 msgstr "écran, diapositives, capture d'écran, présentation, partage d'écran"
 
-#: src/session/components/note-input/transcript/renderer/index.tsx
+#: src/session/components/note-input/transcript/renderer/scroll-controls.tsx
 msgid "Scroll to bottom"
 msgstr "Faire défiler jusqu'en bas"
 
-#: src/session/components/note-input/transcript/renderer/index.tsx
+#: src/session/components/note-input/transcript/renderer/scroll-controls.tsx
 msgid "Scroll to top"
 msgstr "Faire défiler jusqu'en haut"
 
