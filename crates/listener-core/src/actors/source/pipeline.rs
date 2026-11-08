@@ -136,7 +136,7 @@ impl Pipeline {
             .unwrap_or(usize::MAX)
             .saturating_add(SAMPLE_RATE as usize * REPLAY_CONTEXT_SECS)
             .min(SAMPLE_RATE as usize * MAX_REPLAY_SECS);
-        let mut replayed = 0;
+        let mut replayed: usize = 0;
         for item in self.replay_history.tail(wanted) {
             replayed += item.sample_count();
             self.audio_buffer.push_item(item);
@@ -144,6 +144,10 @@ impl Pipeline {
 
         ListenerRefreshReplay {
             duration_secs: replayed as f64 / SAMPLE_RATE as f64,
+            // The replay is the most recent audio: the context shrinks first,
+            // so every undelivered sample is in it unless they alone outgrew
+            // `MAX_REPLAY_SECS`. Only then did the outage lose audio.
+            complete: u64::try_from(replayed).unwrap_or(u64::MAX) >= undelivered,
         }
     }
 
@@ -1332,6 +1336,73 @@ mod tests {
             "every frame is replayed once, in order, before live audio"
         );
         new_handle.abort();
+    }
+
+    /// Delivers 1.2 s to a listener, then captures `outage_frames` of 120 ms
+    /// while no listener accepts audio, and prepares the reconnection replay.
+    async fn replay_after_outage(outage_frames: usize) -> ListenerRefreshReplay {
+        let mut pipeline = test_pipeline();
+        let (old_tx, mut old_rx) = tokio::sync::mpsc::unbounded_channel();
+        let (old_listener, old_handle) = Actor::spawn(None, OrderingListenerProbe(old_tx), ())
+            .await
+            .unwrap();
+        let old_routing = ListenerRouting::Attached(old_listener.clone());
+        for index in 1..=10 {
+            pipeline
+                .dispatch_frame(
+                    speech_frame(frame_value(index)),
+                    ChannelMode::SpeakerOnly,
+                    &old_routing,
+                )
+                .await
+                .unwrap();
+        }
+        for _ in 1..=10 {
+            tokio::time::timeout(Duration::from_secs(1), old_rx.recv())
+                .await
+                .unwrap()
+                .unwrap();
+        }
+        old_listener.stop(None);
+        old_handle.await.unwrap();
+        pipeline.on_listener_routing_changed(&ListenerRouting::Dropped);
+        for index in 0..outage_frames {
+            pipeline
+                .dispatch_frame(
+                    speech_frame(frame_value(11 + index)),
+                    ChannelMode::SpeakerOnly,
+                    &ListenerRouting::Dropped,
+                )
+                .await
+                .unwrap();
+        }
+        pipeline.prepare_listener_refresh()
+    }
+
+    // Issue #446 : une coupure d'environ 1 s est entièrement rejouée au
+    // nouveau flux ; elle ne doit pas être signalée comme une perte.
+    #[tokio::test]
+    async fn short_outage_is_fully_replayed_and_reports_no_loss() {
+        let replay = replay_after_outage(9).await;
+        assert!(replay.complete, "a 1.08 s outage fits in the replay");
+        // The 1.08 s outage plus the 1.2 s of context available.
+        assert!((replay.duration_secs - 2.28).abs() < 1e-6);
+    }
+
+    // Issue #446 : au-delà du plafond de rejeu, le début de la coupure est
+    // perdu ; la reconnexion doit le signaler.
+    #[tokio::test]
+    async fn outage_longer_than_the_replay_cap_reports_a_loss() {
+        let replay = replay_after_outage(150).await;
+        assert!(!replay.complete, "18 s of outage outgrow the 15 s replay");
+        assert!(replay.duration_secs <= MAX_REPLAY_SECS as f64);
+    }
+
+    #[tokio::test]
+    async fn outage_just_under_the_replay_cap_is_still_complete() {
+        // 14.4 s of outage: the context shrinks, the outage itself is replayed.
+        let replay = replay_after_outage(120).await;
+        assert!(replay.complete);
     }
 
     #[test]

@@ -186,11 +186,15 @@ impl ListenerRuntime for TauriRuntime {
     fn emit_progress(&self, event: syntheo_transcription_core::listener::SessionProgressEvent) {
         if let syntheo_transcription_core::listener::SessionProgressEvent::Connected {
             session_id,
+            gap_replayed,
             ..
         } = &event
         {
-            self.capture_gap_registry
-                .connected(session_id, crate::capture_gaps::unix_now_ms());
+            self.capture_gap_registry.connected(
+                session_id,
+                crate::capture_gaps::unix_now_ms(),
+                *gap_replayed,
+            );
         }
         if let Err(error) = CaptureStatusEvent::from(event).emit(&self.app) {
             tracing::error!(?error, "failed_to_emit_progress_event");
