@@ -300,6 +300,48 @@ describe("capture without audio", () => {
     expect(repair).not.toHaveBeenCalled();
   });
 
+  // Issue #446 : le natif a renvoyé tout l'audio de la coupure au nouveau
+  // flux (rejeu sous son plafond) ; rien n'est perdu, rien n'est signalé.
+  it("fully_replayed_outage_records_no_gap", async () => {
+    const { worker, repair, setNow } = setupWithoutAudio();
+    worker.start();
+    worker.persistedThrough(5_000);
+    setNow(10_000);
+    worker.interrupted();
+    setNow(11_000);
+    worker.connected(true);
+    setNow(60_000);
+    const result = await worker.stop();
+    expect(result).toEqual({ incomplete: false, interruptions: [] });
+    expect(repair).not.toHaveBeenCalled();
+  });
+
+  it("outage_beyond_the_replay_cap_keeps_its_gap", async () => {
+    const { worker, setNow } = setupWithoutAudio();
+    worker.start();
+    worker.persistedThrough(5_000);
+    setNow(10_000);
+    worker.interrupted();
+    setNow(40_000);
+    worker.connected(false);
+    setNow(60_000);
+    const result = await worker.stop();
+    expect(result.interruptions).toHaveLength(1);
+    expect(result.interruptions[0]!.end).toBe(40_000);
+  });
+
+  it("storage_failure_keeps_its_gap_despite_a_full_replay", async () => {
+    const { worker, setNow } = setupWithoutAudio();
+    worker.start();
+    setNow(10_000);
+    worker.storageFailed();
+    worker.interrupted();
+    setNow(11_000);
+    worker.connected(true);
+    setNow(60_000);
+    expect((await worker.stop()).interruptions).toHaveLength(1);
+  });
+
   it("never_connected_capture_records_gap_from_start", async () => {
     const { worker, repair, setNow } = setupWithoutAudio();
     worker.start();

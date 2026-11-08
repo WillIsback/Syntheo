@@ -289,8 +289,16 @@ export function createCaptureAudioRecovery(options: {
       pending = true;
       retryAt = 0;
     },
-    connected() {
+    // `gapReplayed` : le natif a renvoyé au nouveau flux tout l'audio de la
+    // coupure (rejeu sous son plafond, voir `MAX_REPLAY_SECS`) ; rien n'a été
+    // perdu, la coupure n'est donc ni réparée ni signalée. Un échec de
+    // stockage garde son trou : le rejeu ne le comble pas.
+    connected(gapReplayed = false) {
       sawConnectionEvent = true;
+      if (gapReplayed && !online && !failed && gapStart !== undefined) {
+        revision += 1;
+        gapStart = undefined;
+      }
       closeGap();
       online = true;
       retryAt = 0;

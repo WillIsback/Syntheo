@@ -622,7 +622,8 @@ export function useCaptureLifecycle(sessionId: string) {
           }),
           transcriptionEvents.captureStatusEvent.listen(({ payload }) => {
             if (payload.session_id !== sessionId) return;
-            if (payload.type === "connected") audioRecovery.connected();
+            if (payload.type === "connected")
+              audioRecovery.connected(payload.gap_replayed);
             else if (payload.type === "connection_error")
               audioRecovery.interrupted();
             else if (
