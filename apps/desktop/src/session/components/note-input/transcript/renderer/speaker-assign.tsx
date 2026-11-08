@@ -1,13 +1,20 @@
 import { Trans, useLingui } from "@lingui/react/macro";
-import { useCallback, useMemo, useRef, useState } from "react";
+import {
+  type ComponentProps,
+  useCallback,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import { MagnifyingGlass, Plus } from "@syntheo/ui/components/icons";
 import { Checkbox } from "@syntheo/ui/components/ui/checkbox";
 import {
   AppFloatingPanel,
   Popover,
+  PopoverAnchor,
   PopoverContent,
-  PopoverTrigger,
 } from "@syntheo/ui/components/ui/popover";
 import { cn } from "@syntheo/utils";
 
@@ -59,10 +66,49 @@ export function SpeakerAssignPopover({
   onAssigned?: (humanId: string) => void;
 }) {
   const [open, setOpen] = useState(false);
+  // Le Popover Radix (contexte Popper, ancre, contenu) n'est monté qu'à
+  // l'ouverture, puis démonté une fois la fermeture terminée : un segment au
+  // repos ne porte qu'un bouton simple (issue 445).
+  const [popoverMounted, setPopoverMounted] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const hasInteractedOutsideRef = useRef(false);
+  const hasPointerDownOutsideRef = useRef(false);
+  const contentId = useId();
 
   const handleOpenChange = useCallback((nextOpen: boolean) => {
+    if (nextOpen) setPopoverMounted(true);
     setOpen(nextOpen);
+  }, []);
+
+  const handleTriggerClick = useCallback(() => {
+    setPopoverMounted(true);
+    setOpen((prevOpen) => !prevOpen);
+  }, []);
+
+  // Sans PopoverTrigger, Radix ne connaît pas le déclencheur : on reprend la
+  // logique de PopoverContentNonModal (focus rendu au déclencheur, clic sur le
+  // déclencheur qui bascule au lieu de fermer puis rouvrir).
+  const handleCloseAutoFocus = useCallback((event: Event) => {
+    event.preventDefault();
+    if (!hasInteractedOutsideRef.current) triggerRef.current?.focus();
+    hasInteractedOutsideRef.current = false;
+    hasPointerDownOutsideRef.current = false;
+    setPopoverMounted(false);
+  }, []);
+
+  const handleInteractOutside = useCallback<InteractOutsideHandler>((event) => {
+    hasInteractedOutsideRef.current = true;
+    const originalType = event.detail.originalEvent.type;
+    if (originalType === "pointerdown") {
+      hasPointerDownOutsideRef.current = true;
+    }
+    const target = event.target;
+    if (target instanceof Node && triggerRef.current?.contains(target)) {
+      event.preventDefault();
+    }
+    if (originalType === "focusin" && hasPointerDownOutsideRef.current) {
+      event.preventDefault();
+    }
   }, []);
 
   const handleAssign = useCallback(
@@ -114,40 +160,55 @@ export function SpeakerAssignPopover({
   );
 
   return (
-    <Popover open={open} onOpenChange={handleOpenChange}>
-      <PopoverTrigger asChild>
-        <button
-          ref={triggerRef}
-          type="button"
-          data-transcript-speaker-assign
-          className={cn([
-            "-my-0.5 cursor-pointer rounded-full py-0.5 pr-2",
-            "underline-offset-2 hover:underline focus-visible:underline",
-            open ? "underline" : null,
-            className,
-          ])}
-          style={{ color }}
-        >
-          {label}
-        </button>
-      </PopoverTrigger>
-      <PopoverContent
-        variant="app"
-        side="right"
-        align="start"
-        sideOffset={8}
-        collisionPadding={16}
-        className="w-80"
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        data-transcript-speaker-assign
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-controls={open ? contentId : undefined}
+        data-state={open ? "open" : "closed"}
+        className={cn([
+          "-my-0.5 cursor-pointer rounded-full py-0.5 pr-2",
+          "underline-offset-2 hover:underline focus-visible:underline",
+          open ? "underline" : null,
+          className,
+        ])}
+        style={{ color }}
+        onClick={handleTriggerClick}
       >
-        <SpeakerParticipantPicker
-          sessionId={sessionId}
-          onSelect={handleAssign}
-          showAssignmentScope={Number.isInteger(segment.key.speaker_index)}
-        />
-      </PopoverContent>
-    </Popover>
+        {label}
+      </button>
+      {open || popoverMounted ? (
+        <Popover open={open} onOpenChange={handleOpenChange}>
+          <PopoverAnchor virtualRef={triggerRef} />
+          <PopoverContent
+            id={contentId}
+            variant="app"
+            side="right"
+            align="start"
+            sideOffset={8}
+            collisionPadding={16}
+            className="w-80"
+            onCloseAutoFocus={handleCloseAutoFocus}
+            onInteractOutside={handleInteractOutside}
+          >
+            <SpeakerParticipantPicker
+              sessionId={sessionId}
+              onSelect={handleAssign}
+              showAssignmentScope={Number.isInteger(segment.key.speaker_index)}
+            />
+          </PopoverContent>
+        </Popover>
+      ) : null}
+    </>
   );
 }
+
+type InteractOutsideHandler = NonNullable<
+  ComponentProps<typeof PopoverContent>["onInteractOutside"]
+>;
 
 export function getAssignmentAnchorWordId(
   segment: Segment,
