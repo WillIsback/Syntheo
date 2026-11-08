@@ -232,7 +232,9 @@ export type CaptureSnapshot = {
 
 export type CaptureState = "active" | "finalizing" | "inactive";
 
-export type CaptureStatusEvent = { type: "audio_initializing"; session_id: string } | { type: "audio_ready"; session_id: string; device: string | null } | { type: "connecting"; session_id: string } | { type: "connected"; session_id: string; adapter: string } | { type: "audio_error"; session_id: string; error: string; device: string | null; is_fatal: boolean } | { type: "connection_error"; session_id: string; error: string };
+export type CaptureStatusEvent = { type: "audio_initializing"; session_id: string } | { type: "audio_ready"; session_id: string; device: string | null } | { type: "connecting"; session_id: string } | { type: "connected"; session_id: string; adapter: string; 
+/**  The replay after a reconnection carried all the audio of the outage. */
+gap_replayed: boolean } | { type: "audio_error"; session_id: string; error: string; device: string | null; is_fatal: boolean } | { type: "connection_error"; session_id: string; error: string };
 
 export type ChannelProfile = "DirectMic" | "RemoteParty" | "MixedCapture";
 

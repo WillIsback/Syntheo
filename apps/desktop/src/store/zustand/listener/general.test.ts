@@ -381,6 +381,7 @@ describe("General Listener Slice", () => {
             type: "connected",
             session_id: "session-1",
             adapter: "deepgram",
+            gap_replayed: false,
           });
         }),
       );
@@ -400,6 +401,7 @@ describe("General Listener Slice", () => {
             type: "connected",
             session_id: "session-1",
             adapter: "deepgram",
+            gap_replayed: false,
           });
         }),
       );

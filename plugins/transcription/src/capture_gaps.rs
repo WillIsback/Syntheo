@@ -123,9 +123,16 @@ impl CaptureGapRegistry {
         }
     }
 
-    pub fn connected(&self, session_id: &str, now_ms: i64) {
+    /// `gap_replayed`: the new listener was sent all the audio of the outage,
+    /// so the outage left no hole in the transcript and is forgotten. A storage
+    /// failure keeps its gap: the replay does not repair it.
+    pub fn connected(&self, session_id: &str, now_ms: i64, gap_replayed: bool) {
         if let Some(ledger) = self.ledgers().get_mut(session_id) {
-            ledger.close_gap(now_ms);
+            if gap_replayed && ledger.awaiting_connection && !ledger.storage_failed {
+                ledger.open_gap_started_at_ms = None;
+            } else {
+                ledger.close_gap(now_ms);
+            }
             ledger.awaiting_connection = false;
         }
     }
@@ -201,7 +208,7 @@ mod tests {
         registry.interrupted("session", 1_030_000);
         assert!(registry.get("session").unwrap().awaiting_connection);
 
-        registry.connected("session", 1_090_000);
+        registry.connected("session", 1_090_000, false);
         let gaps = registry.get("session").unwrap();
         assert_eq!(
             gaps.gaps,
@@ -211,6 +218,31 @@ mod tests {
             }]
         );
         assert!(!gaps.awaiting_connection);
+    }
+
+    // Issue #446 : une coupure entièrement rejouée n'est pas un trou.
+    #[test]
+    fn a_fully_replayed_outage_leaves_no_gap() {
+        let registry = CaptureGapRegistry::default();
+        registry.start("session", 1_000_000, true, true, true);
+        registry.persisted_through("session", 20_000);
+
+        registry.interrupted("session", 1_030_000);
+        registry.connected("session", 1_031_000, true);
+        let gaps = registry.get("session").unwrap();
+        assert!(gaps.gaps.is_empty());
+        assert_eq!(gaps.open_gap_started_at_ms, None);
+        assert!(!gaps.awaiting_connection);
+    }
+
+    #[test]
+    fn a_storage_failure_keeps_its_gap_despite_a_full_replay() {
+        let registry = CaptureGapRegistry::default();
+        registry.start("session", 1_000_000, true, true, true);
+        registry.storage_failed("session", 1_010_000);
+        registry.interrupted("session", 1_030_000);
+        registry.connected("session", 1_031_000, true);
+        assert_eq!(registry.get("session").unwrap().gaps.len(), 1);
     }
 
     #[test]
@@ -274,7 +306,7 @@ mod tests {
             let offset_ms = index * 2_000;
             registry.persisted_through("session", offset_ms + 1_000);
             registry.interrupted("session", capture_started_at_ms + offset_ms);
-            registry.connected("session", capture_started_at_ms + offset_ms + 100);
+            registry.connected("session", capture_started_at_ms + offset_ms + 100, false);
         }
 
         let gaps = registry.get("session").unwrap().gaps;

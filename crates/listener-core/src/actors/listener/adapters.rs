@@ -316,6 +316,7 @@ mod tests {
             session_started_at: Instant::now(),
             session_started_at_unix: SystemTime::now(),
             stream_offset_secs: None,
+            gap_replayed: false,
             session_id: "session".to_string(),
             participant_human_ids: vec![],
             self_human_id: None,

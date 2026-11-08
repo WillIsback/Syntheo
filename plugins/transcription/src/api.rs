@@ -161,7 +161,12 @@ pub enum CaptureStatusEvent {
     #[serde(rename = "connecting")]
     Connecting { session_id: String },
     #[serde(rename = "connected")]
-    Connected { session_id: String, adapter: String },
+    Connected {
+        session_id: String,
+        adapter: String,
+        /// The replay after a reconnection carried all the audio of the outage.
+        gap_replayed: bool,
+    },
     #[serde(rename = "audio_error")]
     AudioError {
         session_id: String,
@@ -373,9 +378,11 @@ impl From<listener::SessionProgressEvent> for CaptureStatusEvent {
             listener::SessionProgressEvent::Connected {
                 session_id,
                 adapter,
+                gap_replayed,
             } => Self::Connected {
                 session_id,
                 adapter,
+                gap_replayed,
             },
         }
     }

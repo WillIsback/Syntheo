@@ -108,7 +108,7 @@ impl Actor for SessionActor {
                 return Ok(());
             }
 
-            match children::spawn_listener(myself.get_cell(), &state.ctx, None).await {
+            match children::spawn_listener(myself.get_cell(), &state.ctx, None, false).await {
                 Ok((listener_cell, mic_isolated)) => {
                     state.listener_cell = Some(listener_cell);
                     state.listener_mic_isolated = mic_isolated;
@@ -347,16 +347,23 @@ async fn update_config(
 }
 
 async fn refresh_listener(myself: ActorRef<SessionMsg>, state: &mut SessionState) {
-    let replay_duration_secs = children::stop_listener(state, "config_update").await;
+    let replay = children::stop_listener(state, "config_update").await;
 
     if !state.mode.should_spawn_listener() {
         return;
     }
 
     let replay_offset_secs =
-        (state.ctx.started_at_instant.elapsed().as_secs_f64() - replay_duration_secs).max(0.0);
+        (state.ctx.started_at_instant.elapsed().as_secs_f64() - replay.duration_secs).max(0.0);
 
-    match children::spawn_listener(myself.get_cell(), &state.ctx, Some(replay_offset_secs)).await {
+    match children::spawn_listener(
+        myself.get_cell(),
+        &state.ctx,
+        Some(replay_offset_secs),
+        replay.complete,
+    )
+    .await
+    {
         Ok((listener_cell, mic_isolated)) => {
             state.listener_cell = Some(listener_cell);
             state.listener_mic_isolated = mic_isolated;
@@ -489,11 +496,18 @@ async fn retry_listener(myself: ActorRef<SessionMsg>, state: &mut SessionState) 
         return;
     }
 
-    let replay_duration_secs = children::prepare_listener_refresh(state).await;
+    let replay = children::prepare_listener_refresh(state).await;
     let replay_offset_secs =
-        (state.ctx.started_at_instant.elapsed().as_secs_f64() - replay_duration_secs).max(0.0);
+        (state.ctx.started_at_instant.elapsed().as_secs_f64() - replay.duration_secs).max(0.0);
 
-    match children::spawn_listener(myself.get_cell(), &state.ctx, Some(replay_offset_secs)).await {
+    match children::spawn_listener(
+        myself.get_cell(),
+        &state.ctx,
+        Some(replay_offset_secs),
+        replay.complete,
+    )
+    .await
+    {
         Ok((listener_cell, mic_isolated)) => {
             tracing::info!(
                 attempts = state.listener_retry_attempt,

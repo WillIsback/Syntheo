@@ -67,6 +67,9 @@ pub struct ListenerArgs {
     pub session_started_at: Instant,
     pub session_started_at_unix: SystemTime,
     pub stream_offset_secs: Option<f64>,
+    /// This listener reconnects after an outage and receives every sample the
+    /// previous one never accepted: the outage lost no audio.
+    pub gap_replayed: bool,
     pub session_id: String,
     pub participant_human_ids: Vec<String>,
     pub self_human_id: Option<String>,
@@ -167,6 +170,7 @@ impl Actor for ListenerActor {
             args.runtime.emit_progress(SessionProgressEvent::Connected {
                 session_id: session_id.clone(),
                 adapter: adapter_name.clone(),
+                gap_replayed: args.gap_replayed,
             });
 
             let transcript = resume_transcript(&args, &adapter_name);

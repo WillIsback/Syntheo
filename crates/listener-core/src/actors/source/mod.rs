@@ -60,6 +60,17 @@ pub struct SourceFrame {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ListenerRefreshReplay {
     pub duration_secs: f64,
+    /// Every sample the previous listener never accepted is part of the replay:
+    /// the outage lost no audio. False once that audio outgrew the replay cap.
+    pub complete: bool,
+}
+
+impl ListenerRefreshReplay {
+    /// No replay was prepared (no source, or the source did not answer).
+    pub const NONE: Self = Self {
+        duration_secs: 0.0,
+        complete: false,
+    };
 }
 
 #[derive(Clone)]
