@@ -6,6 +6,9 @@ export type PlaceholderFunction = (props: {
   node: PMNode;
   pos: number;
   hasAnchor: boolean;
+  // Vrai seulement si le document entier se réduit à un bloc de texte vide :
+  // permet de n'afficher la consigne que dans un éditeur vierge (issue 430).
+  isEmptyDoc: boolean;
 }) => string;
 
 export type PersistentPlaceholderFunction = (props: {
@@ -99,6 +102,7 @@ export function placeholderPlugin(
               node: target.node,
               pos: target.pos,
               hasAnchor: true,
+              isEmptyDoc,
             }),
           );
         }
