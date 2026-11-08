@@ -3755,11 +3755,11 @@ msgstr "Saving..."
 msgid "screen, slides, screenshot, presentation, screen sharing"
 msgstr "screen, slides, screenshot, presentation, screen sharing"
 
-#: src/session/components/note-input/transcript/renderer/index.tsx
+#: src/session/components/note-input/transcript/renderer/scroll-controls.tsx
 msgid "Scroll to bottom"
 msgstr "Scroll to bottom"
 
-#: src/session/components/note-input/transcript/renderer/index.tsx
+#: src/session/components/note-input/transcript/renderer/scroll-controls.tsx
 msgid "Scroll to top"
 msgstr "Scroll to top"
 
@@ -4167,6 +4167,7 @@ msgid "Speak into any text field, in any app. The text is inserted when you fini
 msgstr "Speak into any text field, in any app. The text is inserted when you finish."
 
 #: src/session/components/speaker-naming/speaker-card.tsx
+#: src/session/components/speaker-naming/speakers.ts
 msgid "Speaker {number}"
 msgstr "Speaker {number}"
 
@@ -5354,6 +5355,10 @@ msgstr "Yesterday"
 #: src/templates/utils.ts
 msgid "you"
 msgstr "you"
+
+#: src/session/components/speaker-naming/speakers.ts
+msgid "You"
+msgstr "You"
 
 #: src/stt/live-transcript-interrupted.ts
 msgid "you are offline"

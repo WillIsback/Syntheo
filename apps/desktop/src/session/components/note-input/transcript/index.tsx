@@ -19,14 +19,17 @@ export function Transcript({
   scrollRef,
   editMode = false,
   onEditModeChange,
+  scrollControlsSlot,
 }: {
   sessionId: string;
   scrollRef: RefObject<HTMLDivElement | null>;
   editMode?: boolean;
   onEditModeChange?: (editMode: boolean) => void;
+  scrollControlsSlot?: HTMLElement | null;
 }) {
   return (
     <TranscriptContent
+      scrollControlsSlot={scrollControlsSlot}
       key={sessionId}
       sessionId={sessionId}
       scrollRef={scrollRef}
@@ -41,11 +44,13 @@ function TranscriptContent({
   scrollRef,
   editMode,
   onEditModeChange,
+  scrollControlsSlot,
 }: {
   sessionId: string;
   scrollRef: RefObject<HTMLDivElement | null>;
   editMode: boolean;
   onEditModeChange?: (editMode: boolean) => void;
+  scrollControlsSlot?: HTMLElement | null;
 }) {
   const screen = useTranscriptScreen({ sessionId });
   const incompleteCapture = useIncompleteCapture(sessionId);
@@ -108,6 +113,7 @@ function TranscriptContent({
             currentActive={screen.currentActive}
             captureGeneration={screen.captureGeneration}
             scrollRef={scrollRef}
+            scrollControlsSlot={scrollControlsSlot}
             editMode={editMode && !screen.currentActive}
             onEditModeChange={
               screen.currentActive ? undefined : onEditModeChange
