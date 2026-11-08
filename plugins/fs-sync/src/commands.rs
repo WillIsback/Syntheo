@@ -175,8 +175,12 @@ fn create_parent_dir_for_write(path: &Path) -> Result<(), String> {
     })
 }
 
+/// `path` vient de `resolve_vault_path` : il est canonique et contrôlé. Il est
+/// ouvert sans suivre de lien, pour qu'un lien glissé entre le contrôle et
+/// l'écriture soit refusé au lieu d'être suivi hors du coffre (issue 428).
 fn write_file_with_context(path: &Path, content: String) -> Result<(), String> {
-    std::fs::write(path, content).map_err(|e| format!("failed to write {}: {e}", path.display()))
+    crate::path::write_no_follow(path, content)
+        .map_err(|e| format!("failed to write {}: {e}", path.display()))
 }
 
 #[tauri::command]

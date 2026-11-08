@@ -4,6 +4,8 @@ use uuid::Uuid;
 
 use crate::error::Result;
 
+pub use syntheo_storage::safe_path::{SYMLINK_NOT_ALLOWED, open_no_follow, write_no_follow};
+
 pub fn to_relative_path(path: &Path, base: &Path) -> String {
     path.strip_prefix(base)
         .ok()
@@ -50,6 +52,12 @@ pub fn normalize_folder_path(path: &str) -> Result<String> {
     Ok(normalized.join("/"))
 }
 
+/// Chemin canonique de `path` (absolu, ou relatif à `base`), qui doit rester
+/// sous `base` une fois les liens résolus.
+///
+/// Un lien qui reste dans `base` est remplacé par sa cible : pour écrire,
+/// ouvrir le résultat avec [`write_no_follow`] / [`open_no_follow`], qui
+/// refusent un lien glissé entre ce contrôle et l'ouverture (issue 428).
 pub fn resolve_path_inside_base(base: &Path, path: &Path) -> Result<PathBuf> {
     let base = base.canonicalize()?;
     let candidate = if path.is_absolute() {
@@ -296,5 +304,43 @@ mod tests {
                 .join("real")
                 .join("note.md")
         );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn write_after_resolve_refuses_a_link_swapped_in_meanwhile() {
+        let temp = assert_fs::TempDir::new().unwrap();
+        let base = temp.child("vault");
+        let sentinel = temp.child("outside.md");
+        base.child("note.md").write_str("original").unwrap();
+        sentinel.write_str("keep").unwrap();
+
+        // Même enchaînement que `write_document_batch`, avec un lien glissé
+        // entre la résolution et l'écriture (issue 428).
+        let resolved = resolve_path_inside_base(base.path(), Path::new("note.md")).unwrap();
+        std::fs::remove_file(base.child("note.md").path()).unwrap();
+        std::os::unix::fs::symlink(sentinel.path(), base.child("note.md").path()).unwrap();
+
+        let error = write_no_follow(&resolved, "pirate").unwrap_err();
+
+        assert_eq!(error.to_string(), SYMLINK_NOT_ALLOWED);
+        sentinel.assert("keep");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn write_after_resolve_follows_a_link_staying_inside() {
+        let temp = assert_fs::TempDir::new().unwrap();
+        let base = temp.child("vault");
+        base.child("real")
+            .child("note.md")
+            .write_str("old")
+            .unwrap();
+        std::os::unix::fs::symlink(base.child("real").path(), base.child("alias").path()).unwrap();
+
+        let resolved = resolve_path_inside_base(base.path(), Path::new("alias/note.md")).unwrap();
+        write_no_follow(&resolved, "new").unwrap();
+
+        base.child("real").child("note.md").assert("new");
     }
 }

@@ -213,10 +213,7 @@ impl FsSyncCore {
         let attachments_dir = session_dir.join("attachments");
         let safe_attachment_id = sanitize_filename(attachment_id)?;
 
-        Ok(std::fs::read(join_under(
-            &attachments_dir,
-            &safe_attachment_id,
-        )?)?)
+        read_under(&attachments_dir, &safe_attachment_id)
     }
 
     pub fn attachment_remove(&self, session_id: &str, attachment_id: &str) -> Result<()> {
@@ -256,10 +253,7 @@ impl FsSyncCore {
         let materials_dir = self.resolve_folder_materials_dir(folder_path)?;
         let safe_attachment_id = sanitize_filename(attachment_id)?;
 
-        Ok(std::fs::read(join_under(
-            &materials_dir,
-            &safe_attachment_id,
-        )?)?)
+        read_under(&materials_dir, &safe_attachment_id)
     }
 
     pub fn folder_attachment_remove(&self, folder_path: &str, attachment_id: &str) -> Result<()> {
@@ -361,6 +355,23 @@ fn join_under(dir: &std::path::Path, name: &str) -> Result<PathBuf> {
         .map_err(|error| Error::from(std::io::Error::from(error)))
 }
 
+/// Lit `dir/name` : le chemin canonique est contrôlé puis ouvert sans suivre
+/// de lien, pour que le contrôle et la lecture portent sur le même fichier
+/// (issue 428).
+fn read_under(dir: &std::path::Path, name: &str) -> Result<Vec<u8>> {
+    use std::io::Read;
+
+    let mut file = syntheo_storage::safe_path::open_under_base(
+        dir,
+        name,
+        std::fs::OpenOptions::new().read(true),
+    )
+    .map_err(|error| Error::from(std::io::Error::from(error)))?;
+    let mut data = Vec::new();
+    file.read_to_end(&mut data)?;
+    Ok(data)
+}
+
 fn sanitize_filename(filename: &str) -> Result<String> {
     let path = std::path::Path::new(filename);
 
@@ -419,11 +430,12 @@ fn write_unique_file_with(
 
         let candidate_path = join_under(dir, &candidate_filename)?;
 
-        match OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(&candidate_path)
-        {
+        // `create_new` refuse déjà un nom pris, lien compris ; `open_no_follow`
+        // garde la même ouverture que les autres écritures du coffre.
+        match syntheo_storage::safe_path::open_no_follow(
+            &candidate_path,
+            OpenOptions::new().write(true).create_new(true),
+        ) {
             Ok(mut file) => {
                 if let Err(error) = write_data(&mut file, data) {
                     drop(file);
@@ -772,6 +784,26 @@ mod tests {
         let core = FsSyncCore::new(temp.path().to_path_buf());
 
         assert!(core.attachment_read(UUID_1, "link.txt").is_err());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn attachment_read_follows_a_symlink_staying_in_the_attachments_dir() {
+        let temp = TempDir::new().unwrap();
+        let attachments = temp.child("sessions").child(UUID_1).child("attachments");
+        attachments.child("real.txt").write_str("content").unwrap();
+        std::os::unix::fs::symlink(
+            attachments.child("real.txt").path(),
+            attachments.child("alias.txt").path(),
+        )
+        .unwrap();
+
+        let core = FsSyncCore::new(temp.path().to_path_buf());
+
+        assert_eq!(
+            core.attachment_read(UUID_1, "alias.txt").unwrap(),
+            b"content"
+        );
     }
 
     #[test]
