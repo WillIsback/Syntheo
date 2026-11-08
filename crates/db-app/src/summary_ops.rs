@@ -17,6 +17,11 @@ pub struct GeneratedSummaryBodyUpdate<'a> {
     pub updated_at: &'a str,
     pub pending_auto_enhance: Option<PendingAutoEnhanceMatch<'a>>,
     pub source_note_fingerprint: Option<&'a str>,
+    /// Passages validés venus des notes (issue 417), en tableau JSON : la
+    /// synthèse enregistrée n'a aucune balise, sa provenance vit ici. `None`
+    /// quand le modèle n'a rien balisé (l'affichage se replie alors sur les
+    /// fragments).
+    pub note_passages_json: Option<&'a str>,
 }
 
 /// Versions remplacées gardées par synthèse (issue 415) ; au-delà, les plus
@@ -116,6 +121,7 @@ pub async fn update_generated_summary_body(
         updated_at,
         pending_auto_enhance,
         source_note_fingerprint,
+        note_passages_json,
     } = update;
     let result = if let Some(pending) = pending_auto_enhance {
         sqlx::query(
@@ -128,7 +134,8 @@ pub async fn update_generated_summary_body(
                    ELSE '{}'
                  END,
                  '$.generatedAt', ?,
-                 '$.sourceNoteFingerprint', ?
+                 '$.sourceNoteFingerprint', ?,
+                 '$.notePassages', json(?)
                )
              WHERE id = ?
                AND session_id = ?
@@ -159,6 +166,7 @@ pub async fn update_generated_summary_body(
         .bind(updated_at)
         .bind(updated_at)
         .bind(source_note_fingerprint)
+        .bind(note_passages_json)
         .bind(note_id)
         .bind(session_id)
         .bind(current_body)
@@ -182,7 +190,8 @@ pub async fn update_generated_summary_body(
                    ELSE '{}'
                  END,
                  '$.generatedAt', ?,
-                 '$.sourceNoteFingerprint', ?
+                 '$.sourceNoteFingerprint', ?,
+                 '$.notePassages', json(?)
                )
              WHERE id = ?
                AND session_id = ?
@@ -199,6 +208,7 @@ pub async fn update_generated_summary_body(
         .bind(updated_at)
         .bind(updated_at)
         .bind(source_note_fingerprint)
+        .bind(note_passages_json)
         .bind(note_id)
         .bind(session_id)
         .bind(current_body)

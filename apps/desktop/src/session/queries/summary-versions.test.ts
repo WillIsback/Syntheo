@@ -18,17 +18,37 @@ describe("parseSummaryGenerationMetadata", () => {
     ).toEqual({
       generatedAt: "2026-11-08T09:00:00.000Z",
       sourceNoteFingerprint: "v1:abc",
+      notePassages: null,
     });
+  });
+
+  it("reads the note passages kept apart from the body (issue 417)", () => {
+    expect(
+      parseSummaryGenerationMetadata(
+        '{"notePassages":["Mme Kowalczyk",3,"50k"]}',
+      ).notePassages,
+    ).toEqual(["Mme Kowalczyk", "50k"]);
+    expect(
+      parseSummaryGenerationMetadata('{"notePassages":[]}').notePassages,
+    ).toEqual([]);
+    expect(
+      parseSummaryGenerationMetadata('{"notePassages":null}').notePassages,
+    ).toBeNull();
+    expect(
+      parseSummaryGenerationMetadata('{"notePassages":"x"}').notePassages,
+    ).toBeNull();
   });
 
   it("returns nulls for summaries generated before versions existed", () => {
     expect(parseSummaryGenerationMetadata("{}")).toEqual({
       generatedAt: null,
       sourceNoteFingerprint: null,
+      notePassages: null,
     });
     expect(parseSummaryGenerationMetadata("not json")).toEqual({
       generatedAt: null,
       sourceNoteFingerprint: null,
+      notePassages: null,
     });
   });
 });

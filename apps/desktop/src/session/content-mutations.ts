@@ -74,11 +74,17 @@ export function persistGeneratedEnhancedNote({
   tagNames,
   pendingAutoEnhance,
   sourceNoteFingerprint,
+  notePassages = null,
 }: {
   sessionId: string;
   ownerUserId: string;
   note: SessionDocumentContentUpdate;
   tagNames: string[];
+  /**
+   * Passages balisés par le modèle et validés contre la note (issue 417),
+   * rangés à part du corps ; `null` : aucune balise.
+   */
+  notePassages?: string[] | null;
   pendingAutoEnhance?: {
     generation: string;
     expectedBody: string;
@@ -103,6 +109,7 @@ export function persistGeneratedEnhancedNote({
           }
         : null,
       source_note_fingerprint: sourceNoteFingerprint ?? null,
+      note_passages: notePassages,
     });
     if (result.status === "error") throw new Error(result.error);
   });

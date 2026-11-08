@@ -33,6 +33,10 @@ pub struct SaveGeneratedSummaryRequest {
     /// 415) : la note modifiée ensuite propose « Régénérer avec mes notes ».
     #[serde(default)]
     pub source_note_fingerprint: Option<String>,
+    /// Passages balisés par le modèle et validés contre la note brute (issue
+    /// 417). Les balises sont déjà retirées du corps ; `None` : aucune balise.
+    #[serde(default)]
+    pub note_passages: Option<Vec<String>>,
 }
 
 pub async fn save_generated_summary(
@@ -49,7 +53,12 @@ pub async fn save_generated_summary(
         tag_names,
         pending_auto_enhance,
         source_note_fingerprint,
+        note_passages,
     } = request;
+    let note_passages_json = note_passages
+        .map(|passages| serde_json::to_string(&passages))
+        .transpose()
+        .map_err(|error| error.to_string())?;
 
     let timestamp = js_iso8601_timestamp();
     let trimmed_user_id = owner_user_id.trim();
@@ -89,6 +98,7 @@ pub async fn save_generated_summary(
             updated_at: &timestamp,
             pending_auto_enhance: pending_match,
             source_note_fingerprint: source_note_fingerprint.as_deref(),
+            note_passages_json: note_passages_json.as_deref(),
         },
     )
     .await
@@ -192,6 +202,7 @@ mod tests {
             tag_names: tag_names.into_iter().map(str::to_string).collect(),
             pending_auto_enhance: None,
             source_note_fingerprint: Some("note-v1".to_string()),
+            note_passages: None,
         }
     }
 
@@ -287,6 +298,39 @@ mod tests {
         .unwrap();
         assert_eq!(fingerprint, "note-v1");
         assert_eq!(generated_at, updated_at);
+    }
+
+    // Issue 417 : les passages validés sont rangés à part du corps ; une
+    // génération sans balise efface ceux de la précédente.
+    #[tokio::test]
+    async fn generation_records_note_passages_apart_from_the_body() {
+        let db = test_db().await;
+        let mut first = request(vec![]);
+        first.note_passages = Some(vec!["Mme Kowalczyk".to_string(), "50 000 €".to_string()]);
+        save_generated_summary(db.pool(), first).await.unwrap();
+
+        let passages: String = sqlx::query_scalar(
+            "SELECT json_extract(generation_metadata_json, '$.notePassages')
+             FROM session_documents WHERE id = 'note-1'",
+        )
+        .fetch_one(db.pool())
+        .await
+        .unwrap();
+        assert_eq!(passages, r#"["Mme Kowalczyk","50 000 €"]"#);
+
+        let mut second = request(vec![]);
+        second.current_body = r#"{"type":"doc","content":[]}"#.to_string();
+        second.current_body_format = "prosemirror_json".to_string();
+        save_generated_summary(db.pool(), second).await.unwrap();
+
+        let kind: String = sqlx::query_scalar(
+            "SELECT json_type(generation_metadata_json, '$.notePassages')
+             FROM session_documents WHERE id = 'note-1'",
+        )
+        .fetch_one(db.pool())
+        .await
+        .unwrap();
+        assert_eq!(kind, "null");
     }
 
     #[tokio::test]

@@ -164,6 +164,11 @@ export type SaveGeneratedSummaryRequest = {
 	 *  415) : la note modifiée ensuite propose « Régénérer avec mes notes ».
 	 */
 	source_note_fingerprint?: string | null,
+	/**
+	 *  Passages balisés par le modèle et validés contre la note brute (issue
+	 *  417). Les balises sont déjà retirées du corps ; `None` : aucune balise.
+	 */
+	note_passages?: string[] | null,
 };
 
 export type SaveGeneratedTitleRequest = {

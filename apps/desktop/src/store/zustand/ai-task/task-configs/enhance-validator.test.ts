@@ -27,6 +27,9 @@ describe("createEnhanceValidator", () => {
     "# Data File",
     "# data file status & upload testing",
     "Here is the summary:\n# Data File Status and Upload Testing",
+    // Issue 417 : les balises de provenance ne comptent pas.
+    "# ⟦Data File",
+    "⟦# Data File Status⟧ and Upload Testing",
   ])("accepts valid heading input: %s", (input) => {
     expect(createEnhanceValidator(template)(input)).toEqual({ valid: true });
   });

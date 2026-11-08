@@ -14,8 +14,14 @@ import { runNoteEnhancedAutomations } from "~/automations/engine";
 import { releaseCloudsyncActivityEventually } from "~/db/cloudsync-activity";
 import { retryDatabaseLock } from "~/db/retry";
 import { showSummaryReadyNotification } from "~/services/enhancer/summary-notification";
+import {
+  extractNoteLines,
+  prepareNotes,
+  validateNotePassage,
+} from "~/session/components/living-document/note-attribution";
 import { persistGeneratedEnhancedNote } from "~/session/content-mutations";
 import { loadSessionContentSnapshot } from "~/session/content-queries";
+import { extractNoteMarks } from "~/session/note-marks";
 import { requestAppAttention } from "~/shared/app-attention";
 import { playCompletionSound } from "~/shared/completion-sound";
 import { id } from "~/shared/utils";
@@ -39,8 +45,12 @@ export const runEnhanceSuccess = async ({
   signal,
   onPersisted,
 }: EnhanceSuccessParams) => {
+  // Issue 417 : les balises de provenance sont retirées ici, avant toute
+  // autre étape ; plus rien en aval (titre, étiquettes, synthèse enregistrée,
+  // export, copie, chat, MCP, CLI, sync de fichiers) ne les voit.
+  const marked = extractNoteMarks(text);
   const preparedResult = await templateCommands.prepareGeneratedSummary({
-    text,
+    text: marked.text,
     tag_sources: [
       transformedArgs.preMeetingMemo,
       transformedArgs.postMeetingMemo,
@@ -66,6 +76,11 @@ export const runEnhanceSuccess = async ({
   if (!initialSnapshot) {
     throw new Error(`Session ${args.sessionId} no longer exists`);
   }
+  const notePassages = backedNotePassages(
+    marked.passages,
+    initialSnapshot.rawContent,
+    initialSnapshot.rawContentFormat,
+  );
 
   let trimmedTitle = initialSnapshot.title.trim();
   let generatedTitle = "";
@@ -169,6 +184,7 @@ export const runEnhanceSuccess = async ({
           nextContent: JSON.stringify(md2json(persistableText)),
         },
         tagNames,
+        notePassages,
         ...(transformedArgs.sourceNoteFingerprint
           ? { sourceNoteFingerprint: transformedArgs.sourceNoteFingerprint }
           : {}),
@@ -203,6 +219,27 @@ export const runEnhanceSuccess = async ({
     await releaseCloudsyncActivityEventually("enhance", cloudsyncLeaseKey);
   }
 };
+
+// Contrôle déterministe à la réception : une balise que la note brute
+// n'appuie pas est rejetée, son passage restera noir. `null` (aucune balise)
+// laisse l'affichage se replier sur les fragments venus des notes.
+function backedNotePassages(
+  passages: string[] | null,
+  rawContent: string,
+  rawContentFormat: string,
+): string[] | null {
+  if (passages === null) return null;
+  let rawJson = rawContent;
+  if (rawContentFormat === "markdown") {
+    try {
+      rawJson = JSON.stringify(md2json(rawContent));
+    } catch {
+      rawJson = "";
+    }
+  }
+  const notes = prepareNotes(extractNoteLines(rawJson));
+  return passages.filter((passage) => validateNotePassage(passage, notes));
+}
 
 const TITLE_WAIT_POLL_MS = 250;
 // The running title task fails at its own deadline; this margin only guards

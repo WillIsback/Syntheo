@@ -47,6 +47,8 @@ export type EnhancedNoteRecord = {
   // brute qui a servi (null pour une synthèse plus ancienne).
   generatedAt?: string | null;
   sourceNoteFingerprint?: string | null;
+  // Issue 417 : passages validés venus des notes ; null : aucune balise.
+  notePassages?: string[] | null;
 };
 
 export type SessionParticipantRecord = {
