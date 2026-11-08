@@ -1819,6 +1819,10 @@ msgstr "Dossiers"
 msgid "Food & Drink"
 msgstr "Restauration et boissons"
 
+#: src/stt/interruptions.ts
+msgid "for a few seconds at {start}"
+msgstr "quelques secondes à {start}"
+
 #: src/settings/general/notification.tsx
 msgid "For enabled notifications"
 msgstr "Pour les notifications activées"
@@ -4936,6 +4940,10 @@ msgstr "Transcription · injoignable"
 #: src/session/components/note-input/transcript/screens/empty.tsx
 msgid "Transcription failed"
 msgstr "Échec de la transcription"
+
+#: src/stt/interruptions.ts
+msgid "Transcription interrupted {gaps}"
+msgstr "Transcription interrompue {gaps}"
 
 #: src/settings/search-index.ts
 msgid "transcription model, Whisper, Parakeet, speech recognition"

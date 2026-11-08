@@ -60,57 +60,68 @@ function TranscriptContent({
       {incompleteCapture && (
         <div
           role="status"
-          className="border-chart-3/30 bg-chart-3/10 text-foreground border-b px-4 py-2 text-sm"
+          data-incomplete-capture-banner
+          className="border-chart-3/30 bg-chart-3/10 text-foreground shrink-0 border-b px-4 py-2 text-sm"
         >
           {incompleteCapture.interruptions?.length
             ? `${formatInterruptions(incompleteCapture.interruptions)}.`
             : t`This transcription is incomplete.`}
         </div>
       )}
-      {screen.kind === "running_batch" && (
-        <TranscriptEmptyState
-          isBatching
-          percentage={screen.percentage}
-          phase={screen.phase}
-          onStopTranscription={
-            screen.phase === "importing" ? undefined : handleStopTranscription
-          }
-        />
-      )}
-      {screen.kind === "batch_fallback" && (
-        <BatchState
-          requestedLiveTranscription={screen.requestedLiveTranscription}
-        />
-      )}
-      {screen.kind === "listening" && (
-        <TranscriptListeningState status={screen.status} />
-      )}
-      {screen.kind === "empty" && (
-        <TranscriptEmptyState
-          isBatching={false}
-          error={screen.error}
-          onUploadAudio={uploadAudio}
-          onUploadTranscript={uploadTranscript}
-        />
-      )}
-      {screen.kind === "ready" && (
-        <TranscriptViewer
-          transcriptIds={screen.transcriptIds}
-          liveSegments={screen.liveSegments}
-          currentActive={screen.currentActive}
-          captureGeneration={screen.captureGeneration}
-          scrollRef={scrollRef}
-          editMode={editMode && !screen.currentActive}
-          onEditModeChange={screen.currentActive ? undefined : onEditModeChange}
-          footer={
-            screen.currentActive ? (
-              <LiveTranscriptStatusNotice
-                interrupted={screen.liveTranscriptInterrupted}
-              />
-            ) : null
-          }
-        />
-      )}
+      {/* Les écrans occupent la hauteur restante sous le bandeau : en `h-full`
+          sans ce conteneur, la vue débordait de la hauteur du bandeau et sa
+          fin (la dernière ligne transcrite) passait sous le bord (issue 434). */}
+      <div
+        data-transcript-screen
+        className="relative flex min-h-0 flex-1 flex-col"
+      >
+        {screen.kind === "running_batch" && (
+          <TranscriptEmptyState
+            isBatching
+            percentage={screen.percentage}
+            phase={screen.phase}
+            onStopTranscription={
+              screen.phase === "importing" ? undefined : handleStopTranscription
+            }
+          />
+        )}
+        {screen.kind === "batch_fallback" && (
+          <BatchState
+            requestedLiveTranscription={screen.requestedLiveTranscription}
+          />
+        )}
+        {screen.kind === "listening" && (
+          <TranscriptListeningState status={screen.status} />
+        )}
+        {screen.kind === "empty" && (
+          <TranscriptEmptyState
+            isBatching={false}
+            error={screen.error}
+            onUploadAudio={uploadAudio}
+            onUploadTranscript={uploadTranscript}
+          />
+        )}
+        {screen.kind === "ready" && (
+          <TranscriptViewer
+            transcriptIds={screen.transcriptIds}
+            liveSegments={screen.liveSegments}
+            currentActive={screen.currentActive}
+            captureGeneration={screen.captureGeneration}
+            scrollRef={scrollRef}
+            editMode={editMode && !screen.currentActive}
+            onEditModeChange={
+              screen.currentActive ? undefined : onEditModeChange
+            }
+            footer={
+              screen.currentActive ? (
+                <LiveTranscriptStatusNotice
+                  interrupted={screen.liveTranscriptInterrupted}
+                />
+              ) : null
+            }
+          />
+        )}
+      </div>
     </div>
   );
 }
