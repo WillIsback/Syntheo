@@ -136,7 +136,6 @@ mod tests {
                 title: "Réunion".to_string(),
                 created_at: "lundi 9 novembre 2026".to_string(),
                 participants: vec![],
-                event_title: None,
                 duration: None,
             }),
             labels: None,
