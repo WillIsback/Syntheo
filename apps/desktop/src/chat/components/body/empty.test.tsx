@@ -157,6 +157,28 @@ describe("ChatBodyEmpty", () => {
     ).toBeNull();
   });
 
+  // Issue 529 : dans l'éditeur d'automatisations, des suggestions qui
+  // construisent une automatisation, et non celles d'une note.
+  it("offers automation ideas in the automation editor", () => {
+    const onSendMessage = vi.fn();
+    render(<ChatBodyEmpty isAutomationEditor onSendMessage={onSendMessage} />);
+
+    expect(screen.queryByText("List action items.")).toBeNull();
+    expect(screen.queryByText("Draft follow-up email.")).toBeNull();
+    for (const label of [
+      "Send the summary to a webhook.",
+      "Export as Markdown after each meeting.",
+      "Extract the tasks.",
+    ]) {
+      fireEvent.click(screen.getByText(label));
+    }
+    const prompts = onSendMessage.mock.calls.map(([prompt]) => prompt);
+    expect(prompts).toHaveLength(3);
+    expect(prompts[0]).toMatch(/webhook/i);
+    expect(prompts[1]).toMatch(/Markdown/);
+    expect(prompts[2]).toMatch(/tasks/);
+  });
+
   it("offers no automation without an open note", () => {
     automationMocks.workflows = [READY_WORKFLOW];
 

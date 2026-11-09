@@ -6,10 +6,12 @@ import {
   ArrowsOutSimple,
   ClockCounterClockwise,
   Envelope,
+  FileArrowDown,
   Lightbulb,
   Lightning,
   ListChecks,
   MagnifyingGlass,
+  PaperPlaneTilt,
   Sparkle,
 } from "@syntheo/ui/components/icons";
 import { cn } from "@syntheo/utils";
@@ -25,6 +27,7 @@ export function ChatBodyEmpty({
   hasContext = false,
   isLiveMeeting = false,
   hasSummary = false,
+  isAutomationEditor = false,
   automationSessionId,
   onSendMessage,
 }: {
@@ -32,6 +35,9 @@ export function ChatBodyEmpty({
   hasContext?: boolean;
   isLiveMeeting?: boolean;
   hasSummary?: boolean;
+  // Chat de l'éditeur d'automatisations (issue 529) : des idées
+  // d'automatisation, et non les traitements d'une note.
+  isAutomationEditor?: boolean;
   // Note ouverte : propose aussi de lancer une automatisation sur elle.
   automationSessionId?: string;
   onSendMessage?: (
@@ -97,9 +103,30 @@ export function ChatBodyEmpty({
         : t`What key decisions were made in my recent meetings?`,
     },
   ];
-  const suggestions = isLiveMeeting
-    ? liveMeetingSuggestions
-    : meetingSuggestions;
+  // Seulement ce que les actions savent faire : webhook, export Markdown,
+  // génération par le modèle local.
+  const automationSuggestions = [
+    {
+      label: t`Send the summary to a webhook.`,
+      icon: PaperPlaneTilt,
+      prompt: t`When the meeting summary is ready, send it to a webhook.`,
+    },
+    {
+      label: t`Export as Markdown after each meeting.`,
+      icon: FileArrowDown,
+      prompt: t`When the meeting summary is ready, export the note as a Markdown file.`,
+    },
+    {
+      label: t`Extract the tasks.`,
+      icon: ListChecks,
+      prompt: t`When the meeting summary is ready, extract the tasks with the local model and copy them to the clipboard.`,
+    },
+  ];
+  const suggestions = isAutomationEditor
+    ? automationSuggestions
+    : isLiveMeeting
+      ? liveMeetingSuggestions
+      : meetingSuggestions;
 
   const handleGoToSettings = useCallback(() => {
     openNew({ type: "settings", state: { tab: "intelligence" } });

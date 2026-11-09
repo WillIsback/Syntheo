@@ -1,3 +1,4 @@
+import { i18n } from "@lingui/core";
 import { describe, expect, it } from "vitest";
 
 import { buildAutomationSystemPrompt } from "./chat-prompt";
@@ -9,6 +10,8 @@ import {
 } from "./chat-schema";
 import { WORKFLOW_STEP_TYPES } from "./steps";
 import { WORKFLOW_TRIGGERS } from "./workflows";
+
+import { messages as frMessages } from "~/i18n/locales/fr/messages";
 
 describe("automation chat step schemas", () => {
   it("describes every step type of the registry", () => {
@@ -118,6 +121,22 @@ describe("automation chat system prompt", () => {
     expect(prompt).toMatch(/- webhook:[^\n]*ADVANCED/);
     expect(prompt).toMatch(/- command:[^\n]*ADVANCED/);
     expect(prompt).not.toMatch(/- generate_text:[^\n]*ADVANCED/);
+  });
+
+  // Issue 529 : le chat citait « Confirmer » et « Save & enable ». La
+  // consigne reprend les libellés traduits des vrais boutons de l'éditeur.
+  it("quotes the translated labels of the editor buttons", () => {
+    i18n.load("fr", frMessages);
+    i18n.activate("fr");
+    try {
+      const prompt = buildAutomationSystemPrompt("fr");
+      expect(prompt).toContain("« Ajouter l'étape »");
+      expect(prompt).toContain("« Enregistrer et activer »");
+      expect(prompt).not.toContain("Save & enable");
+      expect(prompt).not.toMatch(/Confirm/);
+    } finally {
+      i18n.activate("en");
+    }
   });
 });
 

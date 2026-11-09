@@ -1,3 +1,4 @@
+import { useLingui } from "@lingui/react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { LanguageModel, ToolSet } from "ai";
 import { useMemo } from "react";
@@ -140,15 +141,19 @@ export function useTransport(
   }, [registry, extraTools]);
 
   // Chat de l'éditeur d'automatisations : ses propres outils et sa consigne,
-  // générée depuis le registre des étapes.
+  // générée depuis le registre des étapes. Elle cite les boutons de
+  // l'éditeur dans la langue de l'interface (issue 529).
+  // useLingui fait recalculer la consigne quand l'interface change de langue.
+  useLingui();
+  const automationSystemPrompt = buildAutomationSystemPrompt(language);
   const scopedChats = useMemo(
     () => ({
       automations: {
         tools: buildAutomationChatTools(),
-        systemPrompt: buildAutomationSystemPrompt(language),
+        systemPrompt: automationSystemPrompt,
       },
     }),
-    [language],
+    [automationSystemPrompt],
   );
 
   const transport = useMemo(() => {

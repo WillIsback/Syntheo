@@ -189,6 +189,7 @@ export function ChatPanelFrame({
             error={sessionProps.error}
             onReload={sessionProps.regenerate}
             isModelConfigured={!!model}
+            isAutomationEditor={chat.scope === "automations"}
             hasContext={sessionProps.contextEntities.length > 0}
             isLiveMeeting={isLiveMeeting}
             hasSummary={hasSummary && sessionProps.contextEntities.length > 0}

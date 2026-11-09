@@ -1,3 +1,4 @@
+import { automationEditorButtons } from "./chat-prompt";
 import {
   type AdvancedStepProposal,
   pendingProposals,
@@ -210,8 +211,16 @@ type WorkflowChange = {
   plan?: (steps: WorkflowStep[]) => Plan | string;
 };
 
-const SAVED_AS_DRAFT =
-  "The editor shows the change. The automation stays a disabled draft: only the user saves and enables it with Save & enable.";
+// Libellés traduits des boutons de l'éditeur (issue 529), lus au moment de
+// l'appel : la réponse du chat cite le bouton que l'utilisateur voit.
+function savedAsDraft(): string {
+  return `The editor shows the change. The automation stays a disabled draft: only the user saves and enables it with ${automationEditorButtons().saveAndEnable}.`;
+}
+
+function advancedStepsProposed(): string {
+  const { addStep, applyChange, decline } = automationEditorButtons();
+  return `Advanced steps (webhook, command) were NOT added: the editor shows a proposal card and the user decides. Tell the user to click ${addStep} on that card (${applyChange} when it changes an existing step), or ${decline}; never say it was added.`;
+}
 
 /** Applique une modification du chat à l'automatisation ouverte. */
 export async function changeEditedWorkflow(
@@ -243,16 +252,14 @@ export async function changeEditedWorkflow(
     for (const proposal of plan?.proposals ?? []) {
       proposeAdvancedStep({ ...proposal, workflowId: next.id });
     }
-    const notes = [SAVED_AS_DRAFT];
+    const notes = [savedAsDraft()];
     if (workflow.enabled && workflow.trigger !== "manual") {
       notes.push(
         "It was enabled, so it is now disabled until the user enables it again.",
       );
     }
     if (plan && plan.proposals.length > 0) {
-      notes.push(
-        "Advanced steps (webhook, command) were NOT added: the editor shows a confirmation card and the user decides. Tell the user to confirm or decline it there; never say it was added.",
-      );
+      notes.push(advancedStepsProposed());
     }
     outcome = {
       status: "ok",

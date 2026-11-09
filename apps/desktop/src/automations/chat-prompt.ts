@@ -1,3 +1,5 @@
+import { t } from "@lingui/core/macro";
+
 import { STEP_INPUT_SCHEMAS } from "./chat-schema";
 import {
   STEP_DEFINITIONS,
@@ -30,6 +32,18 @@ const STEP_SUMMARIES: Record<WorkflowStepType, string> = {
   command: "Run a local program or script, without a shell.",
 };
 
+// Libellés des boutons de l'éditeur, dans la langue de l'interface (issue
+// 529) : mêmes messages Lingui que les boutons eux-mêmes, la consigne ne peut
+// donc plus citer un libellé qui n'existe pas.
+export function automationEditorButtons() {
+  return {
+    addStep: `« ${t`Add the step`} »`,
+    applyChange: `« ${t`Apply the change`} »`,
+    decline: `« ${t`Decline`} »`,
+    saveAndEnable: `« ${t`Save & enable`} »`,
+  };
+}
+
 function stepCatalog(): string {
   return WORKFLOW_STEP_TYPES.map((type) => {
     const definition = STEP_DEFINITIONS[type];
@@ -37,7 +51,7 @@ function stepCatalog(): string {
       (key) => key !== "type" && key !== "id" && key !== "outputName",
     );
     const tags = [
-      definition.advanced ? "ADVANCED, the user must confirm it" : null,
+      definition.advanced ? "ADVANCED, the user must approve it" : null,
       definition.output ? `produces a ${definition.output} result` : null,
     ].filter(Boolean);
     return `- ${type}: ${STEP_SUMMARIES[type]} Fields: ${fields.join(", ")}.${tags.length > 0 ? ` (${tags.join("; ")})` : ""}`;
@@ -49,6 +63,7 @@ export function buildAutomationSystemPrompt(language?: string): string {
     (trigger) => `- ${trigger}: ${TRIGGER_SUMMARIES[trigger]}`,
   ).join("\n");
   const variables = BASE_VARIABLES.map((name) => `{{${name}}}`).join(", ");
+  const buttons = automationEditorButtons();
 
   return `
 You help the user build an automation in Syntheo, a local meeting notes app. The automation editor is open next to you and shows every change you make.
@@ -71,8 +86,9 @@ Tools:
 Rules:
 - If the request is ambiguous or misses something you need (which trigger, which folder, which address, what to generate), ask one short clarification question and call no tool.
 - Use only the triggers, actions, fields and variables listed above. Never invent an action, a field, a folder path, a URL or a program. Syntheo cannot send e-mails, messages or calendar invites: say so and offer what exists, such as copying the text to the clipboard.
-- Prefer local steps. Propose webhook or command only when the user explicitly asks for them; they are only added after the user confirms them in the editor.
-- You never save or enable the automation. When it is ready, tell the user to review it and click Save & enable (an automation launched by hand needs no enabling).
+- Prefer local steps. Propose webhook or command only when the user explicitly asks for them; the editor shows them as a proposal card, and they are only added when the user clicks ${buttons.addStep} on that card (${buttons.applyChange} when it changes an existing step, ${buttons.decline} to drop it).
+- You never save or enable the automation. When it is ready, tell the user to review it and click ${buttons.saveAndEnable} (an automation launched by hand needs no enabling).
+- When you mention a button of the editor, quote its label exactly as written in these rules. Never name any other button and never translate these labels.
 - When a tool returns an error, fix the call or ask the user; never claim a change that a tool did not confirm.
 - Keep replies short and reply in the user's language${language ? ` (app language: ${language})` : ""}.
 `.trim();
