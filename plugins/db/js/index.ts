@@ -126,34 +126,6 @@ export function getStartupStatus(): Promise<StartupStatus> {
   return invoke("plugin:db|get_startup_status");
 }
 
-// L'application est 100 % locale : le report d'activité CloudSync n'existe plus.
-// Ces helpers restent exposés comme no-ops pour les appelants existants.
-export const CLOUDSYNC_ACTIVITY_DEFERRED_ERROR =
-  "cloudsync_activity_deferred" as const;
-
-export function isCloudsyncActivityDeferredError(error: unknown) {
-  const message = error instanceof Error ? error.message : String(error);
-  return message === CLOUDSYNC_ACTIVITY_DEFERRED_ERROR;
-}
-
-export function beginCloudsyncActivity(
-  _activity: string,
-  _key: string,
-): Promise<void> {
-  // Volontairement sans effet : plus aucun report d'activité CloudSync côté
-  // serveur. Conserve comme no-op résolu pour les appelants existants.
-  return Promise.resolve();
-}
-
-export function endCloudsyncActivity(
-  _activity: string,
-  _key: string,
-): Promise<void> {
-  // Volontairement sans effet : contrepartie de `beginCloudsyncActivity`,
-  // conservée comme no-op résolu pour les appelants existants.
-  return Promise.resolve();
-}
-
 export async function subscribe<T = Record<string, unknown>>(
   sql: string,
   params: unknown[],

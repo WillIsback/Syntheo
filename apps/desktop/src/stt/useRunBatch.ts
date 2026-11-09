@@ -16,7 +16,6 @@ import { useListener } from "./contexts";
 import { persistTranscriptWrite } from "./persist-retry";
 import { useSTTConnection } from "./useSTTConnection";
 
-import { withCloudsyncActivity } from "~/db/cloudsync-activity";
 import { deleteProcessedAudioForRetention } from "~/services/audio-retention";
 import { useSession, useSessionParticipants } from "~/session/queries";
 import { useConfigValue } from "~/shared/config";
@@ -501,46 +500,41 @@ export const useRunBatch = (sessionId: string) => {
         }
       };
 
-      const cloudsyncLeaseKey = `${sessionId}:${id()}`;
-      return withCloudsyncActivity(
-        "transcription",
-        cloudsyncLeaseKey,
-        async () => {
-          try {
-            await run(params);
-          } catch (error) {
-            options?.signal?.throwIfAborted();
-            if (!isRecoveryNoSpeechError(options, error)) {
-              throw error;
-            }
+      return (async () => {
+        try {
+          await run(params);
+        } catch (error) {
+          options?.signal?.throwIfAborted();
+          if (!isRecoveryNoSpeechError(options, error)) {
+            throw error;
           }
+        }
 
-          if (options?.recovery) {
-            options.signal?.throwIfAborted();
-            await options.recovery.persist(stagedWords, stagedHints);
-            await acknowledgeCompletedBatch(jobId);
-            return;
-          }
-
-          try {
-            if (!handlePersist) {
-              await saveBatchResults();
-            }
-            if (!options?.deferAudioFinalization) {
-              await deleteProcessedAudioForRetention(audioRetention, sessionId);
-            }
-          } catch (error) {
-            if (isTerminalBatchSaveError(error)) {
-              throw error;
-            }
-            throw new BatchResponseProcessingError(error);
-          }
+        if (options?.recovery) {
+          options.signal?.throwIfAborted();
+          await options.recovery.persist(stagedWords, stagedHints);
           await acknowledgeCompletedBatch(jobId);
-          if (options?.notifyOnCompletion !== false) {
-            await notifyBatchCompleted();
+          return;
+        }
+
+        try {
+          if (!handlePersist) {
+            await saveBatchResults();
           }
-        },
-      );
+          if (!options?.deferAudioFinalization) {
+            await deleteProcessedAudioForRetention(audioRetention, sessionId);
+          }
+        } catch (error) {
+          if (isTerminalBatchSaveError(error)) {
+            throw error;
+          }
+          throw new BatchResponseProcessingError(error);
+        }
+        await acknowledgeCompletedBatch(jobId);
+        if (options?.notifyOnCompletion !== false) {
+          await notifyBatchCompleted();
+        }
+      })();
     },
     [
       conn,

@@ -16,10 +16,8 @@ const mocks = vi.hoisted(() => ({
   chatSetMessages: vi.fn(),
   chatStop: vi.fn(),
   chatInits: [] as unknown[],
-  beginCloudsyncActivity: vi.fn().mockResolvedValue(undefined),
   deleteChatMessage: vi.fn().mockResolvedValue(undefined),
   deleteChatMessagesExcept: vi.fn().mockResolvedValue(undefined),
-  endCloudsyncActivity: vi.fn().mockResolvedValue(undefined),
   flushDatabaseWritesByPrefix: vi.fn().mockResolvedValue(undefined),
   getChatMessageGroupId: vi.fn().mockResolvedValue(null),
   messages: [] as unknown[],
@@ -29,11 +27,6 @@ const mocks = vi.hoisted(() => ({
   store: {} as unknown,
   transport: {} as unknown,
   upsertChatMessage: vi.fn().mockResolvedValue(undefined),
-}));
-
-vi.mock("@syntheo/plugin-db", () => ({
-  beginCloudsyncActivity: mocks.beginCloudsyncActivity,
-  endCloudsyncActivity: mocks.endCloudsyncActivity,
 }));
 
 vi.mock("~/db/write-queue", () => ({
@@ -193,10 +186,6 @@ function connectChatRegenerateToTransport(
   return sendMessages;
 }
 
-function startedNativeKey(callIndex = 0) {
-  return mocks.beginCloudsyncActivity.mock.calls[callIndex]?.[1] as string;
-}
-
 describe("ChatSession", () => {
   beforeEach(() => {
     cleanup();
@@ -210,10 +199,8 @@ describe("ChatSession", () => {
     mocks.chatSendMessage.mockReset().mockResolvedValue(undefined);
     mocks.chatRegenerate.mockReset().mockResolvedValue(undefined);
     mocks.chatStop.mockReset().mockResolvedValue(undefined);
-    mocks.beginCloudsyncActivity.mockReset().mockResolvedValue(undefined);
     mocks.deleteChatMessage.mockReset().mockResolvedValue(undefined);
     mocks.deleteChatMessagesExcept.mockReset().mockResolvedValue(undefined);
-    mocks.endCloudsyncActivity.mockReset().mockResolvedValue(undefined);
     mocks.flushDatabaseWritesByPrefix.mockReset().mockResolvedValue(undefined);
     mocks.getChatMessageGroupId.mockReset().mockResolvedValue(null);
     mocks.replaceChatMessage.mockReset().mockResolvedValue(undefined);
@@ -842,7 +829,7 @@ describe("ChatSession", () => {
     consoleError.mockRestore();
   });
 
-  it("holds CloudSync through the atomic regenerated answer replacement", async () => {
+  it("replaces the regenerated answer through one atomic write", async () => {
     let finishReplacement: (() => void) | undefined;
     const replacement = new Promise<void>((resolve) => {
       finishReplacement = resolve;
@@ -870,7 +857,6 @@ describe("ChatSession", () => {
     renderSession();
     fireEvent.click(screen.getByRole("button", { name: "Regenerate" }));
     await waitFor(() => expect(sendTransport).toHaveBeenCalledOnce());
-    const nativeKey = startedNativeKey();
     const chat = mocks.chatInits[0] as {
       onFinish: (params: {
         message: SyntheoUIMessage;
@@ -892,21 +878,9 @@ describe("ChatSession", () => {
         previousMessageId: oldAssistant.id,
       }),
     );
-    expect(mocks.endCloudsyncActivity).not.toHaveBeenCalledWith(
-      "chat",
-      nativeKey,
-    );
 
     finishReplacement?.();
     await replacement;
-    await waitFor(
-      () =>
-        expect(mocks.endCloudsyncActivity).toHaveBeenCalledWith(
-          "chat",
-          nativeKey,
-        ),
-      { timeout: 1_500 },
-    );
   });
 
   it("keeps the next prior assistant when cleanup cancels an active regeneration preflight", async () => {
@@ -1001,23 +975,12 @@ describe("ChatSession", () => {
     );
     await Promise.resolve();
     fireEvent.click(screen.getByRole("button", { name: "Regenerate" }));
-    await waitFor(() =>
-      expect(mocks.beginCloudsyncActivity).toHaveBeenCalledTimes(2),
-    );
+    await waitFor(() => expect(mocks.chatRegenerate).toHaveBeenCalledTimes(2));
     expect(sendTransport).toHaveBeenCalledOnce();
-    const nativeKeys = [startedNativeKey(0), startedNativeKey(1)];
 
     view.unmount();
     finishFirstPersist?.();
     await firstPersist;
-    await waitFor(() => {
-      for (const nativeKey of nativeKeys) {
-        expect(mocks.endCloudsyncActivity).toHaveBeenCalledWith(
-          "chat",
-          nativeKey,
-        );
-      }
-    });
 
     expect(mocks.replaceChatMessage).not.toHaveBeenCalledWith(
       expect.objectContaining({
@@ -1051,7 +1014,6 @@ describe("ChatSession", () => {
     fireEvent.click(button);
 
     expect(mocks.chatRegenerate).toHaveBeenCalledOnce();
-    expect(mocks.beginCloudsyncActivity).toHaveBeenCalledOnce();
     finishTombstone?.();
   });
 
@@ -1180,7 +1142,6 @@ describe("ChatSession", () => {
     fireEvent.click(screen.getByRole("button", { name: "Regenerate" }));
 
     await waitFor(() => expect(mocks.chatRegenerate).toHaveBeenCalledOnce());
-    expect(mocks.beginCloudsyncActivity).toHaveBeenCalledOnce();
   });
 
   it("keeps one SDK chat and sends through the latest transport", async () => {
@@ -1277,8 +1238,8 @@ describe("ChatSession", () => {
     expect(mocks.chatInits).toHaveLength(1);
   });
 
-  it("stops and drains the active lease when switching chat sessions", async () => {
-    connectChatSendToTransport();
+  it("stops the active response when switching chat sessions", async () => {
+    const sendTransport = connectChatSendToTransport();
     const captured: { send?: ChatSessionRenderProps["sendMessage"] } = {};
     const userMessage: SyntheoUIMessage = {
       id: "user-1",
@@ -1295,10 +1256,7 @@ describe("ChatSession", () => {
     );
 
     captured.send!(userMessage);
-    await waitFor(() =>
-      expect(mocks.beginCloudsyncActivity).toHaveBeenCalledOnce(),
-    );
-    const nativeKey = startedNativeKey();
+    await waitFor(() => expect(sendTransport).toHaveBeenCalledOnce());
     const oldChat = mocks.chatInits[0] as {
       onFinish: (params: {
         message: SyntheoUIMessage;
@@ -1324,12 +1282,6 @@ describe("ChatSession", () => {
     );
 
     expect(mocks.chatStop).toHaveBeenCalledOnce();
-    await waitFor(() =>
-      expect(mocks.endCloudsyncActivity).toHaveBeenCalledWith(
-        "chat",
-        nativeKey,
-      ),
-    );
     expect(mocks.chatInits).toHaveLength(2);
   });
 
@@ -1588,189 +1540,7 @@ describe("ChatSession", () => {
     );
   });
 
-  it("keeps CloudSync paused through persistence after unmount", async () => {
-    let finishAssistantPersist: (() => void) | undefined;
-    mocks.getChatMessageGroupId.mockResolvedValue("group-1");
-    mocks.upsertChatMessage.mockReturnValueOnce(
-      new Promise<void>((resolve) => {
-        finishAssistantPersist = resolve;
-      }),
-    );
-    connectChatSendToTransport();
-    const captured: { send?: ChatSessionRenderProps["sendMessage"] } = {};
-    const view = render(
-      <ChatSession chatGroupId="group-1" sessionId="session-1">
-        {(props) => {
-          captured.send = props.sendMessage;
-          return null;
-        }}
-      </ChatSession>,
-    );
-    const userMessage: SyntheoUIMessage = {
-      id: "user-1",
-      role: "user",
-      parts: [{ type: "text", text: "Question" }],
-    };
-    const assistant: SyntheoUIMessage = {
-      id: "assistant-1",
-      role: "assistant",
-      parts: [{ type: "text", text: "Answer" }],
-    };
-
-    captured.send!(userMessage);
-    await waitFor(() => expect(mocks.chatSendMessage).toHaveBeenCalledOnce());
-    mocks.endCloudsyncActivity.mockClear();
-    const onFinish = mocks.chatInits[0] as {
-      onFinish: (params: {
-        message: SyntheoUIMessage;
-        messages: SyntheoUIMessage[];
-        isAbort: boolean;
-      }) => void;
-    };
-    onFinish.onFinish({
-      isAbort: false,
-      message: assistant,
-      messages: [userMessage, assistant],
-    });
-
-    await waitFor(() =>
-      expect(mocks.upsertChatMessage).toHaveBeenCalledWith(
-        expect.objectContaining({ id: "assistant-1" }),
-      ),
-    );
-    expect(mocks.endCloudsyncActivity).not.toHaveBeenCalled();
-
-    view.unmount();
-    await Promise.resolve();
-    expect(mocks.endCloudsyncActivity).not.toHaveBeenCalled();
-
-    finishAssistantPersist?.();
-    await waitFor(
-      () => expect(mocks.endCloudsyncActivity).toHaveBeenCalledOnce(),
-      { timeout: 1_500 },
-    );
-    const nativeKey = startedNativeKey();
-    expect(nativeKey).toMatch(/^user-1:/);
-    expect(mocks.endCloudsyncActivity).toHaveBeenCalledWith("chat", nativeKey);
-  });
-
-  it("persists a queued outgoing message after unmount wins lease acquisition", async () => {
-    let acquireLease: (() => void) | undefined;
-    let finishPersist: (() => void) | undefined;
-    let finishTrackedWrite: (() => void) | undefined;
-    mocks.beginCloudsyncActivity.mockReturnValueOnce(
-      new Promise<void>((resolve) => {
-        acquireLease = resolve;
-      }),
-    );
-    const consoleError = vi
-      .spyOn(console, "error")
-      .mockImplementation(() => {});
-    const sendTransport = connectChatSendToTransport();
-    const captured: { send?: ChatSessionRenderProps["sendMessage"] } = {};
-    const view = render(
-      <ChatSession chatGroupId="group-1" sessionId="session-1">
-        {(props) => {
-          captured.send = props.sendMessage;
-          return null;
-        }}
-      </ChatSession>,
-    );
-    const userMessage: SyntheoUIMessage = {
-      id: "user-1",
-      role: "user",
-      parts: [{ type: "text", text: "Question" }],
-    };
-    const beforeSend = vi.fn(
-      (trackCompletion: (completion: Promise<unknown>) => void) => {
-        trackCompletion(
-          new Promise<void>((resolve) => {
-            finishTrackedWrite = resolve;
-          }),
-        );
-        return new Promise<void>((resolve) => {
-          finishPersist = resolve;
-        });
-      },
-    );
-
-    captured.send!(userMessage, { beforeSend });
-    await waitFor(() =>
-      expect(mocks.beginCloudsyncActivity).toHaveBeenCalledOnce(),
-    );
-    expect(beforeSend).not.toHaveBeenCalled();
-    expect(sendTransport).not.toHaveBeenCalled();
-
-    view.unmount();
-    await Promise.resolve();
-    expect(beforeSend).not.toHaveBeenCalled();
-    expect(sendTransport).not.toHaveBeenCalled();
-
-    acquireLease?.();
-    await waitFor(() => expect(beforeSend).toHaveBeenCalledOnce());
-    expect(mocks.endCloudsyncActivity).not.toHaveBeenCalled();
-    expect(sendTransport).not.toHaveBeenCalled();
-
-    finishPersist?.();
-    await waitFor(() =>
-      expect(consoleError).toHaveBeenCalledWith(
-        "Failed to send chat message",
-        expect.objectContaining({ name: "AbortError" }),
-      ),
-    );
-    expect(mocks.endCloudsyncActivity).not.toHaveBeenCalled();
-
-    finishTrackedWrite?.();
-    await waitFor(() =>
-      expect(mocks.endCloudsyncActivity).toHaveBeenCalledOnce(),
-    );
-    expect(sendTransport).not.toHaveBeenCalled();
-    consoleError.mockRestore();
-  });
-
-  it("keeps the existing assistant when regeneration unmounts during lease acquisition", async () => {
-    let acquireLease: (() => void) | undefined;
-    mocks.beginCloudsyncActivity.mockReturnValueOnce(
-      new Promise<void>((resolve) => {
-        acquireLease = resolve;
-      }),
-    );
-    mocks.messages = [
-      {
-        id: "user-1",
-        role: "user",
-        parts: [{ type: "text", text: "Question" }],
-      },
-      {
-        id: "assistant-1",
-        role: "assistant",
-        parts: [{ type: "text", text: "Existing answer" }],
-      },
-    ];
-    const consoleError = vi
-      .spyOn(console, "error")
-      .mockImplementation(() => {});
-    const sendTransport = connectChatRegenerateToTransport();
-    const view = renderSession();
-
-    fireEvent.click(screen.getByRole("button", { name: "Regenerate" }));
-    await waitFor(() =>
-      expect(mocks.beginCloudsyncActivity).toHaveBeenCalledOnce(),
-    );
-    expect(mocks.deleteChatMessage).not.toHaveBeenCalled();
-
-    view.unmount();
-    acquireLease?.();
-    await waitFor(() =>
-      expect(mocks.endCloudsyncActivity).toHaveBeenCalledOnce(),
-    );
-
-    expect(mocks.deleteChatMessage).not.toHaveBeenCalled();
-    expect(sendTransport).not.toHaveBeenCalled();
-    consoleError.mockRestore();
-  });
-
-  it("releases the chat lease after an aborted response", async () => {
+  it("does not persist an aborted response", async () => {
     connectChatSendToTransport();
     const captured: {
       send?: ChatSessionRenderProps["sendMessage"];
@@ -1793,7 +1563,6 @@ describe("ChatSession", () => {
 
     captured.send!(userMessage);
     await waitFor(() => expect(mocks.chatSendMessage).toHaveBeenCalledOnce());
-    mocks.endCloudsyncActivity.mockClear();
     captured.stop!();
     expect(mocks.chatStop).toHaveBeenCalledOnce();
 
@@ -1815,14 +1584,11 @@ describe("ChatSession", () => {
       messages: [userMessage, assistant],
     });
 
+    await Promise.resolve();
     expect(mocks.upsertChatMessage).not.toHaveBeenCalled();
-    await waitFor(
-      () => expect(mocks.endCloudsyncActivity).toHaveBeenCalledOnce(),
-      { timeout: 1_500 },
-    );
   });
 
-  it("releases after durable writes flush even when SDK stop never settles", async () => {
+  it("flushes durable writes on unmount even when SDK stop never settles", async () => {
     let finishWriteFlush: (() => void) | undefined;
     mocks.chatStop.mockReturnValueOnce(new Promise<void>(() => {}));
     mocks.flushDatabaseWritesByPrefix.mockReturnValueOnce(
@@ -1830,7 +1596,7 @@ describe("ChatSession", () => {
         finishWriteFlush = resolve;
       }),
     );
-    connectChatSendToTransport();
+    const sendTransport = connectChatSendToTransport();
     const captured: { send?: ChatSessionRenderProps["sendMessage"] } = {};
     const view = render(
       <ChatSession chatGroupId="group-1" sessionId="session-1">
@@ -1847,10 +1613,7 @@ describe("ChatSession", () => {
       parts: [{ type: "text", text: "Question" }],
     };
     captured.send!(userMessage);
-    await waitFor(() =>
-      expect(mocks.beginCloudsyncActivity).toHaveBeenCalledOnce(),
-    );
-    const nativeKey = startedNativeKey();
+    await waitFor(() => expect(sendTransport).toHaveBeenCalledOnce());
     const onFinish = mocks.chatInits[0] as {
       onFinish: (params: {
         message: SyntheoUIMessage;
@@ -1858,24 +1621,15 @@ describe("ChatSession", () => {
         isAbort: boolean;
       }) => void;
     };
-    mocks.endCloudsyncActivity.mockClear();
 
     view.unmount();
     await waitFor(() =>
       expect(mocks.flushDatabaseWritesByPrefix).toHaveBeenCalledWith(["chat:"]),
     );
 
-    expect(mocks.endCloudsyncActivity).not.toHaveBeenCalled();
     expect(mocks.chatStop).toHaveBeenCalledOnce();
 
     finishWriteFlush?.();
-    await waitFor(() =>
-      expect(mocks.endCloudsyncActivity).toHaveBeenCalledWith(
-        "chat",
-        nativeKey,
-      ),
-    );
-    expect(mocks.endCloudsyncActivity).toHaveBeenCalledTimes(1);
 
     mocks.upsertChatMessage.mockClear();
     onFinish.onFinish({
@@ -1897,7 +1651,6 @@ describe("ChatSession", () => {
     await Promise.resolve();
 
     expect(mocks.upsertChatMessage).not.toHaveBeenCalled();
-    expect(mocks.endCloudsyncActivity).toHaveBeenCalledTimes(1);
   });
 
   it("retains a failed new-group marker for a finish callback after teardown", async () => {
@@ -1940,7 +1693,6 @@ describe("ChatSession", () => {
     captured.send!(userMessage);
 
     await waitFor(() => expect(sendTransport).toHaveBeenCalledOnce());
-    expect(mocks.beginCloudsyncActivity).toHaveBeenCalledOnce();
 
     const assistant: SyntheoUIMessage = {
       id: "assistant-1",
@@ -1959,19 +1711,11 @@ describe("ChatSession", () => {
       message: assistant,
       messages: [userMessage, assistant],
     });
-    await waitFor(() =>
-      expect(mocks.endCloudsyncActivity).toHaveBeenCalledOnce(),
-    );
+    expect(mocks.upsertChatMessage).not.toHaveBeenCalled();
   });
 
-  it("waits for the chat lease and durable preflight before transport", async () => {
-    let acquireLease: (() => void) | undefined;
+  it("waits for the durable preflight before transport", async () => {
     let finishPreflight: (() => void) | undefined;
-    mocks.beginCloudsyncActivity.mockReturnValueOnce(
-      new Promise<void>((resolve) => {
-        acquireLease = resolve;
-      }),
-    );
     const beforeSend = vi.fn(
       () =>
         new Promise<void>((resolve) => {
@@ -1997,16 +1741,6 @@ describe("ChatSession", () => {
     captured.send!(userMessage, { beforeSend });
 
     expect(mocks.chatSendMessage).toHaveBeenCalledWith(userMessage);
-    const nativeKey = startedNativeKey();
-    expect(nativeKey).toMatch(/^user-1:/);
-    expect(mocks.beginCloudsyncActivity).toHaveBeenCalledWith(
-      "chat",
-      nativeKey,
-    );
-    expect(beforeSend).not.toHaveBeenCalled();
-    expect(sendTransport).not.toHaveBeenCalled();
-
-    acquireLease?.();
     await waitFor(() => expect(beforeSend).toHaveBeenCalledOnce());
     expect(sendTransport).not.toHaveBeenCalled();
 
@@ -2030,86 +1764,6 @@ describe("ChatSession", () => {
       message: assistant,
       messages: [userMessage, assistant],
     });
-    await waitFor(() =>
-      expect(mocks.endCloudsyncActivity).toHaveBeenCalledWith(
-        "chat",
-        nativeKey,
-      ),
-    );
     view.unmount();
-  });
-
-  it("repairs a failed preflight before the same message can retry", async () => {
-    const acquisitionError = new Error("cloudsync busy");
-    mocks.beginCloudsyncActivity
-      .mockRejectedValueOnce(acquisitionError)
-      .mockResolvedValueOnce(undefined);
-    const consoleError = vi
-      .spyOn(console, "error")
-      .mockImplementation(() => {});
-    const sendTransport = connectChatSendToTransport();
-    const captured: { send?: ChatSessionRenderProps["sendMessage"] } = {};
-    render(
-      <ChatSession chatGroupId="group-1" sessionId="session-1">
-        {(props) => {
-          captured.send = props.sendMessage;
-          return null;
-        }}
-      </ChatSession>,
-    );
-    const userMessage: SyntheoUIMessage = {
-      id: "user-1",
-      role: "user",
-      parts: [{ type: "text", text: "Question" }],
-    };
-    const failedPreflight = vi.fn().mockResolvedValue(undefined);
-    const retryPreflight = vi.fn().mockResolvedValue(undefined);
-
-    captured.send!(userMessage, { beforeSend: failedPreflight });
-    await waitFor(() =>
-      expect(consoleError).toHaveBeenCalledWith(
-        "Failed to send chat message",
-        acquisitionError,
-      ),
-    );
-
-    expect(failedPreflight).toHaveBeenCalledOnce();
-    expect(sendTransport).not.toHaveBeenCalled();
-    expect(mocks.endCloudsyncActivity).toHaveBeenCalledWith(
-      "chat",
-      startedNativeKey(0),
-    );
-
-    captured.send!(userMessage, { beforeSend: retryPreflight });
-    await waitFor(() => expect(retryPreflight).toHaveBeenCalledOnce());
-    expect(failedPreflight).toHaveBeenCalledOnce();
-    expect(sendTransport).toHaveBeenCalledOnce();
-
-    const assistant: SyntheoUIMessage = {
-      id: "assistant-1",
-      role: "assistant",
-      parts: [],
-    };
-    const onFinish = mocks.chatInits[0] as {
-      onFinish: (params: {
-        message: SyntheoUIMessage;
-        messages: SyntheoUIMessage[];
-        isAbort: boolean;
-      }) => void;
-    };
-    onFinish.onFinish({
-      isAbort: true,
-      message: assistant,
-      messages: [userMessage, assistant],
-    });
-    await waitFor(
-      () =>
-        expect(mocks.endCloudsyncActivity).toHaveBeenCalledWith(
-          "chat",
-          startedNativeKey(2),
-        ),
-      { timeout: 1_500 },
-    );
-    consoleError.mockRestore();
   });
 });

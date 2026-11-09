@@ -26,9 +26,9 @@ describe("ErrorMessage", () => {
   it("renders a bare string rejection instead of crashing", () => {
     // Tauri `invoke` rejects with the serialized Rust error, which is a plain
     // string; the AI SDK stores it as `useChat().error` as-is.
-    render(<ErrorMessage error="cloudsync_activity_drain_timeout" />);
+    render(<ErrorMessage error="database_is_locked" />);
 
-    expect(screen.getByText("cloudsync_activity_drain_timeout")).toBeTruthy();
+    expect(screen.getByText("database_is_locked")).toBeTruthy();
   });
 });
 

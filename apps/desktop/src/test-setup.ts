@@ -67,15 +67,6 @@ vi.mock("@tauri-apps/api/path", () => ({
 }));
 
 vi.mock("@syntheo/plugin-db", () => ({
-  CLOUDSYNC_ACTIVITY_DEFERRED_ERROR: "cloudsync_activity_deferred",
-  beginCloudsyncActivity: vi.fn().mockResolvedValue(undefined),
-  endCloudsyncActivity: vi.fn().mockResolvedValue(undefined),
-  isCloudsyncActivityDeferredError: (error: unknown) => {
-    const message = error instanceof Error ? error.message : String(error);
-    return message === "cloudsync_activity_deferred";
-  },
-  bindCloudsyncAccount: vi.fn().mockResolvedValue(true),
-  configureCloudsyncToken: vi.fn().mockResolvedValue("configured"),
   configureE2eeReplica: vi.fn().mockResolvedValue("configured"),
   sealWorkspaceE2eeKeyForRecipients: vi.fn(),
   execute: vi.fn().mockResolvedValue([]),
@@ -101,30 +92,12 @@ vi.mock("@syntheo/plugin-db", () => ({
     nonce: "N".repeat(32),
     ciphertext: "C".repeat(100),
   }),
-  getCloudsyncStatus: vi.fn().mockResolvedValue({
-    cloudsync_enabled: true,
-    extension_loaded: true,
-    configured: false,
-    running: false,
-    network_initialized: false,
-    activity_paused: false,
-    last_sync: null,
-    last_sync_at_ms: null,
-    has_unsent_changes: null,
-    last_error: null,
-    last_error_kind: null,
-    consecutive_failures: 0,
-    deferred_for_capture: false,
-  }),
   getMeeting: vi.fn(),
   getMeetingTranscript: vi.fn(),
   getRecurringMeetingHistory: vi.fn(),
   listMeetings: vi.fn(),
   subscribe: vi.fn().mockResolvedValue(() => Promise.resolve()),
   waitUntilReady: vi.fn().mockResolvedValue(undefined),
-  suspendCloudsync: vi.fn().mockResolvedValue(undefined),
-  suspendCloudsyncAfterAuthLoss: vi.fn().mockResolvedValue(undefined),
-  suspendCloudsyncForSignOut: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("@syntheo/plugin-session", () => ({
