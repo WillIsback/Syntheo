@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   windowLabel: "main",
+  openNew: vi.fn(),
 }));
 
 vi.mock("@tanstack/react-router", () => ({
@@ -15,7 +16,10 @@ vi.mock("@tauri-apps/api/webviewWindow", () => ({
 }));
 
 vi.mock("@syntheo/plugin-windows", () => ({
-  events: {},
+  events: {
+    navigate: () => ({ listen: () => Promise.resolve(() => {}) }),
+    openTab: () => ({ listen: () => Promise.resolve(() => {}) }),
+  },
   getCurrentWebviewWindowLabel: () => mocks.windowLabel,
 }));
 
@@ -35,10 +39,14 @@ vi.mock("~/sidebar/toast/undo-delete-toast", () => ({
 
 vi.mock("~/store/zustand/tabs", () => ({
   isTabInputSupported: vi.fn(),
-  useTabs: () => vi.fn(),
+  useTabs: () => mocks.openNew,
 }));
 
+import { useMountEffect } from "@syntheo/ui/hooks/use-mount-effect";
+
 import MainAppLayout from "./main-app-layout";
+
+import { useFolderSelection } from "~/folders/selection";
 
 describe("MainAppLayout", () => {
   beforeEach(() => {
@@ -53,5 +61,22 @@ describe("MainAppLayout", () => {
     expect(screen.queryByTestId("meeting-import-sync")).toBeNull();
     expect(screen.queryByTestId("enterprise-capture-sync")).toBeNull();
     expect(screen.queryByTestId("workspace-invitation-toasts")).toBeNull();
+  });
+
+  // Issue 501 : une mention de dossier (note, chat) ouvre la page du dossier,
+  // sous-dossier compris (le chemin contient des « / »).
+  it("ouvre la page d'un dossier mentionné", () => {
+    vi.mocked(useMountEffect).mockImplementationOnce((effect) => {
+      effect();
+    });
+    render(<MainAppLayout />);
+
+    const navigate = (
+      window as unknown as { __SYNTHEO_NAVIGATE__: (path: string) => void }
+    ).__SYNTHEO_NAVIGATE__;
+    navigate("/app/folder/Clients/ACME");
+
+    expect(useFolderSelection.getState().selectedPath).toBe("Clients/ACME");
+    expect(mocks.openNew).toHaveBeenCalledWith({ type: "folders" });
   });
 });
