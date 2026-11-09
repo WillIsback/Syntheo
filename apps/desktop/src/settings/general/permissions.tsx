@@ -180,7 +180,6 @@ function AudioPermissions({
 
 function MacOSPermissions() {
   const { t } = useLingui();
-  const calendar = usePermission("calendar");
   const accessibility = usePermission("accessibility");
   const accessibilityGuidance = usePermissionGuidance("accessibility");
 
@@ -207,19 +206,6 @@ function MacOSPermissions() {
         onOpen={accessibility.open}
         assisted={Boolean(accessibilityGuidance)}
       />
-
-      <PermissionGroup title={<Trans>Others</Trans>}>
-        <PermissionRow
-          settingId="permission-calendar"
-          permission="calendar"
-          title={t`Calendar`}
-          description={t`Show Apple Calendar events in Syntheo.`}
-          status={calendar.status}
-          isPending={calendar.isPending}
-          onRequest={calendar.request}
-          onOpen={calendar.open}
-        />
-      </PermissionGroup>
     </div>
   );
 }

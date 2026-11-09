@@ -50,16 +50,6 @@ export const SETTING_DEFINITIONS = {
     synced: true,
     default: "" as string,
   },
-  auto_start_scheduled_meetings: {
-    type: "boolean",
-    path: ["general", "auto_start_scheduled_meetings"],
-    default: true as boolean,
-  },
-  auto_join_scheduled_meetings: {
-    type: "boolean",
-    path: ["general", "auto_join_scheduled_meetings"],
-    default: false as boolean,
-  },
   floating_bar_enabled: {
     type: "boolean",
     path: ["general", "floating_bar_enabled"],
@@ -170,11 +160,6 @@ export const SETTING_DEFINITIONS = {
     type: "boolean",
     path: ["notification", "disabled"],
     default: false as boolean,
-  },
-  notification_event: {
-    type: "boolean",
-    path: ["notification", "event"],
-    default: true as boolean,
   },
   notification_detect: {
     type: "boolean",
@@ -332,11 +317,6 @@ export const SETTING_DEFINITIONS = {
   timezone: {
     type: "string",
     path: ["general", "timezone"],
-  },
-  week_start: {
-    type: "string",
-    path: ["general", "week_start"],
-    synced: true,
   },
   selected_template_id: {
     type: "string",

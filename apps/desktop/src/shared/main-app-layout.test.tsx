@@ -30,10 +30,6 @@ vi.mock("~/billing/local-billing", () => ({
     children,
 }));
 
-vi.mock("~/session/queries", () => ({
-  getOrCreateSessionForEventId: vi.fn(),
-}));
-
 vi.mock("@syntheo/ui/hooks/use-mount-effect", () => ({
   useMountEffect: vi.fn(),
 }));

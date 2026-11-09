@@ -53,7 +53,6 @@ vi.mock("~/session/queries", () => ({
   useEnhancedNote: () => undefined,
   useSessionParticipants: () => [],
 }));
-vi.mock("~/session/utils", () => ({ getSessionEvent: () => null }));
 vi.mock("~/session/components/note-input/transcript/export-data", () => ({
   useTranscriptExportSegments: () => ({ data: [], isLoading: false }),
 }));

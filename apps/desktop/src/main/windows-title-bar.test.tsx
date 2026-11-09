@@ -77,14 +77,9 @@ vi.mock("~/shared/help-dialog", () => ({
 vi.mock("./view-navigation", () => ({
   hasViewNavigation: (tab: { type: string } | null) =>
     tab !== null &&
-    [
-      "settings",
-      "calendar",
-      "contacts",
-      "templates",
-      "automations",
-      "folders",
-    ].includes(tab.type),
+    ["settings", "contacts", "templates", "automations", "folders"].includes(
+      tab.type,
+    ),
 }));
 
 vi.mock("~/store/zustand/tabs", () => {
@@ -107,7 +102,6 @@ vi.mock("~/store/zustand/tabs", () => {
   return {
     SETTINGS_RETURN_TAB_TYPES: [
       "automations",
-      "calendar",
       "contacts",
       "folders",
       "templates",
@@ -350,7 +344,7 @@ describe("WindowsTitleBar", () => {
     });
 
     it("va à l'accueil même si l'assistant est ouvert", () => {
-      mocks.currentTab = { type: "calendar" };
+      mocks.currentTab = { type: "contacts" };
       mocks.chatMode = "Floating";
 
       render(<WindowsTitleBar />);
@@ -372,7 +366,6 @@ describe("WindowsTitleBar", () => {
   describe("bouton « ← Paramètres » (issue 443)", () => {
     const fromSettingsScreens = [
       "templates",
-      "calendar",
       "folders",
       "contacts",
       "automations",

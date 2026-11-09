@@ -198,7 +198,7 @@ it("demande l'e-mail en expliquant son usage, plus le téléphone ni LinkedIn", 
   expect(email.type).toBe("email");
   expect(email.getAttribute("aria-describedby")).toBe("profile-email-help");
   expect(document.getElementById("profile-email-help")?.textContent).toMatch(
-    /recognize you among the attendees/,
+    /recognize you among the participants/,
   );
   for (const label of ["Phone", "LinkedIn"]) {
     expect(screen.queryByLabelText(label)).toBeNull();

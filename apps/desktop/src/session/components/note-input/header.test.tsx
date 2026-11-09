@@ -143,10 +143,6 @@ vi.mock("@syntheo/ui/components/ui/dancing-sticks", () => ({
   DancingSticks: () => <span data-testid="dancing-sticks" />,
 }));
 
-vi.mock("~/calendar/hooks", () => ({
-  useNow: () => new Date(hoisted.nowMs),
-}));
-
 vi.mock("~/ai/hooks", () => ({
   useAITaskTask: () => ({
     isIdle: true,
@@ -173,10 +169,6 @@ vi.mock("~/session/components/shared", () => ({
 vi.mock("~/stt/queries", async (importOriginal) => ({
   ...(await importOriginal()),
   useSessionTranscriptMetadata: () => hoisted.transcriptMetadata,
-}));
-
-vi.mock("~/session/hooks/useSessionEvent", () => ({
-  useSessionEvent: () => hoisted.sessionEvent,
 }));
 
 vi.mock("~/services/enhancer", () => ({

@@ -15,8 +15,8 @@ const SESSION_LIST_COLUMNS: &str = "
 
 const SESSION_COLUMNS: &str = "
     SELECT id, workspace_id, owner_user_id, title, kind, status, created_at, updated_at,
-           started_at, ended_at, timezone, language, event_id, external_event_id,
-           external_provider, series_id, source_apps_json, event_json, folder_path, slug,
+           started_at, ended_at, timezone, language, external_event_id,
+           external_provider, series_id, source_apps_json, folder_path, slug,
            metadata_json, locked
     FROM sessions
 ";
@@ -390,8 +390,8 @@ mod tests {
     ) {
         sqlx::query(
             "INSERT INTO sessions
-             (id, title, started_at, series_id, source_apps_json, event_json, metadata_json)
-             VALUES (?, ?, ?, ?, '[{\"app\":\"zoom\"}]', '{\"event\":1}', '{\"source\":\"test\"}')",
+             (id, title, started_at, series_id, source_apps_json, metadata_json)
+             VALUES (?, ?, ?, ?, '[{\"app\":\"zoom\"}]', '{\"source\":\"test\"}')",
         )
         .bind(id)
         .bind(title)

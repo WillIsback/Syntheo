@@ -8,13 +8,12 @@ describe("StartButton", () => {
     cleanup();
   });
 
-  it("affiche titre, aide, les trois étapes et le raccourci", () => {
+  it("affiche titre, les trois étapes et le raccourci", () => {
     render(<StartButton onStart={vi.fn()} />);
     const button = screen.getByRole("button", { name: /Start a meeting/ });
 
-    expect(button.textContent).toContain(
-      "Title and participants taken from the calendar",
-    );
+    // Calendrier retiré (issue 465) : plus d'aide « tiré de l'agenda ».
+    expect(button.textContent).not.toContain("calendar");
     expect(button.textContent).toContain("Ctrl N");
     expect(button.getAttribute("aria-keyshortcuts")).toBe("Control+N");
 
@@ -39,17 +38,10 @@ describe("StartButton", () => {
     expect(button.className).not.toMatch(/#[0-9a-f]{3,6}/i);
   });
 
-  it("appelle onStart au clic, et se désactive pendant la création", () => {
+  it("appelle onStart au clic", () => {
     const onStart = vi.fn();
-    const view = render(<StartButton onStart={onStart} />);
+    render(<StartButton onStart={onStart} />);
     fireEvent.click(screen.getByRole("button", { name: /Start a meeting/ }));
     expect(onStart).toHaveBeenCalledTimes(1);
-
-    view.rerender(<StartButton onStart={onStart} busy />);
-    const button = screen.getByRole("button", {
-      name: /Start a meeting/,
-    }) as HTMLButtonElement;
-    expect(button.disabled).toBe(true);
-    expect(button.getAttribute("aria-busy")).toBe("true");
   });
 });

@@ -69,9 +69,6 @@ vi.mock("@syntheo/ui/components/ui/popover", () => ({
   PopoverContent: () => null,
   PopoverTrigger: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
-vi.mock("~/calendar/queries", () => ({
-  useSessionEventParticipants: () => [],
-}));
 vi.mock("~/contacts/queries", () => ({
   createHuman: vi.fn(),
   useHumans: () => [],

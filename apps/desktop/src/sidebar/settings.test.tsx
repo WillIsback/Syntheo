@@ -169,7 +169,6 @@ describe("SettingsNav", () => {
       "Dictionary",
       "Templates",
       "Meetings",
-      "Calendar",
       "Folders",
       "Contacts",
     ]) {
@@ -178,6 +177,7 @@ describe("SettingsNav", () => {
     expect(screen.getByRole("button", { name: /^Transcription/ })).toBeTruthy();
     expect(screen.getByRole("button", { name: /^Synthesis/ })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Permissions" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Calendar" })).toBeNull();
     expect(
       screen
         .getByRole("button", { name: "Advanced" })
@@ -255,7 +255,7 @@ describe("SettingsNav", () => {
   });
 
   it.each([
-    ["Calendar", "calendar"],
+    ["Folders", "folders"],
     ["Templates", "templates"],
   ])("opens the %s workspace in a new tab", (label, type) => {
     render(<SettingsNav />);

@@ -3,7 +3,8 @@ import { format } from "date-fns";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("~/shared/config", () => ({
-  useConfigValue: () => hoisted.use24HourTime,
+  useConfigValue: (key: string) =>
+    key === "timezone" ? undefined : hoisted.use24HourTime,
 }));
 
 const hoisted = vi.hoisted(() => {
@@ -28,17 +29,8 @@ vi.mock("@handlewithcare/react-prosemirror", () => ({
 
 vi.mock("~/session/queries", () => ({
   useSession: () => ({
-    created_at: "2026-04-06T00:00:00.000Z",
-    event_json: JSON.stringify({
-      started_at: "2026-04-06T02:30:00.000Z",
-      ended_at: "2026-04-06T01:00:00.000Z",
-    }),
+    created_at: "2026-04-06T02:30:00.000Z",
   }),
-}));
-
-vi.mock("~/calendar/hooks", () => ({
-  useTimezone: () => undefined,
-  toTz: (date: Date) => date,
 }));
 
 vi.mock("~/stt/contexts", () => ({
@@ -144,15 +136,11 @@ describe("SessionNodeView", () => {
   });
 
   it.each([false, true])(
-    "renders the event start time with 24-hour preference %s",
+    "renders the creation time with 24-hour preference %s",
     (use24HourTime) => {
       hoisted.use24HourTime = use24HourTime;
-      const expectedEventTime = format(
+      const expectedTime = format(
         new Date("2026-04-06T02:30:00.000Z"),
-        use24HourTime ? "HH:mm" : "h:mm a",
-      );
-      const unexpectedCreatedTime = format(
-        new Date("2026-04-06T00:00:00.000Z"),
         use24HourTime ? "HH:mm" : "h:mm a",
       );
 
@@ -175,10 +163,7 @@ describe("SessionNodeView", () => {
         </SessionNodeView>,
       );
 
-      expect(screen.queryAllByText(expectedEventTime).length).toBeGreaterThan(
-        0,
-      );
-      expect(screen.queryAllByText(unexpectedCreatedTime)).toHaveLength(0);
+      expect(screen.queryAllByText(expectedTime).length).toBeGreaterThan(0);
     },
   );
 });

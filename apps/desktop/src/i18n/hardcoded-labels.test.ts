@@ -35,16 +35,7 @@ describe("libellés hors composant en français", () => {
   });
 
   test("notification de détection du micro", () => {
-    expect(getMicDetectedNotificationTitle(null)).toBe(
-      "Êtes-vous en réunion ?",
-    );
-    expect(
-      getMicDetectedNotificationTitle({
-        id: "event-1",
-        title: "Point hebdo",
-        participantNames: ["Alice"],
-      }),
-    ).toBe("Parlez-vous avec Alice en ce moment ?");
+    expect(getMicDetectedNotificationTitle()).toBe("Êtes-vous en réunion ?");
     expect(
       getIgnoreAppsFooterText([
         { id: "a", name: "Zoom" },

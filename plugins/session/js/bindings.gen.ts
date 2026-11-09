@@ -6,7 +6,6 @@ import { invoke as __TAURI_INVOKE } from "@tauri-apps/api/core";
 /** Commands */
 export const commands = {
 	createSession: (request: CreateSessionRequest) => typedError<string, string>(__TAURI_INVOKE("plugin:session|create_session", { request })),
-	createSessionForEvent: (request: CreateEventSessionRequest) => typedError<EventSessionResult | null, string>(__TAURI_INVOKE("plugin:session|create_session_for_event", { request })),
 	softDeleteSession: (request: TombstoneSessionRequest) => typedError<DeletedSessionRow | null, string>(__TAURI_INVOKE("plugin:session|soft_delete_session", { request })),
 	restoreDeletedSession: (request: TombstoneSessionRequest) => typedError<RestoreDeletedSessionOutcome, string>(__TAURI_INVOKE("plugin:session|restore_deleted_session", { request })),
 	addSessionParticipant: (request: AddSessionParticipantRequest) => typedError<null, string>(__TAURI_INVOKE("plugin:session|add_session_participant", { request })),
@@ -64,17 +63,11 @@ export type CatalogSessionAudioRequest = {
 	sha256: string,
 };
 
-export type CreateEventSessionRequest = {
-	event_id: string,
-	user_id: string,
-	title: string | null,
-	participants: EventParticipantIdentity[],
-};
-
 export type CreateSessionRequest = {
 	title: string,
 	user_id: string,
-	event_json: string,
+	/**  JSON object stored in `sessions.metadata_json` (empty means `{}`). */
+	metadata_json: string,
 	folder_path: string,
 	raw_md: string,
 };
@@ -90,17 +83,6 @@ export type DeletedSessionRow = {
 
 export type EnsureFolderCatalogRequest = {
 	paths: string[],
-};
-
-export type EventParticipantIdentity = {
-	email: string,
-	name: string,
-	company_name: string | null,
-};
-
-export type EventSessionResult = {
-	session_id: string,
-	created: boolean,
 };
 
 export type MoveSessionContentsRequest = {

@@ -2,27 +2,6 @@ import { z } from "zod";
 
 import { jsonObject, type ToStorageType } from "./shared";
 
-export const sessionEventSchema = z.object({
-  tracking_id: z.string(),
-  calendar_id: z.string(),
-  title: z.string(),
-  started_at: z.string(),
-  ended_at: z.string(),
-  is_all_day: z.boolean(),
-  has_recurrence_rules: z.boolean(),
-  location: z.string().optional(),
-  meeting_link: z.string().optional(),
-  description: z.string().optional(),
-  recurrence_series_id: z.string().optional(),
-});
-
-export const eventParticipantSchema = z.object({
-  name: z.string().optional(),
-  email: z.string().optional(),
-  is_organizer: z.boolean().optional(),
-  is_current_user: z.boolean().optional(),
-});
-
 export const templateSectionSchema = z.object({
   title: z.string(),
   description: z.string(),
@@ -63,8 +42,6 @@ export const aiProviderSchema = z.object({
   api_key: z.string(),
 });
 
-export type SessionEvent = z.infer<typeof sessionEventSchema>;
-export type EventParticipant = z.infer<typeof eventParticipantSchema>;
 export type TemplateSection = z.infer<typeof templateSectionSchema>;
 export type ChatMessageStatus = z.infer<typeof chatMessageStatusSchema>;
 export type TaskStatus = z.infer<typeof taskStatusSchema>;

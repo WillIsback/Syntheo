@@ -25,7 +25,6 @@ export type ExportLabels = {
 	memo: string,
 	summary: string,
 	transcript: string,
-	meeting: string,
 	participants: string,
 	unknownSpeaker: string,
 };
@@ -34,7 +33,6 @@ export type ExportMetadata = {
 	title: string,
 	createdAt: string,
 	participants: string[],
-	eventTitle: string | null,
 	duration: string | null,
 };
 

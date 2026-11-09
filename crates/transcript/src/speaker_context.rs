@@ -12,7 +12,12 @@ pub struct SpeakerContextInterval {
     pub start_ms: i64,
     pub end_ms: i64,
     pub active_call: bool,
-    pub calendar_call: bool,
+    /// Lien de réunion du calendrier, présent seulement dans les contextes
+    /// enregistrés avant la suppression du calendrier (issue 465) : relu pour
+    /// que l'attribution des voix des anciennes notes ne change pas.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[specta(optional)]
+    pub calendar_call: Option<bool>,
     pub mic_isolated: Option<bool>,
     pub shared_microphone: bool,
     pub title: String,
@@ -229,7 +234,7 @@ fn resolve_speaker(
     humans: &[RenderTranscriptHuman],
 ) -> Option<ProvisionalSpeakerLabel> {
     let self_id = self_id.filter(|id| !id.trim().is_empty())?;
-    let virtual_call = context.active_call || context.calendar_call;
+    let virtual_call = context.active_call || context.calendar_call == Some(true);
     // A headset only hears its wearer however diarization splits the voice; a room microphone
     // on a call is the owner only for the voice that dominates it.
     let personal_microphone = context.mic_isolated == Some(true);

@@ -59,8 +59,6 @@ export type LivingDocumentProps = {
   sessionMode: SessionMode;
   rawMd: string;
   sessionTitle: string;
-  eventTitle?: string;
-  eventDescription?: string;
   editorTabs: TabEditorView[];
   currentTab: TabEditorView;
   onSelectView: (view: TabEditorView) => void;
@@ -263,8 +261,6 @@ function UserNotes({
   stage,
   rawMd,
   sessionTitle,
-  eventTitle,
-  eventDescription,
   editorRef,
   onNavigateToTitle,
   onViewReady,
@@ -298,8 +294,6 @@ function UserNotes({
         sessionId={sessionId}
         rawMd={rawMd}
         sessionTitle={sessionTitle}
-        eventTitle={eventTitle}
-        eventDescription={eventDescription}
         onNavigateToTitle={registerAsPrimary ? onNavigateToTitle : undefined}
         placeholder={
           stage === "synthesis"

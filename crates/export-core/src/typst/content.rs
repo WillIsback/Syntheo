@@ -139,7 +139,6 @@ fn build_cover_page(
     title: &str,
     created_at: &str,
     participants: &[String],
-    event_title: Option<&str>,
     duration: Option<&str>,
 ) -> String {
     let mut cover = String::new();
@@ -180,22 +179,6 @@ fn build_cover_page(
         }
     }
     cover.push_str("    #v(12mm)\n");
-
-    if let Some(event) = event_title {
-        let escaped_event = escape_typst_string(event);
-        cover.push_str(
-            "    #block(width: 100%, fill: white, stroke: 0.5pt + hairline, radius: 8pt, inset: (x: 16pt, y: 12pt))[\n",
-        );
-        cover.push_str(&cover_meta_label(&labels.meeting.to_uppercase()));
-        cover.push('\n');
-        cover.push_str("      #v(3pt)\n");
-        cover.push_str(&format!(
-            "      #text(size: 12pt, weight: \"semibold\", fill: ink)[{}]\n",
-            escaped_event
-        ));
-        cover.push_str("    ]\n");
-        cover.push_str("    #v(4mm)\n");
-    }
 
     if !participants.is_empty() {
         let joined = participants
@@ -273,7 +256,6 @@ pub fn build_typst_content(input: &ExportInput) -> String {
             &metadata.title,
             &metadata.created_at,
             &metadata.participants,
-            metadata.event_title.as_deref(),
             metadata.duration.as_deref(),
         );
         content.push_str(&cover);
@@ -355,7 +337,6 @@ mod tests {
             memo: "Mémo".to_string(),
             summary: "Synthèse".to_string(),
             transcript: "Transcription".to_string(),
-            meeting: "Réunion".to_string(),
             participants: "Participants".to_string(),
             unknown_speaker: "Locuteur inconnu".to_string(),
         })));

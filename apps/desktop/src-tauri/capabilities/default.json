@@ -29,7 +29,7 @@
     "core:window:allow-set-always-on-top",
     "core:window:allow-is-always-on-top",
     "core:webview:allow-set-webview-zoom",
-    "calendar:default",
+    "contacts:default",
     "audio-priority:default",
     "db:default",
     "windows:default",

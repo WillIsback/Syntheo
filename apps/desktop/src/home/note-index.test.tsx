@@ -51,21 +51,18 @@ const NOTES: RecentNote[] = [
     title: "Entretien annuel",
     createdAt: "2024-10-29T10:00:00",
     durationMs: 42 * 60_000,
-    trackingId: "event-tracking-1",
   },
   {
     id: "s2",
     title: "",
     createdAt: "2024-10-28T10:00:00",
     durationMs: 65 * 60_000,
-    trackingId: null,
   },
   {
     id: "s3",
     title: "Sans audio",
     createdAt: "2024-10-27T10:00:00",
     durationMs: 0,
-    trackingId: null,
   },
 ];
 

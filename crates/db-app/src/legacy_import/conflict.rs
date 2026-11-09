@@ -27,8 +27,8 @@ pub(super) async fn reconcile_content_conflict(
             let result = sqlx::query(
                 "UPDATE sessions
                  SET owner_user_id = ?, title = ?, created_at = ?, updated_at = ?,
-                     started_at = ?, ended_at = ?, event_id = ?, external_event_id = ?,
-                     external_provider = ?, series_id = ?, event_json = ?, metadata_json = ?,
+                     started_at = ?, ended_at = ?, external_event_id = ?,
+                     external_provider = ?, series_id = ?, metadata_json = ?,
                      folder_path = ?
                  WHERE id = ? AND metadata_json IS ? AND deleted_at IS NULL",
             )
@@ -38,11 +38,9 @@ pub(super) async fn reconcile_content_conflict(
             .bind(&row.created_at)
             .bind(&row.started_at)
             .bind(&row.ended_at)
-            .bind(&row.event_id)
             .bind(&row.external_event_id)
             .bind(&row.external_provider)
             .bind(&row.series_id)
-            .bind(&row.event_json)
             .bind(&row.metadata_json)
             .bind(&row.folder_path)
             .bind(&row.id)
@@ -328,70 +326,6 @@ pub(super) async fn row_matches_existing(
     row: &LegacyImportRow,
 ) -> Result<bool, sqlx::Error> {
     match row {
-        LegacyImportRow::Calendar(row) => {
-            sqlx::query_scalar(
-                "SELECT EXISTS(
-               SELECT 1 FROM calendars
-               WHERE id = ?
-                 AND tracking_id_calendar IS ?
-                 AND name IS ?
-                 AND enabled IS ?
-                 AND provider IS ?
-                 AND source IS ?
-                 AND color IS ?
-                 AND connection_id IS ?
-             )",
-            )
-            .bind(&row.id)
-            .bind(&row.tracking_id_calendar)
-            .bind(&row.name)
-            .bind(row.enabled)
-            .bind(&row.provider)
-            .bind(&row.source)
-            .bind(&row.color)
-            .bind(&row.connection_id)
-            .fetch_one(&mut **transaction)
-            .await
-        }
-        LegacyImportRow::Event(row) => {
-            sqlx::query_scalar(
-                "SELECT EXISTS(
-               SELECT 1 FROM events
-               WHERE id = ?
-                 AND tracking_id_event IS ?
-                 AND calendar_id IS ?
-                 AND title IS ?
-                 AND started_at IS ?
-                 AND ended_at IS ?
-                 AND location IS ?
-                 AND meeting_link IS ?
-                 AND description IS ?
-                 AND note IS ?
-                 AND recurrence_series_id IS ?
-                 AND has_recurrence_rules IS ?
-                 AND is_all_day IS ?
-                 AND provider IS ?
-                 AND participants_json IS ?
-             )",
-            )
-            .bind(&row.id)
-            .bind(&row.tracking_id_event)
-            .bind(&row.calendar_id)
-            .bind(&row.title)
-            .bind(&row.started_at)
-            .bind(&row.ended_at)
-            .bind(&row.location)
-            .bind(&row.meeting_link)
-            .bind(&row.description)
-            .bind(&row.note)
-            .bind(&row.recurrence_series_id)
-            .bind(row.has_recurrence_rules)
-            .bind(row.is_all_day)
-            .bind(&row.provider)
-            .bind(&row.participants_json)
-            .fetch_one(&mut **transaction)
-            .await
-        }
         LegacyImportRow::Template(row) => {
             sqlx::query_scalar(
                 "SELECT EXISTS(
@@ -479,11 +413,9 @@ pub(super) async fn row_matches_existing(
                  AND created_at IS ?
                  AND started_at IS ?
                  AND ended_at IS ?
-                 AND event_id IS ?
                  AND external_event_id IS ?
                  AND external_provider IS ?
                  AND series_id IS ?
-                 AND event_json IS ?
                  AND metadata_json IS ?
                  AND folder_path IS ?
                  AND deleted_at IS NULL
@@ -495,11 +427,9 @@ pub(super) async fn row_matches_existing(
             .bind(&row.created_at)
             .bind(&row.started_at)
             .bind(&row.ended_at)
-            .bind(&row.event_id)
             .bind(&row.external_event_id)
             .bind(&row.external_provider)
             .bind(&row.series_id)
-            .bind(&row.event_json)
             .bind(&row.metadata_json)
             .bind(&row.folder_path)
             .fetch_one(&mut **transaction)

@@ -22,7 +22,6 @@ macro_rules! check {
 #[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub enum Permission {
-    Calendar,
     Reminders,
     Contacts,
     Microphone,
@@ -100,7 +99,6 @@ impl<'a, R: tauri::Runtime, M: tauri::Manager<R>> Permissions<'a, R, M> {
         }
 
         match permission {
-            Permission::Calendar => self.open_calendar().await,
             Permission::Reminders => self.open_reminders().await,
             Permission::Contacts => self.open_contacts().await,
             Permission::Microphone => self.open_microphone().await,
@@ -127,7 +125,6 @@ impl<'a, R: tauri::Runtime, M: tauri::Manager<R>> Permissions<'a, R, M> {
         }
 
         match permission {
-            Permission::Calendar => self.check_calendar().await,
             Permission::Reminders => self.check_reminders().await,
             Permission::Contacts => self.check_contacts().await,
             Permission::Microphone => self.check_microphone().await,
@@ -143,7 +140,6 @@ impl<'a, R: tauri::Runtime, M: tauri::Manager<R>> Permissions<'a, R, M> {
         use tauri_plugin_sidecar2::Sidecar2PluginExt;
 
         let arg = match permission {
-            Permission::Calendar => "calendar",
             Permission::Reminders => "reminders",
             Permission::Contacts => "contacts",
             Permission::Microphone => "microphone",
@@ -175,11 +171,6 @@ impl<'a, R: tauri::Runtime, M: tauri::Manager<R>> Permissions<'a, R, M> {
         let value = value.trim();
 
         let status = match permission {
-            Permission::Calendar => match value {
-                "notDetermined" => PermissionStatus::NeverRequested,
-                "fullAccess" => PermissionStatus::Authorized,
-                _ => PermissionStatus::Denied,
-            },
             Permission::Reminders => match value {
                 "notDetermined" => PermissionStatus::NeverRequested,
                 "fullAccess" => PermissionStatus::Authorized,
@@ -222,7 +213,6 @@ impl<'a, R: tauri::Runtime, M: tauri::Manager<R>> Permissions<'a, R, M> {
 
     pub async fn request(&self, permission: Permission) -> Result<(), crate::Error> {
         match permission {
-            Permission::Calendar => self.request_calendar().await,
             Permission::Reminders => self.request_reminders().await,
             Permission::Contacts => self.request_contacts().await,
             Permission::Microphone => self.request_microphone().await,
@@ -235,7 +225,6 @@ impl<'a, R: tauri::Runtime, M: tauri::Manager<R>> Permissions<'a, R, M> {
 
     pub async fn reset(&self, permission: Permission) -> Result<(), crate::Error> {
         match permission {
-            Permission::Calendar => self.reset_calendar().await,
             Permission::Reminders => self.reset_reminders().await,
             Permission::Contacts => self.reset_contacts().await,
             Permission::Microphone => self.reset_microphone().await,
@@ -277,15 +266,6 @@ impl<'a, R: tauri::Runtime, M: tauri::Manager<R>> Permissions<'a, R, M> {
 
         Err(last_error
             .unwrap_or_else(|| std::io::Error::other("failed to open System Settings").into()))
-    }
-
-    async fn open_calendar(&self) -> Result<(), crate::Error> {
-        #[cfg(target_os = "macos")]
-        {
-            self.open_privacy_settings("Privacy_Calendars")?;
-        }
-
-        Ok(())
     }
 
     async fn open_reminders(&self) -> Result<(), crate::Error> {
@@ -340,18 +320,6 @@ impl<'a, R: tauri::Runtime, M: tauri::Manager<R>> Permissions<'a, R, M> {
         }
 
         Ok(())
-    }
-
-    async fn check_calendar(&self) -> Result<PermissionStatus, crate::Error> {
-        #[cfg(target_os = "macos")]
-        return check!("calendar", unsafe {
-            EKEventStore::authorizationStatusForEntityType(EKEntityType::Event)
-        });
-
-        #[cfg(not(target_os = "macos"))]
-        {
-            Ok(PermissionStatus::Denied)
-        }
     }
 
     async fn check_reminders(&self) -> Result<PermissionStatus, crate::Error> {
@@ -448,29 +416,6 @@ impl<'a, R: tauri::Runtime, M: tauri::Manager<R>> Permissions<'a, R, M> {
         {
             Ok(PermissionStatus::Denied)
         }
-    }
-
-    async fn request_calendar(&self) -> Result<(), crate::Error> {
-        #[cfg(target_os = "macos")]
-        {
-            use objc2_foundation::NSError;
-
-            let event_store = unsafe { EKEventStore::new() };
-            let (tx, rx) = std::sync::mpsc::channel::<bool>();
-            let completion =
-                block2::RcBlock::new(move |granted: objc2::runtime::Bool, _error: *mut NSError| {
-                    let _ = tx.send(granted.as_bool());
-                });
-
-            unsafe {
-                event_store
-                    .requestFullAccessToEventsWithCompletion(&*completion as *const _ as *mut _)
-            };
-
-            let _ = rx.recv_timeout(std::time::Duration::from_secs(60));
-        }
-
-        Ok(())
     }
 
     async fn request_reminders(&self) -> Result<(), crate::Error> {
@@ -576,13 +521,6 @@ impl<'a, R: tauri::Runtime, M: tauri::Manager<R>> Permissions<'a, R, M> {
         {
             macos_accessibility_client::accessibility::application_is_trusted_with_prompt();
         }
-
-        Ok(())
-    }
-
-    async fn reset_calendar(&self) -> Result<(), crate::Error> {
-        #[cfg(target_os = "macos")]
-        self.reset_tcc("Calendar").await;
 
         Ok(())
     }
@@ -734,7 +672,6 @@ mod tests {
     #[test]
     fn other_permission_checks_keep_using_sidecar() {
         for permission in [
-            Permission::Calendar,
             Permission::Reminders,
             Permission::Contacts,
             Permission::Microphone,

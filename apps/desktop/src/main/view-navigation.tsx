@@ -3,7 +3,6 @@ import { type ReactNode } from "react";
 
 import { VIEW_NAVIGATION_WIDTH_PX } from "~/shared/main/layout-widths";
 import { AutomationsNav } from "~/sidebar/automations";
-import { CalendarNav } from "~/sidebar/calendar";
 import { ContactsNav } from "~/sidebar/contacts";
 import { FoldersNav } from "~/sidebar/folders";
 import { SettingsNav } from "~/sidebar/settings";
@@ -15,7 +14,6 @@ import type { Tab } from "~/store/zustand/tabs";
 // l'accueil (ou vers la note d'origine).
 const VIEW_NAVIGATION_TAB_TYPES = [
   "settings",
-  "calendar",
   "contacts",
   "templates",
   "automations",
@@ -39,8 +37,6 @@ function ViewNavigationContent({ type }: { type: ViewNavigationTabType }) {
   switch (type) {
     case "settings":
       return <SettingsNav />;
-    case "calendar":
-      return <CalendarNav />;
     case "contacts":
       return <ContactsNav />;
     case "templates":

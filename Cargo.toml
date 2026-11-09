@@ -22,7 +22,6 @@ keyring = "4.1.4"
 syntheo-aec = { path = "crates/aec", package = "aec" }
 syntheo-agent-access = { path = "crates/agent-access", package = "agent-access" }
 syntheo-agent-core = { path = "crates/agent-core", package = "agent-core" }
-syntheo-apple-calendar = { path = "crates/apple-calendar", package = "apple-calendar" }
 syntheo-apple-todo = { path = "crates/apple-todo", package = "apple-todo" }
 syntheo-askama-utils = { path = "crates/askama-utils", package = "askama-utils" }
 syntheo-audacity = { path = "crates/audacity", package = "audacity" }
@@ -38,8 +37,6 @@ syntheo-audio-utils = { path = "crates/audio-utils", package = "audio-utils" }
 syntheo-brand = { path = "crates/brand", package = "brand" }
 syntheo-buffer = { path = "crates/buffer", package = "buffer" }
 syntheo-bundle = { path = "crates/bundle", package = "bundle" }
-syntheo-calendar = { path = "crates/calendar", package = "calendar" }
-syntheo-calendar-interface = { path = "crates/calendar-interface", package = "calendar-interface" }
 syntheo-claude = { path = "crates/claude", package = "claude" }
 syntheo-cli-process = { path = "crates/cli-process", package = "cli-process" }
 syntheo-codex = { path = "crates/codex", package = "codex" }
@@ -115,7 +112,7 @@ tauri-plugin-window-state = "2.4"
 
 tauri-plugin-agent = { path = "plugins/agent" }
 tauri-plugin-audio-priority = { path = "plugins/audio-priority" }
-tauri-plugin-calendar = { path = "plugins/calendar" }
+tauri-plugin-contacts = { path = "plugins/contacts" }
 tauri-plugin-db = { path = "plugins/db" }
 tauri-plugin-deeplink2 = { path = "plugins/deeplink2" }
 tauri-plugin-detect = { path = "plugins/detect" }

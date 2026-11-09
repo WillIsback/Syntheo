@@ -2,10 +2,36 @@ import { useMemo } from "react";
 
 import type { MentionConfig } from "@syntheo/editor/widgets";
 
-import { useTimelineSessionsTable } from "~/calendar/queries";
 import { useHumans, useOrganizations } from "~/contacts/queries";
+import { useLiveQuery } from "~/db";
 import { useSearchEngine } from "~/search/contexts/engine";
 import { useFolderPaths } from "~/session/queries/folders";
+import { useUndoDelete } from "~/store/zustand/undo-delete";
+
+type MentionSession = { id: string; title: string };
+
+const EMPTY_SESSIONS: MentionSession[] = [];
+
+// Titled notes, oldest first; a note pending deletion is hidden right away.
+function useMentionSessions(): MentionSession[] {
+  const { data = EMPTY_SESSIONS } = useLiveQuery<
+    MentionSession,
+    MentionSession[]
+  >({
+    sql: `
+      SELECT id, title
+      FROM sessions
+      WHERE deleted_at IS NULL AND title <> ''
+      ORDER BY created_at, id
+    `,
+  });
+  const pendingDeletions = useUndoDelete((state) => state.pendingDeletions);
+
+  return useMemo(
+    () => data.filter((session) => !(session.id in pendingDeletions)),
+    [data, pendingDeletions],
+  );
+}
 
 function interleave<T>(lists: T[][]): T[] {
   const items: T[] = [];
@@ -24,7 +50,7 @@ function interleave<T>(lists: T[][]): T[] {
 }
 
 export function useMentionConfig(): MentionConfig {
-  const sessions = useTimelineSessionsTable();
+  const sessions = useMentionSessions();
   const humans = useHumans();
   const organizations = useOrganizations();
   const folderPaths = useFolderPaths();
@@ -54,12 +80,11 @@ export function useMentionConfig(): MentionConfig {
           return interleave([folders, ...hitsByType.values()]).slice(0, 5);
         }
 
-        const sessionItems = Object.entries(sessions ?? {}).flatMap(
-          ([rowId, row]) => {
-            const title = row.title as string | undefined;
-            return title ? [{ id: rowId, type: "session", label: title }] : [];
-          },
-        );
+        const sessionItems = sessions.map((session) => ({
+          id: session.id,
+          type: "session",
+          label: session.title,
+        }));
         const humanItems = humans.flatMap((human) =>
           human.name
             ? [{ id: human.id, type: "human", label: human.name }]

@@ -191,7 +191,7 @@ export type SettingsState = {
 	tab: string | null,
 };
 
-export type TabInput = { type: "sessions"; id: string; state?: SessionsState | null } | { type: "contacts"; state?: ContactsState | null } | { type: "templates"; state?: TemplatesState | null } | { type: "extensions"; state?: ExtensionsState | null } | { type: "humans"; id: string } | { type: "organizations"; id: string } | { type: "folders"; id: string | null } | { type: "empty" } | { type: "extension"; extensionId: string; state?: { [key in string]: Value } | null } | { type: "calendar" } | { type: "changelog"; state: ChangelogState } | { type: "settings"; state?: SettingsState | null } | { type: "onboarding" } | { type: "edit"; requestId: string };
+export type TabInput = { type: "sessions"; id: string; state?: SessionsState | null } | { type: "contacts"; state?: ContactsState | null } | { type: "templates"; state?: TemplatesState | null } | { type: "extensions"; state?: ExtensionsState | null } | { type: "humans"; id: string } | { type: "organizations"; id: string } | { type: "folders"; id: string | null } | { type: "empty" } | { type: "extension"; extensionId: string; state?: { [key in string]: Value } | null } | { type: "changelog"; state: ChangelogState } | { type: "settings"; state?: SettingsState | null } | { type: "onboarding" } | { type: "edit"; requestId: string };
 
 export type TemplatesState = {
 	showHomepage: boolean | null,

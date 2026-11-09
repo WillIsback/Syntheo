@@ -187,7 +187,6 @@ describe("useUploadFile", () => {
       id: "session-1",
       user_id: "user-1",
       raw_md: "",
-      event_json: "",
     });
     updateSessionMock.mockResolvedValue(undefined);
     useTabsMock.mockImplementation((selector) =>

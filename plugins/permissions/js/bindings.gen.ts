@@ -14,7 +14,7 @@ export const commands = {
 };
 
 /* Types */
-export type Permission = "calendar" | "reminders" | "contacts" | "microphone" | "systemAudio" | "screenRecording" | "accessibility" | "inputMonitoring";
+export type Permission = "reminders" | "contacts" | "microphone" | "systemAudio" | "screenRecording" | "accessibility" | "inputMonitoring";
 
 /**
  *  Serializable projection of [`SettingsGuidance`] so the renderer can explain

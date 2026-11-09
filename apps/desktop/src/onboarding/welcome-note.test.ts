@@ -46,11 +46,12 @@ it("creates the welcome note as a local note without a demo meeting", async () =
   await expect(getOrCreateWelcomeSession()).resolves.toBe("welcome-session");
 
   const [title, , initial] = mocks.createSession.mock.calls[0];
-  const event = JSON.parse(initial.event_json);
   expect(title).toBe("Bienvenue sur Syntheo");
-  // La démo d'onboarding a été retirée : la note n'a pas de lien de réunion.
-  expect(event.meeting_link).toBe("");
-  expect(event.tracking_id).toBe("syntheo-onboarding-demo-v1");
+  // Le marqueur vit dans metadata_json depuis la suppression du calendrier.
+  expect(JSON.parse(initial.metadata_json)).toEqual({
+    welcome_note: "syntheo-onboarding-demo-v1",
+  });
+  expect(initial).not.toHaveProperty("event_json");
   expect(() => JSON.parse(initial.raw_md)).not.toThrow();
 });
 

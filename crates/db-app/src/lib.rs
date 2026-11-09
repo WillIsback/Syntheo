@@ -1,13 +1,8 @@
 #![forbid(unsafe_code)]
 
 mod attachment_ops;
-mod calendar_ops;
-mod calendar_sync_ops;
-mod calendar_types;
 mod capture_lifecycle_ops;
 mod contact_ops;
-mod event_ops;
-mod event_types;
 mod folder_catalog_ops;
 mod legacy_import;
 mod legacy_voiceprints;
@@ -33,13 +28,8 @@ mod webhook_ops;
 mod webhook_types;
 
 pub use attachment_ops::*;
-pub use calendar_ops::*;
-pub use calendar_sync_ops::*;
-pub use calendar_types::*;
 pub use capture_lifecycle_ops::*;
 pub use contact_ops::*;
-pub use event_ops::*;
-pub use event_types::*;
 pub use folder_catalog_ops::*;
 pub use legacy_import::*;
 pub use legacy_voiceprints::*;
@@ -64,6 +54,8 @@ pub use transcript_batch_ops::*;
 pub use transcript_live_ops::*;
 pub use webhook_ops::*;
 pub use webhook_types::*;
+
+pub const DEFAULT_USER_ID: &str = "00000000-0000-0000-0000-000000000000";
 
 // Older builds keep running against databases that carry newer migrations, so
 // every new migration must be downgrade-safe by default: additive only, new
@@ -630,6 +622,11 @@ pub const APP_MIGRATION_STEPS: &[syntheo_db_migrate::MigrationStep] = &[
         id: "20261108120000_session_summary_versions",
         scope: syntheo_db_migrate::MigrationScope::Plain,
         sql: include_str!("../migrations/20261108120000_session_summary_versions.sql"),
+    },
+    syntheo_db_migrate::MigrationStep {
+        id: "20261109120000_drop_calendar",
+        scope: syntheo_db_migrate::MigrationScope::Plain,
+        sql: include_str!("../migrations/20261109120000_drop_calendar.sql"),
     },
 ];
 

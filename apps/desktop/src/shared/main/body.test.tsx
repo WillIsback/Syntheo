@@ -69,9 +69,6 @@ vi.mock("~/main/tab-content", () => ({
 vi.mock("~/sidebar/settings", () => ({
   SettingsNav: () => <nav data-testid="view-nav">settings-nav</nav>,
 }));
-vi.mock("~/sidebar/calendar", () => ({
-  CalendarNav: () => <nav data-testid="view-nav">calendar-nav</nav>,
-}));
 vi.mock("~/sidebar/contacts", () => ({
   ContactsNav: () => <nav data-testid="view-nav">contacts-nav</nav>,
 }));
@@ -142,7 +139,6 @@ describe("ClassicMainBody", () => {
 
   it.each([
     "settings",
-    "calendar",
     "contacts",
     "templates",
     "automations",
