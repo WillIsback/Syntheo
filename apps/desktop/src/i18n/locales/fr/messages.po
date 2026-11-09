@@ -388,6 +388,7 @@ msgstr "Ajoutez une compétence à…"
 msgid "Add spoken language"
 msgstr "Ajouter une langue parlée"
 
+#: src/automations/chat-prompt.ts
 #: src/settings/automations/advanced-step-proposals.tsx
 msgid "Add the step"
 msgstr "Ajouter l'étape"
@@ -524,6 +525,7 @@ msgstr "Menu de l'application"
 msgid "Applies an instruction (tasks, short summary, follow-up message); the result feeds the next steps."
 msgstr "Applique une consigne (tâches, résumé court, message de suivi) ; le résultat sert aux étapes suivantes."
 
+#: src/automations/chat-prompt.ts
 #: src/settings/automations/advanced-step-proposals.tsx
 msgid "Apply the change"
 msgstr "Appliquer la modification"
@@ -1347,6 +1349,7 @@ msgstr "La date et l'heure sont obligatoires"
 msgid "Decisions"
 msgstr "Décisions"
 
+#: src/automations/chat-prompt.ts
 #: src/chat/components/message/tool/edit-summary.tsx
 #: src/edit/tab-content.tsx
 #: src/session/components/living-document/summary-review.tsx
@@ -1754,6 +1757,10 @@ msgstr "Exporter"
 msgid "Export as Markdown"
 msgstr "Exporter en Markdown"
 
+#: src/chat/components/body/empty.tsx
+msgid "Export as Markdown after each meeting."
+msgstr "Exporter en Markdown à la fin de chaque réunion."
+
 #: src/settings/automations/markdown-export-config.tsx
 msgid "Export folder"
 msgstr "Dossier d'export"
@@ -1780,6 +1787,10 @@ msgstr "Fichier exporté"
 #: src/automations/labels.ts
 msgid "Extract tasks"
 msgstr "Extraire les tâches"
+
+#: src/chat/components/body/empty.tsx
+msgid "Extract the tasks."
+msgstr "Extraire les tâches."
 
 #: src/session/components/living-document/summary-switcher.tsx
 msgid "Failed to copy"
@@ -3945,6 +3956,7 @@ msgstr "Enregistrer"
 msgid "Save (automatic)"
 msgstr "Enregistrer (automatique)"
 
+#: src/automations/chat-prompt.ts
 #: src/settings/automations/index.tsx
 msgid "Save & enable"
 msgstr "Enregistrer et activer"
@@ -4167,6 +4179,10 @@ msgstr "Envoyez un e-mail"
 #: src/chat/components/input/index.tsx
 msgid "Send message"
 msgstr "Envoyez un message"
+
+#: src/chat/components/body/empty.tsx
+msgid "Send the summary to a webhook."
+msgstr "Envoyer la synthèse en webhook."
 
 #: src/automations/labels.ts
 msgid "Send to an address (webhook)"
@@ -5023,6 +5039,10 @@ msgstr "Le corps JSON n'est pas valide une fois les variables remplies."
 msgid "The kinds of meeting this template is meant for (team, role, frequency…)."
 msgstr "Les réunions auxquelles ce modèle est destiné (équipe, rôle, fréquence…)."
 
+#: src/ai/structured-output.ts
+msgid "The language model did not return a usable answer. Try again, or check the model in the settings."
+msgstr "Le modèle de langage n'a pas renvoyé de réponse exploitable. Réessayez, ou vérifiez le modèle dans les paramètres."
+
 #: src/settings/ai/llm/index.tsx
 msgid "The language model that writes your meeting notes and answers when you ask a note a question."
 msgstr "Le modèle de langage qui rédige vos comptes-rendus et répond quand vous interrogez une note."
@@ -5762,6 +5782,18 @@ msgstr "Quand la réunion se termine"
 #: src/automations/labels.ts
 msgid "When the meeting summary is ready"
 msgstr "Quand la synthèse de la réunion est prête"
+
+#: src/chat/components/body/empty.tsx
+msgid "When the meeting summary is ready, export the note as a Markdown file."
+msgstr "Quand la synthèse de la réunion est prête, exportez la note dans un fichier Markdown."
+
+#: src/chat/components/body/empty.tsx
+msgid "When the meeting summary is ready, extract the tasks with the local model and copy them to the clipboard."
+msgstr "Quand la synthèse de la réunion est prête, extrayez les tâches avec le modèle local et copiez-les dans le presse-papiers."
+
+#: src/chat/components/body/empty.tsx
+msgid "When the meeting summary is ready, send it to a webhook."
+msgstr "Quand la synthèse de la réunion est prête, envoyez-la à un webhook."
 
 #: src/automations/labels.ts
 msgid "When you launch it from a note"

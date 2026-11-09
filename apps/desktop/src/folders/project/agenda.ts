@@ -11,7 +11,7 @@
 // L'ordre du jour est un document de note ordinaire (une liste numérotée),
 // modifiable avec l'éditeur de note.
 
-import { generateText, type LanguageModel, Output } from "ai";
+import type { LanguageModel } from "ai";
 import { z } from "zod";
 
 import type { JSONContent } from "@syntheo/editor/markdown";
@@ -20,6 +20,8 @@ import type { FolderMeeting } from "./meetings";
 import { parseThread, type ThreadItem, type ThreadLabels } from "./thread-doc";
 import { pendingThreadMeetings } from "./thread-generation";
 import type { FolderThreadRecord } from "./thread-store";
+
+import { generateStructured } from "~/ai/structured-output";
 
 // Synthèses envoyées : les dernières réunions, et au plus quelques réunions
 // récentes que le fil rouge ne couvre pas encore.
@@ -232,19 +234,15 @@ export async function generateFolderAgenda({
 }): Promise<JSONContent | null> {
   const material = agendaMaterial({ meetings, thread, labels });
   if (!hasAgendaMaterial(material)) return null;
-  const result = await generateText({
+  const output = await generateStructured({
     model,
     instructions: FOLDER_AGENDA_SYSTEM_PROMPT,
     prompt: buildAgendaPrompt(material),
-    output: Output.object({ schema: agendaSchema }),
-    maxRetries: 2,
+    schema: agendaSchema,
     maxOutputTokens: MAX_OUTPUT_TOKENS,
-    timeout: { totalMs: GENERATION_TIMEOUT_MS },
+    timeoutMs: GENERATION_TIMEOUT_MS,
     abortSignal: signal,
   });
-  if (!result.output) {
-    throw new Error("Folder agenda generation returned no output");
-  }
   signal?.throwIfAborted();
-  return agendaDoc(sanitizeAgenda(result.output, meetings), meetingLabel);
+  return agendaDoc(sanitizeAgenda(output, meetings), meetingLabel);
 }

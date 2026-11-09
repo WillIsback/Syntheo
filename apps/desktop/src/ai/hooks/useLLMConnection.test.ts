@@ -1,7 +1,8 @@
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import { renderHook } from "@testing-library/react";
-import { generateText, streamText } from "ai";
+import { generateText, Output, streamText } from "ai";
 import { afterEach, expect, it, vi } from "vitest";
+import { z } from "zod";
 
 import { useLanguageModel, useLLMConnection } from "./useLLMConnection";
 
@@ -89,6 +90,44 @@ it.each([false, true])(
     unmount();
   },
 );
+
+// Issue 530 : vLLM (et les serveurs compatibles courants) contraignent la
+// réponse au schéma JSON ; sans `supportsStructuredOutputs`, le SDK n'envoyait
+// que `json_object` et prévenait que le schéma était ignoré.
+it("sends the JSON schema of a structured output to the server", async () => {
+  let responseFormat: unknown;
+  vi.mocked(tauriFetch).mockImplementation(async (_input, init) => {
+    responseFormat = JSON.parse(String(init?.body)).response_format;
+    return Response.json({
+      id: "local-completion",
+      model: "mtplx",
+      created: 0,
+      choices: [
+        {
+          index: 0,
+          message: { role: "assistant", content: '{"title":"Budget"}' },
+          finish_reason: "stop",
+        },
+      ],
+    });
+  });
+
+  const { result, unmount } = renderHook(() => useLanguageModel());
+  const completion = await generateText({
+    model: result.current!,
+    prompt: "Title the meeting",
+    output: Output.object({ schema: z.object({ title: z.string() }) }),
+    maxRetries: 0,
+  });
+
+  expect(completion.output).toEqual({ title: "Budget" });
+  expect(responseFormat).toMatchObject({
+    type: "json_schema",
+    json_schema: { schema: { type: "object" } },
+  });
+  expect(completion.warnings ?? []).toEqual([]);
+  unmount();
+});
 
 it.each([
   { ready: true, disabled: true },

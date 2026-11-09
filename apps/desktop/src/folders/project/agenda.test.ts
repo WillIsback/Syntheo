@@ -1,3 +1,4 @@
+import { NoOutputGeneratedError } from "ai";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { JSONContent } from "@syntheo/editor/markdown";
@@ -224,6 +225,27 @@ describe("generateFolderAgenda", () => {
     expect(call.model).toBe(model);
     expect(call.instructions).toBe(FOLDER_AGENDA_SYSTEM_PROMPT);
     expect(JSON.parse(call.prompt).thread.open_points).toHaveLength(1);
+    expect(JSON.stringify(doc)).toContain("Hébergement des démos clients");
+  });
+
+  // Issue 530 : premier « Proposer » en AI_NoOutputGeneratedError avec vLLM.
+  it("retries once in JSON mode when the first answer has no output", async () => {
+    mocks.generateText
+      .mockRejectedValueOnce(new NoOutputGeneratedError())
+      .mockResolvedValueOnce({
+        text: '{"items":[{"text":"Hébergement des démos clients","meetingId":"m2"}]}',
+      });
+
+    const doc = await generateFolderAgenda({
+      model,
+      meetings,
+      thread: threadWith(),
+      labels,
+      meetingLabel,
+    });
+
+    expect(mocks.generateText).toHaveBeenCalledTimes(2);
+    expect(mocks.generateText.mock.calls[1]![0].output).toBeUndefined();
     expect(JSON.stringify(doc)).toContain("Hébergement des démos clients");
   });
 

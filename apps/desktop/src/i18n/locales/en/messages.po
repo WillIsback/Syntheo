@@ -388,6 +388,7 @@ msgstr "Add skill to…"
 msgid "Add spoken language"
 msgstr "Add spoken language"
 
+#: src/automations/chat-prompt.ts
 #: src/settings/automations/advanced-step-proposals.tsx
 msgid "Add the step"
 msgstr "Add the step"
@@ -524,6 +525,7 @@ msgstr "Application menu"
 msgid "Applies an instruction (tasks, short summary, follow-up message); the result feeds the next steps."
 msgstr "Applies an instruction (tasks, short summary, follow-up message); the result feeds the next steps."
 
+#: src/automations/chat-prompt.ts
 #: src/settings/automations/advanced-step-proposals.tsx
 msgid "Apply the change"
 msgstr "Apply the change"
@@ -1347,6 +1349,7 @@ msgstr "Date and time are required"
 msgid "Decisions"
 msgstr "Decisions"
 
+#: src/automations/chat-prompt.ts
 #: src/chat/components/message/tool/edit-summary.tsx
 #: src/edit/tab-content.tsx
 #: src/session/components/living-document/summary-review.tsx
@@ -1754,6 +1757,10 @@ msgstr "Export"
 msgid "Export as Markdown"
 msgstr "Export as Markdown"
 
+#: src/chat/components/body/empty.tsx
+msgid "Export as Markdown after each meeting."
+msgstr "Export as Markdown after each meeting."
+
 #: src/settings/automations/markdown-export-config.tsx
 msgid "Export folder"
 msgstr "Export folder"
@@ -1780,6 +1787,10 @@ msgstr "Exported file"
 #: src/automations/labels.ts
 msgid "Extract tasks"
 msgstr "Extract tasks"
+
+#: src/chat/components/body/empty.tsx
+msgid "Extract the tasks."
+msgstr "Extract the tasks."
 
 #: src/session/components/living-document/summary-switcher.tsx
 msgid "Failed to copy"
@@ -3945,6 +3956,7 @@ msgstr "Save"
 msgid "Save (automatic)"
 msgstr "Save (automatic)"
 
+#: src/automations/chat-prompt.ts
 #: src/settings/automations/index.tsx
 msgid "Save & enable"
 msgstr "Save & enable"
@@ -4167,6 +4179,10 @@ msgstr "Send email"
 #: src/chat/components/input/index.tsx
 msgid "Send message"
 msgstr "Send message"
+
+#: src/chat/components/body/empty.tsx
+msgid "Send the summary to a webhook."
+msgstr "Send the summary to a webhook."
 
 #: src/automations/labels.ts
 msgid "Send to an address (webhook)"
@@ -5023,6 +5039,10 @@ msgstr "The JSON body is not valid once the variables are filled in."
 msgid "The kinds of meeting this template is meant for (team, role, frequency…)."
 msgstr "The kinds of meeting this template is meant for (team, role, frequency…)."
 
+#: src/ai/structured-output.ts
+msgid "The language model did not return a usable answer. Try again, or check the model in the settings."
+msgstr "The language model did not return a usable answer. Try again, or check the model in the settings."
+
 #: src/settings/ai/llm/index.tsx
 msgid "The language model that writes your meeting notes and answers when you ask a note a question."
 msgstr "The language model that writes your meeting notes and answers when you ask a note a question."
@@ -5762,6 +5782,18 @@ msgstr "When the meeting ends"
 #: src/automations/labels.ts
 msgid "When the meeting summary is ready"
 msgstr "When the meeting summary is ready"
+
+#: src/chat/components/body/empty.tsx
+msgid "When the meeting summary is ready, export the note as a Markdown file."
+msgstr "When the meeting summary is ready, export the note as a Markdown file."
+
+#: src/chat/components/body/empty.tsx
+msgid "When the meeting summary is ready, extract the tasks with the local model and copy them to the clipboard."
+msgstr "When the meeting summary is ready, extract the tasks with the local model and copy them to the clipboard."
+
+#: src/chat/components/body/empty.tsx
+msgid "When the meeting summary is ready, send it to a webhook."
+msgstr "When the meeting summary is ready, send it to a webhook."
 
 #: src/automations/labels.ts
 msgid "When you launch it from a note"

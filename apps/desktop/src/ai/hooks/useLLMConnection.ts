@@ -232,6 +232,12 @@ const createProviderModel = (
     fetch: providerFetch,
     name: conn.providerId,
     baseURL: conn.baseUrl,
+    // Issue 530 : vLLM, Ollama, llama.cpp server, LM Studio et NIM acceptent
+    // `response_format: json_schema` et contraignent la réponse au schéma.
+    // Sans cette option, seul `json_object` part et le schéma est ignoré. Un
+    // serveur qui le refuse passe par la nouvelle tentative en JSON demandé
+    // par consigne (ai/structured-output.ts).
+    supportsStructuredOutputs: true,
   };
   if (conn.apiKey) {
     config.apiKey = conn.apiKey;

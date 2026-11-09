@@ -23,6 +23,7 @@ export function ChatBody({
   hasContext = false,
   isLiveMeeting = false,
   hasSummary = false,
+  isAutomationEditor = false,
   automationSessionId,
   onSendMessage,
 }: {
@@ -34,6 +35,7 @@ export function ChatBody({
   hasContext?: boolean;
   isLiveMeeting?: boolean;
   hasSummary?: boolean;
+  isAutomationEditor?: boolean;
   automationSessionId?: string;
   onSendMessage?: (
     content: string,
@@ -91,6 +93,7 @@ export function ChatBody({
               hasContext={hasContext}
               isLiveMeeting={isLiveMeeting}
               hasSummary={hasSummary}
+              isAutomationEditor={isAutomationEditor}
               automationSessionId={automationSessionId}
               onSendMessage={onSendMessage}
             />
