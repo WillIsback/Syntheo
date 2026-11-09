@@ -22,12 +22,12 @@ export function StandardContentWrapper({
   return (
     <div className="flex h-full w-full min-w-0 flex-col">
       <ResizablePanelGroup
-        direction="vertical"
+        orientation="vertical"
         className="min-h-0 min-w-0 flex-1"
       >
         <ResizablePanel
-          defaultSize={100}
-          minSize={35}
+          defaultSize="100%"
+          minSize="35%"
           className="min-h-0 min-w-0"
         >
           <MainPanel fill floatingButton={floatingButton} noBorder={noBorder}>
