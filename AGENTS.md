@@ -15,3 +15,9 @@ Project rules (see `docs/architecture.mdx`):
 - No telemetry, account, or billing code.
 - User-facing text is French first.
 - Commits and PR titles follow Conventional Commits; PRs reference an issue (`Closes #N`).
+
+Testing while developing (several agents often share one machine):
+
+- Run only the tests your change touches: `pnpm -C apps/desktop exec vitest related --run <changed files>` (or `vitest run --changed origin/main`). Always pass `--run`: without it vitest stays in watch mode.
+- Rust: `cargo test -p <crate>` / `cargo clippy -p <crate>`, never the whole workspace while iterating.
+- Run the full suite once, before the final commit; CI runs it again on the PR.
