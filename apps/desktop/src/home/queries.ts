@@ -7,6 +7,7 @@ import { firstNameOf } from "./format";
 
 import { usePersonalContact } from "~/contacts/queries";
 import { useLiveQuery } from "~/db";
+import { normalizeFolderPath } from "~/session/folders";
 import { useOwnerUserId } from "~/shared/owner-user";
 import { useUndoDelete } from "~/store/zustand/undo-delete";
 
@@ -25,6 +26,8 @@ export type RecentNote = {
   title: string;
   createdAt: string;
   durationMs: number;
+  // Chemin du dossier de la note, vide si elle n'est pas rangée.
+  folderPath: string;
 };
 
 type RecentNoteSqlRow = {
@@ -32,6 +35,7 @@ type RecentNoteSqlRow = {
   title: string | null;
   created_at: string | null;
   duration_ms: number | null;
+  folder_path?: string | null;
 };
 
 export function mapRecentNoteRows(
@@ -42,12 +46,13 @@ export function mapRecentNoteRows(
     title: (row.title ?? "").trim(),
     createdAt: row.created_at ?? "",
     durationMs: Math.max(0, Number(row.duration_ms ?? 0)),
+    folderPath: normalizeFolderPath(row.folder_path ?? "") ?? "",
   }));
 }
 
 const EMPTY_NOTES: RecentNote[] = [];
 
-// Notes récentes pour « Reprendre ». La durée est la somme des segments de
+// Notes récentes pour « Reprendre », avec leur dossier. La durée est la somme des segments de
 // transcription (début et fin en ms) de la note.
 export function useRecentNotes(limit = RECENT_NOTES_LIMIT): RecentNote[] {
   // Marge pour masquer les suppressions en attente sans raccourcir la liste.
@@ -58,6 +63,7 @@ export function useRecentNotes(limit = RECENT_NOTES_LIMIT): RecentNote[] {
           session.id,
           session.title,
           session.created_at,
+          session.folder_path,
           COALESCE((
             SELECT SUM(transcript.ended_at_ms - transcript.started_at_ms)
             FROM transcripts AS transcript

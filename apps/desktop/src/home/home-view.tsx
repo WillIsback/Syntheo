@@ -1,5 +1,7 @@
 import { Trans } from "@lingui/react/macro";
 
+import type { HomeFolder } from "./active-folders";
+import { FolderCards } from "./folder-cards";
 import { HomeCapsule } from "./home-capsule";
 import { NoteIndex } from "./note-index";
 import type { RecentNote } from "./queries";
@@ -7,6 +9,7 @@ import { StartButton } from "./start-button";
 
 import type { ShortcutPlatform } from "~/shared/shortcuts";
 import { type PaletteId, useDocumentPalette } from "~/shared/theme/palette";
+import type { TemplateIcon } from "~/templates/template-icon";
 
 // Filigrane de l'accueil selon la palette (maquette, objet PAL) : 茶 Thé vert,
 // 藤 Glycine, 紅 Laque et encre.
@@ -19,25 +22,37 @@ const WATERMARK: Record<PaletteId, string> = {
 export type HomeViewProps = {
   firstName: string;
   recentNotes: readonly RecentNote[];
+  folders?: readonly HomeFolder[];
+  folderIcons?: Record<string, TemplateIcon | undefined>;
   os?: ShortcutPlatform;
   onStart: () => void;
   onOpenNote: (sessionId: string) => void;
   onExportNote: (sessionId: string) => void;
   onDeleteNote: (note: RecentNote) => void;
   onSearch: () => void;
+  onOpenFolder?: (folderPath: string) => void;
+  onOpenAllFolders?: () => void;
 };
 
+const NO_FOLDERS: readonly HomeFolder[] = [];
+const noop = () => {};
+
 // Accueil guidé « Thé vert » (maquette piste C, écran Accueil) : colonne de
-// 640px, salutation, prochaine réunion, bouton Démarrer, « Reprendre ».
+// 640px, salutation, prochaine réunion, bouton Démarrer, « Vos dossiers »
+// (issue 500), « Reprendre ».
 export function HomeView({
   firstName,
   recentNotes,
+  folders = NO_FOLDERS,
+  folderIcons,
   os = "pc",
   onStart,
   onOpenNote,
   onExportNote,
   onDeleteNote,
   onSearch,
+  onOpenFolder = noop,
+  onOpenAllFolders = noop,
 }: HomeViewProps) {
   const palette = useDocumentPalette();
 
@@ -66,8 +81,14 @@ export function HomeView({
             </h1>
           </header>
           <StartButton onStart={onStart} os={os} />
+          <FolderCards
+            folders={folders}
+            onOpenFolder={onOpenFolder}
+            onOpenAllFolders={onOpenAllFolders}
+          />
           <NoteIndex
             notes={recentNotes}
+            folderIcons={folderIcons}
             onOpen={onOpenNote}
             onExport={onExportNote}
             onDelete={onDeleteNote}

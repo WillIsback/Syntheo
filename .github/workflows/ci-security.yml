@@ -51,7 +51,9 @@ jobs:
           # node-forge est sous double licence « BSD-3-Clause OR GPL-2.0 » :
           # l'action refuse toute expression contenant une licence refusée,
           # même en alternative. On l'utilise sous BSD-3-Clause (outil de dev).
-          allow-dependencies-licenses: "pkg:npm/@pierre/diffs, pkg:npm/@pierre/highlights, pkg:npm/@pierre/theme, pkg:npm/@pierre/theming, pkg:npm/node-forge"
+          # jszip : même cas, « MIT OR GPL-3.0-or-later » ; utilisé sous MIT
+          # (dépendance des outils de test e2e).
+          allow-dependencies-licenses: "pkg:npm/@pierre/diffs, pkg:npm/@pierre/highlights, pkg:npm/@pierre/theme, pkg:npm/@pierre/theming, pkg:npm/node-forge, pkg:npm/jszip"
 
       - name: Valider le registre des exceptions de sécurité
         shell: bash

@@ -12,13 +12,15 @@ import { useSquircleRef } from "@syntheo/ui/hooks/use-squircle";
 import { cn } from "@syntheo/utils";
 
 import { useActiveFolderPath, useFolderSelection } from "./selection";
+import { buildFolderTree, filterFolderTree } from "./sidebar-tree";
+import { FolderTreeView } from "./sidebar-tree-view";
 
+import { useSearchNotes } from "~/search/unified/catalog";
 import { createNamedFolder } from "~/session/folder-catalog";
 import { resolvedFolderIcon } from "~/session/folder-icon";
 import { useFolderIcons, useFolderPaths } from "~/session/queries";
 import { CustomSidebarHeader } from "~/sidebar/custom-sidebar-header";
 import { FolderNameDialog } from "~/sidebar/folder-name-dialog";
-import { TemplateIconGlyph } from "~/templates/template-icon";
 
 export function FoldersSidebar() {
   const { t } = useLingui();
@@ -31,15 +33,14 @@ export function FoldersSidebar() {
   const [search, setSearch] = useState("");
   const searchRef = useSquircleRef<HTMLDivElement>();
 
-  const filteredFolders = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    if (!query) {
-      return folders;
-    }
-    return folders.filter((folder) => folder.toLowerCase().includes(query));
-  }, [folders, search]);
+  const notes = useSearchNotes();
+  const tree = useMemo(() => buildFolderTree(folders, notes), [folders, notes]);
+  const filtered = useMemo(
+    () => filterFolderTree(tree, search),
+    [tree, search],
+  );
 
-  const isEmpty = filteredFolders.length === 0;
+  const isEmpty = filtered.tree.length === 0;
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -112,39 +113,15 @@ export function FoldersSidebar() {
             </p>
           </div>
         ) : (
-          <ul className="flex flex-col">
-            {filteredFolders.map((folder) => {
-              const selected = folder === activeFolder;
-              return (
-                <li key={folder}>
-                  <button
-                    type="button"
-                    aria-label={folder}
-                    aria-current={selected ? "page" : undefined}
-                    onClick={() => setSelectedPath(folder)}
-                    className={cn([
-                      "w-full rounded-lg px-3 py-2 text-left text-sm transition-colors select-none",
-                      selected
-                        ? "bg-accent font-medium"
-                        : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
-                    ])}
-                  >
-                    <span className="flex min-w-0 items-center gap-2">
-                      <TemplateIconGlyph
-                        icon={resolvedFolderIcon(
-                          folder,
-                          persistedIcons,
-                          iconOverrides,
-                        )}
-                        className="size-4 text-sm"
-                      />
-                      <span className="min-w-0 truncate">{folder}</span>
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
+          <FolderTreeView
+            tree={filtered.tree}
+            forcedExpanded={filtered.forcedExpanded}
+            activeFolder={activeFolder}
+            iconFor={(path) =>
+              resolvedFolderIcon(path, persistedIcons, iconOverrides)
+            }
+            onSelectFolder={setSelectedPath}
+          />
         )}
       </div>
 

@@ -45,6 +45,9 @@ export default defineConfig(() => ({
   test: {
     reporters: "default",
     environment: "jsdom",
+    // Plafond fixe : par défaut vitest lance un worker par cœur, et plusieurs
+    // runs en parallèle (agents, worktrees) saturent la RAM de la machine.
+    maxWorkers: 4,
     setupFiles: ["./src/test-setup.ts"],
     onConsoleLog: (_, type) => {
       return type === "stderr";

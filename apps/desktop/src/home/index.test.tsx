@@ -23,6 +23,17 @@ const mocks = vi.hoisted(() => ({
       title: "Comité projet",
       createdAt: "2024-10-28T10:00:00",
       durationMs: 0,
+      folderPath: "Atlas",
+    },
+  ],
+  folders: [
+    {
+      path: "Atlas",
+      name: "Atlas",
+      icon: { type: "icon", value: "folder", color: "" },
+      meetingCount: 3,
+      lastMeetingAt: "2024-10-28T10:00:00",
+      thread: null,
     },
   ],
 }));
@@ -32,6 +43,18 @@ vi.mock("@tauri-apps/plugin-os", () => ({ platform: mocks.platform }));
 vi.mock("./queries", () => ({
   useOwnerFirstName: () => mocks.firstName,
   useRecentNotes: () => mocks.recentNotes,
+}));
+
+vi.mock("./active-folders", () => ({
+  useActiveFolders: () => mocks.folders,
+}));
+
+vi.mock("~/session/queries", () => ({
+  useFolderIcons: () => ({}),
+}));
+
+vi.mock("~/session/components/folder-picker", () => ({
+  FolderPickerContent: () => null,
 }));
 
 vi.mock("~/session/hooks/useDeleteSession", () => ({
@@ -77,6 +100,8 @@ vi.mock("~/store/zustand/tabs", () => ({
 
 import { HomePage } from "./index";
 
+import { useFolderSelection } from "~/folders/selection";
+
 describe("HomePage", () => {
   beforeEach(() => {
     mocks.menus = [];
@@ -102,6 +127,19 @@ describe("HomePage", () => {
       type: "sessions",
       id: "s1",
     });
+  });
+
+  it("une carte « Vos dossiers » ouvre la page de son dossier", () => {
+    useFolderSelection.getState().setSelectedPath(null);
+    render(<HomePage />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Atlas/ }));
+    expect(useFolderSelection.getState().selectedPath).toBe("Atlas");
+    expect(mocks.openCurrent).toHaveBeenCalledWith({ type: "folders" });
+
+    fireEvent.click(screen.getByRole("button", { name: "All folders" }));
+    expect(mocks.openCurrent).toHaveBeenLastCalledWith({ type: "folders" });
+    expect(mocks.openCurrent).toHaveBeenCalledTimes(2);
   });
 
   it("la capsule ouvre la palette de recherche (Ctrl K)", () => {

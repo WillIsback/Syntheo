@@ -186,7 +186,11 @@ export function FolderEditor({ folderPath }: { folderPath: string }) {
       <div className="scrollbar-hide @container flex-1 overflow-y-auto px-3 pb-6">
         <div className="grid grid-cols-1 items-start gap-5 @3xl:grid-cols-[minmax(0,1fr)_300px]">
           <div className="flex min-w-0 flex-col gap-4">
-            <NextMeetingSlot folderPath={folderPath} />
+            <NextMeetingSlot
+              folderPath={folderPath}
+              meetings={meetings}
+              thread={thread}
+            />
             <FolderThreadCard
               folderPath={folderPath}
               meetings={meetings}
