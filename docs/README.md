@@ -22,7 +22,7 @@ cd docs
 mint dev
 ```
 
-Update `docs.json` whenever a page is added, moved, or removed. Keep CLI and MCP reference content aligned with `apps/cli/src/cli.rs` and `apps/cli/src/mcp.rs`. Mintlify publishes the custom agent skill from `skill.md`; keep it aligned with `../skills/syntheo/`.
+Update `docs.json` whenever a page is added, moved, or removed. Keep CLI and MCP reference content aligned with `apps/cli/src/cli.rs` and `apps/cli/src/mcp/`. Mintlify publishes the custom agent skill from `skill.md`; keep it aligned with `../skills/syntheo/`.
 
 Before deploying, run:
 

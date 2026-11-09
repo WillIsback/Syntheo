@@ -16,6 +16,7 @@ Suggestions proposées :
 - Pendant une capture : « Résumez les 5 dernières minutes. », « Suggérez la prochaine question à poser. », « Listez les éléments d'action jusqu'à présent. »
 - Après la réunion : « Listez les éléments d'action. », « Rédiger un e-mail de suivi. », « Trouvez les décisions clés. »
 - Quand un compte rendu existe : « Raccourcissez le résumé. » et « Allongez le résumé. »
+- Pour une note rangée dans un dossier : « Préparer l'ordre du jour de la prochaine réunion. ». Cette suggestion n'envoie pas de message : elle ouvre le bloc « Prochaine réunion » du dossier (voir [Dossiers et projets](/folders#prochaine-réunion)).
 
 Vous pouvez aussi demander, par exemple :
 
@@ -26,15 +27,23 @@ Pour répondre, le chat peut chercher dans les titres et le contenu de vos réun
 
 Les étapes de raisonnement et les outils utilisés sont regroupés dans une ligne « Activité ». Dépliez-la pour les consulter.
 
+## Interroger un dossier
+
+Sur la page d'un dossier, cliquez sur « Demander au dossier » (ou appuyez sur <kbd>Ctrl</kbd> + <kbd>J</kbd>) : le chat s'ouvre avec ce dossier pour contexte.
+
+Depuis la palette <kbd>Ctrl</kbd> + <kbd>K</kbd> filtrée sur un dossier, l'action « Demander au dossier » ouvre une nouvelle conversation dont le champ mentionne déjà le dossier et reprend le texte saisi. Rien n'est envoyé avant que vous validiez. Voir [Dossiers et projets](/folders#chercher-dans-un-dossier).
+
 ## Organiser vos réunions
 
-Demandez au chat de lister vos dossiers, d'en créer un ou d'y déplacer des réunions. Par exemple : « Range mes revues de lancement dans Projets/Lancement. » Le déplacement change l'emplacement des réunions, pas leur contenu.
+Demandez au chat de lister vos [dossiers](/folders), d'en créer un ou d'y déplacer des réunions. Par exemple : « Range mes revues de lancement dans Projets/Lancement. » Le déplacement change l'emplacement des réunions, pas leur contenu.
 
 Si un enregistrement ou des notes ont atterri sur la mauvaise réunion, le chat peut aussi les déplacer vers une autre réunion existante, à condition que celle-ci n'ait pas encore de transcription.
 
 ## Guider le contexte
 
 Le chat utilise automatiquement la réunion ouverte et ajoute d'autres réunions ou personnes si votre demande le nécessite.
+
+Pour ajouter vous-même un élément au contexte, tapez `@` suivi de quelques lettres et choisissez un dossier, une note ou un contact. La liste utilise la même recherche que la palette <kbd>Ctrl</kbd> + <kbd>K</kbd>, dans le même ordre : dossiers (avec leur nombre de réunions), notes dont le titre correspond, notes trouvées dans leur contenu, puis contacts. Chaque note affiche son dossier à droite. La liste propose au plus 8 résultats.
 
 Nommez précisément la réunion ou la personne quand plusieurs se ressemblent, ou précisez « Utilise uniquement cette réunion ». Cliquez sur « Nouveau chat » pour repartir d'une conversation vide.
 
@@ -46,6 +55,10 @@ Le chat agit de deux façons sur vos notes :
 - **Correction ponctuelle** (« ce n'est pas X mais Y ») : le chat remplace directement le texte exact dans le compte rendu, le titre ou la transcription.
 
 Pour corriger vous-même la transcription ou réattribuer un locuteur, voir [Notes, comptes rendus et transcriptions](/notes).
+
+## Construire une automatisation
+
+Dans la vue Automatisations, le chat s'affiche à droite de l'éditeur et dispose d'outils propres : il crée l'automatisation ou modifie celle qui est ouverte (nom, déclencheur, étapes). Il ne l'active jamais, et une étape avancée (webhook ou commande) n'est ajoutée qu'après votre confirmation dans l'éditeur. Voir [Construire une automatisation avec le chat](/automations#construire-une-automatisation-avec-le-chat).
 
 ## Confidentialité
 

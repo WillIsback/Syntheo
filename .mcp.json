@@ -3,6 +3,10 @@
     "expo": {
       "type": "http",
       "url": "https://mcp.expo.dev/mcp"
+    },
+    "syntheo-docs": {
+      "type": "http",
+      "url": "https://syntheo.mintlify.site/docs/mcp"
     }
   }
 }

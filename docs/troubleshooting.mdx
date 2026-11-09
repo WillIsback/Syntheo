@@ -72,6 +72,11 @@ Ouvrez **Paramètres → Avancé → Autorisations**. Sous Linux et Windows, la 
 
 Syntheo teste réellement chaque source audio. Une ligne en rouge signifie que le test a échoué. Corrigez la cause, puis cliquez sur la flèche de la ligne pour relancer le test. Sous Linux et Windows, ce bouton n'ouvre pas les réglages du système.
 
+Vérifiez ensuite **Paramètres → Réunions**, section « Audio » :
+
+- « Microphone » et « Son système » indiquent le micro et la sortie captés, avec leur niveau sonore en direct. Choisissez sous « Son système » la sortie où vous entendez les autres participants ; « Capturé en ce moment : » donne la sortie réellement captée. Le choix s'applique à la prochaine écoute. Voir [Enregistrer une réunion](/meetings), section « Choisir le micro et la sortie captée ».
+- Si une source a été coupée pendant l'écoute, son icône est barrée sur fond rouge dans la capsule. Rétablissez-la d'un clic, ou avec <kbd>Ctrl</kbd> + <kbd>Maj</kbd> + <kbd>M</kbd> (micro) et <kbd>Ctrl</kbd> + <kbd>Maj</kbd> + <kbd>S</kbd> (son système).
+
 <Tabs>
   <Tab title="Linux">
     Syntheo capte l'audio système via **PipeWire**, ou via **PulseAudio** si PipeWire n'est pas disponible.
@@ -83,6 +88,7 @@ Syntheo teste réellement chaque source audio. Une ligne en rouge signifie que l
       ```
 
       Sur une distribution récente, la ligne « Server Name » mentionne PipeWire. Si la commande échoue, installez et démarrez `pipewire-pulse` (ou PulseAudio).
+    - Syntheo capte le retour (« Monitor of… ») de la sortie choisie sous « Son système », ou de la sortie par défaut si vous n'en choisissez pas. Avec PipeWire, il suit la sortie par défaut quand elle change, par exemple quand vous branchez un casque. Si Syntheo capte la mauvaise sortie (HDMI de la carte graphique, par exemple), choisissez la bonne sous « Son système ».
     - Vérifiez que le microphone et la source de retour de la sortie audio (« Monitor of… ») existent :
 
       ```bash
@@ -95,7 +101,7 @@ Syntheo teste réellement chaque source audio. Une ligne en rouge signifie que l
   <Tab title="Windows">
     - Ouvrez **Paramètres Windows → Confidentialité et sécurité → Microphone**. Activez l'accès au microphone, puis « Autoriser les applications de bureau à accéder à votre microphone ».
     - Vérifiez dans **Paramètres → Système → Son** que le bon périphérique d'entrée est sélectionné et qu'il capte du son.
-    - L'audio système est capté par bouclage (loopback) sur la sortie audio. Syntheo suit le périphérique de sortie qu'utilise l'application de réunion, même s'il change en cours de capture. Si les autres participants restent absents, vérifiez que le son de la réunion sort bien par un périphérique audio de Windows (et pas par un pilote propriétaire qui le contourne).
+    - L'audio système est capté par bouclage (loopback) sur la sortie choisie sous « Son système », ou sur la sortie par défaut si vous n'en choisissez pas. Si la sortie choisie est débranchée, Syntheo bascule sur la sortie par défaut, puis revient à la sortie choisie quand elle est rebranchée, sans interrompre l'écoute. Si les autres participants restent absents, vérifiez que l'application de réunion joue le son sur cette sortie, et qu'il passe bien par un périphérique audio de Windows (et pas par un pilote propriétaire qui le contourne).
   </Tab>
 </Tabs>
 
@@ -147,7 +153,7 @@ Un compte rendu nécessite un serveur de synthèse. Ouvrez **Paramètres → Syn
 
 Les imports audio acceptent WAV, MP3, OGG, MP4, M4A, FLAC, WebM et AAC. Les imports de transcription acceptent SRT et VTT.
 
-Pour un fichier audio, votre serveur de transcription doit être configuré et exposer `/v1/audio/transcriptions`. Voir [Importer un enregistrement](/import-recordings).
+Pour un fichier audio, votre serveur de transcription doit être configuré. Avec le moteur « OpenAI · temps réel et par lots », il doit exposer `/v1/audio/transcriptions`. Avec « NVIDIA NIM · WebSocket », l'import passe par le flux en temps réel `/v1/realtime` : comptez au moins un quart de la durée de l'enregistrement. Voir [Importer un enregistrement](/import-recordings).
 
 ## Obtenir de l'aide
 

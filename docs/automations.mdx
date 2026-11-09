@@ -1,39 +1,82 @@
 ---
 title: "Automatisations"
-description: "Exportez automatiquement chaque réunion en Markdown dans un dossier local."
+description: "Enchaînez des étapes locales après vos réunions : export Markdown, génération, notes, notifications, webhook ou commande."
 ---
 
-Les automatisations exécutent une tâche répétitive à la fin d'une réunion. Dans Syntheo, la seule action disponible est l'**export Markdown vers un dossier local**. Les actions vers des services en ligne (Slack, Notion, Linear, Google Drive) ont été retirées.
+Les automatisations enchaînent des étapes sur votre ordinateur après vos réunions : exporter la note en Markdown, générer un texte avec votre modèle de langage, écrire une note, copier dans le presse-papiers, afficher une notification. Deux actions avancées envoient du JSON vers une adresse (webhook) ou lancent un programme local. Les actions vers des services en ligne (Slack, Notion, Linear, Google Drive) ont été retirées.
 
-Ouvrez la vue **Automatisations** depuis **Paramètres → Avancé → « Automatisations »**, ou depuis la palette <kbd>Ctrl</kbd> + <kbd>K</kbd>. La colonne de gauche liste les modèles de départ (« Commencer ») et vos flux (« Mes automatisations »).
+Ouvrez la vue **Automatisations** depuis **Paramètres → Avancé → « Automatisations »**, ou depuis la palette <kbd>Ctrl</kbd> + <kbd>K</kbd>. La vue affiche les modèles (« Partir d'un modèle ») et la liste « Mes automatisations ». La colonne de gauche reprend « Mes automatisations », avec un champ de recherche. Le chat reste ouvert à droite pour vous aider à construire l'automatisation (voir [Construire une automatisation avec le chat](#construire-une-automatisation-avec-le-chat)).
 
-## Utiliser le modèle de départ
+## Partir d'un modèle
 
-Le modèle « Exporter toutes les réunions au format Markdown » enregistre chaque réunion terminée dans un fichier Markdown local.
+Deux modèles sont proposés sous « Partir d'un modèle » :
 
-1. Sélectionnez-le sous « Commencer », dans la colonne de gauche.
-2. Choisissez un dossier d'export.
-3. Vérifiez le déclencheur et l'aperçu.
-4. Cliquez sur « Enregistrer et activer », ou sur « Enregistrer le brouillon » pour finir plus tard.
+- **« Exporter en Markdown »** (Fin de la réunion → Exporter en Markdown) enregistre chaque réunion terminée dans un fichier Markdown local.
+- **« Extraire les tâches »** (Synthèse prête → Générer avec le modèle local → Écrire dans le coffre) demande à votre modèle de lister les actions décidées, puis les écrit dans une note « Tâches – » suivie du titre de la réunion, dans le dossier « Tâches ».
 
-Une fois activé, il s'exécute à la fin de chaque réunion, quand la transcription et la note sont prêtes. Désactivez-le pour conserver la configuration sans l'exécuter.
+1. Cliquez sur un modèle. Syntheo crée une automatisation désactivée et l'ouvre dans l'éditeur.
+2. Complétez les réglages manquants. Pour « Exporter en Markdown », cliquez sur « Choisir un dossier » sous « Dossier d'export ».
+3. Vérifiez le déclencheur et chaque étape.
+4. Cliquez sur « Enregistrer et activer ».
 
-## Créer un flux personnalisé
+Une automatisation créée depuis un modèle est une automatisation ordinaire : vous la modifiez comme les autres.
 
-Cliquez sur **+** (« Nouvelle automatisation ») en haut de la colonne de gauche.
+## Créer une automatisation
 
-1. Choisissez le déclencheur : « Après la disponibilité du compte rendu de la réunion » ou « Après la fin de la réunion ».
-2. Ajoutez une ou plusieurs actions « Exporter la réunion au format Markdown », par exemple pour écrire dans deux dossiers différents. Les étapes s'exécutent de haut en bas.
-3. Configurez chaque action.
-4. Cliquez sur « Enregistrer et activer ». Tant qu'il n'est pas activé, le flux reste à l'état de brouillon.
+Cliquez sur « Nouvelle automatisation », dans la vue ou via **+** en haut de la colonne de gauche. L'éditeur numérote les étapes dans l'ordre d'exécution : le déclencheur est l'étape 1, puis chaque action suit.
 
-Un flux ne peut être activé que si chaque action a un dossier et au moins une section à exporter.
+1. Donnez un nom à l'automatisation dans le champ « Nom ». Sans nom, elle s'appelle « Automatisation sans titre ».
+2. Sous « Quand », choisissez le déclencheur :
+   - « Quand la synthèse de la réunion est prête » ;
+   - « Quand la réunion se termine » ;
+   - « Quand vous la lancez depuis une note » : l'automatisation ne part jamais d'elle-même (voir [Lancer une automatisation depuis une note](#lancer-une-automatisation-depuis-une-note)).
+3. Cliquez sur « Ajouter une étape » et choisissez une action (voir [Actions disponibles](#actions-disponibles)). Chaque nouvelle étape s'exécute après la précédente. Pour changer le type d'une étape, utilisez le menu « Action » de sa carte.
+4. Configurez chaque action. Une action incomplète porte le badge « Configuration requise ».
+5. Cliquez sur « Tester » pour vérifier le résultat sur une note (voir [Tester sur une note](#tester-sur-une-note)).
+6. Cliquez sur « Enregistrer et activer ».
 
-Avec le déclencheur « Après la disponibilité du compte rendu de la réunion », régénérer un compte rendu met à jour le fichier déjà exporté pour cette réunion.
+Syntheo enregistre vos modifications au fil de l'eau. Tant qu'elle n'est pas activée, l'automatisation reste à l'état « Brouillon ». Une automatisation ne peut être activée que si elle contient au moins une action, que chaque action est configurée et qu'aucune étape n'utilise le résultat d'une étape absente ou placée après elle. Cliquez sur « Désactiver » pour conserver la configuration sans l'exécuter. Une automatisation lancée à la main n'a pas de bouton d'activation : elle porte le badge « Manuelle ».
+
+Avec le déclencheur « Quand la synthèse de la réunion est prête », régénérer une synthèse met à jour le fichier déjà exporté pour cette réunion. Avec « Quand la réunion se termine », Syntheo exporte la note à la fin de la réunion, puis met à jour le fichier quand la synthèse est prête. Seules les étapes « Exporter en Markdown » sont relancées ainsi : les autres actions ne s'exécutent qu'une fois par réunion.
+
+<Tip>
+  À la fin de la réunion, la synthèse n'existe pas encore. Si une étape utilise la variable « Synthèse », choisissez le déclencheur « Quand la synthèse de la réunion est prête ».
+</Tip>
+
+Pour supprimer une automatisation, ouvrez le menu **⋯** de l'éditeur et choisissez « Supprimer l'automatisation », ou faites un clic droit sur elle dans la colonne de gauche.
+
+## Actions disponibles
+
+Le menu « Ajouter une étape » propose cinq actions locales, puis deux actions sous « Avancé ».
+
+| Action | Ce qu'elle fait | Réglages |
+| --- | --- | --- |
+| « Exporter en Markdown » | Écrit la note dans un dossier de votre ordinateur. | « Dossier d'export » et contenu exporté (voir [Choisir le contenu exporté](#choisir-le-contenu-exporté)). |
+| « Générer avec le modèle local » | Applique une consigne (tâches, résumé court, message de suivi) ; le texte produit sert aux étapes suivantes. | « Consigne ». Utilise le modèle de langage choisi dans **Paramètres → « Synthèse »**. |
+| « Écrire dans le coffre » | Crée une note Syntheo, ou complète la note du même titre. | « Créer une nouvelle note » ou « Compléter la note du même titre », « Dossier du coffre » (vide : à la racine ; créé au besoin), « Titre de la note », « Contenu ». |
+| « Copier dans le presse-papiers » | Remplace le contenu du presse-papiers, prêt à coller dans un message ou un document. | « Contenu ». |
+| « Notification système » | Vous prévient quand l'automatisation a terminé. | « Titre de la notification » et « Texte » (au moins l'un des deux). |
+| « Envoyer vers une adresse (webhook) » | Envoie du JSON vers une adresse de votre choix. Seule étape qui sort de votre ordinateur. | « Adresse (URL) », « Corps JSON ». |
+| « Lancer une commande » | Lance un programme ou un script local. | « Programme », « Arguments ». |
+
+Syntheo ne peut pas envoyer d'e-mail, de message ni d'invitation : pour partager un texte généré, copiez-le dans le presse-papiers ou écrivez-le dans une note.
+
+Sans modèle de langage configuré, l'étape « Générer avec le modèle local » échoue avec le message « Aucun modèle local n'est configuré. Choisissez-en un dans Paramètres › Synthèse. » Voir [Configurer la synthèse](/ai-setup#configurer-la-synthèse).
+
+## Réutiliser un résultat dans les étapes suivantes
+
+Chaque champ texte d'une action accepte des variables, affichées en pastilles. Sous le champ, la ligne « Insérer » propose une pastille par variable : cliquez dessus pour l'insérer à l'endroit du curseur.
+
+- **Variables de la note**, disponibles dès la première action : « Synthèse », « Notes », « Transcription », « Titre » et « Date » (au format `AAAA-MM-JJ`). La carte du déclencheur les liste sous « Disponible pour les étapes suivantes ».
+- **Résultats des étapes précédentes** : « Fichier exporté » (le chemin du fichier écrit par « Exporter en Markdown »), « Texte généré » (« Générer avec le modèle local ») et « Sortie de la commande » (la sortie standard de « Lancer une commande »). Une étape ne propose que les résultats des étapes placées avant elle.
+
+Pour renommer le résultat d'une génération ou d'une commande, remplissez « Résultat disponible pour la suite sous le nom ». Le nouveau nom s'affiche dans les pastilles des étapes suivantes.
+
+Si vous retirez ou déplacez une étape dont le résultat est utilisé plus loin, la pastille devient rouge (« Sortie introuvable ») et l'automatisation ne peut plus être activée ni testée tant que vous ne corrigez pas l'étape.
 
 ## Choisir le contenu exporté
 
-Dans un flux personnalisé, chaque action d'export Markdown propose ces réglages (le modèle de départ, lui, utilise toujours les réglages par défaut) :
+Chaque action « Exporter en Markdown » propose ces réglages :
 
 - Sous « Inclure », cochez « Mémo », « Résumé », « Transcript » et « Collecter les points d'action », dans la combinaison de votre choix. Au moins une section doit rester cochée.
 - Laissez « Nom de fichier » vide pour utiliser la date et le titre de la réunion, ou saisissez un motif comme `{date} {title}.md`.
@@ -43,12 +86,81 @@ Syntheo refuse d'écraser un fichier qui appartient à une autre réunion ou qui
 
 Ces options sont propres aux automatisations. La commande CLI `syntheo meetings export` exporte une réunion complète vers le chemin que vous indiquez, sans ces réglages.
 
+## Étapes avancées
+
+### Envoyer vers une adresse (webhook)
+
+L'étape envoie une requête `POST` avec le « Corps JSON » à l'« Adresse (URL) », par exemple un flux n8n, Home Assistant ou un serveur maison.
+
+- L'adresse doit commencer par `http://` ou `https://` et ne peut pas contenir d'identifiants.
+- Le corps par défaut contient le titre, la date et la synthèse. Les variables sont insérées comme texte JSON, entre guillemets : placez-les à l'intérieur d'une chaîne, comme `"summary": "{{summary}}"`. Le corps doit rester du JSON valide.
+- Syntheo ne suit pas les redirections : l'erreur indique l'adresse finale à utiliser. La requête s'arrête au bout de 15 secondes. Toute réponse hors 2xx fait échouer l'étape.
+
+<Warning>
+  Cette étape envoie le contenu de la note hors de votre ordinateur. Utilisez une adresse de confiance, de préférence en HTTPS ou sur votre réseau privé. La requête n'est pas signée et n'est pas réessayée en cas d'échec : ce sont les [webhooks des Paramètres](/reference/webhooks) qui signent leurs livraisons.
+</Warning>
+
+### Lancer une commande
+
+L'étape lance un programme local avec ses arguments, par exemple un script qui publie le fichier exporté.
+
+1. Dans « Programme », saisissez le chemin du programme, par exemple `/home/me/scripts/publish.sh`.
+2. Cliquez sur « Ajouter un argument » pour chaque argument. Un argument peut contenir des variables, comme « Fichier exporté ».
+
+Syntheo lance le programme sans interpréteur de commandes : chaque argument est transmis tel quel. `$HOME`, `*`, `;`, `|` ou les redirections ne sont pas interprétés ; pour en avoir besoin, écrivez un script et lancez-le. L'entrée standard est fermée et l'exécution s'arrête au bout de 60 secondes. Un code de sortie différent de 0 fait échouer l'étape, avec la première ligne de l'erreur.
+
+Au premier lancement d'une commande, la fenêtre « Lancer cette commande ? » affiche le programme et chaque argument, tels qu'ils seront transmis. Cliquez sur « Autoriser et lancer » ou sur « Ne pas lancer ». Fermer la fenêtre vaut refus, et sans réponse au bout de 5 minutes, la commande n'est pas lancée. Votre accord est mémorisé pour cette commande exacte, telle que vous l'avez saisie : si vous modifiez le programme ou un argument, Syntheo vous redemande confirmation.
+
+<Warning>
+  Le programme s'exécute avec vos droits d'utilisateur. N'autorisez qu'un programme que vous connaissez. Les variables de la note (transcription, titre, texte généré) proviennent de ce qui a été dit en réunion : traitez-les dans votre script comme des données non fiables, sans les exécuter.
+</Warning>
+
+## Tester sur une note
+
+Cliquez sur « Tester » dans l'éditeur pour lancer l'automatisation telle qu'elle est éditée, même non enregistrée, sur une note existante. Le bouton est actif dès que toutes les étapes sont réglées.
+
+1. Dans le panneau « Tester sur une note », choisissez la note. Par défaut, Syntheo sélectionne la plus récente, hors note en cours d'enregistrement. Utilisez « Rechercher par titre » pour en trouver une autre.
+2. Lisez l'avertissement : il liste les étapes à effet réel (fichier, note, presse-papiers, notification, envoi, commande).
+3. Pour vérifier l'enchaînement sans agir, cochez « Simuler les étapes à effet réel ». Ces étapes décrivent alors ce qu'elles feraient, sans rien écrire, envoyer ni lancer. La génération s'exécute tout de même, pour que les étapes suivantes reçoivent son texte. La case est décochée par défaut : le test est réel.
+4. Cliquez sur « Lancer le test ».
+
+Le « Résultat du test » affiche chaque étape : réussie, « Simulée », en erreur avec son message, ou « Non lancée » après une erreur. Il montre aussi le texte généré (« Tout afficher » pour le lire en entier), le fichier exporté, à ouvrir ou à afficher avec « Afficher dans le dossier », la note créée avec « Ouvrir la note », et la durée totale.
+
+Le test ne change ni la dernière exécution ni la liste des notes déjà traitées : les déclencheurs automatiques ne sont pas affectés. Un test réel d'une étape « Lancer une commande » demande la même confirmation qu'une exécution normale.
+
+## Construire une automatisation avec le chat
+
+Dans la vue Automatisations, le chat à droite crée et modifie l'automatisation ouverte dans l'éditeur. Décrivez ce que vous voulez, par exemple : « Quand la synthèse est prête, liste les tâches et ajoute-les à une note du coffre. » L'éditeur affiche chaque modification au fur et à mesure.
+
+- Sans automatisation ouverte, le chat en crée une nouvelle et l'ouvre. Sinon, il modifie celle qui est ouverte : nom, déclencheur, ajout, modification, suppression ou déplacement d'étapes.
+- Si votre demande est ambiguë, le chat vous pose une question au lieu d'inventer un dossier, une adresse ou un programme.
+- Le chat n'active jamais une automatisation. Chaque modification l'enregistre comme brouillon désactivé, et une automatisation active repasse en brouillon. Relisez-la, puis cliquez vous-même sur « Enregistrer et activer ».
+- Le chat n'ajoute jamais directement une étape avancée. Au-dessus des étapes, une carte « Le chat propose d'ajouter l'étape… » (ou « de modifier l'étape… ») affiche l'adresse du webhook ou la commande complète. Cliquez sur « Ajouter l'étape » (ou « Appliquer la modification ») pour l'accepter, ou sur « Refuser ».
+
+Chaque automatisation garde sa propre conversation. Le chat envoie votre demande et la description de l'automatisation au modèle de langage configuré ; voir [Discuter avec vos réunions](/chat#confidentialité).
+
+## Lancer une automatisation depuis une note
+
+Vous pouvez lancer une automatisation sur la note ouverte, quel que soit son déclencheur et qu'elle soit activée ou non. Seules les automatisations prêtes (chaque action configurée) sont proposées.
+
+- **Menu ⋯ de la note** : groupe « Lancer une automatisation ». Il n'apparaît pas pendant l'écoute.
+- **Capsule, à l'étape Synthèse** : bouton « Automatisations ». Il n'apparaît que si au moins une automatisation est prête.
+- **« Demander à la note »** (<kbd>Ctrl</kbd> + <kbd>J</kbd>) : sous les suggestions du chat vide, la section « Lancer une automatisation » liste les automatisations prêtes.
+
+Une notification annonce le résultat : l'automatisation « a été lancée sur cette note », avec le résultat de chaque étape (par exemple le fichier exporté), ou « a échoué sur cette note », avec l'erreur. Un lancement à la main met à jour la dernière exécution, sans modifier le comportement des déclencheurs automatiques pour cette note.
+
 ## Vérifier l'exécution
 
-La fiche de l'automatisation indique si elle est activée et le résultat de sa dernière exécution, avec un message court en cas d'erreur. Vérifiez alors que le dossier choisi existe toujours et qu'il est accessible en écriture.
+La liste « Mes automatisations » affiche, pour chaque automatisation, le déclencheur et les actions (par exemple « Fin de la réunion → Exporter en Markdown »), suivis de la date de la dernière exécution, comme « dernière exécution il y a 20 heures », ou « jamais exécutée ». Le bas de l'éditeur détaille la dernière exécution : le résultat de chaque étape, ou un message court en cas d'erreur. En cas d'erreur d'export, vérifiez que le dossier choisi existe toujours et qu'il est accessible en écriture.
 
-Syntheo doit être ouvert pour exécuter une automatisation : les réunions terminées pendant que l'application est fermée ne sont pas exportées après coup.
+Les étapes s'exécutent dans l'ordre. Si une étape échoue, Syntheo arrête l'automatisation et n'exécute pas les étapes suivantes.
+
+Syntheo doit être ouvert pour exécuter une automatisation : les réunions terminées pendant que l'application est fermée ne sont pas traitées après coup. Lancez alors l'automatisation depuis la note.
 
 <Note>
-  Les fichiers exportés restent sur votre machine. Si vous choisissez un dossier synchronisé par un autre logiciel, c'est ce logiciel qui en transmet le contenu.
+  Les fichiers exportés et les notes écrites restent sur votre machine. Si vous choisissez un dossier synchronisé par un autre logiciel, c'est ce logiciel qui en transmet le contenu. L'étape « Générer avec le modèle local » envoie sa consigne au serveur de modèle de langage configuré : s'il tourne sur votre machine ou votre réseau, ces données ne quittent pas votre infrastructure. Seule l'étape webhook envoie des données vers une adresse de votre choix.
 </Note>
+
+## Mise à jour depuis une version antérieure
+
+Au premier démarrage après la mise à jour, Syntheo convertit l'ancien modèle « Exporter toutes les réunions au format Markdown » en automatisation ordinaire, s'il était activé ou gardé en brouillon. Elle apparaît dans « Mes automatisations » sous le nom « Exporter en Markdown », avec le même dossier, le même état et sa dernière exécution, et produit le même fichier qu'avant. Syntheo retire aussi les étapes vers des services en ligne de vos automatisations enregistrées, et désactive celles qui ne sont plus entièrement configurées.

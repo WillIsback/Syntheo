@@ -42,8 +42,8 @@ flowchart LR
     FINAL --> EXP[Export]
 ```
 
-1. **Capture.** `crates/listener-core` capture séparément le micro et l'audio système. Une connexion STT est ouverte par canal, ce qui fournit une première séparation des locuteurs (vous et les autres participants).
-2. **Transcription.** `crates/owhisper-client` ne contient que des adaptateurs on-premise : le protocole OpenAI (Realtime et `/v1/audio/transcriptions`, dans `adapter/openai` et `adapter/openai_compatible_batch.rs`) et NVIDIA NIM (`adapter/nvidia.rs`). Aucune URL n'est fournie par défaut : l'utilisateur saisit celle de son serveur. Le même client sert la dictée (`plugins/dictation`) et l'import de fichiers audio.
+1. **Capture.** `crates/listener-core` capture séparément le micro et l'audio système. L'utilisateur choisit la sortie captée comme audio système dans **Paramètres → Réunions → Audio** ; sans choix, Syntheo capte la sortie par défaut (`crates/audio-device`, `crates/audio-actual`). Une connexion STT est ouverte par canal, ce qui fournit une première séparation des locuteurs (vous et les autres participants). Un canal coupé envoie du silence de même durée (`crates/listener-core/src/actors/source/pipeline`) : la connexion STT reste ouverte.
+2. **Transcription.** `crates/owhisper-client` ne contient que des adaptateurs on-premise : le protocole OpenAI (Realtime et `/v1/audio/transcriptions`, dans `adapter/openai` et `adapter/openai_compatible_batch.rs`) et NVIDIA NIM (`adapter/nvidia.rs`). Aucune URL n'est fournie par défaut : l'utilisateur saisit celle de son serveur. Le même client sert la dictée (`plugins/dictation`) et l'import de fichiers audio : par `/v1/audio/transcriptions` avec le protocole OpenAI, par le flux temps réel `/v1/realtime` avec NVIDIA NIM.
 3. **Transcription en direct.** Les segments reçus sont assemblés puis enregistrés dans SQLite. Si le flux STT s'interrompt, la session se reconnecte sans redémarrer la capture.
 4. **Enhance.** À la fin de la réunion, l'interface fusionne les notes et la transcription (`apps/desktop/src/store/zustand/ai-task/`). Les prompts sont rendus côté Rust par `plugins/template` à partir des modèles Jinja de `crates/template-app/assets` (`enhance.*`, `title.*`, `chat.*`…). Les templates de compte rendu sont stockés en base (migration `20260413020000_templates.sql`). L'appel au LLM passe par le SDK `ai` et `@ai-sdk/openai-compatible`, vers l'unique endpoint configuré.
 5. **Note finale et export.** Le résultat est enregistré en base, puis exportable : PDF via `crates/export-core`, et Markdown ou JSON depuis la CLI.
@@ -73,7 +73,7 @@ Les flux réseau sans rapport avec l'inférence, encore présents dans le code, 
 ## Interfaces pour les agents
 
 - **CLI** (`apps/cli`) : le binaire `syntheo` lit directement la base `app.db`, en lecture seule pour la consultation et l'export. Les modifications passent par des **propositions**, que l'utilisateur relit ensuite dans l'application. Voir la [référence de la CLI](/reference/cli).
-- **Serveur MCP** : `syntheo mcp` lance un serveur MCP en stdio (`apps/cli/src/mcp.rs`, bibliothèque `rmcp`). Il expose la liste des réunions, les transcriptions, l'export, l'import d'un enregistrement et les propositions de modification. Côté application, `plugins/local-api` et `plugins/mcp` portent les commandes et les types associés.
+- **Serveur MCP** : `syntheo mcp` lance un serveur MCP en stdio (`apps/cli/src/mcp/`, bibliothèque `rmcp`). Il expose la liste des réunions, les transcriptions, l'export, l'import d'un enregistrement et les propositions de modification. Côté application, `plugins/local-api` porte les commandes associées ; `plugins/mcp`, hérité d'Anarlog, ne déclare aucune commande.
 
 La vue d'ensemble se trouve dans [Agents](/agents/overview).
 
