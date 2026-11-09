@@ -456,4 +456,31 @@ describe("Folder project page", () => {
     expect(useFolderSelection.getState().selectedPath).toBe("Atlas");
     expect(mocks.transitionChatMode).toHaveBeenCalledWith({ type: "OPEN" });
   });
+
+  // Issue 502 : modèle de compte rendu par défaut du dossier.
+  it("sets the folder's summary template from the side panel", async () => {
+    run(
+      `INSERT INTO templates (id, title, created_at, updated_at)
+       VALUES ('weekly', 'Point hebdo', '', ''), ('retro', 'Rétro', '', '')`,
+    );
+    window.HTMLElement.prototype.hasPointerCapture ??= () => false;
+    window.HTMLElement.prototype.releasePointerCapture ??= () => {};
+    renderPage();
+
+    const trigger = screen.getByRole("combobox", { name: "Summary template" });
+    expect(trigger.textContent).toBe("None");
+
+    fireEvent.keyDown(trigger, { key: "Enter" });
+    fireEvent.click(await screen.findByRole("option", { name: "Point hebdo" }));
+
+    await waitFor(() =>
+      expect(
+        query("SELECT template_id FROM folders WHERE path = 'Atlas'"),
+      ).toEqual([{ template_id: "weekly" }]),
+    );
+    refreshLiveQueries();
+    expect(
+      screen.getByRole("combobox", { name: "Summary template" }).textContent,
+    ).toBe("Point hebdo");
+  });
 });

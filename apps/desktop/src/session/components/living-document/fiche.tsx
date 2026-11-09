@@ -5,6 +5,7 @@ import { cn } from "@syntheo/utils";
 
 import { MeetingTypePicker } from "./meeting-type-picker";
 
+import { useInheritedFolderTemplate } from "~/folders/folder-template";
 import { ParticipantInput } from "~/session/components/outer-header/metadata/participants/input";
 import { useSession } from "~/session/queries";
 import { getBaseLanguageDisplayName } from "~/settings/general/language";
@@ -18,7 +19,10 @@ export function PrepareFiche({
   sessionId: string;
   onSelectTemplate: (templateId: string) => void;
 }) {
-  const selectedTemplateId = useSession(sessionId)?.raw_template_id ?? "";
+  const session = useSession(sessionId);
+  const selectedTemplateId = session?.raw_template_id ?? "";
+  // Issue 502 : modèle hérité du dossier tant que la note n'en a pas choisi.
+  const inheritedTemplate = useInheritedFolderTemplate(session?.folder_id);
   const templates = useUserTemplates();
 
   return (
@@ -33,6 +37,7 @@ export function PrepareFiche({
         <MeetingTypePicker
           templates={templates}
           selectedTemplateId={selectedTemplateId}
+          inheritedTemplateId={inheritedTemplate?.templateId}
           onSelect={onSelectTemplate}
         />
       </dd>

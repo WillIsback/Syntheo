@@ -33,6 +33,7 @@ import {
 } from "~/store/zustand/ai-task/tasks";
 import { listenerStore } from "~/store/zustand/listener/instance";
 import { getTemplateById } from "~/templates/queries";
+import { resolveSummaryTemplateId } from "~/templates/resolution";
 
 type EnhanceResult =
   | { type: "started"; noteId: string }
@@ -72,6 +73,8 @@ type EnhancerDeps = {
   getModel: () => LanguageModel | null;
   getLLMConn: () => { providerId?: string; modelId?: string } | null;
   getSelectedTemplateId: () => string | undefined;
+  // Modèle du dossier de la note ou de son parent le plus proche (issue 502).
+  getFolderTemplateId?: (sessionId: string) => Promise<string | undefined>;
 };
 
 const UUID_TITLE_RE =
@@ -97,22 +100,6 @@ function shouldHydrateTemplateTitle(
     UUID_TITLE_RE.test(title) ||
     ISO_TITLE_RE.test(title)
   );
-}
-
-function resolveTemplateId(
-  opts: EnhanceOpts | undefined,
-  getSelectedTemplateId: () => string | undefined,
-  memoTemplateId?: string,
-) {
-  if (opts?.templateId === null) {
-    return undefined;
-  }
-
-  if (opts?.templateId) {
-    return opts.templateId || undefined;
-  }
-
-  return memoTemplateId || getSelectedTemplateId();
 }
 
 let instance: EnhancerService | null = null;
@@ -201,11 +188,7 @@ export class EnhancerService {
   ): Promise<QueueEmptySummaryResult> {
     return retryDatabaseLock(async () => {
       const snapshot = await this.loadSession(sessionId);
-      const templateId = resolveTemplateId(
-        undefined,
-        this.deps.getSelectedTemplateId,
-        snapshot.rawTemplateId,
-      );
+      const templateId = await this.resolveTemplateId(snapshot);
       const existingNote = getAutoEnhancedNote(snapshot, templateId);
 
       if (
@@ -243,11 +226,7 @@ export class EnhancerService {
     if (mode !== "if_empty") {
       const pendingAutoEnhance = await retryDatabaseLock(async () => {
         const snapshot = await this.loadSession(sessionId);
-        const selectedTemplateId = resolveTemplateId(
-          undefined,
-          this.deps.getSelectedTemplateId,
-          snapshot.rawTemplateId,
-        );
+        const selectedTemplateId = await this.resolveTemplateId(snapshot);
         const existingNote = getAutoEnhancedNote(snapshot, selectedTemplateId);
         return ensurePendingAutoEnhanceDocument(
           sessionId,
@@ -482,7 +461,7 @@ export class EnhancerService {
   }
 
   async enhance(sessionId: string, opts?: EnhanceOpts): Promise<EnhanceResult> {
-    const { aiTaskStore, getModel, getSelectedTemplateId } = this.deps;
+    const { aiTaskStore, getModel } = this.deps;
 
     const model = getModel();
     if (!model) return { type: "no_model" };
@@ -499,11 +478,7 @@ export class EnhancerService {
       return { type: "too_short" };
     }
 
-    let templateId = resolveTemplateId(
-      opts,
-      getSelectedTemplateId,
-      snapshot.rawTemplateId,
-    );
+    let templateId = await this.resolveTemplateId(snapshot, opts);
     const pendingAutoEnhanceNote = opts?.pendingAutoEnhance
       ? getSessionEnhancedNote(snapshot, opts.pendingAutoEnhance.noteId)
       : undefined;
@@ -695,6 +670,26 @@ export class EnhancerService {
     } catch (error) {
       console.error("[enhancer] failed to hydrate template title", error);
     }
+  }
+
+  // Ordre de résolution au démarrage de la synthèse : choix explicite du
+  // lancement, modèle de la note, du dossier (ou du parent le plus proche),
+  // défaut global, puis Automatique.
+  private async resolveTemplateId(
+    snapshot: SessionContentSnapshot,
+    opts?: EnhanceOpts,
+  ): Promise<string | undefined> {
+    const needsFolder =
+      opts?.templateId !== null && !opts?.templateId && !snapshot.rawTemplateId;
+    const folderTemplateId = needsFolder
+      ? await this.deps.getFolderTemplateId?.(snapshot.sessionId)
+      : undefined;
+    return resolveSummaryTemplateId({
+      requestedTemplateId: opts?.templateId,
+      noteTemplateId: snapshot.rawTemplateId,
+      folderTemplateId,
+      globalTemplateId: this.deps.getSelectedTemplateId(),
+    });
   }
 
   private async loadSession(sessionId: string) {

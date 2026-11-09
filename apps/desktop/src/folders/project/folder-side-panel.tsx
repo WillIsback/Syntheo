@@ -4,6 +4,8 @@ import { useRef, useState } from "react";
 import { File, Plus, X } from "@syntheo/ui/components/icons";
 import { cn } from "@syntheo/utils";
 
+import { FolderTemplateField } from "./folder-template-field";
+
 import {
   deleteLocalFolderMaterial,
   diskAttachmentId,
@@ -16,7 +18,8 @@ export const folderCardClassName =
   "border-border bg-card flex min-w-0 flex-col gap-2.5 rounded-xl border px-4 py-3.5";
 
 // Colonne de droite de la page d'un dossier (issue 496) : le contexte et les
-// supports existants, au comportement inchangé.
+// supports existants, au comportement inchangé, et le modèle de compte rendu
+// par défaut du dossier (issue 502).
 export function FolderSidePanel({ folderPath }: { folderPath: string }) {
   const { t } = useLingui();
   const materials = useFolderMaterials(folderPath);
@@ -34,6 +37,10 @@ export function FolderSidePanel({ folderPath }: { folderPath: string }) {
           <Trans>What these notes are usually about</Trans>
         </p>
         <FolderInstructionsField folderPath={folderPath} rows={4} />
+      </section>
+
+      <section className={folderCardClassName}>
+        <FolderTemplateField folderPath={folderPath} />
       </section>
 
       <section className={folderCardClassName}>
