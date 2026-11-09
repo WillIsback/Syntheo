@@ -246,11 +246,10 @@ const NoteInputContent = forwardRef<
       [editorTabs, handleTabChange, renderedCurrentTab],
     );
 
-    // Ctrl+Pg.Préc / Ctrl+Pg.Suiv (table des raccourcis). Ctrl+Alt+←/→ n'est
-    // plus affiché (rotation d'écran Intel, AltGr) : l'écouteur reste jusqu'à
-    // sa suppression en 0.7.0 (issue 397).
+    // Ctrl+Pg.Préc / Ctrl+Pg.Suiv (table des raccourcis). Ctrl+Alt+←/→ a été
+    // supprimé (rotation d'écran Intel, AltGr ; issue 397).
     useHotkeys(
-      `${getShortcut("previousView").hotkeys}, mod+alt+left`,
+      getShortcut("previousView").hotkeys ?? "",
       () => handleAdjacentViewShortcut("previous"),
       {
         preventDefault: true,
@@ -261,7 +260,7 @@ const NoteInputContent = forwardRef<
     );
 
     useHotkeys(
-      `${getShortcut("nextView").hotkeys}, mod+alt+right`,
+      getShortcut("nextView").hotkeys ?? "",
       () => handleAdjacentViewShortcut("next"),
       {
         preventDefault: true,
