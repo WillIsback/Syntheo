@@ -22,9 +22,21 @@ msgstr "— Sample line written from this instruction."
 msgid "“{excerpt}”"
 msgstr "“{excerpt}”"
 
+#: src/automations/launch.tsx
+msgid "“{title}” could not run on this note"
+msgstr "“{title}” could not run on this note"
+
+#: src/automations/launch.tsx
+msgid "“{title}” failed on this note"
+msgstr "“{title}” failed on this note"
+
 #: src/services/enhancer/summary-notification.ts
 msgid "\"{title}\" is ready to read."
 msgstr "\"{title}\" is ready to read."
+
+#: src/automations/launch.tsx
+msgid "“{title}” ran on this note"
+msgstr "“{title}” ran on this note"
 
 #: src/settings/general/notification.tsx
 msgid "(default)"
@@ -515,6 +527,7 @@ msgstr "Automation actions"
 msgid "Automation deleted"
 msgstr "Automation deleted"
 
+#: src/session/components/capsule/automation-menu.tsx
 #: src/settings/automations/index.tsx
 #: src/sidebar/settings-nav-groups.ts
 msgid "Automations"
@@ -3363,6 +3376,11 @@ msgstr "Review summary"
 #: src/settings/dictation-shortcut.tsx
 msgid "Right Command"
 msgstr "Right Command"
+
+#: src/automations/launch.tsx
+#: src/chat/components/body/empty.tsx
+msgid "Run an automation"
+msgstr "Run an automation"
 
 #: src/session/components/outer-header/overflow/export-modal.tsx
 #: src/settings/dictionary/index.tsx

@@ -1,6 +1,35 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+const automationMocks = vi.hoisted(() => ({
+  runWorkflowOnNote: vi.fn(async () => ({
+    at: "2026-11-09T10:00:00.000Z",
+    status: "success" as const,
+    detail: "/exports/Planning.md",
+  })),
+  workflows: [] as unknown[],
+}));
+
+vi.mock("~/automations/engine", () => ({
+  runWorkflowOnNote: automationMocks.runWorkflowOnNote,
+}));
+
+vi.mock("~/automations/workflows", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/automations/workflows")>()),
+  useAutomationWorkflows: () => automationMocks.workflows,
+}));
+
+const READY_WORKFLOW = {
+  id: "wf-hand",
+  title: "Weekly recap",
+  enabled: false,
+  trigger: "manual",
+  steps: [{ id: "s", type: "markdown_export", directory: "/exports" }],
+  lastRun: null,
+  processedSessionIds: [],
+  chatGroupId: null,
+};
+
 vi.mock("~/chat/hooks/use-chat-appearance", () => ({
   useChatAppearance: () => ({
     isDarkAppearance: false,
@@ -56,5 +85,37 @@ describe("ChatBodyEmpty", () => {
 
     render(<ChatBodyEmpty hasContext onSendMessage={vi.fn()} />);
     expect(screen.queryByText("Make the summary shorter.")).toBeNull();
+  });
+
+  it("runs an automation on the open note from Ask the note", () => {
+    automationMocks.workflows = [READY_WORKFLOW];
+
+    render(
+      <ChatBodyEmpty
+        hasContext
+        automationSessionId="session-1"
+        onSendMessage={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByRole("group", { name: "Run an automation" }),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByText("Weekly recap"));
+
+    expect(automationMocks.runWorkflowOnNote).toHaveBeenCalledWith(
+      "wf-hand",
+      "session-1",
+    );
+    automationMocks.workflows = [];
+  });
+
+  it("offers no automation without an open note", () => {
+    automationMocks.workflows = [READY_WORKFLOW];
+
+    render(<ChatBodyEmpty hasContext onSendMessage={vi.fn()} />);
+
+    expect(screen.queryByText("Run an automation")).toBeNull();
+    automationMocks.workflows = [];
   });
 });

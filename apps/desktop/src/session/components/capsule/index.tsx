@@ -69,11 +69,15 @@ export function NoteCapsule({
   stage,
   listening,
   actions,
+  automations,
   os = "pc",
 }: {
   stage: NoteStage;
   listening?: CapsuleListening;
   actions: CapsuleActions;
+  // Synthèse : menu « Automatisations » pour lancer une automatisation sur
+  // cette note.
+  automations?: ReactNode;
   os?: ShortcutPlatform;
 }) {
   const { t } = useLingui();
@@ -133,6 +137,7 @@ export function NoteCapsule({
           >
             <Trans>Export</Trans>
           </CapsuleButton>
+          {automations}
           {actions.onGenerateSummary ? (
             <CapsuleButton
               tone="primary"
@@ -304,6 +309,21 @@ function CapsuleSteps({ stage }: { stage: NoteStage }) {
   );
 }
 
+export function capsuleButtonClassName(
+  tone: "ghost" | "primary" | "recording" = "ghost",
+) {
+  return cn([
+    "rounded-pill inline-flex items-center px-3.5 py-[7px] transition-colors",
+    "focus-visible:ring-primary-foreground focus-visible:ring-offset-primary focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
+    "disabled:cursor-default disabled:opacity-60",
+    tone === "ghost" && "hover:bg-primary-foreground/10",
+    tone === "primary" &&
+      "bg-primary-foreground text-primary hover:bg-primary-foreground/90 font-semibold",
+    tone === "recording" &&
+      "bg-recording text-background font-semibold hover:brightness-110",
+  ]);
+}
+
 function CapsuleButton({
   children,
   onClick,
@@ -337,16 +357,7 @@ function CapsuleButton({
       aria-label={ariaLabel}
       title={title}
       aria-keyshortcuts={announced ? ariaShortcut(announced, os) : undefined}
-      className={cn([
-        "rounded-pill inline-flex items-center px-3.5 py-[7px] transition-colors",
-        "focus-visible:ring-primary-foreground focus-visible:ring-offset-primary focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
-        "disabled:cursor-default disabled:opacity-60",
-        tone === "ghost" && "hover:bg-primary-foreground/10",
-        tone === "primary" &&
-          "bg-primary-foreground text-primary hover:bg-primary-foreground/90 font-semibold",
-        tone === "recording" &&
-          "bg-recording text-background font-semibold hover:brightness-110",
-      ])}
+      className={capsuleButtonClassName(tone)}
     >
       {children}
       {shortcut ? (

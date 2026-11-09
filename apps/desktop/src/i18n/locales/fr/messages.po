@@ -22,9 +22,21 @@ msgstr "— Exemple de ligne rédigée selon cette consigne."
 msgid "“{excerpt}”"
 msgstr "« {excerpt} »"
 
+#: src/automations/launch.tsx
+msgid "“{title}” could not run on this note"
+msgstr "« {title} » n'a pas pu être lancée sur cette note"
+
+#: src/automations/launch.tsx
+msgid "“{title}” failed on this note"
+msgstr "« {title} » a échoué sur cette note"
+
 #: src/services/enhancer/summary-notification.ts
 msgid "\"{title}\" is ready to read."
 msgstr "\"{title}\" est prêt à être lu."
+
+#: src/automations/launch.tsx
+msgid "“{title}” ran on this note"
+msgstr "« {title} » a été lancée sur cette note"
 
 #: src/settings/general/notification.tsx
 msgid "(default)"
@@ -515,6 +527,7 @@ msgstr "Actions d'automatisation"
 msgid "Automation deleted"
 msgstr "Automatisation supprimée"
 
+#: src/session/components/capsule/automation-menu.tsx
 #: src/settings/automations/index.tsx
 #: src/sidebar/settings-nav-groups.ts
 msgid "Automations"
@@ -3363,6 +3376,11 @@ msgstr "Vérifier le compte rendu"
 #: src/settings/dictation-shortcut.tsx
 msgid "Right Command"
 msgstr "Commande droite"
+
+#: src/automations/launch.tsx
+#: src/chat/components/body/empty.tsx
+msgid "Run an automation"
+msgstr "Lancer une automatisation"
 
 #: src/session/components/outer-header/overflow/export-modal.tsx
 #: src/settings/dictionary/index.tsx

@@ -190,6 +190,13 @@ export function ChatPanelFrame({
             hasContext={sessionProps.contextEntities.length > 0}
             isLiveMeeting={isLiveMeeting}
             hasSummary={hasSummary && sessionProps.contextEntities.length > 0}
+            automationSessionId={
+              chat.scope !== "automations" &&
+              !isLiveMeeting &&
+              sessionProps.contextEntities.length > 0
+                ? currentSessionId
+                : undefined
+            }
             onSendMessage={(content, parts) => {
               handleSendMessage(
                 content,

@@ -5,6 +5,7 @@ import { useHotkeys } from "react-hotkeys-hook";
 import { toast } from "@syntheo/ui/components/ui/toast";
 import { hasSummaryContent } from "@syntheo/utils/session";
 
+import { CapsuleAutomationMenu } from "./automation-menu";
 import { formatElapsed, NoteCapsule, type NoteStage } from "./index";
 import { LevelMeter } from "./level-meter";
 import { registerPreparedNoteStart } from "./start-shortcut";
@@ -274,6 +275,11 @@ export function SessionCapsule({
       <NoteCapsule
         stage={stage}
         os={os}
+        automations={
+          stage === "synthesis" ? (
+            <CapsuleAutomationMenu sessionId={sessionId} />
+          ) : undefined
+        }
         listening={{
           elapsed: <SessionElapsed sessionId={sessionId} />,
           meter: (
