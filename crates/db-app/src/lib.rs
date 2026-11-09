@@ -636,6 +636,11 @@ pub const APP_MIGRATION_STEPS: &[syntheo_db_migrate::MigrationStep] = &[
         scope: syntheo_db_migrate::MigrationScope::Plain,
         sql: include_str!("../migrations/20261109150000_folder_threads.sql"),
     },
+    syntheo_db_migrate::MigrationStep {
+        id: "20261109180000_folder_thread_agenda",
+        scope: syntheo_db_migrate::MigrationScope::Plain,
+        sql: include_str!("../migrations/20261109180000_folder_thread_agenda.sql"),
+    },
 ];
 
 pub fn schema() -> syntheo_db_migrate::DbSchema {
