@@ -19,8 +19,9 @@ it("docs_ui_snippets_match_app_sources", async () => {
   expect(Object.keys(outputs).length).toBeGreaterThan(0);
   for (const [name, expected] of Object.entries(outputs)) {
     const current = readFileSync(join(ROOT, OUTPUT_DIR, name), "utf8");
-    expect(current === expected, `${OUTPUT_DIR}/${name} n'est plus à jour`).toBe(
-      true,
-    );
+    expect(
+      current === expected,
+      `${OUTPUT_DIR}/${name} n'est plus à jour`,
+    ).toBe(true);
   }
 });

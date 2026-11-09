@@ -10,7 +10,7 @@ Cette page relie chaque page de la documentation aux sources qui en déterminent
 </Note>
 
 <Note>
-  Les reproductions interactives de l'app (`docs/snippets/app.gen.jsx`, générées par `scripts/sync-docs-ui.mjs`) reprennent la capsule de `apps/desktop/src/session/components/capsule/`, les couleurs de `packages/design-system/src/tokens.css` et les libellés de `apps/desktop/src/i18n/locales/fr/messages.po`. Quand la structure de la capsule change, mettez à jour `scripts/docs-ui/app.jsx.tpl` ; un changement de couleur ou de libellé est repris en relançant le script.
+  Les reproductions interactives de l'app (`docs/snippets/*.gen.jsx`, générées par `scripts/sync-docs-ui.mjs` depuis `scripts/docs-ui/*.jsx.tpl`) reprennent les couleurs de `packages/design-system/src/tokens.css`, les libellés de `apps/desktop/src/i18n/locales/fr/messages.po` et les icônes de `packages/ui/src/components/icons-*.tsx`. Un changement de couleur, de libellé ou d'icône est repris en relançant le script ; un libellé supprimé fait échouer `apps/desktop/src/docs-ui.test.ts`. Quand la structure d'un écran change, mettez à jour le modèle indiqué dans [Reproductions interactives](#reproductions-interactives).
 </Note>
 
 ## Prise en main
@@ -87,6 +87,32 @@ Cette page relie chaque page de la documentation aux sources qui en déterminent
 | --- | --- |
 | [Questions fréquentes](/help) | Contenu éditorial, sans source dans le code. |
 | [Dépannage](/troubleshooting) | `crates/audio-actual`<br />`crates/audio-device`<br />`crates/device-monitor`<br />`crates/listener-core`<br />`crates/owhisper-client`<br />`crates/ws-client`<br />`plugins/transcription`<br />`plugins/permissions`<br />`plugins/tracing`<br />`apps/cli/src/db.rs`<br />`apps/cli/src/commands/doctor.rs`<br />`apps/desktop/src-tauri/src/lib.rs`<br />`apps/desktop/src-tauri/src/startup.rs`<br />`apps/desktop/src-tauri/src/db.rs`<br />`apps/desktop/src/stt`<br />`apps/desktop/src/settings/ai/stt` |
+
+## Reproductions interactives
+
+Chaque composant de `docs/snippets/*.gen.jsx` reproduit un écran de l'app. Quand la structure d'une de ces sources change (ordre, sections, états), mettez à jour le modèle correspondant dans `scripts/docs-ui/`, puis lancez `node scripts/sync-docs-ui.mjs`.
+
+| Composant | Pages | Modèle | Sources reproduites |
+| --- | --- | --- | --- |
+| `<AppSettings>` (menu) | [Enregistrer une réunion](/meetings), [Configurer la transcription et l'IA](/ai-setup), [Utiliser plusieurs langues](/languages), [Dicter dans d'autres applications](/dictation), [Automatiser la capture](/automatic-capture), [Données et confidentialité](/data-and-privacy), [Dépannage](/troubleshooting) | `settings.jsx.tpl` | `apps/desktop/src/sidebar/settings-nav-groups.ts`<br />`apps/desktop/src/sidebar/settings.tsx`<br />`apps/desktop/src/sidebar/settings-server-status.tsx` |
+| `<AppSettings section="meetings">` | [Enregistrer une réunion](/meetings), [Automatiser la capture](/automatic-capture), [Dépannage](/troubleshooting) | `settings-meetings.jsx.tpl` | `apps/desktop/src/settings/general/index.tsx`<br />`apps/desktop/src/settings/general/meeting-settings.tsx`<br />`apps/desktop/src/settings/general/audio-settings.tsx` |
+| `<AppSettings section="transcription">`, `section="intelligence"` | [Configurer la transcription et l'IA](/ai-setup), [Dépannage](/troubleshooting) | `settings-servers.jsx.tpl` | `apps/desktop/src/settings/ai/stt`<br />`apps/desktop/src/settings/ai/llm`<br />`apps/desktop/src/settings/ai/shared`<br />`packages/provider-validation/src/index.ts` |
+| `<AppSettings section="app">` | [Utiliser plusieurs langues](/languages) | `settings-profile.jsx.tpl` | `apps/desktop/src/settings/general/index.tsx`<br />`apps/desktop/src/settings/general/account-profile.tsx`<br />`apps/desktop/src/settings/general/app-settings.tsx`<br />`apps/desktop/src/settings/general/main-language.tsx`<br />`apps/desktop/src/settings/general/spoken-languages.tsx`<br />`apps/desktop/src/settings/general/single-language-model-hint.tsx`<br />`apps/desktop/src/settings/general/timezone.tsx`<br />`apps/desktop/src/settings/general/storage` |
+| `<AppSettings section="dictation">` | [Dicter dans d'autres applications](/dictation) | `settings-dictation.jsx.tpl` | `apps/desktop/src/settings/dictation.tsx`<br />`apps/desktop/src/settings/dictation-shortcut.tsx`<br />`apps/desktop/src/dictation/state.ts` |
+| `<AppSettings section="privacy">`, `section="permissions"` | [Données et confidentialité](/data-and-privacy), [Dépannage](/troubleshooting) | `settings-privacy.jsx.tpl` | `apps/desktop/src/settings/privacy/index.tsx`<br />`apps/desktop/src/settings/general/permissions.tsx` |
+| `<AppPalette>` | [Votre première réunion](/quickstart), [Notes, comptes rendus et transcriptions](/notes), [Dossiers et projets](/folders) | `palette.jsx.tpl` | `apps/desktop/src/shared/open-note-dialog.tsx`<br />`apps/desktop/src/shared/palette-search-groups.tsx`<br />`apps/desktop/src/search/unified/labels.ts` |
+| `<AppScreen>`, `<Capsule>` et capsule commune | [Enregistrer une réunion](/meetings) | `meeting.jsx.tpl`, `note.jsx.tpl` | `apps/desktop/src/session/components/capsule/index.tsx` |
+| `<AppHome>` | [Votre première réunion](/quickstart) | `quickstart.jsx.tpl` | `apps/desktop/src/home` |
+| `<DictationScreen>` | [Dicter dans d'autres applications](/dictation) | `dictation.jsx.tpl` | `apps/desktop/src/meeting-float/overlay/bar.tsx`<br />`apps/desktop/src/meeting-float/overlay/dictation.tsx`<br />`apps/desktop/src/dictation/panel.ts` |
+| `<AutoCaptureScreen>` | [Automatiser la capture](/automatic-capture) | `automatic-capture.jsx.tpl` | `apps/desktop/src/stt/detect-events.ts`<br />`apps/desktop/src/stt/meeting-apps.ts`<br />`crates/notification-linux/src/impl.rs`<br />`apps/desktop/src/meeting-float/overlay/bar.tsx` |
+| `<ImportScreen>` | [Importer un enregistrement](/import-recordings) | `import.jsx.tpl` | `apps/desktop/src/session/components/outer-header`<br />`apps/desktop/src/session/components/capsule/import-progress.tsx`<br />`apps/desktop/src/session/components/capsule/session-import-progress.tsx`<br />`apps/desktop/src/stt/batch-eta.ts` |
+| `<NoteActions>` | [Notes, comptes rendus et transcriptions](/notes) | `notes.jsx.tpl` | `apps/desktop/src/session/components/outer-header/overflow`<br />`apps/desktop/src/session/components/living-document`<br />`apps/desktop/src/session/components/capsule/automation-menu.tsx` |
+| `<FolderPage>` | [Dossiers et projets](/folders) | `folders.jsx.tpl` | `apps/desktop/src/folders`<br />`apps/desktop/src/sidebar/folders.tsx`<br />`apps/desktop/src/session/folder-instructions.tsx` |
+| `<TemplatesEditor>` | [Personnaliser les comptes rendus](/customize-summaries) | `templates.jsx.tpl` | `apps/desktop/src/templates` |
+| `<ContactsScreen>` | [Contacts](/contacts) | `contacts.jsx.tpl` | `apps/desktop/src/sidebar/contacts.tsx`<br />`apps/desktop/src/contacts` |
+| `<AskNote>` | [Discuter avec vos réunions](/chat) | `chat.jsx.tpl` | `apps/desktop/src/chat/components`<br />`apps/desktop/src/editor-bridge/mention-config.ts`<br />`apps/desktop/src/session/components/living-document/summary-review.tsx`<br />`apps/desktop/src/automations/launch.tsx` |
+| `<AutomationEditor>` | [Automatisations](/automations) | `automations.jsx.tpl` | `apps/desktop/src/sidebar/automations.tsx`<br />`apps/desktop/src/settings/automations`<br />`apps/desktop/src/automations` |
+| `<Troubleshooter>`, `<DataFlows>` | [Dépannage](/troubleshooting), [Données et confidentialité](/data-and-privacy) | `troubleshooting.jsx.tpl` | `apps/desktop/src/stt/live-transcript-interrupted.ts` ; le reste réutilise les écrans ci-dessus. `<DataFlows>` est une illustration de la doc, pas un écran de l'app. |
 
 ## Sources sans page utilisateur
 

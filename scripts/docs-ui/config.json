@@ -13,9 +13,22 @@
   ],
   "outputs": {
     "app.gen.jsx": ["meeting.jsx.tpl"],
-    "start.gen.jsx": ["start.jsx.tpl"],
-    "capture.gen.jsx": ["capture.jsx.tpl"],
-    "organize.gen.jsx": ["organize.jsx.tpl"],
-    "assist.gen.jsx": ["assist.jsx.tpl"]
+    "start.gen.jsx": ["quickstart.jsx.tpl"],
+    "capture.gen.jsx": [
+      "dictation.jsx.tpl",
+      "automatic-capture.jsx.tpl",
+      "import.jsx.tpl"
+    ],
+    "organize.gen.jsx": [
+      "notes.jsx.tpl",
+      "folders.jsx.tpl",
+      "templates.jsx.tpl",
+      "contacts.jsx.tpl"
+    ],
+    "assist.gen.jsx": [
+      "chat.jsx.tpl",
+      "automations.jsx.tpl",
+      "troubleshooting.jsx.tpl"
+    ]
   }
 }
