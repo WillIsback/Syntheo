@@ -6670,6 +6670,7 @@ dependencies = [
  "audio",
  "audio-device",
  "audio-utils",
+ "base64 0.23.1",
  "bytes",
  "device-monitor",
  "futures-util",
@@ -13655,8 +13656,15 @@ dependencies = [
 name = "transcription-core"
 version = "0.1.0"
 dependencies = [
+ "base64 0.23.1",
+ "futures-util",
  "listener-core",
  "listener2-core",
+ "owhisper-interface",
+ "serde_json",
+ "tokio",
+ "tokio-tungstenite 0.29.0",
+ "tracing",
 ]
 
 [[package]]

@@ -94,9 +94,14 @@ export type BatchChannel = {
 	alternatives: BatchAlternatives[],
 };
 
-export type BatchErrorCode = "unknown" | "timed_out" | "audio_metadata_join_failed" | "audio_metadata_read_failed" | "batch_capability_unsupported" | "direct_batch_unsupported" | "progressive_batch_unsupported" | "direct_request_failed" | "progressive_actor_spawn_failed" | "progressive_start_cancelled" | "progressive_stopped_without_completion_signal" | "progressive_finished_without_status" | "progressive_start_failed" | "progressive_stream_error" | "progressive_stream_timeout";
+export type BatchErrorCode = "unknown" | "timed_out" | "audio_metadata_join_failed" | "audio_metadata_read_failed" | "batch_capability_unsupported" | "direct_batch_unsupported" | "progressive_batch_unsupported" | "direct_request_failed" | "progressive_actor_spawn_failed" | "progressive_start_cancelled" | "progressive_stopped_without_completion_signal" | "progressive_finished_without_status" | "progressive_start_failed" | "progressive_stream_error" | "progressive_stream_timeout" | "realtime_stream_failed";
 
-export type BatchProvider = "openai";
+export type BatchProvider = "openai" | 
+/**
+ *  Aucun mode par lot : le fichier passe par le flux temps réel du
+ *  fournisseur (issue 463), hors de `run_batch`.
+ */
+"realtime";
 
 export type BatchRefinementOutcome = { status: "ready"; words: StoredTranscriptWord[]; speaker_hints: StoredSpeakerHint[]; replace_session: boolean; replace_transcript_id: string | null; started_at: number | null } | { status: "empty_current_capture" } | { status: "truncated" };
 
