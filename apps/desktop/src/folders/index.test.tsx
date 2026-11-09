@@ -90,6 +90,27 @@ vi.mock("~/sidebar/custom-sidebar-header", () => ({
   ),
 }));
 
+// Page projet (issue 496) : réunions et fil rouge vides ici, ils ont leurs
+// propres tests (project/).
+vi.mock("./project/meetings", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./project/meetings")>()),
+  useFolderMeetings: () => [],
+}));
+
+vi.mock("./project/thread-store", () => ({
+  useFolderThread: () => null,
+  saveFolderThreadEdit: vi.fn(),
+  saveGeneratedFolderThread: vi.fn(),
+}));
+
+vi.mock("~/editor-bridge/mention-config", () => ({
+  useMentionConfig: () => undefined,
+}));
+
+vi.mock("~/ai/hooks", () => ({
+  useLanguageModel: () => null,
+}));
+
 import { FoldersMain } from "./index";
 import { useFolderSelection } from "./selection";
 import { FoldersSidebar } from "./sidebar";

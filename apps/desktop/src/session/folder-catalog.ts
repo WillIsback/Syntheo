@@ -3,7 +3,7 @@ import { commands } from "@syntheo/plugin-session";
 
 import { ancestorFolderPaths, normalizeFolderPath } from "./folders";
 
-import { liveQueryClient, useLiveQuery } from "~/db";
+import { executeTransaction, liveQueryClient, useLiveQuery } from "~/db";
 import { enqueueDatabaseWrite } from "~/db/write-queue";
 import { normalizeFolderIcon } from "~/session/folder-icon";
 import { type TemplateIcon } from "~/templates/template-icon";
@@ -93,6 +93,21 @@ export async function deleteNamedFolder(folderPath: string): Promise<void> {
     if (result.status === "error") {
       throw new Error(result.error);
     }
+    // Le fil rouge (issue 496) part avec le dossier et ses sous-dossiers : un
+    // dossier recréé sous le même nom repart d'une page vide.
+    const folderIds = `
+      SELECT id FROM folders WHERE path = ? OR path LIKE ?
+    `;
+    await executeTransaction([
+      {
+        sql: `DELETE FROM folder_thread_versions WHERE folder_id IN (${folderIds})`,
+        params: [path, `${path}/%`],
+      },
+      {
+        sql: `DELETE FROM folder_threads WHERE folder_id IN (${folderIds})`,
+        params: [path, `${path}/%`],
+      },
+    ]);
   });
 
   const deleted = await fsSyncCommands.deleteFolder(path);

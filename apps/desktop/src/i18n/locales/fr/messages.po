@@ -50,6 +50,11 @@ msgstr "(Indisponible — utilisation de la valeur par défaut actuelle)"
 msgid "(Unavailable — using the default output)"
 msgstr "(indisponible — sortie par défaut utilisée)"
 
+#. placeholder {0}: stats.count
+#: src/folders/project/folder-header-actions.tsx
+msgid "{0, plural, one {# meeting} other {# meetings}}"
+msgstr "{0, plural, one {# réunion} other {# réunions}}"
+
 #. placeholder {0}: group.sessionIds.length
 #: src/sidebar/toast/undo-delete-toast.tsx
 msgid "{0} {noteLabel} deleted"
@@ -124,6 +129,10 @@ msgstr "{duration}, revenir à la note"
 msgid "{entryCount} selected"
 msgstr "{entryCount} sélectionné(s)"
 
+#: src/folders/project/folder-meetings-card.tsx
+msgid "{hiddenCount, plural, one {See the previous meeting} other {See the # previous meetings}}"
+msgstr "{hiddenCount, plural, one {Voir la réunion précédente} other {Voir les # réunions précédentes}}"
+
 #: src/settings/ai/stt/language-warning.tsx
 msgid "{model} can't transcribe {languages}. Try another model or change your spoken languages."
 msgstr "{model} ne sait pas transcrire {languages}. Essayez un autre modèle ou changez vos langues parlées."
@@ -139,6 +148,10 @@ msgstr "{notice}. Ouvrez Syntheo pour réessayer ou changer d'appareil."
 #: src/stt/meeting-apps.ts
 msgid "{otherAppCount, plural, one {Ignore {firstName} and # other app?} other {Ignore {firstName} and # other apps?}}"
 msgstr "{otherAppCount, plural, one {Ignorer {firstName} et # autre app ?} other {Ignorer {firstName} et # autres apps ?}}"
+
+#: src/folders/project/folder-thread-card.tsx
+msgid "{pendingCount, plural, one {# meeting since} other {# meetings since}}"
+msgstr "{pendingCount, plural, one {# réunion depuis} other {# réunions depuis}}"
 
 #: src/composer/index.tsx
 msgid "{primaryModifier} ↩ to send"
@@ -278,7 +291,7 @@ msgstr "Ajoutez un e-mail"
 msgid "Add example"
 msgstr "Ajoutez un exemple"
 
-#: src/folders/folder-editor.tsx
+#: src/folders/project/folder-side-panel.tsx
 msgid "Add file"
 msgstr "Ajoutez un fichier"
 
@@ -479,6 +492,7 @@ msgstr "Demander avant d'arrêter lorsqu'une réunion peut être terminée. Lors
 msgid "Ask Syntheo AI anything"
 msgstr "Posez toutes vos questions à Syntheo AI"
 
+#: src/folders/project/folder-header-actions.tsx
 #: src/shared/palette-search-groups.tsx
 msgid "Ask the folder"
 msgstr "Demander au dossier"
@@ -753,6 +767,10 @@ msgstr "Choisir"
 msgid "Choose a file format and what to include."
 msgstr "Choisissez un format de fichier et les éléments à inclure."
 
+#: src/folders/project/folder-thread-card.tsx
+msgid "Choose a language model in Settings to write the thread."
+msgstr "Choisissez un modèle de langage dans les Paramètres pour rédiger le fil rouge."
+
 #: src/store/zustand/listener/general-live.ts
 msgid "Choose a working audio device and retry. Audio missing during this interruption cannot be recovered."
 msgstr "Choisissez un périphérique audio qui fonctionne et réessayez. L'audio manquant pendant cette interruption ne peut pas être récupéré."
@@ -994,7 +1012,7 @@ msgstr "Contacts"
 msgid "Content"
 msgstr "Contenu"
 
-#: src/folders/folder-editor.tsx
+#: src/folders/project/folder-side-panel.tsx
 msgid "Context"
 msgstr "Contexte"
 
@@ -1218,6 +1236,10 @@ msgstr "Date"
 #: src/session/components/outer-header/metadata/date.tsx
 msgid "Date and time are required"
 msgstr "La date et l'heure sont obligatoires"
+
+#: src/folders/project/folder-thread-card.tsx
+msgid "Decisions"
+msgstr "Décisions"
 
 #: src/chat/components/message/tool/edit-summary.tsx
 #: src/edit/tab-content.tsx
@@ -1490,6 +1512,10 @@ msgstr "Modifier le résumé"
 #: src/chat/components/message/tool/edit-summary.tsx
 msgid "Edit summary — waiting for your review"
 msgstr "Modifier le résumé — en attente de votre validation"
+
+#: src/folders/project/folder-thread-card.tsx
+msgid "Editable: your corrections are kept when the thread is updated."
+msgstr "Modifiable : vos corrections sont gardées quand le fil rouge est mis à jour."
 
 #: src/settings/appearance/palette.tsx
 msgid "Edo purple and pale wisteria. Elegant, a little more singular."
@@ -2129,6 +2155,10 @@ msgstr "Dernière livraison {0}"
 msgid "Last dictation"
 msgstr "Dernière dictée"
 
+#: src/folders/project/folder-header-actions.tsx
+msgid "last on {last}"
+msgstr "dernière le {last}"
+
 #. placeholder {0}: lastRun.detail
 #: src/settings/automations/markdown-export-config.tsx
 msgid "Last run {relative}: {0}"
@@ -2339,7 +2369,7 @@ msgstr "Respecter le mot entier"
 msgid "Match your device"
 msgstr "Correspondre à votre appareil"
 
-#: src/folders/folder-editor.tsx
+#: src/folders/project/folder-side-panel.tsx
 msgid "Materials"
 msgstr "Matériels"
 
@@ -2400,6 +2430,7 @@ msgstr "Type de réunion : {selectedLabel}"
 msgid "Meeting types"
 msgstr "Types de réunion"
 
+#: src/folders/project/folder-meetings-card.tsx
 #: src/settings/general/index.tsx
 #: src/sidebar/settings-nav-groups.ts
 msgid "Meetings"
@@ -2545,6 +2576,10 @@ msgstr "Plus d'actions"
 msgid "More effort gives finer summaries, but slower. Auto leaves it to the server."
 msgstr "Plus d'effort donne des synthèses plus fines, mais plus lentes. Auto laisse le serveur décider."
 
+#: src/folders/project/folder-meetings-card.tsx
+msgid "most recent first"
+msgstr "plus récentes d'abord"
+
 #: src/templates/sections-editor.tsx
 msgid "Move section {position}"
 msgstr "Déplacer la section {position}"
@@ -2645,6 +2680,7 @@ msgstr "Nouvelle note"
 msgid "New Note"
 msgstr "Nouvelle note"
 
+#: src/folders/project/folder-header-actions.tsx
 #: src/shared/palette-search-groups.tsx
 msgid "New note in this folder"
 msgstr "Nouvelle note dans ce dossier"
@@ -2763,6 +2799,10 @@ msgstr "Aucune personne correspondante"
 msgid "No meeting type found"
 msgstr "Aucun type de réunion trouvé"
 
+#: src/folders/project/folder-header-actions.tsx
+msgid "No meetings yet"
+msgstr "Aucune réunion pour l'instant"
+
 #: src/settings/general/audio-settings.tsx
 msgid "No microphone detected. Plug in a microphone or check permissions."
 msgstr "Aucun micro détecté. Branchez un micro ou vérifiez les autorisations."
@@ -2774,6 +2814,10 @@ msgstr "Aucun micro détecté. Branchez un micro, puis réessayez. L'audio manqu
 #: src/shared/open-note-dialog.tsx
 msgid "No notes in this folder match."
 msgstr "Aucune note de ce dossier ne correspond."
+
+#: src/folders/project/folder-meetings-card.tsx
+msgid "No notes in this folder yet."
+msgstr "Aucune note dans ce dossier pour l'instant."
 
 #: src/session/components/note-input/transcript/renderer/speaker-assign.tsx
 msgid "No people"
@@ -2857,6 +2901,10 @@ msgstr "réception d'événements inactive"
 #: src/settings/ai/shared/server-card.tsx
 msgid "Not tested"
 msgstr "Non testé"
+
+#: src/folders/project/folder-thread-card.tsx
+msgid "Not written yet. Update writes it from the summaries of the meetings in this folder, with your local model."
+msgstr "Pas encore rédigé. « Mettre à jour » le rédige à partir des synthèses des réunions de ce dossier, avec votre modèle local."
 
 #: src/sidebar/toast/undo-delete-toast.tsx
 msgid "note"
@@ -3025,6 +3073,10 @@ msgstr "Ouvrir dans votre navigateur"
 msgid "Open permissions"
 msgstr "Ouvrir les autorisations"
 
+#: src/folders/project/folder-thread-card.tsx
+msgid "Open points"
+msgstr "Points ouverts"
+
 #: src/composer/index.tsx
 #: src/onboarding/final.tsx
 #: src/services/enhancer/summary-notification.ts
@@ -3034,6 +3086,10 @@ msgstr "Ouvrir Syntheo"
 #: src/settings/general/app-settings.tsx
 msgid "Open Syntheo from the menu bar."
 msgstr "Ouvrez Syntheo depuis la barre des menus."
+
+#: src/folders/project/folder-thread-card.tsx
+msgid "Open tasks"
+msgstr "Tâches non faites"
 
 #: src/shared/help-dialog.tsx
 msgid "Open the online documentation"
@@ -3284,6 +3340,10 @@ msgstr "Profil"
 msgid "Program"
 msgstr "Programme"
 
+#: src/folders/project/folder-thread-card.tsx
+msgid "Project thread"
+msgstr "Fil rouge du projet"
+
 #: src/session/components/living-document/summary-review.tsx
 msgid "Proposed edit to the summary"
 msgstr "Modification proposée du résumé"
@@ -3434,7 +3494,7 @@ msgid "Remove"
 msgstr "Supprimer"
 
 #. placeholder {0}: material.filename
-#: src/folders/folder-editor.tsx
+#: src/folders/project/folder-side-panel.tsx
 msgid "Remove {0}"
 msgstr "Supprimer {0}"
 
@@ -4006,6 +4066,10 @@ msgstr "Secret de signature copié"
 #: src/settings/search-index.ts
 msgid "silence, mute, alerts, quiet, do not disturb"
 msgstr "silence, muet, alertes, calme, ne pas déranger"
+
+#: src/folders/project/folder-header-actions.tsx
+msgid "since {first}"
+msgstr "depuis le {first}"
 
 #: src/settings/developers/skills.tsx
 msgid "Skill installed"
@@ -4764,6 +4828,14 @@ msgstr "Le serveur de synthèse n'a pas répondu. Vérifiez qu'il est démarré,
 msgid "The summary still mentions unnamed speakers."
 msgstr "La synthèse mentionne encore des locuteurs sans nom."
 
+#: src/folders/project/folder-thread-card.tsx
+msgid "The thread could not be updated. Check the language model, then try again."
+msgstr "Le fil rouge n'a pas pu être mis à jour. Vérifiez le modèle de langage, puis réessayez."
+
+#: src/folders/project/folder-thread-card.tsx
+msgid "The thread is written from meeting summaries. It will be available once a meeting in this folder has a summary."
+msgstr "Le fil rouge se rédige à partir des synthèses des réunions. Il sera disponible dès qu'une réunion de ce dossier aura une synthèse."
+
 #: src/stt/capture-lifecycle.ts
 #: src/stt/pause-listening.ts
 msgid "The transcript was saved, but Syntheo could not start the summary. Try generating it again."
@@ -5082,6 +5154,7 @@ msgid "Unreachable"
 msgstr "Injoignable"
 
 #: src/editor-bridge/mention-config.ts
+#: src/folders/project/folder-meetings-card.tsx
 #: src/home/note-index.tsx
 #: src/session/components/living-document/meeting-type-picker.tsx
 #: src/session/components/note-input/raw.tsx
@@ -5111,6 +5184,14 @@ msgstr "Section sans titre"
 #: src/edit/tab-content.tsx
 msgid "Untitled session"
 msgstr "Session sans titre"
+
+#: src/folders/project/folder-thread-card.tsx
+msgid "up to date as of {coveredDate}"
+msgstr "à jour jusqu'au {coveredDate}"
+
+#: src/folders/project/folder-thread-card.tsx
+msgid "Update"
+msgstr "Mettre à jour"
 
 #: src/settings/search-index.ts
 msgid "update, new version, upgrade"
@@ -5280,7 +5361,7 @@ msgstr "À quoi sert ce modèle ?"
 msgid "What key decisions were made in my recent meetings?"
 msgstr "Quelles décisions clés ont été prises lors de mes réunions récentes ?"
 
-#: src/folders/folder-editor.tsx
+#: src/folders/project/folder-side-panel.tsx
 msgid "What these notes are usually about"
 msgstr "Sujet habituel de ces notes"
 
