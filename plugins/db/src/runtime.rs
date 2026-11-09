@@ -153,6 +153,17 @@ impl PluginDbRuntime {
         Ok(())
     }
 
+    /// Applique les migrations, puis publie le résultat attendu par
+    /// `wait_until_ready`. Le pool est exposé avant : toute tâche de démarrage
+    /// qui touche au schéma doit attendre `wait_until_ready`.
+    pub async fn run_startup(&self) {
+        let result = self
+            .ensure_app_schema()
+            .await
+            .map_err(|error| error.to_string());
+        self.finish_startup(result);
+    }
+
     pub(crate) fn set_startup_status_if_running(&self, status: crate::StartupStatus) {
         let mut current = self.startup_status.write().unwrap();
         if matches!(
@@ -172,7 +183,7 @@ impl PluginDbRuntime {
         self.startup_status.read().unwrap().clone()
     }
 
-    pub(crate) fn finish_startup(&self, result: std::result::Result<(), String>) {
+    fn finish_startup(&self, result: std::result::Result<(), String>) {
         let phase = if result.is_ok() {
             crate::StartupPhase::Ready
         } else {

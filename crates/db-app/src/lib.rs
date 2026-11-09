@@ -136,6 +136,7 @@ pub async fn prepare_schema_with_progress(
     adopt_legacy_mobile_schema_migration(db.pool()).await?;
     repair_legacy_shared_session_cache_migration(db.pool()).await?;
     repair_legacy_attachment_transfer_jobs_migration(db.pool()).await?;
+    legacy_voiceprints::repair_voiceprint_exemplars_dropped_before_rebuild(db.pool()).await?;
     syntheo_db_migrate::migrate_with_progress(db, schema(), on_migration_progress).await?;
     repair_missing_core_tables(db.pool(), templates_missing_before_migration).await?;
     ensure_local_workspace_binding(db.pool()).await?;

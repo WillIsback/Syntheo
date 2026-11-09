@@ -82,3 +82,83 @@ async fn sessions_can_still_be_purged_once_legacy_voiceprints_are_gone() {
     purge_local_session(&mut tx, "session-1").await.unwrap();
     tx.commit().await.unwrap();
 }
+
+async fn applied(db: &Db, version: i64) -> bool {
+    sqlx::query_scalar::<_, bool>(
+        "SELECT EXISTS(SELECT 1 FROM _sqlx_migrations WHERE version = ? AND success = 1)",
+    )
+    .bind(version)
+    .fetch_one(db.pool())
+    .await
+    .unwrap()
+}
+
+// Issue #520 : la purge a couru avec les migrations et supprimé
+// `voiceprint_exemplars` entre 20260802120000 et 20260903120000. La base reste
+// arrêtée à 20260831120000 et chaque lancement échoue sur la reconstruction.
+async fn database_broken_by_an_early_purge() -> Db {
+    let db = Db::open(syntheo_db_core::DbOpenOptions {
+        storage: syntheo_db_core::DbStorage::Memory,
+        journal_mode_wal: true,
+        foreign_keys: true,
+        max_connections: Some(1),
+    })
+    .await
+    .unwrap();
+    syntheo_db_migrate::migrate(
+        &db,
+        syntheo_db_migrate::DbSchema {
+            steps: migration_steps_before("20260903120000_voiceprint_exemplars_isolated_mic"),
+        },
+    )
+    .await
+    .unwrap();
+    purge_legacy_voiceprints(db.pool(), |_, _| Ok(()))
+        .await
+        .unwrap();
+    let error = syntheo_db_migrate::migrate(&db, schema())
+        .await
+        .unwrap_err();
+    assert!(
+        error
+            .to_string()
+            .contains("no such table: voiceprint_exemplars"),
+        "{error}"
+    );
+    assert!(applied(&db, 20260831120000).await);
+    assert!(!applied(&db, 20260903120000).await);
+    db
+}
+
+#[tokio::test]
+async fn a_database_broken_by_an_early_purge_is_repaired_at_startup() {
+    let db = database_broken_by_an_early_purge().await;
+
+    prepare_schema(&db).await.unwrap();
+
+    assert!(applied(&db, 20260903120000).await);
+    assert!(table_exists(&db, "voiceprint_exemplars").await);
+    // La reprise va jusqu'à la dernière migration connue.
+    let last_id = APP_MIGRATION_STEPS.last().unwrap().id;
+    let last_version: i64 = last_id.split('_').next().unwrap().parse().unwrap();
+    assert!(applied(&db, last_version).await);
+    // La purge qui suit le démarrage retire ensuite la table recréée.
+    purge_legacy_voiceprints(db.pool(), |_, _| Ok(()))
+        .await
+        .unwrap();
+    assert!(!table_exists(&db, "voiceprint_exemplars").await);
+}
+
+#[tokio::test]
+async fn the_repair_does_not_recreate_tables_purged_after_the_migrations() {
+    let db = test_db().await;
+    purge_legacy_voiceprints(db.pool(), |_, _| Ok(()))
+        .await
+        .unwrap();
+
+    prepare_schema(&db).await.unwrap();
+    prepare_schema(&db).await.unwrap();
+
+    assert!(!table_exists(&db, "voiceprint_exemplars").await);
+    assert!(!table_exists(&db, "voiceprint_candidates").await);
+}

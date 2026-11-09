@@ -3,7 +3,7 @@ mod error;
 mod runtime;
 
 pub use error::{Error, Result};
-pub use runtime::{open_app_db, open_app_db_unmigrated};
+pub use runtime::{PluginDbRuntime, open_app_db, open_app_db_unmigrated};
 use tauri::Manager;
 
 const PLUGIN_NAME: &str = "db";
@@ -88,15 +88,6 @@ fn make_specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
         .error_handling(tauri_specta::ErrorHandlingMode::Result)
 }
 
-async fn bootstrap_app_database(
-    runtime: &runtime::PluginDbRuntime,
-) -> std::result::Result<(), String> {
-    runtime
-        .ensure_app_schema()
-        .await
-        .map_err(|error| error.to_string())
-}
-
 pub fn close_webview_subscriptions<R: tauri::Runtime>(app: &tauri::AppHandle<R>, label: &str) {
     let Some(runtime) = app.try_state::<ManagedState>() else {
         return;
@@ -135,8 +126,7 @@ pub fn init<R: tauri::Runtime>(
             let runtime = build_runtime(std::sync::Arc::clone(&db));
             let startup_runtime = std::sync::Arc::clone(&runtime);
             tauri::async_runtime::spawn(async move {
-                let result = bootstrap_app_database(&startup_runtime).await;
-                startup_runtime.finish_startup(result);
+                startup_runtime.run_startup().await;
             });
             app.manage(runtime);
             Ok(())
