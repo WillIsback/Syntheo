@@ -1,5 +1,5 @@
 import { t } from "@lingui/core/macro";
-import { useCallback } from "react";
+import { useCallback, useLayoutEffect, useRef } from "react";
 
 import { toast } from "@syntheo/ui/components/ui/toast";
 
@@ -11,6 +11,7 @@ import {
   loadCaptureLifecycleMarker,
 } from "./capture-lifecycle-storage";
 import { useListener } from "./contexts";
+import { notifyListeningElsewhere } from "./listening-elsewhere";
 import { startMeetingChatCapture } from "./meeting-chat-capture";
 import {
   MEETING_DISCLOSURE_MESSAGE,
@@ -105,8 +106,20 @@ export function useStartListeningState(
     [openNew],
   );
 
+  // Issue 516 : un démarrage refusé parce qu'une autre note écoute ne reste
+  // plus muet ; « Arrêter et démarrer ici » relance ce même démarrage.
+  const startListeningRef = useRef<() => Promise<void>>(async () => {});
+  const notifyBlockedStart = useCallback(() => {
+    void notifyListeningElsewhere(sessionId, {
+      openNote: (id) => openNew({ type: "sessions", id }),
+      stop,
+      startHere: () => startListeningRef.current(),
+    });
+  }, [openNew, sessionId, stop]);
+
   const startListening = useCallback(async () => {
     if (!canStartLiveSession(sessionId)) {
+      notifyBlockedStart();
       return;
     }
     // Sans recorder, une capture sans STT ne produirait rien.
@@ -179,6 +192,7 @@ export function useStartListeningState(
         lifecycle.ready,
       ]);
     if (!canStartLiveSession(sessionId)) {
+      notifyBlockedStart();
       return;
     }
 
@@ -302,6 +316,7 @@ export function useStartListeningState(
     getLiveStartError,
     getSessionMode,
     microphoneDevice,
+    notifyBlockedStart,
     speakerDevice,
     reportStartFailure,
     retainAudio,
@@ -316,6 +331,10 @@ export function useStartListeningState(
     stop,
     stopMeetingChatTasks,
   ]);
+
+  useLayoutEffect(() => {
+    startListeningRef.current = startListening;
+  }, [startListening]);
 
   return { connectionReady, startListening };
 }

@@ -12,6 +12,11 @@ import {
   saveCaptureStop,
 } from "./capture-completion";
 import { saveIncompleteCapture } from "./capture-result";
+import {
+  getGoToListeningNoteLabel,
+  getListeningElsewhereMessage,
+  getStopAndStartHereLabel,
+} from "./listening-elsewhere";
 import { takePausedSummary } from "./pause-listening";
 import {
   getBatchOnlyCaptureMessage,
@@ -26,6 +31,8 @@ import {
 } from "./useStartListening";
 
 import { playCompletionSound } from "~/shared/completion-sound";
+import { listenerStore } from "~/store/zustand/listener/instance";
+import { useLiveTitle } from "~/store/zustand/live-title";
 import { useLiveTranscriptionLanguages } from "~/store/zustand/live-transcription-languages";
 
 vi.mock("./capture-completion", () => ({
@@ -1640,6 +1647,79 @@ describe("useStartListening", () => {
       expect(m.requestAutoEnhance).toHaveBeenCalledOnce();
       expect(m.requestAutoEnhance).toHaveBeenCalledWith(SESSION, "regenerate");
       expect(takePausedSummary(SESSION)).toBeUndefined();
+    });
+  });
+
+  // Issue 516 : une autre note écoute déjà. Le démarrage ne reste plus muet.
+  describe("écoute déjà en cours sur une autre note", () => {
+    const OTHER = "other-note";
+    const setLive = (patch: Partial<typeof initialLive>) =>
+      listenerStore.setState({
+        live: { ...listenerStore.getState().live, ...patch },
+      });
+    const initialLive = listenerStore.getState().live;
+    const lastNotice = () => {
+      const calls = m.toastInfo.mock.calls;
+      const call = calls[calls.length - 1];
+      expect(call?.[0]).toBe(getListeningElsewhereMessage("Weekly sync"));
+      return call?.[1] as {
+        action: { label: string; onClick: () => void };
+        secondaryAction: { label: string; onClick: () => void };
+      };
+    };
+
+    beforeEach(() => {
+      m.canStartLiveSession.mockReturnValue(false);
+      setLive({ status: "active", sessionId: OTHER });
+      useLiveTitle.getState().setTitle(OTHER, "Weekly sync");
+    });
+
+    afterEach(() => {
+      listenerStore.setState({ live: initialLive });
+      useLiveTitle.getState().clearTitle(OTHER);
+    });
+
+    test("names the listening note and opens it on request", async () => {
+      await startListening();
+
+      expect(m.start).not.toHaveBeenCalled();
+      await waitFor(() => expect(m.toastInfo).toHaveBeenCalled());
+      const notice = lastNotice();
+      expect(notice.action.label).toBe(getGoToListeningNoteLabel());
+      expect(notice.secondaryAction.label).toBe(getStopAndStartHereLabel());
+
+      notice.action.onClick();
+      expect(m.openNew).toHaveBeenCalledWith({ type: "sessions", id: OTHER });
+      expect(m.stop).not.toHaveBeenCalled();
+    });
+
+    test("stops the other listening, then starts here", async () => {
+      await startListening();
+      await waitFor(() => expect(m.toastInfo).toHaveBeenCalled());
+      m.stop.mockImplementation(() => {
+        setLive({ status: "finalizing" });
+        m.canStartLiveSession.mockReturnValue(true);
+      });
+
+      await act(async () => {
+        lastNotice().secondaryAction.onClick();
+      });
+
+      expect(m.stop).toHaveBeenCalledOnce();
+      await waitFor(() =>
+        expect(m.start).toHaveBeenCalledWith(
+          expect.objectContaining({ session_id: SESSION }),
+          expect.anything(),
+        ),
+      );
+    });
+
+    test("stays quiet when nothing listens elsewhere", async () => {
+      setLive({ status: "active", sessionId: SESSION });
+      await startListening();
+
+      expect(m.start).not.toHaveBeenCalled();
+      expect(m.toastInfo).not.toHaveBeenCalled();
     });
   });
 });

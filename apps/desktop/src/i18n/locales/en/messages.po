@@ -1962,6 +1962,10 @@ msgstr "Go to Home"
 msgid "Go to next section"
 msgstr "Go to next section"
 
+#: src/stt/listening-elsewhere.ts
+msgid "Go to note"
+msgstr "Go to note"
+
 #: src/onboarding/shared.tsx
 msgid "Go to previous section"
 msgstr "Go to previous section"
@@ -2339,6 +2343,10 @@ msgstr "Listen"
 #: src/session/components/living-document/fiche.tsx
 msgid "Listening"
 msgstr "Listening"
+
+#: src/stt/listening-elsewhere.ts
+msgid "Listening is already in progress on “{title}”."
+msgstr "Listening is already in progress on “{title}”."
 
 #: src/session/components/capsule/index.tsx
 msgid "Listening time"
@@ -4446,6 +4454,10 @@ msgstr "Steps"
 msgid "Stop"
 msgstr "Stop"
 
+#: src/stt/listening-elsewhere.ts
+msgid "Stop and start here"
+msgstr "Stop and start here"
+
 #: src/settings/general/meeting-settings.tsx
 msgid "Stop listening when your call ends."
 msgstr "Stop listening when your call ends."
@@ -5441,6 +5453,7 @@ msgstr "Unreachable"
 #: src/shared/palette-search-groups.tsx
 #: src/shared/ui/resource-list/preview-header.tsx
 #: src/sidebar/toast/undo-delete-toast.tsx
+#: src/stt/listening-elsewhere.ts
 #: src/templates/details.tsx
 #: src/templates/template-preview.tsx
 #: src/templates/template-sidebar.tsx
