@@ -20,7 +20,11 @@ export function useCaptureLifecycle(sessionId: string) {
   const session = useSession(sessionId);
   const transcriptExistence = useSessionTranscriptExistence(sessionId);
   const participantHumanIds = useSessionParticipantHumanIds(sessionId);
-  const { conn, isReady: connectionReady } = useSTTConnection();
+  const {
+    conn,
+    isReady: connectionReady,
+    isLoading: connectionLoading,
+  } = useSTTConnection();
   const runBatch = useRunBatch(sessionId);
   const setBatchTranscriptionPending = useListener(
     (state) => state.setBatchTranscriptionPending,
@@ -88,6 +92,7 @@ export function useCaptureLifecycle(sessionId: string) {
 
   return {
     conn,
+    connectionLoading,
     connectionReady,
     createCaptureLifecycle,
     session,
