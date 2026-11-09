@@ -11,8 +11,6 @@ const {
   uploadAudioMock,
   uploadTranscriptMock,
   audioImportAvailability,
-  audioExists,
-  audioExistsResolved,
   currentNoteContent,
   exportModalMock,
   useHasTranscriptMock,
@@ -26,8 +24,6 @@ const {
   audioImportAvailability: {
     value: { status: "ready" } as { status: "ready" | "unsupported" },
   },
-  audioExists: { value: false },
-  audioExistsResolved: { value: true },
   currentNoteContent: { value: "" },
   exportModalMock: vi.fn(
     (_props: { open: boolean; onOpenChange: (open: boolean) => void }) => null,
@@ -191,8 +187,6 @@ vi.mock("~/stt/useUploadFile", () => ({
 type Scenario = {
   transcript?: boolean;
   content?: string;
-  audio?: boolean;
-  audioResolved?: boolean;
   mode?: string;
   floatingPanel?: boolean;
   platform?: string;
@@ -213,16 +207,12 @@ const ACTIONS = [
 function arrange({
   transcript = true,
   content = "",
-  audio = false,
-  audioResolved = true,
   mode = "inactive",
   floatingPanel = false,
   platform = "macos",
 }: Scenario) {
   useHasTranscriptMock.mockReturnValue(transcript);
   currentNoteContent.value = content;
-  audioExists.value = audio;
-  audioExistsResolved.value = audioResolved;
   useConfigValueMock.mockReturnValue(floatingPanel);
   platformMock.mockReturnValue(platform);
   useListenerMock.mockImplementation((selector) =>
@@ -301,13 +291,13 @@ describe("OverflowButton", () => {
     ],
     [
       "finalizing",
-      { audio: true, mode: "finalizing", floatingPanel: true },
+      { mode: "finalizing", floatingPanel: true },
       {},
       ["Resume listening", "Open in New Window", "Delete note"],
     ],
     [
       "batch transcription",
-      { audio: true, mode: "running_batch" },
+      { mode: "running_batch" },
       {},
       ["Resume listening", "Open in New Window", "Delete note"],
     ],

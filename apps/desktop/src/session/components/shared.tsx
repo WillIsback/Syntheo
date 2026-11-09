@@ -49,11 +49,10 @@ export function useCurrentNoteHasContent(
 export function useSessionNoteView(
   sessionId: string,
   view: EditorView | null = null,
-  { audioExists = false }: { audioExists?: boolean } = {},
 ): EditorView {
   const sessionMode = useListener((state) => state.getSessionMode(sessionId));
   const isLiveSessionActive = sessionMode === "active";
-  const canShowTranscript = useCanShowTranscript(sessionId, { audioExists });
+  const canShowTranscript = useCanShowTranscript(sessionId);
 
   const hasTranscript = useHasTranscript(sessionId);
   const enhancedNoteIds = useEnhancedNotes(
@@ -80,10 +79,9 @@ export function useSessionNoteView(
   ]);
 }
 
-export function useCanShowTranscript(
-  sessionId: string,
-  { audioExists = false }: { audioExists?: boolean } = {},
-): boolean {
+// Syntheo ne conserve jamais l'audio : seule une transcription (ou une
+// capture, un import en cours, une erreur d'import) rend la vue disponible.
+export function useCanShowTranscript(sessionId: string): boolean {
   const hasTranscript = useHasTranscript(sessionId);
   const sessionMode = useListener((state) => state.getSessionMode(sessionId));
   const batchError = useListener((state) => state.batch[sessionId]?.error);
@@ -93,7 +91,6 @@ export function useCanShowTranscript(
   );
 
   return getCanShowTranscript({
-    audioExists,
     batchError: Boolean(batchError),
     hasLiveSegments,
     hasTranscript,
@@ -102,13 +99,11 @@ export function useCanShowTranscript(
 }
 
 function getCanShowTranscript({
-  audioExists = false,
   batchError = false,
   hasLiveSegments = false,
   hasTranscript,
   sessionMode,
 }: {
-  audioExists?: boolean;
   batchError?: boolean;
   hasLiveSegments?: boolean;
   hasTranscript: boolean;
@@ -119,7 +114,6 @@ function getCanShowTranscript({
 
   return (
     hasTranscript ||
-    (audioExists && !isLiveCapture) ||
     isLiveCapture ||
     hasLiveSegments ||
     sessionMode === "running_batch" ||

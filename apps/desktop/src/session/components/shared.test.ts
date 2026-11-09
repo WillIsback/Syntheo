@@ -81,15 +81,7 @@ describe("useSessionNoteView", () => {
     hoisted.sessionMode = "inactive";
   });
 
-  it("keeps the transcript view available when saved audio exists", () => {
-    const { result } = renderHook(() =>
-      useSessionNoteView("session-1", view, { audioExists: true }),
-    );
-
-    expect(result.current).toEqual({ type: "transcript" });
-  });
-
-  it("normalizes the transcript view when audio and transcript rows are missing", () => {
+  it("normalizes the transcript view when transcript rows are missing", () => {
     const { result } = renderHook(() => useSessionNoteView("session-1", view));
 
     expect(result.current).toEqual({ type: "raw" });
@@ -100,17 +92,6 @@ describe("useSessionNoteView", () => {
     hoisted.liveSessionId = "session-1";
 
     const { result } = renderHook(() => useSessionNoteView("session-1", view));
-
-    expect(result.current).toEqual({ type: "transcript" });
-  });
-
-  it("keeps the transcript view while listening when only in-progress audio exists", () => {
-    hoisted.sessionMode = "active";
-    hoisted.liveSessionId = "session-1";
-
-    const { result } = renderHook(() =>
-      useSessionNoteView("session-1", view, { audioExists: true }),
-    );
 
     expect(result.current).toEqual({ type: "transcript" });
   });
