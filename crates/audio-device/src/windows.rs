@@ -293,16 +293,15 @@ impl AudioDeviceBackend for WindowsBackend {
                     is_muted: None,
                 };
 
-                if direction == AudioDirection::Output {
-                    if let Ok(volume_control) =
+                if direction == AudioDirection::Output
+                    && let Ok(volume_control) =
                         device.Activate::<IAudioEndpointVolume>(CLSCTX_ALL, None)
-                    {
-                        if let Ok(volume) = volume_control.GetMasterVolumeLevelScalar() {
-                            audio_device.volume = Some(volume);
-                        }
-                        if let Ok(muted) = volume_control.GetMute() {
-                            audio_device.is_muted = Some(muted.as_bool());
-                        }
+                {
+                    if let Ok(volume) = volume_control.GetMasterVolumeLevelScalar() {
+                        audio_device.volume = Some(volume);
+                    }
+                    if let Ok(muted) = volume_control.GetMute() {
+                        audio_device.is_muted = Some(muted.as_bool());
                     }
                 }
 
