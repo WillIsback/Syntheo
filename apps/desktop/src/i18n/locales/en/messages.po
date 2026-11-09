@@ -38,7 +38,7 @@ msgstr "\"{title}\" is ready to read."
 msgid "“{title}” ran on this note"
 msgstr "“{title}” ran on this note"
 
-#: src/settings/general/notification.tsx
+#: src/settings/general/notification-ignored-apps.tsx
 msgid "(default)"
 msgstr "(default)"
 
@@ -118,7 +118,7 @@ msgstr "{count, plural, one {# speaker to name} other {# speakers to name}}"
 msgid "{count, plural, one {second} other {seconds}}"
 msgstr "{count, plural, one {second} other {seconds}}"
 
-#: src/contacts/details.tsx
+#: src/contacts/details-sections.tsx
 msgid "{count} contacts share the same name or email. Merge them to consolidate all related notes and information."
 msgstr "{count} contacts share the same name or email. Merge them to consolidate all related notes and information."
 
@@ -312,7 +312,7 @@ msgstr "Add at least one example summary."
 msgid "Add context for this folder"
 msgstr "Add context for this folder"
 
-#: src/contacts/details.tsx
+#: src/contacts/details-fields.tsx
 msgid "Add email"
 msgstr "Add email"
 
@@ -332,11 +332,11 @@ msgstr "Add language"
 msgid "Add names, jargon, or product terms to prefer"
 msgstr "Add names, jargon, or product terms to prefer"
 
-#: src/contacts/details.tsx
+#: src/contacts/details-fields.tsx
 msgid "Add notes about this contact..."
 msgstr "Add notes about this contact..."
 
-#: src/contacts/details.tsx
+#: src/contacts/details-organization.tsx
 msgid "Add organization"
 msgstr "Add organization"
 
@@ -406,7 +406,7 @@ msgstr "Agenda proposed from the points still open (editable):"
 msgid "Agent skills"
 msgstr "Agent skills"
 
-#: src/contacts/details.tsx
+#: src/contacts/details-sections.tsx
 msgid "AI-generated summary of all interactions and notes with this contact will appear here. This will synthesize key discussion points, action items, and relationship context across all meetings and notes."
 msgstr "AI-generated summary of all interactions and notes with this contact will appear here. This will synthesize key discussion points, action items, and relationship context across all meetings and notes."
 
@@ -466,7 +466,7 @@ msgstr "Analyzing structure..."
 msgid "Animals & Nature"
 msgstr "Animals & Nature"
 
-#: src/contacts/details.tsx
+#: src/contacts/details-sections.tsx
 msgid "Another contact shares the same name or email. Merge them to consolidate all related notes and information."
 msgstr "Another contact shares the same name or email. Merge them to consolidate all related notes and information."
 
@@ -507,7 +507,7 @@ msgstr "Apply to memo"
 msgid "Apply to summary"
 msgstr "Apply to summary"
 
-#: src/stt/detect-events.ts
+#: src/stt/detect-events-helpers.ts
 msgid "Are you in a meeting?"
 msgstr "Are you in a meeting?"
 
@@ -572,7 +572,7 @@ msgstr "Audio"
 msgid "Audio capture was interrupted"
 msgstr "Audio capture was interrupted"
 
-#: src/stt/capture-lifecycle.ts
+#: src/stt/capture-lifecycle-session.ts
 msgid "Audio could not be deleted"
 msgstr "Audio could not be deleted"
 
@@ -580,15 +580,15 @@ msgstr "Audio could not be deleted"
 msgid "Audio import failed"
 msgstr "Audio import failed"
 
-#: src/store/zustand/listener/general-live.ts
+#: src/store/zustand/listener/general-live-helpers.ts
 msgid "Audio retry failed"
 msgstr "Audio retry failed"
 
-#: src/store/zustand/listener/general-live.ts
+#: src/store/zustand/listener/general-live-events.ts
 msgid "Audio saving is delayed"
 msgstr "Audio saving is delayed"
 
-#: src/store/zustand/listener/general-live.ts
+#: src/store/zustand/listener/general-live-events.ts
 msgid "Audio saving was interrupted"
 msgstr "Audio saving was interrupted"
 
@@ -751,7 +751,7 @@ msgstr "Captured right now:"
 msgid "Change"
 msgstr "Change"
 
-#: src/contacts/details.tsx
+#: src/contacts/details-sections.tsx
 #: src/contacts/organization-details.tsx
 #: src/contacts/profile-photo.tsx
 msgid "Change photo"
@@ -821,7 +821,7 @@ msgstr "Choose a language model in Settings to propose the agenda."
 msgid "Choose a language model in Settings to write the thread."
 msgstr "Choose a language model in Settings to write the thread."
 
-#: src/store/zustand/listener/general-live.ts
+#: src/store/zustand/listener/general-live-helpers.ts
 msgid "Choose a working audio device and retry. Audio missing during this interruption cannot be recovered."
 msgstr "Choose a working audio device and retry. Audio missing during this interruption cannot be recovered."
 
@@ -984,7 +984,8 @@ msgstr "command line, terminal, install"
 msgid "Command output"
 msgstr "Command output"
 
-#: src/contacts/details.tsx
+#: src/contacts/details-fields.tsx
+#: src/contacts/details-sections.tsx
 #: src/settings/general/account-profile.tsx
 #: src/settings/search-index.ts
 msgid "Company"
@@ -1392,7 +1393,7 @@ msgstr "Developers"
 msgid "Device authentication is not available on this computer."
 msgstr "Device authentication is not available on this computer."
 
-#: src/store/zustand/listener/general-live.ts
+#: src/store/zustand/listener/general-live-helpers.ts
 #: src/store/zustand/listener/mic-fallback.ts
 msgid "Device settings"
 msgstr "Device settings"
@@ -1458,7 +1459,7 @@ msgstr "Disable"
 msgid "Disable all notifications"
 msgstr "Disable all notifications"
 
-#: src/store/zustand/listener/general-live.ts
+#: src/store/zustand/listener/general-live-events.ts
 msgid "Disk almost full"
 msgstr "Disk almost full"
 
@@ -1518,11 +1519,11 @@ msgstr "Draft follow-up email."
 msgid "Duplicate"
 msgstr "Duplicate"
 
-#: src/contacts/details.tsx
+#: src/contacts/details-sections.tsx
 msgid "Duplicate contact found"
 msgstr "Duplicate contact found"
 
-#: src/contacts/details.tsx
+#: src/contacts/details-sections.tsx
 msgid "Duplicate contacts found"
 msgstr "Duplicate contacts found"
 
@@ -1587,7 +1588,8 @@ msgstr "Editable: your corrections are kept when the thread is updated."
 msgid "Edo purple and pale wisteria. Elegant, a little more singular."
 msgstr "Edo purple and pale wisteria. Elegant, a little more singular."
 
-#: src/contacts/details.tsx
+#: src/contacts/details-fields.tsx
+#: src/contacts/details-sections.tsx
 #: src/settings/general/account-profile.tsx
 #: src/settings/search-index.ts
 msgid "Email"
@@ -1869,15 +1871,15 @@ msgstr "For enabled notifications"
 msgid "Forget this server's address and key?"
 msgstr "Forget this server's address and key?"
 
-#: src/store/zustand/listener/general-live.ts
+#: src/store/zustand/listener/general-live-events.ts
 msgid "Free up disk space. Audio is kept in memory and saved once storage is available. Live transcription continues."
 msgstr "Free up disk space. Audio is kept in memory and saved once storage is available. Live transcription continues."
 
-#: src/store/zustand/listener/general-live.ts
+#: src/store/zustand/listener/general-live-events.ts
 msgid "Free up disk space. Audio saving stops if the disk fills up. Live transcription continues."
 msgstr "Free up disk space. Audio saving stops if the disk fills up. Live transcription continues."
 
-#: src/stt/capture-lifecycle.ts
+#: src/stt/capture-lifecycle-recovery.ts
 msgid "Free up disk space. Syntheo will try to recover the missing text while this meeting is still recording."
 msgstr "Free up disk space. Syntheo will try to recover the missing text while this meeting is still recording."
 
@@ -2168,7 +2170,8 @@ msgstr "Invalid address: use an http:// or https:// URL."
 msgid "Invitee Time Zone:"
 msgstr "Invitee Time Zone:"
 
-#: src/contacts/details.tsx
+#: src/contacts/details-fields.tsx
+#: src/contacts/details-sections.tsx
 #: src/settings/general/account-profile.tsx
 #: src/settings/search-index.ts
 msgid "Job Title"
@@ -2295,7 +2298,8 @@ msgstr "Lets you know when the automation has finished."
 msgid "Light"
 msgstr "Light"
 
-#: src/contacts/details.tsx
+#: src/contacts/details-fields.tsx
+#: src/contacts/details-sections.tsx
 msgid "LinkedIn"
 msgstr "LinkedIn"
 
@@ -2349,11 +2353,11 @@ msgstr "Live transcript"
 msgid "Live transcript preview"
 msgstr "Live transcript preview"
 
-#: src/store/zustand/listener/general-live.ts
+#: src/store/zustand/listener/general-live-events.ts
 msgid "Live transcription continues. Free up disk space to resume audio saving. Audio missing during this interruption cannot be recovered."
 msgstr "Live transcription continues. Free up disk space to resume audio saving. Audio missing during this interruption cannot be recovered."
 
-#: src/store/zustand/listener/general-live.ts
+#: src/store/zustand/listener/general-live-helpers.ts
 msgid "Live transcription interrupted"
 msgstr "Live transcription interrupted"
 
@@ -2387,7 +2391,7 @@ msgid "Loading settings"
 msgstr "Loading settings"
 
 #: src/changelog/index.tsx
-#: src/contacts/details.tsx
+#: src/contacts/details-sections.tsx
 #: src/settings/general/account-profile.tsx
 msgid "Loading..."
 msgstr "Loading..."
@@ -2565,7 +2569,7 @@ msgstr "memo, about me, description"
 msgid "Memos"
 msgstr "Memos"
 
-#: src/contacts/details.tsx
+#: src/contacts/details-sections.tsx
 #: src/session/components/note-input/transcript/renderer/selection-menu.tsx
 msgid "Merge"
 msgstr "Merge"
@@ -2729,7 +2733,8 @@ msgstr "My server"
 msgid "My servers"
 msgstr "My servers"
 
-#: src/contacts/details.tsx
+#: src/contacts/details-fields.tsx
+#: src/contacts/details-sections.tsx
 #: src/contacts/organization-details.tsx
 #: src/settings/automations/workflow-builder.tsx
 #: src/settings/general/account-profile.tsx
@@ -2807,7 +2812,7 @@ msgstr "Next view of the note"
 msgid "NIM does not publish its model list: these are the models known for this protocol."
 msgstr "NIM does not publish its model list: these are the models known for this protocol."
 
-#: src/settings/general/notification.tsx
+#: src/settings/general/notification-ignored-apps.tsx
 msgid "No apps found."
 msgstr "No apps found."
 
@@ -2904,7 +2909,7 @@ msgstr "No meetings yet"
 msgid "No microphone detected. Plug in a microphone or check permissions."
 msgstr "No microphone detected. Plug in a microphone or check permissions."
 
-#: src/store/zustand/listener/general-live.ts
+#: src/store/zustand/listener/general-live-helpers.ts
 msgid "No microphone detected. Plug in a microphone, then retry. Audio missing during this interruption cannot be recovered."
 msgstr "No microphone detected. Plug in a microphone, then retry. Audio missing during this interruption cannot be recovered."
 
@@ -3079,7 +3084,8 @@ msgstr "Note view"
 msgid "notes"
 msgstr "notes"
 
-#: src/contacts/details.tsx
+#: src/contacts/details-fields.tsx
+#: src/contacts/details-sections.tsx
 #: src/settings/general/account-profile.tsx
 #: src/settings/search-index.ts
 #: src/shared/open-note-dialog.tsx
@@ -3276,7 +3282,7 @@ msgstr "Opens your web browser."
 msgid "Options"
 msgstr "Options"
 
-#: src/contacts/details.tsx
+#: src/contacts/details-organization.tsx
 msgid "Organization"
 msgstr "Organization"
 
@@ -3387,7 +3393,8 @@ msgstr "PgDn"
 msgid "PgUp"
 msgstr "PgUp"
 
-#: src/contacts/details.tsx
+#: src/contacts/details-fields.tsx
+#: src/contacts/details-sections.tsx
 msgid "Phone"
 msgstr "Phone"
 
@@ -3416,7 +3423,7 @@ msgstr "position, role, function, job"
 msgid "Post recording disclosure in meeting chat"
 msgstr "Post recording disclosure in meeting chat"
 
-#: src/stt/capture-lifecycle.ts
+#: src/stt/capture-lifecycle-finalize.ts
 msgid "Post-meeting transcription failed. The recording was kept so you can try again."
 msgstr "Post-meeting transcription failed. The recording was kept so you can try again."
 
@@ -3587,7 +3594,7 @@ msgstr "Record other participants in meetings."
 msgid "Record your voice in meetings and calls."
 msgstr "Record your voice in meetings and calls."
 
-#: src/store/zustand/listener/general-live.ts
+#: src/store/zustand/listener/general-live-helpers.ts
 msgid "Recording could not start. Check your audio permissions and devices."
 msgstr "Recording could not start. Check your audio permissions and devices."
 
@@ -3678,7 +3685,7 @@ msgstr "Remove {use}"
 msgid "Remove argument {position}"
 msgstr "Remove argument {position}"
 
-#: src/contacts/details.tsx
+#: src/contacts/details-fields.tsx
 msgid "Remove email"
 msgstr "Remove email"
 
@@ -3823,7 +3830,7 @@ msgstr "Resume listening"
 #: src/contacts/profile-photo.tsx
 #: src/session/components/note-input/enhanced/enhance-error.tsx
 #: src/settings/general/account-profile.tsx
-#: src/store/zustand/listener/general-live.ts
+#: src/store/zustand/listener/general-live-helpers.ts
 msgid "Retry"
 msgstr "Retry"
 
@@ -3985,7 +3992,7 @@ msgstr "Search icons..."
 msgid "Search in this folder..."
 msgstr "Search in this folder..."
 
-#: src/settings/general/notification.tsx
+#: src/settings/general/notification-ignored-apps.tsx
 msgid "Search installed apps..."
 msgstr "Search installed apps..."
 
@@ -4001,7 +4008,7 @@ msgstr "Search notes and pages..."
 msgid "Search Notes…"
 msgstr "Search Notes…"
 
-#: src/contacts/details.tsx
+#: src/contacts/details-organization.tsx
 msgid "Search or add company"
 msgstr "Search or add company"
 
@@ -4301,7 +4308,7 @@ msgstr "Skip"
 msgid "Smileys & People"
 msgstr "Smileys & People"
 
-#: src/contacts/details.tsx
+#: src/contacts/details-fields.tsx
 msgid "Software Engineer"
 msgstr "Software Engineer"
 
@@ -4530,7 +4537,7 @@ msgstr "Suggestions"
 msgid "Summaries"
 msgstr "Summaries"
 
-#: src/contacts/details.tsx
+#: src/contacts/details-sections.tsx
 #: src/edit/tab-content.tsx
 #: src/session/components/note-input/header-shared.tsx
 #: src/session/components/outer-header/overflow/export-modal.tsx
@@ -4573,7 +4580,7 @@ msgstr "Summary format"
 msgid "Summary format cannot be empty."
 msgstr "Summary format cannot be empty."
 
-#: src/contacts/details.tsx
+#: src/contacts/details-sections.tsx
 #: src/session/components/note-input/enhanced/enhance-error.tsx
 msgid "Summary generation failed"
 msgstr "Summary generation failed"
@@ -4656,15 +4663,15 @@ msgstr "Syntheo completes your notes into a meeting summary."
 msgid "Syntheo could not find this summary in the note. Ask again from the note."
 msgstr "Syntheo could not find this summary in the note. Ask again from the note."
 
-#: src/stt/capture-lifecycle.ts
+#: src/stt/capture-lifecycle-finalize.ts
 msgid "Syntheo could not finish saving the transcript. The recording was kept so you can try again."
 msgstr "Syntheo could not finish saving the transcript. The recording was kept so you can try again."
 
-#: src/stt/capture-lifecycle.ts
+#: src/stt/capture-lifecycle-session.ts
 msgid "Syntheo could not remove the temporary audio. Cleanup will be retried automatically."
 msgstr "Syntheo could not remove the temporary audio. Cleanup will be retried automatically."
 
-#: src/stt/capture-lifecycle.ts
+#: src/stt/capture-lifecycle-finalize.ts
 msgid "Syntheo could not save part of the live transcript."
 msgstr "Syntheo could not save part of the live transcript."
 
@@ -4688,7 +4695,7 @@ msgstr "Syntheo doesn't have microphone access"
 msgid "Syntheo is Locked"
 msgstr "Syntheo is Locked"
 
-#: src/store/zustand/listener/general-live.ts
+#: src/store/zustand/listener/general-live-helpers.ts
 msgid "Syntheo keeps listening while live transcription reconnects. No audio is kept: the missing passage will not be recovered."
 msgstr "Syntheo keeps listening while live transcription reconnects. No audio is kept: the missing passage will not be recovered."
 
@@ -5030,7 +5037,7 @@ msgstr "The page you're looking for doesn't exist."
 msgid "The PDF opens in your reader. Choose Print."
 msgstr "The PDF opens in your reader. Choose Print."
 
-#: src/store/zustand/listener/general-live.ts
+#: src/store/zustand/listener/general-live-events.ts
 msgid "The previous recording needs recovery"
 msgstr "The previous recording needs recovery"
 
@@ -5099,7 +5106,7 @@ msgstr "The thread could not be updated. Check the language model, then try agai
 msgid "The thread is written from meeting summaries. It will be available once a meeting in this folder has a summary."
 msgstr "The thread is written from meeting summaries. It will be available once a meeting in this folder has a summary."
 
-#: src/stt/capture-lifecycle.ts
+#: src/stt/capture-lifecycle-finalize.ts
 #: src/stt/pause-listening.ts
 msgid "The transcript was saved, but Syntheo could not start the summary. Try generating it again."
 msgstr "The transcript was saved, but Syntheo could not start the summary. Try generating it again."
@@ -5116,7 +5123,7 @@ msgstr "the transcription service"
 msgid "The transcription will appear here as soon as the first words arrive."
 msgstr "The transcription will appear here as soon as the first words arrive."
 
-#: src/store/zustand/listener/general-live.ts
+#: src/store/zustand/listener/general-live-events.ts
 msgid "The unreadable audio was preserved in this note's folder as an audio.recovery-*.wav file. New audio will be recorded separately. Your transcript is unchanged."
 msgstr "The unreadable audio was preserved in this note's folder as an audio.recovery-*.wav file. New audio will be recorded separately. Your transcript is unchanged."
 
@@ -5349,7 +5356,7 @@ msgstr "Travel & Places"
 msgid "Trigger"
 msgstr "Trigger"
 
-#: src/contacts/details.tsx
+#: src/contacts/details-sections.tsx
 #: src/onboarding/permissions.tsx
 #: src/settings/general/permissions.tsx
 msgid "Try again"
@@ -5420,7 +5427,7 @@ msgstr "Unmute the microphone"
 msgid "Unnamed"
 msgstr "Unnamed"
 
-#: src/contacts/details.tsx
+#: src/contacts/details-sections.tsx
 msgid "Unnamed contact"
 msgstr "Unnamed contact"
 
@@ -5834,7 +5841,7 @@ msgstr "Your notes have changed since this summary."
 msgid "Your summary is ready."
 msgstr "Your summary is ready."
 
-#: src/stt/capture-lifecycle.ts
+#: src/stt/capture-lifecycle-recovery.ts
 msgid "Your transcript could not be saved"
 msgstr "Your transcript could not be saved"
 

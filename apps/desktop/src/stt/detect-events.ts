@@ -10,7 +10,6 @@ import { commands as notificationCommands } from "@syntheo/plugin-notification";
 import { useMountEffect } from "@syntheo/ui/hooks/use-mount-effect";
 
 import {
-  AUTO_STOP_ACCESSIBILITY_TIMEOUT_MS,
   AUTO_STOP_CONFIRM_DELAY_MS,
   getAutoStopActiveCheckAppIds,
   getAutoStopCandidateAppIds,
@@ -21,6 +20,13 @@ import {
   showMeetingEndedPrompt,
 } from "./auto-stop";
 import { cancelAutoStopEndedNotification } from "./auto-stop-notification";
+import {
+  captureDetectedTriggerApps,
+  createAutoStopAccessibilityInspector,
+  getMicDetectedNotificationTitle,
+  MAX_TIMEOUT_DELAY_MS,
+  type PendingAutoStop,
+} from "./detect-events-helpers";
 import { inspectionsShowActiveMeetingForApps } from "./meeting-accessibility";
 import {
   getIgnorableApps,
@@ -29,25 +35,12 @@ import {
   getNotificationIconForApp,
   getNotificationIconForDetectedApps,
 } from "./meeting-apps";
-import { recordDetectedMeetingApps } from "./meeting-source-apps";
 
 import { useConfigValue } from "~/shared/config";
 import type { ListenerStore } from "~/store/zustand/listener";
 import { isLiveRecordingInProgress } from "~/store/zustand/listener/general-shared";
 
-const MAX_TIMEOUT_DELAY_MS = 2_147_483_647;
-
-type PendingAutoStop = {
-  timeout?: ReturnType<typeof setTimeout>;
-  requireMicSnapshot: boolean;
-  sessionId: string | null;
-  networkInterrupted: boolean;
-  networkHoldUntilMs?: number;
-};
-
-export function getMicDetectedNotificationTitle(): string {
-  return t`Are you in a meeting?`;
-}
+export { getMicDetectedNotificationTitle } from "./detect-events-helpers";
 
 export const useHandleDetectEvents = (store: ListenerStore) => {
   const stop = useStore(store, (state) => state.stop);
@@ -72,36 +65,7 @@ export const useHandleDetectEvents = (store: ListenerStore) => {
   useMountEffect(() => {
     let unlistenDetect: (() => void) | undefined;
     let cancelled = false;
-    let accessibilityInspection: Promise<Awaited<
-      ReturnType<typeof detectCommands.inspectMeetingAccessibility>
-    > | null> | null = null;
-
-    async function inspectForAutoStop() {
-      // A timed-out native walk may still run and its result may be stale for a new stop event.
-      if (accessibilityInspection) {
-        return null;
-      }
-      accessibilityInspection = detectCommands
-        .inspectMeetingAccessibility()
-        .catch(() => null)
-        .finally(() => {
-          accessibilityInspection = null;
-        });
-      let timeout: ReturnType<typeof setTimeout> | undefined;
-      try {
-        return await Promise.race([
-          accessibilityInspection,
-          new Promise<null>((resolve) => {
-            timeout = setTimeout(
-              () => resolve(null),
-              AUTO_STOP_ACCESSIBILITY_TIMEOUT_MS,
-            );
-          }),
-        ]);
-      } finally {
-        clearTimeout(timeout);
-      }
-    }
+    const inspectForAutoStop = createAutoStopAccessibilityInspector();
 
     isOnlineRef.current = navigator.onLine;
     const clearNotificationsIfActive = () => {
@@ -152,40 +116,8 @@ export const useHandleDetectEvents = (store: ListenerStore) => {
     // start to the end of finalizing (issue 349).
     const isRecordingInProgress = () =>
       isLiveRecordingInProgress(store.getState().live);
-    const captureTriggerApps = (apps: { id: string; name: string }[]) => {
-      const appIds = apps.map((app) => app.id);
-      if (appIds.length === 0) {
-        return;
-      }
-
-      const currentLive = store.getState().live;
-      const currentTrigger = currentLive.triggerAppIds ?? [];
-      if (appIds.some((id) => currentTrigger.includes(id))) {
-        clearPendingAutoStop();
-        if (
-          currentLive.sessionId &&
-          cancelAutoStopEndedNotification(currentLive.sessionId)
-        ) {
-          void notificationCommands
-            .clearNotifications()
-            .catch((error) =>
-              console.error("[listener] failed to clear notifications", error),
-            );
-        }
-      }
-      store
-        .getState()
-        .setTriggerAppIds([...new Set([...currentTrigger, ...appIds])]);
-      if (currentLive.sessionId) {
-        void recordDetectedMeetingApps(currentLive.sessionId, apps).catch(
-          (error) =>
-            console.warn(
-              "[listener] failed to persist detected meeting apps",
-              error,
-            ),
-        );
-      }
-    };
+    const captureTriggerApps = (apps: { id: string; name: string }[]) =>
+      captureDetectedTriggerApps(store, clearPendingAutoStop, apps);
 
     function scheduleAutoStop(
       delayMs: number,
