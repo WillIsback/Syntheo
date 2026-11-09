@@ -15,13 +15,6 @@ export function requiresEntitlement(
   );
 }
 
-export function getRequiredConfigFields(
-  requirements: readonly ProviderRequirement[],
-): ConfigField[] {
-  const req = requirements.find((r) => r.kind === "requires_config");
-  return req?.kind === "requires_config" ? req.fields : [];
-}
-
 export type ProviderEligibilityContext = {
   isAuthenticated: boolean;
   isPaid: boolean;

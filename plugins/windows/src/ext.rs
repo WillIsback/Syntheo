@@ -1135,13 +1135,6 @@ impl<'a, M: tauri::Manager<tauri::Wry>> Windows<'a, tauri::Wry, M> {
     ) -> Result<(), crate::Error> {
         window.set_frame_animated(self.manager.app_handle(), frame)
     }
-
-    pub fn close_all(&self) -> Result<(), crate::Error> {
-        for (_, window) in self.manager.webview_windows() {
-            let _ = window.close();
-        }
-        Ok(())
-    }
 }
 
 pub trait WindowsPluginExt<R: tauri::Runtime> {

@@ -28,10 +28,6 @@ vi.mock("~/db", () => ({
   liveQueryClient: { execute: mocks.execute },
 }));
 
-vi.mock("~/env", () => ({
-  env: { VITE_API_URL: "https://api.test" },
-}));
-
 vi.mock("~/session-sharing/delivery-client", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   sendSlackRecap: mocks.sendSlackRecap,

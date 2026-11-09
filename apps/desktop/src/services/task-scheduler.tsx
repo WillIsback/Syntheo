@@ -450,19 +450,6 @@ export function useScheduleTaskRun(
   });
 }
 
-export function useScheduleTaskRunCallback(
-  taskId: string,
-  arg?: unknown,
-  startAfter = 0,
-  config: TaskRunConfig = EMPTY_TASK_RUN_CONFIG,
-): () => string | undefined {
-  const scheduler = useTaskScheduler();
-  return useCallback(
-    () => scheduler?.scheduleTaskRun(taskId, arg, startAfter, config),
-    [arg, config, scheduler, startAfter, taskId],
-  );
-}
-
 function parseRetryDelays(value: number | string): number[] {
   const values = typeof value === "string" ? value.split(",") : [value];
   const delays = values

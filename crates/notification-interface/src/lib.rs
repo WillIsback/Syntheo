@@ -310,10 +310,6 @@ impl Notification {
         self.labels().expanded_schedule(remaining)
     }
 
-    pub fn is_persistent(&self) -> bool {
-        self.timeout.is_none()
-    }
-
     pub fn is_destructive_action(&self) -> bool {
         matches!(
             self.action_variant,

@@ -1,14 +1,12 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
-  canMergeTranscriptEntries,
   completeTranscriptContextSelection,
   focusTranscriptSelection,
   getTranscriptContextSelection,
   getTranscriptMergeTarget,
   getTranscriptRangeRects,
   getTranscriptSelectionFromRange,
-  getTranscriptSelectionFromHere,
   getTranscriptSelectionFromSegment,
   isRangeCoveredBySelection,
   mergeTranscriptSelections,
@@ -18,21 +16,10 @@ afterEach(() => {
   document.body.replaceChildren();
 });
 
-describe("transcript word selection", () => {
-  it("changes from the anchor to the segment end, preserving earlier words", () => {
-    const { container, words } = createReadSegment();
-    const fullRange = document.createRange();
-    fullRange.setStartBefore(words[0]);
-    fullRange.setEndAfter(words[2]);
-    const full = getTranscriptSelectionFromRange(fullRange, container)!;
-    const range = document.createRange();
-    range.selectNodeContents(words[1]);
-    const selected = getTranscriptSelectionFromRange(range, container)!;
-    const result = getTranscriptSelectionFromHere(selected, [full]);
-    expect(result?.groups[0].wordIds).toEqual(["word-2", "word-3"]);
-    expect(getTranscriptSelectionFromHere(selected, [])).toBeNull();
-  });
+const canMerge = (...args: Parameters<typeof getTranscriptMergeTarget>) =>
+  getTranscriptMergeTarget(...args) != null;
 
+describe("transcript word selection", () => {
   it("focuses and selects the chosen word after entering edit mode", () => {
     const { container, words } = createReadSegment();
     const range = document.createRange();
@@ -361,14 +348,10 @@ describe("transcript word selection", () => {
       ["c", entry("transcript-1", 2, null, "word-3")],
     ]);
 
-    expect(canMergeTranscriptEntries(new Set(["a", "c"]), order, entries)).toBe(
-      false,
-    );
-    expect(canMergeTranscriptEntries(new Set(["a", "b"]), order, entries)).toBe(
-      true,
-    );
+    expect(canMerge(new Set(["a", "c"]), order, entries)).toBe(false);
+    expect(canMerge(new Set(["a", "b"]), order, entries)).toBe(true);
     expect(
-      canMergeTranscriptEntries(
+      canMerge(
         new Set(["a", "b"]),
         order,
         new Map([
@@ -378,7 +361,7 @@ describe("transcript word selection", () => {
       ),
     ).toBe(true);
     expect(
-      canMergeTranscriptEntries(
+      canMerge(
         new Set(["a", "b"]),
         order,
         new Map([
@@ -399,7 +382,7 @@ describe("transcript word selection", () => {
       wordIds: ["word-1"],
     });
     expect(
-      canMergeTranscriptEntries(
+      canMerge(
         new Set(["a", "b"]),
         order,
         new Map([

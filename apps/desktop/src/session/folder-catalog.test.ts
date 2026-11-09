@@ -50,7 +50,6 @@ import {
   createNamedFolder,
   deleteNamedFolder,
   ensureFolderCatalog,
-  loadFolderWorkspaceId,
   renameNamedFolder,
 } from "./folder-catalog";
 
@@ -143,9 +142,5 @@ describe("folder catalog", () => {
       "permission denied",
     );
     expect(mocks.renameFolderCatalog).not.toHaveBeenCalled();
-  });
-
-  it("maps a missing workspace to an empty id", async () => {
-    await expect(loadFolderWorkspaceId("CS 101")).resolves.toBe("");
   });
 });

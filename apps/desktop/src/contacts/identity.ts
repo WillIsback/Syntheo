@@ -44,13 +44,6 @@ const PERSONAL_PROVIDER_LABELS = new Set([
   "web",
 ]);
 
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-export function isEmailPlaceholderName(name: string): boolean {
-  const trimmed = name.trim();
-  return !trimmed || EMAIL_PATTERN.test(trimmed);
-}
-
 const SECOND_LEVEL_SUFFIX_LABELS = new Set([
   "co",
   "com",

@@ -25,7 +25,6 @@ hound = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 specta = { workspace = true }
-tempfile = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true, features = ["macros", "rt", "sync", "time"] }
 tokio-util = { workspace = true }

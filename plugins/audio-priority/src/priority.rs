@@ -24,33 +24,6 @@ impl StoredDevice {
         }
     }
 
-    pub fn last_seen_relative(&self) -> String {
-        let now = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_secs();
-        let interval = now.saturating_sub(self.last_seen);
-
-        if interval < 60 {
-            "now".to_string()
-        } else if interval < 3600 {
-            let mins = interval / 60;
-            format!("{}m ago", mins)
-        } else if interval < 86400 {
-            let hours = interval / 3600;
-            format!("{}h ago", hours)
-        } else if interval < 604800 {
-            let days = interval / 86400;
-            format!("{}d ago", days)
-        } else if interval < 2592000 {
-            let weeks = interval / 604800;
-            format!("{}w ago", weeks)
-        } else {
-            let months = interval / 2592000;
-            format!("{}mo ago", months)
-        }
-    }
-
     pub fn update_last_seen(&mut self) {
         self.last_seen = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -91,16 +64,8 @@ impl PriorityManager {
         }
     }
 
-    pub fn from_state(state: PriorityState) -> Self {
-        Self { state }
-    }
-
     pub fn state(&self) -> &PriorityState {
         &self.state
-    }
-
-    pub fn into_state(self) -> PriorityState {
-        self.state
     }
 
     pub fn get_known_devices(&self) -> &[StoredDevice] {
@@ -118,24 +83,12 @@ impl PriorityManager {
         }
     }
 
-    pub fn get_stored_device(&self, uid: &str) -> Option<&StoredDevice> {
-        self.state.known_devices.iter().find(|d| d.uid == uid)
-    }
-
     pub fn forget_device(&mut self, uid: &str) {
         self.state.known_devices.retain(|d| d.uid != uid);
         self.state.input_priorities.retain(|u| u != uid);
         self.state.output_priorities.retain(|u| u != uid);
         self.state.hidden_inputs.retain(|u| u != uid);
         self.state.hidden_outputs.retain(|u| u != uid);
-    }
-
-    pub fn is_hidden(&self, device: &AudioDevice) -> bool {
-        let uid = device.id.as_str();
-        match device.direction {
-            AudioDirection::Input => self.state.hidden_inputs.contains(&uid.to_string()),
-            AudioDirection::Output => self.state.hidden_outputs.contains(&uid.to_string()),
-        }
     }
 
     pub fn hide_device(&mut self, device: &AudioDevice) {
@@ -190,14 +143,6 @@ impl PriorityManager {
         sorted
     }
 
-    pub fn save_priorities(&mut self, devices: &[AudioDevice], direction: AudioDirection) {
-        let uids: Vec<String> = devices.iter().map(|d| d.id.as_str().to_string()).collect();
-        match direction {
-            AudioDirection::Input => self.state.input_priorities = uids,
-            AudioDirection::Output => self.state.output_priorities = uids,
-        }
-    }
-
     pub fn move_device_to_top(&mut self, device: &AudioDevice) {
         let uid = device.id.as_str().to_string();
         let priorities = match device.direction {
@@ -206,18 +151,6 @@ impl PriorityManager {
         };
         priorities.retain(|u| u != &uid);
         priorities.insert(0, uid);
-    }
-
-    pub fn get_highest_priority_device<'a>(
-        &self,
-        devices: &'a [AudioDevice],
-        direction: AudioDirection,
-    ) -> Option<&'a AudioDevice> {
-        let sorted = self.sort_by_priority(devices, direction);
-        sorted
-            .into_iter()
-            .next()
-            .and_then(|d| devices.iter().find(|dev| dev.id == d.id))
     }
 }
 

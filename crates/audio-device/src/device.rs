@@ -138,16 +138,6 @@ impl AudioDevice {
         self.is_default = is_default;
         self
     }
-
-    pub fn with_volume(mut self, volume: f32) -> Self {
-        self.volume = Some(volume);
-        self
-    }
-
-    pub fn with_muted(mut self, is_muted: bool) -> Self {
-        self.is_muted = Some(is_muted);
-        self
-    }
 }
 
 #[cfg(test)]

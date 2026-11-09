@@ -1,4 +1,4 @@
-import { createContext, type ReactNode, useContext, useMemo } from "react";
+import { createContext, type ReactNode, useMemo } from "react";
 
 import { useConfigValues } from "~/shared/config";
 import { useTabs } from "~/store/zustand/tabs";
@@ -60,16 +60,4 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       {children}
     </NotificationContext.Provider>
   );
-}
-
-const DEFAULT_NOTIFICATION_STATE: NotificationState = {
-  hasActiveBanner: false,
-  hasActiveEnhancement: false,
-  notificationCount: 0,
-  shouldShowBadge: false,
-};
-
-export function useNotifications() {
-  const context = useContext(NotificationContext);
-  return context ?? DEFAULT_NOTIFICATION_STATE;
 }

@@ -8,7 +8,6 @@ vi.mock("~/db", () => ({
 }));
 
 import {
-  formatDictionaryTerms,
   normalizeKeywordList,
   parseDictionaryTermsJson,
   parseDictionaryTermsText,
@@ -264,11 +263,5 @@ describe("dictionary term helpers", () => {
     },
   ])("$name", ({ run, expected }) => {
     expect(run()).toEqual(expected);
-  });
-
-  it("formats stored terms one per line", () => {
-    expect(formatDictionaryTerms(["Syntheo", "Parakeet TDT"])).toBe(
-      "Syntheo\nParakeet TDT",
-    );
   });
 });

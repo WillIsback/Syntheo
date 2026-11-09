@@ -86,11 +86,3 @@ export function resolveLiveSessionTitle(
   }
   return storeTitle ?? liveTitle.value;
 }
-
-export function useSessionTitle(
-  sessionId: string,
-  storeTitle: string | undefined,
-): string {
-  const liveTitle = useLiveTitle((s) => s.titles[sessionId]);
-  return resolveLiveSessionTitle(liveTitle, storeTitle);
-}

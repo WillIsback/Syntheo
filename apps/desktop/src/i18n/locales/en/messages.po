@@ -491,7 +491,6 @@ msgid "Are you talking to {firstName} right now?"
 msgstr "Are you talking to {firstName} right now?"
 
 #: src/chat/components/input/index.tsx
-#: src/shared/chat-cta.tsx
 msgid "Ask anything"
 msgstr "Ask anything"
 
@@ -502,10 +501,6 @@ msgstr "Ask before stopping when a meeting may have ended. When alerts are off, 
 #: src/composer/index.tsx
 msgid "Ask Syntheo AI anything"
 msgstr "Ask Syntheo AI anything"
-
-#: src/shared/chat-cta.tsx
-msgid "Ask Syntheo anything"
-msgstr "Ask Syntheo anything"
 
 #: src/session/components/capsule/index.tsx
 #: src/shared/shortcuts.ts
@@ -1262,11 +1257,6 @@ msgstr "Create new speaker"
 msgctxt "export field"
 msgid "Created"
 msgstr "Created"
-
-#. placeholder {0}: apiKey.created_at.slice(0, 10)
-#: src/settings/developers/api-key-row.tsx
-msgid "Created {0}"
-msgstr "Created {0}"
 
 #: src/settings/automations/index.tsx
 msgid "Created {createdAt}"
@@ -2286,11 +2276,6 @@ msgstr "Last run {relative}: {0}"
 #: src/settings/automations/starter-config.tsx
 msgid "Last run failed {relative}: {0}"
 msgstr "Last run failed {relative}: {0}"
-
-#. placeholder {0}: apiKey.last_used_at.slice(0, 10)
-#: src/settings/developers/api-key-row.tsx
-msgid "Last used {0}"
-msgstr "Last used {0}"
 
 #: src/chat/components/message/error.tsx
 msgid "Learn how to fix this"
@@ -3761,10 +3746,6 @@ msgstr "Review memo"
 #: src/session/components/pending-proposals-banner.tsx
 msgid "Review summary"
 msgstr "Review summary"
-
-#: src/settings/developers/api-key-row.tsx
-msgid "Revoke"
-msgstr "Revoke"
 
 #: src/settings/dictation-shortcut.tsx
 msgid "Right Command"

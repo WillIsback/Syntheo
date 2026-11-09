@@ -67,23 +67,6 @@ impl Db {
         &self.change_notifier
     }
 
-    pub async fn connect_local(path: impl AsRef<Path>) -> Result<Self, sqlx::Error> {
-        ensure_parent_dir(path.as_ref()).await?;
-        let options = apply_internal_connect_policy(SqliteConnectOptions::new())
-            .filename(path)
-            .create_if_missing(true)
-            .pragma("journal_mode", "WAL");
-        let (change_notifier, pool_options) = syntheo_db_change::ChangeNotifier::new();
-        let pool = apply_internal_pool_policy(pool_options)
-            .connect_with(options)
-            .await?;
-
-        Ok(Self {
-            pool,
-            change_notifier,
-        })
-    }
-
     pub async fn connect_memory() -> Result<Self, sqlx::Error> {
         let options =
             apply_internal_connect_policy(SqliteConnectOptions::from_str("sqlite::memory:")?);

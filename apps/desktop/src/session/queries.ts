@@ -32,7 +32,6 @@ export {
   loadSessionSummariesByFolder,
   useFolderIcons,
   useFolderPaths,
-  useFolderWorkspaces,
 } from "./queries/folders";
 export {
   applySessionProposal,
@@ -49,7 +48,6 @@ export {
 } from "./queries/participants";
 export {
   loadSessionEvent,
-  preloadSession,
   updateSession,
   useSession,
   useSessionHasTranscript,
