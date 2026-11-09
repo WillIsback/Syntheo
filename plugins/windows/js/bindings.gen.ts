@@ -80,7 +80,10 @@ export type FloatingBarDictationAction = {
 	action: DictationPanelAction,
 };
 
-/**  « Mettre en pause » ou « Reprendre l'écoute » depuis le bandeau flottant (issue 353). */
+/**
+ *  « Mettre en pause » ou « Reprendre l'écoute » depuis le bandeau flottant (issue 353), couper
+ *  ou rétablir le micro (issue 447).
+ */
 export type FloatingBarListeningAction = {
 	action: ListeningPanelAction,
 };
@@ -133,6 +136,8 @@ export type FloatingBarState = {
 	sessionId?: string | null,
 	/**  Durée écoutée, pauses exclues (issue 448) : affichée dans la pastille de réunion. */
 	elapsedSeconds?: number | null,
+	/**  Micro coupé pendant l'écoute (issue 447) : la bascule de la pastille l'affiche barré. */
+	micMuted?: boolean | null,
 };
 
 export type FloatingBarStatus = "recording" | "reconnecting" | "error" | 
@@ -163,7 +168,7 @@ export type FloatingTranscriptBubble = {
 	overlapsNext: boolean,
 };
 
-export type ListeningPanelAction = "pause" | "resume";
+export type ListeningPanelAction = "pause" | "resume" | "muteMic" | "unmuteMic";
 
 export type LiveCaptionOverlayState = {
 	state: LiveCaptionState,

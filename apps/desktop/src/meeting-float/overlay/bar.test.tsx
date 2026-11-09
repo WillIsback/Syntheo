@@ -1,4 +1,6 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { FloatingBarState } from "@syntheo/plugin-windows";
@@ -9,6 +11,7 @@ import {
   FLOATING_PILL_SLOTS,
   formatListeningDuration,
 } from "./layout";
+import { tokensFor } from "./palette";
 
 vi.mock("@syntheo/ui/components/ui/dancing-sticks", () => ({
   DancingSticks: ({ amplitude }: { amplitude: number }) => (
@@ -102,6 +105,13 @@ describe("FloatingBarOverlay meeting pill (issue 448)", () => {
         0,
       ),
     ).toBe(FLOATING_BAR_RECORDING_PILL_WIDTH);
+    // Vitest s'exécute depuis apps/desktop : même largeur que la fenêtre native.
+    const rust = readFileSync(
+      join(process.cwd(), "../../plugins/windows/src/window/floating_bar.rs"),
+      "utf8",
+    );
+    const native = /RECORDING_PILL_WIDTH: f64 = ([\d.]+);/.exec(rust)?.[1];
+    expect(Number(native)).toBe(FLOATING_BAR_RECORDING_PILL_WIDTH);
   });
 
   it.each(["recording", "reconnecting", "error"] as const)(
@@ -205,5 +215,60 @@ describe("FloatingBarOverlay meeting pill (issue 448)", () => {
     expect(pill.className).toContain("h-full");
     expect(pill.className).toContain("w-full");
     expect(pill.style.top).toBe("");
+  });
+});
+
+// Issue 447 : la pastille reçoit la bascule du micro, avec le même état coupé
+// que la capsule (fond `recording`, pictogramme barré).
+describe("FloatingBarOverlay microphone toggle (issue 447)", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  const toggle = () =>
+    screen.getByRole("button", { name: "Mute the microphone" });
+
+  it("sits between the separator and Pause, and says what a click does", () => {
+    renderPill();
+
+    expect(toggle().getAttribute("aria-pressed")).toBe("false");
+    expect(toggle().title).toBe("Mute the microphone");
+    expect(toggle().style.background).toBe("");
+    const pause = screen.getByRole("button", { name: "Pause listening" });
+    expect(
+      toggle().compareDocumentPosition(pause) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(toggle().getAttribute("data-tauri-drag-region")).toBe("false");
+  });
+
+  it("shows a muted microphone on the recording colour", () => {
+    renderPill({ micMuted: true });
+
+    expect(toggle().getAttribute("aria-pressed")).toBe("true");
+    expect(toggle().title).toBe("Unmute the microphone");
+    // Couleur `recording` de la palette (jetons DesignPalettes), pas une
+    // valeur en dur.
+    expect(toggle().style.background).not.toBe("");
+    expect(toggle().style.getPropertyValue("--pill-hover")).toBe(
+      tokensFor("light").recording,
+    );
+  });
+
+  it("asks for the toggle on click", () => {
+    const onToggleMic = vi.fn();
+    renderPill({ micMuted: true }, { onToggleMic });
+
+    fireEvent.click(toggle());
+
+    expect(onToggleMic).toHaveBeenCalledOnce();
+  });
+
+  it("is not offered during a pause", () => {
+    renderPill({ status: "paused", micMuted: true });
+
+    expect(
+      screen.queryByRole("button", { name: "Mute the microphone" }),
+    ).toBeNull();
   });
 });

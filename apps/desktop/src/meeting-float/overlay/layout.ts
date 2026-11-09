@@ -15,19 +15,22 @@ export const FLOATING_BAR_EXPANDED_RADIUS = 21;
 export const FLOATING_BAR_PAUSED_CONTROLS_WIDTH = 232;
 
 // Pastille d'écoute (issue 448), de gauche à droite. La fenêtre native a
-// exactement cette largeur : RECORDING_PILL_WIDTH côté Rust (floating_bar.rs).
+// exactement cette largeur : RECORDING_PILL_WIDTH côté Rust (floating_bar.rs),
+// comparée par bar.test.tsx.
 export const FLOATING_PILL_SLOTS = {
   leadingPadding: FLOATING_BAR_COMPACT_HORIZONTAL_PADDING,
   dot: 22,
   duration: 38,
   level: 28,
   separator: 9,
+  // Bascule du micro (issue 447) : bouton de 30 px et son écart.
+  microphone: FLOATING_BAR_COMPACT_ICON_SIZE + 2,
   pause: 70,
   buttonGap: 2,
   finish: 85,
   trailingPadding: FLOATING_BAR_COMPACT_HORIZONTAL_PADDING,
 } as const;
-export const FLOATING_BAR_RECORDING_PILL_WIDTH = 262;
+export const FLOATING_BAR_RECORDING_PILL_WIDTH = 294;
 // Au-delà d'une heure, la durée passe de mm:ss à h:mm:ss : LONG_DURATION_* côté
 // Rust élargit la fenêtre d'autant.
 export const FLOATING_PILL_LONG_DURATION_SECONDS = 3600;

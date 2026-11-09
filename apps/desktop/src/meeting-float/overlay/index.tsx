@@ -101,6 +101,11 @@ export function FloatingBarOverlayScreen() {
             action: "resume",
           });
         }}
+        onToggleMic={() => {
+          void windowsEvents.floatingBarListeningAction.emit({
+            action: state.micMuted ? "unmuteMic" : "muteMic",
+          });
+        }}
         onOpenNote={() => {
           void windowsEvents.floatingBarOpenMain.emit({});
         }}

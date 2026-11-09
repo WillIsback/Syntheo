@@ -249,7 +249,8 @@ pub struct FloatingBarDictationAction {
     pub action: DictationPanelAction,
 }
 
-/// « Mettre en pause » ou « Reprendre l'écoute » depuis le bandeau flottant (issue 353).
+/// « Mettre en pause » ou « Reprendre l'écoute » depuis le bandeau flottant (issue 353), couper
+/// ou rétablir le micro (issue 447).
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone, specta::Type, tauri_specta::Event)]
 #[serde(rename_all = "camelCase")]
 pub struct FloatingBarListeningAction {
@@ -261,6 +262,8 @@ pub struct FloatingBarListeningAction {
 pub enum ListeningPanelAction {
     Pause,
     Resume,
+    MuteMic,
+    UnmuteMic,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone, specta::Type)]
