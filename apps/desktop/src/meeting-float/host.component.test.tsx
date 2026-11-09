@@ -54,6 +54,37 @@ const mocks = vi.hoisted(() => ({
   subscribeListener: vi.fn(() => vi.fn()),
 }));
 
+const focusMocks = vi.hoisted(() => ({
+  handlers: new Map<string, () => void>(),
+  windowHide: vi.fn(async () => undefined),
+  windowShow: vi.fn(async () => undefined),
+}));
+
+vi.mock("@tauri-apps/api/event", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@tauri-apps/api/event")>()),
+  listen: vi.fn(
+    async (
+      event: string,
+      handler: () => void,
+      options?: { target?: { label?: string } },
+    ) => {
+      const key = `${options?.target?.label}:${event}`;
+      focusMocks.handlers.set(key, handler);
+      return () => focusMocks.handlers.delete(key);
+    },
+  ),
+}));
+
+vi.mock("@tauri-apps/api/window", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@tauri-apps/api/window")>()),
+  Window: {
+    getByLabel: vi.fn(async () => ({
+      hide: focusMocks.windowHide,
+      show: focusMocks.windowShow,
+    })),
+  },
+}));
+
 vi.mock("@tauri-apps/plugin-os", () => ({
   platform: () => "macos",
 }));
@@ -280,6 +311,57 @@ describe("FloatingMeetingWindowHost", () => {
     expect(mocks.listenerState.setMuted.mock.calls).toEqual([[true], [false]]);
     expect(mocks.listenerState.pause).not.toHaveBeenCalled();
     expect(mocks.listenerState.stop).not.toHaveBeenCalled();
+  });
+
+  // Issue 527 : la pastille se retire quand la note écoutée est au premier plan.
+  describe("listened note in view", () => {
+    const fire = async (label: string, event: "focus" | "blur") => {
+      await act(async () => {
+        focusMocks.handlers.get(`${label}:tauri://${event}`)?.();
+      });
+    };
+    const openTab = (id: string) =>
+      act(() => {
+        useTabs.setState({
+          currentTab: { type: "sessions", id } as never,
+        });
+      });
+
+    afterEach(() => {
+      useTabs.setState({ currentTab: null });
+      vi.restoreAllMocks();
+    });
+
+    it("hides the pill while the main window shows the listened note", async () => {
+      vi.spyOn(document, "hasFocus").mockReturnValue(false);
+      render(<FloatingMeetingWindowHost />);
+      await waitFor(() => expect(mocks.floatingBarShow).toHaveBeenCalledOnce());
+      await waitFor(() =>
+        expect(focusMocks.handlers.has("main:tauri://focus")).toBe(true),
+      );
+
+      await openTab("session-1");
+      await fire("main", "focus");
+      await waitFor(() => expect(focusMocks.windowHide).toHaveBeenCalledOnce());
+
+      // Perte du focus : la pastille revient après la temporisation.
+      await fire("main", "blur");
+      expect(focusMocks.windowShow).not.toHaveBeenCalled();
+      await waitFor(() => expect(focusMocks.windowShow).toHaveBeenCalledOnce());
+      expect(mocks.floatingBarShow).toHaveBeenCalledOnce();
+      expect(mocks.floatingBarHide).not.toHaveBeenCalled();
+    });
+
+    it("shows the pill again on another tab", async () => {
+      vi.spyOn(document, "hasFocus").mockReturnValue(true);
+      await openTab("session-1");
+      render(<FloatingMeetingWindowHost />);
+      await waitFor(() => expect(mocks.floatingBarUpdate).toHaveBeenCalled());
+      expect(mocks.floatingBarShow).not.toHaveBeenCalled();
+
+      await openTab("other-note");
+      await waitFor(() => expect(mocks.floatingBarShow).toHaveBeenCalledOnce());
+    });
   });
 
   it("gives an active meeting ownership of the panel", async () => {
