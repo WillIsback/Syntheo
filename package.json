@@ -17,7 +17,7 @@
     "braces": "3.0.3",
     "decode-uri-component": "0.5.1",
     "dprint": "^0.64.3",
-    "eslint": "^9.39.4",
+    "eslint": "^10.14.0",
     "extract-zip": "2.0.1",
     "lint-staged": "^17.6.0",
     "node-forge": "1.4.2",
