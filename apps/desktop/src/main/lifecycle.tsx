@@ -9,6 +9,7 @@ import { buildChatTools } from "~/chat/tools";
 import { searchContacts } from "~/contacts/queries";
 import { useRegisterTools } from "~/contexts/tool";
 import { DictationLifecycle } from "~/dictation/lifecycle";
+import { loadSessionFolderTemplateId } from "~/folders/folder-template";
 import { takePendingWelcomeSession } from "~/onboarding/welcome-note";
 import { useSearchEngine } from "~/search/contexts/engine";
 import { initEnhancerService } from "~/services/enhancer";
@@ -124,6 +125,7 @@ function EnhancerInit() {
       getModel: () => modelRef.current,
       getLLMConn: () => llmConnRef.current,
       getSelectedTemplateId: () => templateIdRef.current || undefined,
+      getFolderTemplateId: loadSessionFolderTemplateId,
     });
 
     return () => service.dispose();
