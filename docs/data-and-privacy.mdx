@@ -3,6 +3,8 @@ title: "Données et confidentialité"
 description: "Ce que Syntheo stocke sur votre poste, ce qui en sort, et pourquoi l'audio n'est jamais conservé."
 ---
 
+import { AppSettings, DataFlows, SettingsPath } from "/snippets/assist.gen.jsx";
+
 Syntheo est un client local. Il n'a ni compte, ni serveur éditeur, ni synchronisation, et n'émet aucune télémétrie. Vos données restent sur votre poste ; seuls les serveurs d'inférence que **vous** configurez reçoivent du contenu de réunion.
 
 Pour une évaluation RGPD complète (tableau des données, flux réseau, garanties techniques, responsabilités), voir [Syntheo Desktop et le RGPD](/conformite/rgpd).
@@ -54,6 +56,10 @@ Conséquence : si la transcription s'interrompt (serveur injoignable, clé refus
 
 Aucun en-tête n'identifie votre appareil. Syntheo ne bascule jamais vers un autre service si votre serveur ne répond pas.
 
+Choisissez une activité dans le schéma ci-dessous : il indique la destination qui reçoit des données, ce qui est envoyé et quand. Pour l'écoute d'une réunion, cochez la case du micro coupé : Syntheo envoie alors du silence à la place du micro.
+
+<DataFlows />
+
 Hors inférence, deux flux mineurs subsistent, sans contenu de réunion : l'affichage des notes de version d'une version autre que celle installée (requête vers GitHub) et quelques icônes d'interface chargées depuis `api.iconify.design`.
 
 Rien n'est envoyé à l'éditeur : pas de compte, pas de statistiques d'usage, pas de rapport d'erreur, pas de vérification de mise à jour. Les mises à jour se font en téléchargeant la nouvelle version depuis les [GitHub Releases](https://github.com/WillIsback/syntheo-desktop/releases/latest).
@@ -61,6 +67,18 @@ Rien n'est envoyé à l'éditeur : pas de compte, pas de statistiques d'usage, p
 <Note>
   Un serveur d'inférence exploité par un tiers devient votre sous-traitant au sens du RGPD (art. 28) : vérifiez le contrat et la localisation des données. Un serveur auto-hébergé reste sous votre contrôle.
 </Note>
+
+## Verrouiller l'application
+
+L'écran « Confidentialité » contient un seul réglage, « Verrouiller l'application » :
+
+<SettingsPath steps={["Paramètres", "Avancé", "Confidentialité"]} />
+
+Activé, il exige la reconnaissance faciale Windows Hello, le code PIN ou le mot de passe à l'ouverture de Syntheo. Syntheo vous demande aussi de vous authentifier pour modifier ce réglage. Sous Linux, l'authentification de l'appareil n'est pas disponible : le réglage reste grisé, avec la mention « L'authentification de l'appareil n'est pas disponible sur cet ordinateur. ».
+
+Dans la reproduction, choisissez le système montré sous l'écran : sous Windows, l'interrupteur devient actif. Le groupe « Avancé » du menu contient aussi « Autorisations », décrit dans [Dépannage](/troubleshooting).
+
+<AppSettings section="privacy" focus="lock" />
 
 ## Supprimer vos données
 
@@ -72,4 +90,6 @@ Rien n'est envoyé à l'éditeur : pas de compte, pas de statistiques d'usage, p
 
 Vous êtes responsable du traitement : informez les participants avant d'enregistrer une réunion. En France, enregistrer une conversation privée à leur insu est puni par l'article 226-1 du Code pénal.
 
-Au démarrage de chaque capture, Syntheo affiche un rappel. Il est activé par défaut ; pour le désactiver, ouvrez **Paramètres → Mes réunions → Réunions** et désactivez « Rappeler aux participants l'enregistrement ».
+Au démarrage de chaque capture, Syntheo affiche un rappel. Il est activé par défaut. Pour le désactiver, désactivez « Rappeler aux participants l'enregistrement » dans l'écran « Réunions » :
+
+<SettingsPath steps={["Paramètres", "Mes réunions", "Réunions"]} />

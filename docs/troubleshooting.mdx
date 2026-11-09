@@ -3,6 +3,12 @@ title: "Dépannage"
 description: "Résoudre les problèmes courants : serveurs de transcription et de synthèse injoignables, HTTPS, liste de modèles vide, audio sous Linux et Windows, installation."
 ---
 
+import { Kbd, SettingsPath, Troubleshooter } from "/snippets/assist.gen.jsx";
+
+Choisissez votre symptôme dans le vérificateur ci-dessous. Il liste les points à vérifier et ouvre l'écran concerné de l'application : la carte du serveur, l'écran « Autorisations », la section « Audio » des réunions, ou une note en écoute. Pour « La transcription s'arrête pendant la réunion », changez la cause simulée, puis cliquez sur « Rétablir le réseau ». Les sections de la page détaillent chaque cas.
+
+<Troubleshooter />
+
 ## Le serveur de transcription ou de synthèse est injoignable
 
 Syntheo ne contient aucun modèle : il dépend entièrement des serveurs dont vous avez saisi l'adresse dans **Paramètres → Transcription** et **Paramètres → Synthèse**.
@@ -65,17 +71,23 @@ Pour limiter ces trous, vérifiez la stabilité du réseau entre votre poste et 
 
 ## Il manque du son : microphone ou audio système
 
-Ouvrez **Paramètres → Avancé → Autorisations**. Sous Linux et Windows, la section « Audio » affiche deux lignes :
+Ouvrez l'écran « Autorisations » :
+
+<SettingsPath steps={["Paramètres", "Avancé", "Autorisations"]} />
+
+Sous Linux et Windows, la section « Audio » affiche deux lignes :
 
 - « Microphone » : votre voix ;
 - « Audio système » : la voix des autres participants.
 
 Syntheo teste réellement chaque source audio. Une ligne en rouge signifie que le test a échoué. Corrigez la cause, puis cliquez sur la flèche de la ligne pour relancer le test. Sous Linux et Windows, ce bouton n'ouvre pas les réglages du système.
 
-Vérifiez ensuite **Paramètres → Réunions**, section « Audio » :
+Vérifiez ensuite la section « Audio » de l'écran « Réunions » :
+
+<SettingsPath steps={["Paramètres", "Mes réunions", "Réunions", "Audio"]} />
 
 - « Microphone » et « Son système » indiquent le micro et la sortie captés, avec leur niveau sonore en direct. Choisissez sous « Son système » la sortie où vous entendez les autres participants ; « Capturé en ce moment : » donne la sortie réellement captée. Le choix s'applique à la prochaine écoute. Voir [Enregistrer une réunion](/meetings), section « Choisir le micro et la sortie captée ».
-- Si une source a été coupée pendant l'écoute, son icône est barrée sur fond rouge dans la capsule. Rétablissez-la d'un clic, ou avec <kbd>Ctrl</kbd> + <kbd>Maj</kbd> + <kbd>M</kbd> (micro) et <kbd>Ctrl</kbd> + <kbd>Maj</kbd> + <kbd>S</kbd> (son système).
+- Si une source a été coupée pendant l'écoute, son icône est barrée sur fond rouge dans la capsule. Rétablissez-la d'un clic, ou avec <Kbd keys="Ctrl+Maj+M" /> (micro) et <Kbd keys="Ctrl+Maj+S" /> (son système).
 
 <Tabs>
   <Tab title="Linux">

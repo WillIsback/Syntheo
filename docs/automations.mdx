@@ -3,9 +3,15 @@ title: "Automatisations"
 description: "Enchaînez des étapes locales après vos réunions : export Markdown, génération, notes, notifications, webhook ou commande."
 ---
 
+import { AutomationEditor, Kbd, SettingsPath } from "/snippets/assist.gen.jsx";
+
 Les automatisations enchaînent des étapes sur votre ordinateur après vos réunions : exporter la note en Markdown, générer un texte avec votre modèle de langage, écrire une note, copier dans le presse-papiers, afficher une notification. Deux actions avancées envoient du JSON vers une adresse (webhook) ou lancent un programme local. Les actions vers des services en ligne (Slack, Notion, Linear, Google Drive) ont été retirées.
 
-Ouvrez la vue **Automatisations** depuis **Paramètres → Avancé → « Automatisations »**, ou depuis la palette <kbd>Ctrl</kbd> + <kbd>K</kbd>. La vue affiche les modèles (« Partir d'un modèle ») et la liste « Mes automatisations ». La colonne de gauche reprend « Mes automatisations », avec un champ de recherche. Le chat reste ouvert à droite pour vous aider à construire l'automatisation (voir [Construire une automatisation avec le chat](#construire-une-automatisation-avec-le-chat)).
+Ouvrez la vue **Automatisations** depuis les Paramètres, ou depuis la palette <Kbd keys="Ctrl+K" /> :
+
+<SettingsPath steps={["Paramètres", "Avancé", "Automatisations"]} />
+
+La vue affiche les modèles (« Partir d'un modèle ») et la liste « Mes automatisations ». La colonne de gauche reprend « Mes automatisations », avec un champ de recherche. Le chat reste ouvert à droite pour vous aider à construire l'automatisation (voir [Construire une automatisation avec le chat](#construire-une-automatisation-avec-le-chat)).
 
 ## Partir d'un modèle
 
@@ -34,6 +40,10 @@ Cliquez sur « Nouvelle automatisation », dans la vue ou via **+** en haut de l
 4. Configurez chaque action. Une action incomplète porte le badge « Configuration requise ».
 5. Cliquez sur « Tester » pour vérifier le résultat sur une note (voir [Tester sur une note](#tester-sur-une-note)).
 6. Cliquez sur « Enregistrer et activer ».
+
+Dans la reproduction ci-dessous, l'automatisation « Extraire les tâches » est ouverte. Changez le déclencheur, ajoutez une étape, insérez une variable, puis cliquez sur « Tester ». Retirez l'étape 2 : la pastille « Texte généré » de l'étape suivante devient « Sortie introuvable » et « Enregistrer et activer » se grise. Les repères désignent la colonne « Mes automatisations » et **+** (1), « Quand » (2), « Ajouter une étape » (3), la ligne « Insérer » (4) et « Tester » (5). Supprimez l'automatisation depuis le menu **⋯** pour revenir à la vue d'ensemble et à « Partir d'un modèle ».
+
+<AutomationEditor />
 
 Syntheo enregistre vos modifications au fil de l'eau. Tant qu'elle n'est pas activée, l'automatisation reste à l'état « Brouillon ». Une automatisation ne peut être activée que si elle contient au moins une action, que chaque action est configurée et qu'aucune étape n'utilise le résultat d'une étape absente ou placée après elle. Cliquez sur « Désactiver » pour conserver la configuration sans l'exécuter. Une automatisation lancée à la main n'a pas de bouton d'activation : elle porte le badge « Manuelle ».
 
@@ -124,6 +134,10 @@ Cliquez sur « Tester » dans l'éditeur pour lancer l'automatisation telle qu'e
 3. Pour vérifier l'enchaînement sans agir, cochez « Simuler les étapes à effet réel ». Ces étapes décrivent alors ce qu'elles feraient, sans rien écrire, envoyer ni lancer. La génération s'exécute tout de même, pour que les étapes suivantes reçoivent son texte. La case est décochée par défaut : le test est réel.
 4. Cliquez sur « Lancer le test ».
 
+Dans la reproduction, le panneau « Tester sur une note » est ouvert : cochez ou décochez « Simuler les étapes à effet réel », puis lancez le test.
+
+<AutomationEditor testing markers={false} />
+
 Le « Résultat du test » affiche chaque étape : réussie, « Simulée », en erreur avec son message, ou « Non lancée » après une erreur. Il montre aussi le texte généré (« Tout afficher » pour le lire en entier), le fichier exporté, à ouvrir ou à afficher avec « Afficher dans le dossier », la note créée avec « Ouvrir la note », et la durée totale.
 
 Le test ne change ni la dernière exécution ni la liste des notes déjà traitées : les déclencheurs automatiques ne sont pas affectés. Un test réel d'une étape « Lancer une commande » demande la même confirmation qu'une exécution normale.
@@ -145,7 +159,7 @@ Vous pouvez lancer une automatisation sur la note ouverte, quel que soit son dé
 
 - **Menu ⋯ de la note** : groupe « Lancer une automatisation ». Il n'apparaît pas pendant l'écoute.
 - **Capsule, à l'étape Synthèse** : bouton « Automatisations ». Il n'apparaît que si au moins une automatisation est prête.
-- **« Demander à la note »** (<kbd>Ctrl</kbd> + <kbd>J</kbd>) : sous les suggestions du chat vide, la section « Lancer une automatisation » liste les automatisations prêtes.
+- **« Demander à la note »** (<Kbd keys="Ctrl+J" />) : sous les suggestions du chat vide, la section « Lancer une automatisation » liste les automatisations prêtes.
 
 Une notification annonce le résultat : l'automatisation « a été lancée sur cette note », avec le résultat de chaque étape (par exemple le fichier exporté), ou « a échoué sur cette note », avec l'erreur. Un lancement à la main met à jour la dernière exécution, sans modifier le comportement des déclencheurs automatiques pour cette note.
 
