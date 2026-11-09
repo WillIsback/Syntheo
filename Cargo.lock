@@ -11861,23 +11861,18 @@ dependencies = [
  "db-execute",
  "db-migrate",
  "db-reactive",
- "fs-sync-core",
  "serde",
  "serde_json",
  "session-ingest",
- "sha2 0.11.1",
  "specta",
  "specta-typescript",
  "sqlx",
- "storage",
  "tauri",
  "tauri-plugin",
  "tauri-specta",
- "tempfile",
  "thiserror 2.0.21",
  "tokio",
  "tracing",
- "uuid",
 ]
 
 [[package]]

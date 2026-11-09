@@ -4,9 +4,6 @@ import type {
   GetMeetingInput,
   GetMeetingTranscriptInput as GeneratedGetMeetingTranscriptInput,
   GetRecurringMeetingHistoryInput as GeneratedGetRecurringMeetingHistoryInput,
-  LegacyCleanupResult,
-  LegacyCleanupStatus,
-  LegacyImportReport,
   ListMeetingsInput as GeneratedListMeetingsInput,
   Meeting,
   MeetingPage,
@@ -18,9 +15,6 @@ import type {
 
 export type {
   GetMeetingInput,
-  LegacyCleanupResult,
-  LegacyCleanupStatus,
-  LegacyImportReport,
   Meeting,
   MeetingPage,
   SessionIngestApplyResult,
@@ -93,22 +87,6 @@ export function executeProxy(
   method: "run" | "all" | "get" | "values",
 ): Promise<{ rows: unknown[] }> {
   return invoke("plugin:db|execute_proxy", { sql, params, method });
-}
-
-export function getLegacyImportReport(): Promise<LegacyImportReport> {
-  return invoke("plugin:db|get_legacy_import_report");
-}
-
-export function getLegacyCleanupStatus(): Promise<LegacyCleanupStatus> {
-  return invoke("plugin:db|get_legacy_cleanup_status");
-}
-
-export function cleanupLegacyFiles(): Promise<LegacyCleanupResult> {
-  return invoke("plugin:db|cleanup_legacy_files");
-}
-
-export function runLegacyImport(dryRun = false): Promise<string> {
-  return invoke("plugin:db|run_legacy_import", { dryRun });
 }
 
 export function applySessionIngest(

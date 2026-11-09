@@ -613,7 +613,6 @@ msgstr "Can't import this audio"
 #: src/session/components/capsule/index.tsx
 #: src/settings/ai/shared/server-address.tsx
 #: src/settings/dictionary/index.tsx
-#: src/settings/general/storage/legacy-cleanup.tsx
 #: src/shared/ui/destructive-confirmation-dialog.tsx
 #: src/sidebar/folder-name-dialog.tsx
 #: src/templates/auto-format-examples-dialog.tsx
@@ -687,10 +686,6 @@ msgstr "Check the spelling, or try a shorter word."
 #: src/imports/screen.tsx
 msgid "Checking installed meeting assistants…"
 msgstr "Checking installed meeting assistants…"
-
-#: src/settings/general/storage/legacy-cleanup.tsx
-msgid "Checking migration..."
-msgstr "Checking migration..."
 
 #: src/settings/developers/cli.tsx
 msgid "Checking…"
@@ -778,18 +773,6 @@ msgstr "Choose the colors of Syntheo. Each palette follows the light or dark the
 #: src/settings/general/audio-settings.tsx
 msgid "Choose the microphone that captures your voice."
 msgstr "Choose the microphone that captures your voice."
-
-#: src/settings/general/storage/legacy-cleanup.tsx
-msgid "Clean Up"
-msgstr "Clean Up"
-
-#: src/settings/general/storage/legacy-cleanup.tsx
-msgid "Clean up legacy files?"
-msgstr "Clean up legacy files?"
-
-#: src/settings/general/storage/legacy-cleanup.tsx
-msgid "Cleaning up..."
-msgstr "Cleaning up..."
 
 #: src/contacts/related-notes.tsx
 #: src/contacts/shared.tsx
@@ -2420,18 +2403,6 @@ msgstr "Microphone unavailable"
 msgid "Microphone unavailable. System audio continues"
 msgstr "Microphone unavailable. System audio continues"
 
-#: src/settings/general/storage/legacy-cleanup.tsx
-msgid "Migration complete"
-msgstr "Migration complete"
-
-#: src/settings/general/storage/legacy-cleanup.tsx
-msgid "Migration needs attention"
-msgstr "Migration needs attention"
-
-#: src/settings/general/storage/legacy-cleanup.tsx
-msgid "Migration status unavailable"
-msgstr "Migration status unavailable"
-
 #: src/main/windows-window-controls.tsx
 msgid "Minimize"
 msgstr "Minimize"
@@ -2812,10 +2783,6 @@ msgstr "NVIDIA NIM: your deployed Speech NIM WebSocket server, for example http:
 #: src/templates/template-icon-picker.tsx
 msgid "Objects"
 msgstr "Objects"
-
-#: src/settings/general/storage/legacy-cleanup.tsx
-msgid "Older files that differ from your current data were kept as recovery copies. No action is required."
-msgstr "Older files that differ from your current data were kept as recovery copies. No action is required."
 
 #: src/contacts/related-notes.tsx
 #: src/contacts/shared.tsx
@@ -3418,7 +3385,6 @@ msgstr "Resume listening"
 #: src/contacts/profile-photo.tsx
 #: src/session/components/note-input/enhanced/enhance-error.tsx
 #: src/settings/general/account-profile.tsx
-#: src/settings/general/storage/legacy-cleanup.tsx
 #: src/store/zustand/listener/general-live.ts
 msgid "Retry"
 msgstr "Retry"
@@ -3907,10 +3873,6 @@ msgstr "Speaker {number}"
 msgid "Speaker {number} · part {part}"
 msgstr "Speaker {number} · part {part}"
 
-#: src/settings/general/storage/legacy-cleanup.tsx
-msgid "SQLite migration verification is incomplete"
-msgstr "SQLite migration verification is incomplete"
-
 #: src/settings/automations/workflow-builder.tsx
 msgid "Stack another destination. Steps run top to bottom."
 msgstr "Stack another destination. Steps run top to bottom."
@@ -4231,10 +4193,6 @@ msgstr "Syntheo structures the summary itself, without a fixed template. Used wh
 msgid "Syntheo uses it to recognize you among the participants of your meetings, so you are not counted twice. It stays on this device."
 msgstr "Syntheo uses it to recognize you among the participants of your meetings, so you are not counted twice. It stays on this device."
 
-#: src/settings/general/storage/legacy-cleanup.tsx
-msgid "Syntheo will retry automatically. This does not affect your notes."
-msgstr "Syntheo will retry automatically. This does not affect your notes."
-
 #: src/stt/auto-stop.ts
 msgid "Syntheo will stop listening in {seconds} seconds."
 msgstr "Syntheo will stop listening in {seconds} seconds."
@@ -4543,12 +4501,6 @@ msgstr "This server answers as {detectedLabel}."
 msgid "This transcription is incomplete."
 msgstr "This transcription is incomplete."
 
-#. placeholder {0}: status.fileCount
-#. placeholder {1}: formatBytes(status.totalBytes)
-#: src/settings/general/storage/legacy-cleanup.tsx
-msgid "This will remove {0} legacy files and free {1}. Your app data will not be affected because the migration to SQLite is complete."
-msgstr "This will remove {0} legacy files and free {1}. Your app data will not be affected because the migration to SQLite is complete."
-
 #: src/session/components/living-document/welcome-card.tsx
 msgid "Three settings to get started"
 msgstr "Three settings to get started"
@@ -4852,10 +4804,6 @@ msgstr "Used for"
 #: src/settings/general/spoken-languages.tsx
 msgid "Used for transcription and automatic summary language detection."
 msgstr "Used for transcription and automatic summary language detection."
-
-#: src/settings/general/storage/legacy-cleanup.tsx
-msgid "Verifying the SQLite migration status"
-msgstr "Verifying the SQLite migration status"
 
 #: src/session/components/living-document/summary-version.tsx
 msgid "Version {versionNumber}"
