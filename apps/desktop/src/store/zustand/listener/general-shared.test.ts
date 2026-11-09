@@ -6,9 +6,12 @@ import {
   type GeneralState,
   initialGeneralState,
   isBatchTranscriptionPending,
+  getListeningElapsedSeconds,
   isLiveRecordingInProgress,
+  markLiveActive,
   markLiveCaptureStarted,
   markLiveFinalizing,
+  markLiveInactive,
   markLiveStartRequested,
   noteLiveTranscriptActivity,
   releaseLiveCaptureGeneration,
@@ -148,6 +151,70 @@ describe("markLiveCaptureStarted", () => {
       "session-a": 1,
       "session-b": 2,
     });
+  });
+});
+
+// Chronomètre lié à la session (issue 523) : le cumul d'une écoute reprise
+// après une pause ne doit pas passer à l'écoute suivante.
+describe("listening elapsed seconds across sessions", () => {
+  const intervalId = 1 as unknown as Parameters<typeof markLiveActive>[2];
+
+  function listen(live: GeneralState["live"], sessionId: string) {
+    markLiveStartRequested(live, sessionId);
+    markLiveCaptureStarted(live, sessionId);
+    markLiveActive(live, sessionId, intervalId, true, true, null);
+  }
+
+  // A écoute 32 s, se met en pause (capture arrêtée), puis reprend.
+  function pauseAndResume(live: GeneralState["live"], sessionId: string) {
+    listen(live, sessionId);
+    live.seconds = 32;
+    live.pause = {
+      sessionId,
+      elapsedSeconds: getListeningElapsedSeconds(live, sessionId),
+      phase: "pausing",
+    };
+    markLiveFinalizing(live, sessionId);
+    markLiveInactive(live, sessionId, null);
+    delete live.finalizingBySession[sessionId];
+    releaseLiveCaptureGeneration(live, sessionId);
+    live.pause.phase = "paused";
+    listen(live, sessionId);
+  }
+
+  it("keeps the elapsed time of a session resumed after a pause", () => {
+    const live = createLive();
+
+    pauseAndResume(live, "session-a");
+    expect(getListeningElapsedSeconds(live, "session-a")).toBe(32);
+
+    live.seconds = 5;
+    expect(getListeningElapsedSeconds(live, "session-a")).toBe(37);
+  });
+
+  it("starts a new session from zero right after a resumed one stops", () => {
+    const live = createLive();
+
+    pauseAndResume(live, "session-a");
+    live.seconds = 4;
+    // « Arrêter et démarrer ici » : B démarre pendant la finalisation de A.
+    markLiveFinalizing(live, "session-a");
+    listen(live, "session-b");
+
+    expect(getListeningElapsedSeconds(live, "session-b")).toBe(0);
+    live.seconds = 24;
+    expect(getListeningElapsedSeconds(live, "session-b")).toBe(24);
+    expect(getListeningElapsedSeconds(live, "session-a")).toBe(0);
+  });
+
+  it("starts from zero when the capture of a new session is reported first", () => {
+    const live = createLive();
+
+    pauseAndResume(live, "session-a");
+    markLiveFinalizing(live, "session-a");
+    markLiveCaptureStarted(live, "session-b");
+
+    expect(getListeningElapsedSeconds(live, "session-b")).toBe(0);
   });
 });
 
