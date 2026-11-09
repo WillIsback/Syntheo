@@ -1,4 +1,5 @@
 import { Trans } from "@lingui/react/macro";
+import type { ReactNode } from "react";
 
 import type { HomeFolder } from "./active-folders";
 import { FolderCards } from "./folder-cards";
@@ -32,6 +33,8 @@ export type HomeViewProps = {
   onSearch: () => void;
   onOpenFolder?: (folderPath: string) => void;
   onOpenAllFolders?: () => void;
+  // Carte « En cours » (issue 517), placée au-dessus des notes récentes.
+  liveNote?: ReactNode;
 };
 
 const NO_FOLDERS: readonly HomeFolder[] = [];
@@ -53,6 +56,7 @@ export function HomeView({
   onSearch,
   onOpenFolder = noop,
   onOpenAllFolders = noop,
+  liveNote = null,
 }: HomeViewProps) {
   const palette = useDocumentPalette();
 
@@ -86,6 +90,7 @@ export function HomeView({
             onOpenFolder={onOpenFolder}
             onOpenAllFolders={onOpenAllFolders}
           />
+          {liveNote}
           <NoteIndex
             notes={recentNotes}
             folderIcons={folderIcons}

@@ -2127,6 +2127,10 @@ msgstr "Améliorer avec des exemples"
 msgid "In favorites"
 msgstr "Favori"
 
+#: src/home/live-note-card.tsx
+msgid "In progress"
+msgstr "En cours"
+
 #: src/shared/open-note-dialog.tsx
 msgid "In this folder"
 msgstr "Dans ce dossier"
@@ -2340,6 +2344,7 @@ msgstr "Écouter"
 msgid "Listening"
 msgstr "Écoute"
 
+#: src/home/live-note-card.tsx
 #: src/session/components/capsule/index.tsx
 msgid "Listening time"
 msgstr "Durée d'écoute"
@@ -3165,6 +3170,7 @@ msgstr "Les modèles sur l'appareil peuvent mettre quelques minutes à s'initial
 msgid "Only on-premise OpenAI-compatible servers are supported (vLLM, Ollama, llama.cpp server, LM Studio…). The address usually ends with /v1, for example http://localhost:8000/v1."
 msgstr "Seuls les serveurs compatibles OpenAI hébergés chez vous sont pris en charge (vLLM, Ollama, serveur llama.cpp, LM Studio…). L'adresse se termine en général par /v1, par exemple http://localhost:8000/v1."
 
+#: src/home/live-note-card.tsx
 #: src/home/note-index.tsx
 #: src/shared/open-note-dialog.tsx
 msgid "Open"
@@ -3338,6 +3344,7 @@ msgstr "Coller"
 msgid "Paste a past summary you like..."
 msgstr "Collez un résumé précédent que vous aimez..."
 
+#: src/home/live-note-card.tsx
 #: src/meeting-float/overlay/bar.tsx
 #: src/settings/developers/webhooks.tsx
 msgid "Pause"
@@ -3362,6 +3369,7 @@ msgstr "Mettre en pause la fermeture automatique"
 msgid "Pause listening"
 msgstr "Mettre en pause l'écoute"
 
+#: src/home/live-note-card.tsx
 #: src/meeting-float/overlay/bar.tsx
 #: src/session/components/capsule/index.tsx
 #: src/settings/developers/webhooks.tsx
@@ -3803,6 +3811,7 @@ msgstr "Résultat disponible pour la suite sous le nom"
 msgid "Result available to the next steps under the name"
 msgstr "Résultat disponible pour la suite sous le nom"
 
+#: src/home/live-note-card.tsx
 #: src/home/note-index.tsx
 #: src/meeting-float/overlay/bar.tsx
 #: src/shared/ui/localized-toaster.tsx
@@ -5433,6 +5442,7 @@ msgstr "Injoignable"
 #: src/folders/project/folder-meetings-card.tsx
 #: src/folders/project/folder-template-field.tsx
 #: src/folders/sidebar-tree-view.tsx
+#: src/home/live-note-card.tsx
 #: src/home/note-index.tsx
 #: src/session/components/living-document/late-filing.ts
 #: src/session/components/living-document/meeting-type-picker.tsx

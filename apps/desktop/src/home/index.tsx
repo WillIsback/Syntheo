@@ -2,8 +2,14 @@ import { useCallback, useMemo, useState } from "react";
 
 import { useActiveFolders } from "./active-folders";
 import { HomeView } from "./home-view";
+import { HomeLiveNoteCard, useHomeLiveSessionId } from "./live-note-card";
 import { NoteExportDialog } from "./note-export-dialog";
-import { type RecentNote, useOwnerFirstName, useRecentNotes } from "./queries";
+import {
+  RECENT_NOTES_LIMIT,
+  type RecentNote,
+  useOwnerFirstName,
+  useRecentNotes,
+} from "./queries";
 
 import { useFolderSelection } from "~/folders/selection";
 import { useDeleteSession } from "~/session/hooks/useDeleteSession";
@@ -17,7 +23,18 @@ export { HomeView } from "./home-view";
 
 export function HomePage() {
   const firstName = useOwnerFirstName();
-  const recentNotes = useRecentNotes();
+  // Pendant l'écoute, la note figure dans la carte « En cours » (issue 517)
+  // et pas dans « Reprendre » : une note de plus est lue pour garder la liste
+  // pleine.
+  const liveSessionId = useHomeLiveSessionId();
+  const latestNotes = useRecentNotes(RECENT_NOTES_LIMIT + 1);
+  const recentNotes = useMemo(
+    () =>
+      latestNotes
+        .filter((note) => note.id !== liveSessionId)
+        .slice(0, RECENT_NOTES_LIMIT),
+    [latestNotes, liveSessionId],
+  );
   const folders = useActiveFolders();
   const folderIcons = useFolderIcons();
   const setSelectedPath = useFolderSelection((state) => state.setSelectedPath);
@@ -78,6 +95,11 @@ export function HomePage() {
         onSearch={openSearch}
         onOpenFolder={openFolder}
         onOpenAllFolders={openAllFolders}
+        liveNote={
+          liveSessionId ? (
+            <HomeLiveNoteCard sessionId={liveSessionId} onOpen={openNote} />
+          ) : null
+        }
       />
       {exportSessionId ? (
         <NoteExportDialog
