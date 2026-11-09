@@ -3,6 +3,8 @@ title: "Importer un enregistrement"
 description: "Créez une note Syntheo à partir d'un fichier audio ou d'un fichier de sous-titres."
 ---
 
+import { ImportScreen } from "/snippets/capture.gen.jsx";
+
 Vous pouvez utiliser Syntheo avec une conversation enregistrée ailleurs :
 
 - importez un **fichier audio** pour le faire transcrire par votre serveur ;
@@ -22,6 +24,12 @@ Vous pouvez aussi glisser un fichier audio sur une note ouverte.
 Formats acceptés : WAV, MP3, OGG, MP4, M4A, FLAC, WebM et AAC.
 
 Vous suivez l'avancement dans la note : « Génération du transcript... », le pourcentage terminé, puis la durée restante estimée, par exemple « Environ 3 min restantes ». Cliquez sur « Arrêter la transcription » pour interrompre l'import.
+
+La capsule en bas de la note passe aussi en état « Import » jusqu'à la fin : une barre de progression, le pourcentage, puis la durée restante et l'accélération dès qu'elles sont fiables, par exemple « reste ~9 min · ×2,1 » (« estimation… » avant). « Arrêter » interrompt l'import, comme « Arrêter la transcription ».
+
+Essayez : ouvrez le menu ••• (1) et choisissez « Téléverser un audio ». L'avancement s'affiche dans la marge « Transcription » (2) et dans la capsule (3). Dans la reproduction, une seconde vaut une minute d'audio.
+
+<ImportScreen />
 
 L'audio n'est pas conservé dans la note. Syntheo choisit la façon d'envoyer le fichier selon le protocole de votre serveur de transcription :
 
