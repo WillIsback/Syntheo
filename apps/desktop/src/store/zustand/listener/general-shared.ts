@@ -72,10 +72,13 @@ export const markLiveCaptureStarted = (live: LiveState, sessionId: string) => {
     live.lastErrorIsAudioRelated = false;
   }
   ensureLiveCaptureGeneration(live, sessionId);
-  // Une reprise continue le minuteur là où la pause l'a arrêté.
+  // Une reprise continue le minuteur là où la pause l'a arrêté ; une autre
+  // session repart de zéro (issue 523).
   if (live.pause?.sessionId === sessionId) {
     live.elapsedOffsetSeconds = live.pause.elapsedSeconds;
     live.pause = null;
+  } else if (live.sessionId !== sessionId) {
+    live.elapsedOffsetSeconds = 0;
   }
   live.status = "active";
   live.loading = false;
@@ -88,6 +91,11 @@ export const markLiveStartRequested = (live: LiveState, sessionId: string) => {
   live.loading = true;
   live.status = "inactive";
   live.sessionId = sessionId;
+  // Le cumul appartient à la session : quand elle démarre pendant la
+  // finalisation de la précédente, l'arrêt de celle-ci ne le remet plus à
+  // zéro (issue 523). Une reprise le restaure depuis la pause au démarrage
+  // de la capture.
+  live.elapsedOffsetSeconds = 0;
   live.lastError = null;
   live.lastErrorSessionId = null;
   live.lastErrorIsAudioRelated = false;
