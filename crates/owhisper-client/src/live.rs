@@ -14,6 +14,23 @@ use syntheo_ws_client::client::{
 
 use crate::{OpenAIAdapter, RealtimeSttAdapter, append_provider_param, normalize_listen_params};
 
+/// Délai entre l'établissement du flux micro et la tentative de connexion du flux son système
+/// d'une capture scindée en deux connexions (fournisseurs sans multicanal natif).
+///
+/// Deux connexions ouvertes à la même milliseconde ont planté un NIM
+/// nemotron-asr-streaming : la capture de CUDA graph du décodeur a couru entre les deux flux
+/// et empoisonné son contexte (issue #519). Le flux son système n'est donc jamais tenté avant
+/// que le flux micro soit établi puis que ce délai soit écoulé, au démarrage comme à chaque
+/// reconnexion (une reconnexion reconstruit le client). Son audio attend pendant ce temps dans
+/// `SPLIT_STAGGER_SPEAKER_BUFFER`, sans perte.
+pub const SPLIT_STREAM_STAGGER: Duration = Duration::from_secs(1);
+
+/// Messages audio du flux son système gardés en mémoire pendant `SPLIT_STREAM_STAGGER` et
+/// l'établissement de sa connexion : à un message par bloc capturé (~120 ms), environ 15 s,
+/// au-delà du délai plus le délai de connexion. S'il se remplit, la contre-pression remonte
+/// jusqu'au tampon du pipeline de capture : rien n'est perdu.
+const SPLIT_STAGGER_SPEAKER_BUFFER: usize = 128;
+
 pub struct ListenClientBuilder<A: RealtimeSttAdapter = OpenAIAdapter> {
     pub(crate) api_base: Option<String>,
     pub(crate) api_key: Option<String>,
@@ -479,7 +496,8 @@ impl<A: RealtimeSttAdapter> ListenClientDual<A> {
         let mic_finalize = finalize_message_factory(&mic_adapter);
         let spk_finalize = finalize_message_factory(&spk_adapter);
         let (mic_tx, mic_rx) = tokio::sync::mpsc::channel::<TransformedInput>(32);
-        let (spk_tx, spk_rx) = tokio::sync::mpsc::channel::<TransformedInput>(32);
+        let (spk_tx, spk_rx) =
+            tokio::sync::mpsc::channel::<TransformedInput>(SPLIT_STAGGER_SPEAKER_BUFFER);
 
         let mic_ws = websocket_client_with_keep_alive(
             self.mic_request.as_ref().unwrap_or(&self.request),
@@ -496,19 +514,37 @@ impl<A: RealtimeSttAdapter> ListenClientDual<A> {
         let mic_initial = mic_adapter.initial_message(self.api_key.as_deref(), &mic_params, 1);
         let spk_initial = spk_adapter.initial_message(self.api_key.as_deref(), &self.params, 1);
 
-        let mic_connect = mic_ws.from_audio::<ListenClientIO, _>(mic_initial, mic_outbound);
-        let spk_connect = spk_ws.from_audio::<ListenClientIO, _>(spk_initial, spk_outbound);
+        // Jamais deux ouvertures simultanées (issue #519) : le micro d'abord, puis le son
+        // système après `SPLIT_STREAM_STAGGER`. L'audio circule dès que le micro est établi ;
+        // celui du son système attend dans `spk_tx` que sa connexion consomme `spk_outbound`.
+        let (mic_raw, mic_handle) = mic_ws
+            .from_audio::<ListenClientIO, _>(mic_initial, mic_outbound)
+            .await?;
 
-        let ((mic_raw, mic_handle), (spk_raw, spk_handle)) =
-            tokio::try_join!(mic_connect, spk_connect)?;
-
-        tokio::spawn(forward_dual_to_single(
+        let forwarder = tokio::spawn(forward_dual_to_single(
             stream,
             mic_tx,
             spk_tx,
             mic_adapter.clone(),
             spk_adapter.clone(),
         ));
+
+        tracing::debug!(
+            stagger_ms = SPLIT_STREAM_STAGGER.as_millis() as u64,
+            "split_stream_speaker_connect_staggered"
+        );
+        tokio::time::sleep(SPLIT_STREAM_STAGGER).await;
+
+        let (spk_raw, spk_handle) = match spk_ws
+            .from_audio::<ListenClientIO, _>(spk_initial, spk_outbound)
+            .await
+        {
+            Ok(connected) => connected,
+            Err(error) => {
+                forwarder.abort();
+                return Err(error);
+            }
+        };
 
         let mic_stream = mic_raw.flat_map({
             let adapter = mic_adapter;

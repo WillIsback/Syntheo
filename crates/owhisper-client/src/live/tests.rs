@@ -317,3 +317,105 @@ fn mic_stream_params_keep_the_participant_bound_unless_the_mic_is_isolated() {
     };
     assert_eq!(mic_stream_params(&isolated).max_speakers, Some(1));
 }
+
+// Issue #519 : deux connexions ouvertes à la même milliseconde ont planté un NIM
+// nemotron-asr-streaming. Le flux son système n'est tenté qu'après l'établissement du flux
+// micro et le délai `SPLIT_STREAM_STAGGER`, et son audio attend dans un tampon sans perte.
+#[tokio::test]
+async fn split_dual_staggers_the_speaker_connection_without_losing_its_audio() {
+    use futures_util::StreamExt;
+    use std::time::Instant;
+
+    struct Accepted {
+        handshake_at: Instant,
+        frames: Vec<(Instant, Vec<u8>)>,
+    }
+
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let base = format!("ws://{}", listener.local_addr().unwrap());
+    let server = tokio::spawn(async move {
+        let mut tasks = Vec::new();
+        for _ in 0..2 {
+            let (socket, _) = listener.accept().await.unwrap();
+            let mut ws = tokio_tungstenite::accept_async(socket).await.unwrap();
+            let handshake_at = Instant::now();
+            tasks.push(tokio::spawn(async move {
+                let mut frames = Vec::new();
+                while frames.len() < 3 {
+                    match tokio::time::timeout(Duration::from_secs(5), ws.next()).await {
+                        Ok(Some(Ok(Message::Binary(data)))) => {
+                            frames.push((Instant::now(), data.to_vec()));
+                        }
+                        Ok(Some(Ok(_))) => {}
+                        _ => break,
+                    }
+                }
+                Accepted {
+                    handshake_at,
+                    frames,
+                }
+            }));
+        }
+        let mut accepted = Vec::new();
+        for task in tasks {
+            accepted.push(task.await.unwrap());
+        }
+        accepted
+    });
+
+    let (tx, rx) = tokio::sync::mpsc::channel::<ListenClientDualInput>(8);
+    for index in 1..=3 {
+        tx.send(ListenClientDualInput::Audio((
+            Bytes::from(format!("mic-{index}")),
+            Bytes::from(format!("spk-{index}")),
+        )))
+        .await
+        .unwrap();
+    }
+
+    let started = Instant::now();
+    let client = ListenClient::builder()
+        .adapter::<TestAdapter>()
+        .api_base(base)
+        .build_dual()
+        .await
+        .unwrap();
+    let (_output, _handle) = client
+        .from_realtime_audio(tokio_stream::wrappers::ReceiverStream::new(rx))
+        .await
+        .unwrap();
+
+    let accepted = tokio::time::timeout(Duration::from_secs(10), server)
+        .await
+        .unwrap()
+        .unwrap();
+    let (mic, spk) = (&accepted[0], &accepted[1]);
+    let waited = spk.handshake_at.duration_since(mic.handshake_at);
+
+    assert!(
+        waited >= super::SPLIT_STREAM_STAGGER,
+        "the speaker stream must wait {:?} after the mic stream, waited {waited:?}",
+        super::SPLIT_STREAM_STAGGER,
+    );
+    assert!(
+        started.elapsed() >= super::SPLIT_STREAM_STAGGER,
+        "the stagger is part of the connection"
+    );
+    assert!(
+        mic.frames.first().unwrap().0 < spk.handshake_at,
+        "mic audio flows while the speaker stream waits"
+    );
+    let payloads = |accepted: &Accepted| {
+        accepted
+            .frames
+            .iter()
+            .map(|(_, data)| String::from_utf8(data.clone()).unwrap())
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(payloads(mic), ["mic-1", "mic-2", "mic-3"]);
+    assert_eq!(
+        payloads(spk),
+        ["spk-1", "spk-2", "spk-3"],
+        "speaker audio captured during the stagger is buffered, not lost"
+    );
+}
