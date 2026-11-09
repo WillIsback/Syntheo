@@ -8,6 +8,9 @@ import { commands as transcriptionCommands } from "@syntheo/plugin-transcription
  */
 export const AUDIO_UPLOAD_CHUNK_BYTES = 4 * 1024 * 1024;
 /** Même plafond que `MAX_AUDIO_UPLOAD_BYTES` côté Rust. */
+// Au-delà, un fichier sans chemin disque est lu par morceaux.
+export const MAX_IPC_AUDIO_BYTES = 4 * 1024 * 1024;
+
 export const MAX_AUDIO_UPLOAD_BYTES = 2 * 1024 * 1024 * 1024;
 
 export class AudioUploadTooLargeError extends Error {
@@ -82,4 +85,19 @@ export function bytesToBase64(bytes: Uint8Array) {
     );
   }
   return btoa(binary);
+}
+
+function assertIpcAudioSize(size: number) {
+  if (size > MAX_IPC_AUDIO_BYTES) {
+    throw new Error(
+      "Audio files without a native path must be smaller than 4 MB",
+    );
+  }
+}
+
+export async function readIpcAudioBase64(file: File) {
+  assertIpcAudioSize(file.size);
+  const arrayBuffer = await file.arrayBuffer();
+  assertIpcAudioSize(arrayBuffer.byteLength);
+  return bytesToBase64(new Uint8Array(arrayBuffer));
 }

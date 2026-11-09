@@ -62,6 +62,7 @@ vi.mock("~/stt/contexts", () => ({
   useListener: (selector: (state: unknown) => unknown) =>
     selector({
       getSessionMode: () => mocks.sessionMode,
+      batchImport: {},
       stop: mocks.stopListening,
       pause: mocks.pauseListening,
       live: mocks.live,

@@ -15,9 +15,13 @@ import {
   notifyAudioImportFailed,
   useAudioImportAvailability,
 } from "./audio-import-feedback";
-import { estimateUploadedAudioSessionCreatedAt } from "./audio-note-date";
 import {
-  bytesToBase64,
+  estimateUploadedAudioSessionCreatedAt,
+  readAudioSeconds,
+} from "./audio-note-date";
+import {
+  MAX_IPC_AUDIO_BYTES,
+  readIpcAudioBase64,
   discardAudioUpload,
   streamAudioFileToMemory,
 } from "./audio-upload-stream";
@@ -45,7 +49,6 @@ export const AUDIO_EXTENSIONS = [
 ];
 const AUDIO_TRANSFER_EXTENSIONS = [...AUDIO_EXTENSIONS, "qta"];
 const TRANSCRIPT_EXTENSIONS = ["vtt", "srt"];
-const MAX_IPC_AUDIO_BYTES = 4 * 1024 * 1024;
 
 function fileExtension(value: string) {
   const extension = value.toLowerCase().split(".").pop();
@@ -77,6 +80,8 @@ export function useUploadFile(sessionId: string) {
   const handleBatchFailed = useListener((state) => state.handleBatchFailed);
   const updateBatchProgress = useListener((state) => state.updateBatchProgress);
   const clearBatchSession = useListener((state) => state.clearBatchSession);
+  const handleImportStarted = useListener((state) => state.handleImportStarted);
+  const handleImportEnded = useListener((state) => state.handleImportEnded);
 
   const session = useSession(sessionId);
   const updateSession = useUpdateSession(sessionId);
@@ -138,19 +143,19 @@ export function useUploadFile(sessionId: string) {
     [updateSession],
   );
 
+  // Durée de l'audio renvoyée si le fichier a un chemin disque (issue 526).
   const applyDroppedAudioNoteDate = useCallback(
-    async (file: File) => {
+    async (file: File, filePath?: string): Promise<number | null> => {
       try {
-        if (!Number.isFinite(file.lastModified) || file.lastModified <= 0) {
-          return;
+        if (Number.isFinite(file.lastModified) && file.lastModified > 0) {
+          await updateSession({
+            created_at: new Date(file.lastModified).toISOString(),
+          });
         }
-
-        await updateSession({
-          created_at: new Date(file.lastModified).toISOString(),
-        });
       } catch (error) {
         console.error("[upload] dropped audio date inspection failed:", error);
       }
+      return filePath ? readAudioSeconds(filePath) : null;
     },
     [updateSession],
   );
@@ -191,7 +196,7 @@ export function useUploadFile(sessionId: string) {
   const runAudioImport = useCallback(
     (
       importAudio: () => Promise<ImportedAudio>,
-      inspectAudioDate: () => Promise<void>,
+      inspectAudio: () => Promise<number | null>,
       cleanup?: () => Promise<void>,
     ) => {
       // Vérifié avant toute écriture : un modèle temps réel seul laisse la
@@ -201,9 +206,10 @@ export function useUploadFile(sessionId: string) {
       }
 
       const program = pipe(
-        Effect.promise(inspectAudioDate),
-        Effect.tap(() =>
+        Effect.promise(inspectAudio),
+        Effect.tap((seconds) =>
           Effect.sync(() => {
+            handleImportStarted(sessionId, seconds);
             handleBatchStarted(sessionId, "importing");
           }),
         ),
@@ -252,6 +258,8 @@ export function useUploadFile(sessionId: string) {
             notifyAudioImportFailed(error);
           }),
         ),
+        // Succès, échec ou arrêt : la capsule quitte l'état « Import ».
+        Effect.ensuring(Effect.sync(() => handleImportEnded(sessionId))),
       );
 
       void Effect.runPromise(program).catch((error) => {
@@ -263,6 +271,8 @@ export function useUploadFile(sessionId: string) {
       clearBatchSession,
       handleBatchFailed,
       handleBatchStarted,
+      handleImportEnded,
+      handleImportStarted,
       queryClient,
       runBatch,
       sessionId,
@@ -340,7 +350,10 @@ export function useUploadFile(sessionId: string) {
             fsSyncCommands.audioImport(sessionId, filePath),
           ),
         }),
-        () => applyEstimatedAudioNoteDate(filePath),
+        () =>
+          applyEstimatedAudioNoteDate(filePath).then(() =>
+            readAudioSeconds(filePath),
+          ),
       );
     },
     [
@@ -370,7 +383,7 @@ export function useUploadFile(sessionId: string) {
               fsSyncCommands.audioImport(sessionId, filePath),
             ),
           }),
-          () => applyDroppedAudioNoteDate(file),
+          () => applyDroppedAudioNoteDate(file, filePath),
         );
         return;
       }
@@ -474,19 +487,4 @@ export function useUploadFile(sessionId: string) {
 function audioUploadFilePath(file: File) {
   const value = (file as { path?: unknown }).path;
   return typeof value === "string" && value.trim() ? value : null;
-}
-
-function assertIpcAudioSize(size: number) {
-  if (size > MAX_IPC_AUDIO_BYTES) {
-    throw new Error(
-      "Audio files without a native path must be smaller than 4 MB",
-    );
-  }
-}
-
-async function readIpcAudioBase64(file: File) {
-  assertIpcAudioSize(file.size);
-  const arrayBuffer = await file.arrayBuffer();
-  assertIpcAudioSize(arrayBuffer.byteLength);
-  return bytesToBase64(new Uint8Array(arrayBuffer));
 }

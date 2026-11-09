@@ -234,6 +234,18 @@ msgstr "+ Ajouter une section"
 msgid "+ New template"
 msgstr "+ Nouveau modèle"
 
+#: src/session/components/capsule/import-progress.tsx
+msgid "×{factor}"
+msgstr "×{factor}"
+
+#: src/session/components/capsule/import-progress.tsx
+msgid "< 1 min left"
+msgstr "reste < 1 min"
+
+#: src/session/components/capsule/import-progress.tsx
+msgid "~{minutes} min left"
+msgstr "reste ~{minutes} min"
+
 #: src/session/components/pending-proposals-banner.tsx
 msgid "1 pending edit"
 msgstr "1 modification en attente"
@@ -1696,6 +1708,10 @@ msgstr "Échap"
 msgid "Esc to dismiss"
 msgstr "Échap pour fermer"
 
+#: src/session/components/capsule/import-progress.tsx
+msgid "estimating…"
+msgstr "estimation…"
+
 #: src/automations/labels.ts
 msgid "Every finished meeting is saved as a Markdown file in a folder."
 msgstr "Chaque réunion terminée est enregistrée en Markdown dans un dossier."
@@ -2121,6 +2137,14 @@ msgstr "Ignorer ces apps ?"
 #: src/stt/meeting-apps.ts
 msgid "Ignore this app?"
 msgstr "Ignorer cette app ?"
+
+#: src/session/components/capsule/import-progress.tsx
+msgid "Import"
+msgstr "Import"
+
+#: src/session/components/capsule/import-progress.tsx
+msgid "Import progress"
+msgstr "Progression de l'import"
 
 #: src/session/components/note-input/transcript/screens/empty.tsx
 msgid "Importing audio..."
@@ -4476,6 +4500,7 @@ msgid "Steps"
 msgstr "Étapes"
 
 #: src/composer/index.tsx
+#: src/session/components/capsule/import-progress.tsx
 #: src/stt/auto-stop.ts
 msgid "Stop"
 msgstr "Arrêter"

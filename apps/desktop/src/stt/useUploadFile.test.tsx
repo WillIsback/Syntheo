@@ -20,6 +20,8 @@ const {
   handleBatchStartedMock,
   updateBatchProgressMock,
   clearBatchSessionMock,
+  handleImportStartedMock,
+  handleImportEndedMock,
   runBatchMock,
   useSessionMock,
   updateSessionMock,
@@ -46,6 +48,8 @@ const {
   handleBatchStartedMock: vi.fn(),
   updateBatchProgressMock: vi.fn(),
   clearBatchSessionMock: vi.fn(),
+  handleImportStartedMock: vi.fn(),
+  handleImportEndedMock: vi.fn(),
   runBatchMock: vi.fn(),
   useSessionMock: vi.fn(),
   updateSessionMock: vi.fn(),
@@ -113,6 +117,8 @@ vi.mock("./contexts", () => ({
       handleBatchFailed: handleBatchFailedMock,
       updateBatchProgress: updateBatchProgressMock,
       clearBatchSession: clearBatchSessionMock,
+      handleImportStarted: handleImportStartedMock,
+      handleImportEnded: handleImportEndedMock,
     }),
 }));
 
@@ -215,6 +221,11 @@ describe("useUploadFile", () => {
     });
     expect(audioSourceMetadataMock).toHaveBeenCalledWith(
       "/tmp/replacement.wav",
+    );
+    // Issue 526 : la capsule suit l'import avec la durée de l'audio.
+    expect(handleImportStartedMock).toHaveBeenCalledWith("session-1", 30);
+    await waitFor(() =>
+      expect(handleImportEndedMock).toHaveBeenCalledWith("session-1"),
     );
   });
 
