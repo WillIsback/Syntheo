@@ -158,7 +158,7 @@ fn run_aec(
     mode: &Mode,
     chunk_size: usize,
 ) -> Result<Vec<f32>, Box<dyn Error>> {
-    let mut aec = AEC::new()?;
+    let mut aec = AEC::new_from_dir(&aec::source_model_dir())?;
 
     match mode {
         Mode::Batch => Ok(aec.process(mic, lpb)?),

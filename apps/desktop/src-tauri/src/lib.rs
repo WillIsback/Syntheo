@@ -1,3 +1,4 @@
+mod aec_models;
 mod agent_skills;
 mod agents;
 mod appearance;
@@ -256,6 +257,7 @@ pub fn main() {
         .setup(move |app| {
             let app_handle = app.handle().clone();
             tauri_plugin_shortcut::initialize_global_shortcuts(&app_handle);
+            aec_models::install(&app_handle);
 
             specta_builder.mount_events(&app_handle);
 

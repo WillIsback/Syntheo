@@ -5,8 +5,12 @@ pub use error::*;
 mod onnx;
 #[cfg(feature = "onnx")]
 pub use onnx::AEC;
+#[cfg(all(feature = "onnx", feature = "download"))]
+pub use onnx::download::ensure_models;
 #[cfg(feature = "onnx")]
-pub use onnx::model::{BLOCK_SHIFT, BLOCK_SIZE};
+pub use onnx::model::{BLOCK_SHIFT, BLOCK_SIZE, MODEL_SOURCE_COMMIT};
+#[cfg(feature = "onnx")]
+pub use onnx::store::{model_generation, models_installed, set_model_dir, source_model_dir};
 
 pub(crate) struct CircularBuffer {
     buffer: Vec<f32>,

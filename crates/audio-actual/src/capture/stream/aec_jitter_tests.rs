@@ -70,6 +70,7 @@ fn run(mic: &[f32], lpb: &[f32], strategy: Strategy) -> Option<Run> {
         .chain(std::iter::repeat_n(0.0, BASE_LAG))
         .collect();
 
+    crate::capture::use_source_aec_models();
     let mut aec = build_aec(RATE);
     aec.as_ref()?;
     let latency = syntheo_aec::BLOCK_SIZE - syntheo_aec::BLOCK_SHIFT;

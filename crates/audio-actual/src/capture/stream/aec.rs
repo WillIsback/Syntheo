@@ -10,11 +10,24 @@ use super::{
     AEC_ROBUST_GAIN_MIN_SEGMENTS, AEC_ROBUST_GAIN_SEGMENTS,
 };
 
+/// `None` quand les modèles DTLN ne sont pas encore installés (ils sont téléchargés à la
+/// demande, issue 429) : la capture continue avec le micro brut, et la boucle réessaie dès
+/// qu'un téléchargement aboutit (voir [`syntheo_aec::model_generation`]).
 pub(super) fn build_aec(sample_rate: u32) -> Option<GatedEchoCanceller<AEC>> {
-    AEC::new()
-        .map_err(|error| tracing::warn!(error.message = ?error, "aec_init_failed"))
-        .ok()
-        .map(|aec| GatedEchoCanceller::new(aec, sample_rate))
+    match AEC::new() {
+        Ok(aec) => Some(GatedEchoCanceller::new(aec, sample_rate)),
+        Err(error @ syntheo_aec::Error::ModelUnavailable(_)) => {
+            tracing::warn!(
+                error.message = %error,
+                "aec_model_unavailable: echo cancellation disabled until the models are downloaded"
+            );
+            None
+        }
+        Err(error) => {
+            tracing::warn!(error.message = ?error, "aec_init_failed");
+            None
+        }
+    }
 }
 
 /// Annule l'écho d'une trame alignée. Quand la référence est silencieuse (traîne comprise), le

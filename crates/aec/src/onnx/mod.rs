@@ -8,7 +8,10 @@ use syntheo_onnx::{
 
 use super::CircularBuffer;
 
+#[cfg(feature = "download")]
+pub(crate) mod download;
 pub(crate) mod model;
+pub(crate) mod store;
 
 struct ProcessingContext {
     scratch: Vec<Complex<f32>>,
@@ -67,15 +70,30 @@ pub struct AEC {
 }
 
 impl AEC {
+    /// Charge les modèles installés (voir [`store::set_model_dir`]). Sans modèle, renvoie
+    /// [`crate::Error::ModelUnavailable`] : la capture continue alors sans annulation d'écho.
     pub fn new() -> Result<Self, crate::Error> {
+        let dir = store::model_dir().ok_or_else(|| {
+            crate::Error::ModelUnavailable("model directory not configured".into())
+        })?;
+        Self::new_from_dir(&dir)
+    }
+
+    pub fn new_from_dir(dir: &std::path::Path) -> Result<Self, crate::Error> {
+        let bytes_1 = store::read_verified(dir, &model::FILES[0])?;
+        let bytes_2 = store::read_verified(dir, &model::FILES[1])?;
+        Self::new_from_bytes(&bytes_1, &bytes_2)
+    }
+
+    fn new_from_bytes(bytes_1: &[u8], bytes_2: &[u8]) -> Result<Self, crate::Error> {
         let (block_len, block_shift) = (model::BLOCK_SIZE, model::BLOCK_SHIFT);
 
         let mut fft_planner = RealFftPlanner::<f32>::new();
         let fft = fft_planner.plan_fft_forward(block_len);
         let ifft = fft_planner.plan_fft_inverse(block_len);
 
-        let session_1 = syntheo_onnx::load_model_from_bytes(model::BYTES_1)?;
-        let session_2 = syntheo_onnx::load_model_from_bytes(model::BYTES_2)?;
+        let session_1 = syntheo_onnx::load_model_from_bytes(bytes_1)?;
+        let session_2 = syntheo_onnx::load_model_from_bytes(bytes_2)?;
 
         let state_size = model::STATE_SIZE;
 
