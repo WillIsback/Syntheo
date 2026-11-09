@@ -85,7 +85,8 @@ pub fn list_mic_using_apps() -> Result<Vec<InstalledApp>, crate::Error> {
     process_ids.sort_unstable();
     process_ids.dedup();
 
-    let mut system = sysinfo::System::new();
+    let mut system = sysinfo::System::new()
+        .map_err(|error| crate::Error::AudioProcessQuery(error.to_string()))?;
     let sysinfo_process_ids = process_ids
         .iter()
         .copied()
