@@ -6,7 +6,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import { createRef, type ReactNode } from "react";
+import { type ComponentProps, createRef, type ReactNode } from "react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { MultiSelectionBar, SelectionMenu } from "./selection-menu";
@@ -81,12 +81,11 @@ describe("SelectionMenu", () => {
     const calls: string[] = [];
     const onEdit = vi.fn(() => calls.push("edit"));
     render(
-      <SelectionMenu
-        containerRef={createRef()}
-        contextRequest={request}
-        onContextClose={() => calls.push("close")}
-        onEdit={onEdit}
-      />,
+      menuElement({
+        contextRequest: request,
+        onContextClose: () => calls.push("close"),
+        onEdit,
+      }),
     );
     fireEvent.click(screen.getByRole("button", { name: "Edit" }));
     expect(onEdit).toHaveBeenCalledWith(request.selection);
@@ -101,12 +100,11 @@ describe("SelectionMenu", () => {
     const calls: string[] = [];
     const onChangeSpeaker = vi.fn(() => calls.push("split"));
     render(
-      <SelectionMenu
-        containerRef={createRef()}
-        contextRequest={request}
-        onContextClose={() => calls.push("close")}
-        onChangeSpeaker={onChangeSpeaker}
-      />,
+      menuElement({
+        contextRequest: request,
+        onContextClose: () => calls.push("close"),
+        onChangeSpeaker,
+      }),
     );
     fireEvent.click(
       screen.getByRole("button", { name: "Change speaker from here" }),
@@ -118,12 +116,10 @@ describe("SelectionMenu", () => {
 
   it("never offers playback: no audio is kept", () => {
     render(
-      <SelectionMenu
-        containerRef={createRef()}
-        contextRequest={createContextRequest()}
-        onContextClose={vi.fn()}
-        onChangeSpeaker={vi.fn()}
-      />,
+      menuElement({
+        contextRequest: createContextRequest(),
+        onChangeSpeaker: vi.fn(),
+      }),
     );
 
     expect(screen.queryByRole("button", { name: "Play from here" })).toBeNull();
@@ -137,14 +133,7 @@ describe("SelectionMenu", () => {
     const request = createContextRequest();
     window.getSelection()?.addRange(request.range);
 
-    render(
-      <SelectionMenu
-        containerRef={createRef()}
-        contextRequest={request}
-        onContextClose={vi.fn()}
-        onChangeSpeaker={vi.fn()}
-      />,
-    );
+    render(menuElement({ contextRequest: request, onChangeSpeaker: vi.fn() }));
 
     expect(
       document.querySelectorAll("[data-transcript-selection-overlay]"),
@@ -160,24 +149,8 @@ describe("SelectionMenu", () => {
 });
 
 describe("MultiSelectionBar", () => {
-  const selection = {
-    sessionId: "session-1",
-    text: "Hello",
-    startMs: 0,
-    groups: [],
-  };
-
   it("keeps merge disabled until contiguous entries are selected", () => {
-    render(
-      <MultiSelectionBar
-        selection={selection}
-        entryCount={2}
-        canMerge={false}
-        onClear={vi.fn()}
-        onAssignSpeaker={vi.fn()}
-        onMerge={vi.fn()}
-      />,
-    );
+    render(barElement({ canMerge: false, onMerge: vi.fn() }));
 
     expect(
       (screen.getByRole("button", { name: "Merge" }) as HTMLButtonElement)
@@ -189,14 +162,7 @@ describe("MultiSelectionBar", () => {
     const onAssignSpeaker = vi.fn(() => Promise.resolve());
     const onClear = vi.fn();
 
-    render(
-      <MultiSelectionBar
-        selection={selection}
-        entryCount={2}
-        onClear={onClear}
-        onAssignSpeaker={onAssignSpeaker}
-      />,
-    );
+    render(barElement({ onClear, onAssignSpeaker }));
 
     fireEvent.click(screen.getByRole("button", { name: "Change speaker" }));
     fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
@@ -211,16 +177,7 @@ describe("MultiSelectionBar", () => {
     const onMerge = vi.fn(() => Promise.resolve());
     const onClear = vi.fn();
 
-    render(
-      <MultiSelectionBar
-        selection={selection}
-        entryCount={2}
-        canMerge
-        onClear={onClear}
-        onAssignSpeaker={vi.fn()}
-        onMerge={onMerge}
-      />,
-    );
+    render(barElement({ canMerge: true, onClear, onMerge }));
 
     fireEvent.click(screen.getByRole("button", { name: "Merge" }));
 
@@ -239,15 +196,7 @@ describe("MultiSelectionBar", () => {
         }),
     );
     const onClear = vi.fn();
-    render(
-      <MultiSelectionBar
-        selection={selection}
-        entryCount={2}
-        onClear={onClear}
-        onAssignSpeaker={vi.fn()}
-        onDelete={onDelete}
-      />,
-    );
+    render(barElement({ onClear, onDelete }));
     fireEvent.click(screen.getByRole("button", { name: "Delete" }));
     await waitFor(() => expect(onDelete).toHaveBeenCalledWith(selection));
     expect(onClear).not.toHaveBeenCalled();
@@ -267,15 +216,7 @@ describe("MultiSelectionBar", () => {
       .mockRejectedValueOnce(new Error("save failed"))
       .mockResolvedValueOnce(undefined);
     const onClear = vi.fn();
-    render(
-      <MultiSelectionBar
-        selection={selection}
-        entryCount={2}
-        onClear={onClear}
-        onAssignSpeaker={vi.fn()}
-        onDelete={onDelete}
-      />,
-    );
+    render(barElement({ onClear, onDelete }));
     fireEvent.click(screen.getByRole("button", { name: "Delete" }));
     await waitFor(() => expect(onDelete).toHaveBeenCalledTimes(1));
     await waitFor(() =>
@@ -294,14 +235,7 @@ describe("MultiSelectionBar", () => {
     document.body.append(host);
     setSessionFabSelectionHost(host);
 
-    render(
-      <MultiSelectionBar
-        selection={selection}
-        entryCount={2}
-        onClear={vi.fn()}
-        onAssignSpeaker={vi.fn()}
-      />,
-    );
+    render(barElement());
 
     expect(host.textContent).toContain("2 selected");
     expect(host.firstElementChild?.className).not.toContain("absolute");
@@ -309,6 +243,38 @@ describe("MultiSelectionBar", () => {
     host.remove();
   });
 });
+
+const selection = {
+  sessionId: "session-1",
+  text: "Hello",
+  startMs: 0,
+  groups: [],
+};
+
+function menuElement(props: Partial<ComponentProps<typeof SelectionMenu>>) {
+  return (
+    <SelectionMenu
+      containerRef={createRef()}
+      contextRequest={null}
+      onContextClose={vi.fn()}
+      {...props}
+    />
+  );
+}
+
+function barElement(
+  props: Partial<ComponentProps<typeof MultiSelectionBar>> = {},
+) {
+  return (
+    <MultiSelectionBar
+      selection={selection}
+      entryCount={2}
+      onClear={vi.fn()}
+      onAssignSpeaker={vi.fn()}
+      {...props}
+    />
+  );
+}
 
 function createContextRequest(): TranscriptContextMenuRequest {
   const container = document.createElement("div");

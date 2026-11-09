@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render as renderUi, screen } from "@testing-library/react";
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type {
@@ -90,27 +90,19 @@ describe("RenderTranscript", () => {
     cleanup();
     vi.clearAllMocks();
     mocks.search = null;
-    mocks.useRenderedTranscriptData.mockReturnValue({
-      maxSpeakerNumber: undefined,
-      request: createRenderRequest(createSegments(500)),
-      segments: createSegments(500),
-    });
+    mockRenderedSegments(createSegments(500));
   });
 
   it.each([false, true])(
     "keeps read and edit mode virtualized with one content and metadata subscription (editMode=%s)",
     (editMode) => {
       render(
-        <RenderTranscript
-          scrollElement={null}
-          isLastTranscript
-          shouldScrollToEnd={false}
-          transcriptId="transcript-1"
-          currentActive
-          captureGeneration={7}
-          editMode={editMode}
-          liveSegments={createSegments(500)}
-        />,
+        transcriptElement({
+          currentActive: true,
+          captureGeneration: 7,
+          editMode,
+          liveSegments: createSegments(500),
+        }),
       );
 
       expect(document.querySelectorAll("section").length).toBeLessThanOrEqual(
@@ -154,16 +146,7 @@ describe("RenderTranscript", () => {
       ],
     });
 
-    render(
-      <RenderTranscript
-        scrollElement={null}
-        isLastTranscript
-        shouldScrollToEnd={false}
-        transcriptId="transcript-1"
-        currentActive
-        liveSegments={[live]}
-      />,
-    );
+    render(transcriptElement({ currentActive: true, liveSegments: [live] }));
 
     expect(document.querySelectorAll("section")).toHaveLength(2);
     expect(document.body.textContent).toContain("word-persisted");
@@ -171,22 +154,9 @@ describe("RenderTranscript", () => {
   });
 
   it("switches back to the persisted renderer after capture stops", () => {
-    mocks.useRenderedTranscriptData.mockReturnValue({
-      maxSpeakerNumber: undefined,
-      request: createRenderRequest(createSegments(1)),
-      segments: createSegments(1),
-    });
+    mockRenderedSegments(createSegments(1));
 
-    render(
-      <RenderTranscript
-        scrollElement={null}
-        isLastTranscript
-        shouldScrollToEnd={false}
-        transcriptId="transcript-1"
-        currentActive={false}
-        liveSegments={[]}
-      />,
-    );
+    render(transcriptElement());
 
     expect(mocks.useRenderedTranscriptData).toHaveBeenCalledWith(
       "transcript-1",
@@ -201,22 +171,9 @@ describe("RenderTranscript", () => {
   });
 
   it("uses the volatile persisted fallback before live segments arrive", () => {
-    mocks.useRenderedTranscriptData.mockReturnValue({
-      maxSpeakerNumber: undefined,
-      request: createRenderRequest(createSegments(1)),
-      segments: createSegments(1),
-    });
+    mockRenderedSegments(createSegments(1));
 
-    render(
-      <RenderTranscript
-        scrollElement={null}
-        isLastTranscript
-        shouldScrollToEnd={false}
-        transcriptId="transcript-1"
-        currentActive
-        liveSegments={[]}
-      />,
-    );
+    render(transcriptElement({ currentActive: true }));
 
     expect(mocks.useRenderedTranscriptData).toHaveBeenCalledWith(
       "transcript-1",
@@ -240,22 +197,9 @@ describe("RenderTranscript", () => {
     ];
     const request = createRenderRequest([live], assignments);
     request.humans = [{ human_id: "human-1", name: "Ada" }];
-    mocks.useRenderedTranscriptData.mockReturnValue({
-      maxSpeakerNumber: undefined,
-      request,
-      segments: [],
-    });
+    mockRenderedSegments([], request);
 
-    render(
-      <RenderTranscript
-        scrollElement={null}
-        isLastTranscript
-        shouldScrollToEnd={false}
-        transcriptId="transcript-1"
-        currentActive
-        liveSegments={[live]}
-      />,
-    );
+    render(transcriptElement({ currentActive: true, liveSegments: [live] }));
 
     expect(screen.getByRole("button", { name: "Ada" })).toBeTruthy();
   });
@@ -266,11 +210,7 @@ describe("RenderTranscript", () => {
       ...createRenderRequest([live]),
       speaker_context: { intervals: [] },
     };
-    mocks.useRenderedTranscriptData.mockReturnValue({
-      maxSpeakerNumber: undefined,
-      request,
-      segments: [],
-    });
+    mockRenderedSegments([], request);
     const labelAda = (segment: Segment): RenderedTranscriptSegment => ({
       ...segment,
       speaker_label: "Ada",
@@ -286,14 +226,7 @@ describe("RenderTranscript", () => {
     });
 
     const rendered = render(
-      <RenderTranscript
-        scrollElement={null}
-        isLastTranscript
-        shouldScrollToEnd={false}
-        transcriptId="transcript-1"
-        currentActive
-        liveSegments={[live]}
-      />,
+      transcriptElement({ currentActive: true, liveSegments: [live] }),
     );
     await screen.findByRole("button", { name: "Ada" });
 
@@ -315,14 +248,7 @@ describe("RenderTranscript", () => {
       words: [...live.words, nextWord],
     };
     rendered.rerender(
-      <RenderTranscript
-        scrollElement={null}
-        isLastTranscript
-        shouldScrollToEnd={false}
-        transcriptId="transcript-1"
-        currentActive
-        liveSegments={[updated]}
-      />,
+      transcriptElement({ currentActive: true, liveSegments: [updated] }),
     );
 
     expect(mocks.renderTranscriptSegments).toHaveBeenCalledTimes(2);
@@ -346,33 +272,16 @@ describe("RenderTranscript", () => {
     ];
     const request = createRenderRequest([settled], assignments);
     request.humans = [{ human_id: "human-1", name: "Ada" }];
-    mocks.useRenderedTranscriptData.mockReturnValue({
-      maxSpeakerNumber: undefined,
-      request,
-      segments: [settled],
-    });
+    mockRenderedSegments([settled], request);
 
-    render(
-      <RenderTranscript
-        scrollElement={null}
-        isLastTranscript
-        shouldScrollToEnd={false}
-        transcriptId="transcript-1"
-        currentActive={false}
-        liveSegments={[]}
-      />,
-    );
+    render(transcriptElement());
 
     expect(screen.getByRole("button", { name: "Ada" })).toBeTruthy();
   });
 
   it("keeps the DOM bounded for a multi-hour transcript fixture", () => {
     const segments = createSegments(10_000);
-    mocks.useRenderedTranscriptData.mockReturnValue({
-      maxSpeakerNumber: undefined,
-      request: createRenderRequest(segments),
-      segments,
-    });
+    mockRenderedSegments(segments);
 
     renderTranscript();
 
@@ -386,11 +295,7 @@ describe("RenderTranscript", () => {
 
   it("mounts and scrolls to an active off-screen search match", () => {
     const segments = createSegments(1_000);
-    mocks.useRenderedTranscriptData.mockReturnValue({
-      maxSpeakerNumber: undefined,
-      request: createRenderRequest(segments),
-      segments,
-    });
+    mockRenderedSegments(segments);
     mocks.search = {
       activeMatchId: "word-999",
       caseSensitive: false,
@@ -408,31 +313,14 @@ describe("RenderTranscript", () => {
 
   it("preserves visible segment nodes when incremental updates append", () => {
     const initial = createSegments(500);
-    mocks.useRenderedTranscriptData.mockReturnValue({
-      maxSpeakerNumber: undefined,
-      request: createRenderRequest(initial),
-      segments: initial,
-    });
+    mockRenderedSegments(initial);
     const rendered = renderTranscript();
     const first = document.querySelector(sectionSelector(0));
     expect(first).toBeTruthy();
     const updated = [...initial, createSegment("500", 500)];
-    mocks.useRenderedTranscriptData.mockReturnValue({
-      maxSpeakerNumber: undefined,
-      request: createRenderRequest(updated),
-      segments: updated,
-    });
+    mockRenderedSegments(updated);
 
-    rendered.rerender(
-      <RenderTranscript
-        scrollElement={null}
-        isLastTranscript
-        shouldScrollToEnd={false}
-        transcriptId="transcript-1"
-        currentActive={false}
-        liveSegments={[]}
-      />,
-    );
+    rendered.rerender(transcriptElement());
 
     expect(document.querySelector(sectionSelector(0))).toBe(first);
     expect(document.querySelectorAll("section").length).toBeLessThanOrEqual(30);
@@ -440,20 +328,9 @@ describe("RenderTranscript", () => {
 
   it("preserves an active live segment while trailing words update", () => {
     const initial = createSegment("live-start:live-end", 0);
-    mocks.useRenderedTranscriptData.mockReturnValue({
-      maxSpeakerNumber: undefined,
-      request: createRenderRequest([initial]),
-      segments: [],
-    });
+    mockRenderedSegments([], createRenderRequest([initial]));
     const rendered = render(
-      <RenderTranscript
-        scrollElement={null}
-        isLastTranscript
-        shouldScrollToEnd={false}
-        transcriptId="transcript-1"
-        currentActive
-        liveSegments={[initial]}
-      />,
+      transcriptElement({ currentActive: true, liveSegments: [initial] }),
     );
     // L'identité de section d'un segment vivant ne dépend que de son premier
     // mot : elle ne change pas quand ses derniers mots arrivent (issue 281).
@@ -474,21 +351,10 @@ describe("RenderTranscript", () => {
       text: `${initial.text}${nextWord.text}`,
       words: [...initial.words, nextWord],
     };
-    mocks.useRenderedTranscriptData.mockReturnValue({
-      maxSpeakerNumber: undefined,
-      request: createRenderRequest([updated]),
-      segments: [],
-    });
+    mockRenderedSegments([], createRenderRequest([updated]));
 
     rendered.rerender(
-      <RenderTranscript
-        scrollElement={null}
-        isLastTranscript
-        shouldScrollToEnd={false}
-        transcriptId="transcript-1"
-        currentActive
-        liveSegments={[updated]}
-      />,
+      transcriptElement({ currentActive: true, liveSegments: [updated] }),
     );
 
     expect(document.querySelector(sectionSelector(0))).toBe(initialNode);
@@ -502,16 +368,36 @@ function sectionSelector(startMs: number) {
   return `section[data-transcript-segment-id='transcript-1:MixedCapture:start-${startMs}']`;
 }
 
-function renderTranscript(scrollElement: HTMLDivElement | null = null) {
-  return render(
+type RenderTranscriptProps = ComponentProps<typeof RenderTranscript>;
+
+function transcriptElement(props: Partial<RenderTranscriptProps> = {}) {
+  return (
     <RenderTranscript
-      scrollElement={scrollElement}
+      scrollElement={null}
       isLastTranscript
       shouldScrollToEnd={false}
       transcriptId="transcript-1"
       currentActive={false}
       liveSegments={[]}
-    />,
+      {...props}
+    />
+  );
+}
+
+function mockRenderedSegments(
+  segments: Segment[],
+  request: RenderTranscriptRequest = createRenderRequest(segments),
+) {
+  mocks.useRenderedTranscriptData.mockReturnValue({
+    maxSpeakerNumber: undefined,
+    request,
+    segments,
+  });
+}
+
+function renderTranscript(scrollElement: HTMLDivElement | null = null) {
+  return render(
+    transcriptElement({ scrollElement }),
     scrollElement ? { container: scrollElement } : undefined,
   );
 }
