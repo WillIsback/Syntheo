@@ -29,9 +29,11 @@ export function useCreateWorkflowFromTemplate() {
   return useMutation({
     mutationKey: ["automation-create-from-template"],
     mutationFn: async (template: AutomationTemplate) => {
+      const label = labels.template[template.id];
       const workflow = createWorkflowFromTemplate(
         template,
-        labels.template[template.id]?.title ?? "",
+        label?.title ?? "",
+        label?.texts,
       );
       if (!workflow) {
         throw new Error("template unavailable");

@@ -42,6 +42,7 @@ describe("reusable outputs", () => {
       {
         kind: "output",
         stepId: "export-a",
+        stepType: "markdown_export",
         stepNumber: 2,
         outputKind: "file",
         outputName: undefined,
@@ -80,13 +81,14 @@ describe("reusable outputs", () => {
 });
 
 describe("templates", () => {
-  it("offers the Markdown export and hides tasks until its actions exist", () => {
+  it("offers the Markdown export and the task extraction now that its actions exist", () => {
     expect(AUTOMATION_TEMPLATES.map((template) => template.id)).toEqual([
       "markdown-export",
       "extract-tasks",
     ]);
     expect(availableTemplates().map((template) => template.id)).toEqual([
       "markdown-export",
+      "extract-tasks",
     ]);
   });
 

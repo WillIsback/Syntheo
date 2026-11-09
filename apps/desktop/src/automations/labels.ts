@@ -2,6 +2,7 @@ import { useLingui } from "@lingui/react/macro";
 import { useMemo } from "react";
 
 import type { StepOutputKind, WorkflowStepType } from "./steps";
+import type { TemplateTexts } from "./templates";
 import type { AvailableVariable, BaseVariable } from "./variables";
 import type { AutomationWorkflow, WorkflowTrigger } from "./workflows";
 
@@ -13,7 +14,12 @@ export type AutomationLabels = {
   step: Record<WorkflowStepType, { title: string; description: string }>;
   variable: Record<BaseVariable, string>;
   output: Record<StepOutputKind, string>;
-  template: Record<string, { title: string; description: string }>;
+  /** Nom par défaut de la sortie, quand il dépend du type d'étape. */
+  stepOutput: Partial<Record<WorkflowStepType, string>>;
+  template: Record<
+    string,
+    { title: string; description: string; texts?: TemplateTexts }
+  >;
   untitled: string;
 };
 
@@ -40,6 +46,30 @@ export function useAutomationLabels(): AutomationLabels {
           title: t`Export as Markdown`,
           description: t`Writes the note to a folder on your computer.`,
         },
+        generate_text: {
+          title: t`Generate with the local model`,
+          description: t`Applies an instruction (tasks, short summary, follow-up message); the result feeds the next steps.`,
+        },
+        vault_write: {
+          title: t`Write to the vault`,
+          description: t`Creates or completes a note in the vault.`,
+        },
+        clipboard: {
+          title: t`Copy to the clipboard`,
+          description: t`Ready to paste into a message or a document.`,
+        },
+        notification: {
+          title: t`System notification`,
+          description: t`Lets you know when the automation has finished.`,
+        },
+        webhook: {
+          title: t`Send to an address (webhook)`,
+          description: t`JSON to n8n, Home Assistant or a home server. The only step that leaves your computer.`,
+        },
+        command: {
+          title: t`Run a command`,
+          description: t`Local script with the path of the exported file. Asks for confirmation the first time.`,
+        },
       },
       variable: {
         summary: t({ message: "Summary", context: "automation variable" }),
@@ -55,6 +85,9 @@ export function useAutomationLabels(): AutomationLabels {
         file: t`Exported file`,
         text: t`Generated text`,
       },
+      stepOutput: {
+        command: t`Command output`,
+      },
       template: {
         "markdown-export": {
           title: t`Export as Markdown`,
@@ -63,6 +96,11 @@ export function useAutomationLabels(): AutomationLabels {
         "extract-tasks": {
           title: t`Extract tasks`,
           description: t`The local model lists the actions to take and adds them to the vault.`,
+          texts: {
+            prompt: t`List the action items decided during the meeting, one per line, with the person responsible. Meeting summary:`,
+            noteTitle: t({ message: "Tasks –", context: "vault note title" }),
+            folder: t({ message: "Tasks", context: "vault folder" }),
+          },
         },
       },
       untitled: t`Untitled automation`,
@@ -102,7 +140,18 @@ export function variableLabel(
   if (variable.kind === "base") {
     return labels.variable[variable.name];
   }
-  return variable.outputName?.trim() || labels.output[variable.outputKind];
+  return (
+    variable.outputName?.trim() ||
+    defaultOutputName(variable.stepType, variable.outputKind, labels)
+  );
+}
+
+export function defaultOutputName(
+  stepType: WorkflowStepType,
+  kind: StepOutputKind,
+  labels: AutomationLabels,
+): string {
+  return labels.stepOutput[stepType] ?? labels.output[kind];
 }
 
 const RELATIVE_UNITS: Array<[Intl.RelativeTimeFormatUnit, number]> = [

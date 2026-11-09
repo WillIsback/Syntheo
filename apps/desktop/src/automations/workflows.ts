@@ -4,6 +4,7 @@ import {
   type WorkflowStep,
 } from "./steps";
 import type { AutomationRunRecord } from "./types";
+import { danglingOutputRefs } from "./variables";
 
 import {
   getStoredSettingValues,
@@ -61,7 +62,11 @@ export function createEmptyWorkflow(
 }
 
 export function isWorkflowReady(workflow: AutomationWorkflow): boolean {
-  return workflow.steps.length > 0 && workflow.steps.every(isWorkflowStepReady);
+  return (
+    workflow.steps.length > 0 &&
+    workflow.steps.every(isWorkflowStepReady) &&
+    danglingOutputRefs(workflow).length === 0
+  );
 }
 
 export function parseAutomationWorkflows(
