@@ -21,7 +21,7 @@ export type TranscriptRowWithId = {
   row: TranscriptRow;
 };
 
-export function toTranscriptRows(
+function toTranscriptRows(
   transcripts: readonly TranscriptRecord[],
 ): TranscriptRowWithId[] {
   return transcripts.map((transcript) => ({
@@ -34,7 +34,7 @@ export function toTranscriptRows(
   }));
 }
 
-export function collectRenderHumanIds(
+function collectRenderHumanIds(
   participantHumanIds: readonly string[],
   assignedHumanIds: readonly string[],
   selfHumanId?: string,
