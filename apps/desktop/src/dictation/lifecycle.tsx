@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { Channel } from "@tauri-apps/api/core";
 import { platform } from "@tauri-apps/plugin-os";
 import { useRef } from "react";
@@ -20,6 +21,7 @@ import { useBillingAccess } from "~/billing/billing-context";
 import { useSettingsReady } from "~/settings/queries";
 import { useConfigValue } from "~/shared/config";
 import { useListener } from "~/stt/contexts";
+import { canStreamFile } from "~/stt/transcription-route";
 import { useRunBatch } from "~/stt/useRunBatch";
 import { useSTTConnection } from "~/stt/useSTTConnection";
 export { useDictationStatus } from "./state";
@@ -230,6 +232,13 @@ function ActiveDictation({
       },
       transcribe: async (audio) => {
         if (finalTranscript !== null) return finalTranscript;
+        // Sans transcription en direct, il faut un modèle par lot : un modèle
+        // temps réel seul ne peut pas reprendre l'enregistrement (issue 463).
+        const { conn } = current.current;
+        if (conn && canStreamFile(conn.provider, conn.model))
+          throw new Error(
+            t`The live transcription of this dictation was interrupted, and this model can't transcribe the recording afterwards. Try again.`,
+          );
         let text = "";
         await current.current.runBatch("", {
           audio,

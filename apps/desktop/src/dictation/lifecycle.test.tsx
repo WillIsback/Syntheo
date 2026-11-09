@@ -280,6 +280,31 @@ describe("dictation access and lifecycle", () => {
     expect(mocks.runBatch).not.toHaveBeenCalled();
   });
 
+  it("explains that a live-only model can't transcribe the recording afterwards", async () => {
+    mocks.connection = {
+      provider: "nvidia",
+      model: "cache-aware-parakeet-rnnt-multi-asr-streaming-sortformer",
+      apiKey: "",
+      baseUrl: "http://192.168.1.87:9000/?provider=nvidia",
+    };
+    render(<DictationLifecycle />);
+    await waitFor(() => expect(useDictationStatus.getState().ready).toBe(true));
+    await act(async () => {
+      mocks.listener?.({ payload: { type: "pressed" } });
+    });
+    await act(async () => {
+      mocks.listener?.({ payload: { type: "released" } });
+    });
+
+    await waitFor(() =>
+      expect(useDictationStatus.getState().error).toBe(
+        "The live transcription of this dictation was interrupted, and this model can't transcribe the recording afterwards. Try again.",
+      ),
+    );
+    expect(mocks.runBatch).not.toHaveBeenCalled();
+    expect(mocks.insertText).not.toHaveBeenCalled();
+  });
+
   it("aborts and removes shortcuts when paid access is lost during recording", async () => {
     const view = render(<DictationLifecycle />);
     await waitFor(() => expect(useDictationStatus.getState().ready).toBe(true));
