@@ -1,17 +1,11 @@
+// Marge transparente autour du panneau de dictée ; la pastille de réunion n'en a
+// pas (issue 448).
 export const FLOATING_BAR_INSET = 4;
 export const FLOATING_BAR_COMPACT_HEIGHT = 38;
 export const FLOATING_BAR_COMPACT_STOP_WIDTH = 62;
-export const FLOATING_BAR_COMPACT_SOLO_STOP_WIDTH = 68;
 export const FLOATING_BAR_COMPACT_ICON_SIZE = 30;
 export const FLOATING_BAR_COMPACT_GAP = 0;
 export const FLOATING_BAR_COMPACT_HORIZONTAL_PADDING = 4;
-export const FLOATING_BAR_HOVER_HANDLE_HEIGHT = 12;
-export const FLOATING_BAR_HOVER_HANDLE_TOP_PADDING = 7;
-const FLOATING_BAR_HOVER_HANDLE_GAP = 2;
-export const FLOATING_BAR_HOVER_HANDLE_RESERVED_HEIGHT =
-  FLOATING_BAR_HOVER_HANDLE_TOP_PADDING +
-  FLOATING_BAR_HOVER_HANDLE_HEIGHT +
-  FLOATING_BAR_HOVER_HANDLE_GAP;
 export const FLOATING_BAR_CONTROL_RADIUS = 10;
 export const FLOATING_BAR_COMPACT_RADIUS = 14;
 export const FLOATING_BAR_EXPANDED_RADIUS = 21;
@@ -20,30 +14,47 @@ export const FLOATING_BAR_EXPANDED_RADIUS = 21;
 // PAUSED_CONTROLS_WIDTH côté Rust (floating_bar.rs).
 export const FLOATING_BAR_PAUSED_CONTROLS_WIDTH = 232;
 
-export function compactControlsWidth(showsExpand: boolean) {
-  return showsExpand
-    ? FLOATING_BAR_COMPACT_STOP_WIDTH +
-        FLOATING_BAR_COMPACT_GAP +
-        FLOATING_BAR_COMPACT_ICON_SIZE
-    : FLOATING_BAR_COMPACT_SOLO_STOP_WIDTH;
-}
+// Pastille d'écoute (issue 448), de gauche à droite. La fenêtre native a
+// exactement cette largeur : RECORDING_PILL_WIDTH côté Rust (floating_bar.rs).
+export const FLOATING_PILL_SLOTS = {
+  leadingPadding: FLOATING_BAR_COMPACT_HORIZONTAL_PADDING,
+  dot: 22,
+  duration: 38,
+  level: 28,
+  separator: 9,
+  pause: 70,
+  buttonGap: 2,
+  finish: 85,
+  trailingPadding: FLOATING_BAR_COMPACT_HORIZONTAL_PADDING,
+} as const;
+export const FLOATING_BAR_RECORDING_PILL_WIDTH = 262;
+// Au-delà d'une heure, la durée passe de mm:ss à h:mm:ss : LONG_DURATION_* côté
+// Rust élargit la fenêtre d'autant.
+export const FLOATING_PILL_LONG_DURATION_SECONDS = 3600;
+export const FLOATING_PILL_LONG_DURATION_EXTRA_WIDTH = 16;
 
-// Même calcul que `meeting_controls_width` côté Rust : la dictée garde ses
-// commandes, l'écoute ajoute « Mettre en pause ».
-export function floatingControlsWidth(state: {
-  dictation?: unknown;
-  status: string;
-  liveCaptionToggleVisible: boolean;
-}) {
-  if (state.dictation) {
-    return compactControlsWidth(state.liveCaptionToggleVisible);
-  }
-  if (state.status === "paused") {
-    return FLOATING_BAR_PAUSED_CONTROLS_WIDTH;
-  }
+export function dictationControlsWidth() {
   return (
-    compactControlsWidth(state.liveCaptionToggleVisible) +
+    FLOATING_BAR_COMPACT_STOP_WIDTH +
     FLOATING_BAR_COMPACT_GAP +
     FLOATING_BAR_COMPACT_ICON_SIZE
   );
+}
+
+export function durationSlotWidth(elapsedSeconds: number) {
+  return elapsedSeconds >= FLOATING_PILL_LONG_DURATION_SECONDS
+    ? FLOATING_PILL_SLOTS.duration + FLOATING_PILL_LONG_DURATION_EXTRA_WIDTH
+    : FLOATING_PILL_SLOTS.duration;
+}
+
+/** Durée d'écoute : mm:ss, puis h:mm:ss au-delà d'une heure. */
+export function formatListeningDuration(elapsedSeconds: number) {
+  const total = Math.max(0, Math.floor(elapsedSeconds));
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const seconds = total % 60;
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return hours > 0
+    ? `${hours}:${pad(minutes)}:${pad(seconds)}`
+    : `${pad(minutes)}:${pad(seconds)}`;
 }

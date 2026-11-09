@@ -12,6 +12,7 @@ import type { FloatingSpeakerLabels } from "./speaker-labels";
 import type { ListenerStore } from "~/store/zustand/listener";
 import {
   getCaptureWarning,
+  getListeningElapsedSeconds,
   isLiveTranscriptInterrupted,
 } from "~/store/zustand/listener/general-shared";
 import { LIVE_TRANSCRIPT_PREVIEW_SEGMENT_LIMIT } from "~/store/zustand/listener/transcript";
@@ -50,6 +51,8 @@ export type FloatingRouteState = {
   liveCaptionToggleVisible: boolean;
   transcriptBubbles: FloatingTranscriptBubble[];
   transcriptNotice?: string | null;
+  // Durée écoutée, pauses exclues, affichée par la pastille (issue 448).
+  elapsedSeconds?: number;
 };
 const FLOATING_TRANSCRIPT_OVERLAP_THRESHOLD_MS = 300;
 
@@ -102,6 +105,7 @@ export function getFloatingRouteState(
       liveCaptionToggleVisible: false,
       transcriptBubbles: [],
       transcriptNotice: null,
+      elapsedSeconds: getListeningElapsedSeconds(state.live, pause.sessionId),
     };
   }
 
@@ -148,6 +152,10 @@ export function getFloatingRouteState(
             sttProvider,
           })
         : null),
+    elapsedSeconds: getListeningElapsedSeconds(
+      state.live,
+      state.live.sessionId,
+    ),
   };
 }
 
@@ -375,6 +383,7 @@ export function isSameFloatingRouteState(
     left?.liveCaptionMinimized === right?.liveCaptionMinimized &&
     left?.liveCaptionToggleVisible === right?.liveCaptionToggleVisible &&
     left?.title === right?.title &&
+    left?.elapsedSeconds === right?.elapsedSeconds &&
     (left?.transcriptNotice ?? null) === (right?.transcriptNotice ?? null) &&
     left?.dictation?.sessionId === right?.dictation?.sessionId &&
     left?.dictation?.phase === right?.dictation?.phase &&

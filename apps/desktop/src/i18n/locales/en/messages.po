@@ -112,6 +112,10 @@ msgstr "{count}s"
 msgid "{day} at {time}"
 msgstr "{day} at {time}"
 
+#: src/meeting-float/overlay/bar.tsx
+msgid "{duration}, back to the note"
+msgstr "{duration}, back to the note"
+
 #: src/session/components/note-input/transcript/renderer/selection-menu.tsx
 msgid "{entryCount} selected"
 msgstr "{entryCount} selected"
@@ -131,6 +135,10 @@ msgstr "{model} can't transcribe all selected languages together. Try another mo
 #: src/sidebar/timeline/utils/index.ts
 msgid "{months} months ago"
 msgstr "{months} months ago"
+
+#: src/meeting-float/overlay/bar.tsx
+msgid "{notice}. Open Syntheo to retry or change devices."
+msgstr "{notice}. Open Syntheo to retry or change devices."
 
 #: src/stt/meeting-apps.ts
 msgid "{otherAppCount, plural, one {Ignore {firstName} and # other app?} other {Ignore {firstName} and # other apps?}}"
@@ -653,6 +661,10 @@ msgstr "Back to current version"
 #: src/sidebar/custom-sidebar-header.tsx
 msgid "Back to Settings"
 msgstr "Back to Settings"
+
+#: src/meeting-float/overlay/bar.tsx
+msgid "Back to the note"
+msgstr "Back to the note"
 
 #: src/settings/search-index.ts
 msgid "bar, small window, control, always on top"
@@ -3252,6 +3264,7 @@ msgstr "Paste"
 msgid "Paste a past summary you like..."
 msgstr "Paste a past summary you like..."
 
+#: src/meeting-float/overlay/bar.tsx
 #: src/settings/developers/webhooks.tsx
 msgid "Pause"
 msgstr "Pause"
@@ -3493,6 +3506,10 @@ msgstr "Recording could not start. Check your audio permissions and devices."
 #: src/stt/start-failure.ts
 msgid "Recording couldn't start"
 msgstr "Recording couldn't start"
+
+#: src/meeting-float/overlay/bar.tsx
+msgid "Recording needs attention"
+msgstr "Recording needs attention"
 
 #: src/settings/general/notification.tsx
 #: src/settings/search-index.ts

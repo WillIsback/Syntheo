@@ -101,20 +101,15 @@ export function FloatingBarOverlayScreen() {
             action: "resume",
           });
         }}
-        onToggleExpanded={(expanded) => {
+        onOpenNote={() => {
+          void windowsEvents.floatingBarOpenMain.emit({});
+        }}
+        onToggleExpanded={() => {
+          // Seule la dictée a un panneau de transcription (issue 448).
           if (state.dictation) {
             void windowsEvents.floatingBarDictationAction.emit({
               sessionId: state.dictation.sessionId,
               action: "togglePreview",
-            });
-          } else {
-            void windowsEvents.floatingBarSettingsChange.emit({
-              floatingBarOpacity: null,
-              liveCaptionOpacity: null,
-              liveCaptionWidth: null,
-              liveCaptionLineCount: null,
-              liveCaptionPosition: null,
-              liveCaptionMinimized: !expanded,
             });
           }
         }}
