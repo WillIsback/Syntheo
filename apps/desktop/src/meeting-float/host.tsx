@@ -54,6 +54,7 @@ import {
 import { useConfigValue, useConfigValues } from "~/shared/config";
 import { useLatestRef } from "~/shared/hooks/useLatestRef";
 import { listenerStore } from "~/store/zustand/listener/instance";
+import { useTabs } from "~/store/zustand/tabs";
 import type { RenderLabelContext } from "~/stt/live-segment";
 import { finishPausedListening } from "~/stt/pause-listening";
 import { requestMainListenerControl } from "~/stt/window-control";
@@ -305,6 +306,12 @@ function FloatingMeetingWindowSync({
     windowsEvents.floatingBarOpenMain
       .listen(async () => {
         await windowsCommands.windowShow({ type: "main" });
+        // Clic sur la durée de la pastille (issue 448) : retour à la note de la
+        // réunion en cours ou en pause.
+        const sessionId = routeState?.dictation ? null : routeState?.sessionId;
+        if (sessionId) {
+          useTabs.getState().openNew({ type: "sessions", id: sessionId });
+        }
       })
       .then((unlisten) => {
         if (cancelled) {
@@ -458,6 +465,10 @@ export function haveFloatingRouteInputsChanged(
     state.live.transcriptionStalled !==
       previousState.live.transcriptionStalled ||
     state.live.pause !== previousState.live.pause ||
+    // Durée affichée par la pastille (issue 448).
+    state.live.seconds !== previousState.live.seconds ||
+    state.live.elapsedOffsetSeconds !==
+      previousState.live.elapsedOffsetSeconds ||
     state.liveSegments !== previousState.liveSegments
   );
 }

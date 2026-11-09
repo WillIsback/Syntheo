@@ -18,6 +18,14 @@ pub enum FloatingBarStatus {
 pub struct FloatingBarOverlayLayout {
     pub controls_center_x: f64,
     pub expands_upward: bool,
+    /// Faux quand le compositeur tient la pastille en calque (layer-shell, issue 448) : elle
+    /// reste ancrée en bas au centre et ne se déplace pas à la souris.
+    #[serde(default = "default_movable")]
+    pub movable: bool,
+}
+
+fn default_movable() -> bool {
+    true
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, specta::Type)]
@@ -77,6 +85,9 @@ pub struct FloatingBarState {
     pub layout: Option<FloatingBarOverlayLayout>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub session_id: Option<String>,
+    /// Durée écoutée, pauses exclues (issue 448) : affichée dans la pastille de réunion.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub elapsed_seconds: Option<u32>,
 }
 
 pub const WINDOW_LABEL: &str = "floating-bar";
@@ -85,76 +96,64 @@ pub const WINDOW_LABEL: &str = "floating-bar";
 pub(crate) mod layout {
     use super::{FloatingBarState, FloatingBarStatus};
 
+    /// Marge transparente autour du panneau de dictée (la pastille de réunion n'en a pas).
     pub const INSET: f64 = 4.0;
     pub const SCREEN_MARGIN: f64 = 8.0;
     pub const COMPACT_HEIGHT: f64 = 38.0;
     pub const COMPACT_STOP_WIDTH: f64 = 62.0;
-    pub const COMPACT_SOLO_STOP_WIDTH: f64 = 68.0;
     pub const COMPACT_ICON_SIZE: f64 = 30.0;
     pub const COMPACT_GAP: f64 = 0.0;
     pub const COMPACT_HORIZONTAL_PADDING: f64 = 4.0;
     /// « En pause », « Reprendre » et « Terminer » côte à côte (bar.tsx).
     pub const PAUSED_CONTROLS_WIDTH: f64 = 232.0;
+    /// Pastille d'écoute (issue 448) : point, durée, niveau, séparateur, « Pause » et
+    /// « Terminer ». Même valeur que FLOATING_BAR_RECORDING_PILL_WIDTH (layout.ts).
+    pub const RECORDING_PILL_WIDTH: f64 = 262.0;
+    /// Place supplémentaire de la durée au-delà d'une heure (h:mm:ss au lieu de mm:ss).
+    pub const LONG_DURATION_EXTRA_WIDTH: f64 = 16.0;
+    pub const LONG_DURATION_SECONDS: u32 = 3600;
     pub const EXPANDED_WIDTH: f64 = 360.0;
     pub const EXPANDED_HEIGHT: f64 = 430.0;
-    pub const HOVER_HANDLE_TOP_PADDING: f64 = 7.0;
-    pub const HOVER_HANDLE_HEIGHT: f64 = 12.0;
-    pub const HOVER_HANDLE_GAP: f64 = 2.0;
-    pub const HOVER_HANDLE_RESERVED_HEIGHT: f64 =
-        HOVER_HANDLE_TOP_PADDING + HOVER_HANDLE_HEIGHT + HOVER_HANDLE_GAP;
 
+    /// Panneau de transcription ouvert : seule la dictée en a un (issue 448).
     pub fn is_expanded(state: &FloatingBarState) -> bool {
-        state.live_caption_toggle_visible && !state.live_caption_minimized
+        state.dictation.is_some()
+            && state.live_caption_toggle_visible
+            && !state.live_caption_minimized
     }
 
-    pub fn compact_controls_width(shows_expand: bool) -> f64 {
-        if shows_expand {
-            COMPACT_STOP_WIDTH + COMPACT_GAP + COMPACT_ICON_SIZE
+    pub fn compact_controls_width() -> f64 {
+        COMPACT_STOP_WIDTH + COMPACT_GAP + COMPACT_ICON_SIZE
+    }
+
+    /// Taille de la pastille de réunion : la fenêtre a exactement cette taille, sans marge ni
+    /// zone réservée (issue 448).
+    pub fn meeting_pill_size(state: &FloatingBarState) -> (f64, f64) {
+        let width = if matches!(state.status, FloatingBarStatus::Paused) {
+            PAUSED_CONTROLS_WIDTH + COMPACT_HORIZONTAL_PADDING * 2.0
+        } else if state
+            .elapsed_seconds
+            .is_some_and(|seconds| seconds >= LONG_DURATION_SECONDS)
+        {
+            RECORDING_PILL_WIDTH + LONG_DURATION_EXTRA_WIDTH
         } else {
-            COMPACT_SOLO_STOP_WIDTH
-        }
+            RECORDING_PILL_WIDTH
+        };
+        (width, COMPACT_HEIGHT)
     }
 
-    pub fn compact_width(shows_expand: bool) -> f64 {
-        compact_controls_width(shows_expand) + COMPACT_HORIZONTAL_PADDING * 2.0
+    /// Taille par défaut, avant tout état : la pastille d'écoute.
+    pub fn default_size() -> (f64, f64) {
+        (RECORDING_PILL_WIDTH, COMPACT_HEIGHT)
     }
 
-    /// Commandes d'une réunion : « Mettre en pause » s'ajoute à l'arrêt pendant l'écoute ; la
-    /// pause affiche son état et ses deux actions.
-    pub fn meeting_controls_width(state: &FloatingBarState) -> f64 {
-        if matches!(state.status, FloatingBarStatus::Paused) {
-            PAUSED_CONTROLS_WIDTH
-        } else {
-            compact_controls_width(state.live_caption_toggle_visible)
-                + COMPACT_GAP
-                + COMPACT_ICON_SIZE
-        }
-    }
-
-    pub fn meeting_container_size(state: &FloatingBarState) -> (f64, f64) {
-        if is_expanded(state) {
-            return container_size(true, true);
-        }
-        (
-            meeting_controls_width(state) + COMPACT_HORIZONTAL_PADDING * 2.0 + INSET * 2.0,
-            COMPACT_HEIGHT + HOVER_HANDLE_RESERVED_HEIGHT + INSET * 2.0,
-        )
-    }
-
-    pub fn dictation_container_size(expanded: bool) -> (f64, f64) {
-        container_size(expanded, true)
-    }
-
-    pub fn container_size(is_expanded: bool, shows_expand: bool) -> (f64, f64) {
+    pub fn dictation_container_size(is_expanded: bool) -> (f64, f64) {
         if is_expanded {
-            (
-                EXPANDED_WIDTH + INSET * 2.0,
-                EXPANDED_HEIGHT + HOVER_HANDLE_RESERVED_HEIGHT + INSET * 2.0,
-            )
+            (EXPANDED_WIDTH + INSET * 2.0, EXPANDED_HEIGHT + INSET * 2.0)
         } else {
             (
-                compact_width(shows_expand) + INSET * 2.0,
-                COMPACT_HEIGHT + HOVER_HANDLE_RESERVED_HEIGHT + INSET * 2.0,
+                compact_controls_width() + COMPACT_HORIZONTAL_PADDING * 2.0 + INSET * 2.0,
+                COMPACT_HEIGHT + INSET * 2.0,
             )
         }
     }
@@ -163,10 +162,12 @@ pub(crate) mod layout {
         if expands_upward {
             height - INSET - COMPACT_HEIGHT / 2.0
         } else {
-            INSET + HOVER_HANDLE_RESERVED_HEIGHT + COMPACT_HEIGHT / 2.0
+            INSET + COMPACT_HEIGHT / 2.0
         }
     }
 
+    /// Cadre du panneau de dictée qui garde ses commandes sous `anchor` quand il s'ouvre ou se
+    /// referme.
     pub fn frame_at_controls(
         anchor: (f64, f64),
         size: (f64, f64),
@@ -174,7 +175,7 @@ pub(crate) mod layout {
         expands_upward: bool,
     ) -> (f64, f64, f64, f64) {
         let width = size.0.min(work.2);
-        let min_height = size.1.min(container_size(false, true).1).min(work.3);
+        let min_height = size.1.min(dictation_container_size(false).1).min(work.3);
         let (y, height) = if expands_upward {
             let bottom = (anchor.1 + INSET + COMPACT_HEIGHT / 2.0)
                 .clamp(work.1 + min_height, work.1 + work.3);
@@ -186,6 +187,20 @@ pub(crate) mod layout {
             (y, size.1.min(work.1 + work.3 - y))
         };
         let x = (anchor.0 - width / 2.0).clamp(work.0, work.0 + work.2 - width);
+        (x, y, width, height)
+    }
+
+    /// Cadre de la pastille de réunion quand sa largeur change (pause, durée au-delà d'une
+    /// heure) : elle garde son centre et reste dans la zone de travail.
+    pub fn frame_around_center(
+        center: (f64, f64),
+        size: (f64, f64),
+        work: (f64, f64, f64, f64),
+    ) -> (f64, f64, f64, f64) {
+        let width = size.0.min(work.2);
+        let height = size.1.min(work.3);
+        let x = (center.0 - width / 2.0).clamp(work.0, work.0 + work.2 - width);
+        let y = (center.1 - height / 2.0).clamp(work.1, work.1 + work.3 - height);
         (x, y, width, height)
     }
 
@@ -370,8 +385,8 @@ mod cross_platform {
     use tauri_specta::Event;
 
     use super::layout::{
-        bottom_center_origin, container_size, controls_center_y, frame_at_controls, is_expanded,
-        pick_monitor,
+        bottom_center_origin, controls_center_y, default_size, dictation_container_size,
+        frame_around_center, frame_at_controls, is_expanded, meeting_pill_size, pick_monitor,
     };
     use super::{FloatingBarOverlayLayout, FloatingBarState, WINDOW_LABEL};
     use crate::Error;
@@ -470,7 +485,7 @@ mod cross_platform {
             return Ok(window);
         }
 
-        let (width, height) = container_size(false, false);
+        let (width, height) = default_size();
         let builder = WebviewWindowBuilder::new(
             app,
             WINDOW_LABEL,
@@ -500,9 +515,30 @@ mod cross_platform {
             .disable_drag_drop_handler()
             .build()?;
 
+        // Wayland (issue 448) : calque ancré en bas au centre quand le compositeur le gère, avant
+        // le premier affichage ; sinon, fenêtre ordinaire placée par `apply_layout`.
+        #[cfg(target_os = "linux")]
+        crate::window::layer_shell::try_init(&window, super::layout::SCREEN_MARGIN as i32);
+
         crate::window::exclude_from_capture(&window);
 
         Ok(window)
+    }
+
+    /// La pastille est un calque Wayland : le compositeur tient sa position.
+    fn is_layer_surface() -> bool {
+        #[cfg(target_os = "linux")]
+        {
+            crate::window::layer_shell::is_active()
+        }
+        #[cfg(not(target_os = "linux"))]
+        {
+            false
+        }
+    }
+
+    fn differs(current: LogicalSize<f64>, size: (f64, f64)) -> bool {
+        (current.width - size.0).abs() >= 0.5 || (current.height - size.1).abs() >= 0.5
     }
 
     fn apply_layout(
@@ -513,16 +549,25 @@ mod cross_platform {
         let is_expanded = state.is_some_and(is_expanded);
         let dictation = state.is_some_and(|state| state.dictation.is_some());
         window.set_focusable(!dictation)?;
-        let (width, height) = match state {
-            _ if dictation => super::layout::dictation_container_size(is_expanded),
-            Some(state) => super::layout::meeting_container_size(state),
-            None => container_size(false, false),
+        let size = match state {
+            _ if dictation => dictation_container_size(is_expanded),
+            Some(state) => meeting_pill_size(state),
+            None => default_size(),
         };
-        let next_size = LogicalSize::new(width, height);
         let scale = window.scale_factor()?;
         let current_size = window.outer_size()?.to_logical::<f64>(scale);
+        if is_layer_surface() {
+            // Calque : ancré en bas au centre par le compositeur, seule la taille change.
+            if differs(current_size, size) {
+                set_fixed_size(window, LogicalSize::new(size.0, size.1))?;
+            }
+            return Ok(FloatingBarOverlayLayout {
+                controls_center_x: size.0 / 2.0,
+                expands_upward: true,
+                movable: false,
+            });
+        }
         let current_position = window.outer_position()?.to_logical::<f64>(scale);
-        let size = (next_size.width, next_size.height);
         let previous = current_state();
         let old_layout =
             previous
@@ -531,6 +576,7 @@ mod cross_platform {
                 .unwrap_or(FloatingBarOverlayLayout {
                     controls_center_x: current_size.width / 2.0,
                     expands_upward: true,
+                    movable: true,
                 });
         if force_default_position {
             let origin = default_origin(window, size.0, size.1)?;
@@ -542,12 +588,9 @@ mod cross_platform {
             return Ok(FloatingBarOverlayLayout {
                 controls_center_x: size.0 / 2.0,
                 expands_upward: true,
+                movable: true,
             });
         }
-        let anchor = (
-            current_position.x + old_layout.controls_center_x,
-            current_position.y + controls_center_y(current_size.height, old_layout.expands_upward),
-        );
         let preferred = window
             .current_monitor()?
             .or(window.app_handle().primary_monitor()?);
@@ -555,41 +598,52 @@ mod cross_platform {
             window.available_monitors().unwrap_or_default()
         }) else {
             // Aucun écran pour cadrer : la taille suit l'état, la position reste au compositeur.
-            if (current_size.width - size.0).abs() >= 0.5
-                || (current_size.height - size.1).abs() >= 0.5
-            {
-                set_fixed_size(window, next_size)?;
+            if differs(current_size, size) {
+                set_fixed_size(window, LogicalSize::new(size.0, size.1))?;
             }
-            return Ok(old_layout);
+            return Ok(FloatingBarOverlayLayout {
+                controls_center_x: size.0 / 2.0,
+                movable: true,
+                ..old_layout
+            });
         };
         let work = monitor.work_area();
         let origin = work.position.to_logical::<f64>(monitor.scale_factor());
         let work_size = work.size.to_logical::<f64>(monitor.scale_factor());
-        let grows = is_expanded && !previous.as_ref().is_some_and(super::layout::is_expanded);
-        let upwards = if grows {
-            anchor.1 - origin.y > origin.y + work_size.height - anchor.1
+        let work = (origin.x, origin.y, work_size.width, work_size.height);
+        let ((x, y, width, height), controls_center_x, expands_upward) = if dictation {
+            let anchor = (
+                current_position.x + old_layout.controls_center_x,
+                current_position.y
+                    + controls_center_y(current_size.height, old_layout.expands_upward),
+            );
+            let grows = is_expanded && !previous.as_ref().is_some_and(super::layout::is_expanded);
+            let upwards = if grows {
+                anchor.1 - origin.y > origin.y + work_size.height - anchor.1
+            } else {
+                old_layout.expands_upward
+            };
+            let frame = frame_at_controls(anchor, size, work, upwards);
+            (frame, anchor.0 - frame.0, upwards)
         } else {
-            old_layout.expands_upward
+            // Pastille de réunion (issue 448) : elle change de largeur autour de son centre.
+            let center = (
+                current_position.x + current_size.width / 2.0,
+                current_position.y + current_size.height / 2.0,
+            );
+            let frame = frame_around_center(center, size, work);
+            (frame, frame.2 / 2.0, true)
         };
-        let frame = frame_at_controls(
-            anchor,
-            size,
-            (origin.x, origin.y, work_size.width, work_size.height),
-            upwards,
-        );
-        if (current_size.width - frame.2).abs() >= 0.5
-            || (current_size.height - frame.3).abs() >= 0.5
-        {
-            set_fixed_size(window, LogicalSize::new(frame.2, frame.3))?;
+        if differs(current_size, (width, height)) {
+            set_fixed_size(window, LogicalSize::new(width, height))?;
         }
-        if (current_position.x - frame.0).abs() >= 0.5
-            || (current_position.y - frame.1).abs() >= 0.5
-        {
-            window.set_position(Position::Logical(LogicalPosition::new(frame.0, frame.1)))?;
+        if (current_position.x - x).abs() >= 0.5 || (current_position.y - y).abs() >= 0.5 {
+            window.set_position(Position::Logical(LogicalPosition::new(x, y)))?;
         }
         Ok(FloatingBarOverlayLayout {
-            controls_center_x: anchor.0 - frame.0,
-            expands_upward: upwards,
+            controls_center_x,
+            expands_upward,
+            movable: true,
         })
     }
 
@@ -703,18 +757,28 @@ pub fn update_amplitude(amplitude: f64) -> Result<(), Error> {
 mod tests {
     use super::layout;
 
+    // Panneau de dictée : ouvert (368 × 438) et replié (108 × 46).
+    const DICTATION_EXPANDED: (f64, f64) = (368.0, 438.0);
+    const DICTATION_COMPACT: (f64, f64) = (108.0, 46.0);
+
+    #[test]
+    fn dictation_sizes_have_no_hover_handle_reserve() {
+        assert_eq!(layout::dictation_container_size(true), DICTATION_EXPANDED);
+        assert_eq!(layout::dictation_container_size(false), DICTATION_COMPACT);
+    }
+
     #[test]
     fn controls_dragged_near_vertical_edges_keep_the_panel_visible() {
         for anchor_y in [-100.0, 10.0, 1070.0, 1200.0] {
             for upwards in [false, true] {
                 let (x, y, width, height) = layout::frame_at_controls(
                     (960.0, anchor_y),
-                    (368.0, 459.0),
+                    DICTATION_EXPANDED,
                     (0.0, 0.0, 1920.0, 1080.0),
                     upwards,
                 );
                 assert!(x >= 0.0 && y >= 0.0);
-                assert!(height >= layout::container_size(false, true).1);
+                assert!(height >= layout::dictation_container_size(false).1);
                 assert!(x + width <= 1920.0 && y + height <= 1080.0);
             }
         }
@@ -728,7 +792,7 @@ mod tests {
             ((-960.0, 92.0), false),
             ((-64.0, 1049.0), true),
         ] {
-            for size in [(111.0, 67.0), (368.0, 459.0), (111.0, 67.0)] {
+            for size in [DICTATION_COMPACT, DICTATION_EXPANDED, DICTATION_COMPACT] {
                 let frame = layout::frame_at_controls(anchor, size, work, upwards);
                 assert_eq!(
                     frame.1 + layout::controls_center_y(frame.3, upwards),
@@ -745,7 +809,7 @@ mod tests {
     fn short_displays_reduce_the_panel_instead_of_moving_the_controls() {
         let frame = layout::frame_at_controls(
             (150.0, 180.0),
-            (368.0, 459.0),
+            DICTATION_EXPANDED,
             (0.0, 0.0, 300.0, 320.0),
             true,
         );
@@ -756,19 +820,23 @@ mod tests {
     #[test]
     fn collapse_after_drag_uses_the_new_control_position() {
         let work = (0.0, 0.0, 1920.0, 1080.0);
-        let expanded = layout::frame_at_controls((1856.0, 1049.0), (368.0, 459.0), work, true);
+        let expanded = layout::frame_at_controls((1856.0, 1049.0), DICTATION_EXPANDED, work, true);
         let controls_x = 1856.0 - expanded.0;
         let moved_anchor = (expanded.0 - 100.0 + controls_x, 1049.0);
-        let collapsed = layout::frame_at_controls(moved_anchor, (144.0, 67.0), work, true);
+        let collapsed = layout::frame_at_controls(moved_anchor, DICTATION_COMPACT, work, true);
         assert_eq!(collapsed.0 + collapsed.2 / 2.0, 1756.0);
     }
 
+    // Issue 448 : la pastille s'ouvre en bas au centre de la zone de travail, à SCREEN_MARGIN
+    // du bord, y compris sur un écran décalé.
     #[test]
     fn default_origin_is_bottom_center_on_offset_displays() {
+        let (width, height) = layout::default_size();
         assert_eq!(
-            layout::bottom_center_origin(-1920.0, 40.0, 1920.0, 1040.0, 111.0, 67.0),
-            (-1015.5, 1005.0)
+            layout::bottom_center_origin(-1920.0, 40.0, 1920.0, 1040.0, width, height),
+            (-1091.0, 1034.0)
         );
+        assert_eq!(1034.0 + height + layout::SCREEN_MARGIN, 40.0 + 1040.0);
     }
 
     // #319 : sous Wayland, ni écran courant (fenêtre jamais affichée) ni écran principal. Le
@@ -791,7 +859,10 @@ mod tests {
         );
     }
 
-    fn meeting_state(status: super::FloatingBarStatus, expand: bool) -> super::FloatingBarState {
+    fn meeting_state(
+        status: super::FloatingBarStatus,
+        elapsed: Option<u32>,
+    ) -> super::FloatingBarState {
         super::FloatingBarState {
             dictation: None,
             amplitude: 0.0,
@@ -803,33 +874,63 @@ mod tests {
             live_caption_width: 360.0,
             live_caption_line_count: 3,
             live_caption_position: crate::window::live_caption::LiveCaptionPosition::BottomCenter,
-            live_caption_minimized: true,
-            live_caption_toggle_visible: expand,
+            live_caption_minimized: false,
+            live_caption_toggle_visible: true,
             transcript_bubbles: None,
             transcript_notice: None,
             layout: None,
             session_id: None,
+            elapsed_seconds: elapsed,
         }
     }
 
-    // Issue 353 : pendant l'écoute, le bouton « Mettre en pause » s'ajoute ; en pause, la barre
-    // s'élargit pour « En pause », « Reprendre » et « Terminer ».
+    // Issue 448 : la fenêtre a exactement la taille de la pastille (38 px de haut, sans zone
+    // réservée ni marge), et la transcription en direct ne l'agrandit plus en réunion.
     #[test]
-    fn meeting_controls_make_room_for_pause_and_resume() {
-        use super::FloatingBarStatus::{Paused, Recording};
+    fn meeting_window_is_exactly_the_pill() {
+        use super::FloatingBarStatus::{Error, Paused, Reconnecting, Recording};
+        for status in [Recording, Reconnecting, Error] {
+            let state = meeting_state(status, Some(767));
+            assert!(!layout::is_expanded(&state));
+            assert_eq!(
+                layout::meeting_pill_size(&state),
+                (layout::RECORDING_PILL_WIDTH, layout::COMPACT_HEIGHT)
+            );
+        }
+        assert_eq!(layout::COMPACT_HEIGHT, 38.0);
+        // Issue 353 : en pause, « En pause », « Reprendre » et « Terminer ».
         assert_eq!(
-            layout::meeting_controls_width(&meeting_state(Recording, false)),
-            layout::COMPACT_SOLO_STOP_WIDTH + layout::COMPACT_ICON_SIZE
+            layout::meeting_pill_size(&meeting_state(Paused, Some(767))),
+            (
+                layout::PAUSED_CONTROLS_WIDTH + layout::COMPACT_HORIZONTAL_PADDING * 2.0,
+                layout::COMPACT_HEIGHT
+            )
+        );
+    }
+
+    #[test]
+    fn pill_widens_once_the_duration_reaches_one_hour() {
+        use super::FloatingBarStatus::Recording;
+        let short = layout::meeting_pill_size(&meeting_state(Recording, Some(3599))).0;
+        let long = layout::meeting_pill_size(&meeting_state(Recording, Some(3600))).0;
+        assert_eq!(short, layout::RECORDING_PILL_WIDTH);
+        assert_eq!(long, short + layout::LONG_DURATION_EXTRA_WIDTH);
+        assert_eq!(
+            layout::meeting_pill_size(&meeting_state(Recording, None)).0,
+            short
+        );
+    }
+
+    #[test]
+    fn pill_resizes_around_its_center_and_stays_on_screen() {
+        let work = (0.0, 0.0, 1920.0, 1080.0);
+        assert_eq!(
+            layout::frame_around_center((960.0, 1015.0), (240.0, 38.0), work),
+            (840.0, 996.0, 240.0, 38.0)
         );
         assert_eq!(
-            layout::meeting_controls_width(&meeting_state(Recording, true)),
-            layout::COMPACT_STOP_WIDTH + 2.0 * layout::COMPACT_ICON_SIZE
-        );
-        assert_eq!(
-            layout::meeting_container_size(&meeting_state(Paused, false)).0,
-            layout::PAUSED_CONTROLS_WIDTH
-                + layout::COMPACT_HORIZONTAL_PADDING * 2.0
-                + layout::INSET * 2.0
+            layout::frame_around_center((10.0, 1079.0), (276.0, 38.0), work),
+            (0.0, 1042.0, 276.0, 38.0)
         );
     }
 
@@ -846,11 +947,11 @@ mod tests {
         use tauri::{LogicalUnit, PixelUnit};
 
         let sizes = [
-            layout::container_size(false, false),
-            layout::container_size(true, true),
+            layout::default_size(),
+            layout::dictation_container_size(true),
             layout::dictation_container_size(false),
-            layout::meeting_container_size(&meeting_state(Recording, false)),
-            layout::meeting_container_size(&meeting_state(Paused, true)),
+            layout::meeting_pill_size(&meeting_state(Recording, Some(4000))),
+            layout::meeting_pill_size(&meeting_state(Paused, None)),
         ];
         for (width, height) in sizes {
             let constraints = layout::fixed_size_constraints(width, height);

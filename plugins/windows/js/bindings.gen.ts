@@ -94,6 +94,11 @@ export type FloatingBarOverlayAmplitude = {
 export type FloatingBarOverlayLayout = {
 	controlsCenterX: number,
 	expandsUpward: boolean,
+	/**
+	 *  Faux quand le compositeur tient la pastille en calque (layer-shell, issue 448) : elle
+	 *  reste ancrée en bas au centre et ne se déplace pas à la souris.
+	 */
+	movable?: boolean,
 };
 
 export type FloatingBarOverlayState = {
@@ -126,6 +131,8 @@ export type FloatingBarState = {
 	transcriptNotice?: string | null,
 	layout?: FloatingBarOverlayLayout | null,
 	sessionId?: string | null,
+	/**  Durée écoutée, pauses exclues (issue 448) : affichée dans la pastille de réunion. */
+	elapsedSeconds?: number | null,
 };
 
 export type FloatingBarStatus = "recording" | "reconnecting" | "error" | 

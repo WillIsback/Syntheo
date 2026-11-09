@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
     | null
     | ((event: { payload: { sessionId: string; action: string } }) => void),
   meetingStop: null as null | (() => void),
+  openMain: null as null | (() => Promise<void>),
   settings: {
     current: {
       floating_bar_opacity: 0.78,
@@ -37,6 +38,8 @@ const mocks = vi.hoisted(() => ({
       degraded: null,
       lastError: null,
       liveTranscriptionActive: true,
+      seconds: 0,
+      elapsedOffsetSeconds: 0,
     },
     liveSegments: [],
     liveCaptionText: "we should ship this",
@@ -60,7 +63,12 @@ vi.mock("@syntheo/plugin-windows", () => ({
     windowShow: mocks.windowShow,
   },
   events: {
-    floatingBarOpenMain: { listen: mocks.listen },
+    floatingBarOpenMain: {
+      listen: vi.fn(async (callback) => {
+        mocks.openMain = callback;
+        return vi.fn();
+      }),
+    },
     floatingBarListeningAction: { listen: mocks.listen },
     floatingBarSettingsChange: { listen: mocks.listen },
     floatingBarStop: {
@@ -110,6 +118,7 @@ vi.mock("~/store/zustand/listener/instance", () => ({
 import { FloatingMeetingWindowHost } from "./host";
 
 import { useDictationStatus } from "~/dictation/state";
+import { useTabs } from "~/store/zustand/tabs";
 
 describe("FloatingMeetingWindowHost", () => {
   beforeEach(() => {
@@ -219,6 +228,27 @@ describe("FloatingMeetingWindowHost", () => {
       useDictationStatus.setState({ phase: "idle" });
     });
     await waitFor(() => expect(mocks.floatingBarHide).toHaveBeenCalledOnce());
+  });
+
+  // Issue 448 : un clic sur la durée de la pastille ramène la fenêtre principale
+  // sur la note de la réunion.
+  it("brings the main window back on the meeting note", async () => {
+    const openNew = vi
+      .spyOn(useTabs.getState(), "openNew")
+      .mockImplementation(() => {});
+    render(<FloatingMeetingWindowHost />);
+    await waitFor(() => expect(mocks.floatingBarShow).toHaveBeenCalledOnce());
+
+    await act(async () => {
+      await mocks.openMain!();
+    });
+
+    expect(mocks.windowShow).toHaveBeenCalledWith({ type: "main" });
+    expect(openNew).toHaveBeenCalledWith({
+      type: "sessions",
+      id: "session-1",
+    });
+    openNew.mockRestore();
   });
 
   it("gives an active meeting ownership of the panel", async () => {

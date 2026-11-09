@@ -84,6 +84,10 @@ msgstr "{count} de plus"
 msgid "{day} at {time}"
 msgstr "{day} à {time}"
 
+#: src/meeting-float/overlay/bar.tsx
+msgid "{duration}, back to the note"
+msgstr "{duration}, revenir à la note"
+
 #: src/session/components/note-input/transcript/renderer/selection-menu.tsx
 msgid "{entryCount} selected"
 msgstr "{entryCount} sélectionné(s)"
@@ -95,6 +99,10 @@ msgstr "{model} ne sait pas transcrire {languages}. Essayez un autre modèle ou 
 #: src/settings/ai/stt/language-warning.tsx
 msgid "{model} can't transcribe all selected languages together. Try another model or use fewer spoken languages."
 msgstr "{model} ne peut pas transcrire toutes les langues sélectionnées ensemble. Essayez un autre modèle ou utilisez moins de langues parlées."
+
+#: src/meeting-float/overlay/bar.tsx
+msgid "{notice}. Open Syntheo to retry or change devices."
+msgstr "{notice}. Ouvrez Syntheo pour réessayer ou changer d'appareil."
 
 #: src/stt/meeting-apps.ts
 msgid "{otherAppCount, plural, one {Ignore {firstName} and # other app?} other {Ignore {firstName} and # other apps?}}"
@@ -560,6 +568,10 @@ msgstr "Revenir à la version actuelle"
 #: src/sidebar/custom-sidebar-header.tsx
 msgid "Back to Settings"
 msgstr "Retour aux Paramètres"
+
+#: src/meeting-float/overlay/bar.tsx
+msgid "Back to the note"
+msgstr "Revenir à la note"
 
 #: src/settings/search-index.ts
 msgid "bar, small window, control, always on top"
@@ -2996,6 +3008,7 @@ msgstr "Coller"
 msgid "Paste a past summary you like..."
 msgstr "Collez un résumé précédent que vous aimez..."
 
+#: src/meeting-float/overlay/bar.tsx
 #: src/settings/developers/webhooks.tsx
 msgid "Pause"
 msgstr "Pause"
@@ -3229,6 +3242,10 @@ msgstr "L'enregistrement n'a pas pu démarrer. Vérifiez vos autorisations et vo
 #: src/stt/start-failure.ts
 msgid "Recording couldn't start"
 msgstr "L'enregistrement n'a pas pu démarrer"
+
+#: src/meeting-float/overlay/bar.tsx
+msgid "Recording needs attention"
+msgstr "L'enregistrement demande votre attention"
 
 #: src/settings/general/notification.tsx
 #: src/settings/search-index.ts

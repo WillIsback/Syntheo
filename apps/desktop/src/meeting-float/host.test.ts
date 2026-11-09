@@ -72,6 +72,8 @@ describe("getFloatingRouteState", () => {
           status: "active",
           sessionId: "session-1",
           amplitude: { mic: 0.6, speaker: 0.8 },
+          seconds: 47,
+          elapsedOffsetSeconds: 720,
         }),
       ),
     ).toEqual({
@@ -89,6 +91,8 @@ describe("getFloatingRouteState", () => {
       liveCaptionToggleVisible: false,
       transcriptBubbles: [],
       transcriptNotice: null,
+      // Issue 448 : durée écoutée affichée par la pastille, pauses exclues.
+      elapsedSeconds: 767,
     });
   });
 
@@ -257,6 +261,7 @@ describe("getFloatingRouteState", () => {
         liveCaptionToggleVisible: false,
         transcriptBubbles: [],
         transcriptNotice: null,
+        elapsedSeconds: 75,
       }),
     );
     expect(getFloatingRouteState(state, { sessionId: "session-2" })).toBeNull();
