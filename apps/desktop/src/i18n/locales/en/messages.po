@@ -1226,6 +1226,10 @@ msgstr "Could not update the note date."
 msgid "Couldn't load your profile. Reopen this page to try again."
 msgstr "Couldn't load your profile. Reopen this page to try again."
 
+#: src/stt/useUploadFile.ts
+msgid "Couldn't open the file picker"
+msgstr "Couldn't open the file picker"
+
 #: src/contacts/profile-photo.tsx
 #: src/settings/general/account-profile.tsx
 msgid "Couldn't save your profile. Try again."
@@ -2989,6 +2993,10 @@ msgstr "No setting matches “{trimmed}”."
 #: src/chat/components/input/use-dictation.ts
 msgid "No speech detected"
 msgstr "No speech detected"
+
+#: src/stt/no-speech-error.ts
+msgid "No speech was detected in the audio."
+msgstr "No speech was detected in the audio."
 
 #: src/settings/automations/workflow-test-panel.tsx
 msgid "No step acts outside Syntheo: the test only shows the results."
@@ -5522,6 +5530,7 @@ msgstr "update, new version, upgrade"
 
 #: src/session/components/note-input/transcript/screens/empty.tsx
 #: src/session/components/outer-header/overflow/index.tsx
+#: src/stt/select-upload-file.ts
 msgid "Upload audio"
 msgstr "Upload audio"
 
@@ -5531,6 +5540,7 @@ msgstr "Upload audio or a transcript file to populate this note."
 
 #: src/session/components/note-input/transcript/screens/empty.tsx
 #: src/session/components/outer-header/overflow/index.tsx
+#: src/stt/select-upload-file.ts
 msgid "Upload transcript"
 msgstr "Upload transcript"
 

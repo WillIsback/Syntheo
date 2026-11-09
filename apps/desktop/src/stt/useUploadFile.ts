@@ -1,6 +1,5 @@
+import { t } from "@lingui/core/macro";
 import { useQueryClient } from "@tanstack/react-query";
-import { downloadDir } from "@tauri-apps/api/path";
-import { open as selectFile } from "@tauri-apps/plugin-dialog";
 import { Effect, pipe } from "effect";
 import { useCallback } from "react";
 
@@ -9,6 +8,7 @@ import {
   events as fsSyncEvents,
 } from "@syntheo/plugin-fs-sync";
 import { commands as listener2Commands } from "@syntheo/plugin-transcription";
+import { toast } from "@syntheo/ui/components/ui/toast";
 
 import {
   ensureAudioImportAvailable,
@@ -24,6 +24,7 @@ import {
 import { useListener } from "./contexts";
 import { fromResult } from "./fromResult";
 import { ChannelProfile } from "./segment";
+import { selectUploadFile } from "./select-upload-file";
 import { isStoppedTranscriptionError, useRunBatch } from "./useRunBatch";
 
 import { getEnhancerService } from "~/services/enhancer";
@@ -427,35 +428,26 @@ export function useUploadFile(sessionId: string) {
         return;
       }
 
-      const filters =
-        kind === "audio"
-          ? [{ name: "Audio", extensions: AUDIO_EXTENSIONS }]
-          : [{ name: "Transcript", extensions: TRANSCRIPT_EXTENSIONS }];
-
-      const program = pipe(
-        Effect.promise(() => downloadDir()),
-        Effect.flatMap((defaultPath) =>
-          Effect.promise(() =>
-            selectFile({
-              title: kind === "audio" ? "Upload Audio" : "Upload Transcript",
-              multiple: false,
-              directory: false,
-              defaultPath,
-              filters,
-            }),
-          ),
-        ),
-      );
-
-      Effect.runPromise(program)
-        .then((selection) => {
-          const path = Array.isArray(selection) ? selection[0] : selection;
+      selectUploadFile(
+        kind,
+        kind === "audio" ? AUDIO_EXTENSIONS : TRANSCRIPT_EXTENSIONS,
+      )
+        .then((path) => {
           if (path) {
             processFile(path, kind);
           }
         })
         .catch((error) => {
+          // Le sélecteur n'a pas pu s'ouvrir : on le dit (issue 525).
           console.error("[upload] dialog failed:", error);
+          if (kind === "audio") {
+            notifyAudioImportFailed(error);
+          } else {
+            toast.error(t`Couldn't open the file picker`, {
+              description:
+                error instanceof Error ? error.message : String(error),
+            });
+          }
         });
     },
     [audioImportAvailability, processFile],

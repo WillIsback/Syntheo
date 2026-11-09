@@ -10,6 +10,7 @@ const {
   audioImportMock,
   audioImportListenMock,
   downloadDirMock,
+  homeDirMock,
   selectFileMock,
   parseSubtitleMock,
   createTranscriptMock,
@@ -35,6 +36,7 @@ const {
   audioImportMock: vi.fn(),
   audioImportListenMock: vi.fn(),
   downloadDirMock: vi.fn(),
+  homeDirMock: vi.fn(),
   selectFileMock: vi.fn(),
   parseSubtitleMock: vi.fn(),
   createTranscriptMock: vi.fn(),
@@ -64,6 +66,7 @@ const {
 
 vi.mock("@tauri-apps/api/path", () => ({
   downloadDir: downloadDirMock,
+  homeDir: homeDirMock,
   resolveResource: vi.fn((path: string) =>
     Promise.resolve(`/resources/${path}`),
   ),
@@ -170,6 +173,7 @@ describe("useUploadFile", () => {
       },
     });
     downloadDirMock.mockResolvedValue("/downloads");
+    homeDirMock.mockResolvedValue("/home/user");
     selectFileMock.mockResolvedValue("/tmp/replacement.wav");
     runBatchMock.mockResolvedValue(undefined);
     createTranscriptMock.mockResolvedValue(undefined);
@@ -325,6 +329,44 @@ describe("useUploadFile", () => {
 
     await waitFor(() => expect(selectFileMock).toHaveBeenCalled());
     expect(toastWarningMock).not.toHaveBeenCalled();
+  });
+
+  test("opens the picker in the home folder without a Downloads folder", async () => {
+    downloadDirMock.mockRejectedValue(new Error("unknown path"));
+    const { result } = renderHook(() => useUploadFile("session-1"), {
+      wrapper: createWrapper(),
+    });
+
+    act(() => result.current.uploadAudio());
+
+    await waitFor(() =>
+      expect(selectFileMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: "Upload audio",
+          defaultPath: "/home/user",
+        }),
+      ),
+    );
+  });
+
+  test("explains a picker that fails to open", async () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    selectFileMock.mockRejectedValue(new Error("portal unavailable"));
+    const { result } = renderHook(() => useUploadFile("session-1"), {
+      wrapper: createWrapper(),
+    });
+
+    act(() => result.current.uploadAudio());
+
+    await waitFor(() =>
+      expect(toastErrorMock).toHaveBeenCalledWith(
+        "Audio import failed",
+        expect.objectContaining({ description: "portal unavailable" }),
+      ),
+    );
+    consoleError.mockRestore();
   });
 
   test("refuses a model that can't transcribe a file before choosing one", () => {
