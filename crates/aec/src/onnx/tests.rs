@@ -68,14 +68,14 @@ macro_rules! aec_test {
             let mic_samples: Vec<f32> = mic_sample.into_iter().map(|s| s.to_sample()).collect();
 
             let batch_result = {
-                let mut aec = AEC::new().unwrap();
+                let mut aec = AEC::new_from_dir(&store::source_model_dir()).unwrap();
                 let result = aec.process(&mic_samples, &lpb_samples).unwrap();
                 assert!(result.iter().all(|&x| x.is_finite()));
                 result
             };
 
             let streaming_result = {
-                let mut aec = AEC::new().unwrap();
+                let mut aec = AEC::new_from_dir(&store::source_model_dir()).unwrap();
                 let mut streaming_result = Vec::new();
 
                 let len_audio = mic_samples.len().min(lpb_samples.len());

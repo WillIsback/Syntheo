@@ -26,6 +26,7 @@ pub(super) async fn run_dual_loop(
 ) {
     let mut joiner = Joiner::new();
     let mut enable_aec = aec_enabled.load(Ordering::Acquire);
+    let mut aec_models = syntheo_aec::model_generation();
     let mut aec = if enable_aec {
         build_aec(sample_rate)
     } else {
@@ -61,7 +62,12 @@ pub(super) async fn run_dual_loop(
             return;
         };
         let updated_aec = aec_enabled.load(Ordering::Acquire);
-        if updated_aec != enable_aec {
+        // Modèles arrivés en cours de capture (premier lancement) : l'annulation d'écho, voulue
+        // mais indisponible jusque-là, démarre sans attendre la capture suivante.
+        let models = syntheo_aec::model_generation();
+        let models_arrived = enable_aec && aec.is_none() && models != aec_models;
+        aec_models = models;
+        if updated_aec != enable_aec || models_arrived {
             enable_aec = updated_aec;
             aec = if enable_aec {
                 build_aec(sample_rate)

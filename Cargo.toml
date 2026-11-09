@@ -10,6 +10,19 @@ debug = "line-tables-only"
 opt-level = 1
 debug = false
 
+# Paquets publiés : sans table des symboles (−39 Mio sur le binaire Linux).
+# Les backtraces de panic perdent les noms de fonctions ; aucun symbole n'est
+# envoyé à un service de rapport de plantage.
+[profile.release]
+strip = true
+# LTO « thin » plutôt que « fat » : l'essentiel du gain de taille (code mort
+# éliminé entre crates) pour une édition de liens parallèle et une mémoire
+# bornée, compatible avec les délais des runners CI (90 min Linux, 120 min
+# Windows). Une seule unité de génération par crate pour optimiser mieux.
+# La variante devtools utilise ce même profil, pour rester fidèle à la release.
+lto = "thin"
+codegen-units = 1
+
 [workspace]
 resolver = "2"
 exclude = ["crates/tiptap/vendor/mdast_util_to_markdown"]

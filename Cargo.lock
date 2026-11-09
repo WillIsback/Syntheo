@@ -28,9 +28,12 @@ dependencies = [
  "hound",
  "onnx",
  "realfft",
+ "reqwest 0.13.5",
  "rodio",
  "serde",
+ "sha2 0.11.1",
  "thiserror 2.0.21",
+ "tokio",
 ]
 
 [[package]]
@@ -2641,6 +2644,7 @@ dependencies = [
 name = "desktop"
 version = "0.0.0"
 dependencies = [
+ "aec",
  "audio-actual",
  "audio-mock",
  "brand",
@@ -3257,7 +3261,6 @@ dependencies = [
  "specta",
  "thiserror 2.0.21",
  "typst",
- "typst-assets",
  "typst-pdf",
 ]
 

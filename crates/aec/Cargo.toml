@@ -6,13 +6,19 @@ license = "MIT"
 
 [features]
 default = ["onnx", "128"]
-onnx = ["dep:syntheo-onnx"]
+onnx = ["dep:syntheo-onnx", "dep:sha2"]
+# Téléchargement des modèles à la demande, pour l'application (issue 429).
+download = ["onnx", "dep:reqwest", "dep:tokio"]
 128 = []
 256 = []
 512 = []
 
 [dependencies]
 syntheo-onnx = { workspace = true, optional = true }
+
+reqwest = { workspace = true, optional = true }
+sha2 = { workspace = true, optional = true }
+tokio = { workspace = true, features = ["fs"], optional = true }
 
 realfft = { workspace = true }
 
@@ -29,6 +35,7 @@ rodio = { workspace = true }
 syntheo-audacity = { workspace = true }
 syntheo-audio-snapshot = { workspace = true }
 syntheo-audio-utils = { workspace = true }
+tokio = { workspace = true, features = ["macros", "rt"] }
 
 [[bench]]
 name = "aec_bench"
