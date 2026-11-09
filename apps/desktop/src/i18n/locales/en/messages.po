@@ -2127,6 +2127,10 @@ msgstr "Improve with examples"
 msgid "In favorites"
 msgstr "In favorites"
 
+#: src/home/live-note-card.tsx
+msgid "In progress"
+msgstr "In progress"
+
 #: src/shared/open-note-dialog.tsx
 msgid "In this folder"
 msgstr "In this folder"
@@ -2340,6 +2344,7 @@ msgstr "Listen"
 msgid "Listening"
 msgstr "Listening"
 
+#: src/home/live-note-card.tsx
 #: src/session/components/capsule/index.tsx
 msgid "Listening time"
 msgstr "Listening time"
@@ -3165,6 +3170,7 @@ msgstr "On-device models can take a few minutes to warm up before text appears."
 msgid "Only on-premise OpenAI-compatible servers are supported (vLLM, Ollama, llama.cpp server, LM Studio…). The address usually ends with /v1, for example http://localhost:8000/v1."
 msgstr "Only on-premise OpenAI-compatible servers are supported (vLLM, Ollama, llama.cpp server, LM Studio…). The address usually ends with /v1, for example http://localhost:8000/v1."
 
+#: src/home/live-note-card.tsx
 #: src/home/note-index.tsx
 #: src/shared/open-note-dialog.tsx
 msgid "Open"
@@ -3338,6 +3344,7 @@ msgstr "Paste"
 msgid "Paste a past summary you like..."
 msgstr "Paste a past summary you like..."
 
+#: src/home/live-note-card.tsx
 #: src/meeting-float/overlay/bar.tsx
 #: src/settings/developers/webhooks.tsx
 msgid "Pause"
@@ -3362,6 +3369,7 @@ msgstr "Pause auto-dismiss"
 msgid "Pause listening"
 msgstr "Pause listening"
 
+#: src/home/live-note-card.tsx
 #: src/meeting-float/overlay/bar.tsx
 #: src/session/components/capsule/index.tsx
 #: src/settings/developers/webhooks.tsx
@@ -3803,6 +3811,7 @@ msgstr "Result available to the next steps as"
 msgid "Result available to the next steps under the name"
 msgstr "Result available to the next steps under the name"
 
+#: src/home/live-note-card.tsx
 #: src/home/note-index.tsx
 #: src/meeting-float/overlay/bar.tsx
 #: src/shared/ui/localized-toaster.tsx
@@ -5433,6 +5442,7 @@ msgstr "Unreachable"
 #: src/folders/project/folder-meetings-card.tsx
 #: src/folders/project/folder-template-field.tsx
 #: src/folders/sidebar-tree-view.tsx
+#: src/home/live-note-card.tsx
 #: src/home/note-index.tsx
 #: src/session/components/living-document/late-filing.ts
 #: src/session/components/living-document/meeting-type-picker.tsx

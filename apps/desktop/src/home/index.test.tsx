@@ -15,6 +15,13 @@ const mocks = vi.hoisted(() => ({
   newNote: vi.fn(),
   openSearch: vi.fn(),
   deleteSession: vi.fn(),
+  live: {
+    status: "inactive" as "inactive" | "active" | "finalizing",
+    sessionId: null as string | null,
+    seconds: 0,
+    elapsedOffsetSeconds: 0,
+    pause: null,
+  },
   menus: [] as MenuItemDef[][],
   firstName: "Camille",
   recentNotes: [
@@ -41,6 +48,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@tauri-apps/plugin-os", () => ({ platform: mocks.platform }));
 
 vi.mock("./queries", () => ({
+  RECENT_NOTES_LIMIT: 5,
   useOwnerFirstName: () => mocks.firstName,
   useRecentNotes: () => mocks.recentNotes,
 }));
@@ -51,6 +59,20 @@ vi.mock("./active-folders", () => ({
 
 vi.mock("~/session/queries", () => ({
   useFolderIcons: () => ({}),
+  useSession: (sessionId: string) => ({
+    id: sessionId,
+    title: "Comité projet",
+  }),
+}));
+
+// Carte « En cours » (issue 517) : état de l'écoute lu dans le magasin.
+vi.mock("~/stt/contexts", () => ({
+  useListener: (selector: (state: unknown) => unknown) =>
+    selector({ live: mocks.live, pause: vi.fn() }),
+}));
+
+vi.mock("~/stt/useStartListening", () => ({
+  useStartListening: () => vi.fn(),
 }));
 
 vi.mock("~/session/components/folder-picker", () => ({
@@ -104,6 +126,13 @@ import { useFolderSelection } from "~/folders/selection";
 
 describe("HomePage", () => {
   beforeEach(() => {
+    mocks.live = {
+      status: "inactive",
+      sessionId: null,
+      seconds: 0,
+      elapsedOffsetSeconds: 0,
+      pause: null,
+    };
     mocks.menus = [];
     mocks.platform.mockReturnValue("linux");
   });
@@ -189,5 +218,26 @@ describe("HomePage", () => {
     expect(dialog.getAttribute("data-session")).toBe("s1");
     expect(dialog.textContent).toBe("open");
     expect(mocks.openCurrent).not.toHaveBeenCalled();
+  });
+
+  it("sans écoute, pas de carte « En cours »", () => {
+    render(<HomePage />);
+    expect(screen.queryByRole("region", { name: /In progress/ })).toBeNull();
+  });
+
+  it("pendant l'écoute, la carte remplace la note dans « Reprendre »", () => {
+    mocks.live = { ...mocks.live, status: "active", sessionId: "s1" };
+    render(<HomePage />);
+
+    const card = screen.getByRole("region", { name: /In progress/ });
+    expect(card.textContent).toContain("Comité projet");
+    // La note écoutée n'est pas répétée dans les notes récentes.
+    expect(screen.queryByRole("row")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Open" }));
+    expect(mocks.openCurrent).toHaveBeenCalledWith({
+      type: "sessions",
+      id: "s1",
+    });
   });
 });
