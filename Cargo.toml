@@ -244,7 +244,7 @@ specta = "=2.0.0-rc.26"
 specta-typescript = "=0.0.13"
 tauri-specta = "=2.0.0-rc.26"
 
-cidre = { version = "0.15", default-features = false, features = ["app", "async", "av", "ax", "blocks", "cm", "core_audio", "dispatch", "io_kit", "io_pm", "macos_15_0"] }
+cidre = { version = "0.29", default-features = false, features = ["app", "async", "av", "ax", "blocks", "cm", "core_audio", "dispatch", "io_kit", "io_pm", "macos_15_0"] }
 cpal = "0.17"
 dasp = { version = "0.11.0", features = ["interpolate", "interpolate-linear"] }
 earshot = "0.1.0"
