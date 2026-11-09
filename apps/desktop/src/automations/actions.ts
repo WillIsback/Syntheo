@@ -3,36 +3,44 @@ import { useMutation } from "@tanstack/react-query";
 
 import { toast } from "@syntheo/ui/components/ui/toast";
 
+import { useAutomationLabels } from "./labels";
 import { useAutomationSelection } from "./selection";
-import { STARTER_AUTOMATIONS, type StarterId } from "./starters";
-import { parseAutomationWorkflows, saveAutomationWorkflows } from "./workflows";
+import {
+  type AutomationTemplate,
+  createWorkflowFromTemplate,
+} from "./templates";
+import {
+  mutateAutomationWorkflows,
+  parseAutomationWorkflows,
+  saveAutomationWorkflows,
+} from "./workflows";
 
 import { deleteChatGroup } from "~/chat/store/queries";
-import { getStoredSettingValues, setSettingValues } from "~/settings/queries";
-import type { SettingValues } from "~/settings/schema";
+import { getStoredSettingValues } from "~/settings/queries";
 
-export function useRemoveStarterDraft() {
+/** « Partir d'un modèle » : crée l'automatisation et l'ouvre dans l'éditeur. */
+export function useCreateWorkflowFromTemplate() {
   const { t } = useLingui();
-  const clearSelection = useAutomationSelection(
-    (state) => state.clearSelection,
+  const labels = useAutomationLabels();
+  const selectWorkflow = useAutomationSelection(
+    (state) => state.selectWorkflow,
   );
 
   return useMutation({
-    mutationKey: ["automation-remove-starter-draft"],
-    mutationFn: async (starterId: StarterId) => {
-      const stored = await getStoredSettingValues();
-      const updates: SettingValues = {};
-      updates[STARTER_AUTOMATIONS[starterId].enabledKey] = false;
-      if (stored.values.automation_draft_template === starterId) {
-        updates.automation_draft_template = "";
+    mutationKey: ["automation-create-from-template"],
+    mutationFn: async (template: AutomationTemplate) => {
+      const workflow = createWorkflowFromTemplate(
+        template,
+        labels.template[template.id]?.title ?? "",
+      );
+      if (!workflow) {
+        throw new Error("template unavailable");
       }
-      await setSettingValues(updates);
+      await mutateAutomationWorkflows((current) => [workflow, ...current]);
+      return workflow;
     },
-    onSuccess: (_, starterId) => {
-      clearSelection({ kind: "starter", starterId });
-      toast.success(t`Automation removed`);
-    },
-    onError: () => toast.error(t`Could not remove the automation`),
+    onSuccess: (workflow) => selectWorkflow(workflow.id),
+    onError: () => toast.error(t`Could not create the automation`),
   });
 }
 

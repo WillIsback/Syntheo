@@ -22,9 +22,21 @@ msgstr "— Sample line written from this instruction."
 msgid "“{excerpt}”"
 msgstr "“{excerpt}”"
 
+#: src/automations/launch.tsx
+msgid "“{title}” could not run on this note"
+msgstr "“{title}” could not run on this note"
+
+#: src/automations/launch.tsx
+msgid "“{title}” failed on this note"
+msgstr "“{title}” failed on this note"
+
 #: src/services/enhancer/summary-notification.ts
 msgid "\"{title}\" is ready to read."
 msgstr "\"{title}\" is ready to read."
+
+#: src/automations/launch.tsx
+msgid "“{title}” ran on this note"
+msgstr "“{title}” ran on this note"
 
 #: src/settings/general/notification.tsx
 msgid "(default)"
@@ -67,6 +79,18 @@ msgstr "{0} results"
 #: src/session/components/note-input/transcript/screens/empty.tsx
 msgid "{0}% complete"
 msgstr "{0}% complete"
+
+#: src/settings/automations/index.tsx
+msgid "{chain} · last run {relative}"
+msgstr "{chain} · last run {relative}"
+
+#: src/settings/automations/index.tsx
+msgid "{chain} · last run failed {relative}"
+msgstr "{chain} · last run failed {relative}"
+
+#: src/settings/automations/index.tsx
+msgid "{chain} · never run"
+msgstr "{chain} · never run"
 
 #: src/session/components/speaker-naming/bar.tsx
 msgid "{count, plural, one {# speaker to name} other {# speakers to name}}"
@@ -164,10 +188,6 @@ msgstr "1 result"
 msgid "A folder with this name already exists."
 msgstr "A folder with this name already exists."
 
-#: src/automations/starters.tsx
-msgid "A Markdown file with the note, summary, and transcript."
-msgstr "A Markdown file with the note, summary, and transcript."
-
 #: src/onboarding/final.tsx
 msgid "A meeting can't be replayed: audio is never kept, only the note remains. Your notes belong to you."
 msgstr "A meeting can't be replayed: audio is never kept, only the note remains. Your notes belong to you."
@@ -194,7 +214,6 @@ msgstr "access, authorize, meeting controls, chat"
 msgid "Accessibility"
 msgstr "Accessibility"
 
-#: src/settings/automations/index.tsx
 #: src/settings/automations/workflow-builder.tsx
 msgid "Action"
 msgstr "Action"
@@ -215,21 +234,13 @@ msgstr "Add"
 msgid "Add \"{0}\""
 msgstr "Add \"{0}\""
 
-#: src/settings/automations/index.tsx
-msgid "Add a trigger and actions. Chat on the right can help you refine the workflow."
-msgstr "Add a trigger and actions. Chat on the right can help you refine the workflow."
-
 #: src/settings/automations/workflow-builder.tsx
-msgid "Add a trigger, then stack actions like Zapier."
-msgstr "Add a trigger, then stack actions like Zapier."
+msgid "Add a step"
+msgstr "Add a step"
 
 #: src/templates/template-form.tsx
 msgid "Add a use"
 msgstr "Add a use"
-
-#: src/settings/automations/workflow-builder.tsx
-msgid "Add an action"
-msgstr "Add an action"
 
 #: src/settings/automations/index.tsx
 msgid "Add and configure at least one action first."
@@ -295,10 +306,6 @@ msgstr "Add skill to…"
 msgid "Add spoken language"
 msgstr "Add spoken language"
 
-#: src/settings/automations/workflow-builder.tsx
-msgid "Add step"
-msgstr "Add step"
-
 #: src/templates/details.tsx
 #: src/templates/template-form.tsx
 #: src/templates/template-sidebar.tsx
@@ -327,22 +334,10 @@ msgstr "Adjust"
 msgid "Advanced"
 msgstr "Advanced"
 
-#: src/settings/automations/workflow-builder.tsx
-msgid "After the meeting ends"
-msgstr "After the meeting ends"
-
-#: src/settings/automations/workflow-builder.tsx
-msgid "After the meeting summary is ready"
-msgstr "After the meeting summary is ready"
-
 #: src/settings/developers/skills.tsx
 #: src/settings/search-index.ts
 msgid "Agent skills"
 msgstr "Agent skills"
-
-#: src/settings/automations/index.tsx
-msgid "AI step"
-msgstr "AI step"
 
 #: src/contacts/details.tsx
 msgid "AI-generated summary of all interactions and notes with this contact will appear here. This will synthesize key discussion points, action items, and relationship context across all meetings and notes."
@@ -513,10 +508,6 @@ msgstr "Auto"
 msgid "Auto summary format"
 msgstr "Auto summary format"
 
-#: src/settings/automations/index.tsx
-msgid "Automate what happens before, during, or after meetings based on the conditions you choose."
-msgstr "Automate what happens before, during, or after meetings based on the conditions you choose."
-
 #: src/session/components/living-document/meeting-type-picker.tsx
 #: src/templates/auto-form.tsx
 #: src/templates/template-sidebar.tsx
@@ -540,26 +531,15 @@ msgstr "Automation actions"
 msgid "Automation deleted"
 msgstr "Automation deleted"
 
-#: src/settings/automations/index.tsx
-msgid "Automation disabled"
-msgstr "Automation disabled"
-
-#: src/settings/automations/index.tsx
-msgid "Automation draft saved"
-msgstr "Automation draft saved"
-
-#: src/settings/automations/index.tsx
-msgid "Automation enabled"
-msgstr "Automation enabled"
-
-#: src/automations/actions.ts
-msgid "Automation removed"
-msgstr "Automation removed"
-
+#: src/session/components/capsule/automation-menu.tsx
 #: src/settings/automations/index.tsx
 #: src/sidebar/settings-nav-groups.ts
 msgid "Automations"
 msgstr "Automations"
+
+#: src/settings/automations/workflow-builder.tsx
+msgid "Available to the next steps"
+msgstr "Available to the next steps"
 
 #: src/instruction/index.tsx
 #: src/shared/shortcuts.ts
@@ -719,10 +699,6 @@ msgstr "Choose"
 msgid "Choose a file format and what to include."
 msgstr "Choose a file format and what to include."
 
-#: src/settings/automations/index.tsx
-msgid "Choose a starter from the sidebar, or create a workflow and add steps like Zapier."
-msgstr "Choose a starter from the sidebar, or create a workflow and add steps like Zapier."
-
 #: src/store/zustand/listener/general-live.ts
 msgid "Choose a working audio device and retry. Audio missing during this interruption cannot be recovered."
 msgstr "Choose a working audio device and retry. Audio missing during this interruption cannot be recovered."
@@ -730,10 +706,6 @@ msgstr "Choose a working audio device and retry. Audio missing during this inter
 #: src/templates/auto-format-examples-dialog.tsx
 msgid "Choose an AI model before generating a format."
 msgstr "Choose an AI model before generating a format."
-
-#: src/settings/automations/index.tsx
-msgid "Choose an export folder first."
-msgstr "Choose an export folder first."
 
 #: src/settings/automations/markdown-export-options.tsx
 msgid "Choose at least one section to export."
@@ -743,12 +715,12 @@ msgstr "Choose at least one section to export."
 msgid "Choose custom color"
 msgstr "Choose custom color"
 
-#: src/settings/automations/starter-config.tsx
+#: src/settings/automations/markdown-export-config.tsx
 #: src/settings/general/storage/export-location.tsx
 msgid "Choose export folder"
 msgstr "Choose export folder"
 
-#: src/settings/automations/starter-config.tsx
+#: src/settings/automations/markdown-export-config.tsx
 #: src/settings/general/storage/export-location.tsx
 msgid "Choose folder"
 msgstr "Choose folder"
@@ -869,10 +841,6 @@ msgstr "Color theme"
 #: src/settings/search-index.ts
 msgid "colors, color, green tea, wisteria, contrast"
 msgstr "colors, color, green tea, wisteria, contrast"
-
-#: src/automations/starters.tsx
-msgid "Combine metadata, summary, notes, and transcript."
-msgstr "Combine metadata, summary, notes, and transcript."
 
 #: src/settings/search-index.ts
 msgid "command line, terminal, install"
@@ -1020,6 +988,10 @@ msgid "Could not copy to clipboard"
 msgstr "Could not copy to clipboard"
 
 #: src/automations/actions.ts
+msgid "Could not create the automation"
+msgstr "Could not create the automation"
+
+#: src/automations/actions.ts
 msgid "Could not delete the automation"
 msgstr "Could not delete the automation"
 
@@ -1035,17 +1007,9 @@ msgstr "Could not export. Check the export location in Settings and try again."
 msgid "Could not open the PDF to print. Try again, or save it instead."
 msgstr "Could not open the PDF to print. Try again, or save it instead."
 
-#: src/automations/actions.ts
-msgid "Could not remove the automation"
-msgstr "Could not remove the automation"
-
 #: src/sidebar/toast/undo-delete-toast.tsx
 msgid "Could not restore deleted note"
 msgstr "Could not restore deleted note"
-
-#: src/settings/automations/index.tsx
-msgid "Could not save the automation draft"
-msgstr "Could not save the automation draft"
 
 #: src/sidebar/folder-name-dialog.tsx
 msgid "Could not save the folder."
@@ -1059,12 +1023,11 @@ msgstr "Could not start voice input"
 msgid "Could not transcribe voice input"
 msgstr "Could not transcribe voice input"
 
-#: src/settings/automations/index.tsx
 #: src/settings/automations/workflow-builder.tsx
 msgid "Could not update the automation"
 msgstr "Could not update the automation"
 
-#: src/settings/automations/starter-config.tsx
+#: src/settings/automations/markdown-export-config.tsx
 #: src/settings/general/storage/export-location.tsx
 msgid "Could not update the export folder"
 msgstr "Could not update the export folder"
@@ -1149,6 +1112,11 @@ msgid "dark, light, color, night mode, system"
 msgstr "dark, light, color, night mode, system"
 
 #: src/settings/automations/markdown-export-options.tsx
+msgid "Date"
+msgstr "Date"
+
+#: src/automations/labels.ts
+msgctxt "automation variable"
 msgid "Date"
 msgstr "Date"
 
@@ -1340,7 +1308,6 @@ msgstr "Done"
 msgid "Downloads, PDF, folder, export, save, Markdown, text file"
 msgstr "Downloads, PDF, folder, export, save, Markdown, text file"
 
-#: src/settings/automations/index.tsx
 #: src/settings/automations/workflow-builder.tsx
 #: src/sidebar/automations.tsx
 msgid "Draft"
@@ -1383,6 +1350,10 @@ msgstr "e.g. Weekly, HR team"
 #: src/templates/auto-format-examples-dialog.tsx
 msgid "Each example must be 12,000 characters or fewer."
 msgstr "Each example must be 12,000 characters or fewer."
+
+#: src/settings/automations/workflow-builder.tsx
+msgid "Each new step runs after the previous one."
+msgstr "Each new step runs after the previous one."
 
 #: src/session/components/living-document/summary-version.tsx
 msgid "Earlier version, read only. The latest summary stays the current one."
@@ -1461,7 +1432,6 @@ msgstr "Enable dictation"
 msgid "Enable Live transcript preview in Settings → Dictation to see words as you speak."
 msgstr "Enable Live transcript preview in Settings → Dictation to see words as you speak."
 
-#: src/settings/automations/index.tsx
 #: src/settings/automations/workflow-builder.tsx
 #: src/sidebar/automations.tsx
 msgid "Enabled"
@@ -1506,6 +1476,10 @@ msgstr "Esc"
 msgid "Esc to dismiss"
 msgstr "Esc to dismiss"
 
+#: src/automations/labels.ts
+msgid "Every finished meeting is saved as a Markdown file in a folder."
+msgstr "Every finished meeting is saved as a Markdown file in a folder."
+
 #: src/session/components/speaker-naming/dialog.tsx
 msgid "Every speaker has a name."
 msgstr "Every speaker has a name."
@@ -1535,21 +1509,17 @@ msgstr "Exclude apps from detection"
 msgid "Expand notification"
 msgstr "Expand notification"
 
-#: src/settings/automations/index.tsx
-msgid "Expected output"
-msgstr "Expected output"
-
 #: src/session/components/capsule/index.tsx
 #: src/session/components/outer-header/overflow/index.tsx
 #: src/shared/shortcuts.ts
 msgid "Export"
 msgstr "Export"
 
-#: src/automations/starters.tsx
-msgid "Export every meeting as Markdown"
-msgstr "Export every meeting as Markdown"
+#: src/automations/labels.ts
+msgid "Export as Markdown"
+msgstr "Export as Markdown"
 
-#: src/settings/automations/starter-config.tsx
+#: src/settings/automations/markdown-export-config.tsx
 msgid "Export folder"
 msgstr "Export folder"
 
@@ -1563,14 +1533,18 @@ msgstr "Export location"
 msgid "Export or print"
 msgstr "Export or print"
 
-#: src/settings/automations/workflow-builder.tsx
-msgid "Export the meeting as Markdown"
-msgstr "Export the meeting as Markdown"
-
 #: src/home/note-index.tsx
 #: src/main/windows-title-bar.tsx
 msgid "Export…"
 msgstr "Export…"
+
+#: src/automations/labels.ts
+msgid "Exported file"
+msgstr "Exported file"
+
+#: src/automations/labels.ts
+msgid "Extract tasks"
+msgstr "Extract tasks"
 
 #: src/session/components/living-document/summary-switcher.tsx
 msgid "Failed to copy"
@@ -1724,6 +1698,10 @@ msgstr "Generate summary"
 msgid "Generate the summary"
 msgstr "Generate the summary"
 
+#: src/automations/labels.ts
+msgid "Generated text"
+msgstr "Generated text"
+
 #: src/session/components/note-input/enhanced/streaming.tsx
 #: src/session/components/title-input.tsx
 msgid "Generating title..."
@@ -1736,10 +1714,6 @@ msgstr "Generating transcript..."
 #: src/shared/shortcuts.ts
 msgid "Get around"
 msgstr "Get around"
-
-#: src/sidebar/automations.tsx
-msgid "Get started"
-msgstr "Get started"
 
 #: src/settings/general/notification.tsx
 msgid "Get your attention when a summary is ready in the background."
@@ -1837,10 +1811,6 @@ msgstr "Hi, I'm Syntheo AI. Set up a language model and I'll be ready to help."
 #: src/settings/general/notification.tsx
 msgid "Hide all notification panels, Dock alerts, and completion sounds."
 msgstr "Hide all notification panels, Dock alerts, and completion sounds."
-
-#: src/settings/automations/index.tsx
-msgid "Hide preview"
-msgstr "Hide preview"
 
 #: src/session/components/living-document/index.tsx
 msgid "Hide transcript"
@@ -2029,14 +1999,22 @@ msgid "Last dictation"
 msgstr "Last dictation"
 
 #. placeholder {0}: lastRun.detail
-#: src/settings/automations/starter-config.tsx
+#: src/settings/automations/markdown-export-config.tsx
 msgid "Last run {relative}: {0}"
 msgstr "Last run {relative}: {0}"
 
 #. placeholder {0}: lastRun.detail
-#: src/settings/automations/starter-config.tsx
+#: src/settings/automations/markdown-export-config.tsx
 msgid "Last run failed {relative}: {0}"
 msgstr "Last run failed {relative}: {0}"
+
+#: src/settings/automations/workflow-builder.tsx
+msgid "Launch it from a note: the ⋯ menu, the capsule in Synthesis, or Ask the note (Ctrl+J)."
+msgstr "Launch it from a note: the ⋯ menu, the capsule in Synthesis, or Ask the note (Ctrl+J)."
+
+#: src/automations/labels.ts
+msgid "Launched by hand"
+msgstr "Launched by hand"
 
 #: src/chat/components/message/error.tsx
 msgid "Learn how to fix this"
@@ -2194,8 +2172,9 @@ msgid "Manage templates"
 msgstr "Manage templates"
 
 #: src/settings/automations/workflow-builder.tsx
-msgid "Markdown export"
-msgstr "Markdown export"
+#: src/sidebar/automations.tsx
+msgid "Manual"
+msgstr "Manual"
 
 #: src/session/components/note-input/search/bar.tsx
 msgid "Match case"
@@ -2246,13 +2225,17 @@ msgstr "Meeting chat"
 msgid "Meeting details access turned on"
 msgstr "Meeting details access turned on"
 
-#: src/automations/starters.tsx
+#: src/automations/labels.ts
 msgid "Meeting ends"
 msgstr "Meeting ends"
 
 #: src/session/components/outer-header/overflow/index.tsx
 msgid "Meeting info"
 msgstr "Meeting info"
+
+#: src/automations/labels.ts
+msgid "Meeting summary ready"
+msgstr "Meeting summary ready"
 
 #: src/session/components/living-document/meeting-type-picker.tsx
 msgid "Meeting type"
@@ -2436,6 +2419,7 @@ msgstr "Mute system audio"
 msgid "Mute the microphone"
 msgstr "Mute the microphone"
 
+#: src/settings/automations/index.tsx
 #: src/sidebar/automations.tsx
 msgid "My automations"
 msgstr "My automations"
@@ -2464,6 +2448,7 @@ msgstr "My servers"
 
 #: src/contacts/details.tsx
 #: src/contacts/organization-details.tsx
+#: src/settings/automations/workflow-builder.tsx
 #: src/settings/general/account-profile.tsx
 #: src/settings/search-index.ts
 msgid "Name"
@@ -2483,6 +2468,7 @@ msgstr "Needs setup"
 msgid "Nemotron, Parakeet"
 msgstr "Nemotron, Parakeet"
 
+#: src/settings/automations/index.tsx
 #: src/sidebar/automations.tsx
 msgid "New automation"
 msgstr "New automation"
@@ -2542,8 +2528,8 @@ msgid "No audio output detected. Plug in headphones or speakers, then search aga
 msgstr "No audio output detected. Plug in headphones or speakers, then search again."
 
 #: src/settings/automations/index.tsx
-msgid "No automation draft yet"
-msgstr "No automation draft yet"
+msgid "No automation yet. Start from a template, or create one and add its steps."
+msgstr "No automation yet. Start from a template, or create one and add its steps."
 
 #: src/sidebar/automations.tsx
 msgid "No automations found"
@@ -2569,7 +2555,7 @@ msgstr "No earlier versions yet."
 msgid "No emoji found"
 msgstr "No emoji found"
 
-#: src/settings/automations/starter-config.tsx
+#: src/settings/automations/markdown-export-config.tsx
 msgid "No folder selected yet."
 msgstr "No folder selected yet."
 
@@ -2740,6 +2726,11 @@ msgstr "notes"
 #: src/contacts/details.tsx
 #: src/settings/general/account-profile.tsx
 #: src/settings/search-index.ts
+msgid "Notes"
+msgstr "Notes"
+
+#: src/automations/labels.ts
+msgctxt "automation variable"
 msgid "Notes"
 msgstr "Notes"
 
@@ -3073,7 +3064,6 @@ msgstr "Press your shortcut to start, then press it again to finish."
 msgid "Prevent selected apps from triggering meeting detection."
 msgstr "Prevent selected apps from triggering meeting detection."
 
-#: src/settings/automations/index.tsx
 #: src/settings/general/notification.tsx
 #: src/templates/template-form.tsx
 msgid "Preview"
@@ -3243,7 +3233,6 @@ msgstr "Remind participants that the meeting is being transcribed."
 
 #: src/session/components/living-document/summary-switcher-view.tsx
 #: src/session/components/note-input/header-enhanced.tsx
-#: src/sidebar/automations.tsx
 msgid "Remove"
 msgstr "Remove"
 
@@ -3259,10 +3248,6 @@ msgstr "Remove {term}"
 #: src/templates/template-form.tsx
 msgid "Remove {use}"
 msgstr "Remove {use}"
-
-#: src/settings/automations/index.tsx
-msgid "Remove automation"
-msgstr "Remove automation"
 
 #: src/contacts/details.tsx
 msgid "Remove email"
@@ -3282,6 +3267,10 @@ msgstr "Remove from favorites"
 msgid "Remove photo"
 msgstr "Remove photo"
 
+#: src/settings/automations/workflow-builder.tsx
+msgid "Remove step {stepNumber}"
+msgstr "Remove step {stepNumber}"
+
 #: src/shared/open-note-dialog.tsx
 msgid "Remove the Settings filter"
 msgstr "Remove the Settings filter"
@@ -3293,10 +3282,6 @@ msgstr "Removed text is struck through, added text is highlighted."
 #: src/session/components/living-document/summary-review.tsx
 msgid "Removed:"
 msgstr "Removed:"
-
-#: src/automations/starters.tsx
-msgid "Render canonical Markdown"
-msgstr "Render canonical Markdown"
 
 #: src/instruction/index.tsx
 msgid "Reopen in browser"
@@ -3370,6 +3355,10 @@ msgstr "Restart App"
 msgid "Restore"
 msgstr "Restore"
 
+#: src/settings/automations/workflow-builder.tsx
+msgid "Result available to the next steps as"
+msgstr "Result available to the next steps as"
+
 #: src/home/note-index.tsx
 #: src/meeting-float/overlay/bar.tsx
 #: src/shared/ui/localized-toaster.tsx
@@ -3416,6 +3405,11 @@ msgstr "Review summary"
 msgid "Right Command"
 msgstr "Right Command"
 
+#: src/automations/launch.tsx
+#: src/chat/components/body/empty.tsx
+msgid "Run an automation"
+msgstr "Run an automation"
+
 #: src/session/components/outer-header/overflow/export-modal.tsx
 #: src/settings/dictionary/index.tsx
 #: src/templates/auto-form.tsx
@@ -3430,17 +3424,9 @@ msgstr "Save (automatic)"
 msgid "Save & enable"
 msgstr "Save & enable"
 
-#: src/automations/starters.tsx
-msgid "Save completed meetings as local Markdown files."
-msgstr "Save completed meetings as local Markdown files."
-
 #: src/session/components/outer-header/metadata/date.tsx
 msgid "Save date"
 msgstr "Save date"
-
-#: src/settings/automations/index.tsx
-msgid "Save draft"
-msgstr "Save draft"
 
 #: src/settings/general/storage/export-location.tsx
 msgid "Save PDF, text, Markdown, and Org exports to this folder."
@@ -3687,6 +3673,10 @@ msgstr "Session note views"
 msgid "Session title"
 msgstr "Session title"
 
+#: src/settings/automations/index.tsx
+msgid "Set the trigger and the actions. The chat on the right can help you shape the automation."
+msgstr "Set the trigger and the actions. The chat on the right can help you shape the automation."
+
 #: src/stt/useStartListening.ts
 msgid "Set up"
 msgstr "Set up"
@@ -3880,13 +3870,13 @@ msgstr "Speaker {number} · part {part}"
 msgid "speakers, output, headphones, HDMI, loopback, participants, sound"
 msgstr "speakers, output, headphones, HDMI, loopback, participants, sound"
 
-#: src/settings/automations/workflow-builder.tsx
-msgid "Stack another destination. Steps run top to bottom."
-msgstr "Stack another destination. Steps run top to bottom."
-
 #: src/home/start-button.tsx
 msgid "Start a meeting"
 msgstr "Start a meeting"
+
+#: src/settings/automations/index.tsx
+msgid "Start from a template"
+msgstr "Start from a template"
 
 #: src/session/components/outer-header/overflow/listening.tsx
 msgid "Start listening"
@@ -3950,9 +3940,9 @@ msgstr "startup, turn on the computer, launch, open automatically, boot"
 msgid "Stay current with updates installed the next time Syntheo opens."
 msgstr "Stay current with updates installed the next time Syntheo opens."
 
-#: src/settings/automations/index.tsx
-msgid "Steps run from top to bottom."
-msgstr "Steps run from top to bottom."
+#: src/settings/automations/workflow-builder.tsx
+msgid "Steps"
+msgstr "Steps"
 
 #: src/composer/index.tsx
 #: src/stt/auto-stop.ts
@@ -4034,6 +4024,11 @@ msgstr "Summaries"
 #: src/session/components/note-input/header-shared.tsx
 #: src/session/components/outer-header/overflow/export-modal.tsx
 #: src/settings/automations/markdown-export-options.tsx
+msgid "Summary"
+msgstr "Summary"
+
+#: src/automations/labels.ts
+msgctxt "automation variable"
 msgid "Summary"
 msgstr "Summary"
 
@@ -4125,6 +4120,10 @@ msgstr "Syntheo can read meeting details"
 msgid "Syntheo cannot reach {providerName}"
 msgstr "Syntheo cannot reach {providerName}"
 
+#: src/settings/automations/index.tsx
+msgid "Syntheo chains local steps after your meetings. Nothing leaves your computer."
+msgstr "Syntheo chains local steps after your meetings. Nothing leaves your computer."
+
 #: src/settings/developers/cli.tsx
 #: src/settings/search-index.ts
 msgid "Syntheo CLI"
@@ -4181,6 +4180,10 @@ msgstr "Syntheo needs access to your microphone and system audio to record and t
 #: src/onboarding/index.tsx
 msgid "Syntheo needs microphone and system audio to transcribe your meetings, plus Accessibility to read meeting controls, visible chat."
 msgstr "Syntheo needs microphone and system audio to transcribe your meetings, plus Accessibility to read meeting controls, visible chat."
+
+#: src/settings/automations/workflow-builder.tsx
+msgid "Syntheo runs the steps in order on your computer: the trigger is step 1, then each action follows."
+msgstr "Syntheo runs the steps in order on your computer: the trigger is step 1, then each action follows."
 
 #. placeholder {0}: statuses[0].displayName
 #: src/settings/developers/skills.tsx
@@ -4314,7 +4317,6 @@ msgstr "Template name"
 msgid "Templates"
 msgstr "Templates"
 
-#: src/settings/automations/index.tsx
 #: src/settings/developers/webhooks.tsx
 msgid "Test"
 msgstr "Test"
@@ -4332,10 +4334,6 @@ msgstr "Test delivered ({0})"
 #: src/settings/developers/webhooks.tsx
 msgid "Test failed ({0})"
 msgstr "Test failed ({0})"
-
-#: src/settings/automations/index.tsx
-msgid "Test runs are not available yet."
-msgstr "Test runs are not available yet."
 
 #: src/settings/ai/llm/server-card.tsx
 #: src/settings/ai/stt/server-card.tsx
@@ -4373,6 +4371,10 @@ msgstr "The live transcription model handles one language at a time. To transcri
 #: src/dictation/lifecycle.tsx
 msgid "The live transcription of this dictation was interrupted, and this model can't transcribe the recording afterwards. Try again."
 msgstr "The live transcription of this dictation was interrupted, and this model can't transcribe the recording afterwards. Try again."
+
+#: src/automations/labels.ts
+msgid "The local model lists the actions to take and adds them to the vault."
+msgstr "The local model lists the actions to take and adds them to the vault."
 
 #: src/chat/components/message/tool/edit-summary.tsx
 msgid "The memo edit could not be prepared."
@@ -4570,6 +4572,11 @@ msgstr "Tip: Add teammate names, acronyms, company jargon, and product terms."
 msgid "Tip: The Syntheo team loves our users!"
 msgstr "Tip: The Syntheo team loves our users!"
 
+#: src/automations/labels.ts
+msgctxt "automation variable"
+msgid "Title"
+msgstr "Title"
+
 #: src/templates/sections-editor.tsx
 msgid "To move a section with the keyboard, focus its handle and use the up and down arrow keys."
 msgstr "To move a section with the keyboard, focus its handle and use the up and down arrow keys."
@@ -4586,6 +4593,11 @@ msgstr "Transcribing…"
 #: src/session/components/note-input/header-transcript.tsx
 #: src/session/components/outer-header/overflow/export-modal.tsx
 #: src/settings/automations/markdown-export-options.tsx
+msgid "Transcript"
+msgstr "Transcript"
+
+#: src/automations/labels.ts
+msgctxt "automation variable"
 msgid "Transcript"
 msgstr "Transcript"
 
@@ -4667,7 +4679,6 @@ msgstr "Transcription unavailable"
 msgid "Travel & Places"
 msgstr "Travel & Places"
 
-#: src/settings/automations/index.tsx
 #: src/settings/automations/workflow-builder.tsx
 msgid "Trigger"
 msgstr "Trigger"
@@ -4769,8 +4780,7 @@ msgstr "Unreachable"
 msgid "Untitled"
 msgstr "Untitled"
 
-#: src/settings/automations/index.tsx
-#: src/sidebar/automations.tsx
+#: src/automations/labels.ts
 msgid "Untitled automation"
 msgstr "Untitled automation"
 
@@ -4808,10 +4818,6 @@ msgstr "Upload transcript"
 #: src/settings/search-index.ts
 msgid "Use 24-hour time"
 msgstr "Use 24-hour time"
-
-#: src/automations/starters.tsx
-msgid "Use a stable filename in the configured export directory."
-msgstr "Use a stable filename in the configured export directory."
 
 #: src/templates/auto-form.tsx
 #: src/templates/details.tsx
@@ -4909,10 +4915,6 @@ msgstr "Voice input is unavailable while Syntheo is recording a meeting."
 msgid "Wait before treating microphone activity as a meeting."
 msgstr "Wait before treating microphone activity as a meeting."
 
-#: src/automations/starters.tsx
-msgid "Wait until the transcript and note are complete."
-msgstr "Wait until the transcript and note are complete."
-
 #: src/settings/search-index.ts
 msgid "webhook, URL, events, integration, automation"
 msgstr "webhook, URL, events, integration, automation"
@@ -4966,13 +4968,25 @@ msgstr "What's new in {version}?"
 msgid "what's new, changes, version, changelog"
 msgstr "what's new, changes, version, changelog"
 
+#: src/settings/automations/workflow-builder.tsx
+msgid "When"
+msgstr "When"
+
 #: src/settings/general/index.tsx
 msgid "When off, summaries follow the detected meeting language."
 msgstr "When off, summaries follow the detected meeting language."
 
-#: src/settings/automations/workflow-builder.tsx
-msgid "When this happens"
-msgstr "When this happens"
+#: src/automations/labels.ts
+msgid "When the meeting ends"
+msgstr "When the meeting ends"
+
+#: src/automations/labels.ts
+msgid "When the meeting summary is ready"
+msgstr "When the meeting summary is ready"
+
+#: src/automations/labels.ts
+msgid "When you launch it from a note"
+msgstr "When you launch it from a note"
 
 #: src/services/notification-labels.ts
 msgid "Where:"
@@ -5006,17 +5020,13 @@ msgstr "Words specific to you go in your"
 msgid "words, vocabulary, names, jargon, spelling, acronyms"
 msgstr "words, vocabulary, names, jargon, spelling, acronyms"
 
-#: src/settings/automations/workflow-builder.tsx
-msgid "Workflow"
-msgstr "Workflow"
-
 #: src/session/components/living-document/index.tsx
 msgid "Write freely, Syntheo will complete it."
 msgstr "Write freely, Syntheo will complete it."
 
-#: src/automations/starters.tsx
-msgid "Write to a folder"
-msgstr "Write to a folder"
+#: src/automations/labels.ts
+msgid "Writes the note to a folder on your computer."
+msgstr "Writes the note to a folder on your computer."
 
 #: src/sidebar/settings-nav-groups.ts
 msgid "Writing"

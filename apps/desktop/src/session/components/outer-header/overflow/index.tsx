@@ -33,6 +33,7 @@ import { ExportModal } from "./export-modal";
 import { Listening } from "./listening";
 import { LockNote } from "./lock-note";
 
+import { NoteMenuAutomationItems } from "~/automations/launch";
 import { openFloatingMeetingPanel } from "~/meeting-float/host";
 import { isFloatingBarSupported } from "~/meeting-float/support";
 import {
@@ -207,6 +208,9 @@ export function OverflowButton({
               </>
             )}
             {hasRecordingActions && <DropdownMenuSeparator />}
+            {isMeetingInProgress ? null : (
+              <NoteMenuAutomationItems sessionId={sessionId} />
+            )}
             <DropdownMenuItem
               onClick={openExportModal}
               title={shortcutTooltip(t`Export`, "exportNote")}

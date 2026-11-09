@@ -18,6 +18,7 @@ import {
 import { useMountEffect } from "@syntheo/ui/hooks/use-mount-effect";
 
 import { AITaskWindowSyncBridge } from "./ai/task-window-sync";
+import { ensureLegacyAutomationsMigrated } from "./automations/migration";
 import { createToolRegistry } from "./contexts/tool-registry/core";
 import { startRenderPerfMonitor } from "./devtools-bar/render-perf";
 import { AppI18nProvider } from "./i18n/provider";
@@ -181,6 +182,7 @@ function runMainWindowStartupTasks() {
     "ai_credentials_migrate",
     migratePlaintextAiProviderApiKeys,
   );
+  void runStartupTask("automations_migrate", ensureLegacyAutomationsMigrated);
   void startRenderPerfForDevtoolsBuilds();
 }
 

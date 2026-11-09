@@ -1,17 +1,12 @@
 import { create } from "zustand";
 
-import { isStarterId, type StarterId } from "./starters";
 import { parseAutomationWorkflows, saveAutomationWorkflows } from "./workflows";
 
 import { useChatContext } from "~/chat/state/chat-context";
-import {
-  getStoredSettingValues,
-  useStoredSettingValue,
-} from "~/settings/queries";
+import { getStoredSettingValues } from "~/settings/queries";
 import { id } from "~/shared/utils";
 
 export type AutomationSelection =
-  | { kind: "starter"; starterId: StarterId }
   | { kind: "chat"; groupId: string }
   | { kind: "draft"; draftId: string }
   | { kind: "workflow"; workflowId: string };
@@ -22,7 +17,6 @@ interface AutomationSelectionState {
   selection: AutomationSelection | null;
   draftIds: string[];
   chatBySelection: Record<string, ChatSelection>;
-  selectStarter: (starterId: StarterId) => void;
   selectChatAutomation: (groupId: string) => void;
   selectDraft: (draftId: string) => void;
   selectWorkflow: (workflowId: string, chatGroupId?: string | null) => void;
@@ -33,8 +27,6 @@ interface AutomationSelectionState {
 
 function selectionChatKey(selection: AutomationSelection): string {
   switch (selection.kind) {
-    case "starter":
-      return `starter:${selection.starterId}`;
     case "chat":
       return `chat:${selection.groupId}`;
     case "draft":
@@ -105,7 +97,6 @@ export const useAutomationSelection = create<AutomationSelectionState>(
       selection: null,
       draftIds: [],
       chatBySelection: {},
-      selectStarter: (starterId) => switchTo({ kind: "starter", starterId }),
       selectChatAutomation: (groupId) => switchTo({ kind: "chat", groupId }),
       selectDraft: (draftId) => switchTo({ kind: "draft", draftId }),
       selectWorkflow: (workflowId, chatGroupId) => {
@@ -229,14 +220,5 @@ async function attachWorkflowChatGroup(
 }
 
 export function useEffectiveAutomationSelection(): AutomationSelection | null {
-  const selection = useAutomationSelection((state) => state.selection);
-  const storedDraft = useStoredSettingValue("automation_draft_template");
-
-  if (selection) {
-    return selection;
-  }
-
-  return isStarterId(storedDraft.value)
-    ? { kind: "starter", starterId: storedDraft.value }
-    : null;
+  return useAutomationSelection((state) => state.selection);
 }

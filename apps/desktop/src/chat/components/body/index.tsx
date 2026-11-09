@@ -23,6 +23,7 @@ export function ChatBody({
   hasContext = false,
   isLiveMeeting = false,
   hasSummary = false,
+  automationSessionId,
   onSendMessage,
 }: {
   messages: SyntheoUIMessage[];
@@ -33,6 +34,7 @@ export function ChatBody({
   hasContext?: boolean;
   isLiveMeeting?: boolean;
   hasSummary?: boolean;
+  automationSessionId?: string;
   onSendMessage?: (
     content: string,
     parts: Array<{ type: "text"; text: string }>,
@@ -89,6 +91,7 @@ export function ChatBody({
               hasContext={hasContext}
               isLiveMeeting={isLiveMeeting}
               hasSummary={hasSummary}
+              automationSessionId={automationSessionId}
               onSendMessage={onSendMessage}
             />
           ) : (

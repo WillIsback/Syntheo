@@ -1,11 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { createElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -28,28 +22,23 @@ const mocks = vi.hoisted(() => ({
   deleteChatAutomation: vi.fn(),
   deleteWorkflow: vi.fn(),
   removeDraft: vi.fn(),
-  removeStarterDraft: vi.fn(),
+  createFromTemplate: vi.fn(),
+  selectWorkflow: vi.fn(),
   selection: null as unknown,
   setSettingValue: vi.fn<(...args: unknown[]) => Promise<void>>(() =>
     Promise.resolve(),
   ),
-  workflows: [] as Array<{
-    id: string;
-    title: string;
-    enabled: boolean;
-    trigger: string;
-    steps: unknown[];
-    lastRun: null;
-    processedSessionIds: string[];
-    chatGroupId: string | null;
-  }>,
+  workflows: [] as Array<Record<string, unknown>>,
   toastError: vi.fn(),
   toastSuccess: vi.fn(),
   toastWarning: vi.fn(),
 }));
 
 vi.mock("~/automations/actions", () => ({
-  useRemoveStarterDraft: () => ({ mutate: mocks.removeStarterDraft }),
+  useCreateWorkflowFromTemplate: () => ({
+    mutate: mocks.createFromTemplate,
+    isPending: false,
+  }),
   useDeleteChatAutomation: () => ({ mutate: mocks.deleteChatAutomation }),
   useDeleteWorkflow: () => ({ mutate: mocks.deleteWorkflow }),
 }));
@@ -66,7 +55,10 @@ vi.mock("~/automations/workflows", async (importOriginal) => {
 
 vi.mock("~/automations/selection", () => ({
   useAutomationSelection: (selector: (state: unknown) => unknown) =>
-    selector({ removeDraft: mocks.removeDraft }),
+    selector({
+      removeDraft: mocks.removeDraft,
+      selectWorkflow: mocks.selectWorkflow,
+    }),
   useEffectiveAutomationSelection: () => mocks.selection,
 }));
 
@@ -86,12 +78,9 @@ vi.mock("~/settings/queries", () => ({
   useStoredSettingValues: () => ({ values: {}, hasValues: new Set() }),
 }));
 
-vi.mock("./starter-config", () => ({
+vi.mock("./markdown-export-config", () => ({
   AutomationLastRunLine: () => null,
   MarkdownExportConfig: () => <div data-testid="config-markdown" />,
-  SlackRecapConfig: () => <div data-testid="config-slack" />,
-  LinearIssuesConfig: () => <div data-testid="config-linear" />,
-  NotionUpdateConfig: () => <div data-testid="config-notion" />,
 }));
 
 vi.mock("@syntheo/ui/components/ui/toast", () => ({
@@ -100,11 +89,6 @@ vi.mock("@syntheo/ui/components/ui/toast", () => ({
     success: mocks.toastSuccess,
     warning: mocks.toastWarning,
   },
-}));
-
-vi.mock("./google-drive-config", () => ({
-  GoogleDriveConfig: () => <div data-testid="config-drive" />,
-  DriveExportResult: () => null,
 }));
 
 import { AutomationsContent } from ".";
@@ -135,7 +119,8 @@ describe("AutomationsContent", () => {
     mocks.deleteChatAutomation.mockClear();
     mocks.deleteWorkflow.mockClear();
     mocks.removeDraft.mockClear();
-    mocks.removeStarterDraft.mockClear();
+    mocks.createFromTemplate.mockClear();
+    mocks.selectWorkflow.mockClear();
     mocks.selection = null;
     mocks.workflows = [];
     mocks.setSettingValue.mockClear();
@@ -144,16 +129,97 @@ describe("AutomationsContent", () => {
     mocks.toastWarning.mockClear();
   });
 
-  it("shows the overview when nothing is selected", () => {
+  it("shows one list and the templates when nothing is selected", () => {
+    mocks.workflows = [
+      {
+        id: "legacy-markdown-export",
+        title: "",
+        templateId: "markdown-export",
+        enabled: true,
+        trigger: "meeting_completed",
+        steps: [{ id: "s", type: "markdown_export", directory: "/exports" }],
+        lastRun: null,
+        processedSessionIds: [],
+        chatGroupId: null,
+      },
+    ];
+
     renderAutomations();
 
     expect(screen.getByRole("heading", { name: "Automations" })).toBeTruthy();
-    expect(screen.getByText("No automation draft yet")).toBeTruthy();
     expect(
       screen.getByText(
-        "Choose a starter from the sidebar, or create a workflow and add steps like Zapier.",
+        "Syntheo chains local steps after your meetings. Nothing leaves your computer.",
       ),
     ).toBeTruthy();
+    expect(screen.getByText("Start from a template")).toBeTruthy();
+    expect(screen.getByText("My automations")).toBeTruthy();
+    // Le modèle « Extraire les tâches » attend ses actions (issue 442).
+    expect(screen.queryByText("Extract tasks")).toBeNull();
+    expect(screen.queryByText(/Zapier|destination/i)).toBeNull();
+    expect(
+      screen.getByText("Meeting ends → Export as Markdown · never run"),
+    ).toBeTruthy();
+
+    fireEvent.click(
+      screen.getByText("Meeting ends → Export as Markdown · never run"),
+    );
+    expect(mocks.selectWorkflow).toHaveBeenCalledWith(
+      "legacy-markdown-export",
+      null,
+    );
+  });
+
+  it("creates an automation from the Markdown template", () => {
+    renderAutomations();
+
+    fireEvent.click(screen.getByRole("button", { name: /Export as Markdown/ }));
+
+    expect(mocks.createFromTemplate).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "markdown-export" }),
+    );
+  });
+
+  it("numbers the trigger 1 and the actions 2, 3 with translated labels", () => {
+    mocks.selection = { kind: "workflow", workflowId: "wf-1" };
+    mocks.workflows = [
+      {
+        id: "wf-1",
+        title: "Archive",
+        enabled: false,
+        trigger: "manual",
+        steps: [
+          { id: "a", type: "markdown_export", directory: "/a" },
+          { id: "b", type: "markdown_export", directory: "" },
+        ],
+        lastRun: null,
+        processedSessionIds: [],
+        chatGroupId: null,
+      },
+    ];
+
+    renderAutomations();
+
+    expect(screen.getByRole("heading", { name: "Archive" })).toBeTruthy();
+    const numbers = Array.from(
+      document.querySelectorAll("[data-step-number]"),
+    ).map((badge) => badge.textContent);
+    expect(numbers).toEqual(["1", "2", "3"]);
+    expect(screen.getByRole("button", { name: "Remove step 2" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Remove step 3" })).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Launch it from a note: the ⋯ menu, the capsule in Synthesis, or Ask the note (Ctrl+J).",
+      ),
+    ).toBeTruthy();
+    // Variables de base dès l'étape 1, puis la sortie de l'étape 2.
+    expect(screen.getAllByText("Summary").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Exported file").length).toBeGreaterThan(0);
+    // Lancée à la main : pas de bouton d'activation.
+    expect(screen.queryByRole("button", { name: "Save & enable" })).toBeNull();
+    expect(
+      screen.queryByText(/Unsupported step|Zapier|destination/i),
+    ).toBeNull();
   });
 
   it("shows the untitled draft page after the sidebar plus button", () => {
@@ -164,43 +230,7 @@ describe("AutomationsContent", () => {
     expect(
       screen.getByRole("heading", { name: "Untitled automation" }),
     ).toBeTruthy();
-    expect(
-      screen.getByText("Add a trigger, then stack actions like Zapier."),
-    ).toBeTruthy();
-    expect(screen.getByText("Add an action")).toBeTruthy();
-  });
-
-  it("deletes a draft from its actions menu", async () => {
-    mocks.selection = { kind: "draft", draftId: "draft-1" };
-
-    renderAutomations();
-
-    const trigger = screen.getByRole("button", { name: "Automation actions" });
-    fireEvent.pointerDown(trigger);
-    fireEvent.click(trigger);
-
-    fireEvent.click(await screen.findByText("Delete automation"));
-
-    expect(mocks.removeDraft).toHaveBeenCalledWith("draft-1");
-  });
-
-  it("shows the selected starter as an inspectable deterministic draft", () => {
-    mocks.selection = { kind: "starter", starterId: "markdown-export" };
-
-    renderAutomations();
-
-    expect(
-      screen.getByRole<HTMLButtonElement>("button", { name: "Test" }).disabled,
-    ).toBe(true);
-    expect(
-      screen.getByRole<HTMLButtonElement>("button", {
-        name: "Save & enable",
-      }).disabled,
-    ).toBe(true);
-
-    fireEvent.click(screen.getByRole("button", { name: "Preview" }));
-
-    expect(screen.getByText("Expected output")).toBeTruthy();
+    expect(screen.getAllByText("Add a step").length).toBeGreaterThan(0);
   });
 
   it.each([
@@ -208,17 +238,8 @@ describe("AutomationsContent", () => {
       name: "draft",
       selection: { kind: "draft", draftId: "draft-1" },
       chatGroup: null,
-      menuItem: "Delete automation",
       mock: mocks.removeDraft,
       id: "draft-1",
-    },
-    {
-      name: "starter automation",
-      selection: { kind: "starter", starterId: "markdown-export" },
-      chatGroup: null,
-      menuItem: "Remove automation",
-      mock: mocks.removeStarterDraft,
-      id: "markdown-export",
     },
     {
       name: "chat automation",
@@ -230,13 +251,12 @@ describe("AutomationsContent", () => {
         createdAt: "2026-08-03T10:00:00.000Z",
         updatedAt: "2026-08-03T10:00:00.000Z",
       },
-      menuItem: "Delete automation",
       mock: mocks.deleteChatAutomation,
       id: "automation-1",
     },
   ])(
     "deletes a $name from its actions menu",
-    async ({ selection, chatGroup, menuItem, mock, id }) => {
+    async ({ selection, chatGroup, mock, id }) => {
       mocks.selection = selection;
       mocks.chatGroup = chatGroup;
 
@@ -248,25 +268,9 @@ describe("AutomationsContent", () => {
       fireEvent.pointerDown(trigger);
       fireEvent.click(trigger);
 
-      fireEvent.click(await screen.findByText(menuItem));
+      fireEvent.click(await screen.findByText("Delete automation"));
 
       expect(mock).toHaveBeenCalledWith(id);
     },
   );
-
-  it("saves the selected draft for Pro users", async () => {
-    mocks.selection = { kind: "starter", starterId: "markdown-export" };
-
-    renderAutomations();
-
-    fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
-
-    await waitFor(() => {
-      expect(mocks.setSettingValue).toHaveBeenCalledWith(
-        "automation_draft_template",
-        "markdown-export",
-      );
-    });
-    expect(mocks.toastSuccess).toHaveBeenCalledWith("Automation draft saved");
-  });
 });

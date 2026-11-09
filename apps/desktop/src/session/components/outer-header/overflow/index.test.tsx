@@ -74,6 +74,9 @@ vi.mock("@syntheo/ui/components/ui/dropdown-menu", () => ({
   DropdownMenuPortal: ({ children }: { children: React.ReactNode }) => (
     <>{children}</>
   ),
+  DropdownMenuLabel: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
   DropdownMenuSeparator: () => <hr />,
   DropdownMenuSub: ({ children }: { children: React.ReactNode }) => (
     <div>{children}</div>
@@ -94,6 +97,35 @@ vi.mock("@syntheo/ui/components/ui/dropdown-menu", () => ({
     <>{children}</>
   ),
 }));
+
+const automationMocks = vi.hoisted(() => ({
+  runWorkflowOnNote: vi.fn(async () => ({
+    at: "2026-11-09T10:00:00.000Z",
+    status: "success" as const,
+    detail: "/exports/Planning.md",
+  })),
+  workflows: [] as unknown[],
+}));
+
+vi.mock("~/automations/engine", () => ({
+  runWorkflowOnNote: automationMocks.runWorkflowOnNote,
+}));
+
+vi.mock("~/automations/workflows", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/automations/workflows")>()),
+  useAutomationWorkflows: () => automationMocks.workflows,
+}));
+
+const READY_WORKFLOW = {
+  id: "wf-hand",
+  title: "Weekly recap",
+  enabled: false,
+  trigger: "manual",
+  steps: [{ id: "s", type: "markdown_export", directory: "/exports" }],
+  lastRun: null,
+  processedSessionIds: [],
+  chatGroupId: null,
+};
 
 vi.mock("./always-on-top", () => ({
   AlwaysOnTop: () => <button type="button">Always on Top</button>,
@@ -373,5 +405,29 @@ describe("OverflowButton", () => {
       expect.objectContaining({ open: true }),
       undefined,
     );
+  });
+
+  it("runs a ready automation on this note from the ⋯ menu", () => {
+    automationMocks.workflows = [READY_WORKFLOW];
+
+    renderOverflow();
+
+    expect(screen.getByText("Run an automation")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Weekly recap/ }));
+
+    expect(automationMocks.runWorkflowOnNote).toHaveBeenCalledWith(
+      "wf-hand",
+      "session-1",
+    );
+    automationMocks.workflows = [];
+  });
+
+  it("hides the automation group while nothing is ready", () => {
+    automationMocks.workflows = [{ ...READY_WORKFLOW, steps: [] }];
+
+    renderOverflow();
+
+    expect(screen.queryByText("Run an automation")).toBeNull();
+    automationMocks.workflows = [];
   });
 });

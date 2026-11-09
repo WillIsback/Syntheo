@@ -1,10 +1,8 @@
-import type { MarkdownExportOptions } from "@syntheo/plugin-local-api";
-
 import {
-  DEFAULT_MARKDOWN_EXPORT_OPTIONS,
-  hasMarkdownExportContent,
-  parseMarkdownExportOptions,
-} from "./markdown-export";
+  isWorkflowStepReady,
+  parseWorkflowStep,
+  type WorkflowStep,
+} from "./steps";
 import type { AutomationRunRecord } from "./types";
 
 import {
@@ -14,23 +12,27 @@ import {
 } from "~/settings/queries";
 import { id } from "~/shared/utils";
 
-const WORKFLOW_TRIGGERS = ["note_enhanced", "meeting_completed"] as const;
+export {
+  createWorkflowStep,
+  isWorkflowStepReady,
+  type WorkflowStep,
+  type WorkflowStepType,
+} from "./steps";
+
+// Déclencheurs : la synthèse est prête, la réunion est terminée, ou un
+// lancement à la main depuis une note (menu ⋯, capsule, « Demander à la
+// note »). Une automatisation « manual » ne part jamais d'elle-même.
+export const WORKFLOW_TRIGGERS = [
+  "note_enhanced",
+  "meeting_completed",
+  "manual",
+] as const;
 export type WorkflowTrigger = (typeof WORKFLOW_TRIGGERS)[number];
-
-// Syntheo ne garde que l'export Markdown local : les étapes cloud
-// (Slack, Notion, Linear, Google Drive) ont été retirées.
-const WORKFLOW_STEP_TYPES = ["markdown_export"] as const;
-export type WorkflowStepType = (typeof WORKFLOW_STEP_TYPES)[number];
-
-export type WorkflowStep = {
-  id: string;
-  type: "markdown_export";
-  directory: string;
-  options?: MarkdownExportOptions;
-};
+export type AutomaticWorkflowTrigger = Exclude<WorkflowTrigger, "manual">;
 
 export type AutomationWorkflow = {
   id: string;
+  /** Vide : l'interface affiche un titre par défaut traduit. */
   title: string;
   enabled: boolean;
   trigger: WorkflowTrigger;
@@ -38,6 +40,8 @@ export type AutomationWorkflow = {
   lastRun: AutomationRunRecord | null;
   processedSessionIds: string[];
   chatGroupId: string | null;
+  /** Modèle d'origine (« Partir d'un modèle », migration) ; sert de titre par défaut. */
+  templateId?: string;
 };
 
 export function createEmptyWorkflow(
@@ -45,30 +49,15 @@ export function createEmptyWorkflow(
 ): AutomationWorkflow {
   return {
     id: overrides.id ?? id(),
-    title: overrides.title ?? "Untitled automation",
+    title: overrides.title ?? "",
     enabled: overrides.enabled ?? false,
     trigger: overrides.trigger ?? "note_enhanced",
     steps: overrides.steps ?? [],
     lastRun: overrides.lastRun ?? null,
     processedSessionIds: overrides.processedSessionIds ?? [],
     chatGroupId: overrides.chatGroupId ?? null,
+    ...(overrides.templateId ? { templateId: overrides.templateId } : {}),
   };
-}
-
-export function createWorkflowStep(_type: WorkflowStepType): WorkflowStep {
-  return {
-    id: id(),
-    type: "markdown_export",
-    directory: "",
-    options: { ...DEFAULT_MARKDOWN_EXPORT_OPTIONS },
-  };
-}
-
-export function isWorkflowStepReady(step: WorkflowStep): boolean {
-  return (
-    step.directory.trim().length > 0 &&
-    hasMarkdownExportContent(step.options ?? DEFAULT_MARKDOWN_EXPORT_OPTIONS)
-  );
 }
 
 export function isWorkflowReady(workflow: AutomationWorkflow): boolean {
@@ -121,23 +110,19 @@ function parseWorkflow(value: unknown): AutomationWorkflow | null {
     return null;
   }
 
-  const trigger =
-    value.trigger === "meeting_completed"
-      ? "meeting_completed"
-      : "note_enhanced";
+  const trigger = WORKFLOW_TRIGGERS.find((item) => item === value.trigger);
   const steps = Array.isArray(value.steps)
     ? value.steps.flatMap((step) => {
-        const parsed = parseStep(step);
+        const parsed = parseWorkflowStep(step);
         return parsed ? [parsed] : [];
       })
     : [];
 
   return {
     id: value.id,
-    title:
-      typeof value.title === "string" ? value.title : "Untitled automation",
+    title: typeof value.title === "string" ? value.title : "",
     enabled: value.enabled === true,
-    trigger,
+    trigger: trigger ?? "note_enhanced",
     steps,
     lastRun: parseLastRun(value.lastRun),
     processedSessionIds: Array.isArray(value.processedSessionIds)
@@ -147,24 +132,10 @@ function parseWorkflow(value: unknown): AutomationWorkflow | null {
       : [],
     chatGroupId:
       typeof value.chatGroupId === "string" ? value.chatGroupId : null,
+    ...(typeof value.templateId === "string" && value.templateId
+      ? { templateId: value.templateId }
+      : {}),
   };
-}
-
-function parseStep(value: unknown): WorkflowStep | null {
-  if (!isRecord(value) || typeof value.id !== "string") {
-    return null;
-  }
-  if (value.type === "markdown_export") {
-    return {
-      id: value.id,
-      type: "markdown_export",
-      directory: typeof value.directory === "string" ? value.directory : "",
-      ...(value.options !== undefined
-        ? { options: parseMarkdownExportOptions(value.options) }
-        : {}),
-    };
-  }
-  return null;
 }
 
 function parseLastRun(value: unknown): AutomationRunRecord | null {
