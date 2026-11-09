@@ -1,5 +1,6 @@
 mod device;
 mod error;
+mod speaker_output;
 
 #[cfg(target_os = "macos")]
 pub mod macos;
@@ -12,6 +13,9 @@ pub mod windows;
 
 pub use device::*;
 pub use error::*;
+pub use speaker_output::{
+    SpeakerCaptureOutput, is_headphone_output, speaker_capture_output, speaker_output_names,
+};
 
 pub fn backend() -> impl AudioDeviceBackend {
     #[cfg(target_os = "macos")]

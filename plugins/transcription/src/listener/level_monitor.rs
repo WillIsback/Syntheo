@@ -1,5 +1,6 @@
-// Indicateur de niveau d'entrée des réglages (issue 419) : ouvre le micro choisi
-// et n'envoie à la webview qu'un niveau entre 0 et 1, dix fois par seconde.
+// Indicateurs de niveau des réglages : ouvre le micro choisi (issue 419) ou la
+// sortie capturée comme son système (issue 450) et n'envoie à la webview qu'un
+// niveau entre 0 et 1, dix fois par seconde.
 // Aucun échantillon n'est conservé ni transmis : chaque bloc est lu, réduit à
 // son niveau, puis libéré. Le flux est refermé dès que la page le demande,
 // qu'une capture démarre, ou au plus tard après `MAX_MONITOR_DURATION`.
@@ -24,12 +25,44 @@ struct ActiveMonitor {
     cancellation: CancellationToken,
 }
 
+/// Ce que mesure un mètre : le micro ou la sortie capturée, chacun par son nom
+/// (`None` : le périphérique par défaut).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum LevelSource {
+    Microphone(Option<String>),
+    Speaker(Option<String>),
+}
+
 #[derive(Default)]
-pub struct MicrophoneLevelMonitor {
+pub struct LevelMonitor {
     active: Mutex<Option<ActiveMonitor>>,
 }
 
-impl MicrophoneLevelMonitor {
+/// Mètre du micro. Chaque ligne des réglages a le sien : ils tournent ensemble.
+#[derive(Default)]
+pub struct MicrophoneLevelMonitor(pub LevelMonitor);
+
+/// Mètre de la sortie capturée comme son système.
+#[derive(Default)]
+pub struct SpeakerLevelMonitor(pub LevelMonitor);
+
+impl std::ops::Deref for MicrophoneLevelMonitor {
+    type Target = LevelMonitor;
+
+    fn deref(&self) -> &LevelMonitor {
+        &self.0
+    }
+}
+
+impl std::ops::Deref for SpeakerLevelMonitor {
+    type Target = LevelMonitor;
+
+    fn deref(&self) -> &LevelMonitor {
+        &self.0
+    }
+}
+
+impl LevelMonitor {
     /// Remplace le mètre en cours, s'il y en a un, par celui de `owner`.
     /// `send` reçoit chaque niveau et renvoie `false` quand la page ne
     /// l'écoute plus.
@@ -37,11 +70,22 @@ impl MicrophoneLevelMonitor {
         &self,
         audio: Arc<dyn syntheo_audio::AudioProvider>,
         owner: String,
-        device: Option<String>,
+        source: LevelSource,
         send: impl Fn(f32) -> bool + Send + 'static,
     ) -> Result<(), syntheo_audio::Error> {
         self.stop_all();
-        let mut stream = audio.open_mic_capture(device, SAMPLE_RATE, CHUNK_SIZE)?;
+        let speaker = matches!(source, LevelSource::Speaker(_));
+        let mut stream = match source {
+            LevelSource::Microphone(device) => {
+                audio.open_mic_capture(device, SAMPLE_RATE, CHUNK_SIZE)?
+            }
+            LevelSource::Speaker(device) => {
+                // Les mètres ne tournent jamais pendant une écoute : ce choix
+                // est celui que l'écoute suivante reprendra au démarrage.
+                audio.set_speaker_device(device);
+                audio.open_speaker_capture(SAMPLE_RATE, CHUNK_SIZE)?
+            }
+        };
 
         let cancellation = CancellationToken::new();
         let cancelled = cancellation.clone();
@@ -56,14 +100,15 @@ impl MicrophoneLevelMonitor {
                     _ = &mut deadline => break,
                     next = stream.next() => {
                         let Some(Ok(frame)) = next else { break };
-                        smoothed = smooth_level(smoothed, level_from_samples(&frame.raw_mic));
+                        let samples = if speaker { &frame.raw_speaker } else { &frame.raw_mic };
+                        smoothed = smooth_level(smoothed, level_from_samples(samples));
                         if !send(smoothed) {
                             break;
                         }
                     }
                 }
             }
-            // Le flux est libéré ici : le micro se referme.
+            // Le flux est libéré ici : le périphérique se referme.
             drop(stream);
         });
 
@@ -142,6 +187,23 @@ mod tests {
 
     struct TestAudio {
         available: bool,
+        speaker_device: std::sync::Mutex<Option<String>>,
+    }
+
+    impl TestAudio {
+        fn new(available: bool) -> Arc<Self> {
+            Arc::new(Self {
+                available,
+                speaker_device: std::sync::Mutex::new(None),
+            })
+        }
+    }
+
+    fn frames(frame: CaptureFrame) -> CaptureStream {
+        CaptureStream::new(stream::unfold(frame, |frame| async move {
+            tokio::time::sleep(Duration::from_millis(1)).await;
+            Some((Ok(frame.clone()), frame))
+        }))
     }
 
     impl AudioProvider for TestAudio {
@@ -149,8 +211,19 @@ mod tests {
             unreachable!()
         }
 
-        fn open_speaker_capture(&self, _: u32, _: usize) -> Result<CaptureStream, Error> {
-            unreachable!()
+        fn open_speaker_capture(&self, _: u32, chunk_size: usize) -> Result<CaptureStream, Error> {
+            if !self.available {
+                return Err(Error::SpeakerStreamSetupFailed);
+            }
+            Ok(frames(CaptureFrame {
+                raw_mic: Arc::from([]),
+                raw_speaker: Arc::from(vec![1.0_f32; chunk_size]),
+                aec_mic: None,
+            }))
+        }
+
+        fn set_speaker_device(&self, device: Option<String>) {
+            *self.speaker_device.lock().unwrap() = device;
         }
 
         fn open_mic_capture(
@@ -162,18 +235,11 @@ mod tests {
             if !self.available {
                 return Err(Error::NoInputDevice);
             }
-            let frame = CaptureFrame {
+            Ok(frames(CaptureFrame {
                 raw_mic: Arc::from(vec![0.5_f32; chunk_size]),
                 raw_speaker: Arc::from([]),
                 aec_mic: None,
-            };
-            Ok(CaptureStream::new(stream::unfold(
-                frame,
-                |frame| async move {
-                    tokio::time::sleep(Duration::from_millis(1)).await;
-                    Some((Ok(frame.clone()), frame))
-                },
-            )))
+            }))
         }
 
         fn default_device_name(&self) -> String {
@@ -215,9 +281,9 @@ mod tests {
     fn start_fails_cleanly_without_microphone() {
         let monitor = MicrophoneLevelMonitor::default();
         let result = monitor.start(
-            Arc::new(TestAudio { available: false }),
+            TestAudio::new(false),
             "settings".into(),
-            None,
+            LevelSource::Microphone(None),
             |_| true,
         );
         assert_eq!(result, Err(Error::NoInputDevice));
@@ -231,9 +297,9 @@ mod tests {
         let counter = sent.clone();
         monitor
             .start(
-                Arc::new(TestAudio { available: true }),
+                TestAudio::new(true),
                 "settings".into(),
-                None,
+                LevelSource::Microphone(None),
                 move |level| {
                     assert!((0.0..=1.0).contains(&level));
                     counter.fetch_add(1, Ordering::SeqCst);
@@ -262,9 +328,9 @@ mod tests {
         let counter = sent.clone();
         monitor
             .start(
-                Arc::new(TestAudio { available: true }),
+                TestAudio::new(true),
                 "settings".into(),
-                None,
+                LevelSource::Microphone(None),
                 move |_| {
                     counter.fetch_add(1, Ordering::SeqCst);
                     false
@@ -273,5 +339,48 @@ mod tests {
             .unwrap();
         tokio::time::sleep(Duration::from_millis(30)).await;
         assert_eq!(sent.load(Ordering::SeqCst), 1);
+    }
+
+    #[tokio::test]
+    async fn speaker_meter_reads_the_chosen_output() {
+        let monitor = SpeakerLevelMonitor::default();
+        let audio = TestAudio::new(true);
+        let levels = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let sink = levels.clone();
+        monitor
+            .start(
+                audio.clone(),
+                "settings".into(),
+                LevelSource::Speaker(Some("Casque".into())),
+                move |level| {
+                    sink.lock().unwrap().push(level);
+                    true
+                },
+            )
+            .unwrap();
+        tokio::time::sleep(Duration::from_millis(30)).await;
+        monitor.stop("settings");
+
+        assert_eq!(
+            audio.speaker_device.lock().unwrap().as_deref(),
+            Some("Casque")
+        );
+        // Le niveau vient de la sortie (pleine échelle), pas du micro (vide).
+        assert!(levels.lock().unwrap().iter().any(|level| *level > 0.9));
+    }
+
+    #[test]
+    fn speaker_and_microphone_meters_are_independent() {
+        let microphone = MicrophoneLevelMonitor::default();
+        let speaker = SpeakerLevelMonitor::default();
+        let result = speaker.start(
+            TestAudio::new(false),
+            "settings".into(),
+            LevelSource::Speaker(None),
+            |_| true,
+        );
+        assert_eq!(result, Err(Error::SpeakerStreamSetupFailed));
+        assert!(!microphone.is_active());
+        assert!(!speaker.is_active());
     }
 }
