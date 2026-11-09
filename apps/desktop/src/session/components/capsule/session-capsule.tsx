@@ -26,7 +26,9 @@ import { showFinishListeningToExport } from "~/shared/export-shortcut";
 import { leaveOverlayTab } from "~/shared/leave-overlay-tab";
 import { registerShortcutAction } from "~/shared/shortcut-actions";
 import { getShortcut, getShortcutPlatform } from "~/shared/shortcuts";
+import { ignoreUnlessTyped } from "~/shared/typed-key";
 import type { EditorView, Tab } from "~/store/zustand/tabs/schema";
+import { setChannelMuted } from "~/stt/channel-mute";
 import { useListener } from "~/stt/contexts";
 import { useLiveAmplitude, useLiveSeconds } from "~/stt/live-meters";
 import { finishPausedListening } from "~/stt/pause-listening";
@@ -93,6 +95,45 @@ export function SessionCapsule({
   // capsule ne se redessine pas à chaque seconde ni à chaque niveau sonore.
   const muted = useListener((state) =>
     state.live.sessionId === sessionId ? state.live.muted : false,
+  );
+  const speakerMuted = useListener((state) =>
+    state.live.sessionId === sessionId ? state.live.speakerMuted : false,
+  );
+  // Issue 447 : chaque bascule coupe son canal sans relancer la session ; une
+  // note détachée passe par la fenêtre principale.
+  const toggleMic = useCallback(() => {
+    setChannelMuted(sessionId, "mic", !muted);
+  }, [muted, sessionId]);
+  const toggleSpeaker = useCallback(() => {
+    setChannelMuted(sessionId, "speaker", !speakerMuted);
+  }, [sessionId, speakerMuted]);
+  // Note détachée : pas de raccourcis globaux, on déclare ceux de l'écoute.
+  const listeningInStandalone =
+    standaloneWindow && tab.active && stage === "listen";
+  useHotkeys(
+    getShortcut("toggleMicrophone").hotkeys ?? "",
+    toggleMic,
+    {
+      enabled: listeningInStandalone,
+      preventDefault: true,
+      enableOnFormTags: true,
+      enableOnContentEditable: true,
+      ignoreEventWhen: ignoreUnlessTyped(
+        getShortcut("toggleMicrophone").typedKey,
+      ),
+    },
+    [toggleMic],
+  );
+  useHotkeys(
+    getShortcut("toggleSystemAudio").hotkeys ?? "",
+    toggleSpeaker,
+    {
+      enabled: listeningInStandalone,
+      preventDefault: true,
+      enableOnFormTags: true,
+      enableOnContentEditable: true,
+    },
+    [toggleSpeaker],
   );
 
   const start = useCallback(() => {
@@ -235,8 +276,14 @@ export function SessionCapsule({
         os={os}
         listening={{
           elapsed: <SessionElapsed sessionId={sessionId} />,
-          meter: <SessionLevelMeter sessionId={sessionId} muted={muted} />,
+          meter: (
+            <SessionLevelMeter
+              sessionId={sessionId}
+              muted={muted && speakerMuted}
+            />
+          ),
           muted,
+          speakerMuted,
           finalizing: sessionMode === "finalizing",
           paused: pausePhase === "paused",
           pausing: pausePhase === "pausing",
@@ -248,6 +295,8 @@ export function SessionCapsule({
           onStop: stop,
           onPause: pause,
           onResume: resume,
+          onToggleMic: toggleMic,
+          onToggleSpeaker: toggleSpeaker,
           onResumeListening: withoutSummary ? resume : undefined,
           onGenerateSummary: withoutSummary ? generateSummary : undefined,
           generateSummaryDisabled: summary.pending,

@@ -2492,6 +2492,23 @@ msgstr "Multilingue"
 msgid "Multilingual · speakers"
 msgstr "Multilingue · locuteurs"
 
+#: src/shared/shortcuts.ts
+msgid "Mute or unmute system audio"
+msgstr "Couper ou rétablir le son système"
+
+#: src/shared/shortcuts.ts
+msgid "Mute or unmute the microphone"
+msgstr "Couper ou rétablir le micro"
+
+#: src/session/components/capsule/channel-toggles.tsx
+msgid "Mute system audio"
+msgstr "Couper le son système"
+
+#: src/meeting-float/overlay/bar.tsx
+#: src/session/components/capsule/channel-toggles.tsx
+msgid "Mute the microphone"
+msgstr "Couper le micro"
+
 #: src/sidebar/automations.tsx
 msgid "My automations"
 msgstr "Mes automatisations"
@@ -3174,6 +3191,7 @@ msgid "Protocol"
 msgstr "Protocole"
 
 #: src/session/components/capsule/index.tsx
+#: src/store/zustand/listener/muted-channels.ts
 msgid "Put on pause"
 msgstr "Mettre en pause"
 
@@ -4441,6 +4459,10 @@ msgstr "Le modèle de transcription en direct ne gère qu'une langue à la fois.
 msgid "The memo edit could not be prepared."
 msgstr "La modification du mémo n'a pas pu être préparée."
 
+#: src/store/zustand/listener/muted-channels.ts
+msgid "The microphone and system audio are muted: nothing is being transcribed."
+msgstr "Le micro et le son système sont coupés : plus rien n'est transcrit."
+
 #: src/session/components/speaker-naming/speaker-card.tsx
 msgid "The name could not be saved. Try again."
 msgstr "Le nom n’a pas pu être enregistré. Réessayez."
@@ -4799,6 +4821,16 @@ msgstr "Déverrouiller"
 #: src/session/components/outer-header/overflow/lock-note.tsx
 msgid "Unlock Note"
 msgstr "Déverrouiller la note"
+
+#: src/session/components/capsule/channel-toggles.tsx
+msgid "Unmute system audio"
+msgstr "Rétablir le son système"
+
+#: src/meeting-float/overlay/bar.tsx
+#: src/session/components/capsule/channel-toggles.tsx
+#: src/store/zustand/listener/muted-channels.ts
+msgid "Unmute the microphone"
+msgstr "Rétablir le micro"
 
 #: src/contacts/details.tsx
 #: src/contacts/organization-details.tsx

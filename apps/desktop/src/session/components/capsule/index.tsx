@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { Pause } from "@syntheo/ui/components/icons";
 import { cn } from "@syntheo/utils";
 
+import { ChannelToggles } from "./channel-toggles";
 import { LevelMeter } from "./level-meter";
 import { NOTE_STAGES, type NoteStage } from "./stage";
 
@@ -27,7 +28,9 @@ export const STAGE_KANJI: Record<NoteStage, string> = {
 export type CapsuleListening = {
   seconds?: number;
   amplitude?: number;
+  // Micro coupé ; `speakerMuted` : son système coupé (issue 447).
   muted: boolean;
+  speakerMuted?: boolean;
   finalizing: boolean;
   // Pause dans la même session (issue 353) : aucune capture ouverte.
   paused?: boolean;
@@ -48,6 +51,9 @@ export type CapsuleActions = {
   onStop: () => void;
   onPause?: () => void;
   onResume?: () => void;
+  // Couper ou rétablir le micro et le son système (issue 447).
+  onToggleMic?: () => void;
+  onToggleSpeaker?: () => void;
   // Note sans compte rendu (par exemple après avoir quitté l'application
   // pendant une pause) : reprendre l'écoute ou générer le compte rendu.
   onResumeListening?: () => void;
@@ -104,7 +110,7 @@ export function NoteCapsule({
         </>
       ) : null}
       {stage === "listen" ? (
-        <ListeningControls listening={listening} actions={actions} />
+        <ListeningControls listening={listening} actions={actions} os={os} />
       ) : null}
       {stage === "synthesis" ? (
         <>
@@ -154,13 +160,17 @@ export function NoteCapsule({
 function ListeningControls({
   listening,
   actions,
+  os,
 }: {
   listening?: CapsuleListening;
   actions: CapsuleActions;
+  os: ShortcutPlatform;
 }) {
   const { t } = useLingui();
   const paused = listening?.paused === true;
   const pausing = listening?.pausing === true;
+  const micMuted = listening?.muted === true;
+  const speakerMuted = listening?.speakerMuted === true;
 
   return (
     <>
@@ -196,12 +206,24 @@ function ListeningControls({
         {paused
           ? null
           : (listening?.meter ?? (
+              // Niveau unique : le canal coupé n'y compte plus ; plat quand
+              // les deux le sont.
               <LevelMeter
                 amplitude={listening?.amplitude ?? 0}
-                muted={listening?.muted}
+                muted={micMuted && speakerMuted}
               />
             ))}
       </span>
+      {!paused && actions.onToggleMic && actions.onToggleSpeaker ? (
+        <ChannelToggles
+          micMuted={micMuted}
+          speakerMuted={speakerMuted}
+          onToggleMic={actions.onToggleMic}
+          onToggleSpeaker={actions.onToggleSpeaker}
+          disabled={listening?.finalizing || pausing}
+          os={os}
+        />
+      ) : null}
       {paused ? (
         actions.onResume ? (
           <CapsuleButton

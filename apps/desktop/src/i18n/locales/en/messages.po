@@ -2492,6 +2492,23 @@ msgstr "Multilingual"
 msgid "Multilingual · speakers"
 msgstr "Multilingual · speakers"
 
+#: src/shared/shortcuts.ts
+msgid "Mute or unmute system audio"
+msgstr "Mute or unmute system audio"
+
+#: src/shared/shortcuts.ts
+msgid "Mute or unmute the microphone"
+msgstr "Mute or unmute the microphone"
+
+#: src/session/components/capsule/channel-toggles.tsx
+msgid "Mute system audio"
+msgstr "Mute system audio"
+
+#: src/meeting-float/overlay/bar.tsx
+#: src/session/components/capsule/channel-toggles.tsx
+msgid "Mute the microphone"
+msgstr "Mute the microphone"
+
 #: src/sidebar/automations.tsx
 msgid "My automations"
 msgstr "My automations"
@@ -3174,6 +3191,7 @@ msgid "Protocol"
 msgstr "Protocol"
 
 #: src/session/components/capsule/index.tsx
+#: src/store/zustand/listener/muted-channels.ts
 msgid "Put on pause"
 msgstr "Put on pause"
 
@@ -4441,6 +4459,10 @@ msgstr "The live transcription model handles one language at a time. To transcri
 msgid "The memo edit could not be prepared."
 msgstr "The memo edit could not be prepared."
 
+#: src/store/zustand/listener/muted-channels.ts
+msgid "The microphone and system audio are muted: nothing is being transcribed."
+msgstr "The microphone and system audio are muted: nothing is being transcribed."
+
 #: src/session/components/speaker-naming/speaker-card.tsx
 msgid "The name could not be saved. Try again."
 msgstr "The name could not be saved. Try again."
@@ -4799,6 +4821,16 @@ msgstr "Unlock"
 #: src/session/components/outer-header/overflow/lock-note.tsx
 msgid "Unlock Note"
 msgstr "Unlock Note"
+
+#: src/session/components/capsule/channel-toggles.tsx
+msgid "Unmute system audio"
+msgstr "Unmute system audio"
+
+#: src/meeting-float/overlay/bar.tsx
+#: src/session/components/capsule/channel-toggles.tsx
+#: src/store/zustand/listener/muted-channels.ts
+msgid "Unmute the microphone"
+msgstr "Unmute the microphone"
 
 #: src/contacts/details.tsx
 #: src/contacts/organization-details.tsx
