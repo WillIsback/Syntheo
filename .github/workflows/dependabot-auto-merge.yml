@@ -98,4 +98,6 @@ jobs:
             exit 1
           fi
 
-          gh pr merge "$PR" --repo "$REPO" --squash
+          # --auto : la protection de main (checks requis, branche à jour) refuse une
+          # fusion immédiate ; GitHub fusionne dès que les exigences sont remplies.
+          gh pr merge "$PR" --repo "$REPO" --squash --auto
