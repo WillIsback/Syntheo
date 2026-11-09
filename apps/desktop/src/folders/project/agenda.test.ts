@@ -222,7 +222,7 @@ describe("generateFolderAgenda", () => {
     expect(mocks.generateText).toHaveBeenCalledTimes(1);
     const call = mocks.generateText.mock.calls[0]![0];
     expect(call.model).toBe(model);
-    expect(call.system).toBe(FOLDER_AGENDA_SYSTEM_PROMPT);
+    expect(call.instructions).toBe(FOLDER_AGENDA_SYSTEM_PROMPT);
     expect(JSON.parse(call.prompt).thread.open_points).toHaveLength(1);
     expect(JSON.stringify(doc)).toContain("Hébergement des démos clients");
   });

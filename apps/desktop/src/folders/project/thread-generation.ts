@@ -262,7 +262,7 @@ export async function generateFolderThread({
     const existing = parseThread(body, labels);
     const result = await generateText({
       model,
-      system: FOLDER_THREAD_SYSTEM_PROMPT,
+      instructions: FOLDER_THREAD_SYSTEM_PROMPT,
       prompt: buildThreadPrompt({ existing, generated, meetings: batch }),
       output: Output.object({ schema: threadUpdateSchema }),
       maxRetries: 2,

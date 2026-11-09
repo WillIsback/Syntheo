@@ -85,7 +85,7 @@ function lastPrompt() {
     mocks.generateText.mock.calls.length - 1
   ]![0] as {
     prompt: string;
-    system: string;
+    instructions: string;
   };
   return { ...call, payload: JSON.parse(call.prompt) as Record<string, any> };
 }
@@ -125,12 +125,12 @@ describe("folder thread generation", () => {
   it("writes the first thread from the summaries, oldest first, each item linked to its meeting", async () => {
     const thread = await firstThread();
 
-    const { payload, system } = lastPrompt();
+    const { payload, instructions } = lastPrompt();
     expect(payload.existing_thread).toBeNull();
     expect(
       payload.meetings.map((item: { meetingId: string }) => item.meetingId),
     ).toEqual(["m1", "m2"]);
-    expect(system).toContain("untrusted data");
+    expect(instructions).toContain("untrusted data");
 
     expect(thread.coveredSessionIds.sort()).toEqual(["m1", "m2"]);
     expect(thread.coveredUntil).toBe(m2.createdAt);

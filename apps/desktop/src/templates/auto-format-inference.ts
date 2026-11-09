@@ -50,7 +50,7 @@ export async function inferSummaryFormat({
 
   const result = await generateText({
     model,
-    system: SYSTEM_PROMPT,
+    instructions: SYSTEM_PROMPT,
     prompt: JSON.stringify({ examples: normalizedExamples }),
     output: Output.object({ schema: inferredFormatSchema }),
     maxRetries: 2,

@@ -234,7 +234,7 @@ export async function generateFolderAgenda({
   if (!hasAgendaMaterial(material)) return null;
   const result = await generateText({
     model,
-    system: FOLDER_AGENDA_SYSTEM_PROMPT,
+    instructions: FOLDER_AGENDA_SYSTEM_PROMPT,
     prompt: buildAgendaPrompt(material),
     output: Output.object({ schema: agendaSchema }),
     maxRetries: 2,

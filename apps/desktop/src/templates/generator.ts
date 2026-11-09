@@ -56,7 +56,7 @@ export async function generateTemplate({
     const { object } = await generateObject({
       model,
       schema: generatedTemplateSchema,
-      system: TEMPLATE_GEN_SYSTEM_PROMPT,
+      instructions: TEMPLATE_GEN_SYSTEM_PROMPT,
       prompt,
     });
     return {
@@ -74,7 +74,7 @@ export async function generateTemplate({
     // Repli pour les modèles sans sortie JSON structurée : génération Markdown.
     const { text } = await generateText({
       model,
-      system: `${TEMPLATE_GEN_SYSTEM_PROMPT}\nRéponds en Markdown : une ligne de titre, puis chaque section sous la forme « # Titre » suivi de la consigne.`,
+      instructions: `${TEMPLATE_GEN_SYSTEM_PROMPT}\nRéponds en Markdown : une ligne de titre, puis chaque section sous la forme « # Titre » suivi de la consigne.`,
       prompt,
     });
     return {

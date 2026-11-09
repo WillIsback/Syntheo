@@ -262,7 +262,7 @@ export async function generateAndSaveContactSummary({
 
   const result = await generateText({
     model,
-    system: CONTACT_SUMMARY_SYSTEM_PROMPT,
+    instructions: CONTACT_SUMMARY_SYSTEM_PROMPT,
     prompt: JSON.stringify({
       user: buildUserContext(user),
       target_is_user: user?.id === human.id,
