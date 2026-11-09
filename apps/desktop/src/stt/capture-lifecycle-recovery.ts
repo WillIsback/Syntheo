@@ -156,6 +156,10 @@ export function createCaptureRecovery(
       try {
         await runBatchRef.current(chunk.path, {
           signal,
+          // Issue 515 : un modèle temps réel seul rejoue le morceau dans son
+          // flux (issue 463) ; sans cela, l'audio d'une pause restait en
+          // échec et la reprise suivante en héritait.
+          allowRealtimeStream: true,
           deferAudioFinalization: true,
           notifyOnCompletion: false,
           recovery: {

@@ -43,7 +43,8 @@ export function getFileTranscriptionRoute(
 
 /**
  * Le lot d'abord ; le flux temps réel seulement pour l'appelant qui l'accepte
- * (l'import de fichier). Les autres fonctions restent liées au lot.
+ * (l'import de fichier, les morceaux d'audio d'une capture à réparer). Les
+ * autres fonctions restent liées au lot.
  */
 export function selectTranscriptionProvider(
   provider: string,
