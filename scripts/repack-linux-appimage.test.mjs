@@ -14,7 +14,46 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-import { repackLinuxAppImage } from "./repack-linux-appimage.mjs";
+import {
+  appImageRuntimeLength,
+  repackLinuxAppImage,
+  squashfsOptions,
+} from "./repack-linux-appimage.mjs";
+
+// Plus petite AppImage acceptée par le script : un en-tête ELF 64 bits dont la
+// table des sections se termine à l'octet 64, suivi de la signature squashfs.
+function fakeAppImage(payload = "original-appimage") {
+  const header = Buffer.alloc(64);
+  Buffer.from([0x7f, 0x45, 0x4c, 0x46, 2, 1]).copy(header);
+  header.writeBigUInt64LE(64n, 0x28);
+  return Buffer.concat([header, Buffer.from(`hsqs${payload}`)]);
+}
+
+// Simule le greffon et appimagetool : l'extraction du greffon crée l'AppRun
+// d'appimagetool, appimagetool écrit la nouvelle AppImage.
+function fakeRun(fixture, commands = [], content = "repacked-appimage") {
+  return async (command, args, options) => {
+    commands.push({ command, args, options });
+    if (command === fixture.plugin) {
+      const tool = path.join(
+        options.cwd,
+        "squashfs-root",
+        "appimagetool-prefix",
+        "AppRun",
+      );
+      await mkdir(path.dirname(tool), { recursive: true });
+      await writeFile(tool, "appimagetool");
+      await chmod(tool, 0o755);
+    } else if (command === "pnpm") {
+      await writeFile(`${fixture.appImage}.sig`, "fresh-signature");
+    } else {
+      // L'AppImage d'origine doit avoir été supprimée avant le
+      // rempaquetage. La création exclusive (flag "wx") échoue avec
+      // EEXIST si le fichier est encore présent.
+      await writeFile(fixture.appImage, content, { flag: "wx" });
+    }
+  };
+}
 
 async function createFixture(
   t,
@@ -22,6 +61,7 @@ async function createFixture(
     withWaylandLibraries = true,
     withAudioLibraries = false,
     patchedGtkHook = false,
+    signed = true,
   } = {},
 ) {
   const directory = await mkdtemp(
@@ -81,15 +121,15 @@ async function createFixture(
       await writeFile(path.join(libraryDirectory, name), name);
     }
   }
-  await writeFile(appImage, "original-appimage");
-  await writeFile(`${appImage}.sig`, "stale-signature");
+  await writeFile(appImage, fakeAppImage());
+  if (signed) await writeFile(`${appImage}.sig`, "stale-signature");
   await writeFile(plugin, "plugin");
   await chmod(plugin, 0o755);
 
   return { directory, appDirectory, appImage, plugin, gtkHook };
 }
 
-test("removes Wayland libraries, repacks, and regenerates the signature", async (t) => {
+test("removes Wayland libraries, recompresses with zstd 19, and re-signs", async (t) => {
   const fixture = await createFixture(t);
   const commands = [];
 
@@ -97,24 +137,12 @@ test("removes Wayland libraries, repacks, and regenerates the signature", async 
     arch: "x86_64",
     bundleDirectory: fixture.directory,
     pluginPath: fixture.plugin,
-    run: async (command, args, options) => {
-      commands.push({ command, args, options });
-      if (command === fixture.plugin) {
-        // L'AppImage d'origine doit avoir été supprimée avant le
-        // rempaquetage. La création exclusive (flag "wx") échoue avec
-        // EEXIST si le fichier est encore présent, sans contrôle préalable
-        // sujet à une course entre la vérification et l'écriture.
-        await writeFile(fixture.appImage, "repacked-appimage", {
-          flag: "wx",
-        });
-      } else {
-        await writeFile(`${fixture.appImage}.sig`, "fresh-signature");
-      }
-    },
+    run: fakeRun(fixture, commands),
   });
 
   assert.equal(result.removedLibraries.length, 2);
   assert.equal(result.updatedGtkHook, true);
+  assert.equal(result.resigned, true);
   await access(fixture.gtkHook, constants.X_OK);
   await assert.rejects(
     access(
@@ -147,19 +175,80 @@ test("removes Wayland libraries, repacks, and regenerates the signature", async 
     "fresh-signature",
   );
 
-  assert.deepEqual(commands[0].args, [
-    "--appimage-extract-and-run",
-    "--appdir",
+  const [extract, pack, sign] = commands;
+  assert.deepEqual(extract.args, ["--appimage-extract"]);
+  const toolDirectory = extract.options.cwd;
+  assert.equal(
+    pack.command,
+    path.join(toolDirectory, "squashfs-root", "appimagetool-prefix", "AppRun"),
+  );
+  assert.deepEqual(pack.args, [
+    "--comp",
+    "zstd",
+    "--mksquashfs-opt=-Xcompression-level",
+    "--mksquashfs-opt=19",
+    "--mksquashfs-opt=-b",
+    "--mksquashfs-opt=1M",
+    "--runtime-file",
+    path.join(toolDirectory, "runtime"),
+    "--no-appstream",
     fixture.appDirectory,
+    fixture.appImage,
   ]);
-  assert.equal(commands[0].options.env.APPIMAGE_EXTRACT_AND_RUN, "1");
-  assert.equal(commands[0].options.env.ARCH, "x86_64");
-  assert.equal(commands[0].options.env.OUTPUT, fixture.appImage);
-  assert.deepEqual(commands[1], {
+  assert.equal(pack.options.env.ARCH, "x86_64");
+  assert.deepEqual(sign, {
     command: "pnpm",
     args: ["-F", "desktop", "tauri", "signer", "sign", fixture.appImage],
     options: undefined,
   });
+  // Le dossier d'outils temporaire (runtime, appimagetool extrait) est supprimé.
+  await assert.rejects(access(toolDirectory, constants.F_OK));
+});
+
+test("reuses the runtime embedded in the original AppImage", async (t) => {
+  const fixture = await createFixture(t);
+  const run = fakeRun(fixture);
+  let runtime;
+  await repackLinuxAppImage({
+    arch: "x86_64",
+    bundleDirectory: fixture.directory,
+    pluginPath: fixture.plugin,
+    run: async (command, args, options) => {
+      if (args.includes("--runtime-file")) {
+        runtime = await readFile(args[args.indexOf("--runtime-file") + 1]);
+      }
+      await run(command, args, options);
+    },
+  });
+  assert.deepEqual(runtime, fakeAppImage().subarray(0, 64));
+});
+
+test("recompresses an unsigned AppImage without creating a signature", async (t) => {
+  const fixture = await createFixture(t, {
+    withWaylandLibraries: false,
+    patchedGtkHook: true,
+    signed: false,
+  });
+  const commands = [];
+
+  const result = await repackLinuxAppImage({
+    arch: "x86_64",
+    bundleDirectory: fixture.directory,
+    pluginPath: fixture.plugin,
+    run: fakeRun(fixture, commands),
+  });
+
+  // Même sans bibliothèque à retirer, l'AppImage est recompressée.
+  assert.deepEqual(result.removedLibraries, []);
+  assert.equal(result.updatedGtkHook, false);
+  assert.equal(result.resigned, false);
+  assert.equal(commands.length, 2);
+  assert.equal(
+    commands.some((command) => command.command === "pnpm"),
+    false,
+  );
+  assert.equal(await readFile(fixture.appImage, "utf8"), "repacked-appimage");
+  await assert.rejects(access(`${fixture.appImage}.sig`, constants.F_OK));
 });
 
 test("removes bundled PipeWire libraries and SPA modules but keeps PulseAudio", async (t) => {
@@ -173,13 +262,7 @@ test("removes bundled PipeWire libraries and SPA modules but keeps PulseAudio", 
     arch: "aarch64",
     bundleDirectory: fixture.directory,
     pluginPath: fixture.plugin,
-    run: async (command) => {
-      if (command === fixture.plugin) {
-        await writeFile(fixture.appImage, "repacked-appimage");
-      } else {
-        await writeFile(`${fixture.appImage}.sig`, "fresh-signature");
-      }
-    },
+    run: fakeRun(fixture),
   });
 
   assert.deepEqual(
@@ -210,49 +293,16 @@ test("removes bundled PipeWire libraries and SPA modules but keeps PulseAudio", 
   assert.equal(await readFile(fixture.appImage, "utf8"), "repacked-appimage");
 });
 
-test("keeps an already-clean AppImage and its signature unchanged", async (t) => {
-  const fixture = await createFixture(t, {
-    withWaylandLibraries: false,
-    patchedGtkHook: true,
-  });
-
-  const result = await repackLinuxAppImage({
-    bundleDirectory: fixture.directory,
-    pluginPath: path.join(fixture.directory, "missing-plugin"),
-    run: async () => {
-      throw new Error("clean AppImages must not be repacked");
-    },
-  });
-
-  assert.deepEqual(result.removedLibraries, []);
-  assert.equal(result.updatedGtkHook, false);
-  assert.equal(await readFile(fixture.appImage, "utf8"), "original-appimage");
-  assert.equal(
-    await readFile(`${fixture.appImage}.sig`, "utf8"),
-    "stale-signature",
-  );
-});
-
 test("repacks a hook-only fix and preserves explicit GTK backend preferences", async (t) => {
   const fixture = await createFixture(t, { withWaylandLibraries: false });
-  const commands = [];
   const result = await repackLinuxAppImage({
     arch: "x86_64",
     bundleDirectory: fixture.directory,
     pluginPath: fixture.plugin,
-    run: async (command) => {
-      commands.push(command);
-      await writeFile(
-        command === fixture.plugin
-          ? fixture.appImage
-          : `${fixture.appImage}.sig`,
-        "regenerated",
-      );
-    },
+    run: fakeRun(fixture),
   });
   assert.deepEqual(result.removedLibraries, []);
   assert.equal(result.updatedGtkHook, true);
-  assert.deepEqual(commands, [fixture.plugin, "pnpm"]);
 
   for (const [preference, expected] of [
     [undefined, "x11,wayland"],
@@ -276,6 +326,20 @@ test("repacks a hook-only fix and preserves explicit GTK backend preferences", a
     );
     assert.equal(backend, `${expected}:unchanged`);
   }
+});
+
+test("reads the runtime length from the ELF section header table", () => {
+  const header = Buffer.alloc(64);
+  Buffer.from([0x7f, 0x45, 0x4c, 0x46, 2, 1]).copy(header);
+  header.writeBigUInt64LE(943_352n, 0x28);
+  header.writeUInt16LE(64, 0x3a);
+  header.writeUInt16LE(20, 0x3c);
+  assert.equal(appImageRuntimeLength(header), 944_632);
+  assert.throws(
+    () => appImageRuntimeLength(Buffer.alloc(64)),
+    /not a little-endian 64-bit ELF/,
+  );
+  assert.deepEqual(squashfsOptions, ["-Xcompression-level", "19", "-b", "1M"]);
 });
 
 for (const [name, prepare, options, error] of [
@@ -302,6 +366,12 @@ for (const [name, prepare, options, error] of [
     /Expected exactly one \.AppImage.*found 2/,
   ],
   [
+    "an AppImage without a squashfs image",
+    (fixture) => writeFile(fixture.appImage, fakeAppImage().subarray(0, 64)),
+    {},
+    /No squashfs image after the AppImage runtime/,
+  ],
+  [
     "a missing architecture",
     () => {},
     { arch: "" },
@@ -311,11 +381,13 @@ for (const [name, prepare, options, error] of [
   test(`refuses ${name} before mutating the bundle`, async (t) => {
     const fixture = await createFixture(t);
     await prepare(fixture);
+    const prepared = await readFile(fixture.appImage);
 
     await assert.rejects(
       repackLinuxAppImage({
         arch: "x86_64",
         bundleDirectory: fixture.directory,
+        run: fakeRun(fixture),
         ...options,
         pluginPath: path.join(
           fixture.directory,
@@ -326,7 +398,7 @@ for (const [name, prepare, options, error] of [
       error,
     );
 
-    assert.equal(await readFile(fixture.appImage, "utf8"), "original-appimage");
+    assert.deepEqual(await readFile(fixture.appImage), prepared);
     assert.equal(
       await readFile(`${fixture.appImage}.sig`, "utf8"),
       "stale-signature",

@@ -77,6 +77,13 @@ jobs:
           pnpm -F desktop tauri build --ci --bundles appimage --features devtools \
             --config ./src-tauri/tauri.conf.syntheo.json
 
+      # Même réempaquetage que release.yml, pour que l'alpha soit fidèle à la
+      # release (bibliothèques hôte, zstd 19, blocs de 1 Mio).
+      - name: Réempaqueter l'AppImage (bibliothèques hôte, zstd 19)
+        env:
+          ARCH: x86_64
+        run: node scripts/repack-linux-appimage.mjs apps/desktop/src-tauri/target/release/bundle/appimage
+
       - name: Rassembler l'AppImage et sa somme de contrôle
         shell: bash
         env:

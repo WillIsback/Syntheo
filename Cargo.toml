@@ -7,6 +7,12 @@ debug = true
 opt-level = 1
 debug = false
 
+# Paquets publiés : sans table des symboles (−39 Mio sur le binaire Linux).
+# Les backtraces de panic perdent les noms de fonctions ; aucun symbole n'est
+# envoyé à un service de rapport de plantage.
+[profile.release]
+strip = true
+
 [workspace]
 resolver = "2"
 exclude = ["crates/tiptap/vendor/mdast_util_to_markdown"]

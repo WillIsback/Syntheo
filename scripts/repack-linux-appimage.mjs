@@ -2,6 +2,8 @@ import { spawn } from "node:child_process";
 import { constants } from "node:fs";
 import {
   access,
+  mkdtemp,
+  open,
   readdir,
   readFile,
   rm,
@@ -131,6 +133,7 @@ function runCommand(command, args, options = {}) {
   const executable = resolveExecutable(command);
   return new Promise((resolve, reject) => {
     const child = spawn(executable, args, {
+      cwd: options.cwd,
       env: options.env ?? process.env,
       stdio: "inherit",
     });
@@ -149,6 +152,67 @@ function runCommand(command, args, options = {}) {
       );
     });
   });
+}
+
+// Squashfs settings passed to mksquashfs through appimagetool: zstd level 19
+// with 1 MiB blocks instead of the default level 15 and 128 KiB blocks. The
+// type 2 AppImage runtime reads zstd natively (xz would be smaller but is not
+// supported by the static runtime). Measured on v0.6.3: about -12 MiB.
+export const squashfsOptions = ["-Xcompression-level", "19", "-b", "1M"];
+
+const elfMagic = Buffer.from([0x7f, 0x45, 0x4c, 0x46]);
+const squashfsMagic = Buffer.from("hsqs");
+
+// The AppImage runtime is a 64-bit ELF followed by the squashfs image. The ELF
+// ends with its section header table, so the image starts right after it.
+export function appImageRuntimeLength(header) {
+  if (
+    header.length < 64 ||
+    !header.subarray(0, 4).equals(elfMagic) ||
+    header[4] !== 2 ||
+    header[5] !== 1
+  ) {
+    throw new Error("AppImage runtime is not a little-endian 64-bit ELF");
+  }
+  const sectionHeaderOffset = header.readBigUInt64LE(0x28);
+  const sectionHeaderSize = header.readUInt16LE(0x3a);
+  const sectionHeaderCount = header.readUInt16LE(0x3c);
+  return Number(
+    sectionHeaderOffset +
+      BigInt(sectionHeaderSize) * BigInt(sectionHeaderCount),
+  );
+}
+
+// Keeps the runtime Tauri already embedded, so the repack never downloads a
+// different one and stays reproducible.
+async function extractRuntime(appImage, destination) {
+  const handle = await open(appImage, "r");
+  try {
+    const header = Buffer.alloc(64);
+    await handle.read(header, 0, header.length, 0);
+    const length = appImageRuntimeLength(header);
+    const magic = Buffer.alloc(squashfsMagic.length);
+    await handle.read(magic, 0, magic.length, length);
+    if (!magic.equals(squashfsMagic)) {
+      throw new Error(
+        `No squashfs image after the AppImage runtime: ${appImage}`,
+      );
+    }
+    const runtime = Buffer.alloc(length);
+    await handle.read(runtime, 0, length, 0);
+    await writeFile(destination, runtime, { mode: 0o755 });
+  } finally {
+    await handle.close();
+  }
+}
+
+async function fileExists(file) {
+  try {
+    await access(file, constants.F_OK);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export async function repackLinuxAppImage({
@@ -181,13 +245,6 @@ export async function repackLinuxAppImage({
   const patchedGtkHook = patchGtkHook(originalGtkHook);
   const updatedGtkHook = originalGtkHook !== patchedGtkHook;
 
-  if (hostLibraries.length === 0 && !updatedGtkHook) {
-    console.log(
-      `AppImage already uses host Wayland and PipeWire libraries and GTK backends: ${appImage}`,
-    );
-    return { appDirectory, appImage, removedLibraries: [], updatedGtkHook };
-  }
-
   if (!arch) {
     throw new Error("AppImage architecture is required for repacking");
   }
@@ -200,58 +257,98 @@ export async function repackLinuxAppImage({
     );
   }
 
-  if (updatedGtkHook) {
-    await writeFile(gtkHook, patchedGtkHook);
-  }
-  await Promise.all(hostLibraries.map((library) => rm(library)));
-
-  const remainingLibraries = await findBundledHostLibraries(
-    path.join(appDirectory, "usr"),
-    baseDirectory,
+  const toolDirectory = await mkdtemp(
+    path.join(os.tmpdir(), "syntheo-appimagetool-"),
   );
-  if (remainingLibraries.length > 0) {
-    throw new Error(
-      `Failed to remove bundled host libraries: ${remainingLibraries.join(", ")}`,
+  try {
+    const runtime = path.join(toolDirectory, "runtime");
+    await extractRuntime(appImage, runtime);
+
+    // linuxdeploy-plugin-appimage cannot forward mksquashfs options, so the
+    // appimagetool it ships is extracted and called directly.
+    await run(resolvedPlugin, ["--appimage-extract"], { cwd: toolDirectory });
+    const appimagetool = path.join(
+      toolDirectory,
+      "squashfs-root",
+      "appimagetool-prefix",
+      "AppRun",
     );
+    try {
+      await access(appimagetool, constants.X_OK);
+    } catch {
+      throw new Error(`appimagetool not found in ${resolvedPlugin}`);
+    }
+
+    if (updatedGtkHook) {
+      await writeFile(gtkHook, patchedGtkHook);
+    }
+    await Promise.all(hostLibraries.map((library) => rm(library)));
+
+    const remainingLibraries = await findBundledHostLibraries(
+      path.join(appDirectory, "usr"),
+      baseDirectory,
+    );
+    if (remainingLibraries.length > 0) {
+      throw new Error(
+        `Failed to remove bundled host libraries: ${remainingLibraries.join(", ")}`,
+      );
+    }
+    if (hostLibraries.length > 0) {
+      console.log(
+        `Removed bundled host libraries:\n${hostLibraries.join("\n")}`,
+      );
+    }
+
+    // An updater signature only exists when Tauri updater artifacts are
+    // enabled. It signs the old bytes, so it is dropped and, if it existed,
+    // regenerated from the repacked AppImage.
+    const signature = `${appImage}.sig`;
+    const wasSigned = await fileExists(signature);
+    await rm(signature, { force: true });
+    await rm(appImage);
+    await run(
+      appimagetool,
+      [
+        "--comp",
+        "zstd",
+        ...squashfsOptions.map((option) => `--mksquashfs-opt=${option}`),
+        "--runtime-file",
+        runtime,
+        "--no-appstream",
+        appDirectory,
+        appImage,
+      ],
+      { env: { ...process.env, ARCH: arch } },
+    );
+
+    const appImageStat = await stat(appImage);
+    if (appImageStat.size === 0) {
+      throw new Error(`Repacked AppImage is empty: ${appImage}`);
+    }
+
+    if (wasSigned) {
+      await run("pnpm", ["-F", "desktop", "tauri", "signer", "sign", appImage]);
+      const signatureStat = await stat(signature);
+      if (signatureStat.size === 0) {
+        throw new Error(
+          `Regenerated AppImage signature is empty: ${signature}`,
+        );
+      }
+    }
+
+    console.log(
+      `Repacked AppImage (zstd ${squashfsOptions.join(" ")}): ${appImage}, ${appImageStat.size} bytes`,
+    );
+    return {
+      appDirectory,
+      appImage,
+      removedLibraries: hostLibraries,
+      updatedGtkHook,
+      resigned: wasSigned,
+    };
+  } finally {
+    await rm(toolDirectory, { force: true, recursive: true });
   }
-
-  console.log(`Removed bundled host libraries:\n${hostLibraries.join("\n")}`);
-
-  await rm(appImage);
-  await run(
-    resolvedPlugin,
-    ["--appimage-extract-and-run", "--appdir", appDirectory],
-    {
-      env: {
-        ...process.env,
-        APPIMAGE_EXTRACT_AND_RUN: "1",
-        ARCH: arch,
-        OUTPUT: appImage,
-      },
-    },
-  );
-
-  const appImageStat = await stat(appImage);
-  if (appImageStat.size === 0) {
-    throw new Error(`Repacked AppImage is empty: ${appImage}`);
-  }
-
-  const signature = `${appImage}.sig`;
-  await rm(signature, { force: true });
-  await run("pnpm", ["-F", "desktop", "tauri", "signer", "sign", appImage]);
-
-  const signatureStat = await stat(signature);
-  if (signatureStat.size === 0) {
-    throw new Error(`Regenerated AppImage signature is empty: ${signature}`);
-  }
-
-  console.log(`Repacked and re-signed AppImage: ${appImage}`);
-  return {
-    appDirectory,
-    appImage,
-    removedLibraries: hostLibraries,
-    updatedGtkHook,
-  };
 }
 
 async function main() {
