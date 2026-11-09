@@ -36,6 +36,7 @@
         "depends": [
           "libwebkit2gtk-4.1-0",
           "libgtk-3-0",
+          "libgtk-layer-shell0",
           "libpipewire-0.3-0",
           "libpulse0",
           "libasound2",

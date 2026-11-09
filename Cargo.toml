@@ -282,6 +282,10 @@ whichlang = "0.1"
 
 swift-rs = { git = "https://github.com/Brendonovich/swift-rs", rev = "41a1605" }
 
+# Linux : GTK de Tauri (gtk-rs 0.18) et pastille de réunion en calque Wayland (issue 448).
+gtk = "0.18"
+gtk-layer-shell = { version = "0.8.2", features = ["v0_6"] }
+
 wasapi = "0.23.0"
 windows = "0.62.2"
 # Keep in step with `windows`: the `#[windows::core::interface]` macro expands to

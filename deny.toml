@@ -33,6 +33,7 @@ ignore = [
   # Plateformes non livrées ou dépendances de Tauri.
   { id = "RUSTSEC-2026-0332", reason = "wasapi : Windows uniquement, non livré (paquets Linux seulement)" },
   { id = "RUSTSEC-2024-0429", reason = "glib 0.18 (gtk-rs) tiré par Tauri sur Linux : en attente de la migration GTK4 de Tauri" },
+  { id = "RUSTSEC-2024-0422", reason = "gtk-layer-shell 0.8 (GTK3) : pastille de réunion en calque Wayland (issue 448), suit gtk-rs 0.18 de Tauri jusqu'à sa migration GTK4" },
   # Capture audio : correctif = montée de version de ringbuf dans audio-actual (chantier 04c).
   { id = "RUSTSEC-2026-0293", reason = "ringbuf 0.4 utilisé par audio-actual : montée de version au chantier 04c (capture sans disque)" },
   # Compression de l'index de recherche local (tantivy 0.6 -> tantivy-sstable -> zstd).
