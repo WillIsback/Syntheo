@@ -244,8 +244,8 @@ describe("isTerminalTranscriptionError", () => {
     "429 Too Many Requests",
     "503 Service Unavailable",
     "database is locked",
-    "nova-3 is not available for batch transcription",
-    "STT connection is not available",
+    "nova-3 can't transcribe a recording afterwards",
+    "The transcription service is not available",
   ])("leaves transient failures retryable: %s", (message) => {
     expect(isTerminalTranscriptionError(new Error(message))).toBe(false);
   });
@@ -400,7 +400,7 @@ describe("useRunBatch", () => {
 
         expect(await runBatchError()).toMatchObject({
           message: expect.stringContaining(
-            "voxtral-mini-2602 is not available for batch transcription with the selected languages",
+            "voxtral-mini-2602 can't transcribe the selected languages",
           ),
         });
         expect(m.startTranscription).not.toHaveBeenCalled();
@@ -811,13 +811,33 @@ describe("useRunBatch", () => {
       });
     });
 
+    // Issue 518 : un modèle qui ne gère qu'une langue à la fois rejoue le
+    // fichier dans la langue principale, comme l'écoute en direct.
+    test("streams in the primary language when the model handles one language at a time", async () => {
+      setConfig({ ai_language: "fr", spoken_languages: ["fr", "en"] });
+      m.isSupportedLanguagesLive.mockImplementation(
+        async (_provider: string, _model: string, languages: string[]) =>
+          languages.length === 1,
+      );
+
+      await runBatch(
+        { allowRealtimeStream: true, promotion: { scope: "whole_session" } },
+        "/home/will/archive.mp4",
+      );
+
+      expect(m.startTranscription.mock.calls[0]?.[0]).toMatchObject({
+        provider: "realtime",
+        languages: ["fr"],
+      });
+    });
+
     test("keeps other batch features off with a live-only model", async () => {
       const result = renderBatch("chat-dictation");
       await expect(
         result.current("", {
           audio: { data_base64: "AAAA", file_name: "a.wav" },
         }),
-      ).rejects.toThrow(/not available for batch transcription/);
+      ).rejects.toThrow(/can't transcribe a recording afterwards/);
       expect(m.startTranscription).not.toHaveBeenCalled();
     });
   });

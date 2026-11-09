@@ -154,9 +154,17 @@ msgstr "{inheritedTitle} — modèle du dossier"
 msgid "{model} can't transcribe {languages}. Try another model or change your spoken languages."
 msgstr "{model} ne sait pas transcrire {languages}. Essayez un autre modèle ou changez vos langues parlées."
 
+#: src/stt/useRunBatch.ts
+msgid "{model} can't transcribe a recording afterwards. Choose a model that transcribes files, or set up another transcription provider."
+msgstr "{model} ne sait pas transcrire un enregistrement après coup. Choisissez un modèle qui transcrit les fichiers, ou configurez un autre fournisseur de transcription."
+
 #: src/settings/ai/stt/language-warning.tsx
 msgid "{model} can't transcribe all selected languages together. Try another model or use fewer spoken languages."
 msgstr "{model} ne peut pas transcrire toutes les langues sélectionnées ensemble. Essayez un autre modèle ou utilisez moins de langues parlées."
+
+#: src/stt/useRunBatch.ts
+msgid "{model} can't transcribe the selected languages. Choose languages it supports, or set up another transcription provider."
+msgstr "{model} ne sait pas transcrire les langues sélectionnées. Choisissez des langues qu'il prend en charge, ou configurez un autre fournisseur de transcription."
 
 #: src/meeting-float/overlay/bar.tsx
 msgid "{notice}. Open Syntheo to retry or change devices."
@@ -5050,6 +5058,10 @@ msgstr "La modification proposée n'a pas pu être enregistrée."
 msgid "The selected model did not answer: {0}"
 msgstr "Le modèle choisi n'a pas répondu : {0}"
 
+#: src/stt/run-batch-helpers.ts
+msgid "The selected transcription provider"
+msgstr "Le fournisseur de transcription sélectionné"
+
 #: src/settings/ai/shared/server-card.tsx
 msgid "The server answered with an error (HTTP {status}). It may still be starting: wait a minute, then test again."
 msgstr "Le serveur a répondu par une erreur (HTTP {status}). Il démarre peut-être encore : patientez une minute, puis relancez le test."
@@ -5118,6 +5130,10 @@ msgstr "La transcription est encore en cours d'écriture."
 #: src/stt/live-transcript-interrupted.ts
 msgid "the transcription service"
 msgstr "le service de transcription"
+
+#: src/stt/useRunBatch.ts
+msgid "The transcription service is not available. Set up your transcription provider."
+msgstr "Le service de transcription n'est pas disponible. Configurez votre fournisseur de transcription."
 
 #: src/session/components/note-input/transcript/screens/listening.tsx
 msgid "The transcription will appear here as soon as the first words arrive."

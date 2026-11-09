@@ -1,3 +1,5 @@
+import { t } from "@lingui/core/macro";
+
 import {
   commands as transcriptionCommands,
   type BatchRefinementSource,
@@ -17,7 +19,8 @@ export type RunOptions = {
   signal?: AbortSignal;
   /**
    * Sans mode par lot, transcrire par le flux temps réel du fournisseur
-   * (issue 463). Réservé à l'import de fichier.
+   * (issue 463) : import de fichier et morceaux d'audio d'une capture à
+   * réparer (issue 515).
    */
   allowRealtimeStream?: boolean;
   /**
@@ -132,7 +135,7 @@ export function selectedProviderLabel(
   modelOverride?: string,
 ) {
   if (!conn) {
-    return "the selected speech-to-text provider";
+    return t`The selected transcription provider`;
   }
 
   return modelOverride ?? conn.model ?? conn.provider;

@@ -1602,6 +1602,44 @@ describe("useStartListening", () => {
       expect(takePausedSummary(SESSION)).toBe("if_empty");
     });
 
+    // Issue 515 : à la 2e reprise, la capture hérite de l'audio de la capture
+    // mise en pause. Avec un modèle temps réel seul, cet audio passe par le
+    // flux temps réel (issue 463), pas par le lot qui échouait en anglais.
+    test("la reprise rejoue l'audio hérité de la pause par le flux temps réel", async () => {
+      const pausedStartedAt = Date.now() - 120_000;
+      queueMarkers(
+        marker({
+          transcriptId: "capture-en-pause",
+          startedAt: pausedStartedAt,
+          chunkedAudio: true,
+          retainAudio: false,
+        }),
+      );
+      vi.mocked(transcriptionCommands.listCaptureAudioChunks).mockResolvedValue(
+        {
+          status: "ok",
+          data: [
+            {
+              id: "chunk-1",
+              path: "/tmp/chunk-1.wav",
+              capture_started_at: pausedStartedAt,
+              start_ms: 50_000,
+              audio_start_ms: 0,
+              end_ms: 60_000,
+            },
+          ],
+        },
+      );
+
+      await startListening();
+      await stopListening(pausedStop(Date.now(), true));
+
+      expect(m.runBatch).toHaveBeenCalledWith(
+        "/tmp/chunk-1.wav",
+        expect.objectContaining({ allowRealtimeStream: true }),
+      );
+    });
+
     test("pause et reprise deux fois : transcript continu, une seule synthèse à la fin", async () => {
       let nextId = 0;
       m.id.mockImplementation(() => `transcript-${++nextId}`);

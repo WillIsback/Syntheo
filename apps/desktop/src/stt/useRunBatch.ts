@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { useCallback } from "react";
 
 import {
@@ -69,11 +70,11 @@ export const useRunBatch = (sessionId: string) => {
       options?.signal?.throwIfAborted();
       if (!startTranscription) {
         throw new Error(
-          "STT connection is not available. Please configure your speech-to-text provider.",
+          t`The transcription service is not available. Set up your transcription provider.`,
         );
       }
 
-      const languages =
+      let languages =
         options?.languages ??
         getTranscriptionLanguages(aiLanguage, spokenLanguages);
       const selectedProviderId = options?.provider ?? conn?.provider;
@@ -96,7 +97,7 @@ export const useRunBatch = (sessionId: string) => {
               label: selectedModel,
             }
           : null;
-      const selectedTargetSupported = selectedTarget
+      let selectedTargetSupported = selectedTarget
         ? await canUseTranscriptionTarget(
             selectedTarget.provider,
             selectedProviderId,
@@ -104,6 +105,26 @@ export const useRunBatch = (sessionId: string) => {
             languages,
           )
         : false;
+      // Issue 518 : comme l'écoute en direct (getLiveTranscriptionConfig), un
+      // modèle temps réel qui ne gère qu'une langue à la fois rejoue le
+      // fichier dans la langue principale.
+      const primaryLanguage = languages[0];
+      if (
+        selectedTarget?.provider === "realtime" &&
+        !selectedTargetSupported &&
+        !options?.languages &&
+        languages.length > 1 &&
+        primaryLanguage &&
+        (await canUseTranscriptionTarget(
+          selectedTarget.provider,
+          selectedProviderId,
+          selectedTarget.model,
+          [primaryLanguage],
+        ))
+      ) {
+        languages = [primaryLanguage];
+        selectedTargetSupported = true;
+      }
       options?.signal?.throwIfAborted();
       // Aucun repli : sans endpoint on-prem capable de batch, l'import échoue.
       const fallbackTarget = selectedTargetSupported ? selectedTarget : null;
@@ -118,10 +139,11 @@ export const useRunBatch = (sessionId: string) => {
         : fallbackTarget;
 
       if (!target) {
+        const model = selectedProviderLabel(conn, selectedModel);
         throw new Error(
           selectedTarget
-            ? `${selectedProviderLabel(conn, selectedModel)} is not available for batch transcription with the selected languages. Choose languages it supports, or configure another speech-to-text provider.`
-            : `${selectedProviderLabel(conn, selectedModel)} is not available for batch transcription on this platform. Configure a batch-capable speech-to-text provider.`,
+            ? t`${model} can't transcribe the selected languages. Choose languages it supports, or set up another transcription provider.`
+            : t`${model} can't transcribe a recording afterwards. Choose a model that transcribes files, or set up another transcription provider.`,
         );
       }
 
