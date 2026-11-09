@@ -1,6 +1,10 @@
 import { describe, expect, test } from "vitest";
 
-import { estimateRemainingSeconds, formatRemainingTime } from "./batch-eta";
+import {
+  estimateImportProgress,
+  estimateRemainingSeconds,
+  formatRemainingTime,
+} from "./batch-eta";
 
 describe("estimateRemainingSeconds", () => {
   const origin = { atMs: 0, fraction: 0.1 };
@@ -23,5 +27,50 @@ describe("formatRemainingTime", () => {
     [440, "About 7 min remaining"],
   ])("formats %d s", (seconds, expected) => {
     expect(formatRemainingTime(seconds)).toBe(expected);
+  });
+});
+
+describe("estimateImportProgress", () => {
+  test("derives the remaining time and the speed from the start of the transcription", () => {
+    // 20 % d'un audio de 10 min en 60 s : 120 s d'audio traitées, soit ×2 ;
+    // il reste 80 %, soit 240 s.
+    const estimate = estimateImportProgress({
+      startedAtMs: 0,
+      nowMs: 60_000,
+      fraction: 0.2,
+      audioSeconds: 600,
+    });
+    expect(estimate?.remainingSeconds).toBeCloseTo(240);
+    expect(estimate?.speedFactor).toBeCloseTo(2);
+  });
+
+  test("is not reliable during the first seconds", () => {
+    expect(
+      estimateImportProgress({
+        startedAtMs: 0,
+        nowMs: 1_000,
+        fraction: 0.2,
+        audioSeconds: 600,
+      }),
+    ).toBeNull();
+    expect(
+      estimateImportProgress({
+        startedAtMs: 0,
+        nowMs: 60_000,
+        fraction: 0.01,
+        audioSeconds: 600,
+      }),
+    ).toBeNull();
+  });
+
+  test("gives the remaining time without speed when the audio duration is unknown", () => {
+    const estimate = estimateImportProgress({
+      startedAtMs: 0,
+      nowMs: 60_000,
+      fraction: 0.5,
+      audioSeconds: null,
+    });
+    expect(estimate?.remainingSeconds).toBeCloseTo(60);
+    expect(estimate?.speedFactor).toBeNull();
   });
 });

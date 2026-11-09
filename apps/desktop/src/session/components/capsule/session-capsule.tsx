@@ -8,6 +8,10 @@ import { hasSummaryContent } from "@syntheo/utils/session";
 import { CapsuleAutomationMenu } from "./automation-menu";
 import { formatElapsed, NoteCapsule, type NoteStage } from "./index";
 import { LevelMeter } from "./level-meter";
+import {
+  SessionImportProgress,
+  useImportInProgress,
+} from "./session-import-progress";
 import { registerPreparedNoteStart } from "./start-shortcut";
 
 import { useShell } from "~/contexts/shell";
@@ -270,11 +274,20 @@ export function SessionCapsule({
     chat.sendEvent({ type: "OPEN" });
   }, [chat]);
 
+  // Import audio (issue 526) : progression et « Arrêter » à la place des
+  // actions de l'étape, jusqu'à la fin (succès, échec ou arrêt).
+  const importing = useImportInProgress(sessionId);
+
   return (
     <>
       <NoteCapsule
         stage={stage}
         os={os}
+        importProgress={
+          importing ? (
+            <SessionImportProgress sessionId={sessionId} />
+          ) : undefined
+        }
         automations={
           stage === "synthesis" ? (
             <CapsuleAutomationMenu sessionId={sessionId} />

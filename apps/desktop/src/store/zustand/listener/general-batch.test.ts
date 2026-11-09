@@ -98,6 +98,7 @@ const ALREADY_RUNNING = "batch error: session already running";
 
 const makeStore = (overrides: Record<string, unknown> = {}) => ({
   batch: {} as Record<string, { percentage: number; recovered?: boolean }>,
+  batchImport: {},
   batchPreview: {},
   batchPersist: {},
   handleBatchStarted: vi.fn(),
@@ -111,6 +112,8 @@ const makeStore = (overrides: Record<string, unknown> = {}) => ({
   handleBatchStopped: vi.fn(),
   updateBatchProgress: vi.fn(),
   setBatchPersist: vi.fn(),
+  handleImportStarted: vi.fn(),
+  handleImportEnded: vi.fn(),
   ...overrides,
 });
 

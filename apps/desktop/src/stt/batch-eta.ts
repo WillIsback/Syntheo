@@ -25,6 +25,39 @@ export function estimateRemainingSeconds(
   return Math.max(0, (elapsedSeconds * (1 - fraction)) / progressed);
 }
 
+/**
+ * Estimation de la capsule pendant un import (issue 526) : durée restante et
+ * accélération (durée audio traitée / temps réel écoulé) depuis le début de
+ * la transcription. `null` tant que l'estimation n'est pas fiable ;
+ * `speedFactor` reste `null` si la durée de l'audio est inconnue.
+ */
+export function estimateImportProgress({
+  startedAtMs,
+  nowMs,
+  fraction,
+  audioSeconds,
+}: {
+  startedAtMs: number;
+  nowMs: number;
+  fraction: number;
+  audioSeconds: number | null;
+}): { remainingSeconds: number; speedFactor: number | null } | null {
+  const remainingSeconds = estimateRemainingSeconds(
+    { atMs: startedAtMs, fraction: 0 },
+    nowMs,
+    fraction,
+  );
+  if (remainingSeconds === null) {
+    return null;
+  }
+  const elapsedSeconds = (nowMs - startedAtMs) / 1000;
+  const speedFactor =
+    audioSeconds !== null && audioSeconds > 0
+      ? (fraction * audioSeconds) / elapsedSeconds
+      : null;
+  return { remainingSeconds, speedFactor };
+}
+
 export function formatRemainingTime(seconds: number): string {
   const minutes = Math.round(seconds / 60);
   if (minutes < 1) {

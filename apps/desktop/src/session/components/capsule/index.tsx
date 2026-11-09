@@ -70,6 +70,7 @@ export function NoteCapsule({
   listening,
   actions,
   automations,
+  importProgress,
   os = "pc",
 }: {
   stage: NoteStage;
@@ -78,6 +79,9 @@ export function NoteCapsule({
   // Synthèse : menu « Automatisations » pour lancer une automatisation sur
   // cette note.
   automations?: ReactNode;
+  // Import audio en cours (issue 526) : remplace les actions de l'étape
+  // jusqu'à la fin de l'import.
+  importProgress?: ReactNode;
   os?: ShortcutPlatform;
 }) {
   const { t } = useLingui();
@@ -88,6 +92,7 @@ export function NoteCapsule({
       aria-label={t`Note capsule`}
       data-note-capsule
       data-stage={stage}
+      data-importing={importProgress ? "" : undefined}
       className={cn([
         "bg-primary text-primary-foreground shadow-capsule rounded-pill pointer-events-auto",
         "flex max-w-full items-center gap-1.5 p-1.5 text-sm whitespace-nowrap",
@@ -95,6 +100,36 @@ export function NoteCapsule({
     >
       <CapsuleSteps stage={stage} />
       <span aria-hidden="true" className="bg-primary-foreground/30 h-5 w-px" />
+      {importProgress ?? (
+        <StageControls
+          stage={stage}
+          listening={listening}
+          actions={actions}
+          automations={automations}
+          os={os}
+        />
+      )}
+    </div>
+  );
+}
+
+function StageControls({
+  stage,
+  listening,
+  actions,
+  automations,
+  os,
+}: {
+  stage: NoteStage;
+  listening?: CapsuleListening;
+  actions: CapsuleActions;
+  automations?: ReactNode;
+  os: ShortcutPlatform;
+}) {
+  const { t } = useLingui();
+
+  return (
+    <>
       {stage === "prepare" ? (
         <>
           {actions.onCancel ? (
@@ -158,7 +193,7 @@ export function NoteCapsule({
           )}
         </>
       ) : null}
-    </div>
+    </>
   );
 }
 

@@ -26,8 +26,14 @@ export type BatchState = {
       terminalReason?: BatchTerminalReason;
       errorCode?: BatchErrorCode;
       recovered?: boolean;
+      // Début de la phase en cours : base de l'estimation de la capsule.
+      startedAtMs?: number;
     }
   >;
+  // Imports audio en cours (issue 526), de la copie du fichier à la fin de
+  // la transcription : l'entrée `batch` disparaît entre les deux phases.
+  // `audioSeconds` : durée de l'audio importé, `null` si inconnue.
+  batchImport: Record<string, { audioSeconds: number | null }>;
   batchPreview: Record<
     string,
     {
@@ -56,6 +62,8 @@ export type BatchActions = {
   handleBatchStopped: (sessionId: string) => void;
   updateBatchProgress: (sessionId: string, percentage: number) => void;
   clearBatchSession: (sessionId: string) => void;
+  handleImportStarted: (sessionId: string, audioSeconds: number | null) => void;
+  handleImportEnded: (sessionId: string) => void;
   setBatchPersist: (sessionId: string, callback: BatchPersistCallback) => void;
   clearBatchPersist: (sessionId: string) => void;
 };
@@ -65,6 +73,7 @@ export const createBatchSlice = <T extends BatchState>(
   get: StoreApi<T>["getState"],
 ): BatchState & BatchActions => ({
   batch: {},
+  batchImport: {},
   batchPreview: {},
   batchPersist: {},
 
@@ -77,6 +86,7 @@ export const createBatchSlice = <T extends BatchState>(
           percentage: 0,
           isComplete: false,
           phase: phase ?? "transcribing",
+          startedAtMs: Date.now(),
           terminalReason: undefined,
           error: undefined,
           errorCode: undefined,
@@ -102,6 +112,7 @@ export const createBatchSlice = <T extends BatchState>(
           isComplete: false,
           phase: "transcribing",
           recovered: true,
+          startedAtMs: Date.now(),
         },
       },
     }));
@@ -183,6 +194,7 @@ export const createBatchSlice = <T extends BatchState>(
           error: undefined,
           errorCode: undefined,
           recovered: state.batch[sessionId]?.recovered,
+          startedAtMs: state.batch[sessionId]?.startedAtMs,
         },
       },
       batchPreview: {
@@ -272,6 +284,24 @@ export const createBatchSlice = <T extends BatchState>(
         batch: rest,
         batchPreview: restPreview,
       };
+    });
+  },
+
+  handleImportStarted: (sessionId, audioSeconds) => {
+    set((state) => ({
+      ...state,
+      batchImport: { ...state.batchImport, [sessionId]: { audioSeconds } },
+    }));
+  },
+
+  handleImportEnded: (sessionId) => {
+    set((state) => {
+      if (!(sessionId in state.batchImport)) {
+        return state;
+      }
+
+      const { [sessionId]: _, ...rest } = state.batchImport;
+      return { ...state, batchImport: rest };
     });
   },
 
