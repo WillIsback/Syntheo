@@ -1,9 +1,11 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { useMutation } from "@tanstack/react-query";
+import { useId } from "react";
 
 import { ArrowRight, Plus, Trash } from "@syntheo/ui/components/icons";
 import { Badge } from "@syntheo/ui/components/ui/badge";
 import { Button } from "@syntheo/ui/components/ui/button";
+import { Input } from "@syntheo/ui/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -14,20 +16,37 @@ import {
 import { toast } from "@syntheo/ui/components/ui/toast";
 import { cn } from "@syntheo/utils";
 
-import { MarkdownExportOptionsConfig } from "./markdown-export-options";
-import { AutomationLastRunLine, MarkdownExportConfig } from "./starter-config";
-
-import { DEFAULT_MARKDOWN_EXPORT_OPTIONS } from "~/automations/markdown-export";
 import {
+  AutomationLastRunLine,
+  MarkdownExportConfig,
+} from "./markdown-export-config";
+import { MarkdownExportOptionsConfig } from "./markdown-export-options";
+
+import {
+  type AutomationLabels,
+  useAutomationLabels,
+  variableLabel,
+  workflowTitle,
+} from "~/automations/labels";
+import { DEFAULT_MARKDOWN_EXPORT_OPTIONS } from "~/automations/markdown-export";
+import { stepDefinition, WORKFLOW_STEP_TYPES } from "~/automations/steps";
+import {
+  type AvailableVariable,
+  availableVariables,
+} from "~/automations/variables";
+import {
+  type AutomationWorkflow,
   createWorkflowStep,
   isWorkflowReady,
   isWorkflowStepReady,
-  type AutomationWorkflow,
+  WORKFLOW_TRIGGERS,
   type WorkflowStep,
   type WorkflowStepType,
   type WorkflowTrigger,
 } from "~/automations/workflows";
 
+// Éditeur : le déclencheur est l'étape 1, les actions suivent (2, 3…) ; le
+// numéro dit l'ordre d'exécution.
 export function WorkflowBuilder({
   workflow,
   onChange,
@@ -36,6 +55,8 @@ export function WorkflowBuilder({
   onChange: (workflow: AutomationWorkflow) => void;
 }) {
   const { t } = useLingui();
+  const labels = useAutomationLabels();
+  const nameId = useId();
 
   const update = (patch: Partial<AutomationWorkflow>) => {
     onChange({ ...workflow, ...patch });
@@ -61,35 +82,55 @@ export function WorkflowBuilder({
       aria-labelledby="workflow-builder-title"
     >
       <div className="border-border flex flex-wrap items-start justify-between gap-3 border-b px-5 py-4">
-        <div className="min-w-0">
+        <div className="flex min-w-0 flex-1 flex-col gap-2">
           <div className="flex items-center gap-2">
             <h3
               id="workflow-builder-title"
               className="truncate text-sm font-semibold"
             >
-              <Trans>Workflow</Trans>
+              <Trans>Steps</Trans>
             </h3>
-            {workflow.enabled ? (
-              <Badge variant="outline">
-                <Trans>Enabled</Trans>
-              </Badge>
-            ) : (
-              <Badge variant="outline">
-                <Trans>Draft</Trans>
-              </Badge>
-            )}
+            <WorkflowStatusBadge workflow={workflow} />
           </div>
-          <p className="text-muted-foreground mt-1 text-xs">
-            <Trans>Add a trigger, then stack actions like Zapier.</Trans>
+          <p className="text-muted-foreground text-xs">
+            <Trans>
+              Syntheo runs the steps in order on your computer: the trigger is
+              step 1, then each action follows.
+            </Trans>
           </p>
+          <div className="flex max-w-sm flex-col gap-1">
+            <label htmlFor={nameId} className="text-xs font-medium">
+              <Trans>Name</Trans>
+            </label>
+            {/* Enregistré à la sortie du champ, pas à chaque frappe. */}
+            <Input
+              key={workflow.id}
+              id={nameId}
+              defaultValue={workflow.title}
+              placeholder={workflowTitle(workflow, labels)}
+              onBlur={(event) => {
+                const title = event.target.value.trim();
+                if (title !== workflow.title) {
+                  update({ title });
+                }
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.currentTarget.blur();
+                }
+              }}
+              className="h-8 text-xs"
+            />
+          </div>
         </div>
       </div>
 
-      <div className="flex flex-col gap-2 p-5">
+      <ol className="flex flex-col gap-0 p-5">
         <WorkflowCard
+          number={1}
           kind="trigger"
-          title={t`When this happens`}
-          badge={<Trans>Trigger</Trans>}
+          eyebrow={t`When`}
+          title={labels.trigger[workflow.trigger].long}
         >
           <Select
             value={workflow.trigger}
@@ -97,30 +138,46 @@ export function WorkflowBuilder({
               update({ trigger: value as WorkflowTrigger })
             }
           >
-            <SelectTrigger className="h-8 w-full max-w-xs text-xs">
+            <SelectTrigger
+              className="h-8 w-full max-w-xs text-xs"
+              aria-label={t`Trigger`}
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="note_enhanced">
-                <Trans>After the meeting summary is ready</Trans>
-              </SelectItem>
-              <SelectItem value="meeting_completed">
-                <Trans>After the meeting ends</Trans>
-              </SelectItem>
+              {WORKFLOW_TRIGGERS.map((trigger) => (
+                <SelectItem key={trigger} value={trigger}>
+                  {labels.trigger[trigger].long}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
+          {workflow.trigger === "manual" ? (
+            <p className="text-muted-foreground mt-2 text-xs">
+              <Trans>
+                Launch it from a note: the ⋯ menu, the capsule in Synthesis, or
+                Ask the note (Ctrl+J).
+              </Trans>
+            </p>
+          ) : null}
+          <VariableChips
+            caption={t`Available to the next steps`}
+            variables={availableVariables(workflow, 0)}
+            labels={labels}
+          />
         </WorkflowCard>
 
-        {workflow.steps.map((step, index) => (
-          <div key={step.id}>
-            <div className="text-muted-foreground flex h-6 items-center pl-6">
-              <ArrowRight className="rotate-90" size={13} />
-            </div>
+        {workflow.steps.map((step, index) => {
+          const stepNumber = index + 2;
+          return (
             <WorkflowCard
+              key={step.id}
+              number={stepNumber}
               kind="action"
-              title={`${t`Then`} ${index + 1}`}
-              badge={<Trans>Action</Trans>}
+              eyebrow={t`Then`}
+              title={labels.step[step.type].title}
               ready={isWorkflowStepReady(step)}
+              removeLabel={t`Remove step ${stepNumber}`}
               onRemove={() => removeStep(step.id)}
             >
               <Select
@@ -132,13 +189,18 @@ export function WorkflowBuilder({
                   )
                 }
               >
-                <SelectTrigger className="h-8 w-full max-w-xs text-xs">
+                <SelectTrigger
+                  className="h-8 w-full max-w-xs text-xs"
+                  aria-label={t`Action`}
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="markdown_export">
-                    <Trans>Export the meeting as Markdown</Trans>
-                  </SelectItem>
+                  {WORKFLOW_STEP_TYPES.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {labels.step[type].title}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <div className="mt-3">
@@ -147,16 +209,20 @@ export function WorkflowBuilder({
                   onChange={(next) => updateStep(step.id, next)}
                 />
               </div>
+              <StepOutputLine
+                step={step}
+                number={stepNumber}
+                workflow={workflow}
+                labels={labels}
+              />
             </WorkflowCard>
-          </div>
-        ))}
+          );
+        })}
 
-        <div className="text-muted-foreground flex h-6 items-center pl-6">
-          <ArrowRight className="rotate-90" size={13} />
-        </div>
-
-        <AddWorkflowStep onAdd={addStep} trigger={workflow.trigger} />
-      </div>
+        <li className="list-none">
+          <AddWorkflowStep onAdd={addStep} labels={labels} />
+        </li>
+      </ol>
 
       <div className="border-border border-t px-5 py-4">
         {!isWorkflowReady(workflow) ? (
@@ -170,6 +236,29 @@ export function WorkflowBuilder({
   );
 }
 
+export function WorkflowStatusBadge({
+  workflow,
+}: {
+  workflow: Pick<AutomationWorkflow, "enabled" | "trigger">;
+}) {
+  if (workflow.trigger === "manual") {
+    return (
+      <Badge variant="outline">
+        <Trans>Manual</Trans>
+      </Badge>
+    );
+  }
+  return workflow.enabled ? (
+    <Badge variant="outline">
+      <Trans>Enabled</Trans>
+    </Badge>
+  ) : (
+    <Badge variant="outline">
+      <Trans>Draft</Trans>
+    </Badge>
+  );
+}
+
 function WorkflowStepConfig({
   step,
   onChange,
@@ -177,56 +266,119 @@ function WorkflowStepConfig({
   step: WorkflowStep;
   onChange: (step: WorkflowStep) => void;
 }) {
-  if (step.type === "markdown_export") {
-    return (
-      <>
-        <MarkdownExportConfig
-          value={step.directory}
-          onChange={(directory) => onChange({ ...step, directory })}
-        />
-        <MarkdownExportOptionsConfig
-          options={step.options ?? DEFAULT_MARKDOWN_EXPORT_OPTIONS}
-          onChange={(options) => onChange({ ...step, options })}
-        />
-      </>
-    );
+  switch (step.type) {
+    case "markdown_export":
+      return (
+        <>
+          <MarkdownExportConfig
+            value={step.directory}
+            onChange={(directory) => onChange({ ...step, directory })}
+          />
+          <MarkdownExportOptionsConfig
+            options={step.options ?? DEFAULT_MARKDOWN_EXPORT_OPTIONS}
+            onChange={(options) => onChange({ ...step, options })}
+          />
+        </>
+      );
   }
-  // Étapes cloud (Slack, Linear, Notion, Google Drive) retirées : une étape
-  // héritée d'un ancien workflow s'affiche comme non prise en charge.
-  return <p className="text-muted-foreground text-xs">Unsupported step.</p>;
+}
+
+/** Ce que l'étape publie pour les suivantes (pastille). */
+function StepOutputLine({
+  step,
+  number,
+  workflow,
+  labels,
+}: {
+  step: WorkflowStep;
+  number: number;
+  workflow: AutomationWorkflow;
+  labels: AutomationLabels;
+}) {
+  const { t } = useLingui();
+  const output = availableVariables(workflow, number - 1).find(
+    (variable) => variable.kind === "output" && variable.stepId === step.id,
+  );
+  if (!output || !stepDefinition(step).output) {
+    return null;
+  }
+  return (
+    <VariableChips
+      caption={t`Result available to the next steps as`}
+      variables={[output]}
+      labels={labels}
+    />
+  );
+}
+
+function VariableChips({
+  caption,
+  variables,
+  labels,
+}: {
+  caption: string;
+  variables: AvailableVariable[];
+  labels: AutomationLabels;
+}) {
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-1.5">
+      <span className="text-muted-foreground text-xs">{caption}</span>
+      {variables.map((variable) => (
+        <span
+          key={variable.token}
+          title={variable.token}
+          data-variable-token={variable.token}
+          className="bg-chart-2/15 text-chart-2 rounded-pill px-2 py-0.5 text-[11px] font-medium"
+        >
+          {variableLabel(variable, labels)}
+        </span>
+      ))}
+    </div>
+  );
 }
 
 function AddWorkflowStep({
   onAdd,
+  labels,
 }: {
   onAdd: (type: WorkflowStepType) => void;
-  trigger: WorkflowTrigger;
+  labels: AutomationLabels;
 }) {
   const { t } = useLingui();
 
   return (
-    <div className="border-border bg-muted/20 flex items-center justify-between gap-3 rounded-xl border border-dashed p-4">
+    <div className="border-border bg-muted/20 mt-6 flex items-center justify-between gap-3 rounded-xl border border-dashed p-4">
       <div>
         <p className="text-sm font-medium">
-          <Trans>Add an action</Trans>
+          <Trans>Add a step</Trans>
         </p>
         <p className="text-muted-foreground mt-1 text-xs">
-          <Trans>Stack another destination. Steps run top to bottom.</Trans>
+          <Trans>Each new step runs after the previous one.</Trans>
         </p>
       </div>
-      <Select onValueChange={(value) => onAdd(value as WorkflowStepType)}>
+      <Select
+        value=""
+        onValueChange={(value) => onAdd(value as WorkflowStepType)}
+      >
         <SelectTrigger className="h-8 w-44 shrink-0 text-xs">
           <span>
             <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
               <Plus size={12} className="shrink-0" />
-              {t`Add step`}
+              {t`Add a step`}
             </span>
           </span>
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="markdown_export">
-            <Trans>Markdown export</Trans>
-          </SelectItem>
+          {WORKFLOW_STEP_TYPES.map((type) => (
+            <SelectItem key={type} value={type}>
+              <span className="flex flex-col">
+                <span>{labels.step[type].title}</span>
+                <span className="text-muted-foreground text-xs">
+                  {labels.step[type].description}
+                </span>
+              </span>
+            </SelectItem>
+          ))}
         </SelectContent>
       </Select>
     </div>
@@ -234,59 +386,76 @@ function AddWorkflowStep({
 }
 
 function WorkflowCard({
+  number,
   kind,
+  eyebrow,
   title,
-  badge,
   ready = true,
+  removeLabel,
   onRemove,
   children,
 }: {
+  number: number;
   kind: "trigger" | "action";
+  eyebrow: string;
   title: string;
-  badge: React.ReactNode;
   ready?: boolean;
+  removeLabel?: string;
   onRemove?: () => void;
   children: React.ReactNode;
 }) {
   return (
-    <div className="border-border bg-card flex items-start gap-3 rounded-xl border p-4">
-      <span
-        className={cn([
-          "mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
-          kind === "trigger"
-            ? "bg-chart-3/15 text-foreground"
-            : "bg-chart-2/15 text-chart-2",
-        ])}
-      >
-        {kind === "trigger" ? "1" : "+"}
-      </span>
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm font-medium">{title}</span>
-          <Badge variant="outline" size="sm">
-            {badge}
-          </Badge>
-          {!ready ? (
-            <Badge variant="outline" size="sm">
-              <Trans>Needs setup</Trans>
-            </Badge>
-          ) : null}
-          {onRemove ? (
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              className="text-muted-foreground ml-auto size-7"
-              onClick={onRemove}
-              aria-label="Remove step"
-            >
-              <Trash size={13} />
-            </Button>
-          ) : null}
+    <li className="list-none">
+      {number > 1 ? (
+        <div
+          aria-hidden="true"
+          className="text-muted-foreground flex h-6 items-center pl-6"
+        >
+          <ArrowRight className="rotate-90" size={13} />
         </div>
-        <div className="mt-3">{children}</div>
+      ) : null}
+      <div className="border-border bg-card flex items-start gap-3 rounded-xl border p-4">
+        <span
+          data-step-number={number}
+          className={cn([
+            "mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
+            kind === "trigger"
+              ? "bg-chart-3/15 text-foreground"
+              : "bg-chart-2/15 text-chart-2",
+          ])}
+        >
+          {number}
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="flex min-w-0 flex-col">
+              <span className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
+                {eyebrow}
+              </span>
+              <span className="text-sm font-medium">{title}</span>
+            </span>
+            {!ready ? (
+              <Badge variant="outline" size="sm">
+                <Trans>Needs setup</Trans>
+              </Badge>
+            ) : null}
+            {onRemove ? (
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                className="text-muted-foreground ml-auto size-7"
+                onClick={onRemove}
+                aria-label={removeLabel}
+              >
+                <Trash size={13} />
+              </Button>
+            ) : null}
+          </div>
+          <div className="mt-3">{children}</div>
+        </div>
       </div>
-    </div>
+    </li>
   );
 }
 
@@ -294,12 +463,7 @@ export function useSaveWorkflow() {
   const { t } = useLingui();
   return useMutation({
     mutationKey: ["automation-workflow-save"],
-    mutationFn: async ({
-      next,
-    }: {
-      workflows: AutomationWorkflow[];
-      next: AutomationWorkflow;
-    }) => {
+    mutationFn: async ({ next }: { next: AutomationWorkflow }) => {
       const { mutateAutomationWorkflows } =
         await import("~/automations/workflows");
       next = { ...next, enabled: next.enabled && isWorkflowReady(next) };

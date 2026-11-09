@@ -8,30 +8,13 @@ import { Button } from "@syntheo/ui/components/ui/button";
 import { toast } from "@syntheo/ui/components/ui/toast";
 import { cn, formatDistanceToNow } from "@syntheo/utils";
 
-import {
-  type AutomationRunRecord,
-  parseAutomationRunRecord,
-} from "~/automations/engine";
-import { setSettingValue, useStoredSettingValue } from "~/settings/queries";
-import { type SettingKey } from "~/settings/schema";
-
-// Configuration des automatisations locales. Les intégrations cloud (Slack,
-// Linear, Notion, Google Drive) sont retirées de Syntheo Desktop.
+import type { AutomationRunRecord } from "~/automations/types";
 
 export function AutomationLastRunLine({
-  settingKey,
-  lastRun: lastRunOverride,
+  lastRun,
 }: {
-  settingKey?: SettingKey;
-  lastRun?: AutomationRunRecord | null;
+  lastRun: AutomationRunRecord | null;
 }) {
-  const storedLastRun = parseAutomationRunRecord(
-    useStoredSettingValue(settingKey ?? "automation_draft_template").value as
-      | string
-      | undefined,
-  );
-  const lastRun =
-    lastRunOverride !== undefined ? lastRunOverride : storedLastRun;
   if (!lastRun) {
     return null;
   }
@@ -85,14 +68,11 @@ export function MarkdownExportConfig({
   value,
   onChange,
 }: {
-  value?: string;
-  onChange?: (directory: string) => void;
-} = {}) {
+  value: string;
+  onChange: (directory: string) => void;
+}) {
   const { t } = useLingui();
-  const storedDirectory = (
-    useStoredSettingValue("automation_markdown_export_directory").value ?? ""
-  ).trim();
-  const directory = (value ?? storedDirectory).trim();
+  const directory = value.trim();
   const chooseFolderMutation = useMutation({
     mutationKey: ["automation-markdown-export-folder"],
     mutationFn: async () => {
@@ -103,11 +83,7 @@ export function MarkdownExportConfig({
         defaultPath: directory || undefined,
       });
       if (typeof selected === "string" && selected) {
-        if (onChange) {
-          onChange(selected);
-          return;
-        }
-        await setSettingValue("automation_markdown_export_directory", selected);
+        onChange(selected);
       }
     },
     onError: () => toast.error(t`Could not update the export folder`),
