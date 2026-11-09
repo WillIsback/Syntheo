@@ -3,6 +3,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { HomeView, type HomeViewProps } from "./home-view";
 
+import { DEFAULT_FOLDER_ICON } from "~/session/folder-icon";
+
 function renderHome(overrides: Partial<HomeViewProps> = {}) {
   const props: HomeViewProps = {
     firstName: "Camille",
@@ -89,6 +91,34 @@ describe("HomeView", () => {
     expect(capsule.className).toContain("rounded-pill");
     fireEvent.click(buttons[0]!);
     expect(props.onSearch).toHaveBeenCalledTimes(1);
+  });
+
+  it("« Vos dossiers » se place sous Démarrer, masqué sans dossier", () => {
+    renderHome();
+    expect(screen.queryByRole("heading", { name: "Your folders" })).toBeNull();
+    cleanup();
+
+    const onOpenFolder = vi.fn();
+    renderHome({
+      onOpenFolder,
+      folders: [
+        {
+          path: "Atlas",
+          name: "Atlas",
+          icon: DEFAULT_FOLDER_ICON,
+          meetingCount: 2,
+          lastMeetingAt: "2026-11-02T09:00:00",
+          thread: null,
+        },
+      ],
+    });
+    const start = screen.getByRole("button", { name: /Start a meeting/ });
+    const heading = screen.getByRole("heading", { name: "Your folders" });
+    expect(
+      start.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Atlas/ }));
+    expect(onOpenFolder).toHaveBeenCalledWith("Atlas");
   });
 
   it("affiche ⌘ sur macOS", () => {

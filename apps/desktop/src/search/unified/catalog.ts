@@ -36,7 +36,7 @@ function mapSearchNoteRows(rows: SearchNoteSqlRow[]): SearchNote[] {
 
 // Notes du plus récent au plus ancien, avec leur dossier ; une note en cours
 // de suppression (annulable) disparaît tout de suite.
-function useSearchNotes(): SearchNote[] {
+export function useSearchNotes(): SearchNote[] {
   const { data = EMPTY_NOTES } = useLiveQuery<SearchNoteSqlRow, SearchNote[]>({
     sql: SEARCH_NOTES_SQL,
     mapRows: mapSearchNoteRows,

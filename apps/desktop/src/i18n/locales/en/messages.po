@@ -50,8 +50,17 @@ msgstr "(Unavailable — using current default)"
 msgid "(Unavailable — using the default output)"
 msgstr "(Unavailable — using the default output)"
 
+#. placeholder {0}: row.hiddenCount
+#: src/folders/sidebar-tree-view.tsx
+msgid "{0, plural, one {… # other} other {… # others}}"
+msgstr "{0, plural, one {… # other} other {… # others}}"
+
+#. placeholder {0}: folder.meetingCount
+#. placeholder {0}: row.noteCount
 #. placeholder {0}: stats.count
 #: src/folders/project/folder-header-actions.tsx
+#: src/folders/sidebar-tree-view.tsx
+#: src/home/folder-cards.tsx
 msgid "{0, plural, one {# meeting} other {# meetings}}"
 msgstr "{0, plural, one {# meeting} other {# meetings}}"
 
@@ -145,6 +154,10 @@ msgstr "{model} can't transcribe all selected languages together. Try another mo
 msgid "{notice}. Open Syntheo to retry or change devices."
 msgstr "{notice}. Open Syntheo to retry or change devices."
 
+#: src/home/folder-cards.tsx
+msgid "{openPoints, plural, one {# open point} other {# open points}}"
+msgstr "{openPoints, plural, one {# open point} other {# open points}}"
+
 #: src/stt/meeting-apps.ts
 msgid "{otherAppCount, plural, one {Ignore {firstName} and # other app?} other {Ignore {firstName} and # other apps?}}"
 msgstr "{otherAppCount, plural, one {Ignore {firstName} and # other app?} other {Ignore {firstName} and # other apps?}}"
@@ -172,6 +185,10 @@ msgstr "{providerName} rejected your API key"
 #: src/stt/live-transcript-interrupted.ts
 msgid "{providerName} stopped sending text"
 msgstr "{providerName} stopped sending text"
+
+#: src/home/folder-cards.tsx
+msgid "{tasks, plural, one {# task} other {# tasks}}"
+msgstr "{tasks, plural, one {# task} other {# tasks}}"
 
 #: src/sidebar/toast/undo-delete-toast.tsx
 msgid "{title} deleted"
@@ -208,6 +225,10 @@ msgstr "A folder with this name already exists."
 #: src/onboarding/final.tsx
 msgid "A meeting can't be replayed: audio is never kept, only the note remains. Your notes belong to you."
 msgstr "A meeting can't be replayed: audio is never kept, only the note remains. Your notes belong to you."
+
+#: src/folders/project/next-meeting-slot.tsx
+msgid "A new proposal replaces your changes to the agenda."
+msgstr "A new proposal replaces your changes to the agenda."
 
 #: src/stt/useStartListening.ts
 msgid "A participant declined recording. Syntheo stopped listening."
@@ -364,6 +385,14 @@ msgstr "Adjust"
 msgid "Advanced"
 msgstr "Advanced"
 
+#: src/folders/project/next-meeting-slot.tsx
+msgid "Agenda"
+msgstr "Agenda"
+
+#: src/folders/project/next-meeting-slot.tsx
+msgid "Agenda proposed from the points still open (editable):"
+msgstr "Agenda proposed from the points still open (editable):"
+
 #: src/settings/developers/skills.tsx
 #: src/settings/search-index.ts
 msgid "Agent skills"
@@ -388,6 +417,10 @@ msgstr "AI, reasoning, quality, speed, thinking"
 #: src/settings/developers/webhooks.tsx
 msgid "All events"
 msgstr "All events"
+
+#: src/home/folder-cards.tsx
+msgid "All folders"
+msgstr "All folders"
 
 #: src/shared/open-note-dialog.tsx
 msgid "All Notes"
@@ -674,6 +707,7 @@ msgstr "by {name}"
 msgid "Can't import this audio"
 msgstr "Can't import this audio"
 
+#: src/folders/project/next-meeting-slot.tsx
 #: src/session/components/capsule/index.tsx
 #: src/settings/ai/shared/server-address.tsx
 #: src/settings/dictionary/index.tsx
@@ -766,6 +800,10 @@ msgstr "Choose"
 #: src/session/components/outer-header/overflow/export-modal.tsx
 msgid "Choose a file format and what to include."
 msgstr "Choose a file format and what to include."
+
+#: src/folders/project/next-meeting-slot.tsx
+msgid "Choose a language model in Settings to propose the agenda."
+msgstr "Choose a language model in Settings to propose the agenda."
 
 #: src/folders/project/folder-thread-card.tsx
 msgid "Choose a language model in Settings to write the thread."
@@ -1238,6 +1276,7 @@ msgid "Date and time are required"
 msgstr "Date and time are required"
 
 #: src/folders/project/folder-thread-card.tsx
+#: src/home/active-folders.ts
 msgid "Decisions"
 msgstr "Decisions"
 
@@ -1695,6 +1734,11 @@ msgstr "Failed to copy: {viewTitle}"
 msgid "File"
 msgstr "File"
 
+#: src/home/file-note-button.tsx
+msgctxt "file a note in a folder"
+msgid "File"
+msgstr "File"
+
 #: src/session/components/outer-header/overflow/export-modal.tsx
 msgid "File format"
 msgstr "File format"
@@ -1766,6 +1810,7 @@ msgstr "Folder name"
 msgid "Folder: {currentPath}"
 msgstr "Folder: {currentPath}"
 
+#: src/folders/sidebar-tree-view.tsx
 #: src/shared/palette-search-groups.tsx
 #: src/sidebar/settings-nav-groups.ts
 msgid "Folders"
@@ -2145,6 +2190,10 @@ msgstr "language, summary, translation"
 #: src/settings/search-index.ts
 msgid "languages, multilingual, foreign language, English, Spanish, German"
 msgstr "languages, multilingual, foreign language, English, Spanish, German"
+
+#: src/home/folder-cards.tsx
+msgid "last {lastDate}"
+msgstr "last {lastDate}"
 
 #. placeholder {0}: webhook.last_delivery_status
 #: src/settings/developers/webhooks.tsx
@@ -2702,6 +2751,10 @@ msgstr "Newest"
 msgid "Next match"
 msgstr "Next match"
 
+#: src/folders/project/next-meeting-slot.tsx
+msgid "Next meeting"
+msgstr "Next meeting"
+
 #: src/shared/shortcuts.ts
 msgid "Next view of the note"
 msgstr "Next view of the note"
@@ -2967,6 +3020,10 @@ msgstr "Notes"
 msgid "Notes stay in All notes. Materials in this folder will be deleted."
 msgstr "Notes stay in All notes. This folder, its nested folders, and all their materials will be deleted."
 
+#: src/home/folder-cards.tsx
+msgid "Nothing pending"
+msgstr "Nothing pending"
+
 #: src/settings/search-index.ts
 msgid "notification area, taskbar, menu bar, icon, clock"
 msgstr "notification area, taskbar, menu bar, icon, clock"
@@ -3074,6 +3131,7 @@ msgid "Open permissions"
 msgstr "Open permissions"
 
 #: src/folders/project/folder-thread-card.tsx
+#: src/home/active-folders.ts
 msgid "Open points"
 msgstr "Open points"
 
@@ -3088,6 +3146,7 @@ msgid "Open Syntheo from the menu bar."
 msgstr "Open Syntheo from the menu bar."
 
 #: src/folders/project/folder-thread-card.tsx
+#: src/home/active-folders.ts
 msgid "Open tasks"
 msgstr "Open tasks"
 
@@ -3124,6 +3183,10 @@ msgstr "Opens System Settings and guides you to add Syntheo to the {0} list"
 #: src/settings/general/permissions.tsx
 msgid "Opens System Settings and guides you to add Syntheo to the {0} list."
 msgstr "Opens System Settings and guides you to add Syntheo to the {0} list."
+
+#: src/folders/project/next-meeting-suggestion.tsx
+msgid "Opens the Next meeting block of the folder {folderPath}."
+msgstr "Opens the Next meeting block of the folder {folderPath}."
 
 #: src/shared/help-dialog.tsx
 msgid "Opens your web browser."
@@ -3284,6 +3347,14 @@ msgstr "Post-meeting transcription failed. The recording was kept so you can try
 msgid "Prepare"
 msgstr "Prepare"
 
+#: src/folders/project/next-meeting-suggestion.tsx
+msgid "Prepare the agenda for the next meeting."
+msgstr "Prepare the agenda for the next meeting."
+
+#: src/folders/project/next-meeting-slot.tsx
+msgid "Prepare the note"
+msgstr "Prepare the note"
+
 #: src/session/components/outer-header/overflow/export-modal.tsx
 msgid "Preparing transcript..."
 msgstr "Preparing transcript..."
@@ -3343,6 +3414,18 @@ msgstr "Program"
 #: src/folders/project/folder-thread-card.tsx
 msgid "Project thread"
 msgstr "Project thread"
+
+#: src/home/folder-cards.tsx
+msgid "Project thread not created yet"
+msgstr "Project thread not created yet"
+
+#: src/folders/project/next-meeting-slot.tsx
+msgid "Propose"
+msgstr "Propose"
+
+#: src/folders/project/next-meeting-slot.tsx
+msgid "Propose drafts the agenda from the open points, decisions to confirm and open tasks of this folder, with your local model."
+msgstr "Propose drafts the agenda from the open points, decisions to confirm and open tasks of this folder, with your local model."
 
 #: src/session/components/living-document/summary-review.tsx
 msgid "Proposed edit to the summary"
@@ -3556,6 +3639,7 @@ msgstr "Reopen in browser"
 msgid "Repair Keychain Access"
 msgstr "Repair Keychain Access"
 
+#: src/folders/project/next-meeting-slot.tsx
 #: src/session/components/note-input/search/bar.tsx
 #: src/shared/shortcuts.ts
 msgid "Replace"
@@ -4683,6 +4767,14 @@ msgstr "The address did not answer within {seconds} seconds."
 msgid "The address redirects to {target}. Syntheo does not follow redirects: use the final address."
 msgstr "The address redirects to {target}. Syntheo does not follow redirects: use the final address."
 
+#: src/folders/project/next-meeting-slot.tsx
+msgid "The agenda could not be proposed. Check the language model, then try again."
+msgstr "The agenda could not be proposed. Check the language model, then try again."
+
+#: src/folders/project/next-meeting-slot.tsx
+msgid "The agenda is drafted from meeting summaries. It will be available once a meeting in this folder has a summary."
+msgstr "The agenda is drafted from meeting summaries. It will be available once a meeting in this folder has a summary."
+
 #: src/settings/ai/stt/server-card.tsx
 msgid "The API key is optional for servers without authentication. It is kept in your system keychain."
 msgstr "The API key is optional for servers without authentication. It is kept in your system keychain."
@@ -5155,6 +5247,7 @@ msgstr "Unreachable"
 
 #: src/editor-bridge/mention-config.ts
 #: src/folders/project/folder-meetings-card.tsx
+#: src/folders/sidebar-tree-view.tsx
 #: src/home/note-index.tsx
 #: src/session/components/living-document/meeting-type-picker.tsx
 #: src/session/components/note-input/raw.tsx
@@ -5512,6 +5605,10 @@ msgstr "You can use up to three example summaries."
 #: src/settings/dictionary/index.tsx
 msgid "Your dictionary is empty"
 msgstr "Your dictionary is empty"
+
+#: src/home/folder-cards.tsx
+msgid "Your folders"
+msgstr "Your folders"
 
 #: src/session/components/living-document/index.tsx
 #: src/session/components/living-document/provenance.tsx

@@ -50,6 +50,10 @@ vi.mock("~/session/queries", () => ({
   useFolderPaths: () => mocks.folders,
 }));
 
+vi.mock("~/search/unified/catalog", () => ({
+  useSearchNotes: () => [],
+}));
+
 vi.mock("~/session/folder-catalog", () => ({
   createNamedFolder: mocks.createNamedFolder,
   deleteNamedFolder: mocks.deleteNamedFolder,
@@ -206,7 +210,7 @@ describe("Folders workspace", () => {
       "value",
       "CS 101",
     );
-    fireEvent.click(screen.getByRole("button", { name: "Work" }));
+    fireEvent.click(screen.getByRole("treeitem", { name: "Work" }));
     expect(screen.getByRole("textbox", { name: "Folder name" })).toHaveProperty(
       "value",
       "Work",

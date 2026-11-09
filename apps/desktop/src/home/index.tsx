@@ -1,10 +1,13 @@
 import { useCallback, useMemo, useState } from "react";
 
+import { useActiveFolders } from "./active-folders";
 import { HomeView } from "./home-view";
 import { NoteExportDialog } from "./note-export-dialog";
 import { type RecentNote, useOwnerFirstName, useRecentNotes } from "./queries";
 
+import { useFolderSelection } from "~/folders/selection";
 import { useDeleteSession } from "~/session/hooks/useDeleteSession";
+import { useFolderIcons } from "~/session/queries";
 import { useOpenNoteDialog } from "~/shared/open-note-dialog";
 import { getShortcutPlatform } from "~/shared/shortcuts";
 import { useNewNote } from "~/shared/useNewNote";
@@ -15,6 +18,9 @@ export { HomeView } from "./home-view";
 export function HomePage() {
   const firstName = useOwnerFirstName();
   const recentNotes = useRecentNotes();
+  const folders = useActiveFolders();
+  const folderIcons = useFolderIcons();
+  const setSelectedPath = useFolderSelection((state) => state.setSelectedPath);
   const openCurrent = useTabs((state) => state.openCurrent);
   // Ouvre la palette de recherche existante (même action que Ctrl+K).
   const { open: openSearch } = useOpenNoteDialog();
@@ -23,6 +29,19 @@ export function HomePage() {
 
   const openNote = useCallback(
     (sessionId: string) => openCurrent({ type: "sessions", id: sessionId }),
+    [openCurrent],
+  );
+  // Une carte ouvre la page de son dossier ; « Tous les dossiers » ouvre la
+  // vue des dossiers telle que l'utilisateur l'a laissée.
+  const openFolder = useCallback(
+    (folderPath: string) => {
+      setSelectedPath(folderPath);
+      openCurrent({ type: "folders" });
+    },
+    [openCurrent, setSelectedPath],
+  );
+  const openAllFolders = useCallback(
+    () => openCurrent({ type: "folders" }),
     [openCurrent],
   );
 
@@ -49,12 +68,16 @@ export function HomePage() {
       <HomeView
         firstName={firstName}
         recentNotes={recentNotes}
+        folders={folders}
+        folderIcons={folderIcons}
         os={os}
         onStart={newNote}
         onOpenNote={openNote}
         onExportNote={exportNote}
         onDeleteNote={deleteNote}
         onSearch={openSearch}
+        onOpenFolder={openFolder}
+        onOpenAllFolders={openAllFolders}
       />
       {exportSessionId ? (
         <NoteExportDialog
