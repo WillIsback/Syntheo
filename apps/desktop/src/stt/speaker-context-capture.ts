@@ -173,12 +173,11 @@ function createCapture(sessionId: string) {
         .then(async (mic) => [mic, await inspectIfUseful(mic, at)] as const),
       liveQueryClient.execute<{
         title: string;
-        event_json: string;
         owner_user_id: string;
         name: string;
         aliases: string | null;
       }>(
-        "SELECT s.title, s.event_json, s.owner_user_id, COALESCE(h.name, '') AS name, json_extract(h.metadata_json, '$.aliases') AS aliases FROM sessions s LEFT JOIN humans h ON h.id = s.owner_user_id AND h.deleted_at IS NULL WHERE s.id = ? AND s.deleted_at IS NULL",
+        "SELECT s.title, s.owner_user_id, COALESCE(h.name, '') AS name, json_extract(h.metadata_json, '$.aliases') AS aliases FROM sessions s LEFT JOIN humans h ON h.id = s.owner_user_id AND h.deleted_at IS NULL WHERE s.id = ? AND s.deleted_at IS NULL",
         [sessionId],
       ),
       getSessionParticipantHumanIds(sessionId),
@@ -197,12 +196,6 @@ function createCapture(sessionId: string) {
         inspectionShowsActiveMeeting(inspection) &&
         micApps.some((app) => app.id === inspection.app.id),
     );
-    let meetingLink = "";
-    try {
-      meetingLink = JSON.parse(row.event_json).meeting_link ?? "";
-    } catch {
-      /* No calendar context. */
-    }
     let aliases: string[] = [];
     try {
       const value = JSON.parse(row.aliases ?? "[]");
@@ -231,12 +224,6 @@ function createCapture(sessionId: string) {
       );
       if (releasedMicrophone || leftCall) callAppId = null;
     }
-    // An observed pre-join/ended window overrides a scheduled link. A link alone is never attendance.
-    const calendarCall = Boolean(
-      meetingLink &&
-      micApps.some((app) => MEETING_CAPABLE_MIC_APP.test(app.id)) &&
-      inspections.length === 0,
-    );
     const inputDevice = available
       ? (device ?? (currentDevice?.status === "ok" ? currentDevice.data : null))
       : null;
@@ -245,7 +232,6 @@ function createCapture(sessionId: string) {
         start_ms: at,
         end_ms: at + EVIDENCE_LEASE_MS,
         active_call: callAppId !== null,
-        calendar_call: calendarCall,
         // A headset is isolated by construction; for anything else the runtime verdict
         // decides — headphones already keep speaker output out of the mic, and a
         // Bluetooth-swapped replacement is a room mic as far as we know.

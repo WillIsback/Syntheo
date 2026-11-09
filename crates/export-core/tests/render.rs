@@ -10,7 +10,6 @@ fn fixture() -> ExportInput {
                 "David Kim".to_string(),
                 "Ava Chen".to_string(),
             ],
-            event_title: Some("Weekly Product Sync".to_string()),
             duration: Some("42m".to_string()),
         }),
         memo_md: Some(
@@ -97,7 +96,6 @@ fn renders_localized_labels() {
         memo: "Mémo".to_string(),
         summary: "Synthèse".to_string(),
         transcript: "Transcription".to_string(),
-        meeting: "Réunion".to_string(),
         participants: "Participants".to_string(),
         unknown_speaker: "Locuteur inconnu".to_string(),
     });

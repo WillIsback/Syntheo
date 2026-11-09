@@ -18,14 +18,6 @@ msgstr ""
 msgid "— Sample line written from this instruction."
 msgstr "— Exemple de ligne rédigée selon cette consigne."
 
-#: src/home/home-view.tsx
-msgid ", at {time}."
-msgstr ", à {time}."
-
-#: src/home/home-view.tsx
-msgid ", in progress."
-msgstr ", en cours."
-
 #: src/session/components/speaker-naming/speaker-card.tsx
 msgid "“{excerpt}”"
 msgstr "« {excerpt} »"
@@ -72,14 +64,6 @@ msgstr "{0} résultats"
 msgid "{0}% complete"
 msgstr "{0} % terminé"
 
-#: src/sidebar/timeline/utils/index.ts
-msgid "{absDays} days ago"
-msgstr "il y a {absDays} jours"
-
-#: src/services/tray-schedule.tsx
-msgid "{count, plural, one {{duration} left} other {{duration} left}}"
-msgstr "{count, plural, one {{duration} restante} other {{duration} restantes}}"
-
 #: src/session/components/speaker-naming/bar.tsx
 msgid "{count, plural, one {# speaker to name} other {# speakers to name}}"
 msgstr "{count, plural, one {# intervenant à nommer} other {# intervenants à nommer}}"
@@ -96,18 +80,6 @@ msgstr "{count} contacts partagent le même nom ou la même adresse e-mail. Fusi
 msgid "{count} more"
 msgstr "{count} de plus"
 
-#: src/services/tray-schedule.tsx
-msgid "{count}h"
-msgstr "{count} h"
-
-#: src/services/tray-schedule.tsx
-msgid "{count}m"
-msgstr "{count} min"
-
-#: src/services/tray-schedule.tsx
-msgid "{count}s"
-msgstr "{count} s"
-
 #: src/session/components/outer-header/overflow/export-document.ts
 msgid "{day} at {time}"
 msgstr "{day} à {time}"
@@ -116,10 +88,6 @@ msgstr "{day} à {time}"
 msgid "{entryCount} selected"
 msgstr "{entryCount} sélectionné(s)"
 
-#: src/services/tray-schedule.tsx
-msgid "{hours}h {minutes}m"
-msgstr "{hours} h {minutes} min"
-
 #: src/settings/ai/stt/language-warning.tsx
 msgid "{model} can't transcribe {languages}. Try another model or change your spoken languages."
 msgstr "{model} ne sait pas transcrire {languages}. Essayez un autre modèle ou changez vos langues parlées."
@@ -127,10 +95,6 @@ msgstr "{model} ne sait pas transcrire {languages}. Essayez un autre modèle ou 
 #: src/settings/ai/stt/language-warning.tsx
 msgid "{model} can't transcribe all selected languages together. Try another model or use fewer spoken languages."
 msgstr "{model} ne peut pas transcrire toutes les langues sélectionnées ensemble. Essayez un autre modèle ou utilisez moins de langues parlées."
-
-#: src/sidebar/timeline/utils/index.ts
-msgid "{months} months ago"
-msgstr "il y a {months} mois"
 
 #: src/stt/meeting-apps.ts
 msgid "{otherAppCount, plural, one {Ignore {firstName} and # other app?} other {Ignore {firstName} and # other apps?}}"
@@ -164,10 +128,6 @@ msgstr "{title} supprimé"
 msgid "{turns, plural, one {# turn} other {# turns}}"
 msgstr "{turns, plural, one {# intervention} other {# interventions}}"
 
-#: src/sidebar/timeline/utils/index.ts
-msgid "{weeks} weeks ago"
-msgstr "Il y a {weeks} semaines"
-
 #: src/templates/template-form.tsx
 msgid "+ Add"
 msgstr "+ Ajouter"
@@ -200,25 +160,13 @@ msgstr "Un fichier Markdown contenant la note, le résumé et le transcript."
 msgid "A meeting can't be replayed: audio is never kept, only the note remains. Your notes belong to you."
 msgstr "La réunion ne se rejoue pas : l'audio n'est jamais conservé, seule la note reste. Vos notes vous appartiennent."
 
-#: src/sidebar/timeline/utils/index.ts
-msgid "a month ago"
-msgstr "il y a un mois"
-
 #: src/stt/useStartListening.ts
 msgid "A participant declined recording. Syntheo stopped listening."
 msgstr "Un participant a refusé l'enregistrement. Syntheo a arrêté l'écoute."
 
-#: src/sidebar/timeline/utils/index.ts
-msgid "a week ago"
-msgstr "il y a une semaine"
-
 #: src/services/notification-labels.ts
 msgid "Accept"
 msgstr "Accepter"
-
-#: src/settings/search-index.ts
-msgid "access, authorize, Apple Calendar, events"
-msgstr "accès, autoriser, Calendrier Apple, événements, agenda"
 
 #: src/settings/search-index.ts
 msgid "access, authorize, meeting controls, chat"
@@ -341,10 +289,6 @@ msgstr "Ajoutez une étape"
 msgid "Add to favorites"
 msgstr "Ajouter aux favoris"
 
-#: src/calendar/components/event-chip.tsx
-msgid "Add to folder"
-msgstr "Ajoutez au dossier"
-
 #: src/settings/developers/webhooks.tsx
 msgid "Add webhook"
 msgstr "Ajoutez un webhook"
@@ -451,10 +395,6 @@ msgstr "Clé d'API (facultative)"
 msgid "Appearance"
 msgstr "Apparence"
 
-#: src/calendar/components/apple/permission.tsx
-msgid "Apple Calendar access is off"
-msgstr "L'accès à Apple Calendar est désactivé"
-
 #: src/main/windows-title-bar.tsx
 msgid "Application menu"
 msgstr "Menu de l'application"
@@ -475,20 +415,8 @@ msgid "Apply to summary"
 msgstr "Appliquer au résumé"
 
 #: src/stt/detect-events.ts
-msgid "Are you in {eventTitle} right now?"
-msgstr "Êtes-vous dans « {eventTitle} » en ce moment ?"
-
-#: src/stt/detect-events.ts
 msgid "Are you in a meeting?"
 msgstr "Êtes-vous en réunion ?"
-
-#: src/stt/detect-events.ts
-msgid "Are you talking to {firstName} and {secondName} right now?"
-msgstr "Parlez-vous avec {firstName} et {secondName} en ce moment ?"
-
-#: src/stt/detect-events.ts
-msgid "Are you talking to {firstName} right now?"
-msgstr "Parlez-vous avec {firstName} en ce moment ?"
 
 #: src/chat/components/input/index.tsx
 msgid "Ask anything"
@@ -569,14 +497,6 @@ msgstr "Auto"
 msgid "Auto summary format"
 msgstr "Format de résumé automatique"
 
-#: src/calendar/components/event-chip.tsx
-msgid "Auto-add"
-msgstr "Ajout automatique"
-
-#: src/calendar/components/event-chip.tsx
-msgid "Auto-add future meetings?"
-msgstr "Ajouter automatiquement les réunions futures ?"
-
 #: src/settings/automations/index.tsx
 msgid "Automate what happens before, during, or after meetings based on the conditions you choose."
 msgstr "Automatisez ce qui se passe avant, pendant ou après les réunions en fonction des conditions que vous choisissez."
@@ -588,14 +508,6 @@ msgid "Automatic"
 msgstr "Automatique"
 
 #: src/settings/search-index.ts
-msgid "automatic, meeting link, Teams, Zoom, calendar"
-msgstr "automatique, lien de réunion, rejoindre, Teams, Zoom, agenda"
-
-#: src/settings/search-index.ts
-msgid "automatic, start, calendar, scheduled meeting"
-msgstr "automatique, démarrer, agenda, réunion prévue"
-
-#: src/settings/search-index.ts
 msgid "automatic, stop, end of call, hang up"
 msgstr "automatique, arrêter, fin d'appel, raccrocher"
 
@@ -603,10 +515,6 @@ msgstr "automatique, arrêter, fin d'appel, raccrocher"
 #: src/settings/search-index.ts
 msgid "Automatically install updates"
 msgstr "Installer automatiquement les mises à jour"
-
-#: src/calendar/components/event-chip.tsx
-msgid "Automatically put all future instances of this recurring meeting into a folder."
-msgstr "Placez automatiquement toutes les futures occurrences de cette réunion récurrente dans un dossier."
 
 #: src/settings/automations/index.tsx
 msgid "Automation actions"
@@ -637,9 +545,8 @@ msgstr "Automatisation retirée"
 msgid "Automations"
 msgstr "Automatisations"
 
-#: src/calendar/components/apple/permission.tsx
-#: src/calendar/components/event-chip.tsx
 #: src/instruction/index.tsx
+#: src/settings/todo/permission.tsx
 #: src/shared/shortcuts.ts
 #: src/sidebar/custom-sidebar-header.tsx
 msgid "Back"
@@ -696,29 +603,14 @@ msgstr "Canevas clair"
 msgid "Bring your meeting history"
 msgstr "Importez votre historique de réunions"
 
-#: src/calendar/components/event-chip.tsx
-msgid "Busy"
-msgstr "Occupé"
-
 #: src/templates/utils.ts
 msgid "by {name}"
 msgstr "par {name}"
-
-#: src/settings/general/permissions.tsx
-#: src/settings/search-index.ts
-#: src/sidebar/settings-nav-groups.ts
-msgid "Calendar"
-msgstr "Calendrier"
-
-#: src/onboarding/index.tsx
-msgid "Calendar connected"
-msgstr "Calendrier connecté"
 
 #: src/stt/audio-import-feedback.ts
 msgid "Can't import this audio"
 msgstr "Impossible d'importer cet audio"
 
-#: src/calendar/components/apple/permission.tsx
 #: src/session/components/capsule/index.tsx
 #: src/settings/ai/shared/server-address.tsx
 #: src/settings/dictionary/index.tsx
@@ -750,10 +642,6 @@ msgstr "Capturer les écrans partagés dans Memos"
 #: src/session/components/living-document/live-transcription-language.tsx
 msgid "Change"
 msgstr "Modifier"
-
-#: src/calendar/components/event-chip.tsx
-msgid "Change auto-add folder"
-msgstr "Modifier le dossier d’ajout automatique"
 
 #: src/contacts/details.tsx
 #: src/contacts/organization-details.tsx
@@ -891,10 +779,6 @@ msgstr "Choisissez les couleurs de Syntheo. Chaque palette suit le thème clair 
 #: src/settings/general/audio-settings.tsx
 msgid "Choose the microphone that captures your voice."
 msgstr "Choisissez le microphone qui capture votre voix."
-
-#: src/settings/general/week-start.tsx
-msgid "Choose which day begins your calendar week."
-msgstr "Choisissez le jour de début de votre semaine calendaire."
 
 #: src/settings/general/storage/legacy-cleanup.tsx
 msgid "Clean Up"
@@ -1048,16 +932,6 @@ msgstr "Configurez un modèle de langage (endpoint compatible OpenAI de votre in
 msgid "Confirm"
 msgstr "Confirmer"
 
-#. placeholder {0}: provider.displayName
-#: src/calendar/components/sidebar.tsx
-msgid "Connect {0}"
-msgstr "Connecter {0}"
-
-#: src/onboarding/calendar.tsx
-#: src/onboarding/index.tsx
-msgid "Connect calendar"
-msgstr "Connecter le calendrier"
-
 #. placeholder {0}: models.length
 #: src/settings/ai/llm/server-card.tsx
 msgid "Connected · {0} models available"
@@ -1089,7 +963,6 @@ msgid "Context"
 msgstr "Contexte"
 
 #: src/imports/screen.tsx
-#: src/onboarding/calendar.tsx
 msgid "Continue"
 msgstr "Continuer"
 
@@ -1157,10 +1030,6 @@ msgstr "Impossible de copier le transcript. Sélectionnez le texte ci-dessus pou
 msgid "Could not copy to clipboard"
 msgstr "Impossible de copier dans le presse-papiers"
 
-#: src/session/hooks/useCreatePreMeetingBrief.ts
-msgid "Could not create the pre-meeting brief. Try again."
-msgstr "Impossible de créer la synthèse pré-réunion. Réessayez."
-
 #: src/automations/actions.ts
 msgid "Could not delete the automation"
 msgstr "Impossible de supprimer l'automatisation"
@@ -1172,10 +1041,6 @@ msgstr "Impossible de supprimer cette note. Veuillez réessayer."
 #: src/session/components/outer-header/overflow/export-modal.tsx
 msgid "Could not export. Check the export location in Settings and try again."
 msgstr "Impossible d'exporter. Vérifiez l'emplacement d'exportation dans Paramètres et réessayez."
-
-#: src/session/insights/past-notes.ts
-msgid "Could not generate meeting insights. Try again."
-msgstr "Impossible de générer les analyses de la réunion. Réessayez."
 
 #: src/session/components/outer-header/overflow/export-modal.tsx
 msgid "Could not open the PDF to print. Try again, or save it instead."
@@ -1241,10 +1106,6 @@ msgstr "Créer « {0} »"
 msgid "Create \"{folderName}\""
 msgstr "Créer \"{folderName}\""
 
-#: src/session/components/note-input/create-brief-suggestion.tsx
-msgid "Create a brief to prepare this meeting"
-msgstr "Créer un brief pour préparer cette réunion"
-
 #: src/services/notification-labels.ts
 msgid "Create New Note..."
 msgstr "Créer une note…"
@@ -1265,10 +1126,6 @@ msgstr "Créé {createdAt}"
 #: src/templates/utils.ts
 msgid "Created by {name}"
 msgstr "Créé par {name}"
-
-#: src/session/components/note-input/raw.tsx
-msgid "Creating brief..."
-msgstr "Création du brief..."
 
 #: src/session/components/living-document/summary-switcher-view.tsx
 msgid "Current"
@@ -1457,10 +1314,6 @@ msgstr "Désactiver"
 msgid "Disable all notifications"
 msgstr "Désactiver toutes les notifications"
 
-#: src/calendar/components/sidebar.tsx
-msgid "Disconnect"
-msgstr "Déconnecter"
-
 #: src/store/zustand/listener/general-live.ts
 msgid "Disk almost full"
 msgstr "Disque presque plein"
@@ -1587,8 +1440,8 @@ msgid "Email"
 msgstr "E-mail"
 
 #: src/settings/search-index.ts
-msgid "email address, mail, calendar, attendees"
-msgstr "adresse e-mail, courriel, mail, agenda, participants"
+msgid "email address, mail, attendees"
+msgstr "adresse e-mail, courriel, mail, participants"
 
 #: src/templates/template-icon-picker.tsx
 msgid "Emojis"
@@ -1630,14 +1483,6 @@ msgstr "fin de réunion, arrêter, question, alerte"
 msgid "English"
 msgstr "Anglais"
 
-#: src/session/components/outer-header/metadata/participants/chip.tsx
-msgid "Enhance contact"
-msgstr "Améliorer le contact"
-
-#: src/session/components/outer-header/metadata/participants/chip.tsx
-msgid "Enhance contact {label}"
-msgstr "Améliorer le contact {label}"
-
 #: src/shared/open-note-dialog.tsx
 #: src/shared/shortcuts.ts
 msgid "Enter"
@@ -1668,11 +1513,6 @@ msgstr "Échap"
 #: src/composer/index.tsx
 msgid "Esc to dismiss"
 msgstr "Échap pour fermer"
-
-#: src/settings/general/notification.tsx
-#: src/settings/search-index.ts
-msgid "Event notifications"
-msgstr "Notifications d'événements"
 
 #: src/session/components/speaker-naming/dialog.tsx
 msgid "Every speaker has a name."
@@ -1884,10 +1724,6 @@ msgstr "Plein écran"
 msgid "Full Screen"
 msgstr "Plein écran"
 
-#: src/calendar/components/event-chip.tsx
-msgid "Future meetings"
-msgstr "Réunions à venir"
-
 #: src/session/components/note-input/enhanced/index.tsx
 msgid "Generate summary"
 msgstr "Générer un résumé"
@@ -1970,7 +1806,7 @@ msgstr "Mode mains libres"
 msgid "Have Syntheo ready when you sign in."
 msgstr "Ayez Syntheo prêt lorsque vous vous connectez."
 
-#: src/calendar/components/apple/permission.tsx
+#: src/settings/todo/permission.tsx
 msgid "Having trouble?"
 msgstr "Vous rencontrez des difficultés ?"
 
@@ -2122,22 +1958,6 @@ msgstr "Améliorer le format du résumé"
 msgid "Improve with examples"
 msgstr "Améliorer avec des exemples"
 
-#: src/sidebar/timeline/utils/index.ts
-msgid "in {absDays} days"
-msgstr "dans {absDays} jours"
-
-#: src/services/tray-schedule.tsx
-msgid "in {duration}"
-msgstr "dans {duration}"
-
-#: src/sidebar/timeline/utils/index.ts
-msgid "in {months} months"
-msgstr "dans {months} mois"
-
-#: src/sidebar/timeline/utils/index.ts
-msgid "in {weeks} weeks"
-msgstr "dans {weeks} semaines"
-
 #: src/templates/template-form.tsx
 #: src/templates/template-sidebar.tsx
 msgid "In favorites"
@@ -2185,20 +2005,6 @@ msgstr "Fuseau horaire de l'invité :"
 #: src/settings/search-index.ts
 msgid "Job Title"
 msgstr "Intitulé du poste"
-
-#: src/services/event-notification/index.ts
-#: src/session/components/outer-header/index.tsx
-msgid "Join & record"
-msgstr "Rejoindre & enregistrer"
-
-#: src/session/components/outer-header/index.tsx
-msgid "Join meeting and record"
-msgstr "Rejoindre la réunion et enregistrer"
-
-#: src/settings/general/meeting-settings.tsx
-#: src/settings/search-index.ts
-msgid "Join scheduled meetings"
-msgstr "Rejoindre les réunions programmées"
 
 #: src/settings/dictation.tsx
 msgid "Keep Syntheo running to use your shortcut in other apps."
@@ -2367,10 +2173,6 @@ msgstr "Transcription en direct : {language}"
 msgid "Loading Auto format..."
 msgstr "Chargement du formatage automatique..."
 
-#: src/calendar/components/calendar-selection.tsx
-msgid "Loading calendars..."
-msgstr "Chargement des calendriers..."
-
 #: src/edit/tab-content.tsx
 msgid "Loading edit…"
 msgstr "Chargement de la modification…"
@@ -2476,11 +2278,6 @@ msgstr "Moi"
 #: src/settings/ai/llm/server-card.tsx
 msgid "Medium"
 msgstr "Moyen"
-
-#: src/session/components/outer-header/overflow/export-document.ts
-msgctxt "export field"
-msgid "Meeting"
-msgstr "Réunion"
 
 #: src/session/components/note-input/meeting-chat-highlights.tsx
 msgid "Meeting chat"
@@ -2662,14 +2459,6 @@ msgstr "Nom du modèle"
 msgid "Model name served by your server"
 msgstr "Nom du modèle servi par votre serveur"
 
-#: src/settings/general/week-start.tsx
-msgid "Monday"
-msgstr "Lundi"
-
-#: src/settings/search-index.ts
-msgid "Monday, Sunday, calendar, week"
-msgstr "lundi, dimanche, agenda, semaine"
-
 #: src/home/note-index.tsx
 #: src/templates/template-form.tsx
 msgid "More actions"
@@ -2682,10 +2471,6 @@ msgstr "Plus d'effort donne des synthèses plus fines, mais plus lentes. Auto la
 #: src/templates/sections-editor.tsx
 msgid "Move section {position}"
 msgstr "Déplacer la section {position}"
-
-#: src/calendar/components/event-chip.tsx
-msgid "Move this note"
-msgstr "Déplacer cette note"
 
 #: src/settings/ai/stt/server-card.tsx
 msgid "Multilingual"
@@ -2780,25 +2565,13 @@ msgstr "Plus récents"
 msgid "Next match"
 msgstr "Correspondance suivante"
 
-#: src/sidebar/timeline/utils/index.ts
-msgid "next month"
-msgstr "mois prochain"
-
 #: src/shared/shortcuts.ts
 msgid "Next view of the note"
 msgstr "Vue suivante de la note"
 
-#: src/sidebar/timeline/utils/index.ts
-msgid "next week"
-msgstr "semaine prochaine"
-
 #: src/settings/ai/stt/server-card.tsx
 msgid "NIM does not publish its model list: these are the models known for this protocol."
 msgstr "NIM ne publie pas sa liste de modèles : ceux-ci sont les modèles connus pour ce protocole."
-
-#: src/calendar/components/event-chip.tsx
-msgid "No"
-msgstr "Non"
 
 #: src/imports/screen.tsx
 #: src/settings/general/notification.tsx
@@ -2821,10 +2594,6 @@ msgstr "Aucune automatisation trouvée"
 msgid "No automations yet"
 msgstr "Aucune automatisation pour le moment"
 
-#: src/calendar/components/calendar-selection.tsx
-msgid "No calendars found"
-msgstr "Aucun calendrier trouvé"
-
 #: src/changelog/index.tsx
 msgid "No changelog available for this version."
 msgstr "Aucun journal des modifications disponible pour cette version."
@@ -2840,10 +2609,6 @@ msgstr "Aucune version antérieure pour le moment."
 #: src/templates/template-icon-picker.tsx
 msgid "No emoji found"
 msgstr "Aucun emoji trouvé"
-
-#: src/sidebar/timeline/utils/index.ts
-msgid "No folder"
-msgstr "Aucun dossier"
 
 #: src/settings/automations/starter-config.tsx
 msgid "No folder selected yet."
@@ -3078,17 +2843,17 @@ msgstr "Les modèles sur l'appareil peuvent mettre quelques minutes à s'initial
 msgid "Only on-premise OpenAI-compatible servers are supported (vLLM, Ollama, llama.cpp server, LM Studio…). The address usually ends with /v1, for example http://localhost:8000/v1."
 msgstr "Seuls les serveurs compatibles OpenAI hébergés chez vous sont pris en charge (vLLM, Ollama, serveur llama.cpp, LM Studio…). L'adresse se termine en général par /v1, par exemple http://localhost:8000/v1."
 
-#: src/calendar/components/apple/permission.tsx
 #: src/home/note-index.tsx
+#: src/settings/todo/permission.tsx
 #: src/shared/open-note-dialog.tsx
 msgid "Open"
 msgstr "Ouvrir"
 
 #. placeholder {0}: permissionName.toLowerCase()
 #. placeholder {0}: title.toLowerCase()
-#: src/calendar/components/apple/permission.tsx
 #: src/onboarding/permissions.tsx
 #: src/settings/general/permissions.tsx
+#: src/settings/todo/permission.tsx
 msgid "Open {0} settings"
 msgstr "Ouvrir les paramètres de {0}"
 
@@ -3108,11 +2873,6 @@ msgstr "Ouvrez une note pour l'exporter."
 msgid "Open AI Settings"
 msgstr "Ouvrir les paramètres de l'IA"
 
-#: src/calendar/components/calendar-selection.tsx
-#: src/calendar/components/sidebar.tsx
-msgid "Open calendar account actions"
-msgstr "Ouvrir les actions du compte de calendrier"
-
 #: src/session/components/outer-header/overflow/index.tsx
 msgid "Open floating panel"
 msgstr "Ouvrir le panneau flottant"
@@ -3129,17 +2889,9 @@ msgstr "Ouvrir dans le panneau droit"
 msgid "Open in your browser"
 msgstr "Ouvrir dans votre navigateur"
 
-#: src/services/event-notification/index.ts
-msgid "Open meeting"
-msgstr "Ouvrir la réunion"
-
 #: src/stt/start-failure.ts
 msgid "Open permissions"
 msgstr "Ouvrir les autorisations"
-
-#: src/calendar/components/apple/permission.tsx
-msgid "Open Settings"
-msgstr "Ouvrir les paramètres"
 
 #: src/composer/index.tsx
 #: src/onboarding/final.tsx
@@ -3150,10 +2902,6 @@ msgstr "Ouvrir Syntheo"
 #: src/settings/general/app-settings.tsx
 msgid "Open Syntheo from the menu bar."
 msgstr "Ouvrez Syntheo depuis la barre des menus."
-
-#: src/settings/general/meeting-settings.tsx
-msgid "Open the meeting link when a scheduled meeting begins."
-msgstr "Ouvrez le lien de la réunion lorsqu'une réunion programmée commence."
 
 #: src/shared/help-dialog.tsx
 msgid "Open the online documentation"
@@ -3197,7 +2945,7 @@ msgstr "Ouvre votre navigateur."
 msgid "Options"
 msgstr "Options"
 
-#: src/calendar/components/apple/permission.tsx
+#: src/settings/todo/permission.tsx
 msgid "or"
 msgstr "ou"
 
@@ -3220,10 +2968,6 @@ msgstr "Version de l'autre appareil"
 #: src/session/components/living-document/live-transcription-language.tsx
 msgid "Other languages ({omittedLanguages}) won't be transcribed live."
 msgstr "Les autres langues ({omittedLanguages}) ne seront pas transcrites en direct."
-
-#: src/settings/general/permissions.tsx
-msgid "Others"
-msgstr "Autres"
 
 #: src/shared/control.tsx
 msgid "Page not found"
@@ -3290,7 +3034,7 @@ msgstr "Mise en pause…"
 msgid "People"
 msgstr "Personnes"
 
-#: src/calendar/components/apple/permission.tsx
+#: src/settings/todo/permission.tsx
 msgid "permission panel."
 msgstr "panneau des autorisations."
 
@@ -3350,10 +3094,6 @@ msgstr "La transcription après la réunion a échoué. L'enregistrement est con
 #: src/shared/shortcuts.ts
 msgid "Prepare"
 msgstr "Préparer"
-
-#: src/settings/general/notification.tsx
-msgid "Prepare for events with a 5-minute reminder."
-msgstr "Préparez-vous aux événements avec un rappel 5 minutes avant."
 
 #: src/session/components/outer-header/overflow/export-modal.tsx
 msgid "Preparing transcript..."
@@ -3474,10 +3214,6 @@ msgstr "reçu"
 msgid "Recent"
 msgstr "Récent"
 
-#: src/calendar/components/sidebar.tsx
-msgid "Reconnect"
-msgstr "Reconnecter"
-
 #: src/settings/general/permissions.tsx
 msgid "Record other participants in meetings."
 msgstr "Enregistrez les autres participants aux réunions."
@@ -3510,10 +3246,6 @@ msgstr "Enregistrement avec le micro par défaut à la place. Vérifiez que le m
 #: src/main/windows-title-bar.tsx
 msgid "Redo"
 msgstr "Rétablir"
-
-#: src/calendar/components/calendar-selection.tsx
-msgid "Refresh calendars"
-msgstr "Actualiser les calendriers"
 
 #: src/session/components/living-document/summary-switcher-view.tsx
 #: src/session/components/note-input/header-enhanced.tsx
@@ -3549,10 +3281,6 @@ msgstr "Rappeler aux participants l'enregistrement"
 #: src/stt/useStartListening.ts
 msgid "Remind participants that the meeting is being transcribed."
 msgstr "Rappelez aux participants que la réunion est transcrite."
-
-#: src/settings/search-index.ts
-msgid "reminder, calendar, meeting, 5 minutes, alert"
-msgstr "rappel, agenda, réunion, 5 minutes, alerte"
 
 #: src/settings/todo/provider-content.tsx
 msgid "Reminders"
@@ -3640,12 +3368,12 @@ msgstr "Remplacer par..."
 msgid "Report a Bug"
 msgstr "Signaler un bug"
 
-#: src/calendar/components/apple/permission.tsx
+#: src/settings/todo/permission.tsx
 msgid "Request"
 msgstr "Demander"
 
 #. placeholder {0}: title.toLowerCase()
-#: src/calendar/components/apple/permission.tsx
+#: src/settings/todo/permission.tsx
 msgid "Request {0}"
 msgstr "Demander {0}"
 
@@ -3669,8 +3397,8 @@ msgstr "Exiger la reconnaissance faciale Windows Hello, le code PIN ou le mot de
 msgid "Requires Syntheo Pro"
 msgstr "Nécessite Syntheo Pro"
 
-#: src/calendar/components/apple/permission.tsx
 #: src/settings/ai/shared/server-address.tsx
+#: src/settings/todo/permission.tsx
 msgid "Reset"
 msgstr "Réinitialiser"
 
@@ -3956,10 +3684,6 @@ msgstr "Sélectionnez tout"
 msgid "Select an organization to view details"
 msgstr "Sélectionnez une organisation pour afficher les détails"
 
-#: src/settings/general/week-start.tsx
-msgid "Select day"
-msgstr "Sélectionnez le jour"
-
 #: src/session/components/folder-picker.tsx
 msgid "Select folder"
 msgstr "Sélectionnez un dossier"
@@ -4076,22 +3800,10 @@ msgstr "Affichez un rappel lorsqu'un enregistrement commence."
 msgid "Show app in Dock"
 msgstr "Afficher l'application dans le Dock"
 
-#: src/settings/general/permissions.tsx
-msgid "Show Apple Calendar events in Syntheo."
-msgstr "Afficher les événements Apple Calendar dans Syntheo."
-
 #: src/settings/general/meeting-settings.tsx
 #: src/settings/search-index.ts
 msgid "Show floating bar"
 msgstr "Afficher la barre flottante"
-
-#: src/calendar/components/session-chip.tsx
-msgid "Show in Finder"
-msgstr "Afficher dans le Finder"
-
-#: src/calendar/components/session-chip.tsx
-msgid "Show in folder"
-msgstr "Afficher dans le dossier"
 
 #: src/services/notification-labels.ts
 msgid "Show less"
@@ -4247,14 +3959,6 @@ msgstr "Démarrer une réunion"
 msgid "Start listening"
 msgstr "Démarrer l'écoute"
 
-#: src/settings/general/meeting-settings.tsx
-msgid "Start listening when a scheduled meeting begins."
-msgstr "Commencer l'écoute lorsqu'une réunion programmée commence."
-
-#: src/services/event-notification/index.ts
-msgid "Start recording"
-msgstr "Démarrer l'enregistrement"
-
 #: src/settings/general/app-settings.tsx
 #: src/settings/search-index.ts
 msgid "Start Syntheo at login"
@@ -4263,11 +3967,6 @@ msgstr "Démarrer Syntheo à la connexion"
 #: src/chat/components/input/index.tsx
 msgid "Start voice input"
 msgstr "Démarrer la saisie vocale"
-
-#: src/settings/general/meeting-settings.tsx
-#: src/settings/search-index.ts
-msgid "Start when meeting begins"
-msgstr "Démarrer au début de la réunion"
 
 #: src/session/components/note-input/raw.tsx
 msgid "Start with a favorite template"
@@ -4289,11 +3988,6 @@ msgstr "En cours"
 msgid "Starting in {minutes} minutes"
 msgstr "Démarrage dans {minutes} minutes"
 
-#: src/services/event-notification/index.ts
-msgid "Starting in {minutesUntil} minutes"
-msgstr "Démarrage dans {minutesUntil} minutes"
-
-#: src/services/event-notification/index.ts
 #: src/services/notification-labels.ts
 msgid "Starting in 1 minute"
 msgstr "Démarrage dans 1 minute"
@@ -4331,10 +4025,6 @@ msgstr "Les étapes s'exécutent de haut en bas."
 #: src/stt/auto-stop.ts
 msgid "Stop"
 msgstr "Arrêter"
-
-#: src/calendar/components/event-chip.tsx
-msgid "Stop auto-add"
-msgstr "Arrêter l'ajout automatique"
 
 #: src/session/components/outer-header/overflow/listening.tsx
 msgid "Stop listening"
@@ -4470,10 +4160,6 @@ msgstr "Versions de la synthèse"
 msgid "Summary wasn't generated"
 msgstr "Le résumé n'a pas été généré"
 
-#: src/settings/general/week-start.tsx
-msgid "Sunday"
-msgstr "Dimanche"
-
 #: src/session/components/note-input/header.tsx
 msgid "Switch view ({previousViewKeys}, {nextViewKeys})"
 msgstr "Changer de vue ({previousViewKeys}, {nextViewKeys})"
@@ -4556,10 +4242,6 @@ msgid "Syntheo keeps listening while live transcription reconnects. No audio is 
 msgstr "Syntheo continue d'écouter pendant la reconnexion de la transcription en direct. Aucun audio n'est conservé : le passage manquant ne sera pas récupéré."
 
 #: src/onboarding/index.tsx
-msgid "Syntheo lit votre calendrier local pour vous rappeler vos réunions"
-msgstr "Syntheo lit votre calendrier local pour vous rappeler vos réunions"
-
-#: src/onboarding/index.tsx
 msgid "Syntheo needs access to your microphone and system audio to record and transcribe your meetings"
 msgstr "Syntheo a besoin d'accéder à votre microphone et à l'audio système pour enregistrer et transcrire vos réunions"
 
@@ -4582,8 +4264,8 @@ msgid "Syntheo structures the summary itself, without a fixed template. Used whe
 msgstr "Syntheo structure lui-même la synthèse, sans modèle fixe. Utilisé quand aucun modèle n'est choisi pour une réunion."
 
 #: src/settings/general/account-profile.tsx
-msgid "Syntheo uses it to recognize you among the attendees of your calendar meetings, so you are not counted as a participant. It stays on this device."
-msgstr "Syntheo s'en sert pour vous reconnaître parmi les participants des réunions de votre agenda, afin de ne pas vous compter comme participant. Elle reste sur cet appareil."
+msgid "Syntheo uses it to recognize you among the participants of your meetings, so you are not counted twice. It stays on this device."
+msgstr "Syntheo s'en sert pour vous reconnaître parmi les participants de vos réunions, afin de ne pas vous compter deux fois. Elle reste sur cet appareil."
 
 #: src/settings/general/storage/legacy-cleanup.tsx
 msgid "Syntheo will retry automatically. This does not affect your notes."
@@ -4877,10 +4559,6 @@ msgstr "Ce modèle ne transcrit qu'après l'enregistrement, ce qui supposerait d
 msgid "This model only transcribes live: importing a file requires a batch transcription model."
 msgstr "Ce modèle ne transcrit qu'en direct : importer un fichier demande un modèle de transcription par lot."
 
-#: src/calendar/components/event-chip.tsx
-msgid "This note"
-msgstr "Cette note"
-
 #: src/chat/components/message/tool/edit-summary.tsx
 msgid "This note has no summary to edit yet."
 msgstr "Cette note n'a pas encore de résumé à modifier."
@@ -4948,21 +4626,9 @@ msgstr "Astuce : Ajoutez les noms des membres de l’équipe, les acronymes, le 
 msgid "Tip: The Syntheo team loves our users!"
 msgstr "Astuce : L’équipe Syntheo adore ses utilisateurs !"
 
-#: src/home/start-button.tsx
-msgid "Title and participants taken from the calendar"
-msgstr "Titre et participants repris depuis l'agenda"
-
 #: src/templates/sections-editor.tsx
 msgid "To move a section with the keyboard, focus its handle and use the up and down arrow keys."
 msgstr "Pour déplacer une section au clavier, placez le focus sur sa poignée et utilisez les flèches haut et bas."
-
-#: src/sidebar/timeline/utils/index.ts
-msgid "Today"
-msgstr "Aujourd’hui"
-
-#: src/sidebar/timeline/utils/index.ts
-msgid "Tomorrow"
-msgstr "Demain"
 
 #: src/chat/components/input/index.tsx
 msgid "Transcribing voice input"
@@ -5079,10 +4745,6 @@ msgstr "Essayer"
 msgid "Try speaking a little closer to the microphone."
 msgstr "Essayez de parler un peu plus près du microphone."
 
-#: src/calendar/components/apple/permission.tsx
-msgid "Turn on Syntheo in System Settings → Privacy & Security → Calendars, then return here."
-msgstr "Activez Syntheo dans Réglages système → Confidentialité et sécurité → Calendriers, puis revenez ici."
-
 #: src/session/components/living-document/fiche.tsx
 msgid "Type"
 msgstr "Type"
@@ -5099,10 +4761,6 @@ msgstr "Indisponible"
 #: src/sidebar/toast/undo-delete-toast.tsx
 msgid "Undo"
 msgstr "Annuler"
-
-#: src/calendar/components/event-chip.tsx
-msgid "Unfiled"
-msgstr "Non classé"
 
 #: src/session/components/note-input/transcript/renderer/speaker-participants.ts
 msgid "Unknown"
@@ -5161,15 +4819,6 @@ msgstr "Sans titre"
 msgid "Untitled automation"
 msgstr "Automatisation sans titre"
 
-#: src/calendar/queries.ts
-#: src/services/tray-schedule.tsx
-msgid "Untitled event"
-msgstr "Événement sans titre"
-
-#: src/home/home-view.tsx
-msgid "Untitled meeting"
-msgstr "Réunion sans titre"
-
 #: src/contacts/related-notes.tsx
 msgid "Untitled Note"
 msgstr "Note sans titre"
@@ -5181,10 +4830,6 @@ msgstr "Section sans titre"
 #: src/edit/tab-content.tsx
 msgid "Untitled session"
 msgstr "Session sans titre"
-
-#: src/services/event-notification/index.ts
-msgid "Upcoming Event"
-msgstr "Événement à venir"
 
 #: src/settings/search-index.ts
 msgid "update, new version, upgrade"
@@ -5326,11 +4971,6 @@ msgstr "webhook, URL, événements, intégration, automatisation"
 msgid "Webhooks"
 msgstr "Webhooks"
 
-#: src/settings/general/week-start.tsx
-#: src/settings/search-index.ts
-msgid "Week starts on"
-msgstr "La semaine commence le"
-
 #: src/onboarding/index.tsx
 msgid "Welcome to Syntheo"
 msgstr "Bienvenue sur Syntheo"
@@ -5439,10 +5079,6 @@ msgstr "Rédigé par Syntheo"
 msgid "Yes"
 msgstr "Oui"
 
-#: src/sidebar/timeline/utils/index.ts
-msgid "Yesterday"
-msgstr "Hier"
-
 #: src/templates/utils.ts
 msgid "you"
 msgstr "vous"
@@ -5455,7 +5091,7 @@ msgstr "Vous"
 msgid "you are offline"
 msgstr "vous êtes hors ligne"
 
-#: src/calendar/components/apple/permission.tsx
+#: src/settings/todo/permission.tsx
 msgid "You can"
 msgstr "Vous pouvez"
 
@@ -5466,10 +5102,6 @@ msgstr "Vous pouvez utiliser jusqu'à trois exemples de résumés."
 #: src/settings/dictionary/index.tsx
 msgid "Your dictionary is empty"
 msgstr "Votre dictionnaire est vide"
-
-#: src/home/home-view.tsx
-msgid "Your next meeting:"
-msgstr "Votre prochaine réunion :"
 
 #: src/session/components/living-document/index.tsx
 #: src/session/components/living-document/provenance.tsx

@@ -5,7 +5,6 @@ import {
   type NotificationEvent,
   type NotificationSource,
 } from "@syntheo/plugin-notification";
-import { commands as openerCommands } from "@syntheo/plugin-opener2";
 import type {
   CaptureConfigUpdate,
   IdentityAssignment,
@@ -13,16 +12,12 @@ import type {
 import { getCurrentWebviewWindowLabel } from "@syntheo/plugin-windows";
 import { useMountEffect } from "@syntheo/ui/hooks/use-mount-effect";
 
-import {
-  getCalendarEventMeetingLink,
-  getCalendarEventStartedAt,
-} from "~/calendar/queries";
 import { liveQueryClient } from "~/db";
 import {
   hasPreparedNoteStart,
   startPreparedNoteFromShortcut,
 } from "~/session/components/capsule/start-shortcut";
-import { createSession, getOrCreateSessionForEventId } from "~/session/queries";
+import { createSession } from "~/session/queries";
 import { setSettingValue } from "~/settings/queries";
 import { useConfigValue, useConfigValues } from "~/shared/config";
 import { useLatestRef } from "~/shared/hooks/useLatestRef";
@@ -142,53 +137,16 @@ const LIVE_TRANSCRIPT_IDENTITY_SQL = `
 
 const LIVE_CAPTURE_CONFIG_DEBOUNCE_MS = 750;
 
-async function shouldAutoStartNotificationSession(
-  eventId: string | null,
-  triggerAppIds: string[] | null,
-): Promise<boolean> {
-  if (triggerAppIds && triggerAppIds.length > 0) {
-    return true;
-  }
-
-  if (!eventId) {
-    return true;
-  }
-
-  const startedAt = await getCalendarEventStartedAt(eventId);
-  if (!startedAt) {
-    return false;
-  }
-
-  const startTime = new Date(String(startedAt)).getTime();
-  return !Number.isNaN(startTime) && startTime <= Date.now();
-}
-
 async function createNotificationSession(
-  eventId: string | null,
   triggerAppIds: string[] | null,
-): Promise<{ sessionId: string; autoStart: boolean }> {
-  const sessionId = eventId
-    ? await getOrCreateSessionForEventId(eventId)
-    : await createSession();
+): Promise<string> {
+  const sessionId = await createSession();
 
   if (triggerAppIds && triggerAppIds.length > 0) {
     listenerStore.getState().setTriggerAppIds(triggerAppIds);
   }
 
-  return {
-    sessionId,
-    autoStart: await shouldAutoStartNotificationSession(eventId, triggerAppIds),
-  };
-}
-
-async function openCalendarMeeting(eventId: string): Promise<void> {
-  const meetingLink = await getCalendarEventMeetingLink(eventId);
-  if (meetingLink) {
-    const result = await openerCommands.openUrl(meetingLink, null);
-    if (result.status === "error") {
-      throw new Error(result.error);
-    }
-  }
+  return sessionId;
 }
 
 function handleAutoStopEndedNotification(
@@ -607,30 +565,10 @@ type ConfirmAcceptTimeoutEvent = Extract<
       | "notification_timeout";
   }
 >;
-type NotificationActionEvent = Extract<
-  NotificationEvent,
-  { type: "notification_action" }
->;
-type OptionSelectedEvent = Extract<
-  NotificationEvent,
-  { type: "notification_option_selected" }
->;
 type FooterActionEvent = Extract<
   NotificationEvent,
   { type: "notification_footer_action" }
 >;
-
-function getEventIdFromSource(
-  source: NotificationSource | null,
-): string | null {
-  if (source?.type === "calendar_event") {
-    return source.event_id;
-  }
-  if (source?.type === "mic_detected") {
-    return source.event_ids?.[0] ?? null;
-  }
-  return null;
-}
 
 function getSessionIdFromSource(
   source: NotificationSource | null,
@@ -648,13 +586,6 @@ function getTriggerAppIdsFromSource(
     return source.app_ids ?? null;
   }
   return null;
-}
-
-function getEventIdsFromSource(source: NotificationSource | null): string[] {
-  if (source?.type === "mic_detected") {
-    return source.event_ids ?? [];
-  }
-  return [];
 }
 
 // « Êtes-vous en réunion ? » → oui, alors qu'une note est en Préparer au
@@ -694,7 +625,6 @@ function handleConfirmAcceptTimeoutEvent(
   }
 
   const source = payload.source;
-  const eventId = getEventIdFromSource(source);
   const sourceSessionId = getSessionIdFromSource(source);
   const triggerAppIds = getTriggerAppIdsFromSource(source);
 
@@ -705,32 +635,27 @@ function handleConfirmAcceptTimeoutEvent(
       state: {
         view: null,
         autoStart: null,
-        scheduledAutoStart: null,
       },
     });
     return;
   }
 
-  if (source?.type !== "calendar_event" && source?.type !== "mic_detected") {
+  if (source?.type !== "mic_detected") {
     return;
   }
 
-  if (
-    source.type === "mic_detected" &&
-    startDetectedMeetingInPreparedNote(triggerAppIds)
-  ) {
+  if (startDetectedMeetingInPreparedNote(triggerAppIds)) {
     return;
   }
 
-  void createNotificationSession(eventId, triggerAppIds)
-    .then(({ sessionId, autoStart }) => {
+  void createNotificationSession(triggerAppIds)
+    .then((sessionId) => {
       openNewRef.current({
         type: "sessions",
         id: sessionId,
         state: {
           view: null,
-          autoStart: autoStart ? true : null,
-          scheduledAutoStart: null,
+          autoStart: true,
         },
       });
     })
@@ -739,98 +664,6 @@ function handleConfirmAcceptTimeoutEvent(
         "[notification] failed to open notification session",
         error,
       );
-    });
-}
-
-async function startCalendarEventRecording(
-  eventId: string,
-  openNewRef: OpenNewRef,
-) {
-  try {
-    const sessionId = await getOrCreateSessionForEventId(eventId);
-    openNewRef.current({
-      type: "sessions",
-      id: sessionId,
-      state: {
-        view: null,
-        autoStart: true,
-      },
-    });
-  } catch (error) {
-    console.error(
-      "[notification] failed to start calendar event recording",
-      error,
-    );
-  }
-
-  try {
-    // Opening the meeting last returns focus to the meeting client,
-    // while the session starts from the route's auto-start state.
-    await openCalendarMeeting(eventId);
-  } catch (error) {
-    console.error("[notification] failed to open calendar meeting", error);
-  }
-}
-
-function handleNotificationActionEvent(
-  payload: NotificationActionEvent,
-  openNewRef: OpenNewRef,
-) {
-  if (payload.source?.type !== "calendar_event") {
-    return;
-  }
-
-  const eventId = payload.source.event_id;
-  if (payload.action === "open_meeting") {
-    void openCalendarMeeting(eventId).catch((error) => {
-      console.error("[notification] failed to open calendar meeting", error);
-    });
-    return;
-  }
-
-  void startCalendarEventRecording(eventId, openNewRef);
-}
-
-function handleOptionSelectedEvent(
-  payload: OptionSelectedEvent,
-  openNewRef: OpenNewRef,
-) {
-  const eventIds = getEventIdsFromSource(payload.source);
-  // « Aucune de ces réunions » : comme un simple « oui ».
-  if (
-    payload.source?.type === "mic_detected" &&
-    payload.selected_index >= eventIds.length &&
-    startDetectedMeetingInPreparedNote(payload.source.app_ids ?? null)
-  ) {
-    return;
-  }
-
-  const sessionPromise =
-    payload.selected_index < eventIds.length
-      ? getOrCreateSessionForEventId(eventIds[payload.selected_index])
-      : createSession();
-
-  if (payload.source?.type === "mic_detected") {
-    const triggerAppIds = payload.source.app_ids ?? [];
-    listenerStore
-      .getState()
-      .setTriggerAppIds(triggerAppIds.length > 0 ? triggerAppIds : null);
-  }
-
-  void sessionPromise
-    .then((sessionId) => {
-      openNewRef.current({
-        type: "sessions",
-        id: sessionId,
-        state: {
-          view: null,
-          autoStart: true,
-          scheduledAutoStart: null,
-        },
-      });
-    })
-    .catch((error) => {
-      console.error("[notification] failed to open selected event", error);
     });
 }
 
@@ -882,12 +715,6 @@ function useNotificationEvents() {
           case "notification_accept":
           case "notification_timeout":
             handleConfirmAcceptTimeoutEvent(payload, openNewRef);
-            break;
-          case "notification_action":
-            handleNotificationActionEvent(payload, openNewRef);
-            break;
-          case "notification_option_selected":
-            handleOptionSelectedEvent(payload, openNewRef);
             break;
           case "notification_footer_action":
             handleFooterActionEvent(payload, ignoredPlatformsRef.current);

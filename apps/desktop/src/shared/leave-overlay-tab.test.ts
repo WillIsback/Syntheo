@@ -92,7 +92,6 @@ describe("goBackOrHome (Alt+←, issue 315)", () => {
 describe("retour aux Paramètres (issue 443)", () => {
   const screens: TabInput[] = [
     { type: "templates" },
-    { type: "calendar" },
     { type: "folders" },
     { type: "contacts" },
     { type: "automations" },
@@ -177,7 +176,7 @@ describe("retour aux Paramètres (issue 443)", () => {
   });
 
   test("revient à la section d'origine même si les Paramètres ont changé de section", () => {
-    openFromSettings({ type: "calendar" }, "meetings");
+    openFromSettings({ type: "folders" }, "meetings");
     const settingsTab = useTabs
       .getState()
       .tabs.find((tab) => tab.type === "settings")!;

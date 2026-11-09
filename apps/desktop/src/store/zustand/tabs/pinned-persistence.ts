@@ -67,7 +67,6 @@ const deserializePinnedTabs = (data: string): PinnedTab[] => {
         case "templates":
         case "humans":
         case "organizations":
-        case "calendar":
         case "changelog":
         case "settings":
         case "onboarding":
@@ -77,6 +76,8 @@ const deserializePinnedTabs = (data: string): PinnedTab[] => {
         case "daily":
         // Onglet des tickets GitHub retiré (issue 403) : ignoré à la lecture.
         case "task":
+        // Calendrier retiré (issue 465) : ignoré à la lecture.
+        case "calendar":
         case "extension":
         case "extensions":
         default:

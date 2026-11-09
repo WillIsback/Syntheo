@@ -446,7 +446,12 @@ export type SpeakerContextInterval = {
 	start_ms: number,
 	end_ms: number,
 	active_call: boolean,
-	calendar_call: boolean,
+	/**
+	 *  Lien de réunion du calendrier, présent seulement dans les contextes
+	 *  enregistrés avant la suppression du calendrier (issue 465) : relu pour
+	 *  que l'attribution des voix des anciennes notes ne change pas.
+	 */
+	calendar_call?: boolean | null,
 	mic_isolated: boolean | null,
 	shared_microphone: boolean,
 	title: string,

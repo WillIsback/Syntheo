@@ -562,7 +562,7 @@ mod tests {
                         start_ms,
                         end_ms,
                         active_call: true,
-                        calendar_call: false,
+                        calendar_call: None,
                         mic_isolated: None,
                         shared_microphone: false,
                         title: String::new(),

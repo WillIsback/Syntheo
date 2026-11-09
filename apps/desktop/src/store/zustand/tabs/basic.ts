@@ -21,7 +21,6 @@ import { listenerStore } from "~/store/zustand/listener/instance";
 
 export const RETURN_ORIGIN_TAB_TYPES: Tab["type"][] = [
   "automations",
-  "calendar",
   "contacts",
   "folders",
   "settings",
@@ -33,7 +32,6 @@ export const RETURN_ORIGIN_TAB_TYPES: Tab["type"][] = [
 // « ← Paramètres » et le raccourci Retour y ramène.
 export const SETTINGS_RETURN_TAB_TYPES: Tab["type"][] = [
   "automations",
-  "calendar",
   "contacts",
   "folders",
   "templates",
@@ -532,7 +530,6 @@ const reuseExistingTab = (
       state: {
         ...nextTab.state,
         autoStart: true,
-        scheduledAutoStart: requestedTab.state.scheduledAutoStart ?? null,
       },
     };
   }

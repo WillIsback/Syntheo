@@ -21,7 +21,6 @@ const hoisted = vi.hoisted(() => ({
   unminimizeWindow: vi.fn(),
   focusWindow: vi.fn(),
   meetingChatRecords: [] as unknown[],
-  eventParticipants: [] as Array<Record<string, unknown>>,
   userTemplates: [] as Array<Record<string, unknown>>,
   replacementContent: null as unknown,
   replaceContent: vi.fn(),
@@ -30,9 +29,6 @@ const hoisted = vi.hoisted(() => ({
   openTemplatesTab: vi.fn(),
   noteEditorProps: [] as Record<string, unknown>[],
   canShowTranscript: false,
-  briefVisible: false,
-  briefGenerating: false,
-  createBrief: vi.fn(),
 }));
 
 vi.mock("@tauri-apps/api/core", () => ({
@@ -98,10 +94,6 @@ vi.mock("~/editor-bridge/app-link-view", () => ({
   AppLinkView: () => null,
 }));
 
-vi.mock("~/calendar/queries", () => ({
-  useSessionEventParticipants: () => hoisted.eventParticipants,
-}));
-
 vi.mock("~/editor-bridge/mention-config", () => ({
   useMentionConfig: () => ({ users: [] }),
 }));
@@ -148,24 +140,12 @@ vi.mock("~/stt/contexts", () => ({
   useListener: () => "inactive",
 }));
 
-vi.mock("~/session/hooks/useCreatePreMeetingBrief", () => ({
-  useCreatePreMeetingBrief: () => ({
-    visible: hoisted.briefVisible,
-    isGenerating: hoisted.briefGenerating,
-    createBrief: hoisted.createBrief,
-  }),
-}));
-
 function RawEditor({
   sessionId,
   className,
-  eventTitle,
-  eventDescription,
 }: {
   sessionId: string;
   className?: string;
-  eventTitle?: string;
-  eventDescription?: string;
 }) {
   return (
     <SessionRawEditor
@@ -173,8 +153,6 @@ function RawEditor({
       rawMd={hoisted.rawMd}
       sessionTitle={hoisted.sessionTitle}
       className={className}
-      eventTitle={eventTitle}
-      eventDescription={eventDescription}
     />
   );
 }
@@ -237,7 +215,6 @@ describe("RawEditor", () => {
     hoisted.fileUpload = vi.fn();
     hoisted.processAudioFile = vi.fn();
     hoisted.meetingChatRecords = [];
-    hoisted.eventParticipants = [];
     hoisted.userTemplates = [];
     hoisted.canShowTranscript = false;
     hoisted.replacementContent = null;
@@ -252,9 +229,6 @@ describe("RawEditor", () => {
     hoisted.showWindow.mockResolvedValue(undefined);
     hoisted.unminimizeWindow.mockResolvedValue(undefined);
     hoisted.focusWindow.mockResolvedValue(undefined);
-    hoisted.briefVisible = false;
-    hoisted.briefGenerating = false;
-    hoisted.createBrief.mockReset();
   });
 
   it("removes a legacy session title from the memo body", () => {
@@ -532,11 +506,8 @@ describe("RawEditor", () => {
     ).not.toBeNull();
   });
 
-  it("prioritizes event-aware template suggestions", () => {
-    hoisted.eventParticipants = [
-      { name: "John", is_current_user: true },
-      { name: "Ada", is_current_user: false },
-    ];
+  it("prioritizes title-aware template suggestions", () => {
+    hoisted.sessionTitle = "Acme product demo";
     hoisted.userTemplates = [
       {
         id: "default-daily-standup",
@@ -564,57 +535,19 @@ describe("RawEditor", () => {
       },
     ];
 
-    render(
-      <RawEditor
-        sessionId="session-1"
-        eventTitle="Acme product demo"
-        eventDescription="Qualify the prospect and understand their budget"
-      />,
-    );
+    render(<RawEditor sessionId="session-1" />);
 
     expect(
       screen.getAllByRole("button").map((button) => button.textContent),
     ).toEqual([
       "Template iconSales Discovery Call",
-      "Template icon1:1 Meeting",
       "Template iconProject Kickoff",
+      "Template iconDaily Standup",
       "New template",
     ]);
   });
 
-  it("offers a brief suggestion above templates when one can be created", () => {
-    hoisted.briefVisible = true;
-    hoisted.userTemplates = [
-      {
-        id: "default-project-kickoff",
-        title: "Project Kickoff",
-        pinned: false,
-        icon: { type: "emoji", value: "🚀" },
-        sections: [{ title: "Goals", description: "" }],
-      },
-    ];
-
-    render(<RawEditor sessionId="session-1" />);
-
-    expect(screen.queryByText("Prepare for this meeting")).toBeNull();
-    expect(
-      screen.getAllByRole("button").map((button) => button.textContent),
-    ).toEqual([
-      "Create a brief to prepare this meeting",
-      "Template iconProject Kickoff",
-      "New template",
-    ]);
-
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "Create a brief to prepare this meeting",
-      }),
-    );
-    expect(hoisted.createBrief).toHaveBeenCalledOnce();
-  });
-
-  it("hides the brief suggestion once the meeting has a recording or transcript", () => {
-    hoisted.briefVisible = true;
+  it("hides template suggestions once the meeting has a transcript", () => {
     hoisted.canShowTranscript = true;
     hoisted.userTemplates = [
       {
@@ -628,11 +561,6 @@ describe("RawEditor", () => {
 
     render(<RawEditor sessionId="session-1" />);
 
-    expect(
-      screen.queryByRole("button", {
-        name: "Create a brief to prepare this meeting",
-      }),
-    ).toBeNull();
     expect(screen.queryByText("Suggested templates")).toBeNull();
     expect(screen.queryByRole("button", { name: "Daily Standup" })).toBeNull();
   });
@@ -646,36 +574,6 @@ describe("RawEditor", () => {
     >(props, "placeholderComponent");
     expect(placeholder({ isEmptyDoc: true })).toBe("Start writing...");
     expect(placeholder({ isEmptyDoc: false })).toBe("");
-  });
-
-  it("locks the memo and shows creating brief while a brief is generated", () => {
-    hoisted.briefVisible = true;
-    hoisted.briefGenerating = true;
-    hoisted.userTemplates = [
-      {
-        id: "default-project-kickoff",
-        title: "Project Kickoff",
-        pinned: false,
-        icon: { type: "emoji", value: "🚀" },
-        sections: [{ title: "Goals", description: "" }],
-      },
-    ];
-
-    render(<RawEditor sessionId="session-1" />);
-
-    const props = hoisted.noteEditorProps[hoisted.noteEditorProps.length - 1];
-    expect(
-      requireCallback<(props: { isEmptyDoc: boolean }) => string>(
-        props,
-        "placeholderComponent",
-      )({ isEmptyDoc: true }),
-    ).toBe("Creating brief...");
-    expect(props?.readOnly).toBe(true);
-    expect(screen.queryByText("Prepare for this meeting")).toBeNull();
-    expect(screen.queryByText("Suggested templates")).toBeNull();
-    expect(
-      screen.queryByRole("button", { name: "Project Kickoff" }),
-    ).toBeNull();
   });
 
   it("creates a template from the empty memo state", async () => {

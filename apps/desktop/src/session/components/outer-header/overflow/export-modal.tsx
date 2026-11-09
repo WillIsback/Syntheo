@@ -35,7 +35,6 @@ import {
   useSession,
   useSessionParticipants,
 } from "~/session/queries";
-import { getSessionEvent } from "~/session/utils";
 import { isAppStoreBuild } from "~/shared/app-store";
 import type { EditorView } from "~/store/zustand/tabs/schema";
 import { useSessionTranscriptMetadata } from "~/stt/queries";
@@ -62,8 +61,6 @@ export function ExportModal({
   const session = useSession(sessionId);
   const sessionTitle = session?.title;
   const sessionCreatedAt = session?.created_at;
-  const event = session ? getSessionEvent(session) : null;
-  const eventTitle = event?.title;
   const rawMd = session?.raw_md;
 
   const enhancedNoteId = currentView.type === "enhanced" ? currentView.id : "";
@@ -131,7 +128,6 @@ export function ExportModal({
     createdAt: sessionCreatedAt ?? null,
     participants: participantNames,
     duration: transcriptDuration,
-    eventTitle: eventTitle || null,
     memoMd: includeMemo ? getMemoMd() || null : null,
     summaryMd: includeSummary ? getSummaryMd() || null : null,
     transcript: includeTranscript ? transcriptItems : null,

@@ -163,7 +163,7 @@ pub fn main() {
 
     builder = builder
         .plugin(tauri_plugin_importer::init())
-        .plugin(tauri_plugin_calendar::init())
+        .plugin(tauri_plugin_contacts::init())
         .plugin(tauri_plugin_todo::init());
 
     #[cfg(not(feature = "app-store"))]
@@ -378,7 +378,6 @@ pub fn main() {
                 let _ = permissions.reset(Permission::SystemAudio).await;
                 let _ = permissions.reset(Permission::ScreenRecording).await;
                 let _ = permissions.reset(Permission::Accessibility).await;
-                let _ = permissions.reset(Permission::Calendar).await;
                 let _ = permissions.reset(Permission::Reminders).await;
             });
         }

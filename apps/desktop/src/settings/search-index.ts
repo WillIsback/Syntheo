@@ -55,7 +55,7 @@ export const SETTINGS_SEARCH_INDEX = [
     page: "app",
     section: IDENTITY,
     label: msg`Email`,
-    keywords: msg`email address, mail, calendar, attendees`,
+    keywords: msg`email address, mail, attendees`,
   },
   {
     id: "profile-company",
@@ -133,13 +133,6 @@ export const SETTINGS_SEARCH_INDEX = [
     keywords: msg`time, hour, country, time difference`,
   },
   {
-    id: "week-start",
-    page: "app",
-    section: LANGUAGE_REGION,
-    label: msg`Week starts on`,
-    keywords: msg`Monday, Sunday, calendar, week`,
-  },
-  {
     id: "export-location",
     page: "app",
     section: STORAGE,
@@ -148,20 +141,6 @@ export const SETTINGS_SEARCH_INDEX = [
   },
 
   // Réunions
-  {
-    id: "auto-start-meetings",
-    page: "meetings",
-    label: msg`Start when meeting begins`,
-    keywords: msg`automatic, start, calendar, scheduled meeting`,
-    platforms: ["macos"],
-  },
-  {
-    id: "auto-join-meetings",
-    page: "meetings",
-    label: msg`Join scheduled meetings`,
-    keywords: msg`automatic, meeting link, Teams, Zoom, calendar`,
-    platforms: ["macos"],
-  },
   {
     id: "auto-stop-meetings",
     page: "meetings",
@@ -255,12 +234,6 @@ export const SETTINGS_SEARCH_INDEX = [
     keywords: msg`notification, alert, synchronization, cloud`,
   },
   {
-    id: "notify-events",
-    page: "notifications",
-    label: msg`Event notifications`,
-    keywords: msg`reminder, calendar, meeting, 5 minutes, alert`,
-  },
-  {
     id: "notify-recording",
     page: "notifications",
     label: msg`Recording status prompts`,
@@ -333,13 +306,6 @@ export const SETTINGS_SEARCH_INDEX = [
     page: "permissions",
     label: msg`Accessibility`,
     keywords: msg`access, authorize, meeting controls, chat`,
-    platforms: ["macos"],
-  },
-  {
-    id: "permission-calendar",
-    page: "permissions",
-    label: msg`Calendar`,
-    keywords: msg`access, authorize, Apple Calendar, events`,
     platforms: ["macos"],
   },
 

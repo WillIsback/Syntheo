@@ -10,7 +10,8 @@ use tauri_plugin_tantivy::{
 };
 
 // Increment when the SQLite-to-Tantivy document shape changes so existing indexes are rebuilt.
-const PROJECTION_VERSION: i64 = 4;
+// 5 : la date d'une note ne vient plus de l'événement de calendrier (issue 465).
+const PROJECTION_VERSION: i64 = 5;
 const BATCH_SIZE: i64 = 64;
 const DIRTY_DEBOUNCE: Duration = Duration::from_millis(250);
 const RETRY_INTERVAL: Duration = Duration::from_secs(5);
@@ -370,7 +371,7 @@ async fn build_session_document(
     id: &str,
 ) -> WorkerResult<IndexAction> {
     let Some(session) = sqlx::query(
-        "SELECT title, created_at, event_json, source_apps_json, locked
+        "SELECT title, created_at, source_apps_json, locked
          FROM sessions
          WHERE id = ? AND deleted_at IS NULL",
     )
@@ -385,14 +386,13 @@ async fn build_session_document(
     if locked != 0 {
         let title: String = session.get("title");
         let created_at: String = session.get("created_at");
-        let event_json: String = session.get("event_json");
         return Ok(IndexAction::Upsert(SearchDocument {
             id: id.to_string(),
             doc_type: "session".to_string(),
             language: None,
             title: fallback_title(&title, "Untitled"),
             content: String::new(),
-            created_at: session_search_timestamp(&event_json, &created_at),
+            created_at: to_epoch_ms(&Value::String(created_at)),
             facets: Vec::new(),
         }));
     }
@@ -464,7 +464,6 @@ async fn build_session_document(
 
     let title: String = session.get("title");
     let created_at: String = session.get("created_at");
-    let event_json: String = session.get("event_json");
 
     Ok(IndexAction::Upsert(SearchDocument {
         id: id.to_string(),
@@ -472,7 +471,7 @@ async fn build_session_document(
         language: None,
         title: fallback_title(&title, "Untitled"),
         content: merge_content(content_parts.iter().map(String::as_str)),
-        created_at: session_search_timestamp(&event_json, &created_at),
+        created_at: to_epoch_ms(&Value::String(created_at)),
         facets: Vec::new(),
     }))
 }
@@ -749,19 +748,6 @@ fn flatten_nested_transcript_value(value: &Value) -> String {
     }
 
     flatten_transcript_value(value)
-}
-
-fn session_search_timestamp(event_json: &str, created_at: &str) -> i64 {
-    if let Ok(event) = serde_json::from_str::<Value>(event_json)
-        && let Some(started_at) = event.get("started_at")
-    {
-        let timestamp = to_epoch_ms(started_at);
-        if timestamp > 0 {
-            return timestamp;
-        }
-    }
-
-    to_epoch_ms(&Value::String(created_at.to_string()))
 }
 
 fn to_epoch_ms(value: &Value) -> i64 {
@@ -1105,21 +1091,5 @@ mod tests {
             ),
             "hello world again nested array"
         );
-    }
-
-    #[test]
-    fn session_timestamp_prefers_event_start_and_falls_back_to_created_at() {
-        assert_eq!(
-            session_search_timestamp(
-                r#"{"started_at":"2026-07-14T01:02:03Z"}"#,
-                "2025-01-01T00:00:00Z",
-            ),
-            1_783_990_923_000
-        );
-        assert_eq!(
-            session_search_timestamp("{}", "2025-01-01T00:00:00Z"),
-            1_735_689_600_000
-        );
-        assert_eq!(session_search_timestamp(r#"{"started_at":1234}"#, ""), 1234);
     }
 }

@@ -13,7 +13,6 @@ import {
   commands as transcriptionCommands,
   type RenderedTranscriptSegment,
 } from "@syntheo/plugin-transcription";
-import { sessionEventSchema } from "@syntheo/store";
 
 import type { TaskArgsMap, TaskArgsMapTransformed, TaskConfig } from ".";
 import { collectEnhanceImageContext } from "./enhance-images";
@@ -713,19 +712,6 @@ function getSessionContext(
 }
 
 function getSessionData(snapshot: SessionContentSnapshot): Session {
-  const parsed = sessionEventSchema.safeParse(snapshot.event);
-  if (parsed.success) {
-    const eventTitle = parsed.data.title;
-    return {
-      title: eventTitle || snapshot.title || null,
-      startedAt: parsed.data.started_at ?? null,
-      endedAt: parsed.data.ended_at ?? null,
-      event: {
-        name: eventTitle || snapshot.title || "",
-      },
-    };
-  }
-
   return {
     title: snapshot.title || null,
     startedAt: null,

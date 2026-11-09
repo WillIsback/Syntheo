@@ -24,10 +24,7 @@ export {
   type SummaryVersionRecord,
   useSummaryVersions,
 } from "./queries/summary-versions";
-export {
-  createSession,
-  getOrCreateSessionForEventId,
-} from "./queries/creation";
+export { createSession } from "./queries/creation";
 export {
   loadSessionSummariesByFolder,
   useFolderIcons,
@@ -47,7 +44,6 @@ export {
   useSessionParticipants,
 } from "./queries/participants";
 export {
-  loadSessionEvent,
   updateSession,
   useSession,
   useSessionHasTranscript,

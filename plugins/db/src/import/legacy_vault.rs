@@ -143,8 +143,6 @@ fn parse_source(
             let content = std::str::from_utf8(bytes)
                 .map_err(|error| format!("source is not valid UTF-8: {error}"))?;
             match source.kind {
-                SourceKind::Calendar => super::calendars::parse_legacy_calendars(content),
-                SourceKind::Event => super::events::parse_legacy_events(content),
                 SourceKind::Template => super::templates::parse_legacy_templates(content),
                 SourceKind::SessionMeta => parse_session_meta(vault_base, &source.path, content),
                 SourceKind::SessionDocument => {

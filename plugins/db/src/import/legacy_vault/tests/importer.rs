@@ -95,6 +95,7 @@ async fn shadow_import_is_non_destructive_idempotent_and_audited() {
         r#"{"general":{"theme":"dark"}}"#,
     )
     .unwrap();
+    // Calendrier retiré (issue 465) : ces deux fichiers sont ignorés.
     std::fs::write(
         dir.path().join("calendars.json"),
         r##"{"calendar-1":{"tracking_id_calendar":"calendar-track-1","name":"Work","enabled":true,"provider":"google","source":"account","color":"#123456","connection_id":"connection-1"}}"##,
@@ -150,8 +151,6 @@ async fn shadow_import_is_non_destructive_idempotent_and_audited() {
         ("chat_groups", "SELECT COUNT(*) FROM chat_groups", 1),
         ("chat_messages", "SELECT COUNT(*) FROM chat_messages", 1),
         ("app_settings", "SELECT COUNT(*) FROM app_settings", 2),
-        ("calendars", "SELECT COUNT(*) FROM calendars", 1),
-        ("events", "SELECT COUNT(*) FROM events", 1),
         ("templates", "SELECT COUNT(*) FROM templates", 22),
     ] {
         assert_eq!(row_count(&db, query).await, expected, "{table}");
@@ -182,7 +181,7 @@ async fn shadow_import_is_non_destructive_idempotent_and_audited() {
         .fetch_one(db.pool())
         .await
         .unwrap();
-    assert_eq!(item_count, 26);
+    assert_eq!(item_count, 22);
 
     let unchanged_count: i64 = sqlx::query_scalar(
         "SELECT COUNT(*) FROM migration_import_items WHERE status = 'unchanged'",
@@ -190,19 +189,19 @@ async fn shadow_import_is_non_destructive_idempotent_and_audited() {
     .fetch_one(db.pool())
     .await
     .unwrap();
-    assert_eq!(unchanged_count, 12);
+    assert_eq!(unchanged_count, 10);
 
     let report = super::super::super::get_legacy_import_report(db.pool())
         .await
         .unwrap();
-    assert_eq!(report.items.len(), 13);
+    assert_eq!(report.items.len(), 11);
     assert_eq!(
         report
             .items
             .iter()
             .filter(|item| item.status == "unchanged")
             .count(),
-        12
+        10
     );
     assert_eq!(
         report
@@ -212,14 +211,14 @@ async fn shadow_import_is_non_destructive_idempotent_and_audited() {
             .count(),
         1
     );
-    assert_eq!(report.targets.len(), 18);
+    assert_eq!(report.targets.len(), 16);
     assert_eq!(
         report
             .targets
             .iter()
             .filter(|target| target.status == "unchanged")
             .count(),
-        17
+        15
     );
     assert_eq!(
         report
@@ -231,5 +230,5 @@ async fn shadow_import_is_non_destructive_idempotent_and_audited() {
     );
     let latest_run = report.latest_run.unwrap();
     assert_eq!(latest_run.status, "completed");
-    assert_eq!(latest_run.matched_count, 18);
+    assert_eq!(latest_run.matched_count, 16);
 }

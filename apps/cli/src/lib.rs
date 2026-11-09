@@ -63,7 +63,7 @@ pub async fn run(mut args: Args) -> Result<u8> {
             if matches!(&command, cli::MeetingCommand::Capabilities) {
                 output::emit(&output::json(
                     "meetings.capabilities",
-                    &serde_json::json!({"recorder_version":VERSION,"managed_initialization":1,"managed_settings":1,"intelligence_disabled":true,"conditional_delete":1,"attachment_export":1,"calendar_identity_export":1,"hold_inventory_export":1,"hold_orphan_inventory":1,"hold_filesystem_inventory":1,"hold_resumable_filesystem_inventory":1,"capture_completion":1,"pilot_usage":1}),
+                    &serde_json::json!({"recorder_version":VERSION,"managed_initialization":1,"managed_settings":1,"intelligence_disabled":true,"conditional_delete":1,"attachment_export":1,"hold_inventory_export":1,"hold_orphan_inventory":1,"hold_filesystem_inventory":1,"hold_resumable_filesystem_inventory":1,"capture_completion":1,"pilot_usage":1}),
                     None,
                 )?);
                 return Ok(0);

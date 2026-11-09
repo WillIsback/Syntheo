@@ -32,8 +32,6 @@ type LoadedNoteFile = {
   sessionId: string;
   title: string;
   date: string | null;
-  eventName: string | null;
-  eventId: string | null;
   participantIds: string[];
   participants: string[];
   participantNamesById?: Record<string, string>;
@@ -55,22 +53,6 @@ type SearchMatch = {
 
 function normalizeWhitespace(value: string): string {
   return value.replace(/\s+/g, " ").trim();
-}
-
-function extractEventName(event: unknown): string | null {
-  if (!event || typeof event !== "object") {
-    return null;
-  }
-
-  const record = event as Record<string, unknown>;
-  if (typeof record.name === "string" && record.name.trim()) {
-    return record.name.trim();
-  }
-  if (typeof record.title === "string" && record.title.trim()) {
-    return record.title.trim();
-  }
-
-  return null;
 }
 
 function extractTranscriptText(
@@ -157,8 +139,6 @@ async function loadNoteFile(sessionId: string): Promise<LoadedNoteFile | null> {
     sessionId,
     title: snapshot.title.trim() || "Untitled",
     date: snapshot.createdAt || null,
-    eventName: extractEventName(snapshot.event),
-    eventId: snapshot.eventId,
     participantIds,
     participants,
     participantNamesById,
@@ -254,13 +234,6 @@ function searchNote(note: LoadedNoteFile, query: string): SearchMatch | null {
     snippets.push({
       section: "Participants",
       text: matchingParticipants.join(", "),
-    });
-  }
-  if (note.eventName?.toLowerCase().includes(lowerQuery)) {
-    score += 8;
-    snippets.push({
-      section: "Event",
-      text: note.eventName,
     });
   }
 
@@ -370,11 +343,6 @@ function scoreRelatedNote(
 ): RelatedNoteMatch | null {
   const reasons: string[] = [];
   let score = 0;
-
-  if (base.eventId && candidate.eventId === base.eventId) {
-    reasons.push("same calendar event");
-    score += 20;
-  }
 
   const participantReasons = sharedParticipantReasons(
     baseParticipantIds,
@@ -518,7 +486,7 @@ export const buildSearchMeetingContentTool = (deps: ToolDependencies) =>
 export const buildFindRelatedMeetingsTool = (deps: ToolDependencies) =>
   tool({
     description:
-      "Find meetings related to the current or given meeting by shared participants, the same calendar event, or nearby dates.",
+      "Find meetings related to the current or given meeting by shared participants or nearby dates.",
     inputSchema: z.object({
       meeting_id: z
         .string()

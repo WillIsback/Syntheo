@@ -21,11 +21,9 @@ const STEPS = [
 // Le seul bouton `primary` de l'accueil : crée une note et l'ouvre.
 export function StartButton({
   onStart,
-  busy = false,
   os = "pc",
 }: {
   onStart: () => void;
-  busy?: boolean;
   os?: ShortcutPlatform;
 }) {
   const { t } = useLingui();
@@ -40,8 +38,6 @@ export function StartButton({
     <button
       type="button"
       onClick={onStart}
-      disabled={busy}
-      aria-busy={busy || undefined}
       aria-keyshortcuts={ariaShortcut("newNote", os)}
       data-start-button
       className={cn([
@@ -49,7 +45,6 @@ export function StartButton({
         "flex w-full items-center gap-[18px] rounded-2xl px-6 py-[22px] text-left",
         "motion-safe:transition-colors",
         "focus-visible:ring-ring focus-visible:ring-offset-background focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
-        "disabled:cursor-progress disabled:opacity-80",
       ])}
     >
       <span
@@ -61,9 +56,6 @@ export function StartButton({
       <span className="flex min-w-0 flex-col">
         <span className="text-[19px] leading-snug font-semibold">
           <Trans>Start a meeting</Trans>
-        </span>
-        <span className="text-sm opacity-75">
-          <Trans>Title and participants taken from the calendar</Trans>
         </span>
         <span data-steps className="mt-2 flex flex-wrap gap-1.5 text-xs">
           {STEPS.map((step) => (

@@ -127,26 +127,13 @@ Next steps: testing and validation of the algorithms
 });
 
 describe("buildKeywordSourceText", () => {
-  it("includes session note, title, and event metadata", () => {
+  it("includes the session note and title", () => {
     expect(
       buildKeywordSourceText({
         rawMd: "Discuss product launch",
         title: "Erebor sync",
-        eventJson: JSON.stringify({
-          title: "OpenWorld review",
-          description: "Airborne Brothers follow-up",
-          location: "Zoom",
-        }),
       }),
-    ).toBe(
-      [
-        "Discuss product launch",
-        "Erebor sync",
-        "OpenWorld review",
-        "Airborne Brothers follow-up",
-        "Zoom",
-      ].join("\n"),
-    );
+    ).toBe(["Discuss product launch", "Erebor sync"].join("\n"));
   });
 });
 
@@ -156,13 +143,7 @@ describe("getSessionKeywords", () => {
       {
         raw_md: "Discuss #Launch and production systems",
         title: "Erebor sync",
-        event_json: JSON.stringify({
-          title: "OpenWorld review",
-          description: "Airborne Brothers follow-up",
-          location: "Zoom",
-        }),
         participant_names_json: "[]",
-        event_participants_json: "[]",
       },
     ]);
 
@@ -174,26 +155,12 @@ describe("getSessionKeywords", () => {
     ).resolves.toEqual(expect.arrayContaining(["Syntheo", "Launch"]));
   });
 
-  it("prioritizes mapped participants and attached event attendees", async () => {
+  it("prioritizes mapped participants", async () => {
     execute.mockResolvedValue([
       {
         raw_md: "Discuss #Launch and production systems",
         title: "Erebor sync",
-        event_json: JSON.stringify({
-          title: "OpenWorld review",
-          description: "Airborne Brothers follow-up",
-          location: "Zoom",
-        }),
-        participant_names_json: JSON.stringify(["Alice Kim"]),
-        event_participants_json: JSON.stringify([
-          { name: "Alice Kim", email: "alice@example.com" },
-          { name: "Mina Park", email: "mina@example.com" },
-          {
-            name: "John Jeong",
-            email: "john@example.com",
-            is_current_user: true,
-          },
-        ]),
+        participant_names_json: JSON.stringify(["Alice Kim", "Mina Park"]),
       },
     ]);
 
@@ -204,7 +171,6 @@ describe("getSessionKeywords", () => {
 
     expect(result.slice(0, 3)).toEqual(["Alice Kim", "Mina Park", "Syntheo"]);
     expect(result).toEqual(expect.arrayContaining(["Launch"]));
-    expect(result).not.toContain("John Jeong");
   });
 });
 
@@ -213,9 +179,7 @@ describe("buildKeywords", () => {
     const result = buildKeywords({
       rawMd: "",
       title: "",
-      eventJson: "",
-      sessionParticipantTerms: ["Alice Kim"],
-      eventParticipantTerms: ["alice kim", "Mina Park"],
+      sessionParticipantTerms: ["Alice Kim", "alice kim", "Mina Park"],
       dictionaryTerms: Array.from(
         { length: 60 },
         (_, index) => `Term ${index}`,

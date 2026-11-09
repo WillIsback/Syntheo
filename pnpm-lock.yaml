@@ -183,9 +183,9 @@ importers:
       '@syntheo/editor':
         specifier: workspace:^
         version: link:../../packages/editor
-      '@syntheo/plugin-calendar':
+      '@syntheo/plugin-contacts':
         specifier: workspace:*
-        version: link:../../plugins/calendar
+        version: link:../../plugins/contacts
       '@syntheo/plugin-db':
         specifier: workspace:*
         version: link:../../plugins/db
@@ -855,7 +855,7 @@ importers:
         specifier: ^2.12.4
         version: 2.12.4
 
-  plugins/calendar:
+  plugins/contacts:
     dependencies:
       '@tauri-apps/api':
         specifier: ^2.12.4

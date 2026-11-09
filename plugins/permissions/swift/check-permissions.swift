@@ -7,7 +7,7 @@ import IOKit.hid
 
 guard CommandLine.arguments.count > 1 else {
   fputs(
-    "Usage: check-permissions <calendar|reminders|contacts|microphone|systemAudio|screenRecording|accessibility|inputMonitoring>\n",
+    "Usage: check-permissions <reminders|contacts|microphone|systemAudio|screenRecording|accessibility|inputMonitoring>\n",
     stderr)
   exit(1)
 }
@@ -15,15 +15,6 @@ guard CommandLine.arguments.count > 1 else {
 let permissionType = CommandLine.arguments[1]
 
 switch permissionType {
-case "calendar":
-  switch EKEventStore.authorizationStatus(for: .event) {
-  case .notDetermined: print("notDetermined")
-  case .restricted: print("restricted")
-  case .denied: print("denied")
-  case .fullAccess: print("fullAccess")
-  case .writeOnly: print("writeOnly")
-  @unknown default: print("unknown")
-  }
 case "reminders":
   switch EKEventStore.authorizationStatus(for: .reminder) {
   case .notDetermined: print("notDetermined")

@@ -28,7 +28,6 @@ vi.mock("@syntheo/plugin-sfx", () => ({
   },
 }));
 
-vi.mock("./calendar", () => ({ CalendarSection: () => null }));
 vi.mock("./imports", () => ({
   ImportSection: () => <div data-testid="import-section" />,
 }));

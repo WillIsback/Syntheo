@@ -281,7 +281,6 @@ export function NotificationSettingsView() {
 
   const configs = useConfigValues([
     "notification_disabled",
-    "notification_event",
     "notification_detect",
     "notification_summary_complete",
     "notification_cloudsync_complete",
@@ -338,7 +337,6 @@ export function NotificationSettingsView() {
   const form = useForm({
     defaultValues: {
       notification_disabled: configs.notification_disabled,
-      notification_event: configs.notification_event,
       notification_detect: configs.notification_detect,
       notification_summary_complete: configs.notification_summary_complete,
       notification_cloudsync_complete: configs.notification_cloudsync_complete,
@@ -361,7 +359,6 @@ export function NotificationSettingsView() {
     onSubmit: ({ value }) => {
       setSettingValues({
         notification_disabled: value.notification_disabled,
-        notification_event: value.notification_event,
         notification_detect: value.notification_detect,
         notification_summary_complete: value.notification_summary_complete,
         notification_cloudsync_complete: value.notification_cloudsync_complete,
@@ -458,21 +455,6 @@ export function NotificationSettingsView() {
                   title={<Trans>Cloud sync complete</Trans>}
                   description={
                     <Trans>Show when initial cloud sync finishes.</Trans>
-                  }
-                  checked={field.state.value}
-                  onChange={field.handleChange}
-                  disabled={notificationsDisabled}
-                />
-              )}
-            </form.Field>
-
-            <form.Field name="notification_event">
-              {(field) => (
-                <SettingSwitchRow
-                  settingId="notify-events"
-                  title={<Trans>Event notifications</Trans>}
-                  description={
-                    <Trans>Prepare for events with a 5-minute reminder.</Trans>
                   }
                   checked={field.state.value}
                   onChange={field.handleChange}
@@ -665,8 +647,7 @@ export function NotificationSettingsView() {
                 <form.Subscribe
                   selector={(state) =>
                     !state.values.notification_disabled &&
-                    (state.values.notification_event ||
-                      state.values.notification_detect)
+                    state.values.notification_detect
                   }
                 >
                   {(anyNotificationEnabled) => (

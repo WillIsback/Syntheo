@@ -307,19 +307,14 @@ async fn write_session(
         marker,
     )?;
     let source_apps_json = serde_json::to_string(&[json!({ "app": SOURCE_TYPE })])?;
-    let event_json = if envelope.session.event.is_null() {
-        String::new()
-    } else {
-        serde_json::to_string(&envelope.session.event)?
-    };
 
     if existing.is_none() {
         sqlx::query(
             "INSERT INTO sessions (
                 id, workspace_id, owner_user_id, title, kind, status, created_at, updated_at,
-                started_at, ended_at, timezone, language, event_id, external_event_id,
-                external_provider, series_id, source_apps_json, event_json, metadata_json
-             ) VALUES (?, ?, ?, ?, 'meeting', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                started_at, ended_at, timezone, language, external_event_id,
+                external_provider, series_id, source_apps_json, metadata_json
+             ) VALUES (?, ?, ?, ?, 'meeting', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         )
         .bind(&envelope.session.id)
         .bind(&envelope.workspace_id)
@@ -332,12 +327,10 @@ async fn write_session(
         .bind(&envelope.session.ended_at)
         .bind(&envelope.session.timezone)
         .bind(&envelope.session.language)
-        .bind(&envelope.session.event_id)
         .bind(&envelope.session.external_event_id)
         .bind(&envelope.session.external_provider)
         .bind(&envelope.session.series_id)
         .bind(source_apps_json)
-        .bind(event_json)
         .bind(metadata_json)
         .execute(&mut **tx)
         .await?;
@@ -350,7 +343,6 @@ async fn write_session(
                 ended_at = COALESCE(NULLIF(?, ''), ended_at),
                 timezone = COALESCE(NULLIF(timezone, ''), ?),
                 language = COALESCE(NULLIF(language, ''), ?),
-                event_id = COALESCE(NULLIF(event_id, ''), ?),
                 external_event_id = COALESCE(NULLIF(external_event_id, ''), ?),
                 external_provider = COALESCE(NULLIF(external_provider, ''), ?),
                 series_id = COALESCE(NULLIF(series_id, ''), ?),
@@ -363,7 +355,6 @@ async fn write_session(
         .bind(&envelope.session.ended_at)
         .bind(&envelope.session.timezone)
         .bind(&envelope.session.language)
-        .bind(&envelope.session.event_id)
         .bind(&envelope.session.external_event_id)
         .bind(&envelope.session.external_provider)
         .bind(&envelope.session.series_id)
@@ -375,9 +366,8 @@ async fn write_session(
         sqlx::query(
             "UPDATE sessions SET
                 title = ?, status = ?, updated_at = ?, started_at = ?, ended_at = ?,
-                timezone = ?, language = ?, event_id = ?, external_event_id = ?,
-                external_provider = ?, series_id = ?, source_apps_json = ?, event_json = ?,
-                metadata_json = ?
+                timezone = ?, language = ?, external_event_id = ?, external_provider = ?,
+                series_id = ?, source_apps_json = ?, metadata_json = ?
              WHERE id = ?",
         )
         .bind(&envelope.session.title)
@@ -387,12 +377,10 @@ async fn write_session(
         .bind(&envelope.session.ended_at)
         .bind(&envelope.session.timezone)
         .bind(&envelope.session.language)
-        .bind(&envelope.session.event_id)
         .bind(&envelope.session.external_event_id)
         .bind(&envelope.session.external_provider)
         .bind(&envelope.session.series_id)
         .bind(source_apps_json)
-        .bind(event_json)
         .bind(metadata_json)
         .bind(&envelope.session.id)
         .execute(&mut **tx)

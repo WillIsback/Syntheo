@@ -147,45 +147,6 @@ async fn insert_row_if_missing(
     row: &LegacyImportRow,
 ) -> Result<InsertOutcome, sqlx::Error> {
     let result = match row {
-        LegacyImportRow::Calendar(row) => sqlx::query(
-            "INSERT INTO calendars \
-             (id, tracking_id_calendar, name, enabled, provider, source, color, connection_id) \
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING",
-        )
-        .bind(&row.id)
-        .bind(&row.tracking_id_calendar)
-        .bind(&row.name)
-        .bind(row.enabled)
-        .bind(&row.provider)
-        .bind(&row.source)
-        .bind(&row.color)
-        .bind(&row.connection_id)
-        .execute(&mut **transaction)
-        .await?,
-        LegacyImportRow::Event(row) => sqlx::query(
-            "INSERT INTO events \
-             (id, tracking_id_event, calendar_id, title, started_at, ended_at, location, \
-              meeting_link, description, note, recurrence_series_id, has_recurrence_rules, \
-              is_all_day, provider, participants_json) \
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING",
-        )
-        .bind(&row.id)
-        .bind(&row.tracking_id_event)
-        .bind(&row.calendar_id)
-        .bind(&row.title)
-        .bind(&row.started_at)
-        .bind(&row.ended_at)
-        .bind(&row.location)
-        .bind(&row.meeting_link)
-        .bind(&row.description)
-        .bind(&row.note)
-        .bind(&row.recurrence_series_id)
-        .bind(row.has_recurrence_rules)
-        .bind(row.is_all_day)
-        .bind(&row.provider)
-        .bind(&row.participants_json)
-        .execute(&mut **transaction)
-        .await?,
         LegacyImportRow::Template(row) => sqlx::query(
             "INSERT INTO templates \
              (id, title, description, pinned, pin_order, category, targets_json, sections_json) \
@@ -255,11 +216,11 @@ async fn insert_row_if_missing(
         LegacyImportRow::Session(row) => sqlx::query(
             "INSERT INTO sessions \
              (id, workspace_id, owner_user_id, title, created_at, updated_at, started_at, \
-              ended_at, event_id, external_event_id, external_provider, series_id, event_json, \
-              metadata_json, folder_path) \
+              ended_at, external_event_id, external_provider, series_id, metadata_json, \
+              folder_path) \
              VALUES (?, NULLIF((SELECT json_extract(value_json, '$.workspace_id') \
                FROM app_settings WHERE id = 'cloudsync_workspace_binding'), ''), \
-               ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING",
+               ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING",
         )
         .bind(&row.id)
         .bind(&row.owner_user_id)
@@ -268,11 +229,9 @@ async fn insert_row_if_missing(
         .bind(&row.created_at)
         .bind(&row.started_at)
         .bind(&row.ended_at)
-        .bind(&row.event_id)
         .bind(&row.external_event_id)
         .bind(&row.external_provider)
         .bind(&row.series_id)
-        .bind(&row.event_json)
         .bind(&row.metadata_json)
         .bind(&row.folder_path)
         .execute(&mut **transaction)

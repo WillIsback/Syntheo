@@ -31,7 +31,6 @@ describe("folder session queries", () => {
         id: "unfiled",
         title: "Scratch",
         created_at: "2026-08-01T00:00:00.000Z",
-        event_json: "",
         folder_path: "",
       },
     ]);
@@ -41,7 +40,6 @@ describe("folder session queries", () => {
         id: "unfiled",
         title: "Scratch",
         created_at: "2026-08-01T00:00:00.000Z",
-        event_json: "",
       },
     ]);
     expect(mocks.execute).toHaveBeenCalledWith(
@@ -56,14 +54,12 @@ describe("folder session queries", () => {
         id: "nested",
         title: "Week 3",
         created_at: "2026-08-10T00:00:00.000Z",
-        event_json: "",
         folder_path: "CS 101/week-3",
       },
       {
         id: "other",
         title: "Other class",
         created_at: "2026-08-11T00:00:00.000Z",
-        event_json: "",
         folder_path: "CS 101 Extra",
       },
     ]);
@@ -73,7 +69,6 @@ describe("folder session queries", () => {
         id: "nested",
         title: "Week 3",
         created_at: "2026-08-10T00:00:00.000Z",
-        event_json: "",
       },
     ]);
     expect(mocks.execute).toHaveBeenCalledWith(

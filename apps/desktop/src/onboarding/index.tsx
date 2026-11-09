@@ -5,7 +5,6 @@ import { useCallback, useEffect, useState } from "react";
 
 import { cn } from "@syntheo/utils";
 
-import { CalendarSection } from "./calendar";
 import {
   getInitialStep,
   getNextStep,
@@ -149,23 +148,6 @@ function OnboardingScreenContent({
             onNext={goNext}
           >
             <PermissionsSection onContinue={goNext} />
-          </OnboardingSection>
-
-          <OnboardingSection
-            title={<Trans>Connect calendar</Trans>}
-            description={
-              <Trans>
-                Syntheo lit votre calendrier local pour vous rappeler vos
-                réunions
-              </Trans>
-            }
-            completedTitle={<Trans>Calendar connected</Trans>}
-            status={getStepStatus("calendar", currentStep)}
-            onBack={goBack}
-            onNext={goNext}
-            onSkip={skipCurrentStep}
-          >
-            <CalendarSection onContinue={goNext} />
           </OnboardingSection>
 
           <OnboardingSection

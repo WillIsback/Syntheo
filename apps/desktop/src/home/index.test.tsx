@@ -7,8 +7,6 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { NextMeeting } from "./next-meeting";
-
 import type { MenuItemDef } from "~/shared/hooks/useNativeContextMenu";
 
 const mocks = vi.hoisted(() => ({
@@ -16,10 +14,8 @@ const mocks = vi.hoisted(() => ({
   openCurrent: vi.fn(),
   newNote: vi.fn(),
   openSearch: vi.fn(),
-  getOrCreateSessionForEventId: vi.fn(),
   deleteSession: vi.fn(),
   menus: [] as MenuItemDef[][],
-  nextMeeting: null as NextMeeting | null,
   firstName: "Camille",
   recentNotes: [
     {
@@ -27,7 +23,6 @@ const mocks = vi.hoisted(() => ({
       title: "Comité projet",
       createdAt: "2024-10-28T10:00:00",
       durationMs: 0,
-      trackingId: "tracking-1",
     },
   ],
 }));
@@ -36,12 +31,7 @@ vi.mock("@tauri-apps/plugin-os", () => ({ platform: mocks.platform }));
 
 vi.mock("./queries", () => ({
   useOwnerFirstName: () => mocks.firstName,
-  useNextMeeting: () => mocks.nextMeeting,
   useRecentNotes: () => mocks.recentNotes,
-}));
-
-vi.mock("~/session/queries", () => ({
-  getOrCreateSessionForEventId: mocks.getOrCreateSessionForEventId,
 }));
 
 vi.mock("~/session/hooks/useDeleteSession", () => ({
@@ -87,24 +77,10 @@ vi.mock("~/store/zustand/tabs", () => ({
 
 import { HomePage } from "./index";
 
-function meeting(imminent: boolean): NextMeeting {
-  const startedAt = new Date(Date.now() + (imminent ? 5 : 120) * 60_000);
-  return {
-    id: "event-1",
-    title: "Point d'équipe",
-    startedAt,
-    endedAt: new Date(startedAt.getTime() + 3_600_000),
-    imminent,
-    ongoing: false,
-  };
-}
-
 describe("HomePage", () => {
   beforeEach(() => {
-    mocks.nextMeeting = null;
     mocks.menus = [];
     mocks.platform.mockReturnValue("linux");
-    mocks.getOrCreateSessionForEventId.mockResolvedValue("session-event");
   });
 
   afterEach(() => {
@@ -112,32 +88,11 @@ describe("HomePage", () => {
     vi.clearAllMocks();
   });
 
-  it("crée une note vierge sans réunion imminente", () => {
-    mocks.nextMeeting = meeting(false);
+  it("Démarrer crée une note vierge", () => {
     render(<HomePage />);
 
     fireEvent.click(screen.getByRole("button", { name: /Start a meeting/ }));
     expect(mocks.newNote).toHaveBeenCalledTimes(1);
-    expect(mocks.getOrCreateSessionForEventId).not.toHaveBeenCalled();
-  });
-
-  it("reprend la réunion imminente de l'agenda (titre et participants)", async () => {
-    mocks.nextMeeting = meeting(true);
-    render(<HomePage />);
-
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: /Start a meeting/ }));
-    });
-
-    expect(mocks.getOrCreateSessionForEventId).toHaveBeenCalledWith(
-      "event-1",
-      "Point d'équipe",
-    );
-    expect(mocks.newNote).not.toHaveBeenCalled();
-    expect(mocks.openCurrent).toHaveBeenCalledWith({
-      type: "sessions",
-      id: "session-event",
-    });
   });
 
   it("ouvre une note de « Reprendre » dans l'onglet courant", () => {
@@ -176,7 +131,6 @@ describe("HomePage", () => {
 
     expect(mocks.deleteSession).toHaveBeenCalledWith("s1", {
       title: "Comité projet",
-      trackingId: "tracking-1",
     });
     expect(mocks.openCurrent).not.toHaveBeenCalled();
   });

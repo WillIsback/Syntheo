@@ -37,7 +37,6 @@ import {
 
 export {
   buildCreateSpeakerParticipantOption,
-  buildEventSpeakerParticipantOptions,
   buildSpeakerParticipantGroups,
   type SpeakerParticipantOption,
 } from "./speaker-participants";
@@ -238,7 +237,7 @@ export function SpeakerParticipantPicker({
   showAssignmentScope?: boolean;
 }) {
   const { t } = useLingui();
-  const { participants, eventParticipants, contacts, resolveHumanId } =
+  const { participants, contacts, resolveHumanId } =
     useSpeakerParticipants(sessionId);
 
   const [query, setQuery] = useState("");
@@ -252,20 +251,19 @@ export function SpeakerParticipantPicker({
     () =>
       buildSpeakerParticipantGroups({
         sessionParticipants: participants,
-        eventParticipants,
         contacts,
         query,
       }),
-    [contacts, eventParticipants, participants, query],
+    [contacts, participants, query],
   );
 
   const createOption = useMemo(
     () =>
       buildCreateSpeakerParticipantOption({
         query,
-        existingOptions: [...participants, ...eventParticipants, ...contacts],
+        existingOptions: [...participants, ...contacts],
       }),
-    [contacts, eventParticipants, participants, query],
+    [contacts, participants, query],
   );
   const hasPeopleGroup = groups.some((group) => group.title === "People");
 

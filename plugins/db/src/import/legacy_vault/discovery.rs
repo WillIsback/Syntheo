@@ -5,8 +5,6 @@ use super::source_format::normalized_relative_path;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum SourceKind {
-    Calendar,
-    Event,
     Template,
     SessionMeta,
     SessionDocument,
@@ -23,8 +21,6 @@ pub(super) enum SourceKind {
 impl SourceKind {
     pub(super) fn as_str(self) -> &'static str {
         match self {
-            Self::Calendar => "calendar",
-            Self::Event => "event",
             Self::Template => "template",
             Self::SessionMeta => "session_meta",
             Self::SessionDocument => "session_document",
@@ -148,8 +144,6 @@ fn classify_source(relative_path: &str) -> Option<SourceKind> {
     let filename = parts.last().copied()?;
 
     match parts.as_slice() {
-        ["calendars.json"] => return Some(SourceKind::Calendar),
-        ["events.json"] => return Some(SourceKind::Event),
         ["templates.json"] => return Some(SourceKind::Template),
         ["tasks.json"] => return Some(SourceKind::Tasks),
         ["daily_notes.json"] => return Some(SourceKind::DailyNotes),

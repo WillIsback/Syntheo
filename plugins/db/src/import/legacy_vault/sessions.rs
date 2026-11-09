@@ -36,10 +36,6 @@ pub(super) fn parse_session_meta(
     }
 
     let event = meta.get("event").and_then(Value::as_object);
-    let event_json = event
-        .map(|event| Value::Object(event.clone()).to_string())
-        .unwrap_or_default();
-    let event_id = value_string(meta.get("event_id")).unwrap_or_default();
     let external_event_id = event
         .and_then(|event| value_string(event.get("tracking_id")))
         .unwrap_or_default();
@@ -66,11 +62,9 @@ pub(super) fn parse_session_meta(
         created_at: value_string(meta.get("created_at")).unwrap_or_default(),
         started_at,
         ended_at,
-        event_id,
         external_event_id,
         external_provider: String::new(),
         series_id,
-        event_json,
         metadata_json: "{}".to_string(),
         folder_path,
         recovery_status: None,
@@ -356,11 +350,9 @@ pub(super) fn parse_transcript(
                     created_at,
                     started_at: String::new(),
                     ended_at: String::new(),
-                    event_id: String::new(),
                     external_event_id: String::new(),
                     external_provider: String::new(),
                     series_id: String::new(),
-                    event_json: String::new(),
                     metadata_json: metadata_json.clone(),
                     folder_path: folder_path.clone(),
                     recovery_status: Some(RECOVERED_MISSING_SESSION_METADATA.to_string()),

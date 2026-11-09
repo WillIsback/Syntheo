@@ -9,8 +9,6 @@ pub struct LegacyImportBatch {
 
 #[derive(Debug)]
 pub enum LegacyImportRow {
-    Calendar(LegacyCalendar),
-    Event(LegacyEvent),
     Template(LegacyTemplate),
     Organization(LegacyOrganization),
     Human(LegacyHuman),
@@ -31,8 +29,6 @@ pub enum LegacyImportRow {
 impl LegacyImportRow {
     pub(super) fn table_name(&self) -> &'static str {
         match self {
-            Self::Calendar(_) => "calendars",
-            Self::Event(_) => "events",
             Self::Template(_) => "templates",
             Self::Organization(_) => "organizations",
             Self::Human(_) => "humans",
@@ -53,8 +49,6 @@ impl LegacyImportRow {
 
     pub(super) fn id(&self) -> &str {
         match self {
-            Self::Calendar(row) => &row.id,
-            Self::Event(row) => &row.id,
             Self::Template(row) => &row.id,
             Self::Organization(row) => &row.id,
             Self::Human(row) => &row.id,
@@ -74,7 +68,7 @@ impl LegacyImportRow {
     }
 
     pub(super) fn existing_sqlite_is_authoritative(&self) -> bool {
-        matches!(self, Self::Calendar(_) | Self::Event(_) | Self::Template(_))
+        matches!(self, Self::Template(_))
             || matches!(self, Self::Session(row) if row.recovery_status.is_some())
     }
 
@@ -86,37 +80,6 @@ impl LegacyImportRow {
             _ => None,
         }
     }
-}
-
-#[derive(Debug)]
-pub struct LegacyCalendar {
-    pub id: String,
-    pub tracking_id_calendar: String,
-    pub name: String,
-    pub enabled: bool,
-    pub provider: String,
-    pub source: String,
-    pub color: String,
-    pub connection_id: String,
-}
-
-#[derive(Debug)]
-pub struct LegacyEvent {
-    pub id: String,
-    pub tracking_id_event: String,
-    pub calendar_id: String,
-    pub title: String,
-    pub started_at: String,
-    pub ended_at: String,
-    pub location: String,
-    pub meeting_link: String,
-    pub description: String,
-    pub note: String,
-    pub recurrence_series_id: String,
-    pub has_recurrence_rules: bool,
-    pub is_all_day: bool,
-    pub provider: String,
-    pub participants_json: Option<String>,
 }
 
 #[derive(Debug)]
@@ -166,11 +129,9 @@ pub struct LegacySession {
     pub created_at: String,
     pub started_at: String,
     pub ended_at: String,
-    pub event_id: String,
     pub external_event_id: String,
     pub external_provider: String,
     pub series_id: String,
-    pub event_json: String,
     pub metadata_json: String,
     pub folder_path: String,
     pub recovery_status: Option<String>,

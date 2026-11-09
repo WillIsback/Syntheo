@@ -31,10 +31,6 @@ vi.mock("@syntheo/ui/components/ui/popover", async () => {
   return { ...actual, Popover };
 });
 
-vi.mock("~/calendar/queries", () => ({
-  useSessionEventParticipants: () => [],
-}));
-
 vi.mock("~/contacts/queries", () => ({
   createHuman: vi.fn(),
   useHumans: () => [{ id: "human-1", name: "Alice", email: "" }],

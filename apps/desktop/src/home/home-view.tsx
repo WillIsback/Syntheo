@@ -1,8 +1,6 @@
-import { Trans, useLingui } from "@lingui/react/macro";
+import { Trans } from "@lingui/react/macro";
 
-import { formatMeetingTime } from "./format";
 import { HomeCapsule } from "./home-capsule";
-import type { NextMeeting } from "./next-meeting";
 import { NoteIndex } from "./note-index";
 import type { RecentNote } from "./queries";
 import { StartButton } from "./start-button";
@@ -20,9 +18,7 @@ const WATERMARK: Record<PaletteId, string> = {
 
 export type HomeViewProps = {
   firstName: string;
-  nextMeeting: NextMeeting | null;
   recentNotes: readonly RecentNote[];
-  starting?: boolean;
   os?: ShortcutPlatform;
   onStart: () => void;
   onOpenNote: (sessionId: string) => void;
@@ -35,9 +31,7 @@ export type HomeViewProps = {
 // 640px, salutation, prochaine réunion, bouton Démarrer, « Reprendre ».
 export function HomeView({
   firstName,
-  nextMeeting,
   recentNotes,
-  starting = false,
   os = "pc",
   onStart,
   onOpenNote,
@@ -70,9 +64,8 @@ export function HomeView({
                 <Trans>Hello.</Trans>
               )}
             </h1>
-            {nextMeeting ? <NextMeetingLine meeting={nextMeeting} /> : null}
           </header>
-          <StartButton onStart={onStart} busy={starting} os={os} />
+          <StartButton onStart={onStart} os={os} />
           <NoteIndex
             notes={recentNotes}
             onOpen={onOpenNote}
@@ -90,19 +83,5 @@ export function HomeView({
       </div>
       <HomeCapsule onSearch={onSearch} os={os} />
     </div>
-  );
-}
-
-function NextMeetingLine({ meeting }: { meeting: NextMeeting }) {
-  const { t, i18n } = useLingui();
-  const title = meeting.title || t`Untitled meeting`;
-  const time = formatMeetingTime(meeting.startedAt, i18n.locale);
-
-  return (
-    <p data-next-meeting className="text-muted-foreground text-base">
-      <Trans>Your next meeting:</Trans>{" "}
-      <b className="text-foreground font-medium">{title}</b>
-      {meeting.ongoing ? t`, in progress.` : t`, at ${time}.`}
-    </p>
   );
 }
