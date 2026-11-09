@@ -70,6 +70,23 @@ impl AudioInput {
         }
     }
 
+    /// Décode en PCM 16 bits mono à `sample_rate`, **en mémoire**, pour le
+    /// flux temps réel (issue 463) : même décodeur que l'import par lot.
+    pub(in crate::batch) fn decode_pcm16_mono(&self, sample_rate: u32) -> Result<Vec<i16>, String> {
+        match self {
+            AudioInput::Path(path) => {
+                let source = syntheo_audio_utils::source_from_path(path)
+                    .map_err(|error| error.to_string())?;
+                decode_source_pcm16_mono(source, sample_rate)
+            }
+            AudioInput::Bytes(data) => {
+                let source = syntheo_audio_utils::source_from_bytes(Arc::clone(data))
+                    .map_err(|error| error.to_string())?;
+                decode_source_pcm16_mono(source, sample_rate)
+            }
+        }
+    }
+
     /// Décode et découpe en segments MP3 mono, **en mémoire**.
     fn encode_segments(&self, segment_duration: Duration) -> Result<Vec<Vec<u8>>, String> {
         match self {
@@ -87,6 +104,33 @@ impl AudioInput {
             }
         }
     }
+}
+
+/// Les canaux sont mêlés en un seul flux : toutes les voix du fichier.
+fn decode_source_pcm16_mono<S: Source>(source: S, sample_rate: u32) -> Result<Vec<i16>, String> {
+    let mut samples = Vec::new();
+    syntheo_audio_utils::for_each_resampled_channel_block::<_, syntheo_audio_utils::Error>(
+        source,
+        sample_rate,
+        |channels| {
+            let Some(first) = channels.first() else {
+                return Ok(());
+            };
+            let count = channels.len() as f32;
+            samples.reserve(first.len());
+            for frame in 0..first.len() {
+                let mixed = channels
+                    .iter()
+                    .map(|channel| channel.get(frame).copied().unwrap_or(0.0))
+                    .sum::<f32>()
+                    / count;
+                samples.push(syntheo_audio_utils::f32_to_i16(mixed));
+            }
+            Ok(())
+        },
+    )
+    .map_err(|error| error.to_string())?;
+    Ok(samples)
 }
 
 pub(super) fn audio_duration(input: &AudioInputRef<'_>) -> Option<Duration> {
@@ -214,6 +258,16 @@ mod tests {
         let duration = audio_duration(&input).expect("decoded duration");
         assert!(duration.as_secs() >= 1, "{duration:?}");
         assert_eq!(input.byte_len(), Some(wav.len() as u64));
+    }
+
+    #[test]
+    fn in_memory_input_decodes_to_mono_pcm_at_the_stream_rate() {
+        let data: Arc<[u8]> = Arc::from(sine_wav(2, 8_000).into_boxed_slice());
+        let samples = AudioInput::Bytes(data).decode_pcm16_mono(16_000).unwrap();
+
+        let seconds = samples.len() as f64 / 16_000.0;
+        assert!((seconds - 2.0).abs() < 0.05, "{seconds} s");
+        assert!(samples.iter().any(|sample| sample.unsigned_abs() > 8_000));
     }
 
     #[test]

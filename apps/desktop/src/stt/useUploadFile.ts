@@ -229,6 +229,9 @@ export function useUploadFile(sessionId: string) {
           Effect.tryPromise({
             try: () =>
               runBatch(filePath, {
+                // Sans modèle par lot, le fichier passe par le flux temps
+                // réel (issue 463).
+                allowRealtimeStream: true,
                 promotion: { scope: "whole_session" },
                 ...(audio ? { audio } : {}),
                 ...(audioUploadId ? { audioUploadId } : {}),

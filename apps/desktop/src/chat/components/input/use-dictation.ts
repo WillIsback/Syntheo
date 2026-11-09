@@ -9,7 +9,12 @@ import { useMountEffect } from "@syntheo/ui/hooks/use-mount-effect";
 
 import { useConfigValue } from "~/shared/config";
 import { useTabs } from "~/store/zustand/tabs";
+import {
+  getBatchAvailability,
+  openTranscriptionSettings,
+} from "~/stt/audio-import-feedback";
 import { useRunBatch } from "~/stt/useRunBatch";
+import { useSTTConnection } from "~/stt/useSTTConnection";
 
 type DictationPhase = "idle" | "starting" | "recording" | "transcribing";
 const MAX_DICTATION_SECONDS = 5 * 60;
@@ -26,6 +31,7 @@ export function useDictation({
     `chat-dictation-${crypto.randomUUID()}`,
   ).current;
   const runBatch = useRunBatch(transcriptionSessionId);
+  const { conn } = useSTTConnection();
   const microphoneDevice = useConfigValue("microphone_device");
   const [phase, setPhaseState] = useState<DictationPhase>("idle");
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -70,6 +76,24 @@ export function useDictation({
       startInFlightRef.current ||
       phaseRef.current !== "idle"
     ) {
+      return;
+    }
+
+    // La dictée du chat transcrit par lot : un modèle temps réel seul ne la
+    // fait pas, on le dit avant d'ouvrir le micro (issue 463).
+    const batchAvailability = getBatchAvailability(conn);
+    if (batchAvailability.status !== "ready") {
+      toast.warning(t`Voice input is unavailable`, {
+        id: "chat-dictation-unavailable",
+        description:
+          batchAvailability.status === "live_only"
+            ? t`This model only transcribes live: voice input in the chat requires a batch transcription model.`
+            : t`No transcription service is set up.`,
+        action: {
+          label: t`Transcription settings`,
+          onClick: openTranscriptionSettings,
+        },
+      });
       return;
     }
 
@@ -136,6 +160,7 @@ export function useDictation({
     }
   }, [
     cancelRecording,
+    conn,
     disabled,
     microphoneDevice,
     setPhase,

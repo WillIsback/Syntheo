@@ -119,9 +119,6 @@ vi.mock("./contexts", () => ({
 }));
 
 vi.mock("./useRunBatch", () => ({
-  // Seul le protocole OpenAI transcrit un fichier ; NVIDIA est temps réel.
-  getBatchProvider: (provider: string) =>
-    provider === "openai" ? "openai" : null,
   isStoppedTranscriptionError: vi.fn(() => false),
   useRunBatch: vi.fn(() => runBatchMock),
 }));
@@ -241,6 +238,7 @@ describe("useUploadFile", () => {
     await waitFor(() => expect(runBatchMock).toHaveBeenCalled());
     expect(audioImportMock).not.toHaveBeenCalled();
     expect(runBatchMock).toHaveBeenCalledWith("", {
+      allowRealtimeStream: true,
       promotion: { scope: "whole_session" },
       audio: { data_base64: "AQID", file_name: "drop.wav" },
     });
@@ -275,6 +273,7 @@ describe("useUploadFile", () => {
     expect(arrayBuffer).not.toHaveBeenCalled();
     expect(audioImportMock).not.toHaveBeenCalled();
     expect(runBatchMock).toHaveBeenCalledWith("", {
+      allowRealtimeStream: true,
       promotion: { scope: "whole_session" },
       audioUploadId: "upload-1",
     });
@@ -318,11 +317,23 @@ describe("useUploadFile", () => {
     consoleError.mockRestore();
   });
 
-  test("refuses a live-only model before choosing a file", () => {
+  test("lets a live-only model choose a file to stream in real time", async () => {
     sttConnection.value = {
       provider: "nvidia",
       model: "cache-aware-parakeet-rnnt-multi-asr-streaming-sortformer",
     };
+    const { result } = renderHook(() => useUploadFile("session-1"), {
+      wrapper: createWrapper(),
+    });
+
+    act(() => result.current.uploadAudio());
+
+    await waitFor(() => expect(selectFileMock).toHaveBeenCalled());
+    expect(toastWarningMock).not.toHaveBeenCalled();
+  });
+
+  test("refuses a model that can't transcribe a file before choosing one", () => {
+    sttConnection.value = { provider: "unknown", model: "unknown-model" };
     const { result } = renderHook(() => useUploadFile("session-1"), {
       wrapper: createWrapper(),
     });
@@ -334,16 +345,51 @@ describe("useUploadFile", () => {
       "Can't import this audio",
       expect.objectContaining({
         description:
-          "This model only transcribes live: importing a file requires a batch transcription model.",
+          "This model can't transcribe a file. Choose another transcription model.",
         action: expect.objectContaining({ label: "Transcription settings" }),
       }),
     );
   });
 
-  test("refuses a dropped file with a live-only model and leaves the note untouched", async () => {
+  test("imports a dropped file through the real-time stream with a live-only model", async () => {
     sttConnection.value = {
       provider: "nvidia",
       model: "cache-aware-parakeet-rnnt-multi-asr-streaming-sortformer",
+    };
+    const { result } = renderHook(() => useUploadFile("session-1"), {
+      wrapper: createWrapper(),
+    });
+    const file = new File([new Uint8Array([1, 2, 3])], "drop.wav", {
+      type: "audio/wav",
+      lastModified: 1_700_000_000_000,
+    });
+    Object.defineProperty(file, "arrayBuffer", {
+      value: vi.fn().mockResolvedValue(new Uint8Array([1, 2, 3]).buffer),
+    });
+
+    act(() => result.current.processAudioFile(file));
+
+    await waitFor(() => expect(runBatchMock).toHaveBeenCalled());
+    expect(toastWarningMock).not.toHaveBeenCalled();
+    expect(runBatchMock).toHaveBeenCalledWith(
+      "",
+      expect.objectContaining({ allowRealtimeStream: true }),
+    );
+    expect(result.current.audioImportAvailability).toEqual({
+      status: "ready",
+      route: "realtime",
+    });
+    await waitFor(() =>
+      expect(queueAutoEnhanceIfSummaryEmptyMock).toHaveBeenCalledWith(
+        "session-1",
+      ),
+    );
+  });
+
+  test("refuses a dropped file when the model can transcribe neither by batch nor live", async () => {
+    sttConnection.value = {
+      provider: "unknown",
+      model: "unknown-model",
     };
     const { result } = renderHook(() => useUploadFile("session-1"), {
       wrapper: createWrapper(),
@@ -362,7 +408,7 @@ describe("useUploadFile", () => {
     expect(audioImportMock).not.toHaveBeenCalled();
     expect(runBatchMock).not.toHaveBeenCalled();
     expect(result.current.audioImportAvailability).toEqual({
-      status: "live_only",
+      status: "unsupported",
     });
   });
 
@@ -490,6 +536,7 @@ describe("useUploadFile", () => {
         expect(runBatchMock).toHaveBeenCalled();
       });
       expect(runBatchMock).toHaveBeenCalledWith("", {
+        allowRealtimeStream: true,
         promotion: { scope: "whole_session" },
         audio: { data_base64: "AQID", file_name: filename },
       });

@@ -24,7 +24,7 @@ const {
   uploadAudioMock: vi.fn(),
   uploadTranscriptMock: vi.fn(),
   audioImportAvailability: {
-    value: { status: "ready" } as { status: "ready" | "live_only" },
+    value: { status: "ready" } as { status: "ready" | "unsupported" },
   },
   audioExists: { value: false },
   audioExistsResolved: { value: true },
@@ -309,15 +309,15 @@ describe("OverflowButton", () => {
     expect(uploadTranscriptMock).toHaveBeenCalledTimes(1);
   });
 
-  it("greys out audio upload with an explanation for a live-only model", () => {
-    audioImportAvailability.value = { status: "live_only" };
+  it("greys out audio upload with an explanation for a model that can't transcribe a file", () => {
+    audioImportAvailability.value = { status: "unsupported" };
     arrange({ transcript: false });
     renderOverflow();
 
     const upload = screen.getByRole("button", { name: "Upload audio" });
     expect(upload.getAttribute("aria-disabled")).toBe("true");
     expect(upload.getAttribute("title")).toBe(
-      "This model only transcribes live: importing a file requires a batch transcription model.",
+      "This model can't transcribe a file. Choose another transcription model.",
     );
 
     // Toujours cliquable : le clic affiche l'explication et le lien réglages.

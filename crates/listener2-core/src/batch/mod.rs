@@ -38,6 +38,16 @@ impl BatchParams {
         Ok(self)
     }
 
+    /// Audio de l'envoi décodé en PCM 16 bits mono à `sample_rate`, en
+    /// mémoire, pour le flux temps réel. Bloquant : à lancer hors du runtime.
+    pub fn decode_pcm16_mono(self, sample_rate: u32) -> Result<Vec<i16>, String> {
+        let params = self.with_decoded_audio()?;
+        params
+            .audio_input()
+            .into_owned()
+            .decode_pcm16_mono(sample_rate)
+    }
+
     /// Copie légère (sans dupliquer un éventuel tampon audio) pour un segment.
     pub(super) fn with_audio_buffer(&self, audio_buffer: Option<AudioBuffer>) -> BatchParams {
         BatchParams {
@@ -105,6 +115,9 @@ impl std::fmt::Debug for AudioBuffer {
 #[strum(serialize_all = "lowercase")]
 pub enum BatchProvider {
     OpenAI,
+    /// Aucun mode par lot : le fichier passe par le flux temps réel du
+    /// fournisseur (issue 463), hors de `run_batch`.
+    Realtime,
 }
 
 /// Tampon audio transmis en mémoire (dictée) : rien n'est écrit sur le disque.
@@ -167,12 +180,27 @@ pub async fn run_batch(
     runtime: Arc<dyn BatchRuntime>,
     params: BatchParams,
 ) -> crate::Result<BatchRunOutput> {
+    let session_id = params.session_id.clone();
+    run_batch_job(
+        runtime.clone(),
+        session_id,
+        run_batch_inner(runtime, params),
+    )
+    .await
+}
+
+/// Cycle d'événements d'un envoi (début, réponse ou échec, fin), partagé par
+/// le lot et par le flux temps réel d'un fichier.
+pub async fn run_batch_job(
+    runtime: Arc<dyn BatchRuntime>,
+    session_id: String,
+    job: impl std::future::Future<Output = crate::Result<BatchRunOutput>>,
+) -> crate::Result<BatchRunOutput> {
     runtime.emit(BatchEvent::BatchStarted {
-        session_id: params.session_id.clone(),
+        session_id: session_id.clone(),
     });
 
-    let session_id = params.session_id.clone();
-    let result = run_batch_inner(runtime.clone(), params).await;
+    let result = job.await;
 
     if let Err(error) = &result {
         let (code, message) = match error {
@@ -206,6 +234,7 @@ pub fn expects_progressive_batch(params: &BatchParams) -> bool {
         BatchProvider::OpenAI => {
             OpenAIAdapter::supports_progressive_batch_model(params.model.as_deref())
         }
+        BatchProvider::Realtime => false,
     }
 }
 
@@ -269,6 +298,10 @@ async fn run_batch_inner(
                 run_direct_batch_for_adapter_kind(AdapterKind::OpenAI, params, listen_params).await
             }
         }
+        BatchProvider::Realtime => Err(crate::BatchFailure::BatchCapabilityUnsupported {
+            provider: BatchProvider::Realtime.to_string(),
+        }
+        .into()),
     }
 }
 

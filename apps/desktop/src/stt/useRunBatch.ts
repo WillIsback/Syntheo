@@ -14,6 +14,11 @@ import { BatchResponseProcessingError } from "./batch-response-processing-error"
 import { completeCaptureTranscript } from "./capture-completion";
 import { useListener } from "./contexts";
 import { persistTranscriptWrite } from "./persist-retry";
+import {
+  canUseTranscriptionTarget,
+  selectTranscriptionProvider,
+  storedTranscriptionProvider,
+} from "./transcription-route";
 import { useSTTConnection } from "./useSTTConnection";
 
 import { withCloudsyncActivity } from "~/db/cloudsync-activity";
@@ -27,15 +32,19 @@ import {
 } from "~/store/zustand/listener/general-batch";
 import type { BatchPersistCallback } from "~/store/zustand/listener/transcript";
 import { serializeBatchResumeContext } from "~/stt/batch-resume-context";
-import {
-  getTranscriptionLanguages,
-  isSupportedLanguagesBatch,
-} from "~/stt/capabilities";
+import { getTranscriptionLanguages } from "~/stt/capabilities";
 import type { TranscriptRecord } from "~/stt/queries";
 import type { SpeakerHintWithId, WordWithId } from "~/stt/types";
 
+export { getBatchProvider } from "./transcription-route";
+
 type RunOptions = {
   signal?: AbortSignal;
+  /**
+   * Sans mode par lot, transcrire par le flux temps réel du fournisseur
+   * (issue 463). Réservé à l'import de fichier.
+   */
+  allowRealtimeStream?: boolean;
   /**
    * Audio transmis en mémoire (dictée) : prioritaire sur le chemin de fichier,
    * et jamais écrit sur le disque. Base64, car Tauri sérialise `Vec<u8>` en
@@ -134,29 +143,11 @@ const INCOMPLETE_BATCH_TRANSCRIPT_ERROR_MESSAGE =
   "The new transcription returned much less text. Your saved transcript and recording were kept. Try transcribing again.";
 const NO_SPEECH_RECOVERY_ERROR_MESSAGE = "No speech was detected in the audio.";
 
-export function getBatchProvider(
-  provider: string,
-  _model: string,
-): TranscriptionParams["provider"] | null {
-  // NVIDIA NIM ne propose que le temps réel ; l'import passe par le protocole
-  // OpenAI (/v1/audio/transcriptions).
-  if (provider === "openai") return "openai";
-  return null;
-}
-
 export function canRunBatchTranscription(
   _conn: { provider: string; model: string } | null,
   _modelOverride?: string,
 ) {
   return true;
-}
-
-async function canUseBatchTarget(
-  provider: TranscriptionParams["provider"],
-  model: string,
-  languages: readonly string[],
-) {
-  return isSupportedLanguagesBatch(provider, model, languages);
 }
 
 function selectedProviderLabel(
@@ -278,7 +269,11 @@ export const useRunBatch = (sessionId: string) => {
       const selectedModel = options?.model ?? conn?.model;
       const selectedProvider =
         selectedProviderId && selectedModel
-          ? getBatchProvider(selectedProviderId, selectedModel)
+          ? selectTranscriptionProvider(
+              selectedProviderId,
+              selectedModel,
+              options?.allowRealtimeStream === true,
+            )
           : null;
       const selectedTarget =
         conn && selectedModel && selectedProvider
@@ -291,8 +286,9 @@ export const useRunBatch = (sessionId: string) => {
             }
           : null;
       const selectedTargetSupported = selectedTarget
-        ? await canUseBatchTarget(
+        ? await canUseTranscriptionTarget(
             selectedTarget.provider,
+            selectedProviderId,
             selectedTarget.model,
             languages,
           )
@@ -318,6 +314,10 @@ export const useRunBatch = (sessionId: string) => {
         );
       }
 
+      const storedProvider = storedTranscriptionProvider(
+        target.provider,
+        conn?.provider,
+      );
       const createdAt = new Date().toISOString();
       const startedAt = options?.captureInterval?.startedAtMs ?? Date.now();
       const memoMd = session?.raw_md ?? "";
@@ -394,7 +394,7 @@ export const useRunBatch = (sessionId: string) => {
               word_id: wordId,
               type: "provider_speaker_index",
               value: JSON.stringify({
-                provider: hint.data.provider ?? target.provider,
+                provider: hint.data.provider ?? storedProvider,
                 channel: hint.data.channel ?? word.channel,
                 speaker_index: hint.data.speaker_index,
               }),
@@ -468,7 +468,7 @@ export const useRunBatch = (sessionId: string) => {
             created_at: createdAt,
             started_at: startedAt,
             memo: memoMd,
-            provider: target.provider,
+            provider: storedProvider,
             model: target.model,
             words: stagedWords.map(toStoredTranscriptWord),
             hints: stagedHints.map(toStoredSpeakerHint),

@@ -6,7 +6,7 @@ mod subtitle;
 
 pub use batch::{
     AudioBuffer, BatchAudio, BatchParams, BatchProvider, BatchRunMode, BatchRunOutput,
-    decode_audio_base64, expects_progressive_batch, run_batch,
+    decode_audio_base64, expects_progressive_batch, run_batch, run_batch_job,
 };
 pub use error::*;
 pub use events::*;

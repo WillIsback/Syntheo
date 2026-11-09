@@ -19,3 +19,14 @@ tauri-event = [
 [dependencies]
 syntheo-listener-core = { workspace = true }
 syntheo-listener2-core = { workspace = true }
+
+owhisper-interface = { workspace = true }
+tokio = { workspace = true, features = ["rt"] }
+tracing = { workspace = true }
+
+[dev-dependencies]
+base64 = { workspace = true }
+futures-util = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true, features = ["macros", "net", "rt-multi-thread"] }
+tokio-tungstenite = { workspace = true }

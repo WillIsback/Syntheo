@@ -172,6 +172,10 @@ msgstr "La réunion ne se rejoue pas : l'audio n'est jamais conservé, seule la 
 msgid "A participant declined recording. Syntheo stopped listening."
 msgstr "Un participant a refusé l'enregistrement. Syntheo a arrêté l'écoute."
 
+#: src/stt/batch-eta.ts
+msgid "About {minutes} min remaining"
+msgstr "Environ {minutes} min restantes"
+
 #: src/services/notification-labels.ts
 msgid "Accept"
 msgstr "Accepter"
@@ -2107,6 +2111,10 @@ msgstr "Laissez le champ vide pour utiliser la date et le titre de la réunion."
 msgid "Leave empty if the server has no authentication"
 msgstr "Laisser vide si le serveur n'a pas d'authentification"
 
+#: src/stt/batch-eta.ts
+msgid "Less than a minute remaining"
+msgstr "Moins d'une minute restante"
+
 #: src/settings/appearance/theme.tsx
 msgid "Light"
 msgstr "Clair"
@@ -2739,8 +2747,12 @@ msgid "No transcription provider is set up. Syntheo does not keep audio: set up 
 msgstr "Aucun fournisseur de transcription n'est configuré. Syntheo ne conserve pas l'audio : configurez un endpoint de transcription avant d'enregistrer."
 
 #: src/stt/audio-import-feedback.ts
-msgid "No transcription service is set up: importing a file requires a batch transcription model."
-msgstr "Aucun service de transcription n'est configuré : importer un fichier demande un modèle de transcription par lot."
+msgid "No transcription service is set up: importing a file requires a transcription model."
+msgstr "Aucun service de transcription n'est configuré : importer un fichier demande un modèle de transcription."
+
+#: src/chat/components/input/use-dictation.ts
+msgid "No transcription service is set up."
+msgstr "Aucun service de transcription n'est configuré."
 
 #: src/services/enhancer/eligibility.ts
 msgid "Not enough words recorded ({wordCount}/{minWords} minimum)"
@@ -4437,6 +4449,10 @@ msgstr "Le modèle de langage qui rédige vos comptes-rendus et répond quand vo
 msgid "The live transcription model handles one language at a time. To transcribe several, <0>change models</0>."
 msgstr "Le modèle de transcription en direct ne gère qu'une langue à la fois. Pour en transcrire plusieurs, <0>changez de modèle</0>."
 
+#: src/dictation/lifecycle.tsx
+msgid "The live transcription of this dictation was interrupted, and this model can't transcribe the recording afterwards. Try again."
+msgstr "La transcription en direct de cette dictée a été interrompue, et ce modèle ne peut pas transcrire l'enregistrement après coup. Réessayez."
+
 #: src/chat/components/message/tool/edit-summary.tsx
 msgid "The memo edit could not be prepared."
 msgstr "La modification du mémo n'a pas pu être préparée."
@@ -4568,13 +4584,17 @@ msgstr "Ce fichier est trop lourd pour être importé (2 Go maximum)."
 msgid "This information stays on your computer. It is used to recognize you in transcripts and to sign your meeting notes."
 msgstr "Ces informations restent sur votre poste. Elles servent à vous reconnaître dans les transcriptions et à signer vos comptes-rendus."
 
+#: src/stt/audio-import-feedback.ts
+msgid "This model can't transcribe a file. Choose another transcription model."
+msgstr "Ce modèle ne sait pas transcrire un fichier. Choisissez un autre modèle de transcription."
+
 #: src/stt/useStartListening.ts
 msgid "This model only transcribes after the recording, which would require keeping the audio. Choose a real-time transcription model."
 msgstr "Ce modèle ne transcrit qu'après l'enregistrement, ce qui supposerait de conserver l'audio. Choisissez un modèle de transcription en temps réel."
 
-#: src/stt/audio-import-feedback.ts
-msgid "This model only transcribes live: importing a file requires a batch transcription model."
-msgstr "Ce modèle ne transcrit qu'en direct : importer un fichier demande un modèle de transcription par lot."
+#: src/chat/components/input/use-dictation.ts
+msgid "This model only transcribes live: voice input in the chat requires a batch transcription model."
+msgstr "Ce modèle ne transcrit qu'en direct : la saisie vocale du chat demande un modèle de transcription par lot."
 
 #: src/chat/components/message/tool/edit-summary.tsx
 msgid "This note has no summary to edit yet."
@@ -4727,6 +4747,7 @@ msgstr "Serveur de transcription ›"
 msgid "transcription server, speech recognition, URL, API key, Whisper"
 msgstr "serveur de transcription, reconnaissance vocale, URL, clé API, Whisper"
 
+#: src/chat/components/input/use-dictation.ts
 #: src/stt/audio-import-feedback.ts
 msgid "Transcription settings"
 msgstr "Réglages de transcription"
@@ -4966,6 +4987,10 @@ msgstr "Afficher Syntheo"
 #: src/settings/ai/stt/server-card.tsx
 msgid "vLLM, speaches, faster-whisper-server"
 msgstr "vLLM, speaches, faster-whisper-server"
+
+#: src/chat/components/input/use-dictation.ts
+msgid "Voice input is unavailable"
+msgstr "La saisie vocale est indisponible"
 
 #: src/chat/components/input/use-dictation.ts
 msgid "Voice input is unavailable while Syntheo is recording a meeting."
