@@ -125,6 +125,8 @@ describe("useSTTConnection", () => {
 
     expect(result.current.conn).toBeNull();
     expect(result.current.isReady).toBe(false);
+    // Réglages chargés : l'absence de connexion est définitive (issue 515).
+    expect(result.current.isLoading).toBe(false);
   });
 
   it("ignores_a_stored_provider_that_no_longer_exists", () => {
@@ -208,6 +210,7 @@ describe("useSTTConnection", () => {
     const providerPending = renderHook(() => useSTTConnection(), { wrapper });
 
     expect(providerPending.result.current.isReady).toBe(false);
+    expect(providerPending.result.current.isLoading).toBe(true);
 
     providerPending.unmount();
     readiness.provider = true;
@@ -215,5 +218,6 @@ describe("useSTTConnection", () => {
     const settingsPending = renderHook(() => useSTTConnection(), { wrapper });
 
     expect(settingsPending.result.current.isReady).toBe(false);
+    expect(settingsPending.result.current.isLoading).toBe(true);
   });
 });

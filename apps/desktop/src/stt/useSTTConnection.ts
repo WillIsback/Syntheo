@@ -58,5 +58,8 @@ export const useSTTConnection = () => {
   return {
     conn: connection,
     isReady: settingsReady && connection !== null && providerConfigReady,
+    // Réglages ou fournisseurs encore en chargement : `conn` null ne veut pas
+    // encore dire « aucun fournisseur » (issue 515).
+    isLoading: !settingsReady || !providerConfigReady,
   };
 };

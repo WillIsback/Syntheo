@@ -635,6 +635,62 @@ describe("useStartListening", () => {
       });
     });
 
+    // Issue 515 : la reprise depuis la pastille passe par un composant monté à
+    // la demande dans la fenêtre principale ; à son premier rendu, les réglages
+    // ne sont pas encore chargés et `conn` vaut null alors que le fournisseur
+    // temps réel est configuré.
+    test("waits_for_loading_settings_before_refusing_capture", async () => {
+      const conn = {
+        provider: "nvidia",
+        model: "parakeet-rnnt-streaming",
+        baseUrl: "http://10.0.0.5:9000/?provider=nvidia",
+        apiKey: "",
+      };
+      m.useSTTConnection.mockReturnValue({ conn: null, isLoading: true });
+      const hook = renderHook(() => useStartListening(SESSION));
+      const firstRenderStart = hook.result.current;
+
+      let pending!: Promise<void>;
+      act(() => {
+        pending = firstRenderStart();
+      });
+      m.useSTTConnection.mockReturnValue({ conn, isLoading: false });
+      hook.rerender();
+      await act(async () => {
+        await pending;
+      });
+
+      expect(m.toastError).not.toHaveBeenCalledWith(
+        getNoTranscriptionProviderMessage(),
+        expect.anything(),
+      );
+      expect(m.start).toHaveBeenCalledWith(
+        expect.objectContaining({ base_url: conn.baseUrl }),
+        expect.anything(),
+      );
+    });
+
+    test("refuses_capture_when_settings_never_finish_loading", async () => {
+      vi.useFakeTimers();
+      m.useSTTConnection.mockReturnValue({ conn: null, isLoading: true });
+      const hook = renderHook(() => useStartListening(SESSION));
+
+      let pending!: Promise<void>;
+      act(() => {
+        pending = hook.result.current();
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(10_000);
+        await pending;
+      });
+
+      expect(m.start).not.toHaveBeenCalled();
+      expect(m.toastError).toHaveBeenCalledWith(
+        getNoTranscriptionProviderMessage(),
+        expect.anything(),
+      );
+    });
+
     test("batch_only_model_cannot_start_capture", async () => {
       m.useSTTConnection.mockReturnValue({
         conn: {
