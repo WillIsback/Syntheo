@@ -67,3 +67,18 @@ exceptions:
     expires: "2027-01-31"
     author: "WillIsback"
     path: "Cargo.lock"
+  - cve: "RUSTSEC-2026-0459"
+    reason: >-
+      libsqlite3-sys 0.35 (SQLite C embarqué, CVE-2026-119375 corrigée en
+      SQLite 3.54.0 / libsqlite3-sys 0.39.0), tiré par sqlx-sqlite 0.9.0 et
+      db-core. Aucune version publiée de sqlx n'accepte encore
+      libsqlite3-sys 0.39 : sqlx-sqlite 0.9.0 est borné à < 0.38 et le lien
+      « sqlite3 » interdit deux versions dans le graphe. La borne est relevée
+      en amont (launchbadge/sqlx, commit 10462fa441 du 2026-11-08), sans
+      publication. Exploitation locale uniquement (ouvrir une base et un
+      fichier -wal forgés) ; l'application n'ouvre que ses propres bases dans
+      son dossier de données. Exception courte : monter sqlx et
+      libsqlite3-sys dès la publication de la version corrigée (issue 490).
+    expires: "2026-12-09"
+    author: "WillIsback"
+    path: "Cargo.lock"
