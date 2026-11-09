@@ -226,6 +226,10 @@ msgstr "A folder with this name already exists."
 msgid "A meeting can't be replayed: audio is never kept, only the note remains. Your notes belong to you."
 msgstr "A meeting can't be replayed: audio is never kept, only the note remains. Your notes belong to you."
 
+#: src/folders/project/next-meeting-slot.tsx
+msgid "A new proposal replaces your changes to the agenda."
+msgstr "A new proposal replaces your changes to the agenda."
+
 #: src/stt/useStartListening.ts
 msgid "A participant declined recording. Syntheo stopped listening."
 msgstr "A participant declined recording. Syntheo stopped listening."
@@ -380,6 +384,14 @@ msgstr "Adjust"
 #: src/sidebar/settings-nav-groups.ts
 msgid "Advanced"
 msgstr "Advanced"
+
+#: src/folders/project/next-meeting-slot.tsx
+msgid "Agenda"
+msgstr "Agenda"
+
+#: src/folders/project/next-meeting-slot.tsx
+msgid "Agenda proposed from the points still open (editable):"
+msgstr "Agenda proposed from the points still open (editable):"
 
 #: src/settings/developers/skills.tsx
 #: src/settings/search-index.ts
@@ -695,6 +707,7 @@ msgstr "by {name}"
 msgid "Can't import this audio"
 msgstr "Can't import this audio"
 
+#: src/folders/project/next-meeting-slot.tsx
 #: src/session/components/capsule/index.tsx
 #: src/settings/ai/shared/server-address.tsx
 #: src/settings/dictionary/index.tsx
@@ -787,6 +800,10 @@ msgstr "Choose"
 #: src/session/components/outer-header/overflow/export-modal.tsx
 msgid "Choose a file format and what to include."
 msgstr "Choose a file format and what to include."
+
+#: src/folders/project/next-meeting-slot.tsx
+msgid "Choose a language model in Settings to propose the agenda."
+msgstr "Choose a language model in Settings to propose the agenda."
 
 #: src/folders/project/folder-thread-card.tsx
 msgid "Choose a language model in Settings to write the thread."
@@ -2734,6 +2751,10 @@ msgstr "Newest"
 msgid "Next match"
 msgstr "Next match"
 
+#: src/folders/project/next-meeting-slot.tsx
+msgid "Next meeting"
+msgstr "Next meeting"
+
 #: src/shared/shortcuts.ts
 msgid "Next view of the note"
 msgstr "Next view of the note"
@@ -3163,6 +3184,10 @@ msgstr "Opens System Settings and guides you to add Syntheo to the {0} list"
 msgid "Opens System Settings and guides you to add Syntheo to the {0} list."
 msgstr "Opens System Settings and guides you to add Syntheo to the {0} list."
 
+#: src/folders/project/next-meeting-suggestion.tsx
+msgid "Opens the Next meeting block of the folder {folderPath}."
+msgstr "Opens the Next meeting block of the folder {folderPath}."
+
 #: src/shared/help-dialog.tsx
 msgid "Opens your web browser."
 msgstr "Opens your web browser."
@@ -3322,6 +3347,14 @@ msgstr "Post-meeting transcription failed. The recording was kept so you can try
 msgid "Prepare"
 msgstr "Prepare"
 
+#: src/folders/project/next-meeting-suggestion.tsx
+msgid "Prepare the agenda for the next meeting."
+msgstr "Prepare the agenda for the next meeting."
+
+#: src/folders/project/next-meeting-slot.tsx
+msgid "Prepare the note"
+msgstr "Prepare the note"
+
 #: src/session/components/outer-header/overflow/export-modal.tsx
 msgid "Preparing transcript..."
 msgstr "Preparing transcript..."
@@ -3385,6 +3418,14 @@ msgstr "Project thread"
 #: src/home/folder-cards.tsx
 msgid "Project thread not created yet"
 msgstr "Project thread not created yet"
+
+#: src/folders/project/next-meeting-slot.tsx
+msgid "Propose"
+msgstr "Propose"
+
+#: src/folders/project/next-meeting-slot.tsx
+msgid "Propose drafts the agenda from the open points, decisions to confirm and open tasks of this folder, with your local model."
+msgstr "Propose drafts the agenda from the open points, decisions to confirm and open tasks of this folder, with your local model."
 
 #: src/session/components/living-document/summary-review.tsx
 msgid "Proposed edit to the summary"
@@ -3598,6 +3639,7 @@ msgstr "Reopen in browser"
 msgid "Repair Keychain Access"
 msgstr "Repair Keychain Access"
 
+#: src/folders/project/next-meeting-slot.tsx
 #: src/session/components/note-input/search/bar.tsx
 #: src/shared/shortcuts.ts
 msgid "Replace"
@@ -4724,6 +4766,14 @@ msgstr "The address did not answer within {seconds} seconds."
 #: src/automations/action-runners.ts
 msgid "The address redirects to {target}. Syntheo does not follow redirects: use the final address."
 msgstr "The address redirects to {target}. Syntheo does not follow redirects: use the final address."
+
+#: src/folders/project/next-meeting-slot.tsx
+msgid "The agenda could not be proposed. Check the language model, then try again."
+msgstr "The agenda could not be proposed. Check the language model, then try again."
+
+#: src/folders/project/next-meeting-slot.tsx
+msgid "The agenda is drafted from meeting summaries. It will be available once a meeting in this folder has a summary."
+msgstr "The agenda is drafted from meeting summaries. It will be available once a meeting in this folder has a summary."
 
 #: src/settings/ai/stt/server-card.tsx
 msgid "The API key is optional for servers without authentication. It is kept in your system keychain."

@@ -108,3 +108,85 @@ async fn creates_folder_thread_tables_on_an_existing_database() {
             .unwrap();
     assert!(floor < 20261109150000, "floor {floor}");
 }
+
+// Ordre du jour de la prochaine réunion (issue 491) : trois colonnes ajoutées
+// à `folder_threads`, sans toucher au fil rouge déjà enregistré.
+const AGENDA_MIGRATION_ID: &str = "20261109180000_folder_thread_agenda";
+
+#[tokio::test]
+async fn adds_agenda_columns_and_keeps_existing_threads() {
+    let steps: Vec<_> = APP_MIGRATION_STEPS
+        .iter()
+        .filter(|step| step.id == AGENDA_MIGRATION_ID)
+        .collect();
+    assert_eq!(steps.len(), 1);
+    assert_eq!(steps[0].scope, syntheo_db_migrate::MigrationScope::Plain);
+    assert!(
+        !steps[0]
+            .sql
+            .lines()
+            .any(|line| line.trim() == "-- breaking")
+    );
+
+    let db = Db::connect_memory_plain().await.unwrap();
+    syntheo_db_migrate::migrate(
+        &db,
+        syntheo_db_migrate::DbSchema {
+            steps: migration_steps_before(AGENDA_MIGRATION_ID),
+        },
+    )
+    .await
+    .unwrap();
+    exec(
+        &db,
+        "INSERT INTO folders (id, path) VALUES ('folder-1', 'Atlas')",
+    )
+    .await;
+    exec(
+        &db,
+        "INSERT INTO folder_threads (folder_id, body, generated_at)
+         VALUES ('folder-1', 'fil rouge', '2026-11-02T09:00:00.000Z')",
+    )
+    .await;
+
+    prepare_schema(&db).await.unwrap();
+    // Une seconde ouverture ne rejoue rien.
+    prepare_schema(&db).await.unwrap();
+
+    let existing: (String, String, String, String) = sqlx::query_as(
+        "SELECT body, agenda_body, agenda_generated_at, agenda_edited_at
+         FROM folder_threads WHERE folder_id = 'folder-1'",
+    )
+    .fetch_one(db.pool())
+    .await
+    .unwrap();
+    assert_eq!(
+        existing,
+        (
+            "fil rouge".to_string(),
+            String::new(),
+            String::new(),
+            String::new()
+        )
+    );
+
+    // Un ordre du jour seul, sans fil rouge rédigé.
+    exec(
+        &db,
+        "INSERT INTO folders (id, path) VALUES ('folder-2', 'Boréal')",
+    )
+    .await;
+    exec(
+        &db,
+        "INSERT INTO folder_threads (folder_id, agenda_body, agenda_generated_at)
+         VALUES ('folder-2', 'ordre du jour', '2026-11-09T09:00:00.000Z')",
+    )
+    .await;
+    let agenda_only: (String, String) = sqlx::query_as(
+        "SELECT body, generated_at FROM folder_threads WHERE folder_id = 'folder-2'",
+    )
+    .fetch_one(db.pool())
+    .await
+    .unwrap();
+    assert_eq!(agenda_only, (String::new(), String::new()));
+}

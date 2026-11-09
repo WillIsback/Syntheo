@@ -17,6 +17,7 @@ import { cn } from "@syntheo/utils";
 import { useAutomationLaunchItems } from "~/automations/launch";
 import type { ContextRef } from "~/chat/context/entities";
 import { useChatAppearance } from "~/chat/hooks/use-chat-appearance";
+import { NextMeetingSuggestion } from "~/folders/project/next-meeting-suggestion";
 import { useTabs } from "~/store/zustand/tabs";
 
 export function ChatBodyEmpty({
@@ -183,6 +184,12 @@ export function ChatBodyEmpty({
               <span className="min-w-0 truncate">{label}</span>
             </button>
           ))}
+          {automationSessionId ? (
+            <NextMeetingSuggestion
+              sessionId={automationSessionId}
+              isDarkAppearance={isDarkAppearance}
+            />
+          ) : null}
         </div>
         {automationSessionId ? (
           <AutomationSuggestions

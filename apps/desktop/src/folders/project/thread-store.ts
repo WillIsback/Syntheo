@@ -51,6 +51,9 @@ export const FOLDER_THREAD_SQL = `
   JOIN folders AS folder ON folder.id = thread.folder_id
   WHERE folder.path = ?
     AND folder.deleted_at IS NULL
+    -- Une ligne qui ne porte que l'ordre du jour (issue 491) n'est pas un
+    -- fil rouge.
+    AND thread.generated_at <> ''
   LIMIT 1
 `;
 

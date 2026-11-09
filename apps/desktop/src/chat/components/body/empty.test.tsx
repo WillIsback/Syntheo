@@ -40,6 +40,27 @@ vi.mock("~/store/zustand/tabs", () => ({
   useTabs: () => vi.fn(),
 }));
 
+// Dossier de la note ouverte (issue 491) : « Préparer l'ordre du jour de la
+// prochaine réunion » n'est proposé que pour une note rangée.
+const folderMocks = vi.hoisted(() => ({
+  folderPath: "",
+  openNextMeetingBlock: vi.fn(),
+}));
+
+vi.mock("~/db", () => ({
+  useLiveQuery: (options: {
+    mapRows: (rows: Array<{ folder_path: string }>) => unknown;
+  }) => ({
+    data: options.mapRows(
+      folderMocks.folderPath ? [{ folder_path: folderMocks.folderPath }] : [],
+    ),
+  }),
+}));
+
+vi.mock("~/folders/project/next-meeting-request", () => ({
+  openNextMeetingBlock: folderMocks.openNextMeetingBlock,
+}));
+
 import { ChatBodyEmpty } from "./empty";
 
 describe("ChatBodyEmpty", () => {
@@ -108,6 +129,32 @@ describe("ChatBodyEmpty", () => {
       "session-1",
     );
     automationMocks.workflows = [];
+  });
+
+  it("offers to prepare the next meeting's agenda for a note filed in a folder", () => {
+    folderMocks.folderPath = "Atlas";
+    const onSendMessage = vi.fn();
+
+    const view = render(
+      <ChatBodyEmpty
+        hasContext
+        automationSessionId="session-1"
+        onSendMessage={onSendMessage}
+      />,
+    );
+    fireEvent.click(
+      screen.getByText("Prepare the agenda for the next meeting."),
+    );
+
+    expect(folderMocks.openNextMeetingBlock).toHaveBeenCalledWith("Atlas");
+    expect(onSendMessage).not.toHaveBeenCalled();
+    view.unmount();
+
+    folderMocks.folderPath = "";
+    render(<ChatBodyEmpty hasContext automationSessionId="session-1" />);
+    expect(
+      screen.queryByText("Prepare the agenda for the next meeting."),
+    ).toBeNull();
   });
 
   it("offers no automation without an open note", () => {
