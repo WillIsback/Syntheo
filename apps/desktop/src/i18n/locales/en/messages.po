@@ -891,6 +891,10 @@ msgstr "Choose the output whose sound Syntheo transcribes: the one where you hea
 msgid "Choose the program to run first."
 msgstr "Choose the program to run first."
 
+#: src/session/components/living-document/after-meeting-folder-suggestion.tsx
+msgid "Choose…"
+msgstr "Choose…"
+
 #: src/contacts/related-notes.tsx
 #: src/contacts/shared.tsx
 #: src/folders/sidebar.tsx
@@ -1785,6 +1789,10 @@ msgstr "File"
 msgid "File format"
 msgstr "File format"
 
+#: src/session/components/living-document/after-meeting-folder-suggestion.tsx
+msgid "File it"
+msgstr "File it"
+
 #: src/settings/automations/markdown-export-options.tsx
 msgid "Filename"
 msgstr "Filename"
@@ -2088,6 +2096,10 @@ msgstr "Icons"
 #: src/settings/search-index.ts
 msgid "Identity"
 msgstr "Identity"
+
+#: src/session/components/living-document/after-meeting-folder-suggestion.tsx
+msgid "Ignore"
+msgstr "Ignore"
 
 #: src/stt/meeting-apps.ts
 msgid "Ignore {firstName} and {secondName}?"
@@ -3884,6 +3896,11 @@ msgstr "Run this command?"
 msgid "runs the program on your computer"
 msgstr "runs the program on your computer"
 
+#: src/session/components/living-document/after-meeting-folder-suggestion.tsx
+msgid "same participants"
+msgstr "same participants"
+
+#: src/session/components/living-document/after-meeting-folder-suggestion.tsx
 #: src/session/components/living-document/fiche-folder.tsx
 msgid "same title"
 msgstr "same title"
@@ -5208,6 +5225,10 @@ msgstr "This information stays on your computer. It is used to recognize you in 
 #: src/settings/automations/workflow-test-panel.tsx
 msgid "This is a real test: these steps really act."
 msgstr "This is a real test: these steps really act."
+
+#: src/session/components/living-document/after-meeting-folder-suggestion.tsx
+msgid "This meeting looks like {folderName} ({reason})"
+msgstr "This meeting looks like {folderName} ({reason})"
 
 #: src/stt/audio-import-feedback.ts
 msgid "This model can't transcribe a file. Choose another transcription model."
