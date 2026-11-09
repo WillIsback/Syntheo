@@ -20,11 +20,6 @@ impl<'a, M: tauri::Manager<tauri::Wry>> Overlay<'a, M> {
         let app = self.manager.app_handle().clone();
         crate::spawn_overlay_listener(app, window, options).await;
     }
-
-    pub async fn abort_listener(&self, window_label: &str) {
-        let app = self.manager.app_handle();
-        crate::abort_overlay_listener(app, window_label).await;
-    }
 }
 
 pub trait OverlayPluginExt {

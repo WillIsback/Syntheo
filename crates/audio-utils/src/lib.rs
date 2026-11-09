@@ -67,13 +67,6 @@ pub trait AudioFormatExt: AsyncSource {
     }
 }
 
-pub fn i16_to_f32_samples(samples: &[i16]) -> Vec<f32> {
-    samples
-        .iter()
-        .map(|&sample| sample as f32 / I16_SCALE)
-        .collect()
-}
-
 pub fn f32_to_i16_samples(samples: &[f32]) -> Vec<i16> {
     samples
         .iter()
@@ -96,37 +89,6 @@ where
     buf.freeze()
 }
 
-pub fn bytes_to_f32_samples(data: &[u8]) -> Vec<f32> {
-    data.chunks_exact(2)
-        .map(|chunk| {
-            let sample = i16::from_le_bytes([chunk[0], chunk[1]]);
-            sample as f32 / I16_SCALE
-        })
-        .collect()
-}
-
-pub fn deinterleave_stereo_bytes(data: &[u8]) -> (Vec<f32>, Vec<f32>) {
-    let num_frames = data.len() / 4;
-    let mut ch0 = Vec::with_capacity(num_frames);
-    let mut ch1 = Vec::with_capacity(num_frames);
-    for frame in data.chunks_exact(4) {
-        ch0.push(i16::from_le_bytes([frame[0], frame[1]]) as f32 / I16_SCALE);
-        ch1.push(i16::from_le_bytes([frame[2], frame[3]]) as f32 / I16_SCALE);
-    }
-    (ch0, ch1)
-}
-
-pub fn deinterleave(samples: &[f32], channels: usize) -> Vec<Vec<f32>> {
-    if channels <= 1 {
-        return vec![samples.to_vec()];
-    }
-    let mut output = vec![Vec::with_capacity(samples.len() / channels + 1); channels];
-    for (index, sample) in samples.iter().enumerate() {
-        output[index % channels].push(*sample);
-    }
-    output
-}
-
 pub fn interleave(channels: &[Vec<f32>]) -> Vec<f32> {
     if channels.is_empty() {
         return Vec::new();
@@ -143,44 +105,6 @@ pub fn interleave(channels: &[Vec<f32>]) -> Vec<f32> {
 
 pub fn mix_sample_f32(mic: f32, speaker: f32) -> f32 {
     (mic + speaker).clamp(-1.0, 1.0)
-}
-
-pub fn mix_audio_f32(mic: &[f32], speaker: &[f32]) -> Vec<f32> {
-    let max_len = mic.len().max(speaker.len());
-    (0..max_len)
-        .map(|i| {
-            let m = mic.get(i).copied().unwrap_or(0.0);
-            let s = speaker.get(i).copied().unwrap_or(0.0);
-            mix_sample_f32(m, s)
-        })
-        .collect()
-}
-
-pub fn mix_audio_pcm16le(mic: &[u8], speaker: &[u8]) -> Vec<u8> {
-    let max_len = mic.len().max(speaker.len());
-    let mut mixed = Vec::with_capacity(max_len);
-
-    let mut index = 0;
-    while index < max_len {
-        let mic_sample = if index + 1 < mic.len() {
-            i16::from_le_bytes([mic[index], mic[index + 1]])
-        } else {
-            0
-        };
-
-        let speaker_sample = if index + 1 < speaker.len() {
-            i16::from_le_bytes([speaker[index], speaker[index + 1]])
-        } else {
-            0
-        };
-
-        let mixed_sample = ((mic_sample as i32 + speaker_sample as i32) / 2) as i16;
-
-        mixed.extend_from_slice(&mixed_sample.to_le_bytes());
-        index += 2;
-    }
-
-    mixed
 }
 
 pub use syntheo_audio_mime::content_type_to_extension;
@@ -557,49 +481,6 @@ pub struct ChunkedAudio {
     pub sample_count: usize,
     pub frame_count: usize,
     pub metadata: AudioMetadata,
-}
-
-pub fn chunk_audio_file(
-    path: impl AsRef<std::path::Path>,
-    chunk_ms: u64,
-) -> Result<ChunkedAudio, crate::Error> {
-    let source = source_from_path(path)?;
-    let metadata = metadata_from_source(&source)?;
-    let samples = resample_audio(source, metadata.sample_rate)?;
-
-    if samples.is_empty() {
-        return Ok(ChunkedAudio {
-            chunks: Vec::new(),
-            sample_count: 0,
-            frame_count: 0,
-            metadata,
-        });
-    }
-
-    let channels = metadata.channels.max(1) as usize;
-    let frames_per_chunk = {
-        let frames = (chunk_ms as u128)
-            .saturating_mul(metadata.sample_rate as u128)
-            .div_ceil(1000);
-        frames.max(1).min(usize::MAX as u128) as usize
-    };
-    let samples_per_chunk = frames_per_chunk
-        .saturating_mul(channels)
-        .clamp(1, usize::MAX);
-
-    let sample_count = samples.len();
-    let frame_count = sample_count / channels;
-    let chunks = samples
-        .chunks(samples_per_chunk)
-        .map(|chunk| f32_to_i16_bytes(chunk.iter().copied()))
-        .collect();
-
-    Ok(ChunkedAudio {
-        chunks,
-        sample_count,
-        frame_count,
-        metadata,
-    })
 }
 
 pub fn chunk_size_for_stt(sample_rate: u32) -> usize {

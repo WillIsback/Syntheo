@@ -1,15 +1,12 @@
 use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
 
-use owhisper_interface::{
-    batch::Response as BatchResponse,
-    stream::{StreamResponse, Word},
-};
+use owhisper_interface::stream::{StreamResponse, Word};
 
 use super::channel_state::ChannelState;
 #[cfg(test)]
 use super::channel_state::{MAX_PARTIAL_TEXT_BYTES, MAX_PARTIAL_WORDS};
 use super::types::{FinalizedWord, PartialWord, TranscriptDelta, WordState};
-use super::words::{assemble, assemble_batch, finalize_words};
+use super::words::assemble;
 
 /// Stateful processor that converts raw `StreamResponse`s into
 /// `TranscriptDelta`s and manages correction jobs from any source.
@@ -131,12 +128,6 @@ impl TranscriptProcessor {
     /// Control whether remaining partials are committed when the session ends.
     pub fn with_flush_partial_finalization(mut self, flush_partials: bool) -> Self {
         self.flush_partials = flush_partials;
-        self
-    }
-
-    /// Disable for complete utterances that cannot receive word-level continuations.
-    pub fn with_final_word_stitching(mut self, stitch_final_words: bool) -> Self {
-        self.stitch_final_words = stitch_final_words;
         self
     }
 
@@ -283,29 +274,6 @@ impl TranscriptProcessor {
         let delta = self.checkpoint();
         self.channels.clear();
         delta
-    }
-
-    /// Convert a complete batch response into a `TranscriptDelta`.
-    pub fn process_batch_response(response: &BatchResponse) -> TranscriptDelta {
-        let mut new_words = Vec::new();
-
-        for channel in &response.results.channels {
-            let Some(alt) = channel.alternatives.first() else {
-                continue;
-            };
-            if alt.words.is_empty() {
-                continue;
-            }
-
-            let raw = assemble_batch(&alt.words, &alt.transcript);
-            new_words.extend(finalize_words(raw, WordState::Final));
-        }
-
-        TranscriptDelta {
-            new_words,
-            replaced_ids: vec![],
-            partials: vec![],
-        }
     }
 
     // ── Internal ────────────────────────────────────────────────────────────

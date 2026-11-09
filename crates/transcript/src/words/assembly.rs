@@ -1,4 +1,4 @@
-use owhisper_interface::{batch, stream::Word};
+use owhisper_interface::stream::Word;
 
 use crate::types::RawWord;
 
@@ -14,21 +14,6 @@ pub(crate) fn assemble(raw: &[Word], transcript: &str, channel: i32) -> Vec<RawW
         }),
         transcript,
         channel,
-    )
-}
-
-pub(crate) fn assemble_batch(raw: &[batch::Word], transcript: &str) -> Vec<RawWord> {
-    assemble_words(
-        raw.iter().map(|word| AssemblyToken {
-            word: word.word.as_str(),
-            punctuated_word: word.punctuated_word.as_deref(),
-            start_ms: (word.start * 1000.0).round() as i64,
-            end_ms: (word.end * 1000.0).round() as i64,
-            channel: word.channel,
-            speaker: word.speaker.map(|speaker| speaker as i32),
-        }),
-        transcript,
-        0,
     )
 }
 

@@ -8,7 +8,7 @@ use reqwest_middleware::ClientWithMiddleware;
 use crate::adapter::BatchSttAdapter;
 use crate::error::Error;
 use crate::http_client::create_client;
-use crate::{ListenClientBuilder, OpenAIAdapter, normalize_listen_params};
+use crate::{OpenAIAdapter, normalize_listen_params};
 
 pub struct BatchClientBuilder<A: BatchSttAdapter = OpenAIAdapter> {
     api_base: Option<String>,
@@ -125,14 +125,6 @@ impl<A: BatchSttAdapter> BatchClient<A> {
                 file_name,
             )
             .await
-    }
-}
-
-impl<A: crate::RealtimeSttAdapter + BatchSttAdapter> ListenClientBuilder<A> {
-    pub fn build_batch(self) -> BatchClient<A> {
-        let params = self.normalized_params();
-        let api_base = self.api_base.expect("api_base is required");
-        BatchClient::new(api_base, self.api_key.unwrap_or_default(), params)
     }
 }
 

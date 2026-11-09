@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 
 use crate::drift::{DriftTrendSnapshot, LagTrendTracker};
 use crate::estimator::{GccPhatLagEstimator, LagEstimate};
-use crate::level::{LevelAccumulator, LevelSnapshot};
+use crate::level::LevelAccumulator;
 
 #[derive(Debug, Clone, Copy)]
 pub struct SyncProbeThresholds {
@@ -74,12 +74,6 @@ impl SyncProbeConfig {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum SyncProbeInputSide {
-    Reference,
-    Observed,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SyncProbeState {
     Searching,
     Acquiring,
@@ -128,7 +122,6 @@ pub struct SyncProbe {
     estimator: GccPhatLagEstimator,
     trend: LagTrendTracker,
     reference_input_levels: LevelAccumulator,
-    observed_input_levels: LevelAccumulator,
 }
 
 impl SyncProbe {
@@ -160,7 +153,6 @@ impl SyncProbe {
             estimator: GccPhatLagEstimator::new(window_samples, max_lag_samples),
             trend: LagTrendTracker::default(),
             reference_input_levels: LevelAccumulator::new(level_interval_samples),
-            observed_input_levels: LevelAccumulator::new(level_interval_samples),
         }
     }
 
@@ -174,19 +166,6 @@ impl SyncProbe {
             tuning: self.tuning,
             level_interval_samples: self.reference_input_levels.interval_samples,
         }
-    }
-
-    pub fn observe_input_chunk(
-        &mut self,
-        side: SyncProbeInputSide,
-        data: &[f32],
-    ) -> Option<LevelSnapshot> {
-        let accumulator = match side {
-            SyncProbeInputSide::Reference => &mut self.reference_input_levels,
-            SyncProbeInputSide::Observed => &mut self.observed_input_levels,
-        };
-
-        accumulator.observe(data)
     }
 
     pub fn observe(&mut self, reference: &[f32], observed: &[f32]) -> Option<SyncProbeEvent> {

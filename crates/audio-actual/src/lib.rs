@@ -100,25 +100,6 @@ impl AudioInput {
         MicInput::list_devices()
     }
 
-    pub fn from_mic_and_speaker(config: CaptureConfig) -> Result<CaptureStream, Error> {
-        capture::open_capture(config)
-    }
-
-    pub fn from_speaker_capture(
-        sample_rate: u32,
-        chunk_size: usize,
-    ) -> Result<CaptureStream, Error> {
-        capture::open_speaker_capture(sample_rate, chunk_size)
-    }
-
-    pub fn from_mic_capture(
-        device: Option<String>,
-        sample_rate: u32,
-        chunk_size: usize,
-    ) -> Result<CaptureStream, Error> {
-        capture::open_mic_capture(device, sample_rate, chunk_size)
-    }
-
     pub fn from_mic(device_name: Option<String>) -> Result<Self, Error> {
         let mic = MicInput::new(device_name)?;
 
@@ -127,20 +108,6 @@ impl AudioInput {
             mic: Some(mic),
             speaker: None,
             speaker_sample_rate: 0,
-            data: None,
-        })
-    }
-
-    pub fn from_speaker() -> Result<Self, Error> {
-        let speaker = SpeakerInput::new()
-            .map_err(|error| Error::SpeakerStreamInitializationFailed(error.to_string()))?;
-        let speaker_sample_rate = speaker.sample_rate();
-
-        Ok(Self {
-            source: AudioSource::RealtimeSpeaker,
-            mic: None,
-            speaker: Some(speaker),
-            speaker_sample_rate,
             data: None,
         })
     }

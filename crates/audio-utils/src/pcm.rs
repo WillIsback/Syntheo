@@ -5,11 +5,6 @@ pub fn f32_to_i16(sample: f32) -> i16 {
 }
 
 #[inline]
-pub fn pcm_f32_to_f32(sample: f32) -> f32 {
-    sample
-}
-
-#[inline]
 pub fn pcm_f64_to_f32(sample: f64) -> f32 {
     sample as f32
 }
