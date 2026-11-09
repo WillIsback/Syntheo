@@ -1,5 +1,7 @@
-import { generateText, type LanguageModel, Output } from "ai";
+import type { LanguageModel } from "ai";
 import { z } from "zod";
+
+import { generateStructured } from "~/ai/structured-output";
 
 export const MAX_FORMAT_EXAMPLES = 3;
 export const MAX_FORMAT_EXAMPLE_LENGTH = 12_000;
@@ -48,17 +50,16 @@ export async function inferSummaryFormat({
     throw new Error("Example is too long");
   }
 
-  const result = await generateText({
+  const output = await generateStructured({
     model,
     instructions: SYSTEM_PROMPT,
     prompt: JSON.stringify({ examples: normalizedExamples }),
-    output: Output.object({ schema: inferredFormatSchema }),
-    maxRetries: 2,
+    schema: inferredFormatSchema,
     maxOutputTokens: 1_000,
-    timeout: { totalMs: GENERATION_TIMEOUT_MS },
+    timeoutMs: GENERATION_TIMEOUT_MS,
   });
 
-  const formatRequirements = result.output?.formatRequirements
+  const formatRequirements = output.formatRequirements
     .replace(/^```(?:markdown)?\s*/i, "")
     .replace(/\s*```$/, "")
     .replace(/^#\s+Format Requirements\s*\n+/i, "")

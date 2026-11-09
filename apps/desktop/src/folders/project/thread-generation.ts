@@ -9,7 +9,7 @@
 // réécrire les textes de l'utilisateur. Un premier fil rouge sur un long
 // historique se construit par lots de réunions, du plus ancien au plus récent.
 
-import { generateText, type LanguageModel, Output } from "ai";
+import type { LanguageModel } from "ai";
 import { z } from "zod";
 
 import type { JSONContent } from "@syntheo/editor/markdown";
@@ -26,6 +26,8 @@ import {
   type ThreadUpdate,
 } from "./thread-doc";
 import type { FolderThreadRecord, GeneratedFolderThread } from "./thread-store";
+
+import { generateStructured } from "~/ai/structured-output";
 
 const MAX_MEETINGS_PER_BATCH = 6;
 const MAX_MEETING_SOURCE_LENGTH = 6_000;
@@ -260,23 +262,19 @@ export async function generateFolderThread({
 
   for (const batch of planThreadBatches(pending)) {
     const existing = parseThread(body, labels);
-    const result = await generateText({
+    const output = await generateStructured({
       model,
       instructions: FOLDER_THREAD_SYSTEM_PROMPT,
       prompt: buildThreadPrompt({ existing, generated, meetings: batch }),
-      output: Output.object({ schema: threadUpdateSchema }),
-      maxRetries: 2,
+      schema: threadUpdateSchema,
       maxOutputTokens: MAX_OUTPUT_TOKENS,
-      timeout: { totalMs: GENERATION_TIMEOUT_MS },
+      timeoutMs: GENERATION_TIMEOUT_MS,
       abortSignal: signal,
     });
-    if (!result.output) {
-      throw new Error("Folder thread generation returned no output");
-    }
     const merged = mergeThread({
       current: body,
       generated,
-      update: sanitizeThreadUpdate(result.output, batch, existing),
+      update: sanitizeThreadUpdate(output, batch, existing),
       labels,
       meetingLabel,
     });

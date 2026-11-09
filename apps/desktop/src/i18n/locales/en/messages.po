@@ -5039,6 +5039,10 @@ msgstr "The JSON body is not valid once the variables are filled in."
 msgid "The kinds of meeting this template is meant for (team, role, frequency…)."
 msgstr "The kinds of meeting this template is meant for (team, role, frequency…)."
 
+#: src/ai/structured-output.ts
+msgid "The language model did not return a usable answer. Try again, or check the model in the settings."
+msgstr "The language model did not return a usable answer. Try again, or check the model in the settings."
+
 #: src/settings/ai/llm/index.tsx
 msgid "The language model that writes your meeting notes and answers when you ask a note a question."
 msgstr "The language model that writes your meeting notes and answers when you ask a note a question."
