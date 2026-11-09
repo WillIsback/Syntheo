@@ -18,7 +18,7 @@ export type ExportInput = {
 	memoMd: string | null,
 	transcript: Transcript | null,
 	metadata: ExportMetadata | null,
-	labels: ExportLabels | null,
+	labels?: ExportLabels | null,
 };
 
 export type ExportLabels = {
