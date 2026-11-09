@@ -190,6 +190,10 @@ msgstr "{providerName} a refusé votre clé d'API"
 msgid "{providerName} stopped sending text"
 msgstr "{providerName} n'envoie plus de texte"
 
+#: src/settings/automations/workflow-test-result.tsx
+msgid "{seconds} s"
+msgstr "{seconds} s"
+
 #: src/home/folder-cards.tsx
 msgid "{tasks, plural, one {# task} other {# tasks}}"
 msgstr "{tasks, plural, one {# tâche} other {# tâches}}"
@@ -713,6 +717,7 @@ msgstr "Impossible d'importer cet audio"
 #: src/folders/project/next-meeting-slot.tsx
 #: src/session/components/capsule/index.tsx
 #: src/settings/ai/shared/server-address.tsx
+#: src/settings/automations/workflow-test-panel.tsx
 #: src/settings/dictionary/index.tsx
 #: src/shared/ui/destructive-confirmation-dialog.tsx
 #: src/sidebar/folder-name-dialog.tsx
@@ -929,6 +934,10 @@ msgstr "Fermer la discussion"
 msgid "Close the open panel, or go home"
 msgstr "Fermer le panneau ouvert, sinon revenir à l'accueil"
 
+#: src/settings/automations/workflow-test-panel.tsx
+msgid "Close the test"
+msgstr "Fermer le test"
+
 #: src/shared/ui/localized-toaster.tsx
 msgid "Closing in"
 msgstr "Fermeture dans"
@@ -1010,6 +1019,10 @@ msgstr "Configurez un modèle de discussion dans les paramètres"
 #: src/composer/index.tsx
 msgid "Configure a chat model to use the quick composer."
 msgstr "Configurez un modèle de discussion pour utiliser le rédacteur rapide."
+
+#: src/settings/automations/index.tsx
+msgid "Configure every step before testing."
+msgstr "Réglez toutes les étapes avant de tester."
 
 #: src/templates/template-generator-bar.tsx
 msgid "Configure your summary server in Settings to get section suggestions."
@@ -1234,9 +1247,17 @@ msgstr "Créée {createdAt}"
 msgid "Created by {name}"
 msgstr "Créé par {name}"
 
+#: src/settings/automations/workflow-test-result.tsx
+msgid "Created:"
+msgstr "Créé :"
+
 #: src/automations/labels.ts
 msgid "Creates or completes a note in the vault."
 msgstr "Crée ou complète une note du coffre."
+
+#: src/settings/automations/workflow-test-panel.tsx
+msgid "creates or completes a note in your vault"
+msgstr "crée ou complète une note de votre coffre"
 
 #: src/session/components/living-document/summary-switcher-view.tsx
 msgid "Current"
@@ -2649,6 +2670,10 @@ msgstr "Plus d'actions"
 msgid "More effort gives finer summaries, but slower. Auto leaves it to the server."
 msgstr "Plus d'effort donne des synthèses plus fines, mais plus lentes. Auto laisse le serveur décider."
 
+#: src/settings/automations/workflow-test-panel.tsx
+msgid "most recent"
+msgstr "la plus récente"
+
 #: src/folders/project/folder-meetings-card.tsx
 msgid "most recent first"
 msgstr "plus récentes d'abord"
@@ -2888,6 +2913,14 @@ msgstr "Aucun micro détecté. Branchez un micro ou vérifiez les autorisations.
 msgid "No microphone detected. Plug in a microphone, then retry. Audio missing during this interruption cannot be recovered."
 msgstr "Aucun micro détecté. Branchez un micro, puis réessayez. L'audio manquant pendant cette interruption ne peut pas être récupéré."
 
+#: src/settings/automations/workflow-test-panel.tsx
+msgid "No note matches this search."
+msgstr "Aucune note ne correspond à cette recherche."
+
+#: src/settings/automations/workflow-test-panel.tsx
+msgid "No note yet: record or write a note first."
+msgstr "Aucune note pour l'instant : enregistrez ou écrivez d'abord une note."
+
 #: src/shared/open-note-dialog.tsx
 msgid "No notes in this folder match."
 msgstr "Aucune note de ce dossier ne correspond."
@@ -2934,6 +2967,10 @@ msgstr "Aucun paramètre ne correspond à « {trimmed} »."
 msgid "No speech detected"
 msgstr "Aucune parole détectée"
 
+#: src/settings/automations/workflow-test-panel.tsx
+msgid "No step acts outside Syntheo: the test only shows the results."
+msgstr "Aucune étape n'agit hors de Syntheo : le test affiche seulement les résultats."
+
 #: src/templates/template-sidebar.tsx
 msgid "No template found"
 msgstr "Aucun modèle trouvé"
@@ -2979,6 +3016,10 @@ msgstr "Non installé"
 msgid "not receiving events"
 msgstr "réception d'événements inactive"
 
+#: src/settings/automations/workflow-test-result.tsx
+msgid "Not run"
+msgstr "Non lancée"
+
 #: src/settings/ai/shared/server-card.tsx
 msgid "Not tested"
 msgstr "Non testé"
@@ -2990,6 +3031,14 @@ msgstr "Pas encore rédigé. « Mettre à jour » le rédige à partir des synth
 #: src/sidebar/toast/undo-delete-toast.tsx
 msgid "note"
 msgstr "note"
+
+#: src/settings/automations/workflow-test-panel.tsx
+msgid "Note"
+msgstr "Note"
+
+#: src/settings/automations/workflow-test-result.tsx
+msgid "Note “{noteTitle}”"
+msgstr "Note « {noteTitle} »"
 
 #: src/session/components/capsule/index.tsx
 msgid "Note capsule"
@@ -3022,6 +3071,10 @@ msgstr "Étapes de la note"
 #: src/settings/automations/step-forms.tsx
 msgid "Note title"
 msgstr "Titre de la note"
+
+#: src/settings/automations/workflow-test-panel.tsx
+msgid "Note to test on"
+msgstr "Note sur laquelle tester"
 
 #: src/session/components/living-document/summary-switcher-view.tsx
 msgid "Note view"
@@ -3178,6 +3231,10 @@ msgstr "Ouvrez Syntheo depuis la barre des menus."
 #: src/home/active-folders.ts
 msgid "Open tasks"
 msgstr "Tâches non faites"
+
+#: src/settings/automations/workflow-test-result.tsx
+msgid "Open the note"
+msgstr "Ouvrir la note"
 
 #: src/shared/help-dialog.tsx
 msgid "Open the online documentation"
@@ -3688,6 +3745,10 @@ msgstr "Tout remplacer"
 msgid "Replace with..."
 msgstr "Remplacer par..."
 
+#: src/settings/automations/workflow-test-panel.tsx
+msgid "replaces the content of the clipboard"
+msgstr "remplace le contenu du presse-papiers"
+
 #: src/main/windows-title-bar.tsx
 msgid "Report a Bug"
 msgstr "Signaler un bug"
@@ -3802,9 +3863,17 @@ msgstr "Lancer une commande"
 msgid "Run an automation"
 msgstr "Lancer une automatisation"
 
+#: src/settings/automations/workflow-test-panel.tsx
+msgid "Run the test"
+msgstr "Lancer le test"
+
 #: src/automations/command-confirmation-dialog.tsx
 msgid "Run this command?"
 msgstr "Lancer cette commande ?"
+
+#: src/settings/automations/workflow-test-panel.tsx
+msgid "runs the program on your computer"
+msgstr "lance le programme sur votre ordinateur"
 
 #: src/session/components/living-document/fiche-folder.tsx
 msgid "same title"
@@ -3894,6 +3963,10 @@ msgstr "Rechercher à nouveau"
 #: src/sidebar/automations.tsx
 msgid "Search automations..."
 msgstr "Rechercher des automatisations..."
+
+#: src/settings/automations/workflow-test-panel.tsx
+msgid "Search by title"
+msgstr "Rechercher par titre"
 
 #: src/contacts/shared.tsx
 msgid "Search contacts..."
@@ -4043,6 +4116,10 @@ msgstr "Envoyez un message"
 msgid "Send to an address (webhook)"
 msgstr "Envoyer vers une adresse (webhook)"
 
+#: src/settings/automations/workflow-test-panel.tsx
+msgid "sends the JSON to the address, outside your computer"
+msgstr "envoie le JSON à l'adresse, hors de votre ordinateur"
+
 #: src/session/components/note-input/meeting-chat-highlights.tsx
 msgid "sent"
 msgstr "envoyé"
@@ -4134,6 +4211,10 @@ msgstr "Maj"
 msgid "Show a reminder when a recording starts."
 msgstr "Affichez un rappel lorsqu'un enregistrement commence."
 
+#: src/settings/automations/workflow-test-result.tsx
+msgid "Show all"
+msgstr "Tout afficher"
+
 #: src/settings/general/app-settings.tsx
 #: src/settings/search-index.ts
 msgid "Show app in Dock"
@@ -4144,7 +4225,12 @@ msgstr "Afficher l'application dans le Dock"
 msgid "Show floating bar"
 msgstr "Afficher la barre flottante"
 
+#: src/settings/automations/workflow-test-result.tsx
+msgid "Show in folder"
+msgstr "Afficher dans le dossier"
+
 #: src/services/notification-labels.ts
+#: src/settings/automations/workflow-test-result.tsx
 msgid "Show less"
 msgstr "Afficher moins"
 
@@ -4182,6 +4268,10 @@ msgstr "Afficher lorsqu'un résumé est prêt."
 msgid "Show when initial cloud sync finishes."
 msgstr "Afficher lorsque la synchronisation initiale dans le cloud se termine."
 
+#: src/settings/automations/workflow-test-panel.tsx
+msgid "shows a system notification"
+msgstr "affiche une notification système"
+
 #: src/settings/developers/webhooks.tsx
 msgid "Signing secret copied"
 msgstr "Secret de signature copié"
@@ -4189,6 +4279,14 @@ msgstr "Secret de signature copié"
 #: src/settings/search-index.ts
 msgid "silence, mute, alerts, quiet, do not disturb"
 msgstr "silence, muet, alertes, calme, ne pas déranger"
+
+#: src/settings/automations/workflow-test-panel.tsx
+msgid "Simulate the steps with real effects"
+msgstr "Simuler les étapes à effet réel"
+
+#: src/settings/automations/workflow-test-result.tsx
+msgid "Simulated"
+msgstr "Simulée"
 
 #: src/folders/project/folder-header-actions.tsx
 msgid "since {first}"
@@ -4613,6 +4711,10 @@ msgstr "Syntheo a besoin du microphone et de l'audio système pour transcrire vo
 msgid "Syntheo passes each argument as is, without a shell. Your answer is remembered for this exact command: if you change it, Syntheo asks again."
 msgstr "Syntheo transmet chaque argument tel quel, sans interpréteur de commandes. Votre réponse est mémorisée pour cette commande exacte : si vous la modifiez, Syntheo vous redemandera."
 
+#: src/settings/automations/workflow-test-panel.tsx
+msgid "Syntheo runs the automation as it is edited, even unsaved, on the note you choose."
+msgstr "Syntheo lance l'automatisation telle qu'elle est éditée, même non enregistrée, sur la note que vous choisissez."
+
 #: src/settings/automations/workflow-builder.tsx
 msgid "Syntheo runs the steps in order on your computer: the trigger is step 1, then each action follows."
 msgstr "Syntheo exécute les étapes dans l'ordre, sur votre ordinateur : le déclencheur est l'étape 1, puis chaque action suit."
@@ -4771,6 +4873,11 @@ msgstr "Modèles"
 msgid "Test"
 msgstr "Test"
 
+#: src/settings/automations/index.tsx
+msgctxt "automation"
+msgid "Test"
+msgstr "Tester"
+
 #: src/settings/ai/shared/server-address.tsx
 msgid "Test connection"
 msgstr "Tester la connexion"
@@ -4784,6 +4891,18 @@ msgstr "Test livré ({0})"
 #: src/settings/developers/webhooks.tsx
 msgid "Test failed ({0})"
 msgstr "Test échoué ({0})"
+
+#: src/settings/automations/workflow-test-panel.tsx
+msgid "Test on a note"
+msgstr "Tester sur une note"
+
+#: src/settings/automations/workflow-test-result.tsx
+msgid "Test result"
+msgstr "Résultat du test"
+
+#: src/settings/automations/workflow-test-panel.tsx
+msgid "Test running…"
+msgstr "Test en cours…"
 
 #: src/settings/ai/llm/server-card.tsx
 #: src/settings/ai/stt/server-card.tsx
@@ -4898,6 +5017,10 @@ msgstr "Le micro et le son système sont coupés : plus rien n'est transcrit."
 msgid "The name could not be saved. Try again."
 msgstr "Le nom n’a pas pu être enregistré. Réessayez."
 
+#: src/settings/automations/workflow-test-result.tsx
+msgid "The next steps were not run."
+msgstr "Les étapes suivantes n'ont pas été lancées."
+
 #: src/settings/dictation.tsx
 msgid "The one that captures your voice."
 msgstr "Celui qui capte votre voix."
@@ -4967,6 +5090,14 @@ msgstr "Le serveur de synthèse n'a pas répondu. Vérifiez qu'il est démarré,
 msgid "The summary still mentions unnamed speakers."
 msgstr "La synthèse mentionne encore des locuteurs sans nom."
 
+#: src/settings/automations/workflow-test-result.tsx
+msgid "The test changes neither the last run nor the list of notes already processed."
+msgstr "Le test ne change ni la dernière exécution ni la liste des notes déjà traitées."
+
+#: src/settings/automations/workflow-test-panel.tsx
+msgid "The test could not run"
+msgstr "Le test n'a pas pu être lancé"
+
 #: src/folders/project/folder-thread-card.tsx
 msgid "The thread could not be updated. Check the language model, then try again."
 msgstr "Le fil rouge n'a pas pu être mis à jour. Vérifiez le modèle de langage, puis réessayez."
@@ -5013,6 +5144,14 @@ msgstr "Ensuite"
 msgid "There is nothing to copy."
 msgstr "Il n'y a rien à copier."
 
+#: src/settings/automations/workflow-test-panel.tsx
+msgid "These steps will be simulated: nothing is written, sent or run."
+msgstr "Ces étapes seront simulées : rien n'est écrit, envoyé ni lancé."
+
+#: src/settings/automations/workflow-test-panel.tsx
+msgid "They describe what they would do, without acting. The local model still generates its text."
+msgstr "Elles décrivent ce qu'elles feraient, sans agir. Le modèle local génère tout de même son texte."
+
 #: src/chat/components/message/loading.tsx
 msgid "Thinking..."
 msgstr "Réflexion..."
@@ -5040,6 +5179,10 @@ msgstr "Ce dossier utilise le modèle {title}"
 #: src/settings/general/index.tsx
 msgid "This information stays on your computer. It is used to recognize you in transcripts and to sign your meeting notes."
 msgstr "Ces informations restent sur votre poste. Elles servent à vous reconnaître dans les transcriptions et à signer vos comptes-rendus."
+
+#: src/settings/automations/workflow-test-panel.tsx
+msgid "This is a real test: these steps really act."
+msgstr "C'est un test réel : ces étapes agissent vraiment."
 
 #: src/stt/audio-import-feedback.ts
 msgid "This model can't transcribe a file. Choose another transcription model."
@@ -5318,6 +5461,11 @@ msgstr "Sans titre"
 #: src/automations/labels.ts
 msgid "Untitled automation"
 msgstr "Automatisation sans titre"
+
+#: src/settings/automations/workflow-test-panel.tsx
+#: src/settings/automations/workflow-test-result.tsx
+msgid "Untitled note"
+msgstr "Note sans titre"
 
 #: src/contacts/related-notes.tsx
 msgid "Untitled Note"
@@ -5630,6 +5778,10 @@ msgstr "Écrivez librement, Syntheo complétera."
 #: src/automations/labels.ts
 msgid "Write to the vault"
 msgstr "Écrire dans le coffre"
+
+#: src/settings/automations/workflow-test-panel.tsx
+msgid "writes a Markdown file to the chosen folder"
+msgstr "écrit un fichier Markdown dans le dossier choisi"
 
 #: src/automations/labels.ts
 msgid "Writes the note to a folder on your computer."

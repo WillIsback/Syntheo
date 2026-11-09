@@ -90,6 +90,19 @@ type StepOf<T extends WorkflowStepType> = Extract<WorkflowStep, { type: T }>;
 /** Ce qu'une étape publie pour les suivantes : du texte ou un fichier. */
 export type StepOutputKind = "text" | "file";
 
+/**
+ * Effet réel d'une étape hors de l'application, signalé avant un test :
+ * fichier exporté, note du coffre, presse-papiers, notification, envoi vers
+ * une adresse, commande. La génération n'en a pas.
+ */
+export type StepEffectKind =
+  | "file"
+  | "vault"
+  | "clipboard"
+  | "notification"
+  | "webhook"
+  | "command";
+
 export type StepDefinition<T extends WorkflowStepType> = {
   type: T;
   create: (stepId: string) => StepOf<T>;
@@ -104,6 +117,8 @@ export type StepDefinition<T extends WorkflowStepType> = {
   rerunsOnSummary: boolean;
   /** Rangée sous « Avancé » dans le menu « Ajouter une étape ». */
   advanced: boolean;
+  /** Effet réel hors de l'application, ou rien (la génération). */
+  effect: StepEffectKind | null;
 };
 
 const markdownExport: StepDefinition<"markdown_export"> = {
@@ -128,6 +143,7 @@ const markdownExport: StepDefinition<"markdown_export"> = {
   output: "file",
   rerunsOnSummary: true,
   advanced: false,
+  effect: "file",
 };
 
 const str = (record: Record<string, unknown>, key: string): string =>
@@ -147,6 +163,7 @@ const generateText: StepDefinition<"generate_text"> = {
   output: "text",
   rerunsOnSummary: false,
   advanced: false,
+  effect: null,
 };
 
 const vaultWrite: StepDefinition<"vault_write"> = {
@@ -171,6 +188,7 @@ const vaultWrite: StepDefinition<"vault_write"> = {
   output: null,
   rerunsOnSummary: false,
   advanced: false,
+  effect: "vault",
 };
 
 const clipboard: StepDefinition<"clipboard"> = {
@@ -185,6 +203,7 @@ const clipboard: StepDefinition<"clipboard"> = {
   output: null,
   rerunsOnSummary: false,
   advanced: false,
+  effect: "clipboard",
 };
 
 const notification: StepDefinition<"notification"> = {
@@ -205,6 +224,7 @@ const notification: StepDefinition<"notification"> = {
   output: null,
   rerunsOnSummary: false,
   advanced: false,
+  effect: "notification",
 };
 
 const webhook: StepDefinition<"webhook"> = {
@@ -226,6 +246,7 @@ const webhook: StepDefinition<"webhook"> = {
   output: null,
   rerunsOnSummary: false,
   advanced: true,
+  effect: "webhook",
 };
 
 const command: StepDefinition<"command"> = {
@@ -243,6 +264,7 @@ const command: StepDefinition<"command"> = {
   output: "text",
   rerunsOnSummary: false,
   advanced: true,
+  effect: "command",
 };
 
 export const STEP_DEFINITIONS: {
@@ -278,6 +300,21 @@ export function createWorkflowStep(type: WorkflowStepType): WorkflowStep {
 
 export function isWorkflowStepReady(step: WorkflowStep): boolean {
   return stepDefinition(step).isReady(step);
+}
+
+export type RealEffectStep = {
+  step: WorkflowStep;
+  /** Numéro affiché dans l'éditeur : le déclencheur est l'étape 1. */
+  number: number;
+  effect: StepEffectKind;
+};
+
+/** Les actions à effet réel, à signaler avant de tester l'automatisation. */
+export function stepsWithRealEffects(steps: WorkflowStep[]): RealEffectStep[] {
+  return steps.flatMap((step, index) => {
+    const effect = stepDefinition(step).effect;
+    return effect ? [{ step, number: index + 2, effect }] : [];
+  });
 }
 
 /** Lit une étape enregistrée ; `null` pour un type inconnu (étape cloud). */
