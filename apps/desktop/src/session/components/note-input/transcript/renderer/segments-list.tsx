@@ -35,10 +35,8 @@ import {
   SegmentKeyUtils,
   type RenderLabelContext,
   type Segment,
-  type SegmentWord,
 } from "~/stt/live-segment";
 import { SpeakerLabelManager } from "~/stt/segment/shared";
-import { isTranscriptWordSeekable } from "~/stt/timing";
 
 export const SegmentsList = memo(
   function SegmentsList({
@@ -49,10 +47,6 @@ export const SegmentsList = memo(
     labelContext,
     offsetMs,
     shouldScrollToEnd,
-    currentMs,
-    seek,
-    startPlayback,
-    audioExists,
     maxSpeakerNumber,
     editMode,
   }: {
@@ -63,10 +57,6 @@ export const SegmentsList = memo(
     labelContext?: RenderLabelContext;
     offsetMs: number;
     shouldScrollToEnd: boolean;
-    currentMs: number;
-    seek: (sec: number) => void;
-    startPlayback: () => void;
-    audioExists: boolean;
     maxSpeakerNumber?: number;
     editMode: boolean;
   }) {
@@ -176,8 +166,6 @@ export const SegmentsList = memo(
       scrollElement,
       activeMatchId: transcriptSearch.activeMatchId,
       searchEnabled: transcriptSearch.query.length > 0,
-      currentMs,
-      offsetMs,
     });
     useRegisterTranscriptSegments(
       transcriptId,
@@ -185,16 +173,6 @@ export const SegmentsList = memo(
       offsetMs,
       segments,
       segmentKeys,
-    );
-
-    const seekAndPlay = useCallback(
-      (word: SegmentWord) => {
-        if (audioExists && isTranscriptWordSeekable(word)) {
-          seek((offsetMs + word.start_ms) / 1000);
-          startPlayback();
-        }
-      },
-      [audioExists, offsetMs, seek, startPlayback],
     );
 
     // Nouveau tour de parole : recoller au bas. Ne dépend que du nombre de
@@ -249,9 +227,6 @@ export const SegmentsList = memo(
               showHeader={!continuation}
               continuation={continuation}
               resolveSegment={resolveSegment}
-              currentMs={currentMs}
-              seekAndPlay={seekAndPlay}
-              audioExists={audioExists}
               search={transcriptSearch}
               editMode={editMode}
             />
@@ -268,12 +243,8 @@ export const SegmentsList = memo(
       prevProps.scrollElement === nextProps.scrollElement &&
       prevProps.offsetMs === nextProps.offsetMs &&
       prevProps.shouldScrollToEnd === nextProps.shouldScrollToEnd &&
-      prevProps.currentMs === nextProps.currentMs &&
-      prevProps.audioExists === nextProps.audioExists &&
       prevProps.maxSpeakerNumber === nextProps.maxSpeakerNumber &&
       prevProps.editMode === nextProps.editMode &&
-      prevProps.seek === nextProps.seek &&
-      prevProps.startPlayback === nextProps.startPlayback &&
       segmentsShallowEqual(prevProps.segments, nextProps.segments)
     );
   },

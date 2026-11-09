@@ -110,10 +110,6 @@ describe("RenderTranscript", () => {
           captureGeneration={7}
           editMode={editMode}
           liveSegments={createSegments(500)}
-          currentMs={0}
-          seek={vi.fn()}
-          startPlayback={vi.fn()}
-          audioExists
         />,
       );
 
@@ -166,10 +162,6 @@ describe("RenderTranscript", () => {
         transcriptId="transcript-1"
         currentActive
         liveSegments={[live]}
-        currentMs={0}
-        seek={vi.fn()}
-        startPlayback={vi.fn()}
-        audioExists
       />,
     );
 
@@ -193,10 +185,6 @@ describe("RenderTranscript", () => {
         transcriptId="transcript-1"
         currentActive={false}
         liveSegments={[]}
-        currentMs={0}
-        seek={vi.fn()}
-        startPlayback={vi.fn()}
-        audioExists
       />,
     );
 
@@ -227,10 +215,6 @@ describe("RenderTranscript", () => {
         transcriptId="transcript-1"
         currentActive
         liveSegments={[]}
-        currentMs={0}
-        seek={vi.fn()}
-        startPlayback={vi.fn()}
-        audioExists
       />,
     );
 
@@ -270,10 +254,6 @@ describe("RenderTranscript", () => {
         transcriptId="transcript-1"
         currentActive
         liveSegments={[live]}
-        currentMs={0}
-        seek={vi.fn()}
-        startPlayback={vi.fn()}
-        audioExists
       />,
     );
 
@@ -313,10 +293,6 @@ describe("RenderTranscript", () => {
         transcriptId="transcript-1"
         currentActive
         liveSegments={[live]}
-        currentMs={0}
-        seek={vi.fn()}
-        startPlayback={vi.fn()}
-        audioExists
       />,
     );
     await screen.findByRole("button", { name: "Ada" });
@@ -346,10 +322,6 @@ describe("RenderTranscript", () => {
         transcriptId="transcript-1"
         currentActive
         liveSegments={[updated]}
-        currentMs={0}
-        seek={vi.fn()}
-        startPlayback={vi.fn()}
-        audioExists
       />,
     );
 
@@ -388,10 +360,6 @@ describe("RenderTranscript", () => {
         transcriptId="transcript-1"
         currentActive={false}
         liveSegments={[]}
-        currentMs={0}
-        seek={vi.fn()}
-        startPlayback={vi.fn()}
-        audioExists
       />,
     );
 
@@ -438,20 +406,6 @@ describe("RenderTranscript", () => {
     expect(scrollElement.scrollTo).toHaveBeenCalled();
   });
 
-  it("pins the active playback segment outside the viewport", () => {
-    const segments = createSegments(1_000);
-    mocks.useRenderedTranscriptData.mockReturnValue({
-      maxSpeakerNumber: undefined,
-      request: createRenderRequest(segments),
-      segments,
-    });
-
-    renderTranscript(null, 99_950);
-
-    expect(document.querySelector(sectionSelector(99_900))).toBeTruthy();
-    expect(document.querySelectorAll("section").length).toBeLessThanOrEqual(30);
-  });
-
   it("preserves visible segment nodes when incremental updates append", () => {
     const initial = createSegments(500);
     mocks.useRenderedTranscriptData.mockReturnValue({
@@ -477,10 +431,6 @@ describe("RenderTranscript", () => {
         transcriptId="transcript-1"
         currentActive={false}
         liveSegments={[]}
-        currentMs={0}
-        seek={vi.fn()}
-        startPlayback={vi.fn()}
-        audioExists
       />,
     );
 
@@ -503,10 +453,6 @@ describe("RenderTranscript", () => {
         transcriptId="transcript-1"
         currentActive
         liveSegments={[initial]}
-        currentMs={0}
-        seek={vi.fn()}
-        startPlayback={vi.fn()}
-        audioExists
       />,
     );
     // L'identité de section d'un segment vivant ne dépend que de son premier
@@ -542,10 +488,6 @@ describe("RenderTranscript", () => {
         transcriptId="transcript-1"
         currentActive
         liveSegments={[updated]}
-        currentMs={0}
-        seek={vi.fn()}
-        startPlayback={vi.fn()}
-        audioExists
       />,
     );
 
@@ -560,10 +502,7 @@ function sectionSelector(startMs: number) {
   return `section[data-transcript-segment-id='transcript-1:MixedCapture:start-${startMs}']`;
 }
 
-function renderTranscript(
-  scrollElement: HTMLDivElement | null = null,
-  currentMs = 0,
-) {
+function renderTranscript(scrollElement: HTMLDivElement | null = null) {
   return render(
     <RenderTranscript
       scrollElement={scrollElement}
@@ -572,10 +511,6 @@ function renderTranscript(
       transcriptId="transcript-1"
       currentActive={false}
       liveSegments={[]}
-      currentMs={currentMs}
-      seek={vi.fn()}
-      startPlayback={vi.fn()}
-      audioExists
     />,
     scrollElement ? { container: scrollElement } : undefined,
   );

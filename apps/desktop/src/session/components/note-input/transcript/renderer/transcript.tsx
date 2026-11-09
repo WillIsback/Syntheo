@@ -25,10 +25,6 @@ export function RenderTranscript({
   currentActive,
   captureGeneration = 0,
   liveSegments,
-  currentMs,
-  seek,
-  startPlayback,
-  audioExists,
   editMode = false,
 }: {
   scrollElement: HTMLDivElement | null;
@@ -38,10 +34,6 @@ export function RenderTranscript({
   currentActive: boolean;
   captureGeneration?: number;
   liveSegments: Segment[];
-  currentMs: number;
-  seek: (sec: number) => void;
-  startPlayback: () => void;
-  audioExists: boolean;
   editMode?: boolean;
 }) {
   return (
@@ -52,10 +44,6 @@ export function RenderTranscript({
       captureGeneration={captureGeneration}
       liveSegments={liveSegments}
       shouldScrollToEnd={isLastTranscript && shouldScrollToEnd}
-      currentMs={currentMs}
-      seek={seek}
-      startPlayback={startPlayback}
-      audioExists={audioExists}
       editMode={editMode}
     />
   );
@@ -68,10 +56,6 @@ function PersistedTranscript({
   captureGeneration,
   liveSegments,
   shouldScrollToEnd,
-  currentMs,
-  seek,
-  startPlayback,
-  audioExists,
   editMode,
 }: {
   scrollElement: HTMLDivElement | null;
@@ -80,10 +64,6 @@ function PersistedTranscript({
   captureGeneration: number;
   liveSegments: Segment[];
   shouldScrollToEnd: boolean;
-  currentMs: number;
-  seek: (sec: number) => void;
-  startPlayback: () => void;
-  audioExists: boolean;
   editMode: boolean;
 }) {
   const {
@@ -113,10 +93,6 @@ function PersistedTranscript({
       transcriptId={transcriptId}
       currentActive={currentActive}
       shouldScrollToEnd={shouldScrollToEnd}
-      currentMs={currentMs}
-      seek={seek}
-      startPlayback={startPlayback}
-      audioExists={audioExists}
       maxSpeakerNumber={maxSpeakerNumber}
       request={request}
       editMode={editMode}
@@ -130,10 +106,6 @@ function TranscriptSegments({
   transcriptId,
   currentActive,
   shouldScrollToEnd,
-  currentMs,
-  seek,
-  startPlayback,
-  audioExists,
   maxSpeakerNumber,
   request,
   editMode,
@@ -143,10 +115,6 @@ function TranscriptSegments({
   transcriptId: string;
   currentActive: boolean;
   shouldScrollToEnd: boolean;
-  currentMs: number;
-  seek: (sec: number) => void;
-  startPlayback: () => void;
-  audioExists: boolean;
   maxSpeakerNumber?: number;
   request: RenderTranscriptRequest | null;
   editMode: boolean;
@@ -190,10 +158,6 @@ function TranscriptSegments({
       labelContext={labelContext}
       offsetMs={offsetMs}
       shouldScrollToEnd={shouldScrollToEnd}
-      currentMs={currentMs}
-      seek={seek}
-      startPlayback={startPlayback}
-      audioExists={audioExists}
       maxSpeakerNumber={request?.speaker_context ? undefined : maxSpeakerNumber}
       editMode={editMode}
     />

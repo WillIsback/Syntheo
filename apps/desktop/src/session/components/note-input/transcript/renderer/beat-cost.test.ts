@@ -176,8 +176,6 @@ function useBeat(
     scrollElement: null,
     activeMatchId: null,
     searchEnabled: false,
-    currentMs: 0,
-    offsetMs: 0,
   });
   return paragraphs;
 }

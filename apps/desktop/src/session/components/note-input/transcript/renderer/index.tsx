@@ -35,9 +35,6 @@ import type { Segment } from "~/stt/live-segment";
 
 const LIVE_TRANSCRIPT_PLACEHOLDER_ID = "__live-transcript__";
 
-const NO_PLAYBACK = () => {};
-const NO_PLAYBACK_SEEK = (_seconds: number) => {};
-
 type SelectedEntries = Map<string, TranscriptWordSelection>;
 
 function getVisibleTranscriptIds(
@@ -156,11 +153,6 @@ export function TranscriptViewer({
     scrollToBottom,
   } = useScrollDetection(containerRef, currentActive);
 
-  // Syntheo ne conserve jamais l'audio : aucune lecture depuis le transcript.
-  const audioExists = false;
-  const deferredCurrentMs = 0;
-  const seek = NO_PLAYBACK_SEEK;
-  const start = NO_PLAYBACK;
   const shouldAutoScroll = currentActive && autoScrollEnabled;
   // Une seule règle de suivi : la dernière transcription ne recolle au bas
   // que si le suivi automatique est actif (l'utilisateur n'a pas remonté).
@@ -178,19 +170,12 @@ export function TranscriptViewer({
   const visibleTranscriptIdsRef = useRef(visibleTranscriptIds);
   visibleTranscriptIdsRef.current = visibleTranscriptIds;
 
+  // Syntheo ne conserve jamais l'audio : la seule action est la copie.
   const handleSelectionAction = useCallback(
-    (action: "copy" | "play", selection: TranscriptWordSelection) => {
-      if (action === "copy") {
-        void navigator.clipboard.writeText(selection.text);
-        return;
-      }
-
-      if (audioExists) {
-        seek(selection.startMs / 1000);
-        start();
-      }
+    (_action: "copy", selection: TranscriptWordSelection) => {
+      void navigator.clipboard.writeText(selection.text);
     },
-    [audioExists, seek, start],
+    [],
   );
   const {
     handleAssignSpeaker,
@@ -426,10 +411,6 @@ export function TranscriptViewer({
                   currentActive={isActiveTranscript}
                   captureGeneration={isActiveTranscript ? captureGeneration : 0}
                   liveSegments={isActiveTranscript ? liveSegments : []}
-                  currentMs={deferredCurrentMs}
-                  seek={seek}
-                  startPlayback={start}
-                  audioExists={audioExists}
                   editMode={editMode}
                 />
               </div>
@@ -441,7 +422,6 @@ export function TranscriptViewer({
           <SelectionMenu
             containerRef={containerRef}
             contextRequest={contextRequest}
-            audioExists={audioExists}
             onContextClose={handleContextClose}
             onAction={handleSelectionAction}
             onEdit={onEditModeChange ? handleEditSelection : undefined}

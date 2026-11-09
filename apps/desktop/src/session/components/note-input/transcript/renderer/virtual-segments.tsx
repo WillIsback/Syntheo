@@ -17,11 +17,9 @@ import {
 } from "../../search/matching";
 import { scrollBehavior } from "./viewport-hooks";
 import {
-  createSegmentIndex,
   ESTIMATED_ROW_CHROME,
   estimateTranscriptRowHeight,
   FALLBACK_VIEWPORT_HEIGHT,
-  findPlaybackSegmentIndex,
   findRowIndex,
   findWordSegmentIndex,
   OVERSCAN_PX,
@@ -44,8 +42,6 @@ export function useVirtualSegments({
   scrollElement,
   activeMatchId,
   searchEnabled,
-  currentMs,
-  offsetMs,
 }: {
   segments: Segment[];
   segmentKeys: string[];
@@ -54,8 +50,6 @@ export function useVirtualSegments({
   scrollElement: HTMLDivElement | null;
   activeMatchId: string | null;
   searchEnabled: boolean;
-  currentMs: number;
-  offsetMs: number;
 }) {
   const [listElement, setListElement] = useState<HTMLDivElement | null>(null);
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
@@ -110,24 +104,12 @@ export function useVirtualSegments({
   }, [estimatedHeights, measuredHeights, segmentKeys]);
   const totalHeight = offsets[offsets.length - 1] ?? 0;
   const viewport = useVirtualViewport(scrollElement, listElement);
-  // Index construits seulement quand ils servent (recherche, lecture) : à
-  // chaque battement de l'écoute, ils reliraient tous les mots (issue 287).
+  // Index construit seulement quand il sert (recherche) : à chaque battement
+  // de l'écoute, il relirait tous les mots (issue 287).
   const activeMatchIndex = useMemo(
     () =>
       activeMatchId ? findWordSegmentIndex(segments, activeMatchId) : null,
     [activeMatchId, segments],
-  );
-  const playing = currentMs > 0;
-  const segmentIndex = useMemo(
-    () => (playing ? createSegmentIndex(segments) : null),
-    [playing, segments],
-  );
-  const playbackIndex = useMemo(
-    () =>
-      segmentIndex
-        ? findPlaybackSegmentIndex(segmentIndex, currentMs, offsetMs)
-        : null,
-    [currentMs, offsetMs, segmentIndex],
   );
   const selectedIndexes = useSelectedSegmentIndexes(listElement);
   const virtualItems = useMemo(() => {
@@ -159,7 +141,6 @@ export function useVirtualSegments({
     }
 
     if (activeMatchIndex !== null) indexes.add(activeMatchIndex);
-    if (playbackIndex !== null) indexes.add(playbackIndex);
     if (focusedIndex !== null) indexes.add(focusedIndex);
     for (const index of selectedIndexes) indexes.add(index);
 
@@ -179,7 +160,6 @@ export function useVirtualSegments({
     focusedIndex,
     measuredHeights,
     offsets,
-    playbackIndex,
     scrollElement,
     selectedIndexes,
     segmentKeys,

@@ -84,7 +84,6 @@ describe("SelectionMenu", () => {
       <SelectionMenu
         containerRef={createRef()}
         contextRequest={request}
-        audioExists={false}
         onContextClose={() => calls.push("close")}
         onEdit={onEdit}
       />,
@@ -105,7 +104,6 @@ describe("SelectionMenu", () => {
       <SelectionMenu
         containerRef={createRef()}
         contextRequest={request}
-        audioExists={false}
         onContextClose={() => calls.push("close")}
         onChangeSpeaker={onChangeSpeaker}
       />,
@@ -118,12 +116,11 @@ describe("SelectionMenu", () => {
     expect(screen.queryByRole("button", { name: "Confirm" })).toBeNull();
   });
 
-  it("hides playback when the transcript has no audio", () => {
+  it("never offers playback: no audio is kept", () => {
     render(
       <SelectionMenu
         containerRef={createRef()}
         contextRequest={createContextRequest()}
-        audioExists={false}
         onContextClose={vi.fn()}
         onChangeSpeaker={vi.fn()}
       />,
@@ -136,20 +133,6 @@ describe("SelectionMenu", () => {
     expect(screen.getByRole("button", { name: /Copy$/ })).toBeTruthy();
   });
 
-  it("keeps playback available when the transcript has audio", () => {
-    render(
-      <SelectionMenu
-        containerRef={createRef()}
-        contextRequest={createContextRequest()}
-        audioExists
-        onContextClose={vi.fn()}
-        onChangeSpeaker={vi.fn()}
-      />,
-    );
-
-    expect(screen.getByRole("button", { name: "Play from here" })).toBeTruthy();
-  });
-
   it("paints its own highlight only once the native selection is gone", () => {
     const request = createContextRequest();
     window.getSelection()?.addRange(request.range);
@@ -158,7 +141,6 @@ describe("SelectionMenu", () => {
       <SelectionMenu
         containerRef={createRef()}
         contextRequest={request}
-        audioExists={false}
         onContextClose={vi.fn()}
         onChangeSpeaker={vi.fn()}
       />,

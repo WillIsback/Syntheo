@@ -28,7 +28,6 @@ export type TranscriptContextMenuRequest = {
 export function SelectionMenu({
   containerRef,
   contextRequest,
-  audioExists,
   onContextClose,
   onAction,
   onChangeSpeaker,
@@ -36,12 +35,8 @@ export function SelectionMenu({
 }: {
   containerRef: React.RefObject<HTMLElement | null>;
   contextRequest: TranscriptContextMenuRequest | null;
-  audioExists: boolean;
   onContextClose: () => void;
-  onAction?: (
-    action: "copy" | "play",
-    selection: TranscriptWordSelection,
-  ) => void;
+  onAction?: (action: "copy", selection: TranscriptWordSelection) => void;
   onEdit?: (selection: TranscriptWordSelection) => void;
   onChangeSpeaker?: (selection: TranscriptWordSelection) => void;
 }) {
@@ -50,7 +45,6 @@ export function SelectionMenu({
       <TextSelectionMenu
         containerRef={containerRef}
         suspended={contextRequest !== null}
-        audioExists={audioExists}
         onAction={onAction}
         onChangeSpeaker={onChangeSpeaker}
         onEdit={onEdit}
@@ -60,7 +54,6 @@ export function SelectionMenu({
           key={contextRequest.id}
           request={contextRequest}
           containerRef={containerRef}
-          audioExists={audioExists}
           onClose={onContextClose}
           onAction={onAction}
           onChangeSpeaker={onChangeSpeaker}
@@ -74,18 +67,13 @@ export function SelectionMenu({
 function TextSelectionMenu({
   containerRef,
   suspended,
-  audioExists,
   onAction,
   onChangeSpeaker,
   onEdit,
 }: {
   containerRef: React.RefObject<HTMLElement | null>;
   suspended: boolean;
-  audioExists: boolean;
-  onAction?: (
-    action: "copy" | "play",
-    selection: TranscriptWordSelection,
-  ) => void;
+  onAction?: (action: "copy", selection: TranscriptWordSelection) => void;
   onEdit?: (selection: TranscriptWordSelection) => void;
   onChangeSpeaker?: (selection: TranscriptWordSelection) => void;
 }) {
@@ -118,7 +106,6 @@ function TextSelectionMenu({
       containerRef={containerRef}
       floatingRef={floatingRef}
       floatingStyles={floatingStyles}
-      audioExists={audioExists}
       onClose={handleClose}
       onAction={onAction}
       onChangeSpeaker={onChangeSpeaker}
@@ -130,7 +117,6 @@ function TextSelectionMenu({
 function ContextSelectionMenu({
   request,
   containerRef,
-  audioExists,
   onClose,
   onAction,
   onChangeSpeaker,
@@ -138,12 +124,8 @@ function ContextSelectionMenu({
 }: {
   request: TranscriptContextMenuRequest;
   containerRef: React.RefObject<HTMLElement | null>;
-  audioExists: boolean;
   onClose: () => void;
-  onAction?: (
-    action: "copy" | "play",
-    selection: TranscriptWordSelection,
-  ) => void;
+  onAction?: (action: "copy", selection: TranscriptWordSelection) => void;
   onEdit?: (selection: TranscriptWordSelection) => void;
   onChangeSpeaker?: (selection: TranscriptWordSelection) => void;
 }) {
@@ -188,7 +170,6 @@ function ContextSelectionMenu({
       containerRef={containerRef}
       floatingRef={floatingRef}
       floatingStyles={floatingStyles}
-      audioExists={audioExists}
       onClose={handleClose}
       onAction={onAction}
       onChangeSpeaker={onChangeSpeaker}

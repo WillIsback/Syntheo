@@ -9,7 +9,7 @@ import {
 import { Trans } from "@lingui/react/macro";
 import { type MouseEvent, useCallback, useRef, useState } from "react";
 
-import { Copy, Pencil, Play, UserSwitch } from "@syntheo/ui/components/icons";
+import { Copy, Pencil, UserSwitch } from "@syntheo/ui/components/icons";
 import { useMountEffect } from "@syntheo/ui/hooks/use-mount-effect";
 import { cn } from "@syntheo/utils";
 
@@ -36,7 +36,6 @@ export function SelectionFloatingMenu({
   containerRef,
   floatingRef,
   floatingStyles,
-  audioExists,
   onClose,
   onAction,
   onChangeSpeaker,
@@ -47,17 +46,13 @@ export function SelectionFloatingMenu({
   containerRef: React.RefObject<HTMLElement | null>;
   floatingRef: (node: HTMLDivElement | null) => void;
   floatingStyles: React.CSSProperties;
-  audioExists: boolean;
   onClose: () => void;
-  onAction?: (
-    action: "copy" | "play",
-    selection: TranscriptWordSelection,
-  ) => void;
+  onAction?: (action: "copy", selection: TranscriptWordSelection) => void;
   onEdit?: (selection: TranscriptWordSelection) => void;
   onChangeSpeaker?: (selection: TranscriptWordSelection) => void;
 }) {
   const handleAction = useCallback(
-    (action: "copy" | "play") => {
+    (action: "copy") => {
       onAction?.(action, selection);
       onClose();
     },
@@ -106,16 +101,6 @@ export function SelectionFloatingMenu({
               >
                 <UserSwitch className="size-3.5" />
                 <Trans>Change speaker from here</Trans>
-              </button>
-            )}
-            {audioExists && (
-              <button
-                type="button"
-                className={cn(MENU_BUTTON_CLASSES)}
-                onClick={() => handleAction("play")}
-              >
-                <Play className="size-3.5" />
-                <Trans>Play from here</Trans>
               </button>
             )}
             <button
