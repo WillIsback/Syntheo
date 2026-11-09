@@ -207,4 +207,86 @@ describe("MeetingTypePicker", () => {
     });
     expect(screen.queryByRole("listbox")).toBeNull();
   });
+
+  // Issue 502 : dans un dossier qui a un modèle, la note le suit tant que
+  // l'utilisateur n'en a pas choisi un.
+  describe("folder template", () => {
+    function renderInFolder(selectedTemplateId = "", onSelect = vi.fn()) {
+      render(
+        <MeetingTypePicker
+          templates={templates}
+          selectedTemplateId={selectedTemplateId}
+          inheritedTemplateId="standup"
+          onSelect={onSelect}
+        />,
+      );
+      return { onSelect };
+    }
+
+    it("shows the inherited template while the note has none", () => {
+      renderInFolder();
+      expect(
+        screen.getByRole("button", {
+          name: "Meeting type: Point quotidien — folder template",
+        }),
+      ).toBeTruthy();
+      open();
+
+      const defaultGroup = screen.getByRole("group", { name: "Default" });
+      expect(
+        within(defaultGroup)
+          .getAllByRole("option")
+          .map((option) => option.textContent),
+      ).toEqual(["Point quotidien — folder template"]);
+      expect(
+        within(defaultGroup).getByRole("img", { name: "Current type" }),
+      ).toBeTruthy();
+    });
+
+    it("keeps the explicit choice of the note", () => {
+      renderInFolder("kickoff");
+      expect(
+        screen.getByRole("button", { name: "Meeting type: Lancement" }),
+      ).toBeTruthy();
+    });
+
+    it("fixes a template chosen in the list on the note", () => {
+      const { onSelect } = renderInFolder();
+      open();
+
+      fireEvent.click(
+        within(screen.getByRole("group", { name: "All templates" })).getByRole(
+          "option",
+          { name: "Point quotidien" },
+        ),
+      );
+      expect(onSelect).toHaveBeenCalledWith("standup");
+    });
+
+    it("leaves the note following the folder from the default entry", () => {
+      const { onSelect } = renderInFolder("kickoff");
+      open();
+
+      fireEvent.click(
+        screen.getByRole("option", {
+          name: "Point quotidien — folder template",
+        }),
+      );
+      expect(onSelect).toHaveBeenCalledWith("");
+    });
+
+    it("falls back to Automatic when the folder template no longer exists", () => {
+      render(
+        <MeetingTypePicker
+          templates={templates}
+          selectedTemplateId=""
+          inheritedTemplateId="deleted"
+          onSelect={vi.fn()}
+        />,
+      );
+      expect(
+        screen.getByRole("button", { name: "Meeting type: Automatic" }),
+      ).toBeTruthy();
+    });
+  });
 });

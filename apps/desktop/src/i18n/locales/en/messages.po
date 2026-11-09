@@ -140,6 +140,10 @@ msgstr "{entryCount} selected"
 msgid "{hiddenCount, plural, one {See the previous meeting} other {See the # previous meetings}}"
 msgstr "{hiddenCount, plural, one {See the previous meeting} other {See the # previous meetings}}"
 
+#: src/session/components/living-document/meeting-type-picker.tsx
+msgid "{inheritedTitle} — folder template"
+msgstr "{inheritedTitle} — folder template"
+
 #: src/settings/ai/stt/language-warning.tsx
 msgid "{model} can't transcribe {languages}. Try another model or change your spoken languages."
 msgstr "{model} can't transcribe {languages}. Try another model or change your spoken languages."
@@ -401,7 +405,6 @@ msgid "All Notes"
 msgstr "All Notes"
 
 #: src/session/components/living-document/meeting-type-picker.tsx
-#: src/templates/template-sidebar.tsx
 msgid "All templates"
 msgstr "All templates"
 
@@ -1259,7 +1262,6 @@ msgid "default"
 msgstr "default"
 
 #: src/session/components/living-document/meeting-type-picker.tsx
-#: src/templates/template-sidebar.tsx
 msgid "Default"
 msgstr "Default"
 
@@ -1698,6 +1700,10 @@ msgstr "Failed to copy transcript"
 msgid "Failed to copy: {viewTitle}"
 msgstr "Failed to copy: {viewTitle}"
 
+#: src/templates/template-sidebar.tsx
+msgid "Favorites"
+msgstr "Favorites"
+
 #: src/main/windows-title-bar.tsx
 msgid "File"
 msgstr "File"
@@ -1818,6 +1824,10 @@ msgstr "Full screen"
 #: src/main/windows-title-bar.tsx
 msgid "Full Screen"
 msgstr "Full Screen"
+
+#: src/templates/template-sidebar.tsx
+msgid "General templates"
+msgstr "General templates"
 
 #: src/session/components/note-input/enhanced/index.tsx
 msgid "Generate summary"
@@ -2623,7 +2633,6 @@ msgid "My automations"
 msgstr "My automations"
 
 #: src/session/components/living-document/meeting-type-picker.tsx
-#: src/templates/template-sidebar.tsx
 msgid "My favorites"
 msgstr "My favorites"
 
@@ -2893,6 +2902,10 @@ msgstr "No transcription service is set up: importing a file requires a transcri
 #: src/chat/components/input/use-dictation.ts
 msgid "No transcription service is set up."
 msgstr "No transcription service is set up."
+
+#: src/folders/project/folder-template-field.tsx
+msgid "None"
+msgstr "None"
 
 #: src/services/enhancer/eligibility.ts
 msgid "Not enough words recorded ({wordCount}/{minWords} minimum)"
@@ -3461,6 +3474,7 @@ msgstr "Recording with the default microphone instead. Check that the microphone
 msgid "Redo"
 msgstr "Redo"
 
+#: src/session/components/living-document/late-filing.ts
 #: src/session/components/living-document/summary-switcher-view.tsx
 #: src/session/components/note-input/header-enhanced.tsx
 #: src/session/components/note-input/template-picker.tsx
@@ -3474,6 +3488,10 @@ msgstr "Regenerate message"
 #: src/session/components/speaker-naming/bar.tsx
 msgid "Regenerate summary with names"
 msgstr "Regenerate summary with names"
+
+#: src/session/components/living-document/late-filing.ts
+msgid "Regenerate the summary with this template? The current version stays in the history."
+msgstr "Regenerate the summary with this template? The current version stays in the history."
 
 #: src/session/components/living-document/summary-version.tsx
 msgid "Regenerate with my notes"
@@ -4376,6 +4394,10 @@ msgstr "Summary preview"
 msgid "Summary ready"
 msgstr "Summary ready"
 
+#: src/folders/project/folder-template-field.tsx
+msgid "Summary template"
+msgstr "Summary template"
+
 #: src/chat/components/message/tool/edit-summary.tsx
 msgid "Summary updated"
 msgstr "Summary updated"
@@ -4902,6 +4924,10 @@ msgstr "This edit is no longer pending."
 msgid "This file is too large to import (2 GB maximum)."
 msgstr "This file is too large to import (2 GB maximum)."
 
+#: src/session/components/living-document/late-filing.ts
+msgid "This folder uses the {title} template"
+msgstr "This folder uses the {title} template"
+
 #: src/settings/general/index.tsx
 msgid "This information stays on your computer. It is used to recognize you in transcripts and to sign your meeting notes."
 msgstr "This information stays on your computer. It is used to recognize you in transcripts and to sign your meeting notes."
@@ -5163,8 +5189,10 @@ msgstr "Unreachable"
 
 #: src/editor-bridge/mention-config.ts
 #: src/folders/project/folder-meetings-card.tsx
+#: src/folders/project/folder-template-field.tsx
 #: src/folders/sidebar-tree-view.tsx
 #: src/home/note-index.tsx
+#: src/session/components/living-document/late-filing.ts
 #: src/session/components/living-document/meeting-type-picker.tsx
 #: src/session/components/note-input/raw.tsx
 #: src/session/components/outer-header/overflow/export-modal.tsx
@@ -5267,6 +5295,10 @@ msgstr "Use your microphone to capture your voice"
 #: src/templates/template-form.tsx
 msgid "Used for"
 msgstr "Used for"
+
+#: src/folders/project/folder-template-field.tsx
+msgid "Used for this folder's notes unless a note picks another"
+msgstr "Used for this folder's notes unless a note picks another"
 
 #: src/settings/general/spoken-languages.tsx
 msgid "Used for transcription and automatic summary language detection."
@@ -5433,6 +5465,10 @@ msgstr "Wisteria"
 #: src/shared/help-dialog.tsx
 msgid "Without a mouse: Tab moves to the next field, Shift+Tab to the previous one, Enter confirms."
 msgstr "Without a mouse: Tab moves to the next field, Shift+Tab to the previous one, Enter confirms."
+
+#: src/folders/project/folder-template-field.tsx
+msgid "Without one, notes use {inheritedTitle} from the {parentName} folder."
+msgstr "Without one, notes use {inheritedTitle} from the {parentName} folder."
 
 #: src/settings/dictation.tsx
 msgid "Words appear in a small bubble while you speak. Text is inserted when you finish."
