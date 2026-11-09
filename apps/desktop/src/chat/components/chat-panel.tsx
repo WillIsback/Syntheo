@@ -16,6 +16,7 @@ import { useChatActions } from "~/chat/store/use-chat-actions";
 import { chatFloatingPanelClassNames } from "~/chat/surface";
 import type { ChatScope } from "~/chat/types";
 import { useShell } from "~/contexts/shell";
+import { useFolderPageChatFolder } from "~/folders/chat-folder";
 import { useSessionHasTranscript } from "~/session/queries";
 import { useOwnerUserId } from "~/shared/owner-user";
 import { folderIdForNewNote, useSidebarNotes } from "~/sidebar/note-filter";
@@ -53,12 +54,13 @@ function ScopedChatSession({
   const { currentSessionId } = useSessionTab();
   const noteFilter = useSidebarNotes((state) => state.noteFilter);
   const folderFilter = useSidebarNotes((state) => state.folderFilter);
+  const folderPageFolder = useFolderPageChatFolder();
   const contextSessionId =
     scope === "automations" ? undefined : currentSessionId;
   const folderId =
     scope === "automations"
       ? undefined
-      : folderIdForNewNote(noteFilter, folderFilter);
+      : (folderPageFolder ?? folderIdForNewNote(noteFilter, folderFilter));
   const ownerUserId = useOwnerUserId();
   const hasAvailableTranscript = useSessionHasTranscript(
     contextSessionId ?? "",

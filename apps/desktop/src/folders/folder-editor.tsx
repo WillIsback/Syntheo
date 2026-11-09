@@ -1,7 +1,7 @@
 import { Trans, useLingui } from "@lingui/react/macro";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 
-import { DotsThree, File, Plus, X } from "@syntheo/ui/components/icons";
+import { DotsThree } from "@syntheo/ui/components/icons";
 import { Button } from "@syntheo/ui/components/ui/button";
 import {
   AppFloatingPanel,
@@ -14,23 +14,26 @@ import {
 import { Input } from "@syntheo/ui/components/ui/input";
 import { cn } from "@syntheo/utils";
 
+import {
+  FolderHeaderActions,
+  FolderMeetingSummaryLine,
+} from "./project/folder-header-actions";
+import { FolderMeetingsCard } from "./project/folder-meetings-card";
+import { FolderSidePanel } from "./project/folder-side-panel";
+import { FolderThreadCard } from "./project/folder-thread-card";
+import { folderMeetingStats, useFolderMeetings } from "./project/meetings";
+import { NextMeetingSlot } from "./project/next-meeting-slot";
+import { useFolderThread } from "./project/thread-store";
 import { useFolderSelection } from "./selection";
 
-import {
-  deleteLocalFolderMaterial,
-  diskAttachmentId,
-  useFolderMaterials,
-} from "~/session/folder-attachments";
 import {
   deleteNamedFolder,
   renameNamedFolder,
   updateFolderIcon,
 } from "~/session/folder-catalog";
 import { resolvedFolderIcon } from "~/session/folder-icon";
-import { FolderInstructionsField } from "~/session/folder-instructions";
 import { folderDisplayName, normalizeFolderPath } from "~/session/folders";
 import { useFolderIcons } from "~/session/queries";
-import { useFolderMaterialUpload } from "~/shared/hooks/useFileUpload";
 import { DestructiveConfirmationDialog } from "~/shared/ui/destructive-confirmation-dialog";
 import { TemplateIconPicker } from "~/templates/template-icon-picker";
 
@@ -50,9 +53,9 @@ export function FolderEditor({ folderPath }: { folderPath: string }) {
     (state) => state.rekeyIconOverride,
   );
   const icon = resolvedFolderIcon(folderPath, persistedIcons, iconOverrides);
-  const materials = useFolderMaterials(folderPath);
-  const upload = useFolderMaterialUpload(folderPath);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const meetings = useFolderMeetings(folderPath);
+  const stats = useMemo(() => folderMeetingStats(meetings), [meetings]);
+  const thread = useFolderThread(folderPath);
   const skipTitleCommit = useRef(false);
   const [busy, setBusy] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
@@ -98,7 +101,7 @@ export function FolderEditor({ folderPath }: { folderPath: string }) {
 
   return (
     <section className="flex h-full flex-1 flex-col" aria-label={folderPath}>
-      <div className="flex h-12 items-center justify-between gap-3 pr-1 pl-3">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 pt-2 pr-1 pb-3 pl-3">
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <TemplateIconPicker
             size="sm"
@@ -112,37 +115,43 @@ export function FolderEditor({ folderPath }: { folderPath: string }) {
               });
             }}
           />
-          <div className="relative max-w-full min-w-0">
-            <span
-              aria-hidden="true"
-              className="invisible block px-0 py-0 text-sm font-semibold whitespace-pre"
-            >
-              {(draft || t`Folder name`) + " "}
-            </span>
-            <Input
-              value={draft}
-              disabled={busy}
-              aria-label={t`Folder name`}
-              onChange={(event) => setDraft(event.target.value)}
-              onBlur={() => {
-                void commitTitle();
-              }}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.currentTarget.blur();
-                }
-                if (event.key === "Escape") {
-                  skipTitleCommit.current = true;
-                  setDraft(displayName);
-                  event.currentTarget.blur();
-                }
-              }}
-              placeholder={t`Folder name`}
-              className="absolute inset-0 h-auto w-full max-w-full min-w-0 border-0 px-0 py-0 text-sm font-semibold shadow-none focus-visible:ring-0 md:text-sm"
-            />
+          <div className="max-w-full min-w-0">
+            <div className="relative max-w-full min-w-0">
+              <span
+                aria-hidden="true"
+                className="invisible block px-0 py-0 text-sm font-semibold whitespace-pre"
+              >
+                {(draft || t`Folder name`) + " "}
+              </span>
+              <Input
+                value={draft}
+                disabled={busy}
+                aria-label={t`Folder name`}
+                onChange={(event) => setDraft(event.target.value)}
+                onBlur={() => {
+                  void commitTitle();
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.currentTarget.blur();
+                  }
+                  if (event.key === "Escape") {
+                    skipTitleCommit.current = true;
+                    setDraft(displayName);
+                    event.currentTarget.blur();
+                  }
+                }}
+                placeholder={t`Folder name`}
+                className="absolute inset-0 h-auto w-full max-w-full min-w-0 border-0 px-0 py-0 text-sm font-semibold shadow-none focus-visible:ring-0 md:text-sm"
+              />
+            </div>
+            <p className="text-muted-foreground text-xs">
+              <FolderMeetingSummaryLine stats={stats} />
+            </p>
           </div>
         </div>
-        <div className="flex items-center gap-0.5">
+        <div className="flex items-center gap-1">
+          <FolderHeaderActions folderPath={folderPath} />
           <DropdownMenu open={actionsOpen} onOpenChange={setActionsOpen}>
             <DropdownMenuTrigger asChild>
               <Button
@@ -174,103 +183,18 @@ export function FolderEditor({ folderPath }: { folderPath: string }) {
         </div>
       </div>
 
-      <div className="scrollbar-hide flex-1 overflow-y-auto px-3 pt-3 pb-6">
-        <div className="flex max-w-2xl flex-col gap-6">
-          <div className="flex flex-col gap-1.5">
-            <h4 className="text-sm font-medium">
-              <Trans>Context</Trans>
-            </h4>
-            <p className="text-muted-foreground text-xs">
-              <Trans>What these notes are usually about</Trans>
-            </p>
-            <FolderInstructionsField folderPath={folderPath} rows={4} />
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <h4 className="text-sm font-medium">
-              <Trans>Materials</Trans>
-            </h4>
-            <input
-              ref={inputRef}
-              type="file"
-              className="hidden"
-              onChange={async (event) => {
-                const file = event.target.files?.[0];
-                event.target.value = "";
-                if (!file) {
-                  return;
-                }
-                setBusy(true);
-                try {
-                  await upload(file);
-                } finally {
-                  setBusy(false);
-                }
-              }}
+      <div className="scrollbar-hide @container flex-1 overflow-y-auto px-3 pb-6">
+        <div className="grid grid-cols-1 items-start gap-5 @3xl:grid-cols-[minmax(0,1fr)_300px]">
+          <div className="flex min-w-0 flex-col gap-4">
+            <NextMeetingSlot folderPath={folderPath} />
+            <FolderThreadCard
+              folderPath={folderPath}
+              meetings={meetings}
+              thread={thread}
             />
-            <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              <li>
-                <button
-                  type="button"
-                  disabled={busy}
-                  className={cn([
-                    "border-border text-muted-foreground hover:bg-accent hover:text-foreground",
-                    "flex aspect-[4/3] w-full flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed",
-                    "focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-hidden",
-                    "disabled:opacity-50",
-                  ])}
-                  onClick={() => inputRef.current?.click()}
-                >
-                  <Plus className="size-6" />
-                  <span className="text-xs font-medium">
-                    <Trans>Add file</Trans>
-                  </span>
-                </button>
-              </li>
-              {materials.map((material) => (
-                <li key={material.id}>
-                  <div className="border-border relative flex aspect-[4/3] flex-col items-center justify-center gap-1.5 rounded-lg border px-3 py-2">
-                    <File
-                      className="text-muted-foreground size-6 shrink-0"
-                      aria-hidden
-                    />
-                    <span
-                      className="w-full truncate text-center text-xs"
-                      title={material.filename}
-                    >
-                      {material.filename}
-                    </span>
-                    <button
-                      type="button"
-                      aria-label={t`Remove ${material.filename}`}
-                      disabled={busy}
-                      className={cn([
-                        "text-muted-foreground hover:bg-accent hover:text-foreground",
-                        "absolute top-1.5 right-1.5 flex size-6 items-center justify-center rounded-full",
-                        "focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-hidden",
-                        "disabled:opacity-50",
-                      ])}
-                      onClick={async () => {
-                        setBusy(true);
-                        try {
-                          await deleteLocalFolderMaterial({
-                            folderPath,
-                            attachmentId: diskAttachmentId(
-                              material.relativePath,
-                            ),
-                          });
-                        } finally {
-                          setBusy(false);
-                        }
-                      }}
-                    >
-                      <X size={12} />
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <FolderMeetingsCard folderPath={folderPath} meetings={meetings} />
           </div>
+          <FolderSidePanel folderPath={folderPath} />
         </div>
       </div>
 
