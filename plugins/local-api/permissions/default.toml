@@ -11,4 +11,5 @@ permissions = [
   "allow-prepare-drive-markdown",
   "allow-get-cloud-snapshot",
   "allow-list-cloud-snapshot-ids",
+  "allow-run-automation-command",
 ]

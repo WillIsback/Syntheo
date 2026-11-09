@@ -2,6 +2,8 @@ import { useRouteContext } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef } from "react";
 
 import { useLanguageModel, useLLMConnection } from "~/ai/hooks";
+import { CommandConfirmationDialog } from "~/automations/command-confirmation-dialog";
+import { registerAutomationLanguageModel } from "~/automations/language-model";
 import { useSessionTab } from "~/chat/components/use-session-tab";
 import { buildChatTools } from "~/chat/tools";
 import { searchContacts } from "~/contacts/queries";
@@ -52,6 +54,7 @@ export function ClassicMainServices() {
       <DictationLifecycle />
       <ToolRegistration />
       <EnhancerInit />
+      <CommandConfirmationDialog />
     </>
   );
 }
@@ -109,6 +112,9 @@ function EnhancerInit() {
   llmConnRef.current = llmConn;
   const templateIdRef = useRef(selectedTemplateId);
   templateIdRef.current = selectedTemplateId;
+
+  // Étape « Générer avec le modèle local » : le même modèle que la synthèse.
+  useEffect(() => registerAutomationLanguageModel(() => modelRef.current), []);
 
   useEffect(() => {
     if (!aiTaskStore) return;

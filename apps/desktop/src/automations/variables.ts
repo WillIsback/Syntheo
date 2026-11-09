@@ -1,4 +1,8 @@
-import { stepDefinition, type StepOutputKind } from "./steps";
+import {
+  stepDefinition,
+  type StepOutputKind,
+  type WorkflowStep,
+} from "./steps";
 import type { AutomationWorkflow } from "./workflows";
 
 // Sorties réutilisables. Dès l'étape 1, toute étape peut lire les variables de
@@ -26,6 +30,7 @@ export type AvailableVariable =
   | {
       kind: "output";
       stepId: string;
+      stepType: WorkflowStep["type"];
       /** Numéro d'étape affiché (déclencheur = 1, première action = 2). */
       stepNumber: number;
       outputKind: StepOutputKind;
@@ -82,6 +87,7 @@ export function availableVariables(
             {
               kind: "output" as const,
               stepId: step.id,
+              stepType: step.type,
               stepNumber: index + 2,
               outputKind,
               outputName: step.outputName,
@@ -100,7 +106,14 @@ export function availableVariables(
 export type WorkflowVariables = {
   get: (ref: VariableRef) => Promise<string | undefined>;
   publish: (stepId: string, value: string) => void;
-  render: (text: string) => Promise<string>;
+  /**
+   * Remplace les variables d'un texte. `escape` transforme chaque valeur
+   * insérée (texte JSON échappé pour le corps d'un webhook).
+   */
+  render: (
+    text: string,
+    options?: { escape?: (value: string) => string },
+  ) => Promise<string>;
 };
 
 export function createWorkflowVariables(
@@ -129,7 +142,7 @@ export function createWorkflowVariables(
     },
     // Une variable inconnue, ou une sortie pas encore produite, reste écrite
     // telle quelle : l'erreur se voit dans le résultat au lieu d'un vide.
-    render: async (text) => {
+    render: async (text, options) => {
       const matches = Array.from(text.matchAll(TOKEN_PATTERN));
       const values = await Promise.all(
         matches.map(async (match) => {
@@ -137,8 +150,50 @@ export function createWorkflowVariables(
           return ref ? await get(ref) : undefined;
         }),
       );
+      const escape = options?.escape ?? ((value: string) => value);
       let index = 0;
-      return text.replace(TOKEN_PATTERN, (token) => values[index++] ?? token);
+      return text.replace(TOKEN_PATTERN, (token) => {
+        const value = values[index++];
+        return value === undefined ? token : escape(value);
+      });
     },
   };
+}
+
+/** Textes saisis dans une étape (champs où l'on insère des variables). */
+export function stepTexts(step: WorkflowStep): string[] {
+  return Object.entries(step).flatMap(([key, value]) => {
+    if (key === "id" || key === "type" || key === "outputName") {
+      return [];
+    }
+    if (typeof value === "string") {
+      return [value];
+    }
+    return Array.isArray(value)
+      ? value.filter((item): item is string => typeof item === "string")
+      : [];
+  });
+}
+
+/**
+ * Sorties citées par une action sans venir d'une action placée avant elle
+ * (étape retirée, ou située après) : l'automatisation n'est pas prête.
+ */
+export function danglingOutputRefs(
+  workflow: Pick<AutomationWorkflow, "steps">,
+): Array<{ stepId: string; missingStepId: string }> {
+  return workflow.steps.flatMap((step, index) => {
+    const known = new Set(
+      availableVariables(workflow, index).flatMap((variable) =>
+        variable.kind === "output" ? [variable.stepId] : [],
+      ),
+    );
+    return stepTexts(step)
+      .flatMap(parseVariableTokens)
+      .flatMap((ref) =>
+        ref.kind === "output" && !known.has(ref.stepId)
+          ? [{ stepId: step.id, missingStepId: ref.stepId }]
+          : [],
+      );
+  });
 }

@@ -4,6 +4,14 @@ import {
   type MarkdownExportOptions,
 } from "@syntheo/plugin-local-api";
 
+import {
+  runClipboardStep,
+  runCommandStep,
+  runGenerateTextStep,
+  runNotificationStep,
+  runVaultWriteStep,
+  runWebhookStep,
+} from "./action-runners";
 import { hasMarkdownExportContent } from "./markdown-export";
 import type { MarkdownExportStep, WorkflowStep } from "./steps";
 import type { WorkflowVariables } from "./variables";
@@ -16,7 +24,13 @@ import { getStoredSettingValues, setSettingValue } from "~/settings/queries";
 export type StepRunContext = {
   sessionId: string;
   workflowId: string;
+  workflowTitle: string;
   variables: WorkflowVariables;
+  /**
+   * À blanc : les étapes à effet réel décrivent ce qu'elles feraient sans
+   * agir (test d'une automatisation).
+   */
+  dryRun?: boolean;
 };
 
 export type StepRunResult = {
@@ -35,6 +49,12 @@ type StepRunners = {
 
 const STEP_RUNNERS: StepRunners = {
   markdown_export: runMarkdownExportStep,
+  generate_text: runGenerateTextStep,
+  vault_write: runVaultWriteStep,
+  clipboard: runClipboardStep,
+  notification: runNotificationStep,
+  webhook: runWebhookStep,
+  command: runCommandStep,
 };
 
 export async function runWorkflowStep(
@@ -50,7 +70,7 @@ export async function runWorkflowStep(
 
 async function runMarkdownExportStep(
   step: MarkdownExportStep,
-  { sessionId, workflowId }: StepRunContext,
+  { sessionId, workflowId, dryRun }: StepRunContext,
 ): Promise<StepRunResult> {
   const directory = step.directory.trim();
   if (!directory) {
@@ -58,6 +78,9 @@ async function runMarkdownExportStep(
   }
   if (step.options && !hasMarkdownExportContent(step.options)) {
     throw new Error("choose at least one element to export");
+  }
+  if (dryRun) {
+    return { detail: directory };
   }
   const path = await exportConfiguredMarkdown(
     sessionId,

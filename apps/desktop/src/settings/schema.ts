@@ -364,6 +364,13 @@ export const SETTING_DEFINITIONS = {
     path: ["automations", "markdown_export_files"],
     default: "" as string,
   },
+  // Commandes confirmées au premier lancement (étape « Lancer une
+  // commande »), mémorisées par commande exacte ; propres à cet appareil.
+  automation_approved_commands: {
+    type: "string",
+    path: ["automations", "approved_commands"],
+    default: "[]" as string,
+  },
 } as const;
 
 export type SettingKey = keyof typeof SETTING_DEFINITIONS;

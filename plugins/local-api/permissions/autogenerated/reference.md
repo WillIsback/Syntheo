@@ -14,6 +14,7 @@ Default permissions for the plugin
 - `allow-prepare-drive-markdown`
 - `allow-get-cloud-snapshot`
 - `allow-list-cloud-snapshot-ids`
+- `allow-run-automation-command`
 
 ## Permission Table
 
@@ -228,6 +229,32 @@ Enables the prepare_drive_markdown command without any pre-configured scope.
 <td>
 
 Denies the prepare_drive_markdown command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`local-api:allow-run-automation-command`
+
+</td>
+<td>
+
+Enables the run_automation_command command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`local-api:deny-run-automation-command`
+
+</td>
+<td>
+
+Denies the run_automation_command command without any pre-configured scope.
 
 </td>
 </tr>

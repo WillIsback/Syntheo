@@ -9,6 +9,7 @@ const COMMANDS: &[&str] = &[
     "prepare_drive_markdown",
     "get_cloud_snapshot",
     "list_cloud_snapshot_ids",
+    "run_automation_command",
 ];
 
 fn main() {

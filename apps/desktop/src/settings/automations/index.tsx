@@ -106,7 +106,7 @@ function AutomationsOverview() {
             lede={
               <Trans>
                 Syntheo chains local steps after your meetings. Nothing leaves
-                your computer.
+                your computer, except a webhook step if you add one.
               </Trans>
             }
           />

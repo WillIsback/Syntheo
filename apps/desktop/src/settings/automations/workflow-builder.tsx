@@ -2,7 +2,7 @@ import { Trans, useLingui } from "@lingui/react/macro";
 import { useMutation } from "@tanstack/react-query";
 import { useId } from "react";
 
-import { ArrowRight, Plus, Trash } from "@syntheo/ui/components/icons";
+import { ArrowRight, Trash } from "@syntheo/ui/components/icons";
 import { Badge } from "@syntheo/ui/components/ui/badge";
 import { Button } from "@syntheo/ui/components/ui/button";
 import { Input } from "@syntheo/ui/components/ui/input";
@@ -16,20 +16,29 @@ import {
 import { toast } from "@syntheo/ui/components/ui/toast";
 import { cn } from "@syntheo/utils";
 
+import { AddWorkflowStep, StepTypeItems } from "./add-step-menu";
 import {
   AutomationLastRunLine,
   MarkdownExportConfig,
 } from "./markdown-export-config";
 import { MarkdownExportOptionsConfig } from "./markdown-export-options";
+import {
+  ClipboardForm,
+  CommandForm,
+  GenerateTextForm,
+  NotificationForm,
+  VaultWriteForm,
+  WebhookForm,
+} from "./step-forms";
+import { VariableChips } from "./variable-field";
 
 import {
   type AutomationLabels,
   useAutomationLabels,
-  variableLabel,
   workflowTitle,
 } from "~/automations/labels";
 import { DEFAULT_MARKDOWN_EXPORT_OPTIONS } from "~/automations/markdown-export";
-import { stepDefinition, WORKFLOW_STEP_TYPES } from "~/automations/steps";
+import { stepDefinition } from "~/automations/steps";
 import {
   type AvailableVariable,
   availableVariables,
@@ -70,6 +79,12 @@ export function WorkflowBuilder({
 
   const addStep = (type: WorkflowStepType) => {
     update({ steps: [...workflow.steps, createWorkflowStep(type)] });
+  };
+
+  const changeStepType = (step: WorkflowStep, type: WorkflowStepType) => {
+    if (type === step.type) return;
+    const next = createWorkflowStep(type);
+    updateStep(step.id, { ...next, id: step.id });
   };
 
   const removeStep = (stepId: string) => {
@@ -183,10 +198,7 @@ export function WorkflowBuilder({
               <Select
                 value={step.type}
                 onValueChange={(value) =>
-                  updateStep(
-                    step.id,
-                    createWorkflowStep(value as WorkflowStepType),
-                  )
+                  changeStepType(step, value as WorkflowStepType)
                 }
               >
                 <SelectTrigger
@@ -196,17 +208,15 @@ export function WorkflowBuilder({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {WORKFLOW_STEP_TYPES.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {labels.step[type].title}
-                    </SelectItem>
-                  ))}
+                  <StepTypeItems labels={labels} />
                 </SelectContent>
               </Select>
               <div className="mt-3">
                 <WorkflowStepConfig
                   step={step}
                   onChange={(next) => updateStep(step.id, next)}
+                  variables={availableVariables(workflow, index)}
+                  labels={labels}
                 />
               </div>
               <StepOutputLine
@@ -262,11 +272,28 @@ export function WorkflowStatusBadge({
 function WorkflowStepConfig({
   step,
   onChange,
+  variables,
+  labels,
 }: {
   step: WorkflowStep;
   onChange: (step: WorkflowStep) => void;
+  variables: AvailableVariable[];
+  labels: AutomationLabels;
 }) {
+  const form = { onChange, variables, labels };
   switch (step.type) {
+    case "generate_text":
+      return <GenerateTextForm step={step} {...form} />;
+    case "vault_write":
+      return <VaultWriteForm step={step} {...form} />;
+    case "clipboard":
+      return <ClipboardForm step={step} {...form} />;
+    case "notification":
+      return <NotificationForm step={step} {...form} />;
+    case "webhook":
+      return <WebhookForm step={step} {...form} />;
+    case "command":
+      return <CommandForm step={step} {...form} />;
     case "markdown_export":
       return (
         <>
@@ -299,7 +326,8 @@ function StepOutputLine({
   const output = availableVariables(workflow, number - 1).find(
     (variable) => variable.kind === "output" && variable.stepId === step.id,
   );
-  if (!output || !stepDefinition(step).output) {
+  // Une sortie texte se renomme dans son formulaire, qui l'affiche déjà.
+  if (!output || stepDefinition(step).output !== "file") {
     return null;
   }
   return (
@@ -308,80 +336,6 @@ function StepOutputLine({
       variables={[output]}
       labels={labels}
     />
-  );
-}
-
-function VariableChips({
-  caption,
-  variables,
-  labels,
-}: {
-  caption: string;
-  variables: AvailableVariable[];
-  labels: AutomationLabels;
-}) {
-  return (
-    <div className="mt-3 flex flex-wrap items-center gap-1.5">
-      <span className="text-muted-foreground text-xs">{caption}</span>
-      {variables.map((variable) => (
-        <span
-          key={variable.token}
-          title={variable.token}
-          data-variable-token={variable.token}
-          className="bg-chart-2/15 text-chart-2 rounded-pill px-2 py-0.5 text-[11px] font-medium"
-        >
-          {variableLabel(variable, labels)}
-        </span>
-      ))}
-    </div>
-  );
-}
-
-function AddWorkflowStep({
-  onAdd,
-  labels,
-}: {
-  onAdd: (type: WorkflowStepType) => void;
-  labels: AutomationLabels;
-}) {
-  const { t } = useLingui();
-
-  return (
-    <div className="border-border bg-muted/20 mt-6 flex items-center justify-between gap-3 rounded-xl border border-dashed p-4">
-      <div>
-        <p className="text-sm font-medium">
-          <Trans>Add a step</Trans>
-        </p>
-        <p className="text-muted-foreground mt-1 text-xs">
-          <Trans>Each new step runs after the previous one.</Trans>
-        </p>
-      </div>
-      <Select
-        value=""
-        onValueChange={(value) => onAdd(value as WorkflowStepType)}
-      >
-        <SelectTrigger className="h-8 w-44 shrink-0 text-xs">
-          <span>
-            <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
-              <Plus size={12} className="shrink-0" />
-              {t`Add a step`}
-            </span>
-          </span>
-        </SelectTrigger>
-        <SelectContent>
-          {WORKFLOW_STEP_TYPES.map((type) => (
-            <SelectItem key={type} value={type}>
-              <span className="flex flex-col">
-                <span>{labels.step[type].title}</span>
-                <span className="text-muted-foreground text-xs">
-                  {labels.step[type].description}
-                </span>
-              </span>
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
   );
 }
 

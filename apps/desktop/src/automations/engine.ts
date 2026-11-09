@@ -153,6 +153,7 @@ async function runWorkflowSteps(
       const result = await runWorkflowStep(step, {
         sessionId,
         workflowId: workflow.id,
+        workflowTitle: workflow.title,
         variables,
       });
       if (result.output !== undefined && stepDefinition(step).output) {

@@ -5,12 +5,17 @@ import {
   hasMarkdownExportContent,
   parseMarkdownExportOptions,
 } from "./markdown-export";
+import {
+  DEFAULT_WEBHOOK_BODY,
+  isWebhookBodyTemplateValid,
+  parseWebhookUrl,
+} from "./webhook";
 
 import { id } from "~/shared/utils";
 
 // Étapes d'une automatisation : une union discriminée par `type`. Chaque
-// nouvelle action (issue 442) ajoute un membre à `WorkflowStep` et une entrée
-// à `STEP_DEFINITIONS` ; le moteur, l'éditeur et les modèles suivent.
+// action ajoute un membre à `WorkflowStep` et une entrée à
+// `STEP_DEFINITIONS` ; le moteur, l'éditeur et les modèles suivent.
 
 type StepBase = {
   id: string;
@@ -27,7 +32,58 @@ export type MarkdownExportStep = StepBase & {
   options?: MarkdownExportOptions;
 };
 
-export type WorkflowStep = MarkdownExportStep;
+export type GenerateTextStep = StepBase & {
+  type: "generate_text";
+  /** Consigne envoyée au modèle local, avec variables. */
+  prompt: string;
+};
+
+export type VaultWriteMode = "create" | "append";
+
+export type VaultWriteStep = StepBase & {
+  type: "vault_write";
+  /** Dossier du coffre (vide : à la racine), avec variables. */
+  folder: string;
+  title: string;
+  content: string;
+  /** Nouvelle note, ou ajout à la note du même titre dans ce dossier. */
+  mode: VaultWriteMode;
+};
+
+export type ClipboardStep = StepBase & {
+  type: "clipboard";
+  content: string;
+};
+
+export type NotificationStep = StepBase & {
+  type: "notification";
+  title: string;
+  message: string;
+};
+
+export type WebhookStep = StepBase & {
+  type: "webhook";
+  url: string;
+  /** Corps JSON ; les variables y sont insérées comme texte JSON échappé. */
+  body: string;
+};
+
+export type CommandStep = StepBase & {
+  type: "command";
+  /** Programme lancé sans interpréteur de commandes. */
+  program: string;
+  /** Un argument par entrée, avec variables (chemin du fichier exporté…). */
+  args: string[];
+};
+
+export type WorkflowStep =
+  | MarkdownExportStep
+  | GenerateTextStep
+  | VaultWriteStep
+  | ClipboardStep
+  | NotificationStep
+  | WebhookStep
+  | CommandStep;
 export type WorkflowStepType = WorkflowStep["type"];
 type StepOf<T extends WorkflowStepType> = Extract<WorkflowStep, { type: T }>;
 
@@ -46,6 +102,8 @@ export type StepDefinition<T extends WorkflowStepType> = {
    * quand la synthèse est régénérée ou arrive après la fin de réunion.
    */
   rerunsOnSummary: boolean;
+  /** Rangée sous « Avancé » dans le menu « Ajouter une étape ». */
+  advanced: boolean;
 };
 
 const markdownExport: StepDefinition<"markdown_export"> = {
@@ -69,12 +127,134 @@ const markdownExport: StepDefinition<"markdown_export"> = {
     hasMarkdownExportContent(step.options ?? DEFAULT_MARKDOWN_EXPORT_OPTIONS),
   output: "file",
   rerunsOnSummary: true,
+  advanced: false,
+};
+
+const str = (record: Record<string, unknown>, key: string): string =>
+  typeof record[key] === "string" ? record[key] : "";
+
+const filled = (value: string) => value.trim().length > 0;
+
+const generateText: StepDefinition<"generate_text"> = {
+  type: "generate_text",
+  create: (stepId) => ({ id: stepId, type: "generate_text", prompt: "" }),
+  parse: (record, stepId) => ({
+    id: stepId,
+    type: "generate_text",
+    prompt: str(record, "prompt"),
+  }),
+  isReady: (step) => filled(step.prompt),
+  output: "text",
+  rerunsOnSummary: false,
+  advanced: false,
+};
+
+const vaultWrite: StepDefinition<"vault_write"> = {
+  type: "vault_write",
+  create: (stepId) => ({
+    id: stepId,
+    type: "vault_write",
+    folder: "",
+    title: "",
+    content: "",
+    mode: "create",
+  }),
+  parse: (record, stepId) => ({
+    id: stepId,
+    type: "vault_write",
+    folder: str(record, "folder"),
+    title: str(record, "title"),
+    content: str(record, "content"),
+    mode: record.mode === "append" ? "append" : "create",
+  }),
+  isReady: (step) => filled(step.title) && filled(step.content),
+  output: null,
+  rerunsOnSummary: false,
+  advanced: false,
+};
+
+const clipboard: StepDefinition<"clipboard"> = {
+  type: "clipboard",
+  create: (stepId) => ({ id: stepId, type: "clipboard", content: "" }),
+  parse: (record, stepId) => ({
+    id: stepId,
+    type: "clipboard",
+    content: str(record, "content"),
+  }),
+  isReady: (step) => filled(step.content),
+  output: null,
+  rerunsOnSummary: false,
+  advanced: false,
+};
+
+const notification: StepDefinition<"notification"> = {
+  type: "notification",
+  create: (stepId) => ({
+    id: stepId,
+    type: "notification",
+    title: "",
+    message: "",
+  }),
+  parse: (record, stepId) => ({
+    id: stepId,
+    type: "notification",
+    title: str(record, "title"),
+    message: str(record, "message"),
+  }),
+  isReady: (step) => filled(step.title) || filled(step.message),
+  output: null,
+  rerunsOnSummary: false,
+  advanced: false,
+};
+
+const webhook: StepDefinition<"webhook"> = {
+  type: "webhook",
+  create: (stepId) => ({
+    id: stepId,
+    type: "webhook",
+    url: "",
+    body: DEFAULT_WEBHOOK_BODY,
+  }),
+  parse: (record, stepId) => ({
+    id: stepId,
+    type: "webhook",
+    url: str(record, "url"),
+    body: str(record, "body"),
+  }),
+  isReady: (step) =>
+    parseWebhookUrl(step.url) !== null && isWebhookBodyTemplateValid(step.body),
+  output: null,
+  rerunsOnSummary: false,
+  advanced: true,
+};
+
+const command: StepDefinition<"command"> = {
+  type: "command",
+  create: (stepId) => ({ id: stepId, type: "command", program: "", args: [] }),
+  parse: (record, stepId) => ({
+    id: stepId,
+    type: "command",
+    program: str(record, "program"),
+    args: Array.isArray(record.args)
+      ? record.args.filter((arg): arg is string => typeof arg === "string")
+      : [],
+  }),
+  isReady: (step) => filled(step.program),
+  output: "text",
+  rerunsOnSummary: false,
+  advanced: true,
 };
 
 export const STEP_DEFINITIONS: {
   [T in WorkflowStepType]: StepDefinition<T>;
 } = {
   markdown_export: markdownExport,
+  generate_text: generateText,
+  vault_write: vaultWrite,
+  clipboard,
+  notification,
+  webhook,
+  command,
 };
 
 export const WORKFLOW_STEP_TYPES = Object.keys(

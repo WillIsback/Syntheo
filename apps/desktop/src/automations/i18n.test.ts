@@ -42,6 +42,30 @@ describe("automation texts in French", () => {
     );
   });
 
+  it("translates the local actions and their messages", () => {
+    expect(t`Generate with the local model`).toBe(
+      "Générer avec le modèle local",
+    );
+    expect(t`Write to the vault`).toBe("Écrire dans le coffre");
+    expect(t`Copy to the clipboard`).toBe("Copier dans le presse-papiers");
+    expect(t`Ready to paste into a message or a document.`).toBe(
+      "Prêt à coller dans un message ou un document.",
+    );
+    expect(t`System notification`).toBe("Notification système");
+    expect(t`Send to an address (webhook)`).toBe(
+      "Envoyer vers une adresse (webhook)",
+    );
+    expect(t`Run a command`).toBe("Lancer une commande");
+    expect(t`Advanced`).toBe("Avancé");
+    expect(t`Generated text`).toBe("Texte généré");
+    expect(t`Run this command?`).toBe("Lancer cette commande ?");
+    expect(
+      t`No local model is configured. Choose one in Settings › Synthesis.`,
+    ).toBe(
+      "Aucun modèle local n'est configuré. Choisissez-en un dans Paramètres › Synthèse.",
+    );
+  });
+
   it("formats last runs as relative dates in the interface language", () => {
     const now = Date.parse("2026-11-09T12:00:00.000Z");
     expect(formatRelativeTime("2026-11-08T16:00:00.000Z", "fr", now)).toBe(
@@ -56,8 +80,13 @@ describe("automation texts in French", () => {
   });
 
   it.each([
+    "automations/action-runners.ts",
+    "automations/command-confirmation-dialog.tsx",
     "automations/labels.ts",
     "automations/launch.tsx",
+    "settings/automations/add-step-menu.tsx",
+    "settings/automations/step-forms.tsx",
+    "settings/automations/variable-field.tsx",
     "settings/automations/index.tsx",
     "settings/automations/workflow-builder.tsx",
     "sidebar/automations.tsx",

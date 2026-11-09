@@ -15,9 +15,21 @@ export const commands = {
 	prepareDriveMarkdown: (meetingId: string) => typedError<DriveMarkdownExport, string>(__TAURI_INVOKE("plugin:local-api|prepare_drive_markdown", { meetingId })),
 	getCloudSnapshot: (meetingId: string) => typedError<Value, string>(__TAURI_INVOKE("plugin:local-api|get_cloud_snapshot", { meetingId })),
 	listCloudSnapshotIds: () => typedError<string[], string>(__TAURI_INVOKE("plugin:local-api|list_cloud_snapshot_ids")),
+	/**
+	 *  Étape « Lancer une commande » : programme et arguments sans interpréteur
+	 *  de commandes, après la confirmation demandée par l'application.
+	 */
+	runAutomationCommand: (program: string, args: string[], timeoutSecs: number | null) => typedError<AutomationCommandOutput, string>(__TAURI_INVOKE("plugin:local-api|run_automation_command", { program, args, timeoutSecs })),
 };
 
 /* Types */
+export type AutomationCommandOutput = {
+	exit_code: number | null,
+	stdout: string,
+	stderr: string,
+	timed_out: boolean,
+};
+
 export type CreatedWebhook = {
 	secret: string,
 } & WebhookInfo;
