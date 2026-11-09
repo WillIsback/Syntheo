@@ -56,7 +56,7 @@ export function MeetingSettingsView({
           />
           <SettingSwitchRow
             settingId="capture-meeting-chat"
-            title={<Trans>Capture meeting chat in Memos</Trans>}
+            title={<Trans>Capture meeting chat in the note</Trans>}
             description={
               <Trans>
                 Save visible chat from supported meetings using Accessibility.
@@ -70,7 +70,7 @@ export function MeetingSettingsView({
       {supportsScreenCapture && (
         <SettingSwitchRow
           settingId="capture-shared-screens"
-          title={<Trans>Capture shared screens in Memos</Trans>}
+          title={<Trans>Capture shared screens in the note</Trans>}
           description={
             <Trans>
               Save slides and screens others share in meetings. Requires Screen

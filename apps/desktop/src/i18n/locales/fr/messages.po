@@ -759,13 +759,13 @@ msgstr "Annuler la dictée"
 
 #: src/settings/general/meeting-settings.tsx
 #: src/settings/search-index.ts
-msgid "Capture meeting chat in Memos"
-msgstr "Capturer le chat de réunion dans Memos"
+msgid "Capture meeting chat in the note"
+msgstr "Capturer le chat de la réunion dans la note"
 
 #: src/settings/general/meeting-settings.tsx
 #: src/settings/search-index.ts
-msgid "Capture shared screens in Memos"
-msgstr "Capturer les écrans partagés dans Memos"
+msgid "Capture shared screens in the note"
+msgstr "Capturer les écrans partagés dans la note"
 
 #: src/settings/general/audio-settings.tsx
 msgid "Captured right now:"
@@ -802,8 +802,8 @@ msgid "Chat history"
 msgstr "Historique de chat"
 
 #: src/settings/search-index.ts
-msgid "chat, messages, memos, Teams, Zoom"
-msgstr "discussion, messages, mémos, Teams, Zoom"
+msgid "chat, messages, note, Teams, Zoom"
+msgstr "discussion, messages, note, Teams, Zoom"
 
 #: src/chat/components/input/use-dictation.ts
 msgid "Check microphone permission and the selected input device, then try again."
@@ -2424,8 +2424,9 @@ msgstr "Chargement des paramètres"
 #: src/changelog/index.tsx
 #: src/contacts/details-sections.tsx
 #: src/settings/general/account-profile.tsx
+#: src/settings/general/storage/export-location.tsx
 msgid "Loading..."
-msgstr "Chargement..."
+msgstr "Chargement…"
 
 #: src/automations/labels.ts
 msgid "Local script with the path of the exported file. Asks for confirmation the first time."

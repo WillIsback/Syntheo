@@ -95,3 +95,11 @@ describe("libellés hors composant en français", () => {
     );
   });
 });
+
+describe("emplacement d'export sans chemin", () => {
+  test("displayPath ne code plus « Loading... » en dur", async () => {
+    const { displayPath } =
+      await import("~/settings/general/storage/path-utils");
+    expect(displayPath(undefined, undefined)).toBe("");
+  });
+});

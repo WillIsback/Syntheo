@@ -71,7 +71,7 @@ export function ExportLocationRow() {
               <Trans>Export location</Trans>
             </p>
             <p className="text-muted-foreground truncate text-xs" title={path}>
-              {displayPath(path, home)}
+              {path ? displayPath(path, home) : t`Loading...`}
             </p>
           </div>
         </button>
