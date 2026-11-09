@@ -3,7 +3,11 @@ title: "Personnaliser les comptes rendus"
 description: "Choisissez un modèle de compte rendu, créez le vôtre ou faites proposer ses sections par l'IA."
 ---
 
-Un compte rendu suit soit le format « Automatique », soit un modèle aux sections fixes. Vous gérez les deux dans la vue **Modèles** : **Paramètres → Mes réunions → « Modèles »**, ou la palette <kbd>Ctrl</kbd> + <kbd>K</kbd>.
+import { Kbd, SettingsPath, TemplatesEditor } from "/snippets/organize.gen.jsx";
+
+Un compte rendu suit soit le format « Automatique », soit un modèle aux sections fixes. Vous gérez les deux dans la vue **Modèles**, ouverte depuis les Paramètres ou depuis la palette <Kbd keys="Ctrl+K" /> :
+
+<SettingsPath steps={["Paramètres", "Mes réunions", "Modèles"]} />
 
 La colonne de gauche liste les modèles par groupe : « Automatique », « Favoris », puis un groupe par dossier qui utilise un modèle (nommé comme le dossier), puis « Généraux ». Chaque modèle n'apparaît qu'une fois : un favori reste sous « Favoris ». Utilisez « Rechercher un modèle » pour filtrer la liste ; la recherche porte aussi sur le nom des dossiers.
 
@@ -30,7 +34,7 @@ Avant la réunion, à l'étape **Préparer**, cliquez sur le type affiché à c�
 
 Si la note est rangée dans un dossier qui a un modèle par défaut, le type affiche ce modèle suivi de « — modèle du dossier ». Choisir un autre modèle dans la liste le fixe sur la note.
 
-Après la réunion, à l'étape **Synthèse**, cliquez sur le nom du modèle sous le titre pour ouvrir le sélecteur. Sélectionner un autre modèle remplace le compte rendu par un nouveau, rédigé selon ce modèle. Pour appliquer à nouveau le même modèle, utilisez « Régénérer ». Voir [Notes, comptes rendus et transcriptions](/notes).
+Après la réunion, à l'étape **Synthèse**, ouvrez le menu « Versions de la synthèse » (la flèche à côté de « Synthèse · v1 », sous le titre), puis choisissez « Changer de modèle… ». Sélectionner un autre modèle remplace le compte rendu par un nouveau, rédigé selon ce modèle. Pour appliquer à nouveau le même modèle, utilisez « Régénérer ». Voir [Notes, comptes rendus et transcriptions](/notes).
 
 ## Choisir un modèle par dossier
 
@@ -65,11 +69,15 @@ Si vous rangez une note qui a déjà un compte rendu dans un dossier dont le mod
 
 Pour réordonner les sections, faites glisser la poignée d'une section. Au clavier, placez le focus sur la poignée et utilisez les flèches haut et bas.
 
-Les modifications sont enregistrées au fil de l'eau. Le menu « Plus d'actions » de l'éditeur propose « Utiliser par défaut », « Dupliquer » et « Supprimer ».
+Les modifications sont enregistrées au fil de l'eau. Le menu « Plus d'actions » de l'éditeur propose « Utiliser par défaut », « Dupliquer » et « Supprimer ». Le modèle utilisé par défaut affiche « Modèle par défaut » dans l'éditeur et « par défaut » dans la liste.
 
 ### Voir la forme du compte rendu
 
 En haut de l'éditeur, basculez de « Modifier » à « Aperçu ». L'aperçu montre la forme de la synthèse : chaque section avec un exemple de ligne rédigée selon sa consigne.
+
+Essayez la vue **Modèles** ci-dessous. La colonne de gauche (1) liste les groupes : « Point projet / Sprint », modèle du dossier Produit, reste sous « Favoris ». Tapez « clients » dans « Rechercher un modèle » (2) : le modèle du dossier Clients apparaît. Basculez sur « Aperçu » (3), cliquez sur « Proposer des sections » (4), puis déplacez une section avec sa poignée et les flèches haut et bas (5). Sélectionnez **Automatique** pour voir son éditeur.
+
+<TemplatesEditor />
 
 ## Proposer des sections avec l'IA
 
@@ -91,6 +99,10 @@ Le format « Automatique » laisse Syntheo structurer le compte rendu lui-même,
 
 1. Ouvrez la vue **Modèles** et sélectionnez **Automatique**.
 2. Modifiez le « Format du résumé », puis cliquez sur « Enregistrer ».
+
+Dans la reproduction ci-dessous, « Automatique » est ouvert : modifiez le format, « Enregistrer » devient actif. Quand un format personnalisé est enregistré, la liste affiche « personnalisé » à côté d'« Automatique » ; « Réinitialiser au format par défaut », dans le menu **•••**, le retire.
+
+<TemplatesEditor start="automatique" markers={false} />
 
 Par exemple :
 

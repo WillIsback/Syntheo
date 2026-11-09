@@ -3,30 +3,42 @@ title: "Contacts"
 description: "Retrouvez les personnes et organisations de vos réunions, saisies localement."
 ---
 
+import { ContactsScreen, Kbd, SettingsPath } from "/snippets/organize.gen.jsx";
+
 Syntheo garde les personnes et les organisations à côté de vos notes de réunion. Tous les contacts sont saisis par vous et stockés localement : aucun carnet d'adresses ni CRM externe n'est connecté.
 
-Ouvrez la vue **Contacts** depuis **Paramètres → Mes réunions → « Contacts »**, ou depuis la palette <kbd>Ctrl</kbd> + <kbd>K</kbd>.
+Ouvrez la vue **Contacts** depuis les Paramètres, ou depuis la palette <Kbd keys="Ctrl+K" /> :
+
+<SettingsPath steps={["Paramètres", "Mes réunions", "Contacts"]} />
+
+La colonne de gauche liste votre propre fiche en tête, puis les contacts épinglés, puis les organisations et les autres personnes. Filtrez-la avec « Rechercher des contacts... ». Le bouton « Options de tri » classe la liste de A à Z, de Z à A, des plus anciens aux plus récents ou l'inverse.
 
 ## Ajouter des contacts
 
 - **Depuis une réunion** : à l'étape Préparer, saisissez un nom dans le champ « Participants » de la fiche (ou dans le menu **•••** › « Informations sur la réunion »). Choisissez une personne existante ou créez-en une nouvelle.
 - **Depuis la transcription** : en attribuant un locuteur, choisissez « Créer un nouvel intervenant ».
-- **Depuis la vue Contacts** : utilisez « Ajoutez une personne ».
+- **Depuis la vue Contacts** : cliquez sur « Ajouter » (**+**), saisissez un nom dans « Ajoutez une personne », puis appuyez sur <Kbd keys="Entrée" />.
 
 ## Compléter une fiche
 
-Ouvrez un contact pour modifier son nom, son poste, son entreprise, ses e-mails, son téléphone, son profil LinkedIn et des notes libres. Vous pouvez aussi changer sa photo, l'« Épingler » en haut de la liste ou le « Supprimer ».
+Ouvrez un contact pour modifier son nom, son poste, son entreprise, ses e-mails, son téléphone, son profil LinkedIn et des notes libres. Vous pouvez aussi changer sa photo. Le menu **•••** de la fiche (« Options de contact ») propose « Épingler » en haut de la liste (ou « Détacher ») et « Supprimer ». Dans la liste, l'épingle à droite d'un contact fait de même.
+
+Votre propre fiche est en lecture seule dans cette vue.
 
 Un contact peut avoir plusieurs adresses e-mail : choisissez « Ajoutez un e-mail » sous le champ E-mail. La première adresse reste l'adresse principale.
 
-Rattachez une personne à une organisation avec « Ajoutez une organisation ». La fiche d'une organisation liste ses membres.
+Rattachez une personne à une organisation avec « Ajoutez une organisation ». La fiche d'une organisation liste ses membres, sous « Personnes ».
 
 ## Notes associées et synthèse
 
-La fiche d'un contact affiche ses « Notes associées », c'est-à-dire les réunions auxquelles il a participé, triables de la plus récente à la plus ancienne.
+La fiche d'un contact affiche ses « Notes associées », c'est-à-dire les réunions auxquelles il a participé, triables de la plus récente à la plus ancienne. Le champ « Rechercher... » filtre la liste par titre.
 
 Si un modèle de langage est configuré, la section « Résumé » présente 3 à 5 faits utiles sur cette personne, tirés de ses réunions récentes. Cette synthèse est générée par votre serveur de modèle de langage et se met à jour quand de nouvelles réunions arrivent. En cas d'échec, utilisez « Réessayer ».
 
 ## Fusionner les doublons
 
-Quand deux contacts partagent le même nom ou la même adresse e-mail, la fiche affiche un bandeau de doublon. Cliquez sur « Fusionner » pour les regrouper : les notes associées et les informations sont réunies sur un seul contact, et les adresses e-mail du doublon sont conservées comme adresses supplémentaires.
+Quand deux contacts partagent le même nom ou la même adresse e-mail, la fiche affiche le bandeau « Doublon de contact détecté ». Cliquez sur « Fusionner » pour les regrouper : les notes associées et les informations sont réunies sur un seul contact, et les adresses e-mail du doublon sont conservées comme adresses supplémentaires.
+
+Essayez ci-dessous, sur la fiche de Malik Benali : fusionnez son doublon (2), puis regardez son adresse supplémentaire apparaître sous « E-mail » et ses notes associées se compléter. Les repères désignent aussi la liste avec le tri et « Ajouter » (1), les champs de la fiche (3) et le « Résumé » (4). Cliquez sur « Acme » dans la liste pour ouvrir la fiche d'une organisation.
+
+<ContactsScreen />
