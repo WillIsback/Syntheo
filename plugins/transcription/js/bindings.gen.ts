@@ -10,6 +10,18 @@ export const commands = {
 	getCurrentMicrophoneDevice: () => typedError<string | null, string>(__TAURI_INVOKE("plugin:transcription|get_current_microphone_device")),
 	startMicrophoneLevelMonitor: (owner: string, device: string | null, levels: Channel<number | null>) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|start_microphone_level_monitor", { owner, device, levels })),
 	stopMicrophoneLevelMonitor: (owner: string) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|stop_microphone_level_monitor", { owner })),
+	/**
+	 *  Sorties qu'on peut capturer comme son système (issue 450) ; `None` quand la
+	 *  plateforme ne permet pas de choisir (macOS).
+	 */
+	listSpeakerDevices: () => typedError<string[] | null, string>(__TAURI_INVOKE("plugin:transcription|list_speaker_devices")),
+	/**
+	 *  Sortie capturée pendant l'écoute, sinon celle que capterait une écoute qui
+	 *  démarre avec le choix `preferred`.
+	 */
+	getCapturedSpeakerDevice: (preferred: string | null) => typedError<CapturedSpeakerDevice | null, string>(__TAURI_INVOKE("plugin:transcription|get_captured_speaker_device", { preferred })),
+	startSpeakerLevelMonitor: (owner: string, device: string | null, levels: Channel<number | null>) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|start_speaker_level_monitor", { owner, device, levels })),
+	stopSpeakerLevelMonitor: (owner: string) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|stop_speaker_level_monitor", { owner })),
 	getMicMuted: () => typedError<boolean, string>(__TAURI_INVOKE("plugin:transcription|get_mic_muted")),
 	setMicMuted: (muted: boolean) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|set_mic_muted", { muted })),
 	getSpeakerMuted: () => typedError<boolean, string>(__TAURI_INVOKE("plugin:transcription|get_speaker_muted")),
@@ -215,6 +227,8 @@ export type CaptureParams = {
 	api_key: string,
 	keywords: string[],
 	mic_device?: string | null,
+	/**  Sortie capturée comme son système (issue 450) ; `None` suit la sortie par défaut. */
+	speaker_device?: string | null,
 	transcription_mode?: TranscriptionMode | null,
 	participant_human_ids?: string[],
 	self_human_id?: string | null,
@@ -247,6 +261,12 @@ export type CaptureState = "active" | "finalizing" | "inactive";
 export type CaptureStatusEvent = { type: "audio_initializing"; session_id: string } | { type: "audio_ready"; session_id: string; device: string | null } | { type: "connecting"; session_id: string } | { type: "connected"; session_id: string; adapter: string; 
 /**  The replay after a reconnection carried all the audio of the outage. */
 gap_replayed: boolean } | { type: "audio_error"; session_id: string; error: string; device: string | null; is_fatal: boolean } | { type: "connection_error"; session_id: string; error: string };
+
+/**  Sortie capturée comme son système (issue 450). */
+export type CapturedSpeakerDevice = {
+	name: string,
+	headphone: boolean,
+};
 
 export type ChannelProfile = "DirectMic" | "RemoteParty" | "MixedCapture";
 

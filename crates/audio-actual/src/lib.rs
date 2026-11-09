@@ -246,6 +246,23 @@ impl AudioProvider for ActualAudio {
             .map_err(|error| Error::SpeakerStreamInitializationFailed(error.to_string()))?;
         Ok(())
     }
+
+    // macOS capte toujours la sortie par défaut : la tap système ne vise pas encore une sortie.
+    fn list_speaker_devices(&self) -> Option<Vec<String>> {
+        cfg!(any(target_os = "linux", target_os = "windows"))
+            .then(syntheo_audio_device::speaker_output_names)
+    }
+
+    fn set_speaker_device(&self, device: Option<String>) {
+        speaker::set_preferred_output(device);
+    }
+
+    fn captured_speaker_device(
+        &self,
+        preferred: Option<String>,
+    ) -> Option<syntheo_audio::OutputDevice> {
+        speaker::captured_output(preferred.as_deref())
+    }
 }
 
 #[cfg(all(test, target_os = "macos"))]

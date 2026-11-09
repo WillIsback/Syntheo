@@ -56,6 +56,9 @@ vi.mock("./permissions", () => ({ Permissions: () => null }));
 vi.mock("./single-language-model-hint", () => ({
   SingleLanguageModelHint: () => null,
 }));
+vi.mock("./speaker-device", () => ({
+  useSpeakerDeviceSetting: () => undefined,
+}));
 vi.mock("./storage", () => ({ StorageSettingsView: () => null }));
 vi.mock("./timezone", () => ({ TimezoneSelector: () => null }));
 vi.mock("./week-start", () => ({ WeekStartSelector: () => null }));

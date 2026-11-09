@@ -156,6 +156,12 @@ export const SETTING_DEFINITIONS = {
     path: ["general", "microphone_device"],
     default: "" as string,
   },
+  // Sortie capturée comme son système (issue 450) ; vide : sortie par défaut.
+  speaker_device: {
+    type: "string",
+    path: ["general", "speaker_device"],
+    default: "" as string,
+  },
   notification_disabled: {
     type: "boolean",
     path: ["notification", "disabled"],

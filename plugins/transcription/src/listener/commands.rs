@@ -119,9 +119,12 @@ pub async fn start_microphone_level_monitor<R: tauri::Runtime>(
         .inner()
         .clone();
     app.state::<crate::listener::level_monitor::MicrophoneLevelMonitor>()
-        .start(audio, owner, device, move |level| {
-            levels.send(level).is_ok()
-        })
+        .start(
+            audio,
+            owner,
+            crate::listener::level_monitor::LevelSource::Microphone(device),
+            move |level| levels.send(level).is_ok(),
+        )
         .map_err(|error| error.to_string())
 }
 
@@ -135,6 +138,78 @@ pub async fn stop_microphone_level_monitor<R: tauri::Runtime>(
     app.state::<crate::listener::level_monitor::MicrophoneLevelMonitor>()
         .stop(&owner);
     Ok(())
+}
+
+/// Sorties qu'on peut capturer comme son système (issue 450) ; `None` quand la
+/// plateforme ne permet pas de choisir (macOS).
+#[tauri::command]
+#[specta::specta]
+pub async fn list_speaker_devices<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+) -> Result<Option<Vec<String>>, String> {
+    let audio = audio_provider(&app);
+    tokio::task::spawn_blocking(move || audio.list_speaker_devices())
+        .await
+        .map_err(|error| error.to_string())
+}
+
+/// Sortie capturée pendant l'écoute, sinon celle que capterait une écoute qui
+/// démarre avec le choix `preferred`.
+#[tauri::command]
+#[specta::specta]
+pub async fn get_captured_speaker_device<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    preferred: Option<String>,
+) -> Result<Option<crate::CapturedSpeakerDevice>, String> {
+    let audio = audio_provider(&app);
+    tokio::task::spawn_blocking(move || {
+        audio
+            .captured_speaker_device(preferred)
+            .map(crate::CapturedSpeakerDevice::from)
+    })
+    .await
+    .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn start_speaker_level_monitor<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    owner: String,
+    device: Option<String>,
+    levels: tauri::ipc::Channel<f32>,
+) -> Result<(), String> {
+    use tauri::Manager;
+    let audio = audio_provider(&app);
+    app.state::<crate::listener::level_monitor::SpeakerLevelMonitor>()
+        .start(
+            audio,
+            owner,
+            crate::listener::level_monitor::LevelSource::Speaker(device),
+            move |level| levels.send(level).is_ok(),
+        )
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn stop_speaker_level_monitor<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    owner: String,
+) -> Result<(), String> {
+    use tauri::Manager;
+    app.state::<crate::listener::level_monitor::SpeakerLevelMonitor>()
+        .stop(&owner);
+    Ok(())
+}
+
+fn audio_provider<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+) -> std::sync::Arc<dyn syntheo_audio::AudioProvider> {
+    use tauri::Manager;
+    app.state::<std::sync::Arc<dyn syntheo_audio::AudioProvider>>()
+        .inner()
+        .clone()
 }
 
 #[tauri::command]
@@ -205,9 +280,14 @@ pub async fn start_capture<R: tauri::Runtime>(
     use crate::live_journal::{LiveJournalRegistry, register_app_journal};
     use tauri::Manager;
 
-    // Une capture a la priorité sur le mètre des réglages : il libère le micro.
+    // Une capture a la priorité sur les mètres des réglages : ils libèrent le
+    // micro et la sortie.
     app.state::<crate::listener::level_monitor::MicrophoneLevelMonitor>()
         .stop_all();
+    app.state::<crate::listener::level_monitor::SpeakerLevelMonitor>()
+        .stop_all();
+    // Sortie capturée comme son système, appliquée au démarrage (issue 450).
+    audio_provider(&app).set_speaker_device(params.speaker_device.clone());
     let session_id = params.session_id.clone();
     let _audio_guard = app.fs_sync().lock_session_audio(&session_id).await;
     let live_transcript = params.live_transcript.clone();

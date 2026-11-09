@@ -8,6 +8,10 @@ Default permissions for the plugin
 - `allow-get-current-microphone-device`
 - `allow-start-microphone-level-monitor`
 - `allow-stop-microphone-level-monitor`
+- `allow-list-speaker-devices`
+- `allow-get-captured-speaker-device`
+- `allow-start-speaker-level-monitor`
+- `allow-stop-speaker-level-monitor`
 - `allow-start-capture`
 - `allow-retry-audio-capture`
 - `allow-flush-live-transcript`
@@ -540,6 +544,32 @@ Denies the get_capture_state command without any pre-configured scope.
 <tr>
 <td>
 
+`transcription:allow-get-captured-speaker-device`
+
+</td>
+<td>
+
+Enables the get_captured_speaker_device command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:deny-get-captured-speaker-device`
+
+</td>
+<td>
+
+Denies the get_captured_speaker_device command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
 `transcription:allow-get-completed-transcription`
 
 </td>
@@ -871,6 +901,32 @@ Enables the list_microphone_devices command without any pre-configured scope.
 <td>
 
 Denies the list_microphone_devices command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:allow-list-speaker-devices`
+
+</td>
+<td>
+
+Enables the list_speaker_devices command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:deny-list-speaker-devices`
+
+</td>
+<td>
+
+Denies the list_speaker_devices command without any pre-configured scope.
 
 </td>
 </tr>
@@ -1294,6 +1350,32 @@ Denies the start_microphone_level_monitor command without any pre-configured sco
 <tr>
 <td>
 
+`transcription:allow-start-speaker-level-monitor`
+
+</td>
+<td>
+
+Enables the start_speaker_level_monitor command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:deny-start-speaker-level-monitor`
+
+</td>
+<td>
+
+Denies the start_speaker_level_monitor command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
 `transcription:allow-start-transcription`
 
 </td>
@@ -1391,6 +1473,32 @@ Enables the stop_microphone_level_monitor command without any pre-configured sco
 <td>
 
 Denies the stop_microphone_level_monitor command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:allow-stop-speaker-level-monitor`
+
+</td>
+<td>
+
+Enables the stop_speaker_level_monitor command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:deny-stop-speaker-level-monitor`
+
+</td>
+<td>
+
+Denies the stop_speaker_level_monitor command without any pre-configured scope.
 
 </td>
 </tr>

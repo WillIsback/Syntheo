@@ -17,6 +17,7 @@ import { useTabs } from "~/store/zustand/tabs";
 import { BatchTranscriptionRecovery } from "~/stt/batch-transcription-recovery";
 import { LiveCaptureRecovery } from "~/stt/live-capture-recovery";
 import { RecordingImportWorker } from "~/stt/recording-import";
+import { SystemAudioChangeNotice } from "~/stt/system-audio-change-notice";
 import { MainListenerControlBridge } from "~/stt/window-control";
 
 export function useClassicMainLifecycle() {
@@ -44,6 +45,7 @@ export function ClassicMainServices() {
   return (
     <>
       <LiveCaptureRecovery />
+      <SystemAudioChangeNotice />
       <BatchTranscriptionRecovery />
       <RecordingImportWorker />
       <MainListenerControlBridge />

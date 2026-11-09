@@ -105,12 +105,31 @@ pub struct CaptureParams {
     pub keywords: Vec<String>,
     #[serde(default)]
     pub mic_device: Option<String>,
+    /// Sortie capturée comme son système (issue 450) ; `None` suit la sortie par défaut.
+    #[serde(default)]
+    pub speaker_device: Option<String>,
     #[serde(default)]
     pub transcription_mode: Option<listener::TranscriptionMode>,
     #[serde(default)]
     pub participant_human_ids: Vec<String>,
     #[serde(default)]
     pub self_human_id: Option<String>,
+}
+
+/// Sortie capturée comme son système (issue 450).
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, specta::Type)]
+pub struct CapturedSpeakerDevice {
+    pub name: String,
+    pub headphone: bool,
+}
+
+impl From<syntheo_audio::OutputDevice> for CapturedSpeakerDevice {
+    fn from(value: syntheo_audio::OutputDevice) -> Self {
+        Self {
+            name: value.name,
+            headphone: value.headphone,
+        }
+    }
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
@@ -574,6 +593,7 @@ mod tests {
             api_key: "test-key".to_string(),
             keywords: vec![],
             mic_device: Some("External Microphone".to_string()),
+            speaker_device: None,
             transcription_mode,
             participant_human_ids: vec![],
             self_human_id: None,
