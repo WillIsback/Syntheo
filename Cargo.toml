@@ -12,6 +12,13 @@ debug = false
 # envoyé à un service de rapport de plantage.
 [profile.release]
 strip = true
+# LTO « thin » plutôt que « fat » : l'essentiel du gain de taille (code mort
+# éliminé entre crates) pour une édition de liens parallèle et une mémoire
+# bornée, compatible avec les délais des runners CI (90 min Linux, 120 min
+# Windows). Une seule unité de génération par crate pour optimiser mieux.
+# La variante devtools utilise ce même profil, pour rester fidèle à la release.
+lto = "thin"
+codegen-units = 1
 
 [workspace]
 resolver = "2"
