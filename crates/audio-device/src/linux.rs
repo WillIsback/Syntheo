@@ -138,15 +138,15 @@ impl AudioDeviceBackend for LinuxBackend {
             conn.mainloop.lock();
             let introspector = conn.context.introspect();
             introspector.get_server_info(move |info| {
-                if let Some(name) = &info.default_sink_name {
-                    if let Ok(mut ds) = default_sink.lock() {
-                        *ds = Some(name.to_string());
-                    }
+                if let Some(name) = &info.default_sink_name
+                    && let Ok(mut ds) = default_sink.lock()
+                {
+                    *ds = Some(name.to_string());
                 }
-                if let Some(name) = &info.default_source_name {
-                    if let Ok(mut ds) = default_source.lock() {
-                        *ds = Some(name.to_string());
-                    }
+                if let Some(name) = &info.default_source_name
+                    && let Ok(mut ds) = default_source.lock()
+                {
+                    *ds = Some(name.to_string());
                 }
                 done_clone.store(true, Ordering::Release);
             });
@@ -167,39 +167,39 @@ impl AudioDeviceBackend for LinuxBackend {
             conn.mainloop.lock();
             let introspector = conn.context.introspect();
             introspector.get_sink_info_list(move |list_result| {
-                if let pulse::callbacks::ListResult::Item(sink_info) = list_result {
-                    if let Some(name) = sink_info.name.as_ref() {
-                        let description = sink_info
-                            .description
-                            .as_ref()
-                            .map(|s| s.to_string())
-                            .unwrap_or_else(|| name.to_string());
+                if let pulse::callbacks::ListResult::Item(sink_info) = list_result
+                    && let Some(name) = sink_info.name.as_ref()
+                {
+                    let description = sink_info
+                        .description
+                        .as_ref()
+                        .map(|s| s.to_string())
+                        .unwrap_or_else(|| name.to_string());
 
-                        let bus = sink_info.proplist.get_str("device.bus");
-                        let transport_type = transport_type_from_bus(bus.as_deref());
+                    let bus = sink_info.proplist.get_str("device.bus");
+                    let transport_type = transport_type_from_bus(bus.as_deref());
 
-                        let is_default = default_sink_name
-                            .as_ref()
-                            .map(|d| d == name.as_ref())
-                            .unwrap_or(false);
+                    let is_default = default_sink_name
+                        .as_ref()
+                        .map(|d| d == name.as_ref())
+                        .unwrap_or(false);
 
-                        let volume = sink_info.volume.avg().0 as f32
-                            / pulse::volume::Volume::NORMAL.0 as f32;
-                        let is_muted = sink_info.mute;
+                    let volume =
+                        sink_info.volume.avg().0 as f32 / pulse::volume::Volume::NORMAL.0 as f32;
+                    let is_muted = sink_info.mute;
 
-                        let device = AudioDevice {
-                            id: DeviceId::new(name.to_string()),
-                            name: description,
-                            direction: AudioDirection::Output,
-                            transport_type,
-                            is_default,
-                            volume: Some(volume),
-                            is_muted: Some(is_muted),
-                        };
+                    let device = AudioDevice {
+                        id: DeviceId::new(name.to_string()),
+                        name: description,
+                        direction: AudioDirection::Output,
+                        transport_type,
+                        is_default,
+                        volume: Some(volume),
+                        is_muted: Some(is_muted),
+                    };
 
-                        if let Ok(mut devs) = devices.lock() {
-                            devs.push(device);
-                        }
+                    if let Ok(mut devs) = devices.lock() {
+                        devs.push(device);
                     }
                 }
                 if let pulse::callbacks::ListResult::End = list_result {
@@ -220,39 +220,39 @@ impl AudioDeviceBackend for LinuxBackend {
             conn.mainloop.lock();
             let introspector = conn.context.introspect();
             introspector.get_source_info_list(move |list_result| {
-                if let pulse::callbacks::ListResult::Item(source_info) = list_result {
-                    if let Some(name) = source_info.name.as_ref() {
-                        if name.ends_with(".monitor") {
-                            return;
-                        }
+                if let pulse::callbacks::ListResult::Item(source_info) = list_result
+                    && let Some(name) = source_info.name.as_ref()
+                {
+                    if name.ends_with(".monitor") {
+                        return;
+                    }
 
-                        let description = source_info
-                            .description
-                            .as_ref()
-                            .map(|s| s.to_string())
-                            .unwrap_or_else(|| name.to_string());
+                    let description = source_info
+                        .description
+                        .as_ref()
+                        .map(|s| s.to_string())
+                        .unwrap_or_else(|| name.to_string());
 
-                        let bus = source_info.proplist.get_str("device.bus");
-                        let transport_type = transport_type_from_bus(bus.as_deref());
+                    let bus = source_info.proplist.get_str("device.bus");
+                    let transport_type = transport_type_from_bus(bus.as_deref());
 
-                        let is_default = default_source_name
-                            .as_ref()
-                            .map(|d| d == name.as_ref())
-                            .unwrap_or(false);
+                    let is_default = default_source_name
+                        .as_ref()
+                        .map(|d| d == name.as_ref())
+                        .unwrap_or(false);
 
-                        let device = AudioDevice {
-                            id: DeviceId::new(name.to_string()),
-                            name: description,
-                            direction: AudioDirection::Input,
-                            transport_type,
-                            is_default,
-                            volume: None,
-                            is_muted: None,
-                        };
+                    let device = AudioDevice {
+                        id: DeviceId::new(name.to_string()),
+                        name: description,
+                        direction: AudioDirection::Input,
+                        transport_type,
+                        is_default,
+                        volume: None,
+                        is_muted: None,
+                    };
 
-                        if let Ok(mut devs) = devices.lock() {
-                            devs.push(device);
-                        }
+                    if let Ok(mut devs) = devices.lock() {
+                        devs.push(device);
                     }
                 }
                 if let pulse::callbacks::ListResult::End = list_result {
@@ -368,14 +368,12 @@ impl AudioDeviceBackend for LinuxBackend {
         conn.mainloop.lock();
         let introspector = conn.context.introspect();
         introspector.get_sink_info_by_name(&device_name, move |list_result| {
-            if let pulse::callbacks::ListResult::Item(sink_info) = list_result {
-                if let Some(active_port) = &sink_info.active_port {
-                    if let Some(name) = active_port.name.as_ref() {
-                        if let Ok(mut r) = result_clone.lock() {
-                            *r = is_headphone_port(name);
-                        }
-                    }
-                }
+            if let pulse::callbacks::ListResult::Item(sink_info) = list_result
+                && let Some(active_port) = &sink_info.active_port
+                && let Some(name) = active_port.name.as_ref()
+                && let Ok(mut r) = result_clone.lock()
+            {
+                *r = is_headphone_port(name);
             }
             done_clone.store(true, Ordering::Release);
         });
@@ -501,10 +499,10 @@ impl AudioDeviceBackend for LinuxBackend {
         conn.mainloop.lock();
         let introspector = conn.context.introspect();
         introspector.get_sink_info_by_name(&device_name, move |list_result| {
-            if let pulse::callbacks::ListResult::Item(sink_info) = list_result {
-                if let Ok(mut r) = result_clone.lock() {
-                    *r = Some(sink_info.mute);
-                }
+            if let pulse::callbacks::ListResult::Item(sink_info) = list_result
+                && let Ok(mut r) = result_clone.lock()
+            {
+                *r = Some(sink_info.mute);
             }
             done_clone.store(true, Ordering::Release);
         });
@@ -594,14 +592,12 @@ pub fn is_headphone_from_default_output_device() -> Option<bool> {
         mainloop.lock();
         let introspector = context.introspect();
         introspector.get_sink_info_by_name("@DEFAULT_SINK@", move |list_result| {
-            if let pulse::callbacks::ListResult::Item(sink_info) = list_result {
-                if let Some(active_port) = &sink_info.active_port {
-                    if let Some(name) = active_port.name.as_ref() {
-                        if let Ok(mut r) = result.lock() {
-                            *r = is_headphone_port(name).then_some(true);
-                        }
-                    }
-                }
+            if let pulse::callbacks::ListResult::Item(sink_info) = list_result
+                && let Some(active_port) = &sink_info.active_port
+                && let Some(name) = active_port.name.as_ref()
+                && let Ok(mut r) = result.lock()
+            {
+                *r = is_headphone_port(name).then_some(true);
             }
             done.store(true, Ordering::Release);
         });

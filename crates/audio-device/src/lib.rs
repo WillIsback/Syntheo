@@ -203,10 +203,10 @@ impl BluetoothDefaultOwnership {
                 listed_after.and_then(|inputs| listed_hands_free_capture(&self.requested, inputs))
             });
         let mut ids = vec![self.requested.id.clone()];
-        if let Some(capture) = capture {
-            if !ids.contains(&capture.id) {
-                ids.push(capture.id.clone());
-            }
+        if let Some(capture) = capture
+            && !ids.contains(&capture.id)
+        {
+            ids.push(capture.id.clone());
         }
         *self.endpoint_ids.lock().unwrap_or_else(|e| e.into_inner()) = Some(ids);
     }
