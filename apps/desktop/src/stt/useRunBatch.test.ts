@@ -31,6 +31,7 @@ const {
   useBillingAccessMock,
   useConfigValueMock,
   isSupportedLanguagesBatchMock,
+  isSupportedLanguagesLiveMock,
   toastWarningMock,
   deleteProcessedAudioForRetentionMock,
   saveBatchTranscriptMock,
@@ -49,6 +50,7 @@ const {
   useBillingAccessMock: vi.fn(),
   useConfigValueMock: vi.fn(),
   isSupportedLanguagesBatchMock: vi.fn(),
+  isSupportedLanguagesLiveMock: vi.fn(),
   toastWarningMock: vi.fn(),
   deleteProcessedAudioForRetentionMock: vi.fn(),
   saveBatchTranscriptMock: vi.fn(),
@@ -142,6 +144,9 @@ vi.mock("~/stt/capabilities", () => {
       return languages;
     },
     isSupportedLanguagesBatch: isSupportedLanguagesBatchMock,
+    isSupportedLanguagesLive: isSupportedLanguagesLiveMock,
+    getSttModelTranscriptionMode: (provider?: string | null) =>
+      provider === "nvidia" ? "live" : undefined,
   };
 });
 
@@ -1042,6 +1047,72 @@ describe("no local fallback", () => {
         await result.current("/tmp/session.wav");
       }),
     ).rejects.toThrow();
+    expect(startTranscriptionMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("file import through the real-time stream", () => {
+  const nvidia = {
+    provider: "nvidia",
+    model: "cache-aware-parakeet-rnnt-multi-asr-streaming-sortformer",
+    baseUrl: "http://192.168.1.87:9000/?provider=nvidia",
+    apiKey: "",
+  };
+
+  beforeEach(() => {
+    useSTTConnectionMock.mockReturnValue({ conn: nvidia });
+    isSupportedLanguagesLiveMock.mockResolvedValue(true);
+    startTranscriptionMock.mockImplementation(async (_params, options) => {
+      options.handlePersist(
+        [{ text: " Bonjour", start_ms: 1_000, end_ms: 1_400, channel: 2 }],
+        [
+          {
+            wordIndex: 0,
+            data: { type: "provider_speaker_index", speaker_index: 1 },
+          },
+        ],
+      );
+    });
+  });
+
+  test("streams the file when the caller allows it and saves the real provider", async () => {
+    const { result } = renderHook(() => useRunBatch("session-1"));
+
+    await act(async () => {
+      await result.current("/home/will/archive.mp4", {
+        allowRealtimeStream: true,
+        promotion: { scope: "whole_session" },
+      });
+    });
+
+    expect(isSupportedLanguagesLiveMock).toHaveBeenCalledWith(
+      "nvidia",
+      nvidia.model,
+      ["en"],
+    );
+    expect(isSupportedLanguagesBatchMock).not.toHaveBeenCalled();
+    expect(startTranscriptionMock.mock.calls[0]?.[0]).toMatchObject({
+      provider: "realtime",
+      file_path: "/home/will/archive.mp4",
+      model: nvidia.model,
+      base_url: nvidia.baseUrl,
+    });
+    const saved = saveBatchTranscriptMock.mock.calls[0]?.[0];
+    expect(saved).toMatchObject({ provider: "nvidia", model: nvidia.model });
+    expect(JSON.parse(saved.hints[0].value)).toMatchObject({
+      provider: "nvidia",
+      speaker_index: 1,
+    });
+  });
+
+  test("keeps other batch features off with a live-only model", async () => {
+    const { result } = renderHook(() => useRunBatch("chat-dictation"));
+
+    await expect(
+      result.current("", {
+        audio: { data_base64: "AAAA", file_name: "a.wav" },
+      }),
+    ).rejects.toThrow(/not available for batch transcription/);
     expect(startTranscriptionMock).not.toHaveBeenCalled();
   });
 });

@@ -4,20 +4,24 @@ import { useMemo } from "react";
 import { toast } from "@syntheo/ui/components/ui/toast";
 
 import { AudioUploadTooLargeError } from "./audio-upload-stream";
-import { getBatchProvider } from "./useRunBatch";
+import {
+  getBatchProvider,
+  getFileTranscriptionRoute,
+} from "./transcription-route";
 import { useSTTConnection } from "./useSTTConnection";
 
 import { useTabs } from "~/store/zustand/tabs";
 
 /**
- * Importer un fichier passe par la transcription par lot. Un modèle qui ne
- * transcrit qu'en direct (NVIDIA streaming) ne peut pas le faire : on le dit
- * avant de toucher à la note (issue 462).
+ * Un fichier importé passe par la transcription par lot ou, pour un modèle qui
+ * ne transcrit qu'en direct (NVIDIA streaming), par son flux temps réel
+ * (issue 463). Sans l'un ni l'autre, on le dit avant de toucher à la note
+ * (issue 462).
  */
 export type AudioImportAvailability =
-  | { status: "ready" }
+  | { status: "ready"; route: "batch" | "realtime" }
   | { status: "no_provider" }
-  | { status: "live_only" };
+  | { status: "unsupported" };
 
 export function getAudioImportAvailability(
   conn: { provider: string; model: string } | null,
@@ -25,11 +29,29 @@ export function getAudioImportAvailability(
   if (!conn) {
     return { status: "no_provider" };
   }
-  // Même choix de cible que `useRunBatch`.
-  if (!getBatchProvider(conn.provider, conn.model)) {
-    return { status: "live_only" };
+  // Même choix de cible que `useRunBatch` avec `allowRealtimeStream`.
+  const route = getFileTranscriptionRoute(conn);
+  return route ? { status: "ready", route } : { status: "unsupported" };
+}
+
+/**
+ * Les autres fonctions (dictée du chat, réparation) restent liées au lot :
+ * un modèle temps réel seul ne les fait pas.
+ */
+export type BatchAvailability =
+  | { status: "ready" }
+  | { status: "no_provider" }
+  | { status: "live_only" };
+
+export function getBatchAvailability(
+  conn: { provider: string; model: string } | null,
+): BatchAvailability {
+  if (!conn) {
+    return { status: "no_provider" };
   }
-  return { status: "ready" };
+  return getBatchProvider(conn.provider, conn.model)
+    ? { status: "ready" }
+    : { status: "live_only" };
 }
 
 export function useAudioImportAvailability(): AudioImportAvailability {
@@ -43,10 +65,10 @@ export function describeAudioImportUnavailable(
   switch (availability.status) {
     case "ready":
       return null;
-    case "live_only":
-      return t`This model only transcribes live: importing a file requires a batch transcription model.`;
+    case "unsupported":
+      return t`This model can't transcribe a file. Choose another transcription model.`;
     case "no_provider":
-      return t`No transcription service is set up: importing a file requires a batch transcription model.`;
+      return t`No transcription service is set up: importing a file requires a transcription model.`;
   }
 }
 

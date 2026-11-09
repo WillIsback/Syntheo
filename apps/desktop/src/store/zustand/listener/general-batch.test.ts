@@ -171,6 +171,17 @@ describe("runBatchSession", () => {
         api_key: "",
       }),
     ).toBe(false);
+    // Le flux temps réel d'un fichier rapporte sa vraie progression.
+    expect(
+      shouldUseSyntheticBatchProgress({
+        session_id: "session-1",
+        provider: "realtime",
+        file_path: "/tmp/archive.mp4",
+        model: "cache-aware-parakeet-rnnt-multi-asr-streaming-sortformer",
+        base_url: "http://192.168.1.87:9000/?provider=nvidia",
+        api_key: "",
+      }),
+    ).toBe(false);
   });
 
   test("caps synthetic progress before completion", () => {
