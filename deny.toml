@@ -44,6 +44,11 @@ ignore = [
   { id = "RUSTSEC-2026-0398", reason = "zstd-safe via tantivy-sstable (index local) : correctif en 8.2.0, incompatible tantivy 0.6" },
   { id = "RUSTSEC-2026-0403", reason = "zstd-safe via tantivy-sstable (index local) : correctif en 8.2.0, incompatible tantivy 0.6" },
   { id = "RUSTSEC-2026-0410", reason = "zstd-sys via tantivy-sstable : wasm32 uniquement, non livré" },
+  # SQLite embarqué (libsqlite3-sys 0.35 via sqlx-sqlite 0.9.0 et db-core) : correctif en
+  # libsqlite3-sys 0.39.0, que sqlx 0.9.0 refuse (borne < 0.38, lien « sqlite3 » unique).
+  # Borne relevée en amont mais non publiée. Exception courte (expire 2026-12-09),
+  # à lever avec la prochaine version de sqlx (issue 490).
+  { id = "RUSTSEC-2026-0459", reason = "libsqlite3-sys 0.35 via sqlx-sqlite 0.9.0 : correctif 0.39 refusé par sqlx 0.9.0, en attente de sqlx (expire 2026-12-09)" },
 ]
 
 [licenses]
