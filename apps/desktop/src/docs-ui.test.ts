@@ -7,14 +7,20 @@ import { expect, it } from "vitest";
 // au-dessus.
 const ROOT = join(process.cwd(), "..", "..");
 
-// Les reproductions de l'app dans la doc (docs/snippets/app.gen.jsx) suivent
+// Les reproductions de l'app dans la doc (docs/snippets/*.gen.jsx) suivent
 // les couleurs, les libellés et les icônes de l'app : si l'un d'eux change,
-// relancer `node scripts/sync-docs-ui.mjs` (issue 512).
-it("docs_ui_snippet_matches_app_sources", async () => {
-  const { generate, OUTPUT_PATH } = await import(
+// relancer `node scripts/sync-docs-ui.mjs` (issues 512 et 528). generate()
+// échoue aussi quand un libellé cité n'existe plus dans messages.po.
+it("docs_ui_snippets_match_app_sources", async () => {
+  const { generate, OUTPUT_DIR } = await import(
     pathToFileURL(join(ROOT, "scripts/sync-docs-ui.mjs")).href
   );
-  const expected = await generate(ROOT);
-  const current = readFileSync(join(ROOT, OUTPUT_PATH), "utf8");
-  expect(current === expected, `${OUTPUT_PATH} n'est plus à jour`).toBe(true);
+  const outputs: Record<string, string> = await generate(ROOT);
+  expect(Object.keys(outputs).length).toBeGreaterThan(0);
+  for (const [name, expected] of Object.entries(outputs)) {
+    const current = readFileSync(join(ROOT, OUTPUT_DIR, name), "utf8");
+    expect(current === expected, `${OUTPUT_DIR}/${name} n'est plus à jour`).toBe(
+      true,
+    );
+  }
 });
