@@ -378,9 +378,6 @@ importers:
       vfile:
         specifier: ^6.0.3
         version: 6.0.3
-      wavesurfer.js:
-        specifier: ^8.0.5
-        version: 8.0.5
       zod:
         specifier: ^4.6.6
         version: 4.6.7
@@ -9095,9 +9092,6 @@ packages:
     engines: {node: '>=10'}
     hasBin: true
 
-  wavesurfer.js@8.0.5:
-    resolution: {integrity: sha512-VRYjNG8vKhpMN9hKGgo6VzqQdnZ+AsDg4yIQppmntUagB+/vKbvirWZYSM+PYT03Z7Ry10f5Uqxadbutx47l/g==}
-
   wcwidth@1.0.1:
     resolution: {integrity: sha512-XHPEwS0q6TaxcvG85+8EYkbiCux2XtWG2mkc47Ng2A77BQu9+DqIOJldST4HgPkuea7dvKSj5VgX3P1d4rW8Tg==}
 
@@ -17761,8 +17755,6 @@ snapshots:
       debug: 4.4.3(supports-color@8.1.1)
     transitivePeerDependencies:
       - supports-color
-
-  wavesurfer.js@8.0.5: {}
 
   wcwidth@1.0.1:
     dependencies:
