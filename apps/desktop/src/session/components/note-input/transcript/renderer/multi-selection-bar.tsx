@@ -4,7 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useCallback, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 
-import { ArrowsMerge, Trash, X } from "@syntheo/ui/components/icons";
+import { ArrowsMerge, Copy, Trash, X } from "@syntheo/ui/components/icons";
 import {
   Popover,
   PopoverContent,
@@ -26,6 +26,7 @@ export function MultiSelectionBar({
   entryCount,
   canMerge = false,
   onClear,
+  onCopy,
   onAssignSpeaker,
   onMerge,
   onDelete,
@@ -34,6 +35,8 @@ export function MultiSelectionBar({
   entryCount: number;
   canMerge?: boolean;
   onClear: () => void;
+  // Copie les répliques avec leurs intervenants (issue 458).
+  onCopy?: () => void | Promise<void>;
   onAssignSpeaker: (
     selection: TranscriptWordSelection,
     humanId: string,
@@ -75,12 +78,26 @@ export function MultiSelectionBar({
         "text-xs",
         fabSelectionHost
           ? null
-          : "absolute bottom-4 left-1/2 z-40 -translate-x-1/2",
+          : "absolute bottom-4 left-1/2 z-40 w-max -translate-x-1/2",
       ])}
     >
       <span className="text-muted-foreground whitespace-nowrap">
         <Trans>{entryCount} selected</Trans>
       </span>
+      {onCopy ? (
+        <button
+          type="button"
+          disabled={deleteMutation.isPending}
+          className={cn([
+            "hover:bg-accent flex h-7 items-center gap-1.5 rounded-full px-2 font-medium",
+            "disabled:pointer-events-none disabled:opacity-50",
+          ])}
+          onClick={() => void onCopy()}
+        >
+          <Copy className="size-3.5" />
+          <Trans>Copy</Trans>
+        </button>
+      ) : null}
       <Popover
         open={speakerPickerOpen && !deleteMutation.isPending}
         onOpenChange={setSpeakerPickerOpen}

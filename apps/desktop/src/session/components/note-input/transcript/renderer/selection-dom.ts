@@ -13,6 +13,8 @@ export type TranscriptWordSelection = {
   text: string;
   startMs: number;
   groups: TranscriptWordSelectionGroup[];
+  // Intervenant tel qu'affiché, pour une réplique entière (copie).
+  speakerLabel?: string;
 };
 
 export function readSegmentKey(element: HTMLElement): SegmentKey | undefined {
