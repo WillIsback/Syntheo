@@ -1,7 +1,10 @@
+# Plusieurs worktrees partagent le même target/ : le cache incrémental
+# (un jeu par variante compilée, jamais purgé par cargo) et les debuginfo
+# complets le faisaient grossir de plusieurs Go par heure.
 [profile.dev]
-incremental = true
+incremental = false
 opt-level = 0
-debug = true
+debug = "line-tables-only"
 
 [profile.dev.package."*"]
 opt-level = 1
