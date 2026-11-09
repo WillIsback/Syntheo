@@ -384,7 +384,7 @@ name = "askama-utils"
 version = "0.1.0"
 dependencies = [
  "askama",
- "askama_parser 0.15.6",
+ "askama_parser",
  "chrono",
  "insta",
  "isolang",
@@ -396,7 +396,7 @@ version = "0.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "071ee5ebf2138e3ad180e0aacf6940c2cab5e6d8333741d9925c7bee2b153f39"
 dependencies = [
- "askama_parser 0.16.1",
+ "askama_parser",
  "basic-toml",
  "glob",
  "memchr",
@@ -415,17 +415,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "643e1c7cbb6aec1d920332fe51a7c0d8219e273dcb8602db03f5263e4d16487b"
 dependencies = [
  "askama_derive",
-]
-
-[[package]]
-name = "askama_parser"
-version = "0.15.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5d0af3691ba3af77949c0b5a3925444b85cb58a0184cc7fec16c68ba2e7be868"
-dependencies = [
- "rustc-hash",
- "unicode-ident",
- "winnow 1.0.1",
 ]
 
 [[package]]
