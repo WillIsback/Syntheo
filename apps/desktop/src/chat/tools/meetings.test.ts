@@ -85,7 +85,7 @@ describe("canonical meeting chat tools", () => {
     const snapshot = readFileSync(
       resolve(
         repositoryRoot,
-        "apps/cli/src/snapshots/syntheo_cli__mcp__tests__mcp_contract.snap",
+        "apps/cli/src/mcp/snapshots/syntheo_cli__mcp__tests__mcp_contract.snap",
       ),
       "utf8",
     );
