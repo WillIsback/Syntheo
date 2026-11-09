@@ -173,6 +173,7 @@ export const SegmentsList = memo(
       offsetMs,
       segments,
       segmentKeys,
+      speakerLabels,
     );
 
     // Nouveau tour de parole : recoller au bas. Ne dépend que du nombre de
@@ -314,6 +315,7 @@ function useRegisterTranscriptSegments(
   offsetMs: number,
   segments: Segment[],
   segmentKeys: string[],
+  speakerLabels: Map<Segment, string>,
 ) {
   const registerSource = useRegisterTranscriptSelectionSource();
   const getEntriesRef = useRef<() => Array<[string, TranscriptWordSelection]>>(
@@ -333,7 +335,7 @@ function useRegisterTranscriptSegments(
       return [
         [
           getTranscriptSectionKey(transcriptId, segmentKeys[index]!),
-          selection,
+          { ...selection, speakerLabel: speakerLabels.get(segment) },
         ] as const,
       ];
     });

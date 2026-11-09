@@ -110,6 +110,10 @@ msgstr "{chain} · jamais exécutée"
 msgid "{count, plural, one {# meeting} other {# meetings}}"
 msgstr "{count, plural, one {# réunion} other {# réunions}}"
 
+#: src/session/components/note-input/transcript/renderer/copy-replies.ts
+msgid "{count, plural, one {# reply copied} other {# replies copied}}"
+msgstr "{count, plural, one {# réplique copiée} other {# répliques copiées}}"
+
 #: src/session/components/speaker-naming/bar.tsx
 msgid "{count, plural, one {# speaker to name} other {# speakers to name}}"
 msgstr "{count, plural, one {# intervenant à nommer} other {# intervenants à nommer}}"
@@ -193,6 +197,10 @@ msgstr "{providerName} n'envoie plus de texte"
 #: src/settings/automations/workflow-test-result.tsx
 msgid "{seconds} s"
 msgstr "{seconds} s"
+
+#: src/session/components/note-input/transcript/renderer/copy-replies.ts
+msgid "{speakerLabel}: {body}"
+msgstr "{speakerLabel} : {body}"
 
 #: src/home/folder-cards.tsx
 msgid "{tasks, plural, one {# task} other {# tasks}}"
@@ -1110,6 +1118,7 @@ msgstr "Copié dans le presse-papiers"
 #: src/main/windows-title-bar.tsx
 #: src/session/components/capsule/index.tsx
 #: src/session/components/living-document/summary-switcher-view.tsx
+#: src/session/components/note-input/transcript/renderer/multi-selection-bar.tsx
 #: src/session/components/note-input/transcript/renderer/selection-floating-menu.tsx
 #: src/settings/developers/webhooks.tsx
 msgid "Copy"
@@ -1709,7 +1718,6 @@ msgid "Expand notification"
 msgstr "Développer la notification"
 
 #: src/session/components/capsule/index.tsx
-#: src/session/components/outer-header/overflow/index.tsx
 #: src/shared/shortcuts.ts
 msgid "Export"
 msgstr "Exporter"
@@ -3807,7 +3815,6 @@ msgstr "Reprendre la fermeture automatique"
 
 #: src/meeting-float/overlay/bar.tsx
 #: src/session/components/capsule/index.tsx
-#: src/session/components/outer-header/overflow/listening.tsx
 #: src/shared/open-note-dialog.tsx
 msgid "Resume listening"
 msgstr "Reprendre l'écoute"
@@ -4295,6 +4302,7 @@ msgstr "Smileys & personnes"
 msgid "Software Engineer"
 msgstr "Ingénieur logiciel"
 
+#: src/session/components/note-input/transcript/renderer/copy-replies.ts
 #: src/session/components/note-input/transcript/renderer/multi-selection-bar.tsx
 #: src/shared/control.tsx
 msgid "Something went wrong"
@@ -4375,10 +4383,6 @@ msgstr "Démarrer une réunion"
 msgid "Start from a template"
 msgstr "Partir d'un modèle"
 
-#: src/session/components/outer-header/overflow/listening.tsx
-msgid "Start listening"
-msgstr "Démarrer l'écoute"
-
 #: src/settings/general/app-settings.tsx
 #: src/settings/search-index.ts
 msgid "Start Syntheo at login"
@@ -4441,10 +4445,6 @@ msgstr "Étapes"
 #: src/stt/auto-stop.ts
 msgid "Stop"
 msgstr "Arrêter"
-
-#: src/session/components/outer-header/overflow/listening.tsx
-msgid "Stop listening"
-msgstr "Arrêter l'écoute"
 
 #: src/settings/general/meeting-settings.tsx
 msgid "Stop listening when your call ends."
@@ -5268,6 +5268,10 @@ msgstr "Transcription"
 msgctxt "export section"
 msgid "Transcript"
 msgstr "Transcription"
+
+#: src/session/components/note-input/transcript/renderer/copy-replies.ts
+msgid "Transcript copied"
+msgstr "Transcription copiée"
 
 #: src/services/enhancer/eligibility.ts
 msgid "Transcript too short to summarize ({characterCount}/{minCharacters} characters minimum)"

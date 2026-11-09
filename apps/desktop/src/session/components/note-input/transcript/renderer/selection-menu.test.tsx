@@ -149,6 +149,21 @@ describe("SelectionMenu", () => {
 });
 
 describe("MultiSelectionBar", () => {
+  it("offers Copy first and keeps the selection after copying", () => {
+    const onCopy = vi.fn();
+    const onClear = vi.fn();
+    render(barElement({ onCopy, onClear, onMerge: vi.fn() }));
+
+    const actions = screen
+      .getAllByRole("button")
+      .map((button) => button.textContent);
+    expect(actions.slice(0, 3)).toEqual(["Copy", "Change speaker", "Merge"]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Copy" }));
+    expect(onCopy).toHaveBeenCalledTimes(1);
+    expect(onClear).not.toHaveBeenCalled();
+  });
+
   it("keeps merge disabled until contiguous entries are selected", () => {
     render(barElement({ canMerge: false, onMerge: vi.fn() }));
 

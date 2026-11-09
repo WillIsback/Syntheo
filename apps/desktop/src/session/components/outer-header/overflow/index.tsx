@@ -1,4 +1,4 @@
-import { Trans, useLingui } from "@lingui/react/macro";
+import { Trans } from "@lingui/react/macro";
 import { useState } from "react";
 
 import {
@@ -6,7 +6,6 @@ import {
   CalendarBlank,
   ClockCounterClockwise,
   DotsThree,
-  FileArrowDown,
   FileText,
   PictureInPicture,
   Waveform,
@@ -29,8 +28,6 @@ import {
 import { MetadataPanelContent } from "../metadata";
 import { AlwaysOnTop } from "./always-on-top";
 import { DeleteNote } from "./delete";
-import { ExportModal } from "./export-modal";
-import { Listening } from "./listening";
 import { LockNote } from "./lock-note";
 
 import { NoteMenuAutomationItems } from "~/automations/launch";
@@ -43,27 +40,23 @@ import {
 import { VersionHistoryDialog } from "~/session/components/version-history-dialog";
 import { openStandaloneNoteWindow } from "~/session/window";
 import { useConfigValue } from "~/shared/config";
-import { ariaShortcut, shortcutTooltip } from "~/shared/shortcuts";
 import type { EditorView } from "~/store/zustand/tabs/schema";
 import { describeAudioImportUnavailable } from "~/stt/audio-import-feedback";
 import { useListener } from "~/stt/contexts";
 import { useUploadFile } from "~/stt/useUploadFile";
 
+// L'écoute et l'export vivent dans la capsule (Ctrl+P compris) : ce menu ne
+// garde que les actions qu'on ne trouve pas ailleurs (issue 458).
 export function OverflowButton({
-  allowListening = true,
   standaloneWindow = false,
   sessionId,
   currentView,
 }: {
-  allowListening?: boolean;
   standaloneWindow?: boolean;
   sessionId: string;
   currentView: EditorView;
 }) {
-  const { t } = useLingui();
   const [open, setOpen] = useState(false);
-  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
-  const [hasOpenedExportModal, setHasOpenedExportModal] = useState(false);
   const [isVersionHistoryOpen, setIsVersionHistoryOpen] = useState(false);
   const [hasOpenedVersionHistory, setHasOpenedVersionHistory] = useState(false);
   const hasTranscript = useHasTranscript(sessionId);
@@ -83,22 +76,12 @@ export function OverflowButton({
   const floatingBarSupported = isFloatingBarSupported();
   const isMeetingInProgress =
     sessionMode === "active" || sessionMode === "finalizing";
-  const showListeningAction = allowListening;
   // Syntheo ne conserve jamais l'audio : l'import n'est proposé que tant
   // que la note est vide.
   const showUploadActions =
     !hasTranscript && !currentNoteHasContent && !isMeetingInProgress;
   const canOpenFloatingPanel =
-    floatingBarSupported &&
-    allowListening &&
-    floatingBarEnabled &&
-    sessionMode === "active";
-  const hasRecordingActions = showListeningAction || showUploadActions;
-  const openExportModal = () => {
-    setOpen(false);
-    setHasOpenedExportModal(true);
-    requestAnimationFrame(() => setIsExportModalOpen(true));
-  };
+    floatingBarSupported && floatingBarEnabled && sessionMode === "active";
   const openVersionHistory = () => {
     setOpen(false);
     setHasOpenedVersionHistory(true);
@@ -166,9 +149,6 @@ export function OverflowButton({
               </span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            {showListeningAction && (
-              <Listening sessionId={sessionId} resume={hasTranscript} />
-            )}
             {showUploadActions && (
               <>
                 <DropdownMenuItem
@@ -197,24 +177,13 @@ export function OverflowButton({
                     <Trans>Upload transcript</Trans>
                   </span>
                 </DropdownMenuItem>
+                <DropdownMenuSeparator />
               </>
             )}
-            {hasRecordingActions && <DropdownMenuSeparator />}
+            {/* Porte son propre séparateur quand une automatisation est prête. */}
             {isMeetingInProgress ? null : (
               <NoteMenuAutomationItems sessionId={sessionId} />
             )}
-            <DropdownMenuItem
-              onClick={openExportModal}
-              title={shortcutTooltip(t`Export`, "exportNote")}
-              aria-keyshortcuts={ariaShortcut("exportNote")}
-              className="cursor-pointer"
-            >
-              <FileArrowDown />
-              <span>
-                <Trans>Export</Trans>
-              </span>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
             {!standaloneWindow && (
               <DropdownMenuItem
                 onClick={handleOpenStandaloneWindow}
@@ -244,14 +213,6 @@ export function OverflowButton({
           </AppFloatingPanel>
         </DropdownMenuContent>
       </DropdownMenu>
-      {hasOpenedExportModal && (
-        <ExportModal
-          sessionId={sessionId}
-          currentView={currentView}
-          open={isExportModalOpen}
-          onOpenChange={setIsExportModalOpen}
-        />
-      )}
       {hasOpenedVersionHistory && (
         <VersionHistoryDialog
           sessionId={sessionId}

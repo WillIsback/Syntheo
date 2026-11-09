@@ -11,6 +11,7 @@ import { useHotkeys } from "react-hotkeys-hook";
 
 import { cn } from "@syntheo/utils";
 
+import { copySelectedReplies } from "./copy-replies";
 import { useTranscriptEditActions } from "./edit-actions";
 import { TranscriptScrollControls } from "./scroll-controls";
 import {
@@ -177,6 +178,10 @@ export function TranscriptViewer({
     },
     [],
   );
+  const handleCopySelectedReplies = useCallback(async () => {
+    const { order, entries } = collectEntries(visibleTranscriptIdsRef.current);
+    await copySelectedReplies(selectedEntries, order, entries);
+  }, [collectEntries, selectedEntries]);
   const {
     handleAssignSpeaker,
     handleEditSelection,
@@ -437,6 +442,7 @@ export function TranscriptViewer({
             entryCount={selectedEntries.size}
             canMerge={canMergeSelection}
             onClear={clearSelectedEntries}
+            onCopy={handleCopySelectedReplies}
             onAssignSpeaker={handleAssignSpeaker}
             onMerge={handleMergeSegments}
             onDelete={

@@ -6,6 +6,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { RenderTranscriptRequest } from "@syntheo/plugin-transcription";
 
 import { PARAGRAPH_MAX_SENTENCES } from "./paragraphs";
+import {
+  TranscriptSelectionProvider,
+  useTranscriptSelectionSources,
+} from "./selection-context";
 import { RenderTranscript } from "./transcript";
 
 import type { Segment, SegmentWord } from "~/stt/live-segment";
@@ -210,5 +214,48 @@ describe("paragraphes d'une même prise de parole (issue 281)", () => {
     );
     expect(scrollTo).toHaveBeenCalled();
     expect(scrollTo.mock.lastCall?.[0].top ?? 0).toBeGreaterThan(0);
+  });
+
+  it("registers each reply with the speaker shown in its header (copy, issue 458)", () => {
+    let collect: ReturnType<
+      typeof useTranscriptSelectionSources
+    >["collectEntries"] = () => ({ order: [], entries: new Map() });
+    function Sources({ children }: { children: ReactNode }) {
+      const sources = useTranscriptSelectionSources();
+      collect = sources.collectEntries;
+      return (
+        <TranscriptSelectionProvider
+          selectMode={false}
+          selectedKeys={new Set()}
+          registerSource={sources.registerSource}
+        >
+          {children}
+        </TranscriptSelectionProvider>
+      );
+    }
+    const client = new QueryClient();
+    render(
+      <QueryClientProvider client={client}>
+        <Sources>
+          <RenderTranscript
+            scrollElement={null}
+            isLastTranscript
+            shouldScrollToEnd={false}
+            transcriptId="transcript-1"
+            currentActive={false}
+            liveSegments={[]}
+            editMode={false}
+          />
+        </Sources>
+      </QueryClientProvider>,
+    );
+
+    const { order, entries } = collect(["transcript-1"]);
+    expect(order).toHaveLength(1);
+    const label = entries.get(order[0]!)?.speakerLabel;
+    expect(label).toBeTruthy();
+    expect(
+      document.querySelector("[data-transcript-speaker-assign]")?.textContent,
+    ).toContain(label);
   });
 });
