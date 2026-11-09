@@ -1,0 +1,38 @@
+{
+  // Détection du code mort TS (ménage, issue 457). Lancer avec `pnpm menage:knip`.
+  // knip n'est pas une dépendance : il est récupéré par npx à la demande.
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "ignore": [
+    "**/*.gen.ts",
+    ".agents/**",
+    // Chargé par include_str! côté Rust.
+    "apps/desktop/src-tauri/src/context_menu_guard.js",
+  ],
+  // tsc vient de typescript, installé à la racine du monorepo.
+  "ignoreBinaries": ["tsc"],
+  // Épinglages de sécurité (overrides pnpm), sans import direct.
+  "ignoreDependencies": [
+    "braces",
+    "decode-uri-component",
+    "extract-zip",
+    "node-forge",
+    "sprintf-js",
+  ],
+  "workspaces": {
+    ".": {
+      "entry": ["scripts/**/*.mjs", "eslint-plugin-syntheo.mjs"],
+      "project": ["scripts/**/*.mjs"],
+    },
+    "apps/desktop": {
+      "entry": [
+        "lingui.config.ts",
+        "public/theme-boot.js",
+        "scripts/*.mjs",
+        "src-tauri/scripts/*.mjs",
+      ],
+    },
+    "e2e/blackbox": {
+      "entry": ["wdio.blackbox.conf.ts", "tests/**/*.spec.ts"],
+    },
+  },
+}

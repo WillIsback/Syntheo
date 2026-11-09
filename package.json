@@ -7,6 +7,8 @@
     "lint": "pnpm lint:oxlint && pnpm lint:eslint",
     "lint:eslint": "eslint",
     "lint:oxlint": "oxlint --type-aware",
+    "menage:knip": "LINGUI_SUPPRESS_BABEL_WARNING=1 LINGUI_CONFIG=apps/desktop/lingui.config.ts npx -y knip@5",
+    "menage:lignes": "node scripts/menage-lignes.mjs",
     "plugin:hello-world:install": "pnpm --dir examples/plugins/hello-world install:dev"
   },
   "devDependencies": {
