@@ -24,13 +24,17 @@ impl<'a, R: tauri::Runtime, M: tauri::Manager<R>> Misc<'a, R, M> {
     }
 
     pub fn get_device_info(&self, locale: Option<String>) -> DeviceInfo {
-        let mut system = sysinfo::System::new();
-        system.refresh_memory();
+        let total_memory_bytes = sysinfo::System::new()
+            .map(|mut system| {
+                system.refresh_memory();
+                system.total_memory()
+            })
+            .unwrap_or_default();
 
         DeviceInfo {
             platform: std::env::consts::OS.to_string(),
             arch: std::env::consts::ARCH.to_string(),
-            total_memory_bytes: system.total_memory(),
+            total_memory_bytes,
             os_version: sysinfo::System::long_os_version().unwrap_or_default(),
             app_version: self.manager.package_info().version.to_string(),
             build_hash: Some(self.get_git_hash()),
@@ -41,8 +45,8 @@ impl<'a, R: tauri::Runtime, M: tauri::Manager<R>> Misc<'a, R, M> {
     /// Resident set size of the host process. WebKit renders in a separate
     /// process on macOS, so this reflects the Rust side, not the JS heap.
     pub fn get_process_memory_bytes(&self) -> Result<u64, String> {
-        let pid = sysinfo::get_current_pid()?;
-        let mut system = sysinfo::System::new();
+        let pid = sysinfo::get_current_pid().map_err(|error| error.to_string())?;
+        let mut system = sysinfo::System::new().map_err(|error| error.to_string())?;
         system.refresh_processes_specifics(
             sysinfo::ProcessesToUpdate::Some(&[pid]),
             false,

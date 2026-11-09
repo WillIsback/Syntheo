@@ -229,14 +229,17 @@ pub(super) fn running_apps_for_bundle(bundle_id: &str) -> Vec<(MeetingApp, i32)>
     if meeting_app_family(bundle_id).is_none() {
         return Vec::new();
     }
-    running_apps_for_bundle_in(&refreshed_process_table(), bundle_id)
+    let Some(system) = refreshed_process_table() else {
+        return Vec::new();
+    };
+    running_apps_for_bundle_in(&system, bundle_id)
 }
 
 #[cfg(not(target_os = "macos"))]
-fn refreshed_process_table() -> sysinfo::System {
-    let mut system = sysinfo::System::new();
+fn refreshed_process_table() -> Option<sysinfo::System> {
+    let mut system = sysinfo::System::new().ok()?;
     system.refresh_processes(sysinfo::ProcessesToUpdate::All, true);
-    system
+    Some(system)
 }
 
 #[cfg(not(target_os = "macos"))]
@@ -282,7 +285,9 @@ fn running_apps_for_bundle_in(system: &sysinfo::System, bundle_id: &str) -> Vec<
 pub(super) fn running_meeting_apps() -> Vec<(MeetingApp, i32)> {
     // Une seule lecture de la table des processus pour les 40 familles connues,
     // au lieu d'une par famille : la sonde tourne toutes les 3 à 5 s pendant l'écoute.
-    let system = refreshed_process_table();
+    let Some(system) = refreshed_process_table() else {
+        return Vec::new();
+    };
     let mut seen = HashSet::new();
 
     MEETING_APP_BUNDLES

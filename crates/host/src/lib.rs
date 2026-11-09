@@ -23,7 +23,9 @@ pub fn kill_processes_by_matcher(matcher: ProcessMatcher) -> u16 {
         ],
     };
 
-    let mut sys = sysinfo::System::new();
+    let Ok(mut sys) = sysinfo::System::new() else {
+        return 0;
+    };
     sys.refresh_processes(sysinfo::ProcessesToUpdate::All, true);
 
     let mut killed_count = 0;

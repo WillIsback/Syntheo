@@ -212,7 +212,7 @@ fn resolve_via_nsrunningapp_inner(pid: i32) -> Option<InstalledApp> {
 }
 
 fn resolve_via_sysinfo(pid: i32) -> Option<InstalledApp> {
-    let mut sys = System::new();
+    let mut sys = System::new().ok()?;
     let pid = Pid::from_u32(pid as u32);
     sys.refresh_processes(sysinfo::ProcessesToUpdate::Some(&[pid]), true);
 
@@ -228,11 +228,13 @@ fn fallback_app_for_pid(pid: i32) -> InstalledApp {
         metadata.name = app.localizedName().map(|name| name.to_string());
     }
 
-    let mut sys = System::new();
     let pid_ref = Pid::from_u32(pid as u32);
-    sys.refresh_processes(sysinfo::ProcessesToUpdate::Some(&[pid_ref]), true);
+    let mut sys = System::new().ok();
+    if let Some(sys) = sys.as_mut() {
+        sys.refresh_processes(sysinfo::ProcessesToUpdate::Some(&[pid_ref]), true);
+    }
 
-    if let Some(process) = sys.process(pid_ref) {
+    if let Some(process) = sys.as_ref().and_then(|sys| sys.process(pid_ref)) {
         metadata.executable_path = process.exe().map(|path| path.to_string_lossy().to_string());
         let process_name = process.name().to_string_lossy().trim().to_string();
         if !process_name.is_empty() {

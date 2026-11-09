@@ -230,7 +230,7 @@ chrono-tz = "0.10"
 vergen-gix = "10"
 
 askama = "0.16"
-askama_parser = "0.15"
+askama_parser = "0.16"
 markdown = "1"
 # Vendored 0.0.2 with byte-indexed Unicode escaping fixed; upstream still uses chars().nth(byte_offset).
 mdast_util_to_markdown = { path = "crates/tiptap/vendor/mdast_util_to_markdown" }
@@ -256,9 +256,9 @@ earshot = "0.1.0"
 hound = "3.5.1"
 htmd = "0.5.0"
 macos-accessibility-client = "0.0.2"
-mp3lame-encoder = "0.2.2"
+mp3lame-encoder = "0.3.0"
 realfft = "3.5.0"
-ringbuf = "0.4.8"
+ringbuf = "0.6.0"
 rodio = { version = "0.22", features = ["tracing"] }
 
 deepgram = { version = "0.7", default-features = false }
@@ -294,7 +294,7 @@ swift-rs = { git = "https://github.com/Brendonovich/swift-rs", rev = "41a1605" }
 gtk = "0.18"
 gtk-layer-shell = { version = "0.8.2", features = ["v0_6"] }
 
-wasapi = "0.23.0"
+wasapi = "0.26.0"
 windows = "0.62.2"
 # Keep in step with `windows`: the `#[windows::core::interface]` macro expands to
 # `::windows_core::…` paths, so a mismatched major makes the generated impl target
@@ -306,4 +306,4 @@ rmcp = "3.9"
 rustls = { version = "0.23", default-features = false }
 sqlx = { version = "=0.9.0", default-features = false }
 sys-locale = "0.3.2"
-sysinfo = "0.38"
+sysinfo = "0.40"
