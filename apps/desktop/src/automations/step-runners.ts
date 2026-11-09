@@ -38,7 +38,13 @@ export type StepRunResult = {
   detail: string;
   /** Valeur publiée pour les étapes suivantes. */
   output?: string;
+  /** Fichier écrit ou note du coffre produite, ouvrable depuis un test. */
+  artifact?: StepArtifact;
 };
+
+export type StepArtifact =
+  | { kind: "file"; path: string }
+  | { kind: "note"; sessionId: string; title: string };
 
 type StepRunners = {
   [T in WorkflowStep["type"]]: (
@@ -88,7 +94,7 @@ async function runMarkdownExportStep(
     step.options,
     `${workflowId}:${step.id}:${sessionId}`,
   );
-  return { detail: path, output: path };
+  return { detail: path, output: path, artifact: { kind: "file", path } };
 }
 
 type StoredMarkdownExportFile = MarkdownExportFile & { key: string };

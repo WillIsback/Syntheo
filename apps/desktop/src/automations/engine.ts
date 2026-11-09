@@ -1,5 +1,5 @@
 import { ensureLegacyAutomationsMigrated } from "./migration";
-import { runWorkflowStep } from "./step-runners";
+import { runWorkflowStep, type StepArtifact } from "./step-runners";
 import { stepDefinition, type WorkflowStep } from "./steps";
 import { type AutomationRunRecord, parseAutomationRunRecord } from "./types";
 import { type BaseVariableLoader, createWorkflowVariables } from "./variables";
@@ -134,48 +134,143 @@ export function setBaseVariableLoaderForTests(loader: BaseVariableLoader) {
   baseVariableLoader = loader;
 }
 
+export type WorkflowTestResult = {
+  status: AutomationRunRecord["status"];
+  /** Une entrée par action, dans l'ordre d'exécution. */
+  steps: StepOutcome[];
+  durationMs: number;
+};
+
+/**
+ * Teste une automatisation telle qu'elle est éditée, même non enregistrée,
+ * sur une note existante. Rien n'est enregistré sur l'automatisation : ni la
+ * dernière exécution, ni la liste des notes traitées. `simulate` lance les
+ * étapes à effet réel à blanc (elles décrivent ce qu'elles feraient).
+ */
+export async function testWorkflowOnNote(
+  workflow: AutomationWorkflow,
+  sessionId: string,
+  { simulate = false }: { simulate?: boolean } = {},
+): Promise<WorkflowTestResult> {
+  return await enqueueWorkflowRun(async () => {
+    const started = Date.now();
+    const steps = await executeWorkflowSteps(
+      sessionId,
+      workflow,
+      workflow.steps,
+      { dryRun: simulate },
+    );
+    return {
+      status: steps.some((step) => step.status === "error")
+        ? "error"
+        : "success",
+      steps,
+      durationMs: Date.now() - started,
+    };
+  });
+}
+
 async function runWorkflowSteps(
   sessionId: string,
   workflow: AutomationWorkflow,
   steps: WorkflowStep[],
   { markProcessed }: { markProcessed: boolean },
 ): Promise<AutomationRunRecord> {
-  const record: AutomationRunRecord = {
-    at: new Date().toISOString(),
-    status: "success",
-    detail: "",
-  };
-  const variables = createWorkflowVariables(sessionId, baseVariableLoader);
-  const details: string[] = [];
+  const at = new Date().toISOString();
   let processed = false;
-  try {
-    for (const step of steps) {
+  const outcomes = await executeWorkflowSteps(sessionId, workflow, steps, {
+    afterStep: async () => {
+      if (markProcessed && !processed) {
+        processed = true;
+        await persistWorkflowResult(workflow.id, { sessionId });
+      }
+    },
+  });
+  const failed = outcomes.some((outcome) => outcome.status === "error");
+  const detail = outcomes
+    .filter((outcome) => outcome.status !== "skipped")
+    .map((outcome) => outcome.detail)
+    .filter(Boolean)
+    .join(" · ");
+  const record: AutomationRunRecord = {
+    at,
+    status: failed ? "error" : "success",
+    detail: detail || (failed ? "" : "ok"),
+  };
+  await persistWorkflowResult(workflow.id, { record });
+  return record;
+}
+
+/** Résultat d'une étape lancée par le moteur. */
+export type StepOutcome = {
+  stepId: string;
+  /** « skipped » : non lancée, une étape précédente a échoué. */
+  status: "success" | "error" | "skipped";
+  /** Résumé lisible, ou message d'erreur. */
+  detail: string;
+  output?: string;
+  artifact?: StepArtifact;
+  /** Lancée à blanc : l'étape a décrit son effet sans agir. */
+  simulated: boolean;
+};
+
+async function executeWorkflowSteps(
+  sessionId: string,
+  workflow: AutomationWorkflow,
+  steps: WorkflowStep[],
+  {
+    dryRun = false,
+    afterStep,
+  }: { dryRun?: boolean; afterStep?: () => Promise<void> },
+): Promise<StepOutcome[]> {
+  const variables = createWorkflowVariables(sessionId, baseVariableLoader);
+  const outcomes: StepOutcome[] = [];
+  let failed = false;
+  for (const step of steps) {
+    // Une étape en échec arrête la suite : les suivantes dépendent peut-être
+    // de sa sortie.
+    if (failed) {
+      outcomes.push({
+        stepId: step.id,
+        status: "skipped",
+        detail: "",
+        simulated: false,
+      });
+      continue;
+    }
+    const simulated = dryRun && stepDefinition(step).effect !== null;
+    try {
       const result = await runWorkflowStep(step, {
         sessionId,
         workflowId: workflow.id,
         workflowTitle: workflow.title,
         variables,
+        dryRun,
       });
       if (result.output !== undefined && stepDefinition(step).output) {
         variables.publish(step.id, result.output);
       }
-      details.push(result.detail);
-      if (markProcessed && !processed) {
-        processed = true;
-        await persistWorkflowResult(workflow.id, { sessionId });
-      }
+      outcomes.push({
+        stepId: step.id,
+        status: "success",
+        detail: result.detail,
+        ...(result.output !== undefined ? { output: result.output } : {}),
+        ...(result.artifact ? { artifact: result.artifact } : {}),
+        simulated,
+      });
+      await afterStep?.();
+    } catch (error) {
+      failed = true;
+      outcomes.push({
+        stepId: step.id,
+        status: "error",
+        detail: error instanceof Error ? error.message : String(error),
+        simulated,
+      });
+      console.error("[automations] workflow failed", error);
     }
-    record.detail = details.filter(Boolean).join(" · ") || "ok";
-  } catch (error) {
-    // Une étape en échec arrête la suite : les suivantes dépendent peut-être
-    // de sa sortie.
-    record.status = "error";
-    details.push(error instanceof Error ? error.message : String(error));
-    record.detail = details.filter(Boolean).join(" · ");
-    console.error("[automations] workflow failed", error);
   }
-  await persistWorkflowResult(workflow.id, { record });
-  return record;
+  return outcomes;
 }
 
 async function persistWorkflowResult(
