@@ -891,6 +891,10 @@ msgstr "Choisissez la sortie dont Syntheo transcrit le son : celle où vous ente
 msgid "Choose the program to run first."
 msgstr "Choisissez d'abord le programme à lancer."
 
+#: src/session/components/living-document/after-meeting-folder-suggestion.tsx
+msgid "Choose…"
+msgstr "Choisir…"
+
 #: src/contacts/related-notes.tsx
 #: src/contacts/shared.tsx
 #: src/folders/sidebar.tsx
@@ -1785,6 +1789,10 @@ msgstr "Ranger"
 msgid "File format"
 msgstr "Format de fichier"
 
+#: src/session/components/living-document/after-meeting-folder-suggestion.tsx
+msgid "File it"
+msgstr "Ranger"
+
 #: src/settings/automations/markdown-export-options.tsx
 msgid "Filename"
 msgstr "Nom de fichier"
@@ -2088,6 +2096,10 @@ msgstr "Icônes"
 #: src/settings/search-index.ts
 msgid "Identity"
 msgstr "Identité"
+
+#: src/session/components/living-document/after-meeting-folder-suggestion.tsx
+msgid "Ignore"
+msgstr "Ignorer"
 
 #: src/stt/meeting-apps.ts
 msgid "Ignore {firstName} and {secondName}?"
@@ -3884,6 +3896,11 @@ msgstr "Lancer cette commande ?"
 msgid "runs the program on your computer"
 msgstr "lance le programme sur votre ordinateur"
 
+#: src/session/components/living-document/after-meeting-folder-suggestion.tsx
+msgid "same participants"
+msgstr "mêmes participants"
+
+#: src/session/components/living-document/after-meeting-folder-suggestion.tsx
 #: src/session/components/living-document/fiche-folder.tsx
 msgid "same title"
 msgstr "même titre"
@@ -5208,6 +5225,10 @@ msgstr "Ces informations restent sur votre poste. Elles servent à vous reconna�
 #: src/settings/automations/workflow-test-panel.tsx
 msgid "This is a real test: these steps really act."
 msgstr "C'est un test réel : ces étapes agissent vraiment."
+
+#: src/session/components/living-document/after-meeting-folder-suggestion.tsx
+msgid "This meeting looks like {folderName} ({reason})"
+msgstr "Cette réunion ressemble à {folderName} ({reason})"
 
 #: src/stt/audio-import-feedback.ts
 msgid "This model can't transcribe a file. Choose another transcription model."
