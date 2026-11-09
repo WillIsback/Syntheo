@@ -12,7 +12,6 @@ import {
   getStepStatus,
 } from "./config";
 import { FinalDescription, FinalSection, finishOnboarding } from "./final";
-import { ImportSection } from "./imports";
 import { PermissionsSection } from "./permissions";
 import { OnboardingSection } from "./shared";
 
@@ -84,11 +83,6 @@ function OnboardingScreenContent({
     if (next) setCurrentStep(next);
   }, [currentPlatform, currentStep]);
 
-  const skipCurrentStep = useCallback(() => {
-    const next = getNextStep(currentStep);
-    if (next) setCurrentStep(next);
-  }, [currentPlatform, currentStep]);
-
   const goBack = useCallback(() => {
     const prev = getPrevStep(currentStep);
     if (prev) setCurrentStep(prev);
@@ -148,23 +142,6 @@ function OnboardingScreenContent({
             onNext={goNext}
           >
             <PermissionsSection onContinue={goNext} />
-          </OnboardingSection>
-
-          <OnboardingSection
-            title={<Trans>Bring your meeting history</Trans>}
-            description={
-              <Trans>
-                Import notes and transcripts from the meeting apps you already
-                use.
-              </Trans>
-            }
-            completedTitle={<Trans>Meeting history imported</Trans>}
-            status={getStepStatus("imports", currentStep)}
-            onBack={goBack}
-            onNext={goNext}
-            onSkip={skipCurrentStep}
-          >
-            <ImportSection onContinue={goNext} onSkip={skipCurrentStep} />
           </OnboardingSection>
 
           <OnboardingSection

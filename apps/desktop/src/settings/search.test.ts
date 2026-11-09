@@ -153,7 +153,6 @@ const PAGE_SOURCES: Record<SettingsTab, string[]> = {
   notifications: ["general/notification.tsx"],
   permissions: ["general/permissions.tsx"],
   privacy: ["privacy/"],
-  imports: ["imports/"],
   developers: ["developers/"],
   dictation: ["dictation.tsx", "dictation-shortcut.tsx"],
   dictionary: ["dictionary/"],

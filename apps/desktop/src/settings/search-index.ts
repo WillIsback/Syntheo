@@ -316,14 +316,6 @@ export const SETTINGS_SEARCH_INDEX = [
     keywords: msg`password, PIN, Windows Hello, security, fingerprint, privacy`,
   },
 
-  // Imports
-  {
-    id: "import-recordings",
-    page: "imports",
-    label: msg`Import recordings`,
-    keywords: msg`import, file, audio file, video, recording, meeting assistant`,
-  },
-
   // Développeurs
   {
     id: "cli",

@@ -391,7 +391,7 @@ describe("Basic Tab Actions", () => {
   test.each([
     [undefined, "app"],
     ["lab", "app"],
-    ["data", "imports"],
+    ["data", "app"],
     ["personalization", "dictionary"],
     ["audio", "meetings"],
     // legacy_settings_tabs_normalize_to_general : écrans compte/équipe retirés

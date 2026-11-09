@@ -210,9 +210,6 @@ importers:
       '@syntheo/plugin-icon':
         specifier: workspace:*
         version: link:../../plugins/icon
-      '@syntheo/plugin-importer':
-        specifier: workspace:*
-        version: link:../../plugins/importer
       '@syntheo/plugin-local-api':
         specifier: workspace:*
         version: link:../../plugins/local-api
@@ -910,12 +907,6 @@ importers:
         version: 2.12.4
 
   plugins/icon:
-    dependencies:
-      '@tauri-apps/api':
-        specifier: ^2.12.4
-        version: 2.12.4
-
-  plugins/importer:
     dependencies:
       '@tauri-apps/api':
         specifier: ^2.12.4

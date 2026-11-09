@@ -30,10 +30,10 @@ describe("onboarding steps", () => {
   // Calendrier retiré (issue 465) : plus aucune étape Calendrier.
   it("never offers a calendar step", () => {
     os.platform = "macos";
-    expect(walk()).toEqual(["permissions", "imports", "final"]);
+    expect(walk()).toEqual(["permissions", "final"]);
     for (const platform of ["linux", "windows"]) {
       os.platform = platform;
-      expect(walk()).toEqual(["imports", "final"]);
+      expect(walk()).toEqual(["final"]);
     }
   });
 });

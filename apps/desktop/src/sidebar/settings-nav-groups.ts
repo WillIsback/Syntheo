@@ -4,7 +4,6 @@ import {
   Bell,
   BookOpen,
   Code,
-  DownloadSimple,
   FileText,
   FolderSimple,
   Lightning,
@@ -125,7 +124,6 @@ export function useSettingsNavGroups(): SettingsNavGroup[] {
           icon: ShieldCheck,
         },
         { id: "permissions", label: t`Permissions`, icon: Lock },
-        { id: "imports", label: t`Imports`, icon: DownloadSimple },
         {
           id: "automations",
           label: t`Automations`,

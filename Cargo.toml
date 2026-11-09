@@ -61,7 +61,6 @@ syntheo-intercept = { path = "crates/intercept", package = "intercept" }
 syntheo-language = { path = "crates/language", package = "language" }
 syntheo-listener-core = { path = "crates/listener-core", package = "listener-core" }
 syntheo-listener2-core = { path = "crates/listener2-core", package = "listener2-core" }
-syntheo-meeting-import = { path = "crates/meeting-import", package = "meeting-import" }
 syntheo-mp3 = { path = "crates/mp3", package = "mp3" }
 syntheo-notification = { path = "crates/notification", package = "notification" }
 syntheo-notification-interface = { path = "crates/notification-interface", package = "notification-interface" }
@@ -84,7 +83,6 @@ syntheo-vad = { path = "crates/vad", package = "vad" }
 syntheo-vad-masking = { path = "crates/vad-masking", package = "vad-masking" }
 syntheo-whisper = { path = "crates/whisper", package = "whisper" }
 syntheo-ws-client = { path = "crates/ws-client", package = "ws-client" }
-syntheo-zoom = { path = "crates/zoom", package = "zoom" }
 
 openai-transcription = { path = "crates/openai-transcription", package = "openai-transcription" }
 owhisper-client = { path = "crates/owhisper-client", package = "owhisper-client" }
@@ -122,7 +120,6 @@ tauri-plugin-fs-sync = { path = "plugins/fs-sync" }
 tauri-plugin-fs2 = { path = "plugins/fs2" }
 tauri-plugin-hooks = { path = "plugins/hooks" }
 tauri-plugin-icon = { path = "plugins/icon" }
-tauri-plugin-importer = { path = "plugins/importer" }
 tauri-plugin-js = { path = "plugins/js" }
 tauri-plugin-local-api = { path = "plugins/local-api" }
 tauri-plugin-local-auth = { path = "plugins/local-auth" }

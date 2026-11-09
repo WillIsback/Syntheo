@@ -598,10 +598,6 @@ msgstr "Bounce app icon"
 msgid "Bright canvas"
 msgstr "Bright canvas"
 
-#: src/onboarding/index.tsx
-msgid "Bring your meeting history"
-msgstr "Bring your meeting history"
-
 #: src/templates/utils.ts
 msgid "by {name}"
 msgstr "by {name}"
@@ -683,10 +679,6 @@ msgstr "Check that your vault folder is available and your disk has free space, 
 msgid "Check the spelling, or try a shorter word."
 msgstr "Check the spelling, or try a shorter word."
 
-#: src/imports/screen.tsx
-msgid "Checking installed meeting assistants…"
-msgstr "Checking installed meeting assistants…"
-
 #: src/settings/developers/cli.tsx
 msgid "Checking…"
 msgstr "Checking…"
@@ -698,11 +690,6 @@ msgstr "Chime"
 #: src/shared/open-note-dialog.tsx
 msgid "Choose"
 msgstr "Choose"
-
-#. placeholder {0}: provider.name
-#: src/imports/screen.tsx
-msgid "Choose {0} export files"
-msgstr "Choose {0} export files"
 
 #: src/session/components/outer-header/overflow/export-modal.tsx
 msgid "Choose a file format and what to include."
@@ -736,10 +723,6 @@ msgstr "Choose custom color"
 #: src/settings/general/storage/export-location.tsx
 msgid "Choose export folder"
 msgstr "Choose export folder"
-
-#: src/imports/screen.tsx
-msgid "Choose files"
-msgstr "Choose files"
 
 #: src/settings/automations/starter-config.tsx
 #: src/settings/general/storage/export-location.tsx
@@ -943,10 +926,6 @@ msgstr "Contacts"
 #: src/folders/folder-editor.tsx
 msgid "Context"
 msgstr "Context"
-
-#: src/imports/screen.tsx
-msgid "Continue"
-msgstr "Continue"
 
 #: src/instruction/index.tsx
 msgid "Continue in your browser, then return to Syntheo."
@@ -1317,7 +1296,6 @@ msgid "Dock, app switcher, icon"
 msgstr "Dock, app switcher, icon"
 
 #: src/main/windows-title-bar.tsx
-#: src/settings/imports/index.tsx
 msgid "Documentation"
 msgstr "Documentation"
 
@@ -1895,34 +1873,9 @@ msgstr "Ignore these apps?"
 msgid "Ignore this app?"
 msgstr "Ignore this app?"
 
-#: src/onboarding/index.tsx
-msgid "Import notes and transcripts from the meeting apps you already use."
-msgstr "Import notes and transcripts from the meeting apps you already use."
-
-#: src/settings/search-index.ts
-msgid "Import recordings"
-msgstr "Import recordings"
-
-#: src/settings/search-index.ts
-msgid "import, file, audio file, video, recording, meeting assistant"
-msgstr "import, file, audio file, video, recording, meeting assistant"
-
-#. placeholder {0}: result.imported
-#. placeholder {1}: result.matched
-#. placeholder {2}: result.conflicts
-#. placeholder {3}: result.errors
-#: src/imports/screen.tsx
-msgid "Imported: {0}. Unchanged: {1}. Needs review: {2}. Failed: {3}."
-msgstr "Imported: {0}. Unchanged: {1}. Needs review: {2}. Failed: {3}."
-
 #: src/session/components/note-input/transcript/screens/empty.tsx
 msgid "Importing audio..."
 msgstr "Importing audio..."
-
-#: src/settings/imports/index.tsx
-#: src/sidebar/settings-nav-groups.ts
-msgid "Imports"
-msgstr "Imports"
 
 #: src/templates/auto-format-examples-dialog.tsx
 msgid "Improve format"
@@ -2042,14 +1995,6 @@ msgstr "Last delivery {0}"
 #: src/settings/dictation.tsx
 msgid "Last dictation"
 msgstr "Last dictation"
-
-#. placeholder {0}: lastRun.imported
-#. placeholder {0}: result.imported
-#. placeholder {1}: lastRun.matched
-#. placeholder {1}: result.matched
-#: src/imports/screen.tsx
-msgid "Last import: {0} added, {1} unchanged"
-msgstr "Last import: {0} added, {1} unchanged"
 
 #. placeholder {0}: lastRun.detail
 #: src/settings/automations/starter-config.tsx
@@ -2268,14 +2213,6 @@ msgstr "Meeting details access turned on"
 #: src/automations/starters.tsx
 msgid "Meeting ends"
 msgstr "Meeting ends"
-
-#: src/imports/screen.tsx
-msgid "Meeting exports"
-msgstr "Meeting exports"
-
-#: src/onboarding/index.tsx
-msgid "Meeting history imported"
-msgstr "Meeting history imported"
 
 #: src/session/components/outer-header/overflow/index.tsx
 msgid "Meeting info"
@@ -2539,7 +2476,6 @@ msgstr "Next view of the note"
 msgid "NIM does not publish its model list: these are the models known for this protocol."
 msgstr "NIM does not publish its model list: these are the models known for this protocol."
 
-#: src/imports/screen.tsx
 #: src/settings/general/notification.tsx
 msgid "No apps found."
 msgstr "No apps found."
@@ -2603,10 +2539,6 @@ msgstr "No folders yet. Create one to group notes and materials."
 #: src/templates/template-icon-picker.tsx
 msgid "No icons found"
 msgstr "No icons found"
-
-#: src/imports/screen.tsx
-msgid "No imports yet."
-msgstr "No imports yet."
 
 #: src/settings/dictionary/index.tsx
 msgid "No match"
@@ -3792,10 +3724,6 @@ msgstr "skill, AI agent, assistant, install"
 #: src/onboarding/shared.tsx
 msgid "Skip"
 msgstr "Skip"
-
-#: src/onboarding/imports.tsx
-msgid "Skip for now"
-msgstr "Skip for now"
 
 #: src/templates/template-icon-picker.tsx
 msgid "Smileys & People"
