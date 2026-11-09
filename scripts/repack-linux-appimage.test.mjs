@@ -328,6 +328,28 @@ test("repacks a hook-only fix and preserves explicit GTK backend preferences", a
   }
 });
 
+test("keeps a GTK hook that leaves the backend to GTK", async (t) => {
+  const fixture = await createFixture(t);
+  // Hook écrit par les versions récentes de linuxdeploy-plugin-gtk.
+  const hook = [
+    'export GTK_DATA_PREFIX="$APPDIR"',
+    "# export GDK_BACKEND=x11 # Monitor this closely. AppImage used to crash on Wayland!",
+    "",
+  ].join("\n");
+  await writeFile(fixture.gtkHook, hook);
+
+  const result = await repackLinuxAppImage({
+    arch: "x86_64",
+    bundleDirectory: fixture.directory,
+    pluginPath: fixture.plugin,
+    run: fakeRun(fixture),
+  });
+
+  assert.equal(result.updatedGtkHook, false);
+  assert.equal(await readFile(fixture.gtkHook, "utf8"), hook);
+  assert.equal(await readFile(fixture.appImage, "utf8"), "repacked-appimage");
+});
+
 test("reads the runtime length from the ELF section header table", () => {
   const header = Buffer.alloc(64);
   Buffer.from([0x7f, 0x45, 0x4c, 0x46, 2, 1]).copy(header);

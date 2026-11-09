@@ -32,7 +32,14 @@ function patchGtkHook(source) {
     return source;
   }
 
-  // Keep X11 preferred, but allow Wayland-only sessions and explicit overrides.
+  // Recent linuxdeploy-plugin-gtk versions ship the line commented out, so
+  // GTK picks its own backend order. That is what every published AppImage
+  // used (none was repacked), so it is kept as is.
+  if (!/^[ \t]*export GDK_BACKEND=/m.test(source)) {
+    return source;
+  }
+
+  // Older versions force X11: keep X11 preferred, but allow Wayland-only sessions and explicit overrides.
   const forcedX11 = /^export GDK_BACKEND=x11(?:[ \t]+#.*)?$/m;
   if (!forcedX11.test(source)) {
     throw new Error("Unrecognized GDK_BACKEND setting in AppImage GTK hook");
