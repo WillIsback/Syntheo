@@ -1,12 +1,20 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  AUDIO_IMPORT_FAILED_TOAST_DURATION_MS,
   describeAudioImportError,
   describeAudioImportUnavailable,
   getAudioImportAvailability,
   getBatchAvailability,
+  notifyAudioImportFailed,
 } from "./audio-import-feedback";
 import { AudioUploadTooLargeError } from "./audio-upload-stream";
+
+const { toastErrorMock } = vi.hoisted(() => ({ toastErrorMock: vi.fn() }));
+
+vi.mock("@syntheo/ui/components/ui/toast", () => ({
+  toast: { error: toastErrorMock, warning: vi.fn() },
+}));
 
 vi.mock("./useSTTConnection", () => ({
   useSTTConnection: () => ({ conn: null }),
@@ -78,5 +86,28 @@ describe("describeAudioImportError", () => {
     expect(
       describeAudioImportError(new Error("audio_upload_size_mismatch")),
     ).toBe("Syntheo couldn't read this file.");
+  });
+});
+
+describe("notifyAudioImportFailed", () => {
+  it("closes on its own after about 12 seconds and keeps its actions", () => {
+    toastErrorMock.mockClear();
+
+    notifyAudioImportFailed(new Error("disk full"));
+
+    expect(AUDIO_IMPORT_FAILED_TOAST_DURATION_MS).toBe(12_000);
+    expect(toastErrorMock).toHaveBeenCalledWith(
+      "Audio import failed",
+      expect.objectContaining({
+        id: "audio-import-failed",
+        description: "disk full",
+        duration: 12_000,
+        keepDuration: true,
+        action: expect.objectContaining({ label: "Transcription settings" }),
+      }),
+    );
+    const options = toastErrorMock.mock.calls[0][1];
+    expect(options.closeButton).not.toBe(false);
+    expect(options.dismissible).not.toBe(false);
   });
 });

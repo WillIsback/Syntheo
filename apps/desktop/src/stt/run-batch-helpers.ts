@@ -10,6 +10,7 @@ import {
 } from "@syntheo/plugin-transcription";
 
 import { BatchResponseProcessingError } from "./batch-response-processing-error";
+import { isNoSpeechDetectedError } from "./no-speech-error";
 
 import type { BatchPersistCallback } from "~/store/zustand/listener/transcript";
 import type { TranscriptRecord } from "~/stt/queries";
@@ -121,7 +122,6 @@ export const EMPTY_CURRENT_CAPTURE_TRANSCRIPT_ERROR_MESSAGE =
   "Batch transcription did not include the current recording.";
 export const INCOMPLETE_BATCH_TRANSCRIPT_ERROR_MESSAGE =
   "The new transcription returned much less text. Your saved transcript and recording were kept. Try transcribing again.";
-const NO_SPEECH_RECOVERY_ERROR_MESSAGE = "No speech was detected in the audio.";
 
 export function canRunBatchTranscription(
   _conn: { provider: string; model: string } | null,
@@ -159,6 +159,7 @@ export function isTerminalTranscriptionError(error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
   return (
     error instanceof BatchResponseProcessingError ||
+    isNoSpeechDetectedError(error) ||
     message === EMPTY_CURRENT_CAPTURE_TRANSCRIPT_ERROR_MESSAGE ||
     message === INCOMPLETE_BATCH_TRANSCRIPT_ERROR_MESSAGE ||
     isTranscriptionAuthenticationError(error) ||
@@ -186,11 +187,7 @@ export function isRecoveryNoSpeechError(
   options: RunOptions | undefined,
   error: unknown,
 ): boolean {
-  return (
-    Boolean(options?.recovery) &&
-    error instanceof Error &&
-    error.message === NO_SPEECH_RECOVERY_ERROR_MESSAGE
-  );
+  return Boolean(options?.recovery) && isNoSpeechDetectedError(error);
 }
 
 export function isTerminalBatchSaveError(error: unknown): boolean {

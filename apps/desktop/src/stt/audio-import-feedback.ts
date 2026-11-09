@@ -111,12 +111,16 @@ export function describeAudioImportError(error: unknown): string {
   return message;
 }
 
+/** Assez long pour lire et cliquer, sans rester sur les écrans suivants. */
+export const AUDIO_IMPORT_FAILED_TOAST_DURATION_MS = 12_000;
+
 /** Une erreur pendant l'import s'affiche au lieu d'un rafraîchissement muet. */
 export function notifyAudioImportFailed(error: unknown) {
   toast.error(t`Audio import failed`, {
     id: "audio-import-failed",
     description: describeAudioImportError(error),
-    duration: Infinity,
+    duration: AUDIO_IMPORT_FAILED_TOAST_DURATION_MS,
+    keepDuration: true,
     action: settingsAction(),
   });
 }

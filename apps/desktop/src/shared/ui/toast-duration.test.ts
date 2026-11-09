@@ -69,6 +69,16 @@ describe("toast migration", () => {
     },
   );
 
+  it("keeps a longer error duration on request", async () => {
+    act(() => {
+      toast.error("Import failed", { duration: 12_000, keepDuration: true });
+    });
+    await advance(TOAST_DURATIONS.error + 250);
+    expect(screen.getByText("Import failed")).toBeTruthy();
+    await advance(12_000 - TOAST_DURATIONS.error);
+    expect(screen.queryByText("Import failed")).toBeNull();
+  });
+
   it("replaces a toast by ID and cancels its old expiration", async () => {
     act(() => {
       toast.info("Starting", { id: "download", duration: 500 });

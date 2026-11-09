@@ -1226,6 +1226,10 @@ msgstr "Impossible de mettre à jour la date de la note."
 msgid "Couldn't load your profile. Reopen this page to try again."
 msgstr "Impossible de charger votre profil. Rouvrez cette page pour réessayer."
 
+#: src/stt/useUploadFile.ts
+msgid "Couldn't open the file picker"
+msgstr "Impossible d'ouvrir le sélecteur de fichiers"
+
 #: src/contacts/profile-photo.tsx
 #: src/settings/general/account-profile.tsx
 msgid "Couldn't save your profile. Try again."
@@ -2989,6 +2993,10 @@ msgstr "Aucun paramètre ne correspond à « {trimmed} »."
 #: src/chat/components/input/use-dictation.ts
 msgid "No speech detected"
 msgstr "Aucune parole détectée"
+
+#: src/stt/no-speech-error.ts
+msgid "No speech was detected in the audio."
+msgstr "Aucune parole n'a été détectée dans l'audio."
 
 #: src/settings/automations/workflow-test-panel.tsx
 msgid "No step acts outside Syntheo: the test only shows the results."
@@ -5522,6 +5530,7 @@ msgstr "mise à jour, nouvelle version, actualiser"
 
 #: src/session/components/note-input/transcript/screens/empty.tsx
 #: src/session/components/outer-header/overflow/index.tsx
+#: src/stt/select-upload-file.ts
 msgid "Upload audio"
 msgstr "Téléverser un audio"
 
@@ -5531,6 +5540,7 @@ msgstr "Téléversez un fichier audio ou un transcript pour renseigner cette not
 
 #: src/session/components/note-input/transcript/screens/empty.tsx
 #: src/session/components/outer-header/overflow/index.tsx
+#: src/stt/select-upload-file.ts
 msgid "Upload transcript"
 msgstr "Téléverser un transcript"
 

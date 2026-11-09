@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-import { EMPTY_BATCH_TRANSCRIPT_ERROR } from "./batch";
 import {
   recoverRunningBatchSessions,
   runBatchSession,
@@ -9,6 +8,7 @@ import {
 } from "./general-batch";
 
 import { BatchResponseProcessingError } from "~/stt/batch-response-processing-error";
+import { NoSpeechDetectedError } from "~/stt/no-speech-error";
 
 const {
   isFocusedMock,
@@ -390,7 +390,9 @@ describe("runBatchSession", () => {
   ])(
     "classifies persist failures (recovery=$recovery, empty=$empty)",
     async ({ recovery, empty }) => {
-      const message = empty ? EMPTY_BATCH_TRANSCRIPT_ERROR : "disk full";
+      const message = empty
+        ? "No speech was detected in the audio."
+        : "disk full";
       const events = captureEvents();
       startEmitting(events, [completed("direct")], "after-resolve");
       const store = makeStore({
@@ -403,7 +405,7 @@ describe("runBatchSession", () => {
       await expect(
         runBatchSession(() => store, SESSION, PARAMS, { recovery }),
       ).rejects.toThrow(
-        empty ? EMPTY_BATCH_TRANSCRIPT_ERROR : BatchResponseProcessingError,
+        empty ? NoSpeechDetectedError : BatchResponseProcessingError,
       );
 
       expect(store.handleBatchFailed).toHaveBeenCalledWith(SESSION, message);

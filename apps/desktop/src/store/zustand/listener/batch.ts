@@ -60,8 +60,6 @@ export type BatchActions = {
   clearBatchPersist: (sessionId: string) => void;
 };
 
-export const EMPTY_BATCH_TRANSCRIPT_ERROR =
-  "No speech was detected in the audio.";
 export const createBatchSlice = <T extends BatchState>(
   set: StoreApi<T>["setState"],
   get: StoreApi<T>["getState"],

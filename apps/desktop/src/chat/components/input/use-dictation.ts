@@ -13,6 +13,10 @@ import {
   getBatchAvailability,
   openTranscriptionSettings,
 } from "~/stt/audio-import-feedback";
+import {
+  isNoSpeechDetectedError,
+  NoSpeechDetectedError,
+} from "~/stt/no-speech-error";
 import { useRunBatch } from "~/stt/useRunBatch";
 import { useSTTConnection } from "~/stt/useSTTConnection";
 
@@ -210,7 +214,7 @@ export function useDictation({
       });
 
       if (!transcript) {
-        throw new Error("No speech was detected in the audio.");
+        throw new NoSpeechDetectedError();
       }
       if (mountedRef.current && generation === generationRef.current) {
         editorRef.current?.insertText(transcript);
@@ -220,7 +224,10 @@ export function useDictation({
         return;
       }
       const message = error instanceof Error ? error.message : String(error);
-      if (/no speech|empty transcript/iu.test(message)) {
+      if (
+        isNoSpeechDetectedError(error) ||
+        /no speech|empty transcript/iu.test(message)
+      ) {
         toast.warning(t`No speech detected`, {
           description: t`Try speaking a little closer to the microphone.`,
         });
