@@ -43,3 +43,10 @@
 - `code/` is the codebase knowledge graph ("Carte du code" tab). It maps apps, plugins, crates, and packages to their role, dependencies, and the user pages they affect.
 - `code/doc-map.mdx` maps each user page to its source paths. Update it when a page's sources move or a new page is added.
 - Keep `code/` factual and source-verified like the rest of the docs; it does not replace `architecture.mdx`.
+
+## Interactive app reproductions
+
+- `snippets/app.gen.jsx` holds React components that reproduce app screens (`<AppScreen>`, `<Capsule>`, `<SettingsPath>`, `<Kbd>`). It is generated: edit `scripts/docs-ui/app.jsx.tpl`, then run `node scripts/sync-docs-ui.mjs` from the repository root. `apps/desktop/src/docs-ui.test.ts` fails when it drifts from the app's tokens, French labels, or icons.
+- Use at most two reproductions per page, where the reader must find a button or a setting. Keep the page's text complete: the components render in the browser and are not indexed by search or the `syntheo-docs` MCP server.
+- `<SettingsPath steps={[...]}>` takes French UI labels exactly as the app shows them; the generator rejects any step that is not in `messages.po`.
+- Update `scripts/docs-ui/config.json` (`version`) with each release.
