@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   ),
   ensureFolderCatalog: vi.fn(),
   execute: vi.fn(),
+  executeTransaction: vi.fn(),
   moveSession: vi.fn(),
   renameFolder: vi.fn(),
   renameFolderCatalog: vi.fn(),
@@ -38,6 +39,7 @@ vi.mock("@syntheo/plugin-fs-sync", () => ({
 }));
 
 vi.mock("~/db", () => ({
+  executeTransaction: mocks.executeTransaction,
   liveQueryClient: { execute: mocks.execute },
   useLiveQuery: () => ({ data: [] }),
 }));
@@ -98,6 +100,21 @@ describe("folder catalog", () => {
     await expect(renameNamedFolder("CS 101", "Algorithms")).resolves.toBe(
       "Algorithms",
     );
+  });
+
+  it("deletes the folder thread with the folder and its nested folders", async () => {
+    await deleteNamedFolder("CS 101");
+
+    expect(mocks.deleteFolderCatalog).toHaveBeenCalledWith({ path: "CS 101" });
+    const statements = mocks.executeTransaction.mock.calls[0]![0] as Array<{
+      sql: string;
+      params: unknown[];
+    }>;
+    expect(statements.map((statement) => statement.sql)).toEqual([
+      expect.stringContaining("DELETE FROM folder_thread_versions"),
+      expect.stringContaining("DELETE FROM folder_threads"),
+    ]);
+    expect(statements[1]!.params).toEqual(["CS 101", "CS 101/%"]);
   });
 
   it("does not delete a folder if moving a note fails", async () => {

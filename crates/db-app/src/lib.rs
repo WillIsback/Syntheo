@@ -631,6 +631,11 @@ pub const APP_MIGRATION_STEPS: &[syntheo_db_migrate::MigrationStep] = &[
         scope: syntheo_db_migrate::MigrationScope::Plain,
         sql: include_str!("../migrations/20261109130000_drop_cloud_sharing.sql"),
     },
+    syntheo_db_migrate::MigrationStep {
+        id: "20261109150000_folder_threads",
+        scope: syntheo_db_migrate::MigrationScope::Plain,
+        sql: include_str!("../migrations/20261109150000_folder_threads.sql"),
+    },
 ];
 
 pub fn schema() -> syntheo_db_migrate::DbSchema {

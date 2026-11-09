@@ -145,6 +145,7 @@ mod consent;
 mod drop_calendar;
 mod drop_cloud_sharing;
 mod entities;
+mod folder_threads;
 mod legacy_voiceprints;
 mod notification_detect_off;
 mod search_index;
