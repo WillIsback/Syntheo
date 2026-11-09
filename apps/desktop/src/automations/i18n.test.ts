@@ -4,6 +4,8 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { formatRelativeTime } from "./labels";
+
 import { messages as frMessages } from "~/i18n/locales/fr/messages";
 
 // Textes des automatisations : traduits en français, sans reste de l'époque
@@ -37,6 +39,19 @@ describe("automation texts in French", () => {
     );
     expect(t({ message: "Transcript", context: "automation variable" })).toBe(
       "Transcription",
+    );
+  });
+
+  it("formats last runs as relative dates in the interface language", () => {
+    const now = Date.parse("2026-11-09T12:00:00.000Z");
+    expect(formatRelativeTime("2026-11-08T16:00:00.000Z", "fr", now)).toBe(
+      "il y a 20 heures",
+    );
+    expect(formatRelativeTime("2026-11-08T12:00:00.000Z", "fr", now)).toBe(
+      "hier",
+    );
+    expect(formatRelativeTime("2026-11-09T11:59:40.000Z", "fr", now)).toBe(
+      "cette minute-ci",
     );
   });
 

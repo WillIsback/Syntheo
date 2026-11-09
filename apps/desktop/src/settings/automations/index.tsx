@@ -11,7 +11,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@syntheo/ui/components/ui/dropdown-menu";
-import { formatDistanceToNow } from "@syntheo/utils";
 
 import {
   useSaveWorkflow,
@@ -26,6 +25,7 @@ import {
 } from "~/automations/actions";
 import {
   useAutomationLabels,
+  useRelativeTime,
   workflowChain,
   workflowTitle,
 } from "~/automations/labels";
@@ -206,13 +206,12 @@ function AutomationsOverview() {
 
 function WorkflowSummaryLine({ workflow }: { workflow: AutomationWorkflow }) {
   const labels = useAutomationLabels();
+  const relativeTime = useRelativeTime();
   const chain = workflowChain(workflow, labels);
   if (!workflow.lastRun) {
     return <Trans>{chain} · never run</Trans>;
   }
-  const relative = formatDistanceToNow(new Date(workflow.lastRun.at), {
-    addSuffix: true,
-  });
+  const relative = relativeTime(workflow.lastRun.at);
   return workflow.lastRun.status === "success" ? (
     <Trans>
       {chain} · last run {relative}
@@ -299,10 +298,9 @@ function AutomationActionsMenu({
 
 function ChatAutomationDetails({ groupId }: { groupId: string }) {
   const group = useChatGroup(groupId, "automations");
+  const relativeTime = useRelativeTime();
   const deleteChatAutomation = useDeleteChatAutomation();
-  const createdAt = group?.createdAt
-    ? formatDistanceToNow(new Date(group.createdAt), { addSuffix: true })
-    : "";
+  const createdAt = group?.createdAt ? relativeTime(group.createdAt) : "";
   const workflow = useEnsuredWorkflow({
     chatGroupId: groupId,
     title: group?.title.trim() || undefined,

@@ -104,3 +104,34 @@ export function variableLabel(
   }
   return variable.outputName?.trim() || labels.output[variable.outputKind];
 }
+
+const RELATIVE_UNITS: Array<[Intl.RelativeTimeFormatUnit, number]> = [
+  ["year", 365 * 24 * 3600],
+  ["month", 30 * 24 * 3600],
+  ["week", 7 * 24 * 3600],
+  ["day", 24 * 3600],
+  ["hour", 3600],
+  ["minute", 60],
+];
+
+/** « il y a 20 heures », « hier » : date relative dans une langue donnée. */
+export function formatRelativeTime(
+  at: string | Date,
+  locale: string,
+  now: number = Date.now(),
+): string {
+  const seconds = Math.round((new Date(at).getTime() - now) / 1000);
+  const format = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
+  for (const [unit, size] of RELATIVE_UNITS) {
+    if (Math.abs(seconds) >= size) {
+      return format.format(Math.round(seconds / size), unit);
+    }
+  }
+  return format.format(0, "minute");
+}
+
+/** Date relative dans la langue active de l'interface. */
+export function useRelativeTime(): (at: string | Date) => string {
+  const { i18n } = useLingui();
+  return (at) => formatRelativeTime(at, i18n.locale);
+}

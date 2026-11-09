@@ -6,8 +6,9 @@ import { type ReactNode } from "react";
 import { FolderOpen } from "@syntheo/ui/components/icons";
 import { Button } from "@syntheo/ui/components/ui/button";
 import { toast } from "@syntheo/ui/components/ui/toast";
-import { cn, formatDistanceToNow } from "@syntheo/utils";
+import { cn } from "@syntheo/utils";
 
+import { useRelativeTime } from "~/automations/labels";
 import type { AutomationRunRecord } from "~/automations/types";
 
 export function AutomationLastRunLine({
@@ -15,12 +16,11 @@ export function AutomationLastRunLine({
 }: {
   lastRun: AutomationRunRecord | null;
 }) {
+  const relativeTime = useRelativeTime();
   if (!lastRun) {
     return null;
   }
-  const relative = formatDistanceToNow(new Date(lastRun.at), {
-    addSuffix: true,
-  });
+  const relative = relativeTime(lastRun.at);
   return (
     <p
       className={cn([

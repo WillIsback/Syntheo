@@ -9,7 +9,7 @@ import {
 } from "@syntheo/ui/components/icons";
 import { Button } from "@syntheo/ui/components/ui/button";
 import { useSquircleRef } from "@syntheo/ui/hooks/use-squircle";
-import { cn, formatDistanceToNow } from "@syntheo/utils";
+import { cn } from "@syntheo/utils";
 
 import { CustomSidebarHeader } from "./custom-sidebar-header";
 
@@ -17,7 +17,11 @@ import {
   useDeleteChatAutomation,
   useDeleteWorkflow,
 } from "~/automations/actions";
-import { useAutomationLabels, workflowTitle } from "~/automations/labels";
+import {
+  useAutomationLabels,
+  useRelativeTime,
+  workflowTitle,
+} from "~/automations/labels";
 import {
   useAutomationSelection,
   useEffectiveAutomationSelection,
@@ -340,6 +344,7 @@ function ChatAutomationListItem({
 }) {
   const { t } = useLingui();
   const deleteChatAutomation = useDeleteChatAutomation();
+  const relativeTime = useRelativeTime();
   const contextMenu = useMemo(
     () => [
       {
@@ -358,7 +363,7 @@ function ChatAutomationListItem({
   );
   const showContextMenu = useNativeContextMenu(contextMenu);
   const createdAt = automation.createdAt
-    ? formatDistanceToNow(new Date(automation.createdAt), { addSuffix: true })
+    ? relativeTime(automation.createdAt)
     : "";
 
   return (
