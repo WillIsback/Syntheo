@@ -6,7 +6,9 @@
 
 use dasp::sample::Sample;
 
-use super::*;
+use super::aec::{build_aec, process_aec};
+use super::aligner::{AecAlignment, AecReferenceAligner, SampleDelayLine};
+use super::loops::reset_echo_cancellation;
 
 const RATE: u32 = 16_000;
 const FRAME: usize = 1_920;
