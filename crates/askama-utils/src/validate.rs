@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use askama_parser::{Ast, Expr, Node, Syntax};
+use askama_parser::{Ast, Expr, LetValueOrBlock, Node, Syntax};
 
 pub struct TemplateUsage {
     pub variables: HashSet<String>,
@@ -56,10 +56,17 @@ fn visit_node(node: &Node<'_>, usage: &mut TemplateUsage) {
                 }
             }
         }
-        Node::Let(let_node) => {
-            if let Some(val) = &let_node.val {
-                visit_expr(val, usage);
+        Node::Let(let_node) => match &let_node.val {
+            LetValueOrBlock::Value(val) => visit_expr(val, usage),
+            LetValueOrBlock::Block { nodes, .. } => {
+                for n in nodes {
+                    visit_node(n, usage);
+                }
             }
+        },
+        Node::Compound(compound) => {
+            visit_expr(&compound.op.lhs, usage);
+            visit_expr(&compound.op.rhs, usage);
         }
         Node::Call(call_node) => {
             if let Some(args) = &call_node.args {
