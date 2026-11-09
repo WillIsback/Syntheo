@@ -3400,7 +3400,6 @@ dependencies = [
  "specta",
  "thiserror 2.0.21",
  "typst",
- "typst-assets",
  "typst-pdf",
 ]
 
