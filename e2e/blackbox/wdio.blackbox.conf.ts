@@ -51,13 +51,9 @@ export const config = {
     ui: "bdd",
     timeout: virtualAudioEnabled ? 180_000 : 60_000,
   },
-  autoCompileOpts: {
-    autoCompile: true,
-    tsNodeOpts: {
-      project: "./tsconfig.json",
-      transpileOnly: true,
-    },
-  },
+  // WebdriverIO compile la config et les specs avec tsx (transpilation
+  // seule) ; autoCompileOpts/tsNodeOpts n'existe plus depuis la v9.
+  tsConfigPath: "./tsconfig.json",
 
   waitforTimeout: 10000,
   connectionRetryTimeout: 120000,
