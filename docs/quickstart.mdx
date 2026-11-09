@@ -3,6 +3,8 @@ title: "Votre première réunion"
 description: "Installez Syntheo, branchez vos serveurs de transcription et de synthèse, puis enregistrez une première réunion."
 ---
 
+import { AppHome, AppPalette, Kbd, SettingsPath } from "/snippets/start.gen.jsx";
+
 Syntheo ne fournit aucun modèle : la transcription et les comptes rendus passent par vos propres serveurs. Configurez-les avant votre premier enregistrement, sinon Syntheo refuse de démarrer l'écoute.
 
 <Steps>
@@ -13,7 +15,11 @@ Syntheo ne fournit aucun modèle : la transcription et les comptes rendus passen
     Au premier lancement, l'écran « Bienvenue sur Syntheo » présente les trois étapes d'une note : Préparer, Écouter et Synthèse. Cliquez sur « Ouvrir Syntheo ». Aucun compte n'est demandé.
   </Step>
   <Step title="Configurer la transcription">
-    Ouvrez les **Paramètres** (<kbd>Ctrl</kbd> + <kbd>,</kbd>), groupe « Mes serveurs », puis **Transcription**. Dans « Adresse du serveur », saisissez l'adresse de votre serveur, par exemple `http://localhost:8000/v1`, puis cliquez sur « Tester la connexion ». Choisissez ensuite le modèle dans la liste.
+    Ouvrez les **Paramètres** (<Kbd keys="Ctrl+," />), groupe « Mes serveurs », puis **Transcription** :
+
+    <SettingsPath steps={["Paramètres", "Mes serveurs", "Transcription"]} />
+
+    Dans « Adresse du serveur », saisissez l'adresse de votre serveur, par exemple `http://localhost:8000/v1`, puis cliquez sur « Tester la connexion ». Choisissez ensuite le modèle dans la liste.
 
     Choisissez un modèle de transcription **en temps réel** : Syntheo ne conserve pas l'audio et ne peut donc pas transcrire après coup une capture en direct.
   </Step>
@@ -24,7 +30,7 @@ Syntheo ne fournit aucun modèle : la transcription et les comptes rendus passen
     Syntheo capte votre microphone et l'audio système (les autres participants). Si votre système vous demande une autorisation d'accès au microphone, acceptez-la. Vous pouvez vérifier l'état des accès dans **Paramètres → Avancé → Autorisations**.
   </Step>
   <Step title="Lancer un premier enregistrement">
-    Sur l'accueil, cliquez sur « Démarrer une réunion ». La note s'ouvre à l'étape **Préparer**. Cliquez sur « Commencer l'écoute » dans la capsule en bas de la fenêtre. Parlez quelques secondes : la transcription s'affiche dans la marge de droite. Cliquez sur « Terminer ». Le compte rendu apparaît à l'étape **Synthèse**.
+    Sur l'accueil, cliquez sur « Démarrer une réunion » (<Kbd keys="Ctrl+N" />). La note s'ouvre à l'étape **Préparer**. Cliquez sur « Commencer l'écoute » dans la capsule en bas de la fenêtre. Parlez quelques secondes : la transcription s'affiche dans la marge de droite. Cliquez sur « Terminer ». Le compte rendu apparaît à l'étape **Synthèse**.
   </Step>
 </Steps>
 
@@ -37,13 +43,21 @@ Le détail des protocoles, des adresses acceptées et des clés d'API est dans [
 ## Se repérer dans l'application
 
 - **L'accueil** vous salue, affiche le bouton « Démarrer une réunion », vos dossiers actifs sous « Vos dossiers » et la liste « Reprendre » avec vos dernières notes.
-- **La palette** « Rechercher une note » (<kbd>Ctrl</kbd> + <kbd>K</kbd>) retrouve une note par son titre ou son contenu, un dossier ou un contact, et ouvre les autres vues : Paramètres, Modèles, Dossiers, Contacts, Automatisations.
+- **La palette** « Rechercher une note » (<Kbd keys="Ctrl+K" />) retrouve une note par son titre ou son contenu, un dossier ou un contact, et ouvre les autres vues : Paramètres, Modèles, Dossiers, Contacts, Automatisations.
 - **Les dossiers** regroupent les réunions d'un projet, avec un fil rouge et l'ordre du jour de la prochaine réunion. Voir [Dossiers et projets](/folders).
 - **Une note** passe par trois étapes, affichées dans la capsule en bas de la fenêtre : 備 Préparer · 聴 Écouter · 結 Synthèse.
-- **« Demander à la note »** (<kbd>Ctrl</kbd> + <kbd>J</kbd>) ouvre le chat, qui répond avec le modèle de langage que vous avez configuré.
+- **« Demander à la note »** (<Kbd keys="Ctrl+J" />) ouvre le chat, qui répond avec le modèle de langage que vous avez configuré.
 - **Paramètres** regroupe vos réglages en cinq groupes : « Moi », « Mes serveurs », « Écrire », « Mes réunions » et « Avancé ».
 
 L'historique passe par l'accueil, la palette et la vue **Dossiers** : il n'y a pas de barre latérale permanente. Le titre d'une note se modifie directement en haut de la note.
+
+Dans la reproduction de l'accueil ci-dessous, cliquez sur « Démarrer une réunion », sur une carte de « Vos dossiers » ou sur une note de « Reprendre ». Une note non rangée propose « Ranger ». Survolez une ligne pour faire apparaître le bouton « Plus d'actions » (Ouvrir, Exporter…, Supprimer). Les flèches haut et bas passent d'une note à l'autre.
+
+<AppHome />
+
+La palette s'ouvre avec « Rechercher une note » ou <Kbd keys="Ctrl+K" />. Vide, elle propose vos notes récentes, les vues de « Aller à » et toutes vos notes. Tapez un mot pour chercher dans les titres puis dans le contenu. Parcourez les résultats avec les flèches et fermez la palette avec <Kbd keys="Échap" />.
+
+<AppPalette />
 
 ## Et ensuite
 

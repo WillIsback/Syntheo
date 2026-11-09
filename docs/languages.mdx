@@ -3,7 +3,11 @@ title: "Utiliser plusieurs langues"
 description: "Choisissez la langue des résumés et du chat, et indiquez à la transcription les langues à attendre."
 ---
 
-Syntheo distingue la langue utilisée pour les résumés et le chat des langues qu'il doit s'attendre à entendre pendant une réunion. Ces réglages se trouvent dans **Paramètres → Profil**, section « Langue et région ».
+import { AppSettings, Kbd, SettingsPath } from "/snippets/start.gen.jsx";
+
+Syntheo distingue la langue utilisée pour les résumés et le chat des langues qu'il doit s'attendre à entendre pendant une réunion. Ces réglages se trouvent dans la page **Profil** des paramètres, section « Langue et région » :
+
+<SettingsPath steps={["Paramètres", "Moi", "Profil", "Langue et région"]} />
 
 <Note>
   La langue de l'interface (le français par défaut) est indépendante de ces réglages.
@@ -23,7 +27,13 @@ Changer de langue principale ne traduit pas une transcription existante. Régén
 
 Dans « Langues parlées supplémentaires », ajoutez les autres langues que les participants peuvent utiliser. Syntheo s'en sert pour la transcription et pour détecter automatiquement la langue des résumés.
 
-Syntheo transmet ces langues à votre serveur de transcription comme indication. C'est le modèle qui décide de ce qu'il sait reconnaître : si une langue manque ou est mal transcrite, essayez un autre modèle sur votre serveur, puis sélectionnez-le dans **Paramètres → Transcription**. Syntheo vous avertit quand le modèle choisi ne peut pas transcrire toutes les langues sélectionnées.
+Syntheo transmet ces langues à votre serveur de transcription comme indication. C'est le modèle qui décide de ce qu'il sait reconnaître : si une langue manque ou est mal transcrite, essayez un autre modèle sur votre serveur, puis sélectionnez-le dans **Paramètres → Mes serveurs → Transcription**. Syntheo vous avertit quand le modèle choisi ne peut pas transcrire toutes les langues sélectionnées : sous les langues parlées, le message « Le modèle de transcription en direct ne gère qu'une langue à la fois. Pour en transcrire plusieurs, changez de modèle. » apparaît, et le lien « changez de modèle » ouvre la page **Transcription**.
+
+La section se termine par le « Fuseau horaire », qui règle l'heure affichée dans la chronologie.
+
+Dans la reproduction ci-dessous, changez la « Langue principale », activez « Utiliser la langue principale pour les résumés », puis tapez un nom de langue dans « Langues parlées supplémentaires » (par exemple « allemand ») : cliquez dessus ou utilisez <Kbd keys="↓" /> puis <Kbd keys="Entrée" />. <Kbd keys="Retour arrière" /> dans le champ vide retire la dernière langue. Cochez « simuler un modèle de transcription qui ne gère qu'une langue » pour afficher l'avertissement.
+
+<AppSettings section="app" focus="language" />
 
 ## Langues proposées
 

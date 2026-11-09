@@ -4,6 +4,8 @@ sidebarTitle: "Transcription et IA"
 description: "Reliez Syntheo à vos serveurs d'inférence auto-hébergés : un serveur de transcription et un serveur LLM compatible OpenAI."
 ---
 
+import { AppSettings, Kbd, SettingsPath } from "/snippets/start.gen.jsx";
+
 Syntheo n'embarque aucun modèle et n'appelle aucun service cloud. Il se connecte à **vos** serveurs d'inférence, sur votre poste ou votre réseau, par des protocoles standard. Vous configurez deux choses indépendantes :
 
 | Réglage | Rôle | Protocole |
@@ -40,7 +42,7 @@ Les ports dépendent de la façon dont vous lancez chaque serveur. Si deux serve
   Syntheo accepte HTTP en clair uniquement vers un hôte privé : `localhost`, `[::1]`, les noms en `.local`, et les adresses IPv4 `127.0.0.0/8`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16` et `100.64.0.0/10` (plage utilisée par Tailscale), ainsi que les noms Tailscale en `.ts.net`. Partout ailleurs, y compris pour un nom d'hôte interne comme `gpu.entreprise.lan`, l'URL doit être en HTTPS ; sinon l'enregistrement est refusé avec le message « Utilisez HTTPS : le HTTP n'est accepté que sur cette machine ou un réseau privé. ». L'URL ne doit contenir ni identifiants, ni paramètres de requête.
 </Note>
 
-Ouvrez les **Paramètres** (<kbd>Ctrl</kbd> + <kbd>,</kbd>). Les deux serveurs se trouvent dans le groupe « Mes serveurs » : **Transcription** et **Synthèse**. Une pastille à côté de chaque entrée indique l'état du serveur, rappelé en bas du menu (par exemple « Transcription · connectée »).
+Ouvrez les **Paramètres** (<Kbd keys="Ctrl+," />). Les deux serveurs se trouvent dans le groupe « Mes serveurs » : **Transcription** et **Synthèse**. Une pastille à côté de chaque entrée indique l'état du serveur, rappelé en bas du menu (par exemple « Transcription · connectée »).
 
 ## La carte serveur
 
@@ -49,7 +51,7 @@ Chaque page présente une carte « Mon serveur ». Elle fonctionne de la même f
 - **« Adresse du serveur »** : l'adresse de base de votre serveur. Elle est enregistrée automatiquement pendant la saisie.
 - **« Tester la connexion »** : interroge le serveur et affiche le résultat dans la pastille d'état. Syntheo teste aussi la connexion dès qu'une adresse est enregistrée.
 - **« Modèle »** : les modèles servis, en boutons radio. Cliquez sur un modèle pour le choisir. Si le vôtre n'apparaît pas, cliquez sur « Saisir un autre nom » et tapez son identifiant exact.
-- **« Avancé »** (replié) : le champ « Clé d'API (facultative) » et « Réinitialiser ce serveur… », qui oublie l'adresse et la clé.
+- **« Avancé »** (replié) : le champ « Clé d'API (facultative) » et « Réinitialiser ce serveur… », qui oublie l'adresse et la clé après confirmation (« Oublier l'adresse et la clé de ce serveur ? »).
 - **« Aide »** (replié) : un rappel des protocoles et des adresses types.
 
 La pastille d'état prend l'une de ces valeurs :
@@ -71,6 +73,8 @@ En cas d'échec, un message sous le titre de la carte dit quoi faire, par exempl
 <Steps>
   <Step title="Ouvrir la page Transcription">
     Dans les Paramètres, groupe « Mes serveurs », ouvrez **Transcription**.
+
+    <SettingsPath steps={["Paramètres", "Mes serveurs", "Transcription"]} />
   </Step>
   <Step title="Saisir l'adresse du serveur">
     Dans « Adresse du serveur », saisissez l'adresse de votre serveur, par exemple `http://localhost:8000/v1` pour vLLM ou speaches, ou `http://localhost:9000/v1/realtime` pour un NIM. Pour un NIM, `http://localhost:9000` suffit aussi : Syntheo utilise toujours le chemin `/v1/realtime`.
@@ -84,7 +88,7 @@ En cas d'échec, un message sous le titre de la carte dit quoi faire, par exempl
     - **« OpenAI · temps réel et par lots »** : pour vLLM, speaches ou faster-whisper-server. La transcription en direct passe par le WebSocket `/v1/realtime` ; l'import d'un fichier audio passe par `/v1/audio/transcriptions`.
     - **« NVIDIA NIM · WebSocket »** : pour un serveur NVIDIA Speech NIM déployé chez vous. Le point d'accès gRPC hébergé par NVIDIA n'est pas pris en charge.
 
-    Sous « Protocole », la mention « détecté automatiquement » confirme le choix. Si le serveur répond avec l'autre protocole, Syntheo l'indique (« Ce serveur répond comme… ») : cliquez sur « Utiliser ce protocole ».
+    Sous « Protocole », la mention « détecté automatiquement » confirme le choix. Si le serveur répond avec l'autre protocole, Syntheo l'indique (« Ce serveur répond comme… ») : cliquez sur « Utiliser ce protocole ». Chaque protocole garde sa propre adresse : « Utiliser ce protocole » recopie l'adresse saisie vers le protocole détecté.
   </Step>
   <Step title="Choisir le modèle">
     Avec le protocole OpenAI, la liste « Modèle » reprend les modèles que publie votre serveur. Syntheo présélectionne le premier ; cliquez sur un autre pour en changer.
@@ -92,6 +96,10 @@ En cas d'échec, un message sous le titre de la carte dit quoi faire, par exempl
     Un NIM ne publie pas sa liste de modèles. Syntheo propose donc les identifiants connus : `nemotron-asr-streaming` (anglais), `parakeet-tdt-0.6b-v3` (multilingue), `parakeet-tdt-0.6b-v2` (anglais) et `cache-aware-parakeet-rnnt-multi-asr-streaming-sortformer` (multilingue, avec locuteurs). `nemotron-asr-streaming` est choisi par défaut.
   </Step>
 </Steps>
+
+Dans la reproduction ci-dessous, modifiez l'« Adresse du serveur » : Syntheo l'enregistre puis la teste. Essayez `http://localhost:9000` (un NIM, puis « Utiliser ce protocole »), un port où rien n'écoute comme `http://localhost:8001/v1` (« Injoignable »), ou `http://gpu.entreprise.lan/v1` (refus du HTTP). Ouvrez « Avancé » et « Aide », puis cliquez sur un autre modèle.
+
+<AppSettings section="transcription" />
 
 ### Transcription en direct ou fichier seul
 
@@ -109,6 +117,8 @@ La dictée dans d'autres applications utilise le même serveur de transcription 
 <Steps>
   <Step title="Ouvrir la page Synthèse">
     Dans les Paramètres, groupe « Mes serveurs », ouvrez **Synthèse**.
+
+    <SettingsPath steps={["Paramètres", "Mes serveurs", "Synthèse"]} />
   </Step>
   <Step title="Saisir l'adresse du serveur">
     Syntheo accepte tout serveur qui expose l'API OpenAI (`/v1/chat/completions` et `/v1/models`), pas seulement vLLM. Dans « Adresse du serveur (compatible OpenAI : vLLM, Ollama, llama.cpp, LM Studio) », saisissez par exemple `http://localhost:11434/v1` pour Ollama ou `http://localhost:8080/v1` pour llama.cpp server. Gardez le suffixe `/v1`.
@@ -125,6 +135,10 @@ La dictée dans d'autres applications utilise le même serveur de transcription 
 </Steps>
 
 Si le serveur répond mais que le modèle choisi échoue, la carte affiche « Le modèle choisi n'a pas répondu : » suivi de la cause. Le même modèle sert aux comptes rendus, au chat, aux titres générés et aux propositions de sections des modèles de compte rendu.
+
+Dans la reproduction ci-dessous, la page Synthèse est reliée à Ollama. Saisissez `http://localhost:1234/v1` (LM Studio) pour voir la liste des modèles changer. Choisissez « Élevé » dans « Effort de raisonnement », puis un autre modèle : l'effort revient à « Auto », car il dépend du modèle.
+
+<AppSettings section="intelligence" focus="effort" />
 
 ## Ce qui transite vers vos serveurs
 
