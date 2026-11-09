@@ -7,15 +7,14 @@ import {
   useRef,
   useState,
 } from "react";
-import { flushSync } from "react-dom";
 import { useHotkeys } from "react-hotkeys-hook";
 
 import { cn } from "@syntheo/utils";
 
+import { useTranscriptEditActions } from "./edit-actions";
 import { TranscriptScrollControls } from "./scroll-controls";
 import {
   completeTranscriptContextSelection,
-  focusTranscriptSelection,
   getTranscriptContextSelection,
   getTranscriptMergeTarget,
   getTranscriptSectionKeyFromElement,
@@ -30,18 +29,9 @@ import {
 import { MultiSelectionBar, SelectionMenu } from "./selection-menu";
 import type { TranscriptContextMenuRequest } from "./selection-menu";
 import { RenderTranscript } from "./transcript";
-import {
-  preserveScrollPosition,
-  useAutoScroll,
-  useScrollDetection,
-} from "./viewport-hooks";
+import { useAutoScroll, useScrollDetection } from "./viewport-hooks";
 
 import type { Segment } from "~/stt/live-segment";
-import {
-  assignTranscriptSpeaker,
-  mergeTranscriptSegments,
-  updateTranscriptSegmentText,
-} from "~/stt/queries";
 
 const LIVE_TRANSCRIPT_PLACEHOLDER_ID = "__live-transcript__";
 
@@ -202,108 +192,19 @@ export function TranscriptViewer({
     },
     [audioExists, seek, start],
   );
-  const handleAssignSpeaker = useCallback(
-    async (
-      selection: TranscriptWordSelection,
-      humanId: string,
-      extendToAdjacent?: boolean,
-    ) => {
-      await preserveScrollPosition(containerRef.current, () =>
-        Promise.all(
-          selection.groups.map((group) =>
-            assignTranscriptSpeaker({
-              transcriptId: group.transcriptId,
-              segmentKey: group.segmentKey,
-              humanId,
-              anchorWordId: group.wordIds[0]!,
-              mode: "segment",
-              wordIds: group.wordIds,
-              extendToAdjacent,
-            }),
-          ),
-        ),
-      );
-    },
-    [],
-  );
-  const handleEditSelection = useCallback(
-    (selection: TranscriptWordSelection) => {
-      flushSync(() => onEditModeChange?.(true));
-      if (containerRef.current) {
-        focusTranscriptSelection(selection, containerRef.current);
-      }
-    },
-    [onEditModeChange],
-  );
-  const handleChangeSpeakerSelection = useCallback(
-    (selection: TranscriptWordSelection) => {
-      flushSync(() => onEditModeChange?.(true));
-      const container = containerRef.current;
-      if (!container) return;
-      const editor = focusTranscriptSelection(selection, container);
-      if (!editor) return;
-      window.getSelection()?.collapseToStart();
-      editor.dispatchEvent(
-        new KeyboardEvent("keydown", {
-          key: "Enter",
-          bubbles: true,
-          cancelable: true,
-        }),
-      );
-    },
-    [onEditModeChange],
-  );
-  const handleMergeSegments = useCallback(async () => {
-    const { order, entries } = collectEntries(visibleTranscriptIdsRef.current);
-    const target = getTranscriptMergeTarget(
-      new Set(selectedEntries.keys()),
-      order,
-      entries,
-    );
-    const targetGroup = target?.groups[0];
-    const selection = mergeTranscriptSelections([...selectedEntries.values()]);
-    if (!targetGroup || !selection) {
-      return;
-    }
-
-    const groups = selection.groups.filter(
-      (group) => group.transcriptId === targetGroup.transcriptId,
-    );
-    await preserveScrollPosition(containerRef.current, () =>
-      Promise.all(
-        groups.map((group) =>
-          mergeTranscriptSegments({
-            transcriptId: group.transcriptId,
-            segmentKey: targetGroup.segmentKey,
-            wordIds: group.wordIds,
-          }),
-        ),
-      ),
-    );
-  }, [collectEntries, selectedEntries]);
-  const handleDeleteSelection = useCallback(
-    async (selection: TranscriptWordSelection) => {
-      const wordsByTranscript = new Map<string, Set<string>>();
-      for (const group of selection.groups) {
-        const wordIds =
-          wordsByTranscript.get(group.transcriptId) ?? new Set<string>();
-        group.wordIds.forEach((wordId) => wordIds.add(wordId));
-        wordsByTranscript.set(group.transcriptId, wordIds);
-      }
-      await preserveScrollPosition(containerRef.current, () =>
-        Promise.all(
-          [...wordsByTranscript].map(([transcriptId, wordIds]) =>
-            updateTranscriptSegmentText({
-              transcriptId,
-              wordIds: [...wordIds],
-              text: "",
-            }),
-          ),
-        ),
-      );
-    },
-    [],
-  );
+  const {
+    handleAssignSpeaker,
+    handleEditSelection,
+    handleChangeSpeakerSelection,
+    handleMergeSegments,
+    handleDeleteSelection,
+  } = useTranscriptEditActions({
+    containerRef,
+    onEditModeChange,
+    collectEntries,
+    selectedEntries,
+    visibleTranscriptIdsRef,
+  });
   const canMergeSelection = useMemo(() => {
     if (selectedEntries.size < 2) {
       return false;
