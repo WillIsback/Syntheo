@@ -26,6 +26,11 @@ vi.mock(
   }),
 );
 
+// Le champ Dossier a ses propres tests (fiche-folder.sqlite.test.tsx).
+vi.mock("./fiche-folder", () => ({
+  FicheFolderField: () => <button type="button">Choose a folder</button>,
+}));
+
 vi.mock("~/session/queries", () => ({
   useSession: () => ({ raw_template_id: mocks.rawTemplateId }),
 }));
@@ -63,9 +68,13 @@ describe("PrepareFiche", () => {
     cleanup();
   });
 
-  it("shows type, participants and listening sources", () => {
+  it("shows folder, type, participants and listening sources", () => {
     render(<PrepareFiche sessionId="s" onSelectTemplate={vi.fn()} />);
 
+    expect(screen.getByText("Folder")).not.toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Choose a folder" }),
+    ).toBeTruthy();
     expect(screen.getByText("Type")).not.toBeNull();
     expect(screen.getByText("Participants")).not.toBeNull();
     expect(screen.getByText("Listening")).not.toBeNull();
