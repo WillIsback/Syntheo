@@ -66,6 +66,21 @@ describe("automation texts in French", () => {
     );
   });
 
+  it("translates the test panel", () => {
+    expect(t({ message: "Test", context: "automation" })).toBe("Tester");
+    expect(t`Test on a note`).toBe("Tester sur une note");
+    expect(t`Simulate the steps with real effects`).toBe(
+      "Simuler les étapes à effet réel",
+    );
+    expect(t`This is a real test: these steps really act.`).toBe(
+      "C'est un test réel : ces étapes agissent vraiment.",
+    );
+    expect(t`The next steps were not run.`).toBe(
+      "Les étapes suivantes n'ont pas été lancées.",
+    );
+    expect(t`Not run`).toBe("Non lancée");
+  });
+
   it("formats last runs as relative dates in the interface language", () => {
     const now = Date.parse("2026-11-09T12:00:00.000Z");
     expect(formatRelativeTime("2026-11-08T16:00:00.000Z", "fr", now)).toBe(
@@ -89,6 +104,8 @@ describe("automation texts in French", () => {
     "settings/automations/variable-field.tsx",
     "settings/automations/index.tsx",
     "settings/automations/workflow-builder.tsx",
+    "settings/automations/workflow-test-panel.tsx",
+    "settings/automations/workflow-test-result.tsx",
     "sidebar/automations.tsx",
   ])("keeps %s free of hardcoded or cloud-era texts", (file) => {
     const source = readFileSync(resolve(__dirname, "..", file), "utf8");
