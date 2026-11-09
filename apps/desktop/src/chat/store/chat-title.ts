@@ -34,7 +34,7 @@ export async function generateChatTitle({
     model,
     maxRetries: 2,
     maxOutputTokens: 32,
-    system:
+    instructions:
       "Write a concise chat title from the user's first message. Use the same language as the request. Return only the title, with no quotes, emoji, markdown, or ending punctuation. Keep it under 6 words.",
     prompt: `Initial request:\n${request}`,
   });

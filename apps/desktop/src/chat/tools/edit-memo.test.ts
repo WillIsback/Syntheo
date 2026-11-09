@@ -109,7 +109,7 @@ describe("edit memo chat tool", () => {
         {
           toolCallId: "request-1",
           messages: [],
-          experimental_context: { currentSessionId: "session-1" },
+          context: { currentSessionId: "session-1" },
         },
       ),
     ).resolves.toEqual({ status: "applied" });
@@ -132,7 +132,7 @@ describe("edit memo chat tool", () => {
         {
           toolCallId: "request-1",
           messages: [],
-          experimental_context: { currentSessionId: undefined },
+          context: { currentSessionId: undefined },
         },
       ),
     ).resolves.toMatchObject({ status: "error" });

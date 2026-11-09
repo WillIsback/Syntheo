@@ -1,11 +1,13 @@
 import {
   type ChatTransport,
   convertToModelMessages,
+  isStepCount,
   type LanguageModel,
   smoothStream,
-  stepCountIs,
+  type Tool,
   ToolLoopAgent,
   type ToolSet,
+  toUIMessageStream,
 } from "ai";
 
 import {
@@ -273,21 +275,34 @@ export class CustomChatTransport implements ChatTransport<SyntheoUIMessage> {
       ),
     ];
 
-    const agent = new ToolLoopAgent({
+    // AI SDK 7 transmet à chaque outil son entrée de `toolsContext` : tous
+    // les outils du tour reçoivent le même contexte (note courante, dossiers
+    // mentionnés), lu par current-session.ts.
+    const toolContext: ChatToolContext = {
+      currentSessionId,
+      mentionedFolderPaths,
+    };
+    const agent = new ToolLoopAgent<
+      never,
+      Record<string, Tool<any, any, ChatToolContext>>
+    >({
       model: this.model,
       instructions: systemPrompt,
       tools,
-      experimental_context: {
-        currentSessionId,
-        mentionedFolderPaths,
-      } satisfies ChatToolContext,
-      stopWhen: stepCountIs(MAX_TOOL_STEPS),
-      prepareStep: ({ messages, stepNumber }) => {
+      toolsContext: Object.fromEntries(
+        Object.keys(tools).map((name) => [name, toolContext]),
+      ),
+      stopWhen: isStepCount(MAX_TOOL_STEPS),
+      // AI SDK 7 reconduit aux étapes suivantes les `messages` renvoyés ici :
+      // on repart de l'historique complet pour garder, à chaque étape, la
+      // même fenêtre qu'en AI SDK 6.
+      prepareStep: ({ initialMessages, responseMessages, stepNumber }) => {
+        const messages = [...initialMessages, ...responseMessages];
         const finalStep = stepNumber >= MAX_TOOL_STEPS - 1;
         const progressReport = finalStep
           ? {
               toolChoice: "none" as const,
-              system: [
+              instructions: [
                 systemPrompt,
                 "This is the final step of this turn. Report verified results and failures. If work remains, explicitly say it is incomplete and offer to continue. Include the original selection/query or series ID, exact destination, completed counts, next unprocessed offset, and any listed but unprocessed IDs so the next turn can resume. Never claim all meetings were moved unless pagination and moves both completed.",
               ]
@@ -370,7 +385,9 @@ export class CustomChatTransport implements ChatTransport<SyntheoUIMessage> {
       }),
     });
 
-    return result.toUIMessageStream({
+    return toUIMessageStream({
+      stream: result.stream,
+      tools,
       originalMessages: options.messages,
       messageMetadata: ({ part }: { part: { type: string } }) => {
         if (part.type === "start") {

@@ -27,14 +27,15 @@ function mentionedFolderPaths(context: ChatToolContext): string[] {
     : [];
 }
 
-export type ToolCallOptions = { experimental_context?: unknown };
+// Contexte fourni par le transport du chat via `toolsContext` (AI SDK 7).
+export type ToolCallOptions = { context?: unknown };
 
 // Defaults to the note attached to the triggering user message.
 export function resolveCurrentSessionId(
   deps: Pick<ToolDependencies, "getSessionId">,
   options: ToolCallOptions | undefined,
 ): string | undefined {
-  const context = options?.experimental_context;
+  const context = options?.context;
   if (isChatToolContext(context)) {
     return context.currentSessionId;
   }
@@ -47,7 +48,7 @@ export function resolveFolderPaths(
   deps: Pick<ToolDependencies, "getFolderFilter">,
   options: ToolCallOptions | undefined,
 ): string[] {
-  const context = options?.experimental_context;
+  const context = options?.context;
   if (isChatToolContext(context)) {
     const mentioned = mentionedFolderPaths(context);
     if (mentioned.length > 0) {

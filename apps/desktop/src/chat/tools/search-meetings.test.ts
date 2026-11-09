@@ -195,7 +195,7 @@ describe("search meetings chat tool", () => {
     const result = await (meetingSearchTool as any).execute(
       { query: "needle" },
       {
-        experimental_context: {
+        context: {
           currentSessionId: undefined,
           mentionedFolderPaths: ["Mentioned"],
         },
@@ -248,7 +248,7 @@ describe("search meetings chat tool", () => {
     const result = await (meetingSearchTool as any).execute(
       { query: "needle", limit: 2 },
       {
-        experimental_context: {
+        context: {
           currentSessionId: undefined,
           mentionedFolderPaths: ["Projects", "Projects/Alpha"],
         },

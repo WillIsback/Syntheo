@@ -32,14 +32,11 @@ describe("CustomChatTransport", () => {
     vi.clearAllMocks();
     mocks.smoothStream.mockReturnValue(mocks.streamTransform);
     mocks.agentStream.mockResolvedValue({
-      toUIMessageStream: vi.fn(
-        () =>
-          new ReadableStream({
-            start(controller) {
-              controller.close();
-            },
-          }),
-      ),
+      stream: new ReadableStream({
+        start(controller) {
+          controller.close();
+        },
+      }),
     });
   });
 
@@ -100,13 +97,21 @@ describe("CustomChatTransport", () => {
     ).toBe(true);
 
     await expect(
-      prepareStep({ messages: [], stepNumber: MAX_TOOL_STEPS - 1 }),
+      prepareStep({
+        initialMessages: [],
+        responseMessages: [],
+        stepNumber: MAX_TOOL_STEPS - 1,
+      }),
     ).resolves.toMatchObject({
       toolChoice: "none",
-      system: expect.stringContaining("next unprocessed offset"),
+      instructions: expect.stringContaining("next unprocessed offset"),
     });
     await expect(
-      prepareStep({ messages: [], stepNumber: MAX_TOOL_STEPS - 2 }),
+      prepareStep({
+        initialMessages: [],
+        responseMessages: [],
+        stepNumber: MAX_TOOL_STEPS - 2,
+      }),
     ).resolves.toEqual({});
 
     const currentTurn = [
@@ -119,10 +124,11 @@ describe("CustomChatTransport", () => {
     await expect(
       prepareStep({
         stepNumber: 1,
-        messages: [
+        initialMessages: [
           { role: "user", content: "Old conversation" },
-          ...currentTurn,
+          currentTurn[0],
         ],
+        responseMessages: currentTurn.slice(1),
       }),
     ).resolves.toEqual({ messages: currentTurn });
   });
@@ -149,7 +155,7 @@ describe("CustomChatTransport", () => {
     );
     const transport = new CustomChatTransport(
       {} as never,
-      {},
+      { edit_memo: {} as never, move_meetings: {} as never },
       undefined,
       resolveContextRef,
     );
@@ -208,9 +214,9 @@ describe("CustomChatTransport", () => {
     });
     expect(mocks.agentOptions).toHaveBeenCalledWith(
       expect.objectContaining({
-        experimental_context: {
-          currentSessionId: "new",
-          mentionedFolderPaths: [],
+        toolsContext: {
+          edit_memo: { currentSessionId: "new", mentionedFolderPaths: [] },
+          move_meetings: { currentSessionId: "new", mentionedFolderPaths: [] },
         },
       }),
     );

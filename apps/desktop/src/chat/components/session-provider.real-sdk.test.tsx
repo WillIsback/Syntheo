@@ -207,6 +207,18 @@ describe("ChatSession with the real AI SDK", () => {
     // Model/provider hooks can return fresh objects on every render; the chat
     // instance must survive that or the UI silently detaches from the stream.
     mocks.transportIdentityChangesEveryRender = true;
+    // L'écriture SQLite de la réponse dure plus longtemps qu'un rendu React.
+    // @ai-sdk/react 4 publie « ready » par un setState ordinaire : avec une
+    // écriture simulée instantanée, la réconciliation lirait un historique
+    // persisté que ce test ne met jamais à jour.
+    let releaseAssistantWrite!: () => void;
+    const assistantWrite = new Promise<void>((resolve) => {
+      releaseAssistantWrite = resolve;
+    });
+    mocks.upsertChatMessage.mockImplementation(
+      (message: PersistedChatMessage) =>
+        message.id === "assistant-1" ? assistantWrite : Promise.resolve(),
+    );
     let controller!: ReadableStreamDefaultController<UIMessageChunk>;
     mocks.sendMessages.mockResolvedValue(
       new ReadableStream<UIMessageChunk>({
@@ -251,6 +263,7 @@ describe("ChatSession with the real AI SDK", () => {
       userMessage.id,
       "assistant-1",
     ]);
+    releaseAssistantWrite();
   });
 
   it("finishes and saves a streaming reply across screen and scope changes with live-recording context", async () => {

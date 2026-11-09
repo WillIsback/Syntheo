@@ -1,5 +1,5 @@
 import {
-  type ImagePart,
+  type FilePart,
   type LanguageModel,
   smoothStream,
   streamText,
@@ -161,12 +161,12 @@ IMPORTANT: Previous attempt failed. ${previousFeedback}`;
 
       const result = streamText({
         model,
-        system,
+        instructions: system,
         ...createPromptInput(enhancedPrompt, args.imageContext),
         abortSignal: combinedController.signal,
         maxRetries: AI_GENERATION_MAX_RETRIES,
       });
-      return withCleanup(result.fullStream, () => {
+      return withCleanup(result.stream, () => {
         signal.removeEventListener("abort", abortFromOuter);
         retrySignal.removeEventListener("abort", abortFromRetry);
       });
@@ -234,7 +234,7 @@ function createPromptInput(
 ):
   | { prompt: string }
   | {
-      messages: Array<{ role: "user"; content: Array<TextPart | ImagePart> }>;
+      messages: Array<{ role: "user"; content: Array<TextPart | FilePart> }>;
     } {
   if (imageContext.length === 0) {
     return { prompt };
@@ -247,9 +247,11 @@ function createPromptInput(
         content: [
           { type: "text", text: prompt },
           ...imageContext.map(
-            (image): ImagePart => ({
-              type: "image",
-              image: image.base64,
+            // AI SDK 7 : la partie `image` est dépréciée au profit d'un
+            // fichier au type MIME image.
+            (image): FilePart => ({
+              type: "file",
+              data: image.base64,
               mediaType: image.mimeType,
             }),
           ),

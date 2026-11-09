@@ -28,7 +28,7 @@ const { DatabaseSync } = createRequire(import.meta.url)(
 ) as typeof import("node:sqlite");
 
 let database: InstanceType<typeof DatabaseSync>;
-const options = { toolCallId: "folder-test", messages: [] };
+const options = { toolCallId: "folder-test", messages: [], context: {} };
 const listTool = buildListFoldersTool();
 const createTool = buildCreateFolderTool();
 const moveTool = buildMoveMeetingsToFolderTool();

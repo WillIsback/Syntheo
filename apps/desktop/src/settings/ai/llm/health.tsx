@@ -21,7 +21,8 @@ export function useConnectionHealth(): LlmHealthStatus {
     queryFn: async () => {
       const result = await generateText({
         model: model!,
-        system: "If user says hi, respond with hello, without any other text.",
+        instructions:
+          "If user says hi, respond with hello, without any other text.",
         prompt: "Hi",
       });
       return result;
