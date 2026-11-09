@@ -50,8 +50,15 @@ msgstr "(Unavailable — using current default)"
 msgid "(Unavailable — using the default output)"
 msgstr "(Unavailable — using the default output)"
 
+#. placeholder {0}: row.hiddenCount
+#: src/folders/sidebar-tree-view.tsx
+msgid "{0, plural, one {… # other} other {… # others}}"
+msgstr "{0, plural, one {… # other} other {… # others}}"
+
+#. placeholder {0}: row.noteCount
 #. placeholder {0}: stats.count
 #: src/folders/project/folder-header-actions.tsx
+#: src/folders/sidebar-tree-view.tsx
 msgid "{0, plural, one {# meeting} other {# meetings}}"
 msgstr "{0, plural, one {# meeting} other {# meetings}}"
 
@@ -1766,6 +1773,7 @@ msgstr "Folder name"
 msgid "Folder: {currentPath}"
 msgstr "Folder: {currentPath}"
 
+#: src/folders/sidebar-tree-view.tsx
 #: src/shared/palette-search-groups.tsx
 #: src/sidebar/settings-nav-groups.ts
 msgid "Folders"
@@ -5155,6 +5163,7 @@ msgstr "Unreachable"
 
 #: src/editor-bridge/mention-config.ts
 #: src/folders/project/folder-meetings-card.tsx
+#: src/folders/sidebar-tree-view.tsx
 #: src/home/note-index.tsx
 #: src/session/components/living-document/meeting-type-picker.tsx
 #: src/session/components/note-input/raw.tsx
