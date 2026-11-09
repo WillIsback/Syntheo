@@ -142,6 +142,10 @@ msgstr "{entryCount} sélectionné(s)"
 msgid "{hiddenCount, plural, one {See the previous meeting} other {See the # previous meetings}}"
 msgstr "{hiddenCount, plural, one {Voir la réunion précédente} other {Voir les # réunions précédentes}}"
 
+#: src/session/components/living-document/meeting-type-picker.tsx
+msgid "{inheritedTitle} — folder template"
+msgstr "{inheritedTitle} — modèle du dossier"
+
 #: src/settings/ai/stt/language-warning.tsx
 msgid "{model} can't transcribe {languages}. Try another model or change your spoken languages."
 msgstr "{model} ne sait pas transcrire {languages}. Essayez un autre modèle ou changez vos langues parlées."
@@ -427,7 +431,6 @@ msgid "All Notes"
 msgstr "Toutes les notes"
 
 #: src/session/components/living-document/meeting-type-picker.tsx
-#: src/templates/template-sidebar.tsx
 msgid "All templates"
 msgstr "Tous les modèles"
 
@@ -800,6 +803,10 @@ msgstr "Choisir"
 #: src/session/components/outer-header/overflow/export-modal.tsx
 msgid "Choose a file format and what to include."
 msgstr "Choisissez un format de fichier et les éléments à inclure."
+
+#: src/session/components/living-document/fiche-folder.tsx
+msgid "Choose a folder"
+msgstr "Choisir un dossier"
 
 #: src/folders/project/next-meeting-slot.tsx
 msgid "Choose a language model in Settings to propose the agenda."
@@ -1291,7 +1298,6 @@ msgid "default"
 msgstr "par défaut"
 
 #: src/session/components/living-document/meeting-type-picker.tsx
-#: src/templates/template-sidebar.tsx
 msgid "Default"
 msgstr "Par défaut"
 
@@ -1730,6 +1736,10 @@ msgstr "Impossible de copier le transcript"
 msgid "Failed to copy: {viewTitle}"
 msgstr "Impossible de copier : {viewTitle}"
 
+#: src/templates/template-sidebar.tsx
+msgid "Favorites"
+msgstr "Favoris"
+
 #: src/main/windows-title-bar.tsx
 msgid "File"
 msgstr "Fichier"
@@ -1793,6 +1803,10 @@ msgstr "Chat flottant"
 msgid "Fn / Globe"
 msgstr "Fn / Globe"
 
+#: src/session/components/living-document/fiche.tsx
+msgid "Folder"
+msgstr "Dossier"
+
 #: src/folders/folder-editor.tsx
 msgid "Folder actions"
 msgstr "Actions du dossier"
@@ -1807,10 +1821,12 @@ msgid "Folder name"
 msgstr "Nom du dossier"
 
 #: src/session/components/folder-picker.tsx
+#: src/session/components/living-document/fiche-folder.tsx
 msgid "Folder: {currentPath}"
 msgstr "Dossier : {currentPath}"
 
 #: src/folders/sidebar-tree-view.tsx
+#: src/session/components/folder-picker.tsx
 #: src/shared/palette-search-groups.tsx
 #: src/sidebar/settings-nav-groups.ts
 msgid "Folders"
@@ -1855,6 +1871,10 @@ msgstr "Plein écran"
 #: src/main/windows-title-bar.tsx
 msgid "Full Screen"
 msgstr "Plein écran"
+
+#: src/templates/template-sidebar.tsx
+msgid "General templates"
+msgstr "Généraux"
 
 #: src/session/components/note-input/enhanced/index.tsx
 msgid "Generate summary"
@@ -2664,7 +2684,6 @@ msgid "My automations"
 msgstr "Mes automatisations"
 
 #: src/session/components/living-document/meeting-type-picker.tsx
-#: src/templates/template-sidebar.tsx
 msgid "My favorites"
 msgstr "Mes favoris"
 
@@ -2938,6 +2957,10 @@ msgstr "Aucun service de transcription n'est configuré : importer un fichier de
 #: src/chat/components/input/use-dictation.ts
 msgid "No transcription service is set up."
 msgstr "Aucun service de transcription n'est configuré."
+
+#: src/folders/project/folder-template-field.tsx
+msgid "None"
+msgstr "Aucun"
 
 #: src/services/enhancer/eligibility.ts
 msgid "Not enough words recorded ({wordCount}/{minWords} minimum)"
@@ -3536,6 +3559,7 @@ msgstr "Enregistrement avec le micro par défaut à la place. Vérifiez que le m
 msgid "Redo"
 msgstr "Rétablir"
 
+#: src/session/components/living-document/late-filing.ts
 #: src/session/components/living-document/summary-switcher-view.tsx
 #: src/session/components/note-input/header-enhanced.tsx
 #: src/session/components/note-input/template-picker.tsx
@@ -3549,6 +3573,10 @@ msgstr "Régénérer le message"
 #: src/session/components/speaker-naming/bar.tsx
 msgid "Regenerate summary with names"
 msgstr "Régénérer la synthèse avec les noms"
+
+#: src/session/components/living-document/late-filing.ts
+msgid "Regenerate the summary with this template? The current version stays in the history."
+msgstr "Régénérer la synthèse avec ce modèle ? La version actuelle reste dans l'historique."
 
 #: src/session/components/living-document/summary-version.tsx
 msgid "Regenerate with my notes"
@@ -3770,6 +3798,10 @@ msgstr "Lancer une automatisation"
 #: src/automations/command-confirmation-dialog.tsx
 msgid "Run this command?"
 msgstr "Lancer cette commande ?"
+
+#: src/session/components/living-document/fiche-folder.tsx
+msgid "same title"
+msgstr "même titre"
 
 #: src/session/components/outer-header/overflow/export-modal.tsx
 #: src/settings/dictionary/index.tsx
@@ -4380,6 +4412,10 @@ msgstr "Proposer des sections"
 msgid "Suggest what to ask next."
 msgstr "Suggérez la prochaine question à poser."
 
+#: src/session/components/folder-picker.tsx
+msgid "Suggested"
+msgstr "Suggéré"
+
 #: src/session/components/note-input/raw.tsx
 msgid "Suggested templates"
 msgstr "Modèles suggérés"
@@ -4451,6 +4487,10 @@ msgstr "Aperçu de la synthèse"
 #: src/services/enhancer/summary-notification.ts
 msgid "Summary ready"
 msgstr "Résumé prêt"
+
+#: src/folders/project/folder-template-field.tsx
+msgid "Summary template"
+msgstr "Modèle de compte rendu"
 
 #: src/chat/components/message/tool/edit-summary.tsx
 msgid "Summary updated"
@@ -4986,6 +5026,10 @@ msgstr "Cette modification n'est plus en attente."
 msgid "This file is too large to import (2 GB maximum)."
 msgstr "Ce fichier est trop lourd pour être importé (2 Go maximum)."
 
+#: src/session/components/living-document/late-filing.ts
+msgid "This folder uses the {title} template"
+msgstr "Ce dossier utilise le modèle {title}"
+
 #: src/settings/general/index.tsx
 msgid "This information stays on your computer. It is used to recognize you in transcripts and to sign your meeting notes."
 msgstr "Ces informations restent sur votre poste. Elles servent à vous reconnaître dans les transcriptions et à signer vos comptes-rendus."
@@ -5247,8 +5291,10 @@ msgstr "Injoignable"
 
 #: src/editor-bridge/mention-config.ts
 #: src/folders/project/folder-meetings-card.tsx
+#: src/folders/project/folder-template-field.tsx
 #: src/folders/sidebar-tree-view.tsx
 #: src/home/note-index.tsx
+#: src/session/components/living-document/late-filing.ts
 #: src/session/components/living-document/meeting-type-picker.tsx
 #: src/session/components/note-input/raw.tsx
 #: src/session/components/outer-header/overflow/export-modal.tsx
@@ -5351,6 +5397,10 @@ msgstr "Utilisez votre microphone pour capter votre voix"
 #: src/templates/template-form.tsx
 msgid "Used for"
 msgstr "Utilisé pour"
+
+#: src/folders/project/folder-template-field.tsx
+msgid "Used for this folder's notes unless a note picks another"
+msgstr "Utilisé pour les notes de ce dossier, sauf si une note en choisit un autre"
 
 #: src/settings/general/spoken-languages.tsx
 msgid "Used for transcription and automatic summary language detection."
@@ -5517,6 +5567,10 @@ msgstr "Glycine"
 #: src/shared/help-dialog.tsx
 msgid "Without a mouse: Tab moves to the next field, Shift+Tab to the previous one, Enter confirms."
 msgstr "Sans souris : Tab passe au champ suivant, Maj+Tab au précédent, Entrée valide."
+
+#: src/folders/project/folder-template-field.tsx
+msgid "Without one, notes use {inheritedTitle} from the {parentName} folder."
+msgstr "Sans modèle ici, les notes utilisent {inheritedTitle}, celui du dossier {parentName}."
 
 #: src/settings/dictation.tsx
 msgid "Words appear in a small bubble while you speak. Text is inserted when you finish."
