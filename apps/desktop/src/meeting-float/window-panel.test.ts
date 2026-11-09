@@ -8,6 +8,18 @@ const mocks = vi.hoisted(() => ({
   liveCaptionShow: vi.fn(),
   liveCaptionHide: vi.fn(),
   liveCaptionUpdate: vi.fn(),
+  windowShow: vi.fn(),
+  windowHide: vi.fn(),
+}));
+
+vi.mock("@tauri-apps/api/window", () => ({
+  Window: {
+    getByLabel: vi.fn(async (label: string) =>
+      label === "floating-bar"
+        ? { show: mocks.windowShow, hide: mocks.windowHide }
+        : null,
+    ),
+  },
 }));
 
 vi.mock("@syntheo/plugin-windows", () => ({
@@ -77,6 +89,67 @@ describe("floating meeting window synchronizer", () => {
     mocks.liveCaptionShow.mockResolvedValue({ status: "ok", data: null });
     mocks.liveCaptionHide.mockResolvedValue({ status: "ok", data: null });
     mocks.liveCaptionUpdate.mockResolvedValue({ status: "ok", data: null });
+    mocks.windowShow.mockResolvedValue(undefined);
+    mocks.windowHide.mockResolvedValue(undefined);
+  });
+
+  // Issue 527 : la pastille se retire sans être recréée ni replacée.
+  describe("concealment", () => {
+    it("hides the shown pill and brings it back where it was", async () => {
+      const synchronizer = createFloatingMeetingWindowSynchronizer();
+      synchronizer.update(routeState(0.1));
+      await vi.waitFor(() => expect(mocks.show).toHaveBeenCalledOnce());
+
+      synchronizer.setConcealed(true);
+      await vi.waitFor(() => expect(mocks.windowHide).toHaveBeenCalledOnce());
+      synchronizer.update({ ...routeState(0.2), title: "Renamed" });
+      await vi.waitFor(() => expect(mocks.update).toHaveBeenCalledTimes(2));
+      expect(mocks.windowHide).toHaveBeenCalledOnce();
+
+      synchronizer.setConcealed(false);
+      await vi.waitFor(() => expect(mocks.windowShow).toHaveBeenCalledOnce());
+      expect(mocks.show).toHaveBeenCalledOnce();
+      expect(mocks.hide).not.toHaveBeenCalled();
+      await synchronizer.dispose();
+    });
+
+    it("delays the first show of a session started from its note", async () => {
+      const synchronizer = createFloatingMeetingWindowSynchronizer();
+      synchronizer.setConcealed(true);
+      synchronizer.update(routeState(0.1));
+      await vi.waitFor(() => expect(mocks.update).toHaveBeenCalledOnce());
+      expect(mocks.show).not.toHaveBeenCalled();
+
+      synchronizer.setConcealed(false);
+      await vi.waitFor(() => expect(mocks.show).toHaveBeenCalledOnce());
+      expect(mocks.windowShow).not.toHaveBeenCalled();
+      await synchronizer.dispose();
+    });
+
+    it("never conceals dictation", async () => {
+      const synchronizer = createFloatingMeetingWindowSynchronizer();
+      synchronizer.setConcealed(true);
+      synchronizer.update({
+        ...routeState(0.1),
+        dictation: { sessionId: "d1" } as FloatingRouteState["dictation"],
+      });
+      await vi.waitFor(() => expect(mocks.show).toHaveBeenCalledOnce());
+      expect(mocks.windowHide).not.toHaveBeenCalled();
+      await synchronizer.dispose();
+    });
+
+    it("lets the end of the listening hide the pill as before", async () => {
+      const synchronizer = createFloatingMeetingWindowSynchronizer();
+      synchronizer.update(routeState(0.1));
+      await vi.waitFor(() => expect(mocks.show).toHaveBeenCalledOnce());
+      synchronizer.setConcealed(true);
+      synchronizer.update(null);
+      await vi.waitFor(() => expect(mocks.hide).toHaveBeenCalledOnce());
+
+      synchronizer.setConcealed(false);
+      await synchronizer.dispose();
+      expect(mocks.windowShow).not.toHaveBeenCalled();
+    });
   });
 
   it("keeps one sync in flight and coalesces updates to the latest state", async () => {

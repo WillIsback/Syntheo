@@ -7,6 +7,10 @@ import {
 import { useMountEffect } from "@syntheo/ui/hooks/use-mount-effect";
 
 import {
+  createFloatingBarConcealment,
+  watchTauriWindowFocus,
+} from "./focus-visibility";
+import {
   createMeetingFloatLabelContext,
   createMeetingFloatRenderRequest,
   loadMeetingFloatData,
@@ -208,6 +212,25 @@ function FloatingMeetingWindowSync({
         });
       },
     );
+    // Issue 527 : pastille masquée quand la note écoutée est au premier plan.
+    const concealment = createFloatingBarConcealment({
+      sources: {
+        isMainWindowFocused: () => document.hasFocus(),
+        watchWindowFocus: watchTauriWindowFocus,
+        getActiveTabSessionId: getActiveTabSessionId,
+        subscribeActiveTab: (onChange) =>
+          useTabs.subscribe((state, previous) => {
+            if (state.currentTab !== previous.currentTab) onChange();
+          }),
+      },
+      getListenedSessionId: () => {
+        const live = listenerStore.getState().live;
+        return live.sessionId ?? live.pause?.sessionId ?? null;
+      },
+      onConcealedChange: (concealed) =>
+        windowSynchronizer.setConcealed(concealed),
+    });
+    windowSynchronizer.setConcealed(concealment.concealed);
     let unsubscribeMeetingData: (() => Promise<void>) | null = null;
     const unlisteners: Array<() => void> = [];
     const speakerLabeler = createFloatingSpeakerLabeler(() => {
@@ -224,6 +247,8 @@ function FloatingMeetingWindowSync({
 
       hasRouteState = true;
       routeState = nextRouteState;
+      // Avant la mise à jour : une écoute lancée depuis sa note reste masquée.
+      windowSynchronizer.setConcealed(concealment.refresh());
       windowSynchronizer.update(routeState);
     };
     const refreshCurrentRouteState = (refreshTranscriptBubbles = false) => {
@@ -401,6 +426,7 @@ function FloatingMeetingWindowSync({
     return () => {
       cancelled = true;
       refreshSettingsRef.current = () => {};
+      concealment.dispose();
       speakerLabeler.dispose();
       unsubscribe();
       unsubscribeDictation();
@@ -485,6 +511,11 @@ export function haveFloatingRouteInputsChanged(
       previousState.live.elapsedOffsetSeconds ||
     state.liveSegments !== previousState.liveSegments
   );
+}
+
+function getActiveTabSessionId() {
+  const tab = useTabs.getState().currentTab;
+  return tab?.type === "sessions" ? tab.id : null;
 }
 
 function getFloatingSessionTitle(
