@@ -4,10 +4,12 @@ use bytes::{BufMut, Bytes, BytesMut};
 use futures_util::{Stream, StreamExt};
 use syntheo_audio_interface::AsyncSource;
 
+mod decoder;
 mod error;
 mod pcm;
 mod playback;
 
+pub use decoder::AudioDecoder;
 pub use error::*;
 pub use pcm::*;
 pub use playback::open_default_playback_sink;
@@ -109,22 +111,22 @@ pub fn mix_sample_f32(mic: f32, speaker: f32) -> f32 {
 
 pub use syntheo_audio_mime::content_type_to_extension;
 
-pub fn source_from_path(
-    path: impl AsRef<std::path::Path>,
-) -> Result<rodio::Decoder<std::io::BufReader<std::fs::File>>, crate::Error> {
-    let file = std::fs::File::open(path.as_ref())?;
-    let decoder = rodio::Decoder::try_from(file)?;
-    Ok(decoder)
+/// Decode the first audio track of a file. Video tracks of an mp4, mov, mkv
+/// or webm are skipped (issue 524).
+pub fn source_from_path(path: impl AsRef<std::path::Path>) -> Result<AudioDecoder, crate::Error> {
+    let path = path.as_ref();
+    let file = std::fs::File::open(path)?;
+    let extension = path.extension().and_then(|extension| extension.to_str());
+    AudioDecoder::new(Box::new(file), extension)
 }
 
 /// Decode audio held in memory. Dictation and imported files must never be
 /// written to disk, so the batch engine decodes straight from bytes.
-pub fn source_from_bytes<T>(data: T) -> Result<rodio::Decoder<std::io::Cursor<T>>, crate::Error>
+pub fn source_from_bytes<T>(data: T) -> Result<AudioDecoder, crate::Error>
 where
     T: AsRef<[u8]> + Send + Sync + 'static,
 {
-    let decoder = rodio::Decoder::try_from(std::io::Cursor::new(data))?;
-    Ok(decoder)
+    AudioDecoder::new(Box::new(std::io::Cursor::new(data)), None)
 }
 
 pub fn audio_bytes_metadata<T>(data: T) -> Result<AudioMetadata, crate::Error>
