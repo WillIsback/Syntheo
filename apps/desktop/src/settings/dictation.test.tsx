@@ -17,12 +17,6 @@ vi.mock("@syntheo/plugin-transcription", () => ({
     }),
   },
 }));
-vi.mock("~/billing/billing-context", () => ({
-  useBillingAccess: () => ({ isPro: true }),
-}));
-vi.mock("~/settings/plan-gate", () => ({
-  PlanGate: ({ children }: { children: React.ReactNode }) => children,
-}));
 vi.mock("./dictation-shortcut", () => ({
   DictationShortcut: () => <div>Dictation shortcut</div>,
 }));

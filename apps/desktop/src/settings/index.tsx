@@ -8,7 +8,6 @@ import {
   SettingsNotifications,
   SettingsPermissions,
 } from "./general";
-import { SettingsTodo } from "./todo";
 
 import { LLM } from "~/settings/ai/llm";
 import { STT } from "~/settings/ai/stt";
@@ -17,7 +16,6 @@ import { SettingsDevelopers } from "~/settings/developers";
 import { SettingsDictation } from "~/settings/dictation";
 import { SettingsDictionary } from "~/settings/dictionary";
 import { SettingsHydrationBoundary } from "~/settings/hydration-boundary";
-import { SettingsImports } from "~/settings/imports";
 import { SettingsPrivacy } from "~/settings/privacy";
 import { usePendingSettingFocus } from "~/settings/setting-focus";
 import { StandardContentWrapper } from "~/shared/main";
@@ -42,13 +40,11 @@ function SettingsView({ tab }: { tab: Extract<Tab, { type: "settings" }> }) {
   usePendingSettingFocus(contentRef);
   const requestedTab = tab.state.tab as string | undefined;
   const activeTab =
-    requestedTab === "data"
-      ? "imports"
-      : requestedTab === "personalization"
-        ? "dictionary"
-        : requestedTab === "audio"
-          ? "meetings"
-          : (tab.state.tab ?? "app");
+    requestedTab === "personalization"
+      ? "dictionary"
+      : requestedTab === "audio"
+        ? "meetings"
+        : (tab.state.tab ?? "app");
 
   const renderContent = () => {
     switch (activeTab) {
@@ -60,8 +56,6 @@ function SettingsView({ tab }: { tab: Extract<Tab, { type: "settings" }> }) {
         return <SettingsAppearance />;
       case "notifications":
         return <SettingsNotifications />;
-      case "imports":
-        return <SettingsImports />;
       case "permissions":
         return <SettingsPermissions />;
       case "privacy":
@@ -76,8 +70,6 @@ function SettingsView({ tab }: { tab: Extract<Tab, { type: "settings" }> }) {
         return <STT />;
       case "intelligence":
         return <LLM />;
-      case "todo":
-        return <SettingsTodo />;
       default:
         return <SettingsApp />;
     }

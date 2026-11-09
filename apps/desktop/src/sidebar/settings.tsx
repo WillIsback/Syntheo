@@ -4,7 +4,6 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import {
   CaretDown,
   CaretRight,
-  Lock,
   MagnifyingGlass,
   X,
 } from "@syntheo/ui/components/icons";
@@ -21,7 +20,6 @@ import {
 } from "./settings-search-results";
 import { ServersHealthFooter, ServerStatusDot } from "./settings-server-status";
 
-import { useBillingAccess } from "~/billing/billing-context";
 import {
   normalizeSearchText,
   searchSettings,
@@ -33,7 +31,6 @@ import { type SettingsTab, useTabs } from "~/store/zustand/tabs";
 
 export function SettingsNav() {
   const { t } = useLingui();
-  const { isPro } = useBillingAccess();
   const groups = useSettingsNavGroups();
   const settingsIndex = useSettingsSearchIndex();
   const [search, setSearch] = useState("");
@@ -162,7 +159,6 @@ export function SettingsNav() {
             <SettingsSearchResults
               hits={hits}
               query={search}
-              isPro={isPro}
               listRef={resultsRef}
               inputRef={inputRef}
               onSelect={selectHit}
@@ -174,7 +170,6 @@ export function SettingsNav() {
                 group={group}
                 forceOpen={group.items.some((item) => item.id === activeTab)}
                 activeTab={activeTab}
-                isPro={isPro}
                 onSelect={selectNavItem}
               />
             ))
@@ -192,16 +187,13 @@ function NavGroup({
   group,
   forceOpen,
   activeTab,
-  isPro,
   onSelect,
 }: {
   group: SettingsNavGroup;
   forceOpen: boolean;
   activeTab: string;
-  isPro: boolean;
   onSelect: (item: NavItem) => void;
 }) {
-  const { t } = useLingui();
   const [expanded, setExpanded] = useState(false);
   const open = !group.collapsed || expanded || forceOpen;
   const labelClass =
@@ -229,7 +221,6 @@ function NavGroup({
       {open
         ? group.items.map((item) => {
             const current = activeTab === item.id;
-            const locked = Boolean(item.requiresPro && !isPro);
             return (
               <button
                 key={item.id}
@@ -255,12 +246,6 @@ function NavGroup({
                   data-testid={`settings-nav-icon-${item.id}`}
                 />
                 <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                {locked ? (
-                  <Lock
-                    aria-label={t`Requires Syntheo Pro`}
-                    className="size-3.5 shrink-0"
-                  />
-                ) : null}
                 {item.server ? <ServerStatusDot kind={item.server} /> : null}
               </button>
             );

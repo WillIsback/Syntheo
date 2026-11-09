@@ -25,11 +25,6 @@ vi.mock("./useNewNote", () => ({
   useNewNote: () => vi.fn(),
 }));
 
-vi.mock("~/billing/local-billing", () => ({
-  LocalBillingProvider: ({ children }: { children: React.ReactNode }) =>
-    children,
-}));
-
 vi.mock("@syntheo/ui/hooks/use-mount-effect", () => ({
   useMountEffect: vi.fn(),
 }));

@@ -12,10 +12,6 @@ Default permissions for the plugin
 - `allow-get-meeting`
 - `allow-get-meeting-transcript`
 - `allow-get-recurring-meeting-history`
-- `allow-get-legacy-cleanup-status`
-- `allow-get-legacy-import-report`
-- `allow-cleanup-legacy-files`
-- `allow-run-legacy-import`
 - `allow-subscribe`
 - `allow-unsubscribe`
 - `allow-get-startup-status`
@@ -52,32 +48,6 @@ Enables the apply_session_ingest command without any pre-configured scope.
 <td>
 
 Denies the apply_session_ingest command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`db:allow-cleanup-legacy-files`
-
-</td>
-<td>
-
-Enables the cleanup_legacy_files command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`db:deny-cleanup-legacy-files`
-
-</td>
-<td>
-
-Denies the cleanup_legacy_files command without any pre-configured scope.
 
 </td>
 </tr>
@@ -156,58 +126,6 @@ Enables the execute_transaction command without any pre-configured scope.
 <td>
 
 Denies the execute_transaction command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`db:allow-get-legacy-cleanup-status`
-
-</td>
-<td>
-
-Enables the get_legacy_cleanup_status command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`db:deny-get-legacy-cleanup-status`
-
-</td>
-<td>
-
-Denies the get_legacy_cleanup_status command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`db:allow-get-legacy-import-report`
-
-</td>
-<td>
-
-Enables the get_legacy_import_report command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`db:deny-get-legacy-import-report`
-
-</td>
-<td>
-
-Denies the get_legacy_import_report command without any pre-configured scope.
 
 </td>
 </tr>
@@ -338,32 +256,6 @@ Enables the list_meetings command without any pre-configured scope.
 <td>
 
 Denies the list_meetings command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`db:allow-run-legacy-import`
-
-</td>
-<td>
-
-Enables the run_legacy_import command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`db:deny-run-legacy-import`
-
-</td>
-<td>
-
-Denies the run_legacy_import command without any pre-configured scope.
 
 </td>
 </tr>

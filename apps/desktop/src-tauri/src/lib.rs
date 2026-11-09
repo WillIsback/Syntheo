@@ -161,10 +161,7 @@ pub fn main() {
 
     builder = builder.plugin(tauri_plugin_db::init(db.clone()));
 
-    builder = builder
-        .plugin(tauri_plugin_importer::init())
-        .plugin(tauri_plugin_contacts::init())
-        .plugin(tauri_plugin_todo::init());
+    builder = builder.plugin(tauri_plugin_contacts::init());
 
     #[cfg(not(feature = "app-store"))]
     {

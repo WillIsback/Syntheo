@@ -92,6 +92,8 @@ describe("monorepo scope", () => {
     "api-sync",
     "api-ticket",
     "api-zoom",
+    "apple-todo",
+    "chrome-native-host",
     "exa",
     "google-mail",
     "jina",
@@ -100,6 +102,7 @@ describe("monorepo scope", () => {
     "loops",
     "mcp",
     "meeting-capture",
+    "meeting-import",
     "mobile-bridge",
     "nango",
     "pyannote-cloud",
@@ -109,12 +112,13 @@ describe("monorepo scope", () => {
     "transcribe-proxy",
     "uniffi-bindgen",
     "updater-core",
+    "zoom",
   ])("removes crate %s", (name) => {
     expect(existsSync(join(REPO_ROOT, "crates", name))).toBe(false);
   });
 
   it("keeps_optional_and_tooling_crates", () => {
-    for (const name of ["audio-mock", "tcc", "chrome-native-host", "xtask"]) {
+    for (const name of ["audio-mock", "tcc", "xtask"]) {
       expect(existsSync(join(REPO_ROOT, "crates", name))).toBe(true);
     }
   });

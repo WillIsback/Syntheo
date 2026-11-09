@@ -18,11 +18,6 @@ vi.mock("@iconify-icon/react", () => ({
 }));
 
 const mocks = vi.hoisted(() => ({
-  billing: {
-    isPro: true,
-    isReady: true,
-    upgradeToPro: vi.fn(),
-  },
   chatGroup: null as {
     id: string;
     ownerUserId: string;
@@ -51,10 +46,6 @@ const mocks = vi.hoisted(() => ({
   toastError: vi.fn(),
   toastSuccess: vi.fn(),
   toastWarning: vi.fn(),
-}));
-
-vi.mock("~/billing/billing-context", () => ({
-  useBillingAccess: () => mocks.billing,
 }));
 
 vi.mock("~/automations/actions", () => ({
@@ -140,9 +131,6 @@ describe("AutomationsContent", () => {
   });
 
   beforeEach(() => {
-    mocks.billing.isPro = true;
-    mocks.billing.isReady = true;
-    mocks.billing.upgradeToPro.mockClear();
     mocks.chatGroup = null;
     mocks.deleteChatAutomation.mockClear();
     mocks.deleteWorkflow.mockClear();

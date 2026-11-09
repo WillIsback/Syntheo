@@ -234,26 +234,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "apple-todo"
-version = "0.1.0"
-dependencies = [
- "backon",
- "block2",
- "chrono",
- "objc2",
- "objc2-core-graphics",
- "objc2-core-location",
- "objc2-event-kit",
- "objc2-foundation",
- "schemars 1.2.3",
- "serde",
- "serde_json",
- "specta",
- "thiserror 2.0.21",
- "tracing",
-]
-
-[[package]]
 name = "approx"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1483,16 +1463,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "58b52a9840ffff5d4d0058ae529fa066a75e794e3125546acfc61c23ad755e49"
 
 [[package]]
-name = "chrome-native-host"
-version = "0.1.0"
-dependencies = [
- "dirs 6.0.0",
- "serde",
- "serde_json",
- "tempfile",
-]
-
-[[package]]
 name = "chrono"
 version = "0.4.45"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2497,7 +2467,6 @@ dependencies = [
  "thiserror 2.0.21",
  "tokio",
  "tracing",
- "uuid",
 ]
 
 [[package]]
@@ -2710,7 +2679,6 @@ dependencies = [
  "tauri-plugin-hooks",
  "tauri-plugin-http",
  "tauri-plugin-icon",
- "tauri-plugin-importer",
  "tauri-plugin-js",
  "tauri-plugin-local-api",
  "tauri-plugin-local-auth",
@@ -2739,7 +2707,6 @@ dependencies = [
  "tauri-plugin-syntheo-tray",
  "tauri-plugin-tantivy",
  "tauri-plugin-template",
- "tauri-plugin-todo",
  "tauri-plugin-tracing",
  "tauri-plugin-transcription",
  "tauri-plugin-window-state",
@@ -6895,22 +6862,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "meeting-import"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "dirs 6.0.0",
- "serde",
- "serde_json",
- "syntheo-http-utils",
- "thiserror 2.0.21",
- "tokio",
- "url",
- "urlencoding",
- "zoom",
-]
-
-[[package]]
 name = "memchr"
 version = "2.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7643,10 +7594,7 @@ version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ca347214e24bc973fc025fd0d36ebb179ff30536ed1f80252706db19ee452009"
 dependencies = [
- "block2",
- "dispatch2",
  "objc2",
- "objc2-contacts",
  "objc2-foundation",
 ]
 
@@ -11916,23 +11864,18 @@ dependencies = [
  "db-execute",
  "db-migrate",
  "db-reactive",
- "fs-sync-core",
  "serde",
  "serde_json",
  "session-ingest",
- "sha2 0.11.1",
  "specta",
  "specta-typescript",
  "sqlx",
- "storage",
  "tauri",
  "tauri-plugin",
  "tauri-specta",
- "tempfile",
  "thiserror 2.0.21",
  "tokio",
  "tracing",
- "uuid",
 ]
 
 [[package]]
@@ -12209,22 +12152,6 @@ dependencies = [
  "tauri-specta",
  "tempfile",
  "thiserror 2.0.21",
-]
-
-[[package]]
-name = "tauri-plugin-importer"
-version = "0.1.0"
-dependencies = [
- "meeting-import",
- "serde",
- "serde_json",
- "specta",
- "specta-typescript",
- "tauri",
- "tauri-plugin",
- "tauri-specta",
- "tokio",
- "tokio-util",
 ]
 
 [[package]]
@@ -12739,20 +12666,6 @@ dependencies = [
  "template-app-legacy",
  "tokio",
  "tracing",
-]
-
-[[package]]
-name = "tauri-plugin-todo"
-version = "0.1.0"
-dependencies = [
- "apple-todo",
- "serde",
- "specta",
- "specta-typescript",
- "tauri",
- "tauri-plugin",
- "tauri-specta",
- "thiserror 2.0.21",
 ]
 
 [[package]]
@@ -14353,12 +14266,6 @@ dependencies = [
  "serde",
  "serde_derive",
 ]
-
-[[package]]
-name = "urlencoding"
-version = "2.1.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "daf8dba3b7eb870caf1ddeed7bc9d2a049f3cfdfae7cb521b087cc33ae4c49da"
 
 [[package]]
 name = "urlpattern"
@@ -16207,18 +16114,6 @@ name = "zmij"
 version = "1.0.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b8848ee67ecc8aedbaf3e4122217aff892639231befc6a1b58d29fff4c2cabaa"
-
-[[package]]
-name = "zoom"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "serde",
- "serde_json",
- "syntheo-http-utils",
- "thiserror 2.0.21",
- "urlencoding",
-]
 
 [[package]]
 name = "zstd"

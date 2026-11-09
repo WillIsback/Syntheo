@@ -48,15 +48,13 @@ export type SettingsTab =
   | "audio"
   | "appearance"
   | "notifications"
-  | "imports"
   | "developers"
   | "privacy"
   | "permissions"
   | "dictionary"
   | "dictation"
   | "transcription"
-  | "intelligence"
-  | "todo";
+  | "intelligence";
 
 const normalizeSettingsTab = (tab: string | null | undefined): SettingsTab => {
   switch (tab) {
@@ -64,7 +62,6 @@ const normalizeSettingsTab = (tab: string | null | undefined): SettingsTab => {
     case "meetings":
     case "appearance":
     case "notifications":
-    case "imports":
     case "developers":
     case "privacy":
     case "permissions":
@@ -72,14 +69,11 @@ const normalizeSettingsTab = (tab: string | null | undefined): SettingsTab => {
     case "dictation":
     case "transcription":
     case "intelligence":
-    case "todo":
       return tab;
     case "audio":
       return "meetings";
     case "personalization":
       return "dictionary";
-    case "data":
-      return "imports";
     // Écrans retirés (compte, abonnement, parrainage, équipe, sync, CRM,
     // « Analyses » ex-`insights`/`stats`) et valeurs inconnues : Profil.
     default:

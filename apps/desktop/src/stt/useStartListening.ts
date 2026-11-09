@@ -49,7 +49,6 @@ export const getBatchOnlyCaptureMessage = () =>
   t`This model only transcribes after the recording, which would require keeping the audio. Choose a real-time transcription model.`;
 
 export {
-  CLOUDSYNC_CAPTURE_LEASE_ATTEMPTS,
   getPostCaptureAction,
   getPostCaptureRepairReasons,
 } from "./capture-lifecycle";
@@ -158,20 +157,6 @@ export function useStartListeningState(
       automatic,
       pendingMarker,
     );
-    // A fresh note or a just-focused window starts listening right as a sync
-    // round begins; waiting for that round to yield made the start feel slow
-    // and sometimes refused to record at all.
-    void lifecycle.deferCloudsync();
-    const releaseCloudsyncDeferral = async () => {
-      try {
-        await lifecycle.releaseCloudsyncLease();
-      } catch (error) {
-        console.error(
-          "[listener] failed to release capture CloudSync deferral",
-          error,
-        );
-      }
-    };
     const [keywords, liveTranscriptionConfig, remoteParticipantHumanIds] =
       await Promise.all([
         import("./useKeywords").then(({ getSessionKeywords }) =>
@@ -192,7 +177,6 @@ export function useStartListeningState(
         lifecycle.ready,
       ]);
     if (!canStartLiveSession(sessionId)) {
-      await releaseCloudsyncDeferral();
       return;
     }
 
@@ -213,7 +197,6 @@ export function useStartListeningState(
           cleanupError,
         );
       }
-      await releaseCloudsyncDeferral();
       await reportStartFailure("recovery_marker", null);
       return;
     }
@@ -250,8 +233,6 @@ export function useStartListeningState(
           "[listener] failed to clean up capture state",
           cleanupError,
         );
-      } finally {
-        await releaseCloudsyncDeferral();
       }
       await reportStartFailure(
         "capture_start",
@@ -266,8 +247,6 @@ export function useStartListeningState(
         await lifecycle.cleanupFailedStart();
       } catch (error) {
         console.error("[listener] failed to clean up capture state", error);
-      } finally {
-        await releaseCloudsyncDeferral();
       }
       await reportStartFailure(
         "capture_rejected",

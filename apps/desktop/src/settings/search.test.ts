@@ -26,7 +26,6 @@ function entry(
     section: null,
     keywords: "",
     breadcrumb: "Profil",
-    requiresPro: false,
     ...overrides,
   } as SettingsSearchResult;
 }
@@ -136,13 +135,6 @@ describe("index des paramètres en français", () => {
     expect(first?.breadcrumb).toBe("Réunions › Audio");
   });
 
-  it("garde les réglages Pro trouvables, marqués comme tels", () => {
-    const dictation = searchSettings(frenchIndex(), "dictee").find(
-      (e) => e.id === "dictation-enabled",
-    );
-    expect(dictation?.requiresPro).toBe(true);
-  });
-
   it("masque les réglages propres à une autre plateforme", () => {
     const ids = (platform: "windows" | "macos") =>
       frenchIndex(platform).map((e) => e.id);
@@ -161,13 +153,11 @@ const PAGE_SOURCES: Record<SettingsTab, string[]> = {
   notifications: ["general/notification.tsx"],
   permissions: ["general/permissions.tsx"],
   privacy: ["privacy/"],
-  imports: ["imports/"],
   developers: ["developers/"],
   dictation: ["dictation.tsx", "dictation-shortcut.tsx"],
   dictionary: ["dictionary/"],
   transcription: ["ai/stt/"],
   intelligence: ["ai/llm/"],
-  todo: ["todo/"],
 };
 
 function sourceFiles(dir: string): string[] {

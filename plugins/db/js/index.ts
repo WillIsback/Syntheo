@@ -4,9 +4,6 @@ import type {
   GetMeetingInput,
   GetMeetingTranscriptInput as GeneratedGetMeetingTranscriptInput,
   GetRecurringMeetingHistoryInput as GeneratedGetRecurringMeetingHistoryInput,
-  LegacyCleanupResult,
-  LegacyCleanupStatus,
-  LegacyImportReport,
   ListMeetingsInput as GeneratedListMeetingsInput,
   Meeting,
   MeetingPage,
@@ -18,9 +15,6 @@ import type {
 
 export type {
   GetMeetingInput,
-  LegacyCleanupResult,
-  LegacyCleanupStatus,
-  LegacyImportReport,
   Meeting,
   MeetingPage,
   SessionIngestApplyResult,
@@ -95,22 +89,6 @@ export function executeProxy(
   return invoke("plugin:db|execute_proxy", { sql, params, method });
 }
 
-export function getLegacyImportReport(): Promise<LegacyImportReport> {
-  return invoke("plugin:db|get_legacy_import_report");
-}
-
-export function getLegacyCleanupStatus(): Promise<LegacyCleanupStatus> {
-  return invoke("plugin:db|get_legacy_cleanup_status");
-}
-
-export function cleanupLegacyFiles(): Promise<LegacyCleanupResult> {
-  return invoke("plugin:db|cleanup_legacy_files");
-}
-
-export function runLegacyImport(dryRun = false): Promise<string> {
-  return invoke("plugin:db|run_legacy_import", { dryRun });
-}
-
 export function applySessionIngest(
   workspaceId: string,
   envelope: Record<string, unknown>,
@@ -124,34 +102,6 @@ export function waitUntilReady(): Promise<void> {
 
 export function getStartupStatus(): Promise<StartupStatus> {
   return invoke("plugin:db|get_startup_status");
-}
-
-// L'application est 100 % locale : le report d'activité CloudSync n'existe plus.
-// Ces helpers restent exposés comme no-ops pour les appelants existants.
-export const CLOUDSYNC_ACTIVITY_DEFERRED_ERROR =
-  "cloudsync_activity_deferred" as const;
-
-export function isCloudsyncActivityDeferredError(error: unknown) {
-  const message = error instanceof Error ? error.message : String(error);
-  return message === CLOUDSYNC_ACTIVITY_DEFERRED_ERROR;
-}
-
-export function beginCloudsyncActivity(
-  _activity: string,
-  _key: string,
-): Promise<void> {
-  // Volontairement sans effet : plus aucun report d'activité CloudSync côté
-  // serveur. Conserve comme no-op résolu pour les appelants existants.
-  return Promise.resolve();
-}
-
-export function endCloudsyncActivity(
-  _activity: string,
-  _key: string,
-): Promise<void> {
-  // Volontairement sans effet : contrepartie de `beginCloudsyncActivity`,
-  // conservée comme no-op résolu pour les appelants existants.
-  return Promise.resolve();
 }
 
 export async function subscribe<T = Record<string, unknown>>(

@@ -1,7 +1,7 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { Command as CommandPrimitive } from "cmdk";
 
-import { Gear, Lock, MagnifyingGlass } from "@syntheo/ui/components/icons";
+import { Gear, MagnifyingGlass } from "@syntheo/ui/components/icons";
 import { cn } from "@syntheo/utils";
 
 import type { SettingsSearchResult } from "~/settings/search";
@@ -20,7 +20,6 @@ export const PALETTE_ITEM_CLASS = cn([
 export function PaletteSettingsGroup({
   results,
   limit,
-  isPro,
   withDivider,
   onSelect,
   onShowAll,
@@ -28,7 +27,6 @@ export function PaletteSettingsGroup({
   results: SettingsSearchResult[];
   // Sans limite dans la palette filtrée.
   limit?: number;
-  isPro: boolean;
   withDivider: boolean;
   onSelect: (result: SettingsSearchResult) => void;
   onShowAll: () => void;
@@ -61,12 +59,6 @@ export function PaletteSettingsGroup({
           <span className="text-muted-foreground ml-auto shrink-0 text-xs">
             {result.breadcrumb}
           </span>
-          {result.requiresPro && !isPro ? (
-            <Lock
-              aria-label={t`Requires Syntheo Pro`}
-              className="h-3.5 w-3.5 shrink-0"
-            />
-          ) : null}
         </CommandPrimitive.Item>
       ))}
       {hidden ? (

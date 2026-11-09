@@ -26,7 +26,6 @@ import { fromResult } from "./fromResult";
 import { ChannelProfile } from "./segment";
 import { isStoppedTranscriptionError, useRunBatch } from "./useRunBatch";
 
-import { withCloudsyncActivity } from "~/db/cloudsync-activity";
 import { getEnhancerService } from "~/services/enhancer";
 import { enqueueSessionAudioOperation } from "~/session/audio-operations";
 import { useSession, useUpdateSession } from "~/session/queries";
@@ -254,10 +253,7 @@ export function useUploadFile(sessionId: string) {
         ),
       );
 
-      const cloudsyncLeaseKey = `${sessionId}:audio-import:${crypto.randomUUID()}`;
-      void withCloudsyncActivity("transcription", cloudsyncLeaseKey, () =>
-        Effect.runPromise(program),
-      ).catch((error) => {
+      void Effect.runPromise(program).catch((error) => {
         console.error("[upload] audio failed:", error);
       });
     },
@@ -327,10 +323,7 @@ export function useUploadFile(sessionId: string) {
           }),
         );
 
-        const cloudsyncLeaseKey = `${sessionId}:subtitle-import:${crypto.randomUUID()}`;
-        void withCloudsyncActivity("transcription", cloudsyncLeaseKey, () =>
-          Effect.runPromise(program),
-        ).catch((error) => {
+        void Effect.runPromise(program).catch((error) => {
           console.error("[upload] transcript failed:", error);
         });
         return;

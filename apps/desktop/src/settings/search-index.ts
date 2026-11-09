@@ -18,7 +18,6 @@ export type SettingsSearchEntry = {
   // Titre de la partie de page, quand la page en a plusieurs.
   section?: MessageDescriptor;
   keywords: MessageDescriptor;
-  requiresPro?: boolean;
   // Réglage affiché seulement sur ces plateformes.
   platforms?: readonly Platform[];
   // Réglage masqué dans la version App Store.
@@ -317,14 +316,6 @@ export const SETTINGS_SEARCH_INDEX = [
     keywords: msg`password, PIN, Windows Hello, security, fingerprint, privacy`,
   },
 
-  // Imports
-  {
-    id: "import-recordings",
-    page: "imports",
-    label: msg`Import recordings`,
-    keywords: msg`import, file, audio file, video, recording, meeting assistant`,
-  },
-
   // Développeurs
   {
     id: "cli",
@@ -360,42 +351,36 @@ export const SETTINGS_SEARCH_INDEX = [
     page: "dictation",
     label: msg`Enable dictation`,
     keywords: msg`dictation, voice typing, speak, text, write`,
-    requiresPro: true,
   },
   {
     id: "dictation-shortcut",
     page: "dictation",
     label: msg`Dictation shortcut`,
     keywords: msg`dictation, shortcut, key, keyboard`,
-    requiresPro: true,
   },
   {
     id: "dictation-hands-free",
     page: "dictation",
     label: msg`Hands-free dictation`,
     keywords: msg`dictation, hands-free, hold, press`,
-    requiresPro: true,
   },
   {
     id: "dictation-microphone",
     page: "dictation",
     label: msg`Microphone`,
     keywords: msg`dictation, mic, headset, sound, audio device`,
-    requiresPro: true,
   },
   {
     id: "dictation-live-preview",
     page: "dictation",
     label: msg`Live transcript preview`,
     keywords: msg`dictation, bubble, preview, live text`,
-    requiresPro: true,
   },
   {
     id: "dictation-language",
     page: "dictation",
     label: msg`Language and vocabulary`,
     keywords: msg`dictation, language, words, vocabulary`,
-    requiresPro: true,
   },
 
   // Dictionnaire (Pro)
@@ -404,7 +389,6 @@ export const SETTINGS_SEARCH_INDEX = [
     page: "dictionary",
     label: msg`Dictionary`,
     keywords: msg`words, vocabulary, names, jargon, spelling, acronyms`,
-    requiresPro: true,
   },
 
   // Transcription

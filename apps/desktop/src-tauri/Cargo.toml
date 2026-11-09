@@ -42,7 +42,6 @@ tauri-plugin-fs2 = { workspace = true }
 tauri-plugin-hooks = { workspace = true }
 tauri-plugin-http = { workspace = true }
 tauri-plugin-icon = { workspace = true }
-tauri-plugin-importer = { workspace = true }
 tauri-plugin-js = { workspace = true }
 tauri-plugin-local-api = { workspace = true }
 tauri-plugin-local-auth = { workspace = true }
@@ -70,7 +69,6 @@ tauri-plugin-store = { workspace = true }
 tauri-plugin-store2 = { workspace = true }
 tauri-plugin-tantivy = { workspace = true }
 tauri-plugin-template = { workspace = true }
-tauri-plugin-todo = { workspace = true }
 tauri-plugin-tracing = { workspace = true }
 tauri-plugin-transcription = { workspace = true }
 tauri-plugin-tray = { workspace = true }

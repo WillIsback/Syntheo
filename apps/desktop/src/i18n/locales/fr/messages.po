@@ -558,7 +558,6 @@ msgid "Automations"
 msgstr "Automatisations"
 
 #: src/instruction/index.tsx
-#: src/settings/todo/permission.tsx
 #: src/shared/shortcuts.ts
 #: src/sidebar/custom-sidebar-header.tsx
 msgid "Back"
@@ -615,10 +614,6 @@ msgstr "Icône d'application avec rebond"
 msgid "Bright canvas"
 msgstr "Canevas clair"
 
-#: src/onboarding/index.tsx
-msgid "Bring your meeting history"
-msgstr "Importez votre historique de réunions"
-
 #: src/templates/utils.ts
 msgid "by {name}"
 msgstr "par {name}"
@@ -630,7 +625,6 @@ msgstr "Impossible d'importer cet audio"
 #: src/session/components/capsule/index.tsx
 #: src/settings/ai/shared/server-address.tsx
 #: src/settings/dictionary/index.tsx
-#: src/settings/general/storage/legacy-cleanup.tsx
 #: src/shared/ui/destructive-confirmation-dialog.tsx
 #: src/sidebar/folder-name-dialog.tsx
 #: src/templates/auto-format-examples-dialog.tsx
@@ -701,14 +695,6 @@ msgstr "Vérifiez que votre dossier de notes est accessible et que le disque a d
 msgid "Check the spelling, or try a shorter word."
 msgstr "Vérifiez l'orthographe, ou essayez un mot plus court."
 
-#: src/imports/screen.tsx
-msgid "Checking installed meeting assistants…"
-msgstr "Vérification des assistants de réunion installés…"
-
-#: src/settings/general/storage/legacy-cleanup.tsx
-msgid "Checking migration..."
-msgstr "Vérification de la migration..."
-
 #: src/settings/developers/cli.tsx
 msgid "Checking…"
 msgstr "Vérification…"
@@ -720,11 +706,6 @@ msgstr "Carillon"
 #: src/shared/open-note-dialog.tsx
 msgid "Choose"
 msgstr "Choisir"
-
-#. placeholder {0}: provider.name
-#: src/imports/screen.tsx
-msgid "Choose {0} export files"
-msgstr "Choisissez {0} fichiers d'exportation"
 
 #: src/session/components/outer-header/overflow/export-modal.tsx
 msgid "Choose a file format and what to include."
@@ -759,10 +740,6 @@ msgstr "Choisissez une couleur personnalisée"
 msgid "Choose export folder"
 msgstr "Choisissez un dossier d'exportation"
 
-#: src/imports/screen.tsx
-msgid "Choose files"
-msgstr "Choisir des fichiers"
-
 #: src/settings/automations/starter-config.tsx
 #: src/settings/general/storage/export-location.tsx
 msgid "Choose folder"
@@ -795,18 +772,6 @@ msgstr "Choisissez les couleurs de Syntheo. Chaque palette suit le thème clair 
 #: src/settings/general/audio-settings.tsx
 msgid "Choose the microphone that captures your voice."
 msgstr "Choisissez le microphone qui capture votre voix."
-
-#: src/settings/general/storage/legacy-cleanup.tsx
-msgid "Clean Up"
-msgstr "Nettoyer"
-
-#: src/settings/general/storage/legacy-cleanup.tsx
-msgid "Clean up legacy files?"
-msgstr "Nettoyer les fichiers hérités ?"
-
-#: src/settings/general/storage/legacy-cleanup.tsx
-msgid "Cleaning up..."
-msgstr "Nettoyage en cours..."
 
 #: src/contacts/related-notes.tsx
 #: src/contacts/shared.tsx
@@ -977,10 +942,6 @@ msgstr "Contacts"
 #: src/folders/folder-editor.tsx
 msgid "Context"
 msgstr "Contexte"
-
-#: src/imports/screen.tsx
-msgid "Continue"
-msgstr "Continuer"
 
 #: src/instruction/index.tsx
 msgid "Continue in your browser, then return to Syntheo."
@@ -1351,7 +1312,6 @@ msgid "Dock, app switcher, icon"
 msgstr "Dock, sélecteur d'apps, icône"
 
 #: src/main/windows-title-bar.tsx
-#: src/settings/imports/index.tsx
 msgid "Documentation"
 msgstr "Documentation"
 
@@ -1822,10 +1782,6 @@ msgstr "Mode mains libres"
 msgid "Have Syntheo ready when you sign in."
 msgstr "Ayez Syntheo prêt lorsque vous vous connectez."
 
-#: src/settings/todo/permission.tsx
-msgid "Having trouble?"
-msgstr "Vous rencontrez des difficultés ?"
-
 #: src/home/home-view.tsx
 msgid "Hello {firstName}."
 msgstr "Bonjour {firstName}."
@@ -1933,34 +1889,9 @@ msgstr "Ignorer ces apps ?"
 msgid "Ignore this app?"
 msgstr "Ignorer cette app ?"
 
-#: src/onboarding/index.tsx
-msgid "Import notes and transcripts from the meeting apps you already use."
-msgstr "Importez des notes et des transcripts depuis les applications de réunion que vous utilisez déjà."
-
-#: src/settings/search-index.ts
-msgid "Import recordings"
-msgstr "Importer des enregistrements"
-
-#: src/settings/search-index.ts
-msgid "import, file, audio file, video, recording, meeting assistant"
-msgstr "importer, fichier, fichier audio, vidéo, enregistrement, assistant de réunion"
-
-#. placeholder {0}: result.imported
-#. placeholder {1}: result.matched
-#. placeholder {2}: result.conflicts
-#. placeholder {3}: result.errors
-#: src/imports/screen.tsx
-msgid "Imported: {0}. Unchanged: {1}. Needs review: {2}. Failed: {3}."
-msgstr "Importés : {0}. Inchangés : {1}. À vérifier : {2}. Échecs : {3}."
-
 #: src/session/components/note-input/transcript/screens/empty.tsx
 msgid "Importing audio..."
 msgstr "Importation de l'audio..."
-
-#: src/settings/imports/index.tsx
-#: src/sidebar/settings-nav-groups.ts
-msgid "Imports"
-msgstr "Importations"
 
 #: src/templates/auto-format-examples-dialog.tsx
 msgid "Improve format"
@@ -2080,14 +2011,6 @@ msgstr "Dernière livraison {0}"
 #: src/settings/dictation.tsx
 msgid "Last dictation"
 msgstr "Dernière dictée"
-
-#. placeholder {0}: lastRun.imported
-#. placeholder {0}: result.imported
-#. placeholder {1}: lastRun.matched
-#. placeholder {1}: result.matched
-#: src/imports/screen.tsx
-msgid "Last import: {0} added, {1} unchanged"
-msgstr "Dernière importation : {0} ajoutés, {1} inchangés"
 
 #. placeholder {0}: lastRun.detail
 #: src/settings/automations/starter-config.tsx
@@ -2311,14 +2234,6 @@ msgstr "Accès aux détails de réunion activé"
 msgid "Meeting ends"
 msgstr "Fin de la réunion"
 
-#: src/imports/screen.tsx
-msgid "Meeting exports"
-msgstr "Exports de réunion"
-
-#: src/onboarding/index.tsx
-msgid "Meeting history imported"
-msgstr "Historique de réunion importé"
-
 #: src/session/components/outer-header/overflow/index.tsx
 msgid "Meeting info"
 msgstr "Informations sur la réunion"
@@ -2444,18 +2359,6 @@ msgstr "Micro indisponible"
 #: src/store/zustand/listener/general-shared.ts
 msgid "Microphone unavailable. System audio continues"
 msgstr "Micro indisponible. L'audio système continue"
-
-#: src/settings/general/storage/legacy-cleanup.tsx
-msgid "Migration complete"
-msgstr "Migration terminée"
-
-#: src/settings/general/storage/legacy-cleanup.tsx
-msgid "Migration needs attention"
-msgstr "Migration à surveiller"
-
-#: src/settings/general/storage/legacy-cleanup.tsx
-msgid "Migration status unavailable"
-msgstr "Statut de migration indisponible"
 
 #: src/main/windows-window-controls.tsx
 msgid "Minimize"
@@ -2593,7 +2496,6 @@ msgstr "Vue suivante de la note"
 msgid "NIM does not publish its model list: these are the models known for this protocol."
 msgstr "NIM ne publie pas sa liste de modèles : ceux-ci sont les modèles connus pour ce protocole."
 
-#: src/imports/screen.tsx
 #: src/settings/general/notification.tsx
 msgid "No apps found."
 msgstr "Aucune application trouvée."
@@ -2657,10 +2559,6 @@ msgstr "Aucun dossier pour le moment. Créez-en un pour regrouper les notes et l
 #: src/templates/template-icon-picker.tsx
 msgid "No icons found"
 msgstr "Aucune icône trouvée"
-
-#: src/imports/screen.tsx
-msgid "No imports yet."
-msgstr "Aucun import pour le moment."
 
 #: src/settings/dictionary/index.tsx
 msgid "No match"
@@ -2842,10 +2740,6 @@ msgstr "NVIDIA NIM : votre serveur Speech NIM WebSocket déployé, par exemple h
 msgid "Objects"
 msgstr "Objets"
 
-#: src/settings/general/storage/legacy-cleanup.tsx
-msgid "Older files that differ from your current data were kept as recovery copies. No action is required."
-msgstr "Les fichiers plus anciens qui diffèrent de vos données actuelles ont été conservés comme copies de récupération. Aucune action n'est requise."
-
 #: src/contacts/related-notes.tsx
 #: src/contacts/shared.tsx
 msgid "Oldest"
@@ -2868,7 +2762,6 @@ msgid "Only on-premise OpenAI-compatible servers are supported (vLLM, Ollama, ll
 msgstr "Seuls les serveurs compatibles OpenAI hébergés chez vous sont pris en charge (vLLM, Ollama, serveur llama.cpp, LM Studio…). L'adresse se termine en général par /v1, par exemple http://localhost:8000/v1."
 
 #: src/home/note-index.tsx
-#: src/settings/todo/permission.tsx
 #: src/shared/open-note-dialog.tsx
 msgid "Open"
 msgstr "Ouvrir"
@@ -2877,7 +2770,6 @@ msgstr "Ouvrir"
 #. placeholder {0}: title.toLowerCase()
 #: src/onboarding/permissions.tsx
 #: src/settings/general/permissions.tsx
-#: src/settings/todo/permission.tsx
 msgid "Open {0} settings"
 msgstr "Ouvrir les paramètres de {0}"
 
@@ -2969,10 +2861,6 @@ msgstr "Ouvre votre navigateur."
 msgid "Options"
 msgstr "Options"
 
-#: src/settings/todo/permission.tsx
-msgid "or"
-msgstr "ou"
-
 #: src/contacts/details.tsx
 msgid "Organization"
 msgstr "Organisation"
@@ -3058,10 +2946,6 @@ msgstr "Mise en pause…"
 #: src/session/components/note-input/transcript/renderer/speaker-assign.tsx
 msgid "People"
 msgstr "Personnes"
-
-#: src/settings/todo/permission.tsx
-msgid "permission panel."
-msgstr "panneau des autorisations."
 
 #: src/settings/general/index.tsx
 #: src/sidebar/settings-nav-groups.ts
@@ -3311,10 +3195,6 @@ msgstr "Rappeler aux participants l'enregistrement"
 msgid "Remind participants that the meeting is being transcribed."
 msgstr "Rappelez aux participants que la réunion est transcrite."
 
-#: src/settings/todo/provider-content.tsx
-msgid "Reminders"
-msgstr "Rappels"
-
 #: src/session/components/living-document/summary-switcher-view.tsx
 #: src/session/components/note-input/header-enhanced.tsx
 #: src/sidebar/automations.tsx
@@ -3397,15 +3277,6 @@ msgstr "Remplacer par..."
 msgid "Report a Bug"
 msgstr "Signaler un bug"
 
-#: src/settings/todo/permission.tsx
-msgid "Request"
-msgstr "Demander"
-
-#. placeholder {0}: title.toLowerCase()
-#: src/settings/todo/permission.tsx
-msgid "Request {0}"
-msgstr "Demander {0}"
-
 #. placeholder {0}: title.toLowerCase()
 #: src/settings/general/permissions.tsx
 msgid "Request {0} permission"
@@ -3419,15 +3290,7 @@ msgstr "Exiger Touch ID ou votre mot de passe à l'ouverture de Syntheo."
 msgid "Require Windows Hello face, PIN, or password when opening Syntheo."
 msgstr "Exiger la reconnaissance faciale Windows Hello, le code PIN ou le mot de passe à l'ouverture de Syntheo."
 
-#: src/shared/open-note-dialog.tsx
-#: src/shared/palette-settings-group.tsx
-#: src/sidebar/settings-search-results.tsx
-#: src/sidebar/settings.tsx
-msgid "Requires Syntheo Pro"
-msgstr "Nécessite Syntheo Pro"
-
 #: src/settings/ai/shared/server-address.tsx
-#: src/settings/todo/permission.tsx
 msgid "Reset"
 msgstr "Réinitialiser"
 
@@ -3483,7 +3346,6 @@ msgstr "Reprendre l'écoute"
 #: src/contacts/profile-photo.tsx
 #: src/session/components/note-input/enhanced/enhance-error.tsx
 #: src/settings/general/account-profile.tsx
-#: src/settings/general/storage/legacy-cleanup.tsx
 #: src/store/zustand/listener/general-live.ts
 msgid "Retry"
 msgstr "Réessayer"
@@ -3892,10 +3754,6 @@ msgstr "compétence, agent IA, assistant, installer"
 msgid "Skip"
 msgstr "Passer"
 
-#: src/onboarding/imports.tsx
-msgid "Skip for now"
-msgstr "Ignorer pour le moment"
-
 #: src/templates/template-icon-picker.tsx
 msgid "Smileys & People"
 msgstr "Smileys & personnes"
@@ -3971,10 +3829,6 @@ msgstr "Locuteur {number}"
 #: src/session/components/speaker-naming/speaker-card.tsx
 msgid "Speaker {number} · part {part}"
 msgstr "Locuteur {number} · partie {part}"
-
-#: src/settings/general/storage/legacy-cleanup.tsx
-msgid "SQLite migration verification is incomplete"
-msgstr "La vérification de la migration SQLite est incomplète"
 
 #: src/settings/automations/workflow-builder.tsx
 msgid "Stack another destination. Steps run top to bottom."
@@ -4296,10 +4150,6 @@ msgstr "Syntheo structure lui-même la synthèse, sans modèle fixe. Utilisé qu
 msgid "Syntheo uses it to recognize you among the participants of your meetings, so you are not counted twice. It stays on this device."
 msgstr "Syntheo s'en sert pour vous reconnaître parmi les participants de vos réunions, afin de ne pas vous compter deux fois. Elle reste sur cet appareil."
 
-#: src/settings/general/storage/legacy-cleanup.tsx
-msgid "Syntheo will retry automatically. This does not affect your notes."
-msgstr "Syntheo réessaiera automatiquement. Cela n'a aucune incidence sur vos notes."
-
 #: src/stt/auto-stop.ts
 msgid "Syntheo will stop listening in {seconds} seconds."
 msgstr "Syntheo arrêtera l'écoute dans {seconds} s."
@@ -4608,14 +4458,6 @@ msgstr "Cette note a été modifiée sur un autre appareil en même temps. La mo
 msgid "This recording is using batch transcription, so the transcript isn't available to chat yet. Ask again after transcription finishes, or switch to a Pro model for live transcription."
 msgstr "Cet enregistrement utilise la transcription par lots, le transcript n'est donc pas encore disponible pour le chat. Veuillez redemander après la fin de la transcription, ou passer à un modèle Pro pour une transcription en direct."
 
-#: src/settings/plan-gate.tsx
-msgid "This requires Syntheo Enterprise"
-msgstr "Cela nécessite Syntheo Enterprise"
-
-#: src/settings/plan-gate.tsx
-msgid "This requires Syntheo Pro"
-msgstr "Cela nécessite Syntheo Pro"
-
 #: src/settings/ai/stt/server-card.tsx
 msgid "This server answers as {detectedLabel}."
 msgstr "Ce serveur répond comme {detectedLabel}."
@@ -4624,19 +4466,9 @@ msgstr "Ce serveur répond comme {detectedLabel}."
 msgid "This transcription is incomplete."
 msgstr "Cette transcription est incomplète."
 
-#. placeholder {0}: status.fileCount
-#. placeholder {1}: formatBytes(status.totalBytes)
-#: src/settings/general/storage/legacy-cleanup.tsx
-msgid "This will remove {0} legacy files and free {1}. Your app data will not be affected because the migration to SQLite is complete."
-msgstr "Cela supprimera {0} fichiers hérités et libérera {1}. Vos données d'application ne seront pas affectées car la migration vers SQLite est terminée."
-
 #: src/session/components/living-document/welcome-card.tsx
 msgid "Three settings to get started"
 msgstr "Trois réglages pour bien démarrer"
-
-#: src/settings/todo/index.tsx
-msgid "Ticket"
-msgstr "Ticket"
 
 #: src/settings/search-index.ts
 msgid "time, clock, hour, AM, PM"
@@ -4873,10 +4705,6 @@ msgstr "Session sans titre"
 msgid "update, new version, upgrade"
 msgstr "mise à jour, nouvelle version, actualiser"
 
-#: src/settings/plan-gate.tsx
-msgid "Upgrade"
-msgstr "Mettre à niveau"
-
 #: src/session/components/note-input/transcript/screens/empty.tsx
 #: src/session/components/outer-header/overflow/index.tsx
 msgid "Upload audio"
@@ -4942,10 +4770,6 @@ msgstr "Utilisé pour"
 #: src/settings/general/spoken-languages.tsx
 msgid "Used for transcription and automatic summary language detection."
 msgstr "Utilisé pour la transcription et la détection automatique de la langue des résumés."
-
-#: src/settings/general/storage/legacy-cleanup.tsx
-msgid "Verifying the SQLite migration status"
-msgstr "Vérification de l'état de la migration SQLite"
 
 #: src/session/components/living-document/summary-version.tsx
 msgid "Version {versionNumber}"
@@ -5132,10 +4956,6 @@ msgstr "Vous"
 #: src/stt/live-transcript-interrupted.ts
 msgid "you are offline"
 msgstr "vous êtes hors ligne"
-
-#: src/settings/todo/permission.tsx
-msgid "You can"
-msgstr "Vous pouvez"
 
 #: src/templates/auto-format-examples-dialog.tsx
 msgid "You can use up to three example summaries."

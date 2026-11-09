@@ -23,7 +23,6 @@ export type SettingsSearchResult = {
   keywords: string;
   // « Réunions › Audio » : page, puis partie de page.
   breadcrumb: string;
-  requiresPro: boolean;
 };
 
 export function normalizeSearchText(text: string) {
@@ -65,7 +64,6 @@ export function resolveSettingsIndex(
         section,
         keywords: i18n._(item.keywords),
         breadcrumb: section ? `${pageLabel} › ${section}` : pageLabel,
-        requiresPro: Boolean(item.requiresPro),
       };
     });
 }

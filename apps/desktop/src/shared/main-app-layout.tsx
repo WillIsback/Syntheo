@@ -6,7 +6,6 @@ import { useMountEffect } from "@syntheo/ui/hooks/use-mount-effect";
 
 import { openNewNoteAndListen, useNewNote } from "./useNewNote";
 
-import { LocalBillingProvider } from "~/billing/local-billing";
 import { useFolderSelection } from "~/folders/selection";
 import { openFoldersFromNavigation } from "~/shared/folders-navigation";
 import { useZoomShortcuts } from "~/shared/zoom";
@@ -17,11 +16,7 @@ export default function MainAppLayout() {
   useNavigationEvents();
   useZoomShortcuts();
 
-  return (
-    <LocalBillingProvider>
-      <MainAppContent />
-    </LocalBillingProvider>
-  );
+  return <MainAppContent />;
 }
 
 function MainAppContent() {

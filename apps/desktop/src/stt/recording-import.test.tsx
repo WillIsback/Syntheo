@@ -25,10 +25,6 @@ vi.mock("~/db", () => ({
 vi.mock("@syntheo/plugin-fs-sync", () => ({
   commands: { audioImport: async () => ({ status: "ok", data: "/audio.wav" }) },
 }));
-vi.mock("~/db/cloudsync-activity", () => ({
-  withCloudsyncActivity: (_kind: string, _id: string, run: () => unknown) =>
-    run(),
-}));
 vi.mock("~/session/queries", () => ({ useSession: () => ({ id: "meeting" }) }));
 vi.mock("~/stt/useRunBatch", () => ({ useRunBatch: () => mocks.transcribe }));
 vi.mock("~/services/enhancer", () => ({

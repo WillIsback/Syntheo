@@ -18,11 +18,6 @@ import {
   useChatContextPipeline,
 } from "~/chat/context/use-chat-context-pipeline";
 import {
-  createChatCloudsyncActivityController,
-  guardChatTransport,
-  type GuardedChatPreflight,
-} from "~/chat/store/cloudsync-activity";
-import {
   consumeFailedChatGroupCreate,
   hasPendingChatPersist,
   waitForPendingChatPersists,
@@ -40,6 +35,11 @@ import {
   upsertChatMessage,
   usePersistedChatMessages,
 } from "~/chat/store/queries";
+import {
+  createChatPreflightController,
+  guardChatTransport,
+  type GuardedChatPreflight,
+} from "~/chat/store/send-preflight";
 import { stripEphemeralToolContext } from "~/chat/tools/strip-ephemeral-tool-context";
 import { useTransport } from "~/chat/transport/use-transport";
 import type {
@@ -148,11 +148,11 @@ function ChatSessionLifecycle({
   );
   const acceptFinishedChatPersistenceRef = useRef(true);
   const regenerateRequestInFlightRef = useRef(false);
-  const chatCloudsyncActivityRef = useRef<ReturnType<
-    typeof createChatCloudsyncActivityController
+  const chatPreflightsRef = useRef<ReturnType<
+    typeof createChatPreflightController
   > | null>(null);
-  chatCloudsyncActivityRef.current ??= createChatCloudsyncActivityController();
-  const chatCloudsyncActivity = chatCloudsyncActivityRef.current;
+  chatPreflightsRef.current ??= createChatPreflightController();
+  const chatPreflights = chatPreflightsRef.current;
   const takeTransportPreflight = useCallback((logicalKey: string) => {
     const queue = pendingTransportPreflightsRef.current.get(logicalKey);
     const preflight = queue?.shift();
@@ -230,7 +230,7 @@ function ChatSessionLifecycle({
                 latestTransportRef.current ?? unavailableChatTransport
               ).reconnectToStream(options),
           },
-          chatCloudsyncActivity,
+          chatPreflights,
           { beforeSend: takeTransportPreflight },
         ),
         onFinish: ({ message, messages, isAbort, isError }) => {
@@ -287,13 +287,10 @@ function ChatSessionLifecycle({
             !retainPriorRegeneration;
 
           if (!currentUserId || (!submittedUserMessage && !persistAssistant)) {
-            if (submittedUserMessage) {
-              chatCloudsyncActivity.finish(submittedUserMessage.id);
-            }
             return;
           }
 
-          const finishedPersist = chatCloudsyncActivity.runWithLease(
+          const finishedPersist = chatPreflights.runAfterPreflight(
             submittedUserMessage?.id ?? sanitizedMessage.id,
             async () => {
               // Outbound user writes may still be retrying; settle them first
@@ -397,7 +394,7 @@ function ChatSessionLifecycle({
           }
         },
       }),
-    [chatCloudsyncActivity, sessionId, takeTransportPreflight],
+    [chatPreflights, sessionId, takeTransportPreflight],
   );
 
   const {
@@ -416,7 +413,7 @@ function ChatSessionLifecycle({
 
   useMountEffect(() => {
     acceptFinishedChatPersistenceRef.current = true;
-    chatCloudsyncActivity.resume();
+    chatPreflights.resume();
     return () => {
       acceptFinishedChatPersistenceRef.current = false;
       const pendingChatGroupIds = new Set([
@@ -433,7 +430,7 @@ function ChatSessionLifecycle({
       } catch (error) {
         console.error("Failed to stop chat response during cleanup", error);
       }
-      const cleanup = Promise.resolve().then(async () => {
+      void Promise.resolve().then(async () => {
         try {
           await Promise.resolve();
           await Promise.allSettled([
@@ -445,7 +442,7 @@ function ChatSessionLifecycle({
           console.error("Failed to flush chat writes during cleanup", error);
         }
       });
-      void chatCloudsyncActivity.dispose(cleanup);
+      chatPreflights.dispose();
       pendingTransportPreflightsRef.current.clear();
       pendingRegenerationTombstonesRef.current.clear();
     };
@@ -498,7 +495,7 @@ function ChatSessionLifecycle({
           },
         };
         chatSetMessages((current) => [...current, message, assistantMessage]);
-        const localResponse = chatCloudsyncActivity.runWithLease(
+        const localResponse = chatPreflights.runAfterPreflight(
           message.id,
           async () => {
             try {
@@ -583,7 +580,7 @@ function ChatSessionLifecycle({
       });
     },
     [
-      chatCloudsyncActivity,
+      chatPreflights,
       chatSendMessage,
       chatSetMessages,
       isTranscriptUnavailable,

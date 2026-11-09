@@ -1,11 +1,6 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-import {
-  beginCloudsyncActivity,
-  endCloudsyncActivity,
-} from "@syntheo/plugin-db";
-
 import { BatchResponseProcessingError } from "./batch-response-processing-error";
 import { completeCaptureTranscript } from "./capture-completion";
 import {
@@ -28,7 +23,6 @@ const {
   useSessionMock,
   useSessionParticipantsMock,
   useSTTConnectionMock,
-  useBillingAccessMock,
   useConfigValueMock,
   isSupportedLanguagesBatchMock,
   isSupportedLanguagesLiveMock,
@@ -47,7 +41,6 @@ const {
   useSessionMock: vi.fn(),
   useSessionParticipantsMock: vi.fn(),
   useSTTConnectionMock: vi.fn(),
-  useBillingAccessMock: vi.fn(),
   useConfigValueMock: vi.fn(),
   isSupportedLanguagesBatchMock: vi.fn(),
   isSupportedLanguagesLiveMock: vi.fn(),
@@ -90,10 +83,6 @@ vi.mock("@syntheo/ui/components/ui/toast", () => ({
   toast: {
     warning: toastWarningMock,
   },
-}));
-
-vi.mock("~/billing/billing-context", () => ({
-  useBillingAccess: useBillingAccessMock,
 }));
 
 vi.mock("~/services/audio-retention", () => ({
@@ -247,9 +236,6 @@ describe("useRunBatch", () => {
         apiKey: "test-key",
       },
     });
-    useBillingAccessMock.mockReturnValue({
-      isPaid: false,
-    });
     useConfigValueMock.mockImplementation((key) =>
       key === "ai_language" ? "en" : [],
     );
@@ -266,9 +252,7 @@ describe("useRunBatch", () => {
   });
 
   test("run_batch_uses_local_provider_without_cloud_session", async () => {
-    // Même un état « payant » hérité ne déclenche plus de session cloud :
-    // le batch part sur l'endpoint on-premise configuré.
-    useBillingAccessMock.mockReturnValue({ isPaid: true });
+    // Aucune session cloud : le batch part sur l'endpoint on-premise configuré.
     useSTTConnectionMock.mockReturnValue({
       conn: {
         provider: "openai",
@@ -397,10 +381,6 @@ describe("useRunBatch", () => {
     finishTranscription?.();
     await act(async () => await run);
 
-    expect(beginCloudsyncActivity).toHaveBeenCalledWith(
-      "transcription",
-      "session-1:generated-1",
-    );
     expect(saveBatchTranscriptMock).toHaveBeenCalledWith(
       expect.objectContaining({
         session_id: "session-1",
@@ -430,11 +410,6 @@ describe("useRunBatch", () => {
     );
     expect(saveBatchTranscriptMock.mock.invocationCallOrder[0]).toBeLessThan(
       deleteProcessedAudioForRetentionMock.mock.invocationCallOrder[0],
-    );
-    expect(
-      deleteProcessedAudioForRetentionMock.mock.invocationCallOrder[0],
-    ).toBeLessThan(
-      vi.mocked(endCloudsyncActivity).mock.invocationCallOrder[0]!,
     );
   });
 
@@ -1029,7 +1004,6 @@ describe("no local fallback", () => {
   test("no_local_fallback_when_endpoint_has_no_batch", async () => {
     platformMock.mockReturnValue("macos");
     archMock.mockReturnValue("aarch64");
-    useBillingAccessMock.mockReturnValue({ isPaid: true });
     useSTTConnectionMock.mockReturnValue({
       conn: {
         provider: "nvidia",

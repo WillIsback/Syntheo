@@ -17,7 +17,6 @@ import { DictationController } from "./controller";
 import { waitForDictationPanel } from "./panel";
 import { useDictationStatus } from "./state";
 
-import { useBillingAccess } from "~/billing/billing-context";
 import { useSettingsReady } from "~/settings/queries";
 import { useConfigValue } from "~/shared/config";
 import { useListener } from "~/stt/contexts";
@@ -33,7 +32,6 @@ export function waitForDictationCleanup() {
 }
 
 export function DictationLifecycle() {
-  const { isPro, isReady } = useBillingAccess();
   const settingsReady = useSettingsReady();
   const enabled = useConfigValue("dictation_enabled");
   const shortcut = useConfigValue("dictation_shortcut");
@@ -47,7 +45,7 @@ export function DictationLifecycle() {
   );
 
   // Syntheo n'a pas de compte : la dictée ne dépend pas d'une session.
-  if (!isReady || !isPro || !settingsReady || !enabled) return null;
+  if (!settingsReady || !enabled) return null;
   return (
     <TranscriptRetention key="local">
       {!meetingActive && !capturingShortcut && (

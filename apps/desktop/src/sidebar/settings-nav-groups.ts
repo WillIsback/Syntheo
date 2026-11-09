@@ -4,7 +4,6 @@ import {
   Bell,
   BookOpen,
   Code,
-  DownloadSimple,
   FileText,
   FolderSimple,
   Lightning,
@@ -28,7 +27,6 @@ type SettingsNavItem =
       id: SettingsTab;
       label: string;
       icon: Icon;
-      requiresPro?: boolean;
       // Serveur dont l'état s'affiche en pastille à droite de l'entrée.
       server?: "stt" | "llm";
     }
@@ -37,7 +35,6 @@ type SettingsNavItem =
       label: string;
       icon: Icon;
       destination: TabInput;
-      requiresPro?: boolean;
       server?: undefined;
     };
 
@@ -85,13 +82,11 @@ export function useSettingsNavGroups(): SettingsNavGroup[] {
           id: "dictation",
           label: t`Dictation`,
           icon: Microphone,
-          requiresPro: true,
         },
         {
           id: "dictionary",
           label: t`Dictionary`,
           icon: BookOpen,
-          requiresPro: true,
         },
       ],
     },
@@ -129,13 +124,11 @@ export function useSettingsNavGroups(): SettingsNavGroup[] {
           icon: ShieldCheck,
         },
         { id: "permissions", label: t`Permissions`, icon: Lock },
-        { id: "imports", label: t`Imports`, icon: DownloadSimple },
         {
           id: "automations",
           label: t`Automations`,
           icon: Lightning,
           destination: { type: "automations" },
-          requiresPro: true,
         },
         { id: "developers", label: t`Developers`, icon: Code },
       ],
