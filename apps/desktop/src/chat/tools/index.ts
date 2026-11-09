@@ -10,6 +10,7 @@ import type {
   TranscriptPage,
 } from "@syntheo/plugin-db";
 
+import type { AutomationChatTools } from "./automations";
 import { buildEditMemoTool } from "./edit-memo";
 import { buildEditSummaryTool } from "./edit-summary";
 import { buildReadFolderMaterialTool } from "./folder-materials";
@@ -300,6 +301,14 @@ type LocalTools = {
   };
 };
 
-export type Tools = LocalTools;
+// Outils du chat de l'éditeur d'automatisations (portée `automations`).
+type AutomationTools = {
+  [K in keyof AutomationChatTools]: {
+    input: InferToolInput<AutomationChatTools[K]>;
+    output: InferToolOutput<AutomationChatTools[K]>;
+  };
+};
+
+export type Tools = LocalTools & AutomationTools;
 
 export type ToolPartType = `tool-${keyof Tools}`;

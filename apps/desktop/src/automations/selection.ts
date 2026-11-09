@@ -20,6 +20,8 @@ interface AutomationSelectionState {
   selectChatAutomation: (groupId: string) => void;
   selectDraft: (draftId: string) => void;
   selectWorkflow: (workflowId: string, chatGroupId?: string | null) => void;
+  /** Ouvre une automatisation créée par le chat en gardant le fil en cours. */
+  adoptWorkflow: (workflowId: string) => void;
   startDraft: () => void;
   removeDraft: (draftId: string) => void;
   clearSelection: (selection: AutomationSelection) => void;
@@ -107,6 +109,11 @@ export const useAutomationSelection = create<AutomationSelectionState>(
         if (!chatGroupId) {
           void restoreWorkflowChat(workflowId);
         }
+      },
+      // Le chat qui vient de créer l'automatisation continue : pas de
+      // changement de fil, contrairement à `selectWorkflow`.
+      adoptWorkflow: (workflowId) => {
+        set({ selection: { kind: "workflow", workflowId } });
       },
       startDraft: () => {
         const draftId = id();

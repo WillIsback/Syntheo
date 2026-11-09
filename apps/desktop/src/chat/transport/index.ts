@@ -21,7 +21,7 @@ import {
 } from "../context/refs";
 import { CONTEXT_TEXT_FIELD } from "../tools/context-text";
 import type { ChatToolContext } from "../tools/current-session";
-import type { SyntheoUIMessage } from "../types";
+import type { ChatScope, SyntheoUIMessage } from "../types";
 import {
   getMeetingIdsFromSearchOutput,
   hasContextText,
@@ -37,6 +37,22 @@ export type ResolvedChatContext =
   | { kind: "session"; context: SessionContext }
   | { kind: "text"; text: string };
 
+/** Outils et consigne propres à une portée (le chat de l'éditeur d'automatisations). */
+export type ScopedChatConfig = { tools: ToolSet; systemPrompt: string };
+
+/** Portée du fil : celle du dernier message de l'utilisateur. */
+export function getChatScopeFromMessages(
+  messages: SyntheoUIMessage[],
+): ChatScope {
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    const message = messages[i];
+    if (message?.role === "user") {
+      return message.metadata?.chatScope ?? "general";
+    }
+  }
+  return "general";
+}
+
 export class CustomChatTransport implements ChatTransport<SyntheoUIMessage> {
   constructor(
     private readonly model: LanguageModel,
@@ -45,6 +61,9 @@ export class CustomChatTransport implements ChatTransport<SyntheoUIMessage> {
     private readonly resolveContextRef?: (
       ref: ContextRef,
     ) => Promise<ResolvedChatContext | null>,
+    private readonly scopedChats: Partial<
+      Record<ChatScope, ScopedChatConfig>
+    > = {},
   ) {}
 
   private async collectContexts(
@@ -215,7 +234,11 @@ export class CustomChatTransport implements ChatTransport<SyntheoUIMessage> {
     options,
   ) => {
     const cache = new Map<string, string | null>();
-    const tools = this.buildHydratingToolSet(cache);
+    // Une portée dédiée remplace les outils et la consigne du chat général :
+    // le chat de l'éditeur d'automatisations n'a que ses propres outils.
+    const scoped = this.scopedChats[getChatScopeFromMessages(options.messages)];
+    const tools = scoped ? scoped.tools : this.buildHydratingToolSet(cache);
+    const systemPrompt = scoped ? scoped.systemPrompt : this.systemPrompt;
 
     const currentSessionId = getCurrentSessionIdFromMessages(options.messages);
     const effectiveContextRefs = orderPromptContextRefs(
@@ -252,7 +275,7 @@ export class CustomChatTransport implements ChatTransport<SyntheoUIMessage> {
 
     const agent = new ToolLoopAgent({
       model: this.model,
-      instructions: this.systemPrompt,
+      instructions: systemPrompt,
       tools,
       experimental_context: {
         currentSessionId,
@@ -265,7 +288,7 @@ export class CustomChatTransport implements ChatTransport<SyntheoUIMessage> {
           ? {
               toolChoice: "none" as const,
               system: [
-                this.systemPrompt,
+                systemPrompt,
                 "This is the final step of this turn. Report verified results and failures. If work remains, explicitly say it is incomplete and offer to continue. Include the original selection/query or series ID, exact destination, completed counts, next unprocessed offset, and any listed but unprocessed IDs so the next turn can resume. Never claim all meetings were moved unless pagination and moves both completed.",
               ]
                 .filter(Boolean)
