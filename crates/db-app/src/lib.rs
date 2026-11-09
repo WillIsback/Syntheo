@@ -628,6 +628,11 @@ pub const APP_MIGRATION_STEPS: &[syntheo_db_migrate::MigrationStep] = &[
         scope: syntheo_db_migrate::MigrationScope::Plain,
         sql: include_str!("../migrations/20261109120000_drop_calendar.sql"),
     },
+    syntheo_db_migrate::MigrationStep {
+        id: "20261109130000_drop_cloud_sharing",
+        scope: syntheo_db_migrate::MigrationScope::Plain,
+        sql: include_str!("../migrations/20261109130000_drop_cloud_sharing.sql"),
+    },
 ];
 
 pub fn schema() -> syntheo_db_migrate::DbSchema {
@@ -661,8 +666,6 @@ const CURRENT_SHARED_SESSION_CACHE_CHECKSUM: &str = "84376d223c0b1ca3298810b101f
 const ATTACHMENT_TRANSFER_JOBS_MIGRATION_VERSION: i64 = 20260717150000;
 const LEGACY_ATTACHMENT_TRANSFER_JOBS_CHECKSUM: &str = "fd846a54c653d8e737371a950747b442bba2da055566dbcd35907b36fe7829a3a09c81052346bb05100ba71be552efc0";
 const CURRENT_ATTACHMENT_TRANSFER_JOBS_CHECKSUM: &str = "9250233e7b51b83bb74ef4e4af159a9c2bbc753ee64751cac8316968b66bb1b2e0e224770d8b63a631350183dc81c2e0";
-const LEGACY_ATTACHMENT_TRANSFER_JOBS_SCHEMA_CHECKSUM: &str = "5702d2831ccfe75bfca957aa6d37cacc54347090c0d106aaaa9c3af124fcf7e57e49b0432ad5191ff3075f2d9d489916";
-const CURRENT_ATTACHMENT_TRANSFER_JOBS_SCHEMA_CHECKSUM: &str = "3beb182b60f84e0f53ae6069fc7a6e4ba28e51e87d37e4fda7e5ab9b8e8ca713bd43bb8bd79100c6116a4d23dfff55ef";
 
 #[derive(Debug)]
 pub enum AppSchemaError {
@@ -713,7 +716,6 @@ pub async fn prepare_schema_with_progress(
     repair_legacy_attachment_transfer_jobs_migration(db.pool()).await?;
     syntheo_db_migrate::migrate_with_progress(db, schema(), on_migration_progress).await?;
     repair_missing_core_tables(db.pool(), templates_missing_before_migration).await?;
-    backfill_session_share_activation(db.pool()).await?;
     ensure_local_workspace_binding(db.pool()).await?;
     apply_managed_settings(db.pool()).await?;
     Ok(())
@@ -832,72 +834,19 @@ async fn adopt_legacy_mobile_migration(
     Ok(())
 }
 
-async fn backfill_session_share_activation(pool: &sqlx::SqlitePool) -> Result<(), sqlx::Error> {
-    sqlx::query(
-        "INSERT OR IGNORE INTO session_share_activation (
-                viewer_user_id,
-                share_id,
-                session_id,
-                activated_at
-             )
-             SELECT
-                viewer_user_id,
-                share_id,
-                session_id,
-                cached_at
-             FROM shared_session_cache
-             WHERE manage_access = 1
-               AND access_version > 1",
-    )
-    .execute(pool)
-    .await?;
-    sqlx::query(
-        "UPDATE sessions SET share_activation_json = (
-          SELECT json_group_object(activation.viewer_user_id,
-            json_object('share_id', activation.share_id, 'activated_at', activation.activated_at))
-          FROM session_share_activation AS activation
-          JOIN shared_session_cache AS cache
-            ON cache.viewer_user_id = activation.viewer_user_id
-            AND cache.share_id = activation.share_id
-            AND cache.session_id = activation.session_id AND cache.manage_access = 1
-          WHERE activation.session_id = sessions.id
-        ) WHERE deleted_at IS NULL AND share_activation_json = '{}' AND EXISTS (
-          SELECT 1 FROM session_share_activation AS activation
-          JOIN shared_session_cache AS cache
-            ON cache.viewer_user_id = activation.viewer_user_id
-            AND cache.share_id = activation.share_id
-            AND cache.session_id = activation.session_id AND cache.manage_access = 1
-          WHERE activation.session_id = sessions.id
-        )",
-    )
-    .execute(pool)
-    .await?;
-    Ok(())
-}
-
+// Une base créée par une préversion garde l'empreinte d'une ancienne version
+// de la migration `attachment_transfer_jobs`. La table est supprimée par
+// `20261109130000_drop_cloud_sharing` : il suffit d'enregistrer l'empreinte
+// actuelle pour que l'historique des migrations reste cohérent.
 async fn repair_legacy_attachment_transfer_jobs_migration(
     pool: &sqlx::SqlitePool,
 ) -> Result<(), AppSchemaError> {
-    let migration_table_exists: bool = sqlx::query_scalar(
-        "SELECT EXISTS(
-            SELECT 1 FROM sqlite_master
-            WHERE type = 'table' AND name = '_sqlx_migrations'
-        )",
-    )
-    .fetch_one(pool)
-    .await?;
-    if !migration_table_exists {
+    if !migration_table_exists(pool).await? {
         return Ok(());
     }
 
-    let checksum: Option<String> = sqlx::query_scalar(
-        "SELECT lower(hex(checksum))
-         FROM _sqlx_migrations
-         WHERE version = ? AND success = 1",
-    )
-    .bind(ATTACHMENT_TRANSFER_JOBS_MIGRATION_VERSION)
-    .fetch_optional(pool)
-    .await?;
+    let checksum =
+        applied_migration_checksum_hex(pool, ATTACHMENT_TRANSFER_JOBS_MIGRATION_VERSION).await?;
     match checksum.as_deref() {
         None | Some(CURRENT_ATTACHMENT_TRANSFER_JOBS_CHECKSUM) => return Ok(()),
         Some(LEGACY_ATTACHMENT_TRANSFER_JOBS_CHECKSUM) => {}
@@ -911,74 +860,6 @@ async fn repair_legacy_attachment_transfer_jobs_migration(
     let current_migration_checksum = migration_checksum(include_str!(
         "../migrations/20260717150000_attachment_transfer_jobs.sql"
     ));
-    if checksum_hex(&current_migration_checksum) != CURRENT_ATTACHMENT_TRANSFER_JOBS_CHECKSUM {
-        return Err(AppSchemaError::AttachmentTransferJobsRepair(
-            "compiled attachment-transfer jobs migration has an unexpected checksum",
-        ));
-    }
-
-    let mut transaction = pool.begin_with("BEGIN IMMEDIATE").await?;
-    let locked_checksum: Option<String> = sqlx::query_scalar(
-        "SELECT lower(hex(checksum))
-         FROM _sqlx_migrations
-         WHERE version = ? AND success = 1",
-    )
-    .bind(ATTACHMENT_TRANSFER_JOBS_MIGRATION_VERSION)
-    .fetch_optional(&mut *transaction)
-    .await?;
-    match locked_checksum.as_deref() {
-        Some(LEGACY_ATTACHMENT_TRANSFER_JOBS_CHECKSUM) => {}
-        Some(CURRENT_ATTACHMENT_TRANSFER_JOBS_CHECKSUM) => {
-            transaction.commit().await?;
-            return Ok(());
-        }
-        _ => {
-            return Err(AppSchemaError::AttachmentTransferJobsRepair(
-                "attachment-transfer jobs migration changed during repair",
-            ));
-        }
-    }
-
-    let legacy_schema_checksum = attachment_transfer_jobs_schema_checksum(&mut transaction).await?;
-    if legacy_schema_checksum != LEGACY_ATTACHMENT_TRANSFER_JOBS_SCHEMA_CHECKSUM {
-        return Err(AppSchemaError::AttachmentTransferJobsRepair(
-            "attachment-transfer jobs migration has an unexpected schema",
-        ));
-    }
-
-    // Only the queue's uniqueness rules changed; keep every transfer job intact.
-    sqlx::raw_sql(
-        "DROP INDEX idx_attachment_transfer_jobs_delete_object;
-         DROP INDEX idx_attachment_transfer_jobs_upload_object_id;
-         DROP INDEX idx_attachment_transfer_jobs_delete_object_id;
-
-         CREATE UNIQUE INDEX idx_attachment_transfer_jobs_delete_object
-         ON attachment_transfer_jobs(object_key)
-         WHERE direction = 'delete' AND phase <> 'completed';
-
-         CREATE UNIQUE INDEX idx_attachment_transfer_jobs_upload_object_id
-         ON attachment_transfer_jobs(remote_object_id)
-         WHERE direction = 'upload'
-           AND remote_object_id <> ''
-           AND phase <> 'completed';
-
-         CREATE UNIQUE INDEX idx_attachment_transfer_jobs_delete_object_id
-         ON attachment_transfer_jobs(remote_object_id)
-         WHERE direction = 'delete'
-           AND remote_object_id <> ''
-           AND phase <> 'completed';",
-    )
-    .execute(&mut *transaction)
-    .await?;
-
-    let current_schema_checksum =
-        attachment_transfer_jobs_schema_checksum(&mut transaction).await?;
-    if current_schema_checksum != CURRENT_ATTACHMENT_TRANSFER_JOBS_SCHEMA_CHECKSUM {
-        return Err(AppSchemaError::AttachmentTransferJobsRepair(
-            "attachment-transfer jobs repair produced an unexpected schema",
-        ));
-    }
-
     let result = sqlx::query(
         "UPDATE _sqlx_migrations
          SET checksum = ?
@@ -987,76 +868,29 @@ async fn repair_legacy_attachment_transfer_jobs_migration(
     .bind(current_migration_checksum.as_slice())
     .bind(ATTACHMENT_TRANSFER_JOBS_MIGRATION_VERSION)
     .bind(LEGACY_ATTACHMENT_TRANSFER_JOBS_CHECKSUM)
-    .execute(&mut *transaction)
+    .execute(pool)
     .await?;
     if result.rows_affected() != 1 {
         return Err(AppSchemaError::AttachmentTransferJobsRepair(
             "attachment-transfer jobs migration changed during repair",
         ));
     }
-
-    transaction.commit().await?;
     Ok(())
 }
 
-async fn attachment_transfer_jobs_schema_checksum(
-    transaction: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
-) -> Result<String, sqlx::Error> {
-    let objects: Vec<(String, String, String)> = sqlx::query_as(
-        "SELECT type, name, sql
-         FROM sqlite_master
-         WHERE sql IS NOT NULL
-           AND (
-             (type = 'table' AND name = 'attachment_transfer_jobs')
-             OR (
-               type IN ('index', 'trigger')
-               AND tbl_name = 'attachment_transfer_jobs'
-             )
-           )
-         ORDER BY type, name",
-    )
-    .fetch_all(&mut **transaction)
-    .await?;
-    let mut schema = String::new();
-    for (object_type, name, sql) in objects {
-        schema.push_str(&object_type);
-        schema.push('\n');
-        schema.push_str(&name);
-        schema.push('\n');
-        schema.push_str(&normalize_schema_sql(&sql));
-        schema.push('\n');
-    }
-
-    Ok(checksum_hex(&migration_checksum(&schema)))
-}
-
-fn normalize_schema_sql(sql: &str) -> String {
-    sql.split_whitespace().collect::<Vec<_>>().join(" ")
-}
-
+// Même cas pour `shared_session_cache` : l'ancienne table n'a pas la même
+// forme. Elle est recréée vide dans sa forme actuelle, pour que les
+// migrations suivantes s'appliquent, puis `20261109130000_drop_cloud_sharing`
+// la supprime.
 async fn repair_legacy_shared_session_cache_migration(
     pool: &sqlx::SqlitePool,
 ) -> Result<(), AppSchemaError> {
-    let migration_table_exists: bool = sqlx::query_scalar(
-        "SELECT EXISTS(
-            SELECT 1 FROM sqlite_master
-            WHERE type = 'table' AND name = '_sqlx_migrations'
-        )",
-    )
-    .fetch_one(pool)
-    .await?;
-    if !migration_table_exists {
+    if !migration_table_exists(pool).await? {
         return Ok(());
     }
 
-    let checksum: Option<String> = sqlx::query_scalar(
-        "SELECT lower(hex(checksum))
-         FROM _sqlx_migrations
-         WHERE version = ? AND success = 1",
-    )
-    .bind(SHARED_SESSION_CACHE_MIGRATION_VERSION)
-    .fetch_optional(pool)
-    .await?;
+    let checksum =
+        applied_migration_checksum_hex(pool, SHARED_SESSION_CACHE_MIGRATION_VERSION).await?;
     match checksum.as_deref() {
         None | Some(CURRENT_SHARED_SESSION_CACHE_CHECKSUM) => return Ok(()),
         Some(LEGACY_SHARED_SESSION_CACHE_CHECKSUM) => {}
@@ -1067,145 +901,20 @@ async fn repair_legacy_shared_session_cache_migration(
         }
     }
 
-    let current_migration_checksum = migration_checksum(include_str!(
-        "../migrations/20260716173000_shared_session_cache.sql"
-    ));
-    if checksum_hex(&current_migration_checksum) != CURRENT_SHARED_SESSION_CACHE_CHECKSUM {
-        return Err(AppSchemaError::SharedSessionCacheRepair(
-            "compiled shared-session cache migration has an unexpected checksum",
-        ));
-    }
-
+    let current_sql = include_str!("../migrations/20260716173000_shared_session_cache.sql");
     let mut transaction = pool.begin_with("BEGIN IMMEDIATE").await?;
-    let locked_checksum: Option<String> = sqlx::query_scalar(
-        "SELECT lower(hex(checksum))
-         FROM _sqlx_migrations
-         WHERE version = ? AND success = 1",
-    )
-    .bind(SHARED_SESSION_CACHE_MIGRATION_VERSION)
-    .fetch_optional(&mut *transaction)
-    .await?;
-    match locked_checksum.as_deref() {
-        Some(LEGACY_SHARED_SESSION_CACHE_CHECKSUM) => {}
-        Some(CURRENT_SHARED_SESSION_CACHE_CHECKSUM) => {
-            transaction.commit().await?;
-            return Ok(());
-        }
-        _ => {
-            return Err(AppSchemaError::SharedSessionCacheRepair(
-                "shared-session cache migration changed during repair",
-            ));
-        }
-    }
-
-    let table_exists: bool = sqlx::query_scalar(
-        "SELECT EXISTS(
-            SELECT 1 FROM sqlite_master
-            WHERE type = 'table' AND name = 'shared_session_cache'
-        )",
-    )
-    .fetch_one(&mut *transaction)
-    .await?;
-    let has_viewer_user_id = table_exists
-        && shared_session_cache_column_exists(&mut transaction, "viewer_user_id").await?;
-    let share_id_is_primary_key: bool = if table_exists {
-        sqlx::query_scalar(
-            "SELECT EXISTS(
-                SELECT 1 FROM pragma_table_info('shared_session_cache')
-                WHERE name = 'share_id' AND pk = 1
-            )",
-        )
-        .fetch_one(&mut *transaction)
-        .await?
-    } else {
-        false
-    };
-    if !table_exists || has_viewer_user_id || !share_id_is_primary_key {
-        return Err(AppSchemaError::SharedSessionCacheRepair(
-            "legacy shared-session cache migration has an unexpected schema",
-        ));
-    }
-
-    let attachments_checksum = applied_migration_checksum(&mut transaction, 20260717172000).await?;
-    let expected_attachments_checksum = migration_checksum(include_str!(
-        "../migrations/20260717172000_shared_session_cache_attachments.sql"
-    ));
-    if attachments_checksum
-        .as_deref()
-        .is_some_and(|checksum| checksum != expected_attachments_checksum.as_slice())
-    {
-        return Err(AppSchemaError::SharedSessionCacheRepair(
-            "shared-session cache attachment migration has an unknown checksum",
-        ));
-    }
-    let attachments_applied = attachments_checksum.is_some();
-    let attachments_present =
-        shared_session_cache_column_exists(&mut transaction, "attachments_json").await?;
-    let web_edits_checksum = applied_migration_checksum(&mut transaction, 20260717190000).await?;
-    let expected_web_edits_checksum = migration_checksum(include_str!(
-        "../migrations/20260717190000_shared_session_cache_web_edits.sql"
-    ));
-    if web_edits_checksum
-        .as_deref()
-        .is_some_and(|checksum| checksum != expected_web_edits_checksum.as_slice())
-    {
-        return Err(AppSchemaError::SharedSessionCacheRepair(
-            "shared-session cache web-edit migration has an unknown checksum",
-        ));
-    }
-    let web_edits_applied = web_edits_checksum.is_some();
-    let web_edit_columns = [
-        "web_editable",
-        "web_edit_base_content_revision",
-        "web_edit_base_title",
-        "web_edit_base_body_json",
-    ];
-    let mut web_edit_columns_present = Vec::with_capacity(web_edit_columns.len());
-    for column in web_edit_columns {
-        web_edit_columns_present
-            .push(shared_session_cache_column_exists(&mut transaction, column).await?);
-    }
-    if attachments_applied != attachments_present
-        || web_edit_columns_present
-            .iter()
-            .any(|present| *present != web_edits_applied)
-    {
-        return Err(AppSchemaError::SharedSessionCacheRepair(
-            "legacy shared-session cache migration history does not match its schema",
-        ));
-    }
-
-    // The legacy cache has no viewer identity, so its derived rows cannot be
-    // assigned to an account safely. Rebuild it and let sync repopulate it.
-    sqlx::query("DROP TABLE shared_session_cache")
+    sqlx::query("DROP TABLE IF EXISTS shared_session_cache")
         .execute(&mut *transaction)
         .await?;
-    sqlx::raw_sql(include_str!(
-        "../migrations/20260716173000_shared_session_cache.sql"
-    ))
-    .execute(&mut *transaction)
-    .await?;
-    if attachments_applied {
-        sqlx::raw_sql(include_str!(
-            "../migrations/20260717172000_shared_session_cache_attachments.sql"
-        ))
+    sqlx::raw_sql(current_sql)
         .execute(&mut *transaction)
         .await?;
-    }
-    if web_edits_applied {
-        sqlx::raw_sql(include_str!(
-            "../migrations/20260717190000_shared_session_cache_web_edits.sql"
-        ))
-        .execute(&mut *transaction)
-        .await?;
-    }
-
     let result = sqlx::query(
         "UPDATE _sqlx_migrations
          SET checksum = ?
-         WHERE version = ? AND lower(hex(checksum)) = ?",
+         WHERE version = ? AND success = 1 AND lower(hex(checksum)) = ?",
     )
-    .bind(current_migration_checksum.as_slice())
+    .bind(migration_checksum(current_sql).as_slice())
     .bind(SHARED_SESSION_CACHE_MIGRATION_VERSION)
     .bind(LEGACY_SHARED_SESSION_CACHE_CHECKSUM)
     .execute(&mut *transaction)
@@ -1220,31 +929,28 @@ async fn repair_legacy_shared_session_cache_migration(
     Ok(())
 }
 
-async fn shared_session_cache_column_exists(
-    transaction: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
-    column: &str,
-) -> Result<bool, sqlx::Error> {
+async fn migration_table_exists(pool: &sqlx::SqlitePool) -> Result<bool, sqlx::Error> {
     sqlx::query_scalar(
         "SELECT EXISTS(
-            SELECT 1 FROM pragma_table_info('shared_session_cache')
-            WHERE name = ?
+            SELECT 1 FROM sqlite_master
+            WHERE type = 'table' AND name = '_sqlx_migrations'
         )",
     )
-    .bind(column)
-    .fetch_one(&mut **transaction)
+    .fetch_one(pool)
     .await
 }
 
-async fn applied_migration_checksum(
-    transaction: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+async fn applied_migration_checksum_hex(
+    pool: &sqlx::SqlitePool,
     version: i64,
-) -> Result<Option<Vec<u8>>, sqlx::Error> {
+) -> Result<Option<String>, sqlx::Error> {
     sqlx::query_scalar(
-        "SELECT checksum FROM _sqlx_migrations
+        "SELECT lower(hex(checksum))
+         FROM _sqlx_migrations
          WHERE version = ? AND success = 1",
     )
     .bind(version)
-    .fetch_optional(&mut **transaction)
+    .fetch_optional(pool)
     .await
 }
 
@@ -1252,6 +958,7 @@ fn migration_checksum(sql: &str) -> Vec<u8> {
     Sha384::digest(sql.as_bytes()).to_vec()
 }
 
+#[cfg(test)]
 fn checksum_hex(checksum: &[u8]) -> String {
     use std::fmt::Write as _;
 

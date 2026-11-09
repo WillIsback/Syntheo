@@ -201,5 +201,5 @@ async fn drops_calendar_schema_and_keeps_linked_note_readable() {
             .fetch_one(db.pool())
             .await
             .unwrap();
-    assert_eq!(floor, 20261109120000);
+    assert!(floor >= 20261109120000, "floor {floor}");
 }
