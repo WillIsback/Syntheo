@@ -55,10 +55,12 @@ msgstr "(indisponible — sortie par défaut utilisée)"
 msgid "{0, plural, one {… # other} other {… # others}}"
 msgstr "{0, plural, one {… # autre} other {… # autres}}"
 
+#. placeholder {0}: folder.meetingCount
 #. placeholder {0}: row.noteCount
 #. placeholder {0}: stats.count
 #: src/folders/project/folder-header-actions.tsx
 #: src/folders/sidebar-tree-view.tsx
+#: src/home/folder-cards.tsx
 msgid "{0, plural, one {# meeting} other {# meetings}}"
 msgstr "{0, plural, one {# réunion} other {# réunions}}"
 
@@ -152,6 +154,10 @@ msgstr "{model} ne peut pas transcrire toutes les langues sélectionnées ensemb
 msgid "{notice}. Open Syntheo to retry or change devices."
 msgstr "{notice}. Ouvrez Syntheo pour réessayer ou changer d'appareil."
 
+#: src/home/folder-cards.tsx
+msgid "{openPoints, plural, one {# open point} other {# open points}}"
+msgstr "{openPoints, plural, one {# point ouvert} other {# points ouverts}}"
+
 #: src/stt/meeting-apps.ts
 msgid "{otherAppCount, plural, one {Ignore {firstName} and # other app?} other {Ignore {firstName} and # other apps?}}"
 msgstr "{otherAppCount, plural, one {Ignorer {firstName} et # autre app ?} other {Ignorer {firstName} et # autres apps ?}}"
@@ -179,6 +185,10 @@ msgstr "{providerName} a refusé votre clé d'API"
 #: src/stt/live-transcript-interrupted.ts
 msgid "{providerName} stopped sending text"
 msgstr "{providerName} n'envoie plus de texte"
+
+#: src/home/folder-cards.tsx
+msgid "{tasks, plural, one {# task} other {# tasks}}"
+msgstr "{tasks, plural, one {# tâche} other {# tâches}}"
 
 #: src/sidebar/toast/undo-delete-toast.tsx
 msgid "{title} deleted"
@@ -395,6 +405,10 @@ msgstr "IA, raisonnement, qualité, rapidité, réflexion"
 #: src/settings/developers/webhooks.tsx
 msgid "All events"
 msgstr "Tous les événements"
+
+#: src/home/folder-cards.tsx
+msgid "All folders"
+msgstr "Tous les dossiers"
 
 #: src/shared/open-note-dialog.tsx
 msgid "All Notes"
@@ -1245,6 +1259,7 @@ msgid "Date and time are required"
 msgstr "La date et l'heure sont obligatoires"
 
 #: src/folders/project/folder-thread-card.tsx
+#: src/home/active-folders.ts
 msgid "Decisions"
 msgstr "Décisions"
 
@@ -1702,6 +1717,11 @@ msgstr "Impossible de copier : {viewTitle}"
 msgid "File"
 msgstr "Fichier"
 
+#: src/home/file-note-button.tsx
+msgctxt "file a note in a folder"
+msgid "File"
+msgstr "Ranger"
+
 #: src/session/components/outer-header/overflow/export-modal.tsx
 msgid "File format"
 msgstr "Format de fichier"
@@ -2153,6 +2173,10 @@ msgstr "langue, synthèse, compte rendu, traduction"
 #: src/settings/search-index.ts
 msgid "languages, multilingual, foreign language, English, Spanish, German"
 msgstr "langues, multilingue, langue étrangère, anglais, espagnol, allemand"
+
+#: src/home/folder-cards.tsx
+msgid "last {lastDate}"
+msgstr "dernière {lastDate}"
 
 #. placeholder {0}: webhook.last_delivery_status
 #: src/settings/developers/webhooks.tsx
@@ -2975,6 +2999,10 @@ msgstr "Notes"
 msgid "Notes stay in All notes. Materials in this folder will be deleted."
 msgstr "Les notes restent dans Toutes les notes. Ce dossier, ses sous-dossiers et tous leurs éléments seront supprimés."
 
+#: src/home/folder-cards.tsx
+msgid "Nothing pending"
+msgstr "Rien en suspens"
+
 #: src/settings/search-index.ts
 msgid "notification area, taskbar, menu bar, icon, clock"
 msgstr "zone de notification, barre des tâches, barre des menus, icône, horloge"
@@ -3082,6 +3110,7 @@ msgid "Open permissions"
 msgstr "Ouvrir les autorisations"
 
 #: src/folders/project/folder-thread-card.tsx
+#: src/home/active-folders.ts
 msgid "Open points"
 msgstr "Points ouverts"
 
@@ -3096,6 +3125,7 @@ msgid "Open Syntheo from the menu bar."
 msgstr "Ouvrez Syntheo depuis la barre des menus."
 
 #: src/folders/project/folder-thread-card.tsx
+#: src/home/active-folders.ts
 msgid "Open tasks"
 msgstr "Tâches non faites"
 
@@ -3351,6 +3381,10 @@ msgstr "Programme"
 #: src/folders/project/folder-thread-card.tsx
 msgid "Project thread"
 msgstr "Fil rouge du projet"
+
+#: src/home/folder-cards.tsx
+msgid "Project thread not created yet"
+msgstr "Fil rouge pas encore créé"
 
 #: src/session/components/living-document/summary-review.tsx
 msgid "Proposed edit to the summary"
@@ -5521,6 +5555,10 @@ msgstr "Vous pouvez utiliser jusqu'à trois exemples de résumés."
 #: src/settings/dictionary/index.tsx
 msgid "Your dictionary is empty"
 msgstr "Votre dictionnaire est vide"
+
+#: src/home/folder-cards.tsx
+msgid "Your folders"
+msgstr "Vos dossiers"
 
 #: src/session/components/living-document/index.tsx
 #: src/session/components/living-document/provenance.tsx
