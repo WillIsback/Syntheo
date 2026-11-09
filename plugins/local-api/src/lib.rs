@@ -1,7 +1,9 @@
+mod automation_command;
 mod commands;
 mod dispatch;
 mod types;
 
+pub use automation_command::AutomationCommandOutput;
 pub use dispatch::{EVENT_MEETING_COMPLETED, EVENT_NOTE_ENHANCED, KNOWN_EVENTS};
 pub use types::*;
 
@@ -22,6 +24,7 @@ fn make_specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             commands::prepare_drive_markdown::<tauri::Wry>,
             commands::get_cloud_snapshot::<tauri::Wry>,
             commands::list_cloud_snapshot_ids::<tauri::Wry>,
+            commands::run_automation_command::<tauri::Wry>,
         ])
         .error_handling(tauri_specta::ErrorHandlingMode::Result)
 }
