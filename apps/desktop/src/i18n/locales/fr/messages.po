@@ -234,13 +234,17 @@ msgstr "Ajouter"
 msgid "Add \"{0}\""
 msgstr "Ajouter \"{0}\""
 
-#: src/settings/automations/workflow-builder.tsx
+#: src/settings/automations/add-step-menu.tsx
 msgid "Add a step"
 msgstr "Ajouter une étape"
 
 #: src/templates/template-form.tsx
 msgid "Add a use"
 msgstr "Ajouter un usage"
+
+#: src/settings/automations/step-forms.tsx
+msgid "Add an argument"
+msgstr "Ajouter un argument"
 
 #: src/settings/automations/index.tsx
 msgid "Add and configure at least one action first."
@@ -325,11 +329,16 @@ msgstr "Ajouté :"
 msgid "Additional spoken languages"
 msgstr "Langues parlées supplémentaires"
 
+#: src/settings/automations/step-forms.tsx
+msgid "Address (URL)"
+msgstr "Adresse (URL)"
+
 #: src/shared/shortcuts.ts
 msgid "Adjust"
 msgstr "Régler"
 
 #: src/settings/ai/shared/server-address.tsx
+#: src/settings/automations/add-step-menu.tsx
 #: src/sidebar/settings-nav-groups.ts
 msgid "Advanced"
 msgstr "Avancé"
@@ -368,6 +377,10 @@ msgstr "Toutes les notes"
 msgid "All templates"
 msgstr "Tous les modèles"
 
+#: src/automations/command-confirmation-dialog.tsx
+msgid "Allow and run"
+msgstr "Autoriser et lancer"
+
 #: src/stt/start-failure.ts
 msgid "Allow microphone access for Syntheo, then try again."
 msgstr "Autorisez Syntheo à accéder au micro, puis réessayez."
@@ -375,6 +388,10 @@ msgstr "Autorisez Syntheo à accéder au micro, puis réessayez."
 #: src/session/components/outer-header/overflow/always-on-top.tsx
 msgid "Always on Top"
 msgstr "Toujours au premier plan"
+
+#: src/automations/command-confirmation-dialog.tsx
+msgid "An automation wants to run a program on your computer for the first time."
+msgstr "Une automatisation veut lancer un programme sur votre ordinateur pour la première fois."
 
 #: src/shared/control.tsx
 msgid "An unexpected error occurred."
@@ -410,6 +427,10 @@ msgstr "Apparence"
 msgid "Application menu"
 msgstr "Menu de l'application"
 
+#: src/automations/labels.ts
+msgid "Applies an instruction (tasks, short summary, follow-up message); the result feeds the next steps."
+msgstr "Applique une consigne (tâches, résumé court, message de suivi) ; le résultat sert aux étapes suivantes."
+
 #: src/session/components/note-input/transcript/renderer/speaker-assign.tsx
 msgid "Apply to all"
 msgstr "Appliquer à tout"
@@ -428,6 +449,15 @@ msgstr "Appliquer au résumé"
 #: src/stt/detect-events.ts
 msgid "Are you in a meeting?"
 msgstr "Êtes-vous en réunion ?"
+
+#: src/settings/automations/step-forms.tsx
+msgid "Argument {position}"
+msgstr "Argument {position}"
+
+#: src/automations/command-confirmation-dialog.tsx
+#: src/settings/automations/step-forms.tsx
+msgid "Arguments"
+msgstr "Arguments"
 
 #: src/chat/components/input/index.tsx
 msgid "Ask anything"
@@ -449,6 +479,10 @@ msgstr "Demander à la note"
 #: src/session/components/speaker-naming/speaker-card.tsx
 msgid "Assigned to {assignedName}"
 msgstr "Attribué à {assignedName}"
+
+#: src/settings/automations/step-forms.tsx
+msgid "At the root of the vault"
+msgstr "À la racine du coffre"
 
 #: src/templates/auto-format-examples-dialog.tsx
 msgid "Attach Markdown or text"
@@ -757,6 +791,10 @@ msgstr "Choisissez le microphone qui capture votre voix."
 msgid "Choose the output whose sound Syntheo transcribes: the one where you hear the other participants."
 msgstr "Choisissez la sortie dont Syntheo transcrit le son : celle où vous entendez les autres participants."
 
+#: src/automations/action-runners.ts
+msgid "Choose the program to run first."
+msgstr "Choisissez d'abord le programme à lancer."
+
 #: src/contacts/related-notes.tsx
 #: src/contacts/shared.tsx
 #: src/folders/sidebar.tsx
@@ -842,15 +880,27 @@ msgstr "Thème de couleurs"
 msgid "colors, color, green tea, wisteria, contrast"
 msgstr "couleurs, couleur, thé vert, glycine, contraste"
 
+#: src/automations/action-runners.ts
+msgid "Command finished: {program}"
+msgstr "Commande terminée : {program}"
+
 #: src/settings/search-index.ts
 msgid "command line, terminal, install"
 msgstr "ligne de commande, terminal, installer"
+
+#: src/automations/labels.ts
+msgid "Command output"
+msgstr "Sortie de la commande"
 
 #: src/contacts/details.tsx
 #: src/settings/general/account-profile.tsx
 #: src/settings/search-index.ts
 msgid "Company"
 msgstr "Entreprise"
+
+#: src/settings/automations/step-forms.tsx
+msgid "Complete the note with the same title"
+msgstr "Compléter la note du même titre"
 
 #: src/session/components/living-document/provenance.tsx
 msgid "Completed by Syntheo"
@@ -919,6 +969,10 @@ msgstr "Options de contact"
 msgid "Contacts"
 msgstr "Contacts"
 
+#: src/settings/automations/step-forms.tsx
+msgid "Content"
+msgstr "Contenu"
+
 #: src/folders/folder-editor.tsx
 msgid "Context"
 msgstr "Contexte"
@@ -942,6 +996,10 @@ msgstr "Copié dans le presse-papiers"
 #: src/session/components/note-input/header-enhanced.tsx
 msgid "Copied to clipboard: {viewTitle}"
 msgstr "Copié dans le presse-papiers : {viewTitle}"
+
+#: src/automations/action-runners.ts
+msgid "Copied to the clipboard"
+msgstr "Copié dans le presse-papiers"
 
 #: src/main/windows-title-bar.tsx
 #: src/session/components/capsule/index.tsx
@@ -969,6 +1027,10 @@ msgstr "Copier le message"
 #: src/settings/developers/webhooks.tsx
 msgid "Copy this signing secret now — it is only shown once."
 msgstr "Copiez maintenant ce secret de signature — il n'est affiché qu'une seule fois."
+
+#: src/automations/labels.ts
+msgid "Copy to the clipboard"
+msgstr "Copier dans le presse-papiers"
 
 #. placeholder {0}: error.message
 #: src/settings/developers/cli.tsx
@@ -1006,6 +1068,10 @@ msgstr "Impossible d'exporter. Vérifiez l'emplacement d'exportation dans Param�
 #: src/session/components/outer-header/overflow/export-modal.tsx
 msgid "Could not open the PDF to print. Try again, or save it instead."
 msgstr "Impossible d'ouvrir le PDF à imprimer. Réessayez, ou enregistrez-le."
+
+#: src/automations/action-runners.ts
+msgid "Could not reach the address: {reason}"
+msgstr "Impossible de joindre l'adresse : {reason}"
 
 #: src/sidebar/toast/undo-delete-toast.tsx
 msgid "Could not restore deleted note"
@@ -1058,6 +1124,10 @@ msgstr "Créer « {0} »"
 msgid "Create \"{folderName}\""
 msgstr "Créer \"{folderName}\""
 
+#: src/settings/automations/step-forms.tsx
+msgid "Create a new note"
+msgstr "Créer une nouvelle note"
+
 #: src/services/notification-labels.ts
 msgid "Create New Note..."
 msgstr "Créer une note…"
@@ -1078,6 +1148,10 @@ msgstr "Créée {createdAt}"
 #: src/templates/utils.ts
 msgid "Created by {name}"
 msgstr "Créé par {name}"
+
+#: src/automations/labels.ts
+msgid "Creates or completes a note in the vault."
+msgstr "Crée ou complète une note du coffre."
 
 #: src/session/components/living-document/summary-switcher-view.tsx
 msgid "Current"
@@ -1291,6 +1365,10 @@ msgstr "Mode d'affichage"
 msgid "do not disturb, focus, silence, quiet"
 msgstr "ne pas déranger, concentration, silence, calme"
 
+#: src/automations/command-confirmation-dialog.tsx
+msgid "Do not run"
+msgstr "Ne pas lancer"
+
 #: src/settings/search-index.ts
 msgid "Dock, app switcher, icon"
 msgstr "Dock, sélecteur d'apps, icône"
@@ -1351,7 +1429,7 @@ msgstr "ex. Hebdo, Équipe RH"
 msgid "Each example must be 12,000 characters or fewer."
 msgstr "Chaque exemple doit comporter 12,000 caractères ou moins."
 
-#: src/settings/automations/workflow-builder.tsx
+#: src/settings/automations/add-step-menu.tsx
 msgid "Each new step runs after the previous one."
 msgstr "Chaque nouvelle étape s'exécute après la précédente."
 
@@ -1699,8 +1777,16 @@ msgid "Generate the summary"
 msgstr "Générer le compte rendu"
 
 #: src/automations/labels.ts
+msgid "Generate with the local model"
+msgstr "Générer avec le modèle local"
+
+#: src/automations/labels.ts
 msgid "Generated text"
 msgstr "Texte généré"
+
+#: src/automations/action-runners.ts
+msgid "Generated text ({length} characters)"
+msgstr "Texte généré ({length} caractères)"
 
 #: src/session/components/note-input/enhanced/streaming.tsx
 #: src/session/components/title-input.tsx
@@ -1718,6 +1804,10 @@ msgstr "Se déplacer"
 #: src/settings/general/notification.tsx
 msgid "Get your attention when a summary is ready in the background."
 msgstr "Soyez averti lorsqu'un résumé est prêt en arrière-plan."
+
+#: src/automations/action-runners.ts
+msgid "Give the vault note a title first."
+msgstr "Donnez d'abord un titre à la note du coffre."
 
 #: src/sidebar/custom-sidebar-header.tsx
 msgid "Go home"
@@ -1913,6 +2003,10 @@ msgstr "Niveau d'entrée"
 msgid "Input level unavailable"
 msgstr "Niveau d'entrée indisponible"
 
+#: src/settings/automations/variable-field.tsx
+msgid "Insert"
+msgstr "Insérer"
+
 #: src/settings/developers/cli.tsx
 msgid "Install"
 msgstr "Installer"
@@ -1925,9 +2019,17 @@ msgstr "Installer pour tous les agents"
 msgid "Installed"
 msgstr "Installé"
 
+#: src/settings/automations/step-forms.tsx
+msgid "Instruction"
+msgstr "Consigne"
+
 #: src/settings/ai/shared/server-card.tsx
 msgid "Invalid address"
 msgstr "Adresse invalide"
+
+#: src/automations/action-runners.ts
+msgid "Invalid address: use an http:// or https:// URL."
+msgstr "Adresse non valide : utilisez une URL en http:// ou https://."
 
 #: src/services/notification-labels.ts
 msgid "Invitee Time Zone:"
@@ -1938,6 +2040,14 @@ msgstr "Fuseau horaire de l'invité :"
 #: src/settings/search-index.ts
 msgid "Job Title"
 msgstr "Intitulé du poste"
+
+#: src/settings/automations/step-forms.tsx
+msgid "JSON body"
+msgstr "Corps JSON"
+
+#: src/automations/labels.ts
+msgid "JSON to n8n, Home Assistant or a home server. The only step that leaves your computer."
+msgstr "JSON vers n8n, Home Assistant, un serveur maison. Seule étape qui sort de votre ordinateur."
 
 #: src/settings/dictation.tsx
 msgid "Keep Syntheo running to use your shortcut in other apps."
@@ -2032,6 +2142,10 @@ msgstr "Laisser vide si le serveur n'a pas d'authentification"
 msgid "Less than a minute remaining"
 msgstr "Moins d'une minute restante"
 
+#: src/automations/labels.ts
+msgid "Lets you know when the automation has finished."
+msgstr "Vous prévient quand l'automatisation a terminé."
+
 #: src/settings/appearance/theme.tsx
 msgid "Light"
 msgstr "Clair"
@@ -2047,6 +2161,14 @@ msgstr "Listez les éléments d'action jusqu'à présent."
 #: src/chat/components/body/empty.tsx
 msgid "List action items."
 msgstr "Listez les éléments d'action."
+
+#: src/automations/labels.ts
+msgid "List the action items decided during the meeting, one per line, with the person responsible. Meeting summary:"
+msgstr "Liste les actions à faire décidées pendant la réunion, une par ligne, avec la personne responsable. Synthèse de la réunion :"
+
+#: src/settings/automations/step-forms.tsx
+msgid "List the decisions and the tasks, one per line…"
+msgstr "Liste les décisions et les tâches, une par ligne…"
 
 #: src/home/start-button.tsx
 #: src/onboarding/final.tsx
@@ -2124,6 +2246,10 @@ msgstr "Chargement des paramètres"
 #: src/settings/general/account-profile.tsx
 msgid "Loading..."
 msgstr "Chargement..."
+
+#: src/automations/labels.ts
+msgid "Local script with the path of the exported file. Asks for confirmation the first time."
+msgstr "Script local avec le chemin du fichier exporté. Confirmation au premier lancement."
 
 #: src/settings/privacy/index.tsx
 #: src/settings/search-index.ts
@@ -2363,6 +2489,10 @@ msgstr "Micro indisponible. L'audio système continue"
 msgid "Minimize"
 msgstr "Réduire"
 
+#: src/settings/automations/variable-field.tsx
+msgid "Missing output"
+msgstr "Sortie introuvable"
+
 #: src/settings/ai/llm/server-card.tsx
 #: src/settings/ai/stt/server-card.tsx
 #: src/settings/search-index.ts
@@ -2583,6 +2713,10 @@ msgstr "Aucun dossier pour le moment. Créez-en un pour regrouper les notes et l
 msgid "No icons found"
 msgstr "Aucune icône trouvée"
 
+#: src/automations/action-runners.ts
+msgid "No local model is configured. Choose one in Settings › Synthesis."
+msgstr "Aucun modèle local n'est configuré. Choisissez-en un dans Paramètres › Synthèse."
+
 #: src/settings/dictionary/index.tsx
 msgid "No match"
 msgstr "Aucune correspondance"
@@ -2699,9 +2833,17 @@ msgstr "note"
 msgid "Note capsule"
 msgstr "Capsule de la note"
 
+#: src/automations/action-runners.ts
+msgid "Note completed: {noteTitle}"
+msgstr "Note complétée : {noteTitle}"
+
 #: src/session/components/capsule/session-capsule.tsx
 msgid "Note copied to clipboard"
 msgstr "Note copiée dans le presse-papiers"
+
+#: src/automations/action-runners.ts
+msgid "Note created: {noteTitle}"
+msgstr "Note créée : {noteTitle}"
 
 #: src/session/components/living-document/index.tsx
 msgid "Note here what you want to remember. During the meeting, write freely: Syntheo will complete it."
@@ -2714,6 +2856,10 @@ msgstr "Note verrouillée"
 #: src/session/components/capsule/index.tsx
 msgid "Note steps"
 msgstr "Étapes de la note"
+
+#: src/settings/automations/step-forms.tsx
+msgid "Note title"
+msgstr "Titre de la note"
 
 #: src/session/components/living-document/summary-switcher-view.tsx
 msgid "Note view"
@@ -2742,6 +2888,14 @@ msgstr "Les notes restent dans Toutes les notes. Ce dossier, ses sous-dossiers e
 #: src/settings/search-index.ts
 msgid "notification area, taskbar, menu bar, icon, clock"
 msgstr "zone de notification, barre des tâches, barre des menus, icône, horloge"
+
+#: src/automations/action-runners.ts
+msgid "Notification shown"
+msgstr "Notification affichée"
+
+#: src/settings/automations/step-forms.tsx
+msgid "Notification title"
+msgstr "Titre de la notification"
 
 #: src/settings/search-index.ts
 msgid "notification, alert, summary ready"
@@ -3091,6 +3245,11 @@ msgstr "Confidentialité"
 msgid "Profile"
 msgstr "Profil"
 
+#: src/automations/command-confirmation-dialog.tsx
+#: src/settings/automations/step-forms.tsx
+msgid "Program"
+msgstr "Programme"
+
 #: src/session/components/living-document/summary-review.tsx
 msgid "Proposed edit to the summary"
 msgstr "Modification proposée du résumé"
@@ -3132,6 +3291,10 @@ msgstr "Prêt à dicter"
 #: src/onboarding/index.tsx
 msgid "Ready to go"
 msgstr "Prêt à démarrer"
+
+#: src/automations/labels.ts
+msgid "Ready to paste into a message or a document."
+msgstr "Prêt à coller dans un message ou un document."
 
 #: src/settings/ai/llm/index.tsx
 #: src/settings/ai/llm/server-card.tsx
@@ -3249,6 +3412,10 @@ msgstr "Supprimer {term}"
 msgid "Remove {use}"
 msgstr "Retirer {use}"
 
+#: src/settings/automations/step-forms.tsx
+msgid "Remove argument {position}"
+msgstr "Retirer l'argument {position}"
+
 #: src/contacts/details.tsx
 msgid "Remove email"
 msgstr "Supprimer l'e-mail"
@@ -3359,6 +3526,10 @@ msgstr "Restaurer"
 msgid "Result available to the next steps as"
 msgstr "Résultat disponible pour la suite sous le nom"
 
+#: src/settings/automations/step-forms.tsx
+msgid "Result available to the next steps under the name"
+msgstr "Résultat disponible pour la suite sous le nom"
+
 #: src/home/note-index.tsx
 #: src/meeting-float/overlay/bar.tsx
 #: src/shared/ui/localized-toaster.tsx
@@ -3405,10 +3576,18 @@ msgstr "Vérifier le compte rendu"
 msgid "Right Command"
 msgstr "Commande droite"
 
+#: src/automations/labels.ts
+msgid "Run a command"
+msgstr "Lancer une commande"
+
 #: src/automations/launch.tsx
 #: src/chat/components/body/empty.tsx
 msgid "Run an automation"
 msgstr "Lancer une automatisation"
+
+#: src/automations/command-confirmation-dialog.tsx
+msgid "Run this command?"
+msgstr "Lancer cette commande ?"
 
 #: src/session/components/outer-header/overflow/export-modal.tsx
 #: src/settings/dictionary/index.tsx
@@ -3635,9 +3814,17 @@ msgstr "Envoyez un e-mail"
 msgid "Send message"
 msgstr "Envoyez un message"
 
+#: src/automations/labels.ts
+msgid "Send to an address (webhook)"
+msgstr "Envoyer vers une adresse (webhook)"
+
 #: src/session/components/note-input/meeting-chat-highlights.tsx
 msgid "sent"
 msgstr "envoyé"
+
+#: src/automations/action-runners.ts
+msgid "Sent to {host} (status {status})"
+msgstr "Envoyé à {host} (statut {status})"
 
 #: src/settings/appearance/note-ink.tsx
 msgid "Sentences that come from your notes appear in green. When off, your notes are shown in a separate block."
@@ -4104,6 +4291,10 @@ msgstr "Syn·thé·o : ce qu'on rassemble autour du thé."
 msgid "Synced"
 msgstr "Synchronisé"
 
+#: src/settings/automations/step-forms.tsx
+msgid "Syntheo asks for your confirmation the first time this exact command runs. Each argument is passed as is, without a shell; the run stops after 60 seconds."
+msgstr "Syntheo vous demande confirmation au premier lancement de cette commande exacte. Chaque argument est transmis tel quel, sans interpréteur de commandes ; l'exécution s'arrête au bout de 60 secondes."
+
 #: src/onboarding/permissions.tsx
 msgid "Syntheo can hear others"
 msgstr "Syntheo peut entendre les autres"
@@ -4121,8 +4312,8 @@ msgid "Syntheo cannot reach {providerName}"
 msgstr "Syntheo ne parvient pas à joindre {providerName}"
 
 #: src/settings/automations/index.tsx
-msgid "Syntheo chains local steps after your meetings. Nothing leaves your computer."
-msgstr "Syntheo enchaîne des étapes locales après vos réunions. Rien ne quitte votre ordinateur."
+msgid "Syntheo chains local steps after your meetings. Nothing leaves your computer, except a webhook step if you add one."
+msgstr "Syntheo enchaîne des étapes locales après vos réunions. Rien ne sort de votre ordinateur, sauf une étape webhook si vous en ajoutez une."
 
 #: src/settings/developers/cli.tsx
 #: src/settings/search-index.ts
@@ -4180,6 +4371,10 @@ msgstr "Syntheo a besoin d'accéder à votre microphone et à l'audio système p
 #: src/onboarding/index.tsx
 msgid "Syntheo needs microphone and system audio to transcribe your meetings, plus Accessibility to read meeting controls, visible chat."
 msgstr "Syntheo a besoin du microphone et de l'audio système pour transcrire vos réunions, ainsi que de l'accessibilité pour lire les contrôles de réunion et le chat visible."
+
+#: src/automations/command-confirmation-dialog.tsx
+msgid "Syntheo passes each argument as is, without a shell. Your answer is remembered for this exact command: if you change it, Syntheo asks again."
+msgstr "Syntheo transmet chaque argument tel quel, sans interpréteur de commandes. Votre réponse est mémorisée pour cette commande exacte : si vous la modifiez, Syntheo vous redemandera."
 
 #: src/settings/automations/workflow-builder.tsx
 msgid "Syntheo runs the steps in order on your computer: the trigger is step 1, then each action follows."
@@ -4274,6 +4469,10 @@ msgstr "Son système : Syntheo capte maintenant {output}."
 msgid "System audio: the headset was unplugged, Syntheo now captures {output}."
 msgstr "Son système : le casque a été débranché, Syntheo capte maintenant {output}."
 
+#: src/automations/labels.ts
+msgid "System notification"
+msgstr "Notification système"
+
 #: src/settings/dictation.tsx
 msgid "System permissions"
 msgstr "Autorisations du système"
@@ -4286,6 +4485,16 @@ msgstr "Son système"
 #: src/onboarding/final.tsx
 msgid "Take your notes while the transcript scrolls in the margin."
 msgstr "Prenez vos notes pendant que la transcription défile en marge."
+
+#: src/automations/labels.ts
+msgctxt "vault folder"
+msgid "Tasks"
+msgstr "Tâches"
+
+#: src/automations/labels.ts
+msgctxt "vault note title"
+msgid "Tasks –"
+msgstr "Tâches –"
 
 #: src/settings/developers/skills.tsx
 msgid "Teach coding agents when and how to use the Syntheo CLI and MCP"
@@ -4344,9 +4553,25 @@ msgstr "Testez la connexion pour lister les modèles servis."
 msgid "Testing…"
 msgstr "Test en cours…"
 
+#: src/settings/automations/step-forms.tsx
+msgid "Text"
+msgstr "Texte"
+
 #: src/session/components/living-document/provenance.tsx
 msgid "Text provenance"
 msgstr "Provenance du texte"
+
+#: src/automations/action-runners.ts
+msgid "The address answered with the status {status}."
+msgstr "L'adresse a répondu avec le statut {status}."
+
+#: src/automations/action-runners.ts
+msgid "The address did not answer within {seconds} seconds."
+msgstr "L'adresse n'a pas répondu en {seconds} secondes."
+
+#: src/automations/action-runners.ts
+msgid "The address redirects to {target}. Syntheo does not follow redirects: use the final address."
+msgstr "L'adresse redirige vers {target}. Syntheo ne suit pas les redirections : utilisez l'adresse finale."
 
 #: src/settings/ai/stt/server-card.tsx
 msgid "The API key is optional for servers without authentication. It is kept in your system keychain."
@@ -4355,6 +4580,34 @@ msgstr "La clé d'API est facultative pour un serveur sans authentification. Ell
 #: src/templates/auto-form.tsx
 msgid "The Automatic format is unavailable."
 msgstr "Le format Automatique est indisponible."
+
+#: src/automations/command-confirmation-dialog.tsx
+msgid "The automation “{workflowTitle}” wants to run a program on your computer for the first time."
+msgstr "L'automatisation « {workflowTitle} » veut lancer un programme sur votre ordinateur pour la première fois."
+
+#: src/settings/automations/step-forms.tsx
+msgid "The body must be valid JSON."
+msgstr "Le corps doit être du JSON valide."
+
+#: src/automations/action-runners.ts
+msgid "The command did not finish within {seconds} seconds."
+msgstr "La commande ne s'est pas terminée en {seconds} secondes."
+
+#: src/automations/action-runners.ts
+msgid "The command failed (code {code}): {reason}"
+msgstr "La commande a échoué (code {code}) : {reason}"
+
+#: src/automations/action-runners.ts
+msgid "The command failed (code {code})."
+msgstr "La commande a échoué (code {code})."
+
+#: src/automations/action-runners.ts
+msgid "The command was not confirmed, so it did not run."
+msgstr "La commande n'a pas été confirmée : elle n'a pas été lancée."
+
+#: src/automations/action-runners.ts
+msgid "The JSON body is not valid once the variables are filled in."
+msgstr "Le corps JSON n'est pas valide une fois les variables remplies."
 
 #: src/templates/template-form.tsx
 msgid "The kinds of meeting this template is meant for (team, role, frequency…)."
@@ -4372,9 +4625,17 @@ msgstr "Le modèle de transcription en direct ne gère qu'une langue à la fois.
 msgid "The live transcription of this dictation was interrupted, and this model can't transcribe the recording afterwards. Try again."
 msgstr "La transcription en direct de cette dictée a été interrompue, et ce modèle ne peut pas transcrire l'enregistrement après coup. Réessayez."
 
+#: src/automations/action-runners.ts
+msgid "The local model did not respond: {reason}"
+msgstr "Le modèle local n'a pas répondu : {reason}"
+
 #: src/automations/labels.ts
 msgid "The local model lists the actions to take and adds them to the vault."
 msgstr "Le modèle local liste les actions à faire et les ajoute au coffre."
+
+#: src/automations/action-runners.ts
+msgid "The local model returned an empty answer."
+msgstr "Le modèle local a renvoyé une réponse vide."
 
 #: src/chat/components/message/tool/edit-summary.tsx
 msgid "The memo edit could not be prepared."
@@ -4391,6 +4652,10 @@ msgstr "Le nom n’a pas pu être enregistré. Réessayez."
 #: src/settings/dictation.tsx
 msgid "The one that captures your voice."
 msgstr "Celui qui capte votre voix."
+
+#: src/settings/automations/step-forms.tsx
+msgid "The only step that leaves your computer: the JSON is sent to the address below. Use an address you trust, such as n8n, Home Assistant or a home server."
+msgstr "Seule étape qui sort de votre ordinateur : le JSON est envoyé à l'adresse ci-dessous. Utilisez une adresse de confiance, comme n8n, Home Assistant ou un serveur maison."
 
 #: src/shared/control.tsx
 msgid "The page you're looking for doesn't exist."
@@ -4486,6 +4751,10 @@ msgstr "Thème et palette"
 #: src/settings/automations/workflow-builder.tsx
 msgid "Then"
 msgstr "Ensuite"
+
+#: src/automations/action-runners.ts
+msgid "There is nothing to copy."
+msgstr "Il n'y a rien à copier."
 
 #: src/chat/components/message/loading.tsx
 msgid "Thinking..."
@@ -4819,6 +5088,10 @@ msgstr "Téléverser un transcript"
 msgid "Use 24-hour time"
 msgstr "Utilisez le format 24 heures"
 
+#: src/settings/automations/step-forms.tsx
+msgid "Use an http:// or https:// address."
+msgstr "Utilisez une adresse en http:// ou https://."
+
 #: src/templates/auto-form.tsx
 #: src/templates/details.tsx
 #: src/templates/template-form.tsx
@@ -4861,6 +5134,18 @@ msgstr "Utilisé pour"
 #: src/settings/general/spoken-languages.tsx
 msgid "Used for transcription and automatic summary language detection."
 msgstr "Utilisé pour la transcription et la détection automatique de la langue des résumés."
+
+#: src/settings/automations/step-forms.tsx
+msgid "Uses the local model chosen in Settings › Synthesis. Nothing leaves your computer."
+msgstr "Utilise le modèle local choisi dans Paramètres › Synthèse. Rien ne sort de votre ordinateur."
+
+#: src/settings/automations/step-forms.tsx
+msgid "Variables are inserted as JSON text, inside quotes. Redirects are not followed; the request stops after 15 seconds."
+msgstr "Les variables sont insérées comme texte JSON, entre guillemets. Les redirections ne sont pas suivies ; la requête s'arrête au bout de 15 secondes."
+
+#: src/settings/automations/step-forms.tsx
+msgid "Vault folder"
+msgstr "Dossier du coffre"
 
 #: src/session/components/living-document/summary-version.tsx
 msgid "Version {versionNumber}"
@@ -4952,6 +5237,10 @@ msgstr "Quelles décisions clés ont été prises lors de mes réunions récente
 msgid "What these notes are usually about"
 msgstr "Sujet habituel de ces notes"
 
+#: src/settings/automations/step-forms.tsx
+msgid "What to do in the vault"
+msgstr "Que faire dans le coffre"
+
 #: src/chat/components/body/empty.tsx
 msgid "What were the key decisions that have been made?"
 msgstr "Quelles ont été les décisions clés prises ?"
@@ -5020,9 +5309,45 @@ msgstr "Vos mots à vous vont dans votre"
 msgid "words, vocabulary, names, jargon, spelling, acronyms"
 msgstr "mots, vocabulaire, noms propres, jargon, orthographe, sigles"
 
+#: src/automations/action-runners.ts
+msgid "Would complete the note \"{noteTitle}\""
+msgstr "Compléterait la note « {noteTitle} »"
+
+#: src/automations/action-runners.ts
+msgid "Would copy to the clipboard"
+msgstr "Copierait dans le presse-papiers"
+
+#: src/automations/action-runners.ts
+msgid "Would create the note \"{noteTitle}\""
+msgstr "Créerait la note « {noteTitle} »"
+
+#: src/automations/action-runners.ts
+msgid "Would run {program}"
+msgstr "Lancerait {program}"
+
+#: src/automations/action-runners.ts
+msgid "Would send the JSON to {host}"
+msgstr "Enverrait le JSON à {host}"
+
+#: src/automations/action-runners.ts
+msgid "Would show a notification"
+msgstr "Afficherait une notification"
+
+#: src/automations/action-runners.ts
+msgid "Write a title or a text for the notification."
+msgstr "Écrivez un titre ou un texte pour la notification."
+
+#: src/automations/action-runners.ts
+msgid "Write an instruction for the local model first."
+msgstr "Écrivez d'abord une consigne pour le modèle local."
+
 #: src/session/components/living-document/index.tsx
 msgid "Write freely, Syntheo will complete it."
 msgstr "Écrivez librement, Syntheo complétera."
+
+#: src/automations/labels.ts
+msgid "Write to the vault"
+msgstr "Écrire dans le coffre"
 
 #: src/automations/labels.ts
 msgid "Writes the note to a folder on your computer."

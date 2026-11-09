@@ -149,13 +149,13 @@ describe("AutomationsContent", () => {
     expect(screen.getByRole("heading", { name: "Automations" })).toBeTruthy();
     expect(
       screen.getByText(
-        "Syntheo chains local steps after your meetings. Nothing leaves your computer.",
+        "Syntheo chains local steps after your meetings. Nothing leaves your computer, except a webhook step if you add one.",
       ),
     ).toBeTruthy();
     expect(screen.getByText("Start from a template")).toBeTruthy();
     expect(screen.getByText("My automations")).toBeTruthy();
-    // Le modèle « Extraire les tâches » attend ses actions (issue 442).
-    expect(screen.queryByText("Extract tasks")).toBeNull();
+    // Ses actions existent (issue 442) : « Extraire les tâches » est proposé.
+    expect(screen.getByText("Extract tasks")).toBeTruthy();
     expect(screen.queryByText(/Zapier|destination/i)).toBeNull();
     expect(
       screen.getByText("Meeting ends → Export as Markdown · never run"),
