@@ -284,6 +284,8 @@ export const folders = sqliteTable(
     iconJson: text("icon_json", { mode: "json" })
       .notNull()
       .default('{"type":"icon","value":"folder","color":"#9ca3af"}'),
+    // Modèle de compte rendu par défaut du dossier (issue 502) ; vide : aucun.
+    templateId: text("template_id").notNull().default(""),
     createdAt: text("created_at").notNull().default(currentTimestamp),
     updatedAt: text("updated_at").notNull().default(currentTimestamp),
     deletedAt: text("deleted_at"),

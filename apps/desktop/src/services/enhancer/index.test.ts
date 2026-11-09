@@ -303,6 +303,97 @@ describe("EnhancerService", () => {
     );
   });
 
+  // Issue 502 : modèle de la note > dossier > défaut global > Automatique.
+  it("uses the folder template when the note has none, before the global default", async () => {
+    snapshot = createSnapshot();
+    const ai = createMockAITaskStore();
+    const getFolderTemplateId = vi.fn(async () => "folder-template");
+    const service = new EnhancerService(
+      createDeps({
+        aiTaskStore: ai.store,
+        getSelectedTemplateId: () => "global-template",
+        getFolderTemplateId,
+      }),
+    );
+
+    await service.enhance("session-1");
+
+    expect(getFolderTemplateId).toHaveBeenCalledWith("session-1");
+    expect(mocks.ensureSummaryDocument).toHaveBeenCalledWith(
+      "session-1",
+      "folder-template",
+    );
+    expect(ai.generate).toHaveBeenCalledWith(
+      "note-1-enhance",
+      expect.objectContaining({
+        args: expect.objectContaining({ templateId: "folder-template" }),
+      }),
+    );
+  });
+
+  it("keeps the template chosen on the note over the folder template", async () => {
+    snapshot = { ...createSnapshot(), rawTemplateId: "memo-template" };
+    const ai = createMockAITaskStore();
+    const getFolderTemplateId = vi.fn(async () => "folder-template");
+    const service = new EnhancerService(
+      createDeps({ aiTaskStore: ai.store, getFolderTemplateId }),
+    );
+
+    await service.enhance("session-1");
+
+    expect(getFolderTemplateId).not.toHaveBeenCalled();
+    expect(mocks.ensureSummaryDocument).toHaveBeenCalledWith(
+      "session-1",
+      "memo-template",
+    );
+  });
+
+  it("falls back to the global default, then to Automatic, without a folder template", async () => {
+    snapshot = createSnapshot();
+    const ai = createMockAITaskStore();
+    await new EnhancerService(
+      createDeps({
+        aiTaskStore: ai.store,
+        getSelectedTemplateId: () => "global-template",
+        getFolderTemplateId: async () => undefined,
+      }),
+    ).enhance("session-1");
+    expect(mocks.ensureSummaryDocument).toHaveBeenLastCalledWith(
+      "session-1",
+      "global-template",
+    );
+
+    await new EnhancerService(
+      createDeps({
+        aiTaskStore: createMockAITaskStore().store,
+        getFolderTemplateId: async () => undefined,
+      }),
+    ).enhance("session-1");
+    expect(mocks.ensureSummaryDocument).toHaveBeenLastCalledWith(
+      "session-1",
+      undefined,
+    );
+  });
+
+  it("does not look up the folder when the launch asks for Automatic", async () => {
+    snapshot = createSnapshot();
+    const getFolderTemplateId = vi.fn(async () => "folder-template");
+    const service = new EnhancerService(
+      createDeps({
+        aiTaskStore: createMockAITaskStore().store,
+        getFolderTemplateId,
+      }),
+    );
+
+    await service.enhance("session-1", { templateId: null });
+
+    expect(getFolderTemplateId).not.toHaveBeenCalled();
+    expect(mocks.ensureSummaryDocument).toHaveBeenCalledWith(
+      "session-1",
+      undefined,
+    );
+  });
+
   it("returns already_active while the note task is generating", async () => {
     snapshot = createSnapshot({ notes: [createNote()] });
     const ai = createMockAITaskStore(() => ({ status: "generating" }));

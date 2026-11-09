@@ -130,4 +130,5 @@ pub const APP_MIGRATION_STEPS: &[MigrationStep] = &[
     migration!("20261109130000_drop_cloud_sharing"),
     migration!("20261109150000_folder_threads"),
     migration!("20261109180000_folder_thread_agenda"),
+    migration!("20261109190000_folder_template"),
 ];

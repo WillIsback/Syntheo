@@ -318,4 +318,32 @@ describe("meeting type selection on the real schema", () => {
     await chooseMeetingType("Automatic");
     await waitFor(() => expect(storedTemplateId()).toBe(""));
   });
+
+  // Issue 502 : la note suit le modèle de son dossier (ou du parent le plus
+  // proche) tant que l'utilisateur n'en a pas choisi un.
+  it("shows the folder template inherited from a parent until a type is chosen", async () => {
+    mocks.database!.exec(`
+      INSERT OR IGNORE INTO templates (id, title, created_at, updated_at)
+      VALUES ('default-daily-standup', 'Point quotidien', '', '');
+      INSERT INTO folders (id, path, template_id)
+      VALUES ('folder-atlas', 'Atlas', 'default-daily-standup');
+      UPDATE sessions SET folder_path = 'Atlas/Hebdo' WHERE id = 'session-1';
+    `);
+    render(<Harness stage="prepare" />);
+
+    expect(
+      await screen.findByRole("button", {
+        name: "Meeting type: Point quotidien — folder template",
+      }),
+    ).toBeTruthy();
+    expect(storedTemplateId()).toBeUndefined();
+
+    await chooseMeetingType("Tête-à-tête");
+    await waitFor(() =>
+      expect(storedTemplateId()).toBe("default-one-on-one-meeting"),
+    );
+    expect(
+      screen.getByRole("button", { name: "Meeting type: Tête-à-tête" }),
+    ).toBeTruthy();
+  });
 });
