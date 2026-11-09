@@ -96,21 +96,6 @@ export function useSessionSummary(
   return sessionId ? data : null;
 }
 
-export function useSessionSummaries(): SessionSummaryRecord[] {
-  const { data = EMPTY_SESSION_SUMMARIES } = useLiveQuery<
-    SessionSummarySqlRow,
-    SessionSummaryRecord[]
-  >({
-    sql: `
-      SELECT id, title, created_at
-      FROM sessions
-      WHERE deleted_at IS NULL
-      ORDER BY created_at DESC, id
-    `,
-  });
-  return data;
-}
-
 export function useSessionSummariesByIds(
   sessionIds: readonly string[],
 ): SessionSummaryRecord[] {

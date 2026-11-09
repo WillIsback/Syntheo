@@ -10,7 +10,6 @@ import {
   useSessionHasTranscript,
 } from "~/session/queries";
 import type { SessionMode } from "~/store/zustand/listener/general";
-import type { Tab } from "~/store/zustand/tabs/schema";
 import { type EditorView } from "~/store/zustand/tabs/schema";
 import { useListener } from "~/stt/contexts";
 
@@ -43,13 +42,6 @@ export function useCurrentNoteHasContent(
   }
 
   return hasStoredNoteContent(rawMd);
-}
-
-export function useCurrentNoteTab(
-  tab: Extract<Tab, { type: "sessions" }>,
-  options: { audioExists?: boolean } = {},
-): EditorView {
-  return useSessionNoteView(tab.id, tab.state.view ?? null, options);
 }
 
 // Vue affichée pour une note, même quand elle n'est pas ouverte dans un
@@ -109,7 +101,7 @@ export function useCanShowTranscript(
   });
 }
 
-export function getCanShowTranscript({
+function getCanShowTranscript({
   audioExists = false,
   batchError = false,
   hasLiveSegments = false,

@@ -47,7 +47,6 @@ export {
   updateSession,
   useSession,
   useSessionHasTranscript,
-  useSessionSummaries,
   useSessionSummariesByIds,
   useSessionSummary,
   useSessionTranscriptExistence,
