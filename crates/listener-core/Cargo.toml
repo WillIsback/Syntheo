@@ -23,9 +23,6 @@ syntheo-vad-masking = { workspace = true }
 owhisper-client = { workspace = true }
 owhisper-interface = { workspace = true }
 
-hound = { workspace = true }
-syntheo-mp3 = { workspace = true }
-
 ractor = { workspace = true, features = ["async-trait"] }
 
 bytes = { workspace = true }
@@ -33,7 +30,6 @@ futures-util = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 specta = { workspace = true, optional = true }
-sysinfo = { workspace = true }
 tauri-specta = { workspace = true, optional = true, features = ["derive"] }
 tokio = { workspace = true, features = ["rt-multi-thread", "macros", "signal"] }
 tokio-stream = { workspace = true }
@@ -42,8 +38,6 @@ tracing = { workspace = true }
 uuid = { workspace = true }
 
 [dev-dependencies]
-syntheo-data = { workspace = true }
 tempfile = { workspace = true }
 tokio = { workspace = true, features = ["test-util"] }
 tokio-tungstenite = { workspace = true }
-tracing-subscriber = { workspace = true }

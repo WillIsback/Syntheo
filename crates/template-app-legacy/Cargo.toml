@@ -16,7 +16,3 @@ minijinja-contrib = { workspace = true, features = ["pycompat"] }
 
 htmd = { workspace = true }
 reqwest = { workspace = true, features = ["blocking"] }
-
-[dev-dependencies]
-insta = { workspace = true }
-syntheo-data = { workspace = true }

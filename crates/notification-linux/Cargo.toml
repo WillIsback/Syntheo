@@ -11,9 +11,6 @@ linux-examples = []
 name = "test_notification"
 required-features = ["linux-examples"]
 
-[dev-dependencies]
-tokio = { workspace = true }
-
 [dependencies]
 syntheo-brand = { workspace = true }
 syntheo-notification-interface = { workspace = true }

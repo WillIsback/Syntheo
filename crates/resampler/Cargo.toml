@@ -23,7 +23,6 @@ syntheo-audio-interface = { workspace = true, optional = true }
 thiserror = { workspace = true }
 
 [dev-dependencies]
-hound = { workspace = true }
 rodio = { workspace = true, features = ["symphonia-all"] }
 syntheo-data = { workspace = true }
 tokio = { workspace = true, features = ["full"] }

@@ -778,7 +778,6 @@ dependencies = [
  "serde",
  "specta",
  "thiserror 2.0.21",
- "tokio",
  "tracing",
  "windows",
  "windows-core",
@@ -827,8 +826,6 @@ dependencies = [
 name = "audio-sync"
 version = "0.1.0"
 dependencies = [
- "approx",
- "dasp",
  "realfft",
  "rodio",
  "serde",
@@ -1882,15 +1879,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1d07550c9036bf2ae0c684c4297d503f838287c83c53686d05370d0e139ae570"
 
 [[package]]
-name = "colored"
-version = "3.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "faf9468729b8cbcea668e36183cb69d317348c2e08e994829fb56ebfdfbaac34"
-dependencies = [
- "windows-sys 0.52.0",
-]
-
-[[package]]
 name = "combine"
 version = "4.6.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2534,10 +2522,6 @@ dependencies = [
 [[package]]
 name = "data"
 version = "0.1.0"
-dependencies = [
- "owhisper-interface",
- "serde",
-]
 
 [[package]]
 name = "data-encoding"
@@ -2561,7 +2545,6 @@ checksum = "11c0bd7d22989969a619bae09147b992a6aa7f31dd4f9d9af6345f533744781f"
 name = "db-app"
 version = "0.1.0"
 dependencies = [
- "base64 0.23.1",
  "db-core",
  "db-migrate",
  "serde",
@@ -2570,7 +2553,6 @@ dependencies = [
  "sqlx",
  "tempfile",
  "thiserror 2.0.21",
- "tiptap",
  "tokio",
  "url",
  "uuid",
@@ -2588,13 +2570,9 @@ dependencies = [
 name = "db-core"
 version = "0.1.0"
 dependencies = [
- "backon",
  "db-change",
  "libsqlite3-sys",
- "serde",
- "serde_json",
  "sqlx",
- "tempfile",
  "thiserror 2.0.21",
  "tokio",
  "tracing",
@@ -3722,7 +3700,6 @@ dependencies = [
  "assert_fs",
  "audio-utils",
  "chrono",
- "criterion",
  "data",
  "frontmatter",
  "fs-format",
@@ -3901,22 +3878,8 @@ dependencies = [
 name = "gbnf"
 version = "0.1.0"
 dependencies = [
- "colored",
- "gbnf-validator",
- "indoc",
- "insta",
  "serde",
- "serde_json",
  "specta",
-]
-
-[[package]]
-name = "gbnf-validator"
-version = "0.1.0"
-source = "git+https://github.com/fastrepl/gbnf-validator?rev=3dec055#3dec0551311840ae8c9a0feb10e556dd18ffe291"
-dependencies = [
- "anyhow",
- "tempfile",
 ]
 
 [[package]]
@@ -6066,15 +6029,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "indoc"
-version = "2.0.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a37b2691796cffeb8a8cd305ac66e65841559f147f4e63231d0eafa4db5384d1"
-dependencies = [
- "rustversion",
-]
-
-[[package]]
 name = "infer"
 version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6865,12 +6819,9 @@ dependencies = [
  "audio-device",
  "audio-utils",
  "bytes",
- "data",
  "device-monitor",
  "futures-util",
- "hound",
  "language",
- "mp3",
  "owhisper-client",
  "owhisper-interface",
  "ractor",
@@ -6879,7 +6830,6 @@ dependencies = [
  "specta",
  "storage",
  "supervisor",
- "sysinfo",
  "tauri-specta",
  "tempfile",
  "tokio",
@@ -6887,7 +6837,6 @@ dependencies = [
  "tokio-tungstenite 0.29.0",
  "tokio-util",
  "tracing",
- "tracing-subscriber",
  "transcript",
  "uuid",
  "vad-masking",
@@ -6898,7 +6847,6 @@ name = "listener2-core"
 version = "0.1.0"
 dependencies = [
  "aspasia",
- "async-stream",
  "audio-utils",
  "axum",
  "base64 0.23.1",
@@ -7437,7 +7385,6 @@ dependencies = [
  "indexmap 2.14.2",
  "notification-interface",
  "pango",
- "tokio",
  "tracing",
 ]
 
@@ -9644,7 +9591,6 @@ dependencies = [
  "dasp",
  "data",
  "futures-util",
- "hound",
  "pin-project",
  "rodio",
  "rubato",
@@ -11595,7 +11541,6 @@ dependencies = [
  "serde_json",
  "sha2 0.11.1",
  "sqlx",
- "storage",
  "tempfile",
  "thiserror 2.0.21",
  "tokio",
@@ -12155,7 +12100,6 @@ name = "tauri-plugin-db"
 version = "0.1.0"
 dependencies = [
  "agent-access",
- "anyhow",
  "db-app",
  "db-core",
  "db-execute",
@@ -12172,14 +12116,12 @@ dependencies = [
  "storage",
  "tauri",
  "tauri-plugin",
- "tauri-plugin-store2",
  "tauri-specta",
  "tempfile",
  "thiserror 2.0.21",
  "tokio",
  "tracing",
  "uuid",
- "wiremock",
 ]
 
 [[package]]
@@ -12289,7 +12231,6 @@ dependencies = [
  "tauri",
  "tauri-plugin",
  "tauri-specta",
- "tempfile",
  "thiserror 2.0.21",
  "tokio",
  "tokio-tungstenite 0.29.0",
@@ -12369,7 +12310,6 @@ dependencies = [
  "tauri-plugin-notify",
  "tauri-plugin-settings",
  "tauri-specta",
- "tempfile",
  "tokio",
  "tracing",
 ]
@@ -12386,7 +12326,6 @@ dependencies = [
  "tauri-plugin-settings",
  "tauri-specta",
  "thiserror 2.0.21",
- "tokio",
 ]
 
 [[package]]
@@ -12459,7 +12398,6 @@ dependencies = [
  "tauri-specta",
  "tempfile",
  "thiserror 2.0.21",
- "tokio",
 ]
 
 [[package]]
@@ -12476,7 +12414,6 @@ dependencies = [
  "tauri-specta",
  "tokio",
  "tokio-util",
- "url",
 ]
 
 [[package]]
@@ -12550,7 +12487,6 @@ dependencies = [
  "tauri-plugin",
  "tauri-specta",
  "thiserror 2.0.21",
- "tokio",
 ]
 
 [[package]]
@@ -12597,9 +12533,7 @@ dependencies = [
  "tauri-plugin",
  "tauri-plugin-settings",
  "tauri-specta",
- "tempfile",
  "thiserror 2.0.21",
- "tokio",
  "tracing",
 ]
 
@@ -12636,7 +12570,6 @@ dependencies = [
  "tauri-plugin-opener",
  "tauri-specta",
  "thiserror 2.0.21",
- "tokio",
 ]
 
 [[package]]
@@ -12681,7 +12614,6 @@ dependencies = [
  "tauri",
  "tauri-plugin",
  "tauri-specta",
- "tokio",
 ]
 
 [[package]]
@@ -12712,7 +12644,6 @@ dependencies = [
  "tauri-specta",
  "tcc",
  "thiserror 2.0.21",
- "tokio",
  "tracing",
 ]
 
@@ -12970,7 +12901,6 @@ dependencies = [
  "tauri-plugin",
  "tauri-plugin-settings",
  "tauri-specta",
- "tempfile",
  "thiserror 2.0.21",
  "tokio",
  "tracing",
@@ -13286,9 +13216,7 @@ dependencies = [
 name = "template-app-legacy"
 version = "0.1.0"
 dependencies = [
- "data",
  "htmd",
- "insta",
  "minijinja",
  "minijinja-contrib",
  "reqwest 0.13.5",
@@ -14759,9 +14687,7 @@ dependencies = [
  "audacity",
  "audio-utils",
  "clap",
- "data",
  "hound",
- "rodio",
  "vad",
 ]
 
@@ -16494,7 +16420,6 @@ dependencies = [
  "serde_json",
  "syntheo-http-utils",
  "thiserror 2.0.21",
- "tokio",
  "urlencoding",
 ]
 
