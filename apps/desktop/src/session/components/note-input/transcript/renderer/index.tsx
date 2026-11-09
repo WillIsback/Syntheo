@@ -14,6 +14,7 @@ import { cn } from "@syntheo/utils";
 import { copySelectedReplies } from "./copy-replies";
 import { useTranscriptEditActions } from "./edit-actions";
 import { TranscriptScrollControls } from "./scroll-controls";
+import { useSelectAllRepliesHotkey } from "./select-all-hotkey";
 import {
   completeTranscriptContextSelection,
   getTranscriptContextSelection,
@@ -260,8 +261,18 @@ export function TranscriptViewer({
       event.preventDefault();
       clearSelectedEntries();
     },
-    { enabled: editMode && selectedEntries.size > 0 },
+    // Aussi hors édition : Ctrl+A ou Ctrl+clic sélectionnent des répliques.
+    { enabled: selectedEntries.size > 0 },
   );
+
+  useSelectAllRepliesHotkey({
+    containerRef,
+    collectAll: () => collectEntries(visibleTranscriptIdsRef.current),
+    onSelect: (entries, anchor) => {
+      setSelectedEntries(entries);
+      setSelectionAnchor(anchor);
+    },
+  });
 
   useHotkeys(
     "mod+shift+up, mod+shift+down",
@@ -386,10 +397,12 @@ export function TranscriptViewer({
           ref={handleContainerRef}
           data-transcript-container
           data-transcript-select-mode={selectMode ? "true" : undefined}
+          // Focalisable au clic : Ctrl+A ne vise la marge que si elle a le focus.
+          tabIndex={-1}
           onClickCapture={handleSegmentSelection}
           onContextMenu={handleContextMenu}
           className={cn([
-            "flex min-h-0 min-w-0 flex-1 flex-col gap-8 overflow-x-clip overflow-y-auto",
+            "flex min-h-0 min-w-0 flex-1 flex-col gap-8 overflow-x-clip overflow-y-auto outline-none",
             "scrollbar-hide",
             "scroll-pb-[calc(8rem+env(safe-area-inset-bottom))]",
             "pb-[calc(4rem+env(safe-area-inset-bottom))]",

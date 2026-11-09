@@ -356,6 +356,27 @@ describe("TranscriptViewer", () => {
     fireEvent.keyUp(document, { key: opposite, code: opposite });
   });
 
+  it("selects every reply with Ctrl+A in the margin, and Esc clears it", () => {
+    render(viewerElement({ transcriptIds: ["1", "2", "3"] }));
+    const margin = document.querySelector("[data-transcript-container]")!;
+    expect(margin.getAttribute("tabindex")).toBe("-1");
+
+    const event = new KeyboardEvent("keydown", {
+      key: "a",
+      code: "KeyA",
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    fireEvent(screen.getByTestId("segment-2"), event);
+    fireEvent.keyUp(document, { key: "a", code: "KeyA" });
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(screen.getByTestId("multi-selection-bar").textContent).toBe("3");
+    fireEvent.keyDown(document, { key: "Escape", code: "Escape" });
+    expect(screen.queryByTestId("multi-selection-bar")).toBeNull();
+  });
+
   it("leaves shortcuts alone without a block selection or inside an editor", () => {
     render(viewerElement({ transcriptIds: ["1", "2", "3"], editMode: true }));
     fireEvent.keyDown(document, {
