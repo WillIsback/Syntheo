@@ -5,6 +5,7 @@ use std::time::{Instant, SystemTime};
 use syntheo_audio::AudioProvider;
 use syntheo_transcript::IdentityAssignment;
 
+use crate::actors::ChannelMutes;
 use crate::{ListenerRuntime, LiveTranscriptEngine, TranscriptionMode};
 
 pub const SESSION_SUPERVISOR_PREFIX: &str = "session_supervisor_";
@@ -108,6 +109,9 @@ pub struct SessionContext {
     /// The live transcript outlives any one listener: a reconnecting listener resumes it so the
     /// audio it replays cannot finalize words twice and segments continue across the gap.
     pub live_transcript: SharedLiveTranscript,
+    /// Micro et son système coupés (issue 447) : partagés par chaque source de la session, ils
+    /// survivent à une reconnexion du STT comme à une relance de la capture.
+    pub mutes: ChannelMutes,
 }
 
 pub type SharedLiveTranscript = Arc<Mutex<Option<LiveTranscriptEngine>>>;

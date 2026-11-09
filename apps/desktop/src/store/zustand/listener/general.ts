@@ -26,6 +26,7 @@ import {
   markLiveStartRequested,
   setLiveState,
 } from "./general-shared";
+import { syncMutedChannelsNotice } from "./muted-channels";
 import type {
   BatchPersistCallback,
   LiveTranscriptPersistCallback,
@@ -65,6 +66,8 @@ export type GeneralActions = {
   beginCaptureRecoveryFinalization: (sessionId: string) => boolean;
   finishCaptureRecoveryFinalization: (sessionId: string) => void;
   setMuted: (value: boolean) => void;
+  // Son système coupé pendant l'écoute (issue 447), sans relancer la session.
+  setSpeakerMuted: (value: boolean) => void;
   setBatchTranscriptionPending: (sessionId: string, pending: boolean) => void;
   setTriggerAppIds: (appIds: string[] | null) => void;
   updateCaptureConfig: (update: CaptureConfigUpdate) => Promise<void>;
@@ -201,6 +204,18 @@ export const createGeneralSlice = <
           );
       }),
     );
+    syncMutedChannelsNotice(get());
+  },
+  setSpeakerMuted: (value) => {
+    setLiveState(set, (live) => {
+      live.speakerMuted = value;
+    });
+    void listenerCommands
+      .setSpeakerMuted(value)
+      .catch((error) =>
+        console.error("[listener] failed to set system audio mute", error),
+      );
+    syncMutedChannelsNotice(get());
   },
   setBatchTranscriptionPending: (sessionId, pending) => {
     setLiveState(set, (live) => {

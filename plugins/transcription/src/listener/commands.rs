@@ -166,6 +166,25 @@ pub async fn set_mic_muted<R: tauri::Runtime>(
 
 #[tauri::command]
 #[specta::specta]
+pub async fn get_speaker_muted<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+) -> Result<bool, String> {
+    Ok(app.listener().get_speaker_muted().await)
+}
+
+/// Coupe ou rétablit le son système de l'écoute en cours (issue 447), sans la relancer.
+#[tauri::command]
+#[specta::specta]
+pub async fn set_speaker_muted<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    muted: bool,
+) -> Result<(), String> {
+    app.listener().set_speaker_muted(muted).await;
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
 pub async fn retry_audio_capture<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
     session_id: String,

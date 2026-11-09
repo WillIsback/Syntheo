@@ -24,6 +24,8 @@ permissions = [
     "allow-stop-capture-for-session",
     "allow-get-mic-muted",
     "allow-set-mic-muted",
+    "allow-get-speaker-muted",
+    "allow-set-speaker-muted",
     "allow-get-capture-state",
     "allow-get-capture-snapshot",
     "allow-update-capture-credentials",

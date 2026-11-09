@@ -607,6 +607,37 @@ mod tests {
         ));
     }
 
+    // Issue 447 : un canal coupé envoie du silence. Coupé longtemps, il ne compte jamais comme
+    // de l'audio actif : seul l'autre canal peut faire partir le chien de garde.
+    #[test]
+    fn a_channel_muted_for_a_long_time_does_not_trigger_reconnection() {
+        let now = Instant::now();
+        let second = crate::actors::SAMPLE_RATE as usize;
+        let muted = syntheo_audio_utils::f32_to_i16_bytes(std::iter::repeat_n(0.0_f32, second));
+        let quiet_room = 16_i16.to_le_bytes().repeat(second);
+
+        let mut progress = StreamProgress::new(now);
+        for elapsed in 1..=900 {
+            let active = active_audio_samples(&muted).max(active_audio_samples(&quiet_room));
+            assert!(
+                !progress.observe_audio(active, now + Duration::from_secs(elapsed)),
+                "watchdog fired after {elapsed} s with a muted channel",
+            );
+        }
+
+        // L'autre canal parle et le STT transcrit : pas de reconnexion non plus.
+        let speech = 1000_i16.to_le_bytes().repeat(second);
+        let mut talking = StreamProgress::new(now);
+        for elapsed in 1..=900 {
+            let time = now + Duration::from_secs(elapsed);
+            let active = active_audio_samples(&muted).max(active_audio_samples(&speech));
+            assert!(!talking.observe_audio(active, time), "fired at {elapsed} s");
+            if elapsed % 10 == 0 {
+                talking.observe_delta(&transcript_delta(true, elapsed as i64), time);
+            }
+        }
+    }
+
     #[test]
     fn partial_transcripts_reset_the_stall_watchdog() {
         let now = Instant::now();

@@ -23,6 +23,7 @@ import { ignoreUnlessTyped } from "~/shared/typed-key";
 import { useNewNote, useNewNoteAndListen } from "~/shared/useNewNote";
 import { focusTitleBarMenu, toggleFullscreen } from "~/shared/window-shortcuts";
 import { useTabs } from "~/store/zustand/tabs";
+import { toggleLiveChannel } from "~/stt/channel-mute";
 
 // Raccourcis enregistrés en permanence, avec `preventDefault` : en
 // développement, le plugin prevent-default est absent et WebView2 reprendrait
@@ -183,6 +184,26 @@ export function useMainShortcuts() {
   );
 
   useHotkeys(hotkeysOf("help"), openHelpDialog, ALWAYS_ON, []);
+
+  // Ctrl+Maj+M et Ctrl+Maj+S (issue 447) : couper ou rétablir le micro ou le
+  // son système de l'écoute en cours, sans effet hors écoute.
+  useHotkeys(
+    hotkeysOf("toggleMicrophone"),
+    () => toggleLiveChannel("mic"),
+    {
+      ...ALWAYS_ON,
+      ignoreEventWhen: ignoreUnlessTyped(
+        getShortcut("toggleMicrophone").typedKey,
+      ),
+    },
+    [],
+  );
+  useHotkeys(
+    hotkeysOf("toggleSystemAudio"),
+    () => toggleLiveChannel("speaker"),
+    ALWAYS_ON,
+    [],
+  );
 
   useHotkeys(
     hotkeysOf("fullScreen"),

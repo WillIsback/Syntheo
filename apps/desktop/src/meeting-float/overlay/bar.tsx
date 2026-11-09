@@ -6,6 +6,8 @@ import {
   ArrowsInSimple,
   ArrowsOutSimple,
   CaretDown,
+  Microphone,
+  MicrophoneSlash,
   Pause,
   Play,
   Square,
@@ -36,6 +38,7 @@ type OverlayCallbacks = {
   onStop: () => void;
   onPause?: () => void;
   onResume?: () => void;
+  onToggleMic?: () => void;
   onOpenNote?: () => void;
   onToggleExpanded: (expanded: boolean) => void;
 };
@@ -78,6 +81,7 @@ function MeetingPill({
   onStop,
   onPause,
   onResume,
+  onToggleMic,
   onOpenNote,
 }: OverlayCallbacks & {
   state: FloatingBarState;
@@ -107,6 +111,7 @@ function MeetingPill({
           colors={colors}
           onStop={onStop}
           onPause={onPause}
+          onToggleMic={onToggleMic}
           onOpenNote={onOpenNote}
         />
       )}
@@ -119,12 +124,14 @@ function RecordingControls({
   colors,
   onStop,
   onPause,
+  onToggleMic,
   onOpenNote,
 }: {
   state: FloatingBarState;
   colors: BarColors;
   onStop: () => void;
   onPause?: () => void;
+  onToggleMic?: () => void;
   onOpenNote?: () => void;
 }) {
   const { t } = useLingui();
@@ -190,6 +197,11 @@ function RecordingControls({
           style={{ width: 1, height: 18, background: colors.separator }}
         />
       </span>
+      <MicrophoneToggle
+        muted={state.micMuted === true}
+        colors={colors}
+        onToggle={onToggleMic}
+      />
       <button
         type="button"
         data-tauri-drag-region="false"
@@ -237,6 +249,51 @@ function RecordingControls({
         <Trans>Finish</Trans>
       </button>
     </>
+  );
+}
+
+// Bascule du micro (issue 447) : même état coupé que dans la capsule, fond
+// `recording` et pictogramme barré ; l'infobulle dit ce que fait le clic.
+function MicrophoneToggle({
+  muted,
+  colors,
+  onToggle,
+}: {
+  muted: boolean;
+  colors: BarColors;
+  onToggle?: () => void;
+}) {
+  const { t } = useLingui();
+  const Icon = muted ? MicrophoneSlash : Microphone;
+
+  return (
+    <span
+      className="flex shrink-0 justify-start"
+      style={{ width: FLOATING_PILL_SLOTS.microphone }}
+    >
+      <button
+        type="button"
+        data-tauri-drag-region="false"
+        data-channel-toggle="mic"
+        aria-label={t`Mute the microphone`}
+        aria-pressed={muted}
+        title={muted ? t`Unmute the microphone` : t`Mute the microphone`}
+        onClick={onToggle}
+        className="flex items-center justify-center hover:bg-[var(--pill-hover)]"
+        style={
+          {
+            "--pill-hover": muted ? colors.accent : colors.controlFill,
+            width: FLOATING_BAR_COMPACT_ICON_SIZE,
+            height: FLOATING_BAR_COMPACT_ICON_SIZE,
+            borderRadius: FLOATING_BAR_CONTROL_RADIUS,
+            background: muted ? colors.accent : undefined,
+            color: muted ? colors.onAccent : colors.content,
+          } as CSSProperties
+        }
+      >
+        <Icon size={14} aria-hidden="true" />
+      </button>
+    </span>
   );
 }
 
@@ -527,6 +584,7 @@ type BarColors = {
   controlFill: string;
   accent: string;
   accentHover: string;
+  onAccent: string;
 };
 
 function barColors(state: FloatingBarState, palette: PaletteId): BarColors {
@@ -545,5 +603,6 @@ function barColors(state: FloatingBarState, palette: PaletteId): BarColors {
     controlFill: withAlpha(tokens.foreground, 8),
     accent: tokens.recording,
     accentHover: withAlpha(tokens.recording, 18),
+    onAccent: tokens.background,
   };
 }

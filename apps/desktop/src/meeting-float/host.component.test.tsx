@@ -7,6 +7,9 @@ const mocks = vi.hoisted(() => ({
     | null
     | ((event: { payload: { sessionId: string; action: string } }) => void),
   meetingStop: null as null | (() => void),
+  listeningAction: null as
+    | null
+    | ((event: { payload: { action: string } }) => void),
   openMain: null as null | (() => Promise<void>),
   settings: {
     current: {
@@ -40,10 +43,13 @@ const mocks = vi.hoisted(() => ({
       liveTranscriptionActive: true,
       seconds: 0,
       elapsedOffsetSeconds: 0,
+      muted: false,
     },
     liveSegments: [],
     liveCaptionText: "we should ship this",
     stop: vi.fn(),
+    pause: vi.fn(),
+    setMuted: vi.fn(),
   },
   subscribeListener: vi.fn(() => vi.fn()),
 }));
@@ -69,7 +75,12 @@ vi.mock("@syntheo/plugin-windows", () => ({
         return vi.fn();
       }),
     },
-    floatingBarListeningAction: { listen: mocks.listen },
+    floatingBarListeningAction: {
+      listen: vi.fn(async (callback) => {
+        mocks.listeningAction = callback;
+        return vi.fn();
+      }),
+    },
     floatingBarSettingsChange: { listen: mocks.listen },
     floatingBarStop: {
       listen: vi.fn(async (callback) => {
@@ -249,6 +260,26 @@ describe("FloatingMeetingWindowHost", () => {
       id: "session-1",
     });
     openNew.mockRestore();
+  });
+
+  // Issue 447 : la bascule du micro de la pastille passe par le même chemin
+  // que la capsule, sans relancer l'écoute.
+  it("mutes and unmutes the microphone from the pill", async () => {
+    render(<FloatingMeetingWindowHost />);
+    await waitFor(() =>
+      expect(mocks.floatingBarUpdate).toHaveBeenLastCalledWith(
+        expect.objectContaining({ micMuted: false }),
+      ),
+    );
+
+    await act(async () => {
+      mocks.listeningAction!({ payload: { action: "muteMic" } });
+      mocks.listeningAction!({ payload: { action: "unmuteMic" } });
+    });
+
+    expect(mocks.listenerState.setMuted.mock.calls).toEqual([[true], [false]]);
+    expect(mocks.listenerState.pause).not.toHaveBeenCalled();
+    expect(mocks.listenerState.stop).not.toHaveBeenCalled();
   });
 
   it("gives an active meeting ownership of the panel", async () => {

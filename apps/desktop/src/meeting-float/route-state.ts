@@ -53,6 +53,8 @@ export type FloatingRouteState = {
   transcriptNotice?: string | null;
   // Durée écoutée, pauses exclues, affichée par la pastille (issue 448).
   elapsedSeconds?: number;
+  // Micro coupé : la bascule de la pastille l'affiche barré (issue 447).
+  micMuted?: boolean;
 };
 const FLOATING_TRANSCRIPT_OVERLAP_THRESHOLD_MS = 300;
 
@@ -156,6 +158,7 @@ export function getFloatingRouteState(
       state.live,
       state.live.sessionId,
     ),
+    micMuted: state.live.muted,
   };
 }
 
@@ -384,6 +387,7 @@ export function isSameFloatingRouteState(
     left?.liveCaptionToggleVisible === right?.liveCaptionToggleVisible &&
     left?.title === right?.title &&
     left?.elapsedSeconds === right?.elapsedSeconds &&
+    left?.micMuted === right?.micMuted &&
     (left?.transcriptNotice ?? null) === (right?.transcriptNotice ?? null) &&
     left?.dictation?.sessionId === right?.dictation?.sessionId &&
     left?.dictation?.phase === right?.dictation?.phase &&

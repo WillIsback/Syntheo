@@ -88,6 +88,9 @@ pub struct FloatingBarState {
     /// Durée écoutée, pauses exclues (issue 448) : affichée dans la pastille de réunion.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub elapsed_seconds: Option<u32>,
+    /// Micro coupé pendant l'écoute (issue 447) : la bascule de la pastille l'affiche barré.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mic_muted: Option<bool>,
 }
 
 pub const WINDOW_LABEL: &str = "floating-bar";
@@ -106,9 +109,10 @@ pub(crate) mod layout {
     pub const COMPACT_HORIZONTAL_PADDING: f64 = 4.0;
     /// « En pause », « Reprendre » et « Terminer » côte à côte (bar.tsx).
     pub const PAUSED_CONTROLS_WIDTH: f64 = 232.0;
-    /// Pastille d'écoute (issue 448) : point, durée, niveau, séparateur, « Pause » et
-    /// « Terminer ». Même valeur que FLOATING_BAR_RECORDING_PILL_WIDTH (layout.ts).
-    pub const RECORDING_PILL_WIDTH: f64 = 262.0;
+    /// Pastille d'écoute (issue 448) : point, durée, niveau, séparateur, bascule du micro
+    /// (issue 447), « Pause » et « Terminer ». Même valeur que FLOATING_BAR_RECORDING_PILL_WIDTH
+    /// (layout.ts), vérifiée par bar.test.tsx.
+    pub const RECORDING_PILL_WIDTH: f64 = 294.0;
     /// Place supplémentaire de la durée au-delà d'une heure (h:mm:ss au lieu de mm:ss).
     pub const LONG_DURATION_EXTRA_WIDTH: f64 = 16.0;
     pub const LONG_DURATION_SECONDS: u32 = 3600;
@@ -834,7 +838,10 @@ mod tests {
         let (width, height) = layout::default_size();
         assert_eq!(
             layout::bottom_center_origin(-1920.0, 40.0, 1920.0, 1040.0, width, height),
-            (-1091.0, 1034.0)
+            (
+                -1920.0 + (1920.0 - layout::RECORDING_PILL_WIDTH) / 2.0,
+                1034.0
+            )
         );
         assert_eq!(1034.0 + height + layout::SCREEN_MARGIN, 40.0 + 1040.0);
     }
@@ -881,6 +888,7 @@ mod tests {
             layout: None,
             session_id: None,
             elapsed_seconds: elapsed,
+            mic_muted: None,
         }
     }
 

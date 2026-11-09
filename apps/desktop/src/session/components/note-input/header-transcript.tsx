@@ -163,7 +163,8 @@ function LiveDancingSticks({ sessionId }: { sessionId: string }) {
 function useTranscriptLiveViewState(sessionId: string) {
   const { mode, muted } = useListener((state) => ({
     mode: state.getSessionMode(sessionId),
-    muted: state.live.muted,
+    // Issue 447 : le niveau reste animé tant qu'un canal est capté.
+    muted: state.live.muted && state.live.speakerMuted,
   }));
   return {
     live: mode === "active" ? { sessionId, muted } : undefined,

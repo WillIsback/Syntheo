@@ -1,5 +1,8 @@
+mod mutes;
 mod pipeline;
 mod stream;
+
+pub use mutes::ChannelMutes;
 
 use std::sync::{
     Arc,
@@ -27,6 +30,9 @@ use syntheo_device_monitor::{DeviceMonitorHandle, DeviceSwitch, DeviceSwitchMoni
 pub enum SourceMsg {
     SetMicMute(bool),
     GetMicMute(RpcReplyPort<bool>),
+    /// Coupe le son système sans arrêter la capture ni le STT (issue 447).
+    SetSpeakerMute(bool),
+    GetSpeakerMute(RpcReplyPort<bool>),
     GetMicDevice(RpcReplyPort<Option<String>>),
     GetMicIsolated(RpcReplyPort<bool>),
     GetCaptureHealth(RpcReplyPort<CaptureHealth>),
@@ -54,6 +60,7 @@ pub struct CaptureHealth {
 pub struct SourceFrame {
     pub capture: CaptureFrame,
     pub mic_muted: bool,
+    pub speaker_muted: bool,
     pub captured: bool,
 }
 
@@ -87,6 +94,8 @@ pub struct SourceArgs {
     pub audio: Arc<dyn AudioProvider>,
     pub session_id: String,
     pub listener_routing: ListenerRouting,
+    /// Tenus par la session : une source relancée garde les canaux coupés.
+    pub mutes: ChannelMutes,
 }
 
 pub struct SourceState {
@@ -100,7 +109,7 @@ pub struct SourceState {
     pub(super) active_mic_device: Option<String>,
     pub(super) onboarding: bool,
     pub(super) capture_mic_isolated: bool,
-    pub(super) mic_muted: Arc<AtomicBool>,
+    pub(super) mutes: ChannelMutes,
     pub(super) run_task: Option<tokio::task::JoinHandle<()>>,
     pub(super) stream_cancel_token: Option<CancellationToken>,
     pub(super) capture_frames: Option<tokio::sync::mpsc::Receiver<SourceFrame>>,
@@ -326,7 +335,7 @@ impl Actor for SourceActor {
                 active_mic_device: None,
                 onboarding: args.onboarding,
                 capture_mic_isolated: false,
-                mic_muted: Arc::new(AtomicBool::new(false)),
+                mutes: args.mutes,
                 run_task: None,
                 stream_cancel_token: None,
                 capture_frames: None,
@@ -366,11 +375,29 @@ impl Actor for SourceActor {
         async {
             match msg {
                 SourceMsg::SetMicMute(muted) => {
-                    st.mic_muted.store(muted, Ordering::Relaxed);
+                    if st.mutes.set_mic(muted) {
+                        st.runtime.emit_data(crate::SessionDataEvent::MicMuted {
+                            session_id: st.session_id.clone(),
+                            value: muted,
+                        });
+                    }
                 }
                 SourceMsg::GetMicMute(reply) => {
                     if !reply.is_closed() {
-                        let _ = reply.send(st.mic_muted.load(Ordering::Relaxed));
+                        let _ = reply.send(st.mutes.mic());
+                    }
+                }
+                SourceMsg::SetSpeakerMute(muted) => {
+                    if st.mutes.set_speaker(muted) {
+                        st.runtime.emit_data(crate::SessionDataEvent::SpeakerMuted {
+                            session_id: st.session_id.clone(),
+                            value: muted,
+                        });
+                    }
+                }
+                SourceMsg::GetSpeakerMute(reply) => {
+                    if !reply.is_closed() {
+                        let _ = reply.send(st.mutes.speaker());
                     }
                 }
                 SourceMsg::GetMicDevice(reply) => {
@@ -588,6 +615,10 @@ impl Actor for SourceActor {
 }
 
 #[cfg(test)]
+#[path = "mute_tests.rs"]
+mod mute_tests;
+
+#[cfg(test)]
 mod tests {
     use std::{
         path::PathBuf,
@@ -780,6 +811,7 @@ mod tests {
                 audio: audio.clone(),
                 session_id: "test-session".to_string(),
                 listener_routing: ListenerRouting::Dropped,
+                mutes: ChannelMutes::default(),
             },
         )
         .await
@@ -833,6 +865,7 @@ mod tests {
                 }),
                 session_id: "no-frames".into(),
                 listener_routing: ListenerRouting::Dropped,
+                mutes: ChannelMutes::default(),
             },
         )
         .await
@@ -924,6 +957,7 @@ mod tests {
                 }),
                 session_id: "output-change".into(),
                 listener_routing: ListenerRouting::Dropped,
+                mutes: ChannelMutes::default(),
             },
         )
         .await
@@ -983,6 +1017,7 @@ mod tests {
                 audio,
                 session_id: "finite-stream".to_string(),
                 listener_routing: ListenerRouting::Dropped,
+                mutes: ChannelMutes::default(),
             },
         )
         .await
@@ -1037,6 +1072,7 @@ mod tests {
                 }),
                 session_id: "partial-audio".into(),
                 listener_routing: ListenerRouting::Attached(listener.clone()),
+                mutes: ChannelMutes::default(),
             },
         )
         .await

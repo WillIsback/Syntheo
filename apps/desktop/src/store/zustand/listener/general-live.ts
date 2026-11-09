@@ -738,13 +738,18 @@ const createSessionEventHandlers = <T extends LiveStore>(
       return;
     }
 
-    if (payload.type === "mic_muted") {
+    if (payload.type === "mic_muted" || payload.type === "speaker_muted") {
       if (get().live.sessionId !== targetSessionId) {
         return;
       }
 
+      const channel = payload.type;
       setLiveState(set, (live) => {
-        live.muted = payload.value;
+        if (channel === "mic_muted") {
+          live.muted = payload.value;
+        } else {
+          live.speakerMuted = payload.value;
+        }
       });
     }
   },
@@ -1117,6 +1122,9 @@ function applyCaptureSnapshot<T extends LiveStore>(
       }
       if (snapshot.micMuted != null) {
         live.muted = snapshot.micMuted;
+      }
+      if (snapshot.speakerMuted != null) {
+        live.speakerMuted = snapshot.speakerMuted;
       }
     });
     notifyCaptureWarning(get, targetSessionId);

@@ -93,7 +93,24 @@ describe("getFloatingRouteState", () => {
       transcriptNotice: null,
       // Issue 448 : durée écoutée affichée par la pastille, pauses exclues.
       elapsedSeconds: 767,
+      // Issue 447 : état de la bascule du micro de la pastille.
+      micMuted: false,
     });
+  });
+
+  it("tells the pill when the microphone is muted (issue 447)", () => {
+    const state = createListenerState({
+      status: "active",
+      sessionId: "session-1",
+      muted: true,
+    });
+    expect(getFloatingRouteState(state)?.micMuted).toBe(true);
+    expect(
+      haveFloatingRouteInputsChanged(state, {
+        ...state,
+        live: { ...state.live, muted: false },
+      }),
+    ).toBe(true);
   });
 
   it("builds transcript bubbles from speaker segments", () => {

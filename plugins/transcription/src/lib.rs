@@ -145,6 +145,8 @@ fn make_specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
             listener::commands::stop_microphone_level_monitor::<tauri::Wry>,
             listener::commands::get_mic_muted::<tauri::Wry>,
             listener::commands::set_mic_muted::<tauri::Wry>,
+            listener::commands::get_speaker_muted::<tauri::Wry>,
+            listener::commands::set_speaker_muted::<tauri::Wry>,
             listener::commands::start_capture::<tauri::Wry>,
             listener::commands::retry_audio_capture::<tauri::Wry>,
             listener::commands::flush_live_transcript::<tauri::Wry>,

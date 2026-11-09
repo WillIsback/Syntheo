@@ -27,7 +27,23 @@ type ListenerControlAction =
   | "pause"
   | "resume"
   | "finish"
-  | "sync";
+  | "sync"
+  // Issue 447 : couper ou rétablir un canal sans relancer l'écoute.
+  | "muteMic"
+  | "unmuteMic"
+  | "muteSpeaker"
+  | "unmuteSpeaker";
+
+export type MutedChannel = "mic" | "speaker";
+
+const CHANNEL_MUTE_ACTIONS: Partial<
+  Record<ListenerControlAction, [MutedChannel, boolean]>
+> = {
+  muteMic: ["mic", true],
+  unmuteMic: ["mic", false],
+  muteSpeaker: ["speaker", true],
+  unmuteSpeaker: ["speaker", false],
+};
 
 type ListenerControlRequest = {
   action: ListenerControlAction;
@@ -37,6 +53,25 @@ type ListenerControlRequest = {
 
 export function isMainWebviewWindow() {
   return getCurrentWebviewWindowLabel() === "main";
+}
+
+// Fenêtre principale : coupe ou rétablit un canal de l'écoute en cours de
+// `sessionId` (sans effet sur une autre session ou hors écoute).
+export function applyChannelMuted(
+  sessionId: string,
+  channel: MutedChannel,
+  muted: boolean,
+) {
+  const state = listenerStore.getState();
+  if (state.live.sessionId !== sessionId || state.live.status !== "active") {
+    return;
+  }
+
+  if (channel === "mic") {
+    state.setMuted(muted);
+  } else {
+    state.setSpeakerMuted(muted);
+  }
 }
 
 // File d'attente de la fenêtre principale, pour ses propres demandes (palette,
@@ -244,6 +279,12 @@ function MainListenerControlRequestRunner({
         case "sync":
           broadcastPauseState(live.pause);
           break;
+        default: {
+          const mute = CHANNEL_MUTE_ACTIONS[request.action];
+          if (mute) {
+            applyChannelMuted(request.sessionId, ...mute);
+          }
+        }
       }
 
       if (!cancelled) {

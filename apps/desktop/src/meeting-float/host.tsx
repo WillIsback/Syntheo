@@ -57,7 +57,10 @@ import { listenerStore } from "~/store/zustand/listener/instance";
 import { useTabs } from "~/store/zustand/tabs";
 import type { RenderLabelContext } from "~/stt/live-segment";
 import { finishPausedListening } from "~/stt/pause-listening";
-import { requestMainListenerControl } from "~/stt/window-control";
+import {
+  applyChannelMuted,
+  requestMainListenerControl,
+} from "~/stt/window-control";
 
 export {
   getFloatingRouteState,
@@ -292,7 +295,16 @@ function FloatingMeetingWindowSync({
       .listen(({ payload }) => {
         if (cancelled || !enabledRef.current) return;
         const live = listenerStore.getState().live;
-        if (payload.action === "pause") {
+        if (payload.action === "muteMic" || payload.action === "unmuteMic") {
+          // Bascule du micro (issue 447) : même chemin que la capsule.
+          if (live.sessionId) {
+            applyChannelMuted(
+              live.sessionId,
+              "mic",
+              payload.action === "muteMic",
+            );
+          }
+        } else if (payload.action === "pause") {
           if (live.status === "active") listenerStore.getState().pause();
         } else if (live.pause?.phase === "paused") {
           void requestMainListenerControl("resume", live.pause.sessionId);
@@ -465,6 +477,8 @@ export function haveFloatingRouteInputsChanged(
     state.live.transcriptionStalled !==
       previousState.live.transcriptionStalled ||
     state.live.pause !== previousState.live.pause ||
+    // Bascule du micro de la pastille (issue 447).
+    state.live.muted !== previousState.live.muted ||
     // Durée affichée par la pastille (issue 448).
     state.live.seconds !== previousState.live.seconds ||
     state.live.elapsedOffsetSeconds !==

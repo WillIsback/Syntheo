@@ -52,7 +52,10 @@ export type GeneralState = {
     captureGenerationBySession: Record<string, number>;
     intervalId?: LiveIntervalId;
     sessionId: string | null;
+    // Micro coupé pendant l'écoute ; `speakerMuted` : son système coupé
+    // (issue 447). La capture et le STT continuent, avec du silence.
     muted: boolean;
+    speakerMuted: boolean;
     captureHealth: {
       mic: boolean | null;
       speaker: boolean | null;
@@ -95,6 +98,7 @@ const initialLiveState: LiveState = {
   captureGenerationBySession: {},
   sessionId: null,
   muted: false,
+  speakerMuted: false,
   captureHealth: { mic: null, speaker: null, unavailable: false },
   lastError: null,
   lastErrorSessionId: null,
@@ -338,6 +342,7 @@ export const markLiveInactive = (
   live.finalStallAudibleSeconds = 0;
   live.transcriptionStalled = false;
   live.muted = initialLiveState.muted;
+  live.speakerMuted = initialLiveState.speakerMuted;
   live.triggerAppIds = null;
   live.elapsedOffsetSeconds = 0;
 };
@@ -362,6 +367,7 @@ export const markLiveStartFailed = (
   live.seconds = 0;
   live.sessionId = null;
   live.muted = initialLiveState.muted;
+  live.speakerMuted = initialLiveState.speakerMuted;
   live.lastError = audioError ?? error;
   live.lastErrorSessionId = sessionId;
   live.lastErrorIsAudioRelated = audioError !== null;

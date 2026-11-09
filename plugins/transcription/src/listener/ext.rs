@@ -122,6 +122,7 @@ impl<'a, R: tauri::Runtime, M: tauri::Manager<R>> Listener<'a, R, M> {
         {
             let source: ActorRef<SourceMsg> = cell.into();
             snapshot.mic_muted = call_t!(source, SourceMsg::GetMicMute, 100).ok();
+            snapshot.speaker_muted = call_t!(source, SourceMsg::GetSpeakerMute, 100).ok();
             snapshot.capture_health = call_t!(source, SourceMsg::GetCaptureHealth, 100).ok();
         }
 
@@ -141,6 +142,22 @@ impl<'a, R: tauri::Runtime, M: tauri::Manager<R>> Listener<'a, R, M> {
     pub async fn set_mic_muted(&self, muted: bool) {
         if let Some(actor) = active_source().await {
             let _ = actor.cast(SourceMsg::SetMicMute(muted));
+        }
+    }
+
+    #[tracing::instrument(skip_all)]
+    pub async fn get_speaker_muted(&self) -> bool {
+        if let Some(actor) = active_source().await {
+            call_t!(actor, SourceMsg::GetSpeakerMute, 100).unwrap_or_default()
+        } else {
+            false
+        }
+    }
+
+    #[tracing::instrument(skip_all)]
+    pub async fn set_speaker_muted(&self, muted: bool) {
+        if let Some(actor) = active_source().await {
+            let _ = actor.cast(SourceMsg::SetSpeakerMute(muted));
         }
     }
 
@@ -360,6 +377,7 @@ mod tests {
             live_segments: None,
             started_at_ms: None,
             mic_muted: None,
+            speaker_muted: None,
             degraded: None,
             capture_health: None,
         };

@@ -27,6 +27,8 @@ Default permissions for the plugin
 - `allow-stop-capture-for-session`
 - `allow-get-mic-muted`
 - `allow-set-mic-muted`
+- `allow-get-speaker-muted`
+- `allow-set-speaker-muted`
 - `allow-get-capture-state`
 - `allow-get-capture-snapshot`
 - `allow-update-capture-credentials`
@@ -616,6 +618,32 @@ Denies the get_mic_muted command without any pre-configured scope.
 <tr>
 <td>
 
+`transcription:allow-get-speaker-muted`
+
+</td>
+<td>
+
+Enables the get_speaker_muted command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:deny-get-speaker-muted`
+
+</td>
+<td>
+
+Denies the get_speaker_muted command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
 `transcription:allow-get-stopped-capture`
 
 </td>
@@ -1181,6 +1209,32 @@ Enables the set_mic_muted command without any pre-configured scope.
 <td>
 
 Denies the set_mic_muted command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:allow-set-speaker-muted`
+
+</td>
+<td>
+
+Enables the set_speaker_muted command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:deny-set-speaker-muted`
+
+</td>
+<td>
+
+Denies the set_speaker_muted command without any pre-configured scope.
 
 </td>
 </tr>
