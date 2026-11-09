@@ -77,7 +77,7 @@ describe("MeetingSettingsView", () => {
     expect(
       screen.queryByText("Post recording disclosure in meeting chat"),
     ).toBeNull();
-    expect(screen.queryByText("Capture meeting chat in Memos")).toBeNull();
+    expect(screen.queryByText("Capture meeting chat in the note")).toBeNull();
     expect(screen.getByText("Show floating bar")).toBeTruthy();
   });
 
@@ -126,7 +126,7 @@ describe("MeetingSettingsView", () => {
     expect(
       screen.getByText("Post recording disclosure in meeting chat"),
     ).toBeTruthy();
-    expect(screen.getByText("Capture meeting chat in Memos")).toBeTruthy();
+    expect(screen.getByText("Capture meeting chat in the note")).toBeTruthy();
     expect(
       screen.getByText(/supported meetings using Accessibility/),
     ).toBeTruthy();

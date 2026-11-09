@@ -156,14 +156,14 @@ export const SETTINGS_SEARCH_INDEX = [
   {
     id: "capture-meeting-chat",
     page: "meetings",
-    label: msg`Capture meeting chat in Memos`,
-    keywords: msg`chat, messages, memos, Teams, Zoom`,
+    label: msg`Capture meeting chat in the note`,
+    keywords: msg`chat, messages, note, Teams, Zoom`,
     platforms: ["macos", "linux"],
   },
   {
     id: "capture-shared-screens",
     page: "meetings",
-    label: msg`Capture shared screens in Memos`,
+    label: msg`Capture shared screens in the note`,
     keywords: msg`screen, slides, screenshot, presentation, screen sharing`,
     platforms: ["macos", "windows"],
   },
