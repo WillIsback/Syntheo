@@ -12,6 +12,9 @@ export const commands = {
 	stopMicrophoneLevelMonitor: (owner: string) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|stop_microphone_level_monitor", { owner })),
 	getMicMuted: () => typedError<boolean, string>(__TAURI_INVOKE("plugin:transcription|get_mic_muted")),
 	setMicMuted: (muted: boolean) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|set_mic_muted", { muted })),
+	getSpeakerMuted: () => typedError<boolean, string>(__TAURI_INVOKE("plugin:transcription|get_speaker_muted")),
+	/**  Coupe ou rétablit le son système de l'écoute en cours (issue 447), sans la relancer. */
+	setSpeakerMuted: (muted: boolean) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|set_speaker_muted", { muted })),
 	startCapture: (params: CaptureParams) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|start_capture", { params })),
 	retryAudioCapture: (sessionId: string, device: string | null) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|retry_audio_capture", { sessionId, device })),
 	flushLiveTranscript: (sessionId: string) => typedError<LiveTranscriptPersistence | null, string>(__TAURI_INVOKE("plugin:transcription|flush_live_transcript", { sessionId })),
@@ -161,7 +164,7 @@ export type CaptureConfigUpdate = {
 	speaker_assignments?: IdentityAssignment[],
 };
 
-export type CaptureDataEvent = { type: "audio_amplitude"; session_id: string; mic: number; speaker: number } | { type: "mic_muted"; session_id: string; value: boolean } | { type: "mic_isolated"; session_id: string; value: boolean } | { type: "mic_dropouts"; session_id: string; ratio: number } | { type: "transcript_delta"; session_id: string; delta: LiveTranscriptDelta } | { type: "transcript_segment_delta"; session_id: string; delta: LiveTranscriptSegmentDelta };
+export type CaptureDataEvent = { type: "audio_amplitude"; session_id: string; mic: number; speaker: number } | { type: "mic_muted"; session_id: string; value: boolean } | { type: "speaker_muted"; session_id: string; value: boolean } | { type: "mic_isolated"; session_id: string; value: boolean } | { type: "mic_dropouts"; session_id: string; ratio: number } | { type: "transcript_delta"; session_id: string; delta: LiveTranscriptDelta } | { type: "transcript_segment_delta"; session_id: string; delta: LiveTranscriptSegmentDelta };
 
 export type CaptureHealth = {
 	mic: boolean | null,
@@ -229,6 +232,7 @@ export type CaptureSnapshot = {
 	liveSegments?: LiveTranscriptSegment[] | null,
 	startedAtMs?: number | null,
 	micMuted?: boolean | null,
+	speakerMuted?: boolean | null,
 	degraded?: DegradedError | null,
 	captureHealth?: CaptureHealth | null,
 };

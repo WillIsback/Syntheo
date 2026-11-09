@@ -218,6 +218,14 @@ impl Pipeline {
 
     fn select_tracks(frame: SourceFrame, mode: ChannelMode) -> (Vec<f32>, Arc<[f32]>) {
         let raw_speaker = Arc::clone(&frame.capture.raw_speaker);
+        // Son système coupé (issue 447) : du silence de même longueur, pour que le STT garde sa
+        // connexion et sa cadence. L'annulation d'écho a déjà eu lieu à la capture, avec la
+        // vraie référence : le son coupé ne revient pas par le micro.
+        let speaker = if frame.speaker_muted {
+            Arc::<[f32]>::from(vec![0.0; raw_speaker.len()])
+        } else {
+            Arc::clone(&raw_speaker)
+        };
 
         let mic_source = match mode {
             ChannelMode::SpeakerOnly => Arc::<[f32]>::from(vec![0.0; raw_speaker.len()]),
@@ -230,7 +238,7 @@ impl Pipeline {
             mic_source.to_vec()
         };
 
-        (mic, raw_speaker)
+        (mic, speaker)
     }
 }
 
@@ -902,6 +910,7 @@ mod tests {
             captured: true,
             capture: capture_frame(),
             mic_muted,
+            speaker_muted: false,
         }
     }
 
@@ -914,6 +923,7 @@ mod tests {
                 aec_mic: None,
             },
             mic_muted: false,
+            speaker_muted: false,
         }
     }
 
@@ -1189,6 +1199,7 @@ mod tests {
                 aec_mic: None,
             },
             mic_muted: false,
+            speaker_muted: false,
         }
     }
 
@@ -1461,6 +1472,74 @@ mod tests {
             assert_eq!(mic, expected_mic, "case: {label}");
             assert_eq!(&*speaker, &[0.75, -0.75, 1.0, -1.0], "case: {label}");
         }
+    }
+
+    // Issue 447 : le son système coupé part en silence vers le STT, le micro garde sa voie
+    // (l'annulation d'écho, en amont, garde la vraie référence : le son coupé ne revient pas
+    // par le micro).
+    #[test]
+    fn select_tracks_silences_the_muted_speaker_and_keeps_the_mic() {
+        for (mic_muted, speaker_muted, mode, expected_mic, expected_speaker, label) in [
+            (
+                false,
+                true,
+                ChannelMode::MicAndSpeaker,
+                vec![0.1, -0.1, 0.2, -0.2],
+                vec![0.0; 4],
+                "speaker muted keeps the aec mic",
+            ),
+            (
+                true,
+                true,
+                ChannelMode::MicAndSpeaker,
+                vec![0.0; 4],
+                vec![0.0; 4],
+                "both channels muted",
+            ),
+            (
+                true,
+                false,
+                ChannelMode::MicAndSpeaker,
+                vec![0.0; 4],
+                vec![0.75, -0.75, 1.0, -1.0],
+                "mic muted keeps the speaker",
+            ),
+            (
+                false,
+                true,
+                ChannelMode::SpeakerOnly,
+                vec![0.0; 4],
+                vec![0.0; 4],
+                "speaker only",
+            ),
+        ] {
+            let mut frame = source_frame(mic_muted);
+            frame.speaker_muted = speaker_muted;
+
+            let (mic, speaker) = Pipeline::select_tracks(frame, mode);
+            assert_eq!(mic, expected_mic, "case: {label}");
+            assert_eq!(&*speaker, expected_speaker.as_slice(), "case: {label}");
+        }
+    }
+
+    #[tokio::test]
+    async fn muted_speaker_reaches_the_listener_as_silence_with_the_same_length() {
+        let mut pipeline = test_pipeline();
+        let mut frame = speech_frame(0.5);
+        frame.speaker_muted = true;
+        pipeline
+            .dispatch_frame(
+                frame,
+                ChannelMode::MicAndSpeaker,
+                &ListenerRouting::Buffering,
+            )
+            .await
+            .unwrap();
+
+        let item = pipeline.audio_buffer.pop().expect("buffered item");
+        assert_eq!(item.spk.len(), 1920, "the stream keeps its cadence");
+        assert!(item.spk.iter().all(|sample| *sample == 0.0));
+        assert_eq!(pipeline.captured_samples, 1920);
     }
 
     fn feed_window(monitor: &mut DropoutMonitor, zero_ratio: f32) {
