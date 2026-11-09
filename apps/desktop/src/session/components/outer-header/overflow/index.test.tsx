@@ -4,7 +4,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { OverflowButton } from "./index";
 
 import { openFloatingMeetingPanel } from "~/meeting-float/host";
-import { formatShortcut } from "~/shared/shortcuts";
 import type { EditorView } from "~/store/zustand/tabs/schema";
 
 const {
@@ -12,7 +11,6 @@ const {
   uploadTranscriptMock,
   audioImportAvailability,
   currentNoteContent,
-  exportModalMock,
   useHasTranscriptMock,
   useListenerMock,
   useConfigValueMock,
@@ -25,9 +23,6 @@ const {
     value: { status: "ready" } as { status: "ready" | "unsupported" },
   },
   currentNoteContent: { value: "" },
-  exportModalMock: vi.fn(
-    (_props: { open: boolean; onOpenChange: (open: boolean) => void }) => null,
-  ),
   useHasTranscriptMock: vi.fn(),
   useListenerMock: vi.fn(),
   useConfigValueMock: vi.fn(),
@@ -131,18 +126,6 @@ vi.mock("./delete", () => ({
   DeleteNote: () => <button type="button">Delete note</button>,
 }));
 
-vi.mock("./export-modal", () => ({
-  ExportModal: exportModalMock,
-}));
-
-vi.mock("./listening", () => ({
-  Listening: ({ resume }: { resume: boolean }) => (
-    <button type="button">
-      {resume ? "Resume listening" : "Start listening"}
-    </button>
-  ),
-}));
-
 vi.mock("./lock-note", () => ({
   LockNote: () => <button type="button">Lock Note</button>,
 }));
@@ -151,6 +134,10 @@ vi.mock("../metadata", () => ({
   MetadataPanelContent: ({ sessionId }: { sessionId: string }) => (
     <div data-testid="meeting-info-popover">{sessionId}</div>
   ),
+}));
+
+vi.mock("~/session/components/version-history-dialog", () => ({
+  VersionHistoryDialog: () => null,
 }));
 
 vi.mock("~/meeting-float/host", () => ({
@@ -195,12 +182,17 @@ type Scenario = {
 const ACTIONS = [
   "Upload audio",
   "Upload transcript",
-  "Start listening",
-  "Resume listening",
-  "Re-transcribe",
   "Open floating panel",
   "Open in New Window",
-  "Delete recording",
+  "Delete note",
+] as const;
+
+// Entrées toujours présentes, quel que soit l'état de la note.
+const PERMANENT = [
+  "Meeting info",
+  "Version history",
+  "Always on Top",
+  "Lock Note",
   "Delete note",
 ] as const;
 
@@ -236,6 +228,23 @@ function visibleActions() {
   return ACTIONS.filter((name) => screen.queryByRole("button", { name }));
 }
 
+// Lit le menu dans l'ordre : « — » pour un séparateur, sinon le libellé.
+function menuOutline(container: HTMLElement) {
+  return [...container.querySelectorAll("button, hr")]
+    .filter((el) => el.getAttribute("aria-label") !== "More")
+    .map((el) =>
+      el.tagName === "HR" ? "—" : (el.textContent ?? "").replace("›", ""),
+    );
+}
+
+function expectTidySeparators(outline: string[]) {
+  expect(outline[0]).not.toBe("—");
+  expect(outline[outline.length - 1]).not.toBe("—");
+  outline.forEach((entry, index) => {
+    if (entry === "—") expect(outline[index + 1]).not.toBe("—");
+  });
+}
+
 describe("OverflowButton", () => {
   afterEach(() => {
     cleanup();
@@ -261,7 +270,6 @@ describe("OverflowButton", () => {
       [
         "Upload audio",
         "Upload transcript",
-        "Start listening",
         "Open in New Window",
         "Delete note",
       ],
@@ -270,54 +278,79 @@ describe("OverflowButton", () => {
       "note with content",
       { transcript: false, content: "Existing content" },
       {},
-      ["Start listening", "Open in New Window", "Delete note"],
+      ["Open in New Window", "Delete note"],
     ],
     [
       "transcript without a recording",
       {},
       {},
-      ["Resume listening", "Open in New Window", "Delete note"],
+      ["Open in New Window", "Delete note"],
     ],
     [
       "active listening",
       { transcript: false, mode: "active", floatingPanel: true },
       {},
-      [
-        "Start listening",
-        "Open floating panel",
-        "Open in New Window",
-        "Delete note",
-      ],
+      ["Open floating panel", "Open in New Window", "Delete note"],
     ],
     [
       "finalizing",
       { mode: "finalizing", floatingPanel: true },
       {},
-      ["Resume listening", "Open in New Window", "Delete note"],
+      ["Open in New Window", "Delete note"],
     ],
     [
       "batch transcription",
       { mode: "running_batch" },
       {},
-      ["Resume listening", "Open in New Window", "Delete note"],
-    ],
-    [
-      "listening disabled",
-      { mode: "active", floatingPanel: true },
-      { allowListening: false },
       ["Open in New Window", "Delete note"],
     ],
-    [
-      "standalone window",
-      {},
-      { standaloneWindow: true },
-      ["Resume listening", "Delete note"],
-    ],
+    ["standalone window", {}, { standaloneWindow: true }, ["Delete note"]],
   ])("offers the right actions for %s", (_label, scenario, props, expected) => {
     arrange(scenario);
-    renderOverflow(props);
+    const { container } = renderOverflow(props);
 
     expect(visibleActions()).toEqual(expected);
+    for (const name of PERMANENT) {
+      expect(screen.getByRole("button", { name })).toBeTruthy();
+    }
+    expectTidySeparators(menuOutline(container));
+  });
+
+  // La capsule porte déjà l'écoute et l'export (Ctrl+P compris) : le menu
+  // « Plus » ne les répète plus (issue 458).
+  it.each<[string, Scenario]>([
+    ["an empty note", { transcript: false }],
+    ["a transcript", {}],
+    ["active listening", { mode: "active", floatingPanel: true }],
+  ])("leaves listening and export to the capsule for %s", (_l, scenario) => {
+    arrange(scenario);
+    renderOverflow();
+
+    expect(screen.queryByRole("button", { name: /listening/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /export/i })).toBeNull();
+  });
+
+  it("groups the remaining entries between single separators", () => {
+    arrange({ transcript: false });
+    automationMocks.workflows = [READY_WORKFLOW];
+    const { container } = renderOverflow();
+
+    expect(menuOutline(container)).toEqual([
+      "Meeting info",
+      "Version history",
+      "—",
+      "Upload audio",
+      "Upload transcript",
+      "—",
+      expect.stringContaining("Weekly recap"),
+      "—",
+      "Open in New Window",
+      "Always on Top",
+      "—",
+      "Lock Note",
+      "Delete note",
+    ]);
+    automationMocks.workflows = [];
   });
 
   it("uploads audio and transcripts into an empty note", () => {
@@ -373,28 +406,6 @@ describe("OverflowButton", () => {
       type: "note",
       value: "session-1",
     });
-  });
-
-  it("opens the export modal when export is selected", () => {
-    vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
-      callback(0);
-      return 0;
-    });
-    renderOverflow();
-
-    expect(exportModalMock).not.toHaveBeenCalled();
-
-    const item = screen.getByRole("button", { name: "Export" });
-    // Infobulle « Exporter (Ctrl+P) » (issue 374), notation de la plateforme.
-    expect(item.getAttribute("title")).toBe(
-      `Export (${formatShortcut("exportNote")})`,
-    );
-    fireEvent.click(item);
-
-    expect(exportModalMock).toHaveBeenLastCalledWith(
-      expect.objectContaining({ open: true }),
-      undefined,
-    );
   });
 
   it("runs a ready automation on this note from the ⋯ menu", () => {

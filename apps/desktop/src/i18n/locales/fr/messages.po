@@ -1709,7 +1709,6 @@ msgid "Expand notification"
 msgstr "Développer la notification"
 
 #: src/session/components/capsule/index.tsx
-#: src/session/components/outer-header/overflow/index.tsx
 #: src/shared/shortcuts.ts
 msgid "Export"
 msgstr "Exporter"
@@ -3807,7 +3806,6 @@ msgstr "Reprendre la fermeture automatique"
 
 #: src/meeting-float/overlay/bar.tsx
 #: src/session/components/capsule/index.tsx
-#: src/session/components/outer-header/overflow/listening.tsx
 #: src/shared/open-note-dialog.tsx
 msgid "Resume listening"
 msgstr "Reprendre l'écoute"
@@ -4375,10 +4373,6 @@ msgstr "Démarrer une réunion"
 msgid "Start from a template"
 msgstr "Partir d'un modèle"
 
-#: src/session/components/outer-header/overflow/listening.tsx
-msgid "Start listening"
-msgstr "Démarrer l'écoute"
-
 #: src/settings/general/app-settings.tsx
 #: src/settings/search-index.ts
 msgid "Start Syntheo at login"
@@ -4441,10 +4435,6 @@ msgstr "Étapes"
 #: src/stt/auto-stop.ts
 msgid "Stop"
 msgstr "Arrêter"
-
-#: src/session/components/outer-header/overflow/listening.tsx
-msgid "Stop listening"
-msgstr "Arrêter l'écoute"
 
 #: src/settings/general/meeting-settings.tsx
 msgid "Stop listening when your call ends."
