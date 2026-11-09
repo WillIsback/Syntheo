@@ -84,6 +84,7 @@ export async function runVaultWriteStep(
     detail: result.created
       ? t`Note created: ${noteTitle}`
       : t`Note completed: ${noteTitle}`,
+    artifact: { kind: "note", sessionId: result.sessionId, title: noteTitle },
   };
 }
 

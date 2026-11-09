@@ -1,7 +1,7 @@
 import { Trans, useLingui } from "@lingui/react/macro";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-import { DotsThree, Lightning, Plus } from "@syntheo/ui/components/icons";
+import { DotsThree, Lightning, Play, Plus } from "@syntheo/ui/components/icons";
 import { Button } from "@syntheo/ui/components/ui/button";
 import {
   AppFloatingPanel,
@@ -17,6 +17,7 @@ import {
   WorkflowBuilder,
   WorkflowStatusBadge,
 } from "./workflow-builder";
+import { WorkflowTestPanel } from "./workflow-test-panel";
 
 import {
   useCreateWorkflowFromTemplate,
@@ -343,6 +344,10 @@ function CustomWorkflowDetails({
   const { t } = useLingui();
   const labels = useAutomationLabels();
   const saveWorkflow = useSaveWorkflow();
+  // Le panneau de test se ferme quand on passe à une autre automatisation.
+  const [testingId, setTestingId] = useState<string | null>(null);
+  const testing = testingId === workflow.id;
+  const ready = isWorkflowReady(workflow);
 
   const persist = (next: AutomationWorkflow) => {
     saveWorkflow.mutate({ next });
@@ -362,6 +367,20 @@ function CustomWorkflowDetails({
         }
         actions={
           <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setTestingId(workflow.id)}
+              disabled={!ready}
+              aria-pressed={testing}
+              title={
+                ready ? undefined : t`Configure every step before testing.`
+              }
+            >
+              <Play size={14} />
+              <Trans context="automation">Test</Trans>
+            </Button>
             {workflow.trigger === "manual" ? null : workflow.enabled ? (
               <Button
                 type="button"
@@ -377,9 +396,9 @@ function CustomWorkflowDetails({
                 type="button"
                 size="sm"
                 onClick={() => handleEnable(true)}
-                disabled={saveWorkflow.isPending || !isWorkflowReady(workflow)}
+                disabled={saveWorkflow.isPending || !ready}
                 title={
-                  !isWorkflowReady(workflow)
+                  !ready
                     ? t`Add and configure at least one action first.`
                     : undefined
                 }
@@ -401,6 +420,13 @@ function CustomWorkflowDetails({
             <p className="text-muted-foreground max-w-2xl text-sm leading-relaxed">
               {description}
             </p>
+          ) : null}
+          {testing ? (
+            <WorkflowTestPanel
+              key={workflow.id}
+              workflow={workflow}
+              onClose={() => setTestingId(null)}
+            />
           ) : null}
           <WorkflowBuilder workflow={workflow} onChange={persist} />
         </div>
