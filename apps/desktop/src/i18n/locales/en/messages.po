@@ -92,6 +92,10 @@ msgstr "{chain} · last run failed {relative}"
 msgid "{chain} · never run"
 msgstr "{chain} · never run"
 
+#: src/search/unified/labels.ts
+msgid "{count, plural, one {# meeting} other {# meetings}}"
+msgstr "{count, plural, one {# meeting} other {# meetings}}"
+
 #: src/session/components/speaker-naming/bar.tsx
 msgid "{count, plural, one {# speaker to name} other {# speakers to name}}"
 msgstr "{count, plural, one {# speaker to name} other {# speakers to name}}"
@@ -217,6 +221,10 @@ msgstr "Accessibility"
 #: src/settings/automations/workflow-builder.tsx
 msgid "Action"
 msgstr "Action"
+
+#: src/shared/palette-search-groups.tsx
+msgid "Actions"
+msgstr "Actions"
 
 #: src/chat/components/message/normal.tsx
 #: src/templates/template-icon-picker.tsx
@@ -441,6 +449,14 @@ msgstr "Ask before stopping when a meeting may have ended. When alerts are off, 
 msgid "Ask Syntheo AI anything"
 msgstr "Ask Syntheo AI anything"
 
+#: src/shared/palette-search-groups.tsx
+msgid "Ask the folder"
+msgstr "Ask the folder"
+
+#: src/shared/palette-search-groups.tsx
+msgid "Ask the folder: “{question}”"
+msgstr "Ask the folder: “{question}”"
+
 #: src/session/components/capsule/index.tsx
 #: src/shared/shortcuts.ts
 msgid "Ask the note"
@@ -559,6 +575,10 @@ msgstr "Back to Settings"
 #: src/meeting-float/overlay/bar.tsx
 msgid "Back to the note"
 msgstr "Back to the note"
+
+#: src/shared/open-note-dialog.tsx
+msgid "Backspace"
+msgstr "Backspace"
 
 #: src/settings/search-index.ts
 msgid "bar, small window, control, always on top"
@@ -915,6 +935,7 @@ msgstr "consent, reminder, inform participants, recording"
 msgid "Contact options"
 msgstr "Contact options"
 
+#: src/shared/palette-search-groups.tsx
 #: src/sidebar/settings-nav-groups.ts
 msgid "Contacts"
 msgstr "Contacts"
@@ -1624,10 +1645,6 @@ msgstr "Float chat"
 msgid "Fn / Globe"
 msgstr "Fn / Globe"
 
-#: src/shared/open-note-dialog.tsx
-msgid "Folder"
-msgstr "Folder"
-
 #: src/folders/folder-editor.tsx
 msgid "Folder actions"
 msgstr "Folder actions"
@@ -1645,7 +1662,7 @@ msgstr "Folder name"
 msgid "Folder: {currentPath}"
 msgstr "Folder: {currentPath}"
 
-#: src/shared/open-note-dialog.tsx
+#: src/shared/palette-search-groups.tsx
 #: src/sidebar/settings-nav-groups.ts
 msgid "Folders"
 msgstr "Folders"
@@ -1896,6 +1913,10 @@ msgstr "Improve with examples"
 msgid "In favorites"
 msgstr "In favorites"
 
+#: src/shared/open-note-dialog.tsx
+msgid "In this folder"
+msgstr "In this folder"
+
 #: src/session/components/outer-header/overflow/export-modal.tsx
 #: src/settings/automations/markdown-export-options.tsx
 msgid "Include"
@@ -2027,6 +2048,10 @@ msgstr "Leave blank to use the meeting date and title."
 #: src/settings/ai/shared/server-address.tsx
 msgid "Leave empty if the server has no authentication"
 msgstr "Leave empty if the server has no authentication"
+
+#: src/shared/open-note-dialog.tsx
+msgid "Leave the folder"
+msgstr "Leave the folder"
 
 #: src/stt/batch-eta.ts
 msgid "Less than a minute remaining"
@@ -2490,6 +2515,10 @@ msgstr "New note"
 msgid "New Note"
 msgstr "New Note"
 
+#: src/shared/palette-search-groups.tsx
+msgid "New note in this folder"
+msgstr "New note in this folder"
+
 #: src/session/components/note-input/raw.tsx
 #: src/templates/details.tsx
 #: src/templates/template-form.tsx
@@ -2607,6 +2636,10 @@ msgstr "No microphone detected. Plug in a microphone or check permissions."
 #: src/store/zustand/listener/general-live.ts
 msgid "No microphone detected. Plug in a microphone, then retry. Audio missing during this interruption cannot be recovered."
 msgstr "No microphone detected. Plug in a microphone, then retry. Audio missing during this interruption cannot be recovered."
+
+#: src/shared/open-note-dialog.tsx
+msgid "No notes in this folder match."
+msgstr "No notes in this folder match."
 
 #: src/session/components/note-input/transcript/renderer/speaker-assign.tsx
 msgid "No people"
@@ -2726,6 +2759,7 @@ msgstr "notes"
 #: src/contacts/details.tsx
 #: src/settings/general/account-profile.tsx
 #: src/settings/search-index.ts
+#: src/shared/open-note-dialog.tsx
 msgid "Notes"
 msgstr "Notes"
 
@@ -3271,6 +3305,10 @@ msgstr "Remove photo"
 msgid "Remove step {stepNumber}"
 msgstr "Remove step {stepNumber}"
 
+#: src/shared/palette-search-groups.tsx
+msgid "Remove the {name} folder filter"
+msgstr "Remove the {name} folder filter"
+
 #: src/shared/open-note-dialog.tsx
 msgid "Remove the Settings filter"
 msgstr "Remove the Settings filter"
@@ -3514,6 +3552,10 @@ msgstr "Search for a Setting…"
 #: src/templates/template-icon-picker.tsx
 msgid "Search icons..."
 msgstr "Search icons..."
+
+#: src/shared/open-note-dialog.tsx
+msgid "Search in this folder..."
+msgstr "Search in this folder..."
 
 #: src/settings/general/notification.tsx
 msgid "Search installed apps..."
@@ -4283,6 +4325,10 @@ msgstr "System permissions"
 msgid "System sound"
 msgstr "System sound"
 
+#: src/shared/palette-search-groups.tsx
+msgid "Tab: search inside"
+msgstr "Tab: search inside"
+
 #: src/onboarding/final.tsx
 msgid "Take your notes while the transcript scrolls in the margin."
 msgstr "Take your notes while the transcript scrolls in the margin."
@@ -4766,12 +4812,13 @@ msgstr "Unpin"
 msgid "Unreachable"
 msgstr "Unreachable"
 
+#: src/editor-bridge/mention-config.ts
 #: src/home/note-index.tsx
 #: src/session/components/living-document/meeting-type-picker.tsx
 #: src/session/components/note-input/raw.tsx
 #: src/session/components/outer-header/overflow/export-modal.tsx
 #: src/session/components/title-input.tsx
-#: src/shared/open-note-dialog.tsx
+#: src/shared/palette-search-groups.tsx
 #: src/shared/ui/resource-list/preview-header.tsx
 #: src/sidebar/toast/undo-delete-toast.tsx
 #: src/templates/details.tsx

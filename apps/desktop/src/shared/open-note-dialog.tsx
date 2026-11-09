@@ -1,18 +1,15 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { Command as CommandPrimitive } from "cmdk";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 
 import {
   BookOpen,
-  FileText,
-  Folder,
   Gear,
   NotePencil,
   MagnifyingGlass,
   Pause,
   Play,
-  Users,
   UsersThree,
   X,
   type Icon,
@@ -24,12 +21,19 @@ import {
 } from "@syntheo/ui/components/ui/dialog";
 import { cn } from "@syntheo/utils";
 
+import { askFolder } from "~/chat/ask-folder";
 import { useFolderSelection } from "~/folders/selection";
+import type {
+  NoteResult,
+  SearchContact,
+  SearchFolder,
+} from "~/search/unified/types";
+import { useUnifiedSearch } from "~/search/unified/use-unified-search";
 import {
   requestSpeakerNaming,
   useSpeakerNamingStore,
 } from "~/session/components/speaker-naming/store";
-import { useFolderPaths, useSessionSummaries } from "~/session/queries";
+import { createSession } from "~/session/queries";
 import {
   normalizeSearchText,
   searchSettings,
@@ -39,6 +43,14 @@ import {
 import { requestSettingFocus } from "~/settings/setting-focus";
 import { openHelpDialog } from "~/shared/help-dialog";
 import { useMainContentCenterOffset } from "~/shared/main/content-offset";
+import {
+  PaletteContactGroup,
+  PaletteFolderActions,
+  PaletteFolderChip,
+  PaletteFolderGroup,
+  PaletteNoteGroup,
+  paletteFolderValue,
+} from "~/shared/palette-search-groups";
 import {
   NoSettingMatches,
   PALETTE_ITEM_CLASS,
@@ -67,6 +79,9 @@ export {
 };
 
 const MAX_RECENT_DISPLAY = 5;
+// Notes affichées pour un texte tapé ; les mentions `@` montrent le début de
+// la même liste (issue 501).
+const PALETTE_NOTE_LIMIT = 50;
 
 interface OpenNoteDialogProps {
   readonly open: boolean;
@@ -78,13 +93,6 @@ type OpenNoteDialogApi = {
   open: () => void;
 };
 
-type NoteResult = {
-  resourceType: "session" | "shared_session";
-  id: string;
-  title: string;
-  createdAt: string;
-};
-
 type PageResult = {
   id: string;
   label: string;
@@ -92,13 +100,7 @@ type PageResult = {
   groupLabel: string;
   icon: Icon;
   destination: TabInput;
-  folderPath?: string;
 };
-
-function folderLabel(path: string) {
-  const segments = path.split("/").filter(Boolean);
-  return segments[segments.length - 1] ?? path;
-}
 
 function filterPageResults(
   query: string,
@@ -117,24 +119,16 @@ function filterPageResults(
   );
 }
 
-function filterByTitle<T extends { title: string }>(
-  items: T[],
-  query: string,
-): T[] {
-  if (!query.trim()) return items;
-  const lowerQuery = query.toLowerCase();
-  return items.filter((item) => item.title.toLowerCase().includes(lowerQuery));
-}
-
-function compareByCreatedAtDesc(a: NoteResult, b: NoteResult): number {
-  if (!a.createdAt || !b.createdAt) return 0;
-  return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-}
-
-function toSessionTabInput(note: NoteResult): TabInput {
-  return note.resourceType === "shared_session"
-    ? { type: "shared_sessions", id: note.id }
-    : { type: "sessions", id: note.id };
+function contactTabInput(contact: SearchContact): TabInput {
+  return {
+    type: "contacts",
+    state: {
+      selected: {
+        type: contact.type === "human" ? "person" : "organization",
+        id: contact.id,
+      },
+    },
+  };
 }
 
 function preventCloseWhenOnDragRegion(event: {
@@ -152,7 +146,8 @@ function preventCloseWhenOnDragRegion(event: {
 
 // Palette `Ctrl+K` : seul point d'entrée vers l'historique des notes depuis la
 // disparition de la barre latérale. Elle cherche aussi les paramètres ; son
-// état vit dans `palette-store.ts`.
+// état vit dans `palette-store.ts`. Notes, dossiers et contacts viennent de la
+// recherche commune avec les mentions `@` (issue 501).
 const OPEN_NOTE_DIALOG_API: OpenNoteDialogApi = { open: openNoteDialog };
 
 /**
@@ -191,7 +186,12 @@ export function OpenNoteDialogProvider({
   );
 }
 
-export function OpenNoteDialog({
+// Fermée, la palette ne monte rien : pas de requêtes vives en arrière-plan.
+export function OpenNoteDialog(props: OpenNoteDialogProps) {
+  return props.open ? <PaletteDialog {...props} /> : null;
+}
+
+function PaletteDialog({
   open,
   onOpenChange,
   mainContentCenterOffset = 0,
@@ -201,6 +201,11 @@ export function OpenNoteDialog({
   // Palette filtrée sur les paramètres (`Ctrl Maj P`, issue 373).
   const settingsOnly = usePaletteStore((state) => state.filter) === "settings";
   const setFilter = usePaletteStore((state) => state.setFilter);
+  // Dossier posé en filtre par Tab (issue 501).
+  const folderFilter = usePaletteStore((state) => state.folder);
+  const setFolderFilter = usePaletteStore((state) => state.setFolder);
+  // Élément surligné (cmdk) : Tab n'agit que sur un dossier.
+  const [selectedValue, setSelectedValue] = useState("");
   const settingsIndex = useSettingsSearchIndex();
   const settingResults = useMemo(
     () =>
@@ -214,9 +219,7 @@ export function OpenNoteDialog({
   );
   const settingsNavGroups = useSettingsNavGroups();
   const createNewNote = useNewNote();
-  const folderPaths = useFolderPaths();
-
-  const sessions = useSessionSummaries();
+  const search = useUnifiedSearch(query, { folder: folderFilter });
 
   const pageResults = useMemo<PageResult[]>(
     () => [
@@ -244,18 +247,8 @@ export function OpenNoteDialog({
         icon: Gear,
         destination: { type: "settings", state: { tab: "app" } },
       },
-      // Les dossiers (ex-filtre de la barre latérale) : recherche par nom.
-      ...folderPaths.map((path): PageResult => ({
-        id: `folder:${path}`,
-        label: folderLabel(path),
-        hint: path.includes("/") ? path : t`Folder`,
-        groupLabel: t`Folders`,
-        icon: Folder,
-        destination: { type: "folders" },
-        folderPath: path,
-      })),
     ],
-    [folderPaths, settingsNavGroups, t],
+    [settingsNavGroups, t],
   );
 
   const topLevelPageIds = new Set([
@@ -264,59 +257,44 @@ export function OpenNoteDialog({
       group.items.flatMap((item) => ("destination" in item ? [item.id] : [])),
     ),
   ]);
-  const filteredPages = filterPageResults(query, pageResults, topLevelPageIds);
+  const isQueryEmpty = !query.trim();
+  // Dans un dossier, la palette ne montre que lui : ni pages ni commandes.
+  const inFolder = folderFilter !== null;
+  const filteredPages = inFolder
+    ? []
+    : filterPageResults(query, pageResults, topLevelPageIds);
 
-  const sessionsMap = useMemo(() => {
-    return new Map<string, NoteResult>(
-      sessions.map((session) => [
-        session.id,
-        {
-          resourceType: "session",
-          id: session.id,
-          title: session.title || t`Untitled`,
-          createdAt: session.created_at,
-        },
-      ]),
-    );
-  }, [sessions, t]);
-
-  const allNotesSortedByDate = useMemo(
-    () => [...sessionsMap.values()].sort(compareByCreatedAtDesc),
-    [sessionsMap],
-  );
-
-  const recentSessions = useMemo(() => {
+  // Sans texte ni filtre : les récents, puis toutes les notes par date.
+  // Avec du texte : les notes classées par la recherche commune.
+  const filteredRecentSessions = useMemo(() => {
+    if (!isQueryEmpty || inFolder) return [];
+    const byId = new Map(search.notes.map((note) => [note.id, note]));
     return recentlyOpenedSessionIds
       .slice(0, MAX_RECENT_DISPLAY)
-      .map((id) => sessionsMap.get(id))
-      .filter((s): s is NoteResult => s !== undefined);
-  }, [recentlyOpenedSessionIds, sessionsMap]);
+      .map((id) => byId.get(id))
+      .filter((note): note is NoteResult => note !== undefined);
+  }, [inFolder, isQueryEmpty, recentlyOpenedSessionIds, search.notes]);
 
-  const recentSessionIdSet = useMemo(() => {
-    return new Set(recentSessions.map((s) => s.id));
-  }, [recentSessions]);
+  const filteredOtherNotes = useMemo(() => {
+    if (isQueryEmpty && !inFolder) {
+      const recentIds = new Set(filteredRecentSessions.map((note) => note.id));
+      return search.notes.filter((note) => !recentIds.has(note.id));
+    }
+    return search.notes.slice(0, PALETTE_NOTE_LIMIT);
+  }, [filteredRecentSessions, inFolder, isQueryEmpty, search.notes]);
 
-  const otherNotes = useMemo(() => {
-    return allNotesSortedByDate.filter(
-      (note) =>
-        note.resourceType === "shared_session" ||
-        !recentSessionIdSet.has(note.id),
-    );
-  }, [allNotesSortedByDate, recentSessionIdSet]);
-
-  const filteredRecentSessions = useMemo(
-    () => filterByTitle(recentSessions, query),
-    [recentSessions, query],
-  );
-
-  const filteredOtherNotes = useMemo(
-    () => filterByTitle(otherNotes, query),
-    [otherNotes, query],
+  // Dossiers en tête quand le texte correspond ; dans un dossier, ses
+  // sous-dossiers.
+  const folderResults = isQueryEmpty && !inFolder ? [] : search.folders;
+  const contactResults = isQueryEmpty || inFolder ? [] : search.contacts;
+  const folderPathByValue = new Map(
+    folderResults.map((folder) => [paletteFolderValue(folder.path), folder]),
   );
 
   const newNoteLabel = t`New note`;
   const matchesQuery = (label: string) =>
-    !query.trim() || label.toLowerCase().includes(query.trim().toLowerCase());
+    !inFolder &&
+    (!query.trim() || label.toLowerCase().includes(query.trim().toLowerCase()));
   const showNewNote = matchesQuery(newNoteLabel);
   // Aide F1 (issue 372) : proposée dès qu'on tape « aide » ou « raccourcis »,
   // pour ne pas encombrer la palette vide.
@@ -366,6 +344,9 @@ export function OpenNoteDialog({
     speakerNamingSessionId !== null && matchesQuery(speakerNamingLabel);
 
   const hasAnyResults =
+    inFolder ||
+    folderResults.length > 0 ||
+    contactResults.length > 0 ||
     showNewNote ||
     showHelp ||
     showListeningCommand ||
@@ -374,18 +355,6 @@ export function OpenNoteDialog({
     settingResults.length > 0 ||
     filteredRecentSessions.length > 0 ||
     filteredOtherNotes.length > 0;
-
-  useEffect(() => {
-    if (!open || !query.trim()) return;
-    const timeout = setTimeout(() => {}, 300);
-    return () => clearTimeout(timeout);
-  }, [
-    filteredOtherNotes.length,
-    filteredPages.length,
-    filteredRecentSessions.length,
-    open,
-    query,
-  ]);
 
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
@@ -404,21 +373,54 @@ export function OpenNoteDialog({
   const handleSelect = useCallback(
     (note: NoteResult) => {
       handleOpenChange(false);
-      openCurrent(toSessionTabInput(note));
+      openCurrent({ type: "sessions", id: note.id });
     },
-    [handleOpenChange, openCurrent, query],
+    [handleOpenChange, openCurrent],
   );
 
   const handleSelectPage = useCallback(
     (page: PageResult) => {
       handleOpenChange(false);
-      if (page.folderPath) {
-        useFolderSelection.getState().setSelectedPath(page.folderPath);
-      }
       openNew(page.destination);
     },
-    [handleOpenChange, openNew, query],
+    [handleOpenChange, openNew],
   );
+
+  // Entrée sur un dossier ouvre sa page (navigation existante).
+  const handleSelectFolder = useCallback(
+    (folder: SearchFolder) => {
+      handleOpenChange(false);
+      useFolderSelection.getState().setSelectedPath(folder.path);
+      openNew({ type: "folders" });
+    },
+    [handleOpenChange, openNew],
+  );
+
+  const handleSelectContact = useCallback(
+    (contact: SearchContact) => {
+      handleOpenChange(false);
+      openNew(contactTabInput(contact));
+    },
+    [handleOpenChange, openNew],
+  );
+
+  const handleAskFolder = useCallback(() => {
+    if (!folderFilter) return;
+    const question = query;
+    handleOpenChange(false);
+    askFolder(folderFilter, question);
+  }, [folderFilter, handleOpenChange, query]);
+
+  // La création accepte un dossier : la note naît rangée.
+  const handleNewNoteInFolder = useCallback(() => {
+    if (!folderFilter) return;
+    handleOpenChange(false);
+    void createSession("", undefined, { folder_id: folderFilter })
+      .then((sessionId) => openNew({ type: "sessions", id: sessionId }))
+      .catch((error) => {
+        console.error("[palette] failed to create note in folder", error);
+      });
+  }, [folderFilter, handleOpenChange, openNew]);
 
   // Arrivée : la page s'ouvre, défile jusqu'au réglage, le surligne et lui
   // donne le focus (voir setting-focus.ts).
@@ -455,6 +457,25 @@ export function OpenNoteDialog({
     handleOpenChange(false);
     requestSpeakerNaming(speakerNamingSessionId);
   }, [handleOpenChange, speakerNamingSessionId]);
+
+  const handleInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    // Tab sur un dossier le pose en filtre : la recherche continue dedans.
+    if (event.key === "Tab" && !event.shiftKey && !settingsOnly) {
+      const folder = folderPathByValue.get(selectedValue);
+      if (folder) {
+        event.preventDefault();
+        setFolderFilter(folder.path);
+        setQuery("");
+        return;
+      }
+    }
+    // Retour arrière dans un champ vide retire le filtre.
+    if (event.key === "Backspace" && !query && (settingsOnly || inFolder)) {
+      event.preventDefault();
+      if (settingsOnly) setFilter(null);
+      else setFolderFilter(null);
+    }
+  };
 
   const actionGroup = (showNewNote ||
     showListeningCommand ||
@@ -510,7 +531,13 @@ export function OpenNoteDialog({
     </CommandPrimitive.Group>
   );
 
-  const isQueryEmpty = !query.trim();
+  const folderGroup = folderResults.length > 0 && (
+    <PaletteFolderGroup
+      folders={folderResults}
+      withDivider={false}
+      onSelect={handleSelectFolder}
+    />
+  );
   const pageGroupHasPadding =
     filteredOtherNotes.length > 0 ||
     settingResults.length > 0 ||
@@ -525,12 +552,19 @@ export function OpenNoteDialog({
     />
   );
   const settingsLabel = t`Search settings`;
+  const folderSearchLabel = t`Search in this folder...`;
+  const searchLabel = settingsOnly
+    ? settingsLabel
+    : inFolder
+      ? folderSearchLabel
+      : t`Search notes and pages...`;
   const pageGroup = filteredPages.length > 0 && (
     <CommandPrimitive.Group
       className={pageGroupHasPadding ? "pb-1.5" : ""}
       heading={
         <div className="flex flex-col gap-3">
-          {isQueryEmpty && filteredRecentSessions.length > 0 && (
+          {((isQueryEmpty && filteredRecentSessions.length > 0) ||
+            (!isQueryEmpty && folderResults.length > 0)) && (
             <div className="bg-accent mx-2 h-px" />
           )}
           <div className="text-muted-foreground px-2 py-1.5 text-xs font-medium tracking-wider uppercase">
@@ -558,6 +592,31 @@ export function OpenNoteDialog({
     </CommandPrimitive.Group>
   );
 
+  const folderView = inFolder && (
+    <>
+      {folderGroup}
+      {filteredOtherNotes.length > 0 ? (
+        <PaletteNoteGroup
+          notes={filteredOtherNotes}
+          heading={<Trans>In this folder</Trans>}
+          withDivider={folderResults.length > 0}
+          showFolder={false}
+          onSelect={handleSelect}
+        />
+      ) : (
+        <div className="text-muted-foreground px-3 py-4 text-center text-sm">
+          <Trans>No notes in this folder match.</Trans>
+        </div>
+      )}
+      <PaletteFolderActions
+        query={query}
+        withDivider
+        onAsk={handleAskFolder}
+        onNewNote={handleNewNoteInFolder}
+      />
+    </>
+  );
+
   if (!open) return null;
 
   return (
@@ -581,8 +640,8 @@ export function OpenNoteDialog({
         onPointerDownOutside={preventCloseWhenOnDragRegion}
       >
         <DialogTitle className="sr-only">
-          {settingsOnly ? (
-            settingsLabel
+          {settingsOnly || inFolder ? (
+            searchLabel
           ) : (
             <Trans>Search notes and pages...</Trans>
           )}
@@ -593,7 +652,12 @@ export function OpenNoteDialog({
             "shadow-capsule overflow-hidden",
           ])}
         >
-          <CommandPrimitive shouldFilter={false} className="flex flex-col">
+          <CommandPrimitive
+            shouldFilter={false}
+            value={selectedValue}
+            onValueChange={setSelectedValue}
+            className="flex flex-col"
+          >
             <div className="border-border/60 flex items-center gap-3 border-b px-4 py-3">
               <MagnifyingGlass className="text-muted-foreground h-4 w-4 shrink-0" />
               {settingsOnly ? (
@@ -610,23 +674,19 @@ export function OpenNoteDialog({
                   <X aria-hidden className="h-3 w-3" />
                 </button>
               ) : null}
+              {folderFilter !== null ? (
+                <PaletteFolderChip
+                  folder={folderFilter}
+                  onRemove={() => setFolderFilter(null)}
+                />
+              ) : null}
               <CommandPrimitive.Input
                 ref={focusInput}
                 value={query}
                 onValueChange={setQuery}
-                onKeyDown={(event) => {
-                  // Retour arrière dans un champ vide retire le filtre.
-                  if (event.key === "Backspace" && !query && settingsOnly) {
-                    event.preventDefault();
-                    setFilter(null);
-                  }
-                }}
-                aria-label={
-                  settingsOnly ? settingsLabel : t`Search notes and pages...`
-                }
-                placeholder={
-                  settingsOnly ? settingsLabel : t`Search notes and pages...`
-                }
+                onKeyDown={handleInputKeyDown}
+                aria-label={searchLabel}
+                placeholder={searchLabel}
                 className={cn([
                   "flex-1 bg-transparent text-sm",
                   "placeholder:text-muted-foreground outline-hidden",
@@ -649,99 +709,68 @@ export function OpenNoteDialog({
               </button>
             </div>
 
-            <CommandPrimitive.List className="max-h-80 overflow-y-auto p-2">
+            <CommandPrimitive.List className="max-h-96 overflow-y-auto p-2">
               {settingsOnly ? (
                 settingResults.length > 0 ? (
                   settingsGroup
                 ) : (
                   <NoSettingMatches query={query} />
                 )
+              ) : inFolder ? (
+                folderView
               ) : !hasAnyResults ? (
                 <CommandPrimitive.Empty className="text-muted-foreground py-6 text-center text-sm">
                   <Trans>No results found.</Trans>
                 </CommandPrimitive.Empty>
               ) : (
                 <>
+                  {folderGroup}
                   {actionGroup}
                   {isQueryEmpty ? null : pageGroup}
                   {settingsGroup}
 
                   {filteredRecentSessions.length > 0 && (
-                    <CommandPrimitive.Group
-                      className={
-                        filteredOtherNotes.length > 0 ||
-                        (isQueryEmpty && filteredPages.length > 0)
-                          ? "pb-1.5"
-                          : ""
-                      }
-                      heading={
-                        <div className="flex flex-col gap-3">
-                          {!isQueryEmpty &&
-                            (filteredPages.length > 0 ||
-                              settingResults.length > 0) && (
-                              <div className="bg-accent mx-2 h-px" />
-                            )}
-                          <div className="text-muted-foreground px-2 py-1.5 text-xs font-medium tracking-wider uppercase">
-                            <Trans>Recent</Trans>
-                          </div>
-                        </div>
-                      }
-                    >
-                      {filteredRecentSessions.map((session) => (
-                        <CommandPrimitive.Item
-                          key={`recent-${session.id}`}
-                          value={`recent-${session.id}`}
-                          onSelect={() => handleSelect(session)}
-                          className={PALETTE_ITEM_CLASS}
-                        >
-                          <FileText className="text-muted-foreground h-4 w-4 shrink-0" />
-                          <span className="truncate">{session.title}</span>
-                        </CommandPrimitive.Item>
-                      ))}
-                    </CommandPrimitive.Group>
+                    <PaletteNoteGroup
+                      notes={filteredRecentSessions}
+                      heading={<Trans>Recent</Trans>}
+                      withDivider={false}
+                      onSelect={handleSelect}
+                    />
                   )}
 
                   {isQueryEmpty ? pageGroup : null}
 
                   {filteredOtherNotes.length > 0 && (
-                    <CommandPrimitive.Group
+                    <PaletteNoteGroup
+                      notes={filteredOtherNotes}
                       heading={
-                        <div className="flex flex-col gap-3">
-                          {(filteredPages.length > 0 ||
-                            settingResults.length > 0 ||
-                            filteredRecentSessions.length > 0) && (
-                            <div className="bg-accent mx-2 h-px" />
-                          )}
-                          <div className="text-muted-foreground px-2 py-1.5 text-xs font-medium tracking-wider uppercase">
-                            <Trans>All Notes</Trans>
-                          </div>
-                        </div>
+                        isQueryEmpty ? (
+                          <Trans>All Notes</Trans>
+                        ) : (
+                          <Trans>Notes</Trans>
+                        )
                       }
-                    >
-                      {filteredOtherNotes.map((note) => (
-                        <CommandPrimitive.Item
-                          key={`${note.resourceType}-${note.id}`}
-                          value={`${note.resourceType}-${note.id}`}
-                          onSelect={() => handleSelect(note)}
-                          className={PALETTE_ITEM_CLASS}
-                        >
-                          {note.resourceType === "shared_session" ? (
-                            <Users
-                              className="text-muted-foreground h-4 w-4 shrink-0"
-                              data-testid="shared-note-icon"
-                            />
-                          ) : (
-                            <FileText className="text-muted-foreground h-4 w-4 shrink-0" />
-                          )}
-                          <span className="truncate">{note.title}</span>
-                        </CommandPrimitive.Item>
-                      ))}
-                    </CommandPrimitive.Group>
+                      withDivider={
+                        filteredPages.length > 0 ||
+                        settingResults.length > 0 ||
+                        filteredRecentSessions.length > 0 ||
+                        folderResults.length > 0
+                      }
+                      onSelect={handleSelect}
+                    />
+                  )}
+
+                  {contactResults.length > 0 && (
+                    <PaletteContactGroup
+                      contacts={contactResults}
+                      withDivider
+                      onSelect={handleSelectContact}
+                    />
                   )}
                 </>
               )}
             </CommandPrimitive.List>
-            {settingsOnly ? (
+            {settingsOnly || inFolder ? (
               <div className="border-border/60 text-muted-foreground flex gap-4 border-t px-4 py-2 text-xs">
                 <span>
                   <kbd className="font-sans">↑↓</kbd> <Trans>Choose</Trans>
@@ -752,6 +781,14 @@ export function OpenNoteDialog({
                   </kbd>{" "}
                   <Trans>Open</Trans>
                 </span>
+                {inFolder ? (
+                  <span>
+                    <kbd className="font-sans">
+                      <Trans>Backspace</Trans>
+                    </kbd>{" "}
+                    <Trans>Leave the folder</Trans>
+                  </span>
+                ) : null}
                 <span>
                   <kbd className="font-sans">
                     <Trans>Esc</Trans>
