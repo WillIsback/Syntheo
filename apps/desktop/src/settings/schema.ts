@@ -328,16 +328,6 @@ export const SETTING_DEFINITIONS = {
     default: "me" as string,
     synced: true,
   },
-  todo_linear_filter: {
-    type: "string",
-    path: ["todo", "linear_filter"],
-    default: "" as string,
-  },
-  todo_github_repository: {
-    type: "string",
-    path: ["todo", "github_repository"],
-    default: "" as string,
-  },
   automation_draft_template: {
     type: "string",
     path: ["automations", "draft_template"],

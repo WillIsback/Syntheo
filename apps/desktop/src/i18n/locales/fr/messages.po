@@ -546,7 +546,6 @@ msgid "Automations"
 msgstr "Automatisations"
 
 #: src/instruction/index.tsx
-#: src/settings/todo/permission.tsx
 #: src/shared/shortcuts.ts
 #: src/sidebar/custom-sidebar-header.tsx
 msgid "Back"
@@ -1806,10 +1805,6 @@ msgstr "Mode mains libres"
 msgid "Have Syntheo ready when you sign in."
 msgstr "Ayez Syntheo prêt lorsque vous vous connectez."
 
-#: src/settings/todo/permission.tsx
-msgid "Having trouble?"
-msgstr "Vous rencontrez des difficultés ?"
-
 #: src/home/home-view.tsx
 msgid "Hello {firstName}."
 msgstr "Bonjour {firstName}."
@@ -2844,7 +2839,6 @@ msgid "Only on-premise OpenAI-compatible servers are supported (vLLM, Ollama, ll
 msgstr "Seuls les serveurs compatibles OpenAI hébergés chez vous sont pris en charge (vLLM, Ollama, serveur llama.cpp, LM Studio…). L'adresse se termine en général par /v1, par exemple http://localhost:8000/v1."
 
 #: src/home/note-index.tsx
-#: src/settings/todo/permission.tsx
 #: src/shared/open-note-dialog.tsx
 msgid "Open"
 msgstr "Ouvrir"
@@ -2853,7 +2847,6 @@ msgstr "Ouvrir"
 #. placeholder {0}: title.toLowerCase()
 #: src/onboarding/permissions.tsx
 #: src/settings/general/permissions.tsx
-#: src/settings/todo/permission.tsx
 msgid "Open {0} settings"
 msgstr "Ouvrir les paramètres de {0}"
 
@@ -2945,10 +2938,6 @@ msgstr "Ouvre votre navigateur."
 msgid "Options"
 msgstr "Options"
 
-#: src/settings/todo/permission.tsx
-msgid "or"
-msgstr "ou"
-
 #: src/contacts/details.tsx
 msgid "Organization"
 msgstr "Organisation"
@@ -3033,10 +3022,6 @@ msgstr "Mise en pause…"
 #: src/session/components/note-input/transcript/renderer/speaker-assign.tsx
 msgid "People"
 msgstr "Personnes"
-
-#: src/settings/todo/permission.tsx
-msgid "permission panel."
-msgstr "panneau des autorisations."
 
 #: src/settings/general/index.tsx
 #: src/sidebar/settings-nav-groups.ts
@@ -3282,10 +3267,6 @@ msgstr "Rappeler aux participants l'enregistrement"
 msgid "Remind participants that the meeting is being transcribed."
 msgstr "Rappelez aux participants que la réunion est transcrite."
 
-#: src/settings/todo/provider-content.tsx
-msgid "Reminders"
-msgstr "Rappels"
-
 #: src/session/components/living-document/summary-switcher-view.tsx
 #: src/session/components/note-input/header-enhanced.tsx
 #: src/sidebar/automations.tsx
@@ -3368,15 +3349,6 @@ msgstr "Remplacer par..."
 msgid "Report a Bug"
 msgstr "Signaler un bug"
 
-#: src/settings/todo/permission.tsx
-msgid "Request"
-msgstr "Demander"
-
-#. placeholder {0}: title.toLowerCase()
-#: src/settings/todo/permission.tsx
-msgid "Request {0}"
-msgstr "Demander {0}"
-
 #. placeholder {0}: title.toLowerCase()
 #: src/settings/general/permissions.tsx
 msgid "Request {0} permission"
@@ -3391,7 +3363,6 @@ msgid "Require Windows Hello face, PIN, or password when opening Syntheo."
 msgstr "Exiger la reconnaissance faciale Windows Hello, le code PIN ou le mot de passe à l'ouverture de Syntheo."
 
 #: src/settings/ai/shared/server-address.tsx
-#: src/settings/todo/permission.tsx
 msgid "Reset"
 msgstr "Réinitialiser"
 
@@ -4582,10 +4553,6 @@ msgstr "Cela supprimera {0} fichiers hérités et libérera {1}. Vos données d'
 msgid "Three settings to get started"
 msgstr "Trois réglages pour bien démarrer"
 
-#: src/settings/todo/index.tsx
-msgid "Ticket"
-msgstr "Ticket"
-
 #: src/settings/search-index.ts
 msgid "time, clock, hour, AM, PM"
 msgstr "heure, horloge, format, AM, PM"
@@ -5071,10 +5038,6 @@ msgstr "Vous"
 #: src/stt/live-transcript-interrupted.ts
 msgid "you are offline"
 msgstr "vous êtes hors ligne"
-
-#: src/settings/todo/permission.tsx
-msgid "You can"
-msgstr "Vous pouvez"
 
 #: src/templates/auto-format-examples-dialog.tsx
 msgid "You can use up to three example summaries."

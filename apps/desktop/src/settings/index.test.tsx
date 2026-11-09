@@ -22,7 +22,6 @@ vi.mock("./general", () => ({
   SettingsPermissions: () => null,
 }));
 
-vi.mock("./todo", () => ({ SettingsTodo: () => null }));
 vi.mock("~/settings/ai/llm", () => ({ LLM: () => null }));
 vi.mock("~/settings/ai/stt", () => ({ STT: () => null }));
 vi.mock("~/settings/appearance", () => ({ SettingsAppearance: () => null }));

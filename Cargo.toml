@@ -22,7 +22,6 @@ keyring = "4.1.4"
 syntheo-aec = { path = "crates/aec", package = "aec" }
 syntheo-agent-access = { path = "crates/agent-access", package = "agent-access" }
 syntheo-agent-core = { path = "crates/agent-core", package = "agent-core" }
-syntheo-apple-todo = { path = "crates/apple-todo", package = "apple-todo" }
 syntheo-askama-utils = { path = "crates/askama-utils", package = "askama-utils" }
 syntheo-audacity = { path = "crates/audacity", package = "audacity" }
 syntheo-audio = { path = "crates/audio", package = "audio" }
@@ -144,7 +143,6 @@ tauri-plugin-sidecar2 = { path = "plugins/sidecar2" }
 tauri-plugin-store2 = { path = "plugins/store2" }
 tauri-plugin-tantivy = { path = "plugins/tantivy" }
 tauri-plugin-template = { path = "plugins/template" }
-tauri-plugin-todo = { path = "plugins/todo" }
 tauri-plugin-tracing = { path = "plugins/tracing" }
 tauri-plugin-transcription = { path = "plugins/transcription" }
 tauri-plugin-tray = { path = "plugins/tray", package = "tauri-plugin-syntheo-tray" }

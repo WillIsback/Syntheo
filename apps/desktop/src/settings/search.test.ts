@@ -159,7 +159,6 @@ const PAGE_SOURCES: Record<SettingsTab, string[]> = {
   dictionary: ["dictionary/"],
   transcription: ["ai/stt/"],
   intelligence: ["ai/llm/"],
-  todo: ["todo/"],
 };
 
 function sourceFiles(dir: string): string[] {

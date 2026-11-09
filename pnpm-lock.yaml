@@ -1037,12 +1037,6 @@ importers:
         specifier: ^2.12.4
         version: 2.12.4
 
-  plugins/todo:
-    dependencies:
-      '@tauri-apps/api':
-        specifier: ^2.12.4
-        version: 2.12.4
-
   plugins/tracing:
     dependencies:
       '@tauri-apps/api':

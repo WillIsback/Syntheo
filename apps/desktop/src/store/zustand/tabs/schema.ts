@@ -55,8 +55,7 @@ export type SettingsTab =
   | "dictionary"
   | "dictation"
   | "transcription"
-  | "intelligence"
-  | "todo";
+  | "intelligence";
 
 const normalizeSettingsTab = (tab: string | null | undefined): SettingsTab => {
   switch (tab) {
@@ -72,7 +71,6 @@ const normalizeSettingsTab = (tab: string | null | undefined): SettingsTab => {
     case "dictation":
     case "transcription":
     case "intelligence":
-    case "todo":
       return tab;
     case "audio":
       return "meetings";

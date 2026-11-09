@@ -234,26 +234,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "apple-todo"
-version = "0.1.0"
-dependencies = [
- "backon",
- "block2",
- "chrono",
- "objc2",
- "objc2-core-graphics",
- "objc2-core-location",
- "objc2-event-kit",
- "objc2-foundation",
- "schemars 1.2.3",
- "serde",
- "serde_json",
- "specta",
- "thiserror 2.0.21",
- "tracing",
-]
-
-[[package]]
 name = "approx"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2738,7 +2718,6 @@ dependencies = [
  "tauri-plugin-syntheo-tray",
  "tauri-plugin-tantivy",
  "tauri-plugin-template",
- "tauri-plugin-todo",
  "tauri-plugin-tracing",
  "tauri-plugin-transcription",
  "tauri-plugin-window-state",
@@ -7613,10 +7592,7 @@ version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ca347214e24bc973fc025fd0d36ebb179ff30536ed1f80252706db19ee452009"
 dependencies = [
- "block2",
- "dispatch2",
  "objc2",
- "objc2-contacts",
  "objc2-foundation",
 ]
 
@@ -12708,20 +12684,6 @@ dependencies = [
  "template-app-legacy",
  "tokio",
  "tracing",
-]
-
-[[package]]
-name = "tauri-plugin-todo"
-version = "0.1.0"
-dependencies = [
- "apple-todo",
- "serde",
- "specta",
- "specta-typescript",
- "tauri",
- "tauri-plugin",
- "tauri-specta",
- "thiserror 2.0.21",
 ]
 
 [[package]]
