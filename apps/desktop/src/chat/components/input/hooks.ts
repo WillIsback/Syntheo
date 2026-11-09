@@ -12,6 +12,11 @@ import type { ContextRef } from "~/chat/context/entities";
 
 const draftCache = new DraftCache();
 
+/** Pré-remplit le champ d'une conversation avant son affichage. */
+export function seedChatDraft(draftKey: string, content: JSONContent) {
+  return draftCache.seed(draftKey, content);
+}
+
 export function useDraftState({
   draftKey,
   onDraftContentChange,

@@ -1,6 +1,8 @@
 export { FormatToolbar } from "./format-toolbar";
 export {
   type MentionConfig,
+  type MentionItem,
+  MENTION_DISPLAY_LIMIT,
   MentionSuggestion,
   findMention,
   mentionSkipPlugin,

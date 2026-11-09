@@ -30,7 +30,13 @@ export interface MentionItem {
   type: string;
   label: string;
   content?: string;
+  // Précision affichée après le libellé : dossier d'une note, nombre de
+  // notes d'un dossier.
+  description?: string;
 }
+
+// Mêmes résultats que la palette `Ctrl+K`, tronqués à cette longueur.
+export const MENTION_DISPLAY_LIMIT = 8;
 
 export type MentionConfig = {
   trigger: string;
@@ -97,7 +103,7 @@ export function useMentionSearch(
     handleSearch(query)
       .then((results) => {
         if (stale) return;
-        setItems(results.slice(0, 5));
+        setItems(results.slice(0, MENTION_DISPLAY_LIMIT));
         setSelectedIndex(0);
       })
       .catch(() => {
@@ -240,7 +246,7 @@ export function MentionSuggestion({ config }: { config: MentionConfig }) {
     >
       {items.map((item, index) => (
         <button
-          key={item.id}
+          key={`${item.type}:${item.id}`}
           className={`mention-item ${index === selectedIndex ? "is-selected" : ""}`}
           onClick={() => insertMention(item)}
           onMouseEnter={() => setSelectedIndex(index)}
@@ -255,6 +261,9 @@ export function MentionSuggestion({ config }: { config: MentionConfig }) {
             <Folder className="mention-type-icon mention-type-folder" />
           ) : null}
           <span className="mention-label">{item.label}</span>
+          {item.description ? (
+            <span className="mention-description">{item.description}</span>
+          ) : null}
         </button>
       ))}
     </div>,
