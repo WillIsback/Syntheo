@@ -246,9 +246,6 @@ describe("NoteInput tab selection", () => {
   it.each([
     ["mod+pagedown", { type: "transcript" }],
     ["mod+pageup", { type: "enhanced", id: "summary-1" }],
-    // Plus affiché, gardé jusqu'à sa suppression en 0.7.0 (issue 397).
-    ["mod+alt+right", { type: "transcript" }],
-    ["mod+alt+left", { type: "enhanced", id: "summary-1" }],
   ])("switches note views with %s", (keys, expected) => {
     hoisted.editorTabs = [
       { type: "enhanced", id: "summary-1" },
@@ -268,6 +265,21 @@ describe("NoteInput tab selection", () => {
 
     expect(handleTabChange).toHaveBeenCalledWith(expected);
     expect(hoisted.onBeforeTabChange).toHaveBeenCalledOnce();
+  });
+
+  // Ctrl+Alt+←/→ fait pivoter l'écran avec certains pilotes Intel (issue 397).
+  it("no longer binds Ctrl+Alt+arrows to note views", () => {
+    renderNoteInput();
+
+    const boundKeys = hoisted.hotkeys.flatMap((hotkey) =>
+      hotkey.keys.split(",").map((key) => key.trim()),
+    );
+
+    expect(boundKeys).toEqual(
+      expect.arrayContaining(["mod+pageup", "mod+pagedown"]),
+    );
+    expect(boundKeys).not.toContain("mod+alt+left");
+    expect(boundKeys).not.toContain("mod+alt+right");
   });
 
   it("reflects the parent-selected tab in the header", () => {
