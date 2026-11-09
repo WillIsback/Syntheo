@@ -13,15 +13,12 @@ vi.mock("~/stt/capture-result", () => ({
   useIncompleteCapture: useIncompleteCaptureMock,
 }));
 
-const {
-  useListenerMock,
-  useAudioPlayerMock,
-  useSessionTranscriptMetadataMock,
-} = vi.hoisted(() => ({
-  useListenerMock: vi.fn(),
-  useAudioPlayerMock: vi.fn(),
-  useSessionTranscriptMetadataMock: vi.fn(),
-}));
+const { useListenerMock, useSessionTranscriptMetadataMock } = vi.hoisted(
+  () => ({
+    useListenerMock: vi.fn(),
+    useSessionTranscriptMetadataMock: vi.fn(),
+  }),
+);
 
 vi.mock("~/stt/queries", () => ({
   useSessionTranscriptMetadata: useSessionTranscriptMetadataMock,
@@ -140,7 +137,6 @@ describe("Transcript", () => {
 
     useSessionTranscriptMetadataMock.mockImplementation(() => transcripts);
     useListenerMock.mockImplementation((selector) => selector(listenerState));
-    useAudioPlayerMock.mockReturnValue({ audioExists: false });
   });
 
   it("switches to transcript viewer after transcript words persist", () => {

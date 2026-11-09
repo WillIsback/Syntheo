@@ -4,9 +4,6 @@ import type { RenderTranscriptRequest } from "@syntheo/plugin-transcription";
 
 import {
   type TranscriptRecord,
-  getSessionParticipantHumanIds,
-  getSessionTranscriptRecords,
-  getTranscriptHumans,
   useSessionParticipantHumanIds,
   useSessionTranscripts,
   useTranscript,
@@ -17,17 +14,14 @@ import {
   collectAssignedHumanIdsFromTranscriptRows,
   type TranscriptRow,
 } from "~/stt/render-transcript";
-import {
-  getSpeakerContext,
-  useSpeakerContext,
-} from "~/stt/speaker-context-query";
+import { useSpeakerContext } from "~/stt/speaker-context-query";
 
 export type TranscriptRowWithId = {
   transcriptId: string;
   row: TranscriptRow;
 };
 
-export function toTranscriptRows(
+function toTranscriptRows(
   transcripts: readonly TranscriptRecord[],
 ): TranscriptRowWithId[] {
   return transcripts.map((transcript) => ({
@@ -40,7 +34,7 @@ export function toTranscriptRows(
   }));
 }
 
-export function collectRenderHumanIds(
+function collectRenderHumanIds(
   participantHumanIds: readonly string[],
   assignedHumanIds: readonly string[],
   selfHumanId?: string,
@@ -52,36 +46,6 @@ export function collectRenderHumanIds(
       selfHumanId ?? "",
     ]),
   ].filter(Boolean);
-}
-
-export async function getSessionTranscriptRenderRequest(
-  sessionId: string,
-): Promise<RenderTranscriptRequest | null> {
-  if (!sessionId) {
-    return null;
-  }
-
-  const [transcripts, participantHumanIds, speakerContext] = await Promise.all([
-    getSessionTranscriptRecords(sessionId),
-    getSessionParticipantHumanIds(sessionId),
-    getSpeakerContext(sessionId),
-  ]);
-  const transcriptRows = toTranscriptRows(transcripts).map(({ row }) => row);
-  const selfHumanId = transcripts[0]?.ownerUserId;
-  const humans = await getTranscriptHumans(
-    collectRenderHumanIds(
-      participantHumanIds,
-      collectAssignedHumanIdsFromTranscriptRows(transcriptRows),
-      selfHumanId,
-    ),
-  );
-
-  return buildRenderTranscriptRequestFromRows(
-    transcriptRows,
-    { humans, selfHumanId },
-    participantHumanIds,
-    speakerContext,
-  );
 }
 
 export function useTranscriptRenderData(

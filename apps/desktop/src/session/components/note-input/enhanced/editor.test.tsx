@@ -86,15 +86,22 @@ vi.mock("~/session/queries", () => ({
   useUpdateEnhancedNoteContent: () => hoisted.persistContent,
 }));
 
-function EnhancedEditor(
-  props: Omit<
-    React.ComponentProps<typeof SessionEnhancedEditor>,
-    "sessionTitle"
-  >,
+function editorElement(
+  props: Partial<React.ComponentProps<typeof SessionEnhancedEditor>> = {},
 ) {
   return (
-    <SessionEnhancedEditor {...props} sessionTitle={hoisted.sessionTitle} />
+    <SessionEnhancedEditor
+      sessionId="session-1"
+      enhancedNoteId="note-1"
+      content={hoisted.content}
+      sessionTitle={hoisted.sessionTitle}
+      {...props}
+    />
   );
+}
+
+function lastEditorProps() {
+  return hoisted.noteEditorProps[hoisted.noteEditorProps.length - 1];
 }
 
 // Rend explicite le cas où NoteEditor n'a pas été rendu ou n'a pas reçu le
@@ -142,15 +149,9 @@ describe("EnhancedEditor", () => {
       ],
     });
 
-    render(
-      <EnhancedEditor
-        sessionId="session-1"
-        enhancedNoteId="note-1"
-        content={hoisted.content}
-      />,
-    );
+    render(editorElement());
 
-    const props = hoisted.noteEditorProps[hoisted.noteEditorProps.length - 1];
+    const props = lastEditorProps();
 
     expect(props?.className).toContain("session-note-editor");
     expect(props?.className).toContain("enhanced-summary-editor");
@@ -178,15 +179,9 @@ describe("EnhancedEditor", () => {
   });
 
   it("persists content and updates the session title from the first line", () => {
-    render(
-      <EnhancedEditor
-        sessionId="session-1"
-        enhancedNoteId="note-1"
-        content={hoisted.content}
-      />,
-    );
+    render(editorElement());
 
-    const props = hoisted.noteEditorProps[hoisted.noteEditorProps.length - 1];
+    const props = lastEditorProps();
     const input = {
       type: "doc",
       content: [
@@ -210,15 +205,9 @@ describe("EnhancedEditor", () => {
     hoisted.content = "";
     hoisted.sessionTitle = "";
 
-    render(
-      <EnhancedEditor
-        sessionId="session-1"
-        enhancedNoteId="note-1"
-        content={hoisted.content}
-      />,
-    );
+    render(editorElement());
 
-    const props = hoisted.noteEditorProps[hoisted.noteEditorProps.length - 1];
+    const props = lastEditorProps();
     const input = {
       type: "doc",
       content: [
@@ -236,15 +225,9 @@ describe("EnhancedEditor", () => {
     hoisted.content = "";
     hoisted.sessionTitle = "Weekly sync";
 
-    render(
-      <EnhancedEditor
-        sessionId="session-1"
-        enhancedNoteId="note-1"
-        content={hoisted.content}
-      />,
-    );
+    render(editorElement());
 
-    const props = hoisted.noteEditorProps[hoisted.noteEditorProps.length - 1];
+    const props = lastEditorProps();
     const input = {
       type: "doc",
       content: [
@@ -266,15 +249,9 @@ describe("EnhancedEditor", () => {
     hoisted.content = "";
     hoisted.sessionTitle = "Weekly sync";
 
-    render(
-      <EnhancedEditor
-        sessionId="session-1"
-        enhancedNoteId="note-1"
-        content={hoisted.content}
-      />,
-    );
+    render(editorElement());
 
-    const props = hoisted.noteEditorProps[hoisted.noteEditorProps.length - 1];
+    const props = lastEditorProps();
     const input = {
       type: "doc",
       content: [
@@ -314,15 +291,9 @@ describe("EnhancedEditor", () => {
     });
     hoisted.sessionTitle = "";
 
-    render(
-      <EnhancedEditor
-        sessionId="session-1"
-        enhancedNoteId="note-1"
-        content={hoisted.content}
-      />,
-    );
+    render(editorElement());
 
-    const props = hoisted.noteEditorProps[hoisted.noteEditorProps.length - 1];
+    const props = lastEditorProps();
     const input = {
       type: "doc",
       content: [
@@ -343,15 +314,9 @@ describe("EnhancedEditor", () => {
     hoisted.content = "";
     hoisted.sessionTitle = "";
 
-    render(
-      <EnhancedEditor
-        sessionId="session-1"
-        enhancedNoteId="note-1"
-        content={hoisted.content}
-      />,
-    );
+    render(editorElement());
 
-    const props = hoisted.noteEditorProps[hoisted.noteEditorProps.length - 1];
+    const props = lastEditorProps();
     const input = {
       type: "doc",
       content: [
@@ -379,16 +344,9 @@ describe("EnhancedEditor", () => {
       ],
     };
 
-    render(
-      <EnhancedEditor
-        sessionId="session-1"
-        enhancedNoteId="note-1"
-        content={hoisted.content}
-        contentOverride={contentOverride}
-      />,
-    );
+    render(editorElement({ contentOverride }));
 
-    const props = hoisted.noteEditorProps[hoisted.noteEditorProps.length - 1];
+    const props = lastEditorProps();
 
     expect(props?.syncContentWhenFocused).toBe(true);
     expect(props?.handleChange).toBeUndefined();
@@ -410,15 +368,9 @@ describe("EnhancedEditor", () => {
   });
 
   it("routes dropped audio files to transcription", () => {
-    render(
-      <EnhancedEditor
-        sessionId="session-1"
-        enhancedNoteId="note-1"
-        content={hoisted.content}
-      />,
-    );
+    render(editorElement());
 
-    const props = hoisted.noteEditorProps[hoisted.noteEditorProps.length - 1];
+    const props = lastEditorProps();
     const fileHandlerConfig = props?.fileHandlerConfig as {
       onDrop: (files: File[]) => boolean | void | { remainingFiles: File[] };
     };

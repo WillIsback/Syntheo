@@ -71,9 +71,6 @@ export function OverflowButton({
     sessionId,
     currentView,
   );
-  // Syntheo ne conserve jamais l'audio d'une capture.
-  const audioExists = false;
-  const audioExistsResolved = true;
   const { audioImportAvailability, uploadAudio, uploadTranscript } =
     useUploadFile(sessionId);
   // Grisée mais cliquable : l'infobulle et le message expliquent pourquoi,
@@ -87,12 +84,10 @@ export function OverflowButton({
   const isMeetingInProgress =
     sessionMode === "active" || sessionMode === "finalizing";
   const showListeningAction = allowListening;
+  // Syntheo ne conserve jamais l'audio : l'import n'est proposé que tant
+  // que la note est vide.
   const showUploadActions =
-    audioExistsResolved &&
-    !audioExists &&
-    !hasTranscript &&
-    !currentNoteHasContent &&
-    !isMeetingInProgress;
+    !hasTranscript && !currentNoteHasContent && !isMeetingInProgress;
   const canOpenFloatingPanel =
     floatingBarSupported &&
     allowListening &&
@@ -172,10 +167,7 @@ export function OverflowButton({
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             {showListeningAction && (
-              <Listening
-                sessionId={sessionId}
-                resume={audioExists || hasTranscript}
-              />
+              <Listening sessionId={sessionId} resume={hasTranscript} />
             )}
             {showUploadActions && (
               <>

@@ -12,19 +12,13 @@ import {
 import { useHotkeys } from "react-hotkeys-hook";
 
 import type { JSONContent, NoteEditorRef } from "@syntheo/editor/note";
-import { cn } from "@syntheo/utils";
 
-import { Enhanced } from "./enhanced";
-import { Header, SessionViewSwitcher, useEditorTabs } from "./header";
-import { RawEditor } from "./raw";
 import { SearchBar } from "./search/bar";
 import { useSearch } from "./search/context";
-import { Transcript } from "./transcript";
 
 import { PerfZone } from "~/devtools-bar/perf-zone";
 import type { NoteStage } from "~/session/components/capsule/stage";
 import { LivingDocument } from "~/session/components/living-document";
-import { useCurrentNoteTab } from "~/session/components/shared";
 import {
   registerCanonicalSessionEditor,
   unregisterCanonicalSessionEditor,
@@ -32,9 +26,8 @@ import {
 import { useScrollPreservation } from "~/shared/hooks/useScrollPreservation";
 import { getShortcut } from "~/shared/shortcuts";
 import type { SessionMode } from "~/store/zustand/listener/general";
-import { type Tab, useTabs } from "~/store/zustand/tabs";
+import type { Tab } from "~/store/zustand/tabs";
 import { type EditorView as TabEditorView } from "~/store/zustand/tabs/schema";
-import { useListener } from "~/stt/contexts";
 
 export interface NoteInputHandle {
   focus: () => void;
@@ -52,98 +45,18 @@ type NoteInputProps = {
   sessionTitle: string;
   onNavigateToTitle?: (pixelWidth?: number) => void;
   onScroll?: UIEventHandler<HTMLDivElement>;
-  editorTabs?: TabEditorView[];
-  currentTab?: TabEditorView;
-  handleTabChange?: (view: TabEditorView) => void;
-  hideHeader?: boolean;
-  sessionMode?: SessionMode;
+  editorTabs: TabEditorView[];
+  currentTab: TabEditorView;
+  handleTabChange: (view: TabEditorView) => void;
+  sessionMode: SessionMode;
   transcriptEditMode?: boolean;
   onTranscriptEditModeChange?: (editMode: boolean) => void;
   // Document vivant : l'étape remplace les onglets Résumé / Notes / Transcript.
-  stage?: NoteStage;
+  stage: NoteStage;
 };
 
-export function shouldShowTranscriptTabSpinner(sessionMode: SessionMode) {
-  return sessionMode === "finalizing" || sessionMode === "running_batch";
-}
-
 export const NoteInput = forwardRef<NoteInputHandle, NoteInputProps>(
-  function NoteInput(props, ref) {
-    if (
-      props.editorTabs &&
-      props.currentTab &&
-      props.handleTabChange &&
-      props.sessionMode !== undefined
-    ) {
-      return (
-        <NoteInputContent
-          {...props}
-          ref={ref}
-          editorTabs={props.editorTabs}
-          currentTab={props.currentTab}
-          commitTabChange={props.handleTabChange}
-          sessionMode={props.sessionMode}
-        />
-      );
-    }
-
-    return <NoteInputWithDerivedState {...props} ref={ref} />;
-  },
-);
-
-const NoteInputWithDerivedState = forwardRef<NoteInputHandle, NoteInputProps>(
-  function NoteInputWithDerivedState(
-    { tab, editorTabs, currentTab, handleTabChange, ...props },
-    ref,
-  ) {
-    const fallbackEditorTabs = useEditorTabs({ sessionId: tab.id });
-    const fallbackCurrentTab: TabEditorView = useCurrentNoteTab(tab);
-    const updateSessionTabState = useTabs(
-      (state) => state.updateSessionTabState,
-    );
-    const tabRef = useRef(tab);
-    tabRef.current = tab;
-    const sessionMode = useListener((state) => state.getSessionMode(tab.id));
-
-    const commitTabChange = useCallback(
-      (tabView: TabEditorView) => {
-        if (handleTabChange) {
-          handleTabChange(tabView);
-          return;
-        }
-
-        updateSessionTabState(tabRef.current, {
-          ...tabRef.current.state,
-          view: tabView,
-        });
-      },
-      [handleTabChange, updateSessionTabState],
-    );
-
-    return (
-      <NoteInputContent
-        {...props}
-        ref={ref}
-        tab={tab}
-        editorTabs={editorTabs ?? fallbackEditorTabs}
-        currentTab={currentTab ?? fallbackCurrentTab}
-        commitTabChange={commitTabChange}
-        sessionMode={props.sessionMode ?? sessionMode}
-      />
-    );
-  },
-);
-
-const NoteInputContent = forwardRef<
-  NoteInputHandle,
-  Omit<NoteInputProps, "editorTabs" | "currentTab" | "handleTabChange"> & {
-    editorTabs: TabEditorView[];
-    currentTab: TabEditorView;
-    commitTabChange: (view: TabEditorView) => void;
-    sessionMode: SessionMode;
-  }
->(
-  (
+  function NoteInput(
     {
       tab,
       rawMd,
@@ -152,15 +65,14 @@ const NoteInputContent = forwardRef<
       onScroll,
       editorTabs,
       currentTab,
-      commitTabChange,
-      hideHeader = false,
+      handleTabChange: commitTabChange,
       sessionMode,
       transcriptEditMode = false,
       onTranscriptEditModeChange,
       stage,
     },
     ref,
-  ) => {
+  ) {
     const internalEditorRef = useRef<NoteEditorRef>(null);
     const sessionId = tab.id;
     const deferredCurrentTab = useDeferredValue(currentTab);
@@ -174,8 +86,6 @@ const NoteInputContent = forwardRef<
       sessionMode === "active" ||
       sessionMode === "finalizing" ||
       sessionMode === "running_batch";
-    const shouldShowTranscriptSpinner =
-      shouldShowTranscriptTabSpinner(sessionMode);
 
     const { scrollRef, onBeforeTabChange } = useScrollPreservation(
       renderedCurrentTab.type === "enhanced" ||
@@ -346,61 +256,8 @@ const NoteInputContent = forwardRef<
       [sessionId],
     );
 
-    if (stage) {
-      return (
-        <div className="-mx-2 flex h-full flex-col">
-          {showSearchBar && isSearchableTab && (
-            <div className="px-3 pt-1">
-              <SearchBar
-                editorRef={internalEditorRef}
-                allowReplace={isEditableTab}
-              />
-            </div>
-          )}
-          <div className="relative min-h-0 flex-1 overflow-hidden">
-            <PerfZone id="living-document">
-              <LivingDocument
-                tab={tab}
-                stage={stage}
-                sessionMode={sessionMode}
-                rawMd={rawMd}
-                sessionTitle={sessionTitle}
-                editorTabs={editorTabs}
-                currentTab={renderedCurrentTab}
-                onSelectView={handleTabChange}
-                editorRef={internalEditorRef}
-                scrollRef={scrollRef}
-                onContainerMouseDown={handleContainerMouseDown}
-                onScroll={onScroll}
-                onNavigateToTitle={onNavigateToTitle}
-                onViewReady={handleSessionViewReady}
-                onViewDisposed={handleSessionViewDisposed}
-                transcriptEditMode={transcriptEditMode}
-                onTranscriptEditModeChange={onTranscriptEditModeChange}
-              />
-            </PerfZone>
-          </div>
-        </div>
-      );
-    }
-
     return (
       <div className="-mx-2 flex h-full flex-col">
-        {!hideHeader && (
-          <div className="relative px-2">
-            <div className="flex items-center justify-between gap-1">
-              <SessionViewSwitcher
-                sessionId={sessionId}
-                editorTabs={editorTabs}
-                currentTab={renderedCurrentTab}
-                handleTabChange={handleTabChange}
-                isTranscribing={shouldShowTranscriptSpinner}
-              />
-              <Header sessionId={sessionId} />
-            </div>
-          </div>
-        )}
-
         {showSearchBar && isSearchableTab && (
           <div className="px-3 pt-1">
             <SearchBar
@@ -409,51 +266,28 @@ const NoteInputContent = forwardRef<
             />
           </div>
         )}
-
-        <div className="relative flex-1 overflow-hidden">
-          <div
-            ref={scrollRef}
-            onMouseDown={handleContainerMouseDown}
-            onScroll={onScroll}
-            className={cn([
-              "h-full px-3",
-              "pt-2",
-              renderedCurrentTab.type === "transcript"
-                ? "overflow-hidden pb-0"
-                : "scroll-pb-20 overflow-x-hidden overflow-y-auto pb-24",
-            ])}
-          >
-            {renderedCurrentTab.type === "enhanced" && (
-              <Enhanced
-                ref={internalEditorRef}
-                sessionId={sessionId}
-                sessionTitle={sessionTitle}
-                enhancedNoteId={renderedCurrentTab.id}
-                onNavigateToTitle={onNavigateToTitle}
-                onViewReady={handleSessionViewReady}
-                onViewDisposed={handleSessionViewDisposed}
-              />
-            )}
-            {renderedCurrentTab.type === "raw" && (
-              <RawEditor
-                ref={internalEditorRef}
-                sessionId={sessionId}
-                rawMd={rawMd}
-                sessionTitle={sessionTitle}
-                onNavigateToTitle={onNavigateToTitle}
-                onViewReady={handleSessionViewReady}
-                onViewDisposed={handleSessionViewDisposed}
-              />
-            )}
-            {renderedCurrentTab.type === "transcript" && (
-              <Transcript
-                sessionId={sessionId}
-                scrollRef={scrollRef}
-                editMode={transcriptEditMode}
-                onEditModeChange={onTranscriptEditModeChange}
-              />
-            )}
-          </div>
+        <div className="relative min-h-0 flex-1 overflow-hidden">
+          <PerfZone id="living-document">
+            <LivingDocument
+              tab={tab}
+              stage={stage}
+              sessionMode={sessionMode}
+              rawMd={rawMd}
+              sessionTitle={sessionTitle}
+              editorTabs={editorTabs}
+              currentTab={renderedCurrentTab}
+              onSelectView={handleTabChange}
+              editorRef={internalEditorRef}
+              scrollRef={scrollRef}
+              onContainerMouseDown={handleContainerMouseDown}
+              onScroll={onScroll}
+              onNavigateToTitle={onNavigateToTitle}
+              onViewReady={handleSessionViewReady}
+              onViewDisposed={handleSessionViewDisposed}
+              transcriptEditMode={transcriptEditMode}
+              onTranscriptEditModeChange={onTranscriptEditModeChange}
+            />
+          </PerfZone>
         </div>
       </div>
     );

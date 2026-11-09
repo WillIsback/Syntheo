@@ -1,78 +1,23 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  currentTab: null as null | { type: string; id?: string },
   flushDatabaseWrites: vi.fn<() => Promise<void>>(),
-  getAllWebviewWindows: vi.fn<() => Promise<Array<{ label: string }>>>(),
-}));
-
-vi.mock("@tauri-apps/api/webviewWindow", () => ({
-  getAllWebviewWindows: mocks.getAllWebviewWindows,
 }));
 
 vi.mock("~/db/write-queue", () => ({
   flushDatabaseWrites: mocks.flushDatabaseWrites,
 }));
 
-vi.mock("~/store/zustand/tabs", () => ({
-  useTabs: {
-    getState: () => ({ currentTab: mocks.currentTab }),
-  },
-}));
-
 import {
-  beginCanonicalSessionEditorActivation,
   flushCanonicalSessionEditorChanges,
-  isCanonicalSessionEditorActive,
-  isCanonicalSessionImportLocked,
   registerCanonicalSessionEditor,
-  tryAcquireCanonicalSessionImportLock,
   unregisterCanonicalSessionEditor,
 } from "./editor-activity";
 
 describe("canonical session editor activity", () => {
   beforeEach(() => {
-    mocks.currentTab = null;
     mocks.flushDatabaseWrites.mockReset();
     mocks.flushDatabaseWrites.mockResolvedValue();
-    mocks.getAllWebviewWindows.mockReset();
-    mocks.getAllWebviewWindows.mockResolvedValue([]);
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
-  it("treats a mounted editor as active whether or not it is focused", async () => {
-    const focusedView = { hasFocus: () => true } as never;
-    registerCanonicalSessionEditor("session-1", focusedView, vi.fn());
-    await expect(isCanonicalSessionEditorActive("session-1")).resolves.toBe(
-      true,
-    );
-    unregisterCanonicalSessionEditor("session-1", focusedView);
-
-    vi.useFakeTimers();
-    const unfocusedView = { hasFocus: () => false } as never;
-    const persistPendingChange = vi.fn();
-    registerCanonicalSessionEditor("session-1", unfocusedView, vi.fn());
-    setTimeout(persistPendingChange, 500);
-
-    await vi.advanceTimersByTimeAsync(499);
-
-    await expect(isCanonicalSessionEditorActive("session-1")).resolves.toBe(
-      true,
-    );
-    expect(persistPendingChange).not.toHaveBeenCalled();
-
-    unregisterCanonicalSessionEditor("session-1", unfocusedView);
-  });
-
-  it("detects the current session tab before its editor view mounts", async () => {
-    mocks.currentTab = { type: "sessions", id: "session-1" };
-
-    await expect(isCanonicalSessionEditorActive("session-1")).resolves.toBe(
-      true,
-    );
   });
 
   it("forces every mounted editor change before draining database writes", async () => {
@@ -96,36 +41,17 @@ describe("canonical session editor activity", () => {
     unregisterCanonicalSessionEditor("session-1", secondView);
   });
 
-  it("excludes editor activation for the full import lease", () => {
-    const releaseImport = tryAcquireCanonicalSessionImportLock("session-1");
-    expect(releaseImport).not.toBeNull();
-    expect(isCanonicalSessionImportLocked("session-1")).toBe(true);
+  it("stops flushing an editor once its view is unregistered", async () => {
+    const view = { hasFocus: () => true } as never;
+    const flush = vi.fn();
+    registerCanonicalSessionEditor("session-1", view, flush);
+    unregisterCanonicalSessionEditor("session-1", view);
 
-    expect(beginCanonicalSessionEditorActivation("session-1")).toBeNull();
+    await flushCanonicalSessionEditorChanges("session-1");
 
-    releaseImport?.();
-    expect(isCanonicalSessionImportLocked("session-1")).toBe(false);
-    const finishActivation = beginCanonicalSessionEditorActivation("session-1");
-    expect(finishActivation).not.toBeNull();
-    finishActivation?.();
-  });
-
-  it("detects an editor in a standalone note window", async () => {
-    mocks.getAllWebviewWindows.mockResolvedValue([
-      { label: "main" },
-      { label: "note-session-1" },
+    expect(flush).not.toHaveBeenCalled();
+    expect(mocks.flushDatabaseWrites).toHaveBeenCalledWith([
+      "session:session-1",
     ]);
-
-    await expect(isCanonicalSessionEditorActive("session-1")).resolves.toBe(
-      true,
-    );
-  });
-
-  it("fails closed when standalone window activity cannot be read", async () => {
-    mocks.getAllWebviewWindows.mockRejectedValue(new Error("unavailable"));
-
-    await expect(isCanonicalSessionEditorActive("session-1")).resolves.toBe(
-      true,
-    );
   });
 });

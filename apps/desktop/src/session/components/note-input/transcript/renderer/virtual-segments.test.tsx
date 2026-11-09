@@ -168,8 +168,6 @@ describe("useVirtualSegments measurements", () => {
             scrollElement: null,
             activeMatchId: null,
             searchEnabled: false,
-            currentMs: 0,
-            offsetMs: 0,
           }),
         { initialProps: { keys: ["first", "second"] } },
       );
@@ -211,8 +209,6 @@ describe("useVirtualSegments measurements", () => {
         scrollElement: null,
         activeMatchId: null,
         searchEnabled: false,
-        currentMs: 0,
-        offsetMs: 0,
       }),
     );
     const initialHeight = result.current.totalHeight;

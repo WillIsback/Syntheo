@@ -56,28 +56,6 @@ export function computeCurrentNoteTab(
   return { type: "raw" };
 }
 
-export function createEditorTabs({
-  enhancedNoteIds,
-  canShowTranscript,
-  sharedNoteIds = [],
-}: {
-  enhancedNoteIds: string[];
-  canShowTranscript: boolean;
-  sharedNoteIds?: readonly string[];
-}): SessionNoteView[] {
-  const enhancedTabs: SessionNoteView[] = enhancedNoteIds.map((id) => ({
-    type: "enhanced",
-    id,
-  }));
-
-  return [
-    ...enhancedTabs,
-    { type: "raw" },
-    ...(canShowTranscript ? [{ type: "transcript" } as const] : []),
-    ...sharedNoteIds.map((id) => ({ type: "shared", id }) as const),
-  ];
-}
-
 const TEXT_CONTAINER_TYPES = new Set([
   "doc",
   "heading",

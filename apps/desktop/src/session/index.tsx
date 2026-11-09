@@ -22,10 +22,6 @@ import { isLockedFlag } from "~/lock/flag";
 import { revealLockedNote } from "~/lock/notes";
 import { NoteLockScreen } from "~/lock/screen";
 import { useAppLock } from "~/lock/store";
-import {
-  isCanonicalSessionImportLocked,
-  subscribeCanonicalSessionImportLocks,
-} from "~/session/editor-activity";
 import { useSession } from "~/session/queries";
 import { registerShortcutAction } from "~/shared/shortcut-actions";
 import { isListeningPaused } from "~/store/zustand/listener/general-shared";
@@ -38,24 +34,6 @@ export function TabContentNote({
   tab,
 }: {
   standaloneWindow?: boolean;
-  tab: Extract<Tab, { type: "sessions" }>;
-}) {
-  const importLocked = React.useSyncExternalStore(
-    subscribeCanonicalSessionImportLocks,
-    () => isCanonicalSessionImportLocked(tab.id),
-    () => isCanonicalSessionImportLocked(tab.id),
-  );
-
-  if (importLocked) return <SessionContentLoading />;
-
-  return <LockedNoteGate tab={tab} standaloneWindow={standaloneWindow} />;
-}
-
-function LockedNoteGate({
-  standaloneWindow,
-  tab,
-}: {
-  standaloneWindow: boolean;
   tab: Extract<Tab, { type: "sessions" }>;
 }) {
   const session = useSession(tab.id);
@@ -260,7 +238,6 @@ function TabContentNoteInner({
                 sessionMode={sessionMode}
                 transcriptEditMode={transcriptEditMode}
                 onTranscriptEditModeChange={handleTranscriptEditModeChange}
-                hideHeader
                 stage={stage}
               />
             ) : (

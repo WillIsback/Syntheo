@@ -34,13 +34,6 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("~/stt/queries", () => ({
-  getSessionParticipantHumanIds: () =>
-    Promise.resolve(mocks.participantHumanIds),
-  getSessionTranscriptRecords: () => Promise.resolve([mocks.transcript]),
-  getTranscriptHumans: (humanIds: string[]) => {
-    mocks.humanIds = humanIds;
-    return Promise.resolve(mocks.humans);
-  },
   useSessionParticipantHumanIds: () => mocks.participantHumanIds,
   useSessionTranscripts: () => [mocks.transcript],
   useTranscript: (...args: unknown[]) => {
@@ -54,12 +47,10 @@ vi.mock("~/stt/queries", () => ({
 }));
 
 vi.mock("~/stt/speaker-context-query", () => ({
-  getSpeakerContext: () => Promise.resolve(mocks.speakerContext),
   useSpeakerContext: () => mocks.speakerContext,
 }));
 
 import {
-  getSessionTranscriptRenderRequest,
   useSessionTranscriptRenderData,
   useTranscriptRenderData,
 } from "./render-request-hooks";
@@ -117,7 +108,7 @@ describe("SQLite transcript render data", () => {
     expect(result.current.request?.transcripts).toHaveLength(1);
   });
 
-  it("builds the same session render request on demand", async () => {
+  it("resolves assigned speakers and participants for the session request", () => {
     mocks.transcript.speakerHints.push(
       {
         id: "word-1:provider_speaker_index",
@@ -158,9 +149,7 @@ describe("SQLite transcript render data", () => {
       useSessionTranscriptRenderData("session-1"),
     );
 
-    await expect(
-      getSessionTranscriptRenderRequest("session-1"),
-    ).resolves.toEqual(result.current.request);
+    expect(result.current.request?.transcripts).toHaveLength(1);
     expect(mocks.humanIds).toEqual(["human-1", "human-2", "user-1"]);
   });
 });

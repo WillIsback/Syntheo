@@ -134,7 +134,7 @@ msgstr "{day} à {time}"
 msgid "{duration}, back to the note"
 msgstr "{duration}, revenir à la note"
 
-#: src/session/components/note-input/transcript/renderer/selection-menu.tsx
+#: src/session/components/note-input/transcript/renderer/multi-selection-bar.tsx
 msgid "{entryCount} selected"
 msgstr "{entryCount} sélectionné(s)"
 
@@ -765,11 +765,11 @@ msgstr "Modifier"
 msgid "Change photo"
 msgstr "Modifier la photo"
 
-#: src/session/components/note-input/transcript/renderer/selection-menu.tsx
+#: src/session/components/note-input/transcript/renderer/multi-selection-bar.tsx
 msgid "Change speaker"
 msgstr "Modifier l’orateur"
 
-#: src/session/components/note-input/transcript/renderer/selection-menu.tsx
+#: src/session/components/note-input/transcript/renderer/selection-floating-menu.tsx
 msgid "Change speaker from here"
 msgstr "Modifier l’orateur depuis ici"
 
@@ -891,6 +891,10 @@ msgstr "Choisissez la sortie dont Syntheo transcrit le son : celle où vous ente
 msgid "Choose the program to run first."
 msgstr "Choisissez d'abord le programme à lancer."
 
+#: src/session/components/living-document/after-meeting-folder-suggestion.tsx
+msgid "Choose…"
+msgstr "Choisir…"
+
 #: src/contacts/related-notes.tsx
 #: src/contacts/shared.tsx
 #: src/folders/sidebar.tsx
@@ -901,7 +905,7 @@ msgstr "Choisissez d'abord le programme à lancer."
 msgid "Clear search"
 msgstr "Effacer la recherche"
 
-#: src/session/components/note-input/transcript/renderer/selection-menu.tsx
+#: src/session/components/note-input/transcript/renderer/multi-selection-bar.tsx
 msgid "Clear selection"
 msgstr "Effacer la sélection"
 
@@ -1099,10 +1103,6 @@ msgstr "Copié"
 msgid "Copied to clipboard"
 msgstr "Copié dans le presse-papiers"
 
-#: src/session/components/note-input/header-enhanced.tsx
-msgid "Copied to clipboard: {viewTitle}"
-msgstr "Copié dans le presse-papiers : {viewTitle}"
-
 #: src/automations/action-runners.ts
 msgid "Copied to the clipboard"
 msgstr "Copié dans le presse-papiers"
@@ -1110,10 +1110,7 @@ msgstr "Copié dans le presse-papiers"
 #: src/main/windows-title-bar.tsx
 #: src/session/components/capsule/index.tsx
 #: src/session/components/living-document/summary-switcher-view.tsx
-#: src/session/components/note-input/header-enhanced.tsx
-#: src/session/components/note-input/header-raw.tsx
-#: src/session/components/note-input/header-transcript.tsx
-#: src/session/components/note-input/transcript/renderer/selection-menu.tsx
+#: src/session/components/note-input/transcript/renderer/selection-floating-menu.tsx
 #: src/settings/developers/webhooks.tsx
 msgid "Copy"
 msgstr "Copier"
@@ -1344,7 +1341,7 @@ msgstr "Modèle par défaut"
 #: src/contacts/contact-page-header.tsx
 #: src/folders/folder-editor.tsx
 #: src/home/note-index.tsx
-#: src/session/components/note-input/transcript/renderer/selection-menu.tsx
+#: src/session/components/note-input/transcript/renderer/multi-selection-bar.tsx
 #: src/session/components/outer-header/overflow/delete.tsx
 #: src/sidebar/automations.tsx
 #: src/templates/template-form.tsx
@@ -1562,7 +1559,7 @@ msgstr "Versions antérieures de cette note, les plus récentes en premier."
 
 #: src/main/windows-title-bar.tsx
 #: src/session/components/living-document/transcript-margin.tsx
-#: src/session/components/note-input/transcript/renderer/selection-menu.tsx
+#: src/session/components/note-input/transcript/renderer/selection-floating-menu.tsx
 #: src/settings/dictionary/index.tsx
 #: src/sidebar/automations.tsx
 #: src/templates/template-form.tsx
@@ -1752,21 +1749,9 @@ msgstr "Extraire les tâches"
 msgid "Failed to copy"
 msgstr "La copie a échoué"
 
-#: src/session/components/note-input/header-raw.tsx
-msgid "Failed to copy memo"
-msgstr "Impossible de copier le mémo"
-
 #: src/session/components/capsule/session-capsule.tsx
 msgid "Failed to copy the note"
 msgstr "Impossible de copier la note"
-
-#: src/session/components/note-input/header-transcript.tsx
-msgid "Failed to copy transcript"
-msgstr "Impossible de copier le transcript"
-
-#: src/session/components/note-input/header-enhanced.tsx
-msgid "Failed to copy: {viewTitle}"
-msgstr "Impossible de copier : {viewTitle}"
 
 #: src/templates/template-sidebar.tsx
 msgid "Favorites"
@@ -1784,6 +1769,10 @@ msgstr "Ranger"
 #: src/session/components/outer-header/overflow/export-modal.tsx
 msgid "File format"
 msgstr "Format de fichier"
+
+#: src/session/components/living-document/after-meeting-folder-suggestion.tsx
+msgid "File it"
+msgstr "Ranger"
 
 #: src/settings/automations/markdown-export-options.tsx
 msgid "Filename"
@@ -2088,6 +2077,10 @@ msgstr "Icônes"
 #: src/settings/search-index.ts
 msgid "Identity"
 msgstr "Identité"
+
+#: src/session/components/living-document/after-meeting-folder-suggestion.tsx
+msgid "Ignore"
+msgstr "Ignorer"
 
 #: src/stt/meeting-apps.ts
 msgid "Ignore {firstName} and {secondName}?"
@@ -2554,10 +2547,6 @@ msgstr "membres"
 msgid "Memo"
 msgstr "Mémo"
 
-#: src/session/components/note-input/header-raw.tsx
-msgid "Memo copied to clipboard"
-msgstr "Mémo copié dans le presse-papiers"
-
 #: src/chat/components/message/tool/edit-summary.tsx
 msgid "Memo edit declined"
 msgstr "Modification du mémo refusée"
@@ -2574,12 +2563,8 @@ msgstr "Mémo mis à jour"
 msgid "memo, about me, description"
 msgstr "mémo, à propos de moi, description"
 
-#: src/session/components/note-input/header-raw.tsx
-msgid "Memos"
-msgstr "Mémos"
-
 #: src/contacts/details-sections.tsx
-#: src/session/components/note-input/transcript/renderer/selection-menu.tsx
+#: src/session/components/note-input/transcript/renderer/multi-selection-bar.tsx
 msgid "Merge"
 msgstr "Fusionner"
 
@@ -2792,7 +2777,6 @@ msgstr "Nouvelle note"
 msgid "New note in this folder"
 msgstr "Nouvelle note dans ce dossier"
 
-#: src/session/components/note-input/raw.tsx
 #: src/templates/details.tsx
 #: src/templates/template-form.tsx
 #: src/templates/utils.ts
@@ -3419,10 +3403,6 @@ msgstr "Vert des pins sur soie écrue, à l'encre. Calme et végétal."
 msgid "Play a sound when transcription, summaries, or cloud sync finish."
 msgstr "Émettre un son à la fin de la transcription, des résumés ou de la synchronisation cloud."
 
-#: src/session/components/note-input/transcript/renderer/selection-menu.tsx
-msgid "Play from here"
-msgstr "Lire à partir d'ici"
-
 #: src/settings/search-index.ts
 msgid "position, role, function, job"
 msgstr "poste, rôle, fonction, métier"
@@ -3634,7 +3614,6 @@ msgstr "Rétablir"
 
 #: src/session/components/living-document/late-filing.ts
 #: src/session/components/living-document/summary-switcher-view.tsx
-#: src/session/components/note-input/header-enhanced.tsx
 #: src/session/components/note-input/template-picker.tsx
 msgid "Regenerate"
 msgstr "Régénérer"
@@ -3673,7 +3652,6 @@ msgid "Remind participants that the meeting is being transcribed."
 msgstr "Rappelez aux participants que la réunion est transcrite."
 
 #: src/session/components/living-document/summary-switcher-view.tsx
-#: src/session/components/note-input/header-enhanced.tsx
 msgid "Remove"
 msgstr "Supprimer"
 
@@ -3829,7 +3807,6 @@ msgstr "Reprendre la fermeture automatique"
 
 #: src/meeting-float/overlay/bar.tsx
 #: src/session/components/capsule/index.tsx
-#: src/session/components/note-input/header-transcript.tsx
 #: src/session/components/outer-header/overflow/listening.tsx
 #: src/shared/open-note-dialog.tsx
 msgid "Resume listening"
@@ -3884,6 +3861,11 @@ msgstr "Lancer cette commande ?"
 msgid "runs the program on your computer"
 msgstr "lance le programme sur votre ordinateur"
 
+#: src/session/components/living-document/after-meeting-folder-suggestion.tsx
+msgid "same participants"
+msgstr "mêmes participants"
+
+#: src/session/components/living-document/after-meeting-folder-suggestion.tsx
 #: src/session/components/living-document/fiche-folder.tsx
 msgid "same title"
 msgstr "même titre"
@@ -4162,11 +4144,7 @@ msgstr "Serveur qui transcrit la parole en texte"
 msgid "Server that writes the summary"
 msgstr "Serveur qui rédige le compte-rendu"
 
-#: src/session/components/note-input/header.tsx
-msgid "Session note views"
-msgstr "Vues des notes de session"
-
-#: src/session/components/title-input.tsx
+#: src/session/components/title-input-field.tsx
 #: src/settings/automations/markdown-export-options.tsx
 msgid "Session title"
 msgstr "Titre de la session"
@@ -4207,10 +4185,6 @@ msgstr "Écran partagé à {time}"
 #: src/session/components/note-input/meeting-screen-gallery.tsx
 msgid "Shared screens"
 msgstr "Écrans partagés"
-
-#: src/session/components/note-input/header-shared-note.tsx
-msgid "Shared summary"
-msgstr "Résumé partagé"
 
 #: src/shared/shortcuts.ts
 msgid "Shift"
@@ -4321,7 +4295,7 @@ msgstr "Smileys & personnes"
 msgid "Software Engineer"
 msgstr "Ingénieur logiciel"
 
-#: src/session/components/note-input/transcript/renderer/selection-menu.tsx
+#: src/session/components/note-input/transcript/renderer/multi-selection-bar.tsx
 #: src/shared/control.tsx
 msgid "Something went wrong"
 msgstr "Une erreur s'est produite"
@@ -4413,10 +4387,6 @@ msgstr "Démarrer Syntheo à la connexion"
 #: src/chat/components/input/index.tsx
 msgid "Start voice input"
 msgstr "Démarrer la saisie vocale"
-
-#: src/session/components/note-input/raw.tsx
-msgid "Start with a favorite template"
-msgstr "Démarrer avec un modèle favori"
 
 #: src/onboarding/index.tsx
 msgid "Start with permissions"
@@ -4530,10 +4500,6 @@ msgstr "Suggérez la prochaine question à poser."
 msgid "Suggested"
 msgstr "Suggéré"
 
-#: src/session/components/note-input/raw.tsx
-msgid "Suggested templates"
-msgstr "Modèles suggérés"
-
 #: src/templates/template-generator-bar.tsx
 msgid "Suggesting…"
 msgstr "Proposition en cours…"
@@ -4618,10 +4584,6 @@ msgstr "Versions de la synthèse"
 #: src/session/hooks/useAutoEnhance.ts
 msgid "Summary wasn't generated"
 msgstr "Le résumé n'a pas été généré"
-
-#: src/session/components/note-input/header.tsx
-msgid "Switch view ({previousViewKeys}, {nextViewKeys})"
-msgstr "Changer de vue ({previousViewKeys}, {nextViewKeys})"
 
 #: src/templates/template-icon-picker.tsx
 msgid "Symbols"
@@ -5209,6 +5171,10 @@ msgstr "Ces informations restent sur votre poste. Elles servent à vous reconna�
 msgid "This is a real test: these steps really act."
 msgstr "C'est un test réel : ces étapes agissent vraiment."
 
+#: src/session/components/living-document/after-meeting-folder-suggestion.tsx
+msgid "This meeting looks like {folderName} ({reason})"
+msgstr "Cette réunion ressemble à {folderName} ({reason})"
+
 #: src/stt/audio-import-feedback.ts
 msgid "This model can't transcribe a file. Choose another transcription model."
 msgstr "Ce modèle ne sait pas transcrire un fichier. Choisissez un autre modèle de transcription."
@@ -5288,7 +5254,6 @@ msgstr "Transcription de la saisie vocale"
 msgid "Transcribing…"
 msgstr "Transcription…"
 
-#: src/session/components/note-input/header-transcript.tsx
 #: src/session/components/outer-header/overflow/export-modal.tsx
 #: src/settings/automations/markdown-export-options.tsx
 msgid "Transcript"
@@ -5303,10 +5268,6 @@ msgstr "Transcription"
 msgctxt "export section"
 msgid "Transcript"
 msgstr "Transcription"
-
-#: src/session/components/note-input/header-transcript.tsx
-msgid "Transcript copied to clipboard"
-msgstr "Transcript copié dans le presse-papiers"
 
 #: src/services/enhancer/eligibility.ts
 msgid "Transcript too short to summarize ({characterCount}/{minCharacters} characters minimum)"
@@ -5471,9 +5432,8 @@ msgstr "Injoignable"
 #: src/home/note-index.tsx
 #: src/session/components/living-document/late-filing.ts
 #: src/session/components/living-document/meeting-type-picker.tsx
-#: src/session/components/note-input/raw.tsx
 #: src/session/components/outer-header/overflow/export-modal.tsx
-#: src/session/components/title-input.tsx
+#: src/session/components/title-input-field.tsx
 #: src/shared/palette-search-groups.tsx
 #: src/shared/ui/resource-list/preview-header.tsx
 #: src/sidebar/toast/undo-delete-toast.tsx

@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render } from "@testing-library/react";
+import { cleanup, render } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -110,11 +110,9 @@ function createScrollElement() {
 
 function renderTranscript({
   scrollElement = null,
-  seek = vi.fn(),
   editMode = false,
 }: {
   scrollElement?: HTMLDivElement | null;
-  seek?: (sec: number) => void;
   editMode?: boolean;
 } = {}) {
   const client = new QueryClient();
@@ -127,10 +125,6 @@ function renderTranscript({
         transcriptId="transcript-1"
         currentActive={false}
         liveSegments={[]}
-        currentMs={0}
-        seek={seek}
-        startPlayback={vi.fn()}
-        audioExists
         editMode={editMode}
       />
     </QueryClientProvider>,
@@ -216,24 +210,5 @@ describe("paragraphes d'une même prise de parole (issue 281)", () => {
     );
     expect(scrollTo).toHaveBeenCalled();
     expect(scrollTo.mock.lastCall?.[0].top ?? 0).toBeGreaterThan(0);
-  });
-
-  it("lance la lecture au clic sur un mot d'un paragraphe non initial", () => {
-    const seek = vi.fn();
-    renderTranscript({ seek });
-
-    const word = document.querySelector<HTMLElement>(
-      `[data-transcript-word-id='w-${PARAGRAPH_MAX_SENTENCES * 2 + 1}-2']`,
-    )!;
-    expect(
-      word
-        .closest("section")!
-        .querySelector("[data-transcript-speaker-assign]"),
-    ).toBe(null);
-    fireEvent.click(word);
-
-    expect(seek).toHaveBeenCalledWith(
-      (5_000 + (PARAGRAPH_MAX_SENTENCES * 2 + 1) * 1_000 + 200) / 1_000,
-    );
   });
 });

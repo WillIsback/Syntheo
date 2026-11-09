@@ -23,6 +23,7 @@ import type { NoteStage } from "../capsule/stage";
 import { Enhanced } from "../note-input/enhanced";
 import { RawEditor } from "../note-input/raw";
 import { TitleInput } from "../title-input";
+import { AfterMeetingFolderSuggestion } from "./after-meeting-folder-suggestion";
 import { PrepareFiche } from "./fiche";
 import { useLateFilingProposal } from "./late-filing";
 import { NoteMeta } from "./meta";
@@ -125,6 +126,9 @@ export function LivingDocument(props: LivingDocumentProps) {
         }
       />
       <WelcomeCard sessionId={sessionId} />
+      {/* Issue 499 : à l'arrêt de l'écoute, un dossier proposé en tête de
+          la synthèse d'une note non rangée. */}
+      <AfterMeetingFolderSuggestion sessionId={sessionId} stage={stage} />
       {/* Positions stables : l'éditeur de notes n'est pas remonté entre
           Préparer et Écouter, le texte en cours de saisie n'est pas perdu. */}
       {stage === "prepare" ? (
