@@ -3,6 +3,7 @@ import { useMemo, type ReactNode } from "react";
 
 import { cn } from "@syntheo/utils";
 
+import { FicheFolderField } from "./fiche-folder";
 import { MeetingTypePicker } from "./meeting-type-picker";
 
 import { useInheritedFolderTemplate } from "~/folders/folder-template";
@@ -30,6 +31,12 @@ export function PrepareFiche({
       data-note-fiche
       className="border-border grid grid-cols-[130px_minmax(0,1fr)] items-baseline gap-x-4 gap-y-3 border-y py-4 text-[15px]"
     >
+      <dt className="text-muted-foreground">
+        <Trans>Folder</Trans>
+      </dt>
+      <dd className="m-0 flex min-w-0 flex-wrap gap-1.5">
+        <FicheFolderField sessionId={sessionId} />
+      </dd>
       <dt className="text-muted-foreground">
         <Trans>Type</Trans>
       </dt>
