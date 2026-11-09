@@ -7,15 +7,14 @@ import {
   useRef,
   useState,
 } from "react";
-import { flushSync } from "react-dom";
 import { useHotkeys } from "react-hotkeys-hook";
 
 import { cn } from "@syntheo/utils";
 
+import { useTranscriptEditActions } from "./edit-actions";
 import { TranscriptScrollControls } from "./scroll-controls";
 import {
   completeTranscriptContextSelection,
-  focusTranscriptSelection,
   getTranscriptContextSelection,
   getTranscriptMergeTarget,
   getTranscriptSectionKeyFromElement,
@@ -30,23 +29,11 @@ import {
 import { MultiSelectionBar, SelectionMenu } from "./selection-menu";
 import type { TranscriptContextMenuRequest } from "./selection-menu";
 import { RenderTranscript } from "./transcript";
-import {
-  preserveScrollPosition,
-  useAutoScroll,
-  useScrollDetection,
-} from "./viewport-hooks";
+import { useAutoScroll, useScrollDetection } from "./viewport-hooks";
 
 import type { Segment } from "~/stt/live-segment";
-import {
-  assignTranscriptSpeaker,
-  mergeTranscriptSegments,
-  updateTranscriptSegmentText,
-} from "~/stt/queries";
 
 const LIVE_TRANSCRIPT_PLACEHOLDER_ID = "__live-transcript__";
-
-const NO_PLAYBACK = () => {};
-const NO_PLAYBACK_SEEK = (_seconds: number) => {};
 
 type SelectedEntries = Map<string, TranscriptWordSelection>;
 
@@ -166,11 +153,6 @@ export function TranscriptViewer({
     scrollToBottom,
   } = useScrollDetection(containerRef, currentActive);
 
-  // Syntheo ne conserve jamais l'audio : aucune lecture depuis le transcript.
-  const audioExists = false;
-  const deferredCurrentMs = 0;
-  const seek = NO_PLAYBACK_SEEK;
-  const start = NO_PLAYBACK;
   const shouldAutoScroll = currentActive && autoScrollEnabled;
   // Une seule règle de suivi : la dernière transcription ne recolle au bas
   // que si le suivi automatique est actif (l'utilisateur n'a pas remonté).
@@ -188,122 +170,26 @@ export function TranscriptViewer({
   const visibleTranscriptIdsRef = useRef(visibleTranscriptIds);
   visibleTranscriptIdsRef.current = visibleTranscriptIds;
 
+  // Syntheo ne conserve jamais l'audio : la seule action est la copie.
   const handleSelectionAction = useCallback(
-    (action: "copy" | "play", selection: TranscriptWordSelection) => {
-      if (action === "copy") {
-        void navigator.clipboard.writeText(selection.text);
-        return;
-      }
-
-      if (audioExists) {
-        seek(selection.startMs / 1000);
-        start();
-      }
-    },
-    [audioExists, seek, start],
-  );
-  const handleAssignSpeaker = useCallback(
-    async (
-      selection: TranscriptWordSelection,
-      humanId: string,
-      extendToAdjacent?: boolean,
-    ) => {
-      await preserveScrollPosition(containerRef.current, () =>
-        Promise.all(
-          selection.groups.map((group) =>
-            assignTranscriptSpeaker({
-              transcriptId: group.transcriptId,
-              segmentKey: group.segmentKey,
-              humanId,
-              anchorWordId: group.wordIds[0]!,
-              mode: "segment",
-              wordIds: group.wordIds,
-              extendToAdjacent,
-            }),
-          ),
-        ),
-      );
+    (_action: "copy", selection: TranscriptWordSelection) => {
+      void navigator.clipboard.writeText(selection.text);
     },
     [],
   );
-  const handleEditSelection = useCallback(
-    (selection: TranscriptWordSelection) => {
-      flushSync(() => onEditModeChange?.(true));
-      if (containerRef.current) {
-        focusTranscriptSelection(selection, containerRef.current);
-      }
-    },
-    [onEditModeChange],
-  );
-  const handleChangeSpeakerSelection = useCallback(
-    (selection: TranscriptWordSelection) => {
-      flushSync(() => onEditModeChange?.(true));
-      const container = containerRef.current;
-      if (!container) return;
-      const editor = focusTranscriptSelection(selection, container);
-      if (!editor) return;
-      window.getSelection()?.collapseToStart();
-      editor.dispatchEvent(
-        new KeyboardEvent("keydown", {
-          key: "Enter",
-          bubbles: true,
-          cancelable: true,
-        }),
-      );
-    },
-    [onEditModeChange],
-  );
-  const handleMergeSegments = useCallback(async () => {
-    const { order, entries } = collectEntries(visibleTranscriptIdsRef.current);
-    const target = getTranscriptMergeTarget(
-      new Set(selectedEntries.keys()),
-      order,
-      entries,
-    );
-    const targetGroup = target?.groups[0];
-    const selection = mergeTranscriptSelections([...selectedEntries.values()]);
-    if (!targetGroup || !selection) {
-      return;
-    }
-
-    const groups = selection.groups.filter(
-      (group) => group.transcriptId === targetGroup.transcriptId,
-    );
-    await preserveScrollPosition(containerRef.current, () =>
-      Promise.all(
-        groups.map((group) =>
-          mergeTranscriptSegments({
-            transcriptId: group.transcriptId,
-            segmentKey: targetGroup.segmentKey,
-            wordIds: group.wordIds,
-          }),
-        ),
-      ),
-    );
-  }, [collectEntries, selectedEntries]);
-  const handleDeleteSelection = useCallback(
-    async (selection: TranscriptWordSelection) => {
-      const wordsByTranscript = new Map<string, Set<string>>();
-      for (const group of selection.groups) {
-        const wordIds =
-          wordsByTranscript.get(group.transcriptId) ?? new Set<string>();
-        group.wordIds.forEach((wordId) => wordIds.add(wordId));
-        wordsByTranscript.set(group.transcriptId, wordIds);
-      }
-      await preserveScrollPosition(containerRef.current, () =>
-        Promise.all(
-          [...wordsByTranscript].map(([transcriptId, wordIds]) =>
-            updateTranscriptSegmentText({
-              transcriptId,
-              wordIds: [...wordIds],
-              text: "",
-            }),
-          ),
-        ),
-      );
-    },
-    [],
-  );
+  const {
+    handleAssignSpeaker,
+    handleEditSelection,
+    handleChangeSpeakerSelection,
+    handleMergeSegments,
+    handleDeleteSelection,
+  } = useTranscriptEditActions({
+    containerRef,
+    onEditModeChange,
+    collectEntries,
+    selectedEntries,
+    visibleTranscriptIdsRef,
+  });
   const canMergeSelection = useMemo(() => {
     if (selectedEntries.size < 2) {
       return false;
@@ -525,10 +411,6 @@ export function TranscriptViewer({
                   currentActive={isActiveTranscript}
                   captureGeneration={isActiveTranscript ? captureGeneration : 0}
                   liveSegments={isActiveTranscript ? liveSegments : []}
-                  currentMs={deferredCurrentMs}
-                  seek={seek}
-                  startPlayback={start}
-                  audioExists={audioExists}
                   editMode={editMode}
                 />
               </div>
@@ -540,7 +422,6 @@ export function TranscriptViewer({
           <SelectionMenu
             containerRef={containerRef}
             contextRequest={contextRequest}
-            audioExists={audioExists}
             onContextClose={handleContextClose}
             onAction={handleSelectionAction}
             onEdit={onEditModeChange ? handleEditSelection : undefined}

@@ -134,7 +134,7 @@ msgstr "{day} at {time}"
 msgid "{duration}, back to the note"
 msgstr "{duration}, back to the note"
 
-#: src/session/components/note-input/transcript/renderer/selection-menu.tsx
+#: src/session/components/note-input/transcript/renderer/multi-selection-bar.tsx
 msgid "{entryCount} selected"
 msgstr "{entryCount} selected"
 
@@ -765,11 +765,11 @@ msgstr "Change"
 msgid "Change photo"
 msgstr "Change photo"
 
-#: src/session/components/note-input/transcript/renderer/selection-menu.tsx
+#: src/session/components/note-input/transcript/renderer/multi-selection-bar.tsx
 msgid "Change speaker"
 msgstr "Change speaker"
 
-#: src/session/components/note-input/transcript/renderer/selection-menu.tsx
+#: src/session/components/note-input/transcript/renderer/selection-floating-menu.tsx
 msgid "Change speaker from here"
 msgstr "Change speaker from here"
 
@@ -905,7 +905,7 @@ msgstr "Choose…"
 msgid "Clear search"
 msgstr "Clear search"
 
-#: src/session/components/note-input/transcript/renderer/selection-menu.tsx
+#: src/session/components/note-input/transcript/renderer/multi-selection-bar.tsx
 msgid "Clear selection"
 msgstr "Clear selection"
 
@@ -1103,10 +1103,6 @@ msgstr "Copied"
 msgid "Copied to clipboard"
 msgstr "Copied to clipboard"
 
-#: src/session/components/note-input/header-enhanced.tsx
-msgid "Copied to clipboard: {viewTitle}"
-msgstr "Copied to clipboard: {viewTitle}"
-
 #: src/automations/action-runners.ts
 msgid "Copied to the clipboard"
 msgstr "Copied to the clipboard"
@@ -1114,10 +1110,7 @@ msgstr "Copied to the clipboard"
 #: src/main/windows-title-bar.tsx
 #: src/session/components/capsule/index.tsx
 #: src/session/components/living-document/summary-switcher-view.tsx
-#: src/session/components/note-input/header-enhanced.tsx
-#: src/session/components/note-input/header-raw.tsx
-#: src/session/components/note-input/header-transcript.tsx
-#: src/session/components/note-input/transcript/renderer/selection-menu.tsx
+#: src/session/components/note-input/transcript/renderer/selection-floating-menu.tsx
 #: src/settings/developers/webhooks.tsx
 msgid "Copy"
 msgstr "Copy"
@@ -1348,7 +1341,7 @@ msgstr "Default template"
 #: src/contacts/contact-page-header.tsx
 #: src/folders/folder-editor.tsx
 #: src/home/note-index.tsx
-#: src/session/components/note-input/transcript/renderer/selection-menu.tsx
+#: src/session/components/note-input/transcript/renderer/multi-selection-bar.tsx
 #: src/session/components/outer-header/overflow/delete.tsx
 #: src/sidebar/automations.tsx
 #: src/templates/template-form.tsx
@@ -1566,7 +1559,7 @@ msgstr "Earlier versions of this note, newest first."
 
 #: src/main/windows-title-bar.tsx
 #: src/session/components/living-document/transcript-margin.tsx
-#: src/session/components/note-input/transcript/renderer/selection-menu.tsx
+#: src/session/components/note-input/transcript/renderer/selection-floating-menu.tsx
 #: src/settings/dictionary/index.tsx
 #: src/sidebar/automations.tsx
 #: src/templates/template-form.tsx
@@ -1756,21 +1749,9 @@ msgstr "Extract tasks"
 msgid "Failed to copy"
 msgstr "Failed to copy"
 
-#: src/session/components/note-input/header-raw.tsx
-msgid "Failed to copy memo"
-msgstr "Failed to copy memo"
-
 #: src/session/components/capsule/session-capsule.tsx
 msgid "Failed to copy the note"
 msgstr "Failed to copy the note"
-
-#: src/session/components/note-input/header-transcript.tsx
-msgid "Failed to copy transcript"
-msgstr "Failed to copy transcript"
-
-#: src/session/components/note-input/header-enhanced.tsx
-msgid "Failed to copy: {viewTitle}"
-msgstr "Failed to copy: {viewTitle}"
 
 #: src/templates/template-sidebar.tsx
 msgid "Favorites"
@@ -2566,10 +2547,6 @@ msgstr "members"
 msgid "Memo"
 msgstr "Memo"
 
-#: src/session/components/note-input/header-raw.tsx
-msgid "Memo copied to clipboard"
-msgstr "Memo copied to clipboard"
-
 #: src/chat/components/message/tool/edit-summary.tsx
 msgid "Memo edit declined"
 msgstr "Memo edit declined"
@@ -2586,12 +2563,8 @@ msgstr "Memo updated"
 msgid "memo, about me, description"
 msgstr "memo, about me, description"
 
-#: src/session/components/note-input/header-raw.tsx
-msgid "Memos"
-msgstr "Memos"
-
 #: src/contacts/details-sections.tsx
-#: src/session/components/note-input/transcript/renderer/selection-menu.tsx
+#: src/session/components/note-input/transcript/renderer/multi-selection-bar.tsx
 msgid "Merge"
 msgstr "Merge"
 
@@ -2804,7 +2777,6 @@ msgstr "New Note"
 msgid "New note in this folder"
 msgstr "New note in this folder"
 
-#: src/session/components/note-input/raw.tsx
 #: src/templates/details.tsx
 #: src/templates/template-form.tsx
 #: src/templates/utils.ts
@@ -3431,10 +3403,6 @@ msgstr "Pine green on raw silk, with ink. Calm and plant-like."
 msgid "Play a sound when transcription, summaries, or cloud sync finish."
 msgstr "Play a sound when transcription, summaries, or cloud sync finish."
 
-#: src/session/components/note-input/transcript/renderer/selection-menu.tsx
-msgid "Play from here"
-msgstr "Play from here"
-
 #: src/settings/search-index.ts
 msgid "position, role, function, job"
 msgstr "position, role, function, job"
@@ -3646,7 +3614,6 @@ msgstr "Redo"
 
 #: src/session/components/living-document/late-filing.ts
 #: src/session/components/living-document/summary-switcher-view.tsx
-#: src/session/components/note-input/header-enhanced.tsx
 #: src/session/components/note-input/template-picker.tsx
 msgid "Regenerate"
 msgstr "Regenerate"
@@ -3685,7 +3652,6 @@ msgid "Remind participants that the meeting is being transcribed."
 msgstr "Remind participants that the meeting is being transcribed."
 
 #: src/session/components/living-document/summary-switcher-view.tsx
-#: src/session/components/note-input/header-enhanced.tsx
 msgid "Remove"
 msgstr "Remove"
 
@@ -3841,7 +3807,6 @@ msgstr "Resume auto-dismiss"
 
 #: src/meeting-float/overlay/bar.tsx
 #: src/session/components/capsule/index.tsx
-#: src/session/components/note-input/header-transcript.tsx
 #: src/session/components/outer-header/overflow/listening.tsx
 #: src/shared/open-note-dialog.tsx
 msgid "Resume listening"
@@ -4179,11 +4144,7 @@ msgstr "Server that turns speech into text"
 msgid "Server that writes the summary"
 msgstr "Server that writes the summary"
 
-#: src/session/components/note-input/header.tsx
-msgid "Session note views"
-msgstr "Session note views"
-
-#: src/session/components/title-input.tsx
+#: src/session/components/title-input-field.tsx
 #: src/settings/automations/markdown-export-options.tsx
 msgid "Session title"
 msgstr "Session title"
@@ -4224,10 +4185,6 @@ msgstr "Shared screen at {time}"
 #: src/session/components/note-input/meeting-screen-gallery.tsx
 msgid "Shared screens"
 msgstr "Shared screens"
-
-#: src/session/components/note-input/header-shared-note.tsx
-msgid "Shared summary"
-msgstr "Shared summary"
 
 #: src/shared/shortcuts.ts
 msgid "Shift"
@@ -4338,7 +4295,7 @@ msgstr "Smileys & People"
 msgid "Software Engineer"
 msgstr "Software Engineer"
 
-#: src/session/components/note-input/transcript/renderer/selection-menu.tsx
+#: src/session/components/note-input/transcript/renderer/multi-selection-bar.tsx
 #: src/shared/control.tsx
 msgid "Something went wrong"
 msgstr "Something went wrong"
@@ -4430,10 +4387,6 @@ msgstr "Start Syntheo at login"
 #: src/chat/components/input/index.tsx
 msgid "Start voice input"
 msgstr "Start voice input"
-
-#: src/session/components/note-input/raw.tsx
-msgid "Start with a favorite template"
-msgstr "Start with a favorite template"
 
 #: src/onboarding/index.tsx
 msgid "Start with permissions"
@@ -4547,10 +4500,6 @@ msgstr "Suggest what to ask next."
 msgid "Suggested"
 msgstr "Suggested"
 
-#: src/session/components/note-input/raw.tsx
-msgid "Suggested templates"
-msgstr "Suggested templates"
-
 #: src/templates/template-generator-bar.tsx
 msgid "Suggesting…"
 msgstr "Suggesting…"
@@ -4635,10 +4584,6 @@ msgstr "Summary versions"
 #: src/session/hooks/useAutoEnhance.ts
 msgid "Summary wasn't generated"
 msgstr "Summary wasn't generated"
-
-#: src/session/components/note-input/header.tsx
-msgid "Switch view ({previousViewKeys}, {nextViewKeys})"
-msgstr "Switch view ({previousViewKeys}, {nextViewKeys})"
 
 #: src/templates/template-icon-picker.tsx
 msgid "Symbols"
@@ -5309,7 +5254,6 @@ msgstr "Transcribing voice input"
 msgid "Transcribing…"
 msgstr "Transcribing…"
 
-#: src/session/components/note-input/header-transcript.tsx
 #: src/session/components/outer-header/overflow/export-modal.tsx
 #: src/settings/automations/markdown-export-options.tsx
 msgid "Transcript"
@@ -5324,10 +5268,6 @@ msgstr "Transcript"
 msgctxt "export section"
 msgid "Transcript"
 msgstr "Transcript"
-
-#: src/session/components/note-input/header-transcript.tsx
-msgid "Transcript copied to clipboard"
-msgstr "Transcript copied to clipboard"
 
 #: src/services/enhancer/eligibility.ts
 msgid "Transcript too short to summarize ({characterCount}/{minCharacters} characters minimum)"
@@ -5492,9 +5432,8 @@ msgstr "Unreachable"
 #: src/home/note-index.tsx
 #: src/session/components/living-document/late-filing.ts
 #: src/session/components/living-document/meeting-type-picker.tsx
-#: src/session/components/note-input/raw.tsx
 #: src/session/components/outer-header/overflow/export-modal.tsx
-#: src/session/components/title-input.tsx
+#: src/session/components/title-input-field.tsx
 #: src/shared/palette-search-groups.tsx
 #: src/shared/ui/resource-list/preview-header.tsx
 #: src/sidebar/toast/undo-delete-toast.tsx

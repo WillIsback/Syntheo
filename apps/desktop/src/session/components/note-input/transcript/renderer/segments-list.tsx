@@ -1,0 +1,344 @@
+import {
+  type FocusEvent,
+  memo,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+} from "react";
+
+import { cn } from "@syntheo/utils";
+
+import { useSearch } from "../../search/context";
+import { useTranscriptParagraphs } from "./paragraphs";
+import {
+  EMPTY_TRANSCRIPT_SEARCH,
+  SegmentRenderer,
+  type SegmentRendererProps,
+  segmentRendererPropsEqual,
+  type TranscriptSearchRenderState,
+} from "./segment";
+import { createSegmentKeys, segmentsShallowEqual } from "./segment-hooks";
+import {
+  getTranscriptSectionKey,
+  getTranscriptSelectionFromSegment,
+  type TranscriptWordSelection,
+} from "./selection";
+import { useRegisterTranscriptSelectionSource } from "./selection-context";
+import { useVirtualSegments, VirtualSegmentRow } from "./virtual-segments";
+
+import { nameMemoComponent } from "~/devtools-bar/render-tracker";
+import { displaySpeakerLabel } from "~/session/components/speaker-naming/speakers";
+import {
+  getMaxSpeakerNumberForParticipants,
+  SegmentKeyUtils,
+  type RenderLabelContext,
+  type Segment,
+} from "~/stt/live-segment";
+import { SpeakerLabelManager } from "~/stt/segment/shared";
+
+export const SegmentsList = memo(
+  function SegmentsList({
+    segments,
+    scrollElement,
+    transcriptId,
+    sessionId,
+    labelContext,
+    offsetMs,
+    shouldScrollToEnd,
+    maxSpeakerNumber,
+    editMode,
+  }: {
+    segments: Segment[];
+    scrollElement: HTMLDivElement | null;
+    transcriptId: string;
+    sessionId?: string;
+    labelContext?: RenderLabelContext;
+    offsetMs: number;
+    shouldScrollToEnd: boolean;
+    maxSpeakerNumber?: number;
+    editMode: boolean;
+  }) {
+    const search = useSearch();
+    const inferredMaxSpeakerNumber = labelContext
+      ? getMaxSpeakerNumberForParticipants(
+          labelContext.getParticipantHumanIds?.() ?? [],
+          labelContext.getSelfHumanId(),
+        )
+      : undefined;
+    const resolvedMaxSpeakerNumber =
+      maxSpeakerNumber ?? inferredMaxSpeakerNumber;
+    const speakerLabelManager = useMemo(() => {
+      return labelContext
+        ? SpeakerLabelManager.fromSegments(
+            segments,
+            labelContext,
+            resolvedMaxSpeakerNumber,
+          )
+        : new SpeakerLabelManager(resolvedMaxSpeakerNumber);
+    }, [labelContext, resolvedMaxSpeakerNumber, segments]);
+    const speakerLabels = useMemo(() => {
+      const labels = new Map<Segment, string>();
+      for (const segment of segments) {
+        // Traduit à l'affichage seulement : la valeur brute (« Speaker N »)
+        // reste celle des données et du contexte du modèle.
+        labels.set(
+          segment,
+          displaySpeakerLabel(
+            segment.speaker_label ??
+              SegmentKeyUtils.renderLabel(
+                segment.key,
+                labelContext,
+                speakerLabelManager,
+              ),
+          ),
+        );
+      }
+      return labels;
+    }, [labelContext, segments, speakerLabelManager]);
+    const transcriptSearch = useMemo<TranscriptSearchRenderState>(() => {
+      const query = search?.query.trim() ?? "";
+      if (!search?.isVisible || !query) {
+        return EMPTY_TRANSCRIPT_SEARCH;
+      }
+
+      return {
+        query,
+        activeMatchId: search.activeMatchId,
+        caseSensitive: search.caseSensitive,
+        wholeWord: search.wholeWord,
+      };
+    }, [
+      search?.activeMatchId,
+      search?.caseSensitive,
+      search?.isVisible,
+      search?.query,
+      search?.wholeWord,
+    ]);
+    // Identité de section de chaque segment (sélection, surlignage) : la clé
+    // stable du segment, qui ne dépend que de son premier mot. L'identifiant
+    // d'un segment vivant contient son dernier mot et change à chaque partiel.
+    const segmentKeys = useMemo(
+      () => createSegmentKeys(segments, transcriptId),
+      [segments, transcriptId],
+    );
+    // Lignes virtuelles : un paragraphe par ligne (issue 281). En édition, le
+    // texte d'un segment reste un seul bloc éditable (voir SegmentRenderer).
+    const paragraphs = useTranscriptParagraphs(segments, !editMode);
+    const rowSegments = useMemo(
+      () => paragraphs.map((paragraph) => paragraph.segment),
+      [paragraphs],
+    );
+    const continuations = useMemo(
+      () => paragraphs.map((paragraph) => paragraph.continuation),
+      [paragraphs],
+    );
+    const rowKeys = useMemo(
+      () => createSegmentKeys(rowSegments, transcriptId),
+      [rowSegments, transcriptId],
+    );
+    // L'en-tête du premier paragraphe réattribue le segment entier, tel qu'il
+    // est au moment du choix, sans que ce paragraphe soit refait à chaque
+    // partiel.
+    const segmentOfRow = useMemo(
+      () =>
+        new Map(
+          paragraphs.map((paragraph) => [
+            paragraph.segment,
+            segments[paragraph.segmentIndex]!,
+          ]),
+        ),
+      [paragraphs, segments],
+    );
+    const segmentOfRowRef = useRef(segmentOfRow);
+    useEffect(() => {
+      segmentOfRowRef.current = segmentOfRow;
+    }, [segmentOfRow]);
+    const resolveSegment = useCallback(
+      (row: Segment) => segmentOfRowRef.current.get(row) ?? row,
+      [],
+    );
+    const virtual = useVirtualSegments({
+      segments: rowSegments,
+      segmentKeys: rowKeys,
+      continuations,
+      scrollElement,
+      activeMatchId: transcriptSearch.activeMatchId,
+      searchEnabled: transcriptSearch.query.length > 0,
+    });
+    useRegisterTranscriptSegments(
+      transcriptId,
+      sessionId,
+      offsetMs,
+      segments,
+      segmentKeys,
+    );
+
+    // Nouveau tour de parole : recoller au bas. Ne dépend que du nombre de
+    // segments, pas des paragraphes ni des partiels : pendant un monologue,
+    // c'est `useAutoScroll` qui suit la croissance du texte.
+    useLayoutEffect(() => {
+      if (!scrollElement || !shouldScrollToEnd) {
+        return;
+      }
+      const raf = requestAnimationFrame(() => {
+        scrollElement.scrollTo({
+          top: scrollElement.scrollHeight,
+          behavior: "auto",
+        });
+      });
+      return () => cancelAnimationFrame(raf);
+    }, [scrollElement, segments.length, shouldScrollToEnd]);
+
+    return (
+      <div
+        ref={virtual.listRef}
+        data-transcript-virtual-total={segments.length}
+        className="relative w-full min-w-0 overflow-x-clip"
+        style={{ height: virtual.totalHeight }}
+      >
+        {virtual.virtualItems.map(({ index, key, top, measuredHeight }) => {
+          const { segment, segmentIndex, continuation } = paragraphs[index]!;
+          const parent = segments[segmentIndex]!;
+          return (
+            <SegmentRow
+              key={key}
+              rowKey={key}
+              index={index}
+              top={top}
+              measuredHeight={measuredHeight}
+              onMeasure={virtual.measureRow}
+              onFocus={virtual.handleRowFocus}
+              onBlur={virtual.handleRowBlur}
+              segment={segment}
+              offsetMs={offsetMs}
+              transcriptId={transcriptId}
+              sessionId={sessionId}
+              speakerLabel={
+                continuation
+                  ? ""
+                  : (speakerLabels.get(parent) ??
+                    displaySpeakerLabel(
+                      SegmentKeyUtils.renderLabel(parent.key),
+                    ))
+              }
+              sectionId={segmentKeys[segmentIndex]}
+              showHeader={!continuation}
+              continuation={continuation}
+              resolveSegment={resolveSegment}
+              search={transcriptSearch}
+              editMode={editMode}
+            />
+          );
+        })}
+      </div>
+    );
+  },
+  (prevProps, nextProps) => {
+    return (
+      prevProps.transcriptId === nextProps.transcriptId &&
+      prevProps.sessionId === nextProps.sessionId &&
+      prevProps.labelContext === nextProps.labelContext &&
+      prevProps.scrollElement === nextProps.scrollElement &&
+      prevProps.offsetMs === nextProps.offsetMs &&
+      prevProps.shouldScrollToEnd === nextProps.shouldScrollToEnd &&
+      prevProps.maxSpeakerNumber === nextProps.maxSpeakerNumber &&
+      prevProps.editMode === nextProps.editMode &&
+      segmentsShallowEqual(prevProps.segments, nextProps.segments)
+    );
+  },
+);
+nameMemoComponent(SegmentsList, "SegmentsList");
+
+type SegmentRowProps = SegmentRendererProps & {
+  rowKey: string;
+  continuation: boolean;
+  index: number;
+  top: number;
+  measuredHeight?: number;
+  onMeasure: (key: string, height: number) => void;
+  onFocus: (index: number) => void;
+  onBlur: (event: FocusEvent<HTMLDivElement>) => void;
+};
+
+// Un bloc de la liste virtuelle. Mémoïsé avec le comparateur du bloc : à
+// chaque partiel, les blocs finaux ne sont pas refaits, seul le bloc vivant
+// l'est.
+const SegmentRow = memo(function SegmentRow({
+  rowKey,
+  index,
+  top,
+  measuredHeight,
+  onMeasure,
+  onFocus,
+  onBlur,
+  continuation,
+  ...segmentProps
+}: SegmentRowProps) {
+  return (
+    <VirtualSegmentRow
+      rowKey={rowKey}
+      index={index}
+      top={top}
+      measuredHeight={measuredHeight}
+      onMeasure={onMeasure}
+      onFocus={onFocus}
+      onBlur={onBlur}
+    >
+      <div className={cn([index > 0 && (continuation ? "pt-2" : "pt-4")])}>
+        <SegmentRenderer {...segmentProps} />
+      </div>
+    </VirtualSegmentRow>
+  );
+}, segmentRowPropsEqual);
+nameMemoComponent(SegmentRow, "SegmentRow");
+
+function segmentRowPropsEqual(prev: SegmentRowProps, next: SegmentRowProps) {
+  return (
+    prev.rowKey === next.rowKey &&
+    prev.index === next.index &&
+    prev.top === next.top &&
+    prev.measuredHeight === next.measuredHeight &&
+    prev.onMeasure === next.onMeasure &&
+    prev.onFocus === next.onFocus &&
+    prev.onBlur === next.onBlur &&
+    prev.continuation === next.continuation &&
+    segmentRendererPropsEqual(prev, next)
+  );
+}
+
+function useRegisterTranscriptSegments(
+  transcriptId: string,
+  sessionId: string | undefined,
+  offsetMs: number,
+  segments: Segment[],
+  segmentKeys: string[],
+) {
+  const registerSource = useRegisterTranscriptSelectionSource();
+  const getEntriesRef = useRef<() => Array<[string, TranscriptWordSelection]>>(
+    () => [],
+  );
+  getEntriesRef.current = () =>
+    segments.flatMap((segment, index) => {
+      const selection = getTranscriptSelectionFromSegment({
+        transcriptId,
+        sessionId,
+        offsetMs,
+        segment,
+      });
+      if (!selection) {
+        return [];
+      }
+      return [
+        [
+          getTranscriptSectionKey(transcriptId, segmentKeys[index]!),
+          selection,
+        ] as const,
+      ];
+    });
+
+  useEffect(() => {
+    return registerSource(transcriptId, () => getEntriesRef.current());
+  }, [registerSource, transcriptId]);
+}

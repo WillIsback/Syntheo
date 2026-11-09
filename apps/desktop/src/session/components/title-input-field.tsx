@@ -1,0 +1,429 @@
+import { useLingui } from "@lingui/react/macro";
+import {
+  type CSSProperties,
+  type ForwardedRef,
+  forwardRef,
+  memo,
+  useCallback,
+  useImperativeHandle,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
+import { useResizeObserver } from "usehooks-ts";
+
+import { cn } from "@syntheo/utils";
+
+import { useSession, useUpdateSession } from "~/session/queries";
+import { useLiveTitle } from "~/store/zustand/live-title";
+
+export interface TitleInputHandle {
+  focus: () => void;
+  focusAtEnd: () => void;
+  focusAtPixelWidth: (pixelWidth: number) => void;
+}
+
+export type TitleVariant = "title" | "breadcrumb" | "document";
+
+export const TITLE_HEIGHT_CLASS: Record<TitleVariant, string> = {
+  breadcrumb: "h-5",
+  title: "h-8",
+  // Titre de note du « document vivant » : Newsreader 40/1.1.
+  document: "h-11",
+};
+
+export const TITLE_TEXT_CLASS: Record<TitleVariant, string> = {
+  breadcrumb: "text-sm leading-5",
+  title: "text-xl font-semibold",
+  document:
+    "font-serif text-[40px] leading-[1.1] font-medium tracking-[-0.01em]",
+};
+
+interface TitleInputInnerProps {
+  sessionId: string;
+  editorId: string;
+  placeholder?: string;
+  onTransferContentToEditor?: (content: string) => void;
+  onFocusEditorAtStart?: () => void;
+  onFocusEditorAtPixelWidth?: (pixelWidth: number) => void;
+  variant: TitleVariant;
+}
+
+export const TitleInputInner = memo(
+  forwardRef<TitleInputHandle, TitleInputInnerProps>(
+    function TitleInputInnerRender(
+      {
+        sessionId,
+        editorId,
+        placeholder,
+        onTransferContentToEditor,
+        onFocusEditorAtStart,
+        onFocusEditorAtPixelWidth,
+        variant,
+      }: TitleInputInnerProps,
+      ref: ForwardedRef<TitleInputHandle>,
+    ) {
+      const { t } = useLingui();
+      const untitled = placeholder ?? t`Untitled`;
+      const storeTitle = useSession(sessionId)?.title;
+      const updateSession = useUpdateSession(sessionId);
+      const [draftTitle, setDraftTitle] = useState<string | null>(null);
+      const [isOverflowing, setIsOverflowing] = useState(false);
+      const [overflowDistance, setOverflowDistance] = useState(0);
+      const [showStartFade, setShowStartFade] = useState(false);
+      const [showEndFade, setShowEndFade] = useState(false);
+      const [isTitleFocused, setIsTitleFocused] = useState(false);
+      const internalRef = useRef<HTMLInputElement>(null);
+      const editRevisionRef = useRef(0);
+      const setLiveTitle = useLiveTitle((s) => s.setTitle);
+      const markLiveTitlePersisted = useLiveTitle((s) => s.markTitlePersisted);
+      const clearLiveTitle = useLiveTitle((s) => s.clearTitle);
+      const title = draftTitle ?? storeTitle ?? "";
+
+      const updateOverflowState = useCallback(
+        (node?: HTMLInputElement | null) => {
+          const input = node ?? internalRef.current;
+          if (!input) {
+            setIsOverflowing(false);
+            setOverflowDistance(0);
+            setShowStartFade(false);
+            setShowEndFade(false);
+            return;
+          }
+          const distance = Math.max(input.scrollWidth - input.clientWidth, 0);
+          const overflowing = distance > 1;
+          const scrollLeft = Math.max(input.scrollLeft, 0);
+          setIsOverflowing(distance > 1);
+          setOverflowDistance(distance);
+          setShowStartFade(overflowing && scrollLeft > 1);
+          setShowEndFade(overflowing && scrollLeft < distance - 1);
+        },
+        [],
+      );
+
+      const setInputRef = useCallback(
+        (node: HTMLInputElement | null) => {
+          internalRef.current = node;
+          if (node) {
+            requestAnimationFrame(() => updateOverflowState(node));
+          } else {
+            setIsOverflowing(false);
+            setOverflowDistance(0);
+            setShowStartFade(false);
+            setShowEndFade(false);
+          }
+        },
+        [updateOverflowState],
+      );
+
+      useResizeObserver({
+        ref: internalRef as React.RefObject<HTMLInputElement>,
+        onResize: () => updateOverflowState(),
+      });
+
+      const titleFadeStyle =
+        showStartFade || showEndFade
+          ? {
+              WebkitMaskImage: getTitleFadeMask({
+                showStartFade,
+                showEndFade,
+              }),
+              maskImage: getTitleFadeMask({ showStartFade, showEndFade }),
+              WebkitMaskRepeat: "no-repeat",
+              maskRepeat: "no-repeat",
+              WebkitMaskSize: "100% 100%",
+              maskSize: "100% 100%",
+            }
+          : undefined;
+      const showHoverReveal =
+        isOverflowing && !isTitleFocused && title.length > 0;
+      const titleHoverScrollStyle = showHoverReveal
+        ? ({
+            "--title-hover-scroll-distance": `-${Math.ceil(overflowDistance)}px`,
+            "--title-hover-scroll-duration": `${Math.min(
+              Math.max(overflowDistance / 48, 2.5),
+              8,
+            ).toFixed(2)}s`,
+          } as CSSProperties)
+        : undefined;
+
+      useImperativeHandle(
+        ref,
+        () => ({
+          focus: () => internalRef.current?.focus(),
+          focusAtEnd: () => {
+            const input = internalRef.current;
+            if (input) {
+              input.focus();
+              input.setSelectionRange(input.value.length, input.value.length);
+            }
+          },
+          focusAtPixelWidth: (pixelWidth: number) => {
+            const input = internalRef.current;
+            if (input?.value) {
+              input.focus();
+              const titleStyle = window.getComputedStyle(input);
+              const canvas = document.createElement("canvas");
+              const ctx = canvas.getContext("2d");
+              if (ctx) {
+                ctx.font = `${titleStyle.fontWeight} ${titleStyle.fontSize} ${titleStyle.fontFamily}`;
+                let charPos = 0;
+                for (let i = 0; i <= input.value.length; i++) {
+                  const currentWidth = ctx.measureText(
+                    input.value.slice(0, i),
+                  ).width;
+                  if (currentWidth >= pixelWidth) {
+                    charPos = i;
+                    break;
+                  }
+                  charPos = i;
+                }
+                input.setSelectionRange(charPos, charPos);
+              }
+            } else if (input) {
+              input.focus();
+            }
+          },
+        }),
+        [],
+      );
+
+      useLayoutEffect(() => {
+        requestAnimationFrame(() => updateOverflowState());
+      }, [title, updateOverflowState]);
+
+      const setStoreTitle = useCallback(
+        (title: string) => updateSession({ title }),
+        [updateSession],
+      );
+
+      const persistTitle = useCallback(
+        (value: string) => {
+          const editRevision = editRevisionRef.current;
+          const previousTitle = storeTitle;
+          return setStoreTitle(value)
+            .then(() => {
+              if (editRevisionRef.current !== editRevision) return;
+              markLiveTitlePersisted(sessionId, value, previousTitle);
+            })
+            .catch((error) => {
+              console.error("[title-input] failed to persist title", error);
+              if (editRevisionRef.current !== editRevision) return;
+              clearLiveTitle(sessionId);
+            })
+            .finally(() => {
+              if (editRevisionRef.current !== editRevision) return;
+              setDraftTitle(null);
+            });
+        },
+        [
+          clearLiveTitle,
+          markLiveTitlePersisted,
+          sessionId,
+          setStoreTitle,
+          storeTitle,
+        ],
+      );
+
+      const handleEnterKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (!onTransferContentToEditor && !onFocusEditorAtStart) {
+          editRevisionRef.current += 1;
+          e.currentTarget.blur();
+          return;
+        }
+
+        const input = internalRef.current;
+        if (!input) return;
+
+        const cursorPos = input.selectionStart ?? input.value.length;
+        const beforeCursor = input.value.slice(0, cursorPos);
+        const afterCursor = input.value.slice(cursorPos);
+
+        editRevisionRef.current += 1;
+        setDraftTitle(beforeCursor);
+        setLiveTitle(sessionId, beforeCursor);
+        void persistTitle(beforeCursor);
+
+        if (afterCursor) {
+          setTimeout(() => onTransferContentToEditor?.(afterCursor), 0);
+        } else {
+          setTimeout(() => onFocusEditorAtStart?.(), 0);
+        }
+      };
+
+      const handleTabKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        e.preventDefault();
+        setTimeout(() => onFocusEditorAtStart?.(), 0);
+      };
+
+      const handleArrowRightKey = (
+        e: React.KeyboardEvent<HTMLInputElement>,
+      ) => {
+        const input = internalRef.current;
+        if (!input) return;
+        const cursorPos = input.selectionStart ?? 0;
+        if (
+          cursorPos === input.value.length &&
+          input.selectionEnd === cursorPos
+        ) {
+          e.preventDefault();
+          setTimeout(() => onFocusEditorAtStart?.(), 0);
+        }
+      };
+
+      const handleArrowDownKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        e.preventDefault();
+        const input = internalRef.current;
+        if (!input) return;
+
+        const cursorPos = input.selectionStart ?? 0;
+        const textBeforeCursor = input.value.slice(0, cursorPos);
+
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        const titleStyle = window.getComputedStyle(input);
+        ctx.font = `${titleStyle.fontWeight} ${titleStyle.fontSize} ${titleStyle.fontFamily}`;
+        const titleWidth = ctx.measureText(textBeforeCursor).width;
+        setTimeout(() => onFocusEditorAtPixelWidth?.(titleWidth), 0);
+      };
+
+      const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (isComposingKeyEvent(e)) {
+          return;
+        }
+
+        if (e.key === "ArrowUp") {
+          e.preventDefault();
+          return;
+        }
+
+        if (e.key === "Enter") {
+          e.preventDefault();
+          handleEnterKey(e);
+        } else if (e.key === "Tab" && onFocusEditorAtStart) {
+          handleTabKey(e);
+        } else if (e.key === "ArrowRight" && onFocusEditorAtStart) {
+          handleArrowRightKey(e);
+        } else if (e.key === "ArrowDown" && onFocusEditorAtPixelWidth) {
+          handleArrowDownKey(e);
+        }
+      };
+
+      return (
+        <div
+          data-tauri-drag-region="false"
+          style={titleFadeStyle}
+          className={cn([
+            "group/title-input relative grid w-fit max-w-full grid-cols-[minmax(0,1fr)] items-center overflow-hidden",
+            TITLE_HEIGHT_CLASS[variant],
+            TITLE_TEXT_CLASS[variant],
+          ])}
+        >
+          <span
+            aria-hidden="true"
+            className="invisible col-start-1 row-start-1 min-w-0 overflow-hidden px-px whitespace-pre"
+          >
+            {title}
+          </span>
+          <span
+            aria-hidden="true"
+            className="invisible col-start-1 row-start-1 min-w-0 overflow-hidden px-px whitespace-pre"
+          >
+            {untitled}
+          </span>
+          <input
+            data-tauri-drag-region="false"
+            data-session-title-input
+            aria-label={t`Session title`}
+            ref={setInputRef}
+            id={`title-input-${sessionId}-${editorId}`}
+            placeholder={untitled}
+            type="text"
+            onChange={(e) => {
+              const value = e.target.value;
+              editRevisionRef.current += 1;
+              setDraftTitle(value);
+              setLiveTitle(sessionId, value);
+              updateOverflowState(e.target);
+            }}
+            onClick={(e) => updateOverflowState(e.currentTarget)}
+            onKeyDown={handleKeyDown}
+            onKeyUp={(e) => updateOverflowState(e.currentTarget)}
+            onFocus={() => {
+              setIsTitleFocused(true);
+              updateOverflowState();
+            }}
+            onBlur={(e) => {
+              setIsTitleFocused(false);
+              if (draftTitle !== null) {
+                void persistTitle(e.target.value);
+              }
+              updateOverflowState(e.target);
+            }}
+            onScroll={(e) => updateOverflowState(e.currentTarget)}
+            onSelect={(e) => updateOverflowState(e.currentTarget)}
+            value={title}
+            className={cn([
+              "col-start-1 row-start-1 w-0 min-w-full transition-opacity duration-200",
+              "border-none bg-transparent focus:outline-hidden",
+              "placeholder:text-muted-foreground text-left",
+              variant === "breadcrumb"
+                ? "text-foreground h-5 appearance-none p-0 text-sm leading-5 focus:underline"
+                : TITLE_TEXT_CLASS[variant],
+              variant === "document" &&
+                "text-foreground placeholder:text-faint focus-visible:ring-ring focus-visible:ring-offset-background h-11 rounded-md focus-visible:ring-2 focus-visible:ring-offset-4",
+              variant === "breadcrumb" &&
+                (isTitleFocused
+                  ? "overflow-x-auto whitespace-nowrap"
+                  : "truncate"),
+              showHoverReveal && "text-transparent caret-transparent",
+            ])}
+          />
+          {showHoverReveal ? (
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 flex items-center justify-start overflow-hidden"
+            >
+              <span
+                style={titleHoverScrollStyle}
+                className={cn([
+                  "group-hover/title-input:animate-title-hover-scroll whitespace-nowrap group-hover/title-input:will-change-transform",
+                  TITLE_TEXT_CLASS[variant],
+                ])}
+              >
+                {title}
+              </span>
+            </div>
+          ) : null}
+        </div>
+      );
+    },
+  ),
+);
+
+function isComposingKeyEvent(event: React.KeyboardEvent<HTMLInputElement>) {
+  return (
+    event.nativeEvent.isComposing ||
+    event.key === "Process" ||
+    event.keyCode === 229
+  );
+}
+
+function getTitleFadeMask({
+  showStartFade,
+  showEndFade,
+}: {
+  showStartFade: boolean;
+  showEndFade: boolean;
+}) {
+  if (showStartFade && showEndFade) {
+    return "linear-gradient(to right, transparent 0, black 28px, black calc(100% - 28px), transparent 100%)";
+  }
+
+  if (showStartFade) {
+    return "linear-gradient(to right, transparent 0, black 28px, black 100%)";
+  }
+
+  return "linear-gradient(to right, black 0, black calc(100% - 28px), transparent 100%)";
+}

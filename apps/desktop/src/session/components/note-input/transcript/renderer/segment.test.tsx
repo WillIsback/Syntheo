@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   EMPTY_TRANSCRIPT_SEARCH,
   SegmentRenderer,
+  type SegmentRendererProps,
   type TranscriptSearchRenderState,
 } from "./segment";
 
@@ -60,191 +61,31 @@ describe("SegmentRenderer", () => {
   });
 
   it("keeps spaces between rendered words and lines", () => {
-    const segment = createSegment();
-    const seekAndPlay = vi.fn();
-    const view = render(
-      <SegmentRenderer
-        segment={segment}
-        offsetMs={0}
-        transcriptId="transcript-1"
-        speakerLabel="Speaker 1"
-        currentMs={0}
-        seekAndPlay={seekAndPlay}
-        audioExists
-        search={EMPTY_TRANSCRIPT_SEARCH}
-      />,
-    );
+    const view = renderSegment();
 
     expect(view.container.textContent).toBe("First line. Second line.");
   });
 
-  it("skips playback rerenders while the active line is unchanged", () => {
-    const segment = createSegment();
-    const seekAndPlay = vi.fn();
-    const view = render(
-      <SegmentRenderer
-        segment={segment}
-        offsetMs={0}
-        transcriptId="transcript-1"
-        speakerLabel="Speaker 1"
-        currentMs={500}
-        seekAndPlay={seekAndPlay}
-        audioExists
-        search={EMPTY_TRANSCRIPT_SEARCH}
-      />,
-    );
+  it.each([
+    ["skips", "an active match outside the segment", "outside-2", 4],
+    ["rerenders", "an active match inside the segment", "word-3", 8],
+  ])(
+    "%s the lines for %s",
+    (_verb, _label, nextActiveMatchId, expectedRenders) => {
+      const view = renderSegment({ search: createSearch("outside-1") });
+      expect(mocks.wordSpan).toHaveBeenCalledTimes(4);
 
-    expect(mocks.wordSpan).toHaveBeenCalledTimes(4);
+      view.rerenderWith({ search: createSearch(nextActiveMatchId) });
 
-    view.rerender(
-      <SegmentRenderer
-        segment={segment}
-        offsetMs={0}
-        transcriptId="transcript-1"
-        speakerLabel="Speaker 1"
-        currentMs={700}
-        seekAndPlay={seekAndPlay}
-        audioExists
-        search={EMPTY_TRANSCRIPT_SEARCH}
-      />,
-    );
-
-    expect(mocks.wordSpan).toHaveBeenCalledTimes(4);
-  });
-
-  it("rerenders playback when the active line changes", () => {
-    const segment = createSegment();
-    const seekAndPlay = vi.fn();
-    const view = render(
-      <SegmentRenderer
-        segment={segment}
-        offsetMs={0}
-        transcriptId="transcript-1"
-        speakerLabel="Speaker 1"
-        currentMs={500}
-        seekAndPlay={seekAndPlay}
-        audioExists
-        search={EMPTY_TRANSCRIPT_SEARCH}
-      />,
-    );
-
-    expect(mocks.wordSpan).toHaveBeenCalledTimes(4);
-
-    view.rerender(
-      <SegmentRenderer
-        segment={segment}
-        offsetMs={0}
-        transcriptId="transcript-1"
-        speakerLabel="Speaker 1"
-        currentMs={1500}
-        seekAndPlay={seekAndPlay}
-        audioExists
-        search={EMPTY_TRANSCRIPT_SEARCH}
-      />,
-    );
-
-    expect(mocks.wordSpan).toHaveBeenCalledTimes(8);
-  });
-
-  it("skips active-match navigation outside the segment", () => {
-    const segment = createSegment();
-    const seekAndPlay = vi.fn();
-    const search = createSearch("outside-1");
-    const view = render(
-      <SegmentRenderer
-        segment={segment}
-        offsetMs={0}
-        transcriptId="transcript-1"
-        speakerLabel="Speaker 1"
-        currentMs={0}
-        seekAndPlay={seekAndPlay}
-        audioExists
-        search={search}
-      />,
-    );
-
-    expect(mocks.wordSpan).toHaveBeenCalledTimes(4);
-
-    view.rerender(
-      <SegmentRenderer
-        segment={segment}
-        offsetMs={0}
-        transcriptId="transcript-1"
-        speakerLabel="Speaker 1"
-        currentMs={0}
-        seekAndPlay={seekAndPlay}
-        audioExists
-        search={createSearch("outside-2")}
-      />,
-    );
-
-    expect(mocks.wordSpan).toHaveBeenCalledTimes(4);
-  });
-
-  it("rerenders active-match navigation inside the segment", () => {
-    const segment = createSegment();
-    const seekAndPlay = vi.fn();
-    const view = render(
-      <SegmentRenderer
-        segment={segment}
-        offsetMs={0}
-        transcriptId="transcript-1"
-        speakerLabel="Speaker 1"
-        currentMs={0}
-        seekAndPlay={seekAndPlay}
-        audioExists
-        search={createSearch("outside")}
-      />,
-    );
-
-    expect(mocks.wordSpan).toHaveBeenCalledTimes(4);
-
-    view.rerender(
-      <SegmentRenderer
-        segment={segment}
-        offsetMs={0}
-        transcriptId="transcript-1"
-        speakerLabel="Speaker 1"
-        currentMs={0}
-        seekAndPlay={seekAndPlay}
-        audioExists
-        search={createSearch("word-3")}
-      />,
-    );
-
-    expect(mocks.wordSpan).toHaveBeenCalledTimes(8);
-  });
+      expect(mocks.wordSpan).toHaveBeenCalledTimes(expectedRenders);
+    },
+  );
 
   it("rerenders when the computed speaker label changes", () => {
-    const segment = createSegment();
-    const seekAndPlay = vi.fn();
-    const view = render(
-      <SegmentRenderer
-        segment={segment}
-        offsetMs={0}
-        transcriptId="transcript-1"
-        speakerLabel="Speaker 1"
-        currentMs={0}
-        seekAndPlay={seekAndPlay}
-        audioExists
-        search={EMPTY_TRANSCRIPT_SEARCH}
-      />,
-    );
-
+    const view = renderSegment();
     expect(mocks.wordSpan).toHaveBeenCalledTimes(4);
 
-    view.rerender(
-      <SegmentRenderer
-        segment={segment}
-        offsetMs={0}
-        transcriptId="transcript-1"
-        speakerLabel="Alice"
-        currentMs={0}
-        seekAndPlay={seekAndPlay}
-        audioExists
-        search={EMPTY_TRANSCRIPT_SEARCH}
-      />,
-    );
+    view.rerenderWith({ speakerLabel: "Alice" });
 
     expect(
       view.container
@@ -256,20 +97,7 @@ describe("SegmentRenderer", () => {
   });
 
   it("persists text corrections when leaving write mode content", async () => {
-    const segment = createSegment();
-    const view = render(
-      <SegmentRenderer
-        segment={segment}
-        offsetMs={0}
-        transcriptId="transcript-1"
-        speakerLabel="Speaker 1"
-        currentMs={0}
-        seekAndPlay={vi.fn()}
-        audioExists
-        search={EMPTY_TRANSCRIPT_SEARCH}
-        editMode
-      />,
-    );
+    const view = renderSegment({ editMode: true });
 
     const editor = view.container.querySelector<HTMLElement>(
       "[data-transcript-editor]",
@@ -290,20 +118,7 @@ describe("SegmentRenderer", () => {
     });
   });
   it("opens speaker selection on Enter and assigns the text after the cursor", async () => {
-    const view = render(
-      <SegmentRenderer
-        segment={createSegment()}
-        offsetMs={0}
-        transcriptId="transcript-1"
-        sessionId="session-1"
-        speakerLabel="Speaker 1"
-        currentMs={0}
-        seekAndPlay={vi.fn()}
-        audioExists
-        search={EMPTY_TRANSCRIPT_SEARCH}
-        editMode
-      />,
-    );
+    const view = renderSegment({ sessionId: "session-1", editMode: true });
     const editor = view.container.querySelector<HTMLElement>(
       "[data-transcript-editor]",
     )!;
@@ -342,19 +157,7 @@ describe("SegmentRenderer", () => {
     );
   });
   it("cancels the split preview without saving or losing edited text", async () => {
-    const view = render(
-      <SegmentRenderer
-        segment={createSegment()}
-        offsetMs={0}
-        transcriptId="transcript-1"
-        speakerLabel="Speaker 1"
-        currentMs={0}
-        seekAndPlay={vi.fn()}
-        audioExists
-        search={EMPTY_TRANSCRIPT_SEARCH}
-        editMode
-      />,
-    );
+    const view = renderSegment({ editMode: true });
     const editor = view.container.querySelector<HTMLElement>(
       "[data-transcript-editor]",
     )!;
@@ -383,6 +186,23 @@ describe("SegmentRenderer", () => {
     expect(mocks.splitTranscriptSpeaker).not.toHaveBeenCalled();
   });
 });
+
+function renderSegment(overrides: Partial<SegmentRendererProps> = {}) {
+  const props: SegmentRendererProps = {
+    segment: createSegment(),
+    offsetMs: 0,
+    transcriptId: "transcript-1",
+    speakerLabel: "Speaker 1",
+    search: EMPTY_TRANSCRIPT_SEARCH,
+    ...overrides,
+  };
+  const view = render(<SegmentRenderer {...props} />);
+  return {
+    ...view,
+    rerenderWith: (next: Partial<SegmentRendererProps>) =>
+      view.rerender(<SegmentRenderer {...props} {...next} />),
+  };
+}
 
 function createSearch(activeMatchId: string): TranscriptSearchRenderState {
   return {

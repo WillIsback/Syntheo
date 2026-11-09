@@ -1,5 +1,4 @@
 import {
-  act,
   cleanup,
   createEvent,
   fireEvent,
@@ -21,14 +20,7 @@ const hoisted = vi.hoisted(() => ({
   unminimizeWindow: vi.fn(),
   focusWindow: vi.fn(),
   meetingChatRecords: [] as unknown[],
-  userTemplates: [] as Array<Record<string, unknown>>,
-  replacementContent: null as unknown,
-  replaceContent: vi.fn(),
-  flushPendingChanges: vi.fn(),
-  createTemplate: vi.fn(() => Promise.resolve("new-template")),
-  openTemplatesTab: vi.fn(),
   noteEditorProps: [] as Record<string, unknown>[],
-  canShowTranscript: false,
 }));
 
 vi.mock("@tauri-apps/api/core", () => ({
@@ -53,36 +45,13 @@ vi.mock("@lingui/react/macro", () => ({
   }),
 }));
 
-vi.mock("@syntheo/editor/note", async () => {
-  const React = await vi.importActual<typeof import("react")>("react");
-
+vi.mock("@syntheo/editor/note", () => {
   return {
     normalizePortableAttachmentUrls: (value: unknown) => value,
-    NoteEditor: React.forwardRef((props: Record<string, unknown>, ref) => {
+    NoteEditor: (props: Record<string, unknown>) => {
       hoisted.noteEditorProps.push(props);
-      React.useImperativeHandle(ref, () => ({
-        view: null,
-        commands: {
-          replaceContent: (content: unknown) => {
-            hoisted.replacementContent = content;
-            hoisted.replaceContent(content);
-            (
-              props.onDocumentChange as ((content: unknown) => void) | undefined
-            )?.(content);
-          },
-        },
-        flushPendingChanges: () => {
-          hoisted.flushPendingChanges();
-          if (hoisted.replacementContent) {
-            (props.handleChange as (content: unknown) => void)(
-              hoisted.replacementContent,
-            );
-          }
-        },
-      }));
-
       return <div>Note editor</div>;
-    }),
+    },
   };
 });
 
@@ -117,10 +86,6 @@ vi.mock("~/session-sharing/comment-anchors", () => ({
   }),
 }));
 
-vi.mock("~/session/components/shared", () => ({
-  useCanShowTranscript: () => hoisted.canShowTranscript,
-}));
-
 vi.mock("~/session/queries", () => ({
   useUpdateSession: () => hoisted.persistChange,
 }));
@@ -129,32 +94,22 @@ vi.mock("~/session/hooks/useAttachmentResolver", () => ({
   useAttachmentResolver: () => () => null,
 }));
 
-vi.mock("~/templates", () => ({
-  TemplateIconGlyph: () => <span aria-hidden>Template icon</span>,
-  useCreateTemplate: () => hoisted.createTemplate,
-  useOpenTemplatesTab: () => hoisted.openTemplatesTab,
-  useUserTemplates: () => hoisted.userTemplates,
-}));
-
 vi.mock("~/stt/contexts", () => ({
   useListener: () => "inactive",
 }));
 
-function RawEditor({
-  sessionId,
-  className,
-}: {
-  sessionId: string;
-  className?: string;
-}) {
+function RawEditor({ sessionId }: { sessionId: string }) {
   return (
     <SessionRawEditor
       sessionId={sessionId}
       rawMd={hoisted.rawMd}
       sessionTitle={hoisted.sessionTitle}
-      className={className}
     />
   );
+}
+
+function lastEditorProps() {
+  return hoisted.noteEditorProps[hoisted.noteEditorProps.length - 1];
 }
 
 vi.mock("~/stt/meeting-chat-records", () => ({
@@ -215,14 +170,6 @@ describe("RawEditor", () => {
     hoisted.fileUpload = vi.fn();
     hoisted.processAudioFile = vi.fn();
     hoisted.meetingChatRecords = [];
-    hoisted.userTemplates = [];
-    hoisted.canShowTranscript = false;
-    hoisted.replacementContent = null;
-    hoisted.replaceContent.mockReset();
-    hoisted.flushPendingChanges.mockReset();
-    hoisted.createTemplate.mockReset();
-    hoisted.createTemplate.mockResolvedValue("new-template");
-    hoisted.openTemplatesTab.mockReset();
     hoisted.showWindow.mockReset();
     hoisted.unminimizeWindow.mockReset();
     hoisted.focusWindow.mockReset();
@@ -249,7 +196,7 @@ describe("RawEditor", () => {
 
     render(<RawEditor sessionId="session-1" />);
 
-    const props = hoisted.noteEditorProps[hoisted.noteEditorProps.length - 1];
+    const props = lastEditorProps();
     expect(props?.initialContent).toEqual({
       type: "doc",
       content: [
@@ -264,7 +211,7 @@ describe("RawEditor", () => {
   it("persists memo content without changing the session title", async () => {
     render(<RawEditor sessionId="session-1" />);
 
-    const props = hoisted.noteEditorProps[hoisted.noteEditorProps.length - 1];
+    const props = lastEditorProps();
     const content = {
       type: "doc",
       content: [
@@ -283,343 +230,15 @@ describe("RawEditor", () => {
     );
   });
 
-  it("applies favorite template sections to an empty memo", async () => {
-    hoisted.userTemplates = [
-      {
-        id: "template-unpinned",
-        title: "Project Kickoff",
-        pinned: false,
-        pinOrder: null,
-        icon: { type: "emoji", value: "🚀" },
-        sections: [{ title: "Goals", description: "" }],
-      },
-      {
-        id: "template-retro",
-        title: "Retrospective",
-        pinned: true,
-        pinOrder: 2,
-        icon: { type: "emoji", value: "🔁" },
-        sections: [{ title: "What we learned", description: "" }],
-      },
-      {
-        id: "template-standup",
-        title: "Standup",
-        pinned: true,
-        pinOrder: 1,
-        icon: { type: "emoji", value: "☀️" },
-        sections: [
-          { title: " Yesterday ", description: "" },
-          { title: "Today", description: "" },
-        ],
-      },
-    ];
-
-    render(<RawEditor sessionId="session-1" />);
-
-    expect(screen.getByText("Start with a favorite template")).not.toBeNull();
-    expect(screen.getByText("Suggested templates")).not.toBeNull();
-    expect(
-      screen.getAllByRole("button").map((button) => button.textContent),
-    ).toEqual([
-      "Template iconStandup",
-      "Template iconRetrospective",
-      "Template iconProject Kickoff",
-      "New template",
-    ]);
-
-    fireEvent.click(screen.getByRole("button", { name: "Standup" }));
-
-    const expectedContent = {
-      type: "doc",
-      content: [
-        {
-          type: "heading",
-          attrs: { level: 2 },
-          content: [{ type: "text", text: "Yesterday" }],
-        },
-        { type: "paragraph" },
-        {
-          type: "heading",
-          attrs: { level: 2 },
-          content: [{ type: "text", text: "Today" }],
-        },
-        { type: "paragraph" },
-      ],
-    };
-    expect(hoisted.replaceContent).toHaveBeenCalledWith(expectedContent);
-    expect(hoisted.flushPendingChanges).toHaveBeenCalledOnce();
-
-    await waitFor(() =>
-      expect(hoisted.persistChange).toHaveBeenCalledWith({
-        raw_md: JSON.stringify(expectedContent),
-        raw_template_id: "template-standup",
-        raw_template_snapshot: {
-          templateId: "template-standup",
-          sections: ["Yesterday", "Today"],
-        },
-      }),
-    );
-  });
-
-  it("suggests built-in templates when none are favorited", () => {
-    hoisted.userTemplates = [
-      {
-        id: "default-daily-standup",
-        title: "Daily Standup",
-        pinned: false,
-        icon: { type: "emoji", value: "☀️" },
-        sections: [{ title: "Today", description: "" }],
-      },
-      {
-        id: "default-project-kickoff",
-        title: "Project Kickoff",
-        pinned: false,
-        icon: { type: "emoji", value: "🚀" },
-        sections: [{ title: "Goals", description: "" }],
-      },
-      {
-        id: "default-one-on-one-meeting",
-        title: "1:1 Meeting",
-        pinned: false,
-        icon: { type: "emoji", value: "👥" },
-        sections: [{ title: "Updates", description: "" }],
-      },
-      {
-        id: "default-board-meeting",
-        title: "Board Meeting",
-        pinned: false,
-        icon: { type: "emoji", value: "📊" },
-        sections: [{ title: "Company Performance", description: "" }],
-      },
-    ];
-
-    render(<RawEditor sessionId="session-1" />);
-
-    const buttons = screen.getAllByRole("button");
-
-    expect(buttons.map((button) => button.textContent)).toEqual([
-      "Template iconProject Kickoff",
-      "Template iconDaily Standup",
-      "Template icon1:1 Meeting",
-      "New template",
-    ]);
-    expect(screen.queryByRole("button", { name: "Board Meeting" })).toBeNull();
-  });
-
-  it("toggles template suggestions from live memo changes", () => {
-    hoisted.userTemplates = [
-      {
-        id: "default-project-kickoff",
-        title: "Project Kickoff",
-        pinned: false,
-        icon: { type: "emoji", value: "🚀" },
-        sections: [{ title: "Goals", description: "" }],
-      },
-    ];
-
-    render(<RawEditor sessionId="session-1" />);
-
-    expect(
-      screen.getByRole("button", { name: "Project Kickoff" }),
-    ).not.toBeNull();
-    const onDocumentChange = hoisted.noteEditorProps[
-      hoisted.noteEditorProps.length - 1
-    ]?.onDocumentChange as (content: unknown) => void;
-
-    act(() => {
-      onDocumentChange({
-        type: "doc",
-        content: [
-          {
-            type: "paragraph",
-            content: [{ type: "text", text: "Live memo" }],
-          },
-        ],
-      });
-    });
-
-    expect(
-      screen.queryByRole("button", { name: "Project Kickoff" }),
-    ).toBeNull();
-    expect(hoisted.persistChange).not.toHaveBeenCalled();
-
-    act(() => {
-      onDocumentChange({ type: "doc", content: [{ type: "paragraph" }] });
-    });
-
-    expect(
-      screen.getByRole("button", { name: "Project Kickoff" }),
-    ).not.toBeNull();
-    expect(hoisted.persistChange).not.toHaveBeenCalled();
-  });
-
-  it("hides template suggestions for structure-only content", () => {
-    hoisted.userTemplates = [
-      {
-        id: "default-project-kickoff",
-        title: "Project Kickoff",
-        pinned: false,
-        icon: { type: "emoji", value: "🚀" },
-        sections: [{ title: "Goals", description: "" }],
-      },
-    ];
-
-    render(<RawEditor sessionId="session-1" />);
-
-    const onDocumentChange = hoisted.noteEditorProps[
-      hoisted.noteEditorProps.length - 1
-    ]?.onDocumentChange as (content: unknown) => void;
-
-    act(() => {
-      onDocumentChange({
-        type: "doc",
-        content: [
-          {
-            type: "taskList",
-            content: [{ type: "taskItem", content: [{ type: "paragraph" }] }],
-          },
-        ],
-      });
-    });
-
-    expect(
-      screen.queryByRole("button", { name: "Project Kickoff" }),
-    ).toBeNull();
-
-    act(() => {
-      onDocumentChange({
-        type: "doc",
-        content: [{ type: "paragraph" }, { type: "paragraph" }],
-      });
-    });
-
-    expect(
-      screen.queryByRole("button", { name: "Project Kickoff" }),
-    ).toBeNull();
-
-    act(() => {
-      onDocumentChange({ type: "doc", content: [{ type: "paragraph" }] });
-    });
-
-    expect(
-      screen.getByRole("button", { name: "Project Kickoff" }),
-    ).not.toBeNull();
-  });
-
-  it("prioritizes title-aware template suggestions", () => {
-    hoisted.sessionTitle = "Acme product demo";
-    hoisted.userTemplates = [
-      {
-        id: "default-daily-standup",
-        title: "Daily Standup",
-        pinned: false,
-        sections: [{ title: "Today", description: "" }],
-      },
-      {
-        id: "default-project-kickoff",
-        title: "Project Kickoff",
-        pinned: false,
-        sections: [{ title: "Goals", description: "" }],
-      },
-      {
-        id: "default-one-on-one-meeting",
-        title: "1:1 Meeting",
-        pinned: false,
-        sections: [{ title: "Updates", description: "" }],
-      },
-      {
-        id: "default-sales-discovery-call",
-        title: "Sales Discovery Call",
-        pinned: false,
-        sections: [{ title: "Customer Needs", description: "" }],
-      },
-    ];
-
-    render(<RawEditor sessionId="session-1" />);
-
-    expect(
-      screen.getAllByRole("button").map((button) => button.textContent),
-    ).toEqual([
-      "Template iconSales Discovery Call",
-      "Template iconProject Kickoff",
-      "Template iconDaily Standup",
-      "New template",
-    ]);
-  });
-
-  it("hides template suggestions once the meeting has a transcript", () => {
-    hoisted.canShowTranscript = true;
-    hoisted.userTemplates = [
-      {
-        id: "default-daily-standup",
-        title: "Daily Standup",
-        pinned: false,
-        icon: { type: "emoji", value: "☀️" },
-        sections: [{ title: "Today", description: "" }],
-      },
-    ];
-
-    render(<RawEditor sessionId="session-1" />);
-
-    expect(screen.queryByText("Suggested templates")).toBeNull();
-    expect(screen.queryByRole("button", { name: "Daily Standup" })).toBeNull();
-  });
-
   it("shows the placeholder only while the whole memo is empty (issue 430)", () => {
     render(<RawEditor sessionId="session-1" />);
 
-    const props = hoisted.noteEditorProps[hoisted.noteEditorProps.length - 1];
+    const props = lastEditorProps();
     const placeholder = requireCallback<
       (props: { isEmptyDoc: boolean }) => string
     >(props, "placeholderComponent");
     expect(placeholder({ isEmptyDoc: true })).toBe("Start writing...");
     expect(placeholder({ isEmptyDoc: false })).toBe("");
-  });
-
-  it("creates a template from the empty memo state", async () => {
-    render(<RawEditor sessionId="session-1" />);
-
-    fireEvent.click(screen.getByRole("button", { name: "New template" }));
-
-    await waitFor(() =>
-      expect(hoisted.createTemplate).toHaveBeenCalledWith({
-        title: "New Template",
-        description: "",
-        sections: [],
-      }),
-    );
-    expect(hoisted.openTemplatesTab).toHaveBeenCalledWith({
-      selectedMineId: "new-template",
-      selectedWebIndex: null,
-      isWebMode: false,
-      showHomepage: false,
-    });
-  });
-
-  it("hides favorite templates when the memo has content", () => {
-    hoisted.rawMd = JSON.stringify({
-      type: "doc",
-      content: [
-        {
-          type: "paragraph",
-          content: [{ type: "text", text: "Existing memo" }],
-        },
-      ],
-    });
-    hoisted.userTemplates = [
-      {
-        id: "template-standup",
-        title: "Standup",
-        pinned: true,
-        pinOrder: 1,
-        icon: { type: "emoji", value: "☀️" },
-        sections: [{ title: "Today", description: "" }],
-      },
-    ];
-
-    render(<RawEditor sessionId="session-1" />);
-
-    expect(screen.queryByRole("button", { name: "Standup" })).toBeNull();
   });
 
   it("renders captured chat without mutating the active memo editor", () => {
@@ -680,7 +299,7 @@ describe("RawEditor", () => {
     (_label, files, itemTypes, expected, importArgs) => {
       render(<RawEditor sessionId="session-1" />);
 
-      const props = hoisted.noteEditorProps[hoisted.noteEditorProps.length - 1];
+      const props = lastEditorProps();
       const fileHandlerConfig = props?.fileHandlerConfig as {
         onDrop: (
           files: File[],
@@ -703,7 +322,7 @@ describe("RawEditor", () => {
   it("routes pasted Voice Memos audio to transcription", () => {
     render(<RawEditor sessionId="session-1" />);
 
-    const props = hoisted.noteEditorProps[hoisted.noteEditorProps.length - 1];
+    const props = lastEditorProps();
     const fileHandlerConfig = props?.fileHandlerConfig as {
       onPaste: (
         files: File[],
@@ -715,29 +334,6 @@ describe("RawEditor", () => {
 
     expect(fileHandlerConfig.onPaste([file], dataTransfer.items)).toBe(true);
     expect(hoisted.processAudioFile).toHaveBeenCalledWith(file);
-  });
-
-  it("shows an audio upload overlay and intercepts audio drops", async () => {
-    render(<RawEditor sessionId="session-1" />);
-
-    const file = new File(["audio"], "clip.flac", { type: "" });
-    const dataTransfer = audioDataTransfer(file);
-    const dropTarget = screen.getByText("Note editor").parentElement;
-
-    expect(dropTarget).not.toBeNull();
-    fireEvent.dragEnter(dropTarget!, { dataTransfer });
-
-    expect(
-      screen.getByText("Drop to upload and transcribe audio"),
-    ).not.toBeNull();
-    await waitFor(() => expect(hoisted.focusWindow).toHaveBeenCalled());
-
-    fireEvent.drop(dropTarget!, { dataTransfer });
-
-    expect(hoisted.processAudioFile).toHaveBeenCalledWith(file);
-    expect(
-      screen.queryByText("Drop to upload and transcribe audio"),
-    ).toBeNull();
   });
 
   it("does not capture mixed audio and attachment drops on the wrapper", () => {
@@ -783,27 +379,43 @@ describe("RawEditor", () => {
     expect(hoisted.processAudioFile).toHaveBeenCalledWith(file);
   });
 
-  it("uses the drag item MIME when dropped audio has no MIME or extension", async () => {
-    render(<RawEditor sessionId="session-1" />);
+  it.each([
+    [
+      "an audio extension",
+      new File(["audio"], "clip.flac", { type: "" }),
+      undefined,
+      [],
+    ],
+    [
+      "the drag item MIME only",
+      new File(["audio"], "clip", { type: "" }),
+      "audio/mpeg",
+      [{ allowUnknownAudio: true, contentType: "audio/mpeg" }],
+    ],
+  ])(
+    "shows an audio upload overlay and intercepts drops recognised by %s",
+    async (_label, file, itemType, extraArgs) => {
+      render(<RawEditor sessionId="session-1" />);
 
-    const file = new File(["audio"], "clip", { type: "" });
-    const dataTransfer = audioDataTransfer(file, "audio/mpeg");
-    const dropTarget = screen.getByText("Note editor").parentElement;
+      const dataTransfer = audioDataTransfer(file, itemType);
+      const dropTarget = screen.getByText("Note editor").parentElement;
 
-    expect(dropTarget).not.toBeNull();
-    fireEvent.dragEnter(dropTarget!, { dataTransfer });
+      expect(dropTarget).not.toBeNull();
+      fireEvent.dragEnter(dropTarget!, { dataTransfer });
 
-    expect(
-      screen.getByText("Drop to upload and transcribe audio"),
-    ).not.toBeNull();
+      expect(
+        screen.getByText("Drop to upload and transcribe audio"),
+      ).not.toBeNull();
+      await waitFor(() => expect(hoisted.focusWindow).toHaveBeenCalled());
 
-    fireEvent.drop(dropTarget!, { dataTransfer });
+      fireEvent.drop(dropTarget!, { dataTransfer });
 
-    expect(hoisted.processAudioFile).toHaveBeenCalledWith(file, {
-      allowUnknownAudio: true,
-      contentType: "audio/mpeg",
-    });
-  });
+      expect(hoisted.processAudioFile).toHaveBeenCalledWith(file, ...extraArgs);
+      expect(
+        screen.queryByText("Drop to upload and transcribe audio"),
+      ).toBeNull();
+    },
+  );
 });
 
 function audioDataTransfer(input: File | File[], itemType?: string | string[]) {
