@@ -4,7 +4,6 @@ import { createElement, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
-  billingState,
   config,
   getServerForModelMock,
   isModelDownloadedMock,
@@ -12,10 +11,6 @@ const {
   readiness,
   startServerForPathMock,
 } = vi.hoisted(() => ({
-  billingState: {
-    isPaid: true,
-    isReady: true,
-  },
   config: {
     current_stt_provider: "syntheo",
     current_stt_model: "cloud",
@@ -61,10 +56,6 @@ vi.mock("@syntheo/plugin-local-stt", () => ({
   },
 }));
 
-vi.mock("~/billing/billing-context", () => ({
-  useBillingAccess: () => billingState,
-}));
-
 vi.mock("~/settings/providers", () => ({
   useAiProvidersState: () => ({
     isReady: readiness.provider,
@@ -97,8 +88,6 @@ describe("useSTTConnection", () => {
   beforeEach(() => {
     config.current_stt_provider = "syntheo";
     config.current_stt_model = "cloud";
-    billingState.isPaid = true;
-    billingState.isReady = true;
     readiness.provider = true;
     readiness.settings = true;
     for (const key of Object.keys(providersState)) delete providersState[key];

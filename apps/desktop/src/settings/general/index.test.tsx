@@ -27,10 +27,6 @@ vi.mock("@tanstack/react-query", () => ({
   }),
 }));
 
-vi.mock("~/billing/billing-context", () => ({
-  useBillingAccess: () => ({ isPro: true }),
-}));
-
 vi.mock("~/settings/queries", () => ({
   setSettingValue: vi.fn(),
   useSetSettingValues: () => mocks.setSettingValues,

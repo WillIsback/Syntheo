@@ -9,11 +9,6 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  billing: {
-    isPro: true,
-    isUpgradingToPro: false,
-    upgradeToPro: vi.fn(),
-  },
   toastWarning: vi.fn(),
 }));
 
@@ -41,10 +36,6 @@ vi.mock("~/settings/queries", () => ({
   useSetSettingValue: () => vi.fn(),
 }));
 
-vi.mock("~/billing/billing-context", () => ({
-  useBillingAccess: () => mocks.billing,
-}));
-
 vi.mock("@syntheo/ui/components/ui/toast", () => ({
   toast: { warning: mocks.toastWarning },
 }));
@@ -53,37 +44,14 @@ vi.mock("~/shared/config", () => ({
   useConfigValue: () => [],
 }));
 
-import { DictionarySettings, SettingsDictionary } from "./index";
+import { DictionarySettings } from "./index";
 
 describe("DictionarySettings", () => {
   beforeEach(() => {
-    mocks.billing.isPro = true;
-    mocks.billing.isUpgradingToPro = false;
-    mocks.billing.upgradeToPro.mockClear();
     mocks.toastWarning.mockClear();
   });
 
   afterEach(cleanup);
-
-  it("shows the dictionary editor and toasts on the free plan", () => {
-    mocks.billing.isPro = false;
-
-    render(<SettingsDictionary />);
-
-    expect(screen.getByRole("textbox")).toBeTruthy();
-    fireEvent.click(screen.getByRole("textbox"));
-
-    expect(mocks.toastWarning).toHaveBeenCalledWith(
-      "This requires Syntheo Pro",
-      {
-        action: {
-          label: "Upgrade",
-          onClick: expect.any(Function),
-        },
-      },
-    );
-    expect(mocks.billing.upgradeToPro).not.toHaveBeenCalled();
-  });
 
   it("adds entered terms and keeps them normalized", async () => {
     const onSave = vi.fn();

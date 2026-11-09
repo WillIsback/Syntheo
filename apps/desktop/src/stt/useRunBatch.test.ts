@@ -23,7 +23,6 @@ const {
   useSessionMock,
   useSessionParticipantsMock,
   useSTTConnectionMock,
-  useBillingAccessMock,
   useConfigValueMock,
   isSupportedLanguagesBatchMock,
   toastWarningMock,
@@ -41,7 +40,6 @@ const {
   useSessionMock: vi.fn(),
   useSessionParticipantsMock: vi.fn(),
   useSTTConnectionMock: vi.fn(),
-  useBillingAccessMock: vi.fn(),
   useConfigValueMock: vi.fn(),
   isSupportedLanguagesBatchMock: vi.fn(),
   toastWarningMock: vi.fn(),
@@ -83,10 +81,6 @@ vi.mock("@syntheo/ui/components/ui/toast", () => ({
   toast: {
     warning: toastWarningMock,
   },
-}));
-
-vi.mock("~/billing/billing-context", () => ({
-  useBillingAccess: useBillingAccessMock,
 }));
 
 vi.mock("~/services/audio-retention", () => ({
@@ -237,9 +231,6 @@ describe("useRunBatch", () => {
         apiKey: "test-key",
       },
     });
-    useBillingAccessMock.mockReturnValue({
-      isPaid: false,
-    });
     useConfigValueMock.mockImplementation((key) =>
       key === "ai_language" ? "en" : [],
     );
@@ -256,9 +247,7 @@ describe("useRunBatch", () => {
   });
 
   test("run_batch_uses_local_provider_without_cloud_session", async () => {
-    // Même un état « payant » hérité ne déclenche plus de session cloud :
-    // le batch part sur l'endpoint on-premise configuré.
-    useBillingAccessMock.mockReturnValue({ isPaid: true });
+    // Aucune session cloud : le batch part sur l'endpoint on-premise configuré.
     useSTTConnectionMock.mockReturnValue({
       conn: {
         provider: "openai",
@@ -1010,7 +999,6 @@ describe("no local fallback", () => {
   test("no_local_fallback_when_endpoint_has_no_batch", async () => {
     platformMock.mockReturnValue("macos");
     archMock.mockReturnValue("aarch64");
-    useBillingAccessMock.mockReturnValue({ isPaid: true });
     useSTTConnectionMock.mockReturnValue({
       conn: {
         provider: "nvidia",

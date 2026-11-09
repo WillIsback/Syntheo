@@ -33,7 +33,6 @@ const mocks = vi.hoisted(() => ({
     pause: null as { sessionId: string; phase: string } | null,
   },
   requestMainListenerControl: vi.fn(),
-  isPro: true,
 }));
 
 vi.mock("~/stt/contexts", () => ({
@@ -43,10 +42,6 @@ vi.mock("~/stt/contexts", () => ({
 
 vi.mock("~/stt/window-control", () => ({
   requestMainListenerControl: mocks.requestMainListenerControl,
-}));
-
-vi.mock("~/billing/billing-context", () => ({
-  useBillingAccess: () => ({ isPro: mocks.isPro }),
 }));
 
 vi.mock("~/settings/team/mirror", () => ({
@@ -106,7 +101,6 @@ describe("OpenNoteDialog", () => {
     mocks.sessions = [];
     mocks.folderPaths = [];
     mocks.live = { status: "inactive", sessionId: null, pause: null };
-    mocks.isPro = true;
     closeNoteDialog();
     useSettingFocus.getState().clear();
     globalThis.ResizeObserver = class {
@@ -305,7 +299,6 @@ describe("recherche de paramètres dans la palette", () => {
     mocks.sessions = [];
     mocks.folderPaths = [];
     mocks.live = { status: "inactive", sessionId: null, pause: null };
-    mocks.isPro = true;
     closeNoteDialog();
     useSettingFocus.getState().clear();
     Element.prototype.scrollIntoView = vi.fn();
@@ -406,18 +399,5 @@ describe("recherche de paramètres dans la palette", () => {
     );
 
     expect(screen.getByRole("option", { name: /New note/ })).toBeTruthy();
-  });
-
-  it("garde les réglages Pro trouvables, avec le cadenas", () => {
-    mocks.isPro = false;
-    render(<OpenNoteDialogProvider>{null}</OpenNoteDialogProvider>);
-    act(() => openSettingsSearch());
-
-    search("hands-free");
-
-    const option = screen.getByRole("option", { name: /Hands-free dictation/ });
-    expect(
-      option.querySelector("[aria-label='Requires Syntheo Pro']"),
-    ).toBeTruthy();
   });
 });

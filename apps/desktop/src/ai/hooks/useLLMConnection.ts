@@ -165,7 +165,6 @@ const resolveLLMConnection = (params: {
 
   const context: ProviderEligibilityContext = {
     isAuthenticated: false,
-    isPaid: true,
     config: { base_url: baseUrl, api_key: apiKey },
   };
 

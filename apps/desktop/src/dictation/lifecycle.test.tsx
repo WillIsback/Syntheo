@@ -8,7 +8,6 @@ const mocks = vi.hoisted(() => ({
     apiKey: string;
     baseUrl: string;
   } | null,
-  billing: { isPro: true, isReady: true },
   platform: "macos",
   settings: {
     dictation_enabled: true,
@@ -46,9 +45,6 @@ vi.mock("~/stt/useSTTConnection", () => ({
   }),
 }));
 vi.mock("@tauri-apps/plugin-os", () => ({ platform: () => mocks.platform }));
-vi.mock("~/billing/billing-context", () => ({
-  useBillingAccess: () => mocks.billing,
-}));
 vi.mock("~/settings/queries", () => ({ useSettingsReady: () => true }));
 vi.mock("~/shared/config", () => ({
   useConfigValue: (key: string) => mocks.settings[key],
@@ -135,7 +131,6 @@ describe("dictation access and lifecycle", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     useDictationStatus.setState({ capturingShortcut: false });
-    mocks.billing = { isPro: true, isReady: true };
     mocks.platform = "macos";
     mocks.connection = {
       provider: "openai",
@@ -187,11 +182,9 @@ describe("dictation access and lifecycle", () => {
     });
   });
 
-  it.each(["free", "loading", "disabled", "meeting"])(
+  it.each(["disabled", "meeting"])(
     "does not register shortcuts when %s",
     async (condition) => {
-      if (condition === "free") mocks.billing.isPro = false;
-      if (condition === "loading") mocks.billing.isReady = false;
       if (condition === "disabled") mocks.settings.dictation_enabled = false;
       if (condition === "meeting") mocks.meeting.status = "active";
       render(<DictationLifecycle />);
@@ -207,7 +200,7 @@ describe("dictation access and lifecycle", () => {
     expect(mocks.configure).toHaveBeenCalledWith("Control+Alt+Space");
   });
 
-  it("registers for Pro access and inserts into the captured field", async () => {
+  it("registers and inserts into the captured field", async () => {
     render(<DictationLifecycle />);
     await waitFor(() => expect(useDictationStatus.getState().ready).toBe(true));
     expect(mocks.configure).toHaveBeenCalledWith("Control+Alt+Space");
@@ -278,25 +271,6 @@ describe("dictation access and lifecycle", () => {
       ),
     );
     expect(mocks.runBatch).not.toHaveBeenCalled();
-  });
-
-  it("aborts and removes shortcuts when paid access is lost during recording", async () => {
-    const view = render(<DictationLifecycle />);
-    await waitFor(() => expect(useDictationStatus.getState().ready).toBe(true));
-    await act(async () => {
-      mocks.listener?.({ payload: { type: "pressed" } });
-    });
-    await waitFor(() =>
-      expect(useDictationStatus.getState().phase).toBe("recording"),
-    );
-    mocks.billing.isPro = false;
-    view.rerender(<DictationLifecycle />);
-    await waitFor(() => expect(mocks.configure).toHaveBeenLastCalledWith(null));
-    expect(mocks.cancelRecording).toHaveBeenCalledWith(
-      expect.stringMatching(/^system-dictation-/u),
-    );
-    expect(mocks.insertText).not.toHaveBeenCalled();
-    expect(useDictationStatus.getState().lastTranscript).toBe("");
   });
 
   it("reports missing microphone permission without capturing a target or audio", async () => {

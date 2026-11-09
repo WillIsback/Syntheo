@@ -26,7 +26,6 @@ function entry(
     section: null,
     keywords: "",
     breadcrumb: "Profil",
-    requiresPro: false,
     ...overrides,
   } as SettingsSearchResult;
 }
@@ -134,13 +133,6 @@ describe("index des paramètres en français", () => {
     const [first] = searchSettings(frenchIndex(), "micro");
     expect(first?.label).toBe("Microphone");
     expect(first?.breadcrumb).toBe("Réunions › Audio");
-  });
-
-  it("garde les réglages Pro trouvables, marqués comme tels", () => {
-    const dictation = searchSettings(frenchIndex(), "dictee").find(
-      (e) => e.id === "dictation-enabled",
-    );
-    expect(dictation?.requiresPro).toBe(true);
   });
 
   it("masque les réglages propres à une autre plateforme", () => {

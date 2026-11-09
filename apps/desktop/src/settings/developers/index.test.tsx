@@ -21,16 +21,6 @@ const mocks = vi.hoisted(() => ({
   setCloudApiEnabled: vi.fn(),
   backfillCloudApiSnapshots: vi.fn(),
   createCloudApiKey: vi.fn(),
-  billing: {
-    isPro: true,
-    isReady: true,
-    isUpgradingToPro: false,
-    upgradeToPro: vi.fn(),
-  },
-}));
-
-vi.mock("~/billing/billing-context", () => ({
-  useBillingAccess: () => mocks.billing,
 }));
 
 vi.mock("~/types/tauri.gen", () => ({
@@ -169,10 +159,6 @@ describe("SettingsDevelopers", () => {
     });
     mocks.setCloudApiEnabled.mockReset();
     mocks.backfillCloudApiSnapshots.mockReset();
-    mocks.billing.isPro = true;
-    mocks.billing.isReady = true;
-    mocks.billing.isUpgradingToPro = false;
-    mocks.billing.upgradeToPro.mockReset();
   });
 
   afterEach(() => {

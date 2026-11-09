@@ -1,7 +1,7 @@
 import { useLingui } from "@lingui/react/macro";
 import { type KeyboardEvent, type RefObject } from "react";
 
-import { Gear, Lock } from "@syntheo/ui/components/icons";
+import { Gear } from "@syntheo/ui/components/icons";
 import { cn } from "@syntheo/utils";
 
 import type { SettingsNavGroup } from "./settings-nav-groups";
@@ -22,14 +22,12 @@ export type SettingsSearchHit =
 export function SettingsSearchResults({
   hits,
   query,
-  isPro,
   listRef,
   inputRef,
   onSelect,
 }: {
   hits: SettingsSearchHit[];
   query: string;
-  isPro: boolean;
   listRef: RefObject<HTMLUListElement | null>;
   inputRef: RefObject<HTMLInputElement | null>;
   onSelect: (hit: SettingsSearchHit) => void;
@@ -70,11 +68,6 @@ export function SettingsSearchResults({
           const label = hit.kind === "page" ? hit.item.label : hit.result.label;
           const hint =
             hit.kind === "page" ? hit.groupLabel : hit.result.breadcrumb;
-          const locked =
-            !isPro &&
-            (hit.kind === "page"
-              ? Boolean(hit.item.requiresPro)
-              : hit.result.requiresPro);
           const Icon = hit.kind === "page" ? hit.item.icon : Gear;
           return (
             <li
@@ -105,12 +98,6 @@ export function SettingsSearchResults({
                     {hint}
                   </span>
                 </span>
-                {locked ? (
-                  <Lock
-                    aria-label={t`Requires Syntheo Pro`}
-                    className="size-3.5 shrink-0"
-                  />
-                ) : null}
               </button>
             </li>
           );

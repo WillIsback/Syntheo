@@ -3390,13 +3390,6 @@ msgstr "Exiger Touch ID ou votre mot de passe à l'ouverture de Syntheo."
 msgid "Require Windows Hello face, PIN, or password when opening Syntheo."
 msgstr "Exiger la reconnaissance faciale Windows Hello, le code PIN ou le mot de passe à l'ouverture de Syntheo."
 
-#: src/shared/open-note-dialog.tsx
-#: src/shared/palette-settings-group.tsx
-#: src/sidebar/settings-search-results.tsx
-#: src/sidebar/settings.tsx
-msgid "Requires Syntheo Pro"
-msgstr "Nécessite Syntheo Pro"
-
 #: src/settings/ai/shared/server-address.tsx
 #: src/settings/todo/permission.tsx
 msgid "Reset"
@@ -4571,14 +4564,6 @@ msgstr "Cette note a été modifiée sur un autre appareil en même temps. La mo
 msgid "This recording is using batch transcription, so the transcript isn't available to chat yet. Ask again after transcription finishes, or switch to a Pro model for live transcription."
 msgstr "Cet enregistrement utilise la transcription par lots, le transcript n'est donc pas encore disponible pour le chat. Veuillez redemander après la fin de la transcription, ou passer à un modèle Pro pour une transcription en direct."
 
-#: src/settings/plan-gate.tsx
-msgid "This requires Syntheo Enterprise"
-msgstr "Cela nécessite Syntheo Enterprise"
-
-#: src/settings/plan-gate.tsx
-msgid "This requires Syntheo Pro"
-msgstr "Cela nécessite Syntheo Pro"
-
 #: src/settings/ai/stt/server-card.tsx
 msgid "This server answers as {detectedLabel}."
 msgstr "Ce serveur répond comme {detectedLabel}."
@@ -4834,10 +4819,6 @@ msgstr "Session sans titre"
 #: src/settings/search-index.ts
 msgid "update, new version, upgrade"
 msgstr "mise à jour, nouvelle version, actualiser"
-
-#: src/settings/plan-gate.tsx
-msgid "Upgrade"
-msgstr "Mettre à niveau"
 
 #: src/session/components/note-input/transcript/screens/empty.tsx
 #: src/session/components/outer-header/overflow/index.tsx

@@ -9,7 +9,6 @@ import {
   Folder,
   Gear,
   NotePencil,
-  Lock,
   MagnifyingGlass,
   Pause,
   Play,
@@ -25,7 +24,6 @@ import {
 } from "@syntheo/ui/components/ui/dialog";
 import { cn } from "@syntheo/utils";
 
-import { useBillingAccess } from "~/billing/billing-context";
 import { useFolderSelection } from "~/folders/selection";
 import {
   requestSpeakerNaming,
@@ -93,7 +91,6 @@ type PageResult = {
   hint: string | null;
   groupLabel: string;
   icon: Icon;
-  requiresPro: boolean;
   destination: TabInput;
   folderPath?: string;
 };
@@ -215,7 +212,6 @@ export function OpenNoteDialog({
   const recentlyOpenedSessionIds = useTabs(
     (state) => state.recentlyOpenedSessionIds,
   );
-  const { isPro } = useBillingAccess();
   const settingsNavGroups = useSettingsNavGroups();
   const createNewNote = useNewNote();
   const folderPaths = useFolderPaths();
@@ -234,7 +230,6 @@ export function OpenNoteDialog({
             hint: hasDestination ? null : t`Settings`,
             groupLabel: group.label,
             icon: item.icon,
-            requiresPro: Boolean(item.requiresPro),
             destination: hasDestination
               ? item.destination
               : { type: "settings", state: { tab: item.id } },
@@ -247,7 +242,6 @@ export function OpenNoteDialog({
         hint: null,
         groupLabel: t`Go to`,
         icon: Gear,
-        requiresPro: false,
         destination: { type: "settings", state: { tab: "app" } },
       },
       // Les dossiers (ex-filtre de la barre latérale) : recherche par nom.
@@ -257,7 +251,6 @@ export function OpenNoteDialog({
         hint: path.includes("/") ? path : t`Folder`,
         groupLabel: t`Folders`,
         icon: Folder,
-        requiresPro: false,
         destination: { type: "folders" },
         folderPath: path,
       })),
@@ -526,7 +519,6 @@ export function OpenNoteDialog({
     <PaletteSettingsGroup
       results={settingResults}
       limit={settingsOnly ? undefined : PALETTE_SETTINGS_LIMIT}
-      isPro={isPro}
       withDivider={!settingsOnly && filteredPages.length > 0}
       onSelect={handleSelectSetting}
       onShowAll={() => setFilter("settings")}
@@ -560,12 +552,6 @@ export function OpenNoteDialog({
             <span className="text-muted-foreground ml-auto shrink-0 text-xs">
               {page.hint}
             </span>
-          ) : null}
-          {page.requiresPro && !isPro ? (
-            <Lock
-              aria-label={t`Requires Syntheo Pro`}
-              className="h-3.5 w-3.5 shrink-0"
-            />
           ) : null}
         </CommandPrimitive.Item>
       ))}

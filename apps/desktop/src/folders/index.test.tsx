@@ -33,14 +33,6 @@ const mocks = vi.hoisted(() => ({
   workspaces: [] as Array<{ id: string; name: string }>,
 }));
 
-vi.mock("~/billing/billing-context", () => ({
-  useBillingAccess: () => ({
-    isReady: false,
-    isPaid: false,
-    upgradeToPro: vi.fn(),
-  }),
-}));
-
 vi.mock("@lingui/react/macro", () => ({
   Trans: ({ children }: { children?: ReactNode }) => <>{children}</>,
   useLingui: () => ({
