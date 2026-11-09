@@ -1962,6 +1962,10 @@ msgstr "Aller à l'accueil"
 msgid "Go to next section"
 msgstr "Aller à la section suivante"
 
+#: src/stt/listening-elsewhere.ts
+msgid "Go to note"
+msgstr "Aller à la note"
+
 #: src/onboarding/shared.tsx
 msgid "Go to previous section"
 msgstr "Aller à la section précédente"
@@ -2343,6 +2347,10 @@ msgstr "Écouter"
 #: src/session/components/living-document/fiche.tsx
 msgid "Listening"
 msgstr "Écoute"
+
+#: src/stt/listening-elsewhere.ts
+msgid "Listening is already in progress on “{title}”."
+msgstr "Une écoute est déjà en cours sur « {title} »."
 
 #: src/home/live-note-card.tsx
 #: src/session/components/capsule/index.tsx
@@ -4455,6 +4463,10 @@ msgstr "Étapes"
 msgid "Stop"
 msgstr "Arrêter"
 
+#: src/stt/listening-elsewhere.ts
+msgid "Stop and start here"
+msgstr "Arrêter et démarrer ici"
+
 #: src/settings/general/meeting-settings.tsx
 msgid "Stop listening when your call ends."
 msgstr "Arrêter l'écoute lorsque votre appel se termine."
@@ -5451,6 +5463,7 @@ msgstr "Injoignable"
 #: src/shared/palette-search-groups.tsx
 #: src/shared/ui/resource-list/preview-header.tsx
 #: src/sidebar/toast/undo-delete-toast.tsx
+#: src/stt/listening-elsewhere.ts
 #: src/templates/details.tsx
 #: src/templates/template-preview.tsx
 #: src/templates/template-sidebar.tsx
