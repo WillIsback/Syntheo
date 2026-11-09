@@ -804,6 +804,10 @@ msgstr "Choisir"
 msgid "Choose a file format and what to include."
 msgstr "Choisissez un format de fichier et les éléments à inclure."
 
+#: src/session/components/living-document/fiche-folder.tsx
+msgid "Choose a folder"
+msgstr "Choisir un dossier"
+
 #: src/folders/project/next-meeting-slot.tsx
 msgid "Choose a language model in Settings to propose the agenda."
 msgstr "Choisissez un modèle de langage dans les Paramètres pour proposer l'ordre du jour."
@@ -1799,6 +1803,10 @@ msgstr "Chat flottant"
 msgid "Fn / Globe"
 msgstr "Fn / Globe"
 
+#: src/session/components/living-document/fiche.tsx
+msgid "Folder"
+msgstr "Dossier"
+
 #: src/folders/folder-editor.tsx
 msgid "Folder actions"
 msgstr "Actions du dossier"
@@ -1813,10 +1821,12 @@ msgid "Folder name"
 msgstr "Nom du dossier"
 
 #: src/session/components/folder-picker.tsx
+#: src/session/components/living-document/fiche-folder.tsx
 msgid "Folder: {currentPath}"
 msgstr "Dossier : {currentPath}"
 
 #: src/folders/sidebar-tree-view.tsx
+#: src/session/components/folder-picker.tsx
 #: src/shared/palette-search-groups.tsx
 #: src/sidebar/settings-nav-groups.ts
 msgid "Folders"
@@ -3789,6 +3799,10 @@ msgstr "Lancer une automatisation"
 msgid "Run this command?"
 msgstr "Lancer cette commande ?"
 
+#: src/session/components/living-document/fiche-folder.tsx
+msgid "same title"
+msgstr "même titre"
+
 #: src/session/components/outer-header/overflow/export-modal.tsx
 #: src/settings/dictionary/index.tsx
 #: src/templates/auto-form.tsx
@@ -4397,6 +4411,10 @@ msgstr "Proposer des sections"
 #: src/chat/components/body/empty.tsx
 msgid "Suggest what to ask next."
 msgstr "Suggérez la prochaine question à poser."
+
+#: src/session/components/folder-picker.tsx
+msgid "Suggested"
+msgstr "Suggéré"
 
 #: src/session/components/note-input/raw.tsx
 msgid "Suggested templates"
