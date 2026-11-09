@@ -84,6 +84,10 @@ msgstr "{count, plural, one {{duration} left} other {{duration} left}}"
 msgid "{count, plural, one {# speaker to name} other {# speakers to name}}"
 msgstr "{count, plural, one {# speaker to name} other {# speakers to name}}"
 
+#: src/shared/ui/localized-toaster.tsx
+msgid "{count, plural, one {second} other {seconds}}"
+msgstr "{count, plural, one {second} other {seconds}}"
+
 #: src/contacts/details.tsx
 msgid "{count} contacts share the same name or email. Merge them to consolidate all related notes and information."
 msgstr "{count} contacts share the same name or email. Merge them to consolidate all related notes and information."
@@ -103,6 +107,10 @@ msgstr "{count}m"
 #: src/services/tray-schedule.tsx
 msgid "{count}s"
 msgstr "{count}s"
+
+#: src/session/components/outer-header/overflow/export-document.ts
+msgid "{day} at {time}"
+msgstr "{day} at {time}"
 
 #: src/session/components/note-input/transcript/renderer/selection-menu.tsx
 msgid "{entryCount} selected"
@@ -530,6 +538,10 @@ msgstr "Audio capture was interrupted"
 msgid "Audio could not be deleted"
 msgstr "Audio could not be deleted"
 
+#: src/stt/audio-import-feedback.ts
+msgid "Audio import failed"
+msgstr "Audio import failed"
+
 #: src/store/zustand/listener/general-live.ts
 msgid "Audio retry failed"
 msgstr "Audio retry failed"
@@ -642,6 +654,11 @@ msgstr "Back"
 msgid "Back to current version"
 msgstr "Back to current version"
 
+#: src/main/windows-title-bar.tsx
+#: src/sidebar/custom-sidebar-header.tsx
+msgid "Back to Settings"
+msgstr "Back to Settings"
+
 #: src/settings/search-index.ts
 msgid "bar, small window, control, always on top"
 msgstr "bar, small window, control, always on top"
@@ -701,6 +718,10 @@ msgstr "Calendar"
 #: src/onboarding/index.tsx
 msgid "Calendar connected"
 msgstr "Calendar connected"
+
+#: src/stt/audio-import-feedback.ts
+msgid "Can't import this audio"
+msgstr "Can't import this audio"
 
 #: src/calendar/components/apple/permission.tsx
 #: src/session/components/capsule/index.tsx
@@ -943,10 +964,18 @@ msgstr "Close chat"
 msgid "Close the open panel, or go home"
 msgstr "Close the open panel, or go home"
 
+#: src/shared/ui/localized-toaster.tsx
+msgid "Closing in"
+msgstr "Closing in"
+
 #: src/settings/general/notification.tsx
 #: src/settings/search-index.ts
 msgid "Cloud sync complete"
 msgstr "Cloud sync complete"
+
+#: src/shared/ui/localized-toaster.tsx
+msgid "Collapse notification"
+msgstr "Collapse notification"
 
 #: src/settings/automations/markdown-export-options.tsx
 msgid "Collect action items"
@@ -1229,7 +1258,8 @@ msgstr "Create New Note..."
 msgid "Create new speaker"
 msgstr "Create new speaker"
 
-#: src/session/components/outer-header/overflow/export-modal.tsx
+#: src/session/components/outer-header/overflow/export-document.ts
+msgctxt "export field"
 msgid "Created"
 msgstr "Created"
 
@@ -1445,6 +1475,10 @@ msgstr "Disconnect"
 msgid "Disk almost full"
 msgstr "Disk almost full"
 
+#: src/shared/ui/localized-toaster.tsx
+msgid "Dismiss"
+msgstr "Dismiss"
+
 #: src/templates/template-form.tsx
 msgid "Display mode"
 msgstr "Display mode"
@@ -1503,7 +1537,7 @@ msgstr "Duplicate contact found"
 msgid "Duplicate contacts found"
 msgstr "Duplicate contacts found"
 
-#: src/session/components/outer-header/overflow/export-modal.tsx
+#: src/session/components/outer-header/overflow/export-document.ts
 msgid "Duration"
 msgstr "Duration"
 
@@ -1674,6 +1708,10 @@ msgstr "Examples must be Markdown or plain text files."
 #: src/settings/search-index.ts
 msgid "Exclude apps from detection"
 msgstr "Exclude apps from detection"
+
+#: src/shared/ui/localized-toaster.tsx
+msgid "Expand notification"
+msgstr "Expand notification"
 
 #: src/settings/automations/index.tsx
 msgid "Expected output"
@@ -2454,6 +2492,11 @@ msgstr "Me"
 msgid "Medium"
 msgstr "Medium"
 
+#: src/session/components/outer-header/overflow/export-document.ts
+msgctxt "export field"
+msgid "Meeting"
+msgstr "Meeting"
+
 #: src/session/components/note-input/meeting-chat-highlights.tsx
 msgid "Meeting chat"
 msgstr "Meeting chat"
@@ -2504,6 +2547,7 @@ msgid "members"
 msgstr "members"
 
 #: src/edit/tab-content.tsx
+#: src/session/components/outer-header/overflow/export-document.ts
 #: src/session/components/outer-header/overflow/export-modal.tsx
 #: src/settings/automations/markdown-export-options.tsx
 msgid "Memo"
@@ -2542,7 +2586,7 @@ msgstr "Merge"
 msgid "Message Syntheo AI"
 msgstr "Message Syntheo AI"
 
-#: src/session/components/outer-header/overflow/export-modal.tsx
+#: src/session/components/outer-header/overflow/export-document.ts
 msgid "Metadata"
 msgstr "Metadata"
 
@@ -2932,6 +2976,10 @@ msgstr "No transcript recorded"
 msgid "No transcription provider is set up. Syntheo does not keep audio: set up a transcription endpoint before recording."
 msgstr "No transcription provider is set up. Syntheo does not keep audio: set up a transcription endpoint before recording."
 
+#: src/stt/audio-import-feedback.ts
+msgid "No transcription service is set up: importing a file requires a batch transcription model."
+msgstr "No transcription service is set up: importing a file requires a batch transcription model."
+
 #: src/services/enhancer/eligibility.ts
 msgid "Not enough words recorded ({wordCount}/{minWords} minimum)"
 msgstr "Not enough words recorded ({wordCount}/{minWords} minimum)"
@@ -3203,7 +3251,7 @@ msgstr "Palette"
 
 #: src/session/components/living-document/fiche.tsx
 #: src/session/components/note-input/transcript/renderer/speaker-assign.tsx
-#: src/session/components/outer-header/overflow/export-modal.tsx
+#: src/session/components/outer-header/overflow/export-document.ts
 msgid "Participants"
 msgstr "Participants"
 
@@ -3223,9 +3271,18 @@ msgstr "Paste a past summary you like..."
 msgid "Pause"
 msgstr "Pause"
 
+#: src/shared/ui/localized-toaster.tsx
+msgctxt "toast timer"
+msgid "Pause"
+msgstr "Pause"
+
 #: src/settings/general/notification.tsx
 msgid "Pause alerts while Do Not Disturb is on."
 msgstr "Pause alerts while Do Not Disturb is on."
+
+#: src/shared/ui/localized-toaster.tsx
+msgid "Pause auto-dismiss"
+msgstr "Pause auto-dismiss"
 
 #: src/meeting-float/overlay/bar.tsx
 #: src/session/components/capsule/index.tsx
@@ -3664,8 +3721,13 @@ msgstr "Restore"
 
 #: src/home/note-index.tsx
 #: src/meeting-float/overlay/bar.tsx
+#: src/shared/ui/localized-toaster.tsx
 msgid "Resume"
 msgstr "Resume"
+
+#: src/shared/ui/localized-toaster.tsx
+msgid "Resume auto-dismiss"
+msgstr "Resume auto-dismiss"
 
 #: src/meeting-float/overlay/bar.tsx
 #: src/session/components/capsule/index.tsx
@@ -4371,6 +4433,11 @@ msgstr "Summaries"
 msgid "Summary"
 msgstr "Summary"
 
+#: src/session/components/outer-header/overflow/export-document.ts
+msgctxt "export section"
+msgid "Summary"
+msgstr "Summary"
+
 #: src/session/components/living-document/summary-switcher-view.tsx
 msgid "Summary · v{shownVersion}"
 msgstr "Summary · v{shownVersion}"
@@ -4490,6 +4557,10 @@ msgstr "Syntheo couldn't open your audio input. Check your microphone selection,
 #: src/stt/start-failure.ts
 msgid "Syntheo couldn't prepare storage for this recording"
 msgstr "Syntheo couldn't prepare storage for this recording"
+
+#: src/stt/audio-import-feedback.ts
+msgid "Syntheo couldn't read this file."
+msgstr "Syntheo couldn't read this file."
 
 #: src/stt/start-failure.ts
 msgid "Syntheo doesn't have microphone access"
@@ -4809,6 +4880,10 @@ msgstr "This edit could not be saved. Try again."
 msgid "This edit is no longer pending."
 msgstr "This edit is no longer pending."
 
+#: src/stt/audio-import-feedback.ts
+msgid "This file is too large to import (2 GB maximum)."
+msgstr "This file is too large to import (2 GB maximum)."
+
 #: src/settings/general/index.tsx
 msgid "This information stays on your computer. It is used to recognize you in transcripts and to sign your meeting notes."
 msgstr "This information stays on your computer. It is used to recognize you in transcripts and to sign your meeting notes."
@@ -4816,6 +4891,10 @@ msgstr "This information stays on your computer. It is used to recognize you in 
 #: src/stt/useStartListening.ts
 msgid "This model only transcribes after the recording, which would require keeping the audio. Choose a real-time transcription model."
 msgstr "This model only transcribes after the recording, which would require keeping the audio. Choose a real-time transcription model."
+
+#: src/stt/audio-import-feedback.ts
+msgid "This model only transcribes live: importing a file requires a batch transcription model."
+msgstr "This model only transcribes live: importing a file requires a batch transcription model."
 
 #: src/calendar/components/event-chip.tsx
 msgid "This note"
@@ -4871,6 +4950,10 @@ msgstr "time, clock, hour, AM, PM"
 msgid "time, hour, country, time difference"
 msgstr "time, hour, country, time difference"
 
+#: src/shared/ui/localized-toaster.tsx
+msgid "Timer paused"
+msgstr "Timer paused"
+
 #: src/settings/general/timezone.tsx
 #: src/settings/search-index.ts
 msgid "Timezone"
@@ -4912,6 +4995,11 @@ msgstr "Transcribing…"
 #: src/session/components/note-input/header-transcript.tsx
 #: src/session/components/outer-header/overflow/export-modal.tsx
 #: src/settings/automations/markdown-export-options.tsx
+msgid "Transcript"
+msgstr "Transcript"
+
+#: src/session/components/outer-header/overflow/export-document.ts
+msgctxt "export section"
 msgid "Transcript"
 msgstr "Transcript"
 
@@ -4974,6 +5062,10 @@ msgstr "Transcription server ›"
 #: src/settings/search-index.ts
 msgid "transcription server, speech recognition, URL, API key, Whisper"
 msgstr "transcription server, speech recognition, URL, API key, Whisper"
+
+#: src/stt/audio-import-feedback.ts
+msgid "Transcription settings"
+msgstr "Transcription settings"
 
 #: src/sidebar/toast/registry.tsx
 msgid "Transcription unavailable"
@@ -5038,6 +5130,11 @@ msgstr "Unknown"
 #: src/session/components/outer-header/metadata/date.tsx
 msgid "Unknown date"
 msgstr "Unknown date"
+
+#: src/session/components/outer-header/overflow/export-document.ts
+msgctxt "export field"
+msgid "Unknown speaker"
+msgstr "Unknown speaker"
 
 #: src/lock/screen.tsx
 msgid "Unlock"

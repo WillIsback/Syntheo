@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-begin-audio-upload"
+description = "Enables the begin_audio_upload command without any pre-configured scope."
+commands.allow = ["begin_audio_upload"]
+
+[[permission]]
+identifier = "deny-begin-audio-upload"
+description = "Denies the begin_audio_upload command without any pre-configured scope."
+commands.deny = ["begin_audio_upload"]

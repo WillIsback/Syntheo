@@ -268,6 +268,21 @@ End with next steps."#
     }
 
     #[test]
+    fn test_section_headings_follow_the_meeting_language() {
+        // Issue 454 : plus de « # Next Steps » dans une réunion en français.
+        for format_override in ["", "Write a concise narrative."] {
+            let rendered = render_enhance_system(&EnhanceSystem {
+                language: Some("fr".to_string()),
+                format_override: format_override.to_string(),
+            })
+            .unwrap();
+            assert!(rendered.contains(
+                "- Write section headings in French, including headings named in these instructions such as Next Steps."
+            ));
+        }
+    }
+
+    #[test]
     fn test_enhance_system_default_snapshot() {
         syntheo_askama_utils::set_current_date_override(Some("2026-11-07".to_string()));
         let rendered = render_enhance_system(&EnhanceSystem {
@@ -334,6 +349,7 @@ End with next steps."#
     - Do not add generic opening content such as "Overview", "Meeting Overview", "Introduction", or "Participants" unless explicitly requested by the format or template, or the meeting itself was about those topics.
     - Preserve essential details; avoid excessive abstraction. Ensure content remains concrete and specific.
     - Output only the Markdown record itself, with no explanations, commentary, or preamble such as "Here's the summary".
+    - Write section headings in French, including headings named in these instructions such as Next Steps.
     - Keep technical terms (e.g., API, SDK, frontend, backend) and globally recognized product names (e.g., React, Vue.js, Django) in English.
     - When using technical terms in sentences, follow the grammatical rules of French.
     "#);

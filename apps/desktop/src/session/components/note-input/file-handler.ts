@@ -209,7 +209,7 @@ function hasSingleAudioUploadDrag(dataTransfer: DataTransfer) {
       return false;
     }
 
-    if (item.type.startsWith("audio/")) {
+    if (isAudioDragMimeType(item.type)) {
       return true;
     }
 
@@ -243,7 +243,22 @@ function getAudioDrop(files: File[], items?: DataTransferItemList) {
 }
 
 function isAudioDropFile(file: File, item?: DataTransferItem) {
-  return isAudioUploadFile(file) || item?.type.startsWith("audio/") === true;
+  return isAudioUploadFile(file) || isAudioDragMimeType(item?.type ?? "");
+}
+
+// Pendant le survol, la webview ne donne que le type MIME (`getAsFile()` rend
+// `null`) : un `.mp4` ou un `.webm` y est annoncé en `video/…`. Sans eux, la
+// zone ne s'activait pas pour `archive.mp4` (issue 464).
+const AUDIO_CONTAINER_VIDEO_MIME_TYPES = new Set([
+  "video/mp4",
+  "video/webm",
+  "video/ogg",
+]);
+
+function isAudioDragMimeType(type: string) {
+  return (
+    type.startsWith("audio/") || AUDIO_CONTAINER_VIDEO_MIME_TYPES.has(type)
+  );
 }
 
 function focusCurrentWindowForAudioDrop() {

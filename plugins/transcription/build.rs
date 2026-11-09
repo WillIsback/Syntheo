@@ -49,6 +49,9 @@ const COMMANDS: &[&str] = &[
     "refine_batch_transcript",
     "save_batch_transcript",
     "reconcile_refined_speaker_clusters",
+    "begin_audio_upload",
+    "append_audio_upload",
+    "discard_audio_upload",
 ];
 
 fn main() {

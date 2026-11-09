@@ -42,6 +42,11 @@ type RunOptions = {
    * tableau de nombres.
    */
   audio?: { data_base64: string; file_name: string };
+  /**
+   * Fichier déposé reçu par morceaux et gardé en mémoire côté Rust
+   * (`streamAudioFileToMemory`) : prioritaire sur `audio` et le chemin.
+   */
+  audioUploadId?: string;
   recovery?: {
     persist: (words: WordWithId[], hints: SpeakerHintWithId[]) => Promise<void>;
   };
@@ -418,6 +423,7 @@ export const useRunBatch = (sessionId: string) => {
         provider: target.provider,
         file_path: filePath,
         audio: options?.audio,
+        audio_upload_id: options?.audioUploadId,
         model: target.model,
         base_url: target.baseUrl,
         api_key: target.apiKey,

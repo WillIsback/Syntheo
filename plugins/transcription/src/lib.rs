@@ -9,6 +9,7 @@ use tokio_util::sync::CancellationToken;
 
 mod api;
 mod audio_retention;
+mod audio_upload;
 mod batch_transcript;
 mod capture_gaps;
 mod capture_markers;
@@ -189,6 +190,9 @@ fn make_specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
             listener2::commands::suggest_providers_for_languages_batch::<tauri::Wry>,
             listener2::commands::list_documented_language_codes_batch::<tauri::Wry>,
             audio_retention::delete_processed_session_audio::<tauri::Wry>,
+            audio_upload::begin_audio_upload::<tauri::Wry>,
+            audio_upload::append_audio_upload::<tauri::Wry>,
+            audio_upload::discard_audio_upload::<tauri::Wry>,
         ])
         .events(tauri_specta::collect_events![
             CaptureLifecycleEvent,
@@ -215,6 +219,7 @@ pub fn init() -> tauri::plugin::TauriPlugin<tauri::Wry> {
             }));
             app.manage(state);
             app.manage(live_journal::LiveJournalRegistry::default());
+            app.manage(audio_upload::AudioUploadRegistry::default());
             app.manage(listener::level_monitor::MicrophoneLevelMonitor::default());
             let stopped_capture_registry = StoppedCaptureRegistry::default();
             app.manage(stopped_capture_registry.clone());

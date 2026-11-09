@@ -58,6 +58,9 @@ export const commands = {
 	listDocumentedLanguageCodesBatch: () => typedError<string[], string>(__TAURI_INVOKE("plugin:transcription|list_documented_language_codes_batch")),
 	/**  Deletes local audio right after processing when the retention policy is `none`. */
 	deleteProcessedSessionAudio: (sessionId: string) => typedError<boolean, string>(__TAURI_INVOKE("plugin:transcription|delete_processed_session_audio", { sessionId })),
+	beginAudioUpload: (fileName: string, sizeBytes: number) => typedError<string, string>(__TAURI_INVOKE("plugin:transcription|begin_audio_upload", { fileName, sizeBytes })),
+	appendAudioUpload: (uploadId: string, dataBase64: string) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|append_audio_upload", { uploadId, dataBase64 })),
+	discardAudioUpload: (uploadId: string) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|discard_audio_upload", { uploadId })),
 };
 
 /** Events */
@@ -548,6 +551,11 @@ export type TranscriptionParams = {
 	file_path?: string,
 	/**  Prioritaire sur `file_path` quand présent. */
 	audio?: BatchAudio | null,
+	/**
+	 *  Fichier déposé reçu par morceaux (`begin_audio_upload`), gardé en
+	 *  mémoire : prioritaire sur `audio` et `file_path`.
+	 */
+	audio_upload_id?: string | null,
 	model?: string | null,
 	base_url: string,
 	api_key: string,

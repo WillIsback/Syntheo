@@ -51,4 +51,7 @@ permissions = [
     "allow-refine-batch-transcript",
     "allow-save-batch-transcript",
     "allow-reconcile-refined-speaker-clusters",
+    "allow-begin-audio-upload",
+    "allow-append-audio-upload",
+    "allow-discard-audio-upload",
 ]

@@ -5,6 +5,8 @@ edition = "2024"
 license = "MIT"
 
 [dependencies]
+chrono = { workspace = true }
+chrono-tz = { workspace = true }
 syntheo-db-app = { workspace = true }
 syntheo-tiptap = { workspace = true }
 syntheo-transcript = { workspace = true }

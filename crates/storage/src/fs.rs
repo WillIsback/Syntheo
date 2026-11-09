@@ -38,8 +38,9 @@ pub fn copy_dir_recursive(
         let src_path = entry.path();
         let file_name = entry.file_name();
         // Le nom vient de `read_dir` ; le contrôle refuse surtout d'écrire à
-        // travers un lien symbolique de `dst` qui pointerait ailleurs.
-        let dst_path = crate::safe_path::join_under_base(dst, &file_name)?;
+        // travers un lien symbolique de `dst` qui pointerait ailleurs. Le
+        // chemin canonique est ensuite ouvert sans suivre de lien (issue 428).
+        let dst_path = crate::safe_path::resolve_under_base(dst, &file_name)?;
 
         if let Some(skip) = skip_filename
             && file_name == skip
@@ -51,7 +52,7 @@ pub fn copy_dir_recursive(
             std::fs::create_dir_all(&dst_path)?;
             copy_dir_recursive(&src_path, &dst_path, skip_filename)?;
         } else {
-            std::fs::copy(&src_path, &dst_path)?;
+            crate::safe_path::copy_no_follow(&src_path, &dst_path)?;
         }
     }
 

@@ -10,6 +10,7 @@ import type { EditorView } from "~/store/zustand/tabs/schema";
 const {
   uploadAudioMock,
   uploadTranscriptMock,
+  audioImportAvailability,
   audioExists,
   audioExistsResolved,
   currentNoteContent,
@@ -22,6 +23,9 @@ const {
 } = vi.hoisted(() => ({
   uploadAudioMock: vi.fn(),
   uploadTranscriptMock: vi.fn(),
+  audioImportAvailability: {
+    value: { status: "ready" } as { status: "ready" | "live_only" },
+  },
   audioExists: { value: false },
   audioExistsResolved: { value: true },
   currentNoteContent: { value: "" },
@@ -146,6 +150,7 @@ vi.mock("~/stt/contexts", () => ({
 
 vi.mock("~/stt/useUploadFile", () => ({
   useUploadFile: vi.fn(() => ({
+    audioImportAvailability: audioImportAvailability.value,
     uploadAudio: uploadAudioMock,
     uploadTranscript: uploadTranscriptMock,
   })),
@@ -302,6 +307,23 @@ describe("OverflowButton", () => {
 
     expect(uploadAudioMock).toHaveBeenCalledTimes(1);
     expect(uploadTranscriptMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("greys out audio upload with an explanation for a live-only model", () => {
+    audioImportAvailability.value = { status: "live_only" };
+    arrange({ transcript: false });
+    renderOverflow();
+
+    const upload = screen.getByRole("button", { name: "Upload audio" });
+    expect(upload.getAttribute("aria-disabled")).toBe("true");
+    expect(upload.getAttribute("title")).toBe(
+      "This model only transcribes live: importing a file requires a batch transcription model.",
+    );
+
+    // Toujours cliquable : le clic affiche l'explication et le lien réglages.
+    fireEvent.click(upload);
+    expect(uploadAudioMock).toHaveBeenCalledTimes(1);
+    audioImportAvailability.value = { status: "ready" };
   });
 
   it.each(["macos", "linux"])(

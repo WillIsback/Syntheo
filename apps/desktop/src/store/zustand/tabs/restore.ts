@@ -13,14 +13,22 @@ export type RestoreActions = {
 };
 
 const tabToTabInput = (tab: Tab): TabInput => {
-  const { active, slotId, pinned, returnToSlotId, returnToTabId, ...rest } =
-    tab as Tab & {
-      active: boolean;
-      slotId: string;
-      pinned: boolean;
-      returnToSlotId?: string;
-      returnToTabId?: string;
-    };
+  const {
+    active,
+    slotId,
+    pinned,
+    returnToSlotId,
+    returnToTabId,
+    returnToSettingsTab,
+    ...rest
+  } = tab as Tab & {
+    active: boolean;
+    slotId: string;
+    pinned: boolean;
+    returnToSlotId?: string;
+    returnToTabId?: string;
+    returnToSettingsTab?: string;
+  };
   return rest as TabInput;
 };
 
