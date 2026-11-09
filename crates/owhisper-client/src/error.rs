@@ -33,14 +33,6 @@ impl Error {
         }
     }
 
-    pub fn provider_failure(message: impl Into<String>, retryable: bool) -> Self {
-        Self::ProviderFailure {
-            message: message.into(),
-            retryable,
-            status: None,
-        }
-    }
-
     pub fn provider_failure_with_status(
         status: reqwest::StatusCode,
         message: impl Into<String>,

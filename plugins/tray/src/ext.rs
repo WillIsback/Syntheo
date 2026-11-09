@@ -438,10 +438,6 @@ impl<'a, M: tauri::Manager<tauri::Wry>> Tray<'a, tauri::Wry, M> {
         Ok(menu)
     }
 
-    pub fn refresh_menu(&self) -> Result<()> {
-        Self::rebuild_menu(self.manager.app_handle())
-    }
-
     fn rebuild_menu(app: &AppHandle<tauri::Wry>) -> Result<()> {
         #[cfg(target_os = "macos")]
         {

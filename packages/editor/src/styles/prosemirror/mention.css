@@ -9,7 +9,7 @@
     0 4px 6px -4px rgb(0 0 0 / 0.1);
   padding: 0.25rem;
   overflow: hidden;
-  max-width: 280px;
+  max-width: 340px;
 }
 
 .mention-item {
@@ -39,6 +39,19 @@
   text-overflow: ellipsis;
   font-size: 0.875rem;
   line-height: 1rem;
+}
+
+.mention-description {
+  margin-left: auto;
+  padding-left: 0.5rem;
+  flex-shrink: 1;
+  min-width: 0;
+  max-width: 50%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.75rem;
+  color: var(--color-muted-foreground, #a3a3a3);
 }
 
 .mention-type-icon {

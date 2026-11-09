@@ -38,14 +38,6 @@ export function readDocumentPalette(): PaletteId {
   );
 }
 
-export function readStoredPalette(): PaletteId {
-  try {
-    return normalizePalette(localStorage.getItem(PALETTE_STORAGE_KEY));
-  } catch {
-    return DEFAULT_PALETTE;
-  }
-}
-
 export function writeStoredPalette(palette: PaletteId): void {
   try {
     localStorage.setItem(PALETTE_STORAGE_KEY, palette);

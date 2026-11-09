@@ -50,16 +50,6 @@ export const SETTING_DEFINITIONS = {
     synced: true,
     default: "" as string,
   },
-  auto_start_scheduled_meetings: {
-    type: "boolean",
-    path: ["general", "auto_start_scheduled_meetings"],
-    default: true as boolean,
-  },
-  auto_join_scheduled_meetings: {
-    type: "boolean",
-    path: ["general", "auto_join_scheduled_meetings"],
-    default: false as boolean,
-  },
   floating_bar_enabled: {
     type: "boolean",
     path: ["general", "floating_bar_enabled"],
@@ -166,15 +156,16 @@ export const SETTING_DEFINITIONS = {
     path: ["general", "microphone_device"],
     default: "" as string,
   },
+  // Sortie capturée comme son système (issue 450) ; vide : sortie par défaut.
+  speaker_device: {
+    type: "string",
+    path: ["general", "speaker_device"],
+    default: "" as string,
+  },
   notification_disabled: {
     type: "boolean",
     path: ["notification", "disabled"],
     default: false as boolean,
-  },
-  notification_event: {
-    type: "boolean",
-    path: ["notification", "event"],
-    default: true as boolean,
   },
   notification_detect: {
     type: "boolean",
@@ -333,11 +324,6 @@ export const SETTING_DEFINITIONS = {
     type: "string",
     path: ["general", "timezone"],
   },
-  week_start: {
-    type: "string",
-    path: ["general", "week_start"],
-    synced: true,
-  },
   selected_template_id: {
     type: "string",
     path: ["general", "selected_template_id"],
@@ -347,16 +333,6 @@ export const SETTING_DEFINITIONS = {
     path: ["general", "default_meeting_share_access"],
     default: "me" as string,
     synced: true,
-  },
-  todo_linear_filter: {
-    type: "string",
-    path: ["todo", "linear_filter"],
-    default: "" as string,
-  },
-  todo_github_repository: {
-    type: "string",
-    path: ["todo", "github_repository"],
-    default: "" as string,
   },
   automation_draft_template: {
     type: "string",
@@ -387,6 +363,13 @@ export const SETTING_DEFINITIONS = {
     type: "string",
     path: ["automations", "markdown_export_files"],
     default: "" as string,
+  },
+  // Commandes confirmées au premier lancement (étape « Lancer une
+  // commande »), mémorisées par commande exacte ; propres à cet appareil.
+  automation_approved_commands: {
+    type: "string",
+    path: ["automations", "approved_commands"],
+    default: "[]" as string,
   },
 } as const;
 

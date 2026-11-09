@@ -1,14 +1,15 @@
-import { Trans, useLingui } from "@lingui/react/macro";
+import { Trans } from "@lingui/react/macro";
 
-import { formatMeetingTime } from "./format";
+import type { HomeFolder } from "./active-folders";
+import { FolderCards } from "./folder-cards";
 import { HomeCapsule } from "./home-capsule";
-import type { NextMeeting } from "./next-meeting";
 import { NoteIndex } from "./note-index";
 import type { RecentNote } from "./queries";
 import { StartButton } from "./start-button";
 
 import type { ShortcutPlatform } from "~/shared/shortcuts";
 import { type PaletteId, useDocumentPalette } from "~/shared/theme/palette";
+import type { TemplateIcon } from "~/templates/template-icon";
 
 // Filigrane de l'accueil selon la palette (maquette, objet PAL) : 茶 Thé vert,
 // 藤 Glycine, 紅 Laque et encre.
@@ -20,30 +21,38 @@ const WATERMARK: Record<PaletteId, string> = {
 
 export type HomeViewProps = {
   firstName: string;
-  nextMeeting: NextMeeting | null;
   recentNotes: readonly RecentNote[];
-  starting?: boolean;
+  folders?: readonly HomeFolder[];
+  folderIcons?: Record<string, TemplateIcon | undefined>;
   os?: ShortcutPlatform;
   onStart: () => void;
   onOpenNote: (sessionId: string) => void;
   onExportNote: (sessionId: string) => void;
   onDeleteNote: (note: RecentNote) => void;
   onSearch: () => void;
+  onOpenFolder?: (folderPath: string) => void;
+  onOpenAllFolders?: () => void;
 };
 
+const NO_FOLDERS: readonly HomeFolder[] = [];
+const noop = () => {};
+
 // Accueil guidé « Thé vert » (maquette piste C, écran Accueil) : colonne de
-// 640px, salutation, prochaine réunion, bouton Démarrer, « Reprendre ».
+// 640px, salutation, prochaine réunion, bouton Démarrer, « Vos dossiers »
+// (issue 500), « Reprendre ».
 export function HomeView({
   firstName,
-  nextMeeting,
   recentNotes,
-  starting = false,
+  folders = NO_FOLDERS,
+  folderIcons,
   os = "pc",
   onStart,
   onOpenNote,
   onExportNote,
   onDeleteNote,
   onSearch,
+  onOpenFolder = noop,
+  onOpenAllFolders = noop,
 }: HomeViewProps) {
   const palette = useDocumentPalette();
 
@@ -70,11 +79,16 @@ export function HomeView({
                 <Trans>Hello.</Trans>
               )}
             </h1>
-            {nextMeeting ? <NextMeetingLine meeting={nextMeeting} /> : null}
           </header>
-          <StartButton onStart={onStart} busy={starting} os={os} />
+          <StartButton onStart={onStart} os={os} />
+          <FolderCards
+            folders={folders}
+            onOpenFolder={onOpenFolder}
+            onOpenAllFolders={onOpenAllFolders}
+          />
           <NoteIndex
             notes={recentNotes}
+            folderIcons={folderIcons}
             onOpen={onOpenNote}
             onExport={onExportNote}
             onDelete={onDeleteNote}
@@ -90,19 +104,5 @@ export function HomeView({
       </div>
       <HomeCapsule onSearch={onSearch} os={os} />
     </div>
-  );
-}
-
-function NextMeetingLine({ meeting }: { meeting: NextMeeting }) {
-  const { t, i18n } = useLingui();
-  const title = meeting.title || t`Untitled meeting`;
-  const time = formatMeetingTime(meeting.startedAt, i18n.locale);
-
-  return (
-    <p data-next-meeting className="text-muted-foreground text-base">
-      <Trans>Your next meeting:</Trans>{" "}
-      <b className="text-foreground font-medium">{title}</b>
-      {meeting.ongoing ? t`, in progress.` : t`, at ${time}.`}
-    </p>
   );
 }

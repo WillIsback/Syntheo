@@ -1,0 +1,426 @@
+import { md2json } from "@syntheo/editor/markdown";
+
+import {
+  type SummaryContentCorrection,
+  type TranscriptContentCorrection,
+} from "~/session/content-mutations";
+import { type SessionContentSnapshot } from "~/session/content-queries";
+
+export type CorrectionTarget =
+  | "summary"
+  | "transcript"
+  | "summary_and_transcript";
+
+type ReplacementResult = {
+  text: string;
+  count: number;
+};
+
+type TranscriptWord = {
+  id?: string | null;
+  text?: string | null;
+  start_ms?: number | null;
+  end_ms?: number | null;
+  channel?: number | null;
+  speaker?: string | null;
+  metadata?: unknown;
+};
+
+type SummaryChange = {
+  enhancedNoteId: string;
+  title: string;
+  replacements: number;
+};
+
+type TranscriptChange = {
+  transcriptId: string;
+  wordReplacements: number;
+  memoReplacements: number;
+};
+
+export type DictionaryChange = {
+  addedTerms: string[];
+};
+
+export type TitleChange = {
+  replacements: number;
+  nextTitle: string;
+};
+
+export type SummaryCorrectionPlan = {
+  changes: SummaryChange[];
+  updates: SummaryContentCorrection[];
+};
+
+export type TranscriptCorrectionPlan = {
+  changes: TranscriptChange[];
+  updates: TranscriptContentCorrection[];
+};
+
+export function replaceExact(
+  value: string,
+  oldText: string,
+  newText: string,
+): ReplacementResult {
+  if (!oldText) {
+    return { text: value, count: 0 };
+  }
+
+  const parts = value.split(oldText);
+  if (parts.length === 1) {
+    return { text: value, count: 0 };
+  }
+
+  return {
+    text: parts.join(newText),
+    count: parts.length - 1,
+  };
+}
+
+function replaceBoundedExact(
+  value: string,
+  oldText: string,
+  newText: string,
+): ReplacementResult {
+  if (!oldText) {
+    return { text: value, count: 0 };
+  }
+
+  const escaped = oldText.replace(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
+  const pattern = new RegExp(
+    String.raw`(^|[^\p{L}\p{N}])${escaped}(?=$|[^\p{L}\p{N}])`,
+    "giu",
+  );
+  let count = 0;
+  const text = value.replace(pattern, (_match, prefix: string) => {
+    count++;
+    return `${prefix}${newText}`;
+  });
+
+  return { text, count };
+}
+
+export function planSummaryCorrections({
+  notes,
+  enhancedNoteId,
+  oldText,
+  newText,
+}: {
+  notes: SessionContentSnapshot["enhancedNotes"];
+  enhancedNoteId?: string;
+  oldText: string;
+  newText: string;
+}): SummaryCorrectionPlan {
+  const candidates = enhancedNoteId
+    ? notes.filter((note) => note.id === enhancedNoteId)
+    : notes;
+  const changes: SummaryChange[] = [];
+  const updates: SummaryContentCorrection[] = [];
+
+  for (const note of candidates) {
+    const replaced = replaceExact(note.markdown, oldText, newText);
+    if (replaced.count === 0) {
+      continue;
+    }
+
+    updates.push({
+      id: note.id,
+      currentContent: note.content,
+      currentContentFormat: note.contentFormat,
+      nextContent: JSON.stringify(md2json(replaced.text)),
+    });
+    changes.push({
+      enhancedNoteId: note.id,
+      title: note.title.trim() || "Summary",
+      replacements: replaced.count,
+    });
+  }
+
+  return { changes, updates };
+}
+
+const TOKEN_CHAR_PATTERN = /[\p{L}\p{N}]/u;
+
+function trimTokenPunctuation(value: string): string {
+  const chars = [...value];
+  let start = 0;
+  while (start < chars.length && !TOKEN_CHAR_PATTERN.test(chars[start])) {
+    start++;
+  }
+  let end = chars.length;
+  while (end > start && !TOKEN_CHAR_PATTERN.test(chars[end - 1])) {
+    end--;
+  }
+  const trimmed = chars.slice(start, end).join("");
+  return trimmed || value;
+}
+
+function normalizeComparableToken(value: string): string {
+  return value
+    .normalize("NFKC")
+    .toLocaleLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, "");
+}
+
+function tokenizeReplacement(value: string): string[] {
+  return value
+    .split(/\s+/)
+    .map((item) => item.trim())
+    .map(trimTokenPunctuation)
+    .filter(Boolean);
+}
+
+function tokenizeComparable(value: string): string[] {
+  return tokenizeReplacement(value)
+    .map(normalizeComparableToken)
+    .filter(Boolean);
+}
+
+function wordRangeMatchesAt(
+  words: TranscriptWord[],
+  target: string[],
+  start: number,
+): boolean {
+  if (target.length === 0 || start + target.length > words.length) {
+    return false;
+  }
+
+  return target.every(
+    (text, index) =>
+      normalizeComparableToken(words[start + index].text ?? "") === text,
+  );
+}
+
+function buildReplacementWords(
+  original: TranscriptWord[],
+  newText: string,
+): TranscriptWord[] {
+  const tokens = tokenizeReplacement(newText);
+  if (tokens.length === 0) {
+    return [];
+  }
+
+  const first = original[0] ?? {};
+  const last = original[original.length - 1] ?? first;
+  const startMs = typeof first.start_ms === "number" ? first.start_ms : null;
+  const endMs = typeof last.end_ms === "number" ? last.end_ms : startMs;
+  const duration =
+    startMs !== null && endMs !== null ? Math.max(endMs - startMs, 0) : 0;
+  const step = tokens.length > 0 ? duration / tokens.length : 0;
+  const baseId = typeof first.id === "string" && first.id ? first.id : null;
+
+  return tokens.map((text, index) => {
+    const wordStart =
+      startMs === null ? first.start_ms : Math.round(startMs + step * index);
+    const wordEnd =
+      startMs === null
+        ? first.end_ms
+        : Math.round(startMs + step * (index + 1));
+
+    return {
+      ...first,
+      id: index === 0 ? first.id : `${baseId ?? "word"}:correction:${index}`,
+      text,
+      start_ms: wordStart,
+      end_ms: wordEnd,
+    };
+  });
+}
+
+export function replaceTranscriptWords(
+  words: TranscriptWord[],
+  oldText: string,
+  newText: string,
+): { words: TranscriptWord[]; count: number } {
+  const target = tokenizeComparable(oldText);
+  const replacementTokens = tokenizeReplacement(newText);
+  if (
+    target.length === 0 ||
+    replacementTokens.length === 0 ||
+    target.length > words.length
+  ) {
+    return { words, count: 0 };
+  }
+
+  const nextWords: TranscriptWord[] = [];
+  let count = 0;
+  for (let index = 0; index < words.length;) {
+    if (target.length === 1 && replacementTokens.length === 1) {
+      const word = words[index];
+      const replaced = replaceBoundedExact(word.text ?? "", oldText, newText);
+      if (replaced.count > 0) {
+        nextWords.push({ ...word, text: replaced.text });
+        count += replaced.count;
+        index++;
+        continue;
+      }
+    }
+
+    if (wordRangeMatchesAt(words, target, index)) {
+      const original = words.slice(index, index + target.length);
+      nextWords.push(...buildReplacementWords(original, newText));
+      index += target.length;
+      count++;
+      continue;
+    }
+
+    nextWords.push(words[index]);
+    index++;
+  }
+
+  return count === 0 ? { words, count: 0 } : { words: nextWords, count };
+}
+
+const TEXT_TOKEN_PATTERN = /[\p{L}\p{N}]+(?:['’_-][\p{L}\p{N}]+)*/gu;
+
+function findComparableTextTokens(
+  value: string,
+): Array<{ text: string; start: number; end: number }> {
+  return Array.from(value.matchAll(TEXT_TOKEN_PATTERN)).flatMap((match) => {
+    const start = match.index;
+    if (start === undefined) {
+      return [];
+    }
+
+    const text = normalizeComparableToken(match[0]);
+    return text ? [{ text, start, end: start + match[0].length }] : [];
+  });
+}
+
+export function replaceLoosePhrase(
+  value: string,
+  oldText: string,
+  newText: string,
+): ReplacementResult {
+  const target = tokenizeComparable(oldText);
+  const tokens = findComparableTextTokens(value);
+  if (target.length === 0 || target.length > tokens.length) {
+    return { text: value, count: 0 };
+  }
+
+  const parts: string[] = [];
+  let cursor = 0;
+  let count = 0;
+
+  for (let index = 0; index < tokens.length;) {
+    const matches = target.every(
+      (text, offset) => tokens[index + offset]?.text === text,
+    );
+    if (!matches) {
+      index++;
+      continue;
+    }
+
+    const first = tokens[index];
+    const last = tokens[index + target.length - 1];
+    parts.push(value.slice(cursor, first.start), newText);
+    cursor = last.end;
+    count++;
+    index += target.length;
+  }
+
+  if (count === 0) {
+    return { text: value, count: 0 };
+  }
+
+  parts.push(value.slice(cursor));
+  return { text: parts.join(""), count };
+}
+
+function replaceTranscriptText(
+  value: string,
+  oldText: string,
+  newText: string,
+): ReplacementResult {
+  if (
+    tokenizeComparable(oldText).length === 1 &&
+    tokenizeReplacement(newText).length === 1
+  ) {
+    const bounded = replaceBoundedExact(value, oldText, newText);
+    return bounded.count > 0
+      ? bounded
+      : replaceLoosePhrase(value, oldText, newText);
+  }
+
+  const exact = replaceExact(value, oldText, newText);
+  return exact.count > 0 ? exact : replaceLoosePhrase(value, oldText, newText);
+}
+
+export function planTranscriptCorrections({
+  transcripts,
+  oldText,
+  newText,
+}: {
+  transcripts: SessionContentSnapshot["transcripts"];
+  oldText: string;
+  newText: string;
+}): TranscriptCorrectionPlan {
+  if (tokenizeReplacement(newText).length === 0) {
+    return { changes: [], updates: [] };
+  }
+
+  const changes: TranscriptChange[] = [];
+  const updates: TranscriptContentCorrection[] = [];
+
+  for (const transcript of transcripts) {
+    const words = transcript.words as TranscriptWord[];
+    const wordResult = replaceTranscriptWords(words, oldText, newText);
+
+    const hasMemo = transcript.memo.length > 0;
+    const memoResult = replaceTranscriptText(
+      hasMemo ? transcript.memo : "",
+      oldText,
+      newText,
+    );
+
+    if (wordResult.count === 0 && memoResult.count === 0) {
+      continue;
+    }
+    if (
+      words.length > 0 &&
+      hasMemo &&
+      (wordResult.count === 0 || memoResult.count === 0)
+    ) {
+      continue;
+    }
+
+    updates.push({
+      id: transcript.id,
+      currentWordsJson: transcript.wordsJson,
+      currentMemo: transcript.memo,
+      nextWordsJson:
+        wordResult.count > 0
+          ? JSON.stringify(wordResult.words)
+          : transcript.wordsJson,
+      nextMemo: memoResult.count > 0 ? memoResult.text : transcript.memo,
+    });
+
+    changes.push({
+      transcriptId: transcript.id,
+      wordReplacements: wordResult.count,
+      memoReplacements: memoResult.count,
+    });
+  }
+
+  return { changes, updates };
+}
+
+export function planTitleCorrection({
+  title,
+  oldText,
+  newText,
+}: {
+  title: string;
+  oldText: string;
+  newText: string;
+}): TitleChange | null {
+  const replaced = replaceExact(title, oldText, newText);
+  if (replaced.count === 0 || replaced.text === title) {
+    return null;
+  }
+
+  return {
+    replacements: replaced.count,
+    nextTitle: replaced.text,
+  };
+}

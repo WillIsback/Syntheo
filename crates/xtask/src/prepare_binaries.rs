@@ -5,7 +5,6 @@ use xshell::{Shell, cmd};
 pub(crate) fn prepare_binaries() -> Result<()> {
     let root_dir = crate::repo_root();
     let src_tauri = root_dir.join("apps/desktop/src-tauri");
-    let binaries_dir = src_tauri.join("binaries");
     let embedded_cli_dir = src_tauri.join("resources").join("cli");
 
     let triple = match env::var("TAURI_ENV_TARGET_TRIPLE") {
@@ -21,24 +20,6 @@ pub(crate) fn prepare_binaries() -> Result<()> {
 
     let sh = Shell::new()?;
     sh.change_dir(&src_tauri);
-    cmd!(
-        sh,
-        "{cargo} build --release --target {triple} -p chrome-native-host"
-    )
-    .run()?;
-
-    fs::create_dir_all(&binaries_dir).context("create binaries/")?;
-
-    let src = src_tauri
-        .join("target")
-        .join(&triple)
-        .join("release")
-        .join(format!("char-chrome-native-host{ext}"));
-    let dst = binaries_dir.join(format!("char-chrome-native-host-{triple}{ext}"));
-    fs::copy(&src, &dst).with_context(|| format!("copy {} -> {}", src.display(), dst.display()))?;
-
-    println!("prepare-binaries: binaries/char-chrome-native-host-{triple}{ext}");
-
     cmd!(
         sh,
         "{cargo} build --release --target {triple} -p syntheo-cli"

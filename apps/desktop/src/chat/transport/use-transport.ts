@@ -8,9 +8,11 @@ import { CustomChatTransport } from "./index";
 import type { ResolvedChatContext } from "./index";
 
 import { useLanguageModel } from "~/ai/hooks";
+import { buildAutomationSystemPrompt } from "~/automations/chat-prompt";
 import type { ContextRef } from "~/chat/context/entities";
 import { renderFolderContext } from "~/chat/context/folder-context";
 import { hydrateSessionContext } from "~/chat/context/session-context-hydrator";
+import { buildAutomationChatTools } from "~/chat/tools/automations";
 import { loadHuman, loadOrganization } from "~/contacts/queries";
 import { useToolRegistry } from "~/contexts/tool";
 import { useConfigValue } from "~/shared/config";
@@ -137,6 +139,18 @@ export function useTransport(
     };
   }, [registry, extraTools]);
 
+  // Chat de l'éditeur d'automatisations : ses propres outils et sa consigne,
+  // générée depuis le registre des étapes.
+  const scopedChats = useMemo(
+    () => ({
+      automations: {
+        tools: buildAutomationChatTools(),
+        systemPrompt: buildAutomationSystemPrompt(language),
+      },
+    }),
+    [language],
+  );
+
   const transport = useMemo(() => {
     if (!model) {
       return null;
@@ -173,8 +187,9 @@ export function useTransport(
           ? ({ kind: "text", text } satisfies ResolvedChatContext)
           : null;
       },
+      scopedChats,
     );
-  }, [model, tools, effectiveSystemPrompt, userId]);
+  }, [model, tools, effectiveSystemPrompt, userId, scopedChats]);
 
   return {
     transport,

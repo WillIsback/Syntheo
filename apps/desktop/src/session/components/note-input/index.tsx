@@ -50,8 +50,6 @@ type NoteInputProps = {
   tab: Extract<Tab, { type: "sessions" }>;
   rawMd: string;
   sessionTitle: string;
-  eventTitle?: string;
-  eventDescription?: string;
   onNavigateToTitle?: (pixelWidth?: number) => void;
   onScroll?: UIEventHandler<HTMLDivElement>;
   editorTabs?: TabEditorView[];
@@ -150,8 +148,6 @@ const NoteInputContent = forwardRef<
       tab,
       rawMd,
       sessionTitle,
-      eventTitle,
-      eventDescription,
       onNavigateToTitle,
       onScroll,
       editorTabs,
@@ -369,8 +365,6 @@ const NoteInputContent = forwardRef<
                 sessionMode={sessionMode}
                 rawMd={rawMd}
                 sessionTitle={sessionTitle}
-                eventTitle={eventTitle}
-                eventDescription={eventDescription}
                 editorTabs={editorTabs}
                 currentTab={renderedCurrentTab}
                 onSelectView={handleTabChange}
@@ -446,8 +440,6 @@ const NoteInputContent = forwardRef<
                 sessionId={sessionId}
                 rawMd={rawMd}
                 sessionTitle={sessionTitle}
-                eventTitle={eventTitle}
-                eventDescription={eventDescription}
                 onNavigateToTitle={onNavigateToTitle}
                 onViewReady={handleSessionViewReady}
                 onViewDisposed={handleSessionViewDisposed}

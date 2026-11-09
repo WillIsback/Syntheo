@@ -5,9 +5,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   clearSelection: vi.fn(),
+  selectWorkflow: vi.fn(),
   deleteChatGroup: vi.fn(() => Promise.resolve()),
   setSettingValues: vi.fn(() => Promise.resolve()),
-  setSettingValue: vi.fn(() => Promise.resolve()),
+  setSettingValue: vi.fn((..._args: unknown[]) => Promise.resolve()),
   storedValues: {} as Record<string, string>,
   toastError: vi.fn(),
   toastSuccess: vi.fn(),
@@ -15,7 +16,10 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("./selection", () => ({
   useAutomationSelection: (selector: (state: unknown) => unknown) =>
-    selector({ clearSelection: mocks.clearSelection }),
+    selector({
+      clearSelection: mocks.clearSelection,
+      selectWorkflow: mocks.selectWorkflow,
+    }),
 }));
 
 vi.mock("~/chat/store/queries", () => ({
@@ -39,7 +43,11 @@ vi.mock("@syntheo/ui/components/ui/toast", () => ({
   },
 }));
 
-import { useDeleteChatAutomation, useRemoveStarterDraft } from "./actions";
+import {
+  useCreateWorkflowFromTemplate,
+  useDeleteChatAutomation,
+} from "./actions";
+import { AUTOMATION_TEMPLATES } from "./templates";
 
 function wrapper({ children }: { children: ReactNode }) {
   const queryClient = new QueryClient({
@@ -51,45 +59,37 @@ function wrapper({ children }: { children: ReactNode }) {
   );
 }
 
-describe("useRemoveStarterDraft", () => {
+describe("useCreateWorkflowFromTemplate", () => {
   beforeEach(() => {
-    mocks.clearSelection.mockClear();
-    mocks.setSettingValues.mockClear();
-    mocks.storedValues = {};
-    mocks.toastError.mockClear();
-    mocks.toastSuccess.mockClear();
+    mocks.selectWorkflow.mockClear();
+    mocks.setSettingValue.mockClear();
+    mocks.storedValues = { automation_workflows: "[]" };
   });
 
-  it("disables the starter and clears its stored draft", async () => {
-    mocks.storedValues = { automation_draft_template: "markdown-export" };
-
-    const { result } = renderHook(() => useRemoveStarterDraft(), { wrapper });
-    result.current.mutate("markdown-export");
+  it("creates an ordinary workflow from the Markdown template and opens it", async () => {
+    const { result } = renderHook(() => useCreateWorkflowFromTemplate(), {
+      wrapper,
+    });
+    result.current.mutate(AUTOMATION_TEMPLATES[0]!);
 
     await waitFor(() => {
-      expect(mocks.setSettingValues).toHaveBeenCalledWith({
-        automation_markdown_export_enabled: false,
-        automation_draft_template: "",
-      });
+      expect(mocks.selectWorkflow).toHaveBeenCalled();
     });
-    expect(mocks.clearSelection).toHaveBeenCalledWith({
-      kind: "starter",
-      starterId: "markdown-export",
-    });
-    expect(mocks.toastSuccess).toHaveBeenCalledWith("Automation removed");
-  });
-
-  it("keeps another starter's stored draft", async () => {
-    mocks.storedValues = { automation_draft_template: "another-starter" };
-
-    const { result } = renderHook(() => useRemoveStarterDraft(), { wrapper });
-    result.current.mutate("markdown-export");
-
-    await waitFor(() => {
-      expect(mocks.setSettingValues).toHaveBeenCalledWith({
-        automation_markdown_export_enabled: false,
-      });
-    });
+    const saved = JSON.parse(
+      mocks.setSettingValue.mock.calls.find(
+        (call) => (call as unknown[])[0] === "automation_workflows",
+      )![1] as string,
+    );
+    expect(saved).toEqual([
+      expect.objectContaining({
+        title: "Export as Markdown",
+        templateId: "markdown-export",
+        enabled: false,
+        trigger: "meeting_completed",
+        steps: [expect.objectContaining({ type: "markdown_export" })],
+      }),
+    ]);
+    expect(mocks.selectWorkflow).toHaveBeenCalledWith(saved[0].id);
   });
 });
 

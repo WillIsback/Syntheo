@@ -115,7 +115,7 @@ async fn start_streams(
 ) -> Result<(), ActorProcessingErr> {
     let mode = st.current_mode;
     let myself2 = myself.clone();
-    let mic_muted = st.mic_muted.clone();
+    let mutes = st.mutes.clone();
     let mic_device = st.active_mic_device.clone();
     let audio = st.audio.clone();
     let (frame_tx, frame_rx) = tokio::sync::mpsc::channel(CAPTURE_FRAME_QUEUE_CAPACITY);
@@ -134,7 +134,7 @@ async fn start_streams(
         let ctx = StreamContext {
             actor: myself2,
             cancel_token: stream_cancel_token,
-            mic_muted,
+            mutes,
             mic_device,
             enable_aec: capture.enable_aec,
             audio,
@@ -154,7 +154,7 @@ async fn start_streams(
 struct StreamContext {
     actor: ActorRef<SourceMsg>,
     cancel_token: CancellationToken,
-    mic_muted: std::sync::Arc<std::sync::atomic::AtomicBool>,
+    mutes: super::ChannelMutes,
     mic_device: Option<String>,
     enable_aec: bool,
     audio: std::sync::Arc<dyn AudioProvider>,
@@ -276,7 +276,8 @@ async fn handle_capture_item(
             let frame = SourceFrame {
                 capture: frame,
                 captured,
-                mic_muted: ctx.mic_muted.load(std::sync::atomic::Ordering::Relaxed),
+                mic_muted: ctx.mutes.mic(),
+                speaker_muted: ctx.mutes.speaker(),
             };
 
             let send_result = tokio::select! {

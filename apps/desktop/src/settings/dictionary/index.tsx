@@ -19,9 +19,7 @@ import {
   InputGroupInput,
 } from "@syntheo/ui/components/ui/input-group";
 
-import { useBillingAccess } from "~/billing/billing-context";
 import { SettingsPageTitle } from "~/settings/page-title";
-import { PlanGate } from "~/settings/plan-gate";
 import { useSetSettingValue } from "~/settings/queries";
 import { useConfigValue } from "~/shared/config";
 import { normalizeKeywordList, parseDictionaryTermsText } from "~/stt/keywords";
@@ -29,16 +27,13 @@ import { normalizeKeywordList, parseDictionaryTermsText } from "~/stt/keywords";
 export function SettingsDictionary() {
   const terms = useConfigValue("personalization_dictionary_terms");
   const setTerms = useSetSettingValue("personalization_dictionary_terms");
-  const { isPro } = useBillingAccess();
 
   return (
     <div className="flex flex-col gap-8">
       <SettingsPageTitle title={<Trans>Dictionary</Trans>} />
-      <PlanGate plan="pro" allowed={isPro}>
-        <div data-setting-id="dictionary-terms">
-          <DictionarySettings terms={terms} onSave={setTerms} />
-        </div>
-      </PlanGate>
+      <div data-setting-id="dictionary-terms">
+        <DictionarySettings terms={terms} onSave={setTerms} />
+      </div>
     </div>
   );
 }

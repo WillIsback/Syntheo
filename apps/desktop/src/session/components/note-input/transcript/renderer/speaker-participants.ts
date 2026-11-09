@@ -1,9 +1,6 @@
 import { useLingui } from "@lingui/react/macro";
 import { useCallback, useMemo } from "react";
 
-import type { EventParticipant } from "@syntheo/store";
-
-import { useSessionEventParticipants } from "~/calendar/queries";
 import { createHuman, useHumans } from "~/contacts/queries";
 import {
   addSessionParticipant,
@@ -12,7 +9,7 @@ import {
 } from "~/session/queries";
 
 // Choix d'un intervenant pour un locuteur : participants de la réunion,
-// invités de l'événement, contacts, et création à la volée. Partagé par la
+// contacts, et création à la volée. Partagé par la
 // fenêtre de la transcription et le panneau « Nommer les intervenants »
 // (issue 321).
 
@@ -29,12 +26,10 @@ export type SpeakerParticipantOption = {
 
 export function buildSpeakerParticipantGroups({
   sessionParticipants,
-  eventParticipants = [],
   contacts,
   query,
 }: {
   sessionParticipants: SpeakerParticipantOption[];
-  eventParticipants?: SpeakerParticipantOption[];
   contacts: SpeakerParticipantOption[];
   query: string;
 }) {
@@ -52,7 +47,7 @@ export function buildSpeakerParticipantGroups({
   };
 
   const participantKeys = new Set<string>();
-  const participantOptions = [...sessionParticipants, ...eventParticipants]
+  const participantOptions = sessionParticipants
     .filter((option) => {
       const keys = getSpeakerParticipantDedupeKeys(option);
       if (keys.some((key) => participantKeys.has(key))) {
@@ -122,60 +117,6 @@ export function buildCreateSpeakerParticipantOption({
   };
 }
 
-export function buildEventSpeakerParticipantOptions({
-  eventParticipants,
-  contacts,
-}: {
-  eventParticipants: EventParticipant[];
-  contacts: SpeakerParticipantOption[];
-}): SpeakerParticipantOption[] {
-  const contactByEmail = new Map(
-    contacts.flatMap((contact) =>
-      [contact.email, ...(contact.additionalEmails ?? [])]
-        .filter((email): email is string => Boolean(email))
-        .map((email) => [email.toLowerCase(), contact] as const),
-    ),
-  );
-  const contactByName = new Map(
-    contacts.map((contact) => [contact.name.toLowerCase(), contact]),
-  );
-
-  return eventParticipants
-    .map((participant, index): SpeakerParticipantOption | null => {
-      const name = (participant.name ?? "").trim();
-      const email = (participant.email ?? "").trim();
-      if (!name && !email) {
-        return null;
-      }
-
-      const contact = email
-        ? contactByEmail.get(email.toLowerCase())
-        : name
-          ? contactByName.get(name.toLowerCase())
-          : undefined;
-
-      if (contact) {
-        return {
-          ...contact,
-          name: name || contact.name,
-          email: email || contact.email,
-          isSessionParticipant: true,
-        };
-      }
-
-      const pendingId = email ? `event:${email}` : `event:${name}:${index}`;
-
-      return {
-        id: pendingId,
-        name: name || email,
-        email: email || undefined,
-        isSessionParticipant: true,
-        isNew: true,
-      };
-    })
-    .filter((option): option is SpeakerParticipantOption => option !== null);
-}
-
 export function getSpeakerParticipantDedupeKeys(
   option: SpeakerParticipantOption,
 ): string[] {
@@ -194,9 +135,6 @@ export function useSpeakerParticipants(sessionId: string | undefined) {
   const ownerUserId = useSession(sessionId ?? "")?.user_id;
   const participantRecords = useSessionParticipants(sessionId ?? "");
   const humanRecords = useHumans();
-  const attachedEventParticipants = useSessionEventParticipants(
-    sessionId ?? "",
-  );
 
   const avatarByHumanId = useMemo(
     () =>
@@ -248,15 +186,6 @@ export function useSpeakerParticipants(sessionId: string | undefined) {
           Boolean(contact),
         ),
     [humanRecords],
-  );
-
-  const eventParticipants = useMemo(
-    () =>
-      buildEventSpeakerParticipantOptions({
-        eventParticipants: attachedEventParticipants,
-        contacts,
-      }),
-    [attachedEventParticipants, contacts],
   );
 
   const participantIds = useMemo(
@@ -316,5 +245,5 @@ export function useSpeakerParticipants(sessionId: string | undefined) {
     [getCurrentHumanId, linkHumanToSession],
   );
 
-  return { participants, eventParticipants, contacts, resolveHumanId };
+  return { participants, contacts, resolveHumanId };
 }

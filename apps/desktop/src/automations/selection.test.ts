@@ -61,13 +61,14 @@ describe("useAutomationSelection", () => {
   });
 
   it("clears the current selection and its stored chat thread", () => {
-    const { selectStarter, clearSelection } = useAutomationSelection.getState();
+    const { selectWorkflow, clearSelection } =
+      useAutomationSelection.getState();
 
-    selectStarter("markdown-export");
+    selectWorkflow("wf-export", null);
     useChatContext.getState().setGroupId("automations", "slack-group");
     const slackSession = automationsChat().sessionId;
 
-    clearSelection({ kind: "starter", starterId: "markdown-export" });
+    clearSelection({ kind: "workflow", workflowId: "wf-export" });
 
     expect(useAutomationSelection.getState().selection).toBeNull();
     expect(useAutomationSelection.getState().chatBySelection).toEqual({});
@@ -76,16 +77,16 @@ describe("useAutomationSelection", () => {
   });
 
   it("keeps the current selection when clearing another automation", () => {
-    const { selectStarter, clearSelection } = useAutomationSelection.getState();
+    const { selectDraft, clearSelection } = useAutomationSelection.getState();
 
-    selectStarter("markdown-export");
+    selectDraft("draft-export");
     const slackChat = automationsChat();
 
     clearSelection({ kind: "chat", groupId: "other-group" });
 
     expect(useAutomationSelection.getState().selection).toEqual({
-      kind: "starter",
-      starterId: "markdown-export",
+      kind: "draft",
+      draftId: "draft-export",
     });
     expect(automationsChat()).toEqual(slackChat);
   });
@@ -133,7 +134,7 @@ describe("useAutomationSelection", () => {
     const liveSession = automationsChat().sessionId;
     useChatContext.getState().setGroupId("automations", "live-group");
 
-    useAutomationSelection.getState().selectStarter("markdown-export");
+    useAutomationSelection.getState().selectDraft("draft-other");
     useAutomationSelection.getState().selectWorkflow("wf-1", "persisted-group");
 
     expect(automationsChat()).toEqual({
@@ -190,15 +191,12 @@ describe("useEffectiveAutomationSelection", () => {
     useAutomationSelection.setState({ selection: null, chatBySelection: {} });
   });
 
-  it("falls back to the stored draft starter", () => {
+  it("ignores the legacy stored starter draft", () => {
     settingsMocks.storedDraft = "markdown-export";
 
     const { result } = renderHook(() => useEffectiveAutomationSelection());
 
-    expect(result.current).toEqual({
-      kind: "starter",
-      starterId: "markdown-export",
-    });
+    expect(result.current).toBeNull();
   });
 
   it("prefers the explicit selection over the stored draft", () => {

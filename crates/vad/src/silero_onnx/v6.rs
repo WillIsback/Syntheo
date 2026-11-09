@@ -52,11 +52,6 @@ impl SileroVad {
         })
     }
 
-    pub fn reset_states(&mut self) {
-        self.state = Array3::zeros((2, 1, STATE_SIZE));
-        self.context = vec![0.0; CONTEXT_SIZE_16KHZ];
-    }
-
     pub fn process_chunk(&mut self, x: &ArrayView1<f32>, sr: u32) -> Result<f32, Error> {
         if sr != 16000 {
             return Err(Error::InvalidInput("sampling rate must be 16kHz".into()));

@@ -33,6 +33,7 @@ ignore = [
   # Plateformes non livrées ou dépendances de Tauri.
   { id = "RUSTSEC-2026-0332", reason = "wasapi : Windows uniquement, non livré (paquets Linux seulement)" },
   { id = "RUSTSEC-2024-0429", reason = "glib 0.18 (gtk-rs) tiré par Tauri sur Linux : en attente de la migration GTK4 de Tauri" },
+  { id = "RUSTSEC-2024-0422", reason = "gtk-layer-shell 0.8 (GTK3) : pastille de réunion en calque Wayland (issue 448), suit gtk-rs 0.18 de Tauri jusqu'à sa migration GTK4" },
   # Capture audio : correctif = montée de version de ringbuf dans audio-actual (chantier 04c).
   { id = "RUSTSEC-2026-0293", reason = "ringbuf 0.4 utilisé par audio-actual : montée de version au chantier 04c (capture sans disque)" },
   # Compression de l'index de recherche local (tantivy 0.6 -> tantivy-sstable -> zstd).
@@ -44,6 +45,11 @@ ignore = [
   { id = "RUSTSEC-2026-0398", reason = "zstd-safe via tantivy-sstable (index local) : correctif en 8.2.0, incompatible tantivy 0.6" },
   { id = "RUSTSEC-2026-0403", reason = "zstd-safe via tantivy-sstable (index local) : correctif en 8.2.0, incompatible tantivy 0.6" },
   { id = "RUSTSEC-2026-0410", reason = "zstd-sys via tantivy-sstable : wasm32 uniquement, non livré" },
+  # SQLite embarqué (libsqlite3-sys 0.35 via sqlx-sqlite 0.9.0 et db-core) : correctif en
+  # libsqlite3-sys 0.39.0, que sqlx 0.9.0 refuse (borne < 0.38, lien « sqlite3 » unique).
+  # Borne relevée en amont mais non publiée. Exception courte (expire 2026-12-09),
+  # à lever avec la prochaine version de sqlx (issue 490).
+  { id = "RUSTSEC-2026-0459", reason = "libsqlite3-sys 0.35 via sqlx-sqlite 0.9.0 : correctif 0.39 refusé par sqlx 0.9.0, en attente de sqlx (expire 2026-12-09)" },
 ]
 
 [licenses]

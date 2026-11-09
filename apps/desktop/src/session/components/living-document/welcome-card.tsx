@@ -11,19 +11,13 @@ import { type SettingsTab, useTabs } from "~/store/zustand/tabs";
 // Une note ne peut contenir que du texte : les trois réglages essentiels sont
 // proposés en vrais boutons, au-dessus de la seule note de bienvenue.
 export function WelcomeCard({ sessionId }: { sessionId: string }) {
-  const eventJson = useSession(sessionId)?.event_json;
-  if (!isWelcomeNote(eventJson)) return null;
+  const welcomeNote = useSession(sessionId)?.welcome_note;
+  if (!isWelcomeNote(welcomeNote)) return null;
   return <WelcomeSettings />;
 }
 
-export function isWelcomeNote(eventJson: string | null | undefined): boolean {
-  if (!eventJson) return false;
-  try {
-    const event = JSON.parse(eventJson) as { tracking_id?: unknown };
-    return event.tracking_id === WELCOME_NOTE_TRACKING_ID;
-  } catch {
-    return false;
-  }
+export function isWelcomeNote(marker: string | null | undefined): boolean {
+  return marker === WELCOME_NOTE_TRACKING_ID;
 }
 
 function WelcomeSettings() {

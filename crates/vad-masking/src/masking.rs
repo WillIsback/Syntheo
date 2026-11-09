@@ -13,11 +13,6 @@ impl VadMask {
         }
     }
 
-    pub fn with_vad_config(mut self, cfg: VadConfig) -> Self {
-        self.vad_cfg = cfg;
-        self
-    }
-
     pub fn process(&mut self, samples: &mut [f32]) {
         if samples.is_empty() {
             return;

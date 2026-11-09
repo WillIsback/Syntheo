@@ -20,6 +20,24 @@ function store(
 }
 
 describe("DraftCache", () => {
+  // Issue 501 : « Demander au dossier » pré-remplit une conversation neuve.
+  it("seed pré-remplit le brouillon d'une conversation pas encore affichée", () => {
+    const cache = new DraftCache();
+
+    expect(cache.seed("neuve", draft("@Atlas livraison"))).toBe(true);
+    cache.acquire("neuve", undefined);
+
+    expect(cache.peek("neuve")).toEqual(draft("@Atlas livraison"));
+  });
+
+  it("seed ne touche pas un champ déjà affiché", () => {
+    const cache = new DraftCache();
+    cache.acquire("ouverte", draft("en cours"));
+
+    expect(cache.seed("ouverte", draft("autre"))).toBe(false);
+    expect(cache.peek("ouverte")).toEqual(draft("en cours"));
+  });
+
   it("preserves the current draft and reports an older draft removal", () => {
     const cache = new DraftCache({
       maxCount: 2,

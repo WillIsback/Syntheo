@@ -11,9 +11,6 @@ vi.mock("@tauri-apps/plugin-http", () => ({ fetch: vi.fn() }));
 vi.mock("~/settings/queries", () => ({
   useSettingsReady: () => managed.ready,
 }));
-vi.mock("~/billing/billing-context", () => ({
-  useBillingAccess: () => ({ isPaid: false }),
-}));
 vi.mock("~/settings/providers", () => ({
   useAiProvider: () => ({
     type: "llm",

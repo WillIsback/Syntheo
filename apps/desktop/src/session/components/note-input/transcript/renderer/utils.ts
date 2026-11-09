@@ -94,11 +94,7 @@ function getSpeakerIndex(key: SegmentKey): number {
   return speakerIndex;
 }
 
-export function getSegmentColor(key: SegmentKey): string {
-  // Palette Syntheo s1–s4 : couleur stable et cyclique par locuteur.
-  return speakerColor(getSpeakerIndex(key));
-}
-
+// Palette Syntheo s1–s4 : couleur stable et cyclique par locuteur.
 export function getSegmentColorVars(key: SegmentKey): SegmentColorVars {
   const speakerIndex = getSpeakerIndex(key);
   return {

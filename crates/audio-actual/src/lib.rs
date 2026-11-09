@@ -100,25 +100,6 @@ impl AudioInput {
         MicInput::list_devices()
     }
 
-    pub fn from_mic_and_speaker(config: CaptureConfig) -> Result<CaptureStream, Error> {
-        capture::open_capture(config)
-    }
-
-    pub fn from_speaker_capture(
-        sample_rate: u32,
-        chunk_size: usize,
-    ) -> Result<CaptureStream, Error> {
-        capture::open_speaker_capture(sample_rate, chunk_size)
-    }
-
-    pub fn from_mic_capture(
-        device: Option<String>,
-        sample_rate: u32,
-        chunk_size: usize,
-    ) -> Result<CaptureStream, Error> {
-        capture::open_mic_capture(device, sample_rate, chunk_size)
-    }
-
     pub fn from_mic(device_name: Option<String>) -> Result<Self, Error> {
         let mic = MicInput::new(device_name)?;
 
@@ -127,20 +108,6 @@ impl AudioInput {
             mic: Some(mic),
             speaker: None,
             speaker_sample_rate: 0,
-            data: None,
-        })
-    }
-
-    pub fn from_speaker() -> Result<Self, Error> {
-        let speaker = SpeakerInput::new()
-            .map_err(|error| Error::SpeakerStreamInitializationFailed(error.to_string()))?;
-        let speaker_sample_rate = speaker.sample_rate();
-
-        Ok(Self {
-            source: AudioSource::RealtimeSpeaker,
-            mic: None,
-            speaker: Some(speaker),
-            speaker_sample_rate,
             data: None,
         })
     }
@@ -278,6 +245,23 @@ impl AudioProvider for ActualAudio {
             .stream()
             .map_err(|error| Error::SpeakerStreamInitializationFailed(error.to_string()))?;
         Ok(())
+    }
+
+    // macOS capte toujours la sortie par défaut : la tap système ne vise pas encore une sortie.
+    fn list_speaker_devices(&self) -> Option<Vec<String>> {
+        cfg!(any(target_os = "linux", target_os = "windows"))
+            .then(syntheo_audio_device::speaker_output_names)
+    }
+
+    fn set_speaker_device(&self, device: Option<String>) {
+        speaker::set_preferred_output(device);
+    }
+
+    fn captured_speaker_device(
+        &self,
+        preferred: Option<String>,
+    ) -> Option<syntheo_audio::OutputDevice> {
+        speaker::captured_output(preferred.as_deref())
     }
 }
 

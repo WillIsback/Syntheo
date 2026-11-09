@@ -1,5 +1,4 @@
 import { md2json } from "@syntheo/editor/markdown";
-import { beginCloudsyncActivity } from "@syntheo/plugin-db";
 import { commands as localApiCommands } from "@syntheo/plugin-local-api";
 import { commands as templateCommands } from "@syntheo/plugin-template";
 
@@ -11,7 +10,6 @@ import {
 import { TITLE_GENERATION_TIMEOUT_MS } from "./title-workflow";
 
 import { runNoteEnhancedAutomations } from "~/automations/engine";
-import { releaseCloudsyncActivityEventually } from "~/db/cloudsync-activity";
 import { retryDatabaseLock } from "~/db/retry";
 import { showSummaryReadyNotification } from "~/services/enhancer/summary-notification";
 import {
@@ -24,7 +22,6 @@ import { loadSessionContentSnapshot } from "~/session/content-queries";
 import { extractNoteMarks } from "~/session/note-marks";
 import { requestAppAttention } from "~/shared/app-attention";
 import { playCompletionSound } from "~/shared/completion-sound";
-import { id } from "~/shared/utils";
 import type { TaskState } from "~/store/zustand/ai-task/tasks";
 import { hasLiveSessionTitleDraft } from "~/store/zustand/live-title";
 
@@ -36,7 +33,6 @@ type EnhanceSuccessParams = Parameters<
 
 export const runEnhanceSuccess = async ({
   text,
-  taskId,
   args,
   transformedArgs,
   model,
@@ -71,7 +67,6 @@ export const runEnhanceSuccess = async ({
 
   const { text: preparedText, tag_names: tagNames } = preparedResult.data;
   const textWithTags = preparedResult.data.text_with_tags;
-  const cloudsyncLeaseKey = `${taskId}:${id()}`;
   const initialSnapshot = await loadSessionContentSnapshot(args.sessionId);
   if (!initialSnapshot) {
     throw new Error(`Session ${args.sessionId} no longer exists`);
@@ -129,8 +124,7 @@ export const runEnhanceSuccess = async ({
     }
   }
 
-  await beginCloudsyncActivity("enhance", cloudsyncLeaseKey);
-  try {
+  {
     const snapshot = await loadSessionContentSnapshot(args.sessionId);
     if (!snapshot) {
       throw new Error(`Session ${args.sessionId} no longer exists`);
@@ -215,8 +209,6 @@ export const runEnhanceSuccess = async ({
       void playCompletionSound();
       void requestAppAttention();
     }
-  } finally {
-    await releaseCloudsyncActivityEventually("enhance", cloudsyncLeaseKey);
   }
 };
 

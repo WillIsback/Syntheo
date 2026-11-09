@@ -24,6 +24,7 @@ import { Enhanced } from "../note-input/enhanced";
 import { RawEditor } from "../note-input/raw";
 import { TitleInput } from "../title-input";
 import { PrepareFiche } from "./fiche";
+import { useLateFilingProposal } from "./late-filing";
 import { NoteMeta } from "./meta";
 import { extractNoteLines } from "./note-attribution";
 import { NoteSeal, ProvenanceLegend } from "./provenance";
@@ -59,8 +60,6 @@ export type LivingDocumentProps = {
   sessionMode: SessionMode;
   rawMd: string;
   sessionTitle: string;
-  eventTitle?: string;
-  eventDescription?: string;
   editorTabs: TabEditorView[];
   currentTab: TabEditorView;
   onSelectView: (view: TabEditorView) => void;
@@ -97,6 +96,8 @@ export function LivingDocument(props: LivingDocumentProps) {
     stage === "listen" || (stage === "synthesis" && transcriptOpen);
   const marginId = `transcript-margin-${sessionId}`;
   const handleSelectTemplate = useMeetingTypeSelection(sessionId, editorRef);
+  // Issue 502 : rangée après la synthèse, la note propose le modèle du dossier.
+  useLateFilingProposal(sessionId);
 
   return (
     <DocumentLayout
@@ -263,8 +264,6 @@ function UserNotes({
   stage,
   rawMd,
   sessionTitle,
-  eventTitle,
-  eventDescription,
   editorRef,
   onNavigateToTitle,
   onViewReady,
@@ -298,8 +297,6 @@ function UserNotes({
         sessionId={sessionId}
         rawMd={rawMd}
         sessionTitle={sessionTitle}
-        eventTitle={eventTitle}
-        eventDescription={eventDescription}
         onNavigateToTitle={registerAsPrimary ? onNavigateToTitle : undefined}
         placeholder={
           stage === "synthesis"

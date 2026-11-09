@@ -113,15 +113,6 @@ fn schema_with_legacy_attachment_transfer_jobs() -> syntheo_db_migrate::DbSchema
     }
 }
 
-async fn attachment_transfer_jobs_schema_checksum_for_test(db: &Db) -> String {
-    let mut transaction = db.pool().begin().await.unwrap();
-    let checksum = attachment_transfer_jobs_schema_checksum(&mut transaction)
-        .await
-        .unwrap();
-    transaction.rollback().await.unwrap();
-    checksum
-}
-
 async fn test_db_without_default_templates() -> Db {
     let db = Db::open(syntheo_db_core::DbOpenOptions {
         storage: syntheo_db_core::DbStorage::Memory,
@@ -151,11 +142,14 @@ async fn test_db_without_default_templates() -> Db {
 mod attachments;
 mod capture_lifecycle;
 mod consent;
+mod drop_calendar;
+mod drop_cloud_sharing;
 mod entities;
+mod folder_template;
+mod folder_threads;
 mod legacy_voiceprints;
 mod notification_detect_off;
 mod search_index;
 mod session_audio;
-mod shared_session_cache;
 mod templates_fr;
 mod transcript_live_deltas;

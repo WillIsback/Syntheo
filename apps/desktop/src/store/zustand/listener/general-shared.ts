@@ -7,204 +7,37 @@ import type {
   CaptureStatusEvent,
 } from "@syntheo/plugin-transcription";
 
-export type LiveSessionStatus = "inactive" | "active" | "finalizing";
-export type SessionMode = LiveSessionStatus | "running_batch";
-export type LiveCaptureUiMode = "live" | "record_only" | "fallback_record_only";
+import {
+  type GeneralState,
+  type LiveIntervalId,
+  type LiveState,
+  TRANSCRIPTION_FINAL_STALL_AUDIBLE_SECONDS,
+  TRANSCRIPTION_STALL_AMPLITUDE_THRESHOLD,
+  TRANSCRIPTION_STALL_AUDIBLE_SECONDS,
+  initialLiveState,
+} from "./general-shared-state";
 
-type LoadingPhase =
-  | "idle"
-  | "audio_initializing"
-  | "audio_ready"
-  | "connecting"
-  | "connected";
-
-export type LiveStartBlockReason =
-  | "session_active"
-  | "session_finalizing"
-  | "post_stop_processing"
-  | "another_session_active"
-  | "start_in_progress";
-
-export type LiveIntervalId = ReturnType<typeof setInterval>;
-
-// Pause de l'écoute (issue 353) : la capture native est arrêtée (micro et
-// audio système fermés), la session reste ouverte pour une reprise.
-// « pausing » couvre l'arrêt de la capture et l'enregistrement du transcript.
-export type LivePause = {
-  sessionId: string;
-  elapsedSeconds: number;
-  phase: "pausing" | "paused";
-};
-
-const TRANSCRIPTION_STALL_AMPLITUDE_THRESHOLD = 0.05;
-export const TRANSCRIPTION_STALL_AUDIBLE_SECONDS = 45;
-export const TRANSCRIPTION_FINAL_STALL_AUDIBLE_SECONDS = 90;
-
-export type GeneralState = {
-  live: {
-    eventUnlistenersBySession: Record<string, (() => void)[]>;
-    loading: boolean;
-    loadingPhase: LoadingPhase;
-    status: LiveSessionStatus;
-    amplitude: { mic: number; speaker: number };
-    seconds: number;
-    captureGenerationCounter: number;
-    captureGenerationBySession: Record<string, number>;
-    intervalId?: LiveIntervalId;
-    sessionId: string | null;
-    muted: boolean;
-    captureHealth: {
-      mic: boolean | null;
-      speaker: boolean | null;
-      unavailable: boolean;
-    };
-    lastError: string | null;
-    lastErrorSessionId: string | null;
-    lastErrorIsAudioRelated: boolean;
-    device: string | null;
-    degraded: DegradedError | null;
-    requestedLiveTranscription: boolean | null;
-    liveTranscriptionActive: boolean | null;
-    needsBatchRepair: boolean;
-    stallAudibleSeconds: number;
-    finalStallAudibleSeconds: number;
-    transcriptionStalled: boolean;
-    finalizingBySession: Record<
-      string,
-      { startedAtMs: number; seconds: number; needsBatchRepair: boolean }
-    >;
-    batchTranscriptionPendingBySession: Record<string, boolean>;
-    postStopProcessingBySession: Record<string, boolean>;
-    triggerAppIds: string[] | null;
-    pause: LivePause | null;
-    // Durée écoutée avant la dernière reprise : le minuteur exclut les pauses.
-    elapsedOffsetSeconds: number;
-  };
-};
-
-type LiveState = GeneralState["live"];
-
-const initialLiveState: LiveState = {
-  status: "inactive",
-  eventUnlistenersBySession: {},
-  loading: false,
-  loadingPhase: "idle",
-  amplitude: { mic: 0, speaker: 0 },
-  seconds: 0,
-  captureGenerationCounter: 0,
-  captureGenerationBySession: {},
-  sessionId: null,
-  muted: false,
-  captureHealth: { mic: null, speaker: null, unavailable: false },
-  lastError: null,
-  lastErrorSessionId: null,
-  lastErrorIsAudioRelated: false,
-  device: null,
-  degraded: null,
-  requestedLiveTranscription: null,
-  liveTranscriptionActive: null,
-  needsBatchRepair: false,
-  stallAudibleSeconds: 0,
-  finalStallAudibleSeconds: 0,
-  transcriptionStalled: false,
-  finalizingBySession: {},
-  batchTranscriptionPendingBySession: {},
-  postStopProcessingBySession: {},
-  triggerAppIds: null,
-  pause: null,
-  elapsedOffsetSeconds: 0,
-};
-
-export const initialGeneralState: GeneralState = {
-  live: initialLiveState,
-};
-
-export const getLiveStartBlockReason = (
-  live: Pick<
-    LiveState,
-    | "status"
-    | "loading"
-    | "sessionId"
-    | "finalizingBySession"
-    | "postStopProcessingBySession"
-  >,
-  targetSessionId: string,
-): LiveStartBlockReason | null => {
-  if (live.postStopProcessingBySession[targetSessionId]) {
-    return "post_stop_processing";
-  }
-
-  if (live.sessionId === targetSessionId) {
-    if (live.status === "active") {
-      return "session_active";
-    }
-    if (live.status === "finalizing") {
-      return "session_finalizing";
-    }
-    if (live.loading) {
-      return "start_in_progress";
-    }
-  }
-
-  if (live.finalizingBySession[targetSessionId]) {
-    return "session_finalizing";
-  }
-
-  if (live.status === "active") {
-    return "another_session_active";
-  }
-
-  if (live.status === "inactive" && live.loading) {
-    return "start_in_progress";
-  }
-
-  return null;
-};
-
-/**
- * Écoute en pause (ou en cours de mise en pause) : `sessionId` omis, toutes
- * sessions confondues. Aucune capture n'est ouverte, mais la réunion continue.
- */
-export const isListeningPaused = (
-  live: Pick<LiveState, "pause">,
-  sessionId?: string,
-): boolean =>
-  live.pause !== null &&
-  (sessionId === undefined || live.pause.sessionId === sessionId);
-
-/** Durée écoutée de `sessionId`, pauses exclues (0 hors écoute et hors pause). */
-export const getListeningElapsedSeconds = (
-  live: Pick<
-    LiveState,
-    "pause" | "sessionId" | "seconds" | "elapsedOffsetSeconds"
-  >,
-  sessionId: string,
-): number => {
-  if (live.pause?.sessionId === sessionId) {
-    return live.pause.elapsedSeconds;
-  }
-  return live.sessionId === sessionId
-    ? live.elapsedOffsetSeconds + live.seconds
-    : 0;
-};
-
-// A recording is in progress, broadly: starting, capturing, or finalizing
-// (including a previous session still finalizing in the background). Post-stop
-// processing such as the summary is not part of it. A paused meeting (issue
-// 353) counts too: no capture is open, but the meeting goes on. Callers that
-// must stay quiet during a recording (the mic-detected prompt, issue 349) rely
-// on this rather than listing states.
-export const isLiveRecordingInProgress = (
-  live: Pick<
-    LiveState,
-    "status" | "loading" | "sessionId" | "finalizingBySession" | "pause"
-  >,
-) =>
-  live.status === "active" ||
-  live.status === "finalizing" ||
-  (live.status === "inactive" && live.loading && !!live.sessionId) ||
-  Object.keys(live.finalizingBySession).length > 0 ||
-  live.pause !== null;
+export {
+  type LiveSessionStatus,
+  type SessionMode,
+  type LiveCaptureUiMode,
+  type LiveStartBlockReason,
+  type LiveIntervalId,
+  type LivePause,
+  TRANSCRIPTION_STALL_AUDIBLE_SECONDS,
+  TRANSCRIPTION_FINAL_STALL_AUDIBLE_SECONDS,
+  type GeneralState,
+  initialGeneralState,
+} from "./general-shared-state";
+export {
+  getLiveStartBlockReason,
+  isListeningPaused,
+  getListeningElapsedSeconds,
+  isLiveRecordingInProgress,
+  getLiveCaptureUiMode,
+  isLiveTranscriptInterrupted,
+  isBatchTranscriptionPending,
+} from "./general-shared-selectors";
 
 export const setLiveState = <T extends GeneralState>(
   set: StoreApi<T>["setState"],
@@ -338,6 +171,7 @@ export const markLiveInactive = (
   live.finalStallAudibleSeconds = 0;
   live.transcriptionStalled = false;
   live.muted = initialLiveState.muted;
+  live.speakerMuted = initialLiveState.speakerMuted;
   live.triggerAppIds = null;
   live.elapsedOffsetSeconds = 0;
 };
@@ -362,6 +196,7 @@ export const markLiveStartFailed = (
   live.seconds = 0;
   live.sessionId = null;
   live.muted = initialLiveState.muted;
+  live.speakerMuted = initialLiveState.speakerMuted;
   live.lastError = audioError ?? error;
   live.lastErrorSessionId = sessionId;
   live.lastErrorIsAudioRelated = audioError !== null;
@@ -544,47 +379,3 @@ export const updateLiveAmplitude = (
     speaker: Math.max(0, Math.min(1, speaker / 1000)),
   };
 };
-
-export const getLiveCaptureUiMode = (
-  live: Pick<
-    LiveState,
-    "requestedLiveTranscription" | "liveTranscriptionActive"
-  >,
-): LiveCaptureUiMode => {
-  if (live.liveTranscriptionActive === false) {
-    return live.requestedLiveTranscription === true
-      ? "fallback_record_only"
-      : "record_only";
-  }
-
-  return "live";
-};
-
-export const isLiveTranscriptInterrupted = (
-  live: Pick<
-    LiveState,
-    | "status"
-    | "requestedLiveTranscription"
-    | "liveTranscriptionActive"
-    | "degraded"
-    | "transcriptionStalled"
-  >,
-) =>
-  live.status === "active" &&
-  live.requestedLiveTranscription === true &&
-  (live.liveTranscriptionActive === false ||
-    live.degraded !== null ||
-    live.transcriptionStalled);
-
-export const isBatchTranscriptionPending = (
-  sessionMode: SessionMode,
-  live: Pick<
-    LiveState,
-    "requestedLiveTranscription" | "liveTranscriptionActive"
-  >,
-  postStopBatchPending = false,
-) =>
-  postStopBatchPending ||
-  sessionMode === "running_batch" ||
-  ((sessionMode === "active" || sessionMode === "finalizing") &&
-    getLiveCaptureUiMode(live) !== "live");

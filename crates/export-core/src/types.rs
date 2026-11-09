@@ -20,7 +20,6 @@ pub struct ExportMetadata {
     pub title: String,
     pub created_at: String,
     pub participants: Vec<String>,
-    pub event_title: Option<String>,
     pub duration: Option<String>,
 }
 
@@ -31,7 +30,6 @@ pub struct ExportLabels {
     pub memo: String,
     pub summary: String,
     pub transcript: String,
-    pub meeting: String,
     pub participants: String,
     pub unknown_speaker: String,
 }
@@ -42,7 +40,6 @@ impl Default for ExportLabels {
             memo: "Memo".to_string(),
             summary: "Summary".to_string(),
             transcript: "Transcript".to_string(),
-            meeting: "Meeting".to_string(),
             participants: "Participants".to_string(),
             unknown_speaker: "Unknown".to_string(),
         }

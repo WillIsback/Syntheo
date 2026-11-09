@@ -18,7 +18,6 @@ const MAX_OPTIONS = 6;
 
 export type SpeakerOptionSource = {
   participants: SpeakerParticipantOption[];
-  eventParticipants: SpeakerParticipantOption[];
   contacts: SpeakerParticipantOption[];
 };
 
@@ -28,7 +27,6 @@ export function buildSpeakerCardOptions(
 ): SpeakerParticipantOption[] {
   const matches = buildSpeakerParticipantGroups({
     sessionParticipants: source.participants,
-    eventParticipants: source.eventParticipants,
     contacts: source.contacts,
     query,
   })
@@ -36,11 +34,7 @@ export function buildSpeakerCardOptions(
     .slice(0, MAX_OPTIONS);
   const create = buildCreateSpeakerParticipantOption({
     query,
-    existingOptions: [
-      ...source.participants,
-      ...source.eventParticipants,
-      ...source.contacts,
-    ],
+    existingOptions: [...source.participants, ...source.contacts],
   });
   return create ? [...matches, create] : matches;
 }

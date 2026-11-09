@@ -14,7 +14,7 @@ pub(crate) fn capture_stop_session_predicate() -> String {
 }
 
 /// Physical local deletion after the caller has locked the database and
-/// verified the exported snapshot. Refuse replicas and shared/cloud content;
+/// verified the exported snapshot. Refuse replicas and cloud content;
 /// their deletion requires the owning sync protocol rather than a local purge.
 pub async fn purge_local_session(
     tx: &mut Transaction<'_, Sqlite>,
@@ -22,14 +22,9 @@ pub async fn purge_local_session(
 ) -> Result<(), sqlx::Error> {
     let cloud_disabled: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM app_settings WHERE id='cloud_sync_enabled' AND value_json='false')").fetch_one(&mut **tx).await?;
     let cloud_attachment: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM session_attachments WHERE session_id=? AND cloud_object_key<>'')").bind(id).fetch_one(&mut **tx).await?;
-    let shared: bool =
-        sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM shared_session_cache WHERE session_id=?)")
-            .bind(id)
-            .fetch_one(&mut **tx)
-            .await?;
     let replicas: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM e2ee_local_state WHERE (table_name='sessions' AND row_id=?) OR (table_name='transcripts' AND row_id IN (SELECT id FROM transcripts WHERE session_id=?)) OR (table_name='session_documents' AND row_id IN (SELECT id FROM session_documents WHERE session_id=?)) OR (table_name='session_attachments' AND row_id IN (SELECT id FROM session_attachments WHERE session_id=?)))")
         .bind(id).bind(id).bind(id).bind(id).fetch_one(&mut **tx).await?;
-    if !cloud_disabled || cloud_attachment || shared || replicas {
+    if !cloud_disabled || cloud_attachment || replicas {
         return Err(sqlx::Error::Protocol(
             "local purge requires unsynced local content".into(),
         ));

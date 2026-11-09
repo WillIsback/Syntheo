@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parseTemplateMarkdown, templateSectionsToMarkdown } from "./markdown";
+import { parseTemplateMarkdown } from "./markdown";
 
 describe("parseTemplateMarkdown", () => {
   it("découpe les sections sur les titres #", () => {
@@ -30,17 +30,5 @@ describe("parseTemplateMarkdown", () => {
     expect(parseTemplateMarkdown("# A")).toEqual([
       { title: "A", description: "" },
     ]);
-  });
-});
-
-describe("templateSectionsToMarkdown", () => {
-  it("est l'inverse du parseur", () => {
-    const sections = [
-      { title: "Participants", description: "Liste." },
-      { title: "Décisions", description: "Résume.\nSur deux lignes." },
-    ];
-    expect(parseTemplateMarkdown(templateSectionsToMarkdown(sections))).toEqual(
-      sections,
-    );
   });
 });

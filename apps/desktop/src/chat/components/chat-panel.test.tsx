@@ -19,6 +19,7 @@ const mocks = vi.hoisted(() => ({
   },
   noteFilter: "mine",
   folderFilter: null as string | null,
+  folderPageFolder: null as string | null,
 }));
 
 vi.mock("./toolbar-controls", () => ({
@@ -88,6 +89,10 @@ vi.mock("~/sidebar/note-filter", () => ({
     }),
 }));
 
+vi.mock("~/folders/chat-folder", () => ({
+  useFolderPageChatFolder: () => mocks.folderPageFolder,
+}));
+
 vi.mock("~/contexts/shell", () => ({
   useShell: () => ({ chat: mocks.chat }),
 }));
@@ -134,6 +139,7 @@ describe("Chat panel", () => {
     cleanup();
     mocks.chatSession.mockClear();
     mocks.chat.scope = "general";
+    mocks.folderPageFolder = null;
     mocks.noteFilter = "mine";
     mocks.folderFilter = null;
     mocks.hasAvailableTranscript = false;
@@ -183,6 +189,17 @@ describe("Chat panel", () => {
       expect.objectContaining({
         folderId: "CS 101",
       }),
+    );
+  });
+
+  it("asks the folder whose page is open (issue 496)", () => {
+    mocks.folderFilter = "CS 101";
+    mocks.folderPageFolder = "Atlas/Ateliers";
+
+    render(<TestChatPanel />);
+
+    expect(mocks.chatSession).toHaveBeenCalledWith(
+      expect.objectContaining({ folderId: "Atlas/Ateliers" }),
     );
   });
 

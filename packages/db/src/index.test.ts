@@ -1,7 +1,6 @@
-import { getTableColumns } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createDb, events, max, templates } from "./index";
+import { createDb, max, templates } from "./index";
 
 describe("@syntheo/db createDb", () => {
   const executeProxy = vi.fn();
@@ -30,36 +29,6 @@ describe("@syntheo/db createDb", () => {
     expect(executeProxy).toHaveBeenCalledWith(
       expect.stringContaining('insert into "templates"'),
       expect.any(Array),
-      "run",
-    );
-  });
-
-  it("exposes nullable event attendance JSON through the Drizzle schema", () => {
-    const attendanceJson = getTableColumns(events).attendanceJson;
-
-    expect(attendanceJson.name).toBe("attendance_json");
-    expect(attendanceJson.notNull).toBe(false);
-    expect(attendanceJson.dataType).toBe("json");
-  });
-
-  it("serializes event attendance JSON through the proxy", async () => {
-    executeProxy.mockResolvedValue({ rows: [] });
-
-    await db.insert(events).values({
-      id: "event-1",
-      attendanceJson: {
-        version: 1,
-        self_status: "accepted",
-      },
-      createdAt: "2026-09-30T10:00:00Z",
-      updatedAt: "2026-09-30T10:00:00Z",
-    });
-
-    expect(executeProxy).toHaveBeenCalledWith(
-      expect.stringContaining('"attendance_json"'),
-      expect.arrayContaining([
-        JSON.stringify({ version: 1, self_status: "accepted" }),
-      ]),
       "run",
     );
   });

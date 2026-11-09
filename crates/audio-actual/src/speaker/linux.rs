@@ -27,6 +27,8 @@ const DEFAULT_SAMPLE_RATE: u32 = 48_000;
 
 pub struct SpeakerInput {
     sample_rate: u32,
+    /// Sortie choisie dans les réglages (issue 450) ; `None` suit la sortie par défaut.
+    preferred: Option<String>,
 }
 
 #[pin_project(PinnedDrop)]
@@ -89,9 +91,10 @@ fn update_pipewire_initialization(
 }
 
 impl SpeakerInput {
-    pub fn new() -> Result<Self> {
+    pub fn new(preferred: Option<String>) -> Result<Self> {
         Ok(Self {
             sample_rate: DEFAULT_SAMPLE_RATE,
+            preferred,
         })
     }
 
@@ -100,11 +103,14 @@ impl SpeakerInput {
     }
 
     pub fn stream(self) -> Result<SpeakerStream> {
-        match SpeakerStream::try_pipewire(self.sample_rate) {
+        // Nom du sink choisi, seulement s'il est présent : sinon la capture suit la sortie par
+        // défaut, et PipeWire la déplace quand le défaut change (casque branché ou débranché).
+        let target = super::output::explicit_output_id(self.preferred.as_deref());
+        match SpeakerStream::try_pipewire(self.sample_rate, target.clone()) {
             Ok(stream) => Ok(stream),
             Err(pipewire_err) => {
                 tracing::warn!(error = ?pipewire_err, "pipewire_capture_unavailable");
-                SpeakerStream::try_pulseaudio(self.sample_rate).map_err(|pulse_err| {
+                SpeakerStream::try_pulseaudio(self.sample_rate, target).map_err(|pulse_err| {
                     anyhow::anyhow!(
                         "PipeWire speaker capture failed: {pipewire_err:#}; PulseAudio speaker capture failed: {pulse_err:#}"
                     )
@@ -115,7 +121,7 @@ impl SpeakerInput {
 }
 
 impl SpeakerStream {
-    fn try_pipewire(initial_rate: u32) -> Result<Self> {
+    fn try_pipewire(initial_rate: u32, target: Option<String>) -> Result<Self> {
         let rb = HeapRb::<f32>::new(BUFFER_SIZE);
         let (producer, consumer) = rb.split();
 
@@ -146,6 +152,7 @@ impl SpeakerStream {
                     },
                     shutdown_rx,
                     init_tx,
+                    target,
                 );
 
                 if let Err(err) = result {
@@ -187,7 +194,7 @@ impl SpeakerStream {
         })
     }
 
-    fn try_pulseaudio(initial_rate: u32) -> Result<Self> {
+    fn try_pulseaudio(initial_rate: u32, target: Option<String>) -> Result<Self> {
         let rb = HeapRb::<f32>::new(BUFFER_SIZE);
         let (producer, consumer) = rb.split();
 
@@ -219,6 +226,7 @@ impl SpeakerStream {
                     },
                     running,
                     init_tx,
+                    target,
                 );
 
                 if let Err(err) = result {
@@ -269,6 +277,7 @@ fn pipewire_capture_loop(
     handles: CaptureThreadHandles,
     shutdown_rx: pw::channel::Receiver<()>,
     init_tx: std::sync::mpsc::Sender<Result<()>>,
+    target: Option<String>,
 ) -> Result<()> {
     // `init_tx` moves into the listener's user data partway through setup, so any
     // failure would otherwise just drop the sender and reach the parent as a bare
@@ -276,7 +285,7 @@ fn pipewire_capture_loop(
     // After a successful init the receiver is gone and the send is a no-op.
     let setup_err_tx = init_tx.clone();
 
-    let result = pipewire_capture_setup(handles, shutdown_rx, init_tx);
+    let result = pipewire_capture_setup(handles, shutdown_rx, init_tx, target);
 
     if let Err(error) = result {
         let _ = setup_err_tx.send(Err(anyhow::anyhow!(error.to_string())));
@@ -289,6 +298,7 @@ fn pipewire_capture_setup(
     handles: CaptureThreadHandles,
     shutdown_rx: pw::channel::Receiver<()>,
     init_tx: std::sync::mpsc::Sender<Result<()>>,
+    target: Option<String>,
 ) -> Result<()> {
     let CaptureThreadHandles {
         producer,
@@ -315,9 +325,12 @@ fn pipewire_capture_setup(
         *pw::keys::MEDIA_ROLE => "Music",
         *pw::keys::STREAM_CAPTURE_SINK => "true",
     };
-    if let Some(target) = resolve_sink_name() {
-        tracing::info!(syntheo.audio.device = %target, "pipewire_targeting_sink");
-        stream_props.insert("target.object", target);
+    match target {
+        Some(target) => {
+            tracing::info!(syntheo.audio.device = %target, "pipewire_targeting_sink");
+            stream_props.insert("target.object", target);
+        }
+        None => tracing::info!("pipewire_following_default_sink"),
     }
 
     let stream = pw::stream::StreamBox::new(&core, "syntheo-speaker-capture", stream_props)
@@ -468,6 +481,7 @@ fn pulseaudio_capture_loop(
     handles: CaptureThreadHandles,
     running: Arc<AtomicBool>,
     init_tx: std::sync::mpsc::Sender<Result<()>>,
+    target: Option<String>,
 ) -> Result<()> {
     let CaptureThreadHandles {
         mut producer,
@@ -502,7 +516,7 @@ fn pulseaudio_capture_loop(
             anyhow::bail!("Invalid PulseAudio sample spec");
         }
 
-        let monitor_device = resolve_monitor_device(&mut mainloop, &context)
+        let monitor_device = resolve_monitor_device(&mut mainloop, &context, target.as_deref())
             .context("Failed to resolve PulseAudio monitor source")?;
         tracing::info!(syntheo.audio.device = %monitor_device, "connecting_to_monitor_device");
 
@@ -656,7 +670,6 @@ fn wait_for_stream_ready(mainloop: &mut Mainloop, stream: &PaStream) -> Result<(
 
 #[derive(Clone, Debug)]
 struct SinkTarget {
-    index: u32,
     name: String,
     monitor: String,
 }
@@ -724,7 +737,6 @@ fn query_sink_targets(mainloop: &mut Mainloop, context: &PaContext) -> Vec<SinkT
                 .map(|value| value.to_string())
                 .unwrap_or_else(|| format!("{name}.monitor"));
             let _ = tx.send(Some(SinkTarget {
-                index: sink_info.index,
                 name: name.to_string(),
                 monitor,
             }));
@@ -738,24 +750,74 @@ fn query_sink_targets(mainloop: &mut Mainloop, context: &PaContext) -> Vec<SinkT
     collect_list(&rx)
 }
 
-// Sink indices that some other process is actively playing into.
-fn query_sinks_in_use(mainloop: &mut Mainloop, context: &PaContext) -> Vec<u32> {
-    use std::sync::mpsc;
+fn resolve_monitor_device(
+    mainloop: &mut Mainloop,
+    context: &PaContext,
+    target: Option<&str>,
+) -> Option<String> {
+    target
+        .and_then(|target| {
+            query_sink_targets(mainloop, context)
+                .into_iter()
+                .find(|sink| sink.name == target)
+                .map(|sink| sink.monitor)
+        })
+        .or_else(|| get_default_sink_name(mainloop, context).map(|name| format!("{name}.monitor")))
+}
 
-    let (tx, rx) = mpsc::channel();
-    let self_pid = std::process::id().to_string();
+/// Sink auquel la capture du son système de ce processus est branchée en ce moment : le flux
+/// d'enregistrement de Syntheo qui lit le moniteur d'un sink. Le micro, lui, lit une vraie
+/// source et n'est donc pas confondu.
+pub(super) fn captured_sink_name() -> Option<String> {
+    with_pulse_context("syntheo-speaker-captured", |mainloop, context| {
+        let streams = query_record_streams(mainloop, context);
+        let monitors = query_monitor_sources(mainloop, context);
+        pick_captured_sink(&streams, &monitors, &std::process::id().to_string())
+    })
+    .flatten()
+}
+
+#[derive(Clone, Debug)]
+struct RecordStream {
+    source: u32,
+    pid: Option<String>,
+}
+
+#[derive(Clone, Debug)]
+struct MonitorSource {
+    index: u32,
+    sink_name: String,
+}
+
+fn pick_captured_sink(
+    streams: &[RecordStream],
+    monitors: &[MonitorSource],
+    self_pid: &str,
+) -> Option<String> {
+    streams
+        .iter()
+        .filter(|stream| stream.pid.as_deref() == Some(self_pid))
+        .find_map(|stream| {
+            monitors
+                .iter()
+                .find(|monitor| monitor.index == stream.source)
+                .map(|monitor| monitor.sink_name.clone())
+        })
+}
+
+fn query_record_streams(mainloop: &mut Mainloop, context: &PaContext) -> Vec<RecordStream> {
+    let (tx, rx) = std::sync::mpsc::channel();
 
     mainloop.lock();
     let introspector = context.introspect();
-    introspector.get_sink_input_info_list(move |list_result| match list_result {
-        pulse::callbacks::ListResult::Item(input) => {
-            let foreign = input
-                .proplist
-                .get_str(pulse::proplist::properties::APPLICATION_PROCESS_ID)
-                .is_none_or(|pid| pid != self_pid);
-            if !input.corked && foreign {
-                let _ = tx.send(Some(input.sink));
-            }
+    introspector.get_source_output_info_list(move |list_result| match list_result {
+        pulse::callbacks::ListResult::Item(output) => {
+            let _ = tx.send(Some(RecordStream {
+                source: output.source,
+                pid: output
+                    .proplist
+                    .get_str(pulse::proplist::properties::APPLICATION_PROCESS_ID),
+            }));
         }
         pulse::callbacks::ListResult::End | pulse::callbacks::ListResult::Error => {
             let _ = tx.send(None);
@@ -766,58 +828,27 @@ fn query_sinks_in_use(mainloop: &mut Mainloop, context: &PaContext) -> Vec<u32> 
     collect_list(&rx)
 }
 
-// Meeting apps often play through a sink that is not the default. Follow whichever sink another
-// process is rendering to; the default wins ties so unrelated playback elsewhere does not pull us
-// away from a meeting on the default sink.
-fn sink_in_use(mainloop: &mut Mainloop, context: &PaContext) -> Option<SinkTarget> {
-    let sinks = query_sink_targets(mainloop, context);
-    let in_use = query_sinks_in_use(mainloop, context);
-    let default_sink = get_default_sink_name(mainloop, context);
-    pick_sink_in_use(sinks, &in_use, default_sink.as_deref())
-}
+fn query_monitor_sources(mainloop: &mut Mainloop, context: &PaContext) -> Vec<MonitorSource> {
+    let (tx, rx) = std::sync::mpsc::channel();
 
-fn pick_sink_in_use(
-    sinks: Vec<SinkTarget>,
-    in_use: &[u32],
-    default_sink: Option<&str>,
-) -> Option<SinkTarget> {
-    let mut candidates: Vec<SinkTarget> = sinks
-        .into_iter()
-        .filter(|sink| in_use.contains(&sink.index))
-        .collect();
-    if candidates.is_empty() {
-        return None;
-    }
-
-    let default_position = candidates
-        .iter()
-        .position(|sink| Some(sink.name.as_str()) == default_sink);
-    let sink = match default_position {
-        Some(position) => candidates.swap_remove(position),
-        None => {
-            let sink = candidates.swap_remove(0);
-            tracing::info!(
-                syntheo.audio.device = %sink.name,
-                "speaker_capture_following_active_sink"
-            );
-            sink
+    mainloop.lock();
+    let introspector = context.introspect();
+    introspector.get_source_info_list(move |list_result| match list_result {
+        pulse::callbacks::ListResult::Item(source) => {
+            if let Some(sink_name) = source.monitor_of_sink_name.as_ref() {
+                let _ = tx.send(Some(MonitorSource {
+                    index: source.index,
+                    sink_name: sink_name.to_string(),
+                }));
+            }
         }
-    };
-    Some(sink)
-}
+        pulse::callbacks::ListResult::End | pulse::callbacks::ListResult::Error => {
+            let _ = tx.send(None);
+        }
+    });
+    mainloop.unlock();
 
-// `None` leaves PipeWire on the default sink.
-fn resolve_sink_name() -> Option<String> {
-    with_pulse_context("syntheo-speaker-list", |mainloop, context| {
-        sink_in_use(mainloop, context).map(|sink| sink.name)
-    })
-    .flatten()
-}
-
-fn resolve_monitor_device(mainloop: &mut Mainloop, context: &PaContext) -> Option<String> {
-    sink_in_use(mainloop, context)
-        .map(|sink| sink.monitor)
-        .or_else(|| get_default_sink_name(mainloop, context).map(|name| format!("{name}.monitor")))
+    collect_list(&rx)
 }
 
 fn get_default_sink_name(mainloop: &mut Mainloop, context: &PaContext) -> Option<String> {
@@ -880,7 +911,7 @@ impl PinnedDrop for SpeakerStream {
 
 #[cfg(test)]
 mod tests {
-    use super::{SinkTarget, pick_sink_in_use, update_pipewire_initialization};
+    use super::{MonitorSource, RecordStream, pick_captured_sink, update_pipewire_initialization};
     use pipewire::stream::StreamState;
     use std::sync::mpsc::{self, TryRecvError};
 
@@ -915,32 +946,40 @@ mod tests {
         assert!(matches!(rx.try_recv(), Err(TryRecvError::Disconnected)));
     }
 
-    fn sink(index: u32, name: &str) -> SinkTarget {
-        SinkTarget {
+    fn stream(source: u32, pid: &str) -> RecordStream {
+        RecordStream {
+            source,
+            pid: Some(pid.to_string()),
+        }
+    }
+
+    fn monitor(index: u32, sink_name: &str) -> MonitorSource {
+        MonitorSource {
             index,
-            name: name.to_string(),
-            monitor: format!("{name}.monitor"),
+            sink_name: sink_name.to_string(),
         }
     }
 
     #[test]
-    fn no_sink_in_use_falls_through_to_default() {
-        let sinks = vec![sink(1, "builtin"), sink(2, "usb")];
-        assert!(pick_sink_in_use(sinks, &[], Some("builtin")).is_none());
+    fn captured_sink_is_the_monitor_our_stream_reads() {
+        let monitors = vec![monitor(10, "hdmi"), monitor(11, "headset")];
+        // Le micro (source 3) et le flux d'un autre processus sur le moniteur HDMI.
+        let streams = vec![stream(3, "42"), stream(10, "7"), stream(11, "42")];
+        assert_eq!(
+            pick_captured_sink(&streams, &monitors, "42").as_deref(),
+            Some("headset")
+        );
     }
 
     #[test]
-    fn follows_the_only_sink_in_use() {
-        let sinks = vec![sink(1, "builtin"), sink(2, "usb")];
-        let picked = pick_sink_in_use(sinks, &[2], Some("builtin")).unwrap();
-        assert_eq!(picked.name, "usb");
-        assert_eq!(picked.monitor, "usb.monitor");
-    }
-
-    #[test]
-    fn default_wins_when_several_sinks_are_in_use() {
-        let sinks = vec![sink(1, "hdmi"), sink(2, "builtin"), sink(3, "usb")];
-        let picked = pick_sink_in_use(sinks, &[1, 2, 3], Some("builtin")).unwrap();
-        assert_eq!(picked.name, "builtin");
+    fn no_capture_running_reports_nothing() {
+        let monitors = vec![monitor(10, "hdmi")];
+        assert!(pick_captured_sink(&[stream(3, "42")], &monitors, "42").is_none());
+        assert!(pick_captured_sink(&[stream(10, "7")], &monitors, "42").is_none());
+        let unknown_pid = RecordStream {
+            source: 10,
+            pid: None,
+        };
+        assert!(pick_captured_sink(&[unknown_pid], &monitors, "42").is_none());
     }
 }

@@ -138,18 +138,6 @@ export function getTranscriptMatches(
   );
 }
 
-export function getTranscriptWordMatches(
-  words: TranscriptSearchWord[],
-  prepared: string,
-  opts: SearchOptions,
-): MatchResult[] {
-  return getTranscriptSearchIndexMatches(
-    createTranscriptSearchIndex(words),
-    prepared,
-    opts,
-  );
-}
-
 export function createTranscriptSearchIndex(
   words: TranscriptSearchWord[],
 ): TranscriptSearchIndex {

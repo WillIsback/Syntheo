@@ -175,7 +175,6 @@ vi.mock("./viewport-hooks", () => ({
     action: () => Promise<unknown>,
   ) => action(),
   useAutoScroll: vi.fn(),
-  usePlaybackAutoScroll: vi.fn(),
   useScrollDetection: () => ({
     ...mocks.scrollDetection,
     scrollToBottom: mocks.scrollToBottom,

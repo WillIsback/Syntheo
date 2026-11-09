@@ -37,9 +37,9 @@ export function SpeakerNamingDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const { participants, eventParticipants, contacts, resolveHumanId } =
+  const { participants, contacts, resolveHumanId } =
     useSpeakerParticipants(sessionId);
-  const source = { participants, eventParticipants, contacts };
+  const source = { participants, contacts };
   // Figées au montage (le panneau est remonté à chaque ouverture).
   const [frozenCards] = useState(cards);
   const [assigned, setAssigned] = useState<Record<string, string>>({});

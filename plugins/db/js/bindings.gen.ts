@@ -12,10 +12,6 @@ export const commands = {
 	execute: (sql: string, params: Value[]) => typedError<Value[], string>(__TAURI_INVOKE("plugin:db|execute", { sql, params })),
 	executeTransaction: (statements: TransactionStatement[]) => typedError<number[], string>(__TAURI_INVOKE("plugin:db|execute_transaction", { statements })),
 	executeProxy: (sql: string, params: Value[], method: string) => typedError<ExecuteProxyResult, string>(__TAURI_INVOKE("plugin:db|execute_proxy", { sql, params, method })),
-	getLegacyImportReport: () => typedError<LegacyImportReport, string>(__TAURI_INVOKE("plugin:db|get_legacy_import_report")),
-	getLegacyCleanupStatus: () => typedError<LegacyCleanupStatus, string>(__TAURI_INVOKE("plugin:db|get_legacy_cleanup_status")),
-	cleanupLegacyFiles: () => typedError<LegacyCleanupResult, string>(__TAURI_INVOKE("plugin:db|cleanup_legacy_files")),
-	runLegacyImport: (dryRun: boolean) => typedError<string, string>(__TAURI_INVOKE("plugin:db|run_legacy_import", { dryRun })),
 	applySessionIngest: (workspaceId: string, envelope: Value) => typedError<SessionIngestApplyResult, string>(__TAURI_INVOKE("plugin:db|apply_session_ingest", { workspaceId, envelope })),
 	subscribe: (sql: string, params: Value[], onEvent: Channel<QueryEvent>) => typedError<SubscriptionRegistration, string>(__TAURI_INVOKE("plugin:db|subscribe", { sql, params, onEvent })),
 	unsubscribe: (subscriptionId: string) => typedError<null, string>(__TAURI_INVOKE("plugin:db|unsubscribe", { subscriptionId })),
@@ -70,67 +66,6 @@ export type GetRecurringMeetingHistoryInput = {
 	meeting_id: string,
 	limit: number | null,
 	offset: number | null,
-};
-
-export type LegacyCleanupResult = {
-	deletedFileCount: number,
-	deletedBytes: number,
-};
-
-export type LegacyCleanupStatus = {
-	migrationReady: boolean,
-	migrationVerified: boolean,
-	available: boolean,
-	alreadyCleaned: boolean,
-	fileCount: number,
-	totalBytes: number,
-	sourceRoot: string,
-	blockingReason: string | null,
-};
-
-export type LegacyImportItemReport = {
-	sourcePath: string,
-	sourceKind: string,
-	sourceSha256: string,
-	status: string,
-	discoveredCount: number,
-	importedCount: number,
-	matchedCount: number,
-	skippedCount: number,
-	conflictCount: number,
-	error: string,
-};
-
-export type LegacyImportReport = {
-	state: StorageMigrationState,
-	latestRun: LegacyImportRun | null,
-	items: LegacyImportItemReport[],
-	targets: LegacyImportTargetReport[],
-};
-
-export type LegacyImportRun = {
-	id: string,
-	importerVersion: number,
-	sourceRoot: string,
-	dryRun: boolean,
-	status: string,
-	discoveredCount: number,
-	importedCount: number,
-	matchedCount: number,
-	skippedCount: number,
-	conflictCount: number,
-	errorCount: number,
-	startedAt: string,
-	completedAt: string | null,
-	error: string,
-};
-
-export type LegacyImportTargetReport = {
-	sourcePath: string,
-	tableName: string,
-	targetId: string,
-	status: string,
-	error: string,
 };
 
 export type ListMeetingsInput = {
@@ -202,22 +137,12 @@ export type QueryEvent = { event: "result"; data: Value[] } | { event: "error"; 
 
 export type SessionIngestApplyResult = "applied" | "already_applied" | "rejected";
 
-export type StartupPhase = "preparing_database" | "migrating_database" | "importing_legacy_data" | "ready" | "failed";
+export type StartupPhase = "preparing_database" | "migrating_database" | "ready" | "failed";
 
 export type StartupStatus = {
 	phase: StartupPhase,
 	migrationCurrent: number | null,
 	migrationTotal: number | null,
-};
-
-export type StorageMigrationState = {
-	phase: string,
-	latestRunId: string,
-	parityVerified: boolean,
-	cutoverAt: string | null,
-	rollbackUntil: string | null,
-	lastError: string,
-	updatedAt: string,
 };
 
 export type SubscriptionRegistration = {

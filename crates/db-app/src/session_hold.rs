@@ -122,8 +122,6 @@ pub async fn local_hold_tables(
             )
         } else if !related.is_empty() {
             related.join(" OR ")
-        } else if name == "events" {
-            "id IN (SELECT event_id FROM sessions WHERE id=?1)".into()
         } else if name == "entity_mentions" {
             "((source_type='session' AND source_id=?1) OR (target_type='session' AND target_id=?1))"
                 .into()

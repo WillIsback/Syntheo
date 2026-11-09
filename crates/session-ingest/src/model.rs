@@ -39,6 +39,9 @@ pub struct IngestSession {
     pub timezone: String,
     #[serde(default)]
     pub language: String,
+    // `event_id` et `event` viennent du protocole de livraison : encore acceptés
+    // (deny_unknown_fields) mais ignorés depuis la suppression du calendrier
+    // (issue 465).
     #[serde(default)]
     pub event_id: String,
     #[serde(default)]

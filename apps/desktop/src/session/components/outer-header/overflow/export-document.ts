@@ -22,7 +22,6 @@ export type ExportDocument = {
   participants: string[];
   /** Durée déjà mise en forme (`formatExportDuration`). */
   duration: string | null;
-  eventTitle?: string | null;
   memoMd: string | null;
   summaryMd: string | null;
   transcript: TranscriptItem[] | null;
@@ -197,7 +196,6 @@ export function pdfExportLabels(): ExportLabels {
     memo: l.memo,
     summary: l.summary,
     transcript: l.transcript,
-    meeting: t({ message: "Meeting", context: "export field" }),
     participants: l.participants,
     unknownSpeaker: t({ message: "Unknown speaker", context: "export field" }),
   };
@@ -220,7 +218,6 @@ export function buildPdfExport(doc: ExportDocument): ExportInput {
       title: doc.title,
       createdAt: doc.createdAt ? formatExportDate(doc.createdAt) : "",
       participants: doc.participants,
-      eventTitle: doc.eventTitle ?? null,
       duration: doc.duration,
     },
     labels: pdfExportLabels(),

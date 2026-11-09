@@ -37,7 +37,6 @@ import {
   extractFirstLineTitle,
   documentTitlePlaceholder,
 } from "~/session/title-content";
-import { repairMissingSessionTitle } from "~/session/title-repair";
 
 const extraNodeViews = { appLink: AppLinkView, session: SessionNodeView };
 const NO_NOTE_LINES: readonly string[] = [];
@@ -214,19 +213,7 @@ const EnhancedEditorInner = forwardRef<
             taskSource={taskSource}
             extraNodeViews={extraNodeViews}
             extraPlugins={noteInkPlugins}
-            onViewReady={(view) => {
-              onViewReady?.(view);
-              if (persistChanges && !sessionTitle.trim()) {
-                void repairMissingSessionTitle(sessionId, enhancedNoteId).catch(
-                  (error) => {
-                    console.error(
-                      "[enhanced-editor] failed to repair title",
-                      error,
-                    );
-                  },
-                );
-              }
-            }}
+            onViewReady={onViewReady}
             onViewDisposed={onViewDisposed}
             syncContentWhenFocused={!persistChanges}
           />

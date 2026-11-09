@@ -25,6 +25,8 @@ pub struct CaptureSnapshot {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mic_muted: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub speaker_muted: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub degraded: Option<listener::DegradedError>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub capture_health: Option<listener::actors::CaptureHealth>,
@@ -103,12 +105,31 @@ pub struct CaptureParams {
     pub keywords: Vec<String>,
     #[serde(default)]
     pub mic_device: Option<String>,
+    /// Sortie capturée comme son système (issue 450) ; `None` suit la sortie par défaut.
+    #[serde(default)]
+    pub speaker_device: Option<String>,
     #[serde(default)]
     pub transcription_mode: Option<listener::TranscriptionMode>,
     #[serde(default)]
     pub participant_human_ids: Vec<String>,
     #[serde(default)]
     pub self_human_id: Option<String>,
+}
+
+/// Sortie capturée comme son système (issue 450).
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, specta::Type)]
+pub struct CapturedSpeakerDevice {
+    pub name: String,
+    pub headphone: bool,
+}
+
+impl From<syntheo_audio::OutputDevice> for CapturedSpeakerDevice {
+    fn from(value: syntheo_audio::OutputDevice) -> Self {
+        Self {
+            name: value.name,
+            headphone: value.headphone,
+        }
+    }
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
@@ -189,6 +210,8 @@ pub enum CaptureDataEvent {
     },
     #[serde(rename = "mic_muted")]
     MicMuted { session_id: String, value: bool },
+    #[serde(rename = "speaker_muted")]
+    SpeakerMuted { session_id: String, value: bool },
     #[serde(rename = "mic_isolated")]
     MicIsolated { session_id: String, value: bool },
     #[serde(rename = "mic_dropouts")]
@@ -361,6 +384,7 @@ impl From<listener::Snapshot> for CaptureSnapshot {
             live_segments: None,
             started_at_ms: None,
             mic_muted: None,
+            speaker_muted: None,
             degraded: None,
             capture_health: None,
         }
@@ -427,6 +451,9 @@ impl From<listener::SessionDataEvent> for CaptureDataEvent {
             },
             listener::SessionDataEvent::MicMuted { session_id, value } => {
                 Self::MicMuted { session_id, value }
+            }
+            listener::SessionDataEvent::SpeakerMuted { session_id, value } => {
+                Self::SpeakerMuted { session_id, value }
             }
             listener::SessionDataEvent::MicIsolated { session_id, value } => {
                 Self::MicIsolated { session_id, value }
@@ -566,6 +593,7 @@ mod tests {
             api_key: "test-key".to_string(),
             keywords: vec![],
             mic_device: Some("External Microphone".to_string()),
+            speaker_device: None,
             transcription_mode,
             participant_human_ids: vec![],
             self_human_id: None,

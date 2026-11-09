@@ -7,6 +7,22 @@ const mocks = vi.hoisted(() => ({
   showMenu: vi.fn(),
 }));
 
+// Le sélecteur de dossier réel lit la base : on vérifie seulement qu'il est
+// ouvert pour la bonne note.
+vi.mock("~/session/components/folder-picker", () => ({
+  FolderPickerContent: ({
+    sessionId,
+    onClose,
+  }: {
+    sessionId: string;
+    onClose: () => void;
+  }) => (
+    <button type="button" data-testid="folder-picker" onClick={onClose}>
+      {sessionId}
+    </button>
+  ),
+}));
+
 // Le menu natif Tauri ne s'affiche pas sous jsdom : on capture les éléments
 // passés au menu.
 vi.mock("~/shared/hooks/useNativeContextMenu", () => ({
@@ -51,21 +67,21 @@ const NOTES: RecentNote[] = [
     title: "Entretien annuel",
     createdAt: "2024-10-29T10:00:00",
     durationMs: 42 * 60_000,
-    trackingId: "event-tracking-1",
+    folderPath: "Clients/Acme",
   },
   {
     id: "s2",
     title: "",
     createdAt: "2024-10-28T10:00:00",
     durationMs: 65 * 60_000,
-    trackingId: null,
+    folderPath: "",
   },
   {
     id: "s3",
     title: "Sans audio",
     createdAt: "2024-10-27T10:00:00",
     durationMs: 0,
-    trackingId: null,
+    folderPath: "",
   },
 ];
 
@@ -96,7 +112,9 @@ describe("NoteIndex", () => {
 
     const cells = (row: HTMLElement) =>
       Array.from(row.querySelectorAll("td")).map((cell) => cell.textContent);
-    expect(cells(rows[1]!)[1]).toBe("Untitled");
+    expect(rows[1]!.querySelector("button[data-note-open]")?.textContent).toBe(
+      "Untitled",
+    );
     expect(cells(rows[0]!)[2]).toBe("42 min");
     expect(cells(rows[1]!)[2]).toBe("1 h 05");
     expect(cells(rows[2]!)[2]).toBe("");
@@ -107,6 +125,36 @@ describe("NoteIndex", () => {
     expect(date?.className).toContain("border-border");
     expect(rows[0]!.className).toContain("hover:bg-accent");
     expect(document.querySelector(".bg-card, .shadow")).toBeNull();
+  });
+
+  it("affiche la pastille du dossier de la note", () => {
+    renderIndex();
+    const rows = screen.getAllByRole("row");
+
+    const chip = rows[0]!.querySelector<HTMLElement>("[data-note-folder]");
+    expect(chip?.textContent).toBe("Acme");
+    expect(chip?.getAttribute("title")).toBe("Clients/Acme");
+    expect(chip?.className).toContain("border-border");
+    expect(rows[0]!.querySelector("[data-note-file]")).toBeNull();
+    expect(rows[1]!.querySelector("[data-note-folder]")).toBeNull();
+  });
+
+  it("« Ranger » ouvre le sélecteur de dossier sans ouvrir la note", () => {
+    const { onOpen } = renderIndex();
+    const file = screen.getAllByRole("button", { name: "File" });
+    expect(file).toHaveLength(2);
+    expect(file[0]!.className).toContain("border-dashed");
+
+    fireEvent.click(file[0]!);
+    const picker = screen.getByTestId("folder-picker");
+    expect(picker.textContent).toBe("s2");
+    expect(onOpen).not.toHaveBeenCalled();
+
+    // Choisir un dossier (le portail remonte jusqu'à la ligne) ferme le
+    // sélecteur sans ouvrir la note.
+    fireEvent.click(picker);
+    expect(screen.queryByTestId("folder-picker")).toBeNull();
+    expect(onOpen).not.toHaveBeenCalled();
   });
 
   it("ouvre la note au clic sur la ligne ou au clavier", () => {

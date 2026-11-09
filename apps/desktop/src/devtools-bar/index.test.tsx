@@ -9,15 +9,6 @@ const mocks = vi.hoisted(() => ({
   outlinesEnabled: true,
   topComponents: [] as Array<{ name: string; count: number }>,
   session: { user: { id: "user-1" } } as object | null,
-  billing: {
-    isReady: true,
-    plan: "trial" as "free" | "trial" | "pro",
-    isLite: false,
-    trialDaysRemaining: 12 as number | null,
-    subscriptionStatus: "trialing",
-    hasPaymentMethod: false,
-    entitlements: ["pro"],
-  },
   setRenderOutlinesEnabled: vi.fn(),
   runAction: vi.fn(),
   copyDiagnostics: vi.fn(),
@@ -88,10 +79,6 @@ vi.mock("./menu", () => ({
     description: string;
     children: React.ReactNode;
   }) => <div data-hint={description}>{children}</div>,
-}));
-
-vi.mock("~/billing/billing-context", () => ({
-  useBillingAccess: () => mocks.billing,
 }));
 
 vi.mock("./actions", () => ({
@@ -170,8 +157,6 @@ describe("DevtoolsStatusBar", () => {
     mocks.outlinesEnabled = true;
     mocks.topComponents = [];
     mocks.session = { user: { id: "user-1" } };
-    mocks.billing.plan = "trial";
-    mocks.billing.trialDaysRemaining = 12;
     vi.mocked(commands.showDevtool).mockResolvedValue(true);
     resetDevtoolsMetrics();
     useDevtoolsMetrics.setState({

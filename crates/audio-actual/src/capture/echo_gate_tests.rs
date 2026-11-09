@@ -231,6 +231,41 @@ fn dtln_latency_matches_the_declared_value() {
     assert_eq!(best_lag, aec.latency_samples());
 }
 
+// Issue 447 : quand le son de l'ordinateur devient du silence numérique en pleine écoute
+// (sortie coupée, référence nulle), DTLN et la veille le tolèrent : pas d'erreur, pas de valeur
+// non finie, et après la traîne le micro passe tel quel, en phase.
+#[test]
+fn dtln_behind_the_gate_tolerates_a_reference_that_falls_to_zero() {
+    let Ok(aec) = syntheo_aec::AEC::new() else {
+        return;
+    };
+    let latency = aec.latency_samples();
+    let mut gate = GatedEchoCanceller::new(aec, RATE);
+    let mic = load_wav("theo_mic.wav");
+    let frames = 12;
+    let reference = sine(FRAME * 3, 0, 0.1, 300.0);
+    let silence = vec![0.0; FRAME];
+    let mut output = Vec::new();
+    for idx in 0..frames {
+        let mic_frame = &mic[idx * FRAME..(idx + 1) * FRAME];
+        // Trois trames de son système, puis la référence tombe à zéro.
+        let reference_frame = if idx < 3 {
+            &reference[idx * FRAME..(idx + 1) * FRAME]
+        } else {
+            &silence
+        };
+        let processed = gate.process(mic_frame, reference_frame, |wet| wet).unwrap();
+        assert_eq!(processed.len(), FRAME);
+        assert!(processed.iter().all(|sample| sample.is_finite()));
+        output.extend(processed);
+    }
+    // Traîne de 500 ms et fondu de sortie passés : le modèle est en veille.
+    let bypass_from = 9 * FRAME;
+    for idx in bypass_from..frames * FRAME {
+        assert_eq!(output[idx], mic[idx - latency], "échantillon {idx}");
+    }
+}
+
 fn load_wav(name: &str) -> Vec<f32> {
     let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../aec/data/inputs")

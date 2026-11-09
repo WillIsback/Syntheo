@@ -18,14 +18,6 @@ export function formatIndexDate(value: string, locale: string): string {
   });
 }
 
-// « 14:00 » en français.
-export function formatMeetingTime(date: Date, locale: string): string {
-  return date.toLocaleTimeString(locale, {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
 // Durée d'écoute : « 42 min », « 1 h 05 ». Rien sous la minute.
 export function formatDuration(totalMs: number): string {
   const minutes = Math.floor(Math.max(0, totalMs) / 60_000);

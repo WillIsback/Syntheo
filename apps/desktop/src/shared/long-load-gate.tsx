@@ -91,8 +91,6 @@ function getStartupDetail(status: StartupStatus | undefined) {
           : "";
       return `Migrating your local database${progress}. This may take a few minutes.`;
     }
-    case "importing_legacy_data":
-      return "Importing your existing notes. This may take a few minutes.";
     case "ready":
     case "failed":
     case undefined:

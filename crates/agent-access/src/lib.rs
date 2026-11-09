@@ -514,16 +514,14 @@ pub async fn get_recurring_meeting_history(
 }
 
 /// Local-only capture metadata. Cloud/API/MCP meeting contracts do not expose
-/// filesystem paths or imported calendar bodies.
+/// filesystem paths.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct LocalMeetingExport {
     #[serde(flatten)]
     pub export: MeetingExport,
     pub folder_path: String,
-    pub event_id: String,
     pub external_event_id: String,
     pub external_provider: String,
-    pub event_json: String,
     pub attachments: Vec<RecordingAttachment>,
     /// Pending capture/recovery excludes even an older, fully final transcript.
     pub capture_pending: bool,
@@ -571,10 +569,8 @@ pub async fn get_local_meeting_export(
     Ok(LocalMeetingExport {
         export,
         folder_path: session.folder_path,
-        event_id: session.event_id,
         external_event_id: session.external_event_id,
         external_provider: session.external_provider,
-        event_json: session.event_json,
         attachments,
         capture_pending,
     })

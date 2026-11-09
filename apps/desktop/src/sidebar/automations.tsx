@@ -9,23 +9,23 @@ import {
 } from "@syntheo/ui/components/icons";
 import { Button } from "@syntheo/ui/components/ui/button";
 import { useSquircleRef } from "@syntheo/ui/hooks/use-squircle";
-import { cn, formatDistanceToNow } from "@syntheo/utils";
+import { cn } from "@syntheo/utils";
 
 import { CustomSidebarHeader } from "./custom-sidebar-header";
 
 import {
   useDeleteChatAutomation,
   useDeleteWorkflow,
-  useRemoveStarterDraft,
 } from "~/automations/actions";
+import {
+  useAutomationLabels,
+  useRelativeTime,
+  workflowTitle,
+} from "~/automations/labels";
 import {
   useAutomationSelection,
   useEffectiveAutomationSelection,
 } from "~/automations/selection";
-import {
-  type StarterAutomation,
-  useStarterAutomations,
-} from "~/automations/starters";
 import {
   type AutomationWorkflow,
   createEmptyWorkflow,
@@ -39,12 +39,10 @@ export function AutomationsNav() {
   const { t } = useLingui();
   const [search, setSearch] = useState("");
   const searchRef = useSquircleRef<HTMLDivElement>();
-  const starters = useStarterAutomations();
   const chatAutomations = useChatGroups("automations");
   const workflows = useAutomationWorkflows();
   const selection = useEffectiveAutomationSelection();
   const draftIds = useAutomationSelection((state) => state.draftIds);
-  const selectStarter = useAutomationSelection((state) => state.selectStarter);
   const selectChatAutomation = useAutomationSelection(
     (state) => state.selectChatAutomation,
   );
@@ -52,15 +50,9 @@ export function AutomationsNav() {
     (state) => state.selectWorkflow,
   );
 
+  const labels = useAutomationLabels();
   const query = search.trim().toLowerCase();
-  const draftTitle = t`Untitled automation`;
-  const filteredStarters = query
-    ? starters.filter(
-        (starter) =>
-          starter.title.toLowerCase().includes(query) ||
-          starter.description.toLowerCase().includes(query),
-      )
-    : starters;
+  const draftTitle = labels.untitled;
   const filteredDraftIds =
     query && !draftTitle.toLowerCase().includes(query) ? [] : draftIds;
   const chatIdsWithWorkflow = useMemo(
@@ -74,9 +66,10 @@ export function AutomationsNav() {
   );
   const filteredWorkflows = useMemo(() => {
     return workflows.filter(
-      (workflow) => !query || workflow.title.toLowerCase().includes(query),
+      (workflow) =>
+        !query || workflowTitle(workflow, labels).toLowerCase().includes(query),
     );
-  }, [query, workflows]);
+  }, [labels, query, workflows]);
   const filteredChatAutomations = useMemo(() => {
     const orphans = chatAutomations.filter(
       (automation) => !chatIdsWithWorkflow.has(automation.id),
@@ -90,7 +83,6 @@ export function AutomationsNav() {
     );
   }, [chatAutomations, chatIdsWithWorkflow, query]);
   const isEmpty =
-    filteredStarters.length === 0 &&
     filteredDraftIds.length === 0 &&
     filteredWorkflows.length === 0 &&
     filteredChatAutomations.length === 0;
@@ -170,25 +162,6 @@ export function AutomationsNav() {
           </div>
         ) : (
           <>
-            {filteredStarters.length > 0 ? (
-              <div className="pb-2">
-                <h3 className="text-muted-foreground px-3 pt-1 pb-1 text-xs font-medium">
-                  <Trans>Get started</Trans>
-                </h3>
-                {filteredStarters.map((starter) => (
-                  <StarterListItem
-                    key={starter.id}
-                    starter={starter}
-                    selected={
-                      selection?.kind === "starter" &&
-                      selection.starterId === starter.id
-                    }
-                    onSelect={selectStarter}
-                  />
-                ))}
-              </div>
-            ) : null}
-
             {filteredDraftIds.length > 0 ||
             filteredWorkflows.length > 0 ||
             filteredChatAutomations.length > 0 ? (
@@ -235,61 +208,6 @@ export function AutomationsNav() {
         )}
       </div>
     </div>
-  );
-}
-
-function StarterListItem({
-  starter,
-  selected,
-  onSelect,
-}: {
-  starter: StarterAutomation;
-  selected: boolean;
-  onSelect: (starterId: StarterAutomation["id"]) => void;
-}) {
-  const { t } = useLingui();
-  const removeStarterDraft = useRemoveStarterDraft();
-  const contextMenu = useMemo(
-    () => [
-      {
-        id: `edit-automation-${starter.id}`,
-        text: t`Edit`,
-        action: () => onSelect(starter.id),
-      },
-      { separator: true as const },
-      {
-        id: `remove-automation-${starter.id}`,
-        text: t`Remove`,
-        action: () => removeStarterDraft.mutate(starter.id),
-      },
-    ],
-    [onSelect, removeStarterDraft, starter.id, t],
-  );
-  const showContextMenu = useNativeContextMenu(contextMenu);
-
-  return (
-    <button
-      type="button"
-      aria-current={selected ? "page" : undefined}
-      onClick={() => onSelect(starter.id)}
-      onContextMenu={(event) => {
-        onSelect(starter.id);
-        void showContextMenu(event);
-      }}
-      className={cn([
-        "w-full rounded-lg px-3 py-2 text-left text-sm transition-colors select-none",
-        selected ? "bg-accent" : "hover:bg-accent/50",
-      ])}
-    >
-      <span className="flex items-center gap-2">
-        <span className="flex size-4 shrink-0 items-center justify-center">
-          {starter.renderIcon(16)}
-        </span>
-        <span className="min-w-0 flex-1 truncate font-medium">
-          {starter.title}
-        </span>
-      </span>
-    </button>
   );
 }
 
@@ -360,6 +278,7 @@ function WorkflowListItem({
   onSelect: (workflowId: string, chatGroupId?: string | null) => void;
 }) {
   const { t } = useLingui();
+  const labels = useAutomationLabels();
   const deleteWorkflow = useDeleteWorkflow();
   const contextMenu = useMemo(
     () => [
@@ -397,10 +316,16 @@ function WorkflowListItem({
         <Lightning className="text-chart-4 size-4 shrink-0" />
         <span className="min-w-0 flex-1">
           <span className="block truncate font-medium">
-            {workflow.title.trim() || t`Untitled automation`}
+            {workflowTitle(workflow, labels)}
           </span>
           <span className="text-muted-foreground mt-0.5 block truncate text-xs">
-            {workflow.enabled ? <Trans>Enabled</Trans> : <Trans>Draft</Trans>}
+            {workflow.trigger === "manual" ? (
+              <Trans>Manual</Trans>
+            ) : workflow.enabled ? (
+              <Trans>Enabled</Trans>
+            ) : (
+              <Trans>Draft</Trans>
+            )}
           </span>
         </span>
       </span>
@@ -419,6 +344,7 @@ function ChatAutomationListItem({
 }) {
   const { t } = useLingui();
   const deleteChatAutomation = useDeleteChatAutomation();
+  const relativeTime = useRelativeTime();
   const contextMenu = useMemo(
     () => [
       {
@@ -437,7 +363,7 @@ function ChatAutomationListItem({
   );
   const showContextMenu = useNativeContextMenu(contextMenu);
   const createdAt = automation.createdAt
-    ? formatDistanceToNow(new Date(automation.createdAt), { addSuffix: true })
+    ? relativeTime(automation.createdAt)
     : "";
 
   return (

@@ -9,9 +9,7 @@ import type {
 
 export type { EditorView };
 
-export type SessionsState = WindowsSessionsState & {
-  scheduledAutoStart?: boolean | null;
-};
+export type SessionsState = WindowsSessionsState;
 
 type WindowsSupportedWindowTabInput = Exclude<
   WindowsTabInput,
@@ -50,15 +48,13 @@ export type SettingsTab =
   | "audio"
   | "appearance"
   | "notifications"
-  | "imports"
   | "developers"
   | "privacy"
   | "permissions"
   | "dictionary"
   | "dictation"
   | "transcription"
-  | "intelligence"
-  | "todo";
+  | "intelligence";
 
 const normalizeSettingsTab = (tab: string | null | undefined): SettingsTab => {
   switch (tab) {
@@ -66,7 +62,6 @@ const normalizeSettingsTab = (tab: string | null | undefined): SettingsTab => {
     case "meetings":
     case "appearance":
     case "notifications":
-    case "imports":
     case "developers":
     case "privacy":
     case "permissions":
@@ -74,14 +69,11 @@ const normalizeSettingsTab = (tab: string | null | undefined): SettingsTab => {
     case "dictation":
     case "transcription":
     case "intelligence":
-    case "todo":
       return tab;
     case "audio":
       return "meetings";
     case "personalization":
       return "dictionary";
-    case "data":
-      return "imports";
     // Écrans retirés (compte, abonnement, parrainage, équipe, sync, CRM,
     // « Analyses » ex-`insights`/`stats`) et valeurs inconnues : Profil.
     default:
@@ -132,7 +124,6 @@ export type Tab =
     })
   | (BaseTab & { type: "organizations"; id: string })
   | (BaseTab & { type: "empty" })
-  | (BaseTab & { type: "calendar" })
   | (BaseTab & {
       type: "changelog";
       state: ChangelogState;
@@ -155,16 +146,7 @@ export const getDefaultState = (tab: TabInput): Tab => {
         ...base,
         type: "sessions",
         id: tab.id,
-        state: tab.state
-          ? {
-              ...tab.state,
-              scheduledAutoStart: tab.state.scheduledAutoStart ?? null,
-            }
-          : {
-              view: null,
-              autoStart: null,
-              scheduledAutoStart: null,
-            },
+        state: tab.state ?? { view: null, autoStart: null },
       };
     case "shared_sessions":
       return { ...base, type: "shared_sessions", id: tab.id };
@@ -199,8 +181,6 @@ export const getDefaultState = (tab: TabInput): Tab => {
       return { ...base, type: "organizations", id: tab.id };
     case "empty":
       return { ...base, type: "empty" };
-    case "calendar":
-      return { ...base, type: "calendar" };
     case "changelog":
       return {
         ...base,
@@ -209,9 +189,6 @@ export const getDefaultState = (tab: TabInput): Tab => {
       };
     case "settings": {
       const subtab = tab.state?.tab as string | null | undefined;
-      if (subtab === "calendar") {
-        return { ...base, type: "calendar" };
-      }
       if (subtab === "automations") {
         return { ...base, type: "automations" };
       }
@@ -258,8 +235,6 @@ export const uniqueIdfromTab = (tab: Tab): string => {
       return `folders`;
     case "empty":
       return `empty-${tab.slotId}`;
-    case "calendar":
-      return `calendar`;
     case "changelog":
       return "changelog";
     case "settings":

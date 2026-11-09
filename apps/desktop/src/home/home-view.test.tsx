@@ -3,10 +3,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { HomeView, type HomeViewProps } from "./home-view";
 
+import { DEFAULT_FOLDER_ICON } from "~/session/folder-icon";
+
 function renderHome(overrides: Partial<HomeViewProps> = {}) {
   const props: HomeViewProps = {
     firstName: "Camille",
-    nextMeeting: null,
     recentNotes: [],
     onStart: vi.fn(),
     onOpenNote: vi.fn(),
@@ -38,45 +39,6 @@ describe("HomeView", () => {
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
       "Hello.",
     );
-  });
-
-  it("n'affiche pas de prochaine réunion quand l'agenda est vide", () => {
-    renderHome();
-    expect(document.querySelector("[data-next-meeting]")).toBeNull();
-  });
-
-  it("affiche la prochaine réunion de l'agenda", () => {
-    const startedAt = new Date(Date.now() + 2 * 60 * 60 * 1000);
-    renderHome({
-      nextMeeting: {
-        id: "event-1",
-        title: "Point d'équipe",
-        startedAt,
-        endedAt: new Date(startedAt.getTime() + 3_600_000),
-        imminent: false,
-        ongoing: false,
-      },
-    });
-    const line = document.querySelector("[data-next-meeting]");
-    expect(line?.textContent).toContain("Your next meeting:");
-    expect(line?.querySelector("b")?.textContent).toBe("Point d'équipe");
-  });
-
-  it("indique une réunion en cours", () => {
-    const startedAt = new Date(Date.now() - 5 * 60 * 1000);
-    renderHome({
-      nextMeeting: {
-        id: "event-1",
-        title: "Point d'équipe",
-        startedAt,
-        endedAt: new Date(startedAt.getTime() + 3_600_000),
-        imminent: true,
-        ongoing: true,
-      },
-    });
-    expect(
-      document.querySelector("[data-next-meeting]")?.textContent,
-    ).toContain("in progress");
   });
 
   it("le bouton Démarrer est le seul élément primary plein largeur", () => {
@@ -129,6 +91,34 @@ describe("HomeView", () => {
     expect(capsule.className).toContain("rounded-pill");
     fireEvent.click(buttons[0]!);
     expect(props.onSearch).toHaveBeenCalledTimes(1);
+  });
+
+  it("« Vos dossiers » se place sous Démarrer, masqué sans dossier", () => {
+    renderHome();
+    expect(screen.queryByRole("heading", { name: "Your folders" })).toBeNull();
+    cleanup();
+
+    const onOpenFolder = vi.fn();
+    renderHome({
+      onOpenFolder,
+      folders: [
+        {
+          path: "Atlas",
+          name: "Atlas",
+          icon: DEFAULT_FOLDER_ICON,
+          meetingCount: 2,
+          lastMeetingAt: "2026-11-02T09:00:00",
+          thread: null,
+        },
+      ],
+    });
+    const start = screen.getByRole("button", { name: /Start a meeting/ });
+    const heading = screen.getByRole("heading", { name: "Your folders" });
+    expect(
+      start.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Atlas/ }));
+    expect(onOpenFolder).toHaveBeenCalledWith("Atlas");
   });
 
   it("affiche ⌘ sur macOS", () => {

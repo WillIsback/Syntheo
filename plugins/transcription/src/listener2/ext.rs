@@ -94,7 +94,18 @@ impl<'a, R: tauri::Runtime, M: tauri::Manager<R>> Listener2<'a, R, M> {
                 if audio_buffer.is_some() {
                     batch_params.audio_buffer = audio_buffer;
                 }
-                let _ = core::run_batch(runtime, batch_params).await;
+                // Sans mode par lot, le fichier passe par le flux temps réel
+                // d'une écoute en direct (issue 463).
+                let _ = match batch_params.provider {
+                    core::BatchProvider::Realtime => {
+                        syntheo_transcription_core::realtime_file::run_realtime_file_batch(
+                            runtime,
+                            batch_params,
+                        )
+                        .await
+                    }
+                    core::BatchProvider::OpenAI => core::run_batch(runtime, batch_params).await,
+                };
                 finish_batch_session(&registry, &session_id, &control);
             }
         });

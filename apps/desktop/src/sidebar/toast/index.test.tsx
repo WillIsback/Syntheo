@@ -30,18 +30,6 @@ const mocks = vi.hoisted(() => ({
     current_stt_provider: "local" as string | null,
     current_stt_model: "model" as string | null,
   },
-  notifications: {
-    hasActiveDownload: false,
-    downloadingModel: null as string | null,
-    activeDownloads: [] as Array<{
-      model: string;
-      displayName: string;
-      progress: number;
-      isStarting?: boolean;
-    }>,
-    localSttStatus: null as null | "loading" | "unreachable",
-    isLocalSttModel: false,
-  },
 }));
 
 vi.mock("@syntheo/ui/components/ui/toast", async (importOriginal) => {
@@ -58,10 +46,6 @@ vi.mock("@syntheo/ui/components/ui/toast", async (importOriginal) => {
     },
   };
 });
-
-vi.mock("~/contexts/notifications", () => ({
-  useNotifications: () => mocks.notifications,
-}));
 
 vi.mock("~/shared/config", () => ({
   useConfigValues: () => mocks.config,
@@ -143,11 +127,6 @@ describe("ToastNotifications", () => {
     mocks.config.current_llm_model = "model";
     mocks.config.current_stt_provider = "local";
     mocks.config.current_stt_model = "model";
-    mocks.notifications.hasActiveDownload = false;
-    mocks.notifications.downloadingModel = null;
-    mocks.notifications.activeDownloads = [];
-    mocks.notifications.localSttStatus = null;
-    mocks.notifications.isLocalSttModel = false;
   });
 
   afterEach(() => {

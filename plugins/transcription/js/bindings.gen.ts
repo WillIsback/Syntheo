@@ -10,8 +10,23 @@ export const commands = {
 	getCurrentMicrophoneDevice: () => typedError<string | null, string>(__TAURI_INVOKE("plugin:transcription|get_current_microphone_device")),
 	startMicrophoneLevelMonitor: (owner: string, device: string | null, levels: Channel<number | null>) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|start_microphone_level_monitor", { owner, device, levels })),
 	stopMicrophoneLevelMonitor: (owner: string) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|stop_microphone_level_monitor", { owner })),
+	/**
+	 *  Sorties qu'on peut capturer comme son système (issue 450) ; `None` quand la
+	 *  plateforme ne permet pas de choisir (macOS).
+	 */
+	listSpeakerDevices: () => typedError<string[] | null, string>(__TAURI_INVOKE("plugin:transcription|list_speaker_devices")),
+	/**
+	 *  Sortie capturée pendant l'écoute, sinon celle que capterait une écoute qui
+	 *  démarre avec le choix `preferred`.
+	 */
+	getCapturedSpeakerDevice: (preferred: string | null) => typedError<CapturedSpeakerDevice | null, string>(__TAURI_INVOKE("plugin:transcription|get_captured_speaker_device", { preferred })),
+	startSpeakerLevelMonitor: (owner: string, device: string | null, levels: Channel<number | null>) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|start_speaker_level_monitor", { owner, device, levels })),
+	stopSpeakerLevelMonitor: (owner: string) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|stop_speaker_level_monitor", { owner })),
 	getMicMuted: () => typedError<boolean, string>(__TAURI_INVOKE("plugin:transcription|get_mic_muted")),
 	setMicMuted: (muted: boolean) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|set_mic_muted", { muted })),
+	getSpeakerMuted: () => typedError<boolean, string>(__TAURI_INVOKE("plugin:transcription|get_speaker_muted")),
+	/**  Coupe ou rétablit le son système de l'écoute en cours (issue 447), sans la relancer. */
+	setSpeakerMuted: (muted: boolean) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|set_speaker_muted", { muted })),
 	startCapture: (params: CaptureParams) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|start_capture", { params })),
 	retryAudioCapture: (sessionId: string, device: string | null) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|retry_audio_capture", { sessionId, device })),
 	flushLiveTranscript: (sessionId: string) => typedError<LiveTranscriptPersistence | null, string>(__TAURI_INVOKE("plugin:transcription|flush_live_transcript", { sessionId })),
@@ -94,9 +109,14 @@ export type BatchChannel = {
 	alternatives: BatchAlternatives[],
 };
 
-export type BatchErrorCode = "unknown" | "timed_out" | "audio_metadata_join_failed" | "audio_metadata_read_failed" | "batch_capability_unsupported" | "direct_batch_unsupported" | "progressive_batch_unsupported" | "direct_request_failed" | "progressive_actor_spawn_failed" | "progressive_start_cancelled" | "progressive_stopped_without_completion_signal" | "progressive_finished_without_status" | "progressive_start_failed" | "progressive_stream_error" | "progressive_stream_timeout";
+export type BatchErrorCode = "unknown" | "timed_out" | "audio_metadata_join_failed" | "audio_metadata_read_failed" | "batch_capability_unsupported" | "direct_batch_unsupported" | "progressive_batch_unsupported" | "direct_request_failed" | "progressive_actor_spawn_failed" | "progressive_start_cancelled" | "progressive_stopped_without_completion_signal" | "progressive_finished_without_status" | "progressive_start_failed" | "progressive_stream_error" | "progressive_stream_timeout" | "realtime_stream_failed";
 
-export type BatchProvider = "openai";
+export type BatchProvider = "openai" | 
+/**
+ *  Aucun mode par lot : le fichier passe par le flux temps réel du
+ *  fournisseur (issue 463), hors de `run_batch`.
+ */
+"realtime";
 
 export type BatchRefinementOutcome = { status: "ready"; words: StoredTranscriptWord[]; speaker_hints: StoredSpeakerHint[]; replace_session: boolean; replace_transcript_id: string | null; started_at: number | null } | { status: "empty_current_capture" } | { status: "truncated" };
 
@@ -161,7 +181,7 @@ export type CaptureConfigUpdate = {
 	speaker_assignments?: IdentityAssignment[],
 };
 
-export type CaptureDataEvent = { type: "audio_amplitude"; session_id: string; mic: number; speaker: number } | { type: "mic_muted"; session_id: string; value: boolean } | { type: "mic_isolated"; session_id: string; value: boolean } | { type: "mic_dropouts"; session_id: string; ratio: number } | { type: "transcript_delta"; session_id: string; delta: LiveTranscriptDelta } | { type: "transcript_segment_delta"; session_id: string; delta: LiveTranscriptSegmentDelta };
+export type CaptureDataEvent = { type: "audio_amplitude"; session_id: string; mic: number; speaker: number } | { type: "mic_muted"; session_id: string; value: boolean } | { type: "speaker_muted"; session_id: string; value: boolean } | { type: "mic_isolated"; session_id: string; value: boolean } | { type: "mic_dropouts"; session_id: string; ratio: number } | { type: "transcript_delta"; session_id: string; delta: LiveTranscriptDelta } | { type: "transcript_segment_delta"; session_id: string; delta: LiveTranscriptSegmentDelta };
 
 export type CaptureHealth = {
 	mic: boolean | null,
@@ -207,6 +227,8 @@ export type CaptureParams = {
 	api_key: string,
 	keywords: string[],
 	mic_device?: string | null,
+	/**  Sortie capturée comme son système (issue 450) ; `None` suit la sortie par défaut. */
+	speaker_device?: string | null,
 	transcription_mode?: TranscriptionMode | null,
 	participant_human_ids?: string[],
 	self_human_id?: string | null,
@@ -229,6 +251,7 @@ export type CaptureSnapshot = {
 	liveSegments?: LiveTranscriptSegment[] | null,
 	startedAtMs?: number | null,
 	micMuted?: boolean | null,
+	speakerMuted?: boolean | null,
 	degraded?: DegradedError | null,
 	captureHealth?: CaptureHealth | null,
 };
@@ -238,6 +261,12 @@ export type CaptureState = "active" | "finalizing" | "inactive";
 export type CaptureStatusEvent = { type: "audio_initializing"; session_id: string } | { type: "audio_ready"; session_id: string; device: string | null } | { type: "connecting"; session_id: string } | { type: "connected"; session_id: string; adapter: string; 
 /**  The replay after a reconnection carried all the audio of the outage. */
 gap_replayed: boolean } | { type: "audio_error"; session_id: string; error: string; device: string | null; is_fatal: boolean } | { type: "connection_error"; session_id: string; error: string };
+
+/**  Sortie capturée comme son système (issue 450). */
+export type CapturedSpeakerDevice = {
+	name: string,
+	headphone: boolean,
+};
 
 export type ChannelProfile = "DirectMic" | "RemoteParty" | "MixedCapture";
 
@@ -446,7 +475,12 @@ export type SpeakerContextInterval = {
 	start_ms: number,
 	end_ms: number,
 	active_call: boolean,
-	calendar_call: boolean,
+	/**
+	 *  Lien de réunion du calendrier, présent seulement dans les contextes
+	 *  enregistrés avant la suppression du calendrier (issue 465) : relu pour
+	 *  que l'attribution des voix des anciennes notes ne change pas.
+	 */
+	calendar_call?: boolean | null,
 	mic_isolated: boolean | null,
 	shared_microphone: boolean,
 	title: string,

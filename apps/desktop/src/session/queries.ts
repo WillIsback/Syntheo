@@ -24,15 +24,11 @@ export {
   type SummaryVersionRecord,
   useSummaryVersions,
 } from "./queries/summary-versions";
-export {
-  createSession,
-  getOrCreateSessionForEventId,
-} from "./queries/creation";
+export { createSession } from "./queries/creation";
 export {
   loadSessionSummariesByFolder,
   useFolderIcons,
   useFolderPaths,
-  useFolderWorkspaces,
 } from "./queries/folders";
 export {
   applySessionProposal,
@@ -48,8 +44,6 @@ export {
   useSessionParticipants,
 } from "./queries/participants";
 export {
-  loadSessionEvent,
-  preloadSession,
   updateSession,
   useSession,
   useSessionHasTranscript,

@@ -12,23 +12,32 @@ import {
 } from "@syntheo/ui/components/ui/select";
 import { cn } from "@syntheo/utils";
 
-import { MicrophoneLevelMeter } from "./microphone-level";
+import { MicrophoneLevelMeter, SpeakerLevelMeter } from "./microphone-level";
 
 import type { SettingId } from "~/settings/search-index";
 import { SETTING_CONTROL_CLASS, SettingRow } from "~/settings/setting-row";
 
+type AudioDeviceSetting = {
+  value: string;
+  devices: string[];
+  onChange: (value: string) => void;
+  // Détection terminée : une liste vide veut alors dire « aucun périphérique ».
+  devicesLoaded?: boolean;
+  onSearchAgain?: () => void;
+  searching?: boolean;
+};
+
 // Ni rétention audio ni empreintes vocales : Syntheo ne conserve jamais l'audio.
 export function AudioSettingsView({
   microphoneDevice,
+  speakerDevice,
 }: {
-  microphoneDevice: {
-    value: string;
-    devices: string[];
-    onChange: (value: string) => void;
-    // Détection terminée : une liste vide veut alors dire « aucun micro ».
-    devicesLoaded?: boolean;
-    onSearchAgain?: () => void;
-    searching?: boolean;
+  microphoneDevice: AudioDeviceSetting;
+  // Sortie capturée comme son système (issue 450) ; absente quand la
+  // plateforme ne permet pas de la choisir (macOS).
+  speakerDevice?: AudioDeviceSetting & {
+    // Sortie réellement capturée, ou celle que capterait une écoute.
+    captured?: string | null;
   };
 }) {
   return (
@@ -47,6 +56,45 @@ export function AudioSettingsView({
         searching={microphoneDevice.searching}
         meter={<MicrophoneLevelMeter device={microphoneDevice.value} />}
       />
+      {speakerDevice ? (
+        <AudioDeviceRow
+          settingId="meetings-system-audio"
+          title={<Trans>System sound</Trans>}
+          description={
+            <Trans>
+              Choose the output whose sound Syntheo transcribes: the one where
+              you hear the other participants.
+            </Trans>
+          }
+          defaultLabel={<Trans>Current default output</Trans>}
+          unavailableLabel={
+            <Trans>(Unavailable — using the default output)</Trans>
+          }
+          emptyMessage={
+            <Trans>
+              No audio output detected. Plug in headphones or speakers, then
+              search again.
+            </Trans>
+          }
+          value={speakerDevice.value}
+          devices={speakerDevice.devices}
+          onChange={speakerDevice.onChange}
+          devicesLoaded={speakerDevice.devicesLoaded}
+          onSearchAgain={speakerDevice.onSearchAgain}
+          searching={speakerDevice.searching}
+          meter={<SpeakerLevelMeter device={speakerDevice.value} />}
+          hint={
+            speakerDevice.captured ? (
+              <p className="text-muted-foreground text-xs" role="status">
+                <Trans>Captured right now:</Trans>{" "}
+                <span className="text-foreground font-medium">
+                  {speakerDevice.captured}
+                </span>
+              </p>
+            ) : null
+          }
+        />
+      ) : null}
     </div>
   );
 }
@@ -64,6 +112,14 @@ export function AudioDeviceRow({
   onSearchAgain,
   searching = false,
   meter,
+  hint,
+  defaultLabel = <Trans>Current default</Trans>,
+  unavailableLabel = <Trans>(Unavailable — using current default)</Trans>,
+  emptyMessage = (
+    <Trans>
+      No microphone detected. Plug in a microphone or check permissions.
+    </Trans>
+  ),
 }: {
   title: ReactNode;
   description: ReactNode;
@@ -75,24 +131,22 @@ export function AudioDeviceRow({
   onSearchAgain?: () => void;
   searching?: boolean;
   meter?: ReactNode;
+  hint?: ReactNode;
+  defaultLabel?: ReactNode;
+  unavailableLabel?: ReactNode;
+  emptyMessage?: ReactNode;
 }) {
   const availableDevices = [...new Set(devices)].sort((a, b) =>
     a.localeCompare(b),
   );
 
-  // Aucun périphérique d'entrée (issue 419, VM sans carte son) : un message
-  // clair et une nouvelle détection plutôt qu'une liste vide.
+  // Aucun périphérique (issue 419, VM sans carte son) : un message clair et
+  // une nouvelle détection plutôt qu'une liste vide.
   if (devicesLoaded && availableDevices.length === 0 && onSearchAgain) {
     return (
       <SettingRow
         title={title}
-        description={
-          <span role="status">
-            <Trans>
-              No microphone detected. Plug in a microphone or check permissions.
-            </Trans>
-          </span>
-        }
+        description={<span role="status">{emptyMessage}</span>}
         settingId={settingId}
       >
         {(labelProps) => (
@@ -139,22 +193,20 @@ export function AudioDeviceRow({
             </SelectTrigger>
             <SelectContent className="max-h-64">
               <SelectItem value={SYSTEM_DEFAULT_DEVICE}>
-                <Trans>Current default</Trans>
+                {defaultLabel}
               </SelectItem>
               {availableDevices.map((device) => (
                 <SelectItem key={device} value={device}>
                   {device}
                   {selectedDeviceUnavailable && device === value ? (
-                    <>
-                      {" "}
-                      <Trans>(Unavailable — using current default)</Trans>
-                    </>
+                    <> {unavailableLabel}</>
                   ) : null}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
           {meter}
+          {hint}
         </div>
       )}
     </SettingRow>

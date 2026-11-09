@@ -26,7 +26,6 @@ import { fromResult } from "./fromResult";
 import { ChannelProfile } from "./segment";
 import { isStoppedTranscriptionError, useRunBatch } from "./useRunBatch";
 
-import { withCloudsyncActivity } from "~/db/cloudsync-activity";
 import { getEnhancerService } from "~/services/enhancer";
 import { enqueueSessionAudioOperation } from "~/session/audio-operations";
 import { useSession, useUpdateSession } from "~/session/queries";
@@ -118,10 +117,6 @@ export function useUploadFile(sessionId: string) {
   const applyEstimatedAudioNoteDate = useCallback(
     async (filePath: string) => {
       try {
-        if (session?.event_json.trim()) {
-          return;
-        }
-
         const result = await fsSyncCommands.audioSourceMetadata(filePath);
         if (result.status === "error") {
           return;
@@ -139,16 +134,12 @@ export function useUploadFile(sessionId: string) {
         console.error("[upload] audio metadata inspection failed:", error);
       }
     },
-    [session?.event_json, updateSession],
+    [updateSession],
   );
 
   const applyDroppedAudioNoteDate = useCallback(
     async (file: File) => {
       try {
-        if (session?.event_json.trim()) {
-          return;
-        }
-
         if (!Number.isFinite(file.lastModified) || file.lastModified <= 0) {
           return;
         }
@@ -160,7 +151,7 @@ export function useUploadFile(sessionId: string) {
         console.error("[upload] dropped audio date inspection failed:", error);
       }
     },
-    [session?.event_json, updateSession],
+    [updateSession],
   );
 
   const importWithProgress = useCallback(
@@ -237,6 +228,9 @@ export function useUploadFile(sessionId: string) {
           Effect.tryPromise({
             try: () =>
               runBatch(filePath, {
+                // Sans modèle par lot, le fichier passe par le flux temps
+                // réel (issue 463).
+                allowRealtimeStream: true,
                 promotion: { scope: "whole_session" },
                 ...(audio ? { audio } : {}),
                 ...(audioUploadId ? { audioUploadId } : {}),
@@ -259,10 +253,7 @@ export function useUploadFile(sessionId: string) {
         ),
       );
 
-      const cloudsyncLeaseKey = `${sessionId}:audio-import:${crypto.randomUUID()}`;
-      void withCloudsyncActivity("transcription", cloudsyncLeaseKey, () =>
-        Effect.runPromise(program),
-      ).catch((error) => {
+      void Effect.runPromise(program).catch((error) => {
         console.error("[upload] audio failed:", error);
       });
     },
@@ -332,10 +323,7 @@ export function useUploadFile(sessionId: string) {
           }),
         );
 
-        const cloudsyncLeaseKey = `${sessionId}:subtitle-import:${crypto.randomUUID()}`;
-        void withCloudsyncActivity("transcription", cloudsyncLeaseKey, () =>
-          Effect.runPromise(program),
-        ).catch((error) => {
+        void Effect.runPromise(program).catch((error) => {
           console.error("[upload] transcript failed:", error);
         });
         return;

@@ -4,7 +4,6 @@ import {
   goBackOrHome,
   goBackToSettings,
   goHome,
-  leaveAllOverlayTabs,
   leaveOverlayTab,
   settingsReturnSection,
 } from "./leave-overlay-tab";
@@ -14,44 +13,6 @@ import {
   createSessionTab,
   resetTabsStore,
 } from "~/store/zustand/tabs/test-utils";
-
-describe("folder chip navigation from overlays", () => {
-  beforeEach(() => {
-    resetTabsStore();
-  });
-
-  test("nested overlay (Settings -> Contacts) lands on the home tab", () => {
-    const session = createSessionTab({ id: "home" });
-    useTabs.getState().openNew(session);
-    useTabs.getState().openNew({ type: "settings" });
-    useTabs.getState().openNew({ type: "contacts" });
-    expect(useTabs.getState().currentTab?.type).toBe("contacts");
-
-    leaveAllOverlayTabs();
-
-    expect(useTabs.getState().currentTab?.type).toBe("sessions");
-  });
-
-  test("single overlay (Settings) lands on the home tab", () => {
-    const session = createSessionTab({ id: "home" });
-    useTabs.getState().openNew(session);
-    useTabs.getState().openNew({ type: "settings" });
-
-    leaveAllOverlayTabs();
-
-    expect(useTabs.getState().currentTab?.type).toBe("sessions");
-  });
-
-  test("orphaned Settings (no return origin) still reaches the home tab", () => {
-    useTabs.getState().openNew({ type: "settings" });
-    useTabs.getState().openNew({ type: "contacts" });
-    expect(useTabs.getState().currentTab?.type).toBe("contacts");
-
-    leaveAllOverlayTabs();
-
-    expect(useTabs.getState().currentTab?.type).toBe("empty");
-  });
-});
 
 describe("goHome (bouton Accueil, issue 315)", () => {
   beforeEach(() => {
@@ -131,7 +92,6 @@ describe("goBackOrHome (Alt+←, issue 315)", () => {
 describe("retour aux Paramètres (issue 443)", () => {
   const screens: TabInput[] = [
     { type: "templates" },
-    { type: "calendar" },
     { type: "folders" },
     { type: "contacts" },
     { type: "automations" },
@@ -216,7 +176,7 @@ describe("retour aux Paramètres (issue 443)", () => {
   });
 
   test("revient à la section d'origine même si les Paramètres ont changé de section", () => {
-    openFromSettings({ type: "calendar" }, "meetings");
+    openFromSettings({ type: "folders" }, "meetings");
     const settingsTab = useTabs
       .getState()
       .tabs.find((tab) => tab.type === "settings")!;

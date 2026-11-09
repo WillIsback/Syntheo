@@ -1,22 +1,10 @@
 import {
-  RETURN_ORIGIN_TAB_TYPES,
   SETTINGS_RETURN_TAB_TYPES,
   type SettingsTab,
   type Tab,
   uniqueIdfromTab,
   useTabs,
 } from "~/store/zustand/tabs";
-
-export function leaveAllOverlayTabs() {
-  for (let attempt = 0; attempt < 10; attempt++) {
-    const { currentTab } = useTabs.getState();
-    if (!currentTab) return;
-    if (!RETURN_ORIGIN_TAB_TYPES.includes(currentTab.type)) return;
-    const { slotId } = currentTab;
-    leaveOverlayTab();
-    if (useTabs.getState().currentTab?.slotId === slotId) return;
-  }
-}
 
 export function leaveOverlayTab() {
   const { tabs, currentTab, select, goBack, canGoBack } = useTabs.getState();

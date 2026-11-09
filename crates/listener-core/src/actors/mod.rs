@@ -1,4 +1,5 @@
 pub mod audio_sweep;
+pub mod file_stream;
 pub mod listener;
 pub mod root;
 pub mod session;

@@ -22,6 +22,8 @@ const hoisted = vi.hoisted(() => {
     } as Live,
     pause: vi.fn(),
     stop: vi.fn(),
+    setMuted: vi.fn(),
+    setSpeakerMuted: vi.fn(),
   };
   return {
     controlHandler: null as
@@ -144,6 +146,29 @@ describe("MainListenerControlBridge", () => {
     expect(hoisted.finishPausedListening).toHaveBeenCalledWith("session-1");
     expect(hoisted.state.stop).not.toHaveBeenCalled();
     expect(hoisted.startListening).not.toHaveBeenCalled();
+  });
+
+  // Issue 447 : une note détachée coupe un canal par la fenêtre principale,
+  // sans relancer l'écoute.
+  test("coupe et rétablit un canal de l'écoute active demandée", async () => {
+    hoisted.state.live = {
+      sessionId: "session-1",
+      status: "active",
+      loading: false,
+      pause: null,
+    };
+    render(<MainListenerControlBridge />);
+    await act(async () => {});
+
+    await send("muteMic");
+    await send("muteSpeaker");
+    await send("unmuteSpeaker");
+    await send("unmuteMic", "session-2");
+
+    expect(hoisted.state.setMuted.mock.calls).toEqual([[true]]);
+    expect(hoisted.state.setSpeakerMuted.mock.calls).toEqual([[true], [false]]);
+    expect(hoisted.startListening).not.toHaveBeenCalled();
+    expect(hoisted.state.stop).not.toHaveBeenCalled();
   });
 
   test("diffuse l'état de pause aux autres fenêtres", async () => {

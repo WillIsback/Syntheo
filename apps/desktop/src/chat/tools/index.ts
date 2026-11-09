@@ -10,6 +10,7 @@ import type {
   TranscriptPage,
 } from "@syntheo/plugin-db";
 
+import type { AutomationChatTools } from "./automations";
 import { buildEditMemoTool } from "./edit-memo";
 import { buildEditSummaryTool } from "./edit-summary";
 import { buildReadFolderMaterialTool } from "./folder-materials";
@@ -29,15 +30,10 @@ import {
   buildFindRelatedMeetingsTool,
   buildSearchMeetingContentTool,
 } from "./note-files";
-import { buildSearchCalendarEventsTool } from "./search-calendar-events";
 import { buildSearchContactsTool } from "./search-contacts";
 import { buildSearchMeetingsTool } from "./search-meetings";
 import { buildApplySessionCorrectionTool } from "./session-correction";
-import type {
-  CalendarEventSearchResult,
-  ContactSearchResult,
-  ToolDependencies,
-} from "./types";
+import type { ContactSearchResult, ToolDependencies } from "./types";
 
 import type { SearchFilters } from "~/search/contexts/engine/types";
 
@@ -110,10 +106,6 @@ export const buildChatTools = (deps: ToolDependencies) => ({
   search_contacts: withToolLogging(
     "search_contacts",
     buildSearchContactsTool(deps),
-  ),
-  search_calendar_events: withToolLogging(
-    "search_calendar_events",
-    buildSearchCalendarEventsTool(deps),
   ),
   edit_memo: withToolLogging("edit_memo", buildEditMemoTool(deps)),
   edit_summary: withToolLogging("edit_summary", buildEditSummaryTool(deps)),
@@ -234,13 +226,6 @@ type LocalTools = {
       results: ContactSearchResult[];
     };
   };
-  search_calendar_events: {
-    input: { query: string; limit?: number };
-    output: {
-      query: string;
-      results: CalendarEventSearchResult[];
-    };
-  };
   edit_memo: {
     input: { sessionId?: string; content: string };
     output: {
@@ -316,6 +301,14 @@ type LocalTools = {
   };
 };
 
-export type Tools = LocalTools;
+// Outils du chat de l'éditeur d'automatisations (portée `automations`).
+type AutomationTools = {
+  [K in keyof AutomationChatTools]: {
+    input: InferToolInput<AutomationChatTools[K]>;
+    output: InferToolOutput<AutomationChatTools[K]>;
+  };
+};
+
+export type Tools = LocalTools & AutomationTools;
 
 export type ToolPartType = `tool-${keyof Tools}`;

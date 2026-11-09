@@ -3,7 +3,6 @@ import { useMemo, type ReactNode } from "react";
 
 import { safeParseDate } from "@syntheo/utils";
 
-import { useSessionEvent } from "~/session/hooks/useSessionEvent";
 import { useSession } from "~/session/queries";
 import { useSessionParticipants } from "~/session/queries/participants";
 import { useUserTemplate } from "~/templates";
@@ -31,14 +30,13 @@ export function NoteMeta({
 }) {
   const { i18n } = useLingui();
   const session = useSession(sessionId);
-  const event = useSessionEvent(sessionId);
   const templateId = session?.raw_template_id || null;
   const { data: template } = useUserTemplate(templateId);
   const participants = useSessionParticipants(sessionId);
   const date = useMemo(() => {
-    const parsed = safeParseDate(event?.started_at ?? session?.created_at);
+    const parsed = safeParseDate(session?.created_at);
     return parsed ? formatNoteDate(parsed, i18n.locale) : null;
-  }, [event?.started_at, i18n.locale, session?.created_at]);
+  }, [i18n.locale, session?.created_at]);
   const typeTitle = template?.title?.trim() || null;
   const names = participants
     .map((participant) => participant.name?.trim())

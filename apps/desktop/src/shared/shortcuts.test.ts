@@ -73,9 +73,11 @@ describe("table des raccourcis", () => {
     ];
     for (const def of SHORTCUTS) {
       const keys = def.keys.map((key) => key.toUpperCase());
-      // Lettres que l'AZERTY déplace.
+      // Lettres que l'AZERTY déplace, sauf si le caractère tapé est comparé.
       for (const moved of ["A", "Q", "Z", "W", "M"]) {
-        expect(keys, def.id).not.toContain(moved);
+        if (def.typedKey?.toUpperCase() !== moved) {
+          expect(keys, def.id).not.toContain(moved);
+        }
       }
       // Ctrl+Alt+… vaut AltGr sur AZERTY.
       expect(keys.includes("MOD") && keys.includes("ALT"), def.id).toBe(false);
@@ -106,6 +108,18 @@ describe("table des raccourcis", () => {
     for (const group of SHORTCUT_GROUPS) {
       expect(shortcutsInGroup(group).length, group).toBeGreaterThan(0);
     }
+  });
+
+  it("Ctrl+Maj+M et Ctrl+Maj+S coupent le micro et le son système (issue 447)", () => {
+    expect(formatShortcut("toggleMicrophone", "pc")).toBe("Ctrl+Maj+M");
+    expect(formatShortcut("toggleSystemAudio", "pc")).toBe("Ctrl+Maj+S");
+    expect(ariaShortcut("toggleMicrophone", "mac")).toBe("Meta+Shift+M");
+    expect(getShortcut("toggleMicrophone").typedKey).toBe("m");
+    expect(shortcutsInGroup("listen").map((def) => def.id)).toEqual([
+      "startListening",
+      "toggleMicrophone",
+      "toggleSystemAudio",
+    ]);
   });
 
   it("Ctrl+P (issue 374) et Ctrl+Maj+P (issue 373) sont disponibles", () => {

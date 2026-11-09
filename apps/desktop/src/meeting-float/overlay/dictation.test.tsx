@@ -83,7 +83,9 @@ describe("dictation floating panel", () => {
     fireEvent.click(screen.getByRole("button", { name: "Finish dictation" }));
     expect(onAction).not.toHaveBeenCalled();
   });
-  it("replaces meeting speakers and bubbles with dictation text in the shared transcript area", () => {
+  // Issue 448 : la pastille de réunion n'affiche plus de transcription ; la dictée garde
+  // son panneau dans la même fenêtre.
+  it("shows the dictation text in its panel and no meeting transcript in the pill", () => {
     useDictationStatus.setState({
       ...useDictationStatus.getInitialState(),
       owner: "test",
@@ -110,6 +112,7 @@ describe("dictation floating panel", () => {
     };
     const callbacks = {
       onStop: vi.fn(),
+      onOpenNote: vi.fn(),
       onToggleExpanded: vi.fn(),
     };
     const view = render(
@@ -118,15 +121,17 @@ describe("dictation floating panel", () => {
         {...callbacks}
       />,
     );
-    expect(screen.getByText("Ada")).toBeTruthy();
-    expect(screen.getByText("Meeting discussion.")).toBeTruthy();
+    expect(screen.queryByText("Ada")).toBeNull();
+    expect(screen.queryByText("Meeting discussion.")).toBeNull();
     expect(
       screen.queryByRole("button", { name: "Cancel dictation" }),
     ).toBeNull();
     view.rerender(<FloatingBarOverlay state={sharedState} {...callbacks} />);
-    expect(screen.queryByText("Ada")).toBeNull();
     expect(screen.queryByText("Meeting discussion.")).toBeNull();
     expect(screen.getByText("My dictated sentence.")).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Collapse live transcript" }),
+    ).toBeTruthy();
     view.rerender(
       <FloatingBarOverlay
         state={{ ...sharedState, dictation: null, title: "Weekly sync" }}
@@ -134,6 +139,5 @@ describe("dictation floating panel", () => {
       />,
     );
     expect(screen.queryByText("My dictated sentence.")).toBeNull();
-    expect(screen.getByText("Ada")).toBeTruthy();
   });
 });

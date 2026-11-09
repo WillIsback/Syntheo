@@ -8,12 +8,15 @@ import { platform } from "@tauri-apps/plugin-os";
 // Règles (design/navigation/etude-ux.md, section 3) :
 // - jamais `Ctrl+Alt+lettre` (AltGr sur AZERTY), ni `Ctrl+W`, `Ctrl+Q`,
 //   `Ctrl+/`, `F5`, `Ctrl+R`, `Ctrl+Alt+Espace` (dictée globale) ;
-// - aucune lettre que l'AZERTY déplace (A, Q, Z, W, M) ;
+// - aucune lettre que l'AZERTY déplace (A, Q, Z, W, M), sauf si l'écouteur
+//   compare le caractère tapé (`typedKey`) : Ctrl+Maj+M (issue 447) ;
 // - toute ponctuation compare le caractère tapé (`typedKey`, voir typed-key.ts).
 
 export type ShortcutId =
   | "newNote"
   | "startListening"
+  | "toggleMicrophone"
+  | "toggleSystemAudio"
   | "searchNotes"
   | "searchSettings"
   | "settings"
@@ -87,6 +90,32 @@ export const SHORTCUTS: readonly ShortcutDef[] = [
     scope: "main",
     available: true,
     label: () => t`Begin listening`,
+  },
+  {
+    // Issue 447 : couper ou rétablir le micro de l'écoute en cours, comme
+    // Ctrl+Maj+M dans Teams. En AZERTY, le M est à droite du L et le code
+    // physique `KeyM` y donne « , » : react-hotkeys-hook accepte le code OU le
+    // caractère, on écarte donc l'appui dont le caractère tapé n'est pas « m ».
+    id: "toggleMicrophone",
+    keys: ["Mod", "Shift", "M"],
+    hotkeys: "mod+shift+m",
+    typedKey: "m",
+    group: "listen",
+    scope: "main",
+    available: true,
+    label: () => t`Mute or unmute the microphone`,
+  },
+  {
+    // Issue 447 : couper ou rétablir le son système (S pour « son » comme
+    // pour « system audio »). Ni Ctrl+S (enregistrer) ni Win+Maj+S (capture
+    // d'écran Windows) ; libre sous GNOME, KDE et Hyprland.
+    id: "toggleSystemAudio",
+    keys: ["Mod", "Shift", "S"],
+    hotkeys: "mod+shift+s",
+    group: "listen",
+    scope: "main",
+    available: true,
+    label: () => t`Mute or unmute system audio`,
   },
   {
     id: "findInNote",

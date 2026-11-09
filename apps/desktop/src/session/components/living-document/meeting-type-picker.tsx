@@ -40,14 +40,21 @@ import { AUTO_TEMPLATE_ID, groupUserTemplates } from "~/templates/utils";
  * Préparer : recherche sur le titre, la description et « Utilisé pour »,
  * groupé comme la liste des modèles (Par défaut, Mes favoris, Tous les
  * modèles). « Automatique » correspond à un identifiant vide.
+ *
+ * Dans un dossier qui a un modèle de compte rendu (issue 502), l'entrée par
+ * défaut devient ce modèle, « <modèle> — modèle du dossier » : tant que
+ * l'utilisateur n'a rien choisi, la note le suit (identifiant vide). Choisir
+ * un modèle dans la liste le fixe sur la note.
  */
 export function MeetingTypePicker({
   templates,
   selectedTemplateId,
+  inheritedTemplateId,
   onSelect,
 }: {
   templates: UserTemplate[];
   selectedTemplateId: string;
+  inheritedTemplateId?: string;
   onSelect: (templateId: string) => void;
 }) {
   const { t } = useLingui();
@@ -60,14 +67,22 @@ export function MeetingTypePicker({
   const selectedTemplate = templates.find(
     (template) => template.id === selectedTemplateId,
   );
-  const autoLabel = t`Automatic`;
+  const inheritedTemplate = inheritedTemplateId
+    ? templates.find((template) => template.id === inheritedTemplateId)
+    : undefined;
+  const inheritedTitle = inheritedTemplate?.title?.trim() || t`Untitled`;
+  const autoLabel = inheritedTemplate
+    ? t`${inheritedTitle} — folder template`
+    : t`Automatic`;
   const selectedLabel = selectedTemplateId
     ? selectedTemplate?.title?.trim() || t`Untitled`
     : autoLabel;
 
   const query = search.trim().toLowerCase();
   const showAuto =
-    !query || autoLabel.toLowerCase().includes(query) || "auto".includes(query);
+    !query ||
+    autoLabel.toLowerCase().includes(query) ||
+    (!inheritedTemplate && "auto".includes(query));
   const { favorites, others } = useMemo(
     () => groupUserTemplates(templates, search),
     [templates, search],

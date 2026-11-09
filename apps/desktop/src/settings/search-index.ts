@@ -18,7 +18,6 @@ export type SettingsSearchEntry = {
   // Titre de la partie de page, quand la page en a plusieurs.
   section?: MessageDescriptor;
   keywords: MessageDescriptor;
-  requiresPro?: boolean;
   // Réglage affiché seulement sur ces plateformes.
   platforms?: readonly Platform[];
   // Réglage masqué dans la version App Store.
@@ -55,7 +54,7 @@ export const SETTINGS_SEARCH_INDEX = [
     page: "app",
     section: IDENTITY,
     label: msg`Email`,
-    keywords: msg`email address, mail, calendar, attendees`,
+    keywords: msg`email address, mail, attendees`,
   },
   {
     id: "profile-company",
@@ -133,13 +132,6 @@ export const SETTINGS_SEARCH_INDEX = [
     keywords: msg`time, hour, country, time difference`,
   },
   {
-    id: "week-start",
-    page: "app",
-    section: LANGUAGE_REGION,
-    label: msg`Week starts on`,
-    keywords: msg`Monday, Sunday, calendar, week`,
-  },
-  {
     id: "export-location",
     page: "app",
     section: STORAGE,
@@ -148,20 +140,6 @@ export const SETTINGS_SEARCH_INDEX = [
   },
 
   // Réunions
-  {
-    id: "auto-start-meetings",
-    page: "meetings",
-    label: msg`Start when meeting begins`,
-    keywords: msg`automatic, start, calendar, scheduled meeting`,
-    platforms: ["macos"],
-  },
-  {
-    id: "auto-join-meetings",
-    page: "meetings",
-    label: msg`Join scheduled meetings`,
-    keywords: msg`automatic, meeting link, Teams, Zoom, calendar`,
-    platforms: ["macos"],
-  },
   {
     id: "auto-stop-meetings",
     page: "meetings",
@@ -208,6 +186,15 @@ export const SETTINGS_SEARCH_INDEX = [
     label: msg`Microphone`,
     keywords: msg`mic, headset, earphones, sound, audio device, webcam`,
   },
+  {
+    id: "meetings-system-audio",
+    page: "meetings",
+    section: AUDIO,
+    label: msg`System sound`,
+    keywords: msg`speakers, output, headphones, HDMI, loopback, participants, sound`,
+    // macOS capte toujours la sortie par défaut (issue 450).
+    platforms: ["linux", "windows"],
+  },
 
   // Apparence
   {
@@ -253,12 +240,6 @@ export const SETTINGS_SEARCH_INDEX = [
     page: "notifications",
     label: msg`Cloud sync complete`,
     keywords: msg`notification, alert, synchronization, cloud`,
-  },
-  {
-    id: "notify-events",
-    page: "notifications",
-    label: msg`Event notifications`,
-    keywords: msg`reminder, calendar, meeting, 5 minutes, alert`,
   },
   {
     id: "notify-recording",
@@ -335,13 +316,6 @@ export const SETTINGS_SEARCH_INDEX = [
     keywords: msg`access, authorize, meeting controls, chat`,
     platforms: ["macos"],
   },
-  {
-    id: "permission-calendar",
-    page: "permissions",
-    label: msg`Calendar`,
-    keywords: msg`access, authorize, Apple Calendar, events`,
-    platforms: ["macos"],
-  },
 
   // Confidentialité
   {
@@ -349,14 +323,6 @@ export const SETTINGS_SEARCH_INDEX = [
     page: "privacy",
     label: msg`Lock app`,
     keywords: msg`password, PIN, Windows Hello, security, fingerprint, privacy`,
-  },
-
-  // Imports
-  {
-    id: "import-recordings",
-    page: "imports",
-    label: msg`Import recordings`,
-    keywords: msg`import, file, audio file, video, recording, meeting assistant`,
   },
 
   // Développeurs
@@ -394,42 +360,36 @@ export const SETTINGS_SEARCH_INDEX = [
     page: "dictation",
     label: msg`Enable dictation`,
     keywords: msg`dictation, voice typing, speak, text, write`,
-    requiresPro: true,
   },
   {
     id: "dictation-shortcut",
     page: "dictation",
     label: msg`Dictation shortcut`,
     keywords: msg`dictation, shortcut, key, keyboard`,
-    requiresPro: true,
   },
   {
     id: "dictation-hands-free",
     page: "dictation",
     label: msg`Hands-free dictation`,
     keywords: msg`dictation, hands-free, hold, press`,
-    requiresPro: true,
   },
   {
     id: "dictation-microphone",
     page: "dictation",
     label: msg`Microphone`,
     keywords: msg`dictation, mic, headset, sound, audio device`,
-    requiresPro: true,
   },
   {
     id: "dictation-live-preview",
     page: "dictation",
     label: msg`Live transcript preview`,
     keywords: msg`dictation, bubble, preview, live text`,
-    requiresPro: true,
   },
   {
     id: "dictation-language",
     page: "dictation",
     label: msg`Language and vocabulary`,
     keywords: msg`dictation, language, words, vocabulary`,
-    requiresPro: true,
   },
 
   // Dictionnaire (Pro)
@@ -438,7 +398,6 @@ export const SETTINGS_SEARCH_INDEX = [
     page: "dictionary",
     label: msg`Dictionary`,
     keywords: msg`words, vocabulary, names, jargon, spelling, acronyms`,
-    requiresPro: true,
   },
 
   // Transcription

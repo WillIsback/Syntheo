@@ -31,9 +31,7 @@ const mocks = vi.hoisted(() => ({
   deleteChatAutomation: vi.fn(),
   draftIds: [] as string[],
   removeDraft: vi.fn(),
-  removeStarterDraft: vi.fn(),
   selection: null as unknown,
-  selectStarter: vi.fn(),
   selectChatAutomation: vi.fn(),
   selectDraft: vi.fn(),
   selectWorkflow: vi.fn(),
@@ -51,6 +49,7 @@ const mocks = vi.hoisted(() => ({
     lastRun: null;
     processedSessionIds: string[];
     chatGroupId: string | null;
+    templateId?: string;
   }>,
 }));
 
@@ -59,7 +58,6 @@ vi.mock("~/chat/store/queries", () => ({
 }));
 
 vi.mock("~/automations/actions", () => ({
-  useRemoveStarterDraft: () => ({ mutate: mocks.removeStarterDraft }),
   useDeleteChatAutomation: () => ({ mutate: mocks.deleteChatAutomation }),
   useDeleteWorkflow: () => ({ mutate: vi.fn() }),
 }));
@@ -83,7 +81,6 @@ vi.mock("~/automations/selection", () => ({
   useAutomationSelection: (selector: (state: unknown) => unknown) =>
     selector({
       draftIds: mocks.draftIds,
-      selectStarter: mocks.selectStarter,
       selectChatAutomation: mocks.selectChatAutomation,
       selectDraft: mocks.selectDraft,
       selectWorkflow: mocks.selectWorkflow,
@@ -160,8 +157,6 @@ describe("AutomationsNav", () => {
     mocks.selection = { kind: "chat", groupId: "automation-1" };
     mocks.deleteChatAutomation.mockClear();
     mocks.removeDraft.mockClear();
-    mocks.removeStarterDraft.mockClear();
-    mocks.selectStarter.mockClear();
     mocks.selectChatAutomation.mockClear();
     mocks.selectDraft.mockClear();
     mocks.selectWorkflow.mockClear();
@@ -171,20 +166,44 @@ describe("AutomationsNav", () => {
     mocks.showContextMenu.mockClear();
   });
 
-  it("lists the starter automations and selects one", () => {
+  it("lists a single kind of automation, without separate starters", () => {
+    mocks.workflows = [
+      {
+        id: "legacy-markdown-export",
+        title: "",
+        templateId: "markdown-export",
+        enabled: true,
+        trigger: "meeting_completed",
+        steps: [],
+        lastRun: null,
+        processedSessionIds: [],
+        chatGroupId: null,
+      } as (typeof mocks.workflows)[number],
+      {
+        id: "wf-hand",
+        title: "Weekly recap",
+        enabled: false,
+        trigger: "manual",
+        steps: [],
+        lastRun: null,
+        processedSessionIds: [],
+        chatGroupId: null,
+      },
+    ];
+
     render(<AutomationsNav />);
 
-    expect(screen.getByText("Get started")).toBeTruthy();
-    // Seul modèle local restant : l'export Markdown (modèles cloud retirés).
-    expect(screen.getByText("Export every meeting as Markdown")).toBeTruthy();
-    expect(screen.queryByText("Share a meeting recap in Slack")).toBeNull();
-    expect(screen.queryByText("Update project notes in Notion")).toBeNull();
+    expect(screen.queryByText("Get started")).toBeNull();
+    expect(screen.getByText("Export as Markdown")).toBeTruthy();
+    expect(screen.getByText("Enabled")).toBeTruthy();
+    expect(screen.getByText("Manual")).toBeTruthy();
 
-    fireEvent.click(
-      screen.getByRole("button", { name: /Export every meeting as Markdown/ }),
+    fireEvent.click(screen.getByRole("button", { name: /Export as Markdown/ }));
+
+    expect(mocks.selectWorkflow).toHaveBeenCalledWith(
+      "legacy-markdown-export",
+      null,
     );
-
-    expect(mocks.selectStarter).toHaveBeenCalledWith("markdown-export");
   });
 
   it("lists chat automations and opens the selected conversation", () => {
@@ -206,20 +225,6 @@ describe("AutomationsNav", () => {
     expect(mocks.selectChatAutomation).toHaveBeenCalledWith("automation-2");
   });
 
-  it("offers edit and remove in the starter context menu", () => {
-    render(<AutomationsNav />);
-
-    fireEvent.contextMenu(
-      screen.getByRole("button", { name: /Export every meeting as Markdown/ }),
-    );
-
-    expect(mocks.selectStarter).toHaveBeenCalledWith("markdown-export");
-    expect(mocks.showContextMenu).toHaveBeenCalled();
-
-    findContextMenuItem("remove-automation-markdown-export")?.action();
-    expect(mocks.removeStarterDraft).toHaveBeenCalledWith("markdown-export");
-  });
-
   it("offers edit and delete in the chat automation context menu", () => {
     render(<AutomationsNav />);
 
@@ -235,14 +240,13 @@ describe("AutomationsNav", () => {
     expect(mocks.deleteChatAutomation).toHaveBeenCalledWith("automation-2");
   });
 
-  it("filters starters and chat automations together", () => {
+  it("filters workflows and chat automations together", () => {
     render(<AutomationsNav />);
 
     fireEvent.change(screen.getByPlaceholderText("Search automations..."), {
       target: { value: "project" },
     });
 
-    expect(screen.queryByText("Export every meeting as Markdown")).toBeNull();
     expect(screen.queryByText("Share weekly recap")).toBeNull();
     expect(screen.getByText("Update project notes")).toBeTruthy();
 

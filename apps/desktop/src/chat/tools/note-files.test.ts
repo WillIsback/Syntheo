@@ -123,8 +123,6 @@ describe("note file chat tools", () => {
         sessionId: "session-1",
         title: "Customer call",
         date: "2026-06-02T00:00:00.000Z",
-        eventName: null,
-        eventId: null,
         participantIds: [],
         participants: ["Ada Lovelace"],
         sections: [
@@ -207,8 +205,6 @@ describe("note file chat tools", () => {
         sessionId: "session-1",
         title: "Customer call",
         date: "2026-06-02T00:00:00.000Z",
-        eventName: null,
-        eventId: null,
         participantIds: [],
         participants: ["Ada Lovelace"],
         sections: [{ title: "Raw note", text: "Follow-up needed." }],

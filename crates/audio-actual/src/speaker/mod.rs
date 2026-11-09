@@ -36,6 +36,9 @@ type PlatformSpeakerStream = linux::SpeakerStream;
 #[cfg(test)]
 mod mock;
 
+mod output;
+pub use output::{captured_output, set_preferred_output};
+
 /// Producer-side handles moved into a Linux or Windows capture thread.
 ///
 /// They are grouped once, before the thread starts, so the real-time path neither allocates nor
@@ -99,7 +102,11 @@ pub struct SpeakerInput {
 pub type SpeakerStream = macos::SpeakerStream;
 
 impl SpeakerInput {
+    /// Capture la sortie choisie dans les réglages (issue 450), ou la sortie par défaut.
     pub fn new() -> Result<Self> {
+        #[cfg(any(target_os = "linux", target_os = "windows"))]
+        let inner = PlatformSpeakerInput::new(output::preferred_output())?;
+        #[cfg(target_os = "macos")]
         let inner = PlatformSpeakerInput::new()?;
         Ok(Self { inner })
     }

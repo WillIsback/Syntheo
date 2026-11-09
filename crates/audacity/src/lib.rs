@@ -65,11 +65,6 @@ impl Project {
         self
     }
 
-    pub fn with_align_start_to_zero(mut self, align_start_to_zero: bool) -> Self {
-        self.align_start_to_zero = align_start_to_zero;
-        self
-    }
-
     pub fn write_bundle(&self, out_dir: impl AsRef<Path>) -> io::Result<Bundle> {
         let out_dir = out_dir.as_ref();
         fs::create_dir_all(out_dir)?;

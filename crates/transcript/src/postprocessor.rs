@@ -1,4 +1,4 @@
-use std::{error::Error as StdError, future::Future};
+use std::error::Error as StdError;
 
 use json_patch::{Patch, patch as apply_json_patch};
 use serde::{Deserialize, Serialize};
@@ -118,31 +118,6 @@ impl TranscriptPostprocessor {
             corrected_words,
             raw_response: raw_response.trim().to_string(),
         })
-    }
-
-    pub async fn process_with<F, Fut, E>(
-        &self,
-        words: &[FinalizedWord],
-        run: F,
-    ) -> Result<TranscriptPostprocessorResult, TranscriptPostprocessorError>
-    where
-        F: FnOnce(TranscriptPostprocessorRequest) -> Fut,
-        Fut: Future<Output = Result<String, E>>,
-        E: StdError + Send + Sync + 'static,
-    {
-        if words.is_empty() {
-            return Ok(TranscriptPostprocessorResult {
-                patch: empty_patch(),
-                corrected_words: vec![],
-                raw_response: "{\"patch\":[]}".to_string(),
-            });
-        }
-
-        let request = self.build_request(words)?;
-        let raw_response = run(request)
-            .await
-            .map_err(|err| TranscriptPostprocessorError::Runner(Box::new(err)))?;
-        self.apply_response(words, &raw_response)
     }
 }
 

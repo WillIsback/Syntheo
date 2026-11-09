@@ -3,13 +3,12 @@ import { describe, expect, it } from "vitest";
 
 import { DesignColors } from "@syntheo/design-system";
 
-import {
-  getActiveLineIndex,
-  getSegmentColor,
-  getSegmentColorVars,
-} from "./utils";
+import { getActiveLineIndex, getSegmentColorVars } from "./utils";
 
 import type { SegmentKey, SegmentWord } from "~/stt/live-segment";
+
+const getSegmentColor = (key: SegmentKey) =>
+  getSegmentColorVars(key)["--segment-color-light"];
 
 describe("transcript renderer utils", () => {
   it("distingue les personnes partageant un canal et un index", () => {

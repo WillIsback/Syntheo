@@ -1,5 +1,7 @@
 pub(crate) mod composer;
 pub(crate) mod floating_bar;
+#[cfg(target_os = "linux")]
+pub(crate) mod layer_shell;
 pub(crate) mod live_caption;
 mod v1;
 

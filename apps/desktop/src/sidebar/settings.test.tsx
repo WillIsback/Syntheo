@@ -20,11 +20,8 @@ const mocks = vi.hoisted(() => ({
     };
   }>,
   openNew: vi.fn(),
-  isPro: true,
-  isUpgradingToPro: false,
   select: vi.fn(),
   transitionChatMode: vi.fn(),
-  upgradeToPro: vi.fn(),
   updateSettingsTabState: vi.fn(),
   updateTemplatesTabState: vi.fn(),
   workspaces: [] as Array<{ workspaceId: string }> | undefined,
@@ -86,14 +83,6 @@ vi.mock("~/settings/ai/shared/server-connection", () => ({
   useServerConnection: (kind: string) => ({ state: mocks.serverStates[kind] }),
 }));
 
-vi.mock("~/billing/billing-context", () => ({
-  useBillingAccess: () => ({
-    isPro: mocks.isPro,
-    isUpgradingToPro: mocks.isUpgradingToPro,
-    upgradeToPro: mocks.upgradeToPro,
-  }),
-}));
-
 vi.mock("~/settings/team/mirror", () => ({
   useMyWorkspacesWithMirror: () => ({
     data: mocks.workspaces,
@@ -132,12 +121,9 @@ describe("SettingsNav", () => {
   beforeEach(() => {
     mocks.currentTab = { type: "settings", state: { tab: "app" } };
     mocks.tabs = [];
-    mocks.isPro = true;
-    mocks.isUpgradingToPro = false;
     mocks.openNew.mockClear();
     mocks.select.mockClear();
     mocks.transitionChatMode.mockClear();
-    mocks.upgradeToPro.mockClear();
     mocks.updateSettingsTabState.mockClear();
     mocks.updateTemplatesTabState.mockClear();
     mocks.workspaces = [];
@@ -169,7 +155,6 @@ describe("SettingsNav", () => {
       "Dictionary",
       "Templates",
       "Meetings",
-      "Calendar",
       "Folders",
       "Contacts",
     ]) {
@@ -178,6 +163,7 @@ describe("SettingsNav", () => {
     expect(screen.getByRole("button", { name: /^Transcription/ })).toBeTruthy();
     expect(screen.getByRole("button", { name: /^Synthesis/ })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Permissions" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Calendar" })).toBeNull();
     expect(
       screen
         .getByRole("button", { name: "Advanced" })
@@ -255,7 +241,7 @@ describe("SettingsNav", () => {
   });
 
   it.each([
-    ["Calendar", "calendar"],
+    ["Folders", "folders"],
     ["Templates", "templates"],
   ])("opens the %s workspace in a new tab", (label, type) => {
     render(<SettingsNav />);
@@ -263,19 +249,6 @@ describe("SettingsNav", () => {
     fireEvent.click(screen.getByRole("button", { name: label }));
 
     expect(mocks.openNew).toHaveBeenCalledWith({ type });
-  });
-
-  it("keeps locked Pro features visible and navigable without forcing an upgrade", () => {
-    mocks.isPro = false;
-    render(<SettingsNav />);
-
-    fireEvent.click(screen.getByRole("button", { name: /Dictionary/ }));
-    expect(openedSettingsTab()).toEqual({ tab: "dictionary" });
-    fireEvent.click(screen.getByRole("button", { name: "Advanced" }));
-    fireEvent.click(screen.getByRole("button", { name: /Automations/ }));
-
-    expect(mocks.openNew).toHaveBeenCalledWith({ type: "automations" });
-    expect(mocks.upgradeToPro).not.toHaveBeenCalled();
   });
 
   // Issue 373 : le champ cherche dans le même index que la palette.
@@ -345,18 +318,6 @@ describe("SettingsNav", () => {
       fireEvent.keyDown(input(), { key: "Enter" });
       expect(useSettingFocus.getState().pending).toBe("palette");
       expect(openedSettingsTab()).toEqual({ tab: "appearance" });
-    });
-
-    it("garde les réglages Pro trouvables, avec le cadenas", () => {
-      mocks.isPro = false;
-      render(<SettingsNav />);
-
-      search("hands-free");
-
-      const hit = screen.getByRole("button", { name: /Hands-free dictation/ });
-      expect(
-        hit.querySelector("[aria-label='Requires Syntheo Pro']"),
-      ).toBeTruthy();
     });
 
     it("conseille quand rien ne correspond", () => {

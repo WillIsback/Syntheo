@@ -14,12 +14,10 @@ import { Plus } from "@syntheo/ui/components/icons";
 import { cn } from "@syntheo/utils";
 
 import { AudioDropTarget } from "./audio-drop-target";
-import { CreateBriefSuggestion } from "./create-brief-suggestion";
 import { useNoteFileHandlerConfig } from "./file-handler";
 import { MeetingChatHighlights } from "./meeting-chat-highlights";
 import { MeetingScreenGallery } from "./meeting-screen-gallery";
 
-import { useSessionEventParticipants } from "~/calendar/queries";
 import { AppLinkView } from "~/editor-bridge/app-link-view";
 import { useMentionConfig } from "~/editor-bridge/mention-config";
 import { openEditorLink } from "~/editor-bridge/open-editor-link";
@@ -27,11 +25,9 @@ import { sessionMentionDropConfig } from "~/editor-bridge/session-mention-drop";
 import { SessionNodeView } from "~/editor-bridge/session-view";
 import { useCanShowTranscript } from "~/session/components/shared";
 import { useAttachmentResolver } from "~/session/hooks/useAttachmentResolver";
-import { useCreatePreMeetingBrief } from "~/session/hooks/useCreatePreMeetingBrief";
 import { useUpdateSession } from "~/session/queries";
 import type { AppliedTemplateSnapshot } from "~/session/queries/types";
 import { removeDocumentTitle } from "~/session/title-content";
-import { useListener } from "~/stt/contexts";
 import {
   TemplateIconGlyph,
   type UserTemplate,
@@ -41,7 +37,6 @@ import {
 } from "~/templates";
 
 const extraNodeViews = { appLink: AppLinkView, session: SessionNodeView };
-const noop = () => {};
 const defaultSuggestedTemplateIds = [
   "default-project-kickoff",
   "default-daily-standup",
@@ -83,8 +78,6 @@ export const RawEditor = forwardRef<
     sessionId: string;
     rawMd: string;
     sessionTitle: string;
-    eventTitle?: string;
-    eventDescription?: string;
     className?: string;
     onNavigateToTitle?: (pixelWidth?: number) => void;
     syncTasks?: boolean;
@@ -102,8 +95,6 @@ export const RawEditor = forwardRef<
       sessionId,
       rawMd,
       sessionTitle,
-      eventTitle,
-      eventDescription,
       className,
       onNavigateToTitle,
       syncTasks = true,
@@ -225,34 +216,6 @@ export const RawEditor = forwardRef<
       [sessionId],
     );
 
-    const getMemoBriefEditor = useCallback(() => {
-      const editor = editorRef.current;
-      if (!editor) {
-        return null;
-      }
-      return {
-        replaceContent: (content: JSONContent) => {
-          editor.commands.replaceContent(content);
-        },
-        flushPendingChanges: () => {
-          editor.flushPendingChanges();
-        },
-      };
-    }, []);
-    const sessionMode = useListener((state) => state.getSessionMode(sessionId));
-    const {
-      visible: briefVisible,
-      isGenerating,
-      createBrief,
-    } = useCreatePreMeetingBrief({
-      sessionId,
-      sessionMode,
-      isMemoView: true,
-      isMemoEmpty,
-      onSwitchToMemos: noop,
-      getMemoEditor: getMemoBriefEditor,
-    });
-
     const handleApplyTemplate = useCallback((template: UserTemplate) => {
       const content = template.sections.flatMap((section) => {
         const title = section.title.trim();
@@ -303,12 +266,8 @@ export const RawEditor = forwardRef<
     const placeholderComponent = useMemo<PlaceholderFunction>(
       () =>
         ({ isEmptyDoc }) =>
-          !isEmptyDoc
-            ? ""
-            : isGenerating
-              ? t`Creating brief...`
-              : (placeholder ?? t`Start writing...`),
-      [isGenerating, placeholder, t],
+          !isEmptyDoc ? "" : (placeholder ?? t`Start writing...`),
+      [placeholder, t],
     );
     return (
       <AudioDropTarget
@@ -326,7 +285,6 @@ export const RawEditor = forwardRef<
               handleChange={handleChange}
               onDocumentChange={handleDocumentChange}
               placeholderComponent={placeholderComponent}
-              readOnly={isGenerating}
               scrollBottomInset={80}
               mentionConfig={mentionConfig}
               sessionMentionDropConfig={sessionMentionDropConfig}
@@ -340,18 +298,13 @@ export const RawEditor = forwardRef<
               onViewReady={onViewReady}
               onViewDisposed={onViewDisposed}
             />
-            {isMemoEmpty && !isGenerating ? (
+            {isMemoEmpty ? (
               <div className="pointer-events-none absolute inset-x-0 top-8 z-10 flex flex-col">
-                {briefVisible && audioExistsResolved && !canShowTranscript ? (
-                  <CreateBriefSuggestion onCreate={createBrief} />
-                ) : null}
                 {showTemplateSuggestions &&
                 audioExistsResolved &&
                 !canShowTranscript ? (
                   <TemplateEmptyState
-                    sessionId={sessionId}
-                    eventTitle={eventTitle ?? sessionTitle}
-                    eventDescription={eventDescription}
+                    sessionTitle={sessionTitle}
                     onApply={handleApplyTemplate}
                   />
                 ) : null}
@@ -386,15 +339,7 @@ function getFavoriteTemplates(templates: UserTemplate[]) {
 function getSuggestedTemplates(
   templates: UserTemplate[],
   favoriteTemplates: UserTemplate[],
-  {
-    eventTitle,
-    eventDescription,
-    participantCount,
-  }: {
-    eventTitle?: string;
-    eventDescription?: string;
-    participantCount: number;
-  },
+  sessionTitle: string,
 ) {
   const favoriteIds = new Set(favoriteTemplates.map((template) => template.id));
   const availableTemplates = templates.filter(
@@ -402,13 +347,9 @@ function getSuggestedTemplates(
       !favoriteIds.has(template.id) &&
       template.sections.some((section) => section.title.trim()),
   );
-  const eventText = `${eventTitle ?? ""} ${eventDescription ?? ""}`;
   const contextualIds = contextualTemplateRules
-    .filter((rule) => rule.pattern.test(eventText))
+    .filter((rule) => rule.pattern.test(sessionTitle))
     .map((rule) => rule.id);
-  if (participantCount === 2) {
-    contextualIds.push("default-one-on-one-meeting");
-  }
   const preferredTemplateIds = [
     ...new Set([...contextualIds, ...defaultSuggestedTemplateIds]),
   ];
@@ -432,19 +373,14 @@ function getSuggestedTemplates(
 }
 
 function TemplateEmptyState({
-  sessionId,
-  eventTitle,
-  eventDescription,
+  sessionTitle,
   onApply,
 }: {
-  sessionId: string;
-  eventTitle?: string;
-  eventDescription?: string;
+  sessionTitle: string;
   onApply: (template: UserTemplate) => void;
 }) {
   const { t } = useLingui();
   const userTemplates = useUserTemplates();
-  const eventParticipants = useSessionEventParticipants(sessionId);
   const createTemplate = useCreateTemplate("session_note");
   const openTemplatesTab = useOpenTemplatesTab();
   const favoriteTemplates = useMemo(
@@ -452,19 +388,8 @@ function TemplateEmptyState({
     [userTemplates],
   );
   const suggestedTemplates = useMemo(
-    () =>
-      getSuggestedTemplates(userTemplates, favoriteTemplates, {
-        eventTitle,
-        eventDescription,
-        participantCount: eventParticipants.length,
-      }),
-    [
-      eventDescription,
-      eventParticipants.length,
-      eventTitle,
-      favoriteTemplates,
-      userTemplates,
-    ],
+    () => getSuggestedTemplates(userTemplates, favoriteTemplates, sessionTitle),
+    [favoriteTemplates, sessionTitle, userTemplates],
   );
   const handleCreateTemplate = useCallback(() => {
     void (async () => {

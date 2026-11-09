@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { Pause } from "@syntheo/ui/components/icons";
 import { cn } from "@syntheo/utils";
 
+import { ChannelToggles } from "./channel-toggles";
 import { LevelMeter } from "./level-meter";
 import { NOTE_STAGES, type NoteStage } from "./stage";
 
@@ -15,7 +16,7 @@ import {
   shortcutTooltip,
 } from "~/shared/shortcuts";
 
-export { getNoteStage, type NoteStage } from "./stage";
+export { type NoteStage } from "./stage";
 
 // Kanji d'ornement devant chaque étape (identite.md § Clins d'œil).
 export const STAGE_KANJI: Record<NoteStage, string> = {
@@ -27,7 +28,9 @@ export const STAGE_KANJI: Record<NoteStage, string> = {
 export type CapsuleListening = {
   seconds?: number;
   amplitude?: number;
+  // Micro coupé ; `speakerMuted` : son système coupé (issue 447).
   muted: boolean;
+  speakerMuted?: boolean;
   finalizing: boolean;
   // Pause dans la même session (issue 353) : aucune capture ouverte.
   paused?: boolean;
@@ -48,6 +51,9 @@ export type CapsuleActions = {
   onStop: () => void;
   onPause?: () => void;
   onResume?: () => void;
+  // Couper ou rétablir le micro et le son système (issue 447).
+  onToggleMic?: () => void;
+  onToggleSpeaker?: () => void;
   // Note sans compte rendu (par exemple après avoir quitté l'application
   // pendant une pause) : reprendre l'écoute ou générer le compte rendu.
   onResumeListening?: () => void;
@@ -63,11 +69,15 @@ export function NoteCapsule({
   stage,
   listening,
   actions,
+  automations,
   os = "pc",
 }: {
   stage: NoteStage;
   listening?: CapsuleListening;
   actions: CapsuleActions;
+  // Synthèse : menu « Automatisations » pour lancer une automatisation sur
+  // cette note.
+  automations?: ReactNode;
   os?: ShortcutPlatform;
 }) {
   const { t } = useLingui();
@@ -104,7 +114,7 @@ export function NoteCapsule({
         </>
       ) : null}
       {stage === "listen" ? (
-        <ListeningControls listening={listening} actions={actions} />
+        <ListeningControls listening={listening} actions={actions} os={os} />
       ) : null}
       {stage === "synthesis" ? (
         <>
@@ -127,6 +137,7 @@ export function NoteCapsule({
           >
             <Trans>Export</Trans>
           </CapsuleButton>
+          {automations}
           {actions.onGenerateSummary ? (
             <CapsuleButton
               tone="primary"
@@ -154,13 +165,17 @@ export function NoteCapsule({
 function ListeningControls({
   listening,
   actions,
+  os,
 }: {
   listening?: CapsuleListening;
   actions: CapsuleActions;
+  os: ShortcutPlatform;
 }) {
   const { t } = useLingui();
   const paused = listening?.paused === true;
   const pausing = listening?.pausing === true;
+  const micMuted = listening?.muted === true;
+  const speakerMuted = listening?.speakerMuted === true;
 
   return (
     <>
@@ -196,12 +211,24 @@ function ListeningControls({
         {paused
           ? null
           : (listening?.meter ?? (
+              // Niveau unique : le canal coupé n'y compte plus ; plat quand
+              // les deux le sont.
               <LevelMeter
                 amplitude={listening?.amplitude ?? 0}
-                muted={listening?.muted}
+                muted={micMuted && speakerMuted}
               />
             ))}
       </span>
+      {!paused && actions.onToggleMic && actions.onToggleSpeaker ? (
+        <ChannelToggles
+          micMuted={micMuted}
+          speakerMuted={speakerMuted}
+          onToggleMic={actions.onToggleMic}
+          onToggleSpeaker={actions.onToggleSpeaker}
+          disabled={listening?.finalizing || pausing}
+          os={os}
+        />
+      ) : null}
       {paused ? (
         actions.onResume ? (
           <CapsuleButton
@@ -282,6 +309,21 @@ function CapsuleSteps({ stage }: { stage: NoteStage }) {
   );
 }
 
+export function capsuleButtonClassName(
+  tone: "ghost" | "primary" | "recording" = "ghost",
+) {
+  return cn([
+    "rounded-pill inline-flex items-center px-3.5 py-[7px] transition-colors",
+    "focus-visible:ring-primary-foreground focus-visible:ring-offset-primary focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
+    "disabled:cursor-default disabled:opacity-60",
+    tone === "ghost" && "hover:bg-primary-foreground/10",
+    tone === "primary" &&
+      "bg-primary-foreground text-primary hover:bg-primary-foreground/90 font-semibold",
+    tone === "recording" &&
+      "bg-recording text-background font-semibold hover:brightness-110",
+  ]);
+}
+
 function CapsuleButton({
   children,
   onClick,
@@ -315,16 +357,7 @@ function CapsuleButton({
       aria-label={ariaLabel}
       title={title}
       aria-keyshortcuts={announced ? ariaShortcut(announced, os) : undefined}
-      className={cn([
-        "rounded-pill inline-flex items-center px-3.5 py-[7px] transition-colors",
-        "focus-visible:ring-primary-foreground focus-visible:ring-offset-primary focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
-        "disabled:cursor-default disabled:opacity-60",
-        tone === "ghost" && "hover:bg-primary-foreground/10",
-        tone === "primary" &&
-          "bg-primary-foreground text-primary hover:bg-primary-foreground/90 font-semibold",
-        tone === "recording" &&
-          "bg-recording text-background font-semibold hover:brightness-110",
-      ])}
+      className={capsuleButtonClassName(tone)}
     >
       {children}
       {shortcut ? (

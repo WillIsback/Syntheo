@@ -1,15 +1,12 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { Popover } from "@syntheo/ui/components/ui/popover";
-
 import { DateEditor } from "./date";
-import { MetadataPopoverContent } from "./index";
+import { MetadataPanelContent } from "./index";
 
 const mocks = vi.hoisted(() => ({
   createdAt: "2026-07-02T03:53:00.000Z" as unknown,
   setCreatedAt: vi.fn(),
-  sessionEvent: null as unknown,
 }));
 
 const lingui = vi.hoisted(() => {
@@ -33,18 +30,8 @@ vi.mock("@lingui/react/macro", () => ({
   }),
 }));
 
-vi.mock("@syntheo/plugin-opener2", () => ({
-  commands: {
-    openUrl: vi.fn(),
-  },
-}));
-
 vi.mock("~/shared/config", () => ({
   useConfigValue: () => undefined,
-}));
-
-vi.mock("~/session/hooks/useSessionEvent", () => ({
-  useSessionEvent: () => mocks.sessionEvent,
 }));
 
 vi.mock("~/session/queries", () => ({
@@ -60,25 +47,10 @@ describe("Metadata controls", () => {
   beforeEach(() => {
     mocks.createdAt = "2026-07-02T03:53:00.000Z";
     mocks.setCreatedAt.mockClear();
-    mocks.sessionEvent = null;
   });
 
   afterEach(() => {
     cleanup();
-  });
-
-  it("uses a narrow floating panel", () => {
-    render(
-      <Popover open>
-        <MetadataPopoverContent sessionId="session-1" />
-      </Popover>,
-    );
-
-    const content = screen
-      .getByRole("button", { name: "Edit date" })
-      .closest("[data-radix-popper-content-wrapper] > *");
-
-    expect(content?.className.split(/\s+/) ?? []).toContain("w-72");
   });
 
   it("renders date edit action buttons as circles", () => {
@@ -95,11 +67,7 @@ describe("Metadata controls", () => {
   });
 
   it("keeps date edit actions available in the narrow panel", () => {
-    render(
-      <Popover open>
-        <MetadataPopoverContent sessionId="session-1" />
-      </Popover>,
-    );
+    render(<MetadataPanelContent sessionId="session-1" />);
     fireEvent.click(screen.getByRole("button", { name: "Edit date" }));
 
     const input = document.querySelector('input[type="datetime-local"]');

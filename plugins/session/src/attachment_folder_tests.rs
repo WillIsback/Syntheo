@@ -83,15 +83,6 @@ fn note_request() -> CatalogNoteAttachmentRequest {
     }
 }
 
-async fn job_rows(pool: &SqlitePool) -> Vec<sqlx::sqlite::SqliteRow> {
-    sqlx::query(
-        "SELECT id, attachment_id, direction, phase, object_key FROM attachment_transfer_jobs ORDER BY id",
-    )
-    .fetch_all(pool)
-    .await
-    .unwrap()
-}
-
 #[tokio::test]
 async fn catalog_note_attachment_inserts_row_and_local_state() {
     let db = test_db().await;
@@ -120,15 +111,10 @@ async fn catalog_note_attachment_inserts_row_and_local_state() {
     .await
     .unwrap();
     assert_eq!(local, "present");
-
-    assert!(
-        job_rows(db.pool()).await.is_empty(),
-        "no upload job without cloud_sync_enabled"
-    );
 }
 
 #[tokio::test]
-async fn catalog_note_attachment_recatalog_new_sha_enqueues_delete_and_clears_key() {
+async fn catalog_note_attachment_recatalog_new_sha_clears_cloud_key() {
     let db = test_db().await;
     insert_session(db.pool(), "session-1").await;
     insert_note_attachment_row(
@@ -143,11 +129,6 @@ async fn catalog_note_attachment_recatalog_new_sha_enqueues_delete_and_clears_ke
     catalog_note_attachment(db.pool(), note_request())
         .await
         .unwrap();
-
-    let jobs = job_rows(db.pool()).await;
-    assert_eq!(jobs.len(), 1);
-    assert_eq!(jobs[0].get::<String, _>("direction"), "delete");
-    assert_eq!(jobs[0].get::<String, _>("object_key"), "object-key-1");
 
     let row = sqlx::query(
         "SELECT cloud_object_key, storage_kind, sha256, deleted_at
@@ -181,7 +162,6 @@ async fn catalog_note_attachment_deleted_session_errors_and_writes_nothing() {
         .await
         .unwrap();
     assert_eq!(count, 0);
-    assert!(job_rows(db.pool()).await.is_empty());
 }
 
 #[tokio::test]

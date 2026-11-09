@@ -457,6 +457,8 @@ export async function recoverRunningBatchSessions<T extends BatchStore>(
 }
 
 export function shouldUseSyntheticBatchProgress(params: TranscriptionParams) {
+  // Le flux temps réel d'un fichier donne sa vraie progression (issue 463).
+  if (params.provider === "realtime") return false;
   return !OPENAI_PROGRESSIVE_BATCH_MODELS.has(params.model ?? "");
 }
 

@@ -4,6 +4,8 @@ import { Square, WarningCircle, Waveform } from "@syntheo/ui/components/icons";
 import { Button } from "@syntheo/ui/components/ui/button";
 import { Spinner } from "@syntheo/ui/components/ui/spinner";
 
+import { formatRemainingTime, useRemainingSeconds } from "~/stt/batch-eta";
+
 export function TranscriptEmptyState({
   isBatching,
   percentage,
@@ -21,6 +23,10 @@ export function TranscriptEmptyState({
   onUploadTranscript?: () => void;
   onStopTranscription?: () => void;
 }) {
+  const remainingSeconds = useRemainingSeconds(
+    isBatching ? percentage : undefined,
+  );
+
   if (error) {
     return (
       <div
@@ -61,6 +67,14 @@ export function TranscriptEmptyState({
           {hasProgress && (
             <p className="text-muted-foreground mt-2 text-sm leading-relaxed tabular-nums">
               {t`${Math.round((percentage ?? 0) * 100)}% complete`}
+            </p>
+          )}
+          {hasProgress && remainingSeconds !== null && (
+            <p
+              data-remaining-time
+              className="text-muted-foreground mt-1 text-sm leading-relaxed tabular-nums"
+            >
+              {formatRemainingTime(remainingSeconds)}
             </p>
           )}
         </div>

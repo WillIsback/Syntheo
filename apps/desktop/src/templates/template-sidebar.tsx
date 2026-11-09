@@ -15,8 +15,10 @@ import { cn } from "@syntheo/utils";
 
 import { type WebTemplate } from "./codec";
 import { getTemplateCopyTitle, type UserTemplate } from "./queries";
-import { AUTO_TEMPLATE_ID, groupUserTemplates, useTemplateTab } from "./utils";
+import { groupTemplatesForSidebar } from "./sidebar-groups";
+import { AUTO_TEMPLATE_ID, useTemplateTab } from "./utils";
 
+import { useFolderTemplateAssignments } from "~/folders/folder-template";
 import { useConfigValue } from "~/shared/config";
 import { useNativeContextMenu } from "~/shared/hooks/useNativeContextMenu";
 import { CustomSidebarHeader } from "~/sidebar/custom-sidebar-header";
@@ -34,8 +36,9 @@ type ListEntry =
     };
 
 /**
- * Liste des modèles, rangée en trois groupes : « Par défaut » (Automatique),
- * « Mes favoris » (modèles épinglés) et « Tous les modèles ».
+ * Liste des modèles, rangée en groupes : « Automatique », « Favoris » (modèles
+ * épinglés), un groupe par dossier qui utilise un modèle (issue 502), puis
+ * « Généraux » (les autres modèles et ceux de la galerie).
  */
 export function TemplatesSidebarContent({
   tab,
@@ -47,6 +50,7 @@ export function TemplatesSidebarContent({
   const [search, setSearch] = useState("");
   const autoPrompt = useConfigValue("auto_summary_prompt");
   const defaultTemplateId = useConfigValue("selected_template_id");
+  const folderTemplates = useFolderTemplateAssignments();
 
   const {
     userTemplates,
@@ -96,9 +100,9 @@ export function TemplatesSidebarContent({
   const showAuto =
     !query || autoLabel.toLowerCase().includes(query) || "auto".includes(query);
 
-  const { favorites, others } = useMemo(
-    () => groupUserTemplates(userTemplates, search),
-    [userTemplates, search],
+  const { favorites, folders, general } = useMemo(
+    () => groupTemplatesForSidebar(userTemplates, search, folderTemplates),
+    [userTemplates, search, folderTemplates],
   );
 
   const filteredWeb = useMemo(
@@ -142,23 +146,29 @@ export function TemplatesSidebarContent({
     }));
 
     return [
-      { id: "default", label: t`Default`, entries: auto },
+      { id: "default", label: t`Automatic`, entries: auto },
       {
         id: "favorites",
-        label: t`My favorites`,
+        label: t`Favorites`,
         entries: favorites.map(toUserEntry),
       },
+      ...folders.map((group) => ({
+        id: `folder:${group.folderPaths.join("\n")}`,
+        label: group.label,
+        entries: group.templates.map(toUserEntry),
+      })),
       {
         id: "all",
-        label: t`All templates`,
-        entries: [...others.map(toUserEntry), ...web],
+        label: t`General templates`,
+        entries: [...general.map(toUserEntry), ...web],
       },
     ].filter((group) => group.entries.length > 0);
   }, [
     favorites,
     filteredWeb,
+    folders,
+    general,
     isWebMode,
-    others,
     selectedMineId,
     selectedWebIndex,
     showAuto,

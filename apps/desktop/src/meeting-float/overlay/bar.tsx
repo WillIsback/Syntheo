@@ -1,158 +1,299 @@
 import { Trans, useLingui } from "@lingui/react/macro";
-import { useEffect, useRef, useState } from "react";
+import { type CSSProperties, useEffect, useRef, useState } from "react";
 
-import type {
-  FloatingBarState,
-  FloatingTranscriptBubble,
-} from "@syntheo/plugin-windows";
+import type { FloatingBarState } from "@syntheo/plugin-windows";
 import {
   ArrowsInSimple,
   ArrowsOutSimple,
   CaretDown,
+  Microphone,
+  MicrophoneSlash,
   Pause,
   Play,
   Square,
   WarningCircle,
 } from "@syntheo/ui/components/icons";
 import { DancingSticks } from "@syntheo/ui/components/ui/dancing-sticks";
-import { cn } from "@syntheo/utils";
 
 import { DictationTranscript } from "./dictation";
 import {
-  FLOATING_BAR_COMPACT_GAP,
+  dictationControlsWidth,
+  durationSlotWidth,
   FLOATING_BAR_COMPACT_HEIGHT,
   FLOATING_BAR_COMPACT_HORIZONTAL_PADDING,
   FLOATING_BAR_COMPACT_ICON_SIZE,
-  FLOATING_BAR_COMPACT_SOLO_STOP_WIDTH,
   FLOATING_BAR_COMPACT_STOP_WIDTH,
   FLOATING_BAR_COMPACT_RADIUS,
   FLOATING_BAR_CONTROL_RADIUS,
   FLOATING_BAR_EXPANDED_RADIUS,
-  FLOATING_BAR_HOVER_HANDLE_HEIGHT,
-  FLOATING_BAR_HOVER_HANDLE_TOP_PADDING,
-  FLOATING_BAR_HOVER_HANDLE_RESERVED_HEIGHT,
   FLOATING_BAR_INSET,
-  floatingControlsWidth,
+  FLOATING_PILL_SLOTS,
+  formatListeningDuration,
 } from "./layout";
 import { tokensFor, withAlpha } from "./palette";
 
 import { type PaletteId, useDocumentPalette } from "~/shared/theme/palette";
 
-export function FloatingBarOverlay({
-  state,
-  onStop,
-  onPause,
-  onResume,
-  onToggleExpanded,
-}: {
-  state: FloatingBarState;
+type OverlayCallbacks = {
   onStop: () => void;
   onPause?: () => void;
   onResume?: () => void;
+  onToggleMic?: () => void;
+  onOpenNote?: () => void;
   onToggleExpanded: (expanded: boolean) => void;
-}) {
-  const [hovered, setHovered] = useState(false);
-  const isExpanded =
-    state.liveCaptionToggleVisible && !state.liveCaptionMinimized;
-  const showsHoverHandle = hovered && !isExpanded;
+};
+
+export function FloatingBarOverlay({
+  state,
+  ...callbacks
+}: OverlayCallbacks & { state: FloatingBarState }) {
   // Re-rend la barre (et ses enfants, qui lisent la palette du document) quand
   // la palette change dans les paramètres.
   const palette = useDocumentPalette();
   const colors = barColors(state, palette);
-  const controlsWidth = floatingControlsWidth(state);
-  const expandsUpward = state.layout?.expandsUpward ?? false;
+  // Un calque Wayland (layer-shell) reste ancré : pas de zone de déplacement.
+  const dragRegion = state.layout?.movable === false ? undefined : "deep";
 
+  return state.dictation ? (
+    <DictationOverlay
+      state={state}
+      colors={colors}
+      dragRegion={dragRegion}
+      onStop={callbacks.onStop}
+      onToggleExpanded={callbacks.onToggleExpanded}
+    />
+  ) : (
+    <MeetingPill
+      state={state}
+      colors={colors}
+      dragRegion={dragRegion}
+      {...callbacks}
+    />
+  );
+}
+
+// Pastille de réunion (issue 448) : un seul bloc de 38 px, de la taille exacte
+// de la fenêtre. Toute la pastille sert à la déplacer, sauf ses boutons.
+function MeetingPill({
+  state,
+  colors,
+  dragRegion,
+  onStop,
+  onPause,
+  onResume,
+  onToggleMic,
+  onOpenNote,
+}: OverlayCallbacks & {
+  state: FloatingBarState;
+  colors: BarColors;
+  dragRegion: "deep" | undefined;
+}) {
   return (
     <div
-      className="relative h-full w-full"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      data-testid="meeting-pill"
+      data-tauri-drag-region={dragRegion}
+      className="flex h-full w-full items-center overflow-hidden whitespace-nowrap select-none"
+      style={{
+        paddingInline: FLOATING_BAR_COMPACT_HORIZONTAL_PADDING,
+        borderRadius: FLOATING_BAR_COMPACT_RADIUS,
+        background: colors.surface,
+        boxShadow: `inset 0 0 0 0.5px ${colors.outerStroke}`,
+        color: colors.content,
+      }}
     >
-      {isExpanded && (
-        <div
-          data-tauri-drag-region
-          className="absolute inset-x-0 top-0"
-          style={{
-            height:
-              FLOATING_BAR_INSET + FLOATING_BAR_HOVER_HANDLE_RESERVED_HEIGHT,
-          }}
+      {state.status === "paused" ? (
+        <div className="flex flex-1 justify-center">
+          <PausedControls colors={colors} onResume={onResume} onStop={onStop} />
+        </div>
+      ) : (
+        <RecordingControls
+          state={state}
+          colors={colors}
+          onStop={onStop}
+          onPause={onPause}
+          onToggleMic={onToggleMic}
+          onOpenNote={onOpenNote}
         />
       )}
-      <div
-        className="absolute overflow-hidden"
+    </div>
+  );
+}
+
+function RecordingControls({
+  state,
+  colors,
+  onStop,
+  onPause,
+  onToggleMic,
+  onOpenNote,
+}: {
+  state: FloatingBarState;
+  colors: BarColors;
+  onStop: () => void;
+  onPause?: () => void;
+  onToggleMic?: () => void;
+  onOpenNote?: () => void;
+}) {
+  const { t } = useLingui();
+  const elapsedSeconds = state.elapsedSeconds ?? 0;
+  const duration = formatListeningDuration(elapsedSeconds);
+  const notice = state.transcriptNotice ?? t`Recording needs attention`;
+  const hover = { "--pill-hover": colors.controlFill } as CSSProperties;
+  const buttonClass =
+    "flex shrink-0 items-center justify-center gap-[5px] text-xs font-semibold";
+
+  return (
+    <>
+      <span
+        aria-hidden="true"
+        className="flex shrink-0 justify-center"
+        style={{ width: FLOATING_PILL_SLOTS.dot }}
+      >
+        <span
+          className="block rounded-full motion-safe:animate-pulse"
+          style={{ width: 8, height: 8, background: colors.accent }}
+        />
+      </span>
+      <button
+        type="button"
+        data-tauri-drag-region="false"
+        aria-label={t`${duration}, back to the note`}
+        title={t`Back to the note`}
+        onClick={onOpenNote}
+        className="flex shrink-0 items-center justify-center text-xs font-semibold tabular-nums hover:bg-[var(--pill-hover)]"
         style={{
-          left: FLOATING_BAR_INSET,
-          right: FLOATING_BAR_INSET,
-          bottom: FLOATING_BAR_INSET,
-          top:
-            FLOATING_BAR_INSET +
-            (showsHoverHandle ? 0 : FLOATING_BAR_HOVER_HANDLE_RESERVED_HEIGHT),
-          borderRadius: isExpanded
-            ? FLOATING_BAR_EXPANDED_RADIUS
-            : FLOATING_BAR_COMPACT_RADIUS,
-          background:
-            hovered && !isExpanded ? colors.envelopeSurface : colors.surface,
-          boxShadow: `inset 0 0 0 0.5px ${colors.outerStroke}`,
+          ...hover,
+          width: durationSlotWidth(elapsedSeconds),
+          height: FLOATING_BAR_COMPACT_ICON_SIZE,
+          borderRadius: FLOATING_BAR_CONTROL_RADIUS,
         }}
       >
-        {showsHoverHandle && <HoverHandle color={colors.handle} />}
-        <div
-          className="absolute inset-x-0 bottom-0"
-          style={{
-            top: showsHoverHandle
-              ? FLOATING_BAR_HOVER_HANDLE_RESERVED_HEIGHT
-              : 0,
-          }}
-        >
-          {isExpanded && (
-            <div
-              className="absolute inset-x-0"
-              style={{
-                top: expandsUpward ? 0 : FLOATING_BAR_COMPACT_HEIGHT,
-                bottom: expandsUpward ? FLOATING_BAR_COMPACT_HEIGHT : 0,
-              }}
-            >
-              <TranscriptList
-                key={state.dictation?.sessionId ?? "meeting"}
-                dictation={state.dictation}
-                bubbles={state.transcriptBubbles ?? []}
-                colorScheme={state.colorScheme}
-                notice={state.transcriptNotice ?? null}
-              />
-            </div>
-          )}
-          <div
-            className="absolute flex -translate-x-1/2 items-center justify-center"
-            style={{
-              left: state.layout
-                ? state.layout.controlsCenterX - FLOATING_BAR_INSET
-                : `calc(100% - ${FLOATING_BAR_COMPACT_HORIZONTAL_PADDING + controlsWidth / 2}px)`,
-              top: expandsUpward ? undefined : 0,
-              bottom: expandsUpward ? 0 : undefined,
-              width: controlsWidth,
-              height: FLOATING_BAR_COMPACT_HEIGHT,
-            }}
-          >
-            {state.status === "paused" && !state.dictation ? (
-              <PausedControls
-                colors={colors}
-                onResume={onResume}
-                onStop={onStop}
-              />
-            ) : (
-              <FloatingControls
-                state={state}
-                isExpanded={isExpanded}
-                colors={colors}
-                onStop={onStop}
-                onPause={onPause}
-                onToggleExpanded={onToggleExpanded}
-              />
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
+        {duration}
+      </button>
+      <span
+        className="flex shrink-0 justify-center"
+        style={{ width: FLOATING_PILL_SLOTS.level, color: colors.accent }}
+      >
+        {state.status === "error" ? (
+          <WarningCircle size={16} aria-label={notice} />
+        ) : (
+          <DancingSticks
+            color={colors.accent}
+            amplitude={state.amplitude}
+            width={20}
+            height={16}
+            stickWidth={2}
+            gap={2}
+          />
+        )}
+      </span>
+      <span
+        aria-hidden="true"
+        className="flex shrink-0 justify-center"
+        style={{ width: FLOATING_PILL_SLOTS.separator }}
+      >
+        <span
+          className="block"
+          style={{ width: 1, height: 18, background: colors.separator }}
+        />
+      </span>
+      <MicrophoneToggle
+        muted={state.micMuted === true}
+        colors={colors}
+        onToggle={onToggleMic}
+      />
+      <button
+        type="button"
+        data-tauri-drag-region="false"
+        aria-label={t`Pause listening`}
+        onClick={onPause}
+        className={`${buttonClass} hover:bg-[var(--pill-hover)]`}
+        style={{
+          ...hover,
+          width: FLOATING_PILL_SLOTS.pause,
+          height: FLOATING_BAR_COMPACT_ICON_SIZE,
+          borderRadius: FLOATING_BAR_CONTROL_RADIUS,
+        }}
+      >
+        <Pause size={12} aria-hidden="true" />
+        <Trans>Pause</Trans>
+      </button>
+      <button
+        type="button"
+        data-tauri-drag-region="false"
+        aria-label={t`Finish the meeting`}
+        title={
+          state.status === "error"
+            ? t`${notice}. Open Syntheo to retry or change devices.`
+            : undefined
+        }
+        onClick={onStop}
+        className={`${buttonClass} hover:bg-[var(--pill-hover)]`}
+        style={
+          {
+            "--pill-hover": colors.accentHover,
+            width: FLOATING_PILL_SLOTS.finish,
+            height: FLOATING_BAR_COMPACT_ICON_SIZE,
+            marginLeft: FLOATING_PILL_SLOTS.buttonGap,
+            borderRadius: FLOATING_BAR_CONTROL_RADIUS,
+            background: colors.controlFill,
+            color: colors.accent,
+          } as CSSProperties
+        }
+      >
+        <span
+          aria-hidden="true"
+          className="block rounded-[2px]"
+          style={{ width: 9, height: 9, background: "currentColor" }}
+        />
+        <Trans>Finish</Trans>
+      </button>
+    </>
+  );
+}
+
+// Bascule du micro (issue 447) : même état coupé que dans la capsule, fond
+// `recording` et pictogramme barré ; l'infobulle dit ce que fait le clic.
+function MicrophoneToggle({
+  muted,
+  colors,
+  onToggle,
+}: {
+  muted: boolean;
+  colors: BarColors;
+  onToggle?: () => void;
+}) {
+  const { t } = useLingui();
+  const Icon = muted ? MicrophoneSlash : Microphone;
+
+  return (
+    <span
+      className="flex shrink-0 justify-start"
+      style={{ width: FLOATING_PILL_SLOTS.microphone }}
+    >
+      <button
+        type="button"
+        data-tauri-drag-region="false"
+        data-channel-toggle="mic"
+        aria-label={t`Mute the microphone`}
+        aria-pressed={muted}
+        title={muted ? t`Unmute the microphone` : t`Mute the microphone`}
+        onClick={onToggle}
+        className="flex items-center justify-center hover:bg-[var(--pill-hover)]"
+        style={
+          {
+            "--pill-hover": muted ? colors.accent : colors.controlFill,
+            width: FLOATING_BAR_COMPACT_ICON_SIZE,
+            height: FLOATING_BAR_COMPACT_ICON_SIZE,
+            borderRadius: FLOATING_BAR_CONTROL_RADIUS,
+            background: muted ? colors.accent : undefined,
+            color: muted ? colors.onAccent : colors.content,
+          } as CSSProperties
+        }
+      >
+        <Icon size={14} aria-hidden="true" />
+      </button>
+    </span>
   );
 }
 
@@ -216,70 +357,106 @@ function PausedControls({
   );
 }
 
-function FloatingControls({
+// Dictée : commandes compactes et panneau de transcription, inchangés (issue
+// 448). Seule la poignée de survol et sa zone réservée disparaissent : la rangée
+// des commandes sert à déplacer le panneau.
+function DictationOverlay({
   state,
-  isExpanded,
   colors,
+  dragRegion,
   onStop,
-  onPause,
   onToggleExpanded,
 }: {
   state: FloatingBarState;
-  isExpanded: boolean;
   colors: BarColors;
+  dragRegion: "deep" | undefined;
   onStop: () => void;
-  onPause?: () => void;
   onToggleExpanded: (expanded: boolean) => void;
 }) {
-  const { t } = useLingui();
+  const [hovered, setHovered] = useState(false);
+  const isExpanded =
+    state.liveCaptionToggleVisible && !state.liveCaptionMinimized;
+  const controlsWidth = dictationControlsWidth();
+  const expandsUpward = state.layout?.expandsUpward ?? false;
 
   return (
     <div
-      className="flex items-center"
-      style={{ gap: FLOATING_BAR_COMPACT_GAP }}
+      className="absolute overflow-hidden"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        inset: FLOATING_BAR_INSET,
+        borderRadius: isExpanded
+          ? FLOATING_BAR_EXPANDED_RADIUS
+          : FLOATING_BAR_COMPACT_RADIUS,
+        background:
+          hovered && !isExpanded ? colors.envelopeSurface : colors.surface,
+        boxShadow: `inset 0 0 0 0.5px ${colors.outerStroke}`,
+      }}
     >
-      {state.dictation ? null : (
-        <button
-          type="button"
-          data-tauri-drag-region="false"
-          aria-label={t`Pause listening`}
-          title={t`Pause listening`}
-          onClick={onPause}
-          className="flex items-center justify-center"
+      {isExpanded && (
+        <div
+          className="absolute inset-x-0"
           style={{
-            width: FLOATING_BAR_COMPACT_ICON_SIZE,
-            height: FLOATING_BAR_COMPACT_ICON_SIZE,
-            borderRadius: FLOATING_BAR_CONTROL_RADIUS,
-            color: colors.content,
+            top: expandsUpward ? 0 : FLOATING_BAR_COMPACT_HEIGHT,
+            bottom: expandsUpward ? FLOATING_BAR_COMPACT_HEIGHT : 0,
           }}
         >
-          <Pause size={14} aria-hidden="true" />
-        </button>
+          <TranscriptList
+            key={state.dictation?.sessionId}
+            dictation={state.dictation}
+            colorScheme={state.colorScheme}
+          />
+        </div>
       )}
-      <StopControl state={state} colors={colors} onStop={onStop} />
-      {state.liveCaptionToggleVisible ? (
-        <button
-          type="button"
-          data-tauri-drag-region="false"
-          aria-label={
-            isExpanded ? "Collapse live transcript" : "Expand live transcript"
-          }
-          onClick={() => onToggleExpanded(!isExpanded)}
-          className="flex items-center justify-center"
+      <div
+        data-tauri-drag-region={dragRegion}
+        className="absolute inset-x-0"
+        style={{
+          top: expandsUpward ? undefined : 0,
+          bottom: expandsUpward ? 0 : undefined,
+          height: FLOATING_BAR_COMPACT_HEIGHT,
+        }}
+      >
+        <div
+          className="absolute flex -translate-x-1/2 items-center justify-center"
           style={{
-            width: FLOATING_BAR_COMPACT_ICON_SIZE,
-            height: FLOATING_BAR_COMPACT_ICON_SIZE,
-            borderRadius: FLOATING_BAR_CONTROL_RADIUS,
-            color: colors.content,
+            left: state.layout
+              ? state.layout.controlsCenterX - FLOATING_BAR_INSET
+              : `calc(100% - ${FLOATING_BAR_COMPACT_HORIZONTAL_PADDING + controlsWidth / 2}px)`,
+            top: 0,
+            width: controlsWidth,
+            height: FLOATING_BAR_COMPACT_HEIGHT,
           }}
         >
-          {isExpanded ? (
-            <ArrowsInSimple size={14} weight="bold" />
-          ) : (
-            <ArrowsOutSimple size={14} weight="bold" />
-          )}
-        </button>
-      ) : null}
+          <StopControl state={state} colors={colors} onStop={onStop} />
+          {state.liveCaptionToggleVisible ? (
+            <button
+              type="button"
+              data-tauri-drag-region="false"
+              aria-label={
+                isExpanded
+                  ? "Collapse live transcript"
+                  : "Expand live transcript"
+              }
+              onClick={() => onToggleExpanded(!isExpanded)}
+              className="flex items-center justify-center"
+              style={{
+                width: FLOATING_BAR_COMPACT_ICON_SIZE,
+                height: FLOATING_BAR_COMPACT_ICON_SIZE,
+                borderRadius: FLOATING_BAR_CONTROL_RADIUS,
+                color: colors.content,
+              }}
+            >
+              {isExpanded ? (
+                <ArrowsInSimple size={14} weight="bold" />
+              ) : (
+                <ArrowsOutSimple size={14} weight="bold" />
+              )}
+            </button>
+          ) : null}
+        </div>
+      </div>
     </div>
   );
 }
@@ -294,33 +471,19 @@ function StopControl({
   onStop: () => void;
 }) {
   const [hovered, setHovered] = useState(false);
-  const width = state.liveCaptionToggleVisible
-    ? FLOATING_BAR_COMPACT_STOP_WIDTH
-    : FLOATING_BAR_COMPACT_SOLO_STOP_WIDTH;
 
   return (
     <button
       type="button"
       data-tauri-drag-region="false"
-      aria-label={
-        state.dictation
-          ? "Finish dictation"
-          : state.status === "error"
-            ? `${state.transcriptNotice ?? "Recording needs attention"}; stop listening`
-            : "Stop listening"
-      }
-      title={
-        state.status === "error"
-          ? `${state.transcriptNotice ?? "Recording needs attention"}. Open Syntheo to retry or change devices.`
-          : undefined
-      }
+      aria-label="Finish dictation"
       disabled={state.dictation?.phase === "transcribing"}
       onClick={onStop}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       className="flex items-center justify-center"
       style={{
-        width,
+        width: FLOATING_BAR_COMPACT_STOP_WIDTH,
         height: FLOATING_BAR_COMPACT_ICON_SIZE,
         borderRadius: FLOATING_BAR_CONTROL_RADIUS,
         background: hovered ? colors.accentHover : colors.controlFill,
@@ -334,10 +497,8 @@ function StopControl({
       ) : hovered ? (
         <span className="flex items-center gap-1.5 text-xs font-semibold">
           <Square size={9} />
-          {state.dictation ? "Done" : "Stop"}
+          Done
         </span>
-      ) : state.status === "error" ? (
-        <WarningCircle size={20} aria-hidden="true" />
       ) : (
         <DancingSticks
           color={colors.accent}
@@ -353,15 +514,11 @@ function StopControl({
 }
 
 function TranscriptList({
-  bubbles,
   colorScheme,
   dictation,
-  notice,
 }: {
   dictation: FloatingBarState["dictation"];
-  bubbles: FloatingTranscriptBubble[];
   colorScheme: FloatingBarState["colorScheme"];
-  notice: string | null;
 }) {
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const [pinned, setPinned] = useState(true);
@@ -370,7 +527,7 @@ function TranscriptList({
     if (pinned) {
       bottomRef.current?.scrollIntoView?.({ block: "end" });
     }
-  }, [bubbles, pinned, notice, dictation?.text, dictation?.partial]);
+  }, [pinned, dictation?.text, dictation?.partial]);
 
   return (
     <div className="relative h-full p-3">
@@ -383,47 +540,17 @@ function TranscriptList({
           setPinned(distance < 20);
         }}
       >
-        <div
-          className={cn([
-            "flex min-h-full flex-col gap-2",
-            dictation ? "justify-start" : "justify-end",
-          ])}
-        >
+        <div className="flex min-h-full flex-col justify-start gap-2">
           {dictation ? (
             <DictationTranscript
               dictation={dictation}
               colorScheme={colorScheme}
             />
-          ) : (
-            bubbles.map((bubble, index) => (
-              <TranscriptBubble
-                key={bubble.id}
-                bubble={bubble}
-                colorScheme={colorScheme}
-                showsSpeakerLabel={
-                  index === 0 ||
-                  bubbles[index - 1]?.speakerLabel !== bubble.speakerLabel ||
-                  bubbles[index - 1]?.isSelf !== bubble.isSelf
-                }
-              />
-            ))
-          )}
-          {!dictation && notice ? (
-            <p
-              role="status"
-              className="px-3 py-1.5 text-center text-[12px] leading-4"
-              style={{ color: tokensFor(colorScheme).mutedForeground }}
-            >
-              {notice}
-            </p>
           ) : null}
           <div ref={bottomRef} />
         </div>
       </div>
-      {!pinned &&
-      (dictation
-        ? !!(dictation.text || dictation.partial)
-        : bubbles.length > 0) ? (
+      {!pinned && !!(dictation?.text || dictation?.partial) ? (
         <button
           type="button"
           data-tauri-drag-region="false"
@@ -448,82 +575,16 @@ function TranscriptList({
   );
 }
 
-function TranscriptBubble({
-  bubble,
-  showsSpeakerLabel,
-  colorScheme,
-}: {
-  bubble: FloatingTranscriptBubble;
-  showsSpeakerLabel: boolean;
-  colorScheme: FloatingBarState["colorScheme"];
-}) {
-  const overlapping = bubble.overlapsPrevious || bubble.overlapsNext;
-  const tokens = tokensFor(colorScheme);
-
-  return (
-    <div
-      className={cn(["flex", bubble.isSelf ? "justify-end" : "justify-start"])}
-    >
-      <div className="max-w-[calc(100%-40px)] text-left">
-        {(showsSpeakerLabel || overlapping) && (
-          <p
-            className="mb-1 text-[10px] font-semibold"
-            style={{ color: tokens.foreground }}
-          >
-            {showsSpeakerLabel ? bubble.speakerLabel : ""}
-          </p>
-        )}
-        <p
-          className="rounded-[11px] px-2.5 py-2 text-[13px] leading-5"
-          style={{
-            color: tokens.foreground,
-            background: bubble.isSelf ? tokens.accent : tokens.card,
-            boxShadow: overlapping
-              ? `inset 0 0 0 1px ${tokens.input}`
-              : undefined,
-          }}
-        >
-          {bubble.text}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function HoverHandle({ color }: { color: string }) {
-  return (
-    <div
-      data-tauri-drag-region
-      className="flex items-center justify-center"
-      style={{
-        height: FLOATING_BAR_HOVER_HANDLE_HEIGHT,
-        width: "100%",
-        paddingTop: FLOATING_BAR_HOVER_HANDLE_TOP_PADDING,
-        boxSizing: "content-box",
-      }}
-    >
-      <div
-        data-tauri-drag-region
-        className="h-full"
-        style={{
-          width: "calc(100% - 16px)",
-          backgroundImage: `radial-gradient(circle, ${color} 0.8px, transparent 0.9px)`,
-          backgroundSize: "5px 7px",
-        }}
-      />
-    </div>
-  );
-}
-
 type BarColors = {
   surface: string;
   envelopeSurface: string;
   content: string;
-  handle: string;
+  separator: string;
   outerStroke: string;
   controlFill: string;
   accent: string;
   accentHover: string;
+  onAccent: string;
 };
 
 function barColors(state: FloatingBarState, palette: PaletteId): BarColors {
@@ -537,10 +598,11 @@ function barColors(state: FloatingBarState, palette: PaletteId): BarColors {
       Math.min(opacity * 108, 95),
     ),
     content: tokens.foreground,
-    handle: withAlpha(tokens.foreground, 40),
+    separator: withAlpha(tokens.foreground, 14),
     outerStroke: withAlpha(tokens.foreground, 14),
     controlFill: withAlpha(tokens.foreground, 8),
     accent: tokens.recording,
     accentHover: withAlpha(tokens.recording, 18),
+    onAccent: tokens.background,
   };
 }

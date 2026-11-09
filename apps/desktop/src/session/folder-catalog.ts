@@ -3,11 +3,7 @@ import { commands } from "@syntheo/plugin-session";
 
 import { ancestorFolderPaths, normalizeFolderPath } from "./folders";
 
-import {
-  clearSeriesFolderRulesForFolder,
-  remapSeriesFolderRules,
-} from "~/calendar/series-folders";
-import { liveQueryClient, useLiveQuery } from "~/db";
+import { executeTransaction, liveQueryClient, useLiveQuery } from "~/db";
 import { enqueueDatabaseWrite } from "~/db/write-queue";
 import { normalizeFolderIcon } from "~/session/folder-icon";
 import { type TemplateIcon } from "~/templates/template-icon";
@@ -60,15 +56,6 @@ export async function renameNamedFolder(
     }
   });
 
-  try {
-    await remapSeriesFolderRules(oldPath, newPath);
-  } catch (error) {
-    console.error(
-      "[folder-catalog] failed to remap series folder rules",
-      error,
-    );
-  }
-
   return newPath;
 }
 
@@ -106,6 +93,21 @@ export async function deleteNamedFolder(folderPath: string): Promise<void> {
     if (result.status === "error") {
       throw new Error(result.error);
     }
+    // Le fil rouge (issue 496) part avec le dossier et ses sous-dossiers : un
+    // dossier recréé sous le même nom repart d'une page vide.
+    const folderIds = `
+      SELECT id FROM folders WHERE path = ? OR path LIKE ?
+    `;
+    await executeTransaction([
+      {
+        sql: `DELETE FROM folder_thread_versions WHERE folder_id IN (${folderIds})`,
+        params: [path, `${path}/%`],
+      },
+      {
+        sql: `DELETE FROM folder_threads WHERE folder_id IN (${folderIds})`,
+        params: [path, `${path}/%`],
+      },
+    ]);
   });
 
   const deleted = await fsSyncCommands.deleteFolder(path);
@@ -114,15 +116,6 @@ export async function deleteNamedFolder(folderPath: string): Promise<void> {
     !String(deleted.error).includes("folder_source_missing")
   ) {
     throw new Error(deleted.error);
-  }
-
-  try {
-    await clearSeriesFolderRulesForFolder(path);
-  } catch (error) {
-    console.error(
-      "[folder-catalog] failed to clear series folder rules",
-      error,
-    );
   }
 }
 
@@ -208,43 +201,6 @@ export function useFolderInstructions(folderPath: string): string {
     params: [folderPath],
     enabled: folderPath.length > 0,
     mapRows: (rows) => rows[0]?.instructions ?? "",
-  });
-  return data;
-}
-
-export async function loadFolderWorkspaceId(
-  folderPath: string,
-): Promise<string> {
-  const path = normalizeFolderPath(folderPath);
-  if (!path) {
-    return "";
-  }
-
-  const rows = await liveQueryClient.execute<{ workspace_id: string }>(
-    `
-      SELECT workspace_id
-      FROM folders
-      WHERE path = ?
-        AND deleted_at IS NULL
-      LIMIT 1
-    `,
-    [path],
-  );
-  return rows[0]?.workspace_id ?? "";
-}
-
-export function useFolderWorkspaceId(folderPath: string): string {
-  const { data = "" } = useLiveQuery<{ workspace_id: string }, string>({
-    sql: `
-      SELECT workspace_id
-      FROM folders
-      WHERE path = ?
-        AND deleted_at IS NULL
-      LIMIT 1
-    `,
-    params: [folderPath],
-    enabled: folderPath.length > 0,
-    mapRows: (rows) => rows[0]?.workspace_id ?? "",
   });
   return data;
 }

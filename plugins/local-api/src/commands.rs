@@ -661,3 +661,21 @@ pub(crate) fn drive_markdown(
     markdown.push('\n');
     Ok(crate::types::DriveMarkdownExport { filename, markdown })
 }
+
+/// Étape « Lancer une commande » : programme et arguments sans interpréteur
+/// de commandes, après la confirmation demandée par l'application.
+#[tauri::command]
+#[specta::specta]
+pub async fn run_automation_command<R: tauri::Runtime>(
+    _app: tauri::AppHandle<R>,
+    program: String,
+    args: Vec<String>,
+    timeout_secs: Option<u32>,
+) -> Result<crate::AutomationCommandOutput, String> {
+    crate::automation_command::run_command(
+        &program,
+        &args,
+        crate::automation_command::effective_timeout(timeout_secs),
+    )
+    .await
+}

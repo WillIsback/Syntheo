@@ -31,14 +31,3 @@ export function parseTemplateMarkdown(markdown: string): TemplateSection[] {
   }
   return sections;
 }
-
-export function templateSectionsToMarkdown(
-  sections: TemplateSection[],
-): string {
-  return sections
-    .map((section) => {
-      const description = section.description ? `\n${section.description}` : "";
-      return `# ${section.title}${description}`;
-    })
-    .join("\n\n");
-}
