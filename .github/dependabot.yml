@@ -13,7 +13,16 @@ updates:
     commit-message:
       prefix: "chore(deps)"
     open-pull-requests-limit: 10
+    # Les familles qui doivent monter ensemble passent avant le groupe minor/patch
+    # (Dependabot range une dépendance dans le premier groupe qui la couvre).
     groups:
+      ai-sdk:
+        patterns: [
+          "ai",
+          "@ai-sdk/*",
+        ] # LanguageModelV3/V4 : une seule version pour toute la famille
+      wdio:
+        patterns: ["@wdio/*"]
       npm-minor-patch:
         update-types: ["minor", "patch"]
     # Avis sans version corrigée publiée ou bloqués par une contrainte amont.
@@ -40,6 +49,10 @@ updates:
       prefix: "chore(deps)"
     open-pull-requests-limit: 10
     groups:
+      windows:
+        patterns: ["windows", "windows-core"] # windows-core doit suivre windows
+      askama:
+        patterns: ["askama", "askama_parser"]
       cargo-minor-patch:
         update-types: ["minor", "patch"]
     # glib 0.18 est imposé par gtk3-rs / webkit2gtk-4.1 (Tauri).
@@ -57,6 +70,15 @@ updates:
         update-types: [
           "version-update:semver-major",
         ] # 3.x exige minijinja 3 ; bumper les deux ensemble
+      - dependency-name: "ort"
+        # Épinglé sur 2.0.0-rc.10 : rc.15 casse `onnx` (API changée). À monter à la main.
+      - dependency-name: "libsqlite3-sys"
+        # Suit sqlx : un seul lien « sqlite3 » dans le graphe, sqlx 0.9.0 est borné à < 0.38.
+      - dependency-name: "cidre"
+        update-types: [
+          "version-update:semver-major",
+          "version-update:semver-minor",
+        ] # macOS seulement, compilé ni par la CI ni par la release : bump non vérifiable
 
   - package-ecosystem: "github-actions"
     directories: ["/", "/.github/actions/*"]
