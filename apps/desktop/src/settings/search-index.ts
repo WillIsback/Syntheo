@@ -186,6 +186,15 @@ export const SETTINGS_SEARCH_INDEX = [
     label: msg`Microphone`,
     keywords: msg`mic, headset, earphones, sound, audio device, webcam`,
   },
+  {
+    id: "meetings-system-audio",
+    page: "meetings",
+    section: AUDIO,
+    label: msg`System sound`,
+    keywords: msg`speakers, output, headphones, HDMI, loopback, participants, sound`,
+    // macOS capte toujours la sortie par défaut (issue 450).
+    platforms: ["linux", "windows"],
+  },
 
   // Apparence
   {

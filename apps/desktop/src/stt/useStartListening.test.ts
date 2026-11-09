@@ -1770,6 +1770,32 @@ describe("useStartListening", () => {
     });
   });
 
+  // Issue 450 : la sortie choisie est appliquée au démarrage de l'écoute.
+  test("starts capture with the selected system audio output", async () => {
+    useConfigValueMock.mockImplementation((key) =>
+      key === "ai_language"
+        ? "en"
+        : key === "speaker_device"
+          ? "Casque (Jabra Evolve2)"
+          : key === "microphone_device"
+            ? ""
+            : key === "consent_auto_send_chat" || key === "capture_meeting_chat"
+              ? false
+              : [],
+    );
+
+    const { result } = renderHook(() => useStartListening("session-1"));
+
+    await act(async () => {
+      await result.current();
+    });
+
+    expect(startMock.mock.calls[0]?.[0]).toMatchObject({
+      mic_device: null,
+      speaker_device: "Casque (Jabra Evolve2)",
+    });
+  });
+
   test("uses the main language for Deepgram live capture when extras are unsupported", async () => {
     useConfigValueMock.mockImplementation((key) =>
       key === "ai_language"

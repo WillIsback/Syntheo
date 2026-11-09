@@ -8,19 +8,27 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { listenerState, startMonitorMock, stopMonitorMock, channels } =
-  vi.hoisted(() => ({
-    listenerState: {
-      live: {
-        status: "inactive" as "inactive" | "active" | "finalizing",
-        loading: false,
-        amplitude: { mic: 0, speaker: 0 },
-      },
+const {
+  listenerState,
+  startMonitorMock,
+  stopMonitorMock,
+  startSpeakerMonitorMock,
+  stopSpeakerMonitorMock,
+  channels,
+} = vi.hoisted(() => ({
+  listenerState: {
+    live: {
+      status: "inactive" as "inactive" | "active" | "finalizing",
+      loading: false,
+      amplitude: { mic: 0, speaker: 0 },
     },
-    startMonitorMock: vi.fn(),
-    stopMonitorMock: vi.fn(),
-    channels: [] as { onmessage: (level: number | null) => void }[],
-  }));
+  },
+  startMonitorMock: vi.fn(),
+  stopMonitorMock: vi.fn(),
+  startSpeakerMonitorMock: vi.fn(),
+  stopSpeakerMonitorMock: vi.fn(),
+  channels: [] as { onmessage: (level: number | null) => void }[],
+}));
 
 vi.mock("@tauri-apps/api/core", () => ({
   Channel: class {
@@ -35,6 +43,8 @@ vi.mock("@syntheo/plugin-transcription", () => ({
   commands: {
     startMicrophoneLevelMonitor: startMonitorMock,
     stopMicrophoneLevelMonitor: stopMonitorMock,
+    startSpeakerLevelMonitor: startSpeakerMonitorMock,
+    stopSpeakerLevelMonitor: stopSpeakerMonitorMock,
   },
 }));
 
@@ -45,11 +55,14 @@ vi.mock("~/stt/contexts", () => ({
 
 import { AudioSettingsView } from "./audio-settings";
 
-type MicrophoneDevice = Parameters<
-  typeof AudioSettingsView
->[0]["microphoneDevice"];
+type AudioSettingsProps = Parameters<typeof AudioSettingsView>[0];
+type MicrophoneDevice = AudioSettingsProps["microphoneDevice"];
+type SpeakerDevice = NonNullable<AudioSettingsProps["speakerDevice"]>;
 
-function renderAudioSettings(microphoneDevice: Partial<MicrophoneDevice> = {}) {
+function renderAudioSettings(
+  microphoneDevice: Partial<MicrophoneDevice> = {},
+  speakerDevice?: Partial<SpeakerDevice>,
+) {
   return render(
     <AudioSettingsView
       microphoneDevice={{
@@ -60,6 +73,19 @@ function renderAudioSettings(microphoneDevice: Partial<MicrophoneDevice> = {}) {
         onSearchAgain: vi.fn(),
         ...microphoneDevice,
       }}
+      speakerDevice={
+        speakerDevice
+          ? {
+              value: "",
+              devices: ["Haut-parleurs (Realtek)", "Casque (Jabra Evolve2)"],
+              onChange: vi.fn(),
+              devicesLoaded: true,
+              onSearchAgain: vi.fn(),
+              captured: "Haut-parleurs (Realtek)",
+              ...speakerDevice,
+            }
+          : undefined
+      }
     />,
   );
 }
@@ -72,6 +98,8 @@ describe("AudioSettingsView", () => {
     channels.length = 0;
     startMonitorMock.mockResolvedValue({ status: "ok", data: null });
     stopMonitorMock.mockResolvedValue({ status: "ok", data: null });
+    startSpeakerMonitorMock.mockResolvedValue({ status: "ok", data: null });
+    stopSpeakerMonitorMock.mockResolvedValue({ status: "ok", data: null });
   });
 
   afterEach(() => {
@@ -201,6 +229,82 @@ describe("AudioSettingsView", () => {
 
       expect(await screen.findByText("Input level unavailable")).toBeTruthy();
       expect(screen.queryByRole("meter")).toBeNull();
+    });
+  });
+
+  describe("system audio output (issue 450)", () => {
+    it("is hidden where the output cannot be chosen", () => {
+      renderAudioSettings();
+      expect(
+        screen.queryByRole("combobox", { name: "System sound" }),
+      ).toBeNull();
+      expect(startSpeakerMonitorMock).not.toHaveBeenCalled();
+    });
+
+    it("follows the current default output and says what is captured", () => {
+      renderAudioSettings({}, {});
+
+      expect(
+        screen.getByRole("combobox", { name: "System sound" }).textContent,
+      ).toContain("Current default output");
+      expect(screen.getByText(/Captured right now:/).textContent).toBe(
+        "Captured right now: Haut-parleurs (Realtek)",
+      );
+    });
+
+    it("shows when the chosen output is unavailable and will fall back", () => {
+      renderAudioSettings(
+        {},
+        { value: "HDMI — GPU NVIDIA", captured: "Haut-parleurs (Realtek)" },
+      );
+
+      expect(
+        screen.getByRole("combobox", { name: "System sound" }).textContent,
+      ).toContain("HDMI — GPU NVIDIA (Unavailable — using the default output)");
+    });
+
+    it("meters the chosen output, apart from the microphone", async () => {
+      const { unmount } = renderAudioSettings(
+        {},
+        { value: "Casque (Jabra Evolve2)" },
+      );
+
+      await waitFor(() =>
+        expect(startSpeakerMonitorMock).toHaveBeenCalledOnce(),
+      );
+      const [owner, device] = startSpeakerMonitorMock.mock.calls[0] as [
+        string,
+        string | null,
+      ];
+      expect(device).toBe("Casque (Jabra Evolve2)");
+      expect(screen.getByRole("meter", { name: "Output level" })).toBeTruthy();
+
+      unmount();
+      expect(stopSpeakerMonitorMock).toHaveBeenCalledWith(owner);
+    });
+
+    it("shows the captured output level during a recording", () => {
+      listenerState.live.status = "active";
+      listenerState.live.amplitude = { mic: 0.3, speaker: 0.6 };
+      renderAudioSettings({}, {});
+
+      expect(startSpeakerMonitorMock).not.toHaveBeenCalled();
+      expect(
+        screen
+          .getByRole("meter", { name: "Output level" })
+          .getAttribute("aria-valuenow"),
+      ).toBe("60");
+    });
+
+    it("explains when no output is detected and searches again", () => {
+      const onSearchAgain = vi.fn();
+      renderAudioSettings({}, { devices: [], onSearchAgain, captured: null });
+
+      expect(screen.getByRole("status").textContent).toBe(
+        "No audio output detected. Plug in headphones or speakers, then search again.",
+      );
+      fireEvent.click(screen.getByRole("button", { name: /Search again/ }));
+      expect(onSearchAgain).toHaveBeenCalledOnce();
     });
   });
 });

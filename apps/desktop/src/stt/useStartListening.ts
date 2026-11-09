@@ -80,6 +80,8 @@ export function useStartListeningState(
   const spokenLanguages = useConfigValue("spoken_languages");
   const dictionaryTerms = useConfigValue("personalization_dictionary_terms");
   const microphoneDevice = useConfigValue("microphone_device");
+  // Sortie capturée comme son système (issue 450).
+  const speakerDevice = useConfigValue("speaker_device");
   // Règle audio de Syntheo : la capture ne conserve jamais l'audio.
   const retainAudio = false;
   const meetingDisclosureAutoSendChat = useConfigValue(
@@ -214,6 +216,7 @@ export function useStartListeningState(
           api_key: conn?.apiKey ?? "",
           keywords,
           mic_device: microphoneDevice || null,
+          speaker_device: speakerDevice || null,
           transcription_mode: liveTranscriptionConfig.transcriptionMode,
           participant_human_ids: remoteParticipantHumanIds,
           self_human_id: session?.user_id || null,
@@ -299,6 +302,7 @@ export function useStartListeningState(
     getLiveStartError,
     getSessionMode,
     microphoneDevice,
+    speakerDevice,
     reportStartFailure,
     retainAudio,
     openNew,

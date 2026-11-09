@@ -19,6 +19,7 @@ import { MeetingSettingsView } from "./meeting-settings";
 import { NotificationSettingsView } from "./notification";
 import { Permissions } from "./permissions";
 import { SingleLanguageModelHint } from "./single-language-model-hint";
+import { useSpeakerDeviceSetting } from "./speaker-device";
 import { SpokenLanguagesView } from "./spoken-languages";
 import { StorageSettingsView } from "./storage";
 import { TimezoneSelector } from "./timezone";
@@ -182,6 +183,10 @@ function SettingsSectionContent({
   });
   // « Rechercher à nouveau » (issue 419) : relance la détection tout de suite.
   const [searchingMicrophones, setSearchingMicrophones] = useState(false);
+  const speakerDevice = useSpeakerDeviceSetting(
+    resolveConfigValue("speaker_device", storedSettings),
+    section === "meetings",
+  );
   return (
     <div className="flex flex-col gap-8">
       {section === "app" ? (
@@ -361,6 +366,7 @@ function SettingsSectionContent({
                     .finally(() => setSearchingMicrophones(false));
                 },
               }}
+              speakerDevice={speakerDevice}
             />
           </div>
         </>

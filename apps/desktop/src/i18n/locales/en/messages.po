@@ -34,6 +34,10 @@ msgstr "(default)"
 msgid "(Unavailable — using current default)"
 msgstr "(Unavailable — using current default)"
 
+#: src/settings/general/audio-settings.tsx
+msgid "(Unavailable — using the default output)"
+msgstr "(Unavailable — using the default output)"
+
 #. placeholder {0}: group.sessionIds.length
 #: src/sidebar/toast/undo-delete-toast.tsx
 msgid "{0} {noteLabel} deleted"
@@ -649,6 +653,10 @@ msgstr "Capture meeting chat in Memos"
 msgid "Capture shared screens in Memos"
 msgstr "Capture shared screens in Memos"
 
+#: src/settings/general/audio-settings.tsx
+msgid "Captured right now:"
+msgstr "Captured right now:"
+
 #: src/session/components/living-document/live-transcription-language.tsx
 msgid "Change"
 msgstr "Change"
@@ -772,6 +780,10 @@ msgstr "Choose the colors of Syntheo. Each palette follows the light or dark the
 #: src/settings/general/audio-settings.tsx
 msgid "Choose the microphone that captures your voice."
 msgstr "Choose the microphone that captures your voice."
+
+#: src/settings/general/audio-settings.tsx
+msgid "Choose the output whose sound Syntheo transcribes: the one where you hear the other participants."
+msgstr "Choose the output whose sound Syntheo transcribes: the one where you hear the other participants."
 
 #: src/contacts/related-notes.tsx
 #: src/contacts/shared.tsx
@@ -1111,6 +1123,10 @@ msgstr "Current"
 #: src/settings/general/audio-settings.tsx
 msgid "Current default"
 msgstr "Current default"
+
+#: src/settings/general/audio-settings.tsx
+msgid "Current default output"
+msgstr "Current default output"
 
 #: src/session/components/living-document/meeting-type-picker.tsx
 msgid "Current type"
@@ -2504,6 +2520,10 @@ msgstr "No apps found."
 msgid "No audio is being captured"
 msgstr "No audio is being captured"
 
+#: src/settings/general/audio-settings.tsx
+msgid "No audio output detected. Plug in headphones or speakers, then search again."
+msgstr "No audio output detected. Plug in headphones or speakers, then search again."
+
 #: src/settings/automations/index.tsx
 msgid "No automation draft yet"
 msgstr "No automation draft yet"
@@ -2880,6 +2900,14 @@ msgstr "Other device's version"
 #: src/session/components/living-document/live-transcription-language.tsx
 msgid "Other languages ({omittedLanguages}) won't be transcribed live."
 msgstr "Other languages ({omittedLanguages}) won't be transcribed live."
+
+#: src/settings/general/microphone-level.tsx
+msgid "Output level"
+msgstr "Output level"
+
+#: src/settings/general/microphone-level.tsx
+msgid "Output level unavailable"
+msgstr "Output level unavailable"
 
 #: src/shared/control.tsx
 msgid "Page not found"
@@ -3830,6 +3858,10 @@ msgstr "Speaker {number}"
 msgid "Speaker {number} · part {part}"
 msgstr "Speaker {number} · part {part}"
 
+#: src/settings/search-index.ts
+msgid "speakers, output, headphones, HDMI, loopback, participants, sound"
+msgstr "speakers, output, headphones, HDMI, loopback, participants, sound"
+
 #: src/settings/automations/workflow-builder.tsx
 msgid "Stack another destination. Steps run top to bottom."
 msgstr "Stack another destination. Steps run top to bottom."
@@ -4205,9 +4237,30 @@ msgstr "System audio unavailable"
 msgid "System audio unavailable. Microphone capture continues"
 msgstr "System audio unavailable. Microphone capture continues"
 
+#: src/stt/system-audio-change-notice.tsx
+msgid "System audio: {previous} is no longer available, Syntheo now captures {output}."
+msgstr "System audio: {previous} is no longer available, Syntheo now captures {output}."
+
+#: src/stt/system-audio-change-notice.tsx
+msgid "System audio: a headset was plugged in, Syntheo now captures {output}."
+msgstr "System audio: a headset was plugged in, Syntheo now captures {output}."
+
+#: src/stt/system-audio-change-notice.tsx
+msgid "System audio: Syntheo now captures {output}."
+msgstr "System audio: Syntheo now captures {output}."
+
+#: src/stt/system-audio-change-notice.tsx
+msgid "System audio: the headset was unplugged, Syntheo now captures {output}."
+msgstr "System audio: the headset was unplugged, Syntheo now captures {output}."
+
 #: src/settings/dictation.tsx
 msgid "System permissions"
 msgstr "System permissions"
+
+#: src/settings/general/audio-settings.tsx
+#: src/settings/search-index.ts
+msgid "System sound"
+msgstr "System sound"
 
 #: src/onboarding/final.tsx
 msgid "Take your notes while the transcript scrolls in the margin."
