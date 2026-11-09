@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
     | "RightPanelOpen",
   currentTab: { type: "empty" } as { type: string } | null,
   persistentChatPanel: vi.fn(),
+  persistentLayoutCalls: [] as { autoSaveId: string; panelIds: string[] }[],
   sendEvent: vi.fn(),
   sessionProps: { sessionId: "chat-session-1" },
   windowExpandWidth: vi.fn(() => Promise.resolve({ status: "ok", data: null })),
@@ -28,20 +29,27 @@ vi.mock("@syntheo/plugin-windows", () => ({
 }));
 
 vi.mock("@syntheo/ui/components/ui/resizable", () => ({
-  ResizablePanelGroup: ({
+  usePersistentPanelLayout: ({
     autoSaveId,
+    panelIds,
+  }: {
+    autoSaveId: string;
+    panelIds: string[];
+  }) => {
+    mocks.persistentLayoutCalls.push({ autoSaveId, panelIds });
+    return { defaultLayout: undefined, onLayoutChanged: vi.fn() };
+  },
+  ResizablePanelGroup: ({
     children,
     "data-main-chat-panel-group": mainChatPanelGroup,
-    direction,
+    orientation,
   }: {
-    autoSaveId?: string;
     children: React.ReactNode;
     "data-main-chat-panel-group"?: boolean;
-    direction: string;
+    orientation: string;
   }) => (
     <div
-      data-auto-save-id={autoSaveId}
-      data-direction={direction}
+      data-orientation={orientation}
       data-main-chat-panel-group={mainChatPanelGroup}
       data-testid="panel-group"
     >
@@ -52,23 +60,23 @@ vi.mock("@syntheo/ui/components/ui/resizable", () => ({
     children,
     className,
     defaultSize,
+    id,
     maxSize,
     minSize,
-    style,
   }: {
     children: React.ReactNode;
     className?: string;
-    defaultSize?: number;
-    maxSize?: number;
-    minSize?: number;
-    style?: React.CSSProperties;
+    defaultSize?: number | string;
+    id?: string;
+    maxSize?: number | string;
+    minSize?: number | string;
   }) => (
     <div
       data-class-name={className}
       data-default-size={defaultSize}
       data-max-size={maxSize}
       data-min-size={minSize}
-      data-min-width={style?.minWidth}
+      data-panel-id={id}
       data-testid="panel"
     >
       {children}
@@ -145,6 +153,7 @@ describe("MainChatPanels", () => {
     mocks.chatMode = "FloatingClosed";
     mocks.currentTab = { type: "empty" };
     mocks.persistentChatPanel.mockClear();
+    mocks.persistentLayoutCalls.length = 0;
     mocks.sendEvent.mockClear();
     mocks.windowExpandWidth.mockClear();
     mocks.windowRestoreWidth.mockClear();
@@ -180,10 +189,50 @@ describe("MainChatPanels", () => {
       </MainChatPanels>,
     );
 
-    expect(screen.getAllByTestId("panel")).toHaveLength(2);
+    const panels = screen.getAllByTestId("panel");
+    expect(panels).toHaveLength(2);
+    expect(panels[1]?.dataset).toMatchObject({
+      defaultSize: "30%",
+      maxSize: "50%",
+      // Sans ResizeObserver (jsdom), le minimum retombe sur 320 px.
+      minSize: "320",
+      panelId: "right-chat",
+    });
     expect(screen.getByTestId("resize-handle")).toBeTruthy();
     expect(screen.getByTestId("chat-view").dataset.layout).toBe("right-panel");
     expect(screen.getByTestId("chat-view").dataset.hasSession).toBe("true");
+  });
+
+  it("mémorise la disposition par ensemble de panneaux affichés", () => {
+    mocks.chatMode = "RightPanelOpen";
+
+    render(
+      <MainChatPanels autoSaveId="standalone-note-chat">
+        <div data-testid="main-content" />
+      </MainChatPanels>,
+    );
+
+    expect(
+      mocks.persistentLayoutCalls[mocks.persistentLayoutCalls.length - 1],
+    ).toEqual({
+      autoSaveId: "standalone-note-chat",
+      panelIds: ["main-body", "right-chat"],
+    });
+
+    cleanup();
+    mocks.chatMode = "FloatingClosed";
+    render(
+      <MainChatPanels>
+        <div data-testid="main-content" />
+      </MainChatPanels>,
+    );
+
+    expect(
+      mocks.persistentLayoutCalls[mocks.persistentLayoutCalls.length - 1],
+    ).toEqual({
+      autoSaveId: "main-chat",
+      panelIds: ["main-body"],
+    });
   });
 
   it("keeps Automations chat docked without a floating chat host", () => {
@@ -205,7 +254,8 @@ describe("MainChatPanels", () => {
   it.each([
     // Paramètres et Automatisations portent leur navigation (240px) dans le corps.
     ["automations", "automations", {}, "840"],
-    ["settings", "settings", {}, "min(940px, 100%)"],
+    // La v4 garde le minimum dans la largeur du groupe (plus de min() CSS).
+    ["settings", "settings", {}, "940"],
     ["sessions", "sessions", {}, "500"],
     ["empty", "empty", {}, "500"],
     ["standalone sessions", "sessions", { noteSurfaceMinWidth: 420 }, "420"],
@@ -216,7 +266,7 @@ describe("MainChatPanels", () => {
 
       render(renderPanels(props, <div data-testid="main-content" />));
 
-      expect(screen.getAllByTestId("panel")[0]?.dataset.minWidth).toBe(
+      expect(screen.getAllByTestId("panel")[0]?.dataset.minSize).toBe(
         expectedMinWidth,
       );
     },
