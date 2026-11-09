@@ -1,10 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import {
-  deriveContactIdentity,
-  inferCompanyNameFromEmail,
-  isEmailPlaceholderName,
-} from "./identity";
+import { deriveContactIdentity, inferCompanyNameFromEmail } from "./identity";
 
 describe("inferCompanyNameFromEmail", () => {
   test.each([
@@ -47,16 +43,5 @@ describe("deriveContactIdentity", () => {
         email: "jane.doe@gmail.com",
       }),
     ).toEqual({ name: "Jane Doe", nameSource: "email" });
-  });
-});
-
-describe("isEmailPlaceholderName", () => {
-  test.each([
-    ["", true],
-    ["alice@acme.com", true],
-    ["Jane @ Acme", false],
-    ["Jane Doe", false],
-  ])("%s -> %s", (name, expected) => {
-    expect(isEmailPlaceholderName(name)).toBe(expected);
   });
 });

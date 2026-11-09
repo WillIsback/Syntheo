@@ -134,12 +134,3 @@ export function getCanShowTranscript({
     Boolean(batchError)
   );
 }
-
-export function RecordingIcon() {
-  return (
-    <span className="relative flex size-3 items-center justify-center">
-      <span className="bg-recording/40 absolute size-2.5 animate-ping rounded-full" />
-      <span className="bg-recording relative size-2 rounded-full" />
-    </span>
-  );
-}

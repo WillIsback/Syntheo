@@ -371,14 +371,6 @@ export function mergeTranscriptSelections(
 
 const LIVE_TRANSCRIPT_PLACEHOLDER_ID = "__live-transcript__";
 
-export function canMergeTranscriptEntries(
-  selectedKeys: ReadonlySet<string>,
-  order: string[],
-  entries: Map<string, TranscriptWordSelection>,
-) {
-  return getTranscriptMergeTarget(selectedKeys, order, entries) != null;
-}
-
 export function getTranscriptMergeTarget(
   selectedKeys: ReadonlySet<string>,
   order: string[],
@@ -689,33 +681,4 @@ export function focusTranscriptSelection(
     }
     return editor;
   }
-}
-
-export function getTranscriptSelectionFromHere(
-  selection: TranscriptWordSelection,
-  entries: Iterable<TranscriptWordSelection>,
-): TranscriptWordSelection | null {
-  const anchor = selection.groups[0];
-  if (!anchor) return null;
-  for (const entry of entries) {
-    const group = entry.groups.find(
-      (group) =>
-        group.transcriptId === anchor.transcriptId &&
-        group.wordIds.includes(anchor.wordIds[0]),
-    );
-    if (group) {
-      return {
-        ...entry,
-        groups: [
-          {
-            ...group,
-            wordIds: group.wordIds.slice(
-              group.wordIds.indexOf(anchor.wordIds[0]),
-            ),
-          },
-        ],
-      };
-    }
-  }
-  return null;
 }

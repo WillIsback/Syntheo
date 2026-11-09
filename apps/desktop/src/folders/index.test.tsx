@@ -29,7 +29,6 @@ const mocks = vi.hoisted(() => ({
   updateFolderInstructions: vi.fn(),
   updateFolderWorkspace: vi.fn(),
   upload: vi.fn(),
-  workspaceId: "",
   personalWorkspaceId: "",
   workspaces: [] as Array<{ id: string; name: string }>,
 }));
@@ -57,7 +56,6 @@ vi.mock("@lingui/react/macro", () => ({
 vi.mock("~/session/queries", () => ({
   useFolderIcons: () => mocks.icons,
   useFolderPaths: () => mocks.folders,
-  useFolderWorkspaces: () => ({}),
 }));
 
 vi.mock("~/session/folder-catalog", () => ({
@@ -67,7 +65,6 @@ vi.mock("~/session/folder-catalog", () => ({
   updateFolderIcon: mocks.updateFolderIcon,
   updateFolderInstructions: mocks.updateFolderInstructions,
   updateFolderWorkspace: mocks.updateFolderWorkspace,
-  useFolderWorkspaceId: () => mocks.workspaceId,
   useFolderInstructions: () => mocks.instructions,
 }));
 
@@ -140,7 +137,6 @@ describe("Folders workspace", () => {
     mocks.instructions = "";
     mocks.materials = [];
     mocks.auth = null;
-    mocks.workspaceId = "";
     mocks.personalWorkspaceId = "";
     mocks.workspaces = [];
     mocks.createNamedFolder.mockResolvedValue("CS 101");

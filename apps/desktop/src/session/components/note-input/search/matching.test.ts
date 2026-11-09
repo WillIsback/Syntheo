@@ -1,9 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  createTranscriptSearchIndex,
   getMatchingElements,
   getTranscriptMatches,
-  getTranscriptWordMatches,
+  getTranscriptSearchIndexMatches,
   registerTranscriptSearchSource,
   type SearchOptions,
 } from "./matching";
@@ -63,11 +64,11 @@ describe("getTranscriptMatches", () => {
     const unregister = registerTranscriptSearchSource(
       container,
       (prepared, options) =>
-        getTranscriptWordMatches(
-          [
+        getTranscriptSearchIndexMatches(
+          createTranscriptSearchIndex([
             { id: "word-1", text: "visible", scrollIntoView: vi.fn() },
             { id: "word-999", text: "offscreen target", scrollIntoView },
-          ],
+          ]),
           prepared,
           options,
         ),

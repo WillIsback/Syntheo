@@ -24,10 +24,6 @@ export function parseDictionaryTermsText(value: string): string[] {
   );
 }
 
-export function formatDictionaryTerms(terms: string[]): string {
-  return normalizeKeywordList(terms).join("\n");
-}
-
 export function parseDictionaryTermsJson(value: unknown): string[] {
   if (Array.isArray(value)) {
     return normalizeKeywordList(

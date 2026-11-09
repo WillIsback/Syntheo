@@ -40,7 +40,6 @@ vi.mock("./overflow", () => ({
 }));
 
 vi.mock("../shared", () => ({
-  RecordingIcon: () => <div />,
   useHasTranscript: (sessionId: string) =>
     mocks.hasTranscriptBySession[sessionId] ?? false,
 }));

@@ -94,12 +94,6 @@ vi.mock("~/billing/billing-context", () => ({
   useBillingAccess: useBillingAccessMock,
 }));
 
-vi.mock("~/env", () => ({
-  env: {
-    VITE_API_URL: "https://api.test",
-  },
-}));
-
 vi.mock("~/services/audio-retention", () => ({
   deleteProcessedAudioForRetention: deleteProcessedAudioForRetentionMock,
   normalizeAudioRetention: (value: unknown) =>

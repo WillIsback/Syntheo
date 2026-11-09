@@ -15,7 +15,7 @@ import {
   shortcutTooltip,
 } from "~/shared/shortcuts";
 
-export { getNoteStage, type NoteStage } from "./stage";
+export { type NoteStage } from "./stage";
 
 // Kanji d'ornement devant chaque étape (identite.md § Clins d'œil).
 export const STAGE_KANJI: Record<NoteStage, string> = {

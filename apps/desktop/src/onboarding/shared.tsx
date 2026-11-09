@@ -2,14 +2,7 @@ import { Trans, useLingui } from "@lingui/react/macro";
 import { AnimatePresence, motion } from "motion/react";
 import { type ReactNode, useEffect, useRef } from "react";
 
-import {
-  CaretLeft,
-  CaretRight,
-  Check,
-  CheckCircle,
-  CircleNotch,
-  XCircle,
-} from "@syntheo/ui/components/icons";
+import { CaretLeft, CaretRight, Check } from "@syntheo/ui/components/icons";
 import { cn } from "@syntheo/utils";
 
 const SCROLL_DELAY_MS = 350;
@@ -162,30 +155,5 @@ export function OnboardingButton({
         className,
       ])}
     />
-  );
-}
-
-export function StepRow({
-  status,
-  label,
-}: {
-  status: "done" | "active" | "failed";
-  label: ReactNode;
-}) {
-  return (
-    <div className="flex items-center gap-2 text-sm">
-      {status === "done" && <CheckCircle className="text-primary size-4" />}
-      {status === "active" && (
-        <CircleNotch className="text-muted-foreground size-4 animate-spin" />
-      )}
-      {status === "failed" && <XCircle className="text-destructive size-4" />}
-      <span
-        className={
-          status === "failed" ? "text-destructive" : "text-muted-foreground"
-        }
-      >
-        {label}
-      </span>
-    </div>
   );
 }

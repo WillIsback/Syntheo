@@ -40,16 +40,6 @@ type SessionTranscriptStateSqlRow = {
 type SessionEventSqlRow = { event_json: string };
 
 const EMPTY_SESSION_SUMMARIES: SessionSummaryRecord[] = [];
-const SESSION_PREFETCH_TTL_MS = 5_000;
-const MAX_PREFETCHED_SESSIONS = 1;
-
-type PrefetchedSession = {
-  createdAt: number;
-  promise: Promise<SessionRecord | null>;
-  value?: SessionRecord | null;
-};
-
-const prefetchedSessions = new Map<string, PrefetchedSession>();
 
 const SESSION_SELECT_SQL = `
   SELECT
@@ -83,47 +73,7 @@ export function useSession(sessionId: string): SessionRecord | null {
     },
   });
   if (!sessionId) return null;
-  if (data !== undefined) {
-    prefetchedSessions.delete(sessionId);
-    return data;
-  }
-
-  const prefetched = getPrefetchedSession(sessionId);
-  return prefetched && "value" in prefetched
-    ? (prefetched.value ?? null)
-    : null;
-}
-
-export function preloadSession(
-  sessionId: string,
-): Promise<SessionRecord | null> {
-  if (!sessionId) return Promise.resolve(null);
-
-  const existing = getPrefetchedSession(sessionId);
-  if (existing) return existing.promise;
-
-  let entry: PrefetchedSession;
-  const promise = liveQueryClient
-    .execute<SessionSqlRow>(SESSION_SELECT_SQL, [sessionId])
-    .then((rows) => {
-      const row = rows[0];
-      const value = row ? mapSessionRow(row) : null;
-      if (prefetchedSessions.get(sessionId) === entry) {
-        entry.value = value;
-      }
-      return value;
-    })
-    .catch((error) => {
-      if (prefetchedSessions.get(sessionId) === entry) {
-        prefetchedSessions.delete(sessionId);
-      }
-      throw error;
-    });
-
-  entry = { createdAt: Date.now(), promise };
-  prefetchedSessions.set(sessionId, entry);
-  trimPrefetchedSessions();
-  return promise;
+  return data ?? null;
 }
 
 export function useSessionSummary(
@@ -439,22 +389,6 @@ function useHeldLiveQueryRows<T>(
     return empty;
   }
   return data ?? previous.current;
-}
-
-function getPrefetchedSession(sessionId: string) {
-  const entry = prefetchedSessions.get(sessionId);
-  if (!entry) return undefined;
-  if (Date.now() - entry.createdAt <= SESSION_PREFETCH_TTL_MS) return entry;
-  prefetchedSessions.delete(sessionId);
-  return undefined;
-}
-
-function trimPrefetchedSessions() {
-  while (prefetchedSessions.size > MAX_PREFETCHED_SESSIONS) {
-    const oldestSessionId = prefetchedSessions.keys().next().value;
-    if (!oldestSessionId) return;
-    prefetchedSessions.delete(oldestSessionId);
-  }
 }
 
 function mapSessionRow(row: SessionSqlRow): SessionRecord {

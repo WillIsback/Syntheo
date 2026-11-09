@@ -491,7 +491,6 @@ msgid "Are you talking to {firstName} right now?"
 msgstr "Parlez-vous avec {firstName} en ce moment ?"
 
 #: src/chat/components/input/index.tsx
-#: src/shared/chat-cta.tsx
 msgid "Ask anything"
 msgstr "Posez toutes vos questions"
 
@@ -502,10 +501,6 @@ msgstr "Demander avant d'arrêter lorsqu'une réunion peut être terminée. Lors
 #: src/composer/index.tsx
 msgid "Ask Syntheo AI anything"
 msgstr "Posez toutes vos questions à Syntheo AI"
-
-#: src/shared/chat-cta.tsx
-msgid "Ask Syntheo anything"
-msgstr "Posez toutes vos questions à Syntheo"
 
 #: src/session/components/capsule/index.tsx
 #: src/shared/shortcuts.ts
@@ -1262,11 +1257,6 @@ msgstr "Créer un nouvel intervenant"
 msgctxt "export field"
 msgid "Created"
 msgstr "Créé le"
-
-#. placeholder {0}: apiKey.created_at.slice(0, 10)
-#: src/settings/developers/api-key-row.tsx
-msgid "Created {0}"
-msgstr "Créé {0}"
 
 #: src/settings/automations/index.tsx
 msgid "Created {createdAt}"
@@ -2286,11 +2276,6 @@ msgstr "Dernière exécution {relative} : {0}"
 #: src/settings/automations/starter-config.tsx
 msgid "Last run failed {relative}: {0}"
 msgstr "Dernière exécution échouée {relative} : {0}"
-
-#. placeholder {0}: apiKey.last_used_at.slice(0, 10)
-#: src/settings/developers/api-key-row.tsx
-msgid "Last used {0}"
-msgstr "Dernière utilisation {0}"
 
 #: src/chat/components/message/error.tsx
 msgid "Learn how to fix this"
@@ -3761,10 +3746,6 @@ msgstr "Vérifier la note"
 #: src/session/components/pending-proposals-banner.tsx
 msgid "Review summary"
 msgstr "Vérifier le compte rendu"
-
-#: src/settings/developers/api-key-row.tsx
-msgid "Revoke"
-msgstr "Révoquer"
 
 #: src/settings/dictation-shortcut.tsx
 msgid "Right Command"

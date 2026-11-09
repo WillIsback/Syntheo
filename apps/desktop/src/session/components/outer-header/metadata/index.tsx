@@ -1,10 +1,7 @@
 import { commands as openerCommands } from "@syntheo/plugin-opener2";
 import { MapPin, VideoCamera } from "@syntheo/ui/components/icons";
 import { Button } from "@syntheo/ui/components/ui/button";
-import {
-  AppFloatingPanel,
-  PopoverContent,
-} from "@syntheo/ui/components/ui/popover";
+import { AppFloatingPanel } from "@syntheo/ui/components/ui/popover";
 import { safeFormat, safeParseDate, TZDate } from "@syntheo/utils";
 
 import { DateEditor } from "./date";
@@ -13,14 +10,6 @@ import { ParticipantsDisplay } from "./participants";
 import { useSessionEvent } from "~/session/hooks/useSessionEvent";
 import { useConfigValue } from "~/shared/config";
 import { useTimeFormat } from "~/shared/hooks/useTimeFormat";
-
-export function MetadataPopoverContent({ sessionId }: { sessionId: string }) {
-  return (
-    <PopoverContent variant="app" align="end" className="w-72 overflow-hidden">
-      <MetadataPanelContent sessionId={sessionId} />
-    </PopoverContent>
-  );
-}
 
 export function MetadataPanelContent({ sessionId }: { sessionId: string }) {
   return (

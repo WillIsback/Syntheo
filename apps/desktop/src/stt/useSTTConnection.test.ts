@@ -65,10 +65,6 @@ vi.mock("~/billing/billing-context", () => ({
   useBillingAccess: () => billingState,
 }));
 
-vi.mock("~/env", () => ({
-  env: { VITE_API_URL: "https://api.example.com" },
-}));
-
 vi.mock("~/settings/providers", () => ({
   useAiProvidersState: () => ({
     isReady: readiness.provider,
