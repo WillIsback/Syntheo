@@ -260,7 +260,6 @@ function TabContentNoteInner({
                 sessionMode={sessionMode}
                 transcriptEditMode={transcriptEditMode}
                 onTranscriptEditModeChange={handleTranscriptEditModeChange}
-                hideHeader
                 stage={stage}
               />
             ) : (
