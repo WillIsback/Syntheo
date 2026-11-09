@@ -1,11 +1,14 @@
 # Workflow : fusion automatique des PR Dependabot
 #
-# La branche `main` n'a pas de règle de protection : `gh pr merge --auto` ne
-# garantit donc PAS qu'un job non requis (le Rust, ~20 min) ait tourné avant la
-# fusion. Un lot de bumps cassants a ainsi atteint `main` sans être compilé
-# (régression ort 2.0.0-rc.15). On attend donc explicitement le succès du job
-# Rust (`ci-code-quality (Rust)`, exécuté sur les PR Dependabot) avant de
-# fusionner, puis on vérifie qu'aucun autre check n'est en échec.
+# Seules les PR **groupées minor/patch** (groupes `npm-minor-patch`,
+# `cargo-minor-patch`, et `github-actions` hors majeure) sont fusionnées
+# automatiquement. Une PR isolée est une mise à jour que Dependabot n'a pas
+# pu ranger dans ces groupes (majeure, ou 0.x → 0.y, cassante pour cargo) :
+# elle reste à relire et à fusionner à la main.
+#
+# La fusion n'a lieu qu'une fois **tous** les checks terminés, aucun en échec,
+# et le job Rust (non requis par le ruleset, ~20 min) vert : un lot de bumps
+# cassants a déjà atteint `main` sans être compilé (régression ort rc.15).
 name: dependabot-auto-merge
 
 on:
@@ -27,42 +30,72 @@ jobs:
       pull-requests: write
       checks: read
     steps:
-      - name: Attendre le job Rust puis fusionner
+      - name: Métadonnées Dependabot
+        id: meta
+        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
+
+      - name: Décider si la PR est fusionnable automatiquement
+        id: policy
+        env:
+          GROUP: ${{ steps.meta.outputs.dependency-group }}
+          UPDATE_TYPE: ${{ steps.meta.outputs.update-type }}
+        run: |
+          set -euo pipefail
+          echo "groupe=${GROUP:-aucun} type=${UPDATE_TYPE:-inconnu}"
+          case "$GROUP" in
+            npm-minor-patch|cargo-minor-patch)
+              ok=true ;;
+            github-actions)
+              if [ "$UPDATE_TYPE" = "version-update:semver-major" ]; then ok=false; else ok=true; fi ;;
+            *)
+              ok=false ;;
+          esac
+          if [ "$ok" != true ]; then
+            echo "ℹ️ PR hors des groupes minor/patch : fusion manuelle après relecture."
+          fi
+          echo "eligible=$ok" >> "$GITHUB_OUTPUT"
+
+      - name: Attendre tous les checks puis fusionner
+        if: steps.policy.outputs.eligible == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
-          SHA: ${{ github.event.pull_request.head.sha }}
           PR: ${{ github.event.pull_request.number }}
         run: |
           set -euo pipefail
-          name='ci-code-quality (Rust)'
+          self='Auto-merge Dependabot'
+          rust='ci-code-quality (Rust)'
+          done=false
           for _ in $(seq 1 160); do
-            state=$(gh api "repos/$REPO/commits/$SHA/check-runs?per_page=100" \
-              --jq ".check_runs[] | select(.name==\"$name\") | \"\(.status):\(.conclusion)\"" \
-              2>/dev/null | head -1 || true)
-            echo "job Rust -> ${state:-en attente}"
-            case "$state" in
-              completed:success)
-                break ;;
-              completed:*)
-                echo "❌ job Rust non vert ($state) : fusion annulée"
-                exit 1 ;;
-            esac
+            rc=0
+            checks=$(gh pr checks "$PR" --repo "$REPO" --json name,bucket) || rc=$?
+            # 8 = des checks sont encore en cours ; tout autre code est une erreur.
+            if [ "$rc" -ne 0 ] && [ "$rc" -ne 8 ]; then
+              echo "❌ lecture des checks impossible (code $rc) : fusion annulée"
+              exit 1
+            fi
+            pending=$(jq --arg self "$self" \
+              '[.[] | select(.name != $self and .bucket == "pending")] | length' <<<"$checks")
+            rust_state=$(jq -r --arg rust "$rust" \
+              '[.[] | select(.name == $rust)][0].bucket // "absent"' <<<"$checks")
+            echo "checks en cours : $pending ; job Rust : $rust_state"
+            if [ "$pending" = "0" ] && [ "$rust_state" != "absent" ] && [ "$rust_state" != "pending" ]; then
+              done=true
+              break
+            fi
             sleep 30
           done
-          if [ "${state:-}" != "completed:success" ]; then
-            echo "❌ délai dépassé en attendant le job Rust"
+          if [ "$done" != true ]; then
+            echo "❌ délai dépassé en attendant les checks"
             exit 1
           fi
 
-          # Aucun autre check ne doit être en échec (vitest, qualité…).
-          failing=$(gh pr checks "$PR" --json name,bucket \
-            --jq '[.[] | select(.bucket=="fail" or .bucket=="cancel")] | length' \
-            2>/dev/null || echo 0)
-          if [ "$failing" != "0" ]; then
-            echo "❌ des checks sont en échec :"
-            gh pr checks "$PR"
+          failing=$(jq --arg self "$self" \
+            '[.[] | select(.name != $self and (.bucket == "fail" or .bucket == "cancel"))] | length' <<<"$checks")
+          if [ "$failing" != "0" ] || [ "$rust_state" != "pass" ]; then
+            echo "❌ checks en échec ou job Rust non vert : fusion annulée"
+            jq -r '.[] | "\(.bucket)\t\(.name)"' <<<"$checks"
             exit 1
           fi
 
-          gh pr merge --squash "$PR"
+          gh pr merge "$PR" --repo "$REPO" --squash
