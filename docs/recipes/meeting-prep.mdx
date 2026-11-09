@@ -31,7 +31,7 @@ Cette recette aide un agent (via le [serveur MCP local](/agents/mcp) ou la [CLI]
     syntheo --json meetings history MEETING_ID --limit 5 --offset 0
     ```
 
-    Une série n'existe que pour une réunion liée à un événement récurrent de calendrier. Sur Linux et Windows, aucun calendrier n'est connecté : la liste est vide. Appuyez-vous alors sur la recherche par titre de la première étape.
+    Syntheo ne se connecte à aucun calendrier : une réunion n'a de série que si elle a été importée avec un identifiant de série. Le plus souvent, la liste est vide. Appuyez-vous alors sur la recherche par titre de la première étape.
   </Step>
   <Step title="Utiliser la transcription avec parcimonie">
     Si une décision n'est pas claire, appelez `get_meeting_transcript` avec `limit: 200`, ou lancez :

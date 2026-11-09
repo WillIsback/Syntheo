@@ -10,7 +10,7 @@
 ## Sources of truth
 
 - Treat `apps/cli/src/cli.rs` as the CLI command contract.
-- Treat `apps/cli/src/mcp.rs` as the MCP tool and resource contract.
+- Treat `apps/cli/src/mcp/` as the MCP tool and resource contract.
 - Treat current release automation as the source of truth for installation channels.
 - Do not infer product behavior from the raw SQLite schema.
 
@@ -37,3 +37,9 @@
 - Run `pnpm exec dprint fmt 'docs/**/*' 'skills/**/*'` from the repository root.
 - Run `pnpm exec dprint check 'docs/**/*' 'skills/**/*'` before submitting.
 - Run `mint validate` and `mint broken-links --check-anchors --check-redirects` from `docs/` before deploying.
+
+## Code map
+
+- `code/` is the codebase knowledge graph ("Carte du code" tab). It maps apps, plugins, crates, and packages to their role, dependencies, and the user pages they affect.
+- `code/doc-map.mdx` maps each user page to its source paths. Update it when a page's sources move or a new page is added.
+- Keep `code/` factual and source-verified like the rest of the docs; it does not replace `architecture.mdx`.

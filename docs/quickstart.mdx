@@ -10,7 +10,7 @@ Syntheo ne fournit aucun modèle : la transcription et les comptes rendus passen
     Téléchargez le paquet Linux ou l'installeur Windows depuis [GitHub Releases](https://github.com/WillIsback/syntheo-desktop/releases/latest). Voir [Installer l'application](/desktop-installation) pour choisir le bon fichier.
   </Step>
   <Step title="Terminer l'accueil">
-    Au premier lancement, Syntheo vous propose d'importer l'historique d'un autre assistant de réunion s'il en détecte un. Cliquez sur « Ignorer pour le moment » si vous n'en avez pas besoin, puis sur « Ouvrir Syntheo ». Aucun compte n'est demandé.
+    Au premier lancement, l'écran « Bienvenue sur Syntheo » présente les trois étapes d'une note : Préparer, Écouter et Synthèse. Cliquez sur « Ouvrir Syntheo ». Aucun compte n'est demandé.
   </Step>
   <Step title="Configurer la transcription">
     Ouvrez les **Paramètres** (<kbd>Ctrl</kbd> + <kbd>,</kbd>), groupe « Mes serveurs », puis **Transcription**. Dans « Adresse du serveur », saisissez l'adresse de votre serveur, par exemple `http://localhost:8000/v1`, puis cliquez sur « Tester la connexion ». Choisissez ensuite le modèle dans la liste.
@@ -36,13 +36,14 @@ Le détail des protocoles, des adresses acceptées et des clés d'API est dans [
 
 ## Se repérer dans l'application
 
-- **L'accueil** vous salue, affiche le bouton « Démarrer une réunion » et la liste « Reprendre » avec vos dernières notes.
-- **La palette** « Rechercher une note » (<kbd>Ctrl</kbd> + <kbd>K</kbd>) retrouve une note par son titre et ouvre les autres vues : Paramètres, Modèles, Calendrier, Dossiers, Contacts, Automatisations.
+- **L'accueil** vous salue, affiche le bouton « Démarrer une réunion », vos dossiers actifs sous « Vos dossiers » et la liste « Reprendre » avec vos dernières notes.
+- **La palette** « Rechercher une note » (<kbd>Ctrl</kbd> + <kbd>K</kbd>) retrouve une note par son titre ou son contenu, un dossier ou un contact, et ouvre les autres vues : Paramètres, Modèles, Dossiers, Contacts, Automatisations.
+- **Les dossiers** regroupent les réunions d'un projet, avec un fil rouge et l'ordre du jour de la prochaine réunion. Voir [Dossiers et projets](/folders).
 - **Une note** passe par trois étapes, affichées dans la capsule en bas de la fenêtre : 備 Préparer · 聴 Écouter · 結 Synthèse.
 - **« Demander à la note »** (<kbd>Ctrl</kbd> + <kbd>J</kbd>) ouvre le chat, qui répond avec le modèle de langage que vous avez configuré.
 - **Paramètres** regroupe vos réglages en cinq groupes : « Moi », « Mes serveurs », « Écrire », « Mes réunions » et « Avancé ».
 
-L'historique passe par l'accueil et la palette : il n'y a pas de barre latérale. Le titre d'une note se modifie directement en haut de la note.
+L'historique passe par l'accueil, la palette et la vue **Dossiers** : il n'y a pas de barre latérale permanente. Le titre d'une note se modifie directement en haut de la note.
 
 ## Et ensuite
 

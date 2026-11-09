@@ -18,7 +18,7 @@ Tout se trouve dans le dossier de données de l'application :
 
 | Donnée | Stockage |
 | --- | --- |
-| Transcriptions, notes, comptes rendus, contacts, dossiers, réglages | Base SQLite locale `app.db` |
+| Transcriptions, notes, comptes rendus, contacts, dossiers (fil rouge, ordre du jour de la prochaine réunion, modèle par défaut), automatisations, réglages | Base SQLite locale `app.db` |
 | Index de recherche plein texte | Dossier de données (copie indexée des transcriptions et des notes) |
 | Journaux techniques | Dossier de logs de l'application, avec masquage du contenu sensible et rotation par taille |
 | Clés API des serveurs d'inférence | Trousseau du système (Secret Service sous Linux, Gestionnaire d'informations d'identification sous Windows), jamais en clair dans la base |
@@ -39,6 +39,8 @@ L'audio de la capture vit en mémoire le temps d'être envoyé à votre serveur 
 - la dictée produit son audio en mémoire ;
 - l'import d'un fichier audio lit le fichier à son emplacement d'origine, sans le copier dans le dossier de données.
 
+Quand vous coupez le micro ou le son système pendant l'écoute, Syntheo envoie du silence à la place de cette source : ce qu'elle capte ne quitte pas votre poste. Voir [Enregistrer une réunion](/meetings), section « Couper le micro ou le son système ».
+
 Conséquence : si la transcription s'interrompt (serveur injoignable, clé refusée), le passage concerné manque à la transcription. Syntheo l'indique et se reconnecte, mais ne peut pas le rattraper.
 
 ## Ce qui sort de votre poste
@@ -46,7 +48,9 @@ Conséquence : si la transcription s'interrompt (serveur injoignable, clé refus
 | Destination | Ce qui est envoyé | Quand |
 | --- | --- | --- |
 | Votre serveur de transcription | L'audio de la capture, de la dictée ou du fichier importé | Pendant la transcription |
-| Votre serveur de synthèse | Le texte utile à la tâche : transcription, notes, consignes du modèle de compte rendu, question du chat | Compte rendu, chat, « Proposer des sections » |
+| Votre serveur de synthèse | Le texte utile à la tâche : transcription, notes, consignes du modèle de compte rendu, question du chat | Compte rendu, chat, « Proposer des sections », fil rouge et ordre du jour d'un dossier, étape « Générer » d'une automatisation |
+| Les adresses de vos [webhooks](/reference/webhooks) | Les événements de réunion (note, résumés, participants, transcription) | À chaque événement, si vous avez ajouté un point de terminaison |
+| L'adresse de l'étape webhook d'une [automatisation](/automations) | Le contenu que vous y placez | Quand l'automatisation s'exécute |
 
 Aucun en-tête n'identifie votre appareil. Syntheo ne bascule jamais vers un autre service si votre serveur ne répond pas.
 

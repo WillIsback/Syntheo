@@ -41,7 +41,7 @@ Une proposition en attente affiche aussi le bandeau « 1 modification en attente
 
 ## Choisir la forme du compte rendu
 
-Le type de réunion choisi à l'étape Préparer fixe le modèle du compte rendu. À l'étape Synthèse, le nom du modèle utilisé s'affiche dans la ligne d'informations sous le titre. Cliquez dessus pour ouvrir le sélecteur :
+Le type de réunion choisi à l'étape Préparer fixe le modèle du compte rendu. Sans choix sur la note, Syntheo utilise le modèle du dossier de la note, s'il en a un. À l'étape Synthèse, le nom du modèle utilisé s'affiche dans la ligne d'informations sous le titre. Cliquez dessus pour ouvrir le sélecteur :
 
 - recherchez un modèle (« Rechercher des modèles... ») et sélectionnez-le pour remplacer le compte rendu par un nouveau, rédigé selon ce modèle ;
 - choisissez « Régénérer » sur le modèle déjà utilisé pour le rédiger à nouveau ;
@@ -67,12 +67,26 @@ Dans une note vide, le même menu propose aussi « Téléverser un audio » et �
 
 Syntheo écrit le fichier dans votre dossier d'export, puis l'affiche dans le gestionnaire de fichiers. Par défaut, il s'agit de votre dossier Téléchargements. Changez-le sous **Paramètres → Profil → « Emplacement d'export »**.
 
-Pour exporter automatiquement chaque réunion en Markdown, voir [Automatisations](/automations). La CLI exporte aussi une réunion en Markdown ou en JSON (`syntheo meetings export`).
+Pour exporter automatiquement chaque réunion en Markdown, ou enchaîner d'autres actions après une réunion, voir [Automatisations](/automations). La CLI exporte aussi une réunion en Markdown ou en JSON (`syntheo meetings export`).
 
 Syntheo ne propose aucun partage en ligne : pour transmettre une réunion, exportez-la puis envoyez le fichier par le moyen de votre choix.
 
 ## Retrouver une note
 
-- L'accueil liste vos dernières notes sous « Reprendre ».
-- La palette « Rechercher une note » (<kbd>Ctrl</kbd> + <kbd>K</kbd>) affiche vos notes récentes (« Récent ») puis « Toutes les notes ». Tapez quelques lettres du titre pour filtrer.
-- La vue **Dossiers** et la vue **Calendrier** classent vos notes par dossier ou par date.
+- L'accueil liste vos dernières notes sous « Reprendre », chacune avec la pastille de son dossier, et vos dossiers actifs sous « Vos dossiers ».
+- La palette « Rechercher une note » (<kbd>Ctrl</kbd> + <kbd>K</kbd>) affiche vos notes récentes (« Récent ») puis « Toutes les notes ». Tapez quelques mots pour chercher.
+- La vue **Dossiers** classe vos notes par dossier. Voir [Dossiers et projets](/folders).
+
+### Chercher avec la palette
+
+La palette cherche à la fois dans les titres et dans le contenu de vos notes. Les titres qui correspondent s'affichent tout de suite ; les notes trouvées par leur contenu arrivent après une courte pause de frappe, avec un extrait du passage.
+
+Les dossiers dont le nom correspond apparaissent en tête, sous « Dossiers », avec leur nombre de réunions. Viennent ensuite les notes dont le titre correspond, puis celles trouvées seulement dans leur contenu ; chaque note affiche son dossier et sa date. Les personnes et organisations ont leur propre groupe, « Contacts ».
+
+Pour chercher dans un seul dossier, surlignez-le et appuyez sur <kbd>Tab</kbd>. La recherche se limite alors à ce dossier et à ses sous-dossiers ; <kbd>Retour arrière</kbd> dans le champ vide en sort. Voir [Chercher dans un dossier](/folders#chercher-dans-un-dossier).
+
+La palette ouvre aussi les autres vues (Paramètres, Modèles, Dossiers, Contacts, Automatisations) et propose quelques commandes.
+
+### Mentionner une note ou un dossier
+
+Dans vos notes et dans le chat, tapez <kbd>@</kbd> pour mentionner un dossier, une note ou un contact. Les suggestions viennent du même moteur que la palette, dans le même ordre. Un dossier mentionné ouvre sa page.

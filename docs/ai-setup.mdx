@@ -98,9 +98,11 @@ En cas d'échec, un message sous le titre de la carte dit quoi faire, par exempl
 Syntheo transcrit les réunions **pendant** la capture, et seulement ainsi : l'audio n'étant jamais conservé, il n'y a pas de transcription après coup. Le modèle choisi doit donc savoir diffuser en temps réel.
 
 - Avec le protocole **OpenAI**, tout modèle on-premise (par exemple Voxtral Realtime sur vLLM) est traité comme un modèle en temps réel. Les noms de modèles « fichier » de l'API OpenAI (`whisper-1`, `gpt-4o-transcribe`, `gpt-4o-mini-transcribe`…) ne servent qu'à l'import : Syntheo refuse de démarrer une capture avec eux, avec le message « Ce modèle ne transcrit qu'après l'enregistrement, ce qui supposerait de conserver l'audio. Choisissez un modèle de transcription en temps réel. ».
-- Avec **NVIDIA NIM**, tous les modèles sont en temps réel. En revanche, l'import d'un fichier audio passe par le protocole OpenAI (`/v1/audio/transcriptions`) : il demande un serveur OpenAI.
+- Avec **NVIDIA NIM**, tous les modèles sont en temps réel. L'import d'un fichier audio passe alors par le même flux en temps réel qu'une réunion : voir [Importer un enregistrement](/import-recordings).
 
-La dictée utilise le même serveur de transcription que les réunions.
+La saisie vocale du chat transcrit par lots, après l'enregistrement : elle demande le protocole OpenAI. Avec un modèle NIM, elle affiche « La saisie vocale est indisponible » avant d'ouvrir le micro.
+
+La dictée dans d'autres applications utilise le même serveur de transcription que les réunions.
 
 ## Configurer la synthèse
 

@@ -20,7 +20,7 @@ La détection fonctionne entièrement en local : Syntheo observe quelles applica
 
 ## Détecter une réunion non planifiée
 
-« Détection du microphone » est activée par défaut dans **Paramètres → Notifications**. Quand une autre application utilise le microphone de façon prolongée, Syntheo vous envoie une notification pour vous signaler qu'une réunion a peut-être commencé.
+Activez « Détection du microphone » dans **Paramètres → Notifications** (désactivée par défaut). Quand une autre application utilise le microphone de façon prolongée, Syntheo vous envoie une notification pour vous signaler qu'une réunion a peut-être commencé.
 
 La détection est un rappel : elle ne démarre pas l'enregistrement toute seule. Vous pouvez régler le « Délai de détection » (de 5 secondes à 2 minutes) et utiliser « Exclure les applications de la détection » pour ignorer les applications qui ne sont pas des outils de réunion.
 
@@ -53,8 +53,8 @@ Sous Windows, « Capturer les écrans partagés dans Memos » enregistre dans vo
 
 ## Garder les commandes à portée de main
 
-Avec « Afficher la barre flottante », activé par défaut dans **Paramètres → Réunions**, une barre compacte reste visible pendant l'écoute. Elle permet de piloter l'enregistrement sans rouvrir la fenêtre principale.
+Avec « Afficher la barre flottante », activé par défaut dans **Paramètres → Réunions**, une pastille compacte reste visible pendant l'écoute. Elle affiche la durée d'écoute et le niveau sonore, et propose la bascule du micro, « Pause » et « Terminer ». Un clic sur la durée vous ramène à la note. Voir [Enregistrer une réunion](/meetings), section « Garder les commandes à portée de main ».
 
-## Réunions planifiées
+La pastille s'ouvre en bas au centre de l'écran. Sous Linux, avec un compositeur Wayland qui gère les calques (Hyprland, sway, KDE Plasma), elle reste ancrée à cet endroit. Sous GNOME, X11 et Windows, vous pouvez la déplacer en la faisant glisser.
 
-**Paramètres → Réunions** affiche aussi « Démarrer au début de la réunion » et « Rejoindre les réunions programmées ». Ces options s'appuient sur les événements d'agenda. Les agendas en ligne (Google, Outlook) ne sont pas pris en charge et l'agenda local n'est disponible que sur macOS, qui n'est pas publié pour l'instant : sous Linux et Windows, ces deux options n'ont donc pas d'effet. Démarrez vos captures depuis une note avec « Commencer l'écoute ».
+Syntheo ne démarre pas l'écoute à partir d'un agenda : démarrez vos captures depuis une note avec « Commencer l'écoute ».
