@@ -3,6 +3,8 @@ title: "Enregistrer une réunion"
 description: "Préparez, écoutez et terminez une capture sans ajouter de robot à l'appel."
 ---
 
+import { AppScreen, SettingsPath } from "/snippets/app.gen.jsx";
+
 ## Avant de commencer
 
 Syntheo a besoin d'un serveur de transcription en temps réel configuré dans **Paramètres → Transcription**. Sans lui, l'écoute ne démarre pas. Pour obtenir un compte rendu, configurez aussi un serveur de synthèse dans **Paramètres → Synthèse**. Voir [Configurer la transcription et l'IA](/ai-setup).
@@ -16,6 +18,10 @@ Une note de réunion est un document vivant. Elle passe par trois étapes sans c
 | 備 Préparer | Une fiche (dossier, type de réunion, participants, écoute) et vos notes | « Annuler » · « Commencer l'écoute » |
 | 聴 Écouter | Vos notes, avec la transcription dans la marge de droite | Chronomètre, niveau sonore, bascules du micro et du son système, « Mettre en pause », « Terminer » |
 | 結 Synthèse | Le compte rendu, puis vos notes | « Copier » · « Exporter » · « Demander à la note » |
+
+Essayez la capsule : cliquez sur « Commencer l'écoute », coupez le micro ou le son système, mettez en pause, puis « Terminer ». Les repères désignent les étapes (1), les actions de la capsule (2) et le contenu de la note (3).
+
+<AppScreen stage="prepare" />
 
 ## Préparer la réunion
 
@@ -43,6 +49,8 @@ Syntheo capte votre microphone et l'audio système de l'ordinateur. Il ne rejoin
 ### Choisir le micro et la sortie captée
 
 Ouvrez **Paramètres → Réunions**, section « Audio » :
+
+<SettingsPath steps={["Paramètres", "Mes réunions", "Réunions", "Audio"]} />
 
 - « Microphone » : le micro qui capte votre voix ;
 - « Son système » : la sortie dont Syntheo transcrit le son, c'est-à-dire celle où vous entendez les autres participants (casque, haut-parleurs, HDMI…).

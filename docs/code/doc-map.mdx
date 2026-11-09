@@ -9,6 +9,10 @@ Cette page relie chaque page de la documentation aux sources qui en déterminent
   Les tests de `apps/cli/src/cli.rs` et `apps/cli/src/mcp/tests.rs` comparent le contrat de la CLI et du serveur MCP à `docs/reference/cli.mdx`, `docs/reference/mcp.mdx` et `skills/syntheo/references/`. Une modification de ce contrat sans mise à jour de la documentation fait échouer la CI.
 </Note>
 
+<Note>
+  Les reproductions interactives de l'app (`docs/snippets/app.gen.jsx`, générées par `scripts/sync-docs-ui.mjs`) reprennent la capsule de `apps/desktop/src/session/components/capsule/`, les couleurs de `packages/design-system/src/tokens.css` et les libellés de `apps/desktop/src/i18n/locales/fr/messages.po`. Quand la structure de la capsule change, mettez à jour `scripts/docs-ui/app.jsx.tpl` ; un changement de couleur ou de libellé est repris en relançant le script.
+</Note>
+
 ## Prise en main
 
 | Page | Sources |
