@@ -17,6 +17,7 @@ import { toast } from "@syntheo/ui/components/ui/toast";
 import { cn } from "@syntheo/utils";
 
 import { AddWorkflowStep, StepTypeItems } from "./add-step-menu";
+import { AdvancedStepProposals } from "./advanced-step-proposals";
 import {
   AutomationLastRunLine,
   MarkdownExportConfig,
@@ -117,9 +118,10 @@ export function WorkflowBuilder({
             <label htmlFor={nameId} className="text-xs font-medium">
               <Trans>Name</Trans>
             </label>
-            {/* Enregistré à la sortie du champ, pas à chaque frappe. */}
+            {/* Enregistré à la sortie du champ, pas à chaque frappe ; un nom
+                donné par le chat remplace le champ. */}
             <Input
-              key={workflow.id}
+              key={`${workflow.id}:${workflow.title}`}
               id={nameId}
               defaultValue={workflow.title}
               placeholder={workflowTitle(workflow, labels)}
@@ -139,6 +141,8 @@ export function WorkflowBuilder({
           </div>
         </div>
       </div>
+
+      <AdvancedStepProposals workflowId={workflow.id} labels={labels} />
 
       <ol className="flex flex-col gap-0 p-5">
         <WorkflowCard

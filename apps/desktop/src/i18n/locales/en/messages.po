@@ -360,6 +360,10 @@ msgstr "Add skill to…"
 msgid "Add spoken language"
 msgstr "Add spoken language"
 
+#: src/settings/automations/advanced-step-proposals.tsx
+msgid "Add the step"
+msgstr "Add the step"
+
 #: src/templates/details.tsx
 #: src/templates/template-form.tsx
 #: src/templates/template-sidebar.tsx
@@ -491,6 +495,10 @@ msgstr "Application menu"
 #: src/automations/labels.ts
 msgid "Applies an instruction (tasks, short summary, follow-up message); the result feeds the next steps."
 msgstr "Applies an instruction (tasks, short summary, follow-up message); the result feeds the next steps."
+
+#: src/settings/automations/advanced-step-proposals.tsx
+msgid "Apply the change"
+msgstr "Apply the change"
 
 #: src/session/components/note-input/transcript/renderer/speaker-assign.tsx
 msgid "Apply to all"
@@ -1312,6 +1320,7 @@ msgstr "Decisions"
 #: src/chat/components/message/tool/edit-summary.tsx
 #: src/edit/tab-content.tsx
 #: src/session/components/living-document/summary-review.tsx
+#: src/settings/automations/advanced-step-proposals.tsx
 msgid "Decline"
 msgstr "Decline"
 
@@ -4957,6 +4966,14 @@ msgstr "The automation “{workflowTitle}” wants to run a program on your comp
 msgid "The body must be valid JSON."
 msgstr "The body must be valid JSON."
 
+#: src/settings/automations/advanced-step-proposals.tsx
+msgid "The chat suggests adding step {number}: {title}"
+msgstr "The chat suggests adding step {number}: {title}"
+
+#: src/settings/automations/advanced-step-proposals.tsx
+msgid "The chat suggests changing step {number}: {title}"
+msgstr "The chat suggests changing step {number}: {title}"
+
 #: src/automations/action-runners.ts
 msgid "The command did not finish within {seconds} seconds."
 msgstr "The command did not finish within {seconds} seconds."
@@ -5155,6 +5172,14 @@ msgstr "They describe what they would do, without acting. The local model still 
 #: src/chat/components/message/loading.tsx
 msgid "Thinking..."
 msgstr "Thinking..."
+
+#: src/settings/automations/advanced-step-proposals.tsx
+msgid "This advanced step runs a program on your computer. It is only added if you confirm."
+msgstr "This advanced step runs a program on your computer. It is only added if you confirm."
+
+#: src/settings/automations/advanced-step-proposals.tsx
+msgid "This advanced step sends the note's data outside your computer, to this address. It is only added if you confirm."
+msgstr "This advanced step sends the note's data outside your computer, to this address. It is only added if you confirm."
 
 #: src/session/components/version-history-dialog.tsx
 msgid "This device"
