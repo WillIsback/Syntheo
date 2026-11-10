@@ -36,6 +36,7 @@ import {
   getNotificationIconForDetectedApps,
 } from "./meeting-apps";
 
+import { showNativeNotification } from "~/services/notification-labels";
 import { useConfigValue } from "~/shared/config";
 import type { ListenerStore } from "~/store/zustand/listener";
 import { isLiveRecordingInProgress } from "~/store/zustand/listener/general-shared";
@@ -387,7 +388,7 @@ export const useHandleDetectEvents = (store: ListenerStore) => {
                 return;
               }
 
-              await notificationCommands.showNotification({
+              await showNativeNotification({
                 key: payload.key,
                 title: getMicDetectedNotificationTitle(),
                 message: "",
