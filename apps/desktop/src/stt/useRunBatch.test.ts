@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import { BatchResponseProcessingError } from "./batch-response-processing-error";
 import { completeCaptureTranscript } from "./capture-completion";
+import { NoSpeechDetectedError } from "./no-speech-error";
 import {
   canRunBatchTranscription,
   EMPTY_CURRENT_CAPTURE_TRANSCRIPT_ERROR_MESSAGE,
@@ -11,6 +12,8 @@ import {
   isTerminalTranscriptionError,
 } from "./useRunBatch";
 import { useRunBatch } from "./useRunBatch";
+
+import { acknowledgeCompletedBatch } from "~/store/zustand/listener/general-batch";
 
 vi.mock("./capture-completion", () => ({
   completeCaptureTranscript: vi.fn().mockResolvedValue(undefined),
@@ -617,6 +620,31 @@ describe("useRunBatch", () => {
   });
 
   describe("échecs d'enregistrement", () => {
+    // Issue 559 : un import sans parole est un échec définitif. Sans accusé de
+    // réception, la session native reprenait au lancement suivant (second toast).
+    test("acknowledges a no-speech batch so it never resumes on next launch", async () => {
+      m.startTranscription.mockRejectedValueOnce(new NoSpeechDetectedError());
+
+      const error = await runBatchError({
+        promotion: { scope: "whole_session" },
+      });
+
+      expect(error).toBeInstanceOf(NoSpeechDetectedError);
+      expect(acknowledgeCompletedBatch).toHaveBeenCalledWith("session-1");
+      expect(m.saveBatchTranscript).not.toHaveBeenCalled();
+    });
+
+    test("keeps other provider failures resumable", async () => {
+      m.startTranscription.mockRejectedValueOnce(new Error("network down"));
+
+      const error = await runBatchError({
+        promotion: { scope: "whole_session" },
+      });
+
+      expect(error).toMatchObject({ message: "network down" });
+      expect(acknowledgeCompletedBatch).not.toHaveBeenCalled();
+    });
+
     test("does not make completed provider work retryable when persistence fails", async () => {
       emits([batchWord("recovered")]);
       m.saveBatchTranscript.mockRejectedValueOnce(

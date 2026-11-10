@@ -34,6 +34,10 @@ import { isStoppedTranscriptionError, useRunBatch } from "./useRunBatch";
 import { getEnhancerService } from "~/services/enhancer";
 import { enqueueSessionAudioOperation } from "~/session/audio-operations";
 import { useSession, useUpdateSession } from "~/session/queries";
+import {
+  clearTranscriptionFailure,
+  recordTranscriptionFailure,
+} from "~/session/transcription-failure";
 import { type Tab, useTabs } from "~/store/zustand/tabs";
 import { createTranscript } from "~/stt/queries";
 
@@ -208,9 +212,15 @@ export function useUploadFile(sessionId: string) {
       const program = pipe(
         Effect.promise(inspectAudio),
         Effect.tap((seconds) =>
-          Effect.sync(() => {
+          Effect.promise(async () => {
             handleImportStarted(sessionId, seconds);
             handleBatchStarted(sessionId, "importing");
+            // Un nouvel import remplace l'avis d'un échec précédent (issue 559).
+            await clearTranscriptionFailure(sessionId).catch(
+              (error: unknown) => {
+                console.error("[upload] failed to clear import failure", error);
+              },
+            );
           }),
         ),
         Effect.flatMap(() =>
@@ -255,6 +265,15 @@ export function useUploadFile(sessionId: string) {
             const msg = error instanceof Error ? error.message : String(error);
             console.error("[upload] audio import failed:", error);
             handleBatchFailed(sessionId, msg);
+            // Gardé dans la note : l'avis survit à une relance (issue 559).
+            await recordTranscriptionFailure(sessionId, error).catch(
+              (persistError: unknown) => {
+                console.error(
+                  "[upload] failed to record import failure",
+                  persistError,
+                );
+              },
+            );
             notifyAudioImportFailed(error);
           }),
         ),
