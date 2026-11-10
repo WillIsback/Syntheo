@@ -22,7 +22,7 @@ Dans les `Cargo.toml`, ces crates sont référencées par l'alias de workspace `
 | `crates/audio` | Contrat commun de capture : trait `AudioProvider`, `CaptureConfig`, `CaptureFrame`, `CaptureStream`, `CaptureEvent`. Aucune implémentation. | `audio-actual`, `audio-mock`, `listener-core`, `plugins/dictation`, `plugins/permissions`, `plugins/transcription` |
 | `crates/audio-actual` | Implémentation réelle (`ActualAudio`) : capture micro via `cpal`, capture de l'audio système, annulation d'écho et resynchronisation. | `apps/desktop/src-tauri` |
 | `crates/audio-mock` | Fournisseur factice `MockAudio`, qui rejoue des fichiers de `syntheo-data`. | `apps/desktop/src-tauri`, seulement avec les features `dev` ou `devtools` |
-| `crates/audio-device` | Énumération des périphériques et choix par défaut par plateforme (`backend()`, `AudioDeviceBackend`), gestion des entrées Bluetooth et des sorties casque. | `audio-actual`, `device-monitor`, `listener-core`, `plugins/audio-priority` |
+| `crates/audio-device` | Énumération des périphériques et choix par défaut par plateforme (`backend()`, `AudioDeviceBackend`), gestion des entrées Bluetooth et des sorties casque. | `audio-actual`, `device-monitor`, `listener-core` |
 | `crates/device-monitor` | Surveille les changements de périphériques (`DeviceMonitor`, `DeviceSwitchMonitor`, `DeviceUpdateMonitor`) avec un anti-rebond de 1 s. | `listener-core` |
 | `crates/audio-sync` | Mesure du décalage micro / audio système (`GccPhatLagEstimator`, `LagTrendTracker`) et des niveaux (`LevelAccumulator`, dBFS). | `audio-actual` |
 | `crates/aec` | Annulation d'écho acoustique par modèle ONNX (`AEC`, `BLOCK_SIZE`, `BLOCK_SHIFT`). Feature `onnx` active par défaut. | `audio-actual` (`capture/echo_gate.rs`) |
