@@ -41,7 +41,6 @@ pub enum NotificationEvent {
 pub enum NotificationKey {
     MicStarted { apps: BTreeSet<String> },
     MicStopped { apps: BTreeSet<String> },
-    CalendarEvent { event_id: String },
     Custom(String),
 }
 
@@ -58,12 +57,6 @@ impl NotificationKey {
         }
     }
 
-    pub fn calendar_event(event_id: impl Into<String>) -> Self {
-        Self::CalendarEvent {
-            event_id: event_id.into(),
-        }
-    }
-
     pub fn to_dedup_key(&self) -> String {
         match self {
             Self::MicStarted { apps } => {
@@ -73,9 +66,6 @@ impl NotificationKey {
             Self::MicStopped { apps } => {
                 let sorted: Vec<_> = apps.iter().cloned().collect();
                 format!("mic-stopped:{}", sorted.join(","))
-            }
-            Self::CalendarEvent { event_id } => {
-                format!("event:{event_id}")
             }
             Self::Custom(s) => s.clone(),
         }
@@ -94,30 +84,6 @@ impl From<&str> for NotificationKey {
     }
 }
 
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize, specta::Type,
-)]
-pub enum ParticipantStatus {
-    #[default]
-    Accepted,
-    Maybe,
-    Declined,
-}
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
-pub struct Participant {
-    pub name: Option<String>,
-    pub email: String,
-    pub status: ParticipantStatus,
-}
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
-pub struct EventDetails {
-    pub what: String,
-    pub timezone: Option<String>,
-    pub location: Option<String>,
-}
-
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct NotificationFooter {
@@ -129,8 +95,6 @@ pub struct NotificationFooter {
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
 #[serde(tag = "type")]
 pub enum NotificationSource {
-    #[serde(rename = "calendar_event")]
-    CalendarEvent { event_id: String },
     #[serde(rename = "session")]
     Session { session_id: String },
     #[serde(rename = "mic_detected")]
@@ -148,8 +112,6 @@ pub enum NotificationSource {
 pub enum NotificationIconAsset {
     #[serde(rename = "app_icon")]
     AppIcon,
-    #[serde(rename = "calendar")]
-    Calendar,
     #[serde(rename = "system_symbol")]
     SystemSymbol { name: String },
     #[serde(rename = "bundle_id")]
@@ -180,7 +142,6 @@ pub enum NotificationIcon {
 pub struct NotificationContext {
     pub key: String,
     pub source: Option<NotificationSource>,
-    pub action: Option<NotificationAction>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize, specta::Type)]
@@ -188,22 +149,6 @@ pub struct NotificationContext {
 pub enum NotificationActionVariant {
     Default,
     Destructive,
-}
-
-/// An explicit calendar reminder action. These are intentionally semantic so the
-/// app can decide whether foregrounding its window is appropriate.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize, specta::Type)]
-#[serde(rename_all = "snake_case")]
-pub enum NotificationAction {
-    JoinAndRecord,
-    OpenMeeting,
-}
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
-#[serde(rename_all = "camelCase")]
-pub struct NotificationActionMenu {
-    pub label: String,
-    pub action: NotificationAction,
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
@@ -214,12 +159,8 @@ pub struct Notification {
     pub timeout: Option<std::time::Duration>,
     pub source: Option<NotificationSource>,
     pub start_time: Option<i64>,
-    pub participants: Option<Vec<Participant>>,
-    pub event_details: Option<EventDetails>,
     pub action_label: Option<String>,
     pub action_variant: Option<NotificationActionVariant>,
-    pub action: Option<NotificationAction>,
-    pub action_menu: Option<NotificationActionMenu>,
     pub options: Option<Vec<String>>,
     pub footer: Option<NotificationFooter>,
     pub icon: Option<NotificationIcon>,
@@ -271,21 +212,6 @@ impl Notification {
             .is_some_and(|options| !options.is_empty())
     }
 
-    pub fn has_action_menu(&self) -> bool {
-        self.action_menu.is_some()
-    }
-
-    pub fn has_expandable_content(&self) -> bool {
-        if matches!(self.source, Some(NotificationSource::CalendarEvent { .. })) {
-            return false;
-        }
-
-        self.participants
-            .as_ref()
-            .is_some_and(|participants| !participants.is_empty())
-            || self.event_details.is_some()
-    }
-
     pub fn default_action_label(&self) -> &str {
         self.action_label.as_deref().unwrap_or("Open Syntheo")
     }
@@ -313,14 +239,6 @@ impl Notification {
 
     pub fn compact_title(&self) -> &str {
         self.title.as_str()
-    }
-
-    pub fn expanded_title(&self) -> &str {
-        self.event_details
-            .as_ref()
-            .map(|details| details.what.as_str())
-            .filter(|title| !title.is_empty())
-            .unwrap_or(self.title.as_str())
     }
 
     pub fn should_dismiss_started(&self, now_unix: i64) -> bool {
@@ -377,10 +295,6 @@ pub fn stop_countdown_message(message: &str, remaining: Duration) -> String {
 impl NotificationSource {
     pub fn default_icon(&self) -> Option<NotificationIcon> {
         match self {
-            Self::CalendarEvent { .. } => Some(NotificationIcon::Overlay {
-                base: NotificationIconAsset::AppIcon,
-                badge: NotificationIconAsset::Calendar,
-            }),
             Self::Session { .. } => None,
             Self::MicDetected { app_ids, .. } => app_ids
                 .iter()

@@ -1,7 +1,6 @@
 use super::{
-    EventDetails, Notification, NotificationAction, NotificationActionMenu,
-    NotificationActionVariant, NotificationFooter, NotificationIcon, NotificationLabels,
-    NotificationSource, Participant,
+    Notification, NotificationActionVariant, NotificationFooter, NotificationIcon,
+    NotificationLabels, NotificationSource,
 };
 
 #[derive(Default)]
@@ -12,12 +11,8 @@ pub struct NotificationBuilder {
     timeout: Option<std::time::Duration>,
     source: Option<NotificationSource>,
     start_time: Option<i64>,
-    participants: Option<Vec<Participant>>,
-    event_details: Option<EventDetails>,
     action_label: Option<String>,
     action_variant: Option<NotificationActionVariant>,
-    action: Option<NotificationAction>,
-    action_menu: Option<NotificationActionMenu>,
     options: Option<Vec<String>>,
     footer: Option<NotificationFooter>,
     icon: Option<NotificationIcon>,
@@ -55,16 +50,6 @@ impl NotificationBuilder {
         self
     }
 
-    pub fn participants(mut self, participants: Vec<Participant>) -> Self {
-        self.participants = Some(participants);
-        self
-    }
-
-    pub fn event_details(mut self, event_details: EventDetails) -> Self {
-        self.event_details = Some(event_details);
-        self
-    }
-
     pub fn action_label(mut self, action_label: impl Into<String>) -> Self {
         self.action_label = Some(action_label.into());
         self
@@ -72,19 +57,6 @@ impl NotificationBuilder {
 
     pub fn action_variant(mut self, action_variant: NotificationActionVariant) -> Self {
         self.action_variant = Some(action_variant);
-        self
-    }
-
-    pub fn action(mut self, action: NotificationAction) -> Self {
-        self.action = Some(action);
-        self
-    }
-
-    pub fn action_menu(mut self, label: impl Into<String>, action: NotificationAction) -> Self {
-        self.action_menu = Some(NotificationActionMenu {
-            label: label.into(),
-            action,
-        });
         self
     }
 
@@ -121,12 +93,8 @@ impl NotificationBuilder {
             timeout: self.timeout,
             source,
             start_time: self.start_time,
-            participants: self.participants,
-            event_details: self.event_details,
             action_label: self.action_label,
             action_variant: self.action_variant,
-            action: self.action,
-            action_menu: self.action_menu,
             options: self.options,
             footer: self.footer,
             icon,

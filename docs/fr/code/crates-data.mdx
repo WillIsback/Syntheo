@@ -193,7 +193,7 @@ Ne décrivez pas le comportement du produit à partir du schéma SQL brut. Parte
 
 | Crate | Plateforme | Contenu |
 | --- | --- | --- |
-| `crates/notification-interface` | toutes | Types `Notification`, `NotificationKey` (`mic_started`, `mic_stopped`, `calendar_event`), `NotificationAction`, `NotificationEvent`, `NotificationLabels`. Aucune dépendance interne. |
+| `crates/notification-interface` | toutes | Types `Notification`, `NotificationKey` (`mic_started`, `mic_stopped`), `NotificationEvent`, `NotificationLabels`. Aucune dépendance interne. |
 | `crates/notification` | toutes | `show`, `clear` et les gestionnaires `setup_*_handler`. Dépend de `syntheo-notification-interface` et du backend de la plateforme. |
 | `crates/notification-linux` | Linux | Fenêtre GTK 3 (`gtk`, `gdk`, `pango`). Dépend de `syntheo-brand`, `syntheo-notification-interface`. |
 | `crates/notification-windows` | Windows | Rendu Win32 (crate `windows`). Dépend de `syntheo-notification-interface`. |

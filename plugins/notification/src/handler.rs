@@ -20,15 +20,6 @@ pub fn init(app: tauri::AppHandle<tauri::Wry>) {
     {
         let app = app.clone();
         syntheo_notification::setup_expanded_accept_handler(move |ctx| {
-            if let Some(action) = ctx.action {
-                let _ = NotificationEvent::Action {
-                    key: ctx.key,
-                    source: ctx.source,
-                    action,
-                }
-                .emit(&app);
-                return;
-            }
             if let Err(_e) = app.windows().show(tauri_plugin_windows::AppWindow::Main) {}
 
             let _ = NotificationEvent::Accept {
@@ -64,15 +55,6 @@ pub fn init(app: tauri::AppHandle<tauri::Wry>) {
     {
         let app = app.clone();
         syntheo_notification::setup_option_selected_handler(move |ctx, selected_index| {
-            if let Some(action) = ctx.action {
-                let _ = NotificationEvent::Action {
-                    key: ctx.key,
-                    source: ctx.source,
-                    action,
-                }
-                .emit(&app);
-                return;
-            }
             if let Err(_e) = app.windows().show(tauri_plugin_windows::AppWindow::Main) {}
 
             let _ = NotificationEvent::OptionSelected {

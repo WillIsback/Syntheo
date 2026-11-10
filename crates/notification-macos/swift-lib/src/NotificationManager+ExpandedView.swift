@@ -1,36 +1,5 @@
 import Cocoa
 
-private enum ParticipantStatusDisplay {
-  case accepted
-  case maybe
-  case declined
-
-  init(from string: String) {
-    switch string.lowercased() {
-    case "accepted": self = .accepted
-    case "maybe": self = .maybe
-    case "declined": self = .declined
-    default: self = .accepted
-    }
-  }
-
-  var icon: String {
-    switch self {
-    case .accepted: return "✓"
-    case .maybe: return "?"
-    case .declined: return "✗"
-    }
-  }
-
-  var color: NSColor {
-    switch self {
-    case .accepted: return NSColor.systemGreen
-    case .maybe: return NSColor.systemYellow
-    case .declined: return NSColor.systemRed
-    }
-  }
-}
-
 extension NotificationManager {
   func createExpandedNotificationView(notification: NotificationInstance) -> NSView {
     let container = NSStackView()
@@ -45,7 +14,7 @@ extension NotificationManager {
     headerStack.distribution = .fill
     headerStack.spacing = 8
 
-    let title = notification.payload.eventDetails?.what ?? notification.payload.title
+    let title = notification.payload.title
     let titleLabel = NSTextField(labelWithString: title)
     titleLabel.font = NSFont.systemFont(ofSize: Fonts.expandedTitleSize, weight: Fonts.titleWeight)
     titleLabel.textColor = NSColor.labelColor
@@ -64,124 +33,17 @@ extension NotificationManager {
     container.addArrangedSubview(headerStack)
     headerStack.widthAnchor.constraint(equalTo: container.widthAnchor).isActive = true
 
-    if let participants = notification.payload.participants, !participants.isEmpty {
-      let participantsStack = createParticipantsSection(participants: participants)
-      container.addArrangedSubview(participantsStack)
-    }
-
     let separator = NSBox()
     separator.boxType = .separator
     separator.translatesAutoresizingMaskIntoConstraints = false
     container.addArrangedSubview(separator)
     separator.widthAnchor.constraint(equalTo: container.widthAnchor).isActive = true
 
-    if let eventDetails = notification.payload.eventDetails {
-      let detailsStack = createDetailsSection(
-        eventDetails: eventDetails,
-        participants: notification.payload.participants,
-        labels: notification.payload.resolvedLabels
-      )
-      container.addArrangedSubview(detailsStack)
-    }
-
     let (actionStack, timerLabel) = createActionSection(notification: notification)
     container.addArrangedSubview(actionStack)
     actionStack.widthAnchor.constraint(equalTo: container.widthAnchor).isActive = true
 
     notification.bindExpandedTimerLabel(timerLabel)
-
-    return container
-  }
-
-  func createParticipantsSection(participants: [Participant]) -> NSStackView {
-    let stack = NSStackView()
-    stack.orientation = .vertical
-    stack.alignment = .leading
-    stack.spacing = 4
-
-    for participant in participants {
-      let row = createParticipantRow(participant: participant)
-      stack.addArrangedSubview(row)
-    }
-
-    return stack
-  }
-
-  func createParticipantRow(participant: Participant) -> NSView {
-    let row = NSStackView()
-    row.orientation = .horizontal
-    row.alignment = .centerY
-    row.spacing = 6
-
-    let name = participant.name ?? ""
-    let displayText = name.isEmpty ? participant.email : "\(name) (\(participant.email))"
-    let label = NSTextField(labelWithString: displayText)
-    label.font = NSFont.systemFont(ofSize: Fonts.detailValueSize, weight: Fonts.bodyWeight)
-    label.textColor = NSColor.labelColor
-
-    let status = ParticipantStatusDisplay(from: participant.status)
-    let statusIcon = NSTextField(labelWithString: status.icon)
-    statusIcon.font = NSFont.systemFont(ofSize: Fonts.detailValueSize)
-    statusIcon.textColor = status.color
-
-    row.addArrangedSubview(label)
-    row.addArrangedSubview(statusIcon)
-
-    return row
-  }
-
-  func createDetailsSection(
-    eventDetails: EventDetails, participants: [Participant]?, labels: NotificationLabels
-  ) -> NSStackView
-  {
-    let stack = NSStackView()
-    stack.orientation = .vertical
-    stack.alignment = .leading
-    stack.spacing = 8
-
-    let whatRow = createDetailRow(label: labels.what, value: eventDetails.what)
-    stack.addArrangedSubview(whatRow)
-
-    if let timezone = eventDetails.timezone {
-      let timezoneRow = createDetailRow(label: labels.inviteeTimeZone, value: timezone)
-      stack.addArrangedSubview(timezoneRow)
-    }
-
-    if let participants = participants, !participants.isEmpty {
-      let whoValue = participants.map { p in
-        let name = p.name ?? ""
-        return name.isEmpty ? p.email : "\(name)\n\(p.email)"
-      }.joined(separator: "\n")
-      let whoRow = createDetailRow(label: labels.who, value: whoValue)
-      stack.addArrangedSubview(whoRow)
-    }
-
-    if let location = eventDetails.location {
-      let whereRow = createDetailRow(label: labels.location, value: location)
-      stack.addArrangedSubview(whereRow)
-    }
-
-    return stack
-  }
-
-  func createDetailRow(label: String, value: String) -> NSView {
-    let container = NSStackView()
-    container.orientation = .vertical
-    container.alignment = .leading
-    container.spacing = 2
-
-    let labelField = NSTextField(labelWithString: label)
-    labelField.font = NSFont.systemFont(ofSize: Fonts.detailLabelSize, weight: Fonts.buttonWeight)
-    labelField.textColor = NSColor.secondaryLabelColor
-
-    let valueField = NSTextField(labelWithString: value)
-    valueField.font = NSFont.systemFont(ofSize: Fonts.detailValueSize, weight: Fonts.bodyWeight)
-    valueField.textColor = NSColor.labelColor
-    valueField.maximumNumberOfLines = 0
-    valueField.lineBreakMode = .byWordWrapping
-
-    container.addArrangedSubview(labelField)
-    container.addArrangedSubview(valueField)
 
     return container
   }

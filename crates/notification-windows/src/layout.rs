@@ -14,7 +14,7 @@
 //! +---------------------------------------------------------------------+  ^
 //! |(x) 4,4 20x20, au survol                                             |  |
 //! |  +------+  Titre             14 px semi-gras      +---------------+ |  |
-//! |  | 28px |  54,16  168x20                          | Action  (|v)  | | 72
+//! |  | 28px |  54,16  168x20                          |    Action     | | 72
 //! |  +------+  Message           12 px, encre douce   | 234,20 112x32 | |  |
 //! |  14,22     54,37  168x18                          +---------------+ |  |
 //! |  ================== progression 14,66 332x3 ======================  |  |
@@ -48,8 +48,6 @@ pub const CLOSE_BUTTON_INSET: i32 = 4;
 pub const ICON_SIZE: i32 = 28;
 pub const ACTION_BUTTON_WIDTH: i32 = 112;
 pub const ACTION_BUTTON_HEIGHT: i32 = 32;
-/// Segment « ▾ » à droite du bouton quand l'action a un menu.
-pub const ACTION_CARET_WIDTH: i32 = 28;
 pub const EXPANDED_ACTION_HEIGHT: i32 = 36;
 pub const COLLAPSE_BUTTON_WIDTH: i32 = 96;
 pub const COLLAPSE_BUTTON_HEIGHT: i32 = 26;
@@ -345,18 +343,6 @@ impl NotificationLayout {
         self.scale_f(SHADOW_BLUR)
     }
 
-    /// Segment du menu « ▾ » à droite du bouton d'action.
-    pub fn action_caret(&self) -> Option<Rect> {
-        self.action.map(|action| {
-            let width = self.scale(ACTION_CARET_WIDTH);
-            Rect {
-                x: action.right() - width,
-                width,
-                ..action
-            }
-        })
-    }
-
     fn scale_f(&self, value: i32) -> f32 {
         value as f32 * self.dpi as f32 / 96.0
     }
@@ -383,13 +369,6 @@ impl NotificationLayout {
 
     pub fn action_hit(&self, notification: &Notification, x: i32, y: i32) -> HitTarget {
         match self.hit_test(x, y) {
-            HitTarget::Action
-                if notification.has_action_menu()
-                    && self.collapse.is_none()
-                    && self.action_caret().is_some_and(|caret| x >= caret.x) =>
-            {
-                HitTarget::Options
-            }
             HitTarget::Action if notification.has_options() && self.collapse.is_none() => {
                 HitTarget::Options
             }
@@ -411,21 +390,6 @@ fn close_button() -> Rect {
         width: CLOSE_BUTTON_SIZE,
         height: CLOSE_BUTTON_SIZE,
     }
-}
-
-pub fn try_expand(
-    layouts: &mut [NotificationLayout],
-    index: usize,
-    notification: &Notification,
-    work_height: i32,
-) -> bool {
-    let mut expanded = layouts.to_vec();
-    expanded[index] = NotificationLayout::expanded(notification).at_dpi(layouts[index].dpi);
-    if fit_stack(&mut expanded, work_height) != 0 {
-        return false;
-    }
-    layouts.clone_from_slice(&expanded);
-    true
 }
 
 pub fn fit_stack(layouts: &mut [NotificationLayout], work_height: i32) -> usize {

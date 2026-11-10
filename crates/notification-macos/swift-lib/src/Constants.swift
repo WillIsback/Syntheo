@@ -39,8 +39,6 @@ enum Fonts {
   static let buttonSize: CGFloat = 12
   static let buttonWeight: NSFont.Weight = .medium
   static let expandedTitleSize: CGFloat = 15
-  static let detailLabelSize: CGFloat = 11
-  static let detailValueSize: CGFloat = 12
   static let actionButtonSize: CGFloat = 13
 }
 

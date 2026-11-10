@@ -92,8 +92,6 @@ type RecentNotificationMap = Mutex<BoundedTimedMap<()>>;
 #[derive(Clone)]
 struct StoredNotificationContext {
     source: Option<NotificationSource>,
-    action: Option<NotificationAction>,
-    action_menu: Option<NotificationAction>,
 }
 
 type NotificationContextMap = Mutex<BoundedTimedMap<StoredNotificationContext>>;
@@ -137,8 +135,6 @@ fn store_context(key: &str, notification: &Notification) -> bool {
         key.to_string(),
         StoredNotificationContext {
             source: notification.source.clone(),
-            action: notification.action,
-            action_menu: notification.action_menu.as_ref().map(|menu| menu.action),
         },
         now,
         MAX_NOTIFICATION_CONTEXTS,
@@ -150,18 +146,7 @@ fn get_context(key: &str) -> NotificationContext {
     let stored = ctx_map.lock().unwrap().remove(key);
     NotificationContext {
         key: key.to_string(),
-        source: stored.as_ref().and_then(|ctx| ctx.source.clone()),
-        action: stored.and_then(|ctx| ctx.action),
-    }
-}
-
-fn get_menu_context(key: &str) -> NotificationContext {
-    let ctx_map = NOTIFICATION_CONTEXT.get_or_init(|| Mutex::new(BoundedTimedMap::default()));
-    let stored = ctx_map.lock().unwrap().remove(key);
-    NotificationContext {
-        key: key.to_string(),
-        source: stored.as_ref().and_then(|ctx| ctx.source.clone()),
-        action: stored.and_then(|ctx| ctx.action_menu),
+        source: stored.and_then(|ctx| ctx.source),
     }
 }
 
@@ -369,7 +354,7 @@ where
     {
         let f = f.clone();
         syntheo_notification_macos::setup_option_selected_handler(move |key, tag| {
-            f(get_menu_context(&key), tag);
+            f(get_context(&key), tag);
         });
     }
 
@@ -378,7 +363,7 @@ where
         let f = f.clone();
         syntheo_notification_linux::setup_notification_option_selected_handler(
             move |key, index| {
-                f(get_menu_context(&key), index);
+                f(get_context(&key), index);
             },
         );
     }
@@ -388,7 +373,7 @@ where
         let f = f.clone();
         syntheo_notification_windows::setup_notification_option_selected_handler(
             move |key, index| {
-                f(get_menu_context(&key), index);
+                f(get_context(&key), index);
             },
         );
     }

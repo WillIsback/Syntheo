@@ -26,10 +26,8 @@ use syntheo_notification_interface::{DismissTimer, Notification, PrimaryAction, 
 
 use crate::callbacks;
 use crate::expanded::expanded_body;
-use crate::icon::{destroy_icon, header_title, load_notification_icon};
-use crate::layout::{
-    HitTarget, MAX_NOTIFICATIONS, NotificationLayout, fit_stack, stacked_origin, try_expand,
-};
+use crate::icon::{destroy_icon, load_notification_icon};
+use crate::layout::{HitTarget, MAX_NOTIFICATIONS, NotificationLayout, fit_stack, stacked_origin};
 use crate::reentrance::Reentrant;
 use crate::render::{Frame, FrameKey, render, system_prefers_dark};
 use crate::theme::ActionStyle;
@@ -291,7 +289,7 @@ impl NotificationManager {
                 };
                 if instance.payload.has_options() {
                     self.show_options_menu(hwnd);
-                } else if instance.payload.has_expandable_content() || instance.is_expanded {
+                } else if instance.is_expanded {
                     self.toggle_expanded(hwnd);
                 } else {
                     callbacks::confirm(key.clone());
@@ -309,19 +307,10 @@ impl NotificationManager {
         else {
             return;
         };
-        let instance = self.active.get_index(index).unwrap().1;
-        if !instance.payload.has_expandable_content() && !instance.is_expanded {
+        // Plus aucune notification n'a de contenu dépliable depuis le retrait
+        // du rappel de calendrier (#545) : seul le repli reste.
+        if !self.active.get_index(index).unwrap().1.is_expanded {
             return;
-        }
-        if !instance.is_expanded {
-            let mut layouts: Vec<_> = self
-                .active
-                .values()
-                .map(|instance| instance.layout.clone())
-                .collect();
-            if !try_expand(&mut layouts, index, &instance.payload, work_area().3) {
-                return;
-            }
         }
         let instance = self.active.get_index_mut(index).unwrap().1;
         instance.is_expanded = !instance.is_expanded;
@@ -340,12 +329,8 @@ impl NotificationManager {
         let Some(instance) = self.instance_by_hwnd_mut(hwnd) else {
             return;
         };
-        let semantic_menu = instance.payload.action_menu.clone();
         let options = match instance.payload.primary_action() {
             PrimaryAction::Options(options) => options.to_vec(),
-            PrimaryAction::Accept { .. } if semantic_menu.is_some() => {
-                vec![semantic_menu.as_ref().unwrap().label.clone()]
-            }
             PrimaryAction::Accept { .. } => return,
         };
         let key = instance.key.clone();
@@ -360,16 +345,14 @@ impl NotificationManager {
                 let _ = AppendMenuW(menu, MF_STRING, index + 1, PCWSTR(text.as_mut_ptr()));
             }
         }
-        if semantic_menu.is_none() {
-            let mut create_new = wide(&instance_labels.create_new_note);
-            unsafe {
-                let _ = AppendMenuW(
-                    menu,
-                    MF_STRING,
-                    options.len() + 1,
-                    PCWSTR(create_new.as_mut_ptr()),
-                );
-            }
+        let mut create_new = wide(&instance_labels.create_new_note);
+        unsafe {
+            let _ = AppendMenuW(
+                menu,
+                MF_STRING,
+                options.len() + 1,
+                PCWSTR(create_new.as_mut_ptr()),
+            );
         }
         let mut cursor = POINT::default();
         unsafe {
@@ -619,11 +602,10 @@ impl NotificationInstance {
         let frame = Frame {
             layout: &self.layout,
             icon: self.icon,
-            title: header_title(&self.payload, self.is_expanded),
+            title: self.payload.compact_title(),
             body,
             expanded: self.is_expanded,
             action: self.action(),
-            action_menu: self.payload.has_action_menu(),
             collapse_label: self
                 .layout
                 .collapse

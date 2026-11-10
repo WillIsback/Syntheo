@@ -193,7 +193,7 @@ Don't describe product behavior from the raw SQL schema. Start from the operatio
 
 | Crate | Platform | Content |
 | --- | --- | --- |
-| `crates/notification-interface` | all | Types `Notification`, `NotificationKey` (`mic_started`, `mic_stopped`, `calendar_event`), `NotificationAction`, `NotificationEvent`, `NotificationLabels`. No internal dependencies. |
+| `crates/notification-interface` | all | Types `Notification`, `NotificationKey` (`mic_started`, `mic_stopped`), `NotificationEvent`, `NotificationLabels`. No internal dependencies. |
 | `crates/notification` | all | `show`, `clear` and the `setup_*_handler` handlers. Depends on `syntheo-notification-interface` and the platform backend. |
 | `crates/notification-linux` | Linux | GTK 3 window (`gtk`, `gdk`, `pango`). Depends on `syntheo-brand`, `syntheo-notification-interface`. |
 | `crates/notification-windows` | Windows | Win32 rendering (`windows` crate). Depends on `syntheo-notification-interface`. |
