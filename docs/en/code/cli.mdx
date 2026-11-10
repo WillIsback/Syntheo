@@ -133,9 +133,9 @@ Resources: `syntheo://meetings/{meeting_id}` (Markdown), `syntheo://meetings/{me
 
 ## App side
 
-The app installs and documents the CLI, but this code lives in `apps/desktop`:
+The app documents the CLI and reports whether it is installed, but this code lives in `apps/desktop`:
 
-- `apps/desktop/src-tauri/src/embedded_cli.rs`: installs the `syntheo` binary shipped with the app (see [Code map: desktop app](/en/code/desktop)).
+- `apps/desktop/src-tauri/src/cli_status.rs`: finds the separately installed `syntheo` binary for **Settings → Developers → CLI & MCP** (see [Code map: desktop app](/en/code/desktop)).
 - `apps/desktop/src-tauri/src/agents-content.md`: `AGENTS.md` file written to the data folder at startup, which points to the MCP tools and the CLI.
 - `plugins/local-api`: app-side commands and types, see [/en/code/plugins](/en/code/plugins).
 

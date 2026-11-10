@@ -17,8 +17,7 @@ export const commands = {
 	setPinnedTabs: (v: string) => typedError<null, string>(__TAURI_INVOKE("set_pinned_tabs", { v })),
 	getRecentlyOpenedSessions: () => typedError<string | null, string>(__TAURI_INVOKE("get_recently_opened_sessions")),
 	setRecentlyOpenedSessions: (v: string) => typedError<null, string>(__TAURI_INVOKE("set_recently_opened_sessions", { v })),
-	checkEmbeddedCli: () => typedError<EmbeddedCliStatus, string>(__TAURI_INVOKE("check_embedded_cli")),
-	installEmbeddedCli: () => typedError<EmbeddedCliStatus, string>(__TAURI_INVOKE("install_embedded_cli")),
+	checkCliStatus: () => typedError<CliStatus, string>(__TAURI_INVOKE("check_cli_status")),
 	listSkillAgents: () => typedError<SkillAgentStatus[], string>(__TAURI_INVOKE("list_skill_agents")),
 	installAgentSkill: (agent: SkillAgent) => typedError<SkillAgentStatus, string>(__TAURI_INVOKE("install_agent_skill", { agent })),
 	getAecModelStatus: () => typedError<AecModelStatus, string>(__TAURI_INVOKE("get_aec_model_status")),
@@ -32,14 +31,20 @@ export type AecModelStatus = {
 	state: AecModelState,
 };
 
-export type EmbeddedCliState = "installed" | "missing" | "conflict" | "unsupported" | "resource_missing";
-
-export type EmbeddedCliStatus = {
-	supported: boolean,
+export type CliStatus = {
+	/**  Command the CLI installs (`syntheo`). */
 	commandName: string,
-	installPath: string,
-	state: EmbeddedCliState,
-	details: string | null,
+	/**
+	 *  Absolute path of the CLI, when found on `PATH` or in cargo's `bin`
+	 *  directory.
+	 */
+	path: string | null,
+	/**
+	 *  True when the first `syntheo` on `PATH` is the desktop app itself (the
+	 *  `.deb` installs the app as `/usr/bin/syntheo`), so typing `syntheo`
+	 *  launches the app instead of the CLI.
+	 */
+	shadowedByApp: boolean,
 };
 
 export type SkillAgent = "claude_code" | "codex" | "cursor" | "opencode";

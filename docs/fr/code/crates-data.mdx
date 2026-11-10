@@ -43,7 +43,6 @@ Dans le workspace Cargo, chaque crate est déclarée sous un alias `syntheo-*` (
 | `crates/codex` | Pilotage de la CLI Codex | `agent-core` | aucune |
 | `crates/opencode` | Pilotage de la CLI OpenCode | `agent-core` | aucune |
 | `crates/data` | Échantillons audio pour les tests | `audio-mock` ; dev-dependency ailleurs | aucune |
-| `crates/xtask` | Tâches de build (`cargo xtask`) | outillage | aucune |
 
 ## Base de données
 
@@ -226,4 +225,3 @@ Ne décrivez pas le comportement du produit à partir du schéma SQL brut. Parte
 ## Outillage et données de test
 
 - **data** (`crates/data`) : échantillons audio WAV (anglais et coréen) inclus à la compilation. Dépendance normale de `crates/audio-mock`, dev-dependency de `audio-actual`, `audio-utils`, `fs-sync-core`, `owhisper-client`, `resampler` et `vad`. Pages de doc concernées : aucune.
-- **xtask** (`crates/xtask`) : `cargo xtask prepare-binaries` compile `syntheo-cli` en release pour la cible courante (`TAURI_ENV_TARGET_TRIPLE` ou triple de l'hôte) et copie le binaire dans `apps/desktop/src-tauri/resources/cli/syntheo-cli-{triple}`. Alias défini dans `.cargo/config.toml`. Pages de doc concernées : aucune directement ; le binaire préparé est celui qu'embarque l'application (voir [Installation](/fr/installation)).

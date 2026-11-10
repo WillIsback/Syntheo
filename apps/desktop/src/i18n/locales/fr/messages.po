@@ -69,16 +69,6 @@ msgstr "{0, plural, one {# réunion} other {# réunions}}"
 msgid "{0} {noteLabel} deleted"
 msgstr "{0} {noteLabel} supprimé"
 
-#. placeholder {0}: status.commandName
-#: src/settings/developers/cli.tsx
-msgid "{0} could not be installed"
-msgstr "{0} n'a pas pu être installé"
-
-#. placeholder {0}: status.commandName
-#: src/settings/developers/cli.tsx
-msgid "{0} is ready to use"
-msgstr "{0} est prêt à être utilisé"
-
 #. placeholder {0}: proposals.length
 #: src/session/components/pending-proposals-banner.tsx
 msgid "{0} pending edits"
@@ -823,6 +813,10 @@ msgstr "Historique de chat"
 msgid "chat, messages, note, Teams, Zoom"
 msgstr "discussion, messages, note, Teams, Zoom"
 
+#: src/settings/developers/cli.tsx
+msgid "Check again"
+msgstr "Vérifier à nouveau"
+
 #: src/chat/components/input/use-dictation.ts
 msgid "Check microphone permission and the selected input device, then try again."
 msgstr "Vérifiez l'autorisation du microphone et le périphérique d'entrée sélectionné, puis réessayez."
@@ -1154,6 +1148,10 @@ msgstr "Copier"
 msgid "Copy config"
 msgstr "Copier la configuration"
 
+#: src/settings/developers/cli.tsx
+msgid "Copy install command"
+msgstr "Copier la commande d'installation"
+
 #: src/settings/dictation.tsx
 msgid "Copy last dictation"
 msgstr "Copier la dernière dictée"
@@ -1175,10 +1173,6 @@ msgstr "Copier dans le presse-papiers"
 #: src/settings/developers/cli.tsx
 msgid "Could not check the CLI: {0}"
 msgstr "Impossible de vérifier la CLI : {0}"
-
-#: src/settings/developers/cli.tsx
-msgid "Could not copy the MCP configuration"
-msgstr "Impossible de copier la configuration MCP"
 
 #: src/settings/dictation.tsx
 msgid "Could not copy the transcript. Select the text above to copy it."
@@ -2229,12 +2223,16 @@ msgid "Insert"
 msgstr "Insérer"
 
 #: src/settings/developers/cli.tsx
-msgid "Install"
-msgstr "Installer"
+msgid "Install command copied"
+msgstr "Commande d'installation copiée"
 
 #: src/settings/developers/skills.tsx
 msgid "Install to all agents"
 msgstr "Installer pour tous les agents"
+
+#: src/settings/developers/cli.tsx
+msgid "Installation guide"
+msgstr "Guide d'installation"
 
 #: src/settings/developers/cli.tsx
 msgid "Installed"
@@ -3120,8 +3118,8 @@ msgid "Not enough words recorded ({wordCount}/{minWords} minimum)"
 msgstr "Pas assez de mots enregistrés ({wordCount}/{minWords} minimum)"
 
 #: src/settings/developers/cli.tsx
-msgid "Not installed"
-msgstr "Non installé"
+msgid "Not found on this computer"
+msgstr "Introuvable sur cet ordinateur"
 
 #: src/settings/developers/webhooks.tsx
 msgid "not receiving events"
@@ -3762,10 +3760,6 @@ msgstr "Régénérer la synthèse avec ce modèle ? La version actuelle reste da
 #: src/session/components/living-document/summary-version.tsx
 msgid "Regenerate with my notes"
 msgstr "Régénérer avec mes notes"
-
-#: src/settings/developers/cli.tsx
-msgid "Reinstall"
-msgstr "Réinstaller"
 
 #: src/contacts/related-notes.tsx
 msgid "Related Notes"
@@ -5026,6 +5020,11 @@ msgstr "Texte"
 msgid "Text provenance"
 msgstr "Provenance du texte"
 
+#. placeholder {0}: status.commandName
+#: src/settings/developers/cli.tsx
+msgid "The {0} command on your PATH opens the desktop app. Use the CLI's absolute path."
+msgstr "La commande {0} de votre PATH ouvre l'application de bureau. Utilisez le chemin absolu de la CLI."
+
 #: src/automations/action-runners.ts
 msgid "The address answered with the status {status}."
 msgstr "L'adresse a répondu avec le statut {status}."
@@ -5069,6 +5068,10 @@ msgstr "Le chat propose d'ajouter l'étape {number} : {title}"
 #: src/settings/automations/advanced-step-proposals.tsx
 msgid "The chat suggests changing step {number}: {title}"
 msgstr "Le chat propose de modifier l'étape {number} : {title}"
+
+#: src/settings/developers/cli.tsx
+msgid "The CLI is not bundled with the app. Install it from a clone of the Syntheo repository:"
+msgstr "La CLI n'est pas fournie avec l'application. Installez-la depuis un clone du dépôt Syntheo :"
 
 #: src/automations/action-runners.ts
 msgid "The command did not finish within {seconds} seconds."
@@ -5521,10 +5524,6 @@ msgstr "Type"
 #: src/session/components/speaker-naming/speaker-card.tsx
 msgid "Type a name"
 msgstr "Saisissez un nom"
-
-#: src/settings/developers/cli.tsx
-msgid "Unavailable"
-msgstr "Indisponible"
 
 #: src/settings/general/audio-settings.tsx
 msgid "Unavailable: the models could not be downloaded (offline?). Listening works without it."

@@ -177,7 +177,7 @@ La colonne « Interface » indique si `apps/desktop/src` importe le paquet `@syn
 | `icon` | macOS uniquement | `set_dock_icon`, `reset_dock_icon`, `get_icon`, `set_recording_indicator`, `set_notification_badge`. Hors macOS, ces commandes ne font rien. |
 | `dock` | macOS uniquement | Aucune commande. Installe le menu du Dock (nouvelle note, réglages, mise à jour, redémarrage, quitter). |
 | `sidecar2` | Interne | Aucune commande. Résout et lance les binaires sidecar, y compris en debug. Utilisé par `permissions`. |
-| `agent` | Non appelé par l'interface | `health_check`, `install_cli`, `uninstall_cli`, via `crates/agent-core`. L'écran **Paramètres → Développeurs → CLI & MCP** passe par les commandes de l'application (`apps/desktop/src-tauri/src/embedded_cli.rs`), pas par ce plugin. |
+| `agent` | Non appelé par l'interface | `health_check`, `install_cli`, `uninstall_cli`, via `crates/agent-core`. L'écran **Paramètres → Développeurs → CLI & MCP** passe par les commandes de l'application (`apps/desktop/src-tauri/src/cli_status.rs`), pas par ce plugin. |
 | `relay` | Développement uniquement | Sert l'interface en HTTP sur `127.0.0.1` (port 1423, ou `RELAY_PORT`) et relaie l'IPC par WebSocket. Le shim Vite `@syntheo/plugin-relay/vite` est chargé dans `apps/desktop/vite.config.ts`. |
 
 ## Quand mettre à jour la documentation

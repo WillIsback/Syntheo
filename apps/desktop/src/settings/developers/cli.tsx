@@ -1,37 +1,35 @@
+import { i18n } from "@lingui/core";
 import { t } from "@lingui/core/macro";
 import { Trans } from "@lingui/react/macro";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 
-import { CheckCircle, CircleNotch, Copy } from "@syntheo/ui/components/icons";
+import { commands as openerCommands } from "@syntheo/plugin-opener2";
+import {
+  ArrowSquareOut,
+  CheckCircle,
+  CircleNotch,
+  Copy,
+} from "@syntheo/ui/components/icons";
 import { Button } from "@syntheo/ui/components/ui/button";
-import { toast } from "@syntheo/ui/components/ui/toast";
-import { cn } from "@syntheo/utils";
 
+import { copyText } from "./clipboard";
 import { SkillsRow } from "./skills";
 
-import { commands, type EmbeddedCliStatus } from "~/types/tauri.gen";
+import { documentationUrl } from "~/shared/documentation";
+import { commands, type CliStatus } from "~/types/tauri.gen";
 
-const CLI_STATUS_QUERY_KEY = ["embedded-cli-status"] as const;
+const CLI_STATUS_QUERY_KEY = ["cli-status"] as const;
+
+// L'application n'embarque plus la CLI (#546) : elle s'installe à part depuis
+// les sources, comme le décrit le guide d'installation.
+export const CLI_INSTALL_COMMAND = "cargo install --locked --path apps/cli";
 
 async function loadStatus() {
-  const result = await commands.checkEmbeddedCli();
+  const result = await commands.checkCliStatus();
   if (result.status === "error") {
     throw new Error(result.error);
   }
   return result.data;
-}
-
-async function copyText(
-  text: string,
-  successMessage: string,
-  fallbackErrorMessage: string,
-) {
-  try {
-    await navigator.clipboard.writeText(text);
-    toast.success(successMessage);
-  } catch (error) {
-    toast.error(error instanceof Error ? error.message : fallbackErrorMessage);
-  }
 }
 
 export function buildMcpConfiguration(command: string) {
@@ -49,128 +47,87 @@ export function buildMcpConfiguration(command: string) {
   );
 }
 
-export function getCliInstallNotification(status: EmbeddedCliStatus) {
-  if (status.state === "installed") {
-    return {
-      type: "success" as const,
-      message: t`${status.commandName} is ready to use`,
-    };
-  }
-
-  return {
-    type: "error" as const,
-    message: status.details ?? t`${status.commandName} could not be installed`,
-  };
-}
-
 export function CliSettingsSections() {
-  const queryClient = useQueryClient();
   const statusQuery = useQuery({
     queryKey: CLI_STATUS_QUERY_KEY,
     queryFn: loadStatus,
   });
-  const installMutation = useMutation({
-    mutationFn: async () => {
-      const result = await commands.installEmbeddedCli();
-      if (result.status === "error") {
-        throw new Error(result.error);
-      }
-      return result.data;
-    },
-    onSuccess: (status) => {
-      queryClient.setQueryData(CLI_STATUS_QUERY_KEY, status);
-      const notification = getCliInstallNotification(status);
-      if (notification.type === "success") {
-        toast.success(notification.message);
-      } else {
-        toast.error(notification.message);
-      }
-    },
-    onError: (error) => toast.error(error.message),
-  });
-
-  const status = statusQuery.data;
-
-  return (
-    <CliSection
-      status={status}
-      isLoading={statusQuery.isPending}
-      error={statusQuery.error}
-      isInstalling={installMutation.isPending}
-      onInstall={() => installMutation.mutate()}
-    />
-  );
-}
-
-function CliSection({
-  status,
-  isLoading,
-  error,
-  isInstalling,
-  onInstall,
-}: {
-  status: EmbeddedCliStatus | undefined;
-  isLoading: boolean;
-  error: Error | null;
-  isInstalling: boolean;
-  onInstall: () => void;
-}) {
-  const canInstall =
-    status?.supported === true &&
-    status.state !== "resource_missing" &&
-    status.state !== "conflict";
-  const isInstalled = status?.state === "installed";
 
   return (
     <section className="flex flex-col gap-4">
       <h2 className="font-sans text-lg font-semibold">{t`CLI & MCP`}</h2>
       <div className="flex flex-col gap-4">
-        <div
-          data-setting-id="cli"
-          className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
-        >
-          <div className="min-w-0">
-            <h3 className="flex items-center gap-1.5 text-sm font-medium">
-              <Trans>Syntheo CLI</Trans>
-              {isInstalled && (
-                <CheckCircle
-                  aria-label={t`Installed`}
-                  className="text-primary size-3.5"
-                />
-              )}
-            </h3>
-            <CliStatus status={status} isLoading={isLoading} error={error} />
-          </div>
-          <div className="flex shrink-0 gap-2">
-            <Button
-              type="button"
-              size="sm"
-              disabled={!canInstall || isInstalling}
-              onClick={onInstall}
-            >
-              {isInstalling ? (
-                <CircleNotch className="size-3.5 animate-spin" />
-              ) : isInstalled ? (
-                t`Reinstall`
-              ) : (
-                t`Install`
-              )}
-            </Button>
-          </div>
-        </div>
-        <McpRow status={status} />
+        <CliRow
+          status={statusQuery.data}
+          isLoading={statusQuery.isPending}
+          error={statusQuery.error}
+          isRefreshing={statusQuery.isFetching}
+          onRefresh={() => void statusQuery.refetch()}
+        />
+        <McpRow status={statusQuery.data} />
         <SkillsRow />
       </div>
     </section>
   );
 }
 
-function CliStatus({
+function CliRow({
+  status,
+  isLoading,
+  error,
+  isRefreshing,
+  onRefresh,
+}: {
+  status: CliStatus | undefined;
+  isLoading: boolean;
+  error: Error | null;
+  isRefreshing: boolean;
+  onRefresh: () => void;
+}) {
+  const isInstalled = status?.path != null;
+
+  return (
+    <div data-setting-id="cli" className="flex flex-col gap-2">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <h3 className="flex items-center gap-1.5 text-sm font-medium">
+            <Trans>Syntheo CLI</Trans>
+            {isInstalled && (
+              <CheckCircle
+                aria-label={t`Installed`}
+                className="text-primary size-3.5"
+              />
+            )}
+          </h3>
+          <CliStatusLine status={status} isLoading={isLoading} error={error} />
+        </div>
+        <div className="flex shrink-0 gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={isRefreshing}
+            onClick={onRefresh}
+          >
+            {isRefreshing ? (
+              <CircleNotch className="size-3.5 animate-spin" />
+            ) : (
+              t`Check again`
+            )}
+          </Button>
+        </div>
+      </div>
+      {status && !isInstalled && <CliInstallHint />}
+    </div>
+  );
+}
+
+function CliStatusLine({
   status,
   isLoading,
   error,
 }: {
-  status: EmbeddedCliStatus | undefined;
+  status: CliStatus | undefined;
   isLoading: boolean;
   error: Error | null;
 }) {
@@ -195,35 +152,67 @@ function CliStatus({
     return null;
   }
 
-  if (status.state === "installed") {
-    return null;
-  }
-
-  const showDetails = ["conflict", "unsupported", "resource_missing"].includes(
-    status.state,
-  );
-
   return (
-    <div className="mt-1 flex items-start gap-1.5 text-xs">
-      <span
-        className={cn([
-          "mt-1 size-2 shrink-0 rounded-full",
-          status.state === "conflict" ? "bg-chart-3" : "bg-muted-foreground/50",
-        ])}
-      />
+    <div className="mt-1 flex flex-col gap-1 text-xs">
       <span className="text-muted-foreground break-all">
-        {showDetails ? (status.details ?? t`Unavailable`) : t`Not installed`}
+        {status.path ?? t`Not found on this computer`}
       </span>
+      {status.shadowedByApp && (
+        <span className="text-chart-3">
+          {t`The ${status.commandName} command on your PATH opens the desktop app. Use the CLI's absolute path.`}
+        </span>
+      )}
     </div>
   );
 }
 
-function McpRow({ status }: { status: EmbeddedCliStatus | undefined }) {
-  const isInstalled = status?.state === "installed";
-  const commandName = status?.commandName ?? "syntheo";
-  const configuration = buildMcpConfiguration(
-    isInstalled ? status.installPath : commandName,
+function CliInstallHint() {
+  return (
+    <div className="bg-muted/50 flex flex-col gap-2 rounded-md p-3 text-xs">
+      <p className="text-muted-foreground">
+        {t`The CLI is not bundled with the app. Install it from a clone of the Syntheo repository:`}
+      </p>
+      <div className="flex items-center gap-2">
+        <code className="bg-background min-w-0 flex-1 truncate rounded px-2 py-1 font-mono">
+          {CLI_INSTALL_COMMAND}
+        </code>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          aria-label={t`Copy install command`}
+          onClick={() =>
+            void copyText(CLI_INSTALL_COMMAND, t`Install command copied`)
+          }
+        >
+          <Copy className="size-3.5" />
+        </Button>
+      </div>
+      <Button
+        type="button"
+        variant="link"
+        size="sm"
+        className="h-auto self-start p-0 text-xs"
+        onClick={() =>
+          void openerCommands
+            .openUrl(documentationUrl(i18n.locale, "installation"), null)
+            .catch((error) =>
+              console.error(
+                "[settings] failed to open installation guide",
+                error,
+              ),
+            )
+        }
+      >
+        {t`Installation guide`}
+        <ArrowSquareOut className="size-3" />
+      </Button>
+    </div>
   );
+}
+
+function McpRow({ status }: { status: CliStatus | undefined }) {
+  const path = status?.path ?? null;
 
   return (
     <div
@@ -238,14 +227,16 @@ function McpRow({ status }: { status: EmbeddedCliStatus | undefined }) {
           type="button"
           variant="outline"
           size="sm"
-          disabled={!isInstalled}
-          onClick={() =>
+          disabled={path === null}
+          onClick={() => {
+            if (path === null) {
+              return;
+            }
             void copyText(
-              configuration,
+              buildMcpConfiguration(path),
               t`MCP configuration copied`,
-              t`Could not copy the MCP configuration`,
-            )
-          }
+            );
+          }}
         >
           <Copy className="size-3.5" />
           {t`Copy config`}

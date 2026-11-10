@@ -24,13 +24,13 @@ This page links the desktop app's modules to the documentation pages to update w
 | `startup.rs` | Launch lock and channel lock: Nightly and stable never share the open database at the same time. Slow startup indicator, consolidation of the old custom storage. | [/en/troubleshooting](/en/troubleshooting) |
 | `db.rs` | Opens `app.db` (`open_desktop_db`), applies a requested reset (`app.db.reset-requested`), recognizes lock errors and newer-schema errors. | [/en/data-and-privacy](/en/data-and-privacy), [/en/troubleshooting](/en/troubleshooting) |
 | `search_index.rs` | Background task that drains the `search_index_dirty` queue into the Tantivy index. A note being captured is only indexed after its journal is compacted. | [/en/notes](/en/notes) |
-| `embedded_cli.rs` | Checks and installs the `syntheo` binary shipped with the app in `~/.local/bin` (Windows: `%LOCALAPPDATA%\Syntheo\bin`). The name follows the channel: `syntheo`, `syntheo-nightly`, `syntheo-staging` or `syntheo-dev`. At startup, it reinstalls it if it is missing, without touching a foreign file at the same path. | [/en/installation](/en/installation), [/en/agents/cli](/en/agents/cli) |
+| `cli_status.rs` | Looks for the standalone `syntheo` CLI on the `PATH`, then in cargo's `bin` folder, ignoring the app's own executable (the `.deb` installs the app as `/usr/bin/syntheo`). The app never bundles nor installs the CLI. | [/en/installation](/en/installation), [/en/agents/cli](/en/agents/cli) |
 | `agent_skills.rs` | Bundles `skills/syntheo` (`SKILL.md`, `references/*.md`) and installs it for Claude Code, Codex, Cursor or OpenCode. | [/en/agents/skills](/en/agents/skills) |
 | `agents.rs`, `agents-content.md` | Writes an `AGENTS.md` in the data folder at each startup, to point agents to the MCP and the CLI. | [/en/agents/overview](/en/agents/overview) |
 | `appearance.rs` | Reads the dock display and the system tray icon at startup. | none |
 | `commands.rs`, `store.rs`, `ext.rs` | App-specific commands and local store keys. | none |
 
-Commands exposed to the interface (`commands.rs`): `get_onboarding_needed`, `set_onboarding_needed`, `get_dismissed_toasts`, `set_dismissed_toasts`, `get_env`, `show_devtool`, `complete_app_exit`, `get_tinybase_values`, `get_pinned_tabs`, `set_pinned_tabs`, `get_recently_opened_sessions`, `set_recently_opened_sessions`, `check_embedded_cli`, `install_embedded_cli` (used by `settings/developers/cli.tsx`), `list_skill_agents`, `install_agent_skill` (used by `settings/developers/skills.tsx`).
+Commands exposed to the interface (`commands.rs`): `get_onboarding_needed`, `set_onboarding_needed`, `get_dismissed_toasts`, `set_dismissed_toasts`, `get_env`, `show_devtool`, `complete_app_exit`, `get_tinybase_values`, `get_pinned_tabs`, `set_pinned_tabs`, `get_recently_opened_sessions`, `set_recently_opened_sessions`, `check_cli_status` (used by `settings/developers/cli.tsx`), `list_skill_agents`, `install_agent_skill` (used by `settings/developers/skills.tsx`).
 
 <Note>
   `tauri_plugin_agent` (through `crates/agent-core`) is registered, but no module in `apps/desktop/src` imports its binding. See [/en/code/cli](/en/code/cli).
