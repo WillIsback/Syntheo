@@ -1,5 +1,6 @@
 use crate::{
     AppExt,
+    aec_models::AecModelStatus,
     agent_skills::{SkillAgent, SkillAgentStatus},
     embedded_cli::EmbeddedCliStatus,
 };
@@ -120,6 +121,18 @@ pub async fn install_embedded_cli<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
 ) -> Result<EmbeddedCliStatus, String> {
     crate::embedded_cli::install(&app)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn get_aec_model_status() -> Result<AecModelStatus, String> {
+    Ok(crate::aec_models::status())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn retry_aec_model_download() -> Result<AecModelStatus, String> {
+    Ok(crate::aec_models::retry_now())
 }
 
 #[tauri::command]

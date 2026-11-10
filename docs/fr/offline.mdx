@@ -27,6 +27,17 @@ Sans serveur de transcription joignable, **il n'y a pas de transcription**. Synt
 - Si aucun fournisseur de transcription n'est configuré, Syntheo refuse de démarrer la capture : « Aucun fournisseur de transcription n'est configuré. Syntheo ne conserve pas l'audio : configurez un endpoint de transcription avant d'enregistrer. »
 - Si le serveur devient injoignable pendant une réunion, la transcription en direct se met en pause et Syntheo tente de se reconnecter. Le passage prononcé pendant la coupure manquera à la transcription.
 
+## Modèles d'annulation d'écho
+
+L'annulation d'écho retire la voix des autres participants que votre micro capte depuis vos haut-parleurs. Ses modèles ne sont pas fournis avec l'application : Syntheo les télécharge une fois, depuis GitHub (`raw.githubusercontent.com`), au premier lancement, puis les garde sur votre poste.
+
+Si ce premier lancement a lieu hors ligne, ou derrière un proxy qui bloque cette adresse, **l'écoute fonctionne quand même**, sans annulation d'écho :
+
+- pendant l'écoute, un message indique « Annulation d'écho indisponible » : « Les modèles n'ont pas pu être téléchargés (hors ligne ?). L'écoute continue sans. », avec un bouton « Réessayer » ;
+- sous **Paramètres → Mes réunions → Réunions → Audio**, la ligne « Annulation d'écho » reste affichée tant que les modèles manquent, avec un bouton « Réessayer ».
+
+Syntheo réessaie aussi de lui-même, après 1 minute, puis 5 et 15 minutes, puis toutes les heures. Dès que le téléchargement aboutit, l'annulation d'écho s'active, même en pleine écoute. En attendant, portez un casque : le micro ne capte alors pas le son des haut-parleurs.
+
 ## Ce qui exige le serveur de synthèse
 
 - la génération des comptes rendus ;
@@ -45,10 +56,10 @@ Sans serveur de synthèse joignable, vos transcriptions restent disponibles : vo
     Suivez [Configurer la transcription et l'IA](/fr/ai-setup) avec des URL locales, par exemple `http://localhost:8000/v1` et `http://localhost:11434/v1`. HTTP en clair est accepté vers `localhost` et les adresses privées.
   </Step>
   <Step title="Tester avant la réunion">
-    Lancez une courte écoute, puis générez un compte rendu. Si les deux fonctionnent avec le réseau coupé, vous êtes prêt.
+    Lancez Syntheo une fois avec le réseau, pour qu'il télécharge les modèles d'annulation d'écho. Lancez ensuite une courte écoute, puis générez un compte rendu. Si les deux fonctionnent avec le réseau coupé, vous êtes prêt.
   </Step>
 </Steps>
 
 <Note>
-  Hors inférence, Syntheo émet très peu de requêtes : l'affichage des notes de version d'une autre version que celle installée (GitHub) et quelques icônes d'interface. Elles ne transportent aucun contenu de réunion et leur échec n'empêche rien. Liste complète dans [Syntheo Desktop et le RGPD](/fr/conformite/rgpd).
+  Hors inférence, Syntheo émet très peu de requêtes : le téléchargement unique des modèles d'annulation d'écho (GitHub), l'affichage des notes de version d'une autre version que celle installée (GitHub) et quelques icônes d'interface. Elles ne transportent aucun contenu de réunion et leur échec n'empêche rien. Liste complète dans [Syntheo Desktop et le RGPD](/fr/conformite/rgpd).
 </Note>

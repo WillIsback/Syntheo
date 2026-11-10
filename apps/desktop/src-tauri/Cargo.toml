@@ -88,7 +88,7 @@ specta-typescript = { workspace = true }
 sqlx = { workspace = true, features = ["runtime-tokio", "sqlite"] }
 strum = { workspace = true, features = ["derive"] }
 tauri-specta = { workspace = true, features = ["derive", "typescript"] }
-tokio = { workspace = true, features = ["fs", "rt-multi-thread", "macros", "time"] }
+tokio = { workspace = true, features = ["fs", "rt-multi-thread", "macros", "sync", "time"] }
 tracing = { workspace = true }
 
 [features]

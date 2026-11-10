@@ -62,9 +62,11 @@ type SpeakerDevice = NonNullable<AudioSettingsProps["speakerDevice"]>;
 function renderAudioSettings(
   microphoneDevice: Partial<MicrophoneDevice> = {},
   speakerDevice?: Partial<SpeakerDevice>,
+  echoCancellation?: AudioSettingsProps["echoCancellation"],
 ) {
   return render(
     <AudioSettingsView
+      echoCancellation={echoCancellation}
       microphoneDevice={{
         value: "",
         devices: ["External Microphone"],
@@ -305,6 +307,40 @@ describe("AudioSettingsView", () => {
       );
       fireEvent.click(screen.getByRole("button", { name: /Search again/ }));
       expect(onSearchAgain).toHaveBeenCalledOnce();
+    });
+  });
+
+  describe("echo cancellation models (issue 509)", () => {
+    it("says nothing while the models are ready", () => {
+      renderAudioSettings({}, undefined, { state: "ready", onRetry: vi.fn() });
+      expect(screen.queryByText(/Echo cancellation/)).toBeNull();
+    });
+
+    it("explains that echo cancellation is off and retries on demand", () => {
+      const onRetry = vi.fn();
+      renderAudioSettings({}, undefined, { state: "failed", onRetry });
+
+      expect(screen.getByText("Echo cancellation")).toBeTruthy();
+      expect(
+        screen.getByText(
+          "Unavailable: the models could not be downloaded (offline?). Listening works without it.",
+        ),
+      ).toBeTruthy();
+
+      fireEvent.click(screen.getByRole("button", { name: /Retry/ }));
+      expect(onRetry).toHaveBeenCalledOnce();
+    });
+
+    it("shows the download in progress without a retry button", () => {
+      renderAudioSettings({}, undefined, {
+        state: "downloading",
+        onRetry: vi.fn(),
+      });
+
+      expect(
+        screen.getByText("Downloading the echo cancellation models…"),
+      ).toBeTruthy();
+      expect(screen.queryByRole("button", { name: /Retry/ })).toBeNull();
     });
   });
 });
