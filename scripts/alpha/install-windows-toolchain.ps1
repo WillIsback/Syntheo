@@ -1,4 +1,4 @@
-# Installe, pour toute la machine, la toolchain de scripts/build-alpha.ps1 dans
+﻿# Installe, pour toute la machine, la toolchain de scripts/build-alpha.ps1 dans
 # une VM Windows 11 : Visual Studio Build Tools 2022 (MSVC v143, SDK Windows,
 # CMake C++), Git, Node.js (même version que la CI) et pnpm (packageManager),
 # LLVM (libclang), Strawberry Perl, CMake et Rust (rust-toolchain.toml).
@@ -110,12 +110,30 @@ function Invoke-Installer([string]$Exe, [string[]]$Arguments, [int[]]$OkCodes = 
   }
 }
 
-function Add-MachinePath([string]$Dir) {
-  $current = [Environment]::GetEnvironmentVariable("Path", "Machine")
-  if (($current -split ';') -notcontains $Dir) {
-    [Environment]::SetEnvironmentVariable("Path", "$current;$Dir", "Machine")
+# Ajoute $Dir au Path (machine et session). Avec -Before, le place juste avant
+# cette entrée (déplacé s'il est déjà plus loin) : c'est le premier trouvé qui gagne.
+function Add-PathEntry([string]$PathValue, [string]$Dir, [string]$Before) {
+  $entries = @($PathValue -split ';' | Where-Object { $_ })
+  if (-not $Before -or $entries -notcontains $Before) {
+    if ($entries -notcontains $Dir) { $entries += $Dir }
+    return $entries -join ';'
   }
-  if (($env:Path -split ';') -notcontains $Dir) { $env:Path = "$env:Path;$Dir" }
+  $result = @()
+  foreach ($entry in $entries) {
+    if ($entry -eq $Dir) { continue }
+    if ($entry -eq $Before) { $result += $Dir }
+    $result += $entry
+  }
+  return $result -join ';'
+}
+
+function Add-MachinePath([string]$Dir, [string]$Before = "") {
+  $current = [Environment]::GetEnvironmentVariable("Path", "Machine")
+  $updated = Add-PathEntry $current $Dir $Before
+  if ($updated -ne $current) {
+    [Environment]::SetEnvironmentVariable("Path", $updated, "Machine")
+  }
+  $env:Path = Add-PathEntry $env:Path $Dir $Before
 }
 
 # --- Visual Studio Build Tools 2022 -------------------------------------------
@@ -214,7 +232,8 @@ else {
   $msi = Get-Pinned "CMake"
   Invoke-Installer "msiexec.exe" @("/i", "`"$msi`"", "/qn", "/norestart", "ADD_CMAKE_TO_PATH=System")
 }
-Add-MachinePath "C:\Program Files\CMake\bin"
+# Avant Strawberry\c\bin, qui embarque un CMake 3.29 : sinon c'est lui qui gagne.
+Add-MachinePath "C:\Program Files\CMake\bin" -Before "C:\Strawberry\c\bin"
 
 # --- Rust ----------------------------------------------------------------------
 
