@@ -326,22 +326,34 @@ EOF
 
 # --- Mode Docker -------------------------------------------------------------------
 
+# Somme SHA-256 de node-v<version>-linux-x64.tar.xz, figée par version : une
+# nouvelle version de Node s'ajoute ici, avec la somme de
+# https://nodejs.org/dist/v<version>/SHASUMS256.txt (signé GPG par l'équipe Node).
+node_sha256() {
+  case "$1" in
+    22.23.4) echo 1805bcd35e6815559bd2eb97db438d3fdb0eb3a5e6a977b7c1badca76337e9ce ;;
+    *) return 1 ;;
+  esac
+}
+
 # Image : versions lues dans la source construite, étiquette qui en dérive.
 docker_image() {
-  local rust_toolchain rust_components node_version pnpm_version context tag
+  local rust_toolchain rust_components node_version node_sum pnpm_version context tag
   rust_toolchain=$(sed -n 's/^channel *= *"\(.*\)"/\1/p' rust-toolchain.toml)
   rust_components=$(sed -n 's/^components *= *\[\(.*\)\]/\1/p' rust-toolchain.toml | tr -d '" ')
   node_version=$(sed -n 's/.*node-version: *"\{0,1\}\([0-9.]*\)"\{0,1\}.*/\1/p' .github/actions/pnpm_install/action.yaml | head -1)
   node_version=${node_version:-22.23.4}
   pnpm_version=$(jq -r '.packageManager // "pnpm@11.1.1" | sub("^pnpm@"; "")' package.json)
   [ -n "$rust_toolchain" ] || die "canal Rust introuvable dans rust-toolchain.toml."
+  node_sum=$(node_sha256 "$node_version") \
+    || die "Node $node_version : somme SHA-256 inconnue, à ajouter dans node_sha256() (scripts/build-alpha.sh)."
   context=$(mktemp -d)
   mkdir -p "$context/scripts"
   cp "$SCRIPT_DIR/alpha/Dockerfile" "$context/Dockerfile"
   cp scripts/bash-guard.sh scripts/setup-linux-tauri.sh scripts/setup-linux-others.sh "$context/scripts/"
   tag=$({
     cat "$context/Dockerfile" "$context"/scripts/*
-    echo "$rust_toolchain $rust_components $node_version $pnpm_version"
+    echo "$rust_toolchain $rust_components $node_version $node_sum $pnpm_version"
   } | sha256sum | cut -c1-12)
   IMAGE="syntheo-alpha:$tag"
   if ! docker image inspect "$IMAGE" > /dev/null 2>&1; then
@@ -350,6 +362,7 @@ docker_image() {
       --build-arg RUST_TOOLCHAIN="$rust_toolchain" \
       --build-arg RUST_COMPONENTS="${rust_components:-clippy,rustfmt}" \
       --build-arg NODE_VERSION="$node_version" \
+      --build-arg NODE_SHA256="$node_sum" \
       --build-arg PNPM_VERSION="$pnpm_version" \
       "$context" > /dev/null
   fi

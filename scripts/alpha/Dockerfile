@@ -11,13 +11,18 @@
 # couches de l'image.
 FROM ubuntu:24.04
 
-# Un `curl | tar` ou `curl | sh` qui échoue doit faire échouer la construction.
+# Toute commande d'une chaîne qui échoue doit faire échouer la construction.
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 ARG RUST_TOOLCHAIN
 ARG RUST_COMPONENTS=clippy,rustfmt
 ARG NODE_VERSION
+# Somme de l'archive Node, figée par version dans scripts/build-alpha.sh.
+ARG NODE_SHA256
 ARG PNPM_VERSION
+# rustup-init figé et vérifié, comme dans scripts/alpha/install-windows-toolchain.ps1.
+ARG RUSTUP_VERSION=1.29.3
+ARG RUSTUP_SHA256=b1c8cb14e30889e7e2999e6b69e62d9e9b9ffc0f4df8180564d306d9680e6c55
 
 ENV DEBIAN_FRONTEND=noninteractive \
     RUSTUP_HOME=/opt/rustup \
@@ -33,18 +38,33 @@ RUN bash /tmp/setup/setup-linux-tauri.sh > /dev/null \
     && bash /tmp/setup/setup-linux-others.sh > /dev/null \
     && rm -rf /var/lib/apt/lists/* /tmp/setup
 
-# Node : même version que .github/actions/pnpm_install ; pnpm : packageManager.
-RUN curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz" \
-    | tar -xJ -C /usr/local --strip-components=1 \
+# Node : même version que .github/actions/pnpm_install, archive vérifiée avant
+# extraction ; pnpm : packageManager.
+RUN : "${NODE_SHA256:?NODE_SHA256 manquant}" \
+    && curl -fsSL -o /tmp/node.tar.xz \
+      "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz" \
+    && echo "${NODE_SHA256}  /tmp/node.tar.xz" | sha256sum -c --quiet - \
+    && tar -xJf /tmp/node.tar.xz -C /usr/local --strip-components=1 \
+    && rm /tmp/node.tar.xz \
     && npm install -g "pnpm@${PNPM_VERSION}" > /dev/null \
     && npm cache clean --force > /dev/null
 
 # Rust : toolchain du dépôt, installée une fois pour toutes dans l'image. Le
 # build tourne avec l'UID de l'hôte : RUSTUP_HOME reste lisible par tous, et
 # CARGO_HOME (registre, git) pointe à l'exécution vers un cache de l'hôte.
-RUN curl -fsSL https://sh.rustup.rs \
-    | CARGO_HOME=/opt/cargo sh -s -- -y --no-modify-path --profile minimal \
+RUN curl -fsSL -o /tmp/rustup-init \
+      "https://static.rust-lang.org/rustup/archive/${RUSTUP_VERSION}/x86_64-unknown-linux-gnu/rustup-init" \
+    && echo "${RUSTUP_SHA256}  /tmp/rustup-init" | sha256sum -c --quiet - \
+    && chmod +x /tmp/rustup-init \
+    && CARGO_HOME=/opt/cargo /tmp/rustup-init -y --no-modify-path --profile minimal \
       --default-toolchain "${RUST_TOOLCHAIN}" -c "${RUST_COMPONENTS}" > /dev/null \
+    && rm /tmp/rustup-init \
     && chmod -R a+rX /opt/rustup /opt/cargo
+
+# Utilisateur par défaut non root. build-alpha.sh lance le conteneur avec
+# `--user $(id -u):$(id -g)`, qui le remplace : les fichiers produits restent à
+# l'utilisateur de l'hôte.
+RUN useradd --system --create-home --home-dir /home/syntheo syntheo
+USER syntheo
 
 WORKDIR /work
