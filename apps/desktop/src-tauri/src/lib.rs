@@ -149,8 +149,6 @@ pub fn main() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_tracing::init());
 
-    builder = builder.plugin(tauri_plugin_agent::init());
-
     builder = builder.plugin(tauri_plugin_db::init(db.clone()));
 
     builder = builder.plugin(tauri_plugin_contacts::init());

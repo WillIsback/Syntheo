@@ -32,10 +32,6 @@ This page links the desktop app's modules to the documentation pages to update w
 
 Commands exposed to the interface (`commands.rs`): `get_onboarding_needed`, `set_onboarding_needed`, `get_dismissed_toasts`, `set_dismissed_toasts`, `get_env`, `show_devtool`, `complete_app_exit`, `get_tinybase_values`, `get_pinned_tabs`, `set_pinned_tabs`, `get_recently_opened_sessions`, `set_recently_opened_sessions`, `check_cli_status` (used by `settings/developers/cli.tsx`), `list_skill_agents`, `install_agent_skill` (used by `settings/developers/skills.tsx`).
 
-<Note>
-  `tauri_plugin_agent` (through `crates/agent-core`) is registered, but no module in `apps/desktop/src` imports its binding. See [/en/code/cli](/en/code/cli).
-</Note>
-
 ## Interface: `apps/desktop/src`
 
 ### Windows and routes

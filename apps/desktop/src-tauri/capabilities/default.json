@@ -42,7 +42,6 @@
     "tracing:default",
     "syntheo-tray:default",
 
-    "agent:default",
     "deeplink2:default",
     "store:default",
     "store2:default",

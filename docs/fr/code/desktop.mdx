@@ -32,10 +32,6 @@ Cette page relie les modules de l'application desktop aux pages de documentation
 
 Commandes exposées à l'interface (`commands.rs`) : `get_onboarding_needed`, `set_onboarding_needed`, `get_dismissed_toasts`, `set_dismissed_toasts`, `get_env`, `show_devtool`, `complete_app_exit`, `get_tinybase_values`, `get_pinned_tabs`, `set_pinned_tabs`, `get_recently_opened_sessions`, `set_recently_opened_sessions`, `check_cli_status` (utilisée par `settings/developers/cli.tsx`), `list_skill_agents`, `install_agent_skill` (utilisées par `settings/developers/skills.tsx`).
 
-<Note>
-  `tauri_plugin_agent` (via `crates/agent-core`) est enregistré, mais aucun module de `apps/desktop/src` n'importe sa liaison. Voir [/code/cli](/fr/code/cli).
-</Note>
-
 ## Interface : `apps/desktop/src`
 
 ### Fenêtres et routes

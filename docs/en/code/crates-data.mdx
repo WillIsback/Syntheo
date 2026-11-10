@@ -219,7 +219,7 @@ Don't describe product behavior from the raw SQL schema. Start from the operatio
 `crates/claude`, `crates/codex` and `crates/opencode` drive the Claude Code, Codex and OpenCode CLIs: options, event streams, sessions or threads, installation check (`health_check_with_options`) and reading or writing their configuration. `codex` and `opencode` also expose deep links (`new_thread_deeplink`, `open_project_deeplink`).
 
 - **Internal dependencies**: `syntheo-cli-process` for all three.
-- **Usage**: only `crates/agent-core` uses them, to install a notification hook in each agent's configuration (`char … notify` command, inherited from Anarlog). `plugins/agent` exposes `health_check`, `install_cli` and `uninstall_cli`, but no code in `apps/desktop/src` imports `@syntheo/plugin-agent`.
+- **Usage**: only `crates/agent-core` uses them, to install a notification hook in each agent's configuration (`char … notify` command, inherited from Anarlog). `agent-core` itself has no user since the `agent` plugin was removed (#546): the four crates are kept, but nothing in the app calls them.
 - **Affected doc pages**: none. The skills installation described in [Skills](/en/agents/skills) doesn't go through these crates.
 
 ## Tooling and test data

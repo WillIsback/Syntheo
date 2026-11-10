@@ -59,7 +59,6 @@ The "Interface" column shows whether `apps/desktop/src` imports the `@syntheo/pl
 | `icon` | Dock icon and indicators (macOS) | Yes | none |
 | `dock` | Dock menu (macOS) | No | none |
 | `sidecar2` | Internal utility | No (used by `permissions`) | none |
-| `agent` | CLI installation | No | none |
 | `relay` | Interface relay for development | No (Vite shim) | none |
 
 ## Capture, transcription and dictation
@@ -177,11 +176,10 @@ The "Interface" column shows whether `apps/desktop/src` imports the `@syntheo/pl
 | `icon` | macOS only | `set_dock_icon`, `reset_dock_icon`, `get_icon`, `set_recording_indicator`, `set_notification_badge`. Outside macOS, these commands do nothing. |
 | `dock` | macOS only | No commands. Installs the Dock menu (new note, settings, update, restart, quit). |
 | `sidecar2` | Internal | No commands. Resolves and launches sidecar binaries, including in debug. Used by `permissions`. |
-| `agent` | Not called by the interface | `health_check`, `install_cli`, `uninstall_cli`, through `crates/agent-core`. The **Settings → Developers → CLI & MCP** screen goes through the app's commands (`apps/desktop/src-tauri/src/cli_status.rs`), not through this plugin. |
 | `relay` | Development only | Serves the interface over HTTP on `127.0.0.1` (port 1423, or `RELAY_PORT`) and relays IPC over WebSocket. The Vite shim `@syntheo/plugin-relay/vite` is loaded in `apps/desktop/vite.config.ts`. |
 
 ## When to update the documentation
 
 - A command or event added, renamed or removed: update the table on this page.
 - A visible behavior change in a plugin whose "Affected doc pages" column is not "none": review those pages.
-- A plugin that starts being called by the interface (for example `agent`): add the affected user pages and the matching row in [Doc ↔ code mapping](/en/code/doc-map).
+- A plugin that starts being called by the interface: add the affected user pages and the matching row in [Doc ↔ code mapping](/en/code/doc-map).

@@ -24,7 +24,6 @@ tauri-build = { workspace = true, features = [] }
 syntheo-brand = { workspace = true }
 tauri = { workspace = true, features = ["specta", "protocol-asset"] }
 
-tauri-plugin-agent = { workspace = true }
 tauri-plugin-autostart = { workspace = true }
 tauri-plugin-clipboard-manager = { workspace = true }
 tauri-plugin-contacts = { workspace = true }

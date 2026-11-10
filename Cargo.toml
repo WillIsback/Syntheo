@@ -122,7 +122,6 @@ tauri-plugin-single-instance = "2.4"
 tauri-plugin-store = "2.4.3"
 tauri-plugin-window-state = "2.4"
 
-tauri-plugin-agent = { path = "plugins/agent" }
 tauri-plugin-contacts = { path = "plugins/contacts" }
 tauri-plugin-db = { path = "plugins/db" }
 tauri-plugin-deeplink2 = { path = "plugins/deeplink2" }

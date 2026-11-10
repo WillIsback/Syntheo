@@ -2635,7 +2635,6 @@ dependencies = [
  "strum 0.28.0",
  "tauri",
  "tauri-build",
- "tauri-plugin-agent",
  "tauri-plugin-autostart",
  "tauri-plugin-clipboard-manager",
  "tauri-plugin-contacts",
@@ -11660,20 +11659,6 @@ dependencies = [
  "serde_json",
  "tauri-utils",
  "walkdir",
-]
-
-[[package]]
-name = "tauri-plugin-agent"
-version = "0.1.0"
-dependencies = [
- "agent-core",
- "serde",
- "specta",
- "specta-typescript",
- "tauri",
- "tauri-plugin",
- "tauri-specta",
- "thiserror 2.0.21",
 ]
 
 [[package]]
