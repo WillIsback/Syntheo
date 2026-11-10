@@ -21,9 +21,17 @@ export const commands = {
 	installEmbeddedCli: () => typedError<EmbeddedCliStatus, string>(__TAURI_INVOKE("install_embedded_cli")),
 	listSkillAgents: () => typedError<SkillAgentStatus[], string>(__TAURI_INVOKE("list_skill_agents")),
 	installAgentSkill: (agent: SkillAgent) => typedError<SkillAgentStatus, string>(__TAURI_INVOKE("install_agent_skill", { agent })),
+	getAecModelStatus: () => typedError<AecModelStatus, string>(__TAURI_INVOKE("get_aec_model_status")),
+	retryAecModelDownload: () => typedError<AecModelStatus, string>(__TAURI_INVOKE("retry_aec_model_download")),
 };
 
 /* Types */
+export type AecModelState = "downloading" | "ready" | "failed";
+
+export type AecModelStatus = {
+	state: AecModelState,
+};
+
 export type EmbeddedCliState = "installed" | "missing" | "conflict" | "unsupported" | "resource_missing";
 
 export type EmbeddedCliStatus = {

@@ -543,6 +543,8 @@ fn make_specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
             commands::install_embedded_cli::<tauri::Wry>,
             commands::list_skill_agents,
             commands::install_agent_skill,
+            commands::get_aec_model_status,
+            commands::retry_aec_model_download,
         ])
         .error_handling(tauri_specta::ErrorHandlingMode::Result)
 }

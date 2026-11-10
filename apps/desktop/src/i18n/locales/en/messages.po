@@ -1539,6 +1539,10 @@ msgstr "Documentation"
 msgid "Done"
 msgstr "Done"
 
+#: src/settings/general/audio-settings.tsx
+msgid "Downloading the echo cancellation models…"
+msgstr "Downloading the echo cancellation models…"
+
 #: src/settings/search-index.ts
 msgid "Downloads, PDF, folder, export, save, Markdown, text file"
 msgstr "Downloads, PDF, folder, export, save, Markdown, text file"
@@ -1597,6 +1601,14 @@ msgstr "Earlier version, read only. The latest summary stays the current one."
 #: src/session/components/version-history-dialog.tsx
 msgid "Earlier versions of this note, newest first."
 msgstr "Earlier versions of this note, newest first."
+
+#: src/settings/general/audio-settings.tsx
+msgid "Echo cancellation"
+msgstr "Echo cancellation"
+
+#: src/stt/aec-model-unavailable-notice.tsx
+msgid "Echo cancellation unavailable"
+msgstr "Echo cancellation unavailable"
 
 #: src/main/windows-title-bar.tsx
 #: src/session/components/living-document/transcript-margin.tsx
@@ -3933,7 +3945,9 @@ msgstr "Resume listening"
 #: src/contacts/profile-photo.tsx
 #: src/session/components/note-input/enhanced/enhance-error.tsx
 #: src/settings/general/account-profile.tsx
+#: src/settings/general/audio-settings.tsx
 #: src/store/zustand/listener/general-live-helpers.ts
+#: src/stt/aec-model-unavailable-notice.tsx
 msgid "Retry"
 msgstr "Retry"
 
@@ -5116,6 +5130,10 @@ msgstr "The memo edit could not be prepared."
 msgid "The microphone and system audio are muted: nothing is being transcribed."
 msgstr "The microphone and system audio are muted: nothing is being transcribed."
 
+#: src/stt/aec-model-unavailable-notice.tsx
+msgid "The models could not be downloaded (offline?). Listening continues without it."
+msgstr "The models could not be downloaded (offline?). Listening continues without it."
+
 #: src/session/components/speaker-naming/speaker-card.tsx
 msgid "The name could not be saved. Try again."
 msgstr "The name could not be saved. Try again."
@@ -5507,6 +5525,10 @@ msgstr "Type a name"
 #: src/settings/developers/cli.tsx
 msgid "Unavailable"
 msgstr "Unavailable"
+
+#: src/settings/general/audio-settings.tsx
+msgid "Unavailable: the models could not be downloaded (offline?). Listening works without it."
+msgstr "Unavailable: the models could not be downloaded (offline?). Listening works without it."
 
 #: src/main/windows-title-bar.tsx
 #: src/sidebar/toast/undo-delete-toast.tsx

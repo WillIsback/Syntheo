@@ -1539,6 +1539,10 @@ msgstr "Documentation"
 msgid "Done"
 msgstr "Terminé"
 
+#: src/settings/general/audio-settings.tsx
+msgid "Downloading the echo cancellation models…"
+msgstr "Téléchargement des modèles d'annulation d'écho…"
+
 #: src/settings/search-index.ts
 msgid "Downloads, PDF, folder, export, save, Markdown, text file"
 msgstr "Téléchargements, PDF, dossier, export, exporter, enregistrer, Markdown, fichier texte"
@@ -1597,6 +1601,14 @@ msgstr "Version précédente, en lecture seule. La synthèse la plus récente re
 #: src/session/components/version-history-dialog.tsx
 msgid "Earlier versions of this note, newest first."
 msgstr "Versions antérieures de cette note, les plus récentes en premier."
+
+#: src/settings/general/audio-settings.tsx
+msgid "Echo cancellation"
+msgstr "Annulation d'écho"
+
+#: src/stt/aec-model-unavailable-notice.tsx
+msgid "Echo cancellation unavailable"
+msgstr "Annulation d'écho indisponible"
 
 #: src/main/windows-title-bar.tsx
 #: src/session/components/living-document/transcript-margin.tsx
@@ -3933,7 +3945,9 @@ msgstr "Reprendre l'écoute"
 #: src/contacts/profile-photo.tsx
 #: src/session/components/note-input/enhanced/enhance-error.tsx
 #: src/settings/general/account-profile.tsx
+#: src/settings/general/audio-settings.tsx
 #: src/store/zustand/listener/general-live-helpers.ts
+#: src/stt/aec-model-unavailable-notice.tsx
 msgid "Retry"
 msgstr "Réessayer"
 
@@ -5116,6 +5130,10 @@ msgstr "La modification du mémo n'a pas pu être préparée."
 msgid "The microphone and system audio are muted: nothing is being transcribed."
 msgstr "Le micro et le son système sont coupés : plus rien n'est transcrit."
 
+#: src/stt/aec-model-unavailable-notice.tsx
+msgid "The models could not be downloaded (offline?). Listening continues without it."
+msgstr "Les modèles n'ont pas pu être téléchargés (hors ligne ?). L'écoute continue sans."
+
 #: src/session/components/speaker-naming/speaker-card.tsx
 msgid "The name could not be saved. Try again."
 msgstr "Le nom n’a pas pu être enregistré. Réessayez."
@@ -5507,6 +5525,10 @@ msgstr "Saisissez un nom"
 #: src/settings/developers/cli.tsx
 msgid "Unavailable"
 msgstr "Indisponible"
+
+#: src/settings/general/audio-settings.tsx
+msgid "Unavailable: the models could not be downloaded (offline?). Listening works without it."
+msgstr "Indisponible : les modèles n'ont pas pu être téléchargés (hors ligne ?). L'écoute fonctionne sans."
 
 #: src/main/windows-title-bar.tsx
 #: src/sidebar/toast/undo-delete-toast.tsx

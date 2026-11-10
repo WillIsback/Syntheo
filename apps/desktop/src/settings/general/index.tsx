@@ -33,6 +33,10 @@ import {
 } from "~/settings/queries";
 import { SettingSwitchRow } from "~/settings/setting-row";
 import { resolveConfigValue, resolveConfigValues } from "~/shared/config";
+import {
+  useAecModelState,
+  useRetryAecModelDownload,
+} from "~/stt/aec-model-status";
 
 const SETTINGS_FORM_KEYS = [
   "autostart",
@@ -187,6 +191,8 @@ function SettingsSectionContent({
     resolveConfigValue("speaker_device", storedSettings),
     section === "meetings",
   );
+  const aecModelState = useAecModelState(section === "meetings");
+  const retryAecModelDownload = useRetryAecModelDownload();
   return (
     <div className="flex flex-col gap-8">
       {section === "app" ? (
@@ -367,6 +373,10 @@ function SettingsSectionContent({
                 },
               }}
               speakerDevice={speakerDevice}
+              echoCancellation={{
+                state: aecModelState,
+                onRetry: () => retryAecModelDownload(),
+              }}
             />
           </div>
         </>

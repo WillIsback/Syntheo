@@ -16,6 +16,7 @@ import { MicrophoneLevelMeter, SpeakerLevelMeter } from "./microphone-level";
 
 import type { SettingId } from "~/settings/search-index";
 import { SETTING_CONTROL_CLASS, SettingRow } from "~/settings/setting-row";
+import type { AecModelState } from "~/types/tauri.gen";
 
 type AudioDeviceSetting = {
   value: string;
@@ -31,6 +32,7 @@ type AudioDeviceSetting = {
 export function AudioSettingsView({
   microphoneDevice,
   speakerDevice,
+  echoCancellation,
 }: {
   microphoneDevice: AudioDeviceSetting;
   // Sortie capturée comme son système (issue 450) ; absente quand la
@@ -39,6 +41,8 @@ export function AudioSettingsView({
     // Sortie réellement capturée, ou celle que capterait une écoute.
     captured?: string | null;
   };
+  // Modèles d'annulation d'écho téléchargés au premier usage (issue 509).
+  echoCancellation?: EchoCancellationStatus;
 }) {
   return (
     <div className="flex flex-col gap-4">
@@ -95,7 +99,60 @@ export function AudioSettingsView({
           }
         />
       ) : null}
+      {echoCancellation ? (
+        <EchoCancellationRow
+          state={echoCancellation.state}
+          onRetry={echoCancellation.onRetry}
+        />
+      ) : null}
     </div>
+  );
+}
+
+type EchoCancellationStatus = {
+  state: AecModelState | undefined;
+  onRetry: () => void;
+};
+
+// L'annulation d'écho n'a pas de réglage : la ligne n'apparaît que lorsque ses
+// modèles manquent, pour dire que l'écoute marche sans et proposer un nouvel
+// essai sans attendre le prochain automatique.
+function EchoCancellationRow({ state, onRetry }: EchoCancellationStatus) {
+  if (state !== "failed" && state !== "downloading") {
+    return null;
+  }
+
+  return (
+    <SettingRow
+      title={<Trans>Echo cancellation</Trans>}
+      description={
+        <span role="status">
+          {state === "failed" ? (
+            <Trans>
+              Unavailable: the models could not be downloaded (offline?).
+              Listening works without it.
+            </Trans>
+          ) : (
+            <Trans>Downloading the echo cancellation models…</Trans>
+          )}
+        </span>
+      }
+    >
+      {(labelProps) =>
+        state === "failed" ? (
+          <Button
+            aria-describedby={labelProps["aria-describedby"]}
+            type="button"
+            variant="outline"
+            className={SETTING_CONTROL_CLASS}
+            onClick={onRetry}
+          >
+            <ArrowsClockwise aria-hidden="true" className="size-4" />
+            <Trans>Retry</Trans>
+          </Button>
+        ) : null
+      }
+    </SettingRow>
   );
 }
 
