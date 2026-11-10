@@ -161,10 +161,10 @@ impl Stream for ManagedEventStream {
     ) -> Poll<Option<Self::Item>> {
         match std::pin::Pin::new(&mut self.inner).poll_next(cx) {
             Poll::Ready(Some(Ok(event))) => {
-                if let Some(session_id) = event.session_id.clone() {
-                    if let Ok(mut guard) = self.session_id.lock() {
-                        *guard = Some(session_id);
-                    }
+                if let Some(session_id) = event.session_id.clone()
+                    && let Ok(mut guard) = self.session_id.lock()
+                {
+                    *guard = Some(session_id);
                 }
                 Poll::Ready(Some(Ok(event)))
             }
