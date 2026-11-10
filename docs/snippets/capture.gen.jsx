@@ -286,7 +286,7 @@ const SYN_LABELS = {
   "Unmute the microphone": "Rétablir le micro",
   "Unreachable": "Injoignable",
   "Upload audio": "Téléverser un audio",
-  "Upload transcript": "Téléverser un transcript",
+  "Upload transcript": "Téléverser une transcription",
   "Use main language for summaries": "Utiliser la langue principale pour les résumés",
   "Use this protocol": "Utiliser ce protocole",
   "Used for transcription and automatic summary language detection.": "Utilisé pour la transcription et la détection automatique de la langue des résumés.",

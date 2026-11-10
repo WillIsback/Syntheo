@@ -1,4 +1,7 @@
-import { DEFAULT_TEMPLATES_EN } from "./default-templates-en";
+import {
+  DEFAULT_TEMPLATES_EN,
+  LEGACY_DEFAULT_TEMPLATES_EN,
+} from "./default-templates-en";
 import { DEFAULT_TEMPLATES_FR } from "./default-templates-fr";
 
 import { executeTransaction } from "~/db";
@@ -57,23 +60,22 @@ export function buildDefaultTemplateLocaleStatements(
   const otherLocales = SUPPORTED_DISPLAY_LOCALES.filter(
     (candidate) => candidate !== locale,
   );
-  return Object.entries(DEFAULT_TEMPLATES[locale]).flatMap(([id, target]) =>
-    otherLocales.flatMap((otherLocale) => {
-      const source = DEFAULT_TEMPLATES[otherLocale][id];
-      return source
-        ? [
-            {
-              sql: LOCALIZE_SQL,
-              params: [
-                ...storedTemplateColumns(target),
-                id,
-                ...storedTemplateColumns(source),
-              ],
-            },
-          ]
-        : [];
-    }),
-  );
+  return Object.entries(DEFAULT_TEMPLATES[locale]).flatMap(([id, target]) => {
+    // Textes fournis qu'une ligne peut encore porter : ceux des autres
+    // langues, puis les anciennes versions (issue 560).
+    const sources = [
+      ...otherLocales.map((otherLocale) => DEFAULT_TEMPLATES[otherLocale][id]),
+      LEGACY_DEFAULT_TEMPLATES_EN[id],
+    ].filter((source): source is DefaultTemplateText => Boolean(source));
+    return sources.map((source) => ({
+      sql: LOCALIZE_SQL,
+      params: [
+        ...storedTemplateColumns(target),
+        id,
+        ...storedTemplateColumns(source),
+      ],
+    }));
+  });
 }
 
 export async function localizeDefaultTemplates(

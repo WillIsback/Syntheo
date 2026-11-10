@@ -1,6 +1,7 @@
 import { commands as store2Commands } from "@syntheo/plugin-store2";
 
 import { executeTransaction } from "~/db";
+import { localizeSecureStoreError } from "~/shared/keychain";
 
 export type AiProviderType = "llm" | "stt";
 
@@ -100,7 +101,7 @@ export async function getProviderApiKey(
     providerRowId(type, providerId),
   );
   if (result.status === "error") {
-    throw new Error(result.error);
+    throw new Error(localizeSecureStoreError(result.error));
   }
   return result.data;
 }
@@ -115,7 +116,7 @@ export async function setProviderApiKey(
     ? await store2Commands.setSecret(PROVIDER_SECRET_SCOPE, key, apiKey)
     : await store2Commands.deleteSecret(PROVIDER_SECRET_SCOPE, key);
   if (result.status === "error") {
-    throw new Error(result.error);
+    throw new Error(localizeSecureStoreError(result.error));
   }
 }
 

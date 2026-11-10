@@ -249,7 +249,7 @@ export const DEFAULT_TEMPLATES_EN: Readonly<
     ],
   },
   "syntheo-general": {
-    title: "General meeting",
+    title: "General Meeting",
     description: "Standard summary: decisions and action items.",
     category: "General",
     targets: [],
@@ -270,7 +270,7 @@ export const DEFAULT_TEMPLATES_EN: Readonly<
     ],
   },
   "syntheo-compliance": {
-    title: "Compliance / GDPR committee",
+    title: "Compliance / GDPR Committee",
     description: "Focused on risks, regulatory decisions and blockers.",
     category: "Compliance",
     targets: [],
@@ -292,7 +292,7 @@ export const DEFAULT_TEMPLATES_EN: Readonly<
     ],
   },
   "syntheo-project": {
-    title: "Project / Sprint check-in",
+    title: "Project / Sprint Check-In",
     description: "Progress, blockers, upcoming deadlines.",
     category: "Project",
     targets: [],
@@ -306,7 +306,7 @@ export const DEFAULT_TEMPLATES_EN: Readonly<
     ],
   },
   "syntheo-standup": {
-    title: "Team standup",
+    title: "Team Standup",
     description: "Short format: done, in progress, blockers.",
     category: "Project",
     targets: [],
@@ -320,3 +320,21 @@ export const DEFAULT_TEMPLATES_EN: Readonly<
     ],
   },
 };
+
+// Titres anglais d'avant le Title Case (issue 560), tels que l'alpha 0.7.1-2
+// les a écrits : un modèle encore à ce texte suit toujours la langue.
+const LEGACY_EN_TITLES: Readonly<Record<string, string>> = {
+  "syntheo-general": "General meeting",
+  "syntheo-compliance": "Compliance / GDPR committee",
+  "syntheo-project": "Project / Sprint check-in",
+  "syntheo-standup": "Team standup",
+};
+
+export const LEGACY_DEFAULT_TEMPLATES_EN: Readonly<
+  Record<string, DefaultTemplateText>
+> = Object.fromEntries(
+  Object.entries(LEGACY_EN_TITLES).map(([id, title]) => [
+    id,
+    { ...DEFAULT_TEMPLATES_EN[id]!, title },
+  ]),
+);
