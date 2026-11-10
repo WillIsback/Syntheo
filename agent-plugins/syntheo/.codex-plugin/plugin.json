@@ -6,7 +6,7 @@
     "name": "William Derue",
     "url": "https://github.com/WillIsback/Syntheo"
   },
-  "homepage": "https://syntheo.mintlify.site/docs/agents/overview",
+  "homepage": "https://docs.syntheo.studio/agents/overview",
   "repository": "https://github.com/WillIsback/Syntheo/tree/main/agent-plugins/syntheo",
   "license": "MIT",
   "keywords": [
@@ -33,7 +33,7 @@
       "Export complete meeting records"
     ],
     "websiteURL": "https://github.com/WillIsback/Syntheo",
-    "privacyPolicyURL": "https://syntheo.mintlify.site/docs/data-and-privacy",
+    "privacyPolicyURL": "https://docs.syntheo.studio/data-and-privacy",
     "defaultPrompt": [
       "Summarize my latest Syntheo meeting.",
       "What action items came out of my planning meeting?",

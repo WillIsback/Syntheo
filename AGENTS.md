@@ -27,7 +27,7 @@ Testing while developing (several agents often share one machine):
 Two tools, two jobs:
 
 - **CodeGraph** is for code tasks: locating symbols, tracing calls, impact of an edit.
-- **The `syntheo-docs` MCP server** (`https://syntheo.mintlify.site/docs/mcp`, declared in `.mcp.json`) searches the published docs, including the code map under `docs/code/` ("Carte du code"). Use it to keep documentation current.
+- **The `syntheo-docs` MCP server** (`https://docs.syntheo.studio/mcp`, declared in `.mcp.json`) searches the published docs, including the code map under `docs/code/` ("Carte du code"). Use it to keep documentation current.
 
 When a change alters user-visible behavior, a CLI/MCP contract, or adds/renames/removes a crate, plugin, package, or top-level module:
 

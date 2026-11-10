@@ -175,6 +175,14 @@
     {
       "source": "/calendar",
       "destination": "/notes"
+    },
+    {
+      "source": "/docs",
+      "destination": "/"
+    },
+    {
+      "source": "/docs/:slug*",
+      "destination": "/:slug*"
     }
   ]
 }

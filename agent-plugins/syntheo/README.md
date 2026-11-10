@@ -15,7 +15,7 @@ Query Syntheo meetings from an agent, entirely on your computer. The plugin bund
 
 3. Check readiness with `syntheo --json doctor`, then `syntheo --json meetings list`.
 
-The plugin starts the MCP server with the command `syntheo`, so the CLI must be on the agent's `PATH`. The `.deb` package installs the desktop app itself as `/usr/bin/syntheo`; on such a machine, make sure `~/.cargo/bin` comes first in `PATH`, or configure the MCP server yourself with the absolute path `~/.cargo/bin/syntheo` (see below). See [Install the CLI](https://syntheo.mintlify.site/docs/installation).
+The plugin starts the MCP server with the command `syntheo`, so the CLI must be on the agent's `PATH`. The `.deb` package installs the desktop app itself as `/usr/bin/syntheo`; on such a machine, make sure `~/.cargo/bin` comes first in `PATH`, or configure the MCP server yourself with the absolute path `~/.cargo/bin/syntheo` (see below). See [Install the CLI](https://docs.syntheo.studio/installation).
 
 The app can be closed once its database exists, except for recording imports, which need the app open.
 
@@ -63,8 +63,8 @@ Clients that do not install plugins can start the local server themselves:
 }
 ```
 
-Restart the client after changing its configuration. See [MCP for agents](https://syntheo.mintlify.site/docs/agents/mcp).
+Restart the client after changing its configuration. See [MCP for agents](https://docs.syntheo.studio/agents/mcp).
 
 ## Data access
 
-The CLI and MCP server read the app's local database through Syntheo's compatibility layer; agents never touch SQLite directly. Neither sends data to a Syntheo server. Content the agent reads is sent to the model the agent uses. Agents cannot change a meeting directly: they stage proposals that you apply or decline in the desktop app. See [Data and privacy](https://syntheo.mintlify.site/docs/data-and-privacy).
+The CLI and MCP server read the app's local database through Syntheo's compatibility layer; agents never touch SQLite directly. Neither sends data to a Syntheo server. Content the agent reads is sent to the model the agent uses. Agents cannot change a meeting directly: they stage proposals that you apply or decline in the desktop app. See [Data and privacy](https://docs.syntheo.studio/data-and-privacy).

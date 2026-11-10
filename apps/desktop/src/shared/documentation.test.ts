@@ -6,10 +6,10 @@ import { DOCUMENTATION_URL, documentationUrl } from "./documentation";
 
 describe("documentationUrl", () => {
   it("pointe vers la documentation Mintlify", () => {
-    expect(DOCUMENTATION_URL).toBe("https://syntheo.mintlify.site/docs");
+    expect(DOCUMENTATION_URL).toBe("https://docs.syntheo.studio");
     expect(documentationUrl()).toBe(DOCUMENTATION_URL);
     expect(documentationUrl("import-recordings")).toBe(
-      "https://syntheo.mintlify.site/docs/import-recordings",
+      "https://docs.syntheo.studio/import-recordings",
     );
   });
 

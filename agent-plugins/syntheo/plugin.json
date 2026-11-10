@@ -7,7 +7,7 @@
     "name": "William Derue",
     "url": "https://github.com/WillIsback/Syntheo"
   },
-  "homepage": "https://syntheo.mintlify.site/docs/agents/overview",
+  "homepage": "https://docs.syntheo.studio/agents/overview",
   "repository": "https://github.com/WillIsback/Syntheo/tree/main/agent-plugins/syntheo",
   "license": "MIT",
   "keywords": [

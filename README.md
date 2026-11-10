@@ -19,7 +19,7 @@
 <p>
   <a href="https://github.com/WillIsback/Syntheo/releases/latest/download/Syntheo-windows-x64-setup.exe"><img alt="Télécharger pour Windows" src="https://img.shields.io/badge/Windows-t%C3%A9l%C3%A9charger-0078D4?logo=windows11&logoColor=white" /></a>
   <a href="https://github.com/WillIsback/Syntheo/releases/latest/download/Syntheo-linux-x86_64.AppImage"><img alt="Télécharger pour Linux" src="https://img.shields.io/badge/Linux-t%C3%A9l%C3%A9charger-FCC624?logo=linux&logoColor=black" /></a>
-  <a href="https://syntheo.mintlify.site/docs"><img alt="Documentation" src="https://img.shields.io/badge/documentation-en%20ligne-316745?logo=readthedocs&logoColor=white" /></a>
+  <a href="https://docs.syntheo.studio"><img alt="Documentation" src="https://img.shields.io/badge/documentation-en%20ligne-316745?logo=readthedocs&logoColor=white" /></a>
   <a href="LICENSE"><img alt="Licence MIT" src="https://img.shields.io/badge/licence-MIT-green" /></a>
 </p>
 

@@ -6,7 +6,7 @@
     },
     "syntheo-docs": {
       "type": "http",
-      "url": "https://syntheo.mintlify.site/docs/mcp"
+      "url": "https://docs.syntheo.studio/mcp"
     }
   }
 }

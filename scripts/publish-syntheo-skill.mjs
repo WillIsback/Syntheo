@@ -30,10 +30,10 @@ export const PLUGIN_PACKAGE_MIRRORS = [
 ];
 
 export const REFERENCE_LINK_REWRITES = {
-  "references/cli.md": "https://syntheo.mintlify.site/docs/reference/cli",
-  "references/mcp.md": "https://syntheo.mintlify.site/docs/reference/mcp",
-  "references/errors.md": "https://syntheo.mintlify.site/docs/reference/errors",
-  "references/setup.md": "https://syntheo.mintlify.site/docs/installation",
+  "references/cli.md": "https://docs.syntheo.studio/reference/cli",
+  "references/mcp.md": "https://docs.syntheo.studio/reference/mcp",
+  "references/errors.md": "https://docs.syntheo.studio/reference/errors",
+  "references/setup.md": "https://docs.syntheo.studio/installation",
 };
 
 export function publishSkill(canonical) {
