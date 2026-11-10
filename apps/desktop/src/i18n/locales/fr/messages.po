@@ -1155,6 +1155,7 @@ msgid "Copy last dictation"
 msgstr "Copier la dernière dictée"
 
 #: src/chat/components/message/normal.tsx
+#: src/stt/meeting-disclosure.ts
 msgid "Copy message"
 msgstr "Copier le message"
 
@@ -2403,6 +2404,10 @@ msgstr "Écoute"
 msgid "Listening is already in progress on “{title}”."
 msgstr "Une écoute est déjà en cours sur « {title} »."
 
+#: src/stt/meeting-disclosure.ts
+msgid "Listening started, but the consent message could not be posted in the {platform} chat. Post it yourself."
+msgstr "L'écoute a démarré, mais le message de consentement n'a pas pu être posté dans le chat de {platform}. Postez-le vous-même."
+
 #: src/home/live-note-card.tsx
 #: src/session/components/capsule/index.tsx
 msgid "Listening time"
@@ -2640,6 +2645,10 @@ msgstr "mémo, à propos de moi, description"
 #: src/session/components/note-input/transcript/renderer/multi-selection-bar.tsx
 msgid "Merge"
 msgstr "Fusionner"
+
+#: src/stt/meeting-disclosure.ts
+msgid "Message copied"
+msgstr "Message copié"
 
 #: src/composer/index.tsx
 msgid "Message Syntheo AI"
