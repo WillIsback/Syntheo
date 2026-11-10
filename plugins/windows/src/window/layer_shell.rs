@@ -18,10 +18,11 @@ use gtk_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
 /// Espace de noms du calque, pour les règles du compositeur (`layerrule` de Hyprland).
 const NAMESPACE: &str = "syntheo-floating-bar";
 
-/// Désactivé pour la 0.7.0 (issue 533) : sous Hyprland, le calque ne dessinait rien pendant
-/// l'écoute et s'affichait en rectangle gris de 200 px en pause. La pastille reprend la fenêtre
-/// flottante de taille fixe de la 0.6.x (issue 416) jusqu'au correctif de la 0.7.1.
-const ENABLED: bool = false;
+/// Désactivé en 0.7.0, réactivé en 0.7.1 (issue 533). Sous Hyprland, le calque ne dessinait rien
+/// pendant l'écoute et prenait 200 px de haut en pause : le webview n'avait pas de taille demandée
+/// (voir `release_webview_size_request` dans `floating_bar.rs`) et la largeur ne suivait pas
+/// l'état. Constante gardée comme interrupteur de repli vers la fenêtre ordinaire.
+const ENABLED: bool = true;
 
 static ACTIVE: AtomicBool = AtomicBool::new(false);
 
