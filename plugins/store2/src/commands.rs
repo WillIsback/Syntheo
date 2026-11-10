@@ -61,7 +61,8 @@ fn secure_store_error(error: keyring::Error) -> String {
         keyring::Error::NoStorageAccess(_) => {
             return LINUX_SECRET_SERVICE_ACCESS_ERROR.to_string();
         }
-        keyring::Error::PlatformFailure(_) => {
+        // Aucun magasin par défaut : Secret Service est absent (issue 560).
+        keyring::Error::PlatformFailure(_) | keyring::Error::NoDefaultStore => {
             return LINUX_SECRET_SERVICE_UNAVAILABLE_ERROR.to_string();
         }
         _ => {}

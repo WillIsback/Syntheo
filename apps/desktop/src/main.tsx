@@ -42,6 +42,7 @@ import { preventFileDropNavigation } from "./shared/prevent-file-drop-navigation
 import { bootstrapThemeFromSettings } from "./shared/theme/apply";
 import { AppThemeProvider } from "./shared/theme/provider";
 import type { ThemePreference } from "./shared/theme/resolve";
+import { LocalizedDialogLabels } from "./shared/ui/localized-dialog-labels";
 import { LocalizedToaster } from "./shared/ui/localized-toaster";
 import { createAITaskStore } from "./store/zustand/ai-task";
 import { listenerStore } from "./store/zustand/listener/instance";
@@ -110,16 +111,18 @@ function ReadyApp() {
   return (
     <AppThemeProvider>
       <AppI18nProvider>
-        {isMainWindow ? <NativeMenuLocaleSync /> : null}
-        {isMainWindow ? <DefaultTemplatesLocaleSync /> : null}
-        <AppLockGate>
-          <App />
-          {isMainWindow ? <TaskManager /> : null}
-          {isMainWindow ? <FloatingMeetingWindowHost /> : null}
-          {isMainWindow ? <EventListeners /> : null}
-          {isMainWindow ? <TrayRecordingSync /> : null}
-          <LocalizedToaster position="bottom-right" theme={theme} />
-        </AppLockGate>
+        <LocalizedDialogLabels>
+          {isMainWindow ? <NativeMenuLocaleSync /> : null}
+          {isMainWindow ? <DefaultTemplatesLocaleSync /> : null}
+          <AppLockGate>
+            <App />
+            {isMainWindow ? <TaskManager /> : null}
+            {isMainWindow ? <FloatingMeetingWindowHost /> : null}
+            {isMainWindow ? <EventListeners /> : null}
+            {isMainWindow ? <TrayRecordingSync /> : null}
+            <LocalizedToaster position="bottom-right" theme={theme} />
+          </AppLockGate>
+        </LocalizedDialogLabels>
       </AppI18nProvider>
     </AppThemeProvider>
   );

@@ -54,11 +54,14 @@ describe("modèles fournis bilingues", () => {
 describe("buildDefaultTemplateLocaleStatements", () => {
   it("ne remplace que les modèles encore identiques à l'autre langue", () => {
     const statements = buildDefaultTemplateLocaleStatements("en");
-    expect(statements).toHaveLength(21);
+    // 21 depuis le français, plus 4 depuis les anciens titres anglais.
+    expect(statements).toHaveLength(25);
     const general = statements.find(
-      (statement) => statement.params[5] === "syntheo-general",
+      (statement) =>
+        statement.params[5] === "syntheo-general" &&
+        statement.params[6] === "Réunion générale",
     );
-    expect(general?.params.slice(0, 1)).toEqual(["General meeting"]);
+    expect(general?.params.slice(0, 1)).toEqual(["General Meeting"]);
     expect(general?.params.slice(6)).toEqual(
       storedTemplateColumns(DEFAULT_TEMPLATES_FR["syntheo-general"]!),
     );
@@ -73,4 +76,39 @@ describe("buildDefaultTemplateLocaleStatements", () => {
     expect(board?.params[0]).toBe("Conseil d'administration");
     expect(board?.params[6]).toBe("Board Meeting");
   });
+
+  // Issue 560 : titres anglais des modèles syntheo-* en Title Case. Les notes
+  // déjà passées en anglais avec l'ancien titre (alpha 0.7.1-2) suivent encore
+  // la langue de l'interface.
+  it.each([
+    ["syntheo-general", "General meeting", "General Meeting"],
+    [
+      "syntheo-compliance",
+      "Compliance / GDPR committee",
+      "Compliance / GDPR Committee",
+    ],
+    [
+      "syntheo-project",
+      "Project / Sprint check-in",
+      "Project / Sprint Check-In",
+    ],
+    ["syntheo-standup", "Team standup", "Team Standup"],
+  ])(
+    "met à jour %s depuis son ancien titre anglais",
+    (id, oldTitle, newTitle) => {
+      expect(DEFAULT_TEMPLATES_EN[id]?.title).toBe(newTitle);
+
+      const toEnglish = buildDefaultTemplateLocaleStatements("en").find(
+        (statement) =>
+          statement.params[5] === id && statement.params[6] === oldTitle,
+      );
+      expect(toEnglish?.params[0]).toBe(newTitle);
+
+      const toFrench = buildDefaultTemplateLocaleStatements("fr").find(
+        (statement) =>
+          statement.params[5] === id && statement.params[6] === oldTitle,
+      );
+      expect(toFrench?.params[0]).toBe(DEFAULT_TEMPLATES_FR[id]?.title);
+    },
+  );
 });

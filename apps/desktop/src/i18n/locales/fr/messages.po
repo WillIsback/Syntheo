@@ -32,7 +32,7 @@ msgstr "« {title} » a échoué sur cette note"
 
 #: src/services/enhancer/summary-notification.ts
 msgid "\"{title}\" is ready to read."
-msgstr "\"{title}\" est prêt à être lu."
+msgstr "« {title} » est prêt à être lu."
 
 #: src/automations/launch.tsx
 msgid "“{title}” ran on this note"
@@ -959,6 +959,7 @@ msgstr "Dupliquer"
 #: src/main/windows-window-controls.tsx
 #: src/session/components/note-input/search/bar.tsx
 #: src/shared/open-note-dialog.tsx
+#: src/shared/ui/localized-dialog-labels.tsx
 msgid "Close"
 msgstr "Fermer"
 
@@ -4780,6 +4781,10 @@ msgstr "Syntheo n'a pas pu supprimer l'audio temporaire. Le nettoyage sera relan
 msgid "Syntheo could not save part of the live transcript."
 msgstr "Syntheo n'a pas pu enregistrer une partie de la transcription en direct."
 
+#: src/shared/keychain.ts
+msgid "Syntheo couldn't access the system keyring. Unlock your login keyring, then try again."
+msgstr "Syntheo n'a pas pu accéder au trousseau du système. Déverrouillez votre trousseau de session, puis réessayez."
+
 #: src/stt/start-failure.ts
 msgid "Syntheo couldn't open your audio input. Check your microphone selection, then try again."
 msgstr "Syntheo n'a pas pu ouvrir votre entrée audio. Vérifiez le micro choisi, puis réessayez."
@@ -5236,6 +5241,10 @@ msgstr "Le serveur de synthèse n'a pas répondu. Vérifiez qu'il est démarré,
 msgid "The summary still mentions unnamed speakers."
 msgstr "La synthèse mentionne encore des locuteurs sans nom."
 
+#: src/shared/keychain.ts
+msgid "The system keyring is unavailable, so Syntheo can't save this key. Start your desktop's keyring service (GNOME Keyring or KWallet, for example), then try again."
+msgstr "Le trousseau du système est indisponible : Syntheo ne peut pas enregistrer cette clé. Démarrez le service de trousseau de votre bureau (GNOME Keyring ou KWallet, par exemple), puis réessayez."
+
 #: src/settings/automations/workflow-test-result.tsx
 msgid "The test changes neither the last run nor the list of notes already processed."
 msgstr "Le test ne change ni la dernière exécution ni la liste des notes déjà traitées."
@@ -5428,7 +5437,7 @@ msgstr "Transcription…"
 #: src/session/components/outer-header/overflow/export-modal.tsx
 #: src/settings/automations/markdown-export-options.tsx
 msgid "Transcript"
-msgstr "Transcript"
+msgstr "Transcription"
 
 #: src/automations/labels.ts
 msgctxt "automation variable"
@@ -5672,7 +5681,7 @@ msgstr "Téléversez un fichier audio ou un transcript pour renseigner cette not
 #: src/session/components/outer-header/overflow/index.tsx
 #: src/stt/select-upload-file.ts
 msgid "Upload transcript"
-msgstr "Téléverser un transcript"
+msgstr "Téléverser une transcription"
 
 #: src/settings/appearance/time-format.tsx
 #: src/settings/search-index.ts
@@ -5845,8 +5854,8 @@ msgid "What:"
 msgstr "Quoi :"
 
 #: src/changelog/index.tsx
-msgid "What's new in {version}?"
-msgstr "Nouveautés de {version} ?"
+msgid "What's new in {version}"
+msgstr "Nouveautés de {version}"
 
 #: src/settings/search-index.ts
 msgid "what's new, changes, version, changelog"

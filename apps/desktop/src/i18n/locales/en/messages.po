@@ -959,6 +959,7 @@ msgstr "Clone"
 #: src/main/windows-window-controls.tsx
 #: src/session/components/note-input/search/bar.tsx
 #: src/shared/open-note-dialog.tsx
+#: src/shared/ui/localized-dialog-labels.tsx
 msgid "Close"
 msgstr "Close"
 
@@ -4780,6 +4781,10 @@ msgstr "Syntheo could not remove the temporary audio. Cleanup will be retried au
 msgid "Syntheo could not save part of the live transcript."
 msgstr "Syntheo could not save part of the live transcript."
 
+#: src/shared/keychain.ts
+msgid "Syntheo couldn't access the system keyring. Unlock your login keyring, then try again."
+msgstr "Syntheo couldn't access the system keyring. Unlock your login keyring, then try again."
+
 #: src/stt/start-failure.ts
 msgid "Syntheo couldn't open your audio input. Check your microphone selection, then try again."
 msgstr "Syntheo couldn't open your audio input. Check your microphone selection, then try again."
@@ -5235,6 +5240,10 @@ msgstr "The summary server did not respond. Check that it is running, then try a
 #: src/session/components/speaker-naming/bar.tsx
 msgid "The summary still mentions unnamed speakers."
 msgstr "The summary still mentions unnamed speakers."
+
+#: src/shared/keychain.ts
+msgid "The system keyring is unavailable, so Syntheo can't save this key. Start your desktop's keyring service (GNOME Keyring or KWallet, for example), then try again."
+msgstr "The system keyring is unavailable, so Syntheo can't save this key. Start your desktop's keyring service (GNOME Keyring or KWallet, for example), then try again."
 
 #: src/settings/automations/workflow-test-result.tsx
 msgid "The test changes neither the last run nor the list of notes already processed."
@@ -5845,8 +5854,8 @@ msgid "What:"
 msgstr "What:"
 
 #: src/changelog/index.tsx
-msgid "What's new in {version}?"
-msgstr "What's new in {version}?"
+msgid "What's new in {version}"
+msgstr "What's new in {version}"
 
 #: src/settings/search-index.ts
 msgid "what's new, changes, version, changelog"

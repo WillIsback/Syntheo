@@ -384,7 +384,7 @@ const SYN_LABELS = {
   "This server answers as {detectedLabel}.": "Ce serveur répond comme {detectedLabel}.",
   "Timezone": "Fuseau horaire",
   "Transcribing…": "Transcription…",
-  "Transcript": "Transcript",
+  "Transcript": "Transcription",
   "Transcription": "Transcription",
   "Transcription server ›": "Serveur de transcription ›",
   "Transcription · connected": "Transcription · connectée",

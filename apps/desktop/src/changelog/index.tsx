@@ -158,7 +158,7 @@ function ChangelogHeader({
         className="pointer-events-none absolute inset-y-0 left-1/2 flex w-[min(640px,calc(100%_-_160px))] -translate-x-1/2 items-center justify-center"
       >
         <h1 className="text-foreground truncate text-center text-xl font-semibold">
-          <Trans>What's new in {version}?</Trans>
+          <Trans>What's new in {version}</Trans>
         </h1>
       </div>
 
