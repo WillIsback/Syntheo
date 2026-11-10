@@ -20,8 +20,6 @@ export type SettingsSearchEntry = {
   keywords: MessageDescriptor;
   // Réglage affiché seulement sur ces plateformes.
   platforms?: readonly Platform[];
-  // Réglage masqué dans la version App Store.
-  hiddenInAppStore?: boolean;
   // Réglage affiché sous condition (option activée, serveur configuré) : sans
   // lui, l'arrivée cible ce réglage parent de la même page.
   fallback?: string;
@@ -75,14 +73,12 @@ export const SETTINGS_SEARCH_INDEX = [
     page: "app",
     label: msg`Start Syntheo at login`,
     keywords: msg`startup, turn on the computer, launch, open automatically, boot`,
-    hiddenInAppStore: true,
   },
   {
     id: "automatic-updates",
     page: "app",
     label: msg`Automatically install updates`,
     keywords: msg`update, new version, upgrade`,
-    hiddenInAppStore: true,
   },
   {
     id: "release-notes",
@@ -102,6 +98,13 @@ export const SETTINGS_SEARCH_INDEX = [
     page: "app",
     label: msg`Show tray icon`,
     keywords: msg`notification area, taskbar, menu bar, icon, clock`,
+  },
+  {
+    id: "interface-language",
+    page: "app",
+    section: LANGUAGE_REGION,
+    label: msg`Interface language`,
+    keywords: msg`language, display, menus, French, English, system`,
   },
   {
     id: "main-language",

@@ -1,7 +1,6 @@
 import { t } from "@lingui/core/macro";
 
-import { commands as notificationCommands } from "@syntheo/plugin-notification";
-
+import { showNativeNotification } from "~/services/notification-labels";
 import { shouldShowNotification } from "~/shared/notification-policy";
 import { isAppWindowInactive } from "~/shared/window-activity";
 
@@ -27,7 +26,7 @@ export async function showSummaryReadyNotification(
   const title = sessionTitle?.trim();
 
   try {
-    const result = await notificationCommands.showNotification({
+    const result = await showNativeNotification({
       key: createSummaryReadyNotificationKey(sessionId),
       title: t`Summary ready`,
       message: title
@@ -39,11 +38,7 @@ export async function showSummaryReadyNotification(
       },
       source: { type: "session", session_id: sessionId },
       start_time: null,
-      participants: null,
-      event_details: null,
       action_label: t`Open Syntheo`,
-      action: null,
-      action_menu: null,
       action_variant: null,
       options: null,
       footer: null,

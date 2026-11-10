@@ -18,7 +18,7 @@
     "./widgets": "./src/widgets/index.ts"
   },
   "scripts": {
-    "test": "vitest run --environment jsdom",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

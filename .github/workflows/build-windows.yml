@@ -1,8 +1,16 @@
 # Workflow : build-windows
 # Compilation des paquets Windows (NSIS + MSI).
-# Signature de code via Azure Artifact Signing **si** les secrets Azure sont
-# fournis (AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET) ; build non
-# signé sinon. Voir docs/fr/desktop-installation.mdx.
+#
+# Règle de signature : on ne signe QUE les builds de release.
+# La signature Azure Artifact Signing (quota mensuel limité) ne s'active que si
+# les deux conditions sont réunies :
+#   1. `inputs.features` est vide : build de release. Toute feature (ex.
+#      `devtools`, utilisée par les alphas de build-devtools.yml) donne un build
+#      de test, jamais signé, même si les secrets sont transmis
+#      (`secrets: inherit`) ;
+#   2. les secrets Azure sont fournis (AZURE_TENANT_ID, AZURE_CLIENT_ID,
+#      AZURE_CLIENT_SECRET), ce que fait release.yml.
+# Sinon, build non signé. Voir docs/fr/desktop-installation.mdx.
 name: build-windows
 
 on:
@@ -104,14 +112,37 @@ jobs:
             Sort-Object FullName -Descending | Select-Object -First 1
           "DUMPBIN=$($dumpbin.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
 
+      # Décision unique de signature, appliquée par toutes les étapes suivantes.
+      # Signer seulement un build de release : features vides ET secrets Azure
+      # présents. Une alpha (features=devtools) n'est jamais signée, même si un
+      # appelant transmet un jour les secrets : elle ne consomme pas le quota.
+      - name: Décider de la signature (release uniquement)
+        id: signing
+        shell: bash
+        env:
+          FEATURES: ${{ inputs.features }}
+          HAS_AZURE_SECRET: ${{ secrets.AZURE_CLIENT_SECRET != '' }}
+        run: |
+          set -euo pipefail
+          if [ -n "${FEATURES:-}" ]; then
+            echo "Build avec features ($FEATURES) : build de test, signature désactivée."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          elif [ "$HAS_AZURE_SECRET" != "true" ]; then
+            echo "Secrets Azure absents : signature désactivée."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Build de release avec secrets Azure : signature activée."
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Vérifier l'authentification Azure
+        if: steps.signing.outputs.enabled == 'true'
         shell: pwsh
         env:
           AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
         run: |
-          if (-not $env:AZURE_CLIENT_SECRET) { Write-Host "Secrets Azure absents : signature désactivée."; exit 0 }
           az login --service-principal -u $env:AZURE_CLIENT_ID -p $env:AZURE_CLIENT_SECRET -t $env:AZURE_TENANT_ID --only-show-errors
           if ($LASTEXITCODE -ne 0) {
             throw "az login a échoué (code $LASTEXITCODE). Si le message est « No subscriptions found », attribue le rôle Reader au service principal sur le groupe de ressources du compte Artifact Signing (ou sur l'abonnement)."
@@ -119,6 +150,7 @@ jobs:
           Write-Host "Authentification Azure OK."
 
       - name: Installer artifact-signing-cli
+        if: steps.signing.outputs.enabled == 'true'
         shell: pwsh
         run: |
           $version = "0.12.0"
@@ -132,15 +164,18 @@ jobs:
           if ($actual -ne $sha256) { throw "SHA256 invalide pour artifact-signing-cli : $actual" }
           $dir | Out-File -FilePath $env:GITHUB_PATH -Append
 
-      - name: Build MSI et NSIS (signés si les secrets Azure sont fournis)
+      - name: Build MSI et NSIS (signés seulement pour une release)
         id: build
         shell: bash
         env:
           # Valeur factice exigée par des intégrations cloud héritées (chantier 04d).
           VITE_API_URL: http://127.0.0.1:9
-          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          # Secrets transmis à l'outil de signature uniquement pour une release :
+          # vides pour un build avec features, quoi que fasse l'appelant.
+          AZURE_TENANT_ID: ${{ steps.signing.outputs.enabled == 'true' && secrets.AZURE_TENANT_ID || '' }}
+          AZURE_CLIENT_ID: ${{ steps.signing.outputs.enabled == 'true' && secrets.AZURE_CLIENT_ID || '' }}
+          AZURE_CLIENT_SECRET: ${{ steps.signing.outputs.enabled == 'true' && secrets.AZURE_CLIENT_SECRET || '' }}
+          SIGNING: ${{ steps.signing.outputs.enabled }}
           FEATURES: ${{ inputs.features }}
         run: |
           set -euo pipefail
@@ -149,12 +184,12 @@ jobs:
             echo "Features : $FEATURES"
             extra+=(--features "$FEATURES")
           fi
-          if [ -n "${AZURE_CLIENT_SECRET:-}" ]; then
-            echo "Signature Windows activée."
+          if [ "$SIGNING" = "true" ]; then
+            echo "Signature Windows activée (build de release)."
             echo "signing=true" >> "$GITHUB_OUTPUT"
             extra+=(--config ./src-tauri/tauri.windows-signing.conf.json)
           else
-            echo "Signature Windows désactivée (secrets Azure absents)."
+            echo "Signature Windows désactivée (build de test ou secrets absents)."
             echo "signing=false" >> "$GITHUB_OUTPUT"
           fi
           pnpm -F ui build

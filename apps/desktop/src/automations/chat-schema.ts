@@ -14,7 +14,7 @@ import { BASE_VARIABLES, danglingOutputRefs, stepTexts } from "./variables";
 // chaque nouvelle action ; un champ inconnu ou un type absent est refusé.
 
 /** Identifiant choisi par le modèle pour citer la sortie d'une étape. */
-export const STEP_ID_PATTERN = /^[a-z][a-z0-9_-]{1,31}$/;
+const STEP_ID_PATTERN = /^[a-z][a-z0-9_-]{1,31}$/;
 
 const stepId = z
   .string()

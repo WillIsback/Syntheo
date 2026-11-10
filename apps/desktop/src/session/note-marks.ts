@@ -25,7 +25,7 @@ export function stripNoteMarks(text: string): string {
   return text.replace(MARKS, "");
 }
 
-export type ExtractedNoteMarks = {
+type ExtractedNoteMarks = {
   /** Le texte sans aucune balise. */
   text: string;
   /**

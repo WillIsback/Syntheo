@@ -11,16 +11,12 @@ use crate::theme::{ActionStyle, Palette};
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct SurfaceState {
     pub action: Option<ActionStyle>,
-    pub action_menu: bool,
     pub collapse: bool,
     pub footer: bool,
     pub hovered: bool,
     /// Part restante du délai de fermeture, entre 0 et 1.
     pub progress: Option<f64>,
 }
-
-/// Opacité du séparateur entre l'action et son menu « ▾ ».
-const CARET_DIVIDER_OPACITY: f32 = 0.35;
 
 pub fn paint_surface(
     layout: &NotificationLayout,
@@ -69,23 +65,6 @@ pub fn paint_surface(
                 canvas.fill_bordered_rect(rect, button_radius, style.fill(palette), outline, border)
             }
             None => canvas.fill_rounded_rect(rect, button_radius, style.fill(palette), 1.0),
-        }
-        if state.action_menu
-            && !state.collapse
-            && let Some(caret) = layout.action_caret()
-        {
-            let divider_height = (caret.height / 2).max(1);
-            canvas.fill_rounded_rect(
-                place(Rect {
-                    x: caret.x,
-                    y: caret.y + (caret.height - divider_height) / 2,
-                    width: border,
-                    height: divider_height,
-                }),
-                0.0,
-                style.ink(palette),
-                CARET_DIVIDER_OPACITY,
-            );
         }
     }
 
@@ -151,7 +130,6 @@ mod tests {
     fn state() -> SurfaceState {
         SurfaceState {
             action: Some(ActionStyle::Primary),
-            action_menu: false,
             collapse: false,
             footer: false,
             hovered: false,

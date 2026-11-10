@@ -38,7 +38,7 @@ serde_json = { workspace = true }
 sqlx = { workspace = true }
 uuid = { workspace = true, features = ["v4"] }
 
-tauri = { workspace = true, features = ["specta", "test"] }
+tauri = { workspace = true, features = ["specta"] }
 
 specta = { workspace = true }
 tauri-specta = { workspace = true, features = ["derive", "typescript"] }

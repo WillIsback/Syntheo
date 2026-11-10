@@ -1,5 +1,5 @@
 # Workflow : Tests
-# Tests unitaires TypeScript (Vitest) et Rust (cargo test), validation YAML
+# Tests unitaires TypeScript (Vitest), tests des scripts (node:test), validation YAML
 name: ci-test
 
 on:
@@ -48,6 +48,83 @@ jobs:
           name: vitest-results-${{ matrix.shard }}
           path: apps/desktop/junit.xml
           retention-days: 7
+
+  # Tests de packages/editor (ProseMirror, sérialisation Markdown) : hors du
+  # périmètre Vitest d'apps/desktop, ils ne tournaient jamais en CI (#505).
+  # La suite est courte (~225 tests), donc pas de shard. Filtrée par chemins :
+  # l'éditeur dépend des paquets du workspace (ui, utils, store…), donc tout
+  # packages/ compte. Le job reste vert quand il saute ses étapes.
+  editor:
+    name: ci-test (Vitest éditeur)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Historique complet sur une PR seulement, pour comparer à sa base.
+          fetch-depth: ${{ github.event_name == 'pull_request' && '0' || '1' }}
+          persist-credentials: false
+
+      - name: Détection des chemins modifiés
+        id: changes
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          if [ -z "${BASE_SHA:-}" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "Hors PR : tests de l'éditeur exécutés."
+          elif git diff --name-only "$BASE_SHA" HEAD -- 'packages/' 'pnpm-lock.yaml' '.github/workflows/ci-test.yml' | grep -q .; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "packages/, lockfile ou workflow modifié : tests de l'éditeur exécutés."
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "Ni packages/, ni lockfile, ni workflow modifié : tests de l'éditeur sautés."
+          fi
+
+      - name: Installer Node, pnpm et les dépendances (lockfile figé)
+        if: steps.changes.outputs.run == 'true'
+        uses: ./.github/actions/pnpm_install
+
+      - name: Tests de l'éditeur
+        if: steps.changes.outputs.run == 'true'
+        run: pnpm -F @syntheo/editor test --reporter=default --reporter=junit --outputFile.junit=junit.xml
+
+      - name: Upload des résultats
+        if: always() && steps.changes.outputs.run == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: vitest-results-editor
+          path: packages/editor/junit.xml
+          retention-days: 7
+
+  # Garde-fous des scripts du dépôt (#546) : tests node:test et cohérence de
+  # la compétence Syntheo publiée (docs/skill.md, agent-plugins/). Pas de
+  # filtre de chemins : les tests lisent des fichiers de tout le dépôt
+  # (notes de version, manifestes de plugins, code de l'app), et un filtre
+  # les laisserait se périmer. Le job est court.
+  scripts:
+    name: ci-test (scripts)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Installer Node, pnpm et les dépendances (lockfile figé)
+        uses: ./.github/actions/pnpm_install
+
+      - name: Tests des scripts
+        run: node --test scripts/*.test.mjs scripts/lib/*.test.mjs
+
+      - name: Compétence Syntheo publiée à jour
+        run: node scripts/publish-syntheo-skill.mjs --check
 
   # Les tests Rust sont exécutés dans ci-code-quality (job Rust fusionné), qui
   # compile le workspace une seule fois pour clippy et cargo test. Ce job ne

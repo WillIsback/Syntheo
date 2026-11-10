@@ -11,28 +11,44 @@ export const commands = {
 	setDismissedToasts: (v: string[]) => typedError<null, string>(__TAURI_INVOKE("set_dismissed_toasts", { v })),
 	getEnv: (key: string) => __TAURI_INVOKE<string>("get_env", { key }),
 	showDevtool: () => __TAURI_INVOKE<boolean>("show_devtool"),
-	isAppStoreBuild: () => __TAURI_INVOKE<boolean>("is_app_store_build"),
 	completeAppExit: () => __TAURI_INVOKE<void>("complete_app_exit"),
 	getTinybaseValues: () => typedError<string | null, string>(__TAURI_INVOKE("get_tinybase_values")),
 	getPinnedTabs: () => typedError<string | null, string>(__TAURI_INVOKE("get_pinned_tabs")),
 	setPinnedTabs: (v: string) => typedError<null, string>(__TAURI_INVOKE("set_pinned_tabs", { v })),
 	getRecentlyOpenedSessions: () => typedError<string | null, string>(__TAURI_INVOKE("get_recently_opened_sessions")),
 	setRecentlyOpenedSessions: (v: string) => typedError<null, string>(__TAURI_INVOKE("set_recently_opened_sessions", { v })),
-	checkEmbeddedCli: () => typedError<EmbeddedCliStatus, string>(__TAURI_INVOKE("check_embedded_cli")),
-	installEmbeddedCli: () => typedError<EmbeddedCliStatus, string>(__TAURI_INVOKE("install_embedded_cli")),
+	checkCliStatus: () => typedError<CliStatus, string>(__TAURI_INVOKE("check_cli_status")),
 	listSkillAgents: () => typedError<SkillAgentStatus[], string>(__TAURI_INVOKE("list_skill_agents")),
 	installAgentSkill: (agent: SkillAgent) => typedError<SkillAgentStatus, string>(__TAURI_INVOKE("install_agent_skill", { agent })),
+	getAecModelStatus: () => typedError<AecModelStatus, string>(__TAURI_INVOKE("get_aec_model_status")),
+	retryAecModelDownload: () => typedError<AecModelStatus, string>(__TAURI_INVOKE("retry_aec_model_download")),
 };
 
 /* Types */
-export type EmbeddedCliState = "installed" | "missing" | "conflict" | "unsupported" | "resource_missing";
+/**
+ *  Où en sont les modèles. `Failed` : le dernier téléchargement a échoué (hors ligne, proxy),
+ *  l'annulation d'écho est inactive et un nouvel essai est programmé.
+ */
+export type AecModelState = "downloading" | "ready" | "failed";
 
-export type EmbeddedCliStatus = {
-	supported: boolean,
+export type AecModelStatus = {
+	state: AecModelState,
+};
+
+export type CliStatus = {
+	/**  Command the CLI installs (`syntheo`). */
 	commandName: string,
-	installPath: string,
-	state: EmbeddedCliState,
-	details: string | null,
+	/**
+	 *  Absolute path of the CLI, when found on `PATH` or in cargo's `bin`
+	 *  directory.
+	 */
+	path: string | null,
+	/**
+	 *  True when the first `syntheo` on `PATH` is the desktop app itself (the
+	 *  `.deb` installs the app as `/usr/bin/syntheo`), so typing `syntheo`
+	 *  launches the app instead of the CLI.
+	 */
+	shadowedByApp: boolean,
 };
 
 export type SkillAgent = "claude_code" | "codex" | "cursor" | "opencode";

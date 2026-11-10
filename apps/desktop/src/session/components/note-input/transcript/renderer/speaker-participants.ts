@@ -117,7 +117,7 @@ export function buildCreateSpeakerParticipantOption({
   };
 }
 
-export function getSpeakerParticipantDedupeKeys(
+function getSpeakerParticipantDedupeKeys(
   option: SpeakerParticipantOption,
 ): string[] {
   return [

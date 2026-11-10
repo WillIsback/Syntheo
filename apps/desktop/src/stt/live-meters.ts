@@ -2,7 +2,7 @@ import { useListener } from "./contexts";
 
 import { getListeningElapsedSeconds } from "~/store/zustand/listener/general-shared";
 
-export function combineLiveAmplitude(amplitude: {
+function combineLiveAmplitude(amplitude: {
   mic: number;
   speaker: number;
 }): number {

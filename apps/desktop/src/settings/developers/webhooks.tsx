@@ -1,4 +1,5 @@
 import { t } from "@lingui/core/macro";
+import { useLingui } from "@lingui/react";
 import { Trans } from "@lingui/react/macro";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -27,6 +28,9 @@ function unwrap<T>(
 }
 
 export function WebhooksSection() {
+  // `t` de @lingui/core/macro lit la langue au rendu : s'abonner au changement de
+  // langue pour se redessiner aussitôt, sous-composants compris (issue 558).
+  useLingui();
   const queryClient = useQueryClient();
   const webhooksQuery = useQuery({
     queryKey: WEBHOOKS_QUERY_KEY,

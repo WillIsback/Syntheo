@@ -13,12 +13,6 @@ common_event_derives! {
         Confirm { key: String, source: Option<syntheo_notification::NotificationSource> },
         #[serde(rename = "notification_accept")]
         Accept { key: String, source: Option<syntheo_notification::NotificationSource> },
-        #[serde(rename = "notification_action")]
-        Action {
-            key: String,
-            source: Option<syntheo_notification::NotificationSource>,
-            action: syntheo_notification::NotificationAction,
-        },
         #[serde(rename = "notification_dismiss")]
         Dismiss { key: String, source: Option<syntheo_notification::NotificationSource> },
         #[serde(rename = "notification_timeout")]

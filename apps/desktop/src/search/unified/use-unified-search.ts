@@ -14,11 +14,11 @@ import { type SearchFunction, useSearchEngine } from "~/search/contexts/engine";
 // des résultats ; les extraits montrent où le texte apparaît.
 const FULL_TEXT_LIMIT = 200;
 const SNIPPET_MAX_CHARS = 120;
-export const FULL_TEXT_DEBOUNCE_MS = 150;
+const FULL_TEXT_DEBOUNCE_MS = 150;
 
 const NO_HITS: FullTextHit[] = [];
 
-export async function fetchFullTextHits(
+async function fetchFullTextHits(
   search: SearchFunction,
   query: string,
 ): Promise<FullTextHit[]> {

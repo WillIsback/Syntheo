@@ -9,6 +9,5 @@ exclude:
     # les règles de path traversal et de SSRF y sont des faux positifs sur des
     # arguments de confiance (chemins déjà résolus et contenus, URL fixes).
     - scripts/publish-syntheo-skill.mjs
-    - scripts/rebrand.mjs
     - scripts/repack-linux-appimage.mjs
     - scripts/remediation/

@@ -12,7 +12,7 @@ import {
   renderTranscriptSegments,
 } from "~/stt/render-transcript";
 
-export type TranscriptExportSegment = TranscriptItem & {
+type TranscriptExportSegment = TranscriptItem & {
   start_ms: number;
   end_ms: number;
 };

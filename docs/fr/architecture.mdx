@@ -14,7 +14,7 @@ Le dépôt est un monorepo **pnpm** (`pnpm-workspace.yaml` : `apps/*`, `packages
 | --- | --- | --- |
 | Application desktop | `apps/desktop` | Tauri 2. Interface React 19 en TypeScript, construite avec Vite. Routage, requêtes et formulaires avec TanStack (Router, Query, Form), état local avec Zustand. Le cœur natif est dans `apps/desktop/src-tauri`. |
 | CLI | `apps/cli` | Binaire `syntheo` en Rust : lecture et export des réunions, propositions de modification, serveur MCP. |
-| Plugins Tauri | `plugins/*` | Pont entre l'interface et le natif : `db`, `transcription`, `dictation`, `template`, `tantivy`, `export`, `store2`, `detect`, `notification`, `shortcut`, `local-api`, `mcp`… Chaque plugin expose des commandes typées, générées pour TypeScript avec `tauri-specta`. |
+| Plugins Tauri | `plugins/*` | Pont entre l'interface et le natif : `db`, `transcription`, `dictation`, `template`, `tantivy`, `export`, `store2`, `detect`, `notification`, `shortcut`, `local-api`… Chaque plugin expose des commandes typées, générées pour TypeScript avec `tauri-specta`. |
 | Capture audio | `crates/audio*`, `crates/aec`, `crates/vad*`, `crates/listener-core` | Accès aux périphériques, capture du micro et de l'audio système, annulation d'écho, détection d'activité vocale, supervision de la session de capture. |
 | Transcription | `crates/owhisper-client`, `crates/transcript`, `crates/ws-client` | Adaptateurs STT et assemblage de la transcription. |
 | Données | `crates/db-core`, `crates/db-app`, `crates/db-migrate`, `crates/storage` | Accès SQLite (sqlx), schéma et migrations, emplacement des dossiers de données. |
@@ -73,7 +73,7 @@ Les flux réseau sans rapport avec l'inférence, encore présents dans le code, 
 ## Interfaces pour les agents
 
 - **CLI** (`apps/cli`) : le binaire `syntheo` lit directement la base `app.db`, en lecture seule pour la consultation et l'export. Les modifications passent par des **propositions**, que l'utilisateur relit ensuite dans l'application. Voir la [référence de la CLI](/fr/reference/cli).
-- **Serveur MCP** : `syntheo mcp` lance un serveur MCP en stdio (`apps/cli/src/mcp/`, bibliothèque `rmcp`). Il expose la liste des réunions, les transcriptions, l'export, l'import d'un enregistrement et les propositions de modification. Côté application, `plugins/local-api` porte les commandes associées ; `plugins/mcp`, hérité d'Anarlog, ne déclare aucune commande.
+- **Serveur MCP** : `syntheo mcp` lance un serveur MCP en stdio (`apps/cli/src/mcp/`, bibliothèque `rmcp`). Il expose la liste des réunions, les transcriptions, l'export, l'import d'un enregistrement et les propositions de modification. Côté application, `plugins/local-api` porte les commandes associées.
 
 La vue d'ensemble se trouve dans [Agents](/fr/agents/overview).
 

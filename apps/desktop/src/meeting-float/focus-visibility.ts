@@ -8,7 +8,7 @@ export const FLOATING_BAR_FOCUS_DELAY_MS = 300;
 
 const MAIN_WINDOW_LABEL = "main";
 
-export type FloatingBarFocusContext = {
+type FloatingBarFocusContext = {
   /** Fenêtre Syntheo au premier plan (`main`, `note-<id>`), `null` sinon. */
   focusedWindow: string | null;
   /** Note de l'onglet actif de la fenêtre principale. */
@@ -18,7 +18,7 @@ export type FloatingBarFocusContext = {
 };
 
 /** Libellé de la fenêtre détachée d'une note (`AppWindow::Note`). */
-export function noteWindowLabel(sessionId: string) {
+function noteWindowLabel(sessionId: string) {
   return `note-${sessionId}`;
 }
 

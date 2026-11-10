@@ -724,18 +724,6 @@ importers:
         specifier: ^2.6.1
         version: 2.6.1
 
-  plugins/agent:
-    dependencies:
-      '@tauri-apps/api':
-        specifier: ^2.12.4
-        version: 2.12.4
-
-  plugins/audio-priority:
-    dependencies:
-      '@tauri-apps/api':
-        specifier: ^2.12.4
-        version: 2.12.4
-
   plugins/contacts:
     dependencies:
       '@tauri-apps/api':
@@ -778,12 +766,6 @@ importers:
         specifier: ^2.12.4
         version: 2.12.4
 
-  plugins/fs2:
-    dependencies:
-      '@tauri-apps/api':
-        specifier: ^2.12.4
-        version: 2.12.4
-
   plugins/hooks:
     dependencies:
       '@tauri-apps/api':
@@ -791,12 +773,6 @@ importers:
         version: 2.12.4
 
   plugins/icon:
-    dependencies:
-      '@tauri-apps/api':
-        specifier: ^2.12.4
-        version: 2.12.4
-
-  plugins/js:
     dependencies:
       '@tauri-apps/api':
         specifier: ^2.12.4
@@ -814,12 +790,6 @@ importers:
         specifier: ^2.12.4
         version: 2.12.4
 
-  plugins/mcp:
-    dependencies:
-      '@tauri-apps/api':
-        specifier: ^2.12.4
-        version: 2.12.4
-
   plugins/misc:
     dependencies:
       '@tauri-apps/api':
@@ -832,25 +802,7 @@ importers:
         specifier: ^2.12.4
         version: 2.12.4
 
-  plugins/notify:
-    dependencies:
-      '@tauri-apps/api':
-        specifier: ^2.12.4
-        version: 2.12.4
-
   plugins/opener2:
-    dependencies:
-      '@tauri-apps/api':
-        specifier: ^2.12.4
-        version: 2.12.4
-
-  plugins/overlay:
-    dependencies:
-      '@tauri-apps/api':
-        specifier: ^2.12.4
-        version: 2.12.4
-
-  plugins/path2:
     dependencies:
       '@tauri-apps/api':
         specifier: ^2.12.4
@@ -888,12 +840,6 @@ importers:
         specifier: ^2.12.4
         version: 2.12.4
 
-  plugins/sidecar2:
-    dependencies:
-      '@tauri-apps/api':
-        specifier: ^2.12.4
-        version: 2.12.4
-
   plugins/store2:
     dependencies:
       '@tauri-apps/api':
@@ -907,12 +853,6 @@ importers:
         version: 2.12.4
 
   plugins/template:
-    dependencies:
-      '@tauri-apps/api':
-        specifier: ^2.12.4
-        version: 2.12.4
-
-  plugins/tracing:
     dependencies:
       '@tauri-apps/api':
         specifier: ^2.12.4

@@ -720,7 +720,6 @@ dependencies = [
 name = "audio-interface"
 version = "0.1.0"
 dependencies = [
- "dasp",
  "futures-util",
  "rodio",
 ]
@@ -1843,15 +1842,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "convert_case"
-version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "633458d4ef8c78b72454de2d54fd6ab2e60f9e02be22f3c6104cdc8a4e0fceb9"
-dependencies = [
- "unicode-segmentation",
-]
-
-[[package]]
 name = "cookie"
 version = "0.18.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2645,9 +2635,6 @@ dependencies = [
  "strum 0.28.0",
  "tauri",
  "tauri-build",
- "tauri-plugin-agent",
- "tauri-plugin-audio-priority",
- "tauri-plugin-automation",
  "tauri-plugin-autostart",
  "tauri-plugin-clipboard-manager",
  "tauri-plugin-contacts",
@@ -2660,22 +2647,17 @@ dependencies = [
  "tauri-plugin-dock",
  "tauri-plugin-export",
  "tauri-plugin-fs-sync",
- "tauri-plugin-fs2",
  "tauri-plugin-hooks",
  "tauri-plugin-http",
  "tauri-plugin-icon",
- "tauri-plugin-js",
  "tauri-plugin-local-api",
  "tauri-plugin-local-auth",
- "tauri-plugin-mcp",
  "tauri-plugin-misc",
  "tauri-plugin-notification",
  "tauri-plugin-notify",
  "tauri-plugin-opener",
  "tauri-plugin-opener2",
  "tauri-plugin-os",
- "tauri-plugin-overlay",
- "tauri-plugin-path2",
  "tauri-plugin-permissions",
  "tauri-plugin-prevent-default",
  "tauri-plugin-process",
@@ -2700,8 +2682,6 @@ dependencies = [
  "tempfile",
  "tokio",
  "tracing",
- "windows",
- "windows-registry",
 ]
 
 [[package]]
@@ -6527,7 +6507,7 @@ checksum = "b6b8cfa2a7656627b4c92c6b9ef929433acd673d5ab3708cda1b18478ac00df4"
 dependencies = [
  "bitflags 2.13.2",
  "cc",
- "convert_case 0.8.0",
+ "convert_case",
  "cookie-factory",
  "libc",
  "libspa-sys",
@@ -7187,7 +7167,6 @@ version = "0.1.0"
 dependencies = [
  "indexmap 2.14.2",
  "notification-interface",
- "tracing",
  "windows",
 ]
 
@@ -8127,7 +8106,6 @@ dependencies = [
  "serde_bytes",
  "serde_json",
  "specta",
- "utoipa",
  "uuid",
 ]
 
@@ -9508,19 +9486,7 @@ version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a135375fbac5ba723bb6a48f432a72f81539cedde422f0121a86c7c4e96d8e0d"
 dependencies = [
- "rquickjs-core 0.10.0",
-]
-
-[[package]]
-name = "rquickjs"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c50dc6d6c587c339edb4769cf705867497a2baf0eca8b4645fa6ecd22f02c77a"
-dependencies = [
- "either",
- "indexmap 2.14.2",
- "rquickjs-core 0.11.0",
- "rquickjs-macro",
+ "rquickjs-core",
 ]
 
 [[package]]
@@ -9531,43 +9497,7 @@ checksum = "bccb7121a123865c8ace4dea42e7ed84d78b90cbaf4ca32c59849d8d210c9672"
 dependencies = [
  "hashbrown 0.16.1",
  "relative-path",
- "rquickjs-sys 0.10.0",
-]
-
-[[package]]
-name = "rquickjs-core"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b8bf7840285c321c3ab20e752a9afb95548c75cd7f4632a0627cea3507e310c1"
-dependencies = [
- "async-lock",
- "chrono",
- "dlopen2",
- "either",
- "hashbrown 0.16.1",
- "indexmap 2.14.2",
- "phf 0.13.1",
- "relative-path",
- "rquickjs-sys 0.11.0",
-]
-
-[[package]]
-name = "rquickjs-macro"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7106215ff41a5677b104906a13e1a440b880f4b6362b5dc4f3978c267fad2b80"
-dependencies = [
- "convert_case 0.10.0",
- "fnv",
- "ident_case",
- "indexmap 2.14.2",
- "phf_generator 0.13.1",
- "phf_shared 0.13.1",
- "proc-macro-crate 3.5.0",
- "proc-macro2",
- "quote",
- "rquickjs-core 0.11.0",
- "syn 2.0.117",
+ "rquickjs-sys",
 ]
 
 [[package]]
@@ -9575,15 +9505,6 @@ name = "rquickjs-sys"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "57b1b6528590d4d65dc86b5159eae2d0219709546644c66408b2441696d1d725"
-dependencies = [
- "cc",
-]
-
-[[package]]
-name = "rquickjs-sys"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "27344601ef27460e82d6a4e1ecb9e7e99f518122095f3c51296da8e9be2b9d83"
 dependencies = [
  "cc",
 ]
@@ -9798,15 +9719,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "93fc1dc3aaa9bfed95e02e6eadabb4baf7e3078b0bd1b4d7b6b0b68378900502"
 dependencies = [
  "winapi-util",
-]
-
-[[package]]
-name = "sanitize-filename"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bc984f4f9ceb736a7bb755c3e3bd17dc56370af2600c9780dcc48c66453da34d"
-dependencies = [
- "regex",
 ]
 
 [[package]]
@@ -11750,53 +11662,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tauri-plugin-agent"
-version = "0.1.0"
-dependencies = [
- "agent-core",
- "serde",
- "specta",
- "specta-typescript",
- "tauri",
- "tauri-plugin",
- "tauri-specta",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "tauri-plugin-audio-priority"
-version = "0.1.0"
-dependencies = [
- "audio-device",
- "serde",
- "serde_json",
- "specta",
- "specta-typescript",
- "tauri",
- "tauri-plugin",
- "tauri-plugin-settings",
- "tauri-specta",
- "thiserror 2.0.21",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "tauri-plugin-automation"
-version = "0.1.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9183fa70494162bb1571998a9f578eeda96dd92d3431082165f38bff647f3311"
-dependencies = [
- "libloading 0.8.9",
- "objc2-app-kit",
- "serde_json",
- "tauri",
- "tauri-plugin",
- "tokio",
- "tracing",
-]
-
-[[package]]
 name = "tauri-plugin-autostart"
 version = "2.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -12059,20 +11924,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tauri-plugin-fs2"
-version = "0.1.0"
-dependencies = [
- "serde",
- "specta",
- "specta-typescript",
- "tauri",
- "tauri-plugin",
- "tauri-plugin-settings",
- "tauri-specta",
- "thiserror 2.0.21",
-]
-
-[[package]]
 name = "tauri-plugin-global-shortcut"
 version = "2.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -12145,21 +11996,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tauri-plugin-js"
-version = "0.1.0"
-dependencies = [
- "rquickjs 0.11.0",
- "serde",
- "specta",
- "specta-typescript",
- "tauri",
- "tauri-plugin",
- "tauri-specta",
- "thiserror 2.0.21",
- "tokio",
-]
-
-[[package]]
 name = "tauri-plugin-local-api"
 version = "0.1.0"
 dependencies = [
@@ -12177,6 +12013,7 @@ dependencies = [
  "specta",
  "specta-typescript",
  "sqlx",
+ "sys-locale",
  "tauri",
  "tauri-plugin",
  "tauri-plugin-db",
@@ -12202,19 +12039,6 @@ dependencies = [
  "tauri-specta",
  "thiserror 2.0.21",
  "windows",
-]
-
-[[package]]
-name = "tauri-plugin-mcp"
-version = "0.1.0"
-dependencies = [
- "serde",
- "specta",
- "specta-typescript",
- "tauri",
- "tauri-plugin",
- "tauri-specta",
- "thiserror 2.0.21",
 ]
 
 [[package]]
@@ -12256,7 +12080,6 @@ dependencies = [
  "notify-debouncer-full",
  "serde",
  "specta",
- "specta-typescript",
  "tauri",
  "tauri-plugin",
  "tauri-plugin-settings",
@@ -12316,32 +12139,6 @@ dependencies = [
  "tauri",
  "tauri-plugin",
  "thiserror 2.0.21",
-]
-
-[[package]]
-name = "tauri-plugin-overlay"
-version = "0.1.0"
-dependencies = [
- "serde",
- "specta",
- "specta-typescript",
- "tauri",
- "tauri-plugin",
- "tauri-specta",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "tauri-plugin-path2"
-version = "0.1.0"
-dependencies = [
- "sanitize-filename",
- "specta",
- "specta-typescript",
- "tauri",
- "tauri-plugin",
- "tauri-specta",
 ]
 
 [[package]]
@@ -12520,7 +12317,6 @@ dependencies = [
  "dirs 6.0.0",
  "serde",
  "specta",
- "specta-typescript",
  "tauri",
  "tauri-plugin",
  "tauri-plugin-shell",
@@ -12664,11 +12460,10 @@ version = "0.1.0"
 dependencies = [
  "dirs 6.0.0",
  "regex",
- "rquickjs 0.10.0",
+ "rquickjs",
  "serde",
  "serde_json",
  "specta",
- "specta-typescript",
  "tauri",
  "tauri-plugin",
  "tauri-specta",
@@ -14370,13 +14165,9 @@ dependencies = [
 name = "vad"
 version = "0.1.0"
 dependencies = [
- "approx",
  "criterion",
  "data",
  "earshot",
- "onnx",
- "serde",
- "serde_json",
  "thiserror 2.0.21",
 ]
 
@@ -15779,29 +15570,6 @@ name = "xmp-writer"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ce9e2f4a404d9ebffc0a9832cf4f50907220ba3d7fffa9099261a5cab52f2dd7"
-
-[[package]]
-name = "xshell"
-version = "0.2.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9e7290c623014758632efe00737145b6867b66292c42167f2ec381eb566a373d"
-dependencies = [
- "xshell-macros",
-]
-
-[[package]]
-name = "xshell-macros"
-version = "0.2.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "32ac00cd3f8ec9c1d33fb3e7958a82df6989c42d747bd326c822b1d625283547"
-
-[[package]]
-name = "xtask"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "xshell",
-]
 
 [[package]]
 name = "yaml-rust"

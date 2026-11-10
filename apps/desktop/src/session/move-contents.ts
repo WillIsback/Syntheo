@@ -14,7 +14,7 @@ import { liveQueryClient } from "~/db";
 import { enqueueDatabaseWrite } from "~/db/write-queue";
 import { listenerStore } from "~/store/zustand/listener/instance";
 
-export type MoveSessionContentsResult =
+type MoveSessionContentsResult =
   | {
       status: "moved";
       sourceMeetingId: string;

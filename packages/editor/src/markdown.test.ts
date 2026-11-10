@@ -416,6 +416,47 @@ describe("json2md", () => {
 
     expect(cellText).toBe("literal \\| marker");
   });
+
+  // Issue #505 : les caractères spéciaux d'une cellule survivent à
+  // l'aller-retour, y compris dans un code inline.
+  test.each([
+    { name: "pipe", cell: [{ type: "text", text: "a | b" }] },
+    { name: "trailing backslash", cell: [{ type: "text", text: "end\\" }] },
+    { name: "literal emphasis", cell: [{ type: "text", text: "*lit*" }] },
+    { name: "escaped asterisk", cell: [{ type: "text", text: "x \\* y" }] },
+    {
+      name: "code backslash",
+      cell: [{ type: "text", text: "C:\\tmp", marks: [{ type: "code" }] }],
+    },
+    {
+      name: "code pipe",
+      cell: [{ type: "text", text: "a|b", marks: [{ type: "code" }] }],
+    },
+  ])("preserves table cell $name across roundtrip", ({ cell }) => {
+    const row = (type: string, content: JSONContent[]): JSONContent => ({
+      type: "tableRow",
+      content: [{ type, content: [{ type: "paragraph", content }] }],
+    });
+    const json: JSONContent = {
+      type: "doc",
+      content: [
+        {
+          type: "table",
+          content: [
+            row("tableHeader", [{ type: "text", text: "H" }]),
+            row("tableCell", cell),
+          ],
+        },
+      ],
+    };
+
+    const roundtripped = md2json(json2md(json));
+    const cellContent =
+      roundtripped.content?.[0]?.content?.[1]?.content?.[0]?.content?.[0]
+        ?.content;
+
+    expect(cellContent).toEqual(cell);
+  });
 });
 
 describe("md2json", () => {

@@ -15,6 +15,7 @@ import {
 
 import { executeTransaction, liveQueryClient, useLiveQuery } from "~/db";
 import { enqueueDatabaseWrite } from "~/db/write-queue";
+import { resolveUiLanguagePreference } from "~/i18n/locales";
 import { normalizeStoredLlmSelection } from "~/settings/ai/llm/selection";
 import {
   SETTING_DEFINITIONS,
@@ -23,7 +24,6 @@ import {
   type SettingValue,
   type SettingValues,
 } from "~/settings/schema";
-import { isAppStoreBuild } from "~/shared/app-store";
 import {
   getDefaultSttModel,
   normalizeStoredSttSelection,
@@ -107,6 +107,7 @@ export async function initializeApplicationSettings(): Promise<void> {
       stored,
       languageResult?.status === "ok" ? languageResult.data : null,
     ),
+    ...collectUiLanguageUpdates(stored),
   };
 
   if (!normalizedSttSelection.model) {
@@ -178,6 +179,17 @@ function collectLanguageUpdates(
   }
 
   return updates;
+}
+
+// Issue 549 : la langue de l'interface devient un réglage distinct. On
+// l'enregistre une fois, d'après les réglages lus avant toute écriture : un
+// profil existant garde la langue qu'il voyait, un nouveau profil reste en
+// automatique (langue du système).
+function collectUiLanguageUpdates(stored: StoredSettingValues): SettingValues {
+  if (stored.hasValues.has("ui_language")) {
+    return {};
+  }
+  return { ui_language: resolveUiLanguagePreference(stored) };
 }
 
 async function migrateLegacyAutoSummaryPrompt(
@@ -303,7 +315,7 @@ async function persistSettingValues(values: SettingValues): Promise<void> {
 }
 
 function applySettingSideEffects(values: SettingValues): void {
-  if (values.autostart !== undefined && !isAppStoreBuild()) {
+  if (values.autostart !== undefined) {
     void (values.autostart ? enable() : disable()).catch(console.error);
   }
   if (values.respect_dnd !== undefined) {

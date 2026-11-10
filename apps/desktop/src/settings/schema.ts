@@ -254,6 +254,13 @@ export const SETTING_DEFINITIONS = {
     path: ["language", "ai_language"],
     default: "fr" as string,
   },
+  // Langue de l'interface, distincte de la langue de transcription :
+  // « auto » (langue du système), « fr » ou « en » (issue 549).
+  ui_language: {
+    type: "string",
+    path: ["language", "ui_language"],
+    default: "auto" as string,
+  },
   spoken_languages: {
     type: "string",
     path: ["language", "spoken_languages"],

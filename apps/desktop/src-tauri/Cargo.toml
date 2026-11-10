@@ -24,8 +24,6 @@ tauri-build = { workspace = true, features = [] }
 syntheo-brand = { workspace = true }
 tauri = { workspace = true, features = ["specta", "protocol-asset"] }
 
-tauri-plugin-agent = { workspace = true }
-tauri-plugin-audio-priority = { workspace = true }
 tauri-plugin-autostart = { workspace = true }
 tauri-plugin-clipboard-manager = { workspace = true }
 tauri-plugin-contacts = { workspace = true }
@@ -38,22 +36,17 @@ tauri-plugin-dictation = { workspace = true }
 tauri-plugin-dock = { workspace = true }
 tauri-plugin-export = { workspace = true }
 tauri-plugin-fs-sync = { workspace = true }
-tauri-plugin-fs2 = { workspace = true }
 tauri-plugin-hooks = { workspace = true }
 tauri-plugin-http = { workspace = true }
 tauri-plugin-icon = { workspace = true }
-tauri-plugin-js = { workspace = true }
 tauri-plugin-local-api = { workspace = true }
 tauri-plugin-local-auth = { workspace = true }
-tauri-plugin-mcp = { workspace = true }
 tauri-plugin-misc = { workspace = true }
 tauri-plugin-notification = { workspace = true }
 tauri-plugin-notify = { workspace = true }
 tauri-plugin-opener = { workspace = true }
 tauri-plugin-opener2 = { workspace = true }
 tauri-plugin-os = { workspace = true }
-tauri-plugin-overlay = { workspace = true }
-tauri-plugin-path2 = { workspace = true }
 tauri-plugin-permissions = { workspace = true }
 tauri-plugin-prevent-default = { workspace = true }
 tauri-plugin-process = { workspace = true }
@@ -94,7 +87,7 @@ specta-typescript = { workspace = true }
 sqlx = { workspace = true, features = ["runtime-tokio", "sqlite"] }
 strum = { workspace = true, features = ["derive"] }
 tauri-specta = { workspace = true, features = ["derive", "typescript"] }
-tokio = { workspace = true, features = ["fs", "rt-multi-thread", "macros", "time"] }
+tokio = { workspace = true, features = ["fs", "rt-multi-thread", "macros", "sync", "time"] }
 tracing = { workspace = true }
 
 [features]
@@ -103,21 +96,12 @@ direct-distribution = [
   "tauri-plugin-permissions/private-tcc",
   "tauri-plugin-windows/macos-private-api",
 ]
-app-store = ["tauri-plugin-icon/app-store"]
 dev = ["dep:syntheo-audio-mock"]
 devtools = [
   "tauri/devtools",
   "dep:syntheo-audio-mock",
   "tauri-plugin-tracing/console-payload",
 ]
-automation = ["tauri-plugin-automation"]
-
-[target.'cfg(target_os = "macos")'.dependencies]
-tauri-plugin-automation = { version = "0.1", optional = true }
-
-[target.'cfg(target_os = "windows")'.dependencies]
-windows = { workspace = true, features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging"] }
-windows-registry = "0.6.1"
 
 [dev-dependencies]
 tempfile = { workspace = true }

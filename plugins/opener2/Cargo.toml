@@ -16,7 +16,7 @@ specta-typescript = { workspace = true }
 
 [dependencies]
 specta = { workspace = true }
-tauri = { workspace = true, features = ["test"] }
+tauri = { workspace = true }
 tauri-plugin-opener = { workspace = true }
 tauri-specta = { workspace = true, features = ["derive", "typescript"] }
 

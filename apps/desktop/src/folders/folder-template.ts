@@ -35,7 +35,7 @@ function mapRows(rows: FolderTemplateSqlRow[]): FolderTemplateAssignment[] {
   }));
 }
 
-export function toFolderTemplateMap(
+function toFolderTemplateMap(
   assignments: readonly FolderTemplateAssignment[],
 ): Map<string, string> {
   return new Map(

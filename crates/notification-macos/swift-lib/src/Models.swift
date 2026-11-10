@@ -1,17 +1,5 @@
 import Foundation
 
-struct Participant: Codable {
-  let name: String?
-  let email: String
-  let status: String
-}
-
-struct EventDetails: Codable {
-  let what: String
-  let timezone: String?
-  let location: String?
-}
-
 struct NotificationFooter: Codable {
   let text: String
   let actionLabel: String
@@ -20,7 +8,6 @@ struct NotificationFooter: Codable {
 
 enum NotificationIconAsset: Codable {
   case appIcon
-  case calendar
   case systemSymbol(name: String)
   case bundleId(bundleId: String)
   case path(path: String)
@@ -34,7 +21,6 @@ enum NotificationIconAsset: Codable {
 
   private enum IconType: String, Codable {
     case appIcon = "app_icon"
-    case calendar
     case systemSymbol = "system_symbol"
     case bundleId = "bundle_id"
     case path
@@ -46,8 +32,6 @@ enum NotificationIconAsset: Codable {
     switch try container.decode(IconType.self, forKey: .type) {
     case .appIcon:
       self = .appIcon
-    case .calendar:
-      self = .calendar
     case .systemSymbol:
       self = .systemSymbol(name: try container.decode(String.self, forKey: .name))
     case .bundleId:
@@ -63,8 +47,6 @@ enum NotificationIconAsset: Codable {
     switch self {
     case .appIcon:
       try container.encode(IconType.appIcon, forKey: .type)
-    case .calendar:
-      try container.encode(IconType.calendar, forKey: .type)
     case .systemSymbol(let name):
       try container.encode(IconType.systemSymbol, forKey: .type)
       try container.encode(name, forKey: .name)
@@ -146,13 +128,11 @@ enum NotificationIcon: Codable {
 }
 
 enum NotificationSource: Codable {
-  case calendarEvent(eventId: String)
   case session(sessionId: String)
   case micDetected(appNames: [String], appIds: [String], eventIds: [String])
 
   private enum CodingKeys: String, CodingKey {
     case type
-    case eventId = "event_id"
     case sessionId = "session_id"
     case appNames = "app_names"
     case appIds = "app_ids"
@@ -160,7 +140,6 @@ enum NotificationSource: Codable {
   }
 
   private enum SourceType: String, Codable {
-    case calendarEvent = "calendar_event"
     case session = "session"
     case micDetected = "mic_detected"
   }
@@ -169,8 +148,6 @@ enum NotificationSource: Codable {
     let container = try decoder.container(keyedBy: CodingKeys.self)
 
     switch try container.decode(SourceType.self, forKey: .type) {
-    case .calendarEvent:
-      self = .calendarEvent(eventId: try container.decode(String.self, forKey: .eventId))
     case .session:
       self = .session(sessionId: try container.decode(String.self, forKey: .sessionId))
     case .micDetected:
@@ -186,9 +163,6 @@ enum NotificationSource: Codable {
     var container = encoder.container(keyedBy: CodingKeys.self)
 
     switch self {
-    case .calendarEvent(let eventId):
-      try container.encode(SourceType.calendarEvent, forKey: .type)
-      try container.encode(eventId, forKey: .eventId)
     case .session(let sessionId):
       try container.encode(SourceType.session, forKey: .type)
       try container.encode(sessionId, forKey: .sessionId)
@@ -258,12 +232,8 @@ struct NotificationPayload: Codable {
   let timeoutSeconds: Double
   let source: NotificationSource?
   let startTime: Int64?
-  let participants: [Participant]?
-  let eventDetails: EventDetails?
   let actionLabel: String?
   let actionVariant: NotificationActionVariant?
-  let action: NotificationAction?
-  let actionMenu: NotificationActionMenu?
   let options: [String]?
   let footer: NotificationFooter?
   let icon: NotificationIcon?
@@ -290,23 +260,4 @@ struct NotificationPayload: Codable {
     guard let options = options else { return false }
     return !options.isEmpty
   }
-
-  var hasExpandableContent: Bool {
-    if case .some(.calendarEvent) = source {
-      return false
-    }
-
-    let hasParticipants = participants?.isEmpty == false
-    return hasParticipants || eventDetails != nil
-  }
-}
-
-enum NotificationAction: String, Codable {
-  case joinAndRecord = "join_and_record"
-  case openMeeting = "open_meeting"
-}
-
-struct NotificationActionMenu: Codable {
-  let label: String
-  let action: NotificationAction
 }

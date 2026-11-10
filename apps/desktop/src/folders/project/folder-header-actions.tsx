@@ -24,7 +24,7 @@ export async function createNoteInFolder(folderPath: string): Promise<string> {
 
 // « Demander au dossier » : ouvre le chat avec ce dossier pour contexte,
 // comme Ctrl+J sur cette page.
-export function askFolder(folderPath: string) {
+function askFolder(folderPath: string) {
   useFolderSelection.getState().setSelectedPath(folderPath);
   useTabs.getState().transitionChatMode({ type: "OPEN" });
 }

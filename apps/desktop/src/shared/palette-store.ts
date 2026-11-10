@@ -6,7 +6,7 @@ import { create } from "zustand";
 // une étiquette « Paramètres » dans le champ, retirable.
 // `folder` est le dossier posé en filtre par Tab (issue 501) : la recherche
 // se limite à ce dossier et à ses sous-dossiers.
-export type PaletteFilter = "settings" | null;
+type PaletteFilter = "settings" | null;
 
 export const usePaletteStore = create<{
   open: boolean;

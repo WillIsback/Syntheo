@@ -29,7 +29,8 @@ serde_json = { workspace = true }
 sha2 = { workspace = true }
 specta = { workspace = true }
 sqlx = { workspace = true, features = ["runtime-tokio", "sqlite"] }
-tauri = { workspace = true, features = ["test"] }
+sys-locale = { workspace = true }
+tauri = { workspace = true }
 tauri-specta = { workspace = true, features = ["derive", "typescript"] }
 tempfile = { workspace = true }
 tokio = { workspace = true, features = ["io-util", "macros", "process", "sync", "rt", "time"] }

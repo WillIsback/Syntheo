@@ -32,6 +32,7 @@ import { SummaryProposalReview, useSummaryProposal } from "./summary-review";
 import { SummarySwitcher, type SynthesisView } from "./summary-switcher";
 import { NotesChangedBanner, SummaryVersionView } from "./summary-version";
 import { TranscriptMargin } from "./transcript-margin";
+import { TranscriptionFailureNotice } from "./transcription-failure";
 import { WelcomeCard } from "./welcome-card";
 
 import { useAITaskTask } from "~/ai/hooks";
@@ -128,6 +129,9 @@ export function LivingDocument(props: LivingDocumentProps) {
       <AfterMeetingFolderSuggestion sessionId={sessionId} stage={stage} />
       {/* Positions stables : l'éditeur de notes n'est pas remonté entre
           Préparer et Écouter, le texte en cours de saisie n'est pas perdu. */}
+      {stage === "prepare" ? (
+        <TranscriptionFailureNotice sessionId={sessionId} />
+      ) : null}
       {stage === "prepare" ? (
         <PrepareFiche
           sessionId={sessionId}

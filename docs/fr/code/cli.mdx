@@ -119,8 +119,8 @@ Ressources : `syntheo://meetings/{meeting_id}` (Markdown), `syntheo://meetings/{
 - **Rôle** : diagnostic et installation d'une intégration par hook pour trois CLI d'agents tierces : Codex, Claude Code et OpenCode (`ProviderKind`).
 - **API principale** : `health_check`, `install_cli`, `uninstall_cli`, `upgrade_hooks` ; types `ProviderHealth`, `ProviderHealthStatus`, `ProviderAuthStatus`.
 - **Dépendances internes** : `crates/claude`, `crates/codex`, `crates/opencode`.
-- **Utilisé par** : `plugins/agent`, enregistré par `apps/desktop/src-tauri` hors build App Store.
-- **État** : hérité d'Anarlog. Les hooks installés appellent la commande `char` (par exemple `char claude notify`), pas `syntheo`, et aucun code de `apps/desktop/src` n'importe `@syntheo/plugin-agent`. Rien ne sert la CLI `syntheo` ici.
+- **Utilisé par** : rien depuis le retrait du plugin `agent` (#546) ; la crate est gardée pour une intégration future.
+- **État** : hérité d'Anarlog. Les hooks qu'elle installe appellent la commande `char` (par exemple `char claude notify`), pas `syntheo`, et `upgrade_hooks` ne tourne plus au démarrage. Rien ne sert la CLI `syntheo` ici.
 - **Pages de doc concernées** : aucune. L'installation des compétences d'agents documentée dans [/agents/skills](/fr/agents/skills) passe par `apps/desktop/src-tauri/src/agent_skills.rs`, pas par cette crate.
 
 ### `crates/cli-process`
@@ -133,11 +133,11 @@ Ressources : `syntheo://meetings/{meeting_id}` (Markdown), `syntheo://meetings/{
 
 ## Côté application
 
-L'application installe et documente la CLI, mais ce code vit dans `apps/desktop` :
+L'application documente la CLI et indique si elle est installée, mais ce code vit dans `apps/desktop` :
 
-- `apps/desktop/src-tauri/src/embedded_cli.rs` : installe le binaire `syntheo` fourni avec l'application (voir [Carte du code : application desktop](/fr/code/desktop)).
+- `apps/desktop/src-tauri/src/cli_status.rs` : trouve le binaire `syntheo` installé à part, pour **Paramètres → Développeurs → CLI & MCP** (voir [Carte du code : application desktop](/fr/code/desktop)).
 - `apps/desktop/src-tauri/src/agents-content.md` : fichier `AGENTS.md` écrit dans le dossier de données au démarrage, qui renvoie vers les outils MCP et la CLI.
-- `plugins/local-api` et `plugins/mcp` : commandes et types côté application, voir [/code/plugins](/fr/code/plugins).
+- `plugins/local-api` : commandes et types côté application, voir [/code/plugins](/fr/code/plugins).
 
 ## Correspondance code et pages
 

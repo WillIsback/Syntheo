@@ -519,6 +519,9 @@ mod cross_platform {
             .disable_drag_drop_handler()
             .build()?;
 
+        #[cfg(target_os = "linux")]
+        release_webview_size_request(&window);
+
         // Wayland (issue 448) : calque ancré en bas au centre quand le compositeur le gère, avant
         // le premier affichage ; sinon, fenêtre ordinaire placée par `apply_layout`.
         #[cfg(target_os = "linux")]
@@ -527,6 +530,30 @@ mod cross_platform {
         crate::window::exclude_from_capture(&window);
 
         Ok(window)
+    }
+
+    /// Donne au webview une taille demandée explicite, minimale, pour que la fenêtre ait exactement
+    /// la taille de la pastille (issue 533).
+    ///
+    /// wry place le `WebKitWebView` dans la boîte de la fenêtre sans taille demandée (-1 × -1).
+    /// Sous Wayland, la fenêtre ordinaire prend alors au moins 200 × 200 (la pastille de
+    /// 294 × 38 devenait un rectangle de 294 × 200), et dans un calque layer-shell le webview ne
+    /// se dessine pas du tout. Avec une taille demandée de 1 × 1, la taille vient des contraintes
+    /// de la fenêtre (`fixed_size_constraints`) et le webview la remplit.
+    #[cfg(target_os = "linux")]
+    fn release_webview_size_request(window: &WebviewWindow<tauri::Wry>) {
+        use gtk::prelude::{ContainerExt, WidgetExt};
+
+        match window.default_vbox() {
+            Ok(vbox) => {
+                for child in vbox.children() {
+                    child.set_size_request(1, 1);
+                }
+            }
+            Err(error) => {
+                tracing::warn!(%error, "floating bar: GTK box unavailable for the webview size");
+            }
+        }
     }
 
     /// La pastille est un calque Wayland : le compositeur tient sa position.
@@ -663,6 +690,16 @@ mod cross_platform {
             size.height,
         ))?;
         window.set_size(Size::Logical(size))?;
+        // Fenêtre non redimensionnable : GTK garde sa taille par défaut (celle de la création) et
+        // ignore le redimensionnement de tao. La pastille ne rétrécissait pas en pause (issue 533).
+        #[cfg(target_os = "linux")]
+        if let Ok(gtk_window) = window.gtk_window() {
+            use gtk::prelude::GtkWindowExt;
+
+            let (width, height) = (size.width.round() as i32, size.height.round() as i32);
+            gtk_window.set_default_size(width, height);
+            gtk_window.resize(width, height);
+        }
         Ok(())
     }
 

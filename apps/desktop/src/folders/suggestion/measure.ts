@@ -18,7 +18,7 @@ export function isFolderSuggestionReliable(precision: number | null): boolean {
 
 type ReasonCount = { made: number; correct: number };
 
-export type FolderSuggestionMeasure = {
+type FolderSuggestionMeasure = {
   filedNotes: number;
   folders: number;
   suggestions: number;

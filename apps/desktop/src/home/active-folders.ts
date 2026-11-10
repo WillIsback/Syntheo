@@ -35,7 +35,7 @@ export type HomeFolder = {
   thread: FolderThreadState | null;
 };
 
-export type FolderThreadBody = { folderPath: string; body: JSONContent | null };
+type FolderThreadBody = { folderPath: string; body: JSONContent | null };
 
 // Points ouverts et tâches non cochées d'un fil rouge ; `null` s'il est vide.
 export function folderThreadState(
@@ -117,7 +117,7 @@ export function selectActiveFolders({
 
 type FolderThreadBodySqlRow = { folder_path: string; body: string | null };
 
-export const HOME_FOLDER_THREADS_SQL = `
+const HOME_FOLDER_THREADS_SQL = `
   SELECT folder.path AS folder_path, thread.body
   FROM folder_threads AS thread
   JOIN folders AS folder ON folder.id = thread.folder_id

@@ -14,7 +14,7 @@ import {
 // qu'une autre écoute le dit, et propose d'aller à la note en cours ou de
 // l'arrêter (arrêt normal, synthèse comprise) pour démarrer ici.
 
-export const LISTENING_ELSEWHERE_NOTICE_ID = "listening-elsewhere";
+const LISTENING_ELSEWHERE_NOTICE_ID = "listening-elsewhere";
 const LISTENING_ELSEWHERE_NOTICE_DURATION_MS = 12_000;
 
 export const getListeningElsewhereMessage = (title: string) =>
@@ -25,7 +25,7 @@ export const getStopAndStartHereLabel = () => t`Stop and start here`;
 type ListenerStoreReader = Pick<typeof listenerStore, "getState">;
 
 /** Note qui écoute en ce moment, si ce n'est pas `sessionId` (sinon `null`). */
-export function getListeningElsewhereSessionId(
+function getListeningElsewhereSessionId(
   live: Pick<LiveState, "status" | "sessionId">,
   sessionId?: string,
 ): string | null {
@@ -36,9 +36,7 @@ export function getListeningElsewhereSessionId(
 }
 
 /** Titre affiché d'une note : brouillon de titre en direct, sinon titre enregistré. */
-export async function getListeningSessionTitle(
-  sessionId: string,
-): Promise<string> {
+async function getListeningSessionTitle(sessionId: string): Promise<string> {
   const liveTitle = useLiveTitle.getState().titles[sessionId];
   let storeTitle: string | undefined;
   try {

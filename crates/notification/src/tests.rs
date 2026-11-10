@@ -66,30 +66,21 @@ fn insert_without_eviction_rejects_new_keys_but_refreshes_existing_at_capacity()
 }
 
 #[test]
-fn semantic_actions_survive_stored_context_routing() {
+fn stored_context_routes_the_source() {
     let notification = Notification::builder()
         .title("Design sync")
-        .message("Starting soon")
-        .source(NotificationSource::CalendarEvent {
-            event_id: "event-1".to_string(),
+        .message("Summary ready")
+        .source(NotificationSource::Session {
+            session_id: "session-1".to_string(),
         })
-        .action(NotificationAction::JoinAndRecord)
-        .action_menu("Open meeting", NotificationAction::OpenMeeting)
         .build();
 
-    assert!(store_context("primary-action", &notification));
-    let primary = get_context("primary-action");
-    assert_eq!(primary.action, Some(NotificationAction::JoinAndRecord));
+    assert!(store_context("session-summary", &notification));
+    let context = get_context("session-summary");
+    assert_eq!(context.key, "session-summary");
     assert!(matches!(
-        primary.source,
-        Some(NotificationSource::CalendarEvent { event_id }) if event_id == "event-1"
+        context.source,
+        Some(NotificationSource::Session { session_id }) if session_id == "session-1"
     ));
-
-    assert!(store_context("menu-action", &notification));
-    let menu = get_menu_context("menu-action");
-    assert_eq!(menu.action, Some(NotificationAction::OpenMeeting));
-    assert!(matches!(
-        menu.source,
-        Some(NotificationSource::CalendarEvent { event_id }) if event_id == "event-1"
-    ));
+    assert!(get_context("session-summary").source.is_none());
 }

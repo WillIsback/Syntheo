@@ -3,7 +3,7 @@ import { create } from "zustand";
 // Langues réellement transcrites en direct pour chaque note en écoute. Le
 // modèle de transcription ne prend parfois que la langue principale : les
 // autres langues parlées sont alors omises et la note l'indique (issue 351).
-export type LiveTranscriptionLanguages = {
+type LiveTranscriptionLanguages = {
   primary: string;
   omitted: string[];
 };

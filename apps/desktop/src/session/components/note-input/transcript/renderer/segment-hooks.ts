@@ -90,7 +90,7 @@ function withStableWords(segment: Segment, cache: StableCache): Segment {
 // locuteur d'un bloc est souvent réattribué (diarisation, identités) et ses
 // mots provisoires deviennent définitifs. Si la clé changeait alors, la ligne
 // serait remontée, perdrait sa hauteur mesurée et toute la marge sauterait.
-export function createSegmentKey(
+function createSegmentKey(
   segment: Segment,
   transcriptId: string,
   fallbackIndex: number,

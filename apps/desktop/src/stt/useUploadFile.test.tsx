@@ -139,6 +139,13 @@ vi.mock("~/session/queries", () => ({
   useUpdateSession: () => updateSessionMock,
 }));
 
+const failureMocks = vi.hoisted(() => ({
+  recordTranscriptionFailure: vi.fn(async () => {}),
+  clearTranscriptionFailure: vi.fn(async () => {}),
+}));
+
+vi.mock("~/session/transcription-failure", () => failureMocks);
+
 vi.mock("~/store/zustand/tabs", () => ({
   useTabs: useTabsMock,
 }));
@@ -483,6 +490,22 @@ describe("useUploadFile", () => {
     expect(handleBatchFailedMock).toHaveBeenCalledWith(
       "session-1",
       "whisper-1 is not available for batch transcription.",
+    );
+    // Issue 559 : l'échec est gardé dans la note, et le nouvel import avait
+    // d'abord effacé l'avis précédent.
+    expect(failureMocks.clearTranscriptionFailure).toHaveBeenCalledWith(
+      "session-1",
+    );
+    expect(failureMocks.recordTranscriptionFailure).toHaveBeenCalledWith(
+      "session-1",
+      expect.objectContaining({
+        message: "whisper-1 is not available for batch transcription.",
+      }),
+    );
+    expect(
+      failureMocks.clearTranscriptionFailure.mock.invocationCallOrder[0],
+    ).toBeLessThan(
+      failureMocks.recordTranscriptionFailure.mock.invocationCallOrder[0]!,
     );
     consoleError.mockRestore();
   });

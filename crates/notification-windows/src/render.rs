@@ -45,7 +45,6 @@ pub(crate) struct Frame<'a> {
     pub body: String,
     pub expanded: bool,
     pub action: Option<(&'a str, ActionStyle)>,
-    pub action_menu: bool,
     pub collapse_label: Option<&'a str>,
     pub footer: Option<(&'a str, &'a str)>,
     pub hovered: bool,
@@ -89,7 +88,6 @@ pub(crate) fn render(hwnd: HWND, frame: &Frame) {
         &palette,
         &SurfaceState {
             action: frame.action.map(|(_, style)| style),
-            action_menu: frame.action_menu,
             collapse: frame.collapse_label.is_some(),
             footer: frame.footer.is_some(),
             hovered: frame.hovered,
@@ -220,24 +218,14 @@ fn draw_content(dc: HDC, frame: &Frame, palette: &Palette) {
 
         let _ = SelectObject(dc, fonts.button.into());
         if let (Some((label, style)), Some(action)) = (frame.action, layout.action) {
-            let caret = (frame.action_menu && !frame.expanded)
-                .then(|| layout.action_caret())
-                .flatten();
             let padding = layout.scale(10);
             let label_rect = Rect {
                 x: action.x + padding,
-                width: caret
-                    .map(|caret| caret.x)
-                    .unwrap_or(action.right() - padding)
-                    - action.x
-                    - padding,
+                width: action.right() - padding - action.x - padding,
                 ..action
             };
             let ink = style.ink(palette);
             centered(dc, place(label_rect), label, ink);
-            if let Some(caret) = caret {
-                centered(dc, place(caret), "▾", ink);
-            }
         }
         if let (Some(label), Some(collapse)) = (frame.collapse_label, layout.collapse) {
             centered(dc, place(collapse), label, palette.ink);

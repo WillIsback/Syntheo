@@ -117,3 +117,15 @@ async fn renderer_secret_commands_reject_native_accounts_before_keychain_access(
     );
     assert_eq!(delete_secret(app, scope, key).await.unwrap_err(), expected);
 }
+
+// Issue 560 : sans Secret Service, keyring renvoie NoDefaultStore et son texte
+// brut (« No default store has been set… ») s'affichait tel quel. L'interface
+// reçoit le message connu, qu'elle traduit.
+#[cfg(target_os = "linux")]
+#[test]
+fn maps_missing_default_store_to_secret_service_unavailable() {
+    assert_eq!(
+        secure_store_error(keyring::Error::NoDefaultStore),
+        LINUX_SECRET_SERVICE_UNAVAILABLE_ERROR
+    );
+}

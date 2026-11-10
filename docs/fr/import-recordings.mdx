@@ -25,7 +25,7 @@ Formats acceptés : WAV, MP3, OGG, MP4, M4A, FLAC, WebM et AAC.
 
 Vous suivez l'avancement dans la note : « Génération du transcript... », le pourcentage terminé, puis la durée restante estimée, par exemple « Environ 3 min restantes ». Cliquez sur « Arrêter la transcription » pour interrompre l'import.
 
-La capsule en bas de la note passe aussi en état « Import » jusqu'à la fin : une barre de progression, le pourcentage, puis la durée restante et l'accélération dès qu'elles sont fiables, par exemple « reste ~9 min · ×2,1 » (« estimation… » avant). « Arrêter » interrompt l'import, comme « Arrêter la transcription ».
+La capsule en bas de la note passe aussi en état « Import » jusqu'à la fin : une barre de progression, le pourcentage, puis la durée restante et l'accélération dès qu'elles sont fiables, par exemple « reste ~9 min · ×2,1 ». Pendant la lecture du fichier, puis pendant les 30 premières secondes de transcription et tant que 5 % de l'audio n'est pas traité, elle affiche « Estimation… ». L'estimation suit ensuite le débit moyen depuis le début de l'avancement, reconnexions comprises : tant qu'aucune reconnexion n'a été mesurée, elle reste prudente. Quand l'avancement marque une pause (pendant une reconnexion), la durée restante ne remonte pas, et l'écart à la reprise est lissé. « Arrêter » interrompt l'import, comme « Arrêter la transcription ».
 
 Essayez : ouvrez le menu ••• (1) et choisissez « Téléverser un audio ». L'avancement s'affiche dans la marge « Transcription » (2) et dans la capsule (3). Dans la reproduction, une seconde vaut une minute d'audio.
 
@@ -35,6 +35,8 @@ L'audio n'est pas conservé dans la note. Syntheo choisit la façon d'envoyer le
 
 - **« OpenAI · temps réel et par lots »** : Syntheo envoie le fichier sur le point d'accès `/v1/audio/transcriptions`, sans en faire de copie. Les fichiers longs ou volumineux sont découpés en plusieurs requêtes.
 - **« NVIDIA NIM · WebSocket »** : Syntheo envoie l'audio du fichier dans le flux en temps réel `/v1/realtime`, comme pour une réunion en direct, mais jusqu'à quatre fois plus vite que sa durée. Comptez donc au moins un quart de la durée de l'enregistrement. Le fichier est décodé en mémoire, sans être écrit sur le disque. Si la connexion tombe, Syntheo se reconnecte et reprend après le dernier passage transcrit, sans doublon. Si le serveur refuse la clé ou les réglages, l'import s'arrête.
+
+Si Syntheo a été fermé après la fin de la transcription par le serveur, la note est complétée au lancement suivant. Si ce résultat est inutilisable, par exemple parce qu'aucune parole n'a été détectée, Syntheo abandonne l'import au lieu de le retenter à chaque lancement : « L'import de l'audio a échoué » s'affiche une fois avec le bouton « Ouvrir la note », et la note indique « Échec de la transcription ».
 
 Quand la transcription est terminée, Syntheo rédige un compte rendu si un serveur est configuré dans **Paramètres → Synthèse**.
 

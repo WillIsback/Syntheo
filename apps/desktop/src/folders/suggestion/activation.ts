@@ -6,7 +6,7 @@ import { isFolderSuggestionReliable } from "./measure.ts";
 // précision non mesurable. La bannière reste donc désactivée. Relancer la
 // mesure quand la base contient assez de notes rangées, puis reporter ici la
 // précision obtenue (par exemple 0.93).
-export const MEASURED_FOLDER_SUGGESTION_PRECISION: number | null = null;
+const MEASURED_FOLDER_SUGGESTION_PRECISION: number | null = null;
 
 export const FOLDER_SUGGESTION_BANNER_ENABLED = isFolderSuggestionReliable(
   MEASURED_FOLDER_SUGGESTION_PRECISION,

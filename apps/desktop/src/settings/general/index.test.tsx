@@ -27,6 +27,11 @@ vi.mock("@tanstack/react-query", () => ({
   }),
 }));
 
+vi.mock("~/stt/aec-model-status", () => ({
+  useAecModelState: () => "ready",
+  useRetryAecModelDownload: () => vi.fn(),
+}));
+
 vi.mock("~/settings/queries", () => ({
   setSettingValue: vi.fn(),
   useSetSettingValues: () => mocks.setSettingValues,
@@ -39,6 +44,9 @@ vi.mock("./account-profile", () => ({
 vi.mock("./app-settings", () => ({ AppSettingsView: () => null }));
 vi.mock("./audio-settings", () => ({
   AudioSettingsView: () => <span>Audio settings</span>,
+}));
+vi.mock("./interface-language", () => ({
+  InterfaceLanguageSelector: () => null,
 }));
 vi.mock("./main-language", () => ({
   MainLanguageView: ({ value }: { value: string }) => (

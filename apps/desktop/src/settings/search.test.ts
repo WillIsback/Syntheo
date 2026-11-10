@@ -112,7 +112,6 @@ describe("index des paramètres en français", () => {
     return resolveSettingsIndex(i18n, {
       pageLabels,
       platform,
-      appStoreBuild: false,
     });
   }
 
@@ -124,6 +123,7 @@ describe("index des paramètres en français", () => {
     ["PDF", "export-location"],
     ["téléchargements", "export-location"],
     ["langue", "main-language"],
+    ["langue", "interface-language"],
   ])("« %s » trouve %s avec les mots de Mme Martin", (query, id) => {
     const ids = searchSettings(frenchIndex(), query).map((e) => e.id);
     expect(ids).toContain(id);

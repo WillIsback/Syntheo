@@ -16,12 +16,12 @@ import {
 
 const MAX_OPTIONS = 6;
 
-export type SpeakerOptionSource = {
+type SpeakerOptionSource = {
   participants: SpeakerParticipantOption[];
   contacts: SpeakerParticipantOption[];
 };
 
-export function buildSpeakerCardOptions(
+function buildSpeakerCardOptions(
   source: SpeakerOptionSource,
   query: string,
 ): SpeakerParticipantOption[] {

@@ -2,9 +2,9 @@ mod aec_models;
 mod agent_skills;
 mod agents;
 mod appearance;
+mod cli_status;
 mod commands;
 mod db;
-mod embedded_cli;
 mod ext;
 mod search_index;
 mod startup;
@@ -131,12 +131,6 @@ pub fn main() {
         });
     }
 
-    // https://docs.crabnebula.dev/plugins/tauri-e2e-tests/#macos-support
-    #[cfg(all(target_os = "macos", feature = "automation"))]
-    {
-        builder = builder.plugin(tauri_plugin_automation::init());
-    }
-
     // https://v2.tauri.app/plugin/deep-linking/#desktop
     // should always be the first plugin
     {
@@ -155,19 +149,11 @@ pub fn main() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_tracing::init());
 
-    #[cfg(not(feature = "app-store"))]
-    {
-        builder = builder.plugin(tauri_plugin_agent::init());
-    }
-
     builder = builder.plugin(tauri_plugin_db::init(db.clone()));
 
     builder = builder.plugin(tauri_plugin_contacts::init());
 
-    #[cfg(not(feature = "app-store"))]
-    {
-        builder = builder.plugin(tauri_plugin_hooks::init());
-    }
+    builder = builder.plugin(tauri_plugin_hooks::init());
 
     builder = builder
         .plugin(tauri_plugin_icon::init())
@@ -179,14 +165,11 @@ pub fn main() {
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_deeplink2::init())
         .plugin(tauri_plugin_fs_sync::init())
-        .plugin(tauri_plugin_fs2::init())
         .plugin(tauri_plugin_os::init())
-        .plugin(tauri_plugin_path2::init())
         .plugin(tauri_plugin_export::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_local_api::init())
         .plugin(tauri_plugin_local_auth::init())
-        .plugin(tauri_plugin_mcp::init())
         .plugin(tauri_plugin_misc::init())
         .plugin(tauri_plugin_template::init())
         .plugin(tauri_plugin_session::init())
@@ -195,7 +178,6 @@ pub fn main() {
         .plugin(tauri_plugin_dock::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_notify::init())
-        .plugin(tauri_plugin_overlay::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_store2::init());
@@ -207,7 +189,6 @@ pub fn main() {
         .plugin(tauri_plugin_shortcut::init())
         .plugin(tauri_plugin_dictation::init())
         .plugin(tauri_plugin_windows::init())
-        .plugin(tauri_plugin_js::init())
         .plugin(
             tauri_plugin_window_state::Builder::default()
                 .with_state_flags(tauri_plugin_windows::persisted_window_state_flags())
@@ -215,16 +196,12 @@ pub fn main() {
                 .build(),
         )
         .plugin(tauri_plugin_transcription::init())
-        .plugin(tauri_plugin_tantivy::init())
-        .plugin(tauri_plugin_audio_priority::init());
+        .plugin(tauri_plugin_tantivy::init());
 
-    #[cfg(not(feature = "app-store"))]
-    {
-        builder = builder.plugin(tauri_plugin_autostart::init(
-            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
-            Some(vec!["--background"]),
-        ));
-    }
+    builder = builder.plugin(tauri_plugin_autostart::init(
+        tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+        Some(vec!["--background"]),
+    ));
 
     #[cfg(any(debug_assertions, feature = "devtools"))]
     {
@@ -328,7 +305,6 @@ pub fn main() {
                 });
             }
 
-            #[cfg(not(feature = "app-store"))]
             {
                 use tauri_plugin_settings::SettingsPluginExt;
                 if let Ok(base) = app_handle.settings().vault_base()
@@ -338,10 +314,7 @@ pub fn main() {
                 }
             }
 
-            search_index::spawn(app_handle.clone(), db.clone());
-
-            #[cfg(not(feature = "app-store"))]
-            embedded_cli::spawn_auto_install(app_handle);
+            search_index::spawn(app_handle, db.clone());
 
             Ok(())
         })
@@ -556,17 +529,17 @@ fn make_specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
             commands::set_dismissed_toasts::<tauri::Wry>,
             commands::get_env::<tauri::Wry>,
             commands::show_devtool::<tauri::Wry>,
-            commands::is_app_store_build,
             commands::complete_app_exit::<tauri::Wry>,
             commands::get_tinybase_values::<tauri::Wry>,
             commands::get_pinned_tabs::<tauri::Wry>,
             commands::set_pinned_tabs::<tauri::Wry>,
             commands::get_recently_opened_sessions::<tauri::Wry>,
             commands::set_recently_opened_sessions::<tauri::Wry>,
-            commands::check_embedded_cli::<tauri::Wry>,
-            commands::install_embedded_cli::<tauri::Wry>,
+            commands::check_cli_status,
             commands::list_skill_agents,
             commands::install_agent_skill,
+            commands::get_aec_model_status,
+            commands::retry_aec_model_download,
         ])
         .error_handling(tauri_specta::ErrorHandlingMode::Result)
 }

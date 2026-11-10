@@ -30,7 +30,7 @@ export function canStreamFile(provider: string, model: string) {
   );
 }
 
-export type FileTranscriptionRoute = "batch" | "realtime";
+type FileTranscriptionRoute = "batch" | "realtime";
 
 /** Comment un fichier importé sera transcrit, ou `null` s'il ne peut pas l'être. */
 export function getFileTranscriptionRoute(

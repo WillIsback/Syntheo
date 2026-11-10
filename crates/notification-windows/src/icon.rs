@@ -1,7 +1,5 @@
 #![cfg_attr(not(target_os = "windows"), allow(dead_code))]
 
-use syntheo_notification_interface::Notification;
-
 pub(crate) fn expand_home(path: &str) -> String {
     let rest = path.strip_prefix("~/").or_else(|| path.strip_prefix("~\\"));
     if let Some(rest) = rest
@@ -13,14 +11,6 @@ pub(crate) fn expand_home(path: &str) -> String {
             .into_owned();
     }
     path.to_string()
-}
-
-pub(crate) fn header_title(notification: &Notification, expanded: bool) -> &str {
-    if expanded {
-        notification.expanded_title()
-    } else {
-        notification.compact_title()
-    }
 }
 
 fn parse_default_icon(spec: &str) -> Option<(String, i32)> {
@@ -85,7 +75,6 @@ mod win {
     fn load_icon_asset(asset: &NotificationIconAsset) -> Option<HICON> {
         match asset {
             NotificationIconAsset::AppIcon => load_app_icon(),
-            NotificationIconAsset::Calendar => load_calendar_icon(),
             NotificationIconAsset::SystemSymbol { name } => load_system_symbol(name),
             NotificationIconAsset::BundleId { bundle_id } => load_icon_from_bundle_id(bundle_id),
             NotificationIconAsset::Path { path } => load_icon_from_path(path),
@@ -129,15 +118,10 @@ mod win {
         extract_icon_at(&exe.to_string_lossy(), 0).or_else(|| stock_icon(SIID_APPLICATION))
     }
 
-    fn load_calendar_icon() -> Option<HICON> {
-        assoc_default_icon(".ics").or_else(|| stock_icon(SIID_INFO))
-    }
-
     fn load_system_symbol(name: &str) -> Option<HICON> {
         match name {
             "phone.fill" | "phone" => assoc_default_icon("tel").or_else(|| stock_icon(SIID_INFO)),
             "video.fill" | "video" => stock_icon(SIID_VIDEOFILES),
-            "calendar" => load_calendar_icon(),
             _ => stock_icon(SIID_INFO),
         }
     }

@@ -5,7 +5,8 @@ use std::{panic::AssertUnwindSafe, panic::catch_unwind};
 use syntheo_audio_sync::{SyncProbe, SyncProbeConfig, SyncProbeEvent, SyncProbeState};
 
 use super::{
-    AEC_ALIGNMENT_SIGNIFICANT_SHIFT_MS, AEC_MAX_REFERENCE_LAG_MS, AEC_MIN_REFERENCE_OVERLAP_MS,
+    AEC_ALIGNMENT_RESET_SHIFT_MS, AEC_ALIGNMENT_SIGNIFICANT_SHIFT_MS,
+    AEC_DELAY_SLEW_INTERVAL_SAMPLES, AEC_MAX_REFERENCE_LAG_MS, AEC_MIN_REFERENCE_OVERLAP_MS,
     AUDIO_SYNC_PROBE_ENV,
 };
 
@@ -15,9 +16,15 @@ pub(super) struct AecReferenceAligner {
     speaker_delay_line: SampleDelayLine,
     /// Dernier alignement mesuré par la sonde, pour le journal.
     pub(super) last_alignment: AecAlignment,
-    /// Alignement appliqué aux lignes de retard : ne suit la mesure que sur un changement
-    /// significatif (hystérésis, #322).
+    /// Alignement visé par les lignes de retard. Un petit déplacement (dérive d'horloge, #437)
+    /// y est rejoint en glissant, sans réinitialiser l'annulation d'écho ; seul un changement
+    /// structurel la réinitialise (#322).
     pub(super) applied_alignment: AecAlignment,
+    /// Dérive d'horloge estimée par la sonde (échantillons par seconde) et échantillons écoulés
+    /// depuis sa dernière mesure : entre deux mesures, la cible des lignes de retard avance
+    /// d'autant (#437).
+    drift_samples_per_sec: Option<f64>,
+    samples_since_measure: usize,
     last_logged_state: Option<SyncProbeState>,
     last_logged_stable_lag_samples: Option<isize>,
     log_probe_events: bool,
@@ -99,6 +106,8 @@ impl AecReferenceAligner {
             speaker_delay_line: SampleDelayLine::new(max_delay_samples),
             last_alignment: AecAlignment::None,
             applied_alignment: AecAlignment::None,
+            drift_samples_per_sec: None,
+            samples_since_measure: 0,
             last_logged_state: None,
             last_logged_stable_lag_samples: None,
             log_probe_events: std::env::var(AUDIO_SYNC_PROBE_ENV).ok().as_deref() == Some("1"),
@@ -117,7 +126,10 @@ impl AecReferenceAligner {
             }
         };
 
+        self.samples_since_measure += raw_mic.len().min(raw_speaker.len());
         let alignment_changed = if let Some(event) = event {
+            self.samples_since_measure = 0;
+            self.drift_samples_per_sec = self.probe.drift_samples_per_sec();
             let alignment_changed = self.update_alignment(&event);
             if self.log_probe_events {
                 self.log_probe_event(event);
@@ -127,17 +139,46 @@ impl AecReferenceAligner {
             false
         };
 
+        if alignment_changed {
+            // L'annulation d'écho repart de zéro : les lignes sautent directement au nouvel
+            // alignement.
+            self.mic_delay_line
+                .snap_to(self.applied_alignment.mic_delay_samples());
+            self.speaker_delay_line
+                .snap_to(self.applied_alignment.speaker_delay_samples());
+        }
+        let target = self.drift_extrapolated_alignment();
         let aligned_mic = self
             .mic_delay_line
-            .process(raw_mic, self.applied_alignment.mic_delay_samples());
+            .process_slewed(raw_mic, target.mic_delay_samples());
         let aligned_speaker = self
             .speaker_delay_line
-            .process(raw_speaker, self.applied_alignment.speaker_delay_samples());
+            .process_slewed(raw_speaker, target.speaker_delay_samples());
 
         AecAlignedPair {
             mic: Arc::from(aligned_mic),
             speaker: Arc::from(aligned_speaker),
             alignment_changed,
+        }
+    }
+
+    /// Alignement visé à cet instant : le dernier alignement appliqué, avancé de la dérive
+    /// d'horloge estimée depuis la dernière mesure de la sonde. Ne change jamais de sens.
+    fn drift_extrapolated_alignment(&self) -> AecAlignment {
+        let Some(drift) = self.drift_samples_per_sec else {
+            return self.applied_alignment;
+        };
+        let elapsed_secs =
+            self.samples_since_measure as f64 / self.probe.config().sample_rate as f64;
+        let shift = drift * elapsed_secs;
+        let extend = |samples: usize, sign: f64| -> usize {
+            (samples as f64 + sign * shift).round().max(0.0) as usize
+        };
+        match self.applied_alignment {
+            AecAlignment::None => AecAlignment::None,
+            // Retard positif (référence retardée) : une dérive positive l'allonge.
+            AecAlignment::DelaySpeaker(samples) => AecAlignment::DelaySpeaker(extend(samples, 1.0)),
+            AecAlignment::DelayMic(samples) => AecAlignment::DelayMic(extend(samples, -1.0)),
         }
     }
 
@@ -184,22 +225,41 @@ impl AecReferenceAligner {
         self.commit_alignment(next_alignment)
     }
 
-    /// Applique l'alignement mesuré s'il s'écarte significativement de l'alignement en place ;
-    /// renvoie `true` si l'annulation d'écho doit repartir de zéro.
+    /// Fait de l'alignement mesuré la cible des lignes de retard ; renvoie `true` si
+    /// l'annulation d'écho doit repartir de zéro.
     ///
-    /// Hystérésis (#322) : la sonde oscille de quelques échantillons toutes les quelques
-    /// secondes. Suivre ce bruit ferait sauter ou répéter des échantillons dans la référence et
-    /// reconverger le modèle à chaque fois. Sous 1 ms, même sens, l'alignement appliqué ne bouge
-    /// pas : le flux de référence reste continu et le modèle garde son état. L'écart est mesuré
-    /// contre l'alignement appliqué, non contre la mesure précédente : une dérive lente finit
-    /// donc par réaligner dès qu'elle cumule 1 ms.
+    /// Avant #437, l'alignement appliqué ne bougeait qu'au-delà de 1 ms (hystérésis de #322) et
+    /// chaque déplacement réinitialisait le modèle. Une dérive d'horloge (≈ 13 échantillons par
+    /// seconde à 800 ppm) le réinitialisait donc toutes les secondes ou presque. Désormais :
+    /// - même sens, déplacement sous [`AEC_ALIGNMENT_RESET_SHIFT_MS`] : la cible change, les
+    ///   lignes de retard la rejoignent en glissant d'un échantillon à la fois et le modèle garde
+    ///   son état ;
+    /// - verrouillage, perte, changement de sens ou saut plus grand : nouvel alignement et
+    ///   réinitialisation.
     pub(super) fn commit_alignment(&mut self, next_alignment: AecAlignment) -> bool {
-        let sample_rate = self.probe.config().sample_rate;
-        if !is_significant_alignment_change(self.applied_alignment, next_alignment, sample_rate) {
+        if next_alignment == self.applied_alignment {
             return false;
         }
+        let sample_rate = self.probe.config().sample_rate as usize;
+        let reset_threshold = sample_rate * AEC_ALIGNMENT_RESET_SHIFT_MS as usize / 1000;
+        let structural = match (self.applied_alignment, next_alignment) {
+            (AecAlignment::DelaySpeaker(before), AecAlignment::DelaySpeaker(after))
+            | (AecAlignment::DelayMic(before), AecAlignment::DelayMic(after)) => {
+                before.abs_diff(after) >= reset_threshold
+            }
+            _ => true,
+        };
         self.applied_alignment = next_alignment;
-        true
+        structural
+    }
+
+    /// Retard de la référence par rapport au micro réellement appliqué par les lignes de retard
+    /// (positif : référence retardée), ou `None` sans alignement. Sert aux mesures de #437.
+    #[cfg(test)]
+    pub(super) fn applied_delay_samples(&self) -> Option<f64> {
+        (self.applied_alignment != AecAlignment::None).then_some(
+            self.speaker_delay_line.current_delay as f64 - self.mic_delay_line.current_delay as f64,
+        )
     }
 
     pub(super) fn log_probe_event(&mut self, event: SyncProbeEvent) {
@@ -261,6 +321,9 @@ impl AecReferenceAligner {
 pub(super) struct SampleDelayLine {
     history: VecDeque<f32>,
     max_delay_samples: usize,
+    /// Retard réellement appliqué, qui rejoint la cible en glissant (`process_slewed`).
+    current_delay: usize,
+    slew_progress: usize,
 }
 
 impl SampleDelayLine {
@@ -268,29 +331,65 @@ impl SampleDelayLine {
         Self {
             history: VecDeque::with_capacity(max_delay_samples + 1),
             max_delay_samples,
+            current_delay: 0,
+            slew_progress: 0,
         }
     }
 
+    /// Place le retard directement sur `delay_samples` (après une réinitialisation).
+    pub(super) fn snap_to(&mut self, delay_samples: usize) {
+        self.current_delay = delay_samples.min(self.max_delay_samples);
+        self.slew_progress = 0;
+    }
+
+    /// Retarde `input` en rejoignant `target_delay` d'un échantillon tous les
+    /// [`AEC_DELAY_SLEW_INTERVAL_SAMPLES`] : un pas répète (retard qui croît) ou saute
+    /// (retard qui décroît) un seul échantillon, sans discontinuité plus grande (#437).
+    pub(super) fn process_slewed(&mut self, input: &[f32], target_delay: usize) -> Vec<f32> {
+        let target_delay = target_delay.min(self.max_delay_samples);
+        let mut output = Vec::with_capacity(input.len());
+        for &sample in input {
+            if self.current_delay != target_delay {
+                self.slew_progress += 1;
+                if self.slew_progress >= AEC_DELAY_SLEW_INTERVAL_SAMPLES {
+                    self.slew_progress = 0;
+                    if self.current_delay < target_delay {
+                        self.current_delay += 1;
+                    } else {
+                        self.current_delay -= 1;
+                    }
+                }
+            } else {
+                self.slew_progress = 0;
+            }
+            output.push(self.push_and_read(sample, self.current_delay));
+        }
+        output
+    }
+
+    /// Retard appliqué immédiatement, sans glissement (mesures de #322).
+    #[cfg(test)]
     pub(super) fn process(&mut self, input: &[f32], delay_samples: usize) -> Vec<f32> {
         let delay_samples = delay_samples.min(self.max_delay_samples);
-        let mut output = Vec::with_capacity(input.len());
+        self.current_delay = delay_samples;
+        input
+            .iter()
+            .map(|&sample| self.push_and_read(sample, delay_samples))
+            .collect()
+    }
 
-        for &sample in input {
-            self.history.push_back(sample);
-            let delayed = self
-                .history
-                .len()
-                .checked_sub(delay_samples + 1)
-                .and_then(|idx| self.history.get(idx))
-                .copied()
-                .unwrap_or(0.0);
-            output.push(delayed);
-
-            while self.history.len() > self.max_delay_samples + 1 {
-                self.history.pop_front();
-            }
+    fn push_and_read(&mut self, sample: f32, delay_samples: usize) -> f32 {
+        self.history.push_back(sample);
+        let delayed = self
+            .history
+            .len()
+            .checked_sub(delay_samples + 1)
+            .and_then(|idx| self.history.get(idx))
+            .copied()
+            .unwrap_or(0.0);
+        while self.history.len() > self.max_delay_samples + 1 {
+            self.history.pop_front();
         }
-
-        output
+        delayed
     }
 }

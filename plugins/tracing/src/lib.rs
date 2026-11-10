@@ -27,9 +27,7 @@ fn make_specta_builder() -> tauri_specta::Builder<tauri::Wry> {
         .plugin_name(PLUGIN_NAME)
         .events(tauri_specta::collect_events![])
         .commands(tauri_specta::collect_commands![
-            commands::logs_dir::<tauri::Wry>,
             commands::do_log::<tauri::Wry>,
-            commands::log_content::<tauri::Wry>,
         ])
         .error_handling(tauri_specta::ErrorHandlingMode::Result)
 }
@@ -114,23 +112,6 @@ pub fn init() -> tauri::plugin::TauriPlugin<tauri::Wry> {
 #[cfg(test)]
 mod test {
     use super::*;
-
-    #[test]
-    fn export_types() {
-        const OUTPUT_FILE: &str = "./js/bindings.gen.ts";
-
-        make_specta_builder()
-            .disable_serde_phases()
-            .semantic_types(
-                specta_typescript::semantic::Configuration::empty().enable_lossless_floats(),
-            )
-            .dangerously_cast_bigints_to_number()
-            .export(specta_typescript::Typescript::default(), OUTPUT_FILE)
-            .unwrap();
-
-        let content = std::fs::read_to_string(OUTPUT_FILE).unwrap();
-        std::fs::write(OUTPUT_FILE, format!("// @ts-nocheck\n{content}")).unwrap();
-    }
 
     fn create_mock_app() -> tauri::App<tauri::test::MockRuntime> {
         let mut ctx = tauri::test::mock_context(tauri::test::noop_assets());

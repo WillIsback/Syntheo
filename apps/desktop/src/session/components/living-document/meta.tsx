@@ -7,7 +7,7 @@ import { useSession } from "~/session/queries";
 import { useSessionParticipants } from "~/session/queries/participants";
 import { useUserTemplate } from "~/templates";
 
-export function formatNoteDate(date: Date, locale: string) {
+function formatNoteDate(date: Date, locale: string) {
   const day = date.toLocaleDateString(locale, {
     weekday: "long",
     day: "numeric",

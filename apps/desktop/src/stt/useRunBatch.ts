@@ -9,6 +9,7 @@ import {
 import { BatchResponseProcessingError } from "./batch-response-processing-error";
 import { completeCaptureTranscript } from "./capture-completion";
 import { useListener } from "./contexts";
+import { isNoSpeechDetectedError } from "./no-speech-error";
 import { persistTranscriptWrite } from "./persist-retry";
 import {
   EMPTY_CURRENT_CAPTURE_TRANSCRIPT_ERROR_MESSAGE,
@@ -340,6 +341,11 @@ export const useRunBatch = (sessionId: string) => {
         } catch (error) {
           options?.signal?.throwIfAborted();
           if (!isRecoveryNoSpeechError(options, error)) {
+            // Issue 559 : sans parole, la tâche est terminée en échec. On
+            // l'acquitte pour que le lancement suivant ne la reprenne pas.
+            if (isNoSpeechDetectedError(error)) {
+              await acknowledgeCompletedBatch(jobId);
+            }
             throw error;
           }
         }

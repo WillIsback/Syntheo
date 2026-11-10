@@ -12,8 +12,8 @@ import { addSessionParticipant, createSession } from "~/session/queries";
 import { useTabs } from "~/store/zustand/tabs";
 
 // Réunions regardées pour le titre et les participants habituels.
-export const USUAL_TITLE_MEETINGS = 8;
-export const USUAL_PARTICIPANT_MEETINGS = 5;
+const USUAL_TITLE_MEETINGS = 8;
+const USUAL_PARTICIPANT_MEETINGS = 5;
 
 function mostRecentFirst(meetings: readonly FolderMeeting[]) {
   return [...meetings].sort(
@@ -48,7 +48,7 @@ export function usualMeetingTitle(meetings: readonly FolderMeeting[]): string {
   return best;
 }
 
-export type MeetingParticipantRow = { session_id: string; human_id: string };
+type MeetingParticipantRow = { session_id: string; human_id: string };
 
 // Participants habituels : présents dans au moins la moitié des dernières
 // réunions qui ont des participants, les plus assidus d'abord (à égalité,
@@ -81,7 +81,7 @@ export function usualParticipants(
     .sort((left, right) => counts.get(right)! - counts.get(left)!);
 }
 
-export async function loadMeetingParticipants(
+async function loadMeetingParticipants(
   sessionIds: readonly string[],
 ): Promise<MeetingParticipantRow[]> {
   if (sessionIds.length === 0) return [];

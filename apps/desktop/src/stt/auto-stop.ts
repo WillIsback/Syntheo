@@ -1,7 +1,5 @@
 import { t } from "@lingui/core/macro";
 
-import { commands as notificationCommands } from "@syntheo/plugin-notification";
-
 import {
   AUTO_STOP_CONFIRM_TIMEOUT_SECONDS,
   cancelAutoStopEndedNotification,
@@ -15,6 +13,8 @@ import {
   isMeetingCapableMicApp,
   type MicApp,
 } from "./meeting-apps";
+
+import { showNativeNotification } from "~/services/notification-labels";
 
 export const AUTO_STOP_CONFIRM_DELAY_MS = 5_000;
 export const AUTO_STOP_ACCESSIBILITY_TIMEOUT_MS = 10_000;
@@ -137,18 +137,14 @@ export async function showMeetingEndedPrompt({
 
   const seconds = STOP_COUNTDOWN_SECONDS_PLACEHOLDER;
   try {
-    await notificationCommands.showNotification({
+    await showNativeNotification({
       key,
       title: t`Did your meeting end?`,
       message: t`Syntheo will stop listening in ${seconds} seconds.`,
       timeout: { secs: AUTO_STOP_CONFIRM_TIMEOUT_SECONDS, nanos: 0 },
       source: null,
       start_time: null,
-      participants: null,
-      event_details: null,
       action_label: t`Stop`,
-      action: null,
-      action_menu: null,
       action_variant: "destructive",
       options: null,
       footer: null,

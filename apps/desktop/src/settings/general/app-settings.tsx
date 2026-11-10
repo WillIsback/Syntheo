@@ -20,7 +20,6 @@ interface SettingItem {
 }
 
 interface AppSettingsViewProps {
-  appStoreBuild: boolean;
   autostart: SettingItem;
   automaticUpdates: SettingItem;
   showAppInDock: SettingItem;
@@ -28,7 +27,6 @@ interface AppSettingsViewProps {
 }
 
 export function AppSettingsView({
-  appStoreBuild,
   autostart,
   automaticUpdates,
   showAppInDock,
@@ -47,31 +45,24 @@ export function AppSettingsView({
     <div className="flex flex-col gap-8">
       <section>
         <div className="flex flex-col gap-4">
-          {!appStoreBuild && (
-            <>
-              <SettingSwitchRow
-                settingId="autostart"
-                title={<Trans>Start Syntheo at login</Trans>}
-                description={
-                  <Trans>Have Syntheo ready when you sign in.</Trans>
-                }
-                checked={autostart.value}
-                onChange={autostart.onChange}
-              />
-              <SettingSwitchRow
-                settingId="automatic-updates"
-                title={<Trans>Automatically install updates</Trans>}
-                description={
-                  <Trans>
-                    Stay current with updates installed the next time Syntheo
-                    opens.
-                  </Trans>
-                }
-                checked={automaticUpdates.value}
-                onChange={automaticUpdates.onChange}
-              />
-            </>
-          )}
+          <SettingSwitchRow
+            settingId="autostart"
+            title={<Trans>Start Syntheo at login</Trans>}
+            description={<Trans>Have Syntheo ready when you sign in.</Trans>}
+            checked={autostart.value}
+            onChange={autostart.onChange}
+          />
+          <SettingSwitchRow
+            settingId="automatic-updates"
+            title={<Trans>Automatically install updates</Trans>}
+            description={
+              <Trans>
+                Stay current with updates installed the next time Syntheo opens.
+              </Trans>
+            }
+            checked={automaticUpdates.value}
+            onChange={automaticUpdates.onChange}
+          />
           <Button
             data-setting-id="release-notes"
             variant="outline"

@@ -48,7 +48,7 @@ function intlLocale(): string {
 }
 
 /** « dimanche 8 novembre 2026 à 22:28 » / « Sunday, November 8, 2026 at 10:28 PM ». */
-export function formatExportDate(isoString: string): string {
+function formatExportDate(isoString: string): string {
   const date = new Date(isoString);
   if (Number.isNaN(date.getTime())) return isoString;
   const locale = intlLocale();
@@ -87,7 +87,7 @@ function labels() {
   };
 }
 
-export function formatExportTranscript(
+function formatExportTranscript(
   items: ReadonlyArray<{ speaker: string | null; text: string }>,
 ): string {
   return items
@@ -190,7 +190,7 @@ export function buildOrgExport(doc: ExportDocument): string {
   return lines.join("\n");
 }
 
-export function pdfExportLabels(): ExportLabels {
+function pdfExportLabels(): ExportLabels {
   const l = labels();
   return {
     memo: l.memo,

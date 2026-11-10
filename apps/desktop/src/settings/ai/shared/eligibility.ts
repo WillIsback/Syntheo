@@ -41,7 +41,7 @@ export function getProviderSelectionBlockers(
   return blockers;
 }
 
-export type EligibilityBlocker =
+type EligibilityBlocker =
   | { code: "missing_provider" }
   | { code: "missing_model" }
   | { code: "provider_disabled" }

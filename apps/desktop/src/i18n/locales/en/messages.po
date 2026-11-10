@@ -69,16 +69,6 @@ msgstr "{0, plural, one {# meeting} other {# meetings}}"
 msgid "{0} {noteLabel} deleted"
 msgstr "{0} {noteLabel} deleted"
 
-#. placeholder {0}: status.commandName
-#: src/settings/developers/cli.tsx
-msgid "{0} could not be installed"
-msgstr "{0} could not be installed"
-
-#. placeholder {0}: status.commandName
-#: src/settings/developers/cli.tsx
-msgid "{0} is ready to use"
-msgstr "{0} is ready to use"
-
 #. placeholder {0}: proposals.length
 #: src/session/components/pending-proposals-banner.tsx
 msgid "{0} pending edits"
@@ -656,6 +646,10 @@ msgstr "Auto summary format"
 msgid "Automatic"
 msgstr "Automatic"
 
+#: src/settings/general/interface-language.tsx
+msgid "Automatic (system)"
+msgstr "Automatic (system)"
+
 #: src/settings/search-index.ts
 msgid "automatic, stop, end of call, hang up"
 msgstr "automatic, stop, end of call, hang up"
@@ -819,6 +813,10 @@ msgstr "Chat history"
 msgid "chat, messages, note, Teams, Zoom"
 msgstr "chat, messages, note, Teams, Zoom"
 
+#: src/settings/developers/cli.tsx
+msgid "Check again"
+msgstr "Check again"
+
 #: src/chat/components/input/use-dictation.ts
 msgid "Check microphone permission and the selected input device, then try again."
 msgstr "Check microphone permission and the selected input device, then try again."
@@ -961,6 +959,7 @@ msgstr "Clone"
 #: src/main/windows-window-controls.tsx
 #: src/session/components/note-input/search/bar.tsx
 #: src/shared/open-note-dialog.tsx
+#: src/shared/ui/localized-dialog-labels.tsx
 msgid "Close"
 msgstr "Close"
 
@@ -1150,6 +1149,10 @@ msgstr "Copy"
 msgid "Copy config"
 msgstr "Copy config"
 
+#: src/settings/developers/cli.tsx
+msgid "Copy install command"
+msgstr "Copy install command"
+
 #: src/settings/dictation.tsx
 msgid "Copy last dictation"
 msgstr "Copy last dictation"
@@ -1171,10 +1174,6 @@ msgstr "Copy to the clipboard"
 #: src/settings/developers/cli.tsx
 msgid "Could not check the CLI: {0}"
 msgstr "Could not check the CLI: {0}"
-
-#: src/settings/developers/cli.tsx
-msgid "Could not copy the MCP configuration"
-msgstr "Could not copy the MCP configuration"
 
 #: src/settings/dictation.tsx
 msgid "Could not copy the transcript. Select the text above to copy it."
@@ -1506,6 +1505,7 @@ msgstr "Disable all notifications"
 msgid "Disk almost full"
 msgstr "Disk almost full"
 
+#: src/session/components/living-document/transcription-failure.tsx
 #: src/shared/ui/localized-toaster.tsx
 msgid "Dismiss"
 msgstr "Dismiss"
@@ -1534,6 +1534,10 @@ msgstr "Documentation"
 #: src/session/components/speaker-naming/dialog.tsx
 msgid "Done"
 msgstr "Done"
+
+#: src/settings/general/audio-settings.tsx
+msgid "Downloading the echo cancellation models…"
+msgstr "Downloading the echo cancellation models…"
 
 #: src/settings/search-index.ts
 msgid "Downloads, PDF, folder, export, save, Markdown, text file"
@@ -1593,6 +1597,14 @@ msgstr "Earlier version, read only. The latest summary stays the current one."
 #: src/session/components/version-history-dialog.tsx
 msgid "Earlier versions of this note, newest first."
 msgstr "Earlier versions of this note, newest first."
+
+#: src/settings/general/audio-settings.tsx
+msgid "Echo cancellation"
+msgstr "Echo cancellation"
+
+#: src/stt/aec-model-unavailable-notice.tsx
+msgid "Echo cancellation unavailable"
+msgstr "Echo cancellation unavailable"
 
 #: src/main/windows-title-bar.tsx
 #: src/session/components/living-document/transcript-margin.tsx
@@ -1713,8 +1725,8 @@ msgid "Esc to dismiss"
 msgstr "Esc to dismiss"
 
 #: src/session/components/capsule/import-progress.tsx
-msgid "estimating…"
-msgstr "estimating…"
+msgid "Estimating…"
+msgstr "Estimating…"
 
 #: src/automations/labels.ts
 msgid "Every finished meeting is saved as a Markdown file in a folder."
@@ -2213,12 +2225,16 @@ msgid "Insert"
 msgstr "Insert"
 
 #: src/settings/developers/cli.tsx
-msgid "Install"
-msgstr "Install"
+msgid "Install command copied"
+msgstr "Install command copied"
 
 #: src/settings/developers/skills.tsx
 msgid "Install to all agents"
 msgstr "Install to all agents"
+
+#: src/settings/developers/cli.tsx
+msgid "Installation guide"
+msgstr "Installation guide"
 
 #: src/settings/developers/cli.tsx
 msgid "Installed"
@@ -2227,6 +2243,11 @@ msgstr "Installed"
 #: src/settings/automations/step-forms.tsx
 msgid "Instruction"
 msgstr "Instruction"
+
+#: src/settings/general/interface-language.tsx
+#: src/settings/search-index.ts
+msgid "Interface language"
+msgstr "Interface language"
 
 #: src/settings/ai/shared/server-card.tsx
 msgid "Invalid address"
@@ -2292,6 +2313,14 @@ msgstr "Language and vocabulary"
 #: src/sidebar/toast/registry.tsx
 msgid "Language model needed"
 msgstr "Language model needed"
+
+#: src/settings/general/interface-language.tsx
+msgid "Language of menus and buttons. Automatic follows your system, in English when Syntheo is not translated into its language."
+msgstr "Language of menus and buttons. Automatic follows your system, in English when Syntheo is not translated into its language."
+
+#: src/settings/search-index.ts
+msgid "language, display, menus, French, English, system"
+msgstr "language, display, menus, French, English, system"
 
 #: src/settings/search-index.ts
 msgid "language, French, English, translation"
@@ -2469,7 +2498,6 @@ msgstr "Loading edit…"
 msgid "Loading settings"
 msgstr "Loading settings"
 
-#: src/changelog/index.tsx
 #: src/contacts/details-sections.tsx
 #: src/settings/general/account-profile.tsx
 #: src/settings/general/storage/export-location.tsx
@@ -3046,6 +3074,7 @@ msgstr "No setting matches “{trimmed}”."
 msgid "No speech detected"
 msgstr "No speech detected"
 
+#: src/session/components/living-document/transcription-failure.tsx
 #: src/stt/no-speech-error.ts
 msgid "No speech was detected in the audio."
 msgstr "No speech was detected in the audio."
@@ -3092,8 +3121,8 @@ msgid "Not enough words recorded ({wordCount}/{minWords} minimum)"
 msgstr "Not enough words recorded ({wordCount}/{minWords} minimum)"
 
 #: src/settings/developers/cli.tsx
-msgid "Not installed"
-msgstr "Not installed"
+msgid "Not found on this computer"
+msgstr "Not found on this computer"
 
 #: src/settings/developers/webhooks.tsx
 msgid "not receiving events"
@@ -3291,6 +3320,10 @@ msgstr "Open in right panel"
 #: src/instruction/index.tsx
 msgid "Open in your browser"
 msgstr "Open in your browser"
+
+#: src/stt/audio-import-feedback.ts
+msgid "Open note"
+msgstr "Open note"
 
 #: src/stt/start-failure.ts
 msgid "Open permissions"
@@ -3735,10 +3768,6 @@ msgstr "Regenerate the summary with this template? The current version stays in 
 msgid "Regenerate with my notes"
 msgstr "Regenerate with my notes"
 
-#: src/settings/developers/cli.tsx
-msgid "Reinstall"
-msgstr "Reinstall"
-
 #: src/contacts/related-notes.tsx
 msgid "Related Notes"
 msgstr "Related Notes"
@@ -3917,7 +3946,9 @@ msgstr "Resume listening"
 #: src/contacts/profile-photo.tsx
 #: src/session/components/note-input/enhanced/enhance-error.tsx
 #: src/settings/general/account-profile.tsx
+#: src/settings/general/audio-settings.tsx
 #: src/store/zustand/listener/general-live-helpers.ts
+#: src/stt/aec-model-unavailable-notice.tsx
 msgid "Retry"
 msgstr "Retry"
 
@@ -4750,6 +4781,10 @@ msgstr "Syntheo could not remove the temporary audio. Cleanup will be retried au
 msgid "Syntheo could not save part of the live transcript."
 msgstr "Syntheo could not save part of the live transcript."
 
+#: src/shared/keychain.ts
+msgid "Syntheo couldn't access the system keyring. Unlock your login keyring, then try again."
+msgstr "Syntheo couldn't access the system keyring. Unlock your login keyring, then try again."
+
 #: src/stt/start-failure.ts
 msgid "Syntheo couldn't open your audio input. Check your microphone selection, then try again."
 msgstr "Syntheo couldn't open your audio input. Check your microphone selection, then try again."
@@ -4996,6 +5031,11 @@ msgstr "Text"
 msgid "Text provenance"
 msgstr "Text provenance"
 
+#. placeholder {0}: status.commandName
+#: src/settings/developers/cli.tsx
+msgid "The {0} command on your PATH opens the desktop app. Use the CLI's absolute path."
+msgstr "The {0} command on your PATH opens the desktop app. Use the CLI's absolute path."
+
 #: src/automations/action-runners.ts
 msgid "The address answered with the status {status}."
 msgstr "The address answered with the status {status}."
@@ -5020,6 +5060,10 @@ msgstr "The agenda is drafted from meeting summaries. It will be available once 
 msgid "The API key is optional for servers without authentication. It is kept in your system keychain."
 msgstr "The API key is optional for servers without authentication. It is kept in your system keychain."
 
+#: src/session/components/living-document/transcription-failure.tsx
+msgid "The audio transcription failed."
+msgstr "The audio transcription failed."
+
 #: src/templates/auto-form.tsx
 msgid "The Automatic format is unavailable."
 msgstr "The Automatic format is unavailable."
@@ -5040,6 +5084,10 @@ msgstr "The chat suggests adding step {number}: {title}"
 msgid "The chat suggests changing step {number}: {title}"
 msgstr "The chat suggests changing step {number}: {title}"
 
+#: src/settings/developers/cli.tsx
+msgid "The CLI is not bundled with the app. Install it from a clone of the Syntheo repository:"
+msgstr "The CLI is not bundled with the app. Install it from a clone of the Syntheo repository:"
+
 #: src/automations/action-runners.ts
 msgid "The command did not finish within {seconds} seconds."
 msgstr "The command did not finish within {seconds} seconds."
@@ -5055,6 +5103,14 @@ msgstr "The command failed (code {code})."
 #: src/automations/action-runners.ts
 msgid "The command was not confirmed, so it did not run."
 msgstr "The command was not confirmed, so it did not run."
+
+#: src/stt/audio-import-feedback.ts
+msgid "The import of {name} was abandoned: {reason}"
+msgstr "The import of {name} was abandoned: {reason}"
+
+#: src/stt/audio-import-feedback.ts
+msgid "The import was abandoned: {reason}"
+msgstr "The import was abandoned: {reason}"
 
 #: src/automations/action-runners.ts
 msgid "The JSON body is not valid once the variables are filled in."
@@ -5099,6 +5155,10 @@ msgstr "The memo edit could not be prepared."
 #: src/store/zustand/listener/muted-channels.ts
 msgid "The microphone and system audio are muted: nothing is being transcribed."
 msgstr "The microphone and system audio are muted: nothing is being transcribed."
+
+#: src/stt/aec-model-unavailable-notice.tsx
+msgid "The models could not be downloaded (offline?). Listening continues without it."
+msgstr "The models could not be downloaded (offline?). Listening continues without it."
 
 #: src/session/components/speaker-naming/speaker-card.tsx
 msgid "The name could not be saved. Try again."
@@ -5180,6 +5240,10 @@ msgstr "The summary server did not respond. Check that it is running, then try a
 #: src/session/components/speaker-naming/bar.tsx
 msgid "The summary still mentions unnamed speakers."
 msgstr "The summary still mentions unnamed speakers."
+
+#: src/shared/keychain.ts
+msgid "The system keyring is unavailable, so Syntheo can't save this key. Start your desktop's keyring service (GNOME Keyring or KWallet, for example), then try again."
+msgstr "The system keyring is unavailable, so Syntheo can't save this key. Start your desktop's keyring service (GNOME Keyring or KWallet, for example), then try again."
 
 #: src/settings/automations/workflow-test-result.tsx
 msgid "The test changes neither the last run nor the list of notes already processed."
@@ -5488,9 +5552,9 @@ msgstr "Type"
 msgid "Type a name"
 msgstr "Type a name"
 
-#: src/settings/developers/cli.tsx
-msgid "Unavailable"
-msgstr "Unavailable"
+#: src/settings/general/audio-settings.tsx
+msgid "Unavailable: the models could not be downloaded (offline?). Listening works without it."
+msgstr "Unavailable: the models could not be downloaded (offline?). Listening works without it."
 
 #: src/main/windows-title-bar.tsx
 #: src/sidebar/toast/undo-delete-toast.tsx
@@ -5790,8 +5854,8 @@ msgid "What:"
 msgstr "What:"
 
 #: src/changelog/index.tsx
-msgid "What's new in {version}?"
-msgstr "What's new in {version}?"
+msgid "What's new in {version}"
+msgstr "What's new in {version}"
 
 #: src/settings/search-index.ts
 msgid "what's new, changes, version, changelog"

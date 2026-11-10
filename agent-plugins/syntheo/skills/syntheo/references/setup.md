@@ -6,7 +6,7 @@ Syntheo stores meetings in a local SQLite database. The `syntheo` executable pro
 
 ## Local CLI
 
-The CLI is not included in the published app packages (AppImage, `.deb`, `.exe`, `.msi`) and is not released as a separate binary. The **Install** button in **Settings → Developers** stays inactive on published builds. Build the CLI from source with [Rust](https://rustup.rs):
+The CLI is not included in the published app packages (AppImage, `.deb`, `.exe`, `.msi`) and is not released as a separate binary. The app never installs it: **Settings → Developers → CLI & MCP** only shows whether `syntheo` is found and the installation command. Build the CLI from source with [Rust](https://rustup.rs):
 
 ```bash
 git clone https://github.com/WillIsback/Syntheo.git

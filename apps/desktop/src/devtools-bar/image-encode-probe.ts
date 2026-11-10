@@ -234,7 +234,7 @@ function clipboardTypes(items: unknown): string {
  * les appels terminaux en mode strict : si l'appelant fait
  * `return canvas.toDataURL()`, c'est son propre appelant qui apparaît.
  */
-export function captureCallSite(skip: number): string {
+function captureCallSite(skip: number): string {
   const stack = new Error("encode").stack ?? "";
   const frames = stack
     .split("\n")

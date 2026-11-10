@@ -109,7 +109,7 @@ export type SpeakerCard = {
   targets: SpeakerTarget[];
 };
 
-export type CaptureSegments = {
+type CaptureSegments = {
   transcriptId: string;
   segments: readonly Segment[];
 };

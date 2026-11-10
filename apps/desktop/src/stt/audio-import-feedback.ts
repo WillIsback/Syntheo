@@ -18,7 +18,7 @@ import { useTabs } from "~/store/zustand/tabs";
  * (issue 463). Sans l'un ni l'autre, on le dit avant de toucher à la note
  * (issue 462).
  */
-export type AudioImportAvailability =
+type AudioImportAvailability =
   | { status: "ready"; route: "batch" | "realtime" }
   | { status: "no_provider" }
   | { status: "unsupported" };
@@ -38,7 +38,7 @@ export function getAudioImportAvailability(
  * Les autres fonctions (dictée du chat, réparation) restent liées au lot :
  * un modèle temps réel seul ne les fait pas.
  */
-export type BatchAvailability =
+type BatchAvailability =
   | { status: "ready" }
   | { status: "no_provider" }
   | { status: "live_only" };
@@ -122,5 +122,35 @@ export function notifyAudioImportFailed(error: unknown) {
     duration: AUDIO_IMPORT_FAILED_TOAST_DURATION_MS,
     keepDuration: true,
     action: settingsAction(),
+  });
+}
+
+/**
+ * Import repris au lancement qui échoue (issue 531) : son résultat est
+ * abandonné et la note passe en échec. On le dit une fois, au lieu de le
+ * retenter en silence à chaque lancement.
+ */
+export function notifyResumedImportAbandoned({
+  sessionId,
+  name,
+  error,
+}: {
+  sessionId: string;
+  name: string | null;
+  error: unknown;
+}) {
+  const reason = describeAudioImportError(error);
+  toast.error(t`Audio import failed`, {
+    id: `audio-import-abandoned-${sessionId}`,
+    description: name
+      ? t`The import of ${name} was abandoned: ${reason}`
+      : t`The import was abandoned: ${reason}`,
+    duration: AUDIO_IMPORT_FAILED_TOAST_DURATION_MS,
+    keepDuration: true,
+    action: {
+      label: t`Open note`,
+      onClick: () =>
+        useTabs.getState().openNew({ type: "sessions", id: sessionId }),
+    },
   });
 }

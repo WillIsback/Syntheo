@@ -5,9 +5,9 @@ import { ancestorFolderPaths } from "@syntheo/utils/folders";
 // parent le plus proche) > défaut global > Automatique (aucun modèle, format
 // libre). Un identifiant vide vaut « pas de choix » à chaque niveau.
 
-export type TemplateResolutionSource = "note" | "folder" | "global" | "auto";
+type TemplateResolutionSource = "note" | "folder" | "global" | "auto";
 
-export type TemplateResolution = {
+type TemplateResolution = {
   templateId: string | undefined;
   source: TemplateResolutionSource;
 };

@@ -18,7 +18,7 @@ import { useListener } from "~/stt/contexts";
 
 const POLL_MS = 3_000;
 
-export function systemAudioChangeMessage(change: SystemAudioChange) {
+function systemAudioChangeMessage(change: SystemAudioChange) {
   const { output } = change;
   switch (change.kind) {
     case "headphones-unplugged":

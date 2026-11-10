@@ -52,12 +52,12 @@ export function HelpDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const { t } = useLingui();
+  const { t, i18n } = useLingui();
   const os = getShortcutPlatform();
 
   const openDocumentation = () => {
     void openerCommands
-      .openUrl(documentationUrl(), null)
+      .openUrl(documentationUrl(i18n.locale), null)
       .catch((error) =>
         console.error("[help] failed to open documentation", error),
       );

@@ -6,7 +6,7 @@ import type { AppToastLabels } from "@syntheo/ui/components/ui/app-toast";
 import { Toaster } from "@syntheo/ui/components/ui/toast";
 
 // `@syntheo/ui` n'a pas d'i18n : l'app lui fournit les textes du toast traduits.
-export function buildAppToastLabels(): AppToastLabels {
+function buildAppToastLabels(): AppToastLabels {
   return {
     dismiss: t`Dismiss`,
     expandNotification: t`Expand notification`,

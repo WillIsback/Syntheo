@@ -21,8 +21,9 @@ pub enum NativeLocale {
 static CURRENT: AtomicU8 = AtomicU8::new(NativeLocale::Fr as u8);
 
 impl NativeLocale {
-    /// Même règle que `resolveDisplayLocale` côté application : l'anglais
-    /// (`en`, `en-US`…) donne l'anglais, tout le reste retombe sur le français.
+    /// L'application envoie sa locale d'affichage déjà résolue (`fr` ou `en`,
+    /// issue 549) : l'anglais (`en`, `en-US`…) donne l'anglais, tout le reste
+    /// le français.
     pub fn from_tag(tag: &str) -> Self {
         let primary = tag.trim().split(['-', '_']).next().unwrap_or_default();
         if primary.eq_ignore_ascii_case("en") {

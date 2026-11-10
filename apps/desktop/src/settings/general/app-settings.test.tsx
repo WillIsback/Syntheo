@@ -31,15 +31,11 @@ function setting(value = true) {
   };
 }
 
-function renderAppSettings({
-  appStoreBuild = false,
-  automaticUpdates = setting(),
-} = {}) {
+function renderAppSettings({ automaticUpdates = setting() } = {}) {
   return {
     ...render(
       <QueryClientProvider client={new QueryClient()}>
         <AppSettingsView
-          appStoreBuild={appStoreBuild}
           autostart={setting()}
           automaticUpdates={automaticUpdates}
           showAppInDock={setting()}
@@ -85,16 +81,5 @@ describe("AppSettingsView", () => {
     );
 
     expect(automaticUpdates.onChange).toHaveBeenCalledWith(true);
-  });
-
-  it("hides direct-distribution controls in App Store builds", () => {
-    renderAppSettings({ appStoreBuild: true });
-
-    expect(
-      screen.queryByRole("switch", { name: "Start Syntheo at login" }),
-    ).toBeNull();
-    expect(
-      screen.queryByRole("switch", { name: "Automatically install updates" }),
-    ).toBeNull();
   });
 });

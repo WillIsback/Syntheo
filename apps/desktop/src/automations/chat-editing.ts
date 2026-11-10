@@ -38,9 +38,9 @@ import { id } from "~/shared/utils";
 // - une étape avancée (webhook, commande) devient une proposition que
 //   l'utilisateur confirme dans l'éditeur (voir chat-proposals.ts).
 
-export type EditedWorkflowRef = { id?: string; chatGroupId?: string };
+type EditedWorkflowRef = { id?: string; chatGroupId?: string };
 
-export function editedWorkflowRef(
+function editedWorkflowRef(
   selection: AutomationSelection | null,
 ): EditedWorkflowRef | null {
   switch (selection?.kind) {
@@ -108,7 +108,7 @@ export function describeWorkflow(workflow: AutomationWorkflow) {
   };
 }
 
-export type ChatEditOutcome =
+type ChatEditOutcome =
   | {
       status: "ok";
       automation: ReturnType<typeof describeWorkflow>;

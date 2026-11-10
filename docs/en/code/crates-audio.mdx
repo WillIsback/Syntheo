@@ -22,9 +22,9 @@ In the `Cargo.toml` files, these crates are referenced by the workspace alias `s
 | `crates/audio` | Common capture contract: `AudioProvider` trait, `CaptureConfig`, `CaptureFrame`, `CaptureStream`, `CaptureEvent`. No implementation. | `audio-actual`, `audio-mock`, `listener-core`, `plugins/dictation`, `plugins/permissions`, `plugins/transcription` |
 | `crates/audio-actual` | Real implementation (`ActualAudio`): microphone capture through `cpal`, system audio capture, echo cancellation and resynchronization. | `apps/desktop/src-tauri` |
 | `crates/audio-mock` | Fake provider `MockAudio`, which replays files from `syntheo-data`. | `apps/desktop/src-tauri`, only with the `dev` or `devtools` features |
-| `crates/audio-device` | Device enumeration and per-platform default choice (`backend()`, `AudioDeviceBackend`), handling of Bluetooth inputs and headset outputs. | `audio-actual`, `device-monitor`, `listener-core`, `plugins/audio-priority` |
+| `crates/audio-device` | Device enumeration and per-platform default choice (`backend()`, `AudioDeviceBackend`), handling of Bluetooth inputs and headset outputs. | `audio-actual`, `device-monitor`, `listener-core` |
 | `crates/device-monitor` | Watches device changes (`DeviceMonitor`, `DeviceSwitchMonitor`, `DeviceUpdateMonitor`) with a 1 s debounce. | `listener-core` |
-| `crates/audio-sync` | Measures the microphone / system audio offset (`GccPhatLagEstimator`, `LagTrendTracker`) and levels (`LevelAccumulator`, dBFS). | `audio-actual` |
+| `crates/audio-sync` | Measures the microphone / system audio offset (`GccPhatLagEstimator`, `SyncProbe`, which also tracks the clock drift between the two devices) and levels (`LevelAccumulator`, dBFS). | `audio-actual` |
 | `crates/aec` | Acoustic echo cancellation with an ONNX model (`AEC`, `BLOCK_SIZE`, `BLOCK_SHIFT`). `onnx` feature enabled by default. | `audio-actual` (`capture/echo_gate.rs`) |
 | `crates/audio-interface` | `AsyncSource` trait, abstraction of an asynchronous audio source. | `audio-actual`, `audio-utils`, `resampler` |
 | `crates/audio-utils` | PCM tools: decoding (`rodio`, `symphonia`), metadata, resampling, `f32` / `i16` conversion, chunking for STT (`chunk_size_for_stt`), playback (`open_default_playback_sink`). | `aec`, `audio-actual`, `audio-mock`, `listener-core`, `listener2-core`, `mp3`, `vad-masking`, `fs-sync-core`, `plugins/sfx` |
@@ -45,9 +45,9 @@ In the `Cargo.toml` files, these crates are referenced by the workspace alias `s
 
 | Crate | Role | Used by |
 | --- | --- | --- |
-| `crates/vad` | Speech detection. Two engines behind features: `earshot` (`earshot` module) and `silero-onnx` (`silero_onnx` module). Consumers only enable `earshot`; Silero is only used by the test bench and comparison tests. | `vad-masking`, `fs-sync-core` |
+| `crates/vad` | Speech detection with `earshot`, behind the feature of the same name (`earshot` module). | `vad-masking`, `fs-sync-core` |
 | `crates/vad-masking` | Masks silences before sending to STT, in batch (`masking`) or streaming (`streaming`, `VadConfig`). | `listener-core` |
-| `crates/onnx` | Loads ONNX models with `ort` (`load_model_from_bytes`, `load_model_from_path`, accelerated variant); re-exports `ort` and `ndarray`. | `aec`, `vad` (`silero-onnx` feature) |
+| `crates/onnx` | Loads ONNX models with `ort` (`load_model_from_bytes`, `load_model_from_path`, accelerated variant); re-exports `ort` and `ndarray`. | `aec` |
 
 **Affected doc pages**: [/en/meetings](/en/meetings) for `vad-masking`; none for `vad` and `onnx` taken on their own.
 
@@ -85,7 +85,7 @@ In the `Cargo.toml` files, these crates are referenced by the workspace alias `s
 | Crate | Role | Used by |
 | --- | --- | --- |
 | `crates/owhisper-client` | STT adapters: OpenAI protocol in real time and in batch (`adapter/openai/`), compatible `/v1/audio/transcriptions` endpoint (`adapter/openai_compatible_batch.rs`) and NVIDIA NIM / Riva over WebSocket (`adapter/nvidia.rs`). Exposes `BatchClient`, `Provider` (only variant: `OpenAI`), `normalize_listen_params`, the live and batch streams. | `listener-core`, `listener2-core`, `plugins/dictation`, `plugins/transcription` |
-| `crates/owhisper-interface` | Shared protocol types: `ListenParams`, `stream`, `batch`, `batch_sse`, `batch_stream`, `InferenceProgress`, OpenAPI description (`openapi`). | `owhisper-client`, `listener-core`, `listener2-core`, `transcript`, `transcription-core`, `plugins/dictation`, `plugins/transcription` |
+| `crates/owhisper-interface` | Shared protocol types: `ListenParams`, `stream`, `batch`, `batch_sse`, `batch_stream`, `InferenceProgress`. | `owhisper-client`, `listener-core`, `listener2-core`, `transcript`, `transcription-core`, `plugins/dictation`, `plugins/transcription` |
 | `crates/openai-transcription` | OpenAI request and response models: `batch` (including `AudioModel`) and `realtime`. | `owhisper-client` |
 | `crates/ws-client` | WebSocket client with retry (`client`, `retry`) on top of `tokio-tungstenite` (native TLS). | `owhisper-client`, which re-exports it |
 

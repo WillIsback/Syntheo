@@ -38,7 +38,7 @@ export type ParticipantConsent = {
   updatedAt: string;
 };
 
-export type SessionListeningPolicy = "continue" | "stop_declined";
+type SessionListeningPolicy = "continue" | "stop_declined";
 
 const DECLINE_PATTERN =
   /\b((i\s+)?(do\s+not|don't|does\s+not|doesn't)\s+consent|stop\s+recording)\b/i;

@@ -12,19 +12,16 @@ Chaque dossier `plugins/<nom>` suit la même structure :
 | Élément | Emplacement | Rôle |
 | --- | --- | --- |
 | Crate Rust | `Cargo.toml`, `src/lib.rs` | Crate `tauri-plugin-<nom>`. `lib.rs` déclare les commandes (`collect_commands!`) et les événements (`collect_events!`) avec `tauri-specta`. |
-| Paquet TypeScript | `package.json`, `js/index.ts` | Paquet `@syntheo/plugin-<nom>`, importé par `apps/desktop/src`. |
-| Bindings générés | `js/bindings.gen.ts` | Produits par le script `codegen` du paquet (`cargo test -p tauri-plugin-<nom>`). Ne les éditez pas à la main. |
+| Paquet TypeScript | `package.json`, `js/index.ts` | Paquet `@syntheo/plugin-<nom>`, importé par `apps/desktop/src`. Absent des plugins sans interface (`notify`, `sidecar2`, `tracing`). |
+| Bindings générés | `js/bindings.gen.ts` | Écrits par le test `export_types` du plugin, lancé par `scripts/check-bindings.sh`. Ne les éditez pas à la main. |
 | Permissions | `permissions/default.toml` | Commandes autorisées par défaut, à reporter dans `apps/desktop/src-tauri/capabilities/default.json`. |
 
-Après toute modification des commandes d'un plugin, lancez `codegen`, puis mettez à jour `permissions/default.toml` et `apps/desktop/src-tauri/capabilities/default.json` (`plugins/AGENTS.md`).
+Après toute modification des commandes d'un plugin, lancez `scripts/check-bindings.sh`, puis mettez à jour `permissions/default.toml` et `apps/desktop/src-tauri/capabilities/default.json` (`plugins/AGENTS.md`).
 
-Tous les plugins sont enregistrés dans `apps/desktop/src-tauri/src/lib.rs`, avec trois exceptions conditionnelles :
-
-- `agent` et `hooks` ne sont pas chargés avec la feature `app-store`.
-- `relay` n'est chargé qu'en build de debug ou avec la feature `devtools`.
+Tous les plugins sont enregistrés dans `apps/desktop/src-tauri/src/lib.rs`, sauf `relay`, chargé seulement en build de debug ou avec la feature `devtools`.
 
 <Note>
-Le nom d'un plugin ne dit pas tout : `notification` affiche les notifications, `notify` surveille le système de fichiers. Les suffixes `2` (`fs2`, `path2`, `opener2`, `store2`, `sidecar2`, `deeplink2`) désignent des extensions maison d'un plugin Tauri officiel du même nom.
+Le nom d'un plugin ne dit pas tout : `notification` affiche les notifications, `notify` surveille le système de fichiers. Les suffixes `2` (`opener2`, `store2`, `sidecar2`, `deeplink2`) désignent des extensions maison d'un plugin Tauri officiel du même nom.
 </Note>
 
 ## Inventaire
@@ -36,7 +33,6 @@ La colonne « Interface » indique si `apps/desktop/src` importe le paquet `@syn
 | `transcription` | Capture audio, transcription en direct et par lot, rétention audio | Oui | [/meetings](/fr/meetings), [/import-recordings](/fr/import-recordings), [/languages](/fr/languages), [/ai-setup](/fr/ai-setup), [/offline](/fr/offline), [/data-and-privacy](/fr/data-and-privacy), [/troubleshooting](/fr/troubleshooting) |
 | `dictation` | Dictée vers le champ actif d'une autre application | Oui | [/dictation](/fr/dictation) |
 | `detect` | Détection des réunions et des applications qui utilisent le micro | Oui | [/automatic-capture](/fr/automatic-capture) |
-| `audio-priority` | Priorité des périphériques audio | Non | aucune |
 | `shortcut` | Raccourcis clavier globaux | Oui | [/dictation](/fr/dictation) |
 | `sfx` | Sons de l'application | Oui | aucune |
 | `db` | Accès SQLite, requêtes réactives, état de démarrage | Oui | [/meetings](/fr/meetings), [/notes](/fr/notes), [/data-and-privacy](/fr/data-and-privacy) |
@@ -53,19 +49,16 @@ La colonne « Interface » indique si `apps/desktop/src` importe le paquet `@syn
 | `windows` | Fenêtres, onglets, barre flottante, sous-titres en direct | Oui | [/automatic-capture](/fr/automatic-capture), [/meetings](/fr/meetings) |
 | `tray` | Icône et menu de la zone de notification | Oui | aucune |
 | `notification` | Notifications natives interactives | Oui | [/automatic-capture](/fr/automatic-capture) |
-| `notify` | Surveillance des fichiers du dossier de données | Non (utilisé par `fs-sync`) | aucune |
+| `notify` | Surveillance des fichiers du dossier de données | Non (Rust seul, utilisé par `fs-sync`) | aucune |
 | `permissions` | Autorisations système (micro, audio, accessibilité) | Oui | [/quickstart](/fr/quickstart), [/troubleshooting](/fr/troubleshooting) |
 | `local-auth` | Authentification locale du système | Oui | aucune |
 | `deeplink2` | Liens `syntheo://` et serveur de rappel local | Oui | aucune |
 | `opener2` | Ouverture d'URL et de fichiers | Oui | aucune |
-| `tracing` | Journaux de l'application | Non | [/troubleshooting](/fr/troubleshooting), [/data-and-privacy](/fr/data-and-privacy) |
+| `tracing` | Journaux de l'application | Non (Rust seul) | [/troubleshooting](/fr/troubleshooting), [/data-and-privacy](/fr/data-and-privacy) |
 | `misc` | Informations techniques diverses | Oui | aucune |
 | `icon` | Icône du Dock et indicateurs (macOS) | Oui | aucune |
-| `overlay` | Fenêtres superposées (macOS) | Non | aucune |
 | `dock` | Menu du Dock (macOS) | Non | aucune |
-| `fs2`, `path2`, `js`, `sidecar2` | Utilitaires internes | Non | aucune |
-| `agent` | Installation de la CLI | Non | aucune |
-| `mcp` | Types hérités, sans commande | Non | aucune |
+| `sidecar2` | Utilitaire interne | Non (utilisé par `permissions`) | aucune |
 | `relay` | Relais de l'interface pour le développement | Non (shim Vite) | aucune |
 
 ## Capture, transcription et dictée
@@ -108,7 +101,6 @@ La colonne « Interface » indique si `apps/desktop/src` importe le paquet `@syn
 
 | Plugin | Commandes et événements | Dépendances internes | Pages de doc concernées |
 | --- | --- | --- | --- |
-| `audio-priority` | `list_input_devices`, `list_output_devices`, `set_default_input_device`, `set_default_output_device`, `get_input_priorities`, `save_input_priorities` (et équivalents de sortie). Aucun import côté interface. | `crates/audio-device` ; plugin `settings` | aucune |
 | `shortcut` | `register_hotkey`, `unregister_hotkey`, `configure`, `validate`, `set_active` ; événement `ShortcutEvent`. Les raccourcis globaux sont initialisés au démarrage (`initialize_global_shortcuts`). | aucune (plugin officiel `global-shortcut`) | [/dictation](/fr/dictation) |
 | `sfx` | `play`, `stop`, `set_volume`, `play_completion_sound`. `apps/desktop/src/shared/completion-sound.ts` joue le son de fin depuis le cycle de capture, la transcription par lot et la génération du compte rendu. | `crates/audio-utils` | aucune |
 
@@ -168,13 +160,13 @@ La colonne « Interface » indique si `apps/desktop/src` importe le paquet `@syn
 | Plugin | Commandes et événements | Dépendances internes | Pages de doc concernées |
 | --- | --- | --- | --- |
 | `tray` | `set_tray_icon_visible`, `set_tray_schedule`, `set_tray_recording_title`, `set_native_menu_locale` | `crates/brand`, `crates/intercept` ; plugins `misc`, `store2`, `windows` | aucune |
-| `notification` | `show_notification`, `clear_notifications` ; événement `NotificationEvent` (`Confirm`, `Accept`, `Action`, `Dismiss`, `Timeout`, `OptionSelected`, `FooterAction`) | `crates/notification` ; plugin `windows` | [/automatic-capture](/fr/automatic-capture) |
+| `notification` | `show_notification`, `clear_notifications` ; événement `NotificationEvent` (`Confirm`, `Accept`, `Dismiss`, `Timeout`, `OptionSelected`, `FooterAction`). L'interface passe par `showNativeNotification` (`apps/desktop/src/services/notification-labels.ts`), qui envoie les libellés natifs (décompte, options, vue dépliée) dans la langue de l'interface. | `crates/notification` ; plugin `windows` | [/automatic-capture](/fr/automatic-capture) |
 | `notify` | Aucune commande ; événement `FileChanged`. Surveille les fichiers avec `notify-debouncer-full` et ignore les écritures de l'application. | plugin `settings` | aucune |
 | `permissions` | `check_permission`, `request_permission`, `open_permission`, `reset_permission`, `permission_guidance`, `close_permission_assistant` | `crates/audio` ; plugin `sidecar2` | [/quickstart](/fr/quickstart), [/troubleshooting](/fr/troubleshooting) |
 | `local-auth` | `available`, `authenticate`. Implémenté sous macOS et Windows ; ailleurs, `available` renvoie `false`. Utilisé par le verrouillage de l'application (`apps/desktop/src/lock/auth.ts`). | aucune | aucune |
 | `deeplink2` | `start_callback_server`, `stop_callback_server`, `take_pending_deep_links`, `list_pending_share_opens`, `take_pending_share_open` ; événements `DeepLinkEvent`, `ShareOpenPendingEvent`. Les types de liens `auth_callback`, `billing_refresh`, `integration_callback` et `share/open` viennent d'Anarlog. | aucune | aucune |
 | `opener2` | `open_url`, `open_path`, `reveal_item_in_dir` | aucune | aucune |
-| `tracing` | `logs_dir`, `do_log`, `log_content`. Écrit `app.log` et masque le contenu des messages de la console. | `crates/user-error` | [/troubleshooting](/fr/troubleshooting), [/data-and-privacy](/fr/data-and-privacy) |
+| `tracing` | `do_log`, appelée par le script injecté dans la webview pour recopier la console dans `app.log`, avec le contenu des messages masqué. Pas de paquet TypeScript. | `crates/user-error` | [/troubleshooting](/fr/troubleshooting), [/data-and-privacy](/fr/data-and-privacy) |
 | `misc` | `get_git_hash`, `get_device_info`, `get_process_memory_bytes`, `opinionated_md_to_html` | `crates/buffer` | aucune |
 
 ### Plugins internes, spécifiques à macOS ou hérités
@@ -182,18 +174,12 @@ La colonne « Interface » indique si `apps/desktop/src` importe le paquet `@syn
 | Plugin | État | Détail |
 | --- | --- | --- |
 | `icon` | macOS uniquement | `set_dock_icon`, `reset_dock_icon`, `get_icon`, `set_recording_indicator`, `set_notification_badge`. Hors macOS, ces commandes ne font rien. |
-| `overlay` | Interne, surtout macOS | `set_fake_window_bounds`, `remove_fake_window`. Aucun usage : ni l'interface ni une autre crate ne l'appellent (`icon` et `permissions` ont leur propre module `overlay`, sans lien). |
 | `dock` | macOS uniquement | Aucune commande. Installe le menu du Dock (nouvelle note, réglages, mise à jour, redémarrage, quitter). |
-| `fs2` | Interne | `read_text_file`, `remove`. Paquet non importé par l'interface. Dépend du plugin `settings`. |
-| `path2` | Interne | `sanitize` (nettoyage des noms de fichiers). Paquet non importé par l'interface. |
-| `js` | Interne | `eval` : évalue du JavaScript dans un moteur QuickJS (`rquickjs`). Paquet non importé par l'interface. |
 | `sidecar2` | Interne | Aucune commande. Résout et lance les binaires sidecar, y compris en debug. Utilisé par `permissions`. |
-| `agent` | Non appelé par l'interface | `health_check`, `install_cli`, `uninstall_cli`, via `crates/agent-core`. L'écran **Paramètres → Développeurs → CLI & MCP** passe par les commandes de l'application (`apps/desktop/src-tauri/src/embedded_cli.rs`), pas par ce plugin. |
-| `mcp` | Hérité | Aucune commande. Déclare seulement des types d'Anarlog (tickets, abonnements, portail de facturation). Le serveur MCP de Syntheo est dans `apps/cli/src/mcp/`, voir [/code/cli](/fr/code/cli). |
 | `relay` | Développement uniquement | Sert l'interface en HTTP sur `127.0.0.1` (port 1423, ou `RELAY_PORT`) et relaie l'IPC par WebSocket. Le shim Vite `@syntheo/plugin-relay/vite` est chargé dans `apps/desktop/vite.config.ts`. |
 
 ## Quand mettre à jour la documentation
 
 - Une commande ou un événement ajouté, renommé ou retiré : mettez à jour le tableau de cette page.
 - Un changement de comportement visible dans un plugin dont la colonne « Pages de doc concernées » n'est pas « aucune » : relisez ces pages.
-- Un plugin qui commence à être appelé par l'interface (par exemple `audio-priority` ou `agent`) : ajoutez les pages utilisateur concernées et la ligne correspondante dans [Correspondance doc ↔ code](/fr/code/doc-map).
+- Un plugin qui commence à être appelé par l'interface : ajoutez les pages utilisateur concernées et la ligne correspondante dans [Correspondance doc ↔ code](/fr/code/doc-map).

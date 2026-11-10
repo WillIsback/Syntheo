@@ -29,7 +29,7 @@
 - Document only commands, options, tools, resources, and output behavior present in the source.
 - Mark planned features and distribution channels as forthcoming.
 - Never describe Homebrew, standalone release binaries, or Windows package-manager installation as available until release automation publishes them.
-- Document desktop-bundled CLI installation only for platforms whose release workflow includes the CLI sidecar and installer UI.
+- The desktop app never bundles nor installs the CLI: Settings → Developers → CLI & MCP only reports whether `syntheo` is found and shows the source installation command.
 - Never tell users or agents to read, migrate, or modify the SQLite database directly.
 - Keep transcript examples bounded. CLI and MCP transcript pages default to 200 words and cap at 500 words.
 

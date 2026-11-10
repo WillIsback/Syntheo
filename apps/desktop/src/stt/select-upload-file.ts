@@ -2,7 +2,7 @@ import { t } from "@lingui/core/macro";
 import { downloadDir, homeDir } from "@tauri-apps/api/path";
 import { open as selectFile } from "@tauri-apps/plugin-dialog";
 
-export type UploadKind = "audio" | "transcript";
+type UploadKind = "audio" | "transcript";
 
 /**
  * Sans dossier Téléchargements XDG (profil sans `user-dirs.dirs`),

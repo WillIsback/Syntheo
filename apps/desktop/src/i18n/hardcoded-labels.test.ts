@@ -58,6 +58,7 @@ describe("libellés hors composant en français", () => {
         message: "Syntheo arrêtera l'écoute dans {seconds} s.",
         action_label: "Arrêter",
         action_variant: "destructive",
+        labels: expect.objectContaining({ showLess: "Afficher moins" }),
       }),
     );
   });

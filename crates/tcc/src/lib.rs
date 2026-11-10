@@ -1,3 +1,7 @@
+//! Permissions TCC de macOS (capture audio et écran, micro). Vide sur les autres systèmes : la
+//! crate n'y est jamais utilisée, mais `cargo clippy --workspace` la compile.
+#![cfg(target_os = "macos")]
+
 use swift_rs::{Bool, Int, SRString, swift};
 
 swift!(fn _audio_capture_permission_status() -> Int);

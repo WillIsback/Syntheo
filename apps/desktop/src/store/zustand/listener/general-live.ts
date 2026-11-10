@@ -30,7 +30,6 @@ import {
 import { flushLiveTranscriptBatches } from "./live-transcript-batch";
 
 import { getSessionResourcePath } from "~/session/resource-path";
-import { isAppStoreBuild } from "~/shared/app-store";
 import { recordDetectedMeetingApps } from "~/stt/meeting-source-apps";
 import { stopSpeakerContextCapture } from "~/stt/speaker-context-capture";
 
@@ -98,24 +97,22 @@ export const startLiveSession = <T extends LiveStore>(
       });
     }
 
-    if (!isAppStoreBuild()) {
-      yield* Effect.tryPromise({
-        try: () =>
-          hooksCommands.runEventHooks({
-            beforeListeningStarted: {
-              args: {
-                resource_dir: sessionPath,
-                app_syntheo: bundleId,
-                app_meeting,
-              },
+    yield* Effect.tryPromise({
+      try: () =>
+        hooksCommands.runEventHooks({
+          beforeListeningStarted: {
+            args: {
+              resource_dir: sessionPath,
+              app_syntheo: bundleId,
+              app_meeting,
             },
-          }),
-        catch: (error) => {
-          console.error("[hooks] BeforeListeningStarted failed:", error);
-          return error;
-        },
-      });
-    }
+          },
+        }),
+      catch: (error) => {
+        console.error("[hooks] BeforeListeningStarted failed:", error);
+        return error;
+      },
+    });
 
     yield* startSessionEffect(params);
 
@@ -240,10 +237,6 @@ export const stopLiveSession = <T extends GeneralState>(
       },
       onSuccess: () => {
         if (!sessionId) {
-          return;
-        }
-
-        if (isAppStoreBuild()) {
           return;
         }
 

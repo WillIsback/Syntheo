@@ -22,7 +22,7 @@ import {
 // copier, afficher, envoyer ni lancer ; la génération, sans effet hors de
 // l'application, s'exécute pour que les étapes suivantes aient sa sortie.
 
-export const COMMAND_TIMEOUT_SECS = 60;
+const COMMAND_TIMEOUT_SECS = 60;
 
 export async function runGenerateTextStep(
   step: GenerateTextStep,

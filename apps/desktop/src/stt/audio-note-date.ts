@@ -28,7 +28,7 @@ export function estimateUploadedAudioSessionCreatedAt(
 }
 
 // Durée de l'audio importé en secondes (issue 526), `null` si inconnue.
-export function audioSeconds(durationMs: number | null) {
+function audioSeconds(durationMs: number | null) {
   return durationMs !== null && durationMs > 0 ? durationMs / 1000 : null;
 }
 

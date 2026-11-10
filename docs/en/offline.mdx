@@ -27,6 +27,17 @@ Without a reachable transcription server, **there is no transcription**. Syntheo
 - If no transcription provider is set up, Syntheo refuses to start the capture: "No transcription provider is set up. Syntheo does not keep audio: set up a transcription endpoint before recording."
 - If the server becomes unreachable during a meeting, live transcription pauses and Syntheo tries to reconnect. The passage spoken during the outage will be missing from the transcript.
 
+## Echo cancellation models
+
+Echo cancellation removes the other participants' voices that your microphone picks up from your speakers. Its models are not bundled with the app: Syntheo downloads them once, from GitHub (`raw.githubusercontent.com`), the first time it starts, then keeps them on your computer.
+
+If that first start happens offline, or behind a proxy that blocks this address, **listening still works**, without echo cancellation:
+
+- during listening, a notice says "Echo cancellation unavailable": "The models could not be downloaded (offline?). Listening continues without it.", with a "Retry" button;
+- under **Settings → My meetings → Meetings → Audio**, the "Echo cancellation" row stays visible as long as the models are missing, with a "Retry" button.
+
+Syntheo also retries on its own, after 1 minute, then 5 and 15 minutes, then every hour. As soon as the download succeeds, echo cancellation turns on, even in the middle of a listening session. Wear headphones in the meantime: the microphone then picks up no speaker sound.
+
 ## What requires the summary server
 
 - generating summaries;
@@ -45,10 +56,10 @@ Without a reachable summary server, your transcripts remain available: you can g
     Follow [Set up transcription and AI](/en/ai-setup) with local URLs, for example `http://localhost:8000/v1` and `http://localhost:11434/v1`. Plain HTTP is accepted toward `localhost` and private addresses.
   </Step>
   <Step title="Test before the meeting">
-    Run a short listening session, then generate a summary. If both work with the network cut off, you are ready.
+    Start Syntheo once with the network on, so that it downloads the echo cancellation models. Then run a short listening session, then generate a summary. If both work with the network cut off, you are ready.
   </Step>
 </Steps>
 
 <Note>
-  Apart from inference, Syntheo makes very few requests: showing the release notes of a version other than the installed one (GitHub) and a few interface icons. They carry no meeting content and their failure blocks nothing. Full list in [Syntheo Desktop and the GDPR](/en/conformite/rgpd).
+  Apart from inference, Syntheo makes very few requests: downloading the echo cancellation models once (GitHub), showing the release notes of a version other than the installed one (GitHub) and a few interface icons. They carry no meeting content and their failure blocks nothing. Full list in [Syntheo Desktop and the GDPR](/en/conformite/rgpd).
 </Note>

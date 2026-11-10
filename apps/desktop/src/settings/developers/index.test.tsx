@@ -9,8 +9,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  checkEmbeddedCli: vi.fn(),
-  installEmbeddedCli: vi.fn(),
+  checkCliStatus: vi.fn(),
   listSkillAgents: vi.fn(),
   installAgentSkill: vi.fn(),
   toastError: vi.fn(),
@@ -25,8 +24,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("~/types/tauri.gen", () => ({
   commands: {
-    checkEmbeddedCli: mocks.checkEmbeddedCli,
-    installEmbeddedCli: mocks.installEmbeddedCli,
+    checkCliStatus: mocks.checkCliStatus,
     listSkillAgents: mocks.listSkillAgents,
     installAgentSkill: mocks.installAgentSkill,
   },
@@ -86,9 +84,9 @@ vi.mock("@syntheo/ui/components/ui/toast", () => ({
 }));
 
 import {
+  CLI_INSTALL_COMMAND,
   SettingsDevelopers,
   buildMcpConfiguration,
-  getCliInstallNotification,
 } from "./index";
 
 describe("buildMcpConfiguration", () => {
@@ -108,42 +106,9 @@ describe("buildMcpConfiguration", () => {
   });
 });
 
-describe("getCliInstallNotification", () => {
-  it("reports installed as success", () => {
-    expect(
-      getCliInstallNotification({
-        supported: true,
-        commandName: "syntheo",
-        installPath: "/Users/test/.local/bin/syntheo",
-        state: "installed",
-        details: "Installed.",
-      }),
-    ).toEqual({ type: "success", message: "syntheo is ready to use" });
-  });
-
-  it.each(["resource_missing", "unsupported"] as const)(
-    "reports %s as an install error",
-    (state) => {
-      expect(
-        getCliInstallNotification({
-          supported: false,
-          commandName: "syntheo",
-          installPath: "/Users/test/.local/bin/syntheo",
-          state,
-          details: "The CLI is unavailable in this build.",
-        }),
-      ).toEqual({
-        type: "error",
-        message: "The CLI is unavailable in this build.",
-      });
-    },
-  );
-});
-
 describe("SettingsDevelopers", () => {
   beforeEach(() => {
-    mocks.checkEmbeddedCli.mockReset();
-    mocks.installEmbeddedCli.mockReset();
+    mocks.checkCliStatus.mockReset();
     mocks.listSkillAgents.mockReset();
     mocks.listSkillAgents.mockResolvedValue({ status: "ok", data: [] });
     mocks.installAgentSkill.mockReset();
@@ -165,24 +130,7 @@ describe("SettingsDevelopers", () => {
     cleanup();
   });
 
-  it("uses the installed CLI path when copying the MCP configuration", async () => {
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    Object.defineProperty(navigator, "clipboard", {
-      configurable: true,
-      value: { writeText },
-    });
-    mocks.checkEmbeddedCli.mockResolvedValue({
-      status: "ok",
-      data: {
-        supported: true,
-        commandName: "syntheo",
-        installPath: "/Users/test/.local/bin/syntheo",
-        state: "installed",
-        details:
-          "Installed at /Users/test/.local/bin/syntheo and managed by Syntheo.",
-      },
-    });
-
+  function renderSettings() {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -191,15 +139,31 @@ describe("SettingsDevelopers", () => {
         <SettingsDevelopers />
       </QueryClientProvider>,
     );
+  }
 
-    expect(await screen.findByText("Reinstall")).toBeTruthy();
-    expect(screen.getByLabelText("Installed")).toBeTruthy();
-    expect(screen.queryByText("Installed")).toBeNull();
+  it("shows the CLI path and copies it into the MCP configuration", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
+    mocks.checkCliStatus.mockResolvedValue({
+      status: "ok",
+      data: {
+        commandName: "syntheo",
+        path: "/Users/test/.cargo/bin/syntheo",
+        shadowedByApp: false,
+      },
+    });
+
+    renderSettings();
+
     expect(
-      screen.queryByText(/\/Users\/test\/\.local\/bin\/syntheo/),
-    ).toBeNull();
-    expect(screen.queryByText("syntheo --json meetings list")).toBeNull();
-    expect(screen.queryByText("syntheo mcp")).toBeNull();
+      await screen.findByText("/Users/test/.cargo/bin/syntheo"),
+    ).toBeTruthy();
+    expect(screen.getByLabelText("Installed")).toBeTruthy();
+    expect(screen.queryByText(CLI_INSTALL_COMMAND)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Install" })).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "Copy config" }));
 
@@ -207,53 +171,70 @@ describe("SettingsDevelopers", () => {
     expect(JSON.parse(writeText.mock.calls[0][0])).toEqual({
       mcpServers: {
         syntheo: {
-          command: "/Users/test/.local/bin/syntheo",
+          command: "/Users/test/.cargo/bin/syntheo",
           args: ["mcp"],
         },
       },
     });
   });
 
-  it("does not expose a nonexistent MCP path when the CLI is unsupported", async () => {
-    mocks.checkEmbeddedCli.mockResolvedValue({
+  it("documents the install command when the CLI is missing", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
+    mocks.checkCliStatus.mockResolvedValue({
+      status: "ok",
+      data: { commandName: "syntheo", path: null, shadowedByApp: false },
+    });
+
+    mocks.openUrl.mockResolvedValue({ status: "ok", data: null });
+
+    renderSettings();
+
+    expect(await screen.findByText(CLI_INSTALL_COMMAND)).toBeTruthy();
+    expect(screen.queryByLabelText("Installed")).toBeNull();
+    const copyConfig = screen.getByRole("button", { name: "Copy config" });
+    expect(copyConfig.hasAttribute("disabled")).toBe(true);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Copy install command" }),
+    );
+    await waitFor(() =>
+      expect(writeText).toHaveBeenCalledWith(CLI_INSTALL_COMMAND),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Installation guide/ }));
+    expect(mocks.openUrl).toHaveBeenCalledWith(
+      "https://docs.syntheo.studio/en/installation",
+      null,
+    );
+  });
+
+  it("warns when the syntheo command on the PATH is the desktop app", async () => {
+    mocks.checkCliStatus.mockResolvedValue({
       status: "ok",
       data: {
-        supported: false,
-        commandName: "syntheo-dev",
-        installPath: "/Users/test/.local/bin/syntheo-dev",
-        state: "unsupported",
-        details: "Bundled CLI installation is currently available on macOS.",
+        commandName: "syntheo",
+        path: "/home/test/.cargo/bin/syntheo",
+        shadowedByApp: true,
       },
     });
 
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
-    render(
-      <QueryClientProvider client={queryClient}>
-        <SettingsDevelopers />
-      </QueryClientProvider>,
-    );
+    renderSettings();
 
-    const copyButton = await screen.findByRole("button", {
-      name: "Copy config",
-    });
-    expect(copyButton.hasAttribute("disabled")).toBe(true);
     expect(
-      screen.queryByText(/\/Users\/test\/\.local\/bin\/syntheo-dev/),
-    ).toBeNull();
+      await screen.findByText(
+        "The syntheo command on your PATH opens the desktop app. Use the CLI's absolute path.",
+      ),
+    ).toBeTruthy();
   });
 
   it("installs the skill into every detected agent from one action", async () => {
-    mocks.checkEmbeddedCli.mockResolvedValue({
+    mocks.checkCliStatus.mockResolvedValue({
       status: "ok",
-      data: {
-        supported: false,
-        commandName: "syntheo",
-        installPath: "/Users/test/.local/bin/syntheo",
-        state: "unsupported",
-        details: "Unavailable.",
-      },
+      data: { commandName: "syntheo", path: null, shadowedByApp: false },
     });
     mocks.listSkillAgents.mockResolvedValue({
       status: "ok",
@@ -346,15 +327,9 @@ describe("SettingsDevelopers", () => {
   });
 
   it("reports a single-agent skill install by agent name", async () => {
-    mocks.checkEmbeddedCli.mockResolvedValue({
+    mocks.checkCliStatus.mockResolvedValue({
       status: "ok",
-      data: {
-        supported: false,
-        commandName: "syntheo",
-        installPath: "/Users/test/.local/bin/syntheo",
-        state: "unsupported",
-        details: "Unavailable.",
-      },
+      data: { commandName: "syntheo", path: null, shadowedByApp: false },
     });
     mocks.listSkillAgents.mockResolvedValue({
       status: "ok",

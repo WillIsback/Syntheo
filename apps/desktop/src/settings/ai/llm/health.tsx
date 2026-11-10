@@ -4,7 +4,7 @@ import { useEffect } from "react";
 
 import { useLanguageModel } from "~/ai/hooks";
 
-export type LlmHealthStatus = {
+type LlmHealthStatus = {
   status: "pending" | "error" | "success" | null;
   message?: string;
 };

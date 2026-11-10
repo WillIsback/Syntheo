@@ -9,7 +9,7 @@ import type { FolderMeeting } from "./meetings";
 
 import { useTabs } from "~/store/zustand/tabs";
 
-export const VISIBLE_MEETINGS = 5;
+const VISIBLE_MEETINGS = 5;
 
 // Chronologie des réunions du dossier (issue 496), plus récentes d'abord,
 // avec le résumé d'une ligne tiré de la synthèse quand elle existe.

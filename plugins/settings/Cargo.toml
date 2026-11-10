@@ -19,7 +19,7 @@ tokio = { workspace = true, features = ["macros"] }
 [dependencies]
 syntheo-storage = { workspace = true }
 
-tauri = { workspace = true, features = ["test"] }
+tauri = { workspace = true }
 tauri-specta = { workspace = true, features = ["derive", "typescript"] }
 
 camino = { workspace = true }

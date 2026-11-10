@@ -17,7 +17,7 @@ tempfile = { workspace = true }
 tokio = { workspace = true, features = ["macros", "rt"] }
 
 [dependencies]
-tauri = { workspace = true, features = ["test"] }
+tauri = { workspace = true }
 tauri-plugin-db = { workspace = true }
 tauri-plugin-dialog = { workspace = true }
 tauri-specta = { workspace = true, features = ["derive", "typescript"] }

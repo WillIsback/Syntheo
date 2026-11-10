@@ -161,8 +161,6 @@ class ClickableView: NSView {
     if let notification = notification {
       if notification.payload.hasOptions, let optionsButton = findOptionsButton(in: self) {
         optionsButton.showOptionsMenu()
-      } else if notification.payload.hasExpandableContent {
-        notification.toggleExpansion()
       } else {
         RustBridge.onCollapsedConfirm(key: notification.key)
         notification.dismiss()

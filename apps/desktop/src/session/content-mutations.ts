@@ -24,7 +24,7 @@ export type SessionDocumentContentUpdate = {
   nextContent: string;
 };
 
-export type SessionTitleCorrection = {
+type SessionTitleCorrection = {
   currentTitle: string;
   nextTitle: string;
 };

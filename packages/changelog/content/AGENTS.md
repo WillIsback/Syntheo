@@ -2,10 +2,14 @@
 
 - Une note par version stable de l'app : `desktop/<major>.<minor>.<patch>.md`.
   Lis aussi `desktop/AGENTS.md`.
-- L'app lit uniquement `desktop/<version>.md` (plugin Vite
-  `apps/desktop/plugins/changelog.ts` pour le bundle, `apps/desktop/src/changelog/source.ts`
-  pour le téléchargement depuis `main`). Il n'existe ni copie à la racine, ni
-  canal nightly, ni app mobile.
+- L'app lit uniquement `desktop/<version>.md`, au build (plugin Vite
+  `apps/desktop/plugins/changelog.ts`) : elle embarque la ligne de la version
+  installée (`selectVersionLine`, `src/line.ts`), sans téléchargement. Il
+  n'existe ni copie à la racine, ni canal nightly, ni app mobile.
+- La même note, sans frontmatter, sert de description à la release GitHub
+  (`release.yml`). Rédige-la dans la branche de lot : la gate `ci-changelog`
+  exige `desktop/<version calculée>.md` dans toute PR qui déclenche une release
+  (`node scripts/next-release-version.mjs` donne la version).
 - Garde seulement les changements visibles par l'utilisateur, en français, par
   thème. Pas de changement interne ni d'infrastructure.
 - Chaque note porte un frontmatter `date` et `summary` : une phrase courte, en

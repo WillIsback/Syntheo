@@ -9,7 +9,7 @@ export function chunkInterval(chunk: RecoveryAudioChunk, startedAt: number) {
   return { start: offset + chunk.start_ms, end: offset + chunk.end_ms };
 }
 
-export function subtractIntervals(
+function subtractIntervals(
   from: RecoveryInterval[],
   remove: RecoveryInterval[],
 ): RecoveryInterval[] {

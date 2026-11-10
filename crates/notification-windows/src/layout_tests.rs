@@ -1,8 +1,6 @@
 use super::*;
 use std::time::Duration;
-use syntheo_notification_interface::{
-    EventDetails, NotificationAction, NotificationFooter, NotificationIcon, NotificationSource,
-};
+use syntheo_notification_interface::{NotificationFooter, NotificationIcon, NotificationSource};
 
 fn compact_notification() -> Notification {
     Notification::builder()
@@ -267,40 +265,10 @@ fn options_map_the_primary_button_to_the_options_hit_target() {
 }
 
 #[test]
-fn action_menu_only_maps_the_caret_to_options() {
-    let notification = Notification::builder()
-        .title("Design sync")
-        .message("")
-        .action(NotificationAction::JoinAndRecord)
-        .action_menu("Open meeting", NotificationAction::OpenMeeting)
-        .build();
-    let layout = NotificationLayout::compact(&notification);
-    let action = layout.action.unwrap();
-    let caret = layout.action_caret().unwrap();
-    assert_eq!(caret.right(), action.right());
-    assert_eq!(caret.width, ACTION_CARET_WIDTH);
-
-    assert_eq!(
-        layout.action_hit(&notification, action.x + 2, action.y + 2),
-        HitTarget::Action
-    );
-    assert_eq!(
-        layout.action_hit(&notification, caret.x - 1, action.y + 2),
-        HitTarget::Action
-    );
-    assert_eq!(
-        layout.action_hit(&notification, caret.x, action.y + 2),
-        HitTarget::Options
-    );
-}
-
-#[test]
 fn hidpi_notifications_keep_text_and_click_targets_inside_the_scaled_window() {
     let notification = Notification::builder()
         .title("Design sync")
         .message("Starting soon")
-        .action(NotificationAction::JoinAndRecord)
-        .action_menu("Open meeting", NotificationAction::OpenMeeting)
         .build();
 
     let layout = NotificationLayout::compact(&notification).at_dpi(192);
@@ -308,10 +276,7 @@ fn hidpi_notifications_keep_text_and_click_targets_inside_the_scaled_window() {
     assert!(layout.title.height >= 28);
     assert!(layout.message.height >= 22);
     assert_eq!(layout.action_hit(&notification, 480, 60), HitTarget::Action);
-    assert_eq!(
-        layout.action_hit(&notification, 640, 60),
-        HitTarget::Options
-    );
+    assert_eq!(layout.action_hit(&notification, 640, 60), HitTarget::Action);
 }
 
 #[test]
@@ -366,16 +331,6 @@ fn expanded_hidpi_stack_keeps_every_action_on_a_short_work_area() {
 }
 
 #[test]
-fn refusing_expansion_keeps_the_clicked_oldest_notification_visible() {
-    let notification = compact_notification();
-    let mut layouts = vec![NotificationLayout::compact(&notification).at_dpi(192); 4];
-    assert!(!try_expand(&mut layouts, 0, &notification, 720));
-    assert_eq!(layouts[0].height, 144);
-    assert!(layouts[0].collapse.is_none());
-    assert_eq!(fit_stack(&mut layouts, 720), 0);
-}
-
-#[test]
 fn fitting_compact_notifications_do_not_require_an_unused_bottom_margin() {
     let notification = compact_notification();
     let mut layouts = vec![NotificationLayout::compact(&notification).at_dpi(192); 5];
@@ -409,11 +364,6 @@ fn expanded_layout_exposes_collapse_and_accept_targets() {
         .message("")
         .source(NotificationSource::Session {
             session_id: "sess".to_string(),
-        })
-        .event_details(EventDetails {
-            what: "Design sync".to_string(),
-            timezone: None,
-            location: None,
         })
         .build();
     let layout = NotificationLayout::expanded(&notification);

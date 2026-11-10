@@ -11,7 +11,7 @@ import { type PaletteId, readDocumentPalette } from "~/shared/theme/palette";
 // tenu à jour par AppThemeProvider dans chaque fenêtre ; les écrans flottants
 // se re-rendent quand elle change (useDocumentPalette).
 
-export type FloatingColorScheme = FloatingBarState["colorScheme"];
+type FloatingColorScheme = FloatingBarState["colorScheme"];
 
 export function tokensFor(
   colorScheme: FloatingColorScheme,

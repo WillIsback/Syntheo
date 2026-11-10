@@ -1,11 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
 
 import { ImportProgress } from "./import-progress";
 
-import { estimateImportProgress } from "~/stt/batch-eta";
+import { useBatchEstimate } from "~/stt/batch-eta";
 import { useListener } from "~/stt/contexts";
-
-const TICK_MS = 1_000;
 
 // Import audio en cours pour cette note (issue 526), de la copie du fichier
 // à la fin de la transcription.
@@ -37,22 +35,14 @@ export function SessionImportProgress({ sessionId }: { sessionId: string }) {
     void stopTranscription(sessionId);
   }, [sessionId, stopTranscription]);
 
-  const [nowMs, setNowMs] = useState(() => Date.now());
-  useEffect(() => {
-    if (!transcribing) {
-      return;
-    }
-    // Une heure antérieure au début ne donne aucune estimation : la première
-    // seconde affiche « estimation… », comme les suivantes tant que
-    // l'avancement ne suffit pas.
-    const id = setInterval(() => setNowMs(Date.now()), TICK_MS);
-    return () => clearInterval(id);
-  }, [transcribing]);
-
-  const estimate =
-    transcribing && startedAtMs !== undefined
-      ? estimateImportProgress({ startedAtMs, nowMs, fraction, audioSeconds })
-      : null;
+  // Mesures relevées chaque seconde depuis le début de la transcription :
+  // « Estimation… » tant qu'elles ne suffisent pas (issue 531).
+  const estimate = useBatchEstimate({
+    active: transcribing && startedAtMs !== undefined,
+    fraction,
+    startedAtMs,
+    audioSeconds,
+  });
 
   return (
     <ImportProgress

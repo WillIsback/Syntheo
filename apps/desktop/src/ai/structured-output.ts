@@ -24,7 +24,7 @@ export class StructuredOutputError extends Error {
   }
 }
 
-export type StructuredGenerationOptions<T> = {
+type StructuredGenerationOptions<T> = {
   model: LanguageModel;
   instructions: string;
   prompt: string;
@@ -51,7 +51,7 @@ ${JSON.stringify(z.toJSONSchema(schema))}`;
 }
 
 /** Extrait l'objet JSON d'une réponse texte (bloc ```json ou accolades). */
-export function extractJsonObject(text: string): unknown {
+function extractJsonObject(text: string): unknown {
   const fenced = /```(?:json)?\s*([\s\S]*?)```/i.exec(text)?.[1];
   const source = (fenced ?? text).trim();
   const start = source.indexOf("{");

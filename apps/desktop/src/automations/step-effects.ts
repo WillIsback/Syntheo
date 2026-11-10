@@ -8,13 +8,13 @@ import type { VaultWriteRequest, VaultWriteResult } from "./vault-writer";
 // par cet objet : les tests le remplacent, et chaque dépendance n'est
 // chargée qu'au premier usage.
 
-export type WebhookResponse = {
+type WebhookResponse = {
   status: number;
   /** En-tête `Location` d'une redirection, qui n'est jamais suivie. */
   location: string | null;
 };
 
-export type StepEffects = {
+type StepEffects = {
   generateText: (prompt: string, signal: AbortSignal) => Promise<string>;
   writeVaultNote: (request: VaultWriteRequest) => Promise<VaultWriteResult>;
   copyText: (text: string) => Promise<void>;
@@ -69,20 +69,17 @@ const defaultEffects: StepEffects = {
     await writeText(text);
   },
   notify: async (title, message) => {
-    const { commands } = await import("@syntheo/plugin-notification");
-    const result = await commands.showNotification({
+    const { showNativeNotification } =
+      await import("~/services/notification-labels");
+    const result = await showNativeNotification({
       key: `automation:${crypto.randomUUID()}`,
       title,
       message,
       timeout: { secs: 10, nanos: 0 },
       source: null,
       start_time: null,
-      participants: null,
-      event_details: null,
       action_label: null,
       action_variant: null,
-      action: null,
-      action_menu: null,
       options: null,
       footer: null,
       icon: null,

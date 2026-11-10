@@ -14,7 +14,7 @@ export type StartFailureStage =
   | "capture_start"
   | "capture_rejected";
 
-export type StartFailureKind =
+type StartFailureKind =
   | "already_running"
   | "storage"
   | "microphone_permission"

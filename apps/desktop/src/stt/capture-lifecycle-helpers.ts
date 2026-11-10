@@ -44,7 +44,7 @@ export async function requestCaptureRecoverySafely(sessionId: string) {
   }
 }
 
-export type PostCaptureDetails = {
+type PostCaptureDetails = {
   audioPath: string | null;
   liveTranscriptionActive: boolean;
   needsBatchRepair: boolean;

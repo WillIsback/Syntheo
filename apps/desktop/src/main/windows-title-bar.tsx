@@ -1,4 +1,6 @@
+import { i18n } from "@lingui/core";
 import { t } from "@lingui/core/macro";
+import { useLingui } from "@lingui/react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useCallback, useRef } from "react";
 
@@ -47,6 +49,9 @@ const appWindow = getCurrentWindow();
 // Aide), zone de déplacement de la fenêtre et contrôles natifs. Il n'y a plus
 // de barre latérale à afficher ou masquer.
 export function WindowsTitleBar() {
+  // `t` de @lingui/core/macro lit la langue au rendu : s'abonner au changement de
+  // langue pour se redessiner aussitôt, sous-composants compris (issue 558).
+  useLingui();
   const currentTab = useTabs((state) => state.currentTab);
   const openNew = useTabs((state) => state.openNew);
   const createNewNote = useNewNote();
@@ -183,7 +188,7 @@ export function WindowsTitleBar() {
             <DropdownMenuItem
               onSelect={() =>
                 void openerCommands
-                  .openUrl(documentationUrl(), null)
+                  .openUrl(documentationUrl(i18n.locale), null)
                   .catch((error) =>
                     console.error(
                       "[title-bar] failed to open documentation",

@@ -34,7 +34,6 @@ import { refreshLegacySettingsSnapshots } from "./settings/legacy-snapshots";
 import { migratePlaintextAiProviderApiKeys } from "./settings/providers";
 import { initializeApplicationSettings } from "./settings/queries";
 import { initializeAppExitFlush } from "./shared/app-exit";
-import { initializeAppStoreBuild } from "./shared/app-store";
 import { useConfigValue } from "./shared/config";
 import { ErrorComponent, NotFoundComponent } from "./shared/control";
 import { LongLoadGate } from "./shared/long-load-gate";
@@ -43,9 +42,11 @@ import { preventFileDropNavigation } from "./shared/prevent-file-drop-navigation
 import { bootstrapThemeFromSettings } from "./shared/theme/apply";
 import { AppThemeProvider } from "./shared/theme/provider";
 import type { ThemePreference } from "./shared/theme/resolve";
+import { LocalizedDialogLabels } from "./shared/ui/localized-dialog-labels";
 import { LocalizedToaster } from "./shared/ui/localized-toaster";
 import { createAITaskStore } from "./store/zustand/ai-task";
 import { listenerStore } from "./store/zustand/listener/instance";
+import { DefaultTemplatesLocaleSync } from "./templates/default-templates-locale-sync";
 import { commands } from "./types/tauri.gen";
 
 const toolRegistry = createToolRegistry();
@@ -110,15 +111,18 @@ function ReadyApp() {
   return (
     <AppThemeProvider>
       <AppI18nProvider>
-        {isMainWindow ? <NativeMenuLocaleSync /> : null}
-        <AppLockGate>
-          <App />
-          {isMainWindow ? <TaskManager /> : null}
-          {isMainWindow ? <FloatingMeetingWindowHost /> : null}
-          {isMainWindow ? <EventListeners /> : null}
-          {isMainWindow ? <TrayRecordingSync /> : null}
-          <LocalizedToaster position="bottom-right" theme={theme} />
-        </AppLockGate>
+        <LocalizedDialogLabels>
+          {isMainWindow ? <NativeMenuLocaleSync /> : null}
+          {isMainWindow ? <DefaultTemplatesLocaleSync /> : null}
+          <AppLockGate>
+            <App />
+            {isMainWindow ? <TaskManager /> : null}
+            {isMainWindow ? <FloatingMeetingWindowHost /> : null}
+            {isMainWindow ? <EventListeners /> : null}
+            {isMainWindow ? <TrayRecordingSync /> : null}
+            <LocalizedToaster position="bottom-right" theme={theme} />
+          </AppLockGate>
+        </LocalizedDialogLabels>
       </AppI18nProvider>
     </AppThemeProvider>
   );
@@ -148,7 +152,7 @@ async function renderApp() {
   }
 
   preventFileDropNavigation();
-  await Promise.all([bootstrapThemeFromSettings(), initializeAppStoreBuild()]);
+  await bootstrapThemeFromSettings();
   const root = ReactDOM.createRoot(rootElement, {
     onCaughtError: (error) => {
       console.error("[render] uncaught error", error);

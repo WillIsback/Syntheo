@@ -17,7 +17,7 @@ export type ModelIgnoreReason =
 
 export type IgnoredModel = { id: string; reasons: ModelIgnoreReason[] };
 
-export type InputModality = "image" | "text";
+type InputModality = "image" | "text";
 
 export type ModelMetadata = {
   input_modalities?: InputModality[];

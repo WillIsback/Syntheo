@@ -1,7 +1,8 @@
 use crate::{
     AppExt,
+    aec_models::AecModelStatus,
     agent_skills::{SkillAgent, SkillAgentStatus},
-    embedded_cli::EmbeddedCliStatus,
+    cli_status::CliStatus,
 };
 
 const STAGING_BUNDLE_ID: &str = "com.syntheo.staging";
@@ -59,12 +60,6 @@ pub fn show_devtool<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> bool {
 
 #[tauri::command]
 #[specta::specta]
-pub fn is_app_store_build() -> bool {
-    cfg!(feature = "app-store")
-}
-
-#[tauri::command]
-#[specta::specta]
 pub fn complete_app_exit<R: tauri::Runtime>(app: tauri::AppHandle<R>) {
     crate::mark_exit_flush_complete();
     app.exit(0);
@@ -114,36 +109,30 @@ pub async fn set_recently_opened_sessions<R: tauri::Runtime>(
 
 #[tauri::command]
 #[specta::specta]
-pub async fn check_embedded_cli<R: tauri::Runtime>(
-    app: tauri::AppHandle<R>,
-) -> Result<EmbeddedCliStatus, String> {
-    Ok(crate::embedded_cli::check(&app))
+pub async fn check_cli_status() -> Result<CliStatus, String> {
+    Ok(crate::cli_status::check())
 }
 
 #[tauri::command]
 #[specta::specta]
-pub async fn install_embedded_cli<R: tauri::Runtime>(
-    app: tauri::AppHandle<R>,
-) -> Result<EmbeddedCliStatus, String> {
-    crate::embedded_cli::install(&app)
+pub async fn get_aec_model_status() -> Result<AecModelStatus, String> {
+    Ok(crate::aec_models::status())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn retry_aec_model_download() -> Result<AecModelStatus, String> {
+    Ok(crate::aec_models::retry_now())
 }
 
 #[tauri::command]
 #[specta::specta]
 pub async fn list_skill_agents() -> Result<Vec<SkillAgentStatus>, String> {
-    if cfg!(feature = "app-store") {
-        return Ok(Vec::new());
-    }
-
     crate::agent_skills::list()
 }
 
 #[tauri::command]
 #[specta::specta]
 pub async fn install_agent_skill(agent: SkillAgent) -> Result<SkillAgentStatus, String> {
-    if cfg!(feature = "app-store") {
-        return Err("Agent skill installation is unavailable in the Mac App Store build.".into());
-    }
-
     crate::agent_skills::install(agent)
 }

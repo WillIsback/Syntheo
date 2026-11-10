@@ -10,6 +10,7 @@ import { CircleNotch } from "@syntheo/ui/components/icons";
 import { AccountProfile } from "./account-profile";
 import { AppSettingsView } from "./app-settings";
 import { AudioSettingsView } from "./audio-settings";
+import { InterfaceLanguageSelector } from "./interface-language";
 import {
   CORE_TRANSCRIPTION_LANGUAGE_CODES,
   getAdditionalSpokenLanguages,
@@ -31,8 +32,11 @@ import {
   useStoredSettingValuesQuery,
 } from "~/settings/queries";
 import { SettingSwitchRow } from "~/settings/setting-row";
-import { isAppStoreBuild } from "~/shared/app-store";
 import { resolveConfigValue, resolveConfigValues } from "~/shared/config";
+import {
+  useAecModelState,
+  useRetryAecModelDownload,
+} from "~/stt/aec-model-status";
 
 const SETTINGS_FORM_KEYS = [
   "autostart",
@@ -187,6 +191,8 @@ function SettingsSectionContent({
     resolveConfigValue("speaker_device", storedSettings),
     section === "meetings",
   );
+  const aecModelState = useAecModelState(section === "meetings");
+  const retryAecModelDownload = useRetryAecModelDownload();
   return (
     <div className="flex flex-col gap-8">
       {section === "app" ? (
@@ -210,7 +216,6 @@ function SettingsSectionContent({
           <form.Subscribe selector={(state) => state.values}>
             {(values) => (
               <AppSettingsView
-                appStoreBuild={isAppStoreBuild()}
                 autostart={{
                   value: values.autostart,
                   onChange: (value) => submitFieldValue("autostart", value),
@@ -239,6 +244,7 @@ function SettingsSectionContent({
               <Trans>Language &amp; Region</Trans>
             </h2>
             <div className="flex flex-col gap-6">
+              <InterfaceLanguageSelector />
               <div className="flex flex-col gap-4">
                 <form.Field name="ai_language">
                   {(field) => (
@@ -367,6 +373,10 @@ function SettingsSectionContent({
                 },
               }}
               speakerDevice={speakerDevice}
+              echoCancellation={{
+                state: aecModelState,
+                onRetry: () => retryAecModelDownload(),
+              }}
             />
           </div>
         </>

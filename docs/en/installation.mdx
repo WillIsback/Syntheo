@@ -11,7 +11,7 @@ The `syntheo` command bundles the CLI and the local MCP server. It reads the des
   The CLI is not included in the published packages (AppImage, `.deb`, `.exe`, `.msi`) and is not published as a separate binary in GitHub Releases. For now, build it from source.
 </Warning>
 
-In the app, under **Settings → Developers → CLI & MCP**, the "Syntheo CLI" row offers an "Install" button. On published versions, this button stays inactive, because the CLI is not bundled. The "Copy config" button of the "MCP server" also stays inactive in this case: write the configuration yourself (see [MCP for agents](/en/agents/mcp)).
+In the app, under **Settings → Developers → CLI & MCP**, the "Syntheo CLI" row shows whether the app finds the `syntheo` command, on your `PATH` or in `~/.cargo/bin`, and its absolute path. If the CLI is missing, the row shows the installation command below; once it is installed, use "Check again". The app never installs the CLI itself. The "Copy config" button of the "MCP server" row copies the MCP configuration with the CLI's absolute path; it stays inactive while the CLI is not found (see [MCP for agents](/en/agents/mcp)).
 
 ## Build from source
 

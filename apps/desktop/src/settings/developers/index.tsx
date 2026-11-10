@@ -1,4 +1,6 @@
+import { i18n } from "@lingui/core";
 import { t } from "@lingui/core/macro";
+import { useLingui } from "@lingui/react";
 
 import { commands as openerCommands } from "@syntheo/plugin-opener2";
 import { ArrowSquareOut } from "@syntheo/ui/components/icons";
@@ -10,11 +12,12 @@ import { WebhooksSection } from "./webhooks";
 import { SettingsPageTitle } from "~/settings/page-title";
 import { documentationUrl } from "~/shared/documentation";
 
-export { buildMcpConfiguration, getCliInstallNotification } from "./cli";
-
-const DEVELOPERS_GUIDE_URL = documentationUrl("agents/overview");
+export { buildMcpConfiguration, CLI_INSTALL_COMMAND } from "./cli";
 
 export function SettingsDevelopers() {
+  // `t` de @lingui/core/macro lit la langue au rendu : s'abonner au changement de
+  // langue pour se redessiner aussitôt, sous-composants compris (issue 558).
+  useLingui();
   return (
     <div className="flex flex-col gap-8">
       <div className="flex items-center justify-between gap-4">
@@ -25,7 +28,7 @@ export function SettingsDevelopers() {
           size="sm"
           onClick={() =>
             void openerCommands
-              .openUrl(DEVELOPERS_GUIDE_URL, null)
+              .openUrl(documentationUrl(i18n.locale, "agents/overview"), null)
               .catch((error) =>
                 console.error(
                   "[settings] failed to open developers guide",
