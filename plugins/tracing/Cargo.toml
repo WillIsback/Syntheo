@@ -19,7 +19,6 @@ tauri-plugin = { workspace = true, features = ["build"] }
 [dev-dependencies]
 dirs = { workspace = true }
 rquickjs = "0.10"
-specta-typescript = { workspace = true }
 tauri = { workspace = true, features = ["test"] }
 tempfile = { workspace = true }
 tracing-appender = { version = "0.2" }

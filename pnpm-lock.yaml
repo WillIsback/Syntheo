@@ -808,12 +808,6 @@ importers:
         specifier: ^2.12.4
         version: 2.12.4
 
-  plugins/notify:
-    dependencies:
-      '@tauri-apps/api':
-        specifier: ^2.12.4
-        version: 2.12.4
-
   plugins/opener2:
     dependencies:
       '@tauri-apps/api':
@@ -852,12 +846,6 @@ importers:
         specifier: ^2.12.4
         version: 2.12.4
 
-  plugins/sidecar2:
-    dependencies:
-      '@tauri-apps/api':
-        specifier: ^2.12.4
-        version: 2.12.4
-
   plugins/store2:
     dependencies:
       '@tauri-apps/api':
@@ -871,12 +859,6 @@ importers:
         version: 2.12.4
 
   plugins/template:
-    dependencies:
-      '@tauri-apps/api':
-        specifier: ^2.12.4
-        version: 2.12.4
-
-  plugins/tracing:
     dependencies:
       '@tauri-apps/api':
         specifier: ^2.12.4

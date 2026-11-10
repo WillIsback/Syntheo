@@ -12,11 +12,11 @@ Chaque dossier `plugins/<nom>` suit la même structure :
 | Élément | Emplacement | Rôle |
 | --- | --- | --- |
 | Crate Rust | `Cargo.toml`, `src/lib.rs` | Crate `tauri-plugin-<nom>`. `lib.rs` déclare les commandes (`collect_commands!`) et les événements (`collect_events!`) avec `tauri-specta`. |
-| Paquet TypeScript | `package.json`, `js/index.ts` | Paquet `@syntheo/plugin-<nom>`, importé par `apps/desktop/src`. |
-| Bindings générés | `js/bindings.gen.ts` | Produits par le script `codegen` du paquet (`cargo test -p tauri-plugin-<nom>`). Ne les éditez pas à la main. |
+| Paquet TypeScript | `package.json`, `js/index.ts` | Paquet `@syntheo/plugin-<nom>`, importé par `apps/desktop/src`. Absent des plugins sans interface (`notify`, `sidecar2`, `tracing`). |
+| Bindings générés | `js/bindings.gen.ts` | Écrits par le test `export_types` du plugin, lancé par `scripts/check-bindings.sh`. Ne les éditez pas à la main. |
 | Permissions | `permissions/default.toml` | Commandes autorisées par défaut, à reporter dans `apps/desktop/src-tauri/capabilities/default.json`. |
 
-Après toute modification des commandes d'un plugin, lancez `codegen`, puis mettez à jour `permissions/default.toml` et `apps/desktop/src-tauri/capabilities/default.json` (`plugins/AGENTS.md`).
+Après toute modification des commandes d'un plugin, lancez `scripts/check-bindings.sh`, puis mettez à jour `permissions/default.toml` et `apps/desktop/src-tauri/capabilities/default.json` (`plugins/AGENTS.md`).
 
 Tous les plugins sont enregistrés dans `apps/desktop/src-tauri/src/lib.rs`, avec trois exceptions conditionnelles :
 
@@ -52,12 +52,12 @@ La colonne « Interface » indique si `apps/desktop/src` importe le paquet `@syn
 | `windows` | Fenêtres, onglets, barre flottante, sous-titres en direct | Oui | [/automatic-capture](/fr/automatic-capture), [/meetings](/fr/meetings) |
 | `tray` | Icône et menu de la zone de notification | Oui | aucune |
 | `notification` | Notifications natives interactives | Oui | [/automatic-capture](/fr/automatic-capture) |
-| `notify` | Surveillance des fichiers du dossier de données | Non (utilisé par `fs-sync`) | aucune |
+| `notify` | Surveillance des fichiers du dossier de données | Non (Rust seul, utilisé par `fs-sync`) | aucune |
 | `permissions` | Autorisations système (micro, audio, accessibilité) | Oui | [/quickstart](/fr/quickstart), [/troubleshooting](/fr/troubleshooting) |
 | `local-auth` | Authentification locale du système | Oui | aucune |
 | `deeplink2` | Liens `syntheo://` et serveur de rappel local | Oui | aucune |
 | `opener2` | Ouverture d'URL et de fichiers | Oui | aucune |
-| `tracing` | Journaux de l'application | Non | [/troubleshooting](/fr/troubleshooting), [/data-and-privacy](/fr/data-and-privacy) |
+| `tracing` | Journaux de l'application | Non (Rust seul) | [/troubleshooting](/fr/troubleshooting), [/data-and-privacy](/fr/data-and-privacy) |
 | `misc` | Informations techniques diverses | Oui | aucune |
 | `icon` | Icône du Dock et indicateurs (macOS) | Oui | aucune |
 | `dock` | Menu du Dock (macOS) | Non | aucune |
@@ -170,7 +170,7 @@ La colonne « Interface » indique si `apps/desktop/src` importe le paquet `@syn
 | `local-auth` | `available`, `authenticate`. Implémenté sous macOS et Windows ; ailleurs, `available` renvoie `false`. Utilisé par le verrouillage de l'application (`apps/desktop/src/lock/auth.ts`). | aucune | aucune |
 | `deeplink2` | `start_callback_server`, `stop_callback_server`, `take_pending_deep_links`, `list_pending_share_opens`, `take_pending_share_open` ; événements `DeepLinkEvent`, `ShareOpenPendingEvent`. Les types de liens `auth_callback`, `billing_refresh`, `integration_callback` et `share/open` viennent d'Anarlog. | aucune | aucune |
 | `opener2` | `open_url`, `open_path`, `reveal_item_in_dir` | aucune | aucune |
-| `tracing` | `logs_dir`, `do_log`, `log_content`. Écrit `app.log` et masque le contenu des messages de la console. | `crates/user-error` | [/troubleshooting](/fr/troubleshooting), [/data-and-privacy](/fr/data-and-privacy) |
+| `tracing` | `do_log`, appelée par le script injecté dans la webview pour recopier la console dans `app.log`, avec le contenu des messages masqué. Pas de paquet TypeScript. | `crates/user-error` | [/troubleshooting](/fr/troubleshooting), [/data-and-privacy](/fr/data-and-privacy) |
 | `misc` | `get_git_hash`, `get_device_info`, `get_process_memory_bytes`, `opinionated_md_to_html` | `crates/buffer` | aucune |
 
 ### Plugins internes, spécifiques à macOS ou hérités

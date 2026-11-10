@@ -15,7 +15,6 @@ ignored = ["specta"]
 tauri-plugin = { workspace = true, features = ["build"] }
 
 [dev-dependencies]
-specta-typescript = { workspace = true }
 tokio = { workspace = true, features = ["macros"] }
 
 [dependencies]
