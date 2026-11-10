@@ -24,7 +24,7 @@ In the `Cargo.toml` files, these crates are referenced by the workspace alias `s
 | `crates/audio-mock` | Fake provider `MockAudio`, which replays files from `syntheo-data`. | `apps/desktop/src-tauri`, only with the `dev` or `devtools` features |
 | `crates/audio-device` | Device enumeration and per-platform default choice (`backend()`, `AudioDeviceBackend`), handling of Bluetooth inputs and headset outputs. | `audio-actual`, `device-monitor`, `listener-core` |
 | `crates/device-monitor` | Watches device changes (`DeviceMonitor`, `DeviceSwitchMonitor`, `DeviceUpdateMonitor`) with a 1 s debounce. | `listener-core` |
-| `crates/audio-sync` | Measures the microphone / system audio offset (`GccPhatLagEstimator`, `LagTrendTracker`) and levels (`LevelAccumulator`, dBFS). | `audio-actual` |
+| `crates/audio-sync` | Measures the microphone / system audio offset (`GccPhatLagEstimator`, `SyncProbe`, which also tracks the clock drift between the two devices) and levels (`LevelAccumulator`, dBFS). | `audio-actual` |
 | `crates/aec` | Acoustic echo cancellation with an ONNX model (`AEC`, `BLOCK_SIZE`, `BLOCK_SHIFT`). `onnx` feature enabled by default. | `audio-actual` (`capture/echo_gate.rs`) |
 | `crates/audio-interface` | `AsyncSource` trait, abstraction of an asynchronous audio source. | `audio-actual`, `audio-utils`, `resampler` |
 | `crates/audio-utils` | PCM tools: decoding (`rodio`, `symphonia`), metadata, resampling, `f32` / `i16` conversion, chunking for STT (`chunk_size_for_stt`), playback (`open_default_playback_sink`). | `aec`, `audio-actual`, `audio-mock`, `listener-core`, `listener2-core`, `mp3`, `vad-masking`, `fs-sync-core`, `plugins/sfx` |

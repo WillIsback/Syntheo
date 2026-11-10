@@ -349,18 +349,18 @@ fn small_alignment_jitter_keeps_the_echo_canceller_converged() {
     assert_eq!(applied, AecAlignment::DelaySpeaker(904));
     assert_eq!(resets.load(Ordering::SeqCst), 1);
 
-    // Bruit de mesure sous 1 ms (16 échantillons) : ni remise à zéro, ni réalignement.
+    // Bruit de mesure : la cible suit, les lignes de retard glissent, sans remise à zéro (#437).
     linear_echo_gain = Some(0.5);
     for jitter in [906, 905, 907] {
         let applied = observe(AecAlignment::DelaySpeaker(jitter), &mut linear_echo_gain);
-        assert_eq!(applied, AecAlignment::DelaySpeaker(904));
+        assert_eq!(applied, AecAlignment::DelaySpeaker(jitter));
     }
     assert_eq!(resets.load(Ordering::SeqCst), 1);
     assert_eq!(linear_echo_gain, Some(0.5));
 
-    // Vrai déplacement du chemin d'écho : 904 → 950, réinitialisation.
-    let applied = observe(AecAlignment::DelaySpeaker(950), &mut linear_echo_gain);
-    assert_eq!(applied, AecAlignment::DelaySpeaker(950));
+    // Vrai déplacement du chemin d'écho, au-delà de 3 ms (48 échantillons) : réinitialisation.
+    let applied = observe(AecAlignment::DelaySpeaker(1_000), &mut linear_echo_gain);
+    assert_eq!(applied, AecAlignment::DelaySpeaker(1_000));
     assert_eq!(resets.load(Ordering::SeqCst), 2);
     assert_eq!(linear_echo_gain, None);
 
@@ -371,16 +371,41 @@ fn small_alignment_jitter_keeps_the_echo_canceller_converged() {
 }
 
 #[test]
-fn slow_drift_realigns_once_it_reaches_one_millisecond() {
+fn slow_drift_glides_without_resetting() {
     let mut aligner = AecReferenceAligner::new(16_000);
     assert!(aligner.commit_alignment(AecAlignment::DelaySpeaker(904)));
-    // Chaque pas reste sous 1 ms, mais l'écart cumulé à l'alignement appliqué l'atteint.
-    let changes: Vec<bool> = (905..=920)
-        .map(|lag| aligner.commit_alignment(AecAlignment::DelaySpeaker(lag)))
+    // Dérive d'horloge (#437) : chaque pas devient la cible, sans réinitialisation, même quand
+    // l'écart cumulé dépasse 1 ms.
+    let resets = (905..=960)
+        .filter(|&lag| aligner.commit_alignment(AecAlignment::DelaySpeaker(lag)))
+        .count();
+    assert_eq!(resets, 0);
+    assert_eq!(aligner.applied_alignment, AecAlignment::DelaySpeaker(960));
+}
+
+#[test]
+fn delay_line_glides_one_sample_at_a_time() {
+    use super::AEC_DELAY_SLEW_INTERVAL_SAMPLES as STEP;
+
+    let mut line = SampleDelayLine::new(64);
+    line.snap_to(10);
+    let input: Vec<f32> = (0..STEP * 4).map(|index| index as f32).collect();
+    let output = line.process_slewed(&input, 13);
+    // Chaque sortie lit l'entrée `index - retard` ; le retard monte d'un échantillon tous les
+    // STEP échantillons, sans saut plus grand.
+    let delays: Vec<usize> = output
+        .iter()
+        .enumerate()
+        .skip(13)
+        .map(|(index, &value)| index - value as usize)
         .collect();
-    assert_eq!(changes.iter().filter(|changed| **changed).count(), 1);
-    assert!(changes[changes.len() - 1]);
-    assert_eq!(aligner.applied_alignment, AecAlignment::DelaySpeaker(920));
+    assert!(
+        delays
+            .windows(2)
+            .all(|pair| pair[1] >= pair[0] && pair[1] - pair[0] <= 1)
+    );
+    assert_eq!(delays.first(), Some(&10));
+    assert_eq!(delays.last(), Some(&13));
 }
 
 fn test_signal(len: usize) -> Vec<f32> {

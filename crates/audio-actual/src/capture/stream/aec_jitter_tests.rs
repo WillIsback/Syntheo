@@ -26,7 +26,8 @@ enum Strategy {
     Ideal,
     /// Comportement d'avant #322 : chaque écart est appliqué et réinitialise l'annulation.
     ResetOnEveryChange,
-    /// Correctif retenu, option (a) : hystérésis sous 1 ms (`commit_alignment`).
+    /// `commit_alignment` : hystérésis sous 1 ms à #322 (option a) ; depuis #437, la cible suit
+    /// la mesure sans réinitialisation sous 3 ms, comme `ShiftWithoutReset`.
     Hysteresis,
     /// Option (b), pour comparaison : écart appliqué à la ligne de retard, sans remise à zéro.
     ShiftWithoutReset,
