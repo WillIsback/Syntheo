@@ -2469,7 +2469,6 @@ msgstr "Chargement de la modification…"
 msgid "Loading settings"
 msgstr "Chargement des paramètres"
 
-#: src/changelog/index.tsx
 #: src/contacts/details-sections.tsx
 #: src/settings/general/account-profile.tsx
 #: src/settings/general/storage/export-location.tsx

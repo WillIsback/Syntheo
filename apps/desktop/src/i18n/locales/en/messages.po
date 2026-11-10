@@ -2469,7 +2469,6 @@ msgstr "Loading edit…"
 msgid "Loading settings"
 msgstr "Loading settings"
 
-#: src/changelog/index.tsx
 #: src/contacts/details-sections.tsx
 #: src/settings/general/account-profile.tsx
 #: src/settings/general/storage/export-location.tsx

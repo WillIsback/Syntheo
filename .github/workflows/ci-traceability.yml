@@ -1,6 +1,7 @@
 # Workflow : Traçabilité
 # Vérifie que la PR est adossée à une issue, que son type est valide et que
-# l'impact semver déclaré est cohérent avec le titre.
+# l'impact semver déclaré est cohérent avec le titre ; si la PR déclenche une
+# release, que sa note de version est rédigée (ci-changelog).
 name: ci-traceability
 
 on:
@@ -80,3 +81,35 @@ jobs:
           else
             echo "✅ Cohérence semver vérifiée."
           fi
+
+  ci-changelog:
+    name: ci-changelog
+    # Dependabot ne rédige pas de note de version. Ses PR `chore(deps)` ne
+    # déclenchent pas de release ; pour un `fix(deps)`, exemption provisoire
+    # (à trancher : note minimale ou étiquette d'exemption, issue #536).
+    if: github.event_name == 'pull_request' && github.event.pull_request.user.login != 'dependabot[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          persist-credentials: false
+
+      - name: Note de version de la release déclenchée
+        shell: bash
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          set -euo pipefail
+          # Même calcul que release.yml après le squash : commits déjà sur main
+          # depuis le dernier tag + titre de la PR (sujet du commit squash),
+          # `[skip release]` compris. Si une release suit la fusion,
+          # packages/changelog/content/desktop/<version>.md doit être dans le
+          # diff de la PR et non vide. HEAD est le commit de fusion de test
+          # (refs/pull/N/merge) : son premier parent est la pointe de main.
+          BASE_SHA=$(git rev-parse HEAD^1)
+          node scripts/next-release-version.mjs --head "$BASE_SHA" \
+            --pr-title "$PR_TITLE" --honor-skip --check-changelog "$BASE_SHA"

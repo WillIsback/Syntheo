@@ -157,9 +157,9 @@ The `packages/editor/daily/cfm.md` file is an inherited design note ("Char-Flavo
 
 - Path: `packages/changelog`
 - Role: contains the release notes (`content/desktop/<version>.md`, one per version) and renders them in the app.
-- Main API: `ChangelogContent`, `changelogComponents`, `parseFrontmatter`, `processContent`. Export `./process` for processing only.
+- Main API: `ChangelogContent`, `changelogComponents`, `parseFrontmatter`, `processContent`, `selectVersionLine`. Exports `./process` and `./line` for processing only (Vite plugin).
 - Internal dependencies: `utils`.
-- Consumers: `apps/desktop/src/changelog/*`. The app reads the latest version through a Vite virtual module (`virtual:changelog`) and downloads older versions.
+- Consumers: `apps/desktop/src/changelog/*`. At build time, a Vite virtual module (`virtual:changelog`) embeds the notes of the installed version line (`selectVersionLine`): patches of the current minor, then `X.Y.0`, then `X.0.0`. Nothing is downloaded at runtime.
 - Affected doc pages: none. The Mintlify site has no release notes page.
 
 ## Resources for agents
