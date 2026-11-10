@@ -3,6 +3,8 @@ title: "Enregistrer une réunion"
 description: "Préparez, écoutez et terminez une capture sans ajouter de robot à l'appel."
 ---
 
+import { AppScreen, AppSettings, Kbd, SettingsPath } from "/snippets/app.gen.jsx";
+
 ## Avant de commencer
 
 Syntheo a besoin d'un serveur de transcription en temps réel configuré dans **Paramètres → Transcription**. Sans lui, l'écoute ne démarre pas. Pour obtenir un compte rendu, configurez aussi un serveur de synthèse dans **Paramètres → Synthèse**. Voir [Configurer la transcription et l'IA](/ai-setup).
@@ -13,29 +15,55 @@ Une note de réunion est un document vivant. Elle passe par trois étapes sans c
 
 | Étape | Ce que vous voyez | Capsule |
 | --- | --- | --- |
-| 備 Préparer | Une fiche (type de réunion, participants, écoute) et vos notes | « Annuler » · « Commencer l'écoute » |
-| 聴 Écouter | Vos notes, avec la transcription dans la marge de droite | Chronomètre, niveau sonore, « Terminer » |
+| 備 Préparer | Une fiche (dossier, type de réunion, participants, écoute) et vos notes | « Annuler » · « Commencer l'écoute » |
+| 聴 Écouter | Vos notes, avec la transcription dans la marge de droite | Chronomètre, niveau sonore, bascules du micro et du son système, « Mettre en pause », « Terminer » |
 | 結 Synthèse | Le compte rendu, puis vos notes | « Copier » · « Exporter » · « Demander à la note » |
+
+Essayez la capsule : cliquez sur « Commencer l'écoute », coupez le micro ou le son système, mettez en pause, puis « Terminer ». Les repères désignent les étapes (1), les actions de la capsule (2) et le contenu de la note (3).
+
+<AppScreen stage="prepare" />
 
 ## Préparer la réunion
 
-1. Sur l'accueil, cliquez sur « Démarrer une réunion » (<kbd>Ctrl</kbd> + <kbd>N</kbd>). Une nouvelle note s'ouvre à l'étape **Préparer**.
+1. Sur l'accueil, cliquez sur « Démarrer une réunion » (<Kbd keys="Ctrl+N" />). Une nouvelle note s'ouvre à l'étape **Préparer**.
 2. Saisissez le titre en haut de la note.
 3. Remplissez la fiche :
-   - **« Type »** : le type de réunion, c'est-à-dire le modèle de compte rendu. Cliquez dessus, tapez quelques lettres dans « Rechercher un type de réunion », puis choisissez un modèle. « Automatique » laisse Syntheo structurer le compte rendu lui-même. « Gérer les modèles » ouvre l'éditeur de modèles.
+   - **« Dossier »** : le dossier où ranger la note. Cliquez sur « Choisir un dossier » pour rechercher un dossier ou en créer un. Si un dossier contient déjà une note du même titre, Syntheo le propose en tête, avec la mention « même titre ». Voir [Dossiers et projets](/folders).
+   - **« Type »** : le type de réunion, c'est-à-dire le modèle de compte rendu. Cliquez dessus, tapez quelques lettres dans « Rechercher un type de réunion », puis choisissez un modèle. « Automatique » laisse Syntheo structurer le compte rendu lui-même. Si le dossier de la note a un modèle par défaut, l'entrée par défaut affiche ce modèle, par exemple « Point projet / Sprint — modèle du dossier ». « Gérer les modèles » ouvre l'éditeur de modèles.
    - **« Participants »** : ajoutez les personnes présentes.
    - **« Écoute »** : rappelle les sources captées (« Micro », « Son de l'ordinateur ») et vos langues parlées.
 4. Notez ce que vous voulez retenir dans la zone de notes.
 
 Le type de réunion choisit le modèle du futur compte rendu. Il ne modifie pas ce que vous avez déjà écrit.
 
+Une note créée depuis la page d'un dossier, avec « Nouvelle note dans ce dossier » ou « Préparer la note », arrive déjà rangée. « Préparer la note » remplit aussi le titre, les participants habituels et l'ordre du jour proposé : voir [Prochaine réunion](/folders#prochaine-réunion).
+
 « Annuler » vous ramène à l'écran précédent.
 
 ## Démarrer l'écoute
 
-Cliquez sur « Commencer l'écoute » dans la capsule, ou appuyez sur <kbd>Ctrl</kbd> + <kbd>Maj</kbd> + <kbd>N</kbd>. Ailleurs dans l'application, ce raccourci crée une nouvelle note et lance l'écoute.
+Cliquez sur « Commencer l'écoute » dans la capsule, ou appuyez sur <Kbd keys="Ctrl+Maj+N" />. Ailleurs dans l'application, ce raccourci crée une nouvelle note et lance l'écoute.
 
 Syntheo capte votre microphone et l'audio système de l'ordinateur. Il ne rejoint pas la réunion comme participant : les autres personnes ne voient pas de robot dans l'appel.
+
+### Choisir le micro et la sortie captée
+
+Ouvrez **Paramètres → Réunions**, section « Audio » :
+
+<SettingsPath steps={["Paramètres", "Mes réunions", "Réunions", "Audio"]} />
+
+Dans la reproduction ci-dessous, changez la sortie captée : la ligne « Capturé en ce moment : » suit votre choix. La sortie « Écouteurs Bluetooth », débranchée, montre la mention « (indisponible — sortie par défaut utilisée) ».
+
+<AppSettings section="meetings" focus="audio" />
+
+- « Microphone » : le micro qui capte votre voix ;
+- « Son système » : la sortie dont Syntheo transcrit le son, c'est-à-dire celle où vous entendez les autres participants (casque, haut-parleurs, HDMI…).
+
+Chaque ligne affiche le niveau sonore en direct. « Sortie par défaut actuelle » suit la sortie par défaut du système. Si la sortie choisie est débranchée, la liste l'indique « (indisponible — sortie par défaut utilisée) » et Syntheo capte la sortie par défaut. « Capturé en ce moment : » donne la sortie réellement captée. Si aucune sortie n'est détectée, branchez un casque ou des haut-parleurs, puis cliquez sur « Rechercher à nouveau ».
+
+Votre choix s'applique au démarrage de l'écoute. Pendant l'écoute, si la sortie captée change, par exemple quand vous branchez ou débranchez un casque, Syntheo l'indique sans interrompre la capture : « Son système : le casque a été débranché, Syntheo capte maintenant … ».
+
+La ligne « Son système » existe sous Linux et Windows.
 
 Au démarrage, Syntheo affiche un rappel pour informer les participants que la réunion est transcrite. Vous pouvez le désactiver dans **Paramètres → Réunions** avec « Rappeler aux participants l'enregistrement ».
 
@@ -51,6 +79,17 @@ La transcription défile dans la marge de droite. Syntheo distingue votre voix (
 
 La capsule affiche le temps d'écoute et le niveau sonore.
 
+### Couper le micro ou le son système
+
+Pendant l'écoute, la capsule propose deux bascules entre le niveau sonore et « Mettre en pause » :
+
+- le micro, avec <Kbd keys="Ctrl+Maj+M" /> ;
+- le son système, avec <Kbd keys="Ctrl+Maj+S" />.
+
+Une source coupée apparaît sur fond rouge, avec une icône barrée. L'infobulle indique l'action, par exemple « Couper le micro » ou « Rétablir le son système ». Ce qui est dit sur une source coupée n'est pas transcrit, mais l'écoute continue : le temps d'écoute défile et la connexion au serveur de transcription reste ouverte. L'état coupé est conservé même si la transcription se reconnecte. Les raccourcis fonctionnent dans la fenêtre de Syntheo, y compris dans une note détachée, et n'ont aucun effet hors écoute.
+
+Si vous coupez les deux sources, Syntheo affiche « Le micro et le son système sont coupés : plus rien n'est transcrit. » avec « Mettre en pause » et « Rétablir le micro ». Le message disparaît dès qu'une source revient.
+
 L'audio n'est jamais écrit sur le disque : il reste en mémoire le temps d'être envoyé à votre serveur de transcription.
 
 ### Si la transcription s'interrompt
@@ -65,21 +104,32 @@ Pour une pause pendant la réunion, cliquez sur « Mettre en pause » dans la ca
 
 Cliquez sur « Reprendre l'écoute » pour continuer dans la même note. La nouvelle capture s'ajoute à la transcription, qui reste continue, et le temps d'écoute reprend là où il s'était arrêté. Vous pouvez mettre en pause et reprendre autant de fois que nécessaire.
 
-La pause ne termine pas la réunion : le compte rendu n'est rédigé qu'à « Terminer ». Pendant la pause, la palette (<kbd>Ctrl</kbd> + <kbd>K</kbd>) propose aussi « Reprendre l'écoute ». Pendant l'écoute, elle propose « Mettre en pause l'écoute ». Aucun raccourci clavier dédié n'existe, pour éviter une pause involontaire.
+La pause ne termine pas la réunion : le compte rendu n'est rédigé qu'à « Terminer ». Pendant la pause, la palette (<Kbd keys="Ctrl+K" />) propose aussi « Reprendre l'écoute ». Pendant l'écoute, elle propose « Mettre en pause l'écoute ». Aucun raccourci clavier dédié n'existe, pour éviter une pause involontaire.
 
 Si vous fermez la note pendant la pause, la réunion reste en pause : la barre flottante affiche « En pause » avec « Reprendre » et « Terminer ». Si vous quittez Syntheo pendant la pause, la réunion se termine sans compte rendu et la transcription est conservée. À la réouverture, la capsule de la note propose « Reprendre l'écoute » ou « Générer le compte rendu ».
 
-Sur macOS, la barre flottante reste masquée pendant la pause : reprenez l'écoute depuis la note ou depuis la palette (<kbd>⌘</kbd> + <kbd>K</kbd>). Cette limite est suivie dans l'[issue 409](https://github.com/WillIsback/syntheo-desktop/issues/409).
+Sur macOS, la barre flottante reste masquée pendant la pause : reprenez l'écoute depuis la note ou depuis la palette (<Kbd keys="⌘+K" />). Cette limite est suivie dans l'[issue 409](https://github.com/WillIsback/syntheo-desktop/issues/409).
 
 ### Garder les commandes à portée de main
 
-Si « Afficher la barre flottante » est activé dans **Paramètres → Réunions** (c'est le cas par défaut), une barre compacte vous permet de piloter l'écoute sans rouvrir la fenêtre principale : « Mettre en pause l'écoute », puis « Reprendre » ou « Terminer ». Pendant une capture, vous pouvez aussi choisir « Ouvrir le panneau flottant » dans le menu **•••** de la note.
+Si « Afficher la barre flottante » est activé dans **Paramètres → Réunions** (c'est le cas par défaut), une pastille compacte vous permet de piloter l'écoute sans rouvrir la fenêtre principale. Elle affiche, de gauche à droite :
+
+- un point rouge pulsant et la durée d'écoute (pauses exclues) ; cliquez sur la durée pour revenir à la note dans la fenêtre principale ;
+- le niveau sonore ;
+- la bascule du micro, synchronisée avec celle de la capsule ;
+- « Pause » et « Terminer ».
+
+En pause, la pastille affiche « En pause », « Reprendre » et « Terminer ». Si la capture rencontre un problème, une icône d'alerte remplace le niveau sonore : ouvrez Syntheo pour réessayer ou changer d'appareil. La pastille ne propose ni bascule du son système, ni transcription en direct : utilisez la capsule de la note.
+
+La pastille s'ouvre en bas au centre de l'écran. Pour la déplacer, faites-la glisser par n'importe quelle zone hors de ses boutons. Sous Wayland, avec un compositeur qui gère les calques (Hyprland, sway, KDE Plasma), elle reste ancrée en bas de l'écran et ne se déplace pas. Sous GNOME et X11, elle se comporte comme une fenêtre ordinaire.
+
+Pendant une capture, vous pouvez aussi choisir « Ouvrir le panneau flottant » dans le menu **•••** de la note.
 
 ## Terminer la réunion
 
 Cliquez sur « Terminer » dans la capsule, pendant l'écoute ou pendant une pause. Syntheo finalise la transcription (« Finalisation… »), puis passe à l'étape **Synthèse**. Il rédige le compte rendu si un serveur de synthèse est configuré.
 
-Pour une simple interruption, préférez « Mettre en pause » (voir [Faire une pause](#faire-une-pause)). Si la conversation reprend après « Terminer », ouvrez le menu **•••** de la note et choisissez « Reprendre l'écoute ».
+Pour une simple interruption, préférez « Mettre en pause » (voir [Faire une pause](#faire-une-pause)). Si la conversation reprend après « Terminer » et que la note n'a pas encore de compte rendu, cliquez sur « Reprendre l'écoute » dans la capsule.
 
 Pour relire, corriger et exporter la note, voir [Notes, comptes rendus et transcriptions](/notes).
 

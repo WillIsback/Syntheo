@@ -10,69 +10,37 @@ import { commands as notificationCommands } from "@syntheo/plugin-notification";
 import { useMountEffect } from "@syntheo/ui/hooks/use-mount-effect";
 
 import {
-  AUTO_STOP_ACCESSIBILITY_TIMEOUT_MS,
   AUTO_STOP_CONFIRM_DELAY_MS,
   getAutoStopActiveCheckAppIds,
   getAutoStopCandidateAppIds,
   getMeetingAppsStillOnCall,
-  getNetworkInterruptionDeadlineMs,
   isRecentNetworkDrop,
   resolveNetworkHoldUntilMs,
   shouldPromptBeforeAutoStopping,
   showMeetingEndedPrompt,
 } from "./auto-stop";
 import { cancelAutoStopEndedNotification } from "./auto-stop-notification";
+import {
+  captureDetectedTriggerApps,
+  createAutoStopAccessibilityInspector,
+  getMicDetectedNotificationTitle,
+  MAX_TIMEOUT_DELAY_MS,
+  type PendingAutoStop,
+} from "./detect-events-helpers";
 import { inspectionsShowActiveMeetingForApps } from "./meeting-accessibility";
 import {
-  getBrowserMeetingPlatform,
   getIgnorableApps,
   getIgnoreAppsFooterText,
   getNotificationAppName,
-  getNotificationDisplayApp,
-  getNotificationDisplayApps,
+  getNotificationIconForApp,
   getNotificationIconForDetectedApps,
-  getNotificationIconForDisplayApp,
 } from "./meeting-apps";
-import { recordDetectedMeetingApps } from "./meeting-source-apps";
 
-import {
-  getNearbyCalendarEvents,
-  type NearbyCalendarEvent,
-} from "~/calendar/queries";
 import { useConfigValue } from "~/shared/config";
 import type { ListenerStore } from "~/store/zustand/listener";
 import { isLiveRecordingInProgress } from "~/store/zustand/listener/general-shared";
 
-const MAX_TIMEOUT_DELAY_MS = 2_147_483_647;
-
-type NearbyEvent = NearbyCalendarEvent;
-type PendingAutoStop = {
-  timeout?: ReturnType<typeof setTimeout>;
-  requireMicSnapshot: boolean;
-  sessionId: string | null;
-  networkInterrupted: boolean;
-  networkHoldUntilMs?: number;
-};
-
-export function getMicDetectedNotificationTitle(
-  event: NearbyEvent | null,
-): string {
-  if (!event) {
-    return t`Are you in a meeting?`;
-  }
-
-  const [firstName, secondName] = event.participantNames;
-  if (event.participantNames.length === 1) {
-    return t`Are you talking to ${firstName} right now?`;
-  }
-
-  if (event.participantNames.length === 2) {
-    return t`Are you talking to ${firstName} and ${secondName} right now?`;
-  }
-
-  const eventTitle = event.title;
-  return t`Are you in ${eventTitle} right now?`;
-}
+export { getMicDetectedNotificationTitle } from "./detect-events-helpers";
 
 export const useHandleDetectEvents = (store: ListenerStore) => {
   const stop = useStore(store, (state) => state.stop);
@@ -97,36 +65,7 @@ export const useHandleDetectEvents = (store: ListenerStore) => {
   useMountEffect(() => {
     let unlistenDetect: (() => void) | undefined;
     let cancelled = false;
-    let accessibilityInspection: Promise<Awaited<
-      ReturnType<typeof detectCommands.inspectMeetingAccessibility>
-    > | null> | null = null;
-
-    async function inspectForAutoStop() {
-      // A timed-out native walk may still run and its result may be stale for a new stop event.
-      if (accessibilityInspection) {
-        return null;
-      }
-      accessibilityInspection = detectCommands
-        .inspectMeetingAccessibility()
-        .catch(() => null)
-        .finally(() => {
-          accessibilityInspection = null;
-        });
-      let timeout: ReturnType<typeof setTimeout> | undefined;
-      try {
-        return await Promise.race([
-          accessibilityInspection,
-          new Promise<null>((resolve) => {
-            timeout = setTimeout(
-              () => resolve(null),
-              AUTO_STOP_ACCESSIBILITY_TIMEOUT_MS,
-            );
-          }),
-        ]);
-      } finally {
-        clearTimeout(timeout);
-      }
-    }
+    const inspectForAutoStop = createAutoStopAccessibilityInspector();
 
     isOnlineRef.current = navigator.onLine;
     const clearNotificationsIfActive = () => {
@@ -177,40 +116,8 @@ export const useHandleDetectEvents = (store: ListenerStore) => {
     // start to the end of finalizing (issue 349).
     const isRecordingInProgress = () =>
       isLiveRecordingInProgress(store.getState().live);
-    const captureTriggerApps = (apps: { id: string; name: string }[]) => {
-      const appIds = apps.map((app) => app.id);
-      if (appIds.length === 0) {
-        return;
-      }
-
-      const currentLive = store.getState().live;
-      const currentTrigger = currentLive.triggerAppIds ?? [];
-      if (appIds.some((id) => currentTrigger.includes(id))) {
-        clearPendingAutoStop();
-        if (
-          currentLive.sessionId &&
-          cancelAutoStopEndedNotification(currentLive.sessionId)
-        ) {
-          void notificationCommands
-            .clearNotifications()
-            .catch((error) =>
-              console.error("[listener] failed to clear notifications", error),
-            );
-        }
-      }
-      store
-        .getState()
-        .setTriggerAppIds([...new Set([...currentTrigger, ...appIds])]);
-      if (currentLive.sessionId) {
-        void recordDetectedMeetingApps(currentLive.sessionId, apps).catch(
-          (error) =>
-            console.warn(
-              "[listener] failed to persist detected meeting apps",
-              error,
-            ),
-        );
-      }
-    };
+    const captureTriggerApps = (apps: { id: string; name: string }[]) =>
+      captureDetectedTriggerApps(store, clearPendingAutoStop, apps);
 
     function scheduleAutoStop(
       delayMs: number,
@@ -355,16 +262,8 @@ export const useHandleDetectEvents = (store: ListenerStore) => {
       }
 
       if (pending.networkInterrupted || !isOnlineRef.current) {
-        const nowMs = Date.now();
         const holdUntilMs =
-          pending.networkHoldUntilMs ??
-          resolveNetworkHoldUntilMs({
-            calendarDeadlineMs: await getNetworkInterruptionDeadlineMs({
-              sessionId: pending.sessionId,
-              nowMs,
-            }),
-            nowMs,
-          });
+          pending.networkHoldUntilMs ?? resolveNetworkHoldUntilMs(Date.now());
         if (pendingAutoStopRef.current !== pending) {
           return;
         }
@@ -464,38 +363,17 @@ export const useHandleDetectEvents = (store: ListenerStore) => {
 
           void (async () => {
             try {
-              const nearbyEvents = await getNearbyCalendarEvents(
-                Date.now(),
-                15 * 60 * 1000,
-              );
-              const nearbyEvent = nearbyEvents[0] ?? null;
-              const browserMeetingPlatform = getBrowserMeetingPlatform(
-                payload.apps,
-                nearbyEvent,
-              );
-              const displayApps = getNotificationDisplayApps(
-                payload.apps,
-                browserMeetingPlatform,
-              );
-              const displayIgnorableApps = ignorableApps.map((app) =>
-                getNotificationDisplayApp(app, browserMeetingPlatform),
-              );
-
               const footerIcon =
-                displayIgnorableApps.length > 0
-                  ? await getNotificationIconForDisplayApp(
-                      displayIgnorableApps[0]!,
-                      browserMeetingPlatform,
-                    )
+                ignorableApps.length > 0
+                  ? await getNotificationIconForApp(ignorableApps[0]!)
                   : null;
               const notificationIcon = await getNotificationIconForDetectedApps(
                 payload.apps,
-                browserMeetingPlatform,
               );
               const footer =
-                displayIgnorableApps.length > 0
+                ignorableApps.length > 0
                   ? {
-                      text: getIgnoreAppsFooterText(displayIgnorableApps),
+                      text: getIgnoreAppsFooterText(ignorableApps),
                       actionLabel: t`Yes`,
                       icon: footerIcon,
                     }
@@ -511,16 +389,16 @@ export const useHandleDetectEvents = (store: ListenerStore) => {
 
               await notificationCommands.showNotification({
                 key: payload.key,
-                title: getMicDetectedNotificationTitle(nearbyEvent),
+                title: getMicDetectedNotificationTitle(),
                 message: "",
                 timeout: { secs: 15, nanos: 0 },
                 source: {
                   type: "mic_detected",
-                  app_names: displayApps.map((app) =>
+                  app_names: payload.apps.map((app) =>
                     getNotificationAppName(app),
                   ),
                   app_ids: appIds,
-                  event_ids: nearbyEvent ? [nearbyEvent.id] : [],
+                  event_ids: [],
                 },
                 start_time: null,
                 participants: null,

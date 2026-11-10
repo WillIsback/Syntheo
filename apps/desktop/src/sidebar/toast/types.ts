@@ -6,13 +6,6 @@ type ToastAction = {
   onClick: () => void | Promise<void>;
 };
 
-export type DownloadProgress = {
-  model: string;
-  displayName: string;
-  progress: number;
-  isStarting?: boolean;
-};
-
 type ToastLifecycle =
   | { type: "condition-bound" }
   | {

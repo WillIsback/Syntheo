@@ -5,7 +5,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import { createRef } from "react";
+import { type ComponentProps, createRef } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TranscriptViewer } from "./index";
@@ -175,7 +175,6 @@ vi.mock("./viewport-hooks", () => ({
     action: () => Promise<unknown>,
   ) => action(),
   useAutoScroll: vi.fn(),
-  usePlaybackAutoScroll: vi.fn(),
   useScrollDetection: () => ({
     ...mocks.scrollDetection,
     scrollToBottom: mocks.scrollToBottom,
@@ -206,14 +205,7 @@ describe("TranscriptViewer", () => {
     (_label, currentActive, isAtBottom, expected) => {
       mocks.scrollDetection.isAtBottom = isAtBottom;
 
-      render(
-        <TranscriptViewer
-          transcriptIds={["transcript-1"]}
-          liveSegments={[]}
-          currentActive={currentActive}
-          scrollRef={createRef()}
-        />,
-      );
+      render(viewerElement({ transcriptIds: ["transcript-1"], currentActive }));
 
       expect(
         screen
@@ -279,12 +271,7 @@ describe("TranscriptViewer", () => {
   // Les captures s'enchaînent dans la marge comme un seul fil.
   it("chains the captures of a paused session without a visible break", () => {
     const { container } = render(
-      <TranscriptViewer
-        transcriptIds={["capture-1", "capture-2", "capture-3"]}
-        liveSegments={[]}
-        currentActive={false}
-        scrollRef={createRef()}
-      />,
+      viewerElement({ transcriptIds: ["capture-1", "capture-2", "capture-3"] }),
     );
 
     expect(
@@ -309,13 +296,10 @@ describe("TranscriptViewer", () => {
     "supports scattered entry selection %s",
     (_label, editMode, testIdPrefix, modifiers) => {
       render(
-        <TranscriptViewer
-          transcriptIds={["transcript-1", "transcript-2"]}
-          liveSegments={[]}
-          currentActive={false}
-          editMode={editMode}
-          scrollRef={createRef()}
-        />,
+        viewerElement({
+          transcriptIds: ["transcript-1", "transcript-2"],
+          editMode,
+        }),
       );
 
       fireEvent.click(
@@ -336,13 +320,7 @@ describe("TranscriptViewer", () => {
     ["ArrowDown", 3],
   ])("extends block selection with Command-Shift-%s", (key, count) => {
     render(
-      <TranscriptViewer
-        transcriptIds={["1", "2", "3", "4"]}
-        liveSegments={[]}
-        currentActive={false}
-        editMode
-        scrollRef={createRef()}
-      />,
+      viewerElement({ transcriptIds: ["1", "2", "3", "4"], editMode: true }),
     );
     fireEvent.click(screen.getByTestId("segment-header-2"));
     const event = new KeyboardEvent("keydown", {
@@ -378,16 +356,29 @@ describe("TranscriptViewer", () => {
     fireEvent.keyUp(document, { key: opposite, code: opposite });
   });
 
+  it("selects every reply with Ctrl+A in the margin, and Esc clears it", () => {
+    render(viewerElement({ transcriptIds: ["1", "2", "3"] }));
+    const margin = document.querySelector("[data-transcript-container]")!;
+    expect(margin.getAttribute("tabindex")).toBe("-1");
+
+    const event = new KeyboardEvent("keydown", {
+      key: "a",
+      code: "KeyA",
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    fireEvent(screen.getByTestId("segment-2"), event);
+    fireEvent.keyUp(document, { key: "a", code: "KeyA" });
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(screen.getByTestId("multi-selection-bar").textContent).toBe("3");
+    fireEvent.keyDown(document, { key: "Escape", code: "Escape" });
+    expect(screen.queryByTestId("multi-selection-bar")).toBeNull();
+  });
+
   it("leaves shortcuts alone without a block selection or inside an editor", () => {
-    render(
-      <TranscriptViewer
-        transcriptIds={["1", "2", "3"]}
-        liveSegments={[]}
-        currentActive={false}
-        editMode
-        scrollRef={createRef()}
-      />,
-    );
+    render(viewerElement({ transcriptIds: ["1", "2", "3"], editMode: true }));
     fireEvent.keyDown(document, {
       key: "ArrowUp",
       code: "ArrowUp",
@@ -412,14 +403,7 @@ describe("TranscriptViewer", () => {
   it("routes selected text to the editor speaker split at the selection start", () => {
     const onEditModeChange = vi.fn();
     render(
-      <TranscriptViewer
-        transcriptIds={["1"]}
-        liveSegments={[]}
-        currentActive={false}
-        editMode
-        onEditModeChange={onEditModeChange}
-        scrollRef={createRef()}
-      />,
+      viewerElement({ transcriptIds: ["1"], editMode: true, onEditModeChange }),
     );
     const editor = screen.getByTestId("editor-1");
     const onEnter = vi.fn((event: Event) => {
@@ -436,30 +420,14 @@ describe("TranscriptViewer", () => {
   });
 
   it("does not offer the speaker picker without an edit-mode callback", () => {
-    render(
-      <TranscriptViewer
-        transcriptIds={["1"]}
-        liveSegments={[]}
-        currentActive={false}
-        editMode
-        scrollRef={createRef()}
-      />,
-    );
+    render(viewerElement({ transcriptIds: ["1"], editMode: true }));
     expect(
       screen.queryByRole("button", { name: "Change speaker from here" }),
     ).toBeNull();
   });
 
   it("saves removal of selected blocks across transcripts", async () => {
-    render(
-      <TranscriptViewer
-        transcriptIds={["1", "2", "3"]}
-        liveSegments={[]}
-        currentActive={false}
-        editMode
-        scrollRef={createRef()}
-      />,
-    );
+    render(viewerElement({ transcriptIds: ["1", "2", "3"], editMode: true }));
     fireEvent.click(screen.getByTestId("segment-header-1"));
     fireEvent.click(screen.getByTestId("segment-header-3"));
     fireEvent.click(screen.getByRole("button", { name: "Delete" }));
@@ -484,15 +452,7 @@ describe("TranscriptViewer", () => {
   ])(
     "does not offer deletion outside inactive edit mode (%s, %s)",
     (editMode, currentActive) => {
-      render(
-        <TranscriptViewer
-          transcriptIds={["1"]}
-          liveSegments={[]}
-          currentActive={currentActive}
-          editMode={editMode}
-          scrollRef={createRef()}
-        />,
-      );
+      render(viewerElement({ transcriptIds: ["1"], currentActive, editMode }));
       fireEvent.click(screen.getByTestId("segment-header-1"), {
         metaKey: true,
       });
@@ -501,15 +461,7 @@ describe("TranscriptViewer", () => {
   );
 
   it("does not treat clicks in the text editor as segment selection", () => {
-    render(
-      <TranscriptViewer
-        transcriptIds={["transcript-1"]}
-        liveSegments={[]}
-        currentActive={false}
-        editMode
-        scrollRef={createRef()}
-      />,
-    );
+    render(viewerElement({ transcriptIds: ["transcript-1"], editMode: true }));
 
     fireEvent.click(screen.getByTestId("editor-transcript-1"));
 
@@ -518,12 +470,7 @@ describe("TranscriptViewer", () => {
 
   it("does not show scroll controls when the transcript cannot scroll", () => {
     render(
-      <TranscriptViewer
-        transcriptIds={["transcript-1"]}
-        liveSegments={[]}
-        currentActive
-        scrollRef={createRef()}
-      />,
+      viewerElement({ transcriptIds: ["transcript-1"], currentActive: true }),
     );
 
     expect(screen.queryByRole("button", { name: "Scroll to top" })).toBeNull();
@@ -543,14 +490,7 @@ describe("TranscriptViewer", () => {
       mocks.scrollDetection.isAtBottom = isAtBottom;
       mocks.scrollDetection.canScroll = true;
 
-      render(
-        <TranscriptViewer
-          transcriptIds={["transcript-1"]}
-          liveSegments={[]}
-          currentActive={false}
-          scrollRef={createRef()}
-        />,
-      );
+      render(viewerElement({ transcriptIds: ["transcript-1"] }));
 
       const top = screen.getByRole<HTMLButtonElement>("button", {
         name: "Scroll to top",
@@ -575,13 +515,10 @@ describe("TranscriptViewer", () => {
     document.body.appendChild(slot);
 
     render(
-      <TranscriptViewer
-        transcriptIds={["transcript-1"]}
-        liveSegments={[]}
-        currentActive={false}
-        scrollRef={createRef()}
-        scrollControlsSlot={slot}
-      />,
+      viewerElement({
+        transcriptIds: ["transcript-1"],
+        scrollControlsSlot: slot,
+      }),
     );
 
     const top = screen.getByRole("button", { name: "Scroll to top" });
@@ -593,14 +530,7 @@ describe("TranscriptViewer", () => {
   it("keeps the scroll controls above the text without a header slot", () => {
     mocks.scrollDetection.canScroll = true;
 
-    render(
-      <TranscriptViewer
-        transcriptIds={["transcript-1"]}
-        liveSegments={[]}
-        currentActive={false}
-        scrollRef={createRef()}
-      />,
-    );
+    render(viewerElement({ transcriptIds: ["transcript-1"] }));
 
     const controls = document.querySelector(
       "[data-transcript-scroll-controls]",
@@ -610,3 +540,17 @@ describe("TranscriptViewer", () => {
     expect(controls!.closest(".absolute")).toBeNull();
   });
 });
+
+function viewerElement(
+  props: Partial<ComponentProps<typeof TranscriptViewer>> = {},
+) {
+  return (
+    <TranscriptViewer
+      transcriptIds={[]}
+      liveSegments={[]}
+      currentActive={false}
+      scrollRef={createRef()}
+      {...props}
+    />
+  );
+}

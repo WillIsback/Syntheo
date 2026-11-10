@@ -29,7 +29,6 @@ export type TranscriptScreen =
     }
   | {
       kind: "empty";
-      hasAudio: boolean;
       error: string | null;
     }
   | {
@@ -67,8 +66,6 @@ export function useTranscriptScreen({
     requestedLiveTranscription: state.live.requestedLiveTranscription,
     sessionMode: state.getSessionMode(sessionId),
   }));
-  // Syntheo ne conserve jamais l'audio d'une capture.
-  const audioExists = false;
   const currentActive =
     sessionMode === "active" || sessionMode === "finalizing";
   const { transcriptIds, liveSegments, hasTranscriptWords } =
@@ -106,7 +103,6 @@ export function useTranscriptScreen({
   if (!hasVisibleTranscriptState) {
     return {
       kind: "empty",
-      hasAudio: audioExists,
       error: batchError,
     };
   }

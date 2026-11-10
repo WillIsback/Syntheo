@@ -72,6 +72,7 @@ pub(super) async fn spawn_source(
             audio: ctx.audio.clone(),
             session_id: ctx.params.session_id.clone(),
             listener_routing,
+            mutes: ctx.mutes.clone(),
         },
         supervisor_cell,
     )

@@ -20,7 +20,11 @@ export function parseSpeakerContext(
           Number.isSafeInteger(item.end_ms) &&
           item.start_ms < item.end_ms &&
           typeof item.active_call === "boolean" &&
-          typeof item.calendar_call === "boolean" &&
+          // Lu dans les contextes enregistrés avant la suppression du
+          // calendrier (issue 465), absent ensuite.
+          (item.calendar_call === undefined ||
+            item.calendar_call === null ||
+            typeof item.calendar_call === "boolean") &&
           typeof item.shared_microphone === "boolean" &&
           (item.mic_isolated === null ||
             typeof item.mic_isolated === "boolean") &&

@@ -79,10 +79,9 @@ une suppression, l'effacement est retenté au lancement suivant.
 - **Pas de compte, pas de synchronisation, pas de rapport d'erreur, pas de
   mise à jour automatique** (les mises à jour passent par les GitHub Releases,
   téléchargées par l'utilisateur).
-- Intégrations restantes : Apple Calendar et Rappels (EventKit, **locaux** à
-  macOS, sans réseau). Les intégrations hébergées héritées (calendriers Google
-  et Outlook, Linear, GitHub via le service Syntheo) sont désactivées :
-  sans compte, elles ne peuvent plus s'authentifier.
+- Aucune intégration de calendrier ni de tâches : Apple Calendar, Rappels et
+  les intégrations hébergées héritées (calendriers Google et Outlook, Linear,
+  GitHub) sont retirées du code.
 
 ## Garanties techniques
 

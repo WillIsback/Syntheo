@@ -6,6 +6,12 @@ mod stream;
 use stream::{CaptureSide, setup_mic_stream, setup_speaker_stream};
 use syntheo_audio::{CaptureConfig, CaptureStream, Error};
 
+/// Les modèles DTLN ne sont plus embarqués (issue 429) : les tests lisent ceux du dépôt.
+#[cfg(test)]
+pub(crate) fn use_source_aec_models() {
+    syntheo_aec::set_model_dir(syntheo_aec::source_model_dir());
+}
+
 pub(crate) fn open_capture(config: CaptureConfig) -> Result<CaptureStream, Error> {
     Ok(stream::open_recovering(config))
 }

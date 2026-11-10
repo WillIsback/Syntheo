@@ -49,7 +49,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@tauri-apps/plugin-os", () => ({ platform: () => "linux" }));
 
 vi.mock("@syntheo/ui/components/ui/toast", () => ({
-  toast: { info: mocks.toastInfo, error: vi.fn() },
+  toast: { info: mocks.toastInfo, error: vi.fn(), success: vi.fn() },
 }));
 
 vi.mock("~/contexts/shell", () => ({
@@ -62,6 +62,7 @@ vi.mock("~/stt/contexts", () => ({
   useListener: (selector: (state: unknown) => unknown) =>
     selector({
       getSessionMode: () => mocks.sessionMode,
+      batchImport: {},
       stop: mocks.stopListening,
       pause: mocks.pauseListening,
       live: mocks.live,
@@ -91,6 +92,35 @@ vi.mock("~/stt/window-control", () => ({
 vi.mock("~/shared/leave-overlay-tab", () => ({
   leaveOverlayTab: mocks.leaveOverlayTab,
 }));
+
+const automationMocks = vi.hoisted(() => ({
+  runWorkflowOnNote: vi.fn(async () => ({
+    at: "2026-11-09T10:00:00.000Z",
+    status: "success" as const,
+    detail: "/exports/Planning.md",
+  })),
+  workflows: [] as unknown[],
+}));
+
+vi.mock("~/automations/engine", () => ({
+  runWorkflowOnNote: automationMocks.runWorkflowOnNote,
+}));
+
+vi.mock("~/automations/workflows", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/automations/workflows")>()),
+  useAutomationWorkflows: () => automationMocks.workflows,
+}));
+
+const READY_WORKFLOW = {
+  id: "wf-hand",
+  title: "Weekly recap",
+  enabled: false,
+  trigger: "manual",
+  steps: [{ id: "s", type: "markdown_export", directory: "/exports" }],
+  lastRun: null,
+  processedSessionIds: [],
+  chatGroupId: null,
+};
 
 vi.mock("~/session/queries", () => ({
   useSession: () => ({ raw_md: mocks.rawMd }),
@@ -483,5 +513,28 @@ describe("SessionCapsule", () => {
         open: true,
       }),
     );
+  });
+
+  it("runs an automation on this note from the Synthesis capsule", async () => {
+    automationMocks.workflows = [READY_WORKFLOW];
+
+    renderCapsule({ stage: "synthesis" });
+
+    const trigger = screen.getByRole("button", { name: "Automations" });
+    fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false });
+    fireEvent.click(trigger);
+    fireEvent.click(await screen.findByText("Weekly recap"));
+
+    expect(automationMocks.runWorkflowOnNote).toHaveBeenCalledWith(
+      "wf-hand",
+      "session-1",
+    );
+    automationMocks.workflows = [];
+  });
+
+  it("shows no Automations button before any automation is ready", () => {
+    renderCapsule({ stage: "synthesis" });
+
+    expect(screen.queryByRole("button", { name: "Automations" })).toBeNull();
   });
 });

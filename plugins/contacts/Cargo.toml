@@ -1,0 +1,30 @@
+[package]
+name = "tauri-plugin-contacts"
+version = "0.1.0"
+authors = ["You"]
+edition = "2024"
+exclude = ["/js", "/node_modules"]
+license = "MIT"
+links = "tauri-plugin-contacts"
+description = ""
+
+[dependencies]
+syntheo-db-app = { workspace = true }
+
+tauri = { workspace = true, features = ["test"] }
+tauri-plugin-db = { workspace = true }
+tauri-specta = { workspace = true, features = ["derive", "typescript"] }
+
+chrono = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+specta = { workspace = true, features = ["chrono"] }
+sqlx = { workspace = true, features = ["runtime-tokio", "sqlite", "sqlite-unbundled", "macros"] }
+
+[build-dependencies]
+tauri-plugin = { workspace = true, features = ["build"] }
+
+[dev-dependencies]
+specta-typescript = { workspace = true }
+syntheo-db-core = { workspace = true }
+tokio = { workspace = true, features = ["macros", "rt"] }

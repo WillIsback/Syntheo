@@ -11,12 +11,6 @@ const mocks = vi.hoisted(() => ({
   createSession: vi.fn(() =>
     Promise.resolve({ status: "ok", data: "session-1" }),
   ),
-  createSessionForEvent: vi.fn(() =>
-    Promise.resolve({
-      status: "ok",
-      data: { session_id: "session-created", created: true },
-    }),
-  ),
   softDeleteSession: vi.fn(() =>
     Promise.resolve({
       status: "ok" as const,
@@ -46,7 +40,6 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@syntheo/plugin-session", () => ({
   commands: {
     createSession: mocks.createSession,
-    createSessionForEvent: mocks.createSessionForEvent,
     softDeleteSession: mocks.softDeleteSession,
     restoreDeletedSession: mocks.restoreDeletedSession,
     addSessionParticipant: mocks.addSessionParticipant,
@@ -73,22 +66,13 @@ import {
   applySessionProposal,
   declineSessionProposal,
   deleteEnhancedNote,
-  getOrCreateSessionForEventId,
   isSessionDeleted,
   isSessionEmpty,
-  loadSessionEvent,
   restoreDeletedSession,
   softDeleteSession,
   updateEnhancedNoteContent,
   updateSession,
 } from "./queries";
-
-const event = {
-  id: "event-1",
-  participants_json: JSON.stringify([
-    { name: "Alice", email: "alice@example.com" },
-  ]),
-};
 
 type SqlStatement = { sql: string; params: unknown[] };
 
@@ -102,6 +86,22 @@ function readWrittenMetadata(statements: SqlStatement[]): unknown {
     throw new Error("expected a generation_metadata_json write");
   }
   return JSON.parse(metadataWrite.params[0] as string);
+}
+
+// Mémo ProseMirror fait de titres de niveau 2.
+function headingDoc(...titles: string[]): string {
+  return JSON.stringify({
+    type: "doc",
+    content: titles.map((text) => ({
+      type: "heading",
+      attrs: { level: 2 },
+      content: [{ type: "text", text }],
+    })),
+  });
+}
+
+function firstTransaction(): SqlStatement[] {
+  return mocks.executeTransaction.mock.calls[0][0] as SqlStatement[];
 }
 
 function writesDocument(statements: SqlStatement[]): boolean {
@@ -120,10 +120,6 @@ describe("session SQLite operations", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useRealTimers();
-    mocks.createSessionForEvent.mockResolvedValue({
-      status: "ok",
-      data: { session_id: "session-created", created: true },
-    });
     mocks.softDeleteSession.mockResolvedValue({
       status: "ok",
       data: { id: "session-1", title: "Planning" },
@@ -132,72 +128,6 @@ describe("session SQLite operations", () => {
       status: "ok",
       data: "restored",
     });
-  });
-
-  it("loads embedded event metadata from the canonical session", async () => {
-    mocks.execute.mockResolvedValueOnce([
-      {
-        event_json: JSON.stringify({
-          tracking_id: "event-1",
-          calendar_id: "calendar-1",
-          title: "Planning",
-        }),
-      },
-    ]);
-
-    await expect(loadSessionEvent("session-1")).resolves.toMatchObject({
-      tracking_id: "event-1",
-      calendar_id: "calendar-1",
-      title: "Planning",
-    });
-  });
-
-  it("attaches parsed calendar participants to an existing event note", async () => {
-    mocks.execute.mockResolvedValueOnce([event]);
-    mocks.createSessionForEvent.mockResolvedValueOnce({
-      status: "ok",
-      data: { session_id: "session-existing", created: false },
-    });
-
-    await expect(getOrCreateSessionForEventId("event-1")).resolves.toBe(
-      "session-existing",
-    );
-
-    expect(mocks.createSessionForEvent).toHaveBeenCalledWith(
-      expect.objectContaining({
-        event_id: "event-1",
-        participants: [expect.objectContaining({ email: "alice@example.com" })],
-      }),
-    );
-  });
-
-  it("does not attach malformed or self calendar participants", async () => {
-    mocks.execute.mockResolvedValueOnce([
-      {
-        ...event,
-        participants_json: JSON.stringify([
-          null,
-          { name: 42, email: "invalid@example.com" },
-          {
-            name: "John",
-            email: "john@example.com",
-            is_current_user: true,
-          },
-          { name: "Artem", email: "artem@example.com" },
-          { name: "Artem Dupe", email: "ARTEM@example.com" },
-        ]),
-      },
-    ]);
-
-    await expect(getOrCreateSessionForEventId("event-1")).resolves.toBe(
-      "session-created",
-    );
-
-    expect(mocks.createSessionForEvent).toHaveBeenCalledWith(
-      expect.objectContaining({
-        participants: [expect.objectContaining({ email: "artem@example.com" })],
-      }),
-    );
   });
 
   it("commits title and raw note changes in one ordered transaction", async () => {
@@ -216,10 +146,7 @@ describe("session SQLite operations", () => {
       raw_md: '{"type":"doc"}',
     });
 
-    const statements = mocks.executeTransaction.mock.calls[0][0] as Array<{
-      sql: string;
-      params: unknown[];
-    }>;
+    const statements = firstTransaction();
     expect(statements).toHaveLength(2);
     expect(statements[0].sql).toContain("UPDATE sessions");
     expect(statements[0].params).toContain("Updated title");
@@ -230,10 +157,7 @@ describe("session SQLite operations", () => {
   it("persists a note lock flag on the session row", async () => {
     await updateSession("session-1", { locked: true });
 
-    const statements = mocks.executeTransaction.mock.calls[0][0] as Array<{
-      sql: string;
-      params: unknown[];
-    }>;
+    const statements = firstTransaction();
     expect(statements).toHaveLength(1);
     expect(statements[0].sql).toContain("locked = ?");
     expect(statements[0].params).toContain(1);
@@ -282,8 +206,7 @@ describe("session SQLite operations", () => {
       },
     });
 
-    const statements = mocks.executeTransaction.mock
-      .calls[0][0] as SqlStatement[];
+    const statements = firstTransaction();
     expect(writesDocument(statements)).toBe(true);
     expect(readWrittenMetadata(statements)).toEqual({
       appliedTemplate: {
@@ -296,16 +219,7 @@ describe("session SQLite operations", () => {
   });
 
   it("stamps untracked memo headings with the previous write time", async () => {
-    const body = JSON.stringify({
-      type: "doc",
-      content: [
-        {
-          type: "heading",
-          attrs: { level: 2 },
-          content: [{ type: "text", text: "Updates" }],
-        },
-      ],
-    });
+    const body = headingDoc("Updates");
     mocks.execute.mockResolvedValueOnce([
       {
         generation_metadata_json: JSON.stringify({
@@ -322,8 +236,7 @@ describe("session SQLite operations", () => {
 
     await updateSession("session-1", { raw_md: body });
 
-    const statements = mocks.executeTransaction.mock
-      .calls[0][0] as SqlStatement[];
+    const statements = firstTransaction();
     const metadata = readWrittenMetadata(statements) as {
       appliedTemplate: unknown;
       headings: { key: string; updatedAt: string };
@@ -343,35 +256,16 @@ describe("session SQLite operations", () => {
       {
         generation_metadata_json: JSON.stringify({ otherKey: "kept" }),
         updated_at: "2026-10-01T00:00:00.000Z",
-        body: JSON.stringify({
-          type: "doc",
-          content: [
-            {
-              type: "heading",
-              attrs: { level: 2 },
-              content: [{ type: "text", text: "To-dos" }],
-            },
-          ],
-        }),
+        body: headingDoc("To-dos"),
         body_format: "prosemirror_json",
       },
     ]);
 
     await updateSession("session-1", {
-      raw_md: JSON.stringify({
-        type: "doc",
-        content: [
-          {
-            type: "heading",
-            attrs: { level: 2 },
-            content: [{ type: "text", text: "To do" }],
-          },
-        ],
-      }),
+      raw_md: headingDoc("To do"),
     });
 
-    const statements = mocks.executeTransaction.mock
-      .calls[0][0] as SqlStatement[];
+    const statements = firstTransaction();
     const metadata = readWrittenMetadata(statements) as {
       headings: { key: string; updatedAt: string };
     };
@@ -383,16 +277,7 @@ describe("session SQLite operations", () => {
   });
 
   it("compares legacy markdown bodies when stamping headings", async () => {
-    const body = JSON.stringify({
-      type: "doc",
-      content: [
-        {
-          type: "heading",
-          attrs: { level: 2 },
-          content: [{ type: "text", text: "Updates" }],
-        },
-      ],
-    });
+    const body = headingDoc("Updates");
     mocks.execute.mockResolvedValueOnce([
       {
         generation_metadata_json: JSON.stringify({ otherKey: "kept" }),
@@ -404,8 +289,7 @@ describe("session SQLite operations", () => {
 
     await updateSession("session-1", { raw_md: body });
 
-    const statements = mocks.executeTransaction.mock
-      .calls[0][0] as SqlStatement[];
+    const statements = firstTransaction();
     const metadata = readWrittenMetadata(statements) as {
       headings: { key: string; updatedAt: string };
     };
@@ -416,21 +300,7 @@ describe("session SQLite operations", () => {
   });
 
   it("restamps memo headings only when they change", async () => {
-    const body = JSON.stringify({
-      type: "doc",
-      content: [
-        {
-          type: "heading",
-          attrs: { level: 2 },
-          content: [{ type: "text", text: "Updates" }],
-        },
-        {
-          type: "heading",
-          attrs: { level: 2 },
-          content: [{ type: "text", text: "Next Steps" }],
-        },
-      ],
-    });
+    const body = headingDoc("Updates", "Next Steps");
     mocks.execute.mockResolvedValueOnce([
       {
         generation_metadata_json: JSON.stringify({
@@ -442,7 +312,7 @@ describe("session SQLite operations", () => {
 
     await updateSession("session-1", { raw_md: body });
 
-    const restamp = mocks.executeTransaction.mock.calls[0][0] as SqlStatement[];
+    const restamp = firstTransaction();
     const metadata = readWrittenMetadata(restamp) as {
       headings: { key: string; updatedAt: string };
     };
@@ -467,8 +337,7 @@ describe("session SQLite operations", () => {
 
     await updateSession("session-1", { raw_md: body });
 
-    const unchanged = mocks.executeTransaction.mock
-      .calls[0][0] as SqlStatement[];
+    const unchanged = firstTransaction();
     expect(writesMetadata(unchanged)).toBe(false);
     expect(writesDocument(unchanged)).toBe(true);
   });
@@ -483,8 +352,7 @@ describe("session SQLite operations", () => {
 
     await updateSession("session-1", { raw_md: "not json" });
 
-    const statements = mocks.executeTransaction.mock
-      .calls[0][0] as SqlStatement[];
+    const statements = firstTransaction();
     expect(writesMetadata(statements)).toBe(false);
     expect(writesDocument(statements)).toBe(true);
   });
@@ -499,10 +367,7 @@ describe("session SQLite operations", () => {
       "Edited title",
     );
 
-    const statements = mocks.executeTransaction.mock.calls[0][0] as Array<{
-      sql: string;
-      params: unknown[];
-    }>;
+    const statements = firstTransaction();
     expect(statements).toHaveLength(3);
     expect(statements[0].sql).toContain("UPDATE session_documents");
     expect(statements[0].params).toContain("enhanced-note-1");
@@ -527,10 +392,7 @@ describe("session SQLite operations", () => {
 
     await deleteEnhancedNote("enhanced-note-1");
 
-    const statements = mocks.executeTransaction.mock.calls[0][0] as Array<{
-      sql: string;
-      params: unknown[];
-    }>;
+    const statements = firstTransaction();
     expect(statements).toHaveLength(1);
     expect(statements[0].sql).toContain("UPDATE session_documents");
     expect(statements[0].sql).toContain("deleted_at IS NULL");
@@ -590,7 +452,6 @@ describe("session SQLite operations", () => {
     mocks.execute.mockResolvedValueOnce([
       {
         title: "",
-        event_json: "",
         note_body: JSON.stringify({
           type: "doc",
           content: [{ type: "paragraph" }],
@@ -608,7 +469,7 @@ describe("session SQLite operations", () => {
   });
 
   it.each([
-    ["title", { title: "Named note", event_json: "" }],
+    ["title", { title: "Named note" }],
     ["note body", { note_body: "Written content" }],
     ["transcript", { transcript_count: 1 }],
     ["enhanced note", { enhanced_note_count: 1 }],
@@ -619,7 +480,6 @@ describe("session SQLite operations", () => {
     mocks.execute.mockResolvedValueOnce([
       {
         title: "",
-        event_json: "event",
         note_body: "",
         note_body_format: "prosemirror_json",
         transcript_count: 0,

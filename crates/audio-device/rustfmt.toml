@@ -1,3 +1,0 @@
-# Le crate reste en édition 2021, mais le dépôt formate en style 2024
-# (dprint appelle `rustfmt --edition 2024`) : on aligne `cargo fmt` dessus.
-style_edition = "2024"

@@ -22,7 +22,6 @@ tauri-plugin-db = { workspace = true }
 
 chrono = { workspace = true }
 serde = { workspace = true }
-serde_json = { workspace = true }
 sqlx = { workspace = true, features = ["runtime-tokio", "sqlite", "sqlite-unbundled", "macros"] }
 
 specta = { workspace = true, features = ["serde_json"] }

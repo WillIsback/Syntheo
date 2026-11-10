@@ -212,9 +212,9 @@ mod test {
     fn navigate_from_str() {
         let test_cases = vec![
             (
-                "syntheo://localhost/app/new?calendarEventId=123&record=true",
+                "syntheo://localhost/app/new?title=Planning&record=true",
                 "/app/new",
-                Some(serde_json::json!({ "calendarEventId": "123", "record": "true" })),
+                Some(serde_json::json!({ "title": "Planning", "record": "true" })),
             ),
             (
                 "syntheo://syntheo.com/app/new?record=true",
@@ -249,7 +249,8 @@ pub struct FloatingBarDictationAction {
     pub action: DictationPanelAction,
 }
 
-/// « Mettre en pause » ou « Reprendre l'écoute » depuis le bandeau flottant (issue 353).
+/// « Mettre en pause » ou « Reprendre l'écoute » depuis le bandeau flottant (issue 353), couper
+/// ou rétablir le micro (issue 447).
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone, specta::Type, tauri_specta::Event)]
 #[serde(rename_all = "camelCase")]
 pub struct FloatingBarListeningAction {
@@ -261,6 +262,8 @@ pub struct FloatingBarListeningAction {
 pub enum ListeningPanelAction {
     Pause,
     Resume,
+    MuteMic,
+    UnmuteMic,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone, specta::Type)]

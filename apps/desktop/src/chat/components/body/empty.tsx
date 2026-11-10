@@ -6,15 +6,20 @@ import {
   ArrowsOutSimple,
   ClockCounterClockwise,
   Envelope,
+  FileArrowDown,
   Lightbulb,
+  Lightning,
   ListChecks,
   MagnifyingGlass,
+  PaperPlaneTilt,
   Sparkle,
 } from "@syntheo/ui/components/icons";
 import { cn } from "@syntheo/utils";
 
+import { useAutomationLaunchItems } from "~/automations/launch";
 import type { ContextRef } from "~/chat/context/entities";
 import { useChatAppearance } from "~/chat/hooks/use-chat-appearance";
+import { NextMeetingSuggestion } from "~/folders/project/next-meeting-suggestion";
 import { useTabs } from "~/store/zustand/tabs";
 
 export function ChatBodyEmpty({
@@ -22,12 +27,19 @@ export function ChatBodyEmpty({
   hasContext = false,
   isLiveMeeting = false,
   hasSummary = false,
+  isAutomationEditor = false,
+  automationSessionId,
   onSendMessage,
 }: {
   isModelConfigured?: boolean;
   hasContext?: boolean;
   isLiveMeeting?: boolean;
   hasSummary?: boolean;
+  // Chat de l'éditeur d'automatisations (issue 529) : des idées
+  // d'automatisation, et non les traitements d'une note.
+  isAutomationEditor?: boolean;
+  // Note ouverte : propose aussi de lancer une automatisation sur elle.
+  automationSessionId?: string;
   onSendMessage?: (
     content: string,
     parts: Array<{ type: "text"; text: string }>,
@@ -91,9 +103,30 @@ export function ChatBodyEmpty({
         : t`What key decisions were made in my recent meetings?`,
     },
   ];
-  const suggestions = isLiveMeeting
-    ? liveMeetingSuggestions
-    : meetingSuggestions;
+  // Seulement ce que les actions savent faire : webhook, export Markdown,
+  // génération par le modèle local.
+  const automationSuggestions = [
+    {
+      label: t`Send the summary to a webhook.`,
+      icon: PaperPlaneTilt,
+      prompt: t`When the meeting summary is ready, send it to a webhook.`,
+    },
+    {
+      label: t`Export as Markdown after each meeting.`,
+      icon: FileArrowDown,
+      prompt: t`When the meeting summary is ready, export the note as a Markdown file.`,
+    },
+    {
+      label: t`Extract the tasks.`,
+      icon: ListChecks,
+      prompt: t`When the meeting summary is ready, extract the tasks with the local model and copy them to the clipboard.`,
+    },
+  ];
+  const suggestions = isAutomationEditor
+    ? automationSuggestions
+    : isLiveMeeting
+      ? liveMeetingSuggestions
+      : meetingSuggestions;
 
   const handleGoToSettings = useCallback(() => {
     openNew({ type: "settings", state: { tab: "intelligence" } });
@@ -178,8 +211,81 @@ export function ChatBodyEmpty({
               <span className="min-w-0 truncate">{label}</span>
             </button>
           ))}
+          {automationSessionId ? (
+            <NextMeetingSuggestion
+              sessionId={automationSessionId}
+              isDarkAppearance={isDarkAppearance}
+            />
+          ) : null}
         </div>
+        {automationSessionId ? (
+          <AutomationSuggestions
+            sessionId={automationSessionId}
+            isDarkAppearance={isDarkAppearance}
+          />
+        ) : null}
       </div>
+    </div>
+  );
+}
+
+// « Demander à la note » (Ctrl+J) : les automatisations prêtes se lancent sur
+// la note ouverte, à côté des traitements proposés.
+function AutomationSuggestions({
+  sessionId,
+  isDarkAppearance,
+}: {
+  sessionId: string;
+  isDarkAppearance: boolean;
+}) {
+  const items = useAutomationLaunchItems(sessionId);
+  if (items.length === 0) {
+    return null;
+  }
+  return (
+    <div
+      role="group"
+      aria-label={t`Run an automation`}
+      className="mt-2 flex flex-col gap-0.5"
+    >
+      <p
+        className={cn([
+          "px-0 pb-1 text-xs font-medium",
+          isDarkAppearance
+            ? "text-primary-foreground/60"
+            : "text-muted-foreground/80",
+        ])}
+      >
+        {t`Run an automation`}
+      </p>
+      {items.map((item) => (
+        <button
+          key={item.id}
+          type="button"
+          onClick={item.run}
+          title={item.description}
+          className={cn([
+            "group grid w-full grid-cols-[1.5rem_minmax(0,1fr)] items-center gap-x-1.5 rounded-lg py-2 pr-3 pl-0 text-left text-sm",
+            isDarkAppearance
+              ? "text-primary-foreground/85 hover:bg-primary-foreground/10"
+              : "text-muted-foreground hover:bg-muted/55",
+            "transition-colors",
+          ])}
+        >
+          <span className="flex size-6 items-center justify-center">
+            <Lightning
+              size={16}
+              className={cn([
+                "shrink-0 transition-colors",
+                isDarkAppearance
+                  ? "text-primary-foreground/55 group-hover:text-primary-foreground/80"
+                  : "text-muted-foreground/75 group-hover:text-foreground",
+              ])}
+            />
+          </span>
+          <span className="min-w-0 truncate">{item.title}</span>
+        </button>
+      ))}
     </div>
   );
 }

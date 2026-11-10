@@ -1,44 +1,15 @@
-import type { SessionEvent } from "@syntheo/store";
-
-export function getSessionEvent(session: {
-  event_json?: string | null;
-}): SessionEvent | null {
-  const eventJson = session.event_json;
-  if (!eventJson) return null;
-  try {
-    return JSON.parse(eventJson) as SessionEvent;
-  } catch {
-    return null;
-  }
-}
-
-export function sessionSearchTimestamp(
-  eventJson: string | null | undefined,
-  createdAt: string,
-): number {
-  const event = getSessionEvent({ event_json: eventJson });
-  const fromEvent = toEpochMs(event?.started_at);
-  if (fromEvent > 0) {
-    return fromEvent;
-  }
-
-  return toEpochMs(createdAt);
-}
-
-function toEpochMs(value: unknown): number {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return Math.trunc(value);
-  }
-
-  if (typeof value !== "string" || !value.trim()) {
+// Same timestamp as the Tantivy session document (search_index.rs): the note's
+// creation date, in epoch milliseconds.
+export function sessionSearchTimestamp(createdAt: string): number {
+  if (!createdAt.trim()) {
     return 0;
   }
 
-  const parsed = Date.parse(value);
+  const parsed = Date.parse(createdAt);
   if (!Number.isNaN(parsed)) {
     return parsed;
   }
 
-  const numeric = Number(value);
+  const numeric = Number(createdAt);
   return Number.isFinite(numeric) ? Math.trunc(numeric) : 0;
 }

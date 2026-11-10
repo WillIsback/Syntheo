@@ -89,7 +89,6 @@ describe("export dans la langue de l'interface", () => {
       memo: "Mémo",
       summary: "Synthèse",
       transcript: "Transcription",
-      meeting: "Réunion",
       participants: "Participants",
       unknownSpeaker: "Locuteur inconnu",
     });

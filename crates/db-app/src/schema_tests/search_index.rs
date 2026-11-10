@@ -332,7 +332,6 @@ async fn session_bookkeeping_updates_do_not_requeue_search_indexing() {
     // Every column the search projection reads still requeues the note.
     for statement in [
         "UPDATE sessions SET title = 'Réunion budget' WHERE id = 'session-1'",
-        "UPDATE sessions SET event_json = '{\"started_at\":\"2026-10-31T23:13:00Z\"}' WHERE id = 'session-1'",
         "UPDATE sessions SET source_apps_json = '[{\"app\":\"zoom\"}]' WHERE id = 'session-1'",
         "UPDATE sessions SET locked = 1 WHERE id = 'session-1'",
         "UPDATE sessions SET created_at = '2026-10-31T23:12:00.000Z' WHERE id = 'session-1'",

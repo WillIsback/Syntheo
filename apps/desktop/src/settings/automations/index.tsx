@@ -1,17 +1,7 @@
 import { Trans, useLingui } from "@lingui/react/macro";
-import { useMutation } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 
-import {
-  ArrowRight,
-  DotsThree,
-  Eye,
-  FloppyDisk,
-  Lightning,
-  Play,
-  Sparkle,
-} from "@syntheo/ui/components/icons";
-import { Badge } from "@syntheo/ui/components/ui/badge";
+import { DotsThree, Lightning, Play, Plus } from "@syntheo/ui/components/icons";
 import { Button } from "@syntheo/ui/components/ui/button";
 import {
   AppFloatingPanel,
@@ -21,46 +11,43 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@syntheo/ui/components/ui/dropdown-menu";
-import { toast } from "@syntheo/ui/components/ui/toast";
-import { cn, formatDistanceToNow } from "@syntheo/utils";
-
-import { AutomationLastRunLine, MarkdownExportConfig } from "./starter-config";
-import { useSaveWorkflow, WorkflowBuilder } from "./workflow-builder";
 
 import {
+  useSaveWorkflow,
+  WorkflowBuilder,
+  WorkflowStatusBadge,
+} from "./workflow-builder";
+import { WorkflowTestPanel } from "./workflow-test-panel";
+
+import {
+  useCreateWorkflowFromTemplate,
   useDeleteChatAutomation,
   useDeleteWorkflow,
-  useRemoveStarterDraft,
 } from "~/automations/actions";
+import {
+  useAutomationLabels,
+  useRelativeTime,
+  workflowChain,
+  workflowTitle,
+} from "~/automations/labels";
 import {
   useAutomationSelection,
   useEffectiveAutomationSelection,
 } from "~/automations/selection";
-import {
-  STARTER_AUTOMATIONS,
-  type StarterId,
-  useStarterAutomations,
-} from "~/automations/starters";
+import { availableTemplates } from "~/automations/templates";
 import {
   type AutomationWorkflow,
   createEmptyWorkflow,
   isWorkflowReady,
+  mutateAutomationWorkflows,
   parseAutomationWorkflows,
   saveAutomationWorkflows,
   useAutomationWorkflows,
 } from "~/automations/workflows";
-import { useBillingAccess } from "~/billing/billing-context";
 import { useChatGroup } from "~/chat/store/queries";
 import { SettingsHydrationBoundary } from "~/settings/hydration-boundary";
 import { SettingsPageTitle } from "~/settings/page-title";
-import { useNotifyPlanRequired } from "~/settings/plan-gate";
-import {
-  getStoredSettingValues,
-  setSettingValue,
-  setSettingValues,
-  useStoredSettingValues,
-} from "~/settings/queries";
-import type { SettingValues } from "~/settings/schema";
+import { getStoredSettingValues } from "~/settings/queries";
 import { StandardContentWrapper } from "~/shared/main";
 
 export function TabContentAutomations() {
@@ -78,15 +65,6 @@ export function TabContentAutomations() {
 export function AutomationsContent() {
   const selection = useEffectiveAutomationSelection();
 
-  if (selection?.kind === "starter") {
-    return (
-      <StarterAutomationDetails
-        key={selection.starterId}
-        starterId={selection.starterId}
-      />
-    );
-  }
-
   if (selection?.kind === "chat") {
     return <ChatAutomationDetails groupId={selection.groupId} />;
   }
@@ -102,38 +80,156 @@ export function AutomationsContent() {
   return <AutomationsOverview />;
 }
 
+// Une seule liste « Mes automatisations », et des modèles pour démarrer : un
+// modèle crée une automatisation ordinaire, ouverte dans l'éditeur.
 function AutomationsOverview() {
+  const labels = useAutomationLabels();
+  const workflows = useAutomationWorkflows();
+  const templates = availableTemplates();
+  const createFromTemplate = useCreateWorkflowFromTemplate();
+  const selectWorkflow = useAutomationSelection(
+    (state) => state.selectWorkflow,
+  );
+
+  const createEmpty = () => {
+    const workflow = createEmptyWorkflow();
+    void mutateAutomationWorkflows((current) => [workflow, ...current]).then(
+      () => selectWorkflow(workflow.id),
+    );
+  };
+
   return (
     <div className="scroll-fade-y scrollbar-hide h-full w-full flex-1 overflow-y-auto px-6 pt-3 pb-8">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
-        <div className="flex flex-col gap-2">
-          <SettingsPageTitle title={<Trans>Automations</Trans>} />
-          <p className="text-muted-foreground max-w-2xl text-sm leading-relaxed">
-            <Trans>
-              Automate what happens before, during, or after meetings based on
-              the conditions you choose.
-            </Trans>
-          </p>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <SettingsPageTitle
+            title={<Trans>Automations</Trans>}
+            lede={
+              <Trans>
+                Syntheo chains local steps after your meetings. Nothing leaves
+                your computer, except a webhook step if you add one.
+              </Trans>
+            }
+          />
+          <Button type="button" size="sm" onClick={createEmpty}>
+            <Plus size={14} />
+            <Trans>New automation</Trans>
+          </Button>
         </div>
 
-        <section className="border-border bg-muted/20 flex min-h-56 flex-col items-center justify-center rounded-2xl border border-dashed px-6 py-10 text-center">
-          <span className="bg-background border-border flex size-11 items-center justify-center rounded-2xl border">
-            <Lightning className="text-muted-foreground" size={20} />
-          </span>
-          <h3 className="mt-4 text-sm font-semibold">
-            <Trans>No automation draft yet</Trans>
+        {templates.length > 0 ? (
+          <section aria-labelledby="automation-templates-title">
+            <h3
+              id="automation-templates-title"
+              className="mb-2 text-sm font-semibold"
+            >
+              <Trans>Start from a template</Trans>
+            </h3>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {templates.map((template) => {
+                const label = labels.template[template.id];
+                const chain = [
+                  labels.trigger[template.trigger].short,
+                  ...template.stepTypes.map(
+                    (type) =>
+                      labels.step[type as keyof typeof labels.step]?.title ??
+                      type,
+                  ),
+                ].join(" → ");
+                return (
+                  <button
+                    key={template.id}
+                    type="button"
+                    disabled={createFromTemplate.isPending}
+                    onClick={() => createFromTemplate.mutate(template)}
+                    className="border-border bg-background hover:bg-accent/50 flex flex-col gap-1 rounded-xl border p-4 text-left transition-colors"
+                  >
+                    <span className="text-sm font-medium">{label?.title}</span>
+                    <span className="text-muted-foreground text-xs leading-relaxed">
+                      {label?.description}
+                    </span>
+                    <span className="text-chart-2 mt-1 text-[11px] font-medium">
+                      {chain}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        ) : null}
+
+        <section aria-labelledby="my-automations-title">
+          <h3 id="my-automations-title" className="mb-2 text-sm font-semibold">
+            <Trans>My automations</Trans>
           </h3>
-          <p className="text-muted-foreground mt-1 max-w-sm text-xs leading-relaxed">
-            <Trans>
-              Choose a starter from the sidebar, or create a workflow and add
-              steps like Zapier.
-            </Trans>
-          </p>
+          {workflows.length === 0 ? (
+            <div className="border-border bg-muted/20 flex flex-col items-center justify-center rounded-2xl border border-dashed px-6 py-10 text-center">
+              <span className="bg-background border-border flex size-11 items-center justify-center rounded-2xl border">
+                <Lightning className="text-muted-foreground" size={20} />
+              </span>
+              <p className="text-muted-foreground mt-3 max-w-sm text-xs leading-relaxed">
+                <Trans>
+                  No automation yet. Start from a template, or create one and
+                  add its steps.
+                </Trans>
+              </p>
+            </div>
+          ) : (
+            <ul className="border-border divide-border flex flex-col divide-y rounded-xl border">
+              {workflows.map((workflow) => (
+                <li key={workflow.id}>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      selectWorkflow(workflow.id, workflow.chatGroupId)
+                    }
+                    className="hover:bg-accent/50 flex w-full items-center gap-3 px-4 py-3 text-left transition-colors"
+                  >
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium">
+                        {workflowTitle(workflow, labels)}
+                      </span>
+                      <span className="text-muted-foreground block truncate text-xs">
+                        <WorkflowSummaryLine workflow={workflow} />
+                      </span>
+                    </span>
+                    <WorkflowStatusBadge workflow={workflow} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
       </div>
     </div>
   );
 }
+
+function WorkflowSummaryLine({ workflow }: { workflow: AutomationWorkflow }) {
+  const labels = useAutomationLabels();
+  const relativeTime = useRelativeTime();
+  const chain = workflowChain(workflow, labels);
+  if (!workflow.lastRun) {
+    return <Trans>{chain} · never run</Trans>;
+  }
+  const relative = relativeTime(workflow.lastRun.at);
+  return workflow.lastRun.status === "success" ? (
+    <Trans>
+      {chain} · last run {relative}
+    </Trans>
+  ) : (
+    <Trans>
+      {chain} · last run failed {relative}
+    </Trans>
+  );
+}
+
+const EDITOR_DESCRIPTION = (
+  <Trans>
+    Set the trigger and the actions. The chat on the right can help you shape
+    the automation.
+  </Trans>
+);
 
 function DraftAutomationDetails({ draftId }: { draftId: string }) {
   const removeDraft = useAutomationSelection((state) => state.removeDraft);
@@ -142,24 +238,16 @@ function DraftAutomationDetails({ draftId }: { draftId: string }) {
   return (
     <CustomWorkflowDetails
       workflow={workflow}
-      title={workflow.title.trim() || <Trans>Untitled automation</Trans>}
-      description={
-        <Trans>
-          Add a trigger and actions. Chat on the right can help you refine the
-          workflow.
-        </Trans>
-      }
+      description={EDITOR_DESCRIPTION}
       onDelete={() => removeDraft(draftId)}
     />
   );
 }
 
 function AutomationDetailHeader({
-  icon,
   title,
   actions,
 }: {
-  icon: React.ReactNode;
   title: React.ReactNode;
   actions: React.ReactNode;
 }) {
@@ -167,42 +255,12 @@ function AutomationDetailHeader({
     <header className="flex h-12 shrink-0 items-center justify-between gap-3 pr-1 pl-3">
       <div className="flex min-w-0 flex-1 items-center gap-2">
         <span className="flex size-7 shrink-0 items-center justify-center">
-          {icon}
+          <Lightning className="text-chart-4" size={16} />
         </span>
         <h2 className="min-w-0 truncate text-sm font-semibold">{title}</h2>
       </div>
       {actions}
     </header>
-  );
-}
-
-function AutomationDetailsLayout({
-  icon,
-  title,
-  description,
-  actions,
-  children,
-}: {
-  icon: React.ReactNode;
-  title: React.ReactNode;
-  description: React.ReactNode;
-  actions: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex h-full min-h-0 flex-1 flex-col">
-      <AutomationDetailHeader icon={icon} title={title} actions={actions} />
-      <div className="scroll-fade-y scrollbar-hide min-h-0 w-full flex-1 overflow-y-auto px-6 pt-3 pb-8">
-        <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
-          {description && (
-            <p className="text-muted-foreground max-w-2xl text-sm leading-relaxed">
-              {description}
-            </p>
-          )}
-          {children}
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -240,12 +298,10 @@ function AutomationActionsMenu({
 }
 
 function ChatAutomationDetails({ groupId }: { groupId: string }) {
-  const { t } = useLingui();
   const group = useChatGroup(groupId, "automations");
+  const relativeTime = useRelativeTime();
   const deleteChatAutomation = useDeleteChatAutomation();
-  const createdAt = group?.createdAt
-    ? formatDistanceToNow(new Date(group.createdAt), { addSuffix: true })
-    : "";
+  const createdAt = group?.createdAt ? relativeTime(group.createdAt) : "";
   const workflow = useEnsuredWorkflow({
     chatGroupId: groupId,
     title: group?.title.trim() || undefined,
@@ -254,7 +310,7 @@ function ChatAutomationDetails({ groupId }: { groupId: string }) {
   return (
     <CustomWorkflowDetails
       workflow={workflow}
-      title={group?.title.trim() || workflow.title || t`Untitled automation`}
+      fallbackTitle={group?.title.trim()}
       description={createdAt ? <Trans>Created {createdAt}</Trans> : null}
       onDelete={() => deleteChatAutomation.mutate(groupId)}
     />
@@ -262,20 +318,13 @@ function ChatAutomationDetails({ groupId }: { groupId: string }) {
 }
 
 function PersistedWorkflowDetails({ workflowId }: { workflowId: string }) {
-  const { t } = useLingui();
   const deleteWorkflow = useDeleteWorkflow();
   const workflow = useEnsuredWorkflow({ id: workflowId });
 
   return (
     <CustomWorkflowDetails
       workflow={workflow}
-      title={workflow.title.trim() || t`Untitled automation`}
-      description={
-        <Trans>
-          Add a trigger and actions. Chat on the right can help you refine the
-          workflow.
-        </Trans>
-      }
+      description={EDITOR_DESCRIPTION}
       onDelete={() => deleteWorkflow.mutate(workflowId)}
     />
   );
@@ -283,79 +332,106 @@ function PersistedWorkflowDetails({ workflowId }: { workflowId: string }) {
 
 function CustomWorkflowDetails({
   workflow,
-  title,
+  fallbackTitle,
   description,
   onDelete,
 }: {
   workflow: AutomationWorkflow;
-  title: React.ReactNode;
+  fallbackTitle?: string;
   description: React.ReactNode;
   onDelete: () => void;
 }) {
   const { t } = useLingui();
-  const billing = useBillingAccess();
-  const notifyPlanRequired = useNotifyPlanRequired();
-  const workflows = useAutomationWorkflows();
+  const labels = useAutomationLabels();
   const saveWorkflow = useSaveWorkflow();
+  // Le panneau de test se ferme quand on passe à une autre automatisation.
+  const [testingId, setTestingId] = useState<string | null>(null);
+  const testing = testingId === workflow.id;
+  const ready = isWorkflowReady(workflow);
 
   const persist = (next: AutomationWorkflow) => {
-    saveWorkflow.mutate({ workflows, next });
+    saveWorkflow.mutate({ next });
   };
 
   const handleEnable = (enabled: boolean) => {
-    if (enabled && !billing.isPro) {
-      notifyPlanRequired("pro");
-      return;
-    }
     persist({ ...workflow, enabled });
   };
 
   return (
-    <AutomationDetailsLayout
-      icon={<Lightning className="text-chart-4" size={16} />}
-      title={title}
-      description={description}
-      actions={
-        <div className="flex items-center gap-2">
-          {workflow.enabled ? (
+    <div className="flex h-full min-h-0 flex-1 flex-col">
+      <AutomationDetailHeader
+        title={
+          workflow.title.trim() ||
+          fallbackTitle ||
+          workflowTitle(workflow, labels)
+        }
+        actions={
+          <div className="flex items-center gap-2">
             <Button
               type="button"
               size="sm"
               variant="outline"
-              onClick={() => handleEnable(false)}
-              disabled={!billing.isReady || saveWorkflow.isPending}
-            >
-              <Trans>Disable</Trans>
-            </Button>
-          ) : (
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => handleEnable(true)}
-              disabled={
-                !billing.isReady ||
-                saveWorkflow.isPending ||
-                (billing.isPro && !isWorkflowReady(workflow))
-              }
+              onClick={() => setTestingId(workflow.id)}
+              disabled={!ready}
+              aria-pressed={testing}
               title={
-                billing.isPro && !isWorkflowReady(workflow)
-                  ? t`Add and configure at least one action first.`
-                  : undefined
+                ready ? undefined : t`Configure every step before testing.`
               }
             >
-              <Lightning size={14} />
-              <Trans>Save &amp; enable</Trans>
+              <Play size={14} />
+              <Trans context="automation">Test</Trans>
             </Button>
-          )}
-          <AutomationActionsMenu
-            actionLabel={<Trans>Delete automation</Trans>}
-            onAction={onDelete}
-          />
+            {workflow.trigger === "manual" ? null : workflow.enabled ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => handleEnable(false)}
+                disabled={saveWorkflow.isPending}
+              >
+                <Trans>Disable</Trans>
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => handleEnable(true)}
+                disabled={saveWorkflow.isPending || !ready}
+                title={
+                  !ready
+                    ? t`Add and configure at least one action first.`
+                    : undefined
+                }
+              >
+                <Lightning size={14} />
+                <Trans>Save &amp; enable</Trans>
+              </Button>
+            )}
+            <AutomationActionsMenu
+              actionLabel={<Trans>Delete automation</Trans>}
+              onAction={onDelete}
+            />
+          </div>
+        }
+      />
+      <div className="scroll-fade-y scrollbar-hide min-h-0 w-full flex-1 overflow-y-auto px-6 pt-3 pb-8">
+        <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
+          {description ? (
+            <p className="text-muted-foreground max-w-2xl text-sm leading-relaxed">
+              {description}
+            </p>
+          ) : null}
+          {testing ? (
+            <WorkflowTestPanel
+              key={workflow.id}
+              workflow={workflow}
+              onClose={() => setTestingId(null)}
+            />
+          ) : null}
+          <WorkflowBuilder workflow={workflow} onChange={persist} />
         </div>
-      }
-    >
-      <WorkflowBuilder workflow={workflow} onChange={persist} />
-    </AutomationDetailsLayout>
+      </div>
+    </div>
   );
 }
 
@@ -408,232 +484,4 @@ function useEnsuredWorkflow({
   }, [chatGroupId, existing, fallback]);
 
   return existing ?? fallback;
-}
-
-function StarterAutomationDetails({ starterId }: { starterId: StarterId }) {
-  const { t } = useLingui();
-  const billing = useBillingAccess();
-  const notifyPlanRequired = useNotifyPlanRequired();
-  const starter = useStarterAutomations().find((item) => item.id === starterId);
-  const [showPreview, setShowPreview] = useState(false);
-  const legacyKeys = STARTER_AUTOMATIONS[starterId];
-  const { values: settingValues } = useStoredSettingValues();
-  const removeStarterDraft = useRemoveStarterDraft();
-
-  const saveDraftMutation = useMutation({
-    mutationKey: ["automation-draft-template"],
-    mutationFn: async () => {
-      await setSettingValue("automation_draft_template", starterId);
-    },
-    onSuccess: () => toast.success(t`Automation draft saved`),
-    onError: () => toast.error(t`Could not save the automation draft`),
-  });
-
-  const setEnabledMutation = useMutation({
-    mutationKey: ["automation-starter-enabled"],
-    mutationFn: async ({ enabled }: { enabled: boolean }) => {
-      const updates: SettingValues = { automation_draft_template: starterId };
-      updates[legacyKeys.enabledKey] = enabled;
-      return setSettingValues(updates);
-    },
-    onSuccess: (_, { enabled }) =>
-      toast.success(enabled ? t`Automation enabled` : t`Automation disabled`),
-    onError: () => toast.error(t`Could not update the automation`),
-  });
-
-  if (!starter) {
-    return null;
-  }
-
-  const isEnabled = Boolean(settingValues[legacyKeys.enabledKey]);
-  const targetRaw = settingValues[legacyKeys.targetKey] ?? "";
-  const isReady = targetRaw.trim().length > 0;
-  const readinessHint = t`Choose an export folder first.`;
-
-  const handleSaveDraft = () => {
-    if (!billing.isPro) {
-      notifyPlanRequired("pro");
-      return;
-    }
-    saveDraftMutation.mutate();
-  };
-
-  const handleEnable = () => {
-    if (!billing.isPro) {
-      notifyPlanRequired("pro");
-      return;
-    }
-    setEnabledMutation.mutate({ enabled: true });
-  };
-
-  return (
-    <AutomationDetailsLayout
-      icon={starter.renderIcon(16)}
-      title={starter.title}
-      description={starter.description}
-      actions={
-        <AutomationActionsMenu
-          actionLabel={<Trans>Remove automation</Trans>}
-          onAction={() => removeStarterDraft.mutate(starterId)}
-        />
-      }
-    >
-      <section
-        className="border-border bg-background overflow-hidden rounded-2xl border"
-        aria-labelledby="automation-draft-title"
-      >
-        <div className="border-border flex flex-wrap items-start justify-between gap-3 border-b px-5 py-4">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <Lightning className="text-primary" size={17} />
-              <h3
-                id="automation-draft-title"
-                className="truncate text-sm font-semibold"
-              >
-                {starter.title}
-              </h3>
-              {isEnabled ? (
-                <Badge variant="outline">
-                  <Trans>Enabled</Trans>
-                </Badge>
-              ) : (
-                <Badge variant="outline">
-                  <Trans>Draft</Trans>
-                </Badge>
-              )}
-            </div>
-            <p className="text-muted-foreground mt-1 text-xs">
-              <Trans>Steps run from top to bottom.</Trans>
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => setShowPreview((visible) => !visible)}
-            >
-              <Eye size={14} />
-              {showPreview ? (
-                <Trans>Hide preview</Trans>
-              ) : (
-                <Trans>Preview</Trans>
-              )}
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              disabled
-              title={t`Test runs are not available yet.`}
-            >
-              <Play size={14} />
-              <Trans>Test</Trans>
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              onClick={handleSaveDraft}
-              disabled={!billing.isReady || saveDraftMutation.isPending}
-            >
-              <FloppyDisk size={14} />
-              <Trans>Save draft</Trans>
-            </Button>
-            {isEnabled ? (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => setEnabledMutation.mutate({ enabled: false })}
-                disabled={!billing.isReady || setEnabledMutation.isPending}
-              >
-                <Trans>Disable</Trans>
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                size="sm"
-                onClick={handleEnable}
-                disabled={
-                  !billing.isReady ||
-                  setEnabledMutation.isPending ||
-                  (billing.isPro && !isReady)
-                }
-                title={billing.isPro && !isReady ? readinessHint : undefined}
-              >
-                <Lightning size={14} />
-                <Trans>Save &amp; enable</Trans>
-              </Button>
-            )}
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-2 p-5">
-          {starter.steps.map((step, index) => (
-            <div key={`${step.kind}-${step.title}`}>
-              <div className="border-border bg-card flex items-start gap-3 rounded-xl border p-4">
-                <span
-                  className={cn([
-                    "mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
-                    step.kind === "ai"
-                      ? "bg-chart-4/15 text-chart-4"
-                      : step.kind === "trigger"
-                        ? "bg-chart-3/15 text-foreground"
-                        : "bg-chart-2/15 text-chart-2",
-                  ])}
-                >
-                  {step.kind === "ai" ? <Sparkle size={13} /> : index + 1}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="flex flex-wrap items-center gap-2">
-                    <span className="text-sm font-medium">{step.title}</span>
-                    <Badge variant="outline" size="sm">
-                      {step.kind === "ai" ? (
-                        <Trans>AI step</Trans>
-                      ) : step.kind === "trigger" ? (
-                        <Trans>Trigger</Trans>
-                      ) : (
-                        <Trans>Action</Trans>
-                      )}
-                    </Badge>
-                  </span>
-                  <span className="text-muted-foreground mt-1 block text-xs leading-relaxed">
-                    {step.detail}
-                  </span>
-                </span>
-              </div>
-              {index < starter.steps.length - 1 ? (
-                <div className="text-muted-foreground flex h-6 items-center pl-6">
-                  <ArrowRight className="rotate-90" size={13} />
-                </div>
-              ) : null}
-            </div>
-          ))}
-        </div>
-
-        <div className="border-border border-t px-5 py-4">
-          <MarkdownExportConfig />
-          {legacyKeys ? (
-            <AutomationLastRunLine settingKey={legacyKeys.lastRunKey} />
-          ) : null}
-        </div>
-
-        {showPreview ? (
-          <div className="border-border bg-muted/35 border-t px-5 py-4">
-            <div className="flex items-start gap-3">
-              <Eye className="text-muted-foreground mt-0.5" size={15} />
-              <div>
-                <h4 className="text-xs font-semibold">
-                  <Trans>Expected output</Trans>
-                </h4>
-                <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-                  {starter.preview}
-                </p>
-              </div>
-            </div>
-          </div>
-        ) : null}
-      </section>
-    </AutomationDetailsLayout>
-  );
 }

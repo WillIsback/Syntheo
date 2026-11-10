@@ -5,7 +5,6 @@ import {
   applyDocumentPalette,
   normalizePalette,
   readDocumentPalette,
-  readStoredPalette,
   useDocumentPalette,
   writeStoredPalette,
 } from "./palette";
@@ -57,16 +56,9 @@ describe("applyDocumentPalette", () => {
 });
 
 describe("stockage local de la palette", () => {
-  it("relit la palette écrite, et Thé vert par défaut", () => {
-    expect(readStoredPalette()).toBe("cha");
+  it("écrit la palette choisie", () => {
     writeStoredPalette("fuji");
     expect(localStorage.getItem("syntheo-palette")).toBe("fuji");
-    expect(readStoredPalette()).toBe("fuji");
-  });
-
-  it("ignore une valeur inconnue", () => {
-    localStorage.setItem("syntheo-palette", "rose");
-    expect(readStoredPalette()).toBe("cha");
   });
 });
 

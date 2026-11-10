@@ -7,8 +7,6 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { NextMeeting } from "./next-meeting";
-
 import type { MenuItemDef } from "~/shared/hooks/useNativeContextMenu";
 
 const mocks = vi.hoisted(() => ({
@@ -16,10 +14,15 @@ const mocks = vi.hoisted(() => ({
   openCurrent: vi.fn(),
   newNote: vi.fn(),
   openSearch: vi.fn(),
-  getOrCreateSessionForEventId: vi.fn(),
   deleteSession: vi.fn(),
+  live: {
+    status: "inactive" as "inactive" | "active" | "finalizing",
+    sessionId: null as string | null,
+    seconds: 0,
+    elapsedOffsetSeconds: 0,
+    pause: null,
+  },
   menus: [] as MenuItemDef[][],
-  nextMeeting: null as NextMeeting | null,
   firstName: "Camille",
   recentNotes: [
     {
@@ -27,7 +30,17 @@ const mocks = vi.hoisted(() => ({
       title: "Comité projet",
       createdAt: "2024-10-28T10:00:00",
       durationMs: 0,
-      trackingId: "tracking-1",
+      folderPath: "Atlas",
+    },
+  ],
+  folders: [
+    {
+      path: "Atlas",
+      name: "Atlas",
+      icon: { type: "icon", value: "folder", color: "" },
+      meetingCount: 3,
+      lastMeetingAt: "2024-10-28T10:00:00",
+      thread: null,
     },
   ],
 }));
@@ -35,13 +48,35 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@tauri-apps/plugin-os", () => ({ platform: mocks.platform }));
 
 vi.mock("./queries", () => ({
+  RECENT_NOTES_LIMIT: 5,
   useOwnerFirstName: () => mocks.firstName,
-  useNextMeeting: () => mocks.nextMeeting,
   useRecentNotes: () => mocks.recentNotes,
 }));
 
+vi.mock("./active-folders", () => ({
+  useActiveFolders: () => mocks.folders,
+}));
+
 vi.mock("~/session/queries", () => ({
-  getOrCreateSessionForEventId: mocks.getOrCreateSessionForEventId,
+  useFolderIcons: () => ({}),
+  useSession: (sessionId: string) => ({
+    id: sessionId,
+    title: "Comité projet",
+  }),
+}));
+
+// Carte « En cours » (issue 517) : état de l'écoute lu dans le magasin.
+vi.mock("~/stt/contexts", () => ({
+  useListener: (selector: (state: unknown) => unknown) =>
+    selector({ live: mocks.live, pause: vi.fn() }),
+}));
+
+vi.mock("~/stt/useStartListening", () => ({
+  useStartListening: () => vi.fn(),
+}));
+
+vi.mock("~/session/components/folder-picker", () => ({
+  FolderPickerContent: () => null,
 }));
 
 vi.mock("~/session/hooks/useDeleteSession", () => ({
@@ -87,24 +122,19 @@ vi.mock("~/store/zustand/tabs", () => ({
 
 import { HomePage } from "./index";
 
-function meeting(imminent: boolean): NextMeeting {
-  const startedAt = new Date(Date.now() + (imminent ? 5 : 120) * 60_000);
-  return {
-    id: "event-1",
-    title: "Point d'équipe",
-    startedAt,
-    endedAt: new Date(startedAt.getTime() + 3_600_000),
-    imminent,
-    ongoing: false,
-  };
-}
+import { useFolderSelection } from "~/folders/selection";
 
 describe("HomePage", () => {
   beforeEach(() => {
-    mocks.nextMeeting = null;
+    mocks.live = {
+      status: "inactive",
+      sessionId: null,
+      seconds: 0,
+      elapsedOffsetSeconds: 0,
+      pause: null,
+    };
     mocks.menus = [];
     mocks.platform.mockReturnValue("linux");
-    mocks.getOrCreateSessionForEventId.mockResolvedValue("session-event");
   });
 
   afterEach(() => {
@@ -112,32 +142,11 @@ describe("HomePage", () => {
     vi.clearAllMocks();
   });
 
-  it("crée une note vierge sans réunion imminente", () => {
-    mocks.nextMeeting = meeting(false);
+  it("Démarrer crée une note vierge", () => {
     render(<HomePage />);
 
     fireEvent.click(screen.getByRole("button", { name: /Start a meeting/ }));
     expect(mocks.newNote).toHaveBeenCalledTimes(1);
-    expect(mocks.getOrCreateSessionForEventId).not.toHaveBeenCalled();
-  });
-
-  it("reprend la réunion imminente de l'agenda (titre et participants)", async () => {
-    mocks.nextMeeting = meeting(true);
-    render(<HomePage />);
-
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: /Start a meeting/ }));
-    });
-
-    expect(mocks.getOrCreateSessionForEventId).toHaveBeenCalledWith(
-      "event-1",
-      "Point d'équipe",
-    );
-    expect(mocks.newNote).not.toHaveBeenCalled();
-    expect(mocks.openCurrent).toHaveBeenCalledWith({
-      type: "sessions",
-      id: "session-event",
-    });
   });
 
   it("ouvre une note de « Reprendre » dans l'onglet courant", () => {
@@ -147,6 +156,19 @@ describe("HomePage", () => {
       type: "sessions",
       id: "s1",
     });
+  });
+
+  it("une carte « Vos dossiers » ouvre la page de son dossier", () => {
+    useFolderSelection.getState().setSelectedPath(null);
+    render(<HomePage />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Atlas/ }));
+    expect(useFolderSelection.getState().selectedPath).toBe("Atlas");
+    expect(mocks.openCurrent).toHaveBeenCalledWith({ type: "folders" });
+
+    fireEvent.click(screen.getByRole("button", { name: "All folders" }));
+    expect(mocks.openCurrent).toHaveBeenLastCalledWith({ type: "folders" });
+    expect(mocks.openCurrent).toHaveBeenCalledTimes(2);
   });
 
   it("la capsule ouvre la palette de recherche (Ctrl K)", () => {
@@ -176,7 +198,6 @@ describe("HomePage", () => {
 
     expect(mocks.deleteSession).toHaveBeenCalledWith("s1", {
       title: "Comité projet",
-      trackingId: "tracking-1",
     });
     expect(mocks.openCurrent).not.toHaveBeenCalled();
   });
@@ -197,5 +218,26 @@ describe("HomePage", () => {
     expect(dialog.getAttribute("data-session")).toBe("s1");
     expect(dialog.textContent).toBe("open");
     expect(mocks.openCurrent).not.toHaveBeenCalled();
+  });
+
+  it("sans écoute, pas de carte « En cours »", () => {
+    render(<HomePage />);
+    expect(screen.queryByRole("region", { name: /In progress/ })).toBeNull();
+  });
+
+  it("pendant l'écoute, la carte remplace la note dans « Reprendre »", () => {
+    mocks.live = { ...mocks.live, status: "active", sessionId: "s1" };
+    render(<HomePage />);
+
+    const card = screen.getByRole("region", { name: /In progress/ });
+    expect(card.textContent).toContain("Comité projet");
+    // La note écoutée n'est pas répétée dans les notes récentes.
+    expect(screen.queryByRole("row")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Open" }));
+    expect(mocks.openCurrent).toHaveBeenCalledWith({
+      type: "sessions",
+      id: "s1",
+    });
   });
 });

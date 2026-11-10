@@ -1,0 +1,77 @@
+/*
+ * Barre latérale : les titres de groupe (« Prise en main », « Utiliser
+ * Syntheo »…) avaient la même taille et la même graisse que les pages.
+ * Petites capitales espacées, couleur thé vert, et un peu d'air au-dessus
+ * de chaque groupe pour hiérarchiser la navigation.
+ */
+#sidebar .sidebar-group-header {
+  margin-top: 1.25rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  text-transform: uppercase;
+  color: #316745;
+}
+
+#sidebar .sidebar-group-header h5,
+#sidebar .sidebar-group-header span {
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+}
+
+#sidebar li:first-child > .sidebar-group-header,
+#sidebar .sidebar-group-header:first-child {
+  margin-top: 0.25rem;
+}
+
+html.dark #sidebar .sidebar-group-header {
+  color: #7dbf95;
+}
+
+/* Pages d'une section en retrait sous leur titre, avec un filet discret. */
+#sidebar ul.sidebar-group {
+  margin-left: 1rem;
+  padding-left: 0.5rem;
+  border-left: 1px solid rgb(49 103 69 / 0.18);
+}
+
+html.dark #sidebar ul.sidebar-group {
+  border-left-color: rgb(125 191 149 / 0.2);
+}
+
+/* Titre de section repliable (sidebar.js) : chevron qui pivote. */
+#sidebar .sidebar-group-header.syntheo-collapsible {
+  cursor: pointer;
+  user-select: none;
+}
+
+#sidebar .sidebar-group-header.syntheo-collapsible::after {
+  content: "";
+  width: 0.4rem;
+  height: 0.4rem;
+  margin-left: auto;
+  margin-right: 0.75rem;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform 150ms ease;
+}
+
+#sidebar .sidebar-group-header[aria-expanded="false"]::after {
+  transform: rotate(-45deg);
+}
+
+#sidebar .sidebar-group-header.syntheo-collapsible:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+  border-radius: 0.375rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #sidebar .sidebar-group-header.syntheo-collapsible::after {
+    transition: none;
+  }
+}

@@ -14,5 +14,6 @@ sudo apt-get -o Acquire::Retries=5 install -y \
   libxdo-dev \
   libssl-dev \
   libayatana-appindicator3-dev \
+  libgtk-layer-shell-dev \
   librsvg2-dev \
   xdg-utils

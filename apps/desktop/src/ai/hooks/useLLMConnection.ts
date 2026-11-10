@@ -24,7 +24,7 @@ import { useAiProvider } from "~/settings/providers";
 import { useSettingsReady } from "~/settings/queries";
 import { useConfigValues } from "~/shared/config";
 
-type LanguageModelV3 = Parameters<typeof wrapLanguageModel>[0]["model"];
+type WrappableLanguageModel = Parameters<typeof wrapLanguageModel>[0]["model"];
 
 type LLMConnectionInfo = {
   providerId: ProviderId;
@@ -52,7 +52,7 @@ type LLMConnectionResult = {
   status: LLMConnectionStatus;
 };
 
-export const useLanguageModel = (): LanguageModelV3 | null => {
+export const useLanguageModel = (): WrappableLanguageModel | null => {
   const { conn } = useLLMConnection();
 
   return useMemo(() => {
@@ -165,7 +165,6 @@ const resolveLLMConnection = (params: {
 
   const context: ProviderEligibilityContext = {
     isAuthenticated: false,
-    isPaid: true,
     config: { base_url: baseUrl, api_key: apiKey },
   };
 
@@ -196,8 +195,8 @@ const resolveLLMConnection = (params: {
 };
 
 const wrapWithThinkingMiddleware = (
-  model: LanguageModelV3,
-): LanguageModelV3 => {
+  model: WrappableLanguageModel,
+): WrappableLanguageModel => {
   return wrapLanguageModel({
     model,
     middleware: [
@@ -207,7 +206,9 @@ const wrapWithThinkingMiddleware = (
   });
 };
 
-const createLanguageModel = (conn: LLMConnectionInfo): LanguageModelV3 => {
+const createLanguageModel = (
+  conn: LLMConnectionInfo,
+): WrappableLanguageModel => {
   const model = createProviderModel(conn);
   const providerOptions = reasoningProviderOptions(
     conn.providerId,
@@ -224,11 +225,19 @@ const createLanguageModel = (conn: LLMConnectionInfo): LanguageModelV3 => {
   });
 };
 
-const createProviderModel = (conn: LLMConnectionInfo): LanguageModelV3 => {
+const createProviderModel = (
+  conn: LLMConnectionInfo,
+): WrappableLanguageModel => {
   const config: Parameters<typeof createOpenAICompatible>[0] = {
     fetch: providerFetch,
     name: conn.providerId,
     baseURL: conn.baseUrl,
+    // Issue 530 : vLLM, Ollama, llama.cpp server, LM Studio et NIM acceptent
+    // `response_format: json_schema` et contraignent la réponse au schéma.
+    // Sans cette option, seul `json_object` part et le schéma est ignoré. Un
+    // serveur qui le refuse passe par la nouvelle tentative en JSON demandé
+    // par consigne (ai/structured-output.ts).
+    supportsStructuredOutputs: true,
   };
   if (conn.apiKey) {
     config.apiKey = conn.apiKey;

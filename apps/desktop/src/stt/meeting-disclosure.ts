@@ -1,3 +1,5 @@
+import { t } from "@lingui/core/macro";
+
 import { commands as detectCommands } from "@syntheo/plugin-detect";
 import { toast } from "@syntheo/ui/components/ui/toast";
 
@@ -8,11 +10,14 @@ import {
 } from "./meeting-consent";
 import { persistDisclosureAttempt } from "./meeting-consent-store";
 
+import { copyText } from "~/settings/developers/clipboard";
+
 export const MEETING_DISCLOSURE_MESSAGE =
   "J'utilise Syntheo pour transcrire cette réunion ; le transcript est conservé sur mon poste.";
 
 const MEETING_DISCLOSURE_MAX_ATTEMPTS = 30;
 const MEETING_DISCLOSURE_RETRY_INTERVAL_MS = 1_000;
+const MEETING_DISCLOSURE_TOAST_DURATION_MS = 12_000;
 const MAX_SENT_MEETING_DISCLOSURE_SESSIONS = 256;
 
 type MeetingDisclosureOutcome =
@@ -147,13 +152,48 @@ async function recordDisclosureAttempt(input: {
   }
 }
 
-function meetingDisclosureFailure(reason: unknown): MeetingDisclosureOutcome {
+function disclosurePlatformLabel(platform: DisclosurePlatform): string {
+  switch (platform) {
+    case "zoom":
+      return "Zoom";
+    case "google_meet":
+      return "Google Meet";
+    case "teams":
+      return "Microsoft Teams";
+    case "slack_huddle":
+      return "Slack";
+    case "webex":
+      return "Webex";
+    default:
+      return "";
+  }
+}
+
+function meetingDisclosureFailure(
+  reason: unknown,
+  detectedPlatform: DisclosurePlatform,
+): MeetingDisclosureOutcome {
   const detail = reason instanceof Error ? reason.message : String(reason);
   console.warn("[listener] meeting disclosure was not sent", reason);
-  toast.warning(
-    "Recording started, but Syntheo could not post the meeting chat disclosure.",
-    { id: "meeting-disclosure-send-failed", duration: Infinity },
-  );
+  // Sans réunion connue (écoute hors réunion), ce n'est pas un échec à
+  // signaler : la tentative reste enregistrée en `not_sent` (issue 532).
+  if (detectedPlatform !== "unknown") {
+    const platform = disclosurePlatformLabel(detectedPlatform);
+    toast.warning(
+      t`Listening started, but the consent message could not be posted in the ${platform} chat. Post it yourself.`,
+      {
+        id: "meeting-disclosure-send-failed",
+        duration: MEETING_DISCLOSURE_TOAST_DURATION_MS,
+        keepDuration: true,
+        action: {
+          label: t`Copy message`,
+          onClick: () => {
+            void copyText(MEETING_DISCLOSURE_MESSAGE, t`Message copied`);
+          },
+        },
+      },
+    );
+  }
   return { status: "notSent", reason: detail };
 }
 
@@ -268,6 +308,7 @@ export async function sendMeetingRecordingDisclosure({
   let lastFailureReason: unknown = "meeting chat disclosure was not sent";
   let lastPlatform: DisclosurePlatform = "unknown";
   let lastSurface = "unknown";
+  let detectedPlatform: DisclosurePlatform = "unknown";
 
   for (let attempt = 0; attempt < Math.max(1, maxAttempts); attempt += 1) {
     const outcome = await attemptMeetingRecordingDisclosure(isCancelled);
@@ -286,6 +327,9 @@ export async function sendMeetingRecordingDisclosure({
     lastFailureReason = outcome.reason;
     lastPlatform = outcome.platform;
     lastSurface = outcome.surface;
+    if (outcome.platform !== "unknown") {
+      detectedPlatform = outcome.platform;
+    }
     if (attempt + 1 < Math.max(1, maxAttempts)) {
       await new Promise<void>((resolve) => {
         setTimeout(resolve, retryIntervalMs);
@@ -309,7 +353,7 @@ export async function sendMeetingRecordingDisclosure({
     platform: lastPlatform,
     surface: lastSurface,
   });
-  return meetingDisclosureFailure(lastFailureReason);
+  return meetingDisclosureFailure(lastFailureReason, detectedPlatform);
 }
 
 export function startMeetingRecordingDisclosure(

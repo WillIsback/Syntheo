@@ -1,3 +1,4 @@
+mod aec_models;
 mod agent_skills;
 mod agents;
 mod appearance;
@@ -161,10 +162,7 @@ pub fn main() {
 
     builder = builder.plugin(tauri_plugin_db::init(db.clone()));
 
-    builder = builder
-        .plugin(tauri_plugin_importer::init())
-        .plugin(tauri_plugin_calendar::init())
-        .plugin(tauri_plugin_todo::init());
+    builder = builder.plugin(tauri_plugin_contacts::init());
 
     #[cfg(not(feature = "app-store"))]
     {
@@ -259,6 +257,7 @@ pub fn main() {
         .setup(move |app| {
             let app_handle = app.handle().clone();
             tauri_plugin_shortcut::initialize_global_shortcuts(&app_handle);
+            aec_models::install(&app_handle);
 
             specta_builder.mount_events(&app_handle);
 
@@ -378,7 +377,6 @@ pub fn main() {
                 let _ = permissions.reset(Permission::SystemAudio).await;
                 let _ = permissions.reset(Permission::ScreenRecording).await;
                 let _ = permissions.reset(Permission::Accessibility).await;
-                let _ = permissions.reset(Permission::Calendar).await;
                 let _ = permissions.reset(Permission::Reminders).await;
             });
         }

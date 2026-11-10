@@ -29,17 +29,8 @@ const mocks = vi.hoisted(() => ({
   updateFolderInstructions: vi.fn(),
   updateFolderWorkspace: vi.fn(),
   upload: vi.fn(),
-  workspaceId: "",
   personalWorkspaceId: "",
   workspaces: [] as Array<{ id: string; name: string }>,
-}));
-
-vi.mock("~/billing/billing-context", () => ({
-  useBillingAccess: () => ({
-    isReady: false,
-    isPaid: false,
-    upgradeToPro: vi.fn(),
-  }),
 }));
 
 vi.mock("@lingui/react/macro", () => ({
@@ -57,7 +48,10 @@ vi.mock("@lingui/react/macro", () => ({
 vi.mock("~/session/queries", () => ({
   useFolderIcons: () => mocks.icons,
   useFolderPaths: () => mocks.folders,
-  useFolderWorkspaces: () => ({}),
+}));
+
+vi.mock("~/search/unified/catalog", () => ({
+  useSearchNotes: () => [],
 }));
 
 vi.mock("~/session/folder-catalog", () => ({
@@ -67,7 +61,6 @@ vi.mock("~/session/folder-catalog", () => ({
   updateFolderIcon: mocks.updateFolderIcon,
   updateFolderInstructions: mocks.updateFolderInstructions,
   updateFolderWorkspace: mocks.updateFolderWorkspace,
-  useFolderWorkspaceId: () => mocks.workspaceId,
   useFolderInstructions: () => mocks.instructions,
 }));
 
@@ -99,6 +92,27 @@ vi.mock("~/sidebar/custom-sidebar-header", () => ({
   CustomSidebarHeader: ({ children }: { children?: ReactNode }) => (
     <div>{children}</div>
   ),
+}));
+
+// Page projet (issue 496) : réunions et fil rouge vides ici, ils ont leurs
+// propres tests (project/).
+vi.mock("./project/meetings", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./project/meetings")>()),
+  useFolderMeetings: () => [],
+}));
+
+vi.mock("./project/thread-store", () => ({
+  useFolderThread: () => null,
+  saveFolderThreadEdit: vi.fn(),
+  saveGeneratedFolderThread: vi.fn(),
+}));
+
+vi.mock("~/editor-bridge/mention-config", () => ({
+  useMentionConfig: () => undefined,
+}));
+
+vi.mock("~/ai/hooks", () => ({
+  useLanguageModel: () => null,
 }));
 
 import { FoldersMain } from "./index";
@@ -140,7 +154,6 @@ describe("Folders workspace", () => {
     mocks.instructions = "";
     mocks.materials = [];
     mocks.auth = null;
-    mocks.workspaceId = "";
     mocks.personalWorkspaceId = "";
     mocks.workspaces = [];
     mocks.createNamedFolder.mockResolvedValue("CS 101");
@@ -197,7 +210,7 @@ describe("Folders workspace", () => {
       "value",
       "CS 101",
     );
-    fireEvent.click(screen.getByRole("button", { name: "Work" }));
+    fireEvent.click(screen.getByRole("treeitem", { name: "Work" }));
     expect(screen.getByRole("textbox", { name: "Folder name" })).toHaveProperty(
       "value",
       "Work",

@@ -4,7 +4,6 @@ import { createElement, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
-  billingState,
   config,
   getServerForModelMock,
   isModelDownloadedMock,
@@ -12,10 +11,6 @@ const {
   readiness,
   startServerForPathMock,
 } = vi.hoisted(() => ({
-  billingState: {
-    isPaid: true,
-    isReady: true,
-  },
   config: {
     current_stt_provider: "syntheo",
     current_stt_model: "cloud",
@@ -61,14 +56,6 @@ vi.mock("@syntheo/plugin-local-stt", () => ({
   },
 }));
 
-vi.mock("~/billing/billing-context", () => ({
-  useBillingAccess: () => billingState,
-}));
-
-vi.mock("~/env", () => ({
-  env: { VITE_API_URL: "https://api.example.com" },
-}));
-
 vi.mock("~/settings/providers", () => ({
   useAiProvidersState: () => ({
     isReady: readiness.provider,
@@ -101,8 +88,6 @@ describe("useSTTConnection", () => {
   beforeEach(() => {
     config.current_stt_provider = "syntheo";
     config.current_stt_model = "cloud";
-    billingState.isPaid = true;
-    billingState.isReady = true;
     readiness.provider = true;
     readiness.settings = true;
     for (const key of Object.keys(providersState)) delete providersState[key];
@@ -140,6 +125,8 @@ describe("useSTTConnection", () => {
 
     expect(result.current.conn).toBeNull();
     expect(result.current.isReady).toBe(false);
+    // Réglages chargés : l'absence de connexion est définitive (issue 515).
+    expect(result.current.isLoading).toBe(false);
   });
 
   it("ignores_a_stored_provider_that_no_longer_exists", () => {
@@ -223,6 +210,7 @@ describe("useSTTConnection", () => {
     const providerPending = renderHook(() => useSTTConnection(), { wrapper });
 
     expect(providerPending.result.current.isReady).toBe(false);
+    expect(providerPending.result.current.isLoading).toBe(true);
 
     providerPending.unmount();
     readiness.provider = true;
@@ -230,5 +218,6 @@ describe("useSTTConnection", () => {
     const settingsPending = renderHook(() => useSTTConnection(), { wrapper });
 
     expect(settingsPending.result.current.isReady).toBe(false);
+    expect(settingsPending.result.current.isLoading).toBe(true);
   });
 });

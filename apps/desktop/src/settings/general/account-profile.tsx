@@ -161,9 +161,9 @@ function ProfileForm({
                 className="text-muted-foreground text-[13px] leading-[1.4]"
               >
                 <Trans>
-                  Syntheo uses it to recognize you among the attendees of your
-                  calendar meetings, so you are not counted as a participant. It
-                  stays on this device.
+                  Syntheo uses it to recognize you among the participants of
+                  your meetings, so you are not counted twice. It stays on this
+                  device.
                 </Trans>
               </p>
             </div>

@@ -7,10 +7,10 @@ import {
   hasStoredNoteContent,
   useCanShowTranscript,
   useCurrentNoteHasContent,
-  useCurrentNoteTab,
+  useSessionNoteView,
 } from "./shared";
 
-import type { Tab } from "~/store/zustand/tabs/schema";
+import type { EditorView } from "~/store/zustand/tabs/schema";
 
 const hoisted = vi.hoisted(() => ({
   batchError: null as string | null,
@@ -63,12 +63,8 @@ vi.mock("~/session/queries", () => ({
   useSessionHasTranscript: () => hoisted.hasTranscript,
 }));
 
-describe("useCurrentNoteTab", () => {
-  const tab = {
-    type: "sessions",
-    id: "session-1",
-    state: { view: { type: "transcript" } },
-  } as Extract<Tab, { type: "sessions" }>;
+describe("useSessionNoteView", () => {
+  const view: EditorView = { type: "transcript" };
 
   beforeEach(() => {
     hoisted.batchError = null;
@@ -85,16 +81,8 @@ describe("useCurrentNoteTab", () => {
     hoisted.sessionMode = "inactive";
   });
 
-  it("keeps the transcript view available when saved audio exists", () => {
-    const { result } = renderHook(() =>
-      useCurrentNoteTab(tab, { audioExists: true }),
-    );
-
-    expect(result.current).toEqual({ type: "transcript" });
-  });
-
-  it("normalizes the transcript view when audio and transcript rows are missing", () => {
-    const { result } = renderHook(() => useCurrentNoteTab(tab));
+  it("normalizes the transcript view when transcript rows are missing", () => {
+    const { result } = renderHook(() => useSessionNoteView("session-1", view));
 
     expect(result.current).toEqual({ type: "raw" });
   });
@@ -103,18 +91,7 @@ describe("useCurrentNoteTab", () => {
     hoisted.sessionMode = "active";
     hoisted.liveSessionId = "session-1";
 
-    const { result } = renderHook(() => useCurrentNoteTab(tab));
-
-    expect(result.current).toEqual({ type: "transcript" });
-  });
-
-  it("keeps the transcript view while listening when only in-progress audio exists", () => {
-    hoisted.sessionMode = "active";
-    hoisted.liveSessionId = "session-1";
-
-    const { result } = renderHook(() =>
-      useCurrentNoteTab(tab, { audioExists: true }),
-    );
+    const { result } = renderHook(() => useSessionNoteView("session-1", view));
 
     expect(result.current).toEqual({ type: "transcript" });
   });

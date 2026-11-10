@@ -37,6 +37,9 @@ pub enum BatchFailure {
     ProgressiveStreamError { provider: String, message: String },
     #[error("Timed out waiting for progressive batch stream response.")]
     ProgressiveStreamTimeout,
+    /// Fichier transcrit par le flux temps réel (issue 463).
+    #[error("{message}")]
+    RealtimeStreamFailed { provider: String, message: String },
 }
 
 impl BatchFailure {
@@ -60,6 +63,7 @@ impl BatchFailure {
             Self::ProgressiveStartFailed { .. } => BatchErrorCode::ProgressiveStartFailed,
             Self::ProgressiveStreamError { .. } => BatchErrorCode::ProgressiveStreamError,
             Self::ProgressiveStreamTimeout => BatchErrorCode::ProgressiveStreamTimeout,
+            Self::RealtimeStreamFailed { .. } => BatchErrorCode::RealtimeStreamFailed,
         }
     }
 }

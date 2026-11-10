@@ -90,6 +90,17 @@ export class DraftCache {
     }
   }
 
+  // Pré-remplit le brouillon d'une conversation pas encore affichée (par
+  // exemple « Demander au dossier » depuis la palette). Sans effet si le
+  // champ de cette conversation est déjà monté.
+  seed(draftKey: string, content: JSONContent): boolean {
+    if (this.active.has(draftKey)) {
+      return false;
+    }
+    const failure = this.retain(draftKey, content);
+    return failure === undefined || failure.reason === "older-draft-removed";
+  }
+
   delete(draftKey: string) {
     this.takeRetained(draftKey);
     const active = this.active.get(draftKey);

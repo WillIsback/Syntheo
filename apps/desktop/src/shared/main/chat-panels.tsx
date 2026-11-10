@@ -1,16 +1,16 @@
 import { isTauri } from "@tauri-apps/api/core";
-import { useCallback, useLayoutEffect, useRef } from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { commands as windowsCommands } from "@syntheo/plugin-windows";
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
+  usePersistentPanelLayout,
 } from "@syntheo/ui/components/ui/resizable";
 
 import {
   AUTOMATIONS_SURFACE_MIN_WIDTH_PX,
-  boundedMinWidthPx,
   NOTE_SURFACE_MIN_WIDTH_PX,
   SETTINGS_SURFACE_MIN_WIDTH_PX,
   usesNoteSurfaceMinWidth,
@@ -24,6 +24,10 @@ import { readZoomFactor } from "~/shared/zoom";
 import { type Tab, useTabs } from "~/store/zustand/tabs";
 
 const RIGHT_CHAT_PANEL_MIN_WIDTH_PX = 320;
+const RIGHT_CHAT_PANEL_MIN_PERCENT = 20;
+// Ids stables : la v4 de react-resizable-panels mémorise la disposition par id.
+const MAIN_BODY_PANEL_ID = "main-body";
+const RIGHT_CHAT_PANEL_ID = "right-chat";
 
 export function MainChatPanels({
   autoSaveId = "main-chat",
@@ -44,10 +48,25 @@ export function MainChatPanels({
     currentTab,
     noteSurfaceMinWidth,
   });
-  const bodyMinWidth =
-    currentTab?.type === "settings" && bodyMinWidthPx != null
-      ? boundedMinWidthPx(bodyMinWidthPx)
-      : bodyMinWidthPx;
+  const panelIds = useMemo(
+    () =>
+      isRightPanelOpen
+        ? [MAIN_BODY_PANEL_ID, RIGHT_CHAT_PANEL_ID]
+        : [MAIN_BODY_PANEL_ID],
+    [isRightPanelOpen],
+  );
+  const { defaultLayout, onLayoutChanged } = usePersistentPanelLayout({
+    autoSaveId,
+    panelIds,
+  });
+  const [panelGroupWidth, setPanelGroupWidth] = useState(0);
+  const panelGroupRef = useElementWidth(setPanelGroupWidth);
+  // En v2, le minimum du chat valait max(20 %, 320 px) : 20 % côté
+  // bibliothèque, 320 px par min-width CSS. La v4 ne prend qu'une contrainte.
+  const rightPanelMinSize = Math.max(
+    RIGHT_CHAT_PANEL_MIN_WIDTH_PX,
+    (panelGroupWidth * RIGHT_CHAT_PANEL_MIN_PERCENT) / 100,
+  );
 
   useNoteSurfaceWindowWidthGuard({
     bodyPanelContainerRef,
@@ -61,14 +80,19 @@ export function MainChatPanels({
       {(sessionProps) => (
         <>
           <ResizablePanelGroup
-            autoSaveId={autoSaveId}
             data-main-chat-panel-group
-            direction="horizontal"
+            defaultLayout={defaultLayout}
+            elementRef={panelGroupRef}
+            onLayoutChanged={onLayoutChanged}
+            orientation="horizontal"
             className="flex min-h-0 flex-1 overflow-hidden"
           >
+            {/* La v4 garde ce minimum dans la largeur du groupe : l'ancien
+                min(…px, 100%) CSS des Paramètres n'est plus nécessaire. */}
             <ResizablePanel
+              id={MAIN_BODY_PANEL_ID}
               className="min-h-0 min-w-0 flex-1 overflow-hidden"
-              style={{ minWidth: bodyMinWidth }}
+              minSize={bodyMinWidthPx}
             >
               <div
                 ref={bodyPanelContainerRef}
@@ -82,11 +106,11 @@ export function MainChatPanels({
               <>
                 <ResizableHandle className="w-0" />
                 <ResizablePanel
-                  defaultSize={30}
-                  minSize={20}
-                  maxSize={50}
+                  id={RIGHT_CHAT_PANEL_ID}
+                  defaultSize="30%"
+                  minSize={rightPanelMinSize}
+                  maxSize="50%"
                   className="min-h-0 overflow-hidden"
-                  style={{ minWidth: RIGHT_CHAT_PANEL_MIN_WIDTH_PX }}
                 >
                   <div
                     data-chat-right-panel
@@ -112,6 +136,23 @@ export function MainChatPanels({
         </>
       )}
     </ChatSessionHost>
+  );
+}
+
+function useElementWidth(onWidth: (width: number) => void) {
+  return useCallback(
+    (element: HTMLDivElement | null) => {
+      if (!element || typeof ResizeObserver === "undefined") {
+        return;
+      }
+
+      const observer = new ResizeObserver(([entry]) => {
+        onWidth(Math.round(entry?.contentRect.width ?? 0));
+      });
+      observer.observe(element);
+      return () => observer.disconnect();
+    },
+    [onWidth],
   );
 }
 

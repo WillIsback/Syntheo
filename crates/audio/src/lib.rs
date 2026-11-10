@@ -151,6 +151,13 @@ impl Stream for CaptureStream {
     }
 }
 
+/// Sortie audio capturée comme son système (issue 450).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OutputDevice {
+    pub name: String,
+    pub headphone: bool,
+}
+
 pub trait AudioProvider: Send + Sync {
     fn open_capture(&self, config: CaptureConfig) -> Result<CaptureStream, Error>;
     fn open_speaker_capture(
@@ -173,6 +180,22 @@ pub trait AudioProvider: Send + Sync {
 
     fn probe_mic(&self, device: Option<String>) -> Result<(), Error>;
     fn probe_speaker(&self) -> Result<(), Error>;
+
+    /// Sorties qu'on peut capturer comme son système. `None` : la plateforme ne permet pas de
+    /// choisir la sortie (macOS capte toujours la sortie par défaut).
+    fn list_speaker_devices(&self) -> Option<Vec<String>> {
+        None
+    }
+
+    /// Sortie choisie pour les prochaines captures du son système ; `None` suit la sortie par
+    /// défaut du système.
+    fn set_speaker_device(&self, _device: Option<String>) {}
+
+    /// Sortie réellement capturée pendant une écoute, sinon celle que capterait une écoute qui
+    /// démarre avec `preferred`.
+    fn captured_speaker_device(&self, _preferred: Option<String>) -> Option<OutputDevice> {
+        None
+    }
 }
 
 #[cfg(test)]

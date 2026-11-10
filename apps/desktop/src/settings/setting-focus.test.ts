@@ -53,11 +53,11 @@ describe("focusSetting", () => {
 
   it("rend la ligne focalisable quand elle n'a aucun champ actif", () => {
     const root = mount(
-      `<div data-setting-id="notify-events"><button disabled>Off</button></div>`,
+      `<div data-setting-id="notify-recording"><button disabled>Off</button></div>`,
     );
     const row = root.querySelector<HTMLElement>("[data-setting-id]")!;
 
-    focusSetting(root, "notify-events");
+    focusSetting(root, "notify-recording");
 
     expect(row.getAttribute("tabindex")).toBe("-1");
     expect(document.activeElement).toBe(row);

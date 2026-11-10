@@ -80,7 +80,10 @@ export type FloatingBarDictationAction = {
 	action: DictationPanelAction,
 };
 
-/**  « Mettre en pause » ou « Reprendre l'écoute » depuis le bandeau flottant (issue 353). */
+/**
+ *  « Mettre en pause » ou « Reprendre l'écoute » depuis le bandeau flottant (issue 353), couper
+ *  ou rétablir le micro (issue 447).
+ */
 export type FloatingBarListeningAction = {
 	action: ListeningPanelAction,
 };
@@ -94,6 +97,11 @@ export type FloatingBarOverlayAmplitude = {
 export type FloatingBarOverlayLayout = {
 	controlsCenterX: number,
 	expandsUpward: boolean,
+	/**
+	 *  Faux quand le compositeur tient la pastille en calque (layer-shell, issue 448) : elle
+	 *  reste ancrée en bas au centre et ne se déplace pas à la souris.
+	 */
+	movable?: boolean,
 };
 
 export type FloatingBarOverlayState = {
@@ -126,6 +134,10 @@ export type FloatingBarState = {
 	transcriptNotice?: string | null,
 	layout?: FloatingBarOverlayLayout | null,
 	sessionId?: string | null,
+	/**  Durée écoutée, pauses exclues (issue 448) : affichée dans la pastille de réunion. */
+	elapsedSeconds?: number | null,
+	/**  Micro coupé pendant l'écoute (issue 447) : la bascule de la pastille l'affiche barré. */
+	micMuted?: boolean | null,
 };
 
 export type FloatingBarStatus = "recording" | "reconnecting" | "error" | 
@@ -156,7 +168,7 @@ export type FloatingTranscriptBubble = {
 	overlapsNext: boolean,
 };
 
-export type ListeningPanelAction = "pause" | "resume";
+export type ListeningPanelAction = "pause" | "resume" | "muteMic" | "unmuteMic";
 
 export type LiveCaptionOverlayState = {
 	state: LiveCaptionState,
@@ -191,7 +203,7 @@ export type SettingsState = {
 	tab: string | null,
 };
 
-export type TabInput = { type: "sessions"; id: string; state?: SessionsState | null } | { type: "contacts"; state?: ContactsState | null } | { type: "templates"; state?: TemplatesState | null } | { type: "extensions"; state?: ExtensionsState | null } | { type: "humans"; id: string } | { type: "organizations"; id: string } | { type: "folders"; id: string | null } | { type: "empty" } | { type: "extension"; extensionId: string; state?: { [key in string]: Value } | null } | { type: "calendar" } | { type: "changelog"; state: ChangelogState } | { type: "settings"; state?: SettingsState | null } | { type: "onboarding" } | { type: "edit"; requestId: string };
+export type TabInput = { type: "sessions"; id: string; state?: SessionsState | null } | { type: "contacts"; state?: ContactsState | null } | { type: "templates"; state?: TemplatesState | null } | { type: "extensions"; state?: ExtensionsState | null } | { type: "humans"; id: string } | { type: "organizations"; id: string } | { type: "folders"; id: string | null } | { type: "empty" } | { type: "extension"; extensionId: string; state?: { [key in string]: Value } | null } | { type: "changelog"; state: ChangelogState } | { type: "settings"; state?: SettingsState | null } | { type: "onboarding" } | { type: "edit"; requestId: string };
 
 export type TemplatesState = {
 	showHomepage: boolean | null,

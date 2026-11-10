@@ -35,16 +35,7 @@ describe("libellés hors composant en français", () => {
   });
 
   test("notification de détection du micro", () => {
-    expect(getMicDetectedNotificationTitle(null)).toBe(
-      "Êtes-vous en réunion ?",
-    );
-    expect(
-      getMicDetectedNotificationTitle({
-        id: "event-1",
-        title: "Point hebdo",
-        participantNames: ["Alice"],
-      }),
-    ).toBe("Parlez-vous avec Alice en ce moment ?");
+    expect(getMicDetectedNotificationTitle()).toBe("Êtes-vous en réunion ?");
     expect(
       getIgnoreAppsFooterText([
         { id: "a", name: "Zoom" },
@@ -102,5 +93,13 @@ describe("libellés hors composant en français", () => {
     ).toBe(
       "Transcription trop courte pour un résumé (120/160 caractères minimum)",
     );
+  });
+});
+
+describe("emplacement d'export sans chemin", () => {
+  test("displayPath ne code plus « Loading... » en dur", async () => {
+    const { displayPath } =
+      await import("~/settings/general/storage/path-utils");
+    expect(displayPath(undefined, undefined)).toBe("");
   });
 });

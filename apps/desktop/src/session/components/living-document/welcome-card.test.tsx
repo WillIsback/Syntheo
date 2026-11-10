@@ -6,13 +6,15 @@ import { isWelcomeNote, WelcomeCard } from "./welcome-card";
 import { WELCOME_NOTE_TRACKING_ID } from "~/onboarding/welcome-note.constants";
 
 const mocks = vi.hoisted(() => ({
-  eventJson: "" as string | undefined,
+  welcomeNote: "" as string | undefined,
   openNew: vi.fn(),
 }));
 
 vi.mock("~/session/queries", () => ({
   useSession: () =>
-    mocks.eventJson === undefined ? null : { event_json: mocks.eventJson },
+    mocks.welcomeNote === undefined
+      ? null
+      : { welcome_note: mocks.welcomeNote },
 }));
 
 vi.mock("~/store/zustand/tabs", () => ({
@@ -20,10 +22,8 @@ vi.mock("~/store/zustand/tabs", () => ({
     select({ openNew: mocks.openNew }),
 }));
 
-const welcomeEvent = JSON.stringify({ tracking_id: WELCOME_NOTE_TRACKING_ID });
-
 beforeEach(() => {
-  mocks.eventJson = welcomeEvent;
+  mocks.welcomeNote = WELCOME_NOTE_TRACKING_ID;
   mocks.openNew.mockReset();
 });
 
@@ -31,13 +31,10 @@ afterEach(cleanup);
 
 describe("isWelcomeNote", () => {
   it("recognizes only the welcome note", () => {
-    expect(isWelcomeNote(welcomeEvent)).toBe(true);
-    expect(isWelcomeNote(JSON.stringify({ tracking_id: "meeting-42" }))).toBe(
-      false,
-    );
+    expect(isWelcomeNote(WELCOME_NOTE_TRACKING_ID)).toBe(true);
+    expect(isWelcomeNote("meeting-42")).toBe(false);
     expect(isWelcomeNote("")).toBe(false);
     expect(isWelcomeNote(undefined)).toBe(false);
-    expect(isWelcomeNote("{not json")).toBe(false);
   });
 });
 
@@ -57,13 +54,13 @@ describe("WelcomeCard", () => {
   });
 
   it("is absent from any other note", () => {
-    mocks.eventJson = JSON.stringify({ tracking_id: "meeting-42" });
+    mocks.welcomeNote = "";
     const { container } = render(<WelcomeCard sessionId="meeting" />);
     expect(container.innerHTML).toBe("");
   });
 
   it("is absent while the note is still loading", () => {
-    mocks.eventJson = undefined;
+    mocks.welcomeNote = undefined;
     const { container } = render(<WelcomeCard sessionId="loading" />);
     expect(container.innerHTML).toBe("");
   });

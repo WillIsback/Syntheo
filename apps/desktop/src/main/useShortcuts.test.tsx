@@ -44,10 +44,6 @@ vi.mock("react-hotkeys-hook", () => ({
   },
 }));
 
-vi.mock("~/billing/billing-context", () => ({
-  useBillingAccess: () => ({ isPro: true }),
-}));
-
 vi.mock("~/contexts/shell", () => ({
   useShell: () => ({
     chat: {

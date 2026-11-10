@@ -14,11 +14,7 @@ import {
 } from "./selection";
 import { useTranscriptSelectionState } from "./selection-context";
 import { SpeakerParticipantPicker } from "./speaker-assign";
-import {
-  getActiveLineIndex,
-  groupWordsIntoLines,
-  type HighlightSegment,
-} from "./utils";
+import { groupWordsIntoLines, type HighlightSegment } from "./utils";
 import { WordSpan } from "./word-span";
 
 import { nameMemoComponent } from "~/devtools-bar/render-tracker";
@@ -43,27 +39,12 @@ export const EMPTY_TRANSCRIPT_SEARCH: TranscriptSearchRenderState = {
   wholeWord: false,
 };
 
-function getSegmentTimeRange(
-  segment: Segment,
-  offsetMs: number,
-): { start: number; end: number } | null {
-  const words = segment.words;
-  if (words.length === 0) return null;
-  return {
-    start: offsetMs + (words[0].start_ms ?? 0),
-    end: offsetMs + (words[words.length - 1].end_ms ?? 0),
-  };
-}
-
 export type SegmentRendererProps = {
   segment: Segment;
   offsetMs: number;
   transcriptId: string;
   sessionId?: string;
   speakerLabel: string;
-  currentMs: number;
-  seekAndPlay: (word: SegmentWord) => void;
-  audioExists: boolean;
   search: TranscriptSearchRenderState;
   editMode?: boolean;
   // Paragraphe d'un segment (issue 281) : identité de section du segment entier,
@@ -80,9 +61,6 @@ export const SegmentRenderer = memo(function SegmentRenderer({
   transcriptId,
   sessionId,
   speakerLabel,
-  currentMs,
-  seekAndPlay,
-  audioExists,
   search,
   editMode = false,
   sectionId,
@@ -160,31 +138,18 @@ export const SegmentRenderer = memo(function SegmentRenderer({
             selectMode ? "select-none" : "select-text-deep",
           ])}
         >
-          {lines.map((line, lineIdx) => {
-            const lineStartMs = offsetMs + line.startMs;
-            const lineEndMs = offsetMs + line.endMs;
-            const isCurrentLine =
-              audioExists &&
-              currentMs > 0 &&
-              currentMs >= lineStartMs &&
-              currentMs <= lineEndMs;
-
-            return (
-              <TranscriptLine
-                key={line.words[0]?.id ?? `line-${lineIdx}`}
-                words={line.words}
-                // Paragraphe suivant : une espace en tête, invisible en
-                // début de ligne, sépare son texte du paragraphe précédent
-                // dans une sélection ou une copie.
-                leadingSpace={lineIdx > 0 || !showHeader}
-                isCurrentLine={isCurrentLine}
-                audioExists={audioExists}
-                seekAndPlay={seekAndPlay}
-                highlightSegmentsByWord={highlightSegmentsByWord}
-                activeMatchId={search.activeMatchId}
-              />
-            );
-          })}
+          {lines.map((line, lineIdx) => (
+            <TranscriptLine
+              key={line.words[0]?.id ?? `line-${lineIdx}`}
+              words={line.words}
+              // Paragraphe suivant : une espace en tête, invisible en début
+              // de ligne, sépare son texte du paragraphe précédent dans une
+              // sélection ou une copie.
+              leadingSpace={lineIdx > 0 || !showHeader}
+              highlightSegmentsByWord={highlightSegmentsByWord}
+              activeMatchId={search.activeMatchId}
+            />
+          ))}
         </div>
       )}
     </section>
@@ -204,8 +169,6 @@ export function segmentRendererPropsEqual(
     prev.transcriptId !== next.transcriptId ||
     prev.sessionId !== next.sessionId ||
     prev.speakerLabel !== next.speakerLabel ||
-    prev.audioExists !== next.audioExists ||
-    prev.seekAndPlay !== next.seekAndPlay ||
     prev.editMode !== next.editMode ||
     prev.sectionId !== next.sectionId ||
     prev.showHeader !== next.showHeader ||
@@ -214,30 +177,7 @@ export function segmentRendererPropsEqual(
     return false;
   }
 
-  if (!canReuseSegmentForSearch(prev, next)) {
-    return false;
-  }
-
-  if (prev.currentMs === next.currentMs) return true;
-
-  const range = getSegmentTimeRange(prev.segment, prev.offsetMs);
-  if (!range) return true;
-
-  const prevInRange =
-    prev.currentMs > 0 &&
-    prev.currentMs >= range.start &&
-    prev.currentMs <= range.end;
-  const nextInRange =
-    next.currentMs > 0 &&
-    next.currentMs >= range.start &&
-    next.currentMs <= range.end;
-
-  if (!prevInRange && !nextInRange) return true;
-
-  return (
-    getActiveLineIndex(prev.segment.words, prev.offsetMs, prev.currentMs) ===
-    getActiveLineIndex(next.segment.words, next.offsetMs, next.currentMs)
-  );
+  return canReuseSegmentForSearch(prev, next);
 }
 
 // Une phrase de la transcription. Pendant l'écoute, seul le bloc vivant change
@@ -247,28 +187,16 @@ const TranscriptLine = memo(
   function TranscriptLine({
     words,
     leadingSpace,
-    isCurrentLine,
-    audioExists,
-    seekAndPlay,
     highlightSegmentsByWord,
     activeMatchId,
   }: {
     words: SegmentWord[];
     leadingSpace: boolean;
-    isCurrentLine: boolean;
-    audioExists: boolean;
-    seekAndPlay: (word: SegmentWord) => void;
     highlightSegmentsByWord: Map<SegmentWord, HighlightSegment[]> | null;
     activeMatchId: string | null;
   }) {
     return (
-      <span
-        data-line-current={isCurrentLine ? "true" : undefined}
-        className={cn([
-          "-mx-0.5 rounded-xs px-0.5",
-          isCurrentLine && "bg-chart-3/15",
-        ])}
-      >
+      <span className="-mx-0.5 rounded-xs px-0.5">
         {leadingSpace ? " " : null}
         {words.map((word, idx) => (
           <Fragment key={word.id ?? `${word.start_ms}-${idx}`}>
@@ -276,8 +204,6 @@ const TranscriptLine = memo(
             <WordSpan
               word={word}
               displayText={getWordDisplayText(word)}
-              audioExists={audioExists}
-              onClickWord={seekAndPlay}
               highlightSegments={
                 highlightSegmentsByWord?.get(word) ?? undefined
               }
@@ -290,9 +216,6 @@ const TranscriptLine = memo(
   },
   (prev, next) =>
     prev.leadingSpace === next.leadingSpace &&
-    prev.isCurrentLine === next.isCurrentLine &&
-    prev.audioExists === next.audioExists &&
-    prev.seekAndPlay === next.seekAndPlay &&
     prev.highlightSegmentsByWord === next.highlightSegmentsByWord &&
     prev.activeMatchId === next.activeMatchId &&
     wordsShallowEqual(prev.words, next.words),

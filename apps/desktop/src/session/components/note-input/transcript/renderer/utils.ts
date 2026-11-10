@@ -51,37 +51,6 @@ export function groupWordsIntoLines(words: SegmentWord[]): SentenceLine[] {
   return lines;
 }
 
-export function getActiveLineIndex(
-  words: SegmentWord[],
-  offsetMs: number,
-  currentMs: number,
-): number | null {
-  if (currentMs <= 0 || words.length === 0) return null;
-
-  let lineIndex = 0;
-  let lineStartMs = words[0]!.start_ms;
-
-  for (let index = 0; index < words.length; index += 1) {
-    const word = words[index]!;
-    const closesLine = endsSentence(word) || index === words.length - 1;
-
-    if (!closesLine) {
-      continue;
-    }
-
-    const start = offsetMs + lineStartMs;
-    const end = offsetMs + word.end_ms;
-    if (currentMs >= start && currentMs <= end) {
-      return lineIndex;
-    }
-
-    lineIndex += 1;
-    lineStartMs = words[index + 1]?.start_ms ?? lineStartMs;
-  }
-
-  return null;
-}
-
 function getSpeakerIndex(key: SegmentKey): number {
   let speakerIndex = key.speaker_index ?? 0;
   if (key.speaker_human_id) {
@@ -94,11 +63,7 @@ function getSpeakerIndex(key: SegmentKey): number {
   return speakerIndex;
 }
 
-export function getSegmentColor(key: SegmentKey): string {
-  // Palette Syntheo s1–s4 : couleur stable et cyclique par locuteur.
-  return speakerColor(getSpeakerIndex(key));
-}
-
+// Palette Syntheo s1–s4 : couleur stable et cyclique par locuteur.
 export function getSegmentColorVars(key: SegmentKey): SegmentColorVars {
   const speakerIndex = getSpeakerIndex(key);
   return {

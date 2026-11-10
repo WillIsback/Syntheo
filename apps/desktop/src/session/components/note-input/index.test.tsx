@@ -3,91 +3,36 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { NoteInput } from ".";
 
+import type { LivingDocumentProps } from "~/session/components/living-document";
 import type { EditorView } from "~/store/zustand/tabs/schema";
 
 const hoisted = vi.hoisted(() => ({
   editorTabs: [{ type: "raw" }, { type: "transcript" }] as EditorView[],
   hotkeys: [] as Array<{ keys: string; callback: () => void }>,
-  enhancedHasProseMirror: true,
-  enhancedEditorProps: [] as Record<string, unknown>[],
+  hasProseMirror: true,
   focusAtTrailingEmptyLine: vi.fn(),
-  flushPendingChanges: vi.fn(),
+  livingDocumentProps: [] as LivingDocumentProps[],
   onBeforeTabChange: vi.fn(),
-  rawEditorProps: [] as Record<string, unknown>[],
   registerCanonicalSessionEditor: vi.fn(),
   searchVisible: false,
-  sessionMode: "inactive",
   unregisterCanonicalSessionEditor: vi.fn(),
-  updateSessionTabState: vi.fn(),
 }));
 
-vi.mock("./enhanced", async () => {
-  const React = await vi.importActual<typeof import("react")>("react");
-
-  return {
-    Enhanced: React.forwardRef((props: Record<string, unknown>, ref) => {
-      hoisted.enhancedEditorProps.push(props);
-      React.useImperativeHandle(ref, () => createEditorRef());
-      return React.createElement(
-        "div",
-        { "data-testid": "enhanced-editor" },
-        React.createElement("button", { type: "button" }, "Retry summary"),
-        hoisted.enhancedHasProseMirror
-          ? React.createElement("div", { className: "ProseMirror" })
-          : null,
-      );
-    }),
-  };
-});
-
-vi.mock("./header", () => ({
-  Header: () => <div data-testid="folder-header" />,
-  SessionViewSwitcher: ({
-    currentTab,
-    editorTabs,
-    handleTabChange,
-    isTranscribing,
-  }: {
-    currentTab: EditorView;
-    editorTabs: EditorView[];
-    handleTabChange: (view: EditorView) => void;
-    isTranscribing?: boolean;
-  }) => (
-    <div>
-      <div data-testid="current-tab">{formatEditorView(currentTab)}</div>
-      <div data-testid="is-transcribing">{String(isTranscribing)}</div>
-      {editorTabs.map((editorTab) => (
-        <button
-          key={formatEditorView(editorTab)}
-          type="button"
-          onClick={() => handleTabChange(editorTab)}
-        >
-          {formatEditorView(editorTab)}
-        </button>
-      ))}
-    </div>
-  ),
-  useEditorTabs: () => hoisted.editorTabs,
+// Le document vivant est remplacé par un double qui expose ses props : un
+// éditeur (ProseMirror ou contrôles seuls) dans le conteneur cliquable.
+vi.mock("~/session/components/living-document", () => ({
+  LivingDocument: (props: LivingDocumentProps) => {
+    hoisted.livingDocumentProps.push(props);
+    return (
+      <div data-testid="document" onMouseDown={props.onContainerMouseDown}>
+        <button type="button">Retry summary</button>
+        {hoisted.hasProseMirror ? (
+          <div className="ProseMirror" data-testid="mock-prosemirror" />
+        ) : null}
+      </div>
+    );
+  },
 }));
-
-vi.mock("./raw", async () => {
-  const React = await vi.importActual<typeof import("react")>("react");
-
-  return {
-    RawEditor: React.forwardRef((props: Record<string, unknown>, ref) => {
-      hoisted.rawEditorProps.push(props);
-      React.useImperativeHandle(ref, () => createEditorRef());
-      return React.createElement(
-        "div",
-        { "data-testid": "raw-editor" },
-        React.createElement("div", {
-          className: "ProseMirror",
-          "data-testid": "mock-prosemirror",
-        }),
-      );
-    }),
-  };
-});
 
 vi.mock("./search/bar", () => ({
   SearchBar: () => <div data-testid="search-bar" />,
@@ -103,16 +48,6 @@ vi.mock("./search/context", () => ({
       : null,
 }));
 
-vi.mock("./transcript", () => ({
-  Transcript: ({ editMode }: { editMode?: boolean }) => (
-    <div data-testid="transcript" data-edit-mode={String(editMode ?? false)} />
-  ),
-}));
-
-vi.mock("~/session/components/shared", () => ({
-  useCurrentNoteTab: () => ({ type: "raw" }),
-}));
-
 vi.mock("~/session/editor-activity", () => ({
   registerCanonicalSessionEditor: hoisted.registerCanonicalSessionEditor,
   unregisterCanonicalSessionEditor: hoisted.unregisterCanonicalSessionEditor,
@@ -125,53 +60,22 @@ vi.mock("~/shared/hooks/useScrollPreservation", () => ({
   }),
 }));
 
-vi.mock("~/store/zustand/tabs", () => ({
-  useTabs: vi.fn((selector: (state: unknown) => unknown) =>
-    selector({
-      updateSessionTabState: hoisted.updateSessionTabState,
-    }),
-  ),
-}));
-
-vi.mock("~/stt/contexts", () => ({
-  useListener: (
-    selector: (state: {
-      getSessionMode: (sessionId: string) => string;
-    }) => unknown,
-  ) =>
-    selector({
-      getSessionMode: () => hoisted.sessionMode,
-    }),
-}));
-
-vi.mock("~/stt/saved-capture-audio", () => ({
-  SavedCaptureAudioPrompt: () => null,
-}));
-
 vi.mock("react-hotkeys-hook", () => ({
   useHotkeys: (keys: string, callback: () => void) => {
     hoisted.hotkeys.push({ keys, callback });
   },
 }));
 
-function formatEditorView(view: EditorView) {
-  return view.type === "enhanced" ? `enhanced:${view.id}` : view.type;
+function lastDocumentProps() {
+  return hoisted.livingDocumentProps[hoisted.livingDocumentProps.length - 1]!;
 }
 
-function createEditorRef() {
-  return {
+// Monte un éditeur factice dans la ref transmise au document vivant.
+function mountEditor() {
+  (lastDocumentProps().editorRef as { current: unknown }).current = {
     view: null,
-    flushPendingChanges: hoisted.flushPendingChanges,
-    commands: {
-      focus: () => {},
-      focusAtStart: () => {},
-      focusAtTrailingEmptyLine: hoisted.focusAtTrailingEmptyLine,
-      focusAtPixelWidth: () => {},
-      insertAtStartAndFocus: () => {},
-      replaceContent: () => {},
-      setSearch: () => {},
-      replace: () => {},
-    },
+    flushPendingChanges: () => {},
+    commands: { focusAtTrailingEmptyLine: hoisted.focusAtTrailingEmptyLine },
   };
 }
 
@@ -179,14 +83,10 @@ function renderNoteInput({
   currentTab = { type: "raw" },
   handleTabChange = vi.fn(),
   transcriptEditMode = false,
-  eventTitle,
-  eventDescription,
 }: {
   currentTab?: EditorView;
   handleTabChange?: (view: EditorView) => void;
   transcriptEditMode?: boolean;
-  eventTitle?: string;
-  eventDescription?: string;
 } = {}) {
   return {
     handleTabChange,
@@ -202,18 +102,18 @@ function renderNoteInput({
         }}
         rawMd="stored memo"
         sessionTitle="Stored title"
-        eventTitle={eventTitle}
-        eventDescription={eventDescription}
         editorTabs={hoisted.editorTabs}
         currentTab={currentTab}
         handleTabChange={handleTabChange}
+        sessionMode="inactive"
+        stage="synthesis"
         transcriptEditMode={transcriptEditMode}
       />,
     ),
   };
 }
 
-describe("NoteInput tab selection", () => {
+describe("NoteInput", () => {
   afterEach(() => {
     cleanup();
   });
@@ -221,34 +121,30 @@ describe("NoteInput tab selection", () => {
   beforeEach(() => {
     hoisted.editorTabs = [{ type: "raw" }, { type: "transcript" }];
     hoisted.hotkeys = [];
-    hoisted.enhancedHasProseMirror = true;
-    hoisted.enhancedEditorProps = [];
+    hoisted.hasProseMirror = true;
     hoisted.focusAtTrailingEmptyLine.mockClear();
-    hoisted.flushPendingChanges.mockClear();
+    hoisted.livingDocumentProps = [];
     hoisted.onBeforeTabChange.mockClear();
-    hoisted.rawEditorProps = [];
     hoisted.registerCanonicalSessionEditor.mockClear();
     hoisted.searchVisible = false;
-    hoisted.sessionMode = "inactive";
     hoisted.unregisterCanonicalSessionEditor.mockClear();
-    hoisted.updateSessionTabState.mockClear();
   });
 
-  it("does not move the header ahead of the parent tab state", () => {
+  it("leaves the selected view to the parent tab state", () => {
     const { handleTabChange } = renderNoteInput();
 
-    fireEvent.click(screen.getByRole("button", { name: "transcript" }));
-
+    lastDocumentProps().onSelectView({ type: "transcript" });
     expect(handleTabChange).toHaveBeenCalledWith({ type: "transcript" });
-    expect(screen.getByTestId("current-tab").textContent).toBe("raw");
+    expect(lastDocumentProps().currentTab).toEqual({ type: "raw" });
+
+    // La vue déjà affichée ne repasse pas par le parent.
+    lastDocumentProps().onSelectView({ type: "raw" });
+    expect(handleTabChange).toHaveBeenCalledOnce();
   });
 
   it.each([
     ["mod+pagedown", { type: "transcript" }],
     ["mod+pageup", { type: "enhanced", id: "summary-1" }],
-    // Plus affiché, gardé jusqu'à sa suppression en 0.7.0 (issue 397).
-    ["mod+alt+right", { type: "transcript" }],
-    ["mod+alt+left", { type: "enhanced", id: "summary-1" }],
   ])("switches note views with %s", (keys, expected) => {
     hoisted.editorTabs = [
       { type: "enhanced", id: "summary-1" },
@@ -270,131 +166,74 @@ describe("NoteInput tab selection", () => {
     expect(hoisted.onBeforeTabChange).toHaveBeenCalledOnce();
   });
 
-  it("reflects the parent-selected tab in the header", () => {
-    const { rerender, handleTabChange } = renderNoteInput();
-    const currentTab = { type: "transcript" } satisfies EditorView;
+  // Ctrl+Alt+←/→ fait pivoter l'écran avec certains pilotes Intel (issue 397).
+  it("no longer binds Ctrl+Alt+arrows to note views", () => {
+    renderNoteInput();
 
-    rerender(
-      <NoteInput
-        tab={{
-          active: true,
-          id: "session-1",
-          pinned: false,
-          slotId: "slot-1",
-          state: { autoStart: null, view: currentTab },
-          type: "sessions",
-        }}
-        rawMd="stored memo"
-        sessionTitle="Stored title"
-        editorTabs={hoisted.editorTabs}
-        currentTab={currentTab}
-        handleTabChange={handleTabChange}
-      />,
+    const boundKeys = hoisted.hotkeys.flatMap((hotkey) =>
+      hotkey.keys.split(",").map((key) => key.trim()),
     );
 
-    expect(screen.getByTestId("current-tab").textContent).toBe("transcript");
+    expect(boundKeys).toEqual(
+      expect.arrayContaining(["mod+pageup", "mod+pagedown"]),
+    );
+    expect(boundKeys).not.toContain("mod+alt+left");
+    expect(boundKeys).not.toContain("mod+alt+right");
   });
 
-  it.each([
-    ["active", "false"],
-    ["finalizing", "true"],
-    ["running_batch", "true"],
-  ])("reports transcription progress while %s", (mode, expected) => {
-    hoisted.sessionMode = mode;
+  it("passes the parent-selected view and hydrated content to the document", () => {
+    const currentTab = { type: "transcript" } satisfies EditorView;
+    renderNoteInput({ currentTab, transcriptEditMode: true });
 
-    renderNoteInput();
-
-    expect(screen.getByTestId("is-transcribing").textContent).toBe(expected);
-  });
-
-  it("passes hydrated session content to the memo editor", () => {
-    renderNoteInput({
-      eventTitle: "Customer discovery",
-      eventDescription: "Learn about the prospect's workflow",
-    });
-
-    expect(
-      hoisted.rawEditorProps[hoisted.rawEditorProps.length - 1],
-    ).toMatchObject({
+    expect(lastDocumentProps()).toMatchObject({
+      currentTab,
       rawMd: "stored memo",
       sessionTitle: "Stored title",
-      eventTitle: "Customer discovery",
-      eventDescription: "Learn about the prospect's workflow",
+      stage: "synthesis",
+      transcriptEditMode: true,
     });
   });
 
-  it("tracks the mounted memo editor until its view is disposed", () => {
+  it("tracks the mounted editor until its view is disposed", () => {
     renderNoteInput();
-    const props = hoisted.rawEditorProps[hoisted.rawEditorProps.length - 1] as {
-      onViewReady?: (view: unknown) => void;
-      onViewDisposed?: (view: unknown) => void;
-    };
-    const view = { hasFocus: () => true };
+    const view = { hasFocus: () => true } as never;
 
-    props.onViewReady?.(view);
+    lastDocumentProps().onViewReady(view);
     expect(hoisted.registerCanonicalSessionEditor).toHaveBeenCalledWith(
       "session-1",
       view,
       expect.any(Function),
     );
 
-    props.onViewDisposed?.(view);
+    lastDocumentProps().onViewDisposed(view);
     expect(hoisted.unregisterCanonicalSessionEditor).toHaveBeenCalledWith(
       "session-1",
       view,
     );
   });
 
-  it("tracks the mounted summary editor because it can update the session title", () => {
-    hoisted.editorTabs = [
-      { type: "enhanced", id: "summary-1" },
-      { type: "raw" },
-    ];
-    renderNoteInput({
-      currentTab: { type: "enhanced", id: "summary-1" },
-    });
-    const props = hoisted.enhancedEditorProps[
-      hoisted.enhancedEditorProps.length - 1
-    ] as { onViewReady?: (view: unknown) => void };
-    const view = { hasFocus: () => true };
-
-    props.onViewReady?.(view);
-
-    expect(hoisted.registerCanonicalSessionEditor).toHaveBeenCalledWith(
-      "session-1",
-      view,
-      expect.any(Function),
-    );
-  });
-
   it("focuses the trailing body line when blank editor space is clicked", () => {
     renderNoteInput();
+    mountEditor();
 
-    const scrollContainer = screen.getByTestId("raw-editor").parentElement;
-    expect(scrollContainer).not.toBeNull();
-
-    fireEvent.mouseDown(scrollContainer!, { button: 0 });
+    fireEvent.mouseDown(screen.getByTestId("document"), { button: 0 });
 
     expect(hoisted.focusAtTrailingEmptyLine).toHaveBeenCalledTimes(1);
   });
 
   it("lets ProseMirror handle clicks inside the document", () => {
     renderNoteInput();
+    mountEditor();
 
     fireEvent.mouseDown(screen.getByTestId("mock-prosemirror"), { button: 0 });
 
     expect(hoisted.focusAtTrailingEmptyLine).not.toHaveBeenCalled();
   });
 
-  it("preserves controls when the enhanced view has no editor", () => {
-    hoisted.editorTabs = [
-      { type: "enhanced", id: "summary-1" },
-      { type: "raw" },
-    ];
-    hoisted.enhancedHasProseMirror = false;
-    renderNoteInput({
-      currentTab: { type: "enhanced", id: "summary-1" },
-    });
+  it("preserves controls when the summary has no editor", () => {
+    hoisted.hasProseMirror = false;
+    renderNoteInput();
+    mountEditor();
 
     const wasNotCancelled = fireEvent.mouseDown(
       screen.getByRole("button", { name: "Retry summary" }),

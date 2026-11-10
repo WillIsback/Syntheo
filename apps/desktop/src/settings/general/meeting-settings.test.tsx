@@ -28,7 +28,6 @@ function setting(value = true) {
 }
 
 function renderMeetingSettings({
-  autoStartScheduledMeetings = true,
   floatingBar = true,
   meetingDisclosureAutoPost = setting(),
   captureMeetingChat = setting(false),
@@ -38,8 +37,6 @@ function renderMeetingSettings({
   return {
     ...render(
       <MeetingSettingsView
-        autoJoinScheduledMeetings={setting()}
-        autoStartScheduledMeetings={setting(autoStartScheduledMeetings)}
         autoStopMeetings={setting()}
         floatingBar={setting(floatingBar)}
         meetingDisclosureAutoPost={meetingDisclosureAutoPost}
@@ -80,7 +77,7 @@ describe("MeetingSettingsView", () => {
     expect(
       screen.queryByText("Post recording disclosure in meeting chat"),
     ).toBeNull();
-    expect(screen.queryByText("Capture meeting chat in Memos")).toBeNull();
+    expect(screen.queryByText("Capture meeting chat in the note")).toBeNull();
     expect(screen.getByText("Show floating bar")).toBeTruthy();
   });
 
@@ -93,8 +90,6 @@ describe("MeetingSettingsView", () => {
       const autoStopMeetings = setting(false);
       render(
         <MeetingSettingsView
-          autoJoinScheduledMeetings={setting()}
-          autoStartScheduledMeetings={setting()}
           autoStopMeetings={autoStopMeetings}
           floatingBar={setting()}
           meetingDisclosureAutoPost={setting()}
@@ -111,15 +106,9 @@ describe("MeetingSettingsView", () => {
     },
   );
 
-  it("shows scheduled meeting options on macOS", () => {
-    renderMeetingSettings();
-
-    expect(screen.getByText("Start when meeting begins")).toBeTruthy();
-    expect(screen.getByText("Join scheduled meetings")).toBeTruthy();
-  });
-
-  it.each(["linux", "windows"])(
-    "hides scheduled meeting options on %s (no calendar)",
+  // Calendrier retiré (issue 465) : plus d'options de réunion programmée.
+  it.each(["macos", "linux", "windows"])(
+    "never shows scheduled meeting options on %s",
     (os) => {
       mocks.platform.mockReturnValue(os);
       renderMeetingSettings();
@@ -137,21 +126,11 @@ describe("MeetingSettingsView", () => {
     expect(
       screen.getByText("Post recording disclosure in meeting chat"),
     ).toBeTruthy();
-    expect(screen.getByText("Capture meeting chat in Memos")).toBeTruthy();
+    expect(screen.getByText("Capture meeting chat in the note")).toBeTruthy();
     expect(
       screen.getByText(/supported meetings using Accessibility/),
     ).toBeTruthy();
     expect(screen.getByText("Stop when meeting ends")).toBeTruthy();
-  });
-
-  it("only enables automatic joining when scheduled listening is enabled", () => {
-    renderMeetingSettings({ autoStartScheduledMeetings: false });
-
-    expect(
-      screen
-        .getByRole("switch", { name: "Join scheduled meetings" })
-        .hasAttribute("disabled"),
-    ).toBe(true);
   });
 
   it("updates the recording disclosure setting", () => {

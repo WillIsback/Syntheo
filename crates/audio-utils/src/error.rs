@@ -7,6 +7,10 @@ pub enum Error {
     #[error(transparent)]
     DecoderError(#[from] rodio::decoder::DecoderError),
     #[error(transparent)]
+    Symphonia(#[from] symphonia::core::errors::Error),
+    #[error("no decodable audio track")]
+    NoAudioTrack,
+    #[error(transparent)]
     Resampler(#[from] syntheo_resampler::Error),
     #[error(transparent)]
     Io(#[from] std::io::Error),

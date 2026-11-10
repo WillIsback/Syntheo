@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { generateText, type LanguageModel, Output } from "ai";
+import type { LanguageModel } from "ai";
 import { useDebounceValue } from "usehooks-ts";
 import { z } from "zod";
 
@@ -11,6 +11,7 @@ import {
 } from "./queries";
 
 import { useLanguageModel } from "~/ai/hooks";
+import { generateStructured } from "~/ai/structured-output";
 import { extractPlainText } from "~/search/contexts/engine/utils";
 import {
   loadSessionContentSnapshot,
@@ -260,9 +261,9 @@ export async function generateAndSaveContactSummary({
   const meetings = buildContactSummarySource(snapshots);
   if (meetings.length === 0) return null;
 
-  const result = await generateText({
+  const output = await generateStructured({
     model,
-    system: CONTACT_SUMMARY_SYSTEM_PROMPT,
+    instructions: CONTACT_SUMMARY_SYSTEM_PROMPT,
     prompt: JSON.stringify({
       user: buildUserContext(user),
       target_is_user: user?.id === human.id,
@@ -276,13 +277,12 @@ export async function generateAndSaveContactSummary({
       existing_facts: incremental?.facts,
       meetings,
     }),
-    output: Output.object({ schema: contactSummarySchema }),
-    maxRetries: 2,
+    schema: contactSummarySchema,
     maxOutputTokens: MAX_OUTPUT_TOKENS,
-    timeout: { totalMs: GENERATION_TIMEOUT_MS },
+    timeoutMs: GENERATION_TIMEOUT_MS,
     abortSignal: signal,
   });
-  const facts = normalizeFacts(result.output?.facts ?? []);
+  const facts = normalizeFacts(output.facts);
   if (facts.length < 3) {
     throw new Error("Contact summary requires at least three facts");
   }

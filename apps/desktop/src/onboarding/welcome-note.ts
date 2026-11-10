@@ -1,5 +1,4 @@
 import { md2json } from "@syntheo/editor/markdown";
-import type { SessionEvent } from "@syntheo/store";
 
 import { liveQueryClient } from "~/db";
 import { WELCOME_NOTE_TRACKING_ID } from "~/onboarding/welcome-note.constants";
@@ -56,8 +55,8 @@ async function findOrCreateWelcomeSession(): Promise<string> {
       FROM sessions
       WHERE deleted_at IS NULL
         AND CASE
-          WHEN json_valid(event_json)
-          THEN json_extract(event_json, '$.tracking_id')
+          WHEN json_valid(metadata_json)
+          THEN json_extract(metadata_json, '$.welcome_note')
         END = ?
       ORDER BY created_at, id
       LIMIT 1
@@ -66,21 +65,8 @@ async function findOrCreateWelcomeSession(): Promise<string> {
   );
   if (rows[0]) return rows[0].id;
 
-  const now = new Date().toISOString();
-  const event: SessionEvent = {
-    tracking_id: WELCOME_NOTE_TRACKING_ID,
-    calendar_id: "",
-    title: WELCOME_NOTE_TITLE,
-    started_at: now,
-    ended_at: "",
-    is_all_day: false,
-    has_recurrence_rules: false,
-    meeting_link: "",
-    description: "Présentation rapide de Syntheo.",
-  };
-
   return createSession(WELCOME_NOTE_TITLE, DEFAULT_USER_ID, {
-    event_json: JSON.stringify(event),
+    metadata_json: JSON.stringify({ welcome_note: WELCOME_NOTE_TRACKING_ID }),
     raw_md: JSON.stringify(md2json(WELCOME_NOTE)),
   });
 }

@@ -27,10 +27,13 @@ describe("onboarding steps", () => {
     }
   });
 
-  it("offers the Apple Calendar step on macOS only", () => {
+  // Calendrier retiré (issue 465) : plus aucune étape Calendrier.
+  it("never offers a calendar step", () => {
     os.platform = "macos";
-    expect(walk()).toEqual(["permissions", "calendar", "imports", "final"]);
-    os.platform = "linux";
-    expect(walk()).toEqual(["imports", "final"]);
+    expect(walk()).toEqual(["permissions", "final"]);
+    for (const platform of ["linux", "windows"]) {
+      os.platform = platform;
+      expect(walk()).toEqual(["final"]);
+    }
   });
 });

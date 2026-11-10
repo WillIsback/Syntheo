@@ -1,11 +1,20 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  AUDIO_IMPORT_FAILED_TOAST_DURATION_MS,
   describeAudioImportError,
   describeAudioImportUnavailable,
   getAudioImportAvailability,
+  getBatchAvailability,
+  notifyAudioImportFailed,
 } from "./audio-import-feedback";
 import { AudioUploadTooLargeError } from "./audio-upload-stream";
+
+const { toastErrorMock } = vi.hoisted(() => ({ toastErrorMock: vi.fn() }));
+
+vi.mock("@syntheo/ui/components/ui/toast", () => ({
+  toast: { error: toastErrorMock, warning: vi.fn() },
+}));
 
 vi.mock("./useSTTConnection", () => ({
   useSTTConnection: () => ({ conn: null }),
@@ -16,21 +25,31 @@ vi.mock("~/store/zustand/tabs", () => ({
 }));
 
 describe("getAudioImportAvailability", () => {
-  it("accepts a batch-capable OpenAI-protocol model", () => {
+  it("imports by batch with a batch-capable OpenAI-protocol model", () => {
     expect(
       getAudioImportAvailability({ provider: "openai", model: "whisper-1" }),
-    ).toEqual({ status: "ready" });
+    ).toEqual({ status: "ready", route: "batch" });
   });
 
-  it("refuses a live-only NVIDIA streaming model", () => {
+  it("imports through the real-time stream with a live-only NVIDIA model", () => {
     const availability = getAudioImportAvailability({
       provider: "nvidia",
       model: "cache-aware-parakeet-rnnt-multi-asr-streaming-sortformer",
     });
 
-    expect(availability).toEqual({ status: "live_only" });
+    expect(availability).toEqual({ status: "ready", route: "realtime" });
+    expect(describeAudioImportUnavailable(availability)).toBeNull();
+  });
+
+  it("refuses a model with neither batch nor real-time transcription", () => {
+    const availability = getAudioImportAvailability({
+      provider: "unknown",
+      model: "unknown-model",
+    });
+
+    expect(availability).toEqual({ status: "unsupported" });
     expect(describeAudioImportUnavailable(availability)).toBe(
-      "This model only transcribes live: importing a file requires a batch transcription model.",
+      "This model can't transcribe a file. Choose another transcription model.",
     );
   });
 
@@ -38,6 +57,21 @@ describe("getAudioImportAvailability", () => {
     expect(getAudioImportAvailability(null)).toEqual({
       status: "no_provider",
     });
+  });
+});
+
+describe("getBatchAvailability", () => {
+  it("keeps batch-only features off with a live-only model", () => {
+    expect(
+      getBatchAvailability({
+        provider: "nvidia",
+        model: "cache-aware-parakeet-rnnt-multi-asr-streaming-sortformer",
+      }),
+    ).toEqual({ status: "live_only" });
+    expect(
+      getBatchAvailability({ provider: "openai", model: "whisper-1" }),
+    ).toEqual({ status: "ready" });
+    expect(getBatchAvailability(null)).toEqual({ status: "no_provider" });
   });
 });
 
@@ -52,5 +86,28 @@ describe("describeAudioImportError", () => {
     expect(
       describeAudioImportError(new Error("audio_upload_size_mismatch")),
     ).toBe("Syntheo couldn't read this file.");
+  });
+});
+
+describe("notifyAudioImportFailed", () => {
+  it("closes on its own after about 12 seconds and keeps its actions", () => {
+    toastErrorMock.mockClear();
+
+    notifyAudioImportFailed(new Error("disk full"));
+
+    expect(AUDIO_IMPORT_FAILED_TOAST_DURATION_MS).toBe(12_000);
+    expect(toastErrorMock).toHaveBeenCalledWith(
+      "Audio import failed",
+      expect.objectContaining({
+        id: "audio-import-failed",
+        description: "disk full",
+        duration: 12_000,
+        keepDuration: true,
+        action: expect.objectContaining({ label: "Transcription settings" }),
+      }),
+    );
+    const options = toastErrorMock.mock.calls[0][1];
+    expect(options.closeButton).not.toBe(false);
+    expect(options.dismissible).not.toBe(false);
   });
 });

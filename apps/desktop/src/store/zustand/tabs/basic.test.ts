@@ -138,7 +138,6 @@ describe("Basic Tab Actions", () => {
       state: {
         view: { type: "enhanced", id: "summary-1" },
         autoStart: true,
-        scheduledAutoStart: null,
       },
     });
     expect(useTabs.getState().tabs).toHaveLength(1);
@@ -249,7 +248,7 @@ describe("Basic Tab Actions", () => {
     });
   });
 
-  test.each(["calendar", "contacts", "templates"] as const)(
+  test.each(["folders", "contacts", "templates"] as const)(
     "openNew tracks where %s was opened from",
     (type) => {
       useTabs.getState().openNew({ type: "settings" });
@@ -392,7 +391,7 @@ describe("Basic Tab Actions", () => {
   test.each([
     [undefined, "app"],
     ["lab", "app"],
-    ["data", "imports"],
+    ["data", "app"],
     ["personalization", "dictionary"],
     ["audio", "meetings"],
     // legacy_settings_tabs_normalize_to_general : écrans compte/équipe retirés

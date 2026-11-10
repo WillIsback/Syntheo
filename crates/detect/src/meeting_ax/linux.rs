@@ -978,14 +978,13 @@ async fn send_slack_from_live(
             .iter()
             .filter(|node| is_slack_thread_control(&node.node))
             .collect();
-        if let Some(control) = (controls.len() == 1).then_some(controls[0]) {
-            if press(connection, &control.bus_name, &control.path)
+        if let Some(control) = (controls.len() == 1).then_some(controls[0])
+            && press(connection, &control.bus_name, &control.path)
                 .await
                 .is_err()
-            {
-                warnings.push("failed to open Slack Huddle thread via AT-SPI".to_string());
-                return slack_failure(&app, &surface, None, warnings);
-            }
+        {
+            warnings.push("failed to open Slack Huddle thread via AT-SPI".to_string());
+            return slack_failure(&app, &surface, None, warnings);
         }
         return slack_failure(&app, &surface, None, {
             warnings.push(

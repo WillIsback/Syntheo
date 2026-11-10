@@ -153,6 +153,17 @@ impl PluginDbRuntime {
         Ok(())
     }
 
+    /// Applique les migrations, puis publie le résultat attendu par
+    /// `wait_until_ready`. Le pool est exposé avant : toute tâche de démarrage
+    /// qui touche au schéma doit attendre `wait_until_ready`.
+    pub async fn run_startup(&self) {
+        let result = self
+            .ensure_app_schema()
+            .await
+            .map_err(|error| error.to_string());
+        self.finish_startup(result);
+    }
+
     pub(crate) fn set_startup_status_if_running(&self, status: crate::StartupStatus) {
         let mut current = self.startup_status.write().unwrap();
         if matches!(
@@ -172,7 +183,7 @@ impl PluginDbRuntime {
         self.startup_status.read().unwrap().clone()
     }
 
-    pub(crate) fn finish_startup(&self, result: std::result::Result<(), String>) {
+    fn finish_startup(&self, result: std::result::Result<(), String>) {
         let phase = if result.is_ok() {
             crate::StartupPhase::Ready
         } else {
@@ -268,16 +279,6 @@ impl PluginDbRuntime {
         let _write_guard = self.synced_write_barrier.read().await;
         self.ensure_app_schema().await?;
         Ok(self.executor.execute_proxy(sql, params, method).await?)
-    }
-
-    pub async fn cleanup_legacy_files(&self) -> Result<crate::LegacyCleanupResult> {
-        let _write_guard = self.synced_write_barrier.read().await;
-        crate::import::cleanup_legacy_files(self.db.pool()).await
-    }
-
-    pub async fn rerun_legacy_import(&self, dry_run: bool) -> Result<String> {
-        let _write_guard = self.synced_write_barrier.read().await;
-        crate::import::rerun_legacy_import(self.db.pool(), dry_run).await
     }
 
     pub async fn subscribe(

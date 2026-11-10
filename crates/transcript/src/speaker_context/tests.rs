@@ -10,7 +10,7 @@ fn context() -> SpeakerContext {
             start_ms: 1000,
             end_ms: 10000,
             active_call: true,
-            calendar_call: false,
+            calendar_call: None,
             mic_isolated: Some(true),
             shared_microphone: false,
             title: "지헌 🤝 덕행".into(),
@@ -276,6 +276,42 @@ fn room_microphone_on_a_call_needs_a_single_local_voice() {
     );
     let segments = render_transcript_segments(request(context, &[(0, 0), (0, 1)]));
     assert!(segments.iter().all(|s| s.provisional_speaker.is_none()));
+}
+
+// Notes enregistrées avant la suppression du calendrier (issue 465) : un lien de
+// réunion du calendrier comptait comme un appel, la relecture doit le garder.
+#[test]
+fn legacy_calendar_call_still_counts_as_a_call() {
+    let legacy: SpeakerContext = serde_json::from_value(serde_json::json!({
+        "intervals": [{
+            "start_ms": 1000,
+            "end_ms": 10000,
+            "active_call": false,
+            "calendar_call": true,
+            "mic_isolated": false,
+            "shared_microphone": false,
+            "title": "",
+            "self_names": [],
+            "participants": []
+        }]
+    }))
+    .unwrap();
+    let segments = render_transcript_segments(request(legacy, &[(0, 0)]));
+    assert_eq!(
+        segments[0].provisional_speaker.as_ref().unwrap().reason,
+        SpeakerResolutionReason::VirtualMeetingMicrophone
+    );
+
+    let mut current = context();
+    current.intervals[0].active_call = false;
+    current.intervals[0].mic_isolated = Some(false);
+    let segments = render_transcript_segments(request(current, &[(0, 0)]));
+    assert!(segments[0].provisional_speaker.is_none());
+    assert!(
+        !serde_json::to_string(&context())
+            .unwrap()
+            .contains("calendar_call")
+    );
 }
 
 #[test]

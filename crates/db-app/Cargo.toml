@@ -7,9 +7,7 @@ license = "MIT"
 [dependencies]
 syntheo-db-core = { workspace = true }
 syntheo-db-migrate = { workspace = true }
-syntheo-tiptap = { workspace = true }
 
-base64 = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 sha2 = { workspace = true }

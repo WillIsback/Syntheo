@@ -55,21 +55,6 @@ impl AudioModel {
         matches!(self, Self::Whisper1)
     }
 
-    pub fn supports_streaming(self) -> bool {
-        !matches!(self, Self::Whisper1)
-    }
-
-    pub fn supports_prompt(self) -> bool {
-        !matches!(self, Self::Gpt4oTranscribeDiarize)
-    }
-
-    pub fn supports_logprobs(self) -> bool {
-        matches!(
-            self,
-            Self::Gpt4oTranscribe | Self::Gpt4oMiniTranscribe | Self::Gpt4oMiniTranscribe20251215
-        )
-    }
-
     pub fn default_response_format(self) -> AudioResponseFormat {
         match self {
             Self::Whisper1 => AudioResponseFormat::VerboseJson,

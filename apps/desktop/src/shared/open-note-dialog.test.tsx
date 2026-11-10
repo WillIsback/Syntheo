@@ -8,6 +8,9 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { buildSearchFolders } from "~/search/unified/rank";
+import type { SearchCatalog, SearchNote } from "~/search/unified/types";
+
 const mocks = vi.hoisted(() => ({
   openCurrent: vi.fn(),
   openNew: vi.fn(),
@@ -22,18 +25,20 @@ const mocks = vi.hoisted(() => ({
     publishedAt: string;
     manageAccess: boolean;
   }>,
-  sessions: [] as Array<{
-    id: string;
-    title: string;
-    created_at: string;
-  }>,
+  catalog: {
+    notes: [],
+    folders: [],
+    contacts: [],
+  } as SearchCatalog,
+  search: vi.fn(),
+  createSession: vi.fn(),
+  askFolder: vi.fn(),
   live: {
     status: "inactive",
     sessionId: null as string | null,
     pause: null as { sessionId: string; phase: string } | null,
   },
   requestMainListenerControl: vi.fn(),
-  isPro: true,
 }));
 
 vi.mock("~/stt/contexts", () => ({
@@ -45,17 +50,26 @@ vi.mock("~/stt/window-control", () => ({
   requestMainListenerControl: mocks.requestMainListenerControl,
 }));
 
-vi.mock("~/billing/billing-context", () => ({
-  useBillingAccess: () => ({ isPro: mocks.isPro }),
-}));
-
 vi.mock("~/settings/team/mirror", () => ({
   useMyWorkspacesWithMirror: () => ({ data: [], isLoading: false }),
 }));
 
 vi.mock("~/session/queries", () => ({
-  useSessionSummaries: () => mocks.sessions,
-  useFolderPaths: () => mocks.folderPaths,
+  createSession: mocks.createSession,
+}));
+
+// Le catalogue (requêtes vives) et l'index plein texte sont simulés ; le
+// classement, lui, est le vrai, commun à la palette et aux mentions.
+vi.mock("~/search/unified/catalog", () => ({
+  useSearchCatalog: () => mocks.catalog,
+}));
+
+vi.mock("~/search/contexts/engine", () => ({
+  useSearchEngine: () => ({ search: mocks.search }),
+}));
+
+vi.mock("~/chat/ask-folder", () => ({
+  askFolder: mocks.askFolder,
 }));
 
 vi.mock("~/shared/useNewNote", () => ({
@@ -95,18 +109,45 @@ import {
   useOpenNoteDialog,
 } from "./open-note-dialog";
 
+import { useMentionConfig } from "~/editor-bridge/mention-config";
 import { useSpeakerNamingStore } from "~/session/components/speaker-naming/store";
 import { useSettingFocus } from "~/settings/setting-focus";
 import { openSettingsSearch } from "~/shared/palette-store";
+
+function setCatalog(notes: SearchNote[], folderPaths: string[] = []) {
+  mocks.catalog = {
+    notes,
+    folders: buildSearchFolders(folderPaths, notes),
+    contacts: [],
+  };
+}
+
+function searchHits(
+  hits: Array<{ id: string; score: number; snippet?: string }>,
+) {
+  mocks.search.mockResolvedValue(
+    hits.map((hit) => ({
+      score: hit.score,
+      document: {
+        id: hit.id,
+        type: "session",
+        title: "",
+        content: "",
+        created_at: 0,
+      },
+      contentSnippet: hit.snippet ?? null,
+    })),
+  );
+}
 
 describe("OpenNoteDialog", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.notes = [];
-    mocks.sessions = [];
+    setCatalog([]);
+    mocks.search.mockResolvedValue([]);
     mocks.folderPaths = [];
     mocks.live = { status: "inactive", sessionId: null, pause: null };
-    mocks.isPro = true;
     closeNoteDialog();
     useSettingFocus.getState().clear();
     globalThis.ResizeObserver = class {
@@ -253,7 +294,7 @@ describe("OpenNoteDialog", () => {
   });
 
   it("ouvre un dossier depuis la recherche (ex-filtre de la barre latérale)", () => {
-    mocks.folderPaths = ["Clients/ACME"];
+    setCatalog([], ["Clients", "Clients/ACME"]);
     render(<OpenNoteDialog open onOpenChange={mocks.onOpenChange} />);
 
     expect(screen.queryByRole("option", { name: /ACME/ })).toBeNull();
@@ -302,10 +343,10 @@ describe("recherche de paramètres dans la palette", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.sessions = [];
+    setCatalog([]);
+    mocks.search.mockResolvedValue([]);
     mocks.folderPaths = [];
     mocks.live = { status: "inactive", sessionId: null, pause: null };
-    mocks.isPro = true;
     closeNoteDialog();
     useSettingFocus.getState().clear();
     Element.prototype.scrollIntoView = vi.fn();
@@ -407,17 +448,205 @@ describe("recherche de paramètres dans la palette", () => {
 
     expect(screen.getByRole("option", { name: /New note/ })).toBeTruthy();
   });
+});
 
-  it("garde les réglages Pro trouvables, avec le cadenas", () => {
-    mocks.isPro = false;
+// Issue 501 : un seul moteur pour Ctrl+K et les mentions `@`.
+describe("recherche commune dans la palette", () => {
+  const ATLAS = "Réunion produit Atlas";
+  const notes: SearchNote[] = [
+    {
+      id: "hebdo",
+      title: "Point hebdo Atlas",
+      createdAt: "2026-11-02T09:00:00Z",
+      folderPath: ATLAS,
+    },
+    {
+      id: "atelier",
+      title: "Atelier onboarding",
+      createdAt: "2026-10-19T09:00:00Z",
+      folderPath: `${ATLAS}/Ateliers`,
+    },
+    {
+      id: "comite",
+      title: "Comité de direction",
+      createdAt: "2026-10-29T09:00:00Z",
+      folderPath: "Comité",
+    },
+  ];
+  const type = (value: string) =>
+    fireEvent.change(screen.getByRole("combobox"), { target: { value } });
+  const noteOptions = () =>
+    screen
+      .getAllByRole("option")
+      .filter((option) =>
+        option.getAttribute("data-value")?.startsWith("note-"),
+      )
+      .map((option) => option.getAttribute("data-value")!.slice(5));
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setCatalog(notes, ["Comité", ATLAS, `${ATLAS}/Ateliers`]);
+    mocks.search.mockResolvedValue([]);
+    mocks.live = { status: "inactive", sessionId: null, pause: null };
+    closeNoteDialog();
+    Element.prototype.scrollIntoView = vi.fn();
+  });
+
+  afterEach(cleanup);
+
+  it("met le dossier en tête avec son nombre de réunions, et le dossier sur chaque note", () => {
     render(<OpenNoteDialogProvider>{null}</OpenNoteDialogProvider>);
-    act(() => openSettingsSearch());
+    act(() => openNoteDialog());
 
-    search("hands-free");
+    type("atlas");
 
-    const option = screen.getByRole("option", { name: /Hands-free dictation/ });
+    const [first] = screen.getAllByRole("option");
+    expect(first?.getAttribute("data-value")).toBe(`folder-${ATLAS}`);
+    expect(first?.textContent).toContain("2 meetings");
+    expect(first?.textContent).toContain("Tab: search inside");
+    const hebdo = screen.getByRole("option", { name: /Point hebdo Atlas/ });
+    expect(hebdo.textContent).toContain(ATLAS);
+  });
+
+  it("cherche aussi dans le contenu des notes (index plein texte)", async () => {
+    searchHits([
+      { id: "comite", score: 3, snippet: "date de livraison du 27" },
+    ]);
+    render(<OpenNoteDialog open onOpenChange={mocks.onOpenChange} />);
+
+    type("livraison");
+
+    const option = await screen.findByRole("option", {
+      name: /Comité de direction/,
+    });
+    expect(option.textContent).toContain("date de livraison du 27");
+    expect(option.textContent).toContain("Comité");
+    expect(mocks.search).toHaveBeenCalledWith(
+      "livraison",
+      null,
+      expect.objectContaining({ snippets: true }),
+    );
+
+    // La frappe continue : le résultat reste affiché (pas de clignotement)
+    // pendant que l'index cherche le nouveau texte ; un texte sans rapport
+    // l'efface aussitôt.
+    mocks.search.mockReturnValue(new Promise(() => {}));
+    type("livraisons");
     expect(
-      option.querySelector("[aria-label='Requires Syntheo Pro']"),
+      screen.getByRole("option", { name: /Comité de direction/ }),
     ).toBeTruthy();
+    type("budget");
+    expect(
+      screen.queryByRole("option", { name: /Comité de direction/ }),
+    ).toBeNull();
+  });
+
+  it("Tab pose le dossier en filtre : sous-dossiers compris, puis retrait", () => {
+    render(<OpenNoteDialogProvider>{null}</OpenNoteDialogProvider>);
+    act(() => openNoteDialog());
+
+    type("atlas");
+    fireEvent.keyDown(screen.getByRole("combobox"), { key: "Tab" });
+
+    expect(
+      screen.getByRole("button", {
+        name: `Remove the ${ATLAS} folder filter`,
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.getByPlaceholderText("Search in this folder..."),
+    ).toBeTruthy();
+    expect(noteOptions()).toEqual(["hebdo", "atelier"]);
+    expect(screen.getByRole("option", { name: /Ask the folder/ })).toBeTruthy();
+    expect(screen.queryByRole("option", { name: /^New note$/ })).toBeNull();
+
+    // Retour arrière dans le champ vide : on sort du dossier.
+    fireEvent.keyDown(screen.getByRole("combobox"), { key: "Backspace" });
+    expect(screen.queryByRole("button", { name: /folder filter/ })).toBeNull();
+  });
+
+  it("la pastille du dossier se retire d'un clic", () => {
+    render(<OpenNoteDialogProvider>{null}</OpenNoteDialogProvider>);
+    act(() => openNoteDialog());
+    type("atlas");
+    fireEvent.keyDown(screen.getByRole("combobox"), { key: "Tab" });
+
+    fireEvent.click(
+      screen.getByRole("button", { name: `Remove the ${ATLAS} folder filter` }),
+    );
+
+    expect(
+      screen.getByPlaceholderText("Search notes and pages..."),
+    ).toBeTruthy();
+  });
+
+  it("Tab ne fait rien hors d'un dossier", () => {
+    render(<OpenNoteDialogProvider>{null}</OpenNoteDialogProvider>);
+    act(() => openNoteDialog());
+
+    type("comité de");
+    fireEvent.keyDown(screen.getByRole("combobox"), { key: "Tab" });
+
+    expect(screen.queryByRole("button", { name: /folder filter/ })).toBeNull();
+  });
+
+  it("dans un dossier : « Demander au dossier » et « Nouvelle note dans ce dossier »", async () => {
+    mocks.createSession.mockResolvedValue("nouvelle");
+    render(<OpenNoteDialogProvider>{null}</OpenNoteDialogProvider>);
+    act(() => openNoteDialog());
+    type("atlas");
+    fireEvent.keyDown(screen.getByRole("combobox"), { key: "Tab" });
+    type("livraison");
+
+    fireEvent.click(
+      screen.getByRole("option", { name: "Ask the folder: “livraison”" }),
+    );
+    expect(mocks.askFolder).toHaveBeenCalledWith(ATLAS, "livraison");
+
+    act(() => openNoteDialog());
+    type("atlas");
+    fireEvent.keyDown(screen.getByRole("combobox"), { key: "Tab" });
+    fireEvent.click(
+      screen.getByRole("option", { name: /New note in this folder/ }),
+    );
+
+    expect(mocks.createSession).toHaveBeenCalledWith("", undefined, {
+      folder_id: ATLAS,
+    });
+    await vi.waitFor(() =>
+      expect(mocks.openNew).toHaveBeenCalledWith({
+        type: "sessions",
+        id: "nouvelle",
+      }),
+    );
+  });
+
+  it("même requête : mêmes notes, dans le même ordre, dans la palette et les mentions", async () => {
+    searchHits([
+      { id: "atelier", score: 2, snippet: "atlas en atelier" },
+      { id: "inconnue", score: 9 },
+    ]);
+    render(<OpenNoteDialog open onOpenChange={mocks.onOpenChange} />);
+    type("atlas");
+    await screen.findByRole("option", { name: /Atelier onboarding/ });
+    const paletteNotes = noteOptions();
+
+    const { result } = renderHook(() => useMentionConfig());
+    const items = await result.current.handleSearch("atlas");
+    const mentionNotes = items
+      .filter((item) => item.type === "session")
+      .map((item) => item.id);
+
+    expect(paletteNotes).toEqual(["hebdo", "atelier"]);
+    expect(mentionNotes).toEqual(paletteNotes);
+    // Le dossier vient en tête des deux côtés ; les notes montrent le leur.
+    expect(items[0]).toMatchObject({
+      type: "folder",
+      id: ATLAS,
+      label: ATLAS,
+    });
+    expect(items.find((item) => item.id === "atelier")?.description).toBe(
+      `${ATLAS} / Ateliers`,
+    );
   });
 });

@@ -156,20 +156,6 @@ impl<'a, R: tauri::Runtime, M: tauri::Manager<R>> AudioPriority<'a, R, M> {
         self.save_state(state).await
     }
 
-    pub async fn is_device_hidden(
-        &self,
-        device_id: &str,
-        direction: AudioDirection,
-    ) -> crate::Result<bool> {
-        let state = self.load_state().await?;
-        let uid = device_id.to_string();
-
-        match direction {
-            AudioDirection::Input => Ok(state.hidden_inputs.contains(&uid)),
-            AudioDirection::Output => Ok(state.hidden_outputs.contains(&uid)),
-        }
-    }
-
     pub async fn hide_device(
         &self,
         device_id: &str,

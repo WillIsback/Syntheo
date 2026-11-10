@@ -15,7 +15,7 @@ use syntheo_audio_utils::{pcm_i16_to_f32, pcm_i32_to_f32};
 use tracing::error;
 use wasapi::{
     AudioCaptureClient, AudioClient, Device, DeviceEnumerator, Direction, Handle, SampleType,
-    SessionState, StreamMode, WaveFormat, initialize_mta,
+    StreamMode, WaveFormat, initialize_mta,
 };
 
 use crate::async_ring::RingbufAsyncReader;
@@ -25,15 +25,19 @@ use super::{BUFFER_SIZE, CHUNK_SIZE, CaptureThreadHandles};
 
 const DEFAULT_SAMPLE_RATE: u32 = 44_100;
 const ENDPOINT_POLL_INTERVAL: Duration = Duration::from_secs(2);
-// A meeting app can start rendering to a non-default endpoint after capture began. Requiring two
-// consecutive polls keeps a one-off system sound from bouncing the stream.
+// The chosen endpoint can be unplugged or come back, and the default can change, after capture
+// began. Requiring two consecutive polls keeps a transient enumeration glitch from bouncing the
+// stream.
 const ENDPOINT_SWITCH_CONFIRMATIONS: u8 = 2;
 
-pub struct SpeakerInput;
+pub struct SpeakerInput {
+    /// Sortie choisie dans les réglages (issue 450) ; `None` suit la sortie par défaut.
+    preferred: Option<String>,
+}
 
 impl SpeakerInput {
-    pub fn new() -> Result<Self> {
-        Ok(Self)
+    pub fn new(preferred: Option<String>) -> Result<Self> {
+        Ok(Self { preferred })
     }
 
     pub fn sample_rate(&self) -> u32 {
@@ -59,6 +63,7 @@ impl SpeakerInput {
             let running = running.clone();
             let current_sample_rate = current_sample_rate.clone();
             let dropped_samples = dropped_samples.clone();
+            let preferred = self.preferred;
 
             thread::spawn(move || {
                 let result = capture_audio_loop(
@@ -72,6 +77,7 @@ impl SpeakerInput {
                     },
                     running,
                     init_tx,
+                    preferred,
                 );
 
                 if let Err(err) = result {
@@ -183,6 +189,7 @@ fn capture_audio_loop(
     handles: CaptureThreadHandles,
     running: Arc<AtomicBool>,
     init_tx: std::sync::mpsc::Sender<Result<()>>,
+    preferred: Option<String>,
 ) -> Result<()> {
     let CaptureThreadHandles {
         mut producer,
@@ -200,7 +207,7 @@ fn capture_audio_loop(
 
         let enumerator =
             DeviceEnumerator::new().context("Failed to create WASAPI device enumerator")?;
-        let device = open_render_device(&enumerator)?;
+        let device = open_render_device(&enumerator, preferred.as_deref())?;
         let capture = open_loopback_capture(device)?;
 
         Ok((enumerator, capture))
@@ -222,6 +229,7 @@ fn capture_audio_loop(
         device = ?capture.device_name,
         "wasapi_loopback_initialized"
     );
+    super::output::set_captured_output_id(Some(capture.device_id.clone()));
     let _ = init_tx.send(Ok(()));
 
     let mut follower = EndpointFollower::new(capture.device_id.clone());
@@ -232,12 +240,15 @@ fn capture_audio_loop(
     while running.load(Ordering::Acquire) {
         if Instant::now() >= next_endpoint_poll {
             next_endpoint_poll = Instant::now() + ENDPOINT_POLL_INTERVAL;
-            if let Some(device) = poll_render_endpoint_switch(&enumerator, &mut follower) {
+            if let Some(device) =
+                poll_render_endpoint_switch(&enumerator, &mut follower, preferred.as_deref())
+            {
                 match open_loopback_capture(device) {
                     Ok(next) => {
                         let _ = capture.audio_client.stop_stream();
                         capture = next;
                         follower = EndpointFollower::new(capture.device_id.clone());
+                        super::output::set_captured_output_id(Some(capture.device_id.clone()));
                         tracing::info!(
                             syntheo.audio.sample_rate_hz = capture.format.sample_rate,
                             device = ?capture.device_name,
@@ -284,6 +295,7 @@ fn capture_audio_loop(
     alive.store(false, Ordering::Release);
     waker.wake();
     let _ = capture.audio_client.stop_stream();
+    super::output::set_captured_output_id(None);
 
     Ok(())
 }
@@ -291,8 +303,9 @@ fn capture_audio_loop(
 fn poll_render_endpoint_switch(
     enumerator: &DeviceEnumerator,
     follower: &mut EndpointFollower,
+    preferred: Option<&str>,
 ) -> Option<Device> {
-    let device = match open_render_device(enumerator) {
+    let device = match open_render_device(enumerator, preferred) {
         Ok(device) => device,
         Err(_) => {
             follower.reset();
@@ -403,50 +416,24 @@ fn drain_packets(capture_client: &wasapi::AudioCaptureClient, queue: &mut VecDeq
     }
 }
 
-fn open_render_device(enumerator: &DeviceEnumerator) -> Result<Device> {
-    let default = enumerator
-        .get_default_device(&Direction::Render)
-        .context("Failed to get default render device")?;
-
-    Ok(render_device_in_use(enumerator, &default).unwrap_or(default))
-}
-
-// Meeting apps often play through an endpoint that is not the system default. When another process
-// is actively rendering somewhere, follow it; the default wins ties so unrelated playback on a
-// secondary device does not pull us away from a meeting on the default one.
-fn render_device_in_use(enumerator: &DeviceEnumerator, default: &Device) -> Option<Device> {
-    if has_foreign_active_session(default) {
-        return None;
+// The chosen endpoint while it is plugged in, otherwise the system default. Following the default
+// keeps "current default output" true when headphones are plugged in or unplugged.
+fn open_render_device(enumerator: &DeviceEnumerator, preferred: Option<&str>) -> Result<Device> {
+    if let Some(device) = preferred.and_then(|name| render_device_named(enumerator, name)) {
+        return Ok(device);
     }
 
+    enumerator
+        .get_default_device(&Direction::Render)
+        .context("Failed to get default render device")
+}
+
+fn render_device_named(enumerator: &DeviceEnumerator, name: &str) -> Option<Device> {
     let collection = enumerator.get_device_collection(&Direction::Render).ok()?;
     collection
         .into_iter()
         .filter_map(|device| device.ok())
-        .find(has_foreign_active_session)
-}
-
-fn has_foreign_active_session(device: &Device) -> bool {
-    let self_pid = std::process::id();
-    let Ok(manager) = device.get_iaudiosessionmanager() else {
-        return false;
-    };
-    let Ok(sessions) = manager.get_audiosessionenumerator() else {
-        return false;
-    };
-    let Ok(count) = sessions.get_count() else {
-        return false;
-    };
-
-    (0..count).any(|index| {
-        sessions.get_session(index).ok().is_some_and(|session| {
-            session.get_state().ok() == Some(SessionState::Active)
-                && session
-                    .get_process_id()
-                    .ok()
-                    .is_some_and(|pid| pid != 0 && pid != self_pid)
-        })
-    })
+        .find(|device| device.get_friendlyname().ok().as_deref() == Some(name))
 }
 
 fn push_wasapi_bytes(

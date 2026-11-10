@@ -3,11 +3,6 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-import {
-  beginCloudsyncActivity,
-  endCloudsyncActivity,
-} from "@syntheo/plugin-db";
-
 import { isAudioUploadFile, useUploadFile } from "./useUploadFile";
 
 const {
@@ -15,6 +10,7 @@ const {
   audioImportMock,
   audioImportListenMock,
   downloadDirMock,
+  homeDirMock,
   selectFileMock,
   parseSubtitleMock,
   createTranscriptMock,
@@ -24,6 +20,8 @@ const {
   handleBatchStartedMock,
   updateBatchProgressMock,
   clearBatchSessionMock,
+  handleImportStartedMock,
+  handleImportEndedMock,
   runBatchMock,
   useSessionMock,
   updateSessionMock,
@@ -40,6 +38,7 @@ const {
   audioImportMock: vi.fn(),
   audioImportListenMock: vi.fn(),
   downloadDirMock: vi.fn(),
+  homeDirMock: vi.fn(),
   selectFileMock: vi.fn(),
   parseSubtitleMock: vi.fn(),
   createTranscriptMock: vi.fn(),
@@ -49,6 +48,8 @@ const {
   handleBatchStartedMock: vi.fn(),
   updateBatchProgressMock: vi.fn(),
   clearBatchSessionMock: vi.fn(),
+  handleImportStartedMock: vi.fn(),
+  handleImportEndedMock: vi.fn(),
   runBatchMock: vi.fn(),
   useSessionMock: vi.fn(),
   updateSessionMock: vi.fn(),
@@ -69,6 +70,7 @@ const {
 
 vi.mock("@tauri-apps/api/path", () => ({
   downloadDir: downloadDirMock,
+  homeDir: homeDirMock,
   resolveResource: vi.fn((path: string) =>
     Promise.resolve(`/resources/${path}`),
   ),
@@ -115,13 +117,12 @@ vi.mock("./contexts", () => ({
       handleBatchFailed: handleBatchFailedMock,
       updateBatchProgress: updateBatchProgressMock,
       clearBatchSession: clearBatchSessionMock,
+      handleImportStarted: handleImportStartedMock,
+      handleImportEnded: handleImportEndedMock,
     }),
 }));
 
 vi.mock("./useRunBatch", () => ({
-  // Seul le protocole OpenAI transcrit un fichier ; NVIDIA est temps réel.
-  getBatchProvider: (provider: string) =>
-    provider === "openai" ? "openai" : null,
   isStoppedTranscriptionError: vi.fn(() => false),
   useRunBatch: vi.fn(() => runBatchMock),
 }));
@@ -178,6 +179,7 @@ describe("useUploadFile", () => {
       },
     });
     downloadDirMock.mockResolvedValue("/downloads");
+    homeDirMock.mockResolvedValue("/home/user");
     selectFileMock.mockResolvedValue("/tmp/replacement.wav");
     runBatchMock.mockResolvedValue(undefined);
     createTranscriptMock.mockResolvedValue(undefined);
@@ -187,7 +189,6 @@ describe("useUploadFile", () => {
       id: "session-1",
       user_id: "user-1",
       raw_md: "",
-      event_json: "",
     });
     updateSessionMock.mockResolvedValue(undefined);
     useTabsMock.mockImplementation((selector) =>
@@ -221,6 +222,11 @@ describe("useUploadFile", () => {
     expect(audioSourceMetadataMock).toHaveBeenCalledWith(
       "/tmp/replacement.wav",
     );
+    // Issue 526 : la capsule suit l'import avec la durée de l'audio.
+    expect(handleImportStartedMock).toHaveBeenCalledWith("session-1", 30);
+    await waitFor(() =>
+      expect(handleImportEndedMock).toHaveBeenCalledWith("session-1"),
+    );
   });
 
   test("imports pathless dropped audio from memory without touching the disk", async () => {
@@ -242,6 +248,7 @@ describe("useUploadFile", () => {
     await waitFor(() => expect(runBatchMock).toHaveBeenCalled());
     expect(audioImportMock).not.toHaveBeenCalled();
     expect(runBatchMock).toHaveBeenCalledWith("", {
+      allowRealtimeStream: true,
       promotion: { scope: "whole_session" },
       audio: { data_base64: "AQID", file_name: "drop.wav" },
     });
@@ -276,6 +283,7 @@ describe("useUploadFile", () => {
     expect(arrayBuffer).not.toHaveBeenCalled();
     expect(audioImportMock).not.toHaveBeenCalled();
     expect(runBatchMock).toHaveBeenCalledWith("", {
+      allowRealtimeStream: true,
       promotion: { scope: "whole_session" },
       audioUploadId: "upload-1",
     });
@@ -319,11 +327,61 @@ describe("useUploadFile", () => {
     consoleError.mockRestore();
   });
 
-  test("refuses a live-only model before choosing a file", () => {
+  test("lets a live-only model choose a file to stream in real time", async () => {
     sttConnection.value = {
       provider: "nvidia",
       model: "cache-aware-parakeet-rnnt-multi-asr-streaming-sortformer",
     };
+    const { result } = renderHook(() => useUploadFile("session-1"), {
+      wrapper: createWrapper(),
+    });
+
+    act(() => result.current.uploadAudio());
+
+    await waitFor(() => expect(selectFileMock).toHaveBeenCalled());
+    expect(toastWarningMock).not.toHaveBeenCalled();
+  });
+
+  test("opens the picker in the home folder without a Downloads folder", async () => {
+    downloadDirMock.mockRejectedValue(new Error("unknown path"));
+    const { result } = renderHook(() => useUploadFile("session-1"), {
+      wrapper: createWrapper(),
+    });
+
+    act(() => result.current.uploadAudio());
+
+    await waitFor(() =>
+      expect(selectFileMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: "Upload audio",
+          defaultPath: "/home/user",
+        }),
+      ),
+    );
+  });
+
+  test("explains a picker that fails to open", async () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    selectFileMock.mockRejectedValue(new Error("portal unavailable"));
+    const { result } = renderHook(() => useUploadFile("session-1"), {
+      wrapper: createWrapper(),
+    });
+
+    act(() => result.current.uploadAudio());
+
+    await waitFor(() =>
+      expect(toastErrorMock).toHaveBeenCalledWith(
+        "Audio import failed",
+        expect.objectContaining({ description: "portal unavailable" }),
+      ),
+    );
+    consoleError.mockRestore();
+  });
+
+  test("refuses a model that can't transcribe a file before choosing one", () => {
+    sttConnection.value = { provider: "unknown", model: "unknown-model" };
     const { result } = renderHook(() => useUploadFile("session-1"), {
       wrapper: createWrapper(),
     });
@@ -335,16 +393,51 @@ describe("useUploadFile", () => {
       "Can't import this audio",
       expect.objectContaining({
         description:
-          "This model only transcribes live: importing a file requires a batch transcription model.",
+          "This model can't transcribe a file. Choose another transcription model.",
         action: expect.objectContaining({ label: "Transcription settings" }),
       }),
     );
   });
 
-  test("refuses a dropped file with a live-only model and leaves the note untouched", async () => {
+  test("imports a dropped file through the real-time stream with a live-only model", async () => {
     sttConnection.value = {
       provider: "nvidia",
       model: "cache-aware-parakeet-rnnt-multi-asr-streaming-sortformer",
+    };
+    const { result } = renderHook(() => useUploadFile("session-1"), {
+      wrapper: createWrapper(),
+    });
+    const file = new File([new Uint8Array([1, 2, 3])], "drop.wav", {
+      type: "audio/wav",
+      lastModified: 1_700_000_000_000,
+    });
+    Object.defineProperty(file, "arrayBuffer", {
+      value: vi.fn().mockResolvedValue(new Uint8Array([1, 2, 3]).buffer),
+    });
+
+    act(() => result.current.processAudioFile(file));
+
+    await waitFor(() => expect(runBatchMock).toHaveBeenCalled());
+    expect(toastWarningMock).not.toHaveBeenCalled();
+    expect(runBatchMock).toHaveBeenCalledWith(
+      "",
+      expect.objectContaining({ allowRealtimeStream: true }),
+    );
+    expect(result.current.audioImportAvailability).toEqual({
+      status: "ready",
+      route: "realtime",
+    });
+    await waitFor(() =>
+      expect(queueAutoEnhanceIfSummaryEmptyMock).toHaveBeenCalledWith(
+        "session-1",
+      ),
+    );
+  });
+
+  test("refuses a dropped file when the model can transcribe neither by batch nor live", async () => {
+    sttConnection.value = {
+      provider: "unknown",
+      model: "unknown-model",
     };
     const { result } = renderHook(() => useUploadFile("session-1"), {
       wrapper: createWrapper(),
@@ -363,7 +456,7 @@ describe("useUploadFile", () => {
     expect(audioImportMock).not.toHaveBeenCalled();
     expect(runBatchMock).not.toHaveBeenCalled();
     expect(result.current.audioImportAvailability).toEqual({
-      status: "live_only",
+      status: "unsupported",
     });
   });
 
@@ -422,47 +515,6 @@ describe("useUploadFile", () => {
     consoleError.mockRestore();
   });
 
-  test("keeps CloudSync deferred until imported-audio summary scheduling settles", async () => {
-    let finishSummaryScheduling: (() => void) | undefined;
-    queueAutoEnhanceIfSummaryEmptyMock.mockReturnValueOnce(
-      new Promise<void>((resolve) => {
-        finishSummaryScheduling = resolve;
-      }),
-    );
-    const { result } = renderHook(() => useUploadFile("session-1"), {
-      wrapper: createWrapper(),
-    });
-    const file = new File([new Uint8Array([1, 2, 3])], "drop.wav", {
-      type: "audio/wav",
-    });
-    Object.defineProperty(file, "arrayBuffer", {
-      value: vi.fn().mockResolvedValue(new Uint8Array([1, 2, 3]).buffer),
-    });
-
-    act(() => {
-      result.current.processAudioFile(file);
-    });
-
-    await waitFor(() => {
-      expect(queueAutoEnhanceIfSummaryEmptyMock).toHaveBeenCalledWith(
-        "session-1",
-      );
-    });
-    expect(beginCloudsyncActivity).toHaveBeenCalledWith(
-      "transcription",
-      expect.stringMatching(/^session-1:audio-import:/),
-    );
-    expect(endCloudsyncActivity).not.toHaveBeenCalled();
-
-    finishSummaryScheduling?.();
-    await waitFor(() => {
-      expect(endCloudsyncActivity).toHaveBeenCalledWith(
-        "transcription",
-        vi.mocked(beginCloudsyncActivity).mock.calls[0]?.[1],
-      );
-    });
-  });
-
   test.each([
     { filename: "drop.webm", mime: "" },
     { filename: "drop.aac", mime: "" },
@@ -491,6 +543,7 @@ describe("useUploadFile", () => {
         expect(runBatchMock).toHaveBeenCalled();
       });
       expect(runBatchMock).toHaveBeenCalledWith("", {
+        allowRealtimeStream: true,
         promotion: { scope: "whole_session" },
         audio: { data_base64: "AQID", file_name: filename },
       });

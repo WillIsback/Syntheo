@@ -67,7 +67,7 @@ fn bench_aec_streaming_long(c: &mut Criterion) {
     group.bench_function(
         format!("long_stream_{}s_chunk_{}", seconds, chunk_size),
         |b| {
-            let mut aec = AEC::new().unwrap();
+            let mut aec = AEC::new_from_dir(&aec::source_model_dir()).unwrap();
             b.iter(|| {
                 aec.reset();
 

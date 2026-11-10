@@ -12,44 +12,36 @@ import {
 
 import { useMountEffect } from "@syntheo/ui/hooks/use-mount-effect";
 
+import {
+  cleanupChatSession,
+  createChatFinishHandler,
+  respondWithoutTranscript,
+  runChatRegeneration,
+} from "./session-provider-lifecycle";
+
 import { dedupeByKey, type ContextRef } from "~/chat/context/entities";
 import {
   type DisplayEntity,
   useChatContextPipeline,
 } from "~/chat/context/use-chat-context-pipeline";
+import { hasPendingChatPersist } from "~/chat/store/pending-persists";
+import { getVisibleChatMessages } from "~/chat/store/persisted-messages";
 import {
-  createChatCloudsyncActivityController,
-  guardChatTransport,
-  type GuardedChatPreflight,
-} from "~/chat/store/cloudsync-activity";
-import {
-  consumeFailedChatGroupCreate,
-  hasPendingChatPersist,
-  waitForPendingChatPersists,
-} from "~/chat/store/pending-persists";
-import {
-  buildPersistedChatMessage,
-  getVisibleChatMessages,
-  shouldPersistFinishedMessage,
-} from "~/chat/store/persisted-messages";
-import {
-  deleteChatMessage,
   deleteChatMessagesExcept,
-  getChatMessageGroupId,
-  replaceChatMessage,
-  upsertChatMessage,
   usePersistedChatMessages,
 } from "~/chat/store/queries";
-import { stripEphemeralToolContext } from "~/chat/tools/strip-ephemeral-tool-context";
+import {
+  createChatPreflightController,
+  guardChatTransport,
+  type GuardedChatPreflight,
+} from "~/chat/store/send-preflight";
 import { useTransport } from "~/chat/transport/use-transport";
 import type {
   ChatMessageSender,
   ChatSendOptions,
   SyntheoUIMessage,
 } from "~/chat/types";
-import { flushDatabaseWritesByPrefix } from "~/db/write-queue";
 import { useOwnerUserId } from "~/shared/owner-user";
-import { id } from "~/shared/utils";
 
 export type ChatSessionRenderProps = {
   sessionId: string;
@@ -148,11 +140,11 @@ function ChatSessionLifecycle({
   );
   const acceptFinishedChatPersistenceRef = useRef(true);
   const regenerateRequestInFlightRef = useRef(false);
-  const chatCloudsyncActivityRef = useRef<ReturnType<
-    typeof createChatCloudsyncActivityController
+  const chatPreflightsRef = useRef<ReturnType<
+    typeof createChatPreflightController
   > | null>(null);
-  chatCloudsyncActivityRef.current ??= createChatCloudsyncActivityController();
-  const chatCloudsyncActivity = chatCloudsyncActivityRef.current;
+  chatPreflightsRef.current ??= createChatPreflightController();
+  const chatPreflights = chatPreflightsRef.current;
   const takeTransportPreflight = useCallback((logicalKey: string) => {
     const queue = pendingTransportPreflightsRef.current.get(logicalKey);
     const preflight = queue?.shift();
@@ -230,174 +222,24 @@ function ChatSessionLifecycle({
                 latestTransportRef.current ?? unavailableChatTransport
               ).reconnectToStream(options),
           },
-          chatCloudsyncActivity,
+          chatPreflights,
           { beforeSend: takeTransportPreflight },
         ),
-        onFinish: ({ message, messages, isAbort, isError }) => {
-          const currentUserId = latestUserIdRef.current;
-          const messageIndex = messages.findIndex((m) => m.id === message.id);
-          const lastMessageIndex =
-            messageIndex === -1 ? messages.length - 1 : messageIndex - 1;
-          let submittedUserMessage: SyntheoUIMessage | undefined;
-          for (let i = lastMessageIndex; i >= 0; i--) {
-            if (messages[i].role === "user") {
-              submittedUserMessage = messages[i];
-              break;
-            }
-          }
-          const submittedChatGroupId = submittedUserMessage
-            ? submittedChatGroupIdsRef.current.get(submittedUserMessage.id)
-            : undefined;
-          if (submittedUserMessage) {
-            submittedChatGroupIdsRef.current.delete(submittedUserMessage.id);
-          }
-          const regenerationTarget = submittedUserMessage
-            ? pendingRegenerationTombstonesRef.current.get(
-                submittedUserMessage.id,
-              )
-            : undefined;
-          const advanceRegenerationTarget = (assistantMessageId: string) => {
-            if (
-              submittedUserMessage &&
-              regenerationTarget &&
-              pendingRegenerationTombstonesRef.current.get(
-                submittedUserMessage.id,
-              ) === regenerationTarget
-            ) {
-              pendingRegenerationTombstonesRef.current.set(
-                submittedUserMessage.id,
-                {
-                  chatGroupId: regenerationTarget.chatGroupId,
-                  assistantMessageId,
-                },
-              );
-            }
-          };
-          const sanitizedParts = stripEphemeralToolContext(message.parts);
-          const sanitizedMessage =
-            sanitizedParts === message.parts
-              ? message
-              : { ...message, parts: sanitizedParts };
-          const retainPriorRegeneration =
-            regenerationTarget &&
-            (isError || !shouldPersistFinishedMessage(sanitizedMessage));
-          const persistAssistant =
-            !isAbort &&
-            acceptFinishedChatPersistenceRef.current &&
-            !retainPriorRegeneration;
-
-          if (!currentUserId || (!submittedUserMessage && !persistAssistant)) {
-            if (submittedUserMessage) {
-              chatCloudsyncActivity.finish(submittedUserMessage.id);
-            }
-            return;
-          }
-
-          const finishedPersist = chatCloudsyncActivity.runWithLease(
-            submittedUserMessage?.id ?? sanitizedMessage.id,
-            async () => {
-              // Outbound user writes may still be retrying; settle them first
-              // so the lookup below reflects the final truth and a failed
-              // persist can be repaired instead of orphaning the reply.
-              const awaitedChatGroupId =
-                submittedChatGroupId ?? latestChatGroupIdRef.current;
-              if (awaitedChatGroupId) {
-                await waitForPendingChatPersists(awaitedChatGroupId);
-              }
-
-              let persistedChatGroupId: string | null = null;
-              if (submittedUserMessage) {
-                try {
-                  persistedChatGroupId = await getChatMessageGroupId(
-                    submittedUserMessage.id,
-                  );
-                } catch (error) {
-                  console.error(
-                    "Failed to resolve the persisted chat message group",
-                    error,
-                  );
-                }
-              }
-              const targetChatGroupId =
-                submittedChatGroupId ??
-                persistedChatGroupId ??
-                latestChatGroupIdRef.current;
-              if (!targetChatGroupId) {
-                return;
-              }
-
-              // The group row was never created; persisting into it would
-              // produce orphaned rows that never appear in history.
-              if (consumeFailedChatGroupCreate(targetChatGroupId)) {
-                return;
-              }
-
-              // If the outbound persist failed, the assistant row would land
-              // with no matching user row and reconciliation would wipe the
-              // turn — repair the user message before persisting the reply.
-              if (submittedUserMessage && !persistedChatGroupId) {
-                await upsertChatMessage(
-                  buildPersistedChatMessage({
-                    message: submittedUserMessage,
-                    chatGroupId: targetChatGroupId,
-                    ownerUserId: currentUserId,
-                    status: "ready",
-                  }),
-                );
-              }
-
-              if (!persistAssistant) {
-                return;
-              }
-
-              if (!shouldPersistFinishedMessage(sanitizedMessage)) {
-                await deleteChatMessage(targetChatGroupId, sanitizedMessage.id);
-                return;
-              }
-
-              const persistedMessage = buildPersistedChatMessage({
-                message: sanitizedMessage,
-                chatGroupId: targetChatGroupId,
-                ownerUserId: currentUserId,
-                status: "ready",
-              });
-              if (regenerationTarget) {
-                if (regenerationTarget.chatGroupId !== targetChatGroupId) {
-                  throw new Error("Regenerated chat message group changed");
-                }
-                await replaceChatMessage({
-                  message: persistedMessage,
-                  previousMessageId: regenerationTarget.assistantMessageId,
-                });
-                advanceRegenerationTarget(sanitizedMessage.id);
-                return;
-              }
-              await upsertChatMessage(persistedMessage);
-            },
-          );
-          void finishedPersist.catch((error) => {
-            console.error("Failed to persist finished chat message", error);
-          });
-          if (submittedUserMessage) {
-            const userMessageId = submittedUserMessage.id;
-            pendingFinishedChatPersistsRef.current.set(
-              userMessageId,
-              finishedPersist,
-            );
-            void finishedPersist
-              .catch(() => undefined)
-              .finally(() => {
-                if (
-                  pendingFinishedChatPersistsRef.current.get(userMessageId) ===
-                  finishedPersist
-                ) {
-                  pendingFinishedChatPersistsRef.current.delete(userMessageId);
-                }
-              });
-          }
-        },
+        onFinish: createChatFinishHandler(
+          {
+            latestChatGroupIdRef,
+            latestUserIdRef,
+            submittedChatGroupIdsRef,
+            pendingTransportPreflightsRef,
+            pendingRegenerationTombstonesRef,
+            pendingFinishedChatPersistsRef,
+            acceptFinishedChatPersistenceRef,
+            regenerateRequestInFlightRef,
+          },
+          chatPreflights,
+        ),
       }),
-    [chatCloudsyncActivity, sessionId, takeTransportPreflight],
+    [chatPreflights, sessionId, takeTransportPreflight],
   );
 
   const {
@@ -416,39 +258,22 @@ function ChatSessionLifecycle({
 
   useMountEffect(() => {
     acceptFinishedChatPersistenceRef.current = true;
-    chatCloudsyncActivity.resume();
-    return () => {
-      acceptFinishedChatPersistenceRef.current = false;
-      const pendingChatGroupIds = new Set([
-        ...submittedChatGroupIdsRef.current.values(),
-        ...[...pendingRegenerationTombstonesRef.current.values()].map(
-          ({ chatGroupId }) => chatGroupId,
-        ),
-        ...(latestChatGroupIdRef.current ? [latestChatGroupIdRef.current] : []),
-      ]);
-      try {
-        void Promise.resolve(latestChatStopRef.current()).catch((error) => {
-          console.error("Failed to stop chat response during cleanup", error);
-        });
-      } catch (error) {
-        console.error("Failed to stop chat response during cleanup", error);
-      }
-      const cleanup = Promise.resolve().then(async () => {
-        try {
-          await Promise.resolve();
-          await Promise.allSettled([
-            ...pendingFinishedChatPersistsRef.current.values(),
-            ...[...pendingChatGroupIds].map(waitForPendingChatPersists),
-          ]);
-          await flushDatabaseWritesByPrefix(["chat:"]);
-        } catch (error) {
-          console.error("Failed to flush chat writes during cleanup", error);
-        }
-      });
-      void chatCloudsyncActivity.dispose(cleanup);
-      pendingTransportPreflightsRef.current.clear();
-      pendingRegenerationTombstonesRef.current.clear();
-    };
+    chatPreflights.resume();
+    return () =>
+      cleanupChatSession(
+        {
+          latestChatGroupIdRef,
+          latestUserIdRef,
+          submittedChatGroupIdsRef,
+          pendingTransportPreflightsRef,
+          pendingRegenerationTombstonesRef,
+          pendingFinishedChatPersistsRef,
+          acceptFinishedChatPersistenceRef,
+          regenerateRequestInFlightRef,
+        },
+        chatPreflights,
+        latestChatStopRef,
+      );
   });
 
   useEffect(() => {
@@ -481,72 +306,16 @@ function ChatSessionLifecycle({
       const targetChatGroupId =
         options?.chatGroupId ?? latestChatGroupIdRef.current;
       if (isTranscriptUnavailable && targetChatGroupId && ownerUserId) {
-        const assistantMessage: SyntheoUIMessage = {
-          id: id(),
-          role: "assistant",
-          parts: [
-            {
-              type: "text",
-              text: t`This recording is using batch transcription, so the transcript isn't available to chat yet. Ask again after transcription finishes, or switch to a Pro model for live transcription.`,
-            },
-          ],
-          metadata: {
-            createdAt: Math.max(
-              Date.now() + 1,
-              (message.metadata?.createdAt ?? 0) + 1,
-            ),
-          },
-        };
-        chatSetMessages((current) => [...current, message, assistantMessage]);
-        const localResponse = chatCloudsyncActivity.runWithLease(
-          message.id,
-          async () => {
-            try {
-              const trackedCompletions: Promise<unknown>[] = [];
-              await options?.beforeSend?.((completion) => {
-                trackedCompletions.push(completion);
-              });
-              await upsertChatMessage(
-                buildPersistedChatMessage({
-                  message: assistantMessage,
-                  chatGroupId: targetChatGroupId,
-                  ownerUserId,
-                  status: "ready",
-                }),
-              );
-              await Promise.allSettled(trackedCompletions);
-            } catch (error) {
-              await Promise.allSettled([
-                deleteChatMessage(targetChatGroupId, message.id),
-                deleteChatMessage(targetChatGroupId, assistantMessage.id),
-              ]);
-              throw error;
-            }
-          },
-        );
-        pendingFinishedChatPersistsRef.current.set(message.id, localResponse);
-        void localResponse
-          .catch((error) => {
-            chatSetMessages((current) =>
-              current.filter(
-                (candidate) =>
-                  candidate.id !== message.id &&
-                  candidate.id !== assistantMessage.id,
-              ),
-            );
-            console.error(
-              "Failed to save batch transcription chat response",
-              error,
-            );
-          })
-          .finally(() => {
-            if (
-              pendingFinishedChatPersistsRef.current.get(message.id) ===
-              localResponse
-            ) {
-              pendingFinishedChatPersistsRef.current.delete(message.id);
-            }
-          });
+        respondWithoutTranscript({
+          message,
+          options,
+          targetChatGroupId,
+          ownerUserId,
+          text: t`This recording is using batch transcription, so the transcript isn't available to chat yet. Ask again after transcription finishes, or switch to a Pro model for live transcription.`,
+          chatSetMessages,
+          chatPreflights,
+          pendingFinishedChatPersistsRef,
+        });
         return;
       }
       if (targetChatGroupId) {
@@ -583,7 +352,7 @@ function ChatSessionLifecycle({
       });
     },
     [
-      chatCloudsyncActivity,
+      chatPreflights,
       chatSendMessage,
       chatSetMessages,
       isTranscriptUnavailable,
@@ -618,84 +387,21 @@ function ChatSessionLifecycle({
       submittedUser.id,
     );
 
-    const runRegenerate = (assistantMessageId?: string) => {
-      let regenerationPreflight: (() => Promise<void>) | undefined;
-      const nextTarget = assistantMessageId
-        ? {
-            chatGroupId,
-            assistantMessageId,
-          }
-        : undefined;
-      const currentTarget = pendingRegenerationTombstonesRef.current.get(
-        submittedUser.id,
+    const runRegenerate = (assistantMessageId?: string) =>
+      runChatRegeneration(
+        {
+          latestChatGroupIdRef,
+          latestUserIdRef,
+          submittedChatGroupIdsRef,
+          pendingTransportPreflightsRef,
+          pendingRegenerationTombstonesRef,
+          pendingFinishedChatPersistsRef,
+          acceptFinishedChatPersistenceRef,
+          regenerateRequestInFlightRef,
+        },
+        { chatGroupId, submittedUser, priorFinishedPersist, chatRegenerate },
+        assistantMessageId,
       );
-      const initializeTarget = () => {
-        const liveTarget = pendingRegenerationTombstonesRef.current.get(
-          submittedUser.id,
-        );
-        if (liveTarget?.chatGroupId === chatGroupId) {
-          return;
-        }
-        if (nextTarget) {
-          pendingRegenerationTombstonesRef.current.set(
-            submittedUser.id,
-            nextTarget,
-          );
-        } else if (liveTarget) {
-          pendingRegenerationTombstonesRef.current.delete(submittedUser.id);
-        }
-      };
-
-      if (priorFinishedPersist) {
-        regenerationPreflight = async () => {
-          await priorFinishedPersist;
-          initializeTarget();
-        };
-        const queue =
-          pendingTransportPreflightsRef.current.get(submittedUser.id) ?? [];
-        queue.push({
-          run: regenerationPreflight,
-          persistOnCancel: false,
-        });
-        pendingTransportPreflightsRef.current.set(submittedUser.id, queue);
-      } else if (currentTarget?.chatGroupId !== chatGroupId) {
-        initializeTarget();
-      }
-      regenerateRequestInFlightRef.current = true;
-      let regeneration: Promise<void>;
-      try {
-        regeneration = Promise.resolve(chatRegenerate());
-      } catch (error) {
-        regeneration = Promise.reject(error);
-      }
-      const observedRegeneration = regeneration.catch((error) => {
-        console.error("Failed to regenerate chat message", error);
-      });
-      void observedRegeneration
-        .then(() => {
-          regenerateRequestInFlightRef.current = false;
-          return pendingFinishedChatPersistsRef.current.get(submittedUser.id);
-        })
-        .finally(() => {
-          if (!regenerationPreflight) {
-            return;
-          }
-          const queue = pendingTransportPreflightsRef.current.get(
-            submittedUser.id,
-          );
-          const index =
-            queue?.findIndex(
-              (candidate) => candidate.run === regenerationPreflight,
-            ) ?? -1;
-          if (queue && index !== -1) {
-            queue.splice(index, 1);
-          }
-          if (queue?.length === 0) {
-            pendingTransportPreflightsRef.current.delete(submittedUser.id);
-          }
-        })
-        .catch(() => undefined);
-    };
 
     for (let i = messages.length - 1; i > submittedUserIndex; i--) {
       if (messages[i].role !== "assistant") {

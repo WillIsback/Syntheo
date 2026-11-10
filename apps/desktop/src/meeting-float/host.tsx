@@ -7,6 +7,10 @@ import {
 import { useMountEffect } from "@syntheo/ui/hooks/use-mount-effect";
 
 import {
+  createFloatingBarConcealment,
+  watchTauriWindowFocus,
+} from "./focus-visibility";
+import {
   createMeetingFloatLabelContext,
   createMeetingFloatRenderRequest,
   loadMeetingFloatData,
@@ -54,9 +58,13 @@ import {
 import { useConfigValue, useConfigValues } from "~/shared/config";
 import { useLatestRef } from "~/shared/hooks/useLatestRef";
 import { listenerStore } from "~/store/zustand/listener/instance";
+import { useTabs } from "~/store/zustand/tabs";
 import type { RenderLabelContext } from "~/stt/live-segment";
 import { finishPausedListening } from "~/stt/pause-listening";
-import { requestMainListenerControl } from "~/stt/window-control";
+import {
+  applyChannelMuted,
+  requestMainListenerControl,
+} from "~/stt/window-control";
 
 export {
   getFloatingRouteState,
@@ -204,6 +212,25 @@ function FloatingMeetingWindowSync({
         });
       },
     );
+    // Issue 527 : pastille masquée quand la note écoutée est au premier plan.
+    const concealment = createFloatingBarConcealment({
+      sources: {
+        isMainWindowFocused: () => document.hasFocus(),
+        watchWindowFocus: watchTauriWindowFocus,
+        getActiveTabSessionId: getActiveTabSessionId,
+        subscribeActiveTab: (onChange) =>
+          useTabs.subscribe((state, previous) => {
+            if (state.currentTab !== previous.currentTab) onChange();
+          }),
+      },
+      getListenedSessionId: () => {
+        const live = listenerStore.getState().live;
+        return live.sessionId ?? live.pause?.sessionId ?? null;
+      },
+      onConcealedChange: (concealed) =>
+        windowSynchronizer.setConcealed(concealed),
+    });
+    windowSynchronizer.setConcealed(concealment.concealed);
     let unsubscribeMeetingData: (() => Promise<void>) | null = null;
     const unlisteners: Array<() => void> = [];
     const speakerLabeler = createFloatingSpeakerLabeler(() => {
@@ -220,6 +247,8 @@ function FloatingMeetingWindowSync({
 
       hasRouteState = true;
       routeState = nextRouteState;
+      // Avant la mise à jour : une écoute lancée depuis sa note reste masquée.
+      windowSynchronizer.setConcealed(concealment.refresh());
       windowSynchronizer.update(routeState);
     };
     const refreshCurrentRouteState = (refreshTranscriptBubbles = false) => {
@@ -291,7 +320,16 @@ function FloatingMeetingWindowSync({
       .listen(({ payload }) => {
         if (cancelled || !enabledRef.current) return;
         const live = listenerStore.getState().live;
-        if (payload.action === "pause") {
+        if (payload.action === "muteMic" || payload.action === "unmuteMic") {
+          // Bascule du micro (issue 447) : même chemin que la capsule.
+          if (live.sessionId) {
+            applyChannelMuted(
+              live.sessionId,
+              "mic",
+              payload.action === "muteMic",
+            );
+          }
+        } else if (payload.action === "pause") {
           if (live.status === "active") listenerStore.getState().pause();
         } else if (live.pause?.phase === "paused") {
           void requestMainListenerControl("resume", live.pause.sessionId);
@@ -305,6 +343,12 @@ function FloatingMeetingWindowSync({
     windowsEvents.floatingBarOpenMain
       .listen(async () => {
         await windowsCommands.windowShow({ type: "main" });
+        // Clic sur la durée de la pastille (issue 448) : retour à la note de la
+        // réunion en cours ou en pause.
+        const sessionId = routeState?.dictation ? null : routeState?.sessionId;
+        if (sessionId) {
+          useTabs.getState().openNew({ type: "sessions", id: sessionId });
+        }
       })
       .then((unlisten) => {
         if (cancelled) {
@@ -382,6 +426,7 @@ function FloatingMeetingWindowSync({
     return () => {
       cancelled = true;
       refreshSettingsRef.current = () => {};
+      concealment.dispose();
       speakerLabeler.dispose();
       unsubscribe();
       unsubscribeDictation();
@@ -458,8 +503,19 @@ export function haveFloatingRouteInputsChanged(
     state.live.transcriptionStalled !==
       previousState.live.transcriptionStalled ||
     state.live.pause !== previousState.live.pause ||
+    // Bascule du micro de la pastille (issue 447).
+    state.live.muted !== previousState.live.muted ||
+    // Durée affichée par la pastille (issue 448).
+    state.live.seconds !== previousState.live.seconds ||
+    state.live.elapsedOffsetSeconds !==
+      previousState.live.elapsedOffsetSeconds ||
     state.liveSegments !== previousState.liveSegments
   );
+}
+
+function getActiveTabSessionId() {
+  const tab = useTabs.getState().currentTab;
+  return tab?.type === "sessions" ? tab.id : null;
 }
 
 function getFloatingSessionTitle(

@@ -38,23 +38,11 @@ pub async fn catalog_note_attachment(
 ) -> Result<(), String> {
     let relative_path = format!("attachments/{}", request.attachment_id);
     let metadata_id = uuid::Uuid::new_v4().to_string();
-    let delete_job_id = uuid::Uuid::new_v4().to_string();
 
     let mut transaction = pool
         .begin_with("BEGIN IMMEDIATE")
         .await
         .map_err(|error| error.to_string())?;
-
-    syntheo_db_app::enqueue_replaced_attachment_delete_by_path(
-        &mut transaction,
-        &delete_job_id,
-        &request.session_id,
-        &relative_path,
-        &request.sha256,
-        request.size_bytes,
-    )
-    .await
-    .map_err(|error| error.to_string())?;
 
     let updated = syntheo_db_app::update_note_attachment(
         &mut transaction,
@@ -110,23 +98,11 @@ pub async fn catalog_session_audio(
     request: CatalogSessionAudioRequest,
 ) -> Result<(), String> {
     let attachment_id = session_audio_attachment_id(&request.session_id);
-    let delete_job_id = uuid::Uuid::new_v4().to_string();
 
     let mut transaction = pool
         .begin_with("BEGIN IMMEDIATE")
         .await
         .map_err(|error| error.to_string())?;
-
-    syntheo_db_app::enqueue_replaced_attachment_delete_by_id(
-        &mut transaction,
-        &delete_job_id,
-        &request.session_id,
-        &attachment_id,
-        &request.sha256,
-        request.size_bytes,
-    )
-    .await
-    .map_err(|error| error.to_string())?;
 
     let updated = syntheo_db_app::update_session_audio_attachment(
         &mut transaction,

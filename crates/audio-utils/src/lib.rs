@@ -4,10 +4,12 @@ use bytes::{BufMut, Bytes, BytesMut};
 use futures_util::{Stream, StreamExt};
 use syntheo_audio_interface::AsyncSource;
 
+mod decoder;
 mod error;
 mod pcm;
 mod playback;
 
+pub use decoder::AudioDecoder;
 pub use error::*;
 pub use pcm::*;
 pub use playback::open_default_playback_sink;
@@ -67,13 +69,6 @@ pub trait AudioFormatExt: AsyncSource {
     }
 }
 
-pub fn i16_to_f32_samples(samples: &[i16]) -> Vec<f32> {
-    samples
-        .iter()
-        .map(|&sample| sample as f32 / I16_SCALE)
-        .collect()
-}
-
 pub fn f32_to_i16_samples(samples: &[f32]) -> Vec<i16> {
     samples
         .iter()
@@ -96,37 +91,6 @@ where
     buf.freeze()
 }
 
-pub fn bytes_to_f32_samples(data: &[u8]) -> Vec<f32> {
-    data.chunks_exact(2)
-        .map(|chunk| {
-            let sample = i16::from_le_bytes([chunk[0], chunk[1]]);
-            sample as f32 / I16_SCALE
-        })
-        .collect()
-}
-
-pub fn deinterleave_stereo_bytes(data: &[u8]) -> (Vec<f32>, Vec<f32>) {
-    let num_frames = data.len() / 4;
-    let mut ch0 = Vec::with_capacity(num_frames);
-    let mut ch1 = Vec::with_capacity(num_frames);
-    for frame in data.chunks_exact(4) {
-        ch0.push(i16::from_le_bytes([frame[0], frame[1]]) as f32 / I16_SCALE);
-        ch1.push(i16::from_le_bytes([frame[2], frame[3]]) as f32 / I16_SCALE);
-    }
-    (ch0, ch1)
-}
-
-pub fn deinterleave(samples: &[f32], channels: usize) -> Vec<Vec<f32>> {
-    if channels <= 1 {
-        return vec![samples.to_vec()];
-    }
-    let mut output = vec![Vec::with_capacity(samples.len() / channels + 1); channels];
-    for (index, sample) in samples.iter().enumerate() {
-        output[index % channels].push(*sample);
-    }
-    output
-}
-
 pub fn interleave(channels: &[Vec<f32>]) -> Vec<f32> {
     if channels.is_empty() {
         return Vec::new();
@@ -145,62 +109,24 @@ pub fn mix_sample_f32(mic: f32, speaker: f32) -> f32 {
     (mic + speaker).clamp(-1.0, 1.0)
 }
 
-pub fn mix_audio_f32(mic: &[f32], speaker: &[f32]) -> Vec<f32> {
-    let max_len = mic.len().max(speaker.len());
-    (0..max_len)
-        .map(|i| {
-            let m = mic.get(i).copied().unwrap_or(0.0);
-            let s = speaker.get(i).copied().unwrap_or(0.0);
-            mix_sample_f32(m, s)
-        })
-        .collect()
-}
-
-pub fn mix_audio_pcm16le(mic: &[u8], speaker: &[u8]) -> Vec<u8> {
-    let max_len = mic.len().max(speaker.len());
-    let mut mixed = Vec::with_capacity(max_len);
-
-    let mut index = 0;
-    while index < max_len {
-        let mic_sample = if index + 1 < mic.len() {
-            i16::from_le_bytes([mic[index], mic[index + 1]])
-        } else {
-            0
-        };
-
-        let speaker_sample = if index + 1 < speaker.len() {
-            i16::from_le_bytes([speaker[index], speaker[index + 1]])
-        } else {
-            0
-        };
-
-        let mixed_sample = ((mic_sample as i32 + speaker_sample as i32) / 2) as i16;
-
-        mixed.extend_from_slice(&mixed_sample.to_le_bytes());
-        index += 2;
-    }
-
-    mixed
-}
-
 pub use syntheo_audio_mime::content_type_to_extension;
 
-pub fn source_from_path(
-    path: impl AsRef<std::path::Path>,
-) -> Result<rodio::Decoder<std::io::BufReader<std::fs::File>>, crate::Error> {
-    let file = std::fs::File::open(path.as_ref())?;
-    let decoder = rodio::Decoder::try_from(file)?;
-    Ok(decoder)
+/// Decode the first audio track of a file. Video tracks of an mp4, mov, mkv
+/// or webm are skipped (issue 524).
+pub fn source_from_path(path: impl AsRef<std::path::Path>) -> Result<AudioDecoder, crate::Error> {
+    let path = path.as_ref();
+    let file = std::fs::File::open(path)?;
+    let extension = path.extension().and_then(|extension| extension.to_str());
+    AudioDecoder::new(Box::new(file), extension)
 }
 
 /// Decode audio held in memory. Dictation and imported files must never be
 /// written to disk, so the batch engine decodes straight from bytes.
-pub fn source_from_bytes<T>(data: T) -> Result<rodio::Decoder<std::io::Cursor<T>>, crate::Error>
+pub fn source_from_bytes<T>(data: T) -> Result<AudioDecoder, crate::Error>
 where
     T: AsRef<[u8]> + Send + Sync + 'static,
 {
-    let decoder = rodio::Decoder::try_from(std::io::Cursor::new(data))?;
-    Ok(decoder)
+    AudioDecoder::new(Box::new(std::io::Cursor::new(data)), None)
 }
 
 pub fn audio_bytes_metadata<T>(data: T) -> Result<AudioMetadata, crate::Error>
@@ -559,49 +485,6 @@ pub struct ChunkedAudio {
     pub metadata: AudioMetadata,
 }
 
-pub fn chunk_audio_file(
-    path: impl AsRef<std::path::Path>,
-    chunk_ms: u64,
-) -> Result<ChunkedAudio, crate::Error> {
-    let source = source_from_path(path)?;
-    let metadata = metadata_from_source(&source)?;
-    let samples = resample_audio(source, metadata.sample_rate)?;
-
-    if samples.is_empty() {
-        return Ok(ChunkedAudio {
-            chunks: Vec::new(),
-            sample_count: 0,
-            frame_count: 0,
-            metadata,
-        });
-    }
-
-    let channels = metadata.channels.max(1) as usize;
-    let frames_per_chunk = {
-        let frames = (chunk_ms as u128)
-            .saturating_mul(metadata.sample_rate as u128)
-            .div_ceil(1000);
-        frames.max(1).min(usize::MAX as u128) as usize
-    };
-    let samples_per_chunk = frames_per_chunk
-        .saturating_mul(channels)
-        .clamp(1, usize::MAX);
-
-    let sample_count = samples.len();
-    let frame_count = sample_count / channels;
-    let chunks = samples
-        .chunks(samples_per_chunk)
-        .map(|chunk| f32_to_i16_bytes(chunk.iter().copied()))
-        .collect();
-
-    Ok(ChunkedAudio {
-        chunks,
-        sample_count,
-        frame_count,
-        metadata,
-    })
-}
-
 pub fn chunk_size_for_stt(sample_rate: u32) -> usize {
     // https://github.com/orgs/deepgram/discussions/224#discussioncomment-6234166
     const CHUNK_MS: u32 = 120;
@@ -611,173 +494,4 @@ pub fn chunk_size_for_stt(sample_rate: u32) -> usize {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn audio_file_metadata_reads_supported_formats() {
-        for (label, path) in [
-            ("wav", syntheo_data::english_1::AUDIO_PATH),
-            ("mp3", syntheo_data::english_1::AUDIO_MP3_PATH),
-            ("mp4", syntheo_data::english_1::AUDIO_MP4_PATH),
-            ("m4a", syntheo_data::english_1::AUDIO_M4A_PATH),
-            ("ogg", syntheo_data::english_1::AUDIO_OGG_PATH),
-            ("flac", syntheo_data::english_1::AUDIO_FLAC_PATH),
-            ("aac", syntheo_data::english_1::AUDIO_AAC_PATH),
-            ("aiff", syntheo_data::english_1::AUDIO_AIFF_PATH),
-        ] {
-            let metadata = audio_file_metadata(path).unwrap();
-            assert!(metadata.sample_rate > 0, "{label}");
-            assert!(metadata.channels > 0, "{label}");
-        }
-    }
-
-    #[test]
-    fn resample_preserves_duration() {
-        let from_rate = 44100;
-        let to_rate = 16000;
-        let duration_secs = 5;
-        let channels = 2;
-        let total_samples = from_rate * duration_secs * channels;
-
-        let source = rodio::buffer::SamplesBuffer::new(
-            std::num::NonZeroU16::new(channels as u16).unwrap(),
-            std::num::NonZeroU32::new(from_rate as u32).unwrap(),
-            vec![0.5f32; total_samples],
-        );
-        let output = resample_audio(source, to_rate as u32).unwrap();
-
-        let expected_frames = duration_secs * to_rate;
-        let actual_frames = output.len() / channels;
-        let ratio = actual_frames as f64 / expected_frames as f64;
-        assert!(
-            (ratio - 1.0).abs() < 0.02,
-            "expected ~{expected_frames} frames, got {actual_frames} (ratio {ratio:.4})"
-        );
-    }
-
-    #[test]
-    fn resample_short_partial_chunk_preserves_duration() {
-        let from_rate = 44_100;
-        let to_rate = 16_000;
-        let channels = 2;
-        let input_frames = 200;
-
-        let source = rodio::buffer::SamplesBuffer::new(
-            std::num::NonZeroU16::new(channels as u16).unwrap(),
-            std::num::NonZeroU32::new(from_rate as u32).unwrap(),
-            vec![0.5f32; input_frames * channels],
-        );
-        let output = resample_audio(source, to_rate as u32).unwrap();
-
-        let actual_frames = output.len() / channels;
-        let expected_frames = (input_frames as f64 * to_rate as f64 / from_rate as f64).round();
-        assert!(
-            (actual_frames as f64 - expected_frames).abs() <= 2.0,
-            "expected ~{expected_frames} frames, got {actual_frames}"
-        );
-    }
-
-    #[test]
-    fn channel_resampling_deinterleaves_without_changing_sample_rate() {
-        let source = rodio::buffer::SamplesBuffer::new(
-            std::num::NonZeroU16::new(2).unwrap(),
-            std::num::NonZeroU32::new(16_000).unwrap(),
-            vec![0.1, 0.9, 0.2, 0.8],
-        );
-
-        let channels = resample_audio_channels(source, 16_000).unwrap();
-
-        assert_eq!(channels, vec![vec![0.1, 0.2], vec![0.9, 0.8]]);
-    }
-
-    #[test]
-    fn channel_resampling_preserves_distinct_channels() {
-        let input_frames = 4_100;
-        let samples = (0..input_frames)
-            .flat_map(|_| [0.25, -0.5])
-            .collect::<Vec<_>>();
-        let channel_source = rodio::buffer::SamplesBuffer::new(
-            std::num::NonZeroU16::new(2).unwrap(),
-            std::num::NonZeroU32::new(44_100).unwrap(),
-            samples,
-        );
-
-        let channels = resample_audio_channels(channel_source, 16_000).unwrap();
-        let expected_frames = (input_frames as f64 * 16_000.0 / 44_100.0).ceil() as usize;
-
-        assert_eq!(channels.len(), 2);
-        assert_eq!(channels[0].len(), expected_frames);
-        assert_eq!(channels[1].len(), expected_frames);
-        assert!(
-            channels[0][100..expected_frames - 100]
-                .iter()
-                .all(|sample| (sample - 0.25).abs() < 0.01)
-        );
-        assert!(
-            channels[1][100..expected_frames - 100]
-                .iter()
-                .all(|sample| (sample + 0.5).abs() < 0.01)
-        );
-    }
-
-    #[test]
-    fn channel_resampling_flushes_a_short_partial_chunk() {
-        let input_frames = 200;
-        let source = rodio::buffer::SamplesBuffer::new(
-            std::num::NonZeroU16::new(2).unwrap(),
-            std::num::NonZeroU32::new(44_100).unwrap(),
-            vec![0.25; input_frames * 2],
-        );
-
-        let channels = resample_audio_channels(source, 16_000).unwrap();
-        let expected_frames = (input_frames as f64 * 16_000.0 / 44_100.0).ceil() as usize;
-
-        assert_eq!(channels.len(), 2);
-        assert_eq!(channels[0].len(), expected_frames);
-        assert_eq!(channels[1].len(), expected_frames);
-    }
-
-    #[test]
-    fn channel_resampling_streams_ordered_blocks_through_eof() {
-        let input_frames = 4_100;
-        let source = rodio::buffer::SamplesBuffer::new(
-            std::num::NonZeroU16::new(2).unwrap(),
-            std::num::NonZeroU32::new(44_100).unwrap(),
-            (0..input_frames)
-                .flat_map(|frame| [frame as f32 / input_frames as f32, -0.75])
-                .collect::<Vec<_>>(),
-        );
-        let mut output = vec![Vec::new(), Vec::new()];
-        let mut block_count = 0usize;
-
-        let info =
-            for_each_resampled_channel_block::<_, crate::Error>(source, 16_000, |channels| {
-                assert_eq!(channels.len(), 2);
-                assert_eq!(channels[0].len(), channels[1].len());
-                assert!(!channels[0].is_empty());
-                for (output, channel) in output.iter_mut().zip(channels) {
-                    output.extend_from_slice(channel);
-                }
-                block_count += 1;
-                Ok(())
-            })
-            .unwrap();
-
-        let expected_frames = (input_frames as f64 * 16_000.0 / 44_100.0).ceil() as usize;
-        assert!(block_count >= 2);
-        assert_eq!(info.frame_count, expected_frames);
-        assert_eq!(output[0].len(), expected_frames);
-        assert_eq!(output[1].len(), expected_frames);
-        assert!(
-            output[0][100..expected_frames - 100]
-                .windows(2)
-                .all(|window| window[0] <= window[1])
-        );
-        assert!(
-            output[1][100..expected_frames - 100]
-                .iter()
-                .all(|sample| (sample + 0.75).abs() < 0.01)
-        );
-    }
-}
+mod tests;

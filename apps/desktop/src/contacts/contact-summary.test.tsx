@@ -181,7 +181,7 @@ describe("contact summary", () => {
     });
 
     const call = mocks.generateText.mock.calls[0]?.[0];
-    expect(call.system).toContain("second person");
+    expect(call.instructions).toContain("second person");
     const prompt = JSON.parse(call.prompt);
     expect(prompt.user).toEqual({
       name: "John",
@@ -547,9 +547,7 @@ function makeSnapshot({
     ownerUserId: "user-1",
     title,
     createdAt,
-    event: null,
     sourceApps: [],
-    eventId: null,
     rawNoteId: null,
     rawTemplateId: "",
     rawUpdatedAt: "",

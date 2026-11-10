@@ -14,9 +14,3 @@ impl Serialize for Error {
         serializer.serialize_str(self.to_string().as_ref())
     }
 }
-
-impl Error {
-    pub fn as_worker_error(&self) -> Box<dyn std::error::Error + Send + Sync> {
-        Box::new(std::io::Error::other(self.to_string()))
-    }
-}

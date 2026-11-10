@@ -23,6 +23,7 @@ import type { NoteStage } from "../capsule/stage";
 import { Enhanced } from "../note-input/enhanced";
 import { RawEditor } from "../note-input/raw";
 import { TitleInput } from "../title-input";
+import { AfterMeetingFolderSuggestion } from "./after-meeting-folder-suggestion";
 import { PrepareFiche } from "./fiche";
 import { NoteMeta } from "./meta";
 import { extractNoteLines } from "./note-attribution";
@@ -59,8 +60,6 @@ export type LivingDocumentProps = {
   sessionMode: SessionMode;
   rawMd: string;
   sessionTitle: string;
-  eventTitle?: string;
-  eventDescription?: string;
   editorTabs: TabEditorView[];
   currentTab: TabEditorView;
   onSelectView: (view: TabEditorView) => void;
@@ -124,6 +123,9 @@ export function LivingDocument(props: LivingDocumentProps) {
         }
       />
       <WelcomeCard sessionId={sessionId} />
+      {/* Issue 499 : à l'arrêt de l'écoute, un dossier proposé en tête de
+          la synthèse d'une note non rangée. */}
+      <AfterMeetingFolderSuggestion sessionId={sessionId} stage={stage} />
       {/* Positions stables : l'éditeur de notes n'est pas remonté entre
           Préparer et Écouter, le texte en cours de saisie n'est pas perdu. */}
       {stage === "prepare" ? (
@@ -263,8 +265,6 @@ function UserNotes({
   stage,
   rawMd,
   sessionTitle,
-  eventTitle,
-  eventDescription,
   editorRef,
   onNavigateToTitle,
   onViewReady,
@@ -298,8 +298,6 @@ function UserNotes({
         sessionId={sessionId}
         rawMd={rawMd}
         sessionTitle={sessionTitle}
-        eventTitle={eventTitle}
-        eventDescription={eventDescription}
         onNavigateToTitle={registerAsPrimary ? onNavigateToTitle : undefined}
         placeholder={
           stage === "synthesis"

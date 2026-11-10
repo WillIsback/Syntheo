@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import {
   getDefaultSttModel,
-  getSttModelSuggestions,
   normalizeStoredSttSelection,
 } from "./model-selection";
 
@@ -46,19 +45,5 @@ describe("normalizeStoredSttSelection", () => {
 
   it("defaults_nvidia_to_the_streaming_nemotron_model", () => {
     expect(getDefaultSttModel("nvidia")).toBe("nemotron-asr-streaming");
-  });
-
-  it("suggests_known_nim_models_for_nvidia", () => {
-    expect(getSttModelSuggestions("nvidia")).toEqual([
-      "nemotron-asr-streaming",
-      "parakeet-tdt-0.6b-v3",
-      "parakeet-tdt-0.6b-v2",
-      "cache-aware-parakeet-rnnt-multi-asr-streaming-sortformer",
-    ]);
-  });
-
-  it("has_no_suggestions_for_undiscoverable_or_missing_providers", () => {
-    expect(getSttModelSuggestions("openai")).toEqual([]);
-    expect(getSttModelSuggestions(undefined)).toEqual([]);
   });
 });

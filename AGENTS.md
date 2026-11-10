@@ -21,3 +21,18 @@ Testing while developing (several agents often share one machine):
 - Run only the tests your change touches: `pnpm -C apps/desktop exec vitest related --run <changed files>` (or `vitest run --changed origin/main`). Always pass `--run`: without it vitest stays in watch mode.
 - Rust: `cargo test -p <crate>` / `cargo clippy -p <crate>`, never the whole workspace while iterating.
 - Run the full suite once, before the final commit; CI runs it again on the PR.
+
+## Documentation knowledge graph (Mintlify)
+
+Two tools, two jobs:
+
+- **CodeGraph** is for code tasks: locating symbols, tracing calls, impact of an edit.
+- **The `syntheo-docs` MCP server** (`https://syntheo.mintlify.site/docs/mcp`, declared in `.mcp.json`) searches the published docs, including the code map under `docs/code/` ("Carte du code"). Use it to keep documentation current.
+
+When a change alters user-visible behavior, a CLI/MCP contract, or adds/renames/removes a crate, plugin, package, or top-level module:
+
+1. Search `syntheo-docs` (or read `docs/code/doc-map.mdx`) for the pages tied to the changed paths.
+2. Update those pages in `docs/` in the same PR, plus the zone page in `docs/code/` if the unit inventory changed.
+3. Follow `docs/AGENTS.md` for writing rules and verification.
+
+The MCP server reflects the last deploy of `main`; for unmerged changes read `docs/` directly.

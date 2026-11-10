@@ -30,11 +30,13 @@ exceptions:
     expires: "2027-01-31"
     author: "WillIsback"
     path: "Cargo.lock"
-  - cve: "RUSTSEC-2026-0332, RUSTSEC-2024-0429, CVE-2026-28980, CVE-2026-43671"
+  - cve: "RUSTSEC-2026-0332, RUSTSEC-2024-0429, RUSTSEC-2024-0422, CVE-2026-28980, CVE-2026-43671"
     reason: >-
       Plateformes non livrées ou dépendances de Tauri : wasapi (Windows),
       swift-nio (transcribe-soniqo, macOS, retiré au chantier 04b), glib 0.18
-      (gtk-rs tiré par Tauri sur Linux, en attente de la migration GTK4).
+      (gtk-rs tiré par Tauri sur Linux, en attente de la migration GTK4),
+      gtk-layer-shell 0.8 (liaisons GTK3 non maintenues, pastille de réunion en
+      calque Wayland, issue 448 ; suit gtk-rs 0.18 jusqu'à la migration GTK4).
     expires: "2027-01-31"
     author: "WillIsback"
     path: "Cargo.lock, crates/transcribe-soniqo/swift-lib/Package.resolved"

@@ -11,6 +11,10 @@ const mocks = vi.hoisted(() => ({
   toastError: vi.fn(),
   toastWarning: vi.fn(),
   useRunBatch: vi.fn(),
+  connection: {
+    provider: "openai",
+    model: "whisper-1",
+  } as { provider: string; model: string } | null,
 }));
 
 vi.mock("@syntheo/plugin-dictation", () => ({
@@ -38,6 +42,10 @@ vi.mock("~/shared/config", () => ({
   useConfigValue: () => "Built-in Microphone",
 }));
 
+vi.mock("~/stt/useSTTConnection", () => ({
+  useSTTConnection: () => ({ conn: mocks.connection }),
+}));
+
 vi.mock("~/stt/useRunBatch", () => ({
   useRunBatch: (sessionId: string) => {
     mocks.useRunBatch(sessionId);
@@ -57,6 +65,7 @@ describe("useDictation", () => {
     await Promise.resolve();
     vi.useRealTimers();
     vi.clearAllMocks();
+    mocks.connection = { provider: "openai", model: "whisper-1" };
     useTabs.setState({ chatMode: "FloatingOpen" });
     mocks.getCaptureState.mockResolvedValue({
       status: "ok",
@@ -123,6 +132,29 @@ describe("useDictation", () => {
     );
     expect(editor.insertText).toHaveBeenCalledWith("Hello world.");
     expect(result.current.phase).toBe("idle");
+  });
+
+  it("explains that a live-only model can't take chat voice input", async () => {
+    mocks.connection = {
+      provider: "nvidia",
+      model: "cache-aware-parakeet-rnnt-multi-asr-streaming-sortformer",
+    };
+    const editorRef = { current: null };
+    const { result } = renderHook(() => useDictation({ editorRef }));
+
+    await act(async () => {
+      await result.current.start();
+    });
+
+    expect(mocks.startRecording).not.toHaveBeenCalled();
+    expect(result.current.phase).toBe("idle");
+    expect(mocks.toastWarning).toHaveBeenCalledWith(
+      "Voice input is unavailable",
+      expect.objectContaining({
+        description:
+          "This model only transcribes live: voice input in the chat requires a batch transcription model.",
+      }),
+    );
   });
 
   it("does not compete with an active meeting recording", async () => {

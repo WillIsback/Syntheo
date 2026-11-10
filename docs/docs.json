@@ -25,80 +25,113 @@
   },
   "favicon": "/favicon.svg",
   "navigation": {
-    "pages": [
+    "tabs": [
       {
-        "group": "Prise en main",
-        "pages": [
-          "index",
-          "desktop-installation",
-          "uninstall",
-          "ai-setup",
-          "quickstart",
-          "philosophy"
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Prise en main",
+            "pages": [
+              "index",
+              "desktop-installation",
+              "uninstall",
+              "ai-setup",
+              "quickstart",
+              "philosophy"
+            ]
+          },
+          {
+            "group": "Utiliser Syntheo",
+            "pages": [
+              "meetings",
+              "dictation",
+              "automatic-capture",
+              "import-recordings",
+              "notes",
+              "folders",
+              "customize-summaries",
+              "chat",
+              "contacts",
+              "automations",
+              "languages"
+            ]
+          },
+          {
+            "group": "Confidentialité et sécurité",
+            "pages": [
+              "data-and-privacy",
+              "offline",
+              "security",
+              "conformite/rgpd"
+            ]
+          },
+          {
+            "group": "CLI et agents",
+            "pages": [
+              "installation",
+              "agents/overview",
+              "agents/cli",
+              "agents/mcp",
+              "agents/skills"
+            ]
+          },
+          {
+            "group": "Recettes",
+            "pages": [
+              "recipes/meeting-prep"
+            ]
+          },
+          {
+            "group": "Référence",
+            "pages": [
+              "reference/cli",
+              "reference/mcp",
+              "reference/webhooks",
+              "reference/errors"
+            ]
+          },
+          {
+            "group": "Projet",
+            "pages": [
+              "architecture",
+              "roadmap"
+            ]
+          },
+          {
+            "group": "Aide",
+            "pages": [
+              "help",
+              "troubleshooting"
+            ]
+          }
         ]
       },
       {
-        "group": "Utiliser Syntheo",
-        "pages": [
-          "meetings",
-          "dictation",
-          "automatic-capture",
-          "import-recordings",
-          "notes",
-          "customize-summaries",
-          "chat",
-          "contacts",
-          "calendar",
-          "automations",
-          "languages"
-        ]
-      },
-      {
-        "group": "Confidentialité et sécurité",
-        "pages": [
-          "data-and-privacy",
-          "offline",
-          "security",
-          "conformite/rgpd"
-        ]
-      },
-      {
-        "group": "CLI et agents",
-        "pages": [
-          "installation",
-          "agents/overview",
-          "agents/cli",
-          "agents/mcp",
-          "agents/skills"
-        ]
-      },
-      {
-        "group": "Recettes",
-        "pages": [
-          "recipes/meeting-prep"
-        ]
-      },
-      {
-        "group": "Référence",
-        "pages": [
-          "reference/cli",
-          "reference/mcp",
-          "reference/webhooks",
-          "reference/errors"
-        ]
-      },
-      {
-        "group": "Projet",
-        "pages": [
-          "architecture",
-          "roadmap"
-        ]
-      },
-      {
-        "group": "Aide",
-        "pages": [
-          "help",
-          "troubleshooting"
+        "tab": "Carte du code",
+        "groups": [
+          {
+            "group": "Knowledge graph",
+            "pages": [
+              "code/index",
+              "code/doc-map"
+            ]
+          },
+          {
+            "group": "Applications",
+            "pages": [
+              "code/desktop",
+              "code/cli"
+            ]
+          },
+          {
+            "group": "Modules",
+            "pages": [
+              "code/plugins",
+              "code/crates-audio",
+              "code/crates-data",
+              "code/packages"
+            ]
+          }
         ]
       }
     ]
@@ -137,5 +170,11 @@
       "github": "https://github.com/WillIsback/syntheo-desktop"
     }
   },
-  "description": "Le bloc-notes de réunion qui reste chez vous : transcription en temps réel et comptes rendus avec vos propres modèles."
+  "description": "Le bloc-notes de réunion qui reste chez vous : transcription en temps réel et comptes rendus avec vos propres modèles.",
+  "redirects": [
+    {
+      "source": "/calendar",
+      "destination": "/notes"
+    }
+  ]
 }

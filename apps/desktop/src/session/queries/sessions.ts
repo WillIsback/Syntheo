@@ -1,7 +1,6 @@
 import { useCallback, useRef } from "react";
 
 import { md2json } from "@syntheo/editor/markdown";
-import type { SessionEvent } from "@syntheo/store";
 
 import { extractBodyHeadingsKey } from "../title-content";
 import type {
@@ -19,7 +18,7 @@ type SessionSqlRow = {
   owner_user_id: string;
   created_at: string;
   folder_path: string;
-  event_json: string;
+  welcome_note: string | null;
   title: string;
   raw_body: string;
   raw_body_format: string;
@@ -37,19 +36,7 @@ type SessionTranscriptStateSqlRow = {
   has_transcript: boolean | number;
 };
 
-type SessionEventSqlRow = { event_json: string };
-
 const EMPTY_SESSION_SUMMARIES: SessionSummaryRecord[] = [];
-const SESSION_PREFETCH_TTL_MS = 5_000;
-const MAX_PREFETCHED_SESSIONS = 1;
-
-type PrefetchedSession = {
-  createdAt: number;
-  promise: Promise<SessionRecord | null>;
-  value?: SessionRecord | null;
-};
-
-const prefetchedSessions = new Map<string, PrefetchedSession>();
 
 const SESSION_SELECT_SQL = `
   SELECT
@@ -57,7 +44,10 @@ const SESSION_SELECT_SQL = `
     sessions.owner_user_id,
     sessions.created_at,
     sessions.folder_path,
-    sessions.event_json,
+    CASE
+      WHEN json_valid(sessions.metadata_json)
+        THEN CAST(json_extract(sessions.metadata_json, '$.welcome_note') AS TEXT)
+    END AS welcome_note,
     sessions.title,
     sessions.locked,
     COALESCE(note.body, '') AS raw_body,
@@ -83,47 +73,7 @@ export function useSession(sessionId: string): SessionRecord | null {
     },
   });
   if (!sessionId) return null;
-  if (data !== undefined) {
-    prefetchedSessions.delete(sessionId);
-    return data;
-  }
-
-  const prefetched = getPrefetchedSession(sessionId);
-  return prefetched && "value" in prefetched
-    ? (prefetched.value ?? null)
-    : null;
-}
-
-export function preloadSession(
-  sessionId: string,
-): Promise<SessionRecord | null> {
-  if (!sessionId) return Promise.resolve(null);
-
-  const existing = getPrefetchedSession(sessionId);
-  if (existing) return existing.promise;
-
-  let entry: PrefetchedSession;
-  const promise = liveQueryClient
-    .execute<SessionSqlRow>(SESSION_SELECT_SQL, [sessionId])
-    .then((rows) => {
-      const row = rows[0];
-      const value = row ? mapSessionRow(row) : null;
-      if (prefetchedSessions.get(sessionId) === entry) {
-        entry.value = value;
-      }
-      return value;
-    })
-    .catch((error) => {
-      if (prefetchedSessions.get(sessionId) === entry) {
-        prefetchedSessions.delete(sessionId);
-      }
-      throw error;
-    });
-
-  entry = { createdAt: Date.now(), promise };
-  prefetchedSessions.set(sessionId, entry);
-  trimPrefetchedSessions();
-  return promise;
+  return data ?? null;
 }
 
 export function useSessionSummary(
@@ -146,21 +96,6 @@ export function useSessionSummary(
   return sessionId ? data : null;
 }
 
-export function useSessionSummaries(): SessionSummaryRecord[] {
-  const { data = EMPTY_SESSION_SUMMARIES } = useLiveQuery<
-    SessionSummarySqlRow,
-    SessionSummaryRecord[]
-  >({
-    sql: `
-      SELECT id, title, created_at
-      FROM sessions
-      WHERE deleted_at IS NULL
-      ORDER BY created_at DESC, id
-    `,
-  });
-  return data;
-}
-
 export function useSessionSummariesByIds(
   sessionIds: readonly string[],
 ): SessionSummaryRecord[] {
@@ -181,28 +116,6 @@ export function useSessionSummariesByIds(
     enabled,
   });
   return useHeldLiveQueryRows(data, EMPTY_SESSION_SUMMARIES, enabled);
-}
-
-export async function loadSessionEvent(
-  sessionId: string,
-): Promise<SessionEvent | null> {
-  const rows = await liveQueryClient.execute<SessionEventSqlRow>(
-    `
-      SELECT event_json
-      FROM sessions
-      WHERE id = ? AND deleted_at IS NULL
-      LIMIT 1
-    `,
-    [sessionId],
-  );
-  const eventJson = rows[0]?.event_json;
-  if (!eventJson) return null;
-
-  try {
-    return JSON.parse(eventJson) as SessionEvent;
-  } catch {
-    return null;
-  }
 }
 
 export function useUpdateSession(sessionId: string) {
@@ -291,7 +204,6 @@ function buildSessionUpdateStatement(
     ["title", changes.title],
     ["created_at", changes.created_at],
     ["folder_path", changes.folder_id],
-    ["event_json", changes.event_json],
     [
       "locked",
       changes.locked === undefined ? undefined : Number(changes.locked),
@@ -396,9 +308,14 @@ export function updateSession(
   sessionId: string,
   changes: SessionChanges,
 ): Promise<void> {
-  return enqueueDatabaseWrite(`session:${sessionId}`, async () => {
+  let filedInto: string | null = null;
+  const write = enqueueDatabaseWrite(`session:${sessionId}`, async () => {
     const now = new Date().toISOString();
     const statements: SqlStatement[] = [];
+    const previousFolder =
+      changes.folder_id === undefined
+        ? undefined
+        : await loadSessionFolderPath(sessionId);
 
     const sessionUpdate = buildSessionUpdateStatement(changes, sessionId, now);
     if (sessionUpdate) statements.push(sessionUpdate);
@@ -422,7 +339,41 @@ export function updateSession(
     }
 
     if (statements.length > 0) await executeTransaction(statements);
+    if (
+      changes.folder_id &&
+      previousFolder !== undefined &&
+      previousFolder !== changes.folder_id
+    ) {
+      filedInto = changes.folder_id;
+    }
   });
+  return write.then(() => {
+    if (filedInto) {
+      offerLateFilingRegeneration(sessionId);
+    }
+  });
+}
+
+async function loadSessionFolderPath(
+  sessionId: string,
+): Promise<string | undefined> {
+  const rows = await liveQueryClient.execute<{ folder_path: string }>(
+    `SELECT folder_path FROM sessions WHERE id = ? AND deleted_at IS NULL LIMIT 1`,
+    [sessionId],
+  );
+  return rows[0]?.folder_path;
+}
+
+// Rangement tardif (issues 502 et 534) : tout changement de dossier d'une note
+// passe ici, quel que soit l'écran d'où il vient. La proposition de
+// régénérer avec le modèle du dossier est décidée dans ~/session/late-filing
+// (chargé à la demande : il dépend de la synthèse et des notifications).
+function offerLateFilingRegeneration(sessionId: string) {
+  void import("~/session/late-filing")
+    .then(({ proposeLateFiling }) => proposeLateFiling(sessionId))
+    .catch((error) => {
+      console.error("[late-filing] failed to check the folder template", error);
+    });
 }
 
 function useHeldLiveQueryRows<T>(
@@ -441,22 +392,6 @@ function useHeldLiveQueryRows<T>(
   return data ?? previous.current;
 }
 
-function getPrefetchedSession(sessionId: string) {
-  const entry = prefetchedSessions.get(sessionId);
-  if (!entry) return undefined;
-  if (Date.now() - entry.createdAt <= SESSION_PREFETCH_TTL_MS) return entry;
-  prefetchedSessions.delete(sessionId);
-  return undefined;
-}
-
-function trimPrefetchedSessions() {
-  while (prefetchedSessions.size > MAX_PREFETCHED_SESSIONS) {
-    const oldestSessionId = prefetchedSessions.keys().next().value;
-    if (!oldestSessionId) return;
-    prefetchedSessions.delete(oldestSessionId);
-  }
-}
-
 function mapSessionRow(row: SessionSqlRow): SessionRecord {
   let rawMd = row.raw_body;
   if (rawMd && row.raw_body_format === "markdown") {
@@ -472,7 +407,7 @@ function mapSessionRow(row: SessionSqlRow): SessionRecord {
     user_id: row.owner_user_id,
     created_at: row.created_at,
     folder_id: row.folder_path,
-    event_json: row.event_json,
+    welcome_note: row.welcome_note ?? "",
     title: row.title,
     raw_md: rawMd,
     raw_template_id: row.raw_template_id,

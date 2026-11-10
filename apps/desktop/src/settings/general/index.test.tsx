@@ -27,10 +27,6 @@ vi.mock("@tanstack/react-query", () => ({
   }),
 }));
 
-vi.mock("~/billing/billing-context", () => ({
-  useBillingAccess: () => ({ isPro: true }),
-}));
-
 vi.mock("~/settings/queries", () => ({
   setSettingValue: vi.fn(),
   useSetSettingValues: () => mocks.setSettingValues,
@@ -59,6 +55,9 @@ vi.mock("./notification", () => ({ NotificationSettingsView: () => null }));
 vi.mock("./permissions", () => ({ Permissions: () => null }));
 vi.mock("./single-language-model-hint", () => ({
   SingleLanguageModelHint: () => null,
+}));
+vi.mock("./speaker-device", () => ({
+  useSpeakerDeviceSetting: () => undefined,
 }));
 vi.mock("./storage", () => ({ StorageSettingsView: () => null }));
 vi.mock("./timezone", () => ({ TimezoneSelector: () => null }));
@@ -143,18 +142,18 @@ describe("SettingsApp", () => {
     render(<SettingsMeetings />);
 
     const props = mocks.meetingSettingsProps.mock.lastCall?.[0] as {
-      autoStartScheduledMeetings: {
+      autoStopMeetings: {
         value: boolean;
         onChange: (value: boolean) => void;
       };
     };
-    expect(props.autoStartScheduledMeetings.value).toBe(true);
+    expect(props.autoStopMeetings.value).toBe(true);
 
-    act(() => props.autoStartScheduledMeetings.onChange(false));
+    act(() => props.autoStopMeetings.onChange(false));
 
     await waitFor(() => {
       expect(mocks.setSettingValues).toHaveBeenCalledWith(
-        expect.objectContaining({ auto_start_scheduled_meetings: false }),
+        expect.objectContaining({ auto_stop_meetings: false }),
       );
     });
   });

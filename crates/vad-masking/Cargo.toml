@@ -7,9 +7,7 @@ license = "MIT"
 [dev-dependencies]
 clap = { workspace = true, features = ["derive"] }
 hound = { workspace = true }
-rodio = { workspace = true }
 syntheo-audacity = { workspace = true }
-syntheo-data = { workspace = true }
 
 [dependencies]
 syntheo-audio-utils = { workspace = true }

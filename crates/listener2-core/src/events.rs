@@ -22,6 +22,7 @@ pub enum BatchErrorCode {
     ProgressiveStartFailed,
     ProgressiveStreamError,
     ProgressiveStreamTimeout,
+    RealtimeStreamFailed,
 }
 
 #[derive(serde::Serialize, Clone)]

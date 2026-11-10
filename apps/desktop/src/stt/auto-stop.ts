@@ -1,7 +1,6 @@
 import { t } from "@lingui/core/macro";
 
 import { commands as notificationCommands } from "@syntheo/plugin-notification";
-import { parseEventInstant } from "@syntheo/utils";
 
 import {
   AUTO_STOP_CONFIRM_TIMEOUT_SECONDS,
@@ -17,24 +16,12 @@ import {
   type MicApp,
 } from "./meeting-apps";
 
-import { loadSessionEvent } from "~/session/queries";
-
 export const AUTO_STOP_CONFIRM_DELAY_MS = 5_000;
 export const AUTO_STOP_ACCESSIBILITY_TIMEOUT_MS = 10_000;
-const AUTO_STOP_CALENDAR_EARLY_START_BUFFER_MS = 5 * 60_000;
-export const AUTO_STOP_EVENT_END_GRACE_MS = 10 * 60_000;
 export const AUTO_STOP_NETWORK_HOLD_MS = 8 * 60_000;
 export const AUTO_STOP_RECENT_OFFLINE_MS = 60_000;
 
 const UNRELIABLE_AUTO_STOP_APP_IDS = new Set(["com.kakao.KakaoTalkMac"]);
-
-function parseEventTimeMs(value: string | undefined): number | null {
-  if (!value) {
-    return null;
-  }
-
-  return parseEventInstant(value)?.getTime() ?? null;
-}
 
 export function shouldPromptBeforeAutoStopping({
   appIds,
@@ -48,47 +35,7 @@ export function shouldPromptBeforeAutoStopping({
   );
 }
 
-export async function getNetworkInterruptionDeadlineMs({
-  sessionId,
-  nowMs,
-}: {
-  sessionId: string | null;
-  nowMs: number;
-}): Promise<number | null> {
-  if (!sessionId) {
-    return null;
-  }
-
-  const event = await loadSessionEvent(sessionId);
-  if (!event || event.is_all_day) {
-    return null;
-  }
-
-  const endMs = parseEventTimeMs(event.ended_at);
-  if (!endMs) {
-    return null;
-  }
-
-  const startMs = parseEventTimeMs(event.started_at);
-  if (startMs && nowMs < startMs - AUTO_STOP_CALENDAR_EARLY_START_BUFFER_MS) {
-    return null;
-  }
-
-  const deadlineMs = endMs + AUTO_STOP_EVENT_END_GRACE_MS;
-  return deadlineMs > nowMs ? deadlineMs : null;
-}
-
-export function resolveNetworkHoldUntilMs({
-  calendarDeadlineMs,
-  nowMs,
-}: {
-  calendarDeadlineMs: number | null;
-  nowMs: number;
-}) {
-  if (calendarDeadlineMs != null && calendarDeadlineMs > nowMs) {
-    return calendarDeadlineMs;
-  }
-
+export function resolveNetworkHoldUntilMs(nowMs: number) {
   return nowMs + AUTO_STOP_NETWORK_HOLD_MS;
 }
 

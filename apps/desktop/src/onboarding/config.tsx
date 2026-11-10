@@ -2,17 +2,12 @@ import { platform } from "@tauri-apps/plugin-os";
 
 import type { SectionStatus } from "./shared";
 
-export type OnboardingStep = "permissions" | "calendar" | "imports" | "final";
+export type OnboardingStep = "permissions" | "final";
 
-// Pas d'étape compte : Syntheo n'a ni compte ni session. Le calendrier local
-// (Apple Calendar) n'existe que sur macOS.
-const STEPS_MACOS: OnboardingStep[] = [
-  "permissions",
-  "calendar",
-  "imports",
-  "final",
-];
-const STEPS_OTHER: OnboardingStep[] = ["imports", "final"];
+// Pas d'étape compte : Syntheo n'a ni compte ni session. Les autorisations
+// système ne se demandent que sur macOS.
+const STEPS_MACOS: OnboardingStep[] = ["permissions", "final"];
+const STEPS_OTHER: OnboardingStep[] = ["final"];
 
 function getOnboardingSteps(): OnboardingStep[] {
   return platform() === "macos" ? STEPS_MACOS : STEPS_OTHER;

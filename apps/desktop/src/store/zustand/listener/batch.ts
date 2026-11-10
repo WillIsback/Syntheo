@@ -6,15 +6,11 @@ import type {
   BatchStreamEvent,
 } from "@syntheo/plugin-transcription";
 
+import { batchPreviewResult, getBatchStreamPercentage } from "./batch-preview";
+import { transformBatch } from "./batch-transform";
 import type { BatchPersistCallback } from "./transcript";
-import { transformWordEntries, type WordEntry } from "./utils";
 
 import { type RuntimeSpeakerHint, type WordLike } from "~/stt/segment";
-import {
-  createTranscriptTimingMetadata,
-  getValidTimingSource,
-  type TranscriptTimingSource,
-} from "~/stt/timing";
 
 type BatchPhase = "importing" | "transcribing";
 type BatchTerminalReason = "failed" | "timed_out" | "stopped";
@@ -30,8 +26,14 @@ export type BatchState = {
       terminalReason?: BatchTerminalReason;
       errorCode?: BatchErrorCode;
       recovered?: boolean;
+      // Début de la phase en cours : base de l'estimation de la capsule.
+      startedAtMs?: number;
     }
   >;
+  // Imports audio en cours (issue 526), de la copie du fichier à la fin de
+  // la transcription : l'entrée `batch` disparaît entre les deux phases.
+  // `audioSeconds` : durée de l'audio importé, `null` si inconnue.
+  batchImport: Record<string, { audioSeconds: number | null }>;
   batchPreview: Record<
     string,
     {
@@ -60,20 +62,18 @@ export type BatchActions = {
   handleBatchStopped: (sessionId: string) => void;
   updateBatchProgress: (sessionId: string, percentage: number) => void;
   clearBatchSession: (sessionId: string) => void;
+  handleImportStarted: (sessionId: string, audioSeconds: number | null) => void;
+  handleImportEnded: (sessionId: string) => void;
   setBatchPersist: (sessionId: string, callback: BatchPersistCallback) => void;
   clearBatchPersist: (sessionId: string) => void;
 };
-
-export const EMPTY_BATCH_TRANSCRIPT_ERROR =
-  "No speech was detected in the audio.";
-const SYNTHETIC_TEXT_WORD_SECONDS = 0.4;
-const MIN_SYNTHETIC_TEXT_WORD_SECONDS = 0.05;
 
 export const createBatchSlice = <T extends BatchState>(
   set: StoreApi<T>["setState"],
   get: StoreApi<T>["getState"],
 ): BatchState & BatchActions => ({
   batch: {},
+  batchImport: {},
   batchPreview: {},
   batchPersist: {},
 
@@ -86,6 +86,7 @@ export const createBatchSlice = <T extends BatchState>(
           percentage: 0,
           isComplete: false,
           phase: phase ?? "transcribing",
+          startedAtMs: Date.now(),
           terminalReason: undefined,
           error: undefined,
           errorCode: undefined,
@@ -111,6 +112,7 @@ export const createBatchSlice = <T extends BatchState>(
           isComplete: false,
           phase: "transcribing",
           recovered: true,
+          startedAtMs: Date.now(),
         },
       },
     }));
@@ -192,6 +194,7 @@ export const createBatchSlice = <T extends BatchState>(
           error: undefined,
           errorCode: undefined,
           recovered: state.batch[sessionId]?.recovered,
+          startedAtMs: state.batch[sessionId]?.startedAtMs,
         },
       },
       batchPreview: {
@@ -284,6 +287,24 @@ export const createBatchSlice = <T extends BatchState>(
     });
   },
 
+  handleImportStarted: (sessionId, audioSeconds) => {
+    set((state) => ({
+      ...state,
+      batchImport: { ...state.batchImport, [sessionId]: { audioSeconds } },
+    }));
+  },
+
+  handleImportEnded: (sessionId) => {
+    set((state) => {
+      if (!(sessionId in state.batchImport)) {
+        return state;
+      }
+
+      const { [sessionId]: _, ...rest } = state.batchImport;
+      return { ...state, batchImport: rest };
+    });
+  },
+
   setBatchPersist: (sessionId, callback) => {
     set((state) => ({
       ...state,
@@ -308,506 +329,3 @@ export const createBatchSlice = <T extends BatchState>(
     });
   },
 });
-
-function batchPreviewResult(
-  currentPreview: {
-    wordsByChannel: Record<number, WordLike[]>;
-    hintsByChannel: Record<number, RuntimeSpeakerHint[]>;
-  },
-  event: BatchStreamEvent,
-): {
-  nextPreview: {
-    wordsByChannel: Record<number, WordLike[]>;
-    hintsByChannel: Record<number, RuntimeSpeakerHint[]>;
-  };
-  words: WordLike[];
-  hints: RuntimeSpeakerHint[];
-  shouldPersist: boolean;
-} {
-  if (event.type === "result") {
-    const [words, hints] = transformBatch(event.response);
-    return {
-      nextPreview: batchPreviewFromWords(words, hints),
-      words,
-      hints,
-      shouldPersist: true,
-    };
-  }
-
-  const nextPreview = mergeBatchPreview(currentPreview, event);
-  const [words, hints] = flattenBatchPreview(nextPreview);
-
-  return {
-    nextPreview,
-    words,
-    hints,
-    shouldPersist: event.type === "segment",
-  };
-}
-
-function transformBatch(
-  response: BatchResponse,
-): [WordLike[], RuntimeSpeakerHint[]] {
-  const allWords: WordLike[] = [];
-  const allHints: RuntimeSpeakerHint[] = [];
-  let wordOffset = 0;
-
-  response.results.channels.forEach((channel, channelIndex) => {
-    const alternative = channel.alternatives[0];
-    if (!alternative) {
-      return;
-    }
-
-    const channelTimingSource = getChannelTimingSource(response, channelIndex);
-    const timingSource =
-      channelTimingSource ??
-      getWordTimingSourceForBatchResponse(
-        response,
-        Boolean(alternative.words?.length),
-        "synthetic_text",
-      );
-    const wordEntries = attachSyntheticChunkStarts(
-      markUnalignedDiarizedWordsSynthetic(
-        wordEntriesFromTranscript(alternative.words, alternative.transcript, {
-          channel: channelIndex,
-          durationSeconds: getBatchDurationSeconds(response),
-          timingSource,
-        }),
-        channelTimingSource,
-      ),
-      response,
-      channelIndex,
-    );
-
-    const [transformedWords, hints] = transformWordEntries(
-      wordEntries,
-      alternative.transcript,
-      channelIndex,
-      { timingSource },
-    );
-    const words = transformedWords.map((word, index) => ({
-      ...word,
-      metadata: wordEntries[index]?.metadata ?? word.metadata,
-    }));
-
-    hints.forEach((hint) => {
-      allHints.push({
-        ...hint,
-        wordIndex: hint.wordIndex + wordOffset,
-      });
-    });
-    allWords.push(...words);
-    wordOffset += words.length;
-  });
-
-  return [allWords, allHints];
-}
-
-function getChannelTimingSource(
-  response: BatchResponse,
-  channel: number,
-): TranscriptTimingSource | undefined {
-  const metadata = response.metadata;
-  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
-    return undefined;
-  }
-  const sources = (metadata as Record<string, unknown>)
-    .timing_sources_by_channel;
-  return Array.isArray(sources)
-    ? getValidTimingSource(sources[channel])
-    : undefined;
-}
-
-function markUnalignedDiarizedWordsSynthetic(
-  entries: WordEntry[],
-  timingSource: TranscriptTimingSource | undefined,
-): WordEntry[] {
-  // Soniqo supplies per-channel provenance for its unaligned fallback words.
-  // Other providers' segment timestamps remain useful without speaker labels.
-  if (timingSource !== "provider_segment_interpolated") return entries;
-  return entries.map((entry) =>
-    typeof entry.speaker === "number"
-      ? entry
-      : {
-          ...entry,
-          metadata: createTranscriptTimingMetadata(
-            "synthetic_text",
-            entry.metadata,
-          ),
-        },
-  );
-}
-
-function attachSyntheticChunkStarts(
-  entries: WordEntry[],
-  response: BatchResponse,
-  channel: number,
-): WordEntry[] {
-  const metadata = response.metadata;
-  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
-    return entries;
-  }
-  const rawChunks = (metadata as Record<string, unknown>).synthetic_chunks;
-  if (!Array.isArray(rawChunks)) return entries;
-
-  const chunks = rawChunks.filter(
-    (
-      chunk,
-    ): chunk is {
-      channel: number;
-      start_seconds: number;
-      end_seconds: number;
-    } =>
-      chunk !== null &&
-      typeof chunk === "object" &&
-      chunk.channel === channel &&
-      typeof chunk.start_seconds === "number" &&
-      Number.isFinite(chunk.start_seconds) &&
-      typeof chunk.end_seconds === "number" &&
-      Number.isFinite(chunk.end_seconds) &&
-      chunk.end_seconds > chunk.start_seconds,
-  );
-  if (!chunks.length) return entries;
-
-  const orderedChunks = [...chunks].sort(
-    (left, right) => left.start_seconds - right.start_seconds,
-  );
-  const hasOverlaps = orderedChunks.some(
-    (chunk, index) =>
-      index > 0 && chunk.start_seconds < orderedChunks[index - 1].end_seconds,
-  );
-  const findChunk = (start: number) => {
-    // Preserve the original first-match behavior for malformed overlapping chunks.
-    if (hasOverlaps) {
-      return chunks.find(
-        (chunk) => start >= chunk.start_seconds && start < chunk.end_seconds,
-      );
-    }
-    let left = 0;
-    let right = orderedChunks.length;
-    while (left < right) {
-      const middle = Math.floor((left + right) / 2);
-      if (orderedChunks[middle].start_seconds <= start) left = middle + 1;
-      else right = middle;
-    }
-    const chunk = orderedChunks[left - 1];
-    return chunk && start < chunk.end_seconds ? chunk : undefined;
-  };
-
-  return entries.map((entry) => {
-    const entryTiming = (
-      entry.metadata?.timing as Record<string, unknown> | undefined
-    )?.source;
-    if (entryTiming !== "synthetic_text") return entry;
-    const chunk = findChunk(entry.start);
-    if (!chunk) return entry;
-    const metadata = createTranscriptTimingMetadata(
-      "synthetic_text",
-      entry.metadata,
-    );
-    return {
-      ...entry,
-      metadata: {
-        ...metadata,
-        timing: {
-          ...(metadata.timing as Record<string, unknown>),
-          chunk_start_ms: Math.round(chunk.start_seconds * 1000),
-        },
-      },
-    };
-  });
-}
-
-function flattenBatchPreview(preview: {
-  wordsByChannel: Record<number, WordLike[]>;
-  hintsByChannel: Record<number, RuntimeSpeakerHint[]>;
-}): [WordLike[], RuntimeSpeakerHint[]] {
-  const allWords: WordLike[] = [];
-  const allHints: RuntimeSpeakerHint[] = [];
-  let wordOffset = 0;
-
-  Object.keys(preview.wordsByChannel)
-    .map(Number)
-    .sort((a, b) => a - b)
-    .forEach((channel) => {
-      const words = preview.wordsByChannel[channel] ?? [];
-      const hints = preview.hintsByChannel[channel] ?? [];
-
-      hints.forEach((hint) => {
-        allHints.push({
-          ...hint,
-          wordIndex: hint.wordIndex + wordOffset,
-        });
-      });
-      allWords.push(...words);
-      wordOffset += words.length;
-    });
-
-  return [allWords, allHints];
-}
-
-function batchPreviewFromWords(
-  words: WordLike[],
-  hints: RuntimeSpeakerHint[],
-): {
-  wordsByChannel: Record<number, WordLike[]>;
-  hintsByChannel: Record<number, RuntimeSpeakerHint[]>;
-} {
-  const wordsByChannel: Record<number, WordLike[]> = {};
-  const hintsByChannel: Record<number, RuntimeSpeakerHint[]> = {};
-  const channelIndexByWordIndex = new Map<
-    number,
-    { channel: number; wordIndex: number }
-  >();
-
-  words.forEach((word, wordIndex) => {
-    const channelWords = wordsByChannel[word.channel] ?? [];
-    if (!(word.channel in wordsByChannel)) {
-      wordsByChannel[word.channel] = channelWords;
-      hintsByChannel[word.channel] = [];
-    }
-
-    channelIndexByWordIndex.set(wordIndex, {
-      channel: word.channel,
-      wordIndex: channelWords.length,
-    });
-    channelWords.push(word);
-  });
-
-  hints.forEach((hint) => {
-    const target = channelIndexByWordIndex.get(hint.wordIndex);
-    if (!target) {
-      return;
-    }
-
-    hintsByChannel[target.channel]!.push({
-      ...hint,
-      wordIndex: target.wordIndex,
-    });
-  });
-
-  return { wordsByChannel, hintsByChannel };
-}
-
-function mergeBatchPreview(
-  preview: {
-    wordsByChannel: Record<number, WordLike[]>;
-    hintsByChannel: Record<number, RuntimeSpeakerHint[]>;
-  },
-  event: BatchStreamEvent,
-) {
-  if (event.type !== "segment") {
-    return preview;
-  }
-
-  const response = event.response;
-  if (response.type !== "Results") {
-    return preview;
-  }
-
-  const channelIndex = response.channel_index[0];
-  const alternative = response.channel.alternatives[0];
-  if (channelIndex === undefined || !alternative) {
-    return preview;
-  }
-
-  const timingSource = getWordTimingSourceForBatchResponse(
-    response,
-    Boolean(alternative.words?.length),
-    "provider_segment_interpolated",
-  );
-  const wordEntries = wordEntriesFromTranscript(
-    alternative.words,
-    alternative.transcript,
-    {
-      channel: channelIndex,
-      startSeconds: response.start,
-      durationSeconds: response.duration,
-      timingSource,
-    },
-  );
-
-  const [incomingWords, incomingHints] = transformWordEntries(
-    wordEntries,
-    alternative.transcript,
-    channelIndex,
-    { timingSource },
-  );
-  if (incomingWords.length === 0) {
-    return preview;
-  }
-
-  if (response.from_finalize) {
-    return {
-      wordsByChannel: {
-        ...preview.wordsByChannel,
-        [channelIndex]: incomingWords,
-      },
-      hintsByChannel: {
-        ...preview.hintsByChannel,
-        [channelIndex]: incomingHints,
-      },
-    };
-  }
-
-  const existingWords = preview.wordsByChannel[channelIndex] ?? [];
-  const existingHints = preview.hintsByChannel[channelIndex] ?? [];
-  const firstStartMs = incomingWords[0]?.start_ms ?? 0;
-  const lastEndMs = incomingWords[incomingWords.length - 1]?.end_ms ?? 0;
-
-  const beforeWords = existingWords.filter(
-    (word) => word.end_ms <= firstStartMs,
-  );
-  const afterWords = existingWords.filter((word) => word.start_ms >= lastEndMs);
-  const mergedWords = [...beforeWords, ...incomingWords, ...afterWords];
-
-  const hintsBefore = existingHints.filter((hint) => {
-    const word = existingWords[hint.wordIndex];
-    return word && word.end_ms <= firstStartMs;
-  });
-  const afterIndexMap = new Map<number, number>();
-  let afterIndex = 0;
-  for (let index = 0; index < existingWords.length; index += 1) {
-    if (existingWords[index].start_ms >= lastEndMs) {
-      afterIndexMap.set(
-        index,
-        beforeWords.length + incomingWords.length + afterIndex,
-      );
-      afterIndex += 1;
-    }
-  }
-  const hintsAfter = existingHints
-    .filter((hint) => afterIndexMap.has(hint.wordIndex))
-    .map((hint) => ({
-      ...hint,
-      wordIndex: afterIndexMap.get(hint.wordIndex)!,
-    }));
-  const adjustedIncomingHints = incomingHints.map((hint) => ({
-    ...hint,
-    wordIndex: beforeWords.length + hint.wordIndex,
-  }));
-
-  return {
-    wordsByChannel: {
-      ...preview.wordsByChannel,
-      [channelIndex]: mergedWords,
-    },
-    hintsByChannel: {
-      ...preview.hintsByChannel,
-      [channelIndex]: [...hintsBefore, ...adjustedIncomingHints, ...hintsAfter],
-    },
-  };
-}
-
-function getBatchStreamPercentage(event: BatchStreamEvent): number {
-  switch (event.type) {
-    case "progress":
-    case "segment":
-      return event.percentage;
-    case "result":
-    case "terminal":
-      return 1;
-    case "error":
-      return 0;
-  }
-}
-
-function wordEntriesFromTranscript(
-  entries: WordEntry[] | null | undefined,
-  transcript: string,
-  {
-    channel,
-    startSeconds = 0,
-    durationSeconds,
-    timingSource,
-  }: {
-    channel: number;
-    startSeconds?: number;
-    durationSeconds?: number;
-    timingSource: TranscriptTimingSource;
-  },
-): WordEntry[] {
-  if (entries?.length) {
-    return entries.map((entry) => ({
-      ...entry,
-      metadata: createTranscriptTimingMetadata(timingSource, entry.metadata),
-    }));
-  }
-
-  if (!transcript.trim()) {
-    return [];
-  }
-
-  const tokens = transcript.trim().split(/\s+/).filter(Boolean);
-  if (!tokens.length) {
-    return [];
-  }
-
-  const duration =
-    timingSource === "synthetic_text"
-      ? tokens.length * SYNTHETIC_TEXT_WORD_SECONDS
-      : Math.max(
-          durationSeconds && Number.isFinite(durationSeconds)
-            ? durationSeconds
-            : tokens.length * SYNTHETIC_TEXT_WORD_SECONDS,
-          tokens.length * MIN_SYNTHETIC_TEXT_WORD_SECONDS,
-        );
-
-  return tokens.map((token, index) => ({
-    word: token,
-    punctuated_word: token,
-    start: startSeconds + (index / tokens.length) * duration,
-    end: startSeconds + ((index + 1) / tokens.length) * duration,
-    channel,
-    speaker: null,
-    metadata: createTranscriptTimingMetadata(timingSource),
-  }));
-}
-
-function getWordTimingSourceForBatchResponse(
-  response: { metadata?: unknown },
-  hasProviderWords: boolean,
-  fallbackWithoutWords: TranscriptTimingSource,
-): TranscriptTimingSource {
-  if (!hasProviderWords) {
-    return fallbackWithoutWords;
-  }
-
-  const explicitSource = getBatchResponseTimingSource(response);
-  if (explicitSource) {
-    return explicitSource;
-  }
-
-  return "provider_word";
-}
-
-function getBatchResponseTimingSource(response: {
-  metadata?: unknown;
-}): TranscriptTimingSource | undefined {
-  const metadata = response.metadata;
-  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
-    return undefined;
-  }
-
-  const record = metadata as Record<string, unknown>;
-  const timing = record.timing;
-  if (timing && typeof timing === "object" && !Array.isArray(timing)) {
-    return getValidTimingSource((timing as Record<string, unknown>).source);
-  }
-
-  return getValidTimingSource(record.timing_source);
-}
-
-function getBatchDurationSeconds(response: BatchResponse): number | undefined {
-  const metadata = response.metadata;
-  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
-    return undefined;
-  }
-
-  const duration = (metadata as Record<string, unknown>).duration;
-  return typeof duration === "number" &&
-    Number.isFinite(duration) &&
-    duration > 0
-    ? duration
-    : undefined;
-}

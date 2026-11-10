@@ -1,6 +1,10 @@
+import { Window } from "@tauri-apps/api/window";
+
 import { commands as windowsCommands } from "@syntheo/plugin-windows";
 
 import type { FloatingRouteState } from "./route-state";
+
+const FLOATING_BAR_WINDOW_LABEL = "floating-bar";
 
 let sentTranscriptSessionId: string | null = null;
 let sentTranscriptBubbles: FloatingRouteState["transcriptBubbles"] | null =
@@ -19,6 +23,10 @@ export function createFloatingMeetingWindowSynchronizer(
   let shownSessionId: string | null = null;
   let appliedRouteState: FloatingRouteState | null = null;
   let nativeCommandsUnavailable = false;
+  // Issue 527 : pastille d'écoute retirée de l'écran pendant que la note écoutée
+  // est visible au premier plan. La dictée n'est jamais concernée.
+  let concealRequested = false;
+  let windowConcealed = false;
   let running: Promise<void> | null = null;
   let disposeRequested = false;
   let disposed = false;
@@ -26,6 +34,25 @@ export function createFloatingMeetingWindowSynchronizer(
 
   const resolveIdleWaiters = () => {
     idleWaiters.splice(0).forEach((resolve) => resolve());
+  };
+  const applyConcealment = async (
+    routeState: FloatingRouteState | null,
+    conceal: boolean,
+  ) => {
+    if (!routeState) {
+      // `floatingBarHide` retire la fenêtre : rien à réafficher ensuite.
+      windowConcealed = false;
+    } else if (conceal) {
+      if (!windowConcealed) await setFloatingBarWindowVisible(false);
+      windowConcealed = true;
+    } else if (windowConcealed) {
+      windowConcealed = false;
+      // Même session : la fenêtre revient telle quelle, à sa dernière position.
+      // Sinon, `floatingBarShow` l'affiche juste après.
+      if (shownSessionId === routeState.sessionId) {
+        await setFloatingBarWindowVisible(true);
+      }
+    }
   };
   const applyDesiredRevision = async () => {
     const revision = desiredRevision;
@@ -36,14 +63,22 @@ export function createFloatingMeetingWindowSynchronizer(
       return;
     }
 
+    const conceal = concealRequested && !!routeState && !routeState.dictation;
+    // Masquée avant d'avoir été montrée pour cette session : l'affichage
+    // (`floatingBarShow`, qui place la pastille) attend la fin du masquage.
+    const showPending = conceal && shownSessionId !== routeState?.sessionId;
     let outcome: FloatingSyncOutcome;
     try {
+      await applyConcealment(routeState, conceal);
       outcome = await syncFloatingMeetingWindow(
         routeState,
-        shownSessionId,
+        showPending ? (routeState?.sessionId ?? null) : shownSessionId,
         appliedRouteState,
         () => revision === desiredRevision || desiredRouteState !== null,
       );
+      if (showPending && outcome.kind === "synced") {
+        outcome = { kind: "synced", sessionId: shownSessionId };
+      }
     } catch (error) {
       console.error(
         "[meeting-float] failed to synchronize the floating panel",
@@ -114,6 +149,15 @@ export function createFloatingMeetingWindowSynchronizer(
         return;
       }
       desiredRouteState = routeState;
+      desiredRevision += 1;
+      schedule();
+    },
+    /** Masque ou réaffiche la pastille d'écoute sans la recréer (issue 527). */
+    setConcealed(concealed: boolean) {
+      if (disposeRequested || concealed === concealRequested) {
+        return;
+      }
+      concealRequested = concealed;
       desiredRevision += 1;
       schedule();
     },
@@ -200,6 +244,8 @@ export async function showFloatingMeetingWindow(
           ? routeState.transcriptBubbles
           : null,
         transcriptNotice: routeState.transcriptNotice ?? null,
+        elapsedSeconds: routeState.elapsedSeconds ?? null,
+        micMuted: routeState.micMuted ?? null,
       });
   if (!shouldContinue()) {
     await hideFloatingMeetingPanel();
@@ -245,6 +291,8 @@ function isAmplitudeOnlyFloatingRouteUpdate(
     previousState.amplitude !== nextState.amplitude &&
     previousState.sessionId === nextState.sessionId &&
     previousState.title === nextState.title &&
+    previousState.elapsedSeconds === nextState.elapsedSeconds &&
+    previousState.micMuted === nextState.micMuted &&
     JSON.stringify(previousState.dictation) ===
       JSON.stringify(nextState.dictation) &&
     previousState.status === nextState.status &&
@@ -270,6 +318,25 @@ export async function hideFloatingMeetingPanel() {
     console.error(
       "[meeting-float] failed to hide the floating panel",
       result.error,
+    );
+  }
+}
+
+/**
+ * Masque ou réaffiche la fenêtre de la pastille sans `floatingBarHide` ni
+ * `floatingBarShow` : l'état publié et la position choisie par l'utilisateur
+ * restent, et le calque Wayland (layer-shell) est seulement démappé puis
+ * remappé, jamais recréé (issue 527).
+ */
+async function setFloatingBarWindowVisible(visible: boolean) {
+  try {
+    const window = await Window.getByLabel(FLOATING_BAR_WINDOW_LABEL);
+    if (!window) return;
+    await (visible ? window.show() : window.hide());
+  } catch (error) {
+    console.error(
+      "[meeting-float] failed to toggle the floating panel visibility",
+      error,
     );
   }
 }

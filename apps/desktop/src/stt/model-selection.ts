@@ -35,14 +35,6 @@ export function getDefaultSttModel(provider?: string | null) {
   return provider ? DEFAULT_EXTERNAL_STT_MODELS[provider] : undefined;
 }
 
-// Native `<datalist>` suggestions for on-prem providers that cannot be
-// discovered from the server. Empty means free text only.
-export function getSttModelSuggestions(
-  provider?: string | null,
-): readonly string[] {
-  return provider === "nvidia" ? NVIDIA_NIM_ASR_MODELS : [];
-}
-
 export function normalizeStoredSttSelection(
   provider: string | undefined,
   model: string | undefined,

@@ -23,6 +23,8 @@ type ToastOptions = {
   description?: ReactNode;
   descriptionClassName?: string;
   duration?: number;
+  /** Erreur : garde `duration` au lieu du plafond de 5 s (toast à actions). */
+  keepDuration?: boolean;
   dismissible?: boolean;
   closeButton?: boolean;
   icon?: ReactNode;
@@ -41,7 +43,7 @@ function showToast(
   const id = options.id ?? `notification-${++nextToastId}`;
   const requestedDuration = options.duration;
   const durationMs =
-    tone === "error" && requestedDuration !== Infinity
+    tone === "error" && requestedDuration !== Infinity && !options.keepDuration
       ? requestedDuration === undefined || !Number.isFinite(requestedDuration)
         ? TOAST_DURATIONS.error
         : Math.min(requestedDuration, TOAST_DURATIONS.error)

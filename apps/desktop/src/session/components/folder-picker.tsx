@@ -111,16 +111,22 @@ export function FolderPicker({
   );
 }
 
+// `suggestedPath` (issue 498) : un dossier proposé en tête de liste, avec
+// `suggestionHint` pour dire pourquoi ; il n'est appliqué qu'au clic.
 export function FolderPickerContent({
   sessionId,
   onClose,
   selectedPath,
   onSelectFolder,
+  suggestedPath,
+  suggestionHint,
 }: {
   sessionId?: string;
   onClose: () => void;
   selectedPath?: string;
   onSelectFolder?: (folderPath: string) => void | Promise<void>;
+  suggestedPath?: string | null;
+  suggestionHint?: string;
 }) {
   const { t } = useLingui();
   const [query, setQuery] = useState("");
@@ -143,6 +149,8 @@ export function FolderPickerContent({
   const canCreateFolder =
     Boolean(normalizedQuery) && !folders.includes(normalizedQuery ?? "");
   const folderName = normalizedQuery ?? "";
+  const suggestion =
+    suggestedPath && suggestedPath !== currentPath ? suggestedPath : null;
 
   const handleSelect = useCallback(
     (nextFolderId: string) => {
@@ -177,6 +185,7 @@ export function FolderPickerContent({
       folderPaths,
       onClose,
       onSelectFolder,
+      sessionId,
       setSelectedPath,
       updateSession,
     ],
@@ -217,8 +226,28 @@ export function FolderPickerContent({
                   : t`No folders found.`
                 : t`No folders yet.`}
             </CommandEmpty>
+            {suggestion ? (
+              <CommandGroup heading={t`Suggested`}>
+                <CommandItem
+                  value={`suggested-folder ${suggestion}`}
+                  onSelect={() => handleSelect(suggestion)}
+                  className="cursor-pointer"
+                >
+                  <TemplateIconGlyph
+                    icon={resolvedFolderIcon(suggestion, folderIcons)}
+                    className="size-4 opacity-70"
+                  />
+                  <span className="min-w-0 flex-1 truncate">{suggestion}</span>
+                  {suggestionHint ? (
+                    <span className="text-muted-foreground shrink-0 text-xs">
+                      {suggestionHint}
+                    </span>
+                  ) : null}
+                </CommandItem>
+              </CommandGroup>
+            ) : null}
             {folders.length > 0 ? (
-              <CommandGroup>
+              <CommandGroup heading={suggestion ? t`Folders` : undefined}>
                 {folders.map((path) => (
                   <CommandItem
                     key={path}

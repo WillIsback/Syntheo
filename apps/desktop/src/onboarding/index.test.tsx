@@ -28,10 +28,6 @@ vi.mock("@syntheo/plugin-sfx", () => ({
   },
 }));
 
-vi.mock("./calendar", () => ({ CalendarSection: () => null }));
-vi.mock("./imports", () => ({
-  ImportSection: () => <div data-testid="import-section" />,
-}));
 vi.mock("./permissions", () => ({ PermissionsSection: () => null }));
 vi.mock("./final", () => ({
   FinalDescription: () => null,
@@ -63,7 +59,6 @@ it("affiche l'accueil guidé sur un fond uni, sans vidéo ni flou (issue 320)", 
   expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
     "Welcome to Syntheo",
   );
-  expect(screen.getByTestId("import-section")).toBeTruthy();
 
   expect(container.querySelector("video")).toBeNull();
   expect(container.querySelector("source")).toBeNull();

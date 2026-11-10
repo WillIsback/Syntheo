@@ -1,0 +1,153 @@
+---
+title: "Carte du code : CLI et MCP"
+description: "Ce que contiennent apps/cli et les crates qui servent la CLI syntheo et son serveur MCP, et les pages de doc qui en dépendent."
+---
+
+Cette page relie le code de la CLI `syntheo` et de son serveur MCP aux pages de documentation qu'il faut mettre à jour quand il change. Pour la vue d'ensemble du monorepo, voir [Architecture](/architecture).
+
+## Contrats vérifiés par les tests
+
+Deux tests de `apps/cli` lisent directement la documentation publique. Un changement de commande ou d'outil MCP casse la CI tant que ces pages ne suivent pas :
+
+| Test | Fichier | Ce qu'il vérifie |
+| --- | --- | --- |
+| `public_docs_and_skill_cover_the_command_contract` | `apps/cli/src/cli.rs` | Chaque sous-commande feuille et chaque option `--long` apparaît dans `docs/reference/cli.mdx`, et chaque sous-commande dans `skills/syntheo/references/cli.md` ou `setup.md`. |
+| `cli_contract_matches_snapshot` | `apps/cli/src/cli.rs` | Le contrat JSON généré par `cli_docs::generate_json` correspond au snapshot `insta` de `apps/cli/src/snapshots/`. |
+| `client_server_handshake_lists_tools_and_resources` | `apps/cli/src/mcp/tests.rs` | Chaque outil, ses paramètres et chaque modèle de ressource (`syntheo://…`) figurent dans `docs/reference/mcp.mdx` ; outils et ressources figurent aussi dans `skills/syntheo/references/mcp.md`. Le contrat est figé dans le snapshot `mcp_contract`. |
+
+<Note>
+  `docs/AGENTS.md` désigne `apps/cli/src/cli.rs` comme contrat des commandes et `apps/cli/src/mcp/` comme contrat des outils et ressources MCP.
+</Note>
+
+## `apps/cli` : le binaire `syntheo`
+
+- **Chemin** : `apps/cli` (paquet Cargo `syntheo-cli`, binaire `syntheo`, `src/main.rs`).
+- **Rôle** : accès en ligne de commande à la base locale `app.db` et serveur MCP en stdio.
+- **Dépendances internes** : `crates/agent-access`, `crates/db-app`, `crates/db-core`. En développement seulement : `crates/cli-docs`.
+- **Pages de doc concernées** : [/reference/cli](/reference/cli), [/reference/mcp](/reference/mcp), [/reference/errors](/reference/errors), [/agents/cli](/agents/cli), [/agents/mcp](/agents/mcp), [/agents/overview](/agents/overview), [/installation](/installation), [/import-recordings](/import-recordings).
+
+### Modules
+
+| Fichier | Rôle |
+| --- | --- |
+| `src/main.rs` | Analyse les arguments avec clap. Avec `--json`, une erreur d'arguments sort en JSON (`code: "invalid_arguments"`). |
+| `src/lib.rs` | `run(args)` : aiguille chaque commande et renvoie le code de sortie. `doctor` passe avant toute ouverture de base. Expose `VERSION` (variable `APP_VERSION` à la compilation, sinon la version Cargo). |
+| `src/cli.rs` | Définition clap de toutes les commandes et options (contrat public). |
+| `src/db.rs` | Résout le chemin de la base et l'ouvre en lecture seule (`open`) ou en écriture (`open_write`). |
+| `src/output.rs` | Enveloppe JSON `{schema_version, command, data, pagination}` (`JSON_SCHEMA_VERSION = "1"`), écriture des exports sans écraser un fichier existant sauf `--force`. |
+| `src/error.rs` | Codes d'erreur stables et codes de sortie. |
+| `src/mcp/` | Serveur MCP (`rmcp`, transport stdio) : outils dans `mod.rs`, `ServerHandler` et ressources dans `handler.rs`, tests de contrat dans `tests.rs`. |
+| `src/commands/*` | Implémentation des sous-commandes. |
+
+### Commandes
+
+| Commande | Implémentation | Accès base |
+| --- | --- | --- |
+| `doctor` | `commands/doctor.rs` | Vérifie la CLI et la base sans modifier les données ; code 1 si la base n'est pas prête. |
+| `meetings list`, `folders`, `get`, `note`, `transcript`, `history`, `export` | `commands/meetings.rs` | Lecture seule. |
+| `meetings import`, `import-status` | `commands/recording_import.rs` | Écriture ; exige `--source local`. |
+| `meetings hold-list`, `hold-export` | `commands/meeting_hold.rs` | Inventaire et flux NDJSON de l'historique local pour archivage. |
+| `meetings pilot-usage` | `commands/meeting_pilot.rs` | Intervalles de capture, sans contenu ; exige `--source local`. |
+| `meetings capabilities` | `lib.rs` | N'ouvre pas la base ; décrit les capacités de capture gérée. |
+| `meetings initialize-managed`, `delete` | `commands/meeting_delete.rs` | Préparation de la base selon une politique gérée ; suppression définitive d'une réunion terminée (exige `--source local` et `--require-transcription-complete`). |
+| `proposals create`, `list`, `show`, `decline` | `commands/proposals.rs` | Écriture dans la table des propositions, jamais dans la note. |
+| `mcp` | `mcp.rs` | Écriture (propositions, imports). |
+
+Options globales : `--base` (`SYNTHEO_BASE`), `--db-path` (`SYNTHEO_DB_PATH`), `--json`. `meetings` accepte `--source` (`SYNTHEO_SOURCE`, `local` par défaut ; `auto` est un alias de `local`).
+
+### Accès à la base
+
+`db.rs` cherche la base dans cet ordre : `--db-path`, puis `--base`/`app.db`, puis le dossier de données du système. Sous ce dossier, la CLI essaie `syntheo/app.db`, puis `fr.willisback.syntheo/app.db`. Un binaire nommé `syntheo-dev` lit `fr.willisback.syntheo.dev/app.db`. Une base absente donne l'erreur `database_not_found` : la CLI ne crée ni ne migre jamais la base.
+
+### Codes d'erreur
+
+| Code | Sortie | Origine |
+| --- | --- | --- |
+| `operation_failed` | 1 | Erreur générique, dont les erreurs `Invalid`, `Conflict` et `Database` de `agent-access`. |
+| `not_found` | 2 | Réunion, proposition ou import introuvable. |
+| `database_not_found` | 3 | Fichier `app.db` absent. |
+| `output_exists` | 4 | Le fichier d'export existe déjà et `--force` manque. |
+| `invalid_arguments` | code clap | Arguments invalides avec `--json`. |
+
+Un import lancé avec `--wait` qui dépasse `--timeout` renvoie aussi le code 2, en gardant le travail en file pour `import-status`.
+
+### Serveur MCP
+
+`mcp.rs` déclare un serveur `syntheo` (outils et ressources activés) avec des instructions qui orientent l'agent vers `list_meetings` en premier et interdisent l'accès direct à SQLite.
+
+| Outils | Fonction `agent-access` |
+| --- | --- |
+| `import_recording`, `get_recording_import` | `import_recording`, `get_recording_import` |
+| `list_meetings`, `list_folders`, `get_meeting` | `list_meetings`, `list_folders`, `get_meeting` |
+| `get_meeting_transcript`, `get_recurring_meeting_history` | `get_meeting_transcript`, `get_recurring_meeting_history` |
+| `export_meeting` | `get_meeting_export` |
+| `propose_summary_edit`, `propose_memo_edit`, `list_proposals`, `get_proposal`, `decline_proposal` | `create_proposal`, `list_proposals`, `get_proposal`, `decline_proposal` |
+
+Ressources : `syntheo://meetings/{meeting_id}` (Markdown), `syntheo://meetings/{meeting_id}/transcript{?offset,limit}` (texte, limite bornée) et `syntheo://series/{series_id}` (liste Markdown de la série).
+
+## Crates au service de la CLI
+
+### `crates/agent-access`
+
+- **Chemin** : `crates/agent-access` (paquet `agent-access`, alias workspace `syntheo-agent-access`).
+- **Rôle** : opérations partagées sur les réunions, appelées par la CLI, le serveur MCP et l'application.
+- **API principale** :
+  - lecture : `list_meetings`, `list_folders`, `get_meeting`, `get_meeting_transcript`, `get_recurring_meeting_history`, `get_meeting_export`, `get_local_meeting_export`, `paginate_transcripts` ;
+  - propositions (`proposals.rs`) : `create_proposal`, `list_proposals`, `get_proposal`, `decline_proposal`, `proposal_unified_diff` ;
+  - import (`recording_import.rs`) : `import_recording`, `get_recording_import`. L'import ne passe en file que si l'application signale un worker actif : elle renouvelle un battement dans la table `local_recording_import_worker` (voir `apps/desktop/src/stt/recording-import.tsx`) ;
+  - rendu : `to_markdown`, `to_export_markdown`, `ExportLocale`, `format_export_date`, `localize_speaker_label` (`export_markdown.rs`, `transcript_render.rs`) ;
+  - limites : `DEFAULT_LIST_LIMIT` 20, `MAX_LIST_LIMIT` 200, `DEFAULT_TRANSCRIPT_LIMIT` 200, `MAX_TRANSCRIPT_LIMIT` 500, `DEFAULT_FOLDER_LIST_LIMIT` 100.
+- **Dépendances internes** : `crates/db-app`, `crates/tiptap`, `crates/transcript`.
+- **Utilisé par** : `apps/cli`, `plugins/db` (export de réunion), `plugins/local-api`, `crates/session-ingest`.
+- **Pages de doc concernées** : [/reference/cli](/reference/cli), [/reference/mcp](/reference/mcp), [/agents/cli](/agents/cli), [/agents/mcp](/agents/mcp), [/import-recordings](/import-recordings), [/notes](/notes) (export Markdown).
+
+<Warning>
+  Les limites de transcription (200 mots par défaut, 500 au plus) viennent de ces constantes. `docs/AGENTS.md` impose les mêmes valeurs dans les exemples de la documentation.
+</Warning>
+
+### `crates/cli-docs`
+
+- **Chemin** : `crates/cli-docs` (`publish = false`).
+- **Rôle** : génère une description de l'arbre clap, en Markdown (`generate`) ou en JSON (`generate_json`, types `CommandDoc`, `OptionDoc`, `ArgumentDoc`).
+- **Dépendances internes** : aucune.
+- **Utilisé par** : seulement les tests de `apps/cli` (`dev-dependencies`), pour le snapshot du contrat.
+- **Pages de doc concernées** : aucune directement ; protège [/reference/cli](/reference/cli) contre une dérive non vue.
+
+### `crates/agent-core`
+
+- **Chemin** : `crates/agent-core` (alias `syntheo-agent-core`).
+- **Rôle** : diagnostic et installation d'une intégration par hook pour trois CLI d'agents tierces : Codex, Claude Code et OpenCode (`ProviderKind`).
+- **API principale** : `health_check`, `install_cli`, `uninstall_cli`, `upgrade_hooks` ; types `ProviderHealth`, `ProviderHealthStatus`, `ProviderAuthStatus`.
+- **Dépendances internes** : `crates/claude`, `crates/codex`, `crates/opencode`.
+- **Utilisé par** : `plugins/agent`, enregistré par `apps/desktop/src-tauri` hors build App Store.
+- **État** : hérité d'Anarlog. Les hooks installés appellent la commande `char` (par exemple `char claude notify`), pas `syntheo`, et aucun code de `apps/desktop/src` n'importe `@syntheo/plugin-agent`. Rien ne sert la CLI `syntheo` ici.
+- **Pages de doc concernées** : aucune. L'installation des compétences d'agents documentée dans [/agents/skills](/agents/skills) passe par `apps/desktop/src-tauri/src/agent_skills.rs`, pas par cette crate.
+
+### `crates/cli-process`
+
+- **Chemin** : `crates/cli-process` (alias `syntheo-cli-process`).
+- **Rôle** : lancement de processus enfants avec tokio : `spawn_with_retry`, `run_to_string`, `spawn_streaming_lines` (flux de lignes typées), lecture bornée de stdout et stderr (`MAX_PROCESS_STDOUT_BYTES` 64 Mo, `MAX_PROCESS_STDERR_BYTES` 1 Mo).
+- **Dépendances internes** : aucune.
+- **Utilisé par** : `crates/claude`, `crates/codex`, `crates/opencode`. Ni `apps/cli` ni le serveur MCP ne l'utilisent.
+- **Pages de doc concernées** : aucune.
+
+## Côté application
+
+L'application installe et documente la CLI, mais ce code vit dans `apps/desktop` :
+
+- `apps/desktop/src-tauri/src/embedded_cli.rs` : installe le binaire `syntheo` fourni avec l'application (voir [Carte du code : application desktop](/code/desktop)).
+- `apps/desktop/src-tauri/src/agents-content.md` : fichier `AGENTS.md` écrit dans le dossier de données au démarrage, qui renvoie vers les outils MCP et la CLI.
+- `plugins/local-api` et `plugins/mcp` : commandes et types côté application, voir [/code/plugins](/code/plugins).
+
+## Correspondance code et pages
+
+| Si vous modifiez | Vérifiez |
+| --- | --- |
+| `apps/cli/src/cli.rs` | [/reference/cli](/reference/cli), [/agents/cli](/agents/cli), `skills/syntheo/references/cli.md`, snapshot `apps/cli/src/snapshots/` |
+| `apps/cli/src/mcp/` | [/reference/mcp](/reference/mcp), [/agents/mcp](/agents/mcp), `skills/syntheo/references/mcp.md`, `apps/desktop/src-tauri/src/agents-content.md` |
+| `apps/cli/src/error.rs` | [/reference/errors](/reference/errors), `skills/syntheo/references/errors.md` |
+| `apps/cli/src/db.rs` | [/installation](/installation), [/troubleshooting](/troubleshooting) |
+| `apps/cli/src/output.rs` | [/reference/cli](/reference/cli) (format JSON) |
+| `crates/agent-access/src/recording_import.rs` | [/import-recordings](/import-recordings), [/reference/mcp](/reference/mcp) |
+| `crates/agent-access/src/proposals.rs` | [/agents/overview](/agents/overview), [/reference/mcp](/reference/mcp) |
+| `crates/agent-access/src/lib.rs` (limites) | [/reference/cli](/reference/cli), [/reference/mcp](/reference/mcp) |

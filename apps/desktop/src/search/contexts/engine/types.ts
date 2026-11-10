@@ -32,4 +32,14 @@ export type SearchFilters = z.infer<typeof searchFiltersSchema>;
 export type SearchHit = {
   score: number;
   document: SearchDocument;
+  // Extrait du contenu autour du terme trouvé (option `snippets`).
+  contentSnippet?: string | null;
+};
+
+// Options de la recherche plein texte : nombre de résultats (100 par défaut
+// côté tantivy) et extraits du contenu.
+export type SearchOptions = {
+  limit?: number;
+  snippets?: boolean;
+  snippetMaxChars?: number;
 };

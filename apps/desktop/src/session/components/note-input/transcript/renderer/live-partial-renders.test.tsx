@@ -54,9 +54,6 @@ vi.mock("@syntheo/ui/components/ui/popover", () => ({
   PopoverContent: () => null,
   PopoverTrigger: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
-vi.mock("~/calendar/queries", () => ({
-  useSessionEventParticipants: () => [],
-}));
 vi.mock("~/contacts/queries", () => ({
   createHuman: vi.fn(),
   useHumans: () => [],
@@ -68,9 +65,6 @@ vi.mock("~/session/queries", () => ({
 }));
 vi.mock("~/stt/queries", () => ({ assignTranscriptSpeaker: vi.fn() }));
 
-const NOOP = () => {};
-const NOOP_SEEK = (_seconds: number) => {};
-
 function Harness({ liveSegments }: { liveSegments: Segment[] }) {
   return (
     <RenderTranscript
@@ -80,10 +74,6 @@ function Harness({ liveSegments }: { liveSegments: Segment[] }) {
       transcriptId="transcript-1"
       currentActive
       liveSegments={liveSegments}
-      currentMs={0}
-      seek={NOOP_SEEK}
-      startPlayback={NOOP}
-      audioExists={false}
     />
   );
 }

@@ -13,11 +13,10 @@ import {
   getOptionalTaskStatus,
   normalizeTaskStatus,
 } from "@syntheo/editor/tasks";
-import { cn, safeParseDate } from "@syntheo/utils";
+import { cn, safeParseDate, TZDate } from "@syntheo/utils";
 
-import { toTz, useTimezone } from "~/calendar/hooks";
 import { useSession } from "~/session/queries";
-import { getSessionEvent } from "~/session/utils";
+import { useConfigValue } from "~/shared/config";
 import { useTimeFormat } from "~/shared/hooks/useTimeFormat";
 import { useTabs } from "~/store/zustand/tabs";
 import { useListener } from "~/stt/contexts";
@@ -30,36 +29,20 @@ export const SessionNodeView = forwardRef<
   const sessionId = node.attrs.sessionId as string;
 
   const session = useSession(sessionId);
-  const tz = useTimezone();
+  const tz = useConfigValue("timezone") || undefined;
   const timeFormat = useTimeFormat();
   const liveSessionId = useListener((state) => state.live.sessionId);
   const liveStatus = useListener((state) => state.live.status);
   const isRecording =
     liveSessionId === sessionId &&
     (liveStatus === "active" || liveStatus === "finalizing");
-  const event = useMemo(() => getSessionEvent(session ?? {}), [session]);
   const displayTime = useMemo(() => {
-    if (event?.is_all_day) {
-      return null;
-    }
-
-    const rawDate = event?.started_at ?? session?.created_at;
+    const rawDate = session?.created_at;
     const parsed = rawDate ? safeParseDate(rawDate) : null;
+    if (!parsed) return null;
 
-    return parsed ? format(toTz(parsed, tz), timeFormat) : null;
-  }, [
-    event?.is_all_day,
-    event?.started_at,
-    session?.created_at,
-    tz,
-    timeFormat,
-  ]);
-
-  const isMeetingOver = useMemo(() => {
-    if (!event?.ended_at) return false;
-    const endedAt = safeParseDate(event.ended_at);
-    return endedAt ? endedAt.getTime() <= Date.now() : false;
-  }, [event]);
+    return format(tz ? new TZDate(parsed, tz) : parsed, timeFormat);
+  }, [session?.created_at, tz, timeFormat]);
 
   const linkedItemOpenBehavior = useLinkedItemOpenBehavior();
   const openCurrent = useTabs((state) => state.openCurrent);
@@ -89,13 +72,11 @@ export const SessionNodeView = forwardRef<
     [openSession],
   );
 
-  const derivedChecked = !isRecording && isMeetingOver;
   const explicitStatus = getOptionalTaskStatus(
     node.attrs.status,
     node.attrs.checked,
   );
-  const status =
-    explicitStatus ?? normalizeTaskStatus(undefined, derivedChecked);
+  const status = explicitStatus ?? normalizeTaskStatus(undefined, false);
 
   const handleToggle = useEditorEventCallback((view) => {
     if (!view) return;

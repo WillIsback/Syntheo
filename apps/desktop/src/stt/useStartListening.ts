@@ -1,5 +1,5 @@
 import { t } from "@lingui/core/macro";
-import { useCallback } from "react";
+import { useCallback, useLayoutEffect, useRef } from "react";
 
 import { toast } from "@syntheo/ui/components/ui/toast";
 
@@ -11,6 +11,7 @@ import {
   loadCaptureLifecycleMarker,
 } from "./capture-lifecycle-storage";
 import { useListener } from "./contexts";
+import { notifyListeningElsewhere } from "./listening-elsewhere";
 import { startMeetingChatCapture } from "./meeting-chat-capture";
 import {
   MEETING_DISCLOSURE_MESSAGE,
@@ -45,11 +46,14 @@ export const getCaptureReminderMessage = () =>
 export const getNoTranscriptionProviderMessage = () =>
   t`No transcription provider is set up. Syntheo does not keep audio: set up a transcription endpoint before recording.`;
 
+// Délai maximal d'attente des réglages avant de conclure à l'absence de
+// fournisseur (issue 515).
+const CONNECTION_LOADING_TIMEOUT_MS = 5_000;
+
 export const getBatchOnlyCaptureMessage = () =>
   t`This model only transcribes after the recording, which would require keeping the audio. Choose a real-time transcription model.`;
 
 export {
-  CLOUDSYNC_CAPTURE_LEASE_ATTEMPTS,
   getPostCaptureAction,
   getPostCaptureRepairReasons,
 } from "./capture-lifecycle";
@@ -66,6 +70,7 @@ export function useStartListeningState(
 ) {
   const {
     conn,
+    connectionLoading,
     connectionReady,
     createCaptureLifecycle,
     session,
@@ -81,6 +86,8 @@ export function useStartListeningState(
   const spokenLanguages = useConfigValue("spoken_languages");
   const dictionaryTerms = useConfigValue("personalization_dictionary_terms");
   const microphoneDevice = useConfigValue("microphone_device");
+  // Sortie capturée comme son système (issue 450).
+  const speakerDevice = useConfigValue("speaker_device");
   // Règle audio de Syntheo : la capture ne conserve jamais l'audio.
   const retainAudio = false;
   const meetingDisclosureAutoSendChat = useConfigValue(
@@ -104,8 +111,20 @@ export function useStartListeningState(
     [openNew],
   );
 
-  const startListening = useCallback(async () => {
+  // Issue 516 : un démarrage refusé parce qu'une autre note écoute ne reste
+  // plus muet ; « Arrêter et démarrer ici » relance ce même démarrage.
+  const startListeningRef = useRef<() => Promise<void>>(async () => {});
+  const notifyBlockedStart = useCallback(() => {
+    void notifyListeningElsewhere(sessionId, {
+      openNote: (id) => openNew({ type: "sessions", id }),
+      stop,
+      startHere: () => startListeningRef.current(),
+    });
+  }, [openNew, sessionId, stop]);
+
+  const startListeningNow = useCallback(async () => {
     if (!canStartLiveSession(sessionId)) {
+      notifyBlockedStart();
       return;
     }
     // Sans recorder, une capture sans STT ne produirait rien.
@@ -158,20 +177,6 @@ export function useStartListeningState(
       automatic,
       pendingMarker,
     );
-    // A fresh note or a just-focused window starts listening right as a sync
-    // round begins; waiting for that round to yield made the start feel slow
-    // and sometimes refused to record at all.
-    void lifecycle.deferCloudsync();
-    const releaseCloudsyncDeferral = async () => {
-      try {
-        await lifecycle.releaseCloudsyncLease();
-      } catch (error) {
-        console.error(
-          "[listener] failed to release capture CloudSync deferral",
-          error,
-        );
-      }
-    };
     const [keywords, liveTranscriptionConfig, remoteParticipantHumanIds] =
       await Promise.all([
         import("./useKeywords").then(({ getSessionKeywords }) =>
@@ -192,7 +197,7 @@ export function useStartListeningState(
         lifecycle.ready,
       ]);
     if (!canStartLiveSession(sessionId)) {
-      await releaseCloudsyncDeferral();
+      notifyBlockedStart();
       return;
     }
 
@@ -213,7 +218,6 @@ export function useStartListeningState(
           cleanupError,
         );
       }
-      await releaseCloudsyncDeferral();
       await reportStartFailure("recovery_marker", null);
       return;
     }
@@ -231,6 +235,7 @@ export function useStartListeningState(
           api_key: conn?.apiKey ?? "",
           keywords,
           mic_device: microphoneDevice || null,
+          speaker_device: speakerDevice || null,
           transcription_mode: liveTranscriptionConfig.transcriptionMode,
           participant_human_ids: remoteParticipantHumanIds,
           self_human_id: session?.user_id || null,
@@ -250,8 +255,6 @@ export function useStartListeningState(
           "[listener] failed to clean up capture state",
           cleanupError,
         );
-      } finally {
-        await releaseCloudsyncDeferral();
       }
       await reportStartFailure(
         "capture_start",
@@ -266,8 +269,6 @@ export function useStartListeningState(
         await lifecycle.cleanupFailedStart();
       } catch (error) {
         console.error("[listener] failed to clean up capture state", error);
-      } finally {
-        await releaseCloudsyncDeferral();
       }
       await reportStartFailure(
         "capture_rejected",
@@ -320,6 +321,8 @@ export function useStartListeningState(
     getLiveStartError,
     getSessionMode,
     microphoneDevice,
+    notifyBlockedStart,
+    speakerDevice,
     reportStartFailure,
     retainAudio,
     openNew,
@@ -333,6 +336,38 @@ export function useStartListeningState(
     stop,
     stopMeetingChatTasks,
   ]);
+
+  // Issue 515 : la reprise depuis la pastille passe par un composant monté à
+  // la demande dans la fenêtre principale, dont le premier rendu n'a pas
+  // encore les réglages (`conn` null). Le démarrage attend leur chargement,
+  // borné, puis s'exécute avec le dernier rendu au lieu d'afficher « aucun
+  // fournisseur ».
+  const connectionLoadingRef = useRef(connectionLoading === true);
+  const loadedWaitersRef = useRef(new Set<() => void>());
+  useLayoutEffect(() => {
+    startListeningRef.current = startListeningNow;
+    connectionLoadingRef.current = connectionLoading === true;
+    if (!connectionLoadingRef.current) {
+      const waiters = [...loadedWaitersRef.current];
+      loadedWaitersRef.current.clear();
+      waiters.forEach((resolve) => resolve());
+    }
+  }, [connectionLoading, startListeningNow]);
+
+  const startListening = useCallback(async () => {
+    if (connectionLoadingRef.current) {
+      await new Promise<void>((resolve) => {
+        const done = () => {
+          clearTimeout(timeout);
+          loadedWaitersRef.current.delete(done);
+          resolve();
+        };
+        const timeout = setTimeout(done, CONNECTION_LOADING_TIMEOUT_MS);
+        loadedWaitersRef.current.add(done);
+      });
+    }
+    await startListeningRef.current();
+  }, []);
 
   return { connectionReady, startListening };
 }

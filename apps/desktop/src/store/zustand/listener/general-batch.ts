@@ -9,14 +9,11 @@ import {
   events as transcriptionEvents,
 } from "@syntheo/plugin-transcription";
 
-import {
-  EMPTY_BATCH_TRANSCRIPT_ERROR,
-  type BatchActions,
-  type BatchState,
-} from "./batch";
+import { type BatchActions, type BatchState } from "./batch";
 
 import { playCompletionSound } from "~/shared/completion-sound";
 import { BatchResponseProcessingError } from "~/stt/batch-response-processing-error";
+import { NoSpeechDetectedError } from "~/stt/no-speech-error";
 
 type BatchStore = BatchActions & BatchState;
 
@@ -104,7 +101,7 @@ export const runBatchSession = async <T extends BatchStore>(
       const handled = get().handleBatchResponse(sessionId, output.response);
       if (handled === false) {
         emptyResponse = true;
-        throw new Error(EMPTY_BATCH_TRANSCRIPT_ERROR);
+        throw new NoSpeechDetectedError();
       }
       cleanup();
     } catch (error) {
@@ -116,7 +113,7 @@ export const runBatchSession = async <T extends BatchStore>(
       }
       cleanup(false);
       reject(
-        error instanceof Error && error.message === EMPTY_BATCH_TRANSCRIPT_ERROR
+        error instanceof NoSpeechDetectedError
           ? error
           : new BatchResponseProcessingError(error),
       );
@@ -457,6 +454,8 @@ export async function recoverRunningBatchSessions<T extends BatchStore>(
 }
 
 export function shouldUseSyntheticBatchProgress(params: TranscriptionParams) {
+  // Le flux temps réel d'un fichier donne sa vraie progression (issue 463).
+  if (params.provider === "realtime") return false;
   return !OPENAI_PROGRESSIVE_BATCH_MODELS.has(params.model ?? "");
 }
 

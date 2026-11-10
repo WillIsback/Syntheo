@@ -22,7 +22,7 @@ beforeEach(() => {
     data: input.enhanceSystem ? "Rendered system prompt" : "Meeting transcript",
   }));
   mocks.streamText.mockImplementation(() => ({
-    fullStream: (async function* () {
+    stream: (async function* () {
       yield {
         type: "text-delta",
         id: "1",
@@ -76,9 +76,9 @@ it("passes custom formatting to the renderer without adding layout rules", async
   expect(mocks.render).toHaveBeenCalledWith({
     enhanceSystem: { language: "en", formatOverride },
   });
-  expect(request.system).toContain("Rendered system prompt");
-  expect(request.system).toContain(formatSummaryDetailGuidance(false));
-  expect(request.system).not.toMatch(
+  expect(request.instructions).toContain("Rendered system prompt");
+  expect(request.instructions).toContain(formatSummaryDetailGuidance(false));
+  expect(request.instructions).not.toMatch(
     /never put prose|bullets per section|# Next Steps/,
   );
   expect(request.prompt).toContain("Keep the requested structure");

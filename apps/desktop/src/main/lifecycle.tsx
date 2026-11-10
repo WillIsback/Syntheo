@@ -2,12 +2,14 @@ import { useRouteContext } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef } from "react";
 
 import { useLanguageModel, useLLMConnection } from "~/ai/hooks";
-import { searchCalendarEvents } from "~/calendar/queries";
+import { CommandConfirmationDialog } from "~/automations/command-confirmation-dialog";
+import { registerAutomationLanguageModel } from "~/automations/language-model";
 import { useSessionTab } from "~/chat/components/use-session-tab";
 import { buildChatTools } from "~/chat/tools";
 import { searchContacts } from "~/contacts/queries";
 import { useRegisterTools } from "~/contexts/tool";
 import { DictationLifecycle } from "~/dictation/lifecycle";
+import { loadSessionFolderTemplateId } from "~/folders/folder-template";
 import { takePendingWelcomeSession } from "~/onboarding/welcome-note";
 import { useSearchEngine } from "~/search/contexts/engine";
 import { initEnhancerService } from "~/services/enhancer";
@@ -18,7 +20,7 @@ import { useTabs } from "~/store/zustand/tabs";
 import { BatchTranscriptionRecovery } from "~/stt/batch-transcription-recovery";
 import { LiveCaptureRecovery } from "~/stt/live-capture-recovery";
 import { RecordingImportWorker } from "~/stt/recording-import";
-import { ScheduledMeetingAutoStart } from "~/stt/scheduled-auto-start";
+import { SystemAudioChangeNotice } from "~/stt/system-audio-change-notice";
 import { MainListenerControlBridge } from "~/stt/window-control";
 
 export function useClassicMainLifecycle() {
@@ -46,13 +48,14 @@ export function ClassicMainServices() {
   return (
     <>
       <LiveCaptureRecovery />
+      <SystemAudioChangeNotice />
       <BatchTranscriptionRecovery />
       <RecordingImportWorker />
-      <ScheduledMeetingAutoStart />
       <MainListenerControlBridge />
       <DictationLifecycle />
       <ToolRegistration />
       <EnhancerInit />
+      <CommandConfirmationDialog />
     </>
   );
 }
@@ -61,8 +64,6 @@ function ToolRegistration() {
   const { search } = useSearchEngine();
 
   const getContactSearchResults = searchContacts;
-
-  const getCalendarEventSearchResults = searchCalendarEvents;
 
   const { getSessionId, getEnhancedNoteId } = useSessionTab();
   const getFolderFilter = useCallback(() => {
@@ -79,7 +80,6 @@ function ToolRegistration() {
       buildChatTools({
         search,
         getContactSearchResults,
-        getCalendarEventSearchResults,
         getSessionId,
         getFolderFilter,
         getEnhancedNoteId,
@@ -88,7 +88,6 @@ function ToolRegistration() {
     [
       search,
       getContactSearchResults,
-      getCalendarEventSearchResults,
       getSessionId,
       getFolderFilter,
       getEnhancedNoteId,
@@ -115,6 +114,9 @@ function EnhancerInit() {
   const templateIdRef = useRef(selectedTemplateId);
   templateIdRef.current = selectedTemplateId;
 
+  // Étape « Générer avec le modèle local » : le même modèle que la synthèse.
+  useEffect(() => registerAutomationLanguageModel(() => modelRef.current), []);
+
   useEffect(() => {
     if (!aiTaskStore) return;
 
@@ -123,6 +125,7 @@ function EnhancerInit() {
       getModel: () => modelRef.current,
       getLLMConn: () => llmConnRef.current,
       getSelectedTemplateId: () => templateIdRef.current || undefined,
+      getFolderTemplateId: loadSessionFolderTemplateId,
     });
 
     return () => service.dispose();

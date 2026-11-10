@@ -10,6 +10,19 @@ debug = "line-tables-only"
 opt-level = 1
 debug = false
 
+# Paquets publiés : sans table des symboles (−39 Mio sur le binaire Linux).
+# Les backtraces de panic perdent les noms de fonctions ; aucun symbole n'est
+# envoyé à un service de rapport de plantage.
+[profile.release]
+strip = true
+# LTO « thin » plutôt que « fat » : l'essentiel du gain de taille (code mort
+# éliminé entre crates) pour une édition de liens parallèle et une mémoire
+# bornée, compatible avec les délais des runners CI (90 min Linux, 120 min
+# Windows). Une seule unité de génération par crate pour optimiser mieux.
+# La variante devtools utilise ce même profil, pour rester fidèle à la release.
+lto = "thin"
+codegen-units = 1
+
 [workspace]
 resolver = "2"
 exclude = ["crates/tiptap/vendor/mdast_util_to_markdown"]
@@ -25,8 +38,6 @@ keyring = "4.1.4"
 syntheo-aec = { path = "crates/aec", package = "aec" }
 syntheo-agent-access = { path = "crates/agent-access", package = "agent-access" }
 syntheo-agent-core = { path = "crates/agent-core", package = "agent-core" }
-syntheo-apple-calendar = { path = "crates/apple-calendar", package = "apple-calendar" }
-syntheo-apple-todo = { path = "crates/apple-todo", package = "apple-todo" }
 syntheo-askama-utils = { path = "crates/askama-utils", package = "askama-utils" }
 syntheo-audacity = { path = "crates/audacity", package = "audacity" }
 syntheo-audio = { path = "crates/audio", package = "audio" }
@@ -41,8 +52,6 @@ syntheo-audio-utils = { path = "crates/audio-utils", package = "audio-utils" }
 syntheo-brand = { path = "crates/brand", package = "brand" }
 syntheo-buffer = { path = "crates/buffer", package = "buffer" }
 syntheo-bundle = { path = "crates/bundle", package = "bundle" }
-syntheo-calendar = { path = "crates/calendar", package = "calendar" }
-syntheo-calendar-interface = { path = "crates/calendar-interface", package = "calendar-interface" }
 syntheo-claude = { path = "crates/claude", package = "claude" }
 syntheo-cli-process = { path = "crates/cli-process", package = "cli-process" }
 syntheo-codex = { path = "crates/codex", package = "codex" }
@@ -68,7 +77,6 @@ syntheo-intercept = { path = "crates/intercept", package = "intercept" }
 syntheo-language = { path = "crates/language", package = "language" }
 syntheo-listener-core = { path = "crates/listener-core", package = "listener-core" }
 syntheo-listener2-core = { path = "crates/listener2-core", package = "listener2-core" }
-syntheo-meeting-import = { path = "crates/meeting-import", package = "meeting-import" }
 syntheo-mp3 = { path = "crates/mp3", package = "mp3" }
 syntheo-notification = { path = "crates/notification", package = "notification" }
 syntheo-notification-interface = { path = "crates/notification-interface", package = "notification-interface" }
@@ -91,7 +99,6 @@ syntheo-vad = { path = "crates/vad", package = "vad" }
 syntheo-vad-masking = { path = "crates/vad-masking", package = "vad-masking" }
 syntheo-whisper = { path = "crates/whisper", package = "whisper" }
 syntheo-ws-client = { path = "crates/ws-client", package = "ws-client" }
-syntheo-zoom = { path = "crates/zoom", package = "zoom" }
 
 openai-transcription = { path = "crates/openai-transcription", package = "openai-transcription" }
 owhisper-client = { path = "crates/owhisper-client", package = "owhisper-client" }
@@ -118,7 +125,7 @@ tauri-plugin-window-state = "2.4"
 
 tauri-plugin-agent = { path = "plugins/agent" }
 tauri-plugin-audio-priority = { path = "plugins/audio-priority" }
-tauri-plugin-calendar = { path = "plugins/calendar" }
+tauri-plugin-contacts = { path = "plugins/contacts" }
 tauri-plugin-db = { path = "plugins/db" }
 tauri-plugin-deeplink2 = { path = "plugins/deeplink2" }
 tauri-plugin-detect = { path = "plugins/detect" }
@@ -129,7 +136,6 @@ tauri-plugin-fs-sync = { path = "plugins/fs-sync" }
 tauri-plugin-fs2 = { path = "plugins/fs2" }
 tauri-plugin-hooks = { path = "plugins/hooks" }
 tauri-plugin-icon = { path = "plugins/icon" }
-tauri-plugin-importer = { path = "plugins/importer" }
 tauri-plugin-js = { path = "plugins/js" }
 tauri-plugin-local-api = { path = "plugins/local-api" }
 tauri-plugin-local-auth = { path = "plugins/local-auth" }
@@ -150,7 +156,6 @@ tauri-plugin-sidecar2 = { path = "plugins/sidecar2" }
 tauri-plugin-store2 = { path = "plugins/store2" }
 tauri-plugin-tantivy = { path = "plugins/tantivy" }
 tauri-plugin-template = { path = "plugins/template" }
-tauri-plugin-todo = { path = "plugins/todo" }
 tauri-plugin-tracing = { path = "plugins/tracing" }
 tauri-plugin-transcription = { path = "plugins/transcription" }
 tauri-plugin-tray = { path = "plugins/tray", package = "tauri-plugin-syntheo-tray" }
@@ -184,7 +189,6 @@ codes-iso-639 = "0.1.5"
 dirs = "6.0.0"
 image = { version = "0.25.10", default-features = false, features = ["webp"] }
 indexmap = "2"
-indoc = "2"
 isolang = "2.4"
 itertools = "0.15.0"
 jsonschema = "0.49.9"
@@ -223,12 +227,10 @@ utoipa = { version = "6", features = ["axum_extras"] }
 chrono = "0.4"
 chrono-tz = "0.10"
 
-gbnf-validator = { git = "https://github.com/fastrepl/gbnf-validator", rev = "3dec055" }
-
 vergen-gix = "10"
 
 askama = "0.16"
-askama_parser = "0.15"
+askama_parser = "0.16"
 markdown = "1"
 # Vendored 0.0.2 with byte-indexed Unicode escaping fixed; upstream still uses chars().nth(byte_offset).
 mdast_util_to_markdown = { path = "crates/tiptap/vendor/mdast_util_to_markdown" }
@@ -254,9 +256,9 @@ earshot = "0.1.0"
 hound = "3.5.1"
 htmd = "0.5.0"
 macos-accessibility-client = "0.0.2"
-mp3lame-encoder = "0.2.2"
+mp3lame-encoder = "0.3.0"
 realfft = "3.5.0"
-ringbuf = "0.4.8"
+ringbuf = "0.6.0"
 rodio = { version = "0.22", features = ["tracing"] }
 
 deepgram = { version = "0.7", default-features = false }
@@ -288,7 +290,11 @@ whichlang = "0.1"
 
 swift-rs = { git = "https://github.com/Brendonovich/swift-rs", rev = "41a1605" }
 
-wasapi = "0.23.0"
+# Linux : GTK de Tauri (gtk-rs 0.18) et pastille de réunion en calque Wayland (issue 448).
+gtk = "0.18"
+gtk-layer-shell = { version = "0.8.2", features = ["v0_6"] }
+
+wasapi = "0.26.0"
 windows = "0.62.2"
 # Keep in step with `windows`: the `#[windows::core::interface]` macro expands to
 # `::windows_core::…` paths, so a mismatched major makes the generated impl target
@@ -300,4 +306,4 @@ rmcp = "3.9"
 rustls = { version = "0.23", default-features = false }
 sqlx = { version = "=0.9.0", default-features = false }
 sys-locale = "0.3.2"
-sysinfo = "0.38"
+sysinfo = "0.40"

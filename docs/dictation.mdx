@@ -3,27 +3,41 @@ title: "Dicter dans d'autres applications"
 description: "Utilisez un raccourci clavier pour transformer votre voix en texte dans le champ actif."
 ---
 
+import { AppSettings, DictationScreen, Kbd, SettingsPath } from "/snippets/capture.gen.jsx";
+
 Gardez Syntheo ouvert, placez le curseur dans un champ de texte d'une autre application et utilisez votre raccourci pour parler au lieu de taper. La dictée ne crée pas de note de réunion.
 
 La dictée utilise le serveur de transcription configuré dans **Paramètres → Transcription**, avec vos langues et votre dictionnaire. L'audio n'est pas conservé ; votre dernière dictée reste en mémoire jusqu'à ce que vous désactiviez la dictée ou fermiez Syntheo.
 
 ## Configurer la dictée
 
-1. Ouvrez **Paramètres → Écrire → Dictée** et activez « Activer la dictée ».
-2. Cliquez sur le « Raccourci » pour enregistrer une nouvelle combinaison de touches, puis choisissez votre « Microphone ».
+<SettingsPath steps={["Paramètres", "Écrire", "Dictée"]} />
+
+1. Activez « Activer la dictée ».
+2. Cliquez sur le « Raccourci » pour enregistrer une nouvelle combinaison de touches (par défaut <Kbd keys="Ctrl+Alt+Espace" />), puis choisissez votre « Microphone ».
 3. Si besoin, cliquez sur « Serveur de transcription › », sur la ligne « Langue et vocabulaire », pour vérifier le serveur et le modèle de transcription.
 4. Sous « Essayer », cliquez dans le champ et testez votre raccourci.
 
+Essayez dans la reproduction : activez « Activer la dictée », cliquez dans le champ « Essayer », puis maintenez <Kbd keys="Ctrl+Alt+Espace" /> et relâchez. Une phrase d'exemple s'insère et « Dernière dictée » apparaît. Vous pouvez aussi cliquer sur le raccourci et taper une autre combinaison.
+
+<AppSettings section="dictation" focus="try" />
+
 Par défaut, maintenez le raccourci pendant que vous parlez, puis relâchez-le pour terminer. Avec « Mode mains libres », appuyez une fois pour commencer et une seconde fois pour terminer. Le texte est inséré quand la transcription est terminée.
 
-Avec « Voir le texte en direct », les mots s'affichent dans une petite bulle pendant que vous parlez, si votre serveur de transcription accepte une connexion en temps réel.
+Avec « Voir le texte en direct » (désactivé par défaut), les mots s'affichent dans une petite bulle pendant que vous parlez, si votre serveur de transcription accepte une connexion en temps réel.
+
+Pendant la dictée, un panneau flottant s'affiche au-dessus de l'application active. Son bouton (1) montre le niveau du micro ; un clic termine la dictée. La bulle (2) affiche les mots reconnus, et la flèche à droite l'ouvre ou la replie. Essayez : maintenez « Maintenir le raccourci » pendant que les mots s'affichent, puis relâchez. Cochez « Mode mains libres » pour démarrer et terminer en deux clics, et appuyez sur <Kbd keys="Échap" /> pour annuler.
+
+<DictationScreen />
+
+Syntheo insère le texte reçu en temps réel. Si ce flux est interrompu, le serveur OpenAI transcrit l'enregistrement après coup. Un modèle NVIDIA NIM ne le peut pas : la dictée affiche alors « La transcription en direct de cette dictée a été interrompue, et ce modèle ne peut pas transcrire l'enregistrement après coup. Réessayez. ».
 
 La dictée s'arrête au bout de cinq minutes et se met en pause pendant que Syntheo enregistre une réunion.
 
 ## Annuler une dictée
 
-- Sous Windows et sous Linux avec X11, appuyez sur Échap.
-- Sous Linux avec Wayland, utilisez Ctrl + Alt + Échap.
+- Sous Windows et sous Linux avec X11, appuyez sur <Kbd keys="Échap" />.
+- Sous Linux avec Wayland, utilisez <Kbd keys="Ctrl+Alt+Échap" />.
 
 Vous pouvez aussi cliquer sur « Annuler la dictée » dans **Paramètres → Dictée**.
 

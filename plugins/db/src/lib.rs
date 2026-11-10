@@ -1,10 +1,9 @@
 mod commands;
 mod error;
-mod import;
 mod runtime;
 
 pub use error::{Error, Result};
-pub use runtime::{open_app_db, open_app_db_unmigrated};
+pub use runtime::{PluginDbRuntime, open_app_db, open_app_db_unmigrated};
 use tauri::Manager;
 
 const PLUGIN_NAME: &str = "db";
@@ -25,7 +24,6 @@ pub struct TransactionStatement {
 pub enum StartupPhase {
     PreparingDatabase,
     MigratingDatabase,
-    ImportingLegacyData,
     Ready,
     Failed,
 }
@@ -46,91 +44,6 @@ impl StartupStatus {
             migration_total: None,
         }
     }
-}
-
-#[derive(Debug, Clone, serde::Serialize, specta::Type, sqlx::FromRow)]
-#[serde(rename_all = "camelCase")]
-pub struct StorageMigrationState {
-    pub phase: String,
-    pub latest_run_id: String,
-    pub parity_verified: bool,
-    pub cutover_at: Option<String>,
-    pub rollback_until: Option<String>,
-    pub last_error: String,
-    pub updated_at: String,
-}
-
-#[derive(Debug, Clone, serde::Serialize, specta::Type, sqlx::FromRow)]
-#[serde(rename_all = "camelCase")]
-pub struct LegacyImportRun {
-    pub id: String,
-    pub importer_version: i64,
-    pub source_root: String,
-    pub dry_run: bool,
-    pub status: String,
-    pub discovered_count: i64,
-    pub imported_count: i64,
-    pub matched_count: i64,
-    pub skipped_count: i64,
-    pub conflict_count: i64,
-    pub error_count: i64,
-    pub started_at: String,
-    pub completed_at: Option<String>,
-    pub error: String,
-}
-
-#[derive(Debug, Clone, serde::Serialize, specta::Type, sqlx::FromRow)]
-#[serde(rename_all = "camelCase")]
-pub struct LegacyImportItemReport {
-    pub source_path: String,
-    pub source_kind: String,
-    pub source_sha256: String,
-    pub status: String,
-    pub discovered_count: i64,
-    pub imported_count: i64,
-    pub matched_count: i64,
-    pub skipped_count: i64,
-    pub conflict_count: i64,
-    pub error: String,
-}
-
-#[derive(Debug, Clone, serde::Serialize, specta::Type, sqlx::FromRow)]
-#[serde(rename_all = "camelCase")]
-pub struct LegacyImportTargetReport {
-    pub source_path: String,
-    pub table_name: String,
-    pub target_id: String,
-    pub status: String,
-    pub error: String,
-}
-
-#[derive(Debug, Clone, serde::Serialize, specta::Type)]
-#[serde(rename_all = "camelCase")]
-pub struct LegacyImportReport {
-    pub state: StorageMigrationState,
-    pub latest_run: Option<LegacyImportRun>,
-    pub items: Vec<LegacyImportItemReport>,
-    pub targets: Vec<LegacyImportTargetReport>,
-}
-
-#[derive(Debug, Clone, serde::Serialize, specta::Type)]
-#[serde(rename_all = "camelCase")]
-pub struct LegacyCleanupStatus {
-    pub migration_ready: bool,
-    pub migration_verified: bool,
-    pub available: bool,
-    pub already_cleaned: bool,
-    pub file_count: u64,
-    pub total_bytes: u64,
-    pub source_root: String,
-    pub blocking_reason: Option<String>,
-}
-
-#[derive(Debug, Clone, serde::Serialize, specta::Type)]
-#[serde(rename_all = "camelCase")]
-pub struct LegacyCleanupResult {
-    pub deleted_file_count: u64,
-    pub deleted_bytes: u64,
 }
 
 #[derive(Debug, Clone, Copy, serde::Serialize, specta::Type, PartialEq, Eq)]
@@ -166,10 +79,6 @@ fn make_specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
             commands::execute,
             commands::execute_transaction,
             commands::execute_proxy,
-            commands::get_legacy_import_report,
-            commands::get_legacy_cleanup_status,
-            commands::cleanup_legacy_files,
-            commands::run_legacy_import,
             commands::apply_session_ingest,
             commands::subscribe::<tauri::Wry>,
             commands::unsubscribe,
@@ -177,29 +86,6 @@ fn make_specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
             commands::wait_until_ready,
         ])
         .error_handling(tauri_specta::ErrorHandlingMode::Result)
-}
-
-async fn bootstrap_app_database<R: tauri::Runtime>(
-    app: tauri::AppHandle<R>,
-    db: std::sync::Arc<syntheo_db_core::Db>,
-    runtime: &runtime::PluginDbRuntime,
-) -> std::result::Result<(), String> {
-    runtime
-        .ensure_app_schema()
-        .await
-        .map_err(|error| error.to_string())?;
-    if import::legacy_import_attempt_required(db.pool())
-        .await
-        .map_err(|error| error.to_string())?
-    {
-        runtime.set_startup_status_if_running(StartupStatus::for_phase(
-            StartupPhase::ImportingLegacyData,
-        ));
-    }
-    import::import_legacy_data(&app, db.pool())
-        .await
-        .map_err(|error| error.to_string())?;
-    Ok(())
 }
 
 pub fn close_webview_subscriptions<R: tauri::Runtime>(app: &tauri::AppHandle<R>, label: &str) {
@@ -238,13 +124,9 @@ pub fn init<R: tauri::Runtime>(
         .invoke_handler(specta_builder.invoke_handler())
         .setup(move |app, _| {
             let runtime = build_runtime(std::sync::Arc::clone(&db));
-            let startup_db = std::sync::Arc::clone(&db);
             let startup_runtime = std::sync::Arc::clone(&runtime);
-            let startup_app = app.app_handle().clone();
             tauri::async_runtime::spawn(async move {
-                let result =
-                    bootstrap_app_database(startup_app, startup_db, &startup_runtime).await;
-                startup_runtime.finish_startup(result);
+                startup_runtime.run_startup().await;
             });
             app.manage(runtime);
             Ok(())
@@ -286,20 +168,6 @@ mod tests {
 
         let content = std::fs::read_to_string(OUTPUT_FILE).unwrap();
         std::fs::write(OUTPUT_FILE, format!("// @ts-nocheck\n{content}")).unwrap();
-    }
-
-    #[test]
-    fn default_permissions_include_legacy_migration_workflow() {
-        let permissions = include_str!("../permissions/default.toml");
-
-        for permission in [
-            "allow-get-legacy-cleanup-status",
-            "allow-get-legacy-import-report",
-            "allow-cleanup-legacy-files",
-            "allow-run-legacy-import",
-        ] {
-            assert!(permissions.contains(permission), "missing {permission}");
-        }
     }
 
     #[test]

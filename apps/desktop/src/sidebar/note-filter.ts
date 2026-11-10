@@ -49,33 +49,3 @@ export function folderIdForNewNote(
 
   return folderFilter;
 }
-
-export function encodeNotesView(
-  noteFilter: SidebarNoteFilter,
-  folderFilter: string | null,
-): string {
-  if (noteFilter === "shared") {
-    return "shared";
-  }
-
-  if (folderFilter !== null) {
-    return `folder:${folderFilter}`;
-  }
-
-  return "mine";
-}
-
-export function decodeNotesView(value: string): {
-  noteFilter: SidebarNoteFilter;
-  folderFilter: string | null;
-} {
-  if (value === "shared") {
-    return { noteFilter: "shared", folderFilter: null };
-  }
-
-  if (value.startsWith("folder:")) {
-    return { noteFilter: "mine", folderFilter: value.slice("folder:".length) };
-  }
-
-  return { noteFilter: "mine", folderFilter: null };
-}

@@ -77,6 +77,10 @@ pub enum SessionDataEvent {
     },
     #[serde(rename = "mic_muted")]
     MicMuted { session_id: String, value: bool },
+    /// The system audio channel was muted or restored during a listening (issue 447): the
+    /// speaker track carries silence, capture and STT keep running.
+    #[serde(rename = "speaker_muted")]
+    SpeakerMuted { session_id: String, value: bool },
     /// Whether the microphone can only hear the local user: true when the default output is a
     /// headphone, so no far-end audio reaches the mic. Emitted each time capture (re)starts.
     #[serde(rename = "mic_isolated")]

@@ -72,6 +72,8 @@ describe("getFloatingRouteState", () => {
           status: "active",
           sessionId: "session-1",
           amplitude: { mic: 0.6, speaker: 0.8 },
+          seconds: 47,
+          elapsedOffsetSeconds: 720,
         }),
       ),
     ).toEqual({
@@ -89,7 +91,26 @@ describe("getFloatingRouteState", () => {
       liveCaptionToggleVisible: false,
       transcriptBubbles: [],
       transcriptNotice: null,
+      // Issue 448 : durée écoutée affichée par la pastille, pauses exclues.
+      elapsedSeconds: 767,
+      // Issue 447 : état de la bascule du micro de la pastille.
+      micMuted: false,
     });
+  });
+
+  it("tells the pill when the microphone is muted (issue 447)", () => {
+    const state = createListenerState({
+      status: "active",
+      sessionId: "session-1",
+      muted: true,
+    });
+    expect(getFloatingRouteState(state)?.micMuted).toBe(true);
+    expect(
+      haveFloatingRouteInputsChanged(state, {
+        ...state,
+        live: { ...state.live, muted: false },
+      }),
+    ).toBe(true);
   });
 
   it("builds transcript bubbles from speaker segments", () => {
@@ -257,6 +278,7 @@ describe("getFloatingRouteState", () => {
         liveCaptionToggleVisible: false,
         transcriptBubbles: [],
         transcriptNotice: null,
+        elapsedSeconds: 75,
       }),
     );
     expect(getFloatingRouteState(state, { sessionId: "session-2" })).toBeNull();

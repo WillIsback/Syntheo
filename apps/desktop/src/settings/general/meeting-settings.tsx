@@ -9,8 +9,6 @@ interface SettingItem {
 }
 
 export function MeetingSettingsView({
-  autoJoinScheduledMeetings,
-  autoStartScheduledMeetings,
   autoStopMeetings,
   floatingBar,
   meetingDisclosureAutoPost,
@@ -18,8 +16,6 @@ export function MeetingSettingsView({
   captureSharedScreens,
   captureReminder,
 }: {
-  autoJoinScheduledMeetings: SettingItem;
-  autoStartScheduledMeetings: SettingItem;
   autoStopMeetings: SettingItem;
   floatingBar: SettingItem;
   meetingDisclosureAutoPost: SettingItem;
@@ -32,37 +28,9 @@ export function MeetingSettingsView({
     currentPlatform === "macos" || currentPlatform === "linux";
   const supportsScreenCapture =
     currentPlatform === "macos" || currentPlatform === "windows";
-  // Seul Apple Calendar fournit un agenda (macOS) : ailleurs, aucune réunion
-  // programmée ne peut déclencher ces options.
-  const supportsScheduledMeetings = currentPlatform === "macos";
 
   return (
     <div className="flex flex-col gap-4">
-      {supportsScheduledMeetings && (
-        <>
-          <SettingSwitchRow
-            settingId="auto-start-meetings"
-            title={<Trans>Start when meeting begins</Trans>}
-            description={
-              <Trans>Start listening when a scheduled meeting begins.</Trans>
-            }
-            checked={autoStartScheduledMeetings.value}
-            onChange={autoStartScheduledMeetings.onChange}
-          />
-          <SettingSwitchRow
-            settingId="auto-join-meetings"
-            title={<Trans>Join scheduled meetings</Trans>}
-            description={
-              <Trans>
-                Open the meeting link when a scheduled meeting begins.
-              </Trans>
-            }
-            checked={autoJoinScheduledMeetings.value}
-            onChange={autoJoinScheduledMeetings.onChange}
-            disabled={!autoStartScheduledMeetings.value}
-          />
-        </>
-      )}
       {/* La fin d'usage du micro est détectée sur toutes les plateformes, y
           compris Windows (sessions WASAPI de capture, issue 407). */}
       <SettingSwitchRow
@@ -88,7 +56,7 @@ export function MeetingSettingsView({
           />
           <SettingSwitchRow
             settingId="capture-meeting-chat"
-            title={<Trans>Capture meeting chat in Memos</Trans>}
+            title={<Trans>Capture meeting chat in the note</Trans>}
             description={
               <Trans>
                 Save visible chat from supported meetings using Accessibility.
@@ -102,7 +70,7 @@ export function MeetingSettingsView({
       {supportsScreenCapture && (
         <SettingSwitchRow
           settingId="capture-shared-screens"
-          title={<Trans>Capture shared screens in Memos</Trans>}
+          title={<Trans>Capture shared screens in the note</Trans>}
           description={
             <Trans>
               Save slides and screens others share in meetings. Requires Screen

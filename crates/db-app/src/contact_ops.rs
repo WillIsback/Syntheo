@@ -41,15 +41,9 @@ pub fn human_additional_emails_json_each_sql(alias: &str) -> String {
     )
 }
 
-pub fn human_has_email_sql(alias: &str, email_sql: &str) -> String {
-    format!(
-        "(lower({alias}.email) = lower({email_sql}) OR EXISTS (SELECT 1 FROM {} AS additional_email WHERE lower(additional_email.value) = lower({email_sql})))",
-        human_additional_emails_json_each_sql(alias)
-    )
-}
-
-// Same as human_has_email_sql, but the primary only matches when it is
-// non-empty: an empty primary must not block the additional-email branch.
+// Matches a human by primary or additional email. The primary only matches
+// when it is non-empty: an empty primary must not block the additional-email
+// branch.
 pub fn human_has_email_nonempty_primary_sql(alias: &str, email_sql: &str) -> String {
     format!(
         "((NULLIF(lower({alias}.email), '') IS NOT NULL AND lower({alias}.email) = lower({email_sql})) OR EXISTS (SELECT 1 FROM {} AS additional_email WHERE lower(additional_email.value) = lower({email_sql})))",

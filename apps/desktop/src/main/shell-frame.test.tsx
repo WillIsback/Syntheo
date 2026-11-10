@@ -34,14 +34,9 @@ vi.mock("~/devtools-bar", () => ({
 vi.mock("./view-navigation", () => ({
   hasViewNavigation: (tab: { type: string } | null) =>
     tab !== null &&
-    [
-      "settings",
-      "calendar",
-      "contacts",
-      "templates",
-      "automations",
-      "folders",
-    ].includes(tab.type),
+    ["settings", "contacts", "templates", "automations", "folders"].includes(
+      tab.type,
+    ),
 }));
 
 vi.mock("~/store/zustand/tabs", () => ({

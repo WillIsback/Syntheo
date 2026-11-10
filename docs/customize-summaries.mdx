@@ -3,15 +3,19 @@ title: "Personnaliser les comptes rendus"
 description: "Choisissez un modèle de compte rendu, créez le vôtre ou faites proposer ses sections par l'IA."
 ---
 
-Un compte rendu suit soit le format « Automatique », soit un modèle aux sections fixes. Vous gérez les deux dans la vue **Modèles** : **Paramètres → Mes réunions → « Modèles »**, ou la palette <kbd>Ctrl</kbd> + <kbd>K</kbd>.
+import { Kbd, SettingsPath, TemplatesEditor } from "/snippets/organize.gen.jsx";
 
-La colonne de gauche liste les modèles en trois groupes : « Par défaut » (le format « Automatique »), « Mes favoris » et « Tous les modèles ». Utilisez « Rechercher un modèle » pour filtrer la liste.
+Un compte rendu suit soit le format « Automatique », soit un modèle aux sections fixes. Vous gérez les deux dans la vue **Modèles**, ouverte depuis les Paramètres ou depuis la palette <Kbd keys="Ctrl+K" /> :
+
+<SettingsPath steps={["Paramètres", "Mes réunions", "Modèles"]} />
+
+La colonne de gauche liste les modèles par groupe : « Automatique », « Favoris », puis un groupe par dossier qui utilise un modèle (nommé comme le dossier), puis « Généraux ». Chaque modèle n'apparaît qu'une fois : un favori reste sous « Favoris ». Utilisez « Rechercher un modèle » pour filtrer la liste ; la recherche porte aussi sur le nom des dossiers.
 
 ## Les modèles fournis
 
 Syntheo installe 21 modèles en français.
 
-Quatre modèles Syntheo sont marqués comme favoris et apparaissent sous « Mes favoris » :
+Quatre modèles Syntheo sont marqués comme favoris et apparaissent sous « Favoris » :
 
 | Modèle | Usage |
 | --- | --- |
@@ -28,7 +32,32 @@ Tous ces modèles sont modifiables. Pour ajouter ou retirer un modèle des favor
 
 Avant la réunion, à l'étape **Préparer**, cliquez sur le type affiché à côté de « Type », dans la fiche de la note (« Automatique » par défaut). Recherchez un modèle avec « Rechercher un type de réunion », puis sélectionnez-le. Le compte rendu suivra ce modèle.
 
-Après la réunion, à l'étape **Synthèse**, cliquez sur le nom du modèle sous le titre pour ouvrir le sélecteur. Sélectionner un autre modèle remplace le compte rendu par un nouveau, rédigé selon ce modèle. Pour appliquer à nouveau le même modèle, utilisez « Régénérer ». Voir [Notes, comptes rendus et transcriptions](/notes).
+Si la note est rangée dans un dossier qui a un modèle par défaut, le type affiche ce modèle suivi de « — modèle du dossier ». Choisir un autre modèle dans la liste le fixe sur la note.
+
+Après la réunion, à l'étape **Synthèse**, ouvrez le menu « Versions de la synthèse » (la flèche à côté de « Synthèse · v1 », sous le titre), puis choisissez « Changer de modèle… ». Sélectionner un autre modèle remplace le compte rendu par un nouveau, rédigé selon ce modèle. Pour appliquer à nouveau le même modèle, utilisez « Régénérer ». Voir [Notes, comptes rendus et transcriptions](/notes).
+
+## Choisir un modèle par dossier
+
+Donnez un modèle par défaut à un dossier pour que toutes ses réunions suivent le même format.
+
+1. Ouvrez la page du dossier (voir [Dossiers et projets](/folders)).
+2. Dans la colonne de droite, sous « Modèle de compte rendu », choisissez un modèle. « Aucun » retire le modèle du dossier.
+
+Ce modèle s'applique aux notes du dossier et de ses sous-dossiers qui n'ont pas de modèle choisi. Un sous-dossier sans modèle hérite de celui du dossier parent le plus proche : la page le rappelle, par exemple « Sans modèle ici, les notes utilisent Point projet / Sprint, celui du dossier Clients. »
+
+Pour rédiger un compte rendu, Syntheo retient le premier modèle disponible dans cet ordre :
+
+1. le modèle choisi au lancement de la synthèse, par exemple avec le sélecteur de l'étape Synthèse ;
+2. le modèle choisi sur la note, à l'étape Préparer ;
+3. le modèle du dossier de la note, ou de son dossier parent le plus proche ;
+4. le modèle marqué « Utiliser par défaut » ;
+5. le format « Automatique ».
+
+Un modèle supprimé n'est plus appliqué.
+
+### Ranger une note déjà synthétisée
+
+Si vous rangez une note qui a déjà un compte rendu dans un dossier dont le modèle est différent, Syntheo affiche « Ce dossier utilise le modèle … » : « Régénérer la synthèse avec ce modèle ? La version actuelle reste dans l'historique. » Cliquez sur « Régénérer » pour appliquer le modèle du dossier. Sans clic, le compte rendu ne change pas. Aucune proposition n'apparaît si la note a un modèle choisi ou si son compte rendu suit déjà ce modèle.
 
 ## Créer un modèle
 
@@ -40,11 +69,15 @@ Après la réunion, à l'étape **Synthèse**, cliquez sur le nom du modèle sou
 
 Pour réordonner les sections, faites glisser la poignée d'une section. Au clavier, placez le focus sur la poignée et utilisez les flèches haut et bas.
 
-Les modifications sont enregistrées au fil de l'eau. Le menu « Plus d'actions » de l'éditeur propose « Utiliser par défaut », « Dupliquer » et « Supprimer ».
+Les modifications sont enregistrées au fil de l'eau. Le menu « Plus d'actions » de l'éditeur propose « Utiliser par défaut », « Dupliquer » et « Supprimer ». Le modèle utilisé par défaut affiche « Modèle par défaut » dans l'éditeur et « par défaut » dans la liste.
 
 ### Voir la forme du compte rendu
 
 En haut de l'éditeur, basculez de « Modifier » à « Aperçu ». L'aperçu montre la forme de la synthèse : chaque section avec un exemple de ligne rédigée selon sa consigne.
+
+Essayez la vue **Modèles** ci-dessous. La colonne de gauche (1) liste les groupes : « Point projet / Sprint », modèle du dossier Produit, reste sous « Favoris ». Tapez « clients » dans « Rechercher un modèle » (2) : le modèle du dossier Clients apparaît. Basculez sur « Aperçu » (3), cliquez sur « Proposer des sections » (4), puis déplacez une section avec sa poignée et les flèches haut et bas (5). Sélectionnez **Automatique** pour voir son éditeur.
+
+<TemplatesEditor />
 
 ## Proposer des sections avec l'IA
 
@@ -62,10 +95,14 @@ Le bouton reste désactivé tant qu'aucun serveur de synthèse n'est connecté :
 
 ## Personnaliser « Automatique »
 
-Le format « Automatique » laisse Syntheo structurer le compte rendu lui-même, sans modèle fixe. Il sert quand aucun modèle n'est choisi pour une réunion.
+Le format « Automatique » laisse Syntheo structurer le compte rendu lui-même, sans modèle fixe. Il sert quand aucun modèle ne s'applique à la réunion : ni sur la note, ni sur son dossier, ni par défaut.
 
 1. Ouvrez la vue **Modèles** et sélectionnez **Automatique**.
 2. Modifiez le « Format du résumé », puis cliquez sur « Enregistrer ».
+
+Dans la reproduction ci-dessous, « Automatique » est ouvert : modifiez le format, « Enregistrer » devient actif. Quand un format personnalisé est enregistré, la liste affiche « personnalisé » à côté d'« Automatique » ; « Réinitialiser au format par défaut », dans le menu **•••**, le retire.
+
+<TemplatesEditor start="automatique" markers={false} />
 
 Par exemple :
 

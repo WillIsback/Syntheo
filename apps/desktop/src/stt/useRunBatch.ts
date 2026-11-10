@@ -1,12 +1,8 @@
+import { t } from "@lingui/core/macro";
 import { useCallback } from "react";
 
 import {
   commands as transcriptionCommands,
-  type BatchRefinementSource,
-  type BatchProvider,
-  type BatchTranscriptPromotion,
-  type StoredSpeakerHint,
-  type StoredTranscriptWord,
   type TranscriptionParams,
 } from "@syntheo/plugin-transcription";
 
@@ -14,9 +10,25 @@ import { BatchResponseProcessingError } from "./batch-response-processing-error"
 import { completeCaptureTranscript } from "./capture-completion";
 import { useListener } from "./contexts";
 import { persistTranscriptWrite } from "./persist-retry";
+import {
+  EMPTY_CURRENT_CAPTURE_TRANSCRIPT_ERROR_MESSAGE,
+  INCOMPLETE_BATCH_TRANSCRIPT_ERROR_MESSAGE,
+  type RunOptions,
+  getSessionSpeakerCount,
+  isRecoveryNoSpeechError,
+  isTerminalBatchSaveError,
+  selectedProviderLabel,
+  toBatchTranscriptPromotion,
+  toStoredSpeakerHint,
+  toStoredTranscriptWord,
+} from "./run-batch-helpers";
+import {
+  canUseTranscriptionTarget,
+  selectTranscriptionProvider,
+  storedTranscriptionProvider,
+} from "./transcription-route";
 import { useSTTConnection } from "./useSTTConnection";
 
-import { withCloudsyncActivity } from "~/db/cloudsync-activity";
 import { deleteProcessedAudioForRetention } from "~/services/audio-retention";
 import { useSession, useSessionParticipants } from "~/session/queries";
 import { useConfigValue } from "~/shared/config";
@@ -27,228 +39,19 @@ import {
 } from "~/store/zustand/listener/general-batch";
 import type { BatchPersistCallback } from "~/store/zustand/listener/transcript";
 import { serializeBatchResumeContext } from "~/stt/batch-resume-context";
-import {
-  getTranscriptionLanguages,
-  isSupportedLanguagesBatch,
-} from "~/stt/capabilities";
-import type { TranscriptRecord } from "~/stt/queries";
+import { getTranscriptionLanguages } from "~/stt/capabilities";
 import type { SpeakerHintWithId, WordWithId } from "~/stt/types";
 
-type RunOptions = {
-  signal?: AbortSignal;
-  /**
-   * Audio transmis en mémoire (dictée) : prioritaire sur le chemin de fichier,
-   * et jamais écrit sur le disque. Base64, car Tauri sérialise `Vec<u8>` en
-   * tableau de nombres.
-   */
-  audio?: { data_base64: string; file_name: string };
-  /**
-   * Fichier déposé reçu par morceaux et gardé en mémoire côté Rust
-   * (`streamAudioFileToMemory`) : prioritaire sur `audio` et le chemin.
-   */
-  audioUploadId?: string;
-  recovery?: {
-    persist: (words: WordWithId[], hints: SpeakerHintWithId[]) => Promise<void>;
-  };
-  deferAudioFinalization?: boolean;
-  handlePersist?: BatchPersistCallback;
-  notifyOnCompletion?: boolean;
-  resume?: { provider: BatchProvider; model: string };
-  provider?: string;
-  model?: string;
-  baseUrl?: string;
-  apiKey?: string;
-  keywords?: string[];
-  languages?: string[];
-  numSpeakers?: number;
-  minSpeakers?: number;
-  maxSpeakers?: number;
-  promotion?: RunOptionsPromotion;
-  captureInterval?: { startedAtMs: number; stoppedAtMs: number };
-};
+export {
+  reconcileRefinedSpeakerClusters,
+  EMPTY_CURRENT_CAPTURE_TRANSCRIPT_ERROR_MESSAGE,
+  canRunBatchTranscription,
+  isStoppedTranscriptionError,
+  isTerminalTranscriptionError,
+  getSessionSpeakerCount,
+} from "./run-batch-helpers";
 
-type RunOptionsPromotion =
-  | { scope: "preserve_existing" }
-  | { scope: "whole_session" }
-  | {
-      scope: "current_capture";
-      audioOffsetMs: number;
-      replaceTranscriptId?: string;
-      startedAt: number;
-    };
-
-function toStoredTranscriptWord(word: WordWithId): StoredTranscriptWord {
-  return {
-    ...word,
-    metadata: word.metadata as StoredTranscriptWord["metadata"],
-  };
-}
-
-function toStoredSpeakerHint(hint: SpeakerHintWithId): StoredSpeakerHint {
-  return {
-    id: hint.id,
-    word_id: hint.word_id ?? undefined,
-    type: hint.type ?? "",
-    value: hint.value as StoredSpeakerHint["value"],
-  };
-}
-
-function toSpeakerHintWithId(hint: StoredSpeakerHint): SpeakerHintWithId {
-  return {
-    id: hint.id,
-    word_id: hint.word_id ?? "",
-    type: hint.type,
-    value: hint.value as SpeakerHintWithId["value"],
-  };
-}
-
-function toBatchRefinementSource(
-  transcript: TranscriptRecord,
-): BatchRefinementSource {
-  return {
-    id: transcript.id,
-    started_at: transcript.startedAt,
-    words: transcript.words.map(toStoredTranscriptWord),
-    speaker_hints: transcript.speakerHints.map(toStoredSpeakerHint),
-  };
-}
-
-export async function reconcileRefinedSpeakerClusters(
-  source: TranscriptRecord,
-  words: WordWithId[],
-  hints: SpeakerHintWithId[],
-): Promise<SpeakerHintWithId[]> {
-  const result = await transcriptionCommands.reconcileRefinedSpeakerClusters({
-    source: toBatchRefinementSource(source),
-    words: words.map(toStoredTranscriptWord),
-    hints: hints.map(toStoredSpeakerHint),
-  });
-  if (result.status === "error") throw new Error(result.error);
-  return result.data.map(toSpeakerHintWithId);
-}
-
-const STOPPED_TRANSCRIPTION_ERROR_MESSAGE = "Transcription stopped.";
-export const EMPTY_CURRENT_CAPTURE_TRANSCRIPT_ERROR_MESSAGE =
-  "Batch transcription did not include the current recording.";
-const INCOMPLETE_BATCH_TRANSCRIPT_ERROR_MESSAGE =
-  "The new transcription returned much less text. Your saved transcript and recording were kept. Try transcribing again.";
-const NO_SPEECH_RECOVERY_ERROR_MESSAGE = "No speech was detected in the audio.";
-
-export function getBatchProvider(
-  provider: string,
-  _model: string,
-): TranscriptionParams["provider"] | null {
-  // NVIDIA NIM ne propose que le temps réel ; l'import passe par le protocole
-  // OpenAI (/v1/audio/transcriptions).
-  if (provider === "openai") return "openai";
-  return null;
-}
-
-export function canRunBatchTranscription(
-  _conn: { provider: string; model: string } | null,
-  _modelOverride?: string,
-) {
-  return true;
-}
-
-async function canUseBatchTarget(
-  provider: TranscriptionParams["provider"],
-  model: string,
-  languages: readonly string[],
-) {
-  return isSupportedLanguagesBatch(provider, model, languages);
-}
-
-function selectedProviderLabel(
-  conn: { provider: string; model: string } | null,
-  modelOverride?: string,
-) {
-  if (!conn) {
-    return "the selected speech-to-text provider";
-  }
-
-  return modelOverride ?? conn.model ?? conn.provider;
-}
-
-export function isStoppedTranscriptionError(error: unknown) {
-  return (
-    (error instanceof Error ? error.message : String(error)) ===
-    STOPPED_TRANSCRIPTION_ERROR_MESSAGE
-  );
-}
-
-function isTranscriptionAuthenticationError(error: unknown) {
-  const message = error instanceof Error ? error.message : String(error);
-  return /authentication failed|invalid_token|unauthorized|\b401\b/i.test(
-    message,
-  );
-}
-
-export function isTerminalTranscriptionError(error: unknown) {
-  const message = error instanceof Error ? error.message : String(error);
-  return (
-    error instanceof BatchResponseProcessingError ||
-    message === EMPTY_CURRENT_CAPTURE_TRANSCRIPT_ERROR_MESSAGE ||
-    message === INCOMPLETE_BATCH_TRANSCRIPT_ERROR_MESSAGE ||
-    isTranscriptionAuthenticationError(error) ||
-    /corrupt or unsupported|unsupported (?:audio|data)|invalid audio|no speech|empty transcript/i.test(
-      message,
-    ) ||
-    /\b(?:400|403|404|413|415|422)\b|bad request|invalid api key/i.test(message)
-  );
-}
-
-export function getSessionSpeakerCount(
-  participantHumanIds: Iterable<string>,
-  selfHumanId?: string | null,
-): number | undefined {
-  const humanIds = new Set(Array.from(participantHumanIds).filter(Boolean));
-
-  if (typeof selfHumanId === "string" && selfHumanId) {
-    humanIds.add(selfHumanId);
-  }
-
-  return humanIds.size > 1 ? humanIds.size : undefined;
-}
-
-function isRecoveryNoSpeechError(
-  options: RunOptions | undefined,
-  error: unknown,
-): boolean {
-  return (
-    Boolean(options?.recovery) &&
-    error instanceof Error &&
-    error.message === NO_SPEECH_RECOVERY_ERROR_MESSAGE
-  );
-}
-
-function isTerminalBatchSaveError(error: unknown): boolean {
-  if (error instanceof BatchResponseProcessingError) {
-    return true;
-  }
-  if (!(error instanceof Error)) {
-    return false;
-  }
-  return (
-    error.message === EMPTY_CURRENT_CAPTURE_TRANSCRIPT_ERROR_MESSAGE ||
-    error.message === INCOMPLETE_BATCH_TRANSCRIPT_ERROR_MESSAGE
-  );
-}
-
-function toBatchTranscriptPromotion(
-  promotion: RunOptionsPromotion,
-): BatchTranscriptPromotion {
-  if (promotion.scope === "current_capture") {
-    return {
-      scope: "current_capture",
-      audio_offset_ms: promotion.audioOffsetMs,
-      replace_transcript_id: promotion.replaceTranscriptId,
-      started_at: promotion.startedAt,
-    };
-  }
-  return { scope: promotion.scope };
-}
-
+export { getBatchProvider } from "./transcription-route";
 export const useRunBatch = (sessionId: string) => {
   const session = useSession(sessionId);
   const participants = useSessionParticipants(sessionId);
@@ -267,18 +70,22 @@ export const useRunBatch = (sessionId: string) => {
       options?.signal?.throwIfAborted();
       if (!startTranscription) {
         throw new Error(
-          "STT connection is not available. Please configure your speech-to-text provider.",
+          t`The transcription service is not available. Set up your transcription provider.`,
         );
       }
 
-      const languages =
+      let languages =
         options?.languages ??
         getTranscriptionLanguages(aiLanguage, spokenLanguages);
       const selectedProviderId = options?.provider ?? conn?.provider;
       const selectedModel = options?.model ?? conn?.model;
       const selectedProvider =
         selectedProviderId && selectedModel
-          ? getBatchProvider(selectedProviderId, selectedModel)
+          ? selectTranscriptionProvider(
+              selectedProviderId,
+              selectedModel,
+              options?.allowRealtimeStream === true,
+            )
           : null;
       const selectedTarget =
         conn && selectedModel && selectedProvider
@@ -290,13 +97,34 @@ export const useRunBatch = (sessionId: string) => {
               label: selectedModel,
             }
           : null;
-      const selectedTargetSupported = selectedTarget
-        ? await canUseBatchTarget(
+      let selectedTargetSupported = selectedTarget
+        ? await canUseTranscriptionTarget(
             selectedTarget.provider,
+            selectedProviderId,
             selectedTarget.model,
             languages,
           )
         : false;
+      // Issue 518 : comme l'écoute en direct (getLiveTranscriptionConfig), un
+      // modèle temps réel qui ne gère qu'une langue à la fois rejoue le
+      // fichier dans la langue principale.
+      const primaryLanguage = languages[0];
+      if (
+        selectedTarget?.provider === "realtime" &&
+        !selectedTargetSupported &&
+        !options?.languages &&
+        languages.length > 1 &&
+        primaryLanguage &&
+        (await canUseTranscriptionTarget(
+          selectedTarget.provider,
+          selectedProviderId,
+          selectedTarget.model,
+          [primaryLanguage],
+        ))
+      ) {
+        languages = [primaryLanguage];
+        selectedTargetSupported = true;
+      }
       options?.signal?.throwIfAborted();
       // Aucun repli : sans endpoint on-prem capable de batch, l'import échoue.
       const fallbackTarget = selectedTargetSupported ? selectedTarget : null;
@@ -311,13 +139,18 @@ export const useRunBatch = (sessionId: string) => {
         : fallbackTarget;
 
       if (!target) {
+        const model = selectedProviderLabel(conn, selectedModel);
         throw new Error(
           selectedTarget
-            ? `${selectedProviderLabel(conn, selectedModel)} is not available for batch transcription with the selected languages. Choose languages it supports, or configure another speech-to-text provider.`
-            : `${selectedProviderLabel(conn, selectedModel)} is not available for batch transcription on this platform. Configure a batch-capable speech-to-text provider.`,
+            ? t`${model} can't transcribe the selected languages. Choose languages it supports, or set up another transcription provider.`
+            : t`${model} can't transcribe a recording afterwards. Choose a model that transcribes files, or set up another transcription provider.`,
         );
       }
 
+      const storedProvider = storedTranscriptionProvider(
+        target.provider,
+        conn?.provider,
+      );
       const createdAt = new Date().toISOString();
       const startedAt = options?.captureInterval?.startedAtMs ?? Date.now();
       const memoMd = session?.raw_md ?? "";
@@ -394,7 +227,7 @@ export const useRunBatch = (sessionId: string) => {
               word_id: wordId,
               type: "provider_speaker_index",
               value: JSON.stringify({
-                provider: hint.data.provider ?? target.provider,
+                provider: hint.data.provider ?? storedProvider,
                 channel: hint.data.channel ?? word.channel,
                 speaker_index: hint.data.speaker_index,
               }),
@@ -468,7 +301,7 @@ export const useRunBatch = (sessionId: string) => {
             created_at: createdAt,
             started_at: startedAt,
             memo: memoMd,
-            provider: target.provider,
+            provider: storedProvider,
             model: target.model,
             words: stagedWords.map(toStoredTranscriptWord),
             hints: stagedHints.map(toStoredSpeakerHint),
@@ -501,46 +334,41 @@ export const useRunBatch = (sessionId: string) => {
         }
       };
 
-      const cloudsyncLeaseKey = `${sessionId}:${id()}`;
-      return withCloudsyncActivity(
-        "transcription",
-        cloudsyncLeaseKey,
-        async () => {
-          try {
-            await run(params);
-          } catch (error) {
-            options?.signal?.throwIfAborted();
-            if (!isRecoveryNoSpeechError(options, error)) {
-              throw error;
-            }
+      return (async () => {
+        try {
+          await run(params);
+        } catch (error) {
+          options?.signal?.throwIfAborted();
+          if (!isRecoveryNoSpeechError(options, error)) {
+            throw error;
           }
+        }
 
-          if (options?.recovery) {
-            options.signal?.throwIfAborted();
-            await options.recovery.persist(stagedWords, stagedHints);
-            await acknowledgeCompletedBatch(jobId);
-            return;
-          }
-
-          try {
-            if (!handlePersist) {
-              await saveBatchResults();
-            }
-            if (!options?.deferAudioFinalization) {
-              await deleteProcessedAudioForRetention(audioRetention, sessionId);
-            }
-          } catch (error) {
-            if (isTerminalBatchSaveError(error)) {
-              throw error;
-            }
-            throw new BatchResponseProcessingError(error);
-          }
+        if (options?.recovery) {
+          options.signal?.throwIfAborted();
+          await options.recovery.persist(stagedWords, stagedHints);
           await acknowledgeCompletedBatch(jobId);
-          if (options?.notifyOnCompletion !== false) {
-            await notifyBatchCompleted();
+          return;
+        }
+
+        try {
+          if (!handlePersist) {
+            await saveBatchResults();
           }
-        },
-      );
+          if (!options?.deferAudioFinalization) {
+            await deleteProcessedAudioForRetention(audioRetention, sessionId);
+          }
+        } catch (error) {
+          if (isTerminalBatchSaveError(error)) {
+            throw error;
+          }
+          throw new BatchResponseProcessingError(error);
+        }
+        await acknowledgeCompletedBatch(jobId);
+        if (options?.notifyOnCompletion !== false) {
+          await notifyBatchCompleted();
+        }
+      })();
     },
     [
       conn,

@@ -16,47 +16,24 @@ import { SessionSurface } from "./components/session-surface";
 import { useHasTranscript } from "./components/shared";
 import { useAutoEnhance } from "./hooks/useAutoEnhance";
 import { useEnhancedNotes } from "./hooks/useEnhancedNotes";
-import { getSessionEvent } from "./utils";
 
 import { PerfZone } from "~/devtools-bar/perf-zone";
 import { isLockedFlag } from "~/lock/flag";
 import { revealLockedNote } from "~/lock/notes";
 import { NoteLockScreen } from "~/lock/screen";
 import { useAppLock } from "~/lock/store";
-import {
-  isCanonicalSessionImportLocked,
-  subscribeCanonicalSessionImportLocks,
-} from "~/session/editor-activity";
 import { useSession } from "~/session/queries";
 import { registerShortcutAction } from "~/shared/shortcut-actions";
 import { isListeningPaused } from "~/store/zustand/listener/general-shared";
 import { type Tab, useTabs } from "~/store/zustand/tabs";
 import { useListener } from "~/stt/contexts";
-import { ScheduledSessionAutoStart } from "~/stt/scheduled-session-auto-start";
+import { SessionAutoStart } from "~/stt/session-auto-start";
 
 export function TabContentNote({
   standaloneWindow = false,
   tab,
 }: {
   standaloneWindow?: boolean;
-  tab: Extract<Tab, { type: "sessions" }>;
-}) {
-  const importLocked = React.useSyncExternalStore(
-    subscribeCanonicalSessionImportLocks,
-    () => isCanonicalSessionImportLocked(tab.id),
-    () => isCanonicalSessionImportLocked(tab.id),
-  );
-
-  if (importLocked) return <SessionContentLoading />;
-
-  return <LockedNoteGate tab={tab} standaloneWindow={standaloneWindow} />;
-}
-
-function LockedNoteGate({
-  standaloneWindow,
-  tab,
-}: {
-  standaloneWindow: boolean;
   tab: Extract<Tab, { type: "sessions" }>;
 }) {
   const session = useSession(tab.id);
@@ -99,11 +76,8 @@ function UnlockedTabContentNote({
     <>
       {tab.state.autoStart && !standaloneWindow ? (
         // Stay mounted under the lock overlay so a locked session can clear
-        // autoStart instead of blocking later scheduled meetings.
-        <ScheduledSessionAutoStart
-          sessionId={tab.id}
-          requiresCalendarEligibility={Boolean(tab.state.scheduledAutoStart)}
-        />
+        // autoStart instead of blocking a later automatic start.
+        <SessionAutoStart sessionId={tab.id} />
       ) : null}
       <SearchProvider>
         <TabContentNoteInner
@@ -142,7 +116,6 @@ function TabContentNoteInner({
     hasTranscript && sessionMode === "inactive",
   );
   const session = useSession(sessionId);
-  const sessionEvent = session ? getSessionEvent(session) : null;
   const updateSessionTabState = useTabs((state) => state.updateSessionTabState);
 
   // Garde l'auto-génération du compte-rendu active pour cette note.
@@ -259,15 +232,12 @@ function TabContentNoteInner({
                 tab={tab}
                 rawMd={session.raw_md}
                 sessionTitle={session.title}
-                eventTitle={sessionEvent?.title}
-                eventDescription={sessionEvent?.description}
                 editorTabs={editorTabs}
                 currentTab={currentView}
                 handleTabChange={handleTabChange}
                 sessionMode={sessionMode}
                 transcriptEditMode={transcriptEditMode}
                 onTranscriptEditModeChange={handleTranscriptEditModeChange}
-                hideHeader
                 stage={stage}
               />
             ) : (

@@ -44,57 +44,6 @@ const DECLINE_PATTERN =
   /\b((i\s+)?(do\s+not|don't|does\s+not|doesn't)\s+consent|stop\s+recording)\b/i;
 const CONSENT_PATTERN = /\b(i\s+consent|i\s+agree\s+to\s+(being\s+)?record)/i;
 
-export function applyDisclosureAttempt(
-  consents: readonly ParticipantConsent[],
-  _attempt: DisclosureAttempt,
-): ParticipantConsent[] {
-  return [...consents];
-}
-
-export function applyLateJoiner(
-  consents: readonly ParticipantConsent[],
-  sessionId: string,
-  participantKey: string,
-  updatedAt: string,
-): ParticipantConsent[] {
-  if (
-    consents.some(
-      (consent) =>
-        consent.sessionId === sessionId &&
-        consent.participantKey === participantKey,
-    )
-  ) {
-    return [...consents];
-  }
-  return [
-    ...consents,
-    {
-      sessionId,
-      participantKey,
-      status: "unknown",
-      source: "unseen",
-      updatedAt,
-    },
-  ];
-}
-
-export function applyExplicitConsentResponse(
-  consents: readonly ParticipantConsent[],
-  next: ParticipantConsent,
-): ParticipantConsent[] {
-  if (next.source === "unseen") {
-    throw new Error("explicit consent cannot use the unseen source");
-  }
-  const without = consents.filter(
-    (consent) =>
-      !(
-        consent.sessionId === next.sessionId &&
-        consent.participantKey === next.participantKey
-      ),
-  );
-  return [...without, next];
-}
-
 export function interpretChatAsConsentResponse(
   text: string,
   disclosureMessage: string,
@@ -121,13 +70,4 @@ export function sessionListeningPolicy(
   return consents.some((consent) => consent.status === "declined")
     ? "stop_declined"
     : "continue";
-}
-
-export function sessionHasLegalConsent(
-  consents: readonly ParticipantConsent[],
-  disclosureAttempts: readonly DisclosureAttempt[],
-): boolean {
-  void consents;
-  void disclosureAttempts;
-  return false;
 }

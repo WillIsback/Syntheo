@@ -10,7 +10,6 @@ import {
   useSessionHasTranscript,
 } from "~/session/queries";
 import type { SessionMode } from "~/store/zustand/listener/general";
-import type { Tab } from "~/store/zustand/tabs/schema";
 import { type EditorView } from "~/store/zustand/tabs/schema";
 import { useListener } from "~/stt/contexts";
 
@@ -45,23 +44,15 @@ export function useCurrentNoteHasContent(
   return hasStoredNoteContent(rawMd);
 }
 
-export function useCurrentNoteTab(
-  tab: Extract<Tab, { type: "sessions" }>,
-  options: { audioExists?: boolean } = {},
-): EditorView {
-  return useSessionNoteView(tab.id, tab.state.view ?? null, options);
-}
-
 // Vue affichée pour une note, même quand elle n'est pas ouverte dans un
 // onglet (`view` nul : vue par défaut, comme à l'ouverture de la note).
 export function useSessionNoteView(
   sessionId: string,
   view: EditorView | null = null,
-  { audioExists = false }: { audioExists?: boolean } = {},
 ): EditorView {
   const sessionMode = useListener((state) => state.getSessionMode(sessionId));
   const isLiveSessionActive = sessionMode === "active";
-  const canShowTranscript = useCanShowTranscript(sessionId, { audioExists });
+  const canShowTranscript = useCanShowTranscript(sessionId);
 
   const hasTranscript = useHasTranscript(sessionId);
   const enhancedNoteIds = useEnhancedNotes(
@@ -88,10 +79,9 @@ export function useSessionNoteView(
   ]);
 }
 
-export function useCanShowTranscript(
-  sessionId: string,
-  { audioExists = false }: { audioExists?: boolean } = {},
-): boolean {
+// Syntheo ne conserve jamais l'audio : seule une transcription (ou une
+// capture, un import en cours, une erreur d'import) rend la vue disponible.
+export function useCanShowTranscript(sessionId: string): boolean {
   const hasTranscript = useHasTranscript(sessionId);
   const sessionMode = useListener((state) => state.getSessionMode(sessionId));
   const batchError = useListener((state) => state.batch[sessionId]?.error);
@@ -101,7 +91,6 @@ export function useCanShowTranscript(
   );
 
   return getCanShowTranscript({
-    audioExists,
     batchError: Boolean(batchError),
     hasLiveSegments,
     hasTranscript,
@@ -109,14 +98,12 @@ export function useCanShowTranscript(
   });
 }
 
-export function getCanShowTranscript({
-  audioExists = false,
+function getCanShowTranscript({
   batchError = false,
   hasLiveSegments = false,
   hasTranscript,
   sessionMode,
 }: {
-  audioExists?: boolean;
   batchError?: boolean;
   hasLiveSegments?: boolean;
   hasTranscript: boolean;
@@ -127,19 +114,9 @@ export function getCanShowTranscript({
 
   return (
     hasTranscript ||
-    (audioExists && !isLiveCapture) ||
     isLiveCapture ||
     hasLiveSegments ||
     sessionMode === "running_batch" ||
     Boolean(batchError)
-  );
-}
-
-export function RecordingIcon() {
-  return (
-    <span className="relative flex size-3 items-center justify-center">
-      <span className="bg-recording/40 absolute size-2.5 animate-ping rounded-full" />
-      <span className="bg-recording relative size-2 rounded-full" />
-    </span>
   );
 }

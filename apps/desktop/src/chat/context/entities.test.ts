@@ -58,7 +58,7 @@ describe("tool context entities", () => {
     ]);
   });
 
-  it("extracts contacts, related meetings, and calendar events", () => {
+  it("extracts contacts and related meetings", () => {
     const entities = extractToolContextEntities([
       {
         parts: [
@@ -90,20 +90,6 @@ describe("tool context entities", () => {
               results: [{ meeting_id: "meeting-10", title: "Mentioned" }],
             },
           },
-          {
-            type: "tool-search_calendar_events",
-            state: "output-available",
-            output: {
-              results: [
-                {
-                  id: "evt-1",
-                  title: "Standup",
-                  linkedSessionId: "session-1",
-                },
-                { id: "evt-2", title: "Interview" },
-              ],
-            },
-          },
         ],
       } as any,
     ]);
@@ -131,22 +117,6 @@ describe("tool context entities", () => {
         source: "tool",
         sessionId: "meeting-10",
         title: "Mentioned",
-      },
-      {
-        kind: "calendar_event",
-        key: "calendar_event:search:evt-1",
-        source: "tool",
-        eventId: "evt-1",
-        linkedSessionId: "session-1",
-        title: "Standup",
-      },
-      {
-        kind: "calendar_event",
-        key: "calendar_event:search:evt-2",
-        source: "tool",
-        eventId: "evt-2",
-        linkedSessionId: null,
-        title: "Interview",
       },
     ]);
   });
