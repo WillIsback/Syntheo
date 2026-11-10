@@ -1,5 +1,6 @@
 import { i18n } from "@lingui/core";
 import { t } from "@lingui/core/macro";
+import { useLingui } from "@lingui/react";
 
 import { commands as openerCommands } from "@syntheo/plugin-opener2";
 import { ArrowSquareOut } from "@syntheo/ui/components/icons";
@@ -14,6 +15,9 @@ import { documentationUrl } from "~/shared/documentation";
 export { buildMcpConfiguration, CLI_INSTALL_COMMAND } from "./cli";
 
 export function SettingsDevelopers() {
+  // `t` de @lingui/core/macro lit la langue au rendu : s'abonner au changement de
+  // langue pour se redessiner aussitôt, sous-composants compris (issue 558).
+  useLingui();
   return (
     <div className="flex flex-col gap-8">
       <div className="flex items-center justify-between gap-4">
