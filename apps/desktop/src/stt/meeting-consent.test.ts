@@ -7,7 +7,7 @@ import {
 } from "./meeting-consent";
 
 const DISCLOSURE =
-  "I'm using Syntheo to record and transcribe this meeting. https://github.com/WillIsback/syntheo-desktop";
+  "I'm using Syntheo to record and transcribe this meeting. https://github.com/WillIsback/Syntheo";
 
 function consent(status: ParticipantConsent["status"]): ParticipantConsent {
   return {

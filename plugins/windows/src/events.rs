@@ -4,7 +4,7 @@ use tauri::Manager;
 
 use crate::{AppWindow, WindowsPluginExt, commands};
 
-// TODO: https://github.com/WillIsback/syntheo-desktop/commit/150c8a1 this not worked. webview_window not found.
+// TODO: https://github.com/WillIsback/Syntheo/commit/150c8a1 this not worked. webview_window not found.
 pub fn on_window_event(window: &tauri::Window<tauri::Wry>, event: &tauri::WindowEvent) {
     let app = window.app_handle();
 

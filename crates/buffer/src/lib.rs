@@ -297,8 +297,8 @@ mod tests {
 - Offers powerful extensions—like real-time transcripts and CRM uploads (e.g. Twenty).
 
 ## Stay Connected
-- Follow updates on [X](https://github.com/WillIsback/syntheo-desktop/x).
-- Join the community and chat on [Discord](https://github.com/WillIsback/syntheo-desktop/discord). 
+- Follow updates on [X](https://github.com/WillIsback/Syntheo/x).
+- Join the community and chat on [Discord](https://github.com/WillIsback/Syntheo/discord). 
 
 # Participants:
 
@@ -336,8 +336,8 @@ mod tests {
 
         # Stay Connected
 
-        - Follow updates on [X](https://github.com/WillIsback/syntheo-desktop/x).
-        - Join the community and chat on [Discord](https://github.com/WillIsback/syntheo-desktop/discord).
+        - Follow updates on [X](https://github.com/WillIsback/Syntheo/x).
+        - Join the community and chat on [Discord](https://github.com/WillIsback/Syntheo/discord).
 
          
 
@@ -374,8 +374,8 @@ mod tests {
 - Offers powerful extensions—like real-time transcripts and CRM uploads (e.g. Twenty).
 
 ## Stay Connected
-- Follow updates on [X](https://github.com/WillIsback/syntheo-desktop/x).
-- Join the community and chat on [Discord](https://github.com/WillIsback/syntheo-desktop/discord).
+- Follow updates on [X](https://github.com/WillIsback/Syntheo/x).
+- Join the community and chat on [Discord](https://github.com/WillIsback/Syntheo/discord).
 "#;
 
         insta::assert_snapshot!(opinionated_md_to_html(input).unwrap().to_string(), @r#"
@@ -402,8 +402,8 @@ mod tests {
         <p> </p>
         <h1>Stay Connected</h1>
         <ul>
-        <li>Follow updates on <a href="https://github.com/WillIsback/syntheo-desktop/x">X</a>.</li>
-        <li>Join the community and chat on <a href="https://github.com/WillIsback/syntheo-desktop/discord">Discord</a>.</li>
+        <li>Follow updates on <a href="https://github.com/WillIsback/Syntheo/x">X</a>.</li>
+        <li>Join the community and chat on <a href="https://github.com/WillIsback/Syntheo/discord">Discord</a>.</li>
         </ul>
         "#);
     }

@@ -202,7 +202,7 @@ fn build_cover_page(
     cover.push_str("    #table(columns: (1fr, auto), stroke: none, inset: 0pt,\n");
     cover.push_str("      [#image(\"syntheo-logo.svg\", width: 13mm)],\n");
     cover.push_str(
-        "      [#align(right, text(size: 9pt, fill: subtle)[#link(\"https://github.com/WillIsback/syntheo-desktop\")[github.com/WillIsback/syntheo-desktop]])],\n",
+        "      [#align(right, text(size: 9pt, fill: subtle)[#link(\"https://github.com/WillIsback/Syntheo\")[github.com/WillIsback/Syntheo]])],\n",
     );
     cover.push_str("    )\n");
     cover.push_str("    #v(14mm)\n");

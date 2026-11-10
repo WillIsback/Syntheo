@@ -46,14 +46,14 @@ done
 3. To actually see what's changed between two versions, you can use this.
 
 ```bash
-gh api repos/WillIsback/syntheo-desktop/compare/<>...<>  --jq '.commits'
+gh api repos/WillIsback/Syntheo/compare/<>...<>  --jq '.commits'
 ```
 
 4. For each merged PR in that range, look up who opened it so outside
    contributors can be credited:
 
 ```bash
-gh api repos/WillIsback/syntheo-desktop/pulls/<number> --jq '{login: .user.login, type: .user.type, association: .author_association}'
+gh api repos/WillIsback/Syntheo/pulls/<number> --jq '{login: .user.login, type: .user.type, association: .author_association}'
 ```
 
 # Contributor credit

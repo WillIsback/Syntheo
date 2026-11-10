@@ -4,10 +4,10 @@
   "description": "Search and read local Syntheo meetings through the local CLI or the local stdio MCP server.",
   "author": {
     "name": "William Derue",
-    "url": "https://github.com/WillIsback/syntheo-desktop"
+    "url": "https://github.com/WillIsback/Syntheo"
   },
   "homepage": "https://syntheo.mintlify.site/docs/agents/overview",
-  "repository": "https://github.com/WillIsback/syntheo-desktop/tree/main/agent-plugins/syntheo",
+  "repository": "https://github.com/WillIsback/Syntheo/tree/main/agent-plugins/syntheo",
   "license": "MIT",
   "keywords": [
     "meetings",
@@ -32,7 +32,7 @@
       "Review recurring meeting history",
       "Export complete meeting records"
     ],
-    "websiteURL": "https://github.com/WillIsback/syntheo-desktop",
+    "websiteURL": "https://github.com/WillIsback/Syntheo",
     "privacyPolicyURL": "https://syntheo.mintlify.site/docs/data-and-privacy",
     "defaultPrompt": [
       "Summarize my latest Syntheo meeting.",

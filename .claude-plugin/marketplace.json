@@ -2,7 +2,7 @@
   "name": "syntheo-desktop",
   "owner": {
     "name": "William Derue",
-    "url": "https://github.com/WillIsback/syntheo-desktop"
+    "url": "https://github.com/WillIsback/Syntheo"
   },
   "metadata": {
     "description": "Syntheo Desktop agent plugin",
@@ -17,10 +17,10 @@
       "version": "1.3.5",
       "author": {
         "name": "William Derue",
-        "url": "https://github.com/WillIsback/syntheo-desktop"
+        "url": "https://github.com/WillIsback/Syntheo"
       },
       "homepage": "https://syntheo.mintlify.site/docs/agents/overview",
-      "repository": "https://github.com/WillIsback/syntheo-desktop/tree/main/agent-plugins/syntheo",
+      "repository": "https://github.com/WillIsback/Syntheo/tree/main/agent-plugins/syntheo",
       "license": "MIT",
       "category": "Productivity",
       "tags": [

@@ -4,7 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 
-const REPO = "WillIsback/syntheo-desktop";
+const REPO = "WillIsback/Syntheo";
 const SHA256_PATTERN = /^[0-9a-f]{64}$/;
 const DEB_ASSETS = {
   x86_64: "syntheo-linux-x86_64.deb",

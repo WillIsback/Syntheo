@@ -57,7 +57,7 @@ $ pnpm lint && cargo clippy -p <crate> -- -D warnings
 
   Alpha devtools du lot, suffixe de pré-version NUMÉRIQUE (MSI refuse 0.6.2-alpha.1) :
     gh workflow run build-devtools --ref <branche-de-lot> -f version=X.Y.Z-N
-    gh run download <run> -R WillIsback/syntheo-desktop
+    gh run download <run> -R WillIsback/Syntheo
   Traces : Linux ~/.local/share/fr.willisback.syntheo/logs/app.log
            Windows %LOCALAPPDATA%\fr.willisback.syntheo\logs\app.log
   Une case = plateforme (🐧 Linux, 🪟 Windows, 🍎 macOS), issue, signal attendu

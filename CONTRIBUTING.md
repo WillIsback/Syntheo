@@ -26,22 +26,22 @@
 
 Sur chaque PR (rapides, bloquantes) :
 
-| Workflow | Vérifie |
-|---|---|
+| Workflow          | Vérifie                                                                                                                                                                     |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `ci-code-quality` | dprint (TS, Rust, YAML, TOML, Markdown), oxlint (desktop), ESLint (fichiers modifiés), `tsc`, `cargo clippy` (non bloquant, #3), titre de PR, actionlint, zizmor, lockfiles |
-| `ci-security` | Dependency Review, `cargo deny`, Trivy, Gitleaks, registre d'exceptions |
-| `ci-codeql` | CodeQL `security-extended` TypeScript, si la PR modifie du TS/JS |
-| `ci-test` | Vitest (desktop), `cargo test` des crates des chantiers, yamllint ; couverture différentielle ≥ 90 % à venir |
-| `ci-traceability` | issue référencée, type de PR, cohérence semver |
+| `ci-security`     | Dependency Review, `cargo deny`, Trivy, Gitleaks, registre d'exceptions                                                                                                     |
+| `ci-codeql`       | CodeQL `security-extended` TypeScript, si la PR modifie du TS/JS                                                                                                            |
+| `ci-test`         | Vitest (desktop), `cargo test` des crates des chantiers, yamllint ; couverture différentielle ≥ 90 % à venir                                                                |
+| `ci-traceability` | issue référencée, type de PR, cohérence semver                                                                                                                              |
 
 Gates lourdes, hors PR :
 
-| Workflow | Quand | Vérifie |
-|---|---|---|
-| `release` | push sur `main` (feat/fix/perf) | CodeQL Rust et TypeScript (gate), build des paquets, SBOM, attestation, GitHub Release |
-| `ci-codeql` | hebdomadaire, à la demande | analyse complète TypeScript + Rust |
-| `ci-install` | hebdomadaire, à la demande | le bloc « Construire depuis les sources › Linux » rejoué sur un runner vierge |
-| `functional-gb10` (Forgejo) | push sur `main`, à la demande | moteurs d'inférence réels du GB10 |
+| Workflow                    | Quand                           | Vérifie                                                                                |
+| --------------------------- | ------------------------------- | -------------------------------------------------------------------------------------- |
+| `release`                   | push sur `main` (feat/fix/perf) | CodeQL Rust et TypeScript (gate), build des paquets, SBOM, attestation, GitHub Release |
+| `ci-codeql`                 | hebdomadaire, à la demande      | analyse complète TypeScript + Rust                                                     |
+| `ci-install`                | hebdomadaire, à la demande      | le bloc « Construire depuis les sources › Linux » rejoué sur un runner vierge          |
+| `functional-gb10` (Forgejo) | push sur `main`, à la demande   | moteurs d'inférence réels du GB10                                                      |
 
 ### Dépendances (Dependabot)
 
@@ -64,8 +64,8 @@ dépendances, construit le paquet `.deb` et vérifie que l'application démarre.
 Il est rejoué à l'identique par `ci-install` (hebdomadaire et à la demande).
 
 ```bash
-git clone https://github.com/WillIsback/syntheo-desktop.git
-cd syntheo-desktop
+git clone https://github.com/WillIsback/Syntheo.git
+cd Syntheo
 bash scripts/setup-linux-tauri.sh
 bash scripts/setup-linux-others.sh
 sudo apt-get install -y xvfb

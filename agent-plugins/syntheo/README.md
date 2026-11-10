@@ -8,8 +8,8 @@ Query Syntheo meetings from an agent, entirely on your computer. The plugin bund
 2. Build the Syntheo CLI from source. It is not included in the published app packages:
 
    ```bash
-   git clone https://github.com/WillIsback/syntheo-desktop.git
-   cd syntheo-desktop
+   git clone https://github.com/WillIsback/Syntheo.git
+   cd Syntheo
    cargo install --locked --path apps/cli
    ```
 
@@ -24,7 +24,7 @@ The app can be closed once its database exists, except for recording imports, wh
 ### Claude Code
 
 ```bash
-claude plugin marketplace add WillIsback/syntheo-desktop
+claude plugin marketplace add WillIsback/Syntheo
 claude plugin install syntheo@syntheo-desktop
 ```
 
@@ -37,7 +37,7 @@ claude mcp add syntheo -- syntheo mcp
 ### Codex
 
 ```bash
-codex plugin marketplace add WillIsback/syntheo-desktop \
+codex plugin marketplace add WillIsback/Syntheo \
   --sparse .agents/plugins \
   --sparse agent-plugins/syntheo
 ```
@@ -46,7 +46,7 @@ Then install **Syntheo** from the Syntheo Desktop source.
 
 ### Cursor
 
-Import `https://github.com/WillIsback/syntheo-desktop` as a team marketplace, then install **Syntheo**. You can also load `agent-plugins/syntheo` as a local plugin while testing.
+Import `https://github.com/WillIsback/Syntheo` as a team marketplace, then install **Syntheo**. You can also load `agent-plugins/syntheo` as a local plugin while testing.
 
 ## Configure MCP directly
 

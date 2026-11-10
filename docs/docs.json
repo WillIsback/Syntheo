@@ -144,13 +144,13 @@
     "links": [
       {
         "label": "Support",
-        "href": "https://github.com/WillIsback/syntheo-desktop/issues"
+        "href": "https://github.com/WillIsback/Syntheo/issues"
       }
     ],
     "primary": {
       "type": "button",
       "label": "Télécharger",
-      "href": "https://github.com/WillIsback/syntheo-desktop/releases/latest"
+      "href": "https://github.com/WillIsback/Syntheo/releases/latest"
     }
   },
   "contextual": {
@@ -167,7 +167,7 @@
   },
   "footer": {
     "socials": {
-      "github": "https://github.com/WillIsback/syntheo-desktop"
+      "github": "https://github.com/WillIsback/Syntheo"
     }
   },
   "description": "Le bloc-notes de réunion qui reste chez vous : transcription en temps réel et comptes rendus avec vos propres modèles.",

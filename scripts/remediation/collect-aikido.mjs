@@ -29,7 +29,7 @@ const REMEDIATION_DIR =
 const API_ORIGIN = (process.env.AIKIDO_API_BASE || "https://app.aikido.dev")
   .trim()
   .replace(/\/+$/, "");
-const REPO = "syntheo-desktop";
+const REPO = "Syntheo";
 const PER_PAGE = 1000;
 
 const args = process.argv.slice(2);

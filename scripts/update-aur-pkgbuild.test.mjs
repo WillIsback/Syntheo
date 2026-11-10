@@ -24,9 +24,9 @@ pkgver=1.4.8
 pkgrel=2
 arch=('x86_64' 'aarch64')
 _release="desktop_v\${pkgver}"
-source=("LICENSE-\${pkgver}::https://raw.githubusercontent.com/WillIsback/syntheo-desktop/\${_release}/LICENSE")
-source_x86_64=("syntheo-\${pkgver}-x86_64.deb::https://github.com/WillIsback/syntheo-desktop/releases/download/\${_release}/syntheo-linux-x86_64.deb")
-source_aarch64=("syntheo-\${pkgver}-aarch64.deb::https://github.com/WillIsback/syntheo-desktop/releases/download/\${_release}/syntheo-linux-aarch64.deb")
+source=("LICENSE-\${pkgver}::https://raw.githubusercontent.com/WillIsback/Syntheo/\${_release}/LICENSE")
+source_x86_64=("syntheo-\${pkgver}-x86_64.deb::https://github.com/WillIsback/Syntheo/releases/download/\${_release}/syntheo-linux-x86_64.deb")
+source_aarch64=("syntheo-\${pkgver}-aarch64.deb::https://github.com/WillIsback/Syntheo/releases/download/\${_release}/syntheo-linux-aarch64.deb")
 sha256sums=('0000000000000000000000000000000000000000000000000000000000000001')
 sha256sums_x86_64=('0000000000000000000000000000000000000000000000000000000000000002')
 sha256sums_aarch64=('0000000000000000000000000000000000000000000000000000000000000003')
@@ -36,11 +36,11 @@ const SRCINFO = `pkgbase = syntheo-bin
 \tpkgver = 1.4.8
 \tpkgrel = 2
 \tarch = x86_64
-\tsource = LICENSE-1.4.8::https://raw.githubusercontent.com/WillIsback/syntheo-desktop/desktop_v1.4.8/LICENSE
+\tsource = LICENSE-1.4.8::https://raw.githubusercontent.com/WillIsback/Syntheo/desktop_v1.4.8/LICENSE
 \tsha256sums = 0000000000000000000000000000000000000000000000000000000000000001
-\tsource_x86_64 = syntheo-1.4.8-x86_64.deb::https://github.com/WillIsback/syntheo-desktop/releases/download/desktop_v1.4.8/syntheo-linux-x86_64.deb
+\tsource_x86_64 = syntheo-1.4.8-x86_64.deb::https://github.com/WillIsback/Syntheo/releases/download/desktop_v1.4.8/syntheo-linux-x86_64.deb
 \tsha256sums_x86_64 = 0000000000000000000000000000000000000000000000000000000000000002
-\tsource_aarch64 = syntheo-1.4.8-aarch64.deb::https://github.com/WillIsback/syntheo-desktop/releases/download/desktop_v1.4.8/syntheo-linux-aarch64.deb
+\tsource_aarch64 = syntheo-1.4.8-aarch64.deb::https://github.com/WillIsback/Syntheo/releases/download/desktop_v1.4.8/syntheo-linux-aarch64.deb
 \tsha256sums_aarch64 = 0000000000000000000000000000000000000000000000000000000000000003
 
 pkgname = syntheo-bin

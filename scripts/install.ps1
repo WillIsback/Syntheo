@@ -1,9 +1,9 @@
 # Installe Syntheo Desktop depuis les GitHub Releases (Windows x64).
 #
-#   irm https://raw.githubusercontent.com/WillIsback/syntheo-desktop/main/scripts/install.ps1 | iex
+#   irm https://raw.githubusercontent.com/WillIsback/Syntheo/main/scripts/install.ps1 | iex
 #
 #   # Une release précise (pour tester une version donnée)
-#   & ([scriptblock]::Create((irm https://raw.githubusercontent.com/WillIsback/syntheo-desktop/main/scripts/install.ps1))) -Version v0.3.0
+#   & ([scriptblock]::Create((irm https://raw.githubusercontent.com/WillIsback/Syntheo/main/scripts/install.ps1))) -Version v0.3.0
 #
 # Options :
 #   -Version <tag>   Release à installer (défaut : latest). Accepte vX.Y.Z.
@@ -18,7 +18,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$Repo = "WillIsback/syntheo-desktop"
+$Repo = "WillIsback/Syntheo"
 
 function Die([string]$Message) {
   Write-Host "erreur: $Message" -ForegroundColor Red

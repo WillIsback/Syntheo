@@ -16,7 +16,7 @@ pub struct ModelFile {
 pub const MODEL_SOURCE_COMMIT: &str = "f3a017e167c1ea608bbe438f10a5107346f922ac";
 
 #[cfg(any(feature = "download", test))]
-const MODEL_SOURCE_BASE: &str = "https://raw.githubusercontent.com/WillIsback/syntheo-desktop";
+const MODEL_SOURCE_BASE: &str = "https://raw.githubusercontent.com/WillIsback/Syntheo";
 
 #[cfg(any(feature = "download", test))]
 impl ModelFile {

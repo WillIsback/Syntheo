@@ -22,7 +22,7 @@ import { join } from "node:path";
 const REMEDIATION_DIR =
   process.env.REMEDIATION_DIR ||
   join(tmpdir(), "opencode", "syntheo-remediation");
-const REPO = process.env.GITHUB_REPOSITORY || "WillIsback/syntheo-desktop";
+const REPO = process.env.GITHUB_REPOSITORY || "WillIsback/Syntheo";
 
 /** Lit un chemin de l'API GitHub avec pagination et renvoie un tableau plat. */
 function ghApi(path) {

@@ -23,6 +23,6 @@ impl MenuItemHandler for HelpSuggestFeature {
     }
 
     fn handle(_app: &AppHandle<tauri::Wry>) {
-        let _ = open::that("https://github.com/WillIsback/syntheo-desktop/issues");
+        let _ = open::that("https://github.com/WillIsback/Syntheo/issues");
     }
 }

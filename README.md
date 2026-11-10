@@ -17,8 +17,8 @@
 </p>
 
 <p>
-  <a href="https://github.com/WillIsback/syntheo-desktop/releases/latest/download/Syntheo-windows-x64-setup.exe"><img alt="Télécharger pour Windows" src="https://img.shields.io/badge/Windows-t%C3%A9l%C3%A9charger-0078D4?logo=windows11&logoColor=white" /></a>
-  <a href="https://github.com/WillIsback/syntheo-desktop/releases/latest/download/Syntheo-linux-x86_64.AppImage"><img alt="Télécharger pour Linux" src="https://img.shields.io/badge/Linux-t%C3%A9l%C3%A9charger-FCC624?logo=linux&logoColor=black" /></a>
+  <a href="https://github.com/WillIsback/Syntheo/releases/latest/download/Syntheo-windows-x64-setup.exe"><img alt="Télécharger pour Windows" src="https://img.shields.io/badge/Windows-t%C3%A9l%C3%A9charger-0078D4?logo=windows11&logoColor=white" /></a>
+  <a href="https://github.com/WillIsback/Syntheo/releases/latest/download/Syntheo-linux-x86_64.AppImage"><img alt="Télécharger pour Linux" src="https://img.shields.io/badge/Linux-t%C3%A9l%C3%A9charger-FCC624?logo=linux&logoColor=black" /></a>
   <a href="https://syntheo.mintlify.site/docs"><img alt="Documentation" src="https://img.shields.io/badge/documentation-en%20ligne-316745?logo=readthedocs&logoColor=white" /></a>
   <a href="LICENSE"><img alt="Licence MIT" src="https://img.shields.io/badge/licence-MIT-green" /></a>
 </p>
@@ -53,7 +53,7 @@ Données, flux réseau et responsabilités au regard du RGPD :
 ### Linux — script en une ligne (AppImage)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/WillIsback/syntheo-desktop/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/WillIsback/Syntheo/main/scripts/install.sh | bash
 ```
 
 Le script télécharge l'AppImage de la dernière release dans `~/.local/bin`,
@@ -63,7 +63,7 @@ crée le lien `syntheo`.
 Pour **tester une release précise** (toutes les versions publiées) :
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/WillIsback/syntheo-desktop/main/scripts/install.sh | bash -s -- --version v0.1.1
+curl -fsSL https://raw.githubusercontent.com/WillIsback/Syntheo/main/scripts/install.sh | bash -s -- --version v0.1.1
 ```
 
 > Sur **Arch / Omarchy**, l'AppImage nécessite FUSE 2 : `sudo pacman -S fuse2`.
@@ -74,16 +74,16 @@ curl -fsSL https://raw.githubusercontent.com/WillIsback/syntheo-desktop/main/scr
 Le script installe aussi le paquet `.deb` :
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/WillIsback/syntheo-desktop/main/scripts/install.sh | bash -s -- --deb
+curl -fsSL https://raw.githubusercontent.com/WillIsback/Syntheo/main/scripts/install.sh | bash -s -- --deb
 sudo apt install ~/.local/bin/Syntheo_*_amd64.deb   # ou : sudo apt install ./Syntheo_*.deb
 ```
 
 ### Windows
 
 **Télécharger l'installeur** (recommandé si tu n'utilises pas le terminal) :
-[`Syntheo-windows-x64-setup.exe`](https://github.com/WillIsback/syntheo-desktop/releases/latest/download/Syntheo-windows-x64-setup.exe)
+[`Syntheo-windows-x64-setup.exe`](https://github.com/WillIsback/Syntheo/releases/latest/download/Syntheo-windows-x64-setup.exe)
 — ou le `.msi` :
-[`Syntheo-windows-x64.msi`](https://github.com/WillIsback/syntheo-desktop/releases/latest/download/Syntheo-windows-x64.msi).
+[`Syntheo-windows-x64.msi`](https://github.com/WillIsback/Syntheo/releases/latest/download/Syntheo-windows-x64.msi).
 
 SmartScreen peut afficher un avertissement sur les premières versions, le
 temps que la réputation du binaire se construise.
@@ -93,19 +93,19 @@ temps que la réputation du binaire se construise.
 élévation) :
 
 ```powershell
-irm https://raw.githubusercontent.com/WillIsback/syntheo-desktop/main/scripts/install.ps1 | iex
+irm https://raw.githubusercontent.com/WillIsback/Syntheo/main/scripts/install.ps1 | iex
 ```
 
 Pour **installer une release précise** :
 
 ```powershell
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/WillIsback/syntheo-desktop/main/scripts/install.ps1))) -Version v0.3.1
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/WillIsback/Syntheo/main/scripts/install.ps1))) -Version v0.3.1
 ```
 
 ### Paquets
 
 Les `.deb`, AppImage, `.msi` et `.exe` sont aussi téléchargeables depuis la page
-[Releases](https://github.com/WillIsback/syntheo-desktop/releases) (chaque
+[Releases](https://github.com/WillIsback/Syntheo/releases) (chaque
 release publie `SHA256SUMS` et `SHA256SUMS-windows`, ainsi qu'une attestation de
 provenance vérifiable avec `gh attestation verify`).
 

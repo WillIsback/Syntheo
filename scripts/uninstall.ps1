@@ -1,10 +1,10 @@
 # Désinstalle Syntheo Desktop sous Windows.
 #
 #   # Interactif : propose les deux modes
-#   irm https://raw.githubusercontent.com/WillIsback/syntheo-desktop/main/scripts/uninstall.ps1 | iex
+#   irm https://raw.githubusercontent.com/WillIsback/Syntheo/main/scripts/uninstall.ps1 | iex
 #
 #   # Avec options (voir ce qui serait retiré, sans rien supprimer)
-#   & ([scriptblock]::Create((irm https://raw.githubusercontent.com/WillIsback/syntheo-desktop/main/scripts/uninstall.ps1))) -Purge -DryRun
+#   & ([scriptblock]::Create((irm https://raw.githubusercontent.com/WillIsback/Syntheo/main/scripts/uninstall.ps1))) -Purge -DryRun
 #
 # Modes :
 #   -KeepData   Désinstaller l'application : programme (installeur NSIS ou MSI),

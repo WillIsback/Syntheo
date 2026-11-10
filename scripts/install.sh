@@ -2,10 +2,10 @@
 # Installe Syntheo Desktop depuis les GitHub Releases.
 #
 #   # Dernière release (AppImage, ~/.local/bin)
-#   curl -fsSL https://raw.githubusercontent.com/WillIsback/syntheo-desktop/main/scripts/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/WillIsback/Syntheo/main/scripts/install.sh | bash
 #
 #   # Une release précise (pour tester une version donnée)
-#   curl -fsSL https://raw.githubusercontent.com/WillIsback/syntheo-desktop/main/scripts/install.sh | bash -s -- --version v0.1.1
+#   curl -fsSL https://raw.githubusercontent.com/WillIsback/Syntheo/main/scripts/install.sh | bash -s -- --version v0.1.1
 #
 # Options :
 #   --version <tag>   Release à installer (défaut : latest). accepte vX.Y.Z.
@@ -19,7 +19,7 @@
 # `syntheo` pointe vers elle : plusieurs versions peuvent coexister.
 set -euo pipefail
 
-REPO="WillIsback/syntheo-desktop"
+REPO="WillIsback/Syntheo"
 VERSION="latest"
 FORMAT="appimage"
 INSTALL_DIR="${XDG_BIN_HOME:-$HOME/.local/bin}"

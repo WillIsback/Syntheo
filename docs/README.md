@@ -1,16 +1,16 @@
 # Syntheo documentation
 
-This Mintlify project is published at [github.com/WillIsback/syntheo-desktop/tree/main/docs](https://github.com/WillIsback/syntheo-desktop/tree/main/docs).
+This Mintlify project is published at [github.com/WillIsback/Syntheo/tree/main/docs](https://github.com/WillIsback/Syntheo/tree/main/docs).
 
 ## Deployment
 
-Configure the Mintlify project with `docs/` as its documentation directory and `github.com/WillIsback/syntheo-desktop/tree/main/docs` as its custom domain. In Mintlify's domain setup:
+Configure the Mintlify project with `docs/` as its documentation directory and `github.com/WillIsback/Syntheo/tree/main/docs` as its custom domain. In Mintlify's domain setup:
 
 1. Add the verification records shown in the dashboard.
 2. Wait for both records and TLS provisioning to verify.
 3. Point the `docs` CNAME to the target shown by Mintlify.
 
-The website redirects the previous `github.com/WillIsback/syntheo-desktop/docs/*` routes to the matching path on the custom domain.
+The website redirects the previous `github.com/WillIsback/Syntheo/docs/*` routes to the matching path on the custom domain.
 
 ## Local preview
 

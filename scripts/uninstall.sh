@@ -2,7 +2,7 @@
 # Désinstalle Syntheo Desktop sous Linux.
 #
 #   # Interactif : propose les deux modes
-#   curl -fsSL https://raw.githubusercontent.com/WillIsback/syntheo-desktop/main/scripts/uninstall.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/WillIsback/Syntheo/main/scripts/uninstall.sh | bash
 #
 #   # Voir ce qui serait retiré, sans rien supprimer
 #   curl -fsSL …/scripts/uninstall.sh | bash -s -- --purge --dry-run

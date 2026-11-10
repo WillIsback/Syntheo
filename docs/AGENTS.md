@@ -2,7 +2,7 @@
 
 ## Scope
 
-- This is the Mintlify project published at `https://github.com/WillIsback/syntheo-desktop/tree/main/docs`.
+- This is the Mintlify project published at `https://github.com/WillIsback/Syntheo/tree/main/docs`.
 - Write for Syntheo users, developers, and agents using the CLI or MCP server.
 - Configuration lives in `docs.json`; content pages are MDX.
 - The public agent skill is served from `skill.md`. Keep its workflow aligned with the packaged skill in `../skills/syntheo/`.
@@ -20,7 +20,7 @@
 - Keep headings and sentences concise.
 - Put the result before implementation detail.
 - Use `Syntheo` for the product and `syntheo` for the executable.
-- Use root-relative links between Mintlify pages. Use `https://github.com/WillIsback/syntheo-desktop/tree/main/docs` in external instructions and agent metadata.
+- Use root-relative links between Mintlify pages. Use `https://github.com/WillIsback/Syntheo/tree/main/docs` in external instructions and agent metadata.
 
 ## Accuracy boundaries
 

@@ -33,6 +33,6 @@ provides a non-default database path; do not crawl the filesystem to find one.
 Never guess a meeting ID. Keep transcript requests bounded and continue from
 `pagination.next_offset` only when more context is needed.
 
-Documentation: https://github.com/WillIsback/syntheo-desktop/tree/main/docs
+Documentation: https://github.com/WillIsback/Syntheo/tree/main/docs
 
-Agent skill: https://github.com/WillIsback/syntheo-desktop/tree/main/docs/skill.md
+Agent skill: https://github.com/WillIsback/Syntheo/tree/main/docs/skill.md

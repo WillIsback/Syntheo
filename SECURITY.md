@@ -7,7 +7,7 @@ Seule la dernière release reçoit des correctifs de sécurité.
 ## Signaler une vulnérabilité
 
 N'ouvrez pas d'issue publique. Utilisez
-[GitHub Security Advisories](https://github.com/WillIsback/syntheo-desktop/security/advisories/new)
+[GitHub Security Advisories](https://github.com/WillIsback/Syntheo/security/advisories/new)
 en décrivant le problème, son impact et un moyen de le reproduire.
 
 ## Périmètre

@@ -279,7 +279,7 @@ describe("startMeetingChatCapture", () => {
 
   test("excludes the generated disclosure while retaining participant chat", async () => {
     const disclosure =
-      "Syntheo disclosure https://github.com/WillIsback/syntheo-desktop";
+      "Syntheo disclosure https://github.com/WillIsback/Syntheo";
     serve([]);
     const stop = await start({ excludedTexts: [disclosure] });
 
@@ -287,7 +287,7 @@ describe("startMeetingChatCapture", () => {
       message("disclosure", {
         direction: "outgoing",
         text: `  ${disclosure.replace(" ", "\n")}  `,
-        links: ["https://github.com/WillIsback/syntheo-desktop"],
+        links: ["https://github.com/WillIsback/Syntheo"],
       }),
       capturedMessage,
     ]);

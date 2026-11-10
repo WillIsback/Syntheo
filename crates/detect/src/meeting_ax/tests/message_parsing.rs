@@ -58,7 +58,7 @@ fn test_teams_current_native_description_preserves_metadata_without_inferring_di
 
 #[test]
 fn test_teams_current_firefox_description_preserves_metadata_without_inferring_direction() {
-    let raw = "anon cannon Sent SYNTHEO-297 Firefox Teams web QA Link https://github.com/WillIsback/syntheo-desktop/firefox-teams 3:03 PM";
+    let raw = "anon cannon Sent SYNTHEO-297 Firefox Teams web QA Link https://github.com/WillIsback/Syntheo/firefox-teams 3:03 PM";
     let parsed = parse_chat_message(&MeetingPlatform::MicrosoftTeams, raw).unwrap();
 
     assert_eq!(parsed.sender.as_deref(), Some("anon cannon"));
@@ -66,11 +66,11 @@ fn test_teams_current_firefox_description_preserves_metadata_without_inferring_d
     assert_eq!(parsed.direction, None);
     assert_eq!(
         parsed.text,
-        "SYNTHEO-297 Firefox Teams web QA https://github.com/WillIsback/syntheo-desktop/firefox-teams"
+        "SYNTHEO-297 Firefox Teams web QA https://github.com/WillIsback/Syntheo/firefox-teams"
     );
     assert_eq!(
         extract_links(&parsed.text),
-        ["https://github.com/WillIsback/syntheo-desktop/firefox-teams"]
+        ["https://github.com/WillIsback/Syntheo/firefox-teams"]
     );
 
     let messages = extract_chat_messages(
@@ -89,7 +89,7 @@ fn test_teams_current_firefox_description_preserves_metadata_without_inferring_d
     assert_eq!(messages[0].timestamp.as_deref(), Some("3:03 PM"));
     assert_eq!(
         messages[0].links,
-        ["https://github.com/WillIsback/syntheo-desktop/firefox-teams"]
+        ["https://github.com/WillIsback/Syntheo/firefox-teams"]
     );
 }
 
@@ -117,13 +117,13 @@ fn test_native_webex_structured_message_preserves_metadata_and_direction() {
         fixture_node(
             4,
             "AXCell",
-            "SYNTHEO-297 native Webex macOS QA https://github.com/WillIsback/syntheo-desktop/native-webex, You, 3:33\u{202f}PM, has hyperlinks, Press Enter key to navigate to the action buttons",
+            "SYNTHEO-297 native Webex macOS QA https://github.com/WillIsback/Syntheo/native-webex, You, 3:33\u{202f}PM, has hyperlinks, Press Enter key to navigate to the action buttons",
             &[1, 0, 0],
         ),
         fixture_node(
             5,
             "AXTextArea",
-            "SYNTHEO-297 native Webex macOS QA https://github.com/WillIsback/syntheo-desktop/native-webex",
+            "SYNTHEO-297 native Webex macOS QA https://github.com/WillIsback/Syntheo/native-webex",
             &[1, 0, 0, 0],
         ),
     ];
@@ -135,11 +135,11 @@ fn test_native_webex_structured_message_preserves_metadata_and_direction() {
     assert_eq!(messages[0].direction, Some(MeetingChatDirection::Outgoing));
     assert_eq!(
         messages[0].text,
-        "SYNTHEO-297 native Webex macOS QA https://github.com/WillIsback/syntheo-desktop/native-webex"
+        "SYNTHEO-297 native Webex macOS QA https://github.com/WillIsback/Syntheo/native-webex"
     );
     assert_eq!(
         messages[0].links,
-        ["https://github.com/WillIsback/syntheo-desktop/native-webex"]
+        ["https://github.com/WillIsback/Syntheo/native-webex"]
     );
 }
 
@@ -147,7 +147,7 @@ fn test_native_webex_structured_message_preserves_metadata_and_direction() {
 fn test_webex_browser_message_preserves_live_metadata_and_direction() {
     let parsed = parse_chat_message(
         &MeetingPlatform::Webex,
-        "Message from You, Unverified, 3:43 PM, SYNTHEO-297 Chrome Webex web QA https://github.com/WillIsback/syntheo-desktop/chrome-webex",
+        "Message from You, Unverified, 3:43 PM, SYNTHEO-297 Chrome Webex web QA https://github.com/WillIsback/Syntheo/chrome-webex",
     )
     .unwrap();
 
@@ -156,16 +156,16 @@ fn test_webex_browser_message_preserves_live_metadata_and_direction() {
     assert_eq!(parsed.direction, Some(MeetingChatDirection::Outgoing));
     assert_eq!(
         parsed.text,
-        "SYNTHEO-297 Chrome Webex web QA https://github.com/WillIsback/syntheo-desktop/chrome-webex"
+        "SYNTHEO-297 Chrome Webex web QA https://github.com/WillIsback/Syntheo/chrome-webex"
     );
     assert_eq!(
         extract_links(&parsed.text),
-        ["https://github.com/WillIsback/syntheo-desktop/chrome-webex"]
+        ["https://github.com/WillIsback/Syntheo/chrome-webex"]
     );
 
     let incoming = parse_chat_message(
         &MeetingPlatform::Webex,
-        "Message from John Jeong, fastrepl.com, 3:33 PM, SYNTHEO-297 native Webex macOS QA https://github.com/WillIsback/syntheo-desktop/native-webex",
+        "Message from John Jeong, fastrepl.com, 3:33 PM, SYNTHEO-297 native Webex macOS QA https://github.com/WillIsback/Syntheo/native-webex",
     )
     .unwrap();
     assert_eq!(incoming.sender.as_deref(), Some("John Jeong"));
@@ -189,7 +189,7 @@ fn test_native_linux_webex_structured_message_preserves_live_metadata() {
     );
     message_text.settable_value = true;
     message_text.value = Some(
-        "SYNTHEO-297 Linux native Webex AT-SPI QA https://github.com/WillIsback/syntheo-desktop/linux-native-webex-atspi"
+        "SYNTHEO-297 Linux native Webex AT-SPI QA https://github.com/WillIsback/Syntheo/linux-native-webex-atspi"
             .to_string(),
     );
     let nodes = vec![
@@ -205,7 +205,7 @@ fn test_native_linux_webex_structured_message_preserves_live_metadata() {
         fixture_node(
             4,
             "AXGroup",
-            "SYNTHEO-297 Linux native Webex AT-SPI QA https://github.com/WillIsback/syntheo-desktop/linux-native-webex-atspi, sent by You, 09:39:52, has hyperlinks, press Enter key to enter the group, then Tab key to navigate to message actions.",
+            "SYNTHEO-297 Linux native Webex AT-SPI QA https://github.com/WillIsback/Syntheo/linux-native-webex-atspi, sent by You, 09:39:52, has hyperlinks, press Enter key to enter the group, then Tab key to navigate to message actions.",
             &[1, 1, 0, 2, 0, 2, 0, 6, 0, 15, 0, 0],
         ),
         message_text,
@@ -218,11 +218,11 @@ fn test_native_linux_webex_structured_message_preserves_live_metadata() {
     assert_eq!(messages[0].direction, Some(MeetingChatDirection::Outgoing));
     assert_eq!(
         messages[0].text,
-        "SYNTHEO-297 Linux native Webex AT-SPI QA https://github.com/WillIsback/syntheo-desktop/linux-native-webex-atspi"
+        "SYNTHEO-297 Linux native Webex AT-SPI QA https://github.com/WillIsback/Syntheo/linux-native-webex-atspi"
     );
     assert_eq!(
         messages[0].links,
-        ["https://github.com/WillIsback/syntheo-desktop/linux-native-webex-atspi"]
+        ["https://github.com/WillIsback/Syntheo/linux-native-webex-atspi"]
     );
 }
 
@@ -293,7 +293,7 @@ fn test_zoom_capture_requires_zoom_meeting_window_scope() {
 
 #[test]
 fn test_native_linux_zoom_structured_message_preserves_live_metadata() {
-    let message = "SYNTHEO-297 Linux native Zoom AT-SPI QA https://github.com/WillIsback/syntheo-desktop/linux-native-zoom-atspi";
+    let message = "SYNTHEO-297 Linux native Zoom AT-SPI QA https://github.com/WillIsback/Syntheo/linux-native-zoom-atspi";
     let mut window = fixture_node(0, "AXWindow", "Meeting", &[]);
     window.within_zoom_meeting_scope = true;
     let mut history = fixture_node(1, "AXList", "chat history", &[11, 59, 0, 25]);
@@ -318,7 +318,7 @@ fn test_native_linux_zoom_structured_message_preserves_live_metadata() {
     assert_eq!(messages[0].text, message);
     assert_eq!(
         messages[0].links,
-        ["https://github.com/WillIsback/syntheo-desktop/linux-native-zoom-atspi"]
+        ["https://github.com/WillIsback/Syntheo/linux-native-zoom-atspi"]
     );
 }
 
@@ -326,7 +326,7 @@ fn test_native_linux_zoom_structured_message_preserves_live_metadata() {
 fn test_slack_chat_message_parser_handles_live_huddle_description() {
     let parsed = parse_chat_message(
         &MeetingPlatform::Slack,
-        "John Jeong: I'm using Syntheo to record and transcribe this meeting. https://github.com/WillIsback/syntheo-desktop. 4:02 AM. 1 link.",
+        "John Jeong: I'm using Syntheo to record and transcribe this meeting. https://github.com/WillIsback/Syntheo. 4:02 AM. 1 link.",
     )
     .unwrap();
 
@@ -334,7 +334,7 @@ fn test_slack_chat_message_parser_handles_live_huddle_description() {
     assert_eq!(parsed.timestamp, Some("4:02 AM".to_string()));
     assert_eq!(
         parsed.text,
-        "I'm using Syntheo to record and transcribe this meeting. https://github.com/WillIsback/syntheo-desktop"
+        "I'm using Syntheo to record and transcribe this meeting. https://github.com/WillIsback/Syntheo"
     );
 
     let mut active_control = node(0, "AXButton", "", None);
@@ -343,7 +343,7 @@ fn test_slack_chat_message_parser_handles_live_huddle_description() {
     let mut message = node(
         1,
         "AXGroup",
-        "John Jeong: I'm using Syntheo to record and transcribe this meeting. https://github.com/WillIsback/syntheo-desktop. 4:02 AM. 1 link.",
+        "John Jeong: I'm using Syntheo to record and transcribe this meeting. https://github.com/WillIsback/Syntheo. 4:02 AM. 1 link.",
         None,
     );
     message.value = Some(String::new());
@@ -354,10 +354,7 @@ fn test_slack_chat_message_parser_handles_live_huddle_description() {
         &[active_control, message],
     );
     assert_eq!(messages.len(), 1);
-    assert_eq!(
-        messages[0].links,
-        ["https://github.com/WillIsback/syntheo-desktop"]
-    );
+    assert_eq!(messages[0].links, ["https://github.com/WillIsback/Syntheo"]);
 }
 
 #[test]
@@ -419,11 +416,11 @@ fn test_chat_parsers_extract_sender_time_and_text() {
         ),
         (
             MeetingPlatform::Zoom,
-            "You to Everyone, 02:20 PM, SYNTHEO-297 Chrome Zoom web QA https://github.com/WillIsback/syntheo-desktop/chrome-zoom",
+            "You to Everyone, 02:20 PM, SYNTHEO-297 Chrome Zoom web QA https://github.com/WillIsback/Syntheo/chrome-zoom",
             "You",
             "02:20 PM",
-            "SYNTHEO-297 Chrome Zoom web QA https://github.com/WillIsback/syntheo-desktop/chrome-zoom",
-            &["https://github.com/WillIsback/syntheo-desktop/chrome-zoom"],
+            "SYNTHEO-297 Chrome Zoom web QA https://github.com/WillIsback/Syntheo/chrome-zoom",
+            &["https://github.com/WillIsback/Syntheo/chrome-zoom"],
             None,
         ),
         (
@@ -565,7 +562,7 @@ fn test_google_meet_capture_keeps_firefox_link_only_message_rows() {
     let message_link = fixture_node(
         4,
         "AXButton",
-        "https://github.com/WillIsback/syntheo-desktop/linux-firefox-meet-atspi",
+        "https://github.com/WillIsback/Syntheo/linux-firefox-meet-atspi",
         &[4, 2, 0, 1, 1, 0],
     );
     let pin = fixture_node(5, "AXButton", "Pin message", &[4, 2, 0, 1, 2, 0]);
@@ -588,11 +585,11 @@ fn test_google_meet_capture_keeps_firefox_link_only_message_rows() {
     assert_eq!(messages[0].timestamp, None);
     assert_eq!(
         messages[0].text,
-        "https://github.com/WillIsback/syntheo-desktop/linux-firefox-meet-atspi"
+        "https://github.com/WillIsback/Syntheo/linux-firefox-meet-atspi"
     );
     assert_eq!(
         messages[0].links,
-        ["https://github.com/WillIsback/syntheo-desktop/linux-firefox-meet-atspi"]
+        ["https://github.com/WillIsback/Syntheo/linux-firefox-meet-atspi"]
     );
 }
 
@@ -612,8 +609,8 @@ fn test_google_meet_capture_assembles_timestamp_sibling_messages() {
     );
     first_text.value = first_text.title.take();
     let mut first_link = fixture_node(5, "AXLink", "", &[4, 2, 2, 1, 1]);
-    first_link.value = Some("github.com/WillIsback/syntheo-desktop/safari-qa".to_string());
-    first_link.title = Some("https://github.com/WillIsback/syntheo-desktop/safari-qa".to_string());
+    first_link.value = Some("github.com/WillIsback/Syntheo/safari-qa".to_string());
+    first_link.title = Some("https://github.com/WillIsback/Syntheo/safari-qa".to_string());
     let mut pin_help = fixture_node(
         6,
         "AXStaticText",
@@ -634,9 +631,8 @@ fn test_google_meet_capture_assembles_timestamp_sibling_messages() {
     );
     second_text.value = second_text.title.take();
     let mut second_link = fixture_node(10, "AXLink", "", &[4, 2, 2, 6, 1]);
-    second_link.value = Some("github.com/WillIsback/syntheo-desktop/chrome-host".to_string());
-    second_link.title =
-        Some("https://github.com/WillIsback/syntheo-desktop/chrome-host".to_string());
+    second_link.value = Some("github.com/WillIsback/Syntheo/chrome-host".to_string());
+    second_link.title = Some("https://github.com/WillIsback/Syntheo/chrome-host".to_string());
     let mut third_timestamp = fixture_node(11, "AXStaticText", "1:51\u{202f}PM", &[4, 2, 2, 7, 0]);
     third_timestamp.value = third_timestamp.title.take();
     let mut third_text = fixture_node(
@@ -672,21 +668,21 @@ fn test_google_meet_capture_assembles_timestamp_sibling_messages() {
     assert_eq!(messages[0].timestamp.as_deref(), Some("1:49 PM"));
     assert_eq!(
         messages[0].text,
-        "SYNTHEO-297 Safari macOS chat QA https://github.com/WillIsback/syntheo-desktop/safari-qa"
+        "SYNTHEO-297 Safari macOS chat QA https://github.com/WillIsback/Syntheo/safari-qa"
     );
     assert_eq!(
         messages[0].links,
-        ["https://github.com/WillIsback/syntheo-desktop/safari-qa"]
+        ["https://github.com/WillIsback/Syntheo/safari-qa"]
     );
     assert_eq!(messages[1].sender.as_deref(), Some("John Jeong (JJ)"));
     assert_eq!(messages[1].timestamp.as_deref(), Some("1:50 PM"));
     assert_eq!(
         messages[1].text,
-        "SYNTHEO-297 Chrome host to Safari https://github.com/WillIsback/syntheo-desktop/chrome-host"
+        "SYNTHEO-297 Chrome host to Safari https://github.com/WillIsback/Syntheo/chrome-host"
     );
     assert_eq!(
         messages[1].links,
-        ["https://github.com/WillIsback/syntheo-desktop/chrome-host"]
+        ["https://github.com/WillIsback/Syntheo/chrome-host"]
     );
     assert_eq!(messages[2].sender, None);
     assert_eq!(messages[2].timestamp.as_deref(), Some("1:51 PM"));
