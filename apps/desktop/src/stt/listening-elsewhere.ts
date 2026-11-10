@@ -36,9 +36,7 @@ function getListeningElsewhereSessionId(
 }
 
 /** Titre affiché d'une note : brouillon de titre en direct, sinon titre enregistré. */
-async function getListeningSessionTitle(
-  sessionId: string,
-): Promise<string> {
+async function getListeningSessionTitle(sessionId: string): Promise<string> {
   const liveTitle = useLiveTitle.getState().titles[sessionId];
   let storeTitle: string | undefined;
   try {

@@ -9,9 +9,7 @@ import {
 
 import type { TranscriptWordSelection } from "./selection";
 
-type TranscriptSelectionSource = () => Array<
-  [string, TranscriptWordSelection]
->;
+type TranscriptSelectionSource = () => Array<[string, TranscriptWordSelection]>;
 
 type TranscriptSelectionRegister = (
   sourceId: string,

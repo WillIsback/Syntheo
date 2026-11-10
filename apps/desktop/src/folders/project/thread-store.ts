@@ -98,9 +98,7 @@ function parseBody(text: string): JSONContent | null {
     : null;
 }
 
-function mapFolderThreadRow(
-  row: FolderThreadSqlRow,
-): FolderThreadRecord {
+function mapFolderThreadRow(row: FolderThreadSqlRow): FolderThreadRecord {
   return {
     folderId: row.folder_id,
     body: parseBody(row.body),
