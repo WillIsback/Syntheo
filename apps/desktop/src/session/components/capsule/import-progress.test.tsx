@@ -62,7 +62,7 @@ describe("ImportProgress", () => {
   it("waits for a reliable estimate", () => {
     renderProgress({ fraction: 0.01, estimate: null, onStop: vi.fn() });
 
-    expect(screen.getByText("estimation…")).toBeTruthy();
+    expect(screen.getByText("Estimation…")).toBeTruthy();
   });
 
   it("stops the transcription with Arrêter", () => {

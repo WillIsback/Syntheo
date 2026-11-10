@@ -145,17 +145,36 @@ describe("SessionCapsule pendant un import", () => {
     startImport(600);
     startTranscription();
 
-    expect(screen.getByText("estimating…")).toBeTruthy();
+    expect(screen.getByText("Estimating…")).toBeTruthy();
 
-    act(() => {
-      hoisted.store.getState().updateBatchProgress(SESSION, 0.2);
-      vi.advanceTimersByTime(60_000);
-    });
+    // ×2 pendant une minute (20 % d'un audio de 10 min), une seconde à la
+    // fois comme le flux temps réel.
+    const tick = (seconds: number, speed: number) => {
+      for (let i = 0; i < seconds; i++) {
+        act(() => {
+          const current = hoisted.store.getState().batch[SESSION]?.percentage;
+          hoisted.store
+            .getState()
+            .updateBatchProgress(SESSION, (current ?? 0) + speed / 600);
+          vi.advanceTimersByTime(1_000);
+        });
+      }
+    };
+    tick(25, 2);
+    expect(screen.getByText("Estimating…")).toBeTruthy();
+    tick(35, 2);
 
     expect(screen.getByRole("progressbar").getAttribute("aria-valuenow")).toBe(
       "20",
     );
-    expect(screen.getByText("~4 min left · ×2.0")).toBeTruthy();
+    // Aucune reconnexion mesurée : estimation prudente (issue 531).
+    expect(screen.getByText("~7 min left · ×1.2")).toBeTruthy();
+
+    // Une reconnexion de 20 s puis la reprise : son coût entre dans la
+    // moyenne et la prudence tombe.
+    tick(20, 0);
+    tick(10, 2);
+    expect(screen.getByText("~5 min left · ×1.5")).toBeTruthy();
   });
 
   it("stops the transcription like the Transcript tab", () => {

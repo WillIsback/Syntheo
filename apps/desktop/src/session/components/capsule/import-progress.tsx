@@ -11,7 +11,7 @@ export type CapsuleImportEstimate = {
 export type CapsuleImportProgress = {
   // Avancement entre 0 et 1.
   fraction: number;
-  // `null` tant que l'estimation n'est pas fiable (premières secondes).
+  // `null` tant que l'estimation n'est pas fiable (issue 531).
   estimate: CapsuleImportEstimate | null;
   // Absent pendant la copie du fichier : l'arrêt n'est possible qu'une fois
   // la transcription lancée, comme dans l'onglet Transcription.
@@ -88,7 +88,7 @@ function ImportEstimate({
 }) {
   const { t, i18n } = useLingui();
   if (estimate === null) {
-    return t`estimating…`;
+    return t`Estimating…`;
   }
 
   const minutes = Math.round(estimate.remainingSeconds / 60);

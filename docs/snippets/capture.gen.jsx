@@ -124,6 +124,7 @@ const SYN_LABELS = {
   "Enter a full address, for example {placeholder}.": "Saisissez une adresse complète, par exemple {placeholder}.",
   "Enter another name": "Saisir un autre nom",
   "Esc": "Échap",
+  "Estimating…": "Estimation…",
   "Exclude apps from detection": "Exclure les applications de la détection",
   "Export": "Exporter",
   "Export location": "Emplacement d'export",
@@ -298,7 +299,6 @@ const SYN_LABELS = {
   "Yes": "Oui",
   "detected automatically": "détecté automatiquement",
   "dictionary": "dictionnaire",
-  "estimating…": "estimation…",
   "vLLM, speaches, faster-whisper-server": "vLLM, speaches, faster-whisper-server",
   "{0}% complete": "{0} % terminé",
   "{count, plural, one {# meeting} other {# meetings}}": "{count, plural, one {# réunion} other {# réunions}}",
@@ -3309,11 +3309,14 @@ const SYN_IMP_FILE = "entretien-atelier-brun.m4a";
 const SYN_IMP_AUDIO_SECONDS = 52 * 60;
 const SYN_IMP_SCALE = 60;
 
-// estimateImportProgress de stt/batch-eta.ts, temps mis à l'échelle de la démo.
+// estimateBatchProgress de stt/batch-eta.ts, temps mis à l'échelle de la démo :
+// 30 s et 5 % avant d'estimer, débit minoré de 40 % tant qu'aucune
+// reconnexion n'est mesurée (la démo n'en a pas).
 const synImpEstimate = (elapsed, fraction) => {
   const seconds = elapsed * SYN_IMP_SCALE;
-  if (fraction >= 1 || elapsed < 3 || fraction < 0.02) return null;
-  return { remaining: (seconds * (1 - fraction)) / fraction, speed: (fraction * SYN_IMP_AUDIO_SECONDS) / seconds };
+  if (fraction >= 1 || seconds < 30 || fraction < 0.05) return null;
+  const rate = (fraction / seconds) * 0.6;
+  return { remaining: (1 - fraction) / rate, speed: rate * SYN_IMP_AUDIO_SECONDS };
 };
 
 const synImpPercent = (fraction) =>
@@ -3322,7 +3325,7 @@ const synImpPercent = (fraction) =>
 /** État « Import » de la capsule (import-progress.tsx). */
 const SynImportCapsule = ({ fraction, estimate, onStop }) => {
   const percent = Math.round(fraction * 100);
-  let line = L("estimating…");
+  let line = L("Estimating…");
   if (estimate) {
     const minutes = Math.round(estimate.remaining / 60);
     const factor = new Intl.NumberFormat(SYN_LOCALE, { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(estimate.speed);

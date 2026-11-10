@@ -5,8 +5,12 @@ import { useMountEffect } from "@syntheo/ui/hooks/use-mount-effect";
 
 import { getEnhancerService } from "~/services/enhancer";
 import { useSession } from "~/session/queries";
-import { recoverRunningBatchSessions } from "~/store/zustand/listener/general-batch";
+import {
+  acknowledgeCompletedBatch,
+  recoverRunningBatchSessions,
+} from "~/store/zustand/listener/general-batch";
 import { listenerStore } from "~/store/zustand/listener/instance";
+import { notifyResumedImportAbandoned } from "~/stt/audio-import-feedback";
 import { parseBatchResumeContext } from "~/stt/batch-resume-context";
 import { isStoppedTranscriptionError, useRunBatch } from "~/stt/useRunBatch";
 
@@ -69,16 +73,29 @@ function ResumeBatchTranscription({
       .then(() =>
         getEnhancerService()?.queueAutoEnhanceIfSummaryEmpty(sessionId),
       )
-      .catch((error) => {
+      .catch(async (error) => {
         if (isStoppedTranscriptionError(error)) return;
         const message = error instanceof Error ? error.message : String(error);
         console.error("[listener] failed to resume batch transcription", {
           sessionId,
           error: message,
         });
+        // Issue 531 : le résultat gardé côté natif n'est plus repris à chaque
+        // lancement. La note affiche l'échec, sans relance comme l'onglet
+        // Transcription, et un toast le signale une fois.
         listenerStore.getState().handleBatchFailed(sessionId, message);
+        await acknowledgeCompletedBatch(sessionId);
+        notifyResumedImportAbandoned({
+          sessionId,
+          name: fileName(session.file_path) ?? (record.title || null),
+          error,
+        });
       });
   }, [record, runBatch, session, sessionId]);
 
   return null;
+}
+
+function fileName(path: string): string | null {
+  return path.split(/[\\/]/).pop() || null;
 }

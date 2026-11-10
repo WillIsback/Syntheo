@@ -124,3 +124,33 @@ export function notifyAudioImportFailed(error: unknown) {
     action: settingsAction(),
   });
 }
+
+/**
+ * Import repris au lancement qui échoue (issue 531) : son résultat est
+ * abandonné et la note passe en échec. On le dit une fois, au lieu de le
+ * retenter en silence à chaque lancement.
+ */
+export function notifyResumedImportAbandoned({
+  sessionId,
+  name,
+  error,
+}: {
+  sessionId: string;
+  name: string | null;
+  error: unknown;
+}) {
+  const reason = describeAudioImportError(error);
+  toast.error(t`Audio import failed`, {
+    id: `audio-import-abandoned-${sessionId}`,
+    description: name
+      ? t`The import of ${name} was abandoned: ${reason}`
+      : t`The import was abandoned: ${reason}`,
+    duration: AUDIO_IMPORT_FAILED_TOAST_DURATION_MS,
+    keepDuration: true,
+    action: {
+      label: t`Open note`,
+      onClick: () =>
+        useTabs.getState().openNew({ type: "sessions", id: sessionId }),
+    },
+  });
+}
