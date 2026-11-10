@@ -294,7 +294,7 @@ swift-rs = { git = "https://github.com/Brendonovich/swift-rs", rev = "41a1605" }
 gtk = "0.18"
 gtk-layer-shell = { version = "0.8.2", features = ["v0_6"] }
 
-wasapi = "0.26.0"
+wasapi = "0.27.0"
 windows = "0.62.2"
 # Keep in step with `windows`: the `#[windows::core::interface]` macro expands to
 # `::windows_core::…` paths, so a mismatched major makes the generated impl target
