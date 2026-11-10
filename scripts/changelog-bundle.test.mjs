@@ -4,7 +4,7 @@ import test from "node:test";
 
 import { changelog } from "../apps/desktop/plugins/changelog.ts";
 
-test("stable and Nightly bundle their own release notes", async (t) => {
+test("stable bundles its own release notes", async (t) => {
   for (const name of ["RELEASE_CHANNEL", "VITE_APP_VERSION"]) {
     const previous = process.env[name];
     t.after(() => {
@@ -14,7 +14,6 @@ test("stable and Nightly bundle their own release notes", async (t) => {
   }
   for (const [channel, version, file] of [
     ["stable", "1.4.23", "content/desktop/1.4.23.md"],
-    ["nightly", "1.4.24-nightly.123", "nightly.md"],
   ]) {
     await t.test(channel, async () => {
       process.env.RELEASE_CHANNEL = channel;

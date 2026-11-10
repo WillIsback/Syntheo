@@ -157,7 +157,7 @@ Le fichier `packages/editor/daily/cfm.md` est une note de conception héritée (
 ## `@syntheo/changelog`
 
 - Chemin : `packages/changelog`
-- Rôle : contient les notes de version (`content/*.md`, une par version, plus `nightly.md`) et les rend dans l'application.
+- Rôle : contient les notes de version (`content/desktop/<version>.md`, une par version) et les rend dans l'application.
 - API principale : `ChangelogContent`, `changelogComponents`, `parseFrontmatter`, `processContent`. Export `./process` pour le traitement seul.
 - Dépendances internes : `utils`.
 - Consommateurs : `apps/desktop/src/changelog/*`. L'application lit la dernière version via un module virtuel Vite (`virtual:changelog`) et télécharge les versions plus anciennes.
