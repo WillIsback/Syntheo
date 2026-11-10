@@ -2,28 +2,40 @@ import { Trans, useLingui } from "@lingui/react/macro";
 
 import { Button } from "@syntheo/ui/components/ui/button";
 
+import {
+  clearTranscriptionFailure,
+  useTranscriptionFailure,
+} from "~/session/transcription-failure";
 import { useListener } from "~/stt/contexts";
 
-// Issue 559 : quand la transcription d'un audio échoue (aucune parole, par
-// exemple), la note reste en « Préparer ». Elle dit pourquoi, au lieu de
-// paraître vierge. L'arrêt demandé par l'utilisateur n'est pas un échec.
+// Issue 559 : quand la transcription d'un audio importé échoue (aucune parole,
+// par exemple), la note reste en « Préparer ». Elle dit pourquoi, au lieu de
+// paraître vierge, y compris après une relance de l'app : l'échec est gardé
+// dans la note jusqu'à ce que l'utilisateur ferme l'avis ou réimporte.
 export function TranscriptionFailureNotice({
   sessionId,
 }: {
   sessionId: string;
 }) {
   const { t } = useLingui();
-  const error = useListener((state) => {
-    const batch = state.batch[sessionId];
-    return batch?.error && batch.terminalReason !== "stopped"
-      ? batch.error
-      : null;
-  });
+  const failure = useTranscriptionFailure(sessionId);
   const clearBatchSession = useListener((state) => state.clearBatchSession);
 
-  if (!error) {
+  if (!failure) {
     return null;
   }
+
+  const reason =
+    failure.code === "no_speech"
+      ? t`No speech was detected in the audio.`
+      : failure.message;
+
+  const dismiss = () => {
+    clearBatchSession(sessionId);
+    void clearTranscriptionFailure(sessionId).catch((error: unknown) => {
+      console.error("[transcription] failed to clear failure notice", error);
+    });
+  };
 
   return (
     <div
@@ -33,14 +45,14 @@ export function TranscriptionFailureNotice({
     >
       <p className="text-foreground min-w-0 text-[13px]">
         <Trans>The audio transcription failed.</Trans>{" "}
-        <span className="text-muted-foreground">{error}</span>
+        <span className="text-muted-foreground">{reason}</span>
       </p>
       <Button
         type="button"
         size="sm"
         variant="ghost"
         aria-label={t`Dismiss`}
-        onClick={() => clearBatchSession(sessionId)}
+        onClick={dismiss}
       >
         <Trans>Dismiss</Trans>
       </Button>

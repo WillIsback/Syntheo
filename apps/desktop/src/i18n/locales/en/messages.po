@@ -3073,6 +3073,7 @@ msgstr "No setting matches “{trimmed}”."
 msgid "No speech detected"
 msgstr "No speech detected"
 
+#: src/session/components/living-document/transcription-failure.tsx
 #: src/stt/no-speech-error.ts
 msgid "No speech was detected in the audio."
 msgstr "No speech was detected in the audio."
