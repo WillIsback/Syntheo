@@ -119,7 +119,7 @@ Resources: `syntheo://meetings/{meeting_id}` (Markdown), `syntheo://meetings/{me
 - **Role**: diagnosis and installation of a hook-based integration for three third-party agent CLIs: Codex, Claude Code and OpenCode (`ProviderKind`).
 - **Main API**: `health_check`, `install_cli`, `uninstall_cli`, `upgrade_hooks`; types `ProviderHealth`, `ProviderHealthStatus`, `ProviderAuthStatus`.
 - **Internal dependencies**: `crates/claude`, `crates/codex`, `crates/opencode`.
-- **Used by**: `plugins/agent`, registered by `apps/desktop/src-tauri` outside App Store builds.
+- **Used by**: `plugins/agent`, registered by `apps/desktop/src-tauri`.
 - **Status**: inherited from Anarlog. The installed hooks call the `char` command (for example `char claude notify`), not `syntheo`, and no code in `apps/desktop/src` imports `@syntheo/plugin-agent`. Nothing here serves the `syntheo` CLI.
 - **Affected doc pages**: none. The agent skills installation documented in [/en/agents/skills](/en/agents/skills) goes through `apps/desktop/src-tauri/src/agent_skills.rs`, not through this crate.
 
@@ -137,7 +137,7 @@ The app installs and documents the CLI, but this code lives in `apps/desktop`:
 
 - `apps/desktop/src-tauri/src/embedded_cli.rs`: installs the `syntheo` binary shipped with the app (see [Code map: desktop app](/en/code/desktop)).
 - `apps/desktop/src-tauri/src/agents-content.md`: `AGENTS.md` file written to the data folder at startup, which points to the MCP tools and the CLI.
-- `plugins/local-api` and `plugins/mcp`: app-side commands and types, see [/en/code/plugins](/en/code/plugins).
+- `plugins/local-api`: app-side commands and types, see [/en/code/plugins](/en/code/plugins).
 
 ## Code and pages mapping
 
