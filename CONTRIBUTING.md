@@ -119,6 +119,20 @@ Pour vérifier la compatibilité avec les autres, passer par le workflow
 (Ubuntu 24.04). Sous Arch, si linuxdeploy échoue sur `strip`, relancer avec
 `NO_STRIP=true`.
 
+> **WebKitGTK et Wayland.** L'AppImage locale embarque le WebKitGTK de la
+> machine. Celui d'Arch (2.54 et plus) plante au démarrage sous Wayland avec un
+> GPU NVIDIA : « Error 71 (Erreur de protocole) dispatching to Wayland display »,
+> rendu dmabuf (issue 555). Pour une alpha à tester sous Wayland, utiliser le
+> workflow `build-devtools` (Ubuntu 24.04). Le script prévient avant le build
+> quand il détecte WebKitGTK 2.54 ou plus, et, si une session Wayland est
+> ouverte, lance l'AppImage une vingtaine de secondes dans un profil jetable
+> (HOME temporaire, bus D-Bus séparé) : en cas d'échec, il s'arrête avec le code
+> 3 et indique le journal. `ALPHA_SMOKE_TEST=0` saute cet essai.
+>
+> La version de Node est contrôlée contre `engines.node` de `package.json` :
+> sous la plus petite version majeure de la plage, le build échoue ; ailleurs
+> hors plage, le script avertit seulement, comme pnpm.
+
 ### Windows (NSIS + MSI)
 
 À faire dans une VM Windows 11. `scripts/build-alpha.ps1` reprend les étapes de

@@ -18,6 +18,15 @@
 # distributions aussi récentes. Pour tester la compatibilité avec les autres
 # distributions, utiliser le workflow build-devtools (Ubuntu 24.04).
 #
+# WebKitGTK : l'AppImage locale embarque le WebKitGTK de la machine. Celui
+# d'Arch (2.54 et plus) plante au démarrage sous Wayland avec un GPU NVIDIA
+# (« Error 71 (Erreur de protocole) dispatching to Wayland display », rendu
+# dmabuf, issue 555). Pour une alpha à tester sous Wayland, passer par le
+# workflow build-devtools (Ubuntu 24.04, WebKitGTK plus ancien). En fin de
+# build, si une session Wayland est ouverte, le script lance l'AppImage une
+# vingtaine de secondes dans un profil jetable pour le vérifier
+# (ALPHA_SMOKE_TEST=0 pour sauter cet essai).
+#
 # Sous Arch, si linuxdeploy échoue au moment de « strip » (section .relr.dyn
 # inconnue), relancer avec NO_STRIP=true.
 #
@@ -78,8 +87,40 @@ EOF
   exit 1
 fi
 
-node_major=$(node -p 'process.versions.node.split(".")[0]')
-[ "$node_major" -ge 22 ] || die "Node.js $(node -v) trop ancien (22.23 ou plus requis)."
+# Node : même plage que `engines.node` de package.json (formes « ^X.Y.Z » et
+# « >=X.Y.Z » séparées par « || »). Sous la plus petite version majeure de la
+# plage, le build échoue ; ailleurs hors plage, simple avertissement, comme pnpm.
+node_range=$(jq -r '.engines.node // ""' package.json)
+node_check=$(
+  NODE_RANGE="$node_range" node -e '
+    const range = process.env.NODE_RANGE;
+    const parse = (v) => v.replace(/^v/, "").split(".").map(Number);
+    const cmp = (a, b) => a[0] - b[0] || a[1] - b[1] || a[2] - b[2];
+    const current = parse(process.version);
+    const clauses = range.split("||").map((c) => c.trim()).filter(Boolean);
+    const ok = clauses.some((clause) => {
+      const m = clause.match(/^(\^|>=)\s*(\d+\.\d+\.\d+)$/);
+      if (!m) return true; // forme inconnue : on ne bloque pas
+      const min = parse(m[2]);
+      if (cmp(current, min) < 0) return false;
+      return m[1] === ">=" || current[0] === min[0];
+    });
+    const lowestMajor = Math.min(...clauses.map((c) => Number((c.match(/\d+/) || [Infinity])[0])));
+    console.log(ok ? "ok" : current[0] < lowestMajor ? "too-old" : "outside");
+  '
+)
+case "$node_check" in
+  ok | "") ;;
+  too-old) die "Node.js $(node -v) trop ancien : package.json demande « $node_range »." ;;
+  *) echo "Attention : Node.js $(node -v) hors de la plage de package.json (« $node_range »)." >&2 ;;
+esac
+
+# WebKitGTK embarqué : avertir avant de lancer un build de plusieurs minutes.
+webkit_version=$(pkg-config --modversion webkit2gtk-4.1 2> /dev/null || echo 0)
+if [ "$(printf '%s\n2.54\n' "$webkit_version" | sort -V | head -1)" = "2.54" ]; then
+  echo "Attention : WebKitGTK $webkit_version sera embarqué. Sous Wayland avec un GPU NVIDIA, il plante" >&2
+  echo "  au démarrage (Error 71, issue 555) : pour tester sous Wayland, utiliser le workflow build-devtools." >&2
+fi
 
 expected_pnpm=$(jq -r '.packageManager // "" | sub("^pnpm@"; "")' package.json)
 actual_pnpm=$(pnpm --version)
@@ -155,3 +196,71 @@ printf 'build local\ncommit %s\nbranche %s\ndate %s\n' \
 echo
 echo "Alpha devtools Linux $VERSION (non signée) : $OUT/$NAME"
 cat "$OUT/SHA256SUMS-devtools-linux"
+
+# --- Essai de démarrage sous Wayland (issue 555) ------------------------------
+# Profil jetable (HOME et XDG temporaires) et bus D-Bus de session séparé : ni
+# le profil, ni la base, ni l'instance en cours de l'utilisateur ne sont
+# touchés. La fenêtre de l'app s'affiche une vingtaine de secondes.
+
+smoke_test_wayland() {
+  local appimage=$1 profile log session_pid elapsed=0 verdict=""
+  profile=$(mktemp -d)
+  log="$profile/app.log"
+  mkdir -p "$profile"/{.config,.local/share,.cache}
+  (
+    export HOME="$profile" XDG_CONFIG_HOME="$profile/.config" \
+      XDG_DATA_HOME="$profile/.local/share" XDG_CACHE_HOME="$profile/.cache" GDK_BACKEND=wayland
+    exec dbus-run-session -- "$appimage"
+  ) > "$log" 2>&1 &
+  session_pid=$!
+  while [ "$elapsed" -lt 20 ]; do
+    sleep 1
+    elapsed=$((elapsed + 1))
+    if grep -q "Error 71" "$log"; then
+      verdict="error71"
+      break
+    fi
+    kill -0 "$session_pid" 2> /dev/null || {
+      verdict="exited"
+      break
+    }
+  done
+  # Arrêt de toute l'arborescence lancée par l'essai, par PID.
+  descendants() {
+    local pid=$1 child
+    for child in $(pgrep -P "$pid" 2> /dev/null); do
+      descendants "$child"
+      echo "$child"
+    done
+  }
+  local pids
+  pids="$(descendants "$session_pid") $session_pid"
+  # shellcheck disable=SC2086
+  kill -TERM $pids 2> /dev/null || true
+  sleep 2
+  # shellcheck disable=SC2086
+  kill -KILL $pids 2> /dev/null || true
+  wait "$session_pid" 2> /dev/null || true
+  case "$verdict" in
+    "")
+      echo "Essai Wayland : l'AppImage a tenu 20 s sans erreur."
+      rm -rf "$profile"
+      ;;
+    error71)
+      echo "Essai Wayland : ÉCHEC, « Error 71 » au démarrage (WebKitGTK $webkit_version embarqué, issue 555)." >&2
+      echo "  Cette AppImage ne démarre pas sous Wayland sur cette machine : utiliser le workflow build-devtools." >&2
+      echo "  Journal : $log" >&2
+      return 1
+      ;;
+    exited)
+      echo "Essai Wayland : ÉCHEC, l'AppImage s'est arrêtée au démarrage. Journal : $log" >&2
+      return 1
+      ;;
+  esac
+}
+
+if [ -n "${WAYLAND_DISPLAY:-}" ] && [ "${ALPHA_SMOKE_TEST:-1}" != 0 ]; then
+  echo
+  echo "Essai de démarrage sous Wayland (profil jetable, 20 s ; ALPHA_SMOKE_TEST=0 pour sauter)…"
+  smoke_test_wayland "$OUT/$NAME" || exit 3
+fi
