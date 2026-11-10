@@ -1,0 +1,117 @@
+---
+title: "Install the app"
+description: "Install Syntheo Desktop on Linux or Windows, verify the package, and update it."
+---
+
+Syntheo Desktop is published for **Linux** (AppImage and `.deb`) and **Windows** (signed `.exe` installer and `.msi`), on x64. macOS packages are not published yet.
+
+All packages are available on the [GitHub Releases](https://github.com/WillIsback/Syntheo/releases/latest) page.
+
+## Choose the right package
+
+| Platform | File (stable name) | Notes |
+| --- | --- | --- |
+| Linux | [`Syntheo-linux-x86_64.AppImage`](https://github.com/WillIsback/Syntheo/releases/latest/download/Syntheo-linux-x86_64.AppImage) | Portable, no installation. Requires FUSE 2. |
+| Linux | [`Syntheo-linux-amd64.deb`](https://github.com/WillIsback/Syntheo/releases/latest/download/Syntheo-linux-amd64.deb) | Debian, Ubuntu, and derivatives. |
+| Windows | [`Syntheo-windows-x64-setup.exe`](https://github.com/WillIsback/Syntheo/releases/latest/download/Syntheo-windows-x64-setup.exe) | Signed installer, per-user installation. |
+| Windows | [`Syntheo-windows-x64.msi`](https://github.com/WillIsback/Syntheo/releases/latest/download/Syntheo-windows-x64.msi) | For managed deployments. |
+
+The links above always point to the latest version. Each release also publishes the same files under a versioned name, for example `Syntheo_0.4.0_amd64.AppImage` or `Syntheo_0.4.0_x64-setup.exe`.
+
+## Linux
+
+### Install script (AppImage)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/WillIsback/Syntheo/main/scripts/install.sh | bash
+```
+
+The script downloads the AppImage of the latest release, checks its SHA256 sum, saves it as `~/.local/bin/Syntheo-<version>.AppImage`, and creates the `syntheo` command. Several versions can coexist.
+
+Useful options:
+
+- `--version v0.4.0` installs a specific version.
+- `--deb` downloads the `.deb` package instead of the AppImage.
+- `--to <folder>` changes the installation folder (`~/.local/bin` by default).
+
+If `~/.local/bin` is not in your `PATH`, the script tells you which line to add.
+
+On Arch-based distributions (Omarchy, EndeavourOS, Manjaro), the AppImage needs FUSE 2:
+
+```bash
+sudo pacman -S fuse2
+```
+
+### Debian and Ubuntu
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/WillIsback/Syntheo/main/scripts/install.sh | bash -s -- --deb
+sudo apt install ~/.local/bin/Syntheo_*_amd64.deb
+```
+
+You can also download [`Syntheo-linux-amd64.deb`](https://github.com/WillIsback/Syntheo/releases/latest/download/Syntheo-linux-amd64.deb) and install it with `sudo apt install ./Syntheo-linux-amd64.deb`.
+
+### Manually downloaded AppImage
+
+```bash
+chmod +x ./Syntheo-linux-x86_64.AppImage
+./Syntheo-linux-x86_64.AppImage
+```
+
+### Black window on Wayland
+
+Syntheo uses WebKitGTK graphics acceleration. If the window stays black (this can happen with some drivers, for example NVIDIA on Wayland), disable DMA-BUF rendering, then, if needed, compositing:
+
+```bash
+WEBKIT_DISABLE_DMABUF_RENDERER=1 syntheo
+WEBKIT_DISABLE_DMABUF_RENDERER=1 WEBKIT_DISABLE_COMPOSITING_MODE=1 syntheo
+```
+
+## Windows
+
+### Installer
+
+Download [`Syntheo-windows-x64-setup.exe`](https://github.com/WillIsback/Syntheo/releases/latest/download/Syntheo-windows-x64-setup.exe), then run it. It installs into your user profile, without administrator rights.
+
+The installer and the `.msi` are **signed** (Azure Artifact Signing): Windows attributes them to **William Derue**. SmartScreen may still show a warning on the first versions, while the binary builds its reputation.
+
+### Install script (PowerShell)
+
+```powershell
+irm https://raw.githubusercontent.com/WillIsback/Syntheo/main/scripts/install.ps1 | iex
+```
+
+The script downloads the installer of the latest release, checks its SHA256 sum against `SHA256SUMS-windows`, and installs it silently (per user, without elevation). For a specific version:
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/WillIsback/Syntheo/main/scripts/install.ps1))) -Version v0.4.0
+```
+
+### MSI
+
+Download [`Syntheo-windows-x64.msi`](https://github.com/WillIsback/Syntheo/releases/latest/download/Syntheo-windows-x64.msi) for a managed installation (GPO, Intune, and so on).
+
+## Verify a package
+
+Each release publishes `SHA256SUMS` (all packages) and `SHA256SUMS-windows`, along with a GitHub provenance attestation.
+
+```bash
+sha256sum -c SHA256SUMS --ignore-missing
+gh attestation verify Syntheo-linux-x86_64.AppImage -R WillIsback/Syntheo
+```
+
+On Windows, compare the output of `Get-FileHash <file>` with the matching line in `SHA256SUMS-windows`.
+
+## Update
+
+Syntheo has no built-in automatic update. To move to a new version, run the install script again or download the new package from [GitHub Releases](https://github.com/WillIsback/Syntheo/releases/latest). Your notes are kept.
+
+To remove the app, alone or with all your data, see [Uninstall Syntheo](/en/uninstall).
+
+## macOS
+
+macOS packages are not published yet. To build the app yourself, follow [Construire depuis les sources](https://github.com/WillIsback/Syntheo/blob/main/CONTRIBUTING.md#construire-depuis-les-sources) (build from source, in French) in `CONTRIBUTING.md`.
+
+## Next step
+
+Once the app is installed, continue with [Your first meeting](/en/quickstart). If the app does not open or does not capture audio, see [Troubleshooting](/en/troubleshooting).

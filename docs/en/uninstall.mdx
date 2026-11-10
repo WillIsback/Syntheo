@@ -1,0 +1,91 @@
+---
+title: "Uninstall Syntheo"
+description: "Remove only the app to reinstall or change versions, or erase everything: meetings, logs, cache, configuration, and API keys."
+---
+
+You can uninstall Syntheo in two ways:
+
+| Mode | What is removed | What remains |
+| --- | --- | --- |
+| **App only** | the program, its launch at startup, its shortcuts | your meetings, notes, transcripts, settings, and API keys |
+| **Full uninstall** | the app, plus the database, logs, cache, configuration, and API keys | nothing from Syntheo |
+
+Choose **App only** to reinstall or change versions: the new installation finds your meetings again. The **full uninstall** cannot be undone; export the notes you want to keep first.
+
+In both cases, the scripts never touch your exports, the [CLI](/en/installation) installed with `cargo`, or the configuration of your agents (Claude, Codex, OpenCode). If you had connected them to Syntheo, remove the integration from the app before uninstalling it.
+
+## Linux
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/WillIsback/Syntheo/main/scripts/uninstall.sh | bash
+```
+
+The script asks for the mode, lists what it will remove, then waits for your confirmation. For the full uninstall, type `EFFACER`.
+
+Options:
+
+- `--keep-data`: app only, without asking for the mode.
+- `--purge`: full uninstall.
+- `--dry-run`: shows what would be removed, without deleting anything.
+- `--yes`: does not ask for confirmation (scripts).
+- `--to <folder>`: AppImage folder, if you changed it at installation.
+
+To see what a full uninstall would remove:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/WillIsback/Syntheo/main/scripts/uninstall.sh | bash -s -- --purge --dry-run
+```
+
+The script removes:
+
+- the `Syntheo-*.AppImage` files from `~/.local/bin` and the `syntheo` command that points to them;
+- the `.deb` package, or the AUR package on Arch (with `sudo`);
+- the launch at startup (`~/.config/autostart`) and the menu shortcuts;
+- in a full uninstall: `~/.local/share/syntheo` (database and search index), `~/.local/share/fr.willisback.syntheo` (logs), the `fr.willisback.syntheo` configuration and cache, and the API keys in the keyring (Secret Service, with `secret-tool`).
+
+AppImages downloaded elsewhere, for example to `~/Downloads`, are not touched: delete them by hand.
+
+## Windows
+
+```powershell
+irm https://raw.githubusercontent.com/WillIsback/Syntheo/main/scripts/uninstall.ps1 | iex
+```
+
+With options:
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/WillIsback/Syntheo/main/scripts/uninstall.ps1))) -Purge -DryRun
+```
+
+- `-KeepData`: app only.
+- `-Purge`: full uninstall.
+- `-DryRun`: shows what would be removed, without deleting anything.
+- `-Yes`: does not ask for confirmation.
+
+The script runs the uninstaller of the `.exe` installer or of the `.msi` (a `.msi` installed for the whole machine may ask for elevation), removes the launch at startup and, in a full uninstall, the `%APPDATA%\syntheo`, `%APPDATA%\fr.willisback.syntheo`, and `%LOCALAPPDATA%\fr.willisback.syntheo` folders, along with the API keys in Credential Manager.
+
+You can also uninstall the app alone from **Settings → Apps → Installed apps → Syntheo**. Your data is then kept.
+
+## Uninstall by hand
+
+Without the scripts, quit Syntheo, uninstall the program, then delete the data folders:
+
+<Tabs>
+  <Tab title="Linux">
+    ```bash
+    rm -rf ~/.local/share/syntheo ~/.local/share/fr.willisback.syntheo \
+           ~/.config/fr.willisback.syntheo ~/.cache/fr.willisback.syntheo
+    secret-tool clear service fr.willisback.syntheo.secure-store
+    ```
+  </Tab>
+  <Tab title="Windows">
+    ```powershell
+    Remove-Item -Recurse -Force "$env:APPDATA\syntheo", "$env:APPDATA\fr.willisback.syntheo", "$env:LOCALAPPDATA\fr.willisback.syntheo"
+    ```
+    Then, in **Credential Manager** (Windows Credentials), delete the entries that contain `fr.willisback.syntheo.secure-store`.
+  </Tab>
+</Tabs>
+
+## Reinstall
+
+Follow [Install the app](/en/desktop-installation). After a full uninstall, the guided onboarding has you configure your [transcription and summary](/en/ai-setup) servers again.
