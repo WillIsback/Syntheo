@@ -204,6 +204,7 @@ fn write_wav(path: &Path, samples: &[f32]) -> Result<(), Box<dyn Error>> {
 }
 
 #[cfg(feature = "onnx")]
+#[allow(clippy::too_many_arguments)]
 fn write_summary(
     path: &Path,
     mic_path: &Path,

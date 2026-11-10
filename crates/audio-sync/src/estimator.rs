@@ -171,16 +171,17 @@ mod tests {
 
     fn delay_signal(input: &[f32], delay_samples: usize) -> Vec<f32> {
         let mut out = vec![0.0; input.len()];
-        for idx in delay_samples..input.len() {
-            out[idx] = input[idx - delay_samples];
+        if delay_samples < input.len() {
+            out[delay_samples..].copy_from_slice(&input[..input.len() - delay_samples]);
         }
         out
     }
 
     fn advance_signal(input: &[f32], advance_samples: usize) -> Vec<f32> {
         let mut out = vec![0.0; input.len()];
-        for idx in 0..input.len().saturating_sub(advance_samples) {
-            out[idx] = input[idx + advance_samples];
+        if advance_samples < input.len() {
+            let kept = input.len() - advance_samples;
+            out[..kept].copy_from_slice(&input[advance_samples..]);
         }
         out
     }

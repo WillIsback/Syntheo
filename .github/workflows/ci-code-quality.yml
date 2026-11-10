@@ -143,7 +143,7 @@ jobs:
 
       # Compile le graphe complet du desktop (plugins `detect`/`importer` → ort,
       # `vad` → onnx, adaptateurs…). Un bump de dépendance cassant échoue ici :
-      # `cargo metadata` ne voit que le lockfile, le clippy est en
+      # `cargo metadata` ne voit que le lockfile, le clippy était alors en
       # continue-on-error, et l'étape de tests ne compile qu'un sous-ensemble.
       # C'est exactement ce qui a laissé passer `ort` 2.0.0-rc.15.
       - name: Compilation du graphe desktop (deps incluses)
@@ -152,18 +152,14 @@ jobs:
           cargo check --locked -p desktop
           echo "✅ Le graphe desktop compile."
 
-      # Clippy est limité aux crates qui portent le desktop et nos chantiers
-      # (--no-deps : sans les crates héritées dont elles dépendent).
-      # Non bloquant tant que les adaptateurs cloud hérités (erreurs clippy)
-      # ne sont pas retirés : voir issue #3.
+      # Clippy sur tout le workspace, cibles de test et exemples compris, et
+      # bloquant : les erreurs héritées sont corrigées (issue 553). Les crates
+      # propres à macOS (tcc, shortcut-macos) ne compilent sous Linux que leur
+      # partie portable.
       - name: Lint (cargo clippy)
-        continue-on-error: true
         run: |
           set -euo pipefail
-          cargo clippy --locked --no-deps \
-            -p desktop -p owhisper-client -p template-app -p db-app -p listener-core \
-            -p audio-actual \
-            --all-targets -- -D warnings
+          cargo clippy --locked --workspace --all-targets -- -D warnings
 
       # Crates portant les chantiers Syntheo : templates et prompts, schéma
       # SQLite, adaptateurs STT, capture (règle « aucun audio sur disque »).

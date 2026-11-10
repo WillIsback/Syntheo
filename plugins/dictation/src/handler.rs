@@ -136,7 +136,7 @@ mod desktop {
             if let Some(window) = self.app.get_webview_window("dictation-overlay") {
                 let phase = phase_name(phase);
                 window
-                    .eval(&format!(
+                    .eval(format!(
                         "if (document.body) document.body.dataset.phase = '{phase}'"
                     ))
                     .map_err(|e| Error::Recording(e.to_string()))?;
