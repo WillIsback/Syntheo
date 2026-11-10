@@ -81,6 +81,77 @@ status=0; timeout 30 xvfb-run -a apps/desktop/src-tauri/target/release/syntheo |
 `VITE_API_URL` est une valeur factice exigée à la compilation par des
 intégrations cloud héritées ; elle disparaît avec le chantier 04d du plan.
 
+## Construire une alpha en local
+
+Une alpha est la variante `devtools` d'un lot (inspecteur, barre de diagnostic,
+logs détaillés), construite avant de fusionner la PR du lot pour tester en
+conditions réelles. Elle est **toujours non signée** : la signature Windows
+(quota Azure limité) est réservée à la release, et `build-windows.yml` la
+refuse pour tout build avec `features` non vide.
+
+La voie préférée est le build local ; le workflow `build-devtools` reste en
+secours (`gh workflow run build-devtools --ref <branche-de-lot> -f version=X.Y.Z-N`).
+La version a un suffixe **numérique** (`0.7.1-1`, pas `0.7.1-alpha.1`) :
+l'installeur MSI de Windows refuse les autres, et les scripts le contrôlent.
+
+### Linux (AppImage)
+
+Depuis la branche du lot, sur une machine Linux x86_64 avec les dépendances de
+Tauri (le script les vérifie et indique la commande d'installation pour
+Debian/Ubuntu et Arch) :
+
+```bash
+bash scripts/build-alpha.sh 0.7.1-1            # sortie : ~/syntheo-alpha/0.7.1-1/
+bash scripts/build-alpha.sh 0.7.1-1 /tmp/alpha # autre dossier de sortie
+```
+
+Le script reprend les étapes du job Linux de `build-devtools.yml` : version
+injectée dans `tauri.conf.syntheo.json` (restauré ensuite), `pnpm -F ui build`,
+`tauri build --bundles appimage --features devtools`, puis réempaquetage par
+`scripts/repack-linux-appimage.mjs`. Il dépose
+`syntheo-devtools-linux/Syntheo-X.Y.Z-N-devtools-linux-x86_64.AppImage`, sa
+somme `SHA256SUMS-devtools-linux` et un fichier `SOURCE` (commit, branche, date).
+Aucune clé de signature n'est lue.
+
+L'AppImage embarque les bibliothèques de la machine de build : construite sur
+une distribution récente (Arch), elle vise les distributions aussi récentes.
+Pour vérifier la compatibilité avec les autres, passer par le workflow
+(Ubuntu 24.04). Sous Arch, si linuxdeploy échoue sur `strip`, relancer avec
+`NO_STRIP=true`.
+
+### Windows (NSIS + MSI)
+
+À faire dans une VM Windows 11. `scripts/build-alpha.ps1` reprend les étapes de
+`build-windows.yml` sans la signature. **Il n'a pas encore été testé en
+conditions réelles** : la première exécution sert de validation.
+
+Toolchain, une fois, dans un PowerShell administrateur :
+
+```powershell
+winget install Microsoft.VisualStudio.2022.BuildTools --override "--wait --passive --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
+winget install Rustlang.Rustup LLVM.LLVM StrawberryPerl.StrawberryPerl Kitware.CMake Git.Git OpenJS.NodeJS.LTS
+corepack enable
+```
+
+- Visual Studio Build Tools 2022, charge « Développement Desktop en C++ »
+  (MSVC v143, SDK Windows) : compilateur, éditeur de liens, runtime Visual C++
+  embarqué et `dumpbin`.
+- Rust par rustup : la version de `rust-toolchain.toml` s'installe au premier build.
+- Node.js 22 ou plus et pnpm (version de `packageManager`, via corepack).
+- LLVM (libclang pour bindgen), Strawberry Perl (OpenSSL compilé depuis les
+  sources), CMake.
+- WebView2 : présent par défaut sous Windows 11, sinon
+  `winget install Microsoft.EdgeWebView2Runtime`.
+
+Puis, dans un nouveau terminal, depuis la racine du dépôt :
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\build-alpha.ps1 -Version 0.7.1-1
+```
+
+Les installeurs, `SHA256SUMS-windows` et `SOURCE` vont dans
+`$HOME\syntheo-alpha\0.7.1-1\syntheo-devtools-windows\` (`-OutDir` pour changer).
+
 ## Lancer en développement
 
 `pnpm dev` (alias `pnpm dev:desktop`) lance l'application en mode
