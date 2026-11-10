@@ -19,7 +19,6 @@ uuid = { workspace = true, features = ["v4"] }
 
 [features]
 default = []
-cli = []
 
 [dev-dependencies]
 tempfile = { workspace = true }

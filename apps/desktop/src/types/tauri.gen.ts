@@ -11,7 +11,6 @@ export const commands = {
 	setDismissedToasts: (v: string[]) => typedError<null, string>(__TAURI_INVOKE("set_dismissed_toasts", { v })),
 	getEnv: (key: string) => __TAURI_INVOKE<string>("get_env", { key }),
 	showDevtool: () => __TAURI_INVOKE<boolean>("show_devtool"),
-	isAppStoreBuild: () => __TAURI_INVOKE<boolean>("is_app_store_build"),
 	completeAppExit: () => __TAURI_INVOKE<void>("complete_app_exit"),
 	getTinybaseValues: () => typedError<string | null, string>(__TAURI_INVOKE("get_tinybase_values")),
 	getPinnedTabs: () => typedError<string | null, string>(__TAURI_INVOKE("get_pinned_tabs")),

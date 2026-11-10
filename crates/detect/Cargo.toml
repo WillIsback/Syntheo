@@ -9,7 +9,6 @@ default = []
 mic = []
 language = []
 list = []
-app = []
 zoom = []
 sleep = []
 screen = ["dep:xcap", "dep:image"]
@@ -46,7 +45,7 @@ macos-accessibility-client = { workspace = true }
 
 [[example]]
 name = "detector"
-required-features = ["mic", "list", "zoom", "sleep", "app", "language"]
+required-features = ["mic", "list", "zoom", "sleep", "language"]
 
 # xcap's Linux backend links libgbm/EGL/PipeWire; Linux capture is not supported yet.
 [target."cfg(any(target_os = \"macos\", target_os = \"windows\"))".dependencies]

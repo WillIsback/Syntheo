@@ -34,7 +34,6 @@ import { refreshLegacySettingsSnapshots } from "./settings/legacy-snapshots";
 import { migratePlaintextAiProviderApiKeys } from "./settings/providers";
 import { initializeApplicationSettings } from "./settings/queries";
 import { initializeAppExitFlush } from "./shared/app-exit";
-import { initializeAppStoreBuild } from "./shared/app-store";
 import { useConfigValue } from "./shared/config";
 import { ErrorComponent, NotFoundComponent } from "./shared/control";
 import { LongLoadGate } from "./shared/long-load-gate";
@@ -148,7 +147,7 @@ async function renderApp() {
   }
 
   preventFileDropNavigation();
-  await Promise.all([bootstrapThemeFromSettings(), initializeAppStoreBuild()]);
+  await bootstrapThemeFromSettings();
   const root = ReactDOM.createRoot(rootElement, {
     onCaughtError: (error) => {
       console.error("[render] uncaught error", error);

@@ -119,7 +119,7 @@ Ressources : `syntheo://meetings/{meeting_id}` (Markdown), `syntheo://meetings/{
 - **Rôle** : diagnostic et installation d'une intégration par hook pour trois CLI d'agents tierces : Codex, Claude Code et OpenCode (`ProviderKind`).
 - **API principale** : `health_check`, `install_cli`, `uninstall_cli`, `upgrade_hooks` ; types `ProviderHealth`, `ProviderHealthStatus`, `ProviderAuthStatus`.
 - **Dépendances internes** : `crates/claude`, `crates/codex`, `crates/opencode`.
-- **Utilisé par** : `plugins/agent`, enregistré par `apps/desktop/src-tauri` hors build App Store.
+- **Utilisé par** : `plugins/agent`, enregistré par `apps/desktop/src-tauri`.
 - **État** : hérité d'Anarlog. Les hooks installés appellent la commande `char` (par exemple `char claude notify`), pas `syntheo`, et aucun code de `apps/desktop/src` n'importe `@syntheo/plugin-agent`. Rien ne sert la CLI `syntheo` ici.
 - **Pages de doc concernées** : aucune. L'installation des compétences d'agents documentée dans [/agents/skills](/fr/agents/skills) passe par `apps/desktop/src-tauri/src/agent_skills.rs`, pas par cette crate.
 

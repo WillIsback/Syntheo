@@ -8,7 +8,6 @@ import {
   type SettingId,
   type SettingsSearchEntry,
 } from "~/settings/search-index";
-import { isAppStoreBuild } from "~/shared/app-store";
 import { useSettingsNavGroups } from "~/sidebar/settings-nav-groups";
 import type { SettingsTab } from "~/store/zustand/tabs";
 
@@ -38,20 +37,17 @@ export function resolveSettingsIndex(
   {
     pageLabels,
     platform: currentPlatform,
-    appStoreBuild,
   }: {
     pageLabels: ReadonlyMap<SettingsTab, string>;
     platform: Platform | null;
-    appStoreBuild: boolean;
   },
 ): SettingsSearchResult[] {
   return (SETTINGS_SEARCH_INDEX as readonly SettingsSearchEntry[])
     .filter(
       (item) =>
-        !(appStoreBuild && item.hiddenInAppStore) &&
-        (!item.platforms ||
-          currentPlatform === null ||
-          item.platforms.includes(currentPlatform)),
+        !item.platforms ||
+        currentPlatform === null ||
+        item.platforms.includes(currentPlatform),
     )
     .map((item) => {
       const pageLabel = pageLabels.get(item.page) ?? "";
@@ -130,7 +126,6 @@ export function useSettingsSearchIndex(): SettingsSearchResult[] {
     return resolveSettingsIndex(i18n, {
       pageLabels,
       platform: runtimePlatform(),
-      appStoreBuild: isAppStoreBuild(),
     });
   }, [groups, i18n]);
 }

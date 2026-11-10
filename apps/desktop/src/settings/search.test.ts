@@ -112,7 +112,6 @@ describe("index des paramètres en français", () => {
     return resolveSettingsIndex(i18n, {
       pageLabels,
       platform,
-      appStoreBuild: false,
     });
   }
 
