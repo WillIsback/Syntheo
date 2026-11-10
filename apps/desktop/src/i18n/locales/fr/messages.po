@@ -1842,6 +1842,10 @@ msgstr "Trouvez les décisions clés."
 msgid "Finish"
 msgstr "Terminer"
 
+#: src/meeting-float/overlay/bar.tsx
+msgid "Finish dictation"
+msgstr "Terminer la dictée"
+
 #: src/shared/export-shortcut.ts
 msgid "Finish listening to export the note."
 msgstr "Terminez l'écoute pour exporter la note."
@@ -2724,6 +2728,10 @@ msgstr "Nom du modèle"
 msgid "Model name served by your server"
 msgstr "Nom du modèle servi par votre serveur"
 
+#: src/session/components/outer-header/overflow/index.tsx
+msgid "More"
+msgstr "Plus"
+
 #: src/home/note-index.tsx
 #: src/templates/template-form.tsx
 msgid "More actions"
@@ -3471,9 +3479,17 @@ msgstr "Téléphone"
 msgid "Pin"
 msgstr "Épingler"
 
+#: src/contacts/person-item.tsx
+msgid "Pin contact"
+msgstr "Épingler le contact"
+
 #: src/settings/appearance/palette.tsx
 msgid "Pine green on raw silk, with ink. Calm and plant-like."
 msgstr "Vert des pins sur soie écrue, à l'encre. Calme et végétal."
+
+#: src/contacts/person-item.tsx
+msgid "Pinned contact"
+msgstr "Contact épinglé"
 
 #: src/settings/general/notification.tsx
 msgid "Play a sound when transcription, summaries, or cloud sync finish."
@@ -5505,6 +5521,7 @@ msgstr "Rétablir le micro"
 
 #: src/contacts/details.tsx
 #: src/contacts/organization-details.tsx
+#: src/contacts/person-item.tsx
 msgid "Unnamed"
 msgstr "Sans nom"
 
@@ -5515,6 +5532,10 @@ msgstr "Contact sans nom"
 #: src/contacts/contact-page-header.tsx
 msgid "Unpin"
 msgstr "Détacher"
+
+#: src/contacts/person-item.tsx
+msgid "Unpin contact"
+msgstr "Désépingler le contact"
 
 #: src/settings/ai/shared/server-card.tsx
 msgid "Unreachable"

@@ -1,4 +1,4 @@
-import { Trans } from "@lingui/react/macro";
+import { Trans, useLingui } from "@lingui/react/macro";
 import { useState } from "react";
 
 import {
@@ -56,6 +56,7 @@ export function OverflowButton({
   sessionId: string;
   currentView: EditorView;
 }) {
+  const { t } = useLingui();
   const [open, setOpen] = useState(false);
   const [isVersionHistoryOpen, setIsVersionHistoryOpen] = useState(false);
   const [hasOpenedVersionHistory, setHasOpenedVersionHistory] = useState(false);
@@ -115,7 +116,7 @@ export function OverflowButton({
             size="icon"
             variant="ghost"
             data-tauri-drag-region="false"
-            aria-label="More"
+            aria-label={t`More`}
             className="text-muted-foreground hover:bg-accent hover:text-foreground rounded-full [&_svg]:size-4"
           >
             <DotsThree className="size-4" />

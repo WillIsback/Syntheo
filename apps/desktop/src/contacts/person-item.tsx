@@ -1,3 +1,4 @@
+import { useLingui } from "@lingui/react/macro";
 import React, { useCallback } from "react";
 
 import { PushPin } from "@syntheo/ui/components/icons";
@@ -21,6 +22,7 @@ export function PersonItem({
   onClick: () => void;
   onDelete?: (id: string) => void;
 }) {
+  const { t } = useLingui();
   const isPinned = readOnly || Boolean(person.pinned);
   const personName = person.name;
   const personEmail = person.email;
@@ -77,7 +79,7 @@ export function PersonItem({
       )}
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1 truncate font-medium">
-          {personName || personEmail || "Unnamed"}
+          {personName || personEmail || t`Unnamed`}
         </div>
         {personEmail && personName && (
           <div className="text-muted-foreground truncate text-xs">
@@ -88,7 +90,7 @@ export function PersonItem({
       {readOnly ? (
         <span
           role="img"
-          aria-label="Pinned contact"
+          aria-label={t`Pinned contact`}
           className="text-primary shrink-0 p-1"
         >
           <PushPin className="size-3.5" weight="bold" />
@@ -102,7 +104,7 @@ export function PersonItem({
               ? "text-primary hover:text-primary-hover"
               : "text-muted-foreground/70 hover:text-muted-foreground opacity-0 group-hover:opacity-100",
           ])}
-          aria-label={isPinned ? "Unpin contact" : "Pin contact"}
+          aria-label={isPinned ? t`Unpin contact` : t`Pin contact`}
         >
           <PushPin
             className="size-3.5"

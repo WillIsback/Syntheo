@@ -470,13 +470,14 @@ function StopControl({
   colors: BarColors;
   onStop: () => void;
 }) {
+  const { t } = useLingui();
   const [hovered, setHovered] = useState(false);
 
   return (
     <button
       type="button"
       data-tauri-drag-region="false"
-      aria-label="Finish dictation"
+      aria-label={t`Finish dictation`}
       disabled={state.dictation?.phase === "transcribing"}
       onClick={onStop}
       onMouseEnter={() => setHovered(true)}
