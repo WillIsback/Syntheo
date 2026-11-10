@@ -66,7 +66,7 @@
     "@syntheo/ui": "workspace:^",
     "@syntheo/utils": "workspace:^",
     "@tanstack/react-form": "^1.33.5",
-    "@tanstack/react-query": "^5.106.1",
+    "@tanstack/react-query": "^5.107.1",
     "@tanstack/react-router": "^1.170.46",
     "@tauri-apps/api": "^2.12.4",
     "@tauri-apps/plugin-autostart": "^2.7.0",
@@ -82,7 +82,7 @@
     "date-fns": "^4.4.0",
     "effect": "^4.1.2",
     "js-levenshtein-esm": "^2.0.0",
-    "motion": "^14.10.0",
+    "motion": "^14.10.1",
     "mutative": "^2.0.2",
     "nlcst-to-string": "^4.0.0",
     "prosemirror-model": "^1.25.4",
@@ -101,7 +101,7 @@
     "usehooks-ts": "^3.1.1",
     "vfile": "^6.0.3",
     "zod": "^4.6.6",
-    "zustand": "^5.0.16"
+    "zustand": "^5.1.0"
   },
   "devDependencies": {
     "@dotenvx/dotenvx": "^2.38.2",
@@ -121,7 +121,7 @@
     "@vitejs/plugin-react": "^6.2.1",
     "jsdom": "^31.0.0",
     "postcss": "^8.5.32",
-    "tailwindcss": "^4.3.4",
+    "tailwindcss": "^4.3.5",
     "terser": "^5.51.2",
     "typescript": "~5.8.3",
     "vite": "^8.3.6",

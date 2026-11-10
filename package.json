@@ -11,7 +11,7 @@
     "menage:lignes": "node scripts/menage-lignes.mjs"
   },
   "devDependencies": {
-    "@tanstack/eslint-plugin-query": "^5.106.1",
+    "@tanstack/eslint-plugin-query": "^5.107.1",
     "braces": "3.0.3",
     "decode-uri-component": "0.5.1",
     "dprint": "^0.64.3",
