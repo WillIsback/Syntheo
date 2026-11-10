@@ -28,7 +28,7 @@ import { useSession, useUpdateSession } from "~/session/queries";
 // proposition, calculée par la règle déterministe de
 // `~/folders/suggestion/rule`. Rien n'est rangé sans clic : « Ranger » passe
 // par la mise à jour de dossier habituelle, et la proposition de
-// régénération du rangement tardif (`late-filing.ts`) suit si le modèle
+// régénération du rangement tardif (`~/session/late-filing`) suit si le modèle
 // effectif change. Désactivée tant que la précision mesurée n'atteint pas le
 // seuil (`~/folders/suggestion/activation`).
 export function AfterMeetingFolderSuggestion({

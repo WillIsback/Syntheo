@@ -3713,9 +3713,9 @@ msgstr "Enregistrement avec le micro par défaut à la place. Vérifiez que le m
 msgid "Redo"
 msgstr "Rétablir"
 
-#: src/session/components/living-document/late-filing.ts
 #: src/session/components/living-document/summary-switcher-view.tsx
 #: src/session/components/note-input/template-picker.tsx
+#: src/session/late-filing.ts
 msgid "Regenerate"
 msgstr "Régénérer"
 
@@ -3727,7 +3727,7 @@ msgstr "Régénérer le message"
 msgid "Regenerate summary with names"
 msgstr "Régénérer la synthèse avec les noms"
 
-#: src/session/components/living-document/late-filing.ts
+#: src/session/late-filing.ts
 msgid "Regenerate the summary with this template? The current version stays in the history."
 msgstr "Régénérer la synthèse avec ce modèle ? La version actuelle reste dans l'historique."
 
@@ -5275,7 +5275,7 @@ msgstr "Cette modification n'est plus en attente."
 msgid "This file is too large to import (2 GB maximum)."
 msgstr "Ce fichier est trop lourd pour être importé (2 Go maximum)."
 
-#: src/session/components/living-document/late-filing.ts
+#: src/session/late-filing.ts
 msgid "This folder uses the {title} template"
 msgstr "Ce dossier utilise le modèle {title}"
 
@@ -5556,10 +5556,10 @@ msgstr "Injoignable"
 #: src/folders/sidebar-tree-view.tsx
 #: src/home/live-note-card.tsx
 #: src/home/note-index.tsx
-#: src/session/components/living-document/late-filing.ts
 #: src/session/components/living-document/meeting-type-picker.tsx
 #: src/session/components/outer-header/overflow/export-modal.tsx
 #: src/session/components/title-input-field.tsx
+#: src/session/late-filing.ts
 #: src/shared/palette-search-groups.tsx
 #: src/shared/ui/resource-list/preview-header.tsx
 #: src/sidebar/toast/undo-delete-toast.tsx

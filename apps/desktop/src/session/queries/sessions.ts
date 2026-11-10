@@ -308,9 +308,14 @@ export function updateSession(
   sessionId: string,
   changes: SessionChanges,
 ): Promise<void> {
-  return enqueueDatabaseWrite(`session:${sessionId}`, async () => {
+  let filedInto: string | null = null;
+  const write = enqueueDatabaseWrite(`session:${sessionId}`, async () => {
     const now = new Date().toISOString();
     const statements: SqlStatement[] = [];
+    const previousFolder =
+      changes.folder_id === undefined
+        ? undefined
+        : await loadSessionFolderPath(sessionId);
 
     const sessionUpdate = buildSessionUpdateStatement(changes, sessionId, now);
     if (sessionUpdate) statements.push(sessionUpdate);
@@ -334,7 +339,41 @@ export function updateSession(
     }
 
     if (statements.length > 0) await executeTransaction(statements);
+    if (
+      changes.folder_id &&
+      previousFolder !== undefined &&
+      previousFolder !== changes.folder_id
+    ) {
+      filedInto = changes.folder_id;
+    }
   });
+  return write.then(() => {
+    if (filedInto) {
+      offerLateFilingRegeneration(sessionId);
+    }
+  });
+}
+
+async function loadSessionFolderPath(
+  sessionId: string,
+): Promise<string | undefined> {
+  const rows = await liveQueryClient.execute<{ folder_path: string }>(
+    `SELECT folder_path FROM sessions WHERE id = ? AND deleted_at IS NULL LIMIT 1`,
+    [sessionId],
+  );
+  return rows[0]?.folder_path;
+}
+
+// Rangement tardif (issues 502 et 534) : tout changement de dossier d'une note
+// passe ici, quel que soit l'écran d'où il vient. La proposition de
+// régénérer avec le modèle du dossier est décidée dans ~/session/late-filing
+// (chargé à la demande : il dépend de la synthèse et des notifications).
+function offerLateFilingRegeneration(sessionId: string) {
+  void import("~/session/late-filing")
+    .then(({ proposeLateFiling }) => proposeLateFiling(sessionId))
+    .catch((error) => {
+      console.error("[late-filing] failed to check the folder template", error);
+    });
 }
 
 function useHeldLiveQueryRows<T>(
