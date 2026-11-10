@@ -8,142 +8,149 @@
 <h1>Syntheo</h1>
 
 <p>
-  <b>Ici, tout peut se dire. Rien ne peut sortir. IA comprise.</b>
+  <b>What's said in the room stays in the room. Even the AI.</b>
   <br />
-  Syn·thé·o : ce qu'on rassemble autour du thé.
+  The open-source meeting notepad that runs on your own machine.
   <br />
-  Transcription en temps réel et comptes rendus structurés, avec les modèles
-  open-weight de <i>votre</i> infrastructure. Aucun cloud, aucun audio conservé.
+  Live transcription and clear write-ups, with the open-weight models of
+  <i>your</i> infrastructure. No cloud, no audio kept.
 </p>
 
 <p>
-  <a href="https://github.com/WillIsback/Syntheo/releases/latest/download/Syntheo-windows-x64-setup.exe"><img alt="Télécharger pour Windows" src="https://img.shields.io/badge/Windows-t%C3%A9l%C3%A9charger-0078D4?logo=windows11&logoColor=white" /></a>
-  <a href="https://github.com/WillIsback/Syntheo/releases/latest/download/Syntheo-linux-x86_64.AppImage"><img alt="Télécharger pour Linux" src="https://img.shields.io/badge/Linux-t%C3%A9l%C3%A9charger-FCC624?logo=linux&logoColor=black" /></a>
-  <a href="https://syntheo.studio"><img alt="Site syntheo.studio" src="https://img.shields.io/badge/site-syntheo.studio-316745" /></a>
-  <a href="https://docs.syntheo.studio"><img alt="Documentation" src="https://img.shields.io/badge/documentation-en%20ligne-316745?logo=readthedocs&logoColor=white" /></a>
-  <a href="LICENSE"><img alt="Licence MIT" src="https://img.shields.io/badge/licence-MIT-green" /></a>
+  <a href="https://github.com/WillIsback/Syntheo/releases/latest/download/Syntheo-windows-x64-setup.exe"><img alt="Download for Windows" src="https://img.shields.io/badge/Windows-download-0078D4?logo=windows11&logoColor=white" /></a>
+  <a href="https://github.com/WillIsback/Syntheo/releases/latest/download/Syntheo-linux-x86_64.AppImage"><img alt="Download for Linux" src="https://img.shields.io/badge/Linux-download-FCC624?logo=linux&logoColor=black" /></a>
+  <a href="https://syntheo.studio"><img alt="Website syntheo.studio" src="https://img.shields.io/badge/website-syntheo.studio-316745" /></a>
+  <a href="https://docs.syntheo.studio"><img alt="Documentation" src="https://img.shields.io/badge/docs-online-316745?logo=readthedocs&logoColor=white" /></a>
+  <a href="LICENSE"><img alt="MIT licence" src="https://img.shields.io/badge/licence-MIT-green" /></a>
 </p>
+
+<p><b>English</b> · <a href="README.fr.md">Français</a></p>
 
 </div>
 
-> **Statut** : en construction (bêta). L'application est utilisable, mais son
-> comportement et ses réglages peuvent encore évoluer d'une version à l'autre.
-> Voir l'[architecture](docs/architecture.mdx) actuelle et la
-> [feuille de route](docs/roadmap.mdx).
+> **Status**: beta. The app is usable, but its behaviour and settings may still
+> change from one version to the next. See the current
+> [architecture](https://docs.syntheo.studio/en/architecture) and the
+> [roadmap](https://docs.syntheo.studio/en/roadmap).
 
-## Ce que fait Syntheo Desktop
+## What Syntheo does
 
-- **Transcription en temps réel** du micro et de l'audio système, en français.
-- **Comptes rendus** générés à partir de vos notes et du transcript, guidés par
-  des **templates** (réunion générale, comité conformité / RGPD, point projet,
-  standup… et un **générateur de templates** par IA).
-- **Inférence on-premise uniquement** : l'application ne parle qu'aux endpoints
-  que vous configurez, via les protocoles standard des moteurs open-weight :
-  - ASR : OpenAI Realtime, vLLM Realtime (ex. Voxtral Mini 4B Realtime),
-    NVIDIA NIM (WebSocket et gRPC), `/v1/audio/transcriptions` ;
-  - LLM : API OpenAI-compatible (vLLM, SGLang, llama.cpp, Ollama, TGI, NIM).
-- **Aucune conservation de l'audio** : il n'existe qu'en mémoire, le temps
-  d'être transcrit. Seuls le transcript et la note sont enregistrés, localement.
-- **Ni compte, ni abonnement, ni télémétrie.**
+- **Live transcription** of your microphone and your computer's audio.
+- **Write-ups** built from your own notes and the transcript, guided by
+  **templates** (general meeting, compliance / GDPR committee, project review,
+  stand-up… and an AI **template generator**). What comes from your notes stays
+  green; what Syntheo adds is in ink.
+- **Project folders**: a running thread across meetings, and an agenda proposed
+  for the next one.
+- **Automations**: run actions on a finished note (export, tasks, webhook…).
+- **On-premise inference only**: the app only talks to the endpoints you
+  configure, through the standard protocols of open-weight engines:
+  - speech-to-text: OpenAI Realtime, vLLM Realtime (e.g. Voxtral Mini 4B
+    Realtime), NVIDIA NIM (WebSocket and gRPC), `/v1/audio/transcriptions`;
+  - language model: OpenAI-compatible API (vLLM, SGLang, llama.cpp, Ollama,
+    TGI, NIM, MLX).
+- **No audio kept**: it only lives in memory while it is transcribed. Only the
+  transcript and the note are saved, locally.
+- **No account, no subscription, no telemetry.**
 
-Données, flux réseau et responsabilités au regard du RGPD :
-[docs/conformite/rgpd.md](docs/conformite/rgpd.md).
+Data, network flows and GDPR responsibilities:
+[GDPR compliance](https://docs.syntheo.studio/en/conformite/rgpd).
 
 ## Installation
 
-### Linux — script en une ligne (AppImage)
+### Linux: one-line script (AppImage)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/WillIsback/Syntheo/main/scripts/install.sh | bash
 ```
 
-Le script télécharge l'AppImage de la dernière release dans `~/.local/bin`,
-vérifie sa somme SHA256, l'enregistre comme `Syntheo-<version>.AppImage` et
-crée le lien `syntheo`.
+The script downloads the latest release's AppImage into `~/.local/bin`, checks
+its SHA256 checksum, saves it as `Syntheo-<version>.AppImage` and creates the
+`syntheo` link.
 
-Pour **tester une release précise** (toutes les versions publiées) :
+To **try a specific release** (any published version):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/WillIsback/Syntheo/main/scripts/install.sh | bash -s -- --version v0.1.1
+curl -fsSL https://raw.githubusercontent.com/WillIsback/Syntheo/main/scripts/install.sh | bash -s -- --version v0.7.0
 ```
 
-> Sur **Arch / Omarchy**, l'AppImage nécessite FUSE 2 : `sudo pacman -S fuse2`.
-> Plusieurs versions peuvent coexister (fichiers `Syntheo-<version>.AppImage`).
+> On **Arch / Omarchy**, the AppImage needs FUSE 2: `sudo pacman -S fuse2`.
+> Several versions can live side by side (`Syntheo-<version>.AppImage` files).
 
 ### Debian / Ubuntu
 
-Le script installe aussi le paquet `.deb` :
+The script can also install the `.deb` package:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/WillIsback/Syntheo/main/scripts/install.sh | bash -s -- --deb
-sudo apt install ~/.local/bin/Syntheo_*_amd64.deb   # ou : sudo apt install ./Syntheo_*.deb
+sudo apt install ~/.local/bin/Syntheo_*_amd64.deb   # or: sudo apt install ./Syntheo_*.deb
 ```
 
 ### Windows
 
-**Télécharger l'installeur** (recommandé si tu n'utilises pas le terminal) :
-[`Syntheo-windows-x64-setup.exe`](https://github.com/WillIsback/Syntheo/releases/latest/download/Syntheo-windows-x64-setup.exe)
-— ou le `.msi` :
+**Download the installer** (recommended if you don't use the terminal):
+[`Syntheo-windows-x64-setup.exe`](https://github.com/WillIsback/Syntheo/releases/latest/download/Syntheo-windows-x64-setup.exe),
+or the `.msi`:
 [`Syntheo-windows-x64.msi`](https://github.com/WillIsback/Syntheo/releases/latest/download/Syntheo-windows-x64.msi).
 
-SmartScreen peut afficher un avertissement sur les premières versions, le
-temps que la réputation du binaire se construise.
+Release installers are signed. SmartScreen may still show a warning while the
+binary builds its reputation.
 
-**Script en une ligne** — télécharge, vérifie la somme SHA256
-(`SHA256SUMS-windows`) et installe silencieusement (portée utilisateur, sans
-élévation) :
+**One-line script**: downloads, checks the SHA256 checksum
+(`SHA256SUMS-windows`) and installs silently (per user, no elevation):
 
 ```powershell
 irm https://raw.githubusercontent.com/WillIsback/Syntheo/main/scripts/install.ps1 | iex
 ```
 
-Pour **installer une release précise** :
+To **install a specific release**:
 
 ```powershell
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/WillIsback/Syntheo/main/scripts/install.ps1))) -Version v0.3.1
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/WillIsback/Syntheo/main/scripts/install.ps1))) -Version v0.7.0
 ```
 
-### Paquets
+### Packages
 
-Les `.deb`, AppImage, `.msi` et `.exe` sont aussi téléchargeables depuis la page
-[Releases](https://github.com/WillIsback/Syntheo/releases) (chaque
-release publie `SHA256SUMS` et `SHA256SUMS-windows`, ainsi qu'une attestation de
-provenance vérifiable avec `gh attestation verify`).
+The `.deb`, AppImage, `.msi` and `.exe` files are also on the
+[Releases](https://github.com/WillIsback/Syntheo/releases) page. Each release
+publishes `SHA256SUMS` and `SHA256SUMS-windows`, plus a provenance attestation
+you can check with `gh attestation verify`.
 
 ### macOS
 
-Les paquets macOS ne sont pas encore publiés. En attendant, l'application se
-construit depuis les sources :
-[CONTRIBUTING.md › Construire depuis les sources](CONTRIBUTING.md#construire-depuis-les-sources).
+macOS packages are not published yet. Meanwhile, you can build the app from
+source: [CONTRIBUTING.md › Building from source](CONTRIBUTING.md#construire-depuis-les-sources).
 
-## Développement
+## Development
 
-- Desktop : `apps/desktop` (Tauri 2, React 19, TypeScript, Vite, Tailwind).
-- Rust : `crates/` et `plugins/` (capture audio, adaptateurs STT, SQLite,
-  templates Jinja des prompts).
-- Architecture (flux de capture et d'inférence, stockage, garanties) :
-  [docs/architecture.mdx](docs/architecture.mdx).
-- Contribution, conventions de commit et gates de CI :
+- Desktop: `apps/desktop` (Tauri 2, React 19, TypeScript, Vite, Tailwind).
+- Rust: `crates/` and `plugins/` (audio capture, speech-to-text adapters,
+  SQLite, Jinja prompt templates).
+- Architecture (capture and inference flows, storage, guarantees):
+  [architecture](https://docs.syntheo.studio/en/architecture).
+- Contributing, commit conventions and CI gates (in French):
   [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## Pourquoi le thé ?
+## Why tea?
 
-Syn·thé·o : ce qu'on rassemble autour du thé. Comme le _kaiki_, le carnet
-qu'un invité garde d'une réunion de thé, votre compte rendu part de vos notes.
-La réunion ne se rejoue pas : l'audio n'est jamais conservé, seule la note
-reste. Voir [L'esprit Syntheo](docs/philosophy.mdx).
+Syn·thé·o: what gathers around tea. In Japan, a _chakai_ (茶会) is a tea
+gathering in a closed room, and a _kaiki_ (会記) is the notebook a guest keeps of
+it. Like a _kaiki_, your write-up starts from your own notes. A meeting happens
+only once (一期一会, _ichi-go ichi-e_): the audio is never kept, only the note
+remains. Read [the story behind the name](https://docs.syntheo.studio/en/philosophy).
 
-## Origine
+## Origin
 
-Syntheo Desktop est un projet indépendant, dérivé d'**[Anarlog](https://github.com/fastrepl/anarlog)**
-(Fastrepl, Inc., licence MIT), importé à la révision `a0d5bd0` du 2026-10-24
-dans un nouveau dépôt. Merci à l'équipe Anarlog pour cette base open source.
-Le détail de ce qui a été repris, retiré et modifié est dans
-[NOTICE.md](NOTICE.md). Syntheo Desktop n'est ni affilié à Fastrepl ni soutenu
-par Fastrepl.
+Syntheo is an independent project derived from
+**[Anarlog](https://github.com/fastrepl/anarlog)** (Fastrepl, Inc., MIT
+licence), imported at revision `a0d5bd0` on 2026-10-24 into a new repository.
+Thanks to the Anarlog team for this open-source foundation. What was kept,
+removed and changed is detailed in [NOTICE.md](NOTICE.md). Syntheo is neither
+affiliated with nor endorsed by Fastrepl.
 
-Syntheo Desktop est le pendant poste de travail de **syntheo-web**.
+Syntheo succeeds [Syntheo-web](https://github.com/WillIsback/Syntheo-web), an
+earlier web generation of the project.
 
 ## Licence
 
-[MIT](LICENSE) : © 2026 William Derue (Syntheo Desktop), © 2023 Fastrepl, Inc. (code d'origine).
+[MIT](LICENSE): © 2026 William Derue (Syntheo), © 2023 Fastrepl, Inc. (original code).
