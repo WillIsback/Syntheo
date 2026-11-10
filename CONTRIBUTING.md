@@ -89,49 +89,82 @@ conditions réelles. Elle est **toujours non signée** : la signature Windows
 (quota Azure limité) est réservée à la release, et `build-windows.yml` la
 refuse pour tout build avec `features` non vide.
 
-La voie préférée est le build local ; le workflow `build-devtools` reste en
-secours (`gh workflow run build-devtools --ref <branche-de-lot> -f version=X.Y.Z-N`).
+Les alphas se construisent **uniquement en local** : AppImage Linux sur un
+poste Linux (dans un conteneur Ubuntu 24.04), installeur Windows dans une VM
+Windows 11. Il n'y a plus de workflow d'alpha sur GitHub.
 La version a un suffixe **numérique** (`0.7.1-1`, pas `0.7.1-alpha.1`) :
 l'installeur MSI de Windows refuse les autres, et les scripts le contrôlent.
 
 ### Linux (AppImage)
 
-Depuis la branche du lot, sur une machine Linux x86_64 avec les dépendances de
-Tauri (le script les vérifie et indique la commande d'installation pour
-Debian/Ubuntu et Arch) :
+`scripts/build-alpha.sh` construit par défaut dans un conteneur Docker Ubuntu
+24.04 (`scripts/alpha/Dockerfile`), identique au runner Linux de `release.yml` :
+mêmes paquets (`scripts/setup-linux-tauri.sh` et `setup-linux-others.sh`), même
+Node que la CI, pnpm de `packageManager`, toolchain de `rust-toolchain.toml`,
+WebKitGTK 2.52. Seul prérequis sur l'hôte : Docker (utilisateur dans le groupe
+`docker`) et git. L'image est construite au premier usage, puis à chaque
+changement de ces versions.
 
 ```bash
-bash scripts/build-alpha.sh 0.7.1-1            # sortie : ~/syntheo-alpha/0.7.1-1/
-bash scripts/build-alpha.sh 0.7.1-1 /tmp/alpha # autre dossier de sortie
+bash scripts/build-alpha.sh 0.7.1-1                    # tête du checkout courant → ~/syntheo-alpha/0.7.1-1/
+bash scripts/build-alpha.sh --from fix/0.7.1 0.7.1-1   # une branche, dans le worktree réservé aux alphas
+bash scripts/build-alpha.sh --from ~/work/mon-worktree 0.7.1-1   # un dossier précis
+bash scripts/build-alpha.sh 0.7.1-1 /tmp/alpha         # autre dossier de sortie
 ```
 
-Le script reprend les étapes du job Linux de `build-devtools.yml` : version
-injectée dans `tauri.conf.syntheo.json` (restauré ensuite), `pnpm -F ui build`,
-`tauri build --bundles appimage --features devtools`, puis réempaquetage par
-`scripts/repack-linux-appimage.mjs`. Il dépose
+Le script injecte la version dans `tauri.conf.syntheo.json` (restauré ensuite),
+puis lance `pnpm install`, `pnpm -F ui build`, `tauri build --bundles appimage
+--features devtools` et le réempaquetage de `scripts/repack-linux-appimage.mjs`,
+comme `release.yml`. Il dépose
 `syntheo-devtools-linux/Syntheo-X.Y.Z-N-devtools-linux-x86_64.AppImage`, sa
-somme `SHA256SUMS-devtools-linux` et un fichier `SOURCE` (commit, branche, date).
-Aucune clé de signature n'est lue.
+somme `SHA256SUMS-devtools-linux` et un fichier `SOURCE` (mode, WebKitGTK,
+profil, commit, modifications locales éventuelles, branche, date). Aucune clé
+de signature n'est lue. Le build tourne avec l'UID courant.
 
-L'AppImage embarque les bibliothèques de la machine de build : construite sur
-une distribution récente (Arch), elle vise les distributions aussi récentes.
-Pour vérifier la compatibilité avec les autres, passer par le workflow
-(Ubuntu 24.04). Sous Arch, si linuxdeploy échoue sur `strip`, relancer avec
-`NO_STRIP=true`.
+Caches persistants, dans `~/.cache/syntheo-alpha/` (`SYNTHEO_ALPHA_CACHE` pour
+changer) : `home/` (registre et git cargo, cache ort, linuxdeploy),
+`target/<clé>` (un par dossier source, réservé aux alphas, jamais partagé avec
+un build de l'hôte), `target-quick/<clé>` et `worktree/` (branches passées par
+`--from`) ; le premier build d'un nouveau dossier source est donc à froid.
+Le store pnpm de l'hôte est
+réutilisé s'il existe. Temps mesurés sur Desktop-Omarchy (build, hors essai
+Wayland de 20 s) : 5 min 30 à froid (hors construction de l'image), 3 min 30
+après une modification TypeScript, 4 min après une modification Rust ; avec
+`--quick`, environ 1 min 10 après une modification Rust.
 
-> **WebKitGTK et Wayland.** L'AppImage locale embarque le WebKitGTK de la
-> machine. Celui d'Arch (2.54 et plus) plante au démarrage sous Wayland avec un
-> GPU NVIDIA : « Error 71 (Erreur de protocole) dispatching to Wayland display »,
-> rendu dmabuf (issue 555). Pour une alpha à tester sous Wayland, utiliser le
-> workflow `build-devtools` (Ubuntu 24.04). Le script prévient avant le build
-> quand il détecte WebKitGTK 2.54 ou plus, et, si une session Wayland est
-> ouverte, lance l'AppImage une vingtaine de secondes dans un profil jetable
-> (HOME temporaire, bus D-Bus séparé) : en cas d'échec, il s'arrête avec le code
-> 3 et indique le journal. `ALPHA_SMOKE_TEST=0` saute cet essai.
+**Boucle de debug.** Pour enchaîner modification et essai sans attendre :
+
+```bash
+# dans le checkout où l'on corrige, sans worktree neuf :
+bash scripts/build-alpha.sh --from . --fast 0.7.1-3          # saute pnpm install et packages/ui s'ils n'ont pas changé
+bash scripts/build-alpha.sh --from . --fast --quick 0.7.1-4  # en plus, profil Rust allégé (debug uniquement)
+```
+
+- `--fast` saute `pnpm install` et le build de `packages/ui` quand le lockfile,
+  les `package.json` et les sources de `packages/ui` n'ont pas changé depuis le
+  dernier build de ce dossier (empreintes).
+- `--quick` compile sans LTO, avec 16 unités de génération et la compilation
+  incrémentale, dans `target-quick/` : nettement plus rapide après une
+  modification Rust, mais **pas fidèle à la release**. À réserver au debug ;
+  une alpha à faire valider se construit sans `--quick`. `SOURCE` l'indique.
+- `--native` construit sur l'hôte, avec ses bibliothèques (le script vérifie
+  les dépendances et indique la commande d'installation pour Debian/Ubuntu et
+  Arch). C'est le mode par défaut seulement sur un hôte Ubuntu 24.04 dont le
+  WebKitGTK est antérieur à 2.54.
+
+> **WebKitGTK et Wayland.** En mode natif, l'AppImage embarque le WebKitGTK de
+> la machine. Celui d'Arch (2.54 et plus) plante au démarrage sous Wayland avec
+> un GPU NVIDIA : « Error 71 (Erreur de protocole) dispatching to Wayland
+> display », rendu dmabuf (issue 555). D'où le conteneur par défaut. En fin de
+> build, si une session Wayland est ouverte, le script lance l'AppImage une
+> vingtaine de secondes dans un profil jetable (HOME temporaire, bus D-Bus
+> séparé) : en cas d'échec, il s'arrête avec le code 3 et indique le journal.
+> `ALPHA_SMOKE_TEST=0` saute cet essai.
 >
-> La version de Node est contrôlée contre `engines.node` de `package.json` :
-> sous la plus petite version majeure de la plage, le build échoue ; ailleurs
-> hors plage, le script avertit seulement, comme pnpm.
+> En mode natif, la version de Node est contrôlée contre `engines.node` de
+> `package.json` : sous la plus petite version majeure de la plage, le build
+> échoue ; ailleurs hors plage, le script avertit seulement, comme pnpm. Sous
+> Arch, si linuxdeploy échoue sur `strip`, relancer avec `NO_STRIP=true`.
 
 ### Windows (NSIS + MSI)
 
