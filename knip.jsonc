@@ -4,7 +4,6 @@
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "ignore": [
     "**/*.gen.ts",
-    ".agents/**",
     // Chargé par include_str! côté Rust.
     "apps/desktop/src-tauri/src/context_menu_guard.js",
   ],
@@ -30,9 +29,6 @@
         "scripts/*.mjs",
         "src-tauri/scripts/*.mjs",
       ],
-    },
-    "e2e/blackbox": {
-      "entry": ["wdio.blackbox.conf.ts", "tests/**/*.spec.ts"],
     },
   },
 }

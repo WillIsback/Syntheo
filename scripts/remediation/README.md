@@ -17,8 +17,7 @@ dans une branche d'intégration unique.
 
 - `gh` authentifié sur le dépôt.
 - `VLLM_API_KEY` dans l'environnement.
-- Agent `fixer` défini dans `~/.config/opencode/agents/fixer.md` (ou dans
-  `.opencode/agents/fixer.md` pour le dépôt principal).
+- Agent `fixer` défini dans `~/.config/opencode/agents/fixer.md`.
 - Le serveur vLLM est limité à `--max-num-seqs 2` : la concurrence est plafonnée à 2.
 
 ## Utilisation
