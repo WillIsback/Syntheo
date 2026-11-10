@@ -11308,10 +11308,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "syntheo-http-utils"
-version = "0.1.0"
-
-[[package]]
 name = "sys-locale"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
