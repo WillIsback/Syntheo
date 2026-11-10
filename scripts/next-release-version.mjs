@@ -105,9 +105,24 @@ export function parseNote(raw) {
   return { summary, body: (match[2] ?? "").trim() };
 }
 
+/**
+ * Chemin de la note d'une version `vX.Y.Z` ou `X.Y.Z` ; refusé hors de ce
+ * format ou hors du dossier des notes.
+ */
+export function releaseNotesFile(version, root = process.cwd()) {
+  const match = /^v?(\d+\.\d+\.\d+)$/.exec(String(version));
+  if (!match) throw new Error(`Version invalide : ${version}`);
+  const dir = path.resolve(root, NOTES_DIR);
+  const file = path.resolve(dir, `${match[1]}.md`);
+  if (path.relative(dir, file) !== `${match[1]}.md`) {
+    throw new Error(`Note hors de ${NOTES_DIR} : ${file}`);
+  }
+  return file;
+}
+
 /** Note de release : résumé puis corps, ou null si le fichier manque/est vide. */
 export function releaseNotes(version, root = process.cwd()) {
-  const file = path.join(root, NOTES_DIR, `${version.replace(/^v/, "")}.md`);
+  const file = releaseNotesFile(version, root);
   if (!existsSync(file)) return null;
   const { summary, body } = parseNote(readFileSync(file, "utf8"));
   if (!body) return null;

@@ -11,6 +11,8 @@ import {
   bumpFromSubjects,
   nextReleaseVersion,
   parseNote,
+  releaseNotes,
+  releaseNotesFile,
 } from "./next-release-version.mjs";
 
 const SCRIPT = fileURLToPath(
@@ -177,4 +179,24 @@ test("CLI dans un dépôt git jetable", async (t) => {
     assert.equal(run("--notes", "v0.7.1").out, "S\n\n## Corrections\n\n- x\n");
     assert.equal(run("--notes", "v0.9.0").code, 1);
   });
+});
+
+test("note de release : la version ne sort pas du dossier des notes", () => {
+  const root = path.join(tmpdir(), "syntheo-notes");
+  const expected = path.join(
+    root,
+    "packages/changelog/content/desktop/0.7.1.md",
+  );
+  assert.equal(releaseNotesFile("v0.7.1", root), expected);
+  assert.equal(releaseNotesFile("0.7.1", root), expected);
+  for (const version of [
+    "../../../etc/passwd",
+    "v0.7.1/../../x",
+    "0.7.1-2",
+    "/etc/passwd",
+    "0.7",
+    undefined,
+  ]) {
+    assert.throws(() => releaseNotes(version, root), /Version invalide/);
+  }
 });
