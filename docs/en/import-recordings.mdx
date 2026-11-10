@@ -25,7 +25,7 @@ Accepted formats: WAV, MP3, OGG, MP4, M4A, FLAC, WebM and AAC.
 
 You follow the progress in the note: "Generating transcript...", the percentage done, then the estimated time left, for example "About 3 min remaining". Click "Stop transcription" to interrupt the import.
 
-The capsule at the bottom of the note also switches to the "Import" state until the end: a progress bar, the percentage, then the time left and the speed-up once they are reliable, for example "~9 min left · ×2.1". For the first 30 seconds, and until 5% of the audio is processed, it shows "Estimating…". The estimate then follows a smoothed average of the real speed, including the time spent connecting and reconnecting: as long as no reconnection has been measured, it stays cautious. "Stop" interrupts the import, like "Stop transcription".
+The capsule at the bottom of the note also switches to the "Import" state until the end: a progress bar, the percentage, then the time left and the speed-up once they are reliable, for example "~9 min left · ×2.1". While the file is being read, then for the first 30 seconds of transcription and until 5% of the audio is processed, it shows "Estimating…". The estimate then follows the average speed since the transcription started moving, reconnections included: as long as no reconnection has been measured, it stays cautious. While the progress pauses (during a reconnection), the time left doesn't climb back up, and the change once it resumes is smoothed. "Stop" interrupts the import, like "Stop transcription".
 
 Try it: open the ••• menu (1) and choose "Upload audio". The progress appears in the "Transcription" margin (2) and in the capsule (3). In the replica, one second equals one minute of audio.
 
