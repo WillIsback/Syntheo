@@ -69,8 +69,9 @@ const defaultEffects: StepEffects = {
     await writeText(text);
   },
   notify: async (title, message) => {
-    const { commands } = await import("@syntheo/plugin-notification");
-    const result = await commands.showNotification({
+    const { showNativeNotification } =
+      await import("~/services/notification-labels");
+    const result = await showNativeNotification({
       key: `automation:${crypto.randomUUID()}`,
       title,
       message,

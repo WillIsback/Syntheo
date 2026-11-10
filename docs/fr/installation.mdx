@@ -11,7 +11,7 @@ La commande `syntheo` regroupe la CLI et le serveur MCP local. Elle lit la base 
   La CLI n'est pas incluse dans les paquets publiés (AppImage, `.deb`, `.exe`, `.msi`) et n'est pas publiée comme binaire séparé dans les GitHub Releases. Pour l'instant, compilez-la depuis les sources.
 </Warning>
 
-Dans l'application, **Paramètres → Développeurs → CLI & MCP**, la ligne « Syntheo CLI » propose un bouton « Installer ». Sur les versions publiées, ce bouton reste inactif, car la CLI n'est pas embarquée. Le bouton « Copier la configuration » du « Serveur MCP » reste lui aussi inactif dans ce cas : écrivez la configuration vous-même (voir [MCP pour les agents](/fr/agents/mcp)).
+Dans l'application, **Paramètres → Développeurs → CLI & MCP**, la ligne « Syntheo CLI » indique si l'application trouve la commande `syntheo`, sur votre `PATH` ou dans `~/.cargo/bin`, et son chemin absolu. Si la CLI manque, la ligne affiche la commande d'installation ci-dessous ; une fois la CLI installée, utilisez « Vérifier à nouveau ». L'application n'installe jamais la CLI elle-même. Le bouton « Copier la configuration » de la ligne « Serveur MCP » copie la configuration MCP avec le chemin absolu de la CLI ; il reste inactif tant que la CLI est introuvable (voir [MCP pour les agents](/fr/agents/mcp)).
 
 ## Compiler depuis les sources
 

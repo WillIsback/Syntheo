@@ -113,10 +113,20 @@ describe("monorepo scope", () => {
     expect(existsSync(join(REPO_ROOT, "crates", name))).toBe(false);
   });
 
-  it("keeps_optional_and_tooling_crates", () => {
-    for (const name of ["audio-mock", "tcc", "xtask"]) {
+  it("keeps_optional_crates", () => {
+    for (const name of ["audio-mock", "tcc"]) {
       expect(existsSync(join(REPO_ROOT, "crates", name))).toBe(true);
     }
+  });
+
+  // La CLI s'installe à part (cargo install) : plus de binaire embarqué (#546).
+  it.each([
+    "crates/xtask",
+    "scripts/verify-packaged-cli.py",
+    "apps/desktop/src-tauri/resources/cli",
+    "apps/desktop/src-tauri/src/embedded_cli.rs",
+  ])("removes embedded CLI tooling %s", (path) => {
+    expect(existsSync(join(REPO_ROOT, path))).toBe(false);
   });
 
   it("notice_lists_removed_apps", () => {

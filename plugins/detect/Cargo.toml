@@ -21,6 +21,7 @@ tauri-plugin = { workspace = true, features = ["build"] }
 [dev-dependencies]
 specta-typescript = { workspace = true }
 syntheo-detect = { workspace = true, features = ["mic"] }
+tauri = { workspace = true, features = ["test"] }
 tauri-plugin-detect = { path = ".", features = ["test-support"] }
 tokio = { workspace = true, features = ["test-util"] }
 
@@ -28,7 +29,7 @@ tokio = { workspace = true, features = ["test-util"] }
 syntheo-detect = { workspace = true, features = ["mic", "list", "language", "sleep", "screen"] }
 syntheo-notification-interface = { workspace = true }
 
-tauri = { workspace = true, features = ["specta", "test"] }
+tauri = { workspace = true, features = ["specta"] }
 tauri-plugin-settings = { workspace = true }
 tauri-plugin-windows = { workspace = true }
 

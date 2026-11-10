@@ -11,7 +11,7 @@ import { WebhooksSection } from "./webhooks";
 import { SettingsPageTitle } from "~/settings/page-title";
 import { documentationUrl } from "~/shared/documentation";
 
-export { buildMcpConfiguration, getCliInstallNotification } from "./cli";
+export { buildMcpConfiguration, CLI_INSTALL_COMMAND } from "./cli";
 
 export function SettingsDevelopers() {
   return (

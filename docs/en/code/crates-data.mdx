@@ -43,7 +43,6 @@ In the Cargo workspace, each crate is declared under a `syntheo-*` alias (for ex
 | `crates/codex` | Driving the Codex CLI | `agent-core` | none |
 | `crates/opencode` | Driving the OpenCode CLI | `agent-core` | none |
 | `crates/data` | Audio samples for tests | `audio-mock`; dev-dependency elsewhere | none |
-| `crates/xtask` | Build tasks (`cargo xtask`) | tooling | none |
 
 ## Database
 
@@ -220,10 +219,9 @@ Don't describe product behavior from the raw SQL schema. Start from the operatio
 `crates/claude`, `crates/codex` and `crates/opencode` drive the Claude Code, Codex and OpenCode CLIs: options, event streams, sessions or threads, installation check (`health_check_with_options`) and reading or writing their configuration. `codex` and `opencode` also expose deep links (`new_thread_deeplink`, `open_project_deeplink`).
 
 - **Internal dependencies**: `syntheo-cli-process` for all three.
-- **Usage**: only `crates/agent-core` uses them, to install a notification hook in each agent's configuration (`char … notify` command, inherited from Anarlog). `plugins/agent` exposes `health_check`, `install_cli` and `uninstall_cli`, but no code in `apps/desktop/src` imports `@syntheo/plugin-agent`.
+- **Usage**: only `crates/agent-core` uses them, to install a notification hook in each agent's configuration (`char … notify` command, inherited from Anarlog). `agent-core` itself has no user since the `agent` plugin was removed (#546): the four crates are kept, but nothing in the app calls them.
 - **Affected doc pages**: none. The skills installation described in [Skills](/en/agents/skills) doesn't go through these crates.
 
 ## Tooling and test data
 
 - **data** (`crates/data`): WAV audio samples (English and Korean) included at compile time. Regular dependency of `crates/audio-mock`, dev-dependency of `audio-actual`, `audio-utils`, `fs-sync-core`, `owhisper-client`, `resampler` and `vad`. Affected doc pages: none.
-- **xtask** (`crates/xtask`): `cargo xtask prepare-binaries` builds `syntheo-cli` in release mode for the current target (`TAURI_ENV_TARGET_TRIPLE` or the host triple) and copies the binary to `apps/desktop/src-tauri/resources/cli/syntheo-cli-{triple}`. Alias defined in `.cargo/config.toml`. Affected doc pages: none directly; the prepared binary is the one the app bundles (see [Installation](/en/installation)).

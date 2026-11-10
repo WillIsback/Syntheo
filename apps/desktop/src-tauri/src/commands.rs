@@ -2,7 +2,7 @@ use crate::{
     AppExt,
     aec_models::AecModelStatus,
     agent_skills::{SkillAgent, SkillAgentStatus},
-    embedded_cli::EmbeddedCliStatus,
+    cli_status::CliStatus,
 };
 
 const STAGING_BUNDLE_ID: &str = "com.syntheo.staging";
@@ -109,18 +109,8 @@ pub async fn set_recently_opened_sessions<R: tauri::Runtime>(
 
 #[tauri::command]
 #[specta::specta]
-pub async fn check_embedded_cli<R: tauri::Runtime>(
-    app: tauri::AppHandle<R>,
-) -> Result<EmbeddedCliStatus, String> {
-    Ok(crate::embedded_cli::check(&app))
-}
-
-#[tauri::command]
-#[specta::specta]
-pub async fn install_embedded_cli<R: tauri::Runtime>(
-    app: tauri::AppHandle<R>,
-) -> Result<EmbeddedCliStatus, String> {
-    crate::embedded_cli::install(&app)
+pub async fn check_cli_status() -> Result<CliStatus, String> {
+    Ok(crate::cli_status::check())
 }
 
 #[tauri::command]

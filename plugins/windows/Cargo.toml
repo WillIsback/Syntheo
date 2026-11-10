@@ -44,7 +44,7 @@ url = { workspace = true, features = ["serde"] }
 uuid = { workspace = true, features = ["v4"] }
 
 specta = { workspace = true, features = ["serde_json"] }
-tauri = { workspace = true, features = ["test"] }
+tauri = { workspace = true }
 tauri-specta = { workspace = true, features = ["derive", "typescript"] }
 
 tauri-plugin-os = { workspace = true }

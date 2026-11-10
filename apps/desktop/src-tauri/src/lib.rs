@@ -2,9 +2,9 @@ mod aec_models;
 mod agent_skills;
 mod agents;
 mod appearance;
+mod cli_status;
 mod commands;
 mod db;
-mod embedded_cli;
 mod ext;
 mod search_index;
 mod startup;
@@ -148,8 +148,6 @@ pub fn main() {
         .plugin(tauri_plugin_opener2::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_tracing::init());
-
-    builder = builder.plugin(tauri_plugin_agent::init());
 
     builder = builder.plugin(tauri_plugin_db::init(db.clone()));
 
@@ -316,9 +314,7 @@ pub fn main() {
                 }
             }
 
-            search_index::spawn(app_handle.clone(), db.clone());
-
-            embedded_cli::spawn_auto_install(app_handle);
+            search_index::spawn(app_handle, db.clone());
 
             Ok(())
         })
@@ -539,8 +535,7 @@ fn make_specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
             commands::set_pinned_tabs::<tauri::Wry>,
             commands::get_recently_opened_sessions::<tauri::Wry>,
             commands::set_recently_opened_sessions::<tauri::Wry>,
-            commands::check_embedded_cli::<tauri::Wry>,
-            commands::install_embedded_cli::<tauri::Wry>,
+            commands::check_cli_status,
             commands::list_skill_agents,
             commands::install_agent_skill,
             commands::get_aec_model_status,

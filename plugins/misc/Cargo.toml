@@ -18,7 +18,7 @@ specta-typescript = { workspace = true }
 [dependencies]
 syntheo-buffer = { workspace = true }
 
-tauri = { workspace = true, features = ["test"] }
+tauri = { workspace = true }
 tauri-specta = { workspace = true, features = ["derive", "typescript"] }
 
 serde = { workspace = true, features = ["derive"] }

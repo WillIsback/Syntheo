@@ -1,5 +1,5 @@
 # Workflow : Tests
-# Tests unitaires TypeScript (Vitest) et Rust (cargo test), validation YAML
+# Tests unitaires TypeScript (Vitest), tests des scripts (node:test), validation YAML
 name: ci-test
 
 on:
@@ -99,6 +99,32 @@ jobs:
           name: vitest-results-editor
           path: packages/editor/junit.xml
           retention-days: 7
+
+  # Garde-fous des scripts du dépôt (#546) : tests node:test et cohérence de
+  # la compétence Syntheo publiée (docs/skill.md, agent-plugins/). Pas de
+  # filtre de chemins : les tests lisent des fichiers de tout le dépôt
+  # (notes de version, manifestes de plugins, code de l'app), et un filtre
+  # les laisserait se périmer. Le job est court.
+  scripts:
+    name: ci-test (scripts)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Installer Node, pnpm et les dépendances (lockfile figé)
+        uses: ./.github/actions/pnpm_install
+
+      - name: Tests des scripts
+        run: node --test scripts/*.test.mjs scripts/lib/*.test.mjs
+
+      - name: Compétence Syntheo publiée à jour
+        run: node scripts/publish-syntheo-skill.mjs --check
 
   # Les tests Rust sont exécutés dans ci-code-quality (job Rust fusionné), qui
   # compile le workspace une seule fois pour clippy et cargo test. Ce job ne

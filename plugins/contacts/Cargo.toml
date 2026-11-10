@@ -11,7 +11,7 @@ description = ""
 [dependencies]
 syntheo-db-app = { workspace = true }
 
-tauri = { workspace = true, features = ["test"] }
+tauri = { workspace = true }
 tauri-plugin-db = { workspace = true }
 tauri-specta = { workspace = true, features = ["derive", "typescript"] }
 

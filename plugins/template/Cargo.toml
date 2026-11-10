@@ -32,5 +32,5 @@ sqlx = { workspace = true, features = ["runtime-tokio", "sqlite", "sqlite-unbund
 tracing = { workspace = true }
 
 specta = { workspace = true, features = ["serde_json"] }
-tauri = { workspace = true, features = ["test"] }
+tauri = { workspace = true }
 tauri-specta = { workspace = true, features = ["derive", "typescript"] }

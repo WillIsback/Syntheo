@@ -24,7 +24,6 @@ tauri-build = { workspace = true, features = [] }
 syntheo-brand = { workspace = true }
 tauri = { workspace = true, features = ["specta", "protocol-asset"] }
 
-tauri-plugin-agent = { workspace = true }
 tauri-plugin-autostart = { workspace = true }
 tauri-plugin-clipboard-manager = { workspace = true }
 tauri-plugin-contacts = { workspace = true }
@@ -103,10 +102,6 @@ devtools = [
   "dep:syntheo-audio-mock",
   "tauri-plugin-tracing/console-payload",
 ]
-
-[target.'cfg(target_os = "windows")'.dependencies]
-windows = { workspace = true, features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging"] }
-windows-registry = "0.6.1"
 
 [dev-dependencies]
 tempfile = { workspace = true }

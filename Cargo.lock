@@ -2635,7 +2635,6 @@ dependencies = [
  "strum 0.28.0",
  "tauri",
  "tauri-build",
- "tauri-plugin-agent",
  "tauri-plugin-autostart",
  "tauri-plugin-clipboard-manager",
  "tauri-plugin-contacts",
@@ -2683,8 +2682,6 @@ dependencies = [
  "tempfile",
  "tokio",
  "tracing",
- "windows",
- "windows-registry",
 ]
 
 [[package]]
@@ -11665,20 +11662,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tauri-plugin-agent"
-version = "0.1.0"
-dependencies = [
- "agent-core",
- "serde",
- "specta",
- "specta-typescript",
- "tauri",
- "tauri-plugin",
- "tauri-specta",
- "thiserror 2.0.21",
-]
-
-[[package]]
 name = "tauri-plugin-autostart"
 version = "2.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -14182,13 +14165,9 @@ dependencies = [
 name = "vad"
 version = "0.1.0"
 dependencies = [
- "approx",
  "criterion",
  "data",
  "earshot",
- "onnx",
- "serde",
- "serde_json",
  "thiserror 2.0.21",
 ]
 
@@ -15591,29 +15570,6 @@ name = "xmp-writer"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ce9e2f4a404d9ebffc0a9832cf4f50907220ba3d7fffa9099261a5cab52f2dd7"
-
-[[package]]
-name = "xshell"
-version = "0.2.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9e7290c623014758632efe00737145b6867b66292c42167f2ec381eb566a373d"
-dependencies = [
- "xshell-macros",
-]
-
-[[package]]
-name = "xshell-macros"
-version = "0.2.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "32ac00cd3f8ec9c1d33fb3e7958a82df6989c42d747bd326c822b1d625283547"
-
-[[package]]
-name = "xtask"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "xshell",
-]
 
 [[package]]
 name = "yaml-rust"

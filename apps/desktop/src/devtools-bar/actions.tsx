@@ -3,6 +3,7 @@ import { useCallback, useState } from "react";
 import { commands as notificationCommands } from "@syntheo/plugin-notification";
 import { openUrlWithInstruction } from "@syntheo/plugin-windows";
 
+import { showNativeNotification } from "~/services/notification-labels";
 import {
   type DevtoolsToastPreview,
   useDevtoolsToastPreview,
@@ -161,7 +162,7 @@ export function useDevtoolsActions() {
   }, []);
 
   const showMicDetectedNotification = useCallback(async () => {
-    await notificationCommands.showNotification({
+    await showNativeNotification({
       key: `devtool-mic-${crypto.randomUUID()}`,
       title: "Are you in a meeting?",
       message: "",
@@ -186,7 +187,7 @@ export function useDevtoolsActions() {
   }, []);
 
   const showMicOptionsNotification = useCallback(async () => {
-    await notificationCommands.showNotification({
+    await showNativeNotification({
       key: `devtool-mic-options-${crypto.randomUUID()}`,
       title: "Are you in a meeting?",
       message: "",
@@ -219,7 +220,7 @@ export function useDevtoolsActions() {
       listenerStore.getState().live.sessionId ??
       `devtool-${crypto.randomUUID()}`;
 
-    await notificationCommands.showNotification({
+    await showNativeNotification({
       key: createAutoStopEndedNotificationKey(sessionId),
       title: "Did your meeting end?",
       message: `Syntheo will stop listening in ${AUTO_STOP_CONFIRM_TIMEOUT_SECONDS} seconds.`,

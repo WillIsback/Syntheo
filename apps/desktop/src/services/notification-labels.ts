@@ -1,6 +1,10 @@
 import { t } from "@lingui/core/macro";
 
-import type { NotificationLabels } from "@syntheo/plugin-notification";
+import {
+  commands,
+  type Notification,
+  type NotificationLabels,
+} from "@syntheo/plugin-notification";
 
 /**
  * Libellés des notifications natives (Windows, Linux, macOS) que le Rust ou le
@@ -28,4 +32,25 @@ export function nativeNotificationLabels(): NotificationLabels {
     accept: t`Accept`,
     createNewNote: t`Create New Note...`,
   };
+}
+
+/**
+ * Joint les libellés natifs, dans la langue active de l'interface au moment de
+ * l'affichage, sauf si l'appelant en fournit déjà.
+ */
+export function withNativeNotificationLabels(
+  notification: Notification,
+): Notification {
+  return {
+    ...notification,
+    labels: notification.labels ?? nativeNotificationLabels(),
+  };
+}
+
+/**
+ * Point d'entrée unique des notifications natives : sans libellés, le natif
+ * retombe sur l'anglais quelle que soit la langue de l'interface.
+ */
+export function showNativeNotification(notification: Notification) {
+  return commands.showNotification(withNativeNotificationLabels(notification));
 }
