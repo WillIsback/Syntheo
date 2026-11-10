@@ -1531,7 +1531,7 @@ describe("useStartListening", () => {
       expect(m.toastWarning).not.toHaveBeenCalled();
     });
 
-    test("reports one terminal failure after the bounded retry window", async () => {
+    test("logs one terminal failure without a toast when no meeting is detected", async () => {
       m.listMicUsingApplications.mockResolvedValue({
         status: "error",
         error: "audio process query failed",
@@ -1548,7 +1548,7 @@ describe("useStartListening", () => {
       expect(m.listMicUsingApplications).toHaveBeenCalledTimes(3);
       expect(m.sendMeetingChatMessage).not.toHaveBeenCalled();
       expect(warn).toHaveBeenCalledTimes(1);
-      expect(m.toastWarning).toHaveBeenCalledTimes(1);
+      expect(m.toastWarning).not.toHaveBeenCalled();
       warn.mockRestore();
     });
 
