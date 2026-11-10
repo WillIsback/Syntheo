@@ -27,6 +27,10 @@ pub struct SyncProbe {
     history_len: usize,
     acquisition_entries: VecDeque<Option<isize>>,
     stable_lag_history: VecDeque<isize>,
+    /// Retards acceptés pendant le verrouillage, avec leur instant de capture : régression de la
+    /// dérive d'horloge (#437).
+    lock_points: VecDeque<(f64, isize)>,
+    silent_intervals: usize,
     state: SyncProbeState,
     stable_lag_samples: Option<isize>,
     consecutive_rejections: usize,
@@ -58,6 +62,8 @@ impl SyncProbe {
             history_len: 0,
             acquisition_entries: VecDeque::with_capacity(config.tuning.acquire_window.max(1)),
             stable_lag_history: VecDeque::with_capacity(config.tuning.stable_lag_window.max(1)),
+            lock_points: VecDeque::with_capacity(config.tuning.drift_fit_window.max(2)),
+            silent_intervals: 0,
             state: SyncProbeState::Searching,
             stable_lag_samples: None,
             consecutive_rejections: 0,
@@ -117,7 +123,7 @@ impl SyncProbe {
 
         if reference_rms < self.min_rms || observed_rms < self.min_rms {
             self.rejections.low_energy += 1;
-            let snapshot = self.handle_missing_interval(None, None);
+            let snapshot = self.handle_silent_interval(capture_time_sec);
             return Some(SyncProbeEvent::SkippedLowEnergy(SyncProbeLowEnergy {
                 capture_time_sec,
                 reference_rms,
@@ -135,7 +141,11 @@ impl SyncProbe {
 
         if !self.meets_thresholds(estimate, thresholds) {
             self.rejections.weak_correlation += 1;
-            let snapshot = self.handle_missing_interval(Some(estimate.lag_samples), confidence);
+            let snapshot = self.handle_missing_interval(
+                capture_time_sec,
+                Some(estimate.lag_samples),
+                confidence,
+            );
             return Some(SyncProbeEvent::SkippedLowConfidence(
                 SyncProbeLowConfidence {
                     capture_time_sec,
@@ -150,12 +160,16 @@ impl SyncProbe {
 
         if self.is_locking_state()
             && self
-                .stable_lag_samples
-                .is_some_and(|stable| self.is_lag_outlier(estimate.lag_samples, stable))
+                .expected_lag_at(capture_time_sec)
+                .is_some_and(|expected| self.is_lag_outlier(estimate.lag_samples, expected))
         {
             self.rejections.lag_outlier += 1;
             let nearest_accepted_lag_samples = self.stable_lag_samples;
-            let snapshot = self.handle_missing_interval(Some(estimate.lag_samples), confidence);
+            let snapshot = self.handle_missing_interval(
+                capture_time_sec,
+                Some(estimate.lag_samples),
+                confidence,
+            );
             return Some(SyncProbeEvent::SkippedLowConfidence(
                 SyncProbeLowConfidence {
                     capture_time_sec,
@@ -171,7 +185,8 @@ impl SyncProbe {
             ));
         }
 
-        let snapshot = self.handle_accepted_estimate(estimate.lag_samples, confidence);
+        let snapshot =
+            self.handle_accepted_estimate(capture_time_sec, estimate.lag_samples, confidence);
         let trend = self.trend.update(
             capture_time_sec,
             estimate.lag_samples as f32,
@@ -253,12 +268,32 @@ impl SyncProbe {
             > self.tuning.lock_outlier_tolerance_samples
     }
 
+    /// Silence sur l'un des deux canaux : rien à mesurer, mais aucune preuve que l'alignement a
+    /// changé. Verrouillée, la sonde garde son retard (extrapolé selon la dérive) et ne le perd
+    /// qu'après [`SyncProbeTuning::lost_after_silent_intervals`] intervalles sans mesure (#437).
+    fn handle_silent_interval(&mut self, capture_time_sec: f64) -> SyncProbeSnapshot {
+        if !self.is_locking_state() {
+            return self.handle_missing_interval(capture_time_sec, None, None);
+        }
+        self.silent_intervals += 1;
+        if self.silent_intervals >= self.tuning.lost_after_silent_intervals.max(1) {
+            let snapshot = self.snapshot(SyncProbeState::Lost, None, None);
+            self.reset_after_loss();
+            return snapshot;
+        }
+        self.track_expected_lag(capture_time_sec);
+        self.state = SyncProbeState::Holdover;
+        self.snapshot(SyncProbeState::Holdover, None, None)
+    }
+
     fn handle_missing_interval(
         &mut self,
+        capture_time_sec: f64,
         candidate_lag_samples: Option<isize>,
         confidence: Option<f32>,
     ) -> SyncProbeSnapshot {
         if self.is_locking_state() {
+            self.track_expected_lag(capture_time_sec);
             return self.advance_holdover_or_loss(candidate_lag_samples, confidence);
         }
 
@@ -299,14 +334,18 @@ impl SyncProbe {
 
     fn handle_accepted_estimate(
         &mut self,
+        capture_time_sec: f64,
         lag_samples: isize,
         confidence: Option<f32>,
     ) -> SyncProbeSnapshot {
         self.consecutive_rejections = 0;
+        self.silent_intervals = 0;
 
         if self.is_locking_state() {
             self.state = SyncProbeState::Locked;
             self.push_stable_lag(lag_samples);
+            self.push_lock_point(capture_time_sec, lag_samples);
+            self.track_expected_lag(capture_time_sec);
             return self.snapshot(SyncProbeState::Locked, Some(lag_samples), confidence);
         }
 
@@ -320,7 +359,7 @@ impl SyncProbe {
         self.state = SyncProbeState::Acquiring;
 
         if self.acquisition_match_count() >= self.tuning.acquire_lock_count.max(1) {
-            self.promote_acquisition_to_lock();
+            self.promote_acquisition_to_lock(capture_time_sec);
             return self.snapshot(SyncProbeState::Locked, Some(lag_samples), confidence);
         }
 
@@ -343,14 +382,86 @@ impl SyncProbe {
         median_isize(self.acquisition_entries.iter().flatten().copied())
     }
 
-    fn promote_acquisition_to_lock(&mut self) {
-        let lags: Vec<isize> = self.acquisition_entries.iter().flatten().copied().collect();
+    fn promote_acquisition_to_lock(&mut self, capture_time_sec: f64) {
+        let interval_secs = self.interval_samples as f64 / self.sample_rate as f64;
+        let entries: Vec<Option<isize>> = self.acquisition_entries.iter().copied().collect();
         self.stable_lag_history.clear();
-        for lag in lags {
-            self.push_stable_lag(lag);
+        self.lock_points.clear();
+        // Une entrée par intervalle, la dernière à l'instant présent.
+        for (index, entry) in entries.iter().enumerate() {
+            if let Some(lag) = *entry {
+                let age = (entries.len() - 1 - index) as f64 * interval_secs;
+                self.push_stable_lag(lag);
+                self.push_lock_point(capture_time_sec - age, lag);
+            }
         }
         self.acquisition_entries.clear();
         self.state = SyncProbeState::Locked;
+    }
+
+    fn push_lock_point(&mut self, capture_time_sec: f64, lag_samples: isize) {
+        let window = self.tuning.drift_fit_window.max(2);
+        if self.lock_points.len() == window {
+            self.lock_points.pop_front();
+        }
+        self.lock_points.push_back((capture_time_sec, lag_samples));
+    }
+
+    /// Pente et ordonnée de la droite des moindres carrés `retard = a + pente × t` sur les
+    /// retards acceptés, quand ils couvrent assez de temps ; la pente est bornée à
+    /// [`SyncProbeTuning::max_drift_ppm`].
+    fn drift_fit(&self) -> Option<(f64, f64)> {
+        if self.lock_points.len() < 3 {
+            return None;
+        }
+        let first = self.lock_points.front()?.0;
+        let last = self.lock_points.back()?.0;
+        if last - first < self.tuning.drift_min_span_secs {
+            return None;
+        }
+        let n = self.lock_points.len() as f64;
+        let mean_t = self.lock_points.iter().map(|(t, _)| t).sum::<f64>() / n;
+        let mean_lag = self
+            .lock_points
+            .iter()
+            .map(|(_, lag)| *lag as f64)
+            .sum::<f64>()
+            / n;
+        let (mut covariance, mut variance) = (0.0, 0.0);
+        for (t, lag) in &self.lock_points {
+            covariance += (t - mean_t) * (*lag as f64 - mean_lag);
+            variance += (t - mean_t).powi(2);
+        }
+        if variance <= f64::EPSILON {
+            return None;
+        }
+        let max_slope = self.tuning.max_drift_ppm * 1e-6 * self.sample_rate as f64;
+        let slope = (covariance / variance).clamp(-max_slope, max_slope);
+        Some((mean_lag - slope * mean_t, slope))
+    }
+
+    /// Dérive d'horloge estimée par la régression, en échantillons par seconde.
+    pub fn drift_samples_per_sec(&self) -> Option<f64> {
+        self.drift_fit().map(|(_, slope)| slope)
+    }
+
+    /// Retard attendu à l'instant donné : la droite de dérive si elle est connue, sinon la
+    /// médiane des derniers retards acceptés.
+    fn expected_lag_at(&self, capture_time_sec: f64) -> Option<isize> {
+        match self.drift_fit() {
+            Some((intercept, slope)) => {
+                Some((intercept + slope * capture_time_sec).round() as isize)
+            }
+            None => self.stable_lag_samples,
+        }
+    }
+
+    /// Le retard verrouillé suit la droite de dérive, y compris entre deux mesures (silence,
+    /// mesure rejetée) : l'alignement glisse avec les horloges au lieu de sauter (#437).
+    fn track_expected_lag(&mut self, capture_time_sec: f64) {
+        if self.drift_fit().is_some() {
+            self.stable_lag_samples = self.expected_lag_at(capture_time_sec);
+        }
     }
 
     fn push_stable_lag(&mut self, lag_samples: isize) {
@@ -366,8 +477,10 @@ impl SyncProbe {
         self.state = SyncProbeState::Searching;
         self.stable_lag_samples = None;
         self.stable_lag_history.clear();
+        self.lock_points.clear();
         self.acquisition_entries.clear();
         self.consecutive_rejections = 0;
+        self.silent_intervals = 0;
     }
 
     fn snapshot(

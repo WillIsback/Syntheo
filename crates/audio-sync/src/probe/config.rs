@@ -24,6 +24,15 @@ pub struct SyncProbeTuning {
     pub lost_after_rejections: usize,
     pub lock_outlier_tolerance_samples: usize,
     pub stable_lag_window: usize,
+    /// Retards acceptés retenus pour estimer la dérive d'horloge (#437).
+    pub drift_fit_window: usize,
+    /// Durée minimale couverte par ces retards avant d'utiliser la pente.
+    pub drift_min_span_secs: f64,
+    /// Pente maximale crédible, en ppm : au-delà, la mesure est bornée.
+    pub max_drift_ppm: f64,
+    /// Intervalles silencieux (énergie trop faible) tolérés sans mesure avant la perte du
+    /// verrou. Un silence ne dit rien de l'alignement : il ne compte pas comme un rejet.
+    pub lost_after_silent_intervals: usize,
 }
 
 impl Default for SyncProbeTuning {
@@ -38,6 +47,10 @@ impl Default for SyncProbeTuning {
             lost_after_rejections: 3,
             lock_outlier_tolerance_samples: 48,
             stable_lag_window: 5,
+            drift_fit_window: 12,
+            drift_min_span_secs: 3.0,
+            max_drift_ppm: 2_000.0,
+            lost_after_silent_intervals: 120,
         }
     }
 }

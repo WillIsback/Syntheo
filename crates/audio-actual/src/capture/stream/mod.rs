@@ -35,6 +35,16 @@ const AUDIO_SYNC_PROBE_ENV: &str = "AUDIO_SYNC_PROBE";
 /// regroupement (24 échantillons, 1,5 ms à 16 kHz). Une milliseconde (16 échantillons à
 /// 16 kHz) sépare ce bruit d'un vrai déplacement du chemin d'écho.
 const AEC_ALIGNMENT_SIGNIFICANT_SHIFT_MS: u32 = 1;
+/// Déplacement de l'alignement, même sens, au-delà duquel l'annulation d'écho repart de zéro.
+/// En deçà, les lignes de retard glissent vers le nouvel alignement sans réinitialisation : la
+/// dérive d'horloge entre micro et haut-parleur (≈ 13 échantillons par seconde à 800 ppm) est
+/// suivie en continu (#437). Même valeur que la tolérance d'aberration de la sonde (48
+/// échantillons à 16 kHz).
+const AEC_ALIGNMENT_RESET_SHIFT_MS: u32 = 3;
+/// Une ligne de retard rejoint son nouvel alignement d'un échantillon tous les
+/// `AEC_DELAY_SLEW_INTERVAL_SAMPLES` (250 échantillons par seconde à 16 kHz, bien au-delà
+/// d'une dérive d'horloge réelle) : chaque pas répète ou saute un seul échantillon.
+const AEC_DELAY_SLEW_INTERVAL_SAMPLES: usize = 64;
 const AEC_MAX_REFERENCE_LAG_MS: u32 = 600;
 const AEC_MIN_REFERENCE_OVERLAP_MS: u32 = 400;
 const AEC_MIN_REFERENCE_RMS: f32 = 1e-4;
@@ -209,6 +219,8 @@ pub(crate) fn open_single(chunk_stream: ChunkStream, side: CaptureSide) -> Captu
     })
 }
 
+#[cfg(test)]
+mod aec_drift_tests;
 #[cfg(test)]
 mod aec_jitter_tests;
 
