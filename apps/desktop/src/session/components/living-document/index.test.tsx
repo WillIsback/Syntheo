@@ -137,6 +137,11 @@ vi.mock("~/session/components/note-input/transcript", () => ({
   Transcript: () => <div data-testid="transcript" />,
 }));
 
+// Testé à part (transcription-failure.test.tsx).
+vi.mock("./transcription-failure", () => ({
+  TranscriptionFailureNotice: () => null,
+}));
+
 vi.mock("./live-transcription-language", () => ({
   LiveTranscriptionLanguage: () => null,
 }));

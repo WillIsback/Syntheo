@@ -1504,6 +1504,7 @@ msgstr "Désactiver toutes les notifications"
 msgid "Disk almost full"
 msgstr "Disque presque plein"
 
+#: src/session/components/living-document/transcription-failure.tsx
 #: src/shared/ui/localized-toaster.tsx
 msgid "Dismiss"
 msgstr "Fermer"
@@ -5052,6 +5053,10 @@ msgstr "L'ordre du jour est rédigé à partir des synthèses des réunions. Il 
 #: src/settings/ai/stt/server-card.tsx
 msgid "The API key is optional for servers without authentication. It is kept in your system keychain."
 msgstr "La clé d'API est facultative pour un serveur sans authentification. Elle est gardée dans le trousseau de votre système."
+
+#: src/session/components/living-document/transcription-failure.tsx
+msgid "The audio transcription failed."
+msgstr "La transcription de l'audio a échoué."
 
 #: src/templates/auto-form.tsx
 msgid "The Automatic format is unavailable."

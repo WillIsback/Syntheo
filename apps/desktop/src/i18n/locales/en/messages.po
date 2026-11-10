@@ -1504,6 +1504,7 @@ msgstr "Disable all notifications"
 msgid "Disk almost full"
 msgstr "Disk almost full"
 
+#: src/session/components/living-document/transcription-failure.tsx
 #: src/shared/ui/localized-toaster.tsx
 msgid "Dismiss"
 msgstr "Dismiss"
@@ -5052,6 +5053,10 @@ msgstr "The agenda is drafted from meeting summaries. It will be available once 
 #: src/settings/ai/stt/server-card.tsx
 msgid "The API key is optional for servers without authentication. It is kept in your system keychain."
 msgstr "The API key is optional for servers without authentication. It is kept in your system keychain."
+
+#: src/session/components/living-document/transcription-failure.tsx
+msgid "The audio transcription failed."
+msgstr "The audio transcription failed."
 
 #: src/templates/auto-form.tsx
 msgid "The Automatic format is unavailable."
