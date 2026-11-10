@@ -73,7 +73,7 @@ The network flows unrelated to inference that are still present in the code are 
 ## Interfaces for agents
 
 - **CLI** (`apps/cli`): the `syntheo` binary reads the `app.db` database directly, read-only for browsing and export. Changes go through **proposals**, which you then review in the app. See the [CLI reference](/en/reference/cli).
-- **MCP server**: `syntheo mcp` starts an MCP server over stdio (`apps/cli/src/mcp/`, `rmcp` library). It exposes the list of meetings, transcripts, export, importing a recording, and edit proposals. On the app side, `plugins/local-api` carries the related commands; `plugins/mcp`, inherited from Anarlog, declares no commands.
+- **MCP server**: `syntheo mcp` starts an MCP server over stdio (`apps/cli/src/mcp/`, `rmcp` library). It exposes the list of meetings, transcripts, export, importing a recording, and edit proposals. On the app side, `plugins/local-api` carries the related commands.
 
 The overview is in [Agents](/en/agents/overview).
 

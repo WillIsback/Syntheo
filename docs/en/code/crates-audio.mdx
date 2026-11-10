@@ -22,7 +22,7 @@ In the `Cargo.toml` files, these crates are referenced by the workspace alias `s
 | `crates/audio` | Common capture contract: `AudioProvider` trait, `CaptureConfig`, `CaptureFrame`, `CaptureStream`, `CaptureEvent`. No implementation. | `audio-actual`, `audio-mock`, `listener-core`, `plugins/dictation`, `plugins/permissions`, `plugins/transcription` |
 | `crates/audio-actual` | Real implementation (`ActualAudio`): microphone capture through `cpal`, system audio capture, echo cancellation and resynchronization. | `apps/desktop/src-tauri` |
 | `crates/audio-mock` | Fake provider `MockAudio`, which replays files from `syntheo-data`. | `apps/desktop/src-tauri`, only with the `dev` or `devtools` features |
-| `crates/audio-device` | Device enumeration and per-platform default choice (`backend()`, `AudioDeviceBackend`), handling of Bluetooth inputs and headset outputs. | `audio-actual`, `device-monitor`, `listener-core`, `plugins/audio-priority` |
+| `crates/audio-device` | Device enumeration and per-platform default choice (`backend()`, `AudioDeviceBackend`), handling of Bluetooth inputs and headset outputs. | `audio-actual`, `device-monitor`, `listener-core` |
 | `crates/device-monitor` | Watches device changes (`DeviceMonitor`, `DeviceSwitchMonitor`, `DeviceUpdateMonitor`) with a 1 s debounce. | `listener-core` |
 | `crates/audio-sync` | Measures the microphone / system audio offset (`GccPhatLagEstimator`, `LagTrendTracker`) and levels (`LevelAccumulator`, dBFS). | `audio-actual` |
 | `crates/aec` | Acoustic echo cancellation with an ONNX model (`AEC`, `BLOCK_SIZE`, `BLOCK_SHIFT`). `onnx` feature enabled by default. | `audio-actual` (`capture/echo_gate.rs`) |
