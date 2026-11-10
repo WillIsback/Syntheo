@@ -1,5 +1,5 @@
 import { readdirSync, readFileSync, watch } from "node:fs";
-import { resolve } from "node:path";
+import { relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Plugin, ViteDevServer } from "vite";
 
@@ -21,6 +21,26 @@ export type ChangelogEntry = {
   summary: string | null;
   content: string;
 };
+
+// Version installée : `X.Y.Z`, ou `X.Y.Z-N` pour une alpha.
+const INSTALLED_VERSION = /^\d+\.\d+\.\d+(?:-\d+)?$/;
+// Fichiers du journal : `X.Y.Z.md`.
+const NOTE_VERSION = /^\d+\.\d+\.\d+$/;
+
+/**
+ * Chemin de la note d'une version, refusé hors du format `X.Y.Z` ou hors du
+ * dossier du journal : la version peut venir de l'environnement du build.
+ */
+export function changelogFile(version: string): string {
+  if (!NOTE_VERSION.test(version)) {
+    throw new Error(`Version de journal invalide : « ${version} ».`);
+  }
+  const file = resolve(changelogDir, `${version}.md`);
+  if (relative(changelogDir, file) !== `${version}.md`) {
+    throw new Error(`Note hors du journal : « ${file} ».`);
+  }
+  return file;
+}
 
 function listVersions(): string[] {
   try {
@@ -47,9 +67,14 @@ export function buildEntries(): ChangelogEntry[] {
   const versions = listVersions();
   const current = process.env.VITE_APP_VERSION || highest(versions);
   if (!current) return [];
+  if (!INSTALLED_VERSION.test(current)) {
+    throw new Error(
+      `VITE_APP_VERSION invalide : « ${current} » (attendu X.Y.Z ou X.Y.Z-N).`,
+    );
+  }
   return selectVersionLine(versions, current).map((version) => {
     const { content, date, summary } = processContent(
-      readFileSync(resolve(changelogDir, `${version}.md`), "utf-8"),
+      readFileSync(changelogFile(version), "utf-8"),
     );
     return { version, date, summary, content };
   });

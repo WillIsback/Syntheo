@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
 import test from "node:test";
 
-import { changelog } from "../apps/desktop/plugins/changelog.ts";
+import { changelog, changelogFile } from "../apps/desktop/plugins/changelog.ts";
 
 const dir = new URL("../packages/changelog/content/desktop/", import.meta.url);
 
@@ -68,4 +68,33 @@ test("le bundle embarque le journal de la ligne de version", async (t) => {
     const entries = await loadEntries(undefined);
     assert.equal(entries[0].version, highest);
   });
+});
+
+test("la version du build ne sort pas du journal", async (t) => {
+  const previous = process.env.VITE_APP_VERSION;
+  t.after(() => {
+    if (previous === undefined) delete process.env.VITE_APP_VERSION;
+    else process.env.VITE_APP_VERSION = previous;
+  });
+
+  for (const version of [
+    "../../../../etc/passwd",
+    "0.7.1/../0.7.0",
+    "v0.7.1",
+    "0.7.1-beta",
+  ]) {
+    await assert.rejects(
+      loadEntries(version),
+      /VITE_APP_VERSION invalide/,
+      version,
+    );
+  }
+  for (const version of ["../0.7.0", "0.7.1-2", "/etc/passwd", "0.7.0.md"]) {
+    assert.throws(
+      () => changelogFile(version),
+      /Version de journal invalide/,
+      version,
+    );
+  }
+  assert.equal(changelogFile("0.7.0"), new URL("0.7.0.md", dir).pathname);
 });
