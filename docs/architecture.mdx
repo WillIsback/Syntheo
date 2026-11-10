@@ -73,7 +73,7 @@ Les flux réseau sans rapport avec l'inférence, encore présents dans le code, 
 ## Interfaces pour les agents
 
 - **CLI** (`apps/cli`) : le binaire `syntheo` lit directement la base `app.db`, en lecture seule pour la consultation et l'export. Les modifications passent par des **propositions**, que l'utilisateur relit ensuite dans l'application. Voir la [référence de la CLI](/reference/cli).
-- **Serveur MCP** : `syntheo mcp` lance un serveur MCP en stdio (`apps/cli/src/mcp/`, bibliothèque `rmcp`). Il expose la liste des réunions, les transcriptions, l'export, l'import d'un enregistrement et les propositions de modification. Côté application, `plugins/local-api` porte les commandes associées ; `plugins/mcp`, hérité d'Anarlog, ne déclare aucune commande.
+- **Serveur MCP** : `syntheo mcp` lance un serveur MCP en stdio (`apps/cli/src/mcp/`, bibliothèque `rmcp`). Il expose la liste des réunions, les transcriptions, l'export, l'import d'un enregistrement et les propositions de modification. Côté application, `plugins/local-api` porte les commandes associées.
 
 La vue d'ensemble se trouve dans [Agents](/agents/overview).
 

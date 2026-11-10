@@ -730,12 +730,6 @@ importers:
         specifier: ^2.12.4
         version: 2.12.4
 
-  plugins/audio-priority:
-    dependencies:
-      '@tauri-apps/api':
-        specifier: ^2.12.4
-        version: 2.12.4
-
   plugins/contacts:
     dependencies:
       '@tauri-apps/api':
@@ -778,12 +772,6 @@ importers:
         specifier: ^2.12.4
         version: 2.12.4
 
-  plugins/fs2:
-    dependencies:
-      '@tauri-apps/api':
-        specifier: ^2.12.4
-        version: 2.12.4
-
   plugins/hooks:
     dependencies:
       '@tauri-apps/api':
@@ -796,12 +784,6 @@ importers:
         specifier: ^2.12.4
         version: 2.12.4
 
-  plugins/js:
-    dependencies:
-      '@tauri-apps/api':
-        specifier: ^2.12.4
-        version: 2.12.4
-
   plugins/local-api:
     dependencies:
       '@tauri-apps/api':
@@ -809,12 +791,6 @@ importers:
         version: 2.12.4
 
   plugins/local-auth:
-    dependencies:
-      '@tauri-apps/api':
-        specifier: ^2.12.4
-        version: 2.12.4
-
-  plugins/mcp:
     dependencies:
       '@tauri-apps/api':
         specifier: ^2.12.4
@@ -839,18 +815,6 @@ importers:
         version: 2.12.4
 
   plugins/opener2:
-    dependencies:
-      '@tauri-apps/api':
-        specifier: ^2.12.4
-        version: 2.12.4
-
-  plugins/overlay:
-    dependencies:
-      '@tauri-apps/api':
-        specifier: ^2.12.4
-        version: 2.12.4
-
-  plugins/path2:
     dependencies:
       '@tauri-apps/api':
         specifier: ^2.12.4
