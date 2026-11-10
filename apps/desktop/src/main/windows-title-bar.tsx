@@ -1,3 +1,4 @@
+import { i18n } from "@lingui/core";
 import { t } from "@lingui/core/macro";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useCallback, useRef } from "react";
@@ -183,7 +184,7 @@ export function WindowsTitleBar() {
             <DropdownMenuItem
               onSelect={() =>
                 void openerCommands
-                  .openUrl(documentationUrl(), null)
+                  .openUrl(documentationUrl(i18n.locale), null)
                   .catch((error) =>
                     console.error(
                       "[title-bar] failed to open documentation",

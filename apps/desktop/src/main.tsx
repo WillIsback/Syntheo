@@ -45,6 +45,7 @@ import type { ThemePreference } from "./shared/theme/resolve";
 import { LocalizedToaster } from "./shared/ui/localized-toaster";
 import { createAITaskStore } from "./store/zustand/ai-task";
 import { listenerStore } from "./store/zustand/listener/instance";
+import { DefaultTemplatesLocaleSync } from "./templates/default-templates-locale-sync";
 import { commands } from "./types/tauri.gen";
 
 const toolRegistry = createToolRegistry();
@@ -110,6 +111,7 @@ function ReadyApp() {
     <AppThemeProvider>
       <AppI18nProvider>
         {isMainWindow ? <NativeMenuLocaleSync /> : null}
+        {isMainWindow ? <DefaultTemplatesLocaleSync /> : null}
         <AppLockGate>
           <App />
           {isMainWindow ? <TaskManager /> : null}

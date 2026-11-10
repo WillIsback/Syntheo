@@ -2,6 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   execute: vi.fn(),
+  // Langue d'interface déjà enregistrée par défaut, pour que les tests qui ne
+  // portent pas sur la migration de `ui_language` (issue 549) n'en voient pas
+  // l'écriture. `null` simule un profil d'avant ce réglage.
+  storedUiLanguage: "fr" as string | null,
   getPreferredLanguages: vi.fn(),
   getTemplateSource: vi.fn(),
   executeTransaction: vi.fn(
@@ -24,7 +28,23 @@ vi.mock("@syntheo/plugin-template", () => ({
 
 vi.mock("~/db", () => ({
   executeTransaction: mocks.executeTransaction,
-  liveQueryClient: { execute: mocks.execute },
+  liveQueryClient: {
+    execute: async (sql: string) => {
+      const rows: Array<{ id: string; value_json: string }> =
+        (await mocks.execute(sql)) ?? [];
+      return mocks.storedUiLanguage === null ||
+        rows.length === 0 ||
+        rows.some((row) => row.id === "ui_language")
+        ? rows
+        : [
+            ...rows,
+            {
+              id: "ui_language",
+              value_json: JSON.stringify(mocks.storedUiLanguage),
+            },
+          ];
+    },
+  },
   useLiveQuery: vi.fn(() => ({ data: undefined })),
 }));
 
@@ -41,6 +61,7 @@ describe("SQLite settings", () => {
   beforeEach(async () => {
     await flushDatabaseWrites();
     vi.clearAllMocks();
+    mocks.storedUiLanguage = "fr";
     mocks.executeTransaction.mockResolvedValue([1]);
     mocks.execute.mockResolvedValue([]);
     mocks.getPreferredLanguages.mockResolvedValue({
@@ -237,8 +258,52 @@ describe("SQLite settings", () => {
       [
         ["ai_language", JSON.stringify("fr")],
         ["spoken_languages", JSON.stringify(JSON.stringify(["en"]))],
+        ["ui_language", JSON.stringify("auto")],
       ],
     );
+  });
+
+  it("garde l'interface en français pour un profil existant en allemand", async () => {
+    mocks.storedUiLanguage = null;
+    mocks.execute.mockResolvedValue([
+      { id: "ai_language", value_json: JSON.stringify("de") },
+      { id: "spoken_languages", value_json: JSON.stringify("[]") },
+    ]);
+
+    await initializeApplicationSettings();
+
+    const statements = mocks.executeTransaction.mock.calls[0][0];
+    expect(statements.map((statement) => statement.params.slice(0, 2))).toEqual(
+      [["ui_language", JSON.stringify("fr")]],
+    );
+  });
+
+  it("garde l'interface en anglais pour un profil existant en anglais", async () => {
+    mocks.storedUiLanguage = null;
+    mocks.execute.mockResolvedValue([
+      { id: "ai_language", value_json: JSON.stringify("en") },
+      { id: "spoken_languages", value_json: JSON.stringify("[]") },
+    ]);
+
+    await initializeApplicationSettings();
+
+    const statements = mocks.executeTransaction.mock.calls[0][0];
+    expect(statements.map((statement) => statement.params.slice(0, 2))).toEqual(
+      [["ui_language", JSON.stringify("en")]],
+    );
+  });
+
+  it("ne réécrit pas une langue d'interface déjà choisie", async () => {
+    mocks.storedUiLanguage = null;
+    mocks.execute.mockResolvedValue([
+      { id: "ai_language", value_json: JSON.stringify("de") },
+      { id: "spoken_languages", value_json: JSON.stringify("[]") },
+      { id: "ui_language", value_json: JSON.stringify("auto") },
+    ]);
+
+    await initializeApplicationSettings();
+
+    expect(mocks.executeTransaction).not.toHaveBeenCalled();
   });
 
   it("normalizes spoken languages previously populated from the OS", async () => {

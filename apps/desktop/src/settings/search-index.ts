@@ -100,6 +100,13 @@ export const SETTINGS_SEARCH_INDEX = [
     keywords: msg`notification area, taskbar, menu bar, icon, clock`,
   },
   {
+    id: "interface-language",
+    page: "app",
+    section: LANGUAGE_REGION,
+    label: msg`Interface language`,
+    keywords: msg`language, display, menus, French, English, system`,
+  },
+  {
     id: "main-language",
     page: "app",
     section: LANGUAGE_REGION,

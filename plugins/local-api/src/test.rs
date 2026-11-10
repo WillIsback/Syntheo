@@ -91,6 +91,15 @@ async fn markdown_export_follows_the_interface_language() {
     .await
     .unwrap();
     assert_eq!(commands::load_export_locale(&pool).await, ExportLocale::En);
+    // An explicit interface language (issue 549) wins over the main language.
+    sqlx::query(
+        "INSERT INTO app_settings (id, value_json, updated_at) \
+             VALUES ('ui_language', '\"fr\"', '2026-11-10T00:00:00Z')",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+    assert_eq!(commands::load_export_locale(&pool).await, ExportLocale::Fr);
 
     let export = syntheo_agent_access::get_meeting_export(&pool, "meeting-1".to_string())
         .await

@@ -656,6 +656,10 @@ msgstr "Auto summary format"
 msgid "Automatic"
 msgstr "Automatic"
 
+#: src/settings/general/interface-language.tsx
+msgid "Automatic (system)"
+msgstr "Automatic (system)"
+
 #: src/settings/search-index.ts
 msgid "automatic, stop, end of call, hang up"
 msgstr "automatic, stop, end of call, hang up"
@@ -2228,6 +2232,11 @@ msgstr "Installed"
 msgid "Instruction"
 msgstr "Instruction"
 
+#: src/settings/general/interface-language.tsx
+#: src/settings/search-index.ts
+msgid "Interface language"
+msgstr "Interface language"
+
 #: src/settings/ai/shared/server-card.tsx
 msgid "Invalid address"
 msgstr "Invalid address"
@@ -2292,6 +2301,14 @@ msgstr "Language and vocabulary"
 #: src/sidebar/toast/registry.tsx
 msgid "Language model needed"
 msgstr "Language model needed"
+
+#: src/settings/general/interface-language.tsx
+msgid "Language of menus and buttons. Automatic follows your system, in English when Syntheo is not translated into its language."
+msgstr "Language of menus and buttons. Automatic follows your system, in English when Syntheo is not translated into its language."
+
+#: src/settings/search-index.ts
+msgid "language, display, menus, French, English, system"
+msgstr "language, display, menus, French, English, system"
 
 #: src/settings/search-index.ts
 msgid "language, French, English, translation"

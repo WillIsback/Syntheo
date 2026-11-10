@@ -158,26 +158,38 @@ pub(crate) async fn run_markdown_export_automation(pool: &sqlx::SqlitePool, meet
     }
 }
 
-/// Exports follow the interface language, which the desktop derives from the
-/// main language setting (French when unset).
+/// Exports follow the interface language: the `ui_language` setting (issue
+/// 549), resolved against the system locale when it is `auto`.
 pub(crate) async fn load_export_locale(
     pool: &sqlx::SqlitePool,
 ) -> syntheo_agent_access::ExportLocale {
-    let language: Option<String> = sqlx::query_scalar(
+    let ui_language = load_language_setting(pool, "ui_language").await;
+    let ai_language = load_language_setting(pool, "ai_language").await;
+    let system_locale = sys_locale::get_locale();
+    syntheo_agent_access::ExportLocale::from_interface_language(
+        ui_language.as_deref(),
+        ai_language.as_deref(),
+        system_locale.as_deref(),
+    )
+}
+
+async fn load_language_setting(pool: &sqlx::SqlitePool, id: &str) -> Option<String> {
+    sqlx::query_scalar::<_, String>(
         "SELECT value_json FROM (
-           SELECT value_json, 1 AS source_rank FROM synced_preferences WHERE id = 'ai_language'
+           SELECT value_json, 1 AS source_rank FROM synced_preferences WHERE id = ?
            UNION ALL
-           SELECT value_json, 0 AS source_rank FROM app_settings WHERE id = 'ai_language'
+           SELECT value_json, 0 AS source_rank FROM app_settings WHERE id = ?
          ) ORDER BY source_rank DESC LIMIT 1",
     )
+    .bind(id)
+    .bind(id)
     .fetch_optional(pool)
     .await
     .unwrap_or_else(|error| {
-        tracing::warn!("[local-api] could not load the interface language: {error}");
+        tracing::warn!("[local-api] could not load the language setting '{id}': {error}");
         None
     })
-    .and_then(|raw: String| serde_json::from_str::<String>(&raw).ok());
-    syntheo_agent_access::ExportLocale::from_language(language.as_deref())
+    .and_then(|raw| serde_json::from_str::<String>(&raw).ok())
 }
 
 async fn load_setting(pool: &sqlx::SqlitePool, id: &str) -> Option<serde_json::Value> {
