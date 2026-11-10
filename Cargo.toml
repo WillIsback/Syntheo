@@ -72,7 +72,6 @@ syntheo-fs-sync-core = { path = "crates/fs-sync-core", package = "fs-sync-core" 
 syntheo-gbnf = { path = "crates/gbnf", package = "gbnf" }
 syntheo-hooks = { path = "crates/hooks", package = "hooks" }
 syntheo-host = { path = "crates/host", package = "host" }
-syntheo-http = { path = "crates/http", package = "syntheo-http-utils" }
 syntheo-intercept = { path = "crates/intercept", package = "intercept" }
 syntheo-language = { path = "crates/language", package = "language" }
 syntheo-listener-core = { path = "crates/listener-core", package = "listener-core" }

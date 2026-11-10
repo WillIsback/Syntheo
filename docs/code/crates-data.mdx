@@ -43,7 +43,6 @@ Dans le workspace Cargo, chaque crate est déclarée sous un alias `syntheo-*` (
 | `crates/codex` | Pilotage de la CLI Codex | `agent-core` | aucune |
 | `crates/opencode` | Pilotage de la CLI OpenCode | `agent-core` | aucune |
 | `crates/data` | Échantillons audio pour les tests | `audio-mock` ; dev-dependency ailleurs | aucune |
-| `crates/http` | Trait `HttpClient` générique | aucune crate | aucune |
 | `crates/xtask` | Tâches de build (`cargo xtask`) | outillage | aucune |
 
 ## Base de données
@@ -213,9 +212,8 @@ Ne décrivez pas le comportement du produit à partir du schéma SQL brut. Parte
 | `crates/shortcut-macos` | `Listener`, `EventTap`, `HotKey`, types de décision | aucune | macOS uniquement : dépendance cible `macos` du plugin `shortcut`. |
 | `crates/overlay-kit` | modules `geometry`, `layout`, `placement`, `path`, `macos` | aucune | Le module `macos` n'existe que sur macOS. Utilisée par l'assistant de permissions macOS du plugin `permissions`. |
 | `crates/bundle` | `get_ancestor_bundle_id`, `bundle_id_for_pid`, `read_bundle_info` | aucune | Code compilé sur macOS uniquement. |
-| `crates/http` | trait `HttpClient` (`get`, `post`, `put`, `patch`, `delete`) | aucune | Paquet `syntheo-http-utils`. Aucune crate du workspace ne l'utilise. |
 
-- **Pages de doc concernées** : voir la colonne Remarques ; aucune pour `host`, `user-error`, `shortcut-macos`, `overlay-kit`, `bundle` et `http`.
+- **Pages de doc concernées** : voir la colonne Remarques ; aucune pour `host`, `user-error`, `shortcut-macos`, `overlay-kit` et `bundle`.
 
 ## Intégrations d'agents de code
 

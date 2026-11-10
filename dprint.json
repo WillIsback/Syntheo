@@ -17,7 +17,6 @@
   "excludes": [
     "crates/tiptap/vendor/mdast_util_to_markdown",
     ".venv",
-    ".drizzle",
     "**/*-lock.yaml",
     "**/*-lock.json",
     "**/locales",
@@ -32,10 +31,7 @@
     "crates/*/tests/fixtures/**",
     "**/migrations/**/*.sql",
     "**/tests/*.sql",
-    "**/charts/**",
-    "**/helm/**/templates/**",
-    "**/schema.json",
-    "**/netlify/edge-functions"
+    "**/schema.json"
   ],
   "exec": {
     "cwd": "${configDir}",

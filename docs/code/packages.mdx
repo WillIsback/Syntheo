@@ -18,7 +18,6 @@ Tous les paquets sont privés (`"private": true`) et publiés sous la portée `@
 | `@syntheo/db-tauri` | `packages/db-tauri` | Transport Tauri vers le plugin `plugins/db`. | `apps/desktop` | aucune |
 | `@syntheo/design-system` | `packages/design-system` | Jetons de design et palettes de couleurs. | `apps/desktop`, `ui` | aucune |
 | `@syntheo/editor` | `packages/editor` | Éditeur ProseMirror des notes, du chat et des invites. | `apps/desktop` | [/notes](/notes), [/chat](/chat), [/meetings](/meetings) |
-| `@syntheo/plugin-sdk` | `packages/plugin-sdk` | Types du contrat de plugin JavaScript. | aucun | aucune |
 | `@syntheo/provider-validation` | `packages/provider-validation` | Validation des adresses et des identifiants des serveurs d'inférence. | `apps/desktop` | [/ai-setup](/ai-setup), [/offline](/offline), [/security](/security) |
 | `@syntheo/store` | `packages/store` | Schémas Zod partagés (fournisseurs, modèles, transcription, chat). | `apps/desktop`, `editor` | [/ai-setup](/ai-setup), [/customize-summaries](/customize-summaries), [/chat](/chat) |
 | `@syntheo/ui` | `packages/ui` | Composants d'interface (shadcn/Radix), icônes, configuration Tailwind. | `apps/desktop`, `editor` | aucune |
@@ -36,7 +35,7 @@ Les dépendances ci-dessous proviennent des champs `dependencies` des `package.j
 | `db-tauri` | `db-runtime`, plugin `@syntheo/plugin-db` (`plugins/db`) |
 | `editor` | `store`, `ui`, `utils`, plugin `@syntheo/plugin-opener2` (`plugins/opener2`) |
 | `ui` | `design-system`, `utils` |
-| `db-runtime`, `design-system`, `plugin-sdk`, `provider-validation`, `store`, `utils` | aucun paquet du workspace |
+| `db-runtime`, `design-system`, `provider-validation`, `store`, `utils` | aucun paquet du workspace |
 
 Pour les plugins Tauri cités, consultez [les plugins](/code/plugins).
 
@@ -162,14 +161,6 @@ Le fichier `packages/editor/daily/cfm.md` est une note de conception héritée (
 - Dépendances internes : `utils`.
 - Consommateurs : `apps/desktop/src/changelog/*`. L'application lit la dernière version via un module virtuel Vite (`virtual:changelog`) et télécharge les versions plus anciennes.
 - Pages de doc concernées : aucune. Le site Mintlify n'a pas de page de notes de version.
-
-## `@syntheo/plugin-sdk`
-
-- Chemin : `packages/plugin-sdk`
-- Rôle : types du contrat des plugins JavaScript (`PluginModule`, `PluginContext`, `PluginCleanup`, `PluginEventRef`, `PluginEventUnlisten`, `PluginStateValue`).
-- Dépendances internes : aucune.
-- Consommateurs : aucun. Ni `apps/desktop` ni les autres paquets ne l'importent.
-- Pages de doc concernées : aucune.
 
 ## Ressources pour les agents
 
