@@ -1,6 +1,6 @@
 import { t } from "@lingui/core/macro";
 
-export const NO_SPEECH_ERROR_CODE = "no_speech";
+const NO_SPEECH_ERROR_CODE = "no_speech";
 
 /**
  * La transcription n'a rendu aucune parole. Le message s'affiche traduit ; la

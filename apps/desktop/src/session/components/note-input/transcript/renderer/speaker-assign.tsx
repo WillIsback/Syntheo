@@ -41,7 +41,7 @@ export {
   type SpeakerParticipantOption,
 } from "./speaker-participants";
 
-export type AssignmentMode = "all" | "segment";
+type AssignmentMode = "all" | "segment";
 
 export function SpeakerAssignPopover({
   segment,

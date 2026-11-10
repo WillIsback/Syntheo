@@ -89,9 +89,7 @@ export function createChatPreflightController() {
   return { start, runAfterPreflight, dispose, resume };
 }
 
-export type ChatPreflightController = ReturnType<
-  typeof createChatPreflightController
->;
+type ChatPreflightController = ReturnType<typeof createChatPreflightController>;
 
 export function guardChatTransport<UI_MESSAGE extends UIMessage>(
   transport: ChatTransport<UI_MESSAGE>,

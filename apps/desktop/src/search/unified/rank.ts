@@ -13,11 +13,11 @@ import { folderDisplayName, folderPathMatchesFilter } from "~/session/folders";
 
 // Plafonds communs : la palette et les mentions montrent au plus autant de
 // dossiers et de contacts ; les notes suivent le même ordre des deux côtés.
-export const SEARCH_FOLDER_LIMIT = 3;
-export const SEARCH_CONTACT_LIMIT = 3;
+const SEARCH_FOLDER_LIMIT = 3;
+const SEARCH_CONTACT_LIMIT = 3;
 
 // Comparaison sans accents ni casse (« Réunion » trouve « reunion »).
-export function normalizeSearchQuery(text: string): string {
+function normalizeSearchQuery(text: string): string {
   return text
     .normalize("NFD")
     .replace(/\p{Diacritic}/gu, "")

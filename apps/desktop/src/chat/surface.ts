@@ -1,4 +1,4 @@
-export type ChatToolbarSurface = "light" | "dark";
+type ChatToolbarSurface = "light" | "dark";
 
 export function isChatDarkAppearance(): boolean {
   return false;

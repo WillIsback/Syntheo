@@ -4,7 +4,7 @@ export const FLOATING_BAR_INSET = 4;
 export const FLOATING_BAR_COMPACT_HEIGHT = 38;
 export const FLOATING_BAR_COMPACT_STOP_WIDTH = 62;
 export const FLOATING_BAR_COMPACT_ICON_SIZE = 30;
-export const FLOATING_BAR_COMPACT_GAP = 0;
+const FLOATING_BAR_COMPACT_GAP = 0;
 export const FLOATING_BAR_COMPACT_HORIZONTAL_PADDING = 4;
 export const FLOATING_BAR_CONTROL_RADIUS = 10;
 export const FLOATING_BAR_COMPACT_RADIUS = 14;
@@ -33,8 +33,8 @@ export const FLOATING_PILL_SLOTS = {
 export const FLOATING_BAR_RECORDING_PILL_WIDTH = 294;
 // Au-delà d'une heure, la durée passe de mm:ss à h:mm:ss : LONG_DURATION_* côté
 // Rust élargit la fenêtre d'autant.
-export const FLOATING_PILL_LONG_DURATION_SECONDS = 3600;
-export const FLOATING_PILL_LONG_DURATION_EXTRA_WIDTH = 16;
+const FLOATING_PILL_LONG_DURATION_SECONDS = 3600;
+const FLOATING_PILL_LONG_DURATION_EXTRA_WIDTH = 16;
 
 export function dictationControlsWidth() {
   return (

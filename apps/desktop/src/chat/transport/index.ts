@@ -40,12 +40,10 @@ export type ResolvedChatContext =
   | { kind: "text"; text: string };
 
 /** Outils et consigne propres à une portée (le chat de l'éditeur d'automatisations). */
-export type ScopedChatConfig = { tools: ToolSet; systemPrompt: string };
+type ScopedChatConfig = { tools: ToolSet; systemPrompt: string };
 
 /** Portée du fil : celle du dernier message de l'utilisateur. */
-export function getChatScopeFromMessages(
-  messages: SyntheoUIMessage[],
-): ChatScope {
+function getChatScopeFromMessages(messages: SyntheoUIMessage[]): ChatScope {
   for (let i = messages.length - 1; i >= 0; i -= 1) {
     const message = messages[i];
     if (message?.role === "user") {

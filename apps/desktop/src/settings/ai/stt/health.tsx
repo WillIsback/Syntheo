@@ -3,7 +3,7 @@ import { usesDeferredProviderAuthentication } from "@syntheo/provider-validation
 import { useConfigValues } from "~/shared/config";
 import { useSTTConnection } from "~/stt/useSTTConnection";
 
-export type HealthStatus = {
+type HealthStatus = {
   status: "pending" | "error" | "success" | null;
   message?: string;
 };

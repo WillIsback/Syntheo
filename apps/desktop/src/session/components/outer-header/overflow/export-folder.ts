@@ -5,7 +5,7 @@ import { getStoredSettingValues } from "~/settings/queries";
 
 // Dossier d'enregistrement de l'export, affiché sous « Enregistrer » (étude
 // UX de la navigation, section 6) : la personne sait où chercher le fichier.
-export type ExportFolder = {
+type ExportFolder = {
   path: string;
   // Aucun dossier choisi dans les paramètres : Téléchargements.
   isDownloads: boolean;

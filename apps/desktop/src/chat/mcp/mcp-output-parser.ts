@@ -7,7 +7,7 @@ type McpTextContentOutput = {
   }>;
 };
 
-export type McpObjectOutput = Record<string, unknown>;
+type McpObjectOutput = Record<string, unknown>;
 
 function isMcpTextEnvelope(output: unknown): output is McpTextContentOutput {
   return (

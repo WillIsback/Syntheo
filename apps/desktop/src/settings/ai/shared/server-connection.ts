@@ -28,7 +28,7 @@ export type ServerConnectionState =
     }
   | { status: "failed"; failure: ServerFailure };
 
-export const SERVER_CONNECTION_QUERY_KEY = "server-connection";
+const SERVER_CONNECTION_QUERY_KEY = "server-connection";
 
 // Le serveur de synthèse n'a qu'un protocole (OpenAI-compatible, `custom`) ;
 // la transcription choisit entre ceux d'owhisper-client.

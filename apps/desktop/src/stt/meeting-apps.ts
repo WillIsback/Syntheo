@@ -58,7 +58,7 @@ export const BROWSER_AUTO_STOP_APP_IDS = new Set([
 ]);
 
 export type MicApp = { id: string; name: string };
-export type MeetingPlatform = {
+type MeetingPlatform = {
   displayName: string;
 };
 

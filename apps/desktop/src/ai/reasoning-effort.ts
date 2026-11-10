@@ -10,7 +10,7 @@ export const normalizeReasoningEffort = (value: unknown): ReasoningEffort =>
 
 // Le seul provider, OpenAI-compatible, transmet `reasoning_effort` ; un
 // serveur qui ne le connaît pas l'ignore.
-export const supportsReasoningEffort = (_providerId: string): boolean => true;
+const supportsReasoningEffort = (_providerId: string): boolean => true;
 
 type ProviderOptions = NonNullable<
   Parameters<typeof defaultSettingsMiddleware>[0]["settings"]["providerOptions"]

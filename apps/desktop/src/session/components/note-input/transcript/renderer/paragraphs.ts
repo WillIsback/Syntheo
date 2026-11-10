@@ -65,7 +65,7 @@ export function splitWordsIntoParagraphs(
   return starts;
 }
 
-export type TranscriptParagraph = {
+type TranscriptParagraph = {
   // Vue du paragraphe : les champs du segment, restreints à ses mots. Même
   // objet tant que ses mots et son locuteur ne changent pas.
   segment: Segment;

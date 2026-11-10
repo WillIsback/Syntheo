@@ -39,7 +39,7 @@ export type LiveTranscriptBatch = {
   segmentDelta: LiveTranscriptSegmentDelta | null;
 };
 
-export type LiveSegmentDeltaAccumulator = {
+type LiveSegmentDeltaAccumulator = {
   removedIds: Set<string>;
   upsertsById: Map<string, LiveTranscriptSegment>;
 };

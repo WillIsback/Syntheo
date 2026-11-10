@@ -1,4 +1,4 @@
-export type BatchResumeContext = {
+type BatchResumeContext = {
   promotion: "whole_session";
 };
 

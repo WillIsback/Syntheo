@@ -3,7 +3,7 @@ import { enqueueDatabaseWrite } from "~/db/write-queue";
 
 const STOP_PREFIX = "capture_stop:";
 
-export type CaptureUsage = {
+type CaptureUsage = {
   startedAtMs: number;
   requestedLiveTranscription: boolean;
   liveTranscriptionActiveAtStop: boolean;

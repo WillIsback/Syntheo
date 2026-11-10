@@ -16,7 +16,7 @@ import { useUnifiedSearcher } from "~/search/unified/use-unified-search";
  * même ordre que la palette `Ctrl+K` (dossiers, notes, contacts). Dossiers et
  * contacts gardent leur place, les notes remplissent le reste.
  */
-export function toMentionItems(
+function toMentionItems(
   results: UnifiedSearchResults,
   untitledLabel: string,
   limit = MENTION_DISPLAY_LIMIT,

@@ -13,7 +13,7 @@ const SESSION_FOLDER_SQL = `
   LIMIT 1
 `;
 
-export function useSessionFolderPath(sessionId: string): string {
+function useSessionFolderPath(sessionId: string): string {
   const { data = "" } = useLiveQuery<{ folder_path: string }, string>({
     sql: SESSION_FOLDER_SQL,
     params: [sessionId],

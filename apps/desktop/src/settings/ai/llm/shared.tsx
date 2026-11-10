@@ -4,7 +4,7 @@ import { Shuffle } from "@syntheo/ui/components/icons";
 
 import { type ProviderRequirement } from "~/settings/ai/shared/eligibility";
 
-export type Provider = {
+type Provider = {
   id: string;
   displayName: string;
   badge: string | null;

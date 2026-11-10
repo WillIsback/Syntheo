@@ -35,9 +35,9 @@ type FolderThreadSqlRow = {
 };
 
 // Versions remplacées gardées par dossier, comme pour les synthèses.
-export const MAX_FOLDER_THREAD_VERSIONS = 20;
+const MAX_FOLDER_THREAD_VERSIONS = 20;
 
-export const FOLDER_THREAD_SQL = `
+const FOLDER_THREAD_SQL = `
   SELECT
     thread.folder_id,
     thread.body,
@@ -98,9 +98,7 @@ function parseBody(text: string): JSONContent | null {
     : null;
 }
 
-export function mapFolderThreadRow(
-  row: FolderThreadSqlRow,
-): FolderThreadRecord {
+function mapFolderThreadRow(row: FolderThreadSqlRow): FolderThreadRecord {
   return {
     folderId: row.folder_id,
     body: parseBody(row.body),

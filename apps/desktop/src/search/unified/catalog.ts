@@ -18,7 +18,7 @@ type SearchNoteSqlRow = {
 
 const EMPTY_NOTES: SearchNote[] = [];
 
-export const SEARCH_NOTES_SQL = `
+const SEARCH_NOTES_SQL = `
   SELECT id, title, created_at, folder_path
   FROM sessions
   WHERE deleted_at IS NULL

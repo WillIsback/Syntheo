@@ -76,7 +76,7 @@ const SPACES = /\s+/g;
 const LIST_TYPES = new Set(["bulletList", "orderedList", "taskList"]);
 const ITEM_TYPES = new Set(["listItem", "taskItem"]);
 
-export function normalizeThreadText(text: string): string {
+function normalizeThreadText(text: string): string {
   return text.replace(SPACES, " ").trim();
 }
 

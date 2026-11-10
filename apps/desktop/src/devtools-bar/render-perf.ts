@@ -26,9 +26,9 @@ import { getDisplayName, traverseRenderedFibers } from "./render-tracker";
  */
 
 export const RENDER_PERF_PREFIX = "[render-perf]";
-export const RENDER_PERF_WINDOW_MS = 10_000;
+const RENDER_PERF_WINDOW_MS = 10_000;
 /** `localStorage[RENDER_PERF_ALWAYS_KEY] = "always"` résume aussi hors écoute. */
-export const RENDER_PERF_ALWAYS_KEY = "syntheo:render-perf";
+const RENDER_PERF_ALWAYS_KEY = "syntheo:render-perf";
 
 const TICK_MS = 1_000;
 const AFTER_STOP_MS = 120_000;
@@ -332,7 +332,7 @@ export function resolveRenderPerfPhase(
   return "idle";
 }
 
-export type RenderPerfMonitorOptions = {
+type RenderPerfMonitorOptions = {
   /** `live.status` du listener : `inactive`, `active` ou `finalizing`. */
   getListenerStatus: () => string;
   log?: (line: string) => void;

@@ -40,7 +40,7 @@ import { createTaskItemAttrs } from "../tasks";
 // ---------------------------------------------------------------------------
 // Slash command items
 // ---------------------------------------------------------------------------
-export interface SlashCommandItem {
+interface SlashCommandItem {
   id: string;
   label: string;
   description: string;

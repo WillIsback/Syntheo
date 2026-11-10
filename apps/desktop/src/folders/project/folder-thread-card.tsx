@@ -36,7 +36,7 @@ export function useThreadLabels(): ThreadLabels {
 
 // « Mettre à jour » : intègre les réunions que le fil rouge ne couvre pas
 // encore, puis enregistre la nouvelle version (l'ancienne est gardée).
-export function useFolderThreadUpdate({
+function useFolderThreadUpdate({
   folderPath,
   meetings,
   thread,

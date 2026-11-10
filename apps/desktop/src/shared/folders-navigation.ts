@@ -1,6 +1,6 @@
 import { useFolderSelection } from "~/folders/selection";
 
-export const FOLDERS_NAVIGATION_PATH = "/app/folders";
+const FOLDERS_NAVIGATION_PATH = "/app/folders";
 
 export function foldersNavigationEvent(folderPath: string) {
   return {

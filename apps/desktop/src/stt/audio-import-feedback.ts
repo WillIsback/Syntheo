@@ -18,7 +18,7 @@ import { useTabs } from "~/store/zustand/tabs";
  * (issue 463). Sans l'un ni l'autre, on le dit avant de toucher à la note
  * (issue 462).
  */
-export type AudioImportAvailability =
+type AudioImportAvailability =
   | { status: "ready"; route: "batch" | "realtime" }
   | { status: "no_provider" }
   | { status: "unsupported" };
@@ -38,7 +38,7 @@ export function getAudioImportAvailability(
  * Les autres fonctions (dictée du chat, réparation) restent liées au lot :
  * un modèle temps réel seul ne les fait pas.
  */
-export type BatchAvailability =
+type BatchAvailability =
   | { status: "ready" }
   | { status: "no_provider" }
   | { status: "live_only" };

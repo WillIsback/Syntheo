@@ -35,7 +35,7 @@ import {
 import { STOPWORDS } from "./note-attribution-words";
 
 /** Mots significatifs consécutifs exigés pour colorer une expression. */
-export const MIN_PHRASE_WORDS = 2;
+const MIN_PHRASE_WORDS = 2;
 /** Lettres exigées au total dans une expression colorée. */
 const MIN_PHRASE_LETTERS = 8;
 /** Lettres exigées pour un nom propre (un sigle en capitales : 2). */
@@ -53,7 +53,7 @@ type FragmentIndex = {
   lines: Array<Array<string | null>>;
 };
 
-export type NoteInkSource = {
+type NoteInkSource = {
   notes: readonly PreparedNote[];
   /** Passages balisés et validés ; `null` : aucune balise, repli. */
   passages: readonly string[] | null;

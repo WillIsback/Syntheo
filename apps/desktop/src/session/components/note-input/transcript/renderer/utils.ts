@@ -5,7 +5,7 @@ import { speakerColor, speakerColorDark } from "~/stt/speaker-palette";
 
 export type HighlightSegment = { text: string; isMatch: boolean };
 
-export type SentenceLine = {
+type SentenceLine = {
   words: SegmentWord[];
   startMs: number;
   endMs: number;

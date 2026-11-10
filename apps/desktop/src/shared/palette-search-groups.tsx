@@ -25,7 +25,7 @@ import { PALETTE_ITEM_CLASS } from "~/shared/palette-settings-group";
 // (issue 501) : dossiers, notes avec leur dossier, contacts, et les actions
 // d'un dossier posé en filtre.
 
-export const PALETTE_FOLDER_VALUE_PREFIX = "folder-";
+const PALETTE_FOLDER_VALUE_PREFIX = "folder-";
 
 export function paletteFolderValue(path: string): string {
   return `${PALETTE_FOLDER_VALUE_PREFIX}${path}`;
@@ -95,7 +95,7 @@ function formatShortDate(value: string, locale: string): string {
   return date.toLocaleDateString(locale, { day: "numeric", month: "short" });
 }
 
-export function PaletteNoteItem({
+function PaletteNoteItem({
   note,
   value,
   showFolder,

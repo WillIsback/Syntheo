@@ -14,7 +14,7 @@ import {
 
 export type { PaletteId };
 
-export const PALETTE_STORAGE_KEY = "syntheo-palette";
+const PALETTE_STORAGE_KEY = "syntheo-palette";
 
 export function normalizePalette(value: unknown): PaletteId {
   return isPaletteId(value) ? value : DEFAULT_PALETTE;
