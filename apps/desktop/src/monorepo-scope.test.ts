@@ -34,7 +34,6 @@ describe("monorepo scope", () => {
       "dprint.json",
       "eslint.config.js",
       "scripts/dev.mjs",
-      "scripts/release-version.mjs",
       ".oxfmtrc.json",
       ".oxlintrc.json",
       "pnpm-workspace.yaml",

@@ -8,11 +8,7 @@ exclude:
     # Outillage de build et de release, local ou CI, jamais livré dans l'app :
     # les règles de path traversal et de SSRF y sont des faux positifs sur des
     # arguments de confiance (chemins déjà résolus et contenus, URL fixes).
-    - scripts/desktop-release-provenance.mjs
-    - scripts/notarize-dmg.mjs
     - scripts/publish-syntheo-skill.mjs
     - scripts/rebrand.mjs
-    - scripts/release-version.mjs
     - scripts/repack-linux-appimage.mjs
-    - scripts/update-aur-pkgbuild.mjs
     - scripts/remediation/
