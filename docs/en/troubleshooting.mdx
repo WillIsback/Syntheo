@@ -1,0 +1,188 @@
+---
+title: "Troubleshooting"
+description: "Fix common problems: unreachable transcription and summary servers, HTTPS, empty model list, audio on Linux and Windows, installation."
+---
+
+import { Kbd, SettingsPath, Troubleshooter } from "/snippets/en/assist.gen.jsx";
+
+Choose your symptom in the checker below. It lists the points to check and opens the relevant screen of the app: the server card, the "Permissions" screen, the meetings "Audio" section, or a note that is listening. For "Transcription stops during the meeting", change the simulated cause, then click "Restore the network". The sections of this page detail each case.
+
+<Troubleshooter />
+
+## The transcription or summary server is unreachable
+
+Syntheo contains no model: it depends entirely on the servers whose address you entered in **Settings → Transcription** and **Settings → Synthesis**.
+
+Start by clicking "Test connection" on the server card. The status pill and the message shown say what to check: "Unreachable", "Key refused", or "Invalid address". See [The server card](/en/ai-setup#the-server-card).
+
+Check, in order:
+
+1. **The server is running.** From the computer where Syntheo is installed, query it directly:
+
+   ```bash
+   curl http://localhost:8000/v1/models
+   ```
+
+   Replace the URL with your server's. Add `-H "Authorization: Bearer <key>"` if your server requires a key.
+
+2. **The base URL is complete.** For an OpenAI-compatible server, it usually ends with `/v1` (for example `http://localhost:8000/v1`), with no `/models` or `/chat/completions` at the end. For an NVIDIA NIM server, enter the server address, for example `http://localhost:9000/v1/realtime`.
+3. **The URL contains no credentials and no parameters.** Syntheo refuses a URL of the form `https://utilisateur:motdepasse@…` or one containing `?…`. Enter the key in the field provided for it.
+4. **The API key is correct.** If the server answers 401 or 403, the pill shows "Key refused". Check the key in "Advanced", then test again.
+5. **No firewall, VPN, or proxy blocks the port** between your computer and the server.
+
+If the summary server answers but the chosen model fails, **Settings → Synthesis** shows "The selected model did not answer:" followed by the cause.
+
+## Syntheo requires HTTPS
+
+Syntheo accepts an `http://` URL only for a server on your computer or on a private network:
+
+- `localhost`, `127.x.x.x`, and `[::1]`;
+- names ending in `.local`;
+- the private addresses `10.x.x.x`, `172.16.x.x` to `172.31.x.x`, and `192.168.x.x`;
+- the range `100.64.x.x` to `100.127.x.x` (used in particular by Tailscale);
+- Tailscale (MagicDNS) names ending in `.ts.net`.
+
+For any other address, including an internal domain name such as `serveur.entreprise.lan`, use `https://`. Otherwise, Syntheo refuses the URL with the message "Use HTTPS: HTTP is only accepted on this machine or a private network.". Put your server behind a reverse proxy with a certificate (Caddy, nginx, Traefik), or use its private IP address directly.
+
+## The model list is empty
+
+Syntheo reads your server's models from `/v1/models` when you click "Test connection". Until the test succeeds, the card shows "Test the connection to list the models served.".
+
+- **The test fails.** Go back to the first section of this page. Syntheo waits 8 seconds at most for the answer.
+- **The test succeeds, but no model appears.** Check that a model is actually loaded, for example with `curl <adresse>/models`. With Ollama, download a model before selecting it. With LM Studio, load one in the local server.
+- **Your model is not in the list.** Click "Enter another name" and type the exact identifier of the model served by your deployment.
+
+An NVIDIA NIM server does not publish its model list. Syntheo offers the known identifiers (`nemotron-asr-streaming`, `parakeet-tdt-0.6b-v3`…); choose the one for your deployment.
+
+## Transcription stops during the meeting
+
+If the transcription server goes down or becomes unreachable, Syntheo shows a message at the bottom of the transcript margin that gives the likely cause, for example:
+
+> Live transcription paused: you are offline. No audio is kept: this passage will be missing from the transcription. Reconnecting…
+
+The possible causes are: you are offline, the server refused your API key, it refused the transcription settings, it is having an outage, Syntheo cannot reach it, or it no longer sends text.
+
+- **Network outage or server failure**: Syntheo tries to reconnect automatically. When the stream comes back, it briefly shows "Live transcription resumed.".
+- **Key or settings refused**: Syntheo does not retry the connection. The message ends with "Check the transcription server settings.". Fix the key or the model in **Settings → Transcription**, then restart listening.
+
+Syntheo does not keep the audio. What was said during the outage therefore cannot be transcribed afterward. Above the transcript, a banner shows the missing periods, for example "Transcription interrupted 14:32–14:35.". If the times are not known, the banner shows "This transcription is incomplete.".
+
+To limit these gaps, check the stability of the network between your computer and the server, and the server's load (GPU memory, number of concurrent sessions).
+
+## Sound is missing: microphone or system audio
+
+Open the "Permissions" screen:
+
+<SettingsPath steps={["Settings", "Advanced", "Permissions"]} />
+
+On Linux and Windows, the "Audio" section shows two rows:
+
+- "Microphone": your voice;
+- "System audio": the other participants' voices.
+
+Syntheo actually tests each audio source. A red row means the test failed. Fix the cause, then click the arrow on the row to run the test again. On Linux and Windows, this button does not open the system settings.
+
+Then check the "Audio" section of the "Meetings" screen:
+
+<SettingsPath steps={["Settings", "My meetings", "Meetings", "Audio"]} />
+
+- "Microphone" and "System sound" show the captured microphone and output, with their live sound level. Under "System sound", choose the output where you hear the other participants; "Captured right now:" gives the output actually captured. The choice applies to the next listening session. See [Record a meeting](/en/meetings), section on choosing the microphone and the captured output.
+- If a source was muted while listening, its icon is crossed out on a red background in the capsule. Turn it back on with a click, or with <Kbd keys="Ctrl+Shift+M" /> (microphone) and <Kbd keys="Ctrl+Shift+S" /> (system sound).
+
+<Tabs>
+  <Tab title="Linux">
+    Syntheo captures system audio through **PipeWire**, or through **PulseAudio** if PipeWire is not available.
+
+    - Check that the sound server is running:
+
+      ```bash
+      pactl info
+      ```
+
+      On a recent distribution, the "Server Name" line mentions PipeWire. If the command fails, install and start `pipewire-pulse` (or PulseAudio).
+    - Syntheo captures the monitor ("Monitor of…") of the output chosen under "System sound", or of the default output if you do not choose one. With PipeWire, it follows the default output when it changes, for example when you plug in a headset. If Syntheo captures the wrong output (the graphics card's HDMI, for example), choose the right one under "System sound".
+    - Check that the microphone and the monitor source of the audio output ("Monitor of…") exist:
+
+      ```bash
+      pactl list short sources
+      ```
+
+    - If the microphone does not appear, check that it is not muted or assigned to another sound card, for example with `pavucontrol`.
+    - If audio works in other apps but not in Syntheo, note the distribution, the desktop environment, and the Syntheo version for the report.
+  </Tab>
+  <Tab title="Windows">
+    - Open **Windows Settings → Privacy & security → Microphone**. Turn on microphone access, then "Let desktop apps access your microphone".
+    - Check in **Settings → System → Sound** that the right input device is selected and that it picks up sound.
+    - System audio is captured by loopback on the output chosen under "System sound", or on the default output if you do not choose one. If the chosen output is unplugged, Syntheo switches to the default output, then goes back to the chosen output when it is plugged in again, without interrupting listening. If the other participants are still missing, check that the meeting app plays its sound on this output, and that the sound goes through a Windows audio device (and not through a proprietary driver that bypasses it).
+  </Tab>
+</Tabs>
+
+## Windows shows a SmartScreen warning
+
+The Windows `.exe` installer is signed. Windows SmartScreen may still show "Windows protected your PC" until the signature has built enough reputation with Microsoft.
+
+1. Check that you downloaded the file from the [GitHub releases page](https://github.com/WillIsback/Syntheo/releases/latest).
+2. Click **More info** and check the publisher shown.
+3. Click **Run anyway**.
+
+Never install an installer obtained through another channel.
+
+## The app does not open after installation on Linux
+
+Make the AppImage executable before launching it:
+
+```bash
+chmod +x ./syntheo-*.AppImage
+```
+
+For Debian or Ubuntu, install the package with `sudo apt install ./syntheo-*.deb` so that the package manager resolves the dependencies. See [Install the app](/en/desktop-installation).
+
+## On Linux, the window stays black
+
+On first launch, Syntheo opens the guided onboarding, on a light background (or dark, depending on your theme) with the title "Welcome to Syntheo". If the window opens but stays completely black, with no text at all, WebKitGTK usually failed to draw it, most often on Wayland with an NVIDIA card.
+
+Syntheo uses WebKit graphics acceleration, which is much smoother. On some combinations of graphics card and compositor, WebKit's DMA-BUF rendering can leave a black window. In that case, run:
+
+```bash
+WEBKIT_DISABLE_DMABUF_RENDERER=1 ./syntheo-*.AppImage
+```
+
+If it still stays black, also disable compositing:
+
+```bash
+WEBKIT_DISABLE_DMABUF_RENDERER=1 WEBKIT_DISABLE_COMPOSITING_MODE=1 ./syntheo-*.AppImage
+```
+
+Report the problem to us with your graphics card, its driver version, and your desktop environment.
+
+The same variable works with the `syntheo` command installed by the `.deb` package.
+
+## No summary appears
+
+A summary needs a summary server. Open **Settings → Synthesis**, check that the pill shows "Connected", then choose a model under "Model". If the server is unreachable, go back to the first section of this page.
+
+## An imported file gives nothing
+
+Audio imports accept WAV, MP3, OGG, MP4, M4A, FLAC, WebM, and AAC. Transcript imports accept SRT and VTT.
+
+For an audio file, your transcription server must be configured. With the "OpenAI · Realtime and batch" engine, it must expose `/v1/audio/transcriptions`. With "NVIDIA NIM · WebSocket", the import goes through the `/v1/realtime` real-time stream: allow at least a quarter of the recording's length. See [Import a recording](/en/import-recordings).
+
+## Get help
+
+[Open a GitHub issue](https://github.com/WillIsback/Syntheo/issues) with:
+
+- your operating system and its version;
+- the Syntheo version;
+- the exact error message;
+- what you expected, and the shortest steps to reproduce the problem;
+- for an AI problem, the server type (vLLM, Ollama, NIM…) and the model used.
+
+If needed, attach the app's `app.log` log, located in the `logs` folder of the app data (on Windows: `%LOCALAPPDATA%\fr.willisback.syntheo\logs`). Read it again before sharing it.
+
+Messages from the interface console appear in it as `webview_console_event`, without their content: only the number of arguments, the label of the module that emits them (for example `diagnostic="[speaker-context] error=Error(ERR_SQLITE_ERROR)"`), and the type and code of an error are kept. The message text, the error text, and any other value are never written to the log.
+
+<Warning>
+  Never publish an API key, meeting content, or the internal address of your servers in a public issue.
+</Warning>
+
+For CLI and MCP server errors, see the [error reference](/en/reference/errors).

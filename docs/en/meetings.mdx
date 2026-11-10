@@ -1,0 +1,140 @@
+---
+title: "Record a meeting"
+description: "Prepare, listen and finish a capture without adding a bot to the call."
+---
+
+import { AppScreen, AppSettings, Kbd, SettingsPath } from "/snippets/en/app.gen.jsx";
+
+## Before you start
+
+Syntheo needs a real-time transcription server, set up in **Settings → Transcription**. Without it, listening does not start. To get a summary, also set up a summary server in **Settings → Synthesis**. See [Set up transcription and AI](/en/ai-setup).
+
+## A note in three stages
+
+A meeting note is a living document. It goes through three stages without changing screens. The capsule at the bottom of the window shows the current stage and the only useful action at that moment:
+
+| Stage | What you see | Capsule |
+| --- | --- | --- |
+| 備 Prepare | A card (folder, meeting type, participants, listening) and your notes | "Cancel" · "Begin listening" |
+| 聴 Listen | Your notes, with the transcript in the right margin | Timer, sound level, microphone and system audio toggles, "Put on pause", "Finish" |
+| 結 Synthesis | The summary, then your notes | "Copy" · "Export" · "Ask the note" |
+
+Try the capsule: click "Begin listening", mute the microphone or system audio, pause, then click "Finish". The markers point to the stages (1), the capsule actions (2) and the note content (3).
+
+<AppScreen stage="prepare" />
+
+## Prepare the meeting
+
+1. On the home screen, click "Start a meeting" (<Kbd keys="Ctrl+N" />). A new note opens at the **Prepare** stage.
+2. Type the title at the top of the note.
+3. Fill in the card:
+   - **"Folder"**: the folder to file the note in. Click "Choose a folder" to search for a folder or create one. If a folder already holds a note with the same title, Syntheo suggests it first, marked "same title". See [Folders and projects](/en/folders).
+   - **"Type"**: the meeting type, that is, the summary template. Click it, type a few letters in "Search a meeting type", then choose a template. "Automatic" lets Syntheo structure the summary itself. If the note's folder has a default template, the default entry shows that template, for example "Point projet / Sprint — folder template". "Manage templates" opens the template editor.
+   - **"Participants"**: add the people who attend.
+   - **"Listening"**: shows the captured sources ("Mic", "Computer audio") and your spoken languages.
+4. Write down what you want to remember in the notes area.
+
+The meeting type sets the template of the future summary. It does not change what you have already written.
+
+A note created from a folder page, with "New note in this folder" or "Prepare the note", is already filed. "Prepare the note" also fills in the title, the usual participants and the proposed agenda: see [Next meeting](/en/folders#next-meeting).
+
+"Cancel" takes you back to the previous screen.
+
+## Start listening
+
+Click "Begin listening" in the capsule, or press <Kbd keys="Ctrl+Shift+N" />. Elsewhere in the app, this shortcut creates a new note and starts listening.
+
+Syntheo captures your microphone and the computer's system audio. It does not join the meeting as a participant: the other people do not see a bot in the call.
+
+### Choose the microphone and the captured output
+
+Open **Settings → Meetings**, "Audio" section:
+
+<SettingsPath steps={["Settings", "My meetings", "Meetings", "Audio"]} />
+
+In the replica below, change the captured output: the "Captured right now:" line follows your choice. The "Bluetooth earbuds" output is unplugged and shows "(Unavailable — using the default output)".
+
+<AppSettings section="meetings" focus="audio" />
+
+- "Microphone": the microphone that captures your voice;
+- "System sound": the output whose sound Syntheo transcribes, that is, the one where you hear the other participants (headset, speakers, HDMI…).
+
+Each line shows the live sound level. "Current default output" follows the system's default output. If the chosen output is unplugged, the list marks it "(Unavailable — using the default output)" and Syntheo captures the default output. "Captured right now:" gives the output actually captured. If no output is detected, plug in a headset or speakers, then click "Search again".
+
+Your choice applies when listening starts. During listening, if the captured output changes, for example when you plug in or unplug a headset, Syntheo tells you without stopping the capture: "System audio: the headset was unplugged, Syntheo now captures …".
+
+The "System sound" line exists on Linux and Windows.
+
+When listening starts, Syntheo shows a reminder to tell participants that the meeting is being transcribed. You can turn it off in **Settings → Meetings** with "Remind participants about recording".
+
+<Warning>
+  Make sure you have the right to record. Inform the participants and get their consent according to the rules that apply where you and they are.
+</Warning>
+
+## During the meeting
+
+Write freely in the main column. Your notes can stay rough: the summary draws on both the conversation and your notes.
+
+The transcript scrolls in the right margin. Syntheo tells your voice (microphone) apart from the other participants' voices (system audio). If your transcription server returns speakers, Syntheo shows them too; you can rename them later. If the window is too narrow, the margin is hidden.
+
+The capsule shows the listening time and the sound level.
+
+### Mute the microphone or system audio
+
+During listening, the capsule offers two toggles between the sound level and "Put on pause":
+
+- the microphone, with <Kbd keys="Ctrl+Shift+M" />;
+- system audio, with <Kbd keys="Ctrl+Shift+S" />.
+
+A muted source appears on a red background, with a crossed-out icon. The tooltip names the action, for example "Mute the microphone" or "Unmute system audio". What is said on a muted source is not transcribed, but listening continues: the listening time keeps running and the connection to the transcription server stays open. The muted state is kept even if transcription reconnects. The shortcuts work in the Syntheo window, including in a detached note, and have no effect outside listening.
+
+If you mute both sources, Syntheo shows "The microphone and system audio are muted: nothing is being transcribed." with "Put on pause" and "Unmute the microphone". The message disappears as soon as a source comes back.
+
+Audio is never written to disk: it stays in memory only long enough to be sent to your transcription server.
+
+### If transcription stops
+
+If the connection to the transcription server drops, Syntheo keeps capturing audio. A message at the bottom of the margin says so, for example "Live transcription paused: you are offline. No audio is kept: this passage will be missing from the transcription. Reconnecting…". When the stream comes back, Syntheo briefly shows "Live transcription resumed.".
+
+Because audio is not kept, the missed passage cannot be recovered: the transcript shows a dated gap, for example "Transcription interrupted 14:32–14:35". See [Troubleshooting](/en/troubleshooting).
+
+### Take a break
+
+To take a break during the meeting, click "Put on pause" in the capsule. Syntheo closes the microphone and system audio: nothing is captured or sent to your transcription server anymore. The capsule shows "Paused" and the listening time stops.
+
+Click "Resume listening" to continue in the same note. The new capture is added to the transcript, which stays continuous, and the listening time picks up where it stopped. You can pause and resume as many times as you need.
+
+Pausing does not end the meeting: the summary is written only when you click "Finish". While paused, the palette (<Kbd keys="Ctrl+K" />) also offers "Resume listening". During listening, it offers "Pause listening". There is no dedicated keyboard shortcut, to avoid pausing by accident.
+
+If you close the note while paused, the meeting stays paused: the floating bar shows "Paused" with "Resume" and "Finish". If you quit Syntheo while paused, the meeting ends without a summary and the transcript is kept. When you reopen it, the note's capsule offers "Resume listening" or "Generate the summary".
+
+On macOS, the floating bar stays hidden while paused: resume listening from the note or from the palette (<Kbd keys="⌘+K" />). This limitation is tracked in [issue 409](https://github.com/WillIsback/Syntheo/issues/409).
+
+### Keep the controls at hand
+
+If "Show floating bar" is on in **Settings → Meetings** (it is by default), a compact pill lets you control listening without reopening the main window. From left to right, it shows:
+
+- a pulsing red dot and the listening duration (pauses excluded); click the duration to go back to the note in the main window;
+- the sound level;
+- the microphone toggle, kept in sync with the capsule's;
+- "Pause" and "Finish".
+
+While paused, the pill shows "Paused", "Resume" and "Finish". If the capture runs into a problem, a warning icon replaces the sound level: open Syntheo to try again or change devices. The pill offers neither a system audio toggle nor a live transcript: use the note's capsule.
+
+The pill opens at the bottom center of the screen. To move it, drag it by any area outside its buttons. On Wayland, with a compositor that supports layers (Hyprland, sway, KDE Plasma), it stays anchored at the bottom of the screen and does not move. On GNOME and X11, it behaves like an ordinary window.
+
+During a capture, you can also choose "Open floating panel" in the note's **•••** menu.
+
+## Finish the meeting
+
+Click "Finish" in the capsule, during listening or during a pause. Syntheo finalizes the transcript ("Finishing…"), then moves to the **Synthesis** stage. It writes the summary if a summary server is set up.
+
+For a simple interruption, prefer "Put on pause" (see [Take a break](#take-a-break)). If the conversation picks up again after "Finish" and the note does not have a summary yet, click "Resume listening" in the capsule.
+
+To review, correct and export the note, see [Notes, summaries and transcripts](/en/notes).
+
+## Start from an existing recording
+
+For a conversation recorded elsewhere, open an empty note, click the **•••** menu, then choose "Upload audio" or "Upload transcript". See [Import a recording](/en/import-recordings).
+
+For meeting detection, automatic stop and other automations, see [Automate capture](/en/automatic-capture).

@@ -26,7 +26,7 @@ Références en ligne (privées, compte du propriétaire) : design system <https
 
 ## Règles du projet qui s'appliquent
 
-Rappel de `AGENTS.md` et `docs/architecture.mdx`, à vérifier dans chaque PR :
+Rappel de `AGENTS.md` et `docs/fr/architecture.mdx`, à vérifier dans chaque PR :
 
 - Aucune ressource distante à l'exécution : **polices embarquées** (`@fontsource…` ou fichiers locaux), pas de Google Fonts.
 - Audio jamais écrit sur disque, y compris pour « Essayer avec ma voix » dans les paramètres.

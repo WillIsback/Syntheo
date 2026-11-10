@@ -1,0 +1,66 @@
+---
+title: "Bloc-notes de réunion local et open source"
+sidebarTitle: "Syntheo"
+description: "Enregistrez une réunion, prenez des notes et repartez avec un compte rendu clair, sans que vos données quittent votre infrastructure."
+---
+
+Syntheo est une application de bureau pour Linux et Windows. Elle capte votre microphone et l'audio de votre ordinateur sans rejoindre l'appel comme un robot. Chaque réunion devient une note vivante : vous la préparez, Syntheo écoute, puis il complète vos notes en compte rendu (備 Préparer · 聴 Écouter · 結 Synthèse). [Pourquoi le thé ?](/fr/philosophy)
+
+La transcription et les résumés passent uniquement par les serveurs que vous configurez (vLLM, Ollama, speaches, NVIDIA NIM…). Syntheo n'a ni compte, ni abonnement, ni télémétrie, et ne conserve jamais l'audio.
+
+<CardGroup cols={2}>
+  <Card title="Installer l'application" icon="download" href="/fr/desktop-installation">
+    Choisissez le paquet Linux (AppImage, `.deb`) ou l'installeur Windows signé.
+  </Card>
+  <Card title="Votre première réunion" icon="play" href="/fr/quickstart">
+    Configurez vos serveurs, puis lancez un premier enregistrement.
+  </Card>
+  <Card title="Configurer la transcription et l'IA" icon="server" href="/fr/ai-setup">
+    Renseignez l'URL de votre serveur de transcription et de votre LLM.
+  </Card>
+  <Card title="Enregistrer une réunion" icon="microphone" href="/fr/meetings">
+    Démarrez, suivez et terminez une capture.
+  </Card>
+  <Card title="Relire et exporter" icon="file-lines" href="/fr/notes">
+    Relisez le compte rendu, vos notes et la transcription, puis exportez-les.
+  </Card>
+  <Card title="Dossiers et projets" icon="folder-open" href="/fr/folders">
+    Rangez vos réunions par projet, suivez le fil rouge et préparez la suivante.
+  </Card>
+  <Card title="Vos données" icon="hard-drive" href="/fr/data-and-privacy">
+    Ce qui reste sur votre ordinateur et ce qui part vers vos serveurs.
+  </Card>
+</CardGroup>
+
+## Questions fréquentes
+
+<CardGroup cols={2}>
+  <Card title="Quelles langues sont prises en charge ?" icon="language" href="/fr/languages">
+    Langue principale, langues parlées supplémentaires et limites du modèle.
+  </Card>
+  <Card title="Puis-je importer un enregistrement ?" icon="file-arrow-up" href="/fr/import-recordings">
+    Créez une note à partir d'un fichier audio ou d'une transcription SRT ou VTT.
+  </Card>
+  <Card title="Comment améliorer les résumés ?" icon="wand-magic-sparkles" href="/fr/customize-summaries">
+    Modèles de compte rendu, consignes, langues et dictionnaire.
+  </Card>
+  <Card title="Puis-je dicter dans d'autres applications ?" icon="keyboard" href="/fr/dictation">
+    Un raccourci clavier transforme votre voix en texte dans le champ actif.
+  </Card>
+  <Card title="Peut-on automatiser la capture ?" icon="bolt" href="/fr/automatic-capture">
+    Détection de réunion, arrêt automatique et barre flottante.
+  </Card>
+  <Card title="Quelque chose ne fonctionne pas" icon="life-ring" href="/fr/troubleshooting">
+    Audio absent, transcription bloquée, compte rendu qui n'apparaît pas.
+  </Card>
+</CardGroup>
+
+## En bref
+
+1. Configurez votre serveur de transcription et votre serveur de synthèse dans **Paramètres → Mes serveurs** (voir [Configurer la transcription et l'IA](/fr/ai-setup)).
+2. Sur l'accueil, cliquez sur « Démarrer une réunion », puis sur « Commencer l'écoute ».
+3. Prenez des notes rapides pendant que Syntheo écoute : la transcription défile dans la marge.
+4. Cliquez sur « Terminer » : Syntheo rédige le compte rendu à partir de la transcription et de vos notes.
+5. Rangez la note dans un dossier pour suivre le projet d'une réunion à l'autre, et retrouvez-la avec <kbd>Ctrl</kbd> + <kbd>K</kbd>, par son titre ou son contenu.
+
+Vos notes sont stockées localement, dans une base SQLite sur votre ordinateur. L'audio vit en mémoire le temps d'être envoyé à votre serveur de transcription, puis disparaît. Voir [Données et confidentialité](/fr/data-and-privacy).

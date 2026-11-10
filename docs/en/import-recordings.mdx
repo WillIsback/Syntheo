@@ -1,0 +1,61 @@
+---
+title: "Import a recording"
+description: "Create a Syntheo note from an audio file or a subtitle file."
+---
+
+import { ImportScreen } from "/snippets/en/capture.gen.jsx";
+
+You can use Syntheo with a conversation recorded elsewhere:
+
+- import an **audio file** to have your server transcribe it;
+- import an existing SRT or VTT **transcript** to get a summary from it.
+
+Everything happens locally: Syntheo reads the files on your computer and uses no online import service.
+
+## Import an audio file
+
+1. On the home screen, click "Start a meeting", or open an empty note.
+2. Open the **•••** menu at the top right of the note and choose "Upload audio".
+3. Select the file.
+4. Keep Syntheo open during transcription.
+
+You can also drag an audio file onto an open note.
+
+Accepted formats: WAV, MP3, OGG, MP4, M4A, FLAC, WebM and AAC.
+
+You follow the progress in the note: "Generating transcript...", the percentage done, then the estimated time left, for example "About 3 min remaining". Click "Stop transcription" to interrupt the import.
+
+The capsule at the bottom of the note also switches to the "Import" state until the end: a progress bar, the percentage, then the time left and the speed-up once they are reliable, for example "~9 min left · ×2.1" ("estimating…" before that). "Stop" interrupts the import, like "Stop transcription".
+
+Try it: open the ••• menu (1) and choose "Upload audio". The progress appears in the "Transcription" margin (2) and in the capsule (3). In the replica, one second equals one minute of audio.
+
+<ImportScreen />
+
+Audio is not kept in the note. Syntheo chooses how to send the file based on your transcription server's protocol:
+
+- **"OpenAI · Realtime and batch"**: Syntheo sends the file to the `/v1/audio/transcriptions` endpoint, without making a copy. Long or large files are split into several requests.
+- **"NVIDIA NIM · WebSocket"**: Syntheo sends the file's audio over the `/v1/realtime` real-time stream, as for a live meeting, but up to four times faster than its duration. So allow at least a quarter of the recording's duration. The file is decoded in memory, without being written to disk. If the connection drops, Syntheo reconnects and resumes after the last transcribed passage, with no duplicates. If the server rejects the key or the settings, the import stops.
+
+When transcription is done, Syntheo writes a summary if a server is set up in **Settings → Synthesis**.
+
+<Note>
+  If your model can transcribe a file neither in batch nor live, the "Upload audio" menu item is grayed out. Click it to show "Can't import this audio" with the cause and the "Transcription settings" button.
+</Note>
+
+The "Upload audio" and "Upload transcript" menu items appear only in an empty note, with no transcript and no capture in progress.
+
+## Import a transcript
+
+1. On the home screen, click "Start a meeting", or open an empty note.
+2. Open the **•••** menu and choose "Upload transcript".
+3. Select a WebVTT (`.vtt`) or SubRip (`.srt`) file.
+
+Syntheo adds the timestamped text to the note, then writes a summary if a summary server is set up and the note does not have one yet.
+
+## If an import does not start
+
+- Check that the file is in a supported format.
+- For an audio file, check in **Settings → Transcription** that a model is selected and that "Test connection" succeeds.
+- If you are coming from another meeting assistant, export your meetings as SRT or VTT and import each transcript into an empty note (see above).
+
+See [Set up transcription and AI](/en/ai-setup) to set up servers, or [Troubleshooting](/en/troubleshooting) for common errors.

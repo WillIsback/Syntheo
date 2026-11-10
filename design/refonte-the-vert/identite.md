@@ -158,7 +158,7 @@ Français, vouvoiement, phrases courtes. Les boutons disent ce qui se passe (« 
 
 ## Récit
 
-Pourquoi le thé : ce récit est la source unique. La page `docs/philosophy.mdx` reprend la version longue, le README et l'accueil guidé la version courte. On ne réécrit pas ailleurs : on recopie.
+Pourquoi le thé : ce récit est la source unique. La page `docs/fr/philosophy.mdx` reprend la version longue, le README et l'accueil guidé la version courte. On ne réécrit pas ailleurs : on recopie.
 
 **Règle.** Chaque référence au thé doit expliquer un choix du produit. Si la phrase dit autant de choses sur Syntheo une fois la référence retirée, la référence est décorative : on la coupe. Les libellés fonctionnels restent en français clair (« Synthèse », « Commencer l'écoute »).
 
@@ -189,7 +189,7 @@ Pourquoi le thé : ce récit est la source unique. La page `docs/philosophy.mdx`
 | Choix du produit                  | Dans le rituel                                                                                                                             | Garantie                                                                        |
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------- |
 | Le compte rendu part de vos notes | le _kaiki_ est le carnet d'un participant, pas un procès-verbal                                                                            | vos notes en `user-ink`, le texte de Syntheo en `foreground` (`provenance.tsx`) |
-| L'audio n'est jamais conservé     | 一期一会 : le moment ne se rejoue pas, seul le _kaiki_ reste                                                                               | `docs/data-and-privacy.mdx`, `docs/conformite/rgpd.md`                          |
+| L'audio n'est jamais conservé     | 一期一会 : le moment ne se rejoue pas, seul le _kaiki_ reste                                                                               | `docs/fr/data-and-privacy.mdx`, `docs/fr/conformite/rgpd.md`                    |
 | Rien n'est envoyé à l'éditeur     | le _chakai_ se tient dans une pièce fermée ; vos serveurs d'inférence apportent le thé depuis l'extérieur, mais c'est vous qui les invitez | pas de compte, pas de télémétrie (`no-telemetry.test.ts`)                       |
 | L'étape Préparer                  | la préparation de l'hôte fait déjà partie de l'attention portée aux invités                                                                | fiche : type de réunion, participants, écoute                                   |
 

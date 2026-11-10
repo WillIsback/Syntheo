@@ -1,0 +1,127 @@
+---
+title: "Customize summaries"
+description: "Choose a summary template, create your own or have the AI propose its sections."
+---
+
+import { Kbd, SettingsPath, TemplatesEditor } from "/snippets/en/organize.gen.jsx";
+
+A summary follows either the "Automatic" format or a template with fixed sections. You manage both in the **Templates** view, opened from Settings or from the palette <Kbd keys="Ctrl+K" />:
+
+<SettingsPath steps={["Settings", "My meetings", "Templates"]} />
+
+The left column lists the templates by group: "Automatic", "Favorites", then one group per folder that uses a template (named after the folder), then "General templates". Each template appears only once: a favorite stays under "Favorites". Use "Search a template" to filter the list; the search also covers folder names.
+
+## The provided templates
+
+Syntheo installs 21 templates in French.
+
+Four Syntheo templates are marked as favorites and appear under "Favorites":
+
+| Template | Use |
+| --- | --- |
+| Réunion générale (general meeting) | Standard summary: participants, decisions and follow-up actions. |
+| Comité conformité / RGPD (compliance / GDPR committee) | Regulatory context, decisions, blockers before production. |
+| Point projet / Sprint (project update / sprint) | Progress, blockers, next steps. |
+| Standup équipe (team standup) | Short format: done, in progress, blockers. |
+
+Seventeen other templates cover common cases: board meeting, brainstorming session, client kickoff, client discovery interview, daily standup, leadership meeting, incident post-mortem, investor meeting, lecture notes, one-on-one (1:1), annual review, product roadmap review, project kickoff, sales discovery call, sprint planning, sprint retrospective and technical design review.
+
+All these templates can be edited. To add a template to favorites or remove it, right-click its name in the list and choose "Add to favorites" or "Remove from favorites". In the editor, the "Add to favorites" button (or "In favorites") does the same.
+
+## Choose a template for a meeting
+
+Before the meeting, at the **Prepare** stage, click the type shown next to "Type", in the note's card ("Automatic" by default). Search for a template with "Search a meeting type", then select it. The summary will follow this template.
+
+If the note is filed in a folder that has a default template, the type shows that template followed by "— folder template". Choosing another template in the list sets it on the note.
+
+After the meeting, at the **Synthesis** stage, open the "Summary versions" menu (the arrow next to "Summary · v1", below the title), then choose "Change template…". Selecting another template replaces the summary with a new one, written according to that template. To apply the same template again, use "Regenerate". See [Notes, summaries and transcripts](/en/notes).
+
+## Choose a template per folder
+
+Give a folder a default template so that all its meetings follow the same format.
+
+1. Open the folder page (see [Folders and projects](/en/folders)).
+2. In the right column, under "Summary template", choose a template. "None" removes the folder's template.
+
+This template applies to the notes of the folder and its subfolders that have no template chosen. A subfolder without a template inherits the one of the closest parent folder: the page tells you, for example "Without one, notes use Point projet / Sprint from the Clients folder."
+
+To write a summary, Syntheo picks the first template available in this order:
+
+1. the template chosen when the summary is started, for example with the picker at the Synthesis stage;
+2. the template chosen on the note, at the Prepare stage;
+3. the template of the note's folder, or of its closest parent folder;
+4. the template marked "Use by default";
+5. the "Automatic" format.
+
+A deleted template is no longer applied.
+
+### File a note that already has a summary
+
+If you file a note that already has a summary in a folder whose template is different, Syntheo shows "This folder uses the … template": "Regenerate the summary with this template? The current version stays in the history." Click "Regenerate" to apply the folder's template. Without a click, the summary does not change. No proposal appears if the note has a chosen template or if its summary already follows this template.
+
+## Create a template
+
+1. Open the **Templates** view.
+2. Click "+ New template" at the bottom of the list.
+3. Give it a name and a description ("What is this template for?").
+4. Under "Used for", click "+ Add" to indicate which meetings this template is meant for (team, role, frequency…), for example "Weekly" or "HR team".
+5. Under "Sections", add sections with "+ Add a section". Each section has a title and a one-line instruction: "Describe in one line what Syntheo should write here."
+
+To reorder the sections, drag a section's handle. With the keyboard, put the focus on the handle and use the up and down arrows.
+
+Changes are saved as you go. The editor's "More actions" menu offers "Use by default", "Duplicate" and "Delete". The template used by default shows "Default template" in the editor and "default" in the list.
+
+### See the shape of the summary
+
+At the top of the editor, switch from "Edit" to "Preview". The preview shows the shape of the summary: each section with a sample line written according to its instruction.
+
+Try the **Templates** view below. The left column (1) lists the groups: "Project / sprint check-in", the Product folder's template, stays under "Favorites". Type "clients" in "Search a template" (2): the Clients folder's template appears. Switch to "Preview" (3), click "Suggest sections" (4), then move a section with its handle and the up and down arrows (5). Select **Automatic** to see its editor.
+
+<TemplatesEditor />
+
+## Suggest sections with AI
+
+In a template's editor, the "Describe the meeting, Syntheo suggests the sections…" field has your local summary server write the sections.
+
+1. Describe the meeting in one sentence, for example: "Monthly security review with the infrastructure team". If you leave the field empty, Syntheo starts from the template's name and description.
+2. Click "Suggest sections".
+3. Syntheo suggests 3 to 6 sections. Review them and adjust them.
+
+<Warning>
+  The suggested sections replace the sections of the open template. The name, the icon and the description are filled in only if they are still empty. Duplicate a template you want to keep first.
+</Warning>
+
+The button stays disabled as long as no summary server is connected: "Configure your summary server in Settings to get section suggestions.". See [Set up transcription and AI](/en/ai-setup).
+
+## Customize "Automatic"
+
+The "Automatic" format lets Syntheo structure the summary itself, without a fixed template. It is used when no template applies to the meeting: not on the note, not on its folder, not by default.
+
+1. Open the **Templates** view and select **Automatic**.
+2. Edit the "Summary format", then click "Save".
+
+In the replica below, "Automatic" is open: edit the format and "Save" becomes active. When a custom format is saved, the list shows "customized" next to "Automatic"; "Reset to default format", in the **•••** menu, removes it.
+
+<TemplatesEditor start="automatique" markers={false} />
+
+For example:
+
+```text
+Start with the decisions. Then list the action items, each with an owner and a due date. Keep the context to three bullets.
+```
+
+"Improve with examples" lets you paste up to three summaries you like (or attach Markdown or text files): your language model derives a new format from them. "Reset to default format", in the "Template actions" menu, restores the original format.
+
+Notes, the transcript and participants are always sent to the language model, whatever the format. The "Automatic" format applies only when "Automatic" is selected: the other templates keep their sections.
+
+After generation, the "Make the summary shorter." and "Make the summary longer." suggestions in the [chat](/en/chat) let you adjust the length.
+
+## Improve names and specialized terms
+
+Under **Settings → Writing → "Dictionary"**, add the names of colleagues, acronyms, product names and business terms that transcription recognizes poorly. Syntheo sends them as hints to your transcription server; their effect depends on what that server supports.
+
+The dictionary does not replace choosing the right spoken languages. See [Languages](/en/languages).
+
+## Apply your changes
+
+New summaries use the selected format. Regenerate an old summary to apply the latest version of a template or of the "Automatic" format to it.

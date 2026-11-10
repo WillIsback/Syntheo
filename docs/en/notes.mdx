@@ -1,0 +1,118 @@
+---
+title: "Notes, summaries and transcripts"
+description: "Review a meeting, correct the details and export the result."
+---
+
+import { AppPalette, Kbd, NoteActions, SettingsPath } from "/snippets/en/organize.gen.jsx";
+
+Once listening is over, the note moves to the **Synthesis** stage. Everything fits in a single document:
+
+- **the summary**, written by your summary server;
+- **"Your notes"**, the notes you took yourself, below the summary;
+- **the transcript**, which you show in the right margin.
+
+A "Text provenance" legend reminds you who wrote what: your notes are in green ("Your notes"), Syntheo's text is in normal ink ("Completed by Syntheo"). The 記 seal at the bottom of the summary shows that it is complete.
+
+You edit the summary and your notes like ordinary text.
+
+<Note>
+  Syntheo never keeps audio. So there is no audio player and no re-transcription afterwards: the transcript produced during the capture is the only record of the conversation.
+</Note>
+
+## Act on the note
+
+The capsule at the bottom of the window groups the actions of the Synthesis stage:
+
+- **"Copy"** copies the displayed summary to the clipboard, in Markdown format (or your notes, if there is no summary yet).
+- **"Export"** (<Kbd keys="Ctrl+P" />) opens the export window (see below).
+- **"Automations"** runs a ready automation on this note. The button appears only if at least one automation is ready. See [Automations](/en/automations).
+- **"Ask the note"** (<Kbd keys="Ctrl+J" />) opens the chat about this meeting. See [Chat with your meetings](/en/chat).
+
+At the top right of the note, next to the folder picker, the **•••** menu groups the actions you cannot find elsewhere:
+
+- "Meeting info": the date and the participants;
+- "Version history";
+- "Upload audio" and "Upload transcript", only in an empty note;
+- "Run an automation", with the ready automations;
+- "Open in New Window", and "Open floating panel" during a capture;
+- "Always on Top";
+- "Lock Note" and "Delete".
+
+Try it below: open the **•••** menu (1), then click "Export" in the capsule (2). The "Transcription" button (3) shows the right margin. In the export window, choose a format (4) and the items to include (5): uncheck everything and "Save" becomes inactive.
+
+<NoteActions />
+
+## Review a proposed edit
+
+When the chat, the CLI or the local MCP server proposes to replace the summary, the proposal appears in its place, at the Synthesis stage: "Proposed edit to the summary". Removed text is struck through, added text is highlighted. Choose "Apply to summary" or "Decline". Until you apply it, the summary stays unchanged.
+
+A pending proposal also shows the "1 pending edit" banner at the top of the note, with "Review summary" or, for your notes, "Review memo".
+
+## Show and correct the transcript
+
+- Click "Transcription", on the right of the info line below the title, to show or hide the margin.
+- In the margin, click "Edit" to switch to edit mode, then "Done" to go back to reading. This button appears only once listening is over.
+- Select words to show a menu: "Edit", "Change speaker from here" or "Copy".
+- Select several blocks to reassign them at once with "Change speaker", "Merge" them or "Delete" them (in edit mode).
+- Click a speaker's name to choose an existing participant or "Create new speaker". Check "Apply to all" to update all of this speaker's segments.
+
+## Choose the shape of the summary
+
+The meeting type chosen at the Prepare stage sets the summary template. Without a choice on the note, Syntheo uses the template of the note's folder, if it has one. At the Synthesis stage, the name of the template used appears in the info line below the title.
+
+On the right of this line, "My notes" and "Summary · v1" switch between your notes and the summary. The arrow next to them ("Summary versions") opens a menu:
+
+- "Versions" lists the summary versions; the current version is marked "Current";
+- "Regenerate" writes the summary again;
+- "Change template…" opens the picker: search for a template ("Search templates...") and select it to replace the summary with a new one, written according to that template. "See all templates" opens the template editor;
+- "Copy" copies the summary.
+
+See [Customize summaries](/en/customize-summaries) to create your own templates.
+
+## Complete an existing note
+
+A note left without a summary, for example because you quit Syntheo during a pause, offers "Resume listening" and "Generate the summary" in its capsule. "Resume listening" adds a new capture to the same note. For a pause during a meeting, use "Put on pause" in the capsule instead: see [Take a break](/en/meetings#take-a-break).
+
+In an empty note, the same menu also offers "Upload audio" and "Upload transcript". See [Import a recording](/en/import-recordings).
+
+## Export a meeting
+
+1. Click "Export" in the capsule, or press <Kbd keys="Ctrl+P" />. On the home screen, you can also right-click a note under "Resume" and choose "Export…", without opening it.
+2. Under "File format", choose PDF, TXT, Markdown or Org.
+3. Under "Include", check "Memo", "Summary" and "Transcript", in any combination.
+
+4. Click "Save". "Print…" always opens a PDF in your viewer, whatever format you chose: choose Print there.
+
+With no item checked, "Save" and "Print…" stay inactive.
+
+Syntheo writes the file to your export folder, then shows it in the file manager. By default, this is your Downloads folder ("Saved in Downloads"). To change it:
+
+<SettingsPath steps={["Settings", "Me", "Profile", "Storage", "Export location"]} />
+
+To export every meeting to Markdown automatically, or chain other actions after a meeting, see [Automations](/en/automations). The CLI also exports a meeting to Markdown or JSON (`syntheo meetings export`).
+
+Syntheo offers no online sharing: to pass on a meeting, export it, then send the file by the means of your choice.
+
+## Find a note
+
+- The home screen lists your latest notes under "Resume", each with its folder's badge, and your active folders under "Your folders".
+- The "Search a note" palette (<Kbd keys="Ctrl+K" />) shows your recent notes ("Recent"), then "All Notes". Type a few words to search.
+- The **Folders** view sorts your notes by folder. See [Folders and projects](/en/folders).
+
+### Search with the palette
+
+The palette searches both the titles and the content of your notes. Matching titles appear right away; notes found by their content arrive after a short pause in typing, with an excerpt of the passage.
+
+Folders whose name matches appear first, under "Folders", with their number of meetings. Then come the notes whose title matches, then those found only in their content; each note shows its folder and its date. People and organizations have their own group, "Contacts".
+
+To search a single folder, highlight it and press <Kbd keys="Tab" />. The search is then limited to that folder and its subfolders; <Kbd keys="Backspace" /> in the empty field leaves it. See [Search in a folder](/en/folders#search-in-a-folder).
+
+The palette also opens the other views (Settings, Templates, Folders, Contacts, Automations) and offers a few commands.
+
+In the replica below, the palette opens empty: browse "Recent", "Go to" and "All Notes" with the arrow keys, then type "quota" to see a note found by its content, with its excerpt.
+
+<AppPalette demo="recherche-contenu" />
+
+### Mention a note or a folder
+
+In your notes and in the chat, type <Kbd keys="@" /> to mention a folder, a note or a contact. The suggestions come from the same engine as the palette, in the same order. A mentioned folder opens its page.

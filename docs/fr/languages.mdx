@@ -1,0 +1,50 @@
+---
+title: "Utiliser plusieurs langues"
+description: "Choisissez la langue des résumés et du chat, et indiquez à la transcription les langues à attendre."
+---
+
+import { AppSettings, Kbd, SettingsPath } from "/snippets/start.gen.jsx";
+
+Syntheo distingue la langue utilisée pour les résumés et le chat des langues qu'il doit s'attendre à entendre pendant une réunion. Ces réglages se trouvent dans la page **Profil** des paramètres, section « Langue et région » :
+
+<SettingsPath steps={["Paramètres", "Moi", "Profil", "Langue et région"]} />
+
+<Note>
+  La langue de l'interface (le français par défaut) est indépendante de ces réglages.
+</Note>
+
+## Choisir la langue principale
+
+Choisissez la « Langue principale ». C'est la langue par défaut pour la transcription et pour les réponses de l'IA : le chat l'utilise, et elle sert de repli pour les résumés. Elle fait toujours partie des langues de transcription.
+
+Par défaut, les résumés suivent la langue détectée de la réunion parmi les langues que vous avez sélectionnées. Les titres générés suivent le résumé. Si la détection n'aboutit pas, Syntheo utilise votre langue principale.
+
+Activez « Utiliser la langue principale pour les résumés » pour écrire tous les résumés dans votre langue principale, même quand la réunion se tient dans une autre langue sélectionnée. Cette option est désactivée par défaut et ne retire pas vos langues parlées supplémentaires.
+
+Changer de langue principale ne traduit pas une transcription existante. Régénérez le résumé d'une ancienne réunion pour appliquer la nouvelle langue.
+
+## Ajouter des langues parlées
+
+Dans « Langues parlées supplémentaires », ajoutez les autres langues que les participants peuvent utiliser. Syntheo s'en sert pour la transcription et pour détecter automatiquement la langue des résumés.
+
+Syntheo transmet ces langues à votre serveur de transcription comme indication. C'est le modèle qui décide de ce qu'il sait reconnaître : si une langue manque ou est mal transcrite, essayez un autre modèle sur votre serveur, puis sélectionnez-le dans **Paramètres → Mes serveurs → Transcription**. Syntheo vous avertit quand le modèle choisi ne peut pas transcrire toutes les langues sélectionnées : sous les langues parlées, le message « Le modèle de transcription en direct ne gère qu'une langue à la fois. Pour en transcrire plusieurs, changez de modèle. » apparaît, et le lien « changez de modèle » ouvre la page **Transcription**.
+
+La section se termine par le « Fuseau horaire », qui règle l'heure affichée dans la chronologie.
+
+Dans la reproduction ci-dessous, changez la « Langue principale », activez « Utiliser la langue principale pour les résumés », puis tapez un nom de langue dans « Langues parlées supplémentaires » (par exemple « allemand ») : cliquez dessus ou utilisez <Kbd keys="↓" /> puis <Kbd keys="Entrée" />. <Kbd keys="Retour arrière" /> dans le champ vide retire la dernière langue. Cochez « simuler un modèle de transcription qui ne gère qu'une langue » pour afficher l'avertissement.
+
+<AppSettings section="app" focus="language" />
+
+## Langues proposées
+
+Les paramètres proposent les langues suivantes, pour la langue principale comme pour les langues parlées supplémentaires :
+
+allemand, anglais, arabe, bengali, biélorusse, bosniaque, bulgare, catalan, chinois, coréen, croate, danois, espagnol, estonien, finnois, français, grec, hébreu, hindi, hongrois, indonésien, italien, japonais, kannada, letton, lituanien, macédonien, malais, marathi, néerlandais, norvégien, ourdou, persan, philippin, polonais, portugais, roumain, russe, serbe, slovaque, slovène, suédois, tamoul, tchèque, télougou, thaï, turc, ukrainien et vietnamien.
+
+Cette liste ne garantit pas que votre modèle de transcription couvre chaque langue : reportez-vous à la documentation du modèle que vous servez (par exemple Whisper ou Voxtral).
+
+## Noms propres et jargon
+
+Choisir une langue n'apprend pas au modèle le vocabulaire de votre organisation. Ajoutez les noms, acronymes et termes métier dans **Paramètres → Écrire → Dictionnaire**.
+
+Pour la structure et le ton des résumés, voir [Personnaliser les comptes rendus](/fr/customize-summaries).

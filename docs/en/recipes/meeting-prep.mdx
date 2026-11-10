@@ -1,0 +1,48 @@
+---
+title: "Prepare a recurring meeting"
+description: "Build a prep sheet from your previous meetings."
+---
+
+This recipe helps an agent (through the [local MCP server](/en/agents/mcp) or the [CLI](/en/agents/cli)) prepare the next occurrence of a recurring meeting without loading every transcript.
+
+<Steps>
+  <Step title="Find the previous meetings">
+    Call `list_meetings` with part of the title, or run:
+
+    ```bash
+    syntheo --json meetings list --query "point projet" --limit 10
+    ```
+
+    Note the ID of the most recent meeting, as well as those of relevant earlier occurrences.
+  </Step>
+  <Step title="Read their structured context">
+    Call `get_meeting`, or run:
+
+    ```bash
+    syntheo --json meetings get MEETING_ID
+    ```
+
+    Note the open action items, the decisions found in the notes or summaries, and the participants.
+  </Step>
+  <Step title="Check the series history (if available)">
+    Call `get_recurring_meeting_history` with the meeting ID, or run:
+
+    ```bash
+    syntheo --json meetings history MEETING_ID --limit 5 --offset 0
+    ```
+
+    Syntheo doesn't connect to any calendar: a meeting only has a series if it was imported with a series ID. Most of the time, the list is empty. In that case, rely on the title search from the first step.
+  </Step>
+  <Step title="Use the transcript sparingly">
+    If a decision is unclear, call `get_meeting_transcript` with `limit: 200`, or run:
+
+    ```bash
+    syntheo --json meetings transcript MEETING_ID --limit 200 --offset 0
+    ```
+
+    Only continue from `next_offset` if needed.
+  </Step>
+  <Step title="Write the sheet">
+    Focus on unresolved action items, past decisions, topics to cover and useful context about each participant. Separate what comes from the meetings from your own inferences.
+  </Step>
+</Steps>

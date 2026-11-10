@@ -1,0 +1,152 @@
+---
+title: "Crates audio, capture et transcription"
+description: "Carte des crates Rust qui capturent l'audio, détectent la parole, parlent aux serveurs STT et assemblent la transcription."
+---
+
+Cette page décrit les crates de `crates/` qui portent la capture audio, la transcription et la détection de réunion. Elle sert à savoir quel code pilote quel comportement documenté. Le flux de bout en bout est décrit dans [Architecture](/fr/architecture).
+
+Dans les `Cargo.toml`, ces crates sont référencées par l'alias de workspace `syntheo-<nom>` (par exemple `syntheo-audio-actual`), sauf `owhisper-client`, `owhisper-interface` et `openai-transcription`, qui gardent leur nom.
+
+## Chaîne principale
+
+1. `apps/desktop/src-tauri` crée le fournisseur audio : `syntheo-audio-actual` (`ActualAudio`), ou `syntheo-audio-mock` en build de développement.
+2. `plugins/transcription` passe par `syntheo-transcription-core`, qui réexporte `syntheo-listener-core` (écoute en direct) et `syntheo-listener2-core` (import par lot).
+3. Les deux listeners parlent au serveur STT via `owhisper-client`, qui s'appuie sur `openai-transcription` et `syntheo-ws-client`.
+4. `syntheo-transcript` assemble les mots reçus en segments et en locuteurs.
+5. `plugins/dictation` réutilise `syntheo-audio` et `owhisper-client` pour la dictée.
+
+## Capture audio
+
+| Crate | Rôle | Utilisée par |
+| --- | --- | --- |
+| `crates/audio` | Contrat commun de capture : trait `AudioProvider`, `CaptureConfig`, `CaptureFrame`, `CaptureStream`, `CaptureEvent`. Aucune implémentation. | `audio-actual`, `audio-mock`, `listener-core`, `plugins/dictation`, `plugins/permissions`, `plugins/transcription` |
+| `crates/audio-actual` | Implémentation réelle (`ActualAudio`) : capture micro via `cpal`, capture de l'audio système, annulation d'écho et resynchronisation. | `apps/desktop/src-tauri` |
+| `crates/audio-mock` | Fournisseur factice `MockAudio`, qui rejoue des fichiers de `syntheo-data`. | `apps/desktop/src-tauri`, seulement avec les features `dev` ou `devtools` |
+| `crates/audio-device` | Énumération des périphériques et choix par défaut par plateforme (`backend()`, `AudioDeviceBackend`), gestion des entrées Bluetooth et des sorties casque. | `audio-actual`, `device-monitor`, `listener-core`, `plugins/audio-priority` |
+| `crates/device-monitor` | Surveille les changements de périphériques (`DeviceMonitor`, `DeviceSwitchMonitor`, `DeviceUpdateMonitor`) avec un anti-rebond de 1 s. | `listener-core` |
+| `crates/audio-sync` | Mesure du décalage micro / audio système (`GccPhatLagEstimator`, `LagTrendTracker`) et des niveaux (`LevelAccumulator`, dBFS). | `audio-actual` |
+| `crates/aec` | Annulation d'écho acoustique par modèle ONNX (`AEC`, `BLOCK_SIZE`, `BLOCK_SHIFT`). Feature `onnx` active par défaut. | `audio-actual` (`capture/echo_gate.rs`) |
+| `crates/audio-interface` | Trait `AsyncSource`, abstraction d'une source audio asynchrone. | `audio-actual`, `audio-utils`, `resampler` |
+| `crates/audio-utils` | Outils PCM : décodage (`rodio`, `symphonia`), métadonnées, rééchantillonnage, conversion `f32` / `i16`, découpage pour le STT (`chunk_size_for_stt`), lecture (`open_default_playback_sink`). | `aec`, `audio-actual`, `audio-mock`, `listener-core`, `listener2-core`, `mp3`, `vad-masking`, `fs-sync-core`, `plugins/sfx` |
+| `crates/audio-mime` | Une fonction : `content_type_to_extension`. | `audio-utils` |
+| `crates/resampler` | Rééchantillonnage par blocs (`RubatoChunkResampler`) au-dessus de `rubato`. | `audio-actual`, `audio-utils` |
+| `crates/mp3` | Encodage MP3 et WAV en flux ou par segments, en mémoire (`encode_mono_segments_in_memory`). | `listener2-core` (`batch/upload.rs`) |
+
+### `crates/audio-actual`
+
+- **Rôle** : le seul fournisseur audio des builds publiés. `apps/desktop/src-tauri/src/lib.rs` (`create_audio_provider`) l'instancie, sauf si `MOCK_AUDIO` est défini dans un build `dev` ou `devtools`.
+- **API** : `ActualAudio`, `AudioInput`, `AudioOutput`, `AudioSource`, `AudioStream` ; réexporte `AudioProvider`, `CaptureConfig`, `CaptureFrame`, `CaptureStream` de `crates/audio`.
+- **Capture de l'audio système** : `src/speaker/` contient une implémentation par plateforme. Sous Linux, elle s'appuie sur PulseAudio (`libpulse-binding`) et PipeWire ; sous Windows, sur `wasapi` ; sous macOS, sur `cidre`. La sortie choisie dans les réglages est prise en compte, sinon la sortie par défaut.
+- **Capture** : `src/capture/` assemble micro et audio système (`joiner.rs`), applique l'annulation d'écho (`echo_gate.rs`) et gère la reprise après erreur (`recovery.rs`).
+- **Dépendances internes** : `aec`, `audio`, `audio-device`, `audio-interface`, `audio-sync`, `audio-utils`, `resampler`.
+- **Pages de doc concernées** : [/meetings](/fr/meetings), [/troubleshooting](/fr/troubleshooting) (audio sous Linux et Windows), [/data-and-privacy](/fr/data-and-privacy) (audio jamais conservé).
+
+## Détection d'activité vocale
+
+| Crate | Rôle | Utilisée par |
+| --- | --- | --- |
+| `crates/vad` | Détection de parole. Deux moteurs derrière des features : `earshot` (module `earshot`) et `silero-onnx` (module `silero_onnx`). Les consommateurs n'activent que `earshot` ; Silero ne sert qu'au banc d'essai et aux tests de comparaison. | `vad-masking`, `fs-sync-core` |
+| `crates/vad-masking` | Masquage des silences avant envoi au STT, en lot (`masking`) ou en flux (`streaming`, `VadConfig`). | `listener-core` |
+| `crates/onnx` | Chargement de modèles ONNX avec `ort` (`load_model_from_bytes`, `load_model_from_path`, variante accélérée) ; réexporte `ort` et `ndarray`. | `aec`, `vad` (feature `silero-onnx`) |
+
+**Pages de doc concernées** : [/meetings](/fr/meetings) pour `vad-masking` ; aucune pour `vad` et `onnx` pris isolément.
+
+## Sessions d'écoute
+
+### `crates/listener-core`
+
+- **Rôle** : moteur de l'écoute en direct. Des acteurs (`src/actors/`) gèrent la session (`session/`), la source audio (`source/`, avec les sourdines et le suivi des périphériques), la connexion STT (`listener/`), le balayage audio (`audio_sweep.rs`) et la lecture d'un fichier au rythme du temps réel (`file_stream/`).
+- **API** : `State`, `Snapshot`, `TranscriptionMode`, `StartSessionError`, `DegradedError`, les événements (`events.rs`) et la transcription en direct (`live_transcript`).
+- **Garantie** : le test `supervisor_writes_no_audio_to_session_dir` vérifie qu'aucun fichier audio n'apparaît dans le dossier de session.
+- **Dépendances internes** : `audio`, `audio-device`, `audio-utils`, `device-monitor`, `language`, `storage`, `supervisor`, `transcript`, `vad-masking`, `owhisper-client`, `owhisper-interface`.
+- **Pages de doc concernées** : [/meetings](/fr/meetings), [/automatic-capture](/fr/automatic-capture), [/data-and-privacy](/fr/data-and-privacy), [/offline](/fr/offline), [/troubleshooting](/fr/troubleshooting).
+
+### `crates/listener2-core`
+
+- **Rôle** : transcription par lot d'un fichier importé. `src/batch/` propose un mode simple et un mode progressif ; `upload.rs` découpe l'audio en segments MP3 en mémoire avant envoi.
+- **API** : `BatchRuntime`, `BatchParams`, `BatchEvent`, `BatchRunMode` ; `is_supported_languages_live` / `_batch`, `suggest_providers_for_languages_live` / `_batch`, `list_documented_language_codes_batch` ; lecture et export de sous-titres (`parse_subtitle_from_path`, `export_words_to_vtt_file`).
+- **Dépendances internes** : `audio-utils`, `language`, `mp3`, `user-error`, `owhisper-client`, `owhisper-interface`.
+- **Pages de doc concernées** : [/import-recordings](/fr/import-recordings), [/languages](/fr/languages).
+
+### `crates/transcription-core`
+
+- **Rôle** : façade unique pour `plugins/transcription`. Les modules `listener` et `listener2` réexportent `listener-core` et `listener2-core`. Le module `realtime_file` importe un fichier par le flux temps réel : décodage en mémoire, passage par `file_stream`, puis rendu au format batch, sans rien écrire sur le disque.
+- **Dépendances internes** : `listener-core`, `listener2-core`, `owhisper-interface`.
+- **Pages de doc concernées** : [/meetings](/fr/meetings), [/import-recordings](/fr/import-recordings).
+
+### `crates/supervisor`
+
+- **Rôle** : supervision d'acteurs : budget de redémarrages (`RestartBudget`, `RestartTracker`), relance avec stratégie (`RetryStrategy`, `spawn_with_retry`), superviseur dynamique (`dynamic`).
+- **Utilisée par** : `listener-core` (redémarrage de la source audio).
+- **Pages de doc concernées** : [/meetings](/fr/meetings) (reprise sans redémarrer la capture).
+
+## Clients STT
+
+| Crate | Rôle | Utilisée par |
+| --- | --- | --- |
+| `crates/owhisper-client` | Adaptateurs STT : protocole OpenAI en temps réel et par lot (`adapter/openai/`), endpoint `/v1/audio/transcriptions` compatible (`adapter/openai_compatible_batch.rs`) et NVIDIA NIM / Riva en WebSocket (`adapter/nvidia.rs`). Expose `BatchClient`, `Provider` (seule variante : `OpenAI`), `normalize_listen_params`, les flux live et batch. | `listener-core`, `listener2-core`, `plugins/dictation`, `plugins/transcription` |
+| `crates/owhisper-interface` | Types partagés du protocole : `ListenParams`, `stream`, `batch`, `batch_sse`, `batch_stream`, `InferenceProgress`, description OpenAPI (`openapi`). | `owhisper-client`, `listener-core`, `listener2-core`, `transcript`, `transcription-core`, `plugins/dictation`, `plugins/transcription` |
+| `crates/openai-transcription` | Modèles de requêtes et réponses OpenAI : `batch` (dont `AudioModel`) et `realtime`. | `owhisper-client` |
+| `crates/ws-client` | Client WebSocket avec relance (`client`, `retry`) au-dessus de `tokio-tungstenite` (TLS natif). | `owhisper-client`, qui le réexporte |
+
+**Pages de doc concernées** : [/ai-setup](/fr/ai-setup), [/meetings](/fr/meetings), [/dictation](/fr/dictation), [/import-recordings](/fr/import-recordings), [/offline](/fr/offline), [/troubleshooting](/fr/troubleshooting), [/conformite/rgpd](/fr/conformite/rgpd).
+
+## Transcription et langues
+
+### `crates/transcript`
+
+- **Rôle** : transforme les mots reçus du STT en transcription : traitement (`TranscriptProcessor`), post-traitement, segments (`build_segments`), étiquettes de locuteurs (`SpeakerLabeler`, `render_speaker_label`), contexte des locuteurs, raffinement après lot (`batch_refine`), matérialisation en direct et rendu.
+- **Dépendances internes** : `template-app`, `owhisper-interface`.
+- **Utilisée par** : `listener-core`, `plugins/transcription`, `agent-access` (CLI et serveur MCP).
+- **Pages de doc concernées** : [/meetings](/fr/meetings), [/notes](/fr/notes), [/contacts](/fr/contacts), [/reference/cli](/fr/reference/cli), [/reference/mcp](/fr/reference/mcp).
+
+### `crates/language`
+
+- **Rôle** : codes de langue ISO 639-1 (`ISO639`, `Language`), listes de langues supportées (`whisper_multilingual`, `parakeet_tdt_v3_languages`), détection (`detect`, via `whatlang`) et langue dominante d'un texte (`dominant_language`).
+- **Dépendances internes** : `whisper` (feature `whisper`, active par défaut).
+- **Utilisée par** : `detect`, `listener-core`, `listener2-core`, `owhisper-client`, `owhisper-interface`, `plugins/tantivy`, `plugins/template` (commande `dominant_language`), `plugins/transcription`.
+- **Pages de doc concernées** : [/languages](/fr/languages).
+
+### `crates/whisper`
+
+Aucun modèle Whisper : la crate ne contient que l'énumération `Language` des langues du tokenizer Whisper (`whisper_index`). Seule `crates/language` l'utilise. **Pages de doc concernées** : aucune.
+
+## Détection de réunion
+
+### `crates/detect`
+
+- **Rôle** : observe le poste pour déclencher la capture automatique. Modules derrière des features : `mic` (micro utilisé par une autre application ; PulseAudio sous Linux), `list` (applications installées), `app`, `zoom`, `sleep` (mise en veille), `screen` (capture d'écran via `xcap`), `language`. `meeting_ax` lit l'accessibilité macOS.
+- **API** : `Detector`, `DetectEvent`, `DetectCallback`, `new_callback`, `BackgroundTask`.
+- **Dépendances internes** : `language` ; `bundle` sous macOS.
+- **Utilisée par** : `plugins/detect` (features `mic`, `list`, `language`, `sleep`, `screen`).
+- **Pages de doc concernées** : [/automatic-capture](/fr/automatic-capture).
+
+## Crates propres à macOS
+
+Aucun build macOS n'est publié (voir [Architecture](/fr/architecture)). Ces crates appellent du code Swift via `swift-rs` et n'ont d'effet que sous macOS.
+
+| Crate | Rôle | Utilisée par |
+| --- | --- | --- |
+| `crates/tcc` | Statut, demande et réinitialisation des permissions TCC (capture audio, capture d'écran, micro). | `plugins/permissions`, seulement avec la feature optionnelle `private-tcc` |
+| `crates/intercept` | Gestionnaire de fermeture forcée et overlay de sortie (`setup_force_quit_handler`, `should_force_quit`, `show_quit_overlay`). Hors macOS, seul le drapeau `should_force_quit` / `set_force_quit` est compilé. | `apps/desktop/src-tauri`, `plugins/tray`, `plugins/dock` (macOS) |
+| `crates/dictation-ui-macos` | Overlay natif de dictée (`show`, `hide`, `update_state`) et insertion du texte dans l'application cible (`capture_target`, `insert_text`). | `plugins/dictation` (dépendance macOS uniquement) |
+
+**Pages de doc concernées** : aucune, tant que macOS n'est pas distribué.
+
+## Crates annexes
+
+| Crate | Rôle | Statut | Pages de doc concernées |
+| --- | --- | --- | --- |
+| `crates/session-ingest` | Format d'import d'une session (`SessionIngestEnvelope`, `IngestSession`, `IngestTranscript`…) et application en base (`apply_session_envelope`, feature `apply`). | Exposée par la commande `apply_session_ingest` de `plugins/db`. Aucun appel trouvé dans `apps/desktop/src`. | aucune |
+| `crates/gbnf` | Énumération `Grammar` qui produit des grammaires GBNF (`build`). | Seulement enregistrée comme type `specta` par `plugins/template`. | aucune |
+| `crates/buffer` | `opinionated_md_to_html` : conversion Markdown vers HTML. | Exposée par `plugins/misc`. Aucun appel trouvé dans `apps/desktop/src`. | aucune |
+| `crates/audacity` | Écrit des projets Audacity (`Project`, `Track`, `Bundle`) pour inspecter des pistes. | Outil de test : dépendance de dev de `aec` et `vad-masking`. | aucune |
+| `crates/audio-snapshot` | Empreintes spectrales et assertions de non-régression audio (`compute_snapshot`, `assert_or_update`). | Outil de test : dépendance de dev de `aec`. | aucune |
+
+## Repères pour la documentation
+
+- Changement de plateforme audio, de périphérique ou de capture système : `crates/audio-actual`, `crates/audio-device`, `crates/device-monitor`. Mettez à jour [/meetings](/fr/meetings) et [/troubleshooting](/fr/troubleshooting).
+- Nouveau protocole ou fournisseur STT : `crates/owhisper-client`. Mettez à jour [/ai-setup](/fr/ai-setup), [/conformite/rgpd](/fr/conformite/rgpd) et [/architecture](/fr/architecture).
+- Changement des formats d'import ou de la transcription par lot : `crates/listener2-core`, `crates/transcription-core`. Mettez à jour [/import-recordings](/fr/import-recordings).
+- Changement des langues supportées : `crates/language`, `crates/listener2-core`. Mettez à jour [/languages](/fr/languages).
+- Toute écriture d'audio sur disque contredit [/data-and-privacy](/fr/data-and-privacy) et les garanties d'[architecture](/fr/architecture).

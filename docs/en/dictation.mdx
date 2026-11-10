@@ -1,0 +1,56 @@
+---
+title: "Dictate in other apps"
+description: "Use a keyboard shortcut to turn your voice into text in the active field."
+---
+
+import { AppSettings, DictationScreen, Kbd, SettingsPath } from "/snippets/en/capture.gen.jsx";
+
+Keep Syntheo open, place the cursor in a text field of another app, and use your shortcut to speak instead of typing. Dictation does not create a meeting note.
+
+Dictation uses the transcription server set up in **Settings → Transcription**, with your languages and your dictionary. Audio is not kept; your last dictation stays in memory until you turn dictation off or close Syntheo.
+
+## Set up dictation
+
+<SettingsPath steps={["Settings", "Writing", "Dictation"]} />
+
+1. Turn on "Enable dictation".
+2. Click the "Dictation shortcut" to record a new key combination (<Kbd keys="Ctrl+Alt+Space" /> by default), then choose your "Microphone".
+3. If needed, click "Transcription server ›", on the "Language and vocabulary" line, to check the transcription server and model.
+4. Under "Try it", click in the field and test your shortcut.
+
+Try it in the replica: turn on "Enable dictation", click in the "Try it" field, then hold <Kbd keys="Ctrl+Alt+Space" /> and release. A sample sentence is inserted and "Last dictation" appears. You can also click the shortcut and type another combination.
+
+<AppSettings section="dictation" focus="try" />
+
+By default, hold the shortcut while you speak, then release it to finish. With "Hands-free dictation", press once to start and a second time to finish. The text is inserted when transcription is done.
+
+With "Live transcript preview" (off by default), the words appear in a small bubble while you speak, if your transcription server accepts a real-time connection.
+
+During dictation, a floating panel appears above the active app. Its button (1) shows the microphone level; a click finishes the dictation. The bubble (2) shows the recognized words, and the arrow on the right expands or collapses it. Try it: hold "Hold the shortcut" while the words appear, then release. Check "Hands-free dictation" to start and finish in two clicks, and press <Kbd keys="Esc" /> to cancel.
+
+<DictationScreen />
+
+Syntheo inserts the text it receives in real time. If this stream is interrupted, the OpenAI server transcribes the recording afterwards. An NVIDIA NIM model cannot: dictation then shows "The live transcription of this dictation was interrupted, and this model can't transcribe the recording afterwards. Try again.".
+
+Dictation stops after five minutes and pauses while Syntheo records a meeting.
+
+## Cancel a dictation
+
+- On Windows and on Linux with X11, press <Kbd keys="Esc" />.
+- On Linux with Wayland, use <Kbd keys="Ctrl+Alt+Esc" />.
+
+You can also click "Cancel dictation" in **Settings → Dictation**.
+
+## Linux specifics
+
+On Wayland, approve the shortcuts in your desktop environment's confirmation window. The target app must expose an editable field through accessibility. These instructions are repeated in **Settings → Dictation**, in the collapsed section "On Linux (Wayland or X11)".
+
+On all platforms, dictation does not work in password fields.
+
+## If the text is not inserted
+
+Keep the original text field active until the dictation ends. If the target changed or the app refuses the insertion, open **Settings → Dictation**, click "Copy last dictation", then paste the text yourself.
+
+If dictation shows a setup error, click "Retry setup".
+
+Dictation is a desktop interaction: the CLI and the MCP server do not start dictation and do not insert text into other apps.

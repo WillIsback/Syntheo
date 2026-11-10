@@ -1,0 +1,52 @@
+---
+title: "Syntheo skill"
+description: "Teach a compatible agent when and how to use Syntheo's CLI and MCP."
+---
+
+The Syntheo skill teaches an agent a single approach:
+
+1. Check local access with `syntheo --json doctor`, or use a Syntheo MCP server that is already connected.
+2. Find meeting IDs from search results.
+3. Read a meeting's details before its transcript.
+4. Keep transcript reads bounded, without ever accessing SQLite directly.
+5. Prepare edit proposals instead of editing meetings.
+
+The skill doesn't install the CLI. [Install it](/en/installation) so the agent can use it.
+
+## Install from the app
+
+Open **Settings → Developers**. In the "CLI & MCP" section, the "Agent skills" row offers the "Add skill to…" menu:
+
+- choose a specific agent;
+- or "Install to all agents" for all detected agents.
+
+The app copies the skill, bundled with the app and therefore at the same version, into the agent's folder:
+
+| Agent | Skill folder |
+| --- | --- |
+| Claude Code | `~/.claude/skills/syntheo` |
+| Codex | `~/.codex/skills/syntheo` |
+| Cursor | `~/.cursor/skills/syntheo` |
+| OpenCode | `$XDG_CONFIG_HOME/opencode/skills/syntheo` (by default `~/.config/opencode/skills/syntheo`) |
+
+An agent only shows as detected if its configuration folder (`~/.claude`, `~/.codex`, `~/.cursor` or OpenCode's) already exists, that is, if you have already used it on this machine. A check mark shows that the skill is installed. Reinstalling replaces the files with those of the app's current version.
+
+## Install manually
+
+For another agent, copy the whole [`skills/syntheo`](https://github.com/WillIsback/Syntheo/tree/main/skills/syntheo) folder from the repository into that agent's skills folder. Keep the folder name `syntheo` so that relative links to `references/` keep working.
+
+<Note>
+  The skills location varies between clients. Follow your agent's instructions, and copy the whole folder rather than just the `SKILL.md` file.
+</Note>
+
+## Package contents
+
+| File | Role |
+| --- | --- |
+| `SKILL.md` | The general approach |
+| `references/setup.md` | Installation and configuration |
+| `references/cli.md` | CLI commands |
+| `references/mcp.md` | MCP tools and resources |
+| `references/errors.md` | Errors and recovery |
+
+A standalone version of `SKILL.md`, with links to this documentation, is published in [`docs/skill.md`](https://github.com/WillIsback/Syntheo/blob/main/docs/skill.md).

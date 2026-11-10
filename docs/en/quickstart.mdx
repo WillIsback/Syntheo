@@ -1,0 +1,64 @@
+---
+title: "Your first meeting"
+description: "Install Syntheo, connect your transcription and summary servers, then record a first meeting."
+---
+
+import { AppHome, AppPalette, Kbd, SettingsPath } from "/snippets/en/start.gen.jsx";
+
+Syntheo provides no model: transcription and summaries go through your own servers. Configure them before your first recording, otherwise Syntheo refuses to start listening.
+
+<Steps>
+  <Step title="Install Syntheo">
+    Download the Linux package or the Windows installer from [GitHub Releases](https://github.com/WillIsback/Syntheo/releases/latest). See [Install the app](/en/desktop-installation) to choose the right file.
+  </Step>
+  <Step title="Finish onboarding">
+    On first launch, the "Welcome to Syntheo" screen presents the three steps of a note: Prepare, Listen, and Synthesis. Click "Open Syntheo". No account is required.
+  </Step>
+  <Step title="Set up transcription">
+    Open **Settings** (<Kbd keys="Ctrl+," />), "My servers" group, then **Transcription**:
+
+    <SettingsPath steps={["Settings", "My servers", "Transcription"]} />
+
+    In "Server address", enter your server's address, for example `http://localhost:8000/v1`, then click "Test connection". Then choose the model from the list.
+
+    Choose a **real-time** transcription model: Syntheo does not keep the audio and therefore cannot transcribe a live capture afterward.
+  </Step>
+  <Step title="Set up synthesis">
+    In the same group, open **Synthesis** and enter the address of your OpenAI-compatible language model server (vLLM, SGLang, llama.cpp, Ollama, LM Studio, TGI, or NIM). Click "Test connection": Syntheo reads the list of served models. This model writes the summaries and answers when you ask a note a question.
+  </Step>
+  <Step title="Check the audio">
+    Syntheo captures your microphone and the system audio (the other participants). If your system asks for permission to access the microphone, accept it. You can check the access status in **Settings → Advanced → Permissions**.
+  </Step>
+  <Step title="Start a first recording">
+    On the home screen, click "Start a meeting" (<Kbd keys="Ctrl+N" />). The note opens at the **Prepare** step. Click "Begin listening" in the capsule at the bottom of the window. Speak for a few seconds: the transcript appears in the right margin. Click "Finish". The summary appears at the **Synthesis** step.
+  </Step>
+</Steps>
+
+Details on protocols, accepted addresses, and API keys are in [Set up transcription and AI](/en/ai-setup).
+
+<Note>
+  `http://` addresses are only accepted for this machine, a private network, or Tailscale. For a server reachable over the internet, use `https://`.
+</Note>
+
+## Find your way around the app
+
+- **The home screen** greets you and shows the "Start a meeting" button, your active folders under "Your folders", and the "Resume" list with your latest notes.
+- **The palette** "Search a note" (<Kbd keys="Ctrl+K" />) finds a note by its title or content, a folder, or a contact, and opens the other views: Settings, Templates, Folders, Contacts, Automations.
+- **Folders** group the meetings of a project, with a running thread and the agenda for the next meeting. See [Folders and projects](/en/folders).
+- **A note** goes through three steps, shown in the capsule at the bottom of the window: 備 Prepare · 聴 Listen · 結 Synthesis.
+- **"Ask the note"** (<Kbd keys="Ctrl+J" />) opens the chat, which answers with the language model you configured.
+- **Settings** gathers your settings into five groups: "Me", "My servers", "Writing", "My meetings", and "Advanced".
+
+History goes through the home screen, the palette, and the **Folders** view: there is no permanent sidebar. You edit a note's title directly at the top of the note.
+
+In the home screen replica below, click "Start a meeting", a card under "Your folders", or a note under "Resume". A note that is not filed offers "File". Hover over a row to show the "More actions" button (Open, Export…, Delete). The up and down arrows move from one note to the next.
+
+<AppHome />
+
+The palette opens with "Search a note" or <Kbd keys="Ctrl+K" />. When empty, it offers your recent notes, the views under "Go to", and all your notes. Type a word to search the titles, then the content. Browse the results with the arrows and close the palette with <Kbd keys="Esc" />.
+
+<AppPalette />
+
+## Next steps
+
+See [Record a meeting](/en/meetings) for the full flow. If Syntheo does not hear the call or the transcript stays empty, start with [Troubleshooting](/en/troubleshooting).

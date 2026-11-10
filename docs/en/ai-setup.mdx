@@ -1,0 +1,166 @@
+---
+title: "Set up transcription and AI"
+sidebarTitle: "Transcription and AI"
+description: "Connect Syntheo to your self-hosted inference servers: a transcription server and an OpenAI-compatible LLM server."
+---
+
+import { AppSettings, Kbd, SettingsPath } from "/snippets/en/start.gen.jsx";
+
+Syntheo ships no model and calls no cloud service. It connects to **your** inference servers, on your computer or your network, through standard protocols. You configure two independent things:
+
+| Setting | Role | Protocol |
+| --- | --- | --- |
+| **Transcription** | Turns the audio of the meeting, the dictation, or an imported file into text | OpenAI Realtime and `/v1/audio/transcriptions`, or Nemotron ASR (NVIDIA NIM, WebSocket) |
+| **Synthesis** | Writes the summaries, answers in the chat, and suggests sections for summary templates | OpenAI-compatible API (`/v1/chat/completions`, models read from `/v1/models`) |
+
+No URL is imposed: you enter your server's. Without a configured and reachable transcription server, Syntheo transcribes nothing, and because the audio is never kept, it cannot catch up on the transcription later.
+
+## Before you start
+
+You need:
+
+- a real-time transcription server, for example vLLM with a Realtime model (Voxtral Realtime), speaches (formerly faster-whisper-server), or a Nemotron ASR NIM;
+- an OpenAI-compatible LLM server, for example vLLM, Ollama, llama.cpp server, LM Studio, SGLang, TGI, or an LLM NIM;
+- the base URL of each server and, if the server requires one, its API key.
+
+Sample base URLs for a server running on the same computer, with the default ports:
+
+| Server | Use | Typical base URL |
+| --- | --- | --- |
+| vLLM (`vllm serve`) | LLM, or transcription with a Realtime model | `http://localhost:8000/v1` |
+| speaches / faster-whisper-server | Transcription | `http://localhost:8000/v1` |
+| NVIDIA NIM Nemotron ASR | Transcription | `http://localhost:9000` |
+| Ollama | LLM | `http://localhost:11434/v1` |
+| llama.cpp server (`llama-server`) | LLM | `http://localhost:8080/v1` |
+| LM Studio | LLM | `http://localhost:1234/v1` |
+| SGLang | LLM | `http://localhost:30000/v1` |
+| NVIDIA NIM LLM | LLM | `http://localhost:8000/v1` |
+
+The ports depend on how you start each server. If two servers run on the same machine, give them different ports.
+
+<Note>
+  Syntheo accepts plain HTTP only to a private host: `localhost`, `[::1]`, `.local` names, and the IPv4 addresses `127.0.0.0/8`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, and `100.64.0.0/10` (the range Tailscale uses), as well as Tailscale `.ts.net` names. Everywhere else, including for an internal host name such as `gpu.entreprise.lan`, the URL must use HTTPS; otherwise saving is refused with the message "Use HTTPS: HTTP is only accepted on this machine or a private network.". The URL must contain neither credentials nor query parameters.
+</Note>
+
+Open **Settings** (<Kbd keys="Ctrl+," />). Both servers are in the "My servers" group: **Transcription** and **Synthesis**. A pill next to each entry shows the server's status, repeated at the bottom of the menu (for example "Transcription · connected").
+
+## The server card
+
+Each page shows a "My server" card. It works the same way for transcription and for synthesis:
+
+- **"Server address"**: the base address of your server. It is saved automatically as you type.
+- **"Test connection"**: queries the server and shows the result in the status pill. Syntheo also tests the connection as soon as an address is saved.
+- **"Model"**: the served models, as radio buttons. Click a model to choose it. If yours does not appear, click "Enter another name" and type its exact identifier.
+- **"Advanced"** (collapsed): the "API key (optional)" field and "Reset this server…", which forgets the address and the key after confirmation ("Forget this server's address and key?").
+- **"Help"** (collapsed): a reminder of the protocols and typical addresses.
+
+The status pill takes one of these values:
+
+| Status | Meaning |
+| --- | --- |
+| "No server yet" | No address is entered. |
+| "Not tested" | The address is saved, but not tested yet. |
+| "Testing…" | Syntheo is querying the server. |
+| "Connected · … ms" | The server answers; the pill shows the measured latency. For synthesis, it shows the number of available models instead ("Connected · … models available"). |
+| "Unreachable" | The server did not answer. |
+| "Key refused" | The server refused the API key. |
+| "Invalid address" | The address is not accepted (see the note above). |
+
+If something fails, a message under the card title says what to do, for example: "The server did not answer at localhost:8000/v1. Check that it is running and that you are on the right network (VPN, Tailscale), then test again."
+
+## Set up transcription
+
+<Steps>
+  <Step title="Open the Transcription page">
+    In Settings, "My servers" group, open **Transcription**.
+
+    <SettingsPath steps={["Settings", "My servers", "Transcription"]} />
+  </Step>
+  <Step title="Enter the server address">
+    In "Server address", enter your server's address, for example `http://localhost:8000/v1` for vLLM or speaches, or `http://localhost:9000/v1/realtime` for a NIM. For a NIM, `http://localhost:9000` also works: Syntheo always uses the `/v1/realtime` path.
+  </Step>
+  <Step title="Enter the API key (optional)">
+    If your server requires a key, open "Advanced" and fill in "API key (optional)". Leave the field empty for a server without authentication.
+  </Step>
+  <Step title="Test the connection">
+    Click "Test connection". Syntheo detects the server's protocol:
+
+    - **"OpenAI · Realtime and batch"**: for vLLM, speaches, or faster-whisper-server. Live transcription goes through the `/v1/realtime` WebSocket; importing an audio file goes through `/v1/audio/transcriptions`.
+    - **"NVIDIA NIM · WebSocket"**: for an NVIDIA Speech NIM server deployed on your side. The gRPC endpoint hosted by NVIDIA is not supported.
+
+    Under "Protocol", the words "detected automatically" confirm the choice. If the server answers with the other protocol, Syntheo says so ("This server answers as…"): click "Use this protocol". Each protocol keeps its own address: "Use this protocol" copies the address you entered to the detected protocol.
+  </Step>
+  <Step title="Choose the model">
+    With the OpenAI protocol, the "Model" list shows the models your server publishes. Syntheo preselects the first one; click another one to change it.
+
+    A NIM does not publish its model list. Syntheo therefore offers the known identifiers: `nemotron-asr-streaming` (English), `parakeet-tdt-0.6b-v3` (multilingual), `parakeet-tdt-0.6b-v2` (English), and `cache-aware-parakeet-rnnt-multi-asr-streaming-sortformer` (multilingual, with speakers). `nemotron-asr-streaming` is chosen by default.
+  </Step>
+</Steps>
+
+In the replica below, change the "Server address": Syntheo saves it, then tests it. Try `http://localhost:9000` (a NIM, then "Use this protocol"), a port where nothing listens such as `http://localhost:8001/v1` ("Unreachable"), or `http://gpu.entreprise.lan/v1` (HTTP refused). Open "Advanced" and "Help", then click another model.
+
+<AppSettings section="transcription" />
+
+### Live transcription or file only
+
+Syntheo transcribes meetings **during** the capture, and only then: since the audio is never kept, there is no transcription afterward. The chosen model must therefore be able to stream in real time.
+
+- With the **OpenAI** protocol, any on-premise model (for example Voxtral Realtime on vLLM) is treated as a real-time model. The OpenAI API's "file" model names (`whisper-1`, `gpt-4o-transcribe`, `gpt-4o-mini-transcribe`…) only serve for imports: Syntheo refuses to start a capture with them, with the message "This model only transcribes after the recording, which would require keeping the audio. Choose a real-time transcription model.".
+- With **NVIDIA NIM**, all models are real-time. Importing an audio file then goes through the same real-time stream as a meeting: see [Import a recording](/en/import-recordings).
+
+Chat voice input transcribes in batches, after the recording: it requires the OpenAI protocol. With a NIM model, it shows "Voice input is unavailable" before opening the microphone.
+
+Dictation in other apps uses the same transcription server as meetings.
+
+## Set up synthesis
+
+<Steps>
+  <Step title="Open the Synthesis page">
+    In Settings, "My servers" group, open **Synthesis**.
+
+    <SettingsPath steps={["Settings", "My servers", "Synthesis"]} />
+  </Step>
+  <Step title="Enter the server address">
+    Syntheo accepts any server that exposes the OpenAI API (`/v1/chat/completions` and `/v1/models`), not just vLLM. In "Server address (OpenAI-compatible: vLLM, Ollama, llama.cpp, LM Studio)", enter for example `http://localhost:11434/v1` for Ollama or `http://localhost:8080/v1` for llama.cpp server. Keep the `/v1` suffix.
+  </Step>
+  <Step title="Enter the API key (optional)">
+    Open "Advanced" and fill in "API key (optional)" only if your server requires one (for example vLLM started with `--api-key`). It is sent in the `Authorization: Bearer` header.
+  </Step>
+  <Step title="Test the connection and choose the model">
+    Click "Test connection". Syntheo reads the list from `/v1/models`: only the models loaded by your server appear. Click the model to use.
+  </Step>
+  <Step title="Set the reasoning effort (optional)">
+    "Reasoning effort" offers "Auto", "Low", "Medium", and "High". "Auto" lets the server decide. More effort gives finer summaries, but slower ones. The other values only apply with a model that can reason and a server that accepts this parameter.
+  </Step>
+</Steps>
+
+If the server answers but the chosen model fails, the card shows "The selected model did not answer:" followed by the cause. The same model serves for summaries, the chat, generated titles, and section suggestions for summary templates.
+
+In the replica below, the Synthesis page is connected to Ollama. Enter `http://localhost:1234/v1` (LM Studio) to see the model list change. Choose "High" in "Reasoning effort", then another model: the effort goes back to "Auto", because it depends on the model.
+
+<AppSettings section="intelligence" focus="effort" />
+
+## What goes to your servers
+
+- The **transcription server** receives the audio of the capture, the dictation, or the imported file, as it streams. Syntheo does not write this audio to disk.
+- The **LLM server** receives the text the task needs: transcript, notes, summary template instructions, question asked in the chat.
+- No header identifies your device. Syntheo contacts no other inference service and never falls back to a third-party service if your server does not answer: it shows an error.
+
+API keys are stored in the system keychain, never in plain text in the local database. Details in [Data and privacy](/en/data-and-privacy).
+
+<Warning>
+  A server run by a third party receives your audio and your text: it becomes a processor under the GDPR. Check the contract and where the data is located before using it. See [Syntheo Desktop and the GDPR](/en/conformite/rgpd).
+</Warning>
+
+## Troubleshooting
+
+| Symptom | What to check |
+| --- | --- |
+| "Use HTTPS: HTTP is only accepted on this machine or a private network." | The host is not recognized as private: switch to HTTPS (reverse proxy, VPN) or use a private address. |
+| The pill shows "Unreachable" | The server did not answer. Check that it is running and that you are on the right network (VPN, Tailscale), then test again. |
+| The pill shows "Key refused" | Check the key in "Advanced", then test again. |
+| The synthesis model list is empty | Check that `base URL/models` answers (for example `curl http://localhost:11434/v1/models`) and that the address ends with `/v1`. |
+| Live transcription pauses | The server no longer answers, or it refused the key or the settings. In the first case, Syntheo tries to reconnect. The missing passage will not be transcribed, since no audio is kept. |
+| Cannot start listening | No transcription server is configured, or the chosen model is a "file" model. |
+
+To work without an internet connection, see [Use Syntheo without a network](/en/offline).

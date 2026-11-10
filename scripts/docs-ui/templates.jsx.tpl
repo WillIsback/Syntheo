@@ -102,7 +102,7 @@ const synTplGroups = (state) => {
   const q = synNorm(state.search.trim());
   const foldersOf = (id) => SYN_TPL_FOLDERS.filter(([, t]) => t === id).map(([f]) => f).sort();
   const visible = state.templates.filter((t) => !q || synNorm(`${t.title} ${t.description}`).includes(q) || foldersOf(t.id).some((f) => synNorm(f).includes(q)));
-  const byTitle = (a, b) => a.title.localeCompare(b.title, "fr");
+  const byTitle = (a, b) => a.title.localeCompare(b.title, SYN_LOCALE);
   const groups = [];
   if (!q || synNorm(L("Automatic")).includes(q) || "auto".includes(q)) groups.push({ label: L("Automatic"), entries: ["auto"] });
   const favorites = visible.filter((t) => t.pinned);
@@ -114,7 +114,7 @@ const synTplGroups = (state) => {
     if (folders.length) byFolder[folders.join(", ")] = [...(byFolder[folders.join(", ")] ?? []), t.id];
     else general.push(t.id);
   });
-  Object.keys(byFolder).sort((a, b) => a.localeCompare(b, "fr")).forEach((label) => groups.push({ label, entries: byFolder[label] }));
+  Object.keys(byFolder).sort((a, b) => a.localeCompare(b, SYN_LOCALE)).forEach((label) => groups.push({ label, entries: byFolder[label] }));
   if (general.length) groups.push({ label: L("General templates"), entries: general });
   return groups;
 };

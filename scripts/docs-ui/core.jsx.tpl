@@ -1,7 +1,8 @@
 // Reproductions interactives de Syntheo pour la documentation Mintlify.
 // Modèles de docs/snippets/*.gen.jsx : les blocs @TOKENS, @LABELS, @ICONS,
 // @CSS_PARTS et @VERSION sont remplis par scripts/sync-docs-ui.mjs depuis les
-// sources de l'app (tokens.css, messages.po, Hugeicons de packages/ui).
+// sources de l'app (tokens.css, messages.po, Hugeicons de packages/ui) ;
+// @LOCALE est la langue de la sortie (fr-FR, ou en-US pour docs/snippets/en/).
 // Libellés : L(msgid anglais de messages.po, entre guillemets), LP(msgid, n) pour un pluriel,
 // LF(msgid, { nom: valeur }) pour une variable. Icônes : I("Folder"), le nom
 // de packages/ui/src/components/icons-*.tsx.
@@ -11,6 +12,7 @@
 // .syn-), ajoutées automatiquement à {h(SynStyle)}.
 
 const SYN_VERSION = /*@VERSION*/ "";
+const SYN_LOCALE = /*@LOCALE*/ "";
 const SYN_LIGHT = /*@TOKENS_LIGHT*/ {};
 const SYN_DARK = /*@TOKENS_DARK*/ {};
 const SYN_LABELS = /*@LABELS*/ {};

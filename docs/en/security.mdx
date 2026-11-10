@@ -1,0 +1,78 @@
+---
+title: "Security"
+description: "Syntheo Desktop's security model, IT-managed deployment and vulnerability reporting."
+---
+
+Syntheo Desktop is a local client, with no vendor server. The surface to assess is limited to the computer and the inference servers you choose. For details on data and flows, see [Data and privacy](/en/data-and-privacy) and [Syntheo Desktop and the GDPR](/en/conformite/rgpd).
+
+## What the app guarantees
+
+- **No account, no authentication** with the vendor. No Syntheo service receives your data.
+- **No telemetry, no error reports**: the analytics and error reporting code is removed, there is nothing to turn off.
+- **No audio on disk**, on any path (capture, dictation, import).
+- **Network limited** to the configured inference servers, plus two minor flows with no meeting content (release notes on GitHub, interface icons), listed in [the GDPR sheet](/en/conformite/rgpd).
+- **No fallback** to a third-party service when an inference server does not respond.
+- **Open source**: everything can be checked in the [GitHub repository](https://github.com/WillIsback/Syntheo).
+
+## API keys
+
+Inference server keys are optional. When you enter one, Syntheo stores it in the system keychain: Secret Service on Linux (an unlocked keyring is required, for example GNOME Keyring or KWallet), Credential Manager on Windows. It is never written in plain text to the local database nor compiled into the app. "Reset this server…", in the "Advanced" section of the server card, removes it from the keychain.
+
+## Transport
+
+Syntheo requires HTTPS toward an inference server, except toward a private host: `localhost`, `[::1]`, `.local` names, Tailscale `.ts.net` names, ranges `127.0.0.0/8`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16` and `100.64.0.0/10`. A URL containing credentials or query parameters is rejected.
+
+Plain HTTP on a local network can be read by anyone with access to it. As soon as the server is not on the machine or on a trusted network, put it behind a TLS reverse proxy or a VPN.
+
+## Protect the computer
+
+Notes and transcripts are stored in plain text in the local database. Turn on disk encryption and session locking.
+
+On Windows, **Settings → Advanced → Privacy** → "Lock app" requires Windows Hello (face, PIN or password) when Syntheo opens. On Linux, this option is not available: the page shows "Device authentication is not available on this computer.".
+
+## Managed deployment
+
+An administrator can enforce some settings by placing a `managed_settings.json` file in the data folder, next to `app.db`. The settings it sets can no longer be changed in the app. An invalid file prevents Syntheo from starting.
+
+```json
+{
+  "schema_version": 1,
+  "settings": {
+    "current_stt_provider": "openai",
+    "current_stt_model": "nom-du-modele",
+    "stt:openai": {
+      "type": "stt",
+      "api_key": "",
+      "base_url": "https://asr.exemple.fr/v1"
+    }
+  }
+}
+```
+
+<AccordionGroup>
+  <Accordion title="Accepted settings">
+    | Key | Accepted values |
+    | --- | --- |
+    | `current_stt_provider` | `openai` or `nvidia` |
+    | `current_stt_model` | non-empty identifier (200 characters at most) |
+    | `stt:openai`, `stt:nvidia` | object `{ "type": "stt", "api_key": "", "base_url": "https://…" }`: HTTPS URL only, with no credentials or parameters, key must be empty |
+    | `intelligence_disabled` | `true` only |
+    | `current_llm_provider`, `current_llm_model` | `""` only |
+    | `auto_start_scheduled_meetings` | `true` or `false` |
+    | `audio_retention` | `"none"` only (audio is never kept anyway) |
+    | `cloud_sync_enabled`, `automatic_updates` | `false` only (features absent from Syntheo) |
+    | `save_recordings` | `true` or `false` |
+
+    Any other key, or any other value, makes the file invalid. The file cannot contain any secret: an API key is entered on each computer.
+  </Accordion>
+</AccordionGroup>
+
+## Report a vulnerability
+
+Do not open a public issue. Use [GitHub Security Advisories](https://github.com/WillIsback/Syntheo/security/advisories/new), describing the problem, its impact and a way to reproduce it. Only the latest published version receives security fixes.
+
+Any network communication toward a host other than the configured inference servers and the documented flows, and any writing of audio to disk, is considered a vulnerability. See the [security policy](https://github.com/WillIsback/Syntheo/blob/main/SECURITY.md).
+
+<Note>
+  Syntheo Desktop claims no certification (SOC 2, ISO 27001, HDS…).
+</Note>

@@ -420,7 +420,7 @@ mod tests {
 
     #[test]
     fn public_docs_and_skill_cover_the_command_contract() {
-        let docs = include_str!("../../../docs/reference/cli.mdx");
+        let docs = include_str!("../../../docs/fr/reference/cli.mdx");
         let skill = concat!(
             include_str!("../../../skills/syntheo/references/cli.md"),
             include_str!("../../../skills/syntheo/references/setup.md"),

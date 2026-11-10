@@ -1,0 +1,53 @@
+---
+title: "Carte du code"
+description: "Knowledge graph du monorepo Syntheo : ce que fait chaque partie du code et quelles pages de documentation en dépendent."
+---
+
+Cette section décrit le code de Syntheo Desktop zone par zone : rôle de chaque application, plugin, crate et paquet, ce qu'il expose et de quoi il dépend. Elle sert à maintenir la documentation à jour : quand une partie du code change, ces pages indiquent quelles pages utilisateur relire.
+
+Pour l'organisation générale et le flux de données, lisez d'abord [Architecture](/fr/architecture).
+
+## Deux outils, deux usages
+
+| Outil | Usage | Accès |
+| --- | --- | --- |
+| **CodeGraph** | Tâches de code : trouver un symbole, suivre un appel, mesurer l'impact d'une modification. | Index local `.codegraph/`, serveur MCP `codegraph`. |
+| **Carte du code (cette section)** | Maintenance de la documentation : savoir quel code détermine quel comportement documenté. | Pages Mintlify, serveur MCP `syntheo-docs`. |
+
+Le serveur MCP de recherche de la documentation est déclaré dans `.mcp.json` à la racine du dépôt :
+
+```bash
+claude mcp add --transport http syntheo-docs https://docs.syntheo.studio/mcp
+```
+
+## Pages
+
+<CardGroup cols={2}>
+  <Card title="Correspondance doc ↔ code" href="/fr/code/doc-map">
+    Pour chaque page utilisateur, les sources qui en déterminent le contenu.
+  </Card>
+  <Card title="Application desktop" href="/fr/code/desktop">
+    `apps/desktop` : interface React et cœur natif Tauri.
+  </Card>
+  <Card title="CLI et accès agents" href="/fr/code/cli">
+    `apps/cli` : commandes `syntheo`, serveur MCP, crates partagées.
+  </Card>
+  <Card title="Plugins Tauri" href="/fr/code/plugins">
+    `plugins/*` : pont entre l'interface et le natif.
+  </Card>
+  <Card title="Audio et transcription" href="/fr/code/crates-audio">
+    Capture, traitement du signal, STT et dictée.
+  </Card>
+  <Card title="Données, export et plateforme" href="/fr/code/crates-data">
+    SQLite, stockage, export, prompts, notifications.
+  </Card>
+  <Card title="Paquets TypeScript" href="/fr/code/packages">
+    `packages/*` : interface, éditeur, accès aux données.
+  </Card>
+</CardGroup>
+
+## Maintenir la carte
+
+- Une pull request qui ajoute, renomme ou supprime une crate, un plugin, un paquet ou un module de premier niveau met à jour la page de sa zone.
+- Une pull request qui change un comportement visible consulte [Correspondance doc ↔ code](/fr/code/doc-map) et met à jour les pages utilisateur concernées.
+- Ne décrivez que ce qui est présent dans le code. Les règles de rédaction de `docs/AGENTS.md` s'appliquent.

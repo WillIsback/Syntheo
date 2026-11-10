@@ -367,7 +367,7 @@ export const ContactsScreen = ({ markers = true }) => {
   const update = (id, p) => setState((s) => ({ ...s, people: s.people.map((c) => (c.id === id ? { ...c, ...p } : c)) }));
   const q = state.search.trim().toLowerCase();
   const compare = (a, b) =>
-    state.sort === "alphabetical" ? a.name.localeCompare(b.name, "fr") : state.sort === "reverse-alphabetical" ? b.name.localeCompare(a.name, "fr") : state.sort === "newest" ? b.order - a.order : a.order - b.order;
+    state.sort === "alphabetical" ? a.name.localeCompare(b.name, SYN_LOCALE) : state.sort === "reverse-alphabetical" ? b.name.localeCompare(a.name, SYN_LOCALE) : state.sort === "newest" ? b.order - a.order : a.order - b.order;
   const people = state.people.filter((p) => !p.self && (!q || `${p.name} ${p.email}`.toLowerCase().includes(q))).sort(compare);
   const orgs = state.orgs.filter((o) => !q || o.name.toLowerCase().includes(q));
   const self = state.people.find((p) => p.self);

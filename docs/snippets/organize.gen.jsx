@@ -2,7 +2,8 @@
 // Reproductions interactives de Syntheo pour la documentation Mintlify.
 // Modèles de docs/snippets/*.gen.jsx : les blocs @TOKENS, @LABELS, @ICONS,
 // @CSS_PARTS et @VERSION sont remplis par scripts/sync-docs-ui.mjs depuis les
-// sources de l'app (tokens.css, messages.po, Hugeicons de packages/ui).
+// sources de l'app (tokens.css, messages.po, Hugeicons de packages/ui) ;
+// @LOCALE est la langue de la sortie (fr-FR, ou en-US pour docs/snippets/en/).
 // Libellés : L(msgid anglais de messages.po, entre guillemets), LP(msgid, n) pour un pluriel,
 // LF(msgid, { nom: valeur }) pour une variable. Icônes : I("Folder"), le nom
 // de packages/ui/src/components/icons-*.tsx.
@@ -12,6 +13,7 @@
 // .syn-), ajoutées automatiquement à {h(SynStyle)}.
 
 const SYN_VERSION = "0.7.0";
+const SYN_LOCALE = "fr-FR";
 const SYN_LIGHT = {
   "background": "hsl(50 43% 97%)",
   "foreground": "hsl(100 8% 15%)",
@@ -1871,7 +1873,7 @@ const SYN_PROF_LANGS = "ar be bg bn bs ca cs da de el en es et fa fi fr he hi hr
 
 const synProfLangName = (code) => {
   try {
-    return new Intl.DisplayNames(["fr"], { type: "language" }).of(code) ?? code;
+    return new Intl.DisplayNames([SYN_LOCALE], { type: "language" }).of(code) ?? code;
   } catch {
     return code;
   }
@@ -3320,7 +3322,7 @@ const SYN_FOLD_INITIAL = {
 
 const synFoldName = (path) => path.split("/").pop();
 const synFoldDate = (iso, weekday) =>
-  new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", timeZone: "UTC", ...(weekday ? { weekday: "short" } : {}) }).format(new Date(`${iso}T12:00:00Z`));
+  new Intl.DateTimeFormat(SYN_LOCALE, { day: "numeric", month: "short", timeZone: "UTC", ...(weekday ? { weekday: "short" } : {}) }).format(new Date(`${iso}T12:00:00Z`));
 const synFoldMeetings = (path) =>
   [path, ...SYN_FOLD_TREE[path].flatMap((child) => [child, ...SYN_FOLD_TREE[child]])]
     .flatMap((p) => (SYN_FOLD_NOTES[p] ?? []).map(([iso, title, line]) => ({ iso, title, line, folder: p })))
@@ -3792,7 +3794,7 @@ const synTplGroups = (state) => {
   const q = synNorm(state.search.trim());
   const foldersOf = (id) => SYN_TPL_FOLDERS.filter(([, t]) => t === id).map(([f]) => f).sort();
   const visible = state.templates.filter((t) => !q || synNorm(`${t.title} ${t.description}`).includes(q) || foldersOf(t.id).some((f) => synNorm(f).includes(q)));
-  const byTitle = (a, b) => a.title.localeCompare(b.title, "fr");
+  const byTitle = (a, b) => a.title.localeCompare(b.title, SYN_LOCALE);
   const groups = [];
   if (!q || synNorm(L("Automatic")).includes(q) || "auto".includes(q)) groups.push({ label: L("Automatic"), entries: ["auto"] });
   const favorites = visible.filter((t) => t.pinned);
@@ -3804,7 +3806,7 @@ const synTplGroups = (state) => {
     if (folders.length) byFolder[folders.join(", ")] = [...(byFolder[folders.join(", ")] ?? []), t.id];
     else general.push(t.id);
   });
-  Object.keys(byFolder).sort((a, b) => a.localeCompare(b, "fr")).forEach((label) => groups.push({ label, entries: byFolder[label] }));
+  Object.keys(byFolder).sort((a, b) => a.localeCompare(b, SYN_LOCALE)).forEach((label) => groups.push({ label, entries: byFolder[label] }));
   if (general.length) groups.push({ label: L("General templates"), entries: general });
   return groups;
 };
@@ -4442,7 +4444,7 @@ export const ContactsScreen = ({ markers = true }) => {
   const update = (id, p) => setState((s) => ({ ...s, people: s.people.map((c) => (c.id === id ? { ...c, ...p } : c)) }));
   const q = state.search.trim().toLowerCase();
   const compare = (a, b) =>
-    state.sort === "alphabetical" ? a.name.localeCompare(b.name, "fr") : state.sort === "reverse-alphabetical" ? b.name.localeCompare(a.name, "fr") : state.sort === "newest" ? b.order - a.order : a.order - b.order;
+    state.sort === "alphabetical" ? a.name.localeCompare(b.name, SYN_LOCALE) : state.sort === "reverse-alphabetical" ? b.name.localeCompare(a.name, SYN_LOCALE) : state.sort === "newest" ? b.order - a.order : a.order - b.order;
   const people = state.people.filter((p) => !p.self && (!q || `${p.name} ${p.email}`.toLowerCase().includes(q))).sort(compare);
   const orgs = state.orgs.filter((o) => !q || o.name.toLowerCase().includes(q));
   const self = state.people.find((p) => p.self);

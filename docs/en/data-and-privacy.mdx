@@ -1,0 +1,95 @@
+---
+title: "Data and privacy"
+description: "What Syntheo stores on your computer, what leaves it, and why audio is never kept."
+---
+
+import { AppSettings, DataFlows, SettingsPath } from "/snippets/en/assist.gen.jsx";
+
+Syntheo is a local client. It has no account, no vendor server and no sync, and sends no telemetry. Your data stays on your computer; only the inference servers that **you** set up receive meeting content.
+
+For a complete GDPR assessment (data table, network flows, technical safeguards, responsibilities), see [Syntheo Desktop and the GDPR](/en/conformite/rgpd).
+
+## What is stored, and where
+
+Everything is in the app's data folder:
+
+| System | Data folder |
+| --- | --- |
+| Linux | `~/.local/share/syntheo` |
+| Windows | `%APPDATA%\syntheo` |
+
+| Data | Storage |
+| --- | --- |
+| Transcripts, notes, summaries, contacts, folders (project thread, next meeting agenda, default template), automations, settings | Local SQLite database `app.db` |
+| Full-text search index | Data folder (indexed copy of transcripts and notes) |
+| Technical logs | The app's log folder, with sensitive content masked and size-based rotation |
+| Inference server API keys | System keychain (Secret Service on Linux, Credential Manager on Windows), never in plain text in the database |
+| Exports | Folder chosen in "Export location" (**Settings → Profile**) |
+| Audio | **Nowhere**: see below |
+
+<Warning>
+  Syntheo does not encrypt the local database. Protect the computer: disk encryption, locked session. Do not edit `app.db` by hand: you risk corrupting your notes. For a portable copy, use export.
+</Warning>
+
+## Audio is never kept
+
+A meeting cannot be replayed (一期一会, "one encounter, one time only"): only the note remains. See [The Syntheo spirit](/en/philosophy).
+
+Capture audio lives in memory just long enough to be sent to your transcription server, then disappears. Syntheo writes no audio file, not even a temporary one:
+
+- no meeting recording, no audio player, no re-transcription afterwards;
+- dictation produces its audio in memory;
+- importing an audio file reads the file where it is, without copying it into the data folder.
+
+When you mute the microphone or system audio during listening, Syntheo sends silence in place of that source: what it captures does not leave your computer. See [Record a meeting](/en/meetings), section "Mute the microphone or system audio".
+
+As a result, if transcription stops (server unreachable, key rejected), the passage concerned is missing from the transcript. Syntheo says so and reconnects, but cannot recover it.
+
+## What leaves your computer
+
+| Destination | What is sent | When |
+| --- | --- | --- |
+| Your transcription server | The audio of the capture, the dictation or the imported file | During transcription |
+| Your summary server | The text needed for the task: transcript, notes, summary template instructions, chat question | Summary, chat, "Suggest sections", a folder's project thread and agenda, an automation's "Generate" step |
+| Your [webhooks](/en/reference/webhooks)' addresses | Meeting events (note, summaries, participants, transcript) | At each event, if you added an endpoint |
+| The address of an [automation](/en/automations)'s webhook step | The content you put in it | When the automation runs |
+
+No header identifies your device. Syntheo never falls back to another service if your server does not respond.
+
+Choose an activity in the diagram below: it shows the destination that receives data, what is sent and when. For meeting listening, check the muted microphone box: Syntheo then sends silence in place of the microphone.
+
+<DataFlows />
+
+Apart from inference, two minor flows remain, with no meeting content: showing the release notes of a version other than the installed one (a request to GitHub) and a few interface icons loaded from `api.iconify.design`.
+
+Nothing is sent to the vendor: no account, no usage statistics, no error reports, no update checks. You update by downloading the new version from [GitHub Releases](https://github.com/WillIsback/Syntheo/releases/latest).
+
+<Note>
+  An inference server run by a third party becomes your processor within the meaning of the GDPR (Art. 28): check the contract and where the data is located. A self-hosted server stays under your control.
+</Note>
+
+## Lock the app
+
+The "Privacy" screen contains a single setting, "Lock app":
+
+<SettingsPath steps={["Settings", "Advanced", "Privacy"]} />
+
+When on, it requires Windows Hello facial recognition, the PIN or the password when Syntheo opens. Syntheo also asks you to authenticate to change this setting. On Linux, device authentication is not available: the setting stays grayed out, with the message "Device authentication is not available on this computer.".
+
+In the replica, choose the system shown below the screen: on Windows, the switch becomes active. The menu's "Advanced" group also contains "Permissions", described in [Troubleshooting](/en/troubleshooting).
+
+<AppSettings section="privacy" focus="lock" />
+
+## Delete your data
+
+- **A meeting**: delete it in the app. Its transcript, its notes and its entry in the search index disappear.
+- **An API key**: in **Settings → Transcription** or **Settings → Synthesis**, open "Advanced", click "Reset this server…", then "Reset". The address and the key are forgotten; the key is removed from the keychain.
+- **Everything**: run a [complete uninstall](/en/uninstall), which removes the database, logs, cache, configuration and API keys, then delete the exports you produced.
+
+## Inform participants
+
+You are the data controller: inform participants before recording a meeting. In France, recording a private conversation without their knowledge is punishable under Article 226-1 of the Penal Code.
+
+When each capture starts, Syntheo shows a reminder. It is on by default. To turn it off, turn off "Remind participants about recording" on the "Meetings" screen:
+
+<SettingsPath steps={["Settings", "My meetings", "Meetings"]} />

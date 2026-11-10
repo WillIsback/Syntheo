@@ -31,7 +31,7 @@ dans [`LICENSE`](LICENSE), comme l'exige la licence.
 ## Modifications principales
 
 L'architecture actuelle est décrite dans
-[`docs/architecture.mdx`](docs/architecture.mdx). En résumé :
+[`docs/fr/architecture.mdx`](docs/fr/architecture.mdx). En résumé :
 
 - identité Syntheo (nom, identifiant d'application, logo, thème, français) ;
 - providers d'inférence **on-premise uniquement** (protocoles OpenAI-compatible
@@ -56,7 +56,7 @@ L'architecture actuelle est décrite dans
   CLI `auth` et source `cloud`), partage de notes et de sessions, synchronisation
   cloud, intégrations Nango (calendriers Google/Outlook, CRM, Google Drive),
   facturation et paywall (`@anlg/pricing`) ;
-  conformité RGPD documentée dans [`docs/conformite/rgpd.md`](docs/conformite/rgpd.md) ;
+  conformité RGPD documentée dans [`docs/fr/conformite/rgpd.md`](docs/fr/conformite/rgpd.md) ;
 - applications hors périmètre retirées du dépôt, qui ne contient plus que le
   client desktop et la CLI : serveur `apps/api` (proxys de transcription et de
   LLM, facturation, synchronisation), site `apps/web`, application mobile

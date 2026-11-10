@@ -1,0 +1,66 @@
+---
+title: "MCP pour les agents"
+description: "Connectez un client MCP à vos réunions Syntheo grâce au serveur local en stdio."
+---
+
+`syntheo mcp` lance un serveur MCP local. Il communique par l'entrée et la sortie standard : il n'ouvre aucun port et n'envoie aucune donnée à un serveur Syntheo. Il n'exige ni compte ni connexion.
+
+Prérequis : [la CLI installée](/fr/installation) et l'application ouverte au moins une fois, pour qu'elle crée sa base. L'application n'a pas besoin de rester ouverte, sauf pour importer un enregistrement.
+
+## Configurer le client
+
+Ajoutez le serveur à la configuration de votre client MCP :
+
+```json
+{
+  "mcpServers": {
+    "syntheo": {
+      "command": "syntheo",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+Si `syntheo` n'est pas dans le `PATH` du client, ou si le `.deb` de l'application est installé (son exécutable s'appelle aussi `syntheo`), indiquez le chemin absolu de la CLI dans `command`, par exemple `/home/vous/.cargo/bin/syntheo`. Redémarrez le client après avoir modifié sa configuration.
+
+Pour une base à un autre emplacement :
+
+```json
+{
+  "mcpServers": {
+    "syntheo": {
+      "command": "syntheo",
+      "args": ["--db-path", "/chemin/vers/app.db", "mcp"]
+    }
+  }
+}
+```
+
+<Note>
+  Quand la CLI est installée depuis l'application, le bouton « Copier la configuration » de **Paramètres → Développeurs → CLI & MCP** copie ce bloc avec le bon chemin. Les versions publiées n'embarquent pas la CLI : ce bouton y reste inactif.
+</Note>
+
+## Utiliser les outils avec méthode
+
+Commencez par `list_meetings`, puis passez un `id` renvoyé à `get_meeting`. Pour un projet ou un client, appelez `list_folders` et passez un `path` renvoyé comme `folder_path`. N'appelez `get_meeting_transcript` que si la note et les résumés ne suffisent pas.
+
+Ne citez que les réunions renvoyées par les outils. Une liste vide signifie seulement qu'aucune réunion ne correspond ; n'inventez ni titre, ni date, ni identifiant.
+
+Les pages de transcription font 200 mots par défaut, 500 au maximum. Ne suivez `pagination.next_offset` que si vous avez besoin de plus de contexte.
+
+Utilisez `get_recurring_meeting_history` avec un identifiant connu quand la tâche dépend des réunions précédentes de la même série. N'utilisez `export_meeting` que si la tâche exige l'enregistrement complet, transcriptions comprises.
+
+## Proposer une modification
+
+Pour modifier un résumé ou la note, appelez `propose_summary_edit` ou `propose_memo_edit`. L'outil renvoie une proposition en attente : n'affirmez pas que la réunion a changé. L'utilisateur l'applique ou la refuse dans l'application. `list_proposals` et `get_proposal` permettent d'inspecter les propositions ; `decline_proposal` refuse une proposition en attente sans toucher à la réunion.
+
+## Importer un enregistrement
+
+`import_recording` crée une réunion à partir d'un fichier audio présent sur l'ordinateur du serveur MCP. L'application doit être ouverte : c'est elle qui transcrit le fichier avec le serveur de transcription configuré, puis génère le résumé. Suivez l'avancement avec `get_recording_import`. N'utilisez cet outil que si l'utilisateur le demande.
+
+## Ressources
+
+Le serveur expose aussi des ressources MCP (`syntheo://meetings/...`, `syntheo://series/...`) en Markdown ou en texte brut, pour les clients qui préfèrent les ressources aux outils.
+
+Paramètres exacts et ressources : voir la [référence MCP](/fr/reference/mcp).

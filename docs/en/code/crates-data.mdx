@@ -1,0 +1,229 @@
+---
+title: "Data, export and platform"
+description: "Rust crates for SQLite storage, files, export, prompts, notifications and system integration, with the documentation pages that depend on them."
+---
+
+This page covers the crates in `crates/` that handle data, files, PDF export, LLM prompts, notifications and a few system services. The overall organization is described in [Architecture](/en/architecture).
+
+In the Cargo workspace, each crate is declared under a `syntheo-*` alias (for example `syntheo-db-app` for `crates/db-app`). The internal dependencies listed below use these aliases.
+
+## Overview
+
+| Crate | Role | Used by | Affected doc pages |
+| --- | --- | --- | --- |
+| `crates/db-core` | Opening the SQLite database (sqlx) | CLI, desktop, plugins `db`, `local-api`, `session`, `template`, `transcription`, `contacts`, crates `agent-access`, `session-ingest` | [Data and privacy](/en/data-and-privacy) |
+| `crates/db-change` | Tracking modified tables | `db-core`, `db-reactive` | none |
+| `crates/db-execute` | Running SQL queries described in JSON | plugin `db`, `db-reactive` | none |
+| `crates/db-reactive` | "Live" queries replayed on each change | plugin `db` | none |
+| `crates/db-migrate` | Migration engine | `db-app`, `db-reactive`, plugin `db` | none |
+| `crates/db-app` | Schema, migrations and business operations on `app.db` | CLI, desktop, plugins `db`, `local-api`, `session`, `template`, `transcription`, `contacts`, crates `agent-access`, `session-ingest` | see [db-app](#db-app) |
+| `crates/storage` | Data folders and safe file writing | desktop, plugins `settings`, `store2`, `transcription`, crates `fs-sync-core`, `listener-core` | [Data and privacy](/en/data-and-privacy), [Uninstall](/en/uninstall) |
+| `crates/fs-sync-core` | Session folders, attachments and audio files on disk | plugin `fs-sync` | [Notes](/en/notes), [Import recordings](/en/import-recordings) |
+| `crates/fs-format` | JSON format of transcripts on disk | `fs-sync-core` | none |
+| `crates/frontmatter` | Reading and writing Markdown with a YAML header | `fs-sync-core` | none |
+| `crates/tiptap` | Conversion between Tiptap/ProseMirror JSON and Markdown | `agent-access`, `fs-sync-core` | [CLI for agents](/en/agents/cli), [MCP server](/en/agents/mcp) |
+| `crates/export-core` | PDF rendering with Typst | plugin `export` | [Notes](/en/notes) |
+| `crates/template-app` | LLM prompts (Askama) | plugin `template`, crate `transcript` | [Customize summaries](/en/customize-summaries), [Chat](/en/chat), [Languages](/en/languages) |
+| `crates/template-app-legacy` | Old MiniJinja prompt engine (inherited) | plugin `template` | none |
+| `crates/askama-utils` | Filters and validation for Askama templates | `template-app` | [Languages](/en/languages) |
+| `crates/summary` | Length policy and formatting of the generated summary | plugin `template` | [Customize summaries](/en/customize-summaries), [Notes](/en/notes) |
+| `crates/hooks` | Shell commands run at the start and end of listening | plugin `hooks` | none |
+| `crates/notification` | Displaying native notifications (facade) | plugin `notification` | [Automatic capture](/en/automatic-capture) |
+| `crates/notification-interface` | Common notification types | `notification`, backends, plugin `detect` | [Automatic capture](/en/automatic-capture) |
+| `crates/notification-linux` | GTK backend (Linux) | `notification` | [Automatic capture](/en/automatic-capture) |
+| `crates/notification-windows` | Win32 backend (Windows) | `notification` | [Automatic capture](/en/automatic-capture) |
+| `crates/notification-macos` | Swift backend (macOS only) | `notification` | none |
+| `crates/shortcut-macos` | Global keyboard shortcuts through an event tap (macOS only) | plugin `shortcut` | none |
+| `crates/overlay-kit` | Overlay panels and animations (macOS only) | plugin `permissions` | none |
+| `crates/bundle` | Bundle ID of the parent process (macOS only) | plugin `permissions`, crate `detect` | none |
+| `crates/brand` | Product names and identifiers | desktop, plugins `store2`, `tray`, `windows`, crates `notification-linux`, `storage` | [Uninstall](/en/uninstall), [Data and privacy](/en/data-and-privacy) |
+| `crates/host` | CPU architecture, OS version, process termination | desktop | none |
+| `crates/user-error` | Recognizing errors caused by the user's account | plugin `tracing`, crates `listener2-core`, `owhisper-client` | none |
+| `crates/claude` | Driving the Claude Code CLI | `agent-core` | none |
+| `crates/codex` | Driving the Codex CLI | `agent-core` | none |
+| `crates/opencode` | Driving the OpenCode CLI | `agent-core` | none |
+| `crates/data` | Audio samples for tests | `audio-mock`; dev-dependency elsewhere | none |
+| `crates/xtask` | Build tasks (`cargo xtask`) | tooling | none |
+
+## Database
+
+The `app.db` database is the heart of the data. The crates are organized in layers: `db-core` opens the connection, `db-migrate` applies the schema provided by `db-app`, and `db-change`, `db-execute` and `db-reactive` serve the interface through the `db` plugin (see [Tauri plugins](/en/code/plugins)).
+
+### db-core
+
+- **Path**: `crates/db-core`
+- **Role**: opens a SQLite pool and attaches a `ChangeNotifier` to it.
+- **API**: `Db` (`open`, `connect_memory`, `connect_local_read_write`, `connect_local_read_only`, `pool`, `change_notifier`), `DbOpenOptions`, `DbStorage`, `ManagedDb`.
+- **Internal dependencies**: `syntheo-db-change`.
+- **Note**: the CLI opens the database with `connect_local_read_only` (`apps/cli/src/db.rs`), which guarantees the read-only access described in [CLI for agents](/en/agents/cli).
+- **Affected doc pages**: [Data and privacy](/en/data-and-privacy), [CLI for agents](/en/agents/cli).
+
+### db-app
+
+- **Path**: `crates/db-app`, SQL migrations in `crates/db-app/migrations`.
+- **Role**: defines the app schema (`schema()`, `APP_MIGRATION_STEPS`, `prepare_schema`) and groups the SQL operations shared by the app, the CLI and the plugins.
+- **Internal dependencies**: `syntheo-db-core`, `syntheo-db-migrate`.
+
+The modules in `crates/db-app/src` and the pages they feed:
+
+| Module | Content | Affected doc pages |
+| --- | --- | --- |
+| `session_ops`, `session_lifecycle_ops`, `session_content_ops`, `session_move_ops`, `session_participant_ops` | Reading, creation, title, summary, transcript, moving between folders and participants of a session | [Meetings](/en/meetings), [Notes](/en/notes), [Contacts](/en/contacts) |
+| `session_review_ops` | Pending edit proposals and conflict resolution | [Notes](/en/notes), [CLI for agents](/en/agents/cli), [MCP server](/en/agents/mcp) |
+| `session_transcript_ops`, `transcript_batch_ops`, `transcript_live_ops` | Live and batch transcripts, rendering data | [Meetings](/en/meetings), [Import recordings](/en/import-recordings) |
+| `summary_ops` | Generated summary body, tags, automatic enhancement queue | [Notes](/en/notes), [Customize summaries](/en/customize-summaries) |
+| `template_ops`, `template_types` | Summary templates stored in the database | [Customize summaries](/en/customize-summaries) |
+| `webhook_ops`, `webhook_types` | Webhook endpoints, secrets and delivery log | [Webhooks reference](/en/reference/webhooks) |
+| `contact_ops` | People and organizations | [Contacts](/en/contacts) |
+| `folder_catalog_ops`, `attachment_ops` | Folders and attachments of notes and folders | [Notes](/en/notes) |
+| `managed_settings` | Enforced settings, including audio retention limited to "None" | [Data and privacy](/en/data-and-privacy), [Security](/en/security) |
+| `session_audio_ops`, `capture_lifecycle_ops`, `session_hold` | Capture markers and tracking of session audio | [Data and privacy](/en/data-and-privacy) |
+| `session_purge` | Local deletion of a session | [Data and privacy](/en/data-and-privacy) |
+| `legacy_voiceprints` | Purge of voiceprints inherited from older versions | none |
+| `pilot_usage_ops` | Reading local usage measurements (capture clocks) | none |
+
+<Note>
+Don't describe product behavior from the raw SQL schema. Start from the operations and the interface that uses them.
+</Note>
+
+### db-migrate
+
+- **Path**: `crates/db-migrate`
+- **Role**: applies an ordered list of `MigrationStep` (`migrate`, `migrate_with_progress`), with the `Plain` or `CloudsyncAlter` scope.
+- **Internal dependencies**: `syntheo-db-core`.
+- **Affected doc pages**: none.
+
+### db-change, db-execute, db-reactive
+
+- **db-change** (`crates/db-change`): `ChangeNotifier`, `TableChange` and `TableChangeKind` report modified tables. No internal dependencies.
+- **db-execute** (`crates/db-execute`): `DbExecutor` runs a query, a "proxy" query or a transaction described in JSON (`TransactionStatement`). Depends on `syntheo-db-core`.
+- **db-reactive** (`crates/db-reactive`): `LiveQueryRuntime` extracts the tables read by a query (`extract_dependencies`, through `EXPLAIN`) and replays it when one of them changes. The `db` plugin exposes it through the `subscribe` and `unsubscribe` commands. Depends on `syntheo-db-core`, `syntheo-db-change`, `syntheo-db-execute`, `syntheo-db-migrate`.
+- **Affected doc pages**: none.
+
+## Files and storage
+
+### storage
+
+- **Path**: `crates/storage`
+- **Role**: computes the data location and writes files without following symbolic links.
+- **API**:
+  - `global::compute_default_base`: base folder. The stable build uses the `syntheo` folder; the other identities (debug, dev configuration) use their bundle ID.
+  - `vault`: `settings.json`, `vault_path` key, `consolidate_custom_vault`.
+  - `safe_path`: `join_under_base`, `resolve_under_base`, `open_no_follow`, `write_no_follow`, `copy_no_follow`.
+  - `session_tree`: walking the session tree (`walk_session_tree`, `find_session_dir`).
+  - `fs`: `atomic_write`, `copy_dir_recursive`.
+  - `windows_auth`: `auth.dpapi` file encrypted with DPAPI, active on Windows only.
+  - `StorageRuntime`: trait that provides the global and vault bases.
+- **Internal dependencies**: `syntheo-brand`.
+- **Affected doc pages**: [Data and privacy](/en/data-and-privacy), [Uninstall](/en/uninstall).
+
+### fs-sync-core
+
+- **Path**: `crates/fs-sync-core`
+- **Role**: manages session folders on disk for the `fs-sync` plugin: listing, creating, renaming and moving folders, reading a session's content, attachments, audio files (`audio`: import into a session, metadata, peaks, speech detection, deletion of expired orphans).
+- **API**: `FsSyncCore` (`list_folders`, `move_session`, `create_folder`), modules `scan`, `session_content`, `folder`, `audio`, `path`.
+- **Internal dependencies**: `syntheo-storage`, `syntheo-fs-format`, `syntheo-frontmatter`, `syntheo-tiptap`, `syntheo-audio-utils`, `syntheo-vad`; `syntheo-data` as a dev-dependency.
+- **Affected doc pages**: [Notes](/en/notes), [Import recordings](/en/import-recordings), [Meetings](/en/meetings).
+
+### fs-format, frontmatter, tiptap
+
+- **fs-format** (`crates/fs-format`): serializable types of the transcript file (`TranscriptJson`, `TranscriptWithData`, `TranscriptWord`, `TranscriptSpeakerHint`). No internal dependencies.
+- **frontmatter** (`crates/frontmatter`): `Document` parses and serializes Markdown with a header. No internal dependencies.
+- **tiptap** (`crates/tiptap`): `tiptap_json_to_md`, `md_to_tiptap_json`, `tiptap_json_to_mdast`, `mdast_to_markdown`, `validate_tiptap_json`, `merge` module. No internal dependencies. `crates/agent-access` uses it to convert note bodies to Markdown in the CLI and MCP server outputs.
+- **Affected doc pages**: `tiptap` feeds [CLI for agents](/en/agents/cli), [MCP server](/en/agents/mcp) and [CLI reference](/en/reference/cli); `fs-format` and `frontmatter`: none.
+
+## Export
+
+### export-core
+
+- **Path**: `crates/export-core`
+- **Role**: produces a meeting's PDF with Typst (`typst`, `typst-pdf`, fonts from `typst-assets`).
+- **API**: `export_pdf(path, input)`, `render_pdf(input)`, types `ExportInput`, `ExportMetadata`, `Transcript`, `TranscriptItem`, `ExportLabels` (section labels in the interface language).
+- **Internal dependencies**: none.
+- **Note**: only PDF goes through this crate. The app's other export formats (TXT, Markdown, Org) and the CLI's Markdown or JSON export don't depend on it.
+- **Affected doc pages**: [Notes](/en/notes) ("Export a meeting" section).
+
+## Prompts and summaries
+
+### template-app
+
+- **Path**: `crates/template-app`, templates in `crates/template-app/assets/*.md.jinja`.
+- **Role**: renders the prompts sent to the LLM. The templates are compiled with Askama.
+- **API**: `render(Template)`, enum `Template` (`EnhanceSystem`, `EnhanceUser`, `TitleSystem`, `TitleUser`, `ChatSystem`, `ContextBlock`, `ToolSearchSessions`, `TranscriptPatchSystem`, `TranscriptPatchUser`, `ActivityCaptureSystem`, `DailySummarySystem`, `EventContactSystem`…), `EditableTemplate` (`EnhanceFormat`, `EnhanceUser`, `TitleUser`) and `template_source`.
+- **Internal dependencies**: `syntheo-askama-utils`.
+- **Note**: the `template` plugin exposes `render` and `get_template_source`. The interface reads the `enhanceFormat` source in the form of the "Automatic" template (`apps/desktop/src/templates/auto-form.tsx`).
+- **Affected doc pages**: [Customize summaries](/en/customize-summaries), [Notes](/en/notes), [Chat](/en/chat), [Languages](/en/languages).
+
+### askama-utils
+
+- **Path**: `crates/askama-utils`
+- **Role**: filters shared by the templates (`current_date`, `language`, `language_name`, `is_english`, `is_korean`) and extraction of the variables used (`extract`, `TemplateUsage`).
+- **Internal dependencies**: none.
+- **Affected doc pages**: [Languages](/en/languages).
+
+### summary
+
+- **Path**: `crates/summary`
+- **Role**: computes the target length of the summary based on the transcript size and the number of sections in the template, then formats the generated text (title on the first line, tags line).
+- **API**: `summary_length_policy`, `summary_length_policy_for_texts`, `prepare_generated_summary`, `compose_generated_summary`, `extract_tag_names`. The `template` plugin exposes them as commands.
+- **Internal dependencies**: none.
+- **Affected doc pages**: [Customize summaries](/en/customize-summaries), [Notes](/en/notes).
+
+### template-app-legacy
+
+- **Path**: `crates/template-app-legacy`
+- **Role**: old MiniJinja engine inherited from Anarlog, with its templates (`enhance`, `title`, `chat`, `auto_generate_tags`, `postprocess_transcript`, `highlight`).
+- **Usage**: the `template` plugin initializes its environment at startup and uses it for the `render_custom` command, which no code in `apps/desktop/src` calls outside tests.
+- **Internal dependencies**: none.
+- **Affected doc pages**: none.
+
+## Local automation
+
+### hooks
+
+- **Path**: `crates/hooks`
+- **Role**: runs the shell commands configured for an event and returns their result.
+- **API**: `HooksConfig`, `HookDefinition`, `HookEvent` (`beforeListeningStarted`, `afterListeningStopped`), `run_hooks_for_event`, `HookResult`.
+- **Usage**: the `hooks` plugin reads the configuration under the `hooks` key of the settings, and the interface triggers the events from `apps/desktop/src/store/zustand/listener/general-live.ts`.
+- **Internal dependencies**: none.
+- **Affected doc pages**: none. This feature is not documented for users; it is separate from [webhooks](/en/reference/webhooks).
+
+## Notifications
+
+`crates/notification` is the facade called by the `notification` plugin. It deduplicates notifications by key, keeps their context and delegates display to the platform backend, enabled by the `legacy` feature (enabled by default and requested by the plugin).
+
+| Crate | Platform | Content |
+| --- | --- | --- |
+| `crates/notification-interface` | all | Types `Notification`, `NotificationKey` (`mic_started`, `mic_stopped`, `calendar_event`), `NotificationAction`, `NotificationEvent`, `NotificationLabels`. No internal dependencies. |
+| `crates/notification` | all | `show`, `clear` and the `setup_*_handler` handlers. Depends on `syntheo-notification-interface` and the platform backend. |
+| `crates/notification-linux` | Linux | GTK 3 window (`gtk`, `gdk`, `pango`). Depends on `syntheo-brand`, `syntheo-notification-interface`. |
+| `crates/notification-windows` | Windows | Win32 rendering (`windows` crate). Depends on `syntheo-notification-interface`. |
+| `crates/notification-macos` | macOS | Swift bridge (`swift-rs`). Depends on `syntheo-notification-interface`. |
+
+- **Affected doc pages**: [Automatic capture](/en/automatic-capture) (microphone detection notification).
+
+## Platform and identity
+
+| Crate | Main API | Internal dependencies | Remarks |
+| --- | --- | --- | --- |
+| `crates/brand` | `PRODUCT_NAME`, `STABLE_BUNDLE_ID` (`fr.willisback.syntheo`), `DEV_BUNDLE_ID`, `APP_DATA_FOLDER` (`syntheo`), `CLI_COMMAND` (`syntheo`) | none | Single source of names. Any change affects [Uninstall](/en/uninstall) and [Data and privacy](/en/data-and-privacy). |
+| `crates/host` | `cpu_arch`, `long_os_version`, `kill_processes_by_matcher` | none | The desktop uses it to stop sidecar processes (`apps/desktop/src-tauri/src/lib.rs`). |
+| `crates/user-error` | `is_user_error_text` | none | Avoids logging account-related failures (credits, invalid API key) as errors. |
+| `crates/shortcut-macos` | `Listener`, `EventTap`, `HotKey`, decision types | none | macOS only: `macos` target dependency of the `shortcut` plugin. |
+| `crates/overlay-kit` | modules `geometry`, `layout`, `placement`, `path`, `macos` | none | The `macos` module only exists on macOS. Used by the macOS permissions assistant of the `permissions` plugin. |
+| `crates/bundle` | `get_ancestor_bundle_id`, `bundle_id_for_pid`, `read_bundle_info` | none | Code compiled on macOS only. |
+
+- **Affected doc pages**: see the Remarks column; none for `host`, `user-error`, `shortcut-macos`, `overlay-kit` and `bundle`.
+
+## Coding agent integrations
+
+`crates/claude`, `crates/codex` and `crates/opencode` drive the Claude Code, Codex and OpenCode CLIs: options, event streams, sessions or threads, installation check (`health_check_with_options`) and reading or writing their configuration. `codex` and `opencode` also expose deep links (`new_thread_deeplink`, `open_project_deeplink`).
+
+- **Internal dependencies**: `syntheo-cli-process` for all three.
+- **Usage**: only `crates/agent-core` uses them, to install a notification hook in each agent's configuration (`char … notify` command, inherited from Anarlog). `plugins/agent` exposes `health_check`, `install_cli` and `uninstall_cli`, but no code in `apps/desktop/src` imports `@syntheo/plugin-agent`.
+- **Affected doc pages**: none. The skills installation described in [Skills](/en/agents/skills) doesn't go through these crates.
+
+## Tooling and test data
+
+- **data** (`crates/data`): WAV audio samples (English and Korean) included at compile time. Regular dependency of `crates/audio-mock`, dev-dependency of `audio-actual`, `audio-utils`, `fs-sync-core`, `owhisper-client`, `resampler` and `vad`. Affected doc pages: none.
+- **xtask** (`crates/xtask`): `cargo xtask prepare-binaries` builds `syntheo-cli` in release mode for the current target (`TAURI_ENV_TARGET_TRIPLE` or the host triple) and copies the binary to `apps/desktop/src-tauri/resources/cli/syntheo-cli-{triple}`. Alias defined in `.cargo/config.toml`. Affected doc pages: none directly; the prepared binary is the one the app bundles (see [Installation](/en/installation)).

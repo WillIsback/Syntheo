@@ -1,0 +1,99 @@
+---
+title: "Questions fréquentes"
+description: "Réponses sur le fonctionnement de Syntheo : serveurs d'IA, confidentialité, audio, plateformes et outils pour développeurs."
+---
+
+Parcourez un thème, puis dépliez la question. Si quelque chose ne fonctionne pas, consultez le [dépannage](/fr/troubleshooting). Pour une question absente de cette page, [ouvrez une issue GitHub](https://github.com/WillIsback/Syntheo/issues).
+
+## Principes
+
+<AccordionGroup>
+  <Accordion title="Faut-il un compte ou un abonnement ?" id="compte-abonnement">
+    Non. Syntheo ne demande aucun compte et n'a pas d'abonnement. Toutes les fonctions sont débloquées. L'application est libre (licence MIT).
+  </Accordion>
+
+  <Accordion title="Qui fait la transcription et les résumés ?" id="qui-fait-l-inference">
+    Vos propres serveurs. Syntheo n'embarque aucun modèle et n'utilise aucun service cloud d'IA. Vous indiquez dans les paramètres l'URL d'un serveur de transcription (STT) et celle d'un serveur de modèle de langue (LLM), hébergés sur votre poste ou dans votre organisation. Voir [Transcription et IA](/fr/ai-setup).
+  </Accordion>
+
+  <Accordion title="Quels serveurs sont compatibles ?" id="serveurs-compatibles">
+    Pour la transcription en temps réel, **Paramètres → Transcription** reconnaît deux protocoles :
+
+    - « OpenAI · temps réel et par lots » : tout serveur qui parle le protocole OpenAI Realtime et `/v1/audio/transcriptions`, par exemple vLLM (avec Voxtral Realtime), speaches ou faster-whisper-server.
+    - « NVIDIA NIM · WebSocket » : un serveur NVIDIA Speech NIM déployé chez vous.
+
+    Pour les comptes rendus et le chat, **Paramètres → Synthèse** accepte tout serveur compatible OpenAI exposant `/v1/chat/completions` et `/v1/models`, comme vLLM, SGLang, llama.cpp server, Ollama, LM Studio, TGI ou NIM LLM.
+  </Accordion>
+
+  <Accordion title="Syntheo rejoint-il l'appel ?" id="rejoint-l-appel">
+    Non. Syntheo capte votre microphone et l'audio système depuis votre ordinateur, sans robot de réunion. Voir [Enregistrer une réunion](/fr/meetings).
+  </Accordion>
+
+  <Accordion title="Syntheo fonctionne-t-il sans internet ?" id="sans-internet">
+    Oui, si vos serveurs de transcription et de modèle de langue sont joignables sans internet : sur le même poste (`localhost`) ou sur votre réseau local. Syntheo n'a besoin d'aucun service en ligne pour fonctionner.
+  </Accordion>
+</AccordionGroup>
+
+## Données et confidentialité
+
+<AccordionGroup>
+  <Accordion title="L'audio est-il conservé ?" id="audio-conserve">
+    Non. L'audio reste en mémoire le temps d'être envoyé à votre serveur de transcription, puis il est abandonné. Syntheo ne crée aucun fichier audio et ne propose pas de retranscrire une réunion après coup. Seuls la transcription, vos notes et les comptes rendus sont enregistrés.
+  </Accordion>
+
+  <Accordion title="Que se passe-t-il si le serveur de transcription se coupe pendant une réunion ?" id="coupure-stt">
+    Syntheo tente de se reconnecter. Comme l'audio n'est pas conservé, la partie de la réunion prononcée pendant la coupure manque à la transcription. Un bandeau l'indique avec ses horaires, par exemple « Transcription interrompue 14:32–14:35 ». Voir [Dépannage](/fr/troubleshooting).
+  </Accordion>
+
+  <Accordion title="Où sont stockées mes données ?" id="stockage">
+    Sur votre ordinateur, dans une base SQLite locale. Sous Linux, le dossier de données est `~/.local/share/syntheo`. Le contenu des réunions ne quitte votre poste que pour atteindre les serveurs STT et LLM que vous avez configurés, et les webhooks que vous avez ajoutés. Voir [Données et confidentialité](/fr/data-and-privacy).
+  </Accordion>
+
+  <Accordion title="Syntheo envoie-t-il de la télémétrie ?" id="telemetrie">
+    Non. Syntheo n'envoie ni télémétrie, ni rapport de plantage, ni statistiques d'usage à un serveur éditeur.
+  </Accordion>
+
+  <Accordion title="Où est stockée ma clé API ?" id="cle-api">
+    La clé API de vos serveurs est facultative. Si vous en saisissez une, elle est stockée localement sur cet ordinateur. Elle n'est jamais intégrée à l'application.
+  </Accordion>
+
+  <Accordion title="Puis-je synchroniser mes notes entre plusieurs ordinateurs ou les partager en ligne ?" id="synchro-partage">
+    Non. Syntheo n'a ni synchronisation cloud, ni partage en ligne, ni espace d'équipe. Pour transmettre une note, exportez-la avec « Exporter » (PDF, TXT, Markdown ou Org) et envoyez le fichier par le canal de votre choix.
+  </Accordion>
+</AccordionGroup>
+
+## Réunions et notes
+
+<AccordionGroup>
+  <Accordion title="Puis-je corriger une transcription ou renommer un locuteur ?" id="corriger-transcript">
+    Oui. À l'étape Synthèse, affichez la transcription dans la marge, puis cliquez sur « Modifier » pour corriger le texte et renommer les locuteurs. Voir [Notes](/fr/notes).
+  </Accordion>
+
+  <Accordion title="Syntheo distingue-t-il les locuteurs ?" id="locuteurs">
+    En partie. Syntheo sépare votre voix (microphone) de celle des autres participants (audio système). Il reprend aussi les locuteurs que renvoie votre serveur de transcription, s'il les fournit. Il n'y a pas d'analyse des locuteurs après la réunion.
+  </Accordion>
+
+  <Accordion title="Puis-je importer un fichier audio existant ?" id="importer-audio">
+    Oui. Importez un fichier WAV, MP3, OGG, MP4, M4A, FLAC, WebM ou AAC dans une note vide. Syntheo l'envoie à votre serveur sans en garder de copie : via `/v1/audio/transcriptions` avec le moteur « OpenAI · temps réel et par lots », ou dans le flux en temps réel `/v1/realtime` avec « NVIDIA NIM · WebSocket ». Vous pouvez aussi importer une transcription SRT ou VTT. Voir [Importer un enregistrement](/fr/import-recordings).
+  </Accordion>
+
+  <Accordion title="Quelles langues sont prises en charge ?" id="langues">
+    Choisissez votre langue principale dans **Paramètres → Profil**, section « Langue et région ». Les langues réellement transcrites dépendent du modèle servi par votre serveur de transcription : vérifiez sa documentation. Voir [Langues](/fr/languages).
+  </Accordion>
+</AccordionGroup>
+
+## Plateformes et mises à jour
+
+<AccordionGroup>
+  <Accordion title="Sur quels systèmes Syntheo fonctionne-t-il ?" id="plateformes">
+    Linux (AppImage et paquet `.deb`) et Windows (installeur `.exe` signé et `.msi`). Aucune version macOS n'est publiée pour l'instant, et il n'existe pas d'application mobile. Voir [Installer l'application](/fr/desktop-installation).
+  </Accordion>
+
+  <Accordion title="Comment mettre Syntheo à jour ?" id="mises-a-jour">
+    Syntheo ne se met pas à jour tout seul. Téléchargez la dernière version sur la [page des versions GitHub](https://github.com/WillIsback/Syntheo/releases/latest) et installez-la par-dessus l'ancienne.
+  </Accordion>
+
+  <Accordion title="Des agents peuvent-ils accéder à mes réunions ?" id="agents">
+    Oui, localement. La [CLI](/fr/agents/cli) et le [serveur MCP local](/fr/agents/mcp) lisent la base de données sur votre ordinateur. Les [webhooks](/fr/reference/webhooks) poussent les événements de réunion vers votre service tant que l'application est ouverte.
+  </Accordion>
+</AccordionGroup>

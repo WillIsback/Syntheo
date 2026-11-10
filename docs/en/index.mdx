@@ -1,0 +1,66 @@
+---
+title: "Local, open-source meeting notepad"
+sidebarTitle: "Syntheo"
+description: "Record a meeting, take notes, and leave with a clear summary, without your data leaving your infrastructure."
+---
+
+Syntheo is a desktop app for Linux and Windows. It captures your microphone and your computer's audio without joining the call as a bot. Each meeting becomes a living note: you prepare it, Syntheo listens, then it turns your notes into a summary (備 Prepare · 聴 Listen · 結 Synthesis). [Why tea?](/en/philosophy)
+
+Transcription and summaries go only through the servers you configure (vLLM, Ollama, speaches, NVIDIA NIM…). Syntheo has no account, no subscription, no telemetry, and never keeps the audio.
+
+<CardGroup cols={2}>
+  <Card title="Install the app" icon="download" href="/en/desktop-installation">
+    Choose the Linux package (AppImage, `.deb`) or the signed Windows installer.
+  </Card>
+  <Card title="Your first meeting" icon="play" href="/en/quickstart">
+    Configure your servers, then start a first recording.
+  </Card>
+  <Card title="Set up transcription and AI" icon="server" href="/en/ai-setup">
+    Enter the URL of your transcription server and your LLM.
+  </Card>
+  <Card title="Record a meeting" icon="microphone" href="/en/meetings">
+    Start, follow, and finish a capture.
+  </Card>
+  <Card title="Review and export" icon="file-lines" href="/en/notes">
+    Review the summary, your notes, and the transcript, then export them.
+  </Card>
+  <Card title="Folders and projects" icon="folder-open" href="/en/folders">
+    File your meetings by project, follow the running thread, and prepare the next one.
+  </Card>
+  <Card title="Your data" icon="hard-drive" href="/en/data-and-privacy">
+    What stays on your computer and what goes to your servers.
+  </Card>
+</CardGroup>
+
+## Frequently asked questions
+
+<CardGroup cols={2}>
+  <Card title="Which languages are supported?" icon="language" href="/en/languages">
+    Main language, additional spoken languages, and model limits.
+  </Card>
+  <Card title="Can I import a recording?" icon="file-arrow-up" href="/en/import-recordings">
+    Create a note from an audio file or from an SRT or VTT transcript.
+  </Card>
+  <Card title="How do I improve summaries?" icon="wand-magic-sparkles" href="/en/customize-summaries">
+    Summary templates, instructions, languages, and dictionary.
+  </Card>
+  <Card title="Can I dictate into other apps?" icon="keyboard" href="/en/dictation">
+    A keyboard shortcut turns your voice into text in the active field.
+  </Card>
+  <Card title="Can capture be automated?" icon="bolt" href="/en/automatic-capture">
+    Meeting detection, automatic stop, and floating bar.
+  </Card>
+  <Card title="Something is not working" icon="life-ring" href="/en/troubleshooting">
+    Missing audio, stuck transcription, summary that does not appear.
+  </Card>
+</CardGroup>
+
+## At a glance
+
+1. Configure your transcription server and your summary server in **Settings → My servers** (see [Set up transcription and AI](/en/ai-setup)).
+2. On the home screen, click "Start a meeting", then "Begin listening".
+3. Take quick notes while Syntheo listens: the transcript scrolls in the margin.
+4. Click "Finish": Syntheo writes the summary from the transcript and your notes.
+5. File the note in a folder to follow the project from one meeting to the next, and find it again with <kbd>Ctrl</kbd> + <kbd>K</kbd>, by its title or its content.
+
+Your notes are stored locally, in a SQLite database on your computer. The audio lives in memory long enough to be sent to your transcription server, then disappears. See [Data and privacy](/en/data-and-privacy).
