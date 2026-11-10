@@ -81,6 +81,39 @@ status=0; timeout 30 xvfb-run -a apps/desktop/src-tauri/target/release/syntheo |
 `VITE_API_URL` est une valeur factice exigée à la compilation par des
 intégrations cloud héritées ; elle disparaît avec le chantier 04d du plan.
 
+## Lancer en développement
+
+`pnpm dev` (alias `pnpm dev:desktop`) lance l'application en mode
+développement. Il passe par `scripts/dev.mjs`, qui démarre
+[process-compose](https://github.com/F1bonacc1/process-compose) avec
+`process-compose.yaml` et deux processus :
+
+1. `ui-build` construit les styles partagés de `@syntheo/ui`
+   (`turbo run build --filter=@syntheo/ui`). Cette étape est indispensable :
+   sans elle, l'interface démarre sans ses styles.
+2. `desktop` lance `pnpm -F @syntheo/desktop tauri:dev` (Tauri avec la feature
+   `dev` et le serveur Vite), une fois `ui-build` terminé avec succès.
+
+process-compose doit être installé : `bash scripts/setup-devtools.sh` l'installe
+sous Linux (version fixée, somme de contrôle vérifiée), sinon
+`brew install process-compose` ou un binaire des
+[releases](https://github.com/F1bonacc1/process-compose/releases).
+
+- Les journaux de chaque processus vont dans `.process-compose/desktop/`
+  (`PC_LOG_DIR` pour changer de dossier).
+- L'API de process-compose écoute sur le port 18081 (`PC_PORT_NUM`).
+- Sans terminal interactif, l'interface TUI est désactivée
+  (`PC_DISABLE_TUI=1`).
+- Les arguments après `--` sont transmis à process-compose, par exemple
+  `pnpm dev -- --tui=false`.
+
+Sans process-compose, l'équivalent manuel est :
+
+```bash
+pnpm exec turbo run build --filter=@syntheo/ui
+pnpm -F @syntheo/desktop tauri:dev
+```
+
 ## Vérifications locales
 
 ```bash
