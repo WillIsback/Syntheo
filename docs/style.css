@@ -1,0 +1,32 @@
+/*
+ * Barre latérale : les titres de groupe (« Prise en main », « Utiliser
+ * Syntheo »…) avaient la même taille et la même graisse que les pages.
+ * Petites capitales espacées, couleur thé vert, et un peu d'air au-dessus
+ * de chaque groupe pour hiérarchiser la navigation.
+ */
+#sidebar .sidebar-group-header {
+  margin-top: 1.25rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  text-transform: uppercase;
+  color: #316745;
+}
+
+#sidebar .sidebar-group-header h5,
+#sidebar .sidebar-group-header span {
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+}
+
+#sidebar li:first-child > .sidebar-group-header,
+#sidebar .sidebar-group-header:first-child {
+  margin-top: 0.25rem;
+}
+
+html.dark #sidebar .sidebar-group-header {
+  color: #7dbf95;
+}
