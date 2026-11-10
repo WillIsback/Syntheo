@@ -1,0 +1,73 @@
+---
+title: "Chat with your meetings"
+description: "Ask questions, find context and review proposed edits."
+---
+
+import { AskNote, Kbd } from "/snippets/en/assist.gen.jsx";
+
+Syntheo's chat answers your questions about the open meeting, searches your other meetings and helps you prepare the follow-up. It uses the language model set up under **Settings → "Synthesis"**. Without a connected model, the chat invites you to "Open AI Settings".
+
+## Ask a question about the open meeting
+
+1. Open a meeting note.
+2. Open the chat: at the Synthesis stage, click "Ask the note" in the capsule. At any time, the <Kbd keys="Ctrl+J" /> shortcut opens and closes the chat.
+3. Ask your question or choose a suggestion. The open meeting is added to the context automatically.
+
+Suggestions offered:
+
+- During a capture: "Recap the last 5 minutes.", "Suggest what to ask next.", "List action items so far."
+- After the meeting: "List action items.", "Draft follow-up email.", "Find key decisions."
+- When a summary exists: "Make the summary shorter." and "Make the summary longer."
+- For a note filed in a folder: "Prepare the agenda for the next meeting.". This suggestion does not send a message: it opens the folder's "Next meeting" block (see [Folders and projects](/en/folders#next-meeting)).
+
+You can also ask, for example:
+
+- "Compare this meeting with the previous project review."
+- "Find the meetings where we talked about the launch date."
+
+To answer, the chat can search the titles and content of your meetings, your contacts and the documents attached to a folder.
+
+The reasoning steps and the tools used are grouped in an "Activity" line. Expand it to see them.
+
+Try the chat below: choose a suggestion, type `@` then a few letters in the field, run an automation, or close the chat and reopen it with "Ask the note". "Make the summary shorter." shows a proposed edit in place of the summary. Check "No connected model" to see the chat without a language model. The markers point to "Ask the note" (1), the suggestions (2), the field (3), "Run an automation" (4) and "New chat" (5).
+
+<AskNote />
+
+## Query a folder
+
+On a folder's page, click "Ask the folder" (or press <Kbd keys="Ctrl+J" />): the chat opens with this folder as context.
+
+From the palette <Kbd keys="Ctrl+K" /> filtered on a folder, the "Ask the folder" action opens a new conversation whose field already mentions the folder and carries over the text you typed. Nothing is sent before you confirm. See [Folders and projects](/en/folders#search-in-a-folder).
+
+## Organize your meetings
+
+Ask the chat to list your [folders](/en/folders), create one or move meetings into it. For example: "File my launch reviews in Projects/Launch." Moving changes where the meetings are, not their content.
+
+If a recording or notes landed on the wrong meeting, the chat can also move them to another existing meeting, provided that one does not have a transcript yet.
+
+## Guide the context
+
+The chat automatically uses the open meeting and adds other meetings or people if your request needs them.
+
+To add an item to the context yourself, type `@` followed by a few letters and choose a folder, a note or a contact. The list uses the same search as the palette <Kbd keys="Ctrl+K" />, in the same order: folders (with their number of meetings), notes whose title matches, notes found in their content, then contacts. Each note shows its folder on the right. The list offers at most 8 results.
+
+Name the meeting or the person precisely when several look alike, or specify "Use only this meeting". Click "New chat" to start over from an empty conversation.
+
+## Edits to your notes
+
+The chat acts on your notes in two ways:
+
+- **Rewriting a summary or a memo**: the chat proposes a complete replacement. For a summary, the proposal appears in its place, at the Synthesis stage: removed text is struck through, added text is highlighted. Choose "Apply to summary" or "Decline". Nothing is changed without your consent.
+- **Targeted correction** ("it's not X but Y"): the chat directly replaces the exact text in the summary, the title or the transcript.
+
+To correct the transcript yourself or reassign a speaker, see [Notes, summaries and transcripts](/en/notes).
+
+## Build an automation
+
+In the Automations view, the chat appears to the right of the editor and has its own tools: it creates the automation or edits the open one (name, trigger, steps). It never enables it, and an advanced step (webhook or command) is added only after you confirm in the editor. See [Build an automation with the chat](/en/automations#build-an-automation-with-the-chat).
+
+## Privacy
+
+The chat sends your question and the necessary context to the language model server you set up, and to it alone. If this server runs on your machine or on your network, this data does not leave your infrastructure. The chat does not search the web.
+
+See [Data and privacy](/en/data-and-privacy).

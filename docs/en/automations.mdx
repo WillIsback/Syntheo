@@ -1,0 +1,180 @@
+---
+title: "Automations"
+description: "Chain local steps after your meetings: Markdown export, generation, notes, notifications, webhook or command."
+---
+
+import { AutomationEditor, Kbd, SettingsPath } from "/snippets/en/assist.gen.jsx";
+
+Automations chain steps on your computer after your meetings: export the note to Markdown, generate text with your language model, write a note, copy to the clipboard, show a notification. Two advanced actions send JSON to an address (webhook) or run a local program. Actions toward online services (Slack, Notion, Linear, Google Drive) have been removed.
+
+Open the **Automations** view from Settings, or from the palette <Kbd keys="Ctrl+K" />:
+
+<SettingsPath steps={["Settings", "Advanced", "Automations"]} />
+
+The view shows the templates ("Start from a template") and the "My automations" list. The left column repeats "My automations", with a search field. The chat stays open on the right to help you build the automation (see [Build an automation with the chat](#build-an-automation-with-the-chat)).
+
+## Start from a template
+
+Two templates are offered under "Start from a template":
+
+- **"Export as Markdown"** (Meeting ends → Export as Markdown) saves each finished meeting to a local Markdown file.
+- **"Extract tasks"** (Meeting summary ready → Generate with the local model → Write to the vault) asks your model to list the decided actions, then writes them to a note named "Tasks –" followed by the meeting title, in the "Tasks" folder.
+
+1. Click a template. Syntheo creates a disabled automation and opens it in the editor.
+2. Fill in the missing settings. For "Export as Markdown", click "Choose a folder" under "Export folder".
+3. Check the trigger and each step.
+4. Click "Save & enable".
+
+An automation created from a template is an ordinary automation: you edit it like the others.
+
+## Create an automation
+
+Click "New automation", in the view or with **+** at the top of the left column. The editor numbers the steps in execution order: the trigger is step 1, then each action follows.
+
+1. Give the automation a name in the "Name" field. Without a name, it is called "Untitled automation".
+2. Under "When", choose the trigger:
+   - "When the meeting summary is ready";
+   - "When the meeting ends";
+   - "When you launch it from a note": the automation never starts on its own (see [Run an automation from a note](#run-an-automation-from-a-note)).
+3. Click "Add a step" and choose an action (see [Available actions](#available-actions)). Each new step runs after the previous one. To change a step's type, use the "Action" menu on its card.
+4. Set up each action. An incomplete action carries the "Needs setup" badge.
+5. Click "Test" to check the result on a note (see [Test on a note](#test-on-a-note)).
+6. Click "Save & enable".
+
+In the replica below, the "Extract tasks" automation is open. Change the trigger, add a step, insert a variable, then click "Test". Remove step 2: the "Generated text" chip of the next step becomes "Missing output" and "Save & enable" is grayed out. The markers point to the "My automations" column and **+** (1), "When" (2), "Add a step" (3), the "Insert" line (4) and "Test" (5). Delete the automation from the **⋯** menu to go back to the overview and to "Start from a template".
+
+<AutomationEditor />
+
+Syntheo saves your changes as you go. As long as it is not enabled, the automation stays in the "Draft" state. An automation can be enabled only if it contains at least one action, every action is set up and no step uses the result of a step that is missing or placed after it. Click "Disable" to keep the configuration without running it. An automation launched by hand has no enable button: it carries the "Manual" badge.
+
+With the "When the meeting summary is ready" trigger, regenerating a summary updates the file already exported for that meeting. With "When the meeting ends", Syntheo exports the note at the end of the meeting, then updates the file when the summary is ready. Only "Export as Markdown" steps are run again this way: the other actions run only once per meeting.
+
+<Tip>
+  At the end of the meeting, the summary does not exist yet. If a step uses the "Summary" variable, choose the "When the meeting summary is ready" trigger.
+</Tip>
+
+To delete an automation, open the editor's **⋯** menu and choose "Delete automation", or right-click it in the left column.
+
+## Available actions
+
+The "Add a step" menu offers five local actions, then two actions under "Advanced".
+
+| Action | What it does | Settings |
+| --- | --- | --- |
+| "Export as Markdown" | Writes the note to a folder on your computer. | "Export folder" and exported content (see [Choose the exported content](#choose-the-exported-content)). |
+| "Generate with the local model" | Applies an instruction (tasks, short summary, follow-up message); the text it produces is used by the next steps. | "Instruction". Uses the language model chosen in **Settings → "Synthesis"**. |
+| "Write to the vault" | Creates a Syntheo note, or completes the note with the same title. | "Create a new note" or "Complete the note with the same title", "Vault folder" (empty: at the root; created if needed), "Note title", "Content". |
+| "Copy to the clipboard" | Replaces the clipboard content, ready to paste into a message or a document. | "Content". |
+| "System notification" | Lets you know when the automation has finished. | "Notification title" and "Text" (at least one of the two). |
+| "Send to an address (webhook)" | Sends JSON to an address of your choice. The only step that leaves your computer. | "Address (URL)", "JSON body". |
+| "Run a command" | Runs a local program or script. | "Program", "Arguments". |
+
+Syntheo cannot send email, messages or invitations: to share a generated text, copy it to the clipboard or write it to a note.
+
+Without a language model set up, the "Generate with the local model" step fails with the message "No local model is configured. Choose one in Settings › Synthesis." See [Set up summarization](/en/ai-setup#set-up-summarization).
+
+## Reuse a result in the next steps
+
+Each text field of an action accepts variables, shown as chips. Below the field, the "Insert" line offers one chip per variable: click it to insert it at the cursor.
+
+- **Note variables**, available from the first action: "Summary", "Notes", "Transcript", "Title" and "Date" (in `YYYY-MM-DD` format). The trigger's card lists them under "Available to the next steps".
+- **Results of previous steps**: "Exported file" (the path of the file written by "Export as Markdown"), "Generated text" ("Generate with the local model") and "Command output" (the standard output of "Run a command"). A step offers only the results of the steps placed before it.
+
+To rename the result of a generation or a command, fill in "Result available to the next steps under the name". The new name appears in the chips of the next steps.
+
+If you remove or move a step whose result is used further on, the chip turns red ("Missing output") and the automation can no longer be enabled or tested until you fix the step.
+
+## Choose the exported content
+
+Each "Export as Markdown" action offers these settings:
+
+- Under "Include", check "Memo", "Summary", "Transcript" and "Collect action items", in any combination. At least one section must stay checked.
+- Leave "Filename" empty to use the meeting date and title, or type a pattern such as `{date} {title}.md`.
+- "Include meeting ID" adds a short identifier to the file name, to tell apart meetings with the same title.
+
+Syntheo refuses to overwrite a file that belongs to another meeting or that was not created by Syntheo. If an export reports a conflict, change the file name.
+
+These options are specific to automations. The CLI command `syntheo meetings export` exports a complete meeting to the path you give, without these settings.
+
+## Advanced steps
+
+### Send to an address (webhook)
+
+The step sends a `POST` request with the "JSON body" to the "Address (URL)", for example an n8n flow, Home Assistant or a home-made server.
+
+- The address must start with `http://` or `https://` and cannot contain credentials.
+- The default body contains the title, the date and the summary. Variables are inserted as JSON text, in quotes: place them inside a string, like `"summary": "{{summary}}"`. The body must remain valid JSON.
+- Syntheo does not follow redirects: the error gives the final address to use. The request stops after 15 seconds. Any response outside 2xx makes the step fail.
+
+<Warning>
+  This step sends the note's content off your computer. Use a trusted address, preferably over HTTPS or on your private network. The request is not signed and is not retried on failure: it is the [webhooks in Settings](/en/reference/webhooks) that sign their deliveries.
+</Warning>
+
+### Run a command
+
+The step runs a local program with its arguments, for example a script that publishes the exported file.
+
+1. In "Program", type the path of the program, for example `/home/me/scripts/publish.sh`.
+2. Click "Add an argument" for each argument. An argument can contain variables, such as "Exported file".
+
+Syntheo runs the program without a shell: each argument is passed as is. `$HOME`, `*`, `;`, `|` or redirections are not interpreted; if you need them, write a script and run it. Standard input is closed and execution stops after 60 seconds. An exit code other than 0 makes the step fail, with the first line of the error.
+
+The first time a command runs, the "Run this command?" window shows the program and each argument, exactly as they will be passed. Click "Allow and run" or "Do not run". Closing the window counts as a refusal, and with no answer after 5 minutes, the command is not run. Your consent is remembered for this exact command, as you typed it: if you change the program or an argument, Syntheo asks you to confirm again.
+
+<Warning>
+  The program runs with your user rights. Only allow a program you know. The note variables (transcript, title, generated text) come from what was said in the meeting: treat them in your script as untrusted data, without executing them.
+</Warning>
+
+## Test on a note
+
+Click "Test" in the editor to run the automation as it is being edited, even unsaved, on an existing note. The button is active as soon as all steps are set up.
+
+1. In the "Test on a note" panel, choose the note. By default, Syntheo selects the most recent one, except a note being recorded. Use "Search by title" to find another one.
+2. Read the warning: it lists the steps with real effects (file, note, clipboard, notification, sending, command).
+3. To check the sequence without acting, check "Simulate the steps with real effects". These steps then describe what they would do, without writing, sending or running anything. Generation still runs, so that the next steps receive its text. The box is unchecked by default: the test is real.
+4. Click "Run the test".
+
+In the replica, the "Test on a note" panel is open: check or uncheck "Simulate the steps with real effects", then run the test.
+
+<AutomationEditor testing markers={false} />
+
+The "Test result" shows each step: succeeded, "Simulated", in error with its message, or "Not run" after an error. It also shows the generated text ("Show all" to read it in full), the exported file, to open or to show with "Show in folder", the created note with "Open the note", and the total duration.
+
+The test changes neither the last run nor the list of notes already processed: automatic triggers are not affected. A real test of a "Run a command" step asks for the same confirmation as a normal run.
+
+## Build an automation with the chat
+
+In the Automations view, the chat on the right creates and edits the automation open in the editor. Describe what you want, for example: "When the summary is ready, list the tasks and add them to a note in the vault." The editor shows each change as it happens.
+
+- With no automation open, the chat creates a new one and opens it. Otherwise, it edits the open one: name, trigger, adding, editing, deleting or moving steps.
+- If your request is ambiguous, the chat asks you a question instead of making up a folder, an address or a program.
+- The chat never enables an automation. Each change saves it as a disabled draft, and an enabled automation goes back to draft. Review it, then click "Save & enable" yourself.
+- The chat never adds an advanced step directly. Above the steps, a "The chat suggests adding step…" card (or "changing step…") shows the webhook address or the full command. Click "Add the step" (or "Apply the change") to accept it, or "Decline".
+
+Each automation keeps its own conversation. The chat sends your request and the description of the automation to the language model you set up; see [Chat with your meetings](/en/chat#privacy).
+
+## Run an automation from a note
+
+You can run an automation on the open note, whatever its trigger and whether it is enabled or not. Only ready automations (every action set up) are offered.
+
+- **The note's ⋯ menu**: "Run an automation" group. It does not appear during listening.
+- **Capsule, at the Synthesis stage**: "Automations" button. It appears only if at least one automation is ready.
+- **"Ask the note"** (<Kbd keys="Ctrl+J" />): below the suggestions of the empty chat, the "Run an automation" section lists the ready automations.
+
+A notification announces the result: the automation "ran on this note", with the result of each step (for example the exported file), or "failed on this note", with the error. A manual run updates the last run, without changing how automatic triggers behave for this note.
+
+## Check execution
+
+The "My automations" list shows, for each automation, the trigger and the actions (for example "Meeting ends → Export as Markdown"), followed by the date of the last run, such as "last run 20 hours ago", or "never run". The bottom of the editor details the last run: the result of each step, or a short message in case of error. In case of an export error, check that the chosen folder still exists and is writable.
+
+Steps run in order. If a step fails, Syntheo stops the automation and does not run the following steps.
+
+Syntheo must be open to run an automation: meetings that end while the app is closed are not processed afterwards. In that case, run the automation from the note.
+
+<Note>
+  Exported files and written notes stay on your machine. If you choose a folder synced by another program, that program is the one that sends its content. The "Generate with the local model" step sends its instruction to the language model server you set up: if it runs on your machine or your network, this data does not leave your infrastructure. Only the webhook step sends data to an address of your choice.
+</Note>
+
+## Update from an earlier version
+
+On the first start after the update, Syntheo converts the old "Export all meetings as Markdown" template into an ordinary automation, if it was enabled or kept as a draft. It appears in "My automations" under the name "Export as Markdown", with the same folder, the same state and its last run, and produces the same file as before. Syntheo also removes steps toward online services from your saved automations, and disables those that are no longer fully set up.

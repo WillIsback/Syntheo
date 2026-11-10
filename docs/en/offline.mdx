@@ -1,0 +1,54 @@
+---
+title: "Use Syntheo without a network"
+sidebarTitle: "Without a network"
+description: "What works without an internet connection and what requires a reachable inference server."
+---
+
+Syntheo needs the internet for none of its features: it has no account, no sync and no online service. What it needs is **your inference servers**. If they run on your computer or on your local network, everything works offline. If they are unreachable, the features that depend on them stop.
+
+## What always works
+
+These features call no server:
+
+- creating, editing and organizing your notes and folders;
+- reviewing transcripts and summaries already produced;
+- full-text search (local index);
+- exporting your notes;
+- managing your summary templates.
+
+## What requires the transcription server
+
+- meeting transcription;
+- dictation;
+- importing an audio file.
+
+Without a reachable transcription server, **there is no transcription**. Syntheo never keeps audio: so it cannot record now to transcribe later.
+
+- If no transcription provider is set up, Syntheo refuses to start the capture: "No transcription provider is set up. Syntheo does not keep audio: set up a transcription endpoint before recording."
+- If the server becomes unreachable during a meeting, live transcription pauses and Syntheo tries to reconnect. The passage spoken during the outage will be missing from the transcript.
+
+## What requires the summary server
+
+- generating summaries;
+- chatting about notes ("Ask the note");
+- "Suggest sections" in the template editor.
+
+Without a reachable summary server, your transcripts remain available: you can generate the summary once the server is back.
+
+## Work entirely offline
+
+<Steps>
+  <Step title="Install the servers on your computer or local network">
+    For example speaches or vLLM for transcription, Ollama or llama.cpp server for the LLM. Download the models **before** you disconnect.
+  </Step>
+  <Step title="Declare them in Syntheo">
+    Follow [Set up transcription and AI](/en/ai-setup) with local URLs, for example `http://localhost:8000/v1` and `http://localhost:11434/v1`. Plain HTTP is accepted toward `localhost` and private addresses.
+  </Step>
+  <Step title="Test before the meeting">
+    Run a short listening session, then generate a summary. If both work with the network cut off, you are ready.
+  </Step>
+</Steps>
+
+<Note>
+  Apart from inference, Syntheo makes very few requests: showing the release notes of a version other than the installed one (GitHub) and a few interface icons. They carry no meeting content and their failure blocks nothing. Full list in [Syntheo Desktop and the GDPR](/en/conformite/rgpd).
+</Note>
