@@ -24,23 +24,54 @@ function backticksFor(node: PMNode, side: number): string {
   return result;
 }
 
-function escapeTableCell(markdown: string): string {
-  const breakPlaceholder = "\u0000TABLE_CELL_BREAK\u0000";
+const LITERAL_BR = /^<br\s*\/?>/i;
 
-  // Order matters: "\" + newline is first turned into a <br> placeholder (that
-  // is how hardBreak is serialized), then every remaining backslash is doubled
-  // *before* "|" and "<br>" are escaped. Without doubling the backslashes, a
-  // cell containing "\|" would serialize as "\\" + "|", i.e. a literal
-  // backslash followed by an unescaped cell delimiter (cell injection).
-  return markdown
-    .replace(/\\\n/g, breakPlaceholder)
-    .replace(/\\/g, "\\\\")
-    .replace(/\n+/g, breakPlaceholder)
-    .replace(/\|/g, "\\|")
-    .replace(/<br\s*\/?>/gi, "\\$&")
-    .split(breakPlaceholder)
-    .join("<br>")
-    .trim();
+// `markdown` is the cell content already serialized as inline Markdown, so its
+// backslashes are already escaped (text goes through `state.esc`). Only the
+// table syntax is escaped here, in a single pass:
+// - "\" + newline (a hardBreak) and newline runs become <br>;
+// - every "|" becomes "\|", so no pipe can close the cell. markdown-it treats a
+//   pipe preceded by any backslash as escaped and drops exactly one backslash,
+//   which restores the inline Markdown, code spans included (issue #505);
+// - a literal <br> tag is escaped so it does not turn into a line break.
+// Doubling the backslashes again here corrupted every "\" in a cell.
+function escapeTableCell(markdown: string): string {
+  let out = "";
+  let i = 0;
+
+  while (i < markdown.length) {
+    const char = markdown[i];
+
+    if (char === "\\" && markdown[i + 1] === "\n") {
+      out += "<br>";
+      i += 2;
+      continue;
+    }
+
+    if (char === "\n") {
+      while (markdown[i] === "\n") i++;
+      out += "<br>";
+      continue;
+    }
+
+    if (char === "|") {
+      out += "\\|";
+      i++;
+      continue;
+    }
+
+    const literalBr = char === "<" ? LITERAL_BR.exec(markdown.slice(i)) : null;
+    if (literalBr) {
+      out += `\\${literalBr[0]}`;
+      i += literalBr[0].length;
+      continue;
+    }
+
+    out += char;
+    i++;
+  }
+
+  return out.trim();
 }
 
 function tableCellToMarkdown(cell: PMNode): string {
