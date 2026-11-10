@@ -182,7 +182,7 @@ La colonne « Interface » indique si `apps/desktop/src` importe le paquet `@syn
 | Plugin | État | Détail |
 | --- | --- | --- |
 | `icon` | macOS uniquement | `set_dock_icon`, `reset_dock_icon`, `get_icon`, `set_recording_indicator`, `set_notification_badge`. Hors macOS, ces commandes ne font rien. |
-| `overlay` | Interne, surtout macOS | `set_fake_window_bounds`, `remove_fake_window`. Utilisé côté Rust par `icon` et `permissions`, pas par l'interface. |
+| `overlay` | Interne, surtout macOS | `set_fake_window_bounds`, `remove_fake_window`. Aucun usage : ni l'interface ni une autre crate ne l'appellent (`icon` et `permissions` ont leur propre module `overlay`, sans lien). |
 | `dock` | macOS uniquement | Aucune commande. Installe le menu du Dock (nouvelle note, réglages, mise à jour, redémarrage, quitter). |
 | `fs2` | Interne | `read_text_file`, `remove`. Paquet non importé par l'interface. Dépend du plugin `settings`. |
 | `path2` | Interne | `sanitize` (nettoyage des noms de fichiers). Paquet non importé par l'interface. |

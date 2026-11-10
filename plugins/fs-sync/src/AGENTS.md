@@ -1,1 +1,1 @@
-- Every `path` we expose through `commands` should be relative to `app.path2().base()`.
+- Every `path` we expose through `commands` should be relative to the vault base (`app.settings().vault_base()`).

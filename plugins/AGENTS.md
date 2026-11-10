@@ -1,1 +1,1 @@
-- After updating commands in `plugins/<NAME/src/lib.rs`, run `codegen`, update `plugins/<NAME>/permissions/default.toml`, `plugins/<NAME>/permissions/default.toml` and `apps/desktop/src-tauri/capabilities/default.json`.
+- After updating commands in `plugins/<NAME>/src/lib.rs`, update `plugins/<NAME>/permissions/default.toml` and `apps/desktop/src-tauri/capabilities/default.json`, then run `scripts/check-bindings.sh` to regenerate `plugins/<NAME>/js/bindings.gen.ts` (the `export_types` test of each plugin writes it) and commit the result.
