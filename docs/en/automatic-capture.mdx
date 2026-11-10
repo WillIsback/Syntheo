@@ -1,0 +1,74 @@
+---
+title: "Automate capture"
+description: "Detect meetings, stop listening when the call ends and keep the controls at hand."
+---
+
+import { AppSettings, AutoCaptureScreen, SettingsPath } from "/snippets/en/capture.gen.jsx";
+
+Syntheo can tell you that a meeting seems to be starting, stop listening when the call ends and show a compact control bar. These settings are in **Settings → My meetings → Meetings** and **Settings → Me → Notifications**.
+
+Detection runs entirely locally: Syntheo watches which apps use the microphone, without sending anything outside.
+
+## Availability by platform
+
+| Feature | Linux | Windows |
+| --- | --- | --- |
+| Reminder to inform participants | Yes | Yes |
+| Floating bar | Yes | Yes |
+| Microphone detection | Yes | No |
+| Stop when the meeting ends | Yes | No |
+| Recording disclosure and meeting chat capture | Yes | No |
+| Shared screen capture | No | Yes |
+
+## Detect an unplanned meeting
+
+<SettingsPath steps={["Settings", "Me", "Notifications"]} />
+
+Turn on "Microphone detection" (off by default). When another app uses the microphone for a sustained period, Syntheo sends you the notification "Are you in a meeting?" to tell you that a meeting may have started. It disappears after 15 seconds.
+
+Detection is a reminder: it does not start recording on its own. "Yes" opens a note and starts listening. You can adjust the "Detection delay" (from 5 seconds to 2 minutes) and use "Exclude apps from detection" to ignore apps that are not meeting tools. The notification footer also offers to ignore the detected app, for example "Ignore Visio?".
+
+Try it: answer "Yes" to the notification (1), or ignore the app with its footer (2). Once listening starts, the pill shows the duration (3), the microphone toggle (4), "Pause" and "Finish" (5). The simulation buttons replay the detection, trigger an alert or simulate the end of the call.
+
+<AutoCaptureScreen />
+
+## Stop listening when the call ends
+
+<SettingsPath steps={["Settings", "My meetings", "Meetings"]} />
+
+"Stop when meeting ends" is on by default. Syntheo stops listening when the meeting app releases the microphone; depending on the app, it may ask you to confirm before stopping.
+
+<Warning>
+  If you switch audio devices or use an app that behaves unusually, the automatic stop may trigger too early. Check that recording is still active before closing the meeting.
+</Warning>
+
+The options on this page are shown below; the following sections describe them.
+
+<AppSettings section="meetings" />
+
+## Inform participants
+
+By default, Syntheo shows a reminder each time recording starts, so that you remember to tell the participants. To turn it off, uncheck "Remind participants about recording" in **Settings → Meetings**.
+
+On Linux, **Settings → Meetings** also offers:
+
+- "Post recording disclosure in meeting chat", which tells participants that listening is starting;
+- "Capture meeting chat in the note", which saves the visible chat of supported meetings in the note.
+
+Both options use desktop accessibility (AT-SPI): allow it if your session asks you to. They are off by default.
+
+<Note>
+  Posting a disclosure is not consent. The applicable rules depend on where you and the other participants are; see [Record a meeting](/en/meetings).
+</Note>
+
+## Capture shared screens
+
+On Windows, "Capture shared screens in the note" saves in the note the slides and screens that other participants share during the meeting. This option is off by default.
+
+## Keep the controls at hand
+
+With "Show floating bar", on by default in **Settings → Meetings**, a compact pill stays visible during listening. It shows the listening duration and the sound level, and offers the microphone toggle, "Pause" and "Finish" (markers 3 to 5 in the replica above). A click on the duration takes you back to the note. While paused, it shows "Paused", "Resume" and "Finish". If the capture runs into a problem, a warning replaces the sound level: open Syntheo to try again or change devices. See [Record a meeting](/en/meetings), section "Keep the controls at hand".
+
+The pill opens at the bottom center of the screen. On Linux, with a Wayland compositor that supports layers (Hyprland, sway, KDE Plasma), it stays anchored there. On GNOME, X11 and Windows, you can move it by dragging it.
+
+Syntheo does not start listening from a calendar: start your captures from a note with "Begin listening".

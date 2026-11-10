@@ -1,0 +1,92 @@
+---
+title: "Folders and projects"
+description: "File your meetings by project, follow a folder's project thread and prepare the next meeting."
+---
+
+import { AppPalette, FolderPage, Kbd } from "/snippets/en/organize.gen.jsx";
+
+A folder groups the meetings of one project, team or client. Its page works as a project space: where the topic stands, what remains open, the agenda for the next meeting and the meeting history.
+
+## Open your folders
+
+- On the home screen, the "Your folders" block shows up to six recently active folders. Click a card to open the folder page, or "All folders" to open the **Folders** view.
+- In the palette (<Kbd keys="Ctrl+K" />), choose **Folders**, or type a folder name.
+
+The **Folders** view shows your folder tree on the left. Each folder shows its icon and its number of meetings, subfolders included.
+
+- Click the chevron to expand a folder: its subfolders appear first, then its notes, most recent first. Beyond five notes, "… N others" opens the folder page.
+- Click a folder name to open its page, or a note to open it in a tab.
+- Filter the list with "Search folders...". Parent folders stay open.
+- Create a folder with the "New folder" button (**+**), at the top of the column. The arrow on its left ("Go home") takes you back to the home screen.
+
+Syntheo remembers which folders are expanded. With the keyboard, use the up and down arrows to browse the tree, the right arrow to expand, the left arrow to collapse, and <Kbd keys="Enter" /> to open.
+
+## File a note
+
+You choose a note's folder in several places:
+
+- **At the Prepare stage**, in the note's card, the "Folder" field shows the note's folder, or "Choose a folder" if it is not filed. Click it to search for a folder or create one ("Search or create folder").
+- **On the home screen**, in the "Resume" list, each note shows its folder's badge. A note that is not filed offers "File", which opens the same picker.
+- **At the top right of a note**, next to the **•••** menu, the folder picker stays available at every stage.
+
+If a folder already holds a note with the same title, the picker suggests it first, under "Suggested", marked "same title". The comparison ignores case, accents, punctuation, dates and numbers. Syntheo never files a note without your click.
+
+## A folder's page
+
+The header shows the folder's name, its icon and the number of meetings, with the dates of the first and the last one. Edit the name directly in the header, and choose another icon by clicking it. Two buttons act on the folder:
+
+- **"Ask the folder"** (<Kbd keys="Ctrl+J" />) opens the chat with this folder as context. See [Chat with your meetings](/en/chat).
+- **"New note in this folder"** creates a note that is already filed and opens it at the Prepare stage.
+
+The **•••** menu offers "Delete". The notes stay in "All Notes"; the folder, its subfolders and their attached files are deleted.
+
+The right column groups:
+
+- **"Context"**: the usual topic of these notes, as free text;
+- **"Summary template"**: the folder's default template (see [Choose a template per folder](/en/customize-summaries#choose-a-template-per-folder));
+- **"Materials"**: the files attached to the folder. Click "Add file" to add one.
+
+When the window is narrow, these blocks move below the rest of the page.
+
+Try the **Folders** view below: expand "Clients" with its chevron (1) or with the keyboard, open a folder, then, on the "Produit" page, click "Propose" (3): the agenda was edited by hand, so Syntheo asks for confirmation. The header (2) holds "Ask the folder" and "New note in this folder"; "Update" (4) adds to the project thread the meetings it does not cover yet; the right column (5) groups the context, the summary template and the materials.
+
+<FolderPage />
+
+### Next meeting
+
+At the top of the page, the "Next meeting" block prepares the project's next meeting.
+
+1. Click "Propose". Your summary server writes an agenda of 3 to 7 items from the folder's open points, decisions to confirm and open tasks. Each item links to the meeting it comes from.
+2. Edit the agenda like a note. Syntheo keeps it on your computer.
+3. Click "Prepare the note". Syntheo creates the note for the next meeting, filed in the folder, with the most frequent title of the latest meetings, the usual participants and the agenda in your notes. The note opens at the Prepare stage.
+
+If you edited the agenda by hand, a new proposal asks for confirmation: "A new proposal replaces your changes to the agenda." Choose "Replace" or "Cancel".
+
+From a note filed in a folder, "Ask the note" (<Kbd keys="Ctrl+J" />) also offers "Prepare the agenda for the next meeting.". This suggestion opens the folder's "Next meeting" block and starts the proposal if there is no agenda yet.
+
+### Project thread
+
+The project thread sums up where the project stands: the state of the topic, then the "Decisions", the "Open points" and the "Open tasks". Each item links to the meeting it comes from.
+
+- Click "Update" to have your summary server add the meetings that the project thread does not cover yet. The button stays inactive when the project thread is up to date.
+- The "up to date as of …" badge shows the last meeting covered, followed by the number of meetings that arrived since.
+- Edit the project thread like a note, and check the tasks that are done. An update adds new items and marks settled points, without rewriting your corrections.
+
+The project thread and the agenda are written from the summaries: they are available as soon as one meeting in the folder has a summary. Without a summary server set up, "Propose" and "Update" stay inactive. See [Set up transcription and AI](/en/ai-setup).
+
+### Meetings
+
+The "Meetings" block lists the meetings of the folder and its subfolders, most recent first, with a line taken from their summary. Click a title to open the note. "See the N previous meetings" shows the rest of the history.
+
+## Search in a folder
+
+In the palette (<Kbd keys="Ctrl+K" />), highlight a folder, then press <Kbd keys="Tab" /> ("Tab: search inside"): the folder becomes a filter and the search is limited to that folder and its subfolders. The palette then offers two actions:
+
+- "Ask the folder" opens a new conversation that mentions the folder and carries over the text you typed. Nothing is sent before you confirm.
+- "New note in this folder" creates a note that is already filed.
+
+To leave the folder, press <Kbd keys="Backspace" /> in the empty field, or remove the folder's badge. See [Find a note](/en/notes#find-a-note).
+
+In the replica below, "quota" is already typed and the "Roadmap" folder is suggested first: press <Kbd keys="Tab" /> to search inside it, then <Kbd keys="Backspace" /> to leave it.
+
+<AppPalette demo="dossier" />

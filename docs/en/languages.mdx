@@ -1,0 +1,50 @@
+---
+title: "Use several languages"
+description: "Choose the language of summaries and chat, and tell transcription which languages to expect."
+---
+
+import { AppSettings, Kbd, SettingsPath } from "/snippets/en/start.gen.jsx";
+
+Syntheo separates the language used for summaries and chat from the languages it should expect to hear during a meeting. These settings are on the **Profile** page of Settings, in the "Language & Region" section:
+
+<SettingsPath steps={["Settings", "Me", "Profile", "Language & Region"]} />
+
+<Note>
+  The interface language (French by default) is independent of these settings.
+</Note>
+
+## Choose the main language
+
+Choose the "Main language". It is the default language for transcription and for AI answers: the chat uses it, and it is the fallback for summaries. It is always one of the transcription languages.
+
+By default, summaries follow the detected language of the meeting among the languages you selected. Generated titles follow the summary. If detection fails, Syntheo uses your main language.
+
+Turn on "Use main language for summaries" to write all summaries in your main language, even when the meeting is held in another selected language. This option is off by default and does not remove your additional spoken languages.
+
+Changing the main language does not translate an existing transcript. Regenerate the summary of an old meeting to apply the new language.
+
+## Add spoken languages
+
+In "Additional spoken languages", add the other languages that participants may use. Syntheo uses them for transcription and to automatically detect the language of summaries.
+
+Syntheo sends these languages to your transcription server as a hint. The model decides what it can recognize: if a language is missing or poorly transcribed, try another model on your server, then select it in **Settings → My servers → Transcription**. Syntheo warns you when the chosen model cannot transcribe all the selected languages: below the spoken languages, the message "The live transcription model handles one language at a time. To transcribe several, change models." appears, and the "change models" link opens the **Transcription** page.
+
+The section ends with the "Timezone", which sets the time shown in the timeline.
+
+In the replica below, change the "Main language", turn on "Use main language for summaries", then type a language name in "Additional spoken languages" (for example "German"): click it or use <Kbd keys="↓" /> then <Kbd keys="Enter" />. <Kbd keys="Backspace" /> in the empty field removes the last language. Check "simulate a transcription model that handles only one language" to show the warning.
+
+<AppSettings section="app" focus="language" />
+
+## Available languages
+
+Settings offer the following languages, for the main language as well as for additional spoken languages:
+
+Arabic, Belarusian, Bengali, Bosnian, Bulgarian, Catalan, Chinese, Croatian, Czech, Danish, Dutch, English, Estonian, Filipino, Finnish, French, German, Greek, Hebrew, Hindi, Hungarian, Indonesian, Italian, Japanese, Kannada, Korean, Latvian, Lithuanian, Macedonian, Malay, Marathi, Norwegian, Persian, Polish, Portuguese, Romanian, Russian, Serbian, Slovak, Slovenian, Spanish, Swedish, Tamil, Telugu, Thai, Turkish, Ukrainian, Urdu and Vietnamese.
+
+This list does not guarantee that your transcription model covers each language: check the documentation of the model you serve (for example Whisper or Voxtral).
+
+## Proper names and jargon
+
+Choosing a language does not teach the model your organization's vocabulary. Add names, acronyms and business terms in **Settings → Writing → Dictionary**.
+
+For the structure and tone of summaries, see [Customize summaries](/en/customize-summaries).
