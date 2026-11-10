@@ -171,6 +171,15 @@
     }
   },
   "description": "Le bloc-notes de réunion qui reste chez vous : transcription en temps réel et comptes rendus avec vos propres modèles.",
+  "seo": {
+    "metatags": {
+      "og:site_name": "Syntheo",
+      "og:locale": "fr_FR",
+      "twitter:card": "summary_large_image",
+      "keywords": "Syntheo, prise de notes de réunion, transcription de réunion, compte rendu de réunion, IA locale, open source, auto-hébergé, Whisper, Ollama, vLLM"
+    },
+    "indexing": "navigable"
+  },
   "redirects": [
     {
       "source": "/calendar",
