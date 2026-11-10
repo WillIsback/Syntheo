@@ -1,1 +1,34 @@
-{ "version": "0.7.0" }
+{
+  "version": "0.7.0",
+  "shared": [
+    "core.jsx.tpl",
+    "note.jsx.tpl",
+    "settings.jsx.tpl",
+    "settings-meetings.jsx.tpl",
+    "settings-servers.jsx.tpl",
+    "settings-profile.jsx.tpl",
+    "settings-dictation.jsx.tpl",
+    "settings-privacy.jsx.tpl",
+    "palette.jsx.tpl"
+  ],
+  "outputs": {
+    "app.gen.jsx": ["meeting.jsx.tpl"],
+    "start.gen.jsx": ["quickstart.jsx.tpl"],
+    "capture.gen.jsx": [
+      "dictation.jsx.tpl",
+      "automatic-capture.jsx.tpl",
+      "import.jsx.tpl"
+    ],
+    "organize.gen.jsx": [
+      "notes.jsx.tpl",
+      "folders.jsx.tpl",
+      "templates.jsx.tpl",
+      "contacts.jsx.tpl"
+    ],
+    "assist.gen.jsx": [
+      "chat.jsx.tpl",
+      "automations.jsx.tpl",
+      "troubleshooting.jsx.tpl"
+    ]
+  }
+}

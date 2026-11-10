@@ -3,7 +3,7 @@ title: "Enregistrer une réunion"
 description: "Préparez, écoutez et terminez une capture sans ajouter de robot à l'appel."
 ---
 
-import { AppScreen, SettingsPath } from "/snippets/app.gen.jsx";
+import { AppScreen, AppSettings, Kbd, SettingsPath } from "/snippets/app.gen.jsx";
 
 ## Avant de commencer
 
@@ -25,7 +25,7 @@ Essayez la capsule : cliquez sur « Commencer l'écoute », coupez le micro ou l
 
 ## Préparer la réunion
 
-1. Sur l'accueil, cliquez sur « Démarrer une réunion » (<kbd>Ctrl</kbd> + <kbd>N</kbd>). Une nouvelle note s'ouvre à l'étape **Préparer**.
+1. Sur l'accueil, cliquez sur « Démarrer une réunion » (<Kbd keys="Ctrl+N" />). Une nouvelle note s'ouvre à l'étape **Préparer**.
 2. Saisissez le titre en haut de la note.
 3. Remplissez la fiche :
    - **« Dossier »** : le dossier où ranger la note. Cliquez sur « Choisir un dossier » pour rechercher un dossier ou en créer un. Si un dossier contient déjà une note du même titre, Syntheo le propose en tête, avec la mention « même titre ». Voir [Dossiers et projets](/folders).
@@ -42,7 +42,7 @@ Une note créée depuis la page d'un dossier, avec « Nouvelle note dans ce doss
 
 ## Démarrer l'écoute
 
-Cliquez sur « Commencer l'écoute » dans la capsule, ou appuyez sur <kbd>Ctrl</kbd> + <kbd>Maj</kbd> + <kbd>N</kbd>. Ailleurs dans l'application, ce raccourci crée une nouvelle note et lance l'écoute.
+Cliquez sur « Commencer l'écoute » dans la capsule, ou appuyez sur <Kbd keys="Ctrl+Maj+N" />. Ailleurs dans l'application, ce raccourci crée une nouvelle note et lance l'écoute.
 
 Syntheo capte votre microphone et l'audio système de l'ordinateur. Il ne rejoint pas la réunion comme participant : les autres personnes ne voient pas de robot dans l'appel.
 
@@ -51,6 +51,10 @@ Syntheo capte votre microphone et l'audio système de l'ordinateur. Il ne rejoin
 Ouvrez **Paramètres → Réunions**, section « Audio » :
 
 <SettingsPath steps={["Paramètres", "Mes réunions", "Réunions", "Audio"]} />
+
+Dans la reproduction ci-dessous, changez la sortie captée : la ligne « Capturé en ce moment : » suit votre choix. La sortie « Écouteurs Bluetooth », débranchée, montre la mention « (indisponible — sortie par défaut utilisée) ».
+
+<AppSettings section="meetings" focus="audio" />
 
 - « Microphone » : le micro qui capte votre voix ;
 - « Son système » : la sortie dont Syntheo transcrit le son, c'est-à-dire celle où vous entendez les autres participants (casque, haut-parleurs, HDMI…).
@@ -79,8 +83,8 @@ La capsule affiche le temps d'écoute et le niveau sonore.
 
 Pendant l'écoute, la capsule propose deux bascules entre le niveau sonore et « Mettre en pause » :
 
-- le micro, avec <kbd>Ctrl</kbd> + <kbd>Maj</kbd> + <kbd>M</kbd> ;
-- le son système, avec <kbd>Ctrl</kbd> + <kbd>Maj</kbd> + <kbd>S</kbd>.
+- le micro, avec <Kbd keys="Ctrl+Maj+M" /> ;
+- le son système, avec <Kbd keys="Ctrl+Maj+S" />.
 
 Une source coupée apparaît sur fond rouge, avec une icône barrée. L'infobulle indique l'action, par exemple « Couper le micro » ou « Rétablir le son système ». Ce qui est dit sur une source coupée n'est pas transcrit, mais l'écoute continue : le temps d'écoute défile et la connexion au serveur de transcription reste ouverte. L'état coupé est conservé même si la transcription se reconnecte. Les raccourcis fonctionnent dans la fenêtre de Syntheo, y compris dans une note détachée, et n'ont aucun effet hors écoute.
 
@@ -100,11 +104,11 @@ Pour une pause pendant la réunion, cliquez sur « Mettre en pause » dans la ca
 
 Cliquez sur « Reprendre l'écoute » pour continuer dans la même note. La nouvelle capture s'ajoute à la transcription, qui reste continue, et le temps d'écoute reprend là où il s'était arrêté. Vous pouvez mettre en pause et reprendre autant de fois que nécessaire.
 
-La pause ne termine pas la réunion : le compte rendu n'est rédigé qu'à « Terminer ». Pendant la pause, la palette (<kbd>Ctrl</kbd> + <kbd>K</kbd>) propose aussi « Reprendre l'écoute ». Pendant l'écoute, elle propose « Mettre en pause l'écoute ». Aucun raccourci clavier dédié n'existe, pour éviter une pause involontaire.
+La pause ne termine pas la réunion : le compte rendu n'est rédigé qu'à « Terminer ». Pendant la pause, la palette (<Kbd keys="Ctrl+K" />) propose aussi « Reprendre l'écoute ». Pendant l'écoute, elle propose « Mettre en pause l'écoute ». Aucun raccourci clavier dédié n'existe, pour éviter une pause involontaire.
 
 Si vous fermez la note pendant la pause, la réunion reste en pause : la barre flottante affiche « En pause » avec « Reprendre » et « Terminer ». Si vous quittez Syntheo pendant la pause, la réunion se termine sans compte rendu et la transcription est conservée. À la réouverture, la capsule de la note propose « Reprendre l'écoute » ou « Générer le compte rendu ».
 
-Sur macOS, la barre flottante reste masquée pendant la pause : reprenez l'écoute depuis la note ou depuis la palette (<kbd>⌘</kbd> + <kbd>K</kbd>). Cette limite est suivie dans l'[issue 409](https://github.com/WillIsback/syntheo-desktop/issues/409).
+Sur macOS, la barre flottante reste masquée pendant la pause : reprenez l'écoute depuis la note ou depuis la palette (<Kbd keys="⌘+K" />). Cette limite est suivie dans l'[issue 409](https://github.com/WillIsback/syntheo-desktop/issues/409).
 
 ### Garder les commandes à portée de main
 
@@ -125,7 +129,7 @@ Pendant une capture, vous pouvez aussi choisir « Ouvrir le panneau flottant » 
 
 Cliquez sur « Terminer » dans la capsule, pendant l'écoute ou pendant une pause. Syntheo finalise la transcription (« Finalisation… »), puis passe à l'étape **Synthèse**. Il rédige le compte rendu si un serveur de synthèse est configuré.
 
-Pour une simple interruption, préférez « Mettre en pause » (voir [Faire une pause](#faire-une-pause)). Si la conversation reprend après « Terminer », ouvrez le menu **•••** de la note et choisissez « Reprendre l'écoute ».
+Pour une simple interruption, préférez « Mettre en pause » (voir [Faire une pause](#faire-une-pause)). Si la conversation reprend après « Terminer » et que la note n'a pas encore de compte rendu, cliquez sur « Reprendre l'écoute » dans la capsule.
 
 Pour relire, corriger et exporter la note, voir [Notes, comptes rendus et transcriptions](/notes).
 

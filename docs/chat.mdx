@@ -3,12 +3,14 @@ title: "Discuter avec vos réunions"
 description: "Posez des questions, retrouvez du contexte et vérifiez les modifications proposées."
 ---
 
+import { AskNote, Kbd } from "/snippets/assist.gen.jsx";
+
 Le chat de Syntheo répond à vos questions sur la réunion ouverte, cherche dans vos autres réunions et vous aide à préparer le suivi. Il utilise le modèle de langage configuré sous **Paramètres → « Synthèse »**. Sans modèle connecté, le chat vous invite à « Ouvrir les paramètres de l'IA ».
 
 ## Poser une question sur la réunion ouverte
 
 1. Ouvrez une note de réunion.
-2. Ouvrez le chat : à l'étape Synthèse, cliquez sur « Demander à la note » dans la capsule. À tout moment, le raccourci <kbd>Ctrl</kbd>+<kbd>J</kbd> ouvre et ferme le chat.
+2. Ouvrez le chat : à l'étape Synthèse, cliquez sur « Demander à la note » dans la capsule. À tout moment, le raccourci <Kbd keys="Ctrl+J" /> ouvre et ferme le chat.
 3. Posez votre question ou choisissez une suggestion. La réunion ouverte est ajoutée automatiquement au contexte.
 
 Suggestions proposées :
@@ -27,11 +29,15 @@ Pour répondre, le chat peut chercher dans les titres et le contenu de vos réun
 
 Les étapes de raisonnement et les outils utilisés sont regroupés dans une ligne « Activité ». Dépliez-la pour les consulter.
 
+Essayez le chat ci-dessous : choisissez une suggestion, tapez `@` puis quelques lettres dans le champ, lancez une automatisation, ou fermez le chat puis rouvrez-le avec « Demander à la note ». « Raccourcissez le résumé. » affiche une modification proposée à la place du compte rendu. Cochez « Sans modèle connecté » pour voir le chat sans modèle de langage. Les repères désignent « Demander à la note » (1), les suggestions (2), le champ (3), « Lancer une automatisation » (4) et « Nouveau chat » (5).
+
+<AskNote />
+
 ## Interroger un dossier
 
-Sur la page d'un dossier, cliquez sur « Demander au dossier » (ou appuyez sur <kbd>Ctrl</kbd> + <kbd>J</kbd>) : le chat s'ouvre avec ce dossier pour contexte.
+Sur la page d'un dossier, cliquez sur « Demander au dossier » (ou appuyez sur <Kbd keys="Ctrl+J" />) : le chat s'ouvre avec ce dossier pour contexte.
 
-Depuis la palette <kbd>Ctrl</kbd> + <kbd>K</kbd> filtrée sur un dossier, l'action « Demander au dossier » ouvre une nouvelle conversation dont le champ mentionne déjà le dossier et reprend le texte saisi. Rien n'est envoyé avant que vous validiez. Voir [Dossiers et projets](/folders#chercher-dans-un-dossier).
+Depuis la palette <Kbd keys="Ctrl+K" /> filtrée sur un dossier, l'action « Demander au dossier » ouvre une nouvelle conversation dont le champ mentionne déjà le dossier et reprend le texte saisi. Rien n'est envoyé avant que vous validiez. Voir [Dossiers et projets](/folders#chercher-dans-un-dossier).
 
 ## Organiser vos réunions
 
@@ -43,7 +49,7 @@ Si un enregistrement ou des notes ont atterri sur la mauvaise réunion, le chat 
 
 Le chat utilise automatiquement la réunion ouverte et ajoute d'autres réunions ou personnes si votre demande le nécessite.
 
-Pour ajouter vous-même un élément au contexte, tapez `@` suivi de quelques lettres et choisissez un dossier, une note ou un contact. La liste utilise la même recherche que la palette <kbd>Ctrl</kbd> + <kbd>K</kbd>, dans le même ordre : dossiers (avec leur nombre de réunions), notes dont le titre correspond, notes trouvées dans leur contenu, puis contacts. Chaque note affiche son dossier à droite. La liste propose au plus 8 résultats.
+Pour ajouter vous-même un élément au contexte, tapez `@` suivi de quelques lettres et choisissez un dossier, une note ou un contact. La liste utilise la même recherche que la palette <Kbd keys="Ctrl+K" />, dans le même ordre : dossiers (avec leur nombre de réunions), notes dont le titre correspond, notes trouvées dans leur contenu, puis contacts. Chaque note affiche son dossier à droite. La liste propose au plus 8 résultats.
 
 Nommez précisément la réunion ou la personne quand plusieurs se ressemblent, ou précisez « Utilise uniquement cette réunion ». Cliquez sur « Nouveau chat » pour repartir d'une conversation vide.
 
