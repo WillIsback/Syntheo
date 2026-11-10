@@ -1729,8 +1729,8 @@ msgid "Esc to dismiss"
 msgstr "Esc to dismiss"
 
 #: src/session/components/capsule/import-progress.tsx
-msgid "estimating…"
-msgstr "estimating…"
+msgid "Estimating…"
+msgstr "Estimating…"
 
 #: src/automations/labels.ts
 msgid "Every finished meeting is saved as a Markdown file in a folder."
@@ -3319,6 +3319,10 @@ msgstr "Open in right panel"
 #: src/instruction/index.tsx
 msgid "Open in your browser"
 msgstr "Open in your browser"
+
+#: src/stt/audio-import-feedback.ts
+msgid "Open note"
+msgstr "Open note"
 
 #: src/stt/start-failure.ts
 msgid "Open permissions"
@@ -5085,6 +5089,14 @@ msgstr "The command failed (code {code})."
 #: src/automations/action-runners.ts
 msgid "The command was not confirmed, so it did not run."
 msgstr "The command was not confirmed, so it did not run."
+
+#: src/stt/audio-import-feedback.ts
+msgid "The import of {name} was abandoned: {reason}"
+msgstr "The import of {name} was abandoned: {reason}"
+
+#: src/stt/audio-import-feedback.ts
+msgid "The import was abandoned: {reason}"
+msgstr "The import was abandoned: {reason}"
 
 #: src/automations/action-runners.ts
 msgid "The JSON body is not valid once the variables are filled in."
