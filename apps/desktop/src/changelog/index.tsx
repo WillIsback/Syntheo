@@ -6,7 +6,7 @@ import { X } from "@syntheo/ui/components/icons";
 import { Button } from "@syntheo/ui/components/ui/button";
 import { useMountEffect } from "@syntheo/ui/hooks/use-mount-effect";
 
-import { useChangelogContent } from "./data";
+import { type ChangelogEntry, changelogEntries } from "./data";
 
 import { useShell } from "~/contexts/shell";
 import { StandardContentWrapper } from "~/shared/main";
@@ -27,8 +27,6 @@ export function TabContentChangelog({
     }
   });
 
-  const { content, loading } = useChangelogContent(current);
-
   return (
     <StandardContentWrapper>
       <div className="flex h-full flex-col">
@@ -38,7 +36,7 @@ export function TabContentChangelog({
 
         <div className="relative mt-2 min-h-0 flex-1 overflow-hidden">
           <div className="scroll-fade-y h-full overflow-y-auto px-3 pb-4">
-            <ChangelogBody content={content} loading={loading} />
+            <ChangelogEntries entries={changelogEntries} />
           </div>
         </div>
       </div>
@@ -71,47 +69,74 @@ function ExternalLink({
   );
 }
 
-function ChangelogBody({
-  content,
-  loading,
-}: {
-  content: string | null;
-  loading: boolean;
-}) {
-  if (loading) {
+const linkComponents = {
+  a: ({ href, children }: { href?: string; children?: React.ReactNode }) =>
+    href ? (
+      <ExternalLink href={href}>{children}</ExternalLink>
+    ) : (
+      <>{children}</>
+    ),
+};
+
+function ChangelogEntries({ entries }: { entries: readonly ChangelogEntry[] }) {
+  const [latest, ...previous] = entries;
+  if (!latest) {
     return (
       <p className="text-muted-foreground">
-        <Trans>Loading...</Trans>
+        <Trans>No changelog available for this version.</Trans>
       </p>
     );
   }
 
-  if (content) {
-    return (
-      <ChangelogContent
-        content={content}
-        components={{
-          a: ({
-            href,
-            children,
-          }: {
-            href?: string;
-            children?: React.ReactNode;
-          }) =>
-            href ? (
-              <ExternalLink href={href}>{children}</ExternalLink>
-            ) : (
-              <>{children}</>
-            ),
-        }}
-      />
-    );
-  }
-
   return (
-    <p className="text-muted-foreground">
-      <Trans>No changelog available for this version.</Trans>
-    </p>
+    <div className="flex flex-col gap-6">
+      <section className="flex flex-col gap-3">
+        <EntryHeading entry={latest} />
+        <EntryBody entry={latest} />
+      </section>
+      {previous.map((entry) => (
+        <details
+          key={entry.version}
+          className="border-border flex flex-col gap-3 border-t pt-4"
+        >
+          <summary className="cursor-pointer">
+            <EntryHeading entry={entry} />
+          </summary>
+          <div className="mt-3">
+            <EntryBody entry={entry} />
+          </div>
+        </details>
+      ))}
+    </div>
+  );
+}
+
+function EntryHeading({ entry }: { entry: ChangelogEntry }) {
+  const { i18n } = useLingui();
+  // `AAAA-MM-JJ` lu en heure locale, pour ne pas glisser d'un jour.
+  const date = entry.date ? new Date(`${entry.date}T00:00:00`) : null;
+  return (
+    <span className="inline-flex items-baseline gap-2">
+      <span className="text-foreground text-lg font-semibold">
+        {entry.version}
+      </span>
+      {date && !Number.isNaN(date.getTime()) && (
+        <span className="text-muted-foreground text-sm">
+          {i18n.date(date, { dateStyle: "long" })}
+        </span>
+      )}
+    </span>
+  );
+}
+
+function EntryBody({ entry }: { entry: ChangelogEntry }) {
+  return (
+    <div className="flex flex-col gap-3">
+      {entry.summary && (
+        <p className="text-muted-foreground">{entry.summary}</p>
+      )}
+      <ChangelogContent content={entry.content} components={linkComponents} />
+    </div>
   );
 }
 

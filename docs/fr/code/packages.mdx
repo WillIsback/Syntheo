@@ -157,9 +157,9 @@ Le fichier `packages/editor/daily/cfm.md` est une note de conception héritée (
 
 - Chemin : `packages/changelog`
 - Rôle : contient les notes de version (`content/desktop/<version>.md`, une par version) et les rend dans l'application.
-- API principale : `ChangelogContent`, `changelogComponents`, `parseFrontmatter`, `processContent`. Export `./process` pour le traitement seul.
+- API principale : `ChangelogContent`, `changelogComponents`, `parseFrontmatter`, `processContent`, `selectVersionLine`. Exports `./process` et `./line` pour le traitement seul (plugin Vite).
 - Dépendances internes : `utils`.
-- Consommateurs : `apps/desktop/src/changelog/*`. L'application lit la dernière version via un module virtuel Vite (`virtual:changelog`) et télécharge les versions plus anciennes.
+- Consommateurs : `apps/desktop/src/changelog/*`. Au build, un module virtuel Vite (`virtual:changelog`) embarque les notes de la ligne de la version installée (`selectVersionLine`) : les patchs de la minor en cours, puis `X.Y.0`, puis `X.0.0`. Rien n'est téléchargé à l'exécution.
 - Pages de doc concernées : aucune. Le site Mintlify n'a pas de page de notes de version.
 
 ## Ressources pour les agents
