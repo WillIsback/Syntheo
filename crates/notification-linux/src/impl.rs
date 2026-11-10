@@ -10,7 +10,7 @@ use gtk::{
 };
 use indexmap::IndexMap;
 
-use syntheo_notification_interface::{DismissTimer, ParticipantStatus, PrimaryAction, unix_now};
+use syntheo_notification_interface::{DismissTimer, PrimaryAction, unix_now};
 
 use crate::callbacks;
 use crate::icon;
@@ -251,38 +251,15 @@ impl NotificationInstance {
                     callbacks::accept(action_key.clone());
                     NotificationManager::dismiss_global(&action_key, DismissReason::Action);
                 });
-                if let Some(menu_action) = &payload.action_menu {
-                    let menu = Menu::new();
-                    let menu_item = MenuItem::with_label(&menu_action.label);
-                    let menu_key = self.key.clone();
-                    menu_item.connect_activate(move |_| {
-                        callbacks::option_selected(menu_key.clone(), 0);
-                        NotificationManager::dismiss_global(&menu_key, DismissReason::Action);
-                    });
-                    menu.append(&menu_item);
-                    menu.show_all();
-                    let menu_button = MenuButton::new();
-                    menu_button.set_label("▾");
-                    menu_button.style_context().add_class("action-button");
-                    menu_button.set_popup(Some(&menu));
-                    let split = GtkBox::new(Orientation::Horizontal, 1);
-                    split.pack_start(&action_button, false, false, 0);
-                    split.pack_start(&menu_button, false, false, 0);
-                    main_box.pack_start(&split, false, false, 0);
-                } else {
-                    main_box.pack_start(&action_button, false, false, 0);
-                }
+                main_box.pack_start(&action_button, false, false, 0);
                 None
             }
         };
 
         let content_key = self.key.clone();
-        let expandable = payload.has_expandable_content();
         content_event_box.connect_button_press_event(move |_, _| {
             if let Some(options_button) = &options_button {
                 options_button.clicked();
-            } else if expandable {
-                NotificationManager::toggle_expanded_global(&content_key);
             } else {
                 callbacks::confirm(content_key.clone());
                 NotificationManager::dismiss_global(&content_key, DismissReason::Action);
@@ -340,7 +317,7 @@ impl NotificationInstance {
         container.set_margin_bottom(14);
 
         let header = GtkBox::new(Orientation::Horizontal, 8);
-        let title = Label::new(Some(payload.expanded_title()));
+        let title = Label::new(Some(payload.compact_title()));
         title.set_halign(Align::Start);
         title.set_hexpand(true);
         title.set_ellipsize(pango::EllipsizeMode::End);
@@ -354,54 +331,6 @@ impl NotificationInstance {
         });
         header.pack_start(&collapse, false, false, 0);
         container.pack_start(&header, false, false, 0);
-
-        if let Some(participants) = payload
-            .participants
-            .as_ref()
-            .filter(|participants| !participants.is_empty())
-        {
-            let list = GtkBox::new(Orientation::Vertical, 4);
-            for participant in participants {
-                let row = GtkBox::new(Orientation::Horizontal, 6);
-                let name = participant.name.clone().unwrap_or_default();
-                let display = if name.is_empty() {
-                    participant.email.clone()
-                } else {
-                    format!("{name} ({})", participant.email)
-                };
-                let label = Label::new(Some(&display));
-                label.set_halign(Align::Start);
-                label.set_hexpand(true);
-                row.pack_start(&label, true, true, 0);
-
-                let (icon, class) = match participant.status {
-                    ParticipantStatus::Accepted => ("✓", "status-accepted"),
-                    ParticipantStatus::Maybe => ("?", "status-maybe"),
-                    ParticipantStatus::Declined => ("✗", "status-declined"),
-                };
-                let status = Label::new(Some(icon));
-                status.style_context().add_class(class);
-                row.pack_start(&status, false, false, 0);
-                list.pack_start(&row, false, false, 0);
-            }
-            container.pack_start(&list, false, false, 0);
-        }
-
-        if let Some(details) = &payload.event_details {
-            let labels = payload.labels();
-            container.pack_start(&detail_row(&labels.what, &details.what), false, false, 0);
-            if let Some(timezone) = &details.timezone {
-                container.pack_start(
-                    &detail_row(&labels.invitee_time_zone, timezone),
-                    false,
-                    false,
-                    0,
-                );
-            }
-            if let Some(location) = &details.location {
-                container.pack_start(&detail_row(&labels.location, location), false, false, 0);
-            }
-        }
 
         let action_button = Button::with_label(payload.expanded_action_label());
         action_button.style_context().add_class("action-button");
@@ -616,7 +545,9 @@ impl NotificationManager {
             let Some(instance) = self.active_notifications.get_mut(key) else {
                 return;
             };
-            if !instance.payload.has_expandable_content() && !instance.is_expanded {
+            // Plus aucune notification n'a de contenu dépliable depuis le
+            // retrait du rappel de calendrier (#545) : seul le repli reste.
+            if !instance.is_expanded {
                 return;
             }
             instance.is_expanded = !instance.is_expanded;
@@ -747,19 +678,6 @@ fn prefers_dark_theme() -> bool {
         .unwrap_or(false)
 }
 
-fn detail_row(label: &str, value: &str) -> GtkBox {
-    let row = GtkBox::new(Orientation::Vertical, 2);
-    let name = Label::new(Some(label));
-    name.set_halign(Align::Start);
-    name.style_context().add_class("notification-footer-label");
-    let content = Label::new(Some(value));
-    content.set_halign(Align::Start);
-    content.set_line_wrap(true);
-    row.pack_start(&name, false, false, 0);
-    row.pack_start(&content, false, false, 0);
-    row
-}
-
 const NOTIFICATION_CSS: &str = r#"
 window {
     background-color: rgba(255, 255, 255, 0.95);
@@ -832,9 +750,6 @@ window.dark .notification-message {
     font-size: 10px;
     font-weight: 600;
 }
-.status-accepted { color: #248a3d; }
-.status-maybe { color: #c93400; }
-.status-declined { color: #c42b1c; }
 progressbar trough {
     min-height: 3px;
     background-color: transparent;

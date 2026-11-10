@@ -2,21 +2,6 @@ use super::*;
 use std::time::Instant;
 
 #[test]
-fn calendar_notifications_default_to_app_plus_calendar_overlay() {
-    let source = NotificationSource::CalendarEvent {
-        event_id: "evt-1".to_string(),
-    };
-
-    assert_eq!(
-        source.default_icon(),
-        Some(NotificationIcon::Overlay {
-            base: NotificationIconAsset::AppIcon,
-            badge: NotificationIconAsset::Calendar,
-        })
-    );
-}
-
-#[test]
 fn mic_notifications_default_to_first_resolvable_app_icon() {
     let source = NotificationSource::MicDetected {
         app_names: vec!["Zoom".to_string()],
@@ -88,8 +73,10 @@ fn notifications_use_explicit_icon_or_source_default() {
     let explicit_icon_notification = Notification::builder()
         .title("Title")
         .message("Message")
-        .source(NotificationSource::CalendarEvent {
-            event_id: "evt-1".to_string(),
+        .source(NotificationSource::MicDetected {
+            app_names: vec!["Zoom".to_string()],
+            app_ids: vec!["us.zoom.xos".to_string()],
+            event_ids: vec![],
         })
         .icon(NotificationIcon::Hidden)
         .build();
@@ -98,45 +85,6 @@ fn notifications_use_explicit_icon_or_source_default() {
         explicit_icon_notification.icon,
         Some(NotificationIcon::Hidden)
     );
-}
-
-#[test]
-fn only_session_notifications_with_event_details_expand() {
-    let calendar_notification = Notification::builder()
-        .title("Standup")
-        .message("Starting soon")
-        .source(NotificationSource::CalendarEvent {
-            event_id: "evt-1".to_string(),
-        })
-        .participants(vec![Participant {
-            name: Some("Ada".to_string()),
-            email: "ada@example.com".to_string(),
-            status: ParticipantStatus::Accepted,
-        }])
-        .event_details(EventDetails {
-            what: "Standup".to_string(),
-            timezone: None,
-            location: None,
-        })
-        .build();
-
-    assert!(!calendar_notification.has_expandable_content());
-
-    let session_notification = Notification::builder()
-        .title("Design sync")
-        .message("")
-        .source(NotificationSource::Session {
-            session_id: "sess-1".to_string(),
-        })
-        .event_details(EventDetails {
-            what: "Design sync".to_string(),
-            timezone: Some("America/Los_Angeles".to_string()),
-            location: Some("Zoom".to_string()),
-        })
-        .build();
-
-    assert!(session_notification.has_expandable_content());
-    assert_eq!(session_notification.expanded_title(), "Design sync");
 }
 
 #[test]
@@ -151,26 +99,6 @@ fn options_override_the_accept_action() {
     assert_eq!(
         notification.primary_action(),
         PrimaryAction::Options(&["Design sync".to_string(), "Planning".to_string()])
-    );
-}
-
-#[test]
-fn semantic_action_menu_keeps_the_primary_action() {
-    let notification = Notification::builder()
-        .title("Design sync")
-        .message("Starting soon")
-        .action_label("Join & record")
-        .action(NotificationAction::JoinAndRecord)
-        .action_menu("Open meeting", NotificationAction::OpenMeeting)
-        .build();
-
-    assert!(notification.has_action_menu());
-    assert_eq!(
-        notification.primary_action(),
-        PrimaryAction::Accept {
-            label: "Join & record",
-            destructive: false
-        }
     );
 }
 
@@ -263,9 +191,6 @@ fn started_notifications_linger_five_minutes_after_start() {
     let notification = Notification::builder()
         .title("Standup")
         .message("Starting soon")
-        .source(NotificationSource::CalendarEvent {
-            event_id: "evt-1".to_string(),
-        })
         .start_time(start_time)
         .build();
 

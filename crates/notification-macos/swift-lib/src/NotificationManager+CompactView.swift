@@ -22,66 +22,7 @@ extension NotificationManager {
       actionButton.title = actionLabel
     }
     actionButton.notification = notification
-    guard let actionMenu = notification.payload.actionMenu else { return actionButton }
-
-    let menuSegmentWidth: CGFloat = 26
-    let surface = NSView()
-    surface.translatesAutoresizingMaskIntoConstraints = false
-
-    actionButton.translatesAutoresizingMaskIntoConstraints = false
-    actionButton.trailingContentInset = menuSegmentWidth
-    actionButton.setContentHuggingPriority(.required, for: .horizontal)
-    actionButton.setContentCompressionResistancePriority(.required, for: .horizontal)
-
-    let menuButton = SemanticMenuButton()
-    menuButton.translatesAutoresizingMaskIntoConstraints = false
-    menuButton.title = ""
-    menuButton.menuLabel = actionMenu.label
-    menuButton.notification = notification
-    menuButton.imagePosition = .imageOnly
-    menuButton.imageScaling = .scaleProportionallyDown
-    if #available(macOS 11.0, *) {
-      let configuration = NSImage.SymbolConfiguration(pointSize: 9, weight: .semibold)
-      menuButton.image = NSImage(
-        systemSymbolName: "chevron.down",
-        accessibilityDescription: actionMenu.label
-      )?.withSymbolConfiguration(configuration)
-    }
-    menuButton.toolTip = actionMenu.label
-    menuButton.setBackgroundColors(
-      normal: NSColor.clear.cgColor,
-      pressed: NSColor.black.withAlphaComponent(0.08).cgColor
-    )
-    menuButton.contentTintColor = actionButton.contentTintColor
-    menuButton.layer?.borderWidth = 0
-    menuButton.layer?.shadowOpacity = 0
-
-    let divider = NSView()
-    divider.translatesAutoresizingMaskIntoConstraints = false
-    divider.wantsLayer = true
-    divider.layer?.backgroundColor = NSColor.black.withAlphaComponent(0.12).cgColor
-
-    surface.addSubview(actionButton)
-    surface.addSubview(menuButton)
-    menuButton.addSubview(divider)
-    NSLayoutConstraint.activate([
-      actionButton.leadingAnchor.constraint(equalTo: surface.leadingAnchor),
-      actionButton.trailingAnchor.constraint(equalTo: surface.trailingAnchor),
-      actionButton.topAnchor.constraint(equalTo: surface.topAnchor),
-      actionButton.bottomAnchor.constraint(equalTo: surface.bottomAnchor),
-      actionButton.heightAnchor.constraint(equalToConstant: 36),
-
-      menuButton.trailingAnchor.constraint(equalTo: surface.trailingAnchor),
-      menuButton.topAnchor.constraint(equalTo: surface.topAnchor),
-      menuButton.bottomAnchor.constraint(equalTo: surface.bottomAnchor),
-      menuButton.widthAnchor.constraint(equalToConstant: menuSegmentWidth),
-
-      divider.leadingAnchor.constraint(equalTo: menuButton.leadingAnchor),
-      divider.centerYAnchor.constraint(equalTo: menuButton.centerYAnchor),
-      divider.widthAnchor.constraint(equalToConstant: 1),
-      divider.heightAnchor.constraint(equalToConstant: 16),
-    ])
-    return surface
+    return actionButton
   }
 
   private func compactFooterButton() -> NSButton {
