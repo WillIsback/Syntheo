@@ -143,6 +143,10 @@
   "navbar": {
     "links": [
       {
+        "label": "syntheo.studio",
+        "href": "https://syntheo.studio"
+      },
+      {
         "label": "Support",
         "href": "https://github.com/WillIsback/Syntheo/issues"
       }
@@ -167,6 +171,7 @@
   },
   "footer": {
     "socials": {
+      "website": "https://syntheo.studio",
       "github": "https://github.com/WillIsback/Syntheo"
     }
   },
