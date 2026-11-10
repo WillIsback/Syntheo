@@ -1,0 +1,49 @@
+---
+title: "Errors and exit codes"
+description: "Interpret CLI and MCP failures, and fix them without touching Syntheo's storage."
+---
+
+Without `--json`, the CLI writes its errors to standard error, as readable text starting with `error:`. With `--json`, it writes to standard error an object containing `schema_version` and `error`, which is made up of `code`, `message` and `exit_code`.
+
+```json
+{
+  "schema_version": "1",
+  "error": {
+    "code": "not_found",
+    "message": "meeting 'abc' not found",
+    "exit_code": 2
+  }
+}
+```
+
+## Exit codes
+
+| Exit code | JSON `code` | Meaning | What to do |
+| --- | --- | --- | --- |
+| `0` | — | Success | Read standard output. |
+| `1` | `operation_failed` | Database opening, validation or operation failure; or a `doctor` report with `ready` set to `false`; or an import that ended as `failed` | Read the message. For `doctor`, inspect the JSON report and check that the app and the CLI have compatible versions. |
+| `2` | `not_found` | Meeting, note, proposal or other data not found | Run a list again and use a returned ID. |
+| `3` | `database_not_found` | Database file not found | Open Syntheo once to create the database, or set the right path with `--db-path` or `--base`. |
+| `4` | `output_exists` | The export file already exists | Choose another path, or explicitly pass `--force` to replace it. |
+
+Two special cases reuse code 2:
+
+- **Invalid arguments**: the JSON code is `invalid_arguments`, with Clap's exit code (usually 2).
+- **`meetings import --wait`**: if the wait times out before the end, the CLI returns 2 without an error object. The job continues; track it with `meetings import-status`.
+
+## Common messages
+
+| Message | Cause | What to do |
+| --- | --- | --- |
+| `base Syntheo introuvable à … ; lancez Syntheo une fois ou passez --db-path` | No database at the selected location | Open the app, or pass `--db-path`. |
+| `Open the updated Syntheo desktop app before importing recordings` | Import requested while the app is not open | Open the app on the same database, then run the import again with the same `--request-key`. |
+| `Unsupported recording format` | Unsupported extension | Use WAV, MP3, OGG, MP4, M4A, FLAC, WebM or AAC. |
+| `Folder does not exist; use meetings folders to choose an existing folder` | Unknown folder | Choose a path returned by `meetings folders`. |
+
+## MCP errors
+
+The MCP server reports a meeting, proposal or import that can't be found as "invalid params". Validation failures and conflicts (empty proposal content, several summaries without `target_id`, declining a proposal that is no longer pending) are reported as internal errors, as are database and serialization failures.
+
+<Warning>
+  Never try to repair by creating tables, running migrations or executing SQL. The app alone handles schema initialization and migrations; a manual change can corrupt the database.
+</Warning>

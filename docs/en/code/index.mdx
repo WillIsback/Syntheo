@@ -1,0 +1,53 @@
+---
+title: "Code map"
+description: "Knowledge graph of the Syntheo monorepo: what each part of the code does and which documentation pages depend on it."
+---
+
+This section describes Syntheo Desktop's code area by area: the role of each app, plugin, crate and package, what it exposes and what it depends on. It helps keep the documentation up to date: when a part of the code changes, these pages show which user pages to review.
+
+For the overall organization and the data flow, read [Architecture](/en/architecture) first.
+
+## Two tools, two uses
+
+| Tool | Use | Access |
+| --- | --- | --- |
+| **CodeGraph** | Code tasks: find a symbol, follow a call, measure the impact of a change. | Local `.codegraph/` index, `codegraph` MCP server. |
+| **Code map (this section)** | Documentation maintenance: know which code determines which documented behavior. | Mintlify pages, `syntheo-docs` MCP server. |
+
+The documentation search MCP server is declared in `.mcp.json` at the repository root:
+
+```bash
+claude mcp add --transport http syntheo-docs https://docs.syntheo.studio/mcp
+```
+
+## Pages
+
+<CardGroup cols={2}>
+  <Card title="Doc ↔ code mapping" href="/en/code/doc-map">
+    For each user page, the sources that determine its content.
+  </Card>
+  <Card title="Desktop app" href="/en/code/desktop">
+    `apps/desktop`: React interface and native Tauri core.
+  </Card>
+  <Card title="CLI and agent access" href="/en/code/cli">
+    `apps/cli`: `syntheo` commands, MCP server, shared crates.
+  </Card>
+  <Card title="Tauri plugins" href="/en/code/plugins">
+    `plugins/*`: bridge between the interface and native code.
+  </Card>
+  <Card title="Audio and transcription" href="/en/code/crates-audio">
+    Capture, signal processing, STT and dictation.
+  </Card>
+  <Card title="Data, export and platform" href="/en/code/crates-data">
+    SQLite, storage, export, prompts, notifications.
+  </Card>
+  <Card title="TypeScript packages" href="/en/code/packages">
+    `packages/*`: interface, editor, data access.
+  </Card>
+</CardGroup>
+
+## Maintain the map
+
+- A pull request that adds, renames or removes a crate, a plugin, a package or a top-level module updates the page for its area.
+- A pull request that changes a visible behavior checks [Doc ↔ code mapping](/en/code/doc-map) and updates the affected user pages.
+- Only describe what is present in the code. The writing rules in `docs/AGENTS.md` apply.

@@ -1,0 +1,139 @@
+---
+title: "MCP reference"
+description: "Tools, resources, limits and transport of Syntheo's local MCP server."
+---
+
+Start the server with `syntheo mcp`. It communicates over stdio and advertises version `2026-07-28` of the MCP protocol. It only reads from and writes to the local database; there is no remote MCP server.
+
+Reads are idempotent. Proposal tools create or decline pending edits, without ever applying them. The app only needs to have created its database once; open it to review and apply proposals, and to process recording imports.
+
+## Tools
+
+| Tool | Access | Role |
+| --- | --- | --- |
+| `list_meetings` | read | Paginated list of meetings. |
+| `list_folders` | read | Paginated list of folders. |
+| `get_meeting` | read | Meeting details, without the transcript. |
+| `get_meeting_transcript` | read | Bounded page of the transcript. |
+| `get_recurring_meeting_history` | read | Meetings from the same recurring series. |
+| `export_meeting` | read | Full record, transcripts included. |
+| `propose_summary_edit` | write | Proposes replacing a summary. |
+| `propose_memo_edit` | write | Proposes replacing the note. |
+| `list_proposals` | read | Paginated list of proposals. |
+| `get_proposal` | read | A proposal and its diff. |
+| `decline_proposal` | write | Declines a pending proposal. |
+| `import_recording` | write | Creates a meeting from a local audio file. |
+| `get_recording_import` | read | State of a recording import. |
+
+### `list_meetings`
+
+| Parameter | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `query` | string | — | Fragment of the title or the ID, case-insensitive. An empty list means no meeting matches: don't invent one. |
+| `series_id` | string | — | Exact ID of a recurring series. |
+| `folder_path` | string | — | Path returned by `list_folders`, for example `Projets/Lancement`. Includes subfolders. |
+| `limit` | integer | `20` | Clamped between `1` and `200`. |
+| `offset` | integer | `0` | Number of results to skip. |
+
+Each meeting contains `folder_path`, which is `null` when outside any folder.
+
+### `list_folders`
+
+| Parameter | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `query` | string | — | Fragment of the folder path, case-insensitive. |
+| `limit` | integer | `100` | Clamped between `1` and `200`. |
+| `offset` | integer | `0` | Number of results to skip. |
+
+Returns `folders`, sorted by path, and `pagination`. Each folder contains `path`, `name` and `parent_path` (`null` at the top level). The list includes empty folders and parent folders. Pass a returned `path` as the `folder_path` of `list_meetings`.
+
+### `get_meeting`
+
+Required parameter: `meeting_id` (string). Returns the meeting metadata, including `folder_path`, the canonical note, the summaries, the participants and the action items. The transcript is deliberately kept separate. For an imported meeting, the result also contains `processing_status` and `recording_import` (otherwise `null`).
+
+### `get_meeting_transcript`
+
+| Parameter | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `meeting_id` | string | required | A meeting ID returned by a tool. |
+| `offset` | integer | `0` | Offset, in words. |
+| `limit` | integer | `200` | Clamped between `1` and `500`. |
+
+The result contains `meeting_id`, `text`, `words` and `pagination` (`offset`, `limit`, `returned`, `total`, `next_offset`). A missing `pagination.next_offset` means the page reaches the end.
+
+### `get_recurring_meeting_history`
+
+Required parameter: `meeting_id` (string). Optional parameters: `limit` (20 by default, clamped between `1` and `200`) and `offset` (0 by default). Results from newest to oldest. If the meeting belongs to no series, `meetings` is empty.
+
+### `export_meeting`
+
+Required parameter: `meeting_id` (string). Returns the meeting's full, structured record: metadata, note, summaries, participants, action items and transcripts. Prefer the detail or transcript tools, unless the task really requires a full export.
+
+When they exist, `speakers` gives the names referenced by the transcript's speaker attributions, and `speaker_context` describes the microphone and call context. These fields are optional.
+
+### `propose_summary_edit`
+
+| Parameter | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `meeting_id` | string | required | A meeting ID returned by a tool. |
+| `content` | string | required | Full replacement summary, in Markdown. |
+| `target_id` | string | — | ID of the target summary. Required when the meeting has several summaries. |
+
+The result is a pending proposal. The meeting doesn't change until the user has applied it in the app.
+
+### `propose_memo_edit`
+
+| Parameter | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `meeting_id` | string | required | A meeting ID returned by a tool. |
+| `content` | string | required | Full replacement note, in Markdown. |
+
+The result is a pending proposal. `content` replaces the meeting's canonical note once the proposal is applied in the app.
+
+### `list_proposals`
+
+| Parameter | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `meeting_id` | string | — | Restricts results to one meeting. |
+| `status` | string | `pending` | `pending`, `applied`, `declined` or `all`. |
+| `limit` | integer | `20` | Clamped between `1` and `200`. |
+| `offset` | integer | `0` | Number of results to skip. |
+
+### `get_proposal`
+
+Required parameter: `proposal_id` (string). Returns the metadata and a unified `diff`. The proposal is not applied.
+
+### `decline_proposal`
+
+Required parameter: `proposal_id` (string). Declines a pending proposal without changing the meeting. A proposal that has already been applied or declined can't be declined.
+
+### `import_recording`
+
+Creates a meeting from an audio file on the MCP server's computer. The app must be open on the same database: it transcribes the file with the configured transcription server, then generates the summary with the configured LLM. The audio is sent to that server.
+
+| Parameter | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `file_path` | string | required | Path of the file on this computer. WAV, MP3, OGG, MP4, M4A, FLAC, WebM or AAC, non-empty. |
+| `title` | string | file name | Meeting title. |
+| `folder_path` | string | — | Existing folder. |
+| `request_key` | string | — | From 1 to 200 bytes. Reuse the same key to retry the same import: the tool returns the original job, even after a failure. |
+
+Returns `meeting_id`, `job_id`, `processing_status`, `summary_status` and `error` (possibly `null`). The file is not copied: don't move it before the job ends. Poll `get_recording_import` until `done` or `failed`, and keep the returned IDs in case the client disconnects. An interrupted job keeps its meeting and the transcript already produced; it is not restarted automatically.
+
+### `get_recording_import`
+
+Required parameter: `job_id` (string). Reads the durable state without starting any work. Processing states: `queued`, `importing`, `transcribing`, `summarizing`, `done`, `failed`. Summary states: `pending`, `done`, `skipped_no_model`, `skipped_too_short`, `failed`. A successful import can have a skipped summary. `queued` only progresses if the app is open.
+
+## Resources
+
+| URI | MIME type | Content |
+| --- | --- | --- |
+| `syntheo://meetings/{meeting_id}` | `text/markdown` | Meeting details, without the transcript text. |
+| `syntheo://meetings/{meeting_id}/transcript{?offset,limit}` | `text/plain` | A bounded page of the transcript. `offset` defaults to 0 and `limit` to 200 (clamped to 500 words at most). Plain text only; use `get_meeting_transcript` to get `words`. |
+| `syntheo://series/{series_id}` | `text/markdown` | Up to 100 meetings from a recurring series. |
+
+The resource list returns recent meetings in pages of 20. Its cursor is a numeric offset.
+
+## Errors
+
+A meeting, proposal or import that can't be found produces an "invalid params" error. Validation failures and conflicts (empty proposal content, several summaries without `target_id`, declining a proposal that is no longer pending, app closed during an import) are reported as internal errors, as are database failures. See [Errors and exit codes](/en/reference/errors).

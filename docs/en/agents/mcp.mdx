@@ -1,0 +1,66 @@
+---
+title: "MCP for agents"
+description: "Connect an MCP client to your Syntheo meetings with the local stdio server."
+---
+
+`syntheo mcp` starts a local MCP server. It communicates through standard input and output: it opens no port and sends no data to a Syntheo server. It requires no account and no sign-in.
+
+Prerequisites: [the CLI installed](/en/installation) and the app opened at least once, so it creates its database. The app doesn't need to stay open, except to import a recording.
+
+## Configure the client
+
+Add the server to your MCP client's configuration:
+
+```json
+{
+  "mcpServers": {
+    "syntheo": {
+      "command": "syntheo",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+If `syntheo` is not in the client's `PATH`, or if the app's `.deb` is installed (its executable is also called `syntheo`), set the CLI's absolute path in `command`, for example `/home/vous/.cargo/bin/syntheo`. Restart the client after changing its configuration.
+
+For a database in another location:
+
+```json
+{
+  "mcpServers": {
+    "syntheo": {
+      "command": "syntheo",
+      "args": ["--db-path", "/chemin/vers/app.db", "mcp"]
+    }
+  }
+}
+```
+
+<Note>
+  When the CLI is installed from the app, the "Copy config" button in **Settings → Developers → CLI & MCP** copies this block with the right path. Published versions don't bundle the CLI: this button stays inactive there.
+</Note>
+
+## Use the tools methodically
+
+Start with `list_meetings`, then pass a returned `id` to `get_meeting`. For a project or a client, call `list_folders` and pass a returned `path` as `folder_path`. Only call `get_meeting_transcript` if the note and the summaries are not enough.
+
+Only cite meetings returned by the tools. An empty list only means that no meeting matches; don't invent a title, a date or an ID.
+
+Transcript pages are 200 words by default, 500 at most. Only follow `pagination.next_offset` if you need more context.
+
+Use `get_recurring_meeting_history` with a known ID when the task depends on previous meetings in the same series. Only use `export_meeting` if the task requires the full record, transcripts included.
+
+## Propose an edit
+
+To edit a summary or the note, call `propose_summary_edit` or `propose_memo_edit`. The tool returns a pending proposal: don't claim that the meeting has changed. The user applies or declines it in the app. `list_proposals` and `get_proposal` let you inspect proposals; `decline_proposal` declines a pending proposal without touching the meeting.
+
+## Import a recording
+
+`import_recording` creates a meeting from an audio file on the MCP server's computer. The app must be open: it transcribes the file with the configured transcription server, then generates the summary. Track progress with `get_recording_import`. Only use this tool if the user asks for it.
+
+## Resources
+
+The server also exposes MCP resources (`syntheo://meetings/...`, `syntheo://series/...`) in Markdown or plain text, for clients that prefer resources to tools.
+
+Exact parameters and resources: see the [MCP reference](/en/reference/mcp).

@@ -1,0 +1,73 @@
+---
+title: "Install the CLI"
+description: "Build the Syntheo CLI from source and connect it to your local data."
+---
+
+The `syntheo` command bundles the CLI and the local MCP server. It reads the desktop app's SQLite database, on your computer.
+
+## Availability
+
+<Warning>
+  The CLI is not included in the published packages (AppImage, `.deb`, `.exe`, `.msi`) and is not published as a separate binary in GitHub Releases. For now, build it from source.
+</Warning>
+
+In the app, under **Settings → Developers → CLI & MCP**, the "Syntheo CLI" row offers an "Install" button. On published versions, this button stays inactive, because the CLI is not bundled. The "Copy config" button of the "MCP server" also stays inactive in this case: write the configuration yourself (see [MCP for agents](/en/agents/mcp)).
+
+## Build from source
+
+Prerequisite: [Rust](https://rustup.rs) installed with `rustup`. The repository pins its toolchain version in `rust-toolchain.toml`; `rustup` downloads it automatically.
+
+```bash
+git clone https://github.com/WillIsback/Syntheo.git
+cd Syntheo
+cargo install --locked --path apps/cli
+~/.cargo/bin/syntheo --version
+```
+
+`cargo` installs the `syntheo` executable in `~/.cargo/bin` (`%USERPROFILE%\.cargo\bin` on Windows). Add this folder to your `PATH` if your terminal can't find the command.
+
+<Warning>
+  The `.deb` package installs the desktop app as `/usr/bin/syntheo`. On a machine where the `.deb` is installed, `syntheo` may therefore launch the app instead of the CLI, depending on the order of your `PATH`. Check with `which -a syntheo`. If in doubt, call the CLI by its absolute path, `~/.cargo/bin/syntheo`, especially in your MCP clients' configuration.
+</Warning>
+
+To update the CLI, get the latest sources (`git pull`) and run the `cargo install` command again. Keep the CLI and the app at the same version: the CLI never migrates the database.
+
+## Connect the CLI to your data
+
+Open the app once so it creates its database. After that, the CLI and the MCP server work even when the app is closed, except for recording import, which requires the app to be open.
+
+Without options, the CLI looks for `app.db` in your system's data folder:
+
+| System | Default location |
+| --- | --- |
+| Linux | `~/.local/share/syntheo/app.db`, then `~/.local/share/fr.willisback.syntheo/app.db` |
+| Windows | `%APPDATA%\syntheo\app.db`, then `%APPDATA%\fr.willisback.syntheo\app.db` |
+
+For another database, pass a global option or an environment variable:
+
+```bash
+syntheo --db-path /chemin/vers/app.db --json meetings list
+SYNTHEO_DB_PATH=/chemin/vers/app.db syntheo --json meetings list
+syntheo --base /chemin/vers/dossier-syntheo --json meetings list
+```
+
+`--base` points to a folder that contains `app.db`. `--db-path` takes precedence over `--base`.
+
+Then check the connection:
+
+```bash
+syntheo --json doctor
+```
+
+## Read and write access
+
+Meeting reads open the database read-only. The `proposals create`, `proposals decline`, `meetings import` and `syntheo mcp` commands open the database for writing, to prepare or decline edits and to create an imported meeting. No command creates the database or runs a migration: that is the app's job.
+
+<CardGroup cols={2}>
+  <Card title="CLI for agents" icon="terminal" href="/en/agents/cli">
+    JSON output and best practices.
+  </Card>
+  <Card title="CLI reference" icon="book" href="/en/reference/cli">
+    All commands and options.
+  </Card>
+</CardGroup>

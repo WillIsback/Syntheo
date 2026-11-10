@@ -1,0 +1,97 @@
+---
+title: "Webhooks reference"
+description: "Signed meeting events that Syntheo sends to an endpoint of your choice."
+---
+
+Webhooks let Syntheo send meeting events to your own service. They are built into the desktop app: the app itself sends the requests, without going through any intermediate server. Configure them in **Settings → Developers**, "Webhooks" section.
+
+<Warning>
+  Meeting events contain the note, the summaries, the participants, the action items and the full transcript text. Only add a trusted endpoint, preferably over HTTPS or on your private network.
+</Warning>
+
+To read meeting data instead of receiving it, use the [CLI](/en/reference/cli) or the [local MCP server](/en/reference/mcp).
+
+<Note>
+  This page describes the webhooks in Settings. The "Send to an address (webhook)" automation step is separate: it sends the JSON body you write, without a signature or retries. See [Automations](/en/automations#send-to-an-address-webhook).
+</Note>
+
+## Add an endpoint
+
+1. Open **Settings → Developers**.
+2. In the "Webhooks" section, enter a URL starting with `http://` or `https://`, then click "Add webhook".
+3. Copy the signing secret (`whsec_...`) with "Copy".
+4. Click "Test" to send a `webhook.test` delivery and check that your service responds.
+
+<Note>
+  The signing secret is shown only once. Save it before leaving the page: Syntheo doesn't show it again afterwards.
+</Note>
+
+A new endpoint receives "All events". Each row shows the state of the last delivery. Use "Pause" to suspend an endpoint without deleting it, then "Enable" to resume it. The trash icon deletes it.
+
+You can configure at most 64 endpoints.
+
+## Events
+
+Syntheo sends each event as a JSON `POST` request, as long as the desktop app is open.
+
+| Event | Triggered when |
+| --- | --- |
+| `meeting.completed` | A capture ends. |
+| `note.enhanced` | An AI summary is generated for a meeting. |
+| `webhook.test` | You start a test delivery. |
+
+The JSON envelope has this shape:
+
+```json
+{
+  "id": "evt_...",
+  "event": "note.enhanced",
+  "created_at": "2026-07-28T09:00:00.000Z",
+  "data": {
+    "meeting": { "id": "...", "title": "...", "note": {...}, "summaries": [...], "participants": [...], "action_items": [...] },
+    "transcript_text": "..."
+  }
+}
+```
+
+For `webhook.test`, `data` only contains a `message` field.
+
+## Delivery and retries
+
+Each request times out after 10 seconds. On failure, Syntheo retries after 5 seconds, then after 30 seconds. A `webhook.test` delivery makes only one attempt.
+
+Each request contains these headers:
+
+| Header | Content |
+| --- | --- |
+| `x-syntheo-event` | Event name. |
+| `x-syntheo-delivery` | Unique delivery ID (the same for all its attempts). |
+| `x-syntheo-timestamp` | Unix timestamp, in seconds. |
+| `x-syntheo-signature` | `sha256=<hex>`: HMAC-SHA256 of the raw request body, computed with the endpoint's `whsec_...` secret. |
+
+## Verify the signature
+
+Compute the HMAC over the exact raw body, before any JSON parsing:
+
+```js
+import crypto from "node:crypto";
+
+const expected = `sha256=${
+  crypto.createHmac("sha256", secret).update(rawBody).digest("hex")
+}`;
+const signature = request.headers["x-syntheo-signature"];
+const received = typeof signature === "string" ? signature : "";
+const valid =
+  Buffer.byteLength(received) === Buffer.byteLength(expected) &&
+  crypto.timingSafeEqual(Buffer.from(received), Buffer.from(expected));
+```
+
+To protect yourself against replay, reject `created_at` values that are too old and store each payload `id` so that you process a retried delivery only once.
+
+## Limits
+
+<Warning>
+  Deliveries only happen while the desktop app is open. Events that occur while it is closed are lost: they are not queued.
+</Warning>
+
+Syntheo sends an event to at most 64 endpoints and runs at most 4 deliveries at the same time.
