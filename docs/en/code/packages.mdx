@@ -1,0 +1,179 @@
+---
+title: "TypeScript packages"
+description: "Role, exports, consumers and affected documentation pages for each package in packages/* and for the resources meant for agents."
+---
+
+This page maps the TypeScript packages of the pnpm workspace (`packages/*`). For the monorepo overview and the main flow, see [the architecture](/en/architecture).
+
+All packages are private (`"private": true`) and published under the `@syntheo/*` scope. They are not distributed on npm: only `apps/desktop` and other workspace packages consume them.
+
+## Inventory
+
+| Package | Path | Role | Consumers | Affected doc pages |
+| --- | --- | --- | --- | --- |
+| `@syntheo/changelog` | `packages/changelog` | Release notes and Markdown rendering of the "What's new" view. | `apps/desktop` | none |
+| `@syntheo/db` | `packages/db` | Drizzle schema of the local database and `createDb` factory. | `apps/desktop` | [/en/data-and-privacy](/en/data-and-privacy), [/en/architecture](/en/architecture) |
+| `@syntheo/db-react` | `packages/db-react` | React hooks for reactive queries. | `apps/desktop` | none |
+| `@syntheo/db-runtime` | `packages/db-runtime` | Type contracts for the database transport. | `db`, `db-react`, `db-tauri` | none |
+| `@syntheo/db-tauri` | `packages/db-tauri` | Tauri transport to the `plugins/db` plugin. | `apps/desktop` | none |
+| `@syntheo/design-system` | `packages/design-system` | Design tokens and color palettes. | `apps/desktop`, `ui` | none |
+| `@syntheo/editor` | `packages/editor` | ProseMirror editor for notes, chat and prompts. | `apps/desktop` | [/en/notes](/en/notes), [/en/chat](/en/chat), [/en/meetings](/en/meetings) |
+| `@syntheo/provider-validation` | `packages/provider-validation` | Validation of inference server addresses and credentials. | `apps/desktop` | [/en/ai-setup](/en/ai-setup), [/en/offline](/en/offline), [/en/security](/en/security) |
+| `@syntheo/store` | `packages/store` | Shared Zod schemas (providers, templates, transcription, chat). | `apps/desktop`, `editor` | [/en/ai-setup](/en/ai-setup), [/en/customize-summaries](/en/customize-summaries), [/en/chat](/en/chat) |
+| `@syntheo/ui` | `packages/ui` | Interface components (shadcn/Radix), icons, Tailwind configuration. | `apps/desktop`, `editor` | none |
+| `@syntheo/utils` | `packages/utils` | Utilities: CSS classes, dates, folders, session tabs, summary eligibility. | `apps/desktop`, `editor`, `ui`, `changelog` | [/en/meetings](/en/meetings), [/en/notes](/en/notes) |
+
+## Internal dependency graph
+
+The dependencies below come from the `dependencies` fields of the `package.json` files.
+
+| Package | Depends on |
+| --- | --- |
+| `changelog` | `utils` |
+| `db` | `db-runtime` |
+| `db-react` | `db-runtime` |
+| `db-tauri` | `db-runtime`, plugin `@syntheo/plugin-db` (`plugins/db`) |
+| `editor` | `store`, `ui`, `utils`, plugin `@syntheo/plugin-opener2` (`plugins/opener2`) |
+| `ui` | `design-system`, `utils` |
+| `db-runtime`, `design-system`, `provider-validation`, `store`, `utils` | no workspace package |
+
+For the Tauri plugins mentioned, see [the plugins](/en/code/plugins).
+
+## Data access layer
+
+Four packages form the SQLite access stack on the TypeScript side. The app assembles them in `apps/desktop/src/db/index.ts`.
+
+### `@syntheo/db-runtime`
+
+- Path: `packages/db-runtime`
+- Role: defines the transport contracts, without implementation.
+- Main API: types `DrizzleProxyClient`, `LiveQueryClient`, `TransactionClient`, `QueryEvent`, `ProxyQueryMethod` (`run`, `all`, `get`, `values`), `Unsubscribe`.
+- Internal dependencies: none.
+- Affected doc pages: none.
+
+### `@syntheo/db`
+
+- Path: `packages/db`
+- Role: thin Drizzle adapter on top of a `DrizzleProxyClient` client (see `packages/db/AGENTS.md`).
+- Main API: `createDb(client)`, the schema exported by `./schema` and the re-exported Drizzle helpers (`eq`, `and`, `or`, `desc`, `asc`, `sql`, `count`, `max`, `ne`).
+- Tables declared in `packages/db/src/schema.ts`: `sessions`, `session_documents`, `transcripts`, `session_participants`, `action_items`, `session_attachments`, `humans`, `organizations`, `workspaces`, `folders`, `folder_attachments`, `tags`, `session_tags`, `entity_mentions`, `chat_groups`, `chat_messages`, `daily_notes`, `templates`, `app_settings`, `synced_preferences`, as well as tables for local library connections, attachment state and import migration.
+- Internal dependencies: `db-runtime`.
+- Affected doc pages: [/en/data-and-privacy](/en/data-and-privacy) (what is stored locally), [/en/architecture](/en/architecture) (local storage).
+
+<Warning>
+The Drizzle schema doesn't define product behavior. Don't document a feature from a table, and never ask users or agents to read the SQLite database directly.
+</Warning>
+
+### `@syntheo/db-react`
+
+- Path: `packages/db-react`
+- Role: connects reactive queries to React.
+- Main API: `createUseLiveQuery(client)` and `createUseDrizzleLiveQuery(client)`.
+- Internal dependencies: `db-runtime`.
+- Affected doc pages: none.
+
+### `@syntheo/db-tauri`
+
+- Path: `packages/db-tauri`
+- Role: implements the transport through the commands and the subscription of the `plugins/db` Tauri plugin.
+- Main API: `tauriLiveQueryClient` (both `LiveQueryClient` and `DrizzleProxyClient`) and `tauriTransactionClient`.
+- Internal dependencies: `db-runtime`, `@syntheo/plugin-db`.
+- Affected doc pages: none.
+
+## `@syntheo/editor`
+
+- Path: `packages/editor`
+- Role: rich editor based on ProseMirror, used for note bodies, chat input and prompts.
+- Internal dependencies: `store`, `ui`, `utils`, `@syntheo/plugin-opener2`.
+- Affected doc pages: [/en/notes](/en/notes), [/en/chat](/en/chat), [/en/meetings](/en/meetings).
+
+The package has no root export; each subpath is an entry point.
+
+| Export | Content | Used in `apps/desktop` |
+| --- | --- | --- |
+| `./note` | Note editor: schema, keyboard shortcuts, collaboration, portable attachments, title layout. | yes |
+| `./markdown` | Markdown schema, parser and serializer. | yes (most frequent import) |
+| `./chat` | Chat input editor and attachment limits. | yes |
+| `./prompt` | Prompt editor. | yes |
+| `./plugins` | ProseMirror plugins: automatic links, hashtags, clipboard, paste, search, comment anchors, task identity, placeholder. | yes |
+| `./node-views` | Node views: images, attachments, mentions, task checkboxes, app links. | yes |
+| `./widgets` | Formatting toolbar, mentions, slash command. | yes |
+| `./tasks`, `./task-storage` | Task model and storage in notes. | yes |
+| `./app-link` | Recognition of Atlassian, Discord, Figma, GitHub, Google, Linear, Notion and Slack links. | yes |
+| `./comments` | Anchoring comments in the text. | not imported by the app to date |
+| `./styles.css` | ProseMirror styles. | yes |
+
+The `packages/editor/daily/cfm.md` file is an inherited design note ("Char-Flavored-Markdown"); no code imports it.
+
+## `@syntheo/store`
+
+- Path: `packages/store`
+- Role: Zod schemas shared between the app and the editor, and conversion helpers for storage.
+- Main API: `templateSectionSchema`, `chatMessageStatusSchema`, `taskStatusSchema`, `wordSchema`, `speakerHintSchema`, `aiProviderSchema` (types `stt` and `llm`), `jsonObject`, type `ToStorageType`. Exports `.`, `./schema` and `./shared`.
+- Internal dependencies: none.
+- Consumers in `apps/desktop`: summary templates (`src/templates/*`), STT and LLM connections (`src/stt/*`, `src/ai/hooks/useLLMConnection.ts`), persisted chat messages (`src/chat/store/persisted-messages.ts`).
+- Affected doc pages: [/en/ai-setup](/en/ai-setup) (provider fields), [/en/customize-summaries](/en/customize-summaries) (template sections), [/en/chat](/en/chat).
+
+## `@syntheo/provider-validation`
+
+- Path: `packages/provider-validation`
+- Role: validates an inference server's address and checks its credentials before saving it.
+- Main API: `validateProviderBaseUrl`, `verifyProviderCredentials`, `isPrivateHost`, `usesDeferredProviderAuthentication`, `providerCredentialIdentity`, class `ProviderCredentialError`, type `ProviderCredential`.
+- Internal dependencies: none (external dependency `js-sha256`).
+- Consumers in `apps/desktop`: `src/settings/providers.ts` and the connection cards under `src/settings/ai/*`.
+- Affected doc pages: [/en/ai-setup](/en/ai-setup), [/en/offline](/en/offline), [/en/security](/en/security). Check these pages if the address rules (HTTPS, private hosts) or authentication rules change.
+
+## `@syntheo/utils`
+
+- Path: `packages/utils`
+- Role: utilities with no workspace dependency.
+- Exports:
+  - `.`: `cn` (Tailwind class merging), re-export of `date-fns` and `TZDate`, `safeParseDate`, `parseEventInstant`, `safeFormat`.
+  - `./folders`: `normalizeFolderPath`, `folderDisplayName`, `collectFolderPaths`, `folderPathMatchesFilter`, `childFolderPath`, `ancestorFolderPaths`.
+  - `./session`: session editor tabs (`computeCurrentNoteTab`, `createEditorTabs`) and summary documents (`hasSummaryContent`, `defaultSummaryDocumentId`, `resolveSummaryDocument`, `visibleSummaryDocuments`).
+  - `./summary-eligibility`: `getSummaryEligibility`, thresholds `MIN_WORDS_FOR_SUMMARY` (5) and `MIN_TRANSCRIPT_CHARACTERS_FOR_SUMMARY` (160).
+- Affected doc pages: [/en/meetings](/en/meetings) (summary trigger), [/en/notes](/en/notes) (folders).
+
+## Interface and design
+
+### `@syntheo/design-system`
+
+- Path: `packages/design-system`
+- Role: design tokens in TypeScript and CSS.
+- Main API: `PALETTE_IDS` (`cha`, `fuji`, `enji`), `DEFAULT_PALETTE` (`cha`), `isPaletteId`, `DesignPalettes`, `DesignColors`, `DesignSpacing`, `DesignRadius`, `DesignTypography`, `DesignControl`, stylesheet `./tokens.css`. The `assets/brand` folder contains the brand assets.
+- Internal dependencies: none.
+- Consumers: `ui`, `apps/desktop` (including `src/settings/appearance/palette.tsx`).
+- Affected doc pages: none. No page describes the appearance palettes to date.
+
+### `@syntheo/ui`
+
+- Path: `packages/ui`
+- Role: shared component library (shadcn configuration in `components.json`).
+- Main API: `./components/ui/*` (accordion, button, card, checkbox, command, dialog, dropdown menu, popover, select, toast, tooltip, etc.), `./components/*` (avatar, icons, logo), `./hooks/*` (`use-mount-effect`, `use-squircle`), `./lib/*`, `./globals.css`, `./tailwind.config`, `./postcss.config`.
+- Internal dependencies: `design-system`, `utils`.
+- Affected doc pages: none.
+
+## `@syntheo/changelog`
+
+- Path: `packages/changelog`
+- Role: contains the release notes (`content/desktop/<version>.md`, one per version) and renders them in the app.
+- Main API: `ChangelogContent`, `changelogComponents`, `parseFrontmatter`, `processContent`. Export `./process` for processing only.
+- Internal dependencies: `utils`.
+- Consumers: `apps/desktop/src/changelog/*`. The app reads the latest version through a Vite virtual module (`virtual:changelog`) and downloads older versions.
+- Affected doc pages: none. The Mintlify site has no release notes page.
+
+## Resources for agents
+
+Three locations carry the same agent skill. Only one is written by hand.
+
+| Path | Role |
+| --- | --- |
+| `skills/syntheo/` | Canonical source: `SKILL.md` and the references `references/cli.md`, `references/mcp.md`, `references/errors.md`, `references/setup.md`. |
+| `agent-plugins/syntheo/` | Distributed agent plugin. Contains a mirror copy of `skills/syntheo/` under `skills/syntheo/`, `mcp.json` (MCP server `syntheo mcp` over stdio), the manifests `plugin.json`, `.claude-plugin/`, `.codex-plugin/`, `.cursor-plugin/`, and the `LICENSE`. The marketplaces `.claude-plugin/marketplace.json`, `.cursor-plugin/marketplace.json` and `.agents/plugins/marketplace.json` at the root point to this folder. |
+| `docs/skill.md` | Public version served by Mintlify. Identical to `skills/syntheo/SKILL.md`, except that the `references/*.md` links become site URLs (`/reference/cli`, `/reference/mcp`, `/reference/errors`, `/installation`). |
+
+The `scripts/publish-syntheo-skill.mjs` script generates `docs/skill.md` and the mirrors in `agent-plugins/syntheo/` from `skills/syntheo/`. With `--check`, it fails if one of the copies has drifted. So always edit `skills/syntheo/`, then run the script again.
+
+The skill's content depends on the contract of the CLI (`apps/cli/src/cli.rs`) and of the MCP server (`apps/cli/src/mcp/`).
+
+Affected doc pages: [/en/agents/overview](/en/agents/overview), [/en/agents/skills](/en/agents/skills), [/en/agents/cli](/en/agents/cli), [/en/agents/mcp](/en/agents/mcp), [/en/reference/cli](/en/reference/cli), [/en/reference/mcp](/en/reference/mcp), [/en/reference/errors](/en/reference/errors), [/en/installation](/en/installation).

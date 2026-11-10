@@ -1,0 +1,112 @@
+---
+title: "Code map: desktop app"
+description: "What the apps/desktop modules do, interface and native core, and the doc pages that depend on them."
+---
+
+This page links the desktop app's modules to the documentation pages to update when they change. For the tech stack and the capture flow, see [Architecture](/en/architecture). The Tauri plugins and the `packages/*` packages have their own maps ([/en/code/plugins](/en/code/plugins)).
+
+## Overview
+
+| Part | Path | Role |
+| --- | --- | --- |
+| Interface | `apps/desktop/src` | React 19, TanStack Router routing (`routes/`), Zustand state (`store/zustand/`), texts translated with Lingui (`i18n/`). |
+| Native core | `apps/desktop/src-tauri/src` | Startup, database opening, Tauri plugin registration, search index, installation of the CLI and agent skills. |
+
+**Internal dependencies of the `@syntheo/desktop` package** (`apps/desktop/package.json`): `@syntheo/changelog`, `db`, `db-react`, `db-tauri`, `editor`, `provider-validation`, `store`, `ui`, `utils`, `design-system` (dev), and the TypeScript bindings of the plugins `contacts`, `db`, `deeplink2`, `detect`, `dictation`, `export`, `fs-sync`, `hooks`, `icon`, `local-api`, `local-auth`, `misc`, `notification`, `opener2`, `permissions`, `relay`, `session`, `settings`, `sfx`, `shortcut`, `store2`, `tantivy`, `template`, `transcription`, `tray`, `windows`.
+
+## Native core: `apps/desktop/src-tauri/src`
+
+**Internal dependencies** (`apps/desktop/src-tauri/Cargo.toml`): `crates/brand`, `crates/audio-actual`, `crates/audio-mock` (optional), `crates/db-app`, `crates/db-core`, `crates/host`, `crates/intercept`, `crates/storage`, and the workspace's `tauri-plugin-*` plugins.
+
+| File | Role | Affected doc pages |
+| --- | --- | --- |
+| `lib.rs` | `main()`: launch locks, database opening, audio source choice (real, or simulated with `MOCK_AUDIO` in a `dev`/`devtools` build), plugin registration, system tray menu and icon, stopping capture from the floating bar, delayed exit while saving. Declares the `tauri-specta` commands listed below. | [/en/troubleshooting](/en/troubleshooting), [/en/desktop-installation](/en/desktop-installation) |
+| `startup.rs` | Launch lock and channel lock: Nightly and stable never share the open database at the same time. Slow startup indicator, consolidation of the old custom storage. | [/en/troubleshooting](/en/troubleshooting) |
+| `db.rs` | Opens `app.db` (`open_desktop_db`), applies a requested reset (`app.db.reset-requested`), recognizes lock errors and newer-schema errors. | [/en/data-and-privacy](/en/data-and-privacy), [/en/troubleshooting](/en/troubleshooting) |
+| `search_index.rs` | Background task that drains the `search_index_dirty` queue into the Tantivy index. A note being captured is only indexed after its journal is compacted. | [/en/notes](/en/notes) |
+| `embedded_cli.rs` | Checks and installs the `syntheo` binary shipped with the app in `~/.local/bin` (Windows: `%LOCALAPPDATA%\Syntheo\bin`). The name follows the channel: `syntheo`, `syntheo-nightly`, `syntheo-staging` or `syntheo-dev`. At startup, it reinstalls it if it is missing, without touching a foreign file at the same path. Unavailable in App Store builds. | [/en/installation](/en/installation), [/en/agents/cli](/en/agents/cli) |
+| `agent_skills.rs` | Bundles `skills/syntheo` (`SKILL.md`, `references/*.md`) and installs it for Claude Code, Codex, Cursor or OpenCode. | [/en/agents/skills](/en/agents/skills) |
+| `agents.rs`, `agents-content.md` | Writes an `AGENTS.md` in the data folder at each startup, to point agents to the MCP and the CLI. | [/en/agents/overview](/en/agents/overview) |
+| `appearance.rs` | Reads the dock display and the system tray icon at startup. | none |
+| `commands.rs`, `store.rs`, `ext.rs` | App-specific commands and local store keys. | none |
+
+Commands exposed to the interface (`commands.rs`): `get_onboarding_needed`, `set_onboarding_needed`, `get_dismissed_toasts`, `set_dismissed_toasts`, `get_env`, `show_devtool`, `is_app_store_build`, `complete_app_exit`, `get_tinybase_values`, `get_pinned_tabs`, `set_pinned_tabs`, `get_recently_opened_sessions`, `set_recently_opened_sessions`, `check_embedded_cli`, `install_embedded_cli` (used by `settings/developers/cli.tsx`), `list_skill_agents`, `install_agent_skill` (used by `settings/developers/skills.tsx`).
+
+<Note>
+  `tauri_plugin_agent` (through `crates/agent-core`) is registered outside App Store builds, but no module in `apps/desktop/src` imports its binding. See [/en/code/cli](/en/code/cli).
+</Note>
+
+## Interface: `apps/desktop/src`
+
+### Windows and routes
+
+`routes/` defines one route per Tauri window. `routeTree.gen.ts` is generated.
+
+| Route | Role |
+| --- | --- |
+| `routes/app/main/_layout*.tsx` | Main window: tabs (notes, settings, templates, contacts, folders, automations…), layout in `main/` and `shared/main/`. |
+| `routes/app/note.$sessionId.tsx` | Note opened in its own window. |
+| `routes/app/floating-bar.tsx`, `live-caption.tsx` | Floating meeting bar and live captions (`meeting-float/`). |
+| `routes/app/composer.tsx` | Quick chat window (`composer/`). |
+| `routes/app/onboarding.tsx` | First launch (`onboarding/`). |
+| `routes/app/instruction.tsx` | "Continue in the browser" screen; sign-in, billing and cloud integrations are gone. |
+
+Tab types are in `store/zustand/tabs/schema.ts`. The old `calendar` and `task` tabs are ignored when pinned tabs are read back (`pinned-persistence.ts`).
+
+### Modules by feature
+
+| Module | Role | Plugins and packages used | Affected doc pages |
+| --- | --- | --- | --- |
+| `stt/` | Meeting capture: start (`useStartListening`), STT connection (`useSTTConnection`), live segments, recovery after a cut, per-channel pause and mute, automatic stop, meeting consent and announcement, video-call app detection (`detect-events.ts`, `meeting-apps.ts`), automatic start (`session-auto-start.tsx`), audio file import (`useUploadFile`, `recording-import.tsx`). | `plugin-transcription`, `plugin-detect`, `plugin-permissions`, `plugin-notification`, `plugin-fs-sync`, `plugin-settings` | [/en/meetings](/en/meetings), [/en/automatic-capture](/en/automatic-capture), [/en/import-recordings](/en/import-recordings), [/en/languages](/en/languages), [/en/troubleshooting](/en/troubleshooting) |
+| `store/zustand/listener/` | Listening session state: live or batch capture, mute, fallback to another microphone, ongoing transcription. | `plugin-transcription`, `plugin-settings`, `plugin-local-api`, `plugin-hooks`, `plugin-detect` | [/en/meetings](/en/meetings) |
+| `store/zustand/ai-task/` | LLM tasks: summary generation (`enhance-*`) and title generation (`title-*`), participants' preferred names. | `plugin-template`, `plugin-transcription`, `plugin-local-api`, `@syntheo/editor` | [/en/meetings](/en/meetings), [/en/customize-summaries](/en/customize-summaries) |
+| `services/enhancer/` | Triggers the summary at the end of a meeting: eligibility, summary language and length, notification. | `plugin-template`, `plugin-notification` | [/en/customize-summaries](/en/customize-summaries), [/en/meetings](/en/meetings) |
+| `services/` (rest) | `audio-retention*` and `audio-cleanup` (deletion of processed audio), `tray-recording`, `event-listeners`, `native-menu-locale`, `task-manager`. | `plugin-tray`, `plugin-windows`, `plugin-transcription` | [/en/data-and-privacy](/en/data-and-privacy), [/en/conformite/rgpd](/en/conformite/rgpd) |
+| `ai/` | Connection to the configured LLM (`useLLMConnection`), provider requests, reasoning effort, task sync between windows. | `@syntheo/provider-validation`, `@syntheo/store` | [/en/ai-setup](/en/ai-setup), [/en/offline](/en/offline) |
+| `session/` | Meeting note: editor and living document, title, versions, speakers (`speaker-naming`), attachments, folders, review of agent proposals (`proposal-review.ts`, `pending-proposals-banner.tsx`), export. | `plugin-session`, `plugin-export`, `plugin-fs-sync`, `plugin-template`, `plugin-transcription`, `@syntheo/editor` | [/en/notes](/en/notes), [/en/meetings](/en/meetings), [/en/agents/overview](/en/agents/overview) |
+| `chat/` | Chat with your notes: transport to the LLM, context (note, folder, mentioned entities), tools (`tools/`: meetings, folders, folder materials, memo and summary edits), persisted messages. | `plugin-db`, `plugin-template`, `plugin-transcription`, `plugin-fs-sync`, `@syntheo/editor` | [/en/chat](/en/chat) |
+| `composer/` | Quick chat window, closed with Esc. | `plugin-windows`, `@syntheo/editor` | [/en/chat](/en/chat) |
+| `templates/` | Summary templates: list, editor, generation, automatic format inference, Markdown conversion. | `plugin-template`, `plugin-db`, `@syntheo/db` | [/en/customize-summaries](/en/customize-summaries) |
+| `automations/` | Automations engine: `note_enhanced`, `meeting_completed` and `manual` triggers, steps (seven actions: five local ones, plus webhook and "Run a command" under "Advanced"), outputs chained between steps, testing on a note, editing through the chat, launching from a note, migration of old automations. | `plugin-local-api`, `plugin-transcription` | [/en/automations](/en/automations) |
+| `dictation/` | Dictation outside meetings: controller that keeps the recording in memory, never on disk, lifecycle and panel. | `plugin-dictation`, `plugin-shortcut`, `plugin-transcription`, `plugin-permissions` | [/en/dictation](/en/dictation) |
+| `contacts/` | People and organizations: profiles, avatar, contact summary. | `plugin-contacts` | [/en/contacts](/en/contacts) |
+| `folders/`, `sidebar/` | Folders as project spaces (`folders/project/`: common thread, next meeting and agenda, per-folder template, folder suggestion) and sidebar (folder tree, settings navigation, server status). | no dedicated plugin | [/en/folders](/en/folders), [/en/notes](/en/notes) |
+| `home/` | Home: notes index, start button, export. | no dedicated plugin | [/en/quickstart](/en/quickstart), [/en/notes](/en/notes) |
+| `search/` | Full-text search (`contexts/engine`). | `plugin-tantivy` | [/en/notes](/en/notes) |
+| `meeting-float/` | Floating bar and live captions during capture. | `plugin-windows`, `plugin-transcription` | [/en/meetings](/en/meetings), [/en/automatic-capture](/en/automatic-capture) |
+| `lock/` | Locking the app and notes with device authentication. | `plugin-local-auth` | [/en/security](/en/security), [/en/data-and-privacy](/en/data-and-privacy) |
+| `onboarding/` | First launch: configuration, permissions, welcome note. | `plugin-permissions` | [/en/quickstart](/en/quickstart), [/en/ai-setup](/en/ai-setup) |
+| `settings/` | Settings, detailed below. | see below | see below |
+| `i18n/` | Lingui catalogs; French by default, English available. | none | [/en/languages](/en/languages) |
+| `changelog/` | What's new tab. | `@syntheo/changelog` | none |
+| `db/` | Interface-side data access, write queue with retry. | `plugin-db`, `@syntheo/db*` | none |
+| `editor-bridge/`, `edit/`, `contexts/`, `shared/`, `main/`, `styles/`, `types/` | Interface infrastructure: links and mentions in the editor, edit tab, tool registry, shortcuts, theme, deep links. | various | none |
+| `devtools-bar/` | Development toolbar. | various | none |
+
+### Settings: `settings/`
+
+The sections come from `sidebar/settings-nav-groups.ts` and are rendered by `settings/index.tsx`.
+
+| Section | Code | Affected doc pages |
+| --- | --- | --- |
+| Profile, meetings, notifications, permissions | `settings/general/` | [/en/meetings](/en/meetings), [/en/languages](/en/languages), [/en/automatic-capture](/en/automatic-capture) |
+| Appearance | `settings/appearance/` | none |
+| Transcription | `settings/ai/stt/`, `settings/ai/shared/` | [/en/ai-setup](/en/ai-setup), [/en/offline](/en/offline), [/en/troubleshooting](/en/troubleshooting) |
+| Intelligence (LLM) | `settings/ai/llm/`, `settings/ai/shared/` | [/en/ai-setup](/en/ai-setup), [/en/offline](/en/offline) |
+| Dictation | `settings/dictation.tsx`, `settings/dictation-shortcut.tsx` | [/en/dictation](/en/dictation) |
+| Dictionary | `settings/dictionary/` | [/en/dictation](/en/dictation), [/en/languages](/en/languages) |
+| Privacy | `settings/privacy/` | [/en/data-and-privacy](/en/data-and-privacy), [/en/security](/en/security) |
+| Automations | `settings/automations/` | [/en/automations](/en/automations) |
+| Developers: CLI | `settings/developers/cli.tsx` | [/en/installation](/en/installation) |
+| Developers: skills | `settings/developers/skills.tsx` | [/en/agents/skills](/en/agents/skills) |
+| Developers: webhooks | `settings/developers/webhooks.tsx` (commands from `plugin-local-api`) | [/en/reference/webhooks](/en/reference/webhooks) |
+
+## Tested guarantees
+
+The tests at the root of `apps/desktop/src` (`no-audio-at-rest`, `stt-on-prem`, `llm-on-prem`, `no-cloud-imports`, `no-telemetry`, `monorepo-scope`, `docs-rgpd`) protect the guarantees described in [Architecture](/en/architecture). `docs-rgpd.test.ts` reads `docs/conformite/rgpd.md`: any new network flow or storage must be added to it.
+
+## Known gap
+
+<Note>
+  The calendar was removed from the code (commit `c307e324`, PR #465): there is no `calendar` tab anymore, and the old `/calendar` page redirects to [Notes](/en/notes).
+</Note>

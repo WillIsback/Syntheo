@@ -1,0 +1,199 @@
+---
+title: "Tauri plugins"
+description: "Role, commands, events and dependencies of each Tauri plugin in plugins/, and the documentation pages that depend on them."
+---
+
+The plugins in `plugins/*` connect the React interface to Syntheo Desktop's native code. This page describes what each plugin exposes and which user pages to review when it changes. For where the plugins fit in the whole monorepo, see [Architecture](/en/architecture).
+
+## Anatomy of a plugin
+
+Each `plugins/<name>` folder follows the same structure:
+
+| Element | Location | Role |
+| --- | --- | --- |
+| Rust crate | `Cargo.toml`, `src/lib.rs` | Crate `tauri-plugin-<name>`. `lib.rs` declares the commands (`collect_commands!`) and the events (`collect_events!`) with `tauri-specta`. |
+| TypeScript package | `package.json`, `js/index.ts` | Package `@syntheo/plugin-<name>`, imported by `apps/desktop/src`. |
+| Generated bindings | `js/bindings.gen.ts` | Produced by the package's `codegen` script (`cargo test -p tauri-plugin-<name>`). Don't edit them by hand. |
+| Permissions | `permissions/default.toml` | Commands allowed by default, to be carried over to `apps/desktop/src-tauri/capabilities/default.json`. |
+
+After any change to a plugin's commands, run `codegen`, then update `permissions/default.toml` and `apps/desktop/src-tauri/capabilities/default.json` (`plugins/AGENTS.md`).
+
+All plugins are registered in `apps/desktop/src-tauri/src/lib.rs`, with three conditional exceptions:
+
+- `agent` and `hooks` are not loaded with the `app-store` feature.
+- `relay` is only loaded in debug builds or with the `devtools` feature.
+
+<Note>
+The name of a plugin doesn't tell the whole story: `notification` shows notifications, `notify` watches the file system. The `2` suffixes (`fs2`, `path2`, `opener2`, `store2`, `sidecar2`, `deeplink2`) denote in-house extensions of an official Tauri plugin with the same name.
+</Note>
+
+## Inventory
+
+The "Interface" column shows whether `apps/desktop/src` imports the `@syntheo/plugin-<name>` package.
+
+| Plugin | Role | Interface | Affected doc pages |
+| --- | --- | --- | --- |
+| `transcription` | Audio capture, live and batch transcription, audio retention | Yes | [/en/meetings](/en/meetings), [/en/import-recordings](/en/import-recordings), [/en/languages](/en/languages), [/en/ai-setup](/en/ai-setup), [/en/offline](/en/offline), [/en/data-and-privacy](/en/data-and-privacy), [/en/troubleshooting](/en/troubleshooting) |
+| `dictation` | Dictation into the active field of another app | Yes | [/en/dictation](/en/dictation) |
+| `detect` | Detection of meetings and of apps that use the microphone | Yes | [/en/automatic-capture](/en/automatic-capture) |
+| `audio-priority` | Audio device priority | No | none |
+| `shortcut` | Global keyboard shortcuts | Yes | [/en/dictation](/en/dictation) |
+| `sfx` | App sounds | Yes | none |
+| `db` | SQLite access, reactive queries, startup state | Yes | [/en/meetings](/en/meetings), [/en/notes](/en/notes), [/en/data-and-privacy](/en/data-and-privacy) |
+| `session` | Creation and lifecycle of notes, folders, participants, proposals | Yes | [/en/notes](/en/notes), [/en/meetings](/en/meetings), [/en/chat](/en/chat) |
+| `contacts` | People and organizations | Yes | [/en/contacts](/en/contacts) |
+| `fs-sync` | Data folder files: notes, folders, attachments, audio import | Yes | [/en/notes](/en/notes), [/en/import-recordings](/en/import-recordings), [/en/data-and-privacy](/en/data-and-privacy) |
+| `tantivy` | Full-text search index | Yes | [/en/notes](/en/notes), [/en/architecture](/en/architecture) |
+| `template` | Prompt rendering and saving summaries | Yes | [/en/customize-summaries](/en/customize-summaries), [/en/languages](/en/languages), [/en/chat](/en/chat) |
+| `export` | Export and PDF printing | Yes | [/en/notes](/en/notes) |
+| `local-api` | Outgoing webhooks, Markdown export | Yes | [/en/reference/webhooks](/en/reference/webhooks), [/en/automations](/en/automations) |
+| `hooks` | Local commands triggered by events | Yes | none |
+| `settings` | Settings file and base folders | Yes | [/en/data-and-privacy](/en/data-and-privacy) |
+| `store2` | Key-value preferences and secrets in the keychain | Yes | [/en/security](/en/security), [/en/ai-setup](/en/ai-setup), [/en/data-and-privacy](/en/data-and-privacy), [/en/uninstall](/en/uninstall) |
+| `windows` | Windows, tabs, floating bar, live captions | Yes | [/en/automatic-capture](/en/automatic-capture), [/en/meetings](/en/meetings) |
+| `tray` | Notification area icon and menu | Yes | none |
+| `notification` | Interactive native notifications | Yes | [/en/automatic-capture](/en/automatic-capture) |
+| `notify` | Watching the data folder files | No (used by `fs-sync`) | none |
+| `permissions` | System permissions (microphone, audio, accessibility) | Yes | [/en/quickstart](/en/quickstart), [/en/troubleshooting](/en/troubleshooting) |
+| `local-auth` | Local system authentication | Yes | none |
+| `deeplink2` | `syntheo://` links and local callback server | Yes | none |
+| `opener2` | Opening URLs and files | Yes | none |
+| `tracing` | App logs | No | [/en/troubleshooting](/en/troubleshooting), [/en/data-and-privacy](/en/data-and-privacy) |
+| `misc` | Miscellaneous technical information | Yes | none |
+| `icon` | Dock icon and indicators (macOS) | Yes | none |
+| `overlay` | Overlay windows (macOS) | No | none |
+| `dock` | Dock menu (macOS) | No | none |
+| `fs2`, `path2`, `js`, `sidecar2` | Internal utilities | No | none |
+| `agent` | CLI installation | No | none |
+| `mcp` | Inherited types, no commands | No | none |
+| `relay` | Interface relay for development | No (Vite shim) | none |
+
+## Capture, transcription and dictation
+
+### `transcription`
+
+- **Path**: `plugins/transcription`
+- **Role**: drives microphone and system audio capture, live transcription, batch transcription of imported files and retention of audio segments waiting to be sent. It is the plugin the interface uses most.
+- **Main commands**:
+  - Devices and levels: `list_microphone_devices`, `list_speaker_devices`, `start_microphone_level_monitor`, `set_mic_muted`, `set_speaker_muted`.
+  - Capture: `start_capture`, `stop_capture`, `stop_capture_for_session`, `retry_audio_capture`, `update_capture_config`, `update_capture_credentials`, `get_capture_state`, `get_capture_snapshot`, `get_capture_audio_gaps`.
+  - Recovery after a stop: `list_stopped_captures`, `list_capture_recoveries`, lifecycle markers (`save_capture_lifecycle_marker`…).
+  - Live transcription: `flush_live_transcript`, `render_transcript_segments`, `render_session_transcript`.
+  - Batch and import: `start_transcription`, `stop_transcription`, `begin_audio_upload`, `append_audio_upload`, `refine_batch_transcript`, `save_batch_transcript`, `reconcile_refined_speaker_clusters`.
+  - Subtitles: `parse_subtitle`, `export_to_vtt`.
+  - Languages: `is_supported_languages_live` and `_batch`, `suggest_providers_for_languages_live` and `_batch`, `list_documented_language_codes_live` and `_batch`.
+  - In-memory audio: `list_capture_audio_chunks`, `delete_transcribed_capture_audio`, `delete_processed_session_audio`.
+- **Events**: `CaptureLifecycleEvent`, `CaptureStatusEvent`, `CaptureDataEvent`, `LiveTranscriptPersistenceEvent`, `SessionAudioRetentionEvent`, `TranscriptionEvent`.
+- **Internal dependencies**: `crates/audio`, `crates/db-app`, `crates/language`, `crates/storage`, `crates/transcript`, `crates/transcription-core`, `crates/owhisper-client`, `crates/owhisper-interface`; plugins `db`, `fs-sync`, `settings`, `store2`, `tray`.
+- **Affected doc pages**: [/en/meetings](/en/meetings), [/en/import-recordings](/en/import-recordings), [/en/languages](/en/languages), [/en/ai-setup](/en/ai-setup), [/en/offline](/en/offline), [/en/data-and-privacy](/en/data-and-privacy), [/en/troubleshooting](/en/troubleshooting).
+
+### `dictation`
+
+- **Path**: `plugins/dictation`
+- **Role**: records the voice, sends it to the STT server and inserts the text into the active app. Insertion has a Linux implementation and a Windows one (`src/insertion/`).
+- **Commands**: `show`, `hide`, `set_phase`, `update_amplitude`, `start_recording`, `start_system_recording`, `stop_recording`, `cancel_recording`, `capture_target`, `insert_text`.
+- **Internal dependencies**: `crates/owhisper-client`, `crates/owhisper-interface`, `crates/audio`.
+- **Affected doc pages**: [/en/dictation](/en/dictation).
+
+### `detect`
+
+- **Path**: `plugins/detect`
+- **Role**: spots the apps that use the microphone, respects Do Not Disturb mode, reads the accessibility tree of meeting windows to send or capture chat messages, and captures screen shares.
+- **Commands**: `list_installed_applications`, `list_mic_using_applications`, `set_respect_do_not_disturb`, `set_ignored_bundle_ids`, `set_included_bundle_ids`, `set_mic_active_threshold`, `inspect_meeting_accessibility`, `send_meeting_chat_message`, `capture_meeting_chat_messages`, `capture_meeting_screen_share`, `get_preferred_languages`, `get_current_locale_identifier`.
+- **Events**: `DetectEvent` (`MicDetected`, `MicStopped`, `MicMuteStateChanged`, `SleepStateChanged`…).
+- **Internal dependencies**: `crates/detect`, `crates/notification-interface`; plugins `settings`, `windows`.
+- **Affected doc pages**: [/en/automatic-capture](/en/automatic-capture) ("Detect an unscheduled meeting", "Stop listening", "Inform participants", "Capture shared screens" sections, and the per-platform availability table).
+
+### Other audio plugins
+
+| Plugin | Commands and events | Internal dependencies | Affected doc pages |
+| --- | --- | --- | --- |
+| `audio-priority` | `list_input_devices`, `list_output_devices`, `set_default_input_device`, `set_default_output_device`, `get_input_priorities`, `save_input_priorities` (and output equivalents). No interface import. | `crates/audio-device`; plugin `settings` | none |
+| `shortcut` | `register_hotkey`, `unregister_hotkey`, `configure`, `validate`, `set_active`; event `ShortcutEvent`. Global shortcuts are initialized at startup (`initialize_global_shortcuts`). | none (official `global-shortcut` plugin) | [/en/dictation](/en/dictation) |
+| `sfx` | `play`, `stop`, `set_volume`, `play_completion_sound`. `apps/desktop/src/shared/completion-sound.ts` plays the completion sound from the capture cycle, batch transcription and summary generation. | `crates/audio-utils` | none |
+
+## Data and content
+
+### `db`
+
+- **Path**: `plugins/db`
+- **Role**: exposes the SQLite database to the interface. Applies migrations, runs queries and pushes changes to subscribers.
+- **Commands**: `execute`, `execute_transaction`, `execute_proxy`, `subscribe`, `unsubscribe`, `list_meetings`, `get_meeting`, `get_meeting_transcript`, `get_recurring_meeting_history`, `apply_session_ingest`, `get_startup_status`, `wait_until_ready`.
+- **Internal dependencies**: `crates/db-core`, `crates/db-app`, `crates/db-execute`, `crates/db-migrate`, `crates/db-reactive`, `crates/session-ingest`, `crates/agent-access`.
+- **Consumers**: `packages/db-tauri` and the interface; the `session`, `contacts`, `template`, `export`, `local-api` and `transcription` plugins depend on it on the Rust side.
+- **Affected doc pages**: [/en/meetings](/en/meetings), [/en/notes](/en/notes), [/en/data-and-privacy](/en/data-and-privacy).
+
+### `session`
+
+- **Path**: `plugins/session`
+- **Role**: transactional writes on notes and folders.
+- **Commands**: `create_session`, `soft_delete_session`, `restore_deleted_session`, `add_session_participant`, `remove_session_participant`, `persist_chat_session_proposal`, `set_session_proposal_status`, `resolve_session_conflicts`, `move_session_contents`, attachments and audio catalog (`catalog_note_attachment`, `catalog_session_audio`, `tombstone_session_audio`…), folder catalog (`ensure_folder_catalog`, `rename_folder_catalog`, `update_folder_instructions`, `update_folder_workspace`, `update_folder_icon`…).
+- **Internal dependencies**: `crates/db-app`; plugin `db`.
+- **Affected doc pages**: [/en/notes](/en/notes), [/en/meetings](/en/meetings), [/en/chat](/en/chat) (proposals from the chat).
+
+### `template`
+
+- **Path**: `plugins/template`
+- **Role**: renders Jinja prompts and saves the generation result.
+- **Commands**: `render`, `render_custom`, `get_template_source`, `summary_length_policy`, `dominant_language`, `prepare_generated_summary`, `compose_generated_summary`, `save_generated_summary`, `save_generated_title`, `apply_session_content_corrections`.
+- **Internal dependencies**: `crates/template-app`, `crates/template-app-legacy`, `crates/summary`, `crates/gbnf`, `crates/language`, `crates/db-app`; plugin `db`.
+- **Affected doc pages**: [/en/customize-summaries](/en/customize-summaries), [/en/languages](/en/languages) (language of summaries and titles), [/en/chat](/en/chat).
+
+### Other data plugins
+
+| Plugin | Commands and events | Internal dependencies | Affected doc pages |
+| --- | --- | --- | --- |
+| `contacts` | `create_human`, `create_organization`, `save_personal_contact`, `update_human`, `update_organization`, `soft_delete_contact`, `update_contact_avatar`, `toggle_contact_pin`, `reorder_pinned_contacts`, `merge_humans` | `crates/db-app`; plugin `db` | [/en/contacts](/en/contacts) |
+| `fs-sync` | Notes and folders (`list_folders`, `create_folder`, `rename_folder`, `delete_folder`, `move_session`, `load_session_content`), document batches (`write_document_batch`, `read_document_batch`), attachments (`attachment_*`, `folder_attachment_*`), imported audio (`audio_import`, `audio_has_speech`, `audio_peaks`, `audio_delete`…); event `AudioImportEvent` | `crates/fs-sync-core`; plugins `notify`, `settings` | [/en/notes](/en/notes), [/en/import-recordings](/en/import-recordings), [/en/data-and-privacy](/en/data-and-privacy) |
+| `tantivy` | `search`, `reindex`, `add_document`, `update_document`, `update_documents`, `remove_document` | `crates/language`; plugin `settings` | [/en/notes](/en/notes) (search palette), [/en/architecture](/en/architecture) |
+| `export` | `export`, `export_text`, `choose_export_path`, `print_pdf`, `cleanup_print_files` | `crates/export-core`; plugin `db` | [/en/notes](/en/notes) |
+| `local-api` | Webhooks (`list_webhooks`, `create_webhook`, `delete_webhook`, `set_webhook_active`, `test_webhook`, `dispatch_event`), `export_meeting_markdown` (used by `apps/desktop/src/automations/step-runners.ts`), `prepare_drive_markdown`, `get_cloud_snapshot`, `list_cloud_snapshot_ids` | `crates/agent-access`, `crates/db-app`; plugin `db` | [/en/reference/webhooks](/en/reference/webhooks), [/en/automations](/en/automations) |
+| `hooks` | `run_event_hooks`, called during listening (`apps/desktop/src/store/zustand/listener/general-live.ts`). The configuration is read under the `hooks` key of the settings. | `crates/hooks`; plugin `settings` | none |
+| `settings` | `settings_path`, `global_base`, `vault_base`, `load`, `save` | `crates/storage` | [/en/data-and-privacy](/en/data-and-privacy) |
+| `store2` | Typed preferences (`get_str`, `set_str`, `get_bool`, `set_number`…, `save`) and secrets (`get_secret`, `set_secret`, `delete_secret`, `repair_keychain_access`) stored in the keychain through `keyring` | `crates/storage`; plugin `settings` | [/en/security](/en/security), [/en/ai-setup](/en/ai-setup), [/en/data-and-privacy](/en/data-and-privacy), [/en/uninstall](/en/uninstall) |
+
+## Windows and system integration
+
+### `windows`
+
+- **Path**: `plugins/windows`
+- **Role**: opens, hides and animates windows and tabs, and drives two overlay windows: the floating bar and the live captions.
+- **Commands**: `window_show`, `window_hide`, `window_navigate`, `window_emit_navigate`, `window_save_frame`, `window_restore_frame_animated`, `set_show_app_in_dock`, `webview_health_ack`, `floating_bar_show`, `floating_bar_hide`, `floating_bar_update`, `live_caption_show`, `live_caption_hide`, `live_caption_update`.
+- **Events**: `Navigate`, `OpenTab`, `WindowDestroyed`, `VisibilityEvent`, `WebviewHealthCheck`, `FloatingBarStop`, `FloatingBarDictationAction`, `FloatingBarListeningAction`, `FloatingBarOpenMain`, `FloatingBarSettingsChange`, `LiveCaptionOverlayState`…
+- **Internal dependencies**: `crates/brand`.
+- **Affected doc pages**: [/en/automatic-capture](/en/automatic-capture) ("Keep the controls at hand"), [/en/meetings](/en/meetings).
+
+### Other system plugins
+
+| Plugin | Commands and events | Internal dependencies | Affected doc pages |
+| --- | --- | --- | --- |
+| `tray` | `set_tray_icon_visible`, `set_tray_schedule`, `set_tray_recording_title`, `set_native_menu_locale` | `crates/brand`, `crates/intercept`; plugins `misc`, `store2`, `windows` | none |
+| `notification` | `show_notification`, `clear_notifications`; event `NotificationEvent` (`Confirm`, `Accept`, `Action`, `Dismiss`, `Timeout`, `OptionSelected`, `FooterAction`) | `crates/notification`; plugin `windows` | [/en/automatic-capture](/en/automatic-capture) |
+| `notify` | No commands; event `FileChanged`. Watches files with `notify-debouncer-full` and ignores the app's own writes. | plugin `settings` | none |
+| `permissions` | `check_permission`, `request_permission`, `open_permission`, `reset_permission`, `permission_guidance`, `close_permission_assistant` | `crates/audio`; plugin `sidecar2` | [/en/quickstart](/en/quickstart), [/en/troubleshooting](/en/troubleshooting) |
+| `local-auth` | `available`, `authenticate`. Implemented on macOS and Windows; elsewhere, `available` returns `false`. Used by the app lock (`apps/desktop/src/lock/auth.ts`). | none | none |
+| `deeplink2` | `start_callback_server`, `stop_callback_server`, `take_pending_deep_links`, `list_pending_share_opens`, `take_pending_share_open`; events `DeepLinkEvent`, `ShareOpenPendingEvent`. The `auth_callback`, `billing_refresh`, `integration_callback` and `share/open` link types come from Anarlog. | none | none |
+| `opener2` | `open_url`, `open_path`, `reveal_item_in_dir` | none | none |
+| `tracing` | `logs_dir`, `do_log`, `log_content`. Writes `app.log` and masks the content of console messages. | `crates/user-error` | [/en/troubleshooting](/en/troubleshooting), [/en/data-and-privacy](/en/data-and-privacy) |
+| `misc` | `get_git_hash`, `get_device_info`, `get_process_memory_bytes`, `opinionated_md_to_html` | `crates/buffer` | none |
+
+### Internal, macOS-specific or inherited plugins
+
+| Plugin | Status | Details |
+| --- | --- | --- |
+| `icon` | macOS only | `set_dock_icon`, `reset_dock_icon`, `get_icon`, `set_recording_indicator`, `set_notification_badge`. Outside macOS, these commands do nothing. |
+| `overlay` | Internal, mostly macOS | `set_fake_window_bounds`, `remove_fake_window`. Unused: neither the interface nor another crate calls it (`icon` and `permissions` have their own `overlay` module, unrelated). |
+| `dock` | macOS only | No commands. Installs the Dock menu (new note, settings, update, restart, quit). |
+| `fs2` | Internal | `read_text_file`, `remove`. Package not imported by the interface. Depends on the `settings` plugin. |
+| `path2` | Internal | `sanitize` (file name cleanup). Package not imported by the interface. |
+| `js` | Internal | `eval`: evaluates JavaScript in a QuickJS engine (`rquickjs`). Package not imported by the interface. |
+| `sidecar2` | Internal | No commands. Resolves and launches sidecar binaries, including in debug. Used by `permissions`. |
+| `agent` | Not called by the interface | `health_check`, `install_cli`, `uninstall_cli`, through `crates/agent-core`. The **Settings → Developers → CLI & MCP** screen goes through the app's commands (`apps/desktop/src-tauri/src/embedded_cli.rs`), not through this plugin. |
+| `mcp` | Inherited | No commands. Only declares Anarlog types (tickets, subscriptions, billing portal). Syntheo's MCP server is in `apps/cli/src/mcp/`, see [/en/code/cli](/en/code/cli). |
+| `relay` | Development only | Serves the interface over HTTP on `127.0.0.1` (port 1423, or `RELAY_PORT`) and relays IPC over WebSocket. The Vite shim `@syntheo/plugin-relay/vite` is loaded in `apps/desktop/vite.config.ts`. |
+
+## When to update the documentation
+
+- A command or event added, renamed or removed: update the table on this page.
+- A visible behavior change in a plugin whose "Affected doc pages" column is not "none": review those pages.
+- A plugin that starts being called by the interface (for example `audio-priority` or `agent`): add the affected user pages and the matching row in [Doc ↔ code mapping](/en/code/doc-map).

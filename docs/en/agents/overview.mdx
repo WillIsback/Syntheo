@@ -1,0 +1,55 @@
+---
+title: "Agents overview"
+description: "Give an agent the context of your Syntheo meetings, locally, without exposing the database or entire transcripts."
+---
+
+Syntheo gives an agent two ways to read your meetings. Both go through the same `syntheo` executable and read the app's local database. Neither goes through a remote server.
+
+| Access | When to use it | Output |
+| --- | --- | --- |
+| [CLI](/en/agents/cli) | The agent has shell access on your computer | Text, or versioned JSON with `--json` |
+| [Local MCP](/en/agents/mcp) | The agent supports a stdio MCP server | Structured tool results and `syntheo://` resources |
+
+A [Syntheo skill](/en/agents/skills) teaches the agent when and how to use these two access methods.
+
+Start by [installing the CLI](/en/installation).
+
+## Recommended approach
+
+1. Check that local access is ready with `syntheo --json doctor`, or use an MCP server that is already connected.
+2. List recent meetings or search for a short fragment of the title. For a project or a client, list the folders and filter by folder path.
+3. Use a meeting ID returned by the tool. Never guess one.
+4. Read the meeting details (note, summaries, participants, action items) before asking for the transcript.
+5. Only ask for the history of a recurring series if previous meetings matter.
+6. Read the transcript page by page, and stop as soon as you have enough information.
+
+## Data freshness
+
+Reads cover the local database as it is at the time of the call. They work offline. A meeting's `updated_at` field shows when its content was last changed.
+
+## Security boundaries
+
+Agents go through the CLI or the MCP, never directly through SQLite. These interfaces apply Syntheo's rules: canonical note, generated summaries, recurring meetings, transcript text.
+
+Reads stay bounded. An agent can't edit a note or a summary directly. It can only prepare a **proposal** with the CLI's `proposals` commands or the MCP's `propose_*` tools. You then review it in the app: the "1 pending edit" banner appears on the meeting, with "Review memo" or "Review summary". You then choose "Apply to memo", "Apply to summary" or "Decline".
+
+The CLI export can create a file; replacing an existing file requires `--force`.
+
+<Note>
+  The CLI and the MCP send nothing to a Syntheo server. However, what the agent reads is sent to the language model it uses. Choose an agent and a model provider that match the confidentiality of your meetings.
+</Note>
+
+<CardGroup cols={2}>
+  <Card title="CLI for agents" icon="terminal" href="/en/agents/cli">
+    JSON output and meeting IDs.
+  </Card>
+  <Card title="MCP for agents" icon="plug" href="/en/agents/mcp">
+    Local stdio MCP server.
+  </Card>
+  <Card title="Syntheo skill" icon="graduation-cap" href="/en/agents/skills">
+    Install the skill in your agent.
+  </Card>
+  <Card title="Errors and exit codes" icon="triangle-exclamation" href="/en/reference/errors">
+    Diagnose a failure.
+  </Card>
+</CardGroup>
