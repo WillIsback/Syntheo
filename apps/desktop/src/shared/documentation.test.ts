@@ -19,8 +19,12 @@ describe("documentationUrl", () => {
       resolve(process.cwd(), "../../docs/docs.json"),
       "utf8",
     );
+    // Doc bilingue : chaque page existe en anglais (`en/…`) et en français
+    // (`fr/…`) ; les adresses sans préfixe redirigent vers `/fr/…` (docs.json).
     for (const page of ["import-recordings", "agents/overview", "chat"]) {
-      expect(docs).toContain(`"${page}"`);
+      expect(docs).toContain(`"en/${page}"`);
+      expect(docs).toContain(`"fr/${page}"`);
+      expect(docs).toContain(`"source": "/${page}"`);
     }
   });
 });

@@ -23,7 +23,7 @@ Check, in order:
    curl http://localhost:8000/v1/models
    ```
 
-   Replace the URL with your server's. Add `-H "Authorization: Bearer <clé>"` if your server requires a key.
+   Replace the URL with your server's. Add `-H "Authorization: Bearer <key>"` if your server requires a key.
 
 2. **The base URL is complete.** For an OpenAI-compatible server, it usually ends with `/v1` (for example `http://localhost:8000/v1`), with no `/models` or `/chat/completions` at the end. For an NVIDIA NIM server, enter the server address, for example `http://localhost:9000/v1/realtime`.
 3. **The URL contains no credentials and no parameters.** Syntheo refuses a URL of the form `https://utilisateur:motdepasse@…` or one containing `?…`. Enter the key in the field provided for it.
