@@ -5,7 +5,9 @@ import { describe, expect, it } from "vitest";
 import {
   SOURCE_LOCALE,
   SUPPORTED_DISPLAY_LOCALES,
+  legacyDisplayLocale,
   resolveDisplayLocale,
+  resolveUiLanguagePreference,
 } from "./locales";
 
 describe("locales supportées", () => {
@@ -24,19 +26,61 @@ describe("locales supportées", () => {
 });
 
 describe("resolveDisplayLocale", () => {
-  it("français par défaut quand aucune langue n'est choisie", () => {
-    expect(resolveDisplayLocale(null)).toBe("fr");
-    expect(resolveDisplayLocale(undefined)).toBe("fr");
+  it("suit la première langue préférée du système en mode automatique", () => {
+    expect(resolveDisplayLocale("auto", ["fr-FR", "en-US"])).toBe("fr");
+    expect(resolveDisplayLocale("auto", ["en-US", "fr-FR"])).toBe("en");
+    expect(resolveDisplayLocale(undefined, ["fr"])).toBe("fr");
   });
 
-  it("anglais seulement si la langue de base est en", () => {
-    expect(resolveDisplayLocale("en")).toBe("en");
-    expect(resolveDisplayLocale("en-US")).toBe("en");
+  it("retombe sur l'anglais sans catalogue pour la langue du système", () => {
+    expect(resolveDisplayLocale("auto", ["zh-CN", "fr-FR"])).toBe("en");
+    expect(resolveDisplayLocale("auto", ["de-DE"])).toBe("en");
+    expect(resolveDisplayLocale("auto", [])).toBe("en");
+    expect(resolveDisplayLocale("auto", null)).toBe("en");
+    expect(resolveDisplayLocale("auto", ["xx-invalid"])).toBe("en");
   });
 
-  it("français pour les autres langues de transcription", () => {
-    expect(resolveDisplayLocale("de")).toBe("fr");
-    expect(resolveDisplayLocale("fr")).toBe("fr");
-    expect(resolveDisplayLocale("xx-invalid")).toBe("fr");
+  it("donne la priorité au réglage explicite sur le système", () => {
+    expect(resolveDisplayLocale("fr", ["en-US"])).toBe("fr");
+    expect(resolveDisplayLocale("en", ["fr-FR"])).toBe("en");
+  });
+
+  it("traite une valeur inconnue comme le mode automatique", () => {
+    expect(resolveDisplayLocale("de", ["fr-FR"])).toBe("fr");
+    expect(resolveDisplayLocale("de", ["zh-CN"])).toBe("en");
+  });
+});
+
+describe("legacyDisplayLocale", () => {
+  it("reproduit l'ancienne règle : anglais seulement pour une langue en", () => {
+    expect(legacyDisplayLocale("en-US")).toBe("en");
+    expect(legacyDisplayLocale("de")).toBe("fr");
+    expect(legacyDisplayLocale(undefined)).toBe("fr");
+  });
+});
+
+describe("resolveUiLanguagePreference", () => {
+  it("lit le réglage enregistré", () => {
+    expect(
+      resolveUiLanguagePreference({
+        values: { ui_language: "en", ai_language: "fr" },
+        hasValues: new Set(["ui_language", "ai_language"]),
+      }),
+    ).toBe("en");
+  });
+
+  it("garde la langue affichée jusqu'ici pour un profil existant", () => {
+    expect(
+      resolveUiLanguagePreference({
+        values: { ai_language: "de" },
+        hasValues: new Set(["ai_language"]),
+      }),
+    ).toBe("fr");
+  });
+
+  it("reste en automatique pour un nouveau profil", () => {
+    expect(
+      resolveUiLanguagePreference({ values: {}, hasValues: new Set() }),
+    ).toBe("auto");
   });
 });

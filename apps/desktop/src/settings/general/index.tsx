@@ -10,6 +10,7 @@ import { CircleNotch } from "@syntheo/ui/components/icons";
 import { AccountProfile } from "./account-profile";
 import { AppSettingsView } from "./app-settings";
 import { AudioSettingsView } from "./audio-settings";
+import { InterfaceLanguageSelector } from "./interface-language";
 import {
   CORE_TRANSCRIPTION_LANGUAGE_CODES,
   getAdditionalSpokenLanguages,
@@ -237,6 +238,7 @@ function SettingsSectionContent({
               <Trans>Language &amp; Region</Trans>
             </h2>
             <div className="flex flex-col gap-6">
+              <InterfaceLanguageSelector />
               <div className="flex flex-col gap-4">
                 <form.Field name="ai_language">
                   {(field) => (

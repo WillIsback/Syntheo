@@ -12,13 +12,42 @@ pub enum ExportLocale {
     Fr,
 }
 
+fn primary_language(tag: Option<&str>) -> String {
+    let tag = tag.unwrap_or("").trim().to_ascii_lowercase();
+    tag.split(['-', '_']).next().unwrap_or("").to_string()
+}
+
 impl ExportLocale {
-    /// Mirrors the desktop `resolveDisplayLocale`: English only when the main
-    /// language is English, French otherwise (French first).
+    /// Rule used before the `ui_language` setting (issue 549), mirroring the
+    /// desktop `legacyDisplayLocale`: English only when the main language is
+    /// English, French otherwise.
     pub fn from_language(language: Option<&str>) -> Self {
-        let language = language.unwrap_or("").trim().to_ascii_lowercase();
-        let primary = language.split(['-', '_']).next().unwrap_or("");
-        if primary == "en" { Self::En } else { Self::Fr }
+        if primary_language(language) == "en" {
+            Self::En
+        } else {
+            Self::Fr
+        }
+    }
+
+    /// Mirrors the desktop `resolveDisplayLocale` (issue 549): an explicit
+    /// `ui_language` (`fr`, `en`) wins; `auto` follows the system locale,
+    /// French only for a French system and English otherwise. A profile that
+    /// has not stored `ui_language` yet keeps the legacy rule.
+    pub fn from_interface_language(
+        ui_language: Option<&str>,
+        ai_language: Option<&str>,
+        system_locale: Option<&str>,
+    ) -> Self {
+        let Some(ui_language) = ui_language else {
+            return Self::from_language(ai_language);
+        };
+        let explicit = primary_language(Some(ui_language));
+        let resolved = if explicit == "fr" || explicit == "en" {
+            explicit
+        } else {
+            primary_language(system_locale)
+        };
+        if resolved == "fr" { Self::Fr } else { Self::En }
     }
 
     fn labels(self) -> &'static Labels {
@@ -320,6 +349,35 @@ mod tests {
         assert_eq!(ExportLocale::from_language(Some("fr")), ExportLocale::Fr);
         assert_eq!(ExportLocale::from_language(Some("de")), ExportLocale::Fr);
         assert_eq!(ExportLocale::from_language(None), ExportLocale::Fr);
+    }
+
+    #[test]
+    fn resolves_the_interface_language_like_the_desktop() {
+        let resolve = ExportLocale::from_interface_language;
+        assert_eq!(
+            resolve(Some("fr"), Some("en"), Some("en-US")),
+            ExportLocale::Fr
+        );
+        assert_eq!(
+            resolve(Some("en"), Some("fr"), Some("fr-FR")),
+            ExportLocale::En
+        );
+        assert_eq!(
+            resolve(Some("auto"), Some("fr"), Some("fr-FR")),
+            ExportLocale::Fr
+        );
+        assert_eq!(
+            resolve(Some("auto"), Some("fr"), Some("en-US")),
+            ExportLocale::En
+        );
+        assert_eq!(
+            resolve(Some("auto"), Some("fr"), Some("zh-CN")),
+            ExportLocale::En
+        );
+        assert_eq!(resolve(Some("auto"), Some("fr"), None), ExportLocale::En);
+        // Not migrated yet: the legacy rule keeps the language shown so far.
+        assert_eq!(resolve(None, Some("de"), Some("en-US")), ExportLocale::Fr);
+        assert_eq!(resolve(None, Some("en"), Some("fr-FR")), ExportLocale::En);
     }
 
     #[test]

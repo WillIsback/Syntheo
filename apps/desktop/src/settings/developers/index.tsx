@@ -1,3 +1,4 @@
+import { i18n } from "@lingui/core";
 import { t } from "@lingui/core/macro";
 
 import { commands as openerCommands } from "@syntheo/plugin-opener2";
@@ -12,8 +13,6 @@ import { documentationUrl } from "~/shared/documentation";
 
 export { buildMcpConfiguration, getCliInstallNotification } from "./cli";
 
-const DEVELOPERS_GUIDE_URL = documentationUrl("agents/overview");
-
 export function SettingsDevelopers() {
   return (
     <div className="flex flex-col gap-8">
@@ -25,7 +24,7 @@ export function SettingsDevelopers() {
           size="sm"
           onClick={() =>
             void openerCommands
-              .openUrl(DEVELOPERS_GUIDE_URL, null)
+              .openUrl(documentationUrl(i18n.locale, "agents/overview"), null)
               .catch((error) =>
                 console.error(
                   "[settings] failed to open developers guide",

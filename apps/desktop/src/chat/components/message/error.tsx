@@ -10,8 +10,13 @@ import { ActionButton, MessageBubble, MessageContainer } from "./shared";
 
 import { documentationUrl } from "~/shared/documentation";
 
-// Pas d'application web hébergée : l'aide renvoie à la documentation publique.
-const CONTEXT_LENGTH_HELP_URL = documentationUrl("chat#guider-le-contexte");
+// Pas d'application web hébergée : l'aide renvoie à la documentation publique,
+// dans la langue de l'interface (l'ancre suit le titre de la page traduite).
+function contextLengthHelpUrl(locale: string): string {
+  return locale === "fr"
+    ? documentationUrl(locale, "chat#guider-le-contexte")
+    : documentationUrl(locale, "chat#guide-the-context");
+}
 
 // `useChat().error` is typed as Error but holds whatever the transport threw.
 export function getChatErrorText(error: unknown): string {
@@ -38,13 +43,13 @@ export function ErrorMessage({
   error: unknown;
   onRetry?: () => void;
 }) {
-  const { t } = useLingui();
+  const { t, i18n } = useLingui();
   const message = getChatErrorText(error);
   const showContextLengthHelp = isContextLengthError(message);
 
   const handleOpenFaq = () => {
     void openerCommands
-      .openUrl(CONTEXT_LENGTH_HELP_URL, null)
+      .openUrl(contextLengthHelpUrl(i18n.locale), null)
       .catch((error) =>
         console.error("[chat] failed to open help link", error),
       );

@@ -12030,6 +12030,7 @@ dependencies = [
  "specta",
  "specta-typescript",
  "sqlx",
+ "sys-locale",
  "tauri",
  "tauri-plugin",
  "tauri-plugin-db",
