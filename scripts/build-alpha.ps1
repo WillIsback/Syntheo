@@ -1,6 +1,7 @@
-# Construit en local une alpha devtools Windows (NSIS + MSI non signés), comme
-# .github/workflows/build-windows.yml appelé par build-devtools.yml, qui reste
-# en secours. À lancer dans la VM Windows, depuis la racine du dépôt :
+# Construit en local une alpha devtools Windows (NSIS + MSI non signés), avec
+# les étapes de .github/workflows/build-windows.yml sans la signature. Les
+# alphas se construisent uniquement en local : il n'y a plus de workflow
+# d'alpha sur GitHub. À lancer dans la VM Windows, depuis la racine du dépôt :
 #
 #   powershell -ExecutionPolicy Bypass -File .\scripts\build-alpha.ps1 -Version 0.7.1-1
 #   powershell -ExecutionPolicy Bypass -File .\scripts\build-alpha.ps1 -Version 0.7.1-1 -OutDir D:\alphas\0.7.1-1
