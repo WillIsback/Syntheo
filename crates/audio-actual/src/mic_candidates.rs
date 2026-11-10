@@ -52,9 +52,10 @@ fn capture_preference(id: Option<&str>) -> u8 {
 /// Every listed device described exactly as `name` is a candidate, plus the other ALSA PCMs of
 /// the same card (and device number, when known). Candidates are sorted capture-friendly first.
 /// The default device is a special case on ALSA: `host.default_input_device()` returns a
-/// synthetic device whose description ("Default Audio Device") never matches the real hint
-/// description of the listed `default` pcm, so when nothing matches by name it is resolved by
-/// stable device id (`cpal::Device::id()`).
+/// synthetic device whose description ("Default Audio Device") differs from the hint description
+/// of the listed `default` pcm, and equals that of the bare `sysdefault` pcm (card 0, direct
+/// access). So the default candidate is resolved by stable device id (`cpal::Device::id()`)
+/// first; name matches stay behind it as fallbacks.
 pub(crate) fn candidate_indices(
     name: &str,
     is_default: bool,
@@ -63,6 +64,27 @@ pub(crate) fn candidate_indices(
     listed_ids: &[Option<String>],
 ) -> Vec<usize> {
     let id_at = |index: usize| listed_ids.get(index).and_then(|id| id.as_deref());
+    // The default device's own pcm, by stable id. On ALSA its synthetic description
+    // ("Default Audio Device") is also the description of the bare `sysdefault` pcm, which opens
+    // card 0 directly and bypasses PipeWire (issue 522): the id must win over the name.
+    let default_index = is_default.then_some(default_id).flatten().and_then(|id| {
+        listed_ids
+            .iter()
+            .position(|listed| listed.as_deref() == Some(id))
+    });
+    let mut indices = candidate_indices_by_name(name, listed_names, &id_at);
+    if let Some(index) = default_index {
+        indices.retain(|&other| other != index);
+        indices.insert(0, index);
+    }
+    indices
+}
+
+fn candidate_indices_by_name<'a>(
+    name: &str,
+    listed_names: &[String],
+    id_at: &impl Fn(usize) -> Option<&'a str>,
+) -> Vec<usize> {
     let exact: Vec<usize> = listed_names
         .iter()
         .enumerate()
@@ -71,17 +93,7 @@ pub(crate) fn candidate_indices(
         .collect();
 
     if exact.is_empty() {
-        if !is_default {
-            return Vec::new();
-        }
-        let Some(id) = default_id else {
-            return Vec::new();
-        };
-        return listed_ids
-            .iter()
-            .position(|listed_id| listed_id.as_deref() == Some(id))
-            .into_iter()
-            .collect();
+        return Vec::new();
     }
 
     let cards: Vec<&str> = exact
@@ -297,6 +309,46 @@ mod tests {
                 "{label}"
             );
         }
+    }
+
+    /// Real `cpal` listing on Omarchy (PipeWire, BRIO as card 0, issue 522): ALSA describes the
+    /// bare `sysdefault` pcm, which opens card 0 directly, exactly like the synthetic default
+    /// device ("Default Audio Device"). The default candidate must open the `default` pcm, which
+    /// goes through PipeWire and follows its default source.
+    #[test]
+    fn default_candidate_opens_the_default_pcm_before_sysdefault() {
+        let names = strings(&[
+            "Discard all samples (playback) or generate zero samples (capture)",
+            "Default Audio Device",
+            "PipeWire Sound Server",
+            "Default ALSA Output (currently PipeWire Media Server)",
+            "BRIO 4K Stream Edition, USB Audio",
+            "BRIO 4K Stream Edition, USB Audio",
+        ]);
+        let listed_ids = ids(&[
+            Some("null"),
+            Some("sysdefault"),
+            Some("pipewire"),
+            Some("default"),
+            Some("sysdefault:CARD=Edition"),
+            Some("hw:CARD=0,DEV=0"),
+        ]);
+        let indices = candidate_indices(
+            "Default Audio Device",
+            true,
+            Some("default"),
+            &names,
+            &listed_ids,
+        );
+        assert_eq!(
+            indices.first(),
+            Some(&3),
+            "the PipeWire-routed default pcm first"
+        );
+        assert!(
+            indices.iter().position(|&i| i == 1) > Some(0),
+            "sysdefault stays a later fallback"
+        );
     }
 
     #[test]
