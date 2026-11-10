@@ -25,6 +25,10 @@ export const commands = {
 };
 
 /* Types */
+/**
+ *  Où en sont les modèles. `Failed` : le dernier téléchargement a échoué (hors ligne, proxy),
+ *  l'annulation d'écho est inactive et un nouvel essai est programmé.
+ */
 export type AecModelState = "downloading" | "ready" | "failed";
 
 export type AecModelStatus = {

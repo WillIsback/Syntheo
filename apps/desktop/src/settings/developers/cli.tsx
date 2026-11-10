@@ -20,7 +20,7 @@ import { commands, type CliStatus } from "~/types/tauri.gen";
 
 const CLI_STATUS_QUERY_KEY = ["cli-status"] as const;
 
-// L'application n'embarque plus la CLI (#546) : elle s'installe à part depuis
+// L'application n'embarque plus la CLI (issue 546) : elle s'installe à part depuis
 // les sources, comme le décrit le guide d'installation.
 export const CLI_INSTALL_COMMAND = "cargo install --locked --path apps/cli";
 
