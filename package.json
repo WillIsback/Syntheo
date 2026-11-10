@@ -11,24 +11,16 @@
     "menage:lignes": "node scripts/menage-lignes.mjs"
   },
   "devDependencies": {
-    "@dotenvx/dotenvx": "^2.38.2",
     "@tanstack/eslint-plugin-query": "^5.106.1",
     "braces": "3.0.3",
     "decode-uri-component": "0.5.1",
     "dprint": "^0.64.3",
     "eslint": "^10.14.0",
-    "extract-zip": "2.0.1",
-    "lint-staged": "^17.6.0",
-    "node-forge": "1.4.2",
     "oxfmt": "^0.77.0",
     "oxlint": "^1.92.0",
     "oxlint-tsgolint": "^7.0.2006",
-    "sprintf-js": "1.0.3",
     "turbo": "2.11.10",
     "typescript-eslint": "^8.72.0"
-  },
-  "lint-staged": {
-    "*.{ts,tsx,js,jsx,json,css,md}": "dprint fmt"
   },
   "packageManager": "pnpm@11.1.1",
   "engines": {

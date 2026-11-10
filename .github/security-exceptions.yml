@@ -48,12 +48,10 @@ exceptions:
     expires: "2027-01-31"
     author: "WillIsback"
     path: "Cargo.lock"
-  - cve: "CVE-2023-54404, CVE-2026-19693, CVE-2026-56876, CVE-2026-85393"
+  - cve: "CVE-2023-54404"
     reason: >-
       pnpm-lock.yaml : zod 3.x (correctif publié uniquement en 4.x, tiré par
-      des dépendances tierces), extract-zip et node-forge (outillage de
-      développement épinglé à la racine par Syntheo, sans correctif publié).
-      Absents de l'application livrée.
+      des dépendances tierces). Absent de l'application livrée.
     expires: "2027-01-31"
     author: "WillIsback"
     path: "pnpm-lock.yaml"

@@ -21,15 +21,11 @@ updates:
           "ai",
           "@ai-sdk/*",
         ] # LanguageModelV3/V4 : une seule version pour toute la famille
-      wdio:
-        patterns: ["@wdio/*"]
       npm-minor-patch:
         update-types: ["minor", "patch"]
     # Avis sans version corrigée publiée ou bloqués par une contrainte amont.
     # Voir .github/security-exceptions.yml (expire le 2027-01-31).
     ignore:
-      - dependency-name: "node-forge" # aucun correctif publié (patch local)
-      - dependency-name: "extract-zip" # aucun correctif publié (patch local)
       - dependency-name: "zod"
         versions: ["3.x"] # correctif uniquement en 4.x, tiré par des tiers
       - dependency-name: "@lobehub/icons"

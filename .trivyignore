@@ -16,9 +16,5 @@ CVE-2025-62518 exp:2027-01-31
 # swift-nio : transcribe-soniqo (STT embarqué macOS), retiré au chantier 04b
 CVE-2026-28980 exp:2027-01-31
 CVE-2026-43671 exp:2027-01-31
-# pnpm-lock.yaml : zod 3.x (correctif uniquement en 4.x), extract-zip et node-forge
-# (outillage de développement épinglé à la racine, sans correctif publié)
+# pnpm-lock.yaml : zod 3.x (correctif uniquement en 4.x)
 CVE-2023-54404 exp:2027-01-31
-CVE-2026-19693 exp:2027-01-31
-CVE-2026-56876 exp:2027-01-31
-CVE-2026-85393 exp:2027-01-31
