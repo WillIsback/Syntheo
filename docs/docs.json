@@ -25,111 +25,284 @@
   },
   "favicon": "/favicon.svg",
   "navigation": {
-    "tabs": [
+    "languages": [
       {
-        "tab": "Documentation",
-        "groups": [
+        "language": "en",
+        "default": true,
+        "navbar": {
+          "links": [
+            {
+              "label": "Website",
+              "href": "https://syntheo.studio"
+            },
+            {
+              "label": "GitHub",
+              "href": "https://github.com/WillIsback/Syntheo"
+            },
+            {
+              "label": "Support",
+              "href": "https://github.com/WillIsback/Syntheo/issues"
+            }
+          ],
+          "primary": {
+            "type": "button",
+            "label": "Download",
+            "href": "https://github.com/WillIsback/Syntheo/releases/latest"
+          }
+        },
+        "footer": {
+          "socials": {
+            "website": "https://syntheo.studio",
+            "github": "https://github.com/WillIsback/Syntheo"
+          }
+        },
+        "tabs": [
           {
-            "group": "Prise en main",
-            "pages": [
-              "index",
-              "desktop-installation",
-              "uninstall",
-              "ai-setup",
-              "quickstart",
-              "philosophy"
+            "tab": "Documentation",
+            "groups": [
+              {
+                "group": "Getting started",
+                "pages": [
+                  "en/index",
+                  "en/desktop-installation",
+                  "en/uninstall",
+                  "en/ai-setup",
+                  "en/quickstart",
+                  "en/philosophy"
+                ]
+              },
+              {
+                "group": "Using Syntheo",
+                "pages": [
+                  "en/meetings",
+                  "en/dictation",
+                  "en/automatic-capture",
+                  "en/import-recordings",
+                  "en/notes",
+                  "en/folders",
+                  "en/customize-summaries",
+                  "en/chat",
+                  "en/contacts",
+                  "en/automations",
+                  "en/languages"
+                ]
+              },
+              {
+                "group": "Privacy and security",
+                "pages": [
+                  "en/data-and-privacy",
+                  "en/offline",
+                  "en/security",
+                  "en/conformite/rgpd"
+                ]
+              },
+              {
+                "group": "CLI and agents",
+                "pages": [
+                  "en/installation",
+                  "en/agents/overview",
+                  "en/agents/cli",
+                  "en/agents/mcp",
+                  "en/agents/skills"
+                ]
+              },
+              {
+                "group": "Recipes",
+                "pages": [
+                  "en/recipes/meeting-prep"
+                ]
+              },
+              {
+                "group": "Reference",
+                "pages": [
+                  "en/reference/cli",
+                  "en/reference/mcp",
+                  "en/reference/webhooks",
+                  "en/reference/errors"
+                ]
+              },
+              {
+                "group": "Project",
+                "pages": [
+                  "en/architecture",
+                  "en/roadmap"
+                ]
+              },
+              {
+                "group": "Help",
+                "pages": [
+                  "en/help",
+                  "en/troubleshooting"
+                ]
+              }
             ]
           },
           {
-            "group": "Utiliser Syntheo",
-            "pages": [
-              "meetings",
-              "dictation",
-              "automatic-capture",
-              "import-recordings",
-              "notes",
-              "folders",
-              "customize-summaries",
-              "chat",
-              "contacts",
-              "automations",
-              "languages"
-            ]
-          },
-          {
-            "group": "Confidentialité et sécurité",
-            "pages": [
-              "data-and-privacy",
-              "offline",
-              "security",
-              "conformite/rgpd"
-            ]
-          },
-          {
-            "group": "CLI et agents",
-            "pages": [
-              "installation",
-              "agents/overview",
-              "agents/cli",
-              "agents/mcp",
-              "agents/skills"
-            ]
-          },
-          {
-            "group": "Recettes",
-            "pages": [
-              "recipes/meeting-prep"
-            ]
-          },
-          {
-            "group": "Référence",
-            "pages": [
-              "reference/cli",
-              "reference/mcp",
-              "reference/webhooks",
-              "reference/errors"
-            ]
-          },
-          {
-            "group": "Projet",
-            "pages": [
-              "architecture",
-              "roadmap"
-            ]
-          },
-          {
-            "group": "Aide",
-            "pages": [
-              "help",
-              "troubleshooting"
+            "tab": "Code map",
+            "groups": [
+              {
+                "group": "Knowledge graph",
+                "pages": [
+                  "en/code/index",
+                  "en/code/doc-map"
+                ]
+              },
+              {
+                "group": "Applications",
+                "pages": [
+                  "en/code/desktop",
+                  "en/code/cli"
+                ]
+              },
+              {
+                "group": "Modules",
+                "pages": [
+                  "en/code/plugins",
+                  "en/code/crates-audio",
+                  "en/code/crates-data",
+                  "en/code/packages"
+                ]
+              }
             ]
           }
         ]
       },
       {
-        "tab": "Carte du code",
-        "groups": [
+        "language": "fr",
+        "navbar": {
+          "links": [
+            {
+              "label": "Site",
+              "href": "https://syntheo.studio/fr/"
+            },
+            {
+              "label": "GitHub",
+              "href": "https://github.com/WillIsback/Syntheo"
+            },
+            {
+              "label": "Support",
+              "href": "https://github.com/WillIsback/Syntheo/issues"
+            }
+          ],
+          "primary": {
+            "type": "button",
+            "label": "Télécharger",
+            "href": "https://github.com/WillIsback/Syntheo/releases/latest"
+          }
+        },
+        "footer": {
+          "socials": {
+            "website": "https://syntheo.studio/fr/",
+            "github": "https://github.com/WillIsback/Syntheo"
+          }
+        },
+        "tabs": [
           {
-            "group": "Knowledge graph",
-            "pages": [
-              "code/index",
-              "code/doc-map"
+            "tab": "Documentation",
+            "groups": [
+              {
+                "group": "Prise en main",
+                "pages": [
+                  "fr/index",
+                  "fr/desktop-installation",
+                  "fr/uninstall",
+                  "fr/ai-setup",
+                  "fr/quickstart",
+                  "fr/philosophy"
+                ]
+              },
+              {
+                "group": "Utiliser Syntheo",
+                "pages": [
+                  "fr/meetings",
+                  "fr/dictation",
+                  "fr/automatic-capture",
+                  "fr/import-recordings",
+                  "fr/notes",
+                  "fr/folders",
+                  "fr/customize-summaries",
+                  "fr/chat",
+                  "fr/contacts",
+                  "fr/automations",
+                  "fr/languages"
+                ]
+              },
+              {
+                "group": "Confidentialité et sécurité",
+                "pages": [
+                  "fr/data-and-privacy",
+                  "fr/offline",
+                  "fr/security",
+                  "fr/conformite/rgpd"
+                ]
+              },
+              {
+                "group": "CLI et agents",
+                "pages": [
+                  "fr/installation",
+                  "fr/agents/overview",
+                  "fr/agents/cli",
+                  "fr/agents/mcp",
+                  "fr/agents/skills"
+                ]
+              },
+              {
+                "group": "Recettes",
+                "pages": [
+                  "fr/recipes/meeting-prep"
+                ]
+              },
+              {
+                "group": "Référence",
+                "pages": [
+                  "fr/reference/cli",
+                  "fr/reference/mcp",
+                  "fr/reference/webhooks",
+                  "fr/reference/errors"
+                ]
+              },
+              {
+                "group": "Projet",
+                "pages": [
+                  "fr/architecture",
+                  "fr/roadmap"
+                ]
+              },
+              {
+                "group": "Aide",
+                "pages": [
+                  "fr/help",
+                  "fr/troubleshooting"
+                ]
+              }
             ]
           },
           {
-            "group": "Applications",
-            "pages": [
-              "code/desktop",
-              "code/cli"
-            ]
-          },
-          {
-            "group": "Modules",
-            "pages": [
-              "code/plugins",
-              "code/crates-audio",
-              "code/crates-data",
-              "code/packages"
+            "tab": "Carte du code",
+            "groups": [
+              {
+                "group": "Knowledge graph",
+                "pages": [
+                  "fr/code/index",
+                  "fr/code/doc-map"
+                ]
+              },
+              {
+                "group": "Applications",
+                "pages": [
+                  "fr/code/desktop",
+                  "fr/code/cli"
+                ]
+              },
+              {
+                "group": "Modules",
+                "pages": [
+                  "fr/code/plugins",
+                  "fr/code/crates-audio",
+                  "fr/code/crates-data",
+                  "fr/code/packages"
+                ]
+              }
             ]
           }
         ]
@@ -143,8 +316,12 @@
   "navbar": {
     "links": [
       {
-        "label": "syntheo.studio",
+        "label": "Website",
         "href": "https://syntheo.studio"
+      },
+      {
+        "label": "GitHub",
+        "href": "https://github.com/WillIsback/Syntheo"
       },
       {
         "label": "Support",
@@ -153,7 +330,7 @@
     ],
     "primary": {
       "type": "button",
-      "label": "Télécharger",
+      "label": "Download",
       "href": "https://github.com/WillIsback/Syntheo/releases/latest"
     }
   },
@@ -175,28 +352,200 @@
       "github": "https://github.com/WillIsback/Syntheo"
     }
   },
-  "description": "Le bloc-notes de réunion qui reste chez vous : transcription en temps réel et comptes rendus avec vos propres modèles.",
+  "description": "The meeting notepad that stays with you: real-time transcription and summaries with your own models.",
   "seo": {
     "metatags": {
       "og:site_name": "Syntheo",
-      "og:locale": "fr_FR",
+      "og:locale": "en_US",
       "twitter:card": "summary_large_image",
-      "keywords": "Syntheo, prise de notes de réunion, transcription de réunion, compte rendu de réunion, IA locale, open source, auto-hébergé, Whisper, Ollama, vLLM"
+      "keywords": "Syntheo, meeting notes, meeting transcription, meeting summary, local AI, open source, self-hosted, Whisper, Ollama, vLLM"
     },
     "indexing": "navigable"
   },
   "redirects": [
     {
+      "source": "/desktop-installation",
+      "destination": "/fr/desktop-installation"
+    },
+    {
+      "source": "/uninstall",
+      "destination": "/fr/uninstall"
+    },
+    {
+      "source": "/ai-setup",
+      "destination": "/fr/ai-setup"
+    },
+    {
+      "source": "/quickstart",
+      "destination": "/fr/quickstart"
+    },
+    {
+      "source": "/philosophy",
+      "destination": "/fr/philosophy"
+    },
+    {
+      "source": "/meetings",
+      "destination": "/fr/meetings"
+    },
+    {
+      "source": "/dictation",
+      "destination": "/fr/dictation"
+    },
+    {
+      "source": "/automatic-capture",
+      "destination": "/fr/automatic-capture"
+    },
+    {
+      "source": "/import-recordings",
+      "destination": "/fr/import-recordings"
+    },
+    {
+      "source": "/notes",
+      "destination": "/fr/notes"
+    },
+    {
+      "source": "/folders",
+      "destination": "/fr/folders"
+    },
+    {
+      "source": "/customize-summaries",
+      "destination": "/fr/customize-summaries"
+    },
+    {
+      "source": "/chat",
+      "destination": "/fr/chat"
+    },
+    {
+      "source": "/contacts",
+      "destination": "/fr/contacts"
+    },
+    {
+      "source": "/automations",
+      "destination": "/fr/automations"
+    },
+    {
+      "source": "/languages",
+      "destination": "/fr/languages"
+    },
+    {
+      "source": "/data-and-privacy",
+      "destination": "/fr/data-and-privacy"
+    },
+    {
+      "source": "/offline",
+      "destination": "/fr/offline"
+    },
+    {
+      "source": "/security",
+      "destination": "/fr/security"
+    },
+    {
+      "source": "/conformite/rgpd",
+      "destination": "/fr/conformite/rgpd"
+    },
+    {
+      "source": "/installation",
+      "destination": "/fr/installation"
+    },
+    {
+      "source": "/agents/overview",
+      "destination": "/fr/agents/overview"
+    },
+    {
+      "source": "/agents/cli",
+      "destination": "/fr/agents/cli"
+    },
+    {
+      "source": "/agents/mcp",
+      "destination": "/fr/agents/mcp"
+    },
+    {
+      "source": "/agents/skills",
+      "destination": "/fr/agents/skills"
+    },
+    {
+      "source": "/recipes/meeting-prep",
+      "destination": "/fr/recipes/meeting-prep"
+    },
+    {
+      "source": "/reference/cli",
+      "destination": "/fr/reference/cli"
+    },
+    {
+      "source": "/reference/mcp",
+      "destination": "/fr/reference/mcp"
+    },
+    {
+      "source": "/reference/webhooks",
+      "destination": "/fr/reference/webhooks"
+    },
+    {
+      "source": "/reference/errors",
+      "destination": "/fr/reference/errors"
+    },
+    {
+      "source": "/architecture",
+      "destination": "/fr/architecture"
+    },
+    {
+      "source": "/roadmap",
+      "destination": "/fr/roadmap"
+    },
+    {
+      "source": "/help",
+      "destination": "/fr/help"
+    },
+    {
+      "source": "/troubleshooting",
+      "destination": "/fr/troubleshooting"
+    },
+    {
+      "source": "/code",
+      "destination": "/fr/code"
+    },
+    {
+      "source": "/code/index",
+      "destination": "/fr/code/index"
+    },
+    {
+      "source": "/code/doc-map",
+      "destination": "/fr/code/doc-map"
+    },
+    {
+      "source": "/code/desktop",
+      "destination": "/fr/code/desktop"
+    },
+    {
+      "source": "/code/cli",
+      "destination": "/fr/code/cli"
+    },
+    {
+      "source": "/code/plugins",
+      "destination": "/fr/code/plugins"
+    },
+    {
+      "source": "/code/crates-audio",
+      "destination": "/fr/code/crates-audio"
+    },
+    {
+      "source": "/code/crates-data",
+      "destination": "/fr/code/crates-data"
+    },
+    {
+      "source": "/code/packages",
+      "destination": "/fr/code/packages"
+    },
+    {
       "source": "/calendar",
-      "destination": "/notes"
+      "destination": "/fr/notes"
     },
     {
       "source": "/docs",
-      "destination": "/"
+      "destination": "/fr"
     },
     {
       "source": "/docs/:slug*",
-      "destination": "/:slug*"
+      "destination": "/fr/:slug*"
     }
   ]
 }

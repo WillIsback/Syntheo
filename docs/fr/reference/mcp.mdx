@@ -1,0 +1,139 @@
+---
+title: "Référence MCP"
+description: "Outils, ressources, limites et transport du serveur MCP local de Syntheo."
+---
+
+Lancez le serveur avec `syntheo mcp`. Il communique en stdio et annonce la version `2026-07-28` du protocole MCP. Il lit et écrit uniquement dans la base locale ; il n'existe pas de serveur MCP distant.
+
+Les lectures sont idempotentes. Les outils de proposition créent ou refusent des modifications en attente, sans jamais les appliquer. L'application doit seulement avoir créé sa base une fois ; ouvrez-la pour vérifier et appliquer les propositions, et pour traiter les imports d'enregistrement.
+
+## Outils
+
+| Outil | Accès | Rôle |
+| --- | --- | --- |
+| `list_meetings` | lecture | Liste paginée des réunions. |
+| `list_folders` | lecture | Liste paginée des dossiers. |
+| `get_meeting` | lecture | Détail d'une réunion, sans transcription. |
+| `get_meeting_transcript` | lecture | Page bornée de la transcription. |
+| `get_recurring_meeting_history` | lecture | Réunions de la même série récurrente. |
+| `export_meeting` | lecture | Enregistrement complet, transcriptions comprises. |
+| `propose_summary_edit` | écriture | Propose le remplacement d'un résumé. |
+| `propose_memo_edit` | écriture | Propose le remplacement de la note. |
+| `list_proposals` | lecture | Liste paginée des propositions. |
+| `get_proposal` | lecture | Une proposition et son diff. |
+| `decline_proposal` | écriture | Refuse une proposition en attente. |
+| `import_recording` | écriture | Crée une réunion à partir d'un fichier audio local. |
+| `get_recording_import` | lecture | État d'un import d'enregistrement. |
+
+### `list_meetings`
+
+| Paramètre | Type | Défaut | Notes |
+| --- | --- | --- | --- |
+| `query` | string | — | Fragment du titre ou de l'identifiant, sans tenir compte de la casse. Une liste vide signifie qu'aucune réunion ne correspond : n'en inventez pas. |
+| `series_id` | string | — | Identifiant exact d'une série récurrente. |
+| `folder_path` | string | — | Chemin renvoyé par `list_folders`, par exemple `Projets/Lancement`. Inclut les sous-dossiers. |
+| `limit` | integer | `20` | Ramené entre `1` et `200`. |
+| `offset` | integer | `0` | Nombre de résultats à sauter. |
+
+Chaque réunion contient `folder_path`, qui vaut `null` hors dossier.
+
+### `list_folders`
+
+| Paramètre | Type | Défaut | Notes |
+| --- | --- | --- | --- |
+| `query` | string | — | Fragment du chemin de dossier, sans tenir compte de la casse. |
+| `limit` | integer | `100` | Ramené entre `1` et `200`. |
+| `offset` | integer | `0` | Nombre de résultats à sauter. |
+
+Renvoie `folders`, triés par chemin, et `pagination`. Chaque dossier contient `path`, `name` et `parent_path` (`null` au premier niveau). La liste inclut les dossiers vides et les dossiers parents. Passez un `path` renvoyé comme `folder_path` de `list_meetings`.
+
+### `get_meeting`
+
+Paramètre obligatoire : `meeting_id` (string). Renvoie les métadonnées de la réunion, dont `folder_path`, la note canonique, les résumés, les participants et les actions. La transcription est volontairement à part. Pour une réunion importée, le résultat contient aussi `processing_status` et `recording_import` (sinon `null`).
+
+### `get_meeting_transcript`
+
+| Paramètre | Type | Défaut | Notes |
+| --- | --- | --- | --- |
+| `meeting_id` | string | obligatoire | Un identifiant de réunion renvoyé par un outil. |
+| `offset` | integer | `0` | Décalage, en mots. |
+| `limit` | integer | `200` | Ramené entre `1` et `500`. |
+
+Le résultat contient `meeting_id`, `text`, `words` et `pagination` (`offset`, `limit`, `returned`, `total`, `next_offset`). L'absence de `pagination.next_offset` signifie que la page atteint la fin.
+
+### `get_recurring_meeting_history`
+
+Paramètre obligatoire : `meeting_id` (string). Paramètres facultatifs : `limit` (20 par défaut, ramené entre `1` et `200`) et `offset` (0 par défaut). Résultats du plus récent au plus ancien. Si la réunion n'appartient à aucune série, `meetings` est vide.
+
+### `export_meeting`
+
+Paramètre obligatoire : `meeting_id` (string). Renvoie l'enregistrement complet et structuré de la réunion : métadonnées, note, résumés, participants, actions et transcriptions. Préférez les outils de détail ou de transcription, sauf si la tâche exige vraiment un export complet.
+
+Quand ils existent, `speakers` donne les noms référencés par les attributions de locuteurs de la transcription, et `speaker_context` décrit le contexte micro et appel. Ces champs sont facultatifs.
+
+### `propose_summary_edit`
+
+| Paramètre | Type | Défaut | Notes |
+| --- | --- | --- | --- |
+| `meeting_id` | string | obligatoire | Un identifiant de réunion renvoyé par un outil. |
+| `content` | string | obligatoire | Résumé de remplacement complet, en Markdown. |
+| `target_id` | string | — | Identifiant du résumé visé. Obligatoire quand la réunion a plusieurs résumés. |
+
+Le résultat est une proposition en attente. La réunion ne change pas tant que l'utilisateur ne l'a pas appliquée dans l'application.
+
+### `propose_memo_edit`
+
+| Paramètre | Type | Défaut | Notes |
+| --- | --- | --- | --- |
+| `meeting_id` | string | obligatoire | Un identifiant de réunion renvoyé par un outil. |
+| `content` | string | obligatoire | Note de remplacement complète, en Markdown. |
+
+Le résultat est une proposition en attente. `content` remplace la note canonique de la réunion une fois la proposition appliquée dans l'application.
+
+### `list_proposals`
+
+| Paramètre | Type | Défaut | Notes |
+| --- | --- | --- | --- |
+| `meeting_id` | string | — | Restreint les résultats à une réunion. |
+| `status` | string | `pending` | `pending`, `applied`, `declined` ou `all`. |
+| `limit` | integer | `20` | Ramené entre `1` et `200`. |
+| `offset` | integer | `0` | Nombre de résultats à sauter. |
+
+### `get_proposal`
+
+Paramètre obligatoire : `proposal_id` (string). Renvoie les métadonnées et un `diff` unifié. La proposition n'est pas appliquée.
+
+### `decline_proposal`
+
+Paramètre obligatoire : `proposal_id` (string). Refuse une proposition en attente sans modifier la réunion. Une proposition déjà appliquée ou déjà refusée ne peut pas être refusée.
+
+### `import_recording`
+
+Crée une réunion à partir d'un fichier audio présent sur l'ordinateur du serveur MCP. L'application doit être ouverte sur la même base : c'est elle qui transcrit le fichier avec le serveur de transcription configuré, puis génère le résumé avec le LLM configuré. L'audio est envoyé à ce serveur.
+
+| Paramètre | Type | Défaut | Notes |
+| --- | --- | --- | --- |
+| `file_path` | string | obligatoire | Chemin du fichier sur cet ordinateur. WAV, MP3, OGG, MP4, M4A, FLAC, WebM ou AAC, non vide. |
+| `title` | string | nom du fichier | Titre de la réunion. |
+| `folder_path` | string | — | Dossier existant. |
+| `request_key` | string | — | De 1 à 200 octets. Réutilisez la même clé pour réessayer le même import : l'outil renvoie la tâche d'origine, même après un échec. |
+
+Renvoie `meeting_id`, `job_id`, `processing_status`, `summary_status` et `error` (éventuellement `null`). Le fichier n'est pas copié : ne le déplacez pas avant la fin de la tâche. Interrogez `get_recording_import` jusqu'à `done` ou `failed`, et conservez les identifiants renvoyés si le client se déconnecte. Une tâche interrompue garde sa réunion et la transcription déjà produit ; elle n'est pas relancée automatiquement.
+
+### `get_recording_import`
+
+Paramètre obligatoire : `job_id` (string). Lit l'état durable sans lancer de travail. États de traitement : `queued`, `importing`, `transcribing`, `summarizing`, `done`, `failed`. États du résumé : `pending`, `done`, `skipped_no_model`, `skipped_too_short`, `failed`. Un import réussi peut avoir un résumé sauté. `queued` ne progresse que si l'application est ouverte.
+
+## Ressources
+
+| URI | Type MIME | Contenu |
+| --- | --- | --- |
+| `syntheo://meetings/{meeting_id}` | `text/markdown` | Détail de la réunion, sans le texte de la transcription. |
+| `syntheo://meetings/{meeting_id}/transcript{?offset,limit}` | `text/plain` | Une page bornée de la transcription. `offset` vaut 0 par défaut et `limit` 200 (ramené à 500 mots au plus). Texte brut uniquement ; utilisez `get_meeting_transcript` pour obtenir `words`. |
+| `syntheo://series/{series_id}` | `text/markdown` | Jusqu'à 100 réunions d'une série récurrente. |
+
+La liste des ressources renvoie les réunions récentes par pages de 20. Son curseur est un décalage numérique.
+
+## Erreurs
+
+Une réunion, une proposition ou un import introuvable produit une erreur « paramètres invalides ». Les échecs de validation et les conflits (contenu de proposition vide, plusieurs résumés sans `target_id`, refus d'une proposition qui n'est plus en attente, application fermée lors d'un import) sont signalés comme erreurs internes, tout comme les échecs de base de données. Voir [Erreurs et codes de sortie](/fr/reference/errors).

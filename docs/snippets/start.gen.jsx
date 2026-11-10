@@ -2,7 +2,8 @@
 // Reproductions interactives de Syntheo pour la documentation Mintlify.
 // Modèles de docs/snippets/*.gen.jsx : les blocs @TOKENS, @LABELS, @ICONS,
 // @CSS_PARTS et @VERSION sont remplis par scripts/sync-docs-ui.mjs depuis les
-// sources de l'app (tokens.css, messages.po, Hugeicons de packages/ui).
+// sources de l'app (tokens.css, messages.po, Hugeicons de packages/ui) ;
+// @LOCALE est la langue de la sortie (fr-FR, ou en-US pour docs/snippets/en/).
 // Libellés : L(msgid anglais de messages.po, entre guillemets), LP(msgid, n) pour un pluriel,
 // LF(msgid, { nom: valeur }) pour une variable. Icônes : I("Folder"), le nom
 // de packages/ui/src/components/icons-*.tsx.
@@ -12,6 +13,7 @@
 // .syn-), ajoutées automatiquement à {h(SynStyle)}.
 
 const SYN_VERSION = "0.7.0";
+const SYN_LOCALE = "fr-FR";
 const SYN_LIGHT = {
   "background": "hsl(50 43% 97%)",
   "foreground": "hsl(100 8% 15%)",
@@ -1708,7 +1710,7 @@ const SYN_PROF_LANGS = "ar be bg bn bs ca cs da de el en es et fa fi fr he hi hr
 
 const synProfLangName = (code) => {
   try {
-    return new Intl.DisplayNames(["fr"], { type: "language" }).of(code) ?? code;
+    return new Intl.DisplayNames([SYN_LOCALE], { type: "language" }).of(code) ?? code;
   } catch {
     return code;
   }
@@ -2790,7 +2792,7 @@ const SYN_HOME_NOTES = [
 ];
 
 // format.ts : « lun. 9 nov. », « 42 min », « 1 h 05 ».
-const synHomeDate = (iso) => new Date(`${iso}T10:00:00`).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" });
+const synHomeDate = (iso) => new Date(`${iso}T10:00:00`).toLocaleDateString(SYN_LOCALE, { weekday: "short", day: "numeric", month: "short" });
 const synHomeDuration = (m) => (m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, "0")}`);
 const synHomeName = (path) => path.split("/").pop();
 

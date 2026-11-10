@@ -2,7 +2,8 @@
 // Reproductions interactives de Syntheo pour la documentation Mintlify.
 // Modèles de docs/snippets/*.gen.jsx : les blocs @TOKENS, @LABELS, @ICONS,
 // @CSS_PARTS et @VERSION sont remplis par scripts/sync-docs-ui.mjs depuis les
-// sources de l'app (tokens.css, messages.po, Hugeicons de packages/ui).
+// sources de l'app (tokens.css, messages.po, Hugeicons de packages/ui) ;
+// @LOCALE est la langue de la sortie (fr-FR, ou en-US pour docs/snippets/en/).
 // Libellés : L(msgid anglais de messages.po, entre guillemets), LP(msgid, n) pour un pluriel,
 // LF(msgid, { nom: valeur }) pour une variable. Icônes : I("Folder"), le nom
 // de packages/ui/src/components/icons-*.tsx.
@@ -12,6 +13,7 @@
 // .syn-), ajoutées automatiquement à {h(SynStyle)}.
 
 const SYN_VERSION = "0.7.0";
+const SYN_LOCALE = "fr-FR";
 const SYN_LIGHT = {
   "background": "hsl(50 43% 97%)",
   "foreground": "hsl(100 8% 15%)",
@@ -1731,7 +1733,7 @@ const SYN_PROF_LANGS = "ar be bg bn bs ca cs da de el en es et fa fi fr he hi hr
 
 const synProfLangName = (code) => {
   try {
-    return new Intl.DisplayNames(["fr"], { type: "language" }).of(code) ?? code;
+    return new Intl.DisplayNames([SYN_LOCALE], { type: "language" }).of(code) ?? code;
   } catch {
     return code;
   }
@@ -3315,7 +3317,7 @@ const synImpEstimate = (elapsed, fraction) => {
 };
 
 const synImpPercent = (fraction) =>
-  new Intl.NumberFormat("fr-FR", { style: "percent", maximumFractionDigits: 0 }).format(Math.round(fraction * 100) / 100);
+  new Intl.NumberFormat(SYN_LOCALE, { style: "percent", maximumFractionDigits: 0 }).format(Math.round(fraction * 100) / 100);
 
 /** État « Import » de la capsule (import-progress.tsx). */
 const SynImportCapsule = ({ fraction, estimate, onStop }) => {
@@ -3323,7 +3325,7 @@ const SynImportCapsule = ({ fraction, estimate, onStop }) => {
   let line = L("estimating…");
   if (estimate) {
     const minutes = Math.round(estimate.remaining / 60);
-    const factor = new Intl.NumberFormat("fr-FR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(estimate.speed);
+    const factor = new Intl.NumberFormat(SYN_LOCALE, { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(estimate.speed);
     line = `${estimate.remaining < 60 ? L("< 1 min left") : LF("~{minutes} min left", { minutes })} · ${LF("×{factor}", { factor })}`;
   }
   return (

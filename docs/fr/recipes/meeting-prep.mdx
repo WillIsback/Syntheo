@@ -1,0 +1,48 @@
+---
+title: "Préparer une réunion récurrente"
+description: "Construisez une fiche de préparation à partir de vos réunions précédentes."
+---
+
+Cette recette aide un agent (via le [serveur MCP local](/fr/agents/mcp) ou la [CLI](/fr/agents/cli)) à préparer la prochaine occurrence d'une réunion récurrente sans charger toutes les transcriptions.
+
+<Steps>
+  <Step title="Retrouver les réunions précédentes">
+    Appelez `list_meetings` avec un extrait du titre, ou lancez :
+
+    ```bash
+    syntheo --json meetings list --query "point projet" --limit 10
+    ```
+
+    Repérez l'identifiant de la réunion la plus récente, ainsi que celui des précédentes occurrences pertinentes.
+  </Step>
+  <Step title="Lire leur contexte structuré">
+    Appelez `get_meeting`, ou lancez :
+
+    ```bash
+    syntheo --json meetings get MEETING_ID
+    ```
+
+    Relevez les actions ouvertes, les décisions présentes dans les notes ou les comptes rendus, et les participants.
+  </Step>
+  <Step title="Consulter l'historique de la série (si disponible)">
+    Appelez `get_recurring_meeting_history` avec l'identifiant de la réunion, ou lancez :
+
+    ```bash
+    syntheo --json meetings history MEETING_ID --limit 5 --offset 0
+    ```
+
+    Syntheo ne se connecte à aucun calendrier : une réunion n'a de série que si elle a été importée avec un identifiant de série. Le plus souvent, la liste est vide. Appuyez-vous alors sur la recherche par titre de la première étape.
+  </Step>
+  <Step title="Utiliser la transcription avec parcimonie">
+    Si une décision n'est pas claire, appelez `get_meeting_transcript` avec `limit: 200`, ou lancez :
+
+    ```bash
+    syntheo --json meetings transcript MEETING_ID --limit 200 --offset 0
+    ```
+
+    Ne continuez à partir de `next_offset` que si c'est nécessaire.
+  </Step>
+  <Step title="Rédiger la fiche">
+    Concentrez-vous sur les actions non résolues, les décisions passées, les sujets à aborder et le contexte utile sur chaque participant. Distinguez ce qui vient des réunions de vos propres déductions.
+  </Step>
+</Steps>

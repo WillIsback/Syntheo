@@ -92,7 +92,7 @@ const SYN_FOLD_INITIAL = {
 
 const synFoldName = (path) => path.split("/").pop();
 const synFoldDate = (iso, weekday) =>
-  new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", timeZone: "UTC", ...(weekday ? { weekday: "short" } : {}) }).format(new Date(`${iso}T12:00:00Z`));
+  new Intl.DateTimeFormat(SYN_LOCALE, { day: "numeric", month: "short", timeZone: "UTC", ...(weekday ? { weekday: "short" } : {}) }).format(new Date(`${iso}T12:00:00Z`));
 const synFoldMeetings = (path) =>
   [path, ...SYN_FOLD_TREE[path].flatMap((child) => [child, ...SYN_FOLD_TREE[child]])]
     .flatMap((p) => (SYN_FOLD_NOTES[p] ?? []).map(([iso, title, line]) => ({ iso, title, line, folder: p })))

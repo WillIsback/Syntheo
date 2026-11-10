@@ -8,7 +8,7 @@ Syntheo Desktop is a pnpm and Rust workspace (Tauri 2 desktop app), derived from
 - `crates/template-app/`: Jinja prompt templates (enhance).
 - `design/refonte-the-vert/`: UI redesign in progress ("Thé vert" identity, "document vivant" note flow). Read its `README.md` before any UI change: it defines the target design, the work lots and the clickable mockups.
 
-Project rules (see `docs/architecture.mdx`):
+Project rules (see `docs/fr/architecture.mdx`):
 
 - Inference only through user-configured on-premise endpoints; never add a cloud provider or a cloud integration.
 - Audio is never written to disk, not even temporarily.
@@ -27,12 +27,12 @@ Testing while developing (several agents often share one machine):
 Two tools, two jobs:
 
 - **CodeGraph** is for code tasks: locating symbols, tracing calls, impact of an edit.
-- **The `syntheo-docs` MCP server** (`https://docs.syntheo.studio/mcp`, declared in `.mcp.json`) searches the published docs, including the code map under `docs/code/` ("Carte du code"). Use it to keep documentation current.
+- **The `syntheo-docs` MCP server** (`https://docs.syntheo.studio/mcp`, declared in `.mcp.json`) searches the published docs, including the code map under `docs/fr/code/` ("Carte du code"). Use it to keep documentation current.
 
 When a change alters user-visible behavior, a CLI/MCP contract, or adds/renames/removes a crate, plugin, package, or top-level module:
 
-1. Search `syntheo-docs` (or read `docs/code/doc-map.mdx`) for the pages tied to the changed paths.
-2. Update those pages in `docs/` in the same PR, plus the zone page in `docs/code/` if the unit inventory changed.
+1. Search `syntheo-docs` (or read `docs/fr/code/doc-map.mdx`) for the pages tied to the changed paths.
+2. Update those pages in `docs/en/` and `docs/fr/` in the same PR, plus the zone page in `docs/fr/code/` if the unit inventory changed.
 3. Follow `docs/AGENTS.md` for writing rules and verification.
 
 The MCP server reflects the last deploy of `main`; for unmerged changes read `docs/` directly.

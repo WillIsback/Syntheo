@@ -1,0 +1,55 @@
+---
+title: "Agents : vue d'ensemble"
+description: "Donnez à un agent le contexte de vos réunions Syntheo, en local, sans exposer la base ni des transcriptions entières."
+---
+
+Syntheo donne à un agent deux façons de lire vos réunions. Les deux passent par le même exécutable `syntheo` et lisent la base locale de l'application. Aucune ne passe par un serveur distant.
+
+| Accès | Quand l'utiliser | Sortie |
+| --- | --- | --- |
+| [CLI](/fr/agents/cli) | L'agent a un accès shell sur votre ordinateur | Texte, ou JSON versionné avec `--json` |
+| [MCP local](/fr/agents/mcp) | L'agent prend en charge un serveur MCP en stdio | Résultats d'outils structurés et ressources `syntheo://` |
+
+Une [compétence Syntheo](/fr/agents/skills) apprend à l'agent quand et comment utiliser ces deux accès.
+
+Commencez par [installer la CLI](/fr/installation).
+
+## Démarche recommandée
+
+1. Vérifiez que l'accès local est prêt avec `syntheo --json doctor`, ou utilisez un serveur MCP déjà connecté.
+2. Listez les réunions récentes ou cherchez un court fragment du titre. Pour un projet ou un client, listez les dossiers et filtrez par chemin de dossier.
+3. Utilisez un identifiant de réunion renvoyé par l'outil. N'en devinez jamais un.
+4. Lisez le détail de la réunion (note, résumés, participants, actions) avant de demander la transcription.
+5. Ne demandez l'historique d'une série récurrente que si les réunions précédentes comptent.
+6. Lisez la transcription page par page, et arrêtez-vous dès que vous avez assez d'éléments.
+
+## Fraîcheur des données
+
+Les lectures portent sur la base locale, telle qu'elle est au moment de l'appel. Elles fonctionnent hors ligne. Le champ `updated_at` d'une réunion indique la dernière modification de son contenu.
+
+## Limites de sécurité
+
+Les agents passent par la CLI ou le MCP, jamais directement par SQLite. Ces interfaces appliquent les règles de Syntheo : note canonique, résumés générés, réunions récurrentes, texte de la transcription.
+
+Les lectures restent bornées. Un agent ne peut pas modifier directement une note ou un résumé. Il peut seulement préparer une **proposition** avec les commandes `proposals` de la CLI ou les outils `propose_*` du MCP. Vous la vérifiez ensuite dans l'application : le bandeau « 1 modification en attente » apparaît sur la réunion, avec « Vérifier la note » ou « Vérifier le compte rendu ». Vous choisissez alors « Appliquer à la note », « Appliquer au résumé » ou « Refuser ».
+
+L'export de la CLI peut créer un fichier ; remplacer un fichier existant exige `--force`.
+
+<Note>
+  La CLI et le MCP ne transmettent rien à un serveur Syntheo. En revanche, ce que l'agent lit est envoyé au modèle de langage qu'il utilise. Choisissez un agent et un fournisseur de modèle compatibles avec la confidentialité de vos réunions.
+</Note>
+
+<CardGroup cols={2}>
+  <Card title="CLI pour les agents" icon="terminal" href="/fr/agents/cli">
+    Sortie JSON et identifiants de réunion.
+  </Card>
+  <Card title="MCP pour les agents" icon="plug" href="/fr/agents/mcp">
+    Serveur MCP local en stdio.
+  </Card>
+  <Card title="Compétence Syntheo" icon="graduation-cap" href="/fr/agents/skills">
+    Installer la compétence dans votre agent.
+  </Card>
+  <Card title="Erreurs et codes de sortie" icon="triangle-exclamation" href="/fr/reference/errors">
+    Diagnostiquer un échec.
+  </Card>
+</CardGroup>

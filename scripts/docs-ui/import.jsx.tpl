@@ -46,7 +46,7 @@ const synImpEstimate = (elapsed, fraction) => {
 };
 
 const synImpPercent = (fraction) =>
-  new Intl.NumberFormat("fr-FR", { style: "percent", maximumFractionDigits: 0 }).format(Math.round(fraction * 100) / 100);
+  new Intl.NumberFormat(SYN_LOCALE, { style: "percent", maximumFractionDigits: 0 }).format(Math.round(fraction * 100) / 100);
 
 /** État « Import » de la capsule (import-progress.tsx). */
 const SynImportCapsule = ({ fraction, estimate, onStop }) => {
@@ -54,7 +54,7 @@ const SynImportCapsule = ({ fraction, estimate, onStop }) => {
   let line = L("estimating…");
   if (estimate) {
     const minutes = Math.round(estimate.remaining / 60);
-    const factor = new Intl.NumberFormat("fr-FR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(estimate.speed);
+    const factor = new Intl.NumberFormat(SYN_LOCALE, { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(estimate.speed);
     line = `${estimate.remaining < 60 ? L("< 1 min left") : LF("~{minutes} min left", { minutes })} · ${LF("×{factor}", { factor })}`;
   }
   return (

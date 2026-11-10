@@ -36,7 +36,7 @@ const SYN_PROF_LANGS = "ar be bg bn bs ca cs da de el en es et fa fi fr he hi hr
 
 const synProfLangName = (code) => {
   try {
-    return new Intl.DisplayNames(["fr"], { type: "language" }).of(code) ?? code;
+    return new Intl.DisplayNames([SYN_LOCALE], { type: "language" }).of(code) ?? code;
   } catch {
     return code;
   }

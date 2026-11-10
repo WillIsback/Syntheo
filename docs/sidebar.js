@@ -1,24 +1,29 @@
 // Barre latérale : sections repliables. Mintlify garde toujours dépliés les
 // groupes de premier niveau ; ce script rend leur titre cliquable (souris et
 // clavier), mémorise les sections repliées et rouvre toujours celle de la page
-// affichée. Idempotent : relancé à chaque navigation interne.
+// affichée. Les titres de section diffèrent selon la langue : l'état replié est
+// gardé par langue (préfixe /fr/ ou /en/ de l'adresse, l'anglais à défaut).
+// Idempotent : relancé à chaque navigation interne.
 (() => {
   if (window.syntheoSidebarCollapse) return;
   window.syntheoSidebarCollapse = true;
 
-  const STORAGE_KEY = "syntheo-docs:collapsed-sections";
+  const storageKey = () => {
+    const lang = window.location.pathname.split("/")[1] === "fr" ? "fr" : "en";
+    return `syntheo-docs:collapsed-sections:${lang}`;
+  };
   const HEADER = "#sidebar .sidebar-group-header";
 
   const readCollapsed = () => {
     try {
-      return new Set(JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"));
+      return new Set(JSON.parse(localStorage.getItem(storageKey()) || "[]"));
     } catch {
       return new Set();
     }
   };
   const writeCollapsed = (collapsed) => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify([...collapsed]));
+      localStorage.setItem(storageKey(), JSON.stringify([...collapsed]));
     } catch {
       // Stockage indisponible (navigation privée) : l'état n'est pas gardé.
     }

@@ -60,7 +60,7 @@ const SYN_HOME_NOTES = [
 ];
 
 // format.ts : « lun. 9 nov. », « 42 min », « 1 h 05 ».
-const synHomeDate = (iso) => new Date(`${iso}T10:00:00`).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" });
+const synHomeDate = (iso) => new Date(`${iso}T10:00:00`).toLocaleDateString(SYN_LOCALE, { weekday: "short", day: "numeric", month: "short" });
 const synHomeDuration = (m) => (m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, "0")}`);
 const synHomeName = (path) => path.split("/").pop();
 

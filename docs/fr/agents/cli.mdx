@@ -1,0 +1,86 @@
+---
+title: "CLI pour les agents"
+description: "Utilisez la sortie JSON de la CLI Syntheo depuis un agent qui a accès au shell."
+---
+
+Passez toujours l'option globale `--json` quand un agent lit la sortie de la CLI.
+
+Une réponse réussie contient `schema_version`, `command`, `data` et, pour les commandes paginées, `pagination`. Lisez le résultat dans `data`. Ne suivez `pagination.next_offset` que si vous avez besoin de la page suivante.
+
+La CLI ne lit que la base locale de votre ordinateur. Elle n'a ni compte, ni connexion, ni source distante.
+
+## Vérifier l'installation
+
+```bash
+syntheo --json doctor
+```
+
+Le rapport indique la version de la CLI, le chemin de base retenu, l'ouverture en lecture seule et l'état du schéma. Si `ready` vaut `false`, la commande affiche quand même le rapport et se termine avec le code 1.
+
+## Trouver la réunion
+
+```bash
+syntheo --json meetings list --query "point hebdo" --limit 10
+syntheo --json meetings folders --query "clients"
+syntheo --json meetings list --folder "Clients/ACME"
+syntheo --json meetings get MEETING_ID
+```
+
+La recherche ignore la casse et porte sur le titre et l'identifiant. `--folder` inclut les sous-dossiers. Si plusieurs réunions correspondent, demandez à l'utilisateur de choisir.
+
+## Lire le strict nécessaire
+
+```bash
+syntheo --json meetings note MEETING_ID --kind note
+syntheo --json meetings note MEETING_ID --kind summary
+syntheo --json meetings history MEETING_ID --limit 10 --offset 0
+```
+
+Utilisez `meetings get` quand les participants ou les actions comptent. Utilisez `meetings note` quand le contenu de la note suffit.
+
+## Transcriptions
+
+```bash
+syntheo --json meetings transcript MEETING_ID --limit 200 --offset 0
+```
+
+Les limites se comptent en mots. Une page fait 200 mots par défaut, 500 au maximum. Arrêtez la pagination dès que vous avez assez d'éléments.
+
+## Proposer une modification
+
+```bash
+syntheo --json proposals create --meeting MEETING_ID --kind summary --content "Markdown de remplacement"
+syntheo --json proposals list --meeting MEETING_ID
+syntheo --json proposals show PROPOSAL_ID
+syntheo --json proposals decline PROPOSAL_ID
+```
+
+<Note>
+  `proposals create` renvoie une proposition en attente. N'affirmez pas que la réunion a changé. L'utilisateur l'applique ou la refuse dans l'application ; vous pouvez aussi la refuser depuis la CLI. Seule une proposition en attente peut être refusée.
+</Note>
+
+## Importer un enregistrement
+
+Seulement si l'utilisateur le demande explicitement, et avec l'application ouverte :
+
+```bash
+syntheo --json meetings import ./reunion.mp3 --title "Revue projet" --request-key revue-2026-10-30 --wait
+syntheo --json meetings import-status JOB_ID
+```
+
+L'import crée une réunion et envoie l'audio au serveur de transcription configuré dans l'application. Conservez l'identifiant de tâche renvoyé, et vérifiez `processing_status` et `summary_status` avant d'annoncer que c'est terminé. Détails dans la [référence de la CLI](/fr/reference/cli#importer-un-enregistrement).
+
+## Exports
+
+N'exportez une réunion complète que si l'utilisateur demande un fichier :
+
+```bash
+syntheo meetings export MEETING_ID --format markdown --output reunion.md
+syntheo meetings export MEETING_ID --format json --output reunion.json
+```
+
+<Warning>
+  L'export refuse de remplacer un fichier existant. N'utilisez `--force` qu'après accord explicite de l'utilisateur pour écraser ce chemin précis.
+</Warning>
+
+Toutes les options sont dans la [référence de la CLI](/fr/reference/cli).

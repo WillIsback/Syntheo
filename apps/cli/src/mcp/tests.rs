@@ -138,7 +138,7 @@ async fn client_server_handshake_lists_tools_and_resources() {
             "propose_summary_edit",
         ]
     );
-    let mcp_docs = include_str!("../../../../docs/reference/mcp.mdx");
+    let mcp_docs = include_str!("../../../../docs/fr/reference/mcp.mdx");
     let mcp_skill = include_str!("../../../../skills/syntheo/references/mcp.md");
     for tool_name in &tool_names {
         assert!(
