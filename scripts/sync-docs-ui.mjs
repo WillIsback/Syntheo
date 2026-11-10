@@ -382,6 +382,17 @@ export async function generate(root = process.cwd()) {
   return outputs;
 }
 
+// Lecture unique, sans test d'existence préalable (pas de course entre le
+// test et la lecture) : un fichier absent vaut une sortie vide.
+function readIfPresent(file) {
+  try {
+    return readFileSync(file, "utf8");
+  } catch (error) {
+    if (error && error.code === "ENOENT") return "";
+    throw error;
+  }
+}
+
 async function main() {
   const check = process.argv.includes("--check");
   const root = process.cwd();
@@ -395,7 +406,7 @@ async function main() {
   const stale = [];
   for (const [name, output] of Object.entries(outputs)) {
     const target = path.join(root, OUTPUT_DIR, name);
-    const current = existsSync(target) ? readFileSync(target, "utf8") : "";
+    const current = readIfPresent(target);
     if (current === output) continue;
     if (check) stale.push(`${OUTPUT_DIR}/${name}`);
     else {
