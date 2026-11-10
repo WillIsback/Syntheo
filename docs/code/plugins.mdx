@@ -18,10 +18,7 @@ Chaque dossier `plugins/<nom>` suit la même structure :
 
 Après toute modification des commandes d'un plugin, lancez `codegen`, puis mettez à jour `permissions/default.toml` et `apps/desktop/src-tauri/capabilities/default.json` (`plugins/AGENTS.md`).
 
-Tous les plugins sont enregistrés dans `apps/desktop/src-tauri/src/lib.rs`, avec trois exceptions conditionnelles :
-
-- `agent` et `hooks` ne sont pas chargés avec la feature `app-store`.
-- `relay` n'est chargé qu'en build de debug ou avec la feature `devtools`.
+Tous les plugins sont enregistrés dans `apps/desktop/src-tauri/src/lib.rs`, sauf `relay`, chargé seulement en build de debug ou avec la feature `devtools`.
 
 <Note>
 Le nom d'un plugin ne dit pas tout : `notification` affiche les notifications, `notify` surveille le système de fichiers. Les suffixes `2` (`fs2`, `path2`, `opener2`, `store2`, `sidecar2`, `deeplink2`) désignent des extensions maison d'un plugin Tauri officiel du même nom.

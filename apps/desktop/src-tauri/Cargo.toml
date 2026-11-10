@@ -103,17 +103,12 @@ direct-distribution = [
   "tauri-plugin-permissions/private-tcc",
   "tauri-plugin-windows/macos-private-api",
 ]
-app-store = ["tauri-plugin-icon/app-store"]
 dev = ["dep:syntheo-audio-mock"]
 devtools = [
   "tauri/devtools",
   "dep:syntheo-audio-mock",
   "tauri-plugin-tracing/console-payload",
 ]
-automation = ["tauri-plugin-automation"]
-
-[target.'cfg(target_os = "macos")'.dependencies]
-tauri-plugin-automation = { version = "0.1", optional = true }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { workspace = true, features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging"] }

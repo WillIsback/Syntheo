@@ -2,10 +2,6 @@ use objc2_app_kit::{NSImage, NSWorkspace, NSWorkspaceIconCreationOptions};
 use objc2_foundation::{NSBundle, NSString};
 
 pub fn set(image: Option<&NSImage>) -> crate::Result<()> {
-    // App Store builds can change the running icon, but cannot write to their bundle.
-    if cfg!(feature = "app-store") {
-        return Ok(());
-    }
     let path = NSBundle::mainBundle().bundlePath();
     // Unbundled development and test executables must not customize their parent directory.
     if !path.to_string().ends_with(".app") {
@@ -81,11 +77,6 @@ mod tests {
             .unwrap();
         assert!(status.success());
         let saved_icon = workspace.iconForFile(&path).TIFFRepresentation().unwrap();
-        if cfg!(feature = "app-store") {
-            assert!(!bundle.join("Icon\r").exists());
-            assert!(saved_icon.isEqualToData(&default_icon));
-            return;
-        }
         assert!(bundle.join("Icon\r").exists());
         assert!(!saved_icon.isEqualToData(&default_icon));
 

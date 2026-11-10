@@ -57,4 +57,3 @@ tracing = { workspace = true }
 [features]
 default = []
 macos-private-api = ["dep:tauri-nspanel", "tauri/macos-private-api"]
-new = []

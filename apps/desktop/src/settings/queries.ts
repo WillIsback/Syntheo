@@ -23,7 +23,6 @@ import {
   type SettingValue,
   type SettingValues,
 } from "~/settings/schema";
-import { isAppStoreBuild } from "~/shared/app-store";
 import {
   getDefaultSttModel,
   normalizeStoredSttSelection,
@@ -303,7 +302,7 @@ async function persistSettingValues(values: SettingValues): Promise<void> {
 }
 
 function applySettingSideEffects(values: SettingValues): void {
-  if (values.autostart !== undefined && !isAppStoreBuild()) {
+  if (values.autostart !== undefined) {
     void (values.autostart ? enable() : disable()).catch(console.error);
   }
   if (values.respect_dnd !== undefined) {

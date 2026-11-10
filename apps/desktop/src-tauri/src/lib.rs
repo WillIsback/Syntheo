@@ -131,12 +131,6 @@ pub fn main() {
         });
     }
 
-    // https://docs.crabnebula.dev/plugins/tauri-e2e-tests/#macos-support
-    #[cfg(all(target_os = "macos", feature = "automation"))]
-    {
-        builder = builder.plugin(tauri_plugin_automation::init());
-    }
-
     // https://v2.tauri.app/plugin/deep-linking/#desktop
     // should always be the first plugin
     {
@@ -155,19 +149,13 @@ pub fn main() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_tracing::init());
 
-    #[cfg(not(feature = "app-store"))]
-    {
-        builder = builder.plugin(tauri_plugin_agent::init());
-    }
+    builder = builder.plugin(tauri_plugin_agent::init());
 
     builder = builder.plugin(tauri_plugin_db::init(db.clone()));
 
     builder = builder.plugin(tauri_plugin_contacts::init());
 
-    #[cfg(not(feature = "app-store"))]
-    {
-        builder = builder.plugin(tauri_plugin_hooks::init());
-    }
+    builder = builder.plugin(tauri_plugin_hooks::init());
 
     builder = builder
         .plugin(tauri_plugin_icon::init())
@@ -218,13 +206,10 @@ pub fn main() {
         .plugin(tauri_plugin_tantivy::init())
         .plugin(tauri_plugin_audio_priority::init());
 
-    #[cfg(not(feature = "app-store"))]
-    {
-        builder = builder.plugin(tauri_plugin_autostart::init(
-            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
-            Some(vec!["--background"]),
-        ));
-    }
+    builder = builder.plugin(tauri_plugin_autostart::init(
+        tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+        Some(vec!["--background"]),
+    ));
 
     #[cfg(any(debug_assertions, feature = "devtools"))]
     {
@@ -328,7 +313,6 @@ pub fn main() {
                 });
             }
 
-            #[cfg(not(feature = "app-store"))]
             {
                 use tauri_plugin_settings::SettingsPluginExt;
                 if let Ok(base) = app_handle.settings().vault_base()
@@ -340,7 +324,6 @@ pub fn main() {
 
             search_index::spawn(app_handle.clone(), db.clone());
 
-            #[cfg(not(feature = "app-store"))]
             embedded_cli::spawn_auto_install(app_handle);
 
             Ok(())
@@ -556,7 +539,6 @@ fn make_specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
             commands::set_dismissed_toasts::<tauri::Wry>,
             commands::get_env::<tauri::Wry>,
             commands::show_devtool::<tauri::Wry>,
-            commands::is_app_store_build,
             commands::complete_app_exit::<tauri::Wry>,
             commands::get_tinybase_values::<tauri::Wry>,
             commands::get_pinned_tabs::<tauri::Wry>,

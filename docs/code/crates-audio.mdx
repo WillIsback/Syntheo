@@ -85,7 +85,7 @@ Dans les `Cargo.toml`, ces crates sont référencées par l'alias de workspace `
 | Crate | Rôle | Utilisée par |
 | --- | --- | --- |
 | `crates/owhisper-client` | Adaptateurs STT : protocole OpenAI en temps réel et par lot (`adapter/openai/`), endpoint `/v1/audio/transcriptions` compatible (`adapter/openai_compatible_batch.rs`) et NVIDIA NIM / Riva en WebSocket (`adapter/nvidia.rs`). Expose `BatchClient`, `Provider` (seule variante : `OpenAI`), `normalize_listen_params`, les flux live et batch. | `listener-core`, `listener2-core`, `plugins/dictation`, `plugins/transcription` |
-| `crates/owhisper-interface` | Types partagés du protocole : `ListenParams`, `stream`, `batch`, `batch_sse`, `batch_stream`, `InferenceProgress`, description OpenAPI (`openapi`). | `owhisper-client`, `listener-core`, `listener2-core`, `transcript`, `transcription-core`, `plugins/dictation`, `plugins/transcription` |
+| `crates/owhisper-interface` | Types partagés du protocole : `ListenParams`, `stream`, `batch`, `batch_sse`, `batch_stream`, `InferenceProgress`. | `owhisper-client`, `listener-core`, `listener2-core`, `transcript`, `transcription-core`, `plugins/dictation`, `plugins/transcription` |
 | `crates/openai-transcription` | Modèles de requêtes et réponses OpenAI : `batch` (dont `AudioModel`) et `realtime`. | `owhisper-client` |
 | `crates/ws-client` | Client WebSocket avec relance (`client`, `retry`) au-dessus de `tokio-tungstenite` (TLS natif). | `owhisper-client`, qui le réexporte |
 

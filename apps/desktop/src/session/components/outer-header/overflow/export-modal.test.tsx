@@ -18,8 +18,6 @@ const mocks = vi.hoisted(() => ({
   exportText: vi.fn(),
   revealItemInDir: vi.fn(async () => ({ status: "ok" as const, data: null })),
   onOpenChange: vi.fn(),
-  chooseExportPath: vi.fn(),
-  isAppStoreBuild: vi.fn(),
   sharedNote: undefined as { body: unknown } | undefined,
 }));
 
@@ -31,7 +29,6 @@ vi.mock("@syntheo/plugin-export", () => ({
   commands: {
     export: mocks.exportPdf,
     exportText: mocks.exportText,
-    chooseExportPath: mocks.chooseExportPath,
     printPdf: mocks.printPdf,
     cleanupPrintFiles: mocks.cleanupPrintFiles,
   },
@@ -44,9 +41,6 @@ vi.mock("@syntheo/plugin-opener2", () => ({
 }));
 vi.mock("~/settings/queries", () => ({
   getStoredSettingValues: mocks.settings,
-}));
-vi.mock("~/shared/app-store", () => ({
-  isAppStoreBuild: mocks.isAppStoreBuild,
 }));
 vi.mock("~/session/queries", () => ({
   useSession: () => ({ title: "Project review" }),
@@ -93,7 +87,6 @@ describe("ExportModal destination", () => {
     mocks.downloadDir.mockResolvedValue("/Users/test/Downloads");
     mocks.exportPdf.mockResolvedValue({ status: "ok", data: null });
     mocks.exportText.mockResolvedValue({ status: "ok", data: null });
-    mocks.isAppStoreBuild.mockReturnValue(false);
     mocks.printPdf.mockResolvedValue({
       status: "ok",
       data: "/cache/print/Project review-0f8c.pdf",
@@ -125,7 +118,6 @@ describe("ExportModal destination", () => {
     );
     expect(mocks.revealItemInDir).toHaveBeenCalledWith(writer.mock.calls[0][0]);
     expect(mocks.downloadDir).not.toHaveBeenCalled();
-    expect(mocks.chooseExportPath).not.toHaveBeenCalled();
   });
 
   it.each([undefined, ""])(
@@ -168,58 +160,6 @@ describe("ExportModal destination", () => {
     expect(mocks.onOpenChange).not.toHaveBeenCalled();
     expect(mocks.revealItemInDir).not.toHaveBeenCalled();
   });
-
-  it("uses the saved folder as the App Store save dialog default", async () => {
-    mocks.isAppStoreBuild.mockReturnValue(true);
-    mocks.settings.mockResolvedValue({
-      values: { export_directory: "/Users/test/Documents" },
-    });
-    mocks.chooseExportPath.mockResolvedValue({
-      status: "ok",
-      data: "/Users/test/Documents/review.pdf",
-    });
-    renderModal();
-    fireEvent.click(screen.getByRole("button", { name: "Save" }));
-    await waitFor(() =>
-      expect(mocks.exportPdf).toHaveBeenCalledWith(
-        "/Users/test/Documents/review.pdf",
-        expect.any(Object),
-      ),
-    );
-    expect(mocks.chooseExportPath).toHaveBeenCalledWith(
-      expect.stringMatching(/^\/Users\/test\/Documents\//),
-      "pdf",
-    );
-  });
-
-  it("leaves the export modal open when the native save dialog is canceled", async () => {
-    mocks.isAppStoreBuild.mockReturnValue(true);
-    mocks.chooseExportPath.mockResolvedValue({ status: "ok", data: null });
-    renderModal();
-    fireEvent.click(screen.getByRole("button", { name: "Save" }));
-    await waitFor(() => expect(mocks.chooseExportPath).toHaveBeenCalled());
-    await waitFor(() =>
-      expect(
-        screen.getByRole("button", { name: "Save" }).hasAttribute("disabled"),
-      ).toBe(false),
-    );
-    expect(mocks.exportPdf).not.toHaveBeenCalled();
-    expect(mocks.onOpenChange).not.toHaveBeenCalled();
-    expect(mocks.revealItemInDir).not.toHaveBeenCalled();
-  });
-
-  it("shows an error when the native save dialog fails", async () => {
-    mocks.isAppStoreBuild.mockReturnValue(true);
-    mocks.chooseExportPath.mockResolvedValue({
-      status: "error",
-      error: "dialog unavailable",
-    });
-    renderModal();
-    fireEvent.click(screen.getByRole("button", { name: "Save" }));
-    await screen.findByRole("alert");
-    expect(mocks.exportPdf).not.toHaveBeenCalled();
-    expect(mocks.onOpenChange).not.toHaveBeenCalled();
-  });
 });
 
 describe("ExportModal : exporter ou imprimer (issue 374)", () => {
@@ -228,7 +168,6 @@ describe("ExportModal : exporter ou imprimer (issue 374)", () => {
     mocks.settings.mockResolvedValue({ values: {} });
     mocks.downloadDir.mockResolvedValue("/Users/test/Downloads");
     mocks.exportPdf.mockResolvedValue({ status: "ok", data: null });
-    mocks.isAppStoreBuild.mockReturnValue(false);
     mocks.printPdf.mockResolvedValue({
       status: "ok",
       data: "/cache/print/Project review-0f8c.pdf",

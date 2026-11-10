@@ -1,5 +1,3 @@
-#[cfg(feature = "app")]
-mod app;
 mod error;
 #[cfg(feature = "language")]
 mod language;
@@ -27,8 +25,6 @@ pub use utils::BackgroundTask;
 ))]
 mod zoom;
 
-#[cfg(feature = "app")]
-pub use app::*;
 #[cfg(feature = "language")]
 pub use language::*;
 #[cfg(feature = "list")]

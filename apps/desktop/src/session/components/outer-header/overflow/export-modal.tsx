@@ -35,7 +35,6 @@ import {
   useSession,
   useSessionParticipants,
 } from "~/session/queries";
-import { isAppStoreBuild } from "~/shared/app-store";
 import type { EditorView } from "~/store/zustand/tabs/schema";
 import { useSessionTranscriptMetadata } from "~/stt/queries";
 
@@ -144,21 +143,7 @@ export function ExportModal({
       const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
       const filename = `${sanitizedTitle}_${timestamp}.${format}`;
       const defaultPath = await join(directory, filename);
-      // App Store sandbox grants must be reacquired after relaunch. Rust opens
-      // the dialog so the chosen path is the only one it accepts outside the
-      // export folder (issue 422).
-      let path: string | null = defaultPath;
-      if (isAppStoreBuild()) {
-        const chosen = await exportCommands.chooseExportPath(
-          defaultPath,
-          format,
-        );
-        if (chosen.status === "error") {
-          throw new Error(chosen.error);
-        }
-        path = chosen.data;
-      }
-      if (!path) return null;
+      const path = defaultPath;
 
       if (format === "pdf") {
         const exportContent = buildPdfContent();
