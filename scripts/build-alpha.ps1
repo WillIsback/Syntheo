@@ -1,4 +1,4 @@
-# Construit en local une alpha devtools Windows (NSIS + MSI non signés), avec
+﻿# Construit en local une alpha devtools Windows (NSIS + MSI non signés), avec
 # les étapes de .github/workflows/build-windows.yml sans la signature. Les
 # alphas se construisent uniquement en local : il n'y a plus de workflow
 # d'alpha sur GitHub. À lancer dans la VM Windows, depuis la racine du dépôt :
@@ -17,8 +17,14 @@
 # MSVC v143, SDK Windows, outils CMake C++), Rust (rustup), Node.js 22 et pnpm,
 # Git, LLVM (libclang pour bindgen), Strawberry Perl (OpenSSL vendu), WebView2.
 #
-# NON TESTÉ en conditions réelles à sa création (#537) : la première exécution
-# dans la VM sert de validation.
+# Validé dans la VM (Windows 11 26200) avec l'alpha 0.7.1-2 : environ 24 min à
+# froid. À lancer depuis un compte administrateur : dans une session SSH d'un
+# compte standard, Windows ne suit pas les jonctions de node_modules et
+# pnpm install échoue (UNKNOWN open …\package.json, -4094). Garder le dépôt et
+# target/ au même endroit d'une alpha à l'autre pour profiter du cache.
+#
+# Fichier enregistré en UTF-8 avec BOM : sans BOM, PowerShell 5 lit les accents
+# en ANSI.
 
 [CmdletBinding()]
 param(
@@ -68,11 +74,9 @@ if ($missing.Count -gt 0) {
   $missing | ForEach-Object { Write-Host "  - $_" }
   Write-Host @"
 
-Installation (PowerShell administrateur) :
-  winget install Microsoft.VisualStudio.2022.BuildTools --override "--wait --passive --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
-  winget install Rustlang.Rustup LLVM.LLVM StrawberryPerl.StrawberryPerl Kitware.CMake Git.Git OpenJS.NodeJS.LTS
-  corepack enable
-Puis rouvrir le terminal.
+Installation, une fois, dans un PowerShell administrateur (versions figées, sommes vérifiées) :
+  powershell -ExecutionPolicy Bypass -File .\scripts\alpha\install-windows-toolchain.ps1
+Puis rouvrir le terminal (ou la session SSH).
 "@
   exit 1
 }
