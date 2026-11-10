@@ -45,9 +45,9 @@ In the `Cargo.toml` files, these crates are referenced by the workspace alias `s
 
 | Crate | Role | Used by |
 | --- | --- | --- |
-| `crates/vad` | Speech detection. Two engines behind features: `earshot` (`earshot` module) and `silero-onnx` (`silero_onnx` module). Consumers only enable `earshot`; Silero is only used by the test bench and comparison tests. | `vad-masking`, `fs-sync-core` |
+| `crates/vad` | Speech detection with `earshot`, behind the feature of the same name (`earshot` module). | `vad-masking`, `fs-sync-core` |
 | `crates/vad-masking` | Masks silences before sending to STT, in batch (`masking`) or streaming (`streaming`, `VadConfig`). | `listener-core` |
-| `crates/onnx` | Loads ONNX models with `ort` (`load_model_from_bytes`, `load_model_from_path`, accelerated variant); re-exports `ort` and `ndarray`. | `aec`, `vad` (`silero-onnx` feature) |
+| `crates/onnx` | Loads ONNX models with `ort` (`load_model_from_bytes`, `load_model_from_path`, accelerated variant); re-exports `ort` and `ndarray`. | `aec` |
 
 **Affected doc pages**: [/en/meetings](/en/meetings) for `vad-masking`; none for `vad` and `onnx` taken on their own.
 
