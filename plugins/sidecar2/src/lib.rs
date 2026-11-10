@@ -25,27 +25,6 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
 mod test {
     use super::*;
 
-    #[test]
-    fn export_types() {
-        const OUTPUT_FILE: &str = "./js/bindings.gen.ts";
-
-        make_specta_builder::<tauri::Wry>()
-            .disable_serde_phases()
-            .semantic_types(
-                specta_typescript::semantic::Configuration::empty().enable_lossless_floats(),
-            )
-            .dangerously_cast_bigints_to_number()
-            .export(
-                // Aucune commande : on garde un module ES pour `js/index.ts`.
-                specta_typescript::Typescript::default().with_raw("export {};"),
-                OUTPUT_FILE,
-            )
-            .unwrap();
-
-        let content = std::fs::read_to_string(OUTPUT_FILE).unwrap();
-        std::fs::write(OUTPUT_FILE, format!("// @ts-nocheck\n{content}")).unwrap();
-    }
-
     fn create_app<R: tauri::Runtime>(builder: tauri::Builder<R>) -> tauri::App<R> {
         let mut ctx = tauri::test::mock_context(tauri::test::noop_assets());
         ctx.config_mut().identifier = "com.syntheo.dev".to_string();
