@@ -298,7 +298,7 @@ windows = "0.62.2"
 # Keep in step with `windows`: the `#[windows::core::interface]` macro expands to
 # `::windows_core::…` paths, so a mismatched major makes the generated impl target
 # the wrong `windows_core` (`audio-device/src/windows.rs`).
-windows-core = "0.62.2"
+windows-core = "0.100.0"
 xcap = "0.9.3"
 
 rmcp = "3.9"
