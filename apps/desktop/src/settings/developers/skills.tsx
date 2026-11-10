@@ -1,4 +1,5 @@
 import { t } from "@lingui/core/macro";
+import { useLingui } from "@lingui/react";
 import { Trans } from "@lingui/react/macro";
 import { Claude, Cursor, OpenAI } from "@lobehub/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -82,6 +83,9 @@ async function installSkill(agent: SkillAgent) {
 }
 
 export function SkillsRow() {
+  // `t` de @lingui/core/macro lit la langue au rendu : s'abonner au changement de
+  // langue pour se redessiner aussitôt, sous-composants compris (issue 558).
+  useLingui();
   const queryClient = useQueryClient();
   const agentsQuery = useQuery({
     queryKey: SKILL_AGENTS_QUERY_KEY,

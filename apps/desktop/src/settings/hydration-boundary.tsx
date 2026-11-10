@@ -1,4 +1,5 @@
 import { t } from "@lingui/core/macro";
+import { useLingui } from "@lingui/react";
 import type { ReactNode } from "react";
 
 import { CircleNotch } from "@syntheo/ui/components/icons";
@@ -10,6 +11,9 @@ export function SettingsHydrationBoundary({
 }: {
   children: ReactNode;
 }) {
+  // `t` de @lingui/core/macro lit la langue au rendu : s'abonner au changement de
+  // langue pour se redessiner aussitôt, sous-composants compris (issue 558).
+  useLingui();
   const { data, isLoading, error } = useStoredSettingValuesQuery();
 
   if (error) {

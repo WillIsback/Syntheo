@@ -1,5 +1,6 @@
 import { i18n } from "@lingui/core";
 import { t } from "@lingui/core/macro";
+import { useLingui } from "@lingui/react";
 import { Trans } from "@lingui/react/macro";
 import { useQuery } from "@tanstack/react-query";
 
@@ -48,6 +49,9 @@ export function buildMcpConfiguration(command: string) {
 }
 
 export function CliSettingsSections() {
+  // `t` de @lingui/core/macro lit la langue au rendu : s'abonner au changement de
+  // langue pour se redessiner aussitôt, sous-composants compris (issue 558).
+  useLingui();
   const statusQuery = useQuery({
     queryKey: CLI_STATUS_QUERY_KEY,
     queryFn: loadStatus,

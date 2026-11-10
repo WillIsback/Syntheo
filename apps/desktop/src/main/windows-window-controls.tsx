@@ -1,4 +1,5 @@
 import { t } from "@lingui/core/macro";
+import { useLingui } from "@lingui/react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useCallback, useState } from "react";
 
@@ -8,6 +9,9 @@ import { cn } from "@syntheo/utils";
 const appWindow = getCurrentWindow();
 
 export function WindowsWindowControls({ onClose }: { onClose?: () => void }) {
+  // `t` de @lingui/core/macro lit la langue au rendu : s'abonner au changement de
+  // langue pour se redessiner aussitôt, sous-composants compris (issue 558).
+  useLingui();
   const [isMaximized, setIsMaximized] = useState(false);
 
   const syncMaximized = useCallback(() => {
