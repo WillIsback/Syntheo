@@ -1,4 +1,4 @@
-export type AttachmentContent = {
+type AttachmentContent = {
   type?: string;
   attrs?: Record<string, unknown>;
   content?: AttachmentContent[];

@@ -9,7 +9,7 @@ import {
 import { catalogLocalNoteAttachment, sha256Hex } from "~/session/attachments";
 import { catalogLocalFolderMaterial } from "~/session/folder-attachments";
 
-export type FileUploadResult = AttachmentSaveResult & {
+type FileUploadResult = AttachmentSaveResult & {
   url: string;
 };
 

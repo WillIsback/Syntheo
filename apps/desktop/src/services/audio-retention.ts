@@ -24,7 +24,7 @@ export function subscribeToSessionAudioRetention(
   };
 }
 
-export function isSessionAudioIdle(sessionId: string) {
+function isSessionAudioIdle(sessionId: string) {
   const state = listenerStore.getState();
   return (
     state.getSessionMode(sessionId) === "inactive" &&

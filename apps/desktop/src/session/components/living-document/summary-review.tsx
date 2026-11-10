@@ -18,7 +18,7 @@ import {
 } from "~/session/proposal-review";
 import { usePendingSessionProposals } from "~/session/queries";
 
-export type SummaryProposal = {
+type SummaryProposal = {
   id: string;
   currentMarkdown: string;
   proposedMarkdown: string;

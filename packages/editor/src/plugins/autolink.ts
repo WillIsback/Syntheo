@@ -42,7 +42,7 @@ function trimTrailingPunctuation(text: string) {
   return text.slice(0, end);
 }
 
-export function findAutolinkMatches(text: string) {
+function findAutolinkMatches(text: string) {
   const matches: Array<{ start: number; end: number; href: string }> = [];
   let match: RegExpExecArray | null;
 

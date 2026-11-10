@@ -18,13 +18,13 @@ export type TranscriptSearchSource = (
   opts: SearchOptions,
 ) => MatchResult[];
 
-export type TranscriptSearchWord = {
+type TranscriptSearchWord = {
   id: string | null;
   text: string;
   scrollIntoView: () => void;
 };
 
-export type TranscriptSearchIndex = {
+type TranscriptSearchIndex = {
   entries: { element: HTMLElement; id: string | null }[];
   spanPositions: { start: number; end: number }[];
   normalizedText: string;

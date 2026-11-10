@@ -12,7 +12,7 @@ import { listenerStore } from "~/store/zustand/listener/instance";
 // adresse la demande, comme pour la pause.
 export type { MutedChannel } from "./window-control";
 
-export function isChannelMuted(channel: MutedChannel) {
+function isChannelMuted(channel: MutedChannel) {
   const live = listenerStore.getState().live;
   return channel === "mic" ? live.muted : live.speakerMuted;
 }

@@ -11,7 +11,7 @@ import {
 
 import { commands } from "~/types/tauri.gen";
 
-export type PinnedTab = TabInput & { pinned: true };
+type PinnedTab = TabInput & { pinned: true };
 
 const serializePinnedTabs = (tabs: Tab[]): string => {
   const pinnedTabs = tabs

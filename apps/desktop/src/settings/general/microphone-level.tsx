@@ -84,7 +84,7 @@ type MonitorState = { level: number; unavailable: boolean };
 
 const IDLE: MonitorState = { level: 0, unavailable: false };
 
-export function useLevelMonitor(
+function useLevelMonitor(
   kind: LevelKind,
   device: string,
   enabled: boolean,

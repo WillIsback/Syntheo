@@ -7,7 +7,7 @@ import type { SearchNote } from "~/search/unified/types";
 import { collectFolderPaths, folderDisplayName } from "~/session/folders";
 
 /** Notes affichées sous un dossier déplié avant « … N autres ». */
-export const VISIBLE_FOLDER_NOTES = 5;
+const VISIBLE_FOLDER_NOTES = 5;
 
 export type FolderTreeNode = {
   path: string;

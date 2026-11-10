@@ -21,7 +21,7 @@ import {
 // Synthèse et « Demander à la note » (Ctrl+J). Les automatisations lancées à
 // la main y figurent, comme les automatiques qu'on veut relancer sur une note.
 
-export type AutomationLaunchItem = {
+type AutomationLaunchItem = {
   id: string;
   title: string;
   /** Les actions enchaînées, sans le déclencheur. */
@@ -30,13 +30,13 @@ export type AutomationLaunchItem = {
 };
 
 /** Automatisations prêtes (toutes les étapes réglées), à lancer sur une note. */
-export function useLaunchableWorkflows(): AutomationWorkflow[] {
+function useLaunchableWorkflows(): AutomationWorkflow[] {
   const workflows = useAutomationWorkflows();
   return useMemo(() => workflows.filter(isWorkflowReady), [workflows]);
 }
 
 /** Lance l'automatisation sur la note et annonce le résultat. */
-export function useRunWorkflowOnNote() {
+function useRunWorkflowOnNote() {
   const { t } = useLingui();
   return useCallback(
     async ({

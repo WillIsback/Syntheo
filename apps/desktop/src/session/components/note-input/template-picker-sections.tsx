@@ -11,7 +11,7 @@ import {
   type WebTemplate,
 } from "~/templates";
 
-export type TemplatePickerItem = {
+type TemplatePickerItem = {
   key: string;
   title: string;
   icon: TemplateIcon;
@@ -19,7 +19,7 @@ export type TemplatePickerItem = {
   onClick: () => void;
 };
 
-export type TemplatePickerSection = {
+type TemplatePickerSection = {
   key: string;
   title: string;
   icon?: React.ReactNode;

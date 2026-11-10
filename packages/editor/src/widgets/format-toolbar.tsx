@@ -51,7 +51,7 @@ export function getClipBoundary(element: Element): Element {
   return element;
 }
 
-export function createSelectionVirtualElement(
+function createSelectionVirtualElement(
   view: EditorView,
   from: number,
   to: number,

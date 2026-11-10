@@ -7,7 +7,7 @@ import type { GeneralState } from "./general-shared";
 // Les deux canaux coupés (issue 447) : autorisé, mais plus rien n'est
 // transcrit. Un message le dit et propose la pause (qui libère les
 // périphériques) ou de rétablir le micro.
-export const MUTED_CHANNELS_NOTICE_DURATION_MS = 12_000;
+const MUTED_CHANNELS_NOTICE_DURATION_MS = 12_000;
 
 export const mutedChannelsNoticeId = (sessionId: string) =>
   `muted-channels-${sessionId}`;

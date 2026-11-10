@@ -6,7 +6,7 @@ import { updateSession } from "./sessions";
 import { useLiveQuery } from "~/db";
 import { enqueueDatabaseWrite } from "~/db/write-queue";
 
-export type SessionConflictRecord = {
+type SessionConflictRecord = {
   id: string;
   field: "body" | "title";
   lostSide: string;
@@ -16,7 +16,7 @@ export type SessionConflictRecord = {
   bodyFormat: string;
 };
 
-export type SessionDocumentVersionRecord = {
+type SessionDocumentVersionRecord = {
   id: string;
   body: string;
   bodyFormat: string;

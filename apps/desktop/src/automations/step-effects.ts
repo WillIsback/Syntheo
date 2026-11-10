@@ -8,13 +8,13 @@ import type { VaultWriteRequest, VaultWriteResult } from "./vault-writer";
 // par cet objet : les tests le remplacent, et chaque dépendance n'est
 // chargée qu'au premier usage.
 
-export type WebhookResponse = {
+type WebhookResponse = {
   status: number;
   /** En-tête `Location` d'une redirection, qui n'est jamais suivie. */
   location: string | null;
 };
 
-export type StepEffects = {
+type StepEffects = {
   generateText: (prompt: string, signal: AbortSignal) => Promise<string>;
   writeVaultNote: (request: VaultWriteRequest) => Promise<VaultWriteResult>;
   copyText: (text: string) => Promise<void>;

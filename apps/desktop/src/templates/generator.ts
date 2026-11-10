@@ -6,7 +6,7 @@ import type { TemplateSection } from "@syntheo/store";
 import { parseTemplateMarkdown } from "./markdown";
 import { normalizeTemplateIcon, type TemplateIcon } from "./template-icon";
 
-export const TEMPLATE_GEN_SYSTEM_PROMPT = `Tu conçois des modèles de compte rendu de réunion en français.
+const TEMPLATE_GEN_SYSTEM_PROMPT = `Tu conçois des modèles de compte rendu de réunion en français.
 À partir d'une description, propose un modèle avec un titre court, une description, une catégorie, une icône et 3 à 6 sections.
 Chaque section a un titre et une consigne décrivant ce que le compte rendu doit contenir.
 Utilise le vouvoiement, un ton sobre et professionnel. Réponds uniquement en français.`;
@@ -19,7 +19,7 @@ export type GeneratedTemplate = {
   sections: TemplateSection[];
 };
 
-export const generatedTemplateSchema = z.object({
+const generatedTemplateSchema = z.object({
   title: z.string().min(1),
   description: z.string(),
   category: z.string(),

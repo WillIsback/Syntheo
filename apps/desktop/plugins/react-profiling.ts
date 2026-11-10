@@ -13,11 +13,11 @@
  * sont inchangés.
  */
 
-export const REACT_PROFILING_ENV = "SYNTHEO_REACT_PROFILING";
+const REACT_PROFILING_ENV = "SYNTHEO_REACT_PROFILING";
 
-export type ReactProfilingAlias = { find: RegExp; replacement: string };
+type ReactProfilingAlias = { find: RegExp; replacement: string };
 
-export function isReactProfilingBuild(
+function isReactProfilingBuild(
   env: Readonly<Record<string, string | undefined>>,
 ): boolean {
   return env[REACT_PROFILING_ENV] === "1";

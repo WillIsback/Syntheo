@@ -10,7 +10,7 @@ import { executeTransaction, liveQueryClient, useLiveQuery } from "~/db";
 import { enqueueDatabaseWrite } from "~/db/write-queue";
 import { ensureFolderCatalog } from "~/session/folder-catalog";
 
-export type FolderAgendaRecord = {
+type FolderAgendaRecord = {
   folderId: string;
   body: JSONContent;
   generatedAt: string | null;
@@ -24,7 +24,7 @@ type FolderAgendaSqlRow = {
   agenda_edited_at: string;
 };
 
-export const FOLDER_AGENDA_SQL = `
+const FOLDER_AGENDA_SQL = `
   SELECT
     thread.folder_id,
     thread.agenda_body,
@@ -49,7 +49,7 @@ function parseBody(text: string): JSONContent | null {
   }
 }
 
-export function mapFolderAgendaRow(
+function mapFolderAgendaRow(
   row: FolderAgendaSqlRow,
 ): FolderAgendaRecord | null {
   const body = parseBody(row.agenda_body);

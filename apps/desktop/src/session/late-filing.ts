@@ -23,14 +23,14 @@ import { getTemplateById } from "~/templates/queries";
 // dossier choisi en Préparer, suggestion après la réunion et chat passent
 // tous par là, que la note soit ouverte ou non.
 
-export type LateFilingSummary = {
+type LateFilingSummary = {
   id: string;
   templateId: string;
   position: number;
   hasContent: boolean;
 };
 
-export type LateFilingProposal = {
+type LateFilingProposal = {
   templateId: string;
   targetNoteId: string;
 };

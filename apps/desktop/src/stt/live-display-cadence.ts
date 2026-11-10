@@ -52,7 +52,7 @@ function installNoteTypingListener() {
   document.addEventListener("beforeinput", onNoteInput, options);
 }
 
-export function isTypingInNotes(now = Date.now()): boolean {
+function isTypingInNotes(now = Date.now()): boolean {
   return now - lastNoteTypingAt < NOTE_TYPING_WINDOW_MS;
 }
 
@@ -66,7 +66,7 @@ function isDocumentHidden() {
   );
 }
 
-export type LiveDisplayCadence = {
+type LiveDisplayCadence = {
   // Un changement est arrivé : il sera affiché au prochain battement.
   request: () => void;
   // L'appelant vient d'afficher l'état courant lui-même (changement d'état de

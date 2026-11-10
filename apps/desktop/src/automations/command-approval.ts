@@ -28,7 +28,7 @@ export function commandKey(command: CommandLine): string {
   return JSON.stringify([command.program.trim(), ...command.args]);
 }
 
-export function parseApprovedCommands(value: string | undefined): string[] {
+function parseApprovedCommands(value: string | undefined): string[] {
   if (!value) {
     return [];
   }
@@ -42,14 +42,14 @@ export function parseApprovedCommands(value: string | undefined): string[] {
   }
 }
 
-export async function isCommandApproved(command: CommandLine) {
+async function isCommandApproved(command: CommandLine) {
   const { values } = await getStoredSettingValues();
   return parseApprovedCommands(values.automation_approved_commands).includes(
     commandKey(command),
   );
 }
 
-export async function rememberApprovedCommand(command: CommandLine) {
+async function rememberApprovedCommand(command: CommandLine) {
   const key = commandKey(command);
   await updateSettingValue("automation_approved_commands", (current) => {
     const approved = parseApprovedCommands(current);

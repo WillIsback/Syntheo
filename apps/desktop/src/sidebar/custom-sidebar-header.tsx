@@ -21,7 +21,7 @@ import { useTabs } from "~/store/zustand/tabs";
 
 export const TITLE_BAR_SIDEBAR_ACTIONS_SLOT_ID = "title-bar-sidebar-actions";
 
-export function useCustomSidebarBack() {
+function useCustomSidebarBack() {
   const { chat } = useShell();
   const currentTab = useTabs((state) => state.currentTab);
 

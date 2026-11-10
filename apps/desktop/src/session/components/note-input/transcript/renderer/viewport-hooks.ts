@@ -10,7 +10,7 @@ import {
 // l'utilisateur (l'inertie de la molette prolonge le geste).
 const USER_SCROLL_GESTURE_WINDOW_MS = 800;
 
-export function prefersReducedMotion(): boolean {
+function prefersReducedMotion(): boolean {
   return (
     typeof window !== "undefined" &&
     typeof window.matchMedia === "function" &&

@@ -89,7 +89,7 @@ export function createChatPreflightController() {
   return { start, runAfterPreflight, dispose, resume };
 }
 
-export type ChatPreflightController = ReturnType<
+type ChatPreflightController = ReturnType<
   typeof createChatPreflightController
 >;
 

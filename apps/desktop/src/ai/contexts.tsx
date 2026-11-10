@@ -7,7 +7,7 @@ import { type AITaskStore, createAITaskStore } from "~/store/zustand/ai-task";
 
 const AITaskContext = createContext<AITaskStore | null>(null);
 
-export type AITaskState = ReturnType<
+type AITaskState = ReturnType<
   ReturnType<typeof createAITaskStore>["getState"]
 >;
 

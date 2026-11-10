@@ -24,7 +24,7 @@ export type VaultWriteRequest = {
 export type VaultWriteResult = { sessionId: string; created: boolean };
 
 /** « Tâches / 2026-11 » → « Tâches/2026-11 » ; `null` si le chemin est invalide. */
-export function normalizeVaultFolder(folder: string): string | null {
+function normalizeVaultFolder(folder: string): string | null {
   const segments = folder.split(/[\\/]/).map((segment) => segment.trim());
   while (segments.length > 0 && !segments[0]) {
     segments.shift();

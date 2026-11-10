@@ -25,15 +25,15 @@ import { id } from "~/shared/utils";
 
 type Ref<T> = { current: T };
 
-export type ChatPreflights = ReturnType<typeof createChatPreflightController>;
+type ChatPreflights = ReturnType<typeof createChatPreflightController>;
 
-export type ChatRegenerationTarget = {
+type ChatRegenerationTarget = {
   chatGroupId: string;
   assistantMessageId: string;
 };
 
 /** Références partagées par le cycle de vie d'une session de chat. */
-export type ChatSessionRefs = {
+type ChatSessionRefs = {
   latestChatGroupIdRef: Ref<string | undefined>;
   latestUserIdRef: Ref<string | null>;
   submittedChatGroupIdsRef: Ref<Map<string, string>>;

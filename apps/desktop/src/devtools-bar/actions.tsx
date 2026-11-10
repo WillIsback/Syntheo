@@ -32,7 +32,7 @@ type DevtoolsMenuItem = {
   destructive?: boolean;
 };
 
-export type DevtoolsMenuGroup = {
+type DevtoolsMenuGroup = {
   label: string;
   description: string;
   items: DevtoolsMenuItem[];

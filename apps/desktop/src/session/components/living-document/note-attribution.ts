@@ -19,7 +19,7 @@ import { ABBREVIATIONS, STOPWORDS, SUFFIXES } from "./note-attribution-words";
 export const NOTE_MATCH_THRESHOLD = 0.6;
 
 /** Mots communs exigés (ramené au nombre de mots de la note s'il est plus petit). */
-export const MIN_SHARED_WORDS = 2;
+const MIN_SHARED_WORDS = 2;
 
 /** Un mot abrégé de la note (« perf ») peut couvrir un mot entier (« performance »). */
 const MIN_PREFIX_LENGTH = 4;
@@ -72,7 +72,7 @@ type Analysis = {
   names: string[];
 };
 
-export function analyze(
+function analyze(
   text: string,
   { skipLeadingName }: { skipLeadingName: boolean },
 ): Analysis {

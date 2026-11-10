@@ -1,7 +1,7 @@
 export type DictationPhase = "idle" | "starting" | "recording" | "transcribing";
 
 /** Enregistrement de dictée gardé en mémoire, jamais écrit sur le disque. */
-export type DictationAudio = { data_base64: string; file_name: string };
+type DictationAudio = { data_base64: string; file_name: string };
 
 export class DictationController {
   private phase: DictationPhase = "idle";

@@ -6,12 +6,12 @@ import { commands as transcriptionCommands } from "@syntheo/plugin-transcription
  * n'est écrit sur le disque, et la webview ne charge jamais tout le fichier
  * d'un coup (issue 464).
  */
-export const AUDIO_UPLOAD_CHUNK_BYTES = 4 * 1024 * 1024;
+const AUDIO_UPLOAD_CHUNK_BYTES = 4 * 1024 * 1024;
 /** Même plafond que `MAX_AUDIO_UPLOAD_BYTES` côté Rust. */
 // Au-delà, un fichier sans chemin disque est lu par morceaux.
 export const MAX_IPC_AUDIO_BYTES = 4 * 1024 * 1024;
 
-export const MAX_AUDIO_UPLOAD_BYTES = 2 * 1024 * 1024 * 1024;
+const MAX_AUDIO_UPLOAD_BYTES = 2 * 1024 * 1024 * 1024;
 
 export class AudioUploadTooLargeError extends Error {
   constructor() {
@@ -76,7 +76,7 @@ export async function discardAudioUpload(uploadId: string) {
   }
 }
 
-export function bytesToBase64(bytes: Uint8Array) {
+function bytesToBase64(bytes: Uint8Array) {
   let binary = "";
   const chunkSize = 0x8000;
   for (let offset = 0; offset < bytes.length; offset += chunkSize) {

@@ -17,14 +17,14 @@ export type ReactToolsState = Readonly<{
   settings: ReactScanSettings;
 }>;
 
-export type ReactScanReport = Readonly<{
+type ReactScanReport = Readonly<{
   id: number;
   name: string | null;
   renders: number;
   totalTimeMs: number;
 }>;
 
-export type ReactToolsControls = Readonly<{
+type ReactToolsControls = Readonly<{
   setToolbarVisible: (visible: boolean) => void;
   setOutlinesEnabled: (enabled: boolean) => void;
   setInspecting: (inspecting: boolean) => void;

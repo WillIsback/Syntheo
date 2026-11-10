@@ -4,7 +4,7 @@ import {
 } from "~/settings/queries";
 import { resolveConfigValue } from "~/shared/config";
 
-export type NotificationSettingKey =
+type NotificationSettingKey =
   | "notification_cloudsync_complete"
   | "notification_summary_complete";
 

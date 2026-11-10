@@ -18,7 +18,7 @@ import { commands as openerCommands } from "@syntheo/plugin-opener2";
 // une demi-minute après, pour que le fichier soit assurément assez vieux.
 export const PRINT_CLEANUP_DELAY_MS = 10 * 60 * 1000 + 30 * 1000;
 
-export class PrintPdfError extends Error {}
+class PrintPdfError extends Error {}
 
 function schedulePrintCleanup() {
   window.setTimeout(() => {

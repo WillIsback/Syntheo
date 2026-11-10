@@ -8,7 +8,7 @@ import { json2md } from "@syntheo/editor/markdown";
 
 import { useLiveQuery } from "~/db";
 
-export type SummaryGenerationMetadata = {
+type SummaryGenerationMetadata = {
   generatedAt: string | null;
   sourceNoteFingerprint: string | null;
   // Issue 417 : passages validés venus des notes, rangés à part du corps

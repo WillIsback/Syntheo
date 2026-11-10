@@ -22,10 +22,10 @@ export type ScanEvent = Readonly<{
   timings: readonly Readonly<{ label: string; time: number }>[];
   components: readonly ScanComponent[];
 }>;
-export type ScanData = Readonly<{
+type ScanData = Readonly<{
   events: readonly ScanEvent[];
 }>;
-export type ScanDataControls = Readonly<{
+type ScanDataControls = Readonly<{
   clear: () => void;
   getPrompt: (id: string, mode: PromptMode) => string;
   mountInspector: (host: HTMLElement) => () => void;

@@ -9,7 +9,7 @@ import {
 
 import type { TranscriptWordSelection } from "./selection";
 
-export type TranscriptSelectionSource = () => Array<
+type TranscriptSelectionSource = () => Array<
   [string, TranscriptWordSelection]
 >;
 

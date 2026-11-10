@@ -40,7 +40,7 @@ export type FolderMeetingSqlRow = {
   sort_order: number | null;
 };
 
-export const FOLDER_MEETINGS_SQL = `
+const FOLDER_MEETINGS_SQL = `
   SELECT
     session.id,
     session.title,
@@ -66,7 +66,7 @@ export const FOLDER_MEETINGS_SQL = `
   ORDER BY session.created_at DESC, session.id
 `;
 
-export function folderMeetingsParams(folderPath: string): string[] {
+function folderMeetingsParams(folderPath: string): string[] {
   return [folderPath, `${folderPath}/%`, `${folderPath}\\%`];
 }
 

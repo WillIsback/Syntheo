@@ -8,7 +8,7 @@ export const SPEAKER_PALETTE = SPEAKER_TOKENS.map(
   (token) => DesignColors.light[token],
 );
 
-export const SPEAKER_PALETTE_DARK = SPEAKER_TOKENS.map(
+const SPEAKER_PALETTE_DARK = SPEAKER_TOKENS.map(
   (token) => DesignColors.dark[token],
 );
 

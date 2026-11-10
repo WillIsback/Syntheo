@@ -103,7 +103,7 @@ export type StepEffectKind =
   | "webhook"
   | "command";
 
-export type StepDefinition<T extends WorkflowStepType> = {
+type StepDefinition<T extends WorkflowStepType> = {
   type: T;
   create: (stepId: string) => StepOf<T>;
   parse: (record: Record<string, unknown>, stepId: string) => StepOf<T> | null;
@@ -302,7 +302,7 @@ export function isWorkflowStepReady(step: WorkflowStep): boolean {
   return stepDefinition(step).isReady(step);
 }
 
-export type RealEffectStep = {
+type RealEffectStep = {
   step: WorkflowStep;
   /** Numéro affiché dans l'éditeur : le déclencheur est l'étape 1. */
   number: number;

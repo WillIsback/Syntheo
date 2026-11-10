@@ -38,7 +38,7 @@ export function AdvancedStepProposals({
   );
 }
 
-export function AdvancedStepProposalCard({
+function AdvancedStepProposalCard({
   proposal,
   labels,
 }: {

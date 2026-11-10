@@ -8,7 +8,7 @@ import { enqueueDatabaseWrite } from "~/db/write-queue";
 
 const SHA256_PATTERN = /^[0-9a-f]{64}$/;
 
-export type FolderMaterialRecord = {
+type FolderMaterialRecord = {
   id: string;
   filename: string;
   contentType: string;

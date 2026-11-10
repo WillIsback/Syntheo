@@ -32,7 +32,7 @@ export type FolderSuggestion = {
 };
 
 // Part minimale des participants de la note déjà vus dans le dossier.
-export const MIN_PARTICIPANT_OVERLAP = 0.5;
+const MIN_PARTICIPANT_OVERLAP = 0.5;
 
 const TITLE_SCORE = 2;
 const TEMPLATE_SCORE = 0.5;

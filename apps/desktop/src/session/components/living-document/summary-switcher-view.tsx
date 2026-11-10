@@ -31,7 +31,7 @@ export type SynthesisView =
   | { kind: "summary" }
   | { kind: "version"; versionId: string };
 
-export type SummaryVersionOption = {
+type SummaryVersionOption = {
   id: string;
   version: number;
   date: string | null;

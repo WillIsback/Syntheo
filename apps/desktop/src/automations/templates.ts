@@ -66,7 +66,7 @@ export const AUTOMATION_TEMPLATES: readonly AutomationTemplate[] = [
   },
 ];
 
-export function isTemplateAvailable(template: AutomationTemplate): boolean {
+function isTemplateAvailable(template: AutomationTemplate): boolean {
   return template.stepTypes.every(isStepTypeAvailable);
 }
 

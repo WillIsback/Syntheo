@@ -16,7 +16,7 @@ import {
 } from "~/stt/render-transcript";
 import { useSpeakerContext } from "~/stt/speaker-context-query";
 
-export type TranscriptRowWithId = {
+type TranscriptRowWithId = {
   transcriptId: string;
   row: TranscriptRow;
 };

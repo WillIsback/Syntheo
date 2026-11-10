@@ -119,7 +119,7 @@ export function NotesChangedBanner({
   ) : null;
 }
 
-export function RegenerateWithNotesBanner({
+function RegenerateWithNotesBanner({
   isGenerating,
   onRegenerate,
 }: {

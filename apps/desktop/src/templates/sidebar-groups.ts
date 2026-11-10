@@ -5,7 +5,7 @@ import { groupUserTemplates } from "./utils";
 
 import { type FolderTemplateAssignment } from "~/folders/folder-template";
 
-export type FolderTemplateGroup = {
+type FolderTemplateGroup = {
   // Dossiers qui utilisent ces modèles, triés : un groupe par dossier, ou par
   // ensemble de dossiers quand un modèle sert à plusieurs.
   folderPaths: string[];
