@@ -25,7 +25,6 @@ import { RawEditor } from "../note-input/raw";
 import { TitleInput } from "../title-input";
 import { AfterMeetingFolderSuggestion } from "./after-meeting-folder-suggestion";
 import { PrepareFiche } from "./fiche";
-import { useLateFilingProposal } from "./late-filing";
 import { NoteMeta } from "./meta";
 import { extractNoteLines } from "./note-attribution";
 import { NoteSeal, ProvenanceLegend } from "./provenance";
@@ -97,8 +96,6 @@ export function LivingDocument(props: LivingDocumentProps) {
     stage === "listen" || (stage === "synthesis" && transcriptOpen);
   const marginId = `transcript-margin-${sessionId}`;
   const handleSelectTemplate = useMeetingTypeSelection(sessionId, editorRef);
-  // Issue 502 : rangée après la synthèse, la note propose le modèle du dossier.
-  useLateFilingProposal(sessionId);
 
   return (
     <DocumentLayout

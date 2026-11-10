@@ -1,10 +1,8 @@
-import { cleanup, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { decideLateFilingProposal, useLateFilingProposal } from "./late-filing";
+import { decideLateFilingProposal, proposeLateFiling } from "./late-filing";
 
 const mocks = vi.hoisted(() => ({
-  folderPath: "" as string,
   rawTemplateId: "",
   summaryTemplateId: "",
   summaryContent: "",
@@ -14,9 +12,6 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@syntheo/ui/components/ui/toast", () => ({ toast: mocks.toast }));
-vi.mock("~/session/queries", () => ({
-  useSession: () => ({ folder_id: mocks.folderPath }),
-}));
 vi.mock("~/session/content-queries", () => ({
   loadSessionContentSnapshot: async () => ({
     title: "Point produit",
@@ -110,30 +105,23 @@ describe("decideLateFilingProposal", () => {
   });
 });
 
-describe("useLateFilingProposal", () => {
+describe("proposeLateFiling", () => {
   beforeEach(() => {
-    mocks.folderPath = "";
     mocks.rawTemplateId = "";
     mocks.summaryTemplateId = "";
     mocks.summaryContent = WRITTEN;
-    mocks.folderTemplateId = undefined;
+    mocks.folderTemplateId = "weekly";
   });
 
   afterEach(() => {
-    cleanup();
     mocks.toast.mockReset();
     mocks.enhance.mockClear();
   });
 
-  it("offers to regenerate when the note is filed into a folder with another template", async () => {
-    const { rerender } = renderHook(() => useLateFilingProposal("session-1"));
-    expect(mocks.toast).not.toHaveBeenCalled();
+  it("offers to regenerate an Automatic summary with the folder template", async () => {
+    await proposeLateFiling("session-1");
 
-    mocks.folderPath = "Atlas";
-    mocks.folderTemplateId = "weekly";
-    rerender();
-
-    await waitFor(() => expect(mocks.toast).toHaveBeenCalledTimes(1));
+    expect(mocks.toast).toHaveBeenCalledTimes(1);
     const [message, options] = mocks.toast.mock.calls[0]!;
     expect(message).toBe("This folder uses the Point hebdo template");
     // Rien n'est réécrit sans accord.
@@ -149,32 +137,19 @@ describe("useLateFilingProposal", () => {
 
   it("stays quiet when the summary already uses the folder template", async () => {
     mocks.summaryTemplateId = "weekly";
-    const { rerender } = renderHook(() => useLateFilingProposal("session-1"));
-    mocks.folderPath = "Atlas";
-    mocks.folderTemplateId = "weekly";
-    rerender();
-
-    await new Promise((resolve) => setTimeout(resolve, 20));
-    expect(mocks.toast).not.toHaveBeenCalled();
-  });
-
-  it("stays quiet when opening a note already in the folder", async () => {
-    mocks.folderPath = "Atlas";
-    mocks.folderTemplateId = "weekly";
-    renderHook(() => useLateFilingProposal("session-1"));
-
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    await proposeLateFiling("session-1");
     expect(mocks.toast).not.toHaveBeenCalled();
   });
 
   it("stays quiet when the note has an explicitly chosen template", async () => {
     mocks.rawTemplateId = "one-on-one";
-    const { rerender } = renderHook(() => useLateFilingProposal("session-1"));
-    mocks.folderPath = "Atlas";
-    mocks.folderTemplateId = "weekly";
-    rerender();
+    await proposeLateFiling("session-1");
+    expect(mocks.toast).not.toHaveBeenCalled();
+  });
 
-    await new Promise((resolve) => setTimeout(resolve, 20));
+  it("stays quiet when the folder template no longer exists", async () => {
+    mocks.folderTemplateId = "deleted";
+    await proposeLateFiling("session-1");
     expect(mocks.toast).not.toHaveBeenCalled();
   });
 });

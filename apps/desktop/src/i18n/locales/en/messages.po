@@ -3713,9 +3713,9 @@ msgstr "Recording with the default microphone instead. Check that the microphone
 msgid "Redo"
 msgstr "Redo"
 
-#: src/session/components/living-document/late-filing.ts
 #: src/session/components/living-document/summary-switcher-view.tsx
 #: src/session/components/note-input/template-picker.tsx
+#: src/session/late-filing.ts
 msgid "Regenerate"
 msgstr "Regenerate"
 
@@ -3727,7 +3727,7 @@ msgstr "Regenerate message"
 msgid "Regenerate summary with names"
 msgstr "Regenerate summary with names"
 
-#: src/session/components/living-document/late-filing.ts
+#: src/session/late-filing.ts
 msgid "Regenerate the summary with this template? The current version stays in the history."
 msgstr "Regenerate the summary with this template? The current version stays in the history."
 
@@ -5275,7 +5275,7 @@ msgstr "This edit is no longer pending."
 msgid "This file is too large to import (2 GB maximum)."
 msgstr "This file is too large to import (2 GB maximum)."
 
-#: src/session/components/living-document/late-filing.ts
+#: src/session/late-filing.ts
 msgid "This folder uses the {title} template"
 msgstr "This folder uses the {title} template"
 
@@ -5556,10 +5556,10 @@ msgstr "Unreachable"
 #: src/folders/sidebar-tree-view.tsx
 #: src/home/live-note-card.tsx
 #: src/home/note-index.tsx
-#: src/session/components/living-document/late-filing.ts
 #: src/session/components/living-document/meeting-type-picker.tsx
 #: src/session/components/outer-header/overflow/export-modal.tsx
 #: src/session/components/title-input-field.tsx
+#: src/session/late-filing.ts
 #: src/shared/palette-search-groups.tsx
 #: src/shared/ui/resource-list/preview-header.tsx
 #: src/sidebar/toast/undo-delete-toast.tsx
