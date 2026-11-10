@@ -21,10 +21,8 @@ fn bench_earshot(c: &mut Criterion) {
             |mut detector: EarshotVad| {
                 let mut speech_count = 0usize;
                 for frame in black_box(&samples).chunks(frame_size) {
-                    if frame.len() == frame_size {
-                        if detector.predict_16khz(frame).unwrap() {
-                            speech_count += 1;
-                        }
+                    if frame.len() == frame_size && detector.predict_16khz(frame).unwrap() {
+                        speech_count += 1;
                     }
                 }
                 black_box(speech_count)
