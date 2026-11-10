@@ -12,7 +12,7 @@
 
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use gtk::prelude::WidgetExt;
+use gtk::prelude::{GtkWindowExt, WidgetExt};
 use gtk_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
 
 /// Espace de noms du calque, pour les règles du compositeur (`layerrule` de Hyprland).
@@ -31,6 +31,9 @@ pub fn is_active() -> bool {
 /// affichage : GTK ne peut plus changer le rôle d'une surface déjà réalisée.
 pub fn try_init(window: &tauri::WebviewWindow<tauri::Wry>, bottom_margin: i32) -> bool {
     if !gtk_layer_shell::is_supported() {
+        // Journalisé pour diagnostiquer une pastille invisible sous Wayland : sans calque,
+        // c'est la fenêtre ordinaire qui doit s'afficher.
+        tracing::info!("floating bar: layer-shell unsupported, ordinary window used");
         return false;
     }
     let gtk_window = match window.gtk_window() {
@@ -53,5 +56,13 @@ pub fn try_init(window: &tauri::WebviewWindow<tauri::Wry>, bottom_margin: i32) -
     LayerShell::set_keyboard_mode(&gtk_window, KeyboardMode::None);
     LayerShell::set_exclusive_zone(&gtk_window, 0);
     ACTIVE.store(true, Ordering::Relaxed);
+    let (width, height) = gtk_window.size();
+    tracing::info!(
+        namespace = NAMESPACE,
+        bottom_margin,
+        width,
+        height,
+        "floating bar: layer-shell initialized"
+    );
     true
 }
