@@ -68,11 +68,9 @@ if ($missing.Count -gt 0) {
   $missing | ForEach-Object { Write-Host "  - $_" }
   Write-Host @"
 
-Installation (PowerShell administrateur) :
-  winget install Microsoft.VisualStudio.2022.BuildTools --override "--wait --passive --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
-  winget install Rustlang.Rustup LLVM.LLVM StrawberryPerl.StrawberryPerl Kitware.CMake Git.Git OpenJS.NodeJS.LTS
-  corepack enable
-Puis rouvrir le terminal.
+Installation, une fois, dans un PowerShell administrateur (versions figées, sommes vérifiées) :
+  powershell -ExecutionPolicy Bypass -File .\scripts\alpha\install-windows-toolchain.ps1
+Puis rouvrir le terminal (ou la session SSH).
 "@
   exit 1
 }

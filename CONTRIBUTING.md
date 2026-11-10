@@ -172,23 +172,28 @@ bash scripts/build-alpha.sh --from . --fast --quick 0.7.1-4  # en plus, profil R
 `build-windows.yml` sans la signature. **Il n'a pas encore été testé en
 conditions réelles** : la première exécution sert de validation.
 
-Toolchain, une fois, dans un PowerShell administrateur :
+Toolchain, une fois, dans un PowerShell **administrateur** (session interactive
+ou SSH d'un compte administrateur), depuis la racine du dépôt :
 
 ```powershell
-winget install Microsoft.VisualStudio.2022.BuildTools --override "--wait --passive --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
-winget install Rustlang.Rustup LLVM.LLVM StrawberryPerl.StrawberryPerl Kitware.CMake Git.Git OpenJS.NodeJS.LTS
-corepack enable
+powershell -ExecutionPolicy Bypass -File .\scripts\alpha\install-windows-toolchain.ps1
 ```
 
-- Visual Studio Build Tools 2022, charge « Développement Desktop en C++ »
-  (MSVC v143, SDK Windows) : compilateur, éditeur de liens, runtime Visual C++
-  embarqué et `dumpbin`.
-- Rust par rustup : la version de `rust-toolchain.toml` s'installe au premier build.
-- Node.js 22 ou plus et pnpm (version de `packageManager`, via corepack).
-- LLVM (libclang pour bindgen), Strawberry Perl (OpenSSL compilé depuis les
-  sources), CMake.
-- WebView2 : présent par défaut sous Windows 11, sinon
-  `winget install Microsoft.EdgeWebView2Runtime`.
+Le script installe pour toute la machine, à des versions figées dont la somme
+SHA-256 est vérifiée (table `$Pinned` en tête du script), et saute ce qui est
+déjà présent :
+
+- Visual Studio Build Tools 2022 (MSVC v143 x64, SDK Windows 11, CMake C++) :
+  compilateur, éditeur de liens, runtime Visual C++ embarqué et `dumpbin` ;
+- Git, Node.js (même version que la CI) et pnpm (version de `packageManager`) ;
+- LLVM (libclang pour bindgen, `LIBCLANG_PATH`), Strawberry Perl (OpenSSL
+  compilé depuis les sources), CMake ;
+- Rust dans `C:\Rust` (`RUSTUP_HOME` machine), à la version et avec les
+  composants de `rust-toolchain.toml` ; le registre cargo de chaque utilisateur
+  reste dans son profil.
+
+WebView2 est présent par défaut sous Windows 11. Le build lui-même tourne avec
+un compte standard.
 
 Puis, dans un nouveau terminal, depuis la racine du dépôt :
 
