@@ -18,7 +18,7 @@ tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 open = { workspace = true }
 
 [dependencies]
-tauri = { workspace = true, features = ["test"] }
+tauri = { workspace = true }
 tauri-plugin-deep-link = { workspace = true }
 tauri-specta = { workspace = true, features = ["derive", "typescript"] }
 

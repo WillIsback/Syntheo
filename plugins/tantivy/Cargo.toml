@@ -19,7 +19,7 @@ tokio = { workspace = true, features = ["macros"] }
 syntheo-language = { workspace = true, features = ["detect"] }
 tantivy = "0.27"
 
-tauri = { workspace = true, features = ["test"] }
+tauri = { workspace = true }
 tauri-plugin-settings = { workspace = true }
 tauri-specta = { workspace = true, features = ["derive", "typescript"] }
 

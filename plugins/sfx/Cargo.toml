@@ -14,11 +14,12 @@ tauri-plugin = { workspace = true, features = ["build"] }
 [dev-dependencies]
 serde_json = { workspace = true }
 specta-typescript = { workspace = true }
+tauri = { workspace = true, features = ["test"] }
 
 [dependencies]
 syntheo-audio-utils = { workspace = true }
 
-tauri = { workspace = true, features = ["test"] }
+tauri = { workspace = true }
 tauri-specta = { workspace = true, features = ["derive", "typescript"] }
 
 rodio = { workspace = true }

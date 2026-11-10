@@ -30,7 +30,7 @@ sha2 = { workspace = true }
 specta = { workspace = true }
 sqlx = { workspace = true, features = ["runtime-tokio", "sqlite"] }
 sys-locale = { workspace = true }
-tauri = { workspace = true, features = ["test"] }
+tauri = { workspace = true }
 tauri-specta = { workspace = true, features = ["derive", "typescript"] }
 tempfile = { workspace = true }
 tokio = { workspace = true, features = ["io-util", "macros", "process", "sync", "rt", "time"] }

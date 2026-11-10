@@ -25,5 +25,5 @@ thiserror = { workspace = true }
 
 tracing = { workspace = true }
 
-tauri = { workspace = true, features = ["test"] }
+tauri = { workspace = true }
 tauri-specta = { workspace = true, features = ["derive", "typescript"] }

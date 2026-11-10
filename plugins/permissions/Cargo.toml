@@ -17,7 +17,7 @@ specta-typescript = { workspace = true }
 [dependencies]
 syntheo-audio = { workspace = true }
 
-tauri = { workspace = true, features = ["specta", "test"] }
+tauri = { workspace = true, features = ["specta"] }
 tauri-plugin-shell = { workspace = true }
 tauri-plugin-sidecar2 = { workspace = true }
 

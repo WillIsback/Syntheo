@@ -15,10 +15,11 @@ ignored = ["specta"]
 tauri-plugin = { workspace = true, features = ["build"] }
 
 [dev-dependencies]
+tauri = { workspace = true, features = ["test"] }
 tokio = { workspace = true, features = ["macros"] }
 
 [dependencies]
-tauri = { workspace = true, features = ["test"] }
+tauri = { workspace = true }
 tauri-plugin-shell = { workspace = true }
 tauri-specta = { workspace = true, features = ["derive", "typescript"] }
 

@@ -12,7 +12,7 @@ description = ""
 tauri-plugin = { workspace = true, features = ["build"] }
 
 [dependencies]
-tauri = { workspace = true, features = ["test"] }
+tauri = { workspace = true }
 tauri-specta = { workspace = true, features = ["derive", "typescript"] }
 
 notify = "8"

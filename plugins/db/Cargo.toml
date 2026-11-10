@@ -21,7 +21,7 @@ syntheo-db-execute = { workspace = true }
 syntheo-db-migrate = { workspace = true }
 syntheo-db-reactive = { workspace = true, features = ["specta"] }
 syntheo-session-ingest = { workspace = true }
-tauri = { workspace = true, features = ["test"] }
+tauri = { workspace = true }
 tauri-specta = { workspace = true, features = ["derive", "typescript"] }
 thiserror = { workspace = true }
 tokio = { workspace = true, features = ["fs", "rt", "sync", "time"] }
