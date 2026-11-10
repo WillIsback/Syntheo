@@ -720,7 +720,6 @@ dependencies = [
 name = "audio-interface"
 version = "0.1.0"
 dependencies = [
- "dasp",
  "futures-util",
  "rodio",
 ]
@@ -7187,7 +7186,6 @@ version = "0.1.0"
 dependencies = [
  "indexmap 2.14.2",
  "notification-interface",
- "tracing",
  "windows",
 ]
 
