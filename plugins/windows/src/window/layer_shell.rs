@@ -18,6 +18,11 @@ use gtk_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
 /// Espace de noms du calque, pour les règles du compositeur (`layerrule` de Hyprland).
 const NAMESPACE: &str = "syntheo-floating-bar";
 
+/// Désactivé pour la 0.7.0 (issue 533) : sous Hyprland, le calque ne dessinait rien pendant
+/// l'écoute et s'affichait en rectangle gris de 200 px en pause. La pastille reprend la fenêtre
+/// flottante de taille fixe de la 0.6.x (issue 416) jusqu'au correctif de la 0.7.1.
+const ENABLED: bool = false;
+
 static ACTIVE: AtomicBool = AtomicBool::new(false);
 
 /// Vrai quand la pastille est un calque : sa position appartient au compositeur.
@@ -30,6 +35,10 @@ pub fn is_active() -> bool {
 /// À appeler sur le fil principal, juste après la création de la fenêtre et avant son premier
 /// affichage : GTK ne peut plus changer le rôle d'une surface déjà réalisée.
 pub fn try_init(window: &tauri::WebviewWindow<tauri::Wry>, bottom_margin: i32) -> bool {
+    if !ENABLED {
+        tracing::info!("floating bar: layer-shell disabled, ordinary window used");
+        return false;
+    }
     if !gtk_layer_shell::is_supported() {
         // Journalisé pour diagnostiquer une pastille invisible sous Wayland : sans calque,
         // c'est la fenêtre ordinaire qui doit s'afficher.
