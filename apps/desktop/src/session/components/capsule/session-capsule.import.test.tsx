@@ -170,11 +170,15 @@ describe("SessionCapsule pendant un import", () => {
     // Aucune reconnexion mesurée : estimation prudente (issue 531).
     expect(screen.getByText("~7 min left · ×1.2")).toBeTruthy();
 
-    // Une reconnexion de 20 s puis la reprise : son coût entre dans la
-    // moyenne et la prudence tombe.
+    // Une reconnexion de 20 s : la durée restante ne remonte pas pendant la
+    // pause (issue 562).
     tick(20, 0);
-    tick(10, 2);
-    expect(screen.getByText("~5 min left · ×1.5")).toBeTruthy();
+    expect(screen.getByText("~7 min left · ×1.2")).toBeTruthy();
+    // La reprise : la pause entre dans la moyenne, la prudence tombe, et la
+    // fin affichée y vient en douceur.
+    tick(60, 2);
+    // 40 % en 150 s : ~3 min 45 et ×1,6 bruts, rejoints à 30 s près.
+    expect(screen.getByText("~4 min left · ×1.5")).toBeTruthy();
   });
 
   it("stops the transcription like the Transcript tab", () => {
