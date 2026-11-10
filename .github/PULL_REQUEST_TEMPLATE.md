@@ -55,9 +55,10 @@ $ pnpm lint && cargo clippy -p <crate> -- -D warnings
   tant que chaque case n'est pas cochée ou reportée explicitement.
   Sans objet pour une PR hors application (CI, doc, outillage [skip release]).
 
-  Alpha devtools du lot, suffixe de pré-version NUMÉRIQUE (MSI refuse 0.6.2-alpha.1) :
-    gh workflow run build-devtools --ref <branche-de-lot> -f version=X.Y.Z-N
-    gh run download <run> -R WillIsback/Syntheo
+  Alpha devtools du lot, suffixe de pré-version NUMÉRIQUE (MSI refuse 0.6.2-alpha.1),
+  construite en local (aucun build par la CI) :
+    Linux   : bash scripts/build-alpha.sh --docker X.Y.Z-N   (conteneur Ubuntu 24.04)
+    Windows : powershell -ExecutionPolicy Bypass -File .\scripts\build-alpha.ps1 -Version X.Y.Z-N
   Traces : Linux ~/.local/share/fr.willisback.syntheo/logs/app.log
            Windows %LOCALAPPDATA%\fr.willisback.syntheo\logs\app.log
   Une case = plateforme (🐧 Linux, 🪟 Windows, 🍎 macOS), issue, signal attendu
