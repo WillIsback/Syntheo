@@ -17,8 +17,8 @@ use crate::{OpenAIAdapter, RealtimeSttAdapter, append_provider_param, normalize_
 /// Délai entre l'établissement du flux micro et la tentative de connexion du flux son système
 /// d'une capture scindée en deux connexions (fournisseurs sans multicanal natif).
 ///
-/// Deux connexions ouvertes à la même milliseconde ont planté un NIM
-/// nemotron-asr-streaming : la capture de CUDA graph du décodeur a couru entre les deux flux
+/// Deux connexions ouvertes à la même milliseconde ont planté un serveur de transcription
+/// Nemotron ASR : la capture de CUDA graph du décodeur a couru entre les deux flux
 /// et empoisonné son contexte (issue #519). Le flux son système n'est donc jamais tenté avant
 /// que le flux micro soit établi puis que ce délai soit écoulé, au démarrage comme à chaque
 /// reconnexion (une reconnexion reconstruit le client). Son audio attend pendant ce temps dans

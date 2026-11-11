@@ -18,8 +18,8 @@ pas responsable de traitement : l'utilisateur l'est, sur son poste.
 > d'origine, sans copie dans le dossier de données.
 >
 > **Providers** : endpoints on-premise uniquement. La transcription parle aux
-> protocoles OpenAI et NVIDIA NIM ; le résumé, le chat et le générateur de
-> templates parlent à un seul endpoint LLM configuré, une API
+> protocoles OpenAI et NVIDIA NeMo-Speech.cpp ; le résumé, le chat et le
+> générateur de templates parlent à un seul endpoint LLM configuré, une API
 > OpenAI-compatible (vLLM, Ollama, llama.cpp server…).
 
 ## Données stockées
@@ -56,8 +56,9 @@ une suppression, l'effacement est retenté au lancement suivant.
 ## Flux réseau
 
 - **Endpoints d'inférence configurés par l'utilisateur**, et eux seuls : ASR
-  (protocole OpenAI : Realtime et `/v1/audio/transcriptions` ; NVIDIA NIM
-  WebSocket) et l'endpoint LLM configuré (API OpenAI-compatible). L'audio de
+  (protocole OpenAI : Realtime et `/v1/audio/transcriptions` ; NVIDIA
+  NeMo-Speech.cpp : WebSocket `/v1/audio/transcriptions/realtime`) et
+  l'endpoint LLM configuré (API OpenAI-compatible). L'audio de
   la capture et le texte (transcript, notes, prompts) y transitent, sans
   empreinte d'appareil ni identifiant de tâche dans les en-têtes. Une URL de transcription non
   reconnue est traitée avec le protocole OpenAI, jamais renvoyée vers un

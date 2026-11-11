@@ -67,6 +67,7 @@
                   "en/desktop-installation",
                   "en/uninstall",
                   "en/ai-setup",
+                  "en/local-transcription-service",
                   "en/quickstart",
                   "en/philosophy"
                 ]
@@ -207,6 +208,7 @@
                   "fr/desktop-installation",
                   "fr/uninstall",
                   "fr/ai-setup",
+                  "fr/local-transcription-service",
                   "fr/quickstart",
                   "fr/philosophy"
                 ]

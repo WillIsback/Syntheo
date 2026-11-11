@@ -33,8 +33,8 @@ Try it: open the ••• menu (1) and choose "Upload audio". The progress appe
 
 Audio is not kept in the note. Syntheo chooses how to send the file based on your transcription server's protocol:
 
-- **"OpenAI · Realtime and batch"**: Syntheo sends the file to the `/v1/audio/transcriptions` endpoint, without making a copy. Long or large files are split into several requests.
-- **"NVIDIA NIM · WebSocket"**: Syntheo sends the file's audio over the `/v1/realtime` real-time stream, as for a live meeting, but up to four times faster than its duration. So allow at least a quarter of the recording's duration. The file is decoded in memory, without being written to disk. If the connection drops, Syntheo reconnects and resumes after the last transcribed passage, with no duplicates. If the server rejects the key or the settings, the import stops.
+- **"OpenAI compatible (realtime and batch)"**: Syntheo sends the file to the `/v1/audio/transcriptions` endpoint, without making a copy. Long or large files are split into several requests.
+- **"NVIDIA NeMo-Speech.cpp"**: Syntheo sends the file's audio over the real-time stream (WebSocket `/v1/audio/transcriptions/realtime`), as for a live meeting, but up to four times faster than its duration. So allow at least a quarter of the recording's duration. The file is decoded in memory, without being written to disk. If the connection drops, Syntheo reconnects and resumes after the last transcribed passage, with no duplicates. If the server rejects the key or the settings, the import stops.
 
 If Syntheo was closed after the server had finished the transcription, the note is completed at the next launch. If that result can't be used, for example because no speech was detected, Syntheo abandons the import instead of retrying it at every launch: "Audio import failed" appears once with the "Open note" button, and the note shows "Transcription failed".
 

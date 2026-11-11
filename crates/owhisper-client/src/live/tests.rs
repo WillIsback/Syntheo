@@ -315,8 +315,8 @@ fn mic_stream_params_keep_the_participant_bound_unless_the_mic_is_isolated() {
     assert_eq!(mic_stream_params(&isolated).max_speakers, Some(1));
 }
 
-// Issue #519 : deux connexions ouvertes à la même milliseconde ont planté un NIM
-// nemotron-asr-streaming. Le flux son système n'est tenté qu'après l'établissement du flux
+// Issue #519 : deux connexions ouvertes à la même milliseconde ont planté un serveur de
+// transcription Nemotron ASR. Le flux son système n'est tenté qu'après l'établissement du flux
 // micro et le délai `SPLIT_STREAM_STAGGER`, et son audio attend dans un tampon sans perte.
 #[tokio::test]
 async fn split_dual_staggers_the_speaker_connection_without_losing_its_audio() {

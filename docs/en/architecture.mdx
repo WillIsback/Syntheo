@@ -30,7 +30,7 @@ flowchart LR
     SYS[System audio] --> CAP
     CAP["Capture<br/>crates/listener-core<br/>(memory only)"] --> STT
     STT["STT adapter<br/>crates/owhisper-client"] -->|OpenAI Realtime /<br/>OpenAI-compatible| SRV1[(Configured<br/>STT server)]
-    STT -->|NVIDIA NIM<br/>WebSocket| SRV1
+    STT -->|NVIDIA NeMo-Speech.cpp<br/>WebSocket| SRV1
     SRV1 --> LIVE[Live transcript]
     LIVE --> DB[(SQLite<br/>app.db)]
     NOTES[User notes] --> DB
@@ -43,7 +43,7 @@ flowchart LR
 ```
 
 1. **Capture.** `crates/listener-core` captures the microphone and the system audio separately. You choose the output captured as system audio in **Settings → Meetings → Audio**; with no choice, Syntheo captures the default output (`crates/audio-device`, `crates/audio-actual`). One STT connection is opened per channel, which gives a first separation of speakers (you and the other participants). A muted channel sends silence of the same length (`crates/listener-core/src/actors/source/pipeline`): the STT connection stays open.
-2. **Transcription.** `crates/owhisper-client` contains only on-premise adapters: the OpenAI protocol (Realtime and `/v1/audio/transcriptions`, in `adapter/openai` and `adapter/openai_compatible_batch.rs`) and NVIDIA NIM (`adapter/nvidia.rs`). No URL is provided by default: you enter your server's. The same client serves dictation (`plugins/dictation`) and audio file imports: through `/v1/audio/transcriptions` with the OpenAI protocol, through the `/v1/realtime` real-time stream with NVIDIA NIM.
+2. **Transcription.** `crates/owhisper-client` contains only on-premise adapters: the OpenAI protocol (Realtime and `/v1/audio/transcriptions`, in `adapter/openai` and `adapter/openai_compatible_batch.rs`) and NVIDIA NeMo-Speech.cpp (`adapter/nvidia.rs`, WebSocket `/v1/audio/transcriptions/realtime`). No URL is provided by default: you enter your server's. The same client serves dictation (`plugins/dictation`) and audio file imports: through `/v1/audio/transcriptions` with the OpenAI protocol, through the real-time stream (WebSocket) with NVIDIA NeMo-Speech.cpp.
 3. **Live transcript.** Received segments are assembled, then saved in SQLite. If the STT stream drops, the session reconnects without restarting the capture.
 4. **Enhance.** At the end of the meeting, the interface merges the notes and the transcript (`apps/desktop/src/store/zustand/ai-task/`). Prompts are rendered on the Rust side by `plugins/template` from the Jinja templates in `crates/template-app/assets` (`enhance.*`, `title.*`, `chat.*`…). Summary templates are stored in the database (migration `20260413020000_templates.sql`). The LLM call goes through the `ai` SDK and `@ai-sdk/openai-compatible`, to the single configured endpoint.
 5. **Final note and export.** The result is saved in the database, then can be exported: PDF through `crates/export-core`, and Markdown or JSON from the CLI.
