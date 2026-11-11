@@ -142,6 +142,91 @@ ln -sf "$installed" "$INSTALL_DIR/syntheo"
 printf 'Installé : %s\n' "$installed"
 printf 'Lien     : %s/syntheo\n' "$INSTALL_DIR"
 
+# Une AppImage ne s'enregistre pas d'elle-même dans le lanceur d'applications,
+# quelle que soit la distribution. On extrait l'entrée .desktop et l'icône
+# qu'elle embarque pour les installer dans ~/.local/share.
+#
+# - Exec pointe vers le lien `syntheo` en chemin absolu : les lanceurs n'ont
+#   pas toujours ~/.local/bin dans leur PATH, et le lien suit la dernière
+#   version installée.
+# - MimeType est retiré : l'application enregistre elle-même le schéma
+#   syntheo:// au démarrage (syntheo-handler.desktop), on évite deux
+#   gestionnaires concurrents.
+# - L'extraction n'a pas besoin de FUSE. Un échec n'annule pas l'installation.
+DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
+APPS_DIR="$DATA_HOME/applications"
+ICONS_DIR="$DATA_HOME/icons/hicolor"
+desktop_file="$APPS_DIR/Syntheo.desktop"
+
+desktop_exec_path() {
+  # Argument entre guillemets (Desktop Entry Specification) : \ " ` $ sont
+  # préfixés d'une barre oblique inverse, puis chaque barre oblique inverse
+  # est doublée par la règle d'échappement des chaînes.
+  printf '"%s"' "$(printf '%s' "$1" | sed -e 's/\\/\\\\\\\\/g' -e 's/["`$]/\\\\&/g')"
+}
+
+integrate_desktop() {
+  local work embedded exec_line icon size
+  work="$1"
+
+  (
+    cd "$work" || exit 1
+    "$installed" --appimage-extract 'usr/share/applications/*.desktop' >/dev/null 2>&1 || true
+    "$installed" --appimage-extract 'usr/share/icons/hicolor/*/apps/syntheo.png' >/dev/null 2>&1 || true
+    "$installed" --appimage-extract '*.desktop' >/dev/null 2>&1 || true
+  )
+
+  embedded="$(find "$work/squashfs-root" -name '*.desktop' -type f 2>/dev/null | sort | head -n 1)"
+  exec_line="Exec=$(desktop_exec_path "$INSTALL_DIR/syntheo")"
+
+  mkdir -p "$APPS_DIR" || return 1
+  if [[ -n "$embedded" ]]; then
+    EXEC_LINE="$exec_line" awk '
+      BEGIN { exec_line = ENVIRON["EXEC_LINE"] }
+      /^\[/ { in_entry = ($0 == "[Desktop Entry]") }
+      in_entry && /^Exec=/ { print exec_line; next }
+      in_entry && /^(TryExec|MimeType|X-AppImage-[^=]*)=/ { next }
+      { print }
+    ' "$embedded" >"$desktop_file.tmp" || return 1
+  else
+    cat >"$desktop_file.tmp" <<EOF || return 1
+[Desktop Entry]
+Type=Application
+Name=Syntheo
+Comment=Syntheo Desktop App
+$exec_line
+Icon=syntheo
+StartupWMClass=syntheo
+Terminal=false
+Categories=Office;
+EOF
+  fi
+  mv "$desktop_file.tmp" "$desktop_file" || return 1
+
+  while IFS= read -r icon; do
+    size="$(basename "$(dirname "$(dirname "$icon")")")"
+    mkdir -p "$ICONS_DIR/$size/apps" && cp "$icon" "$ICONS_DIR/$size/apps/syntheo.png"
+  done < <(find "$work/squashfs-root/usr/share/icons/hicolor" -path '*/apps/syntheo.png' 2>/dev/null)
+
+  command -v update-desktop-database >/dev/null 2>&1 \
+    && update-desktop-database "$APPS_DIR" >/dev/null 2>&1
+  # Ne rafraîchit un cache existant que si le thème est complet : créer un
+  # cache dans un hicolor utilisateur sans index.theme le laisserait périmer.
+  [[ -f "$ICONS_DIR/index.theme" ]] && command -v gtk-update-icon-cache >/dev/null 2>&1 \
+    && gtk-update-icon-cache -q -t "$ICONS_DIR" >/dev/null 2>&1
+  return 0
+}
+
+desktop_work="$(mktemp -d "${DOWNLOAD_DIR%/}/syntheo-desktop.XXXXXX")"
+if integrate_desktop "$desktop_work"; then
+  rm -rf "$desktop_work"
+  printf 'Lanceur  : %s\n' "$desktop_file"
+else
+  rm -rf "$desktop_work"
+  rm -f "$desktop_file.tmp"
+  printf "Avertissement : impossible d'ajouter Syntheo au lanceur d'applications.\n" >&2
+fi
+
 case ":${PATH}:" in
   *":${INSTALL_DIR}:"*) ;;
   *) printf '\nAjoutez %s au PATH : export PATH="%s:$PATH"\n' "$INSTALL_DIR" "$INSTALL_DIR" ;;
