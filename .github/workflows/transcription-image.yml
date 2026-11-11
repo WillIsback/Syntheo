@@ -1,0 +1,416 @@
+# Workflow : image Docker du service de transcription local (issue 573).
+# NeMo-Speech.cpp + Nemotron 3.5 ASR Streaming + Nemotron 3 Diarization,
+# variantes cuda et cpu, linux/amd64 et linux/arm64, publiées sur
+# ghcr.io/willisback/syntheo-transcription. Indépendant des releases de l'app :
+# publication à la main (workflow_dispatch, publish coché) ou par un tag
+# transcription-v<version>-r<révision>. En PR, contrôle léger (cpu amd64,
+# sans publication).
+name: transcription-image
+
+on:
+  workflow_dispatch:
+    inputs:
+      revision:
+        description: "Révision de l'image (tag -rN)"
+        required: true
+        default: "1"
+      publish:
+        description: "Publier sur GHCR (sinon : construction et scan seulement)"
+        type: boolean
+        default: false
+  push:
+    tags:
+      - "transcription-v*"
+  pull_request:
+    branches: [main]
+    paths:
+      - "deploy/transcription/**"
+      - ".github/workflows/transcription-image.yml"
+
+concurrency:
+  group: transcription-image-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions: {}
+
+env:
+  IMAGE: ghcr.io/willisback/syntheo-transcription
+  BAKE_FILE: deploy/transcription/docker-bake.hcl
+  TRIVY_VERSION: 0.76.0
+
+jobs:
+  # --- PR : construction cpu amd64 et essai de démarrage, sans publication ---
+  pr-check:
+    name: Contrôle (cpu, amd64)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Résolution DNS vue du runner (diagnostic : archive.ubuntu.com et
+      # security.ubuntu.com ne se résolvaient pas depuis le conteneur BuildKit).
+      - name: Résolution DNS du runner
+        shell: bash
+        run: |
+          grep -v '^#' /etc/resolv.conf || true
+          for host in archive.ubuntu.com security.ubuntu.com developer.download.nvidia.com; do
+            getent ahosts "$host" | awk -v h="$host" 'NR == 1 { print h, $1 }' || echo "$host : non résolu"
+          done
+
+      # Conteneur BuildKit sur le réseau de l'hôte : il garde le résolveur du
+      # runner (systemd-resolved). Sur le réseau bridge, les étapes apt du
+      # runtime NVIDIA ne résolvaient pas archive.ubuntu.com (PR #575).
+      - name: Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+        with:
+          driver-opts: network=host
+
+      # Cache en lecture seule : seules les constructions de confiance
+      # (workflow_dispatch, tag) l'écrivent.
+      - name: Construction (cpu, amd64)
+        uses: docker/bake-action@59cb1203cd42bcefd40a1b6d73b589e48c86040e # v7.5.0
+        with:
+          source: .
+          files: ${{ env.BAKE_FILE }}
+          targets: cpu
+          set: |
+            *.platform=linux/amd64
+            runtime-cpu.cache-from=type=gha,scope=transcription-runtime-cpu-amd64
+            rootfs-cpu.cache-from=type=gha,scope=transcription-runtime-cpu-amd64
+            cpu.tags=syntheo-transcription:ci
+            cpu.output=type=docker
+
+      - name: Essai de démarrage (/ready et transcription REST)
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run -d --name transcription-ci -p 127.0.0.1:9000:8080 syntheo-transcription:ci
+          docker run --rm --network host syntheo-transcription:ci \
+            health --url http://127.0.0.1:9000/ready --wait 180
+          # Une seconde de silence en WAV 16 kHz mono : la requête doit aboutir.
+          python3 - <<'PY'
+          import struct
+          rate, frames = 16000, 16000
+          data = b"\x00\x00" * frames
+          header = b"RIFF" + struct.pack("<I", 36 + len(data)) + b"WAVEfmt " + struct.pack(
+              "<IHHIIHH", 16, 1, 1, rate, rate * 2, 2, 16) + b"data" + struct.pack("<I", len(data))
+          open("silence.wav", "wb").write(header + data)
+          PY
+          curl -fsS -F file=@silence.wav -F response_format=verbose_json \
+            -F 'timestamp_granularities[]=word' -F diarization=true \
+            http://127.0.0.1:9000/v1/audio/transcriptions
+          echo
+          test "$(docker inspect -f '{{.Config.User}}' syntheo-transcription:ci)" = "1000:1000"
+
+      - name: Journaux du service
+        if: always()
+        shell: bash
+        run: docker logs transcription-ci 2>&1 | tail -50 || true
+
+      # Runtime NVIDIA FROM scratch : l'image porte une entrée dpkg par paquet
+      # Ubuntu copié (status.d, comme les images distroless), lue par Trivy.
+      - name: Scan Trivy (image)
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash .github/scripts/trivy-image.sh image syntheo-transcription:ci docker
+
+  # --- Version et révision, contrôlées contre docker-bake.hcl -----------------
+  meta:
+    name: Version de l'image
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      revision: ${{ steps.meta.outputs.revision }}
+      publish: ${{ steps.meta.outputs.publish }}
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Version, révision, publication
+        id: meta
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+          INPUT_REVISION: ${{ inputs.revision }}
+          INPUT_PUBLISH: ${{ inputs.publish }}
+        run: |
+          set -euo pipefail
+          version=$(docker buildx bake -f "$BAKE_FILE" --print cpu 2>/dev/null |
+            jq -r '.target.cpu.args.NEMO_SPEECH_VERSION')
+          if [ "$EVENT_NAME" = "push" ]; then
+            if [[ ! "$REF_NAME" =~ ^transcription-v([0-9]+\.[0-9]+\.[0-9]+)-r([0-9]+)$ ]]; then
+              echo "::error::Tag attendu : transcription-v<version>-r<révision> (reçu : $REF_NAME)"
+              exit 1
+            fi
+            if [ "${BASH_REMATCH[1]}" != "$version" ]; then
+              echo "::error::Le tag vise ${BASH_REMATCH[1]}, docker-bake.hcl construit $version"
+              exit 1
+            fi
+            revision=${BASH_REMATCH[2]}
+            publish=true
+          else
+            if [[ ! "$INPUT_REVISION" =~ ^[0-9]+$ ]]; then
+              echo "::error::Révision entière attendue (reçu : $INPUT_REVISION)"
+              exit 1
+            fi
+            revision=$INPUT_REVISION
+            publish=$INPUT_PUBLISH
+          fi
+          {
+            echo "version=$version"
+            echo "revision=$revision"
+            echo "publish=$publish"
+          } >> "$GITHUB_OUTPUT"
+          echo "Image ${IMAGE} ${version}-r${revision}, publication : ${publish}"
+
+  # --- Construction native par architecture (pas d'émulation QEMU) -----------
+  build:
+    name: Image ${{ matrix.variant }} (${{ matrix.arch }})
+    needs: meta
+    runs-on: ${{ matrix.runner }}
+    # La variante cuda compile les noyaux ggml pour plusieurs architectures.
+    timeout-minutes: ${{ matrix.variant == 'cuda' && 330 || 120 }}
+    permissions:
+      contents: read
+      packages: write # envoi des images par empreinte sur GHCR
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [cuda, cpu]
+        arch: [amd64, arm64]
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+            platform: linux/amd64
+            # RTX 30xx (86), 40xx (89), 50xx (120a), PTX 75/80 pour les autres.
+            cuda_arch: "75-virtual;80-virtual;86-real;89-real;120a-real"
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+            platform: linux/arm64
+            # DGX Spark GB10 (121a), PTX 80 pour les autres cartes arm64.
+            cuda_arch: "80-virtual;121a-real"
+    steps:
+      - name: Place disque (images CUDA volumineuses)
+        shell: bash
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc \
+            /usr/local/.ghcup /opt/hostedtoolcache/CodeQL || true
+          df -h /
+
+      - name: Checkout du code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Résolution DNS vue du runner (diagnostic : archive.ubuntu.com et
+      # security.ubuntu.com ne se résolvaient pas depuis le conteneur BuildKit).
+      - name: Résolution DNS du runner
+        shell: bash
+        run: |
+          grep -v '^#' /etc/resolv.conf || true
+          for host in archive.ubuntu.com security.ubuntu.com developer.download.nvidia.com; do
+            getent ahosts "$host" | awk -v h="$host" 'NR == 1 { print h, $1 }' || echo "$host : non résolu"
+          done
+
+      # Conteneur BuildKit sur le réseau de l'hôte : il garde le résolveur du
+      # runner (systemd-resolved). Sur le réseau bridge, les étapes apt du
+      # runtime NVIDIA ne résolvaient pas archive.ubuntu.com (PR #575).
+      - name: Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+        with:
+          driver-opts: network=host
+
+      - name: Connexion à GHCR
+        if: needs.meta.outputs.publish == 'true'
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Publication : envoi par empreinte (sans tag), assemblé en index
+      # multi-architecture par le job publish. Sinon : image locale scannée.
+      - name: Sortie de la construction
+        id: output
+        shell: bash
+        env:
+          PUBLISH: ${{ needs.meta.outputs.publish }}
+          VARIANT: ${{ matrix.variant }}
+        run: |
+          set -euo pipefail
+          if [ "$PUBLISH" = "true" ]; then
+            {
+              echo "tags=${IMAGE}"
+              echo "output=type=image,push-by-digest=true,name-canonical=true,push=true"
+            } >> "$GITHUB_OUTPUT"
+          else
+            {
+              echo "tags=syntheo-transcription:ci-${VARIANT}"
+              echo "output=type=docker"
+            } >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Construction
+        id: bake
+        uses: docker/bake-action@59cb1203cd42bcefd40a1b6d73b589e48c86040e # v7.5.0
+        with:
+          source: .
+          files: ${{ env.BAKE_FILE }}
+          targets: ${{ matrix.variant }}
+          set: |
+            *.platform=${{ matrix.platform }}
+            runtime-cuda.args.CUDA_ARCH=${{ matrix.cuda_arch }}
+            rootfs-cuda.args.CUDA_ARCH=${{ matrix.cuda_arch }}
+            runtime-${{ matrix.variant }}.cache-from=type=gha,scope=transcription-runtime-${{ matrix.variant }}-${{ matrix.arch }}
+            runtime-${{ matrix.variant }}.cache-to=type=gha,mode=max,scope=transcription-runtime-${{ matrix.variant }}-${{ matrix.arch }}
+            rootfs-${{ matrix.variant }}.cache-from=type=gha,scope=transcription-runtime-${{ matrix.variant }}-${{ matrix.arch }}
+            ${{ matrix.variant }}.tags=${{ steps.output.outputs.tags }}
+            ${{ matrix.variant }}.output=${{ steps.output.outputs.output }}
+            ${{ matrix.variant }}.attest=type=sbom
+            ${{ matrix.variant }}.attest=type=provenance,mode=max
+
+      - name: Empreinte de l'image
+        id: digest
+        if: needs.meta.outputs.publish == 'true'
+        shell: bash
+        env:
+          METADATA: ${{ steps.bake.outputs.metadata }}
+          VARIANT: ${{ matrix.variant }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          set -euo pipefail
+          digest=$(jq -r --arg v "$VARIANT" '.[$v]["containerimage.digest"]' <<< "$METADATA")
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "::error::Empreinte absente"; exit 1; }
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          mkdir -p digests
+          echo "$digest" > "digests/${VARIANT}-${ARCH}"
+
+      - name: Scan Trivy (image)
+        shell: bash
+        env:
+          PUBLISH: ${{ needs.meta.outputs.publish }}
+          VARIANT: ${{ matrix.variant }}
+          DIGEST: ${{ steps.digest.outputs.digest }}
+          TRIVY_USERNAME: ${{ github.actor }}
+          TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ "$PUBLISH" = "true" ]; then
+            bash .github/scripts/trivy-image.sh image "${IMAGE}@${DIGEST}" remote
+          else
+            bash .github/scripts/trivy-image.sh image "syntheo-transcription:ci-${VARIANT}" docker
+          fi
+
+      # Sans publication : l'image est conservée en artefact (3 jours) pour un
+      # essai avant publication, par exemple arm64 sur le DGX Spark :
+      #   gunzip -c image.tar.gz | docker load
+      - name: Exporter l'image (sans publication)
+        if: needs.meta.outputs.publish != 'true'
+        shell: bash
+        env:
+          VARIANT: ${{ matrix.variant }}
+        run: |
+          set -euo pipefail
+          mkdir -p image
+          docker save "syntheo-transcription:ci-${VARIANT}" | gzip -1 > image/image.tar.gz
+          ls -lh image/
+
+      - name: Conserver l'image (sans publication)
+        if: needs.meta.outputs.publish != 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: image-${{ matrix.variant }}-${{ matrix.arch }}
+          path: image/
+          retention-days: 3
+          compression-level: 0
+          if-no-files-found: error
+
+      - name: Conserver l'empreinte
+        if: needs.meta.outputs.publish == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: digest-${{ matrix.variant }}-${{ matrix.arch }}
+          path: digests/
+          retention-days: 1
+          if-no-files-found: error
+
+  # --- Index multi-architecture, tags et attestation de provenance -----------
+  publish:
+    name: Publication ${{ matrix.variant }}
+    needs: [meta, build]
+    if: needs.meta.outputs.publish == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write # index multi-architecture et tags sur GHCR
+      id-token: write # jeton OIDC de l'attestation de provenance (Sigstore)
+      attestations: write # enregistrement de l'attestation dans le dépôt
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [cuda, cpu]
+    steps:
+      - name: Empreintes des architectures
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: digest-${{ matrix.variant }}-*
+          path: digests
+          merge-multiple: true
+
+      - name: Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Connexion à GHCR
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Tags : 0.3.0-cuda, 0.3.0-cuda-r1 et cuda (flottant), idem pour cpu.
+      - name: Index multi-architecture et tags
+        id: index
+        shell: bash
+        env:
+          VARIANT: ${{ matrix.variant }}
+          VERSION: ${{ needs.meta.outputs.version }}
+          REVISION: ${{ needs.meta.outputs.revision }}
+        run: |
+          set -euo pipefail
+          sources=()
+          for arch in amd64 arm64; do
+            digest=$(cat "digests/${VARIANT}-${arch}")
+            [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "::error::Empreinte ${arch} invalide"; exit 1; }
+            sources+=("${IMAGE}@${digest}")
+          done
+          docker buildx imagetools create \
+            -t "${IMAGE}:${VERSION}-${VARIANT}" \
+            -t "${IMAGE}:${VERSION}-${VARIANT}-r${REVISION}" \
+            -t "${IMAGE}:${VARIANT}" \
+            "${sources[@]}"
+          digest=$(docker buildx imagetools inspect "${IMAGE}:${VERSION}-${VARIANT}-r${REVISION}" \
+            --format '{{json .Manifest}}' | jq -r .digest)
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          docker buildx imagetools inspect "${IMAGE}:${VERSION}-${VARIANT}-r${REVISION}"
+
+      - name: Attestation de provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ${{ env.IMAGE }}
+          subject-digest: ${{ steps.index.outputs.digest }}
+          push-to-registry: true

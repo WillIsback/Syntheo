@@ -47,7 +47,9 @@
 - **Inférence sur site uniquement** : l'application ne parle qu'aux serveurs
   que vous configurez, via les protocoles standard des moteurs open-weight :
   - transcription : OpenAI Realtime, vLLM Realtime (par exemple Voxtral Mini 4B
-    Realtime), NVIDIA NeMo-Speech.cpp (WebSocket), `/v1/audio/transcriptions` ;
+    Realtime), NVIDIA NeMo-Speech.cpp (WebSocket), `/v1/audio/transcriptions`.
+    Pas encore de serveur ? Une image Docker prête à l'emploi en lance un sur
+    votre poste : [installer le service de transcription en local](https://docs.syntheo.studio/fr/local-transcription-service) ;
   - modèle de langage : API compatible OpenAI (vLLM, SGLang, llama.cpp, Ollama,
     LM Studio, TGI, MLX).
 - **Aucune conservation de l'audio** : il n'existe qu'en mémoire, le temps

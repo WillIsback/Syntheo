@@ -46,7 +46,9 @@
 - **On-premise inference only**: the app only talks to the endpoints you
   configure, through the standard protocols of open-weight engines:
   - speech-to-text: OpenAI Realtime, vLLM Realtime (e.g. Voxtral Mini 4B
-    Realtime), NVIDIA NeMo-Speech.cpp (WebSocket), `/v1/audio/transcriptions`;
+    Realtime), NVIDIA NeMo-Speech.cpp (WebSocket), `/v1/audio/transcriptions`.
+    No server yet? A ready-to-use Docker image runs one on your computer:
+    [install the local transcription service](https://docs.syntheo.studio/en/local-transcription-service);
   - language model: OpenAI-compatible API (vLLM, SGLang, llama.cpp, Ollama,
     LM Studio, TGI, MLX).
 - **No audio kept**: it only lives in memory while it is transcribed. Only the
