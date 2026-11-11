@@ -192,6 +192,10 @@ describe("getLiveTranscriptionConfig", () => {
 });
 
 describe("getTranscriptionLanguages", () => {
+  test("imposes no language in automatic detection", () => {
+    expect(getTranscriptionLanguages("auto", ["en", "ko"])).toEqual([]);
+  });
+
   test("prefers the main language before additional spoken languages", () => {
     expect(getTranscriptionLanguages("en", ["ko"])).toEqual(["en", "ko"]);
   });

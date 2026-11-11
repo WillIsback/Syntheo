@@ -31,6 +31,7 @@ describe("stt on-prem", () => {
       "language.rs",
       "mod.rs",
       "nvidia.rs",
+      "nvidia_rest.rs",
       "openai",
       "openai_compatible_batch.rs",
       "parsing.rs",

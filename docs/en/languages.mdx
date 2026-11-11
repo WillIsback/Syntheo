@@ -21,6 +21,16 @@ By default, summaries follow the detected language of the meeting among the lang
 
 Turn on "Use main language for summaries" to write all summaries in your main language, even when the meeting is held in another selected language. This option is off by default and does not remove your additional spoken languages.
 
+### Automatic detection
+
+At the top of the list, "Automatic detection" lets the transcription model recognize the spoken language, without imposing any:
+
+- with the "NVIDIA NeMo-Speech.cpp" protocol, Syntheo asks the server to detect the language (`auto`); the Nemotron model then recognizes the language of each passage;
+- with the "OpenAI compatible (realtime and batch)" protocol, Syntheo sends no language, and the server chooses according to its model;
+- summaries, titles, and the chat follow the language of the meeting or of the question.
+
+The "Use main language for summaries" and "Additional spoken languages" options then disappear: they only make sense with a chosen language.
+
 Changing the main language does not translate an existing transcript. Regenerate the summary of an old meeting to apply the new language.
 
 ## Add spoken languages

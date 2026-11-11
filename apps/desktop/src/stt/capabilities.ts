@@ -3,6 +3,8 @@ import {
   type TranscriptionMode,
 } from "@syntheo/plugin-transcription";
 
+import { isAutoMainLanguage } from "~/settings/general/language";
+
 type LiveTranscriptionConfig = {
   languages: string[];
   omittedLanguages?: string[];
@@ -77,6 +79,11 @@ export function getTranscriptionLanguages(
   mainLanguage: string | null | undefined,
   spokenLanguages: readonly string[] | null | undefined,
 ) {
+  // Détection automatique : aucune langue imposée. NeMo-Speech.cpp reçoit
+  // alors `auto`, le protocole OpenAI n'envoie pas de langue.
+  if (isAutoMainLanguage(mainLanguage)) {
+    return [];
+  }
   const seen = new Set<string>();
   const languages: string[] = [];
 

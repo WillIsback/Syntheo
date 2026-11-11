@@ -105,7 +105,7 @@ export const SETTINGS_SEARCH_INDEX = [
     page: "app",
     section: LANGUAGE_REGION,
     label: msg`Main language`,
-    keywords: msg`language, French, English, translation`,
+    keywords: msg`language, French, English, translation, automatic detection, auto-detect`,
   },
   {
     id: "summary-language",

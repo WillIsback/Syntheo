@@ -12,7 +12,10 @@ import {
 } from "./selection";
 import { displayModelLabel } from "./shared";
 
-import { getBaseLanguageDisplayName } from "~/settings/general/language";
+import {
+  getBaseLanguageDisplayName,
+  isAutoMainLanguage,
+} from "~/settings/general/language";
 import { useConfigValues } from "~/shared/config";
 import {
   isConfiguredSttModel,
@@ -199,7 +202,12 @@ function useTranscriptionLanguageWarning() {
         isSupported,
       );
     },
-    enabled: isConfigured && liveSupport.data !== undefined && !!ai_language,
+    // Détection automatique : aucune langue à vérifier.
+    enabled:
+      isConfigured &&
+      liveSupport.data !== undefined &&
+      !!ai_language &&
+      !isAutoMainLanguage(ai_language),
   });
 
   if (

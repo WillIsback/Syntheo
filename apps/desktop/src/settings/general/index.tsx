@@ -14,6 +14,7 @@ import { InterfaceLanguageSelector } from "./interface-language";
 import {
   CORE_TRANSCRIPTION_LANGUAGE_CODES,
   getAdditionalSpokenLanguages,
+  isAutoMainLanguage,
 } from "./language";
 import { MainLanguageView } from "./main-language";
 import { MeetingSettingsView } from "./meeting-settings";
@@ -256,47 +257,59 @@ function SettingsSectionContent({
                     />
                   )}
                 </form.Field>
-                <div className="border-muted ml-3 flex flex-col gap-4 border-l-2 pt-2 pl-4">
-                  <form.Field name="summary_use_main_language">
-                    {(field) => (
-                      <SettingSwitchRow
-                        settingId="summary-language"
-                        title={<Trans>Use main language for summaries</Trans>}
-                        description={
-                          <Trans>
-                            When off, summaries follow the detected meeting
-                            language.
-                          </Trans>
-                        }
-                        checked={field.state.value}
-                        onChange={field.handleChange}
-                      />
-                    )}
-                  </form.Field>
-                  <form.Field name="spoken_languages">
-                    {(field) => (
-                      <div data-setting-id="spoken-languages">
-                        <SpokenLanguagesView
-                          mainLanguage={form.state.values.ai_language}
-                          value={field.state.value}
-                          onChange={(val) =>
-                            field.handleChange(
-                              getAdditionalSpokenLanguages(
-                                form.state.values.ai_language,
-                                val,
-                              ),
-                            )
-                          }
-                          supportedLanguages={CORE_TRANSCRIPTION_LANGUAGE_CODES}
-                        />
-                        <SingleLanguageModelHint
-                          mainLanguage={form.state.values.ai_language}
-                          spokenLanguages={field.state.value}
-                        />
+                {/* Détection automatique : ni langue des comptes rendus à
+                    imposer, ni autres langues parlées à déclarer. */}
+                <form.Subscribe selector={(state) => state.values.ai_language}>
+                  {(mainLanguage) =>
+                    isAutoMainLanguage(mainLanguage) ? null : (
+                      <div className="border-muted ml-3 flex flex-col gap-4 border-l-2 pt-2 pl-4">
+                        <form.Field name="summary_use_main_language">
+                          {(field) => (
+                            <SettingSwitchRow
+                              settingId="summary-language"
+                              title={
+                                <Trans>Use main language for summaries</Trans>
+                              }
+                              description={
+                                <Trans>
+                                  When off, summaries follow the detected
+                                  meeting language.
+                                </Trans>
+                              }
+                              checked={field.state.value}
+                              onChange={field.handleChange}
+                            />
+                          )}
+                        </form.Field>
+                        <form.Field name="spoken_languages">
+                          {(field) => (
+                            <div data-setting-id="spoken-languages">
+                              <SpokenLanguagesView
+                                mainLanguage={form.state.values.ai_language}
+                                value={field.state.value}
+                                onChange={(val) =>
+                                  field.handleChange(
+                                    getAdditionalSpokenLanguages(
+                                      form.state.values.ai_language,
+                                      val,
+                                    ),
+                                  )
+                                }
+                                supportedLanguages={
+                                  CORE_TRANSCRIPTION_LANGUAGE_CODES
+                                }
+                              />
+                              <SingleLanguageModelHint
+                                mainLanguage={form.state.values.ai_language}
+                                spokenLanguages={field.state.value}
+                              />
+                            </div>
+                          )}
+                        </form.Field>
                       </div>
-                    )}
-                  </form.Field>
-                </div>
+                    )
+                  }
+                </form.Subscribe>
               </div>
               <TimezoneSelector />
             </div>
