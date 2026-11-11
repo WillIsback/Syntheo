@@ -1,24 +1,31 @@
+import { i18n } from "@lingui/core";
+
 import { commands as templateCommands } from "@syntheo/plugin-template";
 
 import {
+  CORE_TRANSCRIPTION_LANGUAGE_CODES,
   getAdditionalSpokenLanguages,
   isAutoMainLanguage,
 } from "~/settings/general/language";
 import type { SettingValues } from "~/settings/schema";
 
+// Langue du compte rendu et du titre. `uiLocale` : la langue de l'interface
+// active, repli de la détection automatique.
 export async function resolveSummaryLanguage(
   settingsValues: SettingValues,
   texts: string[],
-): Promise<string | null> {
+  uiLocale: string = i18n.locale,
+): Promise<string> {
   const mainLanguage = settingsValues.ai_language;
   // Sans langue (ou en détection automatique), le compte rendu suit la langue
-  // de la transcription.
+  // dominante des textes ; à défaut, celle de l'interface. Une langue absente
+  // laisserait le gabarit écrire en anglais (issue 570).
   if (
     typeof mainLanguage !== "string" ||
     mainLanguage.length === 0 ||
     isAutoMainLanguage(mainLanguage)
   ) {
-    return null;
+    return detectTextsLanguage(texts, uiLocale);
   }
 
   const additionalLanguages = getAdditionalSpokenLanguages(
@@ -40,6 +47,27 @@ export async function resolveSummaryLanguage(
     return result.status === "ok" && result.data ? result.data : mainLanguage;
   } catch {
     return mainLanguage;
+  }
+}
+
+async function detectTextsLanguage(
+  texts: string[],
+  uiLocale: string,
+): Promise<string> {
+  const fallback = uiLocale || "en";
+  // Toutes les langues de l'app, celle de l'interface en tête (elle l'emporte
+  // à égalité) ; la détection écarte celles qu'elle ne reconnaît pas.
+  const candidates = [
+    ...new Set([fallback, ...CORE_TRANSCRIPTION_LANGUAGE_CODES]),
+  ];
+  try {
+    const result = await templateCommands.dominantLanguage({
+      texts,
+      candidates,
+    });
+    return result.status === "ok" && result.data ? result.data : fallback;
+  } catch {
+    return fallback;
   }
 }
 

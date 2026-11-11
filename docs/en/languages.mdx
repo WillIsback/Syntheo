@@ -27,7 +27,8 @@ At the top of the list, "Automatic detection" lets the transcription model recog
 
 - with the "NVIDIA NeMo-Speech.cpp" protocol, Syntheo asks the server to detect the language (`auto`); the Nemotron model then recognizes the language of each passage;
 - with the "OpenAI compatible (realtime and batch)" protocol, Syntheo sends no language, and the server chooses according to its model;
-- summaries, titles, and the chat follow the language of the meeting or of the question.
+- the summary is written in the language most present in the transcript, and the title in the summary's language; if it can't be recognized (empty or too short transcript), Syntheo uses the interface language;
+- the chat answers in the language of the question.
 
 The "Use main language for summaries" and "Additional spoken languages" options then disappear: they only make sense with a chosen language.
 

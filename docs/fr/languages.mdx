@@ -27,7 +27,8 @@ En tête de la liste, « Détection automatique » laisse le modèle de transcri
 
 - avec le protocole « NVIDIA NeMo-Speech.cpp », Syntheo demande au serveur de détecter la langue (`auto`) ; le modèle Nemotron reconnaît alors la langue de chaque passage ;
 - avec le protocole « OpenAI compatible (temps réel et par lots) », Syntheo n'envoie aucune langue, et le serveur choisit selon son modèle ;
-- les résumés, les titres et le chat suivent la langue de la réunion ou de la question.
+- le résumé est rédigé dans la langue la plus présente de la transcription, et le titre dans celle du résumé ; si elle ne peut pas être reconnue (transcription vide ou trop courte), Syntheo prend la langue de l'interface ;
+- le chat répond dans la langue de la question.
 
 Les options « Utiliser la langue principale pour les résumés » et « Langues parlées supplémentaires » disparaissent alors : elles n'ont de sens qu'avec une langue choisie.
 
