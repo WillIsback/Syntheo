@@ -171,11 +171,11 @@ mod tests {
             ),
             (
                 "https://asr.example/v1/realtime?provider=nvidia",
-                "nemotron-asr-streaming",
+                "nemotron-3.5-asr-streaming-0.6b.q8_0",
                 TranscriptionMode::Live,
                 vec![],
                 TranscriptionMode::Live,
-                "nvidia nim stays live",
+                "nvidia nemo-speech stays live",
             ),
         ] {
             let mut params = session_params(base_url, model, mode);
@@ -195,7 +195,7 @@ mod tests {
             "session_id": "session",
             "languages": [],
             "onboarding": false,
-            "model": "nemotron-asr-streaming",
+            "model": "nemotron-3.5-asr-streaming-0.6b.q8_0",
             "base_url": "https://asr.example/v1/realtime?provider=nvidia",
             "api_key": "test-key",
             "keywords": [],

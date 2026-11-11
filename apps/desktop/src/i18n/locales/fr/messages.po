@@ -1689,10 +1689,6 @@ msgstr "Activée"
 msgid "end of meeting, stop, question, alert"
 msgstr "fin de réunion, arrêter, question, alerte"
 
-#: src/settings/ai/stt/server-card.tsx
-msgid "English"
-msgstr "Anglais"
-
 #: src/shared/open-note-dialog.tsx
 #: src/shared/shortcuts.ts
 msgid "Enter"
@@ -2790,14 +2786,6 @@ msgstr "plus récentes d'abord"
 msgid "Move section {position}"
 msgstr "Déplacer la section {position}"
 
-#: src/settings/ai/stt/server-card.tsx
-msgid "Multilingual"
-msgstr "Multilingue"
-
-#: src/settings/ai/stt/server-card.tsx
-msgid "Multilingual · speakers"
-msgstr "Multilingue · locuteurs"
-
 #: src/shared/shortcuts.ts
 msgid "Mute or unmute system audio"
 msgstr "Couper ou rétablir le son système"
@@ -2861,8 +2849,8 @@ msgid "Needs setup"
 msgstr "Configuration requise"
 
 #: src/settings/ai/stt/server-card.tsx
-msgid "Nemotron, Parakeet"
-msgstr "Nemotron, Parakeet"
+msgid "Nemotron"
+msgstr "Nemotron"
 
 #: src/settings/automations/index.tsx
 #: src/sidebar/automations.tsx
@@ -2914,10 +2902,6 @@ msgstr "Prochaine réunion"
 #: src/shared/shortcuts.ts
 msgid "Next view of the note"
 msgstr "Vue suivante de la note"
-
-#: src/settings/ai/stt/server-card.tsx
-msgid "NIM does not publish its model list: these are the models known for this protocol."
-msgstr "NIM ne publie pas sa liste de modèles : ceux-ci sont les modèles connus pour ce protocole."
 
 #: src/settings/general/notification-ignored-apps.tsx
 msgid "No apps found."
@@ -3244,12 +3228,12 @@ msgid "Notifications"
 msgstr "Notifications"
 
 #: src/settings/ai/stt/server-card.tsx
-msgid "NVIDIA NIM · WebSocket"
-msgstr "NVIDIA NIM · WebSocket"
+msgid "NVIDIA NeMo-Speech.cpp"
+msgstr "NVIDIA NeMo-Speech.cpp"
 
 #: src/settings/ai/stt/server-card.tsx
-msgid "NVIDIA NIM: your deployed Speech NIM WebSocket server, for example http://localhost:9000/v1/realtime. NVIDIA's hosted gRPC endpoint is not supported."
-msgstr "NVIDIA NIM : votre serveur Speech NIM WebSocket déployé, par exemple http://localhost:9000/v1/realtime. Le point d'accès gRPC hébergé par NVIDIA n'est pas pris en charge."
+msgid "NVIDIA NeMo-Speech.cpp: your nemo-speech serve server, for example http://localhost:9000. Live transcription and imported files use its realtime WebSocket. NVIDIA's hosted gRPC endpoint is not supported."
+msgstr "NVIDIA NeMo-Speech.cpp : votre serveur nemo-speech serve, par exemple http://localhost:9000. La transcription en direct et les fichiers importés passent par son WebSocket temps réel. Le point d'accès gRPC hébergé par NVIDIA n'est pas pris en charge."
 
 #: src/templates/template-icon-picker.tsx
 msgid "Objects"
@@ -3362,12 +3346,12 @@ msgid "Open the online documentation (opens your web browser)"
 msgstr "Ouvrir la documentation en ligne (ouvre votre navigateur)"
 
 #: src/settings/ai/stt/server-card.tsx
-msgid "OpenAI · Realtime and batch"
-msgstr "OpenAI · temps réel et par lots"
+msgid "OpenAI compatible (realtime and batch)"
+msgstr "OpenAI compatible (temps réel et par lots)"
 
 #: src/settings/search-index.ts
-msgid "OpenAI, NVIDIA, NIM, transcription server"
-msgstr "OpenAI, NVIDIA, NIM, serveur de transcription"
+msgid "OpenAI, NVIDIA, NeMo-Speech.cpp, transcription server"
+msgstr "OpenAI, NVIDIA, NeMo-Speech.cpp, serveur de transcription"
 
 #: src/settings/ai/stt/server-card.tsx
 msgid "OpenAI: a server that speaks the OpenAI speech protocol (vLLM, speaches, faster-whisper-server), for example http://localhost:8000/v1. Live transcription uses /v1/realtime, imported files /v1/audio/transcriptions."
@@ -5206,8 +5190,8 @@ msgid "The server answered with an error (HTTP {status}). It may still be starti
 msgstr "Le serveur a répondu par une erreur (HTTP {status}). Il démarre peut-être encore : patientez une minute, puis relancez le test."
 
 #: src/settings/ai/shared/server-card.tsx
-msgid "The server answers, but neither as an OpenAI server nor as an NVIDIA NIM. Check the address, then test again."
-msgstr "Le serveur répond, mais ni comme un serveur OpenAI ni comme un NVIDIA NIM. Vérifiez l'adresse, puis relancez le test."
+msgid "The server answers, but neither as an OpenAI server nor as NVIDIA NeMo-Speech.cpp. Check the address, then test again."
+msgstr "Le serveur répond, mais ni comme un serveur OpenAI ni comme NVIDIA NeMo-Speech.cpp. Vérifiez l'adresse, puis relancez le test."
 
 #: src/settings/ai/shared/server-card.tsx
 msgid "The server answers, but not as an OpenAI-compatible API. Check that the address ends with /v1, then test again."
@@ -5224,6 +5208,10 @@ msgstr "Le serveur a refusé la clé d'API. Vérifiez-la dans « Avancé », pui
 #: src/settings/ai/stt/index.tsx
 msgid "The server that turns speech into text during your meetings. Audio is never written to disk."
 msgstr "Le serveur qui transforme la voix en texte, pendant la réunion. L'audio n'est jamais écrit sur le disque."
+
+#: src/settings/ai/stt/server-card.tsx
+msgid "The server transcribes with the model it loaded, whatever the model chosen here."
+msgstr "Le serveur transcrit avec le modèle qu'il a chargé, quel que soit le modèle choisi ici."
 
 #: src/chat/components/message/tool/edit-summary.tsx
 msgid "The summary edit could not be applied."
@@ -5494,8 +5482,8 @@ msgid "Transcription interrupted {gaps}"
 msgstr "Transcription interrompue {gaps}"
 
 #: src/settings/search-index.ts
-msgid "transcription model, Whisper, Parakeet, speech recognition"
-msgstr "modèle de transcription, Whisper, Parakeet, reconnaissance vocale"
+msgid "transcription model, Whisper, Nemotron, speech recognition"
+msgstr "modèle de transcription, Whisper, Nemotron, reconnaissance vocale"
 
 #: src/sidebar/toast/registry.tsx
 msgid "Transcription provider needed"

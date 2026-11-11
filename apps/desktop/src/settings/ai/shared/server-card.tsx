@@ -118,7 +118,7 @@ export function ServerFailureBanner({
       message =
         kind === "llm"
           ? t`The server answers, but not as an OpenAI-compatible API. Check that the address ends with /v1, then test again.`
-          : t`The server answers, but neither as an OpenAI server nor as an NVIDIA NIM. Check the address, then test again.`;
+          : t`The server answers, but neither as an OpenAI server nor as NVIDIA NeMo-Speech.cpp. Check the address, then test again.`;
       break;
   }
 

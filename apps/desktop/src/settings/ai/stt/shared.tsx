@@ -4,7 +4,6 @@ import type { ReactNode } from "react";
 import { ProviderLobeIcon } from "~/settings/ai/shared";
 import { type ProviderRequirement } from "~/settings/ai/shared/eligibility";
 import { sortProviders } from "~/settings/ai/shared/sort-providers";
-import { NVIDIA_NIM_ASR_MODELS } from "~/stt/model-selection";
 
 type Provider = {
   builtIn?: boolean;
@@ -29,10 +28,10 @@ export function displayModelLabel(model: string, displayName?: string) {
 }
 
 // Aucune URL par défaut : l'utilisateur saisit celle de son serveur. Nemotron
-// ASR passe par le NIM (WebSocket), Voxtral Realtime (vLLM) par le provider
-// OpenAI-compatible.
+// ASR passe par NVIDIA NeMo-Speech.cpp (WebSocket), Voxtral Realtime (vLLM) par
+// le provider OpenAI-compatible.
 export const STT_OPENAI_BASE_URL_PLACEHOLDER = "http://localhost:8000/v1";
-export const STT_NIM_BASE_URL_PLACEHOLDER = "http://localhost:9000/v1/realtime";
+export const STT_NEMO_SPEECH_BASE_URL_PLACEHOLDER = "http://localhost:9000";
 
 const _PROVIDERS = [
   {
@@ -57,21 +56,17 @@ const _PROVIDERS = [
   {
     disabled: false,
     id: "nvidia",
-    displayName: "Nemotron ASR (NIM, WebSocket)",
+    displayName: "NVIDIA NeMo-Speech.cpp",
     badge: "Auto-hébergé",
     icon: <ProviderLobeIcon icon={Nvidia} />,
     baseUrl: undefined,
-    baseUrlPlaceholder: STT_NIM_BASE_URL_PLACEHOLDER,
-    models: [...NVIDIA_NIM_ASR_MODELS],
+    baseUrlPlaceholder: STT_NEMO_SPEECH_BASE_URL_PLACEHOLDER,
+    models: [],
     requirements: [{ kind: "requires_config", fields: ["base_url"] }],
     links: {
       models: {
-        label: "Documentation de l'API",
-        url: "https://docs.nvidia.com/nim/speech/latest/reference/api-references/asr/realtime-asr.html",
-      },
-      setup: {
-        label: "Mise en route du NIM",
-        url: "https://docs.nvidia.com/nim/speech/latest/get-started/tutorials/asr.html",
+        label: "Documentation du serveur",
+        url: "https://github.com/NVIDIA/NeMo-Speech.cpp",
       },
     },
   },

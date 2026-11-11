@@ -78,32 +78,92 @@ describe("probeServer", () => {
     });
   });
 
-  test("détecte un NIM par sa sonde de disponibilité", async () => {
+  // Réponses relevées sur NeMo-Speech.cpp v0.3.0 (nemo-speech serve).
+  const NEMO_MODEL = "nemotron-3.5-asr-streaming-0.6b.q8_0";
+  const nemoModels = () =>
+    Response.json({
+      data: [
+        {
+          capability: "transcription",
+          device: "auto",
+          id: NEMO_MODEL,
+          object: "model",
+          owned_by: "local",
+          speaker_diarization: true,
+          streaming: true,
+          word_timestamps: true,
+        },
+        {
+          capability: "diarization",
+          device: "auto",
+          id: "diarization",
+          object: "model",
+          owned_by: "local",
+        },
+      ],
+      object: "list",
+    });
+  const nemoHealth = () =>
+    Response.json({
+      capabilities: ["asr", "diarization"],
+      device: "auto",
+      ready: true,
+    });
+
+  test("reconnaît NeMo-Speech.cpp à sa liste de modèles, qui ressemble à celle d'OpenAI", async () => {
+    const fetcher = vi.fn(
+      routes({ "http://192.168.1.20:9000/v1/models": nemoModels }),
+    );
+
+    const result = await probeServer(
+      { type: "stt", baseUrl: "http://192.168.1.20:9000/v1", apiKey: "" },
+      { fetcher, now: clock() },
+    );
+
+    expect(result).toEqual({
+      ok: true,
+      latencyMs: 42,
+      protocol: "nvidia",
+      models: [NEMO_MODEL],
+    });
+  });
+
+  test("NeMo-Speech.cpp à la racine du serveur : sonde de santé et modèle chargé", async () => {
     const fetcher = vi.fn(
       routes({
-        "http://192.168.1.20:9000/v1/health/ready": () =>
-          Response.json({ status: "ready" }),
+        "http://192.168.1.20:9000/v1/health/ready": nemoHealth,
+        "http://192.168.1.20:9000/v1/models": nemoModels,
       }),
     );
 
     const result = await probeServer(
-      {
-        type: "stt",
-        baseUrl: "http://192.168.1.20:9000/v1/realtime",
-        apiKey: "",
-      },
+      { type: "stt", baseUrl: "http://192.168.1.20:9000", apiKey: "" },
       { fetcher, now: clock() },
     );
 
-    expect(result).toMatchObject({ ok: true, protocol: "nvidia", models: [] });
+    expect(result).toMatchObject({
+      ok: true,
+      protocol: "nvidia",
+      models: [NEMO_MODEL],
+    });
   });
 
-  test("NIM sans proxy (tout ouvert) : connecté, sans liste de modèles", async () => {
+  test("une liste de modèles OpenAI pour la synthèse n'est jamais lue comme NeMo-Speech.cpp", async () => {
     const fetcher = vi.fn(
-      routes({
-        "http://192.168.1.20:9000/v1/health/ready": () =>
-          Response.json({ status: "ready" }),
-      }),
+      routes({ "http://localhost:8000/v1/models": nemoModels }),
+    );
+
+    const result = await probeServer(
+      { type: "llm", baseUrl: "http://localhost:8000/v1", apiKey: "" },
+      { fetcher, now: clock() },
+    );
+
+    expect(result).toMatchObject({ ok: true, protocol: "openai" });
+  });
+
+  test("serveur à sonde de santé sans liste de modèles : connecté, sans modèle", async () => {
+    const fetcher = vi.fn(
+      routes({ "http://192.168.1.20:9000/v1/health/ready": nemoHealth }),
     );
 
     const result = await probeServer(
@@ -118,16 +178,13 @@ describe("probeServer", () => {
     );
   });
 
-  // Proxy authentifié (Caddy) devant un NIM : la sonde de santé reste
-  // ouverte, les routes de l'API (`/v1/*`) exigent la bonne clé ; hors de
-  // l'API, le NIM répond 404. C'est le cas qui affichait « connecté » à tort :
-  // `/models` à la racine ne disait rien de la clé.
-  const nimBehindProxy = (expectedKey: string) =>
+  // Proxy authentifié (Caddy) devant NeMo-Speech.cpp : la sonde de santé reste
+  // ouverte, les routes de l'API (`/v1/*`) exigent la bonne clé. C'est le cas
+  // qui affichait « connecté » à tort : la sonde ne disait rien de la clé.
+  const nemoBehindProxy = (expectedKey: string) =>
     vi.fn(async (url: string, init?: RequestInit) => {
       const { pathname } = new URL(url);
-      if (pathname === "/v1/health/ready") {
-        return Response.json({ status: "ready" });
-      }
+      if (pathname === "/v1/health/ready") return nemoHealth();
       if (!pathname.startsWith("/v1/")) {
         return new Response(null, { status: 404 });
       }
@@ -135,31 +192,37 @@ describe("probeServer", () => {
       if (auth !== `Bearer ${expectedKey}`) {
         return new Response(null, { status: 401 });
       }
-      return new Response(null, { status: 404 });
+      return pathname === "/v1/models"
+        ? nemoModels()
+        : new Response(null, { status: 404 });
     });
 
-  test("NIM derrière un proxy avec la bonne clé : connecté", async () => {
+  test("NeMo-Speech.cpp derrière un proxy avec la bonne clé : connecté", async () => {
     const result = await probeServer(
       {
         type: "stt",
         baseUrl: "https://asr.tail6cba9f.ts.net",
         apiKey: "bonne-cle",
       },
-      { fetcher: nimBehindProxy("bonne-cle"), now: clock() },
+      { fetcher: nemoBehindProxy("bonne-cle"), now: clock() },
     );
 
-    expect(result).toMatchObject({ ok: true, protocol: "nvidia", models: [] });
+    expect(result).toMatchObject({
+      ok: true,
+      protocol: "nvidia",
+      models: [NEMO_MODEL],
+    });
   });
 
   test.each([
     ["fausse", "mauvaise-cle"],
     ["absente", ""],
   ])(
-    "NIM derrière un proxy avec une clé %s : clé refusée",
+    "NeMo-Speech.cpp derrière un proxy avec une clé %s : clé refusée",
     async (_label, apiKey) => {
       const result = await probeServer(
         { type: "stt", baseUrl: "https://asr.tail6cba9f.ts.net", apiKey },
-        { fetcher: nimBehindProxy("bonne-cle"), now: clock() },
+        { fetcher: nemoBehindProxy("bonne-cle"), now: clock() },
       );
 
       expect(result).toEqual({
@@ -170,13 +233,11 @@ describe("probeServer", () => {
     },
   );
 
-  test("NIM derrière un proxy qui répond 403 : clé refusée", async () => {
+  test("NeMo-Speech.cpp derrière un proxy qui répond 403 : clé refusée", async () => {
     // Le proxy refuse la clé sur toute l'API, route temps réel comprise.
     const fetcher = vi.fn(async (url: string) => {
       const { pathname } = new URL(url);
-      if (pathname === "/v1/health/ready") {
-        return Response.json({ status: "ready" });
-      }
+      if (pathname === "/v1/health/ready") return nemoHealth();
       return new Response(null, {
         status: pathname.startsWith("/v1/") ? 403 : 404,
       });
@@ -189,7 +250,7 @@ describe("probeServer", () => {
 
     expect(result).toEqual({ ok: false, reason: "unauthorized", status: 403 });
     expect(fetcher.mock.calls.map(([url]) => url)).toContain(
-      "http://192.168.1.20:9000/v1/realtime?intent=transcription",
+      "http://192.168.1.20:9000/v1/audio/transcriptions/realtime",
     );
   });
 

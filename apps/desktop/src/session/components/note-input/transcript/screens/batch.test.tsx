@@ -39,7 +39,7 @@ describe("BatchState", () => {
     render(<BatchState requestedLiveTranscription />);
 
     expect(screen.getByRole("status").textContent).toMatch(
-      /^Live transcription paused: Nemotron ASR \(NIM, WebSocket\) is having an outage\./,
+      /^Live transcription paused: NVIDIA NeMo-Speech\.cpp is having an outage\./,
     );
   });
 });

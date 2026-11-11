@@ -1,6 +1,6 @@
-//! Stall watchdog fed by the real NVIDIA NIM adapter, as in a live session:
-//! continuous speech, provisional hypotheses every half second and a single
-//! interim final whose word offsets come in milliseconds (issue #268).
+//! Stall watchdog fed by the real NVIDIA NeMo-Speech.cpp adapter, as in a live
+//! session: continuous speech, incremental hypotheses every half second and a
+//! single interim final (issue #268).
 
 use std::time::{Duration, Instant};
 
@@ -22,15 +22,12 @@ fn delta(text: &str) -> String {
     .to_string()
 }
 
-/// NIM reports `words_info` offsets in milliseconds (NVIDIA's reference
-/// realtime client prints them under "Start (ms)" / "End (ms)").
-fn completed_ms(text: &str, start_ms: f64, end_ms: f64) -> String {
+/// NeMo-Speech.cpp reports word times in seconds.
+fn completed(text: &str, start: f64, end: f64) -> String {
     serde_json::json!({
         "type": "conversation.item.input_audio_transcription.completed",
         "transcript": text,
-        "words_info": {"words": [
-            {"word": text, "start_time": start_ms, "end_time": end_ms, "confidence": 0.9}
-        ]},
+        "words": [{"word": text, "start": start, "end": end, "confidence": 0.9}],
     })
     .to_string()
 }
@@ -103,10 +100,12 @@ fn nvidia_continuous_speech_with_evolving_partials_is_not_a_stall() {
             session.progress.diagnostics(session.time(tick)),
         );
         if tick == 50 {
-            session.receive(&completed_ms("Bonjour à tous.", 300.0, 4_800.0), tick);
+            session.receive(&completed("Bonjour à tous.", 0.3, 4.8), tick);
         } else if tick > 50 && tick % 5 == 0 {
-            hypothesis.push_str(" et");
-            session.receive(&delta(hypothesis.trim()), tick);
+            // Each delta carries only the words added to the open utterance.
+            let added = if hypothesis.is_empty() { "et" } else { " et" };
+            hypothesis.push_str(added);
+            session.receive(&delta(added), tick);
             assert!(
                 session.partial_text.contains(hypothesis.trim()),
                 "the provisional text after the first final was dropped at {:.1}s",
@@ -194,7 +193,7 @@ fn frozen_or_empty_provisional_text_is_not_progress() {
     );
 }
 
-/// Issue #271 : sur une vidéo en parole continue, le NIM n'a rien finalisé
+/// Issue #271 : sur une vidéo en parole continue, le serveur n'a rien finalisé
 /// pendant 90 s et l'écoute s'est reconnectée (`UnfinalizedCap`). Le texte
 /// provisoire de ces 90 s doit être validé dans la transcription avant la
 /// reconnexion, ce que fait l'arrêt du flux (`post_stop` → `checkpoint`).
@@ -209,10 +208,11 @@ fn nvidia_unfinalized_cap_commits_the_provisional_text_before_reconnecting() {
             break;
         }
         if tick == 50 {
-            session.receive(&completed_ms("Bonjour à tous.", 300.0, 4_800.0), tick);
+            session.receive(&completed("Bonjour à tous.", 0.3, 4.8), tick);
         } else if tick > 50 && tick % 5 == 0 {
+            let separator = if hypothesis.is_empty() { "" } else { " " };
             hypothesis.push(format!("mot{tick}"));
-            session.receive(&delta(&hypothesis.join(" ")), tick);
+            session.receive(&delta(&format!("{separator}mot{tick}")), tick);
         }
     }
     let stalled_at = stalled_at.expect("the unfinalized cap recycles the stream");
@@ -227,7 +227,7 @@ fn nvidia_unfinalized_cap_commits_the_provisional_text_before_reconnecting() {
         .engine
         .checkpoint()
         .expect("the provisional hypothesis is committed");
-    // NIM hypotheses carry no word offsets: the committed text is the held
+    // Hypotheses carry no word offsets: the committed text is the held
     // final followed by the whole provisional segment.
     let committed = checkpoint
         .transcript_delta

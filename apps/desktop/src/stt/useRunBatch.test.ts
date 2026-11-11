@@ -208,7 +208,7 @@ describe("getBatchProvider", () => {
   test.each([
     ["openai", "gpt-4o-transcribe", "openai"],
     ["openai", "mistralai/Voxtral-Mini-3B-2507", "openai"],
-    ["nvidia", "nemotron-asr-streaming", null],
+    ["nvidia", "nemotron-3.5-asr-streaming-0.6b", null],
     ["deepgram", "nova-3", null],
   ] as const)("maps %s/%s to %s", (provider, model, expected) => {
     expect(getBatchProvider(provider, model)).toBe(expected);
@@ -781,7 +781,7 @@ describe("useRunBatch", () => {
   test("no_local_fallback_when_endpoint_has_no_batch", async () => {
     setConnection({
       provider: "nvidia",
-      model: "nemotron-asr-streaming",
+      model: "nemotron-3.5-asr-streaming-0.6b",
       baseUrl: "http://192.168.1.87:9000?provider=nvidia",
       apiKey: "",
     });
@@ -794,7 +794,7 @@ describe("useRunBatch", () => {
   describe("file import through the real-time stream", () => {
     const nvidia = {
       provider: "nvidia",
-      model: "cache-aware-parakeet-rnnt-multi-asr-streaming-sortformer",
+      model: "nemotron-3.5-asr-streaming-0.6b",
       baseUrl: "http://192.168.1.87:9000/?provider=nvidia",
       apiKey: "",
     };

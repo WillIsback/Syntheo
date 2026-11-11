@@ -22,6 +22,7 @@ const mocks = vi.hoisted(() => ({
   } as Record<string, string>,
   setSelection: vi.fn(),
   setAiProvider: vi.fn(),
+  persisted: [] as Array<{ provider: string; model: string }>,
 }));
 
 vi.mock("~/settings/ai/shared/server-connection", async (importOriginal) => ({
@@ -36,7 +37,10 @@ vi.mock("~/settings/ai/shared/server-address", () => ({
   ),
 }));
 vi.mock("~/settings/ai/shared/persist-selection", () => ({
-  PersistAiSelection: () => null,
+  PersistAiSelection: (props: { provider: string; model: string }) => {
+    mocks.persisted.push({ provider: props.provider, model: props.model });
+    return null;
+  },
 }));
 vi.mock("~/settings/providers", () => ({
   setAiProvider: mocks.setAiProvider,
@@ -60,6 +64,7 @@ function setup() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.persisted = [];
   mocks.connection.providerId = "openai";
   mocks.connection.state = { status: "untested" };
   mocks.config = {
@@ -105,37 +110,71 @@ describe("SttServerCard", () => {
     });
   });
 
-  it("propose les modèles connus du NIM", () => {
+  it("NeMo-Speech.cpp sans test : propose le modèle de référence", () => {
     mocks.connection.providerId = "nvidia";
     mocks.config = {
       current_stt_provider: "nvidia",
-      current_stt_model: "parakeet-tdt-0.6b-v3",
+      current_stt_model: "nemotron-3.5-asr-streaming-0.6b",
     };
     setup();
 
     expect(
       screen
-        .getByRole("radio", { name: /parakeet-tdt-0\.6b-v3/ })
+        .getByRole("radio", { name: /nemotron-3\.5-asr-streaming-0\.6b/ })
         .getAttribute("aria-checked"),
     ).toBe("true");
     expect(
-      screen.getByRole("radio", { name: /nemotron-asr-streaming/ }),
+      screen.getByText(/transcribes with the model it loaded/),
     ).toBeTruthy();
+    expect(mocks.persisted).toEqual([]);
+  });
+
+  it("NeMo-Speech.cpp connecté : retient le modèle que le serveur annonce", () => {
+    mocks.connection.providerId = "nvidia";
+    mocks.connection.state = {
+      status: "connected",
+      latencyMs: 9,
+      protocol: "nvidia",
+      models: ["nemotron-3.5-asr-streaming-0.6b.q8_0"],
+    };
+    mocks.config = {
+      current_stt_provider: "nvidia",
+      current_stt_model: "nemotron-3.5-asr-streaming-0.6b",
+    };
+    setup();
+
     expect(
-      screen.getByText(/NIM does not publish its model list/),
+      screen.getByRole("radio", { name: /asr-streaming-0\.6b\.q8_0/ }),
     ).toBeTruthy();
+    expect(mocks.persisted).toContainEqual({
+      provider: "nvidia",
+      model: "nemotron-3.5-asr-streaming-0.6b.q8_0",
+    });
+  });
+
+  it("ne propose que les protocoles OpenAI compatible et NeMo-Speech.cpp", () => {
+    setup();
+
+    expect(
+      screen
+        .getAllByRole("radio", { name: /OpenAI|NVIDIA/ })
+        .map((radio) => radio.textContent),
+    ).toEqual([
+      "OpenAI compatible (realtime and batch)",
+      "NVIDIA NeMo-Speech.cpp",
+    ]);
   });
 
   it("change de protocole avec le modèle par défaut du protocole", () => {
     setup();
 
     fireEvent.click(
-      screen.getByRole("radio", { name: "NVIDIA NIM · WebSocket" }),
+      screen.getByRole("radio", { name: "NVIDIA NeMo-Speech.cpp" }),
     );
 
     expect(mocks.setSelection).toHaveBeenCalledWith({
       current_stt_provider: "nvidia",
-      current_stt_model: "nemotron-asr-streaming",
+      current_stt_model: "nemotron-3.5-asr-streaming-0.6b",
     });
   });
 
@@ -144,19 +183,19 @@ describe("SttServerCard", () => {
       status: "connected",
       latencyMs: 12,
       protocol: "nvidia",
-      models: [],
+      models: ["nemotron-3.5-asr-streaming-0.6b.q8_0"],
     };
     setup();
 
     expect(
-      screen.getByText(/This server answers as NVIDIA NIM · WebSocket\./),
+      screen.getByText(/This server answers as NVIDIA NeMo-Speech\.cpp\./),
     ).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Use this protocol" }));
 
     await waitFor(() =>
       expect(mocks.setSelection).toHaveBeenCalledWith({
         current_stt_provider: "nvidia",
-        current_stt_model: "nemotron-asr-streaming",
+        current_stt_model: "nemotron-3.5-asr-streaming-0.6b",
       }),
     );
     expect(mocks.setAiProvider).toHaveBeenCalledWith("stt", "nvidia", {

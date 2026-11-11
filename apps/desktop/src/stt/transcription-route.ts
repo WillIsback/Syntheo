@@ -13,8 +13,8 @@ export function getBatchProvider(
   provider: string,
   _model: string,
 ): TranscriptionProvider | null {
-  // NVIDIA NIM ne propose que le temps réel ; l'import passe par le protocole
-  // OpenAI (/v1/audio/transcriptions).
+  // NVIDIA NeMo-Speech.cpp transcrit les fichiers par son flux temps réel ;
+  // seul le protocole OpenAI passe par le lot (/v1/audio/transcriptions).
   if (provider === "openai") return "openai";
   return null;
 }

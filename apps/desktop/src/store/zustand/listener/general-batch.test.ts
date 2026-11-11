@@ -227,7 +227,7 @@ describe("runBatchSession", () => {
       params: {
         provider: "realtime" as const,
         file_path: "/tmp/archive.mp4",
-        model: "cache-aware-parakeet-rnnt-multi-asr-streaming-sortformer",
+        model: "nemotron-3.5-asr-streaming-0.6b",
         base_url: "http://192.168.1.87:9000/?provider=nvidia",
       },
     },

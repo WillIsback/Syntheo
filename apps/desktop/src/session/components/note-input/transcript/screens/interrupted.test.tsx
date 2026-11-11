@@ -25,7 +25,7 @@ describe("LiveTranscriptStatusNotice (marge d'écoute)", () => {
     const { rerender } = render(<LiveTranscriptStatusNotice interrupted />);
 
     expect(screen.getByRole("status").textContent).toMatch(
-      /^Live transcription paused: Syntheo cannot reach Nemotron ASR/,
+      /^Live transcription paused: Syntheo cannot reach NVIDIA NeMo-Speech\.cpp/,
     );
     expect(screen.getByRole("status").textContent).toMatch(/Reconnecting…$/);
 
