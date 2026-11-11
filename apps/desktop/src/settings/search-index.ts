@@ -75,12 +75,6 @@ export const SETTINGS_SEARCH_INDEX = [
     keywords: msg`startup, turn on the computer, launch, open automatically, boot`,
   },
   {
-    id: "automatic-updates",
-    page: "app",
-    label: msg`Automatically install updates`,
-    keywords: msg`update, new version, upgrade`,
-  },
-  {
     id: "release-notes",
     page: "app",
     label: msg`Show release notes`,
@@ -111,7 +105,7 @@ export const SETTINGS_SEARCH_INDEX = [
     page: "app",
     section: LANGUAGE_REGION,
     label: msg`Main language`,
-    keywords: msg`language, French, English, translation`,
+    keywords: msg`language, French, English, translation, automatic detection, auto-detect`,
   },
   {
     id: "summary-language",
@@ -414,13 +408,13 @@ export const SETTINGS_SEARCH_INDEX = [
     id: "stt-protocol",
     page: "transcription",
     label: msg`Protocol`,
-    keywords: msg`OpenAI, NVIDIA, NIM, transcription server`,
+    keywords: msg`OpenAI, NVIDIA, NeMo-Speech.cpp, transcription server`,
   },
   {
     id: "stt-model",
     page: "transcription",
     label: msg`Model`,
-    keywords: msg`transcription model, Whisper, Parakeet, speech recognition`,
+    keywords: msg`transcription model, Whisper, Nemotron, speech recognition`,
     fallback: "stt-server",
   },
 

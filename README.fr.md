@@ -47,9 +47,9 @@
 - **Inférence sur site uniquement** : l'application ne parle qu'aux serveurs
   que vous configurez, via les protocoles standard des moteurs open-weight :
   - transcription : OpenAI Realtime, vLLM Realtime (par exemple Voxtral Mini 4B
-    Realtime), NVIDIA NIM (WebSocket et gRPC), `/v1/audio/transcriptions` ;
+    Realtime), NVIDIA NeMo-Speech.cpp (WebSocket), `/v1/audio/transcriptions` ;
   - modèle de langage : API compatible OpenAI (vLLM, SGLang, llama.cpp, Ollama,
-    TGI, NIM, MLX).
+    LM Studio, TGI, MLX).
 - **Aucune conservation de l'audio** : il n'existe qu'en mémoire, le temps
   d'être transcrit. Seuls la transcription et la note sont enregistrées,
   localement.

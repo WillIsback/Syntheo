@@ -28,6 +28,9 @@ export type BatchState = {
       recovered?: boolean;
       // Début de la phase en cours : base de l'estimation de la capsule.
       startedAtMs?: number;
+      // Avancement inconnu : le serveur transcrit tout l'audio d'une seule
+      // requête (NeMo-Speech.cpp par REST, issue 568).
+      indeterminate?: boolean;
     }
   >;
   // Imports audio en cours (issue 526), de la copie du fichier à la fin de
@@ -195,6 +198,8 @@ export const createBatchSlice = <T extends BatchState>(
           errorCode: undefined,
           recovered: state.batch[sessionId]?.recovered,
           startedAtMs: state.batch[sessionId]?.startedAtMs,
+          indeterminate:
+            event.type === "progress" && event.indeterminate === true,
         },
       },
       batchPreview: {

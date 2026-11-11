@@ -1,0 +1,122 @@
+---
+title: "Installer le service de transcription en local"
+sidebarTitle: "Service de transcription local"
+description: "Lancez NVIDIA NeMo-Speech.cpp avec Docker sur votre poste, sur carte NVIDIA ou sur processeur seul, et reliez-le à Syntheo."
+---
+
+import { SettingsPath } from "/snippets/start.gen.jsx";
+
+Syntheo ne transcrit rien lui-même : il envoie l'audio à un serveur de transcription. Si vous n'en avez pas, le dépôt fournit une configuration prête à l'emploi dans `deploy/transcription/` : [NVIDIA NeMo-Speech.cpp](https://github.com/NVIDIA/NeMo-Speech.cpp) (licence Apache-2.0) avec les modèles Nemotron 3.5 ASR Streaming et Nemotron 3 Diarization (licence openmdw-1.1), dans Docker. Elle reconnaît le français et distingue les locuteurs.
+
+Le service tourne sur votre poste et n'écoute que sur celui-ci (`127.0.0.1`). L'audio ne quitte pas la machine.
+
+## Configuration minimale
+
+| | Avec une carte NVIDIA | Sur processeur seul |
+| --- | --- | --- |
+| Système | Linux avec Docker Engine et Docker Compose v2 | Linux avec Docker Engine et Docker Compose v2 |
+| Matériel | Carte NVIDIA RTX 30xx ou plus récente, 2 Go de mémoire vidéo libres | 4 cœurs libres pendant une réunion, 1 Go de mémoire vive |
+| Logiciel en plus | Pilote compatible CUDA 13.0 et [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) | Rien |
+| Disque | 1 Go pour le service et 850 Mo pour les modèles, plus une douzaine de Go pendant la première construction | 100 Mo pour le service et 850 Mo pour les modèles, plus une douzaine de Go pendant la première construction |
+
+Avec exactement 4 cœurs, une phrase devient définitive en général environ 0,1 s après la pause qui la clôt, mais ce retard peut monter ponctuellement à 1 ou 2 s en début de flux. Sur processeur limité à 4 cœurs, l'identification des intervenants peut aussi confondre deux voix proches : une carte NVIDIA donne de meilleurs résultats.
+
+Ces chiffres viennent des mesures ci-dessous. La configuration a été validée sous Linux (x86_64). Sous Windows et macOS, Docker Desktop n'a pas été essayé.
+
+## Installer et démarrer le service
+
+<Steps>
+  <Step title="Récupérer la configuration">
+    Clonez le dépôt Syntheo, ou téléchargez seulement le dossier `deploy/transcription/`, puis placez-vous dedans :
+
+    ```bash
+    git clone https://github.com/WillIsback/Syntheo.git
+    cd Syntheo/deploy/transcription
+    ```
+  </Step>
+  <Step title="Régler l'architecture de la carte (carte NVIDIA seulement)">
+    Copiez `.env.example` en `.env` et renseignez `CUDA_ARCH` : `120` pour une RTX 50xx, `89` pour une RTX 40xx, `86` pour une RTX 30xx. Laissé vide, le service est construit pour toutes ces cartes, ce qui prend plus longtemps.
+  </Step>
+  <Step title="Démarrer">
+    Avec une carte NVIDIA :
+
+    ```bash
+    docker compose --profile gpu up -d
+    ```
+
+    Sur processeur seul :
+
+    ```bash
+    docker compose --profile cpu up -d
+    ```
+
+    Au premier lancement, Docker construit le service depuis le Dockerfile officiel de NeMo-Speech.cpp (version 0.3.0), puis télécharge les modèles (850 Mo) dans le volume `nemo-speech-models` et vérifie leur empreinte SHA-256. Comptez de quelques minutes à une demi-heure selon le processeur et la connexion. Les lancements suivants réutilisent le service et les modèles : il est prêt en 5 secondes environ.
+  </Step>
+  <Step title="Vérifier que le service répond">
+    ```bash
+    curl http://localhost:9000/ready
+    ```
+
+    La réponse `{"capabilities":["asr","diarization"],"device":"auto","ready":true}` indique que le service est prêt.
+  </Step>
+</Steps>
+
+## Relier Syntheo au service
+
+<Steps>
+  <Step title="Ouvrir la page Transcription">
+    <SettingsPath steps={["Paramètres", "Mes serveurs", "Transcription"]} />
+  </Step>
+  <Step title="Saisir l'adresse">
+    Dans « Adresse du serveur », saisissez `http://localhost:9000`.
+  </Step>
+  <Step title="Tester la connexion">
+    Cliquez sur « Tester la connexion ». Syntheo détecte le protocole « NVIDIA NeMo-Speech.cpp » et le modèle `nemotron-3.5-asr-streaming-0.6b.q8_0`. Si un autre protocole est sélectionné, cliquez sur « Utiliser ce protocole ».
+  </Step>
+</Steps>
+
+Le reste de la configuration est décrit dans [Configurer la transcription et l'IA](/fr/ai-setup).
+
+## Performances mesurées
+
+Mesures du service fourni, transcription en français avec distinction des locuteurs, sur un enregistrement de réunion à quatre voix :
+
+| Machine | Vitesse sur un fichier | Réunion en direct (micro et son système en même temps) | Mémoire |
+| --- | --- | --- | --- |
+| Carte NVIDIA RTX 5080 | 39 fois plus vite que la durée réelle | Tenue : chaque phrase arrive 0,02 s après la pause qui la clôt | 1,5 Go de mémoire vidéo, 1,1 Go de mémoire vive |
+| Processeur, 4 cœurs (Ryzen 9 9950X) | 2,5 fois plus vite que la durée réelle | Tenue : chaque phrase arrive environ 0,1 s après la pause qui la clôt, parfois 1 à 2 s en début de flux | 500 Mo de mémoire vive |
+| Processeur, 2 cœurs (Ryzen 9 9950X) | 1,2 fois plus vite que la durée réelle | Non tenue : le retard s'accumule pendant la réunion | 500 Mo de mémoire vive |
+
+Une phrase se termine après une seconde de silence : c'est le réglage que Syntheo envoie au service. Les délais ci-dessus s'ajoutent à cette seconde.
+
+Pendant une réunion, Syntheo envoie deux flux en même temps, le micro et le son système : sur processeur seul, prévoyez 4 cœurs libres. Un fichier importé part en une seule requête et le service le traite à la vitesse du tableau : 27 min 48 d'audio en 34 s sur la RTX 5080. Voir [Importer un enregistrement](/fr/import-recordings).
+
+## Protéger l'accès
+
+Par défaut, le service n'écoute que sur votre poste et n'exige pas de clé. Pour définir une clé, renseignez `ASR_API_KEY` dans `.env`, relancez le service avec `docker compose --profile gpu up -d` (ou `--profile cpu`), puis saisissez la même clé dans Syntheo, sous « Avancé », champ « Clé d'API (facultative) ».
+
+<Warning>
+  Ne changez `NEMO_SPEECH_BIND` (l'interface d'écoute, `127.0.0.1` par défaut) que derrière un proxy HTTPS, sur un réseau de confiance, et avec une clé. Le service transmet l'audio en clair.
+</Warning>
+
+## Arrêter, mettre à jour, désinstaller
+
+| Action | Commande |
+| --- | --- |
+| Arrêter le service | `docker compose --profile gpu down` (ou `--profile cpu`) |
+| Voir les journaux | `docker compose logs -f` |
+| Reconstruire après une mise à jour du dépôt | `docker compose --profile gpu up -d --build` |
+| Libérer l'espace de la construction | `docker builder prune` |
+| Tout supprimer, modèles compris | `docker compose --profile gpu down --volumes --rmi all` |
+
+Le service redémarre avec Docker tant que vous ne l'arrêtez pas (`restart: unless-stopped`).
+
+## En cas de problème
+
+| Symptôme | Piste |
+| --- | --- |
+| `could not select device driver "nvidia"` | Le NVIDIA Container Toolkit n'est pas installé ou Docker n'a pas été redémarré après son installation. Sans carte NVIDIA, utilisez `--profile cpu`. |
+| `service "models" didn't complete successfully` | Le téléchargement des modèles a échoué (réseau, ou empreinte inattendue). Consultez `docker compose logs models`, puis relancez la commande de démarrage. |
+| `curl: (7) Failed to connect` sur `localhost:9000` | Le service démarre encore, ou le port 9000 est pris. Changez `NEMO_SPEECH_PORT` dans `.env`, et l'adresse dans Syntheo. |
+| La pastille indique « Clé refusée » | La clé saisie dans Syntheo diffère de `ASR_API_KEY`. |
+| Les phrases arrivent avec plusieurs secondes de retard | Sur processeur seul, la machine manque de cœurs libres pendant la réunion : fermez des applications ou passez sur une carte NVIDIA. |

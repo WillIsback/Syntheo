@@ -27,7 +27,7 @@ type Provider = {
 export const LLM_BASE_URL_PLACEHOLDER = "http://localhost:8000/v1";
 
 // Syntheo ne parle qu'à un serveur OpenAI-compatible on-premise (vLLM,
-// Ollama, llama.cpp server, LM Studio, TGI, NIM LLM).
+// Ollama, llama.cpp server, LM Studio, TGI).
 const _PROVIDERS = [
   {
     id: "custom",

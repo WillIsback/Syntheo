@@ -4,11 +4,13 @@ mod segment;
 pub mod http;
 mod language;
 mod nvidia;
+mod nvidia_rest;
 mod openai;
 mod openai_compatible_batch;
 
 pub use language::{LanguageQuality, LanguageSupport};
 pub use nvidia::*;
+pub use nvidia_rest::{NemoSpeechTranscript, transcribe_with_nemo_speech_rest};
 pub use openai::*;
 
 use std::collections::{BTreeSet, HashSet};
@@ -130,7 +132,7 @@ pub trait RealtimeSttAdapter: Clone + Default + Send + Sync + 'static {
 
     /// Messages produced for one chunk of captured audio. Most protocols send a
     /// single audio frame; a backend that only runs inference after an explicit
-    /// flush (Riva/NIM `commit`) returns the frame plus the control message.
+    /// flush returns the frame plus the control message.
     fn audio_messages(&self, audio: bytes::Bytes) -> Vec<Message> {
         vec![self.audio_to_message(audio)]
     }

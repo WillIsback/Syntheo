@@ -79,7 +79,7 @@ const SYN_LABELS = {
   "Ask the note": "Ask the note",
   "Audio": "Audio",
   "Auto": "Auto",
-  "Automatically install updates": "Automatically install updates",
+  "Automatic detection": "Automatic detection",
   "Automations": "Automations",
   "Backspace": "Backspace",
   "Begin listening": "Begin listening",
@@ -104,7 +104,7 @@ const SYN_LABELS = {
   "Copy last dictation": "Copy last dictation",
   "Current default": "Current default",
   "Current default output": "Current default output",
-  "Default language for transcription and AI responses.": "Default language for transcription and AI responses.",
+  "Default language for transcription and AI responses. Automatic detection lets the transcription model recognize the spoken language, and AI responses follow the meeting language.": "Default language for transcription and AI responses. Automatic detection lets the transcription model recognize the spoken language, and AI responses follow the meeting language.",
   "Developers": "Developers",
   "Device authentication is not available on this computer.": "Device authentication is not available on this computer.",
   "Dictation": "Dictation",
@@ -113,7 +113,6 @@ const SYN_LABELS = {
   "Dictionary": "Dictionary",
   "Email": "Email",
   "Enable dictation": "Enable dictation",
-  "English": "English",
   "Enter": "Enter",
   "Enter a full address, for example {placeholder}.": "Enter a full address, for example {placeholder}.",
   "Enter another name": "Enter another name",
@@ -156,23 +155,21 @@ const SYN_LABELS = {
   "Model name": "Model name",
   "Model name served by your server": "Model name served by your server",
   "More effort gives finer summaries, but slower. Auto leaves it to the server.": "More effort gives finer summaries, but slower. Auto leaves it to the server.",
-  "Multilingual": "Multilingual",
-  "Multilingual · speakers": "Multilingual · speakers",
   "Mute system audio": "Mute system audio",
   "Mute the microphone": "Mute the microphone",
   "My meetings": "My meetings",
   "My server": "My server",
   "My servers": "My servers",
-  "NIM does not publish its model list: these are the models known for this protocol.": "NIM does not publish its model list: these are the models known for this protocol.",
-  "NVIDIA NIM · WebSocket": "NVIDIA NIM · WebSocket",
-  "NVIDIA NIM: your deployed Speech NIM WebSocket server, for example http://localhost:9000/v1/realtime. NVIDIA's hosted gRPC endpoint is not supported.": "NVIDIA NIM: your deployed Speech NIM WebSocket server, for example http://localhost:9000/v1/realtime. NVIDIA's hosted gRPC endpoint is not supported.",
+  "NVIDIA NeMo-Speech.cpp": "NVIDIA NeMo-Speech.cpp",
+  "NVIDIA NeMo-Speech.cpp: your nemo-speech serve server, for example http://localhost:9000. Live transcription and imported files use its realtime WebSocket. NVIDIA's hosted gRPC endpoint is not supported.": "NVIDIA NeMo-Speech.cpp: your nemo-speech serve server, for example http://localhost:9000. Live transcription and imported files use its realtime WebSocket. NVIDIA's hosted gRPC endpoint is not supported.",
   "Name": "Name",
-  "Nemotron, Parakeet": "Nemotron, Parakeet",
+  "Nemotron": "Nemotron",
   "New note in this folder": "New note in this folder",
   "No matching languages found": "No matching languages found",
   "No notes in this folder match.": "No notes in this folder match.",
   "No results found.": "No results found.",
   "No server yet": "No server yet",
+  "No server yet? Install the local transcription service": "No server yet? Install the local transcription service",
   "Not tested": "Not tested",
   "Note capsule": "Note capsule",
   "Note steps": "Note steps",
@@ -182,7 +179,7 @@ const SYN_LABELS = {
   "On Wayland, approve the shortcuts in your desktop's prompt. Use Control + Alt + Escape to cancel. On X11, press Escape to cancel. The target app must expose an editable accessibility field.": "On Wayland, approve the shortcuts in your desktop's prompt. Use Control + Alt + Escape to cancel. On X11, press Escape to cancel. The target app must expose an editable accessibility field.",
   "Only on-premise OpenAI-compatible servers are supported (vLLM, Ollama, llama.cpp server, LM Studio…). The address usually ends with /v1, for example http://localhost:8000/v1.": "Only on-premise OpenAI-compatible servers are supported (vLLM, Ollama, llama.cpp server, LM Studio…). The address usually ends with /v1, for example http://localhost:8000/v1.",
   "Open": "Open",
-  "OpenAI · Realtime and batch": "OpenAI · Realtime and batch",
+  "OpenAI compatible (realtime and batch)": "OpenAI compatible (realtime and batch)",
   "OpenAI: a server that speaks the OpenAI speech protocol (vLLM, speaches, faster-whisper-server), for example http://localhost:8000/v1. Live transcription uses /v1/realtime, imported files /v1/audio/transcriptions.": "OpenAI: a server that speaks the OpenAI speech protocol (vLLM, speaches, faster-whisper-server), for example http://localhost:8000/v1. Live transcription uses /v1/realtime, imported files /v1/audio/transcriptions.",
   "Participants": "Participants",
   "Pause listening": "Pause listening",
@@ -229,7 +226,6 @@ const SYN_LABELS = {
   "Show tray icon": "Show tray icon",
   "Speak into any text field, in any app. The text is inserted when you finish.": "Speak into any text field, in any app. The text is inserted when you finish.",
   "Start Syntheo at login": "Start Syntheo at login",
-  "Stay current with updates installed the next time Syntheo opens.": "Stay current with updates installed the next time Syntheo opens.",
   "Stop listening when your call ends.": "Stop listening when your call ends.",
   "Stop when meeting ends": "Stop when meeting ends",
   "Storage": "Storage",
@@ -252,6 +248,7 @@ const SYN_LABELS = {
   "The one that captures your voice.": "The one that captures your voice.",
   "The server did not answer at {host}. Check that it is running and that you are on the right network (VPN, Tailscale), then test again.": "The server did not answer at {host}. Check that it is running and that you are on the right network (VPN, Tailscale), then test again.",
   "The server that turns speech into text during your meetings. Audio is never written to disk.": "The server that turns speech into text during your meetings. Audio is never written to disk.",
+  "The server transcribes with the model it loaded, whatever the model chosen here.": "The server transcribes with the model it loaded, whatever the model chosen here.",
   "This information stays on your computer. It is used to recognize you in transcripts and to sign your meeting notes.": "This information stays on your computer. It is used to recognize you in transcripts and to sign your meeting notes.",
   "This server answers as {detectedLabel}.": "This server answers as {detectedLabel}.",
   "Timezone": "Timezone",
@@ -1241,10 +1238,10 @@ const SYN_CSS_SERVERS = `
 // français dans le code, hors messages.po).
 const SYN_SRV_HTTPS = "Use HTTPS: HTTP is only accepted on this machine or a private network.";
 const SYN_SRV_OPENAI_PH = "http://localhost:8000/v1";
-const SYN_SRV_NIM_PH = "http://localhost:9000/v1/realtime";
+const SYN_SRV_NEMO_PH = "http://localhost:9000";
 const SYN_SRV_STT_MODELS = ["mistralai/Voxtral-Mini-4B-Realtime-2602", "Systran/faster-whisper-large-v3"];
-// stt/model-selection.ts, NVIDIA_NIM_ASR_MODELS.
-const SYN_SRV_NIM_MODELS = ["nemotron-asr-streaming", "parakeet-tdt-0.6b-v3", "parakeet-tdt-0.6b-v2", "cache-aware-parakeet-rnnt-multi-asr-streaming-sortformer"];
+// stt/model-selection.ts, NEMO_SPEECH_DEFAULT_MODEL.
+const SYN_SRV_NEMO_MODELS = ["nemotron-3.5-asr-streaming-0.6b"];
 const SYN_SRV_LLM_MODELS = { 11434: ["qwen3:14b", "mistral-small3.2:24b", "gemma3:12b"], 1234: ["qwen/qwen3-14b", "google/gemma-3-12b"] };
 
 const synSrvParse = (value) => {
@@ -1502,23 +1499,22 @@ const SynSrvHelp = ({ lines }) => (
 const SynSrvBlock = ({ on, children }) => h(SynHere, { active: on }, children);
 
 // Données d'exemple : vLLM avec Voxtral Realtime sur le protocole OpenAI ;
-// aucune adresse pour le NIM (chaque protocole garde la sienne).
+// aucune adresse pour NeMo-Speech.cpp (chaque protocole garde la sienne).
 const SynSectionTranscription = ({ focus }) => {
   const [protocol, setProtocol] = useState("openai");
   const openai = useSynServer("stt", { url: "http://localhost:8000/v1", result: { ok: true, protocol: "openai", latency: 38, models: SYN_SRV_STT_MODELS } }, SYN_SRV_OPENAI_PH);
-  const nvidia = useSynServer("stt", { url: "", result: null }, SYN_SRV_NIM_PH);
-  const [chosen, setChosen] = useState({ openai: SYN_SRV_STT_MODELS[0], nvidia: SYN_SRV_NIM_MODELS[0] });
-  const server = { ...(protocol === "nvidia" ? nvidia : openai), placeholder: protocol === "nvidia" ? SYN_SRV_NIM_PH : SYN_SRV_OPENAI_PH };
+  const nvidia = useSynServer("stt", { url: "", result: null }, SYN_SRV_NEMO_PH);
+  const [chosen, setChosen] = useState({ openai: SYN_SRV_STT_MODELS[0], nvidia: SYN_SRV_NEMO_MODELS[0] });
+  const server = { ...(protocol === "nvidia" ? nvidia : openai), placeholder: protocol === "nvidia" ? SYN_SRV_NEMO_PH : SYN_SRV_OPENAI_PH };
   const protocols = {
-    openai: { label: L("OpenAI · Realtime and batch"), hint: L("vLLM, speaches, faster-whisper-server") },
-    nvidia: { label: L("NVIDIA NIM · WebSocket"), hint: L("Nemotron, Parakeet") },
+    openai: { label: L("OpenAI compatible (realtime and batch)"), hint: L("vLLM, speaches, faster-whisper-server") },
+    nvidia: { label: L("NVIDIA NeMo-Speech.cpp"), hint: L("Nemotron") },
   };
-  const nimHints = [L("English"), L("Multilingual"), L("English"), L("Multilingual · speakers")];
   const connected = server.state === "connected";
   const detected = connected ? server.result.protocol : null;
   const models =
     protocol === "nvidia"
-      ? SYN_SRV_NIM_MODELS.map((id, i) => ({ id, hint: nimHints[i] }))
+      ? SYN_SRV_NEMO_MODELS.map((id) => ({ id }))
       : connected
         ? server.result.models.map((id) => ({ id }))
         : [];
@@ -1579,7 +1575,7 @@ const SynSectionTranscription = ({ focus }) => {
                   onChange: (next) => setChosen((c) => ({ ...c, [protocol]: next })),
                   footer:
                     protocol === "nvidia"
-                      ? L("NIM does not publish its model list: these are the models known for this protocol.")
+                      ? L("The server transcribes with the model it loaded, whatever the model chosen here.")
                       : connected
                         ? undefined
                         : L("Test the connection to list the models served."),
@@ -1589,8 +1585,9 @@ const SynSectionTranscription = ({ focus }) => {
           {h(SynSrvHelp, {
             lines: [
               L("OpenAI: a server that speaks the OpenAI speech protocol (vLLM, speaches, faster-whisper-server), for example http://localhost:8000/v1. Live transcription uses /v1/realtime, imported files /v1/audio/transcriptions."),
-              L("NVIDIA NIM: your deployed Speech NIM WebSocket server, for example http://localhost:9000/v1/realtime. NVIDIA's hosted gRPC endpoint is not supported."),
+              L("NVIDIA NeMo-Speech.cpp: your nemo-speech serve server, for example http://localhost:9000. Live transcription and imported files use its realtime WebSocket. NVIDIA's hosted gRPC endpoint is not supported."),
               L("The API key is optional for servers without authentication. It is kept in your system keychain."),
+              L("No server yet? Install the local transcription service"),
             ],
           })}
         </section>,
@@ -1926,7 +1923,10 @@ const SynProfLanguage = ({ focus }) => {
   const [spoken, setSpoken] = useState(["en"]);
   const [zone, setZone] = useState("Europe/Paris");
   const [mono, setMono] = useState(false);
-  const langOptions = SYN_PROF_LANGS.map((code) => ({ value: code, label: synProfLangName(code) }));
+  const langOptions = [
+    { value: "auto", label: L("Automatic detection") },
+    ...SYN_PROF_LANGS.map((code) => ({ value: code, label: synProfLangName(code) })),
+  ];
   return h(
     SynHere,
     { active: focus === "language" },
@@ -1936,7 +1936,7 @@ const SynProfLanguage = ({ focus }) => {
         <div className="syn-rows" style={{ borderTop: 0 }}>
           {h(SynRow, {
             title: L("Main language"),
-            description: L("Default language for transcription and AI responses."),
+            description: L("Default language for transcription and AI responses. Automatic detection lets the transcription model recognize the spoken language, and AI responses follow the meeting language."),
             wide: true,
             children: (labels) =>
               h(SynProfSelect, {
@@ -1954,6 +1954,7 @@ const SynProfLanguage = ({ focus }) => {
               }),
           })}
         </div>
+        {main === "auto" ? null : (
         <div className="syn-prof-indent">
           <div className="syn-rows" style={{ borderTop: 0 }}>
             {h(SynSwitchRow, {
@@ -1974,6 +1975,7 @@ const SynProfLanguage = ({ focus }) => {
             ) : null}
           </div>
         </div>
+        )}
       </div>
       <div className="syn-rows" style={{ borderTop: 0 }}>
         {h(SynRow, {
@@ -2044,7 +2046,6 @@ const SynSectionApp = ({ focus }) => {
         {h(SynProfIdentity)}
         <div className="syn-rows" style={{ borderTop: 0 }}>
           {h(SynSwitchRow, { title: L("Start Syntheo at login"), description: L("Have Syntheo ready when you sign in."), initial: true })}
-          {h(SynSwitchRow, { title: L("Automatically install updates"), description: L("Stay current with updates installed the next time Syntheo opens."), initial: true })}
           <div style={{ padding: "12px 0" }}>
             <button type="button" className="syn-ui-btn">{L("Show release notes")}</button>
           </div>

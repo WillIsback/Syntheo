@@ -19,10 +19,10 @@ Browse a topic, then expand the question. If something does not work, see [Troub
   <Accordion title="Which servers are compatible?" id="serveurs-compatibles">
     For real-time transcription, **Settings → Transcription** recognizes two protocols:
 
-    - "OpenAI · Realtime and batch": any server that speaks the OpenAI Realtime protocol and `/v1/audio/transcriptions`, for example vLLM (with Voxtral Realtime), speaches, or faster-whisper-server.
-    - "NVIDIA NIM · WebSocket": an NVIDIA Speech NIM server deployed on your side.
+    - "OpenAI compatible (realtime and batch)": any server that speaks the OpenAI Realtime protocol and `/v1/audio/transcriptions`, for example vLLM (with Voxtral Realtime), speaches, or faster-whisper-server.
+    - "NVIDIA NeMo-Speech.cpp": a `nemo-speech serve` server (NVIDIA NeMo-Speech.cpp, Nemotron models) installed on your side. See [Install the local transcription service](/en/local-transcription-service).
 
-    For summaries and the chat, **Settings → Synthesis** accepts any OpenAI-compatible server exposing `/v1/chat/completions` and `/v1/models`, such as vLLM, SGLang, llama.cpp server, Ollama, LM Studio, TGI, or NIM LLM.
+    For summaries and the chat, **Settings → Synthesis** accepts any OpenAI-compatible server exposing `/v1/chat/completions` and `/v1/models`, such as vLLM, SGLang, llama.cpp server, Ollama, LM Studio, or TGI.
   </Accordion>
 
   <Accordion title="Does Syntheo join the call?" id="rejoint-l-appel">
@@ -74,7 +74,7 @@ Browse a topic, then expand the question. If something does not work, see [Troub
   </Accordion>
 
   <Accordion title="Can I import an existing audio file?" id="importer-audio">
-    Yes. Import a WAV, MP3, OGG, MP4, M4A, FLAC, WebM, or AAC file into an empty note. Syntheo sends it to your server without keeping a copy: through `/v1/audio/transcriptions` with the "OpenAI · Realtime and batch" engine, or into the `/v1/realtime` real-time stream with "NVIDIA NIM · WebSocket". You can also import an SRT or VTT transcript. See [Import a recording](/en/import-recordings).
+    Yes. Import a WAV, MP3, OGG, MP4, M4A, FLAC, WebM, or AAC file into an empty note. Syntheo sends it to your server without keeping a copy: through `/v1/audio/transcriptions` with the "OpenAI compatible (realtime and batch)" engine, or in a single request to `/v1/audio/transcriptions` with "NVIDIA NeMo-Speech.cpp", which falls back to the real-time stream if it fails. You can also import an SRT or VTT transcript. See [Import a recording](/en/import-recordings).
   </Accordion>
 
   <Accordion title="Which languages are supported?" id="langues">

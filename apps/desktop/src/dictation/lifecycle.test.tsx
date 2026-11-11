@@ -276,7 +276,7 @@ describe("dictation access and lifecycle", () => {
   it("explains that a live-only model can't transcribe the recording afterwards", async () => {
     mocks.connection = {
       provider: "nvidia",
-      model: "cache-aware-parakeet-rnnt-multi-asr-streaming-sortformer",
+      model: "nemotron-3.5-asr-streaming-0.6b",
       apiKey: "",
       baseUrl: "http://192.168.1.87:9000/?provider=nvidia",
     };

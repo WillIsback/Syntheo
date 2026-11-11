@@ -35,7 +35,7 @@ L'architecture actuelle est décrite dans
 
 - identité Syntheo (nom, identifiant d'application, logo, thème, français) ;
 - providers d'inférence **on-premise uniquement** (protocoles OpenAI-compatible
-  et NVIDIA NIM) ; les 33 adaptateurs de transcription cloud (Deepgram,
+  et NVIDIA NeMo-Speech.cpp) ; les 33 adaptateurs de transcription cloud (Deepgram,
   AssemblyAI, Soniox, ElevenLabs, Gladia, Speechmatics, Azure, Google, AWS…),
   le crate `soniox` et le provider « custom » compatible Deepgram sont
   supprimés ; les 33 providers LLM cloud (Anarlog, Claude, ChatGPT, Copilot,

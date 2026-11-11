@@ -13,11 +13,15 @@
 
 mod collector;
 mod pace;
+mod rest;
 #[cfg(test)]
 mod tests;
 
 pub use collector::{FILE_STREAM_CHANNEL, words_to_batch_response};
 pub use pace::{DEFAULT_MAX_LEAD, DEFAULT_MAX_SPEED, FileStreamPace};
+pub use rest::{
+    RestFileError, SpeakerBounds, rest_file_transcription, supports_rest_file_transcription,
+};
 
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant, SystemTime};
@@ -87,6 +91,8 @@ pub struct FileStreamProgress {
     /// Part du fichier déjà envoyée, de 0 à 1.
     pub fraction: f64,
     pub preview: Option<String>,
+    /// Avancement inconnu jusqu'à la fin de la requête en cours (issue #568).
+    pub indeterminate: bool,
 }
 
 pub trait FileStreamObserver: Send + Sync {
@@ -412,8 +418,11 @@ impl Driver {
         self.reported = fraction;
         self.last_report = Some(Instant::now());
         let preview = self.lock().preview_text();
-        self.observer
-            .on_progress(FileStreamProgress { fraction, preview });
+        self.observer.on_progress(FileStreamProgress {
+            fraction,
+            preview,
+            indeterminate: false,
+        });
     }
 
     fn output(&mut self, reconnections: u32) -> FileStreamOutput {

@@ -43,7 +43,33 @@ describe("normalizeStoredSttSelection", () => {
     });
   });
 
+  it.each([
+    "nemotron-asr-streaming",
+    "parakeet-tdt-0.6b-v3",
+    "parakeet-tdt-0.6b-v2",
+    "cache-aware-parakeet-rnnt-multi-asr-streaming-sortformer",
+  ])("migrates_retired_nim_model %s to nemo_speech", (model) => {
+    expect(normalizeStoredSttSelection("nvidia", model)).toEqual({
+      provider: "nvidia",
+      model: "nemotron-3.5-asr-streaming-0.6b",
+    });
+  });
+
+  it("keeps_a_model_announced_by_nemo_speech", () => {
+    expect(
+      normalizeStoredSttSelection(
+        "nvidia",
+        "nemotron-3.5-asr-streaming-0.6b.q8_0",
+      ),
+    ).toEqual({
+      provider: "nvidia",
+      model: "nemotron-3.5-asr-streaming-0.6b.q8_0",
+    });
+  });
+
   it("defaults_nvidia_to_the_streaming_nemotron_model", () => {
-    expect(getDefaultSttModel("nvidia")).toBe("nemotron-asr-streaming");
+    expect(getDefaultSttModel("nvidia")).toBe(
+      "nemotron-3.5-asr-streaming-0.6b",
+    );
   });
 });

@@ -2,10 +2,12 @@ import { Trans, useLingui } from "@lingui/react/macro";
 import { useQueryClient } from "@tanstack/react-query";
 import { useId, useRef } from "react";
 
+import { commands as openerCommands } from "@syntheo/plugin-opener2";
+import { ArrowSquareOut } from "@syntheo/ui/components/icons";
 import { cn } from "@syntheo/utils";
 
 import {
-  STT_NIM_BASE_URL_PLACEHOLDER,
+  STT_NEMO_SPEECH_BASE_URL_PLACEHOLDER,
   STT_OPENAI_BASE_URL_PLACEHOLDER,
 } from "./shared";
 
@@ -27,16 +29,14 @@ import {
 import { setAiProvider } from "~/settings/providers";
 import { useSetSettingValues } from "~/settings/queries";
 import { useConfigValues } from "~/shared/config";
+import { documentationUrl } from "~/shared/documentation";
 import { isConfiguredSttModel } from "~/stt/capabilities";
-import {
-  getDefaultSttModel,
-  NVIDIA_NIM_ASR_MODELS,
-} from "~/stt/model-selection";
+import { getDefaultSttModel } from "~/stt/model-selection";
 
 type Protocol = (typeof STT_SERVER_PROTOCOLS)[number];
 
 export function SttServerCard() {
-  const { t } = useLingui();
+  const { t, i18n } = useLingui();
   const protocolLabelId = useId();
   const queryClient = useQueryClient();
   const connection = useServerConnection("stt");
@@ -57,35 +57,47 @@ export function SttServerCard() {
 
   const protocols: Record<Protocol, { label: string; hint: string }> = {
     openai: {
-      label: t`OpenAI · Realtime and batch`,
+      label: t`OpenAI compatible (realtime and batch)`,
       hint: t`vLLM, speaches, faster-whisper-server`,
     },
-    nvidia: { label: t`NVIDIA NIM · WebSocket`, hint: t`Nemotron, Parakeet` },
+    nvidia: { label: t`NVIDIA NeMo-Speech.cpp`, hint: t`Nemotron` },
   };
 
-  const nimHints: Record<(typeof NVIDIA_NIM_ASR_MODELS)[number], string> = {
-    "nemotron-asr-streaming": t`English`,
-    "parakeet-tdt-0.6b-v3": t`Multilingual`,
-    "parakeet-tdt-0.6b-v2": t`English`,
-    "cache-aware-parakeet-rnnt-multi-asr-streaming-sortformer": t`Multilingual · speakers`,
-  };
+  const announced =
+    state.status === "connected" && state.protocol === providerId
+      ? state.models
+      : [];
+  // NeMo-Speech.cpp sert le seul modèle qu'il a chargé, quel que soit celui
+  // que nomme le client : sans test de connexion, on propose le modèle de
+  // référence.
+  const nvidiaModels = announced.length
+    ? announced
+    : [getDefaultSttModel("nvidia") ?? ""];
   const models: ModelOption[] =
     providerId === "nvidia"
-      ? NVIDIA_NIM_ASR_MODELS.map((id) => ({ id, hint: nimHints[id] }))
+      ? nvidiaModels.map((id) => ({ id }))
       : state.status === "connected"
         ? state.models.map((id) => ({ id }))
         : [];
 
-  // Le modèle par défaut est enregistré dès qu'une adresse existe : celui du
-  // protocole (NIM), sinon le premier que le serveur annonce.
-  const fallbackModel =
-    getDefaultSttModel(providerId) ??
-    (state.status === "connected" && state.protocol === providerId
-      ? state.models[0]
-      : undefined);
+  // Le modèle par défaut est enregistré dès qu'une adresse existe : le
+  // premier que le serveur annonce, sinon celui du protocole.
+  const fallbackModel = announced[0] ?? getDefaultSttModel(providerId);
+  // Un modèle enregistré que le serveur NeMo-Speech.cpp n'annonce pas (le
+  // modèle de référence avant le test) cède la place au modèle servi.
+  const staleNvidiaModel =
+    providerId === "nvidia" &&
+    !!model &&
+    announced.length > 0 &&
+    !announced.includes(model);
+  const persistedModel = staleNvidiaModel
+    ? announced[0]
+    : model || fallbackModel || "";
   const persistDefault =
     !!baseUrl &&
-    (current_stt_provider !== providerId || (!model && !!fallbackModel));
+    (current_stt_provider !== providerId ||
+      (!model && !!fallbackModel) ||
+      staleNvidiaModel);
 
   const chooseProtocol = (next: Protocol) => {
     if (next === providerId) return;
@@ -120,10 +132,10 @@ export function SttServerCard() {
     >
       {persistDefault ? (
         <PersistAiSelection
-          key={`stt:${providerId}:${model || fallbackModel || ""}`}
+          key={`stt:${providerId}:${persistedModel}`}
           type="stt"
           provider={providerId}
-          model={model || fallbackModel || ""}
+          model={persistedModel}
         />
       ) : null}
       {state.status === "failed" ? (
@@ -140,7 +152,7 @@ export function SttServerCard() {
           label={<Trans>Server address</Trans>}
           placeholder={
             providerId === "nvidia"
-              ? STT_NIM_BASE_URL_PLACEHOLDER
+              ? STT_NEMO_SPEECH_BASE_URL_PLACEHOLDER
               : STT_OPENAI_BASE_URL_PLACEHOLDER
           }
           testing={state.status === "testing"}
@@ -216,7 +228,7 @@ export function SttServerCard() {
             }
             footer={
               providerId === "nvidia"
-                ? t`NIM does not publish its model list: these are the models known for this protocol.`
+                ? t`The server transcribes with the model it loaded, whatever the model chosen here.`
                 : state.status === "connected"
                   ? undefined
                   : t`Test the connection to list the models served.`
@@ -235,9 +247,9 @@ export function SttServerCard() {
         </p>
         <p>
           <Trans>
-            NVIDIA NIM: your deployed Speech NIM WebSocket server, for example
-            http://localhost:9000/v1/realtime. NVIDIA's hosted gRPC endpoint is
-            not supported.
+            NVIDIA NeMo-Speech.cpp: your nemo-speech serve server, for example
+            http://localhost:9000. Live transcription and imported files use its
+            realtime WebSocket. NVIDIA's hosted gRPC endpoint is not supported.
           </Trans>
         </p>
         <p>
@@ -246,6 +258,27 @@ export function SttServerCard() {
             kept in your system keychain.
           </Trans>
         </p>
+        <button
+          type="button"
+          data-setting-id="stt-local-service"
+          onClick={() =>
+            void openerCommands
+              .openUrl(
+                documentationUrl(i18n.locale, "local-transcription-service"),
+                null,
+              )
+              .catch((error) =>
+                console.error(
+                  "[settings] failed to open the local service guide",
+                  error,
+                ),
+              )
+          }
+          className="text-primary inline-flex items-center gap-1 self-start underline underline-offset-[3px]"
+        >
+          <Trans>No server yet? Install the local transcription service</Trans>
+          <ArrowSquareOut className="size-3" aria-hidden="true" />
+        </button>
       </ServerHelp>
     </ServerCard>
   );

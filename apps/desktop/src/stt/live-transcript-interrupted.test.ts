@@ -25,7 +25,7 @@ describe("getLiveTranscriptPausedMessage", () => {
         sttProvider: "nvidia",
         online: true,
       }),
-    ).toMatch(/: Nemotron ASR \(NIM, WebSocket\) is having an outage\./);
+    ).toMatch(/: NVIDIA NeMo-Speech\.cpp is having an outage\./);
   });
 
   it("reports unreachable direct providers", () => {
@@ -73,7 +73,7 @@ describe("messages en français", () => {
     });
 
     expect(paused).toBe(
-      "Transcription en direct en pause : Nemotron ASR (NIM, WebSocket) subit une panne. Aucun audio n'est conservé : ce passage manquera à la transcription. Reconnexion…",
+      "Transcription en direct en pause : NVIDIA NeMo-Speech.cpp subit une panne. Aucun audio n'est conservé : ce passage manquera à la transcription. Reconnexion…",
     );
     expect(paused).not.toMatch(/transcript\b/i);
     expect(getLiveTranscriptResumedMessage()).toBe(

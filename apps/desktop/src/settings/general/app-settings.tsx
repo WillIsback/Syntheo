@@ -21,14 +21,12 @@ interface SettingItem {
 
 interface AppSettingsViewProps {
   autostart: SettingItem;
-  automaticUpdates: SettingItem;
   showAppInDock: SettingItem;
   showTrayIcon: SettingItem;
 }
 
 export function AppSettingsView({
   autostart,
-  automaticUpdates,
   showAppInDock,
   showTrayIcon,
 }: AppSettingsViewProps) {
@@ -51,17 +49,6 @@ export function AppSettingsView({
             description={<Trans>Have Syntheo ready when you sign in.</Trans>}
             checked={autostart.value}
             onChange={autostart.onChange}
-          />
-          <SettingSwitchRow
-            settingId="automatic-updates"
-            title={<Trans>Automatically install updates</Trans>}
-            description={
-              <Trans>
-                Stay current with updates installed the next time Syntheo opens.
-              </Trans>
-            }
-            checked={automaticUpdates.value}
-            onChange={automaticUpdates.onChange}
           />
           <Button
             data-setting-id="release-notes"

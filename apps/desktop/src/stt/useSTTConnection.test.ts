@@ -101,7 +101,7 @@ describe("useSTTConnection", () => {
     // Aucun module d'authentification simulé : la connexion à un endpoint
     // on-premise ne dépend d'aucune session.
     config.current_stt_provider = "nvidia";
-    config.current_stt_model = "nemotron-asr-streaming";
+    config.current_stt_model = "nemotron-3.5-asr-streaming-0.6b";
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -162,9 +162,9 @@ describe("useSTTConnection", () => {
     });
   });
 
-  it("routes an unauthenticated NVIDIA NIM endpoint to its native adapter", () => {
+  it("routes an unauthenticated NVIDIA NeMo-Speech.cpp endpoint to its native adapter", () => {
     config.current_stt_provider = "nvidia";
-    config.current_stt_model = "nemotron-asr-streaming";
+    config.current_stt_model = "nemotron-3.5-asr-streaming-0.6b";
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -173,7 +173,7 @@ describe("useSTTConnection", () => {
     const { result } = renderHook(() => useSTTConnection(), { wrapper });
     expect(result.current.conn).toEqual({
       provider: "nvidia",
-      model: "nemotron-asr-streaming",
+      model: "nemotron-3.5-asr-streaming-0.6b",
       baseUrl: "http://localhost:9000/?provider=nvidia",
       apiKey: "",
     });
@@ -185,7 +185,7 @@ describe("useSTTConnection", () => {
     // il n'y a rien à quoi se connecter.
     delete providersState["stt:nvidia"];
     config.current_stt_provider = "nvidia";
-    config.current_stt_model = "nemotron-asr-streaming";
+    config.current_stt_model = "nemotron-3.5-asr-streaming-0.6b";
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });

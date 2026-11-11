@@ -1,7 +1,12 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { useMemo } from "react";
 
-import { getBaseLanguageDisplayName, parseLocale } from "./language";
+import {
+  getBaseLanguageDisplayName,
+  isAutoMainLanguage,
+  MAIN_LANGUAGE_AUTO,
+  parseLocale,
+} from "./language";
 import {
   SearchableSelect,
   type SearchableSelectOption,
@@ -32,17 +37,20 @@ export function MainLanguageView({
   }, [supportedLanguages]);
 
   const normalizedValue = useMemo(() => {
+    if (isAutoMainLanguage(value)) return MAIN_LANGUAGE_AUTO;
     const { language } = parseLocale(value);
     return deduped.get(language) ?? value;
   }, [value, deduped]);
 
   const options: SearchableSelectOption[] = useMemo(
-    () =>
-      [...deduped.values()].map((code) => ({
+    () => [
+      { value: MAIN_LANGUAGE_AUTO, label: t`Automatic detection` },
+      ...[...deduped.values()].map((code) => ({
         value: code,
         label: getBaseLanguageDisplayName(code, i18n.locale),
       })),
-    [deduped, i18n.locale],
+    ],
+    [deduped, i18n.locale, t],
   );
 
   return (
@@ -50,7 +58,11 @@ export function MainLanguageView({
       settingId="main-language"
       title={<Trans>Main language</Trans>}
       description={
-        <Trans>Default language for transcription and AI responses.</Trans>
+        <Trans>
+          Default language for transcription and AI responses. Automatic
+          detection lets the transcription model recognize the spoken language,
+          and AI responses follow the meeting language.
+        </Trans>
       }
     >
       {(labelProps) => (

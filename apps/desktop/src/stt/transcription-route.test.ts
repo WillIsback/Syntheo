@@ -19,7 +19,7 @@ vi.mock("./capabilities", async (importOriginal) => ({
   isSupportedLanguagesLive: isSupportedLanguagesLiveMock,
 }));
 
-const NVIDIA_MODEL = "cache-aware-parakeet-rnnt-multi-asr-streaming-sortformer";
+const NVIDIA_MODEL = "nemotron-3.5-asr-streaming-0.6b";
 
 describe("getFileTranscriptionRoute", () => {
   test.each([

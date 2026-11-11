@@ -18,9 +18,9 @@ not the data controller: the user is, on their own computer.
 > folder.
 >
 > **Providers**: on-premise endpoints only. Transcription speaks the OpenAI
-> and NVIDIA NIM protocols; the summary, the chat and the template generator
-> speak to a single configured LLM endpoint, an OpenAI-compatible API (vLLM,
-> Ollama, llama.cpp server…).
+> and NVIDIA NeMo-Speech.cpp protocols; the summary, the chat and the template
+> generator speak to a single configured LLM endpoint, an OpenAI-compatible API
+> (vLLM, Ollama, llama.cpp server…).
 
 ## Stored data
 
@@ -55,8 +55,9 @@ a deletion, erasure is retried at the next launch.
 ## Network flows
 
 - **Inference endpoints configured by the user**, and only those: ASR
-  (OpenAI protocol: Realtime and `/v1/audio/transcriptions`; NVIDIA NIM
-  WebSocket) and the configured LLM endpoint (OpenAI-compatible API). Capture
+  (OpenAI protocol: Realtime and `/v1/audio/transcriptions`; NVIDIA
+  NeMo-Speech.cpp: WebSocket `/v1/audio/transcriptions/realtime`) and the
+  configured LLM endpoint (OpenAI-compatible API). Capture
   audio and text (transcript, notes, prompts) go through them, with no device
   fingerprint or task identifier in the headers. An unrecognized transcription
   URL is handled with the OpenAI protocol, never redirected to a third-party

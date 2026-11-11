@@ -80,7 +80,8 @@ export async function probeServer(
     timedRequest(target, { headers, fetcher, signal, now, timeoutMs });
 
   // Le transcripteur OpenAI s'adresse en `/v1` ou `/v1/realtime` : la liste
-  // des modèles vit toujours à côté, en `/v1/models`.
+  // des modèles vit toujours à côté, en `/v1/models`. NeMo-Speech.cpp
+  // s'adresse à la racine du serveur : sa liste est en `/v1/models`, plus bas.
   let base = trimTrailingSlashes(url.toString());
   if (type === "stt") base = base.replace(/\/realtime$/, "");
 
@@ -90,6 +91,15 @@ export async function probeServer(
     return { ok: false, reason: "unauthorized", status: models.status };
   }
   if (models.ok) {
+    const nemo = type === "stt" ? nemoSpeechModels(models.body) : null;
+    if (nemo) {
+      return {
+        ok: true,
+        latencyMs: models.latencyMs,
+        protocol: "nvidia",
+        models: nemo,
+      };
+    }
     const ids = modelIds(models.body);
     if (ids) {
       return {
@@ -101,8 +111,9 @@ export async function probeServer(
     }
   }
 
-  // NVIDIA NIM ne publie pas de liste de modèles, mais expose sa sonde de
-  // disponibilité standard à la racine du serveur.
+  // NVIDIA NeMo-Speech.cpp expose nativement sa sonde de disponibilité à la
+  // racine (`/ready`, sans authentification) et sa liste de modèles en
+  // `/v1/models`.
   if (type === "stt") {
     // Un 401/403 sur une route annexe (`/models`, sonde de santé) ne prouve
     // pas un refus de clé : un proxy (tailnet…) peut n'exposer que la route
@@ -110,17 +121,15 @@ export async function probeServer(
     // On le note, et la route de transcription tranche plus bas.
     let refusal = isRefusal(models.status) ? models.status : undefined;
     let protocol: ServerProtocol | null = null;
-    const health = await request(`${url.origin}/v1/health/ready`);
+    const health = await request(`${url.origin}/ready`);
     if (health.kind === "response") {
       if (isRefusal(health.status)) refusal ??= health.status;
-      if (health.ok) {
+      if (health.ok && isNemoSpeechReadiness(health.body)) {
         // La sonde de santé reste souvent ouverte derrière un proxy
         // authentifié (Caddy…) : elle ne dit rien de la clé. On interroge
-        // donc aussi une route protégée de l'API, en lecture seule. On ne
-        // reprend pas la création de session (`POST
-        // /v1/realtime/transcription_sessions`) qu'utilise l'adaptateur :
-        // elle émettrait un jeton éphémère à chaque test. Seuls 401 et 403
-        // comptent : un NIM sans proxy répond 404 ou 200, et c'est normal.
+        // donc aussi une route protégée de l'API, en lecture seule, qui donne
+        // en prime le modèle chargé. Seuls 401 et 403 comptent : une autre
+        // réponse montre que la clé a passé le contrôle.
         const authUrl = `${url.origin}/v1/models`;
         const auth =
           authUrl === `${base}/models` ? models : await request(authUrl);
@@ -132,7 +141,7 @@ export async function probeServer(
             ok: true,
             latencyMs: health.latencyMs,
             protocol: "nvidia",
-            models: [],
+            models: (auth.ok ? nemoSpeechModels(auth.body) : null) ?? [],
           };
         }
         protocol = "nvidia";
@@ -252,23 +261,52 @@ function modelIds(body: unknown): string[] | null {
     .slice(0, MAX_MODELS);
 }
 
+// `/ready` de NeMo-Speech.cpp : `{"capabilities":["asr",…],"ready":true}`.
+function isNemoSpeechReadiness(body: unknown): boolean {
+  return (
+    !!body &&
+    typeof body === "object" &&
+    typeof (body as { ready?: unknown }).ready === "boolean"
+  );
+}
+
+// NeMo-Speech.cpp décrit chaque modèle de `/v1/models` par sa capacité
+// (`transcription`, `diarization`…), ce qu'aucun serveur OpenAI ne fait : c'est
+// ce qui le distingue d'un serveur OpenAI-compatible. Seuls les modèles de
+// transcription sont proposés.
+function nemoSpeechModels(body: unknown): string[] | null {
+  if (!body || typeof body !== "object") return null;
+  const list = (body as { data?: unknown }).data;
+  if (!Array.isArray(list)) return null;
+  const entries = list.filter(
+    (entry): entry is { id: unknown; capability: unknown } =>
+      !!entry && typeof entry === "object" && "capability" in entry,
+  );
+  if (entries.length === 0) return null;
+  return entries
+    .filter((entry) => entry.capability === "transcription")
+    .map((entry) => String(entry.id))
+    .filter((id) => id.length > 0)
+    .slice(0, MAX_MODELS);
+}
+
 function isRefusal(status: number) {
   return status === 401 || status === 403;
 }
 
-// Même route que l'adaptateur owhisper-client : `/v1/realtime` à la racine
-// pour NIM, sinon l'adresse saisie suivie de `/realtime`.
+// Même route que l'adaptateur owhisper-client : `/v1/audio/transcriptions/
+// realtime` à la racine pour NeMo-Speech.cpp, sinon l'adresse saisie suivie de
+// `/realtime`.
 function realtimeUrl(url: URL, protocol: ServerProtocol | null) {
   const target = new URL(url.toString());
   const path = trimTrailingSlashes(target.pathname);
-  target.pathname =
-    protocol === "nvidia"
-      ? "/v1/realtime"
-      : path.endsWith("/realtime")
-        ? path
-        : `${path}/realtime`;
   target.search = "";
   target.hash = "";
+  if (protocol === "nvidia") {
+    target.pathname = "/v1/audio/transcriptions/realtime";
+    return target.toString();
+  }
+  target.pathname = path.endsWith("/realtime") ? path : `${path}/realtime`;
   target.searchParams.set("intent", "transcription");
   return target.toString();
 }

@@ -348,7 +348,7 @@ fn a_batch_only_model_cannot_be_streamed() {
     ));
     assert!(supports_file_stream(
         "https://asr.example/v1/realtime?provider=nvidia",
-        "cache-aware-parakeet-rnnt-multi-asr-streaming-sortformer",
+        "nemotron-3.5-asr-streaming-0.6b.q8_0",
         &[]
     ));
 }

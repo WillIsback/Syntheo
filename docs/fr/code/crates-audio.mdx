@@ -70,7 +70,7 @@ Dans les `Cargo.toml`, ces crates sont référencées par l'alias de workspace `
 
 ### `crates/transcription-core`
 
-- **Rôle** : façade unique pour `plugins/transcription`. Les modules `listener` et `listener2` réexportent `listener-core` et `listener2-core`. Le module `realtime_file` importe un fichier par le flux temps réel : décodage en mémoire, passage par `file_stream`, puis rendu au format batch, sans rien écrire sur le disque.
+- **Rôle** : façade unique pour `plugins/transcription`. Les modules `listener` et `listener2` réexportent `listener-core` et `listener2-core`. Le module `realtime_file` importe un fichier d'un modèle temps réel : décodage en mémoire, requête REST unique pour NVIDIA NeMo-Speech.cpp (`file_stream::rest`), sinon passage par le flux temps réel de `file_stream`, puis rendu au format batch, sans rien écrire sur le disque.
 - **Dépendances internes** : `listener-core`, `listener2-core`, `owhisper-interface`.
 - **Pages de doc concernées** : [/meetings](/fr/meetings), [/import-recordings](/fr/import-recordings).
 
@@ -84,7 +84,7 @@ Dans les `Cargo.toml`, ces crates sont référencées par l'alias de workspace `
 
 | Crate | Rôle | Utilisée par |
 | --- | --- | --- |
-| `crates/owhisper-client` | Adaptateurs STT : protocole OpenAI en temps réel et par lot (`adapter/openai/`), endpoint `/v1/audio/transcriptions` compatible (`adapter/openai_compatible_batch.rs`) et NVIDIA NIM / Riva en WebSocket (`adapter/nvidia.rs`). Expose `BatchClient`, `Provider` (seule variante : `OpenAI`), `normalize_listen_params`, les flux live et batch. | `listener-core`, `listener2-core`, `plugins/dictation`, `plugins/transcription` |
+| `crates/owhisper-client` | Adaptateurs STT : protocole OpenAI en temps réel et par lot (`adapter/openai/`), endpoint `/v1/audio/transcriptions` compatible (`adapter/openai_compatible_batch.rs`) et NVIDIA NeMo-Speech.cpp en WebSocket (`adapter/nvidia.rs`, protocole interne `nvidia`). Expose `BatchClient`, `Provider` (seule variante : `OpenAI`), `normalize_listen_params`, les flux live et batch. | `listener-core`, `listener2-core`, `plugins/dictation`, `plugins/transcription` |
 | `crates/owhisper-interface` | Types partagés du protocole : `ListenParams`, `stream`, `batch`, `batch_sse`, `batch_stream`, `InferenceProgress`. | `owhisper-client`, `listener-core`, `listener2-core`, `transcript`, `transcription-core`, `plugins/dictation`, `plugins/transcription` |
 | `crates/openai-transcription` | Modèles de requêtes et réponses OpenAI : `batch` (dont `AudioModel`) et `realtime`. | `owhisper-client` |
 | `crates/ws-client` | Client WebSocket avec relance (`client`, `retry`) au-dessus de `tokio-tungstenite` (TLS natif). | `owhisper-client`, qui le réexporte |

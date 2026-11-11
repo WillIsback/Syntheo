@@ -53,7 +53,7 @@ describe("getSttModelTranscriptionMode", () => {
       ),
     ).toBe("live");
     expect(
-      getSttModelTranscriptionMode("nvidia", "nemotron-asr-streaming"),
+      getSttModelTranscriptionMode("nvidia", "nemotron-3.5-asr-streaming-0.6b"),
     ).toBe("live");
   });
 
@@ -66,7 +66,11 @@ describe("getSttModelTranscriptionMode", () => {
 describe("isConfiguredSttModel", () => {
   test.each([
     { provider: "openai", model: "whisper-large-v3", expected: true },
-    { provider: "nvidia", model: "nemotron-asr-streaming", expected: true },
+    {
+      provider: "nvidia",
+      model: "nemotron-3.5-asr-streaming-0.6b",
+      expected: true,
+    },
     { provider: "openai", model: "", expected: false },
     { provider: "", model: "whisper-large-v3", expected: false },
   ])("$provider/$model -> $expected", ({ provider, model, expected }) => {
@@ -112,7 +116,7 @@ describe("getLiveTranscriptionConfig", () => {
   test("keeps all languages when the selected provider supports them live", async () => {
     const config = await getLiveTranscriptionConfig({
       provider: "nvidia",
-      model: "nemotron-asr-streaming",
+      model: "nemotron-3.5-asr-streaming-0.6b",
       languages: ["en", "es"],
     });
 
@@ -135,7 +139,7 @@ describe("getLiveTranscriptionConfig", () => {
     await expect(
       getLiveTranscriptionConfig({
         provider: "nvidia",
-        model: "nemotron-asr-streaming",
+        model: "nemotron-3.5-asr-streaming-0.6b",
         languages: ["en", "ko"],
       }),
     ).resolves.toEqual({
@@ -158,9 +162,11 @@ describe("getLiveTranscriptionConfig", () => {
       name: "the NVIDIA protocol checks live languages under its own id",
       mockLive: false,
       invoke: () =>
-        isSupportedLanguagesLive("nvidia", "nemotron-asr-streaming", ["fr"]),
+        isSupportedLanguagesLive("nvidia", "nemotron-3.5-asr-streaming-0.6b", [
+          "fr",
+        ]),
       source: "live" as const,
-      expected: ["nvidia", "nemotron-asr-streaming", ["fr"]],
+      expected: ["nvidia", "nemotron-3.5-asr-streaming-0.6b", ["fr"]],
     },
   ])("$name", async ({ mockLive, invoke, source, expected }) => {
     if (mockLive) {
@@ -186,6 +192,10 @@ describe("getLiveTranscriptionConfig", () => {
 });
 
 describe("getTranscriptionLanguages", () => {
+  test("imposes no language in automatic detection", () => {
+    expect(getTranscriptionLanguages("auto", ["en", "ko"])).toEqual([]);
+  });
+
   test("prefers the main language before additional spoken languages", () => {
     expect(getTranscriptionLanguages("en", ["ko"])).toEqual(["en", "ko"]);
   });

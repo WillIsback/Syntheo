@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, it } from "vitest";
 
@@ -60,7 +60,9 @@ it("rgpd_lists_stt_as_on_prem_only", () => {
   // Adaptateurs STT cloud retirés (04b-1) et providers LLM cloud retirés
   // (04b-3) : il ne reste que les endpoints configurés.
   expect(rgpd).not.toContain("Deepgram");
-  expect(rgpd).toContain("NVIDIA NIM");
+  // La transcription NVIDIA passe par NeMo-Speech.cpp (open source).
+  expect(rgpd).toContain("NVIDIA NeMo-Speech.cpp");
+  expect(rgpd).not.toContain("NIM");
 });
 
 it("rgpd_lists_no_model_download", () => {
@@ -85,4 +87,21 @@ it("rgpd_lists_only_the_configured_llm_endpoint", () => {
   expect(rgpd).not.toMatch(/openrouter|anthropic/i);
   expect(rgpd).toContain("endpoint LLM configuré");
   expect(rgpd).toMatch(/empreinte d'appareil/);
+});
+
+it("docs_never_mention_nvidia_nim", () => {
+  // Décision de William (#567) : ni la transcription ni la synthèse ne passent
+  // par un NIM. Toute la doc publiée et les README le reflètent.
+  const files = [
+    "README.md",
+    "README.fr.md",
+    "AGENTS.md",
+    ...readdirSync(join(ROOT, "docs"), { recursive: true, encoding: "utf8" })
+      .filter((path) => /\.(mdx?|json|jsx)$/.test(path))
+      .map((path) => join("docs", path)),
+  ];
+  const offenders = files.filter((path) =>
+    /\bNIM\b/i.test(readFileSync(join(ROOT, path), "utf8")),
+  );
+  expect(offenders).toEqual([]);
 });

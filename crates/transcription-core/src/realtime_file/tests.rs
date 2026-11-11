@@ -33,6 +33,27 @@ impl Events {
             .collect()
     }
 
+    /// Avancements annoncés, avec leur caractère indéterminé (issue #568).
+    fn progress(&self) -> Vec<(f64, bool)> {
+        self.0
+            .lock()
+            .unwrap()
+            .iter()
+            .filter_map(|event| match event {
+                BatchEvent::BatchResponseStreamed {
+                    event:
+                        BatchStreamEvent::Progress {
+                            percentage,
+                            indeterminate,
+                            ..
+                        },
+                    ..
+                } => Some((*percentage, *indeterminate)),
+                _ => None,
+            })
+            .collect()
+    }
+
     fn failure(&self) -> Option<(BatchErrorCode, String)> {
         self.0.lock().unwrap().iter().find_map(|event| match event {
             BatchEvent::BatchFailed { code, error, .. } => Some((*code, error.clone())),
@@ -184,4 +205,181 @@ async fn an_unreadable_file_fails_with_a_clear_message() {
     let (code, message) = events.failure().unwrap();
     assert_eq!(code, BatchErrorCode::AudioMetadataReadFailed);
     assert!(message.contains("couldn't read this file"), "{message}");
+}
+
+/// Faux serveur NeMo-Speech.cpp : `POST /v1/audio/transcriptions` répond avec
+/// `rest_status`, et le WebSocket temps réel rend un mot. Compte les deux.
+async fn nemo_speech_server(
+    rest_status: u16,
+) -> (
+    std::net::SocketAddr,
+    Arc<std::sync::atomic::AtomicUsize>,
+    Arc<std::sync::atomic::AtomicUsize>,
+) {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+    let socket = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = socket.local_addr().unwrap();
+    let posts = Arc::new(AtomicUsize::new(0));
+    let sockets = Arc::new(AtomicUsize::new(0));
+    let (post_count, socket_count) = (posts.clone(), sockets.clone());
+    tokio::spawn(async move {
+        loop {
+            let Ok((mut stream, _)) = socket.accept().await else {
+                return;
+            };
+            let mut peek = [0; 4];
+            let _ = stream.peek(&mut peek).await;
+            if &peek == b"POST" {
+                post_count.fetch_add(1, Ordering::SeqCst);
+                let mut request = Vec::new();
+                let mut buffer = [0; 65536];
+                loop {
+                    let read = stream.read(&mut buffer).await.unwrap_or(0);
+                    if read == 0 {
+                        break;
+                    }
+                    request.extend_from_slice(&buffer[..read]);
+                    let text = String::from_utf8_lossy(&request);
+                    if let Some(head_end) = text.find("\r\n\r\n") {
+                        let length = text[..head_end]
+                            .lines()
+                            .find_map(|line| {
+                                line.to_ascii_lowercase()
+                                    .strip_prefix("content-length:")
+                                    .map(|value| value.trim().parse::<usize>().unwrap_or(0))
+                            })
+                            .unwrap_or(0);
+                        if request.len() >= head_end + 4 + length {
+                            break;
+                        }
+                    }
+                }
+                let body = serde_json::json!({
+                    "duration": 2.0,
+                    "words": [{"word": "Bonjour", "start": 0.3, "end": 0.7, "speaker": 2}]
+                })
+                .to_string();
+                let response = format!(
+                    "HTTP/1.1 {rest_status} X\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                    body.len()
+                );
+                let _ = stream.write_all(response.as_bytes()).await;
+                continue;
+            }
+            socket_count.fetch_add(1, Ordering::SeqCst);
+            tokio::spawn(async move {
+                let mut ws = accept_async(stream).await.unwrap();
+                let created = serde_json::json!({"type": "session.created", "session": {}});
+                ws.send(Message::Text(created.to_string().into()))
+                    .await
+                    .unwrap();
+                let mut answered = false;
+                while let Some(Ok(message)) = ws.next().await {
+                    match message {
+                        Message::Binary(_) if !answered => {
+                            answered = true;
+                            let completed = serde_json::json!({
+                                "type": "conversation.item.input_audio_transcription.completed",
+                                "transcript": "Salut",
+                                "words": [{"word": "Salut", "start": 0.2, "end": 0.5}]
+                            });
+                            ws.send(Message::Text(completed.to_string().into()))
+                                .await
+                                .unwrap();
+                        }
+                        Message::Text(text) if text.contains("input_audio_buffer.commit") => {
+                            let committed =
+                                serde_json::json!({"type": "input_audio_buffer.committed"});
+                            let _ = ws.send(Message::Text(committed.to_string().into())).await;
+                            let _ = ws.close(None).await;
+                            break;
+                        }
+                        _ => {}
+                    }
+                }
+            });
+        }
+    });
+    (address, posts, sockets)
+}
+
+fn channel_words(output: &BatchRunOutput) -> Vec<(String, Option<usize>)> {
+    output.response.results.channels[2].alternatives[0]
+        .words
+        .iter()
+        .map(|word| (word.word.clone(), word.speaker))
+        .collect()
+}
+
+#[tokio::test]
+async fn nemo_speech_imports_a_file_in_one_rest_request() {
+    use std::sync::atomic::Ordering;
+
+    let (address, posts, sockets) = nemo_speech_server(200).await;
+    let events = Arc::new(Events::default());
+
+    let output = run_realtime_file_batch_with(
+        events.clone(),
+        params(
+            format!("http://{address}?provider=nvidia"),
+            "nemotron-3.5-asr-streaming-0.6b",
+            &wav(2),
+        ),
+        options(),
+    )
+    .await
+    .unwrap();
+
+    assert_eq!(channel_words(&output), [("Bonjour".to_string(), Some(1))]);
+    assert_eq!(output.mode, BatchRunMode::Direct);
+    assert_eq!(output.response.metadata["provider"], "nvidia");
+    assert_eq!(posts.load(Ordering::SeqCst), 1);
+    assert_eq!(sockets.load(Ordering::SeqCst), 0);
+    assert_eq!(
+        &events.names()[events.names().len() - 2..],
+        &["response", "completed"]
+    );
+    // Avancement inconnu pendant la requête, complet à son retour.
+    assert_eq!(events.progress(), [(0.0, false), (0.0, true), (1.0, false)]);
+}
+
+#[tokio::test]
+async fn nemo_speech_falls_back_to_the_realtime_stream_when_rest_fails() {
+    use std::sync::atomic::Ordering;
+
+    let (address, posts, sockets) = nemo_speech_server(500).await;
+    let events = Arc::new(Events::default());
+
+    let output = run_realtime_file_batch_with(
+        events.clone(),
+        params(
+            format!("http://{address}?provider=nvidia"),
+            "nemotron-3.5-asr-streaming-0.6b",
+            &wav(2),
+        ),
+        options(),
+    )
+    .await
+    .unwrap();
+
+    assert_eq!(posts.load(Ordering::SeqCst), 1);
+    assert!(sockets.load(Ordering::SeqCst) >= 1);
+    assert_eq!(output.mode, BatchRunMode::Streamed);
+    assert_eq!(
+        channel_words(&output)
+            .into_iter()
+            .map(|(word, _)| word)
+            .collect::<Vec<_>>(),
+        ["Salut"]
+    );
+    // Le repli sur le flux revient à un avancement mesuré.
+    let progress = events.progress();
+    assert_eq!(progress[..3], [(0.0, false), (0.0, true), (0.0, false)]);
+    assert!(
+        progress[3..]
+            .iter()
+            .all(|(_, indeterminate)| !indeterminate)
+    );
 }

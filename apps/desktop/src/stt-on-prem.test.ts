@@ -6,12 +6,12 @@ import { aiProviderSchema } from "@syntheo/store";
 
 import {
   PROVIDERS,
-  STT_NIM_BASE_URL_PLACEHOLDER,
+  STT_NEMO_SPEECH_BASE_URL_PLACEHOLDER,
   STT_OPENAI_BASE_URL_PLACEHOLDER,
 } from "~/settings/ai/stt/shared";
 
 // Garde-fou : la transcription ne parle qu'aux protocoles standard des moteurs
-// on-premise (OpenAI Realtime et /v1/audio/transcriptions, NVIDIA NIM). Les
+// on-premise (OpenAI Realtime et /v1/audio/transcriptions, NVIDIA NeMo-Speech.cpp). Les
 // adaptateurs STT cloud hérités d'Syntheo sont supprimés.
 // Vitest s'exécute depuis apps/desktop (environnement jsdom, pas d'URL file:).
 const REPO_ROOT = join(process.cwd(), "../..");
@@ -31,6 +31,7 @@ describe("stt on-prem", () => {
       "language.rs",
       "mod.rs",
       "nvidia.rs",
+      "nvidia_rest.rs",
       "openai",
       "openai_compatible_batch.rs",
       "parsing.rs",
@@ -146,14 +147,14 @@ describe("stt on-prem", () => {
   });
 
   it("stt_providers_ship_without_a_default_url", () => {
-    expect(STT_NIM_BASE_URL_PLACEHOLDER).toBe(
-      "http://localhost:9000/v1/realtime",
-    );
+    expect(STT_NEMO_SPEECH_BASE_URL_PLACEHOLDER).toBe("http://localhost:9000");
     expect(STT_OPENAI_BASE_URL_PLACEHOLDER).toBe("http://localhost:8000/v1");
     const nvidia = PROVIDERS.find((provider) => provider.id === "nvidia");
     expect(nvidia?.baseUrl).toBeUndefined();
-    expect(nvidia?.baseUrlPlaceholder).toBe(STT_NIM_BASE_URL_PLACEHOLDER);
-    expect(nvidia?.displayName).toContain("Nemotron ASR");
+    expect(nvidia?.baseUrlPlaceholder).toBe(
+      STT_NEMO_SPEECH_BASE_URL_PLACEHOLDER,
+    );
+    expect(nvidia?.displayName).toBe("NVIDIA NeMo-Speech.cpp");
     const openai = PROVIDERS.find((provider) => provider.id === "openai");
     expect(openai?.baseUrl).toBeUndefined();
     expect(openai?.baseUrlPlaceholder).toBe(STT_OPENAI_BASE_URL_PLACEHOLDER);

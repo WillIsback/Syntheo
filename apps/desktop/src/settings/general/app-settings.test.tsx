@@ -31,20 +31,16 @@ function setting(value = true) {
   };
 }
 
-function renderAppSettings({ automaticUpdates = setting() } = {}) {
-  return {
-    ...render(
-      <QueryClientProvider client={new QueryClient()}>
-        <AppSettingsView
-          autostart={setting()}
-          automaticUpdates={automaticUpdates}
-          showAppInDock={setting()}
-          showTrayIcon={setting()}
-        />
-      </QueryClientProvider>,
-    ),
-    automaticUpdates,
-  };
+function renderAppSettings() {
+  return render(
+    <QueryClientProvider client={new QueryClient()}>
+      <AppSettingsView
+        autostart={setting()}
+        showAppInDock={setting()}
+        showTrayIcon={setting()}
+      />
+    </QueryClientProvider>,
+  );
 }
 
 describe("AppSettingsView", () => {
@@ -72,14 +68,9 @@ describe("AppSettingsView", () => {
     });
   });
 
-  it("toggles automatic updates", () => {
-    const automaticUpdates = setting(false);
-    renderAppSettings({ automaticUpdates });
+  it("offers no automatic update switch, as Syntheo has no updater", () => {
+    renderAppSettings();
 
-    fireEvent.click(
-      screen.getByRole("switch", { name: "Automatically install updates" }),
-    );
-
-    expect(automaticUpdates.onChange).toHaveBeenCalledWith(true);
+    expect(screen.queryByRole("switch", { name: /update/i })).toBeNull();
   });
 });

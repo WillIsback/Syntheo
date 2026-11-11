@@ -7,6 +7,10 @@ common_derives! {
             percentage: f64,
             #[serde(default)]
             partial_text: Option<String>,
+            /// Avancement inconnu : le serveur traite tout l'audio d'une seule
+            /// requête sans en donner l'avancement (issue #568).
+            #[serde(default)]
+            indeterminate: bool,
         },
         Segment {
             response: stream::StreamResponse,

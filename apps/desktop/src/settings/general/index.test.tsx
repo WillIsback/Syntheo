@@ -125,6 +125,30 @@ describe("SettingsApp", () => {
     expect(screen.getByTestId("main-language").textContent).toBe("ko");
   });
 
+  it.each([
+    ["ko", true],
+    ["auto", false],
+  ])(
+    "main language %s shows the language-specific options: %s",
+    (ai_language, shown) => {
+      mocks.useStoredSettingValuesQuery.mockReturnValue({
+        data: {
+          values: { ai_language, spoken_languages: JSON.stringify(["en"]) },
+          hasValues: new Set(["ai_language", "spoken_languages"]),
+        },
+        isLoading: false,
+        error: null,
+      });
+
+      render(<SettingsApp />);
+
+      expect(screen.getByTestId("main-language").textContent).toBe(ai_language);
+      expect(
+        screen.queryByText("Use main language for summaries") !== null,
+      ).toBe(shown);
+    },
+  );
+
   it("account_profile_is_reachable_from_general", () => {
     mocks.useStoredSettingValuesQuery.mockReturnValue({
       data: { values: {}, hasValues: new Set() },

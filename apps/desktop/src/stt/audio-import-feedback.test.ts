@@ -34,7 +34,7 @@ describe("getAudioImportAvailability", () => {
   it("imports through the real-time stream with a live-only NVIDIA model", () => {
     const availability = getAudioImportAvailability({
       provider: "nvidia",
-      model: "cache-aware-parakeet-rnnt-multi-asr-streaming-sortformer",
+      model: "nemotron-3.5-asr-streaming-0.6b",
     });
 
     expect(availability).toEqual({ status: "ready", route: "realtime" });
@@ -65,7 +65,7 @@ describe("getBatchAvailability", () => {
     expect(
       getBatchAvailability({
         provider: "nvidia",
-        model: "cache-aware-parakeet-rnnt-multi-asr-streaming-sortformer",
+        model: "nemotron-3.5-asr-streaming-0.6b",
       }),
     ).toEqual({ status: "live_only" });
     expect(

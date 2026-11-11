@@ -25,7 +25,7 @@ Check, in order:
 
    Replace the URL with your server's. Add `-H "Authorization: Bearer <key>"` if your server requires a key.
 
-2. **The base URL is complete.** For an OpenAI-compatible server, it usually ends with `/v1` (for example `http://localhost:8000/v1`), with no `/models` or `/chat/completions` at the end. For an NVIDIA NIM server, enter the server address, for example `http://localhost:9000/v1/realtime`.
+2. **The base URL is complete.** For an OpenAI-compatible server, it usually ends with `/v1` (for example `http://localhost:8000/v1`), with no `/models` or `/chat/completions` at the end. For an NVIDIA NeMo-Speech.cpp server, enter the server root, with no path, for example `http://localhost:9000`.
 3. **The URL contains no credentials and no parameters.** Syntheo refuses a URL of the form `https://utilisateur:motdepasse@…` or one containing `?…`. Enter the key in the field provided for it.
 4. **The API key is correct.** If the server answers 401 or 403, the pill shows "Key refused". Check the key in "Advanced", then test again.
 5. **No firewall, VPN, or proxy blocks the port** between your computer and the server.
@@ -52,7 +52,7 @@ Syntheo reads your server's models from `/v1/models` when you click "Test connec
 - **The test succeeds, but no model appears.** Check that a model is actually loaded, for example with `curl <adresse>/models`. With Ollama, download a model before selecting it. With LM Studio, load one in the local server.
 - **Your model is not in the list.** Click "Enter another name" and type the exact identifier of the model served by your deployment.
 
-An NVIDIA NIM server does not publish its model list. Syntheo offers the known identifiers (`nemotron-asr-streaming`, `parakeet-tdt-0.6b-v3`…); choose the one for your deployment.
+An NVIDIA NeMo-Speech.cpp server publishes the model it has loaded in `/v1/models`: the connection test detects it and offers it to you. The server always transcribes with that model, whichever one you choose.
 
 ## Transcription stops during the meeting
 
@@ -166,7 +166,7 @@ A summary needs a summary server. Open **Settings → Synthesis**, check that th
 
 Audio imports accept WAV, MP3, OGG, MP4, M4A, FLAC, WebM, and AAC. Transcript imports accept SRT and VTT.
 
-For an audio file, your transcription server must be configured. With the "OpenAI · Realtime and batch" engine, it must expose `/v1/audio/transcriptions`. With "NVIDIA NIM · WebSocket", the import goes through the `/v1/realtime` real-time stream: allow at least a quarter of the recording's length. See [Import a recording](/en/import-recordings).
+For an audio file, your transcription server must be configured. With the "OpenAI compatible (realtime and batch)" engine, it must expose `/v1/audio/transcriptions`. With "NVIDIA NeMo-Speech.cpp", the import goes through `/v1/audio/transcriptions` in one request; if it fails, through the real-time stream (WebSocket), and you then need to allow at least a quarter of the recording's length. See [Import a recording](/en/import-recordings).
 
 ## Get help
 
@@ -176,7 +176,7 @@ For an audio file, your transcription server must be configured. With the "OpenA
 - the Syntheo version;
 - the exact error message;
 - what you expected, and the shortest steps to reproduce the problem;
-- for an AI problem, the server type (vLLM, Ollama, NIM…) and the model used.
+- for an AI problem, the server type (vLLM, Ollama, NeMo-Speech.cpp…) and the model used.
 
 If needed, attach the app's `app.log` log, located in the `logs` folder of the app data (on Windows: `%LOCALAPPDATA%\fr.willisback.syntheo\logs`). Read it again before sharing it.
 

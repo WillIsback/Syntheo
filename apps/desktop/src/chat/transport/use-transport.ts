@@ -16,6 +16,7 @@ import { hydrateSessionContext } from "~/chat/context/session-context-hydrator";
 import { buildAutomationChatTools } from "~/chat/tools/automations";
 import { loadHuman, loadOrganization } from "~/contacts/queries";
 import { useToolRegistry } from "~/contexts/tool";
+import { isAutoMainLanguage } from "~/settings/general/language";
 import { useConfigValue } from "~/shared/config";
 
 const MEETING_CONTEXT_TOOL_GUIDANCE = `
@@ -96,7 +97,9 @@ export function useTransport(
   const registry = useToolRegistry();
   const configuredModel = useLanguageModel();
   const model = modelOverride ?? configuredModel;
-  const language = useConfigValue("ai_language") || "en";
+  const mainLanguage = useConfigValue("ai_language") || "en";
+  // Détection automatique : le chat répond dans la langue de la question.
+  const language = isAutoMainLanguage(mainLanguage) ? null : mainLanguage;
   const systemPromptQuery = useQuery({
     queryKey: ["chat-system-prompt", language],
     enabled: systemPromptOverride === undefined,
@@ -145,7 +148,9 @@ export function useTransport(
   // l'éditeur dans la langue de l'interface (issue 529).
   // useLingui fait recalculer la consigne quand l'interface change de langue.
   useLingui();
-  const automationSystemPrompt = buildAutomationSystemPrompt(language);
+  const automationSystemPrompt = buildAutomationSystemPrompt(
+    language ?? undefined,
+  );
   const scopedChats = useMemo(
     () => ({
       automations: {

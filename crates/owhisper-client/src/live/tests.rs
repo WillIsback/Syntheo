@@ -211,52 +211,44 @@ fn mic_stream_params_without_mic_count_keeps_shared_expectation() {
     clippy::result_large_err,
     reason = "Tungstenite requires an unboxed HTTP response in handshake callbacks"
 )]
-async fn nvidia_dual_capture_authenticates_each_stream_with_its_own_token() {
-    use std::collections::BTreeSet;
-    use std::sync::{
-        Arc, Mutex,
-        atomic::{AtomicUsize, Ordering},
-    };
-    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+async fn nvidia_dual_capture_opens_each_stream_with_the_bearer_key() {
+    use std::sync::{Arc, Mutex};
     use tokio_tungstenite::tungstenite::handshake::server::{Request, Response};
 
+    // NeMo-Speech.cpp: each capture stream opens its own WebSocket on the
+    // realtime route with the API key as a Bearer header (no session minting),
+    // then sends one flat `session.update` before any audio.
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let base = format!("http://{}", listener.local_addr().unwrap());
-    let minted = Arc::new(AtomicUsize::new(0));
-    let tokens = Arc::new(Mutex::new(BTreeSet::new()));
-    let seen = tokens.clone();
+    let handshakes = Arc::new(Mutex::new(Vec::new()));
+    let seen = handshakes.clone();
     let server = tokio::spawn(async move {
         let mut tasks = Vec::new();
-        for _ in 0..4 {
-            let (mut socket, _) = listener.accept().await.unwrap();
-            let minted = minted.clone();
+        for _ in 0..2 {
+            let (socket, _) = listener.accept().await.unwrap();
             let seen = seen.clone();
             tasks.push(tokio::spawn(async move {
-                let mut peek = [0; 4096];
-                let n = socket.peek(&mut peek).await.unwrap();
-                if peek[..n].starts_with(b"POST ") {
-                    let mut request = Vec::new();
-                    loop {
-                        let byte = socket.read_u8().await.unwrap();
-                        request.push(byte);
-                        if request.ends_with(b"\r\n\r\n") { break; }
-                    }
-                    assert!(String::from_utf8_lossy(&request).starts_with("POST /v1/realtime/transcription_sessions "));
-                    let number = minted.fetch_add(1, Ordering::SeqCst) + 1;
-                    let body = format!(r#"{{"client_secret":{{"value":"token-{number}"}}}}"#);
-                    socket.write_all(format!("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}", body.len(), body).as_bytes()).await.unwrap();
-                } else {
-                    let mut ws = tokio_tungstenite::accept_hdr_async(socket, |request: &Request, mut response: Response| {
-                        let protocols = request.headers().get("sec-websocket-protocol").unwrap().to_str().unwrap();
-                        let token = protocols.split(", ").find_map(|p| p.strip_prefix("realtime-token.")).unwrap();
-                        assert!(matches!(token, "token-1" | "token-2"));
-                        assert!(seen.lock().unwrap().insert(token.to_owned()), "each handshake needs a distinct token");
-                        response.headers_mut().insert("sec-websocket-protocol", "realtime".parse().unwrap());
+                let mut ws = tokio_tungstenite::accept_hdr_async(
+                    socket,
+                    |request: &Request, response: Response| {
+                        let auth = request
+                            .headers()
+                            .get("authorization")
+                            .and_then(|value| value.to_str().ok())
+                            .map(str::to_owned);
+                        seen.lock()
+                            .unwrap()
+                            .push((request.uri().path().to_owned(), auth));
                         Ok(response)
-                    }).await.unwrap();
-                    use futures_util::StreamExt;
-                    assert!(ws.next().await.unwrap().is_ok());
-                }
+                    },
+                )
+                .await
+                .unwrap();
+                use futures_util::StreamExt;
+                let first = ws.next().await.unwrap().unwrap();
+                let first: serde_json::Value =
+                    serde_json::from_str(first.to_text().unwrap()).unwrap();
+                assert_eq!(first["type"], "session.update");
             }));
         }
         for task in tasks {
@@ -266,7 +258,7 @@ async fn nvidia_dual_capture_authenticates_each_stream_with_its_own_token() {
     let client = ListenClient::builder()
         .adapter::<crate::NvidiaAdapter>()
         .api_base(base)
-        .api_key("mint-key")
+        .api_key("asr-key")
         .build_dual()
         .await
         .unwrap();
@@ -278,7 +270,12 @@ async fn nvidia_dual_capture_authenticates_each_stream_with_its_own_token() {
         .await
         .unwrap()
         .unwrap();
-    assert_eq!(tokens.lock().unwrap().len(), 2);
+    let handshakes = handshakes.lock().unwrap();
+    assert_eq!(handshakes.len(), 2);
+    for (path, auth) in handshakes.iter() {
+        assert_eq!(path, "/v1/audio/transcriptions/realtime");
+        assert_eq!(auth.as_deref(), Some("Bearer asr-key"));
+    }
 }
 
 #[tokio::test]
@@ -318,8 +315,8 @@ fn mic_stream_params_keep_the_participant_bound_unless_the_mic_is_isolated() {
     assert_eq!(mic_stream_params(&isolated).max_speakers, Some(1));
 }
 
-// Issue #519 : deux connexions ouvertes à la même milliseconde ont planté un NIM
-// nemotron-asr-streaming. Le flux son système n'est tenté qu'après l'établissement du flux
+// Issue #519 : deux connexions ouvertes à la même milliseconde ont planté un serveur de
+// transcription Nemotron ASR. Le flux son système n'est tenté qu'après l'établissement du flux
 // micro et le délai `SPLIT_STREAM_STAGGER`, et son audio attend dans un tampon sans perte.
 #[tokio::test]
 async fn split_dual_staggers_the_speaker_connection_without_losing_its_audio() {
