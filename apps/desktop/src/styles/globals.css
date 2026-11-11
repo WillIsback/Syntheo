@@ -124,6 +124,18 @@ html[data-rounded-window] #root {
   --animate-kbd-press: kbd-press 0.4s ease-out forwards;
 
   --animate-wiggle: wiggle 1s ease-in-out infinite;
+  /* Barre de progression sans pourcentage (issue 568). */
+  --animate-progress-indeterminate: progress-indeterminate 1.6s ease-in-out
+    infinite;
+
+  @keyframes progress-indeterminate {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(250%);
+    }
+  }
 
   @keyframes wiggle {
     0%, 100% {

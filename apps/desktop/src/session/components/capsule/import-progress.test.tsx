@@ -74,6 +74,36 @@ describe("ImportProgress", () => {
     expect(onStop).toHaveBeenCalledTimes(1);
   });
 
+  // Issue 568 : requête REST unique, avancement inconnu.
+  it("shows an indeterminate bar, the elapsed time and Arrêter", () => {
+    const onStop = vi.fn();
+    renderProgress({
+      fraction: 0,
+      estimate: null,
+      onStop,
+      indeterminate: true,
+      elapsedSeconds: 83,
+    });
+
+    const bar = screen.getByRole("progressbar");
+    expect(bar.getAttribute("aria-busy")).toBe("true");
+    expect(bar.hasAttribute("aria-valuenow")).toBe(false);
+    expect(screen.queryByText(/%/)).toBeNull();
+    expect(screen.queryByText("Estimation…")).toBeNull();
+    expect(screen.getByText("Transcription en cours…")).toBeTruthy();
+    expect(screen.getByLabelText("Temps écoulé").textContent).toBe("01:23");
+
+    // L'animation ne joue pas si l'utilisateur réduit les mouvements.
+    const animated = bar.querySelector("[data-indeterminate-bar]");
+    expect(animated?.className).toContain(
+      "motion-safe:animate-progress-indeterminate",
+    );
+    expect(animated?.className).not.toMatch(/(^|\s)animate-/);
+
+    fireEvent.click(screen.getByRole("button", { name: "Arrêter" }));
+    expect(onStop).toHaveBeenCalledTimes(1);
+  });
+
   it("disables Arrêter while the file is being copied", () => {
     renderProgress({ fraction: 0.5, estimate: null });
 

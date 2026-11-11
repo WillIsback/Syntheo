@@ -703,6 +703,7 @@ describe("General Listener Slice", () => {
         terminalReason: undefined,
         error: undefined,
         errorCode: undefined,
+        indeterminate: false,
       });
       expect(
         store.getState().batchPreview[sessionId]?.wordsByChannel[0],

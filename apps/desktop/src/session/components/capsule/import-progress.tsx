@@ -1,6 +1,6 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 
-import { capsuleButtonClassName } from "./index";
+import { capsuleButtonClassName, formatElapsed } from "./index";
 
 export type CapsuleImportEstimate = {
   remainingSeconds: number;
@@ -16,10 +16,16 @@ export type CapsuleImportProgress = {
   // Absent pendant la copie du fichier : l'arrêt n'est possible qu'une fois
   // la transcription lancée, comme dans l'onglet Transcription.
   onStop?: () => void;
+  // Avancement inconnu (requête REST unique, issue 568) : barre animée sans
+  // pourcentage et temps écoulé depuis le début de la transcription.
+  indeterminate?: boolean;
+  elapsedSeconds?: number;
 };
 
 // État « Import » de la capsule (issue 526) : barre fine et pourcentage,
-// durée restante et accélération, bouton « Arrêter ».
+// durée restante et accélération, bouton « Arrêter ». Quand le serveur ne
+// donne pas d'avancement (issue 568) : barre indéterminée, temps écoulé et
+// « Transcription en cours… ».
 export function ImportProgress({
   progress,
 }: {
@@ -45,28 +51,57 @@ export function ImportProgress({
           <span role="status" className="text-[13px] font-semibold">
             <Trans>Import</Trans>
           </span>
-          <div
-            role="progressbar"
-            aria-label={t`Import progress`}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={percent}
-            className="bg-primary-foreground/25 rounded-pill h-1 w-28 overflow-hidden"
-          >
-            <div
-              className="bg-primary-foreground rounded-pill h-full transition-[width]"
-              style={{ width: `${percent}%` }}
-            />
-          </div>
-          <span className="font-mono text-[13px] tabular-nums">
-            {percentLabel}
-          </span>
+          {progress.indeterminate ? (
+            <>
+              {/* Ni aria-valuenow ni pourcentage : l'avancement est inconnu. */}
+              <div
+                role="progressbar"
+                aria-label={t`Import progress`}
+                aria-busy="true"
+                className="bg-primary-foreground/25 rounded-pill h-1 w-28 overflow-hidden"
+              >
+                <div
+                  data-indeterminate-bar
+                  className="bg-primary-foreground rounded-pill motion-safe:animate-progress-indeterminate h-full w-2/5 motion-reduce:w-full motion-reduce:opacity-50"
+                />
+              </div>
+              <span
+                aria-label={t`Elapsed time`}
+                className="font-mono text-[13px] tabular-nums"
+              >
+                {formatElapsed(progress.elapsedSeconds ?? 0)}
+              </span>
+            </>
+          ) : (
+            <>
+              <div
+                role="progressbar"
+                aria-label={t`Import progress`}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={percent}
+                className="bg-primary-foreground/25 rounded-pill h-1 w-28 overflow-hidden"
+              >
+                <div
+                  className="bg-primary-foreground rounded-pill h-full transition-[width]"
+                  style={{ width: `${percent}%` }}
+                />
+              </div>
+              <span className="font-mono text-[13px] tabular-nums">
+                {percentLabel}
+              </span>
+            </>
+          )}
         </div>
         <span
           data-import-estimate
           className="text-primary-foreground/70 pl-5 text-xs tabular-nums"
         >
-          <ImportEstimate estimate={progress.estimate} />
+          {progress.indeterminate ? (
+            t`Transcription in progress…`
+          ) : (
+            <ImportEstimate estimate={progress.estimate} />
+          )}
         </span>
       </div>
       <button

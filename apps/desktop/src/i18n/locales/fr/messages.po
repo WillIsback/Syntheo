@@ -1642,6 +1642,10 @@ msgstr "Modifiable : vos corrections sont gardées quand le fil rouge est mis à
 msgid "Edo purple and pale wisteria. Elegant, a little more singular."
 msgstr "Violet d'Edo et glycine pâle. Élégant, un peu plus singulier."
 
+#: src/session/components/capsule/import-progress.tsx
+msgid "Elapsed time"
+msgstr "Temps écoulé"
+
 #: src/contacts/details-fields.tsx
 #: src/contacts/details-sections.tsx
 #: src/settings/general/account-profile.tsx
@@ -5475,6 +5479,10 @@ msgstr "Transcription · injoignable"
 #: src/session/components/note-input/transcript/screens/empty.tsx
 msgid "Transcription failed"
 msgstr "Échec de la transcription"
+
+#: src/session/components/capsule/import-progress.tsx
+msgid "Transcription in progress…"
+msgstr "Transcription en cours…"
 
 #: src/stt/interruptions.ts
 msgid "Transcription interrupted {gaps}"

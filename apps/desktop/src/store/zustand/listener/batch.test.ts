@@ -29,6 +29,25 @@ describe("batch slice : suivi d'un import", () => {
     expect(store.getState().batch.s1?.percentage).toBe(0.4);
   });
 
+  // Issue 568 : requête REST unique, puis repli sur le flux.
+  test("flags an unknown progress until a measured one arrives", () => {
+    store.getState().handleBatchStarted("s1");
+    store.getState().handleBatchResponseStreamed("s1", {
+      type: "progress",
+      percentage: 0,
+      indeterminate: true,
+    });
+    expect(store.getState().batch.s1?.indeterminate).toBe(true);
+
+    store.getState().handleBatchResponseStreamed("s1", {
+      type: "progress",
+      percentage: 0,
+      indeterminate: false,
+    });
+    expect(store.getState().batch.s1?.indeterminate).toBe(false);
+    expect(store.getState().batch.s1?.startedAtMs).toBe(5_000);
+  });
+
   test("keeps the audio duration across both phases until the import ends", () => {
     store.getState().handleImportStarted("s1", 600);
     store.getState().handleBatchStarted("s1", "importing");
