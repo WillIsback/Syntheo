@@ -53,8 +53,23 @@ jobs:
         with:
           persist-credentials: false
 
+      # Résolution DNS vue du runner (diagnostic : archive.ubuntu.com et
+      # security.ubuntu.com ne se résolvaient pas depuis le conteneur BuildKit).
+      - name: Résolution DNS du runner
+        shell: bash
+        run: |
+          grep -v '^#' /etc/resolv.conf || true
+          for host in archive.ubuntu.com security.ubuntu.com developer.download.nvidia.com; do
+            getent ahosts "$host" | awk -v h="$host" 'NR == 1 { print h, $1 }' || echo "$host : non résolu"
+          done
+
+      # Conteneur BuildKit sur le réseau de l'hôte : il garde le résolveur du
+      # runner (systemd-resolved). Sur le réseau bridge, les étapes apt du
+      # runtime NVIDIA ne résolvaient pas archive.ubuntu.com (PR #575).
       - name: Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+        with:
+          driver-opts: network=host
 
       # Cache en lecture seule : seules les constructions de confiance
       # (workflow_dispatch, tag) l'écrivent.
@@ -201,8 +216,23 @@ jobs:
         with:
           persist-credentials: false
 
+      # Résolution DNS vue du runner (diagnostic : archive.ubuntu.com et
+      # security.ubuntu.com ne se résolvaient pas depuis le conteneur BuildKit).
+      - name: Résolution DNS du runner
+        shell: bash
+        run: |
+          grep -v '^#' /etc/resolv.conf || true
+          for host in archive.ubuntu.com security.ubuntu.com developer.download.nvidia.com; do
+            getent ahosts "$host" | awk -v h="$host" 'NR == 1 { print h, $1 }' || echo "$host : non résolu"
+          done
+
+      # Conteneur BuildKit sur le réseau de l'hôte : il garde le résolveur du
+      # runner (systemd-resolved). Sur le réseau bridge, les étapes apt du
+      # runtime NVIDIA ne résolvaient pas archive.ubuntu.com (PR #575).
       - name: Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+        with:
+          driver-opts: network=host
 
       - name: Connexion à GHCR
         if: needs.meta.outputs.publish == 'true'
