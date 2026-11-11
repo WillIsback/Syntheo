@@ -93,6 +93,7 @@ const SYN_LABELS = {
   "At the root of the vault": "At the root of the vault",
   "Audio": "Audio",
   "Auto": "Auto",
+  "Automatic detection": "Automatic detection",
   "Automation actions": "Automation actions",
   "Automations": "Automations",
   "Available to the next steps": "Available to the next steps",
@@ -133,7 +134,7 @@ const SYN_LABELS = {
   "Current default": "Current default",
   "Current default output": "Current default output",
   "Decline": "Decline",
-  "Default language for transcription and AI responses.": "Default language for transcription and AI responses.",
+  "Default language for transcription and AI responses. Automatic detection lets the transcription model recognize the spoken language, and AI responses follow the meeting language.": "Default language for transcription and AI responses. Automatic detection lets the transcription model recognize the spoken language, and AI responses follow the meeting language.",
   "Delete automation": "Delete automation",
   "Developers": "Developers",
   "Device authentication is not available on this computer.": "Device authentication is not available on this computer.",
@@ -2096,7 +2097,10 @@ const SynProfLanguage = ({ focus }) => {
   const [spoken, setSpoken] = useState(["en"]);
   const [zone, setZone] = useState("Europe/Paris");
   const [mono, setMono] = useState(false);
-  const langOptions = SYN_PROF_LANGS.map((code) => ({ value: code, label: synProfLangName(code) }));
+  const langOptions = [
+    { value: "auto", label: L("Automatic detection") },
+    ...SYN_PROF_LANGS.map((code) => ({ value: code, label: synProfLangName(code) })),
+  ];
   return h(
     SynHere,
     { active: focus === "language" },
@@ -2106,7 +2110,7 @@ const SynProfLanguage = ({ focus }) => {
         <div className="syn-rows" style={{ borderTop: 0 }}>
           {h(SynRow, {
             title: L("Main language"),
-            description: L("Default language for transcription and AI responses."),
+            description: L("Default language for transcription and AI responses. Automatic detection lets the transcription model recognize the spoken language, and AI responses follow the meeting language."),
             wide: true,
             children: (labels) =>
               h(SynProfSelect, {
@@ -2124,6 +2128,7 @@ const SynProfLanguage = ({ focus }) => {
               }),
           })}
         </div>
+        {main === "auto" ? null : (
         <div className="syn-prof-indent">
           <div className="syn-rows" style={{ borderTop: 0 }}>
             {h(SynSwitchRow, {
@@ -2144,6 +2149,7 @@ const SynProfLanguage = ({ focus }) => {
             ) : null}
           </div>
         </div>
+        )}
       </div>
       <div className="syn-rows" style={{ borderTop: 0 }}>
         {h(SynRow, {

@@ -1,3 +1,14 @@
+/**
+ * Langue principale « Détection automatique » (issue 569) : aucune langue
+ * n'est imposée à la transcription, le modèle reconnaît celle qui est parlée,
+ * et les réponses de l'IA suivent la langue de la réunion.
+ */
+export const MAIN_LANGUAGE_AUTO = "auto";
+
+export function isAutoMainLanguage(value: string | null | undefined) {
+  return value === MAIN_LANGUAGE_AUTO;
+}
+
 const MAX_DISPLAY_NAME_LOCALES = 16;
 const displayNamesByLocale = new Map<string, Intl.DisplayNames>();
 

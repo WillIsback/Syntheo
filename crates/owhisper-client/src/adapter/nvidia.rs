@@ -75,6 +75,40 @@ const LOCALES: &[(&str, &str)] = &[
 
 const MAX_SEGMENT_BYTES: usize = 1024 * 1024;
 
+/// Language sent to the server: the first selected one, as a locale, or
+/// `auto` without any, so that the multilingual model detects it (Profile ›
+/// Main language › Automatic detection sends no language, issue #569).
+pub(super) fn requested_language(params: &ListenParams) -> String {
+    params
+        .languages
+        .first()
+        .map(localized_language)
+        .unwrap_or_else(|| "auto".to_string())
+}
+
+/// In automatic detection, the model may open a transcript with the detected
+/// locale as a tag (`<fr-FR>`): it is not speech and is left out.
+pub(super) fn strip_language_tag(text: &str) -> &str {
+    let trimmed = text.trim_start();
+    let Some(rest) = trimmed.strip_prefix('<') else {
+        return text;
+    };
+    let Some(end) = rest.find('>') else {
+        return text;
+    };
+    let tag = &rest[..end];
+    let (language, region) = tag.split_once(['-', '_']).unwrap_or((tag, ""));
+    let is_language = (2..=3).contains(&language.len())
+        && language.chars().all(|c| c.is_ascii_alphabetic())
+        && (region.is_empty()
+            || (region.len() == 2 && region.chars().all(|c| c.is_ascii_alphabetic())));
+    if is_language {
+        rest[end + 1..].trim_start()
+    } else {
+        text
+    }
+}
+
 pub(super) fn localized_language(lang: &syntheo_language::Language) -> String {
     if lang.region().is_some() {
         return lang.bcp47_code();
@@ -94,11 +128,7 @@ pub(super) fn localized_language(lang: &syntheo_language::Language) -> String {
 /// (`transcription_session.update` is rejected as an unsupported event type).
 /// `model` is not sent: the server serves the single model it loaded.
 fn session_config(params: &ListenParams) -> Value {
-    let language = params
-        .languages
-        .first()
-        .map(localized_language)
-        .unwrap_or_else(|| "en-US".to_string());
+    let language = requested_language(params);
     let diarization = params.num_speakers != Some(1);
     let mut session = json!({
         "language": language,
@@ -132,8 +162,12 @@ pub(super) fn completed_words(words: &[Value]) -> Vec<owhisper_interface::stream
         .iter()
         .filter_map(|word| {
             let start = word["start"].as_f64()?;
+            let text = strip_language_tag(word["word"].as_str()?);
+            if text.is_empty() {
+                return None;
+            }
             Some(
-                WordBuilder::new(word["word"].as_str()?)
+                WordBuilder::new(text)
                     .start(start)
                     .end(word["end"].as_f64().unwrap_or(start))
                     .confidence(word["confidence"].as_f64().unwrap_or(1.0))
@@ -245,12 +279,15 @@ impl RealtimeSttAdapter for NvidiaAdapter {
                 // Each delta carries only the text added to the open utterance,
                 // while the consumer expects the whole utterance in every partial.
                 state.text.push_str(delta);
-                let text = state.text.clone();
+                let text = strip_language_tag(&state.text).to_string();
+                if text.trim().is_empty() {
+                    return vec![];
+                }
                 let end = state.end(SAMPLE_RATE);
                 vec![state.response(&text, end, false)]
             }
             "conversation.item.input_audio_transcription.completed" => {
-                let Some(text) = value["transcript"].as_str() else {
+                let Some(text) = value["transcript"].as_str().map(strip_language_tag) else {
                     return vec![];
                 };
                 // With endpointing, the commit closing the stream answers with an

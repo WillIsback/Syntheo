@@ -1,6 +1,9 @@
 import { commands as templateCommands } from "@syntheo/plugin-template";
 
-import { getAdditionalSpokenLanguages } from "~/settings/general/language";
+import {
+  getAdditionalSpokenLanguages,
+  isAutoMainLanguage,
+} from "~/settings/general/language";
 import type { SettingValues } from "~/settings/schema";
 
 export async function resolveSummaryLanguage(
@@ -8,7 +11,13 @@ export async function resolveSummaryLanguage(
   texts: string[],
 ): Promise<string | null> {
   const mainLanguage = settingsValues.ai_language;
-  if (typeof mainLanguage !== "string" || mainLanguage.length === 0) {
+  // Sans langue (ou en détection automatique), le compte rendu suit la langue
+  // de la transcription.
+  if (
+    typeof mainLanguage !== "string" ||
+    mainLanguage.length === 0 ||
+    isAutoMainLanguage(mainLanguage)
+  ) {
     return null;
   }
 

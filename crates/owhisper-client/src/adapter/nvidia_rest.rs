@@ -11,7 +11,7 @@ use std::time::Duration;
 use owhisper_interface::{ListenParams, stream::Word};
 use serde_json::{Value, json};
 
-use super::nvidia::{WORD_BOOST, completed_words, localized_language};
+use super::nvidia::{WORD_BOOST, completed_words, requested_language};
 use crate::error::Error;
 
 /// Résultat d'une transcription REST : mots horodatés en secondes depuis le
@@ -67,11 +67,7 @@ pub fn pcm16_mono_wav(samples: &[i16], sample_rate: u32) -> Vec<u8> {
 /// le serveur transcrit avec le modèle qu'il a chargé et refuse un nom inconnu
 /// (`unknown_model`).
 pub fn nemo_speech_form_fields(params: &ListenParams) -> Vec<(&'static str, String)> {
-    let language = params
-        .languages
-        .first()
-        .map(localized_language)
-        .unwrap_or_else(|| "en-US".to_string());
+    let language = requested_language(params);
     let diarization = params.num_speakers != Some(1);
     let mut fields = vec![
         ("language", language),
@@ -216,6 +212,12 @@ mod tests {
             ]
         );
         assert!(fields.iter().all(|(name, _)| *name != "model"));
+    }
+
+    #[test]
+    fn without_a_language_the_model_detects_it() {
+        let fields = nemo_speech_form_fields(&ListenParams::default());
+        assert_eq!(fields[0], ("language", "auto".to_string()));
     }
 
     #[test]

@@ -79,6 +79,7 @@ const SYN_LABELS = {
   "Ask the note": "Demander à la note",
   "Audio": "Audio",
   "Auto": "Auto",
+  "Automatic detection": "Détection automatique",
   "Automations": "Automatisations",
   "Backspace": "Retour arrière",
   "Begin listening": "Commencer l'écoute",
@@ -103,7 +104,7 @@ const SYN_LABELS = {
   "Copy last dictation": "Copier la dernière dictée",
   "Current default": "Valeur par défaut actuelle",
   "Current default output": "Sortie par défaut actuelle",
-  "Default language for transcription and AI responses.": "Langue par défaut pour la transcription et les réponses de l'IA.",
+  "Default language for transcription and AI responses. Automatic detection lets the transcription model recognize the spoken language, and AI responses follow the meeting language.": "Langue par défaut de la transcription et des réponses de l'IA. Avec la détection automatique, le modèle de transcription reconnaît la langue parlée, et les réponses de l'IA suivent la langue de la réunion.",
   "Developers": "Développeurs",
   "Device authentication is not available on this computer.": "L'authentification de l'appareil n'est pas disponible sur cet ordinateur.",
   "Dictation": "Dictée",
@@ -1922,7 +1923,10 @@ const SynProfLanguage = ({ focus }) => {
   const [spoken, setSpoken] = useState(["en"]);
   const [zone, setZone] = useState("Europe/Paris");
   const [mono, setMono] = useState(false);
-  const langOptions = SYN_PROF_LANGS.map((code) => ({ value: code, label: synProfLangName(code) }));
+  const langOptions = [
+    { value: "auto", label: L("Automatic detection") },
+    ...SYN_PROF_LANGS.map((code) => ({ value: code, label: synProfLangName(code) })),
+  ];
   return h(
     SynHere,
     { active: focus === "language" },
@@ -1932,7 +1936,7 @@ const SynProfLanguage = ({ focus }) => {
         <div className="syn-rows" style={{ borderTop: 0 }}>
           {h(SynRow, {
             title: L("Main language"),
-            description: L("Default language for transcription and AI responses."),
+            description: L("Default language for transcription and AI responses. Automatic detection lets the transcription model recognize the spoken language, and AI responses follow the meeting language."),
             wide: true,
             children: (labels) =>
               h(SynProfSelect, {
@@ -1950,6 +1954,7 @@ const SynProfLanguage = ({ focus }) => {
               }),
           })}
         </div>
+        {main === "auto" ? null : (
         <div className="syn-prof-indent">
           <div className="syn-rows" style={{ borderTop: 0 }}>
             {h(SynSwitchRow, {
@@ -1970,6 +1975,7 @@ const SynProfLanguage = ({ focus }) => {
             ) : null}
           </div>
         </div>
+        )}
       </div>
       <div className="syn-rows" style={{ borderTop: 0 }}>
         {h(SynRow, {

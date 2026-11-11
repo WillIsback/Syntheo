@@ -287,3 +287,55 @@ fn provider_selection_survives_custom_and_loopback_endpoints() {
         "ws://localhost:9000/v1/audio/transcriptions/realtime"
     );
 }
+
+#[test]
+fn nvidia_without_a_language_asks_the_model_to_detect_it() {
+    // Profile › Main language › Automatic detection sends no language (#569).
+    assert_eq!(session(&ListenParams::default())["language"], "auto");
+}
+
+#[test]
+fn nvidia_leaves_out_the_detected_language_tag() {
+    let adapter = NvidiaAdapter::default();
+    let _ = adapter.audio_to_message(bytes::Bytes::from(vec![0; 2 * 16_000 * 2]));
+    let mut partials = vec![];
+    for delta in ["<fr", "-FR> Bon", "jour"] {
+        let raw = serde_json::json!({
+            "type": "conversation.item.input_audio_transcription.delta",
+            "delta": delta,
+        })
+        .to_string();
+        partials.extend(
+            adapter
+                .parse_response(&raw)
+                .iter()
+                .map(|response| transcript(response).0.to_string()),
+        );
+    }
+    assert_eq!(partials, ["<fr", "Bon", "Bonjour"]);
+
+    let result = completed(
+        &adapter,
+        r#"{"type":"conversation.item.input_audio_transcription.completed","transcript":"<fr-FR> Bonjour","words":[{"word":"<fr-FR>","start":0.0,"end":0.1},{"word":"Bonjour","start":0.2,"end":0.6}]}"#,
+    );
+    let StreamResponse::TranscriptResponse { channel, .. } = &result else {
+        unreachable!()
+    };
+    assert_eq!(channel.alternatives[0].transcript, "Bonjour");
+    let words: Vec<_> = channel.alternatives[0]
+        .words
+        .iter()
+        .map(|word| word.word.as_str())
+        .collect();
+    assert_eq!(words, ["Bonjour"]);
+}
+
+#[test]
+fn nvidia_keeps_text_that_merely_starts_with_a_bracket() {
+    let adapter = NvidiaAdapter::default();
+    let result = completed(
+        &adapter,
+        r#"{"type":"conversation.item.input_audio_transcription.completed","transcript":"<inaudible> oui"}"#,
+    );
+    assert_eq!(transcript(&result).0, "<inaudible> oui");
+}

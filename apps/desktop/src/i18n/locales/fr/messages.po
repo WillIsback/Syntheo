@@ -650,6 +650,10 @@ msgstr "Automatique"
 msgid "Automatic (system)"
 msgstr "Automatique (système)"
 
+#: src/settings/general/main-language.tsx
+msgid "Automatic detection"
+msgstr "Détection automatique"
+
 #: src/settings/search-index.ts
 msgid "automatic, stop, end of call, hang up"
 msgstr "automatique, arrêter, fin d'appel, raccrocher"
@@ -1361,8 +1365,8 @@ msgid "Default"
 msgstr "Par défaut"
 
 #: src/settings/general/main-language.tsx
-msgid "Default language for transcription and AI responses."
-msgstr "Langue par défaut pour la transcription et les réponses de l'IA."
+msgid "Default language for transcription and AI responses. Automatic detection lets the transcription model recognize the spoken language, and AI responses follow the meeting language."
+msgstr "Langue par défaut de la transcription et des réponses de l'IA. Avec la détection automatique, le modèle de transcription reconnaît la langue parlée, et les réponses de l'IA suivent la langue de la réunion."
 
 #: src/templates/auto-form.tsx
 #: src/templates/template-form.tsx
@@ -2314,8 +2318,8 @@ msgid "language, display, menus, French, English, system"
 msgstr "langue, affichage, menus, français, anglais, système, interface"
 
 #: src/settings/search-index.ts
-msgid "language, French, English, translation"
-msgstr "langue, français, anglais, traduction"
+msgid "language, French, English, translation, automatic detection, auto-detect"
+msgstr "langue, français, anglais, traduction, détection automatique, automatique"
 
 #: src/settings/search-index.ts
 msgid "language, summary, translation"
