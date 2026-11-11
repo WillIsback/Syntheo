@@ -19,7 +19,7 @@ use syntheo_ws_client::client::Message;
 /// Boost score for `speech_contexts`. The served Nemotron streaming model is a
 /// cache-aware RNNT, whose typical request scores are 2–3 (NeMo-Speech.cpp ASR
 /// configuration, "Word boosting"); the server caps them at 5 by default.
-const WORD_BOOST: f64 = 2.0;
+pub(super) const WORD_BOOST: f64 = 2.0;
 
 /// Trailing silence, in milliseconds, that closes an utterance. The server only
 /// honours it when it runs with `--endpointing`; otherwise it emits one final
@@ -75,7 +75,7 @@ const LOCALES: &[(&str, &str)] = &[
 
 const MAX_SEGMENT_BYTES: usize = 1024 * 1024;
 
-fn localized_language(lang: &syntheo_language::Language) -> String {
+pub(super) fn localized_language(lang: &syntheo_language::Language) -> String {
     if lang.region().is_some() {
         return lang.bcp47_code();
     }
@@ -127,7 +127,7 @@ fn session_config(params: &ListenParams) -> Value {
 /// Words of a `.completed` event: `start`/`end` in seconds from the start of the
 /// stream, `speaker` 1-based (absent without diarization), mapped to the
 /// 0-based speaker index the transcript uses.
-fn completed_words(words: &[Value]) -> Vec<owhisper_interface::stream::Word> {
+pub(super) fn completed_words(words: &[Value]) -> Vec<owhisper_interface::stream::Word> {
     words
         .iter()
         .filter_map(|word| {

@@ -105,7 +105,7 @@ In the replica below, change the "Server address": Syntheo saves it, then tests 
 Syntheo transcribes meetings **during** the capture, and only then: since the audio is never kept, there is no transcription afterward. The chosen model must therefore be able to stream in real time.
 
 - With the **OpenAI** protocol, any on-premise model (for example Voxtral Realtime on vLLM) is treated as a real-time model. The OpenAI API's "file" model names (`whisper-1`, `gpt-4o-transcribe`, `gpt-4o-mini-transcribe`…) only serve for imports: Syntheo refuses to start a capture with them, with the message "This model only transcribes after the recording, which would require keeping the audio. Choose a real-time transcription model.".
-- With **NVIDIA NeMo-Speech.cpp**, transcription is always real-time. Importing an audio file then goes through the same real-time stream as a meeting: see [Import a recording](/en/import-recordings).
+- With **NVIDIA NeMo-Speech.cpp**, meeting transcription is always real-time. Importing an audio file goes through the server's `/v1/audio/transcriptions` API, and falls back to the real-time stream if it fails: see [Import a recording](/en/import-recordings).
 
 Chat voice input transcribes in batches, after the recording: it requires the OpenAI protocol. With NVIDIA NeMo-Speech.cpp, it shows "Voice input is unavailable" before opening the microphone.
 

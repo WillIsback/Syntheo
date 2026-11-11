@@ -19,6 +19,8 @@ The service runs on your computer and only listens on it (`127.0.0.1`). The audi
 | Extra software | Driver compatible with CUDA 13.0 and the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) | None |
 | Disk | 1 GB for the service and 850 MB for the models, plus about a dozen GB during the first build | 100 MB for the service and 850 MB for the models, plus about a dozen GB during the first build |
 
+With exactly 4 cores, a sentence usually becomes final about 0.1 s after the pause that ends it, but that delay can occasionally reach 1 or 2 s at the start of a stream. On a processor limited to 4 cores, speaker identification can also merge two similar voices: an NVIDIA card gives better results.
+
 These figures come from the measurements below. The configuration was validated on Linux (x86_64). Docker Desktop on Windows and macOS has not been tried.
 
 ## Install and start the service
@@ -82,12 +84,12 @@ Measurements of the shipped service, transcribing French with speakers told apar
 | Machine | Speed on a file | Live meeting (microphone and system audio at the same time) | Memory |
 | --- | --- | --- | --- |
 | NVIDIA RTX 5080 card | 39 times faster than real time | Keeps up: each sentence arrives 0.02 s after the pause that ends it | 1.5 GB of video memory, 1.1 GB of memory |
-| Processor, 4 cores (Ryzen 9 9950X) | 2.5 times faster than real time | Keeps up: each sentence arrives 0.15 s after the pause that ends it | 500 MB of memory |
+| Processor, 4 cores (Ryzen 9 9950X) | 2.5 times faster than real time | Keeps up: each sentence arrives about 0.1 s after the pause that ends it, sometimes 1 to 2 s at the start of a stream | 500 MB of memory |
 | Processor, 2 cores (Ryzen 9 9950X) | 1.2 times faster than real time | Does not keep up: the delay grows during the meeting | 500 MB of memory |
 
 A sentence ends after one second of silence: that is the setting Syntheo sends to the service. The delays above add to that second.
 
-During a meeting, Syntheo sends two streams at the same time, the microphone and the system audio: on the processor alone, plan for 4 free cores. For an imported file, Syntheo sends the audio up to four times faster than its duration, and the service processes it at the speed in the table: see [Import a recording](/en/import-recordings).
+During a meeting, Syntheo sends two streams at the same time, the microphone and the system audio: on the processor alone, plan for 4 free cores. An imported file goes in a single request and the service processes it at the speed in the table: 27 min 48 of audio in 34 s on the RTX 5080. See [Import a recording](/en/import-recordings).
 
 ## Protect access
 

@@ -70,7 +70,7 @@ In the `Cargo.toml` files, these crates are referenced by the workspace alias `s
 
 ### `crates/transcription-core`
 
-- **Role**: single facade for `plugins/transcription`. The `listener` and `listener2` modules re-export `listener-core` and `listener2-core`. The `realtime_file` module imports a file through the real-time stream: in-memory decoding, passing through `file_stream`, then rendering in batch format, without writing anything to disk.
+- **Role**: single facade for `plugins/transcription`. The `listener` and `listener2` modules re-export `listener-core` and `listener2-core`. The `realtime_file` module imports a file for a real-time model: in-memory decoding, a single REST request for NVIDIA NeMo-Speech.cpp (`file_stream::rest`), otherwise the real-time stream of `file_stream`, then rendering in batch format, without writing anything to disk.
 - **Internal dependencies**: `listener-core`, `listener2-core`, `owhisper-interface`.
 - **Affected doc pages**: [/en/meetings](/en/meetings), [/en/import-recordings](/en/import-recordings).
 

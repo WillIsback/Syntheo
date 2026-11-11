@@ -13,11 +13,15 @@
 
 mod collector;
 mod pace;
+mod rest;
 #[cfg(test)]
 mod tests;
 
 pub use collector::{FILE_STREAM_CHANNEL, words_to_batch_response};
 pub use pace::{DEFAULT_MAX_LEAD, DEFAULT_MAX_SPEED, FileStreamPace};
+pub use rest::{
+    RestFileError, SpeakerBounds, rest_file_transcription, supports_rest_file_transcription,
+};
 
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant, SystemTime};

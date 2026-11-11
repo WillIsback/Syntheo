@@ -74,7 +74,7 @@ Parcourez un thème, puis dépliez la question. Si quelque chose ne fonctionne p
   </Accordion>
 
   <Accordion title="Puis-je importer un fichier audio existant ?" id="importer-audio">
-    Oui. Importez un fichier WAV, MP3, OGG, MP4, M4A, FLAC, WebM ou AAC dans une note vide. Syntheo l'envoie à votre serveur sans en garder de copie : via `/v1/audio/transcriptions` avec le moteur « OpenAI compatible (temps réel et par lots) », ou dans le flux en temps réel (WebSocket) avec « NVIDIA NeMo-Speech.cpp ». Vous pouvez aussi importer une transcription SRT ou VTT. Voir [Importer un enregistrement](/fr/import-recordings).
+    Oui. Importez un fichier WAV, MP3, OGG, MP4, M4A, FLAC, WebM ou AAC dans une note vide. Syntheo l'envoie à votre serveur sans en garder de copie : via `/v1/audio/transcriptions` avec le moteur « OpenAI compatible (temps réel et par lots) », ou en une seule requête sur `/v1/audio/transcriptions` avec « NVIDIA NeMo-Speech.cpp », qui se rabat sur le flux en temps réel en cas d'échec. Vous pouvez aussi importer une transcription SRT ou VTT. Voir [Importer un enregistrement](/fr/import-recordings).
   </Accordion>
 
   <Accordion title="Quelles langues sont prises en charge ?" id="langues">

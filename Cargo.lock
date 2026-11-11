@@ -6624,6 +6624,7 @@ dependencies = [
  "transcript",
  "uuid",
  "vad-masking",
+ "wiremock",
 ]
 
 [[package]]

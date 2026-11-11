@@ -19,6 +19,8 @@ Le service tourne sur votre poste et n'écoute que sur celui-ci (`127.0.0.1`). L
 | Logiciel en plus | Pilote compatible CUDA 13.0 et [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) | Rien |
 | Disque | 1 Go pour le service et 850 Mo pour les modèles, plus une douzaine de Go pendant la première construction | 100 Mo pour le service et 850 Mo pour les modèles, plus une douzaine de Go pendant la première construction |
 
+Avec exactement 4 cœurs, une phrase devient définitive en général environ 0,1 s après la pause qui la clôt, mais ce retard peut monter ponctuellement à 1 ou 2 s en début de flux. Sur processeur limité à 4 cœurs, l'identification des intervenants peut aussi confondre deux voix proches : une carte NVIDIA donne de meilleurs résultats.
+
 Ces chiffres viennent des mesures ci-dessous. La configuration a été validée sous Linux (x86_64). Sous Windows et macOS, Docker Desktop n'a pas été essayé.
 
 ## Installer et démarrer le service
@@ -82,12 +84,12 @@ Mesures du service fourni, transcription en français avec distinction des locut
 | Machine | Vitesse sur un fichier | Réunion en direct (micro et son système en même temps) | Mémoire |
 | --- | --- | --- | --- |
 | Carte NVIDIA RTX 5080 | 39 fois plus vite que la durée réelle | Tenue : chaque phrase arrive 0,02 s après la pause qui la clôt | 1,5 Go de mémoire vidéo, 1,1 Go de mémoire vive |
-| Processeur, 4 cœurs (Ryzen 9 9950X) | 2,5 fois plus vite que la durée réelle | Tenue : chaque phrase arrive 0,15 s après la pause qui la clôt | 500 Mo de mémoire vive |
+| Processeur, 4 cœurs (Ryzen 9 9950X) | 2,5 fois plus vite que la durée réelle | Tenue : chaque phrase arrive environ 0,1 s après la pause qui la clôt, parfois 1 à 2 s en début de flux | 500 Mo de mémoire vive |
 | Processeur, 2 cœurs (Ryzen 9 9950X) | 1,2 fois plus vite que la durée réelle | Non tenue : le retard s'accumule pendant la réunion | 500 Mo de mémoire vive |
 
 Une phrase se termine après une seconde de silence : c'est le réglage que Syntheo envoie au service. Les délais ci-dessus s'ajoutent à cette seconde.
 
-Pendant une réunion, Syntheo envoie deux flux en même temps, le micro et le son système : sur processeur seul, prévoyez 4 cœurs libres. Pour un fichier importé, Syntheo envoie l'audio jusqu'à quatre fois plus vite que sa durée, et le service le traite à la vitesse du tableau : voir [Importer un enregistrement](/fr/import-recordings).
+Pendant une réunion, Syntheo envoie deux flux en même temps, le micro et le son système : sur processeur seul, prévoyez 4 cœurs libres. Un fichier importé part en une seule requête et le service le traite à la vitesse du tableau : 27 min 48 d'audio en 34 s sur la RTX 5080. Voir [Importer un enregistrement](/fr/import-recordings).
 
 ## Protéger l'accès
 
