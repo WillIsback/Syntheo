@@ -62,7 +62,7 @@ jobs:
           for host in archive.ubuntu.com security.ubuntu.com developer.download.nvidia.com; do
             getent ahosts "$host" | awk -v h="$host" 'NR == 1 { print "runner", h, $1 }' || echo "runner $host : non résolu"
             # Mêmes noms via les serveurs publics donnés à BuildKit.
-            for server in 1.1.1.1 8.8.8.8; do
+            for server in 1.1.1.1 9.9.9.9; do
               if command -v dig > /dev/null; then
                 answer=$(dig +short +time=3 +tries=1 "@$server" "$host" A 2> /dev/null | tail -n 1 || true)
                 echo "$server $host ${answer:-non résolu}"
@@ -81,7 +81,7 @@ jobs:
           driver-opts: network=host
           buildkitd-config-inline: |
             [dns]
-              nameservers = ["1.1.1.1", "8.8.8.8"]
+              nameservers = ["1.1.1.1", "9.9.9.9"]
 
       # Cache en lecture seule : seules les constructions de confiance
       # (workflow_dispatch, tag) l'écrivent.
@@ -237,7 +237,7 @@ jobs:
           for host in archive.ubuntu.com security.ubuntu.com developer.download.nvidia.com; do
             getent ahosts "$host" | awk -v h="$host" 'NR == 1 { print "runner", h, $1 }' || echo "runner $host : non résolu"
             # Mêmes noms via les serveurs publics donnés à BuildKit.
-            for server in 1.1.1.1 8.8.8.8; do
+            for server in 1.1.1.1 9.9.9.9; do
               if command -v dig > /dev/null; then
                 answer=$(dig +short +time=3 +tries=1 "@$server" "$host" A 2> /dev/null | tail -n 1 || true)
                 echo "$server $host ${answer:-non résolu}"
@@ -256,7 +256,7 @@ jobs:
           driver-opts: network=host
           buildkitd-config-inline: |
             [dns]
-              nameservers = ["1.1.1.1", "8.8.8.8"]
+              nameservers = ["1.1.1.1", "9.9.9.9"]
 
       - name: Connexion à GHCR
         if: needs.meta.outputs.publish == 'true'

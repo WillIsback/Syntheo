@@ -8,5 +8,10 @@ runs:
         set -euo pipefail
         sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup /usr/local/share/powershell 2> /dev/null || true
         df -h /
-        bash "${GITHUB_WORKSPACE}/scripts/setup-linux-tauri.sh"
-        bash "${GITHUB_WORKSPACE}/scripts/setup-linux-others.sh"
+        # DNS publics : le DNS Azure du runner ne résout pas toujours les
+        # dépôts Ubuntu (release v0.7.2 bloquée 90 min sur apt-get update).
+        bash "${GITHUB_WORKSPACE}/scripts/ci/public-dns.sh"
+        # Garde-fou : apt échoue en 15 min au lieu d'épuiser le job (une
+        # étape d'action composite n'a pas de timeout-minutes).
+        timeout --kill-after=30s 15m bash "${GITHUB_WORKSPACE}/scripts/setup-linux-tauri.sh"
+        timeout --kill-after=30s 15m bash "${GITHUB_WORKSPACE}/scripts/setup-linux-others.sh"

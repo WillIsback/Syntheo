@@ -107,6 +107,7 @@ jobs:
 
       - name: Dépendances système Tauri
         uses: ./.github/actions/install_desktop_deps
+        timeout-minutes: 20
 
       - name: Toolchain Rust
         uses: ./.github/actions/rust_install

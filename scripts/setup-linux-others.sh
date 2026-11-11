@@ -4,8 +4,10 @@
 
 set -euo pipefail
 
-sudo apt update
-sudo apt-get install -y \
+# Délais courts et nouvelles tentatives, comme setup-linux-tauri.sh.
+APT_OPTS=(-o Acquire::Retries=5 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30)
+sudo apt-get "${APT_OPTS[@]}" update
+sudo apt-get "${APT_OPTS[@]}" install -y \
   clang \
   libclang-dev \
   libgtk-3-dev \
