@@ -5,6 +5,11 @@
 //! puis rendu au format batch : l'interface reprend alors le chemin habituel
 //! d'un import (progression, enregistrement, reprise, synthèse). Rien n'est
 //! écrit sur le disque.
+//!
+//! Avec le protocole NVIDIA NeMo-Speech.cpp, le fichier décodé part d'abord
+//! d'une seule requête à l'API REST du serveur, bien plus rapide que le flux
+//! (issue #568) ; le flux temps réel ne sert qu'en repli, si cette requête
+//! échoue.
 
 use std::sync::Arc;
 
@@ -13,7 +18,8 @@ use owhisper_interface::batch_stream::BatchStreamEvent;
 use crate::listener::actors::SAMPLE_RATE;
 use crate::listener::actors::file_stream::{
     FileStreamError, FileStreamObserver, FileStreamOptions, FileStreamParams, FileStreamProgress,
-    file_stream_provider_name, stream_file_transcription, supports_file_stream,
+    RestFileError, SpeakerBounds, file_stream_provider_name, rest_file_transcription,
+    stream_file_transcription, supports_file_stream, supports_rest_file_transcription,
     words_to_batch_response,
 };
 use crate::listener2::{
@@ -65,6 +71,13 @@ async fn transcribe(
         self_human_id: None,
     };
 
+    let speakers = SpeakerBounds {
+        num_speakers: params.num_speakers,
+        max_speakers: params.max_speakers,
+    };
+    let use_rest =
+        supports_rest_file_transcription(&params.base_url, &stream_params.model, &params.languages);
+
     let samples = tokio::task::spawn_blocking(move || params.decode_pcm16_mono(SAMPLE_RATE))
         .await
         .map_err(|_| BatchFailure::AudioMetadataJoinFailed)?
@@ -89,6 +102,32 @@ async fn transcribe(
         fraction: 0.0,
         preview: None,
     });
+
+    if use_rest {
+        match rest_file_transcription(&stream_params, speakers, &samples, observer.as_ref()).await {
+            Ok((words, duration_secs)) => {
+                tracing::info!(words = words.len(), "realtime_file_transcribed_by_rest");
+                return Ok(BatchRunOutput {
+                    session_id,
+                    mode: BatchRunMode::Direct,
+                    response: words_to_batch_response(&words, duration_secs, &provider),
+                });
+            }
+            Err(RestFileError::Cancelled) => {
+                return Err(stream_failure(&provider, FileStreamError::Cancelled).into());
+            }
+            Err(RestFileError::Failed(message)) => {
+                tracing::warn!(
+                    error.message = %message,
+                    "realtime_file_rest_failed_falling_back_to_stream"
+                );
+                observer.on_progress(FileStreamProgress {
+                    fraction: 0.0,
+                    preview: None,
+                });
+            }
+        }
+    }
 
     match stream_file_transcription(stream_params, samples.into(), options, observer).await {
         Ok(output) => {

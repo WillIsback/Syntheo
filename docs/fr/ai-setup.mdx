@@ -105,7 +105,7 @@ Dans la reproduction ci-dessous, modifiez l'« Adresse du serveur » : Syntheo l
 Syntheo transcrit les réunions **pendant** la capture, et seulement ainsi : l'audio n'étant jamais conservé, il n'y a pas de transcription après coup. Le modèle choisi doit donc savoir diffuser en temps réel.
 
 - Avec le protocole **OpenAI**, tout modèle on-premise (par exemple Voxtral Realtime sur vLLM) est traité comme un modèle en temps réel. Les noms de modèles « fichier » de l'API OpenAI (`whisper-1`, `gpt-4o-transcribe`, `gpt-4o-mini-transcribe`…) ne servent qu'à l'import : Syntheo refuse de démarrer une capture avec eux, avec le message « Ce modèle ne transcrit qu'après l'enregistrement, ce qui supposerait de conserver l'audio. Choisissez un modèle de transcription en temps réel. ».
-- Avec **NVIDIA NeMo-Speech.cpp**, la transcription est toujours en temps réel. L'import d'un fichier audio passe alors par le même flux en temps réel qu'une réunion : voir [Importer un enregistrement](/fr/import-recordings).
+- Avec **NVIDIA NeMo-Speech.cpp**, la transcription des réunions est toujours en temps réel. L'import d'un fichier audio passe par l'API `/v1/audio/transcriptions` du serveur, et se rabat sur le flux en temps réel en cas d'échec : voir [Importer un enregistrement](/fr/import-recordings).
 
 La saisie vocale du chat transcrit par lots, après l'enregistrement : elle demande le protocole OpenAI. Avec NVIDIA NeMo-Speech.cpp, elle affiche « La saisie vocale est indisponible » avant d'ouvrir le micro.
 

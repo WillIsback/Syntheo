@@ -166,7 +166,7 @@ Un compte rendu nécessite un serveur de synthèse. Ouvrez **Paramètres → Syn
 
 Les imports audio acceptent WAV, MP3, OGG, MP4, M4A, FLAC, WebM et AAC. Les imports de transcription acceptent SRT et VTT.
 
-Pour un fichier audio, votre serveur de transcription doit être configuré. Avec le moteur « OpenAI compatible (temps réel et par lots) », il doit exposer `/v1/audio/transcriptions`. Avec « NVIDIA NeMo-Speech.cpp », l'import passe par le flux en temps réel (WebSocket) : comptez au moins un quart de la durée de l'enregistrement. Voir [Importer un enregistrement](/fr/import-recordings).
+Pour un fichier audio, votre serveur de transcription doit être configuré. Avec le moteur « OpenAI compatible (temps réel et par lots) », il doit exposer `/v1/audio/transcriptions`. Avec « NVIDIA NeMo-Speech.cpp », l'import passe par `/v1/audio/transcriptions` en une requête ; si elle échoue, par le flux en temps réel (WebSocket), et il faut alors compter au moins un quart de la durée de l'enregistrement. Voir [Importer un enregistrement](/fr/import-recordings).
 
 ## Obtenir de l'aide
 

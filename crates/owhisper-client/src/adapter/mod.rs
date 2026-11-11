@@ -4,11 +4,13 @@ mod segment;
 pub mod http;
 mod language;
 mod nvidia;
+mod nvidia_rest;
 mod openai;
 mod openai_compatible_batch;
 
 pub use language::{LanguageQuality, LanguageSupport};
 pub use nvidia::*;
+pub use nvidia_rest::{NemoSpeechTranscript, transcribe_with_nemo_speech_rest};
 pub use openai::*;
 
 use std::collections::{BTreeSet, HashSet};

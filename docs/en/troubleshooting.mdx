@@ -166,7 +166,7 @@ A summary needs a summary server. Open **Settings → Synthesis**, check that th
 
 Audio imports accept WAV, MP3, OGG, MP4, M4A, FLAC, WebM, and AAC. Transcript imports accept SRT and VTT.
 
-For an audio file, your transcription server must be configured. With the "OpenAI compatible (realtime and batch)" engine, it must expose `/v1/audio/transcriptions`. With "NVIDIA NeMo-Speech.cpp", the import goes through the real-time stream (WebSocket): allow at least a quarter of the recording's length. See [Import a recording](/en/import-recordings).
+For an audio file, your transcription server must be configured. With the "OpenAI compatible (realtime and batch)" engine, it must expose `/v1/audio/transcriptions`. With "NVIDIA NeMo-Speech.cpp", the import goes through `/v1/audio/transcriptions` in one request; if it fails, through the real-time stream (WebSocket), and you then need to allow at least a quarter of the recording's length. See [Import a recording](/en/import-recordings).
 
 ## Get help
 
