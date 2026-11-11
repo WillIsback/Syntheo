@@ -42,7 +42,35 @@ impl ContextBlock {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use askama::Template;
     use syntheo_askama_utils::tpl_snapshot_with_assert;
+
+    // Issue 570 : en détection automatique, le chat ne reçoit pas de langue ;
+    // il répond dans celle de la question, pas en anglais.
+    #[test]
+    fn chat_without_language_answers_in_the_language_of_the_question() {
+        let rendered = ChatSystem { language: None }.render().unwrap();
+        assert!(
+            rendered.contains("- Always respond in the language of the user's latest message,")
+        );
+        assert!(!rendered.contains("English"));
+        assert!(rendered.contains("- If the user asks for your name"));
+        assert!(rendered.contains("\n- Always respond in the language"));
+        assert!(rendered.contains(
+            "different language.\n- Transcript language, source-note language, quoted text and"
+        ));
+    }
+
+    #[test]
+    fn chat_with_a_language_answers_in_it() {
+        let rendered = ChatSystem {
+            language: Some("fr".to_string()),
+        }
+        .render()
+        .unwrap();
+        assert!(rendered.contains("\n- Always respond in French, unless"));
+        assert!(!rendered.contains("latest message"));
+    }
 
     tpl_snapshot_with_assert!(
         test_context_block_wrapped,

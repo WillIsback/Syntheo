@@ -22,30 +22,31 @@ pub fn summary_length_policy(
 #[tauri::command]
 #[specta::specta]
 pub fn dominant_language(request: DominantLanguageRequest) -> Result<Option<String>, String> {
-    let Ok(languages) = request
+    // Un code illisible est écarté plutôt que d'empêcher la détection.
+    let languages = request
         .candidates
         .iter()
-        .map(|candidate| syntheo_language::Language::from_str(candidate))
-        .collect::<Result<Vec<_>, _>>()
-    else {
-        return Ok(None);
-    };
+        .filter_map(|candidate| {
+            syntheo_language::Language::from_str(candidate)
+                .ok()
+                .map(|language| (candidate, language))
+        })
+        .collect::<Vec<_>>();
     let candidate_codes = languages
         .iter()
-        .map(syntheo_language::Language::iso639)
+        .map(|(_, language)| language.iso639())
         .collect::<Vec<_>>();
     let dominant = syntheo_language::dominant_language(
         request.texts.iter().map(String::as_str),
         &candidate_codes,
     );
 
-    Ok(dominant
-        .and_then(|dominant| {
-            languages
-                .iter()
-                .position(|candidate| candidate.iso639() == dominant)
-        })
-        .map(|index| request.candidates[index].clone()))
+    Ok(dominant.and_then(|dominant| {
+        languages
+            .iter()
+            .find(|(_, language)| language.iso639() == dominant)
+            .map(|(candidate, _)| (*candidate).clone())
+    }))
 }
 
 #[tauri::command]
@@ -132,4 +133,33 @@ pub async fn get_template_source<R: tauri::Runtime>(
     template: syntheo_template_app::EditableTemplate,
 ) -> Result<String, String> {
     Ok(syntheo_template_app::template_source(template).to_string())
+}
+
+#[cfg(test)]
+mod dominant_language_tests {
+    use super::*;
+
+    // Issue 570 : en détection automatique, toutes les langues de l'app sont
+    // candidates, y compris celles que la détection ne sait pas reconnaître.
+    #[test]
+    fn detects_french_among_all_candidates_and_returns_the_candidate_code() {
+        let detected = dominant_language(DominantLanguageRequest {
+            texts: vec!["Bonjour à tous, merci d'être venus à cette réunion.".to_string()],
+            candidates: ["bs", "en", "fr", "ms", "pas-une-langue"]
+                .map(String::from)
+                .to_vec(),
+        })
+        .unwrap();
+        assert_eq!(detected.as_deref(), Some("fr"));
+    }
+
+    #[test]
+    fn returns_nothing_for_an_empty_transcript() {
+        let detected = dominant_language(DominantLanguageRequest {
+            texts: vec![String::new()],
+            candidates: ["en", "fr"].map(String::from).to_vec(),
+        })
+        .unwrap();
+        assert_eq!(detected, None);
+    }
 }

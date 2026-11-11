@@ -4,20 +4,24 @@ pub fn dominant_language<'a>(
     texts: impl IntoIterator<Item = &'a str>,
     candidates: &[ISO639],
 ) -> Option<ISO639> {
+    // Les candidats que whatlang ne sait pas reconnaître sont écartés : un
+    // seul d'entre eux ne doit pas empêcher la détection parmi les autres
+    // (issue 570, toutes les langues de l'app en détection automatique).
     let mut unique_candidates = Vec::new();
+    let mut languages = Vec::new();
     for candidate in candidates {
-        if !unique_candidates.contains(candidate) {
+        if unique_candidates.contains(candidate) {
+            continue;
+        }
+        if let Some(language) = map_language(*candidate) {
             unique_candidates.push(*candidate);
+            languages.push(language);
         }
     }
     if unique_candidates.len() < 2 {
         return None;
     }
 
-    let languages = unique_candidates
-        .iter()
-        .map(|candidate| map_language(*candidate))
-        .collect::<Option<Vec<_>>>()?;
     let detector = whatlang::Detector::with_allowlist(languages.clone());
     let mut weights = vec![0_usize; unique_candidates.len()];
 
@@ -166,10 +170,21 @@ mod tests {
     }
 
     #[test]
-    fn returns_none_when_a_candidate_cannot_be_mapped() {
+    fn returns_none_when_only_one_candidate_can_be_mapped() {
         assert_eq!(
             dominant_language(["English"], &[ISO639::En, ISO639::Ab]),
             None
+        );
+    }
+
+    #[test]
+    fn ignores_candidates_whatlang_cannot_recognize() {
+        assert_eq!(
+            dominant_language(
+                ["Bonjour à tous, merci d'être venus à cette réunion."],
+                &[ISO639::Ab, ISO639::En, ISO639::Bs, ISO639::Fr, ISO639::Ms],
+            ),
+            Some(ISO639::Fr)
         );
     }
 
