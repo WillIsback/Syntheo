@@ -321,14 +321,31 @@ jobs:
         id: digest
         if: needs.meta.outputs.publish == 'true'
         shell: bash
+        # Les métadonnées complètes dépassent 128 Ko avec la provenance
+        # BuildKit : passées en variable d'environnement, bash ne démarre
+        # plus (« Argument list too long »). On n'extrait donc que les champs
+        # utiles, côté expression GitHub.
         env:
-          METADATA: ${{ steps.bake.outputs.metadata }}
+          META_DIGEST: ${{ fromJSON(steps.bake.outputs.metadata)[matrix.variant]['containerimage.digest'] }}
+          DESCRIPTOR: ${{ toJSON(fromJSON(steps.bake.outputs.metadata)[matrix.variant]['containerimage.descriptor']) }}
+          IMAGE_NAME: ${{ fromJSON(steps.bake.outputs.metadata)[matrix.variant]['image.name'] }}
           VARIANT: ${{ matrix.variant }}
           ARCH: ${{ matrix.arch }}
         run: |
           set -euo pipefail
-          digest=$(jq -r --arg v "$VARIANT" '.[$v]["containerimage.digest"]' <<< "$METADATA")
-          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "::error::Empreinte absente"; exit 1; }
+          digest="$META_DIGEST"
+          if ! [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            # Repli : le descripteur porte la même empreinte.
+            digest=$(jq -r '.digest // empty' <<< "$DESCRIPTOR" 2>/dev/null || true)
+          fi
+          if ! [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "::error::Empreinte absente pour la cible « $VARIANT » des métadonnées de bake."
+            echo "containerimage.digest : ${META_DIGEST:-<vide>}"
+            echo "containerimage.descriptor : ${DESCRIPTOR:-<vide>}"
+            echo "image.name : ${IMAGE_NAME:-<vide>}"
+            echo "Le JSON complet (clés par cible) figure dans le journal de l'étape « Construction »."
+            exit 1
+          fi
           echo "digest=$digest" >> "$GITHUB_OUTPUT"
           mkdir -p digests
           echo "$digest" > "digests/${VARIANT}-${ARCH}"
