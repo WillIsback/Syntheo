@@ -243,7 +243,13 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # Publication : envoi par empreinte (sans tag), assemblé en index
-      # multi-architecture par le job publish. Sinon : image locale scannée.
+      # multi-architecture par le job publish, avec SBOM et provenance.
+      # Sinon : image locale (exporter docker), scannée puis gardée en
+      # artefact. Ce chemin d'essai se passe d'attestations : avec elles,
+      # BuildKit produit une liste de manifestes que l'exporter docker refuse
+      # (« docker exporter does not currently support exporting manifest
+      # lists », run 43055669100), et `docker load` ne lit pas une archive OCI
+      # sans le magasin d'images containerd.
       - name: Sortie de la construction
         id: output
         shell: bash
@@ -256,11 +262,15 @@ jobs:
             {
               echo "tags=${IMAGE}"
               echo "output=type=image,push-by-digest=true,name-canonical=true,push=true"
+              echo "sbom=type=sbom"
+              echo "provenance=type=provenance,mode=max"
             } >> "$GITHUB_OUTPUT"
           else
             {
               echo "tags=syntheo-transcription:ci-${VARIANT}"
               echo "output=type=docker"
+              echo "sbom=type=sbom,disabled=true"
+              echo "provenance=type=provenance,disabled=true"
             } >> "$GITHUB_OUTPUT"
           fi
 
@@ -280,8 +290,8 @@ jobs:
             rootfs-${{ matrix.variant }}.cache-from=type=gha,scope=transcription-runtime-${{ matrix.variant }}-${{ matrix.arch }}
             ${{ matrix.variant }}.tags=${{ steps.output.outputs.tags }}
             ${{ matrix.variant }}.output=${{ steps.output.outputs.output }}
-            ${{ matrix.variant }}.attest=type=sbom
-            ${{ matrix.variant }}.attest=type=provenance,mode=max
+            ${{ matrix.variant }}.attest=${{ steps.output.outputs.sbom }}
+            ${{ matrix.variant }}.attest=${{ steps.output.outputs.provenance }}
 
       - name: Empreinte de l'image
         id: digest
