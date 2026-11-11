@@ -168,6 +168,7 @@ const SYN_LABELS = {
   "No notes in this folder match.": "Aucune note de ce dossier ne correspond.",
   "No results found.": "Aucun résultat trouvé.",
   "No server yet": "Aucun serveur",
+  "No server yet? Install the local transcription service": "Pas encore de serveur ? Installer le service de transcription en local",
   "Not tested": "Non testé",
   "Note capsule": "Capsule de la note",
   "Note steps": "Étapes de la note",
@@ -1585,6 +1586,7 @@ const SynSectionTranscription = ({ focus }) => {
               L("OpenAI: a server that speaks the OpenAI speech protocol (vLLM, speaches, faster-whisper-server), for example http://localhost:8000/v1. Live transcription uses /v1/realtime, imported files /v1/audio/transcriptions."),
               L("NVIDIA NeMo-Speech.cpp: your nemo-speech serve server, for example http://localhost:9000. Live transcription and imported files use its realtime WebSocket. NVIDIA's hosted gRPC endpoint is not supported."),
               L("The API key is optional for servers without authentication. It is kept in your system keychain."),
+              L("No server yet? Install the local transcription service"),
             ],
           })}
         </section>,
