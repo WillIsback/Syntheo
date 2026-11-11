@@ -111,8 +111,9 @@ export async function probeServer(
     }
   }
 
-  // NVIDIA NeMo-Speech.cpp expose sa sonde de disponibilité et sa liste de
-  // modèles à la racine du serveur.
+  // NVIDIA NeMo-Speech.cpp expose nativement sa sonde de disponibilité à la
+  // racine (`/ready`, sans authentification) et sa liste de modèles en
+  // `/v1/models`.
   if (type === "stt") {
     // Un 401/403 sur une route annexe (`/models`, sonde de santé) ne prouve
     // pas un refus de clé : un proxy (tailnet…) peut n'exposer que la route
@@ -120,10 +121,10 @@ export async function probeServer(
     // On le note, et la route de transcription tranche plus bas.
     let refusal = isRefusal(models.status) ? models.status : undefined;
     let protocol: ServerProtocol | null = null;
-    const health = await request(`${url.origin}/v1/health/ready`);
+    const health = await request(`${url.origin}/ready`);
     if (health.kind === "response") {
       if (isRefusal(health.status)) refusal ??= health.status;
-      if (health.ok) {
+      if (health.ok && isNemoSpeechReadiness(health.body)) {
         // La sonde de santé reste souvent ouverte derrière un proxy
         // authentifié (Caddy…) : elle ne dit rien de la clé. On interroge
         // donc aussi une route protégée de l'API, en lecture seule, qui donne
@@ -258,6 +259,15 @@ function modelIds(body: unknown): string[] | null {
     )
     .filter((id) => id.length > 0)
     .slice(0, MAX_MODELS);
+}
+
+// `/ready` de NeMo-Speech.cpp : `{"capabilities":["asr",…],"ready":true}`.
+function isNemoSpeechReadiness(body: unknown): boolean {
+  return (
+    !!body &&
+    typeof body === "object" &&
+    typeof (body as { ready?: unknown }).ready === "boolean"
+  );
 }
 
 // NeMo-Speech.cpp décrit chaque modèle de `/v1/models` par sa capacité

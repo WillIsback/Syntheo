@@ -131,7 +131,7 @@ describe("probeServer", () => {
   test("NeMo-Speech.cpp à la racine du serveur : sonde de santé et modèle chargé", async () => {
     const fetcher = vi.fn(
       routes({
-        "http://192.168.1.20:9000/v1/health/ready": nemoHealth,
+        "http://192.168.1.20:9000/ready": nemoHealth,
         "http://192.168.1.20:9000/v1/models": nemoModels,
       }),
     );
@@ -161,9 +161,24 @@ describe("probeServer", () => {
     expect(result).toMatchObject({ ok: true, protocol: "openai" });
   });
 
+  test("une page /ready qui n'est pas celle de NeMo-Speech.cpp ne suffit pas", async () => {
+    const fetcher = vi.fn(
+      routes({
+        "http://192.168.1.20:9000/ready": () => new Response("OK"),
+      }),
+    );
+
+    const result = await probeServer(
+      { type: "stt", baseUrl: "http://192.168.1.20:9000", apiKey: "" },
+      { fetcher, now: clock() },
+    );
+
+    expect(result).toMatchObject({ ok: false, reason: "not_found" });
+  });
+
   test("serveur à sonde de santé sans liste de modèles : connecté, sans modèle", async () => {
     const fetcher = vi.fn(
-      routes({ "http://192.168.1.20:9000/v1/health/ready": nemoHealth }),
+      routes({ "http://192.168.1.20:9000/ready": nemoHealth }),
     );
 
     const result = await probeServer(
@@ -184,7 +199,7 @@ describe("probeServer", () => {
   const nemoBehindProxy = (expectedKey: string) =>
     vi.fn(async (url: string, init?: RequestInit) => {
       const { pathname } = new URL(url);
-      if (pathname === "/v1/health/ready") return nemoHealth();
+      if (pathname === "/ready") return nemoHealth();
       if (!pathname.startsWith("/v1/")) {
         return new Response(null, { status: 404 });
       }
@@ -237,7 +252,7 @@ describe("probeServer", () => {
     // Le proxy refuse la clé sur toute l'API, route temps réel comprise.
     const fetcher = vi.fn(async (url: string) => {
       const { pathname } = new URL(url);
-      if (pathname === "/v1/health/ready") return nemoHealth();
+      if (pathname === "/ready") return nemoHealth();
       return new Response(null, {
         status: pathname.startsWith("/v1/") ? 403 : 404,
       });
