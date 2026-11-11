@@ -8,17 +8,20 @@
 # (FROM scratch, utilisateur 1000:1000), construit au commit épinglé et passé
 # ici comme contexte nommé `nemo-speech-runtime`. docker-bake.hcl s'en charge :
 #
-#   docker buildx bake -f deploy/transcription/docker-bake.hcl cpu --load
-#   docker buildx bake -f deploy/transcription/docker-bake.hcl cuda --load
+# docker buildx bake -f deploy/transcription/docker-bake.hcl cpu --load
+# docker buildx bake -f deploy/transcription/docker-bake.hcl cuda --load
 #
 # Avec un runtime déjà construit :
-#   docker buildx build --build-context nemo-speech-runtime=docker-image://<image> .
+# docker buildx build --build-context nemo-speech-runtime=docker-image://<image> .
 
 ARG NEMO_SPEECH_VERSION=0.3.0
 ARG NEMO_SPEECH_COMMIT=20999cc921d2b14aa58708f61756a8b2e787ba20
+# Image épinglée par empreinte (en ARG : le formateur ne lit pas `@sha256`
+# dans un FROM).
+ARG ALPINE_IMAGE=alpine:3.22@sha256:49340b346798875b5592e5d420241f2f9cfba5f47e62ebb1446a1b34734e898f
 
 # --- Modèles GGUF et fiches des modèles, aux révisions figées, vérifiés -----
-FROM alpine:3.22@sha256:49340b346798875b5592e5d420241f2f9cfba5f47e62ebb1446a1b34734e898f AS models
+FROM ${ALPINE_IMAGE} AS models
 ADD --checksum=sha256:3fc991d3badad7277c11030a7519832cddaf2057aafed6d4b25147e953a070b1 \
     https://huggingface.co/nvidia/nemotron-3.5-asr-streaming-0.6b/resolve/ea30d66debe3740a08b573244286791d423d6b3e/nemotron-3.5-asr-streaming-0.6b.q8_0.gguf \
     /out/models/nemotron-3.5-asr-streaming-0.6b.q8_0.gguf
@@ -67,7 +70,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
 # Clé d'API facultative : variable NEMO_SPEECH_HTTP_API_KEY (vide : sans clé).
 # `--endpointing` : un résultat définitif par phrase, au fil des silences
 # (seuil réglé par Syntheo dans chaque session).
-CMD ["--json", "serve", "--access-log", "--host", "0.0.0.0", "--port", "8080", \
-     "--asr-model", "/models/nemotron-3.5-asr-streaming-0.6b.q8_0.gguf", \
-     "--diar-model", "/models/Nemotron-3-Diarization.q8_0.gguf", \
-     "--endpointing"]
+CMD ["--json", "serve", "--access-log", "--host", "0.0.0.0", "--port", "8080", "--asr-model", "/models/nemotron-3.5-asr-streaming-0.6b.q8_0.gguf", "--diar-model", "/models/Nemotron-3-Diarization.q8_0.gguf", "--endpointing"]
