@@ -9,7 +9,7 @@ import {
 
 describe("getDefaultSttModel", () => {
   test.each([
-    ["nvidia", "nemotron-asr-streaming"],
+    ["nvidia", "nemotron-3.5-asr-streaming-0.6b"],
     ["openai", undefined],
     ["syntheo", undefined],
   ])("defaults %s to %s", (provider, model) => {

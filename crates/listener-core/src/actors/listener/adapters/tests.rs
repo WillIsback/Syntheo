@@ -71,7 +71,7 @@ fn listen_params_bound_speakers_from_participants_without_exact_count() {
         (
             "nvidia",
             "https://asr.example/v1/realtime?provider=nvidia",
-            "nemotron-asr-streaming",
+            "nemotron-3.5-asr-streaming-0.6b.q8_0",
             vec!["remote"],
             Some("self"),
             Some(2 + crate::UNLISTED_SPEAKER_MARGIN),
@@ -112,7 +112,7 @@ fn listen_params_leave_speaker_counts_open_without_other_participants() {
     ] {
         let mut args = listener_args(
             "https://asr.example/v1/realtime?provider=nvidia",
-            "nemotron-asr-streaming",
+            "nemotron-3.5-asr-streaming-0.6b.q8_0",
         );
         args.participant_human_ids = participants.iter().map(|id| id.to_string()).collect();
         args.self_human_id = self_human_id.map(|id: &str| id.to_string());
@@ -128,7 +128,7 @@ fn listen_params_leave_speaker_counts_open_without_other_participants() {
 fn isolated_mic_keeps_its_single_voice_alongside_the_participant_bound() {
     let mut args = listener_args(
         "https://asr.example/v1/realtime?provider=nvidia",
-        "nemotron-asr-streaming",
+        "nemotron-3.5-asr-streaming-0.6b.q8_0",
     );
     args.mode = crate::actors::ChannelMode::MicAndSpeaker;
     args.mic_isolated = true;

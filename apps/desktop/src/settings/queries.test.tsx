@@ -366,7 +366,12 @@ describe("SQLite settings", () => {
 
     const statements = mocks.executeTransaction.mock.calls[0][0];
     expect(statements.map((statement) => statement.params.slice(0, 2))).toEqual(
-      [["current_stt_model", JSON.stringify("nemotron-asr-streaming")]],
+      [
+        [
+          "current_stt_model",
+          JSON.stringify("nemotron-3.5-asr-streaming-0.6b"),
+        ],
+      ],
     );
   });
 

@@ -8,23 +8,22 @@ type PreferredProviderModelOptions = {
   keepUnavailableSavedModel?: boolean;
 };
 
-// NVIDIA Speech NIM exposes no model catalogue (no `/v1/models`), so the
-// realtime WebSocket server validates the model against the deployed container
-// instead. List the ids the streaming ASR deployments accept as suggestions;
-// any other id can still be typed by hand.
-export const NVIDIA_NIM_ASR_MODELS = [
+// NVIDIA NeMo-Speech.cpp serves the single model it loaded and ignores the
+// model named by the client; `/v1/models` announces it once the connection is
+// tested. Until then the selection carries the reference streaming model.
+export const NEMO_SPEECH_DEFAULT_MODEL = "nemotron-3.5-asr-streaming-0.6b";
+
+// Model ids of the retired NVIDIA NIM protocol. A selection saved with one of
+// them moves to the NeMo-Speech.cpp default without user action.
+const RETIRED_NIM_MODELS = new Set([
   "nemotron-asr-streaming",
   "parakeet-tdt-0.6b-v3",
   "parakeet-tdt-0.6b-v2",
-  // Multilingual Nemotron ASR Streaming NIM (`type=multi`, fr-FR included).
-  // Deployments that serve the multilingual container expose this id, which is
-  // the one the realtime WebSocket accepts (`nemotron-asr-streaming` is only a
-  // label the container no longer answers to directly).
   "cache-aware-parakeet-rnnt-multi-asr-streaming-sortformer",
-] as const;
+]);
 
 const DEFAULT_EXTERNAL_STT_MODELS: Record<string, string> = {
-  nvidia: NVIDIA_NIM_ASR_MODELS[0],
+  nvidia: NEMO_SPEECH_DEFAULT_MODEL,
 };
 
 // Providers that still exist. A selection saved with a removed cloud provider
@@ -48,6 +47,10 @@ export function normalizeStoredSttSelection(
 
   if (!KNOWN_STT_PROVIDERS.has(provider)) {
     return cleared;
+  }
+
+  if (provider === "nvidia" && model && RETIRED_NIM_MODELS.has(model)) {
+    return { provider, model: NEMO_SPEECH_DEFAULT_MODEL };
   }
 
   return { provider, model };

@@ -114,7 +114,6 @@ const SYN_LABELS = {
   "Dictionary": "Dictionnaire",
   "Email": "E-mail",
   "Enable dictation": "Activer la dictée",
-  "English": "Anglais",
   "Enter": "Entrée",
   "Enter a full address, for example {placeholder}.": "Saisissez une adresse complète, par exemple {placeholder}.",
   "Enter another name": "Saisir un autre nom",
@@ -160,18 +159,15 @@ const SYN_LABELS = {
   "Model name served by your server": "Nom du modèle servi par votre serveur",
   "More actions": "Plus d'actions",
   "More effort gives finer summaries, but slower. Auto leaves it to the server.": "Plus d'effort donne des synthèses plus fines, mais plus lentes. Auto laisse le serveur décider.",
-  "Multilingual": "Multilingue",
-  "Multilingual · speakers": "Multilingue · locuteurs",
   "Mute system audio": "Couper le son système",
   "Mute the microphone": "Couper le micro",
   "My meetings": "Mes réunions",
   "My server": "Mon serveur",
   "My servers": "Mes serveurs",
-  "NIM does not publish its model list: these are the models known for this protocol.": "NIM ne publie pas sa liste de modèles : ceux-ci sont les modèles connus pour ce protocole.",
-  "NVIDIA NIM · WebSocket": "NVIDIA NIM · WebSocket",
-  "NVIDIA NIM: your deployed Speech NIM WebSocket server, for example http://localhost:9000/v1/realtime. NVIDIA's hosted gRPC endpoint is not supported.": "NVIDIA NIM : votre serveur Speech NIM WebSocket déployé, par exemple http://localhost:9000/v1/realtime. Le point d'accès gRPC hébergé par NVIDIA n'est pas pris en charge.",
+  "NVIDIA NeMo-Speech.cpp": "NVIDIA NeMo-Speech.cpp",
+  "NVIDIA NeMo-Speech.cpp: your nemo-speech serve server, for example http://localhost:9000. Live transcription and imported files use its realtime WebSocket. NVIDIA's hosted gRPC endpoint is not supported.": "NVIDIA NeMo-Speech.cpp : votre serveur nemo-speech serve, par exemple http://localhost:9000. La transcription en direct et les fichiers importés passent par son WebSocket temps réel. Le point d'accès gRPC hébergé par NVIDIA n'est pas pris en charge.",
   "Name": "Nom",
-  "Nemotron, Parakeet": "Nemotron, Parakeet",
+  "Nemotron": "Nemotron",
   "New note in this folder": "Nouvelle note dans ce dossier",
   "No matching languages found": "Aucune langue correspondante trouvée",
   "No notes in this folder match.": "Aucune note de ce dossier ne correspond.",
@@ -187,7 +183,7 @@ const SYN_LABELS = {
   "On Wayland, approve the shortcuts in your desktop's prompt. Use Control + Alt + Escape to cancel. On X11, press Escape to cancel. The target app must expose an editable accessibility field.": "Sur Wayland, approuvez les raccourcis dans l'invite de votre environnement de bureau. Utilisez Ctrl + Alt + Échap pour annuler. Sur X11, appuyez sur Échap pour annuler. L'application cible doit exposer un champ d'accessibilité modifiable.",
   "Only on-premise OpenAI-compatible servers are supported (vLLM, Ollama, llama.cpp server, LM Studio…). The address usually ends with /v1, for example http://localhost:8000/v1.": "Seuls les serveurs compatibles OpenAI hébergés chez vous sont pris en charge (vLLM, Ollama, serveur llama.cpp, LM Studio…). L'adresse se termine en général par /v1, par exemple http://localhost:8000/v1.",
   "Open": "Ouvrir",
-  "OpenAI · Realtime and batch": "OpenAI · temps réel et par lots",
+  "OpenAI compatible (realtime and batch)": "OpenAI compatible (temps réel et par lots)",
   "OpenAI: a server that speaks the OpenAI speech protocol (vLLM, speaches, faster-whisper-server), for example http://localhost:8000/v1. Live transcription uses /v1/realtime, imported files /v1/audio/transcriptions.": "OpenAI : un serveur qui parle le protocole vocal d'OpenAI (vLLM, speaches, faster-whisper-server), par exemple http://localhost:8000/v1. La transcription en direct passe par /v1/realtime, les fichiers importés par /v1/audio/transcriptions.",
   "Pause listening": "Mettre en pause l'écoute",
   "Paused": "En pause",
@@ -259,6 +255,7 @@ const SYN_LABELS = {
   "The one that captures your voice.": "Celui qui capte votre voix.",
   "The server did not answer at {host}. Check that it is running and that you are on the right network (VPN, Tailscale), then test again.": "Le serveur n'a pas répondu à {host}. Vérifiez qu'il est démarré et que vous êtes sur le bon réseau (VPN, Tailscale), puis relancez le test.",
   "The server that turns speech into text during your meetings. Audio is never written to disk.": "Le serveur qui transforme la voix en texte, pendant la réunion. L'audio n'est jamais écrit sur le disque.",
+  "The server transcribes with the model it loaded, whatever the model chosen here.": "Le serveur transcrit avec le modèle qu'il a chargé, quel que soit le modèle choisi ici.",
   "This information stays on your computer. It is used to recognize you in transcripts and to sign your meeting notes.": "Ces informations restent sur votre poste. Elles servent à vous reconnaître dans les transcriptions et à signer vos comptes-rendus.",
   "This server answers as {detectedLabel}.": "Ce serveur répond comme {detectedLabel}.",
   "Timezone": "Fuseau horaire",
@@ -1254,10 +1251,10 @@ const SYN_CSS_SERVERS = `
 // français dans le code, hors messages.po).
 const SYN_SRV_HTTPS = "Utilisez HTTPS : le HTTP n'est accepté que sur cette machine ou un réseau privé.";
 const SYN_SRV_OPENAI_PH = "http://localhost:8000/v1";
-const SYN_SRV_NIM_PH = "http://localhost:9000/v1/realtime";
+const SYN_SRV_NEMO_PH = "http://localhost:9000";
 const SYN_SRV_STT_MODELS = ["mistralai/Voxtral-Mini-4B-Realtime-2602", "Systran/faster-whisper-large-v3"];
-// stt/model-selection.ts, NVIDIA_NIM_ASR_MODELS.
-const SYN_SRV_NIM_MODELS = ["nemotron-asr-streaming", "parakeet-tdt-0.6b-v3", "parakeet-tdt-0.6b-v2", "cache-aware-parakeet-rnnt-multi-asr-streaming-sortformer"];
+// stt/model-selection.ts, NEMO_SPEECH_DEFAULT_MODEL.
+const SYN_SRV_NEMO_MODELS = ["nemotron-3.5-asr-streaming-0.6b"];
 const SYN_SRV_LLM_MODELS = { 11434: ["qwen3:14b", "mistral-small3.2:24b", "gemma3:12b"], 1234: ["qwen/qwen3-14b", "google/gemma-3-12b"] };
 
 const synSrvParse = (value) => {
@@ -1515,23 +1512,22 @@ const SynSrvHelp = ({ lines }) => (
 const SynSrvBlock = ({ on, children }) => h(SynHere, { active: on }, children);
 
 // Données d'exemple : vLLM avec Voxtral Realtime sur le protocole OpenAI ;
-// aucune adresse pour le NIM (chaque protocole garde la sienne).
+// aucune adresse pour NeMo-Speech.cpp (chaque protocole garde la sienne).
 const SynSectionTranscription = ({ focus }) => {
   const [protocol, setProtocol] = useState("openai");
   const openai = useSynServer("stt", { url: "http://localhost:8000/v1", result: { ok: true, protocol: "openai", latency: 38, models: SYN_SRV_STT_MODELS } }, SYN_SRV_OPENAI_PH);
-  const nvidia = useSynServer("stt", { url: "", result: null }, SYN_SRV_NIM_PH);
-  const [chosen, setChosen] = useState({ openai: SYN_SRV_STT_MODELS[0], nvidia: SYN_SRV_NIM_MODELS[0] });
-  const server = { ...(protocol === "nvidia" ? nvidia : openai), placeholder: protocol === "nvidia" ? SYN_SRV_NIM_PH : SYN_SRV_OPENAI_PH };
+  const nvidia = useSynServer("stt", { url: "", result: null }, SYN_SRV_NEMO_PH);
+  const [chosen, setChosen] = useState({ openai: SYN_SRV_STT_MODELS[0], nvidia: SYN_SRV_NEMO_MODELS[0] });
+  const server = { ...(protocol === "nvidia" ? nvidia : openai), placeholder: protocol === "nvidia" ? SYN_SRV_NEMO_PH : SYN_SRV_OPENAI_PH };
   const protocols = {
-    openai: { label: L("OpenAI · Realtime and batch"), hint: L("vLLM, speaches, faster-whisper-server") },
-    nvidia: { label: L("NVIDIA NIM · WebSocket"), hint: L("Nemotron, Parakeet") },
+    openai: { label: L("OpenAI compatible (realtime and batch)"), hint: L("vLLM, speaches, faster-whisper-server") },
+    nvidia: { label: L("NVIDIA NeMo-Speech.cpp"), hint: L("Nemotron") },
   };
-  const nimHints = [L("English"), L("Multilingual"), L("English"), L("Multilingual · speakers")];
   const connected = server.state === "connected";
   const detected = connected ? server.result.protocol : null;
   const models =
     protocol === "nvidia"
-      ? SYN_SRV_NIM_MODELS.map((id, i) => ({ id, hint: nimHints[i] }))
+      ? SYN_SRV_NEMO_MODELS.map((id) => ({ id }))
       : connected
         ? server.result.models.map((id) => ({ id }))
         : [];
@@ -1592,7 +1588,7 @@ const SynSectionTranscription = ({ focus }) => {
                   onChange: (next) => setChosen((c) => ({ ...c, [protocol]: next })),
                   footer:
                     protocol === "nvidia"
-                      ? L("NIM does not publish its model list: these are the models known for this protocol.")
+                      ? L("The server transcribes with the model it loaded, whatever the model chosen here.")
                       : connected
                         ? undefined
                         : L("Test the connection to list the models served."),
@@ -1602,7 +1598,7 @@ const SynSectionTranscription = ({ focus }) => {
           {h(SynSrvHelp, {
             lines: [
               L("OpenAI: a server that speaks the OpenAI speech protocol (vLLM, speaches, faster-whisper-server), for example http://localhost:8000/v1. Live transcription uses /v1/realtime, imported files /v1/audio/transcriptions."),
-              L("NVIDIA NIM: your deployed Speech NIM WebSocket server, for example http://localhost:9000/v1/realtime. NVIDIA's hosted gRPC endpoint is not supported."),
+              L("NVIDIA NeMo-Speech.cpp: your nemo-speech serve server, for example http://localhost:9000. Live transcription and imported files use its realtime WebSocket. NVIDIA's hosted gRPC endpoint is not supported."),
               L("The API key is optional for servers without authentication. It is kept in your system keychain."),
             ],
           })}

@@ -137,7 +137,7 @@ describe("useDictation", () => {
   it("explains that a live-only model can't take chat voice input", async () => {
     mocks.connection = {
       provider: "nvidia",
-      model: "cache-aware-parakeet-rnnt-multi-asr-streaming-sortformer",
+      model: "nemotron-3.5-asr-streaming-0.6b",
     };
     const editorRef = { current: null };
     const { result } = renderHook(() => useDictation({ editorRef }));

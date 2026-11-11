@@ -414,13 +414,13 @@ export const SETTINGS_SEARCH_INDEX = [
     id: "stt-protocol",
     page: "transcription",
     label: msg`Protocol`,
-    keywords: msg`OpenAI, NVIDIA, NIM, transcription server`,
+    keywords: msg`OpenAI, NVIDIA, NeMo-Speech.cpp, transcription server`,
   },
   {
     id: "stt-model",
     page: "transcription",
     label: msg`Model`,
-    keywords: msg`transcription model, Whisper, Parakeet, speech recognition`,
+    keywords: msg`transcription model, Whisper, Nemotron, speech recognition`,
     fallback: "stt-server",
   },
 

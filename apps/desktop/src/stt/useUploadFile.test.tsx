@@ -337,7 +337,7 @@ describe("useUploadFile", () => {
   test("lets a live-only model choose a file to stream in real time", async () => {
     sttConnection.value = {
       provider: "nvidia",
-      model: "cache-aware-parakeet-rnnt-multi-asr-streaming-sortformer",
+      model: "nemotron-3.5-asr-streaming-0.6b",
     };
     const { result } = renderHook(() => useUploadFile("session-1"), {
       wrapper: createWrapper(),
@@ -409,7 +409,7 @@ describe("useUploadFile", () => {
   test("imports a dropped file through the real-time stream with a live-only model", async () => {
     sttConnection.value = {
       provider: "nvidia",
-      model: "cache-aware-parakeet-rnnt-multi-asr-streaming-sortformer",
+      model: "nemotron-3.5-asr-streaming-0.6b",
     };
     const { result } = renderHook(() => useUploadFile("session-1"), {
       wrapper: createWrapper(),
