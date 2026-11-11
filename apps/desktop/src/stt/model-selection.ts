@@ -13,7 +13,7 @@ type PreferredProviderModelOptions = {
 // tested. Until then the selection carries the reference streaming model.
 export const NEMO_SPEECH_DEFAULT_MODEL = "nemotron-3.5-asr-streaming-0.6b";
 
-// Model ids of the retired NVIDIA NIM protocol. A selection saved with one of
+// Model ids of the transcription protocol Syntheo used before NeMo-Speech.cpp. A selection saved with one of
 // them moves to the NeMo-Speech.cpp default without user action.
 const RETIRED_NIM_MODELS = new Set([
   "nemotron-asr-streaming",

@@ -84,7 +84,7 @@ In the `Cargo.toml` files, these crates are referenced by the workspace alias `s
 
 | Crate | Role | Used by |
 | --- | --- | --- |
-| `crates/owhisper-client` | STT adapters: OpenAI protocol in real time and in batch (`adapter/openai/`), compatible `/v1/audio/transcriptions` endpoint (`adapter/openai_compatible_batch.rs`) and NVIDIA NIM / Riva over WebSocket (`adapter/nvidia.rs`). Exposes `BatchClient`, `Provider` (only variant: `OpenAI`), `normalize_listen_params`, the live and batch streams. | `listener-core`, `listener2-core`, `plugins/dictation`, `plugins/transcription` |
+| `crates/owhisper-client` | STT adapters: OpenAI protocol in real time and in batch (`adapter/openai/`), compatible `/v1/audio/transcriptions` endpoint (`adapter/openai_compatible_batch.rs`) and NVIDIA NeMo-Speech.cpp over WebSocket (`adapter/nvidia.rs`, internal protocol `nvidia`). Exposes `BatchClient`, `Provider` (only variant: `OpenAI`), `normalize_listen_params`, the live and batch streams. | `listener-core`, `listener2-core`, `plugins/dictation`, `plugins/transcription` |
 | `crates/owhisper-interface` | Shared protocol types: `ListenParams`, `stream`, `batch`, `batch_sse`, `batch_stream`, `InferenceProgress`. | `owhisper-client`, `listener-core`, `listener2-core`, `transcript`, `transcription-core`, `plugins/dictation`, `plugins/transcription` |
 | `crates/openai-transcription` | OpenAI request and response models: `batch` (including `AudioModel`) and `realtime`. | `owhisper-client` |
 | `crates/ws-client` | WebSocket client with retry (`client`, `retry`) on top of `tokio-tungstenite` (native TLS). | `owhisper-client`, which re-exports it |

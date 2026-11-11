@@ -10,7 +10,7 @@ Syntheo n'embarque aucun modèle et n'appelle aucun service cloud. Il se connect
 
 | Réglage | Rôle | Protocole |
 | --- | --- | --- |
-| **Transcription** | Transforme l'audio de la réunion, de la dictée ou d'un fichier importé en texte | OpenAI Realtime et `/v1/audio/transcriptions`, ou Nemotron ASR (NVIDIA NIM, WebSocket) |
+| **Transcription** | Transforme l'audio de la réunion, de la dictée ou d'un fichier importé en texte | OpenAI Realtime et `/v1/audio/transcriptions`, ou NVIDIA NeMo-Speech.cpp (WebSocket) |
 | **Synthèse** | Rédige les comptes rendus, répond dans le chat et propose les sections des modèles de compte rendu | API OpenAI-compatible (`/v1/chat/completions`, modèles lus dans `/v1/models`) |
 
 Aucune URL n'est imposée : vous saisissez celle de votre serveur. Sans serveur de transcription configuré et joignable, Syntheo ne transcrit rien, et comme l'audio n'est jamais conservé, il ne peut pas rattraper la transcription plus tard.
@@ -19,8 +19,8 @@ Aucune URL n'est imposée : vous saisissez celle de votre serveur. Sans serveur 
 
 Il vous faut :
 
-- un serveur de transcription en temps réel, par exemple vLLM avec un modèle Realtime (Voxtral Realtime), speaches (anciennement faster-whisper-server) ou un NIM Nemotron ASR ;
-- un serveur LLM compatible OpenAI, par exemple vLLM, Ollama, llama.cpp server, LM Studio, SGLang, TGI ou un NIM LLM ;
+- un serveur de transcription en temps réel, par exemple vLLM avec un modèle Realtime (Voxtral Realtime), speaches (anciennement faster-whisper-server) ou NVIDIA NeMo-Speech.cpp avec Nemotron ASR (voir [Installer le service de transcription en local](/fr/local-transcription-service)) ;
+- un serveur LLM compatible OpenAI, par exemple vLLM, Ollama, llama.cpp server, LM Studio, SGLang ou TGI ;
 - l'URL de base de chaque serveur et, si le serveur en exige une, sa clé API.
 
 Exemples d'URL de base pour un serveur lancé sur le même poste, avec les ports par défaut :
@@ -29,12 +29,11 @@ Exemples d'URL de base pour un serveur lancé sur le même poste, avec les ports
 | --- | --- | --- |
 | vLLM (`vllm serve`) | LLM, ou transcription avec un modèle Realtime | `http://localhost:8000/v1` |
 | speaches / faster-whisper-server | Transcription | `http://localhost:8000/v1` |
-| NVIDIA NIM Nemotron ASR | Transcription | `http://localhost:9000` |
+| NVIDIA NeMo-Speech.cpp (`nemo-speech serve`) | Transcription | `http://localhost:9000` |
 | Ollama | LLM | `http://localhost:11434/v1` |
 | llama.cpp server (`llama-server`) | LLM | `http://localhost:8080/v1` |
 | LM Studio | LLM | `http://localhost:1234/v1` |
 | SGLang | LLM | `http://localhost:30000/v1` |
-| NVIDIA NIM LLM | LLM | `http://localhost:8000/v1` |
 
 Les ports dépendent de la façon dont vous lancez chaque serveur. Si deux serveurs tournent sur la même machine, donnez-leur des ports différents.
 
@@ -77,7 +76,7 @@ En cas d'échec, un message sous le titre de la carte dit quoi faire, par exempl
     <SettingsPath steps={["Paramètres", "Mes serveurs", "Transcription"]} />
   </Step>
   <Step title="Saisir l'adresse du serveur">
-    Dans « Adresse du serveur », saisissez l'adresse de votre serveur, par exemple `http://localhost:8000/v1` pour vLLM ou speaches, ou `http://localhost:9000/v1/realtime` pour un NIM. Pour un NIM, `http://localhost:9000` suffit aussi : Syntheo utilise toujours le chemin `/v1/realtime`.
+    Dans « Adresse du serveur », saisissez l'adresse de votre serveur, par exemple `http://localhost:8000/v1` pour vLLM ou speaches, ou `http://localhost:9000` pour NVIDIA NeMo-Speech.cpp. Pour NeMo-Speech.cpp, saisissez la racine du serveur : Syntheo ajoute lui-même le chemin `/v1/audio/transcriptions/realtime`.
   </Step>
   <Step title="Saisir la clé d'API (facultative)">
     Si votre serveur exige une clé, ouvrez « Avancé » et remplissez « Clé d'API (facultative) ». Laissez le champ vide pour un serveur sans authentification.
@@ -85,19 +84,19 @@ En cas d'échec, un message sous le titre de la carte dit quoi faire, par exempl
   <Step title="Tester la connexion">
     Cliquez sur « Tester la connexion ». Syntheo détecte le protocole du serveur :
 
-    - **« OpenAI · temps réel et par lots »** : pour vLLM, speaches ou faster-whisper-server. La transcription en direct passe par le WebSocket `/v1/realtime` ; l'import d'un fichier audio passe par `/v1/audio/transcriptions`.
-    - **« NVIDIA NIM · WebSocket »** : pour un serveur NVIDIA Speech NIM déployé chez vous. Le point d'accès gRPC hébergé par NVIDIA n'est pas pris en charge.
+    - **« OpenAI compatible (temps réel et par lots) »** : pour vLLM, speaches ou faster-whisper-server. La transcription en direct passe par le WebSocket `/v1/realtime` ; l'import d'un fichier audio passe par `/v1/audio/transcriptions`.
+    - **« NVIDIA NeMo-Speech.cpp »** : pour un serveur `nemo-speech serve` installé chez vous, avec les modèles Nemotron ASR Streaming et Nemotron Diarization. La transcription en direct et l'import passent par son WebSocket `/v1/audio/transcriptions/realtime`. Le point d'accès gRPC hébergé par NVIDIA n'est pas pris en charge.
 
     Sous « Protocole », la mention « détecté automatiquement » confirme le choix. Si le serveur répond avec l'autre protocole, Syntheo l'indique (« Ce serveur répond comme… ») : cliquez sur « Utiliser ce protocole ». Chaque protocole garde sa propre adresse : « Utiliser ce protocole » recopie l'adresse saisie vers le protocole détecté.
   </Step>
   <Step title="Choisir le modèle">
     Avec le protocole OpenAI, la liste « Modèle » reprend les modèles que publie votre serveur. Syntheo présélectionne le premier ; cliquez sur un autre pour en changer.
 
-    Un NIM ne publie pas sa liste de modèles. Syntheo propose donc les identifiants connus : `nemotron-asr-streaming` (anglais), `parakeet-tdt-0.6b-v3` (multilingue), `parakeet-tdt-0.6b-v2` (anglais) et `cache-aware-parakeet-rnnt-multi-asr-streaming-sortformer` (multilingue, avec locuteurs). `nemotron-asr-streaming` est choisi par défaut.
+    NeMo-Speech.cpp publie dans `/v1/models` le modèle qu'il a chargé : après le test, Syntheo le propose et le retient. Le serveur transcrit toujours avec ce modèle, quel que soit celui que vous choisissez. Avant le premier test, Syntheo affiche le modèle de référence `nemotron-3.5-asr-streaming-0.6b`. Les locuteurs sont distingués si le serveur a chargé un modèle de diarisation.
   </Step>
 </Steps>
 
-Dans la reproduction ci-dessous, modifiez l'« Adresse du serveur » : Syntheo l'enregistre puis la teste. Essayez `http://localhost:9000` (un NIM, puis « Utiliser ce protocole »), un port où rien n'écoute comme `http://localhost:8001/v1` (« Injoignable »), ou `http://gpu.entreprise.lan/v1` (refus du HTTP). Ouvrez « Avancé » et « Aide », puis cliquez sur un autre modèle.
+Dans la reproduction ci-dessous, modifiez l'« Adresse du serveur » : Syntheo l'enregistre puis la teste. Essayez `http://localhost:9000` (un serveur NeMo-Speech.cpp, puis « Utiliser ce protocole »), un port où rien n'écoute comme `http://localhost:8001/v1` (« Injoignable »), ou `http://gpu.entreprise.lan/v1` (refus du HTTP). Ouvrez « Avancé » et « Aide », puis cliquez sur un autre modèle.
 
 <AppSettings section="transcription" />
 
@@ -106,9 +105,9 @@ Dans la reproduction ci-dessous, modifiez l'« Adresse du serveur » : Syntheo l
 Syntheo transcrit les réunions **pendant** la capture, et seulement ainsi : l'audio n'étant jamais conservé, il n'y a pas de transcription après coup. Le modèle choisi doit donc savoir diffuser en temps réel.
 
 - Avec le protocole **OpenAI**, tout modèle on-premise (par exemple Voxtral Realtime sur vLLM) est traité comme un modèle en temps réel. Les noms de modèles « fichier » de l'API OpenAI (`whisper-1`, `gpt-4o-transcribe`, `gpt-4o-mini-transcribe`…) ne servent qu'à l'import : Syntheo refuse de démarrer une capture avec eux, avec le message « Ce modèle ne transcrit qu'après l'enregistrement, ce qui supposerait de conserver l'audio. Choisissez un modèle de transcription en temps réel. ».
-- Avec **NVIDIA NIM**, tous les modèles sont en temps réel. L'import d'un fichier audio passe alors par le même flux en temps réel qu'une réunion : voir [Importer un enregistrement](/fr/import-recordings).
+- Avec **NVIDIA NeMo-Speech.cpp**, la transcription est toujours en temps réel. L'import d'un fichier audio passe alors par le même flux en temps réel qu'une réunion : voir [Importer un enregistrement](/fr/import-recordings).
 
-La saisie vocale du chat transcrit par lots, après l'enregistrement : elle demande le protocole OpenAI. Avec un modèle NIM, elle affiche « La saisie vocale est indisponible » avant d'ouvrir le micro.
+La saisie vocale du chat transcrit par lots, après l'enregistrement : elle demande le protocole OpenAI. Avec NVIDIA NeMo-Speech.cpp, elle affiche « La saisie vocale est indisponible » avant d'ouvrir le micro.
 
 La dictée dans d'autres applications utilise le même serveur de transcription que les réunions.
 

@@ -46,9 +46,9 @@
 - **On-premise inference only**: the app only talks to the endpoints you
   configure, through the standard protocols of open-weight engines:
   - speech-to-text: OpenAI Realtime, vLLM Realtime (e.g. Voxtral Mini 4B
-    Realtime), NVIDIA NIM (WebSocket and gRPC), `/v1/audio/transcriptions`;
+    Realtime), NVIDIA NeMo-Speech.cpp (WebSocket), `/v1/audio/transcriptions`;
   - language model: OpenAI-compatible API (vLLM, SGLang, llama.cpp, Ollama,
-    TGI, NIM, MLX).
+    LM Studio, TGI, MLX).
 - **No audio kept**: it only lives in memory while it is transcribed. Only the
   transcript and the note are saved, locally.
 - **No account, no subscription, no telemetry.**

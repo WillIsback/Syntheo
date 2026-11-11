@@ -1,0 +1,95 @@
+# Service de transcription local pour Syntheo : NVIDIA NeMo-Speech.cpp
+# (Apache-2.0) avec Nemotron 3.5 ASR Streaming et Nemotron 3 Diarization
+# (licence openmdw-1.1). Voir la page « Installer le service de transcription
+# en local » de la documentation.
+#
+#   docker compose --profile gpu up -d    # carte NVIDIA (NVIDIA Container Toolkit)
+#   docker compose --profile cpu up -d    # processeur seul
+#
+# Les modèles GGUF (850 Mo) sont téléchargés au premier lancement dans le
+# volume nemo-speech-models, vérifiés par SHA-256, puis réutilisés.
+# Le service n'écoute que sur cette machine (127.0.0.1) par défaut : dans
+# Syntheo, adresse http://localhost:9000, protocole « NVIDIA NeMo-Speech.cpp ».
+
+name: syntheo-transcription
+
+x-nemo-speech: &nemo-speech
+  restart: unless-stopped
+  environment:
+    # Vide : pas de clé (le service n'écoute que sur cette machine).
+    NEMO_SPEECH_HTTP_API_KEY: ${ASR_API_KEY:-}
+  command:
+    - --json
+    - serve
+    - --access-log
+    - --host
+    - 0.0.0.0
+    - --port
+    - "8080"
+    - --asr-model
+    - /models/nemotron-3.5-asr-streaming-0.6b.q8_0.gguf
+    - --diar-model
+    - /models/Nemotron-3-Diarization.q8_0.gguf
+    # Un résultat définitif par phrase, au fil des silences (seuil réglé par
+    # Syntheo dans chaque session).
+    - --endpointing
+  ports:
+    - "${NEMO_SPEECH_BIND:-127.0.0.1}:${NEMO_SPEECH_PORT:-9000}:8080"
+  volumes:
+    # nocopy : le volume prend les droits de l'image des modèles (utilisateur
+    # 1000), pas ceux du /models de l'image serveur (root).
+    - type: volume
+      source: nemo-speech-models
+      target: /models
+      read_only: true
+      volume:
+        nocopy: true
+  depends_on:
+    models:
+      condition: service_completed_successfully
+
+x-nemo-speech-build: &nemo-speech-build # Dockerfile officiel du dépôt, au tag v0.3.0 (commit 20999cc9).
+  context: https://github.com/NVIDIA/NeMo-Speech.cpp.git#v0.3.0
+  dockerfile: docker/Dockerfile
+  target: runtime
+
+services:
+  models:
+    build:
+      context: .
+      dockerfile: Dockerfile.models
+    image: syntheo-nemo-speech-models:1
+    volumes:
+      - nemo-speech-models:/models
+
+  nemo-speech-gpu:
+    <<: *nemo-speech
+    profiles: [gpu]
+    build:
+      <<: *nemo-speech-build
+      args:
+        # Architecture de la carte (120 : RTX 50xx, 89 : RTX 40xx, 86 :
+        # RTX 30xx) ; vide = ensemble portable de ggml (plus long à construire).
+        CUDA_ARCH: ${CUDA_ARCH:-}
+        JOBS: ${BUILD_JOBS:-}
+    image: nemo-speech-runtime:0.3.0-cuda
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  nemo-speech-cpu:
+    <<: *nemo-speech
+    profiles: [cpu]
+    build:
+      <<: *nemo-speech-build
+      args:
+        ENABLE_CUDA: "OFF"
+        JOBS: ${BUILD_JOBS:-}
+    image: nemo-speech-runtime:0.3.0-cpu
+
+volumes:
+  nemo-speech-models:

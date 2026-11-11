@@ -25,7 +25,7 @@ Vérifiez dans l'ordre :
 
    Remplacez l'URL par celle de votre serveur. Ajoutez `-H "Authorization: Bearer <clé>"` si votre serveur exige une clé.
 
-2. **L'URL de base est complète.** Pour un serveur OpenAI-compatible, elle se termine en général par `/v1` (par exemple `http://localhost:8000/v1`), sans `/models` ni `/chat/completions` à la fin. Pour un serveur NVIDIA NIM, indiquez l'adresse du serveur, par exemple `http://localhost:9000/v1/realtime`.
+2. **L'URL de base est complète.** Pour un serveur OpenAI-compatible, elle se termine en général par `/v1` (par exemple `http://localhost:8000/v1`), sans `/models` ni `/chat/completions` à la fin. Pour un serveur NVIDIA NeMo-Speech.cpp, indiquez la racine du serveur, sans chemin, par exemple `http://localhost:9000`.
 3. **L'URL ne contient ni identifiant, ni paramètre.** Syntheo refuse une URL de la forme `https://utilisateur:motdepasse@…` ou contenant `?…`. Saisissez la clé dans le champ prévu.
 4. **La clé d'API est la bonne.** Si le serveur répond 401 ou 403, la pastille indique « Clé refusée ». Vérifiez la clé dans « Avancé », puis relancez le test.
 5. **Aucun pare-feu, VPN ou proxy ne bloque le port** entre votre poste et le serveur.
@@ -52,7 +52,7 @@ Syntheo lit les modèles de votre serveur dans `/v1/models` quand vous cliquez s
 - **Le test réussit, mais aucun modèle n'apparaît.** Vérifiez qu'un modèle est bien chargé, par exemple avec `curl <adresse>/models`. Avec Ollama, téléchargez un modèle avant de le sélectionner. Avec LM Studio, chargez-en un dans le serveur local.
 - **Votre modèle n'est pas dans la liste.** Cliquez sur « Saisir un autre nom » et tapez l'identifiant exact du modèle servi par votre déploiement.
 
-Un serveur NVIDIA NIM ne publie pas sa liste de modèles. Syntheo propose les identifiants connus (`nemotron-asr-streaming`, `parakeet-tdt-0.6b-v3`…) ; choisissez celui de votre déploiement.
+Un serveur NVIDIA NeMo-Speech.cpp publie dans `/v1/models` le modèle qu'il a chargé : le test de connexion le détecte et vous le propose. Le serveur transcrit toujours avec ce modèle, quel que soit celui que vous choisissez.
 
 ## La transcription s'arrête pendant la réunion
 
@@ -166,7 +166,7 @@ Un compte rendu nécessite un serveur de synthèse. Ouvrez **Paramètres → Syn
 
 Les imports audio acceptent WAV, MP3, OGG, MP4, M4A, FLAC, WebM et AAC. Les imports de transcription acceptent SRT et VTT.
 
-Pour un fichier audio, votre serveur de transcription doit être configuré. Avec le moteur « OpenAI · temps réel et par lots », il doit exposer `/v1/audio/transcriptions`. Avec « NVIDIA NIM · WebSocket », l'import passe par le flux en temps réel `/v1/realtime` : comptez au moins un quart de la durée de l'enregistrement. Voir [Importer un enregistrement](/fr/import-recordings).
+Pour un fichier audio, votre serveur de transcription doit être configuré. Avec le moteur « OpenAI compatible (temps réel et par lots) », il doit exposer `/v1/audio/transcriptions`. Avec « NVIDIA NeMo-Speech.cpp », l'import passe par le flux en temps réel (WebSocket) : comptez au moins un quart de la durée de l'enregistrement. Voir [Importer un enregistrement](/fr/import-recordings).
 
 ## Obtenir de l'aide
 
@@ -176,7 +176,7 @@ Pour un fichier audio, votre serveur de transcription doit être configuré. Ave
 - la version de Syntheo ;
 - le message d'erreur exact ;
 - ce que vous attendiez, et les étapes les plus courtes pour reproduire le problème ;
-- pour un problème d'IA, le type de serveur (vLLM, Ollama, NIM…) et le modèle utilisé.
+- pour un problème d'IA, le type de serveur (vLLM, Ollama, NeMo-Speech.cpp…) et le modèle utilisé.
 
 Si besoin, joignez le journal `app.log` de l'application, situé dans le dossier `logs` des données de l'application (sous Windows : `%LOCALAPPDATA%\fr.willisback.syntheo\logs`). Relisez-le avant de le partager.
 
