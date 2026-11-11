@@ -3041,6 +3041,10 @@ msgstr "Aucun résultat trouvé."
 msgid "No server yet"
 msgstr "Aucun serveur"
 
+#: src/settings/ai/stt/server-card.tsx
+msgid "No server yet? Install the local transcription service"
+msgstr "Pas encore de serveur ? Installer le service de transcription en local"
+
 #: src/shared/palette-settings-group.tsx
 msgid "No setting found."
 msgstr "Aucun paramètre trouvé."

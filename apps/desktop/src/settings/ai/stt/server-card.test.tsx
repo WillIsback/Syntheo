@@ -23,6 +23,11 @@ const mocks = vi.hoisted(() => ({
   setSelection: vi.fn(),
   setAiProvider: vi.fn(),
   persisted: [] as Array<{ provider: string; model: string }>,
+  openUrl: vi.fn(),
+}));
+
+vi.mock("@syntheo/plugin-opener2", () => ({
+  commands: { openUrl: mocks.openUrl },
 }));
 
 vi.mock("~/settings/ai/shared/server-connection", async (importOriginal) => ({
@@ -72,6 +77,7 @@ beforeEach(() => {
     current_stt_model: "voxtral-mini",
   };
   mocks.setAiProvider.mockResolvedValue(undefined);
+  mocks.openUrl.mockResolvedValue(undefined);
 });
 afterEach(cleanup);
 
@@ -202,6 +208,21 @@ describe("SttServerCard", () => {
       base_url: "https://spark.tail6cba9f.ts.net/v1/realtime",
       api_key: "",
     });
+  });
+
+  it("renvoie discrètement vers l'installation du service local, dans l'aide", () => {
+    setup();
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /Install the local transcription service/,
+      }),
+    );
+
+    expect(mocks.openUrl).toHaveBeenCalledWith(
+      expect.stringMatching(/\/en\/local-transcription-service$/),
+      null,
+    );
   });
 
   it("relance le test à la demande", () => {

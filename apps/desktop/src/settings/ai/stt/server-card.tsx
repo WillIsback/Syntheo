@@ -2,6 +2,8 @@ import { Trans, useLingui } from "@lingui/react/macro";
 import { useQueryClient } from "@tanstack/react-query";
 import { useId, useRef } from "react";
 
+import { commands as openerCommands } from "@syntheo/plugin-opener2";
+import { ArrowSquareOut } from "@syntheo/ui/components/icons";
 import { cn } from "@syntheo/utils";
 
 import {
@@ -27,13 +29,14 @@ import {
 import { setAiProvider } from "~/settings/providers";
 import { useSetSettingValues } from "~/settings/queries";
 import { useConfigValues } from "~/shared/config";
+import { documentationUrl } from "~/shared/documentation";
 import { isConfiguredSttModel } from "~/stt/capabilities";
 import { getDefaultSttModel } from "~/stt/model-selection";
 
 type Protocol = (typeof STT_SERVER_PROTOCOLS)[number];
 
 export function SttServerCard() {
-  const { t } = useLingui();
+  const { t, i18n } = useLingui();
   const protocolLabelId = useId();
   const queryClient = useQueryClient();
   const connection = useServerConnection("stt");
@@ -255,6 +258,27 @@ export function SttServerCard() {
             kept in your system keychain.
           </Trans>
         </p>
+        <button
+          type="button"
+          data-setting-id="stt-local-service"
+          onClick={() =>
+            void openerCommands
+              .openUrl(
+                documentationUrl(i18n.locale, "local-transcription-service"),
+                null,
+              )
+              .catch((error) =>
+                console.error(
+                  "[settings] failed to open the local service guide",
+                  error,
+                ),
+              )
+          }
+          className="text-primary inline-flex items-center gap-1 self-start underline underline-offset-[3px]"
+        >
+          <Trans>No server yet? Install the local transcription service</Trans>
+          <ArrowSquareOut className="size-3" aria-hidden="true" />
+        </button>
       </ServerHelp>
     </ServerCard>
   );
