@@ -40,7 +40,6 @@ import {
 
 const SETTINGS_FORM_KEYS = [
   "autostart",
-  "automatic_updates",
   "auto_stop_meetings",
   "floating_bar_enabled",
   "show_app_in_dock",
@@ -64,7 +63,6 @@ function useSettingsForm(storedSettings: StoredSettingValues) {
   const form = useForm({
     defaultValues: {
       autostart: settingsValue.autostart,
-      automatic_updates: settingsValue.automatic_updates,
       auto_stop_meetings: settingsValue.auto_stop_meetings,
       floating_bar_enabled: settingsValue.floating_bar_enabled,
       show_app_in_dock: settingsValue.show_app_in_dock,
@@ -103,7 +101,6 @@ function useSettingsForm(storedSettings: StoredSettingValues) {
 
       setSettingValues({
         autostart: normalizedValue.autostart,
-        automatic_updates: normalizedValue.automatic_updates,
         auto_stop_meetings: normalizedValue.auto_stop_meetings,
         floating_bar_enabled: normalizedValue.floating_bar_enabled,
         show_app_in_dock: normalizedValue.show_app_in_dock,
@@ -219,11 +216,6 @@ function SettingsSectionContent({
                 autostart={{
                   value: values.autostart,
                   onChange: (value) => submitFieldValue("autostart", value),
-                }}
-                automaticUpdates={{
-                  value: values.automatic_updates,
-                  onChange: (value) =>
-                    submitFieldValue("automatic_updates", value),
                 }}
                 showAppInDock={{
                   value: values.show_app_in_dock,

@@ -79,7 +79,6 @@ const SYN_LABELS = {
   "Ask the note": "Ask the note",
   "Audio": "Audio",
   "Auto": "Auto",
-  "Automatically install updates": "Automatically install updates",
   "Automations": "Automations",
   "Backspace": "Backspace",
   "Begin listening": "Begin listening",
@@ -229,7 +228,6 @@ const SYN_LABELS = {
   "Show tray icon": "Show tray icon",
   "Speak into any text field, in any app. The text is inserted when you finish.": "Speak into any text field, in any app. The text is inserted when you finish.",
   "Start Syntheo at login": "Start Syntheo at login",
-  "Stay current with updates installed the next time Syntheo opens.": "Stay current with updates installed the next time Syntheo opens.",
   "Stop listening when your call ends.": "Stop listening when your call ends.",
   "Stop when meeting ends": "Stop when meeting ends",
   "Storage": "Storage",
@@ -2044,7 +2042,6 @@ const SynSectionApp = ({ focus }) => {
         {h(SynProfIdentity)}
         <div className="syn-rows" style={{ borderTop: 0 }}>
           {h(SynSwitchRow, { title: L("Start Syntheo at login"), description: L("Have Syntheo ready when you sign in."), initial: true })}
-          {h(SynSwitchRow, { title: L("Automatically install updates"), description: L("Stay current with updates installed the next time Syntheo opens."), initial: true })}
           <div style={{ padding: "12px 0" }}>
             <button type="button" className="syn-ui-btn">{L("Show release notes")}</button>
           </div>

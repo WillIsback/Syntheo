@@ -34,11 +34,6 @@ export const SETTING_DEFINITIONS = {
     path: ["general", "autostart"],
     default: false as boolean,
   },
-  automatic_updates: {
-    type: "boolean",
-    path: ["general", "automatic_updates"],
-    default: true as boolean,
-  },
   auto_stop_meetings: {
     type: "boolean",
     path: ["general", "auto_stop_meetings"],

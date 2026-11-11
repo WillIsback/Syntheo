@@ -654,11 +654,6 @@ msgstr "Automatique (système)"
 msgid "automatic, stop, end of call, hang up"
 msgstr "automatique, arrêter, fin d'appel, raccrocher"
 
-#: src/settings/general/app-settings.tsx
-#: src/settings/search-index.ts
-msgid "Automatically install updates"
-msgstr "Installer automatiquement les mises à jour"
-
 #: src/settings/automations/index.tsx
 msgid "Automation actions"
 msgstr "Actions d'automatisation"
@@ -4563,10 +4558,6 @@ msgstr "Démarrage…"
 msgid "startup, turn on the computer, launch, open automatically, boot"
 msgstr "démarrage, allumer le PC, lancement, ouverture automatique, ouverture de session"
 
-#: src/settings/general/app-settings.tsx
-msgid "Stay current with updates installed the next time Syntheo opens."
-msgstr "Restez à jour grâce aux mises à jour installées lors de la prochaine ouverture de Syntheo."
-
 #: src/settings/automations/workflow-builder.tsx
 msgid "Steps"
 msgstr "Étapes"
@@ -5662,10 +5653,6 @@ msgstr "à jour jusqu'au {coveredDate}"
 #: src/folders/project/folder-thread-card.tsx
 msgid "Update"
 msgstr "Mettre à jour"
-
-#: src/settings/search-index.ts
-msgid "update, new version, upgrade"
-msgstr "mise à jour, nouvelle version, actualiser"
 
 #: src/session/components/note-input/transcript/screens/empty.tsx
 #: src/session/components/outer-header/overflow/index.tsx

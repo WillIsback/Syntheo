@@ -98,7 +98,6 @@ const SYN_LABELS = {
   "Auto": "Auto",
   "Auto summary format": "Format de résumé automatique",
   "Automatic": "Automatique",
-  "Automatically install updates": "Installer automatiquement les mises à jour",
   "Automations": "Automatisations",
   "Back": "Retour",
   "Backspace": "Retour arrière",
@@ -342,7 +341,6 @@ const SYN_LABELS = {
   "Sort options": "Options de tri",
   "Speak into any text field, in any app. The text is inserted when you finish.": "Parlez dans n'importe quel champ de texte, dans n'importe quelle application. Le texte s'insère quand vous avez terminé.",
   "Start Syntheo at login": "Démarrer Syntheo à la connexion",
-  "Stay current with updates installed the next time Syntheo opens.": "Restez à jour grâce aux mises à jour installées lors de la prochaine ouverture de Syntheo.",
   "Stop listening when your call ends.": "Arrêter l'écoute lorsque votre appel se termine.",
   "Stop using by default": "Ne plus utiliser par défaut",
   "Stop when meeting ends": "Arrêter à la fin de la réunion",
@@ -2220,7 +2218,6 @@ const SynSectionApp = ({ focus }) => {
         {h(SynProfIdentity)}
         <div className="syn-rows" style={{ borderTop: 0 }}>
           {h(SynSwitchRow, { title: L("Start Syntheo at login"), description: L("Have Syntheo ready when you sign in."), initial: true })}
-          {h(SynSwitchRow, { title: L("Automatically install updates"), description: L("Stay current with updates installed the next time Syntheo opens."), initial: true })}
           <div style={{ padding: "12px 0" }}>
             <button type="button" className="syn-ui-btn">{L("Show release notes")}</button>
           </div>

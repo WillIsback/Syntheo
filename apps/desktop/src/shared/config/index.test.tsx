@@ -32,12 +32,6 @@ const cases = [
     expected: false,
   },
   {
-    name: "keeps automatic updates on until explicitly disabled",
-    key: "automatic_updates",
-    values: {},
-    expected: true,
-  },
-  {
     name: "keeps remember speakers on until explicitly disabled",
     key: "remember_speakers",
     values: {},
