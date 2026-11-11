@@ -145,7 +145,12 @@ export type BatchResults = {
 
 export type BatchRunMode = "direct" | "streamed";
 
-export type BatchStreamEvent = { type: "progress"; percentage: number; partial_text?: string | null } | { type: "segment"; response: StreamResponse; percentage: number } | { type: "terminal"; request_id: string; created: string; duration: number; channels: number } | { type: "result"; response: BatchResponse } | { type: "error"; error_code: number | null; error_message: string; provider: string };
+export type BatchStreamEvent = { type: "progress"; percentage: number; partial_text?: string | null; 
+/**
+ *  Avancement inconnu : le serveur traite tout l'audio d'une seule
+ *  requête sans en donner l'avancement (issue #568).
+ */
+indeterminate?: boolean } | { type: "segment"; response: StreamResponse; percentage: number } | { type: "terminal"; request_id: string; created: string; duration: number; channels: number } | { type: "result"; response: BatchResponse } | { type: "error"; error_code: number | null; error_message: string; provider: string };
 
 export type BatchTranscriptPromotion = { scope: "preserve_existing" } | { scope: "whole_session" } | { scope: "current_capture"; audio_offset_ms: number; replace_transcript_id?: string | null; started_at: number };
 

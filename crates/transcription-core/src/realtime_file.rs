@@ -101,6 +101,7 @@ async fn transcribe(
     observer.on_progress(FileStreamProgress {
         fraction: 0.0,
         preview: None,
+        indeterminate: false,
     });
 
     if use_rest {
@@ -121,9 +122,11 @@ async fn transcribe(
                     error.message = %message,
                     "realtime_file_rest_failed_falling_back_to_stream"
                 );
+                // Le flux reprend une progression mesurée.
                 observer.on_progress(FileStreamProgress {
                     fraction: 0.0,
                     preview: None,
+                    indeterminate: false,
                 });
             }
         }
@@ -172,6 +175,7 @@ impl FileStreamObserver for BatchProgressObserver {
             event: BatchStreamEvent::Progress {
                 percentage: progress.fraction,
                 partial_text: progress.preview,
+                indeterminate: progress.indeterminate,
             },
         });
     }

@@ -18,6 +18,7 @@ impl From<BatchSseMessage> for batch_stream::BatchStreamEvent {
             BatchSseMessage::Progress { progress } => batch_stream::BatchStreamEvent::Progress {
                 percentage: progress.percentage,
                 partial_text: progress.partial_text,
+                indeterminate: false,
             },
             BatchSseMessage::Segment { response } => batch_stream::BatchStreamEvent::Segment {
                 percentage: 0.0,

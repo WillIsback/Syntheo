@@ -85,6 +85,15 @@ async fn transcribe_in_requests(
     let total = samples.len();
     let mut words = Vec::new();
     let mut speaker_offset = 0;
+    // Une requête unique ne renvoie rien avant la fin : l'avancement est
+    // inconnu jusque-là. En plusieurs morceaux, il avance par morceau.
+    if total <= chunk_len {
+        observer.on_progress(FileStreamProgress {
+            fraction: 0.0,
+            preview: None,
+            indeterminate: true,
+        });
+    }
 
     for (index, chunk) in samples.chunks(chunk_len.max(1)).enumerate() {
         let offset_secs = (index * chunk_len) as f64 / f64::from(SAMPLE_RATE);
@@ -123,6 +132,7 @@ async fn transcribe_in_requests(
         observer.on_progress(FileStreamProgress {
             fraction: sent as f64 / total.max(1) as f64,
             preview: None,
+            indeterminate: false,
         });
     }
 
@@ -157,13 +167,16 @@ mod tests {
 
     #[derive(Default)]
     struct Recorder {
-        fractions: Mutex<Vec<f64>>,
+        fractions: Mutex<Vec<(f64, bool)>>,
         cancelled: AtomicBool,
     }
 
     impl FileStreamObserver for Recorder {
         fn on_progress(&self, progress: FileStreamProgress) {
-            self.fractions.lock().unwrap().push(progress.fraction);
+            self.fractions
+                .lock()
+                .unwrap()
+                .push((progress.fraction, progress.indeterminate));
         }
 
         fn is_cancelled(&self) -> bool {
@@ -205,7 +218,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn words_land_on_the_file_channel_in_milliseconds_with_full_progress() {
+    async fn a_single_request_reports_unknown_progress_then_lands_words_in_milliseconds() {
         use wiremock::matchers::{method, path};
         use wiremock::{Mock, MockServer, ResponseTemplate};
 
@@ -251,7 +264,10 @@ mod tests {
                 ("toi", 1200, 1500, FILE_STREAM_CHANNEL, Some(1)),
             ]
         );
-        assert_eq!(*recorder.fractions.lock().unwrap(), [1.0]);
+        assert_eq!(
+            *recorder.fractions.lock().unwrap(),
+            [(0.0, true), (1.0, false)]
+        );
     }
 
     #[tokio::test]
@@ -296,7 +312,10 @@ mod tests {
                 (1500, Some(3))
             ]
         );
-        assert_eq!(*recorder.fractions.lock().unwrap(), [0.5, 1.0]);
+        assert_eq!(
+            *recorder.fractions.lock().unwrap(),
+            [(0.5, false), (1.0, false)]
+        );
     }
 
     #[tokio::test]

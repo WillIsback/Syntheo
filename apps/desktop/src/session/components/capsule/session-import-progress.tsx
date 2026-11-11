@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { ImportProgress } from "./import-progress";
 
@@ -14,8 +14,8 @@ export function useImportInProgress(sessionId: string) {
 // Branché sur le magasin de l'écoute, comme le chrono de l'écoute : la
 // capsule ne se redessine pas à chaque seconde.
 export function SessionImportProgress({ sessionId }: { sessionId: string }) {
-  const { fraction, startedAtMs, transcribing, audioSeconds } = useListener(
-    (state) => {
+  const { fraction, startedAtMs, transcribing, audioSeconds, indeterminate } =
+    useListener((state) => {
       const entry = state.batch[sessionId];
       return {
         fraction: entry?.percentage ?? 0,
@@ -27,9 +27,9 @@ export function SessionImportProgress({ sessionId }: { sessionId: string }) {
           entry.phase !== "importing" &&
           !entry.terminalReason,
         audioSeconds: state.batchImport[sessionId]?.audioSeconds ?? null,
+        indeterminate: entry?.indeterminate === true,
       };
-    },
-  );
+    });
   const stopTranscription = useListener((state) => state.stopTranscription);
   const stop = useCallback(() => {
     void stopTranscription(sessionId);
@@ -44,13 +44,37 @@ export function SessionImportProgress({ sessionId }: { sessionId: string }) {
     audioSeconds,
   });
 
+  const elapsedSeconds = useElapsedSeconds(
+    transcribing && indeterminate ? startedAtMs : undefined,
+  );
+
   return (
     <ImportProgress
       progress={{
         fraction,
         estimate,
         onStop: transcribing ? stop : undefined,
+        indeterminate: transcribing && indeterminate,
+        elapsedSeconds,
       }}
     />
   );
+}
+
+// Temps écoulé depuis `startedAtMs`, l'horloge avançant chaque seconde ;
+// 0 sans origine.
+function useElapsedSeconds(startedAtMs: number | undefined) {
+  const [nowMs, setNowMs] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (startedAtMs === undefined) {
+      return;
+    }
+    const id = setInterval(() => setNowMs(Date.now()), 1_000);
+    return () => clearInterval(id);
+  }, [startedAtMs]);
+
+  return startedAtMs === undefined
+    ? 0
+    : Math.max(0, (nowMs - startedAtMs) / 1000);
 }

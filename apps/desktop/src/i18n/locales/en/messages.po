@@ -1642,6 +1642,10 @@ msgstr "Editable: your corrections are kept when the thread is updated."
 msgid "Edo purple and pale wisteria. Elegant, a little more singular."
 msgstr "Edo purple and pale wisteria. Elegant, a little more singular."
 
+#: src/session/components/capsule/import-progress.tsx
+msgid "Elapsed time"
+msgstr "Elapsed time"
+
 #: src/contacts/details-fields.tsx
 #: src/contacts/details-sections.tsx
 #: src/settings/general/account-profile.tsx
@@ -5475,6 +5479,10 @@ msgstr "Transcription · unreachable"
 #: src/session/components/note-input/transcript/screens/empty.tsx
 msgid "Transcription failed"
 msgstr "Transcription failed"
+
+#: src/session/components/capsule/import-progress.tsx
+msgid "Transcription in progress…"
+msgstr "Transcription in progress…"
 
 #: src/stt/interruptions.ts
 msgid "Transcription interrupted {gaps}"

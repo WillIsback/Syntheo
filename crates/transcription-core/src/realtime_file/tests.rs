@@ -33,6 +33,27 @@ impl Events {
             .collect()
     }
 
+    /// Avancements annoncés, avec leur caractère indéterminé (issue #568).
+    fn progress(&self) -> Vec<(f64, bool)> {
+        self.0
+            .lock()
+            .unwrap()
+            .iter()
+            .filter_map(|event| match event {
+                BatchEvent::BatchResponseStreamed {
+                    event:
+                        BatchStreamEvent::Progress {
+                            percentage,
+                            indeterminate,
+                            ..
+                        },
+                    ..
+                } => Some((*percentage, *indeterminate)),
+                _ => None,
+            })
+            .collect()
+    }
+
     fn failure(&self) -> Option<(BatchErrorCode, String)> {
         self.0.lock().unwrap().iter().find_map(|event| match event {
             BatchEvent::BatchFailed { code, error, .. } => Some((*code, error.clone())),
@@ -320,6 +341,8 @@ async fn nemo_speech_imports_a_file_in_one_rest_request() {
         &events.names()[events.names().len() - 2..],
         &["response", "completed"]
     );
+    // Avancement inconnu pendant la requête, complet à son retour.
+    assert_eq!(events.progress(), [(0.0, false), (0.0, true), (1.0, false)]);
 }
 
 #[tokio::test]
@@ -350,5 +373,13 @@ async fn nemo_speech_falls_back_to_the_realtime_stream_when_rest_fails() {
             .map(|(word, _)| word)
             .collect::<Vec<_>>(),
         ["Salut"]
+    );
+    // Le repli sur le flux revient à un avancement mesuré.
+    let progress = events.progress();
+    assert_eq!(progress[..3], [(0.0, false), (0.0, true), (0.0, false)]);
+    assert!(
+        progress[3..]
+            .iter()
+            .all(|(_, indeterminate)| !indeterminate)
     );
 }
