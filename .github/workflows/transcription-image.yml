@@ -60,16 +60,28 @@ jobs:
         run: |
           grep -v '^#' /etc/resolv.conf || true
           for host in archive.ubuntu.com security.ubuntu.com developer.download.nvidia.com; do
-            getent ahosts "$host" | awk -v h="$host" 'NR == 1 { print h, $1 }' || echo "$host : non résolu"
+            getent ahosts "$host" | awk -v h="$host" 'NR == 1 { print "runner", h, $1 }' || echo "runner $host : non résolu"
+            # Mêmes noms via les serveurs publics donnés à BuildKit.
+            for server in 1.1.1.1 9.9.9.9; do
+              if command -v dig > /dev/null; then
+                answer=$(dig +short +time=3 +tries=1 "@$server" "$host" A 2> /dev/null | tail -n 1 || true)
+                echo "$server $host ${answer:-non résolu}"
+              fi
+            done
           done
 
-      # Conteneur BuildKit sur le réseau de l'hôte : il garde le résolveur du
-      # runner (systemd-resolved). Sur le réseau bridge, les étapes apt du
-      # runtime NVIDIA ne résolvaient pas archive.ubuntu.com (PR #575).
+      # Le DNS Azure du runner ne résout pas toujours archive.ubuntu.com et
+      # security.ubuntu.com (PR #575 et #576) : les RUN de la construction
+      # (apt du runtime NVIDIA) passent par des serveurs publics, fixés dans
+      # la configuration de BuildKit ([dns], appliqué au resolv.conf des RUN
+      # quel que soit le réseau). Conteneur BuildKit sur le réseau de l'hôte.
       - name: Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
         with:
           driver-opts: network=host
+          buildkitd-config-inline: |
+            [dns]
+              nameservers = ["1.1.1.1", "9.9.9.9"]
 
       # Cache en lecture seule : seules les constructions de confiance
       # (workflow_dispatch, tag) l'écrivent.
@@ -223,16 +235,28 @@ jobs:
         run: |
           grep -v '^#' /etc/resolv.conf || true
           for host in archive.ubuntu.com security.ubuntu.com developer.download.nvidia.com; do
-            getent ahosts "$host" | awk -v h="$host" 'NR == 1 { print h, $1 }' || echo "$host : non résolu"
+            getent ahosts "$host" | awk -v h="$host" 'NR == 1 { print "runner", h, $1 }' || echo "runner $host : non résolu"
+            # Mêmes noms via les serveurs publics donnés à BuildKit.
+            for server in 1.1.1.1 9.9.9.9; do
+              if command -v dig > /dev/null; then
+                answer=$(dig +short +time=3 +tries=1 "@$server" "$host" A 2> /dev/null | tail -n 1 || true)
+                echo "$server $host ${answer:-non résolu}"
+              fi
+            done
           done
 
-      # Conteneur BuildKit sur le réseau de l'hôte : il garde le résolveur du
-      # runner (systemd-resolved). Sur le réseau bridge, les étapes apt du
-      # runtime NVIDIA ne résolvaient pas archive.ubuntu.com (PR #575).
+      # Le DNS Azure du runner ne résout pas toujours archive.ubuntu.com et
+      # security.ubuntu.com (PR #575 et #576) : les RUN de la construction
+      # (apt du runtime NVIDIA) passent par des serveurs publics, fixés dans
+      # la configuration de BuildKit ([dns], appliqué au resolv.conf des RUN
+      # quel que soit le réseau). Conteneur BuildKit sur le réseau de l'hôte.
       - name: Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
         with:
           driver-opts: network=host
+          buildkitd-config-inline: |
+            [dns]
+              nameservers = ["1.1.1.1", "9.9.9.9"]
 
       - name: Connexion à GHCR
         if: needs.meta.outputs.publish == 'true'
@@ -243,7 +267,13 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # Publication : envoi par empreinte (sans tag), assemblé en index
-      # multi-architecture par le job publish. Sinon : image locale scannée.
+      # multi-architecture par le job publish, avec SBOM et provenance.
+      # Sinon : image locale (exporter docker), scannée puis gardée en
+      # artefact. Ce chemin d'essai se passe d'attestations : avec elles,
+      # BuildKit produit une liste de manifestes que l'exporter docker refuse
+      # (« docker exporter does not currently support exporting manifest
+      # lists », run 43055669100), et `docker load` ne lit pas une archive OCI
+      # sans le magasin d'images containerd.
       - name: Sortie de la construction
         id: output
         shell: bash
@@ -256,11 +286,15 @@ jobs:
             {
               echo "tags=${IMAGE}"
               echo "output=type=image,push-by-digest=true,name-canonical=true,push=true"
+              echo "sbom=type=sbom"
+              echo "provenance=type=provenance,mode=max"
             } >> "$GITHUB_OUTPUT"
           else
             {
               echo "tags=syntheo-transcription:ci-${VARIANT}"
               echo "output=type=docker"
+              echo "sbom=type=sbom,disabled=true"
+              echo "provenance=type=provenance,disabled=true"
             } >> "$GITHUB_OUTPUT"
           fi
 
@@ -280,8 +314,8 @@ jobs:
             rootfs-${{ matrix.variant }}.cache-from=type=gha,scope=transcription-runtime-${{ matrix.variant }}-${{ matrix.arch }}
             ${{ matrix.variant }}.tags=${{ steps.output.outputs.tags }}
             ${{ matrix.variant }}.output=${{ steps.output.outputs.output }}
-            ${{ matrix.variant }}.attest=type=sbom
-            ${{ matrix.variant }}.attest=type=provenance,mode=max
+            ${{ matrix.variant }}.attest=${{ steps.output.outputs.sbom }}
+            ${{ matrix.variant }}.attest=${{ steps.output.outputs.provenance }}
 
       - name: Empreinte de l'image
         id: digest

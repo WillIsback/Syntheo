@@ -4,8 +4,11 @@
 
 set -euo pipefail
 
-sudo apt-get -o Acquire::Retries=5 update
-sudo apt-get -o Acquire::Retries=5 install -y \
+# Délais courts et nouvelles tentatives : un dépôt injoignable fait échouer
+# vite au lieu de bloquer (runners GitHub, DNS Azure instable).
+APT_OPTS=(-o Acquire::Retries=5 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30)
+sudo apt-get "${APT_OPTS[@]}" update
+sudo apt-get "${APT_OPTS[@]}" install -y \
   libwebkit2gtk-4.1-dev \
   build-essential \
   curl \

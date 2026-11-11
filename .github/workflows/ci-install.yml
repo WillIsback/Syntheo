@@ -41,6 +41,11 @@ jobs:
       - name: Libérer de l'espace disque
         run: sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup 2> /dev/null || true
 
+      # DNS publics sur le runner : le DNS Azure ne résout pas toujours les
+      # dépôts Ubuntu (apt du bloc documenté).
+      - name: DNS publics
+        run: bash scripts/ci/public-dns.sh
+
       # Le `git clone` du bloc est redirigé vers ce checkout ; l'URL documentée
       # est tout de même vérifiée.
       - name: Construire depuis les sources (CONTRIBUTING.md › Linux)
