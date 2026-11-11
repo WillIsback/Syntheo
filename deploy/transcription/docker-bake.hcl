@@ -64,6 +64,19 @@ target "runtime-cpu" {
   }
 }
 
+# Étape `rootfs` du Dockerfile NVIDIA (même build que le runtime) : elle a
+# encore la base dpkg d'Ubuntu, absente du runtime FROM scratch. L'image finale
+# y lit les paquets des bibliothèques copiées (licences, entrées dpkg).
+target "rootfs-cuda" {
+  inherits = ["runtime-cuda"]
+  target   = "rootfs"
+}
+
+target "rootfs-cpu" {
+  inherits = ["runtime-cpu"]
+  target   = "rootfs"
+}
+
 target "_image" {
   context    = "deploy/transcription"
   dockerfile = "Dockerfile"
@@ -78,6 +91,7 @@ target "cuda" {
   inherits = ["_image"]
   contexts = {
     nemo-speech-runtime = "target:runtime-cuda"
+    nemo-speech-rootfs  = "target:rootfs-cuda"
   }
   args = {
     VARIANT = "cuda"
@@ -89,6 +103,7 @@ target "cpu" {
   inherits = ["_image"]
   contexts = {
     nemo-speech-runtime = "target:runtime-cpu"
+    nemo-speech-rootfs  = "target:rootfs-cpu"
   }
   args = {
     VARIANT = "cpu"

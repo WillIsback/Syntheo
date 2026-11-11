@@ -11,8 +11,8 @@
 # docker buildx bake -f deploy/transcription/docker-bake.hcl cpu --load
 # docker buildx bake -f deploy/transcription/docker-bake.hcl cuda --load
 #
-# Avec un runtime déjà construit :
-# docker buildx build --build-context nemo-speech-runtime=docker-image://<image> .
+# Contextes nommés attendus : nemo-speech-runtime (cible runtime) et
+# nemo-speech-rootfs (cible rootfs du même build).
 
 ARG NEMO_SPEECH_VERSION=0.3.0
 ARG NEMO_SPEECH_COMMIT=20999cc921d2b14aa58708f61756a8b2e787ba20
@@ -41,6 +41,36 @@ COPY licenses/README.md /out/licenses/README.md
 # Lecture seule pour l'utilisateur 1000 du runtime.
 RUN chmod -R a=rX /out
 
+# --- Paquets Ubuntu des bibliothèques copiées dans le runtime ---------------
+# Le runtime NVIDIA est FROM scratch : il copie les bibliothèques système
+# (glibc, libstdc++, zlib, protobuf, abseil…) sans base de paquets, et ses
+# avis de licence système restent vides (dpkg connaît /usr/lib/… et
+# /usr/local/cuda-13.0/…, le runtime copie /lib/… et /usr/local/cuda/…).
+# Depuis l'étape `rootfs` du même build, on retrouve le paquet de chaque fichier copié pour joindre son
+# fichier copyright et une entrée dpkg par paquet (status.d, comme les images
+# distroless) : Trivy et les SBOM voient alors ce que l'image contient.
+FROM nemo-speech-rootfs AS system
+RUN set -eu; \
+    root=/opt/nemo-speech-scratch-rootfs; \
+    mkdir -p /out/licenses /out/status.d /out/etc; \
+    find "$root" -path "$root/opt" -prune -o \( -type f -o -type l \) -print \
+      | while read -r file; do \
+          path=${file#"$root"}; \
+          dpkg-query -S "$path" 2>/dev/null || dpkg-query -S "/usr$path" 2>/dev/null \
+            || dpkg-query -S "$(readlink -f "$path")" 2>/dev/null || true; \
+        done \
+      | sed -n 's/^\([a-z0-9][a-z0-9+.-]*\)[:,].*/\1/p' | sort -u > /out/packages; \
+    while read -r package; do \
+      dpkg-query -s "$package" > "/out/status.d/$package"; \
+      if [ -f "/usr/share/doc/$package/copyright" ]; then \
+        install -Dm0644 "/usr/share/doc/$package/copyright" "/out/licenses/$package/copyright"; \
+      fi; \
+    done < /out/packages; \
+    dpkg-query -W -f '${Package} ${Version}\n' $(cat /out/packages) > /out/licenses/packages.txt; \
+    cp /etc/os-release /etc/lsb-release /out/etc/; \
+    chmod -R a=rX /out; \
+    test -s /out/packages
+
 # --- Image finale -----------------------------------------------------------
 FROM nemo-speech-runtime AS image
 ARG NEMO_SPEECH_VERSION
@@ -52,9 +82,12 @@ COPY --from=models /out/licenses/ /licenses/
 # Jeu de licences de NeMo-Speech.cpp, conservé tel quel dans
 # /opt/nemo-speech/share/licenses/nemo-speech/, avec une copie ici.
 COPY --from=nemo-speech-runtime /opt/nemo-speech/share/licenses/nemo-speech/ /licenses/nemo-speech.cpp/
+COPY --from=system /out/licenses/ /licenses/system/
+COPY --from=system /out/status.d/ /var/lib/dpkg/status.d/
+COPY --from=system /out/etc/ /etc/
 
 LABEL org.opencontainers.image.title="Syntheo transcription (NeMo-Speech.cpp ${NEMO_SPEECH_VERSION}, ${VARIANT})" \
-      org.opencontainers.image.description="NVIDIA NeMo-Speech.cpp with Nemotron 3.5 ASR Streaming and Nemotron 3 Diarization, ready for Syntheo" \
+      org.opencontainers.image.description="NVIDIA NeMo-Speech.cpp with Nemotron 3.5 ASR Streaming and Nemotron 3 Diarization, ready for Syntheo (FROM scratch runtime, no package manager)" \
       org.opencontainers.image.source="https://github.com/NVIDIA/NeMo-Speech.cpp/tree/${NEMO_SPEECH_COMMIT}" \
       org.opencontainers.image.revision="${NEMO_SPEECH_COMMIT}" \
       org.opencontainers.image.version="${NEMO_SPEECH_VERSION}-${VARIANT}" \

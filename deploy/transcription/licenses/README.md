@@ -1,6 +1,9 @@
 # Licences de l'image syntheo-transcription
 
-Cette image assemble trois composants, chacun sous sa propre licence.
+Cette image assemble trois composants, chacun sous sa propre licence. Elle part
+du runtime officiel de NeMo-Speech.cpp, construit `FROM scratch` : pas de
+gestionnaire de paquets, seulement les binaires, leurs bibliothèques (copiées
+d'Ubuntu 24.04 et, pour la variante cuda, du CUDA Toolkit) et les modèles.
 
 | Composant                                                           | Origine (révision figée)                                                                                           | Licence                                                                                                                           | Fichiers                                                                     |
 | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
@@ -8,6 +11,12 @@ Cette image assemble trois composants, chacun sous sa propre licence.
 | Nemotron 3.5 ASR Streaming 0.6B, GGUF q8_0                          | https://huggingface.co/nvidia/nemotron-3.5-asr-streaming-0.6b, révision `ea30d66debe3740a08b573244286791d423d6b3e` | OpenMDW-1.1                                                                                                                       | `models/nemotron-3.5-asr-streaming-0.6b/`                                    |
 | Nemotron 3 Diarization, GGUF q8_0                                   | https://huggingface.co/nvidia/Nemotron-3-Diarization, révision `52a432672732425e4c19765b9fec9b5810e6f4ba`          | OpenMDW-1.1                                                                                                                       | `models/Nemotron-3-Diarization/`                                             |
 
+- Bibliothèques Ubuntu copiées par le runtime (glibc, libstdc++, zlib,
+  protobuf, abseil, gRPC…) : `system/packages.txt` donne paquet et version,
+  `system/<paquet>/copyright` la licence Debian de chacun (LGPL pour glibc,
+  GPL avec exception pour libgcc/libstdc++…). Leurs entrées dpkg sont dans
+  `/var/lib/dpkg/status.d/`, pour les scanners de vulnérabilités. Sources :
+  archive Ubuntu 24.04 (`apt-get source <paquet>=<version>`).
 - Les poids sont redistribués sans modification. `MODEL_CARD.md` est la fiche
   du modèle à la même révision (avis d'origine) ; `LICENSE.OpenMDW-1.1` est le
   texte de l'accord (https://github.com/OpenMDW/OpenMDW, `1.1/LICENSE.OpenMDW-1.1`).

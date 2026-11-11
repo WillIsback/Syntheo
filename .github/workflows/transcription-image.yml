@@ -44,7 +44,7 @@ jobs:
     name: Contrôle (cpu, amd64)
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
-    timeout-minutes: 120
+    timeout-minutes: 60
     permissions:
       contents: read
     steps:
@@ -67,6 +67,7 @@ jobs:
           set: |
             *.platform=linux/amd64
             runtime-cpu.cache-from=type=gha,scope=transcription-runtime-cpu-amd64
+            rootfs-cpu.cache-from=type=gha,scope=transcription-runtime-cpu-amd64
             cpu.tags=syntheo-transcription:ci
             cpu.output=type=docker
 
@@ -97,11 +98,13 @@ jobs:
         shell: bash
         run: docker logs transcription-ci 2>&1 | tail -50 || true
 
+      # Runtime NVIDIA FROM scratch : l'image porte une entrée dpkg par paquet
+      # Ubuntu copié (status.d, comme les images distroless), lue par Trivy.
       - name: Scan Trivy (image)
         shell: bash
         run: |
           set -euo pipefail
-          bash .github/scripts/trivy-image.sh syntheo-transcription:ci docker
+          bash .github/scripts/trivy-image.sh image syntheo-transcription:ci docker
 
   # --- Version et révision, contrôlées contre docker-bake.hcl -----------------
   meta:
@@ -241,8 +244,10 @@ jobs:
           set: |
             *.platform=${{ matrix.platform }}
             runtime-cuda.args.CUDA_ARCH=${{ matrix.cuda_arch }}
+            rootfs-cuda.args.CUDA_ARCH=${{ matrix.cuda_arch }}
             runtime-${{ matrix.variant }}.cache-from=type=gha,scope=transcription-runtime-${{ matrix.variant }}-${{ matrix.arch }}
             runtime-${{ matrix.variant }}.cache-to=type=gha,mode=max,scope=transcription-runtime-${{ matrix.variant }}-${{ matrix.arch }}
+            rootfs-${{ matrix.variant }}.cache-from=type=gha,scope=transcription-runtime-${{ matrix.variant }}-${{ matrix.arch }}
             ${{ matrix.variant }}.tags=${{ steps.output.outputs.tags }}
             ${{ matrix.variant }}.output=${{ steps.output.outputs.output }}
             ${{ matrix.variant }}.attest=type=sbom
@@ -275,10 +280,34 @@ jobs:
         run: |
           set -euo pipefail
           if [ "$PUBLISH" = "true" ]; then
-            bash .github/scripts/trivy-image.sh "${IMAGE}@${DIGEST}" remote
+            bash .github/scripts/trivy-image.sh image "${IMAGE}@${DIGEST}" remote
           else
-            bash .github/scripts/trivy-image.sh "syntheo-transcription:ci-${VARIANT}" docker
+            bash .github/scripts/trivy-image.sh image "syntheo-transcription:ci-${VARIANT}" docker
           fi
+
+      # Sans publication : l'image est conservée en artefact (3 jours) pour un
+      # essai avant publication, par exemple arm64 sur le DGX Spark :
+      #   gunzip -c image.tar.gz | docker load
+      - name: Exporter l'image (sans publication)
+        if: needs.meta.outputs.publish != 'true'
+        shell: bash
+        env:
+          VARIANT: ${{ matrix.variant }}
+        run: |
+          set -euo pipefail
+          mkdir -p image
+          docker save "syntheo-transcription:ci-${VARIANT}" | gzip -1 > image/image.tar.gz
+          ls -lh image/
+
+      - name: Conserver l'image (sans publication)
+        if: needs.meta.outputs.publish != 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: image-${{ matrix.variant }}-${{ matrix.arch }}
+          path: image/
+          retention-days: 3
+          compression-level: 0
+          if-no-files-found: error
 
       - name: Conserver l'empreinte
         if: needs.meta.outputs.publish == 'true'
