@@ -383,7 +383,6 @@ const SynSectionApp = ({ focus }) => {
         {h(SynProfIdentity)}
         <div className="syn-rows" style={{ borderTop: 0 }}>
           {h(SynSwitchRow, { title: L("Start Syntheo at login"), description: L("Have Syntheo ready when you sign in."), initial: true })}
-          {h(SynSwitchRow, { title: L("Automatically install updates"), description: L("Stay current with updates installed the next time Syntheo opens."), initial: true })}
           <div style={{ padding: "12px 0" }}>
             <button type="button" className="syn-ui-btn">{L("Show release notes")}</button>
           </div>

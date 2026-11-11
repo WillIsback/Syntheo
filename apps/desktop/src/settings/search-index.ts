@@ -75,12 +75,6 @@ export const SETTINGS_SEARCH_INDEX = [
     keywords: msg`startup, turn on the computer, launch, open automatically, boot`,
   },
   {
-    id: "automatic-updates",
-    page: "app",
-    label: msg`Automatically install updates`,
-    keywords: msg`update, new version, upgrade`,
-  },
-  {
     id: "release-notes",
     page: "app",
     label: msg`Show release notes`,
