@@ -60,16 +60,28 @@ jobs:
         run: |
           grep -v '^#' /etc/resolv.conf || true
           for host in archive.ubuntu.com security.ubuntu.com developer.download.nvidia.com; do
-            getent ahosts "$host" | awk -v h="$host" 'NR == 1 { print h, $1 }' || echo "$host : non résolu"
+            getent ahosts "$host" | awk -v h="$host" 'NR == 1 { print "runner", h, $1 }' || echo "runner $host : non résolu"
+            # Mêmes noms via les serveurs publics donnés à BuildKit.
+            for server in 1.1.1.1 8.8.8.8; do
+              if command -v dig > /dev/null; then
+                answer=$(dig +short +time=3 +tries=1 "@$server" "$host" A 2> /dev/null | tail -n 1 || true)
+                echo "$server $host ${answer:-non résolu}"
+              fi
+            done
           done
 
-      # Conteneur BuildKit sur le réseau de l'hôte : il garde le résolveur du
-      # runner (systemd-resolved). Sur le réseau bridge, les étapes apt du
-      # runtime NVIDIA ne résolvaient pas archive.ubuntu.com (PR #575).
+      # Le DNS Azure du runner ne résout pas toujours archive.ubuntu.com et
+      # security.ubuntu.com (PR #575 et #576) : les RUN de la construction
+      # (apt du runtime NVIDIA) passent par des serveurs publics, fixés dans
+      # la configuration de BuildKit ([dns], appliqué au resolv.conf des RUN
+      # quel que soit le réseau). Conteneur BuildKit sur le réseau de l'hôte.
       - name: Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
         with:
           driver-opts: network=host
+          buildkitd-config-inline: |
+            [dns]
+              nameservers = ["1.1.1.1", "8.8.8.8"]
 
       # Cache en lecture seule : seules les constructions de confiance
       # (workflow_dispatch, tag) l'écrivent.
@@ -223,16 +235,28 @@ jobs:
         run: |
           grep -v '^#' /etc/resolv.conf || true
           for host in archive.ubuntu.com security.ubuntu.com developer.download.nvidia.com; do
-            getent ahosts "$host" | awk -v h="$host" 'NR == 1 { print h, $1 }' || echo "$host : non résolu"
+            getent ahosts "$host" | awk -v h="$host" 'NR == 1 { print "runner", h, $1 }' || echo "runner $host : non résolu"
+            # Mêmes noms via les serveurs publics donnés à BuildKit.
+            for server in 1.1.1.1 8.8.8.8; do
+              if command -v dig > /dev/null; then
+                answer=$(dig +short +time=3 +tries=1 "@$server" "$host" A 2> /dev/null | tail -n 1 || true)
+                echo "$server $host ${answer:-non résolu}"
+              fi
+            done
           done
 
-      # Conteneur BuildKit sur le réseau de l'hôte : il garde le résolveur du
-      # runner (systemd-resolved). Sur le réseau bridge, les étapes apt du
-      # runtime NVIDIA ne résolvaient pas archive.ubuntu.com (PR #575).
+      # Le DNS Azure du runner ne résout pas toujours archive.ubuntu.com et
+      # security.ubuntu.com (PR #575 et #576) : les RUN de la construction
+      # (apt du runtime NVIDIA) passent par des serveurs publics, fixés dans
+      # la configuration de BuildKit ([dns], appliqué au resolv.conf des RUN
+      # quel que soit le réseau). Conteneur BuildKit sur le réseau de l'hôte.
       - name: Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
         with:
           driver-opts: network=host
+          buildkitd-config-inline: |
+            [dns]
+              nameservers = ["1.1.1.1", "8.8.8.8"]
 
       - name: Connexion à GHCR
         if: needs.meta.outputs.publish == 'true'
