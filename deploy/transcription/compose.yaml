@@ -6,9 +6,13 @@
 #   docker compose --profile gpu up -d    # carte NVIDIA (NVIDIA Container Toolkit)
 #   docker compose --profile cpu up -d    # processeur seul
 #
+# Le profil est à donner dans chaque commande (ps, logs, pull, down) : sans
+# lui, Docker Compose ne voit aucun service.
+#
 # Image publiée par défaut (ghcr.io/willisback/syntheo-transcription). Pour la
 # construire depuis les sources, depuis la racine du dépôt :
 #   docker buildx bake -f deploy/transcription/docker-bake.hcl cuda --load
+# puis, dans ce dossier :
 #   NEMO_SPEECH_IMAGE=syntheo-transcription docker compose --profile gpu up -d
 #
 # Le service n'écoute que sur cette machine (127.0.0.1) par défaut : dans

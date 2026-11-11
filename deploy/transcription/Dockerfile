@@ -38,8 +38,9 @@ ADD --checksum=sha256:111370508eeeb0f397b13cef6c0d5c6cfa55a0f7089c8df7dd54dd2e8e
 COPY licenses/OpenMDW-1.1.txt /out/licenses/models/nemotron-3.5-asr-streaming-0.6b/LICENSE.OpenMDW-1.1
 COPY licenses/OpenMDW-1.1.txt /out/licenses/models/Nemotron-3-Diarization/LICENSE.OpenMDW-1.1
 COPY licenses/README.md /out/licenses/README.md
-# Lecture seule pour l'utilisateur 1000 du runtime.
-RUN chmod -R a=rX /out
+# Fichiers en lecture seule, dossiers en 0755 : `docker cp` vers l'hôte
+# reste possible (des dossiers r-x y bloquent la copie des fichiers).
+RUN find /out -type d -exec chmod 0755 {} + && find /out -type f -exec chmod 0444 {} +
 
 # --- Paquets Ubuntu des bibliothèques copiées dans le runtime ---------------
 # Le runtime NVIDIA est FROM scratch : il copie les bibliothèques système
@@ -68,7 +69,8 @@ RUN set -eu; \
     done < /out/packages; \
     dpkg-query -W -f '${Package} ${Version}\n' $(cat /out/packages) > /out/licenses/packages.txt; \
     cp /etc/os-release /etc/lsb-release /out/etc/; \
-    chmod -R a=rX /out; \
+    find /out -type d -exec chmod 0755 {} +; \
+    find /out -type f -exec chmod 0444 {} +; \
     test -s /out/packages
 
 # --- Image finale -----------------------------------------------------------
