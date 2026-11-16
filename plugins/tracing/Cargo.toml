@@ -18,7 +18,7 @@ tauri-plugin = { workspace = true, features = ["build"] }
 
 [dev-dependencies]
 dirs = { workspace = true }
-rquickjs = "0.10"
+rquickjs = "0.14"
 tauri = { workspace = true, features = ["test"] }
 tempfile = { workspace = true }
 tracing-appender = { version = "0.2" }
