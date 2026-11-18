@@ -3,6 +3,7 @@ mod app_new;
 mod help_report_bug;
 mod help_suggest_feature;
 mod tray_agenda;
+mod tray_check_updates;
 mod tray_hide;
 mod tray_open;
 mod tray_quit;
@@ -17,6 +18,7 @@ pub use app_new::AppNew;
 pub use help_report_bug::HelpReportBug;
 pub use help_suggest_feature::HelpSuggestFeature;
 pub use tray_agenda::{build_agenda_item, handle_agenda_menu_event};
+pub use tray_check_updates::TrayCheckUpdates;
 pub use tray_hide::TrayHide;
 pub use tray_open::TrayOpen;
 pub use tray_quit::TrayQuit;
@@ -76,6 +78,7 @@ menu_items! {
     TrayOpen => TrayOpen,
     TrayStart => TrayStart,
     TraySettings => TraySettings,
+    TrayCheckUpdates => TrayCheckUpdates,
     TrayShowEvents => TrayShowEvents,
     TrayHide => TrayHide,
     TrayQuit => TrayQuit,

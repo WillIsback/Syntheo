@@ -393,6 +393,13 @@ const SynSectionApp = ({ focus }) => {
           </div>
           {h(SynSwitchRow, { title: L("Show tray icon"), initial: true })}
         </div>
+        <div>
+          <h2 className="syn-h2" style={{ fontSize: 18 }}>{L("Updates")}</h2>
+          <div style={{ padding: "12px 0" }}>
+            <button type="button" className="syn-ui-btn">{L("Check for updates")}</button>
+          </div>
+          {h(SynSwitchRow, { title: L("Check for updates at startup"), initial: true })}
+        </div>
         <div ref={langRef}>{h(SynProfLanguage, { focus })}</div>
         <div>
           <h2 className="syn-h2" style={{ fontSize: 18 }}>{L("Storage")}</h2>

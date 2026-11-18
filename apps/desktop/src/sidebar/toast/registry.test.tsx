@@ -51,4 +51,27 @@ describe("sidebar toast registry", () => {
     const ids = createToastRegistry(baseParams).map((entry) => entry.toast.id);
     expect(ids.some((id) => id.startsWith("desktop-update:"))).toBe(false);
   });
+
+  it("announces an available update until it is dismissed for the session", () => {
+    const onOpenUpdate = vi.fn();
+    const toast = showToast({ availableUpdate: "0.7.4", onOpenUpdate });
+
+    expect(toast?.id).toBe("update-available");
+    expect(toast?.description).toBe("Version 0.7.4 is available");
+    expect(toast?.lifecycle).toEqual({
+      type: "persistent",
+      dismissal: "session",
+      dismissalId: "update-available-0.7.4",
+    });
+    void toast?.primaryAction?.onClick();
+    expect(onOpenUpdate).toHaveBeenCalled();
+
+    expect(
+      showToast(
+        { availableUpdate: "0.7.4" },
+        (dismissed) => dismissed.id === "update-available",
+      ),
+    ).toBeNull();
+    expect(showToast({ availableUpdate: null })).toBeNull();
+  });
 });

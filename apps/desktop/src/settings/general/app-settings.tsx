@@ -6,6 +6,8 @@ import { platform } from "@tauri-apps/plugin-os";
 
 import { Button } from "@syntheo/ui/components/ui/button";
 
+import { UpdateSection } from "./update-section";
+
 import { SettingSwitchRow } from "~/settings/setting-row";
 import { useTabs } from "~/store/zustand/tabs";
 
@@ -90,6 +92,7 @@ export function AppSettingsView({
           />
         </div>
       </section>
+      <UpdateSection version={version.data} />
     </div>
   );
 }

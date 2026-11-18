@@ -10,6 +10,9 @@ type ToastRegistryEntry = {
 };
 
 type ToastRegistryParams = {
+  // Mise à jour intégrée (issue 593) : version annoncée, si elle existe.
+  availableUpdate?: string | null;
+  onOpenUpdate?: () => void;
   hasLLMConfigured: boolean;
   hasSttConfigured: boolean;
   isAiTranscriptionTabActive: boolean;
@@ -25,6 +28,8 @@ type DevtoolsToastPreviewParams = {
 };
 
 export function createToastRegistry({
+  availableUpdate = null,
+  onOpenUpdate = () => {},
   hasLLMConfigured,
   hasSttConfigured,
   isAiTranscriptionTabActive,
@@ -37,6 +42,25 @@ export function createToastRegistry({
 
   // order matters
   return [
+    {
+      toast: {
+        id: "update-available",
+        description: t`Version ${availableUpdate ?? ""} is available`,
+        detail: t`See what's new and update from Settings.`,
+        primaryAction: {
+          label: t`See the update`,
+          onClick: onOpenUpdate,
+        },
+        // Fermé pour cette session : il revient au prochain lancement, ou pour
+        // une version plus récente.
+        lifecycle: {
+          type: "persistent",
+          dismissal: "session",
+          dismissalId: `update-available-${availableUpdate ?? ""}`,
+        },
+      },
+      condition: () => availableUpdate !== null,
+    },
     {
       toast: {
         id: "missing-stt",

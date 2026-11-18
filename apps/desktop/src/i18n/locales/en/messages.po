@@ -261,6 +261,10 @@ msgstr "A folder with this name already exists."
 msgid "A meeting can't be replayed: audio is never kept, only the note remains. Your notes belong to you."
 msgstr "A meeting can't be replayed: audio is never kept, only the note remains. Your notes belong to you."
 
+#: src/settings/general/update-section.tsx
+msgid "A meeting is being recorded: install the update once it ends."
+msgstr "A meeting is being recorded: install the update once it ends."
+
 #: src/folders/project/next-meeting-slot.tsx
 msgid "A new proposal replaces your changes to the agenda."
 msgstr "A new proposal replaces your changes to the agenda."
@@ -826,6 +830,16 @@ msgstr "chat, messages, note, Teams, Zoom"
 msgid "Check again"
 msgstr "Check again"
 
+#: src/settings/general/update-section.tsx
+#: src/settings/search-index.ts
+msgid "Check for updates"
+msgstr "Check for updates"
+
+#: src/settings/general/update-section.tsx
+#: src/settings/search-index.ts
+msgid "Check for updates at startup"
+msgstr "Check for updates at startup"
+
 #: src/chat/components/input/use-dictation.ts
 msgid "Check microphone permission and the selected input device, then try again."
 msgstr "Check microphone permission and the selected input device, then try again."
@@ -837,6 +851,10 @@ msgstr "Check that your vault folder is available and your disk has free space, 
 #: src/shared/palette-settings-group.tsx
 msgid "Check the spelling, or try a shorter word."
 msgstr "Check the spelling, or try a shorter word."
+
+#: src/settings/general/update-section.tsx
+msgid "Checking for updates…"
+msgstr "Checking for updates…"
 
 #: src/settings/developers/cli.tsx
 msgid "Checking…"
@@ -1565,9 +1583,26 @@ msgstr "Documentation"
 msgid "Done"
 msgstr "Done"
 
+#: src/settings/general/update-section.tsx
+msgid "Download progress"
+msgstr "Download progress"
+
+#: src/settings/general/update-section.tsx
+msgid "Download the update"
+msgstr "Download the update"
+
 #: src/settings/general/audio-settings.tsx
 msgid "Downloading the echo cancellation models…"
 msgstr "Downloading the echo cancellation models…"
+
+#. placeholder {0}: formatBytes(progress?.downloaded ?? 0, i18n.locale)
+#: src/settings/general/update-section.tsx
+msgid "Downloading… {0}"
+msgstr "Downloading… {0}"
+
+#: src/settings/general/update-section.tsx
+msgid "Downloading… {percent}%"
+msgstr "Downloading… {percent}%"
 
 #: src/settings/search-index.ts
 msgid "Downloads, PDF, folder, export, save, Markdown, text file"
@@ -2258,6 +2293,10 @@ msgstr "Input level unavailable"
 msgid "Insert"
 msgstr "Insert"
 
+#: src/settings/general/update-section.tsx
+msgid "Install and restart"
+msgstr "Install and restart"
+
 #: src/settings/developers/cli.tsx
 msgid "Install command copied"
 msgstr "Install command copied"
@@ -2273,6 +2312,18 @@ msgstr "Installation guide"
 #: src/settings/developers/cli.tsx
 msgid "Installed"
 msgstr "Installed"
+
+#: src/settings/general/update-section.tsx
+msgid "Installed version: {version}"
+msgstr "Installed version: {version}"
+
+#: src/settings/general/update-section.tsx
+msgid "Installed version: unknown"
+msgstr "Installed version: unknown"
+
+#: src/settings/general/update-section.tsx
+msgid "Installing… Syntheo will restart."
+msgstr "Installing… Syntheo will restart."
 
 #: src/settings/automations/step-forms.tsx
 msgid "Instruction"
@@ -3427,6 +3478,10 @@ msgstr "Open Syntheo from the menu bar."
 msgid "Open tasks"
 msgstr "Open tasks"
 
+#: src/settings/general/update-section.tsx
+msgid "Open the download page"
+msgstr "Open the download page"
+
 #: src/settings/automations/workflow-test-result.tsx
 msgid "Open the note"
 msgstr "Open the note"
@@ -3749,6 +3804,10 @@ msgstr "Read meeting controls and visible chat."
 msgid "Read what each speaker said, then say who it is. Tab moves to the next speaker, Enter confirms."
 msgstr "Read what each speaker said, then say who it is. Tab moves to the next speaker, Enter confirms."
 
+#: src/settings/general/update-section.tsx
+msgid "Reads the latest version on GitHub. Nothing is installed without your action."
+msgstr "Reads the latest version on GitHub. Nothing is installed without your action."
+
 #: src/settings/general/notification.tsx
 msgid "Ready"
 msgstr "Ready"
@@ -3853,6 +3912,10 @@ msgstr "Regenerate with my notes"
 #: src/contacts/related-notes.tsx
 msgid "Related Notes"
 msgstr "Related Notes"
+
+#: src/settings/general/update-section.tsx
+msgid "Release page"
+msgstr "Release page"
 
 #: src/settings/general/meeting-settings.tsx
 #: src/settings/search-index.ts
@@ -4287,6 +4350,14 @@ msgstr "See all folders"
 msgid "See all templates"
 msgstr "See all templates"
 
+#: src/sidebar/toast/registry.tsx
+msgid "See the update"
+msgstr "See the update"
+
+#: src/sidebar/toast/registry.tsx
+msgid "See what's new and update from Settings."
+msgstr "See what's new and update from Settings."
+
 #: src/contacts/details.tsx
 msgid "Select a person to view details"
 msgstr "Select a person to view details"
@@ -4376,6 +4447,10 @@ msgstr "Server that writes the summary"
 #: src/settings/automations/markdown-export-options.tsx
 msgid "Session title"
 msgstr "Session title"
+
+#: src/settings/general/update-section.tsx
+msgid "Set by your administrator."
+msgstr "Set by your administrator."
 
 #: src/settings/automations/index.tsx
 msgid "Set the trigger and the actions. The chat on the right can help you shape the automation."
@@ -4896,6 +4971,10 @@ msgstr "Syntheo doesn't have microphone access"
 msgid "Syntheo is Locked"
 msgstr "Syntheo is Locked"
 
+#: src/settings/general/update-section.tsx
+msgid "Syntheo is up to date."
+msgstr "Syntheo is up to date."
+
 #: src/store/zustand/listener/general-live-helpers.ts
 msgid "Syntheo keeps listening while live transcription reconnects. No audio is kept: the missing passage will not be recovered."
 msgstr "Syntheo keeps listening while live transcription reconnects. No audio is kept: the missing passage will not be recovered."
@@ -5381,6 +5460,14 @@ msgstr "The transcription will appear here as soon as the first words arrive."
 msgid "The unreadable audio was preserved in this note's folder as an audio.recovery-*.wav file. New audio will be recorded separately. Your transcript is unchanged."
 msgstr "The unreadable audio was preserved in this note's folder as an audio.recovery-*.wav file. New audio will be recorded separately. Your transcript is unchanged."
 
+#: src/settings/general/update-section.tsx
+msgid "The update failed: {error}"
+msgstr "The update failed: {error}"
+
+#: src/settings/general/update-section.tsx
+msgid "The update is downloaded and ready to install."
+msgstr "The update is downloaded and ready to install."
+
 #: src/settings/appearance/theme.tsx
 #: src/settings/search-index.ts
 msgid "Theme"
@@ -5441,6 +5528,10 @@ msgstr "This folder uses the {title} template"
 #: src/settings/general/index.tsx
 msgid "This information stays on your computer. It is used to recognize you in transcripts and to sign your meeting notes."
 msgstr "This information stays on your computer. It is used to recognize you in transcripts and to sign your meeting notes."
+
+#: src/settings/general/update-section.tsx
+msgid "This installation (.deb or MSI) is updated by downloading the new package."
+msgstr "This installation (.deb or MSI) is updated by downloading the new package."
 
 #: src/settings/automations/workflow-test-panel.tsx
 msgid "This is a real test: these steps really act."
@@ -5768,6 +5859,22 @@ msgstr "up to date as of {coveredDate}"
 msgid "Update"
 msgstr "Update"
 
+#: src/settings/search-index.ts
+msgid "update, automatic, startup, network, GitHub"
+msgstr "update, automatic, startup, network, GitHub"
+
+#: src/settings/search-index.ts
+msgid "update, upgrade, new version, download, install"
+msgstr "update, upgrade, new version, download, install"
+
+#: src/settings/general/update-section.tsx
+msgid "Updates"
+msgstr "Updates"
+
+#: src/settings/general/update-section.tsx
+msgid "Updates are not checked in this build."
+msgstr "Updates are not checked in this build."
+
 #: src/session/components/note-input/transcript/screens/empty.tsx
 #: src/session/components/outer-header/overflow/index.tsx
 #: src/stt/select-upload-file.ts
@@ -5851,6 +5958,16 @@ msgstr "Variables are inserted as JSON text, inside quotes. Redirects are not fo
 #: src/settings/automations/step-forms.tsx
 msgid "Vault folder"
 msgstr "Vault folder"
+
+#. placeholder {0}: availableUpdate ?? ""
+#: src/sidebar/toast/registry.tsx
+msgid "Version {0} is available"
+msgstr "Version {0} is available"
+
+#. placeholder {0}: update.version
+#: src/settings/general/update-section.tsx
+msgid "Version {0} is available."
+msgstr "Version {0} is available."
 
 #: src/session/components/living-document/summary-version.tsx
 msgid "Version {versionNumber}"
@@ -5953,6 +6070,11 @@ msgstr "What were the key decisions that have been made?"
 #: src/services/notification-labels.ts
 msgid "What:"
 msgstr "What:"
+
+#. placeholder {0}: update.version
+#: src/settings/general/update-section.tsx
+msgid "What's new in {0}"
+msgstr "What's new in {0}"
 
 #: src/changelog/index.tsx
 msgid "What's new in {version}"

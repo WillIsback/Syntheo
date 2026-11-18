@@ -60,9 +60,9 @@ Choose an activity in the diagram below: it shows the destination that receives 
 
 <DataFlows />
 
-Apart from inference, two minor flows remain, with no meeting content: showing the release notes of a version other than the installed one (a request to GitHub) and a few interface icons loaded from `api.iconify.design`.
+Apart from inference, three minor flows remain, with no meeting content: the update check (reading `latest.json` on GitHub, then downloading the installer if you update), showing the release notes of a version other than the installed one (a request to GitHub) and a few interface icons loaded from `api.iconify.design`.
 
-Nothing is sent to the vendor: no account, no usage statistics, no error reports, no update checks. You update by downloading the new version from [GitHub Releases](https://github.com/WillIsback/Syntheo/releases/latest).
+Nothing is sent to the vendor: no account, no usage statistics, no error reports, The update check, on by default and optional, sends no personal data; GitHub sees the computer's IP address. See [Update](/en/desktop-installation#update).
 
 <Note>
   An inference server run by a third party becomes your processor within the meaning of the GDPR (Art. 28): check the contract and where the data is located. A self-hosted server stays under your control.

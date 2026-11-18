@@ -79,3 +79,18 @@ export async function flushAutomaticRelaunch(): Promise<boolean> {
     throw error;
   }
 }
+
+// Mise à jour intégrée (issue 593) : les écritures en attente sont vidées
+// avant l'installation (sous Windows, l'installeur NSIS ferme l'application),
+// puis l'application redémarre sur la nouvelle version.
+export async function installUpdateAndRelaunch(
+  install: () => Promise<void>,
+): Promise<void> {
+  try {
+    await flushApplicationState();
+  } catch (error) {
+    console.error("Failed to flush application data before update", error);
+  }
+  await install();
+  await tauriRelaunch();
+}
