@@ -1,7 +1,9 @@
 import { Plural, Trans, useLingui } from "@lingui/react/macro";
 import {
   type KeyboardEvent,
+  type MouseEvent,
   type ReactNode,
+  type SyntheticEvent,
   useCallback,
   useId,
   useMemo,
@@ -21,6 +23,10 @@ import {
   visibleFolderTreeRows,
 } from "./sidebar-tree";
 
+import {
+  type MenuItemDef,
+  showNativeContextMenu,
+} from "~/shared/hooks/useNativeContextMenu";
 import { useTabs } from "~/store/zustand/tabs";
 import {
   type TemplateIcon,
@@ -35,19 +41,22 @@ function openNote(id: string) {
 
 // Dossiers en projets dépliables (issue 497) : arbre WAI-ARIA à focus mobile.
 // Flèches haut/bas : ligne précédente/suivante ; droite : déplier puis entrer ;
-// gauche : plier puis remonter au parent ; Entrée : ouvrir.
+// gauche : plier puis remonter au parent ; Entrée : ouvrir. Clic droit,
+// touche menu ou Maj+F10 : menu de la ligne de dossier (issue 590).
 export function FolderTreeView({
   tree,
   forcedExpanded,
   activeFolder,
   iconFor,
   onSelectFolder,
+  folderMenu,
 }: {
   tree: readonly FolderTreeNode[];
   forcedExpanded: ReadonlySet<string>;
   activeFolder: string | null;
   iconFor: (path: string) => TemplateIcon;
   onSelectFolder: (path: string) => void;
+  folderMenu?: (path: string) => MenuItemDef[];
 }) {
   const { t } = useLingui();
   const expanded = useExpandedFolders((state) => state.expanded);
@@ -85,10 +94,24 @@ export function FolderTreeView({
     }
   };
 
+  const openMenu = (row: FolderTreeRow, event: SyntheticEvent) => {
+    if (row.kind !== "folder" || !folderMenu) return false;
+    setFocusedKey(row.key);
+    void showNativeContextMenu(folderMenu(row.path), event);
+    return true;
+  };
+
   const handleKeyDown = (event: KeyboardEvent<HTMLUListElement>) => {
     const index = rows.findIndex((row) => row.key === tabStopKey);
     const row = rows[index];
     if (!row) return;
+    if (
+      event.key === "ContextMenu" ||
+      (event.key === "F10" && event.shiftKey)
+    ) {
+      openMenu(row, event);
+      return;
+    }
     let handled = true;
     switch (event.key) {
       case "ArrowDown":
@@ -147,6 +170,9 @@ export function FolderTreeView({
             else itemRefs.current.delete(row.key);
           }}
           onActivate={() => activate(row)}
+          onContextMenu={(event) => {
+            if (!openMenu(row, event)) event.preventDefault();
+          }}
           onToggle={() => {
             if (row.kind === "folder") {
               setFocusedKey(row.key);
@@ -169,6 +195,7 @@ function TreeRow({
   tabbable,
   itemRef,
   onActivate,
+  onContextMenu,
   onToggle,
   children,
 }: {
@@ -177,6 +204,7 @@ function TreeRow({
   tabbable: boolean;
   itemRef: (element: HTMLLIElement | null) => void;
   onActivate: () => void;
+  onContextMenu: (event: MouseEvent<HTMLLIElement>) => void;
   onToggle: () => void;
   children: (countId: string) => ReactNode;
 }) {
@@ -202,6 +230,7 @@ function TreeRow({
       tabIndex={tabbable ? 0 : -1}
       data-folder-tree-row={row.kind}
       onClick={onActivate}
+      onContextMenu={onContextMenu}
       style={{ paddingLeft: 4 + row.depth * INDENT_PX }}
       className={cn([
         "flex min-w-0 cursor-default items-center gap-1.5 rounded-lg py-1.5 pr-2 text-sm transition-colors select-none",

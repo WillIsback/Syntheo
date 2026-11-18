@@ -1,7 +1,19 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ openNew: vi.fn() }));
+const mocks = vi.hoisted(() => ({ openNew: vi.fn(), showMenu: vi.fn() }));
+
+// Le menu natif Tauri ne s'affiche pas sous jsdom : on capture ses entrées.
+vi.mock("~/shared/hooks/useNativeContextMenu", () => ({
+  showNativeContextMenu: (
+    items: unknown[],
+    event: { preventDefault: () => void },
+  ) => {
+    event.preventDefault();
+    mocks.showMenu(items);
+    return Promise.resolve();
+  },
+}));
 
 // Les macros Lingui compilent vers `@lingui/react` : on traduit avec le vrai
 // moteur pour que les pluriels (compteurs, « … N autres ») soient rendus.
@@ -53,7 +65,12 @@ const tree = buildFolderTree(
   ],
 );
 
-function renderTree(onSelectFolder = vi.fn()) {
+function renderTree(
+  onSelectFolder = vi.fn(),
+  folderMenu?: (
+    path: string,
+  ) => Array<{ id: string; text: string; action: () => void }>,
+) {
   render(
     <FolderTreeView
       tree={tree}
@@ -61,6 +78,7 @@ function renderTree(onSelectFolder = vi.fn()) {
       activeFolder="Atlas"
       iconFor={() => ({ type: "emoji", value: "📁" })}
       onSelectFolder={onSelectFolder}
+      folderMenu={folderMenu}
     />,
   );
   return onSelectFolder;
@@ -83,6 +101,7 @@ describe("FolderTreeView", () => {
     localStorage.clear();
     reloadExpandedFolders();
     mocks.openNew.mockReset();
+    mocks.showMenu.mockReset();
   });
 
   afterEach(() => {
@@ -199,5 +218,37 @@ describe("FolderTreeView", () => {
     fireEvent.keyDown(item("Atlas"), { key: "ArrowRight" });
     expect(item("Atlas").getAttribute("aria-expanded")).toBe("true");
     setItem.mockRestore();
+  });
+
+  it("opens the folder menu on right click, menu key and Shift+F10", () => {
+    const folderMenu = vi.fn((path: string) => [
+      {
+        id: "new-subfolder",
+        text: `New subfolder in ${path}`,
+        action: vi.fn(),
+      },
+    ]);
+    renderTree(vi.fn(), folderMenu);
+
+    fireEvent.contextMenu(item("Recrutement"));
+    expect(folderMenu).toHaveBeenLastCalledWith("Recrutement");
+    expect(mocks.showMenu).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(item("Atlas"));
+    fireEvent.keyDown(item("Atlas"), { key: "ContextMenu" });
+    expect(folderMenu).toHaveBeenLastCalledWith("Atlas");
+
+    fireEvent.keyDown(item("Atlas"), { key: "F10", shiftKey: true });
+    expect(mocks.showMenu).toHaveBeenCalledTimes(3);
+  });
+
+  it("opens no folder menu on a note row", () => {
+    useExpandedFolders.getState().setExpanded("Recrutement", true);
+    const folderMenu = vi.fn(() => []);
+    renderTree(vi.fn(), folderMenu);
+
+    fireEvent.contextMenu(item("Point r1"));
+    expect(folderMenu).not.toHaveBeenCalled();
+    expect(mocks.showMenu).not.toHaveBeenCalled();
   });
 });

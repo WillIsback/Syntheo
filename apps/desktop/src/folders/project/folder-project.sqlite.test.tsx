@@ -36,6 +36,7 @@ const mocks = vi.hoisted(() => ({
   createSession: vi.fn(),
   openNew: vi.fn(),
   transitionChatMode: vi.fn(),
+  folderPaths: [] as string[],
 }));
 
 function query(sql: string, params: unknown[] = []) {
@@ -147,6 +148,7 @@ vi.mock("~/session/folder-catalog", () => ({
 
 vi.mock("~/session/queries", () => ({
   useFolderIcons: () => ({}),
+  useFolderPaths: () => mocks.folderPaths,
   createSession: mocks.createSession,
 }));
 

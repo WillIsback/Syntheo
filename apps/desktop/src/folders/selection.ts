@@ -1,5 +1,6 @@
 import { create } from "zustand";
 
+import { rebaseFolderPath } from "~/session/folders";
 import { type TemplateIcon } from "~/templates/template-icon";
 
 export const useFolderSelection = create<{
@@ -48,13 +49,20 @@ export const useFolderSelection = create<{
       const { [path]: _, ...rest } = state.iconOverrides;
       return { iconOverrides: rest };
     }),
+  // Le dossier et ses sous-dossiers suivent le renommage ou le déplacement.
   rekeyIconOverride: (fromPath, toPath) =>
     set((state) => {
-      if (fromPath === toPath || !state.iconOverrides[fromPath]) {
+      if (fromPath === toPath) {
         return state;
       }
-      const { [fromPath]: icon, ...rest } = state.iconOverrides;
-      return { iconOverrides: { ...rest, [toPath]: icon } };
+      let changed = false;
+      const next: Record<string, TemplateIcon> = {};
+      for (const [path, icon] of Object.entries(state.iconOverrides)) {
+        const rebased = rebaseFolderPath(path, fromPath, toPath);
+        changed ||= rebased !== path;
+        next[rebased] = icon;
+      }
+      return changed ? { iconOverrides: next } : state;
     }),
 }));
 

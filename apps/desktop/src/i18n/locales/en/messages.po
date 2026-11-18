@@ -96,6 +96,7 @@ msgstr "{chain} · last run failed {relative}"
 msgid "{chain} · never run"
 msgstr "{chain} · never run"
 
+#: src/folders/project/folder-subfolders.tsx
 #: src/search/unified/labels.ts
 msgid "{count, plural, one {# meeting} other {# meetings}}"
 msgstr "{count, plural, one {# meeting} other {# meetings}}"
@@ -243,6 +244,14 @@ msgstr "1 pending edit"
 #: src/sidebar/settings-search-results.tsx
 msgid "1 result"
 msgstr "1 result"
+
+#: src/folders/folder-actions.tsx
+msgid "A folder cannot be moved into one of its own subfolders."
+msgstr "A folder cannot be moved into one of its own subfolders."
+
+#: src/folders/folder-actions.tsx
+msgid "A folder with this name already exists there."
+msgstr "A folder with this name already exists there."
 
 #: src/sidebar/folder-name-dialog.tsx
 msgid "A folder with this name already exists."
@@ -745,6 +754,7 @@ msgstr "by {name}"
 msgid "Can't import this audio"
 msgstr "Can't import this audio"
 
+#: src/folders/folder-actions.tsx
 #: src/folders/project/next-meeting-slot.tsx
 #: src/session/components/capsule/index.tsx
 #: src/settings/ai/shared/server-address.tsx
@@ -905,6 +915,10 @@ msgstr "Choose template icon"
 #: src/settings/appearance/palette.tsx
 msgid "Choose the colors of Syntheo. Each palette follows the light or dark theme."
 msgstr "Choose the colors of Syntheo. Each palette follows the light or dark theme."
+
+#: src/folders/folder-actions.tsx
+msgid "Choose the folder that will contain this folder."
+msgstr "Choose the folder that will contain this folder."
 
 #: src/settings/general/audio-settings.tsx
 msgid "Choose the microphone that captures your voice."
@@ -1198,6 +1212,10 @@ msgstr "Could not delete this note. Please try again."
 msgid "Could not export. Check the export location in Settings and try again."
 msgstr "Could not export. Check the export location in Settings and try again."
 
+#: src/folders/folder-actions.tsx
+msgid "Could not move the folder."
+msgstr "Could not move the folder."
+
 #: src/session/components/outer-header/overflow/export-modal.tsx
 msgid "Could not open the PDF to print. Try again, or save it instead."
 msgstr "Could not open the PDF to print. Try again, or save it instead."
@@ -1248,7 +1266,7 @@ msgstr "Couldn't open the file picker"
 msgid "Couldn't save your profile. Try again."
 msgstr "Couldn't save your profile. Try again."
 
-#: src/folders/sidebar.tsx
+#: src/folders/folder-actions.tsx
 msgid "Create"
 msgstr "Create"
 
@@ -1374,6 +1392,7 @@ msgid "Default template"
 msgstr "Default template"
 
 #: src/contacts/contact-page-header.tsx
+#: src/folders/folder-actions.tsx
 #: src/folders/folder-editor.tsx
 #: src/home/note-index.tsx
 #: src/session/components/note-input/transcript/renderer/multi-selection-bar.tsx
@@ -1388,9 +1407,13 @@ msgstr "Delete"
 msgid "Delete automation"
 msgstr "Delete automation"
 
-#: src/folders/folder-editor.tsx
+#: src/folders/folder-actions.tsx
 msgid "Delete folder"
 msgstr "Delete folder"
+
+#: src/folders/folder-actions.tsx
+msgid "Delete folder “{name}”"
+msgstr "Delete folder “{name}”"
 
 #: src/templates/sections-editor.tsx
 msgid "Delete section {position}"
@@ -1411,6 +1434,10 @@ msgstr "Describe the meeting, Syntheo suggests the sections…"
 #: src/templates/template-form.tsx
 msgid "Description"
 msgstr "Description"
+
+#: src/folders/folder-actions.tsx
+msgid "Destination"
+msgstr "Destination"
 
 #: src/settings/general/notification.tsx
 msgid "Detect meetings from microphone activity."
@@ -1905,6 +1932,9 @@ msgid "Folder name"
 msgstr "Folder name"
 
 #: src/session/components/folder-picker.tsx
+msgid "Folder: {currentLabel}"
+msgstr "Folder: {currentLabel}"
+
 #: src/session/components/living-document/fiche-folder.tsx
 msgid "Folder: {currentPath}"
 msgstr "Folder: {currentPath}"
@@ -2785,9 +2815,22 @@ msgstr "most recent"
 msgid "most recent first"
 msgstr "most recent first"
 
+#: src/folders/folder-actions.tsx
+msgid "Move"
+msgstr "Move"
+
+#: src/folders/folder-actions.tsx
+msgid "Move “{name}” to…"
+msgstr "Move “{name}” to…"
+
 #: src/templates/sections-editor.tsx
 msgid "Move section {position}"
 msgstr "Move section {position}"
+
+#: src/folders/folder-actions.tsx
+#: src/folders/folder-editor.tsx
+msgid "Move to…"
+msgstr "Move to…"
 
 #: src/shared/shortcuts.ts
 msgid "Mute or unmute system audio"
@@ -2864,6 +2907,7 @@ msgstr "New automation"
 msgid "New chat"
 msgstr "New chat"
 
+#: src/folders/folder-actions.tsx
 #: src/folders/sidebar.tsx
 msgid "New folder"
 msgstr "New folder"
@@ -2877,10 +2921,24 @@ msgstr "New note"
 msgid "New Note"
 msgstr "New Note"
 
+#: src/folders/folder-actions.tsx
 #: src/folders/project/folder-header-actions.tsx
 #: src/shared/palette-search-groups.tsx
 msgid "New note in this folder"
 msgstr "New note in this folder"
+
+#: src/folders/project/folder-subfolders.tsx
+msgid "New subfolder"
+msgstr "New subfolder"
+
+#: src/folders/folder-actions.tsx
+msgid "New subfolder in {parentName}"
+msgstr "New subfolder in {parentName}"
+
+#: src/folders/folder-actions.tsx
+#: src/folders/folder-editor.tsx
+msgid "New subfolder…"
+msgstr "New subfolder…"
 
 #: src/templates/details.tsx
 #: src/templates/template-form.tsx
@@ -3022,6 +3080,10 @@ msgstr "No notes in this folder match."
 #: src/folders/project/folder-meetings-card.tsx
 msgid "No notes in this folder yet."
 msgstr "No notes in this folder yet."
+
+#: src/folders/folder-actions.tsx
+msgid "No other folder available."
+msgstr "No other folder available."
 
 #: src/session/components/note-input/transcript/renderer/speaker-assign.tsx
 msgid "No people"
@@ -3201,7 +3263,7 @@ msgid "Notes"
 msgstr "Notes"
 
 #. js-lingui-explicit-id
-#: src/folders/folder-editor.tsx
+#: src/folders/folder-actions.tsx
 msgid "Notes stay in All notes. Materials in this folder will be deleted."
 msgstr "Notes stay in All notes. This folder, its nested folders, and all their materials will be deleted."
 
@@ -3426,6 +3488,10 @@ msgstr "Page not found"
 #: src/settings/search-index.ts
 msgid "Palette"
 msgstr "Palette"
+
+#: src/folders/project/folder-subfolders.tsx
+msgid "Parent folders"
+msgstr "Parent folders"
 
 #: src/session/components/living-document/fiche.tsx
 #: src/session/components/note-input/transcript/renderer/speaker-assign.tsx
@@ -4091,6 +4157,11 @@ msgstr "Search contacts..."
 msgid "Search emoji..."
 msgstr "Search emoji..."
 
+#: src/folders/folder-actions.tsx
+msgid "Search folders"
+msgstr "Search folders"
+
+#: src/folders/folder-actions.tsx
 #: src/folders/sidebar.tsx
 msgid "Search folders..."
 msgstr "Search folders..."
@@ -4601,6 +4672,10 @@ msgstr "Stop when meeting ends"
 #: src/settings/search-index.ts
 msgid "Storage"
 msgstr "Storage"
+
+#: src/folders/project/folder-subfolders.tsx
+msgid "Subfolders"
+msgstr "Subfolders"
 
 #: src/settings/general/notification.tsx
 msgid "Success"
@@ -5415,6 +5490,10 @@ msgstr "Title"
 #: src/templates/sections-editor.tsx
 msgid "To move a section with the keyboard, focus its handle and use the up and down arrow keys."
 msgstr "To move a section with the keyboard, focus its handle and use the up and down arrow keys."
+
+#: src/folders/folder-actions.tsx
+msgid "Top level"
+msgstr "Top level"
 
 #: src/chat/components/input/index.tsx
 msgid "Transcribing voice input"

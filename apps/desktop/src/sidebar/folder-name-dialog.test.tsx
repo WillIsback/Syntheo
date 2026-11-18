@@ -68,4 +68,25 @@ describe("FolderNameDialog", () => {
     expect(onOpenChange).toHaveBeenCalledExactlyOnceWith(false);
     expect(onSubmit).not.toHaveBeenCalled();
   });
+
+  it("still refuses a name containing a slash", async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    render(
+      <FolderNameDialog
+        open
+        title="New subfolder in Equipe"
+        confirmLabel="Create"
+        onSubmit={onSubmit}
+        onOpenChange={vi.fn()}
+      />,
+    );
+
+    fireEvent.change(screen.getByRole("textbox", { name: "Folder name" }), {
+      target: { value: "MCO/2026" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Create" }));
+
+    expect(await screen.findByText("Enter a valid folder name.")).toBeTruthy();
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
 });

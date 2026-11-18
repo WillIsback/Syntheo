@@ -1,7 +1,11 @@
 import { commands as fsSyncCommands } from "@syntheo/plugin-fs-sync";
 import { commands } from "@syntheo/plugin-session";
 
-import { ancestorFolderPaths, normalizeFolderPath } from "./folders";
+import {
+  ancestorFolderPaths,
+  isSameOrDescendantFolder,
+  normalizeFolderPath,
+} from "./folders";
 
 import { executeTransaction, liveQueryClient, useLiveQuery } from "~/db";
 import { enqueueDatabaseWrite } from "~/db/write-queue";
@@ -38,6 +42,10 @@ export async function renameNamedFolder(
   const newPath = requireNamedFolderPath(newFolderPath);
   if (oldPath === newPath) {
     return newPath;
+  }
+  // Un dossier ne peut pas entrer dans l'un de ses propres sous-dossiers.
+  if (isSameOrDescendantFolder(newPath, oldPath)) {
+    throw new Error("folder_target_inside_source");
   }
 
   if (await folderNameTaken(newPath)) {

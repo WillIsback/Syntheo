@@ -27,7 +27,7 @@ import { cn } from "@syntheo/utils";
 import { useFolderSelection } from "~/folders/selection";
 import { createNamedFolder } from "~/session/folder-catalog";
 import { resolvedFolderIcon } from "~/session/folder-icon";
-import { normalizeFolderPath } from "~/session/folders";
+import { folderPathLabel, normalizeFolderPath } from "~/session/folders";
 import {
   useFolderIcons,
   useFolderPaths,
@@ -58,6 +58,8 @@ export function FolderPicker({
     useSession(sessionId)?.folder_id ?? "",
   );
   const folderIcons = useFolderIcons();
+  // Chemins imbriqués lisibles (issue 590) : `Equipe › MCO`.
+  const currentLabel = folderPathLabel(currentPath);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -69,9 +71,9 @@ export function FolderPicker({
           role="combobox"
           aria-expanded={open}
           aria-label={
-            currentPath ? t`Folder: ${currentPath}` : t`Select folder`
+            currentPath ? t`Folder: ${currentLabel}` : t`Select folder`
           }
-          title={currentPath ? currentPath : t`Select folder`}
+          title={currentPath ? currentLabel : t`Select folder`}
           className={cn([
             "flex h-7 items-center rounded-full [&_svg]:size-4",
             currentPath
@@ -92,7 +94,7 @@ export function FolderPicker({
           )}
           {currentPath ? (
             <span className="text-muted-foreground min-w-0 truncate text-xs @max-[480px]:sr-only">
-              {currentPath}
+              {currentLabel}
             </span>
           ) : null}
         </button>
@@ -237,7 +239,9 @@ export function FolderPickerContent({
                     icon={resolvedFolderIcon(suggestion, folderIcons)}
                     className="size-4 opacity-70"
                   />
-                  <span className="min-w-0 flex-1 truncate">{suggestion}</span>
+                  <span className="min-w-0 flex-1 truncate">
+                    {folderPathLabel(suggestion)}
+                  </span>
                   {suggestionHint ? (
                     <span className="text-muted-foreground shrink-0 text-xs">
                       {suggestionHint}
@@ -261,7 +265,9 @@ export function FolderPickerContent({
                       icon={resolvedFolderIcon(path, folderIcons)}
                       className="size-4 opacity-70"
                     />
-                    <span className="min-w-0 flex-1 truncate">{path}</span>
+                    <span className="min-w-0 flex-1 truncate">
+                      {folderPathLabel(path)}
+                    </span>
                     {path === currentPath ? (
                       <Check className="size-4 shrink-0" />
                     ) : null}

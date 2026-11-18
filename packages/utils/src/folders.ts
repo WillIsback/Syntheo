@@ -118,3 +118,58 @@ export function ancestorFolderPaths(folderPath: string): string[] {
   }
   return ancestors;
 }
+
+/** Chemin lisible pour l'interface : `Equipe/MCO` devient `Equipe › MCO`. */
+export function folderPathLabel(path: string | null | undefined): string {
+  const normalized = normalizeFolderPath(path ?? "");
+  return normalized ? normalized.split("/").join(" › ") : "";
+}
+
+/** `candidate` est `ancestor` lui-même ou l'un de ses sous-dossiers. */
+export function isSameOrDescendantFolder(
+  candidate: string,
+  ancestor: string,
+): boolean {
+  return candidate === ancestor || candidate.startsWith(`${ancestor}/`);
+}
+
+/** Dossier parent d'un chemin (`""` pour un dossier à la racine). */
+export function parentFolderPath(path: string): string {
+  const normalized = normalizeFolderPath(path) ?? "";
+  const slash = normalized.lastIndexOf("/");
+  return slash === -1 ? "" : normalized.slice(0, slash);
+}
+
+/**
+ * Chemin d'un dossier déplacé sous `targetParent` (`""` : à la racine), en
+ * gardant son nom. `null` si le déplacement est impossible : vers lui-même ou
+ * l'un de ses sous-dossiers, ou chemin trop long.
+ */
+export function movedFolderPath(
+  sourcePath: string,
+  targetParent: string,
+): string | null {
+  const source = normalizeFolderPath(sourcePath);
+  const target = normalizeFolderPath(targetParent);
+  if (!source || target === null) {
+    return null;
+  }
+  if (target && isSameOrDescendantFolder(target, source)) {
+    return null;
+  }
+  const name = folderDisplayName(source);
+  return target ? childFolderPath(target, name) : name;
+}
+
+/** Remplace le préfixe `fromPath` par `toPath` (dossier renommé ou déplacé). */
+export function rebaseFolderPath(
+  path: string,
+  fromPath: string,
+  toPath: string,
+): string {
+  if (path === fromPath) return toPath;
+  if (path.startsWith(`${fromPath}/`)) {
+    return `${toPath}${path.slice(fromPath.length)}`;
+  }
+  return path;
+}
