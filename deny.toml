@@ -22,10 +22,6 @@ ignore = [
   { id = "RUSTSEC-2026-0104", reason = "rustls-webpki 0.101 via SDK AWS (s3, bedrock) : retiré aux chantiers 04b/04d" },
   { id = "RUSTSEC-2026-0382", reason = "rustls-webpki 0.101 via SDK AWS (s3, bedrock) : retiré aux chantiers 04b/04d" },
   { id = "RUSTSEC-2026-0258", reason = "h2 0.3 via SDK AWS (s3, bedrock) : retiré aux chantiers 04b/04d" },
-  # Inférence embarquée (local-llm, local-stt) et updater Fastrepl : retirés aux chantiers 04b et 04d.
-  { id = "RUSTSEC-2026-0367", reason = "zip 2.x (local-llm/local-stt) et 4.x (tauri-plugin-updater) : retirés aux chantiers 04b/04d" },
-  { id = "RUSTSEC-2026-0368", reason = "zip 2.x (local-llm/local-stt) et 4.x (tauri-plugin-updater) : retirés aux chantiers 04b/04d" },
-  { id = "RUSTSEC-2026-0369", reason = "zip 2.x (local-llm/local-stt) et 4.x (tauri-plugin-updater) : retirés aux chantiers 04b/04d" },
   # Outils de build et de test, absents du binaire livré.
   { id = "RUSTSEC-2025-0111", reason = "tokio-tar via testcontainers (dev-dependency) : non livré" },
   { id = "RUSTSEC-2026-0194", reason = "quick-xml : wayland-scanner (génération au build) et plist/citationberg (fichiers locaux) ; à suivre en amont" },
