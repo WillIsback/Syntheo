@@ -10,6 +10,7 @@ import {
 import { loadSessionFolderTemplateId } from "~/folders/folder-template";
 import { getEnhancerService } from "~/services/enhancer";
 import { loadSessionContentSnapshot } from "~/session/content-queries";
+import { lateFilingToastId } from "~/session/queries/sessions";
 import { getTemplateById } from "~/templates/queries";
 
 // Rangement tardif (issue 502) : une note déjà synthétisée qui entre dans un
@@ -104,18 +105,23 @@ function regenerate(
   );
 }
 
-export async function proposeLateFiling(sessionId: string): Promise<void> {
+// `isCurrent` (issue 592) : faux si la note a changé de dossier depuis le
+// rangement qui a déclenché la proposition ; elle n'est alors pas affichée.
+export async function proposeLateFiling(
+  sessionId: string,
+  isCurrent: () => boolean = () => true,
+): Promise<void> {
   const proposal = await loadLateFilingProposal(sessionId);
   if (!proposal) {
     return;
   }
   const template = await getTemplateById(proposal.templateId);
-  if (!template) {
+  if (!template || !isCurrent()) {
     return;
   }
   const title = template.title.trim() || t`Untitled`;
   toast(t`This folder uses the ${title} template`, {
-    id: `late-filing-${sessionId}`,
+    id: lateFilingToastId(sessionId),
     description: t`Regenerate the summary with this template? The current version stays in the history.`,
     duration: 15_000,
     action: {

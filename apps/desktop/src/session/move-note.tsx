@@ -50,7 +50,13 @@ export async function moveNoteToFolder(
     action: {
       label: t`Undo`,
       onClick: () => {
-        void updateSession(note.id, { folder_id: from }).catch((error) => {
+        // Annuler ne propose pas de régénérer : la note revient d'où elle
+        // venait (issue 592).
+        void updateSession(
+          note.id,
+          { folder_id: from },
+          { proposeLateFiling: false },
+        ).catch((error) => {
           console.error("[move-note] failed to undo the move", error);
         });
       },

@@ -89,10 +89,13 @@ describe("moveNoteToFolder", () => {
     expect(message).toBe("Note moved to Equipe › MCO");
     expect(options.action.label).toBe("Undo");
 
+    // Annuler remet la note en place sans proposer de régénérer.
     options.action.onClick();
-    expect(mocks.updateSession).toHaveBeenLastCalledWith("s1", {
-      folder_id: "Clients",
-    });
+    expect(mocks.updateSession).toHaveBeenLastCalledWith(
+      "s1",
+      { folder_id: "Clients" },
+      { proposeLateFiling: false },
+    );
   });
 
   it("removes the note from its folder", async () => {

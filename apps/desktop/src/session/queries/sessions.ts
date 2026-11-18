@@ -1,6 +1,7 @@
 import { useCallback, useRef } from "react";
 
 import { md2json } from "@syntheo/editor/markdown";
+import { toast } from "@syntheo/ui/components/ui/toast";
 
 import { extractBodyHeadingsKey } from "../title-content";
 import type {
@@ -304,11 +305,31 @@ function buildNoteUpsertStatement(
   };
 }
 
+/** Identifiant du toast de rangement tardif d'une note (issues 502, 592). */
+export function lateFilingToastId(sessionId: string): string {
+  return `late-filing-${sessionId}`;
+}
+
+// Numéro du dernier changement de dossier de chaque note : une proposition de
+// rangement tardif calculée pour un changement dépassé n'est plus affichée.
+const folderChangeSeq = new Map<string, number>();
+
+export type UpdateSessionOptions = {
+  /**
+   * `false` : ne propose pas de régénérer avec le modèle du dossier (écriture
+   * d'annulation d'un déplacement, issue 592). Par défaut, la proposition
+   * suit tout rangement dans un nouveau dossier.
+   */
+  proposeLateFiling?: boolean;
+};
+
 export function updateSession(
   sessionId: string,
   changes: SessionChanges,
+  options: UpdateSessionOptions = {},
 ): Promise<void> {
   let filedInto: string | null = null;
+  let folderSeq = 0;
   const write = enqueueDatabaseWrite(`session:${sessionId}`, async () => {
     const now = new Date().toISOString();
     const statements: SqlStatement[] = [];
@@ -340,16 +361,26 @@ export function updateSession(
 
     if (statements.length > 0) await executeTransaction(statements);
     if (
-      changes.folder_id &&
+      changes.folder_id !== undefined &&
       previousFolder !== undefined &&
       previousFolder !== changes.folder_id
     ) {
-      filedInto = changes.folder_id;
+      // La note change de dossier : une proposition en cours visait l'ancien
+      // dossier (issue 592), elle est retirée avant toute nouvelle.
+      folderSeq = (folderChangeSeq.get(sessionId) ?? 0) + 1;
+      folderChangeSeq.set(sessionId, folderSeq);
+      toast.dismiss(lateFilingToastId(sessionId));
+      if (changes.folder_id && options.proposeLateFiling !== false) {
+        filedInto = changes.folder_id;
+      }
     }
   });
   return write.then(() => {
     if (filedInto) {
-      offerLateFilingRegeneration(sessionId);
+      offerLateFilingRegeneration(
+        sessionId,
+        () => folderChangeSeq.get(sessionId) === folderSeq,
+      );
     }
   });
 }
@@ -368,9 +399,12 @@ async function loadSessionFolderPath(
 // passe ici, quel que soit l'écran d'où il vient. La proposition de
 // régénérer avec le modèle du dossier est décidée dans ~/session/late-filing
 // (chargé à la demande : il dépend de la synthèse et des notifications).
-function offerLateFilingRegeneration(sessionId: string) {
+function offerLateFilingRegeneration(
+  sessionId: string,
+  isCurrent: () => boolean,
+) {
   void import("~/session/late-filing")
-    .then(({ proposeLateFiling }) => proposeLateFiling(sessionId))
+    .then(({ proposeLateFiling }) => proposeLateFiling(sessionId, isCurrent))
     .catch((error) => {
       console.error("[late-filing] failed to check the folder template", error);
     });

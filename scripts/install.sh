@@ -145,8 +145,7 @@ ln -sf "$installed" "$INSTALL_DIR/syntheo"
 for old in "$INSTALL_DIR"/Syntheo-*.AppImage; do
   [[ -f "$old" && ! -L "$old" ]] || continue
   rm -f "$old"
-  printf 'Ancienne version retirée : %s
-' "$old"
+  printf 'Ancienne version retirée : %s\n' "$old"
 done
 
 printf 'Installé : %s\n' "$installed"
