@@ -9,6 +9,7 @@ mod ext;
 mod search_index;
 mod startup;
 mod store;
+mod updater;
 
 use db::open_desktop_db;
 use ext::*;
@@ -197,6 +198,14 @@ pub fn main() {
         )
         .plugin(tauri_plugin_transcription::init())
         .plugin(tauri_plugin_tantivy::init());
+
+    // Mise à jour intégrée (issue 593) : absente des alphas `devtools`, qui
+    // se verraient proposer la release (0.7.3-1 < 0.7.3).
+    #[cfg(not(feature = "devtools"))]
+    {
+        builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
+    }
+    builder = builder.manage(updater::UpdaterState::default());
 
     builder = builder.plugin(tauri_plugin_autostart::init(
         tauri_plugin_autostart::MacosLauncher::LaunchAgent,
@@ -540,6 +549,9 @@ fn make_specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
             commands::install_agent_skill,
             commands::get_aec_model_status,
             commands::retry_aec_model_download,
+            updater::updater_check::<tauri::Wry>,
+            updater::updater_download::<tauri::Wry>,
+            updater::updater_install::<tauri::Wry>,
         ])
         .error_handling(tauri_specta::ErrorHandlingMode::Result)
 }
