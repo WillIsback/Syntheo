@@ -20,6 +20,13 @@ vi.mock("@tauri-apps/api/app", () => ({
   getVersion: vi.fn().mockResolvedValue("1.4.31"),
 }));
 
+// La section « Mises à jour » a ses propres tests (update-section.test.tsx).
+vi.mock("./update-section", () => ({
+  UpdateSection: ({ version }: { version?: string }) => (
+    <section data-testid="update-section" data-version={version} />
+  ),
+}));
+
 import { AppSettingsView } from "./app-settings";
 
 import { useTabs } from "~/store/zustand/tabs";
@@ -68,9 +75,13 @@ describe("AppSettingsView", () => {
     });
   });
 
-  it("offers no automatic update switch, as Syntheo has no updater", () => {
+  it("shows the update section with the installed version", async () => {
     renderAppSettings();
 
-    expect(screen.queryByRole("switch", { name: /update/i })).toBeNull();
+    await waitFor(() =>
+      expect(screen.getByTestId("update-section").dataset.version).toBe(
+        "1.4.31",
+      ),
+    );
   });
 });
