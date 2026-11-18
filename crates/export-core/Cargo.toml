@@ -11,5 +11,5 @@ specta = { workspace = true, features = ["derive"] }
 thiserror = { workspace = true }
 
 pulldown-cmark = { version = "0.13.0", default-features = false }
-typst = "0.14.2"
+typst = "0.15.1"
 typst-pdf = "0.14.2"
