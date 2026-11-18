@@ -248,7 +248,17 @@ describe("late filing proposal on every filing path", () => {
     fireEvent.click(screen.getByRole("button", { name: "File" }));
     fireEvent.click(await screen.findByRole("option", { name: "Atlas" }));
 
-    await waitFor(() => expect(mocks.toast).toHaveBeenCalledTimes(1));
+    // Le bouton affiche aussi « Note déplacée vers Atlas » avec « Annuler »
+    // (issue 592) : on vérifie la proposition de rangement tardif.
+    await waitFor(() =>
+      expect(
+        mocks.toast.mock.calls.filter(
+          ([, options]) =>
+            (options as { id?: string } | undefined)?.id ===
+            "late-filing-session-1",
+        ),
+      ).toHaveLength(1),
+    );
     expect(storedFolder()).toBe("Atlas");
   });
 

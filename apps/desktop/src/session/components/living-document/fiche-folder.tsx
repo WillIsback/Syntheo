@@ -13,7 +13,7 @@ import { useSameTitleFolderSuggestion } from "./folder-suggestion";
 
 import { FolderPickerContent } from "~/session/components/folder-picker";
 import { resolvedFolderIcon } from "~/session/folder-icon";
-import { normalizeFolderPath } from "~/session/folders";
+import { folderPathLabel, normalizeFolderPath } from "~/session/folders";
 import { useFolderIcons, useSession } from "~/session/queries";
 import { TemplateIconGlyph } from "~/templates/template-icon";
 
@@ -27,6 +27,8 @@ export function FicheFolderField({ sessionId }: { sessionId: string }) {
   const currentPath =
     normalizeFolderPath(useSession(sessionId)?.folder_id ?? "") ?? "";
   const folderIcons = useFolderIcons();
+  // Chemin imbriqué lisible (issues 590 et 592) : `Clients › Boréal`.
+  const currentLabel = folderPathLabel(currentPath);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -35,9 +37,9 @@ export function FicheFolderField({ sessionId }: { sessionId: string }) {
           type="button"
           data-fiche-folder={currentPath || undefined}
           aria-label={
-            currentPath ? t`Folder: ${currentPath}` : t`Choose a folder`
+            currentPath ? t`Folder: ${currentLabel}` : t`Choose a folder`
           }
-          title={currentPath || undefined}
+          title={currentLabel || undefined}
           className={cn([
             "inline-flex max-w-full items-center gap-1.5 rounded-md px-2 py-px text-[15px] leading-normal transition-colors",
             "focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none",
@@ -56,7 +58,7 @@ export function FicheFolderField({ sessionId }: { sessionId: string }) {
             <Plus aria-hidden className="size-3.5 shrink-0" />
           )}
           <span className="truncate">
-            {currentPath || <Trans>Choose a folder</Trans>}
+            {currentLabel || <Trans>Choose a folder</Trans>}
           </span>
           <CaretDown aria-hidden className="size-3.5 shrink-0 opacity-60" />
         </button>

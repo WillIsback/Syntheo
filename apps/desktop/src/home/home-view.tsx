@@ -30,6 +30,7 @@ export type HomeViewProps = {
   onOpenNote: (sessionId: string) => void;
   onExportNote: (sessionId: string) => void;
   onDeleteNote: (note: RecentNote) => void;
+  onMoveNote?: (note: RecentNote) => void;
   onSearch: () => void;
   onOpenFolder?: (folderPath: string) => void;
   onOpenAllFolders?: () => void;
@@ -53,6 +54,7 @@ export function HomeView({
   onOpenNote,
   onExportNote,
   onDeleteNote,
+  onMoveNote,
   onSearch,
   onOpenFolder = noop,
   onOpenAllFolders = noop,
@@ -97,6 +99,7 @@ export function HomeView({
             onOpen={onOpenNote}
             onExport={onExportNote}
             onDelete={onDeleteNote}
+            onMove={onMoveNote}
           />
           <p className="text-muted-foreground flex items-center gap-2 text-[13px]">
             <span

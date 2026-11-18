@@ -214,9 +214,9 @@ describe("folder field of the Prepare fiche on the real schema", () => {
     render(<FicheFolderField sessionId="session-1" />);
 
     const button = screen.getByRole("button", {
-      name: "Folder: Clients/Boréal",
+      name: "Folder: Clients › Boréal",
     });
-    expect(button.textContent).toContain("Clients/Boréal");
+    expect(button.textContent).toContain("Clients › Boréal");
   });
 
   it("files the note in the chosen folder and shows it", async () => {

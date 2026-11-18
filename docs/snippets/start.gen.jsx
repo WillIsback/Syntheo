@@ -159,6 +159,7 @@ const SYN_LABELS = {
   "Model name served by your server": "Nom du modèle servi par votre serveur",
   "More actions": "Plus d'actions",
   "More effort gives finer summaries, but slower. Auto leaves it to the server.": "Plus d'effort donne des synthèses plus fines, mais plus lentes. Auto laisse le serveur décider.",
+  "Move to…": "Déplacer vers…",
   "Mute system audio": "Couper le son système",
   "Mute the microphone": "Couper le micro",
   "My meetings": "Mes réunions",
@@ -2861,6 +2862,7 @@ const SynHomeRow = ({ note, onSay, onDelete, onMove }) => {
           icon: I("DotsThreeVertical"),
           items: [
             { label: L("Open"), onSelect: open },
+            { label: L("Move to…"), onSelect: () => onSay(`Ouvre « Déplacer vers… » pour « ${note.title} », sans ouvrir la note.`) },
             { label: L("Export…"), onSelect: () => onSay(`Ouvre la fenêtre d'export de « ${note.title} », sans ouvrir la note.`) },
             { separator: true },
             { label: L("Delete"), onSelect: () => onDelete(note) },
