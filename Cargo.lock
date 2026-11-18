@@ -1611,7 +1611,7 @@ name = "claude"
 version = "0.1.0"
 dependencies = [
  "cli-process",
- "dirs 6.0.0",
+ "dirs 7.0.0",
  "futures-util",
  "serde",
  "serde_json",
@@ -1722,7 +1722,7 @@ name = "codex"
 version = "0.1.0"
 dependencies = [
  "cli-process",
- "dirs 6.0.0",
+ "dirs 7.0.0",
  "futures-util",
  "serde",
  "serde_json",
@@ -2622,7 +2622,7 @@ dependencies = [
  "chrono",
  "db-app",
  "db-core",
- "dirs 6.0.0",
+ "dirs 7.0.0",
  "host",
  "intercept",
  "pico-args",
@@ -7904,7 +7904,7 @@ name = "opencode"
 version = "0.1.0"
 dependencies = [
  "cli-process",
- "dirs 6.0.0",
+ "dirs 7.0.0",
  "futures-util",
  "serde",
  "serde_json",
@@ -10723,7 +10723,7 @@ version = "0.1.0"
 dependencies = [
  "base64 0.23.1",
  "brand",
- "dirs 6.0.0",
+ "dirs 7.0.0",
  "libc",
  "serde_json",
  "shellexpand",
@@ -11206,7 +11206,7 @@ dependencies = [
  "cli-docs",
  "db-app",
  "db-core",
- "dirs 6.0.0",
+ "dirs 7.0.0",
  "insta",
  "rmcp",
  "schemars 1.2.3",
@@ -12316,7 +12316,7 @@ dependencies = [
 name = "tauri-plugin-sidecar2"
 version = "0.1.0"
 dependencies = [
- "dirs 6.0.0",
+ "dirs 7.0.0",
  "serde",
  "specta",
  "tauri",
@@ -12460,7 +12460,7 @@ dependencies = [
 name = "tauri-plugin-tracing"
 version = "0.1.0"
 dependencies = [
- "dirs 6.0.0",
+ "dirs 7.0.0",
  "regex",
  "rquickjs",
  "serde",

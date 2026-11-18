@@ -178,7 +178,7 @@ base64 = "0.23.1"
 bytes = "1.11"
 clap = "4"
 codes-iso-639 = "0.1.5"
-dirs = "6.0.0"
+dirs = "7.0.0"
 image = { version = "0.25.10", default-features = false, features = ["webp"] }
 indexmap = "2"
 isolang = "2.4"
