@@ -22,6 +22,7 @@ import {
 import { buildMoveMeetingsToFolderTool } from "~/chat/tools/folders";
 import { FileNoteButton } from "~/home/file-note-button";
 import { FolderPicker } from "~/session/components/folder-picker";
+import { updateSession } from "~/session/queries";
 
 // Issue 534 : une note synthétisée en « Automatique », rangée dans un dossier
 // qui a un modèle de compte rendu, doit recevoir la proposition de régénérer
@@ -40,6 +41,9 @@ const mocks = vi.hoisted(() => ({
   database: null as null | import("node:sqlite").DatabaseSync,
   listeners: new Set<() => void>(),
   toast: vi.fn(),
+  dismiss: vi.fn(),
+  // Retient la lecture du modèle pour simuler une proposition en cours.
+  templateGate: Promise.resolve() as Promise<void>,
   enhance: vi.fn(async () => ({ type: "started" })),
 }));
 
@@ -95,12 +99,20 @@ vi.mock("~/db", async () => {
   };
 });
 
-vi.mock("@syntheo/ui/components/ui/toast", () => ({ toast: mocks.toast }));
+vi.mock("@syntheo/ui/components/ui/toast", () => ({
+  toast: Object.assign((...args: unknown[]) => mocks.toast(...args), {
+    dismiss: (...args: unknown[]) => mocks.dismiss(...args),
+  }),
+}));
 vi.mock("~/templates/queries", () => ({
-  getTemplateById: async (id: string) =>
-    (query("SELECT id, title FROM templates WHERE id = ?", [id])[0] as
-      | { id: string; title: string }
-      | undefined) ?? null,
+  getTemplateById: async (id: string) => {
+    await mocks.templateGate;
+    return (
+      (query("SELECT id, title FROM templates WHERE id = ?", [id])[0] as
+        | { id: string; title: string }
+        | undefined) ?? null
+    );
+  },
 }));
 vi.mock("~/services/enhancer", () => ({
   getEnhancerService: () => ({ enhance: mocks.enhance }),
@@ -220,7 +232,62 @@ describe("late filing proposal on every filing path", () => {
     cleanup();
     mocks.listeners.clear();
     mocks.toast.mockReset();
+    mocks.dismiss.mockReset();
     mocks.enhance.mockClear();
+  });
+
+  function lateFilingToasts() {
+    return mocks.toast.mock.calls.filter(
+      ([, options]) =>
+        (options as { id?: string } | undefined)?.id ===
+        "late-filing-session-1",
+    );
+  }
+
+  it("withdraws the pending proposal when the note leaves the folder", async () => {
+    seed();
+    await updateSession("session-1", { folder_id: "Atlas" });
+    await waitFor(() => expect(lateFilingToasts()).toHaveLength(1));
+
+    // « Retirer du dossier » ou « Annuler » vers aucun dossier : la proposition
+    // visait Atlas, elle est fermée et aucune autre n'arrive.
+    await updateSession("session-1", { folder_id: "" });
+    expect(mocks.dismiss).toHaveBeenCalledWith("late-filing-session-1");
+    await act(() => new Promise((done) => setTimeout(done, 30)));
+    expect(lateFilingToasts()).toHaveLength(1);
+  });
+
+  it("drops a proposal computed for a folder the note has already left", async () => {
+    seed();
+    let release!: () => void;
+    mocks.templateGate = new Promise((done) => (release = done));
+    try {
+      // La proposition pour Atlas est en cours de calcul (modèle en lecture)
+      // quand la note quitte le dossier : elle ne doit pas s'afficher.
+      await updateSession("session-1", { folder_id: "Atlas" });
+      await act(() => new Promise((done) => setTimeout(done, 20)));
+      await updateSession("session-1", { folder_id: "" });
+      release();
+
+      await expectNoProposal();
+      expect(storedFolder()).toBe("");
+    } finally {
+      mocks.templateGate = Promise.resolve();
+    }
+  });
+
+  it("proposes nothing when a move is undone", async () => {
+    seed();
+    await updateSession(
+      "session-1",
+      { folder_id: "Atlas" },
+      { proposeLateFiling: false },
+    );
+
+    await expectNoProposal();
+    expect(storedFolder()).toBe("Atlas");
+    // Le changement de dossier ferme quand même une proposition en cours.
+    expect(mocks.dismiss).toHaveBeenCalledWith("late-filing-session-1");
   });
 
   // Le cas relevé par William sur l'alpha 0.7.0-7.
