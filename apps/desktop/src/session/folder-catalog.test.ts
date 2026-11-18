@@ -96,6 +96,25 @@ describe("folder catalog", () => {
     expect(mocks.renameFolderCatalog).not.toHaveBeenCalled();
   });
 
+  it("refuses to move a folder into one of its own subfolders", async () => {
+    await expect(
+      renameNamedFolder("Equipe", "Equipe/MCO/Equipe"),
+    ).rejects.toThrow("folder_target_inside_source");
+    expect(mocks.renameFolder).not.toHaveBeenCalled();
+    expect(mocks.renameFolderCatalog).not.toHaveBeenCalled();
+  });
+
+  it("moves a folder under another parent", async () => {
+    await expect(renameNamedFolder("MCO", "Equipe/MCO")).resolves.toBe(
+      "Equipe/MCO",
+    );
+    expect(mocks.renameFolder).toHaveBeenCalledWith("MCO", "Equipe/MCO");
+    expect(mocks.renameFolderCatalog).toHaveBeenCalledWith({
+      old_path: "MCO",
+      new_path: "Equipe/MCO",
+    });
+  });
+
   it("renames a folder", async () => {
     await expect(renameNamedFolder("CS 101", "Algorithms")).resolves.toBe(
       "Algorithms",

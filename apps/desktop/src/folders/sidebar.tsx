@@ -11,16 +11,19 @@ import { Button } from "@syntheo/ui/components/ui/button";
 import { useSquircleRef } from "@syntheo/ui/hooks/use-squircle";
 import { cn } from "@syntheo/utils";
 
+import {
+  FolderDialogs,
+  useFolderDialogs,
+  useFolderMenuItems,
+} from "./folder-actions";
 import { useActiveFolderPath, useFolderSelection } from "./selection";
 import { buildFolderTree, filterFolderTree } from "./sidebar-tree";
 import { FolderTreeView } from "./sidebar-tree-view";
 
 import { useSearchNotes } from "~/search/unified/catalog";
-import { createNamedFolder } from "~/session/folder-catalog";
 import { resolvedFolderIcon } from "~/session/folder-icon";
 import { useFolderIcons, useFolderPaths } from "~/session/queries";
 import { CustomSidebarHeader } from "~/sidebar/custom-sidebar-header";
-import { FolderNameDialog } from "~/sidebar/folder-name-dialog";
 
 export function FoldersSidebar() {
   const { t } = useLingui();
@@ -29,7 +32,8 @@ export function FoldersSidebar() {
   const iconOverrides = useFolderSelection((state) => state.iconOverrides);
   const setSelectedPath = useFolderSelection((state) => state.setSelectedPath);
   const activeFolder = useActiveFolderPath(folders);
-  const [creating, setCreating] = useState(false);
+  const openDialog = useFolderDialogs((state) => state.open);
+  const folderMenu = useFolderMenuItems();
   const [search, setSearch] = useState("");
   const searchRef = useSquircleRef<HTMLDivElement>();
 
@@ -52,7 +56,7 @@ export function FoldersSidebar() {
             variant="ghost"
             className="text-muted-foreground hover:text-foreground relative z-[60]"
             aria-label={t`New folder`}
-            onClick={() => setCreating(true)}
+            onClick={() => openDialog({ kind: "create", parentPath: null })}
           >
             <Plus size={16} />
           </Button>
@@ -121,20 +125,12 @@ export function FoldersSidebar() {
               resolvedFolderIcon(path, persistedIcons, iconOverrides)
             }
             onSelectFolder={setSelectedPath}
+            folderMenu={folderMenu}
           />
         )}
       </div>
 
-      <FolderNameDialog
-        open={creating}
-        title={t`New folder`}
-        confirmLabel={t`Create`}
-        onOpenChange={setCreating}
-        onSubmit={async (path) => {
-          const created = await createNamedFolder(path);
-          setSelectedPath(created);
-        }}
-      />
+      <FolderDialogs />
     </div>
   );
 }

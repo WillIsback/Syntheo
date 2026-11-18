@@ -13,7 +13,10 @@ export type MenuItemDef =
 
 // Clic droit, clic sur un bouton « ⋮ » ou touche menu clavier : tout
 // événement React suffit, seul le comportement par défaut est bloqué.
-async function showNativeContextMenu(items: MenuItemDef[], e: SyntheticEvent) {
+export async function showNativeContextMenu(
+  items: MenuItemDef[],
+  e: SyntheticEvent,
+) {
   e.preventDefault();
   e.stopPropagation();
 

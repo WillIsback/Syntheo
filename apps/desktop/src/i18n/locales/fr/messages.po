@@ -96,6 +96,7 @@ msgstr "{chain} · échec de la dernière exécution {relative}"
 msgid "{chain} · never run"
 msgstr "{chain} · jamais exécutée"
 
+#: src/folders/project/folder-subfolders.tsx
 #: src/search/unified/labels.ts
 msgid "{count, plural, one {# meeting} other {# meetings}}"
 msgstr "{count, plural, one {# réunion} other {# réunions}}"
@@ -243,6 +244,14 @@ msgstr "1 modification en attente"
 #: src/sidebar/settings-search-results.tsx
 msgid "1 result"
 msgstr "1 résultat"
+
+#: src/folders/folder-actions.tsx
+msgid "A folder cannot be moved into one of its own subfolders."
+msgstr "Un dossier ne peut pas être déplacé dans l'un de ses propres sous-dossiers."
+
+#: src/folders/folder-actions.tsx
+msgid "A folder with this name already exists there."
+msgstr "Un dossier de ce nom existe déjà à cet endroit."
 
 #: src/sidebar/folder-name-dialog.tsx
 msgid "A folder with this name already exists."
@@ -745,6 +754,7 @@ msgstr "par {name}"
 msgid "Can't import this audio"
 msgstr "Impossible d'importer cet audio"
 
+#: src/folders/folder-actions.tsx
 #: src/folders/project/next-meeting-slot.tsx
 #: src/session/components/capsule/index.tsx
 #: src/settings/ai/shared/server-address.tsx
@@ -905,6 +915,10 @@ msgstr "Choisir l'icône du modèle"
 #: src/settings/appearance/palette.tsx
 msgid "Choose the colors of Syntheo. Each palette follows the light or dark theme."
 msgstr "Choisissez les couleurs de Syntheo. Chaque palette suit le thème clair ou sombre."
+
+#: src/folders/folder-actions.tsx
+msgid "Choose the folder that will contain this folder."
+msgstr "Choisissez le dossier qui contiendra ce dossier."
 
 #: src/settings/general/audio-settings.tsx
 msgid "Choose the microphone that captures your voice."
@@ -1198,6 +1212,10 @@ msgstr "Impossible de supprimer cette note. Veuillez réessayer."
 msgid "Could not export. Check the export location in Settings and try again."
 msgstr "Impossible d'exporter. Vérifiez l'emplacement d'exportation dans Paramètres et réessayez."
 
+#: src/folders/folder-actions.tsx
+msgid "Could not move the folder."
+msgstr "Impossible de déplacer le dossier."
+
 #: src/session/components/outer-header/overflow/export-modal.tsx
 msgid "Could not open the PDF to print. Try again, or save it instead."
 msgstr "Impossible d'ouvrir le PDF à imprimer. Réessayez, ou enregistrez-le."
@@ -1248,7 +1266,7 @@ msgstr "Impossible d'ouvrir le sélecteur de fichiers"
 msgid "Couldn't save your profile. Try again."
 msgstr "Impossible d'enregistrer votre profil. Réessayez."
 
-#: src/folders/sidebar.tsx
+#: src/folders/folder-actions.tsx
 msgid "Create"
 msgstr "Créer"
 
@@ -1374,6 +1392,7 @@ msgid "Default template"
 msgstr "Modèle par défaut"
 
 #: src/contacts/contact-page-header.tsx
+#: src/folders/folder-actions.tsx
 #: src/folders/folder-editor.tsx
 #: src/home/note-index.tsx
 #: src/session/components/note-input/transcript/renderer/multi-selection-bar.tsx
@@ -1388,9 +1407,13 @@ msgstr "Supprimer"
 msgid "Delete automation"
 msgstr "Supprimer l'automatisation"
 
-#: src/folders/folder-editor.tsx
+#: src/folders/folder-actions.tsx
 msgid "Delete folder"
 msgstr "Supprimer le dossier"
+
+#: src/folders/folder-actions.tsx
+msgid "Delete folder “{name}”"
+msgstr "Supprimer le dossier « {name} »"
 
 #: src/templates/sections-editor.tsx
 msgid "Delete section {position}"
@@ -1411,6 +1434,10 @@ msgstr "Décrivez la réunion, Syntheo propose les sections…"
 #: src/templates/template-form.tsx
 msgid "Description"
 msgstr "Description"
+
+#: src/folders/folder-actions.tsx
+msgid "Destination"
+msgstr "Destination"
 
 #: src/settings/general/notification.tsx
 msgid "Detect meetings from microphone activity."
@@ -1905,6 +1932,9 @@ msgid "Folder name"
 msgstr "Nom du dossier"
 
 #: src/session/components/folder-picker.tsx
+msgid "Folder: {currentLabel}"
+msgstr "Dossier : {currentLabel}"
+
 #: src/session/components/living-document/fiche-folder.tsx
 msgid "Folder: {currentPath}"
 msgstr "Dossier : {currentPath}"
@@ -2785,9 +2815,22 @@ msgstr "la plus récente"
 msgid "most recent first"
 msgstr "plus récentes d'abord"
 
+#: src/folders/folder-actions.tsx
+msgid "Move"
+msgstr "Déplacer"
+
+#: src/folders/folder-actions.tsx
+msgid "Move “{name}” to…"
+msgstr "Déplacer « {name} » vers…"
+
 #: src/templates/sections-editor.tsx
 msgid "Move section {position}"
 msgstr "Déplacer la section {position}"
+
+#: src/folders/folder-actions.tsx
+#: src/folders/folder-editor.tsx
+msgid "Move to…"
+msgstr "Déplacer vers…"
 
 #: src/shared/shortcuts.ts
 msgid "Mute or unmute system audio"
@@ -2864,6 +2907,7 @@ msgstr "Nouvelle automatisation"
 msgid "New chat"
 msgstr "Nouveau chat"
 
+#: src/folders/folder-actions.tsx
 #: src/folders/sidebar.tsx
 msgid "New folder"
 msgstr "Nouveau dossier"
@@ -2877,10 +2921,24 @@ msgstr "Nouvelle note"
 msgid "New Note"
 msgstr "Nouvelle note"
 
+#: src/folders/folder-actions.tsx
 #: src/folders/project/folder-header-actions.tsx
 #: src/shared/palette-search-groups.tsx
 msgid "New note in this folder"
 msgstr "Nouvelle note dans ce dossier"
+
+#: src/folders/project/folder-subfolders.tsx
+msgid "New subfolder"
+msgstr "Nouveau sous-dossier"
+
+#: src/folders/folder-actions.tsx
+msgid "New subfolder in {parentName}"
+msgstr "Nouveau sous-dossier dans {parentName}"
+
+#: src/folders/folder-actions.tsx
+#: src/folders/folder-editor.tsx
+msgid "New subfolder…"
+msgstr "Nouveau sous-dossier…"
 
 #: src/templates/details.tsx
 #: src/templates/template-form.tsx
@@ -3022,6 +3080,10 @@ msgstr "Aucune note de ce dossier ne correspond."
 #: src/folders/project/folder-meetings-card.tsx
 msgid "No notes in this folder yet."
 msgstr "Aucune note dans ce dossier pour l'instant."
+
+#: src/folders/folder-actions.tsx
+msgid "No other folder available."
+msgstr "Aucun autre dossier disponible."
 
 #: src/session/components/note-input/transcript/renderer/speaker-assign.tsx
 msgid "No people"
@@ -3201,7 +3263,7 @@ msgid "Notes"
 msgstr "Notes"
 
 #. js-lingui-explicit-id
-#: src/folders/folder-editor.tsx
+#: src/folders/folder-actions.tsx
 msgid "Notes stay in All notes. Materials in this folder will be deleted."
 msgstr "Les notes restent dans Toutes les notes. Ce dossier, ses sous-dossiers et tous leurs éléments seront supprimés."
 
@@ -3426,6 +3488,10 @@ msgstr "Page introuvable"
 #: src/settings/search-index.ts
 msgid "Palette"
 msgstr "Palette"
+
+#: src/folders/project/folder-subfolders.tsx
+msgid "Parent folders"
+msgstr "Dossiers parents"
 
 #: src/session/components/living-document/fiche.tsx
 #: src/session/components/note-input/transcript/renderer/speaker-assign.tsx
@@ -4091,6 +4157,11 @@ msgstr "Rechercher des contacts..."
 msgid "Search emoji..."
 msgstr "Rechercher des emojis..."
 
+#: src/folders/folder-actions.tsx
+msgid "Search folders"
+msgstr "Rechercher des dossiers"
+
+#: src/folders/folder-actions.tsx
 #: src/folders/sidebar.tsx
 msgid "Search folders..."
 msgstr "Rechercher des dossiers..."
@@ -4601,6 +4672,10 @@ msgstr "Arrêter à la fin de la réunion"
 #: src/settings/search-index.ts
 msgid "Storage"
 msgstr "Stockage"
+
+#: src/folders/project/folder-subfolders.tsx
+msgid "Subfolders"
+msgstr "Sous-dossiers"
 
 #: src/settings/general/notification.tsx
 msgid "Success"
@@ -5415,6 +5490,10 @@ msgstr "Titre"
 #: src/templates/sections-editor.tsx
 msgid "To move a section with the keyboard, focus its handle and use the up and down arrow keys."
 msgstr "Pour déplacer une section au clavier, placez le focus sur sa poignée et utilisez les flèches haut et bas."
+
+#: src/folders/folder-actions.tsx
+msgid "Top level"
+msgstr "Racine"
 
 #: src/chat/components/input/index.tsx
 msgid "Transcribing voice input"

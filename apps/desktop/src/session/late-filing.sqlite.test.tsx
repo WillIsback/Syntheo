@@ -185,7 +185,10 @@ function storedFolder() {
 async function fileWithHeaderPicker(folder: string) {
   render(<FolderPicker sessionId="session-1" />);
   fireEvent.click(screen.getByRole("combobox", { name: "Select folder" }));
-  fireEvent.click(await screen.findByRole("option", { name: folder }));
+  // Le sélecteur affiche les chemins imbriqués avec « › » (issue 590).
+  fireEvent.click(
+    await screen.findByRole("option", { name: folder.split("/").join(" › ") }),
+  );
   await waitFor(() => expect(storedFolder()).toBe(folder));
 }
 

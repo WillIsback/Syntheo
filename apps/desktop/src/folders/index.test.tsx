@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -31,6 +32,19 @@ const mocks = vi.hoisted(() => ({
   upload: vi.fn(),
   personalWorkspaceId: "",
   workspaces: [] as Array<{ id: string; name: string }>,
+  menu: [] as Array<{ id?: string; action?: () => void }>,
+}));
+
+// Menu natif Tauri : on capture les entrées pour les déclencher.
+vi.mock("~/shared/hooks/useNativeContextMenu", () => ({
+  showNativeContextMenu: (
+    items: Array<{ id?: string; action?: () => void }>,
+    event: { preventDefault: () => void },
+  ) => {
+    event.preventDefault();
+    mocks.menu = items;
+    return Promise.resolve();
+  },
 }));
 
 vi.mock("@lingui/react/macro", () => ({
@@ -115,6 +129,8 @@ vi.mock("~/ai/hooks", () => ({
   useLanguageModel: () => null,
 }));
 
+import { useExpandedFolders } from "./expanded-folders";
+import { useFolderDialogs } from "./folder-actions";
 import { FoldersMain } from "./index";
 import { useFolderSelection } from "./selection";
 import { FoldersSidebar } from "./sidebar";
@@ -172,6 +188,9 @@ describe("Folders workspace", () => {
       deletedPrefixes: [],
       iconOverrides: {},
     });
+    useFolderDialogs.setState({ request: null });
+    useExpandedFolders.setState({ expanded: [] });
+    mocks.menu = [];
   });
 
   afterEach(() => {
@@ -355,5 +374,171 @@ describe("Folders workspace", () => {
       expect(useFolderSelection.getState().iconOverrides.Work).toBeUndefined();
     });
     consoleError.mockRestore();
+  });
+
+  it("creates a subfolder from the folder actions menu", async () => {
+    mocks.folders = ["Equipe"];
+    mocks.createNamedFolder.mockResolvedValue("Equipe/MCO");
+
+    renderFoldersWorkspace();
+
+    fireEvent.pointerDown(
+      screen.getByRole("button", { name: "Folder actions" }),
+      { button: 0, ctrlKey: false },
+    );
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "New subfolder…" }),
+    );
+    expect(await screen.findByText("New subfolder in Equipe")).toBeTruthy();
+    fireEvent.change(screen.getByRole("textbox", { name: "Folder name" }), {
+      target: { value: "MCO" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Create" }));
+
+    await waitFor(() => {
+      expect(mocks.createNamedFolder).toHaveBeenCalledWith("Equipe/MCO");
+    });
+    expect(useFolderSelection.getState().selectedPath).toBe("Equipe/MCO");
+    expect(useExpandedFolders.getState().expanded).toContain("Equipe");
+  });
+
+  it("creates a subfolder from the tree row menu", async () => {
+    mocks.folders = ["Equipe", "Work"];
+    mocks.createNamedFolder.mockResolvedValue("Work/Points");
+
+    renderFoldersWorkspace();
+
+    fireEvent.contextMenu(screen.getByRole("treeitem", { name: "Work" }));
+    expect(mocks.menu.map((entry) => entry.id)).toEqual([
+      "new-subfolder",
+      "new-note",
+      "move",
+      undefined,
+      "delete",
+    ]);
+    act(() => mocks.menu[0]!.action!());
+    expect(await screen.findByText("New subfolder in Work")).toBeTruthy();
+    fireEvent.change(screen.getByRole("textbox", { name: "Folder name" }), {
+      target: { value: "Points" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Create" }));
+
+    await waitFor(() => {
+      expect(mocks.createNamedFolder).toHaveBeenCalledWith("Work/Points");
+    });
+  });
+
+  it("shows the breadcrumb and the direct subfolders of a folder", () => {
+    mocks.folders = ["Equipe", "Equipe/MCO", "Equipe/MCO/2026", "Equipe/RH"];
+    useFolderSelection.setState({ selectedPath: "Equipe/MCO" });
+
+    renderFoldersWorkspace();
+
+    const breadcrumb = screen.getByRole("navigation", {
+      name: "Parent folders",
+    });
+    expect(breadcrumb.textContent).toBe("Equipe›MCO");
+    expect(screen.getByRole("button", { name: /2026/ }).textContent).toContain(
+      "2026",
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Equipe" }));
+    expect(useFolderSelection.getState().selectedPath).toBe("Equipe");
+  });
+
+  it("lists only the direct subfolders and opens one", () => {
+    mocks.folders = ["Equipe", "Equipe/MCO", "Equipe/MCO/2026", "Equipe/RH"];
+    useFolderSelection.setState({ selectedPath: "Equipe" });
+
+    renderFoldersWorkspace();
+
+    expect(
+      screen.queryByRole("navigation", { name: "Parent folders" }),
+    ).toBeNull();
+    const subfolders = screen
+      .getByRole("heading", { name: "Subfolders" })
+      .closest("section")!;
+    const names = Array.from(subfolders.querySelectorAll("li button")).map(
+      (button) => button.textContent,
+    );
+    expect(names).toHaveLength(2);
+    expect(names[0]).toContain("MCO");
+    expect(names[1]).toContain("RH");
+
+    fireEvent.click(subfolders.querySelector("li button")!);
+    expect(useFolderSelection.getState().selectedPath).toBe("Equipe/MCO");
+  });
+
+  it("moves a folder into another one", async () => {
+    mocks.folders = ["Equipe", "MCO", "MCO/2026"];
+    mocks.renameNamedFolder.mockResolvedValue("Equipe/MCO");
+    useFolderSelection.setState({ selectedPath: "MCO" });
+    useExpandedFolders.setState({ expanded: ["MCO"] });
+
+    renderFoldersWorkspace();
+
+    fireEvent.pointerDown(
+      screen.getByRole("button", { name: "Folder actions" }),
+      { button: 0, ctrlKey: false },
+    );
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Move to…" }));
+    const radios = await screen.findAllByRole("radio");
+    // Ni le dossier lui-même, ni ses sous-dossiers ; pas de « racine » pour un
+    // dossier déjà à la racine.
+    expect(radios.map((radio) => radio.textContent)).toEqual(["Equipe"]);
+    fireEvent.click(radios[0]!);
+    fireEvent.click(screen.getByRole("button", { name: "Move" }));
+
+    await waitFor(() => {
+      expect(mocks.renameNamedFolder).toHaveBeenCalledWith("MCO", "Equipe/MCO");
+    });
+    expect(useFolderSelection.getState().selectedPath).toBe("Equipe/MCO");
+    expect(useExpandedFolders.getState().expanded).toEqual([
+      "Equipe/MCO",
+      "Equipe",
+    ]);
+  });
+
+  it("moves a nested folder back to the top level", async () => {
+    mocks.folders = ["Equipe", "Equipe/MCO"];
+    mocks.renameNamedFolder.mockResolvedValue("MCO");
+    useFolderSelection.setState({ selectedPath: "Equipe/MCO" });
+
+    renderFoldersWorkspace();
+
+    fireEvent.pointerDown(
+      screen.getByRole("button", { name: "Folder actions" }),
+      { button: 0, ctrlKey: false },
+    );
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Move to…" }));
+    fireEvent.click(await screen.findByRole("radio", { name: "Top level" }));
+    fireEvent.click(screen.getByRole("button", { name: "Move" }));
+
+    await waitFor(() => {
+      expect(mocks.renameNamedFolder).toHaveBeenCalledWith("Equipe/MCO", "MCO");
+    });
+  });
+
+  it("reports a name collision when moving a folder", async () => {
+    mocks.folders = ["Equipe", "MCO"];
+    mocks.renameNamedFolder.mockRejectedValue(
+      new Error("folder_target_exists"),
+    );
+    useFolderSelection.setState({ selectedPath: "MCO" });
+
+    renderFoldersWorkspace();
+
+    fireEvent.pointerDown(
+      screen.getByRole("button", { name: "Folder actions" }),
+      { button: 0, ctrlKey: false },
+    );
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Move to…" }));
+    fireEvent.click(await screen.findByRole("radio", { name: "Equipe" }));
+    fireEvent.click(screen.getByRole("button", { name: "Move" }));
+
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "A folder with this name already exists there.",
+    );
+    expect(useFolderSelection.getState().selectedPath).toBe("MCO");
   });
 });

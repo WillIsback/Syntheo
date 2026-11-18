@@ -269,7 +269,9 @@ describe("folder field of the Prepare fiche on the real schema", () => {
 
     openPicker("Choose a folder");
     expect(screen.queryByRole("group", { name: "Suggested" })).toBeNull();
-    expect(screen.getByRole("option", { name: "Clients/Boréal" })).toBeTruthy();
+    expect(
+      screen.getByRole("option", { name: "Clients › Boréal" }),
+    ).toBeTruthy();
   });
 
   it("does not suggest the folder the note is already in", () => {

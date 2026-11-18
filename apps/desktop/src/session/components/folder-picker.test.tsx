@@ -176,7 +176,7 @@ describe("FolderPicker", () => {
     render(<FolderPicker sessionId="session-1" />);
 
     fireEvent.click(
-      screen.getByRole("combobox", { name: "Folder: work/meetings" }),
+      screen.getByRole("combobox", { name: "Folder: work › meetings" }),
     );
     fireEvent.click(screen.getByRole("option", { name: "work" }));
 
