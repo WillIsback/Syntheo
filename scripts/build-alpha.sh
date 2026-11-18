@@ -25,6 +25,15 @@
 #                   entrées n'ont pas changé depuis le dernier build de ce
 #                   dossier (empreintes du lockfile, des package.json et des
 #                   sources de packages/ui).
+#   --updater-test <surcouche.json>
+#                   build de test de la mise à jour intégrée (issue 593), pour la
+#                   QA seulement : SANS devtools (plugin de mise à jour actif),
+#                   avec la surcouche de configuration donnée (clé publique de
+#                   test, endpoint local), non commitée. AppImage et .deb dans
+#                   <dossier>/syntheo-updater-test-linux/. Identifiant de
+#                   production : jamais lancé sur l'hôte (pas d'essai Wayland),
+#                   seulement dans un conteneur de test. Refusé si une clé de
+#                   signature est présente dans l'environnement.
 #   --quick         boucle de debug : profil release allégé (sans LTO, 16 unités
 #                   de génération, compilation incrémentale) dans un target/
 #                   séparé. Plus rapide après une modification Rust, mais pas
@@ -68,7 +77,7 @@ die() {
 }
 
 usage() {
-  echo "Usage : bash scripts/build-alpha.sh [--docker|--native] [--from <dossier|branche>] [--fast] [--quick] X.Y.Z-N [dossier-de-sortie]" >&2
+  echo "Usage : bash scripts/build-alpha.sh [--docker|--native] [--from <dossier|branche>] [--fast] [--quick] [--updater-test <surcouche.json>] X.Y.Z-N [dossier-de-sortie]" >&2
   exit 2
 }
 
@@ -77,6 +86,7 @@ MODE=""
 FROM=""
 FAST=false
 QUICK=false
+UPDATER_TEST=""
 IN_CONTAINER=false
 positional=()
 while [ "$#" -gt 0 ]; do
@@ -91,6 +101,12 @@ while [ "$#" -gt 0 ]; do
     --from=*) FROM=${1#--from=} ;;
     --fast) FAST=true ;;
     --quick) QUICK=true ;;
+    --updater-test)
+      [ "$#" -ge 2 ] || usage
+      UPDATER_TEST=$2
+      shift
+      ;;
+    --updater-test=*) UPDATER_TEST=${1#--updater-test=} ;;
     --in-container) IN_CONTAINER=true ;;
     -h | --help) sed -n 2,50p "$0" >&2 && exit 0 ;;
     -*) usage ;;
@@ -106,6 +122,19 @@ if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+-[0-9]+$ ]]; then
 fi
 OUT_BASE=${positional[1]:-"$HOME/syntheo-alpha/$VERSION"}
 OUT="$OUT_BASE/syntheo-devtools-linux"
+# Surcouche du build de test, copiée dans la source le temps du build (le
+# conteneur ne voit que la source) puis retirée.
+UPDATER_TEST_CONF="apps/desktop/src-tauri/.updater-test.conf.json"
+if [ -n "$UPDATER_TEST" ] && ! $IN_CONTAINER; then
+  [ -f "$UPDATER_TEST" ] || die "--updater-test : surcouche « $UPDATER_TEST » introuvable."
+  jq -e '.plugins.updater.pubkey and (.plugins.updater.endpoints | length > 0)' "$UPDATER_TEST" > /dev/null 2>&1 ||
+    die "--updater-test : la surcouche doit définir plugins.updater.pubkey et plugins.updater.endpoints."
+  for var in TAURI_SIGNING_PRIVATE_KEY TAURI_SIGNING_PRIVATE_KEY_PATH AZURE_CLIENT_SECRET APPLE_CERTIFICATE; do
+    [ -z "${!var:-}" ] || die "--updater-test : $var est défini ; ce build de test n'est jamais signé."
+  done
+  UPDATER_TEST=$(cd "$(dirname "$UPDATER_TEST")" && pwd)/$(basename "$UPDATER_TEST")
+  OUT="$OUT_BASE/syntheo-updater-test-linux"
+fi
 CACHE=${SYNTHEO_ALPHA_CACHE:-"$HOME/.cache/syntheo-alpha"}
 
 # --- Étapes de build (hôte en mode natif, conteneur en mode Docker) ------------
@@ -161,7 +190,7 @@ build_steps() {
 
   local bundle_dir="$target_dir/release/bundle/appimage"
   # Une AppImage d'un build précédent ne doit pas être prise pour celle-ci.
-  rm -rf "$bundle_dir"
+  rm -rf "$bundle_dir" "$target_dir/release/bundle/deb"
 
   # linuxdeploy est une AppImage : sans FUSE 2, elle doit s'extraire pour tourner.
   export APPIMAGE_EXTRACT_AND_RUN=${APPIMAGE_EXTRACT_AND_RUN:-1}
@@ -187,8 +216,15 @@ build_steps() {
   echo "-- packages/ui : $((SECONDS - t0)) s"
 
   t0=$SECONDS
-  pnpm -F desktop tauri build --ci --bundles appimage --features devtools \
-    --config ./src-tauri/tauri.conf.syntheo.json
+  if [ "${SYNTHEO_UPDATER_TEST:-}" = 1 ]; then
+    [ -f "$root/$UPDATER_TEST_CONF" ] || die "surcouche du build de test absente de la source."
+    echo "-- build de test de la mise à jour : sans devtools, surcouche $UPDATER_TEST_CONF"
+    pnpm -F desktop tauri build --ci --bundles appimage,deb \
+      --config ./src-tauri/tauri.conf.syntheo.json --config "./src-tauri/${UPDATER_TEST_CONF##*/}"
+  else
+    pnpm -F desktop tauri build --ci --bundles appimage --features devtools \
+      --config ./src-tauri/tauri.conf.syntheo.json
+  fi
   echo "-- tauri build : $((SECONDS - t0)) s"
 
   # Même réempaquetage que release.yml (bibliothèques hôte,
@@ -410,6 +446,7 @@ run_in_docker() {
     -e CARGO_HOME=/cache/home/.cargo \
     -e CARGO_TARGET_DIR=/cache/target \
     -e NO_STRIP="${NO_STRIP:-}" \
+    -e SYNTHEO_UPDATER_TEST="$([ -n "$UPDATER_TEST" ] && echo 1)" \
     -w "$ROOT" \
     "$IMAGE" \
     bash /opt/syntheo-alpha/build-alpha.sh --in-container "${fast_arg[@]}" "$VERSION"
@@ -419,7 +456,15 @@ run_in_docker() {
 
 # --- Build ---------------------------------------------------------------------------
 
-echo "== Alpha devtools Linux $VERSION ($(git rev-parse --short HEAD), $SOURCE_LABEL), mode $MODE, source $ROOT"
+if [ -n "$UPDATER_TEST" ]; then
+  echo "== Build de test de la mise à jour Linux $VERSION ($(git rev-parse --short HEAD), $SOURCE_LABEL), mode $MODE, surcouche $UPDATER_TEST"
+  cp "$UPDATER_TEST" "$ROOT/$UPDATER_TEST_CONF"
+  remove_updater_test_conf() { rm -f "$ROOT/$UPDATER_TEST_CONF"; }
+  trap remove_updater_test_conf EXIT
+  export SYNTHEO_UPDATER_TEST=1
+else
+  echo "== Alpha devtools Linux $VERSION ($(git rev-parse --short HEAD), $SOURCE_LABEL), mode $MODE, source $ROOT"
+fi
 
 if [ "$MODE" = docker ]; then
   run_in_docker
@@ -446,18 +491,37 @@ shopt -u nullglob
 [ "${#found[@]}" -eq 1 ] || die "${#found[@]} AppImage trouvée(s) dans $BUNDLE_DIR (une seule attendue)."
 
 mkdir -p "$OUT"
-NAME="Syntheo-$VERSION-devtools-linux-x86_64.AppImage"
-cp "${found[0]}" "$OUT/$NAME"
-chmod +x "$OUT/$NAME"
-(cd "$OUT" && sha256sum "./$NAME" > SHA256SUMS-devtools-linux)
+if [ -n "$UPDATER_TEST" ]; then
+  # Noms de la release (latest.json et la signature les attendent).
+  NAME="Syntheo_${VERSION}_amd64.AppImage"
+  cp "${found[0]}" "$OUT/$NAME"
+  chmod +x "$OUT/$NAME"
+  shopt -s nullglob
+  debs=("${BUNDLE_DIR%/appimage}/deb"/*.deb)
+  shopt -u nullglob
+  [ "${#debs[@]}" -eq 1 ] && cp "${debs[0]}" "$OUT/Syntheo_${VERSION}_amd64.deb"
+  (cd "$OUT" && sha256sum ./Syntheo_* > SHA256SUMS-updater-test-linux)
+else
+  NAME="Syntheo-$VERSION-devtools-linux-x86_64.AppImage"
+  cp "${found[0]}" "$OUT/$NAME"
+  chmod +x "$OUT/$NAME"
+  (cd "$OUT" && sha256sum "./$NAME" > SHA256SUMS-devtools-linux)
+fi
 dirty=""
 git diff --quiet HEAD 2> /dev/null || dirty=" (modifications locales non commitées)"
 profile_label="profil release"
+[ -n "$UPDATER_TEST" ] && profile_label="profil release, updater-test : plugin de mise à jour actif, sans devtools, surcouche $(basename "$UPDATER_TEST")"
 $QUICK && profile_label="profil rapide --quick, non fidèle à la release"
 printf 'build local (%s, WebKitGTK %s, %s)\ncommit %s%s\nbranche %s\ndate %s\n' \
   "$MODE" "$EMBEDDED_WEBKIT" "$profile_label" "$(git rev-parse HEAD)" "$dirty" "$SOURCE_LABEL" "$(date -Iseconds)" > "$OUT/SOURCE"
 
 echo
+if [ -n "$UPDATER_TEST" ]; then
+  echo "Build de test de la mise à jour Linux $VERSION (non signé, $MODE, $((SECONDS - START)) s) : $OUT"
+  cat "$OUT/SHA256SUMS-updater-test-linux"
+  # Identifiant de production : jamais lancé sur l'hôte.
+  exit 0
+fi
 echo "Alpha devtools Linux $VERSION (non signée, $MODE, $((SECONDS - START)) s) : $OUT/$NAME"
 cat "$OUT/SHA256SUMS-devtools-linux"
 

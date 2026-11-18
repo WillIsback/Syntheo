@@ -166,6 +166,18 @@ bash scripts/build-alpha.sh --from . --fast --quick 0.7.1-4  # en plus, profil R
 > échoue ; ailleurs hors plage, le script avertit seulement, comme pnpm. Sous
 > Arch, si linuxdeploy échoue sur `strip`, relancer avec `NO_STRIP=true`.
 
+### Build de test de la mise à jour intégrée
+
+Pour la QA seulement : `bash scripts/build-alpha.sh --updater-test <surcouche.json> X.Y.Z-N`
+(Linux) et `build-alpha.ps1 -Version X.Y.Z-N -UpdaterTest <surcouche.json>` (Windows)
+construisent sans `devtools`, plugin de mise à jour actif, avec une surcouche non commitée
+(`plugins.updater.pubkey` d'une clé de test jetable, endpoint local en http et
+`dangerousInsecureTransportProtocol`). `scripts/generate-updater-manifest.mjs --base-url`
+fait pointer `latest.json` vers le serveur local. Ces builds portent l'identifiant de
+production : jamais installés sur un poste de travail, seulement dans un conteneur ou une VM
+de test. Un test (`config_identity.rs`) refuse toute configuration commitée qui autoriserait
+un endpoint hors de `https://github.com/`.
+
 ### Windows (NSIS + MSI)
 
 À faire dans une VM Windows 11. `scripts/build-alpha.ps1` reprend les étapes de

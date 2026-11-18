@@ -242,3 +242,62 @@ test("the check command refuses a missing signature file", async () => {
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+test("without --base-url, the manifest is exactly the release one", async () => {
+  const common = {
+    version: "0.7.3",
+    notes: "n",
+    repo: REPO,
+    pubDate: "2026-11-20T10:00:00Z",
+    readSignature: signaturesFor("0.7.3"),
+  };
+  const release = await buildUpdaterManifest(common);
+  const explicit = await buildUpdaterManifest({
+    ...common,
+    baseUrl: undefined,
+  });
+  assert.deepEqual(explicit, release);
+  assert.deepEqual(
+    Object.values(release.platforms).map((entry) => entry.url),
+    [
+      "https://github.com/WillIsback/Syntheo/releases/download/v0.7.3/Syntheo_0.7.3_amd64.AppImage",
+      "https://github.com/WillIsback/Syntheo/releases/download/v0.7.3/Syntheo_0.7.3_x64-setup.exe",
+    ],
+  );
+});
+
+test("--base-url points the installers to a local test server", async () => {
+  const manifest = await buildUpdaterManifest({
+    version: "0.7.3-91",
+    notes: "",
+    repo: REPO,
+    readSignature: signaturesFor("0.7.3-91"),
+    baseUrl: "http://127.0.0.1:8765/",
+  });
+  assert.equal(
+    manifest.platforms["linux-x86_64-appimage"].url,
+    "http://127.0.0.1:8765/Syntheo_0.7.3-91_amd64.AppImage",
+  );
+  assert.deepEqual(
+    checkUpdaterManifest(manifest, {
+      version: "0.7.3-91",
+      repo: REPO,
+      baseUrl: "http://127.0.0.1:8765",
+      files: [
+        "Syntheo_0.7.3-91_amd64.AppImage",
+        "Syntheo_0.7.3-91_x64-setup.exe",
+      ],
+    }),
+    [],
+  );
+  await assert.rejects(
+    buildUpdaterManifest({
+      version: "0.7.3-91",
+      notes: "",
+      repo: REPO,
+      readSignature: signaturesFor("0.7.3-91"),
+      baseUrl: "file:///etc/passwd",
+    }),
+    /adresse de base invalide/,
+  );
+});
