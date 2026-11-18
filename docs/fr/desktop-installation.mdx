@@ -119,7 +119,16 @@ Le paquet `.deb` et le MSI ne sont pas signés pour la mise à jour : l'applicat
 
 ## Mettre à jour
 
-Syntheo n'intègre pas de mise à jour automatique. Pour passer à une nouvelle version, relancez le script d'installation ou téléchargez le nouveau paquet depuis [GitHub Releases](https://github.com/WillIsback/Syntheo/releases/latest). Vos notes sont conservées.
+Syntheo recherche les mises à jour au démarrage (réglage activé par défaut) et quand vous le demandez dans **Paramètres › Profil**, section « Mises à jour » : « Rechercher des mises à jour ». La zone de notification propose aussi « Rechercher des mises à jour… ».
+
+- **AppImage et installeur Windows (.exe)** : quand une version plus récente existe, un message l'annonce dans la barre latérale (« Voir la mise à jour »). Dans les Paramètres, lisez ses nouveautés, puis « Télécharger la mise à jour » et « Installer et redémarrer ». Rien n'est installé sans votre action, et jamais pendant l'enregistrement d'une réunion. Syntheo vérifie la signature de l'installeur avant de l'installer (voir [Signatures de mise à jour](#signatures-de-mise-à-jour)). Vos notes et réglages sont conservés.
+- **Paquet .deb et MSI** : Syntheo annonce la nouvelle version et ouvre la page de téléchargement ; installez le nouveau paquet comme le premier.
+
+La vérification lit le fichier `latest.json` de la dernière release sur GitHub, puis, si vous mettez à jour, télécharge l'installeur depuis GitHub. Aucune donnée personnelle n'est envoyée ; GitHub voit l'adresse IP du poste. Pour ne plus rien vérifier au démarrage, désactivez « Rechercher les mises à jour au démarrage ». Sur un poste géré, l'administrateur peut la désactiver avec la clé `automatic_updates` à `false` du fichier `managed_settings.json`. Hors ligne ou derrière un pare-feu, la vérification au démarrage échoue sans message ; une recherche manuelle affiche l'erreur.
+
+La mise à jour remplace le fichier de l'AppImage sans le renommer. Une AppImage téléchargée à la main sous le nom `Syntheo_0.7.3_amd64.AppImage` contiendra donc la version suivante en gardant ce nom. Le script d'installation évite ce piège en l'installant sous `Syntheo.AppImage`.
+
+La mise à jour intégrée fonctionne à partir de la version 0.7.3. Pour passer d'une version antérieure à la 0.7.3, relancez le script d'installation ou téléchargez le nouveau paquet depuis [GitHub Releases](https://github.com/WillIsback/Syntheo/releases/latest).
 
 Pour retirer l'application, seule ou avec toutes vos données, voir [Désinstaller Syntheo](/fr/uninstall).
 

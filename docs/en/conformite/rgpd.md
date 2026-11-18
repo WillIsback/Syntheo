@@ -73,10 +73,17 @@ a deletion, erasure is retried at the next launch.
     showing those of another version triggers an **unauthenticated** request
     to GitHub (`raw.githubusercontent.com`, or the public API
     `api.github.com` for a nightly version). Only the version number is sent;
+  - update check (at startup, on by default, can be turned off by the user
+    or by the administrator through `managed_settings.json`, key
+    `automatic_updates`): **unauthenticated** read of `latest.json` on GitHub,
+    then download of the installer if the user updates. No personal data
+    sent; GitHub sees the computer's IP address;
   - icons on some screens loaded from `api.iconify.design` (no personal
     data sent, but a network request);
-- **No account, no sync, no error reports, no automatic updates** (updates go
-  through GitHub Releases, downloaded by the user).
+- **No account, no sync, no error reports, nothing installed without the
+  user's action** (the built-in update, AppImage and Windows installer,
+  installs on request with a signed installer; .deb and MSI: link to GitHub
+  Releases).
 - No calendar or task integration: Apple Calendar, Reminders and the legacy
   hosted integrations (Google and Outlook calendars, Linear, GitHub) are
   removed from the code.

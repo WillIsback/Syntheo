@@ -119,7 +119,16 @@ The `.deb` package and the MSI are not signed for updates: the app reports the n
 
 ## Update
 
-Syntheo has no built-in automatic update. To move to a new version, run the install script again or download the new package from [GitHub Releases](https://github.com/WillIsback/Syntheo/releases/latest). Your notes are kept.
+Syntheo checks for updates at startup (on by default) and when you ask in **Settings › Profile**, "Updates" section: "Check for updates". The notification area also offers "Check for Updates…".
+
+- **AppImage and Windows installer (.exe)**: when a newer version exists, a message announces it in the sidebar ("See the update"). In Settings, read what's new, then "Download the update" and "Install and restart". Nothing is installed without your action, and never while a meeting is being recorded. Syntheo checks the installer's signature before installing it (see [Update signatures](#update-signatures)). Your notes and settings are kept.
+- **.deb package and MSI**: Syntheo announces the new version and opens the download page; install the new package as you did the first one.
+
+The check reads the `latest.json` file of the latest release on GitHub, then, if you update, downloads the installer from GitHub. No personal data is sent; GitHub sees the computer's IP address. To stop checking at startup, turn off "Check for updates at startup". On a managed computer, the administrator can turn it off with the `automatic_updates` key set to `false` in `managed_settings.json`. Offline or behind a firewall, the startup check fails silently; a manual check shows the error.
+
+The update replaces the AppImage file without renaming it. An AppImage downloaded by hand as `Syntheo_0.7.3_amd64.AppImage` will therefore hold the next version under that name. The install script avoids this by installing it as `Syntheo.AppImage`.
+
+The built-in update works from version 0.7.3 onward. To move from an earlier version to 0.7.3, run the install script again or download the new package from [GitHub Releases](https://github.com/WillIsback/Syntheo/releases/latest).
 
 To remove the app, alone or with all your data, see [Uninstall Syntheo](/en/uninstall).
 

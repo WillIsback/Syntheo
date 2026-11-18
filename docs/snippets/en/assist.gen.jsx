@@ -105,6 +105,8 @@ const SYN_LABELS = {
   "Capture meeting chat in the note": "Capture meeting chat in the note",
   "Captured right now:": "Captured right now:",
   "Chat history": "Chat history",
+  "Check for updates": "Check for updates",
+  "Check for updates at startup": "Check for updates at startup",
   "Choose": "Choose",
   "Choose at least one section to export.": "Choose at least one section to export.",
   "Choose folder": "Choose folder",
@@ -396,6 +398,7 @@ const SYN_LABELS = {
   "Unmute the microphone": "Unmute the microphone",
   "Unreachable": "Unreachable",
   "Untitled automation": "Untitled automation",
+  "Updates": "Updates",
   "Use an http:// or https:// address.": "Use an http:// or https:// address.",
   "Use main language for summaries": "Use main language for summaries",
   "Use this protocol": "Use this protocol",
@@ -2224,6 +2227,13 @@ const SynSectionApp = ({ focus }) => {
             <button type="button" className="syn-ui-btn">{L("Show release notes")}</button>
           </div>
           {h(SynSwitchRow, { title: L("Show tray icon"), initial: true })}
+        </div>
+        <div>
+          <h2 className="syn-h2" style={{ fontSize: 18 }}>{L("Updates")}</h2>
+          <div style={{ padding: "12px 0" }}>
+            <button type="button" className="syn-ui-btn">{L("Check for updates")}</button>
+          </div>
+          {h(SynSwitchRow, { title: L("Check for updates at startup"), initial: true })}
         </div>
         <div ref={langRef}>{h(SynProfLanguage, { focus })}</div>
         <div>

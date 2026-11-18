@@ -75,11 +75,18 @@ une suppression, l'effacement est retenté au lancement suivant.
     **non authentifiée** vers GitHub (`raw.githubusercontent.com`, ou l'API
     publique `api.github.com` pour une version nightly). Seul le numéro de
     version est transmis ;
+  - recherche de mises à jour (au démarrage, activée par défaut et
+    désactivable par l'utilisateur ou par l'administrateur via
+    `managed_settings.json`, clé `automatic_updates`) : lecture **non
+    authentifiée** de `latest.json` sur GitHub, puis téléchargement de
+    l'installeur si l'utilisateur met à jour. Aucune donnée personnelle
+    transmise ; GitHub voit l'adresse IP du poste ;
   - icônes de certains écrans chargées depuis `api.iconify.design` (aucune
     donnée personnelle transmise, mais une requête réseau) ;
-- **Pas de compte, pas de synchronisation, pas de rapport d'erreur, pas de
-  mise à jour automatique** (les mises à jour passent par les GitHub Releases,
-  téléchargées par l'utilisateur).
+- **Pas de compte, pas de synchronisation, pas de rapport d'erreur, pas
+  d'installation sans action de l'utilisateur** (la mise à jour intégrée,
+  AppImage et installeur Windows, s'installe sur demande, installeur signé ;
+  .deb et MSI : lien vers les GitHub Releases).
 - Aucune intégration de calendrier ni de tâches : Apple Calendar, Rappels et
   les intégrations hébergées héritées (calendriers Google et Outlook, Linear,
   GitHub) sont retirées du code.

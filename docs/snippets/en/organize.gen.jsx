@@ -109,6 +109,8 @@ const SYN_LABELS = {
   "Captured right now:": "Captured right now:",
   "Change photo": "Change photo",
   "Change template…": "Change template…",
+  "Check for updates": "Check for updates",
+  "Check for updates at startup": "Check for updates at startup",
   "Choose": "Choose",
   "Choose a file format and what to include.": "Choose a file format and what to include.",
   "Choose folder": "Choose folder",
@@ -397,6 +399,7 @@ const SYN_LABELS = {
   "Untitled": "Untitled",
   "Untitled section": "Untitled section",
   "Update": "Update",
+  "Updates": "Updates",
   "Use by default": "Use by default",
   "Use main language for summaries": "Use main language for summaries",
   "Use this protocol": "Use this protocol",
@@ -2226,6 +2229,13 @@ const SynSectionApp = ({ focus }) => {
             <button type="button" className="syn-ui-btn">{L("Show release notes")}</button>
           </div>
           {h(SynSwitchRow, { title: L("Show tray icon"), initial: true })}
+        </div>
+        <div>
+          <h2 className="syn-h2" style={{ fontSize: 18 }}>{L("Updates")}</h2>
+          <div style={{ padding: "12px 0" }}>
+            <button type="button" className="syn-ui-btn">{L("Check for updates")}</button>
+          </div>
+          {h(SynSwitchRow, { title: L("Check for updates at startup"), initial: true })}
         </div>
         <div ref={langRef}>{h(SynProfLanguage, { focus })}</div>
         <div>
