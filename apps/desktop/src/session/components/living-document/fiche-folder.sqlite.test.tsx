@@ -214,9 +214,9 @@ describe("folder field of the Prepare fiche on the real schema", () => {
     render(<FicheFolderField sessionId="session-1" />);
 
     const button = screen.getByRole("button", {
-      name: "Folder: Clients/Boréal",
+      name: "Folder: Clients › Boréal",
     });
-    expect(button.textContent).toContain("Clients/Boréal");
+    expect(button.textContent).toContain("Clients › Boréal");
   });
 
   it("files the note in the chosen folder and shows it", async () => {
@@ -269,7 +269,9 @@ describe("folder field of the Prepare fiche on the real schema", () => {
 
     openPicker("Choose a folder");
     expect(screen.queryByRole("group", { name: "Suggested" })).toBeNull();
-    expect(screen.getByRole("option", { name: "Clients/Boréal" })).toBeTruthy();
+    expect(
+      screen.getByRole("option", { name: "Clients › Boréal" }),
+    ).toBeTruthy();
   });
 
   it("does not suggest the folder the note is already in", () => {

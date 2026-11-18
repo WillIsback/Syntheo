@@ -1,7 +1,11 @@
 import { Plural, Trans, useLingui } from "@lingui/react/macro";
 import {
+  type DragEvent,
+  type HTMLAttributes,
   type KeyboardEvent,
+  type MouseEvent,
   type ReactNode,
+  type SyntheticEvent,
   useCallback,
   useId,
   useMemo,
@@ -21,6 +25,11 @@ import {
   visibleFolderTreeRows,
 } from "./sidebar-tree";
 
+import type { SearchNote } from "~/search/unified/types";
+import {
+  type MenuItemDef,
+  showNativeContextMenu,
+} from "~/shared/hooks/useNativeContextMenu";
 import { useTabs } from "~/store/zustand/tabs";
 import {
   type TemplateIcon,
@@ -35,19 +44,27 @@ function openNote(id: string) {
 
 // Dossiers en projets dépliables (issue 497) : arbre WAI-ARIA à focus mobile.
 // Flèches haut/bas : ligne précédente/suivante ; droite : déplier puis entrer ;
-// gauche : plier puis remonter au parent ; Entrée : ouvrir.
+// gauche : plier puis remonter au parent ; Entrée : ouvrir. Clic droit,
+// touche menu ou Maj+F10 : menu de la ligne (dossier : issue 590 ; note :
+// issue 592). Une note se glisse sur un dossier pour l'y ranger (issue 592).
 export function FolderTreeView({
   tree,
   forcedExpanded,
   activeFolder,
   iconFor,
   onSelectFolder,
+  folderMenu,
+  noteMenu,
+  onDropNote,
 }: {
   tree: readonly FolderTreeNode[];
   forcedExpanded: ReadonlySet<string>;
   activeFolder: string | null;
   iconFor: (path: string) => TemplateIcon;
   onSelectFolder: (path: string) => void;
+  folderMenu?: (path: string) => MenuItemDef[];
+  noteMenu?: (note: SearchNote) => MenuItemDef[];
+  onDropNote?: (note: SearchNote, folderPath: string) => void;
 }) {
   const { t } = useLingui();
   const expanded = useExpandedFolders((state) => state.expanded);
@@ -85,10 +102,32 @@ export function FolderTreeView({
     }
   };
 
+  const openMenu = (row: FolderTreeRow, event: SyntheticEvent) => {
+    const items =
+      row.kind === "folder"
+        ? folderMenu?.(row.path)
+        : row.kind === "note"
+          ? noteMenu?.(row.note)
+          : undefined;
+    if (!items) return false;
+    setFocusedKey(row.key);
+    void showNativeContextMenu(items, event);
+    return true;
+  };
+
+  const drag = useNoteDrag(rows, setExpanded, onDropNote);
+
   const handleKeyDown = (event: KeyboardEvent<HTMLUListElement>) => {
     const index = rows.findIndex((row) => row.key === tabStopKey);
     const row = rows[index];
     if (!row) return;
+    if (
+      event.key === "ContextMenu" ||
+      (event.key === "F10" && event.shiftKey)
+    ) {
+      openMenu(row, event);
+      return;
+    }
     let handled = true;
     switch (event.key) {
       case "ArrowDown":
@@ -147,6 +186,11 @@ export function FolderTreeView({
             else itemRefs.current.delete(row.key);
           }}
           onActivate={() => activate(row)}
+          dropTarget={row.kind === "folder" && drag.target === row.path}
+          dragHandlers={drag.handlersFor(row)}
+          onContextMenu={(event) => {
+            if (!openMenu(row, event)) event.preventDefault();
+          }}
           onToggle={() => {
             if (row.kind === "folder") {
               setFocusedKey(row.key);
@@ -169,6 +213,9 @@ function TreeRow({
   tabbable,
   itemRef,
   onActivate,
+  dropTarget,
+  dragHandlers,
+  onContextMenu,
   onToggle,
   children,
 }: {
@@ -177,6 +224,9 @@ function TreeRow({
   tabbable: boolean;
   itemRef: (element: HTMLLIElement | null) => void;
   onActivate: () => void;
+  dropTarget: boolean;
+  dragHandlers: DragHandlers;
+  onContextMenu: (event: MouseEvent<HTMLLIElement>) => void;
   onToggle: () => void;
   children: (countId: string) => ReactNode;
 }) {
@@ -202,6 +252,9 @@ function TreeRow({
       tabIndex={tabbable ? 0 : -1}
       data-folder-tree-row={row.kind}
       onClick={onActivate}
+      onContextMenu={onContextMenu}
+      {...dragHandlers}
+      data-drop-target={dropTarget || undefined}
       style={{ paddingLeft: 4 + row.depth * INDENT_PX }}
       className={cn([
         "flex min-w-0 cursor-default items-center gap-1.5 rounded-lg py-1.5 pr-2 text-sm transition-colors select-none",
@@ -210,6 +263,7 @@ function TreeRow({
           ? "bg-accent text-foreground font-medium"
           : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
         !isFolder && "text-[12.5px]",
+        dropTarget && "bg-primary/15 text-foreground ring-primary/60 ring-1",
       ])}
     >
       {isFolder ? (
@@ -293,4 +347,108 @@ function RowContent({
         </span>
       );
   }
+}
+
+// Glisser-déposer d'une note sur un dossier (issue 592), en HTML5 natif : la
+// fenêtre principale désactive le dépôt de fichiers du système, aucun fichier
+// ne part donc ailleurs. Un dossier replié survolé se déplie après un court
+// délai. L'équivalent clavier est le menu « Déplacer vers… ».
+const NOTE_DRAG_TYPE = "application/x-syntheo-note";
+const EXPAND_ON_HOVER_MS = 700;
+
+type DragHandlers = Partial<
+  Pick<
+    HTMLAttributes<HTMLLIElement>,
+    | "draggable"
+    | "onDragStart"
+    | "onDragEnd"
+    | "onDragOver"
+    | "onDragLeave"
+    | "onDrop"
+  >
+>;
+
+function useNoteDrag(
+  rows: readonly FolderTreeRow[],
+  setExpanded: (path: string, expanded: boolean) => void,
+  onDropNote: ((note: SearchNote, folderPath: string) => void) | undefined,
+) {
+  const [target, setTarget] = useState<string | null>(null);
+  const dragged = useRef<SearchNote | null>(null);
+  const expandTimer = useRef<{ path: string; id: number } | null>(null);
+
+  const clearExpandTimer = () => {
+    if (expandTimer.current) {
+      window.clearTimeout(expandTimer.current.id);
+      expandTimer.current = null;
+    }
+  };
+  const reset = () => {
+    clearExpandTimer();
+    dragged.current = null;
+    setTarget(null);
+  };
+
+  const handlersFor = (row: FolderTreeRow): DragHandlers => {
+    if (!onDropNote) return {};
+    if (row.kind === "note") {
+      return {
+        draggable: true,
+        onDragStart: (event: DragEvent<HTMLLIElement>) => {
+          dragged.current = row.note;
+          event.dataTransfer.effectAllowed = "move";
+          event.dataTransfer.setData(NOTE_DRAG_TYPE, row.note.id);
+        },
+        onDragEnd: reset,
+      };
+    }
+    if (row.kind !== "folder") return {};
+    const accepts = (event: DragEvent<HTMLLIElement>) =>
+      dragged.current !== null &&
+      Array.from(event.dataTransfer.types).includes(NOTE_DRAG_TYPE);
+    return {
+      onDragOver: (event: DragEvent<HTMLLIElement>) => {
+        if (!accepts(event)) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+        if (target !== row.path) setTarget(row.path);
+        if (
+          row.expandable &&
+          !row.expanded &&
+          expandTimer.current?.path !== row.path
+        ) {
+          clearExpandTimer();
+          expandTimer.current = {
+            path: row.path,
+            id: window.setTimeout(() => {
+              expandTimer.current = null;
+              setExpanded(row.path, true);
+            }, EXPAND_ON_HOVER_MS),
+          };
+        }
+      },
+      onDragLeave: (event: DragEvent<HTMLLIElement>) => {
+        if (event.currentTarget.contains(event.relatedTarget as Node | null)) {
+          return;
+        }
+        if (expandTimer.current?.path === row.path) clearExpandTimer();
+        setTarget((current) => (current === row.path ? null : current));
+      },
+      onDrop: (event: DragEvent<HTMLLIElement>) => {
+        const note = dragged.current;
+        if (!note || !accepts(event)) return;
+        event.preventDefault();
+        reset();
+        if (note.folderPath !== row.path) onDropNote(note, row.path);
+      },
+    };
+  };
+
+  // `rows` change quand l'arbre se replie : une cible disparue n'est plus
+  // mise en évidence.
+  const visibleTarget =
+    target && rows.some((row) => row.kind === "folder" && row.path === target)
+      ? target
+      : null;
+  return { target: visibleTarget, handlersFor };
 }

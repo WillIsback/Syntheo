@@ -69,8 +69,8 @@ curl -fsSL https://raw.githubusercontent.com/WillIsback/Syntheo/main/scripts/ins
 ```
 
 Le script télécharge l'AppImage de la dernière release dans `~/.local/bin`,
-vérifie sa somme SHA256, l'enregistre sous le nom `Syntheo-<version>.AppImage`
-et crée le lien `syntheo`.
+vérifie sa somme SHA256, l'enregistre sous le nom `Syntheo.AppImage` et crée le
+lien `syntheo`. Une réinstallation remplace la version précédente.
 
 Pour **tester une release précise** (n'importe quelle version publiée) :
 
@@ -79,7 +79,7 @@ curl -fsSL https://raw.githubusercontent.com/WillIsback/Syntheo/main/scripts/ins
 ```
 
 > Sur **Arch / Omarchy**, l'AppImage nécessite FUSE 2 : `sudo pacman -S fuse2`.
-> Plusieurs versions peuvent coexister (fichiers `Syntheo-<version>.AppImage`).
+> Une ancienne installation `Syntheo-<version>.AppImage` est retirée au passage.
 
 ### Debian / Ubuntu
 

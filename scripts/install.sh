@@ -15,8 +15,9 @@
 #   --dir <dir>       Répertoire de téléchargement (défaut : $TMPDIR ou /tmp).
 #   -h, --help        Affiche cette aide.
 #
-# L'AppImage est enregistrée sous Syntheo-<version>.AppImage et un lien
-# `syntheo` pointe vers elle : plusieurs versions peuvent coexister.
+# L'AppImage est enregistrée sous un nom stable, Syntheo.AppImage, et un lien
+# `syntheo` pointe vers elle : la mise à jour intégrée la remplace en place
+# (issue 591). Les anciennes Syntheo-<version>.AppImage sont retirées.
 set -euo pipefail
 
 REPO="WillIsback/Syntheo"
@@ -134,10 +135,18 @@ if [[ "$FORMAT" = "deb" ]]; then
   exit 0
 fi
 
-installed="$INSTALL_DIR/Syntheo-${VERSION_NUMBER}.AppImage"
+installed="$INSTALL_DIR/Syntheo.AppImage"
 mv "$target" "$installed"
 chmod +x "$installed"
 ln -sf "$installed" "$INSTALL_DIR/syntheo"
+# Migration : les versions précédentes portaient leur numéro dans le nom. La
+# mise à jour intégrée remplace le fichier en place, un nom versionné
+# deviendrait faux après la première mise à jour.
+for old in "$INSTALL_DIR"/Syntheo-*.AppImage; do
+  [[ -f "$old" && ! -L "$old" ]] || continue
+  rm -f "$old"
+  printf 'Ancienne version retirée : %s\n' "$old"
+done
 
 printf 'Installé : %s\n' "$installed"
 printf 'Lien     : %s/syntheo\n' "$INSTALL_DIR"

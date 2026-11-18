@@ -103,7 +103,7 @@ openai-transcription = { path = "crates/openai-transcription", package = "openai
 owhisper-client = { path = "crates/owhisper-client", package = "owhisper-client" }
 owhisper-interface = { path = "crates/owhisper-interface", package = "owhisper-interface" }
 
-ashpd = { version = "0.13.13", default-features = false }
+ashpd = { version = "0.14.0", default-features = false }
 tauri = "2.11.5"
 tauri-build = "2.6.3"
 tauri-plugin = "2.5"
@@ -120,6 +120,7 @@ tauri-plugin-process = "2.3"
 tauri-plugin-shell = "2.3"
 tauri-plugin-single-instance = "2.4"
 tauri-plugin-store = "2.4.3"
+tauri-plugin-updater = { version = "2.14.1", default-features = false, features = ["rustls-tls", "system-proxy"] }
 tauri-plugin-window-state = "2.4"
 
 tauri-plugin-contacts = { path = "plugins/contacts" }
@@ -178,7 +179,7 @@ base64 = "0.23.1"
 bytes = "1.11"
 clap = "4"
 codes-iso-639 = "0.1.5"
-dirs = "6.0.0"
+dirs = "7.0.0"
 image = { version = "0.25.10", default-features = false, features = ["webp"] }
 indexmap = "2"
 isolang = "2.4"
@@ -286,7 +287,7 @@ swift-rs = { git = "https://github.com/Brendonovich/swift-rs", rev = "41a1605" }
 gtk = "0.18"
 gtk-layer-shell = { version = "0.8.2", features = ["v0_6"] }
 
-wasapi = "0.26.0"
+wasapi = "0.27.0"
 windows = "0.62.2"
 # Keep in step with `windows`: the `#[windows::core::interface]` macro expands to
 # `::windows_core::…` paths, so a mismatched major makes the generated impl target

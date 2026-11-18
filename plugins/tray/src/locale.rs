@@ -112,6 +112,7 @@ labels! {
     TrayOpen => { fr: "Ouvrir {app}", en: "Open {app}" },
     TrayStart => { fr: "Démarrer une réunion", en: "Start a Meeting" },
     TraySettings => { fr: "Paramètres", en: "Settings" },
+    TrayCheckUpdates => { fr: "Rechercher des mises à jour…", en: "Check for Updates…" },
     TrayShowEvents => { fr: "Afficher les prochaines réunions", en: "Show Upcoming Meetings" },
     TrayHide => { fr: "Masquer la fenêtre", en: "Hide Window" },
     TrayQuitCompletely => { fr: "Quitter complètement…", en: "Quit Completely…" },

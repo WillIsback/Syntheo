@@ -88,6 +88,8 @@ const SYN_LABELS = {
   "Cancel dictation": "Cancel dictation",
   "Capture meeting chat in the note": "Capture meeting chat in the note",
   "Captured right now:": "Captured right now:",
+  "Check for updates": "Check for updates",
+  "Check for updates at startup": "Check for updates at startup",
   "Choose": "Choose",
   "Choose folder": "Choose folder",
   "Choose the microphone that captures your voice.": "Choose the microphone that captures your voice.",
@@ -159,6 +161,7 @@ const SYN_LABELS = {
   "Model name served by your server": "Model name served by your server",
   "More actions": "More actions",
   "More effort gives finer summaries, but slower. Auto leaves it to the server.": "More effort gives finer summaries, but slower. Auto leaves it to the server.",
+  "Move to…": "Move to…",
   "Mute system audio": "Mute system audio",
   "Mute the microphone": "Mute the microphone",
   "My meetings": "My meetings",
@@ -269,6 +272,7 @@ const SYN_LABELS = {
   "Unmute system audio": "Unmute system audio",
   "Unmute the microphone": "Unmute the microphone",
   "Unreachable": "Unreachable",
+  "Updates": "Updates",
   "Use main language for summaries": "Use main language for summaries",
   "Use this protocol": "Use this protocol",
   "Used for transcription and automatic summary language detection.": "Used for transcription and automatic summary language detection.",
@@ -2064,6 +2068,13 @@ const SynSectionApp = ({ focus }) => {
           </div>
           {h(SynSwitchRow, { title: L("Show tray icon"), initial: true })}
         </div>
+        <div>
+          <h2 className="syn-h2" style={{ fontSize: 18 }}>{L("Updates")}</h2>
+          <div style={{ padding: "12px 0" }}>
+            <button type="button" className="syn-ui-btn">{L("Check for updates")}</button>
+          </div>
+          {h(SynSwitchRow, { title: L("Check for updates at startup"), initial: true })}
+        </div>
         <div ref={langRef}>{h(SynProfLanguage, { focus })}</div>
         <div>
           <h2 className="syn-h2" style={{ fontSize: 18 }}>{L("Storage")}</h2>
@@ -2861,6 +2872,7 @@ const SynHomeRow = ({ note, onSay, onDelete, onMove }) => {
           icon: I("DotsThreeVertical"),
           items: [
             { label: L("Open"), onSelect: open },
+            { label: L("Move to…"), onSelect: () => onSay(`Opens “Move to…” for “${note.title}”, without opening the note.`) },
             { label: L("Export…"), onSelect: () => onSay(`Opens the export window for “${note.title}”, without opening the note.`) },
             { separator: true },
             { label: L("Delete"), onSelect: () => onDelete(note) },

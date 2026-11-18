@@ -96,6 +96,7 @@ msgstr "{chain} · échec de la dernière exécution {relative}"
 msgid "{chain} · never run"
 msgstr "{chain} · jamais exécutée"
 
+#: src/folders/project/folder-subfolders.tsx
 #: src/search/unified/labels.ts
 msgid "{count, plural, one {# meeting} other {# meetings}}"
 msgstr "{count, plural, one {# réunion} other {# réunions}}"
@@ -244,6 +245,14 @@ msgstr "1 modification en attente"
 msgid "1 result"
 msgstr "1 résultat"
 
+#: src/folders/folder-actions.tsx
+msgid "A folder cannot be moved into one of its own subfolders."
+msgstr "Un dossier ne peut pas être déplacé dans l'un de ses propres sous-dossiers."
+
+#: src/folders/folder-actions.tsx
+msgid "A folder with this name already exists there."
+msgstr "Un dossier de ce nom existe déjà à cet endroit."
+
 #: src/sidebar/folder-name-dialog.tsx
 msgid "A folder with this name already exists."
 msgstr "Un dossier portant ce nom existe déjà."
@@ -251,6 +260,10 @@ msgstr "Un dossier portant ce nom existe déjà."
 #: src/onboarding/final.tsx
 msgid "A meeting can't be replayed: audio is never kept, only the note remains. Your notes belong to you."
 msgstr "La réunion ne se rejoue pas : l'audio n'est jamais conservé, seule la note reste. Vos notes vous appartiennent."
+
+#: src/settings/general/update-section.tsx
+msgid "A meeting is being recorded: install the update once it ends."
+msgstr "Une réunion est en cours d'enregistrement : installez la mise à jour une fois qu'elle sera terminée."
 
 #: src/folders/project/next-meeting-slot.tsx
 msgid "A new proposal replaces your changes to the agenda."
@@ -745,6 +758,7 @@ msgstr "par {name}"
 msgid "Can't import this audio"
 msgstr "Impossible d'importer cet audio"
 
+#: src/folders/folder-actions.tsx
 #: src/folders/project/next-meeting-slot.tsx
 #: src/session/components/capsule/index.tsx
 #: src/settings/ai/shared/server-address.tsx
@@ -816,6 +830,16 @@ msgstr "discussion, messages, note, Teams, Zoom"
 msgid "Check again"
 msgstr "Vérifier à nouveau"
 
+#: src/settings/general/update-section.tsx
+#: src/settings/search-index.ts
+msgid "Check for updates"
+msgstr "Rechercher des mises à jour"
+
+#: src/settings/general/update-section.tsx
+#: src/settings/search-index.ts
+msgid "Check for updates at startup"
+msgstr "Rechercher les mises à jour au démarrage"
+
 #: src/chat/components/input/use-dictation.ts
 msgid "Check microphone permission and the selected input device, then try again."
 msgstr "Vérifiez l'autorisation du microphone et le périphérique d'entrée sélectionné, puis réessayez."
@@ -827,6 +851,10 @@ msgstr "Vérifiez que votre dossier de notes est accessible et que le disque a d
 #: src/shared/palette-settings-group.tsx
 msgid "Check the spelling, or try a shorter word."
 msgstr "Vérifiez l'orthographe, ou essayez un mot plus court."
+
+#: src/settings/general/update-section.tsx
+msgid "Checking for updates…"
+msgstr "Recherche des mises à jour…"
 
 #: src/settings/developers/cli.tsx
 msgid "Checking…"
@@ -905,6 +933,14 @@ msgstr "Choisir l'icône du modèle"
 #: src/settings/appearance/palette.tsx
 msgid "Choose the colors of Syntheo. Each palette follows the light or dark theme."
 msgstr "Choisissez les couleurs de Syntheo. Chaque palette suit le thème clair ou sombre."
+
+#: src/session/move-note.tsx
+msgid "Choose the folder for this note."
+msgstr "Choisissez le dossier de cette note."
+
+#: src/folders/folder-actions.tsx
+msgid "Choose the folder that will contain this folder."
+msgstr "Choisissez le dossier qui contiendra ce dossier."
 
 #: src/settings/general/audio-settings.tsx
 msgid "Choose the microphone that captures your voice."
@@ -1198,6 +1234,10 @@ msgstr "Impossible de supprimer cette note. Veuillez réessayer."
 msgid "Could not export. Check the export location in Settings and try again."
 msgstr "Impossible d'exporter. Vérifiez l'emplacement d'exportation dans Paramètres et réessayez."
 
+#: src/folders/folder-actions.tsx
+msgid "Could not move the folder."
+msgstr "Impossible de déplacer le dossier."
+
 #: src/session/components/outer-header/overflow/export-modal.tsx
 msgid "Could not open the PDF to print. Try again, or save it instead."
 msgstr "Impossible d'ouvrir le PDF à imprimer. Réessayez, ou enregistrez-le."
@@ -1248,7 +1288,7 @@ msgstr "Impossible d'ouvrir le sélecteur de fichiers"
 msgid "Couldn't save your profile. Try again."
 msgstr "Impossible d'enregistrer votre profil. Réessayez."
 
-#: src/folders/sidebar.tsx
+#: src/folders/folder-actions.tsx
 msgid "Create"
 msgstr "Créer"
 
@@ -1374,6 +1414,7 @@ msgid "Default template"
 msgstr "Modèle par défaut"
 
 #: src/contacts/contact-page-header.tsx
+#: src/folders/folder-actions.tsx
 #: src/folders/folder-editor.tsx
 #: src/home/note-index.tsx
 #: src/session/components/note-input/transcript/renderer/multi-selection-bar.tsx
@@ -1388,9 +1429,13 @@ msgstr "Supprimer"
 msgid "Delete automation"
 msgstr "Supprimer l'automatisation"
 
-#: src/folders/folder-editor.tsx
+#: src/folders/folder-actions.tsx
 msgid "Delete folder"
 msgstr "Supprimer le dossier"
+
+#: src/folders/folder-actions.tsx
+msgid "Delete folder “{name}”"
+msgstr "Supprimer le dossier « {name} »"
 
 #: src/templates/sections-editor.tsx
 msgid "Delete section {position}"
@@ -1411,6 +1456,10 @@ msgstr "Décrivez la réunion, Syntheo propose les sections…"
 #: src/templates/template-form.tsx
 msgid "Description"
 msgstr "Description"
+
+#: src/folders/folder-actions.tsx
+msgid "Destination"
+msgstr "Destination"
 
 #: src/settings/general/notification.tsx
 msgid "Detect meetings from microphone activity."
@@ -1534,9 +1583,26 @@ msgstr "Documentation"
 msgid "Done"
 msgstr "Terminé"
 
+#: src/settings/general/update-section.tsx
+msgid "Download progress"
+msgstr "Progression du téléchargement"
+
+#: src/settings/general/update-section.tsx
+msgid "Download the update"
+msgstr "Télécharger la mise à jour"
+
 #: src/settings/general/audio-settings.tsx
 msgid "Downloading the echo cancellation models…"
 msgstr "Téléchargement des modèles d'annulation d'écho…"
+
+#. placeholder {0}: formatBytes(progress?.downloaded ?? 0, i18n.locale)
+#: src/settings/general/update-section.tsx
+msgid "Downloading… {0}"
+msgstr "Téléchargement… {0}"
+
+#: src/settings/general/update-section.tsx
+msgid "Downloading… {percent}%"
+msgstr "Téléchargement… {percent} %"
 
 #: src/settings/search-index.ts
 msgid "Downloads, PDF, folder, export, save, Markdown, text file"
@@ -1906,8 +1972,12 @@ msgstr "Nom du dossier"
 
 #: src/session/components/folder-picker.tsx
 #: src/session/components/living-document/fiche-folder.tsx
-msgid "Folder: {currentPath}"
-msgstr "Dossier : {currentPath}"
+msgid "Folder: {currentLabel}"
+msgstr "Dossier : {currentLabel}"
+
+#: src/home/file-note-button.tsx
+msgid "Folder: {label}. Move to another folder"
+msgstr "Dossier : {label}. Déplacer vers un autre dossier"
 
 #: src/folders/sidebar-tree-view.tsx
 #: src/session/components/folder-picker.tsx
@@ -2223,6 +2293,10 @@ msgstr "Niveau d'entrée indisponible"
 msgid "Insert"
 msgstr "Insérer"
 
+#: src/settings/general/update-section.tsx
+msgid "Install and restart"
+msgstr "Installer et redémarrer"
+
 #: src/settings/developers/cli.tsx
 msgid "Install command copied"
 msgstr "Commande d'installation copiée"
@@ -2238,6 +2312,18 @@ msgstr "Guide d'installation"
 #: src/settings/developers/cli.tsx
 msgid "Installed"
 msgstr "Installé"
+
+#: src/settings/general/update-section.tsx
+msgid "Installed version: {version}"
+msgstr "Version installée : {version}"
+
+#: src/settings/general/update-section.tsx
+msgid "Installed version: unknown"
+msgstr "Version installée : inconnue"
+
+#: src/settings/general/update-section.tsx
+msgid "Installing… Syntheo will restart."
+msgstr "Installation… Syntheo va redémarrer."
 
 #: src/settings/automations/step-forms.tsx
 msgid "Instruction"
@@ -2768,6 +2854,7 @@ msgstr "Nom du modèle servi par votre serveur"
 msgid "More"
 msgstr "Plus"
 
+#: src/folders/project/folder-meetings-card.tsx
 #: src/home/note-index.tsx
 #: src/templates/template-form.tsx
 msgid "More actions"
@@ -2785,9 +2872,28 @@ msgstr "la plus récente"
 msgid "most recent first"
 msgstr "plus récentes d'abord"
 
+#: src/folders/folder-actions.tsx
+msgid "Move"
+msgstr "Déplacer"
+
+#: src/folders/folder-actions.tsx
+msgid "Move “{name}” to…"
+msgstr "Déplacer « {name} » vers…"
+
+#: src/session/move-note.tsx
+msgid "Move “{title}” to…"
+msgstr "Déplacer « {title} » vers…"
+
 #: src/templates/sections-editor.tsx
 msgid "Move section {position}"
 msgstr "Déplacer la section {position}"
+
+#: src/folders/folder-actions.tsx
+#: src/folders/folder-editor.tsx
+#: src/home/note-index.tsx
+#: src/session/move-note.tsx
+msgid "Move to…"
+msgstr "Déplacer vers…"
 
 #: src/shared/shortcuts.ts
 msgid "Mute or unmute system audio"
@@ -2864,6 +2970,7 @@ msgstr "Nouvelle automatisation"
 msgid "New chat"
 msgstr "Nouveau chat"
 
+#: src/folders/folder-actions.tsx
 #: src/folders/sidebar.tsx
 msgid "New folder"
 msgstr "Nouveau dossier"
@@ -2877,10 +2984,24 @@ msgstr "Nouvelle note"
 msgid "New Note"
 msgstr "Nouvelle note"
 
+#: src/folders/folder-actions.tsx
 #: src/folders/project/folder-header-actions.tsx
 #: src/shared/palette-search-groups.tsx
 msgid "New note in this folder"
 msgstr "Nouvelle note dans ce dossier"
+
+#: src/folders/project/folder-subfolders.tsx
+msgid "New subfolder"
+msgstr "Nouveau sous-dossier"
+
+#: src/folders/folder-actions.tsx
+msgid "New subfolder in {parentName}"
+msgstr "Nouveau sous-dossier dans {parentName}"
+
+#: src/folders/folder-actions.tsx
+#: src/folders/folder-editor.tsx
+msgid "New subfolder…"
+msgstr "Nouveau sous-dossier…"
 
 #: src/templates/details.tsx
 #: src/templates/template-form.tsx
@@ -2945,6 +3066,10 @@ msgstr "Aucune version antérieure pour le moment."
 #: src/templates/template-icon-picker.tsx
 msgid "No emoji found"
 msgstr "Aucun emoji trouvé"
+
+#: src/session/move-note.tsx
+msgid "No folder"
+msgstr "Aucun dossier"
 
 #: src/settings/automations/markdown-export-config.tsx
 msgid "No folder selected yet."
@@ -3022,6 +3147,10 @@ msgstr "Aucune note de ce dossier ne correspond."
 #: src/folders/project/folder-meetings-card.tsx
 msgid "No notes in this folder yet."
 msgstr "Aucune note dans ce dossier pour l'instant."
+
+#: src/folders/folder-actions.tsx
+msgid "No other folder available."
+msgstr "Aucun autre dossier disponible."
 
 #: src/session/components/note-input/transcript/renderer/speaker-assign.tsx
 msgid "No people"
@@ -3167,6 +3296,14 @@ msgstr "Notez ici ce que vous voulez retenir. Pendant la réunion, écrivez libr
 msgid "Note is Locked"
 msgstr "Note verrouillée"
 
+#: src/session/move-note.tsx
+msgid "Note moved to {label}"
+msgstr "Note déplacée vers {label}"
+
+#: src/session/move-note.tsx
+msgid "Note removed from its folder"
+msgstr "Note retirée de son dossier"
+
 #: src/session/components/capsule/index.tsx
 msgid "Note steps"
 msgstr "Étapes de la note"
@@ -3201,7 +3338,7 @@ msgid "Notes"
 msgstr "Notes"
 
 #. js-lingui-explicit-id
-#: src/folders/folder-editor.tsx
+#: src/folders/folder-actions.tsx
 msgid "Notes stay in All notes. Materials in this folder will be deleted."
 msgstr "Les notes restent dans Toutes les notes. Ce dossier, ses sous-dossiers et tous leurs éléments seront supprimés."
 
@@ -3269,6 +3406,7 @@ msgstr "Seuls les serveurs compatibles OpenAI hébergés chez vous sont pris en 
 
 #: src/home/live-note-card.tsx
 #: src/home/note-index.tsx
+#: src/session/move-note.tsx
 #: src/shared/open-note-dialog.tsx
 msgid "Open"
 msgstr "Ouvrir"
@@ -3339,6 +3477,10 @@ msgstr "Ouvrez Syntheo depuis la barre des menus."
 #: src/home/active-folders.ts
 msgid "Open tasks"
 msgstr "Tâches non faites"
+
+#: src/settings/general/update-section.tsx
+msgid "Open the download page"
+msgstr "Ouvrir la page de téléchargement"
 
 #: src/settings/automations/workflow-test-result.tsx
 msgid "Open the note"
@@ -3426,6 +3568,10 @@ msgstr "Page introuvable"
 #: src/settings/search-index.ts
 msgid "Palette"
 msgstr "Palette"
+
+#: src/folders/project/folder-subfolders.tsx
+msgid "Parent folders"
+msgstr "Dossiers parents"
 
 #: src/session/components/living-document/fiche.tsx
 #: src/session/components/note-input/transcript/renderer/speaker-assign.tsx
@@ -3658,6 +3804,10 @@ msgstr "Lire les contrôles de réunion et le chat visible."
 msgid "Read what each speaker said, then say who it is. Tab moves to the next speaker, Enter confirms."
 msgstr "Lisez ce que chaque intervenant a dit, puis indiquez qui c’est. Tab passe à l’intervenant suivant, Entrée valide."
 
+#: src/settings/general/update-section.tsx
+msgid "Reads the latest version on GitHub. Nothing is installed without your action."
+msgstr "Lit la dernière version sur GitHub. Rien n'est installé sans votre action."
+
 #: src/settings/general/notification.tsx
 msgid "Ready"
 msgstr "Prêt"
@@ -3763,6 +3913,10 @@ msgstr "Régénérer avec mes notes"
 msgid "Related Notes"
 msgstr "Notes associées"
 
+#: src/settings/general/update-section.tsx
+msgid "Release page"
+msgstr "Page de la version"
+
 #: src/settings/general/meeting-settings.tsx
 #: src/settings/search-index.ts
 msgid "Remind participants about recording"
@@ -3805,6 +3959,10 @@ msgstr "Supprimer l'exemple {0}"
 #: src/templates/template-sidebar.tsx
 msgid "Remove from favorites"
 msgstr "Retirer des favoris"
+
+#: src/session/move-note.tsx
+msgid "Remove from folder"
+msgstr "Retirer du dossier"
 
 #: src/contacts/contact-page-header.tsx
 #: src/contacts/profile-photo.tsx
@@ -4091,6 +4249,11 @@ msgstr "Rechercher des contacts..."
 msgid "Search emoji..."
 msgstr "Rechercher des emojis..."
 
+#: src/folders/folder-actions.tsx
+msgid "Search folders"
+msgstr "Rechercher des dossiers"
+
+#: src/folders/folder-actions.tsx
 #: src/folders/sidebar.tsx
 msgid "Search folders..."
 msgstr "Rechercher des dossiers..."
@@ -4187,6 +4350,14 @@ msgstr "Voir tous les dossiers"
 msgid "See all templates"
 msgstr "Voir tous les modèles"
 
+#: src/sidebar/toast/registry.tsx
+msgid "See the update"
+msgstr "Voir la mise à jour"
+
+#: src/sidebar/toast/registry.tsx
+msgid "See what's new and update from Settings."
+msgstr "Nouveautés et mise à jour dans les Paramètres."
+
 #: src/contacts/details.tsx
 msgid "Select a person to view details"
 msgstr "Sélectionnez une personne pour afficher les détails"
@@ -4276,6 +4447,10 @@ msgstr "Serveur qui rédige le compte-rendu"
 #: src/settings/automations/markdown-export-options.tsx
 msgid "Session title"
 msgstr "Titre de la session"
+
+#: src/settings/general/update-section.tsx
+msgid "Set by your administrator."
+msgstr "Réglé par votre administrateur."
 
 #: src/settings/automations/index.tsx
 msgid "Set the trigger and the actions. The chat on the right can help you shape the automation."
@@ -4602,6 +4777,10 @@ msgstr "Arrêter à la fin de la réunion"
 msgid "Storage"
 msgstr "Stockage"
 
+#: src/folders/project/folder-subfolders.tsx
+msgid "Subfolders"
+msgstr "Sous-dossiers"
+
 #: src/settings/general/notification.tsx
 msgid "Success"
 msgstr "Succès"
@@ -4791,6 +4970,10 @@ msgstr "Syntheo n'a pas accès au micro"
 #: src/lock/gate.tsx
 msgid "Syntheo is Locked"
 msgstr "Syntheo est verrouillé"
+
+#: src/settings/general/update-section.tsx
+msgid "Syntheo is up to date."
+msgstr "Syntheo est à jour."
 
 #: src/store/zustand/listener/general-live-helpers.ts
 msgid "Syntheo keeps listening while live transcription reconnects. No audio is kept: the missing passage will not be recovered."
@@ -5277,6 +5460,14 @@ msgstr "La transcription apparaîtra ici dès les premiers mots."
 msgid "The unreadable audio was preserved in this note's folder as an audio.recovery-*.wav file. New audio will be recorded separately. Your transcript is unchanged."
 msgstr "L'audio illisible est conservé dans le dossier de cette note, sous forme de fichier audio.recovery-*.wav. Le nouvel audio sera enregistré à part. Votre transcription n'a pas changé."
 
+#: src/settings/general/update-section.tsx
+msgid "The update failed: {error}"
+msgstr "La mise à jour a échoué : {error}"
+
+#: src/settings/general/update-section.tsx
+msgid "The update is downloaded and ready to install."
+msgstr "La mise à jour est téléchargée et prête à être installée."
+
 #: src/settings/appearance/theme.tsx
 #: src/settings/search-index.ts
 msgid "Theme"
@@ -5337,6 +5528,10 @@ msgstr "Ce dossier utilise le modèle {title}"
 #: src/settings/general/index.tsx
 msgid "This information stays on your computer. It is used to recognize you in transcripts and to sign your meeting notes."
 msgstr "Ces informations restent sur votre poste. Elles servent à vous reconnaître dans les transcriptions et à signer vos comptes-rendus."
+
+#: src/settings/general/update-section.tsx
+msgid "This installation (.deb or MSI) is updated by downloading the new package."
+msgstr "Cette installation (.deb ou MSI) se met à jour en téléchargeant le nouveau paquet."
 
 #: src/settings/automations/workflow-test-panel.tsx
 msgid "This is a real test: these steps really act."
@@ -5415,6 +5610,10 @@ msgstr "Titre"
 #: src/templates/sections-editor.tsx
 msgid "To move a section with the keyboard, focus its handle and use the up and down arrow keys."
 msgstr "Pour déplacer une section au clavier, placez le focus sur sa poignée et utilisez les flèches haut et bas."
+
+#: src/folders/folder-actions.tsx
+msgid "Top level"
+msgstr "Racine"
 
 #: src/chat/components/input/index.tsx
 msgid "Transcribing voice input"
@@ -5552,6 +5751,7 @@ msgid "Unavailable: the models could not be downloaded (offline?). Listening wor
 msgstr "Indisponible : les modèles n'ont pas pu être téléchargés (hors ligne ?). L'écoute fonctionne sans."
 
 #: src/main/windows-title-bar.tsx
+#: src/session/move-note.tsx
 #: src/sidebar/toast/undo-delete-toast.tsx
 msgid "Undo"
 msgstr "Annuler"
@@ -5619,6 +5819,7 @@ msgstr "Injoignable"
 #: src/session/components/outer-header/overflow/export-modal.tsx
 #: src/session/components/title-input-field.tsx
 #: src/session/late-filing.ts
+#: src/session/move-note.tsx
 #: src/shared/palette-search-groups.tsx
 #: src/shared/ui/resource-list/preview-header.tsx
 #: src/sidebar/toast/undo-delete-toast.tsx
@@ -5657,6 +5858,22 @@ msgstr "à jour jusqu'au {coveredDate}"
 #: src/folders/project/folder-thread-card.tsx
 msgid "Update"
 msgstr "Mettre à jour"
+
+#: src/settings/search-index.ts
+msgid "update, automatic, startup, network, GitHub"
+msgstr "mise à jour, automatique, démarrage, réseau, GitHub"
+
+#: src/settings/search-index.ts
+msgid "update, upgrade, new version, download, install"
+msgstr "mise à jour, nouvelle version, télécharger, installer"
+
+#: src/settings/general/update-section.tsx
+msgid "Updates"
+msgstr "Mises à jour"
+
+#: src/settings/general/update-section.tsx
+msgid "Updates are not checked in this build."
+msgstr "Cette version de test ne recherche pas de mises à jour."
 
 #: src/session/components/note-input/transcript/screens/empty.tsx
 #: src/session/components/outer-header/overflow/index.tsx
@@ -5741,6 +5958,16 @@ msgstr "Les variables sont insérées comme texte JSON, entre guillemets. Les re
 #: src/settings/automations/step-forms.tsx
 msgid "Vault folder"
 msgstr "Dossier du coffre"
+
+#. placeholder {0}: availableUpdate ?? ""
+#: src/sidebar/toast/registry.tsx
+msgid "Version {0} is available"
+msgstr "La version {0} est disponible"
+
+#. placeholder {0}: update.version
+#: src/settings/general/update-section.tsx
+msgid "Version {0} is available."
+msgstr "La version {0} est disponible."
 
 #: src/session/components/living-document/summary-version.tsx
 msgid "Version {versionNumber}"
@@ -5843,6 +6070,11 @@ msgstr "Quelles ont été les décisions clés prises ?"
 #: src/services/notification-labels.ts
 msgid "What:"
 msgstr "Quoi :"
+
+#. placeholder {0}: update.version
+#: src/settings/general/update-section.tsx
+msgid "What's new in {0}"
+msgstr "Nouveautés de la {0}"
 
 #: src/changelog/index.tsx
 msgid "What's new in {version}"

@@ -1,5 +1,7 @@
 import { create } from "zustand";
 
+import { rebaseFolderPath } from "~/session/folders";
+
 // Dossiers dépliés dans la barre latérale (issue 497), mémorisés sur ce poste.
 // Le stockage local peut manquer (navigation privée, accès refusé) : on garde
 // alors l'état en mémoire seulement.
@@ -33,6 +35,8 @@ function writeStoredPaths(paths: readonly string[]) {
 type ExpandedFoldersState = {
   expanded: readonly string[];
   setExpanded: (path: string, expanded: boolean) => void;
+  /** Dossier renommé ou déplacé : lui et ses sous-dossiers restent dépliés. */
+  rekeyExpanded: (fromPath: string, toPath: string) => void;
 };
 
 export const useExpandedFolders = create<ExpandedFoldersState>((set, get) => ({
@@ -43,6 +47,22 @@ export const useExpandedFolders = create<ExpandedFoldersState>((set, get) => ({
     const next = expanded
       ? [...current, path]
       : current.filter((entry) => entry !== path);
+    writeStoredPaths(next);
+    set({ expanded: next });
+  },
+  rekeyExpanded: (fromPath, toPath) => {
+    if (fromPath === toPath) return;
+    const current = get().expanded;
+    const next = [
+      ...new Set(
+        current.map((path) => rebaseFolderPath(path, fromPath, toPath)),
+      ),
+    ];
+    if (
+      next.length === current.length &&
+      next.every((p, i) => p === current[i])
+    )
+      return;
     writeStoredPaths(next);
     set({ expanded: next });
   },

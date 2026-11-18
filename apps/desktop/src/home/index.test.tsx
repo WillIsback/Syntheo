@@ -162,7 +162,13 @@ describe("HomePage", () => {
     useFolderSelection.getState().setSelectedPath(null);
     render(<HomePage />);
 
-    fireEvent.click(screen.getByRole("button", { name: /Atlas/ }));
+    // La pastille de dossier d'une note récente est aussi un bouton (issue
+    // 592) : on vise la carte du bloc « Vos dossiers ».
+    fireEvent.click(
+      screen
+        .getAllByRole("button", { name: /Atlas/ })
+        .find((button) => !button.hasAttribute("data-note-folder"))!,
+    );
     expect(useFolderSelection.getState().selectedPath).toBe("Atlas");
     expect(mocks.openCurrent).toHaveBeenCalledWith({ type: "folders" });
 

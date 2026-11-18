@@ -23,6 +23,12 @@
 # pnpm install échoue (UNKNOWN open …\package.json, -4094). Garder le dépôt et
 # target/ au même endroit d'une alpha à l'autre pour profiter du cache.
 #
+# -UpdaterTest <surcouche.json> : build de test de la mise à jour intégrée
+# (issue 593), pour la QA seulement. SANS devtools (plugin de mise à jour
+# actif), avec la surcouche donnée (clé publique de test, endpoint local), non
+# commitée ; sortie dans <OutDir>\syntheo-updater-test-windows. Refusé si une
+# clé de signature est présente dans l'environnement : jamais signé.
+#
 # Fichier enregistré en UTF-8 avec BOM : sans BOM, PowerShell 5 lit les accents
 # en ANSI.
 
@@ -30,7 +36,8 @@
 param(
   [Parameter(Mandatory = $true)]
   [string]$Version,
-  [string]$OutDir
+  [string]$OutDir,
+  [string]$UpdaterTest
 )
 
 $ErrorActionPreference = "Stop"
@@ -44,6 +51,18 @@ if ($Version -notmatch '^\d+\.\d+\.\d+-\d+$') {
 $Root = Split-Path -Parent $PSScriptRoot
 if (-not $OutDir) { $OutDir = Join-Path $HOME "syntheo-alpha\$Version" }
 $Out = Join-Path $OutDir "syntheo-devtools-windows"
+if ($UpdaterTest) {
+  if (-not (Test-Path $UpdaterTest)) { throw "-UpdaterTest : surcouche « $UpdaterTest » introuvable." }
+  $overlay = Get-Content -Raw $UpdaterTest | ConvertFrom-Json
+  if (-not $overlay.plugins.updater.pubkey -or -not $overlay.plugins.updater.endpoints) {
+    throw "-UpdaterTest : la surcouche doit définir plugins.updater.pubkey et plugins.updater.endpoints."
+  }
+  foreach ($name in "TAURI_SIGNING_PRIVATE_KEY", "TAURI_SIGNING_PRIVATE_KEY_PATH", "AZURE_CLIENT_SECRET") {
+    if (Test-Path "Env:$name") { throw "-UpdaterTest : $name est défini ; ce build de test n'est jamais signé." }
+  }
+  $UpdaterTest = (Resolve-Path $UpdaterTest).Path
+  $Out = Join-Path $OutDir "syntheo-updater-test-windows"
+}
 $SrcTauri = Join-Path $Root "apps\desktop\src-tauri"
 $Conf = Join-Path $SrcTauri "tauri.conf.syntheo.json"
 Set-Location $Root
@@ -107,7 +126,12 @@ foreach ($name in "AZURE_TENANT_ID", "AZURE_CLIENT_ID", "AZURE_CLIENT_SECRET",
 
 # --- Build ---------------------------------------------------------------------
 
-Write-Host "== Alpha devtools Windows $Version ($(git rev-parse --short HEAD), $(git rev-parse --abbrev-ref HEAD))"
+if ($UpdaterTest) {
+  Write-Host "== Build de test de la mise à jour Windows $Version ($(git rev-parse --short HEAD), $(git rev-parse --abbrev-ref HEAD))"
+}
+else {
+  Write-Host "== Alpha devtools Windows $Version ($(git rev-parse --short HEAD), $(git rev-parse --abbrev-ref HEAD))"
+}
 
 Invoke-Checked pnpm @("install", "--frozen-lockfile")
 
@@ -147,10 +171,17 @@ try {
   # Valeur factice exigée par des intégrations cloud héritées (chantier 04d).
   $env:VITE_API_URL = "http://127.0.0.1:9"
   Invoke-Checked pnpm @("-F", "ui", "build")
-  Invoke-Checked pnpm @("-F", "desktop", "tauri", "build", "--ci", "--bundles", "nsis,msi",
-    "--features", "devtools",
-    "--config", "./src-tauri/tauri.conf.syntheo.json",
+  $buildArgs = @("-F", "desktop", "tauri", "build", "--ci", "--bundles", "nsis,msi")
+  if ($UpdaterTest) {
+    Write-Host "-- build de test de la mise à jour : sans devtools, surcouche $UpdaterTest"
+  }
+  else {
+    $buildArgs += @("--features", "devtools")
+  }
+  $buildArgs += @("--config", "./src-tauri/tauri.conf.syntheo.json",
     "--config", "./src-tauri/tauri.windows-vcrt.conf.json")
+  if ($UpdaterTest) { $buildArgs += @("--config", $UpdaterTest) }
+  Invoke-Checked pnpm $buildArgs
 }
 finally {
   Copy-Item $confBackup $Conf -Force
@@ -187,7 +218,8 @@ $copied | ForEach-Object {
   $hash = (Get-FileHash -Algorithm SHA256 $_.FullName).Hash.ToLower()
   "$hash  $($_.Name)"
 } | Set-Content -Encoding ascii (Join-Path $Out "SHA256SUMS-windows")
-"build local`ncommit $(git rev-parse HEAD)`nbranche $(git rev-parse --abbrev-ref HEAD)`ndate $(Get-Date -Format o)" |
+$kind = if ($UpdaterTest) { "build local, updater-test : plugin de mise à jour actif, sans devtools" } else { "build local" }
+"$kind`ncommit $(git rev-parse HEAD)`nbranche $(git rev-parse --abbrev-ref HEAD)`ndate $(Get-Date -Format o)" |
   Set-Content -Encoding utf8 (Join-Path $Out "SOURCE")
 
 Write-Host ""

@@ -26,7 +26,7 @@ The links above always point to the latest version. Each release also publishes 
 curl -fsSL https://raw.githubusercontent.com/WillIsback/Syntheo/main/scripts/install.sh | bash
 ```
 
-The script downloads the AppImage of the latest release, checks its SHA256 sum, saves it as `~/.local/bin/Syntheo-<version>.AppImage`, and creates the `syntheo` command. Several versions can coexist.
+The script downloads the AppImage of the latest release, checks its SHA256 sum, saves it as `~/.local/bin/Syntheo.AppImage`, and creates the `syntheo` command. Reinstalling replaces the previous version and removes older `Syntheo-<version>.AppImage` files.
 
 Useful options:
 
@@ -102,9 +102,33 @@ gh attestation verify Syntheo-linux-x86_64.AppImage -R WillIsback/Syntheo
 
 On Windows, compare the output of `Get-FileHash <file>` with the matching line in `SHA256SUMS-windows`.
 
+### Update signatures
+
+For the built-in update, each release also publishes:
+
+- `latest.json`, the manifest the app reads: version, release notes, and for the AppImage and the NSIS installer the installer's address and its signature. It is listed in `SHA256SUMS`;
+- `Syntheo_<version>_amd64.AppImage.sig` and `Syntheo_<version>_x64-setup.exe.sig`, the signatures of these two installers.
+
+These signatures use a Tauri (minisign) key specific to Syntheo, separate from Windows code signing. The app embeds the public key and rejects any installer whose signature does not match, or whose signed version differs from the announced version. Key ID: `682D46182EA91D28`. Public key, as set in the app's configuration:
+
+```text
+dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDY4MkQ0NjE4MkVBOTFEMjgKUldRb0hha3VHRVl0YUF3MmVBV2ZTNlU5Wit4R1hETDlBWmRSSk0wNTZwLzNOVi9YNUtMYVNyUHUK
+```
+
+The `.deb` package and the MSI are not signed for updates: the app reports the new version and links to the download page.
+
 ## Update
 
-Syntheo has no built-in automatic update. To move to a new version, run the install script again or download the new package from [GitHub Releases](https://github.com/WillIsback/Syntheo/releases/latest). Your notes are kept.
+Syntheo checks for updates at startup (on by default) and when you ask in **Settings › Profile**, "Updates" section: "Check for updates". The notification area also offers "Check for Updates…".
+
+- **AppImage and Windows installer (.exe)**: when a newer version exists, a message announces it in the sidebar ("See the update"). In Settings, read what's new, then "Download the update" and "Install and restart". Nothing is installed without your action, and never while a meeting is being recorded. Syntheo checks the installer's signature before installing it (see [Update signatures](#update-signatures)). Your notes and settings are kept.
+- **.deb package and MSI**: Syntheo announces the new version and opens the download page; install the new package as you did the first one.
+
+The check reads the `latest.json` file of the latest release on GitHub, then, if you update, downloads the installer from GitHub. No personal data is sent; GitHub sees the computer's IP address. To stop checking at startup, turn off "Check for updates at startup". On a managed computer, the administrator can turn it off with the `automatic_updates` key set to `false` in `managed_settings.json`. Offline or behind a firewall, the startup check fails silently; a manual check shows the error.
+
+The update replaces the AppImage file without renaming it. An AppImage downloaded by hand as `Syntheo_0.7.3_amd64.AppImage` will therefore hold the next version under that name. The install script avoids this by installing it as `Syntheo.AppImage`.
+
+The built-in update works from version 0.7.3 onward. To move from an earlier version to 0.7.3, run the install script again or download the new package from [GitHub Releases](https://github.com/WillIsback/Syntheo/releases/latest).
 
 To remove the app, alone or with all your data, see [Uninstall Syntheo](/en/uninstall).
 

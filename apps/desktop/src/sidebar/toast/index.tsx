@@ -14,6 +14,12 @@ import {
 import type { ToastType } from "./types";
 import { useDismissedToasts } from "./useDismissedToasts";
 
+import {
+  openUpdateSettings,
+  useStartupUpdateCheck,
+  useTrayUpdateCheck,
+} from "~/services/updater/startup";
+import { useUpdater } from "~/services/updater/store";
 import { useConfigValues } from "~/shared/config";
 import { useLatestRef } from "~/shared/hooks/useLatestRef";
 import { useDevtoolsToastPreview } from "~/store/zustand/devtools-toast-preview";
@@ -26,6 +32,11 @@ export function ToastNotifications() {
     () => new Set<string>(),
   );
   const shouldShowToast = useShouldShowToast();
+  useStartupUpdateCheck();
+  useTrayUpdateCheck();
+  const availableUpdate = useUpdater((state) =>
+    state.phase === "available" && state.update ? state.update.version : null,
+  );
 
   const {
     current_llm_provider,
@@ -81,6 +92,8 @@ export function ToastNotifications() {
   const registry = useMemo(
     () =>
       createToastRegistry({
+        availableUpdate,
+        onOpenUpdate: openUpdateSettings,
         hasLLMConfigured,
         hasSttConfigured,
         isAiTranscriptionTabActive,
@@ -89,6 +102,7 @@ export function ToastNotifications() {
         onOpenSTTSettings: handleOpenSTTSettings,
       }),
     [
+      availableUpdate,
       hasLLMConfigured,
       hasSttConfigured,
       isAiTranscriptionTabActive,

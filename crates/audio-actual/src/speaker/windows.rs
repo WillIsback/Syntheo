@@ -344,7 +344,7 @@ fn open_loopback_capture(device: Device) -> Result<LoopbackCapture> {
     };
 
     audio_client
-        .initialize_client(&accepted_format, &Direction::Capture, &mode)
+        .initialize_client(&accepted_format, Direction::Capture, mode, None)
         .context("Failed to initialize WASAPI loopback client")?;
     if format.sample_rate != DEFAULT_SAMPLE_RATE {
         return Err(anyhow::anyhow!(
@@ -385,7 +385,7 @@ fn open_endpoint_loopback_client(device: &Device) -> Result<(AudioClient, WaveFo
     let desired_format = WaveFormat::new(
         32,
         32,
-        &SampleType::Float,
+        SampleType::Float,
         DEFAULT_SAMPLE_RATE as usize,
         mix_format.get_nchannels() as usize,
         Some(mix_format.get_dwchannelmask()),
@@ -424,12 +424,12 @@ fn open_render_device(enumerator: &DeviceEnumerator, preferred: Option<&str>) ->
     }
 
     enumerator
-        .get_default_device(&Direction::Render)
+        .get_default_device(Direction::Render)
         .context("Failed to get default render device")
 }
 
 fn render_device_named(enumerator: &DeviceEnumerator, name: &str) -> Option<Device> {
-    let collection = enumerator.get_device_collection(&Direction::Render).ok()?;
+    let collection = enumerator.get_device_collection(Direction::Render).ok()?;
     collection
         .into_iter()
         .filter_map(|device| device.ok())

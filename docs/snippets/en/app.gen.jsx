@@ -87,6 +87,8 @@ const SYN_LABELS = {
   "Cancel dictation": "Cancel dictation",
   "Capture meeting chat in the note": "Capture meeting chat in the note",
   "Captured right now:": "Captured right now:",
+  "Check for updates": "Check for updates",
+  "Check for updates at startup": "Check for updates at startup",
   "Choose": "Choose",
   "Choose folder": "Choose folder",
   "Choose the microphone that captures your voice.": "Choose the microphone that captures your voice.",
@@ -263,6 +265,7 @@ const SYN_LABELS = {
   "Unmute system audio": "Unmute system audio",
   "Unmute the microphone": "Unmute the microphone",
   "Unreachable": "Unreachable",
+  "Updates": "Updates",
   "Use main language for summaries": "Use main language for summaries",
   "Use this protocol": "Use this protocol",
   "Used for transcription and automatic summary language detection.": "Used for transcription and automatic summary language detection.",
@@ -2050,6 +2053,13 @@ const SynSectionApp = ({ focus }) => {
             <button type="button" className="syn-ui-btn">{L("Show release notes")}</button>
           </div>
           {h(SynSwitchRow, { title: L("Show tray icon"), initial: true })}
+        </div>
+        <div>
+          <h2 className="syn-h2" style={{ fontSize: 18 }}>{L("Updates")}</h2>
+          <div style={{ padding: "12px 0" }}>
+            <button type="button" className="syn-ui-btn">{L("Check for updates")}</button>
+          </div>
+          {h(SynSwitchRow, { title: L("Check for updates at startup"), initial: true })}
         </div>
         <div ref={langRef}>{h(SynProfLanguage, { focus })}</div>
         <div>

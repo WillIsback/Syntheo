@@ -28,6 +28,7 @@
   },
   "bundle": {
     "publisher": "Syntheo",
+    "category": "Productivity",
     "active": true,
     "createUpdaterArtifacts": false,
     "targets": "all",
@@ -89,6 +90,16 @@
         "schemes": [
           "syntheo-dev"
         ]
+      }
+    },
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDY4MkQ0NjE4MkVBOTFEMjgKUldRb0hha3VHRVl0YUF3MmVBV2ZTNlU5Wit4R1hETDlBWmRSSk0wNTZwLzNOVi9YNUtMYVNyUHUK",
+      "endpoints": [
+        "https://github.com/WillIsback/Syntheo/releases/latest/download/latest.json"
+      ],
+      "requireSignedVersion": true,
+      "windows": {
+        "installMode": "quiet"
       }
     }
   }

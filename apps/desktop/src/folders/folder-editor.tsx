@@ -9,48 +9,49 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@syntheo/ui/components/ui/dropdown-menu";
 import { Input } from "@syntheo/ui/components/ui/input";
 import { cn } from "@syntheo/utils";
 
 import {
+  FolderDialogs,
+  followFolderRename,
+  useFolderDialogs,
+} from "./folder-actions";
+import {
   FolderHeaderActions,
   FolderMeetingSummaryLine,
 } from "./project/folder-header-actions";
 import { FolderMeetingsCard } from "./project/folder-meetings-card";
 import { FolderSidePanel } from "./project/folder-side-panel";
+import {
+  FolderBreadcrumb,
+  FolderSubfoldersCard,
+} from "./project/folder-subfolders";
 import { FolderThreadCard } from "./project/folder-thread-card";
 import { folderMeetingStats, useFolderMeetings } from "./project/meetings";
 import { NextMeetingSlot } from "./project/next-meeting-slot";
 import { useFolderThread } from "./project/thread-store";
 import { useFolderSelection } from "./selection";
 
-import {
-  deleteNamedFolder,
-  renameNamedFolder,
-  updateFolderIcon,
-} from "~/session/folder-catalog";
+import { renameNamedFolder, updateFolderIcon } from "~/session/folder-catalog";
 import { resolvedFolderIcon } from "~/session/folder-icon";
 import { folderDisplayName, normalizeFolderPath } from "~/session/folders";
-import { useFolderIcons } from "~/session/queries";
-import { DestructiveConfirmationDialog } from "~/shared/ui/destructive-confirmation-dialog";
+import { MoveNoteDialog } from "~/session/move-note";
+import { useFolderIcons, useFolderPaths } from "~/session/queries";
 import { TemplateIconPicker } from "~/templates/template-icon-picker";
 
 export function FolderEditor({ folderPath }: { folderPath: string }) {
   const { t } = useLingui();
-  const setSelectedPath = useFolderSelection((state) => state.setSelectedPath);
-  const markFolderDeleted = useFolderSelection(
-    (state) => state.markFolderDeleted,
-  );
+  const openDialog = useFolderDialogs((state) => state.open);
+  const folders = useFolderPaths();
   const persistedIcons = useFolderIcons();
   const iconOverrides = useFolderSelection((state) => state.iconOverrides);
   const setIconOverride = useFolderSelection((state) => state.setIconOverride);
   const clearIconOverride = useFolderSelection(
     (state) => state.clearIconOverride,
-  );
-  const rekeyIconOverride = useFolderSelection(
-    (state) => state.rekeyIconOverride,
   );
   const icon = resolvedFolderIcon(folderPath, persistedIcons, iconOverrides);
   const meetings = useFolderMeetings(folderPath);
@@ -59,7 +60,6 @@ export function FolderEditor({ folderPath }: { folderPath: string }) {
   const skipTitleCommit = useRef(false);
   const [busy, setBusy] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
-  const [deleting, setDeleting] = useState(false);
   const displayName = folderDisplayName(folderPath);
   const [draft, setDraft] = useState(displayName);
 
@@ -90,14 +90,13 @@ export function FolderEditor({ folderPath }: { folderPath: string }) {
     setBusy(true);
     try {
       const renamed = await renameNamedFolder(folderPath, renamedPath);
-      rekeyIconOverride(folderPath, renamed);
-      setSelectedPath(renamed);
+      followFolderRename(folderPath, renamed);
     } catch {
       setDraft(displayName);
     } finally {
       setBusy(false);
     }
-  }, [displayName, draft, folderPath, rekeyIconOverride, setSelectedPath]);
+  }, [displayName, draft, folderPath]);
 
   return (
     <section className="flex h-full flex-1 flex-col" aria-label={folderPath}>
@@ -116,6 +115,7 @@ export function FolderEditor({ folderPath }: { folderPath: string }) {
             }}
           />
           <div className="max-w-full min-w-0">
+            <FolderBreadcrumb folderPath={folderPath} />
             <div className="relative max-w-full min-w-0">
               <span
                 aria-hidden="true"
@@ -172,7 +172,26 @@ export function FolderEditor({ folderPath }: { folderPath: string }) {
               <AppFloatingPanel className={appFloatingMenuPanelClassName}>
                 <DropdownMenuItem
                   disabled={busy}
-                  onClick={() => setDeleting(true)}
+                  onClick={() =>
+                    openDialog({ kind: "create", parentPath: folderPath })
+                  }
+                  className="cursor-pointer"
+                >
+                  <Trans>New subfolder…</Trans>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={busy}
+                  onClick={() => openDialog({ kind: "move", path: folderPath })}
+                  className="cursor-pointer"
+                >
+                  <Trans>Move to…</Trans>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  disabled={busy}
+                  onClick={() =>
+                    openDialog({ kind: "delete", path: folderPath })
+                  }
                   className="text-destructive focus:text-destructive cursor-pointer"
                 >
                   <Trans>Delete</Trans>
@@ -196,37 +215,20 @@ export function FolderEditor({ folderPath }: { folderPath: string }) {
               meetings={meetings}
               thread={thread}
             />
+            <FolderSubfoldersCard
+              folderPath={folderPath}
+              folders={folders}
+              meetings={meetings}
+              icons={persistedIcons}
+            />
             <FolderMeetingsCard folderPath={folderPath} meetings={meetings} />
           </div>
           <FolderSidePanel folderPath={folderPath} />
         </div>
       </div>
 
-      <DestructiveConfirmationDialog
-        open={deleting}
-        onOpenChange={setDeleting}
-        title={<Trans>Delete folder</Trans>}
-        description={
-          <Trans id="Notes stay in All notes. Materials in this folder will be deleted.">
-            Notes stay in All notes. This folder, its nested folders, and all
-            their materials will be deleted.
-          </Trans>
-        }
-        confirmLabel={<Trans>Delete folder</Trans>}
-        isPending={busy}
-        onConfirm={() => {
-          void (async () => {
-            setBusy(true);
-            try {
-              await deleteNamedFolder(folderPath);
-              setDeleting(false);
-              markFolderDeleted(folderPath);
-            } finally {
-              setBusy(false);
-            }
-          })();
-        }}
-      />
+      <FolderDialogs />
+      <MoveNoteDialog />
     </section>
   );
 }

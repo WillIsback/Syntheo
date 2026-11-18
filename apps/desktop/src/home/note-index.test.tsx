@@ -133,7 +133,7 @@ describe("NoteIndex", () => {
 
     const chip = rows[0]!.querySelector<HTMLElement>("[data-note-folder]");
     expect(chip?.textContent).toBe("Acme");
-    expect(chip?.getAttribute("title")).toBe("Clients/Acme");
+    expect(chip?.getAttribute("title")).toBe("Clients › Acme");
     expect(chip?.className).toContain("border-border");
     expect(rows[0]!.querySelector("[data-note-file]")).toBeNull();
     expect(rows[1]!.querySelector("[data-note-folder]")).toBeNull();
@@ -237,6 +237,37 @@ describe("NoteIndex", () => {
     expect(mocks.showMenu).toHaveBeenCalledTimes(2);
     fireEvent.keyDown(title, { key: "F10" });
     expect(mocks.showMenu).toHaveBeenCalledTimes(2);
+    expect(onOpen).not.toHaveBeenCalled();
+  });
+
+  it("« Déplacer vers… » figure dans le menu et vise la note de la ligne", () => {
+    const onMove = vi.fn();
+    render(
+      <NoteIndex
+        notes={NOTES}
+        onOpen={vi.fn()}
+        onExport={vi.fn()}
+        onDelete={vi.fn()}
+        onMove={onMove}
+      />,
+    );
+
+    fireEvent.contextMenu(screen.getAllByRole("row")[0]!);
+    expect(
+      lastMenu().map((entry) => ("separator" in entry ? "-" : entry.id)),
+    ).toEqual(["open", "move", "export", "-", "delete"]);
+    action("move").action();
+    expect(onMove).toHaveBeenCalledWith(NOTES[0]);
+  });
+
+  it("la pastille du dossier ouvre le sélecteur sans ouvrir la note", () => {
+    const { onOpen } = renderIndex();
+    const chip = screen.getByRole("button", {
+      name: "Folder: Clients › Acme. Move to another folder",
+    });
+
+    fireEvent.click(chip);
+    expect(screen.getByTestId("folder-picker").textContent).toBe("s1");
     expect(onOpen).not.toHaveBeenCalled();
   });
 });

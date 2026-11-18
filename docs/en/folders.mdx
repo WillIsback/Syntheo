@@ -21,24 +21,59 @@ The **Folders** view shows your folder tree on the left. Each folder shows its i
 
 Syntheo remembers which folders are expanded. With the keyboard, use the up and down arrows to browse the tree, the right arrow to expand, the left arrow to collapse, and <Kbd keys="Enter" /> to open.
 
+Right-click a folder in the tree to open its menu: "New subfolder…", "New note in this folder", "Move to…" and "Delete". With the keyboard, open the same menu with the menu key or <Kbd keys="Shift+F10" />.
+
+## Create a subfolder
+
+A folder can hold other folders, for example "Team", then "Operations" inside "Team". To create one:
+
+- in the tree, right-click the parent folder, then choose "New subfolder…";
+- or, on the parent folder's page, open the **•••** menu and choose "New subfolder…".
+
+Type the subfolder's name, without "/". The parent folder expands and the new subfolder opens. The **+** button at the top of the column always creates a top-level folder.
+
+A note's folder picker shows subfolders with their path, for example "Team › Operations". Search matches the full path.
+
+## Move a folder
+
+To file an existing folder inside another one, or move it back to the top level, choose "Move to…" in the **•••** menu of its page or in its tree menu. Pick the destination, then "Move". The folder keeps its name, subfolders, notes, icon, context and project thread.
+
+A folder cannot go into one of its own subfolders. If the destination already holds a folder with the same name, Syntheo says so and moves nothing.
+
+Renaming a folder in its page header works the same way: its subfolders follow with all their settings.
+
 ## File a note
 
 You choose a note's folder in several places:
 
 - **At the Prepare stage**, in the note's card, the "Folder" field shows the note's folder, or "Choose a folder" if it is not filed. Click it to search for a folder or create one ("Search or create folder").
-- **On the home screen**, in the "Resume" list, each note shows its folder's badge. A note that is not filed offers "File", which opens the same picker.
+- **On the home screen**, in the "Resume" list, each note shows its folder's badge: click it to file the note elsewhere. A note that is not filed offers "File", which opens the same picker.
 - **At the top right of a note**, next to the **•••** menu, the folder picker stays available at every stage.
 
 If a folder already holds a note with the same title, the picker suggests it first, under "Suggested", marked "same title". The comparison ignores case, accents, punctuation, dates and numbers. Syntheo never files a note without your click.
 
+### Move a note without opening it
+
+You can also move a filed note without opening it:
+
+- **in the folder tree**, right-click the note (or use the menu key or <Kbd keys="Shift+F10" />): "Open", "Move to…", "Remove from folder";
+- **on a folder's page**, in the "Meetings" block, a meeting's **⋮** button (on hover) or a right-click offers the same entries;
+- **on the home screen**, a note's menu offers "Move to…".
+
+"Move to…" opens the folder picker, with "No folder" to take the note out of its folder. In the tree, you can also drag a note onto a folder; a collapsed folder expands when you hover it for a moment.
+
+After each move, a message confirms the chosen folder ("Note moved to Team › Operations") and offers "Undo".
+
 ## A folder's page
 
-The header shows the folder's name, its icon and the number of meetings, with the dates of the first and the last one. Edit the name directly in the header, and choose another icon by clicking it. Two buttons act on the folder:
+Above a subfolder's name, a breadcrumb ("Team › Operations") shows its parent folders; click one to open its page. The header shows the folder's name, its icon and the number of meetings, with the dates of the first and the last one. Edit the name directly in the header, and choose another icon by clicking it. Two buttons act on the folder:
 
 - **"Ask the folder"** (<Kbd keys="Ctrl+J" />) opens the chat with this folder as context. See [Chat with your meetings](/en/chat).
 - **"New note in this folder"** creates a note that is already filed and opens it at the Prepare stage.
 
-The **•••** menu offers "Delete". The notes stay in "All Notes"; the folder, its subfolders and their attached files are deleted.
+The **•••** menu offers "New subfolder…", "Move to…" and "Delete". When you delete a folder, the notes stay in "All Notes"; the folder, its subfolders and their attached files are deleted.
+
+When the folder has subfolders, the "Subfolders" block lists them with their number of meetings. Click one to open its page.
 
 The right column groups:
 

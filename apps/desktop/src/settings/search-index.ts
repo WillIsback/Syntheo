@@ -81,6 +81,18 @@ export const SETTINGS_SEARCH_INDEX = [
     keywords: msg`what's new, changes, version, changelog`,
   },
   {
+    id: "check-for-updates",
+    page: "app",
+    label: msg`Check for updates`,
+    keywords: msg`update, upgrade, new version, download, install`,
+  },
+  {
+    id: "check-updates-on-startup",
+    page: "app",
+    label: msg`Check for updates at startup`,
+    keywords: msg`update, automatic, startup, network, GitHub`,
+  },
+  {
     id: "show-app-in-dock",
     page: "app",
     label: msg`Show app in Dock`,

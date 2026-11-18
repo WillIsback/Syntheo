@@ -18,3 +18,5 @@ CVE-2026-28980 exp:2027-01-31
 CVE-2026-43671 exp:2027-01-31
 # pnpm-lock.yaml : zod 3.x (correctif uniquement en 4.x)
 CVE-2023-54404 exp:2027-01-31
+# pnpm-lock.yaml : picomatch 4.0.7 (outillage de build et de test, sans correctif publié)
+CVE-2026-112366 exp:2027-01-31

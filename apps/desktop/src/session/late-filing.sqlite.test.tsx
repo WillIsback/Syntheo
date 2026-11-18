@@ -22,6 +22,8 @@ import {
 import { buildMoveMeetingsToFolderTool } from "~/chat/tools/folders";
 import { FileNoteButton } from "~/home/file-note-button";
 import { FolderPicker } from "~/session/components/folder-picker";
+import { moveNoteToFolder } from "~/session/move-note";
+import { updateSession } from "~/session/queries";
 
 // Issue 534 : une note synthétisée en « Automatique », rangée dans un dossier
 // qui a un modèle de compte rendu, doit recevoir la proposition de régénérer
@@ -40,6 +42,9 @@ const mocks = vi.hoisted(() => ({
   database: null as null | import("node:sqlite").DatabaseSync,
   listeners: new Set<() => void>(),
   toast: vi.fn(),
+  dismiss: vi.fn(),
+  // Retient la lecture du modèle pour simuler une proposition en cours.
+  templateGate: Promise.resolve() as Promise<void>,
   enhance: vi.fn(async () => ({ type: "started" })),
 }));
 
@@ -95,12 +100,20 @@ vi.mock("~/db", async () => {
   };
 });
 
-vi.mock("@syntheo/ui/components/ui/toast", () => ({ toast: mocks.toast }));
+vi.mock("@syntheo/ui/components/ui/toast", () => ({
+  toast: Object.assign((...args: unknown[]) => mocks.toast(...args), {
+    dismiss: (...args: unknown[]) => mocks.dismiss(...args),
+  }),
+}));
 vi.mock("~/templates/queries", () => ({
-  getTemplateById: async (id: string) =>
-    (query("SELECT id, title FROM templates WHERE id = ?", [id])[0] as
-      | { id: string; title: string }
-      | undefined) ?? null,
+  getTemplateById: async (id: string) => {
+    await mocks.templateGate;
+    return (
+      (query("SELECT id, title FROM templates WHERE id = ?", [id])[0] as
+        | { id: string; title: string }
+        | undefined) ?? null
+    );
+  },
 }));
 vi.mock("~/services/enhancer", () => ({
   getEnhancerService: () => ({ enhance: mocks.enhance }),
@@ -185,7 +198,10 @@ function storedFolder() {
 async function fileWithHeaderPicker(folder: string) {
   render(<FolderPicker sessionId="session-1" />);
   fireEvent.click(screen.getByRole("combobox", { name: "Select folder" }));
-  fireEvent.click(await screen.findByRole("option", { name: folder }));
+  // Le sélecteur affiche les chemins imbriqués avec « › » (issue 590).
+  fireEvent.click(
+    await screen.findByRole("option", { name: folder.split("/").join(" › ") }),
+  );
   await waitFor(() => expect(storedFolder()).toBe(folder));
 }
 
@@ -217,7 +233,132 @@ describe("late filing proposal on every filing path", () => {
     cleanup();
     mocks.listeners.clear();
     mocks.toast.mockReset();
+    mocks.dismiss.mockReset();
     mocks.enhance.mockClear();
+  });
+
+  function lateFilingToasts() {
+    return mocks.toast.mock.calls.filter(
+      ([, options]) =>
+        (options as { id?: string } | undefined)?.id ===
+        "late-filing-session-1",
+    );
+  }
+
+  it("withdraws the pending proposal when the note leaves the folder", async () => {
+    seed();
+    await updateSession("session-1", { folder_id: "Atlas" });
+    await waitFor(() => expect(lateFilingToasts()).toHaveLength(1));
+
+    // « Retirer du dossier » ou « Annuler » vers aucun dossier : la proposition
+    // visait Atlas, elle est fermée et aucune autre n'arrive.
+    await updateSession("session-1", { folder_id: "" });
+    expect(mocks.dismiss).toHaveBeenCalledWith("late-filing-session-1");
+    await act(() => new Promise((done) => setTimeout(done, 30)));
+    expect(lateFilingToasts()).toHaveLength(1);
+  });
+
+  it("drops a proposal computed for a folder the note has already left", async () => {
+    seed();
+    let release!: () => void;
+    mocks.templateGate = new Promise((done) => (release = done));
+    try {
+      // La proposition pour Atlas est en cours de calcul (modèle en lecture)
+      // quand la note quitte le dossier : elle ne doit pas s'afficher.
+      await updateSession("session-1", { folder_id: "Atlas" });
+      await act(() => new Promise((done) => setTimeout(done, 20)));
+      await updateSession("session-1", { folder_id: "" });
+      release();
+
+      await expectNoProposal();
+      expect(storedFolder()).toBe("");
+    } finally {
+      mocks.templateGate = Promise.resolve();
+    }
+  });
+
+  it("proposes nothing when a move is undone", async () => {
+    seed();
+    await updateSession(
+      "session-1",
+      { folder_id: "Atlas" },
+      { proposeLateFiling: false },
+    );
+
+    await expectNoProposal();
+    expect(storedFolder()).toBe("Atlas");
+    // Le changement de dossier ferme quand même une proposition en cours.
+    expect(mocks.dismiss).toHaveBeenCalledWith("late-filing-session-1");
+  });
+
+  // Issue 603 : la proposition passait devant « Note déplacée | Annuler »,
+  // replié derrière elle et inaccessible sans survol.
+  type ToastAction = { label: string; onClick: () => void };
+  type ToastOptions = {
+    id?: string;
+    action?: ToastAction;
+    secondaryAction?: ToastAction;
+  };
+  function toastsWithId(id: string) {
+    return mocks.toast.mock.calls.filter(
+      ([, options]) => (options as ToastOptions | undefined)?.id === id,
+    ) as Array<[string, ToastOptions]>;
+  }
+
+  it("keeps « Undo » on the single message when a move offers to regenerate", async () => {
+    seed();
+    await moveNoteToFolder({ id: "session-1", folderPath: "" }, "Atlas");
+    expect(toastsWithId("move-note-session-1")).toHaveLength(1);
+    await waitFor(() => expect(lateFilingToasts()).toHaveLength(1));
+
+    // Le message du déplacement est remplacé par la proposition, qui porte
+    // les deux actions : un seul message, rien de caché dans la pile.
+    expect(mocks.dismiss).toHaveBeenCalledWith("move-note-session-1");
+    const [message, options] = toastsWithId("late-filing-session-1")[0]!;
+    expect(message).toBe("This folder uses the Standup quotidien template");
+    expect(options.action?.label).toBe("Regenerate");
+    expect(options.secondaryAction?.label).toBe("Undo");
+
+    // « Annuler » remet la note à sa place, ferme la proposition et n'en
+    // propose pas d'autre (issue 592).
+    mocks.dismiss.mockClear();
+    options.secondaryAction!.onClick();
+    await waitFor(() => expect(storedFolder()).toBe(""));
+    expect(mocks.dismiss).toHaveBeenCalledWith("late-filing-session-1");
+    await act(() => new Promise((done) => setTimeout(done, 30)));
+    expect(lateFilingToasts()).toHaveLength(1);
+    expect(mocks.enhance).not.toHaveBeenCalled();
+  });
+
+  it("keeps the move message alone for a folder without a template", async () => {
+    seed({ folderTemplateId: "" });
+    await moveNoteToFolder({ id: "session-1", folderPath: "" }, "Atlas");
+    await act(() => new Promise((done) => setTimeout(done, 30)));
+
+    expect(lateFilingToasts()).toHaveLength(0);
+    expect(mocks.dismiss).not.toHaveBeenCalledWith("move-note-session-1");
+    const [[message, options]] = toastsWithId("move-note-session-1");
+    expect(message).toBe("Note moved to Atlas");
+    expect(options.action?.label).toBe("Undo");
+  });
+
+  it("shows no proposal when the move is undone before it arrives", async () => {
+    seed();
+    let release!: () => void;
+    mocks.templateGate = new Promise((done) => (release = done));
+    try {
+      await moveNoteToFolder({ id: "session-1", folderPath: "" }, "Atlas");
+      const [[, options]] = toastsWithId("move-note-session-1");
+      options.action!.onClick();
+      await waitFor(() => expect(storedFolder()).toBe(""));
+      release();
+
+      await act(() => new Promise((done) => setTimeout(done, 30)));
+      expect(lateFilingToasts()).toHaveLength(0);
+      expect(mocks.dismiss).not.toHaveBeenCalledWith("move-note-session-1");
+    } finally {
+      mocks.templateGate = Promise.resolve();
+    }
   });
 
   // Le cas relevé par William sur l'alpha 0.7.0-7.
@@ -245,7 +386,17 @@ describe("late filing proposal on every filing path", () => {
     fireEvent.click(screen.getByRole("button", { name: "File" }));
     fireEvent.click(await screen.findByRole("option", { name: "Atlas" }));
 
-    await waitFor(() => expect(mocks.toast).toHaveBeenCalledTimes(1));
+    // Le bouton affiche aussi « Note déplacée vers Atlas » avec « Annuler »
+    // (issue 592) : on vérifie la proposition de rangement tardif.
+    await waitFor(() =>
+      expect(
+        mocks.toast.mock.calls.filter(
+          ([, options]) =>
+            (options as { id?: string } | undefined)?.id ===
+            "late-filing-session-1",
+        ),
+      ).toHaveLength(1),
+    );
     expect(storedFolder()).toBe("Atlas");
   });
 

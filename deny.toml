@@ -22,16 +22,14 @@ ignore = [
   { id = "RUSTSEC-2026-0104", reason = "rustls-webpki 0.101 via SDK AWS (s3, bedrock) : retiré aux chantiers 04b/04d" },
   { id = "RUSTSEC-2026-0382", reason = "rustls-webpki 0.101 via SDK AWS (s3, bedrock) : retiré aux chantiers 04b/04d" },
   { id = "RUSTSEC-2026-0258", reason = "h2 0.3 via SDK AWS (s3, bedrock) : retiré aux chantiers 04b/04d" },
-  # Inférence embarquée (local-llm, local-stt) et updater Fastrepl : retirés aux chantiers 04b et 04d.
-  { id = "RUSTSEC-2026-0367", reason = "zip 2.x (local-llm/local-stt) et 4.x (tauri-plugin-updater) : retirés aux chantiers 04b/04d" },
-  { id = "RUSTSEC-2026-0368", reason = "zip 2.x (local-llm/local-stt) et 4.x (tauri-plugin-updater) : retirés aux chantiers 04b/04d" },
-  { id = "RUSTSEC-2026-0369", reason = "zip 2.x (local-llm/local-stt) et 4.x (tauri-plugin-updater) : retirés aux chantiers 04b/04d" },
   # Outils de build et de test, absents du binaire livré.
   { id = "RUSTSEC-2025-0111", reason = "tokio-tar via testcontainers (dev-dependency) : non livré" },
   { id = "RUSTSEC-2026-0194", reason = "quick-xml : wayland-scanner (génération au build) et plist/citationberg (fichiers locaux) ; à suivre en amont" },
   { id = "RUSTSEC-2026-0195", reason = "quick-xml : wayland-scanner (génération au build) et plist/citationberg (fichiers locaux) ; à suivre en amont" },
+  # Crates non maintenues sans faille connue ni version corrigée (avis du 2026-11-17).
+  { id = "RUSTSEC-2026-0543", reason = "chrono / chrono-tz non maintenus, sans faille connue : remplacement suivi dans l'issue 595 (expire 2027-01-31)" },
+  { id = "RUSTSEC-2026-0555", reason = "chrono / chrono-tz non maintenus, sans faille connue : remplacement suivi dans l'issue 595 (expire 2027-01-31)" },
   # Plateformes non livrées ou dépendances de Tauri.
-  { id = "RUSTSEC-2026-0332", reason = "wasapi : Windows uniquement, non livré (paquets Linux seulement)" },
   { id = "RUSTSEC-2024-0429", reason = "glib 0.18 (gtk-rs) tiré par Tauri sur Linux : en attente de la migration GTK4 de Tauri" },
   { id = "RUSTSEC-2024-0422", reason = "gtk-layer-shell 0.8 (GTK3) : pastille de réunion en calque Wayland (issue 448), suit gtk-rs 0.18 de Tauri jusqu'à sa migration GTK4" },
   # Capture audio : correctif = montée de version de ringbuf dans audio-actual (chantier 04c).

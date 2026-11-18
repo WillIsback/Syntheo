@@ -36,6 +36,26 @@ const mocks = vi.hoisted(() => ({
   createSession: vi.fn(),
   openNew: vi.fn(),
   transitionChatMode: vi.fn(),
+  folderPaths: [] as string[],
+  menu: [] as Array<{ id?: string; action?: () => void }>,
+}));
+
+// Le sélecteur de dossier a ses propres tests : ici, seule compte
+// l'ouverture de « Déplacer vers… ».
+vi.mock("~/session/components/folder-picker", () => ({
+  FolderPickerContent: () => <div data-testid="folder-picker" />,
+}));
+
+// Menu natif Tauri : on capture les entrées pour les déclencher.
+vi.mock("~/shared/hooks/useNativeContextMenu", () => ({
+  showNativeContextMenu: (
+    items: Array<{ id?: string; action?: () => void }>,
+    event: { preventDefault: () => void },
+  ) => {
+    event.preventDefault();
+    mocks.menu = items;
+    return Promise.resolve();
+  },
 }));
 
 function query(sql: string, params: unknown[] = []) {
@@ -147,6 +167,7 @@ vi.mock("~/session/folder-catalog", () => ({
 
 vi.mock("~/session/queries", () => ({
   useFolderIcons: () => ({}),
+  useFolderPaths: () => mocks.folderPaths,
   createSession: mocks.createSession,
 }));
 
@@ -176,6 +197,7 @@ import { FolderEditor } from "../folder-editor";
 import { useFolderSelection } from "../selection";
 
 import { messages as englishMessages } from "~/i18n/locales/en/messages";
+import { useMoveNoteDialog } from "~/session/move-note";
 
 const MIGRATIONS = resolve(process.cwd(), "../../crates/db-app/migrations");
 let schema = "";
@@ -271,6 +293,7 @@ describe("Folder project page", () => {
   });
 
   beforeEach(() => {
+    useMoveNoteDialog.setState({ note: null });
     const database = new DatabaseSync(":memory:");
     database.exec(schema);
     mocks.database = database;
@@ -319,6 +342,27 @@ describe("Folder project page", () => {
     mocks.database = null;
   });
 
+  it("moves a meeting from its row menu without opening it", async () => {
+    renderPage();
+
+    const actions = screen.getAllByRole("button", { name: "More actions" });
+    fireEvent.click(actions[0]!);
+    expect(mocks.menu.map((entry) => entry.id)).toEqual([
+      "open",
+      "move",
+      "remove-from-folder",
+    ]);
+    act(() => mocks.menu[1]!.action!());
+    expect(
+      await screen.findByText("Move “Préparation recette” to…"),
+    ).toBeTruthy();
+    expect(mocks.openNew).not.toHaveBeenCalled();
+
+    // Clic droit sur une autre ligne : même menu, pour cette réunion.
+    fireEvent.contextMenu(screen.getByText("Atelier onboarding"));
+    expect(mocks.menu.map((entry) => entry.id)).toContain("move");
+  });
+
   it("lists the meetings of the folder and its nested folders, most recent first", () => {
     renderPage();
 
@@ -326,7 +370,9 @@ describe("Folder project page", () => {
       "3 meetings · since Oct 19 · last on Wed, Oct 28",
     );
     const titles = [
-      ...document.querySelectorAll<HTMLButtonElement>("ol > li button"),
+      ...document.querySelectorAll<HTMLButtonElement>(
+        "ol > li button:not([data-meeting-actions])",
+      ),
     ].map((button) => button.textContent);
     expect(titles).toEqual([
       "Préparation recette",

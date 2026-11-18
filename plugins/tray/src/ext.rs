@@ -28,8 +28,8 @@ use crate::locale::{self, NativeLocale};
 #[cfg(target_os = "macos")]
 use crate::menu_items::{AppInfo, AppNew, HelpReportBug, HelpSuggestFeature, TrayQuit};
 use crate::menu_items::{
-    MenuItemHandler, TrayHide, TrayOpen, TrayQuitCompletely, TraySettings, TrayShowEvents,
-    TrayStart, TrayVersion, build_agenda_item,
+    MenuItemHandler, TrayCheckUpdates, TrayHide, TrayOpen, TrayQuitCompletely, TraySettings,
+    TrayShowEvents, TrayStart, TrayVersion, build_agenda_item,
 };
 use tauri_plugin_store2::Store2PluginExt;
 
@@ -429,6 +429,7 @@ impl<'a, M: tauri::Manager<tauri::Wry>> Tray<'a, tauri::Wry, M> {
             START_DISABLED.load(Ordering::SeqCst),
         )?)?;
         menu.append(&TraySettings::build(app)?)?;
+        menu.append(&TrayCheckUpdates::build(app)?)?;
         menu.append(&PredefinedMenuItem::separator(app)?)?;
         menu.append(&TrayVersion::build(app)?)?;
         menu.append(&PredefinedMenuItem::separator(app)?)?;

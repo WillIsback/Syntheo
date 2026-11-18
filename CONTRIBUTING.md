@@ -166,6 +166,18 @@ bash scripts/build-alpha.sh --from . --fast --quick 0.7.1-4  # en plus, profil R
 > échoue ; ailleurs hors plage, le script avertit seulement, comme pnpm. Sous
 > Arch, si linuxdeploy échoue sur `strip`, relancer avec `NO_STRIP=true`.
 
+### Build de test de la mise à jour intégrée
+
+Pour la QA seulement : `bash scripts/build-alpha.sh --updater-test <surcouche.json> X.Y.Z-N`
+(Linux) et `build-alpha.ps1 -Version X.Y.Z-N -UpdaterTest <surcouche.json>` (Windows)
+construisent sans `devtools`, plugin de mise à jour actif, avec une surcouche non commitée
+(`plugins.updater.pubkey` d'une clé de test jetable, endpoint local en http et
+`dangerousInsecureTransportProtocol`). `scripts/generate-updater-manifest.mjs --base-url`
+fait pointer `latest.json` vers le serveur local. Ces builds portent l'identifiant de
+production : jamais installés sur un poste de travail, seulement dans un conteneur ou une VM
+de test. Un test (`config_identity.rs`) refuse toute configuration commitée qui autoriserait
+un endpoint hors de `https://github.com/`.
+
 ### Windows (NSIS + MSI)
 
 À faire dans une VM Windows 11. `scripts/build-alpha.ps1` reprend les étapes de
@@ -246,6 +258,31 @@ pnpm -F ui build && pnpm -F desktop test
 pnpm exec dprint check $(git diff --name-only main)
 cargo test --locked -p template-app -p db-app
 ```
+
+## Clé de mise à jour intégrée
+
+La release signe l'AppImage et l'installeur NSIS avec une clé Tauri dédiée
+(job `updater` de `release.yml`, `tauri signer sign --app-version`), puis publie
+`latest.json` (`scripts/generate-updater-manifest.mjs`). La clé privée et son
+mot de passe sont les secrets du dépôt `TAURI_SIGNING_PRIVATE_KEY` et
+`TAURI_SIGNING_PRIVATE_KEY_PASSWORD`, lus par ce seul job ; une copie de
+sauvegarde est gardée hors du dépôt par le mainteneur. La clé publique est dans
+`apps/desktop/src-tauri/tauri.conf.json` (`plugins.updater.pubkey`).
+
+**Perdre la clé privée coupe la mise à jour intégrée** : les versions installées
+n'acceptent que des installeurs signés par elle, il faudrait réinstaller chaque
+poste à la main.
+
+Rotation (clé compromise ou remplacée) :
+
+1. Générer une nouvelle paire : `pnpm -F desktop tauri signer generate -w ~/.tauri/syntheo-updater.key`, avec mot de passe.
+2. Publier une release encore signée par l'**ancienne** clé, dont la
+   configuration embarque la **nouvelle** clé publique : les postes s'y mettent
+   à jour, puis ne font plus confiance qu'à la nouvelle clé.
+3. Remplacer les deux secrets du dépôt par la nouvelle clé, mettre à jour la
+   clé publique et son identifiant dans `docs/*/desktop-installation.mdx`.
+4. Une clé compromise ne peut pas être révoquée à distance : les postes
+   restés sur une version antérieure à l'étape 2 doivent être réinstallés.
 
 ## Exceptions de sécurité
 

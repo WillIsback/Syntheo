@@ -283,7 +283,8 @@
     "Produit/Roadmap": "Product/Roadmap",
     "Rétro sprint 44": "Sprint 44 retro",
     "\"Client Altis\"": "\"Altis client\"",
-    "\"Recrutement\"": "\"Hiring\""
+    "\"Recrutement\"": "\"Hiring\"",
+    "`Ouvre « Déplacer vers… » pour « ${note.title} », sans ouvrir la note.`": "`Opens “Move to…” for “${note.title}”, without opening the note.`"
   },
   "settings-dictation.jsx.tpl": {
     "Bonjour Camille, je vous envoie le compte rendu de jeudi avant midi.": "Hi Camille, I'll send you Thursday's summary before noon.",

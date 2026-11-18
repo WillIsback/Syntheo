@@ -14,13 +14,6 @@ exceptions:
     expires: "2027-01-31"
     author: "WillIsback"
     path: "Cargo.lock"
-  - cve: "RUSTSEC-2026-0367, RUSTSEC-2026-0368, RUSTSEC-2026-0369"
-    reason: >-
-      zip 2.x (local-llm, local-stt) et 4.x (tauri-plugin-updater) : inférence
-      embarquée et updater Fastrepl retirés aux chantiers 04b et 04d.
-    expires: "2027-01-31"
-    author: "WillIsback"
-    path: "Cargo.lock"
   - cve: "RUSTSEC-2025-0111, CVE-2025-62518, CVE-2026-40034, CVE-2026-44471, GHSA-fr8x-3vfx-f45h, GHSA-p3hw-mv63-rf9w, GHSA-pg4w-g64p-qwhj, GHSA-x494-mj8g-cj27, RUSTSEC-2026-0194, RUSTSEC-2026-0195"
     reason: >-
       Outils de build et de test absents du binaire livré : tokio-tar
@@ -30,9 +23,16 @@ exceptions:
     expires: "2027-01-31"
     author: "WillIsback"
     path: "Cargo.lock"
-  - cve: "RUSTSEC-2026-0332, RUSTSEC-2024-0429, RUSTSEC-2024-0422, CVE-2026-28980, CVE-2026-43671"
+  - cve: "RUSTSEC-2026-0543, RUSTSEC-2026-0555"
     reason: >-
-      Plateformes non livrées ou dépendances de Tauri : wasapi (Windows),
+      chrono / chrono-tz non maintenus, sans faille connue : remplacement suivi
+      dans l'issue 595 (expire 2027-01-31).
+    expires: "2027-01-31"
+    author: "WillIsback"
+    path: "Cargo.lock"
+  - cve: "RUSTSEC-2024-0429, RUSTSEC-2024-0422, CVE-2026-28980, CVE-2026-43671"
+    reason: >-
+      Plateformes non livrées ou dépendances de Tauri :
       swift-nio (transcribe-soniqo, macOS, retiré au chantier 04b), glib 0.18
       (gtk-rs tiré par Tauri sur Linux, en attente de la migration GTK4),
       gtk-layer-shell 0.8 (liaisons GTK3 non maintenues, pastille de réunion en
@@ -82,3 +82,16 @@ exceptions:
     expires: "2026-12-09"
     author: "WillIsback"
     path: "Cargo.lock"
+  - cve: "CVE-2026-112366"
+    reason: >-
+      picomatch 4.0.7, dernière version publiée, sans correctif : tiré par
+      l'outillage de build et de test (vite, vitest, tinyglobby, rollup), absent
+      de l'application livrée ; le déni de service demande un motif glob que
+      seul le dépôt fournit. Seule dépendance d'exécution concernée :
+      react-scan (outil développeur), dont seul le plugin de build
+      (react-component-name) utilise @rollup/pluginutils et picomatch ; aucun
+      picomatch dans le bundle de l'application. À retirer dès qu'une version
+      corrigée existe (issue 595).
+    expires: "2027-01-31"
+    author: "WillIsback"
+    path: "pnpm-lock.yaml"
