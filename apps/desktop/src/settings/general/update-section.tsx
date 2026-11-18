@@ -1,6 +1,9 @@
 import { Trans, useLingui } from "@lingui/react/macro";
+import { defaultRehypePlugins, Streamdown } from "streamdown";
 
+import { changelogComponents } from "@syntheo/changelog";
 import { commands as openerCommands } from "@syntheo/plugin-opener2";
+import { streamdownIcons } from "@syntheo/ui/components/streamdown-icons";
 import { Button } from "@syntheo/ui/components/ui/button";
 
 import { useLiveQuery } from "~/db";
@@ -27,6 +30,57 @@ function openReleasePage(url: string) {
   void openerCommands.openUrl(url, null).catch((error) => {
     console.error("[updater] failed to open the release page", error);
   });
+}
+
+// Les notes viennent de `latest.json` (note de version en Markdown, issue 598).
+// HTML brut ignoré, images non chargées, et un lien n'ouvre que le navigateur :
+// la fenêtre de l'application ne navigue jamais.
+const updateNotesComponents = {
+  ...changelogComponents,
+  a: ({ href, children }: { href?: string; children?: React.ReactNode }) =>
+    href && /^https?:\/\//i.test(href) ? (
+      <a
+        className="text-primary decoration-primary/40 underline underline-offset-2"
+        href={href}
+        onClick={(event) => {
+          event.preventDefault();
+          openReleasePage(href);
+        }}
+      >
+        {children}
+      </a>
+    ) : (
+      <span>{children}</span>
+    ),
+  img: ({ alt }: { alt?: string }) => (alt ? <span>{alt}</span> : null),
+};
+
+// Sans `rehype-raw` : le HTML reste un nœud brut, que `skipHtml` retire.
+const updateNotesRehypePlugins = [
+  defaultRehypePlugins.sanitize,
+  defaultRehypePlugins.harden,
+];
+
+function UpdateNotes({ notes }: { notes: string }) {
+  return (
+    <div
+      data-testid="update-notes"
+      className="scroll-fade-y mt-2 max-h-72 overflow-y-auto pr-2"
+    >
+      <Streamdown
+        icons={streamdownIcons}
+        components={updateNotesComponents}
+        rehypePlugins={updateNotesRehypePlugins}
+        skipHtml
+        mode="static"
+        isAnimating={false}
+        controls={false}
+        linkSafety={{ enabled: false }}
+      >
+        {notes}
+      </Streamdown>
+    </div>
+  );
 }
 
 function formatBytes(bytes: number, locale: string): string {
@@ -135,7 +189,7 @@ export function UpdateSection({ version }: { version: string | undefined }) {
         />
       ) : null}
 
-      {update?.notes &&
+      {update?.notes?.trim() &&
       (phase === "available" ||
         phase === "downloading" ||
         phase === "ready") ? (
@@ -143,9 +197,7 @@ export function UpdateSection({ version }: { version: string | undefined }) {
           <summary className="cursor-pointer">
             <Trans>What's new in {update.version}</Trans>
           </summary>
-          <p className="text-muted-foreground mt-2 whitespace-pre-line">
-            {update.notes}
-          </p>
+          <UpdateNotes notes={update.notes} />
         </details>
       ) : null}
 

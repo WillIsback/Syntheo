@@ -108,7 +108,7 @@ describe("UpdateSection", () => {
     expect(screen.getByRole("status").textContent).toContain(
       "Version 0.7.4 is available.",
     );
-    expect(screen.getByText("- Sous-dossiers")).toBeTruthy();
+    expect(screen.getByRole("listitem").textContent).toBe("Sous-dossiers");
     fireEvent.click(
       screen.getByRole("button", { name: "Download the update" }),
     );
@@ -127,6 +127,93 @@ describe("UpdateSection", () => {
       screen.getByRole("button", { name: "Install and restart" }),
     );
     expect(useUpdater.getState().install).toHaveBeenCalled();
+  });
+
+  it("renders the release notes as Markdown, in a bounded scroll area", () => {
+    render(<UpdateSection version="0.7.3" />);
+    setUpdater({
+      phase: "available",
+      update: {
+        ...UPDATE,
+        notes: [
+          "Les dossiers acceptent des sous-dossiers.",
+          "",
+          "## Dossiers",
+          "",
+          "- **Sous-dossiers :** un dossier peut en contenir d'autres.",
+          "- Réglage `automatic_updates` à `false`.",
+          "",
+          "```",
+          "~/.local/bin/Syntheo.AppImage",
+          "```",
+        ].join("\n"),
+      },
+    });
+
+    const notes = screen.getByTestId("update-notes");
+    expect(notes.className).toContain("max-h-72");
+    expect(notes.className).toContain("overflow-y-auto");
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Dossiers" }),
+    ).toBeTruthy();
+    const items = screen.getAllByRole("listitem");
+    expect(items).toHaveLength(2);
+    expect(items[0].querySelector("strong")?.textContent).toBe(
+      "Sous-dossiers :",
+    );
+    expect(
+      [...notes.querySelectorAll("code")].map((code) => code.textContent),
+    ).toEqual(
+      expect.arrayContaining([
+        "automatic_updates",
+        "false",
+        expect.stringContaining("~/.local/bin/Syntheo.AppImage"),
+      ]),
+    );
+    expect(notes.textContent).not.toMatch(/##|\*\*|`/);
+  });
+
+  it("never interprets raw HTML nor navigates the window from a link", () => {
+    render(<UpdateSection version="0.7.3" />);
+    setUpdater({
+      phase: "available",
+      update: {
+        ...UPDATE,
+        notes: [
+          '<img src="https://evil.example/x.png" onerror="alert(1)">',
+          '<a href="https://evil.example">piège</a>',
+          "",
+          "[Voir la release](https://github.com/WillIsback/Syntheo/releases)",
+          "",
+          "[Script](javascript:alert(1))",
+        ].join("\n"),
+      },
+    });
+
+    const notes = screen.getByTestId("update-notes");
+    expect(notes.querySelector("img")).toBeNull();
+    expect(notes.querySelector('[href^="https://evil"]')).toBeNull();
+    expect(notes.querySelector('[href^="javascript"]')).toBeNull();
+    expect(screen.queryByRole("link", { name: "Script" })).toBeNull();
+    expect(notes.textContent).toContain("Script");
+
+    const link = screen.getByRole("link", { name: "Voir la release" });
+    const click = new MouseEvent("click", { bubbles: true, cancelable: true });
+    link.dispatchEvent(click);
+    expect(click.defaultPrevented).toBe(true);
+    expect(mocks.openUrl).toHaveBeenCalledWith(
+      "https://github.com/WillIsback/Syntheo/releases",
+      null,
+    );
+  });
+
+  it("shows no notes block for empty or missing notes", () => {
+    render(<UpdateSection version="0.7.3" />);
+    for (const notes of [null, "", "  \n "]) {
+      setUpdater({ phase: "available", update: { ...UPDATE, notes } });
+      expect(screen.queryByTestId("update-notes")).toBeNull();
+      expect(screen.queryByText(/What's new in/)).toBeNull();
+    }
   });
 
   it("never installs during a recording", () => {
