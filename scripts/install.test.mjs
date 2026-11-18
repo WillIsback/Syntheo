@@ -1,12 +1,24 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { chmod, mkdir, mkdtemp, readFile, readlink, rm, stat, writeFile } from "node:fs/promises";
+import {
+  chmod,
+  mkdir,
+  mkdtemp,
+  readFile,
+  readlink,
+  rm,
+  stat,
+  writeFile,
+} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
-const INSTALL_SH = path.join(path.dirname(fileURLToPath(import.meta.url)), "install.sh");
+const INSTALL_SH = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "install.sh",
+);
 
 // curl factice : résout "latest" vers v9.9.9, sert l'AppImage factice pour le
 // téléchargement et répond 404 au manifeste SHA256SUMS.
@@ -61,15 +73,19 @@ async function runInstall(t, { installDir, env = {} } = {}) {
   await chmod(appImage, 0o755);
 
   const target = installDir ?? path.join(home, ".local", "bin");
-  const stdout = execFileSync("bash", [INSTALL_SH, "--to", target, "--dir", path.join(root, "dl")], {
-    env: {
-      HOME: home,
-      PATH: `${bin}:/usr/bin:/bin`,
-      FAKE_APPIMAGE: appImage,
-      ...env,
+  const stdout = execFileSync(
+    "bash",
+    [INSTALL_SH, "--to", target, "--dir", path.join(root, "dl")],
+    {
+      env: {
+        HOME: home,
+        PATH: `${bin}:/usr/bin:/bin`,
+        FAKE_APPIMAGE: appImage,
+        ...env,
+      },
+      encoding: "utf8",
     },
-    encoding: "utf8",
-  });
+  );
   return { root, home, target, stdout };
 }
 
@@ -85,9 +101,49 @@ test("installe une entrée de lanceur à partir de celle embarquée", async (t) 
   assert.match(desktop, /^StartupWMClass=syntheo$/m);
   assert.match(stdout, /Lanceur  : .*Syntheo\.desktop/);
 
-  const icon = path.join(home, ".local", "share", "icons", "hicolor", "128x128", "apps", "syntheo.png");
+  const icon = path.join(
+    home,
+    ".local",
+    "share",
+    "icons",
+    "hicolor",
+    "128x128",
+    "apps",
+    "syntheo.png",
+  );
   assert.equal(await readFile(icon, "utf8"), "png");
-  assert.equal(await readlink(path.join(target, "syntheo")), path.join(target, "Syntheo-9.9.9.AppImage"));
+  assert.equal(
+    await readlink(path.join(target, "syntheo")),
+    path.join(target, "Syntheo.AppImage"),
+  );
+});
+
+test("installe l'AppImage sous un nom stable et retire les anciennes versions", async (t) => {
+  // La mise à jour intégrée remplace le fichier en place (issue 591) : un nom
+  // versionné deviendrait faux après la première mise à jour.
+  const root = await mkdtemp(path.join(os.tmpdir(), "syntheo-migr-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const installDir = path.join(root, "bin");
+  await mkdir(installDir, { recursive: true });
+  await writeFile(path.join(installDir, "Syntheo-0.7.2.AppImage"), "ancienne");
+  await writeFile(path.join(installDir, "autre-outil"), "garde");
+
+  const { stdout } = await runInstall(t, { installDir });
+
+  assert.equal(
+    await readlink(path.join(installDir, "syntheo")),
+    path.join(installDir, "Syntheo.AppImage"),
+  );
+  await stat(path.join(installDir, "Syntheo.AppImage"));
+  await assert.rejects(stat(path.join(installDir, "Syntheo-0.7.2.AppImage")));
+  assert.equal(
+    await readFile(path.join(installDir, "autre-outil"), "utf8"),
+    "garde",
+  );
+  assert.match(
+    stdout,
+    /Ancienne version retirée : .*Syntheo-0\.7\.2\.AppImage/,
+  );
 });
 
 test("respecte XDG_DATA_HOME", async (t) => {
@@ -111,7 +167,9 @@ test("échappe un répertoire d'installation contenant des caractères spéciaux
 });
 
 test("crée une entrée par défaut si l'extraction échoue, sans faire échouer l'installation", async (t) => {
-  const { home, target } = await runInstall(t, { env: { FAKE_EXTRACT_FAIL: "1" } });
+  const { home, target } = await runInstall(t, {
+    env: { FAKE_EXTRACT_FAIL: "1" },
+  });
   const desktop = await readFile(
     path.join(home, ".local", "share", "applications", "Syntheo.desktop"),
     "utf8",
@@ -122,6 +180,9 @@ test("crée une entrée par défaut si l'extraction échoue, sans faire échouer
 });
 
 test("le script désinstalle l'entrée qu'il a créée", async () => {
-  const uninstall = await readFile(path.join(path.dirname(INSTALL_SH), "uninstall.sh"), "utf8");
+  const uninstall = await readFile(
+    path.join(path.dirname(INSTALL_SH), "uninstall.sh"),
+    "utf8",
+  );
   assert.match(uninstall, /applications\/\*\[Ss\]yntheo\*\.desktop/);
 });
