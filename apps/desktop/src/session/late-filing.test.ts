@@ -8,10 +8,15 @@ const mocks = vi.hoisted(() => ({
   summaryContent: "",
   folderTemplateId: undefined as string | undefined,
   toast: vi.fn(),
+  dismiss: vi.fn(),
   enhance: vi.fn(async () => ({ type: "started", noteId: "summary-1" })),
 }));
 
-vi.mock("@syntheo/ui/components/ui/toast", () => ({ toast: mocks.toast }));
+vi.mock("@syntheo/ui/components/ui/toast", () => ({
+  toast: Object.assign((...args: unknown[]) => mocks.toast(...args), {
+    dismiss: (...args: unknown[]) => mocks.dismiss(...args),
+  }),
+}));
 vi.mock("~/session/content-queries", () => ({
   loadSessionContentSnapshot: async () => ({
     title: "Point produit",
@@ -115,7 +120,31 @@ describe("proposeLateFiling", () => {
 
   afterEach(() => {
     mocks.toast.mockReset();
+    mocks.dismiss.mockReset();
     mocks.enhance.mockClear();
+  });
+
+  it("takes over the move message and its « Undo » (issue 603)", async () => {
+    const undo = vi.fn();
+    await proposeLateFiling("session-1", () => true, {
+      toastId: "move-note-session-1",
+      label: "Undo",
+      onClick: undo,
+    });
+
+    expect(mocks.dismiss).toHaveBeenCalledWith("move-note-session-1");
+    const [, options] = mocks.toast.mock.calls[0]!;
+    expect(options.id).toBe("late-filing-session-1");
+    expect(options.action.label).toBe("Regenerate");
+    options.secondaryAction.onClick();
+    expect(undo).toHaveBeenCalled();
+    expect(mocks.enhance).not.toHaveBeenCalled();
+  });
+
+  it("leaves other messages alone without a move to undo", async () => {
+    await proposeLateFiling("session-1");
+    expect(mocks.dismiss).not.toHaveBeenCalled();
+    expect(mocks.toast.mock.calls[0]![1].secondaryAction).toBeUndefined();
   });
 
   it("offers to regenerate an Automatic summary with the folder template", async () => {

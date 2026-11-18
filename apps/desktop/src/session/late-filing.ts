@@ -10,7 +10,7 @@ import {
 import { loadSessionFolderTemplateId } from "~/folders/folder-template";
 import { getEnhancerService } from "~/services/enhancer";
 import { loadSessionContentSnapshot } from "~/session/content-queries";
-import { lateFilingToastId } from "~/session/queries/sessions";
+import { lateFilingToastId, type UndoMove } from "~/session/queries/sessions";
 import { getTemplateById } from "~/templates/queries";
 
 // Rangement tardif (issue 502) : une note déjà synthétisée qui entre dans un
@@ -107,9 +107,12 @@ function regenerate(
 
 // `isCurrent` (issue 592) : faux si la note a changé de dossier depuis le
 // rangement qui a déclenché la proposition ; elle n'est alors pas affichée.
+// `undoMove` (issue 603) : la proposition remplace le message du déplacement
+// et garde son « Annuler », visible sans survoler la pile de messages.
 export async function proposeLateFiling(
   sessionId: string,
   isCurrent: () => boolean = () => true,
+  undoMove?: UndoMove,
 ): Promise<void> {
   const proposal = await loadLateFilingProposal(sessionId);
   if (!proposal) {
@@ -120,6 +123,9 @@ export async function proposeLateFiling(
     return;
   }
   const title = template.title.trim() || t`Untitled`;
+  if (undoMove) {
+    toast.dismiss(undoMove.toastId);
+  }
   toast(t`This folder uses the ${title} template`, {
     id: lateFilingToastId(sessionId),
     description: t`Regenerate the summary with this template? The current version stays in the history.`,
@@ -128,5 +134,13 @@ export async function proposeLateFiling(
       label: t`Regenerate`,
       onClick: () => regenerate(sessionId, proposal, title),
     },
+    ...(undoMove
+      ? {
+          secondaryAction: {
+            label: undoMove.label,
+            onClick: undoMove.onClick,
+          },
+        }
+      : {}),
   });
 }

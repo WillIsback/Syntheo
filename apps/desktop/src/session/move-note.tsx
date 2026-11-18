@@ -43,24 +43,29 @@ export async function moveNoteToFolder(
   const to = normalizeFolderPath(targetPath) ?? "";
   if (from === to) return;
 
-  await updateSession(note.id, { folder_id: to });
+  const toastId = `move-note-${note.id}`;
+  const undo = {
+    toastId,
+    label: t`Undo`,
+    onClick: () => {
+      // Annuler ne propose pas de régénérer : la note revient d'où elle
+      // venait (issue 592).
+      void updateSession(
+        note.id,
+        { folder_id: from },
+        { proposeLateFiling: false },
+      ).catch((error) => {
+        console.error("[move-note] failed to undo the move", error);
+      });
+    },
+  };
+  // Une proposition de régénérer (dossier avec modèle) remplace ce message et
+  // reprend « Annuler » (issue 603).
+  await updateSession(note.id, { folder_id: to }, { undoMove: undo });
   const label = folderPathLabel(to);
   toast(to ? t`Note moved to ${label}` : t`Note removed from its folder`, {
-    id: `move-note-${note.id}`,
-    action: {
-      label: t`Undo`,
-      onClick: () => {
-        // Annuler ne propose pas de régénérer : la note revient d'où elle
-        // venait (issue 592).
-        void updateSession(
-          note.id,
-          { folder_id: from },
-          { proposeLateFiling: false },
-        ).catch((error) => {
-          console.error("[move-note] failed to undo the move", error);
-        });
-      },
-    },
+    id: toastId,
+    action: { label: undo.label, onClick: undo.onClick },
   });
 }
 

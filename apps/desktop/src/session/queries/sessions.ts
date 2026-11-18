@@ -321,6 +321,19 @@ export type UpdateSessionOptions = {
    * suit tout rangement dans un nouveau dossier.
    */
   proposeLateFiling?: boolean;
+  /**
+   * Annulation du déplacement d'où vient ce rangement (issue 603). Si une
+   * proposition de régénérer s'affiche, elle remplace le message
+   * `toastId` et porte aussi « Annuler » : deux messages empilés cachaient
+   * « Annuler » sous la proposition.
+   */
+  undoMove?: UndoMove;
+};
+
+export type UndoMove = {
+  toastId: string;
+  label: string;
+  onClick: () => void;
 };
 
 export function updateSession(
@@ -380,6 +393,7 @@ export function updateSession(
       offerLateFilingRegeneration(
         sessionId,
         () => folderChangeSeq.get(sessionId) === folderSeq,
+        options.undoMove,
       );
     }
   });
@@ -402,9 +416,12 @@ async function loadSessionFolderPath(
 function offerLateFilingRegeneration(
   sessionId: string,
   isCurrent: () => boolean,
+  undoMove?: UndoMove,
 ) {
   void import("~/session/late-filing")
-    .then(({ proposeLateFiling }) => proposeLateFiling(sessionId, isCurrent))
+    .then(({ proposeLateFiling }) =>
+      proposeLateFiling(sessionId, isCurrent, undoMove),
+    )
     .catch((error) => {
       console.error("[late-filing] failed to check the folder template", error);
     });
