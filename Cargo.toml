@@ -103,7 +103,7 @@ openai-transcription = { path = "crates/openai-transcription", package = "openai
 owhisper-client = { path = "crates/owhisper-client", package = "owhisper-client" }
 owhisper-interface = { path = "crates/owhisper-interface", package = "owhisper-interface" }
 
-ashpd = { version = "0.13.13", default-features = false }
+ashpd = { version = "0.14.0", default-features = false }
 tauri = "2.11.5"
 tauri-build = "2.6.3"
 tauri-plugin = "2.5"
