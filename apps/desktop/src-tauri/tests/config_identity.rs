@@ -109,3 +109,35 @@ fn decode_base64(input: &str) -> String {
     }
     String::from_utf8(out).expect("utf-8")
 }
+
+// Garde-fou du build de test (issue 593) : la surcouche locale (endpoint http,
+// transport non chiffré autorisé) ne doit jamais être commitée.
+#[test]
+fn committed_configs_never_allow_an_insecure_or_foreign_update_endpoint() {
+    let mut configs: Vec<String> = std::fs::read_dir(".")
+        .unwrap()
+        .filter_map(|entry| entry.ok())
+        .map(|entry| entry.file_name().to_string_lossy().into_owned())
+        .filter(|name| name.starts_with("tauri.") && name.ends_with(".json"))
+        .collect();
+    configs.sort();
+    assert!(configs.contains(&"tauri.conf.json".to_string()));
+    for name in configs {
+        let raw = std::fs::read_to_string(&name).unwrap();
+        assert!(
+            !raw.contains("dangerousInsecureTransportProtocol")
+                && !raw.contains("dangerous-insecure-transport-protocol"),
+            "{name} ne doit pas autoriser un transport non chiffré"
+        );
+        let config: Value = serde_json::from_str(&raw).unwrap();
+        if let Some(endpoints) = config["plugins"]["updater"]["endpoints"].as_array() {
+            for endpoint in endpoints {
+                let endpoint = endpoint.as_str().unwrap_or_default();
+                assert!(
+                    endpoint.starts_with("https://github.com/"),
+                    "{name} : endpoint de mise à jour hors de https://github.com/ ({endpoint})"
+                );
+            }
+        }
+    }
+}

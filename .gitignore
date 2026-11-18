@@ -25,3 +25,6 @@ internal
 .worktrees/
 .changelog-hmr-*/
 .claude/launch.json
+
+# Surcouche locale du build de test de la mise à jour (scripts/build-alpha.*, --updater-test)
+apps/desktop/src-tauri/.updater-test.conf.json

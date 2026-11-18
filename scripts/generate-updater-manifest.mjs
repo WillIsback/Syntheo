@@ -16,6 +16,9 @@
 //   --dist dist --notes notes.md --repo WillIsback/Syntheo [--out dist/latest.json]
 // Contrôle (job publish) : node scripts/generate-updater-manifest.mjs check \
 //   --version v0.7.3 --dist dist --repo WillIsback/Syntheo [--manifest dist/latest.json]
+// Build de test de la QA (issue 593) : --base-url http://127.0.0.1:8765 fait
+// pointer les installeurs vers un serveur local. Sans --base-url, le manifeste
+// est celui de la release (URL GitHub versionnées). release.yml ne le passe pas.
 
 import { readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -61,16 +64,31 @@ export function signatureFields(signature) {
  * Construit le manifeste. `readSignature(fileName)` renvoie le contenu du
  * `.sig` de l'installeur (ou lève une erreur s'il manque).
  */
+/** Adresse d'un installeur : release GitHub, ou serveur de test (`baseUrl`). */
+export function installerUrl({ repo, version, fileName, baseUrl }) {
+  if (baseUrl) {
+    return `${baseUrl.replace(/\/+$/, "")}/${encodeURIComponent(fileName)}`;
+  }
+  return `https://github.com/${repo}/releases/download/v${version}/${encodeURIComponent(fileName)}`;
+}
+
 export async function buildUpdaterManifest({
   version,
   notes,
   repo,
   pubDate = new Date(),
   readSignature,
+  baseUrl,
 }) {
   const v = plainVersion(version);
   if (!/^[\w.-]+\/[\w.-]+$/.test(repo ?? "")) {
     throw new Error(`dépôt invalide : « ${repo} »`);
+  }
+  if (
+    baseUrl !== undefined &&
+    !/^https?:\/\/[^\s/?#]+(\/[^\s?#]*)?$/.test(baseUrl)
+  ) {
+    throw new Error(`adresse de base invalide : « ${baseUrl} »`);
   }
   const platforms = {};
   for (const [key, fileFor] of Object.entries(UPDATER_PLATFORMS)) {
@@ -94,7 +112,7 @@ export async function buildUpdaterManifest({
       signature,
       // URL versionnée, pas l'alias stable : l'URL et la signature désignent
       // toujours les mêmes octets.
-      url: `https://github.com/${repo}/releases/download/v${v}/${encodeURIComponent(fileName)}`,
+      url: installerUrl({ repo, version: v, fileName, baseUrl }),
     };
   }
   return {
@@ -106,7 +124,10 @@ export async function buildUpdaterManifest({
 }
 
 /** Contrôle d'un manifeste publié contre le tag et le contenu de `dist/`. */
-export function checkUpdaterManifest(manifest, { version, repo, files }) {
+export function checkUpdaterManifest(
+  manifest,
+  { version, repo, files, baseUrl },
+) {
   const v = plainVersion(version);
   const errors = [];
   if (manifest.version !== v) {
@@ -117,7 +138,9 @@ export function checkUpdaterManifest(manifest, { version, repo, files }) {
   if (keys.join(",") !== expected.join(",")) {
     errors.push(`plateformes [${keys}] ≠ [${expected}]`);
   }
-  const prefix = `https://github.com/${repo}/releases/download/v${v}/`;
+  const prefix = baseUrl
+    ? `${baseUrl.replace(/\/+$/, "")}/`
+    : `https://github.com/${repo}/releases/download/v${v}/`;
   for (const [key, entry] of Object.entries(manifest.platforms ?? {})) {
     if (!entry.url?.startsWith(prefix)) {
       errors.push(`${key} : URL hors de la release v${v} (${entry.url})`);
@@ -159,6 +182,7 @@ async function check(options) {
     version: options.version,
     repo: options.repo,
     files,
+    baseUrl: options["base-url"],
   });
   const v = plainVersion(options.version);
   for (const fileFor of Object.values(UPDATER_PLATFORMS)) {
@@ -190,6 +214,7 @@ async function main() {
     repo: options.repo,
     readSignature: (fileName) =>
       readFile(path.join(dist, `${fileName}.sig`), "utf8"),
+    baseUrl: options["base-url"],
   });
   const out = options.out ?? path.join(dist, "latest.json");
   await writeFile(out, `${JSON.stringify(manifest, null, 2)}\n`);
