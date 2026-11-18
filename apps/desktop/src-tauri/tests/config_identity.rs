@@ -18,8 +18,13 @@ fn syntheo_configs_have_syntheo_identity() {
         json!(["syntheo-dev"])
     );
     assert_eq!(dev["bundle"]["createUpdaterArtifacts"], false);
+    // Catégorie du lanceur (issue 602) : « Productivity » donne
+    // `Categories=Office;` dans le .desktop de l'AppImage et du .deb, comme le
+    // lanceur de repli de scripts/install.sh. La surcouche de release en hérite.
+    assert_eq!(dev["bundle"]["category"], "Productivity");
 
     let rel = read("tauri.conf.syntheo.json");
+    assert!(rel["bundle"].get("category").is_none());
     assert_eq!(rel["identifier"], "fr.willisback.syntheo");
     assert_eq!(
         rel["plugins"]["deep-link"]["desktop"]["schemes"],
