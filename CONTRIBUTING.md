@@ -247,6 +247,31 @@ pnpm exec dprint check $(git diff --name-only main)
 cargo test --locked -p template-app -p db-app
 ```
 
+## Clé de mise à jour intégrée
+
+La release signe l'AppImage et l'installeur NSIS avec une clé Tauri dédiée
+(job `updater` de `release.yml`, `tauri signer sign --app-version`), puis publie
+`latest.json` (`scripts/generate-updater-manifest.mjs`). La clé privée et son
+mot de passe sont les secrets du dépôt `TAURI_SIGNING_PRIVATE_KEY` et
+`TAURI_SIGNING_PRIVATE_KEY_PASSWORD`, lus par ce seul job ; une copie de
+sauvegarde est gardée hors du dépôt par le mainteneur. La clé publique est dans
+`apps/desktop/src-tauri/tauri.conf.json` (`plugins.updater.pubkey`).
+
+**Perdre la clé privée coupe la mise à jour intégrée** : les versions installées
+n'acceptent que des installeurs signés par elle, il faudrait réinstaller chaque
+poste à la main.
+
+Rotation (clé compromise ou remplacée) :
+
+1. Générer une nouvelle paire : `pnpm -F desktop tauri signer generate -w ~/.tauri/syntheo-updater.key`, avec mot de passe.
+2. Publier une release encore signée par l'**ancienne** clé, dont la
+   configuration embarque la **nouvelle** clé publique : les postes s'y mettent
+   à jour, puis ne font plus confiance qu'à la nouvelle clé.
+3. Remplacer les deux secrets du dépôt par la nouvelle clé, mettre à jour la
+   clé publique et son identifiant dans `docs/*/desktop-installation.mdx`.
+4. Une clé compromise ne peut pas être révoquée à distance : les postes
+   restés sur une version antérieure à l'étape 2 doivent être réinstallés.
+
 ## Exceptions de sécurité
 
 Une alerte acceptée temporairement est inscrite dans

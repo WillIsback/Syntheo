@@ -26,7 +26,7 @@ Les liens ci-dessus pointent toujours vers la dernière version. Chaque release 
 curl -fsSL https://raw.githubusercontent.com/WillIsback/Syntheo/main/scripts/install.sh | bash
 ```
 
-Le script télécharge l'AppImage de la dernière release, vérifie sa somme SHA256, l'enregistre sous `~/.local/bin/Syntheo-<version>.AppImage` et crée la commande `syntheo`. Plusieurs versions peuvent coexister.
+Le script télécharge l'AppImage de la dernière release, vérifie sa somme SHA256, l'enregistre sous `~/.local/bin/Syntheo.AppImage` et crée la commande `syntheo`. Une réinstallation remplace la version précédente et retire les anciens fichiers `Syntheo-<version>.AppImage`.
 
 Options utiles :
 
@@ -101,6 +101,21 @@ gh attestation verify Syntheo-linux-x86_64.AppImage -R WillIsback/Syntheo
 ```
 
 Sous Windows, comparez le résultat de `Get-FileHash <fichier>` avec la ligne correspondante de `SHA256SUMS-windows`.
+
+### Signatures de mise à jour
+
+Pour la mise à jour intégrée, chaque release publie aussi :
+
+- `latest.json`, le manifeste lu par l'application : version, notes de version, et pour l'AppImage et l'installeur NSIS l'adresse de l'installeur et sa signature. Il figure dans `SHA256SUMS` ;
+- `Syntheo_<version>_amd64.AppImage.sig` et `Syntheo_<version>_x64-setup.exe.sig`, les signatures de ces deux installeurs.
+
+Ces signatures utilisent une clé Tauri (minisign) propre à Syntheo, distincte de la signature de code Windows. L'application embarque la clé publique et refuse tout installeur dont la signature ne correspond pas, ou dont la version signée diffère de la version annoncée. Identifiant de la clé : `682D46182EA91D28`. Clé publique, telle qu'inscrite dans la configuration de l'application :
+
+```text
+dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDY4MkQ0NjE4MkVBOTFEMjgKUldRb0hha3VHRVl0YUF3MmVBV2ZTNlU5Wit4R1hETDlBWmRSSk0wNTZwLzNOVi9YNUtMYVNyUHUK
+```
+
+Le paquet `.deb` et le MSI ne sont pas signés pour la mise à jour : l'application signale la nouvelle version et renvoie vers la page de téléchargement.
 
 ## Mettre à jour
 

@@ -38,7 +38,7 @@ curl -fsSL https://raw.githubusercontent.com/WillIsback/Syntheo/main/scripts/uni
 
 The script removes:
 
-- the `Syntheo-*.AppImage` files from `~/.local/bin` and the `syntheo` command that points to them;
+- the `Syntheo.AppImage` and `Syntheo-*.AppImage` files from `~/.local/bin` and the `syntheo` command that points to them;
 - the `.deb` package, or the AUR package on Arch (with `sudo`);
 - the launch at startup (`~/.config/autostart`) and the menu shortcuts;
 - in a full uninstall: `~/.local/share/syntheo` (database and search index), `~/.local/share/fr.willisback.syntheo` (logs), the `fr.willisback.syntheo` configuration and cache, and the API keys in the keyring (Secret Service, with `secret-tool`).

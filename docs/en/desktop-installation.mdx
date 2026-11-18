@@ -26,7 +26,7 @@ The links above always point to the latest version. Each release also publishes 
 curl -fsSL https://raw.githubusercontent.com/WillIsback/Syntheo/main/scripts/install.sh | bash
 ```
 
-The script downloads the AppImage of the latest release, checks its SHA256 sum, saves it as `~/.local/bin/Syntheo-<version>.AppImage`, and creates the `syntheo` command. Several versions can coexist.
+The script downloads the AppImage of the latest release, checks its SHA256 sum, saves it as `~/.local/bin/Syntheo.AppImage`, and creates the `syntheo` command. Reinstalling replaces the previous version and removes older `Syntheo-<version>.AppImage` files.
 
 Useful options:
 
@@ -101,6 +101,21 @@ gh attestation verify Syntheo-linux-x86_64.AppImage -R WillIsback/Syntheo
 ```
 
 On Windows, compare the output of `Get-FileHash <file>` with the matching line in `SHA256SUMS-windows`.
+
+### Update signatures
+
+For the built-in update, each release also publishes:
+
+- `latest.json`, the manifest the app reads: version, release notes, and for the AppImage and the NSIS installer the installer's address and its signature. It is listed in `SHA256SUMS`;
+- `Syntheo_<version>_amd64.AppImage.sig` and `Syntheo_<version>_x64-setup.exe.sig`, the signatures of these two installers.
+
+These signatures use a Tauri (minisign) key specific to Syntheo, separate from Windows code signing. The app embeds the public key and rejects any installer whose signature does not match, or whose signed version differs from the announced version. Key ID: `682D46182EA91D28`. Public key, as set in the app's configuration:
+
+```text
+dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDY4MkQ0NjE4MkVBOTFEMjgKUldRb0hha3VHRVl0YUF3MmVBV2ZTNlU5Wit4R1hETDlBWmRSSk0wNTZwLzNOVi9YNUtMYVNyUHUK
+```
+
+The `.deb` package and the MSI are not signed for updates: the app reports the new version and links to the download page.
 
 ## Update
 

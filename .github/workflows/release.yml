@@ -192,9 +192,90 @@ jobs:
       contents: read
     uses: ./.github/workflows/ci-codeql.yml
 
+  # Mise à jour intégrée (issue 591) : signature des installeurs AppImage et
+  # NSIS par la clé Tauri dédiée, puis `latest.json`. Seul job à lire la clé
+  # privée. Signe les octets publiés (après Authenticode et réempaquetage de
+  # l'AppImage), en dernier. Tourne aussi en dry_run : le manifeste et les
+  # signatures sont alors déposés en artefact, sans publication.
+  updater:
+    name: Signatures de mise à jour et latest.json
+    needs: [detect, build, build-windows]
+    if: needs.detect.outputs.version != 'skipped'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Installer Node, pnpm et les dépendances (lockfile figé)
+        uses: ./.github/actions/pnpm_install
+
+      - name: Télécharger l'AppImage
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: syntheo-desktop-linux
+          path: installers
+
+      - name: Télécharger l'installeur NSIS
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: syntheo-desktop-windows
+          path: installers
+
+      - name: Signer les installeurs (clé de mise à jour Tauri)
+        shell: bash
+        env:
+          VERSION: ${{ needs.detect.outputs.version }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -z "${TAURI_SIGNING_PRIVATE_KEY}" ]; then
+            echo "::error::Secret TAURI_SIGNING_PRIVATE_KEY absent : la release ne peut pas publier de mise à jour intégrée."
+            exit 1
+          fi
+          v="${VERSION#v}"
+          mkdir -p updater
+          # Formats mis à jour par l'application : AppImage et NSIS. Le .deb et
+          # le MSI sont seulement annoncés (lien de téléchargement).
+          for file in "Syntheo_${v}_amd64.AppImage" "Syntheo_${v}_x64-setup.exe"; do
+            # --app-version lie la signature à la version (requireSignedVersion).
+            pnpm -F desktop exec tauri signer sign --app-version "$v" "$GITHUB_WORKSPACE/installers/$file" > /dev/null
+            test -s "installers/$file.sig" || { echo "::error::Signature absente ou vide : $file.sig"; exit 1; }
+            mv "installers/$file.sig" updater/
+          done
+          ls -l updater
+
+      - name: Générer latest.json
+        shell: bash
+        env:
+          VERSION: ${{ needs.detect.outputs.version }}
+        run: |
+          set -euo pipefail
+          # Même note de version que la release (rédigée dans la PR) ; vide en
+          # secours, l'application renvoie alors vers la page de la release.
+          node scripts/next-release-version.mjs --notes "$VERSION" > updater-notes.md || : > updater-notes.md
+          cp installers/*.AppImage installers/*-setup.exe updater/
+          node scripts/generate-updater-manifest.mjs \
+            --version "$VERSION" --dist updater --notes updater-notes.md \
+            --repo "$GITHUB_REPOSITORY" --out updater/latest.json
+          node scripts/generate-updater-manifest.mjs check \
+            --version "$VERSION" --dist updater --repo "$GITHUB_REPOSITORY"
+          rm updater/*.AppImage updater/*-setup.exe
+          cat updater/latest.json
+
+      - name: Upload des signatures et du manifeste
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: syntheo-updater
+          path: updater/
+          retention-days: 14
+
   publish:
     name: Publication de la release
-    needs: [detect, build, build-windows, sast]
+    needs: [detect, build, build-windows, sast, updater]
     if: |
       needs.detect.outputs.version != 'skipped'
       && (github.event_name != 'workflow_dispatch' || (inputs.dry_run != true && inputs.dry_run != 'true'))
@@ -227,6 +308,23 @@ jobs:
           name: syntheo-desktop-windows
           path: dist
 
+      - name: Télécharger les signatures de mise à jour et latest.json
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: syntheo-updater
+          path: dist
+
+      - name: Contrôler latest.json
+        shell: bash
+        env:
+          VERSION: ${{ needs.detect.outputs.version }}
+        run: |
+          set -euo pipefail
+          # Version du tag, URL de chaque installeur présent dans dist/,
+          # signatures non vides.
+          node scripts/generate-updater-manifest.mjs check \
+            --version "$VERSION" --dist dist --repo "$GITHUB_REPOSITORY"
+
       - name: Créer les alias d'assets stables
         shell: bash
         env:
@@ -242,14 +340,14 @@ jobs:
           cp "Syntheo_${v}_x64_en-US.msi" "Syntheo-windows-x64.msi"
           # Régénère les sommes en incluant les alias.
           rm -f SHA256SUMS SHA256SUMS-windows
-          sha256sum ./*.deb ./*.AppImage ./*.msi ./*.exe > SHA256SUMS
+          sha256sum ./*.deb ./*.AppImage ./*.msi ./*.exe ./latest.json > SHA256SUMS
           sha256sum ./*.msi ./*.exe > SHA256SUMS-windows
           cat SHA256SUMS SHA256SUMS-windows
 
       - name: Attestation de provenance
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
-          subject-path: "dist/*.deb, dist/*.AppImage, dist/*.msi, dist/*.exe"
+          subject-path: "dist/*.deb, dist/*.AppImage, dist/*.msi, dist/*.exe, dist/latest.json"
 
       - name: Générer le CHANGELOG
         shell: bash
@@ -328,6 +426,7 @@ jobs:
       build,
       build-windows,
       sast,
+      updater,
       publish,
     ]
     if: failure() && github.event_name == 'push'
@@ -344,6 +443,7 @@ jobs:
           BUILD: ${{ needs.build.result }}
           WINDOWS: ${{ needs.build-windows.result }}
           SAST: ${{ needs.sast.result }}
+          UPDATER: ${{ needs.updater.result }}
           PUBLISH: ${{ needs.publish.result }}
         with:
           script: |
@@ -354,6 +454,7 @@ jobs:
               `- **Build** : \`${process.env.BUILD}\``,
               `- **Build Windows** : \`${process.env.WINDOWS}\``,
               `- **Gate SAST (CodeQL)** : \`${process.env.SAST}\``,
+              `- **Signatures de mise à jour** : \`${process.env.UPDATER}\``,
               `- **Publish** : \`${process.env.PUBLISH}\``,
               '',
               `🔗 Run : ${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`,
