@@ -82,3 +82,16 @@ exceptions:
     expires: "2026-12-09"
     author: "WillIsback"
     path: "Cargo.lock"
+  - cve: "CVE-2026-112366"
+    reason: >-
+      picomatch 4.0.7, dernière version publiée, sans correctif : tiré par
+      l'outillage de build et de test (vite, vitest, tinyglobby, rollup), absent
+      de l'application livrée ; le déni de service demande un motif glob que
+      seul le dépôt fournit. Seule dépendance d'exécution concernée :
+      react-scan (outil développeur), dont seul le plugin de build
+      (react-component-name) utilise @rollup/pluginutils et picomatch ; aucun
+      picomatch dans le bundle de l'application. À retirer dès qu'une version
+      corrigée existe (issue 595).
+    expires: "2027-01-31"
+    author: "WillIsback"
+    path: "pnpm-lock.yaml"
