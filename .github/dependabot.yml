@@ -75,6 +75,10 @@ updates:
           "version-update:semver-major",
           "version-update:semver-minor",
         ] # macOS seulement, compilé ni par la CI ni par la release : bump non vérifiable
+      - dependency-name: "windows-core"
+        versions: [
+          ">= 0.63",
+        ] # PR #547 (0.62 → 0.100) : monte sans le crate windows, audio-device ne compile plus. Migration suivie dans #595 (retirer cette règle avec elle)
 
   - package-ecosystem: "github-actions"
     directories: ["/", "/.github/actions/*"]
