@@ -1,12 +1,16 @@
 import { Plural, Trans, useLingui } from "@lingui/react/macro";
-import { useState } from "react";
+import { type SyntheticEvent, useState } from "react";
 
+import { DotsThreeVertical } from "@syntheo/ui/components/icons";
+import { cn } from "@syntheo/utils";
 import { folderDisplayName } from "@syntheo/utils/folders";
 
 import { folderCardClassName } from "./folder-side-panel";
 import { formatMeetingDate } from "./format";
 import type { FolderMeeting } from "./meetings";
 
+import { useNoteMenuItems } from "~/session/move-note";
+import { showNativeContextMenu } from "~/shared/hooks/useNativeContextMenu";
 import { useTabs } from "~/store/zustand/tabs";
 
 const VISIBLE_MEETINGS = 5;
@@ -20,8 +24,21 @@ export function FolderMeetingsCard({
   folderPath: string;
   meetings: readonly FolderMeeting[];
 }) {
-  const { i18n } = useLingui();
+  const { t, i18n } = useLingui();
   const [expanded, setExpanded] = useState(false);
+  const noteMenu = useNoteMenuItems();
+  // Ouvrir, Déplacer vers…, Retirer du dossier (issue 592) : clic droit,
+  // bouton ⋮ (au survol ou au focus), touche menu ou Maj+F10.
+  const showMenu = (meeting: FolderMeeting, event: SyntheticEvent) => {
+    void showNativeContextMenu(
+      noteMenu({
+        id: meeting.id,
+        title: meeting.title,
+        folderPath: meeting.folderPath,
+      }),
+      event,
+    );
+  };
   const visible = expanded ? meetings : meetings.slice(0, VISIBLE_MEETINGS);
   const hiddenCount = meetings.length - visible.length;
 
@@ -44,7 +61,8 @@ export function FolderMeetingsCard({
           {visible.map((meeting) => (
             <li
               key={meeting.id}
-              className="grid grid-cols-[5.5rem_0.75rem_minmax(0,1fr)] gap-2.5 py-2"
+              onContextMenu={(event) => showMenu(meeting, event)}
+              className="group grid grid-cols-[5.5rem_0.75rem_minmax(0,1fr)_1.5rem] gap-2.5 py-2"
             >
               <span className="text-muted-foreground pt-px text-right text-xs">
                 {formatMeetingDate(meeting.createdAt, i18n.locale)}
@@ -62,6 +80,14 @@ export function FolderMeetingsCard({
                       .getState()
                       .openNew({ type: "sessions", id: meeting.id })
                   }
+                  onKeyDown={(event) => {
+                    if (
+                      event.key === "ContextMenu" ||
+                      (event.key === "F10" && event.shiftKey)
+                    ) {
+                      showMenu(meeting, event);
+                    }
+                  }}
                 >
                   {meeting.title.trim() || <Trans>Untitled</Trans>}
                 </button>
@@ -76,6 +102,21 @@ export function FolderMeetingsCard({
                   </p>
                 ) : null}
               </div>
+              <button
+                type="button"
+                data-meeting-actions
+                aria-label={t`More actions`}
+                aria-haspopup="menu"
+                onClick={(event) => showMenu(meeting, event)}
+                className={cn([
+                  "text-muted-foreground hover:text-foreground inline-flex size-6 items-center justify-center rounded-sm",
+                  "opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 focus-visible:opacity-100",
+                  "focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none",
+                  "motion-safe:transition-opacity",
+                ])}
+              >
+                <DotsThreeVertical className="size-4" aria-hidden="true" />
+              </button>
             </li>
           ))}
         </ol>

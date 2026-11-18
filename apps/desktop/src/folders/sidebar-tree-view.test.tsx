@@ -1,4 +1,10 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ openNew: vi.fn(), showMenu: vi.fn() }));
@@ -65,11 +71,15 @@ const tree = buildFolderTree(
   ],
 );
 
+type Item = { id: string; text: string; action: () => void };
+
 function renderTree(
   onSelectFolder = vi.fn(),
-  folderMenu?: (
-    path: string,
-  ) => Array<{ id: string; text: string; action: () => void }>,
+  folderMenu?: (path: string) => Item[],
+  extra: {
+    noteMenu?: (note: SearchNote) => Item[];
+    onDropNote?: (note: SearchNote, folderPath: string) => void;
+  } = {},
 ) {
   render(
     <FolderTreeView
@@ -79,9 +89,25 @@ function renderTree(
       iconFor={() => ({ type: "emoji", value: "📁" })}
       onSelectFolder={onSelectFolder}
       folderMenu={folderMenu}
+      noteMenu={extra.noteMenu}
+      onDropNote={extra.onDropNote}
     />,
   );
   return onSelectFolder;
+}
+
+// jsdom n'a pas de DataTransfer : un équivalent minimal suffit.
+function dataTransfer() {
+  const data = new Map<string, string>();
+  return {
+    get types() {
+      return [...data.keys()];
+    },
+    setData: (type: string, value: string) => data.set(type, value),
+    getData: (type: string) => data.get(type) ?? "",
+    effectAllowed: "",
+    dropEffect: "",
+  };
 }
 
 function item(name: string) {
@@ -250,5 +276,80 @@ describe("FolderTreeView", () => {
     fireEvent.contextMenu(item("Point r1"));
     expect(folderMenu).not.toHaveBeenCalled();
     expect(mocks.showMenu).not.toHaveBeenCalled();
+  });
+
+  it("opens the note menu on right click and Shift+F10", () => {
+    useExpandedFolders.getState().setExpanded("Recrutement", true);
+    const noteMenu = vi.fn(() => [
+      { id: "move", text: "Move to…", action: vi.fn() },
+    ]);
+    renderTree(vi.fn(), undefined, { noteMenu });
+
+    fireEvent.contextMenu(item("Point r1"));
+    expect(noteMenu).toHaveBeenLastCalledWith(
+      expect.objectContaining({ id: "r1", folderPath: "Recrutement" }),
+    );
+
+    fireEvent.keyDown(item("Point r1"), { key: "F10", shiftKey: true });
+    expect(mocks.showMenu).toHaveBeenCalledTimes(2);
+  });
+
+  it("files a note dragged onto another folder", () => {
+    useExpandedFolders.getState().setExpanded("Recrutement", true);
+    const onDropNote = vi.fn();
+    renderTree(vi.fn(), undefined, { onDropNote });
+
+    const transfer = dataTransfer();
+    expect(item("Point r1").getAttribute("draggable")).toBe("true");
+    fireEvent.dragStart(item("Point r1"), { dataTransfer: transfer });
+    fireEvent.dragOver(item("Atlas"), { dataTransfer: transfer });
+    expect(item("Atlas").dataset.dropTarget).toBe("true");
+    fireEvent.drop(item("Atlas"), { dataTransfer: transfer });
+
+    expect(onDropNote).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "r1" }),
+      "Atlas",
+    );
+    expect(item("Atlas").dataset.dropTarget).toBeUndefined();
+  });
+
+  it("ignores a drop on the note's own folder and foreign drags", () => {
+    useExpandedFolders.getState().setExpanded("Recrutement", true);
+    const onDropNote = vi.fn();
+    renderTree(vi.fn(), undefined, { onDropNote });
+
+    const transfer = dataTransfer();
+    fireEvent.dragStart(item("Point r1"), { dataTransfer: transfer });
+    fireEvent.drop(item("Recrutement"), { dataTransfer: transfer });
+    expect(onDropNote).not.toHaveBeenCalled();
+
+    // Un fichier glissé depuis le système n'est pas une note.
+    const file = dataTransfer();
+    file.setData("Files", "");
+    fireEvent.dragOver(item("Atlas"), { dataTransfer: file });
+    expect(item("Atlas").dataset.dropTarget).toBeUndefined();
+  });
+
+  it("expands a collapsed folder after hovering it while dragging", () => {
+    vi.useFakeTimers();
+    try {
+      useExpandedFolders.getState().setExpanded("Recrutement", true);
+      renderTree(vi.fn(), undefined, { onDropNote: vi.fn() });
+
+      const transfer = dataTransfer();
+      fireEvent.dragStart(item("Point r1"), { dataTransfer: transfer });
+      fireEvent.dragOver(item("Atlas"), { dataTransfer: transfer });
+      expect(useExpandedFolders.getState().expanded).not.toContain("Atlas");
+      act(() => vi.advanceTimersByTime(800));
+      expect(useExpandedFolders.getState().expanded).toContain("Atlas");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("makes no row draggable without a drop handler", () => {
+    useExpandedFolders.getState().setExpanded("Recrutement", true);
+    renderTree();
+    expect(item("Point r1").getAttribute("draggable")).toBeNull();
   });
 });

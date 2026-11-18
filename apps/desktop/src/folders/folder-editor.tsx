@@ -39,6 +39,7 @@ import { useFolderSelection } from "./selection";
 import { renameNamedFolder, updateFolderIcon } from "~/session/folder-catalog";
 import { resolvedFolderIcon } from "~/session/folder-icon";
 import { folderDisplayName, normalizeFolderPath } from "~/session/folders";
+import { MoveNoteDialog } from "~/session/move-note";
 import { useFolderIcons, useFolderPaths } from "~/session/queries";
 import { TemplateIconPicker } from "~/templates/template-icon-picker";
 
@@ -227,6 +228,7 @@ export function FolderEditor({ folderPath }: { folderPath: string }) {
       </div>
 
       <FolderDialogs />
+      <MoveNoteDialog />
     </section>
   );
 }

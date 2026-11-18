@@ -916,6 +916,10 @@ msgstr "Choose template icon"
 msgid "Choose the colors of Syntheo. Each palette follows the light or dark theme."
 msgstr "Choose the colors of Syntheo. Each palette follows the light or dark theme."
 
+#: src/session/move-note.tsx
+msgid "Choose the folder for this note."
+msgstr "Choose the folder for this note."
+
 #: src/folders/folder-actions.tsx
 msgid "Choose the folder that will contain this folder."
 msgstr "Choose the folder that will contain this folder."
@@ -1932,12 +1936,13 @@ msgid "Folder name"
 msgstr "Folder name"
 
 #: src/session/components/folder-picker.tsx
+#: src/session/components/living-document/fiche-folder.tsx
 msgid "Folder: {currentLabel}"
 msgstr "Folder: {currentLabel}"
 
-#: src/session/components/living-document/fiche-folder.tsx
-msgid "Folder: {currentPath}"
-msgstr "Folder: {currentPath}"
+#: src/home/file-note-button.tsx
+msgid "Folder: {label}. Move to another folder"
+msgstr "Folder: {label}. Move to another folder"
 
 #: src/folders/sidebar-tree-view.tsx
 #: src/session/components/folder-picker.tsx
@@ -2798,6 +2803,7 @@ msgstr "Model name served by your server"
 msgid "More"
 msgstr "More"
 
+#: src/folders/project/folder-meetings-card.tsx
 #: src/home/note-index.tsx
 #: src/templates/template-form.tsx
 msgid "More actions"
@@ -2823,12 +2829,18 @@ msgstr "Move"
 msgid "Move “{name}” to…"
 msgstr "Move “{name}” to…"
 
+#: src/session/move-note.tsx
+msgid "Move “{title}” to…"
+msgstr "Move “{title}” to…"
+
 #: src/templates/sections-editor.tsx
 msgid "Move section {position}"
 msgstr "Move section {position}"
 
 #: src/folders/folder-actions.tsx
 #: src/folders/folder-editor.tsx
+#: src/home/note-index.tsx
+#: src/session/move-note.tsx
 msgid "Move to…"
 msgstr "Move to…"
 
@@ -3003,6 +3015,10 @@ msgstr "No earlier versions yet."
 #: src/templates/template-icon-picker.tsx
 msgid "No emoji found"
 msgstr "No emoji found"
+
+#: src/session/move-note.tsx
+msgid "No folder"
+msgstr "No folder"
 
 #: src/settings/automations/markdown-export-config.tsx
 msgid "No folder selected yet."
@@ -3229,6 +3245,14 @@ msgstr "Note here what you want to remember. During the meeting, write freely: S
 msgid "Note is Locked"
 msgstr "Note is Locked"
 
+#: src/session/move-note.tsx
+msgid "Note moved to {label}"
+msgstr "Note moved to {label}"
+
+#: src/session/move-note.tsx
+msgid "Note removed from its folder"
+msgstr "Note removed from its folder"
+
 #: src/session/components/capsule/index.tsx
 msgid "Note steps"
 msgstr "Note steps"
@@ -3331,6 +3355,7 @@ msgstr "Only on-premise OpenAI-compatible servers are supported (vLLM, Ollama, l
 
 #: src/home/live-note-card.tsx
 #: src/home/note-index.tsx
+#: src/session/move-note.tsx
 #: src/shared/open-note-dialog.tsx
 msgid "Open"
 msgstr "Open"
@@ -3871,6 +3896,10 @@ msgstr "Remove example {0}"
 #: src/templates/template-sidebar.tsx
 msgid "Remove from favorites"
 msgstr "Remove from favorites"
+
+#: src/session/move-note.tsx
+msgid "Remove from folder"
+msgstr "Remove from folder"
 
 #: src/contacts/contact-page-header.tsx
 #: src/contacts/profile-photo.tsx
@@ -5631,6 +5660,7 @@ msgid "Unavailable: the models could not be downloaded (offline?). Listening wor
 msgstr "Unavailable: the models could not be downloaded (offline?). Listening works without it."
 
 #: src/main/windows-title-bar.tsx
+#: src/session/move-note.tsx
 #: src/sidebar/toast/undo-delete-toast.tsx
 msgid "Undo"
 msgstr "Undo"
@@ -5698,6 +5728,7 @@ msgstr "Unreachable"
 #: src/session/components/outer-header/overflow/export-modal.tsx
 #: src/session/components/title-input-field.tsx
 #: src/session/late-filing.ts
+#: src/session/move-note.tsx
 #: src/shared/palette-search-groups.tsx
 #: src/shared/ui/resource-list/preview-header.tsx
 #: src/sidebar/toast/undo-delete-toast.tsx

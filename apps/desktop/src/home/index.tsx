@@ -13,6 +13,7 @@ import {
 
 import { useFolderSelection } from "~/folders/selection";
 import { useDeleteSession } from "~/session/hooks/useDeleteSession";
+import { MoveNoteDialog, useMoveNoteDialog } from "~/session/move-note";
 import { useFolderIcons } from "~/session/queries";
 import { useOpenNoteDialog } from "~/shared/open-note-dialog";
 import { getShortcutPlatform } from "~/shared/shortcuts";
@@ -73,6 +74,17 @@ export function HomePage() {
       }),
     [deleteSession],
   );
+  // « Déplacer vers… » (issue 592) : la boîte commune, sans ouvrir la note.
+  const openMoveNote = useMoveNoteDialog((state) => state.open);
+  const moveNote = useCallback(
+    (note: RecentNote) =>
+      openMoveNote({
+        id: note.id,
+        title: note.title,
+        folderPath: note.folderPath,
+      }),
+    [openMoveNote],
+  );
   const [exportSessionId, setExportSessionId] = useState<string | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
   const exportNote = useCallback((sessionId: string) => {
@@ -92,6 +104,7 @@ export function HomePage() {
         onOpenNote={openNote}
         onExportNote={exportNote}
         onDeleteNote={deleteNote}
+        onMoveNote={moveNote}
         onSearch={openSearch}
         onOpenFolder={openFolder}
         onOpenAllFolders={openAllFolders}
@@ -101,6 +114,7 @@ export function HomePage() {
           ) : null
         }
       />
+      <MoveNoteDialog />
       {exportSessionId ? (
         <NoteExportDialog
           key={exportSessionId}

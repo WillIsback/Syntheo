@@ -128,6 +128,7 @@ const SynHomeRow = ({ note, onSay, onDelete, onMove }) => {
           icon: I("DotsThreeVertical"),
           items: [
             { label: L("Open"), onSelect: open },
+            { label: L("Move to…"), onSelect: () => onSay(`Ouvre « Déplacer vers… » pour « ${note.title} », sans ouvrir la note.`) },
             { label: L("Export…"), onSelect: () => onSay(`Ouvre la fenêtre d'export de « ${note.title} », sans ouvrir la note.`) },
             { separator: true },
             { label: L("Delete"), onSelect: () => onDelete(note) },

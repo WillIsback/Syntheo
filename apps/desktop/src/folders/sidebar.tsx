@@ -22,6 +22,11 @@ import { FolderTreeView } from "./sidebar-tree-view";
 
 import { useSearchNotes } from "~/search/unified/catalog";
 import { resolvedFolderIcon } from "~/session/folder-icon";
+import {
+  MoveNoteDialog,
+  moveNoteToFolder,
+  useNoteMenuItems,
+} from "~/session/move-note";
 import { useFolderIcons, useFolderPaths } from "~/session/queries";
 import { CustomSidebarHeader } from "~/sidebar/custom-sidebar-header";
 
@@ -34,6 +39,7 @@ export function FoldersSidebar() {
   const activeFolder = useActiveFolderPath(folders);
   const openDialog = useFolderDialogs((state) => state.open);
   const folderMenu = useFolderMenuItems();
+  const noteMenuItems = useNoteMenuItems();
   const [search, setSearch] = useState("");
   const searchRef = useSquircleRef<HTMLDivElement>();
 
@@ -126,11 +132,27 @@ export function FoldersSidebar() {
             }
             onSelectFolder={setSelectedPath}
             folderMenu={folderMenu}
+            noteMenu={(note) =>
+              noteMenuItems({
+                id: note.id,
+                title: note.title,
+                folderPath: note.folderPath,
+              })
+            }
+            onDropNote={(note, folderPath) => {
+              void moveNoteToFolder(
+                { id: note.id, folderPath: note.folderPath },
+                folderPath,
+              ).catch((error) => {
+                console.error("[folders] failed to move the note", error);
+              });
+            }}
           />
         )}
       </div>
 
       <FolderDialogs />
+      <MoveNoteDialog />
     </div>
   );
 }

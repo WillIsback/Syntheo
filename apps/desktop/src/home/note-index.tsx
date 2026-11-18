@@ -6,7 +6,6 @@ import { cn } from "@syntheo/utils";
 
 import { FileNoteButton } from "./file-note-button";
 import { formatDuration, formatIndexDate } from "./format";
-import { NoteFolderChip } from "./note-folder-chip";
 import type { RecentNote } from "./queries";
 
 import {
@@ -19,6 +18,8 @@ type NoteIndexActions = {
   onOpen: (sessionId: string) => void;
   onExport: (sessionId: string) => void;
   onDelete: (note: RecentNote) => void;
+  // « Déplacer vers… » (issue 592), absent si non fourni.
+  onMove?: (note: RecentNote) => void;
 };
 
 // Touche « menu » du clavier ou Maj+F10 : ouvre le menu de la ligne.
@@ -31,8 +32,9 @@ const NO_ICONS: Record<string, TemplateIcon | undefined> = {};
 // « Reprendre » : tableau sans carte, lignes séparées par un filet `border`,
 // survol `accent`. Chaque ligne a un bouton (titre) ; flèches haut/bas pour
 // passer d'une note à l'autre. Clic droit ou bouton « ⋮ » : menu natif
-// Ouvrir, Exporter…, Supprimer (issue 420). Chaque note porte la pastille de
-// son dossier, ou « Ranger » si elle n'est pas rangée (issue 500).
+// Ouvrir, Déplacer vers… (issue 592), Exporter…, Supprimer (issue 420).
+// Chaque note porte la pastille de son dossier, ou « Ranger » si elle n'est
+// pas rangée (issue 500) ; l'une et l'autre ouvrent le sélecteur de dossier.
 export function NoteIndex({
   notes,
   folderIcons = NO_ICONS,
@@ -97,6 +99,7 @@ function NoteRow({
   onOpen,
   onExport,
   onDelete,
+  onMove,
 }: {
   note: RecentNote;
   index: number;
@@ -110,11 +113,14 @@ function NoteRow({
   const contextMenu = useMemo<MenuItemDef[]>(
     () => [
       { id: "open", text: t`Open`, action: () => onOpen(note.id) },
+      ...(onMove
+        ? [{ id: "move", text: t`Move to…`, action: () => onMove(note) }]
+        : []),
       { id: "export", text: t`Export…`, action: () => onExport(note.id) },
       { separator: true },
       { id: "delete", text: t`Delete`, action: () => onDelete(note) },
     ],
-    [t, note, onOpen, onExport, onDelete],
+    [t, note, onOpen, onExport, onDelete, onMove],
   );
   const showMenu = useNativeContextMenu(contextMenu);
 
@@ -150,11 +156,11 @@ function NoteRow({
           >
             {title}
           </button>
-          {note.folderPath ? (
-            <NoteFolderChip folderPath={note.folderPath} icons={folderIcons} />
-          ) : (
-            <FileNoteButton sessionId={note.id} />
-          )}
+          <FileNoteButton
+            sessionId={note.id}
+            folderPath={note.folderPath}
+            icons={folderIcons}
+          />
         </div>
       </td>
       <td className="border-border text-muted-foreground w-[72px] border-t px-1 py-3 text-right text-[13px] whitespace-nowrap">
