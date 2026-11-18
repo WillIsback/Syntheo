@@ -48,7 +48,7 @@ pub fn list_mic_using_apps() -> Result<Vec<InstalledApp>, crate::Error> {
     let enumerator = wasapi::DeviceEnumerator::new()
         .map_err(|error| crate::Error::AudioProcessQuery(error.to_string()))?;
     let devices = enumerator
-        .get_device_collection(&wasapi::Direction::Capture)
+        .get_device_collection(wasapi::Direction::Capture)
         .map_err(|error| crate::Error::AudioProcessQuery(error.to_string()))?;
 
     let mut process_ids = Vec::new();

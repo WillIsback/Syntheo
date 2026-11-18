@@ -7,7 +7,7 @@ license = "MIT"
 [dependencies]
 owhisper-interface = { workspace = true }
 
-json-patch = "4.1"
+json-patch = "5.0"
 regex = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
