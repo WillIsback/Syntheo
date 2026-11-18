@@ -74,10 +74,23 @@ pub async fn rename_folder_catalog(
         .await
         .map_err(|error| error.to_string())?;
 
+    if is_descendant(&request.new_path, &request.old_path) {
+        return Err("folder_target_inside_source".to_string());
+    }
+
     syntheo_db_app::rename_folder_row(&mut transaction, &request.new_path, &request.old_path)
         .await
         .map_err(|error| error.to_string())?;
     ensure_folder(&mut transaction, &request.new_path).await?;
+    // Sous-dossiers : leurs lignes suivent le parent (issue 590), sinon ils
+    // restent à l'ancien chemin et apparaissent comme dossiers fantômes.
+    syntheo_db_app::rewrite_folder_descendant_paths(
+        &mut transaction,
+        &request.old_path,
+        &request.new_path,
+    )
+    .await
+    .map_err(|error| error.to_string())?;
     syntheo_db_app::rewrite_folder_attachment_paths(
         &mut transaction,
         &request.old_path,
@@ -97,6 +110,13 @@ pub async fn rename_folder_catalog(
         .commit()
         .await
         .map_err(|error| error.to_string())
+}
+
+/// `candidate` est un sous-dossier (à n'importe quelle profondeur) de `ancestor`.
+fn is_descendant(candidate: &str, ancestor: &str) -> bool {
+    candidate
+        .strip_prefix(ancestor)
+        .is_some_and(|rest| rest.starts_with('/') || rest.starts_with('\\'))
 }
 
 pub async fn delete_folder_catalog(

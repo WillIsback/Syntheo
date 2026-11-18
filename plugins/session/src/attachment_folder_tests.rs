@@ -495,6 +495,152 @@ async fn rename_folder_catalog_rewrites_exact_and_nested_paths() {
 }
 
 #[tokio::test]
+async fn rename_folder_catalog_moves_nested_folder_rows_and_keeps_ids() {
+    let db = test_db().await;
+    sqlx::query(
+        "INSERT INTO folders (id, path, instructions, icon_json) VALUES
+         ('f-team', 'Equipe', '', '{}'),
+         ('f-mco', 'Equipe/MCO', 'Consignes MCO', '{\"emoji\":\"🛠\"}'),
+         ('f-deep', 'Equipe/MCO/2026', '', '{}'),
+         ('f-win', 'Equipe\\Ops', '', '{}'),
+         ('f-twin', 'Equipe_2/Autre', '', '{}'),
+         ('f-case', 'equipe/minuscule', '', '{}'),
+         ('f-gone', 'Equipe/Ancien', '', '{}')",
+    )
+    .execute(db.pool())
+    .await
+    .unwrap();
+    sqlx::query("UPDATE folders SET deleted_at = 'gone' WHERE id = 'f-gone'")
+        .execute(db.pool())
+        .await
+        .unwrap();
+    sqlx::query(
+        "INSERT INTO sessions (id, owner_user_id, folder_path)
+         VALUES ('s-1', 'u', 'Equipe/MCO')",
+    )
+    .execute(db.pool())
+    .await
+    .unwrap();
+
+    rename_folder_catalog(
+        db.pool(),
+        RenameFolderCatalogRequest {
+            old_path: "Equipe".to_string(),
+            new_path: "Pôle".to_string(),
+        },
+    )
+    .await
+    .unwrap();
+
+    let rows: Vec<(String, String)> = sqlx::query_as("SELECT id, path FROM folders ORDER BY id")
+        .fetch_all(db.pool())
+        .await
+        .unwrap();
+    assert_eq!(
+        rows,
+        vec![
+            ("f-case".to_string(), "equipe/minuscule".to_string()),
+            ("f-deep".to_string(), "Pôle/MCO/2026".to_string()),
+            ("f-gone".to_string(), "Equipe/Ancien".to_string()),
+            ("f-mco".to_string(), "Pôle/MCO".to_string()),
+            ("f-team".to_string(), "Pôle".to_string()),
+            ("f-twin".to_string(), "Equipe_2/Autre".to_string()),
+            ("f-win".to_string(), "Pôle\\Ops".to_string()),
+        ]
+    );
+    let instructions: String =
+        sqlx::query_scalar("SELECT instructions FROM folders WHERE id = 'f-mco'")
+            .fetch_one(db.pool())
+            .await
+            .unwrap();
+    assert_eq!(instructions, "Consignes MCO");
+    let live_old: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM folders
+         WHERE deleted_at IS NULL AND (path = 'Equipe' OR path GLOB 'Equipe/*')",
+    )
+    .fetch_one(db.pool())
+    .await
+    .unwrap();
+    assert_eq!(live_old, 0, "aucun dossier fantôme à l'ancien chemin");
+    let session_path: String =
+        sqlx::query_scalar("SELECT folder_path FROM sessions WHERE id = 's-1'")
+            .fetch_one(db.pool())
+            .await
+            .unwrap();
+    assert_eq!(session_path, "Pôle/MCO");
+}
+
+#[tokio::test]
+async fn rename_folder_catalog_moves_folder_under_another_parent() {
+    let db = test_db().await;
+    sqlx::query(
+        "INSERT INTO folders (id, path) VALUES
+         ('f-team', 'Equipe'), ('f-mco', 'MCO'), ('f-sub', 'MCO/Comptes rendus')",
+    )
+    .execute(db.pool())
+    .await
+    .unwrap();
+
+    rename_folder_catalog(
+        db.pool(),
+        RenameFolderCatalogRequest {
+            old_path: "MCO".to_string(),
+            new_path: "Equipe/MCO".to_string(),
+        },
+    )
+    .await
+    .unwrap();
+    rename_folder_catalog(
+        db.pool(),
+        RenameFolderCatalogRequest {
+            old_path: "Equipe/MCO/Comptes rendus".to_string(),
+            new_path: "Comptes rendus".to_string(),
+        },
+    )
+    .await
+    .unwrap();
+
+    let rows: Vec<(String, String)> = sqlx::query_as("SELECT id, path FROM folders ORDER BY id")
+        .fetch_all(db.pool())
+        .await
+        .unwrap();
+    assert_eq!(
+        rows,
+        vec![
+            ("f-mco".to_string(), "Equipe/MCO".to_string()),
+            ("f-sub".to_string(), "Comptes rendus".to_string()),
+            ("f-team".to_string(), "Equipe".to_string()),
+        ]
+    );
+}
+
+#[tokio::test]
+async fn rename_folder_catalog_refuses_moving_into_own_descendant() {
+    let db = test_db().await;
+    sqlx::query("INSERT INTO folders (id, path) VALUES ('f-a', 'A'), ('f-b', 'A/B')")
+        .execute(db.pool())
+        .await
+        .unwrap();
+
+    let error = rename_folder_catalog(
+        db.pool(),
+        RenameFolderCatalogRequest {
+            old_path: "A".to_string(),
+            new_path: "A/B/A".to_string(),
+        },
+    )
+    .await
+    .unwrap_err();
+    assert_eq!(error, "folder_target_inside_source");
+
+    let paths: Vec<String> = sqlx::query_scalar("SELECT path FROM folders ORDER BY id")
+        .fetch_all(db.pool())
+        .await
+        .unwrap();
+    assert_eq!(paths, vec!["A".to_string(), "A/B".to_string()]);
+}
+
+#[tokio::test]
 async fn delete_folder_catalog_tombstones_nested_and_clears_sessions() {
     let db = test_db().await;
     sqlx::query(

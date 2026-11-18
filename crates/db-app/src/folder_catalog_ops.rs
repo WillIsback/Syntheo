@@ -222,6 +222,36 @@ pub async fn rename_folder_row(
     Ok(result.rows_affected())
 }
 
+/// Réécrit le chemin des sous-dossiers vivants d'un dossier renommé ou déplacé,
+/// en conservant leur `id` (réglages, icône et fil rouge y sont rattachés).
+/// La comparaison par `substr` est exacte et sensible à la casse, contrairement
+/// à `LIKE` : renommer `Equipe` ne touche ni `equipe/…` ni `Equipe_2/…`.
+pub async fn rewrite_folder_descendant_paths(
+    conn: &mut SqliteConnection,
+    old_path: &str,
+    new_path: &str,
+) -> Result<u64, sqlx::Error> {
+    let result = sqlx::query(
+        "UPDATE folders
+        SET
+          path = ? || substr(path, length(?) + 1),
+          updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+        WHERE deleted_at IS NULL
+          AND length(path) > length(?)
+          AND substr(path, 1, length(?)) = ?
+          AND substr(path, length(?) + 1, 1) IN ('/', '\\')",
+    )
+    .bind(new_path)
+    .bind(old_path)
+    .bind(old_path)
+    .bind(old_path)
+    .bind(old_path)
+    .bind(old_path)
+    .execute(&mut *conn)
+    .await?;
+    Ok(result.rows_affected())
+}
+
 pub async fn rewrite_folder_attachment_paths(
     conn: &mut SqliteConnection,
     old_path: &str,
