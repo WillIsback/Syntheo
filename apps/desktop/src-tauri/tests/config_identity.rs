@@ -56,7 +56,9 @@ fn updater_reads_the_release_manifest_with_the_syntheo_key() {
     // Le manifeste falsifié qui présente une ancienne release comme nouvelle est
     // refusé : la version est liée à la signature.
     assert_eq!(updater["requireSignedVersion"], true);
-    assert_eq!(updater["windows"]["installMode"], "passive");
+    // Mode silencieux (issue 597) : en passif, l'installeur NSIS proposait de
+    // désinstaller un MSI Syntheo par machine présent sur le poste.
+    assert_eq!(updater["windows"]["installMode"], "quiet");
 
     // Clé publique de la release (identifiant 682D46182EA91D28), en base64 d'un
     // fichier de clé minisign.

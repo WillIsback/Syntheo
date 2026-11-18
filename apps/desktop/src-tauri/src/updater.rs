@@ -196,7 +196,8 @@ pub async fn updater_download<R: Runtime>(
 
 /// Installe la mise à jour téléchargée. Le front l'appelle hors écoute, sur
 /// action de la personne, puis relance l'application. Sous Windows,
-/// l'installeur NSIS (mode passif) ferme l'application lui-même.
+/// l'installeur NSIS (mode silencieux, sans fenêtre) ferme l'application
+/// lui-même et la relance.
 #[tauri::command]
 #[specta::specta]
 pub async fn updater_install<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
