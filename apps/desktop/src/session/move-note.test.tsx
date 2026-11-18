@@ -63,7 +63,7 @@ type ActionItem = Exclude<MenuItemDef, { separator: true }>;
 function lastToast() {
   const [message, options] = mocks.toast.mock.lastCall as [
     string,
-    { action: { label: string; onClick: () => void } },
+    { id?: string; action: { label: string; onClick: () => void } },
   ];
   return { message, options };
 }
@@ -82,12 +82,24 @@ describe("moveNoteToFolder", () => {
   it("moves the note and offers to undo", async () => {
     await moveNoteToFolder({ id: "s1", folderPath: "Clients" }, "Equipe/MCO");
 
-    expect(mocks.updateSession).toHaveBeenCalledWith("s1", {
-      folder_id: "Equipe/MCO",
-    });
+    expect(mocks.updateSession).toHaveBeenCalledWith(
+      "s1",
+      { folder_id: "Equipe/MCO" },
+      {
+        undoMove: expect.objectContaining({
+          toastId: "move-note-s1",
+          label: "Undo",
+        }),
+      },
+    );
     const { message, options } = lastToast();
     expect(message).toBe("Note moved to Equipe › MCO");
+    expect(options.id).toBe("move-note-s1");
     expect(options.action.label).toBe("Undo");
+    // Le même « Annuler » passe à une éventuelle proposition (issue 603).
+    expect(options.action.onClick).toBe(
+      mocks.updateSession.mock.calls[0]![2].undoMove.onClick,
+    );
 
     // Annuler remet la note en place sans proposer de régénérer.
     options.action.onClick();
@@ -101,7 +113,11 @@ describe("moveNoteToFolder", () => {
   it("removes the note from its folder", async () => {
     await moveNoteToFolder({ id: "s1", folderPath: "Clients" }, "");
 
-    expect(mocks.updateSession).toHaveBeenCalledWith("s1", { folder_id: "" });
+    expect(mocks.updateSession).toHaveBeenCalledWith(
+      "s1",
+      { folder_id: "" },
+      expect.objectContaining({ undoMove: expect.any(Object) }),
+    );
     expect(lastToast().message).toBe("Note removed from its folder");
   });
 
@@ -156,9 +172,11 @@ describe("moveNoteToFolder", () => {
     fireEvent.click(screen.getByTestId("picker"));
 
     await waitFor(() =>
-      expect(mocks.updateSession).toHaveBeenCalledWith("s1", {
-        folder_id: "Equipe/MCO",
-      }),
+      expect(mocks.updateSession).toHaveBeenCalledWith(
+        "s1",
+        { folder_id: "Equipe/MCO" },
+        expect.objectContaining({ undoMove: expect.any(Object) }),
+      ),
     );
     expect(useMoveNoteDialog.getState().note).toBeNull();
   });
@@ -174,9 +192,11 @@ describe("moveNoteToFolder", () => {
     fireEvent.click(await screen.findByRole("button", { name: "No folder" }));
 
     await waitFor(() =>
-      expect(mocks.updateSession).toHaveBeenCalledWith("s1", {
-        folder_id: "",
-      }),
+      expect(mocks.updateSession).toHaveBeenCalledWith(
+        "s1",
+        { folder_id: "" },
+        expect.objectContaining({ undoMove: expect.any(Object) }),
+      ),
     );
   });
 

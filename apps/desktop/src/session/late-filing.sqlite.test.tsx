@@ -22,6 +22,7 @@ import {
 import { buildMoveMeetingsToFolderTool } from "~/chat/tools/folders";
 import { FileNoteButton } from "~/home/file-note-button";
 import { FolderPicker } from "~/session/components/folder-picker";
+import { moveNoteToFolder } from "~/session/move-note";
 import { updateSession } from "~/session/queries";
 
 // Issue 534 : une note synthétisée en « Automatique », rangée dans un dossier
@@ -288,6 +289,76 @@ describe("late filing proposal on every filing path", () => {
     expect(storedFolder()).toBe("Atlas");
     // Le changement de dossier ferme quand même une proposition en cours.
     expect(mocks.dismiss).toHaveBeenCalledWith("late-filing-session-1");
+  });
+
+  // Issue 603 : la proposition passait devant « Note déplacée | Annuler »,
+  // replié derrière elle et inaccessible sans survol.
+  type ToastAction = { label: string; onClick: () => void };
+  type ToastOptions = {
+    id?: string;
+    action?: ToastAction;
+    secondaryAction?: ToastAction;
+  };
+  function toastsWithId(id: string) {
+    return mocks.toast.mock.calls.filter(
+      ([, options]) => (options as ToastOptions | undefined)?.id === id,
+    ) as Array<[string, ToastOptions]>;
+  }
+
+  it("keeps « Undo » on the single message when a move offers to regenerate", async () => {
+    seed();
+    await moveNoteToFolder({ id: "session-1", folderPath: "" }, "Atlas");
+    expect(toastsWithId("move-note-session-1")).toHaveLength(1);
+    await waitFor(() => expect(lateFilingToasts()).toHaveLength(1));
+
+    // Le message du déplacement est remplacé par la proposition, qui porte
+    // les deux actions : un seul message, rien de caché dans la pile.
+    expect(mocks.dismiss).toHaveBeenCalledWith("move-note-session-1");
+    const [message, options] = toastsWithId("late-filing-session-1")[0]!;
+    expect(message).toBe("This folder uses the Standup quotidien template");
+    expect(options.action?.label).toBe("Regenerate");
+    expect(options.secondaryAction?.label).toBe("Undo");
+
+    // « Annuler » remet la note à sa place, ferme la proposition et n'en
+    // propose pas d'autre (issue 592).
+    mocks.dismiss.mockClear();
+    options.secondaryAction!.onClick();
+    await waitFor(() => expect(storedFolder()).toBe(""));
+    expect(mocks.dismiss).toHaveBeenCalledWith("late-filing-session-1");
+    await act(() => new Promise((done) => setTimeout(done, 30)));
+    expect(lateFilingToasts()).toHaveLength(1);
+    expect(mocks.enhance).not.toHaveBeenCalled();
+  });
+
+  it("keeps the move message alone for a folder without a template", async () => {
+    seed({ folderTemplateId: "" });
+    await moveNoteToFolder({ id: "session-1", folderPath: "" }, "Atlas");
+    await act(() => new Promise((done) => setTimeout(done, 30)));
+
+    expect(lateFilingToasts()).toHaveLength(0);
+    expect(mocks.dismiss).not.toHaveBeenCalledWith("move-note-session-1");
+    const [[message, options]] = toastsWithId("move-note-session-1");
+    expect(message).toBe("Note moved to Atlas");
+    expect(options.action?.label).toBe("Undo");
+  });
+
+  it("shows no proposal when the move is undone before it arrives", async () => {
+    seed();
+    let release!: () => void;
+    mocks.templateGate = new Promise((done) => (release = done));
+    try {
+      await moveNoteToFolder({ id: "session-1", folderPath: "" }, "Atlas");
+      const [[, options]] = toastsWithId("move-note-session-1");
+      options.action!.onClick();
+      await waitFor(() => expect(storedFolder()).toBe(""));
+      release();
+
+      await act(() => new Promise((done) => setTimeout(done, 30)));
+      expect(lateFilingToasts()).toHaveLength(0);
+      expect(mocks.dismiss).not.toHaveBeenCalledWith("move-note-session-1");
+    } finally {
+      mocks.templateGate = Promise.resolve();
+    }
   });
 
   // Le cas relevé par William sur l'alpha 0.7.0-7.
