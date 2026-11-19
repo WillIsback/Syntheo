@@ -1,3 +1,4 @@
+import { LogicalPosition } from "@tauri-apps/api/dpi";
 import { Menu, MenuItem, PredefinedMenuItem } from "@tauri-apps/api/menu";
 import { type SyntheticEvent, useCallback } from "react";
 
@@ -11,6 +12,34 @@ export type MenuItemDef =
     }
   | { separator: true };
 
+/**
+ * Position du menu ouvert au clavier (touche menu, Maj+F10, Entrée sur un
+ * bouton « ⋮ ») : sous l'élément qui a le focus. Sans position, Tauri place
+ * le menu au pointeur, loin de l'élément (issue 600). `null` pour un
+ * événement souris : le menu suit le pointeur.
+ */
+export function keyboardMenuPosition(
+  e: SyntheticEvent,
+): LogicalPosition | null {
+  const native = e.nativeEvent;
+  if (
+    native instanceof MouseEvent &&
+    (native.clientX !== 0 || native.clientY !== 0)
+  ) {
+    return null;
+  }
+  const active = document.activeElement;
+  const anchor =
+    active instanceof Element && active !== document.body
+      ? active
+      : e.currentTarget instanceof Element
+        ? e.currentTarget
+        : null;
+  if (!anchor) return null;
+  const rect = anchor.getBoundingClientRect();
+  return new LogicalPosition(rect.left, rect.bottom);
+}
+
 // Clic droit, clic sur un bouton « ⋮ » ou touche menu clavier : tout
 // événement React suffit, seul le comportement par défaut est bloqué.
 export async function showNativeContextMenu(
@@ -19,6 +48,8 @@ export async function showNativeContextMenu(
 ) {
   e.preventDefault();
   e.stopPropagation();
+  // Lu avant les `await` : l'événement et le focus sont encore ceux du geste.
+  const position = keyboardMenuPosition(e);
 
   const menuItems = await Promise.all(
     items.map((item) =>
@@ -35,7 +66,7 @@ export async function showNativeContextMenu(
   );
 
   const menu = await Menu.new({ items: menuItems });
-  await menu.popup();
+  await (position ? menu.popup(position) : menu.popup());
 }
 
 export function useNativeContextMenu(items: MenuItemDef[]) {
