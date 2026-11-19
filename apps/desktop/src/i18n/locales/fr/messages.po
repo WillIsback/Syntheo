@@ -5569,6 +5569,10 @@ msgstr "Cet enregistrement utilise la transcription par lots, le transcript n'es
 msgid "This server answers as {detectedLabel}."
 msgstr "Ce serveur répond comme {detectedLabel}."
 
+#: src/settings/ai/stt/server-card.tsx
+msgid "This server has no diarization model loaded: transcripts will not tell speakers apart."
+msgstr "Ce serveur n'a pas chargé de modèle de diarisation : les transcriptions ne distingueront pas les intervenants."
+
 #: src/session/components/note-input/transcript/index.tsx
 msgid "This transcription is incomplete."
 msgstr "Cette transcription est incomplète."

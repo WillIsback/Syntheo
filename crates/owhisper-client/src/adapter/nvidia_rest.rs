@@ -25,6 +25,72 @@ pub struct NemoSpeechTranscript {
 /// Point d'accès REST d'un serveur dont l'adresse a été saisie à la racine,
 /// en `/v1` ou en `/v1/realtime` : le chemin est toujours celui de la racine.
 pub fn nemo_speech_transcriptions_url(api_base: &str) -> Result<url::Url, Error> {
+    nemo_speech_root_url(api_base, "/v1/audio/transcriptions")
+}
+
+/// Liste des modèles du serveur, à la racine comme la route REST.
+pub fn nemo_speech_models_url(api_base: &str) -> Result<url::Url, Error> {
+    nemo_speech_root_url(api_base, "/v1/models")
+}
+
+/// Délai de la sonde des capacités : elle précède l'ouverture du flux et ne
+/// doit pas la retarder sensiblement.
+pub const NEMO_SPEECH_PROBE_TIMEOUT: Duration = Duration::from_secs(2);
+
+/// Le serveur propose-t-il la diarisation (issue 574) ? NeMo-Speech.cpp lancé
+/// sans `--diar-model` annonce `"speaker_diarization": false` sur son modèle
+/// de transcription dans `/v1/models`, et refuse toute requête qui la demande
+/// (« speaker diarization requested but no diarizer model is loaded »), en
+/// REST comme à l'ouverture d'une session temps réel.
+pub fn speaker_diarization_from_models(body: &Value) -> Option<bool> {
+    body["data"]
+        .as_array()?
+        .iter()
+        .find(|entry| entry["capability"] == "transcription")?
+        .get("speaker_diarization")?
+        .as_bool()
+}
+
+/// Lit la capacité de diarisation du serveur. `None` si la sonde échoue, ne
+/// répond pas à temps ou ne dit rien : l'appelant garde alors son
+/// comportement habituel (diarisation demandée), celui d'un serveur lancé
+/// avec son diariseur, la configuration documentée.
+pub async fn nemo_speech_speaker_diarization(
+    api_base: &str,
+    api_key: Option<&str>,
+    timeout: Duration,
+) -> Option<bool> {
+    let url = nemo_speech_models_url(api_base).ok()?;
+    let mut request = crate::http_client::create_client()
+        .get(url.as_str())
+        .timeout(timeout);
+    if let Some(key) = api_key.filter(|key| !key.is_empty()) {
+        request = request.bearer_auth(key);
+    }
+    let response = request.send().await.ok()?;
+    if !response.status().is_success() {
+        return None;
+    }
+    let body: Value = response.json().await.ok()?;
+    speaker_diarization_from_models(&body)
+}
+
+/// Ne plus demander la diarisation : les adaptateurs NeMo-Speech.cpp la
+/// demandent sauf pour une voix unique (`num_speakers == 1`), qui la coupe
+/// sans borne de locuteurs.
+pub fn without_speaker_diarization(params: &mut ListenParams) {
+    params.num_speakers = Some(1);
+    params.min_speakers = None;
+    params.max_speakers = None;
+    params.mic_num_speakers = None;
+}
+
+/// Refus d'un serveur sans diariseur à qui la diarisation a été demandée.
+fn is_missing_diarizer_error(error: &Error) -> bool {
+    matches!(error, Error::UnexpectedStatus { body, .. } if body.contains("no diarizer model is loaded"))
+}
+
+fn nemo_speech_root_url(api_base: &str, path: &str) -> Result<url::Url, Error> {
     let mut url = url::Url::parse(api_base)
         .map_err(|error| Error::provider_configuration("nvidia", error.to_string()))?;
     let scheme = match url.scheme() {
@@ -35,7 +101,7 @@ pub fn nemo_speech_transcriptions_url(api_base: &str) -> Result<url::Url, Error>
     .to_string();
     url.set_scheme(&scheme)
         .map_err(|_| Error::provider_configuration("nvidia", "unsupported URL scheme"))?;
-    url.set_path("/v1/audio/transcriptions");
+    url.set_path(path);
     url.set_query(None);
     url.set_fragment(None);
     Ok(url)
@@ -111,7 +177,32 @@ pub fn parse_nemo_speech_transcript(body: &Value) -> NemoSpeechTranscript {
 }
 
 /// Transcrit `samples` (PCM 16 bits mono à `sample_rate`) d'une seule requête.
+/// Si le serveur refuse la diarisation faute de diariseur, un second essai part
+/// sans la demander : la transcription aboutit, sans intervenants (issue 574).
 pub async fn transcribe_with_nemo_speech_rest(
+    api_base: &str,
+    api_key: Option<&str>,
+    params: &ListenParams,
+    samples: &[i16],
+    sample_rate: u32,
+    timeout: Duration,
+) -> Result<NemoSpeechTranscript, Error> {
+    match post_nemo_speech_rest(api_base, api_key, params, samples, sample_rate, timeout).await {
+        Err(error) if is_missing_diarizer_error(&error) && requests_diarization(params) => {
+            tracing::warn!("nemo_speech_rest_retry_without_diarization");
+            let mut params = params.clone();
+            without_speaker_diarization(&mut params);
+            post_nemo_speech_rest(api_base, api_key, &params, samples, sample_rate, timeout).await
+        }
+        result => result,
+    }
+}
+
+fn requests_diarization(params: &ListenParams) -> bool {
+    params.num_speakers != Some(1)
+}
+
+async fn post_nemo_speech_rest(
     api_base: &str,
     api_key: Option<&str>,
     params: &ListenParams,
@@ -293,6 +384,113 @@ mod tests {
         .unwrap();
         assert_eq!(transcript.words.len(), 1);
         assert_eq!(transcript.words[0].speaker, Some(0));
+    }
+
+    // Liste de modèles relevée sur NeMo-Speech.cpp v0.3.0, avec ou sans
+    // diariseur chargé.
+    fn models(speaker_diarization: Option<bool>) -> Value {
+        let mut transcription = json!({
+            "capability": "transcription",
+            "id": "nemotron-3.5-asr-streaming-0.6b.q8_0",
+            "object": "model",
+        });
+        if let Some(value) = speaker_diarization {
+            transcription["speaker_diarization"] = json!(value);
+        }
+        json!({
+            "data": [{"capability": "diarization", "id": "diarization"}, transcription],
+            "object": "list"
+        })
+    }
+
+    #[test]
+    fn reads_the_diarization_capability_of_the_transcription_model() {
+        assert_eq!(
+            speaker_diarization_from_models(&models(Some(true))),
+            Some(true)
+        );
+        assert_eq!(
+            speaker_diarization_from_models(&models(Some(false))),
+            Some(false)
+        );
+        assert_eq!(speaker_diarization_from_models(&models(None)), None);
+        assert_eq!(speaker_diarization_from_models(&json!({"data": []})), None);
+        assert_eq!(speaker_diarization_from_models(&json!("oops")), None);
+    }
+
+    #[tokio::test]
+    async fn probes_the_models_list_at_the_server_root() {
+        use wiremock::matchers::{header, method, path};
+        use wiremock::{Mock, MockServer, ResponseTemplate};
+
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/v1/models"))
+            .and(header("authorization", "Bearer asr-key"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(models(Some(false))))
+            .mount(&server)
+            .await;
+        let base = format!("{}/v1/realtime?provider=nvidia", server.uri());
+        assert_eq!(
+            nemo_speech_speaker_diarization(&base, Some("asr-key"), Duration::from_secs(2)).await,
+            Some(false)
+        );
+        // Refus de la clé ou serveur absent : on ne sait pas.
+        assert_eq!(
+            nemo_speech_speaker_diarization(&base, Some("wrong"), Duration::from_secs(2)).await,
+            None
+        );
+        assert_eq!(
+            nemo_speech_speaker_diarization("http://127.0.0.1:9", None, Duration::from_secs(2))
+                .await,
+            None
+        );
+    }
+
+    #[tokio::test]
+    async fn retries_without_diarization_when_the_server_has_no_diarizer() {
+        use wiremock::matchers::method;
+        use wiremock::{Mock, MockServer, Request, ResponseTemplate};
+
+        // Réponse de NeMo-Speech.cpp lancé sans `--diar-model` (issue 574).
+        let server = MockServer::start().await;
+        Mock::given(method("POST"))
+            .respond_with(|request: &Request| {
+                let body = String::from_utf8_lossy(&request.body);
+                if body.contains("name=\"diarization\"\r\n\r\ntrue") {
+                    ResponseTemplate::new(400).set_body_json(json!({"error": {
+                        "type": "invalid_request_error",
+                        "message": "speaker diarization requested but no diarizer model is loaded"
+                    }}))
+                } else {
+                    assert!(body.contains("name=\"diarization\"\r\n\r\nfalse"));
+                    assert!(!body.contains("max_speaker_count"));
+                    ResponseTemplate::new(200).set_body_json(json!({
+                        "duration": 1.0,
+                        "words": [{"word": "Oui", "start": 0.1, "end": 0.3}]
+                    }))
+                }
+            })
+            .expect(2)
+            .mount(&server)
+            .await;
+
+        let params = ListenParams {
+            max_speakers: Some(4),
+            ..Default::default()
+        };
+        let transcript = transcribe_with_nemo_speech_rest(
+            &server.uri(),
+            None,
+            &params,
+            &[0; 16_000],
+            16_000,
+            Duration::from_secs(5),
+        )
+        .await
+        .unwrap();
+        assert_eq!(transcript.words.len(), 1);
+        assert_eq!(transcript.words[0].speaker, None);
     }
 
     #[tokio::test]

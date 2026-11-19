@@ -5569,6 +5569,10 @@ msgstr "This recording is using batch transcription, so the transcript isn't ava
 msgid "This server answers as {detectedLabel}."
 msgstr "This server answers as {detectedLabel}."
 
+#: src/settings/ai/stt/server-card.tsx
+msgid "This server has no diarization model loaded: transcripts will not tell speakers apart."
+msgstr "This server has no diarization model loaded: transcripts will not tell speakers apart."
+
 #: src/session/components/note-input/transcript/index.tsx
 msgid "This transcription is incomplete."
 msgstr "This transcription is incomplete."

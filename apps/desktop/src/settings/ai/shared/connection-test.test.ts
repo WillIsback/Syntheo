@@ -80,7 +80,7 @@ describe("probeServer", () => {
 
   // Réponses relevées sur NeMo-Speech.cpp v0.3.0 (nemo-speech serve).
   const NEMO_MODEL = "nemotron-3.5-asr-streaming-0.6b.q8_0";
-  const nemoModels = () =>
+  const nemoModels = (speakerDiarization = true) =>
     Response.json({
       data: [
         {
@@ -89,7 +89,7 @@ describe("probeServer", () => {
           id: NEMO_MODEL,
           object: "model",
           owned_by: "local",
-          speaker_diarization: true,
+          speaker_diarization: speakerDiarization,
           streaming: true,
           word_timestamps: true,
         },
@@ -125,8 +125,37 @@ describe("probeServer", () => {
       latencyMs: 42,
       protocol: "nvidia",
       models: [NEMO_MODEL],
+      speakerDiarization: true,
     });
   });
+
+  // Issue 574 : NeMo-Speech.cpp lancé sans `--diar-model`.
+  test.each([
+    ["à l'adresse /v1", "http://192.168.1.20:9000/v1"],
+    ["à la racine", "http://192.168.1.20:9000"],
+  ])(
+    "lit l'absence de diariseur annoncée par /v1/models (%s)",
+    async (_label, baseUrl) => {
+      const fetcher = vi.fn(
+        routes({
+          "http://192.168.1.20:9000/ready": () =>
+            Response.json({ capabilities: ["asr"], ready: true }),
+          "http://192.168.1.20:9000/v1/models": () => nemoModels(false),
+        }),
+      );
+
+      const result = await probeServer(
+        { type: "stt", baseUrl, apiKey: "" },
+        { fetcher, now: clock() },
+      );
+
+      expect(result).toMatchObject({
+        ok: true,
+        protocol: "nvidia",
+        speakerDiarization: false,
+      });
+    },
+  );
 
   test("NeMo-Speech.cpp à la racine du serveur : sonde de santé et modèle chargé", async () => {
     const fetcher = vi.fn(

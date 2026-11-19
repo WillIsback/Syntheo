@@ -28,6 +28,10 @@ export type ServerProbeResult =
       // reconnu (seule la route temps réel répond).
       protocol: ServerProtocol | null;
       models: string[];
+      // NeMo-Speech.cpp : le modèle de transcription annonce s'il peut
+      // distinguer les intervenants (`speaker_diarization`, faux sans
+      // `--diar-model`, issue 574). Absent quand le serveur ne le dit pas.
+      speakerDiarization?: boolean;
     }
   | { ok: false; reason: "invalid_url"; message: string }
   | {
@@ -98,6 +102,7 @@ export async function probeServer(
         latencyMs: models.latencyMs,
         protocol: "nvidia",
         models: nemo,
+        ...nemoSpeechDiarization(models.body),
       };
     }
     const ids = modelIds(models.body);
@@ -142,6 +147,7 @@ export async function probeServer(
             latencyMs: health.latencyMs,
             protocol: "nvidia",
             models: (auth.ok ? nemoSpeechModels(auth.body) : null) ?? [],
+            ...(auth.ok ? nemoSpeechDiarization(auth.body) : {}),
           };
         }
         protocol = "nvidia";
@@ -288,6 +294,27 @@ function nemoSpeechModels(body: unknown): string[] | null {
     .map((entry) => String(entry.id))
     .filter((id) => id.length > 0)
     .slice(0, MAX_MODELS);
+}
+
+// Capacité `speaker_diarization` du modèle de transcription, quand le serveur
+// l'annonce.
+function nemoSpeechDiarization(body: unknown): {
+  speakerDiarization?: boolean;
+} {
+  const list =
+    body && typeof body === "object"
+      ? (body as { data?: unknown }).data
+      : undefined;
+  if (!Array.isArray(list)) return {};
+  const transcription = list.find(
+    (entry): entry is { speaker_diarization?: unknown } =>
+      !!entry &&
+      typeof entry === "object" &&
+      (entry as { capability?: unknown }).capability === "transcription",
+  );
+  return typeof transcription?.speaker_diarization === "boolean"
+    ? { speakerDiarization: transcription.speaker_diarization }
+    : {};
 }
 
 function isRefusal(status: number) {
