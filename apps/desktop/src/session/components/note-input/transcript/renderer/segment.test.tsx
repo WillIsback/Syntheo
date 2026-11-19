@@ -1,5 +1,11 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   EMPTY_TRANSCRIPT_SEARCH,
@@ -58,6 +64,11 @@ describe("SegmentRenderer", () => {
     mocks.splitTranscriptSpeaker.mockClear();
     mocks.wordSpan.mockClear();
     mocks.updateTranscriptSegmentText.mockClear();
+  });
+
+  // Sans globals Vitest, Testing Library ne démonte pas seul entre les cas.
+  afterEach(() => {
+    cleanup();
   });
 
   it("keeps spaces between rendered words and lines", () => {
@@ -135,10 +146,12 @@ describe("SegmentRenderer", () => {
     const chooseSpeaker = await screen.findByRole("button", {
       name: "Choose speaker",
     });
-    expect(
-      view.container.querySelector("[data-transcript-speaker-split]")
-        ?.textContent,
-    ).toBe("Second line.");
+    await waitFor(() =>
+      expect(
+        view.container.querySelector("[data-transcript-speaker-split]")
+          ?.textContent,
+      ).toBe("Second line."),
+    );
     expect(editor.hidden).toBe(true);
     expect(view.container.contains(chooseSpeaker)).toBe(false);
     expect(
@@ -154,6 +167,14 @@ describe("SegmentRenderer", () => {
         offset: 12,
         humanId: "human-2",
       }),
+    );
+    // Le Popover se referme après l'enregistrement et rend le focus à
+    // l'éditeur par requestAnimationFrame : on attend sa fermeture pour que
+    // ce focus tardif ne referme pas le Popover du cas suivant (issue 614).
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: "Choose speaker" }),
+      ).toBeNull(),
     );
   });
   it("cancels the split preview without saving or losing edited text", async () => {
@@ -171,10 +192,12 @@ describe("SegmentRenderer", () => {
     const picker = await screen.findByRole("button", {
       name: "Choose speaker",
     });
-    expect(
-      view.container.querySelector("[data-transcript-speaker-split]")
-        ?.textContent,
-    ).toBe("Next speaker.");
+    await waitFor(() =>
+      expect(
+        view.container.querySelector("[data-transcript-speaker-split]")
+          ?.textContent,
+      ).toBe("Next speaker."),
+    );
     fireEvent.keyDown(picker, { key: "Escape" });
     await waitFor(() =>
       expect(
