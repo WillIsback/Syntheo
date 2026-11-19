@@ -123,6 +123,24 @@ export async function buildUpdaterManifest({
   };
 }
 
+/**
+ * Lit le texte d'un `latest.json`. Un BOM UTF-8 en tête fait échouer
+ * tauri-plugin-updater (« error decoding response body ») : refusé avec un
+ * message clair plutôt qu'un `SyntaxError` obscur (issue 601).
+ */
+export function parseUpdaterManifest(text) {
+  if (text.startsWith("\uFEFF")) {
+    throw new Error(
+      "latest.json commence par un BOM UTF-8 (EF BB BF) : tauri-plugin-updater le refuse (« error decoding response body »). Réécrire le fichier en UTF-8 sans BOM.",
+    );
+  }
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    throw new Error(`latest.json n'est pas un JSON valide : ${error.message}`);
+  }
+}
+
 /** Contrôle d'un manifeste publié contre le tag et le contenu de `dist/`. */
 export function checkUpdaterManifest(
   manifest,
@@ -176,7 +194,7 @@ function parseArgs(argv) {
 async function check(options) {
   const dist = path.resolve(options.dist);
   const manifestPath = options.manifest ?? path.join(dist, "latest.json");
-  const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+  const manifest = parseUpdaterManifest(await readFile(manifestPath, "utf8"));
   const files = await readdir(dist);
   const errors = checkUpdaterManifest(manifest, {
     version: options.version,

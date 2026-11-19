@@ -2626,6 +2626,7 @@ dependencies = [
  "host",
  "intercept",
  "pico-args",
+ "reqwest 0.13.5",
  "serde",
  "serde_json",
  "specta",
@@ -2683,6 +2684,7 @@ dependencies = [
  "tempfile",
  "tokio",
  "tracing",
+ "wiremock",
 ]
 
 [[package]]
