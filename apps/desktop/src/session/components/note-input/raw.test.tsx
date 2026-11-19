@@ -27,6 +27,7 @@ vi.mock("@tauri-apps/api/core", () => ({
   isTauri: () => true,
 }));
 
+// Simulée pour vérifier qu'un glisser n'appelle aucune commande de fenêtre.
 vi.mock("@tauri-apps/api/window", () => ({
   getCurrentWindow: () => ({
     show: hoisted.showWindow,
@@ -406,11 +407,15 @@ describe("RawEditor", () => {
       expect(
         screen.getByText("Drop to upload and transcribe audio"),
       ).not.toBeNull();
-      await waitFor(() => expect(hoisted.focusWindow).toHaveBeenCalled());
 
       fireEvent.drop(dropTarget!, { dataTransfer });
 
       expect(hoisted.processAudioFile).toHaveBeenCalledWith(file, ...extraArgs);
+      // Aucune commande de fenêtre : `unminimize` est refusé par l'ACL et la
+      // fenêtre survolée est déjà affichée (issue 467).
+      expect(hoisted.showWindow).not.toHaveBeenCalled();
+      expect(hoisted.unminimizeWindow).not.toHaveBeenCalled();
+      expect(hoisted.focusWindow).not.toHaveBeenCalled();
       expect(
         screen.queryByText("Drop to upload and transcribe audio"),
       ).toBeNull();
