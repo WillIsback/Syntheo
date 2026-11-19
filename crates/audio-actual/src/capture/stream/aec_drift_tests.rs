@@ -219,7 +219,11 @@ fn aec_drift_800_ppm_stays_aligned() {
 /// le même motif parole / silence que [`speaker_signal`] : les deux canaux restent dans leur
 /// alignement d'origine, celui qu'attend DTLN.
 fn recorded_pair() -> (Vec<f32>, Vec<f32>) {
-    let (lpb, mic) = (load("theo_lpb.wav"), load("theo_mic.wav"));
+    recorded_pair_named("theo_lpb.wav", "theo_mic.wav")
+}
+
+fn recorded_pair_named(lpb_name: &str, mic_name: &str) -> (Vec<f32>, Vec<f32>) {
+    let (lpb, mic) = (load(lpb_name), load(mic_name));
     let len = lpb.len().min(mic.len());
     let total = DURATION_SECS * RATE as usize;
     let rate = RATE as usize;
@@ -349,5 +353,206 @@ fn aec_drift_erle_with_dtln() {
         let raw = run_drift_erle(scenario, ErleMode::Raw).unwrap();
         let aligned = run_drift_erle(scenario, ErleMode::Aligner).unwrap();
         println!("| {label} | {ideal:.2} dB | {raw:.2} dB | {aligned:.2} dB |");
+    }
+}
+
+// Issue 554 : balayage de l'avance laissée à la référence. L'aligneur réel mesure le retard ;
+// la référence est ensuite retardée de ce retard moins l'avance (émulation du correctif, sans
+// changer l'aligneur). Trois cas :
+// - theo : paire enregistrée, écho seul ;
+// - doubletalk : paire enregistrée de double parole, sans piste propre de la voix locale ;
+// - theo + voix locale : écho de theo plus la voix propre de `syntheo_mic.wav` (sa référence
+//   est un silence), pour mesurer ce que devient la voix locale.
+
+const LEADS: [usize; 5] = [0, 160, 320, 480, 640];
+
+#[derive(Clone, Copy)]
+enum SweepPair {
+    Theo,
+    Doubletalk,
+    TheoWithNearEnd,
+}
+
+/// Voix locale propre, par segments de 2 à 5 s séparés de silences de 2 à 7 s (décalés du
+/// motif de la référence pour couvrir double parole, voix seule et écho seul).
+fn near_end_signal(total: usize) -> Vec<f32> {
+    let voice = load("syntheo_mic.wav");
+    let rate = RATE as usize;
+    let mut out = Vec::with_capacity(total);
+    let (mut cursor, mut step) = (0usize, 0usize);
+    out.extend(std::iter::repeat_n(0.0, 2 * rate));
+    while out.len() < total {
+        let talk = (2 + (step * 3) % 4) * rate;
+        let pause = (2 + (step * 5) % 6) * rate;
+        for _ in 0..talk {
+            out.push(voice[cursor % voice.len()]);
+            cursor += 1;
+        }
+        out.extend(std::iter::repeat_n(0.0, pause));
+        step += 1;
+    }
+    out.truncate(total);
+    out
+}
+
+struct LeadMeasure {
+    /// ERLE (dB) sur les passages où seule la référence joue.
+    erle_echo_only: f64,
+    /// Réduction micro → sortie (dB) sur les passages de double parole.
+    reduction_doubletalk: f64,
+    /// Voix locale conservée en double parole (dB, 0 = intacte) : énergie de la projection de
+    /// la sortie sur la voix locale propre, rapportée à celle de la voix locale.
+    near_kept_db: Option<f64>,
+    /// Corrélation sortie / voix locale propre en double parole.
+    near_correlation: Option<f64>,
+}
+
+fn energy(signal: &[f32]) -> f64 {
+    signal.iter().map(|&x| f64::from(x).powi(2)).sum()
+}
+
+fn active(signal: &[f32]) -> bool {
+    signal.iter().any(|sample| sample.abs() > 1e-3)
+}
+
+fn run_lead(pair: SweepPair, scenario: Scenario, lead: usize) -> Option<LeadMeasure> {
+    use super::aligner::SampleDelayLine;
+
+    let (speaker, echo) = match pair {
+        SweepPair::Theo | SweepPair::TheoWithNearEnd => recorded_pair(),
+        SweepPair::Doubletalk => {
+            recorded_pair_named("doubletalk_lpb_sample.wav", "doubletalk_mic_sample.wav")
+        }
+    };
+    let near = matches!(pair, SweepPair::TheoWithNearEnd).then(|| near_end_signal(echo.len()));
+    let mut mic = drifted(&echo, scenario);
+    if let Some(near) = &near {
+        for (sample, voice) in mic.iter_mut().zip(near) {
+            *sample += voice;
+        }
+    }
+    crate::capture::use_source_aec_models();
+    let mut aec = build_aec(RATE);
+    aec.as_ref()?;
+    let latency = syntheo_aec::BLOCK_SIZE - syntheo_aec::BLOCK_SHIFT;
+    let mut linear_echo_gain = None;
+    let mut aligner = AecReferenceAligner::new(RATE);
+    let mut speaker_line = SampleDelayLine::new(4_000);
+    let mut output = Vec::with_capacity(mic.len());
+    for (speaker_chunk, mic_chunk) in speaker.chunks(CHUNK).zip(mic.chunks(CHUNK)) {
+        let pair = aligner.align(speaker_chunk, mic_chunk);
+        if pair.alignment_changed {
+            reset_echo_cancellation(&mut aec, &mut linear_echo_gain);
+        }
+        // Retard mesuré moins l'avance ; sans verrou, la référence brute comme l'aligneur.
+        let reference = match aligner.applied_delay_samples() {
+            Some(applied) => speaker_line.process(
+                speaker_chunk,
+                (applied - lead as f64).round().max(0.0) as usize,
+            ),
+            None => speaker_line.process(speaker_chunk, 0),
+        };
+        output.extend_from_slice(&process_aec(
+            &mut aec,
+            &mut linear_echo_gain,
+            &pair.mic,
+            &reference,
+        )?);
+    }
+
+    let skip = 6 * RATE as usize;
+    let end_all = mic.len().saturating_sub(latency);
+    let (mut echo_mic, mut echo_out) = (0.0, 0.0);
+    let (mut dt_mic, mut dt_out) = (0.0, 0.0);
+    let (mut near_energy, mut projected, mut cross, mut out_dt) = (0.0, 0.0, 0.0, 0.0);
+    for start in (skip..end_all).step_by(CHUNK) {
+        let end = (start + CHUNK).min(end_all);
+        let out = &output[start + latency..end + latency];
+        let ref_on = active(&speaker[start..end]);
+        let near_on = near.as_ref().is_some_and(|near| active(&near[start..end]));
+        if !ref_on {
+            continue;
+        }
+        let mic_e = energy(&mic[start..end]);
+        let out_e = energy(out);
+        if near_on {
+            dt_mic += mic_e;
+            dt_out += out_e;
+            let voice = &near.as_ref().unwrap()[start..end];
+            let voice_e = energy(voice);
+            let dot: f64 = voice
+                .iter()
+                .zip(out)
+                .map(|(&v, &o)| f64::from(v) * f64::from(o))
+                .sum();
+            near_energy += voice_e;
+            if voice_e > 0.0 {
+                projected += dot * dot / voice_e;
+            }
+            cross += dot;
+            out_dt += out_e;
+        } else if near.is_none() && matches!(pair, SweepPair::Doubletalk) {
+            // Double parole enregistrée : la voix locale est partout, sans piste propre.
+            dt_mic += mic_e;
+            dt_out += out_e;
+        } else {
+            echo_mic += mic_e;
+            echo_out += out_e;
+        }
+    }
+    let db = |num: f64, den: f64| 10.0 * (num / den.max(1e-12)).log10();
+    Some(LeadMeasure {
+        erle_echo_only: db(echo_mic, echo_out),
+        reduction_doubletalk: db(dt_mic, dt_out),
+        near_kept_db: near.as_ref().map(|_| db(projected, near_energy)),
+        near_correlation: near
+            .as_ref()
+            .map(|_| cross / (near_energy * out_dt).sqrt().max(1e-12)),
+    })
+}
+
+#[test]
+#[ignore = "mesure longue avec le modèle DTLN réel"]
+fn aec_drift_lead_sweep_with_dtln() {
+    println!(
+        "| Paire | Dérive | Avance (éch.) | ERLE écho seul | Réduction double parole \
+         | Voix locale conservée | Corrélation voix locale |"
+    );
+    println!("|---|---|---|---|---|---|---|");
+    for (pair, pair_label) in [
+        (SweepPair::Theo, "theo"),
+        (SweepPair::Doubletalk, "doubletalk"),
+        (SweepPair::TheoWithNearEnd, "theo + voix locale"),
+    ] {
+        for (drift_label, drift_ppm) in [("sans dérive", 0.0), ("800 ppm", DRIFT_PPM)] {
+            let scenario = Scenario {
+                drift_ppm,
+                jump_samples: 0.0,
+            };
+            for lead in LEADS {
+                let Some(measure) = run_lead(pair, scenario, lead) else {
+                    println!("modèle indisponible, mesure ignorée");
+                    return;
+                };
+                let optional = |value: Option<f64>, unit: &str| {
+                    value.map_or("—".to_string(), |value| format!("{value:.2}{unit}"))
+                };
+                let erle = if matches!(pair, SweepPair::Doubletalk) {
+                    "—".to_string()
+                } else {
+                    format!("{:.2} dB", measure.erle_echo_only)
+                };
+                let reduction = if matches!(pair, SweepPair::Theo) {
+                    "—".to_string()
+                } else {
+                    format!("{:.2} dB", measure.reduction_doubletalk)
+                };
+                println!(
+                    "| {pair_label} | {drift_label} | {lead} | {erle} | {reduction} | {} | {} |",
+                    optional(measure.near_kept_db, " dB"),
+                    optional(measure.near_correlation, ""),
+                );
+            }
+        }
     }
 }
