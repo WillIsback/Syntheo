@@ -3376,8 +3376,8 @@ msgid "NVIDIA NeMo-Speech.cpp"
 msgstr "NVIDIA NeMo-Speech.cpp"
 
 #: src/settings/ai/stt/server-card.tsx
-msgid "NVIDIA NeMo-Speech.cpp: your nemo-speech serve server, for example http://localhost:9000. Live transcription and imported files use its realtime WebSocket. NVIDIA's hosted gRPC endpoint is not supported."
-msgstr "NVIDIA NeMo-Speech.cpp: your nemo-speech serve server, for example http://localhost:9000. Live transcription and imported files use its realtime WebSocket. NVIDIA's hosted gRPC endpoint is not supported."
+msgid "NVIDIA NeMo-Speech.cpp: your nemo-speech serve server, for example http://localhost:9000. Live transcription uses its realtime WebSocket; imported files go through /v1/audio/transcriptions, with the WebSocket as a fallback. NVIDIA's hosted gRPC endpoint is not supported."
+msgstr "NVIDIA NeMo-Speech.cpp: your nemo-speech serve server, for example http://localhost:9000. Live transcription uses its realtime WebSocket; imported files go through /v1/audio/transcriptions, with the WebSocket as a fallback. NVIDIA's hosted gRPC endpoint is not supported."
 
 #: src/templates/template-icon-picker.tsx
 msgid "Objects"
