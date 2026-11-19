@@ -310,6 +310,46 @@ describe("UpdateSection", () => {
     ).toBeNull();
   });
 
+  // Reprise QA de #601 : au premier rendu, ni interrupteur avant de connaître
+  // le support du build, ni « unknown » pendant la lecture de la version.
+  it("renders no startup switch while the build support is unknown", () => {
+    setUpdater({ supported: null } as never);
+    render(<UpdateSection version="0.7.3" />);
+    expect(
+      screen.queryByRole("switch", { name: /Check for updates at startup/ }),
+    ).toBeNull();
+    expect(
+      screen.queryByText("Updates are not checked in this build."),
+    ).toBeNull();
+
+    setUpdater({ supported: true } as never);
+    expect(
+      screen.getByRole("switch", { name: /Check for updates at startup/ }),
+    ).toBeTruthy();
+  });
+
+  it("renders no startup switch in a build without updates", () => {
+    setUpdater({ supported: false, phase: "unavailable" } as never);
+    render(<UpdateSection version="0.7.3-2" />);
+    expect(
+      screen.getByText("Updates are not checked in this build."),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("switch", { name: /Check for updates at startup/ }),
+    ).toBeNull();
+  });
+
+  it("says the version is unknown only when reading it failed", () => {
+    const { rerender } = render(<UpdateSection version={undefined} />);
+    expect(screen.queryByText(/Installed version/)).toBeNull();
+
+    rerender(<UpdateSection version={undefined} versionFailed />);
+    expect(screen.getByText("Installed version: unknown")).toBeTruthy();
+
+    rerender(<UpdateSection version="0.7.3" />);
+    expect(screen.getByText("Installed version: 0.7.3")).toBeTruthy();
+  });
+
   it("toggles the startup check, unless the administrator set it", () => {
     const { unmount } = render(<UpdateSection version="0.7.3" />);
     const toggle = screen.getByRole("switch", {
