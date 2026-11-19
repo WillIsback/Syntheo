@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
 import {
   buildUpdaterManifest,
@@ -225,8 +226,9 @@ test("the check command refuses a missing signature file", async () => {
       path.join(dir, "Syntheo_0.7.3_amd64.AppImage.sig"),
       fakeSignature("Syntheo_0.7.3_amd64.AppImage", "0.7.3"),
     );
-    const script = new URL("./generate-updater-manifest.mjs", import.meta.url)
-      .pathname;
+    const script = fileURLToPath(
+      new URL("./generate-updater-manifest.mjs", import.meta.url),
+    );
     const args = [script, "check", "--version", "v0.7.3", "--dist", dir];
     await assert.rejects(
       run(process.execPath, [...args, "--repo", REPO]),
@@ -333,8 +335,9 @@ test("refuses a manifest that starts with a UTF-8 BOM", async () => {
       path.join(dir, "latest.json"),
       `\uFEFF${JSON.stringify(manifest)}`,
     );
-    const script = new URL("./generate-updater-manifest.mjs", import.meta.url)
-      .pathname;
+    const script = fileURLToPath(
+      new URL("./generate-updater-manifest.mjs", import.meta.url),
+    );
     await assert.rejects(
       promisify(execFile)(process.execPath, [
         script,

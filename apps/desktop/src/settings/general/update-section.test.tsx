@@ -254,7 +254,7 @@ describe("UpdateSection", () => {
   it.each([
     [
       "signature",
-      "The update's signature doesn't match Syntheo's key: nothing was installed. Download it from the release page.",
+      "The update's signature could not be verified: nothing was installed. Try again later; if it happens again, report it.",
     ],
     [
       "offline",
@@ -270,6 +270,26 @@ describe("UpdateSection", () => {
     render(<UpdateSection version="0.7.3" />);
     setUpdater({ phase: "error", error: code });
     expect(screen.getByRole("status").textContent).toBe(message);
+  });
+
+  it("never links to a manual download after a signature error", () => {
+    render(<UpdateSection version="0.7.3" />);
+    setUpdater({ phase: "error", error: "signature", update: UPDATE });
+    expect(screen.queryByRole("button", { name: "Release page" })).toBeNull();
+  });
+
+  it("links the release page after an error, the release list without a known update", () => {
+    render(<UpdateSection version="0.7.3" />);
+    setUpdater({ phase: "error", error: "manifest", update: null });
+    fireEvent.click(screen.getByRole("button", { name: "Release page" }));
+    expect(mocks.openUrl).toHaveBeenCalledWith(
+      "https://github.com/WillIsback/Syntheo/releases",
+      null,
+    );
+
+    setUpdater({ phase: "error", error: "interrupted", update: UPDATE });
+    fireEvent.click(screen.getByRole("button", { name: "Release page" }));
+    expect(mocks.openUrl).toHaveBeenLastCalledWith(UPDATE.releaseUrl, null);
   });
 
   it("reads the build support on mount and hides the switch in a devtools build", () => {

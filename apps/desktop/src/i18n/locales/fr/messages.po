@@ -5481,8 +5481,8 @@ msgid "The update is downloaded and ready to install."
 msgstr "La mise à jour est téléchargée et prête à être installée."
 
 #: src/settings/general/update-section.tsx
-msgid "The update's signature doesn't match Syntheo's key: nothing was installed. Download it from the release page."
-msgstr "La signature de la mise à jour ne correspond pas à la clé de Syntheo : rien n'a été installé. Téléchargez-la depuis la page de la version."
+msgid "The update's signature could not be verified: nothing was installed. Try again later; if it happens again, report it."
+msgstr "La signature de la mise à jour n'a pas pu être vérifiée : rien n'a été installé. Réessayez plus tard ; si l'erreur revient, signalez-la."
 
 #: src/settings/appearance/theme.tsx
 #: src/settings/search-index.ts

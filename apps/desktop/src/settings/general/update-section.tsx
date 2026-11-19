@@ -1,11 +1,11 @@
 import { Trans, useLingui } from "@lingui/react/macro";
-import { useEffect } from "react";
 import { defaultRehypePlugins, Streamdown } from "streamdown";
 
 import { changelogComponents } from "@syntheo/changelog";
 import { commands as openerCommands } from "@syntheo/plugin-opener2";
 import { streamdownIcons } from "@syntheo/ui/components/streamdown-icons";
 import { Button } from "@syntheo/ui/components/ui/button";
+import { useMountEffect } from "@syntheo/ui/hooks/use-mount-effect";
 
 import { useLiveQuery } from "~/db";
 import { type UpdaterErrorCode, useUpdater } from "~/services/updater/store";
@@ -26,6 +26,9 @@ function useUpdatesManaged(): boolean {
   });
   return data;
 }
+
+/** Liste des versions, quand aucune mise à jour n'est connue. */
+const RELEASES_URL = "https://github.com/WillIsback/Syntheo/releases";
 
 function openReleasePage(url: string) {
   void openerCommands.openUrl(url, null).catch((error) => {
@@ -88,11 +91,13 @@ function UpdateNotes({ notes }: { notes: string }) {
 // journal, pas à l'écran.
 function UpdateErrorMessage({ code }: { code: UpdaterErrorCode | null }) {
   switch (code) {
+    // Pas de renvoi vers le téléchargement manuel : il ferait installer à la
+    // main le fichier que la vérification vient de refuser.
     case "signature":
       return (
         <Trans>
-          The update's signature doesn't match Syntheo's key: nothing was
-          installed. Download it from the release page.
+          The update's signature could not be verified: nothing was installed.
+          Try again later; if it happens again, report it.
         </Trans>
       );
     case "offline":
@@ -149,9 +154,9 @@ export function UpdateSection({ version }: { version: string | undefined }) {
   );
 
   // Alpha `devtools` : l'indisponibilité s'affiche dès l'ouverture.
-  useEffect(() => {
+  useMountEffect(() => {
     void loadSupport();
-  }, [loadSupport]);
+  });
 
   const busy =
     phase === "checking" || phase === "downloading" || phase === "installing";
@@ -266,11 +271,15 @@ export function UpdateSection({ version }: { version: string | undefined }) {
             <Trans>Install and restart</Trans>
           </Button>
         ) : null}
-        {(phase === "error" || phase === "available") && update ? (
+        {/* En erreur, les messages renvoient à la page de la version : le lien
+            est toujours là (liste des versions sans mise à jour connue), sauf
+            pour une signature refusée. */}
+        {(phase === "available" && update) ||
+        (phase === "error" && error !== "signature") ? (
           <Button
             variant="link"
             className="px-1"
-            onClick={() => openReleasePage(update.releaseUrl)}
+            onClick={() => openReleasePage(update?.releaseUrl ?? RELEASES_URL)}
           >
             <Trans>Release page</Trans>
           </Button>
