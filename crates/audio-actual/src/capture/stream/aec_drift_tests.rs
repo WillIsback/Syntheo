@@ -694,3 +694,79 @@ fn aec_drift_corrected_lead_with_dtln() {
         }
     }
 }
+
+/// #623 : diagnostic de la sonde (`crates/audio-sync`) sur le scénario qui décroche, retard de
+/// départ 280 et +800 ppm. Instantané de chaque intervalle : état, retard candidat, pic et
+/// netteté de la corrélation, retard stable, retard vrai à la fin de la fenêtre.
+#[test]
+#[ignore = "diagnostic de la sonde, sortie à lire"]
+fn aec_probe_snapshots_280_at_800_ppm() {
+    use syntheo_audio_sync::{SyncProbe, SyncProbeConfig, SyncProbeEvent};
+
+    let scenario = Scenario {
+        drift_ppm: DRIFT_PPM,
+        jump_samples: 0.0,
+        base_lag: 280.0,
+    };
+    let speaker = speaker_signal(&load("theo_lpb.wav"));
+    let mic = mic_signal(&speaker, scenario);
+    // Même configuration que `AecReferenceAligner::new`.
+    let max_lag = RATE as usize * super::AEC_MAX_REFERENCE_LAG_MS as usize / 1000;
+    let min_overlap = RATE as usize * super::AEC_MIN_REFERENCE_OVERLAP_MS as usize / 1000;
+    let mut config = SyncProbeConfig::new(RATE);
+    config.window_samples = config
+        .window_samples
+        .max((max_lag + min_overlap).next_power_of_two());
+    config.max_lag_samples = max_lag.max(config.max_lag_samples);
+    let mut probe = SyncProbe::new(config);
+    println!(
+        "fenêtre {} éch., intervalle {} éch.",
+        config.window_samples, config.interval_samples
+    );
+    println!("| t (s) | événement | candidat | pic | netteté | état | stable | vrai |");
+    println!("|---|---|---|---|---|---|---|---|");
+    for (index, (speaker_chunk, mic_chunk)) in
+        speaker.chunks(CHUNK).zip(mic.chunks(CHUNK)).enumerate()
+    {
+        let Some(event) = probe.observe(speaker_chunk, mic_chunk) else {
+            continue;
+        };
+        let end = (index + 1) * CHUNK;
+        let snapshot = event.snapshot();
+        let (kind, candidate, peak, distinct) = match &event {
+            SyncProbeEvent::Measured(m) => (
+                "mesure",
+                Some(m.estimate.lag_samples),
+                m.estimate.peak_ratio,
+                m.estimate.distinctiveness,
+            ),
+            SyncProbeEvent::SkippedLowConfidence(c) => (
+                match c.reason {
+                    syntheo_audio_sync::SyncProbeLowConfidenceReason::WeakCorrelation => {
+                        "rejet corrélation"
+                    }
+                    syntheo_audio_sync::SyncProbeLowConfidenceReason::LagOutlier { .. } => {
+                        "rejet aberrant"
+                    }
+                },
+                Some(c.estimate.lag_samples),
+                c.estimate.peak_ratio,
+                c.estimate.distinctiveness,
+            ),
+            SyncProbeEvent::SkippedLowEnergy(_) => ("silence", None, 0.0, 0.0),
+        };
+        let t = event.capture_time_sec();
+        if !(3.0..=20.0).contains(&t) {
+            continue;
+        }
+        println!(
+            "| {t:.2} | {kind} | {} | {peak:.1} | {distinct:.2} | {:?} | {} | {:.1} |",
+            candidate.map_or("—".to_string(), |lag| lag.to_string()),
+            snapshot.state,
+            snapshot
+                .stable_lag_samples
+                .map_or("—".to_string(), |lag| lag.to_string()),
+            true_lag(end, scenario),
+        );
+    }
+}
