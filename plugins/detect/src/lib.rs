@@ -40,19 +40,16 @@ const PLUGIN_NAME: &str = "detect";
 pub(crate) type DetectorState = Mutex<syntheo_detect::Detector>;
 pub(crate) type ScreenShareSamplerState = Arc<Mutex<syntheo_detect::ScreenShareSampler>>;
 
-/// Réglage « Détection des réunions » de l'interface (`notification_detect`,
-/// en base), poussé par `set_detect_enabled` au démarrage et à chaque
-/// changement (issue 618). Hors du mutex du processeur : le minuteur le lit
-/// en tenant ce verrou. Vrai tant que l'interface ne l'a pas poussé, pour ne
-/// pas manquer un micro déjà actif au lancement : le réglage est relu quand
-/// le seuil est atteint.
+/// L'invite « Êtes-vous en réunion ? » est-elle affichée par l'interface
+/// (`notification_detect && !notification_disabled`) ? Poussée par
+/// `set_detect_enabled` au démarrage et à chaque changement (issue 618). Ne
+/// coupe pas `MicDetected`, décide seulement de la carence de 10 minutes.
+/// Hors du mutex du processeur : le minuteur la lit en tenant ce verrou.
+///
+/// Fausse avant la première poussée : sans carence, une détection ne peut
+/// pas retarder la suivante (le cas de l'issue 618).
+#[derive(Default)]
 pub(crate) struct DetectEnabled(pub(crate) AtomicBool);
-
-impl Default for DetectEnabled {
-    fn default() -> Self {
-        Self(AtomicBool::new(true))
-    }
-}
 
 #[cfg(feature = "test-support")]
 pub type ProcessorState = Arc<Mutex<Processor>>;

@@ -313,8 +313,10 @@ async fn test_cooldown_suppresses_until_ten_minutes_pass() {
     );
 }
 
+// Issue 618 : l'invite coupée n'empêche pas MicDetected, dont l'interface se
+// sert pendant un enregistrement (déclencheurs de l'arrêt automatique).
 #[tokio::test(start_paused = true)]
-async fn test_detect_disabled_mid_flight_suppresses_mic_detected() {
+async fn test_prompt_disabled_mid_flight_still_emits_mic_detected() {
     let h = Harness::new();
 
     h.mic_started(zoom());
@@ -323,10 +325,9 @@ async fn test_detect_disabled_mid_flight_suppresses_mic_detected() {
     h.env.set_detect_enabled(false);
 
     h.advance_secs(15).await;
-    assert!(
-        h.take_events().is_empty(),
-        "MicDetected should be suppressed when detect is disabled after timer started"
-    );
+    let events = h.take_events();
+    assert_eq!(events.len(), 1, "MicDetected emitted with the prompt off");
+    assert!(matches!(&events[0], DetectEvent::MicDetected { .. }));
 }
 
 #[tokio::test(start_paused = true)]
@@ -438,21 +439,25 @@ async fn test_threshold_change_affects_new_timers() {
     ));
 }
 
+// Issue 618 (a) : invite coupée, MicDetected au seuil, sans carence : le
+// micro repris juste après est de nouveau signalé.
 #[tokio::test(start_paused = true)]
-async fn test_detect_re_enabled_after_disabled_starts_fresh() {
+async fn test_prompt_disabled_emits_without_cooldown() {
     let h = Harness::new();
     h.env.set_detect_enabled(false);
 
     h.mic_started(zoom());
     h.advance_secs(15).await;
-    assert!(h.take_events().is_empty(), "disabled, no event");
+    assert_eq!(h.take_events().len(), 1, "prompt off: MicDetected emitted");
 
-    h.env.set_detect_enabled(true);
+    h.mic_stopped(zoom());
+    h.take_events();
     h.mic_started(zoom());
 
     h.advance_secs(15).await;
     let events = h.take_events();
-    assert_eq!(events.len(), 1, "re-enabled should start fresh timer");
+    assert_eq!(events.len(), 1, "no cooldown with the prompt off");
+    assert!(matches!(&events[0], DetectEvent::MicDetected { .. }));
 }
 
 #[tokio::test(start_paused = true)]
@@ -520,17 +525,16 @@ async fn test_dnd_toggled_off_before_timer_fires() {
     );
 }
 
-// Issue 618 : une détection perdue pendant que le réglage est coupé ne doit
-// pas consommer le délai de 10 minutes. Réglage coupé pendant le seuil, puis
-// rallumé : le micro repris tout de suite doit être signalé.
+// Issue 618 (b) : invite coupée puis rallumée, la détection suivante part
+// sans attendre 10 minutes.
 #[tokio::test(start_paused = true)]
-async fn test_detection_skipped_while_disabled_does_not_start_cooldown() {
+async fn test_detection_while_prompt_disabled_does_not_start_cooldown() {
     let h = Harness::new();
 
     h.mic_started(zoom());
     h.env.set_detect_enabled(false);
     h.advance_secs(15).await;
-    assert!(h.take_events().is_empty(), "disabled: no MicDetected");
+    assert_eq!(h.take_events().len(), 1, "prompt off: MicDetected emitted");
 
     h.mic_stopped(zoom());
     h.take_events();

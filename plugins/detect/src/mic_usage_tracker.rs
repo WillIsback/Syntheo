@@ -83,13 +83,17 @@ pub(crate) fn spawn_timer<E: Env>(
 
         let emit_event = {
             let mut guard = state.lock().unwrap_or_else(|e| e.into_inner());
-            // Réglage coupé : on libère le minuteur sans carence (issue 618).
-            if !env.is_detect_enabled() {
-                if guard.mic_usage_tracker.release(&app_id, generation) {
-                    tracing::info!(app_id = %app_id, "skip_mic_detected: detect_disabled");
-                }
-                None
-            } else if !guard.mic_usage_tracker.claim(&app_id, generation) {
+            // MicDetected part que l'invite « Êtes-vous en réunion ? » soit
+            // activée ou non : l'interface s'en sert aussi pendant un
+            // enregistrement. L'invite décide seulement de la carence de
+            // 10 minutes : coupée, l'événement n'affiche rien et ne doit pas
+            // retarder la prochaine invite (issue 618).
+            let owned = if env.is_detect_enabled() {
+                guard.mic_usage_tracker.claim(&app_id, generation)
+            } else {
+                guard.mic_usage_tracker.release(&app_id, generation)
+            };
+            if !owned {
                 None
             } else if guard.policy.respect_dnd && env.is_do_not_disturb() {
                 tracing::info!(app_id = %app_id, "skip_mic_detected: DoNotDisturb");

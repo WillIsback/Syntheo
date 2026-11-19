@@ -25,6 +25,7 @@ const {
   clearNotificationsMock,
   showNotificationMock,
   useConfigValueMock,
+  setDetectEnabledMock,
 } = vi.hoisted(() => ({
   listMicUsingApplicationsMock: vi.fn(),
   inspectMeetingAccessibilityMock: vi.fn(),
@@ -35,12 +36,17 @@ const {
   })),
   showNotificationMock: vi.fn(),
   useConfigValueMock: vi.fn((key: string) => key !== "notification_disabled"),
+  setDetectEnabledMock: vi.fn(async (_enabled: boolean) => ({
+    status: "ok" as const,
+    data: null,
+  })),
 }));
 
 vi.mock("@syntheo/plugin-detect", () => ({
   commands: {
     inspectMeetingAccessibility: inspectMeetingAccessibilityMock,
     listMicUsingApplications: listMicUsingApplicationsMock,
+    setDetectEnabled: setDetectEnabledMock,
   },
   events: { detectEvent: { listen: listenMock } },
 }));
@@ -149,6 +155,7 @@ describe("ListenerProvider detect events", () => {
     showNotificationMock.mockReset();
     showNotificationMock.mockResolvedValue({ status: "ok", data: null });
     useConfigValueMock.mockReset();
+    setDetectEnabledMock.mockClear();
     useConfigValueMock.mockImplementation(
       (key: string) => key !== "notification_disabled",
     );
@@ -475,6 +482,63 @@ describe("ListenerProvider detect events", () => {
   });
 
   describe("invite micro détecté", () => {
+    // Issue 618 : l'invite coupée (réglage par défaut) n'empêche pas un
+    // enregistrement en cours d'apprendre l'application de l'appel, dont
+    // dépend l'arrêt automatique.
+    test("learns the trigger app while recording with the meeting prompt off", async () => {
+      useConfigValueMock.mockImplementation(
+        (key: string) =>
+          key !== "notification_disabled" && key !== "notification_detect",
+      );
+      const { store, micDetected } = await setup({ fakeTimers: false });
+
+      micDetected([zoom]);
+      await Promise.resolve();
+
+      expect(store.getState().live.triggerAppIds).toContain(zoom.id);
+      expect(showNotificationMock).not.toHaveBeenCalled();
+    });
+
+    test.each([
+      { detect: false, disabled: false, pushed: false },
+      { detect: true, disabled: true, pushed: false },
+      { detect: true, disabled: false, pushed: true },
+    ])(
+      "pushes the meeting prompt state to the detector (detect=$detect, notifications off=$disabled)",
+      async ({ detect, disabled, pushed }) => {
+        const config = {
+          notification_detect: detect,
+          notification_disabled: disabled,
+        };
+        useConfigValueMock.mockImplementation(
+          (key: string) => (config as Record<string, boolean>)[key] ?? true,
+        );
+        const store = createListenerStore();
+        const view = render(
+          <ListenerProvider store={store}>
+            <div>child</div>
+          </ListenerProvider>,
+        );
+
+        await vi.waitFor(() =>
+          expect(setDetectEnabledMock).toHaveBeenLastCalledWith(pushed),
+        );
+
+        // Changement de l'un des deux réglages : nouvelle poussée.
+        config.notification_detect = !detect;
+        view.rerender(
+          <ListenerProvider store={store}>
+            <div>child</div>
+          </ListenerProvider>,
+        );
+        await vi.waitFor(() =>
+          expect(setDetectEnabledMock).toHaveBeenLastCalledWith(
+            !detect && !disabled,
+          ),
+        );
+      },
+    );
+
     test("does not show mic-detected prompts when detection notifications are disabled", async () => {
       useConfigValueMock.mockImplementation((key: string) =>
         key === "notification_detect" ? false : true,

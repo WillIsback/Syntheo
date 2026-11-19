@@ -7,7 +7,6 @@ const mocks = vi.hoisted(() => ({
   // l'écriture. `null` simule un profil d'avant ce réglage.
   storedUiLanguage: "fr" as string | null,
   getPreferredLanguages: vi.fn(),
-  setDetectEnabled: vi.fn(() => Promise.resolve({ status: "ok", data: null })),
   getTemplateSource: vi.fn(),
   executeTransaction: vi.fn(
     (_statements: Array<{ sql: string; params: unknown[] }>) =>
@@ -18,7 +17,6 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@syntheo/plugin-detect", () => ({
   commands: {
     getPreferredLanguages: mocks.getPreferredLanguages,
-    setDetectEnabled: mocks.setDetectEnabled,
   },
 }));
 
@@ -228,32 +226,6 @@ describe("SQLite settings", () => {
       JSON.stringify(false),
     ]);
   });
-
-  it("pushes the meeting detection setting to the detector when it changes", async () => {
-    await setSettingValues({ notification_detect: true });
-
-    expect(mocks.setDetectEnabled).toHaveBeenCalledExactlyOnceWith(true);
-  });
-
-  it.each([
-    { stored: undefined, pushed: false },
-    { stored: true, pushed: true },
-  ])(
-    "pushes the meeting detection setting at startup (stored: $stored)",
-    async ({ stored, pushed }) => {
-      mocks.execute.mockResolvedValue(
-        stored === undefined
-          ? []
-          : [{ id: "notification_detect", value_json: JSON.stringify(stored) }],
-      );
-
-      await initializeApplicationSettings();
-
-      // Jamais enregistré : la valeur par défaut (coupé), pas le « vrai »
-      // provisoire du détecteur (issue 618).
-      expect(mocks.setDetectEnabled).toHaveBeenLastCalledWith(pushed);
-    },
-  );
 
   it("prefers the synced row over a stale device-local row", () => {
     const result = parseSettingRows([

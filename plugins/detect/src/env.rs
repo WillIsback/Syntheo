@@ -7,6 +7,10 @@ use crate::DetectEvent;
 pub trait Env: Clone + Send + Sync + 'static {
     fn emit(&self, event: DetectEvent);
     fn is_do_not_disturb(&self) -> bool;
+    /// L'invite « Êtes-vous en réunion ? » est affichée par l'interface
+    /// (`notification_detect && !notification_disabled`). Ne coupe pas
+    /// `MicDetected` : décide seulement si la carence de 10 minutes démarre
+    /// (issue 618).
     fn is_detect_enabled(&self) -> bool;
 }
 
@@ -36,15 +40,14 @@ impl<R: Runtime> Env for TauriEnv<R> {
         crate::dnd::is_do_not_disturb()
     }
 
-    // Le réglage poussé par l'interface (issue 618). L'ancien
-    // `settings.json`, lu jusqu'ici, n'est plus écrit par l'interface : Rust
-    // émettait toujours, et l'interface jetait l'événement.
+    // La valeur poussée par l'interface (issue 618). L'ancien `settings.json`,
+    // lu jusqu'ici, n'est plus écrit par l'interface.
     fn is_detect_enabled(&self) -> bool {
         use tauri::Manager;
 
         self.app_handle
             .try_state::<crate::DetectEnabled>()
-            .is_none_or(|state| state.0.load(std::sync::atomic::Ordering::Relaxed))
+            .is_some_and(|state| state.0.load(std::sync::atomic::Ordering::Relaxed))
     }
 }
 

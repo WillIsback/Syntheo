@@ -35,10 +35,9 @@ pub fn handle_detect_event<E: Env>(
     event: syntheo_detect::DetectEvent,
 ) {
     match event {
+        // Suivi même avec l'invite coupée : MicDetected sert aussi pendant un
+        // enregistrement (déclencheurs de l'arrêt automatique, issue 618).
         syntheo_detect::DetectEvent::MicStarted(apps) => {
-            if !env.is_detect_enabled() {
-                return;
-            }
             handle_mic_started(env, state, apps);
         }
         syntheo_detect::DetectEvent::MicStopped(apps) => {
