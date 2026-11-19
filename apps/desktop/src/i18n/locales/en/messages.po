@@ -758,6 +758,10 @@ msgstr "by {name}"
 msgid "Can't import this audio"
 msgstr "Can't import this audio"
 
+#: src/settings/general/update-section.tsx
+msgid "Can't reach the update server. Check your connection, then try again."
+msgstr "Can't reach the update server. Check your connection, then try again."
+
 #: src/folders/folder-actions.tsx
 #: src/folders/project/next-meeting-slot.tsx
 #: src/session/components/capsule/index.tsx
@@ -5274,6 +5278,10 @@ msgstr "The command failed (code {code})."
 msgid "The command was not confirmed, so it did not run."
 msgstr "The command was not confirmed, so it did not run."
 
+#: src/settings/general/update-section.tsx
+msgid "The download was interrupted. Try again."
+msgstr "The download was interrupted. Try again."
+
 #: src/stt/audio-import-feedback.ts
 msgid "The import of {name} was abandoned: {reason}"
 msgstr "The import of {name} was abandoned: {reason}"
@@ -5461,12 +5469,20 @@ msgid "The unreadable audio was preserved in this note's folder as an audio.reco
 msgstr "The unreadable audio was preserved in this note's folder as an audio.recovery-*.wav file. New audio will be recorded separately. Your transcript is unchanged."
 
 #: src/settings/general/update-section.tsx
-msgid "The update failed: {error}"
-msgstr "The update failed: {error}"
+msgid "The update failed. Try again, or use the release page."
+msgstr "The update failed. Try again, or use the release page."
+
+#: src/settings/general/update-section.tsx
+msgid "The update information could not be read. Try again later, or use the release page."
+msgstr "The update information could not be read. Try again later, or use the release page."
 
 #: src/settings/general/update-section.tsx
 msgid "The update is downloaded and ready to install."
 msgstr "The update is downloaded and ready to install."
+
+#: src/settings/general/update-section.tsx
+msgid "The update's signature doesn't match Syntheo's key: nothing was installed. Download it from the release page."
+msgstr "The update's signature doesn't match Syntheo's key: nothing was installed. Download it from the release page."
 
 #: src/settings/appearance/theme.tsx
 #: src/settings/search-index.ts

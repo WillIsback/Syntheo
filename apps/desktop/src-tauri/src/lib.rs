@@ -549,6 +549,7 @@ fn make_specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
             commands::install_agent_skill,
             commands::get_aec_model_status,
             commands::retry_aec_model_download,
+            updater::updater_supported,
             updater::updater_check::<tauri::Wry>,
             updater::updater_download::<tauri::Wry>,
             updater::updater_install::<tauri::Wry>,

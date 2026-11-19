@@ -105,4 +105,6 @@ devtools = [
 ]
 
 [dev-dependencies]
+reqwest = { workspace = true }
 tempfile = { workspace = true }
+wiremock = { workspace = true }

@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   buildUpdaterManifest,
   checkUpdaterManifest,
+  parseUpdaterManifest,
   signatureFields,
 } from "./generate-updater-manifest.mjs";
 
@@ -300,4 +301,54 @@ test("--base-url points the installers to a local test server", async () => {
     }),
     /adresse de base invalide/,
   );
+});
+
+// Issue 601 : un latest.json précédé d'un BOM est refusé par le plugin. Le
+// contrôle le dit clairement au lieu d'un SyntaxError.
+test("refuses a manifest that starts with a UTF-8 BOM", async () => {
+  assert.deepEqual(parseUpdaterManifest('{"version":"0.7.4"}'), {
+    version: "0.7.4",
+  });
+  assert.throws(
+    () => parseUpdaterManifest('\uFEFF{"version":"0.7.4"}'),
+    /BOM UTF-8.*error decoding response body/,
+  );
+  assert.throws(() => parseUpdaterManifest("{"), /n'est pas un JSON valide/);
+
+  const { execFile } = await import("node:child_process");
+  const { mkdtemp, writeFile, rm } = await import("node:fs/promises");
+  const os = await import("node:os");
+  const path = await import("node:path");
+  const { promisify } = await import("node:util");
+  const dir = await mkdtemp(path.join(os.tmpdir(), "updater-manifest-bom-"));
+  try {
+    const manifest = await buildUpdaterManifest({
+      version: "0.7.3",
+      notes: "",
+      repo: REPO,
+      readSignature: signaturesFor("0.7.3"),
+    });
+    // Écrit avec BOM, comme le ferait un éditeur Windows.
+    await writeFile(
+      path.join(dir, "latest.json"),
+      `\uFEFF${JSON.stringify(manifest)}`,
+    );
+    const script = new URL("./generate-updater-manifest.mjs", import.meta.url)
+      .pathname;
+    await assert.rejects(
+      promisify(execFile)(process.execPath, [
+        script,
+        "check",
+        "--version",
+        "v0.7.3",
+        "--dist",
+        dir,
+        "--repo",
+        REPO,
+      ]),
+      (error) => /BOM UTF-8/.test(error.stderr),
+    );
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
 });

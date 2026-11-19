@@ -3,7 +3,11 @@ import { create } from "zustand";
 
 import { installUpdateAndRelaunch } from "~/shared/relaunch";
 import { listenerStore } from "~/store/zustand/listener/instance";
-import { commands, type DownloadEvent } from "~/types/tauri.gen";
+import {
+  commands,
+  type DownloadEvent,
+  type UpdaterError,
+} from "~/types/tauri.gen";
 
 // Mise à jour intégrée (issue 593) : état de la vérification, du
 // téléchargement et de l'installation, au-dessus des commandes Rust
@@ -31,11 +35,18 @@ export type UpdaterPhase =
   | "installing"
   | "error";
 
+/** Code d'erreur stable (Rust) ; « other » pour une erreur côté interface. */
+export type UpdaterErrorCode = UpdaterError;
+
 type UpdaterState = {
   phase: UpdaterPhase;
   update: AvailableUpdate | null;
   progress: { downloaded: number; total: number | null } | null;
-  error: string | null;
+  error: UpdaterErrorCode | null;
+  // `false` : build `devtools` (alpha), sans mise à jour intégrée. `null` tant
+  // que la commande n'a pas répondu.
+  supported: boolean | null;
+  loadSupport: () => Promise<void>;
   check: (options: { manual: boolean }) => Promise<void>;
   download: () => Promise<void>;
   install: () => Promise<void>;
@@ -47,8 +58,15 @@ export function isListeningNow(): boolean {
   return status === "active" || status === "finalizing";
 }
 
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
+// Erreur d'une commande Rust, avec son code (issue 601).
+class UpdaterCommandError extends Error {
+  constructor(readonly code: UpdaterErrorCode) {
+    super(`updater: ${code}`);
+  }
+}
+
+function errorCode(error: unknown): UpdaterErrorCode {
+  return error instanceof UpdaterCommandError ? error.code : "other";
 }
 
 export const useUpdater = create<UpdaterState>((set, get) => ({
@@ -56,6 +74,23 @@ export const useUpdater = create<UpdaterState>((set, get) => ({
   update: null,
   progress: null,
   error: null,
+  supported: null,
+
+  loadSupport: async () => {
+    if (get().supported !== null) return;
+    let supported = true;
+    try {
+      supported = await commands.updaterSupported();
+    } catch (error) {
+      console.warn("[updater] failed to read support", error);
+    }
+    set((state) => ({
+      supported,
+      // Alpha `devtools` : indisponible dès l'ouverture, sans attendre la
+      // vérification différée (issue 601).
+      phase: !supported && state.phase === "idle" ? "unavailable" : state.phase,
+    }));
+  },
 
   check: async ({ manual }) => {
     const { phase } = get();
@@ -69,7 +104,9 @@ export const useUpdater = create<UpdaterState>((set, get) => ({
     set({ phase: "checking", error: null });
     try {
       const result = await commands.updaterCheck();
-      if (result.status === "error") throw new Error(result.error);
+      if (result.status === "error") {
+        throw new UpdaterCommandError(result.error);
+      }
       const check = result.data;
       if (check.status === "unavailable") {
         set({ phase: "unavailable", update: null });
@@ -77,7 +114,9 @@ export const useUpdater = create<UpdaterState>((set, get) => ({
         set({ phase: "up_to_date", update: null });
       } else {
         set({
-          phase: "available",
+          // La version trouvée est déjà téléchargée : elle reste prête à être
+          // installée (issue 601).
+          phase: check.downloaded ? "ready" : "available",
           progress: null,
           update: {
             version: check.version,
@@ -91,8 +130,12 @@ export const useUpdater = create<UpdaterState>((set, get) => ({
     } catch (error) {
       // Hors ligne, proxy, pare-feu : la vérification au démarrage échoue en
       // silence ; la vérification demandée affiche l'erreur.
-      if (manual) {
-        set({ phase: "error", error: errorMessage(error) });
+      const code = errorCode(error);
+      if (code === "unavailable") {
+        set({ phase: "unavailable", update: null });
+      } else if (manual) {
+        console.warn("[updater] check failed", error);
+        set({ phase: "error", error: code });
       } else {
         console.warn("[updater] automatic check failed", error);
         set({ phase: "idle" });
@@ -114,10 +157,13 @@ export const useUpdater = create<UpdaterState>((set, get) => ({
     };
     try {
       const result = await commands.updaterDownload(channel);
-      if (result.status === "error") throw new Error(result.error);
+      if (result.status === "error") {
+        throw new UpdaterCommandError(result.error);
+      }
       set({ phase: "ready" });
     } catch (error) {
-      set({ phase: "error", error: errorMessage(error) });
+      console.warn("[updater] download failed", error);
+      set({ phase: "error", error: errorCode(error) });
     }
   },
 
@@ -132,10 +178,13 @@ export const useUpdater = create<UpdaterState>((set, get) => ({
     try {
       await installUpdateAndRelaunch(async () => {
         const result = await commands.updaterInstall();
-        if (result.status === "error") throw new Error(result.error);
+        if (result.status === "error") {
+          throw new UpdaterCommandError(result.error);
+        }
       });
     } catch (error) {
-      set({ phase: "error", error: errorMessage(error) });
+      console.warn("[updater] install failed", error);
+      set({ phase: "error", error: errorCode(error) });
     }
   },
 }));

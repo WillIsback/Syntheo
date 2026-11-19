@@ -46,6 +46,8 @@ vi.mock("~/services/updater/store", async () => {
     update: null,
     progress: null,
     error: null,
+    supported: true,
+    loadSupport: vi.fn(),
     check: vi.fn(),
     download: vi.fn(),
     install: vi.fn(),
@@ -82,6 +84,8 @@ describe("UpdateSection", () => {
       update: null,
       progress: null,
       error: null,
+      supported: true,
+      loadSupport: vi.fn(),
       check: vi.fn(),
       download: vi.fn(),
       install: vi.fn(),
@@ -246,12 +250,44 @@ describe("UpdateSection", () => {
     expect(mocks.openUrl).toHaveBeenCalledWith(UPDATE.releaseUrl, null);
   });
 
-  it("shows a clear error after a manual check fails", () => {
+  // Issue 601 : un libellé traduit par code, sans le détail technique.
+  it.each([
+    [
+      "signature",
+      "The update's signature doesn't match Syntheo's key: nothing was installed. Download it from the release page.",
+    ],
+    [
+      "offline",
+      "Can't reach the update server. Check your connection, then try again.",
+    ],
+    ["interrupted", "The download was interrupted. Try again."],
+    [
+      "manifest",
+      "The update information could not be read. Try again later, or use the release page.",
+    ],
+    ["other", "The update failed. Try again, or use the release page."],
+  ] as const)("explains the %s error", (code, message) => {
     render(<UpdateSection version="0.7.3" />);
-    setUpdater({ phase: "error", error: "network unreachable" });
+    setUpdater({ phase: "error", error: code });
+    expect(screen.getByRole("status").textContent).toBe(message);
+  });
+
+  it("reads the build support on mount and hides the switch in a devtools build", () => {
+    const loadSupport = vi.fn();
+    setUpdater({ loadSupport } as never);
+    render(<UpdateSection version="0.7.3-1" />);
+    expect(loadSupport).toHaveBeenCalledTimes(1);
+    expect(
+      screen.getByRole("switch", { name: /Check for updates at startup/ }),
+    ).toBeTruthy();
+
+    setUpdater({ supported: false, phase: "unavailable" } as never);
     expect(screen.getByRole("status").textContent).toBe(
-      "The update failed: network unreachable",
+      "Updates are not checked in this build.",
     );
+    expect(
+      screen.queryByRole("switch", { name: /Check for updates at startup/ }),
+    ).toBeNull();
   });
 
   it("toggles the startup check, unless the administrator set it", () => {

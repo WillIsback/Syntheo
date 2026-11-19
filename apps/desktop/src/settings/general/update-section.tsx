@@ -1,4 +1,5 @@
 import { Trans, useLingui } from "@lingui/react/macro";
+import { useEffect } from "react";
 import { defaultRehypePlugins, Streamdown } from "streamdown";
 
 import { changelogComponents } from "@syntheo/changelog";
@@ -7,7 +8,7 @@ import { streamdownIcons } from "@syntheo/ui/components/streamdown-icons";
 import { Button } from "@syntheo/ui/components/ui/button";
 
 import { useLiveQuery } from "~/db";
-import { useUpdater } from "~/services/updater/store";
+import { type UpdaterErrorCode, useUpdater } from "~/services/updater/store";
 import { useSetSettingValue } from "~/settings/queries";
 import { SettingSwitchRow } from "~/settings/setting-row";
 import { useConfigValues } from "~/shared/config";
@@ -83,6 +84,39 @@ function UpdateNotes({ notes }: { notes: string }) {
   );
 }
 
+// Libellé par code d'erreur (issue 601) : le détail technique est dans le
+// journal, pas à l'écran.
+function UpdateErrorMessage({ code }: { code: UpdaterErrorCode | null }) {
+  switch (code) {
+    case "signature":
+      return (
+        <Trans>
+          The update's signature doesn't match Syntheo's key: nothing was
+          installed. Download it from the release page.
+        </Trans>
+      );
+    case "offline":
+      return (
+        <Trans>
+          Can't reach the update server. Check your connection, then try again.
+        </Trans>
+      );
+    case "interrupted":
+      return <Trans>The download was interrupted. Try again.</Trans>;
+    case "manifest":
+      return (
+        <Trans>
+          The update information could not be read. Try again later, or use the
+          release page.
+        </Trans>
+      );
+    default:
+      return (
+        <Trans>The update failed. Try again, or use the release page.</Trans>
+      );
+  }
+}
+
 function formatBytes(bytes: number, locale: string): string {
   return new Intl.NumberFormat(locale, {
     style: "unit",
@@ -104,6 +138,8 @@ export function UpdateSection({ version }: { version: string | undefined }) {
   const update = useUpdater((state) => state.update);
   const progress = useUpdater((state) => state.progress);
   const error = useUpdater((state) => state.error);
+  const supported = useUpdater((state) => state.supported);
+  const loadSupport = useUpdater((state) => state.loadSupport);
   const check = useUpdater((state) => state.check);
   const download = useUpdater((state) => state.download);
   const install = useUpdater((state) => state.install);
@@ -111,6 +147,11 @@ export function UpdateSection({ version }: { version: string | undefined }) {
     (state) =>
       state.live.status === "active" || state.live.status === "finalizing",
   );
+
+  // Alpha `devtools` : l'indisponibilité s'affiche dès l'ouverture.
+  useEffect(() => {
+    void loadSupport();
+  }, [loadSupport]);
 
   const busy =
     phase === "checking" || phase === "downloading" || phase === "installing";
@@ -175,7 +216,7 @@ export function UpdateSection({ version }: { version: string | undefined }) {
         ) : null}
         {phase === "error" ? (
           <span className="text-destructive block">
-            <Trans>The update failed: {error}</Trans>
+            <UpdateErrorMessage code={error} />
           </span>
         ) : null}
       </div>
@@ -251,23 +292,25 @@ export function UpdateSection({ version }: { version: string | undefined }) {
         </p>
       ) : null}
 
-      <SettingSwitchRow
-        settingId="check-updates-on-startup"
-        title={<Trans>Check for updates at startup</Trans>}
-        description={
-          managed ? (
-            <Trans>Set by your administrator.</Trans>
-          ) : (
-            <Trans>
-              Reads the latest version on GitHub. Nothing is installed without
-              your action.
-            </Trans>
-          )
-        }
-        checked={automatic_updates && !managed}
-        disabled={managed}
-        onChange={setAutomaticUpdates}
-      />
+      {supported === false ? null : (
+        <SettingSwitchRow
+          settingId="check-updates-on-startup"
+          title={<Trans>Check for updates at startup</Trans>}
+          description={
+            managed ? (
+              <Trans>Set by your administrator.</Trans>
+            ) : (
+              <Trans>
+                Reads the latest version on GitHub. Nothing is installed without
+                your action.
+              </Trans>
+            )
+          }
+          checked={automatic_updates && !managed}
+          disabled={managed}
+          onChange={setAutomaticUpdates}
+        />
+      )}
     </section>
   );
 }
