@@ -40,7 +40,6 @@ export const runBatchSession = async <T extends BatchStore>(
   options?: {
     notifyOnCompletion?: boolean;
     signal?: AbortSignal;
-    recovery?: boolean;
   },
 ) => {
   const resumeFromRecovery = get().batch[sessionId]?.recovered === true;
@@ -96,11 +95,9 @@ export const runBatchSession = async <T extends BatchStore>(
 
     settled = true;
 
-    let emptyResponse = false;
     try {
       const handled = get().handleBatchResponse(sessionId, output.response);
       if (handled === false) {
-        emptyResponse = true;
         throw new NoSpeechDetectedError();
       }
       cleanup();
@@ -109,8 +106,6 @@ export const runBatchSession = async <T extends BatchStore>(
       const errorMessage =
         error instanceof Error ? error.message : String(error);
       get().handleBatchFailed(sessionId, errorMessage);
-      if (!(options?.recovery && emptyResponse)) {
-      }
       cleanup(false);
       reject(
         error instanceof NoSpeechDetectedError
