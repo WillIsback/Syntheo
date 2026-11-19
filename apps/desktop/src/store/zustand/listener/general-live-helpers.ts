@@ -175,7 +175,9 @@ const notifyTranscriptionStalled = () => {
   toast.warning(t`Live transcription interrupted`, {
     id: "live-transcription-stalled",
     duration: Infinity,
-    description: t`Syntheo keeps listening while live transcription reconnects. No audio is kept: the missing passage will not be recovered.`,
+    // La reconnexion rejoue une coupure courte (issues 446 et 621) : la perte
+    // n'est affirmée que si la coupure dure.
+    description: t`Syntheo keeps listening while live transcription reconnects. No audio is saved to disk: if the outage lasts, the missing passage will not be recovered.`,
   });
 };
 

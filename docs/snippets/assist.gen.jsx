@@ -206,7 +206,7 @@ const SYN_LABELS = {
   "Listening…": "Écoute…",
   "Live transcript preview": "Voir le texte en direct",
   "Live transcription paused: {cause}. No audio is kept: this passage will be missing from the transcription. Check the transcription server settings.": "Transcription en direct en pause : {cause}. Aucun audio n'est conservé : ce passage manquera à la transcription. Vérifiez les réglages du serveur de transcription.",
-  "Live transcription paused: {cause}. No audio is kept: this passage will be missing from the transcription. Reconnecting…": "Transcription en direct en pause : {cause}. Aucun audio n'est conservé : ce passage manquera à la transcription. Reconnexion…",
+  "Live transcription paused: {cause}. No audio is saved to disk: if the outage lasts, this passage will be missing from the transcription. Reconnecting…": "Transcription en direct en pause : {cause}. Aucun audio n'est enregistré sur le disque : si la coupure dure, ce passage manquera à la transcription. Reconnexion…",
   "Live transcription resumed.": "Transcription en direct reprise.",
   "Local script with the path of the exported file. Asks for confirmation the first time.": "Script local avec le chemin du fichier exporté. Confirmation au premier lancement.",
   "Lock app": "Verrouiller l'application",
@@ -3869,7 +3869,7 @@ const SynTrbLiveNote = ({ failure }) => {
   const message = resumed
     ? L("Live transcription resumed.")
     : cause === "offline"
-      ? LF("Live transcription paused: {cause}. No audio is kept: this passage will be missing from the transcription. Reconnecting…", { cause: L("you are offline") })
+      ? LF("Live transcription paused: {cause}. No audio is saved to disk: if the outage lasts, this passage will be missing from the transcription. Reconnecting…", { cause: L("you are offline") })
       : LF("Live transcription paused: {cause}. No audio is kept: this passage will be missing from the transcription. Check the transcription server settings.", {
           cause: LF("{providerName} rejected your API key", { providerName: "OpenAI" }),
         });

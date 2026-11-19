@@ -159,7 +159,7 @@ Les clés API sont rangées dans le trousseau du système, jamais en clair dans 
 | La pastille indique « Injoignable » | Le serveur n'a pas répondu. Vérifiez qu'il est démarré et que vous êtes sur le bon réseau (VPN, Tailscale), puis relancez le test. |
 | La pastille indique « Clé refusée » | Vérifiez la clé dans « Avancé », puis relancez le test. |
 | La liste des modèles de synthèse est vide | Vérifiez que `URL de base/models` répond (par exemple `curl http://localhost:11434/v1/models`) et que l'adresse se termine bien par `/v1`. |
-| La transcription en direct se met en pause | Le serveur ne répond plus, ou il a refusé la clé ou les réglages. Dans le premier cas, Syntheo tente de se reconnecter. Le passage manquant ne sera pas transcrit, faute d'audio conservé. |
+| La transcription en direct se met en pause | Le serveur ne répond plus, ou il a refusé la clé ou les réglages. Dans le premier cas, Syntheo tente de se reconnecter et rejoue une coupure courte de mémoire ; après une coupure plus longue, le passage manquant ne sera pas transcrit, faute d'audio enregistré sur le disque. |
 | Impossible de démarrer une écoute | Aucun serveur de transcription n'est configuré, ou le modèle choisi est un modèle « fichier ». |
 
 Pour travailler sans connexion internet, voir [Utiliser Syntheo sans réseau](/fr/offline).

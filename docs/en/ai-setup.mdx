@@ -159,7 +159,7 @@ API keys are stored in the system keychain, never in plain text in the local dat
 | The pill shows "Unreachable" | The server did not answer. Check that it is running and that you are on the right network (VPN, Tailscale), then test again. |
 | The pill shows "Key refused" | Check the key in "Advanced", then test again. |
 | The synthesis model list is empty | Check that `base URL/models` answers (for example `curl http://localhost:11434/v1/models`) and that the address ends with `/v1`. |
-| Live transcription pauses | The server no longer answers, or it refused the key or the settings. In the first case, Syntheo tries to reconnect. The missing passage will not be transcribed, since no audio is kept. |
+| Live transcription pauses | The server no longer answers, or it refused the key or the settings. In the first case, Syntheo tries to reconnect and replays a short outage from memory; after a longer one, the missing passage will not be transcribed, since no audio is saved to disk. |
 | Cannot start listening | No transcription server is configured, or the chosen model is a "file" model. |
 
 To work without an internet connection, see [Use Syntheo without a network](/en/offline).

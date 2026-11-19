@@ -94,9 +94,9 @@ L'audio n'est jamais écrit sur le disque : il reste en mémoire le temps d'êtr
 
 ### Si la transcription s'interrompt
 
-Si la connexion au serveur de transcription se coupe, Syntheo continue de capter l'audio. En bas de la marge, un message l'indique, par exemple « Transcription en direct en pause : vous êtes hors ligne. Aucun audio n'est conservé : ce passage manquera à la transcription. Reconnexion… ». Quand le flux revient, Syntheo affiche brièvement « Transcription en direct reprise. ».
+Si la connexion au serveur de transcription se coupe, Syntheo continue de capter l'audio. En bas de la marge, un message l'indique, par exemple « Transcription en direct en pause : vous êtes hors ligne. Aucun audio n'est enregistré sur le disque : si la coupure dure, ce passage manquera à la transcription. Reconnexion… ». Quand le flux revient, Syntheo affiche brièvement « Transcription en direct reprise. ». Une coupure courte est rejouée de mémoire au nouveau flux : rien ne manque.
 
-Comme l'audio n'est pas conservé, le passage manqué ne peut pas être rattrapé : la transcription indique un trou daté, par exemple « Transcription interrompue 14:32–14:35 ». Voir [Dépannage](/fr/troubleshooting).
+Après une coupure plus longue (au-delà d'une quinzaine de secondes), le passage manqué ne peut pas être rattrapé, faute d'audio enregistré sur le disque : la transcription indique un trou daté, par exemple « Transcription interrompue 14:32–14:35 ». Voir [Dépannage](/fr/troubleshooting).
 
 ### Faire une pause
 

@@ -78,12 +78,15 @@ export function getLiveTranscriptPausedMessage({
   online?: boolean;
 }) {
   const cause = getPauseCause({ degraded, sttProvider, online });
-  // Règle audio de Syntheo : rien n'est conservé, la coupure manquera à la
-  // transcription.
+  // Sans nouvelle tentative (clé ou réglages refusés), le passage manque tant
+  // que la personne n'agit pas : formulation ferme.
   if (!isRetriedAutomatically(degraded)) {
     return t`Live transcription paused: ${cause}. No audio is kept: this passage will be missing from the transcription. Check the transcription server settings.`;
   }
-  return t`Live transcription paused: ${cause}. No audio is kept: this passage will be missing from the transcription. Reconnecting…`;
+  // Une coupure courte est rejouée au flux suivant (issue 446) : la perte
+  // n'est pas encore connue, on ne l'affirme pas (issue 621). Rien n'est
+  // écrit sur le disque.
+  return t`Live transcription paused: ${cause}. No audio is saved to disk: if the outage lasts, this passage will be missing from the transcription. Reconnecting…`;
 }
 
 export function getLiveTranscriptResumedMessage() {

@@ -206,7 +206,7 @@ const SYN_LABELS = {
   "Listening…": "Listening…",
   "Live transcript preview": "Live transcript preview",
   "Live transcription paused: {cause}. No audio is kept: this passage will be missing from the transcription. Check the transcription server settings.": "Live transcription paused: {cause}. No audio is kept: this passage will be missing from the transcription. Check the transcription server settings.",
-  "Live transcription paused: {cause}. No audio is kept: this passage will be missing from the transcription. Reconnecting…": "Live transcription paused: {cause}. No audio is kept: this passage will be missing from the transcription. Reconnecting…",
+  "Live transcription paused: {cause}. No audio is saved to disk: if the outage lasts, this passage will be missing from the transcription. Reconnecting…": "Live transcription paused: {cause}. No audio is saved to disk: if the outage lasts, this passage will be missing from the transcription. Reconnecting…",
   "Live transcription resumed.": "Live transcription resumed.",
   "Local script with the path of the exported file. Asks for confirmation the first time.": "Local script with the path of the exported file. Asks for confirmation the first time.",
   "Lock app": "Lock app",
@@ -3869,7 +3869,7 @@ const SynTrbLiveNote = ({ failure }) => {
   const message = resumed
     ? L("Live transcription resumed.")
     : cause === "offline"
-      ? LF("Live transcription paused: {cause}. No audio is kept: this passage will be missing from the transcription. Reconnecting…", { cause: L("you are offline") })
+      ? LF("Live transcription paused: {cause}. No audio is saved to disk: if the outage lasts, this passage will be missing from the transcription. Reconnecting…", { cause: L("you are offline") })
       : LF("Live transcription paused: {cause}. No audio is kept: this passage will be missing from the transcription. Check the transcription server settings.", {
           cause: LF("{providerName} rejected your API key", { providerName: "OpenAI" }),
         });
