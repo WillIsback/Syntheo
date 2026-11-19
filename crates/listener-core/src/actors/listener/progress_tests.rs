@@ -351,3 +351,67 @@ fn the_unfinalized_cap_does_not_bypass_the_spacing() {
         super::stream::StallReason::NoProgress
     );
 }
+
+// Reprise de #571 (QA, alpha 0.7.4-1) : après des minutes de bruit sans parole,
+// le plafond d'audio non finalisé tombait au premier texte provisoire, en plein
+// début de phrase. L'audio d'avant le premier progrès ne compte plus.
+
+/// Connexion dont le délai sans progrès est déjà espacé à 240 s.
+fn spaced_progress(start: Instant) -> StreamProgress {
+    let backoff = super::SharedStallBackoff::default();
+    for _ in 0..3 {
+        backoff.lock().unwrap().record_stall();
+    }
+    StreamProgress::with_backoff(start, backoff)
+}
+
+#[test]
+fn speech_after_long_noise_does_not_trip_the_unfinalized_cap() {
+    let start = Instant::now();
+    let mut progress = spaced_progress(start);
+    let at = |tick: u64| start + Duration::from_millis(tick * 100);
+    // 100 s de bruit actif, sans aucun texte : la connexion reste ouverte.
+    for tick in 1..=1_000 {
+        assert!(!progress.observe_audio(CHUNK_SAMPLES, at(tick)), "{tick}");
+    }
+    // La parole commence : premier texte provisoire, puis l'audio continue.
+    progress.observe_response(&provisional("Et la", 1), at(1_000));
+    for tick in 1_001..=1_050 {
+        assert!(
+            !progress.observe_audio(CHUNK_SAMPLES, at(tick)),
+            "plafond déclenché à {:.1} s : {:?}",
+            tick as f64 / 10.0,
+            progress.diagnostics(at(tick)),
+        );
+    }
+}
+
+#[test]
+fn the_unfinalized_cap_still_counts_from_the_first_progress() {
+    let start = Instant::now();
+    let mut progress = spaced_progress(start);
+    let at = |tick: u64| start + Duration::from_millis(tick * 100);
+    for tick in 1..=1_000 {
+        progress.observe_audio(CHUNK_SAMPLES, at(tick));
+    }
+    // Parole continue : l'hypothèse change chaque seconde, aucun final.
+    let mut stalled_at = None;
+    for tick in 1_000..=2_000 {
+        if tick % 10 == 0 {
+            let words = "mot ".repeat(((tick - 1_000) / 10 + 1) as usize);
+            progress.observe_response(&provisional(&words, 1), at(tick));
+        }
+        if progress.observe_audio(CHUNK_SAMPLES, at(tick)) {
+            stalled_at = Some(tick);
+            break;
+        }
+    }
+    let stalled_at = stalled_at.expect("le plafond recycle toujours le flux");
+    // 90 s d'audio comptées à partir du premier progrès (le bloc 1 000, reçu
+    // juste après le premier texte, compte déjà) : 900 blocs.
+    assert_eq!(stalled_at, 1_899);
+    assert_eq!(
+        progress.diagnostics(at(stalled_at)).reason,
+        super::stream::StallReason::UnfinalizedCap
+    );
+}
