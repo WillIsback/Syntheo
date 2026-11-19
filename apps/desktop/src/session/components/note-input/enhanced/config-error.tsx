@@ -18,8 +18,8 @@ export function ConfigError() {
         </p>
         <p className="text-muted-foreground text-sm leading-relaxed">
           <Trans>
-            Configurez un modèle de langage (endpoint compatible OpenAI de votre
-            infrastructure) pour générer un résumé de ce transcript.
+            Set up a language model (an OpenAI-compatible endpoint on your
+            infrastructure) to generate a summary of this transcript.
           </Trans>
         </p>
       </div>
@@ -30,7 +30,7 @@ export function ConfigError() {
             openNew({ type: "settings", state: { tab: "intelligence" } })
           }
         >
-          <Trans>Configurer le modèle</Trans>
+          <Trans>Set up the model</Trans>
         </Button>
       </div>
     </div>
