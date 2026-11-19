@@ -11,6 +11,11 @@ runs:
         # DNS publics : le DNS Azure du runner ne résout pas toujours les
         # dépôts Ubuntu (release v0.7.2 bloquée 90 min sur apt-get update).
         bash "${GITHUB_WORKSPACE}/scripts/ci/public-dns.sh"
+        # Miroir apt du runner trop lent (#604) : on le retire de la liste si
+        # le suivant fait mieux, sinon apt y reste jusqu'au garde-fou. Simple
+        # précaution : un échec de la mesure ne doit pas arrêter le job.
+        bash "${GITHUB_WORKSPACE}/scripts/ci/apt-mirror.sh" ||
+          echo "::warning::Mesure du miroir apt en échec : miroirs inchangés"
         # Garde-fou : apt échoue en 15 min au lieu d'épuiser le job (une
         # étape d'action composite n'a pas de timeout-minutes).
         timeout --kill-after=30s 15m bash "${GITHUB_WORKSPACE}/scripts/setup-linux-tauri.sh"

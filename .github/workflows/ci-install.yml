@@ -46,6 +46,11 @@ jobs:
       - name: DNS publics
         run: bash scripts/ci/public-dns.sh
 
+      # Miroir apt du runner trop lent : retiré de la liste si le suivant fait
+      # mieux (#604). Un échec de la mesure ne doit pas arrêter le job.
+      - name: Miroir apt
+        run: bash scripts/ci/apt-mirror.sh || echo "::warning::Mesure du miroir apt en échec, miroirs inchangés"
+
       # Le `git clone` du bloc est redirigé vers ce checkout ; l'URL documentée
       # est tout de même vérifiée.
       - name: Construire depuis les sources (CONTRIBUTING.md › Linux)
