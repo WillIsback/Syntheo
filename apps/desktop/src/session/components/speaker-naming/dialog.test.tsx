@@ -54,6 +54,8 @@ function card(overrides: Partial<SpeakerCard> = {}): SpeakerCard {
     number: "1",
     part: null,
     turns: 12,
+    words: 120,
+    minor: false,
     excerpts: [
       "Le budget de la médiathèque doit être revu.",
       "Nous ouvrirons le samedi matin.",
@@ -125,6 +127,48 @@ describe("SpeakerNamingDialog", () => {
       within(item).getByText("“Nous ouvrirons le samedi matin.”"),
     ).not.toBeNull();
     expect(within(item).getByLabelText("Who is it?")).not.toBeNull();
+  });
+
+  // Issue 449 : les intervenants mineurs sont regroupés sous « Autres »,
+  // replié, sans être masqués.
+  it("groups minor speakers under a collapsed Others section", () => {
+    renderDialog([
+      card(),
+      card({
+        id: "t1:Speaker 2",
+        number: "2",
+        words: 3,
+        minor: true,
+        excerpts: ["Oui, d'accord."],
+      }),
+    ]);
+
+    const others = document.querySelector<HTMLDetailsElement>(
+      "[data-speaker-naming-others]",
+    );
+    expect(others).not.toBeNull();
+    expect(others?.open).toBe(false);
+    expect(others?.querySelector("summary")?.textContent).toBe("Others (1)");
+    expect(
+      within(others!).getByRole("listitem", { name: "Speaker 2" }),
+    ).not.toBeNull();
+    // La carte principale reste hors du groupe.
+    expect(
+      within(others!).queryByRole("listitem", { name: "Speaker 1" }),
+    ).toBeNull();
+    expect(screen.getByRole("listitem", { name: "Speaker 1" })).not.toBeNull();
+  });
+
+  it("lists every speaker when all of them are minor (very short meeting)", () => {
+    renderDialog([
+      card({ words: 4, minor: true }),
+      card({ id: "t1:Speaker 2", number: "2", words: 2, minor: true }),
+    ]);
+
+    expect(document.querySelector("[data-speaker-naming-others]")).toBeNull();
+    expect(screen.queryByText("Every speaker has a name.")).toBeNull();
+    expect(screen.getByRole("listitem", { name: "Speaker 1" })).not.toBeNull();
+    expect(screen.getByRole("listitem", { name: "Speaker 2" })).not.toBeNull();
   });
 
   it("names the capture part only when the note has several captures", () => {

@@ -14,7 +14,18 @@ const ANONYMOUS_MENTION =
   /\b(?:speaker|locut(?:eur|rice)|intervenante?|orat(?:eur|rice))\s+(?:n[°º]\s*)?\d+\b/iu;
 
 const MAX_EXCERPTS = 2;
-const MIN_SENTENCE_WORDS = 3;
+// Issue 449 : sous 5 mots, une phrase ne permet pas de reconnaître quelqu'un.
+const MIN_SENTENCE_WORDS = 5;
+// Repli d'avant l'issue 449 : 3 mots, puis n'importe quelle phrase.
+const FALLBACK_SENTENCE_WORDS = 3;
+
+/**
+ * Seuil d'un intervenant « mineur » (issue 449, décision de William du
+ * 2026-11-19) : moins de 8 mots dans la capture. Écho, diarisation qui
+ * alterne sur des fragments : ces cartes sont regroupées sous « Autres »,
+ * repliées, jamais masquées ni fusionnées. À ajuster à l'usage.
+ */
+export const MINOR_SPEAKER_WORDS = 8;
 const MAX_SCORED_WORDS = 25;
 const DISTINCTIVE_WEIGHT = 3;
 const MAX_EXCERPT_CHARS = 180;
@@ -104,6 +115,10 @@ export type SpeakerCard = {
   /** Rang de la capture (1, 2…) quand la note en a plusieurs, sinon `null`. */
   part: number | null;
   turns: number;
+  /** Mots attribués à ce locuteur dans la capture. */
+  words: number;
+  /** Moins de `MINOR_SPEAKER_WORDS` mots : rangé sous « Autres ». */
+  minor: boolean;
   excerpts: string[];
   /** Clés et mots à réattribuer dans cette capture. */
   targets: SpeakerTarget[];
@@ -165,8 +180,11 @@ function shorten(sentence: string): string {
 
 /**
  * Deux phrases qui permettent de reconnaître le locuteur, dans l'ordre où il
- * les a dites. Score : nombre de mots (plafonné) + poids des mots que lui
- * seul emploie. Les phrases trop courtes (« Oui. ») ne servent qu'à défaut.
+ * les a dites. `texts` : une entrée par tour de parole, segments consécutifs
+ * du locuteur déjà réunis. Score : mots porteurs (plafonnés, sans les mots
+ * courants) + poids des mots que lui seul emploie. Les phrases de moins de
+ * `MIN_SENTENCE_WORDS` mots (« Oui. », « D'accord, on y va. ») ne servent
+ * qu'à défaut.
  */
 export function pickSpeakerExcerpts(
   texts: readonly string[],
@@ -181,21 +199,25 @@ export function pickSpeakerExcerpts(
     const distinctive = new Set(
       tokens.filter((token) => distinctiveWords.has(token)),
     ).size;
+    const meaningful = tokens.filter(isMeaningful).length;
     return [
       {
         text,
         order,
         words: tokens.length,
         score:
-          Math.min(tokens.length, MAX_SCORED_WORDS) +
+          Math.min(meaningful, MAX_SCORED_WORDS) +
           DISTINCTIVE_WEIGHT * distinctive,
       },
     ];
   });
-  const long = sentences.filter(
-    (sentence) => sentence.words >= MIN_SENTENCE_WORDS,
-  );
-  const pool = long.length > 0 ? long : sentences;
+  // Repli : le minimum d'avant (3 mots), puis n'importe quelle phrase
+  // (« Oui. » vaut mieux que rien).
+  const atLeast = (words: number) =>
+    sentences.filter((sentence) => sentence.words >= words);
+  const long = atLeast(MIN_SENTENCE_WORDS);
+  const medium = atLeast(FALLBACK_SENTENCE_WORDS);
+  const pool = long.length > 0 ? long : medium.length > 0 ? medium : sentences;
 
   return [...pool]
     .sort(
@@ -210,6 +232,7 @@ export function pickSpeakerExcerpts(
 type Group = {
   label: string;
   turns: number;
+  words: number;
   firstOrder: number;
   texts: string[];
   targets: Map<string, SpeakerTarget>;
@@ -225,6 +248,7 @@ function keyId(key: SegmentKey): string {
 
 function groupCapture(segments: readonly Segment[]): Group[] {
   const groups = new Map<string, Group>();
+  let previousLabel: string | null = null;
   segments.forEach((segment, order) => {
     const label = segment.speaker_label ?? "";
     if (segment.words.length === 0 || !label) return;
@@ -233,6 +257,7 @@ function groupCapture(segments: readonly Segment[]): Group[] {
       group = {
         label,
         turns: 0,
+        words: 0,
         firstOrder: order,
         texts: [],
         targets: new Map(),
@@ -240,7 +265,16 @@ function groupCapture(segments: readonly Segment[]): Group[] {
       groups.set(label, group);
     }
     group.turns += 1;
-    group.texts.push(segment.text);
+    group.words += segment.words.length;
+    // Segments consécutifs du même locuteur : une seule entrée de texte,
+    // découpée en phrases ensuite (issue 449). Sinon chaque fragment de 1 à
+    // 3 mots deviendrait une « phrase ».
+    if (previousLabel === label && group.texts.length > 0) {
+      group.texts[group.texts.length - 1] += ` ${segment.text}`;
+    } else {
+      group.texts.push(segment.text);
+    }
+    previousLabel = label;
     const id = keyId(segment.key);
     const target = group.targets.get(id) ?? { key: segment.key, wordIds: [] };
     for (const word of segment.words) {
@@ -277,7 +311,7 @@ function distinctiveWordsByLabel(groups: Group[]): Map<string, Set<string>> {
 /**
  * Une carte par locuteur anonyme et par capture : un même index n'est pas la
  * même personne d'une capture à l'autre (une pause d'écoute, issue 353, crée
- * une nouvelle capture). Ordre : du plus présent au moins présent.
+ * une nouvelle capture). Ordre : du plus de mots au moins de mots.
  */
 export function buildSpeakerCards(
   captures: readonly CaptureSegments[],
@@ -298,6 +332,8 @@ export function buildSpeakerCards(
           number: group.label.replace(/^Speaker /, ""),
           part: multiple ? captureIndex + 1 : null,
           turns: group.turns,
+          words: group.words,
+          minor: group.words < MINOR_SPEAKER_WORDS,
           excerpts: pickSpeakerExcerpts(
             group.texts,
             distinctive.get(group.label) ?? new Set(),
@@ -312,9 +348,24 @@ export function buildSpeakerCards(
   return cards
     .sort(
       (a, b) =>
+        b.card.words - a.card.words ||
         b.card.turns - a.card.turns ||
         a.captureIndex - b.captureIndex ||
         a.firstOrder - b.firstOrder,
     )
     .map(({ card }) => card);
+}
+
+/**
+ * Cartes principales et cartes « Autres » (issue 449). Quand tous les
+ * intervenants sont mineurs (réunion très courte), aucun regroupement : ils
+ * restent tous principaux, le panneau ne s'ouvre jamais sur une liste vide.
+ */
+export function splitSpeakerCards(cards: readonly SpeakerCard[]): {
+  main: SpeakerCard[];
+  others: SpeakerCard[];
+} {
+  const main = cards.filter((card) => !card.minor);
+  if (main.length === 0) return { main: [...cards], others: [] };
+  return { main, others: cards.filter((card) => card.minor) };
 }

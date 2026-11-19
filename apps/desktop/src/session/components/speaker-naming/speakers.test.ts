@@ -5,7 +5,10 @@ import {
   buildSpeakerCards,
   displaySpeakerLabel,
   isAnonymousSpeakerLabel,
+  MINOR_SPEAKER_WORDS,
   pickSpeakerExcerpts,
+  type SpeakerCard,
+  splitSpeakerCards,
   summaryMentionsAnonymousSpeakers,
 } from "./speakers";
 
@@ -235,6 +238,61 @@ describe("buildSpeakerCards", () => {
         { transcriptId: "t2", segments: [] },
       ]),
     ).toEqual([]);
+  });
+});
+
+// Issue 449 : écho ou diarisation qui alterne sur des fragments de 1 à 3 mots.
+describe("intervenants fragmentés et mineurs", () => {
+  const fragmented = () =>
+    buildSpeakerCards([
+      {
+        transcriptId: "t1",
+        segments: [
+          segment("Speaker 1", "Le budget de", { speakerIndex: 0 }),
+          segment("Speaker 1", "la médiathèque augmente", { speakerIndex: 0 }),
+          segment("Speaker 1", "de cinq pour cent.", { speakerIndex: 0 }),
+          segment("Speaker 2", "Oui.", { speakerIndex: 1 }),
+          segment("Speaker 1", "Nous ouvrirons le", { speakerIndex: 0 }),
+          segment("Speaker 1", "samedi matin dès mars.", { speakerIndex: 0 }),
+          segment("Speaker 2", "D'accord, bien.", { speakerIndex: 1 }),
+          segment("Speaker 3", "Hum.", { speakerIndex: 2 }),
+        ],
+      },
+    ]);
+
+  it("rebuilds sentences across consecutive fragments of one speaker", () => {
+    const [main] = fragmented();
+
+    expect(main?.number).toBe("1");
+    expect(main?.excerpts).toEqual([
+      "Le budget de la médiathèque augmente de cinq pour cent.",
+      "Nous ouvrirons le samedi matin dès mars.",
+    ]);
+  });
+
+  it("counts words, sorts by words and flags speakers under the threshold", () => {
+    expect(MINOR_SPEAKER_WORDS).toBe(8);
+    const cards = fragmented();
+
+    expect(cards.map((card) => [card.number, card.words, card.minor])).toEqual([
+      ["1", 17, false],
+      ["2", 3, true],
+      ["3", 1, true],
+    ]);
+  });
+
+  it("groups minor speakers under Others, unless every speaker is minor", () => {
+    const cards = fragmented();
+    const { main, others } = splitSpeakerCards(cards);
+    expect(main.map((card) => card.number)).toEqual(["1"]);
+    expect(others.map((card) => card.number)).toEqual(["2", "3"]);
+
+    // Réunion très courte : aucun intervenant principal, aucun regroupement.
+    const onlyMinor = cards.filter((card) => card.minor) as SpeakerCard[];
+    expect(splitSpeakerCards(onlyMinor)).toEqual({
+      main: onlyMinor,
+      others: [],
+    });
   });
 });
 

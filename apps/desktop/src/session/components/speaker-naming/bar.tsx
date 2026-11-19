@@ -5,7 +5,10 @@ import { ArrowsClockwise, UsersThree } from "@syntheo/ui/components/icons";
 import { Button } from "@syntheo/ui/components/ui/button";
 
 import { SpeakerNamingDialog } from "./dialog";
-import { summaryMentionsAnonymousSpeakers } from "./speakers";
+import {
+  splitSpeakerCards,
+  summaryMentionsAnonymousSpeakers,
+} from "./speakers";
 import {
   clearSpeakerNamed,
   consumeSpeakerNamingRequest,
@@ -49,7 +52,9 @@ export function SpeakerNamingBar({
   });
   const [open, setOpen] = useState(false);
 
-  const count = ready ? cards.length : 0;
+  // Les intervenants mineurs, regroupés sous « Autres » (issue 449), ne
+  // comptent pas : ni dans la ligne, ni pour proposer de régénérer.
+  const count = ready ? splitSpeakerCards(cards).main.length : 0;
   useEffect(() => {
     setSpeakerNamingAvailable(count > 0 ? { sessionId, count } : null);
     return () => {

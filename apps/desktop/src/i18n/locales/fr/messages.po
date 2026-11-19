@@ -3556,6 +3556,10 @@ msgstr "Version de l'autre appareil"
 msgid "Other languages ({omittedLanguages}) won't be transcribed live."
 msgstr "Les autres langues ({omittedLanguages}) ne seront pas transcrites en direct."
 
+#: src/session/components/speaker-naming/dialog.tsx
+msgid "Others"
+msgstr "Autres"
+
 #: src/settings/general/microphone-level.tsx
 msgid "Output level"
 msgstr "Niveau de sortie"
@@ -4670,6 +4674,10 @@ msgstr "Locuteur {number}"
 #: src/session/components/speaker-naming/speaker-card.tsx
 msgid "Speaker {number} · part {part}"
 msgstr "Locuteur {number} · partie {part}"
+
+#: src/session/components/speaker-naming/dialog.tsx
+msgid "Speakers with only a few words."
+msgstr "Intervenants qui n'ont dit que quelques mots."
 
 #: src/settings/search-index.ts
 msgid "speakers, output, headphones, HDMI, loopback, participants, sound"
