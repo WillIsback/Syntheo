@@ -236,6 +236,15 @@ fn aec_drift_800_ppm_stays_aligned() {
         base_lag: LEAD_SAMPLES + 400.0,
     });
     report("−800 ppm, traverse l'avance", &crossing);
+    // #623 : départ à 280 échantillons à +800 ppm. Le verrou se prend sous dérive avant que la
+    // droite existe ; une mesure faible juste après le faisait perdre (3 réinitialisations,
+    // 4,1 % sans alignement avant le correctif de la sonde).
+    let short_lag = run_drift(Scenario {
+        drift_ppm: DRIFT_PPM,
+        jump_samples: 0.0,
+        base_lag: 280.0,
+    });
+    report("800 ppm, départ à 280 éch.", &short_lag);
     println!(
         "traversée de l'avance pendant le verrou : {:?} s (1er verrou {:?} s)",
         crossing.crossed_while_locked_secs, crossing.first_lock_secs
@@ -256,6 +265,16 @@ fn aec_drift_800_ppm_stays_aligned() {
         crossing.resets <= run.resets,
         "traversée de l'avance : {} réinitialisations",
         crossing.resets
+    );
+    assert_eq!(
+        short_lag.resets, 1,
+        "départ à 280 : {} réinitialisations",
+        short_lag.resets
+    );
+    assert!(
+        short_lag.unaligned_ratio < 0.01,
+        "départ à 280 : verrou perdu {:.1} % du temps",
+        short_lag.unaligned_ratio * 100.0
     );
     let (Some(locked_at), Some(crossed_at)) =
         (crossing.first_lock_secs, crossing.crossed_while_locked_secs)
@@ -692,5 +711,131 @@ fn aec_drift_corrected_lead_with_dtln() {
                 );
             }
         }
+    }
+}
+
+/// #623 : diagnostic de la sonde (`crates/audio-sync`) sur le scénario qui décroche, retard de
+/// départ 280 et +800 ppm. Instantané de chaque intervalle : état, retard candidat, pic et
+/// netteté de la corrélation, retard stable, retard vrai à la fin de la fenêtre.
+#[test]
+#[ignore = "diagnostic de la sonde, sortie à lire"]
+fn aec_probe_snapshots_280_at_800_ppm() {
+    use syntheo_audio_sync::{SyncProbe, SyncProbeConfig, SyncProbeEvent};
+
+    let scenario = Scenario {
+        drift_ppm: DRIFT_PPM,
+        jump_samples: 0.0,
+        base_lag: 280.0,
+    };
+    let speaker = speaker_signal(&load("theo_lpb.wav"));
+    let mic = mic_signal(&speaker, scenario);
+    // Même configuration que `AecReferenceAligner::new`.
+    let max_lag = RATE as usize * super::AEC_MAX_REFERENCE_LAG_MS as usize / 1000;
+    let min_overlap = RATE as usize * super::AEC_MIN_REFERENCE_OVERLAP_MS as usize / 1000;
+    let mut config = SyncProbeConfig::new(RATE);
+    config.window_samples = config
+        .window_samples
+        .max((max_lag + min_overlap).next_power_of_two());
+    config.max_lag_samples = max_lag.max(config.max_lag_samples);
+    let mut probe = SyncProbe::new(config);
+    println!(
+        "fenêtre {} éch., intervalle {} éch.",
+        config.window_samples, config.interval_samples
+    );
+    println!("| t (s) | événement | candidat | pic | netteté | état | stable | vrai |");
+    println!("|---|---|---|---|---|---|---|---|");
+    for (index, (speaker_chunk, mic_chunk)) in
+        speaker.chunks(CHUNK).zip(mic.chunks(CHUNK)).enumerate()
+    {
+        let Some(event) = probe.observe(speaker_chunk, mic_chunk) else {
+            continue;
+        };
+        let end = (index + 1) * CHUNK;
+        let snapshot = event.snapshot();
+        let (kind, candidate, peak, distinct) = match &event {
+            SyncProbeEvent::Measured(m) => (
+                "mesure",
+                Some(m.estimate.lag_samples),
+                m.estimate.peak_ratio,
+                m.estimate.distinctiveness,
+            ),
+            SyncProbeEvent::SkippedLowConfidence(c) => (
+                match c.reason {
+                    syntheo_audio_sync::SyncProbeLowConfidenceReason::WeakCorrelation => {
+                        "rejet corrélation"
+                    }
+                    syntheo_audio_sync::SyncProbeLowConfidenceReason::LagOutlier { .. } => {
+                        "rejet aberrant"
+                    }
+                },
+                Some(c.estimate.lag_samples),
+                c.estimate.peak_ratio,
+                c.estimate.distinctiveness,
+            ),
+            SyncProbeEvent::SkippedLowEnergy(_) => ("silence", None, 0.0, 0.0),
+        };
+        let t = event.capture_time_sec();
+        if !(3.0..=20.0).contains(&t) {
+            continue;
+        }
+        println!(
+            "| {t:.2} | {kind} | {} | {peak:.1} | {distinct:.2} | {:?} | {} | {:.1} |",
+            candidate.map_or("—".to_string(), |lag| lag.to_string()),
+            snapshot.state,
+            snapshot
+                .stable_lag_samples
+                .map_or("—".to_string(), |lag| lag.to_string()),
+            true_lag(end, scenario),
+        );
+    }
+}
+
+/// #623 : retard appliqué par l'aligneur pendant les premières secondes du verrou, sur la paire
+/// réelle theo (retard ajouté 904, puis sans retard ajouté), sans dérive. Sert à comparer la
+/// médiane (avant) et le dernier retard accepté (après) tant que la droite de dérive manque.
+#[test]
+#[ignore = "mesure à lire"]
+fn aec_probe_first_lock_seconds_on_theo() {
+    for base_lag in [BASE_LAG, 0.0] {
+        let scenario = Scenario {
+            drift_ppm: 0.0,
+            jump_samples: 0.0,
+            base_lag,
+        };
+        let (speaker, echo) = recorded_pair();
+        let mic = drifted(&echo, scenario);
+        let mut aligner = AecReferenceAligner::new(RATE);
+        let mut resets = 0;
+        let mut first_lock: Option<f64> = None;
+        let mut last_printed: Option<(super::aligner::AecAlignment, super::aligner::AecAlignment)> =
+            None;
+        println!("retard ajouté {base_lag} :");
+        for (index, (speaker_chunk, mic_chunk)) in
+            speaker.chunks(CHUNK).zip(mic.chunks(CHUNK)).enumerate()
+        {
+            let pair = aligner.align(speaker_chunk, mic_chunk);
+            if pair.alignment_changed {
+                resets += 1;
+            }
+            let t = (index + 1) as f64 * CHUNK as f64 / RATE as f64;
+            if first_lock.is_none() && aligner.applied_alignment.signed_delay().is_some() {
+                first_lock = Some(t);
+            }
+            let Some(locked_at) = first_lock else {
+                continue;
+            };
+            if t > locked_at + 4.0 {
+                continue;
+            }
+            let state = (aligner.last_alignment, aligner.applied_alignment);
+            if last_printed != Some(state) {
+                println!(
+                    "  t={t:.2} s  mesure brute {:?}  appliqué {:?}",
+                    state.0, state.1
+                );
+                last_printed = Some(state);
+            }
+        }
+        println!("  1er verrou {first_lock:?} s, réinitialisations sur 180 s : {resets}");
     }
 }
