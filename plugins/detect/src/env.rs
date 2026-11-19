@@ -36,22 +36,16 @@ impl<R: Runtime> Env for TauriEnv<R> {
         crate::dnd::is_do_not_disturb()
     }
 
+    // Le réglage poussé par l'interface (issue 618). L'ancien
+    // `settings.json`, lu jusqu'ici, n'est plus écrit par l'interface : Rust
+    // émettait toujours, et l'interface jetait l'événement.
     fn is_detect_enabled(&self) -> bool {
-        read_detect_enabled_settings(&self.app_handle).unwrap_or(true)
+        use tauri::Manager;
+
+        self.app_handle
+            .try_state::<crate::DetectEnabled>()
+            .is_none_or(|state| state.0.load(std::sync::atomic::Ordering::Relaxed))
     }
-}
-
-fn read_detect_enabled_settings<R: Runtime>(app_handle: &AppHandle<R>) -> Option<bool> {
-    use tauri_plugin_settings::SettingsPluginExt;
-
-    let path = app_handle.settings().settings_path().ok()?;
-    let content = std::fs::read_to_string(path.as_str()).ok()?;
-    let settings: serde_json::Value = serde_json::from_str(&content).ok()?;
-
-    settings
-        .get("notification")
-        .and_then(|n| n.get("detect"))
-        .and_then(|d| d.as_bool())
 }
 
 #[cfg(any(test, feature = "test-support"))]

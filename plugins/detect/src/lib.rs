@@ -1,3 +1,4 @@
+use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 
 use tauri::Manager;
@@ -39,6 +40,20 @@ const PLUGIN_NAME: &str = "detect";
 pub(crate) type DetectorState = Mutex<syntheo_detect::Detector>;
 pub(crate) type ScreenShareSamplerState = Arc<Mutex<syntheo_detect::ScreenShareSampler>>;
 
+/// Réglage « Détection des réunions » de l'interface (`notification_detect`,
+/// en base), poussé par `set_detect_enabled` au démarrage et à chaque
+/// changement (issue 618). Hors du mutex du processeur : le minuteur le lit
+/// en tenant ce verrou. Vrai tant que l'interface ne l'a pas poussé, pour ne
+/// pas manquer un micro déjà actif au lancement : le réglage est relu quand
+/// le seuil est atteint.
+pub(crate) struct DetectEnabled(pub(crate) AtomicBool);
+
+impl Default for DetectEnabled {
+    fn default() -> Self {
+        Self(AtomicBool::new(true))
+    }
+}
+
 #[cfg(feature = "test-support")]
 pub type ProcessorState = Arc<Mutex<Processor>>;
 #[cfg(not(feature = "test-support"))]
@@ -78,6 +93,7 @@ fn make_specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
             commands::get_preferred_languages::<tauri::Wry>,
             commands::get_current_locale_identifier::<tauri::Wry>,
             commands::set_mic_active_threshold::<tauri::Wry>,
+            commands::set_detect_enabled::<tauri::Wry>,
         ])
         .events(tauri_specta::collect_events![DetectEvent])
         .error_handling(tauri_specta::ErrorHandlingMode::Result)
@@ -93,6 +109,7 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
 
             app.manage(DetectorState::default());
             app.manage(ProcessorState::default());
+            app.manage(DetectEnabled::default());
             app.manage(ScreenShareSamplerState::default());
             app.manage(ax_worker::AxWorker::default());
 

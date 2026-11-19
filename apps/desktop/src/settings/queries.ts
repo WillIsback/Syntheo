@@ -127,7 +127,14 @@ export async function initializeApplicationSettings(): Promise<void> {
   }
   const current =
     Object.keys(updates).length > 0 ? await getStoredSettingValues() : stored;
-  applySettingSideEffects(current.values);
+  applySettingSideEffects({
+    ...current.values,
+    // Toujours poussé au démarrage, même jamais enregistré : la détection
+    // côté Rust doit connaître la valeur par défaut (issue 618).
+    notification_detect:
+      current.values.notification_detect ??
+      SETTING_DEFINITIONS.notification_detect.default,
+  });
 }
 
 function collectSelectionUpdates(
@@ -317,6 +324,11 @@ async function persistSettingValues(values: SettingValues): Promise<void> {
 function applySettingSideEffects(values: SettingValues): void {
   if (values.autostart !== undefined) {
     void (values.autostart ? enable() : disable()).catch(console.error);
+  }
+  if (values.notification_detect !== undefined) {
+    void detectCommands
+      .setDetectEnabled(values.notification_detect)
+      .catch(console.error);
   }
   if (values.respect_dnd !== undefined) {
     void detectCommands

@@ -519,3 +519,30 @@ async fn test_dnd_toggled_off_before_timer_fires() {
         "DnD turned off before timer fires should allow MicDetected"
     );
 }
+
+// Issue 618 : une détection perdue pendant que le réglage est coupé ne doit
+// pas consommer le délai de 10 minutes. Réglage coupé pendant le seuil, puis
+// rallumé : le micro repris tout de suite doit être signalé.
+#[tokio::test(start_paused = true)]
+async fn test_detection_skipped_while_disabled_does_not_start_cooldown() {
+    let h = Harness::new();
+
+    h.mic_started(zoom());
+    h.env.set_detect_enabled(false);
+    h.advance_secs(15).await;
+    assert!(h.take_events().is_empty(), "disabled: no MicDetected");
+
+    h.mic_stopped(zoom());
+    h.take_events();
+    h.env.set_detect_enabled(true);
+    h.mic_started(zoom());
+
+    h.advance_secs(15).await;
+    let events = h.take_events();
+    assert_eq!(
+        events.len(),
+        1,
+        "re-enabled: the first detection fires without waiting 10 minutes"
+    );
+    assert!(matches!(&events[0], DetectEvent::MicDetected { .. }));
+}
