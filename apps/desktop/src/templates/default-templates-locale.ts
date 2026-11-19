@@ -62,10 +62,10 @@ export function buildDefaultTemplateLocaleStatements(
   );
   return Object.entries(DEFAULT_TEMPLATES[locale]).flatMap(([id, target]) => {
     // Textes fournis qu'une ligne peut encore porter : ceux des autres
-    // langues, puis les anciennes versions (issue 560).
+    // langues, puis les anciennes versions anglaises (issues 560 et 616).
     const sources = [
       ...otherLocales.map((otherLocale) => DEFAULT_TEMPLATES[otherLocale][id]),
-      LEGACY_DEFAULT_TEMPLATES_EN[id],
+      ...(LEGACY_DEFAULT_TEMPLATES_EN[id] ?? []),
     ].filter((source): source is DefaultTemplateText => Boolean(source));
     return sources.map((source) => ({
       sql: LOCALIZE_SQL,

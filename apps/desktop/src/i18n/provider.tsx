@@ -3,7 +3,6 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { type ReactNode, useLayoutEffect } from "react";
 
 import { commands as detectCommands } from "@syntheo/plugin-detect";
-import { useMountEffect } from "@syntheo/ui/hooks/use-mount-effect";
 
 import { createI18n } from "./catalogs";
 import {
@@ -50,26 +49,17 @@ export function AppI18nProvider({ children }: { children: ReactNode }) {
   // en anglais) ne relance pas la requête, donc ne réactivait pas la langue, et
   // l'interface restait dans l'ancienne jusqu'au rechargement (issue 558). Ses
   // messages sont déjà chargés : on la réactive avant l'affichage.
+  // `<html lang>` suit la langue active, écrit après l'activation : lu au
+  // rendu, il retardait d'une bascule vers une langue en cache (issue 616).
   useLayoutEffect(() => {
-    if (i18n && !isPlaceholderData && i18n.locale !== locale) {
+    if (!i18n) return;
+    if (!isPlaceholderData && i18n.locale !== locale) {
       i18n.activate(locale);
     }
+    document.documentElement.lang = i18n.locale;
   }, [i18n, isPlaceholderData, locale]);
 
   if (!i18n) return null;
 
-  return (
-    <I18nProvider i18n={i18n}>
-      <DocumentLanguage key={i18n.locale} locale={i18n.locale} />
-      {children}
-    </I18nProvider>
-  );
-}
-
-function DocumentLanguage({ locale }: { locale: string }) {
-  useMountEffect(() => {
-    document.documentElement.lang = locale;
-  });
-
-  return null;
+  return <I18nProvider i18n={i18n}>{children}</I18nProvider>;
 }

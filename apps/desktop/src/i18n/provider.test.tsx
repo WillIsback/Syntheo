@@ -83,21 +83,27 @@ describe("AppI18nProvider", () => {
     setUiLanguage("en");
     const { rerender } = renderApp();
     expect(await screen.findByText("File", {}, { timeout: 5000 })).toBeTruthy();
+    expect(document.documentElement.lang).toBe("en");
 
     await switchTo("fr", rerender);
     expect(
       await screen.findByText("Fichier", {}, { timeout: 5000 }),
     ).toBeTruthy();
     expect(i18n.locale).toBe("fr");
+    // `<html lang>` suit sans retard, y compris vers une langue en cache
+    // (issue 616).
+    expect(document.documentElement.lang).toBe("fr");
 
     await switchTo("auto", rerender);
     expect(await screen.findByText("File", {}, { timeout: 5000 })).toBeTruthy();
     expect(i18n.locale).toBe("en");
+    expect(document.documentElement.lang).toBe("en");
 
     await switchTo("fr", rerender);
     expect(
       await screen.findByText("Fichier", {}, { timeout: 5000 }),
     ).toBeTruthy();
     expect(i18n.locale).toBe("fr");
+    expect(document.documentElement.lang).toBe("fr");
   }, 30_000);
 });

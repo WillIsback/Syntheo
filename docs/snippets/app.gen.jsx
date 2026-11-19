@@ -111,7 +111,7 @@ const SYN_LABELS = {
   "Device authentication is not available on this computer.": "L'authentification de l'appareil n'est pas disponible sur cet ordinateur.",
   "Dictation": "Dictée",
   "Dictation shortcut": "Raccourci",
-  "Dictation uses your microphone, transcription provider, languages, and dictionary. Audio is never written to disk; it only passes through memory. Your last transcript stays in memory until dictation is disabled or Syntheo closes.": "La dictée utilise votre microphone, le fournisseur de transcription, les langues et le dictionnaire. L'audio n'est jamais enregistré sur le disque : il ne transite qu'en mémoire. Votre dernier transcript reste en mémoire jusqu'à ce que la dictée soit désactivée ou que Syntheo se ferme.",
+  "Dictation uses your microphone, transcription provider, languages, and dictionary. Audio is never written to disk; it only passes through memory. Your last transcript stays in memory until dictation is disabled or Syntheo closes.": "La dictée utilise votre microphone, le fournisseur de transcription, les langues et le dictionnaire. L'audio n'est jamais enregistré sur le disque : il ne transite qu'en mémoire. Votre dernière transcription reste en mémoire jusqu'à ce que la dictée soit désactivée ou que Syntheo se ferme.",
   "Dictionary": "Dictionnaire",
   "Email": "E-mail",
   "Enable dictation": "Activer la dictée",

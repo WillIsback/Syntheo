@@ -22,6 +22,10 @@ msgstr "— Sample line written from this instruction."
 msgid "“{excerpt}”"
 msgstr "“{excerpt}”"
 
+#: src/services/enhancer/summary-notification.ts
+msgid "\"{title}\""
+msgstr "\"{title}\""
+
 #: src/automations/launch.tsx
 msgid "“{title}” could not run on this note"
 msgstr "“{title}” could not run on this note"
@@ -29,10 +33,6 @@ msgstr "“{title}” could not run on this note"
 #: src/automations/launch.tsx
 msgid "“{title}” failed on this note"
 msgstr "“{title}” failed on this note"
-
-#: src/services/enhancer/summary-notification.ts
-msgid "\"{title}\" is ready to read."
-msgstr "\"{title}\" is ready to read."
 
 #: src/automations/launch.tsx
 msgid "“{title}” ran on this note"
@@ -4948,8 +4948,8 @@ msgid "Syntheo could not save part of the live transcript."
 msgstr "Syntheo could not save part of the live transcript."
 
 #: src/shared/keychain.ts
-msgid "Syntheo couldn't access the system keyring. Unlock your login keyring, then try again."
-msgstr "Syntheo couldn't access the system keyring. Unlock your login keyring, then try again."
+msgid "Syntheo couldn't access the system keyring. Unlock your login keyring, or install one (GNOME Keyring, KWallet), then try again."
+msgstr "Syntheo couldn't access the system keyring. Unlock your login keyring, or install one (GNOME Keyring, KWallet), then try again."
 
 #: src/stt/start-failure.ts
 msgid "Syntheo couldn't open your audio input. Check your microphone selection, then try again."

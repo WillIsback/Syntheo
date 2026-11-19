@@ -22,6 +22,10 @@ msgstr "— Exemple de ligne rédigée selon cette consigne."
 msgid "“{excerpt}”"
 msgstr "« {excerpt} »"
 
+#: src/services/enhancer/summary-notification.ts
+msgid "\"{title}\""
+msgstr "« {title} »"
+
 #: src/automations/launch.tsx
 msgid "“{title}” could not run on this note"
 msgstr "« {title} » n'a pas pu être lancée sur cette note"
@@ -29,10 +33,6 @@ msgstr "« {title} » n'a pas pu être lancée sur cette note"
 #: src/automations/launch.tsx
 msgid "“{title}” failed on this note"
 msgstr "« {title} » a échoué sur cette note"
-
-#: src/services/enhancer/summary-notification.ts
-msgid "\"{title}\" is ready to read."
-msgstr "« {title} » est prêt à être lu."
 
 #: src/automations/launch.tsx
 msgid "“{title}” ran on this note"
@@ -1110,7 +1110,7 @@ msgstr "Configurer le modèle"
 
 #: src/session/components/note-input/enhanced/config-error.tsx
 msgid "Configurez un modèle de langage (endpoint compatible OpenAI de votre infrastructure) pour générer un résumé de ce transcript."
-msgstr "Configurez un modèle de langage (endpoint compatible OpenAI de votre infrastructure) pour générer un résumé de ce transcript."
+msgstr "Configurez un modèle de langage (endpoint compatible OpenAI de votre infrastructure) pour générer un résumé de cette transcription."
 
 #: src/session/components/note-input/transcript/renderer/speaker-assign.tsx
 msgid "Confirm"
@@ -1212,7 +1212,7 @@ msgstr "Impossible de vérifier la CLI : {0}"
 
 #: src/settings/dictation.tsx
 msgid "Could not copy the transcript. Select the text above to copy it."
-msgstr "Impossible de copier le transcript. Sélectionnez le texte ci-dessus pour le copier."
+msgstr "Impossible de copier la transcription. Sélectionnez le texte ci-dessus pour le copier."
 
 #: src/settings/developers/clipboard.ts
 msgid "Could not copy to clipboard"
@@ -1500,7 +1500,7 @@ msgstr "Raccourci"
 
 #: src/settings/dictation.tsx
 msgid "Dictation uses your microphone, transcription provider, languages, and dictionary. Audio is never written to disk; it only passes through memory. Your last transcript stays in memory until dictation is disabled or Syntheo closes."
-msgstr "La dictée utilise votre microphone, le fournisseur de transcription, les langues et le dictionnaire. L'audio n'est jamais enregistré sur le disque : il ne transite qu'en mémoire. Votre dernier transcript reste en mémoire jusqu'à ce que la dictée soit désactivée ou que Syntheo se ferme."
+msgstr "La dictée utilise votre microphone, le fournisseur de transcription, les langues et le dictionnaire. L'audio n'est jamais enregistré sur le disque : il ne transite qu'en mémoire. Votre dernière transcription reste en mémoire jusqu'à ce que la dictée soit désactivée ou que Syntheo se ferme."
 
 #: src/settings/search-index.ts
 msgid "dictation, bubble, preview, live text"
@@ -2057,7 +2057,7 @@ msgstr "Génération du titre..."
 
 #: src/session/components/note-input/transcript/screens/empty.tsx
 msgid "Generating transcript..."
-msgstr "Génération du transcript..."
+msgstr "Génération de la transcription..."
 
 #: src/shared/shortcuts.ts
 msgid "Get around"
@@ -2621,7 +2621,7 @@ msgstr "Langue principale"
 
 #: src/chat/components/body/empty.tsx
 msgid "Make the current summary more detailed than it is now. Add supporting context, rationale, and examples from the transcript without inventing anything."
-msgstr "Rendez le résumé actuel plus détaillé qu'il ne l'est actuellement. Ajoutez du contexte complémentaire, des justifications et des exemples tirés du transcript sans rien inventer."
+msgstr "Rendez le résumé actuel plus détaillé qu'il ne l'est actuellement. Ajoutez du contexte complémentaire, des justifications et des exemples tirés de la transcription sans rien inventer."
 
 #: src/chat/components/body/empty.tsx
 msgid "Make the current summary noticeably shorter than it is now. Keep every decision, owner, deadline, and open question; cut repetition and secondary detail."
@@ -3214,7 +3214,7 @@ msgstr "Aucun modèle pour le moment"
 
 #: src/session/components/note-input/transcript/screens/empty.tsx
 msgid "No transcript available"
-msgstr "Aucun transcript disponible"
+msgstr "Aucune transcription disponible"
 
 #: src/services/enhancer/eligibility.ts
 msgid "No transcript recorded"
@@ -3704,7 +3704,7 @@ msgstr "Préparer la note"
 
 #: src/session/components/outer-header/overflow/export-modal.tsx
 msgid "Preparing transcript..."
-msgstr "Préparation du transcript..."
+msgstr "Préparation de la transcription..."
 
 #: src/settings/dictation-shortcut.tsx
 msgid "Preparing…"
@@ -3832,7 +3832,7 @@ msgstr "Effort de raisonnement"
 
 #: src/session/components/note-input/enhanced/streaming.tsx
 msgid "Reasoning models think through the transcript before writing."
-msgstr "Les modèles de raisonnement réfléchissent au transcript avant de rédiger."
+msgstr "Les modèles de raisonnement réfléchissent à la transcription avant de rédiger."
 
 #: src/chat/components/body/empty.tsx
 msgid "Recap the last 5 minutes."
@@ -3840,7 +3840,7 @@ msgstr "Résumez les 5 dernières minutes."
 
 #: src/chat/components/body/empty.tsx
 msgid "Recap what was discussed in the last 5 minutes of this meeting. Use the transcript timestamps, where the latest one is now."
-msgstr "Résumez ce qui a été discuté lors des 5 dernières minutes de cette réunion. Utilisez les horodatages du transcript, le plus récent correspondant à maintenant."
+msgstr "Résumez ce qui a été discuté lors des 5 dernières minutes de cette réunion. Utilisez les horodatages de la transcription, le plus récent correspondant à maintenant."
 
 #: src/session/components/note-input/meeting-chat-highlights.tsx
 msgid "received"
@@ -4948,8 +4948,8 @@ msgid "Syntheo could not save part of the live transcript."
 msgstr "Syntheo n'a pas pu enregistrer une partie de la transcription en direct."
 
 #: src/shared/keychain.ts
-msgid "Syntheo couldn't access the system keyring. Unlock your login keyring, then try again."
-msgstr "Syntheo n'a pas pu accéder au trousseau du système. Déverrouillez votre trousseau de session, puis réessayez."
+msgid "Syntheo couldn't access the system keyring. Unlock your login keyring, or install one (GNOME Keyring, KWallet), then try again."
+msgstr "Syntheo n'a pas pu accéder au trousseau du système. Déverrouillez votre trousseau de session, ou installez un trousseau (GNOME Keyring, KWallet), puis réessayez."
 
 #: src/stt/start-failure.ts
 msgid "Syntheo couldn't open your audio input. Check your microphone selection, then try again."
@@ -5563,7 +5563,7 @@ msgstr "Cette note a été modifiée sur un autre appareil en même temps. La mo
 
 #: src/chat/components/session-provider.tsx
 msgid "This recording is using batch transcription, so the transcript isn't available to chat yet. Ask again after transcription finishes, or switch to a Pro model for live transcription."
-msgstr "Cet enregistrement utilise la transcription par lots, le transcript n'est donc pas encore disponible pour le chat. Veuillez redemander après la fin de la transcription, ou passer à un modèle Pro pour une transcription en direct."
+msgstr "Cet enregistrement utilise la transcription par lots, la transcription n'est donc pas encore disponible pour le chat. Veuillez redemander après la fin de la transcription, ou passer à un modèle Pro pour une transcription en direct."
 
 #: src/settings/ai/stt/server-card.tsx
 msgid "This server answers as {detectedLabel}."
@@ -5887,7 +5887,7 @@ msgstr "Téléverser un audio"
 
 #: src/session/components/note-input/transcript/screens/empty.tsx
 msgid "Upload audio or a transcript file to populate this note."
-msgstr "Téléversez un fichier audio ou un transcript pour renseigner cette note."
+msgstr "Téléversez un fichier audio ou une transcription pour renseigner cette note."
 
 #: src/session/components/note-input/transcript/screens/empty.tsx
 #: src/session/components/outer-header/overflow/index.tsx

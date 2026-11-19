@@ -4,7 +4,10 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("~/db", () => ({ executeTransaction: vi.fn() }));
 
-import { DEFAULT_TEMPLATES_EN } from "./default-templates-en";
+import {
+  DEFAULT_TEMPLATES_EN,
+  LEGACY_DEFAULT_TEMPLATES_EN,
+} from "./default-templates-en";
 import { DEFAULT_TEMPLATES_FR } from "./default-templates-fr";
 import {
   buildDefaultTemplateLocaleStatements,
@@ -54,8 +57,9 @@ describe("modèles fournis bilingues", () => {
 describe("buildDefaultTemplateLocaleStatements", () => {
   it("ne remplace que les modèles encore identiques à l'autre langue", () => {
     const statements = buildDefaultTemplateLocaleStatements("en");
-    // 21 depuis le français, plus 4 depuis les anciens titres anglais.
-    expect(statements).toHaveLength(25);
+    // 21 depuis le français, plus 8 depuis les anciens textes anglais des
+    // modèles syntheo-* (0.7.1 à 0.7.3, et alpha 0.7.1-2).
+    expect(statements).toHaveLength(29);
     const general = statements.find(
       (statement) =>
         statement.params[5] === "syntheo-general" &&
@@ -111,4 +115,56 @@ describe("buildDefaultTemplateLocaleStatements", () => {
       expect(toFrench?.params[0]).toBe(DEFAULT_TEMPLATES_FR[id]?.title);
     },
   );
+
+  // Issue 616 : sections des modèles syntheo-* en Title Case, comme les modèles
+  // généraux. Un modèle non modifié publié de 0.7.1 à 0.7.3 (sections en casse
+  // de phrase) bascule encore de langue, et passe aux nouvelles sections.
+  it("met en Title Case les sections des modèles syntheo-*", () => {
+    expect(
+      DEFAULT_TEMPLATES_EN["syntheo-general"]?.sections.map(([title]) => title),
+    ).toEqual(["Participants", "Decisions Made", "Action Items", "Next Step"]);
+    expect(
+      DEFAULT_TEMPLATES_EN["syntheo-compliance"]?.sections.map(
+        ([title]) => title,
+      ),
+    ).toEqual([
+      "Context",
+      "Decisions Made",
+      "Blockers Before Production",
+      "Residual Risks",
+      "Next Step",
+    ]);
+    expect(
+      DEFAULT_TEMPLATES_EN["syntheo-project"]?.sections.map(([title]) => title),
+    ).toEqual(["Progress", "Blockers", "Next Steps"]);
+    expect(
+      DEFAULT_TEMPLATES_EN["syntheo-standup"]?.sections.map(([title]) => title),
+    ).toEqual(["Done", "In Progress", "Blockers"]);
+  });
+
+  it.each([
+    "syntheo-general",
+    "syntheo-compliance",
+    "syntheo-project",
+    "syntheo-standup",
+  ])("fait encore basculer %s publié en 0.7.3", (id) => {
+    const published = LEGACY_DEFAULT_TEMPLATES_EN[id]![0]!;
+    // Texte de 0.7.3 : titre actuel, sections en casse de phrase.
+    expect(published.title).toBe(DEFAULT_TEMPLATES_EN[id]?.title);
+    expect(published.sections).not.toEqual(DEFAULT_TEMPLATES_EN[id]?.sections);
+    const stored = storedTemplateColumns(published);
+    const matches = (statement: { params: string[] }) =>
+      statement.params[5] === id &&
+      JSON.stringify(statement.params.slice(6)) === JSON.stringify(stored);
+
+    const toFrench = buildDefaultTemplateLocaleStatements("fr").find(matches);
+    expect(toFrench?.params.slice(0, 5)).toEqual(
+      storedTemplateColumns(DEFAULT_TEMPLATES_FR[id]!),
+    );
+
+    const toEnglish = buildDefaultTemplateLocaleStatements("en").find(matches);
+    expect(toEnglish?.params.slice(0, 5)).toEqual(
+      storedTemplateColumns(DEFAULT_TEMPLATES_EN[id]!),
+    );
+  });
 });
