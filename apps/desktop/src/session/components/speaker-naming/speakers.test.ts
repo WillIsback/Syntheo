@@ -5,7 +5,10 @@ import {
   buildSpeakerCards,
   displaySpeakerLabel,
   isAnonymousSpeakerLabel,
+  MINOR_SPEAKER_WORDS,
   pickSpeakerExcerpts,
+  type SpeakerCard,
+  splitSpeakerCards,
   summaryMentionsAnonymousSpeakers,
 } from "./speakers";
 
@@ -235,6 +238,131 @@ describe("buildSpeakerCards", () => {
         { transcriptId: "t2", segments: [] },
       ]),
     ).toEqual([]);
+  });
+});
+
+// Issue 449 : écho ou diarisation qui alterne sur des fragments de 1 à 3 mots.
+describe("intervenants fragmentés et mineurs", () => {
+  const fragmented = () =>
+    buildSpeakerCards([
+      {
+        transcriptId: "t1",
+        segments: [
+          segment("Speaker 1", "Le budget de", { speakerIndex: 0 }),
+          segment("Speaker 1", "la médiathèque augmente", { speakerIndex: 0 }),
+          segment("Speaker 1", "de cinq pour cent.", { speakerIndex: 0 }),
+          segment("Speaker 2", "Oui.", { speakerIndex: 1 }),
+          segment("Speaker 1", "Nous ouvrirons le", { speakerIndex: 0 }),
+          segment("Speaker 1", "samedi matin dès mars.", { speakerIndex: 0 }),
+          segment("Speaker 2", "D'accord, bien.", { speakerIndex: 1 }),
+          segment("Speaker 3", "Hum.", { speakerIndex: 2 }),
+        ],
+      },
+    ]);
+
+  it("rebuilds sentences across consecutive fragments of one speaker", () => {
+    const [main] = fragmented();
+
+    expect(main?.number).toBe("1");
+    expect(main?.excerpts).toEqual([
+      "Le budget de la médiathèque augmente de cinq pour cent.",
+      "Nous ouvrirons le samedi matin dès mars.",
+    ]);
+  });
+
+  it("counts words, sorts by words and flags speakers under the threshold", () => {
+    expect(MINOR_SPEAKER_WORDS).toBe(8);
+    const cards = fragmented();
+
+    expect(cards.map((card) => [card.number, card.words, card.minor])).toEqual([
+      ["1", 17, false],
+      ["2", 3, true],
+      ["3", 1, true],
+    ]);
+  });
+
+  it("groups minor speakers under Others", () => {
+    const cards = fragmented();
+    const { main, others } = splitSpeakerCards(cards);
+    expect(main.map((card) => card.number)).toEqual(["1"]);
+    expect(others.map((card) => card.number)).toEqual(["2", "3"]);
+
+    // Pas de repli : sans carte principale, les mineures restent « Autres ».
+    const onlyMinor = cards.filter((card) => card.minor) as SpeakerCard[];
+    expect(splitSpeakerCards(onlyMinor)).toEqual({
+      main: [],
+      others: onlyMinor,
+    });
+  });
+
+  // Une fois les principaux nommés, les fragments restants restent mineurs :
+  // le seuil se juge sur toute la note, quel que soit le libellé.
+  it.each(["Alice", "You"])(
+    "keeps fragments minor once the main speaker is named %s",
+    (named) => {
+      const cards = buildSpeakerCards([
+        {
+          transcriptId: "t1",
+          segments: [
+            segment(
+              named,
+              "Je présente le budget de la médiathèque ce matin.",
+              {
+                humanId: "alice",
+              },
+            ),
+            segment("Speaker 2", "Oui.", { speakerIndex: 1 }),
+            segment("Speaker 3", "Hum, bon.", { speakerIndex: 2 }),
+          ],
+        },
+      ]);
+
+      expect(cards.map((card) => [card.number, card.minor])).toEqual([
+        ["3", true],
+        ["2", true],
+      ]);
+      expect(splitSpeakerCards(cards).main).toEqual([]);
+    },
+  );
+
+  it("flags nobody as minor when nobody reaches the threshold", () => {
+    const cards = buildSpeakerCards([
+      {
+        transcriptId: "t1",
+        segments: [
+          segment("Speaker 1", "Bonjour tout le monde.", { speakerIndex: 0 }),
+          segment("Speaker 2", "Bonjour.", { speakerIndex: 1 }),
+        ],
+      },
+    ]);
+
+    expect(cards.map((card) => card.minor)).toEqual([false, false]);
+  });
+
+  it("judges the threshold across captures", () => {
+    const cards = buildSpeakerCards([
+      {
+        transcriptId: "t1",
+        segments: [
+          segment(
+            "Alice",
+            "Je présente le budget de la médiathèque ce matin.",
+            {
+              humanId: "alice",
+            },
+          ),
+        ],
+      },
+      {
+        transcriptId: "t2",
+        segments: [segment("Speaker 1", "Oui merci.", { speakerIndex: 0 })],
+      },
+    ]);
+
+    expect(cards.map((card) => [card.transcriptId, card.minor])).toEqual([
+      ["t2", true],
+    ]);
+    expect(splitSpeakerCards(cards).main).toEqual([]);
   });
 });
 

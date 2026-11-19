@@ -58,13 +58,15 @@ vi.mock("~/stt/contexts", () => ({
     }),
 }));
 
-function card(id: string): SpeakerCard {
+function card(id: string, minor = false): SpeakerCard {
   return {
     id,
     transcriptId: "t1",
     number: id.slice(-1),
     part: null,
     turns: 3,
+    words: minor ? 2 : 40,
+    minor,
     excerpts: ["Bonjour."],
     targets: [],
   };
@@ -117,6 +119,42 @@ describe("SpeakerNamingBar", () => {
     expect(screen.getByRole("dialog").textContent).toBe(
       "t1:Speaker 1,t1:Speaker 2",
     );
+  });
+
+  // Issue 449 : les intervenants mineurs, sous « Autres », ne comptent pas.
+  it("counts only the main speakers, but still passes every card to the panel", () => {
+    mocks.cards = [card("t1:Speaker 1"), card("t1:Speaker 2", true)];
+    renderBar();
+
+    expect(useSpeakerNamingStore.getState().available).toEqual({
+      sessionId: "session-1",
+      count: 1,
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Name speakers" }));
+    expect(screen.getByRole("dialog").textContent).toBe(
+      "t1:Speaker 1,t1:Speaker 2",
+    );
+  });
+
+  // Les principaux sont nommés, il ne reste que des fragments : rien à
+  // réclamer (issue 449).
+  it("asks for nothing when only minor speakers remain", () => {
+    mocks.cards = [card("t1:Speaker 3", true), card("t1:Speaker 4", true)];
+    renderBar();
+
+    expect(useSpeakerNamingStore.getState().available).toBeNull();
+    expect(screen.queryByRole("button", { name: "Name speakers" })).toBeNull();
+  });
+
+  // Réunion très courte : buildSpeakerCards ne marque aucune carte mineure.
+  it("offers the panel for a very short meeting", () => {
+    mocks.cards = [card("t1:Speaker 1"), card("t1:Speaker 2")];
+    renderBar();
+
+    expect(useSpeakerNamingStore.getState().available?.count).toBe(2);
+    expect(
+      screen.getByRole("button", { name: "Name speakers" }),
+    ).not.toBeNull();
   });
 
   it("offers the palette command while anonymous speakers remain", () => {
