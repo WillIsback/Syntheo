@@ -45,6 +45,12 @@ const AEC_ALIGNMENT_RESET_SHIFT_MS: u32 = 3;
 /// `AEC_DELAY_SLEW_INTERVAL_SAMPLES` (250 échantillons par seconde à 16 kHz, bien au-delà
 /// d'une dérive d'horloge réelle) : chaque pas répète ou saute un seul échantillon.
 const AEC_DELAY_SLEW_INTERVAL_SAMPLES: usize = 64;
+/// Avance laissée à la référence sur l'écho (#554) : l'aligneur retarde la référence du retard
+/// mesuré moins cette avance, au lieu de la caler exactement sur l'écho. DTLN annule mieux
+/// l'écho quand la référence le précède : sur la paire theo, +8 dB d'ERLE sans dérive et +7 dB
+/// à 800 ppm, voix locale non dégradée en double parole (`aec_drift_lead_sweep_with_dtln`).
+/// Coût : jusqu'à 30 ms de retard sur la voie micro quand le retard mesuré est plus court.
+const AEC_REFERENCE_LEAD_MS: u32 = 30;
 const AEC_MAX_REFERENCE_LAG_MS: u32 = 600;
 const AEC_MIN_REFERENCE_OVERLAP_MS: u32 = 400;
 const AEC_MIN_REFERENCE_RMS: f32 = 1e-4;

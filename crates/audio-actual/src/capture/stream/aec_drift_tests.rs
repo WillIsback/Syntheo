@@ -20,6 +20,8 @@ const DURATION_SECS: usize = 180;
 /// Écho atténué et bruit de fond du micro.
 const ECHO_GAIN: f32 = 0.5;
 const MIC_NOISE: f32 = 0.002;
+/// Avance laissée à la référence par l'aligneur (`AEC_REFERENCE_LEAD_MS`, #554).
+const LEAD_SAMPLES: f64 = (RATE * super::AEC_REFERENCE_LEAD_MS / 1000) as f64;
 
 pub(super) struct DriftRun {
     /// Part du temps, après le premier verrouillage, sans alignement appliqué.
@@ -70,6 +72,8 @@ fn speaker_signal(speech: &[f32]) -> Vec<f32> {
 pub(super) struct Scenario {
     pub drift_ppm: f64,
     pub jump_samples: f64,
+    /// Retard initial du chemin d'écho ajouté au signal.
+    pub base_lag: f64,
 }
 
 const JUMP_AT: usize = DURATION_SECS / 2 * RATE as usize;
@@ -80,7 +84,7 @@ fn true_lag(n: usize, scenario: Scenario) -> f64 {
     } else {
         0.0
     };
-    BASE_LAG + n as f64 * scenario.drift_ppm * 1e-6 + jump
+    scenario.base_lag + n as f64 * scenario.drift_ppm * 1e-6 + jump
 }
 
 /// Micro : écho de la référence lue au temps `n - retard(n)` (interpolation linéaire), plus un
@@ -136,7 +140,9 @@ pub(super) fn run_drift(scenario: Scenario) -> DriftRun {
         match applied {
             None => unaligned += 1,
             Some(applied) => {
-                let error = (applied - true_lag(start, scenario)).abs();
+                // La référence garde son avance (#554) : la cible est le retard vrai moins
+                // l'avance.
+                let error = (applied - (true_lag(start, scenario) - LEAD_SAMPLES)).abs();
                 error_sum += error;
                 error_max = error_max.max(error);
                 error_count += 1;
@@ -177,6 +183,7 @@ fn aec_drift_800_ppm_stays_aligned() {
     let still = run_drift(Scenario {
         drift_ppm: 0.0,
         jump_samples: 0.0,
+        base_lag: BASE_LAG,
     });
     report("sans dérive", &still);
     for drift_ppm in [200.0, -800.0] {
@@ -185,19 +192,30 @@ fn aec_drift_800_ppm_stays_aligned() {
             &run_drift(Scenario {
                 drift_ppm,
                 jump_samples: 0.0,
+                base_lag: BASE_LAG,
             }),
         );
     }
     let jump = run_drift(Scenario {
         drift_ppm: DRIFT_PPM,
         jump_samples: 300.0,
+        base_lag: BASE_LAG,
     });
     report("800 ppm + saut de 300 éch. à 90 s", &jump);
     let run = run_drift(Scenario {
         drift_ppm: DRIFT_PPM,
         jump_samples: 0.0,
+        base_lag: BASE_LAG,
     });
     report("800 ppm", &run);
+    // #554 : retard de départ juste sous l'avance ; la dérive le fait traverser l'avance
+    // (cible signée qui passe de négative à positive) sans réinitialisation supplémentaire.
+    let crossing = run_drift(Scenario {
+        drift_ppm: DRIFT_PPM,
+        jump_samples: 0.0,
+        base_lag: LEAD_SAMPLES - 60.0,
+    });
+    report("800 ppm, traverse l'avance", &crossing);
 
     assert!(
         run.unaligned_ratio < 0.01,
@@ -210,6 +228,17 @@ fn aec_drift_800_ppm_stays_aligned() {
         run.mean_error
     );
     assert!(run.resets <= 2, "{} réinitialisations", run.resets);
+    assert!(
+        crossing.resets <= run.resets,
+        "traversée de l'avance : {} réinitialisations",
+        crossing.resets
+    );
+    assert!(
+        crossing.unaligned_ratio < 0.01 && crossing.mean_error < 16.0,
+        "traversée de l'avance : verrou {:.1} %, erreur {:.1}",
+        crossing.unaligned_ratio * 100.0,
+        crossing.mean_error
+    );
     assert_eq!(still.resets, 1);
     // Un vrai changement du chemin d'écho est toujours détecté et réacquis.
     assert!(jump.resets >= 2 && jump.unaligned_ratio < 0.1);
@@ -345,6 +374,7 @@ fn aec_drift_erle_with_dtln() {
         let scenario = Scenario {
             drift_ppm,
             jump_samples: 0.0,
+            base_lag: BASE_LAG,
         };
         let Some(ideal) = run_drift_erle(scenario, ErleMode::Ideal) else {
             println!("modèle indisponible, mesure ignorée");
@@ -395,7 +425,17 @@ fn near_end_signal(total: usize) -> Vec<f32> {
     out
 }
 
+#[derive(Clone, Copy)]
+enum LeadMode {
+    /// Avance émulée : référence retardée du retard mesuré brut moins cette avance.
+    Emulated(usize),
+    /// Aligneur corrigé tel quel (avance `AEC_REFERENCE_LEAD_MS`), sorties utilisées directement.
+    Corrected,
+}
+
 struct LeadMeasure {
+    /// Réinitialisations de l'annulation d'écho demandées par l'aligneur.
+    resets: usize,
     /// ERLE (dB) sur les passages où seule la référence joue.
     erle_echo_only: f64,
     /// Réduction micro → sortie (dB) sur les passages de double parole.
@@ -415,7 +455,7 @@ fn active(signal: &[f32]) -> bool {
     signal.iter().any(|sample| sample.abs() > 1e-3)
 }
 
-fn run_lead(pair: SweepPair, scenario: Scenario, lead: usize) -> Option<LeadMeasure> {
+fn run_lead(pair: SweepPair, scenario: Scenario, mode: LeadMode) -> Option<LeadMeasure> {
     use super::aligner::SampleDelayLine;
 
     let (speaker, echo) = match pair {
@@ -439,23 +479,38 @@ fn run_lead(pair: SweepPair, scenario: Scenario, lead: usize) -> Option<LeadMeas
     let mut aligner = AecReferenceAligner::new(RATE);
     let mut speaker_line = SampleDelayLine::new(4_000);
     let mut output = Vec::with_capacity(mic.len());
+    let mut resets = 0;
+    // Retard visé de la ligne du micro, par bloc : la sortie suit le micro retardé (branche
+    // `DelayMic` de l'aligneur corrigé), à recaler pour la comparer à la voix locale propre.
+    let mut mic_delays = Vec::with_capacity(mic.len() / CHUNK + 1);
     for (speaker_chunk, mic_chunk) in speaker.chunks(CHUNK).zip(mic.chunks(CHUNK)) {
         let pair = aligner.align(speaker_chunk, mic_chunk);
         if pair.alignment_changed {
+            resets += 1;
             reset_echo_cancellation(&mut aec, &mut linear_echo_gain);
         }
-        // Retard mesuré moins l'avance ; sans verrou, la référence brute comme l'aligneur.
-        let reference = match aligner.applied_delay_samples() {
-            Some(applied) => speaker_line.process(
-                speaker_chunk,
-                (applied - lead as f64).round().max(0.0) as usize,
-            ),
-            None => speaker_line.process(speaker_chunk, 0),
+        mic_delays.push(match mode {
+            LeadMode::Corrected => aligner.applied_alignment.mic_delay_samples(),
+            LeadMode::Emulated(_) => 0,
+        });
+        let (aligned_mic, reference) = match mode {
+            LeadMode::Corrected => (pair.mic.to_vec(), pair.speaker.to_vec()),
+            // Retard brut (appliqué plus l'avance de l'aligneur) moins l'avance émulée ; sans
+            // verrou, la référence brute.
+            LeadMode::Emulated(lead) => {
+                let delay = aligner.applied_delay_samples().map_or(0, |applied| {
+                    (applied + LEAD_SAMPLES - lead as f64).round().max(0.0) as usize
+                });
+                (
+                    mic_chunk.to_vec(),
+                    speaker_line.process(speaker_chunk, delay),
+                )
+            }
         };
         output.extend_from_slice(&process_aec(
             &mut aec,
             &mut linear_echo_gain,
-            &pair.mic,
+            &aligned_mic,
             &reference,
         )?);
     }
@@ -465,9 +520,12 @@ fn run_lead(pair: SweepPair, scenario: Scenario, lead: usize) -> Option<LeadMeas
     let (mut echo_mic, mut echo_out) = (0.0, 0.0);
     let (mut dt_mic, mut dt_out) = (0.0, 0.0);
     let (mut near_energy, mut projected, mut cross, mut out_dt) = (0.0, 0.0, 0.0, 0.0);
+    let max_mic_delay = mic_delays.iter().copied().max().unwrap_or(0);
+    let end_all = end_all.saturating_sub(max_mic_delay);
     for start in (skip..end_all).step_by(CHUNK) {
         let end = (start + CHUNK).min(end_all);
-        let out = &output[start + latency..end + latency];
+        let shift = latency + mic_delays.get(start / CHUNK).copied().unwrap_or(0);
+        let out = &output[start + shift..end + shift];
         let ref_on = active(&speaker[start..end]);
         let near_on = near.as_ref().is_some_and(|near| active(&near[start..end]));
         if !ref_on {
@@ -502,6 +560,7 @@ fn run_lead(pair: SweepPair, scenario: Scenario, lead: usize) -> Option<LeadMeas
     }
     let db = |num: f64, den: f64| 10.0 * (num / den.max(1e-12)).log10();
     Some(LeadMeasure {
+        resets,
         erle_echo_only: db(echo_mic, echo_out),
         reduction_doubletalk: db(dt_mic, dt_out),
         near_kept_db: near.as_ref().map(|_| db(projected, near_energy)),
@@ -528,9 +587,10 @@ fn aec_drift_lead_sweep_with_dtln() {
             let scenario = Scenario {
                 drift_ppm,
                 jump_samples: 0.0,
+                base_lag: BASE_LAG,
             };
             for lead in LEADS {
-                let Some(measure) = run_lead(pair, scenario, lead) else {
+                let Some(measure) = run_lead(pair, scenario, LeadMode::Emulated(lead)) else {
                     println!("modèle indisponible, mesure ignorée");
                     return;
                 };
@@ -551,6 +611,44 @@ fn aec_drift_lead_sweep_with_dtln() {
                     "| {pair_label} | {drift_label} | {lead} | {erle} | {reduction} | {} | {} |",
                     optional(measure.near_kept_db, " dB"),
                     optional(measure.near_correlation, ""),
+                );
+            }
+        }
+    }
+}
+
+/// #554, aligneur corrigé : avance réelle de `AEC_REFERENCE_LEAD_MS`, avec le retard ajouté du
+/// banc (904, branche `DelaySpeaker`) et sans retard ajouté (retard naturel de theo, ≈ 473
+/// échantillons, sous l'avance : branche `DelayMic`, autour de zéro).
+#[test]
+#[ignore = "mesure longue avec le modèle DTLN réel"]
+fn aec_drift_corrected_lead_with_dtln() {
+    println!(
+        "| Paire | Retard ajouté | Dérive | ERLE écho seul | Voix locale conservée | Réinit. |"
+    );
+    println!("|---|---|---|---|---|---|");
+    for (pair, pair_label) in [
+        (SweepPair::Theo, "theo"),
+        (SweepPair::TheoWithNearEnd, "theo + voix locale"),
+    ] {
+        for base_lag in [BASE_LAG, 0.0] {
+            for (drift_label, drift_ppm) in [("sans dérive", 0.0), ("800 ppm", DRIFT_PPM)] {
+                let scenario = Scenario {
+                    drift_ppm,
+                    jump_samples: 0.0,
+                    base_lag,
+                };
+                let Some(measure) = run_lead(pair, scenario, LeadMode::Corrected) else {
+                    println!("modèle indisponible, mesure ignorée");
+                    return;
+                };
+                println!(
+                    "| {pair_label} | {base_lag} | {drift_label} | {:.2} dB | {} | {} |",
+                    measure.erle_echo_only,
+                    measure
+                        .near_kept_db
+                        .map_or("—".to_string(), |value| format!("{value:.2} dB")),
+                    measure.resets,
                 );
             }
         }
