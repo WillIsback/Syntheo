@@ -7,19 +7,22 @@ use syntheo_audio_sync::{SyncProbe, SyncProbeConfig, SyncProbeEvent, SyncProbeSt
 use super::{
     AEC_ALIGNMENT_RESET_SHIFT_MS, AEC_ALIGNMENT_SIGNIFICANT_SHIFT_MS,
     AEC_DELAY_SLEW_INTERVAL_SAMPLES, AEC_MAX_REFERENCE_LAG_MS, AEC_MIN_REFERENCE_OVERLAP_MS,
-    AUDIO_SYNC_PROBE_ENV,
+    AEC_REFERENCE_LEAD_MS, AUDIO_SYNC_PROBE_ENV,
 };
 
 pub(super) struct AecReferenceAligner {
     probe: SyncProbe,
     mic_delay_line: SampleDelayLine,
     speaker_delay_line: SampleDelayLine,
-    /// Dernier alignement mesuré par la sonde, pour le journal.
+    /// Dernier alignement mesuré par la sonde (mesure brute, sans l'avance), pour le journal.
     pub(super) last_alignment: AecAlignment,
-    /// Alignement visé par les lignes de retard. Un petit déplacement (dérive d'horloge, #437)
-    /// y est rejoint en glissant, sans réinitialiser l'annulation d'écho ; seul un changement
+    /// Alignement visé par les lignes de retard : retard mesuré moins l'avance de la référence
+    /// (#554). Un petit déplacement (dérive d'horloge, #437), même de part et d'autre de zéro, y
+    /// est rejoint en glissant, sans réinitialiser l'annulation d'écho ; seul un changement
     /// structurel la réinitialise (#322).
     pub(super) applied_alignment: AecAlignment,
+    /// Avance laissée à la référence, en échantillons ([`AEC_REFERENCE_LEAD_MS`]).
+    reference_lead_samples: isize,
     /// Dérive d'horloge estimée par la sonde (échantillons par seconde) et échantillons écoulés
     /// depuis sa dernière mesure : entre deux mesures, la cible des lignes de retard avance
     /// d'autant (#437).
@@ -36,6 +39,8 @@ pub(super) struct AecAlignedPair {
     pub(super) alignment_changed: bool,
 }
 
+/// `None` : pas de verrou. Un alignement verrouillé de retard nul est `DelaySpeaker(0)`
+/// ([`AecAlignment::from_signed_delay`]) : il se distingue de la perte de verrou (#554).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum AecAlignment {
     None,
@@ -44,6 +49,25 @@ pub(super) enum AecAlignment {
 }
 
 impl AecAlignment {
+    /// Alignement verrouillé d'un retard signé de la référence (positif : référence retardée,
+    /// négatif : micro retardé, nul : `DelaySpeaker(0)`).
+    pub(super) fn from_signed_delay(delay_samples: isize) -> Self {
+        if delay_samples < 0 {
+            Self::DelayMic(delay_samples.unsigned_abs())
+        } else {
+            Self::DelaySpeaker(delay_samples as usize)
+        }
+    }
+
+    /// Retard signé de la référence, `None` sans verrou.
+    pub(super) fn signed_delay(self) -> Option<isize> {
+        match self {
+            Self::None => None,
+            Self::DelaySpeaker(samples) => Some(samples as isize),
+            Self::DelayMic(samples) => Some(-(samples as isize)),
+        }
+    }
+
     pub(super) fn from_lag_samples(lag_samples: Option<isize>) -> Self {
         match lag_samples {
             Some(lag) if lag > 0 => Self::DelaySpeaker(lag as usize),
@@ -106,6 +130,8 @@ impl AecReferenceAligner {
             speaker_delay_line: SampleDelayLine::new(max_delay_samples),
             last_alignment: AecAlignment::None,
             applied_alignment: AecAlignment::None,
+            reference_lead_samples: (sample_rate as usize * AEC_REFERENCE_LEAD_MS as usize / 1000)
+                as isize,
             drift_samples_per_sec: None,
             samples_since_measure: 0,
             last_logged_state: None,
@@ -163,34 +189,36 @@ impl AecReferenceAligner {
     }
 
     /// Alignement visé à cet instant : le dernier alignement appliqué, avancé de la dérive
-    /// d'horloge estimée depuis la dernière mesure de la sonde. Ne change jamais de sens.
+    /// d'horloge estimée depuis la dernière mesure de la sonde. Calculé sur le retard signé : près
+    /// de zéro (avance de #554), il passe d'un côté à l'autre en glissant, sans réinitialisation.
     fn drift_extrapolated_alignment(&self) -> AecAlignment {
-        let Some(drift) = self.drift_samples_per_sec else {
+        let (Some(drift), Some(delay)) = (
+            self.drift_samples_per_sec,
+            self.applied_alignment.signed_delay(),
+        ) else {
             return self.applied_alignment;
         };
         let elapsed_secs =
             self.samples_since_measure as f64 / self.probe.config().sample_rate as f64;
-        let shift = drift * elapsed_secs;
-        let extend = |samples: usize, sign: f64| -> usize {
-            (samples as f64 + sign * shift).round().max(0.0) as usize
-        };
-        match self.applied_alignment {
-            AecAlignment::None => AecAlignment::None,
-            // Retard positif (référence retardée) : une dérive positive l'allonge.
-            AecAlignment::DelaySpeaker(samples) => AecAlignment::DelaySpeaker(extend(samples, 1.0)),
-            AecAlignment::DelayMic(samples) => AecAlignment::DelayMic(extend(samples, -1.0)),
-        }
+        // Une dérive positive allonge le retard de la référence.
+        AecAlignment::from_signed_delay((delay as f64 + drift * elapsed_secs).round() as isize)
     }
 
     pub(super) fn update_alignment(&mut self, event: &SyncProbeEvent) -> bool {
         let snapshot = event.snapshot();
-        let next_alignment = if matches!(
+        let locked = matches!(
             snapshot.state,
             SyncProbeState::Locked | SyncProbeState::Holdover
-        ) {
+        );
+        let next_alignment = if locked {
             AecAlignment::from_lag_samples(snapshot.stable_lag_samples)
         } else {
             AecAlignment::None
+        };
+        // Cible des lignes : retard mesuré moins l'avance de la référence (#554).
+        let target = match (locked, snapshot.stable_lag_samples) {
+            (true, Some(lag)) => AecAlignment::from_signed_delay(lag - self.reference_lead_samples),
+            _ => AecAlignment::None,
         };
 
         if next_alignment != self.last_alignment {
@@ -201,13 +229,16 @@ impl AecReferenceAligner {
                         $level,
                         previous_alignment = ?self.last_alignment,
                         alignment = ?next_alignment,
-                        mic_delay_samples = next_alignment.mic_delay_samples(),
-                        speaker_delay_samples = next_alignment.speaker_delay_samples(),
+                        applied_alignment = ?target,
+                        // Retards réellement appliqués, après l'avance de la référence.
+                        mic_delay_samples = target.mic_delay_samples(),
+                        speaker_delay_samples = target.speaker_delay_samples(),
                         mic_delay_ms =
-                            next_alignment.mic_delay_samples() as f32 / sample_rate as f32 * 1000.0,
-                        speaker_delay_ms = next_alignment.speaker_delay_samples() as f32
-                            / sample_rate as f32
-                            * 1000.0,
+                            target.mic_delay_samples() as f32 / sample_rate as f32 * 1000.0,
+                        speaker_delay_ms =
+                            target.speaker_delay_samples() as f32 / sample_rate as f32 * 1000.0,
+                        reference_lead_samples = self.reference_lead_samples,
+                        // Mesure brute de la sonde.
                         stable_lag_samples = snapshot.stable_lag_samples,
                         state = ?snapshot.state,
                         "aec_reference_alignment_changed"
@@ -222,7 +253,7 @@ impl AecReferenceAligner {
             self.last_alignment = next_alignment;
         }
 
-        self.commit_alignment(next_alignment)
+        self.commit_alignment(target)
     }
 
     /// Fait de l'alignement mesuré la cible des lignes de retard ; renvoie `true` si
@@ -231,22 +262,21 @@ impl AecReferenceAligner {
     /// Avant #437, l'alignement appliqué ne bougeait qu'au-delà de 1 ms (hystérésis de #322) et
     /// chaque déplacement réinitialisait le modèle. Une dérive d'horloge (≈ 13 échantillons par
     /// seconde à 800 ppm) le réinitialisait donc toutes les secondes ou presque. Désormais :
-    /// - même sens, déplacement sous [`AEC_ALIGNMENT_RESET_SHIFT_MS`] : la cible change, les
-    ///   lignes de retard la rejoignent en glissant d'un échantillon à la fois et le modèle garde
-    ///   son état ;
-    /// - verrouillage, perte, changement de sens ou saut plus grand : nouvel alignement et
-    ///   réinitialisation.
+    /// - déplacement du retard signé sous [`AEC_ALIGNMENT_RESET_SHIFT_MS`], y compris de part et
+    ///   d'autre de zéro (avance de #554) : la cible change, les lignes de retard la rejoignent
+    ///   en glissant d'un échantillon à la fois et le modèle garde son état ;
+    /// - verrouillage, perte ou saut plus grand : nouvel alignement et réinitialisation.
     pub(super) fn commit_alignment(&mut self, next_alignment: AecAlignment) -> bool {
         if next_alignment == self.applied_alignment {
             return false;
         }
         let sample_rate = self.probe.config().sample_rate as usize;
         let reset_threshold = sample_rate * AEC_ALIGNMENT_RESET_SHIFT_MS as usize / 1000;
-        let structural = match (self.applied_alignment, next_alignment) {
-            (AecAlignment::DelaySpeaker(before), AecAlignment::DelaySpeaker(after))
-            | (AecAlignment::DelayMic(before), AecAlignment::DelayMic(after)) => {
-                before.abs_diff(after) >= reset_threshold
-            }
+        let structural = match (
+            self.applied_alignment.signed_delay(),
+            next_alignment.signed_delay(),
+        ) {
+            (Some(before), Some(after)) => before.abs_diff(after) >= reset_threshold,
             _ => true,
         };
         self.applied_alignment = next_alignment;
@@ -260,6 +290,13 @@ impl AecReferenceAligner {
         (self.applied_alignment != AecAlignment::None).then_some(
             self.speaker_delay_line.current_delay as f64 - self.mic_delay_line.current_delay as f64,
         )
+    }
+
+    /// Retard réellement appliqué par la ligne du micro (mesures de #554 : la sortie suit le
+    /// micro retardé).
+    #[cfg(test)]
+    pub(super) fn mic_line_delay_samples(&self) -> usize {
+        self.mic_delay_line.current_delay
     }
 
     pub(super) fn log_probe_event(&mut self, event: SyncProbeEvent) {
