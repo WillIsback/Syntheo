@@ -292,6 +292,13 @@ impl AecReferenceAligner {
         )
     }
 
+    /// Retard réellement appliqué par la ligne du micro (mesures de #554 : la sortie suit le
+    /// micro retardé).
+    #[cfg(test)]
+    pub(super) fn mic_line_delay_samples(&self) -> usize {
+        self.mic_delay_line.current_delay
+    }
+
     pub(super) fn log_probe_event(&mut self, event: SyncProbeEvent) {
         let snapshot = event.snapshot();
         let should_log = self.last_logged_state != Some(snapshot.state)

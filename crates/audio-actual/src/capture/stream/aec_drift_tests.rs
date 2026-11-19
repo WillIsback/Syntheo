@@ -32,6 +32,9 @@ pub(super) struct DriftRun {
     /// Réinitialisations de l'annulation d'écho demandées par l'aligneur.
     pub resets: usize,
     pub first_lock_secs: Option<f64>,
+    /// Le retard appliqué a changé de signe pendant le verrou (#554), avec l'instant du
+    /// premier passage d'un signe à l'autre.
+    pub crossed_while_locked_secs: Option<f64>,
 }
 
 fn load(name: &str) -> Vec<f32> {
@@ -120,6 +123,8 @@ pub(super) fn run_drift(scenario: Scenario) -> DriftRun {
     let mut first_lock = None;
     let (mut unaligned, mut counted) = (0usize, 0usize);
     let (mut error_sum, mut error_max, mut error_count) = (0.0f64, 0.0f64, 0usize);
+    let mut first_sign: Option<bool> = None;
+    let mut crossed = None;
 
     for (index, (speaker_chunk, mic_chunk)) in
         speaker.chunks(CHUNK).zip(mic.chunks(CHUNK)).enumerate()
@@ -140,6 +145,16 @@ pub(super) fn run_drift(scenario: Scenario) -> DriftRun {
         match applied {
             None => unaligned += 1,
             Some(applied) => {
+                if applied != 0.0 {
+                    let positive = applied > 0.0;
+                    match first_sign {
+                        None => first_sign = Some(positive),
+                        Some(first) if first != positive && crossed.is_none() => {
+                            crossed = Some(start as f64 / RATE as f64);
+                        }
+                        Some(_) => {}
+                    }
+                }
                 // La référence garde son avance (#554) : la cible est le retard vrai moins
                 // l'avance.
                 let error = (applied - (true_lag(start, scenario) - LEAD_SAMPLES)).abs();
@@ -156,6 +171,7 @@ pub(super) fn run_drift(scenario: Scenario) -> DriftRun {
         max_error: error_max,
         resets,
         first_lock_secs: first_lock,
+        crossed_while_locked_secs: crossed,
     }
 }
 
@@ -208,14 +224,22 @@ fn aec_drift_800_ppm_stays_aligned() {
         base_lag: BASE_LAG,
     });
     report("800 ppm", &run);
-    // #554 : retard de départ juste sous l'avance ; la dérive le fait traverser l'avance
-    // (cible signée qui passe de négative à positive) sans réinitialisation supplémentaire.
+    // #554 : retard de départ 400 échantillons au-dessus de l'avance ; la dérive négative
+    // (−12,8 échantillons par seconde) le fait passer sous l'avance vers 31 s, bien après le
+    // verrou : la cible signée passe de positive à négative en glissant (la ligne de la
+    // référence redescend à 0 pendant que celle du micro monte), sans réinitialisation
+    // supplémentaire. (Un départ sous l'avance à +800 ppm, vers 280 échantillons, fait perdre
+    // le verrou à la sonde vers 9 s, avance ou non : c'est la sonde, pas l'avance.)
     let crossing = run_drift(Scenario {
-        drift_ppm: DRIFT_PPM,
+        drift_ppm: -DRIFT_PPM,
         jump_samples: 0.0,
-        base_lag: LEAD_SAMPLES - 60.0,
+        base_lag: LEAD_SAMPLES + 400.0,
     });
-    report("800 ppm, traverse l'avance", &crossing);
+    report("−800 ppm, traverse l'avance", &crossing);
+    println!(
+        "traversée de l'avance pendant le verrou : {:?} s (1er verrou {:?} s)",
+        crossing.crossed_while_locked_secs, crossing.first_lock_secs
+    );
 
     assert!(
         run.unaligned_ratio < 0.01,
@@ -233,6 +257,12 @@ fn aec_drift_800_ppm_stays_aligned() {
         "traversée de l'avance : {} réinitialisations",
         crossing.resets
     );
+    let (Some(locked_at), Some(crossed_at)) =
+        (crossing.first_lock_secs, crossing.crossed_while_locked_secs)
+    else {
+        panic!("le retard appliqué n'a pas changé de signe pendant le verrou");
+    };
+    assert!(crossed_at > locked_at);
     assert!(
         crossing.unaligned_ratio < 0.01 && crossing.mean_error < 16.0,
         "traversée de l'avance : verrou {:.1} %, erreur {:.1}",
@@ -480,8 +510,9 @@ fn run_lead(pair: SweepPair, scenario: Scenario, mode: LeadMode) -> Option<LeadM
     let mut speaker_line = SampleDelayLine::new(4_000);
     let mut output = Vec::with_capacity(mic.len());
     let mut resets = 0;
-    // Retard visé de la ligne du micro, par bloc : la sortie suit le micro retardé (branche
-    // `DelayMic` de l'aligneur corrigé), à recaler pour la comparer à la voix locale propre.
+    // Retard de la ligne du micro à la fin de chaque bloc : la sortie suit le micro retardé
+    // (branche `DelayMic` de l'aligneur corrigé), à recaler pour la comparer à la voix locale
+    // propre. Le retard réel, pas la cible : entre deux mesures, la ligne suit la dérive.
     let mut mic_delays = Vec::with_capacity(mic.len() / CHUNK + 1);
     for (speaker_chunk, mic_chunk) in speaker.chunks(CHUNK).zip(mic.chunks(CHUNK)) {
         let pair = aligner.align(speaker_chunk, mic_chunk);
@@ -490,7 +521,7 @@ fn run_lead(pair: SweepPair, scenario: Scenario, mode: LeadMode) -> Option<LeadM
             reset_echo_cancellation(&mut aec, &mut linear_echo_gain);
         }
         mic_delays.push(match mode {
-            LeadMode::Corrected => aligner.applied_alignment.mic_delay_samples(),
+            LeadMode::Corrected => aligner.mic_line_delay_samples(),
             LeadMode::Emulated(_) => 0,
         });
         let (aligned_mic, reference) = match mode {
@@ -631,8 +662,17 @@ fn aec_drift_corrected_lead_with_dtln() {
         (SweepPair::Theo, "theo"),
         (SweepPair::TheoWithNearEnd, "theo + voix locale"),
     ] {
-        for base_lag in [BASE_LAG, 0.0] {
-            for (drift_label, drift_ppm) in [("sans dérive", 0.0), ("800 ppm", DRIFT_PPM)] {
+        for (base_lag, drifts) in [
+            (
+                BASE_LAG,
+                &[("sans dérive", 0.0), ("800 ppm", DRIFT_PPM)][..],
+            ),
+            (0.0, &[("sans dérive", 0.0), ("800 ppm", DRIFT_PPM)][..]),
+            // Retard mesuré ≈ 673 qui redescend sous l'avance vers 15 s, après les 6 s
+            // exclues et après le verrou : traversée verrouillée (DelaySpeaker → DelayMic).
+            (200.0, &[("−800 ppm", -DRIFT_PPM)][..]),
+        ] {
+            for &(drift_label, drift_ppm) in drifts {
                 let scenario = Scenario {
                     drift_ppm,
                     jump_samples: 0.0,
