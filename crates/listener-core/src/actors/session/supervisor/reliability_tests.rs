@@ -511,3 +511,92 @@ async fn meeting_capture_uses_one_connection_per_channel_and_recovers_from_a_sta
         Vec::<PathBuf>::new()
     );
 }
+
+// Issue 571 : bruit continu au-dessus du seuil, serveur muet. L'espacement des
+// arrêts du chien de garde survit au redémarrage du listener par le
+// superviseur : chaque listener reconnecté vit deux fois plus longtemps que
+// le précédent. Délai de base réduit à 300 ms pour garder le test court.
+#[tokio::test]
+async fn noise_without_transcript_spaces_reconnections_across_listener_restarts() {
+    use crate::actors::StallBackoff;
+
+    const BASE: Duration = Duration::from_millis(300);
+    let socket = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = socket.local_addr().unwrap();
+    let server = tokio::spawn(async move {
+        loop {
+            let Ok((stream, _)) = socket.accept().await else {
+                break;
+            };
+            tokio::spawn(async move {
+                let Ok(mut ws) = accept_async(stream).await else {
+                    return;
+                };
+                // Muet : ne répond jamais à l'audio.
+                while let Some(Ok(message)) = ws.next().await {
+                    if matches!(&message, Message::Text(text) if text.contains("input_audio_buffer.commit"))
+                    {
+                        let _ = ws.close(None).await;
+                        break;
+                    }
+                }
+            });
+        }
+    });
+    let vault = tempfile::tempdir().unwrap();
+    let (events_tx, _events) = mpsc::unbounded_channel();
+    let mut ctx = test_ctx();
+    ctx.runtime = Arc::new(TranscriptRuntime { events: events_tx });
+    ctx.app_dir = vault.path().to_path_buf();
+    ctx.params.session_id = uuid::Uuid::new_v4().to_string();
+    ctx.params.base_url = format!("http://{address}/v1");
+    ctx.params.onboarding = true;
+    ctx.params.model = "cloud".to_string();
+    ctx.stall_backoff = Arc::new(std::sync::Mutex::new(StallBackoff::new(
+        BASE,
+        Duration::from_secs(10),
+    )));
+    let backoff = ctx.stall_backoff.clone();
+    let session_id = ctx.params.session_id.clone();
+    let (supervisor, supervisor_task) = Actor::spawn(None, SessionActor, ctx).await.unwrap();
+
+    let mut lifetimes = Vec::new();
+    let mut listener = wait_for_listener(&session_id, None).await;
+    for _ in 0..3 {
+        let started = std::time::Instant::now();
+        // Une seconde de bruit actif toutes les 50 ms, jusqu'à l'arrêt.
+        while listener.get_status() == ActorStatus::Running
+            && matches!(
+                ractor::call_t!(
+                    listener,
+                    ListenerMsg::AudioSingle,
+                    1000,
+                    one_second_of_audio()
+                ),
+                Ok(ListenerAudioResult::Accepted)
+            )
+        {
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        }
+        lifetimes.push(started.elapsed());
+        listener = wait_for_listener(&session_id, Some(listener.get_id())).await;
+    }
+
+    // Trois arrêts sans progrès : 300 ms, puis 600 ms, puis 1,2 s.
+    assert_eq!(
+        backoff.lock().unwrap().progress_timeout(),
+        BASE * 8,
+        "{lifetimes:?}"
+    );
+    assert!(lifetimes[0] >= BASE, "{lifetimes:?}");
+    assert!(lifetimes[1] >= BASE * 2, "{lifetimes:?}");
+    assert!(lifetimes[2] >= BASE * 4, "{lifetimes:?}");
+    assert!(lifetimes[2] > lifetimes[0] * 2, "{lifetimes:?}");
+
+    supervisor.cast(SessionMsg::Shutdown).unwrap();
+    timeout(Duration::from_secs(10), supervisor_task)
+        .await
+        .unwrap()
+        .unwrap();
+    server.abort();
+}

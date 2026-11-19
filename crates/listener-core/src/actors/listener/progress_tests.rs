@@ -250,3 +250,104 @@ fn nvidia_unfinalized_cap_commits_the_provisional_text_before_reconnecting() {
             .all(|pair| pair[0].start_ms <= pair[1].start_ms)
     );
 }
+
+// Issue 571 : fond sonore au-dessus du seuil d'énergie, serveur muet. Chaque
+// arrêt du chien de garde est suivi d'une reconnexion (connexion neuve, même
+// état partagé, 1,1 s de nouvelle tentative) qui rejoue l'audio.
+
+/// Instants (en secondes depuis le début) des arrêts du chien de garde sur
+/// `secs` secondes de bruit, avec un progrès éventuel à `progress_at`.
+fn noise_stalls(
+    backoff: &super::SharedStallBackoff,
+    secs: u64,
+    mut response_at: impl FnMut(u64) -> Option<StreamResponse>,
+) -> Vec<f64> {
+    const RETRY_TICKS: u64 = 11;
+    let start = Instant::now();
+    let at = |tick: u64| start + Duration::from_millis(tick * 100);
+    let mut progress = StreamProgress::with_backoff(start, backoff.clone());
+    let mut stalls = Vec::new();
+    let mut tick = 0;
+    while tick < secs * 10 {
+        tick += 1;
+        if let Some(response) = response_at(tick) {
+            progress.observe_response(&response, at(tick));
+        }
+        if progress.observe_audio(CHUNK_SAMPLES, at(tick)) {
+            stalls.push(tick as f64 / 10.0);
+            progress.record_stall();
+            tick += RETRY_TICKS;
+            progress = StreamProgress::with_backoff(at(tick), backoff.clone());
+        }
+    }
+    stalls
+}
+
+fn gaps(stalls: &[f64]) -> Vec<f64> {
+    std::iter::once(stalls[0])
+        .chain(stalls.windows(2).map(|pair| pair[1] - pair[0]))
+        .map(|gap| (gap * 10.0).round() / 10.0)
+        .collect()
+}
+
+#[test]
+fn continuous_noise_spaces_the_reconnections() {
+    let backoff = super::SharedStallBackoff::default();
+
+    let stalls = noise_stalls(&backoff, 10 * 60, |_| None);
+
+    // 30 s, puis 60, 120, 240 s (plus la nouvelle tentative), puis au plus un
+    // arrêt toutes les 300 s. Avant le correctif : un arrêt toutes les ~31 s.
+    assert_eq!(gaps(&stalls), vec![30.0, 61.1, 121.1, 241.1], "{stalls:?}");
+    let eleven_more_minutes = noise_stalls(&backoff, 11 * 60, |_| None);
+    assert_eq!(
+        gaps(&eleven_more_minutes),
+        vec![300.0, 301.1],
+        "{eleven_more_minutes:?}"
+    );
+}
+
+#[test]
+fn progress_after_spaced_stalls_brings_the_timeout_back_to_thirty_seconds() {
+    let backoff = super::SharedStallBackoff::default();
+    let stalls = noise_stalls(&backoff, 4 * 60, |_| None);
+    assert_eq!(stalls.len(), 3, "{stalls:?}");
+    assert_eq!(
+        backoff.lock().unwrap().progress_timeout(),
+        Duration::from_secs(240)
+    );
+
+    // La parole reprend : une hypothèse arrive à 2 s, puis le serveur se fige
+    // en pleine parole. Le blocage est vu 30 s après le dernier progrès.
+    let wedged = noise_stalls(&backoff, 60, |tick| {
+        (tick == 20).then(|| provisional("Reprenons", 1))
+    });
+    assert_eq!(wedged.first().copied(), Some(32.0), "{wedged:?}");
+    assert_eq!(
+        backoff.lock().unwrap().progress_timeout(),
+        Duration::from_secs(30)
+    );
+}
+
+#[test]
+fn the_unfinalized_cap_does_not_bypass_the_spacing() {
+    // Délai porté à 240 s : 90 s d'audio actif sans final ni progrès ne
+    // doivent pas recycler le flux plus tôt.
+    let backoff = super::SharedStallBackoff::default();
+    for _ in 0..3 {
+        backoff.lock().unwrap().record_stall();
+    }
+    let start = Instant::now();
+    let mut progress = StreamProgress::with_backoff(start, backoff.clone());
+    let fired = (1..=2_399).find(|&tick| {
+        progress.observe_audio(CHUNK_SAMPLES, start + Duration::from_millis(tick * 100))
+    });
+    assert_eq!(fired, None, "stopped before the 240 s timeout");
+    assert!(progress.observe_audio(CHUNK_SAMPLES, start + Duration::from_secs(240)));
+    assert_eq!(
+        progress
+            .diagnostics(start + Duration::from_secs(240))
+            .reason,
+        super::stream::StallReason::NoProgress
+    );
+}
