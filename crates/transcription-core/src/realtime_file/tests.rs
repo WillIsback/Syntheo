@@ -216,6 +216,27 @@ async fn nemo_speech_server(
     Arc<std::sync::atomic::AtomicUsize>,
     Arc<std::sync::atomic::AtomicUsize>,
 ) {
+    let server = nemo_speech_server_with(rest_status, None).await;
+    (server.address, server.posts, server.sockets)
+}
+
+/// Faux serveur NeMo-Speech.cpp et ce qu'il a reçu.
+struct NemoSpeechServer {
+    address: std::net::SocketAddr,
+    posts: Arc<std::sync::atomic::AtomicUsize>,
+    sockets: Arc<std::sync::atomic::AtomicUsize>,
+    /// Sondes `GET` (liste des modèles, issue 574).
+    probes: Arc<std::sync::atomic::AtomicUsize>,
+    /// Corps bruts des requêtes `POST` (formulaire multipart).
+    post_bodies: Arc<Mutex<Vec<String>>>,
+}
+
+/// Comme [`nemo_speech_server`], et `GET /v1/models` répond `models` (sinon 404,
+/// sonde muette). Seule une demande d'upgrade WebSocket ouvre le flux temps réel.
+async fn nemo_speech_server_with(
+    rest_status: u16,
+    models: Option<serde_json::Value>,
+) -> NemoSpeechServer {
     use std::sync::atomic::{AtomicUsize, Ordering};
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
@@ -223,14 +244,31 @@ async fn nemo_speech_server(
     let address = socket.local_addr().unwrap();
     let posts = Arc::new(AtomicUsize::new(0));
     let sockets = Arc::new(AtomicUsize::new(0));
-    let (post_count, socket_count) = (posts.clone(), sockets.clone());
+    let probes = Arc::new(AtomicUsize::new(0));
+    let post_bodies = Arc::new(Mutex::new(Vec::new()));
+    let (post_count, socket_count, probe_count, post_log) = (
+        posts.clone(),
+        sockets.clone(),
+        probes.clone(),
+        post_bodies.clone(),
+    );
     tokio::spawn(async move {
         loop {
             let Ok((mut stream, _)) = socket.accept().await else {
                 return;
             };
-            let mut peek = [0; 4];
-            let _ = stream.peek(&mut peek).await;
+            // En-tête complet, sans le consommer : la poignée de main WebSocket le relit.
+            let mut head = [0; 4096];
+            let mut head_len = 0;
+            for _ in 0..50 {
+                head_len = stream.peek(&mut head).await.unwrap_or(0);
+                if head_len == 0 || head[..head_len].windows(4).any(|w| w == b"\r\n\r\n") {
+                    break;
+                }
+                tokio::time::sleep(Duration::from_millis(5)).await;
+            }
+            let header = String::from_utf8_lossy(&head[..head_len]).to_ascii_lowercase();
+            let peek = [head[0], head[1], head[2], head[3]];
             if &peek == b"POST" {
                 post_count.fetch_add(1, Ordering::SeqCst);
                 let mut request = Vec::new();
@@ -256,6 +294,10 @@ async fn nemo_speech_server(
                         }
                     }
                 }
+                post_log
+                    .lock()
+                    .unwrap()
+                    .push(String::from_utf8_lossy(&request).into_owned());
                 let body = serde_json::json!({
                     "duration": 2.0,
                     "words": [{"word": "Bonjour", "start": 0.3, "end": 0.7, "speaker": 2}]
@@ -265,6 +307,27 @@ async fn nemo_speech_server(
                     "HTTP/1.1 {rest_status} X\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
                     body.len()
                 );
+                let _ = stream.write_all(response.as_bytes()).await;
+                continue;
+            }
+            if !header.contains("upgrade: websocket") {
+                // Sonde de la liste des modèles (`GET /v1/models`).
+                probe_count.fetch_add(1, Ordering::SeqCst);
+                let mut buffer = [0; 4096];
+                let _ = stream.read(&mut buffer).await;
+                let response = match &models {
+                    Some(models) => {
+                        let body = models.to_string();
+                        format!(
+                            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                            body.len()
+                        )
+                    }
+                    None => {
+                        "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+                            .to_string()
+                    }
+                };
                 let _ = stream.write_all(response.as_bytes()).await;
                 continue;
             }
@@ -302,7 +365,13 @@ async fn nemo_speech_server(
             });
         }
     });
-    (address, posts, sockets)
+    NemoSpeechServer {
+        address,
+        posts,
+        sockets,
+        probes,
+        post_bodies,
+    }
 }
 
 fn channel_words(output: &BatchRunOutput) -> Vec<(String, Option<usize>)> {
@@ -317,7 +386,10 @@ fn channel_words(output: &BatchRunOutput) -> Vec<(String, Option<usize>)> {
 async fn nemo_speech_imports_a_file_in_one_rest_request() {
     use std::sync::atomic::Ordering;
 
-    let (address, posts, sockets) = nemo_speech_server(200).await;
+    // Sonde de la liste des modèles sans réponse exploitable (404) : diarisation
+    // demandée comme avant (issue 574).
+    let server = nemo_speech_server_with(200, None).await;
+    let (address, posts, sockets) = (server.address, server.posts.clone(), server.sockets.clone());
     let events = Arc::new(Events::default());
 
     let output = run_realtime_file_batch_with(
@@ -337,6 +409,7 @@ async fn nemo_speech_imports_a_file_in_one_rest_request() {
     assert_eq!(output.response.metadata["provider"], "nvidia");
     assert_eq!(posts.load(Ordering::SeqCst), 1);
     assert_eq!(sockets.load(Ordering::SeqCst), 0);
+    assert_eq!(server.probes.load(Ordering::SeqCst), 1);
     assert_eq!(
         &events.names()[events.names().len() - 2..],
         &["response", "completed"]
@@ -382,4 +455,55 @@ async fn nemo_speech_falls_back_to_the_realtime_stream_when_rest_fails() {
             .iter()
             .all(|(_, indeterminate)| !indeterminate)
     );
+}
+
+/// Liste des modèles de NeMo-Speech.cpp v0.3.0, avec ou sans diariseur chargé
+/// (même forme que les tests d'owhisper-client pour l'issue 574).
+fn nemo_speech_models(speaker_diarization: bool) -> serde_json::Value {
+    serde_json::json!({
+        "data": [
+            {
+                "capability": "transcription",
+                "id": "nemotron-3.5-asr-streaming-0.6b.q8_0",
+                "object": "model",
+                "owned_by": "local",
+                "speaker_diarization": speaker_diarization,
+                "streaming": true,
+                "word_timestamps": true
+            },
+            {"capability": "diarization", "id": "diarization", "object": "model"}
+        ],
+        "object": "list"
+    })
+}
+
+/// Issue 574 : la sonde de la liste des modèles décide du champ `diarization`
+/// de la requête REST d'import.
+#[tokio::test]
+async fn nemo_speech_import_follows_the_announced_diarization() {
+    use std::sync::atomic::Ordering;
+
+    for (announced, field) in [(false, "false"), (true, "true")] {
+        let server = nemo_speech_server_with(200, Some(nemo_speech_models(announced))).await;
+        run_realtime_file_batch_with(
+            Arc::new(Events::default()),
+            params(
+                format!("http://{}?provider=nvidia", server.address),
+                "nemotron-3.5-asr-streaming-0.6b",
+                &wav(2),
+            ),
+            options(),
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(server.probes.load(Ordering::SeqCst), 1, "{announced}");
+        assert_eq!(server.posts.load(Ordering::SeqCst), 1, "{announced}");
+        assert_eq!(server.sockets.load(Ordering::SeqCst), 0, "{announced}");
+        let bodies = server.post_bodies.lock().unwrap();
+        assert!(
+            bodies[0].contains(&format!("name=\"diarization\"\r\n\r\n{field}")),
+            "speaker_diarization: {announced}"
+        );
+    }
 }
