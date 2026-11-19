@@ -499,6 +499,28 @@ describe("Folders workspace", () => {
     ]);
   });
 
+  it("filters move targets with the displayed separator", async () => {
+    mocks.folders = ["Equipe", "Equipe/MCO", "Projet", "RH"];
+    useFolderSelection.setState({ selectedPath: "RH" });
+
+    renderFoldersWorkspace();
+
+    fireEvent.pointerDown(
+      screen.getByRole("button", { name: "Folder actions" }),
+      { button: 0, ctrlKey: false },
+    );
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Move to…" }));
+    fireEvent.change(
+      await screen.findByRole("textbox", { name: "Search folders" }),
+      {
+        target: { value: "equipe › mco" },
+      },
+    );
+
+    const radios = await screen.findAllByRole("radio");
+    expect(radios.map((radio) => radio.textContent)).toEqual(["Equipe › MCO"]);
+  });
+
   it("moves a nested folder back to the top level", async () => {
     mocks.folders = ["Equipe", "Equipe/MCO"];
     mocks.renameNamedFolder.mockResolvedValue("MCO");

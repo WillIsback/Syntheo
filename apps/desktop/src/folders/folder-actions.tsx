@@ -27,6 +27,7 @@ import { resolvedFolderIcon } from "~/session/folder-icon";
 import {
   childFolderPath,
   folderDisplayName,
+  folderPathFromLabel,
   folderPathLabel,
   isSameOrDescendantFolder,
   movedFolderPath,
@@ -299,7 +300,8 @@ function MoveFolderDialog({
 
   const targets = useMemo(() => {
     if (!path) return [];
-    const needle = query.trim().toLocaleLowerCase();
+    // Les cibles s'affichent « A › B » : la saisie peut reprendre cette forme.
+    const needle = folderPathFromLabel(query.trim()).toLocaleLowerCase();
     return folderMoveTargets(folders, path).filter(
       (folder) => !needle || folder.toLocaleLowerCase().includes(needle),
     );
