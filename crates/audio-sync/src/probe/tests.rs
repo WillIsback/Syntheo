@@ -272,3 +272,105 @@ fn sync_probe_follows_clock_drift_and_extrapolates_through_silence() {
         );
     }
 }
+
+fn other_noise(len: usize) -> Vec<f32> {
+    let mut state = 0x9e37_79b9u32;
+    (0..len)
+        .map(|_| {
+            state ^= state << 13;
+            state ^= state >> 17;
+            state ^= state << 5;
+            (state as f32 / u32::MAX as f32) * 2.0 - 1.0
+        })
+        .collect()
+}
+
+/// Réglages de test proches de la production pour #623 : seuils de corrélation actifs (une
+/// mesure faible est rejetée), acquisition assez large pour verrouiller sous dérive, droite de
+/// dérive dès 0,6 s de points.
+fn drifting_config(window_samples: usize) -> SyncProbeConfig {
+    let mut config = test_config(window_samples);
+    config.tuning.acquire = SyncProbeThresholds::new(8.0, 1.05);
+    config.tuning.hold = SyncProbeThresholds::new(8.0, 1.05);
+    config.tuning.acquire_cluster_tolerance_samples = 48;
+    config.tuning.drift_min_span_secs = 0.6;
+    config
+}
+
+fn observe_lag(probe: &mut SyncProbe, reference: &[f32], lag: usize) -> SyncProbeEvent {
+    probe
+        .observe(reference, &delay_signal(reference, lag))
+        .unwrap()
+}
+
+/// #623 : verrou pris sous dérive avant que la droite existe, puis une mesure faible. Le
+/// retard attendu suit le dernier retard accepté (pas la médiane, en retard sous dérive) et la
+/// tolérance s'élargit avec le temps : les deux mesures justes suivantes sont acceptées, le
+/// verrou tient et la droite de dérive se forme.
+#[test]
+fn sync_probe_keeps_a_drifting_lock_through_a_weak_measurement() {
+    let window = 4096;
+    let reference = excitation(window);
+    let mut probe = SyncProbe::new(drifting_config(window));
+
+    for lag in [200, 220] {
+        observe_lag(&mut probe, &reference, lag);
+    }
+    let locked = observe_lag(&mut probe, &reference, 240).snapshot();
+    assert_eq!(locked.state, SyncProbeState::Locked);
+    assert_eq!(locked.stable_lag_samples, Some(240));
+    assert!(probe.drift_samples_per_sec().is_none());
+
+    // Mesure faible : le micro n'entend pas la référence.
+    let weak = probe.observe(&reference, &other_noise(window)).unwrap();
+    assert!(matches!(weak, SyncProbeEvent::SkippedLowConfidence(_)));
+    assert_eq!(weak.snapshot().state, SyncProbeState::Holdover);
+
+    // Deux mesures justes, à 40 puis 60 échantillons du dernier retard accepté.
+    for lag in [280, 300] {
+        let event = observe_lag(&mut probe, &reference, lag);
+        assert!(matches!(event, SyncProbeEvent::Measured(_)), "{lag}");
+        assert_eq!(event.snapshot().state, SyncProbeState::Locked);
+    }
+    assert!(probe.drift_samples_per_sec().is_some());
+}
+
+/// #623 : la tolérance élargie est bornée à `lost_after_rejections` intervalles. Après un
+/// silence plus long, une estimation au-delà de 48 + 32 × 3 intervalles est rejetée comme
+/// aberrante, même sans droite de dérive.
+#[test]
+fn sync_probe_bounds_the_widened_tolerance_after_a_long_silence() {
+    let window = 4096;
+    let reference = excitation(window);
+    let mut config = drifting_config(window);
+    config.min_rms = 0.01;
+    let mut probe = SyncProbe::new(config);
+    for _ in 0..2 {
+        observe_lag(&mut probe, &reference, 200);
+    }
+    // Verrou au troisième intervalle, sur des points qui couvrent 0,512 s : pas encore de
+    // droite de dérive (0,6 s).
+    let locked = observe_lag(&mut probe, &reference, 200).snapshot();
+    assert_eq!(locked.state, SyncProbeState::Locked);
+    assert!(probe.drift_samples_per_sec().is_none());
+
+    // Silence de 10 intervalles (2,56 s), au-delà de la borne de 3 intervalles (0,768 s) :
+    // la tolérance plafonne à 48 + 32 × 0,768 ≈ 73 échantillons.
+    let silence = vec![0.0; window];
+    for _ in 0..10 {
+        let event = probe.observe(&reference, &silence).unwrap();
+        assert!(matches!(event, SyncProbeEvent::SkippedLowEnergy(_)));
+    }
+
+    let far = observe_lag(&mut probe, &reference, 200 + 120);
+    assert!(
+        matches!(
+            far,
+            SyncProbeEvent::SkippedLowConfidence(SyncProbeLowConfidence {
+                reason: SyncProbeLowConfidenceReason::LagOutlier { .. },
+                ..
+            })
+        ),
+        "{far:?}"
+    );
+}

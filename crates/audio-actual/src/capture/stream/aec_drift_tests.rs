@@ -236,6 +236,15 @@ fn aec_drift_800_ppm_stays_aligned() {
         base_lag: LEAD_SAMPLES + 400.0,
     });
     report("−800 ppm, traverse l'avance", &crossing);
+    // #623 : départ à 280 échantillons à +800 ppm. Le verrou se prend sous dérive avant que la
+    // droite existe ; une mesure faible juste après le faisait perdre (3 réinitialisations,
+    // 4,1 % sans alignement avant le correctif de la sonde).
+    let short_lag = run_drift(Scenario {
+        drift_ppm: DRIFT_PPM,
+        jump_samples: 0.0,
+        base_lag: 280.0,
+    });
+    report("800 ppm, départ à 280 éch.", &short_lag);
     println!(
         "traversée de l'avance pendant le verrou : {:?} s (1er verrou {:?} s)",
         crossing.crossed_while_locked_secs, crossing.first_lock_secs
@@ -256,6 +265,16 @@ fn aec_drift_800_ppm_stays_aligned() {
         crossing.resets <= run.resets,
         "traversée de l'avance : {} réinitialisations",
         crossing.resets
+    );
+    assert_eq!(
+        short_lag.resets, 1,
+        "départ à 280 : {} réinitialisations",
+        short_lag.resets
+    );
+    assert!(
+        short_lag.unaligned_ratio < 0.01,
+        "départ à 280 : verrou perdu {:.1} % du temps",
+        short_lag.unaligned_ratio * 100.0
     );
     let (Some(locked_at), Some(crossed_at)) =
         (crossing.first_lock_secs, crossing.crossed_while_locked_secs)
@@ -768,5 +787,55 @@ fn aec_probe_snapshots_280_at_800_ppm() {
                 .map_or("—".to_string(), |lag| lag.to_string()),
             true_lag(end, scenario),
         );
+    }
+}
+
+/// #623 : retard appliqué par l'aligneur pendant les premières secondes du verrou, sur la paire
+/// réelle theo (retard ajouté 904, puis sans retard ajouté), sans dérive. Sert à comparer la
+/// médiane (avant) et le dernier retard accepté (après) tant que la droite de dérive manque.
+#[test]
+#[ignore = "mesure à lire"]
+fn aec_probe_first_lock_seconds_on_theo() {
+    for base_lag in [BASE_LAG, 0.0] {
+        let scenario = Scenario {
+            drift_ppm: 0.0,
+            jump_samples: 0.0,
+            base_lag,
+        };
+        let (speaker, echo) = recorded_pair();
+        let mic = drifted(&echo, scenario);
+        let mut aligner = AecReferenceAligner::new(RATE);
+        let mut resets = 0;
+        let mut first_lock: Option<f64> = None;
+        let mut last_printed: Option<(super::aligner::AecAlignment, super::aligner::AecAlignment)> =
+            None;
+        println!("retard ajouté {base_lag} :");
+        for (index, (speaker_chunk, mic_chunk)) in
+            speaker.chunks(CHUNK).zip(mic.chunks(CHUNK)).enumerate()
+        {
+            let pair = aligner.align(speaker_chunk, mic_chunk);
+            if pair.alignment_changed {
+                resets += 1;
+            }
+            let t = (index + 1) as f64 * CHUNK as f64 / RATE as f64;
+            if first_lock.is_none() && aligner.applied_alignment.signed_delay().is_some() {
+                first_lock = Some(t);
+            }
+            let Some(locked_at) = first_lock else {
+                continue;
+            };
+            if t > locked_at + 4.0 {
+                continue;
+            }
+            let state = (aligner.last_alignment, aligner.applied_alignment);
+            if last_printed != Some(state) {
+                println!(
+                    "  t={t:.2} s  mesure brute {:?}  appliqué {:?}",
+                    state.0, state.1
+                );
+                last_printed = Some(state);
+            }
+        }
+        println!("  1er verrou {first_lock:?} s, réinitialisations sur 180 s : {resets}");
     }
 }

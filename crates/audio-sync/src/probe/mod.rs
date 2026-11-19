@@ -264,8 +264,27 @@ impl SyncProbe {
     }
 
     fn is_lag_outlier(&self, lag_samples: isize, stable_lag_samples: isize) -> bool {
-        (lag_samples - stable_lag_samples).unsigned_abs()
-            > self.tuning.lock_outlier_tolerance_samples
+        (lag_samples - stable_lag_samples).unsigned_abs() > self.outlier_tolerance_samples()
+    }
+
+    /// Tolérance d'aberration. Avec la droite de dérive : la valeur réglée. Sans elle (les
+    /// premières secondes d'un verrou), l'incertitude croît avec le temps écoulé depuis le
+    /// dernier retard accepté, au rythme de la dérive maximale admise (#623) ; ce temps est
+    /// borné à [`SyncProbeTuning::lost_after_rejections`] intervalles, pour qu'un long silence
+    /// juste après le verrou n'ouvre pas la porte à n'importe quelle estimation.
+    fn outlier_tolerance_samples(&self) -> usize {
+        let base = self.tuning.lock_outlier_tolerance_samples;
+        if self.drift_fit().is_some() {
+            return base;
+        }
+        let Some(&(last_accepted_sec, _)) = self.lock_points.back() else {
+            return base;
+        };
+        let interval_secs = self.interval_samples as f64 / self.sample_rate as f64;
+        let max_elapsed = self.tuning.lost_after_rejections.max(1) as f64 * interval_secs;
+        let elapsed = (self.capture_time_sec() - last_accepted_sec).clamp(0.0, max_elapsed);
+        let max_slope = self.tuning.max_drift_ppm * 1e-6 * self.sample_rate as f64;
+        base + (max_slope * elapsed).round() as usize
     }
 
     /// Silence sur l'un des deux canaux : rien à mesurer, mais aucune preuve que l'alignement a
@@ -397,6 +416,7 @@ impl SyncProbe {
         }
         self.acquisition_entries.clear();
         self.state = SyncProbeState::Locked;
+        self.track_expected_lag(capture_time_sec);
     }
 
     fn push_lock_point(&mut self, capture_time_sec: f64, lag_samples: isize) {
@@ -445,23 +465,26 @@ impl SyncProbe {
         self.drift_fit().map(|(_, slope)| slope)
     }
 
-    /// Retard attendu à l'instant donné : la droite de dérive si elle est connue, sinon la
-    /// médiane des derniers retards acceptés.
+    /// Retard attendu à l'instant donné : la droite de dérive si elle est connue, sinon le
+    /// dernier retard accepté. Pas la médiane : sous dérive, la médiane des retards de
+    /// l'acquisition date de plus d'une seconde, et le verrou partait faux (#623).
     fn expected_lag_at(&self, capture_time_sec: f64) -> Option<isize> {
         match self.drift_fit() {
             Some((intercept, slope)) => {
                 Some((intercept + slope * capture_time_sec).round() as isize)
             }
-            None => self.stable_lag_samples,
+            None => self
+                .lock_points
+                .back()
+                .map(|&(_, lag)| lag)
+                .or(self.stable_lag_samples),
         }
     }
 
-    /// Le retard verrouillé suit la droite de dérive, y compris entre deux mesures (silence,
+    /// Le retard verrouillé suit le retard attendu, y compris entre deux mesures (silence,
     /// mesure rejetée) : l'alignement glisse avec les horloges au lieu de sauter (#437).
     fn track_expected_lag(&mut self, capture_time_sec: f64) {
-        if self.drift_fit().is_some() {
-            self.stable_lag_samples = self.expected_lag_at(capture_time_sec);
-        }
+        self.stable_lag_samples = self.expected_lag_at(capture_time_sec);
     }
 
     fn push_stable_lag(&mut self, lag_samples: isize) {
