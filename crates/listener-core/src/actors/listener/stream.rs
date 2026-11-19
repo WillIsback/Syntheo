@@ -150,6 +150,13 @@ impl StreamProgress {
     fn mark_progress(&mut self, now: std::time::Instant) {
         self.last_progress_at = now;
         self.active_samples = 0;
+        if !self.progressed {
+            // L'audio reçu avant le premier texte de la connexion (bruit de fond
+            // sans parole) n'a aucun texte provisoire à valider : il ne compte
+            // pas dans le plafond d'audio non finalisé. Sinon, après des minutes
+            // de bruit, le plafond tombait au premier mot (reprise de #571).
+            self.unfinalized_samples = 0;
+        }
         self.progressed = true;
         let mut backoff = lock(&self.backoff);
         backoff.record_progress();
