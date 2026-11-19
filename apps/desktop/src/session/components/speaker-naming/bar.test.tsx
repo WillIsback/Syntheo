@@ -136,8 +136,19 @@ describe("SpeakerNamingBar", () => {
     );
   });
 
-  it("still offers the panel when every speaker is minor", () => {
-    mocks.cards = [card("t1:Speaker 1", true), card("t1:Speaker 2", true)];
+  // Les principaux sont nommés, il ne reste que des fragments : rien à
+  // réclamer (issue 449).
+  it("asks for nothing when only minor speakers remain", () => {
+    mocks.cards = [card("t1:Speaker 3", true), card("t1:Speaker 4", true)];
+    renderBar();
+
+    expect(useSpeakerNamingStore.getState().available).toBeNull();
+    expect(screen.queryByRole("button", { name: "Name speakers" })).toBeNull();
+  });
+
+  // Réunion très courte : buildSpeakerCards ne marque aucune carte mineure.
+  it("offers the panel for a very short meeting", () => {
+    mocks.cards = [card("t1:Speaker 1"), card("t1:Speaker 2")];
     renderBar();
 
     expect(useSpeakerNamingStore.getState().available?.count).toBe(2);

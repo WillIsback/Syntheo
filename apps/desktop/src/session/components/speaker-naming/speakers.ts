@@ -320,8 +320,18 @@ export function buildSpeakerCards(
     capture.segments.some((segment) => segment.words.length > 0),
   );
   const multiple = withWords.length > 1;
+  const groupsByCapture = withWords.map((capture) =>
+    groupCapture(capture.segments),
+  );
+  // « Mineur » se juge sur toute la note, libellés nommés et « You » compris :
+  // une fois les principaux nommés, les fragments restants ne redeviennent
+  // pas principaux. Si personne n'atteint le seuil (réunion très courte),
+  // aucune carte n'est mineure.
+  const someoneReachesThreshold = groupsByCapture.some((groups) =>
+    groups.some((group) => group.words >= MINOR_SPEAKER_WORDS),
+  );
   const cards = withWords.flatMap((capture, captureIndex) => {
-    const groups = groupCapture(capture.segments);
+    const groups = groupsByCapture[captureIndex] ?? [];
     const distinctive = distinctiveWordsByLabel(groups);
     return groups
       .filter((group) => isAnonymousSpeakerLabel(group.label))
@@ -333,7 +343,7 @@ export function buildSpeakerCards(
           part: multiple ? captureIndex + 1 : null,
           turns: group.turns,
           words: group.words,
-          minor: group.words < MINOR_SPEAKER_WORDS,
+          minor: someoneReachesThreshold && group.words < MINOR_SPEAKER_WORDS,
           excerpts: pickSpeakerExcerpts(
             group.texts,
             distinctive.get(group.label) ?? new Set(),
@@ -357,15 +367,15 @@ export function buildSpeakerCards(
 }
 
 /**
- * Cartes principales et cartes « Autres » (issue 449). Quand tous les
- * intervenants sont mineurs (réunion très courte), aucun regroupement : ils
- * restent tous principaux, le panneau ne s'ouvre jamais sur une liste vide.
+ * Cartes principales et cartes « Autres » (issue 449). La réunion très
+ * courte est portée par `minor` (aucune carte mineure), pas par un repli ici.
  */
 export function splitSpeakerCards(cards: readonly SpeakerCard[]): {
   main: SpeakerCard[];
   others: SpeakerCard[];
 } {
-  const main = cards.filter((card) => !card.minor);
-  if (main.length === 0) return { main: [...cards], others: [] };
-  return { main, others: cards.filter((card) => card.minor) };
+  return {
+    main: cards.filter((card) => !card.minor),
+    others: cards.filter((card) => card.minor),
+  };
 }

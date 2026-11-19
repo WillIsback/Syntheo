@@ -281,18 +281,88 @@ describe("intervenants fragmentés et mineurs", () => {
     ]);
   });
 
-  it("groups minor speakers under Others, unless every speaker is minor", () => {
+  it("groups minor speakers under Others", () => {
     const cards = fragmented();
     const { main, others } = splitSpeakerCards(cards);
     expect(main.map((card) => card.number)).toEqual(["1"]);
     expect(others.map((card) => card.number)).toEqual(["2", "3"]);
 
-    // Réunion très courte : aucun intervenant principal, aucun regroupement.
+    // Pas de repli : sans carte principale, les mineures restent « Autres ».
     const onlyMinor = cards.filter((card) => card.minor) as SpeakerCard[];
     expect(splitSpeakerCards(onlyMinor)).toEqual({
-      main: onlyMinor,
-      others: [],
+      main: [],
+      others: onlyMinor,
     });
+  });
+
+  // Une fois les principaux nommés, les fragments restants restent mineurs :
+  // le seuil se juge sur toute la note, quel que soit le libellé.
+  it.each(["Alice", "You"])(
+    "keeps fragments minor once the main speaker is named %s",
+    (named) => {
+      const cards = buildSpeakerCards([
+        {
+          transcriptId: "t1",
+          segments: [
+            segment(
+              named,
+              "Je présente le budget de la médiathèque ce matin.",
+              {
+                humanId: "alice",
+              },
+            ),
+            segment("Speaker 2", "Oui.", { speakerIndex: 1 }),
+            segment("Speaker 3", "Hum, bon.", { speakerIndex: 2 }),
+          ],
+        },
+      ]);
+
+      expect(cards.map((card) => [card.number, card.minor])).toEqual([
+        ["3", true],
+        ["2", true],
+      ]);
+      expect(splitSpeakerCards(cards).main).toEqual([]);
+    },
+  );
+
+  it("flags nobody as minor when nobody reaches the threshold", () => {
+    const cards = buildSpeakerCards([
+      {
+        transcriptId: "t1",
+        segments: [
+          segment("Speaker 1", "Bonjour tout le monde.", { speakerIndex: 0 }),
+          segment("Speaker 2", "Bonjour.", { speakerIndex: 1 }),
+        ],
+      },
+    ]);
+
+    expect(cards.map((card) => card.minor)).toEqual([false, false]);
+  });
+
+  it("judges the threshold across captures", () => {
+    const cards = buildSpeakerCards([
+      {
+        transcriptId: "t1",
+        segments: [
+          segment(
+            "Alice",
+            "Je présente le budget de la médiathèque ce matin.",
+            {
+              humanId: "alice",
+            },
+          ),
+        ],
+      },
+      {
+        transcriptId: "t2",
+        segments: [segment("Speaker 1", "Oui merci.", { speakerIndex: 0 })],
+      },
+    ]);
+
+    expect(cards.map((card) => [card.transcriptId, card.minor])).toEqual([
+      ["t2", true],
+    ]);
+    expect(splitSpeakerCards(cards).main).toEqual([]);
   });
 });
 

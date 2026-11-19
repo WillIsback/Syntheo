@@ -111,7 +111,13 @@ export function SpeakerNamingDialog({
               {main.map((card, index) => renderCard(card, index))}
             </ol>
             {others.length > 0 ? (
-              <details data-speaker-naming-others className="group">
+              // Sans carte principale (cas défensif), le groupe est déplié :
+              // jamais un panneau qui ne montre qu'un groupe replié.
+              <details
+                data-speaker-naming-others
+                className="group"
+                open={main.length === 0 ? true : undefined}
+              >
                 <summary className="text-muted-foreground hover:text-foreground cursor-pointer text-sm select-none">
                   <Trans>Others</Trans>{" "}
                   <span className="tabular-nums">({others.length})</span>

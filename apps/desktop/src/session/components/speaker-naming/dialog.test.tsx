@@ -159,10 +159,26 @@ describe("SpeakerNamingDialog", () => {
     expect(screen.getByRole("listitem", { name: "Speaker 1" })).not.toBeNull();
   });
 
-  it("lists every speaker when all of them are minor (very short meeting)", () => {
+  it("unfolds Others when there is no main card", () => {
     renderDialog([
       card({ words: 4, minor: true }),
       card({ id: "t1:Speaker 2", number: "2", words: 2, minor: true }),
+    ]);
+
+    const others = document.querySelector<HTMLDetailsElement>(
+      "[data-speaker-naming-others]",
+    );
+    expect(others?.open).toBe(true);
+    expect(
+      within(others!).getByRole("listitem", { name: "Speaker 1" }),
+    ).not.toBeNull();
+  });
+
+  // Réunion très courte : cartes courtes, aucune mineure, pas de groupe.
+  it("lists every speaker of a very short meeting without a group", () => {
+    renderDialog([
+      card({ words: 4 }),
+      card({ id: "t1:Speaker 2", number: "2", words: 2 }),
     ]);
 
     expect(document.querySelector("[data-speaker-naming-others]")).toBeNull();
