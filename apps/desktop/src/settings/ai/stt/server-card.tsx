@@ -200,6 +200,19 @@ export function SttServerCard() {
             );
           })}
         </div>
+        {providerId === "nvidia" &&
+        state.status === "connected" &&
+        state.speakerDiarization === false ? (
+          <p
+            data-testid="stt-no-diarization"
+            className="text-muted-foreground text-[13px]"
+          >
+            <Trans>
+              This server has no diarization model loaded: transcripts will not
+              tell speakers apart.
+            </Trans>
+          </p>
+        ) : null}
         {detected && detected !== providerId ? (
           <p className="text-muted-foreground text-[13px]">
             {t`This server answers as ${detectedLabel}.`}{" "}

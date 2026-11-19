@@ -11,6 +11,27 @@ describe("toConnectionState", () => {
     });
   });
 
+  test("garde la capacité de diarisation annoncée par NeMo-Speech.cpp", () => {
+    expect(
+      toConnectionState("http://192.168.1.20:9000", {
+        isFetching: false,
+        data: {
+          ok: true,
+          latencyMs: 9,
+          protocol: "nvidia",
+          models: ["m"],
+          speakerDiarization: false,
+        },
+      }),
+    ).toEqual({
+      status: "connected",
+      latencyMs: 9,
+      protocol: "nvidia",
+      models: ["m"],
+      speakerDiarization: false,
+    });
+  });
+
   test("non testé, en cours, connecté, injoignable", () => {
     const url = "http://localhost:8000/v1";
     expect(toConnectionState(url, { isFetching: false })).toEqual({

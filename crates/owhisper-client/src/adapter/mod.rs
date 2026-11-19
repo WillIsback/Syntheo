@@ -10,7 +10,10 @@ mod openai_compatible_batch;
 
 pub use language::{LanguageQuality, LanguageSupport};
 pub use nvidia::*;
-pub use nvidia_rest::{NemoSpeechTranscript, transcribe_with_nemo_speech_rest};
+pub use nvidia_rest::{
+    NEMO_SPEECH_PROBE_TIMEOUT, NemoSpeechTranscript, nemo_speech_speaker_diarization,
+    transcribe_with_nemo_speech_rest, without_speaker_diarization,
+};
 pub use openai::*;
 
 use std::collections::{BTreeSet, HashSet};

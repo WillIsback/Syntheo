@@ -232,6 +232,20 @@ fn nvidia_single_voice_stream_disables_diarization_without_a_bound() {
 }
 
 #[test]
+fn nvidia_session_without_diarizer_turns_diarization_off() {
+    // Issue 574 : serveur sans diariseur, la session ne la demande pas.
+    let mut params = ListenParams {
+        max_speakers: Some(4),
+        mic_num_speakers: Some(1),
+        ..Default::default()
+    };
+    crate::without_speaker_diarization(&mut params);
+    let session = session(&params);
+    assert_eq!(session["speaker_diarization"], false);
+    assert!(session.get("max_speaker_count").is_none());
+}
+
+#[test]
 fn nvidia_streams_binary_audio_and_commits_only_at_the_end() {
     // A commit ends the recognition stream on NeMo-Speech.cpp: audio chunks are
     // sent alone, and the single commit is the finalize message.

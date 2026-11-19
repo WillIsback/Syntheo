@@ -107,16 +107,20 @@ pub(super) async fn spawn_rx_task(
 
     let result = match (adapter_kind, is_dual) {
         (AdapterKind::OpenAI, false) => {
-            spawn_rx_task_single_with_adapter::<OpenAIAdapter>(args, myself).await
+            let params = build_listen_params(&args);
+            spawn_rx_task_single_with_adapter::<OpenAIAdapter>(args, params, myself).await
         }
         (AdapterKind::OpenAI, true) => {
-            spawn_rx_task_dual_with_adapter::<OpenAIAdapter>(args, myself).await
+            let params = build_listen_params(&args);
+            spawn_rx_task_dual_with_adapter::<OpenAIAdapter>(args, params, myself).await
         }
         (AdapterKind::Nvidia, false) => {
-            spawn_rx_task_single_with_adapter::<NvidiaAdapter>(args, myself).await
+            let params = nemo_speech_listen_params(&args).await;
+            spawn_rx_task_single_with_adapter::<NvidiaAdapter>(args, params, myself).await
         }
         (AdapterKind::Nvidia, true) => {
-            spawn_rx_task_dual_with_adapter::<NvidiaAdapter>(args, myself).await
+            let params = nemo_speech_listen_params(&args).await;
+            spawn_rx_task_dual_with_adapter::<NvidiaAdapter>(args, params, myself).await
         }
     }?;
 
@@ -141,6 +145,26 @@ fn build_listen_params(args: &ListenerArgs) -> owhisper_interface::ListenParams 
         custom_query: Some(custom_query),
         ..Default::default()
     }
+}
+
+/// Paramètres d'une session NeMo-Speech.cpp. Un serveur sans diariseur
+/// refuse l'ouverture d'une session qui demande la diarisation (issue 574) :
+/// sa liste de modèles le dit, et la session s'ouvre alors sans. Sonde muette
+/// ou en échec (`NEMO_SPEECH_PROBE_TIMEOUT`) : diarisation demandée, comme
+/// avant, pour ne pas perdre les intervenants d'un serveur qui les fournit.
+async fn nemo_speech_listen_params(args: &ListenerArgs) -> owhisper_interface::ListenParams {
+    let mut params = build_listen_params(args);
+    let diarization = owhisper_client::nemo_speech_speaker_diarization(
+        &args.base_url,
+        Some(args.api_key.as_str()),
+        owhisper_client::NEMO_SPEECH_PROBE_TIMEOUT,
+    )
+    .await;
+    if diarization == Some(false) {
+        tracing::info!("nemo_speech_session_without_diarization");
+        owhisper_client::without_speaker_diarization(&mut params);
+    }
+    params
 }
 
 fn max_speakers(args: &ListenerArgs) -> Option<u32> {
@@ -175,6 +199,7 @@ fn desktop_connect_policy() -> syntheo_ws_client::client::WebSocketConnectPolicy
 
 async fn spawn_rx_task_single_with_adapter<A: RealtimeSttAdapter>(
     args: ListenerArgs,
+    params: owhisper_interface::ListenParams,
     myself: ActorRef<ListenerMsg>,
 ) -> Result<
     (
@@ -193,7 +218,7 @@ async fn spawn_rx_task_single_with_adapter<A: RealtimeSttAdapter>(
         .adapter::<A>()
         .api_base(args.base_url.clone())
         .api_key(args.api_key.clone())
-        .params(build_listen_params(&args))
+        .params(params)
         .connect_policy(desktop_connect_policy())
         .build_single()
         .await
@@ -225,6 +250,7 @@ async fn spawn_rx_task_single_with_adapter<A: RealtimeSttAdapter>(
 
 async fn spawn_rx_task_dual_with_adapter<A: RealtimeSttAdapter>(
     args: ListenerArgs,
+    params: owhisper_interface::ListenParams,
     myself: ActorRef<ListenerMsg>,
 ) -> Result<
     (
@@ -243,7 +269,7 @@ async fn spawn_rx_task_dual_with_adapter<A: RealtimeSttAdapter>(
         .adapter::<A>()
         .api_base(args.base_url.clone())
         .api_key(args.api_key.clone())
-        .params(build_listen_params(&args))
+        .params(params)
         .connect_policy(desktop_connect_policy())
         .build_dual()
         .await

@@ -13,7 +13,10 @@ pub use adapter::{
     NvidiaAdapter, OpenAIAdapter, RealtimeSttAdapter, append_provider_param,
     documented_language_codes_batch, documented_language_codes_live, normalize_languages,
 };
-pub use adapter::{NemoSpeechTranscript, transcribe_with_nemo_speech_rest};
+pub use adapter::{
+    NEMO_SPEECH_PROBE_TIMEOUT, NemoSpeechTranscript, nemo_speech_speaker_diarization,
+    transcribe_with_nemo_speech_rest, without_speaker_diarization,
+};
 pub use adapter::{StreamingBatchEvent, StreamingBatchStream};
 
 pub use batch::{BatchClient, BatchClientBuilder};

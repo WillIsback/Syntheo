@@ -158,6 +158,37 @@ describe("SttServerCard", () => {
     });
   });
 
+  it.each([
+    { speakerDiarization: false, shown: true },
+    { speakerDiarization: true, shown: false },
+    { speakerDiarization: undefined, shown: false },
+  ])(
+    "NeMo-Speech.cpp sans diariseur : le dit (speakerDiarization=$speakerDiarization)",
+    ({ speakerDiarization, shown }) => {
+      mocks.connection.providerId = "nvidia";
+      mocks.connection.state = {
+        status: "connected",
+        latencyMs: 9,
+        protocol: "nvidia",
+        models: ["nemotron-3.5-asr-streaming-0.6b.q8_0"],
+        ...(speakerDiarization === undefined ? {} : { speakerDiarization }),
+      };
+      mocks.config = {
+        current_stt_provider: "nvidia",
+        current_stt_model: "nemotron-3.5-asr-streaming-0.6b",
+      };
+      setup();
+
+      const note = screen.queryByTestId("stt-no-diarization");
+      expect(note !== null).toBe(shown);
+      if (note) {
+        expect(note.textContent).toBe(
+          "This server has no diarization model loaded: transcripts will not tell speakers apart.",
+        );
+      }
+    },
+  );
+
   it("ne propose que les protocoles OpenAI compatible et NeMo-Speech.cpp", () => {
     setup();
 

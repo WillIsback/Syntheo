@@ -129,6 +129,8 @@ pub(super) fn localized_language(lang: &syntheo_language::Language) -> String {
 /// `model` is not sent: the server serves the single model it loaded.
 fn session_config(params: &ListenParams) -> Value {
     let language = requested_language(params);
+    // Coupée pour une voix unique, et quand le serveur n'a pas de diariseur
+    // (`without_speaker_diarization`, issue 574).
     let diarization = params.num_speakers != Some(1);
     let mut session = json!({
         "language": language,
