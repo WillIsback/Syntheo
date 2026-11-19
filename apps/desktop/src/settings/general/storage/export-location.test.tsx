@@ -121,6 +121,21 @@ describe("ExportLocationRow", () => {
     },
   );
 
+  it("invites to choose a folder when the system has no Downloads folder", async () => {
+    mocks.downloadDir.mockRejectedValue(new Error("unknown path null"));
+    renderRow();
+
+    // L'invite remplace « Loading... », sans message d'erreur.
+    expect(await screen.findByText("Choose export folder")).toBeTruthy();
+    expect(screen.queryByText("Loading...")).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(
+      screen
+        .getByRole("button", { name: "Choose folder" })
+        .hasAttribute("disabled"),
+    ).toBe(false);
+  });
+
   it("waits for settings to load before allowing a change", () => {
     mocks.settings.mockReturnValue({ isLoading: true });
     renderRow();

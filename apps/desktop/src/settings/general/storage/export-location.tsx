@@ -71,7 +71,13 @@ export function ExportLocationRow() {
               <Trans>Export location</Trans>
             </p>
             <p className="text-muted-foreground truncate text-xs" title={path}>
-              {path ? displayPath(path, home) : t`Loading...`}
+              {path
+                ? displayPath(path, home)
+                : downloads.error
+                  ? // Pas de dossier Téléchargements (issue 615) : l'export
+                    // demandera où enregistrer ; on invite à choisir.
+                    t`Choose export folder`
+                  : t`Loading...`}
             </p>
           </div>
         </button>
@@ -103,7 +109,7 @@ export function ExportLocationRow() {
           <Trans>Reset to Downloads</Trans>
         </Button>
       )}
-      {(settings.error || downloads.error || changeMutation.error) && (
+      {(settings.error || changeMutation.error) && (
         <p role="alert" className="text-destructive mt-1 px-2 text-xs">
           <Trans>Could not update the export folder</Trans>
         </p>

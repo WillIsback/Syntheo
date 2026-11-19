@@ -16,6 +16,11 @@ const mocks = vi.hoisted(() => ({
   cleanupPrintFiles: vi.fn(),
   openPath: vi.fn(),
   exportText: vi.fn(),
+  chooseExportPath: vi.fn(),
+  session: { title: "Project review" } as { title: string; raw_md?: string },
+  summaries: [] as { content: string }[],
+  currentSummary: undefined as { content: string } | undefined,
+  transcriptSegments: [] as unknown[],
   revealItemInDir: vi.fn(async () => ({ status: "ok" as const, data: null })),
   onOpenChange: vi.fn(),
   sharedNote: undefined as { body: unknown } | undefined,
@@ -29,6 +34,7 @@ vi.mock("@syntheo/plugin-export", () => ({
   commands: {
     export: mocks.exportPdf,
     exportText: mocks.exportText,
+    chooseExportPath: mocks.chooseExportPath,
     printPdf: mocks.printPdf,
     cleanupPrintFiles: mocks.cleanupPrintFiles,
   },
@@ -43,12 +49,16 @@ vi.mock("~/settings/queries", () => ({
   getStoredSettingValues: mocks.settings,
 }));
 vi.mock("~/session/queries", () => ({
-  useSession: () => ({ title: "Project review" }),
-  useEnhancedNote: () => undefined,
+  useSession: () => mocks.session,
+  useEnhancedNote: () => mocks.currentSummary,
+  useEnhancedNoteRecords: () => mocks.summaries,
   useSessionParticipants: () => [],
 }));
 vi.mock("~/session/components/note-input/transcript/export-data", () => ({
-  useTranscriptExportSegments: () => ({ data: [], isLoading: false }),
+  useTranscriptExportSegments: () => ({
+    data: mocks.transcriptSegments,
+    isLoading: false,
+  }),
 }));
 vi.mock("~/stt/queries", () => ({ useSessionTranscriptMetadata: () => [] }));
 vi.mock("~/shared-notes/cache", () => ({
@@ -58,6 +68,20 @@ vi.mock("~/shared-notes/cache", () => ({
 }));
 
 import { ExportModal } from "./export-modal";
+
+const doc = (text: string) =>
+  JSON.stringify({
+    type: "doc",
+    content: [{ type: "paragraph", content: [{ type: "text", text }] }],
+  });
+
+// Par défaut, une note avec un résumé (cas de la plupart des tests).
+function resetNote() {
+  mocks.session = { title: "Project review" };
+  mocks.summaries = [{ content: doc("Summary body") }];
+  mocks.currentSummary = undefined;
+  mocks.transcriptSegments = [];
+}
 import { PRINT_CLEANUP_DELAY_MS } from "./print-pdf";
 
 function renderModal(
@@ -83,6 +107,7 @@ function renderModal(
 describe("ExportModal destination", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    resetNote();
     mocks.settings.mockResolvedValue({ values: {} });
     mocks.downloadDir.mockResolvedValue("/Users/test/Downloads");
     mocks.exportPdf.mockResolvedValue({ status: "ok", data: null });
@@ -165,6 +190,7 @@ describe("ExportModal destination", () => {
 describe("ExportModal : exporter ou imprimer (issue 374)", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    resetNote();
     mocks.settings.mockResolvedValue({ values: {} });
     mocks.downloadDir.mockResolvedValue("/Users/test/Downloads");
     mocks.exportPdf.mockResolvedValue({ status: "ok", data: null });
@@ -268,5 +294,110 @@ describe("ExportModal : exporter ou imprimer (issue 374)", () => {
       "Could not open the PDF to print",
     );
     expect(mocks.onOpenChange).not.toHaveBeenCalled();
+  });
+});
+
+describe("ExportModal : contenu par défaut (issue 615)", () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    resetNote();
+    mocks.settings.mockResolvedValue({ values: {} });
+    mocks.downloadDir.mockResolvedValue("/Users/test/Downloads");
+    mocks.exportText.mockResolvedValue({ status: "ok", data: null });
+  });
+  afterEach(cleanup);
+
+  const box = (name: string) =>
+    screen.getByRole("checkbox", { name }) as HTMLInputElement;
+
+  async function exportMarkdown() {
+    fireEvent.click(screen.getByRole("radio", { name: "Markdown" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(mocks.exportText).toHaveBeenCalled());
+    return mocks.exportText.mock.calls[0][1] as string;
+  }
+
+  it("checks the memo of a note without summary and disables empty sections", async () => {
+    mocks.summaries = [];
+    mocks.session = { title: "Project review", raw_md: doc("Memo body") };
+    renderModal();
+
+    expect(box("Memo").checked).toBe(true);
+    expect(box("Summary").checked).toBe(false);
+    expect(box("Summary").disabled).toBe(true);
+    expect(box("Transcript").disabled).toBe(true);
+    expect(await exportMarkdown()).toContain("Memo body");
+  });
+
+  it("checks the transcript when the note has neither summary nor memo", () => {
+    mocks.summaries = [];
+    mocks.transcriptSegments = [{ speaker: "A", text: "Hello" }];
+    renderModal();
+
+    expect(box("Transcript").checked).toBe(true);
+    expect(box("Memo").disabled).toBe(true);
+  });
+
+  it("exports the summary from the memo tab", async () => {
+    mocks.session = { title: "Project review", raw_md: doc("Memo body") };
+    renderModal({ type: "raw" });
+
+    expect(box("Summary").checked).toBe(true);
+    expect(box("Memo").checked).toBe(false);
+    expect(box("Memo").disabled).toBe(false);
+    expect(await exportMarkdown()).toContain("Summary body");
+  });
+
+  it("exports the summary shown in its tab", async () => {
+    mocks.currentSummary = { content: doc("Second summary") };
+    renderModal({ type: "enhanced", id: "summary-2" });
+
+    expect(await exportMarkdown()).toContain("Second summary");
+  });
+
+  it("keeps an explicit choice", async () => {
+    mocks.session = { title: "Project review", raw_md: doc("Memo body") };
+    renderModal();
+
+    fireEvent.click(box("Memo"));
+    fireEvent.click(box("Summary"));
+
+    const content = await exportMarkdown();
+    expect(content).toContain("Memo body");
+    expect(content).not.toContain("Summary body");
+  });
+
+  it("asks where to save when the system has no Downloads folder", async () => {
+    mocks.downloadDir.mockRejectedValue(new Error("unknown path null"));
+    mocks.chooseExportPath.mockResolvedValue({
+      status: "ok",
+      data: "/home/anne/compte-rendu.md",
+    });
+    renderModal();
+
+    await exportMarkdown();
+
+    expect(mocks.chooseExportPath).toHaveBeenCalledWith(
+      expect.stringMatching(/^Project review_.*\.md$/),
+      "md",
+    );
+    expect(mocks.exportText).toHaveBeenCalledWith(
+      "/home/anne/compte-rendu.md",
+      expect.any(String),
+    );
+    await waitFor(() => expect(mocks.onOpenChange).toHaveBeenCalledWith(false));
+  });
+
+  it("stays open without writing when « Save as » is canceled", async () => {
+    mocks.downloadDir.mockRejectedValue(new Error("unknown path null"));
+    mocks.chooseExportPath.mockResolvedValue({ status: "ok", data: null });
+    renderModal();
+
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(mocks.chooseExportPath).toHaveBeenCalled());
+    expect(mocks.exportPdf).not.toHaveBeenCalled();
+    expect(mocks.onOpenChange).not.toHaveBeenCalled();
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 });
