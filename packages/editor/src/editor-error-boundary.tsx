@@ -27,7 +27,11 @@ export class EditorErrorBoundary extends Component<
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error("Editor render failed", error, info);
+    // `resetKey` dit quel éditeur a levé : `session_raw_note:<id>` (note),
+    // `enhanced_note:<id>` (résumé) ou `note` (issue 572).
+    console.error("Editor render failed", error, info, {
+      editor: this.props.resetKey ?? "unknown",
+    });
 
     if (this.state.recoveryAttempts < MAX_AUTO_RECOVERY_ATTEMPTS) {
       this.setState((state) => ({

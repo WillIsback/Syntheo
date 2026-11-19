@@ -25,7 +25,7 @@ afterEach(() => {
 });
 
 describe("createDerivedInk", () => {
-  it("decorates the computed ranges without touching the document", () => {
+  it("decorates the computed ranges without touching the document", async () => {
     const ink = createDerivedInk<DerivedInkRange[]>({
       className: "ink-test",
       data: [{ from: 1, to: 7 }],
@@ -50,6 +50,8 @@ describe("createDerivedInk", () => {
     expect(html.innerHTML).not.toContain("ink-test");
 
     ink.setData([{ from: 8, to: 13 }]);
+    // Recalcul en microtâche, hors du commit React (issue 572).
+    await Promise.resolve();
     expect(inked(view)).toEqual(["Beta."]);
     expect(JSON.stringify(view.state.doc.toJSON())).toBe(before);
   });

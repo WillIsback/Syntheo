@@ -72,6 +72,27 @@ describe("EditorErrorBoundary", () => {
     });
   });
 
+  it("logs which editor failed to render (issue 572)", async () => {
+    function BrokenEditor(): never {
+      throw new RangeError("Applying a mismatched transaction");
+    }
+
+    render(
+      <EditorErrorBoundary resetKey="enhanced_note:summary-1">
+        <BrokenEditor />
+      </EditorErrorBoundary>,
+      renderOptions,
+    );
+
+    await screen.findByRole("alert");
+    expect(consoleError).toHaveBeenCalledWith(
+      "Editor render failed",
+      expect.any(RangeError),
+      expect.anything(),
+      { editor: "enhanced_note:summary-1" },
+    );
+  });
+
   it("resets after the editor identity changes", async () => {
     function BrokenEditor() {
       throw new Error("render failed");
