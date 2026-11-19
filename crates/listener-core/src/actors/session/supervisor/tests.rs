@@ -187,6 +187,7 @@ pub(super) fn test_ctx() -> SessionContext {
         started_at_instant: Instant::now(),
         started_at_system: SystemTime::now(),
         live_transcript: Default::default(),
+        stall_backoff: Default::default(),
         mutes: Default::default(),
     }
 }

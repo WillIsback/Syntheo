@@ -45,6 +45,7 @@ fn listener_args(base_url: &str, model: &str) -> ListenerArgs {
         self_human_id: None,
         speaker_assignments: vec![],
         live_transcript: Default::default(),
+        stall_backoff: Default::default(),
         mic_isolated: false,
     }
 }
