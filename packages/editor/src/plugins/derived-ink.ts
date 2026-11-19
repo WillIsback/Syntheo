@@ -76,7 +76,12 @@ export function createDerivedInk<T>({
     setData: (next) => {
       if (Object.is(next, data)) return;
       data = next;
-      refresh();
+      // Hors du commit React (issue 572) : setData part d'un effet, souvent
+      // dans le même commit que la synchronisation du contenu de l'éditeur.
+      // Une transaction construite ici sur `view.state`, pas encore à jour,
+      // serait appliquée après le remplacement du document et lèverait
+      // « Applying a mismatched transaction ».
+      queueMicrotask(refresh);
     },
   };
 }
