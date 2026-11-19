@@ -7,6 +7,10 @@ use crate::DetectEvent;
 pub trait Env: Clone + Send + Sync + 'static {
     fn emit(&self, event: DetectEvent);
     fn is_do_not_disturb(&self) -> bool;
+    /// L'invite « Êtes-vous en réunion ? » est affichée par l'interface
+    /// (`notification_detect && !notification_disabled`). Ne coupe pas
+    /// `MicDetected` : décide seulement si la carence de 10 minutes démarre
+    /// (issue 618).
     fn is_detect_enabled(&self) -> bool;
 }
 
@@ -36,22 +40,15 @@ impl<R: Runtime> Env for TauriEnv<R> {
         crate::dnd::is_do_not_disturb()
     }
 
+    // La valeur poussée par l'interface (issue 618). L'ancien `settings.json`,
+    // lu jusqu'ici, n'est plus écrit par l'interface.
     fn is_detect_enabled(&self) -> bool {
-        read_detect_enabled_settings(&self.app_handle).unwrap_or(true)
+        use tauri::Manager;
+
+        self.app_handle
+            .try_state::<crate::DetectEnabled>()
+            .is_some_and(|state| state.0.load(std::sync::atomic::Ordering::Relaxed))
     }
-}
-
-fn read_detect_enabled_settings<R: Runtime>(app_handle: &AppHandle<R>) -> Option<bool> {
-    use tauri_plugin_settings::SettingsPluginExt;
-
-    let path = app_handle.settings().settings_path().ok()?;
-    let content = std::fs::read_to_string(path.as_str()).ok()?;
-    let settings: serde_json::Value = serde_json::from_str(&content).ok()?;
-
-    settings
-        .get("notification")
-        .and_then(|n| n.get("detect"))
-        .and_then(|d| d.as_bool())
 }
 
 #[cfg(any(test, feature = "test-support"))]

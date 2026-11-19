@@ -1,5 +1,5 @@
 import { t } from "@lingui/core/macro";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useStore } from "zustand";
 
 import {
@@ -53,8 +53,22 @@ export const useHandleDetectEvents = (store: ListenerStore) => {
 
   const autoStopMeetingsRef = useRef(autoStopMeetings);
   autoStopMeetingsRef.current = autoStopMeetings;
-  const notificationDetectRef = useRef(notificationDetect);
-  notificationDetectRef.current = notificationDetect && !notificationsDisabled;
+  // Seule expression de la condition de l'invite « Êtes-vous en réunion ? ».
+  const meetingPromptEnabled = notificationDetect && !notificationsDisabled;
+  const notificationDetectRef = useRef(meetingPromptEnabled);
+  notificationDetectRef.current = meetingPromptEnabled;
+  // La détection côté Rust en déduit si la carence de 10 minutes démarre :
+  // invite coupée, pas de carence, et MicDetected part quand même (issue 618).
+  useEffect(() => {
+    void detectCommands
+      .setDetectEnabled(meetingPromptEnabled)
+      .catch((error) =>
+        console.error(
+          "[detect] failed to push the meeting prompt setting",
+          error,
+        ),
+      );
+  }, [meetingPromptEnabled]);
   const notificationRecordingRef = useRef(notificationRecording);
   notificationRecordingRef.current =
     notificationRecording && !notificationsDisabled;

@@ -18,6 +18,7 @@ Default permissions for the plugin
 - `allow-get-preferred-languages`
 - `allow-get-current-locale-identifier`
 - `allow-set-mic-active-threshold`
+- `allow-set-detect-enabled`
 
 ## Permission Table
 
@@ -284,6 +285,32 @@ Enables the send_meeting_chat_message command without any pre-configured scope.
 <td>
 
 Denies the send_meeting_chat_message command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`detect:allow-set-detect-enabled`
+
+</td>
+<td>
+
+Enables the set_detect_enabled command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`detect:deny-set-detect-enabled`
+
+</td>
+<td>
+
+Denies the set_detect_enabled command without any pre-configured scope.
 
 </td>
 </tr>

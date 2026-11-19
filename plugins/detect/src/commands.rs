@@ -273,6 +273,16 @@ pub(crate) async fn set_respect_do_not_disturb<R: tauri::Runtime>(
 
 #[tauri::command]
 #[specta::specta]
+pub(crate) async fn set_detect_enabled<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    enabled: bool,
+) -> Result<(), String> {
+    app.detect().set_detect_enabled(enabled);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
 pub(crate) async fn set_mic_active_threshold<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
     secs: u64,

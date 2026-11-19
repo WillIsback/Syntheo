@@ -43,6 +43,13 @@ impl MicUsageTracker {
         }
     }
 
+    /// Removes the timer entry without starting a cooldown (generation must
+    /// match): a detection skipped because the setting is off must not delay
+    /// the next one (issue 618).
+    pub fn release(&mut self, app_id: &str, generation: u64) -> bool {
+        self.timers.claim(app_id, generation)
+    }
+
     /// Removes the timer entry only if the generation matches,
     /// preventing a stale timer from claiming an entry replaced by a newer one.
     /// On success, sets a cooldown so the same app won't be re-tracked for a while.
@@ -76,10 +83,17 @@ pub(crate) fn spawn_timer<E: Env>(
 
         let emit_event = {
             let mut guard = state.lock().unwrap_or_else(|e| e.into_inner());
-            if !guard.mic_usage_tracker.claim(&app_id, generation) {
-                None
-            } else if !env.is_detect_enabled() {
-                tracing::info!(app_id = %app_id, "skip_mic_detected: detect_disabled");
+            // MicDetected part que l'invite « Êtes-vous en réunion ? » soit
+            // activée ou non : l'interface s'en sert aussi pendant un
+            // enregistrement. L'invite décide seulement de la carence de
+            // 10 minutes : coupée, l'événement n'affiche rien et ne doit pas
+            // retarder la prochaine invite (issue 618).
+            let owned = if env.is_detect_enabled() {
+                guard.mic_usage_tracker.claim(&app_id, generation)
+            } else {
+                guard.mic_usage_tracker.release(&app_id, generation)
+            };
+            if !owned {
                 None
             } else if guard.policy.respect_dnd && env.is_do_not_disturb() {
                 tracing::info!(app_id = %app_id, "skip_mic_detected: DoNotDisturb");

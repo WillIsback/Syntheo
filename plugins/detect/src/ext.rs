@@ -50,6 +50,11 @@ impl<'a, R: tauri::Runtime, M: tauri::Manager<R>> Detect<'a, R, M> {
         state_guard.policy.respect_dnd = enabled;
     }
 
+    pub fn set_detect_enabled(&self, enabled: bool) {
+        let state = self.manager.state::<crate::DetectEnabled>();
+        state.0.store(enabled, std::sync::atomic::Ordering::Relaxed);
+    }
+
     pub fn set_mic_active_threshold(&self, secs: u64) {
         let state = self.manager.state::<crate::ProcessorState>();
         let mut state_guard = state.lock().unwrap_or_else(|e| e.into_inner());
