@@ -96,7 +96,7 @@ Audio is never written to disk: it stays in memory only long enough to be sent t
 
 If the connection to the transcription server drops, Syntheo keeps capturing audio. A message at the bottom of the margin says so, for example "Live transcription paused: you are offline. No audio is saved to disk: if the outage lasts, this passage will be missing from the transcription. Reconnecting…". When the stream comes back, Syntheo briefly shows "Live transcription resumed.". A short outage is replayed to the new stream from memory: nothing is missing.
 
-Because audio is not kept, the missed passage cannot be recovered: the transcript shows a dated gap, for example "Transcription interrupted 14:32–14:35". See [Troubleshooting](/en/troubleshooting).
+After a longer outage (beyond about fifteen seconds), the missed passage cannot be recovered, since no audio is saved to disk: the transcript shows a dated gap, for example "Transcription interrupted 14:32–14:35". See [Troubleshooting](/en/troubleshooting).
 
 ### Take a break
 
