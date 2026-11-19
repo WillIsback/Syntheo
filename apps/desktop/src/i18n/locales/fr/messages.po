@@ -1108,14 +1108,6 @@ msgstr "Réglez toutes les étapes avant de tester."
 msgid "Configure your summary server in Settings to get section suggestions."
 msgstr "Configurez votre serveur de synthèse dans les paramètres pour obtenir des propositions de sections."
 
-#: src/session/components/note-input/enhanced/config-error.tsx
-msgid "Configurer le modèle"
-msgstr "Configurer le modèle"
-
-#: src/session/components/note-input/enhanced/config-error.tsx
-msgid "Configurez un modèle de langage (endpoint compatible OpenAI de votre infrastructure) pour générer un résumé de ce transcript."
-msgstr "Configurez un modèle de langage (endpoint compatible OpenAI de votre infrastructure) pour générer un résumé de cette transcription."
-
 #: src/session/components/note-input/transcript/renderer/speaker-assign.tsx
 msgid "Confirm"
 msgstr "Confirmer"
@@ -4469,12 +4461,20 @@ msgid "Set up"
 msgstr "Configurer"
 
 #: src/session/components/note-input/enhanced/config-error.tsx
+msgid "Set up a language model (an OpenAI-compatible endpoint on your infrastructure) to generate a summary of this transcript."
+msgstr "Configurez un modèle de langage (endpoint compatible OpenAI de votre infrastructure) pour générer un résumé de cette transcription."
+
+#: src/session/components/note-input/enhanced/config-error.tsx
 msgid "Set up AI summaries"
 msgstr "Configurez les résumés par IA"
 
 #: src/session/components/note-input/enhanced-actions.ts
 msgid "Set up Intelligence in Settings before regenerating this summary."
 msgstr "Configurez l'IA dans les Paramètres avant de régénérer ce résumé."
+
+#: src/session/components/note-input/enhanced/config-error.tsx
+msgid "Set up the model"
+msgstr "Configurer le modèle"
 
 #: src/settings/dictation.tsx
 msgid "Setting up dictation…"
