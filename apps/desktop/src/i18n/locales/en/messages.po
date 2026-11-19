@@ -2563,8 +2563,8 @@ msgid "Live transcription paused: {cause}. No audio is kept: this passage will b
 msgstr "Live transcription paused: {cause}. No audio is kept: this passage will be missing from the transcription. Check the transcription server settings."
 
 #: src/stt/live-transcript-interrupted.ts
-msgid "Live transcription paused: {cause}. No audio is kept: this passage will be missing from the transcription. Reconnecting…"
-msgstr "Live transcription paused: {cause}. No audio is kept: this passage will be missing from the transcription. Reconnecting…"
+msgid "Live transcription paused: {cause}. No audio is saved to disk: if the outage lasts, this passage will be missing from the transcription. Reconnecting…"
+msgstr "Live transcription paused: {cause}. No audio is saved to disk: if the outage lasts, this passage will be missing from the transcription. Reconnecting…"
 
 #: src/stt/live-transcript-interrupted.ts
 msgid "Live transcription resumed."
@@ -4988,8 +4988,8 @@ msgid "Syntheo is up to date."
 msgstr "Syntheo is up to date."
 
 #: src/store/zustand/listener/general-live-helpers.ts
-msgid "Syntheo keeps listening while live transcription reconnects. No audio is kept: the missing passage will not be recovered."
-msgstr "Syntheo keeps listening while live transcription reconnects. No audio is kept: the missing passage will not be recovered."
+msgid "Syntheo keeps listening while live transcription reconnects. No audio is saved to disk: if the outage lasts, the missing passage will not be recovered."
+msgstr "Syntheo keeps listening while live transcription reconnects. No audio is saved to disk: if the outage lasts, the missing passage will not be recovered."
 
 #: src/onboarding/index.tsx
 msgid "Syntheo needs access to your microphone and system audio to record and transcribe your meetings"

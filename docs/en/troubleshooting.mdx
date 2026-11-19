@@ -58,7 +58,7 @@ An NVIDIA NeMo-Speech.cpp server publishes the model it has loaded in `/v1/model
 
 If the transcription server goes down or becomes unreachable, Syntheo shows a message at the bottom of the transcript margin that gives the likely cause, for example:
 
-> Live transcription paused: you are offline. No audio is kept: this passage will be missing from the transcription. Reconnecting…
+> Live transcription paused: you are offline. No audio is saved to disk: if the outage lasts, this passage will be missing from the transcription. Reconnecting…
 
 The possible causes are: you are offline, the server refused your API key, it refused the transcription settings, it is having an outage, Syntheo cannot reach it, or it no longer sends text.
 
