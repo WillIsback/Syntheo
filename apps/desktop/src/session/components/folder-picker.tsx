@@ -27,7 +27,11 @@ import { cn } from "@syntheo/utils";
 import { useFolderSelection } from "~/folders/selection";
 import { createNamedFolder } from "~/session/folder-catalog";
 import { resolvedFolderIcon } from "~/session/folder-icon";
-import { folderPathLabel, normalizeFolderPath } from "~/session/folders";
+import {
+  folderPathFromLabel,
+  folderPathLabel,
+  normalizeFolderPath,
+} from "~/session/folders";
 import {
   useFolderIcons,
   useFolderPaths,
@@ -40,7 +44,8 @@ import { TemplateIconGlyph } from "~/templates/template-icon";
 
 const filterFolders = (value: string, search: string) => {
   const haystack = value.toLocaleLowerCase();
-  const needle = search.toLocaleLowerCase();
+  // La ligne affiche « Equipe › MCO » : la saisie peut reprendre cette forme.
+  const needle = folderPathFromLabel(search).toLocaleLowerCase();
   return haystack.includes(needle) ? 1 : 0;
 };
 
@@ -147,7 +152,10 @@ export function FolderPickerContent({
     return folderPaths;
   }, [currentPath, folderPaths]);
   const trimmedQuery = query.trim();
-  const normalizedQuery = normalizeFolderPath(trimmedQuery);
+  // Sans cette conversion, « Créer "A › B" » créerait un dossier nommé « A › B ».
+  const normalizedQuery = normalizeFolderPath(
+    folderPathFromLabel(trimmedQuery),
+  );
   const canCreateFolder =
     Boolean(normalizedQuery) && !folders.includes(normalizedQuery ?? "");
   const folderName = normalizedQuery ?? "";

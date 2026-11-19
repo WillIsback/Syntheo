@@ -646,7 +646,7 @@ describe("recherche commune dans la palette", () => {
       label: ATLAS,
     });
     expect(items.find((item) => item.id === "atelier")?.description).toBe(
-      `${ATLAS} / Ateliers`,
+      `${ATLAS} › Ateliers`,
     );
   });
 });

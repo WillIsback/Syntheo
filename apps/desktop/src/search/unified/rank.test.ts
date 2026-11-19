@@ -106,6 +106,20 @@ describe("rankUnifiedResults", () => {
     );
   });
 
+  it("trouve un sous-dossier par son chemin affiché « › »", () => {
+    for (const query of [
+      "Réunion produit Atlas › Ateliers",
+      "atlas›ateliers",
+      "atlas / ateliers",
+    ]) {
+      const results = rankUnifiedResults(catalog, query, []);
+      expect(
+        results.folders.map((folder) => folder.path),
+        query,
+      ).toEqual(["Réunion produit Atlas/Ateliers"]);
+    }
+  });
+
   it("ignore accents et casse", () => {
     const results = rankUnifiedResults(catalog, "COMITE", []);
 

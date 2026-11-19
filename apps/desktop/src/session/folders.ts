@@ -3,6 +3,7 @@ export {
   childFolderPath,
   collectFolderPaths,
   folderDisplayName,
+  folderPathFromLabel,
   folderPathLabel,
   folderPathMatchesFilter,
   isSameOrDescendantFolder,

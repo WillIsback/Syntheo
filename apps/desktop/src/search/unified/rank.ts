@@ -9,7 +9,11 @@ import type {
   UnifiedSearchResults,
 } from "./types";
 
-import { folderDisplayName, folderPathMatchesFilter } from "~/session/folders";
+import {
+  folderDisplayName,
+  folderPathFromLabel,
+  folderPathMatchesFilter,
+} from "~/session/folders";
 
 // Plafonds communs : la palette et les mentions montrent au plus autant de
 // dossiers et de contacts ; les notes suivent le même ordre des deux côtés.
@@ -45,7 +49,8 @@ function folderTier(folder: SearchFolder, needle: string): number | null {
   const nameTier = textTier(folder.name, needle);
   if (nameTier !== null) return nameTier;
   // Le chemin seul (un dossier parent porte le mot) passe après les noms.
-  return textTier(folder.path, needle) === null ? null : 3;
+  // La palette l'affiche « A › B » : la saisie peut reprendre cette forme.
+  return textTier(folder.path, folderPathFromLabel(needle)) === null ? null : 3;
 }
 
 function rankFolders(
