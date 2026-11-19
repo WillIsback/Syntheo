@@ -21,10 +21,13 @@ describe("ConfigError", () => {
 
     expect(screen.getByRole("alert")).not.toBeNull();
     expect(screen.queryByRole("button", { name: "Get Pro" })).toBeNull();
-
-    fireEvent.click(
-      screen.getByRole("button", { name: "Configurer le modèle" }),
+    // Issue 622 : textes sources en anglais (l'interface anglaise affichait
+    // du français).
+    expect(screen.getByRole("alert").textContent).toContain(
+      "Set up a language model (an OpenAI-compatible endpoint on your infrastructure) to generate a summary of this transcript.",
     );
+
+    fireEvent.click(screen.getByRole("button", { name: "Set up the model" }));
     expect(openNew).toHaveBeenCalledWith({
       type: "settings",
       state: { tab: "intelligence" },
