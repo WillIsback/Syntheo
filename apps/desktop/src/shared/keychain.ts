@@ -23,7 +23,9 @@ const LINUX_SECRET_SERVICE_UNAVAILABLE_ERRORS = [
 // Issue 560 : l'erreur du trousseau s'affichait brute, en anglais.
 export function localizeSecureStoreError(message: string): string {
   if (message === LINUX_SECRET_SERVICE_ACCESS_ERROR) {
-    return t`Syntheo couldn't access the system keyring. Unlock your login keyring, then try again.`;
+    // Même erreur sans trousseau installé ou sans invite possible : le message
+    // ne suppose pas un trousseau verrouillé (issue 616).
+    return t`Syntheo couldn't access the system keyring. Unlock your login keyring, or install one (GNOME Keyring, KWallet), then try again.`;
   }
   if (LINUX_SECRET_SERVICE_UNAVAILABLE_ERRORS.includes(message)) {
     return t`The system keyring is unavailable, so Syntheo can't save this key. Start your desktop's keyring service (GNOME Keyring or KWallet, for example), then try again.`;
