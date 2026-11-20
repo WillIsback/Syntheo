@@ -106,12 +106,14 @@ pub(super) fn stop_if_stalled(
         return;
     }
     let diagnostics = progress.diagnostics(now);
+    progress.record_stall();
     tracing::warn!(
         reason = ?diagnostics.reason,
         active_audio_secs = diagnostics.active_audio_secs,
         unfinalized_audio_secs = diagnostics.unfinalized_audio_secs,
         secs_since_progress = diagnostics.secs_since_progress,
         secs_since_response = diagnostics.secs_since_response,
+        progress_timeout_secs = diagnostics.progress_timeout_secs,
         "listen_stream_stalled_during_audio"
     );
     stop_with_degraded_error(myself, DegradedError::ConnectionTimeout);

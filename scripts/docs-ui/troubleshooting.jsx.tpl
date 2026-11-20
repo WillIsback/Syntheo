@@ -55,7 +55,7 @@ const SynTrbLiveNote = ({ failure }) => {
   const message = resumed
     ? L("Live transcription resumed.")
     : cause === "offline"
-      ? LF("Live transcription paused: {cause}. No audio is kept: this passage will be missing from the transcription. Reconnecting…", { cause: L("you are offline") })
+      ? LF("Live transcription paused: {cause}. No audio is saved to disk: if the outage lasts, this passage will be missing from the transcription. Reconnecting…", { cause: L("you are offline") })
       : LF("Live transcription paused: {cause}. No audio is kept: this passage will be missing from the transcription. Check the transcription server settings.", {
           cause: LF("{providerName} rejected your API key", { providerName: "OpenAI" }),
         });

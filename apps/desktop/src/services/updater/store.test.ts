@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   updaterCheck: vi.fn(),
+  updaterSupported: vi.fn(async () => true),
   updaterDownload: vi.fn(),
   updaterInstall: vi.fn(),
   installUpdateAndRelaunch: vi.fn(async (install: () => Promise<void>) => {
@@ -14,6 +15,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("~/types/tauri.gen", () => ({
   commands: {
     updaterCheck: mocks.updaterCheck,
+    updaterSupported: mocks.updaterSupported,
     updaterDownload: mocks.updaterDownload,
     updaterInstall: mocks.updaterInstall,
   },
@@ -47,6 +49,7 @@ const AVAILABLE = {
   date: "2026-12-01T10:00:00Z",
   installable: true,
   release_url: "https://github.com/WillIsback/Syntheo/releases/tag/v0.7.4",
+  downloaded: false,
 };
 
 describe("updater store", () => {
@@ -58,6 +61,7 @@ describe("updater store", () => {
       update: null,
       progress: null,
       error: null,
+      supported: null,
     });
   });
 
@@ -95,7 +99,7 @@ describe("updater store", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     mocks.updaterCheck.mockResolvedValue({
       status: "error",
-      error: "error sending request",
+      error: "offline",
     });
 
     await useUpdater.getState().check({ manual: false });
@@ -104,7 +108,7 @@ describe("updater store", () => {
     await useUpdater.getState().check({ manual: true });
     expect(useUpdater.getState()).toMatchObject({
       phase: "error",
-      error: "error sending request",
+      error: "offline",
     });
     warn.mockRestore();
   });
@@ -164,13 +168,72 @@ describe("updater store", () => {
     useUpdater.setState({ phase: "ready" });
     mocks.updaterInstall.mockResolvedValue({
       status: "error",
-      error: "signature mismatch",
+      error: "signature",
     });
 
     await useUpdater.getState().install();
     expect(useUpdater.getState()).toMatchObject({
       phase: "error",
-      error: "signature mismatch",
+      error: "signature",
     });
+  });
+
+  // Issue 601 : « Rechercher des mises à jour… » depuis la zone de
+  // notification ne fait plus retélécharger une version déjà prête.
+  it("stays ready when a new check finds the version already downloaded", async () => {
+    useUpdater.setState({ phase: "ready" });
+    mocks.updaterCheck.mockResolvedValue({
+      status: "ok",
+      data: { ...AVAILABLE, downloaded: true },
+    });
+
+    await useUpdater.getState().check({ manual: true });
+
+    expect(useUpdater.getState()).toMatchObject({
+      phase: "ready",
+      update: { version: "0.7.4" },
+    });
+  });
+
+  it("keeps the download error code and maps an interface failure to other", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    useUpdater.setState({
+      phase: "available",
+      update: {
+        version: "0.7.4",
+        notes: null,
+        date: null,
+        installable: true,
+        releaseUrl: AVAILABLE.release_url,
+      },
+    });
+    mocks.updaterDownload.mockResolvedValue({
+      status: "error",
+      error: "interrupted",
+    });
+    await useUpdater.getState().download();
+    expect(useUpdater.getState().error).toBe("interrupted");
+
+    useUpdater.setState({ phase: "ready" });
+    mocks.installUpdateAndRelaunch.mockRejectedValueOnce(
+      new Error("relaunch failed"),
+    );
+    await useUpdater.getState().install();
+    expect(useUpdater.getState()).toMatchObject({
+      phase: "error",
+      error: "other",
+    });
+  });
+
+  it("shows a devtools build as unavailable as soon as support is read", async () => {
+    mocks.updaterSupported.mockResolvedValueOnce(false);
+
+    await useUpdater.getState().loadSupport();
+
+    expect(useUpdater.getState()).toMatchObject({
+      supported: false,
+      phase: "unavailable",
+    });
+    expect(mocks.updaterCheck).not.toHaveBeenCalled();
   });
 });

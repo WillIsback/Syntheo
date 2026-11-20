@@ -5,9 +5,10 @@ import { changelogComponents } from "@syntheo/changelog";
 import { commands as openerCommands } from "@syntheo/plugin-opener2";
 import { streamdownIcons } from "@syntheo/ui/components/streamdown-icons";
 import { Button } from "@syntheo/ui/components/ui/button";
+import { useMountEffect } from "@syntheo/ui/hooks/use-mount-effect";
 
 import { useLiveQuery } from "~/db";
-import { useUpdater } from "~/services/updater/store";
+import { type UpdaterErrorCode, useUpdater } from "~/services/updater/store";
 import { useSetSettingValue } from "~/settings/queries";
 import { SettingSwitchRow } from "~/settings/setting-row";
 import { useConfigValues } from "~/shared/config";
@@ -25,6 +26,9 @@ function useUpdatesManaged(): boolean {
   });
   return data;
 }
+
+/** Liste des versions, quand aucune mise à jour n'est connue. */
+const RELEASES_URL = "https://github.com/WillIsback/Syntheo/releases";
 
 function openReleasePage(url: string) {
   void openerCommands.openUrl(url, null).catch((error) => {
@@ -83,6 +87,41 @@ function UpdateNotes({ notes }: { notes: string }) {
   );
 }
 
+// Libellé par code d'erreur (issue 601) : le détail technique est dans le
+// journal, pas à l'écran.
+function UpdateErrorMessage({ code }: { code: UpdaterErrorCode | null }) {
+  switch (code) {
+    // Pas de renvoi vers le téléchargement manuel : il ferait installer à la
+    // main le fichier que la vérification vient de refuser.
+    case "signature":
+      return (
+        <Trans>
+          The update's signature could not be verified: nothing was installed.
+          Try again later; if it happens again, report it.
+        </Trans>
+      );
+    case "offline":
+      return (
+        <Trans>
+          Can't reach the update server. Check your connection, then try again.
+        </Trans>
+      );
+    case "interrupted":
+      return <Trans>The download was interrupted. Try again.</Trans>;
+    case "manifest":
+      return (
+        <Trans>
+          The update information could not be read. Try again later, or use the
+          release page.
+        </Trans>
+      );
+    default:
+      return (
+        <Trans>The update failed. Try again, or use the release page.</Trans>
+      );
+  }
+}
+
 function formatBytes(bytes: number, locale: string): string {
   return new Intl.NumberFormat(locale, {
     style: "unit",
@@ -95,7 +134,14 @@ function formatBytes(bytes: number, locale: string): string {
 // vérification à la demande, téléchargement, installation et relance, et
 // l'interrupteur de vérification au démarrage. Aucune installation ni relance
 // pendant une écoute ou une finalisation.
-export function UpdateSection({ version }: { version: string | undefined }) {
+export function UpdateSection({
+  version,
+  versionFailed = false,
+}: {
+  version: string | undefined;
+  /** La lecture de la version a échoué (pas seulement pas encore lue). */
+  versionFailed?: boolean;
+}) {
   const { t, i18n } = useLingui();
   const { automatic_updates } = useConfigValues(["automatic_updates"] as const);
   const setAutomaticUpdates = useSetSettingValue("automatic_updates");
@@ -104,6 +150,8 @@ export function UpdateSection({ version }: { version: string | undefined }) {
   const update = useUpdater((state) => state.update);
   const progress = useUpdater((state) => state.progress);
   const error = useUpdater((state) => state.error);
+  const supported = useUpdater((state) => state.supported);
+  const loadSupport = useUpdater((state) => state.loadSupport);
   const check = useUpdater((state) => state.check);
   const download = useUpdater((state) => state.download);
   const install = useUpdater((state) => state.install);
@@ -111,6 +159,11 @@ export function UpdateSection({ version }: { version: string | undefined }) {
     (state) =>
       state.live.status === "active" || state.live.status === "finalizing",
   );
+
+  // Alpha `devtools` : l'indisponibilité s'affiche dès l'ouverture.
+  useMountEffect(() => {
+    void loadSupport();
+  });
 
   const busy =
     phase === "checking" || phase === "downloading" || phase === "installing";
@@ -130,13 +183,17 @@ export function UpdateSection({ version }: { version: string | undefined }) {
       >
         <Trans>Updates</Trans>
       </h2>
-      <p className="text-muted-foreground text-sm">
-        {version ? (
+      {/* « inconnue » seulement si la lecture a échoué : pendant le chargement,
+          la ligne n'apparaît pas encore (reprise QA de l'issue 601). */}
+      {version ? (
+        <p className="text-muted-foreground text-sm">
           <Trans>Installed version: {version}</Trans>
-        ) : (
+        </p>
+      ) : versionFailed ? (
+        <p className="text-muted-foreground text-sm">
           <Trans>Installed version: unknown</Trans>
-        )}
-      </p>
+        </p>
+      ) : null}
 
       <div role="status" aria-live="polite" className="text-sm">
         {phase === "checking" ? <Trans>Checking for updates…</Trans> : null}
@@ -175,7 +232,7 @@ export function UpdateSection({ version }: { version: string | undefined }) {
         ) : null}
         {phase === "error" ? (
           <span className="text-destructive block">
-            <Trans>The update failed: {error}</Trans>
+            <UpdateErrorMessage code={error} />
           </span>
         ) : null}
       </div>
@@ -225,11 +282,15 @@ export function UpdateSection({ version }: { version: string | undefined }) {
             <Trans>Install and restart</Trans>
           </Button>
         ) : null}
-        {(phase === "error" || phase === "available") && update ? (
+        {/* En erreur, les messages renvoient à la page de la version : le lien
+            est toujours là (liste des versions sans mise à jour connue), sauf
+            pour une signature refusée. */}
+        {(phase === "available" && update) ||
+        (phase === "error" && error !== "signature") ? (
           <Button
             variant="link"
             className="px-1"
-            onClick={() => openReleasePage(update.releaseUrl)}
+            onClick={() => openReleasePage(update?.releaseUrl ?? RELEASES_URL)}
           >
             <Trans>Release page</Trans>
           </Button>
@@ -251,23 +312,27 @@ export function UpdateSection({ version }: { version: string | undefined }) {
         </p>
       ) : null}
 
-      <SettingSwitchRow
-        settingId="check-updates-on-startup"
-        title={<Trans>Check for updates at startup</Trans>}
-        description={
-          managed ? (
-            <Trans>Set by your administrator.</Trans>
-          ) : (
-            <Trans>
-              Reads the latest version on GitHub. Nothing is installed without
-              your action.
-            </Trans>
-          )
-        }
-        checked={automatic_updates && !managed}
-        disabled={managed}
-        onChange={setAutomaticUpdates}
-      />
+      {/* Seulement quand la mise à jour intégrée est confirmée : ni pendant la
+          lecture du support (premier rendu), ni sur une alpha devtools. */}
+      {supported !== true ? null : (
+        <SettingSwitchRow
+          settingId="check-updates-on-startup"
+          title={<Trans>Check for updates at startup</Trans>}
+          description={
+            managed ? (
+              <Trans>Set by your administrator.</Trans>
+            ) : (
+              <Trans>
+                Reads the latest version on GitHub. Nothing is installed without
+                your action.
+              </Trans>
+            )
+          }
+          checked={automatic_updates && !managed}
+          disabled={managed}
+          onChange={setAutomaticUpdates}
+        />
+      )}
     </section>
   );
 }

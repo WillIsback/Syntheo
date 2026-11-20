@@ -1,5 +1,3 @@
-import { isTauri } from "@tauri-apps/api/core";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import {
   type DragEvent,
   type HTMLAttributes,
@@ -83,10 +81,6 @@ export function useNoteFileHandlerConfig(sessionId: string) {
     (event: DragEvent<HTMLDivElement>) => {
       if (!hasSingleAudioUploadDrag(event.dataTransfer)) {
         return;
-      }
-
-      if (audioDragDepthRef.current === 0) {
-        focusCurrentWindowForAudioDrop();
       }
 
       audioDragDepthRef.current += 1;
@@ -259,23 +253,4 @@ function isAudioDragMimeType(type: string) {
   return (
     type.startsWith("audio/") || AUDIO_CONTAINER_VIDEO_MIME_TYPES.has(type)
   );
-}
-
-function focusCurrentWindowForAudioDrop() {
-  if (!isTauri()) {
-    return;
-  }
-
-  void bringCurrentWindowToFront();
-}
-
-async function bringCurrentWindowToFront() {
-  try {
-    const currentWindow = getCurrentWindow();
-    await currentWindow.show();
-    await currentWindow.unminimize();
-    await currentWindow.setFocus();
-  } catch (error) {
-    console.error("Failed to focus window for audio drop", error);
-  }
 }

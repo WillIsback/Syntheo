@@ -259,14 +259,14 @@ export const DEFAULT_TEMPLATES_EN: Readonly<
         "List the meeting participants with their role if mentioned.",
       ],
       [
-        "Decisions made",
+        "Decisions Made",
         "Summarize the important decisions made during the meeting.",
       ],
       [
-        "Action items",
+        "Action Items",
         "List the actions to take, with the owner and deadline if mentioned.",
       ],
-      ["Next step", "Describe the next step or the date of the next meeting."],
+      ["Next Step", "Describe the next step or the date of the next meeting."],
     ],
   },
   "syntheo-compliance": {
@@ -279,16 +279,16 @@ export const DEFAULT_TEMPLATES_EN: Readonly<
         "Context",
         "Summarize the regulatory context or the compliance topic discussed.",
       ],
-      ["Decisions made", "List the regulatory or technical decisions made."],
+      ["Decisions Made", "List the regulatory or technical decisions made."],
       [
-        "Blockers before production",
+        "Blockers Before Production",
         "List the identified obstacles that prevent going to production.",
       ],
       [
-        "Residual risks",
+        "Residual Risks",
         "Identify the risks not yet addressed and their potential impact.",
       ],
-      ["Next step", "Describe the immediate actions and the review date."],
+      ["Next Step", "Describe the immediate actions and the review date."],
     ],
   },
   "syntheo-project": {
@@ -302,7 +302,7 @@ export const DEFAULT_TEMPLATES_EN: Readonly<
         "Blockers",
         "List the current obstacles and their impact on the schedule.",
       ],
-      ["Next steps", "List the priority tasks and deadlines."],
+      ["Next Steps", "List the priority tasks and deadlines."],
     ],
   },
   "syntheo-standup": {
@@ -315,7 +315,7 @@ export const DEFAULT_TEMPLATES_EN: Readonly<
         "Done",
         "For each speaker, summarize what was accomplished since the last standup.",
       ],
-      ["In progress", "For each speaker, list today's tasks in progress."],
+      ["In Progress", "For each speaker, list today's tasks in progress."],
       ["Blockers", "List the reported blockers and their impact."],
     ],
   },
@@ -330,11 +330,37 @@ const LEGACY_EN_TITLES: Readonly<Record<string, string>> = {
   "syntheo-standup": "Team standup",
 };
 
+// Titres de section anglais d'avant le Title Case (issue 616), publiés de
+// 0.7.1 à 0.7.3 (et par l'alpha 0.7.1-2).
+const LEGACY_EN_SECTION_TITLES: Readonly<Record<string, string>> = {
+  "Decisions Made": "Decisions made",
+  "Action Items": "Action items",
+  "Next Step": "Next step",
+  "Blockers Before Production": "Blockers before production",
+  "Residual Risks": "Residual risks",
+  "Next Steps": "Next steps",
+  "In Progress": "In progress",
+};
+
+function withLegacySections(text: DefaultTemplateText): DefaultTemplateText {
+  return {
+    ...text,
+    sections: text.sections.map(
+      ([title, description]) =>
+        [LEGACY_EN_SECTION_TITLES[title] ?? title, description] as const,
+    ),
+  };
+}
+
+// Textes anglais déjà publiés qu'un modèle non modifié peut encore porter : il
+// suit toujours la langue de l'interface, et passe aux textes actuels.
+// - 0.7.1 à 0.7.3 : titres en Title Case, sections en casse de phrase ;
+// - alpha 0.7.1-2 : titres et sections en casse de phrase.
 export const LEGACY_DEFAULT_TEMPLATES_EN: Readonly<
-  Record<string, DefaultTemplateText>
+  Record<string, readonly DefaultTemplateText[]>
 > = Object.fromEntries(
-  Object.entries(LEGACY_EN_TITLES).map(([id, title]) => [
-    id,
-    { ...DEFAULT_TEMPLATES_EN[id]!, title },
-  ]),
+  Object.entries(LEGACY_EN_TITLES).map(([id, title]) => {
+    const published = withLegacySections(DEFAULT_TEMPLATES_EN[id]!);
+    return [id, [published, { ...published, title }]];
+  }),
 );

@@ -31,6 +31,11 @@ pub fn check() -> CliStatus {
     let app_exe = std::env::current_exe()
         .ok()
         .and_then(|path| path.canonicalize().ok());
+    // AppImage : l'AppRun place `$APPDIR/usr/bin` en tête du PATH du
+    // processus. Le terminal de la personne n'a pas ce préfixe (issue 617).
+    let appimage_dir = std::env::var_os("APPDIR")
+        .filter(|value| !value.is_empty())
+        .map(PathBuf::from);
 
     locate(
         command_name,
@@ -38,6 +43,7 @@ pub fn check() -> CliStatus {
         &path_dirs,
         cargo_bin_dir().as_deref(),
         app_exe.as_deref(),
+        appimage_dir.as_deref(),
     )
 }
 
@@ -49,18 +55,25 @@ fn cargo_bin_dir() -> Option<PathBuf> {
 }
 
 // `PATH` is searched in order, then cargo's `bin` directory: an app launched
-// from the desktop often inherits a `PATH` without `~/.cargo/bin`.
+// from the desktop often inherits a `PATH` without `~/.cargo/bin`. Directories
+// inside the mounted AppImage (`appimage_dir`) are skipped: they only exist
+// in the app's own `PATH`, not in the user's terminal.
 fn locate(
     command_name: &str,
     file_name: &str,
     path_dirs: &[PathBuf],
     cargo_bin: Option<&Path>,
     app_exe: Option<&Path>,
+    appimage_dir: Option<&Path>,
 ) -> CliStatus {
     let mut shadowed_by_app = false;
     let mut path = None;
 
-    for dir in path_dirs.iter().map(PathBuf::as_path).chain(cargo_bin) {
+    let user_path_dirs = path_dirs
+        .iter()
+        .map(PathBuf::as_path)
+        .filter(|dir| appimage_dir.is_none_or(|appdir| !dir.starts_with(appdir)));
+    for dir in user_path_dirs.chain(cargo_bin) {
         let candidate = dir.join(file_name);
         if !candidate.is_file() {
             continue;
@@ -111,6 +124,7 @@ mod tests {
             &[first.path().to_path_buf(), second.path().to_path_buf()],
             None,
             None,
+            None,
         );
 
         assert_eq!(status.path, Some(cli.display().to_string()));
@@ -128,6 +142,7 @@ mod tests {
             "syntheo",
             &[path_dir.path().to_path_buf()],
             Some(cargo_bin.path()),
+            None,
             None,
         );
 
@@ -148,10 +163,67 @@ mod tests {
             &[usr_bin.path().to_path_buf()],
             Some(cargo_bin.path()),
             Some(&app_exe),
+            None,
         );
 
         assert_eq!(status.path, Some(cli.display().to_string()));
         assert!(status.shadowed_by_app);
+    }
+
+    #[test]
+    fn ignores_the_appimage_path_prefix() {
+        // AppRun : PATH=$APPDIR/usr/bin:<PATH de la personne>.
+        let appdir = tempfile::tempdir().unwrap();
+        let usr_bin = appdir.path().join("usr/bin");
+        std::fs::create_dir_all(&usr_bin).unwrap();
+        let app = touch(&usr_bin, "syntheo");
+        let app_exe = app.canonicalize().unwrap();
+        let user_dir = tempfile::tempdir().unwrap();
+
+        let status = locate(
+            "syntheo",
+            "syntheo",
+            &[usr_bin.clone(), user_dir.path().to_path_buf()],
+            None,
+            Some(&app_exe),
+            Some(appdir.path()),
+        );
+
+        assert_eq!(status.path, None);
+        assert!(!status.shadowed_by_app);
+
+        // Le CLI installé par la personne reste trouvé derrière le préfixe.
+        let cli = touch(user_dir.path(), "syntheo");
+        let status = locate(
+            "syntheo",
+            "syntheo",
+            &[usr_bin.clone(), user_dir.path().to_path_buf()],
+            None,
+            Some(&app_exe),
+            Some(appdir.path()),
+        );
+        assert_eq!(status.path, Some(cli.display().to_string()));
+        assert!(!status.shadowed_by_app);
+    }
+
+    #[test]
+    fn without_appdir_the_app_on_path_still_shadows_the_cli() {
+        // .deb : /usr/bin/syntheo est l'application, l'avertissement reste.
+        let usr_bin = tempfile::tempdir().unwrap();
+        let app = touch(usr_bin.path(), "syntheo");
+        let app_exe = app.canonicalize().unwrap();
+
+        let status = locate(
+            "syntheo",
+            "syntheo",
+            &[usr_bin.path().to_path_buf()],
+            None,
+            Some(&app_exe),
+            None,
+        );
+
+        assert!(status.shadowed_by_app);
+        assert_eq!(status.path, None);
     }
 
     #[test]
@@ -163,6 +235,7 @@ mod tests {
             "syntheo",
             "syntheo",
             &[path_dir.path().to_path_buf()],
+            None,
             None,
             None,
         );

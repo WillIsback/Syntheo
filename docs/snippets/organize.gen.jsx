@@ -150,7 +150,7 @@ const SYN_LABELS = {
   "Device authentication is not available on this computer.": "L'authentification de l'appareil n'est pas disponible sur cet ordinateur.",
   "Dictation": "Dictée",
   "Dictation shortcut": "Raccourci",
-  "Dictation uses your microphone, transcription provider, languages, and dictionary. Audio is never written to disk; it only passes through memory. Your last transcript stays in memory until dictation is disabled or Syntheo closes.": "La dictée utilise votre microphone, le fournisseur de transcription, les langues et le dictionnaire. L'audio n'est jamais enregistré sur le disque : il ne transite qu'en mémoire. Votre dernier transcript reste en mémoire jusqu'à ce que la dictée soit désactivée ou que Syntheo se ferme.",
+  "Dictation uses your microphone, transcription provider, languages, and dictionary. Audio is never written to disk; it only passes through memory. Your last transcript stays in memory until dictation is disabled or Syntheo closes.": "La dictée utilise votre microphone, le fournisseur de transcription, les langues et le dictionnaire. L'audio n'est jamais enregistré sur le disque : il ne transite qu'en mémoire. Votre dernière transcription reste en mémoire jusqu'à ce que la dictée soit désactivée ou que Syntheo se ferme.",
   "Dictionary": "Dictionnaire",
   "Display mode": "Mode d'affichage",
   "Done": "Terminé",
@@ -227,7 +227,7 @@ const SYN_LABELS = {
   "My server": "Mon serveur",
   "My servers": "Mes serveurs",
   "NVIDIA NeMo-Speech.cpp": "NVIDIA NeMo-Speech.cpp",
-  "NVIDIA NeMo-Speech.cpp: your nemo-speech serve server, for example http://localhost:9000. Live transcription and imported files use its realtime WebSocket. NVIDIA's hosted gRPC endpoint is not supported.": "NVIDIA NeMo-Speech.cpp : votre serveur nemo-speech serve, par exemple http://localhost:9000. La transcription en direct et les fichiers importés passent par son WebSocket temps réel. Le point d'accès gRPC hébergé par NVIDIA n'est pas pris en charge.",
+  "NVIDIA NeMo-Speech.cpp: your nemo-speech serve server, for example http://localhost:9000. Live transcription uses its realtime WebSocket; imported files go through /v1/audio/transcriptions, with the WebSocket as a fallback. NVIDIA's hosted gRPC endpoint is not supported.": "NVIDIA NeMo-Speech.cpp : votre serveur nemo-speech serve, par exemple http://localhost:9000. La transcription en direct passe par son WebSocket temps réel ; les fichiers importés passent par /v1/audio/transcriptions, avec le WebSocket en repli. Le point d'accès gRPC hébergé par NVIDIA n'est pas pris en charge.",
   "Name": "Nom",
   "Nemotron": "Nemotron",
   "New folder": "Nouveau dossier",
@@ -1764,7 +1764,7 @@ const SynSectionTranscription = ({ focus }) => {
           {h(SynSrvHelp, {
             lines: [
               L("OpenAI: a server that speaks the OpenAI speech protocol (vLLM, speaches, faster-whisper-server), for example http://localhost:8000/v1. Live transcription uses /v1/realtime, imported files /v1/audio/transcriptions."),
-              L("NVIDIA NeMo-Speech.cpp: your nemo-speech serve server, for example http://localhost:9000. Live transcription and imported files use its realtime WebSocket. NVIDIA's hosted gRPC endpoint is not supported."),
+              L("NVIDIA NeMo-Speech.cpp: your nemo-speech serve server, for example http://localhost:9000. Live transcription uses its realtime WebSocket; imported files go through /v1/audio/transcriptions, with the WebSocket as a fallback. NVIDIA's hosted gRPC endpoint is not supported."),
               L("The API key is optional for servers without authentication. It is kept in your system keychain."),
               L("No server yet? Install the local transcription service"),
             ],

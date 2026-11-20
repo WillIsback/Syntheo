@@ -73,8 +73,15 @@ function reportMoveError(error: unknown) {
   console.error("[move-note] failed to move the note", error);
 }
 
+type MoveNoteFocusTarget = { element: HTMLElement | null; noteId: string };
+
 type MoveNoteDialogState = {
   note: MovableNote | null;
+  /**
+   * Élément qui avait le focus à l'ouverture (ligne de l'arbre, carte…) et
+   * note concernée : gardés après la fermeture pour y rendre le focus.
+   */
+  returnFocus: MoveNoteFocusTarget | null;
   hosts: readonly string[];
   open: (note: MovableNote) => void;
   close: () => void;
@@ -83,8 +90,20 @@ type MoveNoteDialogState = {
 
 export const useMoveNoteDialog = create<MoveNoteDialogState>((set) => ({
   note: null,
+  returnFocus: null,
   hosts: [],
-  open: (note) => set({ note }),
+  open: (note) =>
+    set({
+      note,
+      returnFocus: {
+        element:
+          document.activeElement instanceof HTMLElement &&
+          document.activeElement !== document.body
+            ? document.activeElement
+            : null,
+        noteId: note.id,
+      },
+    }),
   close: () => set({ note: null }),
   registerHost: (id) => {
     set((state) => ({ hosts: [...state.hosts, id] }));
@@ -123,6 +142,26 @@ export function useNoteMenuItems(): (note: MovableNote) => MenuItemDef[] {
 }
 
 /**
+ * Rend le focus après la boîte (issue 600) : à l'élément d'origine s'il est
+ * toujours affiché, sinon à la ligne de la note dans l'arbre des dossiers
+ * (remontée ailleurs après le déplacement). Sans cible, le focus reste où
+ * il est.
+ */
+export function restoreMoveNoteFocus(target: MoveNoteFocusTarget | null): void {
+  if (!target) return;
+  const { element, noteId } = target;
+  if (element?.isConnected) {
+    element.focus();
+    return;
+  }
+  document
+    .querySelector<HTMLElement>(
+      `[data-folder-tree-row="note"][data-note-id="${CSS.escape(noteId)}"]`,
+    )
+    ?.focus();
+}
+
+/**
  * Boîte « Déplacer vers… ». Montée à plusieurs endroits (accueil, barre
  * latérale et page des dossiers) : seule la première montée l'affiche.
  */
@@ -135,6 +174,16 @@ export function MoveNoteDialog() {
 
   useEffect(() => registerHost(id), [id, registerHost]);
 
+  // Après un déplacement, la ligne d'origine peut être remontée ou retirée
+  // une fois la base relue : on rend le focus à nouveau si il s'est perdu.
+  const refocusAfterMove = () => {
+    requestAnimationFrame(() => {
+      const active = document.activeElement;
+      if (active && active !== document.body && active.isConnected) return;
+      restoreMoveNoteFocus(useMoveNoteDialog.getState().returnFocus);
+    });
+  };
+
   if (!isHost) return null;
   const title = note?.title.trim() || t`Untitled`;
   return (
@@ -144,7 +193,14 @@ export function MoveNoteDialog() {
         if (!next) close();
       }}
     >
-      <GlassDialogContent className="max-w-[360px] gap-3">
+      <GlassDialogContent
+        className="max-w-[360px] gap-3"
+        onCloseAutoFocus={(event) => {
+          // Pas de déclencheur Radix : sans cela, le focus tombe sur <body>.
+          event.preventDefault();
+          restoreMoveNoteFocus(useMoveNoteDialog.getState().returnFocus);
+        }}
+      >
         <DialogHeader className="items-center gap-2 text-center sm:text-center">
           <DialogTitle className="text-foreground text-[13px] leading-5 font-semibold tracking-normal">
             <Trans>Move “{title}” to…</Trans>
@@ -160,7 +216,9 @@ export function MoveNoteDialog() {
                 type="button"
                 onClick={() => {
                   close();
-                  void moveNoteToFolder(note, "").catch(reportMoveError);
+                  void moveNoteToFolder(note, "")
+                    .then(refocusAfterMove)
+                    .catch(reportMoveError);
                 }}
                 className={cn([
                   "text-muted-foreground hover:bg-accent hover:text-foreground flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm",
@@ -177,7 +235,9 @@ export function MoveNoteDialog() {
                 selectedPath={note.folderPath}
                 onClose={close}
                 onSelectFolder={(path) =>
-                  moveNoteToFolder(note, path).catch(reportMoveError)
+                  moveNoteToFolder(note, path)
+                    .then(refocusAfterMove)
+                    .catch(reportMoveError)
                 }
               />
             </div>

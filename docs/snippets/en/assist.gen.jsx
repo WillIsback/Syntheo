@@ -206,7 +206,7 @@ const SYN_LABELS = {
   "Listening…": "Listening…",
   "Live transcript preview": "Live transcript preview",
   "Live transcription paused: {cause}. No audio is kept: this passage will be missing from the transcription. Check the transcription server settings.": "Live transcription paused: {cause}. No audio is kept: this passage will be missing from the transcription. Check the transcription server settings.",
-  "Live transcription paused: {cause}. No audio is kept: this passage will be missing from the transcription. Reconnecting…": "Live transcription paused: {cause}. No audio is kept: this passage will be missing from the transcription. Reconnecting…",
+  "Live transcription paused: {cause}. No audio is saved to disk: if the outage lasts, this passage will be missing from the transcription. Reconnecting…": "Live transcription paused: {cause}. No audio is saved to disk: if the outage lasts, this passage will be missing from the transcription. Reconnecting…",
   "Live transcription resumed.": "Live transcription resumed.",
   "Local script with the path of the exported file. Asks for confirmation the first time.": "Local script with the path of the exported file. Asks for confirmation the first time.",
   "Lock app": "Lock app",
@@ -236,7 +236,7 @@ const SYN_LABELS = {
   "My server": "My server",
   "My servers": "My servers",
   "NVIDIA NeMo-Speech.cpp": "NVIDIA NeMo-Speech.cpp",
-  "NVIDIA NeMo-Speech.cpp: your nemo-speech serve server, for example http://localhost:9000. Live transcription and imported files use its realtime WebSocket. NVIDIA's hosted gRPC endpoint is not supported.": "NVIDIA NeMo-Speech.cpp: your nemo-speech serve server, for example http://localhost:9000. Live transcription and imported files use its realtime WebSocket. NVIDIA's hosted gRPC endpoint is not supported.",
+  "NVIDIA NeMo-Speech.cpp: your nemo-speech serve server, for example http://localhost:9000. Live transcription uses its realtime WebSocket; imported files go through /v1/audio/transcriptions, with the WebSocket as a fallback. NVIDIA's hosted gRPC endpoint is not supported.": "NVIDIA NeMo-Speech.cpp: your nemo-speech serve server, for example http://localhost:9000. Live transcription uses its realtime WebSocket; imported files go through /v1/audio/transcriptions, with the WebSocket as a fallback. NVIDIA's hosted gRPC endpoint is not supported.",
   "Name": "Name",
   "Needs setup": "Needs setup",
   "Nemotron": "Nemotron",
@@ -1762,7 +1762,7 @@ const SynSectionTranscription = ({ focus }) => {
           {h(SynSrvHelp, {
             lines: [
               L("OpenAI: a server that speaks the OpenAI speech protocol (vLLM, speaches, faster-whisper-server), for example http://localhost:8000/v1. Live transcription uses /v1/realtime, imported files /v1/audio/transcriptions."),
-              L("NVIDIA NeMo-Speech.cpp: your nemo-speech serve server, for example http://localhost:9000. Live transcription and imported files use its realtime WebSocket. NVIDIA's hosted gRPC endpoint is not supported."),
+              L("NVIDIA NeMo-Speech.cpp: your nemo-speech serve server, for example http://localhost:9000. Live transcription uses its realtime WebSocket; imported files go through /v1/audio/transcriptions, with the WebSocket as a fallback. NVIDIA's hosted gRPC endpoint is not supported."),
               L("The API key is optional for servers without authentication. It is kept in your system keychain."),
               L("No server yet? Install the local transcription service"),
             ],
@@ -3869,7 +3869,7 @@ const SynTrbLiveNote = ({ failure }) => {
   const message = resumed
     ? L("Live transcription resumed.")
     : cause === "offline"
-      ? LF("Live transcription paused: {cause}. No audio is kept: this passage will be missing from the transcription. Reconnecting…", { cause: L("you are offline") })
+      ? LF("Live transcription paused: {cause}. No audio is saved to disk: if the outage lasts, this passage will be missing from the transcription. Reconnecting…", { cause: L("you are offline") })
       : LF("Live transcription paused: {cause}. No audio is kept: this passage will be missing from the transcription. Check the transcription server settings.", {
           cause: LF("{providerName} rejected your API key", { providerName: "OpenAI" }),
         });

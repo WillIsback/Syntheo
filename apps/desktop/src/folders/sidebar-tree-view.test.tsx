@@ -182,6 +182,14 @@ describe("FolderTreeView", () => {
     expect(mocks.openNew).toHaveBeenCalledWith({ type: "sessions", id: "a2" });
   });
 
+  it("marks note rows with their id, for focus return after a move", () => {
+    useExpandedFolders.setState({ expanded: ["Atlas"] });
+    renderTree();
+
+    expect(item("Point a2").dataset.noteId).toBe("a2");
+    expect(item("Atlas").dataset.noteId).toBeUndefined();
+  });
+
   it("navigates with the keyboard", () => {
     const onSelectFolder = renderTree();
     const atlas = item("Atlas");

@@ -125,6 +125,18 @@ export function folderPathLabel(path: string | null | undefined): string {
   return normalized ? normalized.split("/").join(" › ") : "";
 }
 
+/**
+ * Saisie d'un chemin sous sa forme affichée : `Equipe › MCO`, `Equipe›MCO`
+ * et `Equipe / MCO` deviennent `Equipe/MCO`. Découpe linéaire, sans regex à
+ * espaces répétés (pas de retour arrière quadratique sur une longue saisie).
+ */
+export function folderPathFromLabel(text: string): string {
+  return text
+    .split(/[/›]/u)
+    .map((segment) => segment.trim())
+    .join("/");
+}
+
 /** `candidate` est `ancestor` lui-même ou l'un de ses sous-dossiers. */
 export function isSameOrDescendantFolder(
   candidate: string,

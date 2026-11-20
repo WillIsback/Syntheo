@@ -143,6 +143,56 @@ describe("FolderPicker", () => {
     });
   });
 
+  it.each(["Equipe Projet › MCO", "Equipe Projet›MCO", "Equipe Projet / MCO"])(
+    "finds a subfolder from its displayed path « %s »",
+    async (query) => {
+      mocks.folderPaths = ["Equipe Projet", "Equipe Projet/MCO", "Projet"];
+
+      render(<FolderPicker sessionId="session-1" />);
+
+      fireEvent.click(screen.getByRole("combobox", { name: "Select folder" }));
+      fireEvent.change(screen.getByPlaceholderText("Search or create folder"), {
+        target: { value: query },
+      });
+
+      const options = await screen.findAllByRole("option");
+      expect(options.map((option) => option.textContent)).toEqual([
+        "Equipe Projet › MCO",
+      ]);
+    },
+  );
+
+  it("matches the displayed path regardless of case", async () => {
+    mocks.folderPaths = ["Equipe Projet", "Equipe Projet/MCO", "Projet"];
+
+    render(<FolderPicker sessionId="session-1" />);
+
+    fireEvent.click(screen.getByRole("combobox", { name: "Select folder" }));
+    fireEvent.change(screen.getByPlaceholderText("Search or create folder"), {
+      target: { value: "projet / mco" },
+    });
+
+    expect(
+      await screen.findByRole("option", { name: "Equipe Projet › MCO" }),
+    ).toBeTruthy();
+    expect(screen.queryByRole("option", { name: "Projet" })).toBeNull();
+  });
+
+  it("creates a nested folder typed with the displayed separator", async () => {
+    render(<FolderPicker sessionId="session-1" />);
+
+    fireEvent.click(screen.getByRole("combobox", { name: "Select folder" }));
+    fireEvent.change(screen.getByPlaceholderText("Search or create folder"), {
+      target: { value: "clients › acme" },
+    });
+    fireEvent.click(
+      await screen.findByRole("option", { name: 'Create "clients/acme"' }),
+    );
+
+    // Pas de dossier dont le nom contiendrait « › ».
+    expect(mocks.createNamedFolder).toHaveBeenCalledWith("clients/acme");
+  });
+
   it("highlights the current folder and does not offer no folder", () => {
     mocks.folderId = "work";
 

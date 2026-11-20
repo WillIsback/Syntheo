@@ -10,7 +10,7 @@ Syntheo ships no model and calls no cloud service. It connects to **your** infer
 
 | Setting | Role | Protocol |
 | --- | --- | --- |
-| **Transcription** | Turns the audio of the meeting, the dictation, or an imported file into text | OpenAI Realtime and `/v1/audio/transcriptions`, or NVIDIA NeMo-Speech.cpp (WebSocket) |
+| **Transcription** | Turns the audio of the meeting, the dictation, or an imported file into text | OpenAI Realtime and `/v1/audio/transcriptions`, or NVIDIA NeMo-Speech.cpp (WebSocket for live, REST for imports) |
 | **Synthesis** | Writes the summaries, answers in the chat, and suggests sections for summary templates | OpenAI-compatible API (`/v1/chat/completions`, models read from `/v1/models`) |
 
 No URL is imposed: you enter your server's. Without a configured and reachable transcription server, Syntheo transcribes nothing, and because the audio is never kept, it cannot catch up on the transcription later.
@@ -85,7 +85,7 @@ If something fails, a message under the card title says what to do, for example:
     Click "Test connection". Syntheo detects the server's protocol:
 
     - **"OpenAI compatible (realtime and batch)"**: for vLLM, speaches, or faster-whisper-server. Live transcription goes through the `/v1/realtime` WebSocket; importing an audio file goes through `/v1/audio/transcriptions`.
-    - **"NVIDIA NeMo-Speech.cpp"**: for a `nemo-speech serve` server installed on your side, with the Nemotron ASR Streaming and Nemotron Diarization models. Live transcription and imports go through its `/v1/audio/transcriptions/realtime` WebSocket. The gRPC endpoint hosted by NVIDIA is not supported.
+    - **"NVIDIA NeMo-Speech.cpp"**: for a `nemo-speech serve` server installed on your side, with the Nemotron ASR Streaming and Nemotron Diarization models. Live transcription goes through its `/v1/audio/transcriptions/realtime` WebSocket; importing an audio file goes through `/v1/audio/transcriptions`, with the WebSocket as a fallback if that request fails. The gRPC endpoint hosted by NVIDIA is not supported.
 
     Under "Protocol", the words "detected automatically" confirm the choice. If the server answers with the other protocol, Syntheo says so ("This server answers as…"): click "Use this protocol". Each protocol keeps its own address: "Use this protocol" copies the address you entered to the detected protocol.
   </Step>
@@ -159,7 +159,7 @@ API keys are stored in the system keychain, never in plain text in the local dat
 | The pill shows "Unreachable" | The server did not answer. Check that it is running and that you are on the right network (VPN, Tailscale), then test again. |
 | The pill shows "Key refused" | Check the key in "Advanced", then test again. |
 | The synthesis model list is empty | Check that `base URL/models` answers (for example `curl http://localhost:11434/v1/models`) and that the address ends with `/v1`. |
-| Live transcription pauses | The server no longer answers, or it refused the key or the settings. In the first case, Syntheo tries to reconnect. The missing passage will not be transcribed, since no audio is kept. |
+| Live transcription pauses | The server no longer answers, or it refused the key or the settings. In the first case, Syntheo tries to reconnect and replays a short outage from memory; after a longer one, the missing passage will not be transcribed, since no audio is saved to disk. |
 | Cannot start listening | No transcription server is configured, or the chosen model is a "file" model. |
 
 To work without an internet connection, see [Use Syntheo without a network](/en/offline).

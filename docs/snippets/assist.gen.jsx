@@ -142,7 +142,7 @@ const SYN_LABELS = {
   "Device authentication is not available on this computer.": "L'authentification de l'appareil n'est pas disponible sur cet ordinateur.",
   "Dictation": "Dictée",
   "Dictation shortcut": "Raccourci",
-  "Dictation uses your microphone, transcription provider, languages, and dictionary. Audio is never written to disk; it only passes through memory. Your last transcript stays in memory until dictation is disabled or Syntheo closes.": "La dictée utilise votre microphone, le fournisseur de transcription, les langues et le dictionnaire. L'audio n'est jamais enregistré sur le disque : il ne transite qu'en mémoire. Votre dernier transcript reste en mémoire jusqu'à ce que la dictée soit désactivée ou que Syntheo se ferme.",
+  "Dictation uses your microphone, transcription provider, languages, and dictionary. Audio is never written to disk; it only passes through memory. Your last transcript stays in memory until dictation is disabled or Syntheo closes.": "La dictée utilise votre microphone, le fournisseur de transcription, les langues et le dictionnaire. L'audio n'est jamais enregistré sur le disque : il ne transite qu'en mémoire. Votre dernière transcription reste en mémoire jusqu'à ce que la dictée soit désactivée ou que Syntheo se ferme.",
   "Dictionary": "Dictionnaire",
   "Disable": "Désactiver",
   "Draft": "Brouillon",
@@ -206,13 +206,13 @@ const SYN_LABELS = {
   "Listening…": "Écoute…",
   "Live transcript preview": "Voir le texte en direct",
   "Live transcription paused: {cause}. No audio is kept: this passage will be missing from the transcription. Check the transcription server settings.": "Transcription en direct en pause : {cause}. Aucun audio n'est conservé : ce passage manquera à la transcription. Vérifiez les réglages du serveur de transcription.",
-  "Live transcription paused: {cause}. No audio is kept: this passage will be missing from the transcription. Reconnecting…": "Transcription en direct en pause : {cause}. Aucun audio n'est conservé : ce passage manquera à la transcription. Reconnexion…",
+  "Live transcription paused: {cause}. No audio is saved to disk: if the outage lasts, this passage will be missing from the transcription. Reconnecting…": "Transcription en direct en pause : {cause}. Aucun audio n'est enregistré sur le disque : si la coupure dure, ce passage manquera à la transcription. Reconnexion…",
   "Live transcription resumed.": "Transcription en direct reprise.",
   "Local script with the path of the exported file. Asks for confirmation the first time.": "Script local avec le chemin du fichier exporté. Confirmation au premier lancement.",
   "Lock app": "Verrouiller l'application",
   "Low": "Faible",
   "Main language": "Langue principale",
-  "Make the current summary more detailed than it is now. Add supporting context, rationale, and examples from the transcript without inventing anything.": "Rendez le résumé actuel plus détaillé qu'il ne l'est actuellement. Ajoutez du contexte complémentaire, des justifications et des exemples tirés du transcript sans rien inventer.",
+  "Make the current summary more detailed than it is now. Add supporting context, rationale, and examples from the transcript without inventing anything.": "Rendez le résumé actuel plus détaillé qu'il ne l'est actuellement. Ajoutez du contexte complémentaire, des justifications et des exemples tirés de la transcription sans rien inventer.",
   "Make the current summary noticeably shorter than it is now. Keep every decision, owner, deadline, and open question; cut repetition and secondary detail.": "Rendez le résumé actuel nettement plus court qu'il ne l'est actuellement. Conservez chaque décision, chaque responsable, chaque échéance et chaque question ouverte ; supprimez les répétitions et les détails secondaires.",
   "Make the summary longer.": "Allongez le résumé.",
   "Make the summary shorter.": "Raccourcissez le résumé.",
@@ -236,7 +236,7 @@ const SYN_LABELS = {
   "My server": "Mon serveur",
   "My servers": "Mes serveurs",
   "NVIDIA NeMo-Speech.cpp": "NVIDIA NeMo-Speech.cpp",
-  "NVIDIA NeMo-Speech.cpp: your nemo-speech serve server, for example http://localhost:9000. Live transcription and imported files use its realtime WebSocket. NVIDIA's hosted gRPC endpoint is not supported.": "NVIDIA NeMo-Speech.cpp : votre serveur nemo-speech serve, par exemple http://localhost:9000. La transcription en direct et les fichiers importés passent par son WebSocket temps réel. Le point d'accès gRPC hébergé par NVIDIA n'est pas pris en charge.",
+  "NVIDIA NeMo-Speech.cpp: your nemo-speech serve server, for example http://localhost:9000. Live transcription uses its realtime WebSocket; imported files go through /v1/audio/transcriptions, with the WebSocket as a fallback. NVIDIA's hosted gRPC endpoint is not supported.": "NVIDIA NeMo-Speech.cpp : votre serveur nemo-speech serve, par exemple http://localhost:9000. La transcription en direct passe par son WebSocket temps réel ; les fichiers importés passent par /v1/audio/transcriptions, avec le WebSocket en repli. Le point d'accès gRPC hébergé par NVIDIA n'est pas pris en charge.",
   "Name": "Nom",
   "Needs setup": "Configuration requise",
   "Nemotron": "Nemotron",
@@ -1762,7 +1762,7 @@ const SynSectionTranscription = ({ focus }) => {
           {h(SynSrvHelp, {
             lines: [
               L("OpenAI: a server that speaks the OpenAI speech protocol (vLLM, speaches, faster-whisper-server), for example http://localhost:8000/v1. Live transcription uses /v1/realtime, imported files /v1/audio/transcriptions."),
-              L("NVIDIA NeMo-Speech.cpp: your nemo-speech serve server, for example http://localhost:9000. Live transcription and imported files use its realtime WebSocket. NVIDIA's hosted gRPC endpoint is not supported."),
+              L("NVIDIA NeMo-Speech.cpp: your nemo-speech serve server, for example http://localhost:9000. Live transcription uses its realtime WebSocket; imported files go through /v1/audio/transcriptions, with the WebSocket as a fallback. NVIDIA's hosted gRPC endpoint is not supported."),
               L("The API key is optional for servers without authentication. It is kept in your system keychain."),
               L("No server yet? Install the local transcription service"),
             ],
@@ -3869,7 +3869,7 @@ const SynTrbLiveNote = ({ failure }) => {
   const message = resumed
     ? L("Live transcription resumed.")
     : cause === "offline"
-      ? LF("Live transcription paused: {cause}. No audio is kept: this passage will be missing from the transcription. Reconnecting…", { cause: L("you are offline") })
+      ? LF("Live transcription paused: {cause}. No audio is saved to disk: if the outage lasts, this passage will be missing from the transcription. Reconnecting…", { cause: L("you are offline") })
       : LF("Live transcription paused: {cause}. No audio is kept: this passage will be missing from the transcription. Check the transcription server settings.", {
           cause: LF("{providerName} rejected your API key", { providerName: "OpenAI" }),
         });

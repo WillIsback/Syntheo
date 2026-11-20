@@ -10,7 +10,7 @@ Syntheo n'embarque aucun modèle et n'appelle aucun service cloud. Il se connect
 
 | Réglage | Rôle | Protocole |
 | --- | --- | --- |
-| **Transcription** | Transforme l'audio de la réunion, de la dictée ou d'un fichier importé en texte | OpenAI Realtime et `/v1/audio/transcriptions`, ou NVIDIA NeMo-Speech.cpp (WebSocket) |
+| **Transcription** | Transforme l'audio de la réunion, de la dictée ou d'un fichier importé en texte | OpenAI Realtime et `/v1/audio/transcriptions`, ou NVIDIA NeMo-Speech.cpp (WebSocket en direct, REST pour l'import) |
 | **Synthèse** | Rédige les comptes rendus, répond dans le chat et propose les sections des modèles de compte rendu | API OpenAI-compatible (`/v1/chat/completions`, modèles lus dans `/v1/models`) |
 
 Aucune URL n'est imposée : vous saisissez celle de votre serveur. Sans serveur de transcription configuré et joignable, Syntheo ne transcrit rien, et comme l'audio n'est jamais conservé, il ne peut pas rattraper la transcription plus tard.
@@ -85,7 +85,7 @@ En cas d'échec, un message sous le titre de la carte dit quoi faire, par exempl
     Cliquez sur « Tester la connexion ». Syntheo détecte le protocole du serveur :
 
     - **« OpenAI compatible (temps réel et par lots) »** : pour vLLM, speaches ou faster-whisper-server. La transcription en direct passe par le WebSocket `/v1/realtime` ; l'import d'un fichier audio passe par `/v1/audio/transcriptions`.
-    - **« NVIDIA NeMo-Speech.cpp »** : pour un serveur `nemo-speech serve` installé chez vous, avec les modèles Nemotron ASR Streaming et Nemotron Diarization. La transcription en direct et l'import passent par son WebSocket `/v1/audio/transcriptions/realtime`. Le point d'accès gRPC hébergé par NVIDIA n'est pas pris en charge.
+    - **« NVIDIA NeMo-Speech.cpp »** : pour un serveur `nemo-speech serve` installé chez vous, avec les modèles Nemotron ASR Streaming et Nemotron Diarization. La transcription en direct passe par son WebSocket `/v1/audio/transcriptions/realtime` ; l'import d'un fichier audio passe par `/v1/audio/transcriptions`, avec le WebSocket en repli si cette requête échoue. Le point d'accès gRPC hébergé par NVIDIA n'est pas pris en charge.
 
     Sous « Protocole », la mention « détecté automatiquement » confirme le choix. Si le serveur répond avec l'autre protocole, Syntheo l'indique (« Ce serveur répond comme… ») : cliquez sur « Utiliser ce protocole ». Chaque protocole garde sa propre adresse : « Utiliser ce protocole » recopie l'adresse saisie vers le protocole détecté.
   </Step>
@@ -159,7 +159,7 @@ Les clés API sont rangées dans le trousseau du système, jamais en clair dans 
 | La pastille indique « Injoignable » | Le serveur n'a pas répondu. Vérifiez qu'il est démarré et que vous êtes sur le bon réseau (VPN, Tailscale), puis relancez le test. |
 | La pastille indique « Clé refusée » | Vérifiez la clé dans « Avancé », puis relancez le test. |
 | La liste des modèles de synthèse est vide | Vérifiez que `URL de base/models` répond (par exemple `curl http://localhost:11434/v1/models`) et que l'adresse se termine bien par `/v1`. |
-| La transcription en direct se met en pause | Le serveur ne répond plus, ou il a refusé la clé ou les réglages. Dans le premier cas, Syntheo tente de se reconnecter. Le passage manquant ne sera pas transcrit, faute d'audio conservé. |
+| La transcription en direct se met en pause | Le serveur ne répond plus, ou il a refusé la clé ou les réglages. Dans le premier cas, Syntheo tente de se reconnecter et rejoue une coupure courte de mémoire ; après une coupure plus longue, le passage manquant ne sera pas transcrit, faute d'audio enregistré sur le disque. |
 | Impossible de démarrer une écoute | Aucun serveur de transcription n'est configuré, ou le modèle choisi est un modèle « fichier ». |
 
 Pour travailler sans connexion internet, voir [Utiliser Syntheo sans réseau](/fr/offline).

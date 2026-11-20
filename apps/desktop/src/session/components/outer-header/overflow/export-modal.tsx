@@ -32,6 +32,7 @@ import { printPdf } from "./print-pdf";
 import { useTranscriptExportSegments } from "~/session/components/note-input/transcript/export-data";
 import {
   useEnhancedNote,
+  useEnhancedNoteRecords,
   useSession,
   useSessionParticipants,
 } from "~/session/queries";
@@ -39,6 +40,16 @@ import type { EditorView } from "~/store/zustand/tabs/schema";
 import { useSessionTranscriptMetadata } from "~/stt/queries";
 
 type FileFormat = "pdf" | "txt" | "md" | "org";
+type ExportSection = "memo" | "summary" | "transcript";
+
+function markdownFromJson(content: string | null | undefined): string {
+  if (!content) return "";
+  try {
+    return json2md(JSON.parse(content));
+  } catch {
+    return "";
+  }
+}
 
 export function ExportModal({
   sessionId,
@@ -53,9 +64,11 @@ export function ExportModal({
 }) {
   const { t } = useLingui();
   const [format, setFormat] = useState<FileFormat>("pdf");
-  const [includeMemo, setIncludeMemo] = useState(false);
-  const [includeSummary, setIncludeSummary] = useState(true);
-  const [includeTranscript, setIncludeTranscript] = useState(false);
+  // Choix explicites de la personne ; sans choix, la case suit le contenu
+  // de la note (issue 615).
+  const [chosen, setChosen] = useState<Partial<Record<ExportSection, boolean>>>(
+    {},
+  );
 
   const session = useSession(sessionId);
   const sessionTitle = session?.title;
@@ -64,7 +77,11 @@ export function ExportModal({
 
   const enhancedNoteId = currentView.type === "enhanced" ? currentView.id : "";
   const enhancedNoteContent = useEnhancedNote(enhancedNoteId)?.content;
-  const summaryContent = enhancedNoteContent;
+  // Hors de l'onglet d'un résumé (Mémo, Transcription), le premier résumé de
+  // la note : l'export ne dépend pas de l'onglet affiché.
+  const firstSummaryContent = useEnhancedNoteRecords(sessionId)[0]?.content;
+  const summaryContent =
+    currentView.type === "enhanced" ? enhancedNoteContent : firstSummaryContent;
   const participants = useSessionParticipants(sessionId);
 
   const participantNames = useMemo(
@@ -102,33 +119,37 @@ export function ExportModal({
     return null;
   }, [transcripts]);
 
-  const getMemoMd = (): string => {
-    if (!rawMd) return "";
-    try {
-      const parsed = JSON.parse(rawMd);
-      return json2md(parsed);
-    } catch {
-      return "";
-    }
+  const memoMd = useMemo(() => markdownFromJson(rawMd), [rawMd]);
+  const summaryMd = useMemo(
+    () => markdownFromJson(summaryContent),
+    [summaryContent],
+  );
+  const available: Record<ExportSection, boolean> = {
+    memo: memoMd.trim() !== "",
+    summary: summaryMd.trim() !== "",
+    transcript: transcripts.length > 0 || transcriptItems.length > 0,
   };
-
-  const getSummaryMd = (): string => {
-    if (!summaryContent) return "";
-    try {
-      const parsed = JSON.parse(summaryContent);
-      return json2md(parsed);
-    } catch {
-      return "";
-    }
-  };
+  // Par défaut : le résumé, sinon le mémo, sinon la transcription.
+  const defaultSection: ExportSection | null = available.summary
+    ? "summary"
+    : available.memo
+      ? "memo"
+      : available.transcript
+        ? "transcript"
+        : null;
+  const isIncluded = (section: ExportSection) =>
+    available[section] && (chosen[section] ?? section === defaultSection);
+  const includeMemo = isIncluded("memo");
+  const includeSummary = isIncluded("summary");
+  const includeTranscript = isIncluded("transcript");
 
   const buildDocument = (): ExportDocument => ({
     title: sessionTitle || t`Untitled`,
     createdAt: sessionCreatedAt ?? null,
     participants: participantNames,
     duration: transcriptDuration,
-    memoMd: includeMemo ? getMemoMd() || null : null,
-    summaryMd: includeSummary ? getSummaryMd() || null : null,
+    memoMd: includeMemo ? memoMd || null : null,
+    summaryMd: includeSummary ? summaryMd || null : null,
     transcript: includeTranscript ? transcriptItems : null,
   });
 
@@ -136,14 +157,26 @@ export function ExportModal({
 
   const { mutate, isPending, error } = useMutation({
     mutationFn: async () => {
-      const { path: directory } = await resolveExportFolder();
+      const folder = await resolveExportFolder();
       const sanitizedTitle = (
         (sessionTitle ?? t`Untitled`).trim() || t`Untitled`
       ).replace(/[<>:"/\\|?*]/g, "_");
       const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
       const filename = `${sanitizedTitle}_${timestamp}.${format}`;
-      const defaultPath = await join(directory, filename);
-      const path = defaultPath;
+      let path: string;
+      if (folder) {
+        path = await join(folder.path, filename);
+      } else {
+        // Pas de dossier Téléchargements : « Enregistrer sous ».
+        const choice = await exportCommands.chooseExportPath(filename, format);
+        if (choice.status === "error") {
+          throw new Error(choice.error);
+        }
+        if (!choice.data) {
+          return null;
+        }
+        path = choice.data;
+      }
 
       if (format === "pdf") {
         const exportContent = buildPdfContent();
@@ -264,32 +297,40 @@ export function ExportModal({
               <div className="flex justify-center gap-4">
                 {[
                   {
-                    id: "memo",
+                    id: "memo" as const,
                     label: <Trans>Memo</Trans>,
                     checked: includeMemo,
-                    setter: setIncludeMemo,
                   },
                   {
-                    id: "summary",
+                    id: "summary" as const,
                     label: <Trans>Summary</Trans>,
                     checked: includeSummary,
-                    setter: setIncludeSummary,
                   },
                   {
-                    id: "transcript",
+                    id: "transcript" as const,
                     label: <Trans>Transcript</Trans>,
                     checked: includeTranscript,
-                    setter: setIncludeTranscript,
                   },
-                ].map(({ id, label, checked, setter }) => (
+                ].map(({ id, label, checked }) => (
                   <label
                     key={id}
-                    className="flex cursor-pointer items-center gap-1.5 text-sm"
+                    className={cn([
+                      "flex items-center gap-1.5 text-sm",
+                      available[id]
+                        ? "cursor-pointer"
+                        : "text-muted-foreground cursor-not-allowed opacity-60",
+                    ])}
                   >
                     <input
                       type="checkbox"
                       checked={checked}
-                      onChange={(e) => setter(e.target.checked)}
+                      disabled={!available[id]}
+                      onChange={(e) =>
+                        setChosen((current) => ({
+                          ...current,
+                          [id]: e.target.checked,
+                        }))
+                      }
                       className="accent-primary"
                     />
                     {label}

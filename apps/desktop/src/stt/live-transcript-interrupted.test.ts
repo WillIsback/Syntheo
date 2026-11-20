@@ -45,8 +45,47 @@ describe("getLiveTranscriptPausedMessage", () => {
       online: true,
     });
     expect(message).not.toMatch(/being saved|filled in from the recording/);
-    expect(message).toContain("No audio is kept");
+    expect(message).toContain("No audio is saved to disk");
     expect(message).toMatch(/Reconnecting…$/);
+  });
+
+  // Issue 621 : une coupure courte est rejouée ; tant que la reconnexion est
+  // en cours, la perte n'est pas affirmée.
+  it("does not claim the passage is lost while reconnecting", () => {
+    const message = getLiveTranscriptPausedMessage({
+      degraded: { type: "connection_timeout" },
+      sttProvider: "nvidia",
+      online: true,
+    });
+    expect(message).toContain(
+      "if the outage lasts, this passage will be missing from the transcription",
+    );
+    expect(message).not.toMatch(
+      /No audio is kept: this passage will be missing/,
+    );
+  });
+
+  it("keeps the firm wording when the server rejects the settings", () => {
+    for (const degraded of [
+      { type: "authentication_failed" as const, provider: "nvidia" },
+      {
+        type: "provider_configuration" as const,
+        provider: "nvidia",
+        message: "bad",
+      },
+    ]) {
+      expect(
+        getLiveTranscriptPausedMessage({
+          degraded: degraded as Parameters<
+            typeof getLiveTranscriptPausedMessage
+          >[0]["degraded"],
+          sttProvider: "nvidia",
+          online: true,
+        }),
+      ).toContain(
+        "No audio is kept: this passage will be missing from the transcription.",
+      );
+    }
   });
 
   it("ne promet pas de reconnexion quand le serveur refuse la clé", () => {
@@ -73,7 +112,7 @@ describe("messages en français", () => {
     });
 
     expect(paused).toBe(
-      "Transcription en direct en pause : NVIDIA NeMo-Speech.cpp subit une panne. Aucun audio n'est conservé : ce passage manquera à la transcription. Reconnexion…",
+      "Transcription en direct en pause : NVIDIA NeMo-Speech.cpp subit une panne. Aucun audio n'est enregistré sur le disque : si la coupure dure, ce passage manquera à la transcription. Reconnexion…",
     );
     expect(paused).not.toMatch(/transcript\b/i);
     expect(getLiveTranscriptResumedMessage()).toBe(

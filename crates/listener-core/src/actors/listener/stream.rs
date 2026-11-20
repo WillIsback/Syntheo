@@ -5,12 +5,12 @@ use owhisper_client::FinalizeHandle;
 use owhisper_interface::stream::{Extra, StreamResponse};
 use ractor::{ActorRef, rpc::CallResult};
 
+use super::stall_backoff::{SharedStallBackoff, StallBackoff};
 use super::{FINALIZE_STREAM_TIMEOUT, ListenerMsg};
 
 const PROVIDER_RESPONSE_ACK_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(1);
 const FINALIZE_HANDLE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(1);
 const MAX_FINAL_RESPONSES: usize = 64;
-const TRANSCRIPT_PROGRESS_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(30);
 const MIN_ACTIVE_AUDIO_SAMPLES: usize = crate::actors::SAMPLE_RATE as usize * 5;
 const MAX_TRACKED_CHANNELS: usize = 16;
 const MAX_UNFINALIZED_AUDIO_SAMPLES: usize = crate::actors::SAMPLE_RATE as usize * 90;
@@ -23,6 +23,15 @@ pub(super) struct StreamProgress {
     provisional_hashes: Vec<(i32, u64)>,
     active_samples: usize,
     unfinalized_samples: usize,
+    /// Délai sans progrès de cette connexion, lu dans `backoff` à son
+    /// ouverture (issue 571).
+    progress_timeout: std::time::Duration,
+    /// Cette connexion a produit au moins un progrès.
+    progressed: bool,
+    /// L'arrêt de cette connexion est déjà compté (de l'audio peut encore
+    /// arriver avant l'arrêt effectif de l'acteur).
+    stall_recorded: bool,
+    backoff: SharedStallBackoff,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -41,10 +50,18 @@ pub(super) struct StallDiagnostics {
     pub(super) unfinalized_audio_secs: f64,
     pub(super) secs_since_progress: f64,
     pub(super) secs_since_response: f64,
+    pub(super) progress_timeout_secs: f64,
 }
 
 impl StreamProgress {
+    /// Connexion seule, délai de base (tests).
+    #[cfg(test)]
     pub(super) fn new(now: std::time::Instant) -> Self {
+        Self::with_backoff(now, SharedStallBackoff::default())
+    }
+
+    pub(super) fn with_backoff(now: std::time::Instant, backoff: SharedStallBackoff) -> Self {
+        let progress_timeout = lock(&backoff).progress_timeout();
         Self {
             last_progress_at: now,
             last_response_at: now,
@@ -52,13 +69,35 @@ impl StreamProgress {
             provisional_hashes: Vec::new(),
             active_samples: 0,
             unfinalized_samples: 0,
+            progress_timeout,
+            progressed: false,
+            stall_recorded: false,
+            backoff,
         }
     }
 
     pub(super) fn observe_audio(&mut self, samples: usize, now: std::time::Instant) -> bool {
         self.active_samples = self.active_samples.saturating_add(samples);
         self.unfinalized_samples = self.unfinalized_samples.saturating_add(samples);
-        self.no_progress(now) || self.unfinalized_samples >= MAX_UNFINALIZED_AUDIO_SAMPLES
+        self.no_progress(now) || self.unfinalized_cap_reached()
+    }
+
+    /// Le plafond d'audio non finalisé sert à valider le texte provisoire
+    /// d'une parole continue. Sans aucun progrès sur cette connexion, il n'y
+    /// a rien à valider : c'est au délai sans progrès, éventuellement espacé,
+    /// de décider (issue 571). Sinon, sur un bruit continu, le plafond (90 s)
+    /// contournerait l'espacement.
+    fn unfinalized_cap_reached(&self) -> bool {
+        self.progressed && self.unfinalized_samples >= MAX_UNFINALIZED_AUDIO_SAMPLES
+    }
+
+    /// Le chien de garde arrête cette connexion. Sans progrès, la suivante
+    /// attendra plus longtemps.
+    pub(super) fn record_stall(&mut self) {
+        if !self.progressed && !self.stall_recorded {
+            lock(&self.backoff).record_stall();
+        }
+        self.stall_recorded = true;
     }
 
     /// Any provider message, including ones carrying no transcript progress.
@@ -111,6 +150,18 @@ impl StreamProgress {
     fn mark_progress(&mut self, now: std::time::Instant) {
         self.last_progress_at = now;
         self.active_samples = 0;
+        if !self.progressed {
+            // L'audio reçu avant le premier texte de la connexion (bruit de fond
+            // sans parole) n'a aucun texte provisoire à valider : il ne compte
+            // pas dans le plafond d'audio non finalisé. Sinon, après des minutes
+            // de bruit, le plafond tombait au premier mot (reprise de #571).
+            self.unfinalized_samples = 0;
+        }
+        self.progressed = true;
+        let mut backoff = lock(&self.backoff);
+        backoff.record_progress();
+        // Un vrai blocage en pleine parole est de nouveau vu en 30 s.
+        self.progress_timeout = backoff.progress_timeout();
     }
 
     pub(super) fn diagnostics(&self, now: std::time::Instant) -> StallDiagnostics {
@@ -125,12 +176,13 @@ impl StreamProgress {
             unfinalized_audio_secs: self.unfinalized_samples as f64 / sample_rate,
             secs_since_progress: now.duration_since(self.last_progress_at).as_secs_f64(),
             secs_since_response: now.duration_since(self.last_response_at).as_secs_f64(),
+            progress_timeout_secs: self.progress_timeout.as_secs_f64(),
         }
     }
 
     fn no_progress(&self, now: std::time::Instant) -> bool {
         self.active_samples >= MIN_ACTIVE_AUDIO_SAMPLES
-            && now.duration_since(self.last_progress_at) >= TRANSCRIPT_PROGRESS_TIMEOUT
+            && now.duration_since(self.last_progress_at) >= self.progress_timeout
     }
 
     pub(super) fn observe_delta(
@@ -160,6 +212,10 @@ impl StreamProgress {
             self.unfinalized_samples = 0;
         }
     }
+}
+
+fn lock(backoff: &SharedStallBackoff) -> std::sync::MutexGuard<'_, StallBackoff> {
+    backoff.lock().unwrap_or_else(|error| error.into_inner())
 }
 
 pub(super) fn active_audio_samples(audio: &[u8]) -> usize {

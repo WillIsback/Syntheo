@@ -22,6 +22,10 @@ msgstr "— Sample line written from this instruction."
 msgid "“{excerpt}”"
 msgstr "“{excerpt}”"
 
+#: src/services/enhancer/summary-notification.ts
+msgid "\"{title}\""
+msgstr "\"{title}\""
+
 #: src/automations/launch.tsx
 msgid "“{title}” could not run on this note"
 msgstr "“{title}” could not run on this note"
@@ -29,10 +33,6 @@ msgstr "“{title}” could not run on this note"
 #: src/automations/launch.tsx
 msgid "“{title}” failed on this note"
 msgstr "“{title}” failed on this note"
-
-#: src/services/enhancer/summary-notification.ts
-msgid "\"{title}\" is ready to read."
-msgstr "\"{title}\" is ready to read."
 
 #: src/automations/launch.tsx
 msgid "“{title}” ran on this note"
@@ -132,6 +132,14 @@ msgstr "{duration}, back to the note"
 #: src/session/components/note-input/transcript/renderer/multi-selection-bar.tsx
 msgid "{entryCount} selected"
 msgstr "{entryCount} selected"
+
+#: src/session/components/note-input/audio-drop-target.tsx
+msgid "{formats} audio"
+msgstr "{formats} audio"
+
+#: src/session/components/note-input/audio-drop-target.tsx
+msgid "{head}, or {last}"
+msgstr "{head}, or {last}"
 
 #: src/folders/project/folder-meetings-card.tsx
 msgid "{hiddenCount, plural, one {See the previous meeting} other {See the # previous meetings}}"
@@ -758,6 +766,10 @@ msgstr "by {name}"
 msgid "Can't import this audio"
 msgstr "Can't import this audio"
 
+#: src/settings/general/update-section.tsx
+msgid "Can't reach the update server. Check your connection, then try again."
+msgstr "Can't reach the update server. Check your connection, then try again."
+
 #: src/folders/folder-actions.tsx
 #: src/folders/project/next-meeting-slot.tsx
 #: src/session/components/capsule/index.tsx
@@ -1103,14 +1115,6 @@ msgstr "Configure every step before testing."
 #: src/templates/template-generator-bar.tsx
 msgid "Configure your summary server in Settings to get section suggestions."
 msgstr "Configure your summary server in Settings to get section suggestions."
-
-#: src/session/components/note-input/enhanced/config-error.tsx
-msgid "Configurer le modèle"
-msgstr "Configurer le modèle"
-
-#: src/session/components/note-input/enhanced/config-error.tsx
-msgid "Configurez un modèle de langage (endpoint compatible OpenAI de votre infrastructure) pour générer un résumé de ce transcript."
-msgstr "Configurez un modèle de langage (endpoint compatible OpenAI de votre infrastructure) pour générer un résumé de ce transcript."
 
 #: src/session/components/note-input/transcript/renderer/speaker-assign.tsx
 msgid "Confirm"
@@ -1624,6 +1628,10 @@ msgstr "Draft a follow-up email to the participants"
 #: src/chat/components/body/empty.tsx
 msgid "Draft follow-up email."
 msgstr "Draft follow-up email."
+
+#: src/session/components/note-input/audio-drop-target.tsx
+msgid "Drop to upload and transcribe audio"
+msgstr "Drop to upload and transcribe audio"
 
 #: src/templates/details.tsx
 #: src/templates/template-form.tsx
@@ -2559,8 +2567,8 @@ msgid "Live transcription paused: {cause}. No audio is kept: this passage will b
 msgstr "Live transcription paused: {cause}. No audio is kept: this passage will be missing from the transcription. Check the transcription server settings."
 
 #: src/stt/live-transcript-interrupted.ts
-msgid "Live transcription paused: {cause}. No audio is kept: this passage will be missing from the transcription. Reconnecting…"
-msgstr "Live transcription paused: {cause}. No audio is kept: this passage will be missing from the transcription. Reconnecting…"
+msgid "Live transcription paused: {cause}. No audio is saved to disk: if the outage lasts, this passage will be missing from the transcription. Reconnecting…"
+msgstr "Live transcription paused: {cause}. No audio is saved to disk: if the outage lasts, this passage will be missing from the transcription. Reconnecting…"
 
 #: src/stt/live-transcript-interrupted.ts
 msgid "Live transcription resumed."
@@ -3376,8 +3384,8 @@ msgid "NVIDIA NeMo-Speech.cpp"
 msgstr "NVIDIA NeMo-Speech.cpp"
 
 #: src/settings/ai/stt/server-card.tsx
-msgid "NVIDIA NeMo-Speech.cpp: your nemo-speech serve server, for example http://localhost:9000. Live transcription and imported files use its realtime WebSocket. NVIDIA's hosted gRPC endpoint is not supported."
-msgstr "NVIDIA NeMo-Speech.cpp: your nemo-speech serve server, for example http://localhost:9000. Live transcription and imported files use its realtime WebSocket. NVIDIA's hosted gRPC endpoint is not supported."
+msgid "NVIDIA NeMo-Speech.cpp: your nemo-speech serve server, for example http://localhost:9000. Live transcription uses its realtime WebSocket; imported files go through /v1/audio/transcriptions, with the WebSocket as a fallback. NVIDIA's hosted gRPC endpoint is not supported."
+msgstr "NVIDIA NeMo-Speech.cpp: your nemo-speech serve server, for example http://localhost:9000. Live transcription uses its realtime WebSocket; imported files go through /v1/audio/transcriptions, with the WebSocket as a fallback. NVIDIA's hosted gRPC endpoint is not supported."
 
 #: src/templates/template-icon-picker.tsx
 msgid "Objects"
@@ -3551,6 +3559,10 @@ msgstr "Other device's version"
 #: src/session/components/living-document/live-transcription-language.tsx
 msgid "Other languages ({omittedLanguages}) won't be transcribed live."
 msgstr "Other languages ({omittedLanguages}) won't be transcribed live."
+
+#: src/session/components/speaker-naming/dialog.tsx
+msgid "Others"
+msgstr "Others"
 
 #: src/settings/general/microphone-level.tsx
 msgid "Output level"
@@ -4461,12 +4473,20 @@ msgid "Set up"
 msgstr "Set up"
 
 #: src/session/components/note-input/enhanced/config-error.tsx
+msgid "Set up a language model (an OpenAI-compatible endpoint on your infrastructure) to generate a summary of this transcript."
+msgstr "Set up a language model (an OpenAI-compatible endpoint on your infrastructure) to generate a summary of this transcript."
+
+#: src/session/components/note-input/enhanced/config-error.tsx
 msgid "Set up AI summaries"
 msgstr "Set up AI summaries"
 
 #: src/session/components/note-input/enhanced-actions.ts
 msgid "Set up Intelligence in Settings before regenerating this summary."
 msgstr "Set up Intelligence in Settings before regenerating this summary."
+
+#: src/session/components/note-input/enhanced/config-error.tsx
+msgid "Set up the model"
+msgstr "Set up the model"
 
 #: src/settings/dictation.tsx
 msgid "Setting up dictation…"
@@ -4666,6 +4686,10 @@ msgstr "Speaker {number}"
 #: src/session/components/speaker-naming/speaker-card.tsx
 msgid "Speaker {number} · part {part}"
 msgstr "Speaker {number} · part {part}"
+
+#: src/session/components/speaker-naming/dialog.tsx
+msgid "Speakers with only a few words."
+msgstr "Speakers with only a few words."
 
 #: src/settings/search-index.ts
 msgid "speakers, output, headphones, HDMI, loopback, participants, sound"
@@ -4948,8 +4972,8 @@ msgid "Syntheo could not save part of the live transcript."
 msgstr "Syntheo could not save part of the live transcript."
 
 #: src/shared/keychain.ts
-msgid "Syntheo couldn't access the system keyring. Unlock your login keyring, then try again."
-msgstr "Syntheo couldn't access the system keyring. Unlock your login keyring, then try again."
+msgid "Syntheo couldn't access the system keyring. Unlock your login keyring, or install one (GNOME Keyring, KWallet), then try again."
+msgstr "Syntheo couldn't access the system keyring. Unlock your login keyring, or install one (GNOME Keyring, KWallet), then try again."
 
 #: src/stt/start-failure.ts
 msgid "Syntheo couldn't open your audio input. Check your microphone selection, then try again."
@@ -4976,8 +5000,8 @@ msgid "Syntheo is up to date."
 msgstr "Syntheo is up to date."
 
 #: src/store/zustand/listener/general-live-helpers.ts
-msgid "Syntheo keeps listening while live transcription reconnects. No audio is kept: the missing passage will not be recovered."
-msgstr "Syntheo keeps listening while live transcription reconnects. No audio is kept: the missing passage will not be recovered."
+msgid "Syntheo keeps listening while live transcription reconnects. No audio is saved to disk: if the outage lasts, the missing passage will not be recovered."
+msgstr "Syntheo keeps listening while live transcription reconnects. No audio is saved to disk: if the outage lasts, the missing passage will not be recovered."
 
 #: src/onboarding/index.tsx
 msgid "Syntheo needs access to your microphone and system audio to record and transcribe your meetings"
@@ -5274,6 +5298,10 @@ msgstr "The command failed (code {code})."
 msgid "The command was not confirmed, so it did not run."
 msgstr "The command was not confirmed, so it did not run."
 
+#: src/settings/general/update-section.tsx
+msgid "The download was interrupted. Try again."
+msgstr "The download was interrupted. Try again."
+
 #: src/stt/audio-import-feedback.ts
 msgid "The import of {name} was abandoned: {reason}"
 msgstr "The import of {name} was abandoned: {reason}"
@@ -5461,12 +5489,20 @@ msgid "The unreadable audio was preserved in this note's folder as an audio.reco
 msgstr "The unreadable audio was preserved in this note's folder as an audio.recovery-*.wav file. New audio will be recorded separately. Your transcript is unchanged."
 
 #: src/settings/general/update-section.tsx
-msgid "The update failed: {error}"
-msgstr "The update failed: {error}"
+msgid "The update failed. Try again, or use the release page."
+msgstr "The update failed. Try again, or use the release page."
+
+#: src/settings/general/update-section.tsx
+msgid "The update information could not be read. Try again later, or use the release page."
+msgstr "The update information could not be read. Try again later, or use the release page."
 
 #: src/settings/general/update-section.tsx
 msgid "The update is downloaded and ready to install."
 msgstr "The update is downloaded and ready to install."
+
+#: src/settings/general/update-section.tsx
+msgid "The update's signature could not be verified: nothing was installed. Try again later; if it happens again, report it."
+msgstr "The update's signature could not be verified: nothing was installed. Try again later; if it happens again, report it."
 
 #: src/settings/appearance/theme.tsx
 #: src/settings/search-index.ts
@@ -5568,6 +5604,10 @@ msgstr "This recording is using batch transcription, so the transcript isn't ava
 #: src/settings/ai/stt/server-card.tsx
 msgid "This server answers as {detectedLabel}."
 msgstr "This server answers as {detectedLabel}."
+
+#: src/settings/ai/stt/server-card.tsx
+msgid "This server has no diarization model loaded: transcripts will not tell speakers apart."
+msgstr "This server has no diarization model loaded: transcripts will not tell speakers apart."
 
 #: src/session/components/note-input/transcript/index.tsx
 msgid "This transcription is incomplete."

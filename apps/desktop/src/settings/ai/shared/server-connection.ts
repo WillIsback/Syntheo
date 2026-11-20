@@ -25,6 +25,7 @@ export type ServerConnectionState =
       latencyMs: number;
       protocol: ServerProtocol | null;
       models: string[];
+      speakerDiarization?: boolean;
     }
   | { status: "failed"; failure: ServerFailure };
 
@@ -95,6 +96,9 @@ export function toConnectionState(
       latencyMs: query.data.latencyMs,
       protocol: query.data.protocol,
       models: query.data.models,
+      ...(query.data.speakerDiarization === undefined
+        ? {}
+        : { speakerDiarization: query.data.speakerDiarization }),
     };
   }
   return { status: "failed", failure: query.data };

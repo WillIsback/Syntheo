@@ -74,7 +74,7 @@ describe("moveNoteToFolder", () => {
     mocks.updateSession.mockReset();
     mocks.updateSession.mockResolvedValue(undefined);
     mocks.openNew.mockReset();
-    useMoveNoteDialog.setState({ note: null, hosts: [] });
+    useMoveNoteDialog.setState({ note: null, returnFocus: null, hosts: [] });
   });
 
   afterEach(cleanup);
@@ -197,6 +197,90 @@ describe("moveNoteToFolder", () => {
         { folder_id: "" },
         expect.objectContaining({ undoMove: expect.any(Object) }),
       ),
+    );
+  });
+
+  it("gives the focus back to the note after Escape", async () => {
+    render(
+      <>
+        <button type="button">Point hebdo row</button>
+        <MoveNoteDialog />
+      </>,
+    );
+    const origin = screen.getByRole("button", { name: "Point hebdo row" });
+    origin.focus();
+    act(() =>
+      useMoveNoteDialog
+        .getState()
+        .open({ id: "s1", title: "Point hebdo", folderPath: "" }),
+    );
+    await screen.findByText("Move “Point hebdo” to…");
+
+    fireEvent.keyDown(document.activeElement ?? document.body, {
+      key: "Escape",
+    });
+
+    await waitFor(() => expect(document.activeElement).toBe(origin));
+  });
+
+  it("gives the focus back to the note after moving it", async () => {
+    render(
+      <>
+        <button type="button">Point hebdo row</button>
+        <MoveNoteDialog />
+      </>,
+    );
+    const origin = screen.getByRole("button", { name: "Point hebdo row" });
+    origin.focus();
+    act(() =>
+      useMoveNoteDialog
+        .getState()
+        .open({ id: "s1", title: "Point hebdo", folderPath: "" }),
+    );
+
+    fireEvent.click(await screen.findByTestId("picker"));
+
+    await waitFor(() => expect(mocks.updateSession).toHaveBeenCalled());
+    await waitFor(() => expect(document.activeElement).toBe(origin));
+  });
+
+  it("falls back to the note row of the tree when the origin is gone", async () => {
+    const { rerender } = render(
+      <>
+        <button type="button">Card</button>
+        <ul>
+          <li data-folder-tree-row="note" data-note-id="s1" tabIndex={-1}>
+            Point hebdo
+          </li>
+        </ul>
+        <MoveNoteDialog />
+      </>,
+    );
+    screen.getByRole("button", { name: "Card" }).focus();
+    act(() =>
+      useMoveNoteDialog
+        .getState()
+        .open({ id: "s1", title: "Point hebdo", folderPath: "" }),
+    );
+    await screen.findByText("Move “Point hebdo” to…");
+    // La carte d'origine disparaît (déplacée, liste filtrée).
+    rerender(
+      <>
+        <ul>
+          <li data-folder-tree-row="note" data-note-id="s1" tabIndex={-1}>
+            Point hebdo
+          </li>
+        </ul>
+        <MoveNoteDialog />
+      </>,
+    );
+
+    fireEvent.keyDown(document.activeElement ?? document.body, {
+      key: "Escape",
+    });
+
+    await waitFor(() =>
+      expect((document.activeElement as HTMLElement).dataset.noteId).toBe("s1"),
     );
   });
 

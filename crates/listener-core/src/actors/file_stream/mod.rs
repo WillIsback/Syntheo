@@ -327,6 +327,9 @@ impl Driver {
             self_human_id: self.params.self_human_id.clone(),
             speaker_assignments: Vec::new(),
             live_transcript: self.live_transcript.clone(),
+            // Chaque tentative d'un fichier garde le délai de base : pas
+            // d'espacement des reconnexions pour un import (issue 571).
+            stall_backoff: Default::default(),
             mic_isolated: false,
         }
     }

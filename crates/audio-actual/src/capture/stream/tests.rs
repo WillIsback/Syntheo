@@ -468,6 +468,64 @@ fn aec_reference_aligner_emits_detected_speaker_delay() {
     }
 
     let aligned = aligned.unwrap();
+    // Mesure brute dans `last_alignment` ; la référence garde son avance de 480 échantillons
+    // (30 ms, #554) : retardée de 7 200 − 480.
     assert_eq!(aligner.last_alignment, AecAlignment::DelaySpeaker(7_200));
-    assert_eq!(&*aligned.speaker, &speaker[71_200..72_800]);
+    assert_eq!(aligner.applied_alignment, AecAlignment::DelaySpeaker(6_720));
+    assert_eq!(&*aligned.speaker, &speaker[71_680..73_280]);
+}
+
+/// Alignement appliqué après observation de `speaker` et `mic` (#554 : retard mesuré moins
+/// l'avance de 480 échantillons).
+fn applied_alignment(speaker: &[f32], mic: &[f32]) -> AecAlignment {
+    let mut aligner = AecReferenceAligner::new(16_000);
+    for (speaker, mic) in speaker.chunks(1_600).zip(mic.chunks(1_600)) {
+        aligner.align(speaker, mic);
+    }
+    aligner.applied_alignment
+}
+
+#[test]
+fn reference_keeps_its_lead_whatever_the_measured_delay() {
+    let signal = test_signal(16_000 * 5);
+    // Écho plus tardif que l'avance : la référence est retardée de la différence.
+    assert_eq!(
+        applied_alignment(&signal, &delayed(&signal, 2_000)),
+        AecAlignment::DelaySpeaker(1_520)
+    );
+    // Écho exactement à l'avance : verrouillé, retard nul (distinct de la perte de verrou).
+    assert_eq!(
+        applied_alignment(&signal, &delayed(&signal, 480)),
+        AecAlignment::DelaySpeaker(0)
+    );
+    // Écho plus précoce que l'avance : c'est le micro qui attend.
+    assert_eq!(
+        applied_alignment(&signal, &delayed(&signal, 300)),
+        AecAlignment::DelayMic(180)
+    );
+    // Micro en avance sur la référence : il attend son retard plus l'avance.
+    assert_eq!(
+        applied_alignment(&delayed(&signal, 2_000), &signal),
+        AecAlignment::DelayMic(2_480)
+    );
+}
+
+#[test]
+fn crossing_zero_under_the_reset_threshold_glides_without_reset() {
+    let mut aligner = AecReferenceAligner::new(16_000);
+    // Verrouillage : réinitialisation.
+    assert!(aligner.commit_alignment(AecAlignment::from_signed_delay(10)));
+    // De part et d'autre de zéro, sous le seuil (48 échantillons) : glissement.
+    for delay in [4, 0, -6, -20, 3] {
+        assert!(
+            !aligner.commit_alignment(AecAlignment::from_signed_delay(delay)),
+            "{delay}"
+        );
+    }
+    assert_eq!(aligner.applied_alignment, AecAlignment::DelaySpeaker(3));
+    // Saut signé au-delà du seuil : réinitialisation.
+    assert!(aligner.commit_alignment(AecAlignment::from_signed_delay(-60)));
+    // Perte puis reprise du verrou : réinitialisations.
+    assert!(aligner.commit_alignment(AecAlignment::None));
+    assert!(aligner.commit_alignment(AecAlignment::from_signed_delay(0)));
 }

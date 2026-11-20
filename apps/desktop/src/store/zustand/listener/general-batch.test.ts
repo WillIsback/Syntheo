@@ -385,14 +385,9 @@ describe("runBatchSession", () => {
     expect(store.handleBatchFailed).not.toHaveBeenCalled();
   });
 
-  test.each([
-    { recovery: false, empty: true },
-    { recovery: true, empty: true },
-    { recovery: false, empty: false },
-    { recovery: true, empty: false },
-  ])(
-    "classifies persist failures (recovery=$recovery, empty=$empty)",
-    async ({ recovery, empty }) => {
+  test.each([{ empty: true }, { empty: false }])(
+    "classifies persist failures (empty=$empty)",
+    async ({ empty }) => {
       const message = empty
         ? "No speech was detected in the audio."
         : "disk full";
@@ -406,7 +401,7 @@ describe("runBatchSession", () => {
       });
 
       await expect(
-        runBatchSession(() => store, SESSION, PARAMS, { recovery }),
+        runBatchSession(() => store, SESSION, PARAMS),
       ).rejects.toThrow(
         empty ? NoSpeechDetectedError : BatchResponseProcessingError,
       );
@@ -448,9 +443,9 @@ describe("runBatchSession", () => {
       );
       const store = makeStore();
 
-      await expect(
-        runBatchSession(() => store, SESSION, PARAMS, { recovery: true }),
-      ).rejects.toBe(error);
+      await expect(runBatchSession(() => store, SESSION, PARAMS)).rejects.toBe(
+        error,
+      );
 
       expect(store.handleBatchFailed).toHaveBeenCalledWith(
         SESSION,

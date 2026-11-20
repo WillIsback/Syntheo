@@ -9,22 +9,11 @@ const hoisted = vi.hoisted(() => ({
   persistContent: vi.fn(() => Promise.resolve()),
   fileUpload: vi.fn(),
   processAudioFile: vi.fn(),
-  showWindow: vi.fn(),
-  unminimizeWindow: vi.fn(),
-  focusWindow: vi.fn(),
   noteEditorProps: [] as Record<string, unknown>[],
 }));
 
 vi.mock("@tauri-apps/api/core", () => ({
   isTauri: () => true,
-}));
-
-vi.mock("@tauri-apps/api/window", () => ({
-  getCurrentWindow: () => ({
-    show: hoisted.showWindow,
-    unminimize: hoisted.unminimizeWindow,
-    setFocus: hoisted.focusWindow,
-  }),
 }));
 
 vi.mock("@syntheo/editor/markdown", () => ({
@@ -129,12 +118,6 @@ describe("EnhancedEditor", () => {
     hoisted.persistContent = vi.fn(() => Promise.resolve());
     hoisted.fileUpload = vi.fn();
     hoisted.processAudioFile = vi.fn();
-    hoisted.showWindow.mockReset();
-    hoisted.unminimizeWindow.mockReset();
-    hoisted.focusWindow.mockReset();
-    hoisted.showWindow.mockResolvedValue(undefined);
-    hoisted.unminimizeWindow.mockResolvedValue(undefined);
-    hoisted.focusWindow.mockResolvedValue(undefined);
   });
 
   it("shows the session title as the first line for persisted notes", () => {

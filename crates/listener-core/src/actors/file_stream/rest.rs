@@ -7,7 +7,10 @@
 
 use std::time::Duration;
 
-use owhisper_client::{AdapterKind, transcribe_with_nemo_speech_rest};
+use owhisper_client::{
+    AdapterKind, NEMO_SPEECH_PROBE_TIMEOUT, nemo_speech_speaker_diarization,
+    transcribe_with_nemo_speech_rest, without_speaker_diarization,
+};
 use owhisper_interface::ListenParams;
 use syntheo_transcript::{FinalizedWord, WordState};
 
@@ -72,7 +75,7 @@ async fn transcribe_in_requests(
     observer: &dyn FileStreamObserver,
     max_request_secs: u64,
 ) -> Result<(Vec<FinalizedWord>, f64), RestFileError> {
-    let listen_params = ListenParams {
+    let mut listen_params = ListenParams {
         model: Some(params.model.clone()),
         languages: params.languages.clone(),
         keywords: params.keywords.clone(),
@@ -81,6 +84,19 @@ async fn transcribe_in_requests(
         sample_rate: SAMPLE_RATE,
         ..Default::default()
     };
+    // Serveur sans diariseur : ne pas demander la diarisation (issue 574).
+    // Sonde muette ou en échec : diarisation demandée, et le second essai de
+    // `transcribe_with_nemo_speech_rest` rattrape un refus.
+    if nemo_speech_speaker_diarization(
+        &params.base_url,
+        Some(params.api_key.as_str()),
+        NEMO_SPEECH_PROBE_TIMEOUT,
+    )
+    .await
+        == Some(false)
+    {
+        without_speaker_diarization(&mut listen_params);
+    }
     let chunk_len = (max_request_secs * u64::from(SAMPLE_RATE)) as usize;
     let total = samples.len();
     let mut words = Vec::new();

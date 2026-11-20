@@ -29,9 +29,10 @@ export async function showSummaryReadyNotification(
     const result = await showNativeNotification({
       key: createSummaryReadyNotificationKey(sessionId),
       title: t`Summary ready`,
-      message: title
-        ? t`"${title}" is ready to read.`
-        : t`Your summary is ready.`,
+      // Le titre de la notification dit déjà « Résumé prêt » : le message se
+      // réduit au titre de la note, qui tient mieux sur la ligne unique de la
+      // carte compacte de Windows (issue 616).
+      message: title ? t`"${title}"` : t`Your summary is ready.`,
       timeout: {
         secs: SUMMARY_READY_NOTIFICATION_TIMEOUT_SECONDS,
         nanos: 0,

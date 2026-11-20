@@ -1,7 +1,10 @@
 mod adapters;
 #[cfg(test)]
 mod progress_tests;
+mod stall_backoff;
 mod stream;
+
+pub use stall_backoff::{SharedStallBackoff, StallBackoff};
 
 use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime};
@@ -81,6 +84,10 @@ pub struct ListenerArgs {
     pub self_human_id: Option<String>,
     pub speaker_assignments: Vec<IdentityAssignment>,
     pub live_transcript: SharedLiveTranscript,
+    /// Délai du chien de garde, partagé par les listeners successifs de la
+    /// session pour qu'un fond sonore sans parole espace les reconnexions
+    /// (issue 571).
+    pub stall_backoff: SharedStallBackoff,
     /// The mic-isolation verdict the streams opened with: every playing output is a headphone
     /// and the mic was not swapped away from the user's Bluetooth headset.
     pub mic_isolated: bool,
@@ -181,14 +188,17 @@ impl Actor for ListenerActor {
 
             let transcript = resume_transcript(&args, &adapter_name);
 
+            let progress =
+                (!matches!(adapter_name.as_str(), "soniqo" | "apple-speech")).then(|| {
+                    stream::StreamProgress::with_backoff(Instant::now(), args.stall_backoff.clone())
+                });
             let state = ListenerState {
                 args,
                 transcript,
                 tx,
                 rx_task,
                 shutdown_tx: Some(shutdown_tx),
-                progress: (!matches!(adapter_name.as_str(), "soniqo" | "apple-speech"))
-                    .then(|| stream::StreamProgress::new(Instant::now())),
+                progress,
             };
 
             Ok(state)

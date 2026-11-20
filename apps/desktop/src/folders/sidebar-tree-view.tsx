@@ -251,6 +251,7 @@ function TreeRow({
       aria-describedby={isFolder ? countId : undefined}
       tabIndex={tabbable ? 0 : -1}
       data-folder-tree-row={row.kind}
+      data-note-id={row.kind === "note" ? row.note.id : undefined}
       onClick={onActivate}
       onContextMenu={onContextMenu}
       {...dragHandlers}

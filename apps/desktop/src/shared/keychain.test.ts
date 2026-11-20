@@ -21,7 +21,7 @@ describe("localizeSecureStoreError", () => {
         "Linux couldn't access Secret Service. Unlock your login keyring, then try again.",
       ),
     ).toBe(
-      "Syntheo couldn't access the system keyring. Unlock your login keyring, then try again.",
+      "Syntheo couldn't access the system keyring. Unlock your login keyring, or install one (GNOME Keyring, KWallet), then try again.",
     );
   });
 

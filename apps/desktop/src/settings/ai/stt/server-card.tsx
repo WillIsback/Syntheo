@@ -200,6 +200,19 @@ export function SttServerCard() {
             );
           })}
         </div>
+        {providerId === "nvidia" &&
+        state.status === "connected" &&
+        state.speakerDiarization === false ? (
+          <p
+            data-testid="stt-no-diarization"
+            className="text-muted-foreground text-[13px]"
+          >
+            <Trans>
+              This server has no diarization model loaded: transcripts will not
+              tell speakers apart.
+            </Trans>
+          </p>
+        ) : null}
         {detected && detected !== providerId ? (
           <p className="text-muted-foreground text-[13px]">
             {t`This server answers as ${detectedLabel}.`}{" "}
@@ -248,8 +261,10 @@ export function SttServerCard() {
         <p>
           <Trans>
             NVIDIA NeMo-Speech.cpp: your nemo-speech serve server, for example
-            http://localhost:9000. Live transcription and imported files use its
-            realtime WebSocket. NVIDIA's hosted gRPC endpoint is not supported.
+            http://localhost:9000. Live transcription uses its realtime
+            WebSocket; imported files go through /v1/audio/transcriptions, with
+            the WebSocket as a fallback. NVIDIA's hosted gRPC endpoint is not
+            supported.
           </Trans>
         </p>
         <p>

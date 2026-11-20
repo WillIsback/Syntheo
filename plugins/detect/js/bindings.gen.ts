@@ -24,6 +24,7 @@ export const commands = {
 	getPreferredLanguages: () => typedError<string[], string>(__TAURI_INVOKE("plugin:detect|get_preferred_languages")),
 	getCurrentLocaleIdentifier: () => typedError<string, string>(__TAURI_INVOKE("plugin:detect|get_current_locale_identifier")),
 	setMicActiveThreshold: (secs: number) => typedError<null, string>(__TAURI_INVOKE("plugin:detect|set_mic_active_threshold", { secs })),
+	setDetectEnabled: (enabled: boolean) => typedError<null, string>(__TAURI_INVOKE("plugin:detect|set_detect_enabled", { enabled })),
 };
 
 /** Events */

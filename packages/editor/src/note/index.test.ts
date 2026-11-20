@@ -12,9 +12,17 @@ import { redo, undo } from "prosemirror-history";
 import { Node as PMNode } from "prosemirror-model";
 import { EditorState, TextSelection } from "prosemirror-state";
 import type { EditorView } from "prosemirror-view";
-import { type ComponentProps, createElement, createRef } from "react";
+import {
+  type ComponentProps,
+  createElement,
+  createRef,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { createDerivedInk } from "../plugins/derived-ink";
 import type { JSONContent, NoteEditorRef } from "./index";
 import {
   createReadOnlyPlugin,
@@ -613,5 +621,91 @@ describe("browser-safe editor controls", () => {
     select(view, 9);
 
     expect(rendered.queryByText("Commands")).toBeNull();
+  });
+});
+
+describe("external content and derived ink in the same commit (issue 572)", () => {
+  // Comme EnhancedEditor : l'encre est un plugin figé au montage, et ses
+  // données passent par setData dans un effet du parent, qui s'exécute
+  // après l'effet de synchronisation du contenu de l'éditeur enfant.
+  function InkedEditor({
+    content,
+    words,
+    editorRef,
+  }: {
+    content: JSONContent;
+    words: readonly string[];
+    editorRef: React.Ref<NoteEditorRef>;
+  }) {
+    const [ink] = useState(() =>
+      createDerivedInk<readonly string[]>({
+        className: "ink",
+        data: words,
+        compute: (doc, data) => {
+          const ranges: { from: number; to: number }[] = [];
+          doc.descendants((node, pos) => {
+            if (!node.isText) return;
+            for (const word of data) {
+              const index = node.text!.indexOf(word);
+              if (index >= 0) {
+                ranges.push({
+                  from: pos + index,
+                  to: pos + index + word.length,
+                });
+              }
+            }
+          });
+          return ranges;
+        },
+      }),
+    );
+    const plugins = useMemo(() => [ink.plugin], [ink]);
+    useEffect(() => {
+      ink.setData(words);
+    }, [ink, words]);
+    return createElement(NoteEditor, {
+      ref: editorRef,
+      initialContent: content,
+      enforceTitleHeading: false,
+      extraPlugins: plugins,
+    } as ComponentProps<typeof NoteEditor>);
+  }
+
+  it("applies new content and new ink data changed together", async () => {
+    const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+    const ref = createRef<NoteEditorRef>();
+    const rendered = render(
+      createElement(InkedEditor, {
+        content: paragraphDoc("old words"),
+        words: ["old"],
+        editorRef: ref,
+      }),
+    );
+    await waitFor(() => expect(ref.current?.view).not.toBeNull());
+
+    // Fin d'une génération : le contenu et les passages changent ensemble.
+    act(() => {
+      rendered.rerender(
+        createElement(InkedEditor, {
+          content: paragraphDoc("new summary words"),
+          words: ["summary"],
+          editorRef: ref,
+        }),
+      );
+    });
+    await waitSettle();
+
+    const renderErrors = errors.mock.calls.filter((call) =>
+      call.some(
+        (arg) =>
+          (arg instanceof Error &&
+            /mismatched transaction/.test(arg.message)) ||
+          (typeof arg === "string" && /Editor render failed/.test(arg)),
+      ),
+    );
+    expect(renderErrors).toEqual([]);
+    const view = ref.current!.view!;
+    expect(view.state.doc.textContent).toBe("new summary words");
+    expect(view.dom.querySelector(".ink")?.textContent).toBe("summary");
   });
 });

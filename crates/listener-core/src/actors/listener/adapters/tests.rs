@@ -45,6 +45,7 @@ fn listener_args(base_url: &str, model: &str) -> ListenerArgs {
         self_human_id: None,
         speaker_assignments: vec![],
         live_transcript: Default::default(),
+        stall_backoff: Default::default(),
         mic_isolated: false,
     }
 }
@@ -241,4 +242,70 @@ fn websocket_retry_after_reaches_the_session_supervisor() {
         .expect("listener init error");
 
     assert_eq!(error.retry_after, Some(Duration::from_secs(7)));
+}
+
+// Issue 574 : serveur NeMo-Speech.cpp lancé sans `--diar-model`, simulé par sa
+// liste de modèles (`speaker_diarization: false`). La session s'ouvre sans
+// demander la diarisation ; sonde en échec ou muette, comportement d'avant.
+async fn nemo_models_server(speaker_diarization: Option<bool>) -> wiremock::MockServer {
+    use wiremock::matchers::{method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
+
+    let server = MockServer::start().await;
+    let mut transcription = serde_json::json!({
+        "capability": "transcription",
+        "id": "nemotron-3.5-asr-streaming-0.6b.q8_0",
+        "object": "model",
+        "streaming": true,
+        "word_timestamps": true,
+    });
+    if let Some(value) = speaker_diarization {
+        transcription["speaker_diarization"] = serde_json::json!(value);
+    }
+    Mock::given(method("GET"))
+        .and(path("/v1/models"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "data": [transcription],
+            "object": "list",
+        })))
+        .mount(&server)
+        .await;
+    server
+}
+
+#[tokio::test]
+async fn nemo_session_without_diarizer_does_not_request_diarization() {
+    let server = nemo_models_server(Some(false)).await;
+    let mut args = listener_args(
+        &format!("{}/v1/realtime?provider=nvidia", server.uri()),
+        "nemotron-3.5-asr-streaming-0.6b.q8_0",
+    );
+    args.participant_human_ids = vec!["remote-a".to_string(), "remote-b".to_string()];
+    args.mic_isolated = true;
+
+    let params = nemo_speech_listen_params(&args).await;
+
+    // Une voix unique pour l'adaptateur : speaker_diarization à false, sans
+    // max_speaker_count (couvert par streaming_providers_tests.rs).
+    assert_eq!(params.num_speakers, Some(1));
+    assert_eq!(params.max_speakers, None);
+    assert_eq!(params.mic_num_speakers, None);
+}
+
+#[tokio::test]
+async fn nemo_session_keeps_diarization_when_offered_or_unknown() {
+    let offered = nemo_models_server(Some(true)).await;
+    let silent = nemo_models_server(None).await;
+    for base in [
+        format!("{}/v1/realtime?provider=nvidia", offered.uri()),
+        format!("{}/v1/realtime?provider=nvidia", silent.uri()),
+        // Sonde en échec : rien n'écoute sur ce port.
+        "http://127.0.0.1:9/v1/realtime?provider=nvidia".to_string(),
+    ] {
+        let mut args = listener_args(&base, "nemotron-3.5-asr-streaming-0.6b.q8_0");
+        args.participant_human_ids = vec!["remote-a".to_string()];
+        let params = nemo_speech_listen_params(&args).await;
+        assert_eq!(params, build_listen_params(&args), "{base}");
+        assert_ne!(params.num_speakers, Some(1), "{base}");
+    }
 }

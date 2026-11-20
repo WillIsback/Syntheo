@@ -113,6 +113,7 @@ pub(super) async fn spawn_listener(
             self_human_id: ctx.params.self_human_id.clone(),
             speaker_assignments: ctx.params.speaker_assignments.clone(),
             live_transcript: ctx.live_transcript.clone(),
+            stall_backoff: ctx.stall_backoff.clone(),
             mic_isolated,
         },
         supervisor_cell,

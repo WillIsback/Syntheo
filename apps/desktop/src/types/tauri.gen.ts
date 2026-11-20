@@ -22,14 +22,21 @@ export const commands = {
 	installAgentSkill: (agent: SkillAgent) => typedError<SkillAgentStatus, string>(__TAURI_INVOKE("install_agent_skill", { agent })),
 	getAecModelStatus: () => typedError<AecModelStatus, string>(__TAURI_INVOKE("get_aec_model_status")),
 	retryAecModelDownload: () => typedError<AecModelStatus, string>(__TAURI_INVOKE("retry_aec_model_download")),
-	updaterCheck: () => typedError<UpdateCheck, string>(__TAURI_INVOKE("updater_check")),
-	updaterDownload: (onEvent: Channel<DownloadEvent>) => typedError<null, string>(__TAURI_INVOKE("updater_download", { onEvent })),
+	/**
+	 *  La mise à jour intégrée existe dans ce build : faux pour les alphas
+	 *  `devtools`. Lue à l'ouverture des Paramètres, sans attendre une
+	 *  vérification (issue 601).
+	 */
+	updaterSupported: () => __TAURI_INVOKE<boolean>("updater_supported"),
+	updaterCheck: () => typedError<UpdateCheck, UpdaterError>(__TAURI_INVOKE("updater_check")),
+	updaterDownload: (onEvent: Channel<DownloadEvent>) => typedError<null, UpdaterError>(__TAURI_INVOKE("updater_download", { onEvent })),
 	/**
 	 *  Installe la mise à jour téléchargée. Le front l'appelle hors écoute, sur
 	 *  action de la personne, puis relance l'application. Sous Windows,
-	 *  l'installeur NSIS (mode passif) ferme l'application lui-même.
+	 *  l'installeur NSIS (mode silencieux, sans fenêtre) ferme l'application
+	 *  lui-même et la relance.
 	 */
-	updaterInstall: () => typedError<null, string>(__TAURI_INVOKE("updater_install")),
+	updaterInstall: () => typedError<null, UpdaterError>(__TAURI_INVOKE("updater_install")),
 };
 
 /* Types */
@@ -75,7 +82,30 @@ export type UpdateCheck =
 /**  Pas de vérification possible : build `devtools`, plugin absent. */
 { status: "unavailable" } | { status: "up_to_date" } | { status: "available"; version: string; notes: string | null; date: string | null; 
 /**  `false` : .deb, MSI ou type inconnu, annonce avec lien seulement. */
-installable: boolean; release_url: string };
+installable: boolean; release_url: string; 
+/**  Cette version est déjà téléchargée : prête à être installée. */
+downloaded: boolean };
+
+/**
+ *  Erreur de mise à jour, en code stable (issue 601) : l'interface affiche un
+ *  libellé traduit par code, le détail technique part dans le journal.
+ */
+export type UpdaterError = 
+/**
+ *  Signature refusée : autre clé, version signée différente ou absente,
+ *  signature illisible.
+ */
+"signature" | 
+/**  Serveur injoignable : hors ligne, proxy, délai dépassé. */
+"offline" | 
+/**  Téléchargement interrompu ou refusé en cours de route. */
+"interrupted" | 
+/**  `latest.json` illisible, sans entrée pour ce format ou introuvable. */
+"manifest" | 
+/**  Build `devtools` : pas de mise à jour intégrée. */
+"unavailable" | 
+/**  Tout le reste (installation, état incohérent). */
+"other";
 
 /* Tauri Specta runtime */
 async function typedError<T, E>(result: Promise<T>): Promise<{ status: "ok"; data: T } | { status: "error"; error: E }> {
