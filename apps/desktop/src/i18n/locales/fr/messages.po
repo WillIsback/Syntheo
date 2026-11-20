@@ -133,6 +133,14 @@ msgstr "{duration}, revenir à la note"
 msgid "{entryCount} selected"
 msgstr "{entryCount} sélectionné(s)"
 
+#: src/session/components/note-input/audio-drop-target.tsx
+msgid "{formats} audio"
+msgstr "Audio {formats}"
+
+#: src/session/components/note-input/audio-drop-target.tsx
+msgid "{head}, or {last}"
+msgstr "{head} ou {last}"
+
 #: src/folders/project/folder-meetings-card.tsx
 msgid "{hiddenCount, plural, one {See the previous meeting} other {See the # previous meetings}}"
 msgstr "{hiddenCount, plural, one {Voir la réunion précédente} other {Voir les # réunions précédentes}}"
@@ -1620,6 +1628,10 @@ msgstr "Rédigez un e-mail de suivi à l'intention des participants"
 #: src/chat/components/body/empty.tsx
 msgid "Draft follow-up email."
 msgstr "Rédiger un e-mail de suivi."
+
+#: src/session/components/note-input/audio-drop-target.tsx
+msgid "Drop to upload and transcribe audio"
+msgstr "Déposez pour importer et transcrire l'audio"
 
 #: src/templates/details.tsx
 #: src/templates/template-form.tsx
