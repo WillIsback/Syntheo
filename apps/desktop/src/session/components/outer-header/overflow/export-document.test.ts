@@ -101,7 +101,23 @@ describe("export dans la langue de l'interface", () => {
   });
 
   it("met la durée en forme", () => {
-    expect(formatExportDuration(0, 59_000)).toBe("0 min");
     expect(formatExportDuration(0, 65 * 60_000)).toBe("1 h 05");
+  });
+
+  // Issue 627 : une réunion de moins d'une minute n'affiche plus « 0 min ».
+  it("donne en secondes une durée de moins d'une minute", () => {
+    expect(formatExportDuration(0, 45_000)).toBe("45 s");
+    expect(formatExportDuration(0, 59_900)).toBe("59 s");
+    expect(formatExportDuration(1_000, 2_000)).toBe("1 s");
+    expect(formatExportDuration(0, 60_000)).toBe("1 min");
+    expect(formatExportDuration(0, 119_000)).toBe("1 min");
+    expect(formatExportDuration(0, 11 * 60_000)).toBe("11 min");
+    expect(formatExportDuration(0, 65 * 60_000)).toBe("1 h 05");
+  });
+
+  it("garde « 0 min » pour une durée nulle, négative ou sous la seconde", () => {
+    expect(formatExportDuration(0, 0)).toBe("0 min");
+    expect(formatExportDuration(0, 999)).toBe("0 min");
+    expect(formatExportDuration(5_000, 0)).toBe("0 min");
   });
 });
