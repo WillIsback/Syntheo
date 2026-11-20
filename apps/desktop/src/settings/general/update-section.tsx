@@ -184,7 +184,7 @@ export function UpdateSection({
         <Trans>Updates</Trans>
       </h2>
       {/* « inconnue » seulement si la lecture a échoué : pendant le chargement,
-          la ligne n'apparaît pas encore (reprise QA de #601). */}
+          la ligne n'apparaît pas encore (reprise QA de l'issue 601). */}
       {version ? (
         <p className="text-muted-foreground text-sm">
           <Trans>Installed version: {version}</Trans>

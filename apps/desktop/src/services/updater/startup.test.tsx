@@ -68,7 +68,7 @@ describe("startup update check", () => {
     vi.useRealTimers();
   });
 
-  // Reprise QA de #601 : le support est lu dès le démarrage, même sans
+  // Reprise QA de l'issue 601 : le support est lu dès le démarrage, même sans
   // vérification automatique, avant l'ouverture des Paramètres.
   it("reads the build support at startup, whatever the startup check setting", () => {
     mocks.automaticUpdates = false;

@@ -28,7 +28,7 @@ export function useStartupUpdateCheck() {
 
   // Mise à jour intégrée présente dans ce build (faux pour une alpha
   // devtools) : connue dès le démarrage, avant l'ouverture des Paramètres
-  // (reprise QA de #601). L'appel au montage de la section ne refait rien.
+  // (reprise QA de l'issue 601). L'appel au montage de la section ne refait rien.
   useEffect(() => {
     void useUpdater.getState().loadSupport();
   }, []);

@@ -310,7 +310,7 @@ describe("UpdateSection", () => {
     ).toBeNull();
   });
 
-  // Reprise QA de #601 : au premier rendu, ni interrupteur avant de connaître
+  // Reprise QA de l'issue 601 : au premier rendu, ni interrupteur avant de connaître
   // le support du build, ni « unknown » pendant la lecture de la version.
   it("renders no startup switch while the build support is unknown", () => {
     setUpdater({ supported: null } as never);
