@@ -26,6 +26,13 @@ export function useStartupUpdateCheck() {
   const ready = useSettingsReady();
   const { automatic_updates } = useConfigValues(["automatic_updates"] as const);
 
+  // Mise à jour intégrée présente dans ce build (faux pour une alpha
+  // devtools) : connue dès le démarrage, avant l'ouverture des Paramètres
+  // (reprise QA de l'issue 601). L'appel au montage de la section ne refait rien.
+  useEffect(() => {
+    void useUpdater.getState().loadSupport();
+  }, []);
+
   useEffect(() => {
     if (!ready || !automatic_updates || startupCheckDone) return;
     const timer = setTimeout(() => {

@@ -134,7 +134,14 @@ function formatBytes(bytes: number, locale: string): string {
 // vérification à la demande, téléchargement, installation et relance, et
 // l'interrupteur de vérification au démarrage. Aucune installation ni relance
 // pendant une écoute ou une finalisation.
-export function UpdateSection({ version }: { version: string | undefined }) {
+export function UpdateSection({
+  version,
+  versionFailed = false,
+}: {
+  version: string | undefined;
+  /** La lecture de la version a échoué (pas seulement pas encore lue). */
+  versionFailed?: boolean;
+}) {
   const { t, i18n } = useLingui();
   const { automatic_updates } = useConfigValues(["automatic_updates"] as const);
   const setAutomaticUpdates = useSetSettingValue("automatic_updates");
@@ -176,13 +183,17 @@ export function UpdateSection({ version }: { version: string | undefined }) {
       >
         <Trans>Updates</Trans>
       </h2>
-      <p className="text-muted-foreground text-sm">
-        {version ? (
+      {/* « inconnue » seulement si la lecture a échoué : pendant le chargement,
+          la ligne n'apparaît pas encore (reprise QA de l'issue 601). */}
+      {version ? (
+        <p className="text-muted-foreground text-sm">
           <Trans>Installed version: {version}</Trans>
-        ) : (
+        </p>
+      ) : versionFailed ? (
+        <p className="text-muted-foreground text-sm">
           <Trans>Installed version: unknown</Trans>
-        )}
-      </p>
+        </p>
+      ) : null}
 
       <div role="status" aria-live="polite" className="text-sm">
         {phase === "checking" ? <Trans>Checking for updates…</Trans> : null}
@@ -301,7 +312,9 @@ export function UpdateSection({ version }: { version: string | undefined }) {
         </p>
       ) : null}
 
-      {supported === false ? null : (
+      {/* Seulement quand la mise à jour intégrée est confirmée : ni pendant la
+          lecture du support (premier rendu), ni sur une alpha devtools. */}
+      {supported !== true ? null : (
         <SettingSwitchRow
           settingId="check-updates-on-startup"
           title={<Trans>Check for updates at startup</Trans>}

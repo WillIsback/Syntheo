@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   ready: true,
   automaticUpdates: true,
   check: vi.fn(),
+  loadSupport: vi.fn(),
   openNew: vi.fn(),
   listeners: new Map<string, () => void>(),
 }));
@@ -36,7 +37,9 @@ vi.mock("~/store/zustand/tabs", () => ({
 }));
 
 vi.mock("./store", () => ({
-  useUpdater: { getState: () => ({ check: mocks.check }) },
+  useUpdater: {
+    getState: () => ({ check: mocks.check, loadSupport: mocks.loadSupport }),
+  },
 }));
 
 import {
@@ -63,6 +66,15 @@ describe("startup update check", () => {
   afterEach(() => {
     cleanup();
     vi.useRealTimers();
+  });
+
+  // Reprise QA de l'issue 601 : le support est lu dès le démarrage, même sans
+  // vérification automatique, avant l'ouverture des Paramètres.
+  it("reads the build support at startup, whatever the startup check setting", () => {
+    mocks.automaticUpdates = false;
+    mocks.loadSupport.mockClear();
+    render(<Probe />);
+    expect(mocks.loadSupport).toHaveBeenCalledTimes(1);
   });
 
   it("checks once, silently, a while after startup", () => {

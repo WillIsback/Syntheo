@@ -92,7 +92,7 @@ export function AppSettingsView({
           />
         </div>
       </section>
-      <UpdateSection version={version.data} />
+      <UpdateSection version={version.data} versionFailed={version.isError} />
     </div>
   );
 }
