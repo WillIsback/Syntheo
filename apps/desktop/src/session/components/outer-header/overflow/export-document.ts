@@ -65,9 +65,14 @@ function formatExportDate(isoString: string): string {
   return t`${day} at ${time}`;
 }
 
-/** « 11 min », « 1 h 05 ». */
+/** « 45 s », « 11 min », « 1 h 05 » (unités identiques en anglais et en français). */
 export function formatExportDuration(startMs: number, endMs: number): string {
-  const minutes = Math.max(0, Math.floor((endMs - startMs) / 60000));
+  const seconds = Math.floor((endMs - startMs) / 1000);
+  // Moins d'une minute : en secondes, sinon « 0 min » (issue 627).
+  if (seconds >= 1 && seconds < 60) {
+    return `${seconds} s`;
+  }
+  const minutes = Math.max(0, Math.floor(seconds / 60));
   const hours = Math.floor(minutes / 60);
   if (hours > 0) {
     return `${hours} h ${String(minutes % 60).padStart(2, "0")}`;
