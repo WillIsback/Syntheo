@@ -52,6 +52,10 @@ on:
         type: string
         required: false
         default: "syntheo-desktop-windows"
+    outputs:
+      signed:
+        description: "true si les installeurs sont signés et leur signature vérifiée"
+        value: ${{ jobs.build.outputs.signed }}
 
 concurrency:
   group: build-windows-${{ github.ref }}-${{ inputs.features }}
@@ -65,6 +69,8 @@ jobs:
     name: Build Windows
     runs-on: windows-latest
     timeout-minutes: 120
+    outputs:
+      signed: ${{ steps.verify.outputs.signed || 'false' }}
     # Compilation Rust réutilisée d'un build à l'autre (backend cache Actions) :
     # seul le code modifié est recompilé.
     env:
@@ -246,6 +252,7 @@ jobs:
           if ($missing) { throw "DLL du runtime Visual C++ importées mais non embarquées : $($missing -join ', ')" }
 
       - name: Vérifier la signature des installeurs
+        id: verify
         if: steps.build.outputs.signing == 'true'
         shell: pwsh
         run: |
@@ -275,6 +282,8 @@ jobs:
             }
           }
           if ($failed) { throw "au moins un installeur n'est pas signé correctement" }
+          # Lue par release.yml : une release publiée exige des installeurs signés.
+          "signed=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
       - name: Rassembler les artefacts et les sommes de contrôle
         shell: pwsh

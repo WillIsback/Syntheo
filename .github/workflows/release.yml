@@ -313,6 +313,22 @@ jobs:
       id-token: write
       attestations: write
     steps:
+      # Une release publiée ne met jamais en ligne d'installeurs Windows non
+      # signés : la signature se désactive d'elle-même hors release depuis
+      # main ou sans secrets Azure (build-windows.yml), sans faire échouer le
+      # build. Ce job ne tourne pas en dry_run.
+      - name: Exiger des installeurs Windows signés
+        shell: bash
+        env:
+          WINDOWS_SIGNED: ${{ needs.build-windows.outputs.signed }}
+        run: |
+          set -euo pipefail
+          if [ "$WINDOWS_SIGNED" != "true" ]; then
+            echo "::error::Signature Windows désactivée ou non vérifiée : vérifier github.workflow_ref (appel depuis release.yml sur main) et les secrets Azure transmis à build-windows. Publication annulée."
+            exit 1
+          fi
+          echo "Installeurs Windows signés et vérifiés."
+
       - name: Checkout du code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
