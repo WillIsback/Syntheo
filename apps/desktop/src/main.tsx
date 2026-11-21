@@ -10,6 +10,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 import { StrictMode, useMemo } from "react";
 import ReactDOM from "react-dom/client";
+import { z } from "zod";
 
 import {
   getCurrentWebviewWindowLabel,
@@ -131,6 +132,9 @@ function ReadyApp() {
 
 initWindowsPlugin();
 startCspViolationReport();
+// La CSP interdit eval : zod n'essaie plus de compiler ses validateurs (sa
+// sonde `new Function` serait signalée comme violation à chaque démarrage).
+z.config({ jitless: true });
 
 const isMainWindow = getCurrentWebviewWindowLabel() === "main";
 
