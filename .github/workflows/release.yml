@@ -96,11 +96,9 @@ jobs:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 90
-    # Compilation Rust réutilisée d'une release à l'autre (backend cache
-    # Actions, portée main) : seul le code modifié est recompilé.
-    env:
-      SCCACHE_GHA_ENABLED: "true"
-      RUSTC_WRAPPER: sccache
+    # Paquets signés : compilés de zéro, sans cache de compilation (sccache)
+    # ni registre Cargo restauré depuis le cache Actions, que d'autres
+    # exécutions sur main alimentent aussi.
     steps:
       - name: Checkout du code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -113,9 +111,8 @@ jobs:
 
       - name: Toolchain Rust
         uses: ./.github/actions/rust_install
-
-      - name: Cache du compilateur (sccache)
-        uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba # v0.0.11
+        with:
+          cache: "false"
 
       - name: Installer Node, pnpm et les dépendances (lockfile figé)
         uses: ./.github/actions/pnpm_install
@@ -173,7 +170,7 @@ jobs:
           retention-days: 14
 
   # Paquets Windows (NSIS + MSI), en parallèle du build Linux. Signés : build
-  # de release (sans features) avec les secrets Azure transmis.
+  # de release (sans features) depuis main, avec les secrets Azure transmis.
   # La signature de code est décrite dans docs/fr/desktop-installation.mdx.
   build-windows:
     name: Build des paquets Windows
@@ -182,7 +179,11 @@ jobs:
     uses: ./.github/workflows/build-windows.yml
     with:
       version: ${{ needs.detect.outputs.version }}
-    secrets: inherit
+    # Seuls les identifiants de signature, lus par la seule étape qui signe.
+    secrets:
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
 
   # Gate SAST lourde (CodeQL Rust + TypeScript), en parallèle du build.
   sast:
@@ -309,6 +310,22 @@ jobs:
       id-token: write
       attestations: write
     steps:
+      # Une release publiée ne met jamais en ligne d'installeurs Windows non
+      # signés : la signature se désactive d'elle-même hors release depuis
+      # main ou sans secrets Azure (build-windows.yml), sans faire échouer le
+      # build. Ce job ne tourne pas en dry_run.
+      - name: Exiger des installeurs Windows signés
+        shell: bash
+        env:
+          WINDOWS_SIGNED: ${{ needs.build-windows.outputs.signed }}
+        run: |
+          set -euo pipefail
+          if [ "$WINDOWS_SIGNED" != "true" ]; then
+            echo "::error::Signature Windows désactivée ou non vérifiée : vérifier github.workflow_ref (appel depuis release.yml sur main) et les secrets Azure transmis à build-windows. Publication annulée."
+            exit 1
+          fi
+          echo "Installeurs Windows signés et vérifiés."
+
       - name: Checkout du code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

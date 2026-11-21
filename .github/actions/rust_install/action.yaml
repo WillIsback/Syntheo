@@ -5,6 +5,10 @@ inputs:
     description: Cibles rustup supplémentaires, séparées par des virgules (ex. x86_64-pc-windows-msvc).
     required: false
     default: ""
+  cache:
+    description: Restaurer et sauvegarder le registre Cargo (rust-cache). "false" pour les builds de release signés.
+    required: false
+    default: "true"
 runs:
   using: "composite"
   steps:
@@ -26,6 +30,7 @@ runs:
     # Cargo (~/.cargo/registry, ~/.cargo/git) pour éviter de cumuler deux
     # backends sur le même target/.
     - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
+      if: inputs.cache != 'false'
       with:
         cache-targets: "false"
         workspaces: |
