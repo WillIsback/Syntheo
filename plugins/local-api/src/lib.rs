@@ -40,6 +40,7 @@ pub fn init() -> tauri::plugin::TauriPlugin<tauri::Wry> {
             specta_builder.mount_events(app);
             let secrets: webhook_secrets::SharedSecretStore =
                 std::sync::Arc::new(webhook_secrets::KeychainSecrets(app.clone()));
+            webhook_secrets::spawn_startup_migration(app.clone(), secrets.clone());
             app.manage(secrets);
             Ok(())
         })
