@@ -242,6 +242,21 @@ pub fn main() {
         .on_window_event(tauri_plugin_windows::on_window_event)
         .setup(move |app| {
             let app_handle = app.handle().clone();
+            // Dossier de l'application (journaux, stockage de la webview),
+            // distinct du dossier de la base : réservé à l'utilisateur
+            // (issue 653).
+            {
+                use tauri::Manager;
+                for dir in [
+                    app_handle.path().app_data_dir(),
+                    app_handle.path().app_log_dir(),
+                ]
+                .into_iter()
+                .flatten()
+                {
+                    startup::harden_data_dir_permissions(&dir);
+                }
+            }
             tauri_plugin_shortcut::initialize_global_shortcuts(&app_handle);
             aec_models::install(&app_handle);
 

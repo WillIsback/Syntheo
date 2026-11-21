@@ -48,6 +48,9 @@ pub async fn open_desktop_db(identifier: &str) -> Result<Arc<Db>, String> {
         }
     };
 
+    // La base et ses fichiers WAL viennent d'être créés : mêmes droits que le
+    // reste du dossier (issue 653).
+    crate::startup::harden_data_dir_permissions(&dir);
     Ok(Arc::new(db))
 }
 
