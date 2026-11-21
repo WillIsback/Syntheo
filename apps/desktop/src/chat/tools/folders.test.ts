@@ -22,6 +22,18 @@ import {
   buildListFoldersTool,
   buildMoveMeetingsToFolderTool,
 } from "./folders";
+import {
+  type ToolApproval,
+  type ToolApprovalDecision,
+  usePendingToolApprovalStore,
+} from "./pending-tool-approval-store";
+
+// La carte de l'outil répond à la demande de validation (issue 644).
+const approvals = {
+  decision: { approved: true } as ToolApprovalDecision,
+  seen: [] as ToolApproval[],
+};
+let stopAnswering: (() => void) | null = null;
 
 const { DatabaseSync } = createRequire(import.meta.url)(
   "node:sqlite",
@@ -147,6 +159,46 @@ describe("bulk folder assignment", () => {
     database.exec(
       "INSERT INTO folders (id, path) VALUES ('defcons', 'defcons')",
     );
+    approvals.decision = { approved: true };
+    approvals.seen = [];
+    stopAnswering = usePendingToolApprovalStore.subscribe((state) => {
+      for (const approval of state.approvals.values()) {
+        if (approvals.seen.includes(approval)) continue;
+        approvals.seen.push(approval);
+        queueMicrotask(() =>
+          usePendingToolApprovalStore
+            .getState()
+            .resolveApproval(approval.requestId, approvals.decision),
+        );
+      }
+    });
+  });
+
+  afterEach(() => {
+    stopAnswering?.();
+    usePendingToolApprovalStore.setState({ approvals: new Map() });
+  });
+
+  // Issue 644 : rien ne change de dossier sans l'accord de l'utilisateur.
+  it("moves nothing when the user declines, and shows what would move", async () => {
+    addMeeting("first", "Work");
+    addMeeting("second");
+    approvals.decision = { approved: false };
+
+    const result = await moveTool.execute!(
+      { meeting_ids: ["first", "second"], folder_path: "defcons" },
+      options,
+    );
+
+    expect(result).toMatchObject({ status: "declined", results: [] });
+    expect(folderFor("first")).toBe("Work");
+    expect(folderFor("second")).toBe("");
+    expect(mocks.executeTransaction).not.toHaveBeenCalled();
+    expect(approvals.seen[0]).toMatchObject({
+      kind: "move_meetings_to_folder",
+      folderPath: "defcons",
+      meetingCount: 2,
+    });
   });
 
   it("moves meetings without changing their contents, deduplicates IDs, and skips already filed meetings", async () => {

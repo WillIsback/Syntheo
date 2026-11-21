@@ -2,7 +2,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { getMeeting } from "@syntheo/plugin-db";
 
-import { buildChatTools, type ToolDependencies } from "./index";
+import {
+  buildChatTools,
+  CHAT_TOOL_ACCESS,
+  type ToolDependencies,
+} from "./index";
 
 function dependencies(): ToolDependencies {
   return {
@@ -68,5 +72,25 @@ describe("chat tool registration", () => {
     ).rejects.toThrow("private error");
 
     expect(JSON.stringify(error.mock.calls)).not.toContain("private");
+  });
+
+  // Issue 644 : chaque outil est classé en lecture ou en écriture.
+  it("classifies every chat tool as read or write", () => {
+    expect(Object.keys(CHAT_TOOL_ACCESS).sort()).toEqual(
+      Object.keys(buildChatTools(dependencies())).sort(),
+    );
+    expect(
+      Object.entries(CHAT_TOOL_ACCESS)
+        .filter(([, access]) => access === "write")
+        .map(([name]) => name)
+        .sort(),
+    ).toEqual([
+      "apply_session_correction",
+      "create_folder",
+      "edit_memo",
+      "edit_summary",
+      "move_meeting_contents",
+      "move_meetings_to_folder",
+    ]);
   });
 });

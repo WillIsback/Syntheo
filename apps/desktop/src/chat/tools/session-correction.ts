@@ -6,7 +6,7 @@ import {
   resolveCurrentSessionId,
 } from "./current-session";
 import { saveDictionaryTerms } from "./dictionary-terms";
-import { requestDictionaryApproval } from "./pending-dictionary-store";
+import { requestToolApproval } from "./pending-tool-approval-store";
 import {
   type CorrectionTarget,
   type DictionaryChange,
@@ -227,7 +227,7 @@ export const buildApplySessionCorrectionTool = (
 ) =>
   tool({
     description:
-      "Apply a correction to a session summary, visible session title, and/or transcript. Use this when the user corrects note content, for example 'it's not X but Y'. Prefer summary_and_transcript for factual meeting corrections unless the user explicitly asks for one target only. Read the note first if you need exact summary text.",
+      "Apply a correction to a session summary, visible session title, and/or transcript. Use this when the user corrects note content, for example 'it's not X but Y'. Prefer summary_and_transcript for factual meeting corrections unless the user explicitly asks for one target only. Read the note first if you need exact summary text. The user reviews the correction in the tool card and nothing changes until they approve it; correct another note than the current one only when the user names it.",
     inputSchema: z.object({
       sessionId: z
         .string()
@@ -331,6 +331,51 @@ export const buildApplySessionCorrectionTool = (
         };
       }
 
+      // Dictionnaire (issue 643) : seuls des noms bornés sont proposés.
+      const { accepted, rejected } = partitionDictionaryTerms(
+        params.dictionaryTerms ?? [],
+      );
+      const proposedTerms = accepted.slice(0, MAX_DICTIONARY_TERMS_PER_CALL);
+      const dictionaryChanges: DictionaryChange = {
+        addedTerms: [],
+        rejectedTerms: [
+          ...rejected,
+          ...accepted.slice(MAX_DICTIONARY_TERMS_PER_CALL),
+        ],
+        declinedTerms: [],
+      };
+
+      // Validation (issue 644) : la correction, et les termes proposés, ne
+      // s'appliquent qu'après l'accord de l'utilisateur dans la carte. Une
+      // autre note que la note ouverte y est signalée.
+      const decision = await requestToolApproval(
+        options.toolCallId,
+        {
+          kind: "session_correction",
+          sessionTitle: snapshot.title,
+          otherNote: sessionId !== resolveCurrentSessionId(deps, options),
+          oldText: params.oldText,
+          newText,
+          summaries: plans.summaryPlan.changes.length,
+          transcriptReplacements: plans.transcriptPlan.changes.reduce(
+            (total, change) =>
+              total + change.wordReplacements + change.memoReplacements,
+            0,
+          ),
+          title: Boolean(plans.titleChange),
+          dictionaryTerms: proposedTerms,
+        },
+        options.abortSignal,
+      );
+      if (!decision.approved) {
+        return {
+          status: "declined",
+          message:
+            "The user declined this correction. Nothing was changed. Do not retry unless the user asks again.",
+          sessionId,
+        };
+      }
+
       const committed = await commitCorrectionPlans({
         sessionId,
         snapshot,
@@ -345,27 +390,9 @@ export const buildApplySessionCorrectionTool = (
         };
       }
 
-      // Dictionnaire (issue 643) : seuls des noms bornés sont proposés, et
-      // rien n'est enregistré sans l'accord de l'utilisateur dans la carte.
-      const { accepted, rejected } = partitionDictionaryTerms(
-        params.dictionaryTerms ?? [],
-      );
-      const proposedTerms = accepted.slice(0, MAX_DICTIONARY_TERMS_PER_CALL);
-      const dictionaryChanges: DictionaryChange = {
-        addedTerms: [],
-        rejectedTerms: [
-          ...rejected,
-          ...accepted.slice(MAX_DICTIONARY_TERMS_PER_CALL),
-        ],
-        declinedTerms: [],
-      };
       let dictionarySaveFailed = false;
       if (proposedTerms.length > 0) {
-        const approved = await requestDictionaryApproval(
-          options.toolCallId,
-          proposedTerms,
-        );
-        if (!approved) {
+        if (!decision.addDictionaryTerms) {
           dictionaryChanges.declinedTerms = proposedTerms;
         } else {
           try {
