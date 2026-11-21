@@ -105,7 +105,11 @@ devtools = [
 ]
 
 [dev-dependencies]
+# Même analyse des motifs d'URL que tauri-plugin-http (tests/http_scope.rs).
+regex = { workspace = true }
 reqwest = { workspace = true }
 tauri = { workspace = true, features = ["test"] }
 tempfile = { workspace = true }
+url = { workspace = true }
+urlpattern = "0.6"
 wiremock = { workspace = true }
