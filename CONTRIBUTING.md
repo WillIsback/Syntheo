@@ -92,8 +92,11 @@ intégrations cloud héritées ; elle disparaît avec le chantier 04d du plan.
 Une alpha est la variante `devtools` d'un lot (inspecteur, barre de diagnostic,
 logs détaillés), construite avant de fusionner la PR du lot pour tester en
 conditions réelles. Elle est **toujours non signée** : la signature Windows
-(quota Azure limité) est réservée à la release, et `build-windows.yml` la
-refuse pour tout build avec `features` non vide.
+(quota Azure limité) est réservée à la release appelée par `release.yml`
+depuis `main`, et `build-windows.yml` la refuse pour tout build avec
+`features` non vide comme pour un lancement manuel. La compilation y tourne
+sans identifiants Azure : seule l'étape qui assemble et signe les
+installeurs les reçoit.
 
 Les alphas se construisent **uniquement en local** : AppImage Linux sur un
 poste Linux (dans un conteneur Ubuntu 24.04), installeur Windows dans une VM
