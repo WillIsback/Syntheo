@@ -39,6 +39,8 @@ Les ports dépendent de la façon dont vous lancez chaque serveur. Si deux serve
 
 <Note>
   Syntheo accepte HTTP en clair uniquement vers un hôte privé : `localhost`, `[::1]`, les noms en `.local`, et les adresses IPv4 `127.0.0.0/8`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16` et `100.64.0.0/10` (plage utilisée par Tailscale), ainsi que les noms Tailscale en `.ts.net`. Partout ailleurs, y compris pour un nom d'hôte interne comme `gpu.entreprise.lan`, l'URL doit être en HTTPS ; sinon l'enregistrement est refusé avec le message « Utilisez HTTPS : le HTTP n'est accepté que sur cette machine ou un réseau privé. ». L'URL ne doit contenir ni identifiants, ni paramètres de requête.
+
+  En dehors de cette machine (`localhost`, `127.0.0.0/8`, `[::1]`), une adresse en HTTP clair n'est enregistrée qu'après confirmation (« Utiliser quand même le HTTP non chiffré »), puis la carte rappelle en permanence que la connexion n'est pas chiffrée : l'audio, les notes et la clé d'API passent en clair sur le réseau, et sur un autre réseau, ou Tailscale arrêté, une autre machine peut répondre à la même adresse. Voir [Passer son serveur en HTTPS](#passer-son-serveur-en-https).
 </Note>
 
 Ouvrez les **Paramètres** (<Kbd keys="Ctrl+," />). Les deux serveurs se trouvent dans le groupe « Mes serveurs » : **Transcription** et **Synthèse**. Une pastille à côté de chaque entrée indique l'état du serveur, rappelé en bas du menu (par exemple « Transcription · connectée »).
@@ -138,6 +140,15 @@ Si le serveur répond mais que le modèle choisi échoue, la carte affiche « Le
 Dans la reproduction ci-dessous, la page Synthèse est reliée à Ollama. Saisissez `http://localhost:1234/v1` (LM Studio) pour voir la liste des modèles changer. Choisissez « Élevé » dans « Effort de raisonnement », puis un autre modèle : l'effort revient à « Auto », car il dépend du modèle.
 
 <AppSettings section="intelligence" focus="effort" />
+
+## Passer son serveur en HTTPS
+
+HTTPS chiffre le trafic et prouve l'identité du serveur : c'est le seul moyen de garantir que l'audio et la clé d'API arrivent au bon serveur.
+
+- **Tailscale** : sur la machine du serveur, `tailscale serve --bg 8000` (remplacez `8000` par le port du serveur) le publie dans votre tailnet en `https://<machine>.<tailnet>.ts.net`, avec un certificat obtenu et renouvelé automatiquement. Activez d'abord HTTPS dans la console d'administration Tailscale (DNS → HTTPS Certificates). Saisissez ensuite cette adresse dans Syntheo, avec le chemin du serveur (par exemple `https://gpu.mon-tailnet.ts.net/v1`). Voir la [documentation de `tailscale serve`](https://tailscale.com/kb/1312/serve).
+- **Reverse proxy** : placez le serveur derrière un reverse proxy TLS, par exemple Caddy (`caddy reverse-proxy --from gpu.exemple.fr --to localhost:8000`), qui obtient lui aussi un certificat automatiquement pour un nom public.
+
+Un administrateur peut imposer une adresse HTTPS à tous les postes avec `managed_settings.json` : voir [Sécurité](/fr/security#déploiement-géré).
 
 ## Ce qui transite vers vos serveurs
 

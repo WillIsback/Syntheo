@@ -22,7 +22,7 @@ Les clés des serveurs d'inférence sont facultatives. Quand vous en saisissez u
 
 Syntheo exige HTTPS vers un serveur d'inférence, sauf vers un hôte privé : `localhost`, `[::1]`, noms en `.local`, noms Tailscale en `.ts.net`, plages `127.0.0.0/8`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16` et `100.64.0.0/10`. Une URL contenant des identifiants ou des paramètres de requête est refusée.
 
-HTTP en clair sur un réseau local reste lisible par quiconque y a accès. Dès que le serveur n'est pas sur la machine ou sur un réseau de confiance, placez-le derrière un reverse proxy TLS ou un VPN.
+HTTP en clair sur un réseau local reste lisible par quiconque y a accès, et la forme de l'adresse ne prouve pas l'identité du serveur : sur un autre réseau, ou Tailscale arrêté, une autre machine peut répondre à la même adresse. Hors de cette machine, Syntheo demande donc de confirmer une adresse en HTTP clair, puis la signale en permanence sur la carte du serveur. La même règle d'adresse est vérifiée au démarrage de chaque capture ou transcription. Passez le serveur en HTTPS dès que possible : voir [Passer son serveur en HTTPS](/fr/ai-setup#passer-son-serveur-en-https).
 
 ## Protéger le poste
 

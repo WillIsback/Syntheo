@@ -26,6 +26,8 @@ impl<'a, R: tauri::Runtime, M: tauri::Manager<R>> Listener2<'a, R, M> {
         &self,
         params: TranscriptionParams,
     ) -> Result<(), core::Error> {
+        // Revalidée ici, pas seulement à l'enregistrement (issue 646).
+        crate::validate_base_url(&params.base_url).map_err(core::Error::BatchError)?;
         let state = self.manager.state::<crate::SharedState>();
         let guard = state.lock().await;
         let app = guard.app.clone();

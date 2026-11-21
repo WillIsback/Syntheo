@@ -5011,6 +5011,10 @@ msgstr "Summary versions"
 msgid "Summary wasn't generated"
 msgstr "Summary wasn't generated"
 
+#: src/settings/ai/shared/cleartext-warning.tsx
+msgid "Switch to HTTPS"
+msgstr "Switch to HTTPS"
+
 #: src/templates/template-icon-picker.tsx
 msgid "Symbols"
 msgstr "Symbols"
@@ -5362,6 +5366,10 @@ msgstr "The API key is optional for servers without authentication. It is kept i
 #: src/session/components/living-document/transcription-failure.tsx
 msgid "The audio transcription failed."
 msgstr "The audio transcription failed."
+
+#: src/settings/ai/shared/cleartext-warning.tsx
+msgid "The audio, your notes and the API key would travel in clear text on the network. On another network, or with Tailscale stopped, another machine can answer at this address. Prefer HTTPS: tailscale serve publishes your server at https://machine.tailnet.ts.net with an automatic certificate."
+msgstr "The audio, your notes and the API key would travel in clear text on the network. On another network, or with Tailscale stopped, another machine can answer at this address. Prefer HTTPS: tailscale serve publishes your server at https://machine.tailnet.ts.net with an automatic certificate."
 
 #: src/templates/auto-form.tsx
 msgid "The Automatic format is unavailable."
@@ -5927,6 +5935,14 @@ msgstr "Unavailable: the models could not be downloaded (offline?). Listening wo
 msgid "Undo"
 msgstr "Undo"
 
+#: src/settings/ai/shared/cleartext-warning.tsx
+msgid "Unencrypted connection to {host}"
+msgstr "Unencrypted connection to {host}"
+
+#: src/settings/ai/shared/cleartext-warning.tsx
+msgid "Unencrypted connection: the audio, your notes and the API key travel in clear text on the network."
+msgstr "Unencrypted connection: the audio, your notes and the API key travel in clear text on the network."
+
 #: src/session/components/note-input/transcript/renderer/speaker-participants.ts
 msgid "Unknown"
 msgstr "Unknown"
@@ -6097,6 +6113,10 @@ msgstr "Use this protocol"
 #: src/lock/screen.tsx
 msgid "Use Touch ID or enter your password to view."
 msgstr "Use Touch ID or enter your password to view."
+
+#: src/settings/ai/shared/cleartext-warning.tsx
+msgid "Use unencrypted HTTP anyway"
+msgstr "Use unencrypted HTTP anyway"
 
 #: src/lock/screen.tsx
 msgid "Use Windows Hello face, PIN, or password to view."

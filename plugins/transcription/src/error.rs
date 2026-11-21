@@ -23,6 +23,9 @@ pub enum Error {
     StopSessionFailed,
     #[error("actor not found {0}")]
     ActorNotFound(String),
+    /// Adresse du serveur refusée par la règle d'URL (issue 646).
+    #[error("invalid server address: {0}")]
+    InvalidBaseUrl(String),
 }
 
 impl Serialize for Error {
