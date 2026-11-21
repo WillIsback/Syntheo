@@ -17,6 +17,7 @@ import {
   type MarkdownDiffChunk,
 } from "~/session/proposal-review";
 import { usePendingSessionProposals } from "~/session/queries";
+import { safeRehypePlugins } from "~/shared/safe-markdown";
 
 type SummaryProposal = {
   id: string;
@@ -164,6 +165,7 @@ function DiffChunk({ chunk }: { chunk: MarkdownDiffChunk }) {
     <Streamdown
       icons={streamdownIcons}
       components={streamdownComponents}
+      rehypePlugins={safeRehypePlugins}
       className={cn(["note-typography", "flex flex-col"])}
       linkSafety={{ enabled: false }}
     >

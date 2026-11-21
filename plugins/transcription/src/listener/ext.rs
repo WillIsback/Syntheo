@@ -180,6 +180,8 @@ impl<'a, R: tauri::Runtime, M: tauri::Manager<R>> Listener<'a, R, M> {
 
     #[tracing::instrument(skip_all)]
     pub async fn start_capture(&self, params: CaptureParams) -> Result<(), crate::Error> {
+        // Revalidée ici, pas seulement à l'enregistrement (issue 646).
+        crate::validate_base_url(&params.base_url).map_err(crate::Error::InvalidBaseUrl)?;
         let params: SessionParams = params.into();
         if let Some(cell) = registry::where_is(RootActor::name()) {
             let actor: ActorRef<RootMsg> = cell.into();

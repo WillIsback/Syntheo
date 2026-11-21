@@ -19,6 +19,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("streamdown", () => ({
+  defaultRehypePlugins: {},
   Streamdown: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="markdown">{children}</div>
   ),

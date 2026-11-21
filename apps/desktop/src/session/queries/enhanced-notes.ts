@@ -189,7 +189,7 @@ function mapEnhancedNoteRow(row: EnhancedNoteSqlRow): EnhancedNoteRecord {
   let content = row.body;
   if (content && row.body_format === "markdown") {
     try {
-      content = JSON.stringify(md2json(content));
+      content = JSON.stringify(md2json(content, { stripRemoteImages: true }));
     } catch (error) {
       console.error("[session] failed to decode summary Markdown", error);
     }

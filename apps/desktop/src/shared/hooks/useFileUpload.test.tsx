@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -46,6 +47,13 @@ function uploadFile() {
   } as unknown as File;
 }
 
+let queryClient = new QueryClient();
+function wrapper({ children }: { children: React.ReactNode }) {
+  return (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
+}
+
 describe("useFileUpload", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -75,7 +83,9 @@ describe("useFileUpload", () => {
 
   it("hashes, saves, and catalogs the final physical attachment before returning", async () => {
     const file = uploadFile();
-    const { result } = renderHook(() => useFileUpload("session-1"));
+    const { result } = renderHook(() => useFileUpload("session-1"), {
+      wrapper,
+    });
     let uploaded: Awaited<ReturnType<typeof result.current>> | undefined;
 
     await act(async () => {
@@ -103,10 +113,30 @@ describe("useFileUpload", () => {
     );
   });
 
+  // Issue 661 : la note enregistrée ne garde que l'identifiant ; le résolveur
+  // des pièces jointes doit relire la liste aussitôt.
+  it("refreshes the attachment resolver of the note after a save", async () => {
+    queryClient = new QueryClient();
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+    const { result } = renderHook(() => useFileUpload("session-1"), {
+      wrapper,
+    });
+
+    await act(async () => {
+      await result.current(uploadFile());
+    });
+
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: ["session", "session-1", "attachment-paths"],
+    });
+  });
+
   it("removes the exact newly saved file when catalog persistence fails", async () => {
     const catalogError = new Error("catalog unavailable");
     mocks.catalogLocalNoteAttachment.mockRejectedValue(catalogError);
-    const { result } = renderHook(() => useFileUpload("session-1"));
+    const { result } = renderHook(() => useFileUpload("session-1"), {
+      wrapper,
+    });
 
     await expect(result.current(uploadFile())).rejects.toBe(catalogError);
     expect(mocks.attachmentRemove).toHaveBeenCalledWith(
@@ -117,7 +147,9 @@ describe("useFileUpload", () => {
 
   it("does not write a file when checksum generation fails", async () => {
     mocks.sha256Hex.mockRejectedValue(new Error("checksum unavailable"));
-    const { result } = renderHook(() => useFileUpload("session-1"));
+    const { result } = renderHook(() => useFileUpload("session-1"), {
+      wrapper,
+    });
 
     await expect(result.current(uploadFile())).rejects.toThrow(
       "checksum unavailable",
@@ -133,7 +165,9 @@ describe("useFileUpload", () => {
       size: 4 * 1024 * 1024 + 1,
       arrayBuffer: vi.fn(),
     } as unknown as File;
-    const { result } = renderHook(() => useFileUpload("session-1"));
+    const { result } = renderHook(() => useFileUpload("session-1"), {
+      wrapper,
+    });
 
     await expect(result.current(file)).rejects.toThrow(
       "Attachments must be smaller than 4 MB",
@@ -151,7 +185,9 @@ describe("useFileUpload", () => {
         .fn()
         .mockResolvedValue(new ArrayBuffer(4 * 1024 * 1024 + 1)),
     } as unknown as File;
-    const { result } = renderHook(() => useFileUpload("session-1"));
+    const { result } = renderHook(() => useFileUpload("session-1"), {
+      wrapper,
+    });
 
     await expect(result.current(file)).rejects.toThrow(
       "Attachments must be smaller than 4 MB",
@@ -162,7 +198,9 @@ describe("useFileUpload", () => {
 
   it("saves folder materials against the folder path", async () => {
     const file = uploadFile();
-    const { result } = renderHook(() => useFolderMaterialUpload("CS 101"));
+    const { result } = renderHook(() => useFolderMaterialUpload("CS 101"), {
+      wrapper,
+    });
     let uploaded: Awaited<ReturnType<typeof result.current>> | undefined;
 
     await act(async () => {
@@ -191,7 +229,9 @@ describe("useFileUpload", () => {
   it("removes a folder material file when catalog persistence fails", async () => {
     const catalogError = new Error("catalog unavailable");
     mocks.catalogLocalFolderMaterial.mockRejectedValue(catalogError);
-    const { result } = renderHook(() => useFolderMaterialUpload("CS 101"));
+    const { result } = renderHook(() => useFolderMaterialUpload("CS 101"), {
+      wrapper,
+    });
 
     await expect(result.current(uploadFile())).rejects.toBe(catalogError);
     expect(mocks.folderAttachmentRemove).toHaveBeenCalledWith(

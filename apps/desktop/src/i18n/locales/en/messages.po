@@ -55,6 +55,11 @@ msgstr "(Unavailable — using the default output)"
 msgid "{0, plural, one {… # other} other {… # others}}"
 msgstr "{0, plural, one {… # other} other {… # others}}"
 
+#. placeholder {0}: approval.transcriptReplacements
+#: src/chat/components/message/tool/approval.tsx
+msgid "{0, plural, one {# change in the transcript} other {# changes in the transcript}}"
+msgstr "{0, plural, one {# change in the transcript} other {# changes in the transcript}}"
+
 #. placeholder {0}: folder.meetingCount
 #. placeholder {0}: row.noteCount
 #. placeholder {0}: stats.count
@@ -63,6 +68,31 @@ msgstr "{0, plural, one {… # other} other {… # others}}"
 #: src/home/folder-cards.tsx
 msgid "{0, plural, one {# meeting} other {# meetings}}"
 msgstr "{0, plural, one {# meeting} other {# meetings}}"
+
+#. placeholder {0}: rejected.length
+#: src/chat/components/message/tool/session-correction.tsx
+msgid "{0, plural, one {# suggested term was ignored: a dictionary term is a short name, without links or formatting.} other {# suggested terms were ignored: a dictionary term is a short name, without links or formatting.}}"
+msgstr "{0, plural, one {# suggested term was ignored: a dictionary term is a short name, without links or formatting.} other {# suggested terms were ignored: a dictionary term is a short name, without links or formatting.}}"
+
+#. placeholder {0}: approval.summaries
+#: src/chat/components/message/tool/approval.tsx
+msgid "{0, plural, one {# summary} other {# summaries}}"
+msgstr "{0, plural, one {# summary} other {# summaries}}"
+
+#. placeholder {0}: approval.meetingCount - approval.meetingTitles.length
+#: src/chat/components/message/tool/approval.tsx
+msgid "{0, plural, one {and # other} other {and # others}}"
+msgstr "{0, plural, one {and # other} other {and # others}}"
+
+#. placeholder {0}: approval.meetingCount
+#: src/chat/components/message/tool/approval.tsx
+msgid "{0, plural, one {Move # meeting to this folder:} other {Move # meetings to this folder:}}"
+msgstr "{0, plural, one {Move # meeting to this folder:} other {Move # meetings to this folder:}}"
+
+#. placeholder {0}: approval.meetingCount
+#: src/chat/components/message/tool/approval.tsx
+msgid "{0, plural, one {Remove # meeting from its folder:} other {Remove # meetings from their folder:}}"
+msgstr "{0, plural, one {Remove # meeting from its folder:} other {Remove # meetings from their folder:}}"
 
 #. placeholder {0}: group.sessionIds.length
 #: src/sidebar/toast/undo-delete-toast.tsx
@@ -414,6 +444,10 @@ msgstr "Add to favorites"
 msgid "Add webhook"
 msgstr "Add webhook"
 
+#: src/chat/components/message/tool/session-correction.tsx
+msgid "Added to your dictionary:"
+msgstr "Added to your dictionary:"
+
 #: src/session/components/living-document/summary-review.tsx
 msgid "Added:"
 msgstr "Added:"
@@ -490,6 +524,10 @@ msgstr "Allow and run"
 msgid "Allow microphone access for Syntheo, then try again."
 msgstr "Allow microphone access for Syntheo, then try again."
 
+#: src/chat/components/message/tool/approval.tsx
+msgid "Also add these terms to your dictionary"
+msgstr "Also add these terms to your dictionary"
+
 #: src/session/components/outer-header/overflow/always-on-top.tsx
 msgid "Always on Top"
 msgstr "Always on Top"
@@ -535,6 +573,10 @@ msgstr "Application menu"
 #: src/automations/labels.ts
 msgid "Applies an instruction (tasks, short summary, follow-up message); the result feeds the next steps."
 msgstr "Applies an instruction (tasks, short summary, follow-up message); the result feeds the next steps."
+
+#: src/chat/components/message/tool/approval.tsx
+msgid "Apply"
+msgstr "Apply"
 
 #: src/automations/chat-prompt.ts
 #: src/settings/automations/advanced-step-proposals.tsx
@@ -1209,6 +1251,18 @@ msgstr "Copy this signing secret now — it is only shown once."
 msgid "Copy to the clipboard"
 msgstr "Copy to the clipboard"
 
+#: src/chat/components/message/tool/session-correction.tsx
+msgid "Correct the note — waiting for your review"
+msgstr "Correct the note — waiting for your review"
+
+#: src/chat/components/message/tool/session-correction.tsx
+msgid "Correction declined"
+msgstr "Correction declined"
+
+#: src/chat/components/message/tool/session-correction.tsx
+msgid "Correction failed"
+msgstr "Correction failed"
+
 #. placeholder {0}: error.message
 #: src/settings/developers/cli.tsx
 msgid "Could not check the CLI: {0}"
@@ -1393,6 +1447,7 @@ msgid "Decisions"
 msgstr "Decisions"
 
 #: src/automations/chat-prompt.ts
+#: src/chat/components/message/tool/approval.tsx
 #: src/chat/components/message/tool/edit-summary.tsx
 #: src/edit/tab-content.tsx
 #: src/session/components/living-document/summary-review.tsx
@@ -2243,6 +2298,10 @@ msgstr "Ignore these apps?"
 msgid "Ignore this app?"
 msgstr "Ignore this app?"
 
+#: src/shared/safe-markdown.tsx
+msgid "Image unavailable"
+msgstr "Image unavailable"
+
 #: src/session/components/capsule/import-progress.tsx
 msgid "Import"
 msgstr "Import"
@@ -2578,6 +2637,10 @@ msgstr "Live transcription resumed."
 msgid "Live transcription: {language}"
 msgstr "Live transcription: {language}"
 
+#: src/shared/safe-markdown.tsx
+msgid "Load image"
+msgstr "Load image"
+
 #: src/templates/auto-form.tsx
 msgid "Loading Auto format..."
 msgstr "Loading Auto format..."
@@ -2697,6 +2760,10 @@ msgstr "Medium"
 msgid "Meeting chat"
 msgstr "Meeting chat"
 
+#: src/chat/components/message/tool/move-tools.tsx
+msgid "Meeting contents moved"
+msgstr "Meeting contents moved"
+
 #: src/onboarding/permissions.tsx
 msgid "Meeting details access turned on"
 msgstr "Meeting details access turned on"
@@ -2730,6 +2797,10 @@ msgstr "Meeting types"
 #: src/sidebar/settings-nav-groups.ts
 msgid "Meetings"
 msgstr "Meetings"
+
+#: src/chat/components/message/tool/move-tools.tsx
+msgid "Meetings moved"
+msgstr "Meetings moved"
 
 #: src/contacts/organization-details.tsx
 msgid "member"
@@ -2892,9 +2963,31 @@ msgstr "Move “{name}” to…"
 msgid "Move “{title}” to…"
 msgstr "Move “{title}” to…"
 
+#: src/chat/components/message/tool/move-tools.tsx
+msgid "Move declined"
+msgstr "Move declined"
+
+#: src/chat/components/message/tool/move-tools.tsx
+msgid "Move failed"
+msgstr "Move failed"
+
+#: src/chat/components/message/tool/move-tools.tsx
+msgid "Move meeting contents — waiting for your review"
+msgstr "Move meeting contents — waiting for your review"
+
+#: src/chat/components/message/tool/move-tools.tsx
+msgid "Move meetings — waiting for your review"
+msgstr "Move meetings — waiting for your review"
+
 #: src/templates/sections-editor.tsx
 msgid "Move section {position}"
 msgstr "Move section {position}"
+
+#. placeholder {0}: approval.sourceTitle
+#. placeholder {1}: approval.targetTitle
+#: src/chat/components/message/tool/approval.tsx
+msgid "Move the recording, transcript, summaries and notes of “{0}” to “{1}”."
+msgstr "Move the recording, transcript, summaries and notes of “{0}” to “{1}”."
 
 #: src/folders/folder-actions.tsx
 #: src/folders/folder-editor.tsx
@@ -3291,6 +3384,10 @@ msgstr "Note completed: {noteTitle}"
 #: src/session/components/capsule/session-capsule.tsx
 msgid "Note copied to clipboard"
 msgstr "Note copied to clipboard"
+
+#: src/chat/components/message/tool/session-correction.tsx
+msgid "Note corrected"
+msgstr "Note corrected"
 
 #: src/automations/action-runners.ts
 msgid "Note created: {noteTitle}"
@@ -3992,6 +4089,10 @@ msgstr "Remove the {name} folder filter"
 #: src/shared/open-note-dialog.tsx
 msgid "Remove the Settings filter"
 msgstr "Remove the Settings filter"
+
+#: src/chat/components/message/tool/session-correction.tsx
+msgid "Removed from your dictionary:"
+msgstr "Removed from your dictionary:"
 
 #: src/session/components/living-document/summary-review.tsx
 msgid "Removed text is struck through, added text is highlighted."
@@ -4910,6 +5011,10 @@ msgstr "Summary versions"
 msgid "Summary wasn't generated"
 msgstr "Summary wasn't generated"
 
+#: src/settings/ai/shared/cleartext-warning.tsx
+msgid "Switch to HTTPS"
+msgstr "Switch to HTTPS"
+
 #: src/templates/template-icon-picker.tsx
 msgid "Symbols"
 msgstr "Symbols"
@@ -5225,6 +5330,10 @@ msgstr "Text"
 msgid "Text provenance"
 msgstr "Text provenance"
 
+#: src/chat/components/message/tool/session-correction.tsx
+msgid "Text to correct not found"
+msgstr "Text to correct not found"
+
 #. placeholder {0}: status.commandName
 #: src/settings/developers/cli.tsx
 msgid "The {0} command on your PATH opens the desktop app. Use the CLI's absolute path."
@@ -5257,6 +5366,10 @@ msgstr "The API key is optional for servers without authentication. It is kept i
 #: src/session/components/living-document/transcription-failure.tsx
 msgid "The audio transcription failed."
 msgstr "The audio transcription failed."
+
+#: src/settings/ai/shared/cleartext-warning.tsx
+msgid "The audio, your notes and the API key would travel in clear text on the network. On another network, or with Tailscale stopped, another machine can answer at this address. Prefer HTTPS: tailscale serve publishes your server at https://machine.tailnet.ts.net with an automatic certificate."
+msgstr "The audio, your notes and the API key would travel in clear text on the network. On another network, or with Tailscale stopped, another machine can answer at this address. Prefer HTTPS: tailscale serve publishes your server at https://machine.tailnet.ts.net with an automatic certificate."
 
 #: src/templates/auto-form.tsx
 msgid "The Automatic format is unavailable."
@@ -5297,6 +5410,10 @@ msgstr "The command failed (code {code})."
 #: src/automations/action-runners.ts
 msgid "The command was not confirmed, so it did not run."
 msgstr "The command was not confirmed, so it did not run."
+
+#: src/chat/components/message/tool/session-correction.tsx
+msgid "The correction could not be applied."
+msgstr "The correction could not be applied."
 
 #: src/settings/general/update-section.tsx
 msgid "The download was interrupted. Try again."
@@ -5346,6 +5463,14 @@ msgstr "The local model lists the actions to take and adds them to the vault."
 msgid "The local model returned an empty answer."
 msgstr "The local model returned an empty answer."
 
+#: src/chat/components/message/tool/move-tools.tsx
+msgid "The meeting contents could not be moved."
+msgstr "The meeting contents could not be moved."
+
+#: src/chat/components/message/tool/move-tools.tsx
+msgid "The meetings could not be moved."
+msgstr "The meetings could not be moved."
+
 #: src/chat/components/message/tool/edit-summary.tsx
 msgid "The memo edit could not be prepared."
 msgstr "The memo edit could not be prepared."
@@ -5365,6 +5490,10 @@ msgstr "The name could not be saved. Try again."
 #: src/settings/automations/workflow-test-result.tsx
 msgid "The next steps were not run."
 msgstr "The next steps were not run."
+
+#: src/chat/components/message/tool/approval.tsx
+msgid "The note title"
+msgstr "The note title"
 
 #: src/settings/dictation.tsx
 msgid "The one that captures your voice."
@@ -5446,6 +5575,10 @@ msgstr "The summary still mentions unnamed speakers."
 #: src/shared/keychain.ts
 msgid "The system keyring is unavailable, so Syntheo can't save this key. Start your desktop's keyring service (GNOME Keyring or KWallet, for example), then try again."
 msgstr "The system keyring is unavailable, so Syntheo can't save this key. Start your desktop's keyring service (GNOME Keyring or KWallet, for example), then try again."
+
+#: src/chat/components/message/tool/session-correction.tsx
+msgid "The terms could not be removed."
+msgstr "The terms could not be removed."
 
 #: src/settings/automations/workflow-test-result.tsx
 msgid "The test changes neither the last run nor the list of notes already processed."
@@ -5540,6 +5673,11 @@ msgstr "This advanced step runs a program on your computer. It is only added if 
 #: src/settings/automations/advanced-step-proposals.tsx
 msgid "This advanced step sends the note's data outside your computer, to this address. It is only added if you confirm."
 msgstr "This advanced step sends the note's data outside your computer, to this address. It is only added if you confirm."
+
+#. placeholder {0}: approval.sessionTitle
+#: src/chat/components/message/tool/approval.tsx
+msgid "This correction changes another note: {0}"
+msgstr "This correction changes another note: {0}"
 
 #: src/session/components/version-history-dialog.tsx
 msgid "This device"
@@ -5790,11 +5928,20 @@ msgstr "Type a name"
 msgid "Unavailable: the models could not be downloaded (offline?). Listening works without it."
 msgstr "Unavailable: the models could not be downloaded (offline?). Listening works without it."
 
+#: src/chat/components/message/tool/session-correction.tsx
 #: src/main/windows-title-bar.tsx
 #: src/session/move-note.tsx
 #: src/sidebar/toast/undo-delete-toast.tsx
 msgid "Undo"
 msgstr "Undo"
+
+#: src/settings/ai/shared/cleartext-warning.tsx
+msgid "Unencrypted connection to {host}"
+msgstr "Unencrypted connection to {host}"
+
+#: src/settings/ai/shared/cleartext-warning.tsx
+msgid "Unencrypted connection: the audio, your notes and the API key travel in clear text on the network."
+msgstr "Unencrypted connection: the audio, your notes and the API key travel in clear text on the network."
 
 #: src/session/components/note-input/transcript/renderer/speaker-participants.ts
 msgid "Unknown"
@@ -5966,6 +6113,10 @@ msgstr "Use this protocol"
 #: src/lock/screen.tsx
 msgid "Use Touch ID or enter your password to view."
 msgstr "Use Touch ID or enter your password to view."
+
+#: src/settings/ai/shared/cleartext-warning.tsx
+msgid "Use unencrypted HTTP anyway"
+msgstr "Use unencrypted HTTP anyway"
 
 #: src/lock/screen.tsx
 msgid "Use Windows Hello face, PIN, or password to view."

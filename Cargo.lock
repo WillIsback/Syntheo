@@ -2626,6 +2626,7 @@ dependencies = [
  "host",
  "intercept",
  "pico-args",
+ "regex",
  "reqwest 0.13.5",
  "serde",
  "serde_json",
@@ -2684,6 +2685,8 @@ dependencies = [
  "tempfile",
  "tokio",
  "tracing",
+ "url",
+ "urlpattern",
  "wiremock",
 ]
 
@@ -12074,10 +12077,12 @@ dependencies = [
  "tauri",
  "tauri-plugin",
  "tauri-plugin-db",
+ "tauri-plugin-store2",
  "tauri-specta",
  "tempfile",
  "tokio",
  "tracing",
+ "url",
  "uuid",
 ]
 

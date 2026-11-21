@@ -95,3 +95,25 @@ fn event_subscription_limit_allows_replacements_but_rejects_growth() {
         false
     ));
 }
+
+// Issue 645 : commandes jamais transmises par le relay.
+#[test]
+fn denies_commands_that_run_programs_or_read_secrets() {
+    for cmd in [
+        "plugin:local-api|run_automation_command",
+        "plugin:store2|get_secret",
+        "plugin:store2|set_secret",
+        "plugin:store2|delete_secret",
+        "plugin:opener2|open_path",
+    ] {
+        assert!(super::is_denied_command(cmd), "{cmd}");
+    }
+    for cmd in [
+        "plugin:db|execute",
+        "plugin:db|execute_proxy",
+        "plugin:store2|get_str",
+        "plugin:event|listen",
+    ] {
+        assert!(!super::is_denied_command(cmd), "{cmd}");
+    }
+}

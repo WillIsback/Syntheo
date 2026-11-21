@@ -1,6 +1,8 @@
 import { tool } from "ai";
 import { z } from "zod";
 
+import { requestToolApproval } from "./pending-tool-approval-store";
+
 import { liveQueryClient } from "~/db";
 import { createNamedFolder } from "~/session/folder-catalog";
 import { normalizeFolderPath } from "~/session/folders";
@@ -55,6 +57,9 @@ export const buildCreateFolderTool = () =>
       folder_path: await createNamedFolder(folder_path),
     }),
   });
+
+// Réunions nommées dans la carte de validation ; les autres sont comptées.
+const APPROVAL_TITLE_PREVIEW = 5;
 
 async function loadMeetingFolder(meetingId: string) {
   const rows = await liveQueryClient.execute<{
@@ -146,14 +151,17 @@ function summarizeMoveStatus(
 export const buildMoveMeetingsToFolderTool = () =>
   tool({
     description:
-      "Move up to 200 existing meetings into an existing folder, or use an empty folder_path to unfile them. This changes folder assignment only; it does not merge meetings or move contents between meetings. Resolve meeting IDs with list_meetings or get_recurring_meeting_history and use the exact destination from list_folders or create_folder. For all/every requests, follow meeting pagination and submit each batch. Results report moved, unchanged, and failed meetings separately; never claim failures succeeded.",
+      "Move up to 200 existing meetings into an existing folder, or use an empty folder_path to unfile them. This changes folder assignment only; it does not merge meetings or move contents between meetings. Resolve meeting IDs with list_meetings or get_recurring_meeting_history and use the exact destination from list_folders or create_folder. For all/every requests, follow meeting pagination and submit each batch. Results report moved, unchanged, and failed meetings separately; never claim failures succeeded. The user confirms each batch in the tool card before anything moves.",
     inputSchema: z.object({
       meeting_ids: z.array(z.string().trim().min(1)).min(1).max(200),
       folder_path: folderPathSchema.describe(
         "Exact destination folder path, or an empty string to remove folder assignment",
       ),
     }),
-    execute: async ({ meeting_ids, folder_path }, { abortSignal }) => {
+    execute: async (
+      { meeting_ids, folder_path },
+      { abortSignal, toolCallId },
+    ) => {
       const path = normalizeFolderPath(folder_path);
       if (
         path === null ||
@@ -167,7 +175,35 @@ export const buildMoveMeetingsToFolderTool = () =>
         };
       }
 
-      const results = await Array.from(new Set(meeting_ids)).reduce(
+      // Validation (issue 644) : rien ne change de dossier sans l'accord de
+      // l'utilisateur dans la carte de l'outil.
+      const ids = Array.from(new Set(meeting_ids));
+      const titles = await Promise.all(
+        ids.slice(0, APPROVAL_TITLE_PREVIEW).map(async (id) => {
+          const meeting = await loadMeetingFolder(id);
+          return meeting ? meeting.title : id;
+        }),
+      );
+      const decision = await requestToolApproval(
+        toolCallId,
+        {
+          kind: "move_meetings_to_folder",
+          folderPath: path,
+          meetingTitles: titles,
+          meetingCount: ids.length,
+        },
+        abortSignal,
+      );
+      if (!decision.approved) {
+        return {
+          status: "declined" as const,
+          message:
+            "The user declined this move. Nothing was changed. Do not retry unless the user asks again.",
+          results: [] as MoveMeetingResult[],
+        };
+      }
+
+      const results = await ids.reduce(
         async (previous, meetingId) => {
           const accumulated = await previous;
           accumulated.push(

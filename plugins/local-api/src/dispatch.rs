@@ -5,6 +5,10 @@ use hmac::{Hmac, KeyInit, Mac};
 use sha2::Sha256;
 use sqlx::SqlitePool;
 
+use crate::webhook_secrets::{
+    SharedSecretStore, migrate_secrets, move_to_keychain, resolve_secret,
+};
+
 pub const EVENT_MEETING_COMPLETED: &str = "meeting.completed";
 pub const EVENT_NOTE_ENHANCED: &str = "note.enhanced";
 pub const EVENT_TEST: &str = "webhook.test";
@@ -139,6 +143,7 @@ async fn meeting_payload(pool: &SqlitePool, meeting_id: &str) -> Result<serde_js
 
 pub async fn create_endpoint(
     pool: &SqlitePool,
+    secrets: &SharedSecretStore,
     url: &str,
     events: &[String],
 ) -> Result<crate::CreatedWebhook, String> {
@@ -180,6 +185,15 @@ pub async fn create_endpoint(
     )
     .await
     .map_err(|error| error.to_string())?;
+    // Secret affiché une fois à l'utilisateur, puis gardé dans le trousseau.
+    let row = if move_to_keychain(secrets, pool, &row.id, &secret).await {
+        syntheo_db_app::get_webhook_endpoint(pool, &row.id)
+            .await
+            .map_err(|error| error.to_string())?
+            .unwrap_or(row)
+    } else {
+        row
+    };
 
     Ok(crate::CreatedWebhook {
         info: crate::WebhookInfo::from(row),
@@ -191,10 +205,12 @@ pub async fn create_endpoint(
 /// in background tasks; the returned count is the number of endpoints targeted.
 pub async fn dispatch_event(
     pool: &SqlitePool,
+    secrets: &SharedSecretStore,
     event: &str,
     meeting_id: &str,
 ) -> Result<usize, String> {
     let fanout_permit = acquire_fanout_slot().await?;
+    migrate_secrets(secrets, pool).await;
     let mut endpoints = syntheo_db_app::list_active_webhook_endpoints(pool)
         .await
         .map_err(|error| error.to_string())?
@@ -216,12 +232,14 @@ pub async fn dispatch_event(
     let body = Bytes::from(envelope(event, meeting_payload(pool, meeting_id).await?));
     let targeted = endpoints.len();
     let pool = pool.clone();
+    let secrets = secrets.clone();
     let event = std::sync::Arc::<str>::from(event);
     let delivery_slots = delivery_slots();
     tokio::spawn(async move {
         let _fanout_permit = fanout_permit;
         run_bounded(endpoints, MAX_CONCURRENT_DELIVERIES, move |endpoint| {
             let pool = pool.clone();
+            let secrets = secrets.clone();
             let event = event.clone();
             let body = body.clone();
             let delivery_slots = delivery_slots.clone();
@@ -229,7 +247,7 @@ pub async fn dispatch_event(
                 let Ok(_permit) = delivery_slots.acquire_owned().await else {
                     return;
                 };
-                deliver_with_retry(&pool, &endpoint, &event, &body).await;
+                deliver_with_retry(&pool, &secrets, &endpoint, &event, &body).await;
             }
         })
         .await;
@@ -265,6 +283,7 @@ where
 
 pub async fn send_test(
     pool: &SqlitePool,
+    secrets: &SharedSecretStore,
     endpoint: &syntheo_db_app::WebhookEndpointRow,
 ) -> Result<crate::WebhookDelivery, String> {
     let _permit = acquire_test_delivery_slot().await?;
@@ -273,7 +292,7 @@ pub async fn send_test(
         serde_json::json!({ "message": "This is a test delivery from Syntheo." }),
     ));
     let delivery_id = format!("dlv_{}", uuid::Uuid::new_v4().simple());
-    let status = deliver_once(endpoint, EVENT_TEST, &body, &delivery_id).await;
+    let status = deliver_once(secrets, endpoint, EVENT_TEST, &body, &delivery_id).await;
     let delivered = status.delivered;
     let status_text = truncate_status(&status.status);
     if let Err(error) =
@@ -294,6 +313,7 @@ struct DeliveryOutcome {
 
 async fn deliver_with_retry(
     pool: &SqlitePool,
+    secrets: &SharedSecretStore,
     endpoint: &syntheo_db_app::WebhookEndpointRow,
     event: &str,
     body: &Bytes,
@@ -307,16 +327,19 @@ async fn deliver_with_retry(
         if *delay > 0 {
             tokio::time::sleep(std::time::Duration::from_secs(*delay)).await;
         }
-        outcome = deliver_once(endpoint, event, body, &delivery_id).await;
+        outcome = deliver_once(secrets, endpoint, event, body, &delivery_id).await;
         if outcome.delivered {
             break;
         }
     }
 
+    // Identifiant et hôte seulement : le chemin d'une URL de webhook porte
+    // souvent un jeton (Slack, Discord, n8n), issue 653.
     if !outcome.delivered {
         tracing::warn!(
-            "[local-api] webhook delivery to {} failed: {}",
-            endpoint.url,
+            "[local-api] webhook {} delivery to {} failed: {}",
+            endpoint.id,
+            webhook_host(&endpoint.url),
             outcome.status
         );
     }
@@ -329,11 +352,21 @@ async fn deliver_with_retry(
 }
 
 async fn deliver_once(
+    secrets: &SharedSecretStore,
     endpoint: &syntheo_db_app::WebhookEndpointRow,
     event: &str,
     body: &Bytes,
     delivery_id: &str,
 ) -> DeliveryOutcome {
+    let secret = match resolve_secret(secrets, endpoint).await {
+        Ok(secret) => secret,
+        Err(error) => {
+            return DeliveryOutcome {
+                delivered: false,
+                status: format!("error: {error}"),
+            };
+        }
+    };
     let client = match reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(DELIVERY_TIMEOUT_SECS))
         .build()
@@ -358,10 +391,7 @@ async fn deliver_once(
         )
         .header(
             "x-syntheo-signature",
-            format!(
-                "sha256={}",
-                sign_payload_bytes(&endpoint.secret, body.as_ref())
-            ),
+            format!("sha256={}", sign_payload_bytes(&secret, body.as_ref())),
         )
         .body(body.clone())
         .send()
@@ -374,9 +404,38 @@ async fn deliver_once(
         },
         Err(error) => DeliveryOutcome {
             delivered: false,
-            status: format!("error: {error}"),
+            status: delivery_error_status(error),
         },
     }
+}
+
+/// Hôte (et port) d'une URL de webhook, sans chemin ni requête.
+pub(crate) fn webhook_host(url: &str) -> String {
+    url::Url::parse(url)
+        .ok()
+        .and_then(|url| {
+            url.host_str().map(|host| match url.port() {
+                Some(port) => format!("{host}:{port}"),
+                None => host.to_string(),
+            })
+        })
+        .unwrap_or_else(|| "invalid-url".to_string())
+}
+
+/// Erreur réseau sans l'URL, que reqwest répète sinon dans son message.
+pub(crate) fn delivery_error_status(error: reqwest::Error) -> String {
+    let kind = if error.is_timeout() {
+        "timeout"
+    } else if error.is_connect() {
+        "connection failed"
+    } else if error.is_redirect() {
+        "redirect"
+    } else if error.is_request() {
+        "request failed"
+    } else {
+        "error"
+    };
+    format!("error: {kind}: {}", error.without_url())
 }
 
 fn truncate_status(status: &str) -> String {

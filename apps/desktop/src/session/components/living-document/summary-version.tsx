@@ -14,6 +14,7 @@ import { flushDatabaseWrites } from "~/db/write-queue";
 import { useEnhancedNoteActions } from "~/session/components/note-input/enhanced-actions";
 import { noteChangedSinceSummary } from "~/session/note-fingerprint";
 import { type SummaryVersionRecord, useEnhancedNote } from "~/session/queries";
+import { safeRehypePlugins } from "~/shared/safe-markdown";
 
 // Une version remplacée d'une synthèse (issue 415), en lecture seule : la
 // version actuelle l'emporte toujours, on ne peut pas en promouvoir une
@@ -67,6 +68,7 @@ export function SummaryVersionView({
         <Streamdown
           icons={streamdownIcons}
           components={streamdownComponents}
+          rehypePlugins={safeRehypePlugins}
           className={cn(["note-typography", "flex flex-col"])}
           linkSafety={{ enabled: false }}
         >

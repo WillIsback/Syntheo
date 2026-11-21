@@ -1,15 +1,17 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { useForm } from "@tanstack/react-form";
 import { useMutation } from "@tanstack/react-query";
-import { type ReactNode, useId, useState } from "react";
+import { type ReactNode, useId, useRef, useState } from "react";
 
 import {
+  isCleartextRemoteUrl,
   ProviderCredentialError,
   validateProviderBaseUrl,
 } from "@syntheo/provider-validation";
 import { CircleNotch } from "@syntheo/ui/components/icons";
 import { Button } from "@syntheo/ui/components/ui/button";
 
+import { CleartextConfirmation, CleartextNotice } from "./cleartext-warning";
 import { FieldLabel, SERVER_INPUT_CLASS } from "./server-card";
 import type { ServerKind } from "./server-connection";
 
@@ -86,6 +88,13 @@ function ServerAddressFields({
   const [urlError, setUrlError] = useState<string | null>(null);
   const [keychainError, setKeychainError] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
+  // HTTP clair hors de cette machine (issue 646) : une adresse déjà
+  // enregistrée reste acceptée (avec le rappel permanent) ; une nouvelle
+  // adresse attend la confirmation avant d'être enregistrée.
+  const confirmedHttpUrl = useRef<string | null>(
+    isCleartextRemoteUrl(initial.base_url) ? initial.base_url.trim() : null,
+  );
+  const [pendingHttpUrl, setPendingHttpUrl] = useState<string | null>(null);
 
   const form = useForm({
     defaultValues: initial,
@@ -104,6 +113,15 @@ function ServerAddressFields({
         }
       }
       setUrlError(null);
+      if (
+        baseUrl &&
+        isCleartextRemoteUrl(baseUrl) &&
+        confirmedHttpUrl.current !== baseUrl
+      ) {
+        setPendingHttpUrl(baseUrl);
+        return;
+      }
+      setPendingHttpUrl(null);
       try {
         await mutation.mutateAsync({
           base_url: baseUrl,
@@ -213,6 +231,23 @@ function ServerAddressFields({
             {urlError ?? saveError}
           </p>
         ) : null}
+        <form.Subscribe selector={(state) => state.values.base_url.trim()}>
+          {(baseUrl) =>
+            pendingHttpUrl && pendingHttpUrl === baseUrl ? (
+              <CleartextConfirmation
+                host={new URL(baseUrl).host}
+                onConfirm={() => {
+                  confirmedHttpUrl.current = baseUrl;
+                  setPendingHttpUrl(null);
+                  void form.handleSubmit();
+                }}
+              />
+            ) : confirmedHttpUrl.current === baseUrl &&
+              isCleartextRemoteUrl(baseUrl) ? (
+              <CleartextNotice />
+            ) : null
+          }
+        </form.Subscribe>
       </div>
       <details>
         <summary className="text-muted-foreground hover:text-foreground cursor-pointer text-sm">

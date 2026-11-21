@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import {
+  isCleartextRemoteUrl,
+  isLoopbackHost,
   isPrivateHost,
   ProviderCredentialError,
   providerCredentialIdentity,
@@ -308,4 +310,38 @@ test("isPrivateHost_refuse_les_imitations_du_suffixe_ts_net", () => {
     () => validateProviderBaseUrl("http://evil-ts.net:9000"),
     /Utilisez HTTPS : le HTTP n'est accepté que sur cette machine ou un réseau privé\./,
   );
+});
+
+// Issue 646 : HTTP clair hors de cette machine signalé, sans exemption sur la
+// forme de l'adresse.
+test("isCleartextRemoteUrl_signale_tout_http_hors_de_cette_machine", () => {
+  for (const url of [
+    "http://192.168.1.87:8000/v1",
+    "http://gpu.tailnet.ts.net:8000/v1",
+    "http://100.64.0.1:8000/v1",
+    "http://10.0.0.5:8000",
+    "http://gpu.local:8000",
+  ]) {
+    assert.equal(isCleartextRemoteUrl(url), true, url);
+  }
+  for (const url of [
+    "http://localhost:8000/v1",
+    "http://127.0.0.1:8000/v1",
+    "http://127.8.9.10:8000",
+    "http://[::1]:8000/v1",
+    "https://192.168.1.87:8000/v1",
+    "https://gpu.tailnet.ts.net/v1",
+    "pas une url",
+  ]) {
+    assert.equal(isCleartextRemoteUrl(url), false, url);
+  }
+});
+
+test("isLoopbackHost_ne_reconnait_que_cette_machine", () => {
+  for (const host of ["localhost", "127.0.0.1", "127.255.0.1", "[::1]"]) {
+    assert.equal(isLoopbackHost(host), true, host);
+  }
+  for (const host of ["192.168.1.87", "gpu.local", "a.ts.net", "128.0.0.1"]) {
+    assert.equal(isLoopbackHost(host), false, host);
+  }
 });

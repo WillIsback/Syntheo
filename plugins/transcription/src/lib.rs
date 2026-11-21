@@ -298,3 +298,26 @@ mod test {
         std::fs::write(OUTPUT_FILE, format!("// @ts-nocheck\n{content}")).unwrap();
     }
 }
+
+/// Adresse du serveur d'inférence revalidée au démarrage (issue 646). Une
+/// adresse vide passe : elle échoue plus loin, comme avant.
+pub(crate) fn validate_base_url(base_url: &str) -> std::result::Result<(), String> {
+    if base_url.trim().is_empty() {
+        return Ok(());
+    }
+    owhisper_client::validate_provider_base_url(base_url)
+        .map(|_| ())
+        .map_err(|error| error.to_string())
+}
+
+#[cfg(test)]
+mod base_url_tests {
+    #[test]
+    fn start_refuses_public_http_and_garbage() {
+        assert!(super::validate_base_url("http://192.168.1.87:8000/v1?provider=nvidia").is_ok());
+        assert!(super::validate_base_url("https://api.example.com/v1").is_ok());
+        assert!(super::validate_base_url("").is_ok());
+        assert!(super::validate_base_url("http://api.example.com/v1").is_err());
+        assert!(super::validate_base_url("::not a url::").is_err());
+    }
+}

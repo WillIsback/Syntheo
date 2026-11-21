@@ -22,14 +22,16 @@ Tout se trouve dans le dossier de données de l'application :
 | --- | --- |
 | Transcriptions, notes, comptes rendus, contacts, dossiers (fil rouge, ordre du jour de la prochaine réunion, modèle par défaut), automatisations, réglages | Base SQLite locale `app.db` |
 | Index de recherche plein texte | Dossier de données (copie indexée des transcriptions et des notes) |
-| Journaux techniques | Dossier de logs de l'application, avec masquage du contenu sensible et rotation par taille |
-| Clés API des serveurs d'inférence | Trousseau du système (Secret Service sous Linux, Gestionnaire d'informations d'identification sous Windows), jamais en clair dans la base |
+| Journaux techniques | Dossier de logs de l'application, avec masquage du contenu sensible (clés et jetons, adresses, identifiants) et rotation par taille. Pour un webhook en échec, seul l'hôte est journalisé, jamais le chemin de l'URL |
+| Clés API des serveurs d'inférence et secrets de signature des webhooks | Trousseau du système (Secret Service sous Linux, Gestionnaire d'informations d'identification sous Windows), jamais en clair dans la base. Sans trousseau disponible sous Linux, le secret d'un webhook reste dans la base |
 | Exports | Dossier choisi dans « Emplacement d'export » (**Paramètres → Profil**) |
 | Audio | **Nulle part** : voir ci-dessous |
 
 <Warning>
-  La base locale n'est pas chiffrée par Syntheo. Protégez le poste : chiffrement du disque, session verrouillée. Ne modifiez pas `app.db` à la main : vous risquez de corrompre vos notes. Pour une copie portable, utilisez l'export.
+  La base locale n'est pas chiffrée par Syntheo. Activez le chiffrement du disque (BitLocker sous Windows, LUKS ou le chiffrement proposé à l'installation sous Linux) et verrouillez la session : c'est ce qui protège vos notes si le poste ou une sauvegarde est perdu. Ne modifiez pas `app.db` à la main : vous risquez de corrompre vos notes. Pour une copie portable, utilisez l'export.
 </Warning>
+
+Sous Linux, Syntheo réserve son dossier de données à votre compte : le dossier est en `0700`, la base et les journaux en `0600`, corrigés à chaque démarrage. Les sauvegardes laissées par une réinitialisation de la base (`app.db.<date>.bak`) sont supprimées après 30 jours ; la plus récente est toujours gardée.
 
 ## L'audio n'est jamais conservé
 

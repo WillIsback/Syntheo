@@ -140,7 +140,9 @@ export async function applySessionProposal(proposalId: string): Promise<void> {
     );
   }
 
-  const json = JSON.stringify(md2json(proposal.proposedMarkdown));
+  const json = JSON.stringify(
+    md2json(proposal.proposedMarkdown, { stripRemoteImages: true }),
+  );
   if (proposal.kind === "memo_replace") {
     await updateSession(proposal.sessionId, { raw_md: json });
   } else {

@@ -44,6 +44,8 @@ Syntheo accepts an `http://` URL only for a server on your computer or on a priv
 
 For any other address, including an internal domain name such as `serveur.entreprise.lan`, use `https://`. Otherwise, Syntheo refuses the URL with the message "Use HTTPS: HTTP is only accepted on this machine or a private network.". Put your server behind a reverse proxy with a certificate (Caddy, nginx, Traefik), or use its private IP address directly.
 
+Except for `localhost`, `127.x.x.x`, and `[::1]`, a plain HTTP address is saved only after you confirm it, and the server card then flags the connection as unencrypted. To remove this warning, switch the server to HTTPS: see [Switch your server to HTTPS](/en/ai-setup#switch-your-server-to-https).
+
 ## The model list is empty
 
 Syntheo reads your server's models from `/v1/models` when you click "Test connection". Until the test succeeds, the card shows "Test the connection to list the models served.".

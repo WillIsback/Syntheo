@@ -37,7 +37,9 @@ export function usesDeferredProviderAuthentication(
 // Contrôle d'URL partagé : appliqué à l'enregistrement d'un provider, même
 // quand aucune sonde d'authentification n'est déclenchée. Un endpoint on-prem
 // en HTTP clair reste acceptable sur la machine ou un réseau privé ; ailleurs,
-// HTTPS est exigé.
+// HTTPS est exigé. Hors de cette machine, le HTTP clair est signalé et doit
+// être confirmé (`isCleartextRemoteUrl`). Même règle côté Rust :
+// `owhisper_client::validate_provider_base_url`.
 export function validateProviderBaseUrl(baseUrl: string): URL {
   let base: URL;
   try {
@@ -156,15 +158,15 @@ function credentialRequest({ baseUrl, apiKey }: ProviderCredential) {
   };
 }
 
-// Un endpoint on-prem en HTTP clair reste acceptable sur la machine ou un
-// réseau privé (LAN, plage CGNAT de Tailscale, noms .local, noms MagicDNS
-// *.ts.net) ; ailleurs, HTTPS.
+// Hôtes où le HTTP clair est accepté : cette machine ou une adresse de réseau
+// privé (LAN, plage CGNAT de Tailscale, noms .local, noms MagicDNS *.ts.net) ;
+// ailleurs, HTTPS. Seul le suffixe exact « .ts.net » compte : « evil-ts.net »
+// est refusé.
 //
-// Les noms MagicDNS en `.ts.net` ne se résolvent que dans le tailnet, dont
-// tout le trafic est chiffré de bout en bout par WireGuard ; et Tailscale
-// Funnel, seul moyen de les exposer sur Internet, ne le fait qu'en HTTPS.
-// Le HTTP clair vers ces noms ne quitte donc jamais le tunnel chiffré.
-// Seul le suffixe exact « .ts.net » compte : « evil-ts.net » est refusé.
+// La forme de l'adresse ne prouve pas l'identité du serveur (issue 646) : sur
+// un autre réseau, ou Tailscale arrêté, une autre machine peut répondre à la
+// même adresse. Hors de cette machine, le HTTP clair est donc signalé et
+// confirmé (`isCleartextRemoteUrl`).
 export function isPrivateHost(hostname: string) {
   const host = hostname.toLowerCase();
   if (
@@ -189,6 +191,35 @@ export function isPrivateHost(hostname: string) {
     (a === 192 && b === 168) ||
     (a === 100 && b >= 64 && b <= 127)
   );
+}
+
+/** Cette machine : `localhost`, 127.0.0.0/8, `[::1]`. */
+export function isLoopbackHost(hostname: string) {
+  const host = hostname.toLowerCase();
+  if (host === "localhost" || host === "[::1]") return true;
+  const octets = host.split(".").map(Number);
+  return (
+    octets.length === 4 &&
+    octets.every(
+      (octet) => Number.isInteger(octet) && octet >= 0 && octet <= 255,
+    ) &&
+    octets[0] === 127
+  );
+}
+
+/**
+ * URL en HTTP clair vers un autre hôte que cette machine : le trafic, la clé
+ * d'API et l'audio passent en clair sur le réseau. À confirmer à
+ * l'enregistrement et à signaler en permanence (issue 646).
+ */
+export function isCleartextRemoteUrl(baseUrl: string): boolean {
+  let url: URL;
+  try {
+    url = new URL(baseUrl.trim());
+  } catch {
+    return false;
+  }
+  return url.protocol === "http:" && !isLoopbackHost(url.hostname);
 }
 
 // Nom de machine sous `.ts.net` : au moins une étiquette non vide avant le

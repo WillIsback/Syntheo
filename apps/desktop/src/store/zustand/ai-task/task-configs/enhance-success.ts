@@ -175,7 +175,9 @@ export const runEnhanceSuccess = async ({
           currentContentFormat:
             args.pendingAutoEnhance?.expectedContentFormat ??
             note.contentFormat,
-          nextContent: JSON.stringify(md2json(persistableText)),
+          nextContent: JSON.stringify(
+            md2json(persistableText, { stripRemoteImages: true }),
+          ),
         },
         tagNames,
         notePassages,

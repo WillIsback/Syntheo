@@ -29,7 +29,57 @@ pub fn acquire_launch_lock(identifier: &str) -> LaunchLockState {
             "failed to create application data directory: {error}"
         ));
     }
+    harden_data_dir_permissions(&dir);
     lock_launch_file(&dir.join(LAUNCH_LOCK_FILENAME))
+}
+
+/// Dossier de données réservé à l'utilisateur (issue 653) : 0700 pour le
+/// dossier et ses sous-dossiers directs, 0600 pour les fichiers qu'ils
+/// contiennent (base, journaux, sauvegardes). Corrigé à chaque démarrage, y
+/// compris pour les fichiers créés par une version précédente. Pas d'umask
+/// global : les exports écrits ailleurs par l'utilisateur gardent leurs droits
+/// habituels. Sous Windows, le dossier de l'utilisateur n'est pas lisible par
+/// les autres comptes.
+pub(crate) fn harden_data_dir_permissions(dir: &Path) {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+
+        fn set_mode(path: &Path, mode: u32) {
+            if let Err(error) =
+                std::fs::set_permissions(path, std::fs::Permissions::from_mode(mode))
+            {
+                eprintln!("failed to restrict {}: {error}", path.display());
+            }
+        }
+
+        fn restrict_entries(dir: &Path, depth: u8) {
+            let Ok(entries) = std::fs::read_dir(dir) else {
+                return;
+            };
+            for entry in entries.flatten() {
+                let Ok(file_type) = entry.file_type() else {
+                    continue;
+                };
+                let path = entry.path();
+                if file_type.is_dir() {
+                    set_mode(&path, 0o700);
+                    if depth > 0 {
+                        restrict_entries(&path, depth - 1);
+                    }
+                } else if file_type.is_file() {
+                    set_mode(&path, 0o600);
+                }
+            }
+        }
+
+        set_mode(dir, 0o700);
+        // Dossier et un niveau de sous-dossiers (journaux, index) : le 0700
+        // du dossier suffit déjà à fermer tout ce qu'il contient.
+        restrict_entries(dir, 1);
+    }
+    #[cfg(not(unix))]
+    let _ = dir;
 }
 
 fn lock_launch_file(path: &Path) -> LaunchLockState {
@@ -294,5 +344,48 @@ mod tests {
             lock_channel_files(&stable, &nightly, "com.syntheo.nightly"),
             ChannelLockState::Acquired(None)
         ));
+    }
+}
+
+#[cfg(all(test, unix))]
+mod permission_tests {
+    use std::os::unix::fs::PermissionsExt;
+
+    fn mode(path: &std::path::Path) -> u32 {
+        std::fs::metadata(path).unwrap().permissions().mode() & 0o777
+    }
+
+    // Issue 653 : base, journaux et sauvegardes réservés à l'utilisateur.
+    #[test]
+    fn data_dir_is_restricted_to_the_user() {
+        let dir = std::env::temp_dir().join(format!(
+            "syntheo-perm-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let logs = dir.join("logs");
+        std::fs::create_dir_all(&logs).unwrap();
+        for file in [
+            dir.join("app.db"),
+            dir.join("app.db-wal"),
+            logs.join("app.log"),
+        ] {
+            std::fs::write(&file, b"x").unwrap();
+            std::fs::set_permissions(&file, std::fs::Permissions::from_mode(0o644)).unwrap();
+        }
+        std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o755)).unwrap();
+        std::fs::set_permissions(&logs, std::fs::Permissions::from_mode(0o755)).unwrap();
+
+        super::harden_data_dir_permissions(&dir);
+
+        assert_eq!(mode(&dir), 0o700);
+        assert_eq!(mode(&logs), 0o700);
+        assert_eq!(mode(&dir.join("app.db")), 0o600);
+        assert_eq!(mode(&dir.join("app.db-wal")), 0o600);
+        assert_eq!(mode(&logs.join("app.log")), 0o600);
+        std::fs::remove_dir_all(dir).unwrap();
     }
 }

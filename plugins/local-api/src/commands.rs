@@ -8,6 +8,14 @@ use crate::{
 const MAX_CLOUD_SNAPSHOT_BYTES: usize = 2 * 1024 * 1024;
 static MARKDOWN_EXPORT_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
+fn secrets<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+) -> crate::webhook_secrets::SharedSecretStore {
+    app.state::<crate::webhook_secrets::SharedSecretStore>()
+        .inner()
+        .clone()
+}
+
 fn pool<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Result<sqlx::SqlitePool, String> {
     app.try_state::<tauri_plugin_db::ManagedState>()
         .map(|state| state.pool().clone())
@@ -20,6 +28,7 @@ pub async fn list_webhooks<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
 ) -> Result<Vec<WebhookInfo>, String> {
     let pool = pool(&app)?;
+    crate::webhook_secrets::migrate_secrets(&secrets(&app), &pool).await;
     Ok(syntheo_db_app::list_webhook_endpoints(&pool)
         .await
         .map_err(|e| e.to_string())?
@@ -36,7 +45,7 @@ pub async fn create_webhook<R: tauri::Runtime>(
     events: Vec<String>,
 ) -> Result<CreatedWebhook, String> {
     let pool = pool(&app)?;
-    dispatch::create_endpoint(&pool, &url, &events).await
+    dispatch::create_endpoint(&pool, &secrets(&app), &url, &events).await
 }
 
 #[tauri::command]
@@ -46,9 +55,13 @@ pub async fn delete_webhook<R: tauri::Runtime>(
     id: String,
 ) -> Result<bool, String> {
     let pool = pool(&app)?;
-    syntheo_db_app::delete_webhook_endpoint(&pool, &id)
+    let deleted = syntheo_db_app::delete_webhook_endpoint(&pool, &id)
         .await
-        .map_err(|e| e.to_string())
+        .map_err(|e| e.to_string())?;
+    if deleted {
+        crate::webhook_secrets::delete_secret(&secrets(&app), &id).await;
+    }
+    Ok(deleted)
 }
 
 #[tauri::command]
@@ -77,7 +90,7 @@ pub async fn test_webhook<R: tauri::Runtime>(
         .await
         .map_err(|e| e.to_string())?
         .ok_or_else(|| format!("webhook '{id}' not found"))?;
-    dispatch::send_test(&pool, &endpoint).await
+    dispatch::send_test(&pool, &secrets(&app), &endpoint).await
 }
 
 #[tauri::command]
@@ -97,7 +110,7 @@ pub async fn dispatch_event<R: tauri::Runtime>(
     if event == dispatch::EVENT_NOTE_ENHANCED {
         run_markdown_export_automation(&pool, &meeting_id).await;
     }
-    let targeted = dispatch::dispatch_event(&pool, &event, &meeting_id).await?;
+    let targeted = dispatch::dispatch_event(&pool, &secrets(&app), &event, &meeting_id).await?;
     Ok(targeted as u32)
 }
 

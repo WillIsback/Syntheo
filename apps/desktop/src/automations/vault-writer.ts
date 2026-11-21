@@ -1,4 +1,4 @@
-import { md2json } from "@syntheo/editor/markdown";
+import { json2md, md2json } from "@syntheo/editor/markdown";
 
 import type { VaultWriteMode } from "./steps";
 
@@ -53,9 +53,12 @@ export async function writeVaultNote(
         includeTranscriptWords: false,
       });
       const before = snapshot?.rawMarkdown.trim() ?? "";
-      const merged = [before, request.content.trim()]
-        .filter(Boolean)
-        .join("\n\n");
+      // Seul le contenu ajouté perd ses images distantes : la note existante
+      // reste telle quelle (issue 642).
+      const added = json2md(
+        md2json(request.content, { stripRemoteImages: true }),
+      ).trim();
+      const merged = [before, added].filter(Boolean).join("\n\n");
       await updateSession(existing, {
         raw_md: JSON.stringify(md2json(merged)),
       });
@@ -65,7 +68,9 @@ export async function writeVaultNote(
 
   const sessionId = await createSession(request.title, undefined, {
     folder_id: folder,
-    raw_md: JSON.stringify(md2json(request.content)),
+    raw_md: JSON.stringify(
+      md2json(request.content, { stripRemoteImages: true }),
+    ),
   });
   return { sessionId, created: true };
 }

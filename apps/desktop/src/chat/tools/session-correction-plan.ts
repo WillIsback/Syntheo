@@ -40,6 +40,10 @@ type TranscriptChange = {
 
 export type DictionaryChange = {
   addedTerms: string[];
+  /** Termes qui n'ont pas la forme d'un nom, ou au-delà du maximum. */
+  rejectedTerms?: string[];
+  /** Termes que l'utilisateur a refusés dans la carte. */
+  declinedTerms?: string[];
 };
 
 export type TitleChange = {
@@ -127,7 +131,9 @@ export function planSummaryCorrections({
       id: note.id,
       currentContent: note.content,
       currentContentFormat: note.contentFormat,
-      nextContent: JSON.stringify(md2json(replaced.text)),
+      nextContent: JSON.stringify(
+        md2json(replaced.text, { stripRemoteImages: true }),
+      ),
     });
     changes.push({
       enhancedNoteId: note.id,

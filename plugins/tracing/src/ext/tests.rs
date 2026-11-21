@@ -77,6 +77,16 @@ fn diagnostic_message_keeps_render_perf_summaries() {
     );
 }
 
+// Issue 642 : une violation de CSP garde sa directive et l'origine bloquée.
+#[test]
+fn diagnostic_message_keeps_csp_violations() {
+    let violation = "[csp] img-src https://attaquant.example";
+    assert_eq!(
+        super::diagnostic_message(&[serde_json::json!(violation)]).as_deref(),
+        Some(violation)
+    );
+}
+
 #[test]
 fn diagnostic_message_keeps_code_labels_and_error_kinds_only() {
     // A periodic `console.error("[speaker-context] observation failed", error)`

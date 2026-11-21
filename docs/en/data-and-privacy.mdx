@@ -22,14 +22,16 @@ Everything is in the app's data folder:
 | --- | --- |
 | Transcripts, notes, summaries, contacts, folders (project thread, next meeting agenda, default template), automations, settings | Local SQLite database `app.db` |
 | Full-text search index | Data folder (indexed copy of transcripts and notes) |
-| Technical logs | The app's log folder, with sensitive content masked and size-based rotation |
-| Inference server API keys | System keychain (Secret Service on Linux, Credential Manager on Windows), never in plain text in the database |
+| Technical logs | The app's log folder, with sensitive content masked (keys and tokens, addresses, identifiers) and size-based rotation. For a failed webhook, only the host is logged, never the URL path |
+| Inference server API keys and webhook signing secrets | System keychain (Secret Service on Linux, Credential Manager on Windows), never in plain text in the database. With no keychain available on Linux, a webhook secret stays in the database |
 | Exports | Folder chosen in "Export location" (**Settings → Profile**) |
 | Audio | **Nowhere**: see below |
 
 <Warning>
-  Syntheo does not encrypt the local database. Protect the computer: disk encryption, locked session. Do not edit `app.db` by hand: you risk corrupting your notes. For a portable copy, use export.
+  Syntheo does not encrypt the local database. Turn on disk encryption (BitLocker on Windows, LUKS or the encryption offered at installation on Linux) and lock your session: this is what protects your notes if the computer or a backup is lost. Do not edit `app.db` by hand: you risk corrupting your notes. For a portable copy, use export.
 </Warning>
+
+On Linux, Syntheo restricts its data folder to your account: the folder is `0700`, the database and logs `0600`, corrected at every start. Backups left by a database reset (`app.db.<date>.bak`) are deleted after 30 days; the most recent one is always kept.
 
 ## Audio is never kept
 
