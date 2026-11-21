@@ -20,16 +20,18 @@ pub async fn run<R: Runtime>(
     app: AppHandle<R>,
     addr: SocketAddr,
     pending: PendingResults,
+    token_file: Option<std::path::PathBuf>,
 ) -> Result<(), std::io::Error> {
     let state = Arc::new(AppState { app, pending });
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
     let local_addr = listener.local_addr()?;
-    let access = RelayAccess::new(local_addr.port());
+    let access = RelayAccess::new(local_addr.port(), token_file);
 
     let router = Router::new()
         .route("/ws", get(ws_upgrade::<R>))
         .route("/health", get(|| async { "ok" }))
+        .route(crate::access::BOOTSTRAP_PATH, get(|| async { "" }))
         .fallback(get(proxy_to_vite))
         .layer(axum::middleware::from_fn_with_state(access, authorize))
         .with_state(state);
