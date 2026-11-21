@@ -12074,10 +12074,12 @@ dependencies = [
  "tauri",
  "tauri-plugin",
  "tauri-plugin-db",
+ "tauri-plugin-store2",
  "tauri-specta",
  "tempfile",
  "tokio",
  "tracing",
+ "url",
  "uuid",
 ]
 

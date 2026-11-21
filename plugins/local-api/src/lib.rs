@@ -1,7 +1,9 @@
+use tauri::Manager;
 mod automation_command;
 mod commands;
 mod dispatch;
 mod types;
+mod webhook_secrets;
 
 pub use automation_command::AutomationCommandOutput;
 pub use dispatch::{EVENT_MEETING_COMPLETED, EVENT_NOTE_ENHANCED, KNOWN_EVENTS};
@@ -36,6 +38,9 @@ pub fn init() -> tauri::plugin::TauriPlugin<tauri::Wry> {
         .invoke_handler(specta_builder.invoke_handler())
         .setup(move |app, _api| {
             specta_builder.mount_events(app);
+            let secrets: webhook_secrets::SharedSecretStore =
+                std::sync::Arc::new(webhook_secrets::KeychainSecrets(app.clone()));
+            app.manage(secrets);
             Ok(())
         })
         .build()

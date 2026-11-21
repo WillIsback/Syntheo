@@ -79,6 +79,21 @@ pub async fn delete_webhook_endpoint(pool: &SqlitePool, id: &str) -> Result<bool
     Ok(result.rows_affected() > 0)
 }
 
+/// Remplace le secret stocké en base (marqueur après déplacement vers le
+/// trousseau, issue 653).
+pub async fn set_webhook_endpoint_secret(
+    pool: &SqlitePool,
+    id: &str,
+    secret: &str,
+) -> Result<bool, sqlx::Error> {
+    let result = sqlx::query("UPDATE webhook_endpoints SET secret = ? WHERE id = ?")
+        .bind(secret)
+        .bind(id)
+        .execute(pool)
+        .await?;
+    Ok(result.rows_affected() > 0)
+}
+
 pub async fn record_webhook_delivery(
     pool: &SqlitePool,
     id: &str,

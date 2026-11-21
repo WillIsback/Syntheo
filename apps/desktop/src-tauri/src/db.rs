@@ -24,6 +24,7 @@ pub async fn open_desktop_db(identifier: &str) -> Result<Arc<Db>, String> {
         Ok(None) => {}
         Err(error) => eprintln!("failed to reset the application database: {error}"),
     }
+    purge_old_database_backups(&dir, unix_now());
     let db_path = dir.join(DB_FILENAME);
 
     // During an update relaunch the previous process can hold the database for
@@ -76,6 +77,53 @@ fn apply_pending_database_reset(
     Ok(Some(backup))
 }
 
+/// Les sauvegardes laissées par une réinitialisation contiennent toutes les
+/// notes : gardées 30 jours, puis supprimées, sauf la plus récente
+/// (issue 653).
+const DATABASE_BACKUP_RETENTION_SECS: u64 = 30 * 24 * 60 * 60;
+
+fn unix_now() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|elapsed| elapsed.as_secs())
+        .unwrap_or(0)
+}
+
+/// Horodatage d'un fichier `app.db.<horodatage>.bak[-wal|-shm]`.
+fn backup_stamp(name: &str) -> Option<u64> {
+    let rest = name.strip_prefix(&format!("{DB_FILENAME}."))?;
+    let (stamp, suffix) = rest.split_once(".bak")?;
+    if !["", "-wal", "-shm"].contains(&suffix) {
+        return None;
+    }
+    stamp.parse().ok()
+}
+
+pub(crate) fn purge_old_database_backups(dir: &std::path::Path, now: u64) {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return;
+    };
+    let backups: Vec<(u64, std::path::PathBuf)> = entries
+        .flatten()
+        .filter_map(|entry| {
+            let name = entry.file_name();
+            backup_stamp(&name.to_string_lossy()).map(|stamp| (stamp, entry.path()))
+        })
+        .collect();
+    let newest = backups.iter().map(|(stamp, _)| *stamp).max();
+    for (stamp, path) in backups {
+        if Some(stamp) != newest
+            && now.saturating_sub(stamp) > DATABASE_BACKUP_RETENTION_SECS
+            && let Err(error) = std::fs::remove_file(&path)
+        {
+            eprintln!(
+                "failed to remove old database backup {}: {error}",
+                path.display()
+            );
+        }
+    }
+}
+
 pub fn is_transient_lock_error(error: &impl std::fmt::Display) -> bool {
     let message = error.to_string();
     message.contains("database is locked") || message.contains("database table is locked")
@@ -126,6 +174,63 @@ pub(crate) fn desktop_db_dir(identifier: &str) -> Option<std::path::PathBuf> {
 
 #[cfg(test)]
 mod tests {
+    // Issue 653 : sauvegardes de plus de 30 jours supprimées, sauf la plus
+    // récente.
+    #[test]
+    fn purges_old_database_backups_but_keeps_the_newest() {
+        let dir = std::env::temp_dir().join(format!(
+            "syntheo-bak-{}-{}",
+            std::process::id(),
+            super::unix_now()
+        ));
+        std::fs::create_dir_all(&dir).unwrap();
+        let day = 24 * 60 * 60;
+        let now = 1_000 * day;
+        let old = now - 40 * day;
+        let older = now - 90 * day;
+        let recent = now - 5 * day;
+        let files = [
+            format!("app.db.{older}.bak"),
+            format!("app.db.{older}.bak-wal"),
+            format!("app.db.{old}.bak"),
+            format!("app.db.{recent}.bak"),
+            format!("app.db.{recent}.bak-shm"),
+            "app.db".to_string(),
+            "app.db.reset-requested".to_string(),
+            "notes.bak".to_string(),
+        ];
+        for name in &files {
+            std::fs::write(dir.join(name), b"x").unwrap();
+        }
+
+        super::purge_old_database_backups(&dir, now);
+
+        let left: std::collections::BTreeSet<String> = std::fs::read_dir(&dir)
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
+            .collect();
+        assert_eq!(
+            left,
+            [
+                format!("app.db.{recent}.bak"),
+                format!("app.db.{recent}.bak-shm"),
+                "app.db".to_string(),
+                "app.db.reset-requested".to_string(),
+                "notes.bak".to_string(),
+            ]
+            .into_iter()
+            .collect()
+        );
+
+        // Seule sauvegarde, même ancienne : gardée.
+        std::fs::write(dir.join(format!("app.db.{older}.bak")), b"x").unwrap();
+        std::fs::remove_file(dir.join(format!("app.db.{recent}.bak"))).unwrap();
+        std::fs::remove_file(dir.join(format!("app.db.{recent}.bak-shm"))).unwrap();
+        super::purge_old_database_backups(&dir, now);
+        assert!(dir.join(format!("app.db.{older}.bak")).exists());
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
     use super::*;
 
     #[test]

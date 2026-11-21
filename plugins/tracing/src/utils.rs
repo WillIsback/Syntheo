@@ -84,10 +84,15 @@ impl SizeRollingWriter {
     }
 
     fn open_current_file(&mut self) -> io::Result<()> {
-        let file = fs::OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(&self.base_path)?;
+        let mut options = fs::OpenOptions::new();
+        options.create(true).append(true);
+        // Journal lisible par le seul utilisateur (issue 653).
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            options.mode(0o600);
+        }
+        let file = options.open(&self.base_path)?;
         self.written = file.metadata()?.len();
         self.file = Some(file);
         Ok(())
