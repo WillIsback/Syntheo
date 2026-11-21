@@ -25,4 +25,8 @@ paths = [
   '''^crates/supabase-auth/src/server/mod\.rs$''',
   '''^crates/supabase-auth/src/session\.rs$''',
   '''^supabase/tests/000-setup-tests-hooks\.sql$''',
+  # Tests du masquage des journaux (issue 653) : clés factices aux formats
+  # connus (sk-, AKIA, api_key=…) que le masquage doit retirer. Aucune clé
+  # réelle.
+  '''^plugins/tracing/src/redaction\.rs$''',
 ]
