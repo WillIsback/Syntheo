@@ -45,10 +45,16 @@ Gates lourdes, hors PR :
 
 ### Dépendances (Dependabot)
 
-Dependabot ouvre chaque semaine des PR groupées (npm, cargo, actions). Elles sont
-fusionnées automatiquement (squash) dès que les gates de PR requises par la règle
-de la branche `main` sont au vert ; une PR en échec reste ouverte et doit être
-corrigée à la main. `ci-traceability` ne s'applique pas à Dependabot.
+Dependabot ouvre chaque semaine des PR groupées (npm, cargo, actions). Une
+version n'est proposée qu'après une quarantaine depuis sa publication (7 jours,
+3 pour un correctif ; les mises à jour de sécurité n'attendent pas), et pnpm
+refuse de résoudre une version de moins de 3 jours (`minimumReleaseAge`).
+Les groupes minor/patch npm et cargo sont fusionnés automatiquement (squash) dès
+que les gates de PR requises par la règle de la branche `main` sont au vert ; une
+PR en échec reste ouverte et doit être corrigée à la main. Restent toujours à
+relire et fusionner à la main : les actions GitHub, les paquets `tauri*`,
+`@tauri-apps/*` et `minisign*`, et l'outil de signature (`.github/signing`).
+`ci-traceability` ne s'applique pas à Dependabot.
 
 ## Construire depuis les sources
 
