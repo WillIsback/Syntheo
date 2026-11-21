@@ -55,6 +55,11 @@ msgstr "(indisponible — sortie par défaut utilisée)"
 msgid "{0, plural, one {… # other} other {… # others}}"
 msgstr "{0, plural, one {… # autre} other {… # autres}}"
 
+#. placeholder {0}: approval.transcriptReplacements
+#: src/chat/components/message/tool/approval.tsx
+msgid "{0, plural, one {# change in the transcript} other {# changes in the transcript}}"
+msgstr "{0, plural, one {# modification dans le transcript} other {# modifications dans le transcript}}"
+
 #. placeholder {0}: folder.meetingCount
 #. placeholder {0}: row.noteCount
 #. placeholder {0}: stats.count
@@ -68,6 +73,26 @@ msgstr "{0, plural, one {# réunion} other {# réunions}}"
 #: src/chat/components/message/tool/session-correction.tsx
 msgid "{0, plural, one {# suggested term was ignored: a dictionary term is a short name, without links or formatting.} other {# suggested terms were ignored: a dictionary term is a short name, without links or formatting.}}"
 msgstr "{0, plural, one {# terme suggéré a été ignoré : un terme du dictionnaire est un nom court, sans lien ni mise en forme.} other {# termes suggérés ont été ignorés : un terme du dictionnaire est un nom court, sans lien ni mise en forme.}}"
+
+#. placeholder {0}: approval.summaries
+#: src/chat/components/message/tool/approval.tsx
+msgid "{0, plural, one {# summary} other {# summaries}}"
+msgstr "{0, plural, one {# synthèse} other {# synthèses}}"
+
+#. placeholder {0}: approval.meetingCount - approval.meetingTitles.length
+#: src/chat/components/message/tool/approval.tsx
+msgid "{0, plural, one {and # other} other {and # others}}"
+msgstr "{0, plural, one {et # autre} other {et # autres}}"
+
+#. placeholder {0}: approval.meetingCount
+#: src/chat/components/message/tool/approval.tsx
+msgid "{0, plural, one {Move # meeting to this folder:} other {Move # meetings to this folder:}}"
+msgstr "{0, plural, one {Déplacer # réunion dans ce dossier :} other {Déplacer # réunions dans ce dossier :}}"
+
+#. placeholder {0}: approval.meetingCount
+#: src/chat/components/message/tool/approval.tsx
+msgid "{0, plural, one {Remove # meeting from its folder:} other {Remove # meetings from their folder:}}"
+msgstr "{0, plural, one {Retirer # réunion de son dossier :} other {Retirer # réunions de leur dossier :}}"
 
 #. placeholder {0}: group.sessionIds.length
 #: src/sidebar/toast/undo-delete-toast.tsx
@@ -409,14 +434,6 @@ msgstr "Ajouter une langue parlée"
 msgid "Add the step"
 msgstr "Ajouter l'étape"
 
-#: src/chat/components/message/tool/session-correction.tsx
-msgid "Add these terms to your dictionary?"
-msgstr "Ajouter ces termes à votre dictionnaire ?"
-
-#: src/chat/components/message/tool/session-correction.tsx
-msgid "Add to dictionary"
-msgstr "Ajouter au dictionnaire"
-
 #: src/templates/details.tsx
 #: src/templates/template-form.tsx
 #: src/templates/template-sidebar.tsx
@@ -507,6 +524,10 @@ msgstr "Autoriser et lancer"
 msgid "Allow microphone access for Syntheo, then try again."
 msgstr "Autorisez Syntheo à accéder au micro, puis réessayez."
 
+#: src/chat/components/message/tool/approval.tsx
+msgid "Also add these terms to your dictionary"
+msgstr "Ajouter aussi ces termes à votre dictionnaire"
+
 #: src/session/components/outer-header/overflow/always-on-top.tsx
 msgid "Always on Top"
 msgstr "Toujours au premier plan"
@@ -552,6 +573,10 @@ msgstr "Menu de l'application"
 #: src/automations/labels.ts
 msgid "Applies an instruction (tasks, short summary, follow-up message); the result feeds the next steps."
 msgstr "Applique une consigne (tâches, résumé court, message de suivi) ; le résultat sert aux étapes suivantes."
+
+#: src/chat/components/message/tool/approval.tsx
+msgid "Apply"
+msgstr "Appliquer"
 
 #: src/automations/chat-prompt.ts
 #: src/settings/automations/advanced-step-proposals.tsx
@@ -1227,8 +1252,12 @@ msgid "Copy to the clipboard"
 msgstr "Copier dans le presse-papiers"
 
 #: src/chat/components/message/tool/session-correction.tsx
-msgid "Correcting the note"
-msgstr "Correction de la note"
+msgid "Correct the note — waiting for your review"
+msgstr "Corriger la note — en attente de votre validation"
+
+#: src/chat/components/message/tool/session-correction.tsx
+msgid "Correction declined"
+msgstr "Correction refusée"
 
 #: src/chat/components/message/tool/session-correction.tsx
 msgid "Correction failed"
@@ -1418,6 +1447,7 @@ msgid "Decisions"
 msgstr "Décisions"
 
 #: src/automations/chat-prompt.ts
+#: src/chat/components/message/tool/approval.tsx
 #: src/chat/components/message/tool/edit-summary.tsx
 #: src/edit/tab-content.tsx
 #: src/session/components/living-document/summary-review.tsx
@@ -1606,10 +1636,6 @@ msgstr "Dock, sélecteur d'apps, icône"
 #: src/main/windows-title-bar.tsx
 msgid "Documentation"
 msgstr "Documentation"
-
-#: src/chat/components/message/tool/session-correction.tsx
-msgid "Don't add"
-msgstr "Ne pas ajouter"
 
 #: src/session/components/living-document/transcript-margin.tsx
 #: src/session/components/speaker-naming/dialog.tsx
@@ -2734,6 +2760,10 @@ msgstr "Moyen"
 msgid "Meeting chat"
 msgstr "Chat de réunion"
 
+#: src/chat/components/message/tool/move-tools.tsx
+msgid "Meeting contents moved"
+msgstr "Contenu de la réunion déplacé"
+
 #: src/onboarding/permissions.tsx
 msgid "Meeting details access turned on"
 msgstr "Accès aux détails de réunion activé"
@@ -2767,6 +2797,10 @@ msgstr "Types de réunion"
 #: src/sidebar/settings-nav-groups.ts
 msgid "Meetings"
 msgstr "Réunions"
+
+#: src/chat/components/message/tool/move-tools.tsx
+msgid "Meetings moved"
+msgstr "Réunions déplacées"
 
 #: src/contacts/organization-details.tsx
 msgid "member"
@@ -2929,9 +2963,31 @@ msgstr "Déplacer « {name} » vers…"
 msgid "Move “{title}” to…"
 msgstr "Déplacer « {title} » vers…"
 
+#: src/chat/components/message/tool/move-tools.tsx
+msgid "Move declined"
+msgstr "Déplacement refusé"
+
+#: src/chat/components/message/tool/move-tools.tsx
+msgid "Move failed"
+msgstr "Échec du déplacement"
+
+#: src/chat/components/message/tool/move-tools.tsx
+msgid "Move meeting contents — waiting for your review"
+msgstr "Déplacer le contenu de la réunion — en attente de votre validation"
+
+#: src/chat/components/message/tool/move-tools.tsx
+msgid "Move meetings — waiting for your review"
+msgstr "Déplacer des réunions — en attente de votre validation"
+
 #: src/templates/sections-editor.tsx
 msgid "Move section {position}"
 msgstr "Déplacer la section {position}"
+
+#. placeholder {0}: approval.sourceTitle
+#. placeholder {1}: approval.targetTitle
+#: src/chat/components/message/tool/approval.tsx
+msgid "Move the recording, transcript, summaries and notes of “{0}” to “{1}”."
+msgstr "Déplacer l'enregistrement, le transcript, les synthèses et les notes de « {0} » vers « {1} »."
 
 #: src/folders/folder-actions.tsx
 #: src/folders/folder-editor.tsx
@@ -5399,6 +5455,14 @@ msgstr "Le modèle local liste les actions à faire et les ajoute au coffre."
 msgid "The local model returned an empty answer."
 msgstr "Le modèle local a renvoyé une réponse vide."
 
+#: src/chat/components/message/tool/move-tools.tsx
+msgid "The meeting contents could not be moved."
+msgstr "Le contenu de la réunion n'a pas pu être déplacé."
+
+#: src/chat/components/message/tool/move-tools.tsx
+msgid "The meetings could not be moved."
+msgstr "Les réunions n'ont pas pu être déplacées."
+
 #: src/chat/components/message/tool/edit-summary.tsx
 msgid "The memo edit could not be prepared."
 msgstr "La modification du mémo n'a pas pu être préparée."
@@ -5418,6 +5482,10 @@ msgstr "Le nom n’a pas pu être enregistré. Réessayez."
 #: src/settings/automations/workflow-test-result.tsx
 msgid "The next steps were not run."
 msgstr "Les étapes suivantes n'ont pas été lancées."
+
+#: src/chat/components/message/tool/approval.tsx
+msgid "The note title"
+msgstr "Le titre de la note"
 
 #: src/settings/dictation.tsx
 msgid "The one that captures your voice."
@@ -5597,6 +5665,11 @@ msgstr "Cette étape avancée lance un programme sur votre ordinateur. Elle n'es
 #: src/settings/automations/advanced-step-proposals.tsx
 msgid "This advanced step sends the note's data outside your computer, to this address. It is only added if you confirm."
 msgstr "Cette étape avancée envoie les données de la note hors de votre ordinateur, vers cette adresse. Elle n'est ajoutée que si vous confirmez."
+
+#. placeholder {0}: approval.sessionTitle
+#: src/chat/components/message/tool/approval.tsx
+msgid "This correction changes another note: {0}"
+msgstr "Cette correction modifie une autre note : {0}"
 
 #: src/session/components/version-history-dialog.tsx
 msgid "This device"

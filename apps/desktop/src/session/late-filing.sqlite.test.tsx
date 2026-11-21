@@ -20,6 +20,7 @@ import {
 } from "vitest";
 
 import { buildMoveMeetingsToFolderTool } from "~/chat/tools/folders";
+import { usePendingToolApprovalStore } from "~/chat/tools/pending-tool-approval-store";
 import { FileNoteButton } from "~/home/file-note-button";
 import { FolderPicker } from "~/session/components/folder-picker";
 import { moveNoteToFolder } from "~/session/move-note";
@@ -402,12 +403,23 @@ describe("late filing proposal on every filing path", () => {
 
   it("offers it when the chat moves the note into the folder", async () => {
     seed();
+    // La carte de l'outil valide le déplacement (issue 644).
+    const stop = usePendingToolApprovalStore.subscribe((state) => {
+      for (const approval of state.approvals.values()) {
+        queueMicrotask(() =>
+          usePendingToolApprovalStore
+            .getState()
+            .resolveApproval(approval.requestId, { approved: true }),
+        );
+      }
+    });
     const tool = buildMoveMeetingsToFolderTool();
     const output = await tool.execute!(
       { meeting_ids: ["session-1"], folder_path: "Atlas" },
       { toolCallId: "call-1", messages: [], context: {} },
     );
 
+    stop();
     expect(output).toMatchObject({ status: "ok", moved: 1 });
     await waitFor(() => expect(mocks.toast).toHaveBeenCalledTimes(1));
   });

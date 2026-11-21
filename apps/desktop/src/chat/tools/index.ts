@@ -70,6 +70,35 @@ function withToolLogging<T extends { execute?: (...args: any[]) => any }>(
   } as T;
 }
 
+// Outils du chat classés en lecture et en écriture (issue 644). Un outil
+// d'écriture qui modifie des réunions attend l'accord de l'utilisateur dans sa
+// carte (pending-tool-approval-store, ou pending-edit-store pour une
+// différence de note) ; create_folder crée seulement un dossier vide.
+export const CHAT_TOOL_ACCESS = {
+  list_folders: "read",
+  create_folder: "write",
+  move_meetings_to_folder: "write",
+  list_meetings: "read",
+  get_meeting: "read",
+  get_meeting_transcript: "read",
+  get_recurring_meeting_history: "read",
+  search_meeting_content: "read",
+  read_folder_material: "read",
+  find_related_meetings: "read",
+  search_meetings: "read",
+  search_contacts: "read",
+  edit_memo: "write",
+  edit_summary: "write",
+  apply_session_correction: "write",
+  move_meeting_contents: "write",
+} as const satisfies Record<
+  keyof ReturnType<typeof buildChatTools>,
+  "read" | "write"
+>;
+
+/** Outils d'écriture sans validation : dossier vide, aucune réunion modifiée. */
+export const CHAT_WRITE_TOOLS_WITHOUT_APPROVAL = ["create_folder"] as const;
+
 export const buildChatTools = (deps: ToolDependencies) => ({
   list_folders: withToolLogging("list_folders", buildListFoldersTool()),
   create_folder: withToolLogging("create_folder", buildCreateFolderTool()),

@@ -5,12 +5,12 @@ import { useState } from "react";
 import { Pencil } from "@syntheo/ui/components/icons";
 import { Button } from "@syntheo/ui/components/ui/button";
 
+import { TermList, ToolApprovalPanel } from "./approval";
 import { defineTool } from "./define-tool";
 import { ToolCardBody, ToolCardFooterError, ToolCardFooters } from "./shared";
 
 import { parseMcpObjectOutput } from "~/chat/mcp/mcp-output-parser";
 import { removeDictionaryTerms } from "~/chat/tools/dictionary-terms";
-import { usePendingDictionaryStore } from "~/chat/tools/pending-dictionary-store";
 
 type CorrectionOutput = {
   status?: string;
@@ -24,55 +24,6 @@ type CorrectionOutput = {
 
 function parseCorrectionOutput(output: unknown): CorrectionOutput | null {
   return parseMcpObjectOutput<CorrectionOutput>(output);
-}
-
-function TermList({ terms }: { terms: string[] }) {
-  return (
-    <ul className="flex flex-wrap gap-1.5">
-      {terms.map((term) => (
-        <li
-          key={term}
-          className="bg-muted text-foreground rounded px-1.5 py-0.5 text-xs"
-        >
-          {term}
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-// Ajout au dictionnaire (issue 643) : proposé, accepté ou refusé ici, puis
-// annulable en un clic.
-function DictionaryApproval({ toolCallId }: { toolCallId: string }) {
-  const approval = usePendingDictionaryStore((state) =>
-    state.approvals.get(toolCallId),
-  );
-  if (!approval) return null;
-
-  const resolve = (approved: boolean) =>
-    usePendingDictionaryStore.getState().resolveApproval(toolCallId, approved);
-
-  return (
-    <div className="border-border/80 flex flex-col gap-2 border-t px-3.5 py-2.5">
-      <p className="text-muted-foreground text-xs">
-        <Trans>Add these terms to your dictionary?</Trans>
-      </p>
-      <TermList terms={approval.terms} />
-      <div className="flex justify-end gap-2">
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          onClick={() => resolve(false)}
-        >
-          <Trans>Don't add</Trans>
-        </Button>
-        <Button type="button" size="sm" onClick={() => resolve(true)}>
-          <Trans>Add to dictionary</Trans>
-        </Button>
-      </div>
-    </div>
-  );
 }
 
 function DictionaryOutcome({
@@ -144,9 +95,10 @@ export const ToolSessionCorrection = defineTool({
   isDone: (parsed) =>
     parsed?.status === "applied" || parsed?.status === "partial",
   label: ({ running, failed, parsed }) => {
-    if (running) return t`Correcting the note`;
+    if (running) return t`Correct the note — waiting for your review`;
     if (failed || parsed?.status === "error") return t`Correction failed`;
     if (parsed?.status === "not_found") return t`Text to correct not found`;
+    if (parsed?.status === "declined") return t`Correction declined`;
     return t`Note corrected`;
   },
   renderBody: (input) =>
@@ -165,7 +117,7 @@ export const ToolSessionCorrection = defineTool({
           <ToolCardFooterError text={t`The correction could not be applied.`} />
         ) : null}
       </ToolCardFooters>
-      <DictionaryApproval toolCallId={toolCallId} />
+      <ToolApprovalPanel toolCallId={toolCallId} />
       {parsed?.dictionaryChanges ? (
         <DictionaryOutcome changes={parsed.dictionaryChanges} />
       ) : null}
