@@ -54,11 +54,17 @@ jobs:
           esac
           # Chaîne de build et de mise à jour, même rangée dans un groupe
           # minor/patch : toujours relue à la main.
-          if [ "$ok" = true ] && tr ',' '\n' <<<"$NAMES" | sed 's/^ *//' \
-            | grep -qiE '^(@tauri-apps/|tauri($|-)|minisign)'; then
-            echo "ℹ️ Paquet de la chaîne de build ou de mise à jour : fusion manuelle après relecture."
-            ok=false
-          fi
+          # Boucle sans tube : avec pipefail, un `grep -q` qui s'arrête tôt
+          # ferait échouer le test dans le sens permissif.
+          IFS=',' read -ra names <<<"$NAMES"
+          for name in "${names[@]}"; do
+            name="${name#"${name%%[![:space:]]*}"}"
+            case "${name,,}" in
+              @tauri-apps/*|tauri|tauri-*|minisign*)
+                echo "ℹ️ Paquet de la chaîne de build ou de mise à jour (${name}) : fusion manuelle après relecture."
+                ok=false ;;
+            esac
+          done
           if [ "$ok" != true ]; then
             echo "ℹ️ PR hors des groupes minor/patch fusionnables : fusion manuelle après relecture."
           fi
