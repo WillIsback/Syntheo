@@ -26,6 +26,7 @@ import type { Part } from "./types";
 
 import { hasRenderableContent } from "~/chat/message-content";
 import type { SyntheoUIMessage } from "~/chat/types";
+import { safeRehypePlugins, SafeMarkdownImage } from "~/shared/safe-markdown";
 
 function getMessageText(message: SyntheoUIMessage): string {
   return message.parts
@@ -222,6 +223,8 @@ function Reasoning({ part }: { part: Extract<Part, { type: "reasoning" }> }) {
 }
 
 const chatComponents = {
+  // Image distante : jamais chargée d'office (issue 642).
+  img: SafeMarkdownImage,
   h1: (props: React.HTMLAttributes<HTMLHeadingElement>) => {
     return (
       <h1 className="mt-3 mb-1 text-base font-semibold first:mt-0">
@@ -278,6 +281,7 @@ function Text({ part }: { part: Extract<Part, { type: "text" }> }) {
     <Streamdown
       icons={streamdownIcons}
       components={chatComponents}
+      rehypePlugins={safeRehypePlugins}
       className="overflow-wrap-anywhere min-w-0 px-0.5 py-1"
       caret="block"
       isAnimating={isAnimating}

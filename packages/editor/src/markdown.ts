@@ -78,14 +78,73 @@ export function parseJsonContent(raw: string | undefined | null): JSONContent {
   }
 }
 
-export function md2json(markdown: string): JSONContent {
+/**
+ * Image servie par l'application elle-même : protocole asset (pièces jointes,
+ * médias), `data:image`, `blob:` ou chemin relatif. Toute autre adresse est
+ * distante.
+ */
+export function isLocalImageSrc(src: unknown): boolean {
+  if (typeof src !== "string") return false;
+  const value = src.trim();
+  if (!value) return false;
+  const lower = value.toLowerCase();
+  if (
+    lower.startsWith("asset:") ||
+    lower.startsWith("http://asset.localhost/") ||
+    lower.startsWith("https://asset.localhost/") ||
+    lower.startsWith("data:image/") ||
+    lower.startsWith("blob:")
+  ) {
+    return true;
+  }
+  // Chemin relatif ou absolu de l'application, sans schéma ni hôte.
+  return !/^[a-z][a-z0-9+.-]*:/i.test(value) && !value.startsWith("//");
+}
+
+// Contenu généré (issue 642) : une image distante émettrait une requête à
+// chaque affichage. Elle est remplacée par son texte alternatif, s'il existe.
+function stripRemoteImageNodes(nodes: JSONContent[]): JSONContent[] {
+  const out: JSONContent[] = [];
+  for (const node of nodes) {
+    if (node.type === "image" && !isLocalImageSrc(node.attrs?.src)) {
+      const alt =
+        typeof node.attrs?.alt === "string" ? node.attrs.alt.trim() : "";
+      if (alt) out.push({ type: "text", text: alt });
+      continue;
+    }
+    out.push(
+      node.content
+        ? { ...node, content: stripRemoteImageNodes(node.content) }
+        : node,
+    );
+  }
+  return out;
+}
+
+export function stripRemoteImages(doc: JSONContent): JSONContent {
+  if (!doc.content) return doc;
+  // Une image de bloc retirée laisse son texte alternatif dans un paragraphe.
+  const content = stripRemoteImageNodes(doc.content).map((node) =>
+    node.type === "text" ? { type: "paragraph", content: [node] } : node,
+  );
+  return {
+    ...doc,
+    content: content.length > 0 ? content : [{ type: "paragraph" }],
+  };
+}
+
+export function md2json(
+  markdown: string,
+  options: { stripRemoteImages?: boolean } = {},
+): JSONContent {
   try {
     const doc = getParser().parse(markdown);
     const json = doc.toJSON() as JSONContent;
     if (!json.content || json.content.length === 0) {
       return { type: "doc", content: [{ type: "paragraph" }] };
     }
-    return liftBlockImages(json);
+    const lifted = liftBlockImages(json);
+    return options.stripRemoteImages ? stripRemoteImages(lifted) : lifted;
   } catch (error) {
     console.error(error);
     return {

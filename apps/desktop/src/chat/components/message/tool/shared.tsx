@@ -6,6 +6,7 @@ import { streamdownIcons } from "@syntheo/ui/components/streamdown-icons";
 import { cn } from "@syntheo/utils";
 
 import { extractMcpOutputText } from "~/chat/mcp/mcp-output-parser";
+import { safeRehypePlugins, SafeMarkdownImage } from "~/shared/safe-markdown";
 
 export function ToolCard({
   failed,
@@ -132,12 +133,17 @@ export function ToolCardFooters({
   );
 }
 
+// Image distante : jamais chargée d'office (issue 642).
+const markdownPreviewComponents = { img: SafeMarkdownImage };
+
 export function MarkdownPreview({ children }: { children: string }) {
   return (
     <div className="border-border/80 bg-card rounded-lg border">
       <div className="max-h-64 overflow-y-auto px-3 py-2.5">
         <Streamdown
           icons={streamdownIcons}
+          components={markdownPreviewComponents}
+          rehypePlugins={safeRehypePlugins}
           className="text-muted-foreground text-[13px] leading-relaxed"
           linkSafety={{ enabled: false }}
         >

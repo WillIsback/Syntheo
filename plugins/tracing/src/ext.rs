@@ -47,7 +47,9 @@ impl<'a, R: tauri::Runtime, M: tauri::Manager<R>> Tracing<'a, R, M> {
 // `[render-perf]` : résumé des rendus pendant l'écoute, émis par les seuls
 // builds devtools (`devtools-bar/render-perf.ts`) et fait uniquement de noms
 // de code et de nombres.
-const DIAGNOSTIC_PREFIXES: &[&str] = &["[cloudsync]", "[render-perf]"];
+// `[csp]` : violation de la CSP, directive et origine bloquée seulement
+// (`shared/csp-report.ts`, issue 642).
+const DIAGNOSTIC_PREFIXES: &[&str] = &["[cloudsync]", "[render-perf]", "[csp]"];
 const DIAGNOSTIC_MAX_LEN: usize = 200;
 const CODE_LABEL_MAX_LEN: usize = 40;
 const ERROR_IDENTIFIER_MAX_LEN: usize = 64;

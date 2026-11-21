@@ -36,6 +36,7 @@ import { initializeApplicationSettings } from "./settings/queries";
 import { initializeAppExitFlush } from "./shared/app-exit";
 import { useConfigValue } from "./shared/config";
 import { ErrorComponent, NotFoundComponent } from "./shared/control";
+import { startCspViolationReport } from "./shared/csp-report";
 import { LongLoadGate } from "./shared/long-load-gate";
 import { startInteractionProfiler } from "./shared/perf/interaction-profiler";
 import { preventFileDropNavigation } from "./shared/prevent-file-drop-navigation";
@@ -129,6 +130,7 @@ function ReadyApp() {
 }
 
 initWindowsPlugin();
+startCspViolationReport();
 
 const isMainWindow = getCurrentWebviewWindowLabel() === "main";
 

@@ -117,6 +117,7 @@ vi.mock("./summary-switcher", () => ({
 }));
 
 vi.mock("streamdown", () => ({
+  defaultRehypePlugins: {},
   Streamdown: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="markdown">{children}</div>
   ),

