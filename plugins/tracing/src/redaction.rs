@@ -17,8 +17,27 @@ static UUID_REGEX: LazyLock<Regex> = LazyLock::new(|| {
         .expect("Invalid regex")
 });
 static SECRET_REGEX: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?i)\b(bearer\s+|api[_ -]?key[=:]\s*|token[=:]\s*)[a-z0-9._~+/=-]{8,}")
-        .expect("Invalid regex")
+    Regex::new(
+        r"(?i)\b(bearer\s+|(?:api[_ -]?key|access[_-]?token|refresh[_-]?token|token|key|secret|password)[=:]\s*)[a-z0-9._~+/=-]{8,}",
+    )
+    .expect("Invalid regex")
+});
+// Forme JSON : `"api_key":"…"`, `"apiKey": "…"`, `"access_token":"…"`,
+// `"authorization":"Bearer …"` (issue 653).
+static JSON_SECRET_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r#"(?i)("(?:api[_-]?key|apikey|access[_-]?token|refresh[_-]?token|token|secret|password|authorization|client[_-]?secret)"\s*:\s*")[^"]{4,}(")"#,
+    )
+    .expect("Invalid regex")
+});
+// Préfixes de clés connus, où qu'ils apparaissent : OpenAI et Anthropic
+// (`sk-`), secrets de webhook (`whsec_`), GitHub, Slack, Hugging Face, Groq,
+// Google, AWS.
+static PREFIXED_SECRET_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"\b(?:sk-[A-Za-z0-9_-]{16,}|whsec_[A-Za-z0-9]{8,}|gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|xox[abprs]-[A-Za-z0-9-]{10,}|hf_[A-Za-z0-9]{20,}|gsk_[A-Za-z0-9]{20,}|AIza[A-Za-z0-9_-]{30,}|AKIA[A-Z0-9]{16})\b",
+    )
+    .expect("Invalid regex")
 });
 
 fn redact_sensitive_text(value: &str, home_dir: Option<&str>) -> String {
@@ -37,6 +56,12 @@ fn redact_sensitive_text(value: &str, home_dir: Option<&str>) -> String {
         .into_owned();
     redacted = UUID_REGEX
         .replace_all(&redacted, "[ID_REDACTED]")
+        .into_owned();
+    redacted = JSON_SECRET_REGEX
+        .replace_all(&redacted, "${1}[SECRET_REDACTED]${2}")
+        .into_owned();
+    redacted = PREFIXED_SECRET_REGEX
+        .replace_all(&redacted, "[SECRET_REDACTED]")
         .into_owned();
     SECRET_REGEX
         .replace_all(&redacted, "$1[SECRET_REDACTED]")
@@ -126,6 +151,57 @@ impl<W: Write> Drop for RedactingWriter<W> {
 
 #[cfg(test)]
 mod tests {
+    // Issue 653 : formes JSON, `access_token=`, `key=` et préfixes connus.
+    #[test]
+    fn redacts_json_query_and_prefixed_secrets() {
+        for (input, leaked) in [
+            (r#"{"api_key":"abcd1234efgh5678"}"#, "abcd1234efgh5678"),
+            (r#"{"apiKey": "abcd1234efgh5678"}"#, "abcd1234efgh5678"),
+            (r#"{"access_token":"ya29.a0AfH6SMBx"}"#, "ya29.a0AfH6SMBx"),
+            (r#"{"authorization":"Bearer zzzzzzzzzz"}"#, "zzzzzzzzzz"),
+            ("GET /cb?access_token=ya29abcdefgh&x=1", "ya29abcdefgh"),
+            ("https://x.example/v1?key=AIzaSyA1234567", "AIzaSyA1234567"),
+            ("secret: s3cr3tvalue99", "s3cr3tvalue99"),
+            (
+                "using sk-proj-abcdefghijklmnop1234 now",
+                "sk-proj-abcdefghijklmnop1234",
+            ),
+            (
+                "sk-ant-api03-abcdefghijklmnopqrst",
+                "sk-ant-api03-abcdefghijklmnopqrst",
+            ),
+            ("sig whsec_abcdefghijkl", "whsec_abcdefghijkl"),
+            (
+                "ghp_abcdefghijklmnopqrstuvwxyz0123",
+                "ghp_abcdefghijklmnopqrstuvwxyz0123",
+            ),
+            ("xoxb-1234567890-abcdefghij", "xoxb-1234567890-abcdefghij"),
+            (
+                "hf_abcdefghijklmnopqrstuvwxyz",
+                "hf_abcdefghijklmnopqrstuvwxyz",
+            ),
+            ("AKIAABCDEFGHIJKLMNOP", "AKIAABCDEFGHIJKLMNOP"),
+        ] {
+            let redacted = redact_sensitive_text(input, None);
+            assert!(!redacted.contains(leaked), "{input} -> {redacted}");
+            assert!(
+                redacted.contains("[SECRET_REDACTED]"),
+                "{input} -> {redacted}"
+            );
+        }
+    }
+
+    #[test]
+    fn keeps_ordinary_text() {
+        for input in [
+            "[local-api] webhook wh_1 delivery to hooks.slack.com failed: 500",
+            r#"{"model":"nemotron","language":"fr"}"#,
+            "skeleton loaded in 12 ms",
+        ] {
+            assert_eq!(redact_sensitive_text(input, None), input);
+        }
+    }
+
     use super::*;
     use std::io::Write;
 
