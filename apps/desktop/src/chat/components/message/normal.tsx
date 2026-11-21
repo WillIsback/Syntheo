@@ -154,11 +154,21 @@ function isActivityPart(part: SyntheoUIMessage["parts"][number]) {
 
   return (
     (part.type.startsWith("tool-") || part.type === "dynamic-tool") &&
-    part.type !== "tool-edit_memo" &&
-    part.type !== "tool-edit_summary" &&
-    part.type !== "tool-update_prompt_template"
+    !ALWAYS_VISIBLE_TOOL_PARTS.has(part.type)
   );
 }
+
+// Outils dont la carte attend une décision de l'utilisateur (Appliquer ou
+// Refuser) ou en garde la trace (Annuler) : jamais repliés dans « Activité »,
+// sinon la conversation semble bloquée (issue 644).
+const ALWAYS_VISIBLE_TOOL_PARTS = new Set([
+  "tool-edit_memo",
+  "tool-edit_summary",
+  "tool-update_prompt_template",
+  "tool-apply_session_correction",
+  "tool-move_meeting_contents",
+  "tool-move_meetings_to_folder",
+]);
 
 function Part({ part }: { part: Part }) {
   if (part.type === "reasoning") {
