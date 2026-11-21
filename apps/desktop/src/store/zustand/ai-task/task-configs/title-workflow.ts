@@ -66,7 +66,7 @@ async function getSystemPrompt(args: TaskArgsMapTransformed["title"]) {
     throw new Error(result.error);
   }
 
-  return appendPreferredNamesGuidance(result.data, args.dictionaryTerms);
+  return result.data;
 }
 
 async function getUserPrompt(args: TaskArgsMapTransformed["title"]) {
@@ -82,5 +82,6 @@ async function getUserPrompt(args: TaskArgsMapTransformed["title"]) {
     throw new Error(result.error);
   }
 
-  return result.data;
+  // Dictionnaire dans le prompt utilisateur, en liste délimitée (issue 643).
+  return appendPreferredNamesGuidance(result.data, args.dictionaryTerms);
 }

@@ -64,6 +64,11 @@ msgstr "{0, plural, one {… # autre} other {… # autres}}"
 msgid "{0, plural, one {# meeting} other {# meetings}}"
 msgstr "{0, plural, one {# réunion} other {# réunions}}"
 
+#. placeholder {0}: rejected.length
+#: src/chat/components/message/tool/session-correction.tsx
+msgid "{0, plural, one {# suggested term was ignored: a dictionary term is a short name, without links or formatting.} other {# suggested terms were ignored: a dictionary term is a short name, without links or formatting.}}"
+msgstr "{0, plural, one {# terme suggéré a été ignoré : un terme du dictionnaire est un nom court, sans lien ni mise en forme.} other {# termes suggérés ont été ignorés : un terme du dictionnaire est un nom court, sans lien ni mise en forme.}}"
+
 #. placeholder {0}: group.sessionIds.length
 #: src/sidebar/toast/undo-delete-toast.tsx
 msgid "{0} {noteLabel} deleted"
@@ -404,6 +409,14 @@ msgstr "Ajouter une langue parlée"
 msgid "Add the step"
 msgstr "Ajouter l'étape"
 
+#: src/chat/components/message/tool/session-correction.tsx
+msgid "Add these terms to your dictionary?"
+msgstr "Ajouter ces termes à votre dictionnaire ?"
+
+#: src/chat/components/message/tool/session-correction.tsx
+msgid "Add to dictionary"
+msgstr "Ajouter au dictionnaire"
+
 #: src/templates/details.tsx
 #: src/templates/template-form.tsx
 #: src/templates/template-sidebar.tsx
@@ -413,6 +426,10 @@ msgstr "Ajouter aux favoris"
 #: src/settings/developers/webhooks.tsx
 msgid "Add webhook"
 msgstr "Ajoutez un webhook"
+
+#: src/chat/components/message/tool/session-correction.tsx
+msgid "Added to your dictionary:"
+msgstr "Ajoutés à votre dictionnaire :"
 
 #: src/session/components/living-document/summary-review.tsx
 msgid "Added:"
@@ -1209,6 +1226,14 @@ msgstr "Copiez maintenant ce secret de signature — il n'est affiché qu'une se
 msgid "Copy to the clipboard"
 msgstr "Copier dans le presse-papiers"
 
+#: src/chat/components/message/tool/session-correction.tsx
+msgid "Correcting the note"
+msgstr "Correction de la note"
+
+#: src/chat/components/message/tool/session-correction.tsx
+msgid "Correction failed"
+msgstr "Échec de la correction"
+
 #. placeholder {0}: error.message
 #: src/settings/developers/cli.tsx
 msgid "Could not check the CLI: {0}"
@@ -1581,6 +1606,10 @@ msgstr "Dock, sélecteur d'apps, icône"
 #: src/main/windows-title-bar.tsx
 msgid "Documentation"
 msgstr "Documentation"
+
+#: src/chat/components/message/tool/session-correction.tsx
+msgid "Don't add"
+msgstr "Ne pas ajouter"
 
 #: src/session/components/living-document/transcript-margin.tsx
 #: src/session/components/speaker-naming/dialog.tsx
@@ -3300,6 +3329,10 @@ msgstr "Note complétée : {noteTitle}"
 msgid "Note copied to clipboard"
 msgstr "Note copiée dans le presse-papiers"
 
+#: src/chat/components/message/tool/session-correction.tsx
+msgid "Note corrected"
+msgstr "Note corrigée"
+
 #: src/automations/action-runners.ts
 msgid "Note created: {noteTitle}"
 msgstr "Note créée : {noteTitle}"
@@ -4000,6 +4033,10 @@ msgstr "Retirer le filtre du dossier {name}"
 #: src/shared/open-note-dialog.tsx
 msgid "Remove the Settings filter"
 msgstr "Retirer le filtre Paramètres"
+
+#: src/chat/components/message/tool/session-correction.tsx
+msgid "Removed from your dictionary:"
+msgstr "Retirés de votre dictionnaire :"
 
 #: src/session/components/living-document/summary-review.tsx
 msgid "Removed text is struck through, added text is highlighted."
@@ -5233,6 +5270,10 @@ msgstr "Texte"
 msgid "Text provenance"
 msgstr "Provenance du texte"
 
+#: src/chat/components/message/tool/session-correction.tsx
+msgid "Text to correct not found"
+msgstr "Texte à corriger introuvable"
+
 #. placeholder {0}: status.commandName
 #: src/settings/developers/cli.tsx
 msgid "The {0} command on your PATH opens the desktop app. Use the CLI's absolute path."
@@ -5305,6 +5346,10 @@ msgstr "La commande a échoué (code {code})."
 #: src/automations/action-runners.ts
 msgid "The command was not confirmed, so it did not run."
 msgstr "La commande n'a pas été confirmée : elle n'a pas été lancée."
+
+#: src/chat/components/message/tool/session-correction.tsx
+msgid "The correction could not be applied."
+msgstr "La correction n'a pas pu être appliquée."
 
 #: src/settings/general/update-section.tsx
 msgid "The download was interrupted. Try again."
@@ -5454,6 +5499,10 @@ msgstr "La synthèse mentionne encore des locuteurs sans nom."
 #: src/shared/keychain.ts
 msgid "The system keyring is unavailable, so Syntheo can't save this key. Start your desktop's keyring service (GNOME Keyring or KWallet, for example), then try again."
 msgstr "Le trousseau du système est indisponible : Syntheo ne peut pas enregistrer cette clé. Démarrez le service de trousseau de votre bureau (GNOME Keyring ou KWallet, par exemple), puis réessayez."
+
+#: src/chat/components/message/tool/session-correction.tsx
+msgid "The terms could not be removed."
+msgstr "Les termes n'ont pas pu être retirés."
 
 #: src/settings/automations/workflow-test-result.tsx
 msgid "The test changes neither the last run nor the list of notes already processed."
@@ -5798,6 +5847,7 @@ msgstr "Saisissez un nom"
 msgid "Unavailable: the models could not be downloaded (offline?). Listening works without it."
 msgstr "Indisponible : les modèles n'ont pas pu être téléchargés (hors ligne ?). L'écoute fonctionne sans."
 
+#: src/chat/components/message/tool/session-correction.tsx
 #: src/main/windows-title-bar.tsx
 #: src/session/move-note.tsx
 #: src/sidebar/toast/undo-delete-toast.tsx

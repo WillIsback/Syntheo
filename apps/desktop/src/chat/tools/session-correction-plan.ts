@@ -40,6 +40,10 @@ type TranscriptChange = {
 
 export type DictionaryChange = {
   addedTerms: string[];
+  /** Termes qui n'ont pas la forme d'un nom, ou au-delà du maximum. */
+  rejectedTerms?: string[];
+  /** Termes que l'utilisateur a refusés dans la carte. */
+  declinedTerms?: string[];
 };
 
 export type TitleChange = {
