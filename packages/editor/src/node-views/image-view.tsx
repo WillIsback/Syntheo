@@ -124,6 +124,13 @@ export const imageNodeSpec: NodeSpec = {
   },
 };
 
+// Dernière adresse affichée pour chaque pièce jointe (issue 661) : à
+// l'enregistrement, la note ne garde que l'identifiant de la pièce jointe
+// (`normalizePortableAttachmentUrls`). Tant que le résolveur ne la connaît pas
+// encore, l'image garde l'adresse avec laquelle elle a été insérée au lieu de
+// s'afficher vide.
+const knownAttachmentSrc = new Map<string, string>();
+
 export const ResizableImageView = forwardRef<
   HTMLDivElement,
   NodeViewComponentProps
@@ -137,6 +144,19 @@ export const ResizableImageView = forwardRef<
       : node.attrs.attachmentId;
   const resolvedAttachment =
     typeof attachmentId === "string" ? resolveAttachment?.(attachmentId) : null;
+  const directSrc =
+    resolvedAttachment?.src ??
+    (typeof node.attrs.src === "string" && node.attrs.src
+      ? node.attrs.src
+      : null);
+  if (typeof attachmentId === "string" && directSrc) {
+    knownAttachmentSrc.set(attachmentId, directSrc);
+  }
+  const imageSrc =
+    directSrc ??
+    (typeof attachmentId === "string"
+      ? knownAttachmentSrc.get(attachmentId)
+      : undefined);
   const [isHovered, setIsHovered] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [draftWidth, setDraftWidth] = useState<number | null>(null);
@@ -261,7 +281,7 @@ export const ResizableImageView = forwardRef<
       >
         <img
           ref={imageRef}
-          src={resolvedAttachment?.src ?? node.attrs.src}
+          src={imageSrc ?? undefined}
           alt={node.attrs.alt || ""}
           title={parseImageMetadata(node.attrs.title).title ?? undefined}
           className={cn([
