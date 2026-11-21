@@ -3,14 +3,15 @@
 #
 # Règle de signature : on ne signe QUE les builds de release.
 # La signature Azure Artifact Signing (quota mensuel limité) ne s'active que si
-# les deux conditions sont réunies :
+# toutes ces conditions sont réunies :
 #   1. `inputs.features` est vide : build de release. Toute feature (ex.
-#      `devtools`, utilisée par les alphas de build-devtools.yml) donne un build
-#      de test, jamais signé, même si les secrets sont transmis
-#      (`secrets: inherit`) ;
-#   2. les secrets Azure sont fournis (AZURE_TENANT_ID, AZURE_CLIENT_ID,
-#      AZURE_CLIENT_SECRET), ce que fait release.yml.
-# Sinon, build non signé. Voir docs/fr/desktop-installation.mdx.
+#      `devtools`) donne un build de test, jamais signé ;
+#   2. le workflow est appelé par release.yml depuis main (jamais par un
+#      lancement manuel de ce workflow, ni depuis une autre branche) ;
+#   3. les secrets Azure sont transmis explicitement par release.yml.
+# La compilation (dépendances, build.rs, Vite) tourne sans aucun identifiant.
+# Seule l'étape qui assemble et signe les installeurs reçoit les identifiants
+# Azure. Sinon, build non signé. Voir docs/fr/desktop-installation.mdx.
 name: build-windows
 
 on:
@@ -27,6 +28,15 @@ on:
         required: false
         default: ""
   workflow_call:
+    # Transmis un par un par release.yml (pas de `secrets: inherit`), lus par la
+    # seule étape de signature.
+    secrets:
+      AZURE_TENANT_ID:
+        required: false
+      AZURE_CLIENT_ID:
+        required: false
+      AZURE_CLIENT_SECRET:
+        required: false
     inputs:
       version:
         description: "Version injectée dans le bundle"
@@ -42,6 +52,10 @@ on:
         type: string
         required: false
         default: "syntheo-desktop-windows"
+    outputs:
+      signed:
+        description: "true si les installeurs sont signés et leur signature vérifiée"
+        value: ${{ jobs.build.outputs.signed }}
 
 concurrency:
   group: build-windows-${{ github.ref }}-${{ inputs.features }}
@@ -55,11 +69,11 @@ jobs:
     name: Build Windows
     runs-on: windows-latest
     timeout-minutes: 120
-    # Compilation Rust réutilisée d'un build à l'autre (backend cache Actions) :
-    # seul le code modifié est recompilé.
-    env:
-      SCCACHE_GHA_ENABLED: "true"
-      RUSTC_WRAPPER: sccache
+    outputs:
+      signed: ${{ steps.verify.outputs.signed || 'false' }}
+    # Paquets signés : compilés de zéro, sans cache de compilation (sccache)
+    # ni registre Cargo restauré depuis le cache Actions, que d'autres
+    # exécutions sur main alimentent aussi.
     steps:
       - name: Checkout du code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -68,9 +82,8 @@ jobs:
 
       - name: Toolchain Rust
         uses: ./.github/actions/rust_install
-
-      - name: Cache du compilateur (sccache)
-        uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba # v0.0.11
+        with:
+          cache: "false"
 
       - name: Installer Node, pnpm et les dépendances (lockfile figé)
         uses: ./.github/actions/pnpm_install
@@ -112,42 +125,32 @@ jobs:
             Sort-Object FullName -Descending | Select-Object -First 1
           "DUMPBIN=$($dumpbin.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-      # Décision unique de signature, appliquée par toutes les étapes suivantes.
-      # Signer seulement un build de release : features vides ET secrets Azure
-      # présents. Une alpha (features=devtools) n'est jamais signée, même si un
-      # appelant transmet un jour les secrets : elle ne consomme pas le quota.
-      - name: Décider de la signature (release uniquement)
+      # Décision unique de signature, appliquée par les étapes suivantes. Seul
+      # un booléen sort de cette étape : aucun secret n'y est lu en clair.
+      - name: Décider de la signature (release depuis main uniquement)
         id: signing
         shell: bash
         env:
           FEATURES: ${{ inputs.features }}
+          REF: ${{ github.ref }}
+          CALLER: ${{ github.workflow_ref }}
+          RELEASE_WORKFLOW: ${{ github.repository }}/.github/workflows/release.yml@refs/heads/main
           HAS_AZURE_SECRET: ${{ secrets.AZURE_CLIENT_SECRET != '' }}
         run: |
           set -euo pipefail
           if [ -n "${FEATURES:-}" ]; then
             echo "Build avec features ($FEATURES) : build de test, signature désactivée."
             echo "enabled=false" >> "$GITHUB_OUTPUT"
+          elif [ "$REF" != "refs/heads/main" ] || [ "$CALLER" != "$RELEASE_WORKFLOW" ]; then
+            echo "Hors release depuis main ($CALLER) : signature désactivée."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
           elif [ "$HAS_AZURE_SECRET" != "true" ]; then
             echo "Secrets Azure absents : signature désactivée."
             echo "enabled=false" >> "$GITHUB_OUTPUT"
           else
-            echo "Build de release avec secrets Azure : signature activée."
+            echo "Release depuis main avec secrets Azure : signature activée."
             echo "enabled=true" >> "$GITHUB_OUTPUT"
           fi
-
-      - name: Vérifier l'authentification Azure
-        if: steps.signing.outputs.enabled == 'true'
-        shell: pwsh
-        env:
-          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-        run: |
-          az login --service-principal -u $env:AZURE_CLIENT_ID -p $env:AZURE_CLIENT_SECRET -t $env:AZURE_TENANT_ID --only-show-errors
-          if ($LASTEXITCODE -ne 0) {
-            throw "az login a échoué (code $LASTEXITCODE). Si le message est « No subscriptions found », attribue le rôle Reader au service principal sur le groupe de ressources du compte Artifact Signing (ou sur l'abonnement)."
-          }
-          Write-Host "Authentification Azure OK."
 
       - name: Installer artifact-signing-cli
         if: steps.signing.outputs.enabled == 'true'
@@ -164,18 +167,13 @@ jobs:
           if ($actual -ne $sha256) { throw "SHA256 invalide pour artifact-signing-cli : $actual" }
           $dir | Out-File -FilePath $env:GITHUB_PATH -Append
 
-      - name: Build MSI et NSIS (signés seulement pour une release)
-        id: build
+      # Compilation sans aucun identifiant : le code des dépendances (build.rs,
+      # proc-macros, plugins Vite) ne voit jamais les secrets Azure.
+      - name: Compiler l'application (sans signature)
         shell: bash
         env:
           # Valeur factice exigée par des intégrations cloud héritées (chantier 04d).
           VITE_API_URL: http://127.0.0.1:9
-          # Secrets transmis à l'outil de signature uniquement pour une release :
-          # vides pour un build avec features, quoi que fasse l'appelant.
-          AZURE_TENANT_ID: ${{ steps.signing.outputs.enabled == 'true' && secrets.AZURE_TENANT_ID || '' }}
-          AZURE_CLIENT_ID: ${{ steps.signing.outputs.enabled == 'true' && secrets.AZURE_CLIENT_ID || '' }}
-          AZURE_CLIENT_SECRET: ${{ steps.signing.outputs.enabled == 'true' && secrets.AZURE_CLIENT_SECRET || '' }}
-          SIGNING: ${{ steps.signing.outputs.enabled }}
           FEATURES: ${{ inputs.features }}
         run: |
           set -euo pipefail
@@ -184,18 +182,55 @@ jobs:
             echo "Features : $FEATURES"
             extra+=(--features "$FEATURES")
           fi
-          if [ "$SIGNING" = "true" ]; then
-            echo "Signature Windows activée (build de release)."
-            echo "signing=true" >> "$GITHUB_OUTPUT"
-            extra+=(--config ./src-tauri/tauri.windows-signing.conf.json)
-          else
-            echo "Signature Windows désactivée (build de test ou secrets absents)."
-            echo "signing=false" >> "$GITHUB_OUTPUT"
-          fi
           pnpm -F ui build
-          pnpm -F desktop tauri build --ci --bundles nsis,msi \
+          pnpm -F desktop tauri build --ci --no-bundle \
             --config ./src-tauri/tauri.conf.syntheo.json \
             --config ./src-tauri/tauri.windows-vcrt.conf.json "${extra[@]}"
+
+      - name: Assembler les installeurs MSI et NSIS (non signés)
+        if: steps.signing.outputs.enabled != 'true'
+        shell: bash
+        env:
+          FEATURES: ${{ inputs.features }}
+        run: |
+          set -euo pipefail
+          extra=()
+          if [ -n "${FEATURES:-}" ]; then
+            extra+=(--features "$FEATURES")
+          fi
+          pnpm -F desktop tauri bundle --ci --bundles nsis,msi \
+            --config ./src-tauri/tauri.conf.syntheo.json \
+            --config ./src-tauri/tauri.windows-vcrt.conf.json "${extra[@]}"
+
+      # Seule étape qui reçoit les identifiants Azure : elle n'exécute que
+      # l'assemblage des installeurs (aucune compilation) et l'outil de
+      # signature, qui signe l'exécutable, le programme de désinstallation et
+      # les installeurs. Session Azure fermée en sortie.
+      # Passage à OIDC (identité fédérée, sans secret client) : remplacer les
+      # trois variables par une étape azure/login avec `id-token: write`, une
+      # fois l'identité fédérée configurée côté Entra ID.
+      - name: Assembler et signer les installeurs (release)
+        id: build
+        if: steps.signing.outputs.enabled == 'true'
+        shell: bash
+        env:
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+        run: |
+          set -euo pipefail
+          trap 'az logout --only-show-errors > /dev/null 2>&1 || true' EXIT
+          if ! az login --service-principal -u "$AZURE_CLIENT_ID" -p "$AZURE_CLIENT_SECRET" \
+            -t "$AZURE_TENANT_ID" --only-show-errors > /dev/null; then
+            echo "::error::az login a échoué. Si le message est « No subscriptions found », attribue le rôle Reader au service principal sur le groupe de ressources du compte Artifact Signing (ou sur l'abonnement)."
+            exit 1
+          fi
+          echo "Authentification Azure OK."
+          echo "signing=true" >> "$GITHUB_OUTPUT"
+          pnpm -F desktop tauri bundle --ci --bundles nsis,msi \
+            --config ./src-tauri/tauri.conf.syntheo.json \
+            --config ./src-tauri/tauri.windows-vcrt.conf.json \
+            --config ./src-tauri/tauri.windows-signing.conf.json
 
       - name: Vérifier que le runtime Visual C++ importé est embarqué
         shell: pwsh
@@ -214,6 +249,7 @@ jobs:
           if ($missing) { throw "DLL du runtime Visual C++ importées mais non embarquées : $($missing -join ', ')" }
 
       - name: Vérifier la signature des installeurs
+        id: verify
         if: steps.build.outputs.signing == 'true'
         shell: pwsh
         run: |
@@ -243,6 +279,8 @@ jobs:
             }
           }
           if ($failed) { throw "au moins un installeur n'est pas signé correctement" }
+          # Lue par release.yml : une release publiée exige des installeurs signés.
+          "signed=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
       - name: Rassembler les artefacts et les sommes de contrôle
         shell: pwsh

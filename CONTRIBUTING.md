@@ -45,10 +45,16 @@ Gates lourdes, hors PR :
 
 ### Dépendances (Dependabot)
 
-Dependabot ouvre chaque semaine des PR groupées (npm, cargo, actions). Elles sont
-fusionnées automatiquement (squash) dès que les gates de PR requises par la règle
-de la branche `main` sont au vert ; une PR en échec reste ouverte et doit être
-corrigée à la main. `ci-traceability` ne s'applique pas à Dependabot.
+Dependabot ouvre chaque semaine des PR groupées (npm, cargo, actions). Une
+version n'est proposée qu'après une quarantaine depuis sa publication (7 jours,
+3 pour un correctif ; les mises à jour de sécurité n'attendent pas), et pnpm
+refuse de résoudre une version de moins de 3 jours (`minimumReleaseAge`).
+Les groupes minor/patch npm et cargo sont fusionnés automatiquement (squash) dès
+que les gates de PR requises par la règle de la branche `main` sont au vert ; une
+PR en échec reste ouverte et doit être corrigée à la main. Restent toujours à
+relire et fusionner à la main : les actions GitHub, les paquets `tauri*`,
+`@tauri-apps/*` et `minisign*`, et l'outil de signature (`.github/signing`).
+`ci-traceability` ne s'applique pas à Dependabot.
 
 ## Construire depuis les sources
 
@@ -86,8 +92,11 @@ intégrations cloud héritées ; elle disparaît avec le chantier 04d du plan.
 Une alpha est la variante `devtools` d'un lot (inspecteur, barre de diagnostic,
 logs détaillés), construite avant de fusionner la PR du lot pour tester en
 conditions réelles. Elle est **toujours non signée** : la signature Windows
-(quota Azure limité) est réservée à la release, et `build-windows.yml` la
-refuse pour tout build avec `features` non vide.
+(quota Azure limité) est réservée à la release appelée par `release.yml`
+depuis `main`, et `build-windows.yml` la refuse pour tout build avec
+`features` non vide comme pour un lancement manuel. La compilation y tourne
+sans identifiants Azure : seule l'étape qui assemble et signe les
+installeurs les reçoit.
 
 Les alphas se construisent **uniquement en local** : AppImage Linux sur un
 poste Linux (dans un conteneur Ubuntu 24.04), installeur Windows dans une VM
@@ -264,9 +273,14 @@ cargo test --locked -p template-app -p db-app
 La release signe l'AppImage et l'installeur NSIS avec une clé Tauri dédiée
 (job `updater` de `release.yml`, `tauri signer sign --app-version`), puis publie
 `latest.json` (`scripts/generate-updater-manifest.mjs`). La clé privée et son
-mot de passe sont les secrets du dépôt `TAURI_SIGNING_PRIVATE_KEY` et
-`TAURI_SIGNING_PRIVATE_KEY_PASSWORD`, lus par ce seul job ; une copie de
-sauvegarde est gardée hors du dépôt par le mainteneur. La clé publique est dans
+mot de passe sont les secrets `TAURI_SIGNING_PRIVATE_KEY` et
+`TAURI_SIGNING_PRIVATE_KEY_PASSWORD` de l'environnement GitHub
+`release-signing` (branches de déploiement limitées à `main`, relecteur
+requis), lus par ce seul job ; une copie de sauvegarde est gardée hors du dépôt
+par le mainteneur. Le job ne tourne que depuis `main`, jamais en `dry_run`, et
+n'installe que l'outil de signature, à version et empreintes figées
+(`.github/signing`, à garder à la version de `@tauri-apps/cli` de
+`apps/desktop`). La clé publique est dans
 `apps/desktop/src-tauri/tauri.conf.json` (`plugins.updater.pubkey`).
 
 **Perdre la clé privée coupe la mise à jour intégrée** : les versions installées

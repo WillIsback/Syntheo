@@ -82,7 +82,7 @@
     "date-fns": "^4.4.0",
     "effect": "^4.1.4",
     "js-levenshtein-esm": "^2.0.0",
-    "motion": "^14.13.0",
+    "motion": "^14.14.0",
     "mutative": "^2.0.2",
     "nlcst-to-string": "^4.0.0",
     "prosemirror-model": "^1.25.13",
