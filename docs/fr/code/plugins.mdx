@@ -176,7 +176,7 @@ La colonne « Interface » indique si `apps/desktop/src` importe le paquet `@syn
 | `icon` | macOS uniquement | `set_dock_icon`, `reset_dock_icon`, `get_icon`, `set_recording_indicator`, `set_notification_badge`. Hors macOS, ces commandes ne font rien. |
 | `dock` | macOS uniquement | Aucune commande. Installe le menu du Dock (nouvelle note, réglages, mise à jour, redémarrage, quitter). |
 | `sidecar2` | Interne | Aucune commande. Résout et lance les binaires sidecar, y compris en debug. Utilisé par `permissions`. |
-| `relay` | Développement uniquement | Sert l'interface en HTTP sur `127.0.0.1` (port 1423, ou `RELAY_PORT`) et relaie l'IPC par WebSocket. Le shim Vite `@syntheo/plugin-relay/vite` est chargé dans `apps/desktop/vite.config.ts`. |
+| `relay` | Développement uniquement | Sert l'interface en HTTP sur `127.0.0.1` seulement (port 1423, ou `RELAY_PORT`) et relaie l'IPC par WebSocket. Actif par défaut en build de debug ; dans une build avec la feature `devtools`, seulement avec `SYNTHEO_RELAY=1`. Le navigateur se connecte par une URL d'amorçage à usage unique, affichée en console et écrite dans le fichier `relay-token` du dossier de données de l'application (lisible par le seul utilisateur). Les commandes qui lancent un programme ou lisent les secrets ne passent pas par le relay. Le shim Vite `@syntheo/plugin-relay/vite` est chargé dans `apps/desktop/vite.config.ts`. |
 
 ## Quand mettre à jour la documentation
 

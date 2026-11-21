@@ -55,6 +55,21 @@ const OUTBOUND_BUFFER_CAPACITY: usize = 32;
 const REPLY_SEND_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5);
 const SLOW_CLIENT_CLOSE_CODE: u16 = 1013;
 
+/// Commandes que le relay ne transmet jamais (issue 645) : lancer un
+/// programme, lire ou modifier les secrets du trousseau, ouvrir un fichier avec
+/// un programme au choix. Le reste de l'interface reste pilotable.
+const DENIED_COMMANDS: &[&str] = &[
+    "plugin:local-api|run_automation_command",
+    "plugin:store2|get_secret",
+    "plugin:store2|set_secret",
+    "plugin:store2|delete_secret",
+    "plugin:opener2|open_path",
+];
+
+pub(crate) fn is_denied_command(cmd: &str) -> bool {
+    DENIED_COMMANDS.contains(&cmd)
+}
+
 #[derive(Deserialize)]
 pub struct InvokeRequest {
     pub id: u64,
@@ -205,6 +220,19 @@ pub async fn handle_ws<R: Runtime>(socket: WebSocket, app: AppHandle<R>, pending
         request_tasks.spawn(async move {
             let _permit = permit;
             let result = match req.cmd.as_str() {
+                cmd if is_denied_command(cmd) => {
+                    if let Some((internal_id, _)) = pending_invocation {
+                        pending.remove(internal_id).await;
+                        active_invokes.lock().await.remove(&internal_id);
+                    }
+                    InvokeResponse {
+                        id,
+                        ok: false,
+                        payload: serde_json::Value::String(
+                            "command not available through the relay".into(),
+                        ),
+                    }
+                }
                 "plugin:event|listen" => {
                     event_listen(&app, id, &req.args, &outbound_tx, &overflow_tx, &subs).await
                 }

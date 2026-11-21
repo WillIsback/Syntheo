@@ -1,3 +1,8 @@
+use std::{
+    path::PathBuf,
+    sync::{Arc, Mutex},
+};
+
 use axum::{
     extract::{Request, State},
     http::{HeaderMap, StatusCode, header},
@@ -5,18 +10,70 @@ use axum::{
     response::{IntoResponse, Response},
 };
 
+/// Chemin de l'amorçage : `/__relay/bootstrap?token=…` pose le cookie de
+/// session puis renvoie vers l'interface.
+pub(crate) const BOOTSTRAP_PATH: &str = "/__relay/bootstrap";
+
+// Accès au relay (issue 645). Le jeton d'amorçage est remis hors bande : écrit
+// dans un fichier lisible par le seul utilisateur et affiché en console, jamais
+// déduit d'en-têtes de requête. Il ne sert qu'une fois ; le suivant le
+// remplace aussitôt. Le cookie de session n'est posé que par cet amorçage,
+// jamais sur une réponse transmise depuis le serveur de développement.
 #[derive(Clone)]
 pub(crate) struct RelayAccess {
     port: u16,
     secret: String,
+    bootstrap: Arc<Mutex<String>>,
+    token_file: Option<PathBuf>,
 }
 
 impl RelayAccess {
-    pub(crate) fn new(port: u16) -> Self {
-        Self {
+    pub(crate) fn new(port: u16, token_file: Option<PathBuf>) -> Self {
+        let access = Self {
             port,
             secret: uuid::Uuid::new_v4().to_string(),
+            bootstrap: Arc::new(Mutex::new(String::new())),
+            token_file,
+        };
+        access.rotate_bootstrap();
+        access
+    }
+
+    /// URL d'amorçage du jeton courant.
+    pub(crate) fn bootstrap_url(&self) -> String {
+        let token = self.bootstrap.lock().map(|t| t.clone()).unwrap_or_default();
+        format!(
+            "http://127.0.0.1:{}{BOOTSTRAP_PATH}?token={token}",
+            self.port
+        )
+    }
+
+    /// Nouveau jeton à usage unique : fichier réécrit et URL affichée en console
+    /// (stderr, pas dans app.log).
+    fn rotate_bootstrap(&self) {
+        if let Ok(mut token) = self.bootstrap.lock() {
+            *token = uuid::Uuid::new_v4().simple().to_string();
         }
+        let url = self.bootstrap_url();
+        if let Some(path) = &self.token_file
+            && let Err(error) = write_private_file(path, &format!("{url}\n"))
+        {
+            tracing::warn!(%error, "[relay] bootstrap token file not written");
+        }
+        eprintln!("[relay] open {url} to connect a browser (single use)");
+    }
+
+    /// Consomme le jeton s'il est exact, en temps constant.
+    fn consume_bootstrap(&self, candidate: &str) -> bool {
+        let matches = self
+            .bootstrap
+            .lock()
+            .map(|token| constant_time_eq(token.as_bytes(), candidate.as_bytes()))
+            .unwrap_or(false);
+        if matches {
+            self.rotate_bootstrap();
+        }
+        matches
     }
 
     fn host(&self, headers: &HeaderMap) -> Option<String> {
@@ -36,11 +93,53 @@ impl RelayAccess {
     fn authenticated(&self, headers: &HeaderMap) -> bool {
         let expected = format!("{}={}", self.cookie_name(), self.secret);
         headers.get_all(header::COOKIE).iter().any(|value| {
-            value
-                .to_str()
-                .is_ok_and(|cookies| cookies.split(';').any(|cookie| cookie.trim() == expected))
+            value.to_str().is_ok_and(|cookies| {
+                cookies
+                    .split(';')
+                    .any(|cookie| constant_time_eq(cookie.trim().as_bytes(), expected.as_bytes()))
+            })
         })
     }
+}
+
+fn constant_time_eq(left: &[u8], right: &[u8]) -> bool {
+    left.len() == right.len()
+        && left
+            .iter()
+            .zip(right)
+            .fold(0u8, |acc, (a, b)| acc | (a ^ b))
+            == 0
+}
+
+/// Fichier lisible par le seul utilisateur (0600 sous Unix ; sous Windows, le
+/// dossier de données de l'utilisateur n'est pas lisible par les autres
+/// comptes).
+fn write_private_file(path: &std::path::Path, content: &str) -> std::io::Result<()> {
+    use std::io::Write;
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    let mut options = std::fs::OpenOptions::new();
+    options.write(true).create(true).truncate(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    let mut file = options.open(path)?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        file.set_permissions(std::fs::Permissions::from_mode(0o600))?;
+    }
+    file.write_all(content.as_bytes())
+}
+
+fn query_token(req: &Request) -> Option<String> {
+    req.uri()
+        .query()?
+        .split('&')
+        .find_map(|pair| pair.strip_prefix("token=").map(str::to_string))
 }
 
 pub(crate) async fn authorize(
@@ -65,26 +164,43 @@ pub(crate) async fn authorize(
     {
         return StatusCode::FORBIDDEN.into_response();
     }
-    if req.uri().path() == "/ws" && (!same_origin || !access.authenticated(req.headers())) {
+
+    let path = req.uri().path().to_string();
+    if path == BOOTSTRAP_PATH {
+        let Some(token) = query_token(&req) else {
+            return StatusCode::FORBIDDEN.into_response();
+        };
+        if !access.consume_bootstrap(&token) {
+            return StatusCode::FORBIDDEN.into_response();
+        }
+        return (
+            StatusCode::SEE_OTHER,
+            [
+                (header::LOCATION, "/".to_string()),
+                (
+                    header::SET_COOKIE,
+                    format!(
+                        "{}={}; HttpOnly; SameSite=Strict; Path=/",
+                        access.cookie_name(),
+                        access.secret
+                    ),
+                ),
+                (header::CACHE_CONTROL, "no-store".to_string()),
+                (header::REFERRER_POLICY, "no-referrer".to_string()),
+            ],
+        )
+            .into_response();
+    }
+    if path != "/health" && !access.authenticated(req.headers()) {
+        return StatusCode::FORBIDDEN.into_response();
+    }
+    if path == "/ws" && !same_origin {
         return StatusCode::FORBIDDEN.into_response();
     }
 
-    // Only a top-level browser navigation can bootstrap the HttpOnly credential.
-    let trusted_navigation = req
-        .headers()
-        .get("sec-fetch-site")
-        .is_some_and(|site| site == "none" || site == "same-origin");
-    let bootstrap = trusted_navigation
-        && req
-            .headers()
-            .get("sec-fetch-mode")
-            .is_some_and(|mode| mode == "navigate")
-        && req
-            .headers()
-            .get("sec-fetch-dest")
-            .is_some_and(|dest| dest == "document");
     let mut response = next.run(req).await;
-    // Vite's development CORS policy must not expose this proxy to websites.
+    // Vite's development CORS policy must not expose this proxy to websites,
+    // and a proxied response never sets a cookie.
     response
         .headers_mut()
         .remove(header::ACCESS_CONTROL_ALLOW_ORIGIN);
@@ -101,28 +217,6 @@ pub(crate) async fn authorize(
     response
         .headers_mut()
         .insert("x-frame-options", "DENY".parse().unwrap());
-    if bootstrap
-        && response.status().is_success()
-        && response
-            .headers()
-            .get(header::CONTENT_TYPE)
-            .is_some_and(|content_type| {
-                content_type
-                    .to_str()
-                    .is_ok_and(|value| value.starts_with("text/html"))
-            })
-    {
-        response.headers_mut().insert(
-            header::SET_COOKIE,
-            format!(
-                "{}={}; HttpOnly; SameSite=Strict; Path=/ws",
-                access.cookie_name(),
-                access.secret
-            )
-            .parse()
-            .unwrap(),
-        );
-    }
     response
 }
 
@@ -134,130 +228,175 @@ mod tests {
     use tokio_tungstenite::tungstenite::{Message, client::IntoClientRequest};
     use tower::ServiceExt;
 
-    #[tokio::test]
-    async fn relay_requires_a_bootstrapped_credential_and_its_exact_origin() {
-        let access = RelayAccess::new(1423);
-        let cookie = format!("{}={}", access.cookie_name(), access.secret);
-        let router = Router::new()
+    fn token_of(access: &RelayAccess) -> String {
+        access.bootstrap.lock().unwrap().clone()
+    }
+
+    fn router(access: RelayAccess) -> Router {
+        Router::new()
             .route(
                 "/",
                 get(|| async {
+                    // Amont non authentifié (serveur de développement ou
+                    // processus qui occupe le port) : jamais de cookie relayé.
                     (
                         [
                             (header::CONTENT_TYPE, "text/html"),
                             (header::ACCESS_CONTROL_ALLOW_ORIGIN, "*"),
+                            (header::SET_COOKIE, "syntheo-relay-1423=planted"),
                         ],
                         "<html></html>",
                     )
                 }),
             )
             .route("/ws", get(|| async { "accepted" }))
-            .layer(axum::middleware::from_fn_with_state(access, authorize));
-        for (host, origin, credential, expected) in [
+            .route("/health", get(|| async { "ok" }))
+            .route(BOOTSTRAP_PATH, get(|| async { "" }))
+            .layer(axum::middleware::from_fn_with_state(access, authorize))
+    }
+
+    async fn get_with(router: &Router, uri: &str, headers: &[(&str, &str)]) -> Response {
+        let mut request = Request::builder()
+            .uri(uri)
+            .header(header::HOST, "127.0.0.1:1423");
+        for (name, value) in headers {
+            request = request.header(*name, *value);
+        }
+        router
+            .clone()
+            .oneshot(request.body(Body::empty()).unwrap())
+            .await
+            .unwrap()
+    }
+
+    // Issue 645 : les en-têtes Sec-Fetch d'un client quelconque ne suffisent
+    // plus ; une réponse transmise ne pose jamais de cookie.
+    #[tokio::test]
+    async fn forged_navigation_headers_get_no_credential() {
+        let access = RelayAccess::new(1423, None);
+        let router = router(access);
+        let response = get_with(
+            &router,
+            "/",
+            &[
+                ("sec-fetch-site", "none"),
+                ("sec-fetch-mode", "navigate"),
+                ("sec-fetch-dest", "document"),
+            ],
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+        assert!(!response.headers().contains_key(header::SET_COOKIE));
+    }
+
+    #[tokio::test]
+    async fn bootstrap_token_is_single_use_and_sets_the_session_cookie() {
+        let dir = std::env::temp_dir().join(format!("relay-test-{}", uuid::Uuid::new_v4()));
+        let file = dir.join(crate::TOKEN_FILE_NAME);
+        let access = RelayAccess::new(1423, Some(file.clone()));
+        let first = token_of(&access);
+        assert_eq!(
+            std::fs::read_to_string(&file).unwrap().trim(),
+            format!("http://127.0.0.1:1423{BOOTSTRAP_PATH}?token={first}")
+        );
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            assert_eq!(
+                std::fs::metadata(&file).unwrap().permissions().mode() & 0o777,
+                0o600
+            );
+        }
+        let router = router(access.clone());
+
+        let wrong = get_with(&router, &format!("{BOOTSTRAP_PATH}?token=guess"), &[]).await;
+        assert_eq!(wrong.status(), StatusCode::FORBIDDEN);
+        assert!(!wrong.headers().contains_key(header::SET_COOKIE));
+
+        let ok = get_with(&router, &format!("{BOOTSTRAP_PATH}?token={first}"), &[]).await;
+        assert_eq!(ok.status(), StatusCode::SEE_OTHER);
+        assert_eq!(ok.headers()[header::LOCATION], "/");
+        let cookie = format!("{}={}", access.cookie_name(), access.secret);
+        assert_eq!(
+            ok.headers()[header::SET_COOKIE],
+            format!("{cookie}; HttpOnly; SameSite=Strict; Path=/")
+        );
+
+        // Usage unique : le même jeton est refusé, le fichier porte le suivant.
+        let replay = get_with(&router, &format!("{BOOTSTRAP_PATH}?token={first}"), &[]).await;
+        assert_eq!(replay.status(), StatusCode::FORBIDDEN);
+        let second = token_of(&access);
+        assert_ne!(first, second);
+        assert!(std::fs::read_to_string(&file).unwrap().contains(&second));
+
+        // Avec le cookie, l'interface est servie, sans cookie relayé.
+        let page = get_with(&router, "/", &[("cookie", cookie.as_str())]).await;
+        assert_eq!(page.status(), StatusCode::OK);
+        assert!(!page.headers().contains_key(header::SET_COOKIE));
+        assert!(
+            !page
+                .headers()
+                .contains_key(header::ACCESS_CONTROL_ALLOW_ORIGIN)
+        );
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn websocket_requires_the_cookie_and_its_exact_origin() {
+        let access = RelayAccess::new(1423, None);
+        let cookie = format!("{}={}", access.cookie_name(), access.secret);
+        let router = router(access);
+        for (origin, credential, expected) in [
+            ("http://127.0.0.1:1423", "", StatusCode::FORBIDDEN),
             (
-                "localhost:1423",
-                "http://localhost:1423",
-                "",
-                StatusCode::FORBIDDEN,
-            ),
-            (
-                "localhost:1423",
                 "https://attacker.example",
                 cookie.as_str(),
                 StatusCode::FORBIDDEN,
             ),
+            ("", cookie.as_str(), StatusCode::FORBIDDEN),
             (
-                "attacker.example:1423",
-                "http://attacker.example:1423",
-                cookie.as_str(),
-                StatusCode::FORBIDDEN,
-            ),
-            ("localhost:1423", "", cookie.as_str(), StatusCode::FORBIDDEN),
-            (
-                "localhost:1423",
-                "http://localhost:1423",
+                "http://127.0.0.1:1423",
                 "syntheo-relay-1423=forged",
                 StatusCode::FORBIDDEN,
             ),
-            (
-                "localhost:1423",
-                "http://localhost:1423",
-                cookie.as_str(),
-                StatusCode::OK,
-            ),
+            ("http://127.0.0.1:1423", cookie.as_str(), StatusCode::OK),
         ] {
-            let response = router
-                .clone()
-                .oneshot(
-                    Request::builder()
-                        .uri("/ws")
-                        .header(header::HOST, host)
-                        .header(header::ORIGIN, origin)
-                        .header(header::COOKIE, credential)
-                        .body(Body::empty())
-                        .unwrap(),
-                )
-                .await
-                .unwrap();
-            assert_eq!(response.status(), expected);
-        }
-        for dest in ["iframe", "document"] {
-            let response = router
-                .clone()
-                .oneshot(
-                    Request::builder()
-                        .uri("/")
-                        .header(header::HOST, "localhost:1423")
-                        .header("sec-fetch-site", "none")
-                        .header("sec-fetch-mode", "navigate")
-                        .header("sec-fetch-dest", dest)
-                        .body(Body::empty())
-                        .unwrap(),
-                )
-                .await
-                .unwrap();
-            assert_eq!(
-                response.headers().contains_key(header::SET_COOKIE),
-                dest == "document"
-            );
-            assert!(
-                !response
-                    .headers()
-                    .contains_key(header::ACCESS_CONTROL_ALLOW_ORIGIN)
-            );
-            if dest == "document" {
-                assert_eq!(
-                    response.headers()[header::SET_COOKIE],
-                    format!("{cookie}; HttpOnly; SameSite=Strict; Path=/ws")
-                );
+            let mut headers = vec![("cookie", credential)];
+            if !origin.is_empty() {
+                headers.push(("origin", origin));
             }
+            let response = get_with(&router, "/ws", &headers).await;
+            assert_eq!(response.status(), expected, "{origin} {credential}");
         }
-        for site in ["cross-site", "same-site", ""] {
-            let response = router
-                .clone()
-                .oneshot(
-                    Request::builder()
-                        .uri("/")
-                        .header(header::HOST, "localhost:1423")
-                        .header("sec-fetch-site", site)
-                        .header("sec-fetch-mode", "navigate")
-                        .header("sec-fetch-dest", "document")
-                        .body(Body::empty())
-                        .unwrap(),
-                )
-                .await
-                .unwrap();
-            assert!(!response.headers().contains_key(header::SET_COOKIE));
-        }
-        let restarted = RelayAccess::new(1423);
+        let wrong_host = router
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/ws")
+                    .header(header::HOST, "attacker.example:1423")
+                    .header(header::COOKIE, cookie.as_str())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(wrong_host.status(), StatusCode::FORBIDDEN);
+        assert_eq!(
+            get_with(&router, "/health", &[]).await.status(),
+            StatusCode::OK
+        );
+        let restarted = RelayAccess::new(1423, None);
         assert!(!restarted.authenticated(&HeaderMap::from_iter([(
             header::COOKIE,
             cookie.parse().unwrap()
         )])));
+    }
 
+    #[tokio::test]
+    async fn websocket_connects_with_the_bootstrapped_cookie() {
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap();
-        let access = RelayAccess::new(addr.port());
+        let access = RelayAccess::new(addr.port(), None);
         let cookie = format!("{}={}", access.cookie_name(), access.secret);
         let router = Router::new()
             .route(
