@@ -106,5 +106,6 @@ devtools = [
 
 [dev-dependencies]
 reqwest = { workspace = true }
+tauri = { workspace = true, features = ["test"] }
 tempfile = { workspace = true }
 wiremock = { workspace = true }
