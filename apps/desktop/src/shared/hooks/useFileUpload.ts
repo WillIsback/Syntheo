@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { useCallback } from "react";
 
@@ -8,6 +9,7 @@ import {
 
 import { catalogLocalNoteAttachment, sha256Hex } from "~/session/attachments";
 import { catalogLocalFolderMaterial } from "~/session/folder-attachments";
+import { sessionAttachmentPathsQueryKey } from "~/session/hooks/useAttachmentResolver";
 
 type FileUploadResult = AttachmentSaveResult & {
   url: string;
@@ -16,6 +18,7 @@ type FileUploadResult = AttachmentSaveResult & {
 const MAX_IPC_ATTACHMENT_BYTES = 4 * 1024 * 1024;
 
 export function useFileUpload(sessionId: string) {
+  const queryClient = useQueryClient();
   return useCallback(
     async (file: File): Promise<FileUploadResult> => {
       const filename = file.name;
@@ -55,9 +58,14 @@ export function useFileUpload(sessionId: string) {
         }
         throw error;
       }
+      // La note enregistrée ne garde que l'identifiant de la pièce jointe :
+      // le résolveur doit la connaître tout de suite (issue 661).
+      void queryClient.invalidateQueries({
+        queryKey: sessionAttachmentPathsQueryKey(sessionId),
+      });
       return { path, attachmentId, url: convertFileSrc(path) };
     },
-    [sessionId],
+    [queryClient, sessionId],
   );
 }
 
