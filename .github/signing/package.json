@@ -1,0 +1,8 @@
+{
+  "name": "syntheo-release-signing",
+  "private": true,
+  "description": "Outil de signature des mises à jour, seul installé dans le job de signature de release.yml (même version que apps/desktop).",
+  "dependencies": {
+    "@tauri-apps/cli": "2.12.4"
+  }
+}
