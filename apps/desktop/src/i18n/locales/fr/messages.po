@@ -2243,6 +2243,10 @@ msgstr "Ignorer ces apps ?"
 msgid "Ignore this app?"
 msgstr "Ignorer cette app ?"
 
+#: src/shared/safe-markdown.tsx
+msgid "Image unavailable"
+msgstr "Image indisponible"
+
 #: src/session/components/capsule/import-progress.tsx
 msgid "Import"
 msgstr "Import"
@@ -2577,6 +2581,10 @@ msgstr "Transcription en direct reprise."
 #: src/session/components/living-document/live-transcription-language.tsx
 msgid "Live transcription: {language}"
 msgstr "Transcription en direct : {language}"
+
+#: src/shared/safe-markdown.tsx
+msgid "Load image"
+msgstr "Charger l'image"
 
 #: src/templates/auto-form.tsx
 msgid "Loading Auto format..."

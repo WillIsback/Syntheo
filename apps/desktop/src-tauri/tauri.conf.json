@@ -17,6 +17,34 @@
     "withGlobalTauri": true,
     "macOSPrivateApi": false,
     "security": {
+      "csp": {
+        "default-src": "'self'",
+        "script-src": "'self' 'wasm-unsafe-eval'",
+        "style-src": "'self' 'unsafe-inline'",
+        "img-src": "'self' asset: http://asset.localhost blob: data:",
+        "media-src": "'self' asset: http://asset.localhost blob: data:",
+        "font-src": "'self' data:",
+        "connect-src": "'self' ipc: http://ipc.localhost asset: http://asset.localhost blob: data:",
+        "worker-src": "'self' blob:",
+        "frame-src": "'none'",
+        "object-src": "'none'",
+        "base-uri": "'self'",
+        "form-action": "'none'"
+      },
+      "devCsp": {
+        "default-src": "'self'",
+        "script-src": "'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' http://localhost:1422",
+        "style-src": "'self' 'unsafe-inline' http://localhost:1422",
+        "img-src": "'self' asset: http://asset.localhost blob: data: http://localhost:1422",
+        "media-src": "'self' asset: http://asset.localhost blob: data:",
+        "font-src": "'self' data: http://localhost:1422",
+        "connect-src": "'self' ipc: http://ipc.localhost asset: http://asset.localhost blob: data: http://localhost:1422 ws://localhost:1422",
+        "worker-src": "'self' blob:",
+        "frame-src": "'none'",
+        "object-src": "'none'",
+        "base-uri": "'self'",
+        "form-action": "'none'"
+      },
       "assetProtocol": {
         "enable": true,
         "scope": [

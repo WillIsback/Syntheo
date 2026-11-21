@@ -127,7 +127,9 @@ export function planSummaryCorrections({
       id: note.id,
       currentContent: note.content,
       currentContentFormat: note.contentFormat,
-      nextContent: JSON.stringify(md2json(replaced.text)),
+      nextContent: JSON.stringify(
+        md2json(replaced.text, { stripRemoteImages: true }),
+      ),
     });
     changes.push({
       enhancedNoteId: note.id,

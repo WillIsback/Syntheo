@@ -103,8 +103,10 @@ mod tests {
     Summary of Q1 goals.
 
     Meeting Chat:
+    <meeting_chat>
     - Slack · 10:42 AM · Ada · received
       Review the rollout plan.
+    </meeting_chat>
     </context>
     "#);
 
@@ -204,11 +206,13 @@ mod tests {
     Title: Standup
 
     Full Meeting Transcript:
+    <transcript>
 
     [00:05] Alice: Kickoff
     [62:05] Bob: Status update
     Carol: Imported line
     [65:00] (now, still recording)
+    </transcript>
     </context>
     "#);
 }

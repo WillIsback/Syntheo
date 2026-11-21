@@ -57,6 +57,7 @@ vi.mock("@syntheo/ui/components/ui/spinner", () => ({
 }));
 
 vi.mock("streamdown", () => ({
+  defaultRehypePlugins: {},
   Streamdown: ({ children }: { children: string }) => <div>{children}</div>,
 }));
 

@@ -11,6 +11,7 @@ const reviewMocks = vi.hoisted(() => ({
 }));
 
 vi.mock("streamdown", () => ({
+  defaultRehypePlugins: {},
   Streamdown: ({ children }: { children: React.ReactNode }) => (
     <div>{children}</div>
   ),

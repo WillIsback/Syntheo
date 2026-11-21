@@ -10,6 +10,7 @@ import { useAITaskTask, useLLMConnection } from "~/ai/hooks";
 // Issue 417 : pendant la génération, le texte reçu porte encore les balises
 // de provenance ; elles ne s'affichent jamais.
 import { stripNoteMarks } from "~/session/note-marks";
+import { safeRehypePlugins } from "~/shared/safe-markdown";
 import { createTaskId } from "~/store/zustand/ai-task/task-configs";
 import { getPersistableGeneratedTitle } from "~/store/zustand/ai-task/task-configs/title-success";
 import { isLocalModelProviderId } from "~/store/zustand/ai-task/tasks";
@@ -107,6 +108,7 @@ export function StreamingView({
         <Streamdown
           icons={streamdownIcons}
           components={streamdownComponents}
+          rehypePlugins={safeRehypePlugins}
           className={cn(["note-typography", "flex flex-col"])}
           caret="block"
           isAnimating={isGenerating}

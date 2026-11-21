@@ -161,11 +161,15 @@ User written note:
 {%- if let Some(meeting_chat) = ctx.meeting_chat %}
 
 Meeting Chat:
+<meeting_chat>
 {{ meeting_chat }}
+</meeting_chat>
 {%- endif -%}
 {%- if let Some(transcript) = ctx.transcript %}
 
 Full Meeting Transcript:
+<transcript>
 {{ transcript(transcript) }}
+</transcript>
 {%- endif -%}
 {%- endmacro -%}
