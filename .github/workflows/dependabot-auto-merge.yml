@@ -1,10 +1,13 @@
 # Workflow : fusion automatique des PR Dependabot
 #
-# Seules les PR **groupées minor/patch** (groupes `npm-minor-patch`,
-# `cargo-minor-patch`, et `github-actions` hors majeure) sont fusionnées
-# automatiquement. Une PR isolée est une mise à jour que Dependabot n'a pas
-# pu ranger dans ces groupes (majeure, ou 0.x → 0.y, cassante pour cargo) :
-# elle reste à relire et à fusionner à la main.
+# Seules les PR **groupées minor/patch** (groupes `npm-minor-patch` et
+# `cargo-minor-patch`) sont fusionnées automatiquement. Une PR isolée est une
+# mise à jour que Dependabot n'a pas pu ranger dans ces groupes (majeure, ou
+# 0.x → 0.y, cassante pour cargo) : elle reste à relire et à fusionner à la
+# main. Restent aussi manuelles, quel que soit le type de version : les
+# actions GitHub (groupe `github-actions`), la chaîne de build et de mise à
+# jour (groupes `tauri` et `release-signing`) et toute PR qui touche un paquet
+# `tauri*`, `@tauri-apps/*` ou `minisign*`.
 #
 # La fusion n'a lieu qu'une fois **tous** les checks terminés, aucun en échec,
 # et le job Rust (non requis par le ruleset, ~20 min) vert : un lot de bumps
@@ -39,19 +42,31 @@ jobs:
         env:
           GROUP: ${{ steps.meta.outputs.dependency-group }}
           UPDATE_TYPE: ${{ steps.meta.outputs.update-type }}
+          NAMES: ${{ steps.meta.outputs.dependency-names }}
         run: |
           set -euo pipefail
           echo "groupe=${GROUP:-aucun} type=${UPDATE_TYPE:-inconnu}"
           case "$GROUP" in
             npm-minor-patch|cargo-minor-patch)
               ok=true ;;
-            github-actions)
-              if [ "$UPDATE_TYPE" = "version-update:semver-major" ]; then ok=false; else ok=true; fi ;;
             *)
               ok=false ;;
           esac
+          # Chaîne de build et de mise à jour, même rangée dans un groupe
+          # minor/patch : toujours relue à la main.
+          # Boucle sans tube : avec pipefail, un `grep -q` qui s'arrête tôt
+          # ferait échouer le test dans le sens permissif.
+          IFS=',' read -ra names <<<"$NAMES"
+          for name in "${names[@]}"; do
+            name="${name#"${name%%[![:space:]]*}"}"
+            case "${name,,}" in
+              @tauri-apps/*|tauri|tauri-*|minisign*)
+                echo "ℹ️ Paquet de la chaîne de build ou de mise à jour (${name}) : fusion manuelle après relecture."
+                ok=false ;;
+            esac
+          done
           if [ "$ok" != true ]; then
-            echo "ℹ️ PR hors des groupes minor/patch : fusion manuelle après relecture."
+            echo "ℹ️ PR hors des groupes minor/patch fusionnables : fusion manuelle après relecture."
           fi
           echo "eligible=$ok" >> "$GITHUB_OUTPUT"
 

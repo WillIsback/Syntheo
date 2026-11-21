@@ -47,6 +47,12 @@ peerDependencyRules:
     unist-util-visit: "5"
     esbuild: "0.25"
 
+# Quarantaine : pnpm ne résout pas une version publiée depuis moins de 3 jours
+# (en minutes). Même délai minimal que le cooldown de Dependabot pour un
+# correctif (.github/dependabot.yml). Un correctif de sécurité urgent passe par
+# minimumReleaseAgeExclude, ajouté puis retiré dans la même PR.
+minimumReleaseAge: 4320
+
 allowBuilds:
   "@parcel/watcher": true
   dprint: true

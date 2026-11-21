@@ -13,9 +13,18 @@ updates:
     commit-message:
       prefix: "chore(deps)"
     open-pull-requests-limit: 10
+    # Quarantaine : une version n'est proposée qu'après ce délai depuis sa
+    # publication (les mises à jour de sécurité n'attendent pas).
+    cooldown:
+      default-days: 7
+      semver-patch-days: 3
     # Les familles qui doivent monter ensemble passent avant le groupe minor/patch
     # (Dependabot range une dépendance dans le premier groupe qui la couvre).
     groups:
+      # Chaîne de build et de mise à jour : PR à part, fusion manuelle
+      # (dependabot-auto-merge.yml).
+      tauri:
+        patterns: ["@tauri-apps/*"]
       ai-sdk:
         patterns: [
           "ai",
@@ -44,7 +53,16 @@ updates:
     commit-message:
       prefix: "chore(deps)"
     open-pull-requests-limit: 10
+    # Quarantaine : une version n'est proposée qu'après ce délai depuis sa
+    # publication (les mises à jour de sécurité n'attendent pas).
+    cooldown:
+      default-days: 7
+      semver-patch-days: 3
     groups:
+      # Chaîne de build et de mise à jour : PR à part, fusion manuelle
+      # (dependabot-auto-merge.yml).
+      tauri:
+        patterns: ["tauri", "tauri-*", "minisign*"]
       windows:
         patterns: ["windows", "windows-core"] # windows-core doit suivre windows
       askama:
@@ -91,7 +109,32 @@ updates:
     commit-message:
       prefix: "chore(ci)"
     open-pull-requests-limit: 10
-    # Une seule PR pour toutes les actions (épinglées par SHA dans plusieurs fichiers).
+    cooldown:
+      default-days: 7
+    # Une seule PR pour toutes les actions (épinglées par SHA dans plusieurs
+    # fichiers), fusionnée à la main.
     groups:
       github-actions:
+        patterns: ["*"]
+
+  # Outil de signature des mises à jour (job updater de release.yml), à garder
+  # à la version de @tauri-apps/cli d'apps/desktop. Fusion manuelle.
+  - package-ecosystem: "npm"
+    directory: "/.github/signing"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "08:00"
+      timezone: "Europe/Paris"
+    labels: ["type:chore", "dependencies"]
+    commit-message:
+      prefix: "chore(deps)"
+    open-pull-requests-limit: 2
+    # Quarantaine : une version n'est proposée qu'après ce délai depuis sa
+    # publication (les mises à jour de sécurité n'attendent pas).
+    cooldown:
+      default-days: 7
+      semver-patch-days: 3
+    groups:
+      release-signing:
         patterns: ["*"]
