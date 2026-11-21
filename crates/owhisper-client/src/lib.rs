@@ -1,4 +1,5 @@
 mod adapter;
+mod base_url;
 mod batch;
 mod error;
 mod http_client;
@@ -19,6 +20,7 @@ pub use adapter::{
 };
 pub use adapter::{StreamingBatchEvent, StreamingBatchStream};
 
+pub use base_url::{BaseUrlError, is_loopback_host, is_private_host, validate_provider_base_url};
 pub use batch::{BatchClient, BatchClientBuilder};
 pub use error::Error;
 pub use live::{

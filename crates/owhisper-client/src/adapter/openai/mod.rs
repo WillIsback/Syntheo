@@ -99,7 +99,12 @@ impl OpenAIAdapter {
     /// host, port and any reverse-proxy path prefix. The desktop's
     /// `?provider=` marker is dropped.
     pub(crate) fn build_ws_url_from_base(api_base: &str) -> (url::Url, Vec<(String, String)>) {
-        let mut url: url::Url = api_base.parse().expect("invalid_api_base");
+        // URL déjà validée au démarrage (`validate_provider_base_url`). Par
+        // sûreté, une valeur illisible donne une adresse injoignable plutôt
+        // qu'une panique de l'acteur de capture (issue 646).
+        let mut url: url::Url = api_base
+            .parse()
+            .unwrap_or_else(|_| url::Url::parse("ws://127.0.0.1:9/invalid-base-url").unwrap());
         let mut params: Vec<(String, String)> = super::extract_query_params(&url)
             .into_iter()
             .filter(|(key, _)| key != "provider")
@@ -113,7 +118,8 @@ impl OpenAIAdapter {
         } else {
             "wss"
         };
-        url.set_scheme(scheme).expect("invalid_api_base_scheme");
+        // http ↔ ws et https ↔ wss : changement toujours permis.
+        let _ = url.set_scheme(scheme);
         url.set_query(None);
         let path = url.path().trim_end_matches('/').to_string();
         if !path.ends_with("/realtime") {

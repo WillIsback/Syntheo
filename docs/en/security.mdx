@@ -22,7 +22,7 @@ Inference server keys are optional. When you enter one, Syntheo stores it in the
 
 Syntheo requires HTTPS toward an inference server, except toward a private host: `localhost`, `[::1]`, `.local` names, Tailscale `.ts.net` names, ranges `127.0.0.0/8`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16` and `100.64.0.0/10`. A URL containing credentials or query parameters is rejected.
 
-Plain HTTP on a local network can be read by anyone with access to it. As soon as the server is not on the machine or on a trusted network, put it behind a TLS reverse proxy or a VPN.
+Plain HTTP on a local network can be read by anyone with access to it, and the shape of the address does not prove the server's identity: on another network, or with Tailscale stopped, another machine can answer at the same address. Outside this machine, Syntheo therefore asks you to confirm a plain HTTP address, then flags it permanently on the server card. The same address rule is checked when each capture or transcription starts. Switch the server to HTTPS as soon as you can: see [Switch your server to HTTPS](/en/ai-setup#switch-your-server-to-https).
 
 ## Protect the computer
 
