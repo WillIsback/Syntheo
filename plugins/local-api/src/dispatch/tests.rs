@@ -447,3 +447,59 @@ async fn missing_keychain_secret_fails_the_delivery_without_panicking() {
     assert!(!outcome.delivered);
     assert!(outcome.status.contains("keychain"), "{}", outcome.status);
 }
+
+// Issue 653 : migration au lancement, sans ouverture des réglages
+// (list_webhooks) ni livraison.
+#[tokio::test]
+async fn secrets_are_migrated_at_startup_once_the_database_is_ready() {
+    let db = syntheo_db_core::Db::connect_memory_plain().await.unwrap();
+    syntheo_db_app::prepare_schema(&db).await.unwrap();
+    syntheo_db_app::insert_webhook_endpoint(
+        db.pool(),
+        "webhook-1",
+        "https://example.com",
+        "whsec_legacy",
+        "[]",
+    )
+    .await
+    .unwrap();
+    let (memory, secrets) = memory_secrets();
+    // Base pas encore prête aux deux premières tentatives.
+    let calls = Arc::new(AtomicUsize::new(0));
+    let pool = db.pool().clone();
+    let counter = calls.clone();
+
+    let migrated = crate::webhook_secrets::startup_migration(
+        move || (counter.fetch_add(1, Ordering::SeqCst) >= 2).then(|| pool.clone()),
+        &secrets,
+        10,
+        std::time::Duration::from_millis(1),
+    )
+    .await;
+
+    assert!(migrated);
+    assert_eq!(calls.load(Ordering::SeqCst), 3);
+    let row = syntheo_db_app::get_webhook_endpoint(db.pool(), "webhook-1")
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(row.secret, KEYCHAIN_MARKER);
+    assert_eq!(
+        memory.read("webhook-1").unwrap().as_deref(),
+        Some("whsec_legacy")
+    );
+}
+
+#[tokio::test]
+async fn startup_migration_gives_up_without_a_database() {
+    let (_, secrets) = memory_secrets();
+    assert!(
+        !crate::webhook_secrets::startup_migration(
+            || None,
+            &secrets,
+            3,
+            std::time::Duration::from_millis(1),
+        )
+        .await
+    );
+}

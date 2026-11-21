@@ -86,14 +86,67 @@ pub(crate) async fn move_to_keychain(
 
 /// Migration des endpoints dont le secret est encore en base.
 pub(crate) async fn migrate_secrets(store: &SharedSecretStore, pool: &SqlitePool) {
-    let Ok(endpoints) = syntheo_db_app::list_webhook_endpoints(pool).await else {
-        return;
-    };
+    let _ = try_migrate_secrets(store, pool).await;
+}
+
+/// Comme [`migrate_secrets`], mais signale une base pas encore prête.
+pub(crate) async fn try_migrate_secrets(
+    store: &SharedSecretStore,
+    pool: &SqlitePool,
+) -> Result<(), sqlx::Error> {
+    let endpoints = syntheo_db_app::list_webhook_endpoints(pool).await?;
     for endpoint in endpoints {
         if endpoint.secret != KEYCHAIN_MARKER {
             move_to_keychain(store, pool, &endpoint.id, &endpoint.secret).await;
         }
     }
+    Ok(())
+}
+
+/// Migration au lancement (issue 653), en tâche de fond : sans attendre
+/// l'ouverture des réglages ni la prochaine livraison. Réessaie tant que la
+/// base n'est pas prête (au plus une minute), sans bloquer le démarrage.
+pub(crate) fn spawn_startup_migration<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    store: SharedSecretStore,
+) {
+    use tauri::Manager;
+    tauri::async_runtime::spawn(async move {
+        let migrated = startup_migration(
+            || {
+                app.try_state::<tauri_plugin_db::ManagedState>()
+                    .map(|state| state.pool().clone())
+            },
+            &store,
+            60,
+            std::time::Duration::from_secs(1),
+        )
+        .await;
+        if !migrated {
+            tracing::warn!(
+                "[local-api] webhook secrets not migrated at startup: database not ready"
+            );
+        }
+    });
+}
+
+/// Boucle de la migration au lancement : `pool` renvoie la base dès qu'elle
+/// est ouverte. Renvoie `false` si elle ne l'a jamais été.
+pub(crate) async fn startup_migration(
+    pool: impl Fn() -> Option<SqlitePool>,
+    store: &SharedSecretStore,
+    attempts: u32,
+    delay: std::time::Duration,
+) -> bool {
+    for _ in 0..attempts {
+        if let Some(pool) = pool()
+            && try_migrate_secrets(store, &pool).await.is_ok()
+        {
+            return true;
+        }
+        tokio::time::sleep(delay).await;
+    }
+    false
 }
 
 pub(crate) async fn delete_secret(store: &SharedSecretStore, id: &str) {
