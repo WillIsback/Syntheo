@@ -15,7 +15,7 @@ on:
         options: [auto, patch, minor, major, none]
         default: auto
       dry_run:
-        description: "Mode dry-run (build sans publication)"
+        description: "Mode dry-run (build depuis main, sans signature de mise à jour ni publication)"
         type: boolean
         default: true
 
@@ -92,6 +92,8 @@ jobs:
   build:
     name: Build des paquets Linux
     needs: [detect, gate-version-consistency]
+    # Paquets de release : seulement depuis main, y compris en dry_run.
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     # Compilation Rust réutilisée d'une release à l'autre (backend cache
@@ -195,22 +197,39 @@ jobs:
   # Mise à jour intégrée (issue 591) : signature des installeurs AppImage et
   # NSIS par la clé Tauri dédiée, puis `latest.json`. Seul job à lire la clé
   # privée. Signe les octets publiés (après Authenticode et réempaquetage de
-  # l'AppImage), en dernier. Tourne aussi en dry_run : le manifeste et les
-  # signatures sont alors déposés en artefact, sans publication.
+  # l'AppImage), en dernier.
+  # Job minimal : seulement depuis main, jamais en dry_run, dans
+  # l'environnement `release-signing` qui détient la clé (branches de
+  # déploiement limitées à main, relecteur requis). Aucune installation des
+  # dépendances du dépôt : seul l'outil de signature est installé, à version et
+  # empreintes figées (.github/signing), sans script d'installation.
   updater:
     name: Signatures de mise à jour et latest.json
     needs: [detect, build, build-windows]
-    if: needs.detect.outputs.version != 'skipped'
+    if: |
+      needs.detect.outputs.version != 'skipped'
+      && github.ref == 'refs/heads/main'
+      && (github.event_name != 'workflow_dispatch' || (inputs.dry_run != true && inputs.dry_run != 'true'))
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    environment: release-signing
     steps:
       - name: Checkout du code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      - name: Installer Node, pnpm et les dépendances (lockfile figé)
-        uses: ./.github/actions/pnpm_install
+      - name: Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22.23.4"
+
+      # Version exacte et empreintes sha512 du package-lock.json dédié
+      # (identiques à pnpm-lock.yaml), vérifiées par npm ci ; aucun script
+      # d'installation n'est exécuté.
+      - name: Installer l'outil de signature (version et empreintes figées)
+        working-directory: .github/signing
+        run: npm ci --ignore-scripts --no-audit --no-fund
 
       - name: Télécharger l'AppImage
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -242,7 +261,7 @@ jobs:
           # le MSI sont seulement annoncés (lien de téléchargement).
           for file in "Syntheo_${v}_amd64.AppImage" "Syntheo_${v}_x64-setup.exe"; do
             # --app-version lie la signature à la version (requireSignedVersion).
-            pnpm -F desktop exec tauri signer sign --app-version "$v" "$GITHUB_WORKSPACE/installers/$file" > /dev/null
+            .github/signing/node_modules/.bin/tauri signer sign --app-version "$v" "$GITHUB_WORKSPACE/installers/$file" > /dev/null
             test -s "installers/$file.sig" || { echo "::error::Signature absente ou vide : $file.sig"; exit 1; }
             mv "installers/$file.sig" updater/
           done
@@ -278,6 +297,7 @@ jobs:
     needs: [detect, build, build-windows, sast, updater]
     if: |
       needs.detect.outputs.version != 'skipped'
+      && github.ref == 'refs/heads/main'
       && (github.event_name != 'workflow_dispatch' || (inputs.dry_run != true && inputs.dry_run != 'true'))
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -390,6 +410,7 @@ jobs:
           # utilisé uniquement pour créer le tag : GITHUB_TOKEN ne peut pas
           # avoir la permission Workflows, et GitHub refuse (403) un tag sur un
           # commit qui modifie .github/workflows depuis la release précédente.
+          # Secret de l'environnement `production`, à expiration courte.
           RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
           VERSION: ${{ needs.detect.outputs.version }}
           TARGET: ${{ github.sha }}

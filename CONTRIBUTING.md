@@ -264,9 +264,14 @@ cargo test --locked -p template-app -p db-app
 La release signe l'AppImage et l'installeur NSIS avec une clé Tauri dédiée
 (job `updater` de `release.yml`, `tauri signer sign --app-version`), puis publie
 `latest.json` (`scripts/generate-updater-manifest.mjs`). La clé privée et son
-mot de passe sont les secrets du dépôt `TAURI_SIGNING_PRIVATE_KEY` et
-`TAURI_SIGNING_PRIVATE_KEY_PASSWORD`, lus par ce seul job ; une copie de
-sauvegarde est gardée hors du dépôt par le mainteneur. La clé publique est dans
+mot de passe sont les secrets `TAURI_SIGNING_PRIVATE_KEY` et
+`TAURI_SIGNING_PRIVATE_KEY_PASSWORD` de l'environnement GitHub
+`release-signing` (branches de déploiement limitées à `main`, relecteur
+requis), lus par ce seul job ; une copie de sauvegarde est gardée hors du dépôt
+par le mainteneur. Le job ne tourne que depuis `main`, jamais en `dry_run`, et
+n'installe que l'outil de signature, à version et empreintes figées
+(`.github/signing`, à garder à la version de `@tauri-apps/cli` de
+`apps/desktop`). La clé publique est dans
 `apps/desktop/src-tauri/tauri.conf.json` (`plugins.updater.pubkey`).
 
 **Perdre la clé privée coupe la mise à jour intégrée** : les versions installées
