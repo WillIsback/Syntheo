@@ -148,7 +148,7 @@ HTTPS encrypts the traffic and proves the server's identity: it is the only way 
 - **Tailscale**: on the server machine, `tailscale serve --bg 8000` (replace `8000` with the server's port) publishes it in your tailnet at `https://<machine>.<tailnet>.ts.net`, with a certificate obtained and renewed automatically. First enable HTTPS in the Tailscale admin console (DNS → HTTPS Certificates). Then enter that address in Syntheo, with the server path (for example `https://gpu.my-tailnet.ts.net/v1`). See the [`tailscale serve` documentation](https://tailscale.com/kb/1312/serve).
 - **Reverse proxy**: put the server behind a TLS reverse proxy, for example Caddy (`caddy reverse-proxy --from gpu.example.com --to localhost:8000`), which also obtains a certificate automatically for a public name.
 
-An administrator can enforce an HTTPS address on every computer with `managed_settings.json`: see [Security](/en/security#managed-deployment).
+An administrator can enforce an HTTPS address on every computer with `managed_settings.json`: see [Security](/en/security#enterprise-deployment).
 
 ## What goes to your servers
 
