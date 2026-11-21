@@ -5,6 +5,8 @@ import {
   resolveActiveEnhancedNoteId,
   resolveCurrentSessionId,
 } from "./current-session";
+import { saveDictionaryTerms } from "./dictionary-terms";
+import { requestDictionaryApproval } from "./pending-dictionary-store";
 import {
   type CorrectionTarget,
   type DictionaryChange,
@@ -25,37 +27,10 @@ import {
   loadSessionContentSnapshot,
   type SessionContentSnapshot,
 } from "~/session/content-queries";
-import { updateSettingValue } from "~/settings/queries";
-import { normalizeKeywordList, parseDictionaryTermsJson } from "~/stt/keywords";
-
-function dictionaryKey(value: string): string {
-  return value.trim().replace(/\s+/g, " ").toLocaleLowerCase();
-}
-
-async function saveDictionaryTerms(
-  terms?: string[],
-): Promise<DictionaryChange> {
-  if (!terms || terms.length === 0) {
-    return { addedTerms: [] };
-  }
-
-  let addedTerms: string[] = [];
-  await updateSettingValue(
-    "personalization_dictionary_terms",
-    (storedValue) => {
-      const currentTerms = parseDictionaryTermsJson(storedValue);
-      const currentKeys = new Set(currentTerms.map(dictionaryKey));
-      addedTerms = normalizeKeywordList(terms).filter(
-        (term) => !currentKeys.has(dictionaryKey(term)),
-      );
-      return JSON.stringify(
-        normalizeKeywordList([...currentTerms, ...addedTerms]),
-      );
-    },
-  );
-
-  return { addedTerms };
-}
+import {
+  MAX_DICTIONARY_TERMS_PER_CALL,
+  partitionDictionaryTerms,
+} from "~/stt/keywords";
 
 function shouldEditSummary(target: CorrectionTarget): boolean {
   return target === "summary" || target === "summary_and_transcript";
@@ -281,7 +256,7 @@ export const buildApplySessionCorrectionTool = (
         .array(z.string().min(1))
         .default([])
         .describe(
-          "Uncommon names, company/product names, acronyms, or jargon from the correction to save for future transcription. Skip common names.",
+          `Uncommon names, company/product names, acronyms, or jargon from the correction to save for future transcription (at most ${MAX_DICTIONARY_TERMS_PER_CALL}, each a single name of at most 40 characters). Skip common names. The user confirms them before they are saved.`,
         ),
     }),
     execute: async (params: CorrectionParams, options) => {
@@ -370,13 +345,37 @@ export const buildApplySessionCorrectionTool = (
         };
       }
 
-      let dictionaryChanges: DictionaryChange = { addedTerms: [] };
+      // Dictionnaire (issue 643) : seuls des noms bornés sont proposés, et
+      // rien n'est enregistré sans l'accord de l'utilisateur dans la carte.
+      const { accepted, rejected } = partitionDictionaryTerms(
+        params.dictionaryTerms ?? [],
+      );
+      const proposedTerms = accepted.slice(0, MAX_DICTIONARY_TERMS_PER_CALL);
+      const dictionaryChanges: DictionaryChange = {
+        addedTerms: [],
+        rejectedTerms: [
+          ...rejected,
+          ...accepted.slice(MAX_DICTIONARY_TERMS_PER_CALL),
+        ],
+        declinedTerms: [],
+      };
       let dictionarySaveFailed = false;
-      try {
-        dictionaryChanges = await saveDictionaryTerms(params.dictionaryTerms);
-      } catch (error) {
-        dictionarySaveFailed = true;
-        console.error("Failed to save correction dictionary terms", error);
+      if (proposedTerms.length > 0) {
+        const approved = await requestDictionaryApproval(
+          options.toolCallId,
+          proposedTerms,
+        );
+        if (!approved) {
+          dictionaryChanges.declinedTerms = proposedTerms;
+        } else {
+          try {
+            dictionaryChanges.addedTerms =
+              await saveDictionaryTerms(proposedTerms);
+          } catch (error) {
+            dictionarySaveFailed = true;
+            console.error("Failed to save correction dictionary terms", error);
+          }
+        }
       }
 
       const missingTargets = buildMissingTargets({ scope, plans });

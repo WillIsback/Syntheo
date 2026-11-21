@@ -1,6 +1,7 @@
 import { ToolEditMemo, ToolEditSummary } from "./edit-summary";
 import { ToolGeneric } from "./generic";
 import { ToolSearchMeetings } from "./search-meetings";
+import { ToolSessionCorrection } from "./session-correction";
 import { ToolUpdatePromptTemplate } from "./update-prompt-template";
 
 import type { Part } from "~/chat/components/message/types";
@@ -13,6 +14,7 @@ const toolRegistry: Record<string, ToolComponent> = {
   "tool-search_sessions": ToolSearchMeetings as ToolComponent,
   "tool-edit_memo": ToolEditMemo as ToolComponent,
   "tool-edit_summary": ToolEditSummary as ToolComponent,
+  "tool-apply_session_correction": ToolSessionCorrection as ToolComponent,
   "tool-update_prompt_template": ToolUpdatePromptTemplate as ToolComponent,
 };
 

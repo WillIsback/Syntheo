@@ -78,14 +78,11 @@ async function getSystemPrompt(args: TaskArgsMapTransformed["enhance"]) {
     Boolean(args.template?.sections.length),
   );
 
-  return appendPreferredNamesGuidance(
-    `${result.data}
+  return `${result.data}
 
 # Summary Mode
 
-${detailGuidance}`,
-    args.dictionaryTerms,
-  );
+${detailGuidance}`;
 }
 
 async function getUserPrompt(args: TaskArgsMapTransformed["enhance"]) {
@@ -122,7 +119,8 @@ async function getUserPrompt(args: TaskArgsMapTransformed["enhance"]) {
     throw new Error(result.error);
   }
 
-  return result.data;
+  // Dictionnaire dans le prompt utilisateur, en liste délimitée (issue 643).
+  return appendPreferredNamesGuidance(result.data, args.dictionaryTerms);
 }
 
 async function* generateSummary(params: {
