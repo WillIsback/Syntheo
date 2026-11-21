@@ -6,6 +6,9 @@
 export function cspViolationMessage(event: {
   effectiveDirective: string;
   blockedURI: string;
+  sourceFile?: string;
+  lineNumber?: number;
+  columnNumber?: number;
 }): string {
   let blocked = event.blockedURI;
   try {
@@ -15,7 +18,12 @@ export function cspViolationMessage(event: {
     // Mots-clés (« inline », « eval », « data », « blob ») : gardés tels quels.
     blocked = event.blockedURI.slice(0, 16);
   }
-  return `[csp] ${event.effectiveDirective} ${blocked}`;
+  // Emplacement du code en cause : nom du fichier de l'application seulement.
+  const file = event.sourceFile?.split(/[?#]/)[0]?.split("/").pop();
+  const where = file
+    ? ` at ${file.slice(0, 48)}:${event.lineNumber ?? 0}:${event.columnNumber ?? 0}`
+    : "";
+  return `[csp] ${event.effectiveDirective} ${blocked}${where}`;
 }
 
 export function startCspViolationReport() {

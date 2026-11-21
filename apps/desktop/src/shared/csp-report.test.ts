@@ -29,4 +29,16 @@ describe("cspViolationMessage", () => {
       }),
     ).toBe("[csp] img-src data:");
   });
+
+  it("ajoute le fichier, la ligne et la colonne du code en cause", () => {
+    expect(
+      cspViolationMessage({
+        effectiveDirective: "script-src",
+        blockedURI: "eval",
+        sourceFile: "tauri://localhost/assets/schemas-DiKiOCUP.js?x=1",
+        lineNumber: 1,
+        columnNumber: 4242,
+      }),
+    ).toBe("[csp] script-src eval at schemas-DiKiOCUP.js:1:4242");
+  });
 });
