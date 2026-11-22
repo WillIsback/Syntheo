@@ -29,12 +29,17 @@ export function randomTermKey(): string {
   return randomHex(32);
 }
 
-/** Inscription, créée à l'activation (ou à la première mesure). */
+/**
+ * Inscription, créée à l'activation (ou à la première mesure), seulement si
+ * la mesure est active : aucune réinscription après un effacement, même
+ * depuis une écriture déjà en file.
+ */
 export function enrollmentStatement(now: string): Statement {
   return {
     sql: `
       INSERT INTO beta_enrollment (id, pseudonym, enrolled_at, term_key)
-      VALUES (1, ?, ?, ?)
+      SELECT 1, ?, ?, ?
+      WHERE ${ENABLED}
       ON CONFLICT(id) DO NOTHING
     `,
     params: [randomPseudonym(), now, randomTermKey()],
@@ -52,9 +57,10 @@ export type SummaryEvent = "exported" | "shared";
 /**
  * Premier export de fichier ou premier partage (copie dans le presse-papiers,
  * envoi par webhook) de la génération courante d'une synthèse. Seulement si
- * la mesure est activée, la personne inscrite et cette génération notée : une
- * régénération démarre une nouvelle ligne, et les événements de l'ancienne n'y
- * passent pas.
+ * la mesure est activée, la personne inscrite et cette génération notée et
+ * ouverte : une régénération démarre une nouvelle ligne, et les événements de
+ * l'ancienne n'y passent pas ; une génération close à la désactivation n'en
+ * reçoit plus.
  */
 export function summaryEventStatement(
   event: SummaryEvent,
@@ -71,6 +77,7 @@ export function summaryEventStatement(
         ORDER BY generated_at DESC, id DESC
         LIMIT 1
       )
+        AND closed_at IS NULL
         AND ${ENABLED}
         AND EXISTS (SELECT 1 FROM beta_enrollment)
     `,
@@ -117,7 +124,7 @@ export function termStatements(
         INSERT INTO beta_terms (
           hash, term_index, first_seen_at, in_dictionary_first, added_seen_at
         )
-        VALUES (
+        SELECT
           ?,
           (
             SELECT candidate.value FROM json_each(?) AS candidate
@@ -125,7 +132,7 @@ export function termStatements(
             LIMIT 1
           ),
           ?, ?, NULL
-        )
+        WHERE EXISTS (SELECT 1 FROM summary_measurements WHERE id = ?)
         ON CONFLICT(hash) DO NOTHING
       `,
       params: [
@@ -133,14 +140,16 @@ export function termStatements(
         JSON.stringify(randomTermIndexes(8)),
         now,
         inDictionary.has(term.hash) ? 1 : 0,
+        measurementId,
       ],
     },
     {
       sql: `
         INSERT INTO beta_term_errors (measurement_id, term_hash, count)
-        VALUES (?, ?, ?)
+        SELECT ?, ?, ?
+        WHERE EXISTS (SELECT 1 FROM summary_measurements WHERE id = ?)
       `,
-      params: [measurementId, term.hash, term.count],
+      params: [measurementId, term.hash, term.count, measurementId],
     },
   ]);
   statements.push({
@@ -149,17 +158,51 @@ export function termStatements(
       WHERE added_seen_at IS NULL
         AND in_dictionary_first = 0
         AND hash IN (SELECT value FROM json_each(?))
+        AND EXISTS (SELECT 1 FROM summary_measurements WHERE id = ?)
     `,
-    params: [now, JSON.stringify([...inDictionary])],
+    params: [now, JSON.stringify([...inDictionary]), measurementId],
   });
   return statements;
 }
+
+/** Effacement sûr : les pages libérées sont réécrites à zéro. */
+export const SECURE_DELETE: Statement = {
+  sql: "PRAGMA secure_delete = ON",
+  params: [],
+};
 
 /** Copie des synthèses telles que générées : vidée quand la mesure s'arrête. */
 export const CLEAR_GENERATED_BODIES: Statement = {
   sql: "DELETE FROM summary_generated_bodies",
   params: [],
 };
+
+/** Arrêt de la mesure : les générations ouvertes sont closes. */
+export function closeGenerationsStatement(now: string): Statement {
+  return {
+    sql: "UPDATE beta_generations SET closed_at = ? WHERE closed_at IS NULL",
+    params: [now],
+  };
+}
+
+/** Ce que fait l'arrêt de la mesure, dans la transaction du réglage. */
+export function stopMeasurementStatements(now: string): Statement[] {
+  return [
+    SECURE_DELETE,
+    CLEAR_GENERATED_BODIES,
+    closeGenerationsStatement(now),
+  ];
+}
+
+/**
+ * Après un effacement : réduit le journal WAL pour que les pages effacées n'y
+ * restent pas. Au mieux, sans bloquer ni faire échouer l'effacement.
+ */
+export function checkpointAfterErase(): void {
+  void liveQueryClient
+    .execute("PRAGMA wal_checkpoint(TRUNCATE)")
+    .catch((cause) => console.error("[mesure] wal checkpoint skipped", cause));
+}
 
 /**
  * « Effacer mes mesures » : compteurs, calibrage, termes, générations, copie
@@ -168,6 +211,7 @@ export const CLEAR_GENERATED_BODIES: Statement = {
  */
 export function eraseStatements(now: string): Statement[] {
   return [
+    SECURE_DELETE,
     { sql: "DELETE FROM beta_term_errors", params: [] },
     { sql: "DELETE FROM summary_measurement_sections", params: [] },
     { sql: "DELETE FROM summary_measurements", params: [] },
@@ -192,13 +236,6 @@ export function eraseStatements(now: string): Statement[] {
 export function eraseBetaData(): Promise<void> {
   return enqueueDatabaseWrite("summary-measurements", async () => {
     await executeTransaction(eraseStatements(new Date().toISOString()));
+    checkpointAfterErase();
   });
-}
-
-export async function hasBetaData(): Promise<boolean> {
-  const [row] = await liveQueryClient.execute<{ n: number }>(
-    `SELECT (SELECT count(*) FROM summary_measurements)
-          + (SELECT count(*) FROM beta_enrollment) AS n`,
-  );
-  return (row?.n ?? 0) > 0;
 }

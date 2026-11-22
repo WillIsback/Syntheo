@@ -243,6 +243,10 @@ pub async fn update_generated_summary_body(
         .bind(updated_at)
         .execute(&mut *conn)
         .await?;
+    }
+    // `beta_generations` contrôle la forme des identifiants : une forme
+    // inattendue fait sauter la ligne de la bêta, jamais la synthèse.
+    if result.rows_affected() == 1 && beta_row_fits(note_id, session_id, updated_at) {
         sqlx::query(
             "INSERT INTO beta_generations (document_id, session_id, generated_at)
              SELECT ?, ?, ?
@@ -374,4 +378,30 @@ pub async fn upsert_session_tag(
     .await?;
 
     Ok(session_tag.rows_affected())
+}
+
+/// Forme admise par les CHECK de `beta_generations` : identifiants et date.
+fn beta_row_fits(document_id: &str, session_id: &str, generated_at: &str) -> bool {
+    let date = generated_at.len() <= 32
+        && generated_at.as_bytes().get(10) == Some(&b'T')
+        && generated_at.as_bytes()[..10]
+            .iter()
+            .enumerate()
+            .all(|(i, b)| {
+                if i == 4 || i == 7 {
+                    *b == b'-'
+                } else {
+                    b.is_ascii_digit()
+                }
+            })
+        && generated_at
+            .bytes()
+            .all(|b| b.is_ascii_digit() || b"TZ:.+-".contains(&b));
+    let fits = |id: &str, max: usize, colon: bool| {
+        (1..=max).contains(&id.len())
+            && id.bytes().all(|b| {
+                b.is_ascii_alphanumeric() || b == b'_' || b == b'-' || (colon && b == b':')
+            })
+    };
+    date && fits(document_id, 96, true) && fits(session_id, 64, false)
 }

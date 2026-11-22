@@ -84,7 +84,26 @@ pub async fn apply_managed_settings(pool: &SqlitePool) -> Result<(), sqlx::Error
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => BTreeMap::new(),
         Err(e) => return Err(sqlx::Error::Io(e)),
     };
+    // Mesure de la bêta (issue 672) imposée à false : comme une désactivation,
+    // la copie des synthèses générées est vidée, en effacement sûr, et les
+    // générations ouvertes sont closes.
+    let stop_measurement =
+        settings.get("measurement_enabled") == Some(&serde_json::Value::Bool(false));
     let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+    if stop_measurement {
+        sqlx::query("PRAGMA secure_delete = ON")
+            .execute(&mut *tx)
+            .await?;
+        sqlx::query("DELETE FROM summary_generated_bodies")
+            .execute(&mut *tx)
+            .await?;
+        sqlx::query(
+            "UPDATE beta_generations SET closed_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
+             WHERE closed_at IS NULL",
+        )
+        .execute(&mut *tx)
+        .await?;
+    }
     sqlx::query("DELETE FROM managed_app_settings")
         .execute(&mut *tx)
         .await?;
@@ -138,6 +157,44 @@ mod tests {
             assert!(validate(text.as_bytes()).is_err(), "{text}");
         }
     }
+    #[tokio::test]
+    // Vérification 0.8.0, point 4 : une mesure imposée à false au démarrage
+    // vide la copie des synthèses générées et clôt les générations.
+    async fn managed_measurement_off_clears_the_beta_copy() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("app.db");
+        let db = syntheo_db_core::Db::connect_local_plain(&path)
+            .await
+            .unwrap();
+        crate::prepare_schema(&db).await.unwrap();
+        for sql in [
+            "INSERT INTO summary_generated_bodies (document_id, session_id, body_format, body, generated_at) VALUES ('note-1', 'session-1', 'prosemirror_json', '{}', '2026-11-22T08:00:00.000Z')",
+            "INSERT INTO beta_generations (document_id, session_id, generated_at) VALUES ('note-1', 'session-1', '2026-11-22T08:00:00.000Z')",
+        ] {
+            sqlx::query(sql).execute(db.pool()).await.unwrap();
+        }
+        db.pool().close().await;
+        std::fs::write(
+            dir.path().join("managed_settings.json"),
+            br#"{"schema_version":1,"settings":{"measurement_enabled":false}}"#,
+        )
+        .unwrap();
+        let db = syntheo_db_core::Db::connect_local_plain(&path)
+            .await
+            .unwrap();
+        crate::prepare_schema(&db).await.unwrap();
+        let bodies: i64 = sqlx::query_scalar("SELECT count(*) FROM summary_generated_bodies")
+            .fetch_one(db.pool())
+            .await
+            .unwrap();
+        let open: i64 =
+            sqlx::query_scalar("SELECT count(*) FROM beta_generations WHERE closed_at IS NULL")
+                .fetch_one(db.pool())
+                .await
+                .unwrap();
+        assert_eq!((bodies, open), (0, 0));
+    }
+
     #[tokio::test]
     async fn startup_policy_locks_settings_and_survives_reopen() {
         let dir = tempfile::tempdir().unwrap();

@@ -34,7 +34,12 @@ export function measurementStatements(
           deleted_words, replaced_content, replaced_lexical,
           unmatched_sent_words, generated_source
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+        WHERE EXISTS (
+          SELECT 1 FROM app_settings
+          WHERE id = 'measurement_enabled' AND value_json = 'true'
+        )
+          AND EXISTS (SELECT 1 FROM beta_enrollment)
       `,
       params: [
         id,
@@ -60,7 +65,8 @@ export function measurementStatements(
           added_words, deleted_words, replaced_content, replaced_lexical,
           role
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?
+        WHERE EXISTS (SELECT 1 FROM summary_measurements WHERE id = ?)
       `,
       params: [
         id,
@@ -72,6 +78,7 @@ export function measurementStatements(
         section.counters.replacedContent,
         section.counters.replacedLexical,
         section.role,
+        id,
       ],
     })),
   ];

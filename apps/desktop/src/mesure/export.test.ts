@@ -57,6 +57,7 @@ function measurement(
     id,
     documentId,
     measuredAt,
+    generatedSource: "original",
     ruleVersion: 1,
     aligned: true,
     headingsGenerated: 3,
@@ -110,12 +111,14 @@ function rows(): ExportRows {
         generatedAt: at(1, 10),
         exportedAt: null,
         sharedAt: at(1, 11),
+        closedAt: null,
       },
       {
         documentId: OTHER,
         generatedAt: at(4, 10),
         exportedAt: null,
         sharedAt: null,
+        closedAt: null,
       },
     ],
     terms: [
@@ -210,18 +213,21 @@ describe("buildExport", () => {
           generatedAt: at(0, 10),
           exportedAt: null,
           sharedAt: null,
+          closedAt: null,
         },
         {
           documentId: OTHER,
           generatedAt: at(2, 8),
           exportedAt: null,
           sharedAt: null,
+          closedAt: null,
         },
         {
           documentId: DOC,
           generatedAt: at(3),
           exportedAt: null,
           sharedAt: null,
+          closedAt: null,
         },
         // Régénérée encore, sans mesure.
         {
@@ -229,6 +235,7 @@ describe("buildExport", () => {
           generatedAt: at(10),
           exportedAt: null,
           sharedAt: null,
+          closedAt: null,
         },
       ],
       termErrors: [],
@@ -261,12 +268,14 @@ describe("buildExport", () => {
           generatedAt: at(0, 10),
           exportedAt: null,
           sharedAt: at(0, 11),
+          closedAt: null,
         },
         {
           documentId: DOC,
           generatedAt: at(10),
           exportedAt: null,
           sharedAt: null,
+          closedAt: null,
         },
       ],
       termErrors: [],
@@ -292,6 +301,60 @@ describe("buildExport", () => {
     expect(data.terms[0].errors).toEqual([{ meeting: "m1", count: 1 }]);
   });
 
+  // Vérification 0.8.0, point 3 : la mesure est désactivée (génération
+  // close), la synthèse régénérée ou restaurée pendant ce temps, puis la
+  // mesure réactivée. Ni la mesure ni le partage d'après ne passent sur la
+  // génération close, et une mesure sur une synthèse retouchée ne compte pas.
+  it("nothing attaches to a generation closed when measurement stopped", async () => {
+    const input: ExportRows = {
+      ...rows(),
+      measurements: [
+        measurement("after-reactivation", DOC, at(6)),
+        {
+          ...measurement("retouched", OTHER, at(7)),
+          generatedSource: "current",
+        },
+      ],
+      sections: [],
+      generations: [
+        {
+          documentId: DOC,
+          generatedAt: at(1),
+          exportedAt: null,
+          sharedAt: at(6),
+          closedAt: at(3),
+        },
+        {
+          documentId: OTHER,
+          generatedAt: at(2),
+          exportedAt: null,
+          sharedAt: null,
+          closedAt: null,
+        },
+      ],
+      termErrors: [],
+    };
+    const data = buildExport(input, "0.8.0", NOW);
+    expect(await checkExport(data)).toEqual({ export: data });
+    expect(data.meetings).toEqual([]);
+    expect(data.summaries).toEqual([
+      {
+        summary: "s1",
+        generated_day: 1,
+        measured: null,
+        exported: null,
+        shared: null,
+      },
+      {
+        summary: "s2",
+        generated_day: 2,
+        measured: null,
+        exported: null,
+        shared: null,
+      },
+    ]);
+  });
+
   // Revue 0.8.0, constat 11 : A mesurée (entrée du terme), ajout au
   // dictionnaire constaté à la mesure de B, A remesurée ensuite. Le terme
   // reste, ajouté après m1 (A).
@@ -310,12 +373,14 @@ describe("buildExport", () => {
           generatedAt: at(1),
           exportedAt: null,
           sharedAt: null,
+          closedAt: null,
         },
         {
           documentId: OTHER,
           generatedAt: at(4),
           exportedAt: null,
           sharedAt: null,
+          closedAt: null,
         },
       ],
       terms: [

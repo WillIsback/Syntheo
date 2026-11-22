@@ -11,6 +11,8 @@ export type ExportRows = {
     id: string;
     documentId: string;
     measuredAt: string;
+    /** `original` : comparée à la synthèse telle que générée. */
+    generatedSource: "original" | "current";
     ruleVersion: number;
     aligned: boolean;
     headingsGenerated: number;
@@ -31,6 +33,8 @@ export type ExportRows = {
     generatedAt: string;
     exportedAt: string | null;
     sharedAt: string | null;
+    /** Close à l'arrêt de la mesure : plus rien ne s'y rattache ensuite. */
+    closedAt: string | null;
   }[];
   terms: {
     hash: string;
@@ -100,8 +104,9 @@ const RULE_VERSION = 1;
  *
  * - Chaque génération notée (pendant que la mesure était active) est une
  *   synthèse `sN` ; une régénération en est une nouvelle.
- * - Une mesure se rattache à la génération de sa synthèse en cours à sa date ;
- *   une mesure sans génération notée n'est pas exportée.
+ * - Une mesure se rattache à la génération de sa synthèse en cours à sa date,
+ *   si elle est encore ouverte ; une mesure sans génération notée, ou faite
+ *   sur une synthèse retouchée (`current`), n'est pas exportée.
  * - Une génération mesurée donne une réunion `mN` : sa première mesure. Les
  *   réunions suivent l'ordre chronologique de ces mesures, qui sert aussi à
  *   dater l'ajout d'un terme au dictionnaire.
@@ -136,16 +141,20 @@ export function buildExport(
   // Première mesure de chaque génération, dans l'ordre des mesures.
   type Measurement = ExportRows["measurements"][number];
   const firstMeasurement = new Map<(typeof generations)[number], Measurement>();
-  for (const measurement of [...rows.measurements].sort((a, b) =>
-    a.measuredAt.localeCompare(b.measuredAt),
-  )) {
+  for (const measurement of rows.measurements
+    .filter((m) => m.generatedSource === "original")
+    .sort((a, b) => a.measuredAt.localeCompare(b.measuredAt))) {
     const candidates = byDocument.get(measurement.documentId) ?? [];
     let generation: (typeof generations)[number] | undefined;
     for (const candidate of candidates) {
       if (candidate.generatedAt <= measurement.measuredAt)
         generation = candidate;
     }
-    if (generation && !firstMeasurement.has(generation)) {
+    const open =
+      generation &&
+      (generation.closedAt === null ||
+        measurement.measuredAt < generation.closedAt);
+    if (generation && open && !firstMeasurement.has(generation)) {
       firstMeasurement.set(generation, measurement);
     }
   }
@@ -180,7 +189,11 @@ export function buildExport(
   const summaries = generations.map((g) => {
     // Un événement antérieur à la génération appartient à une autre.
     const after = (at: string | null) =>
-      at !== null && at >= g.generatedAt ? day(at) : null;
+      at !== null &&
+      at >= g.generatedAt &&
+      (g.closedAt === null || at < g.closedAt)
+        ? day(at)
+        : null;
     const measurement = firstMeasurement.get(g);
     return {
       summary: summaryIndex.get(g) as string,
@@ -272,6 +285,7 @@ export async function loadExportRows(): Promise<ExportRows> {
       id: string;
       document_id: string;
       measured_at: string;
+      generated_source: "original" | "current";
       rule_version: number;
       aligned: number;
       headings_generated: number;
@@ -282,7 +296,7 @@ export async function loadExportRows(): Promise<ExportRows> {
     `SELECT id, document_id, measured_at, rule_version, aligned,
             headings_generated, headings_matched, unmatched_sent_words,
             generated_words, added_words, deleted_words, replaced_content,
-            replaced_lexical
+            replaced_lexical, generated_source
      FROM summary_measurements
      WHERE measured_at >= ?`,
     [enrollment.enrolled_at],
@@ -304,8 +318,9 @@ export async function loadExportRows(): Promise<ExportRows> {
     generated_at: string;
     exported_at: string | null;
     shared_at: string | null;
+    closed_at: string | null;
   }>(
-    `SELECT document_id, generated_at, exported_at, shared_at
+    `SELECT document_id, generated_at, exported_at, shared_at, closed_at
      FROM beta_generations
      WHERE generated_at >= ?`,
     [enrollment.enrolled_at],
@@ -332,6 +347,7 @@ export async function loadExportRows(): Promise<ExportRows> {
       id: m.id,
       documentId: m.document_id,
       measuredAt: m.measured_at,
+      generatedSource: m.generated_source,
       ruleVersion: m.rule_version,
       aligned: m.aligned === 1,
       headingsGenerated: m.headings_generated,
@@ -351,6 +367,7 @@ export async function loadExportRows(): Promise<ExportRows> {
       generatedAt: g.generated_at,
       exportedAt: g.exported_at,
       sharedAt: g.shared_at,
+      closedAt: g.closed_at,
     })),
     terms: terms.map((t) => ({
       hash: t.hash,

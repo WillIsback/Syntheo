@@ -14,7 +14,7 @@ const TABLES: [&str; 7] = [
     "beta_term_errors",
 ];
 /// Seules colonnes TEXT permises, toutes contraintes par CHECK.
-const TEXT_COLUMNS: [&str; 18] = [
+const TEXT_COLUMNS: [&str; 19] = [
     "id",
     "document_id",
     "session_id",
@@ -33,6 +33,7 @@ const TEXT_COLUMNS: [&str; 18] = [
     "added_seen_at",
     "term_key",
     "generated_at",
+    "closed_at",
 ];
 const ID: &str = "0b9f2c1e-4d3a-4b5c-8d7e-1f2a3b4c5d6e";
 

@@ -16,6 +16,7 @@ import {
 import { executeTransaction, liveQueryClient, useLiveQuery } from "~/db";
 import { enqueueDatabaseWrite } from "~/db/write-queue";
 import { resolveUiLanguagePreference } from "~/i18n/locales";
+import { checkpointAfterErase, stopMeasurementStatements } from "~/mesure/beta";
 import { normalizeStoredLlmSelection } from "~/settings/ai/llm/selection";
 import {
   SETTING_DEFINITIONS,
@@ -287,7 +288,9 @@ export function useSetSettingValues() {
 
 async function persistSettingValues(values: SettingValues): Promise<void> {
   const now = new Date().toISOString();
-  const statements = Object.entries(values).map(([key, value]) => ({
+  const statements: { sql: string; params: unknown[] }[] = Object.entries(
+    values,
+  ).map(([key, value]) => ({
     sql: SYNCED_SETTING_KEYS.has(key as SettingKey)
       ? `
       INSERT INTO synced_preferences (id, workspace_id, value_json, updated_at)
@@ -311,14 +314,12 @@ async function persistSettingValues(values: SettingValues): Promise<void> {
     params: [key, JSON.stringify(value), now],
   }));
   // Bêta de la mesure (issue 672) : arrêter la mesure vide la copie des
-  // synthèses telles que générées, dans la même transaction.
-  if (values.measurement_enabled === false) {
-    statements.push({
-      sql: "DELETE FROM summary_generated_bodies",
-      params: [],
-    });
-  }
+  // synthèses telles que générées et clôt les générations ouvertes, dans la
+  // même transaction, en effacement sûr.
+  const stopping = values.measurement_enabled === false;
+  if (stopping) statements.push(...stopMeasurementStatements(now));
   if (statements.length > 0) await executeTransaction(statements);
+  if (stopping) checkpointAfterErase();
   applySettingSideEffects(values);
 }
 

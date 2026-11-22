@@ -216,6 +216,38 @@ async fn nothing_is_kept_for_the_beta_while_measurement_is_off() {
     assert_eq!(generations(&db).await, 0);
 }
 
+// Vérification 0.8.0, point 1 : un identifiant hors du format des tables de
+// la bêta ne fait jamais échouer la synthèse ; seule la ligne de la bêta saute.
+#[tokio::test]
+async fn an_odd_identifier_never_fails_the_summary() {
+    let db = test_db().await;
+    set_measurement(&db, true).await;
+    enroll(&db).await;
+    sqlx::query(
+        "INSERT INTO session_documents (
+            id, workspace_id, session_id, kind, body, body_format
+         ) VALUES ('note 1/é', 'workspace-1', 'session-1', 'summary', 'old body', 'markdown')",
+    )
+    .execute(db.pool())
+    .await
+    .unwrap();
+    let mut odd = request(vec![]);
+    odd.note_id = "note 1/é".to_string();
+    let next = odd.next_body.clone();
+    save_generated_summary(db.pool(), odd).await.unwrap();
+    let body: String =
+        sqlx::query_scalar("SELECT body FROM session_documents WHERE id = 'note 1/é'")
+            .fetch_one(db.pool())
+            .await
+            .unwrap();
+    assert_eq!(body, next);
+    let rows: i64 = sqlx::query_scalar("SELECT count(*) FROM beta_generations")
+        .fetch_one(db.pool())
+        .await
+        .unwrap();
+    assert_eq!(rows, 0);
+}
+
 #[tokio::test]
 async fn first_generation_into_an_empty_summary_keeps_no_version() {
     let db = test_db().await;

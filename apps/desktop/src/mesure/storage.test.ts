@@ -8,6 +8,7 @@ import {
   randomPseudonym,
   randomTermIndexes,
   randomTermKey,
+  stopMeasurementStatements,
   summaryEventStatement,
   termStatements,
 } from "./beta";
@@ -62,6 +63,15 @@ describe("measurement storage", () => {
       result,
     );
     expect(statements).toHaveLength(2);
+    // Vérification 0.8.0, point 5 : rien n'est enregistré mesure désactivée
+    // ou sans inscription, même depuis une écriture déjà en file.
+    expect(statements[0].sql).toContain("measurement_enabled");
+    expect(statements[0].sql).toContain(
+      "EXISTS (SELECT 1 FROM beta_enrollment)",
+    );
+    expect(statements[1].sql).toContain(
+      "EXISTS (SELECT 1 FROM summary_measurements WHERE id = ?)",
+    );
     for (const { params } of statements) {
       for (const value of params) {
         if (typeof value === "string") {
@@ -111,13 +121,14 @@ describe("beta term tracking", () => {
     expect(statements).toHaveLength(3);
     expect(statements[0].sql).toContain("json_each");
     expect(statements[0].sql).not.toContain("MAX(term_index)");
-    const [hash, candidates, seenAt, first] = statements[0].params as [
+    const [hash, candidates, seenAt, first, guard] = statements[0].params as [
       string,
       string,
       string,
       number,
+      string,
     ];
-    expect([hash, seenAt, first]).toEqual(["a".repeat(64), now, 1]);
+    expect([hash, seenAt, first, guard]).toEqual(["a".repeat(64), now, 1, ID]);
     const indexes = JSON.parse(candidates) as number[];
     expect(indexes).toHaveLength(8);
     for (const index of indexes) {
@@ -125,11 +136,18 @@ describe("beta term tracking", () => {
         true,
       );
     }
-    expect(statements[1].params).toEqual([ID, "a".repeat(64), 1]);
+    expect(statements[1].params).toEqual([ID, "a".repeat(64), 1, ID]);
     expect(statements[2].params).toEqual([
       now,
       JSON.stringify(["a".repeat(64), "b".repeat(64)]),
+      ID,
     ]);
+    // Rien ne s'écrit si la mesure n'a pas été insérée (mesure désactivée).
+    for (const { sql } of statements) {
+      expect(sql).toContain(
+        "EXISTS (SELECT 1 FROM summary_measurements WHERE id = ?)",
+      );
+    }
   });
 
   it("draws term indexes over the whole range", () => {
@@ -147,6 +165,7 @@ describe("beta term tracking", () => {
     expect(sql).toContain("measurement_enabled");
     expect(sql).toContain("EXISTS (SELECT 1 FROM beta_enrollment)");
     expect(sql).toContain("ORDER BY generated_at DESC");
+    expect(sql).toContain("closed_at IS NULL");
     expect(sql).toContain("COALESCE(shared_at");
     expect(params).toEqual(["2026-11-25T09:00:00.000Z", "doc-1"]);
   });
@@ -155,6 +174,7 @@ describe("beta term tracking", () => {
   // la copie des synthèses générées, et arrête la mesure et le Calibrage.
   it("erases every beta table and turns measurement off", () => {
     const statements = eraseStatements("2026-11-25T09:00:00.000Z");
+    expect(statements[0].sql).toBe("PRAGMA secure_delete = ON");
     const tables = statements
       .filter(({ sql }) => sql.startsWith("DELETE FROM "))
       .map(({ sql }) => sql.replace("DELETE FROM ", ""));
@@ -185,7 +205,20 @@ describe("beta term tracking", () => {
     const key = randomTermKey();
     expect(key).toMatch(/^[0-9a-f]{64}$/);
     expect(randomTermKey()).not.toBe(key);
-    const { params } = enrollmentStatement("2026-11-25T09:00:00.000Z");
+    const { sql, params } = enrollmentStatement("2026-11-25T09:00:00.000Z");
     expect(params[2]).toMatch(/^[0-9a-f]{64}$/);
+    // Vérification 0.8.0, point 5 : jamais d'inscription mesure désactivée.
+    expect(sql).toContain("measurement_enabled");
+  });
+
+  // Vérification 0.8.0, points 3 et 8 : l'arrêt de la mesure vide la copie
+  // des synthèses générées et clôt les générations ouvertes, en effacement sûr.
+  it("stopping measurement clears the copy and closes open generations", () => {
+    const statements = stopMeasurementStatements("2026-11-25T09:00:00.000Z");
+    expect(statements.map(({ sql }) => sql)).toEqual([
+      "PRAGMA secure_delete = ON",
+      "DELETE FROM summary_generated_bodies",
+      "UPDATE beta_generations SET closed_at = ? WHERE closed_at IS NULL",
+    ]);
   });
 });

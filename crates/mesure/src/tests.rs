@@ -521,7 +521,7 @@ fn section_roles_and_corrected_terms() {
             .dictionary_hashes
             .contains(&report.corrected_terms[0].hash)
     );
-    assert_eq!(report.dictionary_hashes.len(), 2);
+    assert_eq!(report.dictionary_hashes.len(), 2); // deux entrées d'un mot
     let json = serde_json::to_string(&report).unwrap();
     assert!(!json.contains("Marten") && !json.contains("marten"));
 
@@ -563,6 +563,51 @@ fn corrected_term_is_the_word_that_made_it_lexical() {
         .hashes();
     let hashes: Vec<_> = report.corrected_terms.iter().map(|t| &t.hash).collect();
     assert_eq!(hashes, [&drasi[0]]);
+}
+
+// Vérification 0.8.0, point 2 : un terme suivi contenu dans une entrée de
+// plusieurs mots du dictionnaire est reconnu, et la clé ne paraît jamais dans
+// un `Debug`.
+#[test]
+fn a_tracked_term_inside_a_longer_dictionary_entry_is_recognised() {
+    let none = Dictionary::new(["Nemotron"]).unwrap().with_term_key(KEY);
+    let with_entry = Dictionary::new(["Nemotron", "Jean Dupont"])
+        .unwrap()
+        .with_term_key(KEY);
+
+    let report = measure(
+        "Le dossier est suivi par Dupond depuis lundi.",
+        Format::Text,
+        "Le dossier est suivi par Dupont depuis lundi.",
+        Format::Text,
+        &none,
+    )
+    .unwrap();
+    assert_eq!(report.corrected_terms.len(), 1);
+    assert!(
+        with_entry
+            .hashes()
+            .contains(&report.corrected_terms[0].hash)
+    );
+
+    // « Jeanne Dupond » corrigé en « Jean Dupont » : deux termes, tous deux
+    // contenus dans l'entrée ajoutée ensuite.
+    let report = measure(
+        "Le dossier est suivi par Jeanne Dupond depuis lundi.",
+        Format::Text,
+        "Le dossier est suivi par Jean Dupont depuis lundi.",
+        Format::Text,
+        &none,
+    )
+    .unwrap();
+    assert_eq!(report.corrected_terms.len(), 2);
+    for term in &report.corrected_terms {
+        assert!(with_entry.hashes().contains(&term.hash));
+        assert!(!none.hashes().contains(&term.hash));
+    }
+
+    let debug = format!("{with_entry:?}");
+    assert!(debug.contains("<masquée>") && !debug.contains("[7, 7"));
 }
 
 // Revue 0.8.0, constat 13 : liste fermée, correspondance exacte, testée sur

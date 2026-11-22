@@ -40,6 +40,10 @@ CREATE TABLE IF NOT EXISTS beta_generations (
     CHECK (exported_at IS NULL OR (exported_at GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T*' AND length(exported_at) <= 32 AND exported_at NOT GLOB '*[^0-9TZ:.+-]*')),
   shared_at    TEXT
     CHECK (shared_at IS NULL OR (shared_at GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T*' AND length(shared_at) <= 32 AND shared_at NOT GLOB '*[^0-9TZ:.+-]*')),
+  -- Close quand la mesure s'arrête : plus aucune mesure ni aucun événement
+  -- ne s'y rattache ensuite.
+  closed_at    TEXT
+    CHECK (closed_at IS NULL OR (closed_at GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T*' AND length(closed_at) <= 32 AND closed_at NOT GLOB '*[^0-9TZ:.+-]*')),
   UNIQUE (document_id, generated_at)
 ) STRICT;
 

@@ -83,13 +83,23 @@ pub fn load_file(path: &std::path::Path) -> Result<(String, Format), MeasureErro
 
 /// Termes du dictionnaire de l'utilisateur, comparés sans tenir compte de la
 /// casse.
-#[derive(Debug, Default, Clone)]
+#[derive(Default, Clone)]
 pub struct Dictionary {
     terms: Vec<Vec<String>>,
     /// Clé locale des empreintes de termes (bêta, issue 672) : tirée à
     /// l'inscription, détruite à l'effacement. Sans clé, aucun terme n'est
     /// suivi.
     term_key: Option<[u8; 32]>,
+}
+
+// La clé des empreintes n'apparaît jamais dans un journal ni un message.
+impl std::fmt::Debug for Dictionary {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Dictionary")
+            .field("terms", &self.terms.len())
+            .field("term_key", &self.term_key.map(|_| "<masquée>"))
+            .finish()
+    }
 }
 
 impl Dictionary {
@@ -122,13 +132,23 @@ impl Dictionary {
         self
     }
 
-    /// Empreintes des termes, triées et sans doublon (voir `term_hash`) ;
-    /// vide sans clé.
+    /// Empreintes de chaque suite de mots des entrées (un mot, deux mots…,
+    /// l'entrée entière), triées et sans doublon (voir `term_hash`) ; vide
+    /// sans clé. Un terme suivi contenu dans une entrée y est ainsi reconnu :
+    /// « Dupont » corrigé, puis « Jean Dupont » ajouté au dictionnaire.
     pub fn hashes(&self) -> Vec<String> {
         let Some(key) = &self.term_key else {
             return Vec::new();
         };
-        let mut out: Vec<String> = self.terms.iter().map(|t| term_hash(key, t)).collect();
+        let mut out: Vec<String> = self
+            .terms
+            .iter()
+            .flat_map(|term| {
+                (1..=term.len()).flat_map(move |size| {
+                    term.windows(size).map(move |window| term_hash(key, window))
+                })
+            })
+            .collect();
         out.sort();
         out.dedup();
         out
