@@ -746,14 +746,84 @@ async fn a_blocked_launch_stops_commissioning_with_its_reason() {
     );
 }
 
-// Un module qui ne fait que s'arrêter n'est pas un refus de lancement : la
-// mesure reste « trop lent » sans raison de refus.
+// Un module qui s'arrête aussitôt n'est pas un refus d'exécution : chaque
+// profil échoue (lancement raté, passager) jusqu'à la pause de relances, et
+// la mesure est alors refusée sans rien enregistrer.
 #[cfg(unix)]
 #[tokio::test]
-async fn a_failed_measure_is_not_a_launch_refusal() {
+async fn a_crashing_module_is_not_a_launch_refusal() {
     let fixture = crashing_fixture();
     let host = fixture.host();
-    let result = host.commission(true, Duration::from_secs(1)).await.unwrap();
-    assert_eq!(result.profile, None);
-    assert_ne!(host.launch_refusal().as_deref(), Some("execution_blocked"));
+    let error = host
+        .commission(true, Duration::from_secs(1))
+        .await
+        .unwrap_err();
+    assert_eq!(error, "crashing");
+    assert!(host.commissioning().is_none());
+    assert_eq!(host.launch_refusal(), None);
+}
+
+// Vérification de f84794c4 : sous Windows, un accès refusé peut venir d'un
+// antivirus qui tient la copie privée tout juste écrite. Une seule nouvelle
+// tentative, avec une copie neuve, avant de le déclarer définitif.
+#[cfg(unix)]
+#[tokio::test]
+async fn windows_retries_an_access_denied_launch_once_with_a_fresh_copy() {
+    let fixture = blocked_fixture();
+    let host = fixture.host().with_windows_spawn_rules();
+    assert_eq!(
+        host.target(true).await.unwrap_err(),
+        HostError::ExecutionBlocked
+    );
+    // Deux vérifications (deux copies) pour une seule tentative comptée.
+    assert_eq!(host.verifications().await, 2);
+    // Sans les règles de Windows (Linux, noexec) : définitif tout de suite.
+    let linux_fixture = blocked_fixture();
+    let linux = linux_fixture.host();
+    assert_eq!(
+        linux.target(true).await.unwrap_err(),
+        HostError::ExecutionBlocked
+    );
+    assert_eq!(linux.verifications().await, 1);
+}
+
+// Vérification de f84794c4 : un poste mesuré dont le module plante en boucle
+// pendant l'écoute. « Mesurer à nouveau » pendant le refus de 10 min est
+// refusé sans rien écrire ; le profil retenu est gardé.
+#[cfg(unix)]
+#[tokio::test]
+async fn a_measure_during_the_restart_pause_keeps_the_profile() {
+    use speech_host::commissioning::{Commissioning, Profile, load, save};
+    let fixture = crashing_fixture();
+    let build = fixture.companion().build_id() ^ speech_host::models::fingerprint();
+    let kept = Commissioning {
+        profile: Some(Profile::TwoStreamsDiarized),
+        measures: vec![],
+        measured_at: 1,
+        module_build: build,
+    };
+    save(fixture.data.path(), &kept).unwrap();
+    let host = fixture
+        .host()
+        .with_restart_policy(speech_host::host::RestartPolicy {
+            max_attempts: 2,
+            window: Duration::from_secs(600),
+            stable_after: Duration::from_secs(600),
+        });
+    assert!(host.profile().is_some());
+    for _ in 0..2 {
+        assert!(matches!(host.target(true).await, Err(HostError::Launch(_))));
+    }
+    assert_eq!(
+        host.target(true).await.unwrap_err(),
+        HostError::RestartBudget
+    );
+    let error = host
+        .commission(true, Duration::from_secs(1))
+        .await
+        .unwrap_err();
+    assert_eq!(error, "crashing");
+    assert!(host.profile().is_some());
+    assert_eq!(load(fixture.data.path(), build), Some(kept));
+    assert_eq!(host.launch_refusal(), None);
 }

@@ -156,12 +156,7 @@ export function describeOnDeviceError(code: string): string {
 
 // Refus de lancement qui arrête une mise en service (codes de l'hôte) : la
 // mesure n'a pas eu lieu, le poste n'est pas « trop lent ».
-const LAUNCH_REFUSALS = [
-  "execution_blocked",
-  "invalid",
-  "crashing",
-  "disabled",
-] as const;
+const LAUNCH_REFUSALS = ["execution_blocked", "invalid", "disabled"] as const;
 
 /** Raison du refus de lancement enregistrée par la dernière mise en service. */
 export function launchRefusal(
