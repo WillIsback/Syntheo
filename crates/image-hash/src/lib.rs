@@ -137,6 +137,26 @@ mod tests {
         assert_ne!(image_hash(&unsigned), image_hash(&signed_altered));
     }
 
+    /// Vraie signature Authenticode : paires « signé, désigné » (par exemple
+    /// une DLL de Microsoft et sa copie passée à `signtool remove /s`) dans
+    /// `SYNTHEO_IMAGE_HASH_PAIRS` (`a,b;c,d`).
+    #[test]
+    #[ignore = "fichiers signés fournis par l'essai"]
+    fn real_authenticode_pairs_share_their_image_hash() {
+        let Ok(pairs) = std::env::var("SYNTHEO_IMAGE_HASH_PAIRS") else {
+            return;
+        };
+        for pair in pairs.split(';') {
+            let (signed, stripped) = pair.split_once(',').unwrap();
+            let (signed, stripped) = (
+                std::fs::read(signed).unwrap(),
+                std::fs::read(stripped).unwrap(),
+            );
+            assert_ne!(signed.len(), stripped.len());
+            assert_eq!(image_hash(&signed), image_hash(&stripped), "{pair}");
+        }
+    }
+
     #[test]
     fn other_files_use_a_plain_sha256() {
         let text = b"ELF ou autre contenu";
