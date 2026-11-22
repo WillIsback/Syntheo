@@ -121,9 +121,9 @@ Module de transcription sur le poste (issue 681) : un processus séparé que l'a
 
 - **Moteurs derrière un trait** (`engine::Engine`, `engine::Recognizer`) : A, `parakeet::ParakeetEngine` (Nemotron 3.5 en flux, int8 per-channel, et diarisation Nemotron-3), est implémenté ; B pourra s'y brancher.
 - **Lancement** : le jeton (au moins 128 bits) arrive sur l'entrée standard, jamais sur la ligne de commande ; le module écoute sur `127.0.0.1`, sur un port libre, l'annonce en JSON sur la sortie standard et s'arrête quand l'entrée standard se ferme.
-- **Canal local** (`auth`, `server`) : `Authorization: Bearer` comparé en temps constant ; preuve du module en retour (HMAC du jeton sur un nonce du client, en-têtes `x-syntheo-speech-nonce` et `x-syntheo-speech-proof`) ; en-tête `Origin` refusé ; `Host` limité à la boucle locale ; sessions simultanées bornées.
+- **Canal local** (`auth`, `server`) : le jeton ne circule jamais. Le client envoie un nonce et une preuve, et le module répond par la sienne : des HMAC du jeton liés au nonce, aux deux ports de la connexion et au sens, ce qui empêche le relais et la réflexion. Un nonce n'est accepté qu'une fois (rejeu refusé). En-tête `Origin` refusé ; `Host` limité à la boucle locale. Handshake borné dans le temps et en nombre, sessions simultanées bornées, file audio bornée.
 - **Journaux** : des durées et des nombres, jamais de texte transcrit.
-- **Tests** : contrat avec l'adaptateur `nvidia` sur un moteur factice, contrôles du handshake, aucune connexion sortante (Linux) ; essai avec le vrai modèle si `SYNTHEO_SPEECH_MODELS` et `SYNTHEO_SPEECH_AUDIO` sont définis.
+- **Tests** : découpage en énoncés, horodatages et intervenants testés sans modèle (`segment`) ; contrat avec l'adaptateur `nvidia` sur un moteur factice (feature `fake-engine`, jamais livrée) ; handshake (relais, rejeu, réflexion, connexions muettes) ; aucune connexion sortante du binaire réel (Linux) ; essai avec le vrai modèle si `SYNTHEO_SPEECH_MODELS` et `SYNTHEO_SPEECH_AUDIO` sont définis.
 
 **Pages de doc concernées** : aucune pour l'instant (pas encore d'interface).
 

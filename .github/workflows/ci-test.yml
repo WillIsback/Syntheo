@@ -176,12 +176,17 @@ jobs:
       - name: Lint (cargo clippy)
         if: steps.changes.outputs.run == 'true'
         working-directory: apps/speech
-        run: cargo clippy --locked --all-targets -- -D warnings
+        run: |
+          set -euo pipefail
+          cargo clippy --locked --all-targets -- -D warnings
+          cargo clippy --locked --all-targets --features fake-engine -- -D warnings
 
       - name: Tests
         if: steps.changes.outputs.run == 'true'
         working-directory: apps/speech
-        run: cargo test --locked
+        # Le moteur factice (feature fake-engine, jamais livré) sert aux tests
+        # de contrat et au test du binaire réel.
+        run: cargo test --locked --features fake-engine
 
   # Les tests Rust sont exécutés dans ci-code-quality (job Rust fusionné), qui
   # compile le workspace une seule fois pour clippy et cargo test. Ce job ne

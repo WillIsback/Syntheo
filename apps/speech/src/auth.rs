@@ -1,22 +1,33 @@
-//! Jeton par lancement et authentification dans les deux sens.
+//! Jeton par lancement et authentification dans les deux sens, sans que le
+//! jeton circule jamais.
 //!
 //! - L'application tire un jeton aléatoire d'au moins 128 bits à chaque
 //!   lancement et l'écrit sur l'entrée standard du module, jamais sur la ligne
 //!   de commande (visible des autres processus) ni dans un journal.
-//! - Le client prouve qu'il connaît le jeton : `Authorization: Bearer <jeton>`,
-//!   comparé en temps constant.
-//! - Le module prouve qu'il le connaît aussi : le client envoie un nonce
-//!   (`x-syntheo-speech-nonce`), le module répond dans l'en-tête
-//!   `x-syntheo-speech-proof` par HMAC-SHA-256(jeton, `syntheo-speech/1 ` +
-//!   nonce). Le client vérifie cette preuve avant d'envoyer l'audio : un autre
-//!   processus qui aurait pris le port ne la produit pas.
+//! - Le client envoie un nonce `Nc` (`x-syntheo-speech-nonce`) et une preuve
+//!   (`x-syntheo-speech-client-proof`) : HMAC-SHA-256 du jeton sur
+//!   `syntheo-speech/1 client|Nc|port source|port serveur`.
+//! - Le module la vérifie en temps constant avec le port source vu sur la
+//!   connexion et son propre port, ce qui lie la preuve à cette connexion TCP
+//!   (un relais ne peut pas la réutiliser), et refuse tout `Nc` déjà vu pendant
+//!   le lancement (rejeu).
+//! - Il répond dans `x-syntheo-speech-proof` par le HMAC du jeton sur
+//!   `syntheo-speech/1 server|Nc|port source|port serveur` : l'étiquette de
+//!   sens empêche de renvoyer au client sa propre preuve (réflexion).
+//! - Le client n'envoie rien d'autre avant d'avoir vérifié cette preuve. Un
+//!   processus qui aurait pris le port ne reçoit que le nonce et une preuve
+//!   liée à des ports : il ne peut ni répondre, ni rejouer ailleurs.
+
+use std::collections::HashSet;
+use std::sync::Mutex;
 
 use hmac::{Hmac, KeyInit, Mac};
 use sha2::Sha256;
 
 pub const NONCE_HEADER: &str = "x-syntheo-speech-nonce";
+pub const CLIENT_PROOF_HEADER: &str = "x-syntheo-speech-client-proof";
 pub const PROOF_HEADER: &str = "x-syntheo-speech-proof";
-const PROOF_CONTEXT: &str = "syntheo-speech/1 ";
+const PROTOCOL: &str = "syntheo-speech/1";
 
 /// Jeton du lancement. Son `Debug` ne l'affiche jamais.
 #[derive(Clone)]
@@ -34,6 +45,29 @@ pub enum TokenError {
     Invalid,
 }
 
+/// Sens d'une preuve : l'étiquette diffère, contre la réflexion.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Direction {
+    Client,
+    Server,
+}
+
+impl Direction {
+    fn label(self) -> &'static str {
+        match self {
+            Direction::Client => "client",
+            Direction::Server => "server",
+        }
+    }
+}
+
+/// Ports de la connexion TCP : source (client) et serveur (module).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Ports {
+    pub client: u16,
+    pub server: u16,
+}
+
 impl Token {
     /// Jeton lu sur l'entrée standard : au moins 32 chiffres hexadécimaux
     /// (128 bits), au plus 128.
@@ -45,29 +79,43 @@ impl Token {
         decode_hex(hex).map(Self).ok_or(TokenError::Invalid)
     }
 
-    /// Vérifie `Authorization: Bearer <jeton>` en temps constant.
-    pub fn accepts_bearer(&self, header: Option<&str>) -> bool {
-        let Some(given) = header.and_then(|h| h.strip_prefix("Bearer ")) else {
-            return false;
-        };
-        let Some(given) = decode_hex(given.trim()) else {
-            return false;
-        };
-        constant_time_eq(&given, &self.0)
-    }
-
-    /// Preuve du module pour un nonce du client.
-    pub fn proof(&self, nonce: &str) -> String {
+    /// Preuve d'un sens pour un nonce et une connexion.
+    pub fn proof(&self, direction: Direction, nonce: &str, ports: Ports) -> String {
         let mut mac = <Hmac<Sha256> as KeyInit>::new_from_slice(&self.0)
             .expect("hmac accepts keys of any length");
-        mac.update(PROOF_CONTEXT.as_bytes());
-        mac.update(nonce.as_bytes());
+        mac.update(
+            format!(
+                "{PROTOCOL} {}|{nonce}|{}|{}",
+                direction.label(),
+                ports.client,
+                ports.server
+            )
+            .as_bytes(),
+        );
         encode_hex(&mac.finalize().into_bytes())
     }
 
-    /// Vérification côté client (utilisée par les tests et par l'application).
-    pub fn verify_proof(&self, nonce: &str, proof: &str) -> bool {
-        constant_time_eq(self.proof(nonce).as_bytes(), proof.trim().as_bytes())
+    /// Vérifie une preuve en temps constant.
+    pub fn verify(&self, direction: Direction, nonce: &str, ports: Ports, proof: &str) -> bool {
+        constant_time_eq(
+            self.proof(direction, nonce, ports).as_bytes(),
+            proof.trim().as_bytes(),
+        )
+    }
+}
+
+/// Nonces déjà acceptés pendant le lancement : un rejeu est refusé. Seules
+/// des preuves valides y entrent, donc seulement des connexions légitimes.
+#[derive(Default)]
+pub struct SeenNonces(Mutex<HashSet<String>>);
+
+impl SeenNonces {
+    /// `true` si le nonce est nouveau (et le retient).
+    pub fn first_use(&self, nonce: &str) -> bool {
+        self.0
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .insert(nonce.to_owned())
     }
 }
 
@@ -102,6 +150,10 @@ mod tests {
     use super::*;
 
     const HEX: &str = "00112233445566778899aabbccddeeff";
+    const PORTS: Ports = Ports {
+        client: 50000,
+        server: 40000,
+    };
 
     #[test]
     fn tokens_need_128_bits_of_hex() {
@@ -119,22 +171,30 @@ mod tests {
     }
 
     #[test]
-    fn bearer_is_checked() {
-        let token = Token::from_hex(HEX).unwrap();
-        assert!(token.accepts_bearer(Some(&format!("Bearer {HEX}"))));
-        assert!(!token.accepts_bearer(Some(&format!("Bearer {}", "11".repeat(16)))));
-        assert!(!token.accepts_bearer(Some(HEX)));
-        assert!(!token.accepts_bearer(None));
-    }
-
-    #[test]
-    fn the_proof_needs_the_token() {
+    fn proofs_are_bound_to_token_nonce_ports_and_direction() {
         let token = Token::from_hex(HEX).unwrap();
         let other = Token::from_hex(&"ab".repeat(16)).unwrap();
         let nonce = "cd".repeat(16);
-        assert!(token.verify_proof(&nonce, &token.proof(&nonce)));
-        assert!(!token.verify_proof(&nonce, &other.proof(&nonce)));
-        assert!(!token.verify_proof(&"ef".repeat(16), &token.proof(&nonce)));
-        assert!(valid_nonce(&nonce) && !valid_nonce("court") && !valid_nonce(&"zz".repeat(16)));
+        let client = token.proof(Direction::Client, &nonce, PORTS);
+        assert!(token.verify(Direction::Client, &nonce, PORTS, &client));
+        // Autre jeton, autre nonce, autre connexion : refusée.
+        assert!(!other.verify(Direction::Client, &nonce, PORTS, &client));
+        assert!(!token.verify(Direction::Client, &"ef".repeat(16), PORTS, &client));
+        let relayed = Ports {
+            client: 50001,
+            ..PORTS
+        };
+        assert!(!token.verify(Direction::Client, &nonce, relayed, &client));
+        // Réflexion : la preuve du client n'est pas celle du serveur.
+        assert!(!token.verify(Direction::Server, &nonce, PORTS, &client));
+    }
+
+    #[test]
+    fn a_nonce_is_accepted_once() {
+        let seen = SeenNonces::default();
+        assert!(seen.first_use("aa"));
+        assert!(!seen.first_use("aa"));
+        assert!(valid_nonce(&"cd".repeat(16)) && !valid_nonce("court"));
+        assert!(!valid_nonce(&"zz".repeat(16)));
     }
 }

@@ -121,9 +121,9 @@ On-device transcription module (issue 681): a separate process that the applicat
 
 - **Engines behind a trait** (`engine::Engine`, `engine::Recognizer`): A, `parakeet::ParakeetEngine` (streaming Nemotron 3.5, per-channel int8, and Nemotron-3 diarization), is implemented; B can plug in later.
 - **Launch**: the token (at least 128 bits) arrives on standard input, never on the command line; the module listens on `127.0.0.1`, on a free port, announces it as JSON on standard output and stops when standard input closes.
-- **Local channel** (`auth`, `server`): `Authorization: Bearer` compared in constant time; module proof in return (HMAC of the token over a client nonce, headers `x-syntheo-speech-nonce` and `x-syntheo-speech-proof`); `Origin` header refused; `Host` limited to the loopback; concurrent sessions bounded.
+- **Local channel** (`auth`, `server`): the token never travels. The client sends a nonce and a proof, and the module answers with its own: HMACs of the token bound to the nonce, both ports of the connection and the direction, which prevents relaying and reflection. A nonce is accepted only once (replay refused). `Origin` header refused; `Host` limited to the loopback. Handshake bounded in time and number, concurrent sessions bounded, audio queue bounded.
 - **Logs**: durations and counts, never transcribed text.
-- **Tests**: contract with the `nvidia` adapter over a fake engine, handshake checks, no outbound connection (Linux); a real-model run when `SYNTHEO_SPEECH_MODELS` and `SYNTHEO_SPEECH_AUDIO` are set.
+- **Tests**: utterance segmentation, timestamps and speakers tested without the model (`segment`); contract with the `nvidia` adapter over a fake engine (`fake-engine` feature, never shipped); handshake (relay, replay, reflection, silent connections); no outbound connection from the real binary (Linux); a real-model run when `SYNTHEO_SPEECH_MODELS` and `SYNTHEO_SPEECH_AUDIO` are set.
 
 **Affected doc pages**: none yet (no interface so far).
 

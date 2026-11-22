@@ -72,6 +72,7 @@ fn utterances_carry_exactly_the_model_text() {
     }
     events.extend(recognizer.finish().unwrap());
     let mut completed = Vec::new();
+    let mut utterances = 0usize;
     let mut deltas = Vec::new();
     // Les deltas d'un énoncé, recollés comme l'adaptateur, puis remis à zéro.
     let mut open = String::new();
@@ -99,10 +100,19 @@ fn utterances_carry_exactly_the_model_text() {
                     w.iter().all(|w| w.speaker.is_some()),
                     "intervenant pour chaque mot"
                 );
+                let duration = samples.len() as f64 / 16_000.0;
+                for word in w {
+                    assert!(
+                        word.start <= word.end && word.end <= duration + 1e-9,
+                        "horodatage dans l'audio reçu"
+                    );
+                }
+                utterances += 1;
                 completed.extend(words(transcript));
             }
         }
     }
     assert_eq!(bare(&completed), bare(&reference), "énoncés fermés");
     assert_eq!(deltas, completed, "deltas");
+    assert!(utterances >= 2, "plusieurs énoncés : {utterances}");
 }

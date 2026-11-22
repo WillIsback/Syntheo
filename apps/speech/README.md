@@ -18,8 +18,13 @@ Dossier des modèles : `nemotron/` (encoder.onnx et ses données, decoder_joint.
 
 ## Canal local
 
-- `GET /v1/audio/transcriptions/realtime` en WebSocket, avec `Authorization: Bearer <jeton>` comparé en temps constant.
-- Le client envoie un nonce (`x-syntheo-speech-nonce`, 32 à 128 chiffres hexadécimaux). Le module répond dans `x-syntheo-speech-proof` par HMAC-SHA-256 du jeton sur `syntheo-speech/1`, une espace, puis le nonce. Le client vérifie cette preuve avant d'envoyer l'audio.
+`GET /v1/audio/transcriptions/realtime` en WebSocket. **Le jeton ne circule jamais** : chaque côté prouve qu'il le connaît, par un HMAC-SHA-256 lié à la connexion.
+
+- **Le client** ouvre la connexion TCP, puis envoie un nonce `Nc` (`x-syntheo-speech-nonce`, 32 à 128 chiffres hexadécimaux) et sa preuve (`x-syntheo-speech-client-proof`). Cette preuve est le HMAC du jeton sur le texte formé de `syntheo-speech/1`, d'une espace, de `client`, puis de `|Nc|port source|port serveur`.
+- **Le module** vérifie cette preuve en temps constant, avec le port source qu'il voit et son propre port : un relais ne peut donc pas la réutiliser. Il refuse aussi tout nonce déjà accepté pendant le lancement (rejeu).
+- **Le module répond** dans `x-syntheo-speech-proof` par le même calcul, avec `server` au lieu de `client`. L'étiquette de sens empêche la réflexion.
+- **Le client vérifie** cette preuve avant d'envoyer quoi que ce soit d'autre. Il ne se connecte qu'au port annoncé par le lancement en cours, jamais à un port mémorisé.
+- **Contre l'épuisement** : le handshake est limité à 3 s et 16 handshakes au plus sont en cours ; au-delà, la connexion est fermée tout de suite. Une erreur d'acceptation entraîne une pause de 100 ms, et la file audio est bornée, avec contre-pression sur le client.
 - Un en-tête `Origin` donne 403 : une page web ne peut pas joindre le module. Un `Host` hors de `127.0.0.1:port` ou `localhost:port` donne 403.
 - Les sessions simultanées sont bornées (4 par défaut ; au-delà, 503).
 - Les journaux, sur la sortie d'erreur, ne contiennent que des durées et des nombres, jamais de texte transcrit.
@@ -28,7 +33,8 @@ Dossier des modèles : `nemotron/` (encoder.onnx et ses données, decoder_joint.
 
 ```
 cargo clippy --locked --all-targets -- -D warnings
-cargo test --locked
+cargo clippy --locked --all-targets --features fake-engine -- -D warnings
+cargo test --locked --features fake-engine   # moteur factice, jamais livré
 # Essai avec le vrai modèle (sauté sans ces variables) :
 SYNTHEO_SPEECH_MODELS=<dossier> SYNTHEO_SPEECH_AUDIO=<wav 16 kHz mono PCM16> cargo test --release --test model
 ```

@@ -18,6 +18,9 @@ default = ["parakeet"]
 # Moteur A : parakeet-rs (ONNX Runtime), Nemotron 3.5 en flux et diarisation
 # Nemotron-3.
 parakeet = ["dep:parakeet-rs"]
+# Moteur factice pour les tests (`--engine fake`) ; jamais dans le module
+# livré.
+fake-engine = []
 
 [dependencies]
 futures-util = "0.3.31"

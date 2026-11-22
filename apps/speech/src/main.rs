@@ -69,6 +69,8 @@ fn load_engine(args: &Args) -> Result<Arc<dyn Engine>, String> {
         "parakeet" => syntheo_speech::parakeet::ParakeetEngine::load(&args.models, args.threads)
             .map(|engine| Arc::new(engine) as Arc<dyn Engine>)
             .map_err(|error| error.to_string()),
+        #[cfg(feature = "fake-engine")]
+        "fake" => Ok(Arc::new(syntheo_speech::fake::FakeEngine) as Arc<dyn Engine>),
         _ => Err("unsupported engine".to_owned()),
     }
 }

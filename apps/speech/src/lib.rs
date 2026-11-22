@@ -12,7 +12,10 @@
 
 pub mod auth;
 pub mod engine;
+#[cfg(feature = "fake-engine")]
+pub mod fake;
 #[cfg(feature = "parakeet")]
 pub mod parakeet;
 pub mod protocol;
+pub mod segment;
 pub mod server;

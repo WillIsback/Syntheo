@@ -4,14 +4,11 @@
 //!
 //! - Le modèle ASR est chargé une fois et partagé par les sessions ; chaque
 //!   session a son état de décodage. La diarisation est chargée par session.
-//! - Découpage en énoncés : après le silence de fin d'énoncé demandé
-//!   (`endpointing_ms`) sans nouveau mot, l'énoncé se ferme au mot suivant, ou
-//!   après une tranche de grâce sans jeton ; un jeton qui continue le dernier
-//!   mot (ponctuation émise en retard) le rejoint.
-//! - Horodatage des mots : trame de l'encodeur (80 ms) où le premier jeton du
-//!   mot est émis, rapportée au début de la tranche traitée.
-//! - Intervenant d'un mot : segment de diarisation qui couvre son milieu, ou le
-//!   dernier intervenant connu quand la diarisation n'a pas encore rattrapé.
+//! - Découpage en énoncés, horodatage des mots et intervenants : module
+//!   `segment`, indépendant du modèle et testé sans lui. Taille de tranche lue
+//!   dans le modèle.
+//! - Un échec de la diarisation dégrade la session en « sans intervenant » ;
+//!   la transcription continue.
 //! - Non pris en charge par parakeet-rs : `speech_contexts` (mots favorisés) et
 //!   `max_speaker_count`, ignorés.
 
@@ -21,15 +18,8 @@ use parakeet_rs::sortformer::{DiarizationConfig, Sortformer, SpeakerSegment, Str
 use parakeet_rs::{ExecutionConfig, Nemotron, NemotronHandle};
 
 use crate::engine::{Engine, EngineError, Recognizer};
-use crate::protocol::{Event, SAMPLE_RATE, SessionConfig, Word};
-
-/// Tranche de 560 ms de l'export ONNX.
-const CHUNK: usize = 8960;
-/// Une trame de l'encodeur : 80 ms.
-const FRAME_SECONDS: f64 = 0.08;
-/// Après le silence de fin d'énoncé, une tranche de grâce : le modèle émet
-/// parfois la ponctuation ou la fin d'un mot une tranche plus tard.
-const GRACE_SECONDS: f64 = 0.56;
+use crate::protocol::{Event, SAMPLE_RATE, SessionConfig};
+use crate::segment::{Segmenter, Token};
 
 pub struct ParakeetEngine {
     asr: NemotronHandle,
@@ -91,142 +81,43 @@ impl Engine for ParakeetEngine {
             }
             _ => None,
         };
+        // Taille de tranche lue dans le modèle (géométrie de l'export ONNX).
+        let chunk = asr.chunk_samples();
+        if chunk == 0 {
+            return Err(EngineError("speech model has no streaming geometry"));
+        }
         Ok(Box::new(ParakeetRecognizer {
             asr,
             diarizer,
+            chunk,
             pending: Vec::new(),
             fed: 0,
-            utterance: Utterance::default(),
-            segments: Vec::new(),
-            last_speaker: None,
-            silence_limit: f64::from(session.endpointing_ms) / 1000.0,
-            word_pending: false,
+            received: 0,
+            segmenter: Segmenter::new(
+                f64::from(session.endpointing_ms) / 1000.0,
+                chunk as f64 / f64::from(SAMPLE_RATE),
+            ),
+            speakers: Speakers::default(),
         }))
     }
 }
 
-/// Énoncé ouvert : mots en cours et instant du dernier mot.
+/// Segments de diarisation reçus, et dernier intervenant connu.
 #[derive(Default)]
-struct Utterance {
-    words: Vec<OpenWord>,
-    last_word_at: f64,
-}
-
-struct OpenWord {
-    text: String,
-    start: f64,
-    logprob_sum: f32,
-    tokens: u32,
-}
-
-struct ParakeetRecognizer {
-    asr: Nemotron,
-    diarizer: Option<Sortformer>,
-    /// Audio pas encore remis au modèle (moins d'une tranche).
-    pending: Vec<f32>,
-    /// Échantillons déjà remis.
-    fed: u64,
-    utterance: Utterance,
+struct Speakers {
     segments: Vec<SpeakerSegment>,
-    last_speaker: Option<u32>,
-    silence_limit: f64,
-    /// Le dernier jeton était un « ▁ » seul.
-    word_pending: bool,
+    last: Option<u32>,
+    enabled: bool,
 }
 
-impl ParakeetRecognizer {
-    fn seconds(&self) -> f64 {
-        self.fed as f64 / f64::from(SAMPLE_RATE)
-    }
-
-    /// Une tranche complète : décodage, diarisation, découpage.
-    fn chunk(&mut self, chunk: &[f32], events: &mut Vec<Event>) -> Result<(), EngineError> {
-        let chunk_start = self.seconds();
-        let tokens = self
-            .asr
-            .transcribe_chunk_with_tokens(chunk)
-            .map_err(|_| EngineError("recognition failed"))?;
-        if let Some(diarizer) = self.diarizer.as_mut() {
-            let segments = diarizer
-                .feed(chunk)
-                .map_err(|_| EngineError("diarization failed"))?;
-            self.segments.extend(segments);
+impl Speakers {
+    /// Intervenant à l'instant `at` : segment qui le couvre, ou le dernier
+    /// connu quand la diarisation n'a pas encore rattrapé ; `None` sans
+    /// diarisation.
+    fn at(&mut self, at: f64) -> Option<u32> {
+        if !self.enabled {
+            return None;
         }
-        self.fed += chunk.len() as u64;
-        let mut delta = String::new();
-        for token in tokens {
-            // Étiquette de langue (`<fr-FR>`) en détection automatique.
-            if token.text.starts_with('<') && token.text.ends_with('>') {
-                continue;
-            }
-            let piece = token.text.replace('\u{2581}', " ");
-            if piece.is_empty() {
-                continue;
-            }
-            let at = chunk_start + token.local_frame as f64 * FRAME_SECONDS;
-            let text = piece.trim_start();
-            // Un jeton « ▁ » seul annonce un nouveau mot sans en porter les
-            // lettres : le jeton suivant ouvre le mot.
-            if text.is_empty() {
-                self.word_pending = true;
-                continue;
-            }
-            // La ponctuation se colle au mot précédent, même précédée d'un « ▁ »,
-            // comme dans le texte du décodeur.
-            let punctuation = !text.chars().any(char::is_alphanumeric);
-            // Ponctuation arrivée après la fermeture de l'énoncé : elle ne peut
-            // plus rejoindre son mot, déjà envoyé, et n'ouvre pas de phrase.
-            if punctuation && self.utterance.words.is_empty() {
-                continue;
-            }
-            let pending = std::mem::take(&mut self.word_pending);
-            let starts_word = self.utterance.words.is_empty()
-                || (!punctuation && (piece.starts_with(' ') || pending));
-            // Un nouveau mot après le silence de fin d'énoncé ferme l'énoncé
-            // ouvert ; un jeton qui continue le dernier mot (ponctuation,
-            // fin de mot émise en retard) le rejoint.
-            if starts_word
-                && !self.utterance.words.is_empty()
-                && chunk_start - self.utterance.last_word_at >= self.silence_limit
-            {
-                if !delta.is_empty() {
-                    events.push(Event::Delta(std::mem::take(&mut delta)));
-                }
-                events.push(self.close_utterance());
-            }
-            if starts_word {
-                self.utterance.words.push(OpenWord {
-                    text: text.to_owned(),
-                    start: at,
-                    logprob_sum: token.logprob,
-                    tokens: 1,
-                });
-            } else if let Some(word) = self.utterance.words.last_mut() {
-                word.text.push_str(text);
-                word.logprob_sum += token.logprob;
-                word.tokens += 1;
-            }
-            // Le premier mot d'un énoncé ne commence pas par une espace.
-            if starts_word && !(delta.is_empty() && self.utterance.words.len() == 1) {
-                delta.push(' ');
-            }
-            delta.push_str(text);
-            self.utterance.last_word_at = self.seconds();
-        }
-        if !delta.is_empty() {
-            events.push(Event::Delta(delta));
-        }
-        // Sans aucun jeton pendant le silence et une tranche de grâce : fermé.
-        if !self.utterance.words.is_empty()
-            && self.seconds() - self.utterance.last_word_at >= self.silence_limit + GRACE_SECONDS
-        {
-            events.push(self.close_utterance());
-        }
-        Ok(())
-    }
-
-    fn speaker_at(&mut self, at: f64) -> Option<u32> {
-        self.diarizer.as_ref()?;
         let sample = (at * f64::from(SAMPLE_RATE)) as u64;
         let found = self
             .segments
@@ -235,56 +126,86 @@ impl ParakeetRecognizer {
             .find(|s| s.start <= sample && sample < s.end)
             .map(|s| s.speaker_id as u32 + 1);
         if found.is_some() {
-            self.last_speaker = found;
+            self.last = found;
         }
-        found.or(self.last_speaker)
+        found.or(self.last)
     }
 
-    fn close_utterance(&mut self) -> Event {
-        let words = std::mem::take(&mut self.utterance.words);
-        let ends: Vec<f64> = words
-            .iter()
-            .skip(1)
-            .map(|w| w.start)
-            .chain(std::iter::once(self.utterance.last_word_at))
-            .collect();
-        let words: Vec<Word> = words
-            .into_iter()
-            .zip(ends)
-            .map(|(word, end)| {
-                let end = end.max(word.start + FRAME_SECONDS);
-                let speaker = self.speaker_at((word.start + end) / 2.0);
-                Word {
-                    confidence: f64::from((word.logprob_sum / word.tokens as f32).exp())
-                        .clamp(0.0, 1.0),
-                    word: word.text,
-                    start: word.start,
-                    end,
-                    speaker,
+    /// Oublie les segments finis avant `before` (secondes).
+    fn forget_before(&mut self, before: f64) {
+        let sample = (before * f64::from(SAMPLE_RATE)) as u64;
+        self.segments.retain(|s| s.end >= sample);
+    }
+}
+
+struct ParakeetRecognizer {
+    asr: Nemotron,
+    diarizer: Option<Sortformer>,
+    /// Échantillons par tranche, lus dans le modèle.
+    chunk: usize,
+    /// Audio pas encore remis au modèle (moins d'une tranche).
+    pending: Vec<f32>,
+    /// Échantillons remis au modèle, silence de fin compris.
+    fed: u64,
+    /// Échantillons réellement reçus du client.
+    received: u64,
+    segmenter: Segmenter,
+    speakers: Speakers,
+}
+
+impl ParakeetRecognizer {
+    fn seconds(samples: u64) -> f64 {
+        samples as f64 / f64::from(SAMPLE_RATE)
+    }
+
+    /// Une tranche complète : décodage, diarisation, découpage.
+    fn decode(&mut self, chunk: &[f32]) -> Result<Vec<Event>, EngineError> {
+        let start = Self::seconds(self.fed);
+        let tokens = self
+            .asr
+            .transcribe_chunk_with_tokens(chunk)
+            .map_err(|_| EngineError("recognition failed"))?;
+        self.speakers.enabled = self.diarizer.is_some();
+        if let Some(diarizer) = self.diarizer.as_mut() {
+            match diarizer.feed(chunk) {
+                Ok(segments) => self.speakers.segments.extend(segments),
+                Err(_) => {
+                    // La transcription continue, sans intervenant.
+                    crate::server::log("diarization failed: continuing without speakers");
+                    self.diarizer = None;
+                    self.speakers.enabled = false;
                 }
+            }
+        }
+        self.fed += chunk.len() as u64;
+        let end = Self::seconds(self.fed);
+        let tokens: Vec<Token> = tokens
+            .into_iter()
+            .map(|t| Token {
+                text: t.text,
+                frame: t.local_frame,
+                logprob: t.logprob,
             })
             .collect();
-        // Segments de diarisation déjà dépassés : plus utiles.
-        if let Some(first) = words.first() {
-            let keep_from = (first.start * f64::from(SAMPLE_RATE)) as u64;
-            self.segments.retain(|s| s.end >= keep_from);
+        let speakers = &mut self.speakers;
+        let events = self
+            .segmenter
+            .chunk(start, end, &tokens, &mut |at| speakers.at(at));
+        if events.iter().any(|e| matches!(e, Event::Completed { .. })) {
+            speakers.forget_before(start - 2.0);
         }
-        let transcript = words
-            .iter()
-            .map(|w| w.word.as_str())
-            .collect::<Vec<_>>()
-            .join(" ");
-        Event::Completed { transcript, words }
+        Ok(events)
     }
 }
 
 impl Recognizer for ParakeetRecognizer {
     fn push(&mut self, samples: &[f32]) -> Result<Vec<Event>, EngineError> {
+        self.received += samples.len() as u64;
         self.pending.extend_from_slice(samples);
         let mut events = Vec::new();
-        while self.pending.len() >= CHUNK {
-            let chunk: Vec<f32> = self.pending.drain(..CHUNK).collect();
-            self.chunk(&chunk, &mut events)?;
+        while self.pending.len() >= self.chunk {
+            let chunk: Vec<f32> = self.pending.drain(..self.chunk).collect();
+            events.extend(self.decode(&chunk)?);
         }
         Ok(events)
     }
@@ -295,19 +216,18 @@ impl Recognizer for ParakeetRecognizer {
         // silence pour vider le décodeur.
         if !self.pending.is_empty() {
             let mut last = std::mem::take(&mut self.pending);
-            last.resize(CHUNK, 0.0);
-            self.chunk(&last, &mut events)?;
+            last.resize(self.chunk, 0.0);
+            events.extend(self.decode(&last)?);
         }
-        self.chunk(&[0.0; CHUNK], &mut events)?;
-        if let Some(diarizer) = self.diarizer.as_mut() {
-            let segments = diarizer
-                .flush()
-                .map_err(|_| EngineError("diarization failed"))?;
-            self.segments.extend(segments);
+        events.extend(self.decode(&vec![0.0; self.chunk])?);
+        if let Some(diarizer) = self.diarizer.as_mut()
+            && let Ok(segments) = diarizer.flush()
+        {
+            self.speakers.segments.extend(segments);
         }
-        if !self.utterance.words.is_empty() {
-            events.push(self.close_utterance());
-        }
+        let audio_end = Self::seconds(self.received);
+        let speakers = &mut self.speakers;
+        events.extend(self.segmenter.finish(audio_end, &mut |at| speakers.at(at)));
         Ok(events)
     }
 }

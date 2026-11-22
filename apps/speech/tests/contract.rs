@@ -1,7 +1,10 @@
 //! Contrat avec l'application : le client est l'adaptateur `nvidia` de
 //! `owhisper-client`, celui qui parle à NeMo-Speech.cpp. Il produit les
 //! messages et lit les réponses ; le moteur est factice, derrière le trait.
-//! S'y ajoutent les contrôles de sécurité du canal local.
+//! S'y ajoutent les contrôles de sécurité du canal local : handshake sans
+//! jeton en clair, relais, rejeu, réflexion, connexions muettes, et aucune
+//! connexion sortante du binaire réel.
+#![cfg(feature = "fake-engine")]
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -9,75 +12,30 @@ use std::time::Duration;
 use futures_util::{SinkExt, StreamExt};
 use owhisper_client::{NvidiaAdapter, RealtimeSttAdapter};
 use owhisper_interface::stream::StreamResponse;
-use syntheo_speech::auth::{NONCE_HEADER, PROOF_HEADER, Token};
-use syntheo_speech::engine::{Engine, EngineError, Recognizer};
-use syntheo_speech::protocol::{Event, SessionConfig, Word};
+use syntheo_speech::auth::{
+    CLIENT_PROOF_HEADER, Direction, NONCE_HEADER, PROOF_HEADER, Ports, Token,
+};
+use syntheo_speech::fake::FakeEngine;
 use syntheo_speech::server::{REALTIME_PATH, ServerConfig, serve};
+use tokio::net::TcpStream;
+use tokio_tungstenite::WebSocketStream;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
+use tokio_tungstenite::tungstenite::http::Request;
 
 const TOKEN: &str = "0123456789abcdef0123456789abcdef";
-const NONCE: &str = "fedcba9876543210fedcba9876543210";
 
-/// Moteur factice : un delta par seconde d'audio, un énoncé fermé au commit
-/// avec deux intervenants (ou aucun sans diarisation).
-struct FakeEngine;
-
-struct FakeRecognizer {
-    samples: usize,
-    diarization: bool,
+fn token() -> Token {
+    Token::from_hex(TOKEN).unwrap()
 }
 
-impl Engine for FakeEngine {
-    fn open(&self, config: &SessionConfig) -> Result<Box<dyn Recognizer>, EngineError> {
-        if config.language != "fr-FR" {
-            return Err(EngineError("unsupported language"));
-        }
-        Ok(Box::new(FakeRecognizer {
-            samples: 0,
-            diarization: config.diarization,
-        }))
-    }
-}
-
-impl Recognizer for FakeRecognizer {
-    fn push(&mut self, samples: &[f32]) -> Result<Vec<Event>, EngineError> {
-        let before = self.samples / 16_000;
-        self.samples += samples.len();
-        let after = self.samples / 16_000;
-        Ok((before..after)
-            .map(|i| {
-                Event::Delta(if i == 0 {
-                    "Bonjour".into()
-                } else {
-                    " toi".into()
-                })
-            })
-            .collect())
-    }
-
-    fn finish(&mut self) -> Result<Vec<Event>, EngineError> {
-        let speaker = |n| self.diarization.then_some(n);
-        Ok(vec![Event::Completed {
-            transcript: "Bonjour toi".into(),
-            words: vec![
-                Word {
-                    word: "Bonjour".into(),
-                    start: 0.5,
-                    end: 0.9,
-                    confidence: 0.9,
-                    speaker: speaker(1),
-                },
-                Word {
-                    word: "toi".into(),
-                    start: 1.2,
-                    end: 1.5,
-                    confidence: 1.0,
-                    speaker: speaker(2),
-                },
-            ],
-        }])
-    }
+fn fresh_nonce() -> String {
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static NEXT: AtomicU64 = AtomicU64::new(1);
+    format!(
+        "{:032x}",
+        NEXT.fetch_add(1, Ordering::SeqCst) + u64::from(std::process::id()) * 1_000_000
+    )
 }
 
 /// Lance un serveur sur un port libre ; rend le port et l'arrêt.
@@ -88,7 +46,7 @@ async fn start(max_sessions: usize) -> (u16, tokio::sync::oneshot::Sender<()>) {
     let port = listener.local_addr().unwrap().port();
     let (stop, stopped) = tokio::sync::oneshot::channel::<()>();
     let config = ServerConfig {
-        token: Token::from_hex(TOKEN).unwrap(),
+        token: token(),
         max_sessions,
     };
     tokio::spawn(serve(listener, config, Arc::new(FakeEngine), async {
@@ -97,27 +55,79 @@ async fn start(max_sessions: usize) -> (u16, tokio::sync::oneshot::Sender<()>) {
     (port, stop)
 }
 
-fn request(
-    port: u16,
-    edit: impl FnOnce(&mut tokio_tungstenite::tungstenite::http::Request<()>),
-) -> tokio_tungstenite::tungstenite::http::Request<()> {
-    let mut request = format!("ws://127.0.0.1:{port}{REALTIME_PATH}")
-        .into_client_request()
-        .unwrap();
-    let headers = request.headers_mut();
-    headers.insert("authorization", format!("Bearer {TOKEN}").parse().unwrap());
-    headers.insert(NONCE_HEADER, NONCE.parse().unwrap());
-    edit(&mut request);
-    request
+/// Retouche de la requête de handshake (en-têtes, chemin).
+type EditRequest = Box<dyn FnOnce(&mut Request<()>) + Send>;
+
+/// Ce que le client met dans son handshake.
+struct Hello {
+    nonce: String,
+    /// Preuve envoyée ; `None` : calculée correctement.
+    proof: Option<String>,
+    edit: EditRequest,
 }
 
-/// Code HTTP d'un handshake refusé.
-async fn refused_status(request: tokio_tungstenite::tungstenite::http::Request<()>) -> u16 {
-    match tokio_tungstenite::connect_async(request).await {
-        Err(tokio_tungstenite::tungstenite::Error::Http(response)) => response.status().as_u16(),
-        Err(other) => panic!("unexpected error: {other}"),
-        Ok(_) => panic!("handshake should have been refused"),
+impl Hello {
+    fn new() -> Self {
+        Self {
+            nonce: fresh_nonce(),
+            proof: None,
+            edit: Box::new(|_| {}),
+        }
     }
+}
+
+/// Ouvre la connexion TCP (pour connaître le port source), envoie le
+/// handshake vers `port`, en visant le module sur `server_port`.
+async fn connect(
+    port: u16,
+    server_port: u16,
+    hello: Hello,
+) -> Result<(WebSocketStream<TcpStream>, Ports, String), u16> {
+    let stream = TcpStream::connect(("127.0.0.1", port)).await.unwrap();
+    let ports = Ports {
+        client: stream.local_addr().unwrap().port(),
+        server: server_port,
+    };
+    let mut request = format!("ws://127.0.0.1:{server_port}{REALTIME_PATH}")
+        .into_client_request()
+        .unwrap();
+    let proof = hello
+        .proof
+        .unwrap_or_else(|| token().proof(Direction::Client, &hello.nonce, ports));
+    request
+        .headers_mut()
+        .insert(NONCE_HEADER, hello.nonce.parse().unwrap());
+    request
+        .headers_mut()
+        .insert(CLIENT_PROOF_HEADER, proof.parse().unwrap());
+    (hello.edit)(&mut request);
+    match tokio_tungstenite::client_async(request, stream).await {
+        Ok((ws, response)) => {
+            let proof = response
+                .headers()
+                .get(PROOF_HEADER)
+                .and_then(|v| v.to_str().ok())
+                .unwrap_or_default()
+                .to_owned();
+            Ok((ws, ports, proof))
+        }
+        Err(tokio_tungstenite::tungstenite::Error::Http(response)) => {
+            Err(response.status().as_u16())
+        }
+        Err(_) => Err(0),
+    }
+}
+
+/// Handshake complet, preuve du module vérifiée.
+async fn open(port: u16) -> WebSocketStream<TcpStream> {
+    let hello = Hello::new();
+    let nonce = hello.nonce.clone();
+    let (ws, ports, proof) = connect(port, port, hello).await.expect("handshake");
+    assert!(
+        token().verify(Direction::Server, &nonce, ports, &proof),
+        "preuve du module"
+    );
+    ws
 }
 
 fn params(diarization: bool) -> owhisper_interface::ListenParams {
@@ -130,18 +140,7 @@ fn params(diarization: bool) -> owhisper_interface::ListenParams {
 
 /// Une session complète avec l'adaptateur ; rend ses réponses.
 async fn session(port: u16, diarization: bool) -> Vec<StreamResponse> {
-    let (mut ws, response) = tokio_tungstenite::connect_async(request(port, |_| {}))
-        .await
-        .unwrap();
-    // Le module a prouvé qu'il connaît le jeton, avant tout audio.
-    let proof = response
-        .headers()
-        .get(PROOF_HEADER)
-        .unwrap()
-        .to_str()
-        .unwrap();
-    assert!(Token::from_hex(TOKEN).unwrap().verify_proof(NONCE, proof));
-
+    let mut ws = open(port).await;
     let adapter = NvidiaAdapter::default();
     ws.send(
         adapter
@@ -198,7 +197,6 @@ async fn the_nvidia_adapter_gets_partials_a_final_and_the_end_of_stream() {
             (String::new(), true, true),
         ]
     );
-    // Mots horodatés, intervenants ramenés à partir de 0 par l'adaptateur.
     let StreamResponse::TranscriptResponse { channel, start, .. } = &responses[2] else {
         unreachable!()
     };
@@ -235,74 +233,153 @@ async fn two_streams_run_side_by_side() {
 }
 
 #[tokio::test]
-async fn the_handshake_refuses_strangers() {
+async fn the_token_never_travels() {
     let (port, _stop) = start(2).await;
-    let wrong = "11".repeat(16);
-    assert_eq!(
-        refused_status(request(port, |r| {
-            r.headers_mut().remove("authorization");
-        }))
-        .await,
-        401
-    );
-    assert_eq!(
-        refused_status(request(port, |r| {
-            r.headers_mut()
-                .insert("authorization", format!("Bearer {wrong}").parse().unwrap());
-        }))
-        .await,
-        401
-    );
-    assert_eq!(
-        refused_status(request(port, |r| {
-            r.headers_mut().remove(NONCE_HEADER);
-        }))
-        .await,
-        401
-    );
-    // Une page web (en-tête Origin) ne joint pas le module, jeton ou non.
-    assert_eq!(
-        refused_status(request(port, |r| {
-            r.headers_mut()
-                .insert("origin", "http://localhost:3000".parse().unwrap());
-        }))
-        .await,
-        403
-    );
-    // Rebinding DNS : un autre nom d'hôte que la boucle locale.
-    assert_eq!(
-        refused_status(request(port, |r| {
-            r.headers_mut()
-                .insert("host", format!("evil.example:{port}").parse().unwrap());
-        }))
-        .await,
-        403
-    );
-    let mut other_path = request(port, |_| {});
-    *other_path.uri_mut() = format!("ws://127.0.0.1:{port}/v1/realtime")
-        .parse()
+    let hello = Hello::new();
+    let nonce = hello.nonce.clone();
+    let (_ws, ports, server_proof) = connect(port, port, hello).await.unwrap();
+    let client_proof = token().proof(Direction::Client, &nonce, ports);
+    for sent in [&nonce, &client_proof, &server_proof] {
+        assert!(!sent.contains(TOKEN));
+    }
+}
+
+#[tokio::test]
+async fn the_handshake_refuses_strangers() {
+    let (port, _stop) = start(4).await;
+    let wrong = Token::from_hex(&"11".repeat(16)).unwrap();
+    // Sans preuve, preuve d'un autre jeton, sans nonce.
+    let mut no_proof = Hello::new();
+    no_proof.edit = Box::new(|r| {
+        r.headers_mut().remove(CLIENT_PROOF_HEADER);
+    });
+    assert_eq!(connect(port, port, no_proof).await.err(), Some(401));
+    let mut other = Hello::new();
+    other.proof = Some(wrong.proof(
+        Direction::Client,
+        &other.nonce,
+        Ports {
+            client: 0,
+            server: port,
+        },
+    ));
+    assert_eq!(connect(port, port, other).await.err(), Some(401));
+    let mut no_nonce = Hello::new();
+    no_nonce.edit = Box::new(|r| {
+        r.headers_mut().remove(NONCE_HEADER);
+    });
+    assert_eq!(connect(port, port, no_nonce).await.err(), Some(401));
+    // Une page web (Origin), un autre nom d'hôte (rebinding DNS), un autre
+    // chemin.
+    let mut origin = Hello::new();
+    origin.edit = Box::new(|r| {
+        r.headers_mut()
+            .insert("origin", "http://localhost:3000".parse().unwrap());
+    });
+    assert_eq!(connect(port, port, origin).await.err(), Some(403));
+    let mut host = Hello::new();
+    host.edit = Box::new(move |r| {
+        r.headers_mut()
+            .insert("host", format!("evil.example:{port}").parse().unwrap());
+    });
+    assert_eq!(connect(port, port, host).await.err(), Some(403));
+    let mut path = Hello::new();
+    path.edit = Box::new(move |r| {
+        *r.uri_mut() = format!("ws://127.0.0.1:{port}/v1/realtime")
+            .parse()
+            .unwrap();
+    });
+    assert_eq!(connect(port, port, path).await.err(), Some(404));
+}
+
+// Revue 0.8.0 (module), constat 2 : la preuve du client est liée à la
+// connexion ; un relais ne peut pas la réutiliser.
+#[tokio::test]
+async fn a_relay_cannot_reuse_the_client_proof() {
+    let (port, _stop) = start(4).await;
+    // Relais TCP : il transmet les octets au module depuis sa propre connexion.
+    let relay = tokio::net::TcpListener::bind(("127.0.0.1", 0))
+        .await
         .unwrap();
-    assert_eq!(refused_status(other_path).await, 404);
+    let relay_port = relay.local_addr().unwrap().port();
+    tokio::spawn(async move {
+        while let Ok((mut inbound, _)) = relay.accept().await {
+            tokio::spawn(async move {
+                let mut outbound = TcpStream::connect(("127.0.0.1", port)).await.unwrap();
+                let _ = tokio::io::copy_bidirectional(&mut inbound, &mut outbound).await;
+            });
+        }
+    });
+    // Le client croit parler au module sur ce port : sa preuve porte ses
+    // ports vers le relais, que le module ne voit pas.
+    assert_eq!(
+        connect(relay_port, port, Hello::new()).await.err(),
+        Some(401)
+    );
+}
+
+// Constat 2 : un nonce n'est accepté qu'une fois pendant le lancement.
+#[tokio::test]
+async fn a_nonce_cannot_be_used_twice() {
+    let (port, _stop) = start(4).await;
+    let first = Hello::new();
+    let nonce = first.nonce.clone();
+    let _ws = connect(port, port, first).await.expect("first use");
+    let mut again = Hello::new();
+    again.nonce = nonce;
+    assert_eq!(connect(port, port, again).await.err(), Some(401));
+}
+
+// Constat 2 : la preuve du serveur renvoyée comme preuve du client
+// (réflexion) est refusée.
+#[tokio::test]
+async fn a_reflected_proof_is_refused() {
+    let (port, _stop) = start(4).await;
+    let stream = TcpStream::connect(("127.0.0.1", port)).await.unwrap();
+    let ports = Ports {
+        client: stream.local_addr().unwrap().port(),
+        server: port,
+    };
+    drop(stream);
+    let mut reflected = Hello::new();
+    reflected.proof = Some(token().proof(Direction::Server, &reflected.nonce, ports));
+    assert_eq!(connect(port, port, reflected).await.err(), Some(401));
 }
 
 #[tokio::test]
 async fn sessions_are_bounded() {
     let (port, _stop) = start(2).await;
-    let (_a, _) = tokio_tungstenite::connect_async(request(port, |_| {}))
-        .await
-        .unwrap();
-    let (_b, _) = tokio_tungstenite::connect_async(request(port, |_| {}))
-        .await
-        .unwrap();
-    assert_eq!(refused_status(request(port, |_| {})).await, 503);
+    let _a = open(port).await;
+    let _b = open(port).await;
+    assert_eq!(connect(port, port, Hello::new()).await.err(), Some(503));
+}
+
+// Constats 1, 3 et 5 : des connexions muettes n'empêchent pas le vrai client
+// de passer (handshake borné dans le temps et en nombre).
+#[tokio::test]
+async fn silent_connections_do_not_lock_the_real_client_out() {
+    let (port, _stop) = start(4).await;
+    let mut silent = Vec::new();
+    for _ in 0..64 {
+        silent.push(TcpStream::connect(("127.0.0.1", port)).await.unwrap());
+    }
+    let started = std::time::Instant::now();
+    let mut connected = false;
+    while started.elapsed() < Duration::from_secs(10) {
+        if let Ok((_ws, _, _)) = connect(port, port, Hello::new()).await {
+            connected = true;
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(200)).await;
+    }
+    assert!(connected, "le vrai client n'a pas pu se connecter");
+    drop(silent);
 }
 
 #[tokio::test]
 async fn audio_before_the_session_update_is_refused() {
     let (port, _stop) = start(2).await;
-    let (mut ws, _) = tokio_tungstenite::connect_async(request(port, |_| {}))
-        .await
-        .unwrap();
+    let mut ws = open(port).await;
     ws.send(Message::Binary(vec![0u8; 640].into()))
         .await
         .unwrap();
@@ -316,9 +393,7 @@ async fn audio_before_the_session_update_is_refused() {
 #[tokio::test]
 async fn an_unsupported_language_is_reported_as_an_error() {
     let (port, _stop) = start(2).await;
-    let (mut ws, _) = tokio_tungstenite::connect_async(request(port, |_| {}))
-        .await
-        .unwrap();
+    let mut ws = open(port).await;
     let adapter = NvidiaAdapter::default();
     let params = owhisper_interface::ListenParams {
         languages: vec!["de".parse().unwrap()],
@@ -337,59 +412,99 @@ async fn an_unsupported_language_is_reported_as_an_error() {
     ));
 }
 
-/// Aucune connexion sortante : toutes les sockets TCP du processus de test
-/// (serveurs, sessions et clients des tests parallèles compris) restent sur
-/// la boucle locale, aux deux bouts ; et celles du module y figurent.
+/// Sockets TCP d'un processus : (état, adresse locale, adresse distante).
 #[cfg(target_os = "linux")]
-#[tokio::test]
-async fn no_outbound_connection() {
-    let (port, _stop) = start(4).await;
-    let (_session, ws) = {
-        let (ws, _) = tokio_tungstenite::connect_async(request(port, |_| {}))
-            .await
-            .unwrap();
-        (session(port, true).await, ws)
-    };
-    let inodes: std::collections::HashSet<String> = std::fs::read_dir("/proc/self/fd")
-        .unwrap()
-        .filter_map(|e| std::fs::read_link(e.ok()?.path()).ok())
-        .filter_map(|target| {
-            let target = target.to_string_lossy().into_owned();
-            target
-                .strip_prefix("socket:[")?
-                .strip_suffix(']')
-                .map(str::to_owned)
+fn tcp_sockets(pid: u32) -> Vec<(String, String, String)> {
+    let inodes: std::collections::HashSet<String> = std::fs::read_dir(format!("/proc/{pid}/fd"))
+        .map(|dir| {
+            dir.filter_map(|e| std::fs::read_link(e.ok()?.path()).ok())
+                .filter_map(|target| {
+                    let target = target.to_string_lossy().into_owned();
+                    target
+                        .strip_prefix("socket:[")?
+                        .strip_suffix(']')
+                        .map(str::to_owned)
+                })
+                .collect()
         })
-        .collect();
-    let mut checked = 0;
-    for table in ["/proc/self/net/tcp", "/proc/self/net/tcp6"] {
-        let Ok(content) = std::fs::read_to_string(table) else {
+        .unwrap_or_default();
+    let mut sockets = Vec::new();
+    for table in ["tcp", "tcp6"] {
+        let Ok(content) = std::fs::read_to_string(format!("/proc/{pid}/net/{table}")) else {
             continue;
         };
         for line in content.lines().skip(1) {
-            let fields: Vec<&str> = line.split_whitespace().collect();
-            if fields.len() < 10 || !inodes.contains(fields[9]) {
-                continue;
-            }
-            let port_of = |address: &str| {
-                u16::from_str_radix(address.rsplit(':').next().unwrap(), 16).unwrap()
-            };
-            let (local, remote) = (port_of(fields[1]), port_of(fields[2]));
-            let loopback = |address: &str| {
-                let host = address.split(':').next().unwrap();
-                host == "0100007F"
-                    || host == "00000000000000000000000001000000"
-                    || host.chars().all(|c| c == '0')
-            };
-            assert!(
-                loopback(fields[1]) && loopback(fields[2]),
-                "socket hors de la boucle locale : {line}"
-            );
-            if local == port || remote == port {
-                checked += 1;
+            let f: Vec<&str> = line.split_whitespace().collect();
+            if f.len() >= 10 && inodes.contains(f[9]) {
+                sockets.push((f[3].to_owned(), f[1].to_owned(), f[2].to_owned()));
             }
         }
     }
-    assert!(checked >= 2, "sockets du module trouvées : {checked}");
-    drop(ws);
+    sockets
+}
+
+/// Constat 9 : le binaire réel (moteur factice) n'ouvre aucune socket hors de
+/// la boucle locale, ni avant, ni pendant, ni après une session ; aucune
+/// écoute sur 0.0.0.0 ou ::.
+#[cfg(target_os = "linux")]
+#[tokio::test]
+async fn the_real_binary_opens_no_outbound_connection() {
+    use std::io::{BufRead, Write};
+    const LOOPBACK: [&str; 2] = ["0100007F", "00000000000000000000000001000000"];
+    let mut child = std::process::Command::new(env!("CARGO_BIN_EXE_syntheo-speech"))
+        .args(["--engine", "fake", "--models", "/nonexistent"])
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::null())
+        .env_clear()
+        .spawn()
+        .unwrap();
+    let pid = child.id();
+    let mut stdin = child.stdin.take().unwrap();
+    writeln!(stdin, "{TOKEN}").unwrap();
+    let mut line = String::new();
+    std::io::BufReader::new(child.stdout.take().unwrap())
+        .read_line(&mut line)
+        .unwrap();
+    let announce: serde_json::Value = serde_json::from_str(&line).unwrap();
+    let port = announce["port"].as_u64().unwrap() as u16;
+
+    let check = |when: &str| {
+        let sockets = tcp_sockets(pid);
+        assert!(!sockets.is_empty(), "{when} : aucune socket trouvée");
+        for (state, local, remote) in &sockets {
+            let (local_host, local_port) = local.split_once(':').unwrap();
+            assert!(
+                LOOPBACK.contains(&local_host),
+                "{when} : écoute ou connexion hors boucle locale : {local}"
+            );
+            assert_eq!(
+                u16::from_str_radix(local_port, 16).unwrap(),
+                port,
+                "{when} : autre port local : {local}"
+            );
+            if state == "0A" {
+                continue; // LISTEN : adresse distante nulle.
+            }
+            let remote_host = remote.split_once(':').unwrap().0;
+            assert!(
+                LOOPBACK.contains(&remote_host),
+                "{when} : pair hors boucle locale : {remote}"
+            );
+        }
+    };
+    check("avant la session");
+    let during = tokio::spawn(async move { session(port, true).await });
+    for _ in 0..10 {
+        tokio::time::sleep(Duration::from_millis(30)).await;
+        check("pendant la session");
+    }
+    assert_eq!(transcripts(&during.await.unwrap()).len(), 4);
+    check("après la session");
+    drop(stdin);
+    let status = child.wait().unwrap();
+    assert!(
+        status.success(),
+        "arrêt à la fermeture de l'entrée standard"
+    );
 }

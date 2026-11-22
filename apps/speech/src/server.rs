@@ -5,9 +5,14 @@
 //! - aucun en-tête `Origin` : une page web ne peut pas joindre le module ;
 //! - `Host` sur la boucle locale (`127.0.0.1` ou `localhost`), contre le
 //!   rebinding DNS ;
-//! - jeton du lancement en `Authorization: Bearer` ;
-//! - nonce du client, auquel le module répond par une preuve du jeton ;
+//! - preuve du client (jeton, nonce, ports de la connexion), nonce jamais
+//!   vu ; le module répond par sa propre preuve (voir `auth`), et le jeton ne
+//!   circule jamais ;
 //! - nombre de sessions simultanées borné.
+//!
+//! Contre l'épuisement : handshake borné dans le temps, connexions en cours de
+//! handshake bornées (prises avant toute tâche), pause sur une erreur
+//! d'acceptation, file audio bornée (contre-pression sur le client).
 //!
 //! Puis un `session.update`, l'audio, un commit. La reconnaissance tourne dans
 //! un fil par session ; aucun texte transcrit n'est journalisé.
@@ -23,7 +28,10 @@ use tokio_tungstenite::tungstenite::handshake::server::{ErrorResponse, Request, 
 use tokio_tungstenite::tungstenite::http::{HeaderValue, StatusCode};
 use tokio_tungstenite::tungstenite::protocol::WebSocketConfig;
 
-use crate::auth::{NONCE_HEADER, PROOF_HEADER, Token, valid_nonce};
+use crate::auth::{
+    CLIENT_PROOF_HEADER, Direction, NONCE_HEADER, PROOF_HEADER, Ports, SeenNonces, Token,
+    valid_nonce,
+};
 use crate::engine::{Engine, Recognizer};
 use crate::protocol::{
     ClientEvent, Event, ProtocolError, committed_json, error_json, event_json, parse_client_event,
@@ -35,6 +43,15 @@ pub const REALTIME_PATH: &str = "/v1/audio/transcriptions/realtime";
 const SESSION_TIMEOUT: Duration = Duration::from_secs(10);
 /// Une trame binaire ou un message texte au plus : 1 Mio.
 const MAX_MESSAGE: usize = 1024 * 1024;
+/// Délai du handshake WebSocket, preuve comprise.
+const HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(3);
+/// Connexions en cours de handshake : au-delà, refusées sur-le-champ.
+const MAX_HANDSHAKES: usize = 16;
+/// Pause après une erreur d'acceptation (descripteurs épuisés…).
+const ACCEPT_BACKOFF: Duration = Duration::from_millis(100);
+/// Trames audio en attente du moteur (environ 5 s en trames de 20 ms) :
+/// au-delà, la lecture du client attend.
+const AUDIO_QUEUE: usize = 256;
 
 #[derive(Clone)]
 pub struct ServerConfig {
@@ -57,24 +74,58 @@ pub async fn serve(
 ) {
     let port = listener.local_addr().map(|a| a.port()).unwrap_or(0);
     let sessions = Arc::new(Semaphore::new(config.max_sessions.max(1)));
+    let handshakes = Arc::new(Semaphore::new(MAX_HANDSHAKES));
+    let nonces = Arc::new(SeenNonces::default());
     tokio::pin!(shutdown);
     loop {
         tokio::select! {
             () = &mut shutdown => break,
             accepted = listener.accept() => {
-                let Ok((stream, peer)) = accepted else { continue };
+                let (stream, peer) = match accepted {
+                    Ok(accepted) => accepted,
+                    Err(error) => {
+                        // Descripteurs épuisés, par exemple : la connexion
+                        // reste dans la file du noyau, on ne boucle pas à vide.
+                        log(&format!("accept failed ({:?})", error.kind()));
+                        tokio::select! {
+                            () = &mut shutdown => break,
+                            () = tokio::time::sleep(ACCEPT_BACKOFF) => continue,
+                        }
+                    }
+                };
                 // Liaison sur 127.0.0.1 : un pair hors boucle locale ne peut
                 // pas arriver ; la vérification reste, par défense.
                 if !peer.ip().is_loopback() {
                     continue;
                 }
-                let (config, engine, sessions) = (config.clone(), engine.clone(), sessions.clone());
+                // Place de handshake prise avant toute tâche : au-delà, la
+                // connexion est fermée tout de suite.
+                let Ok(handshake) = handshakes.clone().try_acquire_owned() else {
+                    continue;
+                };
+                let context = Handshake {
+                    peer_port: peer.port(),
+                    port,
+                    config: config.clone(),
+                    sessions: sessions.clone(),
+                    nonces: nonces.clone(),
+                };
+                let engine = engine.clone();
                 tokio::spawn(async move {
-                    connection(stream, port, config, engine, sessions).await;
+                    connection(stream, context, handshake, engine).await;
                 });
             }
         }
     }
+}
+
+/// Ce qu'il faut pour vérifier un handshake.
+struct Handshake {
+    peer_port: u16,
+    port: u16,
+    config: ServerConfig,
+    sessions: Arc<Semaphore>,
+    nonces: Arc<SeenNonces>,
 }
 
 fn reject(status: StatusCode) -> ErrorResponse {
@@ -96,12 +147,15 @@ fn loopback_host(host: Option<&str>, port: u16) -> bool {
 )]
 async fn connection(
     stream: tokio::net::TcpStream,
-    port: u16,
-    config: ServerConfig,
+    context: Handshake,
+    handshake: tokio::sync::OwnedSemaphorePermit,
     engine: Arc<dyn Engine>,
-    sessions: Arc<Semaphore>,
 ) {
     let mut permit = None;
+    let ports = Ports {
+        client: context.peer_port,
+        server: context.port,
+    };
     let callback = |request: &Request, mut response: Response| {
         let header = |name: &str| request.headers().get(name).and_then(|v| v.to_str().ok());
         if request.uri().path() != REALTIME_PATH {
@@ -110,30 +164,42 @@ async fn connection(
         if request.headers().contains_key("origin") {
             return Err(reject(StatusCode::FORBIDDEN));
         }
-        if !loopback_host(header("host"), port) {
+        if !loopback_host(header("host"), context.port) {
             return Err(reject(StatusCode::FORBIDDEN));
-        }
-        if !config.token.accepts_bearer(header("authorization")) {
-            return Err(reject(StatusCode::UNAUTHORIZED));
         }
         let Some(nonce) = header(NONCE_HEADER).filter(|n| valid_nonce(n)) else {
             return Err(reject(StatusCode::UNAUTHORIZED));
         };
-        match sessions.clone().try_acquire_owned() {
+        let proven = header(CLIENT_PROOF_HEADER).is_some_and(|proof| {
+            context
+                .config
+                .token
+                .verify(Direction::Client, nonce, ports, proof)
+        });
+        if !proven || !context.nonces.first_use(nonce) {
+            return Err(reject(StatusCode::UNAUTHORIZED));
+        }
+        match context.sessions.clone().try_acquire_owned() {
             Ok(acquired) => permit = Some(acquired),
             Err(_) => return Err(reject(StatusCode::SERVICE_UNAVAILABLE)),
         }
-        let proof = HeaderValue::from_str(&config.token.proof(nonce))
-            .map_err(|_| reject(StatusCode::INTERNAL_SERVER_ERROR))?;
+        let proof = context.config.token.proof(Direction::Server, nonce, ports);
+        let proof =
+            HeaderValue::from_str(&proof).map_err(|_| reject(StatusCode::INTERNAL_SERVER_ERROR))?;
         response.headers_mut().insert(PROOF_HEADER, proof);
         Ok(response)
     };
     let ws_config = WebSocketConfig::default()
         .max_message_size(Some(MAX_MESSAGE))
         .max_frame_size(Some(MAX_MESSAGE));
-    let Ok(ws) =
-        tokio_tungstenite::accept_hdr_async_with_config(stream, callback, Some(ws_config)).await
-    else {
+    let accepted = tokio::time::timeout(
+        HANDSHAKE_TIMEOUT,
+        tokio_tungstenite::accept_hdr_async_with_config(stream, callback, Some(ws_config)),
+    )
+    .await;
+    // La place de handshake se libère dès la fin du handshake, réussi ou non.
+    drop(handshake);
+    let Ok(Ok(ws)) = accepted else {
         return;
     };
     let _permit = permit;
@@ -201,7 +267,9 @@ async fn session(
             return;
         }
     };
-    let (work_tx, work_rx) = std::sync::mpsc::channel::<Work>();
+    // File bornée : si le moteur prend du retard, la lecture du client
+    // attend (contre-pression TCP) au lieu d'accumuler l'audio en mémoire.
+    let (work_tx, work_rx) = mpsc::channel::<Work>(AUDIO_QUEUE);
     let (out_tx, mut out_rx) = mpsc::unbounded_channel::<Output>();
     let worker = std::thread::spawn(move || recognize(recognizer, work_rx, out_tx));
     log(&format!(
@@ -219,14 +287,14 @@ async fn session(
                 Some(Ok(Message::Binary(bytes))) => {
                     let audio = pcm16_to_f32(&bytes);
                     samples += audio.len() as u64;
-                    if work_tx.send(Work::Audio(audio)).is_err() {
+                    if work_tx.send(Work::Audio(audio)).await.is_err() {
                         break;
                     }
                 }
                 Some(Ok(Message::Text(text))) => match parse_client_event(&text) {
                     Ok(ClientEvent::Commit) => {
                         committing = true;
-                        let _ = work_tx.send(Work::Finish);
+                        let _ = work_tx.send(Work::Finish).await;
                     }
                     Ok(ClientEvent::SessionUpdate(_)) => {
                         let _ = sink.send(send(error_json(ProtocolError::SessionExpected.message()))).await;
@@ -276,13 +344,14 @@ async fn session(
 /// chaque appel au moteur.
 fn recognize(
     mut recognizer: Box<dyn Recognizer>,
-    work: std::sync::mpsc::Receiver<Work>,
+    mut work: mpsc::Receiver<Work>,
     out: mpsc::UnboundedSender<Output>,
 ) {
-    while let Ok(first) = work.recv() {
+    while let Some(first) = work.blocking_recv() {
         let mut audio = Vec::new();
         let mut finish = false;
-        for item in std::iter::once(first).chain(work.try_iter()) {
+        let queued = std::iter::from_fn(|| work.try_recv().ok());
+        for item in std::iter::once(first).chain(queued) {
             match item {
                 Work::Audio(samples) => audio.extend(samples),
                 Work::Finish => finish = true,
