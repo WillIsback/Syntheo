@@ -6,11 +6,7 @@ Default permissions for the plugin
 
 - `allow-window-show`
 - `allow-window-hide`
-- `allow-window-destroy`
-- `allow-window-navigate`
 - `allow-window-emit-navigate`
-- `allow-window-is-exists`
-- `allow-window-is-occluded`
 - `allow-webview-health-ack`
 - `allow-webview-health-ready`
 - `allow-window-set-frame-animated`
@@ -405,32 +401,6 @@ Denies the webview_health_ready command without any pre-configured scope.
 <tr>
 <td>
 
-`windows:allow-window-destroy`
-
-</td>
-<td>
-
-Enables the window_destroy command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`windows:deny-window-destroy`
-
-</td>
-<td>
-
-Denies the window_destroy command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
 `windows:allow-window-emit-navigate`
 
 </td>
@@ -502,84 +472,6 @@ Enables the window_hide command without any pre-configured scope.
 <td>
 
 Denies the window_hide command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`windows:allow-window-is-exists`
-
-</td>
-<td>
-
-Enables the window_is_exists command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`windows:deny-window-is-exists`
-
-</td>
-<td>
-
-Denies the window_is_exists command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`windows:allow-window-is-occluded`
-
-</td>
-<td>
-
-Enables the window_is_occluded command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`windows:deny-window-is-occluded`
-
-</td>
-<td>
-
-Denies the window_is_occluded command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`windows:allow-window-navigate`
-
-</td>
-<td>
-
-Enables the window_navigate command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`windows:deny-window-navigate`
-
-</td>
-<td>
-
-Denies the window_navigate command without any pre-configured scope.
 
 </td>
 </tr>

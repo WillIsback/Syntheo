@@ -25,7 +25,7 @@ import { useTabs } from "~/store/zustand/tabs";
 // comme le sélecteur de l'en-tête de la note : même écriture en base, même
 // proposition de régénération après un rangement tardif.
 
-export type MovableNote = {
+type MovableNote = {
   id: string;
   title: string;
   folderPath: string;
@@ -147,7 +147,7 @@ export function useNoteMenuItems(): (note: MovableNote) => MenuItemDef[] {
  * (remontée ailleurs après le déplacement). Sans cible, le focus reste où
  * il est.
  */
-export function restoreMoveNoteFocus(target: MoveNoteFocusTarget | null): void {
+function restoreMoveNoteFocus(target: MoveNoteFocusTarget | null): void {
   if (!target) return;
   const { element, noteId } = target;
   if (element?.isConnected) {

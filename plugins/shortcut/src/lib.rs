@@ -1,4 +1,3 @@
-mod commands;
 mod error;
 mod events;
 mod ext;
@@ -18,8 +17,6 @@ fn make_specta_builder() -> tauri_specta::Builder<tauri::Wry> {
     tauri_specta::Builder::<tauri::Wry>::new()
         .plugin_name(PLUGIN_NAME)
         .commands(tauri_specta::collect_commands![
-            commands::register_hotkey::<tauri::Wry>,
-            commands::unregister_hotkey::<tauri::Wry>,
             global::configure,
             global::validate,
             global::set_active,

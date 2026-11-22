@@ -276,17 +276,6 @@ pub fn check(
     Ok(checked.entries)
 }
 
-/// `check` avec le plancher anti-retour du module installé (installation).
-pub fn check_with_floor(
-    dir: &Path,
-    public_key: Option<&str>,
-    app_version: &str,
-    floor: Option<&Path>,
-) -> Result<BTreeMap<String, String>, VerifyError> {
-    // Installation : plancher lu seulement, monté après la mise en place.
-    Ok(check_at(dir, public_key, app_version, floor)?.entries)
-}
-
 /// Dossier contrôlé : liste et construction du manifeste signé.
 #[derive(Debug)]
 pub struct Checked {

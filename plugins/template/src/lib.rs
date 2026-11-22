@@ -1,12 +1,10 @@
 use tauri::Wry;
 
 mod commands;
-mod ext;
 mod generated_summary;
 mod session_content;
 mod transaction_utils;
 
-pub use ext::TemplatePluginExt;
 pub use syntheo_template_app::Template;
 
 const PLUGIN_NAME: &str = "template";
@@ -23,7 +21,6 @@ fn make_specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
             commands::save_generated_title::<Wry>,
             commands::apply_session_content_corrections::<Wry>,
             commands::render::<Wry>,
-            commands::render_custom::<Wry>,
             commands::get_template_source::<Wry>,
         ])
         .typ::<syntheo_gbnf::Grammar>()
@@ -35,10 +32,6 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
 
     tauri::plugin::Builder::new(PLUGIN_NAME)
         .invoke_handler(specta_builder.invoke_handler())
-        .setup(|_app, _api| {
-            let _ = syntheo_template_app_legacy::get_environment();
-            Ok(())
-        })
         .build()
 }
 

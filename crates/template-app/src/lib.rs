@@ -5,7 +5,6 @@ mod enhance;
 mod event_contact;
 mod title;
 mod tool;
-mod transcript_patch;
 mod types;
 mod validate;
 
@@ -16,7 +15,6 @@ pub use enhance::*;
 pub use event_contact::*;
 pub use title::*;
 pub use tool::*;
-pub use transcript_patch::*;
 pub use types::*;
 pub use validate::*;
 
@@ -52,8 +50,6 @@ common_derives! {
         ChatSystem(ChatSystem),
         ContextBlock(ContextBlock),
         ToolSearchSessions(ToolSearchSessions),
-        TranscriptPatchSystem(TranscriptPatchSystem),
-        TranscriptPatchUser(Box<TranscriptPatchUser>),
     }
 }
 
@@ -84,8 +80,6 @@ pub fn render(t: Template) -> Result<String, Error> {
         Template::ChatSystem(t) => Ok(askama::Template::render(&t)?),
         Template::ContextBlock(t) => Ok(askama::Template::render(&t)?),
         Template::ToolSearchSessions(t) => Ok(askama::Template::render(&t)?),
-        Template::TranscriptPatchSystem(t) => Ok(askama::Template::render(&t)?),
-        Template::TranscriptPatchUser(t) => Ok(askama::Template::render(&*t)?),
     }
 }
 

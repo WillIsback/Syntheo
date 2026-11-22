@@ -23,8 +23,7 @@ Dans le workspace Cargo, chaque crate est déclarée sous un alias `syntheo-*` (
 | `crates/frontmatter` | Lecture et écriture de Markdown avec en-tête YAML | `fs-sync-core` | aucune |
 | `crates/tiptap` | Conversion entre JSON Tiptap/ProseMirror et Markdown | `agent-access`, `fs-sync-core` | [CLI pour agents](/fr/agents/cli), [Serveur MCP](/fr/agents/mcp) |
 | `crates/export-core` | Rendu PDF avec Typst | plugin `export` | [Notes](/fr/notes) |
-| `crates/template-app` | Prompts du LLM (Askama) | plugin `template`, crate `transcript` | [Personnaliser les comptes rendus](/fr/customize-summaries), [Chat](/fr/chat), [Langues](/fr/languages) |
-| `crates/template-app-legacy` | Ancien moteur de prompts MiniJinja (hérité) | plugin `template` | aucune |
+| `crates/template-app` | Prompts du LLM (Askama) | plugin `template` | [Personnaliser les comptes rendus](/fr/customize-summaries), [Chat](/fr/chat), [Langues](/fr/languages) |
 | `crates/askama-utils` | Filtres et validation pour les gabarits Askama | `template-app` | [Langues](/fr/languages) |
 | `crates/mesure` | Reprise entre synthèse générée et version envoyée : normalisation, alignement par titres, diff mot à mot, classement lexical ou de fond ; lecture bornée des `.docx` ; ne rend que des compteurs | CLI (`syntheo mesure`), plugin `mesure` | [Référence CLI](/fr/reference/cli), [Données et confidentialité](/fr/data-and-privacy), [Bêta : mesure et transparence](/fr/beta) |
 | `crates/summary` | Politique de longueur et mise en forme du compte rendu généré | plugin `template` | [Personnaliser les comptes rendus](/fr/customize-summaries), [Notes](/fr/notes) |
@@ -52,7 +51,7 @@ La base `app.db` est le cœur des données. Les crates se répartissent en couch
 
 - **Chemin** : `crates/db-core`
 - **Rôle** : ouvre un pool SQLite et y attache un `ChangeNotifier`.
-- **API** : `Db` (`open`, `connect_memory`, `connect_local_read_write`, `connect_local_read_only`, `pool`, `change_notifier`), `DbOpenOptions`, `DbStorage`, `ManagedDb`.
+- **API** : `Db` (`open`, `connect_local_read_write`, `connect_local_read_only`, `pool`, `change_notifier`), `DbOpenOptions`, `DbStorage`, `ManagedDb`.
 - **Dépendances internes** : `syntheo-db-change`.
 - **À noter** : la CLI ouvre la base avec `connect_local_read_only` (`apps/cli/src/db.rs`), ce qui garantit la lecture seule décrite dans [CLI pour agents](/fr/agents/cli).
 - **Pages de doc concernées** : [Données et confidentialité](/fr/data-and-privacy), [CLI pour agents](/fr/agents/cli).
@@ -119,7 +118,7 @@ Ne décrivez pas le comportement du produit à partir du schéma SQL brut. Parte
 ### fs-sync-core
 
 - **Chemin** : `crates/fs-sync-core`
-- **Rôle** : gère les dossiers de sessions sur disque pour le plugin `fs-sync` : liste, création, renommage et déplacement de dossiers, lecture du contenu d'une session, pièces jointes, fichiers audio (`audio` : import dans une session, métadonnées, crêtes, détection de parole, suppression des orphelins expirés).
+- **Rôle** : gère les dossiers de sessions sur disque pour le plugin `fs-sync` : liste, création, renommage et déplacement de dossiers, lecture du contenu d'une session, pièces jointes, fichiers audio (`audio` : import dans une session, métadonnées, détection de parole).
 - **API** : `FsSyncCore` (`list_folders`, `move_session`, `create_folder`), modules `scan`, `session_content`, `folder`, `audio`, `path`.
 - **Dépendances internes** : `syntheo-storage`, `syntheo-fs-format`, `syntheo-frontmatter`, `syntheo-tiptap`, `syntheo-audio-utils`, `syntheo-vad` ; `syntheo-data` en dev-dependency.
 - **Pages de doc concernées** : [Notes](/fr/notes), [Importer des enregistrements](/fr/import-recordings), [Réunions](/fr/meetings).
@@ -148,7 +147,7 @@ Ne décrivez pas le comportement du produit à partir du schéma SQL brut. Parte
 
 - **Chemin** : `crates/template-app`, gabarits dans `crates/template-app/assets/*.md.jinja`.
 - **Rôle** : rend les prompts envoyés au LLM. Les gabarits sont compilés avec Askama.
-- **API** : `render(Template)`, enum `Template` (`EnhanceSystem`, `EnhanceUser`, `TitleSystem`, `TitleUser`, `ChatSystem`, `ContextBlock`, `ToolSearchSessions`, `TranscriptPatchSystem`, `TranscriptPatchUser`, `ActivityCaptureSystem`, `DailySummarySystem`, `EventContactSystem`…), `EditableTemplate` (`EnhanceFormat`, `EnhanceUser`, `TitleUser`) et `template_source`.
+- **API** : `render(Template)`, enum `Template` (`EnhanceSystem`, `EnhanceUser`, `TitleSystem`, `TitleUser`, `ChatSystem`, `ContextBlock`, `ToolSearchSessions`, `ActivityCaptureSystem`, `DailySummarySystem`, `EventContactSystem`…), `EditableTemplate` (`EnhanceFormat`, `EnhanceUser`, `TitleUser`) et `template_source`.
 - **Dépendances internes** : `syntheo-askama-utils`.
 - **À noter** : le plugin `template` expose `render` et `get_template_source`. L'interface lit la source de `enhanceFormat` dans le formulaire du modèle « Automatique » (`apps/desktop/src/templates/auto-form.tsx`).
 - **Pages de doc concernées** : [Personnaliser les comptes rendus](/fr/customize-summaries), [Notes](/fr/notes), [Chat](/fr/chat), [Langues](/fr/languages).
@@ -167,14 +166,6 @@ Ne décrivez pas le comportement du produit à partir du schéma SQL brut. Parte
 - **API** : `summary_length_policy`, `summary_length_policy_for_texts`, `prepare_generated_summary`, `compose_generated_summary`, `extract_tag_names`. Le plugin `template` les expose comme commandes.
 - **Dépendances internes** : aucune.
 - **Pages de doc concernées** : [Personnaliser les comptes rendus](/fr/customize-summaries), [Notes](/fr/notes).
-
-### template-app-legacy
-
-- **Chemin** : `crates/template-app-legacy`
-- **Rôle** : ancien moteur MiniJinja hérité d'Anarlog, avec ses gabarits (`enhance`, `title`, `chat`, `auto_generate_tags`, `postprocess_transcript`, `highlight`).
-- **Usage** : le plugin `template` initialise son environnement au démarrage et s'en sert pour la commande `render_custom`, qu'aucun code de `apps/desktop/src` n'appelle hors tests.
-- **Dépendances internes** : aucune.
-- **Pages de doc concernées** : aucune.
 
 ## Notifications
 

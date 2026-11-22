@@ -99,7 +99,7 @@ export function createTranscriptAccumulator(
   return new TranscriptAccumulator(store, transcriptId, initialState);
 }
 
-export class TranscriptAccumulator {
+class TranscriptAccumulator {
   private words: WordWithId[];
   private hints: SpeakerHintWithId[];
   private disposed = false;

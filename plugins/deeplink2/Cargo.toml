@@ -13,18 +13,11 @@ tauri-plugin = { workspace = true, features = ["build"] }
 
 [dev-dependencies]
 specta-typescript = { workspace = true }
-tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
-
-open = { workspace = true }
 
 [dependencies]
 tauri = { workspace = true }
 tauri-plugin-deep-link = { workspace = true }
 tauri-specta = { workspace = true, features = ["derive", "typescript"] }
-
-askama = { workspace = true }
-axum = { workspace = true }
-tokio = { workspace = true, features = ["net", "rt", "sync", "time"] }
 
 serde = { workspace = true }
 serde_qs = { workspace = true }
@@ -33,4 +26,3 @@ specta = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
 url = { workspace = true }
-uuid = { workspace = true, features = ["v4"] }

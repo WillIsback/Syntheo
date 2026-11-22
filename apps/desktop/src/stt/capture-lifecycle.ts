@@ -14,7 +14,6 @@ export {
   getAudioDurationMs,
   getPostCaptureAction,
   getPostCaptureRepairReasons,
-  type PostCaptureRepairReason,
 } from "./capture-lifecycle-helpers";
 
 export function useCaptureLifecycle(sessionId: string) {

@@ -6,13 +6,11 @@ mod overlay_state {
     pub struct State {
         pub original_icon_data: Option<Vec<u8>>,
         pub recording_active: bool,
-        pub notification_count: Option<u8>,
     }
 
     static STATE: Mutex<State> = Mutex::new(State {
         original_icon_data: None,
         recording_active: false,
-        notification_count: None,
     });
 
     pub fn get() -> State {
@@ -147,50 +145,6 @@ impl<'a, R: tauri::Runtime, M: tauri::Manager<R>> Icon<'a, R, M> {
         }
     }
 
-    pub fn reset_dock_icon(&self) -> Result<(), crate::Error> {
-        #[cfg(target_os = "macos")]
-        {
-            let (tx, rx) = std::sync::mpsc::sync_channel(1);
-            let app_handle = self.manager.app_handle();
-            app_handle
-                .run_on_main_thread(move || {
-                    use objc2_app_kit::NSApplication;
-                    use objc2_foundation::MainThreadMarker;
-
-                    let mtm =
-                        MainThreadMarker::new().expect("run_on_main_thread guarantees main thread");
-                    let ns_app = NSApplication::sharedApplication(mtm);
-
-                    let result = crate::bundle_icon::set(None);
-                    let state = overlay_state::update(|state| {
-                        state.original_icon_data = None;
-                    });
-                    unsafe { ns_app.setApplicationIconImage(None) };
-
-                    if state.recording_active || state.notification_count.is_some() {
-                        let Some(current) = ns_app.applicationIconImage() else {
-                            let _ = tx.send(result);
-                            return;
-                        };
-
-                        if let Some(composite_image) = compose_icon(&current, &state) {
-                            unsafe { ns_app.setApplicationIconImage(Some(&composite_image)) };
-                        }
-                    }
-                    let _ = tx.send(result);
-                })
-                .map_err(crate::Error::Tauri)?;
-
-            rx.recv()
-                .map_err(|e| crate::Error::Custom(format!("Failed to receive icon result: {e}")))?
-        }
-
-        #[cfg(not(target_os = "macos"))]
-        {
-            Ok(())
-        }
-    }
-
     pub fn set_recording_indicator(&self, show: bool) -> Result<(), crate::Error> {
         #[cfg(target_os = "macos")]
         {
@@ -260,140 +214,6 @@ impl<'a, R: tauri::Runtime, M: tauri::Manager<R>> Icon<'a, R, M> {
             Ok(())
         }
     }
-
-    pub fn set_notification_badge(&self, count: Option<u8>) -> Result<(), crate::Error> {
-        #[cfg(target_os = "macos")]
-        {
-            let app_handle = self.manager.app_handle();
-            app_handle
-                .run_on_main_thread(move || {
-                    use objc2::AnyThread;
-                    use objc2_app_kit::{NSApplication, NSImage};
-                    use objc2_foundation::{MainThreadMarker, NSData};
-
-                    let mtm =
-                        MainThreadMarker::new().expect("run_on_main_thread guarantees main thread");
-                    let ns_app = NSApplication::sharedApplication(mtm);
-
-                    let next_count = count.filter(|count| *count > 0);
-                    let state = overlay_state::get();
-
-                    let base_image = if let Some(original_data) = state.original_icon_data.clone() {
-                        let ns_data = NSData::with_bytes(&original_data);
-                        match NSImage::initWithData(NSImage::alloc(), &ns_data) {
-                            Some(image) => image,
-                            None => return,
-                        }
-                    } else {
-                        let Some(current) = ns_app.applicationIconImage() else {
-                            overlay_state::update(|state| {
-                                state.notification_count = next_count;
-                            });
-                            return;
-                        };
-
-                        let Some(bytes) = icon_helpers::image_to_bytes(&current) else {
-                            return;
-                        };
-
-                        overlay_state::update(|state| {
-                            state.original_icon_data = Some(bytes);
-                        });
-
-                        current
-                    };
-
-                    let state = overlay_state::update(|state| {
-                        state.notification_count = next_count;
-                    });
-
-                    if let Some(composite_image) = compose_icon(&base_image, &state) {
-                        unsafe { ns_app.setApplicationIconImage(Some(&composite_image)) };
-                    } else if state.original_icon_data.is_some() {
-                        unsafe { ns_app.setApplicationIconImage(Some(&base_image)) };
-                    } else {
-                        unsafe { ns_app.setApplicationIconImage(None) };
-                    }
-                })
-                .map_err(crate::Error::Tauri)?;
-
-            Ok(())
-        }
-
-        #[cfg(not(target_os = "macos"))]
-        {
-            let _ = count;
-            Ok(())
-        }
-    }
-
-    pub fn get_icon(&self) -> Result<Option<String>, crate::Error> {
-        #[cfg(target_os = "macos")]
-        {
-            use base64::Engine;
-            use objc2::AnyThread;
-            use objc2::msg_send;
-            use objc2_app_kit::{NSApplication, NSBitmapImageFileType, NSBitmapImageRep};
-            use objc2_foundation::{MainThreadMarker, NSRect, NSSize};
-            use std::sync::mpsc;
-
-            let (tx, rx) = mpsc::channel();
-            let app_handle = self.manager.app_handle();
-
-            app_handle
-                .run_on_main_thread(move || {
-                    let mtm =
-                        MainThreadMarker::new().expect("run_on_main_thread guarantees main thread");
-                    let ns_app = NSApplication::sharedApplication(mtm);
-
-                    unsafe {
-                        let Some(image) = ns_app.applicationIconImage() else {
-                            let _ = tx.send(None);
-                            return;
-                        };
-
-                        let size = NSSize::new(64.0, 64.0);
-                        image.setSize(size);
-
-                        let mut rect = NSRect::new(objc2_foundation::NSPoint::new(0.0, 0.0), size);
-                        let Some(cgimage) = image.CGImageForProposedRect_context_hints(
-                            &mut rect as *mut NSRect as *mut _,
-                            None,
-                            None,
-                        ) else {
-                            let _ = tx.send(None);
-                            return;
-                        };
-
-                        let bitmap =
-                            NSBitmapImageRep::initWithCGImage(NSBitmapImageRep::alloc(), &cgimage);
-
-                        let Some(png_data) = bitmap.representationUsingType_properties(
-                            NSBitmapImageFileType::PNG,
-                            &objc2_foundation::NSDictionary::new(),
-                        ) else {
-                            let _ = tx.send(None);
-                            return;
-                        };
-
-                        let len: usize = msg_send![&*png_data, length];
-                        let ptr: *const u8 = msg_send![&*png_data, bytes];
-                        let slice = std::slice::from_raw_parts(ptr, len);
-                        let base64 = base64::engine::general_purpose::STANDARD.encode(slice);
-                        let _ = tx.send(Some(base64));
-                    }
-                })
-                .map_err(crate::Error::Tauri)?;
-
-            rx.recv()
-                .map_err(|e| crate::Error::Custom(format!("Failed to receive icon data: {}", e)))
-        }
-
-        #[cfg(not(target_os = "macos"))]
-        {
-            Ok(None)
-        }
-    }
 }
 
 #[cfg(target_os = "macos")]
@@ -401,14 +221,9 @@ fn compose_icon(
     base_image: &objc2_app_kit::NSImage,
     state: &overlay_state::State,
 ) -> Option<objc2::rc::Retained<objc2_app_kit::NSImage>> {
-    if state.recording_active {
-        return Some(crate::overlay::Overlay::Recording.draw(base_image));
-    }
-
     state
-        .notification_count
-        .filter(|count| *count > 0)
-        .map(|count| crate::overlay::Overlay::Notification(count).draw(base_image))
+        .recording_active
+        .then(|| crate::overlay::Overlay::Recording.draw(base_image))
 }
 
 pub trait IconPluginExt<R: tauri::Runtime> {

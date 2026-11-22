@@ -6,7 +6,8 @@ license = "MIT"
 
 [dependencies]
 askama = { workspace = true }
-minijinja = { workspace = true }
+# `json` : filtre `tojson` des formats saisis par l'utilisateur (enhance.rs).
+minijinja = { workspace = true, features = ["json"] }
 serde = { workspace = true, features = ["derive"] }
 specta = { workspace = true, features = ["derive"] }
 syntheo-askama-utils = { workspace = true }

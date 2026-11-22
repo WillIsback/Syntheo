@@ -74,16 +74,6 @@ pub async fn parse_subtitle<R: tauri::Runtime>(
 
 #[tauri::command]
 #[specta::specta]
-pub async fn export_to_vtt<R: tauri::Runtime>(
-    app: tauri::AppHandle<R>,
-    session_id: String,
-    words: Vec<core::VttWord>,
-) -> Result<String, String> {
-    app.listener2().export_to_vtt(session_id, words)
-}
-
-#[tauri::command]
-#[specta::specta]
 pub async fn is_supported_languages_batch<R: tauri::Runtime>(
     _app: tauri::AppHandle<R>,
     provider: String,
@@ -97,39 +87,6 @@ pub async fn is_supported_languages_batch<R: tauri::Runtime>(
         .map_err(|e| format!("unknown_language: {}", e))?;
 
     core::is_supported_languages_batch(&provider, model.as_deref(), &languages_parsed)
-}
-
-#[tauri::command]
-#[specta::specta]
-pub async fn suggest_providers_for_languages_batch<R: tauri::Runtime>(
-    _app: tauri::AppHandle<R>,
-    languages: Vec<String>,
-) -> Result<Vec<String>, String> {
-    let languages_parsed = languages
-        .iter()
-        .map(|s| syntheo_language::Language::from_str(s))
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|e| format!("unknown_language: {}", e))?;
-
-    Ok(core::suggest_providers_for_languages_batch(
-        &languages_parsed,
-    ))
-}
-
-#[tauri::command]
-#[specta::specta]
-pub async fn list_documented_language_codes_batch<R: tauri::Runtime>(
-    _app: tauri::AppHandle<R>,
-) -> Result<Vec<String>, String> {
-    Ok(core::list_documented_language_codes_batch())
-}
-
-#[tauri::command]
-#[specta::specta]
-pub async fn refine_batch_transcript(
-    request: syntheo_transcript::BatchRefinementRequest,
-) -> Result<syntheo_transcript::BatchRefinementOutcome, String> {
-    Ok(syntheo_transcript::refine_batch_transcript(request))
 }
 
 #[tauri::command]

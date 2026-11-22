@@ -6,17 +6,12 @@ import * as __TAURI_EVENT from "@tauri-apps/api/event";
 
 /** Commands */
 export const commands = {
-	startCallbackServer: (scheme: string, port: number | null) => typedError<number, string>(__TAURI_INVOKE("plugin:deeplink2|start_callback_server", { scheme, port })),
-	stopCallbackServer: () => typedError<null, string>(__TAURI_INVOKE("plugin:deeplink2|stop_callback_server")),
 	takePendingDeepLinks: () => typedError<DeepLink[], string>(__TAURI_INVOKE("plugin:deeplink2|take_pending_deep_links")),
-	listPendingShareOpens: () => typedError<string[], string>(__TAURI_INVOKE("plugin:deeplink2|list_pending_share_opens")),
-	takePendingShareOpen: (pendingId: string) => typedError<ShareOpenRequest | null, string>(__TAURI_INVOKE("plugin:deeplink2|take_pending_share_open", { pendingId })),
 };
 
 /** Events */
 export const events = {
 	deepLinkEvent: makeEvent<DeepLinkEvent, DeepLinkEvent>("plugin:deeplink2:deep-link-event"),
-	shareOpenPendingEvent: makeEvent<ShareOpenPendingEvent, ShareOpenPendingEvent>("plugin:deeplink2:share-open-pending-event"),
 };
 
 /* Types */
@@ -39,12 +34,6 @@ export type IntegrationCallbackSearch = {
 	disconnected_connection_id: string | null,
 	return_to: string | null,
 };
-
-export type ShareOpenPendingEvent = {
-	pending_id: string,
-};
-
-export type ShareOpenRequest = { mode: "account"; share_id: string } | { mode: "handoff"; request_id: string };
 
 /* Tauri Specta runtime */
 async function typedError<T, E>(result: Promise<T>): Promise<{ status: "ok"; data: T } | { status: "error"; error: E }> {

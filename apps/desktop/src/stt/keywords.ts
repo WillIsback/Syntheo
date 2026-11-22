@@ -50,7 +50,7 @@ export function parseDictionaryTermsJson(value: unknown): string[] {
 // Termes du dictionnaire ajoutés par le chat (issue 643) : un terme est un nom
 // propre ou un sigle, jamais une phrase. Il entre dans les prompts de synthèse
 // et part vers le serveur de transcription.
-export const MAX_DICTIONARY_TERM_LENGTH = 40;
+const MAX_DICTIONARY_TERM_LENGTH = 40;
 export const MAX_DICTIONARY_TERMS_PER_CALL = 10;
 
 // Caractères qui construisent un lien, une image, du code ou du HTML en

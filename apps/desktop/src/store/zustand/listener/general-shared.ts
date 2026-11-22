@@ -20,8 +20,6 @@ import {
 export {
   type LiveSessionStatus,
   type SessionMode,
-  type LiveCaptureUiMode,
-  type LiveStartBlockReason,
   type LiveIntervalId,
   type LivePause,
   TRANSCRIPTION_STALL_AUDIBLE_SECONDS,

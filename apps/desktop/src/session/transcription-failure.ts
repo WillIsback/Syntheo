@@ -4,7 +4,7 @@ import { isNoSpeechDetectedError } from "~/stt/no-speech-error";
 // Issue 559 : l'échec de la transcription d'un audio importé est gardé dans la
 // note (`sessions.metadata_json.transcription_failure`). L'état du listener
 // est en mémoire : sans cette trace, la note redevenait vierge à la relance.
-export type TranscriptionFailure = {
+type TranscriptionFailure = {
   // « no_speech » se traduit à l'affichage ; les autres échecs gardent le
   // message reçu.
   code: string | null;
@@ -40,7 +40,7 @@ const SELECT_SQL = `
   LIMIT 1
 `;
 
-export function toTranscriptionFailure(error: unknown): TranscriptionFailure {
+function toTranscriptionFailure(error: unknown): TranscriptionFailure {
   return {
     code: isNoSpeechDetectedError(error) ? "no_speech" : null,
     message: error instanceof Error ? error.message : String(error),

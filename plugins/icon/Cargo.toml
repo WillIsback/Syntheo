@@ -31,7 +31,6 @@ objc2-foundation = { workspace = true }
 tauri = { workspace = true }
 tauri-specta = { workspace = true, features = ["derive", "typescript"] }
 
-base64 = { workspace = true }
 serde = { workspace = true }
 specta = { workspace = true }
 thiserror = { workspace = true }

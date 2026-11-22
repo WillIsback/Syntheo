@@ -25,12 +25,6 @@ pub struct UpdateFolderInstructionsRequest {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
-pub struct UpdateFolderWorkspaceRequest {
-    pub path: String,
-    pub workspace_id: String,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
 pub struct UpdateFolderIconRequest {
     pub path: String,
     pub icon_json: String,
@@ -160,25 +154,6 @@ pub async fn update_folder_instructions(
     )
     .await
     .map_err(|error| error.to_string())?;
-
-    transaction
-        .commit()
-        .await
-        .map_err(|error| error.to_string())
-}
-
-pub async fn update_folder_workspace(
-    pool: &SqlitePool,
-    request: UpdateFolderWorkspaceRequest,
-) -> Result<(), String> {
-    let mut transaction = pool
-        .begin_with("BEGIN IMMEDIATE")
-        .await
-        .map_err(|error| error.to_string())?;
-
-    syntheo_db_app::update_folder_workspace(&mut transaction, &request.path, &request.workspace_id)
-        .await
-        .map_err(|error| error.to_string())?;
 
     transaction
         .commit()

@@ -51,7 +51,7 @@ function useLabels() {
   return { profile, refusal };
 }
 
-export function ProbeVerdict({ probe }: { probe: Probe }) {
+function ProbeVerdict({ probe }: { probe: Probe }) {
   const { t } = useLingui();
   const labels = useLabels();
   const verdict = probe.verdict;

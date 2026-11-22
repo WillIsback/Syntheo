@@ -91,24 +91,6 @@ where
     buf.freeze()
 }
 
-pub fn interleave(channels: &[Vec<f32>]) -> Vec<f32> {
-    if channels.is_empty() {
-        return Vec::new();
-    }
-    let frames = channels.iter().map(|c| c.len()).max().unwrap_or(0);
-    let mut output = Vec::with_capacity(frames * channels.len());
-    for frame in 0..frames {
-        for ch in channels {
-            output.push(ch.get(frame).copied().unwrap_or(0.0));
-        }
-    }
-    output
-}
-
-pub fn mix_sample_f32(mic: f32, speaker: f32) -> f32 {
-    (mic + speaker).clamp(-1.0, 1.0)
-}
-
 pub use syntheo_audio_mime::content_type_to_extension;
 
 /// Decode the first audio track of a file. Video tracks of an mp4, mov, mkv

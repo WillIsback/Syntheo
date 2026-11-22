@@ -1,10 +1,4 @@
-const COMMANDS: &[&str] = &[
-    "set_dock_icon",
-    "reset_dock_icon",
-    "get_icon",
-    "set_recording_indicator",
-    "set_notification_badge",
-];
+const COMMANDS: &[&str] = &["set_dock_icon", "set_recording_indicator"];
 
 fn main() {
     tauri_plugin::Builder::new(COMMANDS).build();

@@ -44,7 +44,6 @@ fn make_specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
             commands::rename_folder_catalog::<Wry>,
             commands::delete_folder_catalog::<Wry>,
             commands::update_folder_instructions::<Wry>,
-            commands::update_folder_workspace::<Wry>,
             commands::update_folder_icon::<Wry>,
         ])
         .error_handling(tauri_specta::ErrorHandlingMode::Result)

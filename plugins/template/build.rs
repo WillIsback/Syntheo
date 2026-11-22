@@ -7,7 +7,6 @@ const COMMANDS: &[&str] = &[
     "save_generated_title",
     "apply_session_content_corrections",
     "render",
-    "render_custom",
     "render_support",
     "get_template_source",
 ];

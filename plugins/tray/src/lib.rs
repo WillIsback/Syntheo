@@ -27,7 +27,6 @@ fn make_specta_builder() -> tauri_specta::Builder<tauri::Wry> {
         .plugin_name(PLUGIN_NAME)
         .commands(tauri_specta::collect_commands![
             commands::set_tray_icon_visible,
-            commands::set_tray_schedule,
             commands::set_tray_recording_title,
             commands::set_native_menu_locale,
         ])

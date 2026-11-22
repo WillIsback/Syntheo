@@ -96,9 +96,6 @@ export const CHAT_TOOL_ACCESS = {
   "read" | "write"
 >;
 
-/** Outils d'écriture sans validation : dossier vide, aucune réunion modifiée. */
-export const CHAT_WRITE_TOOLS_WITHOUT_APPROVAL = ["create_folder"] as const;
-
 export const buildChatTools = (deps: ToolDependencies) => ({
   list_folders: withToolLogging("list_folders", buildListFoldersTool()),
   create_folder: withToolLogging("create_folder", buildCreateFolderTool()),

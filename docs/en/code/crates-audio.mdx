@@ -47,7 +47,7 @@ In the `Cargo.toml` files, these crates are referenced by the workspace alias `s
 | --- | --- | --- |
 | `crates/vad` | Speech detection with `earshot`, behind the feature of the same name (`earshot` module). | `vad-masking`, `fs-sync-core` |
 | `crates/vad-masking` | Masks silences before sending to STT, in batch (`masking`) or streaming (`streaming`, `VadConfig`). | `listener-core` |
-| `crates/onnx` | Loads ONNX models with `ort` (`load_model_from_bytes`, `load_model_from_path`, accelerated variant); re-exports `ort` and `ndarray`. | `aec` |
+| `crates/onnx` | Loads ONNX models with `ort` (`load_model_from_bytes`); re-exports `ort` and `ndarray`. | `aec` |
 
 **Affected doc pages**: [/en/meetings](/en/meetings) for `vad-masking`; none for `vad` and `onnx` taken on their own.
 
@@ -64,7 +64,7 @@ In the `Cargo.toml` files, these crates are referenced by the workspace alias `s
 ### `crates/listener2-core`
 
 - **Role**: batch transcription of an imported file. `src/batch/` offers a simple mode and a progressive mode; `upload.rs` splits the audio into in-memory MP3 segments before sending.
-- **API**: `BatchRuntime`, `BatchParams`, `BatchEvent`, `BatchRunMode`; `is_supported_languages_live` / `_batch`, `suggest_providers_for_languages_live` / `_batch`, `list_documented_language_codes_batch`; subtitle reading and export (`parse_subtitle_from_path`, `export_words_to_vtt_file`).
+- **API**: `BatchRuntime`, `BatchParams`, `BatchEvent`, `BatchRunMode`; `is_supported_languages_live` / `_batch`, `suggest_providers_for_languages_live` / `_batch`; subtitle reading (`parse_subtitle_from_path`).
 - **Internal dependencies**: `audio-utils`, `language`, `mp3`, `user-error`, `owhisper-client`, `owhisper-interface`.
 - **Affected doc pages**: [/en/import-recordings](/en/import-recordings), [/en/languages](/en/languages).
 
@@ -95,8 +95,8 @@ In the `Cargo.toml` files, these crates are referenced by the workspace alias `s
 
 ### `crates/transcript`
 
-- **Role**: turns the words received from STT into a transcript: processing (`TranscriptProcessor`), post-processing, segments (`build_segments`), speaker labels (`SpeakerLabeler`, `render_speaker_label`), speaker context, post-batch refinement (`batch_refine`), live materialization and rendering.
-- **Internal dependencies**: `template-app`, `owhisper-interface`.
+- **Role**: turns the words received from STT into a transcript: processing (`TranscriptProcessor`), segments (`build_segments`), speaker labels (`SpeakerLabeler`, `render_speaker_label`), speaker context, post-batch refinement (`batch_refine`), live materialization and rendering.
+- **Internal dependencies**: `owhisper-interface`.
 - **Used by**: `listener-core`, `plugins/transcription`, `agent-access` (CLI and MCP server).
 - **Affected doc pages**: [/en/meetings](/en/meetings), [/en/notes](/en/notes), [/en/contacts](/en/contacts), [/en/reference/cli](/en/reference/cli), [/en/reference/mcp](/en/reference/mcp).
 
@@ -161,7 +161,6 @@ No macOS build is published (see [Architecture](/en/architecture)). These crates
 | --- | --- | --- | --- |
 | `crates/session-ingest` | Session import format (`SessionIngestEnvelope`, `IngestSession`, `IngestTranscript`…) and applying it to the database (`apply_session_envelope`, `apply` feature). | Exposed by the `apply_session_ingest` command of `plugins/db`. No call found in `apps/desktop/src`. | none |
 | `crates/gbnf` | `Grammar` enum that produces GBNF grammars (`build`). | Only registered as a `specta` type by `plugins/template`. | none |
-| `crates/buffer` | `opinionated_md_to_html`: Markdown to HTML conversion. | Exposed by `plugins/misc`. No call found in `apps/desktop/src`. | none |
 | `crates/audacity` | Writes Audacity projects (`Project`, `Track`, `Bundle`) to inspect tracks. | Test tool: dev dependency of `aec` and `vad-masking`. | none |
 | `crates/audio-snapshot` | Spectral fingerprints and audio non-regression assertions (`compute_snapshot`, `assert_or_update`). | Test tool: dev dependency of `aec`. | none |
 

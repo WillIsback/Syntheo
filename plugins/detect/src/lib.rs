@@ -77,7 +77,6 @@ fn make_specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
         .plugin_name(PLUGIN_NAME)
         .commands(tauri_specta::collect_commands![
             commands::list_installed_applications::<tauri::Wry>,
-            commands::get_installed_application_icons::<tauri::Wry>,
             commands::list_mic_using_applications::<tauri::Wry>,
             commands::set_respect_do_not_disturb::<tauri::Wry>,
             commands::set_ignored_bundle_ids::<tauri::Wry>,
@@ -88,7 +87,6 @@ fn make_specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
             commands::capture_meeting_chat_messages::<tauri::Wry>,
             commands::capture_meeting_screen_share::<tauri::Wry>,
             commands::get_preferred_languages::<tauri::Wry>,
-            commands::get_current_locale_identifier::<tauri::Wry>,
             commands::set_mic_active_threshold::<tauri::Wry>,
             commands::set_detect_enabled::<tauri::Wry>,
         ])

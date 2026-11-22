@@ -20,8 +20,6 @@ import { getShortcutPlatform } from "~/shared/shortcuts";
 import { useNewNote } from "~/shared/useNewNote";
 import { useTabs } from "~/store/zustand/tabs";
 
-export { HomeView } from "./home-view";
-
 export function HomePage() {
   const firstName = useOwnerFirstName();
   // Pendant l'écoute, la note figure dans la carte « En cours » (issue 517)

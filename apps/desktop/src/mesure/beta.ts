@@ -52,7 +52,7 @@ export function ensureEnrollment(): Promise<void> {
   });
 }
 
-export type SummaryEvent = "exported" | "shared";
+type SummaryEvent = "exported" | "shared";
 
 /**
  * Premier export de fichier ou premier partage (copie dans le presse-papiers,
@@ -166,19 +166,19 @@ export function termStatements(
 }
 
 /** Effacement sûr : les pages libérées sont réécrites à zéro. */
-export const SECURE_DELETE: Statement = {
+const SECURE_DELETE: Statement = {
   sql: "PRAGMA secure_delete = ON",
   params: [],
 };
 
 /** Copie des synthèses telles que générées : vidée quand la mesure s'arrête. */
-export const CLEAR_GENERATED_BODIES: Statement = {
+const CLEAR_GENERATED_BODIES: Statement = {
   sql: "DELETE FROM summary_generated_bodies",
   params: [],
 };
 
 /** Arrêt de la mesure : les générations ouvertes sont closes. */
-export function closeGenerationsStatement(now: string): Statement {
+function closeGenerationsStatement(now: string): Statement {
   return {
     sql: "UPDATE beta_generations SET closed_at = ? WHERE closed_at IS NULL",
     params: [now],

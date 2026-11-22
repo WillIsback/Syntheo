@@ -1,11 +1,7 @@
 const COMMANDS: &[&str] = &[
     "window_show",
     "window_hide",
-    "window_destroy",
-    "window_navigate",
     "window_emit_navigate",
-    "window_is_exists",
-    "window_is_occluded",
     "webview_health_ack",
     "webview_health_ready",
     "window_set_frame_animated",

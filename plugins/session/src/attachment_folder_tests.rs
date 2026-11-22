@@ -8,9 +8,8 @@ use crate::attachments::{
 };
 use crate::folder_catalog::{
     DeleteFolderCatalogRequest, EnsureFolderCatalogRequest, RenameFolderCatalogRequest,
-    UpdateFolderIconRequest, UpdateFolderInstructionsRequest, UpdateFolderWorkspaceRequest,
-    delete_folder_catalog, ensure_folder_catalog, rename_folder_catalog, update_folder_icon,
-    update_folder_instructions, update_folder_workspace,
+    UpdateFolderIconRequest, UpdateFolderInstructionsRequest, delete_folder_catalog,
+    ensure_folder_catalog, rename_folder_catalog, update_folder_icon, update_folder_instructions,
 };
 use crate::folder_materials::{
     CatalogFolderMaterialRequest, TombstoneFolderMaterialRequest, catalog_folder_material,
@@ -719,7 +718,7 @@ async fn update_folder_icon_creates_folder_row() {
 }
 
 #[tokio::test]
-async fn update_folder_instructions_and_workspace() {
+async fn folder_instructions_are_updated() {
     let db = test_db().await;
     sqlx::query("INSERT INTO folders (id, path) VALUES ('f-1', 'docs')")
         .execute(db.pool())
@@ -735,20 +734,10 @@ async fn update_folder_instructions_and_workspace() {
     )
     .await
     .unwrap();
-    update_folder_workspace(
-        db.pool(),
-        UpdateFolderWorkspaceRequest {
-            path: "docs".to_string(),
-            workspace_id: "workspace-9".to_string(),
-        },
-    )
-    .await
-    .unwrap();
 
-    let row = sqlx::query("SELECT instructions, workspace_id FROM folders WHERE id = 'f-1'")
+    let row = sqlx::query("SELECT instructions FROM folders WHERE id = 'f-1'")
         .fetch_one(db.pool())
         .await
         .unwrap();
     assert_eq!(row.get::<String, _>("instructions"), "Be brief");
-    assert_eq!(row.get::<String, _>("workspace_id"), "workspace-9");
 }

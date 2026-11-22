@@ -83,10 +83,6 @@ pub fn suggest_providers_for_languages_batch(
         .collect()
 }
 
-pub fn list_documented_language_codes_batch() -> Vec<String> {
-    owhisper_client::documented_language_codes_batch()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -71,12 +71,7 @@ import { type TabInput, useTabs } from "~/store/zustand/tabs";
 import { useListener } from "~/stt/contexts";
 import { requestMainListenerControl } from "~/stt/window-control";
 
-export {
-  closeNoteDialog,
-  openNoteDialog,
-  openSettingsSearch,
-  useIsNoteDialogOpen,
-};
+export { closeNoteDialog, openNoteDialog, openSettingsSearch };
 
 const MAX_RECENT_DISPLAY = 5;
 // Notes affichées pour un texte tapé ; les mentions `@` montrent le début de

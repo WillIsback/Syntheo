@@ -80,10 +80,6 @@ updates:
         update-types: [
           "version-update:semver-major",
         ] # 1.x impose des trames de 256 échantillons, incompatible avec le wrapper vad 10/20/30 ms
-      - dependency-name: "minijinja-contrib"
-        update-types: [
-          "version-update:semver-major",
-        ] # 3.x exige minijinja 3 ; bumper les deux ensemble
       - dependency-name: "ort"
         # Épinglé sur 2.0.0-rc.10 : rc.15 casse `onnx` (API changée). À monter à la main.
       - dependency-name: "libsqlite3-sys"

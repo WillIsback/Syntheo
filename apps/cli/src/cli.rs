@@ -36,20 +36,6 @@ pub struct Args {
     pub command: Command,
 }
 
-impl Args {
-    pub fn needs_write(&self) -> bool {
-        matches!(
-            self.command,
-            Command::Proposals {
-                command: ProposalCommand::Create { .. } | ProposalCommand::Decline { .. },
-            } | Command::Meetings {
-                command: MeetingCommand::Import { .. },
-                ..
-            } | Command::Mcp
-        )
-    }
-}
-
 #[derive(Debug, Subcommand)]
 pub enum Command {
     /// Check the local CLI and database connection without changing data

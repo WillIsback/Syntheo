@@ -47,7 +47,7 @@ Dans les `Cargo.toml`, ces crates sont référencées par l'alias de workspace `
 | --- | --- | --- |
 | `crates/vad` | Détection de parole avec `earshot`, derrière la feature du même nom (module `earshot`). | `vad-masking`, `fs-sync-core` |
 | `crates/vad-masking` | Masquage des silences avant envoi au STT, en lot (`masking`) ou en flux (`streaming`, `VadConfig`). | `listener-core` |
-| `crates/onnx` | Chargement de modèles ONNX avec `ort` (`load_model_from_bytes`, `load_model_from_path`, variante accélérée) ; réexporte `ort` et `ndarray`. | `aec` |
+| `crates/onnx` | Chargement de modèles ONNX avec `ort` (`load_model_from_bytes`) ; réexporte `ort` et `ndarray`. | `aec` |
 
 **Pages de doc concernées** : [/meetings](/fr/meetings) pour `vad-masking` ; aucune pour `vad` et `onnx` pris isolément.
 
@@ -64,7 +64,7 @@ Dans les `Cargo.toml`, ces crates sont référencées par l'alias de workspace `
 ### `crates/listener2-core`
 
 - **Rôle** : transcription par lot d'un fichier importé. `src/batch/` propose un mode simple et un mode progressif ; `upload.rs` découpe l'audio en segments MP3 en mémoire avant envoi.
-- **API** : `BatchRuntime`, `BatchParams`, `BatchEvent`, `BatchRunMode` ; `is_supported_languages_live` / `_batch`, `suggest_providers_for_languages_live` / `_batch`, `list_documented_language_codes_batch` ; lecture et export de sous-titres (`parse_subtitle_from_path`, `export_words_to_vtt_file`).
+- **API** : `BatchRuntime`, `BatchParams`, `BatchEvent`, `BatchRunMode` ; `is_supported_languages_live` / `_batch`, `suggest_providers_for_languages_live` / `_batch` ; lecture de sous-titres (`parse_subtitle_from_path`).
 - **Dépendances internes** : `audio-utils`, `language`, `mp3`, `user-error`, `owhisper-client`, `owhisper-interface`.
 - **Pages de doc concernées** : [/import-recordings](/fr/import-recordings), [/languages](/fr/languages).
 
@@ -95,8 +95,8 @@ Dans les `Cargo.toml`, ces crates sont référencées par l'alias de workspace `
 
 ### `crates/transcript`
 
-- **Rôle** : transforme les mots reçus du STT en transcription : traitement (`TranscriptProcessor`), post-traitement, segments (`build_segments`), étiquettes de locuteurs (`SpeakerLabeler`, `render_speaker_label`), contexte des locuteurs, raffinement après lot (`batch_refine`), matérialisation en direct et rendu.
-- **Dépendances internes** : `template-app`, `owhisper-interface`.
+- **Rôle** : transforme les mots reçus du STT en transcription : traitement (`TranscriptProcessor`), segments (`build_segments`), étiquettes de locuteurs (`SpeakerLabeler`, `render_speaker_label`), contexte des locuteurs, raffinement après lot (`batch_refine`), matérialisation en direct et rendu.
+- **Dépendances internes** : `owhisper-interface`.
 - **Utilisée par** : `listener-core`, `plugins/transcription`, `agent-access` (CLI et serveur MCP).
 - **Pages de doc concernées** : [/meetings](/fr/meetings), [/notes](/fr/notes), [/contacts](/fr/contacts), [/reference/cli](/fr/reference/cli), [/reference/mcp](/fr/reference/mcp).
 
@@ -161,7 +161,6 @@ Aucun build macOS n'est publié (voir [Architecture](/fr/architecture)). Ces cra
 | --- | --- | --- | --- |
 | `crates/session-ingest` | Format d'import d'une session (`SessionIngestEnvelope`, `IngestSession`, `IngestTranscript`…) et application en base (`apply_session_envelope`, feature `apply`). | Exposée par la commande `apply_session_ingest` de `plugins/db`. Aucun appel trouvé dans `apps/desktop/src`. | aucune |
 | `crates/gbnf` | Énumération `Grammar` qui produit des grammaires GBNF (`build`). | Seulement enregistrée comme type `specta` par `plugins/template`. | aucune |
-| `crates/buffer` | `opinionated_md_to_html` : conversion Markdown vers HTML. | Exposée par `plugins/misc`. Aucun appel trouvé dans `apps/desktop/src`. | aucune |
 | `crates/audacity` | Écrit des projets Audacity (`Project`, `Track`, `Bundle`) pour inspecter des pistes. | Outil de test : dépendance de dev de `aec` et `vad-masking`. | aucune |
 | `crates/audio-snapshot` | Empreintes spectrales et assertions de non-régression audio (`compute_snapshot`, `assert_or_update`). | Outil de test : dépendance de dev de `aec`. | aucune |
 

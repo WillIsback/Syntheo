@@ -36,4 +36,3 @@ uuid = { workspace = true, features = ["v4"] }
 assert_fs = "1"
 predicates = "3"
 syntheo-data = { workspace = true }
-tempfile = { workspace = true }

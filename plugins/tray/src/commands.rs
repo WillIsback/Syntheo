@@ -1,7 +1,4 @@
-use crate::{
-    TrayPluginExt,
-    schedule::{TrayScheduleEvent, TrayScheduleLabels},
-};
+use crate::TrayPluginExt;
 
 #[tauri::command]
 #[specta::specta]
@@ -11,18 +8,6 @@ pub async fn set_tray_icon_visible(
 ) -> Result<(), String> {
     app.tray().set_visible(visible).map_err(|e| e.to_string())?;
     Ok(())
-}
-
-#[tauri::command]
-#[specta::specta]
-pub async fn set_tray_schedule(
-    app: tauri::AppHandle<tauri::Wry>,
-    events: Vec<TrayScheduleEvent>,
-    labels: TrayScheduleLabels,
-) -> Result<(), String> {
-    app.tray()
-        .set_schedule(events, labels)
-        .map_err(|error| error.to_string())
 }
 
 #[tauri::command]

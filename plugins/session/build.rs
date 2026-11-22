@@ -20,7 +20,6 @@ const COMMANDS: &[&str] = &[
     "rename_folder_catalog",
     "delete_folder_catalog",
     "update_folder_instructions",
-    "update_folder_workspace",
     "update_folder_icon",
 ];
 

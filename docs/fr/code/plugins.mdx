@@ -51,7 +51,7 @@ La colonne « Interface » indique si `apps/desktop/src` importe le paquet `@syn
 | `notify` | Surveillance des fichiers du dossier de données | Non (Rust seul, utilisé par `fs-sync`) | aucune |
 | `permissions` | Autorisations système (micro, audio, accessibilité) | Oui | [/quickstart](/fr/quickstart), [/troubleshooting](/fr/troubleshooting) |
 | `local-auth` | Authentification locale du système | Oui | aucune |
-| `deeplink2` | Liens `syntheo://` et serveur de rappel local | Oui | aucune |
+| `deeplink2` | Liens `syntheo://` (reçus, aucun n'est traité) | Oui | aucune |
 | `mesure` | Mesure de la reprise d'une synthèse (bêta), sans état ni base | Oui | aucune |
 | `opener2` | Ouverture d'URL et de fichiers | Oui | aucune |
 | `tracing` | Journaux de l'application | Non (Rust seul) | [/troubleshooting](/fr/troubleshooting), [/data-and-privacy](/fr/data-and-privacy) |
@@ -72,9 +72,9 @@ La colonne « Interface » indique si `apps/desktop/src` importe le paquet `@syn
   - Capture : `start_capture`, `stop_capture`, `stop_capture_for_session`, `retry_audio_capture`, `update_capture_config`, `update_capture_credentials`, `get_capture_state`, `get_capture_snapshot`, `get_capture_audio_gaps`.
   - Reprise après arrêt : `list_stopped_captures`, `list_capture_recoveries`, marqueurs de cycle de vie (`save_capture_lifecycle_marker`…).
   - Transcription en direct : `flush_live_transcript`, `render_transcript_segments`, `render_session_transcript`.
-  - Lot et import : `start_transcription`, `stop_transcription`, `begin_audio_upload`, `append_audio_upload`, `refine_batch_transcript`, `save_batch_transcript`, `reconcile_refined_speaker_clusters`.
-  - Sous-titres : `parse_subtitle`, `export_to_vtt`.
-  - Langues : `is_supported_languages_live` et `_batch`, `suggest_providers_for_languages_live` et `_batch`, `list_documented_language_codes_live` et `_batch`.
+  - Lot et import : `start_transcription`, `stop_transcription`, `begin_audio_upload`, `append_audio_upload`, `save_batch_transcript`, `reconcile_refined_speaker_clusters`.
+  - Sous-titres : `parse_subtitle`.
+  - Langues : `is_supported_languages_live` et `_batch`.
   - Audio en mémoire : `list_capture_audio_chunks`, `delete_transcribed_capture_audio`, `delete_processed_session_audio`.
   - Transcription sur le poste : `probe_local_transcription` (sonde de `crates/speech-probe`, refusée pendant une écoute et par le relay) ; `on_device_status` (politique gérée et module installé), `on_device_install` (fichier `manifest.json` choisi côté Rust, chemin local seulement, vérifié avant la mise en place ; erreurs en codes traduits par l'interface) et `on_device_uninstall`, ces deux dernières refusées pendant une écoute et par le relay (issue 685) ; `on_device_commission` (mise en service, refusée pendant une écoute et par le relay), `on_device_commissioning` (résultat enregistré) et `on_device_load` (charge du module, barre de diagnostic) (issue 686).
 - **Événements** : `CaptureLifecycleEvent`, `CaptureStatusEvent`, `CaptureDataEvent`, `LiveTranscriptPersistenceEvent`, `SessionAudioRetentionEvent`, `TranscriptionEvent`.
@@ -93,7 +93,7 @@ La colonne « Interface » indique si `apps/desktop/src` importe le paquet `@syn
 
 - **Chemin** : `plugins/detect`
 - **Rôle** : repère les applications qui utilisent le micro, respecte le mode « Ne pas déranger », lit l'accessibilité des fenêtres de réunion pour envoyer ou capturer des messages de chat, et capture les partages d'écran.
-- **Commandes** : `list_installed_applications`, `list_mic_using_applications`, `set_respect_do_not_disturb`, `set_ignored_bundle_ids`, `set_included_bundle_ids`, `set_mic_active_threshold`, `inspect_meeting_accessibility`, `send_meeting_chat_message`, `capture_meeting_chat_messages`, `capture_meeting_screen_share`, `get_preferred_languages`, `get_current_locale_identifier`.
+- **Commandes** : `list_installed_applications`, `list_mic_using_applications`, `set_respect_do_not_disturb`, `set_ignored_bundle_ids`, `set_included_bundle_ids`, `set_mic_active_threshold`, `inspect_meeting_accessibility`, `send_meeting_chat_message`, `capture_meeting_chat_messages`, `capture_meeting_screen_share`, `get_preferred_languages`.
 - **Événements** : `DetectEvent` (`MicDetected`, `MicStopped`, `MicMuteStateChanged`, `SleepStateChanged`…).
 - **Dépendances internes** : `crates/detect`, `crates/notification-interface` ; plugins `settings`, `windows`.
 - **Pages de doc concernées** : [/automatic-capture](/fr/automatic-capture) (sections « Détecter une réunion non planifiée », « Arrêter l'écoute », « Informer les participants », « Capturer les écrans partagés », et le tableau de disponibilité par plateforme).
@@ -102,7 +102,7 @@ La colonne « Interface » indique si `apps/desktop/src` importe le paquet `@syn
 
 | Plugin | Commandes et événements | Dépendances internes | Pages de doc concernées |
 | --- | --- | --- | --- |
-| `shortcut` | `register_hotkey`, `unregister_hotkey`, `configure`, `validate`, `set_active` ; événement `ShortcutEvent`. Les raccourcis globaux sont initialisés au démarrage (`initialize_global_shortcuts`). | aucune (plugin officiel `global-shortcut`) | [/dictation](/fr/dictation) |
+| `shortcut` | `configure`, `validate`, `set_active` ; événement `ShortcutEvent`. Les raccourcis globaux sont initialisés au démarrage (`initialize_global_shortcuts`). | aucune (plugin officiel `global-shortcut`) | [/dictation](/fr/dictation) |
 | `sfx` | `play`, `stop`, `set_volume`, `play_completion_sound`. `apps/desktop/src/shared/completion-sound.ts` joue le son de fin depuis le cycle de capture, la transcription par lot et la génération du compte rendu. | `crates/audio-utils` | aucune |
 
 ## Données et contenu
@@ -120,7 +120,7 @@ La colonne « Interface » indique si `apps/desktop/src` importe le paquet `@syn
 
 - **Chemin** : `plugins/session`
 - **Rôle** : écritures transactionnelles sur les notes et les dossiers.
-- **Commandes** : `create_session`, `soft_delete_session`, `restore_deleted_session`, `add_session_participant`, `remove_session_participant`, `persist_chat_session_proposal`, `set_session_proposal_status`, `resolve_session_conflicts`, `move_session_contents`, catalogue des pièces jointes et de l'audio (`catalog_note_attachment`, `catalog_session_audio`, `tombstone_session_audio`…), catalogue des dossiers (`ensure_folder_catalog`, `rename_folder_catalog`, `update_folder_instructions`, `update_folder_workspace`, `update_folder_icon`…).
+- **Commandes** : `create_session`, `soft_delete_session`, `restore_deleted_session`, `add_session_participant`, `remove_session_participant`, `persist_chat_session_proposal`, `set_session_proposal_status`, `resolve_session_conflicts`, `move_session_contents`, catalogue des pièces jointes et de l'audio (`catalog_note_attachment`, `catalog_session_audio`, `tombstone_session_audio`…), catalogue des dossiers (`ensure_folder_catalog`, `rename_folder_catalog`, `update_folder_instructions`, `update_folder_icon`…).
 - **Dépendances internes** : `crates/db-app` ; plugin `db`.
 - **Pages de doc concernées** : [/notes](/fr/notes), [/meetings](/fr/meetings), [/chat](/fr/chat) (propositions issues du chat).
 
@@ -128,8 +128,8 @@ La colonne « Interface » indique si `apps/desktop/src` importe le paquet `@syn
 
 - **Chemin** : `plugins/template`
 - **Rôle** : rend les prompts Jinja et enregistre le résultat de la génération.
-- **Commandes** : `render`, `render_custom`, `get_template_source`, `summary_length_policy`, `dominant_language`, `prepare_generated_summary`, `compose_generated_summary`, `save_generated_summary`, `save_generated_title`, `apply_session_content_corrections`.
-- **Dépendances internes** : `crates/template-app`, `crates/template-app-legacy`, `crates/summary`, `crates/gbnf`, `crates/language`, `crates/db-app` ; plugin `db`.
+- **Commandes** : `render`, `get_template_source`, `summary_length_policy`, `dominant_language`, `prepare_generated_summary`, `compose_generated_summary`, `save_generated_summary`, `save_generated_title`, `apply_session_content_corrections`.
+- **Dépendances internes** : `crates/template-app`, `crates/summary`, `crates/gbnf`, `crates/language`, `crates/db-app` ; plugin `db`.
 - **Pages de doc concernées** : [/customize-summaries](/fr/customize-summaries), [/languages](/fr/languages) (langue des résumés et des titres), [/chat](/fr/chat).
 
 ### Autres plugins de données
@@ -137,10 +137,10 @@ La colonne « Interface » indique si `apps/desktop/src` importe le paquet `@syn
 | Plugin | Commandes et événements | Dépendances internes | Pages de doc concernées |
 | --- | --- | --- | --- |
 | `contacts` | `create_human`, `create_organization`, `save_personal_contact`, `update_human`, `update_organization`, `soft_delete_contact`, `update_contact_avatar`, `toggle_contact_pin`, `reorder_pinned_contacts`, `merge_humans` | `crates/db-app` ; plugin `db` | [/contacts](/fr/contacts) |
-| `fs-sync` | Notes et dossiers (`list_folders`, `create_folder`, `rename_folder`, `delete_folder`, `move_session`, `load_session_content`), lots de documents (`write_document_batch`, `read_document_batch`), pièces jointes (`attachment_*`, `folder_attachment_*`), audio importé (`audio_import`, `audio_has_speech`, `audio_peaks`, `audio_delete`…) ; événement `AudioImportEvent` | `crates/fs-sync-core` ; plugins `notify`, `settings` | [/notes](/fr/notes), [/import-recordings](/fr/import-recordings), [/data-and-privacy](/fr/data-and-privacy) |
-| `tantivy` | `search`, `reindex`, `add_document`, `update_document`, `update_documents`, `remove_document` | `crates/language` ; plugin `settings` | [/notes](/fr/notes) (palette de recherche), [/architecture](/fr/architecture) |
+| `fs-sync` | Notes et dossiers (`list_folders`, `create_folder`, `rename_folder`, `delete_folder`, `move_session`, `load_session_content`), lots de documents (`write_document_batch`), pièces jointes (`attachment_*`, `folder_attachment_*`), audio importé (`audio_import`, `audio_has_speech`, `audio_delete`…) ; événement `AudioImportEvent` | `crates/fs-sync-core` ; plugins `notify`, `settings` | [/notes](/fr/notes), [/import-recordings](/fr/import-recordings), [/data-and-privacy](/fr/data-and-privacy) |
+| `tantivy` | `search` | `crates/language` ; plugin `settings` | [/notes](/fr/notes) (palette de recherche), [/architecture](/fr/architecture) |
 | `export` | `export`, `export_text`, `choose_export_path`, `print_pdf`, `cleanup_print_files` | `crates/export-core` ; plugin `db` | [/notes](/fr/notes) |
-| `local-api` | Webhooks (`list_webhooks`, `create_webhook`, `delete_webhook`, `set_webhook_active`, `test_webhook`, `dispatch_event`), `export_meeting_markdown` (utilisé par `apps/desktop/src/automations/step-runners.ts`), `prepare_drive_markdown`, `get_cloud_snapshot`, `list_cloud_snapshot_ids` | `crates/agent-access`, `crates/db-app` ; plugin `db` | [/reference/webhooks](/fr/reference/webhooks), [/automations](/fr/automations) |
+| `local-api` | Webhooks (`list_webhooks`, `create_webhook`, `delete_webhook`, `set_webhook_active`, `test_webhook`, `dispatch_event`), `export_meeting_markdown` (utilisé par `apps/desktop/src/automations/step-runners.ts`) | `crates/agent-access`, `crates/db-app` ; plugin `db` | [/reference/webhooks](/fr/reference/webhooks), [/automations](/fr/automations) |
 | `settings` | `settings_path`, `global_base`, `vault_base`, `load`, `save` | `crates/storage` | [/data-and-privacy](/fr/data-and-privacy) |
 | `store2` | Préférences typées (`get_str`, `set_str`, `get_bool`, `set_number`…, `save`) et secrets (`get_secret`, `set_secret`, `delete_secret`, `repair_keychain_access`) rangés dans le trousseau via `keyring` | `crates/storage` ; plugin `settings` | [/security](/fr/security), [/ai-setup](/fr/ai-setup), [/data-and-privacy](/fr/data-and-privacy), [/uninstall](/fr/uninstall) |
 
@@ -150,7 +150,7 @@ La colonne « Interface » indique si `apps/desktop/src` importe le paquet `@syn
 
 - **Chemin** : `plugins/windows`
 - **Rôle** : ouvre, masque et anime les fenêtres et onglets, et pilote deux fenêtres superposées : la barre flottante et les sous-titres en direct.
-- **Commandes** : `window_show`, `window_hide`, `window_navigate`, `window_emit_navigate`, `window_save_frame`, `window_restore_frame_animated`, `set_show_app_in_dock`, `webview_health_ack`, `floating_bar_show`, `floating_bar_hide`, `floating_bar_update`, `live_caption_show`, `live_caption_hide`, `live_caption_update`.
+- **Commandes** : `window_show`, `window_hide`, `window_emit_navigate`, `window_save_frame`, `window_restore_frame_animated`, `set_show_app_in_dock`, `webview_health_ack`, `floating_bar_show`, `floating_bar_hide`, `floating_bar_update`, `live_caption_show`, `live_caption_hide`, `live_caption_update`.
 - **Événements** : `Navigate`, `OpenTab`, `WindowDestroyed`, `VisibilityEvent`, `WebviewHealthCheck`, `FloatingBarStop`, `FloatingBarDictationAction`, `FloatingBarListeningAction`, `FloatingBarOpenMain`, `FloatingBarSettingsChange`, `LiveCaptionOverlayState`…
 - **Dépendances internes** : `crates/brand`.
 - **Pages de doc concernées** : [/automatic-capture](/fr/automatic-capture) (« Garder les commandes à portée de main »), [/meetings](/fr/meetings).
@@ -159,22 +159,22 @@ La colonne « Interface » indique si `apps/desktop/src` importe le paquet `@syn
 
 | Plugin | Commandes et événements | Dépendances internes | Pages de doc concernées |
 | --- | --- | --- | --- |
-| `tray` | `set_tray_icon_visible`, `set_tray_schedule`, `set_tray_recording_title`, `set_native_menu_locale` | `crates/brand`, `crates/intercept` ; plugins `misc`, `store2`, `windows` | aucune |
+| `tray` | `set_tray_icon_visible`, `set_tray_recording_title`, `set_native_menu_locale` | `crates/brand`, `crates/intercept` ; plugins `misc`, `store2`, `windows` | aucune |
 | `notification` | `show_notification`, `clear_notifications` ; événement `NotificationEvent` (`Confirm`, `Accept`, `Dismiss`, `Timeout`, `OptionSelected`, `FooterAction`). L'interface passe par `showNativeNotification` (`apps/desktop/src/services/notification-labels.ts`), qui envoie les libellés natifs (décompte, options, vue dépliée) dans la langue de l'interface. | `crates/notification` ; plugin `windows` | [/automatic-capture](/fr/automatic-capture) |
 | `notify` | Aucune commande ; événement `FileChanged`. Surveille les fichiers avec `notify-debouncer-full` et ignore les écritures de l'application. | plugin `settings` | aucune |
 | `permissions` | `check_permission`, `request_permission`, `open_permission`, `reset_permission`, `permission_guidance`, `close_permission_assistant` | `crates/audio` ; plugin `sidecar2` | [/quickstart](/fr/quickstart), [/troubleshooting](/fr/troubleshooting) |
 | `local-auth` | `available`, `authenticate`. Implémenté sous macOS et Windows ; ailleurs, `available` renvoie `false`. Utilisé par le verrouillage de l'application (`apps/desktop/src/lock/auth.ts`). | aucune | aucune |
-| `deeplink2` | `start_callback_server`, `stop_callback_server`, `take_pending_deep_links`, `list_pending_share_opens`, `take_pending_share_open` ; événements `DeepLinkEvent`, `ShareOpenPendingEvent`. Les types de liens `auth_callback`, `billing_refresh`, `integration_callback` et `share/open` viennent d'Anarlog. | aucune | aucune |
+| `deeplink2` | `take_pending_deep_links` ; événement `DeepLinkEvent`. Les types de liens `auth_callback`, `billing_refresh` et `integration_callback` viennent d'Anarlog ; l'interface n'en traite aucun. | aucune | aucune |
 | `mesure` | `measure`, `measure_differences` (mode Calibrage, extraits rendus à l'écran seulement) | `crates/mesure` | [/fr/data-and-privacy](/fr/data-and-privacy) |
 | `opener2` | `open_url`, `open_path`, `reveal_item_in_dir` | aucune | aucune |
 | `tracing` | `do_log`, appelée par le script injecté dans la webview pour recopier la console dans `app.log`, avec le contenu des messages masqué. Pas de paquet TypeScript. | `crates/user-error` | [/troubleshooting](/fr/troubleshooting), [/data-and-privacy](/fr/data-and-privacy) |
-| `misc` | `get_git_hash`, `get_device_info`, `get_process_memory_bytes`, `opinionated_md_to_html` | `crates/buffer` | aucune |
+| `misc` | `get_git_hash`, `get_device_info`, `get_process_memory_bytes` | aucune | aucune |
 
 ### Plugins internes, spécifiques à macOS ou hérités
 
 | Plugin | État | Détail |
 | --- | --- | --- |
-| `icon` | macOS uniquement | `set_dock_icon`, `reset_dock_icon`, `get_icon`, `set_recording_indicator`, `set_notification_badge`. Hors macOS, ces commandes ne font rien. |
+| `icon` | macOS uniquement | `set_dock_icon`, `set_recording_indicator`. Hors macOS, ces commandes ne font rien. |
 | `dock` | macOS uniquement | Aucune commande. Installe le menu du Dock (nouvelle note, réglages, mise à jour, redémarrage, quitter). |
 | `sidecar2` | Interne | Aucune commande. Résout et lance les binaires sidecar, y compris en debug. Utilisé par `permissions`. |
 | `relay` | Développement uniquement | Sert l'interface en HTTP sur `127.0.0.1` seulement (port 1423, ou `RELAY_PORT`) et relaie l'IPC par WebSocket. Actif par défaut en build de debug ; dans une build avec la feature `devtools`, seulement avec `SYNTHEO_RELAY=1`. Le navigateur se connecte par une URL d'amorçage à usage unique, affichée en console et écrite dans le fichier `relay-token` du dossier de données de l'application (lisible par le seul utilisateur). Les commandes qui lancent un programme ou lisent les secrets ne passent pas par le relay. Le shim Vite `@syntheo/plugin-relay/vite` est chargé dans `apps/desktop/vite.config.ts`. |

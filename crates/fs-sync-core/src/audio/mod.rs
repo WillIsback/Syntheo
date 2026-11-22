@@ -1,19 +1,14 @@
-use std::collections::HashSet;
 use std::fmt::Write as _;
 use std::io::Read;
 use std::path::{Path, PathBuf};
-use std::time::{Duration, UNIX_EPOCH};
 
 use crate::error::AudioImportError;
-use crate::path::is_uuid;
 use crate::runtime::{AudioImportEvent, AudioImportRuntime};
 use chrono::{DateTime, Utc};
 use sha2::{Digest, Sha256};
 
 mod activity;
-mod peaks;
 pub use activity::has_speech;
-pub use peaks::{AudioPeaks, PEAKS_PER_CHANNEL, cached_peaks, compute_peaks};
 
 const AUDIO_FORMATS: [&str; 3] = ["audio.mp3", "audio.wav", "audio.ogg"];
 const AUDIO_ARTIFACTS: [&str; 7] = [
@@ -188,30 +183,6 @@ fn delete_with(
     Ok(true)
 }
 
-pub fn delete_orphaned_expired(
-    sessions_dir: &Path,
-    known_session_ids: &[String],
-    retention_ms: u64,
-    now_ms: u64,
-) -> std::io::Result<Vec<String>> {
-    if !sessions_dir.exists() {
-        return Ok(Vec::new());
-    }
-
-    let known_session_ids: HashSet<&str> = known_session_ids.iter().map(String::as_str).collect();
-    let expires_before_ms = now_ms.saturating_sub(retention_ms);
-    let mut deleted = Vec::new();
-
-    delete_orphaned_expired_in_dir(
-        sessions_dir,
-        &known_session_ids,
-        expires_before_ms,
-        &mut deleted,
-    )?;
-
-    Ok(deleted)
-}
-
 pub fn source_metadata(source_path: &Path) -> std::io::Result<AudioSourceMetadata> {
     use syntheo_audio_utils::Source;
 
@@ -228,82 +199,6 @@ pub fn source_metadata(source_path: &Path) -> std::io::Result<AudioSourceMetadat
         modified_at,
         duration_ms,
     })
-}
-
-fn delete_orphaned_expired_in_dir(
-    dir: &Path,
-    known_session_ids: &HashSet<&str>,
-    expires_before_ms: u64,
-    deleted: &mut Vec<String>,
-) -> std::io::Result<()> {
-    let entries = match std::fs::read_dir(dir) {
-        Ok(entries) => entries,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
-        Err(error) => return Err(error),
-    };
-
-    for entry in entries {
-        let entry = entry?;
-        let path = entry.path();
-        // `file_type` ne suit pas les liens : un lien vers un dossier hors de
-        // `sessions` n'est ni parcouru ni purgé.
-        if !entry.file_type()?.is_dir() {
-            continue;
-        }
-
-        let Some(name) = path.file_name().and_then(|name| name.to_str()) else {
-            continue;
-        };
-
-        if is_uuid(name) {
-            if known_session_ids.contains(name) || path.join("_meta.json").exists() {
-                continue;
-            }
-
-            if orphan_audio_expired(&path, expires_before_ms)? {
-                delete(&path)?;
-                deleted.push(name.to_string());
-            }
-            continue;
-        }
-
-        delete_orphaned_expired_in_dir(&path, known_session_ids, expires_before_ms, deleted)?;
-    }
-
-    Ok(())
-}
-
-fn orphan_audio_expired(session_dir: &Path, expires_before_ms: u64) -> std::io::Result<bool> {
-    let mut latest_modified_ms = None;
-    for artifact in AUDIO_ARTIFACTS.into_iter().chain(["audio-recovery"]) {
-        collect_audio_modified(&session_dir.join(artifact), &mut latest_modified_ms)?;
-    }
-    Ok(latest_modified_ms.is_some_and(|modified_ms| modified_ms <= expires_before_ms))
-}
-
-fn collect_audio_modified(path: &Path, latest: &mut Option<u64>) -> std::io::Result<()> {
-    let metadata = match std::fs::symlink_metadata(path) {
-        Ok(metadata) => metadata,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
-        Err(error) => return Err(error),
-    };
-    if metadata.is_symlink() {
-        return Ok(());
-    }
-    let modified_ms = metadata
-        .modified()?
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or(Duration::ZERO)
-        .as_millis()
-        .try_into()
-        .unwrap_or(u64::MAX);
-    *latest = Some(latest.map_or(modified_ms, |value| value.max(modified_ms)));
-    if metadata.is_dir() {
-        for entry in std::fs::read_dir(path)? {
-            collect_audio_modified(&entry?.path(), latest)?;
-        }
-    }
-    Ok(())
 }
 
 /// Validates the user's file and returns its original path. The audio is read

@@ -48,7 +48,7 @@ import { TemplateIconGlyph } from "~/templates/template-icon";
 // boîtes de dialogue sont pilotées par ce store et rendues une seule fois par
 // `FolderDialogs`, quel que soit le point d'entrée.
 
-export type FolderDialogRequest =
+type FolderDialogRequest =
   | { kind: "create"; parentPath: string | null }
   | { kind: "move"; path: string }
   | { kind: "delete"; path: string };
@@ -81,7 +81,7 @@ export function followFolderRename(fromPath: string, toPath: string) {
   selection.setSelectedPath(toPath);
 }
 
-export async function createFolderIn(
+async function createFolderIn(
   parentPath: string | null,
   name: string,
 ): Promise<string> {
@@ -98,7 +98,7 @@ export async function createFolderIn(
 }
 
 /** Déplace `sourcePath` sous `targetParent` (`""` : à la racine). */
-export async function moveFolder(
+async function moveFolder(
   sourcePath: string,
   targetParent: string,
 ): Promise<string> {
@@ -261,7 +261,7 @@ function DeleteFolderDialog({
  * Destinations possibles pour déplacer `sourcePath` : la racine et tous les
  * dossiers, sauf lui-même, ses sous-dossiers et son parent actuel.
  */
-export function folderMoveTargets(
+function folderMoveTargets(
   folders: readonly string[],
   sourcePath: string,
 ): string[] {

@@ -4,7 +4,7 @@ import { type AecModelState, commands } from "~/types/tauri.gen";
 
 // Modèles d'annulation d'écho téléchargés au premier usage (issue 429) : tant
 // qu'ils manquent, l'écoute marche sans annulation d'écho (issue 509).
-export const AEC_MODEL_STATUS_QUERY_KEY = ["aec-model-status"] as const;
+const AEC_MODEL_STATUS_QUERY_KEY = ["aec-model-status"] as const;
 
 // L'état vit en mémoire côté natif : le relire est gratuit. On cesse dès que
 // les modèles sont prêts, ils ne repartent plus.

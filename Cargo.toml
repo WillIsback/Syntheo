@@ -50,7 +50,6 @@ syntheo-audio-snapshot = { path = "crates/audio-snapshot", package = "audio-snap
 syntheo-audio-sync = { path = "crates/audio-sync", package = "audio-sync" }
 syntheo-audio-utils = { path = "crates/audio-utils", package = "audio-utils" }
 syntheo-brand = { path = "crates/brand", package = "brand" }
-syntheo-buffer = { path = "crates/buffer", package = "buffer" }
 syntheo-bundle = { path = "crates/bundle", package = "bundle" }
 syntheo-claude = { path = "crates/claude", package = "claude" }
 syntheo-cli-process = { path = "crates/cli-process", package = "cli-process" }
@@ -91,7 +90,6 @@ syntheo-storage = { path = "crates/storage", package = "storage" }
 syntheo-summary = { path = "crates/summary", package = "summary" }
 syntheo-tcc = { path = "crates/tcc", package = "tcc" }
 syntheo-template-app = { path = "crates/template-app", package = "template-app" }
-syntheo-template-app-legacy = { path = "crates/template-app-legacy", package = "template-app-legacy" }
 syntheo-tiptap = { path = "crates/tiptap", package = "tiptap" }
 syntheo-transcript = { path = "crates/transcript", package = "transcript" }
 syntheo-transcription-core = { path = "crates/transcription-core", package = "transcription-core" }
@@ -230,7 +228,6 @@ markdown = "1"
 # Vendored 0.0.2 with byte-indexed Unicode escaping fixed; upstream still uses chars().nth(byte_offset).
 mdast_util_to_markdown = { path = "crates/tiptap/vendor/mdast_util_to_markdown" }
 minijinja = "2.7.0"
-minijinja-contrib = "2.7.0"
 minisign-verify = "0.3"
 
 env_logger = "0.11.8"
@@ -250,7 +247,6 @@ cpal = "0.17"
 dasp = { version = "0.11.0", features = ["interpolate", "interpolate-linear"] }
 earshot = "0.1.0"
 hound = "3.5.1"
-htmd = "0.5.0"
 macos-accessibility-client = "0.0.2"
 mp3lame-encoder = "0.3.0"
 realfft = "3.5.0"

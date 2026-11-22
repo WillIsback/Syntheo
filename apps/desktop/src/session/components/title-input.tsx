@@ -22,8 +22,6 @@ import { useTitleGenerating } from "~/ai/hooks";
 import { useSession } from "~/session/queries";
 import { type Tab } from "~/store/zustand/tabs";
 
-export type { TitleInputHandle } from "./title-input-field";
-
 export const TitleInput = forwardRef<
   TitleInputHandle,
   {

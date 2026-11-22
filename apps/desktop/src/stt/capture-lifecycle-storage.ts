@@ -8,9 +8,6 @@ export type {
   InheritedCapture,
 } from "@syntheo/plugin-transcription";
 
-export const CAPTURE_LIFECYCLE_SETTING_PREFIX = "capture_lifecycle_pending:";
-export const CAPTURE_AUDIO_SAVED_SETTING_PREFIX = "capture_audio_saved:";
-
 export function saveCaptureLifecycleMarker(
   marker: CaptureLifecycleMarker,
   replaceTranscriptId?: string,
@@ -35,17 +32,6 @@ export function clearCaptureLifecycleMarker(
       sessionId,
       transcriptId,
     );
-    if (result.status === "error") {
-      throw new Error(result.error);
-    }
-  });
-}
-
-// A stopped capture whose saved audio waits for the user to create the note
-// or resume listening.
-export function markCaptureAudioSaved(sessionId: string): Promise<void> {
-  return enqueueDatabaseWrite(`session:${sessionId}`, async () => {
-    const result = await listenerCommands.markCaptureAudioSaved(sessionId);
     if (result.status === "error") {
       throw new Error(result.error);
     }

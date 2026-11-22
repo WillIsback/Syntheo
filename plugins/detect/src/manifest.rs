@@ -4,7 +4,6 @@
 #[cfg_attr(not(test), allow(dead_code))]
 pub(crate) const COMMANDS: &[&str] = &[
     "list_installed_applications",
-    "get_installed_application_icons",
     "list_mic_using_applications",
     "set_respect_do_not_disturb",
     "set_ignored_bundle_ids",
@@ -15,7 +14,6 @@ pub(crate) const COMMANDS: &[&str] = &[
     "capture_meeting_chat_messages",
     "capture_meeting_screen_share",
     "get_preferred_languages",
-    "get_current_locale_identifier",
     "set_mic_active_threshold",
     "set_detect_enabled",
 ];

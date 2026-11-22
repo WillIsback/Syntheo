@@ -22,14 +22,12 @@ syntheo-gbnf = { workspace = true }
 syntheo-language = { workspace = true, features = ["dominant"] }
 syntheo-summary = { workspace = true }
 syntheo-template-app = { workspace = true }
-syntheo-template-app-legacy = { workspace = true }
 tauri-plugin-db = { workspace = true }
 
 chrono = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 sqlx = { workspace = true, features = ["runtime-tokio", "sqlite", "sqlite-unbundled", "macros"] }
-tracing = { workspace = true }
 
 specta = { workspace = true, features = ["serde_json"] }
 tauri = { workspace = true }

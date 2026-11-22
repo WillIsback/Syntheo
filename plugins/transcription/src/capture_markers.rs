@@ -279,17 +279,6 @@ pub(crate) async fn list_markers(
         .collect())
 }
 
-pub(crate) async fn mark_audio_saved(
-    app: &AppHandle<impl tauri::Runtime>,
-    session_id: &str,
-) -> Result<(), String> {
-    let runtime = database_runtime(app)?;
-    let _guard = runtime.synced_write_guard().await;
-    syntheo_db_app::mark_capture_audio_saved(runtime.pool(), session_id)
-        .await
-        .map_err(|error| error.to_string())
-}
-
 pub(crate) async fn clear_audio_saved(
     app: &AppHandle<impl tauri::Runtime>,
     session_id: &str,

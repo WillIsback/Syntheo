@@ -138,11 +138,6 @@ fn make_specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
         .plugin_name(PLUGIN_NAME)
         .commands(tauri_specta::collect_commands![
             commands::search::<tauri::Wry>,
-            commands::reindex::<tauri::Wry>,
-            commands::add_document::<tauri::Wry>,
-            commands::update_document::<tauri::Wry>,
-            commands::update_documents::<tauri::Wry>,
-            commands::remove_document::<tauri::Wry>,
         ])
         .error_handling(tauri_specta::ErrorHandlingMode::Result)
 }

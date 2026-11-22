@@ -8,10 +8,7 @@ import type { AudioRetentionPolicy } from "./audio-retention-policy";
 
 import { listenerStore } from "~/store/zustand/listener/instance";
 
-export {
-  normalizeAudioRetention,
-  type AudioRetentionPolicy,
-} from "./audio-retention-policy";
+export { normalizeAudioRetention } from "./audio-retention-policy";
 
 export function subscribeToSessionAudioRetention(
   listener: (event: SessionAudioRetentionEvent) => void,

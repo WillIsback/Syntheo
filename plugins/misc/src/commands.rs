@@ -22,12 +22,3 @@ pub async fn get_process_memory_bytes<R: tauri::Runtime>(
 ) -> Result<u64, String> {
     app.misc().get_process_memory_bytes()
 }
-
-#[tauri::command]
-#[specta::specta]
-pub async fn opinionated_md_to_html<R: tauri::Runtime>(
-    app: tauri::AppHandle<R>,
-    text: String,
-) -> Result<String, String> {
-    app.misc().opinionated_md_to_html(&text)
-}

@@ -12,7 +12,7 @@ import {
   type ToolScope,
 } from "./tool-registry/core";
 
-export type { ToolRegistry, ToolScope };
+export type { ToolScope };
 
 const ToolRegistryContext = createContext<ToolRegistry | null>(null);
 

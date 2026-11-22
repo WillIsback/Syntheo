@@ -6,38 +6,9 @@ import { invoke as __TAURI_INVOKE } from "@tauri-apps/api/core";
 /** Commands */
 export const commands = {
 	setTrayIconVisible: (visible: boolean) => typedError<null, string>(__TAURI_INVOKE("plugin:syntheo-tray|set_tray_icon_visible", { visible })),
-	setTraySchedule: (events: TrayScheduleEvent[], labels: TrayScheduleLabels) => typedError<null, string>(__TAURI_INVOKE("plugin:syntheo-tray|set_tray_schedule", { events, labels })),
 	setTrayRecordingTitle: (title: string | null) => typedError<null, string>(__TAURI_INVOKE("plugin:syntheo-tray|set_tray_recording_title", { title })),
 	/**  Langue d'affichage de l'interface, pour traduire les menus natifs. */
 	setNativeMenuLocale: (locale: string) => typedError<null, string>(__TAURI_INVOKE("plugin:syntheo-tray|set_native_menu_locale", { locale })),
-};
-
-/* Types */
-export type TrayScheduleEvent = {
-	id: string,
-	title: string,
-	meetingLink: string | null,
-	startsAtMs: number,
-	endsAtMs: number | null,
-	dayStartMs: number,
-	previousDayStartMs: number,
-	timeLabel: string,
-};
-
-/**
- *  Libellés traduits par Lingui côté application et envoyés avec le planning.
- *  Le calcul des délais reste ici : seuls les gabarits de texte changent.
- *  Jetons remplacés : `{duration}`, `{count}`, `{hours}` et `{minutes}`.
- */
-export type TrayScheduleLabels = {
-	untitledEvent: string,
-	startsIn: string,
-	remainingOne: string,
-	remainingOther: string,
-	seconds: string,
-	minutes: string,
-	hours: string,
-	hoursMinutes: string,
 };
 
 /* Tauri Specta runtime */

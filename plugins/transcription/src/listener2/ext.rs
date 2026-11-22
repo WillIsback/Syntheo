@@ -236,28 +236,6 @@ impl<'a, R: tauri::Runtime, M: tauri::Manager<R>> Listener2<'a, R, M> {
     pub fn parse_subtitle(&self, path: String) -> Result<core::Subtitle, String> {
         core::parse_subtitle_from_path(path)
     }
-
-    pub fn export_to_vtt(
-        &self,
-        session_id: String,
-        words: Vec<core::VttWord>,
-    ) -> Result<String, String> {
-        use tauri_plugin_settings::SettingsPluginExt;
-
-        let base = self
-            .manager
-            .settings()
-            .vault_base()
-            .map_err(|e| e.to_string())?;
-        let session_dir = base.join("sessions").join(&session_id);
-
-        std::fs::create_dir_all(&session_dir).map_err(|e| e.to_string())?;
-
-        let vtt_path = session_dir.join("transcript.vtt");
-
-        core::export_words_to_vtt_file(words, &vtt_path)?;
-        Ok(vtt_path.to_string())
-    }
 }
 
 pub trait Listener2PluginExt<R: tauri::Runtime> {

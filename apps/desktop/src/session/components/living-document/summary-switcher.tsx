@@ -27,7 +27,7 @@ import {
 } from "~/session/queries";
 import { useConfigValues } from "~/shared/config";
 
-export { formatVersionDate, type SynthesisView };
+export { type SynthesisView };
 
 // Sélecteur « Mes notes | Synthèse · vN ▾ » de l'étape Synthèse (issue 415).
 // Il remplace l'ancien sélecteur de comptes rendus : le menu ▾ liste les

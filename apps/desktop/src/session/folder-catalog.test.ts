@@ -15,7 +15,6 @@ const mocks = vi.hoisted(() => ({
   renameFolderCatalog: vi.fn(),
   updateFolderIcon: vi.fn(),
   updateFolderInstructions: vi.fn(),
-  updateFolderWorkspace: vi.fn(),
 }));
 
 vi.mock("@syntheo/plugin-session", () => ({
@@ -25,7 +24,6 @@ vi.mock("@syntheo/plugin-session", () => ({
     renameFolderCatalog: mocks.renameFolderCatalog,
     updateFolderIcon: mocks.updateFolderIcon,
     updateFolderInstructions: mocks.updateFolderInstructions,
-    updateFolderWorkspace: mocks.updateFolderWorkspace,
   },
 }));
 
@@ -64,7 +62,6 @@ describe("folder catalog", () => {
       mocks.renameFolderCatalog,
       mocks.updateFolderIcon,
       mocks.updateFolderInstructions,
-      mocks.updateFolderWorkspace,
     ]) {
       command.mockResolvedValue({ status: "ok", data: null });
     }
