@@ -5471,10 +5471,6 @@ msgstr "Testing…"
 msgid "Text"
 msgstr "Text"
 
-#: src/mesure/measure-dialog.tsx
-msgid "Text documents"
-msgstr "Text documents"
-
 #: src/session/components/living-document/provenance.tsx
 msgid "Text provenance"
 msgstr "Text provenance"
@@ -5861,9 +5857,17 @@ msgstr "This edit could not be saved. Try again."
 msgid "This edit is no longer pending."
 msgstr "This edit is no longer pending."
 
+#: src/mesure/measure-dialog.tsx
+msgid "This file is not UTF-8 text."
+msgstr "This file is not UTF-8 text."
+
 #: src/stt/audio-import-feedback.ts
 msgid "This file is too large to import (2 GB maximum)."
 msgstr "This file is too large to import (2 GB maximum)."
+
+#: src/mesure/measure-dialog.tsx
+msgid "This file is too large to measure."
+msgstr "This file is too large to measure."
 
 #: src/session/late-filing.ts
 msgid "This folder uses the {title} template"

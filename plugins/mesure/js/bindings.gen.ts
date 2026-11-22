@@ -61,8 +61,11 @@ export type SectionMeasure = {
 export type SentFormat = "text" | "markdown" | "html";
 
 /**  Version envoyée : texte collé (avec son format) ou fichier déposé. */
-export type SentInput = { kind: "text"; text: string; format: SentFormat } | { kind: "file"; path: string } | 
-/**  `.docx` déposé dans la fenêtre (le navigateur ne donne pas son chemin). */
+export type SentInput = { kind: "text"; text: string; format: SentFormat } | 
+/**
+ *  `.docx` choisi ou déposé, lu par l'interface : le plugin ne reçoit
+ *  jamais de chemin (revue du lot 0.8.0, constat 1).
+ */
 { kind: "docx"; base64: string };
 
 /* Tauri Specta runtime */

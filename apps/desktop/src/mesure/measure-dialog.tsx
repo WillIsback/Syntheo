@@ -1,6 +1,5 @@
 import { Trans, useLingui } from "@lingui/react/macro";
-import { open as selectFile } from "@tauri-apps/plugin-dialog";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import {
   commands as mesureCommands,
@@ -35,7 +34,6 @@ import {
   getStoredNoteMarkdown,
 } from "~/session/components/note-input/header-shared";
 import { useConfigValues } from "~/shared/config";
-import { resolveUploadDefaultPath } from "~/stt/select-upload-file";
 
 // Bêta, issue 671 : mesure de la reprise d'une synthèse. La version envoyée
 // (collée ou déposée) ne vit qu'en mémoire, dans cette fenêtre ; seuls les
@@ -43,7 +41,10 @@ import { resolveUploadDefaultPath } from "~/stt/select-upload-file";
 // classes choisies à la main restent aussi en mémoire : seule la matrice
 // d'accord (des nombres) est enregistrée.
 
-const EXTENSIONS = ["txt", "md", "markdown", "html", "htm", "docx"];
+const ACCEPT = ".txt,.md,.markdown,.html,.htm,.docx";
+/** Mêmes plafonds que le crate `mesure`, vérifiés avant toute lecture. */
+const MAX_TEXT_BYTES = 4 * 1024 * 1024;
+const MAX_DOCX_BYTES = 16 * 1024 * 1024;
 
 type Source =
   | { kind: "pasted"; text: string; html: string | null }
@@ -53,16 +54,17 @@ function extensionOf(name: string): string {
   return name.split(".").pop()?.toLowerCase() ?? "";
 }
 
-async function fileInput(file: File): Promise<SentInput | null> {
+type FileInputResult =
+  | { ok: true; input: SentInput }
+  | { ok: false; reason: "type" | "size" | "encoding" };
+
+/**
+ * Fichier choisi ou déposé, lu par l'interface : le plugin ne reçoit jamais de
+ * chemin (revue du lot 0.8.0, constat 1). Taille vérifiée avant la lecture,
+ * texte décodé en UTF-8 strict (constats 23 et 26).
+ */
+export async function fileInput(file: File): Promise<FileInputResult> {
   const extension = extensionOf(file.name);
-  if (extension === "docx") {
-    const bytes = new Uint8Array(await file.arrayBuffer());
-    let binary = "";
-    for (let i = 0; i < bytes.length; i += 0x8000) {
-      binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-    }
-    return { kind: "docx", base64: btoa(binary) };
-  }
   const format =
     extension === "md" || extension === "markdown"
       ? "markdown"
@@ -70,9 +72,29 @@ async function fileInput(file: File): Promise<SentInput | null> {
         ? "html"
         : extension === "txt"
           ? "text"
-          : null;
-  if (!format) return null;
-  return { kind: "text", text: await file.text(), format };
+          : extension === "docx"
+            ? "docx"
+            : null;
+  if (!format) return { ok: false, reason: "type" };
+  const limit = format === "docx" ? MAX_DOCX_BYTES : MAX_TEXT_BYTES;
+  if (file.size > limit) return { ok: false, reason: "size" };
+  if (format === "docx") {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    let binary = "";
+    for (let i = 0; i < bytes.length; i += 0x8000) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+    }
+    return { ok: true, input: { kind: "docx", base64: btoa(binary) } };
+  }
+  let text: string;
+  try {
+    text = new TextDecoder("utf-8", { fatal: true }).decode(
+      await file.arrayBuffer(),
+    );
+  } catch {
+    return { ok: false, reason: "encoding" };
+  }
+  return { ok: true, input: { kind: "text", text, format } };
 }
 
 /**
@@ -97,11 +119,16 @@ export async function generatedVersion(
   return { markdown: currentMarkdown, source: "current" };
 }
 
-function sentInput(source: Source): SentInput {
+/**
+ * Un collage avec HTML (mail, wiki) est lu en HTML ; un texte collé ou saisi
+ * sans HTML est lu en Markdown, pour qu'une synthèse collée telle quelle
+ * garde ses titres et donne une reprise nulle (revue du lot 0.8.0, constat 7).
+ */
+export function sentInput(source: Source): SentInput {
   if (source.kind === "file") return source.input;
   return source.html
     ? { kind: "text", text: source.html, format: "html" }
-    : { kind: "text", text: source.text, format: "text" };
+    : { kind: "text", text: source.text, format: "markdown" };
 }
 
 export function MeasureDialog({
@@ -131,11 +158,23 @@ export function MeasureDialog({
   const [rows, setRows] = useState<DifferenceRow[] | null>(null);
   const [labels, setLabels] = useState<Map<number, TrueClass>>(new Map());
   const [calibrationSaved, setCalibrationSaved] = useState(false);
+  const [savingCalibration, setSavingCalibration] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Jeton de la mesure en cours : fermer la fenêtre le change, et un calcul
+  // qui se termine ensuite n'enregistre ni n'affiche rien (constats 21, 25).
+  const run = useRef(0);
+  // Un calibrage par mesure : réenregistrer remplace la même ligne
+  // (constats 22, 24).
+  const calibrationId = useRef<string | null>(null);
+  const fileField = useRef<HTMLInputElement>(null);
 
   // Fermer la fenêtre efface tout ce qu'elle tenait en mémoire.
   const reset = () => {
+    run.current += 1;
+    calibrationId.current = null;
+    setBusy(false);
+    setSavingCalibration(false);
     setSource(null);
     setResult(null);
     setRows(null);
@@ -146,16 +185,20 @@ export function MeasureDialog({
 
   const measure = async () => {
     if (!source) return;
+    const token = ++run.current;
+    const current = () => run.current === token;
     setBusy(true);
     setError(null);
     const dictionary = personalization_dictionary_terms ?? [];
     const input = sentInput(source);
     const generated = await generatedVersion(documentId, summaryMarkdown);
+    if (!current()) return;
     const measured = await mesureCommands.measure(
       generated.markdown,
       input,
       dictionary,
     );
+    if (!current()) return;
     if (measured.status === "error") {
       setBusy(false);
       setError(t`The sent version could not be measured: ${measured.error}`);
@@ -164,6 +207,7 @@ export function MeasureDialog({
     setResult(measured.data);
     setGeneratedSource(generated.source);
     try {
+      if (!current()) return;
       await saveMeasurement(
         { sessionId, documentId, generatedSource: generated.source },
         measured.data,
@@ -172,47 +216,38 @@ export function MeasureDialog({
       console.error("[mesure] failed to save the counters", cause);
       setError(t`The counters could not be saved.`);
     }
+    if (!current()) return;
     if (calibration_enabled) {
       const listed = await mesureCommands.measureDifferences(
         generated.markdown,
         input,
         dictionary,
       );
-      if (listed.status === "ok") setRows(listed.data);
-      else setError(t`The differences could not be listed.`);
+      if (!current()) return;
+      if (listed.status === "ok") {
+        calibrationId.current = crypto.randomUUID();
+        setRows(listed.data);
+      } else setError(t`The differences could not be listed.`);
     }
     setBusy(false);
   };
 
-  const chooseFile = async () => {
-    const selection = await selectFile({
-      title: t`Sent version`,
-      multiple: false,
-      directory: false,
-      defaultPath: await resolveUploadDefaultPath(),
-      filters: [{ name: t`Text documents`, extensions: EXTENSIONS }],
-    });
-    const path = Array.isArray(selection) ? selection[0] : selection;
-    if (!path) return;
-    setResult(null);
-    setRows(null);
-    setSource({
-      kind: "file",
-      name: path.split(/[\\/]/).pop() ?? path,
-      input: { kind: "file", path },
-    });
-  };
-
-  const dropFile = async (file: File) => {
-    const input = await fileInput(file);
-    if (!input) {
-      setError(t`Use a .txt, .md, .html or .docx file.`);
+  const loadFile = async (file: File) => {
+    const read = await fileInput(file);
+    if (!read.ok) {
+      setError(
+        read.reason === "size"
+          ? t`This file is too large to measure.`
+          : read.reason === "encoding"
+            ? t`This file is not UTF-8 text.`
+            : t`Use a .txt, .md, .html or .docx file.`,
+      );
       return;
     }
     setError(null);
     setResult(null);
     setRows(null);
-    setSource({ kind: "file", name: file.name, input });
+    setSource({ kind: "file", name: file.name, input: read.input });
   };
 
   const matrix =
@@ -250,7 +285,7 @@ export function MeasureDialog({
               event.preventDefault();
               event.stopPropagation();
               const file = event.dataTransfer.files?.[0];
-              if (file) void dropFile(file);
+              if (file) void loadFile(file);
             }}
           >
             <Textarea
@@ -259,10 +294,16 @@ export function MeasureDialog({
               className="min-h-40"
               value={source?.kind === "pasted" ? source.text : ""}
               onPaste={(event) => {
+                // Un collage avec HTML dans une zone vide garde le HTML pour la
+                // mesure. Sinon, le collage s'insère à la position du curseur,
+                // comme d'habitude, et la mesure lit le texte (constat 27).
                 const html = event.clipboardData.getData("text/html");
+                const empty =
+                  source?.kind !== "pasted" || source.text.length === 0;
+                if (!html || !empty) return;
                 const text = event.clipboardData.getData("text/plain");
                 event.preventDefault();
-                setSource({ kind: "pasted", text, html: html || null });
+                setSource({ kind: "pasted", text, html });
               }}
               onChange={(event) =>
                 setSource({
@@ -273,10 +314,22 @@ export function MeasureDialog({
               }
             />
             <div className="flex items-center gap-3">
+              <input
+                ref={fileField}
+                type="file"
+                accept={ACCEPT}
+                className="hidden"
+                data-testid="measure-file"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  event.target.value = "";
+                  if (file) void loadFile(file);
+                }}
+              />
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => void chooseFile()}
+                onClick={() => fileField.current?.click()}
               >
                 <Trans>Choose a file…</Trans>
               </Button>
@@ -327,11 +380,18 @@ export function MeasureDialog({
               </Button>
               <Button
                 type="button"
-                disabled={calibrationSaved}
+                disabled={calibrationSaved || savingCalibration}
                 onClick={() => {
-                  void saveCalibration(matrix).then(
-                    () => setCalibrationSaved(true),
+                  const id = calibrationId.current;
+                  if (!id) return;
+                  setSavingCalibration(true);
+                  void saveCalibration(id, matrix).then(
+                    () => {
+                      setSavingCalibration(false);
+                      setCalibrationSaved(true);
+                    },
                     (cause) => {
+                      setSavingCalibration(false);
                       console.error(
                         "[mesure] failed to save the matrix",
                         cause,

@@ -12095,6 +12095,7 @@ name = "tauri-plugin-mesure"
 version = "0.1.0"
 dependencies = [
  "base64 0.23.1",
+ "db-app",
  "mesure",
  "serde",
  "serde_json",
@@ -12102,6 +12103,7 @@ dependencies = [
  "specta-typescript",
  "tauri",
  "tauri-plugin",
+ "tauri-plugin-db",
  "tauri-specta",
 ]
 

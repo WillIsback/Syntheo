@@ -10,9 +10,10 @@
 CREATE TABLE IF NOT EXISTS summary_measurements (
   id                    TEXT PRIMARY KEY NOT NULL
     CHECK (length(id) = 36 AND id NOT GLOB '*[^0-9a-f-]*'),
-  -- Synthèse mesurée (`session_documents.id`) et sa réunion.
+  -- Synthèse mesurée (`session_documents.id`, dont `summary:<sessionId>`
+  -- pour la synthèse principale) et sa réunion.
   document_id           TEXT NOT NULL
-    CHECK (length(document_id) BETWEEN 1 AND 64 AND document_id NOT GLOB '*[^0-9A-Za-z_-]*'),
+    CHECK (length(document_id) BETWEEN 1 AND 96 AND document_id NOT GLOB '*[^0-9A-Za-z_:-]*'),
   session_id            TEXT NOT NULL
     CHECK (length(session_id) BETWEEN 1 AND 64 AND session_id NOT GLOB '*[^0-9A-Za-z_-]*'),
   rule_version          INTEGER NOT NULL CHECK (rule_version > 0),

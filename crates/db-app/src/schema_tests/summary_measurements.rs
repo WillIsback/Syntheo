@@ -75,6 +75,15 @@ async fn text_columns_refuse_free_text() {
         async move { sqlx::query(sqlx::AssertSqlSafe(sql)).execute(&pool).await }
     };
     insert(ID, "doc-1", None).await.unwrap();
+    // Synthèse principale d'une réunion : `summary:<sessionId>` (revue du lot
+    // 0.8.0, constat 2).
+    insert(
+        "3b9f2c1e-4d3a-4b5c-8d7e-1f2a3b4c5d6e",
+        "summary:5f0c2a7e-1b3d-4c6e-9a8b-7d6e5f4a3b2c",
+        None,
+    )
+    .await
+    .unwrap();
     for (id, document, at) in [
         ("Le projet avance avec Martin et Alice", "doc-2", None),
         (

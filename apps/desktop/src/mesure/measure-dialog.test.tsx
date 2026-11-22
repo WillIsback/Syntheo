@@ -22,7 +22,6 @@ vi.mock("@syntheo/plugin-mesure", () => ({
     measureDifferences: mocks.measureDifferences,
   },
 }));
-vi.mock("@tauri-apps/plugin-dialog", () => ({ open: vi.fn() }));
 vi.mock("~/db", () => ({
   executeTransaction: mocks.executeTransaction,
   liveQueryClient: { execute: async () => mocks.generatedRows },
@@ -37,11 +36,8 @@ vi.mock("~/session/components/note-input/header-shared", () => ({
   copyTextToClipboard: mocks.copy,
   getStoredNoteMarkdown: (content: string | undefined) => content?.trim() ?? "",
 }));
-vi.mock("~/stt/select-upload-file", () => ({
-  resolveUploadDefaultPath: async () => undefined,
-}));
 
-import { MeasureDialog } from "./measure-dialog";
+import { fileInput, MeasureDialog } from "./measure-dialog";
 
 const SENT = "Le projet avance avec Marten et un secret confidentiel.";
 const RESULT = {
@@ -118,7 +114,7 @@ describe("MeasureDialog", () => {
     await screen.findByText(/words of content reworked per 100 generated/);
     expect(mocks.measure).toHaveBeenCalledWith(
       "# Résumé\n\nLe projet avance avec Martin.",
-      { kind: "text", text: SENT, format: "text" },
+      { kind: "text", text: SENT, format: "markdown" },
       [],
     );
     expect(mocks.measureDifferences).not.toHaveBeenCalled();
@@ -232,5 +228,127 @@ describe("MeasureDialog", () => {
       expect(mocks.executeTransaction).toHaveBeenCalledOnce(),
     );
     expect(persisted()).toContain('"current"');
+  });
+
+  // Revue du lot 0.8.0, constats 21 et 25 : fermer pendant le calcul
+  // n'enregistre rien et n'affiche rien.
+  it("closing during the calculation saves and shows nothing", async () => {
+    mocks.config.calibration_enabled = false;
+    let resolve: (value: unknown) => void = () => undefined;
+    mocks.measure.mockReturnValueOnce(
+      new Promise((done) => {
+        resolve = done;
+      }),
+    );
+    const onOpenChange = vi.fn();
+    render(
+      <MeasureDialog
+        open
+        onOpenChange={onOpenChange}
+        sessionId="session-1"
+        documentId="doc-1"
+        summaryMarkdown={"# Résumé\n\nTexte."}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText("Sent version"), {
+      target: { value: SENT },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Measure" }));
+    await waitFor(() => expect(mocks.measure).toHaveBeenCalled());
+    fireEvent.keyDown(document.activeElement ?? document.body, {
+      key: "Escape",
+    });
+    await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+    resolve({ status: "ok", data: RESULT });
+    await new Promise((done) => setTimeout(done, 20));
+    expect(mocks.executeTransaction).not.toHaveBeenCalled();
+    expect(screen.queryByText(/words of content reworked/)).toBeNull();
+  });
+
+  // Constats 22 et 24 : un calibrage par mesure, réenregistré à la même ligne.
+  it("saving the matrix again replaces the same row", async () => {
+    renderDialog();
+    fireEvent.change(screen.getByLabelText("Sent version"), {
+      target: { value: SENT },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Measure" }));
+    await screen.findByText("Marten");
+    const groups = screen.getAllByRole("radiogroup");
+    fireEvent.click(
+      groups[0].querySelector('[role="radio"]:nth-child(2)') as Element,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Save the matrix" }));
+    await screen.findByRole("button", { name: "Matrix saved" });
+    fireEvent.click(
+      groups[1].querySelector('[role="radio"]:nth-child(1)') as Element,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Save the matrix" }));
+    await screen.findByRole("button", { name: "Matrix saved" });
+    const calls = mocks.executeTransaction.mock.calls as unknown as {
+      sql: string;
+      params: unknown[];
+    }[][][];
+    const matrixWrites = calls.slice(1).map((call) => call[0][0]);
+    expect(matrixWrites).toHaveLength(2);
+    expect(matrixWrites[0].params[0]).toBe(matrixWrites[1].params[0]);
+    expect(matrixWrites[1].sql).toContain("ON CONFLICT(id) DO UPDATE");
+  });
+
+  it("keeps the text when pasting into a non-empty field", () => {
+    renderDialog();
+    const field = screen.getByLabelText("Sent version");
+    fireEvent.change(field, { target: { value: "Début déjà saisi" } });
+    fireEvent.paste(field, {
+      clipboardData: {
+        getData: (type: string) =>
+          type === "text/html" ? "<p>Suite</p>" : "Suite",
+      },
+    });
+    expect((field as HTMLTextAreaElement).value).toBe("Début déjà saisi");
+  });
+
+  it("reads a chosen file in the window, never by path", async () => {
+    mocks.config.calibration_enabled = false;
+    renderDialog();
+    const file = new File(["# Résumé\n\nTexte."], "publiee.md", {
+      type: "text/markdown",
+    });
+    fireEvent.change(screen.getByTestId("measure-file"), {
+      target: { files: [file] },
+    });
+    await screen.findByText("publiee.md");
+    fireEvent.click(screen.getByRole("button", { name: "Measure" }));
+    await screen.findByText(/words of content reworked/);
+    expect(mocks.measure.mock.calls[0][1]).toEqual({
+      kind: "text",
+      text: "# Résumé\n\nTexte.",
+      format: "markdown",
+    });
+  });
+});
+
+// Constats 23 et 26 : taille vérifiée avant la lecture, UTF-8 strict.
+describe("fileInput", () => {
+  it("refuses an oversized file without reading it", async () => {
+    const file = new File(["x"], "gros.txt");
+    Object.defineProperty(file, "size", { value: 5 * 1024 * 1024 });
+    const read = vi.spyOn(file, "arrayBuffer");
+    expect(await fileInput(file)).toEqual({ ok: false, reason: "size" });
+    expect(read).not.toHaveBeenCalled();
+  });
+
+  it("refuses a text file that is not UTF-8", async () => {
+    const latin1 = new File(
+      [new Uint8Array([0x76, 0x61, 0x6c, 0x69, 0x64, 0xe9])],
+      "a.html",
+    );
+    expect(await fileInput(latin1)).toEqual({ ok: false, reason: "encoding" });
+  });
+
+  it("refuses other file types", async () => {
+    expect(await fileInput(new File(["%PDF"], "a.pdf"))).toEqual({
+      ok: false,
+      reason: "type",
+    });
   });
 });

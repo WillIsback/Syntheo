@@ -70,5 +70,15 @@ describe("measurement storage", () => {
       autoLexicalTrueLexical: 40,
     });
     expect(params).toEqual([ID, 1, 150, 12, 9, 40]);
+    // Réenregistrer remplace la même ligne (revue du lot 0.8.0, constat 22).
+    expect(
+      calibrationStatement(ID, {
+        ruleVersion: 1,
+        autoContentTrueContent: 1,
+        autoContentTrueLexical: 0,
+        autoLexicalTrueContent: 0,
+        autoLexicalTrueLexical: 0,
+      }).sql,
+    ).toContain("ON CONFLICT(id) DO UPDATE");
   });
 });

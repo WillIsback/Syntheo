@@ -74,6 +74,10 @@ export function measurementStatements(
   ];
 }
 
+/**
+ * Un calibrage par mesure : réenregistrer remplace la même ligne au lieu d'en
+ * ajouter une (revue du lot 0.8.0, constats 22 et 24).
+ */
 export function calibrationStatement(
   id: string,
   matrix: AgreementMatrix,
@@ -86,6 +90,12 @@ export function calibrationStatement(
         auto_lexical_true_lexical
       )
       VALUES (?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        rule_version = excluded.rule_version,
+        auto_content_true_content = excluded.auto_content_true_content,
+        auto_content_true_lexical = excluded.auto_content_true_lexical,
+        auto_lexical_true_content = excluded.auto_lexical_true_content,
+        auto_lexical_true_lexical = excluded.auto_lexical_true_lexical
     `,
     params: [
       id,
@@ -109,10 +119,11 @@ export function saveMeasurement(
   });
 }
 
-export function saveCalibration(matrix: AgreementMatrix): Promise<void> {
+export function saveCalibration(
+  id: string,
+  matrix: AgreementMatrix,
+): Promise<void> {
   return enqueueDatabaseWrite("calibration-results", async () => {
-    await executeTransaction([
-      calibrationStatement(crypto.randomUUID(), matrix),
-    ]);
+    await executeTransaction([calibrationStatement(id, matrix)]);
   });
 }

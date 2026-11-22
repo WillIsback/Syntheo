@@ -175,11 +175,50 @@ fn strip_block_markers(line: &str) -> &str {
     }
 }
 
+/// Prochaine position de `target` à partir de `from`, sans rebalayer : les
+/// recherches se font à positions croissantes, et un résultat reste valable
+/// tant que `from` ne l'a pas dépassé (temps linéaire sur la ligne, revue du
+/// lot 0.8.0, constat 15).
+struct NextIndex {
+    target: char,
+    searched_from: usize,
+    found: Option<Option<usize>>,
+}
+
+impl NextIndex {
+    fn new(target: char) -> Self {
+        Self {
+            target,
+            searched_from: 0,
+            found: None,
+        }
+    }
+
+    fn after(&mut self, chars: &[char], from: usize) -> Option<usize> {
+        if let Some(found) = self.found
+            && from >= self.searched_from
+            && found.is_none_or(|at| at >= from)
+        {
+            return found;
+        }
+        let found = chars
+            .get(from..)
+            .and_then(|rest| rest.iter().position(|&c| c == self.target))
+            .map(|offset| from + offset);
+        self.searched_from = from;
+        self.found = Some(found);
+        found
+    }
+}
+
 /// Mise en forme en ligne : image → texte alternatif, lien → texte du lien,
 /// balises HTML retirées, marques d'emphase et de code retirées.
 fn inline(text: &str) -> String {
     let chars: Vec<char> = text.chars().collect();
     let mut out = String::with_capacity(text.len());
+    let mut close_bracket = NextIndex::new(']');
+    let mut close_paren = NextIndex::new(')');
+    let mut close_angle = NextIndex::new('>');
     let mut i = 0;
     while i < chars.len() {
         let c = chars[i];
@@ -192,7 +231,14 @@ fn inline(text: &str) -> String {
                 i += 1;
             }
             '[' => {
-                if let Some((label_end, after)) = link_parts(&chars, i) {
+                let link = close_bracket.after(&chars, i + 1).and_then(|label_end| {
+                    if chars.get(label_end + 1) != Some(&'(') {
+                        return None;
+                    }
+                    let target_end = close_paren.after(&chars, label_end + 2)?;
+                    Some((label_end, target_end + 1))
+                });
+                if let Some((label_end, after)) = link {
                     out.extend(&chars[i + 1..label_end]);
                     i = after;
                 } else {
@@ -200,18 +246,17 @@ fn inline(text: &str) -> String {
                     i += 1;
                 }
             }
-            '<' => {
+            '<' if chars
+                .get(i + 1)
+                .is_some_and(|c| c.is_ascii_alphabetic() || *c == '/' || *c == '!') =>
+            {
                 // Balise HTML ou lien automatique : retiré entièrement.
-                match chars[i + 1..].iter().position(|&c| c == '>') {
-                    Some(end)
-                        if chars
-                            .get(i + 1)
-                            .is_some_and(|c| c.is_ascii_alphabetic() || *c == '/' || *c == '!') =>
-                    {
+                match close_angle.after(&chars, i + 1) {
+                    Some(end) => {
                         out.push(' ');
-                        i += end + 2;
+                        i = end + 1;
                     }
-                    _ => {
+                    None => {
                         out.push(c);
                         i += 1;
                     }
@@ -236,17 +281,6 @@ fn inline(text: &str) -> String {
         }
     }
     out
-}
-
-/// `[texte](cible)` à partir de `start` : fin du texte et position après la
-/// parenthèse fermante.
-fn link_parts(chars: &[char], start: usize) -> Option<(usize, usize)> {
-    let label_end = start + 1 + chars[start + 1..].iter().position(|&c| c == ']')?;
-    if chars.get(label_end + 1) != Some(&'(') {
-        return None;
-    }
-    let target_end = label_end + 2 + chars[label_end + 2..].iter().position(|&c| c == ')')?;
-    Some((label_end, target_end + 1))
 }
 
 // --- HTML -----------------------------------------------------------------
@@ -492,6 +526,39 @@ mod tests {
         assert_eq!(
             texts(&md, Format::Markdown),
             vec![(false, "citation".into())]
+        );
+    }
+
+    // Revue du lot 0.8.0, constat 15 : une ligne pathologique (que des `[`,
+    // des `<a`, ou des `[x](`) est lue en temps linéaire.
+    #[test]
+    fn pathological_inline_markup_is_linear() {
+        let n = 1_000_000;
+        for line in [
+            "[".repeat(n),
+            "<a".repeat(n / 2),
+            "[x](".repeat(n / 4),
+            "[x]".repeat(n / 3),
+        ] {
+            let started = std::time::Instant::now();
+            let out = blocks(&line, Format::Markdown);
+            assert_eq!(out.len(), 1);
+            assert!(
+                started.elapsed() < std::time::Duration::from_secs(5),
+                "{:?}",
+                started.elapsed()
+            );
+        }
+    }
+
+    #[test]
+    fn links_and_tags_still_read_after_the_cache() {
+        assert_eq!(
+            texts(
+                "voir [a](u) et [b](v) <b>gras</b> [pas un lien] fin",
+                Format::Markdown
+            ),
+            vec![(false, "voir a et b gras [pas un lien] fin".into())]
         );
     }
 

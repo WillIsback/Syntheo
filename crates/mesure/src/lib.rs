@@ -268,10 +268,11 @@ impl Counters {
     }
 }
 
-/// Différence avec ses extraits, pour le calibrage manuel de l'étape 0
-/// (`syntheo mesure --differences`). Fonction de la CLI seulement, derrière la
-/// fonctionnalité `differences` : l'application n'active pas cette
-/// fonctionnalité et n'a donc jamais accès aux extraits.
+/// Différence avec ses extraits, pour le calibrage manuel de l'étape 0 :
+/// `syntheo mesure --differences` et le mode Calibrage de l'application
+/// (plugin `mesure`, extraits rendus à l'écran seulement, jamais enregistrés).
+/// Derrière la fonctionnalité `differences`, que seuls ces deux consommateurs
+/// activent (test `only_the_cli_and_the_calibration_plugin_enable_differences`).
 #[cfg(feature = "differences")]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Difference {

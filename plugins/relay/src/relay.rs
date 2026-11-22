@@ -67,6 +67,10 @@ const DENIED_COMMANDS: &[&str] = &[
     "plugin:store2|set_secret",
     "plugin:store2|delete_secret",
     "plugin:opener2|open_path",
+    // Mesure de la bêta (issue 671) : réservée à l'écran local, les extraits
+    // du Calibrage ne sortent pas par le relay.
+    "plugin:mesure|measure",
+    "plugin:mesure|measure_differences",
 ];
 
 pub(crate) fn is_denied_command(cmd: &str) -> bool {

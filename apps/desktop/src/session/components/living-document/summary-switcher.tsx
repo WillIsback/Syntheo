@@ -133,8 +133,11 @@ function SummarySwitcherForNote({
 
   return (
     <>
-      {measurement_enabled ? (
+      {/* Démontée à la fermeture et liée à la synthèse : rien de la mesure ne
+          survit d'une ouverture à l'autre (revue du lot 0.8.0, constat 21). */}
+      {measurement_enabled && measureOpen ? (
         <MeasureDialog
+          key={currentNoteId}
           open={measureOpen}
           onOpenChange={setMeasureOpen}
           sessionId={sessionId}

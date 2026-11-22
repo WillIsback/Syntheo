@@ -105,6 +105,8 @@ fn denies_commands_that_run_programs_or_read_secrets() {
         "plugin:store2|set_secret",
         "plugin:store2|delete_secret",
         "plugin:opener2|open_path",
+        "plugin:mesure|measure",
+        "plugin:mesure|measure_differences",
     ] {
         assert!(super::is_denied_command(cmd), "{cmd}");
     }

@@ -1,8 +1,6 @@
 use base64::Engine;
 use serde::{Deserialize, Serialize};
-use syntheo_mesure::{
-    ChangeKind, Dictionary, Format, MAX_DOCX_BYTES, MeasureError, docx_to_html, load_file,
-};
+use syntheo_mesure::{ChangeKind, Dictionary, Format, MAX_DOCX_BYTES, MeasureError, docx_to_html};
 
 /// Version envoyée : texte collé (avec son format) ou fichier déposé.
 #[derive(Debug, Clone, Deserialize, specta::Type)]
@@ -12,10 +10,8 @@ pub enum SentInput {
         text: String,
         format: SentFormat,
     },
-    File {
-        path: String,
-    },
-    /// `.docx` déposé dans la fenêtre (le navigateur ne donne pas son chemin).
+    /// `.docx` choisi ou déposé, lu par l'interface : le plugin ne reçoit
+    /// jamais de chemin (revue du lot 0.8.0, constat 1).
     Docx {
         base64: String,
     },
@@ -116,7 +112,6 @@ fn error(error: MeasureError) -> String {
 fn sent_text(sent: SentInput) -> Result<(String, Format), String> {
     match sent {
         SentInput::Text { text, format } => Ok((text, format.into())),
-        SentInput::File { path } => load_file(std::path::Path::new(&path)).map_err(error),
         SentInput::Docx { base64 } => {
             if base64.len() > MAX_DOCX_BYTES / 3 * 4 + 4 {
                 return Err(error(MeasureError::TooLarge));
@@ -199,16 +194,66 @@ pub(crate) fn run_differences(
         .collect())
 }
 
+/// Réglage booléen effectif, lu dans `app_settings` (un réglage géré y est
+/// écrit et verrouillé au démarrage, il l'emporte donc). Absent : faux.
+fn setting_enabled(value_json: Option<&str>) -> bool {
+    value_json.is_some_and(|v| v.trim() == "true")
+}
+
+/// Contrôle côté Rust des réglages de la bêta (revue du lot 0.8.0, constat
+/// 13) : la mesure exige `measurement_enabled`, les extraits du Calibrage
+/// exigent en plus `calibration_enabled`. Lecture seule.
+pub(crate) fn check_enabled(
+    measurement: Option<&str>,
+    calibration: Option<&str>,
+    need_calibration: bool,
+) -> Result<(), String> {
+    if !setting_enabled(measurement) {
+        return Err("rework measurement is disabled".to_owned());
+    }
+    if need_calibration && !setting_enabled(calibration) {
+        return Err("calibration mode is disabled".to_owned());
+    }
+    Ok(())
+}
+
+async fn ensure_enabled<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+    need_calibration: bool,
+) -> Result<(), String> {
+    use tauri::Manager;
+    let Some(db) = app.try_state::<tauri_plugin_db::ManagedState>() else {
+        return Err("database unavailable".to_owned());
+    };
+    let pool = db.pool().clone();
+    let read = |id: &'static str| {
+        let pool = pool.clone();
+        async move {
+            syntheo_db_app::get_app_setting_json(&pool, id)
+                .await
+                .map_err(|_| "settings unavailable".to_owned())
+        }
+    };
+    let measurement = read("measurement_enabled").await?;
+    let calibration = read("calibration_enabled").await?;
+    check_enabled(
+        measurement.as_deref(),
+        calibration.as_deref(),
+        need_calibration,
+    )
+}
+
 /// Mesure la reprise de `generated` (Markdown de la synthèse) par rapport à la
 /// version envoyée. Ne rend que des nombres.
 #[tauri::command]
 #[specta::specta]
 pub(crate) async fn measure<R: tauri::Runtime>(
-    _app: tauri::AppHandle<R>,
+    app: tauri::AppHandle<R>,
     generated: String,
     sent: SentInput,
     dictionary: Vec<String>,
 ) -> Result<MeasureResult, String> {
+    ensure_enabled(&app, false).await?;
     tauri::async_runtime::spawn_blocking(move || run_measure(&generated, sent, &dictionary))
         .await
         .map_err(|_| "measure task failed".to_owned())?
@@ -218,11 +263,12 @@ pub(crate) async fn measure<R: tauri::Runtime>(
 #[tauri::command]
 #[specta::specta]
 pub(crate) async fn measure_differences<R: tauri::Runtime>(
-    _app: tauri::AppHandle<R>,
+    app: tauri::AppHandle<R>,
     generated: String,
     sent: SentInput,
     dictionary: Vec<String>,
 ) -> Result<Vec<DifferenceRow>, String> {
+    ensure_enabled(&app, true).await?;
     tauri::async_runtime::spawn_blocking(move || run_differences(&generated, sent, &dictionary))
         .await
         .map_err(|_| "measure task failed".to_owned())?
@@ -270,35 +316,54 @@ mod tests {
         assert_eq!(result.content_per_mille, report.content_per_mille);
     }
 
+    // Revue du lot 0.8.0, constat 7 : la synthèse collée telle quelle
+    // (Markdown, sans HTML) donne une reprise nulle.
     #[test]
-    fn dropped_files_use_the_same_reader_as_the_cli() {
-        let dir = std::env::temp_dir().join(format!("mesure-plugin-{}", std::process::id()));
-        std::fs::create_dir_all(&dir).unwrap();
-        let txt = dir.join("publiee.txt");
-        std::fs::write(&txt, SENT).unwrap();
-        let from_file = run_measure(
+    fn pasting_the_summary_itself_gives_no_rework() {
+        let result = run_measure(
             GENERATED,
-            SentInput::File {
-                path: txt.to_string_lossy().into_owned(),
+            SentInput::Text {
+                text: GENERATED.to_owned(),
+                format: SentFormat::Markdown,
             },
             &[],
         )
         .unwrap();
-        let pdf = dir.join("publiee.pdf");
-        std::fs::write(&pdf, b"%PDF").unwrap();
+        assert!(result.aligned);
+        assert_eq!(result.total.generated, 28);
+        assert_eq!(
+            (
+                result.total.added,
+                result.total.deleted,
+                result.total.replaced_content,
+                result.total.replaced_lexical
+            ),
+            (0, 0, 0, 0)
+        );
+    }
+
+    #[test]
+    fn a_dropped_docx_is_read_by_the_crate_reader() {
+        use base64::Engine;
         let refused = run_measure(
             GENERATED,
-            SentInput::File {
-                path: pdf.to_string_lossy().into_owned(),
+            SentInput::Docx {
+                base64: base64::engine::general_purpose::STANDARD.encode(b"not a zip"),
             },
             &[],
         );
-        std::fs::remove_dir_all(&dir).unwrap();
-        assert_eq!(
-            from_file,
-            run_measure(GENERATED, text(SentFormat::Text), &[]).unwrap()
-        );
         assert!(refused.is_err());
+    }
+
+    // Revue du lot 0.8.0, constat 13 : réglages vérifiés côté Rust.
+    #[test]
+    fn commands_require_the_beta_settings() {
+        assert!(check_enabled(None, None, false).is_err());
+        assert!(check_enabled(Some("false"), Some("true"), false).is_err());
+        assert!(check_enabled(Some("true"), None, false).is_ok());
+        assert!(check_enabled(Some("true"), None, true).is_err());
+        assert!(check_enabled(Some("true"), Some("false"), true).is_err());
+        assert!(check_enabled(Some("true"), Some("true"), true).is_ok());
     }
 
     // Le résultat de `measure` ne contient aucune chaîne : nombres, booléens et

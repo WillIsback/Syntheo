@@ -5,8 +5,11 @@
 //! crate `mesure` (le même que `syntheo mesure`), et rendent le résultat.
 //! - `measure` : des nombres seulement, que l'interface peut enregistrer.
 //! - `measure_differences` : les différences avec leurs extraits, pour le mode
-//!   Calibrage. Rendues à l'écran seulement ; ce plugin n'a ni base, ni
-//!   journal, ni fichier en écriture (test `plugin_persists_nothing`).
+//!   Calibrage. Rendues à l'écran seulement ; ce plugin ne lit la base que
+//!   pour ses réglages et n'écrit nulle part (test `plugin_persists_nothing`).
+//!
+//! Aucune commande ne reçoit de chemin de fichier : l'interface lit le
+//! fichier choisi ou déposé. Les deux commandes sont refusées par le relay.
 
 #![forbid(unsafe_code)]
 
@@ -53,10 +56,10 @@ mod test {
         std::fs::write(OUTPUT_FILE, format!("// @ts-nocheck\n{content}")).unwrap();
     }
 
-    // Garde-fou du mode Calibrage : ce plugin ne dépend d'aucune base, d'aucun
-    // journal ni d'aucun stockage, et son code n'écrit nulle part. Les
-    // extraits qu'il rend ne peuvent donc être persistés que par l'interface,
-    // qui ne le fait pas (tests de l'interface).
+    // Garde-fou du mode Calibrage : ce plugin ne lit la base que pour ses
+    // réglages (lecture seule), n'a ni journal ni stockage, et son code
+    // n'écrit nulle part. Les extraits qu'il rend ne peuvent donc être persistés
+    // que par l'interface, qui ne le fait pas (tests de l'interface).
     #[test]
     fn plugin_persists_nothing() {
         let manifest = include_str!("../Cargo.toml");
@@ -67,12 +70,16 @@ mod test {
             .split("\n[")
             .next()
             .unwrap();
+        let allowed_db = ["syntheo-db-app", "tauri-plugin-db"];
         for forbidden in ["db", "sqlx", "tracing", "log", "store", "fs-", "settings"] {
             for line in dependencies
                 .lines()
                 .filter(|l| !l.trim_start().starts_with('#'))
             {
                 let name = line.split('=').next().unwrap_or("").trim();
+                if allowed_db.contains(&name) {
+                    continue;
+                }
                 assert!(!name.contains(forbidden), "dépendance interdite : {name}");
             }
         }
@@ -81,6 +88,11 @@ mod test {
         for source in [include_str!("lib.rs"), include_str!("commands.rs")] {
             let code = source.split(marker.as_str()).next().unwrap();
             let forbidden = [
+                "INSERT",
+                "UPDATE ",
+                "DELETE",
+                "execute(",
+                "std::fs::",
                 "std::fs::write",
                 "File::create",
                 "OpenOptions",

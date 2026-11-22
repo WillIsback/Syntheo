@@ -16,6 +16,7 @@ unicode-normalization = { workspace = true }
 serde_json = { workspace = true }
 
 [features]
-# Extraits des différences, pour le calibrage manuel par la CLI
-# (`syntheo mesure --differences`). L'application ne l'active jamais.
+# Extraits des différences, pour le calibrage manuel : CLI
+# (`syntheo mesure --differences`) et plugin `mesure` (mode Calibrage, à
+# l'écran seulement). Aucun autre crate ne l'active (test de garde-fou).
 differences = []

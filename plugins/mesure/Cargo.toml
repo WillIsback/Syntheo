@@ -17,8 +17,10 @@ specta-typescript = { workspace = true }
 
 [dependencies]
 # `differences` : extraits pour le mode Calibrage, gardés en mémoire et rendus
-# à l'écran seulement ; ce plugin n'a aucun accès à la base ni au journal.
+# à l'écran seulement. Base : lecture seule des réglages de la bêta.
+syntheo-db-app = { workspace = true }
 syntheo-mesure = { workspace = true, features = ["differences"] }
+tauri-plugin-db = { workspace = true }
 
 base64 = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
