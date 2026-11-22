@@ -27,13 +27,14 @@ quantized them to int8; nothing else was trained or changed.
 
 | File                                                  | Source                                                                                                                                                       | Quantization                                    |
 | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------- |
-| `nemotron/encoder.onnx`, `nemotron/encoder.onnx.data` | [nvidia/nemotron-3.5-asr-streaming-0.6b](https://huggingface.co/nvidia/nemotron-3.5-asr-streaming-0.6b), revision `ea30d66debe3740a08b573244286791d423d6b3e` | int8, per channel (MatMul, Gemm), 7-bit weights |
-| `nemotron/decoder_joint.onnx`                         | same                                                                                                                                                         | int8, per channel (MatMul, Gemm), 7-bit weights |
+| `nemotron/encoder.onnx`, `nemotron/encoder.onnx.data` | [nvidia/nemotron-3.5-asr-streaming-0.6b](https://huggingface.co/nvidia/nemotron-3.5-asr-streaming-0.6b), revision `ea30d66debe3740a08b573244286791d423d6b3e` | int8, per channel (MatMul, Gemm), reduced range |
+| `nemotron/decoder_joint.onnx`                         | same                                                                                                                                                         | int8, per channel (MatMul, Gemm), reduced range |
 | `nemotron/tokenizer.model`, `nemotron/config.json`    | same                                                                                                                                                         | unchanged                                       |
-| `diar/nemotron3_diar_v3.onnx`                         | [nvidia/Nemotron-3-Diarization](https://huggingface.co/nvidia/Nemotron-3-Diarization), revision `52a432672732425e4c19765b9fec9b5810e6f4ba`                   | int8, per tensor (MatMul, Gemm), 7-bit weights  |
+| `diar/nemotron3_diar_v3.onnx`                         | [nvidia/Nemotron-3-Diarization](https://huggingface.co/nvidia/Nemotron-3-Diarization), revision `52a432672732425e4c19765b9fec9b5810e6f4ba`                   | int8, per tensor (MatMul, Gemm), reduced range  |
 
-Weights are quantized on 7 bits (`reduce_range`) so that the models also work on
-CPUs without VNNI; see [CPU compatibility](#cpu-compatibility).
+Weights are quantized to reduced-range int8 (`reduce_range`: values in
+[-64, 64]) so that the models also work on CPUs without VNNI; see
+[CPU compatibility](#cpu-compatibility).
 
 The ONNX exports come from
 [altunenes/parakeet-rs](https://huggingface.co/altunenes/parakeet-rs), revision
@@ -108,15 +109,24 @@ spontaneous, noisy or far-field speech is not measured.
 
 ONNX Runtime multiplies int8 weights by uint8 activations. On x86 CPUs without
 VNNI (Intel up to most 10th-generation Core, AMD up to Zen 3), its AVX2 kernel
-adds two such products in a 16-bit integer, which overflows with 8-bit weights:
-an earlier quantization of these models produced no words at all on those CPUs.
-With 7-bit weights the worst case (255 × 63 × 2 = 32,130) fits in 16 bits.
+adds two such products in a 16-bit integer, which overflows with full-range
+int8 weights: an earlier quantization of these models produced no words at all
+on those CPUs. With reduced-range int8 weights ([-64, 64], 129 levels) the
+worst case (255 × 64 × 2 = 32,640) fits in 16 bits (at most 32,767).
 
-Under emulation of a CPU without VNNI (QEMU `Skylake-Client` and `Haswell`,
-AVX2), on 16 utterances of the sample above (530 words), these weights give a
-word error rate of 12.08 % against 11.32 % in FP32 (paired difference +0.75
-point, −0.19 to +1.87), and every utterance is transcribed. Each release is
-checked the same way before publication (`apps/speech/models/cpu-check`).
+In a one-off measurement under emulation of a CPU without VNNI (QEMU
+`Skylake-Client` and `Haswell`, AVX2), on 16 utterances of the sample above
+(530 words), these weights gave a word error rate of 12.08 % against 11.32 % in
+FP32 (paired difference +0.75 point, −0.19 to +1.87), and every utterance was
+transcribed.
+
+Each release is checked before publication under QEMU `Skylake-Client` (AVX2
+without VNNI), on two 30-second clips (`apps/speech/models/cpu-check`). For
+each clip, the output must hold at least 80 % of the words of the FP32
+reference, have a word error rate of at most 5 % against the FP32 transcript,
+give every word a speaker, and find the same number of distinct speakers as the
+FP32 reference. This check guards against a failure on CPUs without VNNI; it
+does not measure accuracy.
 
 Verified natively on AVX-512 with VNNI and under emulation on AVX2 without
 VNNI; AVX-512 without VNNI (for example first-generation Xeon Scalable) is not
