@@ -299,6 +299,35 @@ Rotation (clé compromise ou remplacée) :
 4. Une clé compromise ne peut pas être révoquée à distance : les postes
    restés sur une version antérieure à l'étape 2 doivent être réinstallés.
 
+## Signature Windows (Azure Artifact Signing)
+
+Les installeurs Windows et `syntheo.exe` sont signés Authenticode par Azure
+Artifact Signing (compte `willisback-signing`, profil `syntheo-public`), dans le
+job `sign` de `build-windows.yml`, séparé de la compilation :
+
+- il ne tourne que pour une release appelée par `release.yml` depuis `main`,
+  jamais pour un build de test ni pour un lancement à blanc (`dry_run`) ;
+- il porte l'environnement GitHub `windows-signing` (branches de déploiement
+  limitées à `main`) et la seule permission `id-token: write` du workflow ;
+- il n'installe aucune dépendance du projet : la CLI Tauri à version et
+  empreintes figées (`.github/signing`) et le paquet NuGet
+  `Microsoft.ArtifactSigning.Client` à empreinte figée ;
+- il se connecte à Azure par identité fédérée (OIDC, `azure/login`), **sans
+  secret client** : l'environnement ne contient que `AZURE_CLIENT_ID` et
+  `AZURE_TENANT_ID`, des identifiants non secrets que `release.yml` transmet
+  par leur nom (un workflow réutilisable l'exige ; la valeur de l'environnement
+  l'emporte) ;
+- il vérifie que chaque fichier signé porte le signataire attendu
+  (`CN=William Derue`, émetteur « Microsoft ID Verified CS ») et un
+  horodatage, puis publie la sortie `signed` que `release.yml` exige avant de
+  publier.
+
+L'identité fédérée d'Entra ID n'accepte que le sujet
+`repo:WillIsback@116890814/Syntheo@1432142215:environment:windows-signing` :
+aucun autre dépôt, environnement ou branche ne peut obtenir de jeton. Sans
+secret, il n'y a pas de rotation à prévoir ; changer d'application Entra ID
+revient à remplacer les deux identifiants de l'environnement.
+
 ## Exceptions de sécurité
 
 Une alerte acceptée temporairement est inscrite dans
