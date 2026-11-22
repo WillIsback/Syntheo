@@ -154,8 +154,6 @@ pub fn main() {
 
     builder = builder.plugin(tauri_plugin_contacts::init());
 
-    builder = builder.plugin(tauri_plugin_hooks::init());
-
     builder = builder
         .plugin(tauri_plugin_icon::init())
         .plugin(tauri_plugin_shell::init())

@@ -27,7 +27,6 @@ In the Cargo workspace, each crate is declared under a `syntheo-*` alias (for ex
 | `crates/template-app-legacy` | Old MiniJinja prompt engine (inherited) | plugin `template` | none |
 | `crates/askama-utils` | Filters and validation for Askama templates | `template-app` | [Languages](/en/languages) |
 | `crates/summary` | Length policy and formatting of the generated summary | plugin `template` | [Customize summaries](/en/customize-summaries), [Notes](/en/notes) |
-| `crates/hooks` | Shell commands run at the start and end of listening | plugin `hooks` | none |
 | `crates/notification` | Displaying native notifications (facade) | plugin `notification` | [Automatic capture](/en/automatic-capture) |
 | `crates/notification-interface` | Common notification types | `notification`, backends, plugin `detect` | [Automatic capture](/en/automatic-capture) |
 | `crates/notification-linux` | GTK backend (Linux) | `notification` | [Automatic capture](/en/automatic-capture) |
@@ -175,17 +174,6 @@ Don't describe product behavior from the raw SQL schema. Start from the operatio
 - **Usage**: the `template` plugin initializes its environment at startup and uses it for the `render_custom` command, which no code in `apps/desktop/src` calls outside tests.
 - **Internal dependencies**: none.
 - **Affected doc pages**: none.
-
-## Local automation
-
-### hooks
-
-- **Path**: `crates/hooks`
-- **Role**: runs the shell commands configured for an event and returns their result.
-- **API**: `HooksConfig`, `HookDefinition`, `HookEvent` (`beforeListeningStarted`, `afterListeningStopped`), `run_hooks_for_event`, `HookResult`.
-- **Usage**: the `hooks` plugin reads the configuration under the `hooks` key of the settings, and the interface triggers the events from `apps/desktop/src/store/zustand/listener/general-live.ts`.
-- **Internal dependencies**: none.
-- **Affected doc pages**: none. This feature is not documented for users; it is separate from [webhooks](/en/reference/webhooks).
 
 ## Notifications
 

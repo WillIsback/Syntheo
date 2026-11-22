@@ -27,7 +27,6 @@ Dans le workspace Cargo, chaque crate est déclarée sous un alias `syntheo-*` (
 | `crates/template-app-legacy` | Ancien moteur de prompts MiniJinja (hérité) | plugin `template` | aucune |
 | `crates/askama-utils` | Filtres et validation pour les gabarits Askama | `template-app` | [Langues](/fr/languages) |
 | `crates/summary` | Politique de longueur et mise en forme du compte rendu généré | plugin `template` | [Personnaliser les comptes rendus](/fr/customize-summaries), [Notes](/fr/notes) |
-| `crates/hooks` | Commandes shell lancées au début et à la fin de l'écoute | plugin `hooks` | aucune |
 | `crates/notification` | Affichage des notifications natives (façade) | plugin `notification` | [Capture automatique](/fr/automatic-capture) |
 | `crates/notification-interface` | Types communs des notifications | `notification`, backends, plugin `detect` | [Capture automatique](/fr/automatic-capture) |
 | `crates/notification-linux` | Backend GTK (Linux) | `notification` | [Capture automatique](/fr/automatic-capture) |
@@ -175,17 +174,6 @@ Ne décrivez pas le comportement du produit à partir du schéma SQL brut. Parte
 - **Usage** : le plugin `template` initialise son environnement au démarrage et s'en sert pour la commande `render_custom`, qu'aucun code de `apps/desktop/src` n'appelle hors tests.
 - **Dépendances internes** : aucune.
 - **Pages de doc concernées** : aucune.
-
-## Automatisation locale
-
-### hooks
-
-- **Chemin** : `crates/hooks`
-- **Rôle** : exécute les commandes shell configurées pour un événement et renvoie leur résultat.
-- **API** : `HooksConfig`, `HookDefinition`, `HookEvent` (`beforeListeningStarted`, `afterListeningStopped`), `run_hooks_for_event`, `HookResult`.
-- **Usage** : le plugin `hooks` lit la configuration sous la clé `hooks` des paramètres et l'interface déclenche les événements depuis `apps/desktop/src/store/zustand/listener/general-live.ts`.
-- **Dépendances internes** : aucune.
-- **Pages de doc concernées** : aucune. Cette fonction n'est pas documentée côté utilisateur ; elle est distincte des [webhooks](/fr/reference/webhooks).
 
 ## Notifications
 

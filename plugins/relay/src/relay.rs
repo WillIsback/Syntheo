@@ -58,6 +58,9 @@ const SLOW_CLIENT_CLOSE_CODE: u16 = 1013;
 /// Commandes que le relay ne transmet jamais (issue 645) : lancer un
 /// programme, lire ou modifier les secrets du trousseau, ouvrir un fichier avec
 /// un programme au choix. Le reste de l'interface reste pilotable.
+/// Les hooks de settings.json, qui lançaient des commandes au début et à la fin
+/// de l'écoute, sont retirés de l'application (issue 675) : leur commande
+/// n'existe plus, il n'y a rien à refuser de ce côté.
 const DENIED_COMMANDS: &[&str] = &[
     "plugin:local-api|run_automation_command",
     "plugin:store2|get_secret",

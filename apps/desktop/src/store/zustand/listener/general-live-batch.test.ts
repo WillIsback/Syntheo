@@ -41,12 +41,6 @@ vi.mock("@syntheo/plugin-detect", () => ({
   },
 }));
 
-vi.mock("@syntheo/plugin-hooks", () => ({
-  commands: {
-    runEventHooks: vi.fn(async () => ({ status: "ok", data: null })),
-  },
-}));
-
 vi.mock("@syntheo/plugin-icon", () => ({
   commands: {
     setRecordingIndicator: vi.fn(async () => ({ status: "ok", data: null })),

@@ -36,7 +36,6 @@ tauri-plugin-dictation = { workspace = true }
 tauri-plugin-dock = { workspace = true }
 tauri-plugin-export = { workspace = true }
 tauri-plugin-fs-sync = { workspace = true }
-tauri-plugin-hooks = { workspace = true }
 tauri-plugin-http = { workspace = true }
 tauri-plugin-icon = { workspace = true }
 tauri-plugin-local-api = { workspace = true }

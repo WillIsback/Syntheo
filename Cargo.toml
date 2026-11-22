@@ -70,7 +70,6 @@ syntheo-frontmatter = { path = "crates/frontmatter", package = "frontmatter" }
 syntheo-fs-format = { path = "crates/fs-format", package = "fs-format" }
 syntheo-fs-sync-core = { path = "crates/fs-sync-core", package = "fs-sync-core" }
 syntheo-gbnf = { path = "crates/gbnf", package = "gbnf" }
-syntheo-hooks = { path = "crates/hooks", package = "hooks" }
 syntheo-host = { path = "crates/host", package = "host" }
 syntheo-intercept = { path = "crates/intercept", package = "intercept" }
 syntheo-language = { path = "crates/language", package = "language" }
@@ -131,7 +130,6 @@ tauri-plugin-dictation = { path = "plugins/dictation" }
 tauri-plugin-dock = { path = "plugins/dock" }
 tauri-plugin-export = { path = "plugins/export" }
 tauri-plugin-fs-sync = { path = "plugins/fs-sync" }
-tauri-plugin-hooks = { path = "plugins/hooks" }
 tauri-plugin-icon = { path = "plugins/icon" }
 tauri-plugin-local-api = { path = "plugins/local-api" }
 tauri-plugin-local-auth = { path = "plugins/local-auth" }

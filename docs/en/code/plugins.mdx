@@ -43,7 +43,6 @@ The "Interface" column shows whether `apps/desktop/src` imports the `@syntheo/pl
 | `template` | Prompt rendering and saving summaries | Yes | [/en/customize-summaries](/en/customize-summaries), [/en/languages](/en/languages), [/en/chat](/en/chat) |
 | `export` | Export and PDF printing | Yes | [/en/notes](/en/notes) |
 | `local-api` | Outgoing webhooks, Markdown export | Yes | [/en/reference/webhooks](/en/reference/webhooks), [/en/automations](/en/automations) |
-| `hooks` | Local commands triggered by events | Yes | none |
 | `settings` | Settings file and base folders | Yes | [/en/data-and-privacy](/en/data-and-privacy) |
 | `store2` | Key-value preferences and secrets in the keychain | Yes | [/en/security](/en/security), [/en/ai-setup](/en/ai-setup), [/en/data-and-privacy](/en/data-and-privacy), [/en/uninstall](/en/uninstall) |
 | `windows` | Windows, tabs, floating bar, live captions | Yes | [/en/automatic-capture](/en/automatic-capture), [/en/meetings](/en/meetings) |
@@ -140,7 +139,6 @@ The "Interface" column shows whether `apps/desktop/src` imports the `@syntheo/pl
 | `tantivy` | `search`, `reindex`, `add_document`, `update_document`, `update_documents`, `remove_document` | `crates/language`; plugin `settings` | [/en/notes](/en/notes) (search palette), [/en/architecture](/en/architecture) |
 | `export` | `export`, `export_text`, `choose_export_path`, `print_pdf`, `cleanup_print_files` | `crates/export-core`; plugin `db` | [/en/notes](/en/notes) |
 | `local-api` | Webhooks (`list_webhooks`, `create_webhook`, `delete_webhook`, `set_webhook_active`, `test_webhook`, `dispatch_event`), `export_meeting_markdown` (used by `apps/desktop/src/automations/step-runners.ts`), `prepare_drive_markdown`, `get_cloud_snapshot`, `list_cloud_snapshot_ids` | `crates/agent-access`, `crates/db-app`; plugin `db` | [/en/reference/webhooks](/en/reference/webhooks), [/en/automations](/en/automations) |
-| `hooks` | `run_event_hooks`, called during listening (`apps/desktop/src/store/zustand/listener/general-live.ts`). The configuration is read under the `hooks` key of the settings. | `crates/hooks`; plugin `settings` | none |
 | `settings` | `settings_path`, `global_base`, `vault_base`, `load`, `save` | `crates/storage` | [/en/data-and-privacy](/en/data-and-privacy) |
 | `store2` | Typed preferences (`get_str`, `set_str`, `get_bool`, `set_number`…, `save`) and secrets (`get_secret`, `set_secret`, `delete_secret`, `repair_keychain_access`) stored in the keychain through `keyring` | `crates/storage`; plugin `settings` | [/en/security](/en/security), [/en/ai-setup](/en/ai-setup), [/en/data-and-privacy](/en/data-and-privacy), [/en/uninstall](/en/uninstall) |
 
