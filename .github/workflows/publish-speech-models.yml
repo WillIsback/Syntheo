@@ -100,11 +100,32 @@ jobs:
           SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
+          # Release « latest », vide s'il n'y en a aucune (404) ; toute autre
+          # erreur arrête le job.
+          latest_tag() {
+            local out err
+            err=$(mktemp)
+            if out=$(gh api "repos/$REPO/releases/latest" --jq .tag_name 2> "$err"); then
+              printf '%s' "$out"
+            elif grep -q 'HTTP 404' "$err"; then
+              printf ''
+            else
+              cat "$err" >&2; exit 1
+            fi
+          }
           releases=$(gh api --paginate "repos/$REPO/releases" --jq ".[] | select(.tag_name == \"$VERSION\") | [.draft, .prerelease] | @tsv")
           count=$(printf '%s\n' "$releases" | grep -c . || true)
           [ "$count" = "1" ] || { echo "::error::$count release(s) pour $VERSION, une seule attendue"; exit 1; }
-          # Tag : « commit <sha> » pour un tag léger, vide s'il n'existe pas.
-          tag=$(gh api "repos/$REPO/git/ref/tags/$VERSION" --jq '"\(.object.type) \(.object.sha)"' 2> /dev/null || true)
+          # Tag : « commit <sha> » pour un tag léger (« tag <sha> » s'il est
+          # annoté), vide s'il n'existe pas. matching-refs répond 200 avec une
+          # liste vide quand le tag manque (git/ref rendrait un 404, dont gh
+          # écrit le corps sur stdout sans appliquer --jq) ; toute autre
+          # erreur arrête le job (set -e).
+          tag=$(gh api --paginate "repos/$REPO/git/matching-refs/tags/$VERSION" \
+            --jq ".[] | select(.ref == \"refs/tags/$VERSION\") | \"\(.object.type) \(.object.sha)\"")
+          if [ -n "$tag" ] && ! [[ "$tag" =~ ^(commit|tag)\ [0-9a-f]{40}$ ]]; then
+            echo "::error::référence du tag $VERSION inattendue"; exit 1
+          fi
           if [ "$RESUME" = "true" ]; then
             [ "$releases" = "$(printf 'false\ttrue')" ] || { echo "::error::reprise : $VERSION doit être une prerelease publiée"; exit 1; }
             [ "${tag%% *}" = "commit" ] || { echo "::error::reprise : tag léger $VERSION absent"; exit 1; }
@@ -113,7 +134,7 @@ jobs:
               ahead | identical) ;;
               *) echo "::error::reprise : le tag $VERSION ne pointe pas sur un commit de main ($status)"; exit 1 ;;
             esac
-            latest=$(gh api "repos/$REPO/releases/latest" --jq .tag_name 2> /dev/null || true)
+            latest=$(latest_tag)
             [ "$latest" != "$VERSION" ] || { echo "::error::$VERSION est « latest »"; exit 1; }
           else
             [ "${releases%%$'\t'*}" = "true" ] || { echo "::error::la release $VERSION n'est plus un brouillon (reprise : resume=true)"; exit 1; }
@@ -181,6 +202,18 @@ jobs:
           TAG_EXISTS: ${{ steps.state.outputs.tag_exists }}
         run: |
           set -euo pipefail
+          # Release « latest », vide s'il n'y en a aucune (404).
+          latest_tag() {
+            local out err
+            err=$(mktemp)
+            if out=$(gh api "repos/$REPO/releases/latest" --jq .tag_name 2> "$err"); then
+              printf '%s' "$out"
+            elif grep -q 'HTTP 404' "$err"; then
+              printf ''
+            else
+              cat "$err" >&2; exit 1
+            fi
+          }
           id=$(gh api --paginate "repos/$REPO/releases" --jq ".[] | select(.tag_name == \"$VERSION\" and .draft == true) | .id")
           [ -n "$id" ] || { echo "::error::brouillon $VERSION introuvable"; exit 1; }
           if [ "$TAG_EXISTS" != "true" ]; then
@@ -190,7 +223,7 @@ jobs:
             -F draft=false -F prerelease=true -f make_latest=false > /dev/null
           state=$(gh api "repos/$REPO/releases/$id" --jq '[.draft, .prerelease] | @tsv')
           [ "$state" = "$(printf 'false\ttrue')" ] || { echo "::error::état inattendu : $state"; exit 1; }
-          latest=$(gh api "repos/$REPO/releases/latest" --jq .tag_name)
+          latest=$(latest_tag)
           [ "$latest" != "$VERSION" ] || { echo "::error::$VERSION est devenue latest"; exit 1; }
 
       - name: uv

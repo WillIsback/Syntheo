@@ -72,6 +72,9 @@ function Get-PeLayout([byte[]]$b) {
   if ($size -eq 0 -and $offset -eq 0) { $end = [long]$b.Length }
   elseif ($offset -ge $imageEnd -and $offset -eq $aligned -and $offset + $size -eq $b.Length) { $end = $offset }
   else { return $null }
+  # Le contenu haché doit couvrir les champs ignorés (image forgée dont le
+  # bloc de certificats commencerait dans l'en-tête), comme la crate.
+  if ($end -lt $certificates + 8) { return $null }
   return @{ Checksum = $checksum; Certificates = $certificates; End = $end }
 }
 

@@ -220,15 +220,21 @@ mod tests {
     // Revue, R1 : bloc de certificats déclaré dans l'en-tête d'une image
     // courte (fin des en-têtes et des sections avant l'entrée de la table) :
     // pas de panic, fichier haché en entier.
-    #[test]
-    fn a_certificate_block_inside_the_headers_does_not_panic() {
+    /// Image forgée : en-têtes et section déclarés minuscules (fin réelle à
+    /// 8), bloc de certificats déclaré dans l'en-tête jusqu'à la fin.
+    fn certificates_in_headers() -> Vec<u8> {
         let mut forged = pe();
-        // En-têtes et section déclarés minuscules : fin réelle à 8.
         forged[OPTIONAL + 60..OPTIONAL + 64].copy_from_slice(&8u32.to_le_bytes());
         forged[SECTIONS + 16..SECTIONS + 20].copy_from_slice(&0u32.to_le_bytes());
         let size = forged.len() as u32 - 8;
         forged[CERTS..CERTS + 4].copy_from_slice(&8u32.to_le_bytes());
         forged[CERTS + 4..CERTS + 8].copy_from_slice(&size.to_le_bytes());
+        forged
+    }
+
+    #[test]
+    fn a_certificate_block_inside_the_headers_does_not_panic() {
+        let forged = certificates_in_headers();
         assert_eq!(
             image_hash(&forged),
             Sha256::digest(&forged)
@@ -304,6 +310,7 @@ mod tests {
                 ),
                 ("appended.bin", appended),
                 ("plain.bin", b"pas une image PE".to_vec()),
+                ("certificates-in-headers.bin", certificates_in_headers()),
             ];
             let mut expected = String::new();
             for (name, bytes) in files {
@@ -323,7 +330,7 @@ mod tests {
             );
             lines += 1;
         }
-        assert_eq!(lines, 4);
+        assert_eq!(lines, 5);
         // Signée ou non, même empreinte ; octets ajoutés, empreinte différente.
         let hash_of = |name: &str| {
             expected
