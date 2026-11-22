@@ -65,7 +65,8 @@ a deletion, erasure is retried at the next launch.
 - **TLS recommended** as soon as the endpoint is not on the machine or a trusted
   network (for example through a reverse proxy or a VPN). The app accepts
   plain HTTP only toward a private host (local machine, local network,
-  Tailscale range, `.local` names) and requires HTTPS elsewhere.
+  Tailscale range, `.local` names), after confirmation outside the machine,
+  and requires HTTPS elsewhere.
 - An endpoint run by a third party becomes the **user's processor**
   (Art. 28 GDPR): contract and data location to be checked.
 - **Other flows, apart from inference**:
@@ -78,8 +79,10 @@ a deletion, erasure is retried at the next launch.
     `automatic_updates`): **unauthenticated** read of `latest.json` on GitHub,
     then download of the installer if the user updates. No personal data
     sent; GitHub sees the computer's IP address;
-  - icons on some screens loaded from `api.iconify.design` (no personal
-    data sent, but a network request);
+  - remote image in a summary, a proposal or a chat answer: nothing is
+    loaded automatically; a click on "Load image" sends a request to the
+    site hosting it, which sees the computer's IP address and the full image
+    address;
 - **No account, no sync, no error reports, nothing installed without the
   user's action** (the built-in update, AppImage and Windows installer,
   installs on request with a signed installer; .deb and MSI: link to GitHub

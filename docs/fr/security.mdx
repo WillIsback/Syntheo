@@ -10,9 +10,69 @@ Syntheo Desktop est un client local, sans serveur éditeur. La surface à évalu
 - **Aucun compte, aucune authentification** auprès de l'éditeur. Aucun service Syntheo ne reçoit vos données.
 - **Aucune télémétrie, aucun rapport d'erreur** : le code d'analyse et de rapport d'erreur est retiré, il n'y a rien à désactiver.
 - **Aucun audio sur disque**, sur aucun chemin (capture, dictée, import).
-- **Réseau limité** aux serveurs d'inférence configurés, plus trois flux mineurs sans contenu de réunion (recherche de mises à jour et notes de version sur GitHub, icônes d'interface), listés dans [la fiche RGPD](/fr/conformite/rgpd).
+- **Réseau limité** aux serveurs d'inférence et aux webhooks que vous configurez, plus deux flux mineurs sans contenu de réunion (recherche de mises à jour et notes de version sur GitHub) et le chargement d'une image distante quand vous cliquez sur « Charger l'image ». Ces flux sont listés dans [la fiche RGPD](/fr/conformite/rgpd).
 - **Aucune bascule** vers un service tiers quand un serveur d'inférence ne répond pas.
 - **Code ouvert** : tout est vérifiable dans le [dépôt GitHub](https://github.com/WillIsback/Syntheo).
+
+## Audit de sécurité
+
+Syntheo a fait l'objet d'un audit de sécurité interne le 21 novembre 2026, puis d'une contre-visite le 22 novembre 2026 sur la version 0.7.5. Cette section en donne le bilan. Le rapport détaillé reste confidentiel, car il décrit des points encore ouverts.
+
+### Méthode
+
+- **Audit interne**, en boîte blanche : analyse statique du code de l'application, de la CLI et de la chaîne de publication. Elle a été menée avec des agents d'IA, sous la responsabilité du mainteneur, selon six axes : l'interface et ses échanges avec le cœur de l'application, l'injection de consignes par le contenu d'une réunion, le réseau et les serveurs d'inférence, les fichiers piégés, un attaquant présent sur le poste, la chaîne d'approvisionnement et les mises à jour.
+- **Pas de test d'intrusion** : rien n'a été exécuté pendant l'audit. La sensibilité réelle des modèles de langage aux consignes injectées n'a pas été mesurée.
+- **Contre-visite** des correctifs de la 0.7.5, selon la même méthode : chaque constat a été relu dans le code de la version publiée, en cherchant à réfuter sa correction.
+- Gravités cotées selon CVSS 3.1.
+
+### Bilan
+
+L'audit a relevé 34 constats : aucun critique, un seul de gravité élevée (sur la chaîne de publication des mises à jour), 8 moyens, 16 faibles et 9 pour information. Il n'a trouvé aucune exécution de code à distance ni aucune injection de script (XSS). La version publiée n'ouvre aucun port réseau sur le poste.
+
+Depuis la 0.7.5, il ne reste aucun constat de gravité élevée. Le constat élevé est corrigé, avec un risque résiduel de gravité moyenne.
+
+| Version | État | Constats |
+| --- | --- | --- |
+| 0.7.5 | Corrigés et vérifiés par la contre-visite | 12 |
+| 0.7.5 | Corrigé, avec un risque résiduel accepté et documenté | 1 |
+| 0.7.5 | Partiellement corrigés ; le reste est suivi dans une issue publique | 5 |
+| 0.8.0 (prévue) | Faibles ou pour information, planifiés | 5 |
+| 0.8.1 (prévue) | Faibles ou pour information, planifiés | 11 |
+
+Gravités actuelles : aucune critique, aucune élevée, 3 moyennes, 19 faibles, 12 pour information.
+
+### Ce que la 0.7.5 a changé
+
+- **Images distantes** : une image hébergée sur un autre site, dans un compte rendu, une proposition ou une réponse du chat, n'est plus chargée d'office. Elle ne l'est que si vous cliquez sur « Charger l'image ». Une politique de sécurité du contenu (CSP) stricte encadre aussi l'interface.
+- **Modifications du chat validées** : le chat ne modifie plus une réunion, ne déplace plus son contenu et ne range plus de réunions sans votre clic sur « Appliquer ». Les termes qu'il propose pour le dictionnaire sont bornés et passent par la même carte.
+- **HTTP en clair** : une adresse de serveur en HTTP vers une autre machine que la vôtre n'est enregistrée qu'après confirmation, puis reste signalée sur la carte du serveur.
+- **Journaux et données locales** : le journal masque davantage de clés et de jetons ; les secrets de signature des webhooks sont dans le trousseau du système ; sous Linux, le dossier de données, la base et les journaux sont réservés à votre compte.
+- **Chaîne de publication** :
+  - la clé qui signe les mises à jour est conservée dans un environnement GitHub protégé, utilisable seulement depuis la branche principale. Elle n'est lue que par une étape isolée, qui n'installe aucune dépendance du projet. L'application vérifie la signature et la version de chaque mise à jour, et rien n'est installé sans votre action ;
+  - les installeurs Windows sont signés Authenticode, et la publication refuse un installeur non signé ;
+  - les dépendances passent une quarantaine de 7 jours (3 jours pour un correctif) avant toute fusion automatique, et les versions publiées sont compilées sans cache.
+
+### Ce qui reste
+
+Trois risques résiduels de gravité moyenne sont identifiés, chacun avec sa parade :
+
+- **Publication par un mainteneur unique** : les versions sont publiées par un seul mainteneur, sans second relecteur. Parade : piloter les mises à jour depuis la DSI (voir les recommandations ci-dessous).
+- **Signature des installeurs Windows** : son isolement dans la chaîne de publication doit encore être renforcé. Parade : vérifier les empreintes et l'attestation de provenance des installeurs avant de les déployer.
+- **HTTP en clair vers un serveur privé** : il reste possible après confirmation. Parade : des serveurs en HTTPS uniquement.
+
+Les constats faibles ou pour information encore ouverts touchent : le traitement des fichiers importés et des pièces jointes, le durcissement de l'interface au-delà de la CSP, les échanges réseau et les automatisations, l'accès des agents (CLI et MCP) et la dictée, et le retrait de code inutilisé. Chacun est suivi dans une issue publique.
+
+### Recommandations aux organisations qui déploient
+
+- **Version publiée uniquement** : n'installez jamais une préversion de développement (alpha « devtools ») sur un poste de travail.
+- **Serveurs en HTTPS** : imposez le serveur de transcription par `managed_settings.json` (voir [Déploiement en entreprise](#déploiement-en-entreprise)) ; le fichier refuse le HTTP clair. Le serveur de synthèse ne peut pas être imposé par ce fichier, seulement désactivé : vérifiez sur chaque poste que son adresse est en `https://`. N'acceptez aucune adresse en HTTP clair, même confirmée.
+- **Mises à jour pilotées** : `automatic_updates` à `false`, puis déployez les versions validées après contrôle de `SHA256SUMS` et de l'attestation de provenance publiés avec chaque release.
+- **Postes protégés** : chiffrement du disque et verrouillage de session. Les notes et transcriptions sont stockées en clair (voir [Protéger le poste](#protéger-le-poste)).
+- **Information des participants** : l'application rappelle à l'utilisateur, au début de chaque capture, d'informer les participants ; elle ne les informe pas elle-même. Fixez la règle d'information dans vos consignes d'usage.
+- **Registre et analyse d'impact** : ils relèvent de l'organisation responsable des données, avec l'avis de son DPO. Voir [Syntheo Desktop et le RGPD](/fr/conformite/rgpd).
+- **Première phase en transcription seule**, si vous le souhaitez : `intelligence_disabled` à `true` coupe toute fonction de modèle de langage.
+
+Pour signaler une vulnérabilité, voir [Signaler une vulnérabilité](#signaler-une-vulnérabilité).
 
 ## Clés API
 
@@ -20,7 +80,7 @@ Les clés des serveurs d'inférence sont facultatives. Quand vous en saisissez u
 
 ## Transport
 
-Syntheo exige HTTPS vers un serveur d'inférence, sauf vers un hôte privé : `localhost`, `[::1]`, noms en `.local`, noms Tailscale en `.ts.net`, plages `127.0.0.0/8`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16` et `100.64.0.0/10`. Une URL contenant des identifiants ou des paramètres de requête est refusée.
+Syntheo exige HTTPS vers un serveur d'inférence. Seul un hôte privé peut être joint en HTTP clair : `localhost`, `[::1]`, noms en `.local`, noms Tailscale en `.ts.net`, plages `127.0.0.0/8`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16` et `100.64.0.0/10`. Hors de cette machine, cette adresse demande une confirmation et reste signalée. Une URL contenant des identifiants ou des paramètres de requête est refusée.
 
 HTTP en clair sur un réseau local reste lisible par quiconque y a accès, et la forme de l'adresse ne prouve pas l'identité du serveur : sur un autre réseau, ou Tailscale arrêté, une autre machine peut répondre à la même adresse. Hors de cette machine, Syntheo demande donc de confirmer une adresse en HTTP clair, puis la signale en permanence sur la carte du serveur. La même règle d'adresse est vérifiée au démarrage de chaque capture ou transcription. Passez le serveur en HTTPS dès que possible : voir [Passer son serveur en HTTPS](/fr/ai-setup#passer-son-serveur-en-https).
 

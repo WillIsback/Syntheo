@@ -23,7 +23,7 @@ it("docs_rgpd_is_referenced", () => {
 it("docs_rgpd_lists_every_known_flow_and_store", () => {
   const rgpd = readFileSync(join(ROOT, "docs/fr/conformite/rgpd.md"), "utf8");
   // Flux réseau hors inférence encore présents dans le code.
-  for (const flow of ["api.github.com", "api.iconify.design"]) {
+  for (const flow of ["api.github.com", "Charger l'image"]) {
     expect(rgpd).toContain(flow);
   }
   // Stockages locaux annexes.
@@ -104,4 +104,23 @@ it("docs_never_mention_nvidia_nim", () => {
     /\bNIM\b/i.test(readFileSync(join(ROOT, path), "utf8")),
   );
   expect(offenders).toEqual([]);
+});
+
+// Les icônes iconify ne partent plus : la CSP de production (connect-src sans
+// origine https) bloque leur requête. La doc ne doit plus les lister comme un
+// flux sortant (issue 666 ; retrait du composant suivi dans issue 658).
+it("docs_do_not_list_iconify_as_a_network_flow", () => {
+  for (const page of [
+    "docs/fr/conformite/rgpd.md",
+    "docs/en/conformite/rgpd.md",
+    "docs/fr/security.mdx",
+    "docs/en/security.mdx",
+    "docs/fr/data-and-privacy.mdx",
+    "docs/en/data-and-privacy.mdx",
+    "SECURITY.md",
+  ]) {
+    expect(readFileSync(join(ROOT, page), "utf8")).not.toContain(
+      "api.iconify.design",
+    );
+  }
 });
