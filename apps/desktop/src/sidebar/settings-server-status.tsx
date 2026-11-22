@@ -7,6 +7,7 @@ import {
   type ServerKind,
   useServerConnection,
 } from "~/settings/ai/shared/server-connection";
+import { useUsableTranscription } from "~/stt/usable-transcription";
 
 // État des serveurs dans le menu des paramètres : une pastille à côté de
 // « Transcription » et « Synthèse », et un rappel en bas du menu. C'est la
@@ -64,23 +65,37 @@ function useStatusLabel(kind: ServerKind, state: ServerConnectionState) {
   }
 }
 
-export function ServerStatusDot({ kind }: { kind: ServerKind }) {
+// Transcription : la source « Sur ce poste », quand elle est choisie, passe
+// avant l'état du serveur (même règle que le toast et le bandeau).
+function useStatus(kind: ServerKind): { label: string; tone: Tone } {
+  const { t } = useLingui();
   const { state } = useServerConnection(kind);
-  const label = useStatusLabel(kind, state);
+  const serverLabel = useStatusLabel(kind, state);
+  const transcription = useUsableTranscription();
+  if (kind === "stt" && transcription.active === "on_device") {
+    return { label: t`Transcription · on this computer`, tone: "ok" };
+  }
+  if (kind === "stt" && transcription.onDeviceNotReady) {
+    return { label: t`Transcription · this computer is not ready`, tone: "ko" };
+  }
+  return { label: serverLabel, tone: toneOf(state) };
+}
+
+export function ServerStatusDot({ kind }: { kind: ServerKind }) {
+  const { label, tone } = useStatus(kind);
   return (
     <span className="ml-auto flex items-center" title={label}>
-      <StatusPip tone={toneOf(state)} />
+      <StatusPip tone={tone} />
       <span className="sr-only">{label}</span>
     </span>
   );
 }
 
 function ServerStatusLine({ kind }: { kind: ServerKind }) {
-  const { state } = useServerConnection(kind);
-  const label = useStatusLabel(kind, state);
+  const { label, tone } = useStatus(kind);
   return (
     <span className="flex items-center gap-2">
-      <StatusPip tone={toneOf(state)} />
+      <StatusPip tone={tone} />
       {label}
     </span>
   );

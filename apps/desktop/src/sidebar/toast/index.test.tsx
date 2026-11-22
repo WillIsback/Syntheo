@@ -29,7 +29,10 @@ const mocks = vi.hoisted(() => ({
     current_llm_model: "model" as string | null,
     current_stt_provider: "local" as string | null,
     current_stt_model: "model" as string | null,
+    stt_on_device: false as boolean,
   },
+  onDevice: null as unknown,
+  commissioning: null as unknown,
 }));
 
 vi.mock("@syntheo/ui/components/ui/toast", async (importOriginal) => {
@@ -77,8 +80,15 @@ vi.mock("~/store/zustand/tabs", () => ({
 }));
 
 vi.mock("~/stt/capabilities", () => ({
-  isConfiguredSttModel: () => true,
+  isConfiguredSttModel: (provider?: string | null, model?: string | null) =>
+    !!provider && !!model,
   isSyntheoCloudSttModel: () => false,
+}));
+
+vi.mock("~/stt/on-device", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/stt/on-device")>()),
+  useOnDeviceStatus: () => ({ data: mocks.onDevice }),
+  useOnDeviceCommissioning: () => ({ data: mocks.commissioning }),
 }));
 
 vi.mock("~/stt/contexts", () => ({
@@ -127,6 +137,52 @@ describe("ToastNotifications", () => {
     mocks.config.current_llm_model = "model";
     mocks.config.current_stt_provider = "local";
     mocks.config.current_stt_model = "model";
+    mocks.config.stt_on_device = false;
+    mocks.onDevice = null;
+    mocks.commissioning = null;
+  });
+
+  // QA de 0.8.0-2 (William) : seule la transcription sur ce poste, prête.
+  it("asks for no transcription provider when this computer is ready", () => {
+    mocks.config.current_stt_provider = null;
+    mocks.config.current_stt_model = null;
+    mocks.config.stt_on_device = true;
+    mocks.onDevice = {
+      allowed: true,
+      companion: true,
+      models: { kind: "installed", totalBytes: 1 },
+      downloadable: true,
+    };
+    mocks.commissioning = {
+      profile: "two_streams",
+      measures: [],
+      measuredAt: 1,
+    };
+
+    render(<ToastNotifications />);
+    act(() => vi.advanceTimersByTime(500));
+
+    const descriptions = mocks.message.mock.calls.map((call) => call[0]);
+    expect(descriptions).not.toContain("Transcription provider needed");
+  });
+
+  it("still asks for one when this computer is chosen but not measured", () => {
+    mocks.config.current_stt_provider = null;
+    mocks.config.current_stt_model = null;
+    mocks.config.stt_on_device = true;
+    mocks.onDevice = {
+      allowed: true,
+      companion: true,
+      models: { kind: "installed", totalBytes: 1 },
+      downloadable: true,
+    };
+    mocks.commissioning = { profile: null, measures: [], measuredAt: 1 };
+
+    render(<ToastNotifications />);
+    act(() => vi.advanceTimersByTime(500));
+
+    const descriptions = mocks.message.mock.calls.map((call) => call[0]);
+    expect(descriptions).toContain("Transcription provider needed");
   });
 
   afterEach(() => {

@@ -2469,6 +2469,10 @@ msgstr "Import"
 msgid "Import progress"
 msgstr "Import progress"
 
+#: src/stt/audio-import-feedback.ts
+msgid "Importing a file goes through a transcription server: transcription on this computer only transcribes live recordings. Add a server in Settings › Transcription."
+msgstr "Importing a file goes through a transcription server: transcription on this computer only transcribes live recordings. Add a server in Settings › Transcription."
+
 #: src/session/components/note-input/transcript/screens/empty.tsx
 msgid "Importing audio..."
 msgstr "Importing audio..."
@@ -6465,8 +6469,16 @@ msgid "Transcription · not tested"
 msgstr "Transcription · not tested"
 
 #: src/sidebar/settings-server-status.tsx
+msgid "Transcription · on this computer"
+msgstr "Transcription · on this computer"
+
+#: src/sidebar/settings-server-status.tsx
 msgid "Transcription · testing…"
 msgstr "Transcription · testing…"
+
+#: src/sidebar/settings-server-status.tsx
+msgid "Transcription · this computer is not ready"
+msgstr "Transcription · this computer is not ready"
 
 #: src/sidebar/settings-server-status.tsx
 msgid "Transcription · unreachable"
