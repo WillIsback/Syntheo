@@ -115,6 +115,18 @@ Aucun modèle Whisper : la crate ne contient que l'énumération `Language` des 
 
 Sonde de la transcription sur le poste (issue 682), sans rien télécharger. `hardware::read` lit en quelques millisecondes AVX2, cœurs physiques et logiques, mémoire disponible, espace libre du disque des données, plan d'alimentation (Linux : profil ACPI ; Windows : plan actif et économiseur de batterie), secteur ou batterie, et GPU avec leur mémoire vidéo quand le système la donne. `bench::run` est un micro-banc d'environ 4 s : un produit matriciel q8_0 en AVX2, de forme proche d'une couche de l'encodeur, sur autant de fils que de cœurs physiques ; il rend un débit en GMAC/s. `predict::predict` convertit ce débit en RTF par moteur (`Engine::ParakeetOnnx` ou `Engine::NemoGgml`) et par profil, en interpolant entre des points mesurés par le banc de l'issue 680. `predict::decide` applique les seuils : profil complet proposé jusqu'à un RTF de 0,5, profil dégradé jusqu'à 1,0, refus au-delà, ou sans AVX2, sous 1,5 Go de mémoire libre, sous 2 Go de disque ou si le disque est introuvable ; hors de la plage mesurée, la prédiction n'est jamais plus favorable que le point extrême. Exposée par la commande `probe_local_transcription` de `plugins/transcription` : une seule sonde à la fois, refusée pendant une écoute, si l'état de capture ne répond pas, et par le relay ; une écoute qui démarre l'interrompt (verdict `interrupted`). L'exemple `probe` affiche la sonde en JSON, pour étalonner un poste de référence. **Pages de doc concernées** : aucune pour l'instant (pas encore d'interface).
 
+### `apps/speech` : module `syntheo-speech`
+
+Module de transcription sur le poste (issue 681) : un processus séparé que l'application lance et arrête, joignable seulement sur la boucle locale, qui parle le protocole temps réel de NeMo-Speech.cpp, celui de l'adaptateur `nvidia` de `crates/owhisper-client`. C'est un **workspace Cargo à part**, avec son propre `Cargo.lock` : le moteur A (`parakeet-rs`, ONNX Runtime) épingle une version d'`ort` différente de celle de l'application, et le module est construit par son propre workflow.
+
+- **Moteurs derrière un trait** (`engine::Engine`, `engine::Recognizer`) : A, `parakeet::ParakeetEngine` (Nemotron 3.5 en flux, int8 per-channel, et diarisation Nemotron-3), est implémenté ; B pourra s'y brancher.
+- **Lancement** : le jeton (au moins 128 bits) arrive sur l'entrée standard, jamais sur la ligne de commande ; le module écoute sur `127.0.0.1`, sur un port libre, l'annonce en JSON sur la sortie standard et s'arrête quand l'entrée standard se ferme.
+- **Canal local** (`auth`, `server`) : `Authorization: Bearer` comparé en temps constant ; preuve du module en retour (HMAC du jeton sur un nonce du client, en-têtes `x-syntheo-speech-nonce` et `x-syntheo-speech-proof`) ; en-tête `Origin` refusé ; `Host` limité à la boucle locale ; sessions simultanées bornées.
+- **Journaux** : des durées et des nombres, jamais de texte transcrit.
+- **Tests** : contrat avec l'adaptateur `nvidia` sur un moteur factice, contrôles du handshake, aucune connexion sortante (Linux) ; essai avec le vrai modèle si `SYNTHEO_SPEECH_MODELS` et `SYNTHEO_SPEECH_AUDIO` sont définis.
+
+**Pages de doc concernées** : aucune pour l'instant (pas encore d'interface).
+
 ## Détection de réunion
 
 ### `crates/detect`
