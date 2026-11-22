@@ -10,9 +10,69 @@ Syntheo Desktop is a local client, with no vendor server. The surface to assess 
 - **No account, no authentication** with the vendor. No Syntheo service receives your data.
 - **No telemetry, no error reports**: the analytics and error reporting code is removed, there is nothing to turn off.
 - **No audio on disk**, on any path (capture, dictation, import).
-- **Network limited** to the configured inference servers, plus three minor flows with no meeting content (update check and release notes on GitHub, interface icons), listed in [the GDPR sheet](/en/conformite/rgpd).
+- **Network limited** to the inference servers and webhooks you configure, plus two minor flows with no meeting content (update check and release notes on GitHub) and loading a remote image when you click "Load image". These flows are listed in [the GDPR sheet](/en/conformite/rgpd).
 - **No fallback** to a third-party service when an inference server does not respond.
 - **Open source**: everything can be checked in the [GitHub repository](https://github.com/WillIsback/Syntheo).
+
+## Security audit
+
+Syntheo underwent an internal security audit on November 21, 2026, followed by a follow-up review on November 22, 2026 of version 0.7.5. This section summarizes the results. The detailed report stays confidential, because it describes points that are still open.
+
+### Method
+
+- **Internal audit**, white-box: static analysis of the app, CLI and release pipeline code. It was carried out with AI agents, under the maintainer's responsibility, along six lines: the interface and its exchanges with the app core, instruction injection through meeting content, the network and inference servers, malicious files, an attacker present on the computer, the supply chain and updates.
+- **No penetration test**: nothing was run during the audit. How readily language models follow injected instructions was not measured.
+- **Follow-up review** of the 0.7.5 fixes, using the same method: each finding was reread in the code of the published version, trying to refute its fix.
+- Severities rated with CVSS 3.1.
+
+### Results
+
+The audit reported 34 findings: none critical, a single high-severity one (on the update release pipeline), 8 medium, 16 low and 9 informational. It found no remote code execution and no script injection (XSS). The published version opens no network port on the computer.
+
+Since 0.7.5, no high-severity finding remains. The high finding is fixed, with a medium-severity residual risk.
+
+| Version | Status | Findings |
+| --- | --- | --- |
+| 0.7.5 | Fixed and verified by the follow-up review | 12 |
+| 0.7.5 | Fixed, with an accepted and documented residual risk | 1 |
+| 0.7.5 | Partly fixed; the rest is tracked in a public issue | 5 |
+| 0.8.0 (planned) | Low or informational, scheduled | 5 |
+| 0.8.1 (planned) | Low or informational, scheduled | 11 |
+
+Current severities: none critical, none high, 3 medium, 19 low, 12 informational.
+
+### What 0.7.5 changed
+
+- **Remote images**: an image hosted on another site, in a summary, a proposal or a chat answer, is no longer loaded automatically. It loads only if you click "Load image". A strict content security policy (CSP) also restricts the interface.
+- **Chat edits confirmed**: the chat no longer edits a meeting, moves its content or files meetings without your click on "Apply". The terms it suggests for the dictionary are bounded and go through the same card.
+- **Plain HTTP**: a server address in HTTP toward another machine than yours is saved only after confirmation, then stays flagged on the server card.
+- **Logs and local data**: the log masks more keys and tokens; webhook signing secrets are in the system keychain; on Linux, the data folder, the database and the logs are restricted to your account.
+- **Release pipeline**:
+  - the key that signs updates is kept in a protected GitHub environment, usable only from the main branch. It is read only by an isolated step, which installs none of the project's dependencies. The app checks the signature and the version of each update, and nothing is installed without your action;
+  - Windows installers are Authenticode-signed, and the release refuses an unsigned installer;
+  - dependencies go through a 7-day quarantine (3 days for a fix) before any automatic merge, and published versions are built without cache.
+
+### What remains
+
+Three medium-severity residual risks are identified, each with its countermeasure:
+
+- **Releases by a single maintainer**: versions are published by one maintainer, without a second reviewer. Countermeasure: have IT control updates (see the recommendations below).
+- **Windows installer signing**: its isolation in the release pipeline still needs strengthening. Countermeasure: check the checksums and provenance attestation of installers before deploying them.
+- **Plain HTTP toward a private server**: still possible after confirmation. Countermeasure: HTTPS servers only.
+
+The low or informational findings still open concern: handling of imported files and attachments, hardening the interface beyond the CSP, network exchanges and automations, agent access (CLI and MCP) and dictation, and removal of unused code. Each is tracked in a public issue.
+
+### Recommendations for organizations deploying Syntheo
+
+- **Published version only**: never install a development pre-release ("devtools" alpha) on a work computer.
+- **HTTPS servers**: enforce the transcription server through `managed_settings.json` (see [Enterprise deployment](#enterprise-deployment)); the file rejects plain HTTP. The summary server cannot be enforced by this file, only turned off: check on each computer that its address starts with `https://`. Accept no plain HTTP address, even confirmed.
+- **IT-controlled updates**: `automatic_updates` set to `false`, then deploy validated versions after checking the `SHA256SUMS` and the provenance attestation published with each release.
+- **Protected computers**: disk encryption and session locking. Notes and transcripts are stored in plain text (see [Protect the computer](#protect-the-computer)).
+- **Informing participants**: the app reminds the user, when each capture starts, to inform participants; it does not inform them itself. Set the information rule in your usage guidelines.
+- **Records and impact assessment**: they belong to the organization responsible for the data, with the advice of its DPO. See [Syntheo Desktop and the GDPR](/en/conformite/rgpd).
+- **A first transcription-only phase**, if you wish: `intelligence_disabled` set to `true` turns off every language model feature.
+
+To report a vulnerability, see [Report a vulnerability](#report-a-vulnerability).
 
 ## API keys
 
@@ -20,7 +80,7 @@ Inference server keys are optional. When you enter one, Syntheo stores it in the
 
 ## Transport
 
-Syntheo requires HTTPS toward an inference server, except toward a private host: `localhost`, `[::1]`, `.local` names, Tailscale `.ts.net` names, ranges `127.0.0.0/8`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16` and `100.64.0.0/10`. A URL containing credentials or query parameters is rejected.
+Syntheo requires HTTPS toward an inference server. Only a private host can be reached over plain HTTP: `localhost`, `[::1]`, `.local` names, Tailscale `.ts.net` names, ranges `127.0.0.0/8`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16` and `100.64.0.0/10`. Outside this machine, such an address requires confirmation and stays flagged. A URL containing credentials or query parameters is rejected.
 
 Plain HTTP on a local network can be read by anyone with access to it, and the shape of the address does not prove the server's identity: on another network, or with Tailscale stopped, another machine can answer at the same address. Outside this machine, Syntheo therefore asks you to confirm a plain HTTP address, then flags it permanently on the server card. The same address rule is checked when each capture or transcription starts. Switch the server to HTTPS as soon as you can: see [Switch your server to HTTPS](/en/ai-setup#switch-your-server-to-https).
 

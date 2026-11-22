@@ -201,7 +201,8 @@ jobs:
   # l'AppImage), en dernier.
   # Job minimal : seulement depuis main, jamais en dry_run, dans
   # l'environnement `release-signing` qui détient la clé (branches de
-  # déploiement limitées à main, relecteur requis). Aucune installation des
+  # déploiement limitées à main ; sans relecteur, mainteneur seul, décision du
+  # 2026-11-21). Aucune installation des
   # dépendances du dépôt : seul l'outil de signature est installé, à version et
   # empreintes figées (.github/signing), sans script d'installation.
   updater:
@@ -427,7 +428,8 @@ jobs:
           # utilisé uniquement pour créer le tag : GITHUB_TOKEN ne peut pas
           # avoir la permission Workflows, et GitHub refuse (403) un tag sur un
           # commit qui modifie .github/workflows depuis la release précédente.
-          # Secret de l'environnement `production`, à expiration courte.
+          # Secret de l'environnement `production` (limité à main). Le jeton
+          # expire le 2027-11-01 : le renouveler avant cette date.
           RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
           VERSION: ${{ needs.detect.outputs.version }}
           TARGET: ${{ github.sha }}
