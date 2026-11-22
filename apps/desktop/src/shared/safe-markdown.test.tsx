@@ -80,14 +80,22 @@ describe("rendu sûr des images", () => {
     },
   );
 
-  // `asset://` et `data:` sont déjà retirés par la sanitisation de Streamdown
-  // (protocoles hors liste), comme avant ce correctif ; la forme
-  // `http://asset.localhost` passe et s'affiche.
-  it("affiche les images locales", () => {
-    renderMarkdown("![b](http://asset.localhost/tmp/b.png)");
-    expect(images().map((image) => image.getAttribute("src"))).toEqual([
-      "http://asset.localhost/tmp/b.png",
-    ]);
+  // Issue 677 : une adresse de fichier local (protocole asset) ou de chemin
+  // réseau n'est jamais rendue ; seul le texte alternatif reste. `asset://` et
+  // `data:` sont déjà retirés par la sanitisation de Streamdown.
+  it.each([
+    ["synthèse", streamdownComponents],
+    ["chat", { img: SafeMarkdownImage }],
+  ])("%s : une image de fichier local n'est pas rendue", (_, components) => {
+    renderMarkdown(
+      "![local](http://asset.localhost/tmp/b.png)\n\n![reseau](http://asset.localhost/%5C%5C192.0.2.1%5Cshare%5Cc.png)",
+      components,
+    );
+    expect(images()).toEqual([]);
+    expect(screen.queryByRole("button", { name: "Load image" })).toBeNull();
+    expect(document.body.textContent).toContain("local");
+    expect(document.body.textContent).toContain("reseau");
+    expect(document.body.innerHTML).not.toContain("192.0.2.1");
   });
 
   it("charge l'image distante au clic, par le client HTTP, puis l'affiche en blob:", async () => {
@@ -122,11 +130,11 @@ describe("rendu sûr des images", () => {
 
   it("préfixe les id et name du HTML brut (pas de clobbering de document)", () => {
     renderMarkdown(
-      '<img name="createElement" id="getElementById" src="http://asset.localhost/a.png">',
+      '<a name="createElement" id="getElementById" href="https://example.com">lien</a>',
     );
-    const image = images()[0];
-    expect(image.getAttribute("name")).toBe("user-content-createElement");
-    expect(image.getAttribute("id")).toBe("user-content-getElementById");
+    const link = screen.getByText("lien").closest("a");
+    expect(link?.getAttribute("name")).toBe("user-content-createElement");
+    expect(link?.getAttribute("id")).toBe("user-content-getElementById");
     expect(typeof document.createElement).toBe("function");
   });
 });

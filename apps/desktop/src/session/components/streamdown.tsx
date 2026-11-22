@@ -1,7 +1,11 @@
 import { parseImageMetadata } from "@syntheo/editor/node-views";
 import { cn } from "@syntheo/utils";
 
-import { isLocalImageSrc, RemoteImage } from "~/shared/safe-markdown";
+import {
+  isGeneratedImageSrc,
+  isRemoteWebImageSrc,
+  RemoteImage,
+} from "~/shared/safe-markdown";
 
 // Typography comes from the shared `.note-typography` scope (see
 // packages/editor styles) so the streaming view matches the editor exactly;
@@ -35,20 +39,23 @@ export const streamdownComponents = {
       ...(props.style || {}),
     };
 
-    if (typeof props.src !== "string" || !props.src) {
-      return props.alt ? <span>{props.alt}</span> : null;
-    }
-    if (!isLocalImageSrc(props.src)) {
+    // Contenu généré : ni fichier local ni chemin réseau (issue 677).
+    if (isGeneratedImageSrc(props.src)) {
       return (
-        <RemoteImage
-          src={props.src}
-          alt={props.alt}
-          title={title}
-          className={className}
-          style={style}
-        />
+        <img {...props} title={title} className={className} style={style} />
       );
     }
-    return <img {...props} title={title} className={className} style={style} />;
+    if (typeof props.src !== "string" || !isRemoteWebImageSrc(props.src)) {
+      return props.alt ? <span>{props.alt}</span> : null;
+    }
+    return (
+      <RemoteImage
+        src={props.src}
+        alt={props.alt}
+        title={title}
+        className={className}
+        style={style}
+      />
+    );
   },
 } as const;

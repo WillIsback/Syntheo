@@ -33,9 +33,49 @@ fn is_plain_address(path: &str) -> bool {
             .all(|c| c.is_ascii_alphanumeric() || ".-".contains(c))
 }
 
+/// Chemin local seulement : un chemin réseau (`\\serveur\partage`,
+/// `//serveur/partage`) ou de périphérique (`\\?\…`, `\\.\…`) est refusé
+/// avant tout accès, pour ne jamais ouvrir de connexion SMB (issue 677).
+pub(crate) fn check_openable_path(path: &str) -> Result<()> {
+    let mut chars = path.chars();
+    let is_sep = |c: Option<char>| matches!(c, Some('/' | '\\'));
+    if path.contains('\0') || (is_sep(chars.next()) && is_sep(chars.next())) {
+        return Err(Error::PathNotAllowed);
+    }
+    #[cfg(windows)]
+    {
+        use std::path::{Component, Path, Prefix};
+        if let Some(Component::Prefix(prefix)) = Path::new(path).components().next()
+            && !matches!(prefix.kind(), Prefix::Disk(_))
+        {
+            return Err(Error::PathNotAllowed);
+        }
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
-    use super::check_openable_url;
+    use super::{check_openable_path, check_openable_url};
+
+    #[test]
+    fn network_and_device_paths_are_refused() {
+        for path in [
+            r"\\server\share\report.pdf",
+            "//server/share/report.pdf",
+            r"\/server\share",
+            r"\\?\UNC\server\share\report.pdf",
+            r"\\.\pipe\name",
+        ] {
+            assert!(check_openable_path(path).is_err(), "{path}");
+        }
+        for path in [
+            "/home/user/.local/share/syntheo/report.pdf",
+            r"C:\Users\user\Documents\report.pdf",
+        ] {
+            assert!(check_openable_path(path).is_ok(), "{path}");
+        }
+    }
 
     #[test]
     fn web_pages_and_plain_addresses_open() {
