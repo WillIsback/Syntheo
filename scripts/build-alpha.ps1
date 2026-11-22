@@ -68,6 +68,20 @@ $SrcTauri = Join-Path $Root "apps\desktop\src-tauri"
 $Conf = Join-Path $SrcTauri "tauri.conf.syntheo.json"
 Set-Location $Root
 
+# Restes d'un plugin ou d'une crate retirés (issue 692) : un dossier de plugins\ ou crates\ sans
+# aucun fichier suivi ni Cargo.toml / package.json (par exemple le node_modules d'un plugin
+# supprimé) serait pris pour un membre du workspace, et `cargo metadata` échouerait.
+foreach ($top in "plugins", "crates") {
+  Get-ChildItem -Directory -Path $top -ErrorAction SilentlyContinue | ForEach-Object {
+    $dir = $_.FullName
+    if ((Test-Path (Join-Path $dir "Cargo.toml")) -or (Test-Path (Join-Path $dir "package.json"))) { return }
+    $relative = "$top/$($_.Name)"
+    if (git ls-files -- $relative | Select-Object -First 1) { return }
+    Write-Host "-- reste d'un membre retiré supprimé : $relative"
+    Remove-Item -Recurse -Force -LiteralPath $dir
+  }
+}
+
 function Invoke-Checked {
   param([string]$Exe, [string[]]$Arguments)
   & $Exe @Arguments

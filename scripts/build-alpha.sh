@@ -271,6 +271,25 @@ else
   SOURCE_LABEL=$FROM
 fi
 cd "$ROOT"
+
+# Restes d'un plugin ou d'une crate retirés (issue 692) : un dossier de plugins/ ou crates/ sans
+# aucun fichier suivi ni Cargo.toml / package.json (par exemple le node_modules d'un plugin
+# supprimé) serait pris pour un membre du workspace, et `cargo metadata` échouerait.
+purge_removed_members() {
+  local dir
+  for dir in plugins/*/ crates/*/; do
+    dir=${dir%/}
+    [ -d "$dir" ] || continue
+    [ -e "$dir/Cargo.toml" ] || [ -e "$dir/package.json" ] && continue
+    [ -n "$(git ls-files -- "$dir" | head -1)" ] && continue
+    echo "-- reste d'un membre retiré supprimé : $dir"
+    rm -rf -- "$dir"
+  done
+}
+if git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
+  purge_removed_members
+fi
+
 if [ -z "$SOURCE_LABEL" ]; then
   SOURCE_LABEL=$(git rev-parse --abbrev-ref HEAD 2> /dev/null || echo "?")
   [ "$SOURCE_LABEL" = HEAD ] && SOURCE_LABEL="HEAD détachée"
