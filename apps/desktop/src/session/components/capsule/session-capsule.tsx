@@ -225,7 +225,7 @@ export function SessionCapsule({
     }).then((copied) => {
       // Bêta (issue 672) : copie d'une synthèse, pour le taux d'abandon.
       if (copied && currentView.type === "enhanced") {
-        void recordSummaryEvent("shared", sessionId, currentView.id);
+        void recordSummaryEvent("shared", currentView.id);
       }
     });
   }, [markdown, t, currentView, sessionId]);

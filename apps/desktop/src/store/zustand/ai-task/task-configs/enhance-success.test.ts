@@ -298,11 +298,7 @@ describe("enhanceSuccess.onSuccess", () => {
     mocks.dispatchEvent.mockResolvedValue({ status: "ok", data: 2 });
     await runEnhanceSuccess(createParams());
     await vi.waitFor(() =>
-      expect(mocks.recordSummaryEvent).toHaveBeenCalledWith(
-        "shared",
-        "session-1",
-        "note-1",
-      ),
+      expect(mocks.recordSummaryEvent).toHaveBeenCalledWith("shared", "note-1"),
     );
   });
 

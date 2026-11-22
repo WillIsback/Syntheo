@@ -36,6 +36,7 @@ const HASH_A = "a".repeat(64);
 const HASH_B = "b".repeat(64);
 const SESSION = "5f0c2a7e-1b3d-4c6e-9a8b-7d6e5f4a3b2c";
 const DOC = `summary:${SESSION}`;
+const OTHER = "summary:other";
 const counters = (g: number, a: number, s: number, rf: number, rl: number) => ({
   generated: g,
   added: a,
@@ -43,95 +44,98 @@ const counters = (g: number, a: number, s: number, rf: number, rl: number) => ({
   replaced_content: rf,
   replaced_lexical: rl,
 });
+const at = (day: number, hour = 9) =>
+  new Date(Date.UTC(2026, 10, 22 + day, hour)).toISOString();
+
+type Measurement = ExportRows["measurements"][number];
+function measurement(
+  id: string,
+  documentId: string,
+  measuredAt: string,
+): Measurement {
+  return {
+    id,
+    documentId,
+    measuredAt,
+    ruleVersion: 1,
+    aligned: true,
+    headingsGenerated: 3,
+    headingsMatched: 3,
+    unmatchedSentWords: 0,
+    total: counters(28, 3, 2, 4, 1),
+  };
+}
+
+function sections(measurementId: string): ExportRows["sections"] {
+  return [
+    {
+      measurementId,
+      index: 0,
+      role: "other",
+      matched: true,
+      counters: counters(11, 0, 0, 3, 0),
+    },
+    {
+      measurementId,
+      index: 1,
+      role: "decisions",
+      matched: true,
+      counters: counters(11, 3, 0, 1, 1),
+    },
+    {
+      measurementId,
+      index: 2,
+      role: "actions",
+      matched: true,
+      counters: counters(6, 0, 2, 0, 0),
+    },
+  ];
+}
 
 function rows(): ExportRows {
   return {
     enrollment: {
       pseudonym: "p-3f9a1c0e7b2d4f6a8c1e3b5d7f9a2c4e",
-      enrolledAt: "2026-11-22T08:00:00.000Z",
+      enrolledAt: at(0, 8),
     },
     measurements: [
-      // Mesure plus ancienne de la même synthèse : remplacée par la suivante.
-      {
-        id: "m-old",
-        documentId: DOC,
-        measuredAt: "2026-11-24T09:00:00.000Z",
-        ruleVersion: 1,
-        aligned: true,
-        headingsGenerated: 3,
-        headingsMatched: 3,
-        unmatchedSentWords: 0,
-        total: counters(28, 1, 0, 0, 0),
-      },
-      {
-        id: "m-new",
-        documentId: DOC,
-        measuredAt: "2026-11-25T09:00:00.000Z",
-        ruleVersion: 1,
-        aligned: true,
-        headingsGenerated: 3,
-        headingsMatched: 3,
-        unmatchedSentWords: 0,
-        total: counters(28, 3, 2, 4, 1),
-      },
+      measurement("m-first", DOC, at(2)),
+      // Remesure de la même génération : seule la première compte.
+      measurement("m-again", DOC, at(3)),
     ],
-    sections: [
-      {
-        measurementId: "m-new",
-        index: 0,
-        role: "other",
-        matched: true,
-        counters: counters(11, 0, 0, 3, 0),
-      },
-      {
-        measurementId: "m-new",
-        index: 1,
-        role: "decisions",
-        matched: true,
-        counters: counters(11, 3, 0, 1, 1),
-      },
-      {
-        measurementId: "m-new",
-        index: 2,
-        role: "actions",
-        matched: true,
-        counters: counters(6, 0, 2, 0, 0),
-      },
-      {
-        measurementId: "m-old",
-        index: 0,
-        role: "other",
-        matched: true,
-        counters: counters(28, 1, 0, 0, 0),
-      },
-    ],
-    summaries: [
+    sections: [...sections("m-first"), ...sections("m-again")],
+    generations: [
       {
         documentId: DOC,
-        generatedAt: "2026-11-23T10:00:00.000Z",
+        generatedAt: at(1, 10),
         exportedAt: null,
-        sharedAt: "2026-11-23T11:00:00.000Z",
+        sharedAt: at(1, 11),
       },
       {
-        documentId: "summary:other",
-        generatedAt: "2026-11-26T10:00:00.000Z",
+        documentId: OTHER,
+        generatedAt: at(4, 10),
         exportedAt: null,
         sharedAt: null,
       },
     ],
     terms: [
-      { hash: HASH_A, index: 1, inDictionaryFirst: false, addedSeenAt: null },
+      {
+        hash: HASH_A,
+        index: 4821,
+        inDictionaryFirst: false,
+        addedSeenAt: null,
+      },
       // Déjà au dictionnaire à sa première correction : hors de l'étude.
-      { hash: HASH_B, index: 2, inDictionaryFirst: true, addedSeenAt: null },
+      { hash: HASH_B, index: 77, inDictionaryFirst: true, addedSeenAt: null },
     ],
     termErrors: [
-      { measurementId: "m-new", termHash: HASH_A, count: 1 },
-      { measurementId: "m-new", termHash: HASH_B, count: 1 },
+      { measurementId: "m-first", termHash: HASH_A, count: 1 },
+      { measurementId: "m-first", termHash: HASH_B, count: 1 },
     ],
   };
 }
 
-const NOW = new Date("2026-12-13T08:00:00.000Z");
+const NOW = new Date(at(21, 8));
 
 describe("buildExport", () => {
   it("builds a valid, coherent export-v1 file", async () => {
@@ -142,7 +146,7 @@ describe("buildExport", () => {
     expect(data.meetings[0]).toMatchObject({
       meeting: "m1",
       summary: "s1",
-      day: 3,
+      day: 2,
     });
     expect(data.meetings[0].sections.map((s) => s.role)).toEqual([
       "other",
@@ -166,7 +170,11 @@ describe("buildExport", () => {
       },
     ]);
     expect(data.terms).toEqual([
-      { term: "t1", added_after: null, errors: [{ meeting: "m1", count: 1 }] },
+      {
+        term: "t4821",
+        added_after: null,
+        errors: [{ meeting: "m1", count: 1 }],
+      },
     ]);
   });
 
@@ -178,31 +186,163 @@ describe("buildExport", () => {
       HASH_A,
       HASH_B,
       "2026-",
-      "m-new",
+      "m-first",
     ]) {
       expect(json).not.toContain(leak);
     }
   });
 
-  it("dates the dictionary addition after the previous meeting", () => {
-    const input = rows();
-    input.measurements.push({
-      ...input.measurements[1],
-      id: "m-3",
-      documentId: "summary:other",
-      measuredAt: "2026-11-27T09:00:00.000Z",
-    });
-    input.termErrors.push({ measurementId: "m-3", termHash: HASH_A, count: 2 });
-    input.terms[0].addedSeenAt = "2026-11-27T09:00:00.000Z";
-    const data = buildExport(input, "0.8.0", NOW);
-    expect(data.terms[0]).toEqual({
-      term: "t1",
-      added_after: "m1",
-      errors: [
-        { meeting: "m1", count: 1 },
-        { meeting: "m2", count: 2 },
+  // Revue 0.8.0, constats 1 et 3 : générer, mesurer, régénérer, mesurer,
+  // exporter ; puis une régénération sans nouvelle mesure. L'agrégation
+  // accepte le fichier.
+  it("a summary regenerated after its measurement still gives a coherent file", async () => {
+    const input: ExportRows = {
+      ...rows(),
+      measurements: [
+        measurement("a1", DOC, at(1)),
+        measurement("b1", OTHER, at(2)),
+        measurement("a2", DOC, at(4)),
       ],
+      sections: [],
+      generations: [
+        {
+          documentId: DOC,
+          generatedAt: at(0, 10),
+          exportedAt: null,
+          sharedAt: null,
+        },
+        {
+          documentId: OTHER,
+          generatedAt: at(2, 8),
+          exportedAt: null,
+          sharedAt: null,
+        },
+        {
+          documentId: DOC,
+          generatedAt: at(3),
+          exportedAt: null,
+          sharedAt: null,
+        },
+        // Régénérée encore, sans mesure.
+        {
+          documentId: DOC,
+          generatedAt: at(10),
+          exportedAt: null,
+          sharedAt: null,
+        },
+      ],
+      termErrors: [],
+    };
+    const data = buildExport(input, "0.8.0", NOW);
+    expect(await checkExport(data)).toEqual({ export: data });
+    expect(data.meetings.map((m) => [m.meeting, m.summary, m.day])).toEqual([
+      ["m1", "s1", 1],
+      ["m2", "s2", 2],
+      ["m3", "s3", 4],
+    ]);
+    expect(data.summaries.map((s) => [s.generated_day, s.measured])).toEqual([
+      [0, 1],
+      [2, 2],
+      [3, 4],
+      [10, null],
+    ]);
+  });
+
+  // Revue 0.8.0, constat 10 : la copie d'une génération ne passe pas sur la
+  // régénération suivante.
+  it("keeps each event on its own generation", async () => {
+    const input: ExportRows = {
+      ...rows(),
+      measurements: [],
+      sections: [],
+      generations: [
+        {
+          documentId: DOC,
+          generatedAt: at(0, 10),
+          exportedAt: null,
+          sharedAt: at(0, 11),
+        },
+        {
+          documentId: DOC,
+          generatedAt: at(10),
+          exportedAt: null,
+          sharedAt: null,
+        },
+      ],
+      termErrors: [],
+    };
+    const data = buildExport(input, "0.8.0", NOW);
+    expect(await checkExport(data)).toEqual({ export: data });
+    expect(data.summaries.map((s) => s.shared)).toEqual([0, null]);
+  });
+
+  // Revue 0.8.0, constats 2 et 4 : une mesure dont la génération n'a pas été
+  // notée (mesure désactivée à la génération) n'est pas exportée.
+  it("leaves out a measurement whose generation was not recorded", async () => {
+    const input = rows();
+    input.measurements.push(measurement("m-off", "summary:off", at(5)));
+    input.termErrors.push({
+      measurementId: "m-off",
+      termHash: HASH_A,
+      count: 1,
     });
+    const data = buildExport(input, "0.8.0", NOW);
+    expect(await checkExport(data)).toEqual({ export: data });
+    expect(data.meetings).toHaveLength(1);
+    expect(data.terms[0].errors).toEqual([{ meeting: "m1", count: 1 }]);
+  });
+
+  // Revue 0.8.0, constat 11 : A mesurée (entrée du terme), ajout au
+  // dictionnaire constaté à la mesure de B, A remesurée ensuite. Le terme
+  // reste, ajouté après m1 (A).
+  it("dates the dictionary addition in the chronological order of measurements", async () => {
+    const input: ExportRows = {
+      ...rows(),
+      measurements: [
+        measurement("a1", DOC, at(2)),
+        measurement("b1", OTHER, at(5)),
+        measurement("a-again", DOC, at(6)),
+      ],
+      sections: [],
+      generations: [
+        {
+          documentId: DOC,
+          generatedAt: at(1),
+          exportedAt: null,
+          sharedAt: null,
+        },
+        {
+          documentId: OTHER,
+          generatedAt: at(4),
+          exportedAt: null,
+          sharedAt: null,
+        },
+      ],
+      terms: [
+        {
+          hash: HASH_A,
+          index: 12,
+          inDictionaryFirst: false,
+          addedSeenAt: at(5),
+        },
+      ],
+      termErrors: [
+        { measurementId: "a1", termHash: HASH_A, count: 1 },
+        { measurementId: "b1", termHash: HASH_A, count: 1 },
+      ],
+    };
+    const data = buildExport(input, "0.8.0", NOW);
+    expect(await checkExport(data)).toEqual({ export: data });
+    expect(data.terms).toEqual([
+      {
+        term: "t12",
+        added_after: "m1",
+        errors: [
+          { meeting: "m1", count: 1 },
+          { meeting: "m2", count: 1 },
+        ],
+      },
+    ]);
   });
 
   it("refuses to build without enrollment or with an odd app version", () => {

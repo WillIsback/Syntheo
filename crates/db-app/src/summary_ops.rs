@@ -218,13 +218,19 @@ pub async fn update_generated_summary_body(
         .await?
     };
 
-    // Corps produit, avant toute retouche : la version générée de la mesure
-    // de la bêta (issue 671), remplacé à chaque régénération.
+    // Bêta de la mesure (issues 671 et 672), seulement pendant que la mesure
+    // est active : le corps produit avant toute retouche (la version générée
+    // de la mesure, remplacée à chaque régénération), et la génération
+    // elle-même, une ligne par génération, si la personne est inscrite.
     if result.rows_affected() == 1 {
         sqlx::query(
             "INSERT INTO summary_generated_bodies
                (document_id, session_id, body_format, body, generated_at)
-             VALUES (?, ?, 'prosemirror_json', ?, ?)
+             SELECT ?, ?, 'prosemirror_json', ?, ?
+             WHERE EXISTS (
+               SELECT 1 FROM app_settings
+               WHERE id = 'measurement_enabled' AND value_json = 'true'
+             )
              ON CONFLICT(document_id) DO UPDATE SET
                session_id = excluded.session_id,
                body_format = excluded.body_format,
@@ -234,6 +240,21 @@ pub async fn update_generated_summary_body(
         .bind(note_id)
         .bind(session_id)
         .bind(next_body)
+        .bind(updated_at)
+        .execute(&mut *conn)
+        .await?;
+        sqlx::query(
+            "INSERT INTO beta_generations (document_id, session_id, generated_at)
+             SELECT ?, ?, ?
+             WHERE EXISTS (
+               SELECT 1 FROM app_settings
+               WHERE id = 'measurement_enabled' AND value_json = 'true'
+             )
+               AND EXISTS (SELECT 1 FROM beta_enrollment)
+             ON CONFLICT(document_id, generated_at) DO NOTHING",
+        )
+        .bind(note_id)
+        .bind(session_id)
         .bind(updated_at)
         .execute(&mut *conn)
         .await?;

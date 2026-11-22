@@ -2888,8 +2888,8 @@ msgid "Measured meetings: {0}"
 msgstr "Measured meetings: {0}"
 
 #: src/mesure/beta-data.tsx
-msgid "Measurements and pseudonym erased from this computer."
-msgstr "Measurements and pseudonym erased from this computer."
+msgid "Measurements and pseudonym erased from this computer. Measurement is now off."
+msgstr "Measurements and pseudonym erased from this computer. Measurement is now off."
 
 #: src/settings/ai/llm/server-card.tsx
 msgid "Medium"

@@ -25,7 +25,8 @@ export type ExportRows = {
     matched: boolean;
     counters: Counters;
   }[];
-  summaries: {
+  /** Générations notées pendant que la mesure était active. */
+  generations: {
     documentId: string;
     generatedAt: string;
     exportedAt: string | null;
@@ -95,8 +96,15 @@ const DAY_MS = 86_400_000;
 const RULE_VERSION = 1;
 
 /**
- * Construit l'export à partir des lignes de la base. Une seule mesure par
- * synthèse (la plus récente), dans l'ordre des mesures.
+ * Construit l'export à partir des lignes de la base.
+ *
+ * - Chaque génération notée (pendant que la mesure était active) est une
+ *   synthèse `sN` ; une régénération en est une nouvelle.
+ * - Une mesure se rattache à la génération de sa synthèse en cours à sa date ;
+ *   une mesure sans génération notée n'est pas exportée.
+ * - Une génération mesurée donne une réunion `mN` : sa première mesure. Les
+ *   réunions suivent l'ordre chronologique de ces mesures, qui sert aussi à
+ *   dater l'ajout d'un terme au dictionnaire.
  */
 export function buildExport(
   rows: ExportRows,
@@ -112,87 +120,74 @@ export function buildExport(
   const enrolled = Date.parse(rows.enrollment.enrolledAt);
   const day = (at: string) =>
     Math.max(0, Math.floor((Date.parse(at) - enrolled) / DAY_MS));
-  const optionalDay = (at: string | null) => (at === null ? null : day(at));
 
-  // Dernière mesure de chaque synthèse, dans l'ordre des mesures.
-  const latest = new Map<string, ExportRows["measurements"][number]>();
-  for (const measurement of [...rows.measurements].sort((a, b) =>
-    a.measuredAt.localeCompare(b.measuredAt),
-  )) {
-    latest.set(measurement.documentId, measurement);
-  }
-  const measured = [...latest.values()].sort((a, b) =>
-    a.measuredAt.localeCompare(b.measuredAt),
-  );
-  const firstMeasured = new Map<string, string>();
-  for (const measurement of rows.measurements) {
-    const previous = firstMeasured.get(measurement.documentId);
-    if (!previous || measurement.measuredAt < previous) {
-      firstMeasured.set(measurement.documentId, measurement.measuredAt);
-    }
-  }
-
-  // Synthèses générées depuis l'inscription, et toute synthèse mesurée.
-  const summaryRows = new Map(rows.summaries.map((s) => [s.documentId, s]));
-  for (const measurement of measured) {
-    if (!summaryRows.has(measurement.documentId)) {
-      summaryRows.set(measurement.documentId, {
-        documentId: measurement.documentId,
-        generatedAt: rows.enrollment.enrolledAt,
-        exportedAt: null,
-        sharedAt: null,
-      });
-    }
-  }
-  const summaries = [...summaryRows.values()].sort(
+  const generations = [...rows.generations].sort(
     (a, b) =>
       a.generatedAt.localeCompare(b.generatedAt) ||
       a.documentId.localeCompare(b.documentId),
   );
-  const summaryIndex = new Map(
-    summaries.map((s, i) => [s.documentId, `s${i + 1}`]),
+  const byDocument = new Map<string, typeof generations>();
+  for (const generation of generations) {
+    const list = byDocument.get(generation.documentId) ?? [];
+    list.push(generation);
+    byDocument.set(generation.documentId, list);
+  }
+
+  // Première mesure de chaque génération, dans l'ordre des mesures.
+  type Measurement = ExportRows["measurements"][number];
+  const firstMeasurement = new Map<(typeof generations)[number], Measurement>();
+  for (const measurement of [...rows.measurements].sort((a, b) =>
+    a.measuredAt.localeCompare(b.measuredAt),
+  )) {
+    const candidates = byDocument.get(measurement.documentId) ?? [];
+    let generation: (typeof generations)[number] | undefined;
+    for (const candidate of candidates) {
+      if (candidate.generatedAt <= measurement.measuredAt)
+        generation = candidate;
+    }
+    if (generation && !firstMeasurement.has(generation)) {
+      firstMeasurement.set(generation, measurement);
+    }
+  }
+
+  const summaryIndex = new Map(generations.map((g, i) => [g, `s${i + 1}`]));
+  const measured = [...firstMeasurement.entries()].sort(([, a], [, b]) =>
+    a.measuredAt.localeCompare(b.measuredAt),
   );
+  const meetingIndex = new Map(measured.map(([, m], i) => [m.id, `m${i + 1}`]));
 
-  const meetingIndex = new Map(measured.map((m, i) => [m.id, `m${i + 1}`]));
-  const meetings = measured.map((m) => {
-    const generatedDay = day(
-      summaryRows.get(m.documentId)?.generatedAt ?? m.measuredAt,
-    );
-    return {
-      meeting: meetingIndex.get(m.id) as string,
-      summary: summaryIndex.get(m.documentId) as string,
-      // Une mesure n'est jamais datée avant la génération de sa synthèse.
-      day: Math.max(day(m.measuredAt), generatedDay),
-      mode: "paste" as const,
-      aligned: m.aligned,
-      headings_generated: m.headingsGenerated,
-      headings_matched: m.headingsMatched,
-      unmatched_sent_words: m.unmatchedSentWords,
-      total: m.total,
-      sections: rows.sections
-        .filter((s) => s.measurementId === m.id)
-        .sort((a, b) => a.index - b.index)
-        .map((s) => ({
-          index: s.index,
-          role: s.role,
-          matched: s.matched,
-          counters: s.counters,
-        })),
-    };
-  });
+  const meetings = measured.map(([generation, m]) => ({
+    meeting: meetingIndex.get(m.id) as string,
+    summary: summaryIndex.get(generation) as string,
+    day: day(m.measuredAt),
+    mode: "paste" as const,
+    aligned: m.aligned,
+    headings_generated: m.headingsGenerated,
+    headings_matched: m.headingsMatched,
+    unmatched_sent_words: m.unmatchedSentWords,
+    total: m.total,
+    sections: rows.sections
+      .filter((s) => s.measurementId === m.id)
+      .sort((a, b) => a.index - b.index)
+      .map((s) => ({
+        index: s.index,
+        role: s.role,
+        matched: s.matched,
+        counters: s.counters,
+      })),
+  }));
 
-  const exportedSummaries = summaries.map((s) => {
-    const generatedDay = day(s.generatedAt);
-    const after = (at: string | null) => {
-      const value = optionalDay(at);
-      return value === null ? null : Math.max(value, generatedDay);
-    };
+  const summaries = generations.map((g) => {
+    // Un événement antérieur à la génération appartient à une autre.
+    const after = (at: string | null) =>
+      at !== null && at >= g.generatedAt ? day(at) : null;
+    const measurement = firstMeasurement.get(g);
     return {
-      summary: summaryIndex.get(s.documentId) as string,
-      generated_day: generatedDay,
-      measured: after(firstMeasured.get(s.documentId) ?? null),
-      exported: after(s.exportedAt),
-      shared: after(s.sharedAt),
+      summary: summaryIndex.get(g) as string,
+      generated_day: day(g.generatedAt),
+      measured: measurement ? day(measurement.measuredAt) : null,
+      exported: after(g.exportedAt),
+      shared: after(g.sharedAt),
     };
   });
 
@@ -214,14 +209,13 @@ export function buildExport(
       if (errors.length === 0) return [];
       let addedAfter: string | null = null;
       if (term.addedSeenAt) {
-        // Constaté au dictionnaire à une mesure : ajouté après la mesure
-        // précédente. Ajouté avant toute mesure exportée : hors de l'étude.
-        const before = measured.filter(
-          (m) => m.measuredAt < (term.addedSeenAt as string),
-        );
+        // Constaté au dictionnaire à une mesure : ajouté après la réunion
+        // exportée qui la précède. Avant toute réunion exportée : hors étude.
+        const seen = term.addedSeenAt;
+        const before = measured.filter(([, m]) => m.measuredAt < seen);
         const previous = before[before.length - 1];
         if (!previous) return [];
-        addedAfter = meetingIndex.get(previous.id) as string;
+        addedAfter = meetingIndex.get(previous[1].id) as string;
       }
       return [{ term: `t${term.index}`, added_after: addedAfter, errors }];
     });
@@ -234,7 +228,7 @@ export function buildExport(
     pseudonym: rows.enrollment.pseudonym,
     enrolled_days: day(now.toISOString()),
     meetings,
-    summaries: exportedSummaries,
+    summaries,
     terms,
   };
 }
@@ -268,7 +262,7 @@ export async function loadExportRows(): Promise<ExportRows> {
       enrollment: null,
       measurements: [],
       sections: [],
-      summaries: [],
+      generations: [],
       terms: [],
       termErrors: [],
     };
@@ -305,18 +299,15 @@ export async function loadExportRows(): Promise<ExportRows> {
             added_words, deleted_words, replaced_content, replaced_lexical
      FROM summary_measurement_sections`,
   );
-  const summaries = await liveQueryClient.execute<{
+  const generations = await liveQueryClient.execute<{
     document_id: string;
     generated_at: string;
     exported_at: string | null;
     shared_at: string | null;
   }>(
-    `SELECT generated.document_id, generated.generated_at,
-            event.exported_at, event.shared_at
-     FROM summary_generated_bodies AS generated
-     LEFT JOIN beta_summary_events AS event
-       ON event.document_id = generated.document_id
-     WHERE generated.generated_at >= ?`,
+    `SELECT document_id, generated_at, exported_at, shared_at
+     FROM beta_generations
+     WHERE generated_at >= ?`,
     [enrollment.enrolled_at],
   );
   const terms = await liveQueryClient.execute<{
@@ -355,11 +346,11 @@ export async function loadExportRows(): Promise<ExportRows> {
       matched: s.matched === 1,
       counters: counters(s),
     })),
-    summaries: summaries.map((s) => ({
-      documentId: s.document_id,
-      generatedAt: s.generated_at,
-      exportedAt: s.exported_at,
-      sharedAt: s.shared_at,
+    generations: generations.map((g) => ({
+      documentId: g.document_id,
+      generatedAt: g.generated_at,
+      exportedAt: g.exported_at,
+      sharedAt: g.shared_at,
     })),
     terms: terms.map((t) => ({
       hash: t.hash,

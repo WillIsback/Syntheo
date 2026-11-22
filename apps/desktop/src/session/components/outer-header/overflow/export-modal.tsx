@@ -204,7 +204,7 @@ export function ExportModal({
 
       // Bêta (issue 672) : export de fichier d'une synthèse, pour l'abandon.
       if (includeSummary && summaryMd && exportedSummaryId) {
-        void recordSummaryEvent("exported", sessionId, exportedSummaryId);
+        void recordSummaryEvent("exported", exportedSummaryId);
       }
       return path;
     },

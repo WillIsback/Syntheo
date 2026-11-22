@@ -436,11 +436,7 @@ describe("SessionCapsule", () => {
     );
     // Bêta (issue 672) : la copie d'une synthèse compte comme partage.
     await waitFor(() =>
-      expect(mocks.recordSummaryEvent).toHaveBeenCalledWith(
-        "shared",
-        tab.id,
-        "note-1",
-      ),
+      expect(mocks.recordSummaryEvent).toHaveBeenCalledWith("shared", "note-1"),
     );
   });
 

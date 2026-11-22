@@ -488,11 +488,15 @@ fn export_schema_is_closed_and_has_no_free_string() {
 }
 
 // Issue 672 : rôle des sections déduit du titre, termes corrigés par empreinte
-// (même empreinte qu'un terme du dictionnaire), jamais en clair.
+// à clé (même empreinte qu'un terme du dictionnaire), jamais en clair.
+const KEY: [u8; 32] = [7; 32];
+
 #[test]
 fn section_roles_and_corrected_terms() {
     let sent = "# Résumé\n\nLe projet avance bien. Le budget est validé par la direction.\n\n## Décisions\n\n- Lancer le pilote en janvier avec Marten.\n- Garder le serveur actuel.\n\n## Actions\n\n- Envoyer le compte rendu à l'équipe.\n";
-    let dictionary = Dictionary::new(["Marten", "Nemotron"]).unwrap();
+    let dictionary = Dictionary::new(["Marten", "Nemotron"])
+        .unwrap()
+        .with_term_key(KEY);
     let report = measure(
         GENERATED,
         Format::Markdown,
@@ -520,17 +524,131 @@ fn section_roles_and_corrected_terms() {
     assert_eq!(report.dictionary_hashes.len(), 2);
     let json = serde_json::to_string(&report).unwrap();
     assert!(!json.contains("Marten") && !json.contains("marten"));
+
+    // Sans clé, aucun terme n'est suivi ; une autre clé donne d'autres empreintes.
+    let plain = Dictionary::new(["Marten"]).unwrap();
+    let report = measure(GENERATED, Format::Markdown, sent, Format::Markdown, &plain).unwrap();
+    assert!(report.corrected_terms.is_empty() && report.dictionary_hashes.is_empty());
+    let other = Dictionary::new(["Marten"]).unwrap().with_term_key([8; 32]);
+    let a = Dictionary::new(["Marten"])
+        .unwrap()
+        .with_term_key(KEY)
+        .hashes();
+    assert_ne!(a, other.hashes());
+}
+
+// Revue 0.8.0, constat 12 : l'empreinte porte sur le mot qui a fait le
+// classement lexical, pas sur tout le remplacement ; l'ajout au dictionnaire
+// d'un terme corrigé se retrouve donc par la même empreinte.
+#[test]
+fn corrected_term_is_the_word_that_made_it_lexical() {
+    let generated = "Le dossier est suivi par Dupond depuis lundi.";
+    let sent = "Le dossier est suivi par Dupont depuis lundi.";
+    let before = Dictionary::new(["Nemotron"]).unwrap().with_term_key(KEY);
+    let first = measure(generated, Format::Text, sent, Format::Text, &before).unwrap();
+    assert_eq!(first.corrected_terms.len(), 1);
+    assert!(!before.hashes().contains(&first.corrected_terms[0].hash));
+    let after = Dictionary::new(["Nemotron", "Dupont"])
+        .unwrap()
+        .with_term_key(KEY);
+    assert!(after.hashes().contains(&first.corrected_terms[0].hash));
+
+    // « au rectorat » remplacé par « à la DRASI » : le terme est « DRASI ».
+    let generated = "Le dossier part au rectorat demain.";
+    let sent = "Le dossier part à la DRASI demain.";
+    let report = measure(generated, Format::Text, sent, Format::Text, &before).unwrap();
+    let drasi = Dictionary::new(["DRASI"])
+        .unwrap()
+        .with_term_key(KEY)
+        .hashes();
+    let hashes: Vec<_> = report.corrected_terms.iter().map(|t| &t.hash).collect();
+    assert_eq!(hashes, [&drasi[0]]);
+}
+
+// Revue 0.8.0, constat 13 : liste fermée, correspondance exacte, testée sur
+// les titres de tous les modèles par défaut, en français et en anglais.
+#[test]
+fn section_roles_follow_the_default_templates() {
+    let mut titles = Vec::new();
+    for source in [
+        include_str!("../../../apps/desktop/src/templates/default-templates-fr.ts"),
+        include_str!("../../../apps/desktop/src/templates/default-templates-en.ts"),
+    ] {
+        // Les sections sont des paires ["Titre", "Description"].
+        for line in source.split("sections: [").skip(1) {
+            let block = &line[..line.find("\n    ],").unwrap_or(line.len())];
+            for pair in block.split('[').skip(1) {
+                if let Some(title) = pair
+                    .trim_start()
+                    .strip_prefix('"')
+                    .and_then(|t| t.split('"').next())
+                {
+                    titles.push(title.to_string());
+                }
+            }
+        }
+    }
+    assert!(titles.len() > 200, "titres lus : {}", titles.len());
+    let decisions = [
+        "Décisions du conseil",
+        "Décisions majeures",
+        "Décisions prises",
+        "Décisions actées",
+        "Décisions et actions",
+        "Board Decisions",
+        "Major Decisions",
+        "Decisions Made",
+        "Decisions & Action Items",
+    ];
+    let actions = [
+        "Prochaines étapes",
+        "Actions",
+        "Éléments à fournir",
+        "À faire",
+        "Plan d'action",
+        "Actions à suivre",
+        "Prochaine étape",
+        "Next Steps",
+        "Action Items",
+        "Follow-up Items",
+        "Action Plan",
+        "Next Step",
+    ];
+    for title in &titles {
+        let expected = if decisions.contains(&title.as_str()) {
+            SectionRole::Decisions
+        } else if actions.contains(&title.as_str()) {
+            SectionRole::Actions
+        } else {
+            SectionRole::Other
+        };
+        assert_eq!(SectionRole::from_title(Some(title)), expected, "{title}");
+    }
+    // Chaque titre attendu existe bien dans un modèle par défaut.
+    for title in decisions.iter().chain(&actions) {
+        assert!(
+            titles.iter().any(|t| t == title),
+            "{title} absent des modèles"
+        );
+    }
+    // Pas de sous-chaîne : « action » dans un autre mot ne suffit pas.
+    for title in [
+        "Rédaction",
+        "Transactions",
+        "Interactions",
+        "Satisfaction client",
+        "Décisionnaires",
+    ] {
+        assert_eq!(
+            SectionRole::from_title(Some(title)),
+            SectionRole::Other,
+            "{title}"
+        );
+    }
     assert_eq!(
-        SectionRole::from_title(Some("prochaines étapes")),
+        SectionRole::from_title(Some("  Prochaines  étapes : ")),
         SectionRole::Actions
     );
-    assert_eq!(
-        SectionRole::from_title(Some("next steps")),
-        SectionRole::Actions
-    );
-    assert_eq!(
-        SectionRole::from_title(Some("decisions taken")),
-        SectionRole::Decisions
-    );
+    assert_eq!(SectionRole::from_title(Some("To-do")), SectionRole::Actions);
     assert_eq!(SectionRole::from_title(None), SectionRole::Other);
 }

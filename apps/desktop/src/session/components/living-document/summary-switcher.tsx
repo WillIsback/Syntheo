@@ -187,7 +187,7 @@ function SummarySwitcherForNote({
               }).then((copied) => {
                 // Bêta (issue 672) : partage de la synthèse, pour l'abandon.
                 if (copied) {
-                  void recordSummaryEvent("shared", sessionId, currentNoteId);
+                  void recordSummaryEvent("shared", currentNoteId);
                 }
               });
             }}

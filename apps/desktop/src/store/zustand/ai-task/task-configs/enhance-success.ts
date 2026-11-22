@@ -204,11 +204,7 @@ export const runEnhanceSuccess = async ({
         .then((result) => {
           // Bêta (issue 672) : un envoi réel par webhook partage la synthèse.
           if (result.status === "ok" && result.data > 0) {
-            void recordSummaryEvent(
-              "shared",
-              args.sessionId,
-              args.enhancedNoteId,
-            );
+            void recordSummaryEvent("shared", args.enhancedNoteId);
           }
         })
         .catch((error) =>

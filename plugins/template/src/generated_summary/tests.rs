@@ -102,45 +102,118 @@ async fn regeneration_keeps_the_previous_body_as_a_superseded_version() {
 
 // Issue 671 : le corps produit, avant toute retouche, est gardé comme version
 // générée de la mesure, et remplacé à chaque régénération.
+async fn set_measurement(db: &Db, enabled: bool) {
+    sqlx::query(
+        "INSERT INTO app_settings (id, value_json) VALUES ('measurement_enabled', ?)
+         ON CONFLICT(id) DO UPDATE SET value_json = excluded.value_json",
+    )
+    .bind(if enabled { "true" } else { "false" })
+    .execute(db.pool())
+    .await
+    .unwrap();
+}
+
+async fn enroll(db: &Db) {
+    sqlx::query(sqlx::AssertSqlSafe(format!(
+        "INSERT INTO beta_enrollment VALUES (1, 'p-{}', '2026-11-22T08:00:00.000Z', '{}')",
+        "0".repeat(32),
+        "a".repeat(64)
+    )))
+    .execute(db.pool())
+    .await
+    .unwrap();
+}
+
+async fn generated_bodies(db: &Db) -> Vec<(String, String, String)> {
+    sqlx::query_as(
+        "SELECT session_id, body_format, body FROM summary_generated_bodies
+         WHERE document_id = 'note-1'",
+    )
+    .fetch_all(db.pool())
+    .await
+    .unwrap()
+}
+
+async fn generations(db: &Db) -> i64 {
+    sqlx::query_scalar("SELECT count(*) FROM beta_generations WHERE document_id = 'note-1'")
+        .fetch_one(db.pool())
+        .await
+        .unwrap()
+}
+
+/// Régénère par-dessus le corps courant, un instant plus tard.
+async fn regenerate(db: &Db, current: &str, next: &str) {
+    std::thread::sleep(std::time::Duration::from_millis(5));
+    let mut again = request(vec![]);
+    again.current_body = current.to_string();
+    again.current_body_format = "prosemirror_json".to_string();
+    again.next_body = next.to_string();
+    save_generated_summary(db.pool(), again).await.unwrap();
+}
+
 #[tokio::test]
 async fn generation_keeps_the_produced_body_for_the_measurement() {
     let db = test_db().await;
-    let generated = || async {
-        sqlx::query_as::<_, (String, String, String)>(
-            "SELECT session_id, body_format, body FROM summary_generated_bodies
-             WHERE document_id = 'note-1'",
-        )
-        .fetch_all(db.pool())
-        .await
-        .unwrap()
-    };
+    set_measurement(&db, true).await;
+    enroll(&db).await;
 
     let first = request(vec![]);
     let first_body = first.next_body.clone();
     let session_id = first.session_id.clone();
     save_generated_summary(db.pool(), first).await.unwrap();
     assert_eq!(
-        generated().await,
+        generated_bodies(&db).await,
         [(
             session_id.clone(),
             "prosemirror_json".to_string(),
             first_body.clone()
         )]
     );
+    assert_eq!(generations(&db).await, 1);
 
-    let mut second = request(vec![]);
-    second.current_body = first_body;
-    second.current_body_format = "prosemirror_json".to_string();
-    second.next_body = r#"{"type":"doc","content":[{"type":"paragraph"}]}"#.to_string();
-    save_generated_summary(db.pool(), second).await.unwrap();
+    let next = r#"{"type":"doc","content":[{"type":"paragraph"}]}"#;
+    regenerate(&db, &first_body, next).await;
     assert_eq!(
-        generated().await,
-        [(
-            session_id,
-            "prosemirror_json".to_string(),
-            r#"{"type":"doc","content":[{"type":"paragraph"}]}"#.to_string()
-        )]
+        generated_bodies(&db).await,
+        [(session_id, "prosemirror_json".to_string(), next.to_string())]
     );
+    // Une régénération est une nouvelle génération (revue 0.8.0, constat 10).
+    assert_eq!(generations(&db).await, 2);
+}
+
+// Revue 0.8.0, constats 2, 4 et 8 : rien n'est gardé pour la bêta pendant que
+// la mesure est désactivée, ni le corps généré, ni la génération.
+#[tokio::test]
+async fn nothing_is_kept_for_the_beta_while_measurement_is_off() {
+    let db = test_db().await;
+    let first = request(vec![]);
+    let first_body = first.next_body.clone();
+    save_generated_summary(db.pool(), first).await.unwrap();
+    assert!(generated_bodies(&db).await.is_empty());
+    assert_eq!(generations(&db).await, 0);
+
+    // Activée sans inscription : le corps est gardé, pas la génération.
+    set_measurement(&db, true).await;
+    let second = r#"{"type":"doc","content":[{"type":"paragraph"}]}"#;
+    regenerate(&db, &first_body, second).await;
+    assert_eq!(generated_bodies(&db).await.len(), 1);
+    assert_eq!(generations(&db).await, 0);
+
+    // Inscrite, puis désactivée : plus rien de nouveau.
+    enroll(&db).await;
+    set_measurement(&db, false).await;
+    sqlx::query("DELETE FROM summary_generated_bodies")
+        .execute(db.pool())
+        .await
+        .unwrap();
+    regenerate(
+        &db,
+        second,
+        r#"{"type":"doc","content":[{"type":"heading"}]}"#,
+    )
+    .await;
+    assert!(generated_bodies(&db).await.is_empty());
+    assert_eq!(generations(&db).await, 0);
 }
 
 #[tokio::test]

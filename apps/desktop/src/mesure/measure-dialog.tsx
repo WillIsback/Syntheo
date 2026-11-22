@@ -19,6 +19,7 @@ import {
 import { Textarea } from "@syntheo/ui/components/ui/textarea";
 import { cn } from "@syntheo/utils";
 
+import { ensureEnrollment } from "./beta";
 import {
   agreementMatrix,
   agreementPercent,
@@ -192,6 +193,11 @@ export function MeasureDialog({
     const dictionary = personalization_dictionary_terms ?? [];
     const input = sentInput(source);
     const generated = await generatedVersion(documentId, summaryMarkdown);
+    // L'inscription porte la clé des empreintes de termes : elle doit exister
+    // avant le calcul (issue 672).
+    await ensureEnrollment().catch((cause) =>
+      console.error("[mesure] failed to enroll", cause),
+    );
     if (!current()) return;
     const measured = await mesureCommands.measure(
       generated.markdown,

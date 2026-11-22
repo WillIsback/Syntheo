@@ -123,7 +123,10 @@ export function BetaData() {
       </div>
       {erased ? (
         <p className="text-muted-foreground text-xs" role="status">
-          <Trans>Measurements and pseudonym erased from this computer.</Trans>
+          <Trans>
+            Measurements and pseudonym erased from this computer. Measurement is
+            now off.
+          </Trans>
         </p>
       ) : null}
 

@@ -30,7 +30,7 @@ const ROWS = {
   },
   measurements: [],
   sections: [],
-  summaries: [],
+  generations: [],
   terms: [],
   termErrors: [],
 };
@@ -87,7 +87,7 @@ describe("BetaData", () => {
       }),
     );
     await screen.findByText(
-      "Measurements and pseudonym erased from this computer.",
+      "Measurements and pseudonym erased from this computer. Measurement is now off.",
     );
     expect(mocks.eraseBetaData).toHaveBeenCalledOnce();
   });

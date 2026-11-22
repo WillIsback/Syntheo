@@ -9,12 +9,12 @@ const TABLES: [&str; 7] = [
     "summary_measurement_sections",
     "calibration_results",
     "beta_enrollment",
-    "beta_summary_events",
+    "beta_generations",
     "beta_terms",
     "beta_term_errors",
 ];
 /// Seules colonnes TEXT permises, toutes contraintes par CHECK.
-const TEXT_COLUMNS: [&str; 16] = [
+const TEXT_COLUMNS: [&str; 18] = [
     "id",
     "document_id",
     "session_id",
@@ -31,6 +31,8 @@ const TEXT_COLUMNS: [&str; 16] = [
     "term_hash",
     "first_seen_at",
     "added_seen_at",
+    "term_key",
+    "generated_at",
 ];
 const ID: &str = "0b9f2c1e-4d3a-4b5c-8d7e-1f2a3b4c5d6e";
 
@@ -168,7 +170,8 @@ async fn beta_export_tables_refuse_free_text() {
     };
     let pseudonym = "p-3f9a1c0e7b2d4f6a8c1e3b5d7f9a2c4e";
     run(format!(
-        "INSERT INTO beta_enrollment VALUES (1, '{pseudonym}', '2026-11-22T10:00:00.000Z')"
+        "INSERT INTO beta_enrollment VALUES (1, '{pseudonym}', '2026-11-22T10:00:00.000Z', '{}')",
+        "0f".repeat(32)
     ))
     .await
     .unwrap();
@@ -178,14 +181,16 @@ async fn beta_export_tables_refuse_free_text() {
     ))
     .await
     .unwrap();
-    run("INSERT INTO beta_summary_events VALUES ('summary:5f0c2a7e-1b3d-4c6e-9a8b-7d6e5f4a3b2c', '5f0c2a7e-1b3d-4c6e-9a8b-7d6e5f4a3b2c', NULL, '2026-11-23T09:00:00.000Z')".into())
+    run("INSERT INTO beta_generations (document_id, session_id, generated_at, shared_at) VALUES ('summary:5f0c2a7e-1b3d-4c6e-9a8b-7d6e5f4a3b2c', '5f0c2a7e-1b3d-4c6e-9a8b-7d6e5f4a3b2c', '2026-11-23T08:00:00.000Z', '2026-11-23T09:00:00.000Z')".into())
         .await
         .unwrap();
     for sql in [
-        "INSERT INTO beta_enrollment VALUES (2, 'p-3f9a1c0e7b2d4f6a8c1e3b5d7f9a2c4e', '2026-11-22T10:00:00Z')".to_string(),
+        format!("INSERT INTO beta_enrollment VALUES (2, 'p-3f9a1c0e7b2d4f6a8c1e3b5d7f9a2c4e', '2026-11-22T10:00:00Z', '{}')", "0f".repeat(32)),
+        "UPDATE beta_enrollment SET term_key = 'clé secrète'".to_string(),
+        "INSERT INTO beta_terms VALUES ('".to_string() + &"b".repeat(64) + "', 100000, '2026-11-22T10:00:00Z', 0, NULL)",
         "UPDATE beta_enrollment SET pseudonym = 'Alice Martin'".to_string(),
         "INSERT INTO beta_terms VALUES ('Nemotron', 2, '2026-11-22T10:00:00Z', 0, NULL)".to_string(),
-        "INSERT INTO beta_summary_events VALUES ('doc-2', 's-1', 'hier soir', NULL)".to_string(),
+        "INSERT INTO beta_generations (document_id, session_id, generated_at) VALUES ('doc-2', 's-1', 'hier soir')".to_string(),
         "UPDATE summary_measurement_sections SET role = 'Décisions du comité'".to_string(),
     ] {
         let result = run(sql.clone()).await;
@@ -218,4 +223,10 @@ async fn beta_export_tables_refuse_free_text() {
         .await
         .unwrap();
     assert_eq!(left.0, 0);
+    // Revue 0.8.0, constat 6 : le terme resté sans erreur disparaît aussi.
+    let terms: (i64,) = sqlx::query_as("SELECT count(*) FROM beta_terms")
+        .fetch_one(db.pool())
+        .await
+        .unwrap();
+    assert_eq!(terms.0, 0);
 }

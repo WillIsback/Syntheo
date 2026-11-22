@@ -116,20 +116,29 @@ export function saveMeasurement(
   result: MeasureResult,
 ): Promise<void> {
   return enqueueDatabaseWrite("summary-measurements", async () => {
-    const id = crypto.randomUUID();
-    const now = new Date().toISOString();
     // Une mesure inscrit à la bêta si ce n'est déjà fait, puis enregistre ses
     // compteurs et le suivi de ses termes (issue 672), en une transaction.
-    await executeTransaction([
-      enrollmentStatement(now),
-      ...measurementStatements(id, ids, result),
-      ...termStatements(
-        id,
-        result.correctedTerms,
-        result.dictionaryHashes,
-        now,
-      ),
-    ]);
+    // Les index de termes sont tirés au hasard : sur une collision (tous les
+    // candidats pris), la transaction échoue et on retire.
+    for (let attempt = 1; ; attempt++) {
+      const id = crypto.randomUUID();
+      const now = new Date().toISOString();
+      try {
+        await executeTransaction([
+          enrollmentStatement(now),
+          ...measurementStatements(id, ids, result),
+          ...termStatements(
+            id,
+            result.correctedTerms,
+            result.dictionaryHashes,
+            now,
+          ),
+        ]);
+        return;
+      } catch (cause) {
+        if (attempt >= 3 || result.correctedTerms.length === 0) throw cause;
+      }
+    }
   });
 }
 

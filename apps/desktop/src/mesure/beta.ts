@@ -1,10 +1,11 @@
 import { executeTransaction, liveQueryClient } from "~/db";
 import { enqueueDatabaseWrite } from "~/db/write-queue";
 
-// Bêta, issue 672 : inscription (pseudonyme aléatoire et date de référence),
-// événements de partage et d'export des synthèses (taux d'abandon), et
-// effacement. Rien n'est enregistré tant que la mesure n'est pas activée, et
-// aucun texte : des identifiants, des dates et des empreintes.
+// Bêta, issue 672 : inscription (pseudonyme aléatoire, date de référence et
+// clé des empreintes de termes), événements d'export et de partage de chaque
+// génération de synthèse (taux d'abandon), suivi des termes et effacement.
+// Rien n'est enregistré tant que la mesure n'est pas activée, et aucun texte :
+// des identifiants, des dates et des empreintes à clé locale.
 
 type Statement = { sql: string; params: unknown[] };
 
@@ -13,21 +14,30 @@ const ENABLED = `EXISTS (
   WHERE id = 'measurement_enabled' AND value_json = 'true'
 )`;
 
-/** Pseudonyme aléatoire : `p-` suivi de 32 chiffres hexadécimaux. */
-export function randomPseudonym(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(16));
-  return `p-${Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("")}`;
+function randomHex(bytes: number): string {
+  const values = crypto.getRandomValues(new Uint8Array(bytes));
+  return Array.from(values, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-/** Inscription, créée à la première activation (ou à la première mesure). */
+/** Pseudonyme aléatoire : `p-` suivi de 32 chiffres hexadécimaux. */
+export function randomPseudonym(): string {
+  return `p-${randomHex(16)}`;
+}
+
+/** Clé HMAC des empreintes de termes : 32 octets aléatoires. */
+export function randomTermKey(): string {
+  return randomHex(32);
+}
+
+/** Inscription, créée à l'activation (ou à la première mesure). */
 export function enrollmentStatement(now: string): Statement {
   return {
     sql: `
-      INSERT INTO beta_enrollment (id, pseudonym, enrolled_at)
-      VALUES (1, ?, ?)
+      INSERT INTO beta_enrollment (id, pseudonym, enrolled_at, term_key)
+      VALUES (1, ?, ?, ?)
       ON CONFLICT(id) DO NOTHING
     `,
-    params: [randomPseudonym(), now],
+    params: [randomPseudonym(), now, randomTermKey()],
   };
 }
 
@@ -41,57 +51,58 @@ export type SummaryEvent = "exported" | "shared";
 
 /**
  * Premier export de fichier ou premier partage (copie dans le presse-papiers,
- * envoi par webhook) des synthèses d'une réunion, ou d'une seule synthèse.
- * Seulement si la mesure est activée et la personne inscrite.
+ * envoi par webhook) de la génération courante d'une synthèse. Seulement si
+ * la mesure est activée, la personne inscrite et cette génération notée : une
+ * régénération démarre une nouvelle ligne, et les événements de l'ancienne n'y
+ * passent pas.
  */
 export function summaryEventStatement(
   event: SummaryEvent,
-  sessionId: string,
-  documentId: string | null,
+  documentId: string,
   now: string,
 ): Statement {
   const column = event === "exported" ? "exported_at" : "shared_at";
   return {
     sql: `
-      INSERT INTO beta_summary_events (document_id, session_id, ${column})
-      SELECT document.id, document.session_id, ?
-      FROM session_documents AS document
-      WHERE document.session_id = ?
-        AND (? IS NULL OR document.id = ?)
-        AND document.kind IN ('summary', 'template_output')
-        AND document.deleted_at IS NULL
+      UPDATE beta_generations SET ${column} = COALESCE(${column}, ?)
+      WHERE id = (
+        SELECT id FROM beta_generations
+        WHERE document_id = ?
+        ORDER BY generated_at DESC, id DESC
+        LIMIT 1
+      )
         AND ${ENABLED}
         AND EXISTS (SELECT 1 FROM beta_enrollment)
-      ON CONFLICT(document_id) DO UPDATE SET
-        ${column} = COALESCE(beta_summary_events.${column}, excluded.${column})
     `,
-    params: [now, sessionId, documentId, documentId],
+    params: [now, documentId],
   };
 }
 
 export function recordSummaryEvent(
   event: SummaryEvent,
-  sessionId: string,
-  documentId: string | null = null,
+  documentId: string,
 ): Promise<void> {
   return enqueueDatabaseWrite("beta-summary-events", async () => {
     await executeTransaction([
-      summaryEventStatement(
-        event,
-        sessionId,
-        documentId,
-        new Date().toISOString(),
-      ),
+      summaryEventStatement(event, documentId, new Date().toISOString()),
     ]).catch((cause) => {
       console.error("[mesure] failed to record a summary event", cause);
     });
   });
 }
 
+/** Index de terme tiré au hasard dans [1, 99999] (schéma `tN`). */
+export function randomTermIndexes(count: number): number[] {
+  const values = crypto.getRandomValues(new Uint32Array(count));
+  return Array.from(values, (v) => (v % 99_999) + 1);
+}
+
 /**
- * Termes corrigés d'une mesure (empreintes), et constat d'ajout au
+ * Termes corrigés d'une mesure (empreintes à clé), et constat d'ajout au
  * dictionnaire : un terme suivi qui apparaît dans le dictionnaire y a été
- * ajouté depuis la mesure précédente.
+ * ajouté depuis la mesure précédente. L'index d'un nouveau terme est le
+ * premier des candidats tirés au hasard qui n'est pas déjà pris ; si tous le
+ * sont, la transaction échoue et l'enregistrement est retenté.
  */
 export function termStatements(
   measurementId: string,
@@ -107,12 +118,22 @@ export function termStatements(
           hash, term_index, first_seen_at, in_dictionary_first, added_seen_at
         )
         VALUES (
-          ?, (SELECT COALESCE(MAX(term_index), 0) + 1 FROM beta_terms), ?, ?,
-          NULL
+          ?,
+          (
+            SELECT candidate.value FROM json_each(?) AS candidate
+            WHERE candidate.value NOT IN (SELECT term_index FROM beta_terms)
+            LIMIT 1
+          ),
+          ?, ?, NULL
         )
         ON CONFLICT(hash) DO NOTHING
       `,
-      params: [term.hash, now, inDictionary.has(term.hash) ? 1 : 0],
+      params: [
+        term.hash,
+        JSON.stringify(randomTermIndexes(8)),
+        now,
+        inDictionary.has(term.hash) ? 1 : 0,
+      ],
     },
     {
       sql: `
@@ -134,20 +155,43 @@ export function termStatements(
   return statements;
 }
 
-/** « Effacer mes mesures » : compteurs, calibrage, termes, événements, pseudonyme. */
-export const ERASE_STATEMENTS: Statement[] = [
-  { sql: "DELETE FROM beta_term_errors", params: [] },
-  { sql: "DELETE FROM summary_measurement_sections", params: [] },
-  { sql: "DELETE FROM summary_measurements", params: [] },
-  { sql: "DELETE FROM calibration_results", params: [] },
-  { sql: "DELETE FROM beta_terms", params: [] },
-  { sql: "DELETE FROM beta_summary_events", params: [] },
-  { sql: "DELETE FROM beta_enrollment", params: [] },
-];
+/** Copie des synthèses telles que générées : vidée quand la mesure s'arrête. */
+export const CLEAR_GENERATED_BODIES: Statement = {
+  sql: "DELETE FROM summary_generated_bodies",
+  params: [],
+};
+
+/**
+ * « Effacer mes mesures » : compteurs, calibrage, termes, générations, copie
+ * des synthèses générées, inscription (pseudonyme et clé), et arrêt de la
+ * mesure et du Calibrage. Réactiver crée une nouvelle inscription.
+ */
+export function eraseStatements(now: string): Statement[] {
+  return [
+    { sql: "DELETE FROM beta_term_errors", params: [] },
+    { sql: "DELETE FROM summary_measurement_sections", params: [] },
+    { sql: "DELETE FROM summary_measurements", params: [] },
+    { sql: "DELETE FROM calibration_results", params: [] },
+    { sql: "DELETE FROM beta_terms", params: [] },
+    { sql: "DELETE FROM beta_generations", params: [] },
+    CLEAR_GENERATED_BODIES,
+    { sql: "DELETE FROM beta_enrollment", params: [] },
+    ...["measurement_enabled", "calibration_enabled"].map((id) => ({
+      sql: `
+        INSERT INTO app_settings (id, value_json, updated_at)
+        VALUES (?, 'false', ?)
+        ON CONFLICT(id) DO UPDATE SET
+          value_json = excluded.value_json,
+          updated_at = excluded.updated_at
+      `,
+      params: [id, now],
+    })),
+  ];
+}
 
 export function eraseBetaData(): Promise<void> {
   return enqueueDatabaseWrite("summary-measurements", async () => {
-    await executeTransaction(ERASE_STATEMENTS);
+    await executeTransaction(eraseStatements(new Date().toISOString()));
   });
 }
 

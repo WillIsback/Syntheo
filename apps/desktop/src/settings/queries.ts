@@ -310,6 +310,14 @@ async function persistSettingValues(values: SettingValues): Promise<void> {
     `,
     params: [key, JSON.stringify(value), now],
   }));
+  // Bêta de la mesure (issue 672) : arrêter la mesure vide la copie des
+  // synthèses telles que générées, dans la même transaction.
+  if (values.measurement_enabled === false) {
+    statements.push({
+      sql: "DELETE FROM summary_generated_bodies",
+      params: [],
+    });
+  }
   if (statements.length > 0) await executeTransaction(statements);
   applySettingSideEffects(values);
 }
