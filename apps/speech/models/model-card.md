@@ -1,7 +1,7 @@
 ---
 license: other
 license_name: openmdw-1.1
-license_link: LICENSE.OpenMDW-1.1
+license_link: https://huggingface.co/WillisBack/syntheo-speech-models/blob/main/LICENSE.OpenMDW-1.1
 base_model:
   - nvidia/nemotron-3.5-asr-streaming-0.6b
   - nvidia/Nemotron-3-Diarization
