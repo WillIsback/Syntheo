@@ -250,6 +250,7 @@ pub fn init() -> tauri::plugin::TauriPlugin<tauri::Wry> {
                 app.manage(Arc::new(syntheo_speech_host::SpeechHost::new(
                     dir,
                     on_device::threads_per_session(),
+                    &app.package_info().version.to_string(),
                 )));
             }
 

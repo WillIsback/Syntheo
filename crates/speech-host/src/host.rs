@@ -1,6 +1,7 @@
 //! Cycle de vie du processus `syntheo-speech` (issue 684).
 //!
-//! - Avant chaque lancement : vérification des empreintes (`verify`).
+//! - Avant chaque lancement : manifeste signé, puis liste fermée des fichiers
+//!   et de leurs empreintes (`verify`).
 //! - Lancement : environnement vidé (aucune clé d'API héritée), dossier du
 //!   module comme dossier courant, jeton aléatoire écrit sur l'entrée
 //!   standard (jamais sur la ligne de commande, dans l'environnement ni dans
@@ -119,6 +120,8 @@ struct Running {
     stdin: Option<ChildStdin>,
     target: OnDeviceTarget,
     started_at: Instant,
+    /// Objets vérifiés gardés tant que le processus vit (Windows).
+    _staging: Option<crate::verify::Staging>,
 }
 
 /// Tire un jeton de 32 octets (deux UUID v4 : 244 bits aléatoires).
@@ -133,7 +136,19 @@ fn hex(bytes: &[u8]) -> String {
 }
 
 /// Lance le module vérifié ; rend le lancement une fois le port annoncé.
-async fn launch(verified: &Verified, engine: &str, threads: usize) -> Result<Running, HostError> {
+/// Dossier courant du module : jamais le dossier du module (aucune
+/// bibliothèque ne doit pouvoir y être cherchée).
+fn neutral_dir() -> PathBuf {
+    if cfg!(windows) {
+        std::env::var_os("SystemRoot")
+            .map(|root| PathBuf::from(root).join("System32"))
+            .unwrap_or_else(std::env::temp_dir)
+    } else {
+        PathBuf::from("/")
+    }
+}
+
+async fn launch(verified: Verified, engine: &str, threads: usize) -> Result<Running, HostError> {
     let mut command = Command::new(&verified.binary);
     command
         .arg("--engine")
@@ -142,7 +157,7 @@ async fn launch(verified: &Verified, engine: &str, threads: usize) -> Result<Run
         .arg(&verified.models)
         .arg("--threads")
         .arg(threads.max(1).to_string())
-        .current_dir(&verified.dir)
+        .current_dir(neutral_dir())
         .env_clear()
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -207,9 +222,16 @@ async fn launch(verified: &Verified, engine: &str, threads: usize) -> Result<Run
     }
     let port = port.ok_or_else(|| HostError::Launch("invalid port".into()))? as u16;
     let token = OnDeviceToken::new(token).ok_or_else(|| HostError::Launch("token".into()))?;
+    // Le module a chargé son binaire et ses modèles avant d'annoncer : la
+    // copie privée peut partir ; les handles Windows restent jusqu'à sa mort.
+    let staging = match verified.staging {
+        crate::verify::Staging::Copy(_) => None,
+        locked => Some(locked),
+    };
     Ok(Running {
         child,
         stdin: Some(stdin),
+        _staging: staging,
         started_at: Instant::now(),
         target: OnDeviceTarget {
             base_url: format!("http://127.0.0.1:{port}"),
@@ -224,6 +246,10 @@ pub struct SpeechHost {
     engine: String,
     threads: usize,
     policy: RestartPolicy,
+    /// Clé publique des manifestes de module.
+    manifest_key: Option<String>,
+    /// Version de l'application, comparée à `min_app_version`.
+    app_version: String,
     state: Mutex<HostState>,
 }
 
@@ -241,13 +267,16 @@ struct HostState {
 }
 
 impl SpeechHost {
-    /// `dir` : dossier du module installé ; `threads` : fils par session.
-    pub fn new(dir: PathBuf, threads: usize) -> Self {
+    /// `dir` : dossier du module installé ; `threads` : fils par session ;
+    /// `app_version` : version de l'application.
+    pub fn new(dir: PathBuf, threads: usize, app_version: &str) -> Self {
         Self {
             dir,
             engine: "parakeet".to_owned(),
             threads,
             policy: RestartPolicy::default(),
+            manifest_key: crate::manifest::MODULE_PUBLIC_KEY.map(str::to_owned),
+            app_version: app_version.to_owned(),
             state: Mutex::new(HostState::default()),
         }
     }
@@ -262,6 +291,13 @@ impl SpeechHost {
     /// Borne des tentatives (essais).
     pub fn with_restart_policy(mut self, policy: RestartPolicy) -> Self {
         self.policy = policy;
+        self
+    }
+
+    /// Clé publique des manifestes, à la place de `MODULE_PUBLIC_KEY`
+    /// (essais avec une clé jetable).
+    pub fn with_manifest_key(mut self, key: &str) -> Self {
+        self.manifest_key = Some(key.to_owned());
         self
     }
 
@@ -304,7 +340,14 @@ impl SpeechHost {
         state.attempts.push(now);
         state.verifications += 1;
         let dir = self.dir.clone();
-        let verified = match tokio::task::spawn_blocking(move || verify(&dir)).await {
+        let key = self.manifest_key.clone();
+        let app_version = self.app_version.clone();
+        let verified = match tokio::task::spawn_blocking(move || {
+            crate::verify::remove_stale_copies(&dir);
+            verify(&dir, key.as_deref(), &app_version)
+        })
+        .await
+        {
             Ok(Ok(verified)) => verified,
             Ok(Err(error)) => {
                 state.rejected = Some(error.to_string());
@@ -312,7 +355,7 @@ impl SpeechHost {
             }
             Err(_) => return Err(HostError::Verify("verification failed".into())),
         };
-        let running = launch(&verified, &self.engine, self.threads).await?;
+        let running = launch(verified, &self.engine, self.threads).await?;
         let target = running.target.clone();
         state.running = Some(running);
         Ok(target)

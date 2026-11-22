@@ -1,0 +1,285 @@
+# Workflow : build-speech
+# Construction du module de transcription sur le poste `syntheo-speech`
+# (apps/speech, issue 683) pour Linux x86-64 et Windows x86-64, sans
+# publication.
+#
+# Jobs :
+#   - `build` (Linux, Windows) : compilation release depuis un registre Cargo
+#     et un cache vides (aucun cache partagé avec les autres workflows), avec
+#     la chaîne d'ONNX Runtime vérifiée avant et après la compilation
+#     (apps/speech/supply-chain/check_ort.py) ; SBOM CycloneDX. Sous Windows,
+#     runtime Visual C++ embarqué et imports vérifiés. Aucun identifiant.
+#   - `manifest` : `manifest.json` et `files.sha256` du module construit
+#     (binaire, bibliothèques, licences, puis les modèles de
+#     apps/speech/models/models.json avec leur URL).
+#   - `sign-manifest` : signature du manifeste (manifest.json.sig), avec une
+#     clé propre au module, distincte de celle des mises à jour Tauri, rangée
+#     dans l'environnement `speech-signing` (limité à main). Seulement sur
+#     demande (`sign`) et depuis main : désactivé tant que la clé n'existe pas.
+#
+# Signature Authenticode (prévue, pas encore active) : un job `authenticode`
+# se placera entre `build` et `manifest` pour la cible Windows, sur le modèle
+# du job `sign` de build-windows.yml : environnement `windows-signing`, OIDC
+# (`id-token: write` limité à ce job), client Artifact Signing à empreinte
+# figée, `signtool sign` de syntheo-speech.exe, puis vérification du
+# signataire. Le manifeste est calculé après, sur l'exécutable signé.
+name: build-speech
+
+on:
+  workflow_dispatch:
+    inputs:
+      min-app-version:
+        description: "Version minimale de l'application (x.y.z)"
+        type: string
+        required: false
+        default: "0.8.0"
+      models-base-url:
+        description: "URL de base des modèles (https://)"
+        type: string
+        required: false
+        default: "https://github.com/WillIsback/Syntheo/releases/download/speech-models-1"
+      sign:
+        description: "Signer le manifeste (main uniquement, environnement speech-signing)"
+        type: boolean
+        required: false
+        default: false
+  workflow_call:
+    secrets:
+      SPEECH_MANIFEST_PRIVATE_KEY:
+        required: false
+      SPEECH_MANIFEST_PRIVATE_KEY_PASSWORD:
+        required: false
+    inputs:
+      min-app-version:
+        type: string
+        required: true
+      models-base-url:
+        type: string
+        required: false
+        default: "https://github.com/WillIsback/Syntheo/releases/download/speech-models-1"
+      sign:
+        type: boolean
+        required: false
+        default: false
+
+concurrency:
+  group: build-speech-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build syntheo-speech (${{ matrix.target }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+            binary: syntheo-speech
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            binary: syntheo-speech.exe
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    env:
+      ORT_CACHE_DIR: ${{ github.workspace }}/../ort-cache
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Sans rust-cache ni sccache : registre et compilation partent de zéro.
+      - name: Toolchain Rust
+        uses: ./.github/actions/rust_install
+        with:
+          cache: "false"
+
+      - name: Récupérer les dépendances (Cargo.lock figé)
+        working-directory: apps/speech
+        run: cargo fetch --locked
+
+      - name: Vérifier l'épinglage d'ONNX Runtime
+        shell: bash
+        env:
+          TARGET: ${{ matrix.target }}
+        run: python3 -I apps/speech/supply-chain/check_ort.py before "$TARGET"
+
+      # Features par défaut (moteur parakeet) ; jamais `fake-engine`.
+      - name: Compiler le module (release)
+        working-directory: apps/speech
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$ORT_CACHE_DIR"
+          cargo build --release --locked
+
+      - name: Vérifier l'archive ONNX Runtime utilisée
+        shell: bash
+        env:
+          TARGET: ${{ matrix.target }}
+        run: python3 -I apps/speech/supply-chain/check_ort.py after "$TARGET"
+
+      - name: Assembler le module
+        shell: bash
+        env:
+          BINARY: ${{ matrix.binary }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist/licenses
+          cp "apps/speech/target/release/$BINARY" dist/
+          cp apps/speech/supply-chain/LICENSE.OpenMDW-1.1 dist/licenses/
+
+      # Le binaire est lié au CRT dynamique (MSVC par défaut) : runtime
+      # Visual C++ embarqué à côté, comme pour syntheo.exe. Toute DLL hors
+      # Windows importée par le binaire doit être dans le dossier du module.
+      - name: Runtime Visual C++ et imports (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $vswhere = Join-Path ${env:ProgramFiles(x86)} "Microsoft Visual Studio\Installer\vswhere.exe"
+          $vs = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if (-not $vs) { throw "Visual Studio (outils VC x64) introuvable" }
+          $redist = Get-ChildItem (Join-Path $vs "VC\Redist\MSVC") -Directory |
+            Where-Object { $_.Name -match '^\d+\.\d+\.\d+$' -and (Test-Path (Join-Path $_.FullName "x64\Microsoft.VC143.CRT")) } |
+            Sort-Object { [version]$_.Name } -Descending | Select-Object -First 1
+          if (-not $redist) { throw "Microsoft.VC143.CRT introuvable" }
+          $crt = Join-Path $redist.FullName "x64\Microsoft.VC143.CRT"
+          $dumpbin = Get-ChildItem (Join-Path $vs "VC\Tools\MSVC\*\bin\Hostx64\x64\dumpbin.exe") |
+            Sort-Object FullName -Descending | Select-Object -First 1
+          $imports = & $dumpbin.FullName /nologo /dependents dist/syntheo-speech.exe |
+            ForEach-Object { $_.Trim() } | Where-Object { $_ -match '\.dll$' }
+          Write-Host "Imports de syntheo-speech.exe :"
+          $imports | ForEach-Object { Write-Host "  $_" }
+          foreach ($dll in $imports | Where-Object { $_ -match '^(msvcp|vcruntime|concrt|vcomp)' }) {
+            Copy-Item (Join-Path $crt $dll) dist/ -ErrorAction Stop
+          }
+          $missing = $imports | Where-Object { $_ -match '^onnxruntime' -and -not (Test-Path (Join-Path dist $_)) }
+          if ($missing) { throw "DLL ONNX Runtime importées mais absentes du module : $($missing -join ', ')" }
+          Get-ChildItem dist -Recurse -File | ForEach-Object { Write-Host "$($_.Length)  $($_.FullName)" }
+
+      # SBOM des dépendances Rust du module, outil à version figée.
+      - name: SBOM (CycloneDX)
+        shell: bash
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          set -euo pipefail
+          cargo install --locked cargo-cyclonedx --version 0.5.10
+          cargo cyclonedx --manifest-path apps/speech/Cargo.toml --format json --spec-version 1.5 \
+            --target "$TARGET" --override-filename syntheo-speech
+          mkdir -p sbom
+          shopt -s nullglob
+          boms=(apps/speech/syntheo-speech*.json)
+          [ "${#boms[@]}" -eq 1 ] || { echo "::error::SBOM introuvable ou multiple : ${boms[*]}"; exit 1; }
+          mv "${boms[0]}" "sbom/syntheo-speech-$TARGET.cdx.json"
+
+      - name: Upload du module (non signé)
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: syntheo-speech-unsigned-${{ matrix.target }}
+          path: dist/
+          retention-days: 7
+
+      - name: Upload du SBOM
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: syntheo-speech-sbom-${{ matrix.target }}
+          path: sbom/
+          retention-days: 30
+
+  manifest:
+    name: Manifeste (${{ matrix.target }})
+    needs: build
+    strategy:
+      matrix:
+        target: [x86_64-unknown-linux-gnu, x86_64-pc-windows-msvc]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Télécharger le module
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: syntheo-speech-unsigned-${{ matrix.target }}
+          path: module
+
+      - name: Écrire manifest.json et files.sha256
+        shell: bash
+        env:
+          TARGET: ${{ matrix.target }}
+          MIN_APP_VERSION: ${{ inputs.min-app-version }}
+          MODELS_BASE_URL: ${{ inputs.models-base-url }}
+        run: |
+          set -euo pipefail
+          python3 -I apps/speech/supply-chain/make_manifest.py module "$TARGET" "$MIN_APP_VERSION" "$MODELS_BASE_URL"
+          cat module/files.sha256
+
+      - name: Upload du module et de son manifeste
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: syntheo-speech-${{ matrix.target }}
+          path: module/
+          retention-days: 14
+
+  # Signature du manifeste : clé du module (pas celle des mises à jour),
+  # environnement `speech-signing` limité à main. Seul l'outil de signature est
+  # installé (version et empreintes figées de .github/signing).
+  sign-manifest:
+    name: Signature du manifeste (${{ matrix.target }})
+    needs: manifest
+    if: inputs.sign && github.ref == 'refs/heads/main'
+    strategy:
+      matrix:
+        target: [x86_64-unknown-linux-gnu, x86_64-pc-windows-msvc]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: speech-signing
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22.23.4"
+
+      - name: Installer l'outil de signature (version et empreintes figées)
+        working-directory: .github/signing
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Télécharger le manifeste
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: syntheo-speech-${{ matrix.target }}
+          path: module
+
+      - name: Signer manifest.json (clé du module)
+        shell: bash
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.SPEECH_MANIFEST_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.SPEECH_MANIFEST_PRIVATE_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -z "${TAURI_SIGNING_PRIVATE_KEY}" ]; then
+            echo "::error::Secret SPEECH_MANIFEST_PRIVATE_KEY absent de l'environnement speech-signing."
+            exit 1
+          fi
+          .github/signing/node_modules/.bin/tauri signer sign module/manifest.json > /dev/null
+          test -s module/manifest.json.sig || { echo "::error::Signature absente ou vide"; exit 1; }
+
+      - name: Upload de la signature
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: syntheo-speech-signature-${{ matrix.target }}
+          path: module/manifest.json.sig
+          retention-days: 14

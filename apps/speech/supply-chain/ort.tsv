@@ -1,0 +1,3 @@
+target	feature_set	url	sha256
+x86_64-unknown-linux-gnu	none	https://cdn.pyke.io/0/pyke:ort-rs/ms@1.31.0/x86_64-unknown-linux-gnu.tar.lzma2	02aac0d3b4927026292088986d7a377c657c88761b1c068be217a67b35447678
+x86_64-pc-windows-msvc	directml	https://cdn.pyke.io/0/pyke:ort-rs/ms@1.31.0/x86_64-pc-windows-msvc+directml.tar.lzma2	f99aaef23f12986abb05924c944d8433521263ad756b462df762a5a982c98405

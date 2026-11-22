@@ -75,8 +75,30 @@ fn load_engine(args: &Args) -> Result<Arc<dyn Engine>, String> {
     }
 }
 
+/// Windows : les bibliothèques chargées dynamiquement (ONNX Runtime et ses
+/// fournisseurs) ne sont cherchées que dans le dossier du binaire et dans
+/// System32, jamais dans le dossier courant ni le PATH.
+#[cfg(windows)]
+fn restrict_dll_search() {
+    const LOAD_LIBRARY_SEARCH_APPLICATION_DIR: u32 = 0x0000_0200;
+    const LOAD_LIBRARY_SEARCH_SYSTEM32: u32 = 0x0000_0800;
+    unsafe extern "system" {
+        fn SetDefaultDllDirectories(flags: u32) -> i32;
+    }
+    // SAFETY : appel Win32 sans pointeur, avant tout chargement dynamique.
+    let ok = unsafe {
+        SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_APPLICATION_DIR | LOAD_LIBRARY_SEARCH_SYSTEM32)
+    };
+    if ok == 0 {
+        server::log("stopped: dll search path not restricted");
+        std::process::exit(1);
+    }
+}
+
 #[tokio::main]
 async fn main() {
+    #[cfg(windows)]
+    restrict_dll_search();
     let code = run().await.map_or_else(
         |error| {
             server::log(&format!("stopped: {error}"));
