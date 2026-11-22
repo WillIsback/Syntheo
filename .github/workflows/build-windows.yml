@@ -9,6 +9,11 @@
 #   2. le workflow est appelé par release.yml depuis main (jamais par un
 #      lancement manuel de ce workflow, ni depuis une autre branche) ;
 #   3. les secrets Azure sont transmis explicitement par release.yml.
+# Dans ce seul cas, le job déclare l'environnement `windows-signing` (branches
+# de déploiement limitées à main) : les secrets Azure y sont rangés, et un
+# secret d'environnement l'emporte sur celui du même nom transmis par
+# l'appelant. Un build de test (features, lancement manuel, autre branche) ne
+# déclare aucun environnement et ne bute donc pas sur sa règle de branches.
 # La compilation (dépendances, build.rs, Vite) tourne sans aucun identifiant.
 # Seule l'étape qui assemble et signe les installeurs reçoit les identifiants
 # Azure. Sinon, build non signé. Cette isolation est par étape, dans le même
@@ -31,7 +36,10 @@ on:
         default: ""
   workflow_call:
     # Transmis un par un par release.yml (pas de `secrets: inherit`), lus par la
-    # seule étape de signature.
+    # seule étape de signature. La transmission reste nécessaire une fois les
+    # secrets dans l'environnement `windows-signing` : un workflow réutilisable
+    # ne lit un secret d'environnement que si l'appelant le passe par son nom,
+    # et c'est alors la valeur de l'environnement qui est utilisée.
     secrets:
       AZURE_TENANT_ID:
         required: false
@@ -71,6 +79,10 @@ jobs:
     name: Build Windows
     runs-on: windows-latest
     timeout-minutes: 120
+    # Environnement des secrets Azure, seulement pour une release depuis main :
+    # mêmes conditions que l'étape « Décider de la signature » (sans le test de
+    # présence des secrets). Sinon, nom vide : aucun environnement.
+    environment: ${{ (inputs.features == '' && github.ref == 'refs/heads/main' && github.workflow_ref == format('{0}/.github/workflows/release.yml@refs/heads/main', github.repository)) && 'windows-signing' || '' }}
     outputs:
       signed: ${{ steps.verify.outputs.signed || 'false' }}
     # Paquets signés : compilés de zéro, sans cache de compilation (sccache)

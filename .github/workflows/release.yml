@@ -180,6 +180,11 @@ jobs:
     with:
       version: ${{ needs.detect.outputs.version }}
     # Seuls les identifiants de signature, lus par la seule étape qui signe.
+    # Ce job ne peut pas porter `environment` (il appelle un workflow
+    # réutilisable) : c'est le job de build-windows.yml qui déclare
+    # `windows-signing`, dont les secrets l'emportent sur ceux transmis ici.
+    # La transmission par nom reste obligatoire, avant comme après le
+    # déplacement des secrets du dépôt vers cet environnement.
     secrets:
       AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
       AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
