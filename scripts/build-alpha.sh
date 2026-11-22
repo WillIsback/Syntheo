@@ -235,6 +235,16 @@ build_steps() {
   fi
   echo "-- tauri build : $((SECONDS - t0)) s"
 
+  # linuxdeploy ajoute un RUNPATH aux exécutables de usr/bin, ce qui change
+  # les octets du compagnon dont l'application a épinglé l'empreinte : il est
+  # remis tel que construit (il ne dépend que de la libc, de libm, de
+  # libgcc_s et de libstdc++ de l'hôte, comme dans le .deb). Le réempaquetage
+  # qui suit reconstruit l'AppImage depuis l'AppDir.
+  local appdir
+  appdir=$(find "$bundle_dir" -maxdepth 1 -type d -name '*.AppDir' | head -1)
+  [ -n "$appdir" ] || die "AppDir introuvable dans $bundle_dir."
+  install -m 0755 "$src_tauri/binaries/syntheo-speech-x86_64-unknown-linux-gnu" "$appdir/usr/bin/syntheo-speech"
+
   # Même réempaquetage que release.yml (bibliothèques hôte,
   # zstd 19, blocs de 1 Mio), pour que l'alpha soit fidèle à la release.
   t0=$SECONDS

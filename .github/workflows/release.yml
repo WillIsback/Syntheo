@@ -148,14 +148,18 @@ jobs:
           pnpm -F desktop tauri build --ci --bundles deb,appimage \
             --config ./src-tauri/tauri.conf.syntheo.json --config ./src-tauri/tauri.speech.conf.json
 
-      # Le compagnon est livré, exécutable, dans les deux paquets.
-      - name: Vérifier le compagnon dans le .deb et l'AppImage
+      # linuxdeploy ajoute un RUNPATH aux exécutables de usr/bin, ce qui
+      # change les octets du compagnon dont l'application a épinglé
+      # l'empreinte : il est remis tel que construit avant le réempaquetage,
+      # qui reconstruit l'AppImage depuis l'AppDir (il ne dépend que de la
+      # libc, de libm, de libgcc_s et de libstdc++ de l'hôte, comme dans le
+      # .deb).
+      - name: Rétablir le compagnon épinglé dans l'AppDir
         run: |
           set -euo pipefail
-          bundle=apps/desktop/src-tauri/target/release/bundle
-          dpkg-deb -c "$bundle"/deb/*.deb | grep -E '^-rwxr-xr-x .* \./usr/bin/syntheo-speech$'
-          appdir=$(find "$bundle/appimage" -maxdepth 1 -type d -name '*.AppDir' | head -1)
-          test -x "$appdir/usr/bin/syntheo-speech"
+          appdir=$(find apps/desktop/src-tauri/target/release/bundle/appimage -maxdepth 1 -type d -name '*.AppDir' | head -1)
+          [ -n "$appdir" ] || { echo "::error::AppDir introuvable"; exit 1; }
+          install -m 0755 apps/desktop/src-tauri/binaries/syntheo-speech-x86_64-unknown-linux-gnu "$appdir/usr/bin/syntheo-speech"
 
       # Réempaquette l'AppDir : retire Wayland et PipeWire embarqués (ils
       # doivent venir de l'hôte), puis recompresse le squashfs en zstd 19 à
@@ -165,6 +169,22 @@ jobs:
         env:
           ARCH: x86_64
         run: node scripts/repack-linux-appimage.mjs apps/desktop/src-tauri/target/release/bundle/appimage
+
+      # Le compagnon est livré, exécutable et identique à celui dont
+      # l'application a épinglé l'empreinte, dans les deux paquets.
+      - name: Vérifier le compagnon dans le .deb et l'AppImage
+        run: |
+          set -euo pipefail
+          bundle=apps/desktop/src-tauri/target/release/bundle
+          built=apps/desktop/src-tauri/binaries/syntheo-speech-x86_64-unknown-linux-gnu
+          check=$(mktemp -d)
+          dpkg-deb -x "$bundle"/deb/*.deb "$check/deb"
+          test -x "$check/deb/usr/bin/syntheo-speech"
+          cmp "$built" "$check/deb/usr/bin/syntheo-speech"
+          appimage=$(find "$bundle/appimage" -maxdepth 1 -type f -name '*.AppImage' | head -1)
+          (cd "$check" && "$OLDPWD/$appimage" --appimage-extract usr/bin/syntheo-speech > /dev/null)
+          test -x "$check/squashfs-root/usr/bin/syntheo-speech"
+          cmp "$built" "$check/squashfs-root/usr/bin/syntheo-speech"
 
       - name: Rassembler les artefacts et les sommes de contrôle
         shell: bash
