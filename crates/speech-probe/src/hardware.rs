@@ -188,12 +188,45 @@ fn gpus() -> Vec<Gpu> {
     out
 }
 
+/// Mode d'alimentation de Windows 10 et 11 (surcouche du plan actif), lu par
+/// `PowerGetEffectiveOverlayScheme`. Absente du crate `windows`, la fonction
+/// est résolue à l'exécution, une seule fois : un import statique empêcherait
+/// l'application de démarrer sur un Windows qui ne l'exporte pas. Absente :
+/// `None`, et le plan actif décide.
 #[cfg(target_os = "windows")]
-#[link(name = "powrprof")]
-unsafe extern "system" {
-    /// Mode d'alimentation de Windows 10 et 11 (surcouche du plan actif),
-    /// absent du crate `windows`. Rend 0 en cas de succès.
-    fn PowerGetEffectiveOverlayScheme(effective: *mut windows::core::GUID) -> u32;
+fn effective_overlay() -> Option<windows::core::GUID> {
+    use std::sync::OnceLock;
+    use windows::Win32::System::LibraryLoader::{
+        GetProcAddress, LOAD_LIBRARY_SEARCH_SYSTEM32, LoadLibraryExW,
+    };
+    type OverlayFn = unsafe extern "system" fn(*mut windows::core::GUID) -> u32;
+    // Adresse de la fonction (0 : absente), résolue une fois.
+    static RESOLVED: OnceLock<usize> = OnceLock::new();
+    let address = *RESOLVED.get_or_init(|| {
+        // SAFETY : chargement de la DLL système depuis System32 seulement ;
+        // le module reste chargé pour la durée du processus.
+        let Ok(module) = (unsafe {
+            LoadLibraryExW(
+                windows::core::w!("powrprof.dll"),
+                None,
+                LOAD_LIBRARY_SEARCH_SYSTEM32,
+            )
+        }) else {
+            return 0;
+        };
+        // SAFETY : recherche d'un symbole dans un module valide.
+        unsafe { GetProcAddress(module, windows::core::s!("PowerGetEffectiveOverlayScheme")) }
+            .map_or(0, |f| f as usize)
+    });
+    if address == 0 {
+        return None;
+    }
+    // SAFETY : adresse non nulle rendue par GetProcAddress pour cette
+    // fonction, dont la signature est `DWORD (GUID*)`.
+    let function: OverlayFn = unsafe { std::mem::transmute::<usize, OverlayFn>(address) };
+    let mut overlay = windows::core::GUID::zeroed();
+    // SAFETY : écrit un GUID dans une variable locale.
+    (unsafe { function(&mut overlay) } == 0).then_some(overlay)
 }
 
 #[cfg(target_os = "windows")]
@@ -209,9 +242,7 @@ fn power_plan() -> PowerPlan {
     }
     // Mode d'alimentation (« meilleure efficacité énergétique »…) : il prime
     // sur le plan quand il est défini.
-    let mut overlay = windows::core::GUID::zeroed();
-    // SAFETY : écrit un GUID dans une variable locale.
-    if unsafe { PowerGetEffectiveOverlayScheme(&mut overlay) } == 0 {
+    if let Some(overlay) = effective_overlay() {
         let mode = windows_overlay(&format!("{overlay:?}"));
         if mode != PowerPlan::Unknown {
             return mode;

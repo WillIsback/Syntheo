@@ -17,4 +17,4 @@ specta = ["dep:specta"]
 serde_json = { workspace = true }
 
 [target.'cfg(target_os = "windows")'.dependencies]
-windows = { workspace = true, features = ["Win32_Foundation", "Win32_Graphics_Dxgi", "Win32_Graphics_Dxgi_Common", "Win32_System_Power", "Win32_System_Registry"] }
+windows = { workspace = true, features = ["Win32_Foundation", "Win32_Graphics_Dxgi", "Win32_Graphics_Dxgi_Common", "Win32_System_LibraryLoader", "Win32_System_Power", "Win32_System_Registry"] }
