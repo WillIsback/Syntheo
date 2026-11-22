@@ -10,7 +10,8 @@
 # l'installeur MSI refuse les autres.
 #
 # Aucune signature : les variables Azure et Tauri de signature sont retirées de
-# l'environnement, et tauri.windows-signing.conf.json n'est jamais utilisé.
+# l'environnement, et aucune commande de signature n'est configurée (la
+# signature Authenticode n'a lieu que dans le job sign de build-windows.yml).
 #
 # Prérequis (voir CONTRIBUTING.md, « Construire une alpha en local ») :
 # Visual Studio Build Tools 2022 (charge « Développement Desktop en C++ » :
