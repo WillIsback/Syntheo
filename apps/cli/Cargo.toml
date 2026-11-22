@@ -12,7 +12,8 @@ path = "src/main.rs"
 syntheo-agent-access = { workspace = true }
 syntheo-db-app = { workspace = true }
 syntheo-db-core = { workspace = true }
-syntheo-mesure = { workspace = true }
+# `differences` : extraits pour le calibrage manuel, CLI seulement.
+syntheo-mesure = { workspace = true, features = ["differences"] }
 
 base64 = { workspace = true }
 clap = { workspace = true, features = ["derive", "env"] }

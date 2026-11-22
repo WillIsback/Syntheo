@@ -34,6 +34,8 @@ impl Format {
 }
 
 pub(crate) fn blocks(input: &str, format: Format) -> Vec<Block> {
+    // Marque d'ordre UTF-8 (BOM) en tête, fréquente sous Windows : retirée.
+    let input = input.strip_prefix('\u{feff}').unwrap_or(input);
     let input: String = input.nfc().collect();
     let raw = match format {
         Format::Markdown => markdown_blocks(&input),
@@ -514,6 +516,14 @@ mod tests {
                 ("OK", true, true),
                 ("?", false, false),
             ]
+        );
+    }
+
+    #[test]
+    fn utf8_bom_is_ignored() {
+        assert_eq!(
+            texts("\u{feff}# Résumé\nTexte", Format::Markdown),
+            vec![(true, "Résumé".into()), (false, "Texte".into())]
         );
     }
 

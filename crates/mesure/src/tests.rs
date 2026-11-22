@@ -303,3 +303,104 @@ fn format_from_extension() {
     assert_eq!(Format::from_extension("docx"), None);
     assert_eq!(Format::from_extension("pdf"), None);
 }
+
+// Calibrage (étape 0) : les différences de la paire de référence, avec leurs
+// extraits, dans l'ordre de la version générée.
+#[cfg(feature = "differences")]
+#[test]
+fn differences_list_the_reference_pair() {
+    let sent = "# Résumé
+
+Le projet avance bien. Le budget est validé par le comité de direction.
+
+## Décisions
+
+- Lancer le pilote en février avec Marten.
+- Garder le serveur actuel.
+- Former les testeurs.
+
+## Actions
+
+- Envoyer le compte rendu.
+";
+    let list = differences(
+        GENERATED,
+        Format::Markdown,
+        sent,
+        Format::Markdown,
+        &Dictionary::default(),
+    )
+    .unwrap();
+    let rows: Vec<_> = list
+        .iter()
+        .map(|d| {
+            (
+                d.section,
+                d.change.kind,
+                d.change.lexical,
+                d.change.weight,
+                d.generated.as_str(),
+                d.sent.as_str(),
+            )
+        })
+        .collect();
+    use ChangeKind::*;
+    assert_eq!(
+        rows,
+        vec![
+            (Some(0), Replaced, false, 3, "la", "le comité de"),
+            (Some(1), Replaced, false, 1, "janvier", "février"),
+            (Some(1), Replaced, true, 1, "Martin", "Marten"),
+            (Some(1), Added, false, 3, "", "Former les testeurs."),
+            (Some(2), Deleted, false, 2, "à l'équipe", ""),
+        ]
+    );
+    // Mêmes totaux que la mesure chiffrée.
+    let mut counters = Counters::default();
+    for d in &list {
+        counters.record(d.change);
+    }
+    let report = run(GENERATED, sent);
+    assert_eq!(
+        (
+            counters.added,
+            counters.deleted,
+            counters.replaced_content,
+            counters.replaced_lexical
+        ),
+        (
+            report.total.added,
+            report.total.deleted,
+            report.total.replaced_content,
+            report.total.replaced_lexical
+        )
+    );
+}
+
+// Garde-fou : seule la CLI active la fonctionnalité `differences` ; ni
+// l'application ni un plugin n'ont accès aux extraits.
+#[test]
+fn only_the_cli_enables_differences() {
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let mut manifests = vec![root.join("apps/desktop/src-tauri/Cargo.toml")];
+    for dir in ["plugins", "crates"] {
+        for entry in std::fs::read_dir(root.join(dir)).unwrap() {
+            let manifest = entry.unwrap().path().join("Cargo.toml");
+            if manifest.exists() {
+                manifests.push(manifest);
+            }
+        }
+    }
+    for manifest in manifests {
+        let text = std::fs::read_to_string(&manifest).unwrap();
+        for line in text.lines().filter(|l| l.contains("syntheo-mesure")) {
+            assert!(
+                !line.contains("differences"),
+                "{} active `differences`",
+                manifest.display()
+            );
+        }
+    }
+    let cli = std::fs::read_to_string(root.join("apps/cli/Cargo.toml")).unwrap();
+    assert!(cli.contains(r#"syntheo-mesure = { workspace = true, features = ["differences"] }"#));
+}

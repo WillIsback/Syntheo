@@ -25,7 +25,7 @@ Meeting commands accept `--source` before their subcommand (or `SYNTHEO_SOURCE`)
 
 `doctor` exits with status 1 when its response contains `ready: false`.
 
-`syntheo mesure --generated FILE --sent FILE [--dictionary FILE]` measures how much of a generated summary was reworked before it was sent (`.md`, `.txt` or `.html`). It prints numbers only (words generated, added, deleted, replaced as content or lexical, per mille rates, per section by rank), never text, and opens neither the database nor the network. Use it only when the user asks for this measurement.
+`syntheo mesure --generated FILE --sent FILE [--dictionary FILE]` measures how much of a generated summary was reworked before it was sent (`.md`, `.txt` or `.html`). It prints numbers only (words generated, added, deleted, replaced as content or lexical, per mille rates, per section by rank), never text, and opens neither the database nor the network. Use it only when the user asks for this measurement. `--differences` (never with `--json`) instead prints each difference with text excerpts as TSV for manual calibration; do not save, quote or share that output.
 
 Read transcripts in bounded word pages:
 
