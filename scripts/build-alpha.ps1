@@ -182,6 +182,10 @@ try {
   foreach ($sub in "nsis", "msi") {
     Remove-Item (Join-Path $bundleDir $sub) -Recurse -Force -ErrorAction SilentlyContinue
   }
+  # DirectML.dll laissée par un ancien build (copy-dylibs d'ort, retiré) : le
+  # bundler MSI embarque tout *.dll de target\release ; l'application utilise
+  # celle de Windows, comme avec l'installeur NSIS.
+  Remove-Item (Join-Path $targetDir "release\DirectML.dll") -Force -ErrorAction SilentlyContinue
 
   # Programme compagnon syntheo-speech (issue 683), avant `tauri build` qui
   # l'embarque et en épingle l'empreinte (avec celle du runtime Visual C++).
