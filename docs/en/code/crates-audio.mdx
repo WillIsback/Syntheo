@@ -115,6 +115,18 @@ No Whisper model: the crate only contains the `Language` enum of the Whisper tok
 
 On-device transcription probe (issue 682), with nothing downloaded. `hardware::read` reads in a few milliseconds AVX2, physical and logical cores, available memory, free space on the data disk, power plan (Linux: ACPI profile; Windows: active plan and battery saver), mains or battery, and GPUs with their video memory when the system reports it. `bench::run` is a micro-benchmark of about 4 s: a q8_0 matrix product with AVX2, shaped like an encoder layer, on as many threads as physical cores; it returns a throughput in GMAC/s. `predict::predict` turns that throughput into an RTF per engine (`Engine::ParakeetOnnx` or `Engine::NemoGgml`) and per profile, interpolating between points measured by the issue 680 bench. `predict::decide` applies the thresholds: full profile offered up to an RTF of 0.5, degraded profile up to 1.0, refused beyond, or without AVX2, under 1.5 GB of free memory, under 2 GB of disk or when the disk cannot be found; outside the measured range, the prediction is never more favourable than the end point. Exposed by the `probe_local_transcription` command of `plugins/transcription`: one probe at a time, refused during a capture, when the capture state does not answer, and by the relay; a capture that starts interrupts it (verdict `interrupted`). The `probe` example prints the probe as JSON, to calibrate a reference machine. **Affected doc pages**: none yet (no interface so far).
 
+### `apps/speech`: `syntheo-speech` module
+
+On-device transcription module (issue 681): a separate process that the application starts and stops, reachable only on the loopback, speaking the NeMo-Speech.cpp realtime protocol, the one of the `nvidia` adapter in `crates/owhisper-client`. It is a **separate Cargo workspace**, with its own `Cargo.lock`: engine A (`parakeet-rs`, ONNX Runtime) pins a different `ort` version from the application's, and the module is built by its own workflow.
+
+- **Engines behind a trait** (`engine::Engine`, `engine::Recognizer`): A, `parakeet::ParakeetEngine` (streaming Nemotron 3.5, per-channel int8, and Nemotron-3 diarization), is implemented; B can plug in later.
+- **Launch**: the token (at least 128 bits) arrives on standard input, never on the command line; the module listens on `127.0.0.1`, on a free port, announces it as JSON on standard output and stops when standard input closes.
+- **Local channel** (`auth`, `server`): the token never travels. The client sends a nonce and a proof, and the module answers with its own: HMACs of the token bound to the nonce, both ports of the connection and the direction, which prevents relaying and reflection. A nonce is accepted only once (replay refused). `Origin` header refused; `Host` limited to the loopback. Handshake bounded in time and number, concurrent sessions bounded, audio queue bounded.
+- **Logs**: durations and counts, never transcribed text.
+- **Tests**: utterance segmentation, timestamps and speakers tested without the model (`segment`); contract with the `nvidia` adapter over a fake engine (`fake-engine` feature, never shipped); handshake (relay, replay, reflection, silent connections); no outbound connection from the real binary (Linux); a real-model run when `SYNTHEO_SPEECH_MODELS` and `SYNTHEO_SPEECH_AUDIO` are set.
+
+**Affected doc pages**: none yet (no interface so far).
+
 ## Meeting detection
 
 ### `crates/detect`

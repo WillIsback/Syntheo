@@ -59,7 +59,9 @@ describe("monorepo scope", () => {
     const apps = readdirSync(join(REPO_ROOT, "apps")).filter((name) =>
       statSync(join(REPO_ROOT, "apps", name)).isDirectory(),
     );
-    expect(apps.sort()).toEqual(["cli", "desktop"]);
+    // apps/speech : module de transcription sur le poste (issue 681),
+    // workspace Cargo à part, lancé par le desktop sur la boucle locale.
+    expect(apps.sort()).toEqual(["cli", "desktop", "speech"]);
   });
 
   it("cargo_workspace_has_no_server_member", () => {
