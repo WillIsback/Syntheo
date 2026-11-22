@@ -8,7 +8,7 @@
 # (défaut <target>\ort-cache ; il ne doit contenir que l'archive épinglée).
 #
 # ONNX Runtime reste épinglé (apps/speech/supply-chain/ort.tsv) et contrôlé
-# avant et après la compilation (check_ort.py). Avec -Dumpbin, les DLL
+# avant et après la compilation (règles de check_ort.py, en PowerShell). Avec -Dumpbin, les DLL
 # importées sont listées : runtime Visual C++ (embarqué par l'application,
 # vcrt\) ou DLL du système seulement ; une DLL ONNX Runtime importée arrête le
 # build (elle ne serait pas livrée).
@@ -28,14 +28,46 @@ $root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $speech = Join-Path $root "apps\speech"
 $targetDir = if ($env:SPEECH_TARGET_DIR) { $env:SPEECH_TARGET_DIR } else { Join-Path $speech "target" }
 if (-not $env:ORT_CACHE_DIR) { $env:ORT_CACHE_DIR = Join-Path $targetDir "ort-cache" }
-$python = if (Get-Command python3 -ErrorAction SilentlyContinue) { "python3" } else { "python" }
-$check = Join-Path $speech "supply-chain\check_ort.py"
+
+# Contrôles d'ONNX Runtime de supply-chain/check_ort.py, en PowerShell (pas de
+# Python requis sur le poste de construction) : mêmes règles, même épinglage
+# (ort.tsv).
+function Get-OrtPin {
+  $rows = @(Import-Csv -Delimiter "`t" (Join-Path $speech "supply-chain\ort.tsv") | Where-Object { $_.target -eq $Target })
+  if ($rows.Count -ne 1) { throw "aucun épinglage ONNX Runtime pour $Target" }
+  return $rows[0]
+}
+function Test-OrtBefore {
+  $pin = Get-OrtPin
+  $lock = Get-Content -Raw (Join-Path $speech "Cargo.lock")
+  $blocks = @(($lock -split '\[\[package\]\]') | Where-Object { $_ -match 'name = "ort-sys"' })
+  if ($blocks.Count -ne 1) { throw "ort-sys absent ou en plusieurs versions dans Cargo.lock" }
+  if ($blocks[0] -notmatch 'version = "([^"]+)"') { throw "version d'ort-sys introuvable" }
+  $version = $Matches[1]
+  $cargoHome = if ($env:CARGO_HOME) { $env:CARGO_HOME } else { Join-Path $HOME ".cargo" }
+  $dist = @(Get-ChildItem (Join-Path $cargoHome "registry\src\*\ort-sys-$version\build\download\dist.tsv") -ErrorAction SilentlyContinue)
+  if ($dist.Count -ne 1) { throw "dist.tsv d'ort-sys $version introuvable (cargo fetch --locked d'abord)" }
+  $rows = @(Import-Csv -Delimiter "`t" $dist[0].FullName | Where-Object { $_.target -eq $Target -and $_.feature_set -eq $pin.feature_set })
+  if ($rows.Count -ne 1 -or $rows[0].url -ne $pin.url -or $rows[0].sha256_hash -ne $pin.sha256) {
+    throw "ort-sys $version n'épingle pas l'archive attendue pour $Target"
+  }
+  Write-Host "ort-sys $version : $($pin.url) $($pin.sha256)"
+}
+function Test-OrtAfter {
+  $pin = Get-OrtPin
+  $extracted = Join-Path $env:ORT_CACHE_DIR "dfbin\$Target"
+  $found = @(if (Test-Path $extracted) { Get-ChildItem $extracted | ForEach-Object { $_.Name } | Sort-Object })
+  if ($found.Count -ne 1 -or $found[0] -ne $pin.sha256) {
+    throw "archives ONNX Runtime utilisées : $($found -join ', '), attendue : $($pin.sha256)"
+  }
+  Write-Host "ONNX Runtime utilisé : $($pin.sha256)"
+}
 
 $t0 = Get-Date
 Push-Location $speech
 try {
   Invoke-Checked cargo @("fetch", "--locked")
-  Invoke-Checked $python @("-I", $check, "before", $Target)
+  Test-OrtBefore
   $env:CARGO_TARGET_DIR = $targetDir
   try {
     Invoke-Checked cargo @("build", "--release", "--locked", "--target", $Target)
@@ -43,7 +75,7 @@ try {
   finally {
     Remove-Item Env:CARGO_TARGET_DIR -ErrorAction SilentlyContinue
   }
-  Invoke-Checked $python @("-I", $check, "after", $Target)
+  Test-OrtAfter
 }
 finally {
   Pop-Location
