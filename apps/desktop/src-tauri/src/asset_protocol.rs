@@ -3,8 +3,10 @@
 // Il remplace celui de Tauri, qui résout le chemin demandé (lien symbolique,
 // existence, forme canonique) avant de le comparer à la portée : sous Windows,
 // un chemin réseau serait donc touché, et une connexion SMB ouverte, avant tout
-// refus. Ici, un chemin réseau ou de périphérique est refusé d'emblée, sur la
-// seule forme de la chaîne, puis le reste suit la logique de Tauri 2.12
+// refus. Ici, tout chemin qui n'est pas un chemin local
+// (`tauri_plugin_opener2::is_local_path`, même règle que l'ouverture de
+// fichiers) est refusé d'emblée, sur la seule forme de la chaîne, puis le reste
+// suit la logique de Tauri 2.12
 // (`tauri/src/protocol/asset.rs`, Apache-2.0 ou MIT) : `SafePathBuf`, portée
 // `asset_protocol_scope`, type MIME, requêtes partielles.
 
@@ -20,24 +22,6 @@ use tokio::io::{AsyncReadExt, AsyncSeekExt};
 
 /// Plus grande tranche envoyée par réponse partielle, comme Tauri.
 const MAX_RANGE_LEN: u64 = 1000 * 1024;
-
-/// Chemin réseau (`\\serveur\partage`, `//serveur/partage`) ou de
-/// périphérique (`\\?\…`, `\\.\…`), sous toutes les combinaisons de barres.
-pub(crate) fn is_network_or_device_path(path: &str) -> bool {
-    let mut chars = path.chars();
-    let is_sep = |c: Option<char>| matches!(c, Some('/' | '\\'));
-    if is_sep(chars.next()) && is_sep(chars.next()) {
-        return true;
-    }
-    #[cfg(windows)]
-    {
-        use std::path::{Component, Path, Prefix};
-        if let Some(Component::Prefix(prefix)) = Path::new(path).components().next() {
-            return !matches!(prefix.kind(), Prefix::Disk(_));
-        }
-    }
-    false
-}
 
 /// Chemin de fichier demandé par une adresse `asset` : chemin de l'URL sans sa
 /// première barre, décodé.
@@ -93,7 +77,8 @@ pub(crate) async fn get_response(
     let path = requested_path(request);
 
     // Avant toute résolution du chemin : aucun accès au système de fichiers.
-    if path.contains('\0') || is_network_or_device_path(&path) {
+    // Même règle que l'ouverture de fichiers (opener2).
+    if !tauri_plugin_opener2::is_local_path(&path) {
         tracing::warn!("asset_protocol_network_path_refused");
         return Ok(status(origin, StatusCode::FORBIDDEN));
     }
@@ -198,33 +183,26 @@ mod tests {
         (response, asked)
     }
 
-    #[test]
-    fn network_and_device_paths_are_detected() {
-        for path in [
-            r"\\server\share\image.png",
-            "//server/share/image.png",
-            r"\/server\share",
-            r"/\server/share",
-            r"\\?\UNC\server\share\image.png",
-            r"\\?\C:\Users\image.png",
-            r"\\.\pipe\name",
-        ] {
-            assert!(is_network_or_device_path(path), "{path}");
-        }
-        for path in [
-            "/home/user/.local/share/syntheo/image.png",
-            r"C:\Users\user\AppData\Roaming\image.png",
-            "C:/Users/user/image.png",
-        ] {
-            assert!(!is_network_or_device_path(path), "{path}");
-        }
-    }
-
     // Le chemin réseau est refusé sans que la portée soit consultée : rien
     // n'est résolu ni ouvert, même si la portée l'autoriserait.
     #[test]
     fn network_path_is_refused_before_the_scope_is_consulted() {
-        for path in [r"\\192.0.2.1\share\a.png", "//192.0.2.1/share/a.png"] {
+        let mut paths = vec![
+            r"\\192.0.2.1\share\a.png",
+            "//192.0.2.1/share/a.png",
+            r"\/192.0.2.1\share\a.png",
+            r"\\?\UNC\192.0.2.1\share\a.png",
+            r"\\.\pipe\name",
+        ];
+        if cfg!(windows) {
+            // Objet NT, chemin sans lecteur, chemin relatif.
+            paths.extend([
+                r"\??\UNC\192.0.2.1\share\a.png",
+                r"\Windows\a.png",
+                r"relatif\a.png",
+            ]);
+        }
+        for path in paths {
             let (response, asked) = run(&request(path, None), true);
             assert_eq!(response.status(), StatusCode::FORBIDDEN, "{path}");
             assert!(!asked, "{path}");
@@ -247,9 +225,12 @@ mod tests {
             eprintln!("partage administratif injoignable, essai sauté : {unc}");
             return;
         }
-        let (response, asked) = run(&request(&unc, None), true);
-        assert_eq!(response.status(), StatusCode::FORBIDDEN);
-        assert!(!asked);
+        let nt = format!(r"\??\UNC\localhost\{drive}$\{rest}");
+        for path in [&unc, &nt] {
+            let (response, asked) = run(&request(path, None), true);
+            assert_eq!(response.status(), StatusCode::FORBIDDEN, "{path}");
+            assert!(!asked, "{path}");
+        }
         let (response, _) = run(&request(&local, None), true);
         assert_eq!(response.status(), StatusCode::OK);
     }

@@ -33,25 +33,46 @@ fn is_plain_address(path: &str) -> bool {
             .all(|c| c.is_ascii_alphanumeric() || ".-".contains(c))
 }
 
-/// Chemin local seulement : un chemin réseau (`\\serveur\partage`,
-/// `//serveur/partage`) ou de périphérique (`\\?\…`, `\\.\…`) est refusé
-/// avant tout accès, pour ne jamais ouvrir de connexion SMB (issue 677).
-pub(crate) fn check_openable_path(path: &str) -> Result<()> {
-    let mut chars = path.chars();
-    let is_sep = |c: Option<char>| matches!(c, Some('/' | '\\'));
-    if path.contains('\0') || (is_sep(chars.next()) && is_sep(chars.next())) {
-        return Err(Error::PathNotAllowed);
+/// Chemin de fichier local, seule forme que l'application accepte d'ouvrir ou
+/// de servir (issue 677). Décidé sur la seule chaîne, avant tout accès au
+/// système de fichiers, pour ne jamais ouvrir de connexion SMB.
+///
+/// - Windows : seul un chemin absolu sur un lecteur (`C:\…`, `C:/…`) est
+///   accepté. Tout le reste est refusé : chemin réseau (`\\serveur\…`),
+///   de périphérique (`\\?\…`, `\\.\…`), d'objet NT (`\??\…`, que les
+///   API Win32 transmettent tel quel et qui peut désigner un partage), chemin
+///   commençant par une seule barre, relatif ou relatif à un lecteur (`C:x`).
+/// - Linux et macOS : refus de deux séparateurs en tête (`//…`, `\\…`).
+///
+/// Le caractère nul est refusé partout.
+pub fn is_local_path(path: &str) -> bool {
+    if path.contains('\0') {
+        return false;
     }
     #[cfg(windows)]
     {
         use std::path::{Component, Path, Prefix};
-        if let Some(Component::Prefix(prefix)) = Path::new(path).components().next()
-            && !matches!(prefix.kind(), Prefix::Disk(_))
-        {
-            return Err(Error::PathNotAllowed);
-        }
+        let mut components = Path::new(path).components();
+        matches!(
+            (components.next(), components.next()),
+            (Some(Component::Prefix(prefix)), Some(Component::RootDir))
+                if matches!(prefix.kind(), Prefix::Disk(_))
+        )
     }
-    Ok(())
+    #[cfg(not(windows))]
+    {
+        let mut chars = path.chars();
+        let is_sep = |c: Option<char>| matches!(c, Some('/' | '\\'));
+        !(is_sep(chars.next()) && is_sep(chars.next()))
+    }
+}
+
+pub(crate) fn check_openable_path(path: &str) -> Result<()> {
+    if is_local_path(path) {
+        Ok(())
+    } else {
+        Err(Error::PathNotAllowed)
+    }
 }
 
 #[cfg(test)]
@@ -66,14 +87,40 @@ mod tests {
             r"\/server\share",
             r"\\?\UNC\server\share\report.pdf",
             r"\\.\pipe\name",
+            "report\0.pdf",
         ] {
             assert!(check_openable_path(path).is_err(), "{path}");
         }
+    }
+
+    #[cfg(not(windows))]
+    #[test]
+    fn absolute_unix_paths_are_local() {
+        assert!(check_openable_path("/home/user/.local/share/syntheo/report.pdf").is_ok());
+    }
+
+    // Sous Windows, seul un chemin absolu sur un lecteur passe : le préfixe
+    // d'objet NT `\??\` (vu comme une racine par Rust, mais transmis tel quel
+    // au gestionnaire d'objets) et toute forme sans lecteur sont refusés.
+    #[cfg(windows)]
+    #[test]
+    fn only_drive_paths_are_local_on_windows() {
         for path in [
-            "/home/user/.local/share/syntheo/report.pdf",
-            r"C:\Users\user\Documents\report.pdf",
+            r"\??\UNC\localhost\C$\Windows\notepad.exe",
+            r"\??\C:\Windows\notepad.exe",
+            r"\Windows\notepad.exe",
+            "/Windows/notepad.exe",
+            r"relatif\x",
+            "C:relatif",
+            r"\\?\C:\Windows\notepad.exe",
         ] {
-            assert!(check_openable_path(path).is_ok(), "{path}");
+            assert!(!super::is_local_path(path), "{path}");
+        }
+        for path in [
+            r"C:\Users\user\Documents\report.pdf",
+            "C:/Users/user/report.pdf",
+        ] {
+            assert!(super::is_local_path(path), "{path}");
         }
     }
 
