@@ -11,7 +11,8 @@ Taking part is voluntary. Measurement is off by default and runs on your compute
 
 | Status | What it covers |
 | --- | --- |
-| **Proven, outside the beta's scope** | Live transcription in French. No audio is kept and nothing goes to servers other than the ones you set up: see [Data and privacy](/en/data-and-privacy) and [Security](/en/security). |
+| **Proven, outside the beta's scope** | Live transcription in French. |
+| **Designed this way, outside the beta's scope** | Syntheo is designed to keep no audio and to send meetings only to the servers you set up; the static audit found no automatic flow. See [Data and privacy](/en/data-and-privacy) and [Security](/en/security). |
 | **Observed once** | A summary built with Syntheo and shared after partial rework, by its designer. One user who knows the tool: this is not proof. |
 | **Never checked: the purpose of the beta** | That someone else gets, on their own meetings, a sendable summary with little content rework. That adding a term to the dictionary reduces corrections of proper names and acronyms. |
 
@@ -68,7 +69,7 @@ Three indicators are measured:
 | --- | --- | --- |
 | Content rework | Main | Per meeting, then median per tester |
 | Lexical rework | Support | Per term, before and after it is added to the dictionary |
-| Abandonment rate | Safeguard | Per tester: share of generated summaries not measured, exported or shared within 7 days |
+| Abandonment rate | Safeguard | Per tester: share of generated summaries not measured, exported or shared within 7 days, then median across qualified testers |
 
 **Not** measured: the number of meetings or summaries, time spent in the app, stated satisfaction, or a score given by an AI. No score mixes content and lexical rework.
 
@@ -88,11 +89,11 @@ The thresholds below are set before the beta. **No threshold will change after t
 | --- | --- |
 | Qualified tester | At least 5 measured meetings. Otherwise, the tester is marked "insufficient", with no figure. |
 | Publishable result | At least 5 qualified testers. Otherwise, figures are given tester by tester, with no conclusion. |
-| **Success** | Median content rework of 100 per 1,000 or less for at least 2 out of 3 qualified testers, **and** an abandonment rate of 20% or less. |
+| **Success** | Median content rework of 100 per 1,000 or less for at least 2 out of 3 qualified testers, **and** a median abandonment rate across qualified testers of 20% or less. |
 | **Clear failure** | Median content rework above 250 per 1,000 for the majority of qualified testers. |
 | Grey zone | Everything else. Reported as such. |
-| Decisions and Actions safeguard | If additions exceed 50 words per 1,000 generated in the Decisions or Actions section for at least a third of testers, this is flagged, even in case of success. For a tester with no recognized Decisions or Actions section, the safeguard is shown as "not computable", not ignored. |
-| Abandonment | A generated summary that is not measured, exported, or shared within 7 days of being generated. Sharing means copying the summary to the clipboard (to paste it into an email or a wiki, the usual case) or sending it through a webhook. |
+| Decisions and Actions safeguard | If additions exceed 50 words per 1,000 generated in the Decisions or Actions section for at least a third of the qualified testers for whom the safeguard is computable, this is flagged, even in case of success. For each tester, the value used is the median over their meetings. The safeguard is not computable for a tester with no recognized Decisions or Actions section: that tester is left out of the one-third calculation, and the result says so ("not computable for N testers"). |
+| Abandonment | A generated summary that is not measured, exported, or shared within 7 days of being generated. A summary whose 7 days have not elapsed by the date of the export does not count yet. Sharing means copying the summary to the clipboard (to paste it into an email or a wiki, the usual case) or sending it through a webhook. |
 
 For a sense of scale: 100 per 1,000 means about one word in ten of the summary was added, removed, or changed in content.
 
@@ -101,11 +102,13 @@ For a sense of scale: 100 per 1,000 means about one word in ten of the summary w
 When you often correct a name, you add it to the dictionary, and then it comes back less often. But it might have come back less often anyway: a term corrected several times in a row often becomes rare again on its own (regression to the mean). To separate the two effects, the beta compares two groups of terms selected by the same rule, at the same moment:
 
 - a term **enters the study** once it has been corrected twice;
-- it is **treated** if it is added to the dictionary within the next 2 meetings, a **comparison** term otherwise;
-- for each term, its errors are counted over the 5 meetings before and the 5 meetings after it entered (at least 3 on each side);
+- it is **treated** if it is added to the dictionary at the meeting where it entered or within the next 2 meetings;
+- it is a **comparison** term if it is added later, or never;
+- it is **excluded** if it had been added before it entered;
+- for each term, its errors are counted over the 5 meetings before and the 5 meetings after it entered; the entry meeting belongs to neither window, and each side needs at least 3 meetings with generated words;
 - the dictionary's effect is the drop for treated terms minus the drop for comparison terms, with an uncertainty interval.
 
-The result is only shown with at least 20 treated and 20 comparison terms, from at least 3 testers; otherwise the page states how many are missing. Limit: you choose which terms to add, it is not random. The starting frequency of both groups is published so readers can judge.
+The result is only shown with at least 20 treated and 20 comparison terms, from at least 3 testers; otherwise the result states "N terms missing" or "N testers missing". Limit: you choose which terms to add, it is not random. The starting frequency of both groups is published so readers can judge.
 
 Terms are designated by an index (`t1`, `t2`…). The mapping between the index and the term stays on your computer and is never exported.
 
@@ -149,9 +152,9 @@ You export by hand. Syntheo shows you the whole file before saving it and sends 
 | `headings_generated`, `headings_matched` | Number of headings in the generated version, and how many are found in the sent version. | `3`, `3` |
 | `unmatched_sent_words` | Words in sections of the sent version that are missing from the generated version. | `0` |
 | `total` | Counters for the whole meeting (see below). | |
-| `sections` | For each section: `index` (its rank), `role` (`decisions` or `actions` according to the summary template, `other` otherwise), `matched` (found or not) and its counters. Never its heading. | `{"index": 1, "role": "decisions", …}` |
+| `sections` | For each section: `index` (its rank), `role` (`decisions` or `actions` according to the summary template, `other` otherwise), `matched` (found or not) and `counters` (its counters, see below). Never its heading. | `{"index": 1, "role": "decisions", "matched": true, "counters": {…}}` |
 
-**Counters (`total` and each section)**
+**Counters (`total` and each section's `counters`)**
 
 | Field | Meaning | Example |
 | --- | --- | --- |
@@ -165,9 +168,9 @@ You export by hand. Syntheo shows you the whole file before saving it and sends 
 
 | Field | Meaning | Example |
 | --- | --- | --- |
-| `summary` | Index of the summary. | `"s2"` |
-| `generated_day` | Day of generation, counted from enrollment. | `5` |
-| `measured` | Day of the first measurement, or `null`. | `null` |
+| `summary` | Index of the summary. | `"s1"` |
+| `generated_day` | Day of generation, counted from enrollment. | `2` |
+| `measured` | Day of the first measurement, or `null`. | `2` |
 | `exported` | Day the note was first exported to a file (Markdown, PDF…), or `null`. | `null` |
 | `shared` | Day of the first share: summary copied to the clipboard or sent through a webhook, or `null`. | `3` |
 
@@ -185,7 +188,7 @@ You export by hand. Syntheo shows you the whole file before saving it and sends 
   **The export is pseudonymized, not anonymous.** The pseudonym is random, but with few participants, someone who knows the pilot can sometimes recognize a file (by its number of meetings or its pace). The export therefore remains personal data and is handled as such.
 </Warning>
 
-The tool that gathers exports, forthcoming, treats each file as untrusted: a file that does not match the schema is rejected.
+The tool that gathers exports (`scripts/beta/` in the [repository](https://github.com/WillIsback/Syntheo)) treats each file as untrusted. It rejects a file that does not match the schema or whose content is inconsistent (for example a share dated before generation). For a given pseudonym, it keeps only the most recent export; if two different exports compete for that place, it rejects them.
 
 ## Your rights
 

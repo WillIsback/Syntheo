@@ -11,7 +11,8 @@ La participation est volontaire. La mesure est désactivée par défaut, se calc
 
 | Statut | Ce qui est concerné |
 | --- | --- |
-| **Éprouvé, hors du champ de la bêta** | La transcription en direct en français. L'absence d'audio conservé et d'envoi vers d'autres serveurs que ceux que vous configurez : voir [Données et confidentialité](/fr/data-and-privacy) et [Sécurité](/fr/security). |
+| **Éprouvé, hors du champ de la bêta** | La transcription en direct en français. |
+| **Conçu ainsi, hors du champ de la bêta** | Syntheo est conçu pour ne garder aucun audio et n'envoyer les réunions qu'aux serveurs configurés ; aucun flux automatique n'a été trouvé par l'audit statique. Voir [Données et confidentialité](/fr/data-and-privacy) et [Sécurité](/fr/security). |
 | **Observé une seule fois** | Un compte rendu construit avec Syntheo et partagé après une retouche partielle, par son concepteur. Un seul utilisateur, qui connaît l'outil : ce n'est pas une preuve. |
 | **Jamais vérifié : c'est l'objet de la bêta** | Qu'une autre personne obtienne, sur ses propres réunions, une synthèse envoyable avec peu de reprise de fond. Que l'ajout d'un terme au dictionnaire réduise les corrections de noms propres et de sigles. |
 
@@ -68,7 +69,7 @@ Trois indicateurs sont mesurés :
 | --- | --- | --- |
 | Reprise de fond | Principal | Par réunion, puis médiane par testeur |
 | Reprise lexicale | Appui | Par terme, avant et après son ajout au dictionnaire |
-| Taux d'abandon | Garde-fou | Par testeur : part des synthèses générées ni mesurées, ni exportées, ni partagées dans les 7 jours |
+| Taux d'abandon | Garde-fou | Par testeur : part des synthèses générées ni mesurées, ni exportées, ni partagées dans les 7 jours, puis médiane des testeurs qualifiés |
 
 Ne sont **pas** mesurés : le nombre de réunions ou de synthèses, la durée d'usage, la satisfaction déclarée, ni une note attribuée par une IA. Aucun score ne mélange fond et lexical.
 
@@ -88,11 +89,11 @@ Les seuils ci-dessous sont fixés avant la bêta. **Aucun seuil ne sera modifié
 | --- | --- |
 | Testeur qualifié | Au moins 5 réunions mesurées. Sinon, le testeur est noté « insuffisant », sans chiffre. |
 | Résultat publiable | Au moins 5 testeurs qualifiés. Sinon, les chiffres sont donnés testeur par testeur, sans conclusion. |
-| **Succès** | Médiane de reprise de fond de 100 pour 1 000 ou moins chez au moins 2 testeurs qualifiés sur 3, **et** taux d'abandon de 20 % ou moins. |
+| **Succès** | Médiane de reprise de fond de 100 pour 1 000 ou moins chez au moins 2 testeurs qualifiés sur 3, **et** médiane des taux d'abandon des testeurs qualifiés de 20 % ou moins. |
 | **Échec net** | Médiane de reprise de fond au-dessus de 250 pour 1 000 chez la majorité des testeurs qualifiés. |
 | Zone grise | Tout le reste. Rapporté comme tel. |
-| Garde-fou Décisions et Actions | Si les ajouts dépassent 50 mots pour 1 000 générés dans la section Décisions ou Actions chez au moins un tiers des testeurs, c'est signalé, même en cas de succès. Pour un testeur dont aucune section Décisions ou Actions n'est reconnue, le garde-fou est affiché « non calculable », pas ignoré. |
-| Abandon | Une synthèse générée qui n'a été ni mesurée, ni exportée, ni partagée dans les 7 jours qui suivent sa génération. Partager veut dire copier la synthèse dans le presse-papiers (pour la coller dans un courriel ou un wiki, le cas courant) ou l'envoyer par webhook. |
+| Garde-fou Décisions et Actions | Si les ajouts dépassent 50 mots pour 1 000 générés dans la section Décisions ou Actions chez au moins un tiers des testeurs qualifiés pour qui le garde-fou est calculable, c'est signalé, même en cas de succès. Pour chaque testeur, la valeur retenue est la médiane sur ses réunions. Le garde-fou n'est pas calculable pour un testeur dont aucune section Décisions ou Actions n'est reconnue : ce testeur sort du calcul du tiers, et le résultat l'indique (« non calculable pour N testeurs »). |
+| Abandon | Une synthèse générée qui n'a été ni mesurée, ni exportée, ni partagée dans les 7 jours qui suivent sa génération. Une synthèse dont ces 7 jours ne sont pas écoulés à la date de l'export ne compte pas encore. Partager veut dire copier la synthèse dans le presse-papiers (pour la coller dans un courriel ou un wiki, le cas courant) ou l'envoyer par webhook. |
 
 Pour fixer les idées : 100 pour 1 000 veut dire qu'environ un mot sur dix de la synthèse a été ajouté, retiré ou changé sur le fond.
 
@@ -101,11 +102,13 @@ Pour fixer les idées : 100 pour 1 000 veut dire qu'environ un mot sur dix de la
 Quand vous corrigez souvent un nom, vous l'ajoutez au dictionnaire, puis il revient moins. Mais il serait peut-être revenu moins de toute façon : un terme corrigé plusieurs fois de suite redevient souvent rare de lui-même (c'est le retour à la moyenne). Pour séparer les deux effets, la bêta compare deux groupes de termes choisis par la même règle, au même moment :
 
 - un terme **entre dans l'étude** dès qu'il a été corrigé 2 fois ;
-- il est **traité** s'il est ajouté au dictionnaire dans les 2 réunions qui suivent, **comparé** sinon ;
-- pour chaque terme, on compte ses erreurs sur les 5 réunions avant et les 5 réunions après son entrée (au moins 3 de chaque côté) ;
+- il est **traité** s'il est ajouté au dictionnaire à la réunion de son entrée ou dans les 2 réunions qui suivent ;
+- il est **comparé** s'il est ajouté plus tard, ou jamais ;
+- il est **exclu** s'il avait été ajouté avant son entrée ;
+- pour chaque terme, on compte ses erreurs sur les 5 réunions avant et les 5 réunions après son entrée ; la réunion d'entrée n'appartient à aucune des deux fenêtres, et il faut au moins 3 réunions avec des mots générés de chaque côté ;
 - l'effet du dictionnaire est la baisse des termes traités, moins la baisse des termes comparés, avec un intervalle d'incertitude.
 
-Le résultat n'est affiché qu'avec au moins 20 termes traités et 20 termes comparés, venant d'au moins 3 testeurs ; sinon, la page indique combien il en manque. Limite : vous choisissez quels termes ajouter, ce n'est pas tiré au sort. La fréquence de départ des deux groupes est publiée pour qu'on puisse en juger.
+Le résultat n'est affiché qu'avec au moins 20 termes traités et 20 termes comparés, venant d'au moins 3 testeurs ; sinon, le résultat indique « il manque N termes » ou « il manque N testeurs ». Limite : vous choisissez quels termes ajouter, ce n'est pas tiré au sort. La fréquence de départ des deux groupes est publiée pour qu'on puisse en juger.
 
 Les termes sont désignés par un index (`t1`, `t2`…). La correspondance entre l'index et le terme reste sur votre poste et n'est jamais exportée.
 
@@ -149,9 +152,9 @@ L'export se fait à la main. Syntheo vous montre le fichier en entier avant de l
 | `headings_generated`, `headings_matched` | Nombre de titres de la version générée, et combien se retrouvent dans la version envoyée. | `3`, `3` |
 | `unmatched_sent_words` | Mots des sections de la version envoyée absentes de la version générée. | `0` |
 | `total` | Les compteurs de la réunion entière (voir ci-dessous). | |
-| `sections` | Pour chaque section : `index` (son rang), `role` (`decisions` ou `actions` d'après le modèle de compte rendu, `other` sinon), `matched` (retrouvée ou non) et ses compteurs. Jamais son titre. | `{"index": 1, "role": "decisions", …}` |
+| `sections` | Pour chaque section : `index` (son rang), `role` (`decisions` ou `actions` d'après le modèle de compte rendu, `other` sinon), `matched` (retrouvée ou non) et `counters` (ses compteurs, voir ci-dessous). Jamais son titre. | `{"index": 1, "role": "decisions", "matched": true, "counters": {…}}` |
 
-**Compteurs (`total` et chaque section)**
+**Compteurs (`total` et `counters` de chaque section)**
 
 | Champ | Sens | Exemple |
 | --- | --- | --- |
@@ -165,9 +168,9 @@ L'export se fait à la main. Syntheo vous montre le fichier en entier avant de l
 
 | Champ | Sens | Exemple |
 | --- | --- | --- |
-| `summary` | Index de la synthèse. | `"s2"` |
-| `generated_day` | Jour de génération, depuis l'inscription. | `5` |
-| `measured` | Jour de la première mesure, ou `null`. | `null` |
+| `summary` | Index de la synthèse. | `"s1"` |
+| `generated_day` | Jour de génération, depuis l'inscription. | `2` |
+| `measured` | Jour de la première mesure, ou `null`. | `2` |
 | `exported` | Jour du premier export de la note en fichier (Markdown, PDF…), ou `null`. | `null` |
 | `shared` | Jour du premier partage : synthèse copiée dans le presse-papiers ou envoyée par webhook, ou `null`. | `3` |
 
@@ -185,7 +188,7 @@ L'export se fait à la main. Syntheo vous montre le fichier en entier avant de l
   **L'export est pseudonymisé, pas anonyme.** Le pseudonyme est aléatoire, mais avec peu de participants, quelqu'un qui connaît le pilote peut parfois reconnaître un fichier (par son nombre de réunions ou son rythme). L'export reste donc une donnée personnelle, traitée comme telle.
 </Warning>
 
-L'outil qui rassemble les exports, à venir, traite chaque fichier comme non fiable : un fichier qui ne respecte pas le schéma est refusé.
+L'outil qui rassemble les exports (`scripts/beta/` dans le [dépôt](https://github.com/WillIsback/Syntheo)) traite chaque fichier comme non fiable. Il refuse un fichier qui ne respecte pas le schéma ou dont le contenu est incohérent (par exemple un partage daté d'avant la génération). Pour un même pseudonyme, il ne garde que l'export le plus récent ; si deux exports différents se disputent cette place, il les refuse.
 
 ## Vos droits
 
