@@ -108,8 +108,10 @@ fn denies_commands_that_run_programs_or_read_secrets() {
         "plugin:mesure|measure",
         "plugin:mesure|measure_differences",
         "plugin:transcription|probe_local_transcription",
-        "plugin:transcription|on_device_install",
-        "plugin:transcription|on_device_uninstall",
+        "plugin:transcription|on_device_download_models",
+        "plugin:transcription|on_device_install_models",
+        "plugin:transcription|on_device_cancel_install",
+        "plugin:transcription|on_device_remove_models",
         "plugin:transcription|on_device_commission",
     ] {
         assert!(super::is_denied_command(cmd), "{cmd}");

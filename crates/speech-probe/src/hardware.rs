@@ -77,7 +77,7 @@ pub fn read(data_dir: &Path) -> Hardware {
 
 /// Disque dont le point de montage est le plus long préfixe du dossier.
 /// `None` : disque introuvable, traité comme un refus, jamais comme accepté.
-fn free_disk(dir: &Path) -> Option<u64> {
+pub fn free_disk(dir: &Path) -> Option<u64> {
     let dir = std::fs::canonicalize(dir).unwrap_or_else(|_| dir.to_path_buf());
     let dir = std::path::PathBuf::from(strip_verbatim(&dir.to_string_lossy()));
     let disks = sysinfo::Disks::new_with_refreshed_list().ok()?;

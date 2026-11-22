@@ -199,7 +199,12 @@ pub fn main() {
                 .with_denylist(&["composer", "dictation-overlay"])
                 .build(),
         )
-        .plugin(tauri_plugin_transcription::init())
+        .plugin(tauri_plugin_transcription::init_with(
+            tauri_plugin_transcription::SpeechBuild {
+                companion_files: Some(env!("SYNTHEO_SPEECH_FILES")),
+                models_urls: option_env!("SYNTHEO_SPEECH_MODELS_URLS"),
+            },
+        ))
         .plugin(tauri_plugin_tantivy::init());
 
     // Mise à jour intégrée (issue 593) : absente des alphas `devtools`, qui

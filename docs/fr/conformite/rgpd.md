@@ -42,17 +42,19 @@ Tout est stocké sur le poste, dans le dossier de données de l'application
 
 Aucune de ces données n'est envoyée à l'éditeur.
 
-**Inférence sur le poste, seulement si l'utilisateur l'installe** : par
-défaut, l'application n'exécute aucun modèle (transcription, LLM, diarisation
-ou empreintes vocales). La source facultative « Sur ce poste » (à venir)
-installe un module de transcription signé, `syntheo-speech`, dans
-`modules/speech` du dossier de données de l'application, avec ses modèles,
-l'audio de mise en service, le résultat de la mise en service et le dernier
-numéro de module accepté. Le module transcrit l'audio de l'écoute en mémoire,
-sur la boucle locale, sans rien écrire d'audio ni journaliser de texte ; il se
-supprime avec **Désinstaller** ou avec le dossier de données. Un réglage géré
-(`on_device_transcription_enabled`) permet à une organisation de l'interdire.
-Voir [Transcrire sur ce poste](/fr/on-device-transcription). Une version antérieure a pu laisser des fichiers de
+**Inférence sur le poste, seulement si l'utilisateur installe les modèles** :
+par défaut, l'application n'exécute aucun modèle (transcription, LLM,
+diarisation ou empreintes vocales). Le programme de transcription sur le poste,
+`syntheo-speech`, est livré avec l'application mais ne tourne que si
+l'utilisateur choisit la source facultative « Sur ce poste » et installe ses
+modèles (environ 1,1 Go) dans `speech/models` du dossier de données ; le
+résultat de la mise en service est dans `speech/commissioning.json`. Le
+programme transcrit l'audio de l'écoute en mémoire, sur la boucle locale, sans
+rien écrire d'audio ni journaliser de texte. Les modèles se suppriment avec
+**Retirer les modèles** ou avec le dossier de données. Les réglages gérés
+`on_device_transcription_enabled` (interdire la source) et
+`speech_models_urls` (imposer un miroir des modèles) sont à la disposition de
+l'organisation. Voir [Transcrire sur ce poste](/fr/on-device-transcription). Une version antérieure a pu laisser des fichiers de
 modèles dans les dossiers `models/stt` et `models/llm` du dossier de données,
 ainsi que dans le cache de modèles Soniqo sous macOS : ils ne sont plus ni lus
 ni chargés, et peuvent être supprimés à la main. Les empreintes vocales
@@ -63,12 +65,23 @@ une suppression, l'effacement est retenté au lancement suivant.
 
 ## Flux réseau
 
-- **Module de transcription sur le poste** (source facultative « Sur ce
-  poste ») : l'audio de l'écoute part vers le module, sur la boucle locale
-  (`127.0.0.1`) du poste, après authentification mutuelle ; rien ne quitte le
-  poste, et le module n'ouvre aucune connexion vers l'extérieur. Pour une
-  écoute « Sur ce poste », aucun audio ne part vers le serveur, même pour
-  réparer un passage coupé.
+- **Transcription sur le poste** (source facultative « Sur ce poste ») :
+  l'audio de l'écoute part vers le programme `syntheo-speech`, sur la boucle
+  locale (`127.0.0.1`) du poste, après authentification mutuelle ; rien ne
+  quitte le poste, et le programme n'ouvre aucune connexion vers l'extérieur.
+  Pour une écoute « Sur ce poste », aucun audio ne part vers le serveur, même
+  pour réparer un passage coupé.
+- **Téléchargement des modèles de la transcription sur le poste**, seulement
+  quand l'utilisateur choisit **Télécharger les modèles** : requêtes HTTPS
+  pour les fichiers des modèles vers la release GitHub de Syntheo
+  (`github.com`, redirigé vers `release-assets.githubusercontent.com`), puis
+  vers Hugging Face (`huggingface.co`, redirigé vers ses serveurs de contenu
+  sous `hf.co`, par exemple `cas-bridge.xethub.hf.co`) en secours, ou vers le
+  miroir défini par l'administrateur (`speech_models_urls`) à la place ; les
+  redirections HTTPS sont suivies (5 au plus), y compris celles du miroir
+  vers un autre hôte. Aucune donnée de
+  réunion n'est envoyée ; ces hôtes voient l'adresse IP du poste. Aucun flux
+  si les modèles sont installés depuis un dossier.
 - **Endpoints d'inférence configurés par l'utilisateur**, et eux seuls : ASR
   (protocole OpenAI : Realtime et `/v1/audio/transcriptions` ; NVIDIA
   NeMo-Speech.cpp : WebSocket `/v1/audio/transcriptions/realtime`) et

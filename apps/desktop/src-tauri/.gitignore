@@ -8,3 +8,8 @@
 
 # Runtime Visual C++ copié par la CI Windows (build-windows.yml)
 /vcrt/
+
+# Programme compagnon syntheo-speech construit avant `tauri build` (issue 683,
+# scripts/build-speech.sh et .ps1)
+/binaries/syntheo-speech-*
+/speech-licenses/

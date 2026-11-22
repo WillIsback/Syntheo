@@ -26,10 +26,9 @@ export function useConnectionHealth(): HealthStatus {
     if (stt_on_device && onDevice.data?.allowed) {
       return {
         status: "error",
-        message:
-          onDevice.data.module.kind === "invalid"
-            ? t`The transcription module of this computer is refused. Install it again or go back to the server in Settings › Transcription.`
-            : t`The transcription module of this computer is not installed. Install it or go back to the server in Settings › Transcription.`,
+        message: onDevice.data.companion
+          ? t`The transcription models of this computer are not installed. Install them or go back to the server in Settings › Transcription.`
+          : t`This version of Syntheo does not include transcription on this computer. Go back to the server in Settings › Transcription.`,
       };
     }
     return { status: "error", message: "Provider not configured." };

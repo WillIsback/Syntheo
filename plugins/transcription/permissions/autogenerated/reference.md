@@ -55,8 +55,11 @@ Default permissions for the plugin
 - `allow-discard-audio-upload`
 - `allow-probe-local-transcription`
 - `allow-on-device-status`
-- `allow-on-device-install`
-- `allow-on-device-uninstall`
+- `allow-on-device-download-models`
+- `allow-on-device-install-models`
+- `allow-on-device-install-progress`
+- `allow-on-device-cancel-install`
+- `allow-on-device-remove-models`
 - `allow-on-device-commissioning`
 - `allow-on-device-commission`
 - `allow-on-device-load`
@@ -828,6 +831,32 @@ Denies the list_transcription_sessions command without any pre-configured scope.
 <tr>
 <td>
 
+`transcription:allow-on-device-cancel-install`
+
+</td>
+<td>
+
+Enables the on_device_cancel_install command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:deny-on-device-cancel-install`
+
+</td>
+<td>
+
+Denies the on_device_cancel_install command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
 `transcription:allow-on-device-commission`
 
 </td>
@@ -906,12 +935,12 @@ Denies the on_device_commissioning command without any pre-configured scope.
 <tr>
 <td>
 
-`transcription:allow-on-device-install`
+`transcription:allow-on-device-download-models`
 
 </td>
 <td>
 
-Enables the on_device_install command without any pre-configured scope.
+Enables the on_device_download_models command without any pre-configured scope.
 
 </td>
 </tr>
@@ -919,12 +948,64 @@ Enables the on_device_install command without any pre-configured scope.
 <tr>
 <td>
 
-`transcription:deny-on-device-install`
+`transcription:deny-on-device-download-models`
 
 </td>
 <td>
 
-Denies the on_device_install command without any pre-configured scope.
+Denies the on_device_download_models command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:allow-on-device-install-models`
+
+</td>
+<td>
+
+Enables the on_device_install_models command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:deny-on-device-install-models`
+
+</td>
+<td>
+
+Denies the on_device_install_models command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:allow-on-device-install-progress`
+
+</td>
+<td>
+
+Enables the on_device_install_progress command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:deny-on-device-install-progress`
+
+</td>
+<td>
+
+Denies the on_device_install_progress command without any pre-configured scope.
 
 </td>
 </tr>
@@ -958,6 +1039,32 @@ Denies the on_device_load command without any pre-configured scope.
 <tr>
 <td>
 
+`transcription:allow-on-device-remove-models`
+
+</td>
+<td>
+
+Enables the on_device_remove_models command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:deny-on-device-remove-models`
+
+</td>
+<td>
+
+Denies the on_device_remove_models command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
 `transcription:allow-on-device-status`
 
 </td>
@@ -977,32 +1084,6 @@ Enables the on_device_status command without any pre-configured scope.
 <td>
 
 Denies the on_device_status command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`transcription:allow-on-device-uninstall`
-
-</td>
-<td>
-
-Enables the on_device_uninstall command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`transcription:deny-on-device-uninstall`
-
-</td>
-<td>
-
-Denies the on_device_uninstall command without any pre-configured scope.
 
 </td>
 </tr>

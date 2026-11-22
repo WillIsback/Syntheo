@@ -215,17 +215,37 @@ build_steps() {
   fi
   echo "-- packages/ui : $((SECONDS - t0)) s"
 
+  # Programme compagnon syntheo-speech (issue 683), construit dans le même
+  # environnement que l'application (glibc de la CI en mode Docker), avant
+  # `tauri build` qui l'embarque et en épingle l'empreinte.
+  t0=$SECONDS
+  SPEECH_TARGET_DIR="$target_dir/speech" bash scripts/build-speech.sh x86_64-unknown-linux-gnu
+  echo "-- syntheo-speech : $((SECONDS - t0)) s"
+
   t0=$SECONDS
   if [ "${SYNTHEO_UPDATER_TEST:-}" = 1 ]; then
     [ -f "$root/$UPDATER_TEST_CONF" ] || die "surcouche du build de test absente de la source."
     echo "-- build de test de la mise à jour : sans devtools, surcouche $UPDATER_TEST_CONF"
-    pnpm -F desktop tauri build --ci --bundles appimage,deb \
-      --config ./src-tauri/tauri.conf.syntheo.json --config "./src-tauri/${UPDATER_TEST_CONF##*/}"
+    # Build de test jamais distribué : le compagnon peut partir sans source de
+    # téléchargement des modèles (garde du build.rs de l'application).
+    SYNTHEO_SPEECH_ALLOW_NO_SOURCES=1 pnpm -F desktop tauri build --ci --bundles appimage,deb \
+      --config ./src-tauri/tauri.conf.syntheo.json --config ./src-tauri/tauri.speech.conf.json \
+      --config "./src-tauri/${UPDATER_TEST_CONF##*/}"
   else
     pnpm -F desktop tauri build --ci --bundles appimage --features devtools \
-      --config ./src-tauri/tauri.conf.syntheo.json
+      --config ./src-tauri/tauri.conf.syntheo.json --config ./src-tauri/tauri.speech.conf.json
   fi
   echo "-- tauri build : $((SECONDS - t0)) s"
+
+  # linuxdeploy ajoute un RUNPATH aux exécutables de usr/bin, ce qui change
+  # les octets du compagnon dont l'application a épinglé l'empreinte : il est
+  # remis tel que construit (il ne dépend que de la libc, de libm, de
+  # libgcc_s et de libstdc++ de l'hôte, comme dans le .deb). Le réempaquetage
+  # qui suit reconstruit l'AppImage depuis l'AppDir.
+  local appdir
+  appdir=$(find "$bundle_dir" -maxdepth 1 -type d -name '*.AppDir' | head -1)
+  [ -n "$appdir" ] || die "AppDir introuvable dans $bundle_dir."
+  install -m 0755 "$src_tauri/binaries/syntheo-speech-x86_64-unknown-linux-gnu" "$appdir/usr/bin/syntheo-speech"
 
   # Même réempaquetage que release.yml (bibliothèques hôte,
   # zstd 19, blocs de 1 Mio), pour que l'alpha soit fidèle à la release.

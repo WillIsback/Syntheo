@@ -52,6 +52,10 @@ pub enum OnDeviceErrorKind {
     /// Mise en service pas encore faite, ou poste trop lent pour le temps
     /// réel (aucun profil ne tient).
     NotCommissioned,
+    /// Le système a refusé d'exécuter le programme (politique de contrôle des
+    /// applications comme AppLocker, ou dossier de données monté sans droit
+    /// d'exécution) : inutile de réessayer.
+    ExecutionBlocked,
 }
 
 impl OnDeviceErrorKind {
@@ -66,6 +70,7 @@ impl OnDeviceErrorKind {
             Self::Installing => "installing",
             Self::NotCommissioned => "not_commissioned",
             Self::Measuring => "measuring",
+            Self::ExecutionBlocked => "execution_blocked",
         }
     }
 

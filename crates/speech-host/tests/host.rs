@@ -1,37 +1,61 @@
-//! Cycle de vie avec le vrai binaire du module, construit avec le moteur
+//! Cycle de vie avec le vrai binaire du compagnon, construit avec le moteur
 //! factice (`cargo build --features fake-engine` dans `apps/speech`) et donné
 //! par `SYNTHEO_SPEECH_TEST_BIN`. Sauté sans cette variable.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use futures_util::StreamExt;
 use owhisper_client::{FinalizeHandle, ListenClient, NvidiaAdapter};
 use owhisper_interface::MixedMessage;
 use owhisper_interface::stream::StreamResponse;
-use speech_host::test_signing::{TestKey, current_manifest};
-use speech_host::{HostError, SpeechHost};
+use speech_host::companion::binary_name;
+use speech_host::models::ModelFile;
+use speech_host::{Companion, HostError, SpeechHost};
 
-/// Dossier de module : le binaire, un modèle factice, la liste des empreintes.
-fn module_dir(binary: &Path) -> tempfile::TempDir {
-    let dir = tempfile::tempdir().unwrap();
-    let name = speech_host::verify::binary_name();
-    std::fs::copy(binary, dir.path().join(name)).unwrap();
-    std::fs::create_dir_all(dir.path().join("models")).unwrap();
-    std::fs::write(dir.path().join("models/placeholder"), b"x").unwrap();
-    let manifest = current_manifest(dir.path(), &[name], &["models/placeholder"], "0.8.0");
-    KEY.with(|key| key.sign_module(dir.path(), &manifest));
-    dir
+/// Dossier d'installation (le compagnon) et dossier de données (un modèle
+/// factice), comme dans l'application.
+struct Fixture {
+    install: tempfile::TempDir,
+    data: tempfile::TempDir,
 }
 
-thread_local! {
-    static KEY: TestKey = TestKey::new();
+fn placeholder() -> ModelFile {
+    ModelFile {
+        path: "placeholder".to_owned(),
+        size: 1,
+        // SHA-256 de « x ».
+        sha256: "2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881".to_owned(),
+    }
 }
 
-fn host(dir: &Path) -> SpeechHost {
-    SpeechHost::new(dir.to_path_buf(), 1, "0.8.0")
-        .with_engine("fake")
-        .with_manifest_key(&KEY.with(TestKey::public))
+fn fixture(binary: &Path) -> Fixture {
+    let install = tempfile::tempdir().unwrap();
+    std::fs::copy(binary, install.path().join(binary_name())).unwrap();
+    fixture_in(install)
+}
+
+fn fixture_in(install: tempfile::TempDir) -> Fixture {
+    let data = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(data.path().join("models")).unwrap();
+    std::fs::write(data.path().join("models/placeholder"), b"x").unwrap();
+    Fixture { install, data }
+}
+
+impl Fixture {
+    fn companion(&self) -> Companion {
+        Companion::hashed_now(self.install.path(), &[binary_name()]).unwrap()
+    }
+
+    fn host(&self) -> SpeechHost {
+        SpeechHost::new(self.data.path().to_path_buf(), Some(self.companion()), 1)
+            .with_engine("fake")
+            .with_models(vec![placeholder()])
+    }
+
+    fn model(&self) -> PathBuf {
+        self.data.path().join("models/placeholder")
+    }
 }
 
 fn binary() -> Option<std::path::PathBuf> {
@@ -138,8 +162,8 @@ async fn launch_session_restart_with_a_new_token_and_stop() {
         eprintln!("SYNTHEO_SPEECH_TEST_BIN absent : essai sauté");
         return;
     };
-    let dir = module_dir(&binary);
-    let host = host(dir.path());
+    let fixture = fixture(&binary);
+    let host = fixture.host();
 
     let first = host.target(true).await.expect("lancement");
     assert!(first.base_url.starts_with("http://127.0.0.1:"));
@@ -160,7 +184,7 @@ async fn launch_session_restart_with_a_new_token_and_stop() {
         let exe = std::fs::read_link(format!("/proc/{pid}/exe")).unwrap();
         let exe = exe.to_string_lossy().into_owned();
         assert!(
-            exe.contains(".speech-run-") && !exe.ends_with(" (deleted)"),
+            exe.contains("/.run-") && !exe.ends_with(" (deleted)"),
             "{exe}"
         );
         // Le modèle vérifié est hérité par descripteur (zéro copie).
@@ -168,7 +192,7 @@ async fn launch_session_restart_with_a_new_token_and_stop() {
             .unwrap()
             .flatten()
             .filter_map(|fd| std::fs::read_link(fd.path()).ok())
-            .any(|target| target == dir.path().join("models/placeholder"));
+            .any(|target| target == fixture.model());
         assert!(inherited, "modèle hérité par descripteur");
         assert_eq!(
             std::fs::read_link(format!("/proc/{pid}/cwd")).unwrap(),
@@ -208,31 +232,24 @@ async fn launch_session_restart_with_a_new_token_and_stop() {
 }
 
 #[tokio::test]
-async fn an_altered_module_never_starts() {
+async fn an_altered_model_never_starts() {
     let Some(binary) = binary() else { return };
-    let dir = module_dir(&binary);
-    std::fs::write(dir.path().join("models/placeholder"), b"altere").unwrap();
-    let host = host(dir.path());
+    let fixture = fixture(&binary);
+    std::fs::write(fixture.model(), b"y").unwrap();
+    let host = fixture.host();
     assert!(matches!(host.target(true).await, Err(HostError::Verify(_))));
     assert!(!host.is_running().await);
 }
 
-/// Dossier de module dont le « binaire » est un script qui sort aussitôt.
+/// Compagnon dont le « binaire » est un script qui sort aussitôt.
 #[cfg(unix)]
-fn crashing_module_dir() -> tempfile::TempDir {
+fn crashing_fixture() -> Fixture {
     use std::os::unix::fs::PermissionsExt;
-    let dir = tempfile::tempdir().unwrap();
-    let binary = dir.path().join(speech_host::verify::binary_name());
+    let install = tempfile::tempdir().unwrap();
+    let binary = install.path().join(binary_name());
     std::fs::write(&binary, "#!/bin/sh\nexit 1\n").unwrap();
     std::fs::set_permissions(&binary, std::fs::Permissions::from_mode(0o755)).unwrap();
-    let manifest = current_manifest(
-        dir.path(),
-        &[speech_host::verify::binary_name()],
-        &[],
-        "0.8.0",
-    );
-    KEY.with(|key| key.sign_module(dir.path(), &manifest));
-    dir
+    fixture_in(install)
 }
 
 // Revue de l'issue 684 : chaque tentative compte, réussie ou non ; au-delà
@@ -240,12 +257,14 @@ fn crashing_module_dir() -> tempfile::TempDir {
 #[cfg(unix)]
 #[tokio::test]
 async fn a_module_that_exits_at_once_is_refused_after_the_last_attempt() {
-    let dir = crashing_module_dir();
-    let host = host(dir.path()).with_restart_policy(speech_host::host::RestartPolicy {
-        max_attempts: 2,
-        window: Duration::from_secs(60),
-        stable_after: Duration::from_secs(60),
-    });
+    let fixture = crashing_fixture();
+    let host = fixture
+        .host()
+        .with_restart_policy(speech_host::host::RestartPolicy {
+            max_attempts: 2,
+            window: Duration::from_secs(60),
+            stable_after: Duration::from_secs(60),
+        });
     for _ in 0..2 {
         let error = host.target(true).await.unwrap_err();
         assert!(matches!(error, HostError::Launch(_)), "{error:?}");
@@ -265,13 +284,18 @@ async fn a_module_that_exits_at_once_is_refused_after_the_last_attempt() {
     assert_eq!(host.verifications().await, 2);
 }
 
-// Un module altéré : une seule tentative, un seul hachage, refus définitif.
+// Un compagnon altéré après la construction : une seule tentative, un seul
+// hachage, refus définitif.
 #[cfg(unix)]
 #[tokio::test]
-async fn an_altered_module_is_checked_once() {
-    let dir = crashing_module_dir();
-    std::fs::write(dir.path().join("intrus.so"), b"x").unwrap();
-    let host = host(dir.path());
+async fn an_altered_companion_is_checked_once() {
+    let fixture = crashing_fixture();
+    let host = fixture.host();
+    std::fs::write(
+        fixture.install.path().join(binary_name()),
+        "#!/bin/sh\nexit 2\n",
+    )
+    .unwrap();
     for _ in 0..5 {
         let error = host.target(true).await.unwrap_err();
         assert!(matches!(error, HostError::Verify(_)), "{error:?}");
@@ -280,20 +304,28 @@ async fn an_altered_module_is_checked_once() {
     assert_eq!(host.verifications().await, 1);
 }
 
-/// Module réel (binaire release, vrais modèles), signé par `tauri signer` :
-/// `SYNTHEO_SPEECH_MODULE_DIR` et `SYNTHEO_SPEECH_MODULE_KEY` (clé publique).
-/// Vérifie le format de signature de la CI et le lancement avec le moteur A.
+/// Compagnon réel (binaire release, vrais modèles) : `SYNTHEO_SPEECH_RELEASE_BIN`
+/// et `SYNTHEO_SPEECH_DATA_DIR` (dossier qui contient `models/`). Vérifie les
+/// empreintes compilées de `models.json` et le lancement avec le moteur A.
+fn real_host() -> Option<(SpeechHost, PathBuf, tempfile::TempDir)> {
+    let binary = std::env::var_os("SYNTHEO_SPEECH_RELEASE_BIN")?;
+    let data: PathBuf = std::env::var_os("SYNTHEO_SPEECH_DATA_DIR")?.into();
+    let install = tempfile::tempdir().unwrap();
+    std::fs::copy(binary, install.path().join(binary_name())).unwrap();
+    let companion = Companion::hashed_now(install.path(), &[binary_name()]).unwrap();
+    Some((
+        SpeechHost::new(data.clone(), Some(companion), 2),
+        data,
+        install,
+    ))
+}
+
 #[tokio::test]
-async fn a_real_signed_module_starts_and_accepts_a_session() {
-    let (Some(dir), Some(key)) = (
-        std::env::var_os("SYNTHEO_SPEECH_MODULE_DIR"),
-        std::env::var("SYNTHEO_SPEECH_MODULE_KEY").ok(),
-    ) else {
-        eprintln!("SYNTHEO_SPEECH_MODULE_DIR ou SYNTHEO_SPEECH_MODULE_KEY absent : essai sauté");
+async fn a_real_companion_starts_and_accepts_a_session() {
+    let Some((host, dir, _install)) = real_host() else {
+        eprintln!("SYNTHEO_SPEECH_RELEASE_BIN ou SYNTHEO_SPEECH_DATA_DIR absent : essai sauté");
         return;
     };
-    let dir: std::path::PathBuf = dir.into();
-    let host = SpeechHost::new(dir.clone(), 2, "0.8.0").with_manifest_key(&key);
     let target = host.target(true).await.expect("module vérifié et lancé");
     #[cfg(target_os = "linux")]
     {
@@ -351,32 +383,17 @@ fn wav(seconds: usize) -> Vec<u8> {
     out
 }
 
-/// Dossier de module avec l'audio de mise en service.
-fn commissioning_module_dir(binary: &Path, seconds: usize) -> tempfile::TempDir {
-    let dir = tempfile::tempdir().unwrap();
-    let name = speech_host::verify::binary_name();
-    std::fs::copy(binary, dir.path().join(name)).unwrap();
-    std::fs::create_dir_all(dir.path().join("models")).unwrap();
-    std::fs::write(dir.path().join("models/placeholder"), b"x").unwrap();
-    std::fs::create_dir_all(dir.path().join("commissioning")).unwrap();
-    for file in speech_host::commissioning::AUDIO_FILES {
-        std::fs::write(dir.path().join(file), wav(seconds)).unwrap();
-    }
-    let mut files = vec![name];
-    files.extend(speech_host::commissioning::AUDIO_FILES);
-    let manifest = current_manifest(dir.path(), &files, &["models/placeholder"], "0.8.0");
-    KEY.with(|key| key.sign_module(dir.path(), &manifest));
-    dir
-}
-
 // Issue 686 : mise en service mesurée, dans l'ordre de conclusion-680 §4.
 // Moteur factice à coût simulé : deux flux diarisés dépassent le temps réel
 // (2 × 0,9), deux flux sans diarisation tiennent (2 × 0,2).
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn commissioning_picks_the_first_profile_that_keeps_up() {
     let Some(binary) = binary() else { return };
-    let dir = commissioning_module_dir(&binary, 8);
-    let host = host(dir.path()).with_extra_args(&["--fake-cost", "0.9,0.6,0.2"]);
+    let fixture = fixture(&binary);
+    let host = fixture
+        .host()
+        .with_commissioning_audio(wav(8)[44..].to_vec(), wav(8)[44..].to_vec())
+        .with_extra_args(&["--fake-cost", "0.9,0.6,0.2"]);
     assert_eq!(host.commissioning_progress(), None);
     let (result, seen) = tokio::join!(host.commission(true, Duration::from_secs(8)), async {
         let mut seen = Vec::new();
@@ -423,8 +440,10 @@ async fn commissioning_picks_the_first_profile_that_keeps_up() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn the_module_reports_its_load() {
     let Some(binary) = binary() else { return };
-    let dir = module_dir(&binary);
-    let host = host(dir.path()).with_extra_args(&["--fake-cost", "0.1,0.1,0.1"]);
+    let fixture = fixture(&binary);
+    let host = fixture
+        .host()
+        .with_extra_args(&["--fake-cost", "0.1,0.1,0.1"]);
     let target = host.target(true).await.unwrap();
     let client = ListenClient::builder()
         .adapter::<NvidiaAdapter>()
@@ -459,19 +478,15 @@ async fn the_module_reports_its_load() {
     host.stop().await;
 }
 
-/// Mise en service réelle (binaire release, vrais modèles, audio MLS),
-/// module signé par `tauri signer` : `SYNTHEO_SPEECH_MODULE_DIR` et
-/// `SYNTHEO_SPEECH_MODULE_KEY`. Mesure d'appoint, 30 s par profil.
+/// Mise en service réelle (binaire release, vrais modèles, audio MLS
+/// compilé) : mêmes variables que `a_real_companion_starts…`. Mesure
+/// d'appoint, 30 s par profil.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[ignore = "mise en service réelle, une à deux minutes"]
-async fn a_real_module_is_commissioned() {
-    let (Some(dir), Some(key)) = (
-        std::env::var_os("SYNTHEO_SPEECH_MODULE_DIR"),
-        std::env::var("SYNTHEO_SPEECH_MODULE_KEY").ok(),
-    ) else {
+async fn a_real_companion_is_commissioned() {
+    let Some((host, _dir, _install)) = real_host() else {
         return;
     };
-    let host = SpeechHost::new(dir.into(), 2, "0.8.0").with_manifest_key(&key);
     let result = host
         .commission(true, speech_host::commissioning::MEASURE)
         .await
@@ -494,9 +509,13 @@ async fn a_real_module_is_commissioned() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_profile_that_errors_is_refused_and_the_next_is_measured() {
     let Some(binary) = binary() else { return };
-    let dir = commissioning_module_dir(&binary, 6);
-    let host =
-        std::sync::Arc::new(host(dir.path()).with_extra_args(&["--fake-cost", "0.1,0.1,0.1"]));
+    let fixture = fixture(&binary);
+    let host = std::sync::Arc::new(
+        fixture
+            .host()
+            .with_commissioning_audio(wav(6)[44..].to_vec(), wav(6)[44..].to_vec())
+            .with_extra_args(&["--fake-cost", "0.1,0.1,0.1"]),
+    );
     let killer = {
         let host = host.clone();
         tokio::spawn(async move {
@@ -530,4 +549,64 @@ async fn a_profile_that_errors_is_refused_and_the_next_is_measured() {
     );
     assert_eq!(result.profile, Some(Profile::TwoStreams), "{result:?}");
     host.stop().await;
+}
+
+/// Installation réelle depuis un dossier (issue 683) : les vrais modèles,
+/// vérifiés contre les empreintes compilées de models.json, puis lancement
+/// du compagnon release et une session : `SYNTHEO_SPEECH_RELEASE_BIN` et
+/// `SYNTHEO_SPEECH_MODELS_SRC` (dossier qui contient nemotron/ et diar/).
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "copie ≈ 1 Go et lance le vrai moteur"]
+async fn real_models_install_from_a_folder_and_run() {
+    let (Some(binary), Some(source)) = (
+        std::env::var_os("SYNTHEO_SPEECH_RELEASE_BIN"),
+        std::env::var_os("SYNTHEO_SPEECH_MODELS_SRC"),
+    ) else {
+        return;
+    };
+    let install = tempfile::tempdir().unwrap();
+    std::fs::copy(binary, install.path().join(binary_name())).unwrap();
+    let companion = Companion::hashed_now(install.path(), &[binary_name()]).unwrap();
+    let data = tempfile::tempdir().unwrap();
+    let host = SpeechHost::new(data.path().to_path_buf(), Some(companion), 2);
+    let started = std::time::Instant::now();
+    host.install_models_from(source.into())
+        .await
+        .expect("modèles installés");
+    eprintln!("installation : {:?}", started.elapsed());
+    assert!(matches!(
+        host.status().await.models,
+        speech_host::models::ModelsStatus::Installed { .. }
+    ));
+    let target = host.target(true).await.expect("compagnon vérifié et lancé");
+    session(target).await;
+    host.stop().await;
+}
+
+// Revue de 7d72caf6, constat 18 : une annulation demandée hors installation
+// n'annule pas l'installation suivante.
+#[tokio::test]
+async fn a_cancel_outside_an_installation_is_ignored() {
+    let data = tempfile::tempdir().unwrap();
+    let source = tempfile::tempdir().unwrap();
+    std::fs::write(source.path().join("placeholder"), b"x").unwrap();
+    let host = SpeechHost::new(data.path().to_path_buf(), None, 1).with_models(vec![placeholder()]);
+    host.cancel_install();
+    host.install_models_from(source.path().to_path_buf())
+        .await
+        .expect("installation non annulée");
+    assert_eq!(
+        std::fs::read(data.path().join("models/placeholder")).unwrap(),
+        b"x"
+    );
+    assert!(host.install_progress().is_none());
+}
+
+// Revue de 7d72caf6, constat 7 : un lancement refusé par le système a son
+// propre code, définitif.
+#[test]
+fn a_blocked_launch_has_its_own_permanent_code() {
+    let error = HostError::ExecutionBlocked;
+    assert!(error.is_permanent());
+    assert_eq!(error.to_on_device_error().kind.code(), "execution_blocked");
 }

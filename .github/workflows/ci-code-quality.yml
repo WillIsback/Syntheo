@@ -258,7 +258,7 @@ jobs:
           if [ -z "${BASE_SHA:-}" ]; then
             echo "run=true" >> "$GITHUB_OUTPUT"
             echo "Hors PR : clippy Windows du module exécuté."
-          elif git diff --name-only "$BASE_SHA" HEAD -- 'crates/speech-host/' 'crates/speech-probe/' 'crates/owhisper-client/' 'crates/ws-client/' 'Cargo.lock' '.github/workflows/ci-code-quality.yml' | grep -q .; then
+          elif git diff --name-only "$BASE_SHA" HEAD -- 'crates/speech-host/' 'crates/speech-probe/' 'crates/owhisper-client/' 'crates/ws-client/' 'crates/image-hash/' 'scripts/check-companion-pins.ps1' 'Cargo.lock' '.github/workflows/ci-code-quality.yml' | grep -q .; then
             echo "run=true" >> "$GITHUB_OUTPUT"
             echo "Module sur le poste ou Cargo.lock modifié : clippy Windows exécuté."
           else
@@ -276,6 +276,20 @@ jobs:
         run: |
           set -euo pipefail
           cargo clippy --locked -p speech-host -p speech-probe --all-targets -- -D warnings
+
+      # Le job sign de build-windows.yml contrôle l'empreinte du compagnon
+      # signé avec check-companion-pins.ps1, qui reproduit image-hash : les
+      # deux doivent donner les empreintes de référence, pour ne pas
+      # découvrir un écart au moment d'une release.
+      - name: Empreintes de référence (crate image-hash)
+        if: steps.changes.outputs.run == 'true'
+        shell: bash
+        run: cargo test --locked -p image-hash
+
+      - name: Empreintes de référence (check-companion-pins.ps1)
+        if: steps.changes.outputs.run == 'true'
+        shell: pwsh
+        run: ./scripts/check-companion-pins.ps1 -Fixtures crates/image-hash/tests/fixtures
 
   meta:
     name: ci-code-quality (PR et workflows)

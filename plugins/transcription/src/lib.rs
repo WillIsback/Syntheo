@@ -20,6 +20,7 @@ mod listener2;
 mod live_journal;
 mod local_probe;
 mod on_device;
+pub use on_device::SpeechBuild;
 mod session_transcript;
 mod stopped_captures;
 
@@ -192,8 +193,11 @@ fn make_specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
             audio_upload::discard_audio_upload::<tauri::Wry>,
             local_probe::probe_local_transcription::<tauri::Wry>,
             on_device::on_device_status::<tauri::Wry>,
-            on_device::on_device_install::<tauri::Wry>,
-            on_device::on_device_uninstall::<tauri::Wry>,
+            on_device::on_device_download_models::<tauri::Wry>,
+            on_device::on_device_install_models::<tauri::Wry>,
+            on_device::on_device_install_progress::<tauri::Wry>,
+            on_device::on_device_cancel_install::<tauri::Wry>,
+            on_device::on_device_remove_models::<tauri::Wry>,
             on_device::on_device_commissioning::<tauri::Wry>,
             on_device::on_device_commission::<tauri::Wry>,
             on_device::on_device_load::<tauri::Wry>,
@@ -211,6 +215,12 @@ fn make_specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
 }
 
 pub fn init() -> tauri::plugin::TauriPlugin<tauri::Wry> {
+    init_with(on_device::SpeechBuild::default())
+}
+
+/// `speech` : compagnon et sources des modèles fixés par la construction de
+/// l'application (issue 683).
+pub fn init_with(speech: on_device::SpeechBuild) -> tauri::plugin::TauriPlugin<tauri::Wry> {
     let specta_builder = make_specta_builder();
 
     tauri::plugin::Builder::new(PLUGIN_NAME)
@@ -242,11 +252,12 @@ pub fn init() -> tauri::plugin::TauriPlugin<tauri::Wry> {
             listener2::load_completed_batches(&batch_registry);
             app.manage(batch_registry);
             app.manage(on_device::OnDevicePolicy::default());
-            if let Some(dir) = on_device::module_dir(app.app_handle()) {
+            app.manage(on_device::CompiledSources::of(speech));
+            if let Some(dir) = on_device::data_dir(app.app_handle()) {
                 app.manage(Arc::new(syntheo_speech_host::SpeechHost::new(
                     dir,
+                    syntheo_speech_host::Companion::of_this_app(speech.companion_files),
                     on_device::threads_per_session(),
-                    &app.package_info().version.to_string(),
                 )));
             }
 

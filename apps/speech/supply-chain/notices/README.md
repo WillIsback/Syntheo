@@ -1,6 +1,6 @@
-# Licences et avis du module syntheo-speech
+# Licences et avis du programme syntheo-speech
 
-Le module livré contient ce dossier (sous `licenses/`), listé dans le manifeste signé.
+L'installeur de l'application livre ce dossier (`speech-licenses/`, posé par `scripts/build-speech.sh` et `.ps1`), avec l'attribution de l'audio de mise en service et la liste des crates (`THIRD-PARTY-RUST.html`). Les modèles ne sont pas livrés avec l'application : ils sont téléchargés ou installés à part, et leurs sources publient l'accord et les fiches à côté des fichiers, dont une copie figure aussi sous `models/`.
 
 | Composant                                                                          | Origine (révision figée)                                                                                                                          | Licence                                             | Fichiers                                                                             |
 | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------ |
@@ -12,11 +12,11 @@ Le module livré contient ce dossier (sous `licenses/`), listé dans le manifest
 | Audio de mise en service (`commissioning/mic.wav`, `sys.wav`)                      | Multilingual LibriSpeech, partie française, révision `2e83e61823b4c47dcbcb1980bb88601274127609` ; enregistrements LibriVox                        | CC BY 4.0 (MLS) ; enregistrements du domaine public | `commissioning-audio-ATTRIBUTION.md`                                                 |
 | Export ONNX des deux modèles                                                       | https://huggingface.co/altunenes/parakeet-rs, révision `26684938ff242cb4f7a65fad712476c6015a4477`                                                 | celle des modèles NVIDIA (OpenMDW-1.1)              | `models/parakeet-rs-export*.README.md`                                               |
 
-- Les fiches des modèles sont les `README.md` des dépôts ci-dessus, aux révisions indiquées, sans modification : ce sont les avis d'origine que l'accord OpenMDW-1.1 demande de conserver.
-- Les poids livrés sont quantifiés en int8 par Syntheo (`../../models/quantize.py`), à partir de l'export ci-dessus.
+- Les fiches des modèles sont les `README.md` des dépôts ci-dessus, aux révisions indiquées, sans modification, avec leurs sous-fiches NVIDIA (`bias.md`, `explainability.md`, `privacy.md`, `safety.md`, en `models/<modèle>.<sous-fiche>.md`) : ce sont les avis d'origine que l'accord OpenMDW-1.1 demande de conserver. Aucun autre avis de droit d'auteur ne figure dans ces dépôts.
+- Les poids distribués par Syntheo (release GitHub, dépôt Hugging Face) sont quantifiés en int8 par Syntheo (`../../models/quantize.py`), à partir de l'export ci-dessus.
 - Sous Windows, ONNX Runtime est la variante DirectML. `DirectML.dll` n'est pas livrée : c'est celle de Windows (System32).
-- Le runtime Visual C++ livré sous Windows (`vcruntime140*.dll`, `msvcp140*.dll`) est redistribuable selon la licence de Visual Studio.
+- Le runtime Visual C++ livré sous Windows avec l'application (`vcruntime140*.dll`, `msvcp140*.dll`), que le programme charge aussi, est redistribuable selon la licence de Visual Studio.
 
 ---
 
-The module bundles ONNX Runtime 1.31.0 (MIT, third-party notices in `onnxruntime/ThirdPartyNotices.txt`), Rust crates (notices in `THIRD-PARTY-RUST.html`), and the Nemotron 3.5 ASR Streaming and Nemotron 3 Diarization models quantized to int8 (OpenMDW-1.1, model cards and agreement text under `models/`). Sources and revisions are listed in the table above.
+The program bundles ONNX Runtime 1.31.0 (MIT, third-party notices in `onnxruntime/ThirdPartyNotices.txt`) and Rust crates (notices in `THIRD-PARTY-RUST.html`). The Nemotron 3.5 ASR Streaming and Nemotron 3 Diarization models, quantized to int8 by Syntheo, are not shipped with the app: they are downloaded or installed separately, and their sources publish the OpenMDW-1.1 agreement and the NVIDIA model cards next to the files; a copy is also provided under `models/`. Sources and revisions are listed in the table above.

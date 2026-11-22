@@ -14,6 +14,19 @@ fn invalid() -> sqlx::Error {
     sqlx::Error::Protocol("invalid managed settings file".into())
 }
 
+/// Adresse HTTPS sans identifiants, requête ni fragment.
+fn plain_https(s: &str) -> bool {
+    s.len() <= 2048
+        && url::Url::parse(s).is_ok_and(|u| {
+            u.scheme() == "https"
+                && u.host_str().is_some()
+                && u.username().is_empty()
+                && u.password().is_none()
+                && u.query().is_none()
+                && u.fragment().is_none()
+        })
+}
+
 fn validate(bytes: &[u8]) -> Result<ManagedSettings, sqlx::Error> {
     if bytes.len() > 64 * 1024 {
         return Err(invalid());
@@ -43,16 +56,17 @@ fn validate(bytes: &[u8]) -> Result<ManagedSettings, sqlx::Error> {
                 v.len() == 3
                     && v.get("type").and_then(Value::as_str) == Some("stt")
                     && v.get("api_key").and_then(Value::as_str) == Some("")
-                    && v.get("base_url").and_then(Value::as_str).is_some_and(|s| {
-                        s.len() <= 2048
-                            && url::Url::parse(s).is_ok_and(|u| {
-                                u.scheme() == "https"
-                                    && u.host_str().is_some()
-                                    && u.username().is_empty()
-                                    && u.password().is_none()
-                                    && u.query().is_none()
-                                    && u.fragment().is_none()
-                            })
+                    && v.get("base_url").and_then(Value::as_str).is_some_and(plain_https)
+            }),
+            // Miroir des modèles de transcription sur le poste (issue 683) :
+            // remplace les sources compilées.
+            // Même validateur que speech-host (syntheo-speech-sources) : une
+            // liste acceptée ici sert telle quelle au téléchargement.
+            "speech_models_urls" => value.as_array().is_some_and(|urls| {
+                (1..=syntheo_speech_sources::MAX_SOURCES).contains(&urls.len())
+                    && urls.iter().all(|url| {
+                        url.as_str()
+                            .is_some_and(|url| syntheo_speech_sources::Source::parse(url).is_some())
                     })
             }),
             _ => false,
@@ -107,6 +121,17 @@ impl ManagedPolicy {
     /// The on-device transcription module (issue 684) may be loaded.
     pub fn on_device_transcription_allowed(&self) -> bool {
         self.settings.get("on_device_transcription_enabled") != Some(&Value::Bool(false))
+    }
+
+    /// Sources des modèles imposées par l'organisation (issue 683), dans
+    /// l'ordre ; `None` : les sources compilées.
+    pub fn speech_models_urls(&self) -> Option<Vec<String>> {
+        let urls = self.settings.get("speech_models_urls")?.as_array()?;
+        Some(
+            urls.iter()
+                .filter_map(|u| u.as_str().map(str::to_owned))
+                .collect(),
+        )
     }
 }
 
@@ -203,6 +228,47 @@ mod tests {
             assert!(validate(text.as_bytes()).is_err());
         }
     }
+    #[test]
+    fn managed_settings_accept_only_plain_https_model_sources() {
+        let doc = |urls: &str| {
+            format!(r#"{{"schema_version":1,"settings":{{"speech_models_urls":{urls}}}}}"#)
+        };
+        let ok = validate(
+            doc(r#"["https://miroir.drasi.example/modeles/{path}","https://b.example/{name}"]"#)
+                .as_bytes(),
+        )
+        .unwrap();
+        let policy = ManagedPolicy {
+            settings: ok.settings,
+        };
+        assert_eq!(policy.speech_models_urls().unwrap().len(), 2);
+        assert!(ManagedPolicy::default().speech_models_urls().is_none());
+        for bad in [
+            r#"[]"#,
+            r#""https://a.example/{path}""#,
+            r#"["http://a.example/{path}"]"#,
+            r#"["https://user:pw@a.example/{path}"]"#,
+            r#"["https://jeton@a.example/{path}"]"#,
+            r#"["https://a.example/{path}?t=1"]"#,
+            r#"["https://a.example/{autre}"]"#,
+            r#"["https:///{path}"]"#,
+            r#"["https://a.example/{path},https://b.example"]"#,
+            r#"["HTTPS://a.example/{path}"]"#,
+            r#"["https:a.example/{path}"]"#,
+            r#"["https://a.example/{path}", "https://b.example/{path}", "https://c.example/{path}", "https://d.example/{path}", "https://e.example/{path}", "https://f.example/{path}", "https://g.example/{path}", "https://h.example/{path}", "https://i.example/{path}"]"#,
+            r#"[1]"#,
+            // Revue, R6 : entrées vides, et plus de 8 éléments même si
+            // certains sont vides.
+            r#"[""]"#,
+            r#"["   "]"#,
+            r#"["https://a.example/{path}", ""]"#,
+            r#"["https://a.example/{path}", "https://b.example/{path}", "https://c.example/{path}", "https://d.example/{path}", "https://e.example/{path}", "https://f.example/{path}", "https://g.example/{path}", "https://h.example/{path}", ""]"#,
+            r#"[]"#,
+        ] {
+            assert!(validate(doc(bad).as_bytes()).is_err(), "{bad}");
+        }
+    }
+
     #[test]
     fn managed_settings_accept_on_prem_stt_providers() {
         for provider in ["openai", "nvidia"] {

@@ -44,26 +44,38 @@ describe("source « Sur ce poste »", () => {
     ).toBeUndefined();
   });
 
-  it("is usable only when allowed and installed", () => {
+  it("is usable only when allowed, with the companion and the models", () => {
+    const installed = { kind: "installed", totalBytes: 1 } as const;
     expect(
       isOnDeviceUsable({
         allowed: true,
-        installable: true,
-        module: { kind: "installed", version: "0.1.0", sizeBytes: 1 },
+        companion: true,
+        models: installed,
+        downloadable: false,
       }),
     ).toBe(true);
     expect(
       isOnDeviceUsable({
         allowed: true,
-        installable: true,
-        module: { kind: "invalid", reason: "x" },
+        companion: true,
+        models: { kind: "partial", presentBytes: 1, totalBytes: 2 },
+        downloadable: true,
+      }),
+    ).toBe(false);
+    expect(
+      isOnDeviceUsable({
+        allowed: true,
+        companion: false,
+        models: installed,
+        downloadable: true,
       }),
     ).toBe(false);
     expect(
       isOnDeviceUsable({
         allowed: false,
-        installable: true,
-        module: { kind: "installed", version: "0.1.0", sizeBytes: 1 },
+        companion: true,
+        models: installed,
+        downloadable: true,
       }),
     ).toBe(false);
   });

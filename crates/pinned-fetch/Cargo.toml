@@ -1,0 +1,20 @@
+[package]
+name = "pinned-fetch"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+
+[features]
+# Essais seulement : accepte `http://127.0.0.1` (serveur local des tests).
+# Jamais activée par l'application.
+test-loopback = []
+
+[dependencies]
+reqwest = { workspace = true }
+sha2 = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = ["fs", "io-util", "macros", "time"] }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+tokio = { workspace = true, features = ["macros", "net", "rt-multi-thread"] }

@@ -42,15 +42,17 @@ Linux).
 
 None of this data is sent to the vendor.
 
-**On-device inference, only if the user installs it**: by default, the app
-runs no model (transcription, LLM, diarization or voiceprints). The optional
-"On this computer" source (forthcoming) installs a signed transcription module,
-`syntheo-speech`, in `modules/speech` of the app data folder, with its models,
-the commissioning audio, the commissioning result and the latest accepted
-module number. The module transcribes the recording audio in memory, on the
-loopback, writing no audio and logging no text; it is removed with
-**Uninstall** or with the data folder. A managed setting
-(`on_device_transcription_enabled`) lets an organization forbid it. See
+**On-device inference, only if the user installs the models**: by default,
+the app runs no model (transcription, LLM, diarization or voiceprints). The
+on-device transcription program, `syntheo-speech`, ships with the app but only
+runs if the user chooses the optional "On this computer" source and installs
+its models (about 1.1 GB) in `speech/models` of the app data folder; the
+commissioning result is in `speech/commissioning.json`. The program
+transcribes the recording audio in memory, on the loopback, writing no audio
+and logging no text. The models are removed with **Remove the models** or with
+the data folder. The managed settings `on_device_transcription_enabled`
+(forbid the source) and `speech_models_urls` (require a model mirror) are
+available to the organization. See
 [Transcribe on this computer](/en/on-device-transcription). An earlier version may have left model files in the
 `models/stt` and `models/llm` folders of the data folder, as well as in the
 Soniqo model cache on macOS: they are no longer read or loaded, and can be
@@ -61,12 +63,21 @@ a deletion, erasure is retried at the next launch.
 
 ## Network flows
 
-- **On-device transcription module** (optional "On this computer" source):
-  the recording audio goes to the module, on the computer's loopback
-  (`127.0.0.1`), after mutual authentication; nothing leaves the computer, and
-  the module opens no outbound connection. For an "On this computer"
-  recording, no audio goes to the server, not even to repair a dropped
-  passage.
+- **On-device transcription** (optional "On this computer" source): the
+  recording audio goes to the `syntheo-speech` program, on the computer's
+  loopback (`127.0.0.1`), after mutual authentication; nothing leaves the
+  computer, and the program opens no outbound connection. For an "On this
+  computer" recording, no audio goes to the server, not even to repair a
+  dropped passage.
+- **Download of the on-device transcription models**, only when the user
+  chooses **Download the models**: HTTPS requests for the model files to
+  Syntheo's GitHub release (`github.com`, redirected to
+  `release-assets.githubusercontent.com`), then to Hugging Face
+  (`huggingface.co`, redirected to its content servers under `hf.co`, for
+  example `cas-bridge.xethub.hf.co`) as a fallback, or to the mirror set by
+  the administrator (`speech_models_urls`) instead; HTTPS redirects are
+  followed (5 at most), including the mirror's redirects to another host. No meeting data is sent; these hosts see the
+  computer's IP address. No flow if the models are installed from a folder.
 - **Inference endpoints configured by the user**, and only those: ASR
   (OpenAI protocol: Realtime and `/v1/audio/transcriptions`; NVIDIA
   NeMo-Speech.cpp: WebSocket `/v1/audio/transcriptions/realtime`) and the

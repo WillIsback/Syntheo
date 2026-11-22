@@ -74,28 +74,30 @@ The low or informational findings still open concern: handling of imported files
 
 To report a vulnerability, see [Report a vulnerability](#report-a-vulnerability).
 
-## On-device transcription module
+## On-device transcription
 
-The [On this computer](/en/on-device-transcription) source relies on an executable shipped separately, the `syntheo-speech` module, which the app installs and then runs with its models. This section describes what Syntheo guarantees about it, and what it does not.
+The [On this computer](/en/on-device-transcription) source relies on a companion program, `syntheo-speech`, shipped in Syntheo's installer next to the app, and on models downloaded or installed separately. This section describes what Syntheo guarantees about them, and what it does not.
 
 ### What is guaranteed
 
-- **Signature**: the module is only loaded if its manifest is signed with Syntheo's module signing key, separate from the app update key. The manifest gives the target, the minimum app version, and the SHA-256 checksum and size of every file: binary, libraries, models, licenses, commissioning audio. Without a key configured in the app, no module is loaded.
-- **Check before every launch**: signature first, before any other read, then a closed list of files (no extra file, no symlink, no path leaving the folder), sizes and checksums.
-- **Same objects checked and run**: the binary and its libraries are copied into a fresh private folder at every launch (rights limited to your account), hashed from that copy and run from it. Models are opened once and hashed from the open file: on Linux, the module inherits these open files; on Windows, each model and each folder of its path stay locked against writing and deletion while the module runs.
-- **No rollback**: a manifest older than the newest one accepted on this computer, or than the minimum version set by the app, is refused.
-- **Loopback only**: the module only listens on `127.0.0.1`, refuses browser requests (`Origin` header) and opens no outbound connection.
-- **Mutual authentication**: a random 256-bit token, drawn at every launch and passed on standard input, never travels on the network, nor is written to a log, a setting, the command line or the module's environment. On every connection, the app and the module prove to each other that they know it, with an HMAC bound to a fresh nonce and both ports of the connection. No audio leaves before the module's proof; a wrong proof closes the connection, with no retry.
-- **Contained launch**: cleared environment, working directory outside the module folder, library search limited to the module folder and System32 on Windows, bounded restarts, stop with the app.
-- **Policy**: the managed setting `on_device_transcription_enabled` set to `false` is read from `managed_settings.json` and kept in memory: rewriting the app database does not lift it. Installation, uninstallation and commissioning are refused through the relay.
+- **Program shipped with the app**: it is installed, updated and uninstalled with Syntheo, and signed with it on Windows (same Authenticode signer, checked by the release pipeline). The app only takes it from its own installation folder, a path resolved in Rust (canonical folder of the executable; symlink or reparse point refused), never from a path coming from the interface, then runs it from a checked copy (see below).
+- **Compiled checksums**: at build time, the app pins the program's checksum (excluding the Authenticode signature, which signing adds afterwards) and, on Windows, that of the Visual C++ runtime it loads; it also compiles the model list with each file's size and SHA-256 checksum.
+- **Check before every launch**: the program and the models must match these checksums; a missing or different file, or one replaced by a symlink, is refused.
+- **Same objects checked and run**: the program (and on Windows its runtime) is copied into a fresh private folder at every launch (rights limited to your account), hashed from that copy and run from it. Models are opened once and hashed from the open file: on Linux, the program inherits these open files; on Windows, each model and each folder of its path stay locked against writing and deletion while it runs.
+- **Models checked at installation**: downloaded over HTTPS only (redirects included) or copied from a local folder chosen in Rust, each file is written next to its destination, hashed while written, compared with its compiled size and checksum, then put in place; a source serving other content is skipped, with nothing put in place.
+- **Loopback only**: the program only listens on `127.0.0.1`, refuses browser requests (`Origin` header) and opens no outbound connection.
+- **Mutual authentication**: a random 256-bit token, drawn at every launch and passed on standard input, never travels on the network, nor is written to a log, a setting, the command line or the program's environment. On every connection, the app and the program prove to each other that they know it, with an HMAC bound to a fresh nonce and both ports of the connection. No audio leaves before the program's proof; a wrong proof closes the connection, with no retry.
+- **Contained launch**: cleared environment, working directory outside the program folder, library search limited to its private folder and System32 on Windows, bounded restarts, stop with the app.
+- **Policy**: the managed settings `on_device_transcription_enabled` and `speech_models_urls` are read from `managed_settings.json` and kept in memory: rewriting the app database does not lift them. Downloading, installing and removing models, and commissioning, are refused through the relay.
 - **No audio to the server** for an "On this computer" recording, repairs included.
 
 ### Limits
 
-- **Same user account**: a malicious program already running under your account can modify the app data folder, and also the app itself, installed for your account. On Linux, it could still rewrite a model file in place while the module uses it: Linux offers no mandatory lock to an ordinary user. Replacing it by path or symlink is no longer possible.
-- **Local floor**: the latest accepted module number is stored in the data folder. It protects against a rollback through the distribution channel, not against a local attacker, who can modify that file; it disappears if you delete the app data.
-- **Windows**: the Windows-specific protections (locks, private folder with restricted rights, library search) are checked at compile time by CI, not yet at run time on a real computer.
-- **Audit**: the module has not had an external audit yet; it was reviewed internally at every step.
+- **Same user account**: a malicious program already running under your account can modify the app data folder and, if Syntheo is installed for your account, the app itself. On Linux, it could still rewrite a model file in place while the program uses it: Linux offers no mandatory lock to an ordinary user. Replacing it by path or symlink is no longer possible.
+- **Application control**: the copy that runs sits in the app's data folder. An AppLocker or SRP policy with path rules, or a home folder mounted `noexec`, blocks it: the launch fails with the code `execution_blocked`, with no retry during the recording (see [Computers with application control](/en/on-device-transcription#computers-with-application-control)).
+- **Model hosting**: the sources (GitHub, Hugging Face or a mirror) are not trusted as such; only the compiled checksums are. An unavailable or tampered source prevents the download, without ever getting another file accepted.
+- **Windows**: the Windows-specific protections (locks, private folder with restricted rights, library search) have been compiled and built on Windows, but not yet tested against an attack on a real computer.
+- **Audit**: the program has not had an external audit yet; it was reviewed internally at every step.
 
 ## API keys
 
@@ -152,7 +154,8 @@ The settings most useful to an IT department:
     | `automatic_updates` | `false` only: turns off the update check at startup (see above) |
     | `cloud_sync_enabled` | `false` only (feature absent from Syntheo) |
     | `measurement_enabled`, `calibration_enabled` | `false` only: turns off the beta rework measurement, and its Calibration mode (see [Data and privacy](/en/data-and-privacy#rework-measurement-beta)) |
-    | `on_device_transcription_enabled` | `false` only: forbids loading the on-device transcription module (`syntheo-speech`), even when installed |
+    | `on_device_transcription_enabled` | `false` only: forbids on-device transcription; the `syntheo-speech` program, shipped with the app, is never launched |
+    | `speech_models_urls` | List of 1 to 8 HTTPS addresses (`{path}` or `{name}` markers allowed), with no credentials, query, fragment or comma: replaces the download sources of the on-device transcription models, for example with an internal mirror ([details](/en/on-device-transcription#require-a-model-mirror)) |
     | `save_recordings` | `true` or `false` |
 
     Any other key, or any other value, makes the file invalid. The file cannot contain any secret: an API key is entered on each computer.

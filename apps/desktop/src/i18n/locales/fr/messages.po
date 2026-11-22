@@ -291,10 +291,6 @@ msgstr "1 modification en attente"
 msgid "1 result"
 msgstr "1 résultat"
 
-#: src/stt/on-device.ts
-msgid "A file of the module has been modified."
-msgstr "Un fichier du module a été modifié."
-
 #: src/folders/folder-actions.tsx
 msgid "A folder cannot be moved into one of its own subfolders."
 msgstr "Un dossier ne peut pas être déplacé dans l'un de ses propres sous-dossiers."
@@ -318,6 +314,14 @@ msgstr "La réunion ne se rejoue pas : l'audio n'est jamais conservé, seule la 
 #: src/settings/general/update-section.tsx
 msgid "A meeting is being recorded: install the update once it ends."
 msgstr "Une réunion est en cours d'enregistrement : installez la mise à jour une fois qu'elle sera terminée."
+
+#: src/stt/on-device.ts
+msgid "A model file does not match the expected file (damaged or another version)."
+msgstr "Un fichier de modèle ne correspond pas au fichier attendu (endommagé ou d'une autre version)."
+
+#: src/stt/on-device.ts
+msgid "A model file has been modified. Remove the models and install them again."
+msgstr "Un fichier de modèle a été modifié. Retirez les modèles et installez-les à nouveau."
 
 #: src/folders/project/next-meeting-slot.tsx
 msgid "A new proposal replaces your changes to the agenda."
@@ -887,6 +891,7 @@ msgstr "Le serveur des mises à jour est injoignable. Vérifiez votre connexion,
 #: src/mesure/beta-data.tsx
 #: src/session/components/capsule/index.tsx
 #: src/settings/ai/shared/server-address.tsx
+#: src/settings/ai/stt/on-device-card.tsx
 #: src/settings/automations/workflow-test-panel.tsx
 #: src/settings/dictionary/index.tsx
 #: src/shared/ui/destructive-confirmation-dialog.tsx
@@ -1009,6 +1014,10 @@ msgstr "Choisir un fichier…"
 msgid "Choose a folder"
 msgstr "Choisir un dossier"
 
+#: src/stt/on-device.ts
+msgid "Choose a folder on this computer (not on a network share)."
+msgstr "Choisissez un dossier sur ce poste (pas sur un partage réseau)."
+
 #: src/folders/project/next-meeting-slot.tsx
 msgid "Choose a language model in Settings to propose the agenda."
 msgstr "Choisissez un modèle de langage dans les Paramètres pour proposer l'ordre du jour."
@@ -1016,10 +1025,6 @@ msgstr "Choisissez un modèle de langage dans les Paramètres pour proposer l'or
 #: src/folders/project/folder-thread-card.tsx
 msgid "Choose a language model in Settings to write the thread."
 msgstr "Choisissez un modèle de langage dans les Paramètres pour rédiger le fil rouge."
-
-#: src/stt/on-device.ts
-msgid "Choose a module folder on this computer (not on a network share)."
-msgstr "Choisissez un dossier de module sur ce poste (pas sur un partage réseau)."
 
 #: src/store/zustand/listener/general-live-helpers.ts
 msgid "Choose a working audio device and retry. Audio missing during this interruption cannot be recovered."
@@ -1075,17 +1080,13 @@ msgstr "Choisissez les couleurs de Syntheo. Chaque palette suit le thème clair 
 msgid "Choose the folder for this note."
 msgstr "Choisissez le dossier de cette note."
 
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Choose the folder that contains the model files. Each file is checked against the version expected by this application before it is put in place."
+msgstr "Choisissez le dossier qui contient les fichiers des modèles. Chaque fichier est comparé à la version attendue par cette application avant d'être mis en place."
+
 #: src/folders/folder-actions.tsx
 msgid "Choose the folder that will contain this folder."
 msgstr "Choisissez le dossier qui contiendra ce dossier."
-
-#: src/settings/ai/stt/on-device-card.tsx
-msgid "Choose the manifest.json file of a module folder. Its signature and every file are checked before installation."
-msgstr "Choisissez le fichier manifest.json d'un dossier de module. Sa signature et chacun de ses fichiers sont vérifiés avant l'installation."
-
-#: src/stt/on-device.ts
-msgid "Choose the manifest.json file of the module folder."
-msgstr "Choisissez le fichier manifest.json du dossier du module."
 
 #: src/settings/general/audio-settings.tsx
 msgid "Choose the microphone that captures your voice."
@@ -1758,6 +1759,15 @@ msgstr "Terminé"
 msgid "Download progress"
 msgstr "Progression du téléchargement"
 
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Download the models"
+msgstr "Télécharger les modèles"
+
+#. placeholder {0}: formatSize(models.totalBytes)
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Download the models ({0})"
+msgstr "Télécharger les modèles ({0})"
+
 #: src/settings/general/update-section.tsx
 msgid "Download the update"
 msgstr "Télécharger la mise à jour"
@@ -1765,6 +1775,10 @@ msgstr "Télécharger la mise à jour"
 #: src/settings/general/audio-settings.tsx
 msgid "Downloading the echo cancellation models…"
 msgstr "Téléchargement des modèles d'annulation d'écho…"
+
+#: src/stt/on-device.ts
+msgid "Downloading the models is not available: install them from a folder."
+msgstr "Le téléchargement des modèles n'est pas disponible : installez-les depuis un dossier."
 
 #. placeholder {0}: formatBytes(progress?.downloaded ?? 0, i18n.locale)
 #: src/settings/general/update-section.tsx
@@ -1825,6 +1839,10 @@ msgstr "ex. Hebdo, Équipe RH"
 #: src/templates/auto-format-examples-dialog.tsx
 msgid "Each example must be 12,000 characters or fewer."
 msgstr "Chaque exemple doit comporter 12,000 caractères ou moins."
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Each file is checked against the version expected by this application before it is put in place. Without network access, install them from a folder that contains them."
+msgstr "Chaque fichier est comparé à la version attendue par cette application avant d'être mis en place. Sans accès au réseau, installez-les depuis un dossier qui les contient."
 
 #: src/settings/automations/add-step-menu.tsx
 msgid "Each new step runs after the previous one."
@@ -2505,10 +2523,6 @@ msgstr "Niveau d'entrée indisponible"
 msgid "Insert"
 msgstr "Insérer"
 
-#: src/settings/ai/stt/on-device-card.tsx
-msgid "Install"
-msgstr "Installer"
-
 #: src/settings/general/update-section.tsx
 msgid "Install and restart"
 msgstr "Installer et redémarrer"
@@ -2518,18 +2532,21 @@ msgid "Install command copied"
 msgstr "Commande d'installation copiée"
 
 #: src/settings/ai/stt/on-device-card.tsx
-msgid "Install from a file…"
-msgstr "Installer depuis un fichier…"
+msgid "Install from a folder…"
+msgstr "Installer depuis un dossier…"
 
 #: src/settings/developers/skills.tsx
 msgid "Install to all agents"
 msgstr "Installer pour tous les agents"
 
+#: src/stt/on-device.ts
+msgid "Installation cancelled. A download resumes where it stopped."
+msgstr "Installation annulée. Un téléchargement reprend là où il s'est arrêté."
+
 #: src/settings/developers/cli.tsx
 msgid "Installation guide"
 msgstr "Guide d'installation"
 
-#: src/settings/ai/stt/on-device-card.tsx
 #: src/settings/developers/cli.tsx
 msgid "Installed"
 msgstr "Installé"
@@ -2542,13 +2559,15 @@ msgstr "Version installée : {version}"
 msgid "Installed version: unknown"
 msgstr "Version installée : inconnue"
 
-#: src/stt/on-device.ts
-msgid "Installing the module is not available yet."
-msgstr "L'installation du module n'est pas encore disponible."
+#. placeholder {0}: formatSize(done.doneBytes)
+#. placeholder {1}: formatSize(done.totalBytes)
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Installing the models: {0} of {1}…"
+msgstr "Installation des modèles : {0} sur {1}…"
 
 #: src/settings/ai/stt/on-device-card.tsx
-msgid "Installing…"
-msgstr "Installation…"
+msgid "Installing the models…"
+msgstr "Installation des modèles…"
 
 #: src/settings/general/update-section.tsx
 msgid "Installing… Syntheo will restart."
@@ -3177,23 +3196,24 @@ msgstr "Nom du modèle"
 msgid "Model name served by your server"
 msgstr "Nom du modèle servi par votre serveur"
 
-#. placeholder {0}: module.version
-#. placeholder {1}: formatSize(module.sizeBytes)
+#. placeholder {0}: formatSize(models.totalBytes)
 #: src/settings/ai/stt/on-device-card.tsx
-msgid "Module installed: version {0}, {1}."
-msgstr "Module installé : version {0}, {1}."
+msgid "Models installed ({0})."
+msgstr "Modèles installés ({0})."
 
 #: src/settings/ai/stt/on-device-card.tsx
-msgid "Module installed. Measuring this computer (one to two minutes)…"
-msgstr "Module installé. Mesure de ce poste (une à deux minutes)…"
+msgid "Models installed. Measuring this computer (one to two minutes)…"
+msgstr "Modèles installés. Mesure de ce poste (une à deux minutes)…"
+
+#. placeholder {0}: formatSize(models.presentBytes)
+#. placeholder {1}: formatSize(models.totalBytes)
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Models partly installed: {0} of {1}."
+msgstr "Modèles installés en partie : {0} sur {1}."
 
 #: src/settings/ai/stt/on-device-card.tsx
-msgid "Module not installed. Download from Syntheo is coming soon."
-msgstr "Module non installé. Le téléchargement depuis Syntheo arrive bientôt."
-
-#: src/settings/ai/stt/on-device-card.tsx
-msgid "Module uninstalled."
-msgstr "Module désinstallé."
+msgid "Models removed."
+msgstr "Modèles retirés."
 
 #: src/session/components/outer-header/overflow/index.tsx
 msgid "More"
@@ -3611,6 +3631,10 @@ msgstr "Aucun"
 msgid "not enough free disk space (2 GB needed)"
 msgstr "pas assez d'espace disque libre (2 Go nécessaires)"
 
+#: src/stt/on-device.ts
+msgid "Not enough free disk space for the models (2 GB needed)."
+msgstr "Pas assez d'espace disque libre pour les modèles (2 Go nécessaires)."
+
 #: src/settings/ai/stt/on-device-card.tsx
 msgid "not enough free memory (1.5 GB needed)"
 msgstr "pas assez de mémoire libre (1,5 Go nécessaire)"
@@ -3796,8 +3820,8 @@ msgid "on-device transcription is not available"
 msgstr "la transcription sur ce poste n'est pas disponible"
 
 #: src/settings/ai/stt/on-device-card.tsx
-msgid "Once the module is installed, you can turn it on here."
-msgstr "Une fois le module installé, vous pourrez l'activer ici."
+msgid "Once the models are installed, you can turn it on here."
+msgstr "Une fois les modèles installés, vous pourrez l'activer ici."
 
 #: src/settings/ai/llm/server-card.tsx
 msgid "Only on-premise OpenAI-compatible servers are supported (vLLM, Ollama, llama.cpp server, LM Studio…). The address usually ends with /v1, for example http://localhost:8000/v1."
@@ -4219,6 +4243,7 @@ msgstr "Lisez ce que chaque intervenant a dit, puis indiquez qui c’est. Tab pa
 msgid "Reads the latest version on GitHub. Nothing is installed without your action."
 msgstr "Lit la dernière version sur GitHub. Rien n'est installé sans votre action."
 
+#: src/settings/ai/stt/on-device-card.tsx
 #: src/settings/general/notification.tsx
 msgid "Ready"
 msgstr "Prêt"
@@ -4388,6 +4413,10 @@ msgstr "Retirer l'étape {stepNumber}"
 msgid "Remove the {name} folder filter"
 msgstr "Retirer le filtre du dossier {name}"
 
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Remove the models"
+msgstr "Retirer les modèles"
+
 #: src/shared/open-note-dialog.tsx
 msgid "Remove the Settings filter"
 msgstr "Retirer le filtre Paramètres"
@@ -4517,6 +4546,10 @@ msgstr "Reprendre la fermeture automatique"
 #: src/shared/open-note-dialog.tsx
 msgid "Resume listening"
 msgstr "Reprendre l'écoute"
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Resume the download"
+msgstr "Reprendre le téléchargement"
 
 #: src/chat/components/message/error.tsx
 #: src/contacts/profile-photo.tsx
@@ -5790,6 +5823,10 @@ msgstr "Le téléchargement a été interrompu. Réessayez."
 msgid "The export could not be built or saved."
 msgstr "L'export n'a pas pu être construit ou enregistré."
 
+#: src/stt/on-device.ts
+msgid "The files could not be read or written (disk full?). Try again."
+msgstr "Les fichiers n'ont pas pu être lus ou écrits (disque plein ?). Réessayez."
+
 #: src/stt/audio-import-feedback.ts
 msgid "The import of {name} was abandoned: {reason}"
 msgstr "L'import de {name} a été abandonné : {reason}"
@@ -5797,11 +5834,6 @@ msgstr "L'import de {name} a été abandonné : {reason}"
 #: src/stt/audio-import-feedback.ts
 msgid "The import was abandoned: {reason}"
 msgstr "L'import a été abandonné : {reason}"
-
-#. placeholder {0}: describeOnDeviceError(module.reason)
-#: src/settings/ai/stt/on-device-card.tsx
-msgid "The installed module is refused: {0}"
-msgstr "Le module installé est refusé : {0}"
 
 #: src/automations/action-runners.ts
 msgid "The JSON body is not valid once the variables are filled in."
@@ -5844,6 +5876,10 @@ msgid "The matrix could not be saved."
 msgstr "La matrice n'a pas pu être enregistrée."
 
 #: src/stt/on-device.ts
+msgid "The measurement audio is missing from this version of Syntheo."
+msgstr "L'audio de mesure manque dans cette version de Syntheo."
+
+#: src/stt/on-device.ts
 msgid "The measurement could not run. Try again."
 msgstr "La mesure n'a pas pu se lancer. Réessayez."
 
@@ -5868,39 +5904,27 @@ msgstr "La modification du mémo n'a pas pu être préparée."
 msgid "The microphone and system audio are muted: nothing is being transcribed."
 msgstr "Le micro et le son système sont coupés : plus rien n'est transcrit."
 
+#: src/stt/on-device.ts
+msgid "The models are not installed or are incomplete."
+msgstr "Les modèles ne sont pas installés ou sont incomplets."
+
+#: src/stt/on-device.ts
+msgid "The models could not be downloaded (network or server). Try again: the download resumes where it stopped."
+msgstr "Les modèles n'ont pas pu être téléchargés (réseau ou serveur). Réessayez : le téléchargement reprend là où il s'est arrêté."
+
 #: src/stt/aec-model-unavailable-notice.tsx
 msgid "The models could not be downloaded (offline?). Listening continues without it."
 msgstr "Les modèles n'ont pas pu être téléchargés (hors ligne ?). L'écoute continue sans."
 
-#: src/stt/on-device.ts
-msgid "The module files could not be read or written (disk full?). Try again."
-msgstr "Les fichiers du module n'ont pas pu être lus ou écrits (disque plein ?). Réessayez."
-
-#: src/stt/on-device.ts
-msgid "The module folder is incomplete or contains unexpected files."
-msgstr "Le dossier du module est incomplet ou contient des fichiers inattendus."
-
-#: src/stt/on-device.ts
-msgid "The module has no measurement audio. Install it again."
-msgstr "Le module n'a pas d'audio de mesure. Réinstallez-le."
-
-#: src/stt/on-device.ts
-msgid "The module is in use. Stop the recording, then try again."
-msgstr "Le module est en cours d'utilisation. Arrêtez l'écoute, puis réessayez."
-
-#: src/stt/on-device.ts
-msgid "The module is not signed by Syntheo."
-msgstr "Le module n'est pas signé par Syntheo."
+#. placeholder {0}: describeOnDeviceError(e.message)
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "The models were not installed: {0}"
+msgstr "Les modèles n'ont pas été installés : {0}"
 
 #. placeholder {0}: describeOnDeviceError(e.message)
 #: src/settings/ai/stt/on-device-card.tsx
-msgid "The module was not installed: {0}"
-msgstr "Le module n'a pas été installé : {0}"
-
-#. placeholder {0}: describeOnDeviceError(e.message)
-#: src/settings/ai/stt/on-device-card.tsx
-msgid "The module was not uninstalled: {0}"
-msgstr "Le module n'a pas été désinstallé : {0}"
+msgid "The models were not removed: {0}"
+msgstr "Les modèles n'ont pas été retirés : {0}"
 
 #: src/session/components/speaker-naming/speaker-card.tsx
 msgid "The name could not be saved. Try again."
@@ -6049,6 +6073,15 @@ msgstr "La transcription est enregistrée, mais Syntheo n'a pas pu lancer le ré
 msgid "The transcription is still being written."
 msgstr "La transcription est encore en cours d'écriture."
 
+#. placeholder {0}: formatSize(models.totalBytes)
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "The transcription models ({0}) are not installed yet."
+msgstr "Les modèles de transcription ({0}) ne sont pas encore installés."
+
+#: src/settings/ai/stt/health.tsx
+msgid "The transcription models of this computer are not installed. Install them or go back to the server in Settings › Transcription."
+msgstr "Les modèles de transcription de ce poste ne sont pas installés. Installez-les ou revenez au serveur dans Paramètres › Transcription."
+
 #: src/stt/live-transcript-interrupted.ts
 msgid "the transcription module of this computer could not be authenticated"
 msgstr "le module de transcription de ce poste n'a pas pu être authentifié"
@@ -6069,17 +6102,13 @@ msgstr "le module de transcription de ce poste est en cours de mesure"
 msgid "the transcription module of this computer is missing or has been modified"
 msgstr "le module de transcription de ce poste est absent ou a été modifié"
 
-#: src/settings/ai/stt/health.tsx
-msgid "The transcription module of this computer is not installed. Install it or go back to the server in Settings › Transcription."
-msgstr "Le module de transcription de ce poste n'est pas installé. Installez-le ou revenez au serveur dans Paramètres › Transcription."
-
-#: src/settings/ai/stt/health.tsx
-msgid "The transcription module of this computer is refused. Install it again or go back to the server in Settings › Transcription."
-msgstr "Le module de transcription de ce poste est refusé. Réinstallez-le ou revenez au serveur dans Paramètres › Transcription."
-
 #: src/stt/live-transcript-interrupted.ts
 msgid "the transcription module of this computer keeps stopping"
 msgstr "le module de transcription de ce poste s'arrête sans cesse"
+
+#: src/stt/on-device.ts
+msgid "The transcription program of this computer has been modified. Reinstall Syntheo."
+msgstr "Le programme de transcription de ce poste a été modifié. Réinstallez Syntheo."
 
 #: src/stt/live-transcript-interrupted.ts
 msgid "the transcription service"
@@ -6172,6 +6201,14 @@ msgstr "Ce poste peut transcrire vos réunions seul : {0}."
 msgid "This computer cannot transcribe on its own; Syntheo uses your transcription server."
 msgstr "Ce poste ne peut pas transcrire seul ; Syntheo utilise votre serveur de transcription."
 
+#: src/stt/live-transcript-interrupted.ts
+msgid "this computer does not allow the transcription program to run (application control policy)"
+msgstr "ce poste n'autorise pas l'exécution du programme de transcription (politique de contrôle des applications)"
+
+#: src/stt/on-device.ts
+msgid "This computer does not allow the transcription program to run from the Syntheo data folder (application control policy or noexec mount). Ask your administrator."
+msgstr "Ce poste n'autorise pas l'exécution du programme de transcription depuis le dossier de données de Syntheo (politique de contrôle des applications ou montage noexec). Adressez-vous à votre administrateur."
+
 #: src/settings/ai/stt/on-device-card.tsx
 msgid "This computer has not been measured yet."
 msgstr "Ce poste n'a pas encore été mesuré."
@@ -6185,12 +6222,12 @@ msgid "This computer is chosen for transcription, but it has not been measured o
 msgstr "Ce poste est choisi pour la transcription, mais il n'a pas été mesuré ou il est trop lent : la transcription en direct est en pause."
 
 #: src/settings/ai/stt/on-device-card.tsx
-msgid "This computer is chosen for transcription, but its module is not installed: live transcription is paused."
-msgstr "Ce poste est choisi pour la transcription, mais son module n'est pas installé : la transcription en direct est en pause."
+msgid "This computer is chosen for transcription, but its models are not installed: live transcription is paused."
+msgstr "Ce poste est choisi pour la transcription, mais ses modèles ne sont pas installés : la transcription en direct est en pause."
 
 #: src/settings/ai/stt/on-device-card.tsx
-msgid "This computer is chosen for transcription, but its module is refused: live transcription is paused."
-msgstr "Ce poste est choisi pour la transcription, mais son module est refusé : la transcription en direct est en pause."
+msgid "This computer is chosen for transcription, but this version of Syntheo does not include transcription on this computer: live transcription is paused."
+msgstr "Ce poste est choisi pour la transcription, mais cette version de Syntheo n'inclut pas la transcription sur le poste : la transcription en direct est en pause."
 
 #. placeholder {0}: verdict.reasons.map((r) => labels.refusal[r]).join(", ")
 #: src/settings/ai/stt/on-device-card.tsx
@@ -6225,6 +6262,10 @@ msgstr "Ce fichier est trop lourd pour être importé (2 Go maximum)."
 #: src/mesure/measure-dialog.tsx
 msgid "This file is too large to measure."
 msgstr "Ce fichier est trop volumineux pour être mesuré."
+
+#: src/stt/on-device.ts
+msgid "This folder does not contain the models. Choose the folder that contains the model files."
+msgstr "Ce dossier ne contient pas les modèles. Choisissez le dossier qui contient les fichiers des modèles."
 
 #: src/session/late-filing.ts
 msgid "This folder uses the {title} template"
@@ -6262,18 +6303,6 @@ msgstr "Ce modèle ne transcrit qu'après l'enregistrement, ce qui supposerait d
 msgid "This model only transcribes live: voice input in the chat requires a batch transcription model."
 msgstr "Ce modèle ne transcrit qu'en direct : la saisie vocale du chat demande un modèle de transcription par lot."
 
-#: src/stt/on-device.ts
-msgid "This module is not made for this computer."
-msgstr "Ce module n'est pas prévu pour ce poste."
-
-#: src/stt/on-device.ts
-msgid "This module is older than the one already accepted."
-msgstr "Ce module est plus ancien que celui déjà accepté."
-
-#: src/stt/on-device.ts
-msgid "This module needs a newer version of Syntheo."
-msgstr "Ce module demande une version plus récente de Syntheo."
-
 #: src/chat/components/message/tool/edit-summary.tsx
 msgid "This note has no summary to edit yet."
 msgstr "Cette note n'a pas encore de résumé à modifier."
@@ -6297,6 +6326,18 @@ msgstr "Ce serveur n'a pas chargé de modèle de diarisation : les transcription
 #: src/session/components/note-input/transcript/index.tsx
 msgid "This transcription is incomplete."
 msgstr "Cette transcription est incomplète."
+
+#: src/stt/on-device.ts
+msgid "This version of Syntheo does not include transcription on this computer, or its program is missing. Reinstall Syntheo."
+msgstr "Cette version de Syntheo n'inclut pas la transcription sur le poste, ou son programme manque. Réinstallez Syntheo."
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "This version of Syntheo does not include transcription on this computer."
+msgstr "Cette version de Syntheo n'inclut pas la transcription sur le poste."
+
+#: src/settings/ai/stt/health.tsx
+msgid "This version of Syntheo does not include transcription on this computer. Go back to the server in Settings › Transcription."
+msgstr "Cette version de Syntheo n'inclut pas la transcription sur le poste. Revenez au serveur dans Paramètres › Transcription."
 
 #: src/session/components/living-document/welcome-card.tsx
 msgid "Three settings to get started"
@@ -6341,8 +6382,8 @@ msgid "Top level"
 msgstr "Racine"
 
 #: src/settings/ai/stt/on-device-card.tsx
-msgid "Transcribe without a server: the transcription module runs on this computer and audio never leaves it."
-msgstr "Transcrire sans serveur : le module de transcription tourne sur ce poste et l'audio ne le quitte pas."
+msgid "Transcribe without a server: transcription runs on this computer and audio never leaves it."
+msgstr "Transcrire sans serveur : la transcription tourne sur ce poste et l'audio ne le quitte pas."
 
 #: src/chat/components/input/index.tsx
 msgid "Transcribing voice input"
@@ -6421,12 +6462,12 @@ msgid "transcription model, Whisper, Nemotron, speech recognition"
 msgstr "modèle de transcription, Whisper, Nemotron, reconnaissance vocale"
 
 #: src/settings/ai/stt/on-device-card.tsx
-msgid "Transcription on this computer is coming soon."
-msgstr "La transcription sur ce poste arrive bientôt."
-
-#: src/settings/ai/stt/on-device-card.tsx
 msgid "Transcription on this computer is disabled by your administrator; transcription now goes through the server."
 msgstr "La transcription sur ce poste est désactivée par votre administrateur ; la transcription passe par le serveur."
+
+#: src/stt/on-device.ts
+msgid "Transcription on this computer is in use. Stop the recording, then try again."
+msgstr "La transcription sur ce poste est en cours d'utilisation. Arrêtez l'écoute, puis réessayez."
 
 #: src/stt/on-device.ts
 msgid "Transcription on this computer uses the microphone only: the computer's sound (remote participants) is not transcribed."
@@ -6506,10 +6547,6 @@ msgstr "Connexion non chiffrée vers {host}"
 #: src/settings/ai/shared/cleartext-warning.tsx
 msgid "Unencrypted connection: the audio, your notes and the API key travel in clear text on the network."
 msgstr "Connexion non chiffrée : l'audio, vos notes et la clé d'API passent en clair sur le réseau."
-
-#: src/settings/ai/stt/on-device-card.tsx
-msgid "Uninstall"
-msgstr "Désinstaller"
 
 #: src/session/components/note-input/transcript/renderer/speaker-participants.ts
 msgid "Unknown"

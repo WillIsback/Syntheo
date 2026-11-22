@@ -18,6 +18,8 @@ name = "syntheo_desktop_lib"
 crate-type = ["staticlib", "rlib"]
 
 [build-dependencies]
+syntheo-image-hash = { workspace = true }
+syntheo-speech-sources = { workspace = true }
 tauri-build = { workspace = true, features = [] }
 
 [dependencies]
