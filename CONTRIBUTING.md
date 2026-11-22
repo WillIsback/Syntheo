@@ -299,6 +299,18 @@ Rotation (clé compromise ou remplacée) :
 4. Une clé compromise ne peut pas être révoquée à distance : les postes
    restés sur une version antérieure à l'étape 2 doivent être réinstallés.
 
+## Signature Windows (Azure Artifact Signing)
+
+Les identifiants `AZURE_TENANT_ID`, `AZURE_CLIENT_ID` et `AZURE_CLIENT_SECRET`
+sont les secrets de l'environnement GitHub `windows-signing` (branches de
+déploiement limitées à `main`). Le job de `build-windows.yml` ne déclare cet
+environnement que pour une release appelée par `release.yml` depuis `main` ;
+un build de test n'en déclare aucun. `release.yml` transmet les trois secrets
+par leur nom, ce qu'exige un workflow réutilisable ; la valeur de
+l'environnement l'emporte. Pour les remplacer (rotation du secret client),
+modifier les secrets de l'environnement, pas ceux du dépôt. Le passage à une
+identité fédérée, sans secret client, est suivi dans #663.
+
 ## Exceptions de sécurité
 
 Une alerte acceptée temporairement est inscrite dans
