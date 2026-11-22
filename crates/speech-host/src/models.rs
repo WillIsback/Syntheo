@@ -599,4 +599,25 @@ mod tests {
         assert_eq!(of(&bare), of(&pinned));
         assert_ne!(of(&bare), of(&other));
     }
+
+    // Sources épinglées : la release GitHub speech-models-1, à plat ; chaque
+    // fichier y a un nom unique (un asset par fichier).
+    #[test]
+    fn the_compiled_sources_point_to_the_github_release() {
+        let sources = compiled_sources();
+        assert_eq!(
+            sources.first().map(Source::as_str),
+            Some("https://github.com/WillIsback/Syntheo/releases/download/speech-models-1/{name}")
+        );
+        let urls: std::collections::HashSet<String> = files()
+            .iter()
+            .map(|f| sources[0].url_for(&f.path))
+            .collect();
+        assert_eq!(urls.len(), files().len());
+        assert!(urls.contains(
+            "https://github.com/WillIsback/Syntheo/releases/download/speech-models-1/encoder.onnx.data"
+        ));
+        // Le gabarit Hugging Face en attente n'est jamais une source.
+        assert!(sources.iter().all(|s| !s.as_str().contains('<')));
+    }
 }
