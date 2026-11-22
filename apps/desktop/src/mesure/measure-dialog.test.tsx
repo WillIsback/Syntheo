@@ -56,6 +56,8 @@ const RESULT = {
   unmatchedSentWords: 0,
   contentPerMille: 400,
   lexicalPerMille: 200,
+  correctedTerms: [{ hash: "c".repeat(64), count: 1 }],
+  dictionaryHashes: [],
 };
 const ROWS = [
   {

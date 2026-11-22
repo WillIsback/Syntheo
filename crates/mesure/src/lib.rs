@@ -109,6 +109,18 @@ impl Dictionary {
         Ok(Self { terms: out })
     }
 
+    /// Empreintes des termes, triées et sans doublon (voir `term_hash`).
+    pub fn hashes(&self) -> Vec<String> {
+        let mut out: Vec<String> = self
+            .terms
+            .iter()
+            .map(|t| term_hash(t.iter().map(String::as_str)))
+            .collect();
+        out.sort();
+        out.dedup();
+        out
+    }
+
     fn matches(&self, words: &[&Token]) -> bool {
         let lower: Vec<String> = words.iter().map(|t| t.text.to_lowercase()).collect();
         self.terms.iter().any(|term| {
@@ -170,9 +182,75 @@ fn per_mille(count: u64, generated: u64) -> Option<f64> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct SectionReport {
     pub index: u32,
+    /// Rôle de la section dans le modèle de compte rendu, déduit de son titre
+    /// (le titre lui-même n'est jamais rendu).
+    pub role: SectionRole,
     /// Section retrouvée dans la version envoyée (même titre).
     pub matched: bool,
     pub counters: Counters,
+}
+
+/// Rôle d'une section, pour le garde-fou Décisions et Actions de la bêta
+/// (spec §4) ; liste fermée.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum SectionRole {
+    Decisions,
+    Actions,
+    Other,
+}
+
+impl SectionRole {
+    /// Déduit d'un titre de section normalisé (casse ignorée), en français ou
+    /// en anglais.
+    pub fn from_title(title: Option<&str>) -> Self {
+        let Some(title) = title else {
+            return Self::Other;
+        };
+        let has = |words: &[&str]| words.iter().any(|w| title.contains(w));
+        if has(&["décision", "decision"]) {
+            Self::Decisions
+        } else if has(&[
+            "action",
+            "prochaines étapes",
+            "prochaine étape",
+            "next step",
+            "à faire",
+            "to do",
+            "todo",
+            "tâches",
+            "tasks",
+            "suites à donner",
+        ]) {
+            Self::Actions
+        } else {
+            Self::Other
+        }
+    }
+}
+
+/// Terme corrigé (côté envoyé d'une correction lexicale), désigné par
+/// l'empreinte SHA-256 de sa forme normalisée : son texte n'est jamais rendu.
+/// Sert au suivi des termes de la bêta (spec §3).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct CorrectedTerm {
+    pub hash: String,
+    pub count: u32,
+}
+
+/// Empreinte d'un terme : SHA-256 de ses mots en minuscules, séparés par une
+/// espace. Même calcul pour un terme corrigé et pour un terme du dictionnaire.
+fn term_hash<'a>(words: impl IntoIterator<Item = &'a str>) -> String {
+    use sha2::{Digest, Sha256};
+    let key = words
+        .into_iter()
+        .map(str::to_lowercase)
+        .collect::<Vec<_>>()
+        .join(" ");
+    Sha256::digest(key.as_bytes())
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect()
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -193,6 +271,10 @@ pub struct Report {
     pub content_per_mille: Option<f64>,
     /// `Rl / G × 1000` sur le total.
     pub lexical_per_mille: Option<f64>,
+    /// Termes corrigés par une correction lexicale, par empreinte, triés.
+    pub corrected_terms: Vec<CorrectedTerm>,
+    /// Empreintes des termes du dictionnaire au moment de la mesure, triées.
+    pub dictionary_hashes: Vec<String>,
 }
 
 /// Mesure la reprise entre `generated` et `sent`. Les textes ne sont pas
@@ -208,17 +290,27 @@ pub fn measure(
     let mut total = Counters::default();
     let mut reports = Vec::new();
     let mut unmatched_sent_words = 0;
+    let mut corrected = std::collections::BTreeMap::<String, u32>::new();
     for pair in prepared.pairs() {
         let mut counters = Counters {
             generated: word_count(&pair.generated),
             ..Counters::default()
         };
-        diff(&pair.generated, &pair.sent, dictionary, |_, _, change| {
-            counters.record(change)
+        diff(&pair.generated, &pair.sent, dictionary, |_, new, change| {
+            counters.record(change);
+            if change.kind == ChangeKind::Replaced && change.lexical {
+                let words = new.iter().filter(|t| t.word).map(|t| t.text.as_str());
+                *corrected.entry(term_hash(words)).or_default() += 1;
+            }
         });
         match pair.place {
-            Place::Section { index, matched } => reports.push(SectionReport {
+            Place::Section {
                 index,
+                role,
+                matched,
+            } => reports.push(SectionReport {
+                index,
+                role,
                 matched,
                 counters,
             }),
@@ -237,6 +329,11 @@ pub fn measure(
         unmatched_sent_words,
         content_per_mille: total.content_per_mille(),
         lexical_per_mille: total.lexical_per_mille(),
+        corrected_terms: corrected
+            .into_iter()
+            .map(|(hash, count)| CorrectedTerm { hash, count })
+            .collect(),
+        dictionary_hashes: dictionary.hashes(),
     })
 }
 
@@ -339,7 +436,11 @@ struct Prepared {
 }
 
 enum Place {
-    Section { index: u32, matched: bool },
+    Section {
+        index: u32,
+        role: SectionRole,
+        matched: bool,
+    },
     UnmatchedSent,
     Global,
 }
@@ -407,6 +508,7 @@ impl Prepared {
             pairs.push(Pair {
                 place: Place::Section {
                     index: index as u32,
+                    role: SectionRole::from_title(section.title.as_deref()),
                     matched: counterpart.is_some(),
                 },
                 generated: Cow::Borrowed(&section.tokens),

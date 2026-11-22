@@ -872,6 +872,7 @@ msgstr "Le serveur des mises à jour est injoignable. Vérifiez votre connexion,
 
 #: src/folders/folder-actions.tsx
 #: src/folders/project/next-meeting-slot.tsx
+#: src/mesure/beta-data.tsx
 #: src/session/components/capsule/index.tsx
 #: src/settings/ai/shared/server-address.tsx
 #: src/settings/automations/workflow-test-panel.tsx
@@ -1113,6 +1114,7 @@ msgstr "Dupliquer"
 #: src/changelog/index.tsx
 #: src/main/windows-title-bar.tsx
 #: src/main/windows-window-controls.tsx
+#: src/mesure/beta-data.tsx
 #: src/mesure/measure-dialog.tsx
 #: src/session/components/note-input/search/bar.tsx
 #: src/shared/open-note-dialog.tsx
@@ -1925,6 +1927,14 @@ msgstr "Saisissez un nom de dossier valide."
 msgid "Enter another name"
 msgstr "Saisir un autre nom"
 
+#: src/mesure/beta-data.tsx
+msgid "Erase all measurements and my pseudonym"
+msgstr "Effacer toutes les mesures et mon pseudonyme"
+
+#: src/mesure/beta-data.tsx
+msgid "Erase my measurements…"
+msgstr "Effacer mes mesures…"
+
 #: src/shared/open-note-dialog.tsx
 #: src/shared/shortcuts.ts
 msgid "Esc"
@@ -1993,6 +2003,14 @@ msgstr "Dossier d'export"
 msgid "Export location"
 msgstr "Emplacement d'export"
 
+#: src/mesure/beta-data.tsx
+msgid "Export my measurements"
+msgstr "Exporter mes mesures"
+
+#: src/mesure/beta-data.tsx
+msgid "Export my measurements…"
+msgstr "Exporter mes mesures…"
+
 #: src/session/components/outer-header/overflow/export-modal.tsx
 #: src/shared/shortcuts.ts
 msgid "Export or print"
@@ -2044,6 +2062,10 @@ msgstr "Format de fichier"
 #: src/session/components/living-document/after-meeting-folder-suggestion.tsx
 msgid "File it"
 msgstr "Ranger"
+
+#: src/mesure/beta-data.tsx
+msgid "File saved."
+msgstr "Fichier enregistré."
 
 #: src/settings/automations/markdown-export-options.tsx
 msgid "Filename"
@@ -2860,6 +2882,15 @@ msgstr "Mesurer la reprise des synthèses"
 msgid "Measure rework…"
 msgstr "Mesurer la reprise…"
 
+#. placeholder {0}: preview.meetings
+#: src/mesure/beta-data.tsx
+msgid "Measured meetings: {0}"
+msgstr "Réunions mesurées : {0}"
+
+#: src/mesure/beta-data.tsx
+msgid "Measurements and pseudonym erased from this computer."
+msgstr "Mesures et pseudonyme effacés de ce poste."
+
 #: src/settings/ai/llm/server-card.tsx
 msgid "Medium"
 msgstr "Moyen"
@@ -3324,6 +3355,10 @@ msgstr "Aucune langue correspondante trouvée"
 #: src/session/components/note-input/transcript/renderer/speaker-assign.tsx
 msgid "No matching people"
 msgstr "Aucune personne correspondante"
+
+#: src/mesure/beta-data.tsx
+msgid "No measurement yet: measure a summary first."
+msgstr "Aucune mesure pour l'instant : mesurez d'abord une synthèse."
 
 #: src/session/components/living-document/meeting-type-picker.tsx
 msgid "No meeting type found"
@@ -4418,6 +4453,10 @@ msgstr "Enregistrer les exports PDF, texte, Markdown et Org dans ce dossier."
 #: src/settings/general/meeting-settings.tsx
 msgid "Save slides and screens others share in meetings. Requires Screen Recording."
 msgstr "Enregistrer les diapositives et les écrans partagés par d'autres pendant les réunions. Nécessite l'enregistrement d'écran."
+
+#: src/mesure/beta-data.tsx
+msgid "Save the file…"
+msgstr "Enregistrer le fichier…"
 
 #: src/mesure/measure-dialog.tsx
 msgid "Save the matrix"
@@ -5572,6 +5611,10 @@ msgstr "Les différences n'ont pas pu être listées."
 msgid "The download was interrupted. Try again."
 msgstr "Le téléchargement a été interrompu. Réessayez."
 
+#: src/mesure/beta-data.tsx
+msgid "The export could not be built or saved."
+msgstr "L'export n'a pas pu être construit ou enregistré."
+
 #: src/stt/audio-import-feedback.ts
 msgid "The import of {name} was abandoned: {reason}"
 msgstr "L'import de {name} a été abandonné : {reason}"
@@ -5884,6 +5927,10 @@ msgstr "Cette installation (.deb ou MSI) se met à jour en téléchargeant le no
 #: src/settings/automations/workflow-test-panel.tsx
 msgid "This is a real test: these steps really act."
 msgstr "C'est un test réel : ces étapes agissent vraiment."
+
+#: src/mesure/beta-data.tsx
+msgid "This is the whole file: counts, local indexes and days since you joined, under a random pseudonym. No text, title, name or date. Nothing is sent: you save the file and choose whether to share it."
+msgstr "Voici le fichier en entier : des compteurs, des index locaux et des jours comptés depuis votre inscription, sous un pseudonyme aléatoire. Aucun texte, titre, nom ni date. Rien n'est envoyé : vous enregistrez le fichier et choisissez de le transmettre ou non."
 
 #: src/session/components/living-document/after-meeting-folder-suggestion.tsx
 msgid "This meeting looks like {folderName} ({reason})"

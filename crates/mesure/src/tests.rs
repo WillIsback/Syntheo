@@ -254,13 +254,23 @@ fn limits_are_enforced() {
     ));
 }
 
-// Aucune chaîne dans le rapport : seulement des nombres, des booléens et des
-// clés fixes. Un champ texte ajouté plus tard fait échouer ce test.
+// Aucune chaîne libre dans le rapport : des nombres, des booléens et des clés
+// fixes ; les seules chaînes admises sont des empreintes SHA-256 (termes, issue
+// 672) et les rôles de section, liste fermée. Un champ texte ajouté plus tard
+// fait échouer ce test.
 #[test]
 fn report_contains_no_free_text() {
     fn walk(value: &serde_json::Value, path: &str) {
         match value {
-            serde_json::Value::String(s) => panic!("chaîne dans le rapport à {path} : {s:?}"),
+            serde_json::Value::String(s) => {
+                let hash = (path.ends_with(".hash") || path.contains(".dictionary_hashes["))
+                    && s.len() == 64
+                    && s.chars()
+                        .all(|c| c.is_ascii_digit() || ('a'..='f').contains(&c));
+                let role = path.ends_with(".role")
+                    && ["decisions", "actions", "other"].contains(&s.as_str());
+                assert!(hash || role, "chaîne dans le rapport à {path} : {s:?}");
+            }
             serde_json::Value::Array(items) => {
                 for (i, item) in items.iter().enumerate() {
                     walk(item, &format!("{path}[{i}]"));
@@ -475,4 +485,52 @@ fn export_schema_is_closed_and_has_no_free_string() {
     ] {
         serde_json::from_str::<serde_json::Value>(example).unwrap();
     }
+}
+
+// Issue 672 : rôle des sections déduit du titre, termes corrigés par empreinte
+// (même empreinte qu'un terme du dictionnaire), jamais en clair.
+#[test]
+fn section_roles_and_corrected_terms() {
+    let sent = "# Résumé\n\nLe projet avance bien. Le budget est validé par la direction.\n\n## Décisions\n\n- Lancer le pilote en janvier avec Marten.\n- Garder le serveur actuel.\n\n## Actions\n\n- Envoyer le compte rendu à l'équipe.\n";
+    let dictionary = Dictionary::new(["Marten", "Nemotron"]).unwrap();
+    let report = measure(
+        GENERATED,
+        Format::Markdown,
+        sent,
+        Format::Markdown,
+        &dictionary,
+    )
+    .unwrap();
+    let roles: Vec<_> = report.sections.iter().map(|s| s.role).collect();
+    assert_eq!(
+        roles,
+        [
+            SectionRole::Other,
+            SectionRole::Decisions,
+            SectionRole::Actions
+        ]
+    );
+    assert_eq!(report.corrected_terms.len(), 1);
+    assert_eq!(report.corrected_terms[0].count, 1);
+    assert!(
+        report
+            .dictionary_hashes
+            .contains(&report.corrected_terms[0].hash)
+    );
+    assert_eq!(report.dictionary_hashes.len(), 2);
+    let json = serde_json::to_string(&report).unwrap();
+    assert!(!json.contains("Marten") && !json.contains("marten"));
+    assert_eq!(
+        SectionRole::from_title(Some("prochaines étapes")),
+        SectionRole::Actions
+    );
+    assert_eq!(
+        SectionRole::from_title(Some("next steps")),
+        SectionRole::Actions
+    );
+    assert_eq!(
+        SectionRole::from_title(Some("decisions taken")),
+        SectionRole::Decisions
+    );
+    assert_eq!(SectionRole::from_title(None), SectionRole::Other);
 }

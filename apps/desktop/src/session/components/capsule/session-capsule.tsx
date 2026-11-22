@@ -15,6 +15,7 @@ import {
 import { registerPreparedNoteStart } from "./start-shortcut";
 
 import { useShell } from "~/contexts/shell";
+import { recordSummaryEvent } from "~/mesure/beta";
 import {
   copyTextToClipboard,
   getStoredNoteMarkdown,
@@ -221,8 +222,13 @@ export function SessionCapsule({
     void copyTextToClipboard(markdown, {
       success: t`Note copied to clipboard`,
       error: t`Failed to copy the note`,
+    }).then((copied) => {
+      // Bêta (issue 672) : copie d'une synthèse, pour le taux d'abandon.
+      if (copied && currentView.type === "enhanced") {
+        void recordSummaryEvent("shared", sessionId, currentView.id);
+      }
     });
-  }, [markdown, t]);
+  }, [markdown, t, currentView, sessionId]);
 
   const [exportOpen, setExportOpen] = useState(false);
   const [exportMounted, setExportMounted] = useState(false);

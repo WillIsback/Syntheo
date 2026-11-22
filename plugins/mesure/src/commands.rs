@@ -50,6 +50,7 @@ pub struct MeasureCounters {
 #[serde(rename_all = "camelCase")]
 pub struct SectionMeasure {
     pub index: u32,
+    pub role: SectionRole,
     pub matched: bool,
     pub counters: MeasureCounters,
 }
@@ -67,6 +68,26 @@ pub struct MeasureResult {
     pub unmatched_sent_words: u32,
     pub content_per_mille: Option<f64>,
     pub lexical_per_mille: Option<f64>,
+    /// Termes corrigés (corrections lexicales), par empreinte SHA-256.
+    pub corrected_terms: Vec<CorrectedTermCount>,
+    /// Empreintes des termes du dictionnaire au moment de la mesure.
+    pub dictionary_hashes: Vec<String>,
+}
+
+/// Rôle d'une section dans le modèle de compte rendu (liste fermée).
+#[derive(Debug, Clone, Copy, Serialize, specta::Type, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum SectionRole {
+    Decisions,
+    Actions,
+    Other,
+}
+
+#[derive(Debug, Clone, Serialize, specta::Type, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct CorrectedTermCount {
+    pub hash: String,
+    pub count: u32,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, specta::Type, PartialEq, Eq)]
@@ -153,6 +174,11 @@ pub(crate) fn run_measure(
             .iter()
             .map(|s| SectionMeasure {
                 index: s.index,
+                role: match s.role {
+                    syntheo_mesure::SectionRole::Decisions => SectionRole::Decisions,
+                    syntheo_mesure::SectionRole::Actions => SectionRole::Actions,
+                    syntheo_mesure::SectionRole::Other => SectionRole::Other,
+                },
                 matched: s.matched,
                 counters: counters(&s.counters),
             })
@@ -160,6 +186,15 @@ pub(crate) fn run_measure(
         unmatched_sent_words: n(report.unmatched_sent_words),
         content_per_mille: report.content_per_mille,
         lexical_per_mille: report.lexical_per_mille,
+        corrected_terms: report
+            .corrected_terms
+            .into_iter()
+            .map(|t| CorrectedTermCount {
+                hash: t.hash,
+                count: t.count,
+            })
+            .collect(),
+        dictionary_hashes: report.dictionary_hashes,
     })
 }
 
@@ -370,9 +405,16 @@ mod tests {
     // clés fixes seulement.
     #[test]
     fn measure_result_contains_no_free_text() {
+        // Seules chaînes admises : empreintes SHA-256 et rôles (liste fermée).
         fn walk(value: &serde_json::Value) {
             match value {
-                serde_json::Value::String(s) => panic!("chaîne dans le résultat : {s:?}"),
+                serde_json::Value::String(s) => {
+                    let hash = s.len() == 64
+                        && s.chars()
+                            .all(|c| c.is_ascii_digit() || ('a'..='f').contains(&c));
+                    let role = ["decisions", "actions", "other"].contains(&s.as_str());
+                    assert!(hash || role, "chaîne dans le résultat : {s:?}");
+                }
                 serde_json::Value::Array(items) => items.iter().for_each(walk),
                 serde_json::Value::Object(map) => map.values().for_each(walk),
                 _ => {}

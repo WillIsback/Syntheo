@@ -1,5 +1,6 @@
 import type { MeasureResult } from "@syntheo/plugin-mesure";
 
+import { enrollmentStatement, termStatements } from "./beta";
 import type { AgreementMatrix } from "./calibration";
 
 import { executeTransaction } from "~/db";
@@ -56,9 +57,10 @@ export function measurementStatements(
       sql: `
         INSERT INTO summary_measurement_sections (
           measurement_id, section_index, matched, generated_words,
-          added_words, deleted_words, replaced_content, replaced_lexical
+          added_words, deleted_words, replaced_content, replaced_lexical,
+          role
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       params: [
         id,
@@ -69,6 +71,7 @@ export function measurementStatements(
         section.counters.deleted,
         section.counters.replacedContent,
         section.counters.replacedLexical,
+        section.role,
       ],
     })),
   ];
@@ -113,9 +116,20 @@ export function saveMeasurement(
   result: MeasureResult,
 ): Promise<void> {
   return enqueueDatabaseWrite("summary-measurements", async () => {
-    await executeTransaction(
-      measurementStatements(crypto.randomUUID(), ids, result),
-    );
+    const id = crypto.randomUUID();
+    const now = new Date().toISOString();
+    // Une mesure inscrit à la bêta si ce n'est déjà fait, puis enregistre ses
+    // compteurs et le suivi de ses termes (issue 672), en une transaction.
+    await executeTransaction([
+      enrollmentStatement(now),
+      ...measurementStatements(id, ids, result),
+      ...termStatements(
+        id,
+        result.correctedTerms,
+        result.dictionaryHashes,
+        now,
+      ),
+    ]);
   });
 }
 
