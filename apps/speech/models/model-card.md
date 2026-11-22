@@ -37,6 +37,38 @@ The ONNX exports come from
 `26684938ff242cb4f7a65fad712476c6015a4477`, which converts the NVIDIA models
 without changing them.
 
+## Parameters
+
+Elements of the ONNX initializers of these files, counted from the tensor
+shapes (quantization scales and zero points included; they are negligible):
+
+| File                          | Parameters  | int8               | float32            |
+| ----------------------------- | ----------- | ------------------ | ------------------ |
+| `nemotron/encoder.onnx`       | 624.6 M     | 537.8 M (86 %)     | 86.8 M (14 %)      |
+| `nemotron/decoder_joint.onnx` | 24.4 M      | 9.5 M (39 %)       | 15.0 M (61 %)      |
+| `diar/nemotron3_diar_v3.onnx` | 99.9 M      | 98.2 M (98 %)      | 1.7 M (2 %)        |
+| **Total**                     | **748.9 M** | **645.4 M (86 %)** | **103.5 M (14 %)** |
+
+Only the weights of matrix products (MatMul, Gemm) are quantized; the other
+weights (convolutions, embeddings, normalization) stay in float32.
+
+## Performance
+
+Real-time factor (processing time divided by audio duration, lower is faster)
+with ONNX Runtime on the CPU, for the two streams of a meeting (microphone and
+system audio) with speaker diarization, as Syntheo runs them:
+
+| Computer                                    | Speech recognition, 1 stream | Diarization, 1 stream | 2 streams with diarization |
+| ------------------------------------------- | ---------------------------- | --------------------- | -------------------------- |
+| AMD Ryzen 9 9950X, limited to 4 cores       | 0.086                        | 0.049                 | 0.19                       |
+| Intel Core i7-10510U, 4 cores, performance  | to be measured               | to be measured        | to be measured             |
+| Intel Core i7-10510U, 4 cores, power saving | to be measured               | to be measured        | to be measured             |
+
+Syntheo measures each computer before using it (about 30 seconds per profile)
+and keeps transcription on the computer only if final results arrive less than
+2 seconds after the end-of-utterance wait, at the 95th percentile, without
+drift.
+
 ## Reproduce
 
 Quantization is reproducible byte for byte. From a checkout of the Syntheo
