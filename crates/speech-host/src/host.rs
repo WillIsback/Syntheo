@@ -264,7 +264,7 @@ async fn launch(
         // La copie vérifiée s'exécute depuis le dossier de données : une
         // politique de contrôle des applications par chemin (AppLocker,
         // SRP) ou un montage noexec la refuse (issue 683, revue 7).
-        if e.kind() == std::io::ErrorKind::PermissionDenied {
+        if launch_blocked(&e) {
             HostError::ExecutionBlocked
         } else {
             HostError::Launch(format!("{:?}", e.kind()))
@@ -618,6 +618,13 @@ impl SpeechHost {
         {
             return Err("installing");
         }
+        // Installation acquise : une annulation restée d'une installation
+        // précédente (refusée ensuite par `running`, ou terminée juste
+        // après le clic) est oubliée ; un clic à partir d'ici compte, même
+        // pendant l'attente du verrou ci-dessous. Un clic avant cette ligne
+        // (pendant les refus communs du plugin) est ignoré : rien n'est
+        // encore en cours.
+        self.cancel.store(false, Ordering::SeqCst);
         let guard = InstallingGuard(&self.installing);
         let mut state = self.state.lock().await;
         if state
@@ -634,10 +641,6 @@ impl SpeechHost {
 
     /// Fin d'une installation : refus et compteurs oubliés.
     async fn end_install(&self) {
-        // Remise à zéro en fin d'installation (pas au début : une annulation
-        // demandée pendant les contrôles qui précèdent reste prise en compte).
-        self.cancel
-            .store(false, std::sync::atomic::Ordering::SeqCst);
         *self.progress.lock().unwrap_or_else(|e| e.into_inner()) = None;
         let mut state = self.state.lock().await;
         state.rejected = None;
@@ -863,9 +866,35 @@ impl SpeechHost {
     }
 }
 
+/// Lancement refusé par le système : accès refusé (montage noexec, droits),
+/// ou, sous Windows, `ERROR_ACCESS_DISABLED_BY_POLICY` (1260) d'AppLocker
+/// et des stratégies de restriction logicielle, que std ne classe pas.
+fn launch_blocked(error: &std::io::Error) -> bool {
+    const ERROR_ACCESS_DISABLED_BY_POLICY: i32 = 1260;
+    error.kind() == std::io::ErrorKind::PermissionDenied
+        || (cfg!(windows) && error.raw_os_error() == Some(ERROR_ACCESS_DISABLED_BY_POLICY))
+}
+
 #[cfg(test)]
 mod tests {
-    use super::parse_load;
+    use super::{launch_blocked, parse_load};
+
+    // Revue, R4 : refus de la politique d'exécution reconnus.
+    #[test]
+    fn recognizes_a_blocked_launch() {
+        assert!(launch_blocked(&std::io::Error::from(
+            std::io::ErrorKind::PermissionDenied
+        )));
+        assert_eq!(
+            launch_blocked(&std::io::Error::from_raw_os_error(1260)),
+            cfg!(windows)
+        );
+        assert!(!launch_blocked(&std::io::Error::from(
+            std::io::ErrorKind::NotFound
+        )));
+        // ERROR_INVALID_FUNCTION (1) n'est pas un refus de politique.
+        assert!(!cfg!(windows) || !launch_blocked(&std::io::Error::from_raw_os_error(1)));
+    }
 
     #[test]
     fn reads_load_lines_and_ignores_the_rest() {

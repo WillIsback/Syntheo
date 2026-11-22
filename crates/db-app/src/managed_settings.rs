@@ -63,12 +63,10 @@ fn validate(bytes: &[u8]) -> Result<ManagedSettings, sqlx::Error> {
             // Même validateur que speech-host (syntheo-speech-sources) : une
             // liste acceptée ici sert telle quelle au téléchargement.
             "speech_models_urls" => value.as_array().is_some_and(|urls| {
-                urls.iter()
-                    .map(Value::as_str)
-                    .collect::<Option<Vec<_>>>()
-                    .is_some_and(|urls| {
-                        urls.len() == urls.iter().filter(|u| !u.contains(',')).count()
-                            && syntheo_speech_sources::parse_sources(urls).is_some()
+                (1..=syntheo_speech_sources::MAX_SOURCES).contains(&urls.len())
+                    && urls.iter().all(|url| {
+                        url.as_str()
+                            .is_some_and(|url| syntheo_speech_sources::Source::parse(url).is_some())
                     })
             }),
             _ => false,
@@ -259,6 +257,13 @@ mod tests {
             r#"["https:a.example/{path}"]"#,
             r#"["https://a.example/{path}", "https://b.example/{path}", "https://c.example/{path}", "https://d.example/{path}", "https://e.example/{path}", "https://f.example/{path}", "https://g.example/{path}", "https://h.example/{path}", "https://i.example/{path}"]"#,
             r#"[1]"#,
+            // Revue, R6 : entrées vides, et plus de 8 éléments même si
+            // certains sont vides.
+            r#"[""]"#,
+            r#"["   "]"#,
+            r#"["https://a.example/{path}", ""]"#,
+            r#"["https://a.example/{path}", "https://b.example/{path}", "https://c.example/{path}", "https://d.example/{path}", "https://e.example/{path}", "https://f.example/{path}", "https://g.example/{path}", "https://h.example/{path}", ""]"#,
+            r#"[]"#,
         ] {
             assert!(validate(doc(bad).as_bytes()).is_err(), "{bad}");
         }
