@@ -5,8 +5,8 @@ import { invoke as __TAURI_INVOKE } from "@tauri-apps/api/core";
 
 /** Commands */
 export const commands = {
-	openUrl: (url: string, openWith: string | null) => typedError<null, string>(__TAURI_INVOKE("plugin:opener2|open_url", { url, openWith })),
-	openPath: (path: string, openWith: string | null) => typedError<null, string>(__TAURI_INVOKE("plugin:opener2|open_path", { path, openWith })),
+	openUrl: (url: string) => typedError<null, string>(__TAURI_INVOKE("plugin:opener2|open_url", { url })),
+	openPath: (path: string) => typedError<null, string>(__TAURI_INVOKE("plugin:opener2|open_path", { path })),
 	revealItemInDir: (path: string) => typedError<null, string>(__TAURI_INVOKE("plugin:opener2|reveal_item_in_dir", { path })),
 };
 

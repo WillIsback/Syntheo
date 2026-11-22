@@ -252,7 +252,6 @@ describe("SttServerCard", () => {
 
     expect(mocks.openUrl).toHaveBeenCalledWith(
       expect.stringMatching(/\/en\/local-transcription-service$/),
-      null,
     );
   });
 

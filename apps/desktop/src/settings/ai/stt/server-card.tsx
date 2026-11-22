@@ -280,7 +280,6 @@ export function SttServerCard() {
             void openerCommands
               .openUrl(
                 documentationUrl(i18n.locale, "local-transcription-service"),
-                null,
               )
               .catch((error) =>
                 console.error(

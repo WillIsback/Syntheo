@@ -52,7 +52,7 @@ describe("MeetingChatHighlights", () => {
     fireEvent.click(
       screen.getByRole("link", { name: "https://example.com/spec" }),
     );
-    expect(openUrlMock).toHaveBeenCalledWith("https://example.com/spec", null);
+    expect(openUrlMock).toHaveBeenCalledWith("https://example.com/spec");
   });
 
   test.each([

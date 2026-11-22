@@ -7,11 +7,8 @@ use crate::Opener2PluginExt;
 pub(crate) async fn open_url<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
     url: String,
-    open_with: Option<String>,
 ) -> Result<(), String> {
-    app.opener2()
-        .open_url(&url, open_with.as_deref())
-        .map_err(|e| e.to_string())
+    app.opener2().open_url(&url).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -19,11 +16,8 @@ pub(crate) async fn open_url<R: tauri::Runtime>(
 pub(crate) async fn open_path<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
     path: String,
-    open_with: Option<String>,
 ) -> Result<(), String> {
-    app.opener2()
-        .open_path(&path, open_with.as_deref())
-        .map_err(|e| e.to_string())
+    app.opener2().open_path(&path).map_err(|e| e.to_string())
 }
 
 #[tauri::command]

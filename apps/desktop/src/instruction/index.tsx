@@ -135,7 +135,7 @@ function ExternalInstruction({
             ])}
             onClick={() =>
               void openerCommands
-                .openUrl(url, null)
+                .openUrl(url)
                 .catch((error) =>
                   console.error("[instruction] failed to open link", error),
                 )

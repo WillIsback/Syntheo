@@ -83,7 +83,7 @@ export function WorkflowTestPanel({
   const artifactActions: ArtifactActions = {
     openFile: (path) => {
       void openerCommands
-        .openPath(path, null)
+        .openPath(path)
         .catch((error) => console.error("[automations] open failed", error));
     },
     revealFile: (path) => {

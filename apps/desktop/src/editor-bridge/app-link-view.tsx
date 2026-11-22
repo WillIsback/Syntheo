@@ -222,7 +222,7 @@ export const AppLinkView = forwardRef<HTMLSpanElement, NodeViewComponentProps>(
         return;
       }
 
-      await openerCommands.openUrl(href, null);
+      await openerCommands.openUrl(href);
     });
 
     return (

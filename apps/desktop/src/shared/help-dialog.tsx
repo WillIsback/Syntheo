@@ -57,7 +57,7 @@ export function HelpDialog({
 
   const openDocumentation = () => {
     void openerCommands
-      .openUrl(documentationUrl(i18n.locale), null)
+      .openUrl(documentationUrl(i18n.locale))
       .catch((error) =>
         console.error("[help] failed to open documentation", error),
       );

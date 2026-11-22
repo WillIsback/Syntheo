@@ -31,7 +31,7 @@ function useUpdatesManaged(): boolean {
 const RELEASES_URL = "https://github.com/WillIsback/Syntheo/releases";
 
 function openReleasePage(url: string) {
-  void openerCommands.openUrl(url, null).catch((error) => {
+  void openerCommands.openUrl(url).catch((error) => {
     console.error("[updater] failed to open the release page", error);
   });
 }

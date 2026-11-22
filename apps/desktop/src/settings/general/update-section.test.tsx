@@ -207,7 +207,6 @@ describe("UpdateSection", () => {
     expect(click.defaultPrevented).toBe(true);
     expect(mocks.openUrl).toHaveBeenCalledWith(
       "https://github.com/WillIsback/Syntheo/releases",
-      null,
     );
   });
 
@@ -247,7 +246,7 @@ describe("UpdateSection", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Open the download page" }),
     );
-    expect(mocks.openUrl).toHaveBeenCalledWith(UPDATE.releaseUrl, null);
+    expect(mocks.openUrl).toHaveBeenCalledWith(UPDATE.releaseUrl);
   });
 
   // Issue 601 : un libellé traduit par code, sans le détail technique.
@@ -284,12 +283,11 @@ describe("UpdateSection", () => {
     fireEvent.click(screen.getByRole("button", { name: "Release page" }));
     expect(mocks.openUrl).toHaveBeenCalledWith(
       "https://github.com/WillIsback/Syntheo/releases",
-      null,
     );
 
     setUpdater({ phase: "error", error: "interrupted", update: UPDATE });
     fireEvent.click(screen.getByRole("button", { name: "Release page" }));
-    expect(mocks.openUrl).toHaveBeenLastCalledWith(UPDATE.releaseUrl, null);
+    expect(mocks.openUrl).toHaveBeenLastCalledWith(UPDATE.releaseUrl);
   });
 
   it("reads the build support on mount and hides the switch in a devtools build", () => {

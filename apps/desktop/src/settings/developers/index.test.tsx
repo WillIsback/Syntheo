@@ -208,7 +208,6 @@ describe("SettingsDevelopers", () => {
     fireEvent.click(screen.getByRole("button", { name: /Installation guide/ }));
     expect(mocks.openUrl).toHaveBeenCalledWith(
       "https://docs.syntheo.studio/en/installation",
-      null,
     );
   });
 

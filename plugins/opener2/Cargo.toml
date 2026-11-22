@@ -21,3 +21,4 @@ tauri-plugin-opener = { workspace = true }
 tauri-specta = { workspace = true, features = ["derive", "typescript"] }
 
 thiserror = { workspace = true }
+url = { workspace = true }
