@@ -8,11 +8,7 @@ import * as __TAURI_EVENT from "@tauri-apps/api/event";
 export const commands = {
 	windowShow: (window: AppWindow) => typedError<null, string>(__TAURI_INVOKE("plugin:windows|window_show", { window })),
 	windowHide: (window: AppWindow) => typedError<null, string>(__TAURI_INVOKE("plugin:windows|window_hide", { window })),
-	windowDestroy: (window: AppWindow) => typedError<null, string>(__TAURI_INVOKE("plugin:windows|window_destroy", { window })),
-	windowNavigate: (window: AppWindow, path: string) => typedError<null, string>(__TAURI_INVOKE("plugin:windows|window_navigate", { window, path })),
 	windowEmitNavigate: (window: AppWindow, event: Navigate) => typedError<null, string>(__TAURI_INVOKE("plugin:windows|window_emit_navigate", { window, event })),
-	windowIsExists: (window: AppWindow) => typedError<boolean, string>(__TAURI_INVOKE("plugin:windows|window_is_exists", { window })),
-	windowIsOccluded: (window: AppWindow) => typedError<boolean, string>(__TAURI_INVOKE("plugin:windows|window_is_occluded", { window })),
 	webviewHealthAck: (requestId: string) => typedError<null, string>(__TAURI_INVOKE("plugin:windows|webview_health_ack", { requestId })),
 	webviewHealthReady: () => typedError<null, string>(__TAURI_INVOKE("plugin:windows|webview_health_ready")),
 	windowSetFrameAnimated: (window: AppWindow, anchor: Anchor, width: number, height: number) => typedError<null, string>(__TAURI_INVOKE("plugin:windows|window_set_frame_animated", { window, anchor, width, height })),

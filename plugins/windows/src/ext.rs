@@ -434,41 +434,6 @@ impl AppWindow {
         }
     }
 
-    fn is_occluded(&self, app: &AppHandle<tauri::Wry>) -> Result<bool, crate::Error> {
-        #[cfg(target_os = "macos")]
-        {
-            use objc2_app_kit::NSWindowOcclusionState;
-
-            let Some((window_id, appkit_occluded, on_active_space)) =
-                self.with_ns_window(app, |ns_window| {
-                    let window_number = ns_window.windowNumber();
-                    let window_id = u32::try_from(window_number).ok();
-                    let appkit_occluded = !ns_window
-                        .occlusionState()
-                        .contains(NSWindowOcclusionState::Visible);
-
-                    (window_id, appkit_occluded, ns_window.isOnActiveSpace())
-                })?
-            else {
-                return Ok(false);
-            };
-
-            if appkit_occluded || !on_active_space {
-                return Ok(true);
-            }
-
-            Ok(window_id
-                .and_then(|id| is_window_mostly_covered(id, i64::from(std::process::id())))
-                .unwrap_or(false))
-        }
-
-        #[cfg(not(target_os = "macos"))]
-        {
-            let _ = app;
-            Ok(false)
-        }
-    }
-
     fn set_frame_animated(
         &self,
         app: &AppHandle<tauri::Wry>,
@@ -535,30 +500,6 @@ impl AppWindow {
         if self.get(app).is_some() {
             events::Navigate::emit_to(&event, app, self.label())?;
         }
-        Ok(())
-    }
-
-    fn navigate(
-        &self,
-        app: &AppHandle<tauri::Wry>,
-        path: impl AsRef<str>,
-    ) -> Result<(), crate::Error> {
-        if let Some(window) = self.get(app) {
-            let mut url = window.url().unwrap();
-
-            let path_str = path.as_ref();
-            if let Some(query_index) = path_str.find('?') {
-                let (path_part, query_part) = path_str.split_at(query_index);
-                url.set_path(path_part);
-                url.set_query(Some(&query_part[1..]));
-            } else {
-                url.set_path(path_str);
-                url.set_query(None);
-            }
-
-            window.navigate(url)?;
-        }
-
         Ok(())
     }
 
@@ -1100,24 +1041,12 @@ impl<'a, M: tauri::Manager<tauri::Wry>> Windows<'a, tauri::Wry, M> {
             .unwrap_or(false))
     }
 
-    pub fn is_exists(&self, window: AppWindow) -> Result<bool, crate::Error> {
-        Ok(window.get(self.manager.app_handle()).is_some())
-    }
-
-    pub fn is_occluded(&self, window: AppWindow) -> Result<bool, crate::Error> {
-        window.is_occluded(self.manager.app_handle())
-    }
-
     pub fn emit_navigate(
         &self,
         window: AppWindow,
         event: events::Navigate,
     ) -> Result<(), crate::Error> {
         window.emit_navigate(self.manager.app_handle(), event)
-    }
-
-    pub fn navigate(&self, window: AppWindow, path: impl AsRef<str>) -> Result<(), crate::Error> {
-        window.navigate(self.manager.app_handle(), path)
     }
 
     pub fn frame(&self, window: AppWindow) -> Result<Option<SavedFrame>, crate::Error> {

@@ -51,35 +51,12 @@ pub async fn webview_health_ready(window: tauri::Window<tauri::Wry>) -> Result<(
 
 #[tauri::command]
 #[specta::specta]
-pub async fn window_destroy(
-    app: tauri::AppHandle<tauri::Wry>,
-    window: AppWindow,
-) -> Result<(), String> {
-    app.windows().destroy(window).map_err(|e| e.to_string())?;
-    Ok(())
-}
-
-#[tauri::command]
-#[specta::specta]
 pub async fn set_show_app_in_dock(
     app: tauri::AppHandle<tauri::Wry>,
     show: bool,
 ) -> Result<(), String> {
     app.windows()
         .set_show_app_in_dock(show)
-        .map_err(|e| e.to_string())?;
-    Ok(())
-}
-
-#[tauri::command]
-#[specta::specta]
-pub async fn window_navigate(
-    app: tauri::AppHandle<tauri::Wry>,
-    window: AppWindow,
-    path: String,
-) -> Result<(), String> {
-    app.windows()
-        .navigate(window, path)
         .map_err(|e| e.to_string())?;
     Ok(())
 }
@@ -631,29 +608,6 @@ pub async fn live_caption_update(
 pub async fn live_caption_current_state()
 -> Result<Option<crate::window::live_caption::LiveCaptionState>, String> {
     Ok(crate::window::live_caption::current_state())
-}
-
-#[tauri::command]
-#[specta::specta]
-pub async fn window_is_exists(
-    app: tauri::AppHandle<tauri::Wry>,
-    window: AppWindow,
-) -> Result<bool, String> {
-    let exists = app.windows().is_exists(window).map_err(|e| e.to_string())?;
-    Ok(exists)
-}
-
-#[tauri::command]
-#[specta::specta]
-pub async fn window_is_occluded(
-    app: tauri::AppHandle<tauri::Wry>,
-    window: AppWindow,
-) -> Result<bool, String> {
-    let occluded = app
-        .windows()
-        .is_occluded(window)
-        .map_err(|e| e.to_string())?;
-    Ok(occluded)
 }
 
 #[cfg(test)]

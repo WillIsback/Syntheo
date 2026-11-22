@@ -3,11 +3,7 @@ description = "Default permissions for the plugin"
 permissions = [
     "allow-window-show",
     "allow-window-hide",
-    "allow-window-destroy",
-    "allow-window-navigate",
     "allow-window-emit-navigate",
-    "allow-window-is-exists",
-    "allow-window-is-occluded",
     "allow-webview-health-ack",
     "allow-webview-health-ready",
     "allow-window-set-frame-animated",

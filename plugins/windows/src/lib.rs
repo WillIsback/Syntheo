@@ -334,11 +334,7 @@ fn make_specta_builder() -> tauri_specta::Builder<tauri::Wry> {
         .commands(tauri_specta::collect_commands![
             commands::window_show,
             commands::window_hide,
-            commands::window_destroy,
-            commands::window_navigate,
             commands::window_emit_navigate,
-            commands::window_is_exists,
-            commands::window_is_occluded,
             commands::webview_health_ack,
             commands::webview_health_ready,
             commands::window_set_frame_animated,

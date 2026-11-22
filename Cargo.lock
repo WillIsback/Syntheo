@@ -3541,7 +3541,6 @@ dependencies = [
  "specta",
  "storage",
  "tauri-specta",
- "tempfile",
  "thiserror 2.0.21",
  "tiptap",
  "tracing",
@@ -11930,9 +11929,6 @@ dependencies = [
 name = "tauri-plugin-deeplink2"
 version = "0.1.0"
 dependencies = [
- "askama",
- "axum",
- "open",
  "serde",
  "serde_qs",
  "specta",
@@ -11942,10 +11938,8 @@ dependencies = [
  "tauri-plugin-deep-link",
  "tauri-specta",
  "thiserror 2.0.21",
- "tokio",
  "tracing",
  "url",
- "uuid",
 ]
 
 [[package]]
@@ -12080,7 +12074,6 @@ version = "0.1.0"
 dependencies = [
  "fs-sync-core",
  "rayon",
- "serde_json",
  "specta",
  "specta-typescript",
  "tauri",

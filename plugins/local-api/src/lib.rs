@@ -23,9 +23,6 @@ fn make_specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             commands::test_webhook::<tauri::Wry>,
             commands::dispatch_event::<tauri::Wry>,
             commands::export_meeting_markdown::<tauri::Wry>,
-            commands::prepare_drive_markdown::<tauri::Wry>,
-            commands::get_cloud_snapshot::<tauri::Wry>,
-            commands::list_cloud_snapshot_ids::<tauri::Wry>,
             commands::run_automation_command::<tauri::Wry>,
         ])
         .error_handling(tauri_specta::ErrorHandlingMode::Result)

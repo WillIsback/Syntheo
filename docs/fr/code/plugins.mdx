@@ -51,7 +51,7 @@ La colonne « Interface » indique si `apps/desktop/src` importe le paquet `@syn
 | `notify` | Surveillance des fichiers du dossier de données | Non (Rust seul, utilisé par `fs-sync`) | aucune |
 | `permissions` | Autorisations système (micro, audio, accessibilité) | Oui | [/quickstart](/fr/quickstart), [/troubleshooting](/fr/troubleshooting) |
 | `local-auth` | Authentification locale du système | Oui | aucune |
-| `deeplink2` | Liens `syntheo://` et serveur de rappel local | Oui | aucune |
+| `deeplink2` | Liens `syntheo://` (reçus, aucun n'est traité) | Oui | aucune |
 | `mesure` | Mesure de la reprise d'une synthèse (bêta), sans état ni base | Oui | aucune |
 | `opener2` | Ouverture d'URL et de fichiers | Oui | aucune |
 | `tracing` | Journaux de l'application | Non (Rust seul) | [/troubleshooting](/fr/troubleshooting), [/data-and-privacy](/fr/data-and-privacy) |
@@ -102,7 +102,7 @@ La colonne « Interface » indique si `apps/desktop/src` importe le paquet `@syn
 
 | Plugin | Commandes et événements | Dépendances internes | Pages de doc concernées |
 | --- | --- | --- | --- |
-| `shortcut` | `register_hotkey`, `unregister_hotkey`, `configure`, `validate`, `set_active` ; événement `ShortcutEvent`. Les raccourcis globaux sont initialisés au démarrage (`initialize_global_shortcuts`). | aucune (plugin officiel `global-shortcut`) | [/dictation](/fr/dictation) |
+| `shortcut` | `configure`, `validate`, `set_active` ; événement `ShortcutEvent`. Les raccourcis globaux sont initialisés au démarrage (`initialize_global_shortcuts`). | aucune (plugin officiel `global-shortcut`) | [/dictation](/fr/dictation) |
 | `sfx` | `play`, `stop`, `set_volume`, `play_completion_sound`. `apps/desktop/src/shared/completion-sound.ts` joue le son de fin depuis le cycle de capture, la transcription par lot et la génération du compte rendu. | `crates/audio-utils` | aucune |
 
 ## Données et contenu
@@ -137,10 +137,10 @@ La colonne « Interface » indique si `apps/desktop/src` importe le paquet `@syn
 | Plugin | Commandes et événements | Dépendances internes | Pages de doc concernées |
 | --- | --- | --- | --- |
 | `contacts` | `create_human`, `create_organization`, `save_personal_contact`, `update_human`, `update_organization`, `soft_delete_contact`, `update_contact_avatar`, `toggle_contact_pin`, `reorder_pinned_contacts`, `merge_humans` | `crates/db-app` ; plugin `db` | [/contacts](/fr/contacts) |
-| `fs-sync` | Notes et dossiers (`list_folders`, `create_folder`, `rename_folder`, `delete_folder`, `move_session`, `load_session_content`), lots de documents (`write_document_batch`, `read_document_batch`), pièces jointes (`attachment_*`, `folder_attachment_*`), audio importé (`audio_import`, `audio_has_speech`, `audio_peaks`, `audio_delete`…) ; événement `AudioImportEvent` | `crates/fs-sync-core` ; plugins `notify`, `settings` | [/notes](/fr/notes), [/import-recordings](/fr/import-recordings), [/data-and-privacy](/fr/data-and-privacy) |
+| `fs-sync` | Notes et dossiers (`list_folders`, `create_folder`, `rename_folder`, `delete_folder`, `move_session`, `load_session_content`), lots de documents (`write_document_batch`), pièces jointes (`attachment_*`, `folder_attachment_*`), audio importé (`audio_import`, `audio_has_speech`, `audio_delete`…) ; événement `AudioImportEvent` | `crates/fs-sync-core` ; plugins `notify`, `settings` | [/notes](/fr/notes), [/import-recordings](/fr/import-recordings), [/data-and-privacy](/fr/data-and-privacy) |
 | `tantivy` | `search`, `reindex`, `add_document`, `update_document`, `update_documents`, `remove_document` | `crates/language` ; plugin `settings` | [/notes](/fr/notes) (palette de recherche), [/architecture](/fr/architecture) |
 | `export` | `export`, `export_text`, `choose_export_path`, `print_pdf`, `cleanup_print_files` | `crates/export-core` ; plugin `db` | [/notes](/fr/notes) |
-| `local-api` | Webhooks (`list_webhooks`, `create_webhook`, `delete_webhook`, `set_webhook_active`, `test_webhook`, `dispatch_event`), `export_meeting_markdown` (utilisé par `apps/desktop/src/automations/step-runners.ts`), `prepare_drive_markdown`, `get_cloud_snapshot`, `list_cloud_snapshot_ids` | `crates/agent-access`, `crates/db-app` ; plugin `db` | [/reference/webhooks](/fr/reference/webhooks), [/automations](/fr/automations) |
+| `local-api` | Webhooks (`list_webhooks`, `create_webhook`, `delete_webhook`, `set_webhook_active`, `test_webhook`, `dispatch_event`), `export_meeting_markdown` (utilisé par `apps/desktop/src/automations/step-runners.ts`) | `crates/agent-access`, `crates/db-app` ; plugin `db` | [/reference/webhooks](/fr/reference/webhooks), [/automations](/fr/automations) |
 | `settings` | `settings_path`, `global_base`, `vault_base`, `load`, `save` | `crates/storage` | [/data-and-privacy](/fr/data-and-privacy) |
 | `store2` | Préférences typées (`get_str`, `set_str`, `get_bool`, `set_number`…, `save`) et secrets (`get_secret`, `set_secret`, `delete_secret`, `repair_keychain_access`) rangés dans le trousseau via `keyring` | `crates/storage` ; plugin `settings` | [/security](/fr/security), [/ai-setup](/fr/ai-setup), [/data-and-privacy](/fr/data-and-privacy), [/uninstall](/fr/uninstall) |
 
@@ -150,7 +150,7 @@ La colonne « Interface » indique si `apps/desktop/src` importe le paquet `@syn
 
 - **Chemin** : `plugins/windows`
 - **Rôle** : ouvre, masque et anime les fenêtres et onglets, et pilote deux fenêtres superposées : la barre flottante et les sous-titres en direct.
-- **Commandes** : `window_show`, `window_hide`, `window_navigate`, `window_emit_navigate`, `window_save_frame`, `window_restore_frame_animated`, `set_show_app_in_dock`, `webview_health_ack`, `floating_bar_show`, `floating_bar_hide`, `floating_bar_update`, `live_caption_show`, `live_caption_hide`, `live_caption_update`.
+- **Commandes** : `window_show`, `window_hide`, `window_emit_navigate`, `window_save_frame`, `window_restore_frame_animated`, `set_show_app_in_dock`, `webview_health_ack`, `floating_bar_show`, `floating_bar_hide`, `floating_bar_update`, `live_caption_show`, `live_caption_hide`, `live_caption_update`.
 - **Événements** : `Navigate`, `OpenTab`, `WindowDestroyed`, `VisibilityEvent`, `WebviewHealthCheck`, `FloatingBarStop`, `FloatingBarDictationAction`, `FloatingBarListeningAction`, `FloatingBarOpenMain`, `FloatingBarSettingsChange`, `LiveCaptionOverlayState`…
 - **Dépendances internes** : `crates/brand`.
 - **Pages de doc concernées** : [/automatic-capture](/fr/automatic-capture) (« Garder les commandes à portée de main »), [/meetings](/fr/meetings).
@@ -159,12 +159,12 @@ La colonne « Interface » indique si `apps/desktop/src` importe le paquet `@syn
 
 | Plugin | Commandes et événements | Dépendances internes | Pages de doc concernées |
 | --- | --- | --- | --- |
-| `tray` | `set_tray_icon_visible`, `set_tray_schedule`, `set_tray_recording_title`, `set_native_menu_locale` | `crates/brand`, `crates/intercept` ; plugins `misc`, `store2`, `windows` | aucune |
+| `tray` | `set_tray_icon_visible`, `set_tray_recording_title`, `set_native_menu_locale` | `crates/brand`, `crates/intercept` ; plugins `misc`, `store2`, `windows` | aucune |
 | `notification` | `show_notification`, `clear_notifications` ; événement `NotificationEvent` (`Confirm`, `Accept`, `Dismiss`, `Timeout`, `OptionSelected`, `FooterAction`). L'interface passe par `showNativeNotification` (`apps/desktop/src/services/notification-labels.ts`), qui envoie les libellés natifs (décompte, options, vue dépliée) dans la langue de l'interface. | `crates/notification` ; plugin `windows` | [/automatic-capture](/fr/automatic-capture) |
 | `notify` | Aucune commande ; événement `FileChanged`. Surveille les fichiers avec `notify-debouncer-full` et ignore les écritures de l'application. | plugin `settings` | aucune |
 | `permissions` | `check_permission`, `request_permission`, `open_permission`, `reset_permission`, `permission_guidance`, `close_permission_assistant` | `crates/audio` ; plugin `sidecar2` | [/quickstart](/fr/quickstart), [/troubleshooting](/fr/troubleshooting) |
 | `local-auth` | `available`, `authenticate`. Implémenté sous macOS et Windows ; ailleurs, `available` renvoie `false`. Utilisé par le verrouillage de l'application (`apps/desktop/src/lock/auth.ts`). | aucune | aucune |
-| `deeplink2` | `start_callback_server`, `stop_callback_server`, `take_pending_deep_links`, `list_pending_share_opens`, `take_pending_share_open` ; événements `DeepLinkEvent`, `ShareOpenPendingEvent`. Les types de liens `auth_callback`, `billing_refresh`, `integration_callback` et `share/open` viennent d'Anarlog. | aucune | aucune |
+| `deeplink2` | `take_pending_deep_links` ; événement `DeepLinkEvent`. Les types de liens `auth_callback`, `billing_refresh` et `integration_callback` viennent d'Anarlog ; l'interface n'en traite aucun. | aucune | aucune |
 | `mesure` | `measure`, `measure_differences` (mode Calibrage, extraits rendus à l'écran seulement) | `crates/mesure` | [/fr/data-and-privacy](/fr/data-and-privacy) |
 | `opener2` | `open_url`, `open_path`, `reveal_item_in_dir` | aucune | aucune |
 | `tracing` | `do_log`, appelée par le script injecté dans la webview pour recopier la console dans `app.log`, avec le contenu des messages masqué. Pas de paquet TypeScript. | `crates/user-error` | [/troubleshooting](/fr/troubleshooting), [/data-and-privacy](/fr/data-and-privacy) |

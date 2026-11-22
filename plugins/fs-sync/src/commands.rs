@@ -1,9 +1,7 @@
-use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
 use rayon::prelude::*;
-use serde_json::Value;
 use tauri::Manager;
 use tauri_plugin_notify::{MAX_OWN_WRITES_PER_BATCH, NotifyPluginExt};
 use tauri_plugin_settings::SettingsPluginExt;
@@ -100,37 +98,6 @@ pub(crate) async fn deserialize(input: String) -> Result<ParsedDocument, String>
 
 #[tauri::command]
 #[specta::specta]
-pub(crate) async fn write_json_batch<R: tauri::Runtime>(
-    app: tauri::AppHandle<R>,
-    items: Vec<(Value, String)>,
-) -> Result<(), String> {
-    let base = app.settings().vault_base().map_err(|e| e.to_string())?;
-    let base_path = base
-        .as_std_path()
-        .canonicalize()
-        .map_err(|e| e.to_string())?;
-    let items: Vec<(Value, PathBuf)> = items
-        .into_iter()
-        .map(|(json, path)| {
-            resolve_vault_path(&base_path, &path)
-                .map(|resolved_path| (json, resolved_path))
-                .map_err(|e| format!("failed to resolve json path {path}: {e}"))
-        })
-        .collect::<Result<_, _>>()?;
-
-    let app_for_write = app.clone();
-    spawn_blocking!({
-        write_own_batches(&app_for_write, &base_path, items, |json, path| {
-            create_parent_dir_for_write(&path)?;
-            let content = crate::json::serialize(json)
-                .map_err(|e| format!("failed to serialize json for {}: {e}", path.display()))?;
-            write_file_with_context(&path, content)
-        })
-    })
-}
-
-#[tauri::command]
-#[specta::specta]
 pub(crate) async fn write_document_batch<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
     items: Vec<(ParsedDocument, String)>,
@@ -181,25 +148,6 @@ fn create_parent_dir_for_write(path: &Path) -> Result<(), String> {
 fn write_file_with_context(path: &Path, content: String) -> Result<(), String> {
     crate::path::write_no_follow(path, content)
         .map_err(|e| format!("failed to write {}: {e}", path.display()))
-}
-
-#[tauri::command]
-#[specta::specta]
-pub(crate) async fn read_document_batch(
-    dir_path: String,
-) -> Result<HashMap<String, ParsedDocument>, String> {
-    spawn_blocking!({
-        let files = crate::session::list_uuid_files(&PathBuf::from(&dir_path), "md");
-        let results: HashMap<_, _> = files
-            .into_par_iter()
-            .filter_map(|(id, path)| {
-                let content = std::fs::read_to_string(&path).ok()?;
-                let doc = ParsedDocument::from_str(&content).ok()?;
-                Some((id, doc))
-            })
-            .collect();
-        Ok(results)
-    })
 }
 
 #[tauri::command]
@@ -289,31 +237,6 @@ pub(crate) async fn audio_metadata<R: tauri::Runtime>(
 
 #[tauri::command]
 #[specta::specta]
-pub(crate) async fn audio_delete_orphaned_expired<R: tauri::Runtime>(
-    app: tauri::AppHandle<R>,
-    known_session_ids: Vec<String>,
-    retention_ms: u64,
-    now_ms: u64,
-) -> Result<Vec<String>, String> {
-    let base = app.settings().vault_base().map_err(|e| e.to_string())?;
-    let sessions_dir = base.join("sessions").into_std_path_buf();
-    let deleted = spawn_blocking!({
-        crate::audio::delete_orphaned_expired(
-            &sessions_dir,
-            &known_session_ids,
-            retention_ms,
-            now_ms,
-        )
-        .map_err(|e| e.to_string())
-    })?;
-    for session_id in &deleted {
-        remove_audio_peaks_cache(&app, session_id);
-    }
-    Ok(deleted)
-}
-
-#[tauri::command]
-#[specta::specta]
 pub(crate) async fn audio_import<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
     session_id: String,
@@ -373,20 +296,6 @@ pub(crate) async fn audio_path<R: tauri::Runtime>(
         .allow_file(&path)
         .map_err(|error| error.to_string())?;
     Ok(path)
-}
-
-#[tauri::command]
-#[specta::specta]
-pub(crate) async fn audio_peaks<R: tauri::Runtime>(
-    app: tauri::AppHandle<R>,
-    session_id: String,
-) -> Result<crate::audio::AudioPeaks, String> {
-    let session_dir = resolve_session_dir(&app, &session_id)?;
-    let cache_path = audio_peaks_cache_path(&app, &session_id)?;
-    spawn_blocking!({
-        let path = crate::audio::path(&session_dir).ok_or("audio_path_not_found")?;
-        crate::audio::cached_peaks(&path, &cache_path).map_err(|e| e.to_string())
-    })
 }
 
 pub(crate) fn remove_audio_peaks_cache<R: tauri::Runtime>(
@@ -487,26 +396,6 @@ pub(crate) async fn scan_and_read<R: tauri::Runtime>(
             path_filter.as_deref(),
         ))
     })
-}
-
-#[tauri::command]
-#[specta::specta]
-pub(crate) async fn chat_dir<R: tauri::Runtime>(
-    app: tauri::AppHandle<R>,
-    chat_group_id: String,
-) -> Result<String, String> {
-    let base = app.settings().vault_base().map_err(|e| e.to_string())?;
-    Ok(base.join("chats").join(&chat_group_id).to_string())
-}
-
-#[tauri::command]
-#[specta::specta]
-pub(crate) async fn entity_dir<R: tauri::Runtime>(
-    app: tauri::AppHandle<R>,
-    dir_name: String,
-) -> Result<String, String> {
-    let base = app.settings().vault_base().map_err(|e| e.to_string())?;
-    Ok(base.join(&dir_name).to_string())
 }
 
 #[tauri::command]
