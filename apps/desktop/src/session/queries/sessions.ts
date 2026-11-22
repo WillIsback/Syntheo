@@ -314,7 +314,7 @@ export function lateFilingToastId(sessionId: string): string {
 // rangement tardif calculée pour un changement dépassé n'est plus affichée.
 const folderChangeSeq = new Map<string, number>();
 
-export type UpdateSessionOptions = {
+type UpdateSessionOptions = {
   /**
    * `false` : ne propose pas de régénérer avec le modèle du dossier (écriture
    * d'annulation d'un déplacement, issue 592). Par défaut, la proposition

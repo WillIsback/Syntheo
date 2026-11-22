@@ -103,7 +103,7 @@ export async function fileInput(file: File): Promise<FileInputResult> {
  * toute retouche, gardé à chaque génération. Pour une synthèse générée avant
  * la 0.8.0, la synthèse actuelle, marquée `current`.
  */
-export async function generatedVersion(
+async function generatedVersion(
   documentId: string,
   currentMarkdown: string,
 ): Promise<{ markdown: string; source: "original" | "current" }> {
@@ -125,7 +125,7 @@ export async function generatedVersion(
  * sans HTML est lu en Markdown, pour qu'une synthèse collée telle quelle
  * garde ses titres et donne une reprise nulle (revue du lot 0.8.0, constat 7).
  */
-export function sentInput(source: Source): SentInput {
+function sentInput(source: Source): SentInput {
   if (source.kind === "file") return source.input;
   return source.html
     ? { kind: "text", text: source.html, format: "html" }
@@ -455,7 +455,7 @@ function perHundred(perMille: number | null): string {
 }
 
 /** Nombres bruts, jamais de score composite. */
-export function MeasureSummary({
+function MeasureSummary({
   result,
   generatedSource,
 }: {

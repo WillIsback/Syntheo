@@ -41,10 +41,6 @@ export function getTranscriptTimingSource(word: {
   );
 }
 
-export function isTranscriptWordSeekable(word: { metadata?: unknown }) {
-  return getTranscriptTimingSource(word) !== "synthetic_text";
-}
-
 export function getValidTimingSource(
   source: unknown,
 ): TranscriptTimingSource | undefined {

@@ -11,7 +11,7 @@ import {
 
 import { id } from "~/shared/utils";
 
-export const RETURN_ORIGIN_TAB_TYPES: Tab["type"][] = [
+const RETURN_ORIGIN_TAB_TYPES: Tab["type"][] = [
   "automations",
   "contacts",
   "folders",

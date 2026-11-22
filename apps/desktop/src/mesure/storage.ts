@@ -12,7 +12,7 @@ import { enqueueDatabaseWrite } from "~/db/write-queue";
 
 type Statement = { sql: string; params: unknown[] };
 
-export type MeasurementIds = {
+type MeasurementIds = {
   sessionId: string;
   documentId: string;
   /** Version comparée : corps produit par Syntheo, ou synthèse actuelle. */

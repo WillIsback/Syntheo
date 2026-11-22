@@ -143,22 +143,6 @@ export async function updateFolderInstructions(
   });
 }
 
-export async function updateFolderWorkspace(
-  folderPath: string,
-  workspaceId: string,
-): Promise<void> {
-  const path = await ensureFolderCatalog(folderPath);
-  await enqueueDatabaseWrite("folders", async () => {
-    const result = await commands.updateFolderWorkspace({
-      path,
-      workspace_id: workspaceId,
-    });
-    if (result.status === "error") {
-      throw new Error(result.error);
-    }
-  });
-}
-
 export async function updateFolderIcon(
   folderPath: string,
   icon: TemplateIcon,

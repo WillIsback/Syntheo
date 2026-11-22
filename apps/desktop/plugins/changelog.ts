@@ -15,7 +15,7 @@ const changelogDir = resolve(
 const VIRTUAL_ID = "virtual:changelog";
 const RESOLVED_ID = "\0" + VIRTUAL_ID;
 
-export type ChangelogEntry = {
+type ChangelogEntry = {
   version: string;
   date: string | null;
   summary: string | null;
@@ -63,7 +63,7 @@ function highest(versions: string[]): string | null {
 // Journal cumulatif de la ligne de version installée (issue #536), résolu au
 // build : seuls les fichiers de la ligne entrent dans le bundle, et l'onglet
 // Journal fonctionne hors ligne.
-export function buildEntries(): ChangelogEntry[] {
+function buildEntries(): ChangelogEntry[] {
   const versions = listVersions();
   const current = process.env.VITE_APP_VERSION || highest(versions);
   if (!current) return [];

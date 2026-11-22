@@ -10,7 +10,6 @@ import { listenerStore } from "~/store/zustand/listener/instance";
 // Couper le micro ou le son système pendant l'écoute (issue 447). La fenêtre
 // principale tient l'écoute : une fenêtre secondaire (note détachée) lui
 // adresse la demande, comme pour la pause.
-export type { MutedChannel } from "./window-control";
 
 function isChannelMuted(channel: MutedChannel) {
   const live = listenerStore.getState().live;

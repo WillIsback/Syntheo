@@ -3,8 +3,6 @@ import { create } from "zustand";
 
 import { type SettingId, settingFallback } from "~/settings/search-index";
 
-export type { SettingId };
-
 // Ciblage d'un réglage précis dans les pages de réglages : l'élément porte
 // `data-setting-id`, une demande de focus le fait défiler à l'écran, le
 // surligne 2 secondes (fond `accent`) et place le focus sur son champ

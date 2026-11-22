@@ -53,7 +53,7 @@ type Counters = {
   replaced_lexical: number;
 };
 
-export type BetaExport = {
+type BetaExport = {
   schema_version: 1;
   app_version: string;
   rule_version: number;

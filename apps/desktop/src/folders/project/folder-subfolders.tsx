@@ -18,7 +18,7 @@ import {
 import { TemplateIconGlyph } from "~/templates/template-icon";
 
 /** Sous-dossiers directs de `folderPath`, triés par nom. */
-export function directSubfolders(
+function directSubfolders(
   folders: readonly string[],
   folderPath: string,
 ): string[] {

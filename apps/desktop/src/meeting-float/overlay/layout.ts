@@ -10,10 +10,6 @@ export const FLOATING_BAR_CONTROL_RADIUS = 10;
 export const FLOATING_BAR_COMPACT_RADIUS = 14;
 export const FLOATING_BAR_EXPANDED_RADIUS = 21;
 
-// « En pause », « Reprendre » et « Terminer » (issue 353) ; même valeur que
-// PAUSED_CONTROLS_WIDTH côté Rust (floating_bar.rs).
-export const FLOATING_BAR_PAUSED_CONTROLS_WIDTH = 232;
-
 // Pastille d'écoute (issue 448), de gauche à droite. La fenêtre native a
 // exactement cette largeur : RECORDING_PILL_WIDTH côté Rust (floating_bar.rs),
 // comparée par bar.test.tsx.

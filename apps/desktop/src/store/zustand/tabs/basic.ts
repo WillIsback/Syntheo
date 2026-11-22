@@ -21,11 +21,7 @@ import { isSameTab, type Tab, type TabInput } from "./schema";
 
 import { listenerStore } from "~/store/zustand/listener/instance";
 
-export {
-  RETURN_ORIGIN_TAB_TYPES,
-  SETTINGS_RETURN_TAB_TYPES,
-  type BasicState,
-} from "./basic-open-tab";
+export { SETTINGS_RETURN_TAB_TYPES, type BasicState } from "./basic-open-tab";
 
 export type BasicActions = {
   openCurrent: (tab: TabInput) => void;

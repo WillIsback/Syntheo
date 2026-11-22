@@ -51,7 +51,7 @@ type PostCaptureDetails = {
   transcriptWriteFailed?: boolean;
 };
 
-export type PostCaptureRepairReason =
+type PostCaptureRepairReason =
   | "live_transcription_unavailable"
   | "live_stream_incomplete"
   | "transcript_persistence_failed";

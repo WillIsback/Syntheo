@@ -5,8 +5,6 @@ import {
   commands as transcriptionCommands,
   type OnDeviceStatus,
   type Probe,
-  type Profile,
-  type Refusal,
 } from "@syntheo/plugin-transcription";
 
 // Source « Sur ce poste » (issues 684 et 685) : adresse interne réservée,
@@ -14,10 +12,10 @@ import {
 // réelle ni modifiable.
 export const ON_DEVICE_BASE_URL = "syntheo-speech://local";
 // Moteur retenu par l'issue 680 : parakeet-rs (ONNX Runtime), int8.
-export const ON_DEVICE_ENGINE = "parakeet_onnx" as const;
+const ON_DEVICE_ENGINE = "parakeet_onnx" as const;
 export const ON_DEVICE_STATUS_QUERY_KEY = ["on-device-status"] as const;
 
-export async function loadOnDeviceStatus(): Promise<OnDeviceStatus> {
+async function loadOnDeviceStatus(): Promise<OnDeviceStatus> {
   const result = await transcriptionCommands.onDeviceStatus();
   if (result.status === "error") throw new Error(result.error);
   return result.data;
@@ -81,21 +79,6 @@ export async function runOnDeviceProbe(): Promise<Probe> {
   if (result.status === "error") throw new Error(result.error);
   return result.data;
 }
-
-export const PROFILES: readonly Profile[] = [
-  "two_streams_diarized",
-  "two_streams",
-  "one_stream_diarized",
-  "one_stream",
-];
-
-export const REFUSALS: readonly Refusal[] = [
-  "no_avx2",
-  "not_enough_memory",
-  "not_enough_disk",
-  "disk_unknown",
-  "too_slow",
-];
 
 /**
  * Message clair pour un code d'erreur du module (commandes du plugin, état

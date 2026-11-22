@@ -32,7 +32,6 @@ import { stopSpeakerContextCapture } from "~/stt/speaker-context-capture";
 
 export {
   updateLiveSessionConfig,
-  openMicrophoneSettings,
   dispatchMeetingCompleted,
 } from "./general-live-helpers";
 export { attachLiveSession } from "./general-live-attach";
