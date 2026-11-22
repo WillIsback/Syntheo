@@ -404,3 +404,62 @@ fn only_the_cli_enables_differences() {
     let cli = std::fs::read_to_string(root.join("apps/cli/Cargo.toml")).unwrap();
     assert!(cli.contains(r#"syntheo-mesure = { workspace = true, features = ["differences"] }"#));
 }
+
+// Contrat d'export de la bêta (issue 672), `schema/export-v1.json` : tout
+// objet est fermé et toute chaîne a un motif, une liste fermée ou une
+// constante. Un champ libre ajouté au schéma fait échouer ce test.
+#[test]
+fn export_schema_is_closed_and_has_no_free_string() {
+    fn walk(node: &serde_json::Value, path: &str) {
+        let Some(map) = node.as_object() else {
+            if let Some(items) = node.as_array() {
+                for (i, item) in items.iter().enumerate() {
+                    walk(item, &format!("{path}[{i}]"));
+                }
+            }
+            return;
+        };
+        if map.get("type").and_then(|t| t.as_str()) == Some("object") {
+            assert_eq!(
+                map.get("additionalProperties"),
+                Some(&serde_json::Value::Bool(false)),
+                "objet ouvert à {path}"
+            );
+        }
+        if map.get("type").and_then(|t| t.as_str()) == Some("string") {
+            assert!(
+                map.contains_key("pattern")
+                    || map.contains_key("enum")
+                    || map.contains_key("const"),
+                "chaîne libre à {path}"
+            );
+            if let Some(pattern) = map.get("pattern").and_then(|p| p.as_str()) {
+                assert!(
+                    pattern.starts_with('^') && pattern.ends_with('$'),
+                    "motif non ancré à {path}"
+                );
+                assert!(
+                    !pattern.contains(".*") && !pattern.contains(".+"),
+                    "motif trop large à {path}"
+                );
+            }
+        }
+        for (key, value) in map {
+            if key != "description" && key != "title" {
+                walk(value, &format!("{path}.{key}"));
+            }
+        }
+    }
+    let schema: serde_json::Value =
+        serde_json::from_str(include_str!("../schema/export-v1.json")).unwrap();
+    assert_eq!(schema["properties"]["schema_version"]["const"], 1);
+    walk(&schema, "$");
+    // Les exemples restent du JSON valide (leur validation par le schéma est
+    // faite par l'outil d'agrégation, issue 673).
+    for example in [
+        include_str!("../schema/export-v1.example.json"),
+        include_str!("../schema/export-v1.invalid.json"),
+    ] {
+        serde_json::from_str::<serde_json::Value>(example).unwrap();
+    }
+}

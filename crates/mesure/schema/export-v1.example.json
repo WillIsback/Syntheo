@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "app_version": "0.8.0",
+  "rule_version": 1,
+  "rubric_version": 0,
+  "pseudonym": "p-3f9a1c0e7b2d4f6a8c1e3b5d7f9a2c4e",
+  "enrolled_days": 21,
+  "meetings": [
+    {
+      "meeting": "m1",
+      "summary": "s1",
+      "day": 2,
+      "mode": "paste",
+      "aligned": true,
+      "headings_generated": 3,
+      "headings_matched": 3,
+      "unmatched_sent_words": 0,
+      "total": {
+        "generated": 28,
+        "added": 3,
+        "deleted": 2,
+        "replaced_content": 4,
+        "replaced_lexical": 1
+      },
+      "sections": [
+        {
+          "index": 0,
+          "role": "other",
+          "matched": true,
+          "counters": {
+            "generated": 11,
+            "added": 0,
+            "deleted": 0,
+            "replaced_content": 3,
+            "replaced_lexical": 0
+          }
+        },
+        {
+          "index": 1,
+          "role": "decisions",
+          "matched": true,
+          "counters": {
+            "generated": 11,
+            "added": 3,
+            "deleted": 0,
+            "replaced_content": 1,
+            "replaced_lexical": 1
+          }
+        },
+        {
+          "index": 2,
+          "role": "actions",
+          "matched": true,
+          "counters": {
+            "generated": 6,
+            "added": 0,
+            "deleted": 2,
+            "replaced_content": 0,
+            "replaced_lexical": 0
+          }
+        }
+      ]
+    }
+  ],
+  "summaries": [
+    { "summary": "s1", "generated_day": 2, "measured": 2, "exported": null, "shared": 3 },
+    { "summary": "s2", "generated_day": 5, "measured": null, "exported": null, "shared": null }
+  ],
+  "terms": [
+    {
+      "term": "t1",
+      "added_after": "m1",
+      "errors": [{ "meeting": "m1", "count": 1 }]
+    }
+  ]
+}
