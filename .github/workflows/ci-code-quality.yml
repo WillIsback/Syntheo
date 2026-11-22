@@ -293,11 +293,18 @@ jobs:
 
   # Publication des modèles de la transcription sur le poste : tests de
   # hf_upload.py (comparaison avec Hugging Face, dossier incomplet refusé),
-  # sans réseau. Sur une PR, sauté si apps/speech/models ne change pas.
+  # sans réseau, puis garde-fou sous un CPU sans VNNI : les modèles de
+  # models.json, téléchargés depuis ses `sources`, doivent rendre des mots
+  # sous qemu Skylake-Client (apps/speech/models/cpu-check). Sur une PR, sauté
+  # si ni apps/speech/models, ni l'exemple cpu-check, ni l'audio de mise en
+  # service ne changent.
   speech-models:
     name: ci-code-quality (modèles de la transcription sur le poste)
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 60
+    env:
+      SCCACHE_GHA_ENABLED: "true"
+      RUSTC_WRAPPER: sccache
     steps:
       - name: Checkout du code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -314,7 +321,7 @@ jobs:
           set -euo pipefail
           if [ -z "${BASE_SHA:-}" ]; then
             echo "run=true" >> "$GITHUB_OUTPUT"
-          elif git diff --name-only "$BASE_SHA" HEAD -- 'apps/speech/models/' '.github/workflows/ci-code-quality.yml' '.github/workflows/publish-speech-models.yml' | grep -q .; then
+          elif git diff --name-only "$BASE_SHA" HEAD -- 'apps/speech/models/' 'apps/speech/examples/' 'apps/speech/commissioning/' '.github/workflows/ci-code-quality.yml' '.github/workflows/publish-speech-models.yml' | grep -q .; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
             echo "run=false" >> "$GITHUB_OUTPUT"
@@ -324,6 +331,42 @@ jobs:
       - name: Tests de l'envoi vers Hugging Face
         if: steps.changes.outputs.run == 'true'
         run: python3 -I -m unittest discover -s apps/speech/models -p 'test_*.py'
+
+      - name: Toolchain Rust
+        if: steps.changes.outputs.run == 'true'
+        uses: ./.github/actions/rust_install
+
+      - name: Cache du compilateur (sccache)
+        if: steps.changes.outputs.run == 'true'
+        uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba # v0.0.11
+
+      # Même ONNX Runtime que le module livré : archive épinglée contrôlée
+      # avant et après la compilation (check_ort.py, cache vide au départ).
+      - name: Construire cpu-check
+        if: steps.changes.outputs.run == 'true'
+        working-directory: apps/speech
+        shell: bash
+        run: |
+          set -euo pipefail
+          export ORT_CACHE_DIR="$RUNNER_TEMP/ort-cache"
+          cargo fetch --locked
+          python3 -I supply-chain/check_ort.py before x86_64-unknown-linux-gnu
+          cargo build --release --locked --example cpu-check
+          python3 -I supply-chain/check_ort.py after x86_64-unknown-linux-gnu
+
+      - name: Télécharger les modèles de models.json
+        if: steps.changes.outputs.run == 'true'
+        run: python3 -I apps/speech/models/fetch.py "$RUNNER_TEMP/models"
+
+      - name: Installer qemu-user
+        if: steps.changes.outputs.run == 'true'
+        run: sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends qemu-user-static
+
+      - name: Garde-fou sous un CPU sans VNNI (qemu Skylake-Client)
+        if: steps.changes.outputs.run == 'true'
+        env:
+          CPU_CHECK_BIN: apps/speech/target/release/examples/cpu-check
+        run: bash apps/speech/models/cpu-check/run.sh "$RUNNER_TEMP/models"
 
   meta:
     name: ci-code-quality (PR et workflows)

@@ -15,7 +15,15 @@ uv run --locked --script apps/speech/models/quantize.py <dossier neuf>
 python3 -I apps/speech/models/verify.py <dossier neuf>
 ```
 
-`quantize.py` télécharge chaque source à la révision figée de `models.json`, vérifie son empreinte, quantifie (`onnxruntime.quantization.quantize_dynamic`, onnxruntime 1.32.0, onnx 1.23.2, toutes les dépendances figées par `quantize.py.lock`), puis vérifie chaque fichier produit. La reconstruction redonne exactement les empreintes de `models.json`. `verify.py` contrôle n'importe quelle copie : une arborescence (`nemotron/…`, `diar/…`), ou des fichiers à plat avec `--flat` (assets d'une release, avec leur `SHA256SUMS`). L'attestation de provenance de la CI couvre les fichiers publiés, pas leur fabrication : la reproduction ci-dessus est le moyen de vérifier celle-ci.
+`quantize.py` télécharge chaque source à la révision figée de `models.json`, vérifie son empreinte, quantifie (`onnxruntime.quantization.quantize_dynamic`, onnxruntime 1.32.0, onnx 1.23.2, poids int8 sur 7 bits par `reduce_range`, toutes les dépendances figées par `quantize.py.lock`), puis vérifie chaque fichier produit. La reconstruction redonne exactement les empreintes de `models.json`. `verify.py` contrôle n'importe quelle copie : une arborescence (`nemotron/…`, `diar/…`), ou des fichiers à plat avec `--flat` (assets d'une release, avec leur `SHA256SUMS`). L'attestation de provenance de la CI couvre les fichiers publiés, pas leur fabrication : la reproduction ci-dessus est le moyen de vérifier celle-ci.
+
+## CPU sans VNNI : `reduce_range` et garde-fou
+
+Les poids sont quantifiés sur 7 bits (`reduce_range`, dans `models.json`). Sur un CPU sans VNNI (Intel jusqu'à la 10e génération courante, AMD jusqu'à Zen 3), le noyau AVX2 d'ONNX Runtime somme deux produits activation × poids (u8 × s8) dans un entier 16 bits ; avec des poids sur 8 bits, la somme sature et l'ASR ne rend que des sorties vides (modèles de la 0.8.0-3). Sur 7 bits, le pire cas (255 × 63 × 2 = 32 130) tient dans 16 bits. Mesuré sur 150 énoncés, l'écart de WER avec le FP32 reste dans le bruit (voir la fiche `model-card.md`), pour la même taille et la même vitesse.
+
+Le garde-fou `cpu-check/run.sh <dossier des modèles>` transcrit l'audio de mise en service (`commissioning/mic.wav` et `sys.wav`) avec le vrai moteur, diarisation comprise, sous `qemu-x86_64 -cpu Skylake-Client` (AVX2 sans VNNI), et exige au moins 100 mots et un WER d'au plus 10 % face à la transcription FP32 de référence (`cpu-check/*.fp32.txt`, 127 mots). Il est bloquant dans `publish-speech-models.yml` (sur les assets du brouillon, avant l'attestation) et dans la CI (`ci-code-quality`, job des modèles, quand `apps/speech/models`, l'exemple `cpu-check` ou l'audio de mise en service changent : modèles téléchargés par `fetch.py` depuis les `sources`). `--expect-empty` sert de témoin négatif : les modèles de la 0.8.0-3 y rendent 0 mot. Limite : vérifié en natif AVX-512 avec VNNI et en émulation AVX2 sans VNNI ; AVX-512 sans VNNI non vérifié (l'émulation logicielle de qemu n'a pas d'AVX-512).
+
+Les `sources` doivent servir les nouveaux fichiers avant que `models.json` change dans une PR : publier d'abord (brouillon, Hugging Face), puis épingler.
 
 ## Publier
 
@@ -28,15 +36,15 @@ Une construction release sans devtools qui livre le compagnon échoue si `source
 
 ### Source Hugging Face
 
-Le dépôt `WillisBack/syntheo-speech-models` a été rempli le 22 novembre 2026, avant la release, depuis les fichiers du brouillon `speech-models-1` (vérifiés avant l'envoi, puis retéléchargés à la révision obtenue et vérifiés). `sources` l'épingle après la release GitHub, à cette révision :
+Le dépôt `WillisBack/syntheo-speech-models` a été rempli le 22 novembre 2026, avant la release, depuis les fichiers du brouillon `speech-models-1` (vérifiés avant l'envoi, puis retéléchargés à la révision obtenue et vérifiés), puis mis à jour le même jour avec les poids sur 7 bits (`reduce_range`) ; la révision précédente, aux poids sur 8 bits, ne sert plus. `sources` l'épingle après la release GitHub, à cette révision :
 
 ```
-https://huggingface.co/WillisBack/syntheo-speech-models/resolve/bffcd9b4676654bca14ea4d4b256ae8fbc488761/{path}
+https://huggingface.co/WillisBack/syntheo-speech-models/resolve/16e4ca54b924297bf6af2cbc5f9c9c2eca9a94bf/{path}
 ```
 
 Jamais `main` : une révision épinglée garantit que la source sert toujours les fichiers vérifiés. Les fichiers y sont en arborescence (`nemotron/…`, `diar/…`), d'où `{path}`. Tant que la release GitHub reste un brouillon, sa source répond 404 et l'application passe à Hugging Face. `publish-speech-models.yml` n'envoie rien si Hugging Face contient déjà des fichiers identiques (même SHA-256) et reprend alors la révision existante.
 
-Fichiers : `verify.py` (contrôle), `flatten.py` (arborescence ↔ à plat), `download-draft.sh` (assets d'un brouillon), `publish-local.sh`, `release-notes.md`, `model-card.md` (fiche Hugging Face), `hf_upload.py`, `hf_upload.py.lock` et `test_hf_upload.py` (tests sans réseau : `python3 -I -m unittest discover -s apps/speech/models -p 'test_*.py'`).
+Fichiers : `verify.py` (contrôle), `fetch.py` (téléchargement depuis les `sources`, comme l'application), `cpu-check/` (garde-fou), `flatten.py` (arborescence ↔ à plat), `download-draft.sh` (assets d'un brouillon), `publish-local.sh`, `release-notes.md`, `model-card.md` (fiche Hugging Face), `hf_upload.py`, `hf_upload.py.lock` et `test_hf_upload.py` (tests sans réseau : `python3 -I -m unittest discover -s apps/speech/models -p 'test_*.py'`).
 
 ## Miroir ou dossier d'installation
 
