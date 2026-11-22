@@ -6201,6 +6201,14 @@ msgstr "Ce poste peut transcrire vos réunions seul : {0}."
 msgid "This computer cannot transcribe on its own; Syntheo uses your transcription server."
 msgstr "Ce poste ne peut pas transcrire seul ; Syntheo utilise votre serveur de transcription."
 
+#: src/stt/live-transcript-interrupted.ts
+msgid "this computer does not allow the transcription program to run (application control policy)"
+msgstr "ce poste n'autorise pas l'exécution du programme de transcription (politique de contrôle des applications)"
+
+#: src/stt/on-device.ts
+msgid "This computer does not allow the transcription program to run from the Syntheo data folder (application control policy or noexec mount). Ask your administrator."
+msgstr "Ce poste n'autorise pas l'exécution du programme de transcription depuis le dossier de données de Syntheo (politique de contrôle des applications ou montage noexec). Adressez-vous à votre administrateur."
+
 #: src/settings/ai/stt/on-device-card.tsx
 msgid "This computer has not been measured yet."
 msgstr "Ce poste n'a pas encore été mesuré."
@@ -6216,6 +6224,10 @@ msgstr "Ce poste est choisi pour la transcription, mais il n'a pas été mesuré
 #: src/settings/ai/stt/on-device-card.tsx
 msgid "This computer is chosen for transcription, but its models are not installed: live transcription is paused."
 msgstr "Ce poste est choisi pour la transcription, mais ses modèles ne sont pas installés : la transcription en direct est en pause."
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "This computer is chosen for transcription, but the transcription program is missing from this installation of Syntheo: live transcription is paused. Reinstall Syntheo, or use the server."
+msgstr "Ce poste est choisi pour la transcription, mais le programme de transcription manque dans cette installation de Syntheo : la transcription en direct est en pause. Réinstallez Syntheo, ou utilisez le serveur."
 
 #. placeholder {0}: verdict.reasons.map((r) => labels.refusal[r]).join(", ")
 #: src/settings/ai/stt/on-device-card.tsx

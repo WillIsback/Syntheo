@@ -137,6 +137,8 @@ export function describeOnDeviceError(code: string): string {
       return t`Installation cancelled. A download resumes where it stopped.`;
     case "measuring":
       return t`A measurement is already in progress.`;
+    case "execution_blocked":
+      return t`This computer does not allow the transcription program to run from the Syntheo data folder (application control policy or noexec mount). Ask your administrator.`;
     case "no_commissioning_audio":
       return t`The measurement audio is missing from this version of Syntheo.`;
     case "measure_failed":

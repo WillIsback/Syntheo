@@ -52,6 +52,8 @@ function onDeviceCause(reason: string) {
       return t`the transcription module of this computer is being measured`;
     case "not_commissioned":
       return t`this computer has not been measured, or is too slow for live transcription`;
+    case "execution_blocked":
+      return t`this computer does not allow the transcription program to run (application control policy)`;
     default:
       return t`on-device transcription is not available`;
   }

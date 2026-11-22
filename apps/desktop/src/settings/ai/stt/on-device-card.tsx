@@ -213,16 +213,33 @@ export function OnDeviceCard() {
     onSuccess: afterInstall,
     onError: installError,
   });
-  const installingAny = downloading.isPending || fromFolder.isPending;
+  const installingHere = downloading.isPending || fromFolder.isPending;
+  // Toujours lu tant que la carte est affichée : une carte remontée pendant
+  // une installation (lancée avant de quitter les réglages) en reprend
+  // l'affichage et bloque les boutons.
   const installProgress = useQuery({
     queryKey: ["on-device-install-progress"],
     queryFn: async () => {
       const result = await transcriptionCommands.onDeviceInstallProgress();
       return result.status === "ok" ? result.data : null;
     },
-    enabled: installingAny,
-    refetchInterval: installingAny ? 500 : false,
+    refetchInterval: (query) =>
+      installingHere || query.state.data ? 500 : 2000,
   });
+  const installingElsewhere = !installingHere && !!installProgress.data;
+  const installingAny = installingHere || installingElsewhere;
+  // Fin d'une installation suivie depuis une carte remontée : état relu.
+  const [sawElsewhere, setSawElsewhere] = useState(false);
+  useEffect(() => {
+    if (installingElsewhere) {
+      setSawElsewhere(true);
+    } else if (sawElsewhere) {
+      setSawElsewhere(false);
+      void queryClient.invalidateQueries({
+        queryKey: ON_DEVICE_STATUS_QUERY_KEY,
+      });
+    }
+  }, [installingElsewhere, sawElsewhere, queryClient]);
 
   const removing = useMutation({
     mutationFn: async () => {
@@ -458,7 +475,14 @@ export function OnDeviceCard() {
           className="bg-alert text-alert-foreground flex flex-col gap-2 rounded-md px-3 py-2 text-[13px]"
         >
           <p>
-            {installed ? (
+            {!companion ? (
+              <Trans>
+                This computer is chosen for transcription, but the
+                transcription program is missing from this installation of
+                Syntheo: live transcription is paused. Reinstall Syntheo, or
+                use the server.
+              </Trans>
+            ) : installed ? (
               <Trans>
                 This computer is chosen for transcription, but it has not been
                 measured or is too slow: live transcription is paused.

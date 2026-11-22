@@ -6201,6 +6201,14 @@ msgstr "This computer can transcribe your meetings on its own: {0}."
 msgid "This computer cannot transcribe on its own; Syntheo uses your transcription server."
 msgstr "This computer cannot transcribe on its own; Syntheo uses your transcription server."
 
+#: src/stt/live-transcript-interrupted.ts
+msgid "this computer does not allow the transcription program to run (application control policy)"
+msgstr "this computer does not allow the transcription program to run (application control policy)"
+
+#: src/stt/on-device.ts
+msgid "This computer does not allow the transcription program to run from the Syntheo data folder (application control policy or noexec mount). Ask your administrator."
+msgstr "This computer does not allow the transcription program to run from the Syntheo data folder (application control policy or noexec mount). Ask your administrator."
+
 #: src/settings/ai/stt/on-device-card.tsx
 msgid "This computer has not been measured yet."
 msgstr "This computer has not been measured yet."
@@ -6216,6 +6224,10 @@ msgstr "This computer is chosen for transcription, but it has not been measured 
 #: src/settings/ai/stt/on-device-card.tsx
 msgid "This computer is chosen for transcription, but its models are not installed: live transcription is paused."
 msgstr "This computer is chosen for transcription, but its models are not installed: live transcription is paused."
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "This computer is chosen for transcription, but the transcription program is missing from this installation of Syntheo: live transcription is paused. Reinstall Syntheo, or use the server."
+msgstr "This computer is chosen for transcription, but the transcription program is missing from this installation of Syntheo: live transcription is paused. Reinstall Syntheo, or use the server."
 
 #. placeholder {0}: verdict.reasons.map((r) => labels.refusal[r]).join(", ")
 #: src/settings/ai/stt/on-device-card.tsx

@@ -117,6 +117,25 @@ describe("OnDeviceCard", () => {
     expect(screen.queryByText("Install from a folder…")).toBeNull();
   });
 
+  // Revue de 7d72caf6, constat 23 : source choisie sans compagnon.
+  it("says the program is missing when the chosen source has no companion", async () => {
+    mocks.status = { ...mocks.status, companion: false };
+    mocks.config = { stt_on_device: true };
+    setup();
+    const alert = await screen.findByTestId("on-device-missing");
+    expect(alert.textContent).toMatch(/transcription program is missing/);
+    expect(alert.textContent).not.toMatch(/models are not installed/);
+  });
+
+  // Revue de 7d72caf6, constat 21 : carte remontée pendant une installation.
+  it("picks up an installation started before the card was mounted", async () => {
+    mocks.installProgress = { doneBytes: 100_000_000, totalBytes: 1_066_000_000 };
+    setup();
+    await screen.findByTestId("on-device-install-progress");
+    expect(screen.getByText("Cancel")).toBeTruthy();
+    expect(screen.queryByText(/Download the models/)).toBeNull();
+  });
+
   it("downloads the models, then measures the computer", async () => {
     setup();
     await screen.findByText(/models \(1\.1 GB\) are not installed yet/);
@@ -171,12 +190,12 @@ describe("OnDeviceCard", () => {
         finish = resolve;
       }),
     );
+    setup();
+    fireEvent.click(await screen.findByText("Download the models (1.1 GB)"));
     mocks.installProgress = {
       doneBytes: 340_000_000,
       totalBytes: 1_066_000_000,
     };
-    setup();
-    fireEvent.click(await screen.findByText("Download the models (1.1 GB)"));
     await waitFor(() =>
       expect(
         screen.getByTestId("on-device-install-progress").textContent,
@@ -184,6 +203,7 @@ describe("OnDeviceCard", () => {
     );
     fireEvent.click(screen.getByText("Cancel"));
     expect(mocks.cancel).toHaveBeenCalled();
+    mocks.installProgress = null;
     finish({ status: "error", error: "cancelled" });
     await screen.findByText(/Installation cancelled/);
   });
