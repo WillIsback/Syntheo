@@ -692,14 +692,14 @@ expression: canonicalize_json(contract)
       "options": [
         {
           "flags": "--generated",
-          "help": "Generated summary (.md, .txt or .html)",
+          "help": "Generated summary (.md, .txt, .html or .docx)",
           "is_flag": false,
           "required": true,
           "value_name": "FILE"
         },
         {
           "flags": "--sent",
-          "help": "Version actually sent or published (.md, .txt or .html)",
+          "help": "Version actually sent or published (.md, .txt, .html or .docx)",
           "is_flag": false,
           "required": true,
           "value_name": "FILE"

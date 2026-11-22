@@ -100,6 +100,49 @@ async fn regeneration_keeps_the_previous_body_as_a_superseded_version() {
     assert_eq!(summary_rows(&db).await, 1);
 }
 
+// Issue 671 : le corps produit, avant toute retouche, est gardé comme version
+// générée de la mesure, et remplacé à chaque régénération.
+#[tokio::test]
+async fn generation_keeps_the_produced_body_for_the_measurement() {
+    let db = test_db().await;
+    let generated = || async {
+        sqlx::query_as::<_, (String, String, String)>(
+            "SELECT session_id, body_format, body FROM summary_generated_bodies
+             WHERE document_id = 'note-1'",
+        )
+        .fetch_all(db.pool())
+        .await
+        .unwrap()
+    };
+
+    let first = request(vec![]);
+    let first_body = first.next_body.clone();
+    let session_id = first.session_id.clone();
+    save_generated_summary(db.pool(), first).await.unwrap();
+    assert_eq!(
+        generated().await,
+        [(
+            session_id.clone(),
+            "prosemirror_json".to_string(),
+            first_body.clone()
+        )]
+    );
+
+    let mut second = request(vec![]);
+    second.current_body = first_body;
+    second.current_body_format = "prosemirror_json".to_string();
+    second.next_body = r#"{"type":"doc","content":[{"type":"paragraph"}]}"#.to_string();
+    save_generated_summary(db.pool(), second).await.unwrap();
+    assert_eq!(
+        generated().await,
+        [(
+            session_id,
+            "prosemirror_json".to_string(),
+            r#"{"type":"doc","content":[{"type":"paragraph"}]}"#.to_string()
+        )]
+    );
+}
+
 #[tokio::test]
 async fn first_generation_into_an_empty_summary_keeps_no_version() {
     let db = test_db().await;

@@ -1,0 +1,27 @@
+[package]
+name = "tauri-plugin-mesure"
+version = "0.1.0"
+authors = ["You"]
+edition = "2024"
+exclude = ["/js", "/node_modules"]
+license = "MIT"
+links = "tauri-plugin-mesure"
+description = "Mesure de la reprise d'une synthèse (bêta) : calcul local, sans base ni réseau."
+
+[build-dependencies]
+tauri-plugin = { workspace = true, features = ["build"] }
+
+[dev-dependencies]
+serde_json = { workspace = true }
+specta-typescript = { workspace = true }
+
+[dependencies]
+# `differences` : extraits pour le mode Calibrage, gardés en mémoire et rendus
+# à l'écran seulement ; ce plugin n'a aucun accès à la base ni au journal.
+syntheo-mesure = { workspace = true, features = ["differences"] }
+
+base64 = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+specta = { workspace = true }
+tauri = { workspace = true }
+tauri-specta = { workspace = true, features = ["derive", "typescript"] }

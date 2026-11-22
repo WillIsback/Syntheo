@@ -151,5 +151,6 @@ mod legacy_voiceprints;
 mod notification_detect_off;
 mod search_index;
 mod session_audio;
+mod summary_measurements;
 mod templates_fr;
 mod transcript_live_deltas;

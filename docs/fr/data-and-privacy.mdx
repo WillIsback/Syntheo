@@ -74,7 +74,7 @@ Rien n'est envoyé à l'éditeur : pas de compte, pas de statistiques d'usage, p
 
 ## Verrouiller l'application
 
-L'écran « Confidentialité » contient un seul réglage, « Verrouiller l'application » :
+L'écran « Confidentialité » contient le réglage « Verrouiller l'application », et les réglages de la [mesure de la reprise](#mesure-de-la-reprise-bêta) (bêta) :
 
 <SettingsPath steps={["Paramètres", "Avancé", "Confidentialité"]} />
 
@@ -83,6 +83,18 @@ Activé, il exige la reconnaissance faciale Windows Hello, le code PIN ou le mot
 Dans la reproduction, choisissez le système montré sous l'écran : sous Windows, l'interrupteur devient actif. Le groupe « Avancé » du menu contient aussi « Autorisations », décrit dans [Dépannage](/fr/troubleshooting).
 
 <AppSettings section="privacy" focus="lock" />
+
+## Mesure de la reprise (bêta)
+
+Pour la bêta, Syntheo peut mesurer combien vous avez retouché une synthèse avant de l'envoyer. Cette fonction est **désactivée par défaut** : activez « Mesurer la reprise des synthèses » dans **Paramètres → Avancé → Confidentialité**. Un administrateur peut la couper par `managed_settings.json` (clés `measurement_enabled` et `calibration_enabled` à `false`, voir [Sécurité](/fr/security#déploiement-en-entreprise)).
+
+Dans le menu de la synthèse, « Mesurer la reprise… » ouvre une fenêtre où vous collez la version envoyée, ou déposez un fichier `.txt`, `.md`, `.html` ou `.docx`. Le calcul a lieu sur votre poste, sans IA ni réseau, avec la même règle que la commande [`syntheo mesure`](/fr/reference/cli#commande-mesure). Il affiche des nombres bruts : mots de fond retouchés pour 100 mots générés, et noms propres ou sigles corrigés.
+
+- **Ce qui est gardé** : seulement des compteurs (mots générés, ajoutés, supprimés, remplacés), par synthèse et par section désignée par son rang, avec la version de la règle de calcul, dans la base locale.
+- **Ce qui n'est jamais gardé** : la version envoyée, les extraits, les titres. Le texte collé ne vit que dans la fenêtre et disparaît à sa fermeture. Les tables de mesure refusent tout texte.
+- **Rien n'est envoyé.**
+
+Le **mode Calibrage**, réglage séparé et lui aussi désactivé par défaut, sert à vérifier la règle à la main : après une mesure, chaque différence s'affiche avec ses deux extraits et sa classe automatique (fond ou lexical), et vous choisissez la vraie classe. La matrice d'accord (des nombres) s'affiche, se copie, et peut être enregistrée. Les extraits et vos choix ligne par ligne restent à l'écran : ils ne vont ni dans la base, ni dans le journal, ni dans un export.
 
 ## Supprimer vos données
 

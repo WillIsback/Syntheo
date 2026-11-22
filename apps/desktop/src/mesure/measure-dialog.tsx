@@ -1,0 +1,545 @@
+import { Trans, useLingui } from "@lingui/react/macro";
+import { open as selectFile } from "@tauri-apps/plugin-dialog";
+import { useState } from "react";
+
+import {
+  commands as mesureCommands,
+  type DifferenceRow,
+  type MeasureResult,
+  type SentInput,
+} from "@syntheo/plugin-mesure";
+import { Button } from "@syntheo/ui/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@syntheo/ui/components/ui/dialog";
+import { Textarea } from "@syntheo/ui/components/ui/textarea";
+import { cn } from "@syntheo/utils";
+
+import {
+  agreementMatrix,
+  agreementPercent,
+  labeledCount,
+  matrixToTsv,
+  type TrueClass,
+} from "./calibration";
+import { saveCalibration, saveMeasurement } from "./storage";
+
+import { liveQueryClient } from "~/db";
+import {
+  copyTextToClipboard,
+  getStoredNoteMarkdown,
+} from "~/session/components/note-input/header-shared";
+import { useConfigValues } from "~/shared/config";
+import { resolveUploadDefaultPath } from "~/stt/select-upload-file";
+
+// Bêta, issue 671 : mesure de la reprise d'une synthèse. La version envoyée
+// (collée ou déposée) ne vit qu'en mémoire, dans cette fenêtre ; seuls les
+// compteurs sont enregistrés. En mode Calibrage, les différences et les
+// classes choisies à la main restent aussi en mémoire : seule la matrice
+// d'accord (des nombres) est enregistrée.
+
+const EXTENSIONS = ["txt", "md", "markdown", "html", "htm", "docx"];
+
+type Source =
+  | { kind: "pasted"; text: string; html: string | null }
+  | { kind: "file"; name: string; input: SentInput };
+
+function extensionOf(name: string): string {
+  return name.split(".").pop()?.toLowerCase() ?? "";
+}
+
+async function fileInput(file: File): Promise<SentInput | null> {
+  const extension = extensionOf(file.name);
+  if (extension === "docx") {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    let binary = "";
+    for (let i = 0; i < bytes.length; i += 0x8000) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+    }
+    return { kind: "docx", base64: btoa(binary) };
+  }
+  const format =
+    extension === "md" || extension === "markdown"
+      ? "markdown"
+      : extension === "html" || extension === "htm"
+        ? "html"
+        : extension === "txt"
+          ? "text"
+          : null;
+  if (!format) return null;
+  return { kind: "text", text: await file.text(), format };
+}
+
+/**
+ * Version générée de la mesure (spec §2) : le corps produit par Syntheo avant
+ * toute retouche, gardé à chaque génération. Pour une synthèse générée avant
+ * la 0.8.0, la synthèse actuelle, marquée `current`.
+ */
+export async function generatedVersion(
+  documentId: string,
+  currentMarkdown: string,
+): Promise<{ markdown: string; source: "original" | "current" }> {
+  try {
+    const [row] = await liveQueryClient.execute<{ body: string }>(
+      "SELECT body FROM summary_generated_bodies WHERE document_id = ?",
+      [documentId],
+    );
+    const markdown = getStoredNoteMarkdown(row?.body);
+    if (markdown) return { markdown, source: "original" };
+  } catch (cause) {
+    console.error("[mesure] failed to read the generated body", cause);
+  }
+  return { markdown: currentMarkdown, source: "current" };
+}
+
+function sentInput(source: Source): SentInput {
+  if (source.kind === "file") return source.input;
+  return source.html
+    ? { kind: "text", text: source.html, format: "html" }
+    : { kind: "text", text: source.text, format: "text" };
+}
+
+export function MeasureDialog({
+  open,
+  onOpenChange,
+  sessionId,
+  documentId,
+  summaryMarkdown,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  sessionId: string;
+  documentId: string;
+  summaryMarkdown: string;
+}) {
+  const { t } = useLingui();
+  const { calibration_enabled, personalization_dictionary_terms } =
+    useConfigValues([
+      "calibration_enabled",
+      "personalization_dictionary_terms",
+    ] as const);
+  const [source, setSource] = useState<Source | null>(null);
+  const [result, setResult] = useState<MeasureResult | null>(null);
+  const [generatedSource, setGeneratedSource] = useState<
+    "original" | "current"
+  >("original");
+  const [rows, setRows] = useState<DifferenceRow[] | null>(null);
+  const [labels, setLabels] = useState<Map<number, TrueClass>>(new Map());
+  const [calibrationSaved, setCalibrationSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  // Fermer la fenêtre efface tout ce qu'elle tenait en mémoire.
+  const reset = () => {
+    setSource(null);
+    setResult(null);
+    setRows(null);
+    setLabels(new Map());
+    setCalibrationSaved(false);
+    setError(null);
+  };
+
+  const measure = async () => {
+    if (!source) return;
+    setBusy(true);
+    setError(null);
+    const dictionary = personalization_dictionary_terms ?? [];
+    const input = sentInput(source);
+    const generated = await generatedVersion(documentId, summaryMarkdown);
+    const measured = await mesureCommands.measure(
+      generated.markdown,
+      input,
+      dictionary,
+    );
+    if (measured.status === "error") {
+      setBusy(false);
+      setError(t`The sent version could not be measured: ${measured.error}`);
+      return;
+    }
+    setResult(measured.data);
+    setGeneratedSource(generated.source);
+    try {
+      await saveMeasurement(
+        { sessionId, documentId, generatedSource: generated.source },
+        measured.data,
+      );
+    } catch (cause) {
+      console.error("[mesure] failed to save the counters", cause);
+      setError(t`The counters could not be saved.`);
+    }
+    if (calibration_enabled) {
+      const listed = await mesureCommands.measureDifferences(
+        generated.markdown,
+        input,
+        dictionary,
+      );
+      if (listed.status === "ok") setRows(listed.data);
+      else setError(t`The differences could not be listed.`);
+    }
+    setBusy(false);
+  };
+
+  const chooseFile = async () => {
+    const selection = await selectFile({
+      title: t`Sent version`,
+      multiple: false,
+      directory: false,
+      defaultPath: await resolveUploadDefaultPath(),
+      filters: [{ name: t`Text documents`, extensions: EXTENSIONS }],
+    });
+    const path = Array.isArray(selection) ? selection[0] : selection;
+    if (!path) return;
+    setResult(null);
+    setRows(null);
+    setSource({
+      kind: "file",
+      name: path.split(/[\\/]/).pop() ?? path,
+      input: { kind: "file", path },
+    });
+  };
+
+  const dropFile = async (file: File) => {
+    const input = await fileInput(file);
+    if (!input) {
+      setError(t`Use a .txt, .md, .html or .docx file.`);
+      return;
+    }
+    setError(null);
+    setResult(null);
+    setRows(null);
+    setSource({ kind: "file", name: file.name, input });
+  };
+
+  const matrix =
+    rows && result ? agreementMatrix(rows, labels, result.ruleVersion) : null;
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) reset();
+        onOpenChange(next);
+      }}
+    >
+      <DialogContent className="max-h-[85vh] max-w-3xl overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            <Trans>Measure rework</Trans>
+          </DialogTitle>
+          <DialogDescription>
+            <Trans>
+              Paste or drop the version you actually sent. It stays in this
+              window: only counts are saved, never text.
+            </Trans>
+          </DialogDescription>
+        </DialogHeader>
+
+        {!result ? (
+          <div
+            className="flex flex-col gap-3"
+            onDragOver={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+            }}
+            onDrop={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              const file = event.dataTransfer.files?.[0];
+              if (file) void dropFile(file);
+            }}
+          >
+            <Textarea
+              aria-label={t`Sent version`}
+              placeholder={t`Paste the sent version here, or drop a .txt, .md, .html or .docx file.`}
+              className="min-h-40"
+              value={source?.kind === "pasted" ? source.text : ""}
+              onPaste={(event) => {
+                const html = event.clipboardData.getData("text/html");
+                const text = event.clipboardData.getData("text/plain");
+                event.preventDefault();
+                setSource({ kind: "pasted", text, html: html || null });
+              }}
+              onChange={(event) =>
+                setSource({
+                  kind: "pasted",
+                  text: event.target.value,
+                  html: null,
+                })
+              }
+            />
+            <div className="flex items-center gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => void chooseFile()}
+              >
+                <Trans>Choose a file…</Trans>
+              </Button>
+              {source?.kind === "file" ? (
+                <span className="text-muted-foreground truncate text-sm">
+                  {source.name}
+                </span>
+              ) : null}
+            </div>
+          </div>
+        ) : (
+          <MeasureSummary result={result} generatedSource={generatedSource} />
+        )}
+
+        {result && rows ? (
+          <CalibrationTable
+            rows={rows}
+            labels={labels}
+            onLabel={(index, label) => {
+              const next = new Map(labels);
+              next.set(index, label);
+              setLabels(next);
+              setCalibrationSaved(false);
+            }}
+          />
+        ) : null}
+
+        {matrix && labeledCount(matrix) > 0 ? (
+          <section className="flex flex-col gap-2" aria-label={t`Agreement`}>
+            <p className="text-sm">
+              <Trans>
+                Agreement: {agreementPercent(matrix)?.toFixed(1)}% on{" "}
+                {labeledCount(matrix)} differences (rule {matrix.ruleVersion}).
+              </Trans>
+            </p>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() =>
+                  void copyTextToClipboard(matrixToTsv(matrix), {
+                    success: t`Copied to clipboard`,
+                    error: t`Failed to copy`,
+                  })
+                }
+              >
+                <Trans>Copy the matrix</Trans>
+              </Button>
+              <Button
+                type="button"
+                disabled={calibrationSaved}
+                onClick={() => {
+                  void saveCalibration(matrix).then(
+                    () => setCalibrationSaved(true),
+                    (cause) => {
+                      console.error(
+                        "[mesure] failed to save the matrix",
+                        cause,
+                      );
+                      setError(t`The matrix could not be saved.`);
+                    },
+                  );
+                }}
+              >
+                {calibrationSaved ? (
+                  <Trans>Matrix saved</Trans>
+                ) : (
+                  <Trans>Save the matrix</Trans>
+                )}
+              </Button>
+            </div>
+          </section>
+        ) : null}
+
+        {error ? (
+          <p role="alert" className="text-destructive text-sm">
+            {error}
+          </p>
+        ) : null}
+
+        <DialogFooter>
+          {!result ? (
+            <Button
+              type="button"
+              disabled={!source || busy || summaryMarkdown.length === 0}
+              onClick={() => void measure()}
+            >
+              <Trans>Measure</Trans>
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                reset();
+                onOpenChange(false);
+              }}
+            >
+              <Trans>Close</Trans>
+            </Button>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function perHundred(perMille: number | null): string {
+  return perMille === null ? "-" : (perMille / 10).toFixed(1);
+}
+
+/** Nombres bruts, jamais de score composite. */
+export function MeasureSummary({
+  result,
+  generatedSource,
+}: {
+  result: MeasureResult;
+  generatedSource: "original" | "current";
+}) {
+  const total = result.total;
+  const content = perHundred(result.contentPerMille);
+  const lexical = total.replacedLexical;
+  return (
+    <section className="flex flex-col gap-2 text-sm" data-measure-result>
+      <p className="text-base">
+        <Trans>
+          {content} words of content reworked per 100 generated, plus {lexical}{" "}
+          words of names or acronyms corrected.
+        </Trans>
+      </p>
+      {generatedSource === "current" ? (
+        <p className="text-muted-foreground text-xs">
+          <Trans>
+            Compared with the current summary: its original generated version
+            was not kept (summary generated before version 0.8.0).
+          </Trans>
+        </p>
+      ) : null}
+      <dl className="text-muted-foreground grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 tabular-nums">
+        <dt>
+          <Trans>Generated words</Trans>
+        </dt>
+        <dd>{total.generated}</dd>
+        <dt>
+          <Trans>Added</Trans>
+        </dt>
+        <dd>{total.added}</dd>
+        <dt>
+          <Trans>Deleted</Trans>
+        </dt>
+        <dd>{total.deleted}</dd>
+        <dt>
+          <Trans>Replaced (content)</Trans>
+        </dt>
+        <dd>{total.replacedContent}</dd>
+        <dt>
+          <Trans>Replaced (names, acronyms)</Trans>
+        </dt>
+        <dd>{total.replacedLexical}</dd>
+        <dt>
+          <Trans>Sections found</Trans>
+        </dt>
+        <dd>
+          {result.headingsMatched} / {result.headingsGenerated}
+          {result.aligned ? null : (
+            <>
+              {" "}
+              <Trans>(measured as a whole)</Trans>
+            </>
+          )}
+        </dd>
+      </dl>
+    </section>
+  );
+}
+
+function CalibrationTable({
+  rows,
+  labels,
+  onLabel,
+}: {
+  rows: readonly DifferenceRow[];
+  labels: ReadonlyMap<number, TrueClass>;
+  onLabel: (index: number, label: TrueClass) => void;
+}) {
+  const { t } = useLingui();
+  const kindLabel = (row: DifferenceRow) =>
+    row.kind === "added"
+      ? t`Added`
+      : row.kind === "deleted"
+        ? t`Deleted`
+        : t`Replaced`;
+  return (
+    <section className="flex flex-col gap-2" aria-label={t`Calibration`}>
+      <h3 className="text-sm font-semibold">
+        <Trans>Calibration: classify each difference</Trans>
+      </h3>
+      <p className="text-muted-foreground text-xs">
+        <Trans>These excerpts are shown only here and are never saved.</Trans>
+      </p>
+      <table className="w-full text-left text-xs">
+        <thead className="text-muted-foreground">
+          <tr>
+            <th className="py-1 pr-2">#</th>
+            <th className="py-1 pr-2">
+              <Trans>Type</Trans>
+            </th>
+            <th className="py-1 pr-2">
+              <Trans>Generated</Trans>
+            </th>
+            <th className="py-1 pr-2">
+              <Trans>Sent</Trans>
+            </th>
+            <th className="py-1 pr-2">
+              <Trans>Automatic</Trans>
+            </th>
+            <th className="py-1">
+              <Trans>Your choice</Trans>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, index) => {
+            const label = labels.get(index);
+            return (
+              <tr key={index} className="border-border border-t align-top">
+                <td className="py-1 pr-2 tabular-nums">{index + 1}</td>
+                <td className="py-1 pr-2">{kindLabel(row)}</td>
+                <td className="py-1 pr-2">{row.generated}</td>
+                <td className="py-1 pr-2">{row.sent}</td>
+                <td className="py-1 pr-2">
+                  {row.lexical ? t`Lexical` : t`Content`}
+                </td>
+                <td className="py-1">
+                  <div
+                    role="radiogroup"
+                    aria-label={t`Class of difference ${index + 1}`}
+                    className="flex gap-1"
+                  >
+                    {(["content", "lexical"] as const).map((value) => (
+                      <button
+                        key={value}
+                        type="button"
+                        role="radio"
+                        aria-checked={label === value}
+                        className={cn([
+                          "rounded border px-2 py-0.5",
+                          label === value
+                            ? "bg-foreground text-background"
+                            : "border-border",
+                        ])}
+                        onClick={() => onLabel(index, value)}
+                      >
+                        {value === "content" ? t`Content` : t`Lexical`}
+                      </button>
+                    ))}
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </section>
+  );
+}

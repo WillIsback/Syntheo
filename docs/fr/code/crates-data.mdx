@@ -26,7 +26,7 @@ Dans le workspace Cargo, chaque crate est déclarée sous un alias `syntheo-*` (
 | `crates/template-app` | Prompts du LLM (Askama) | plugin `template`, crate `transcript` | [Personnaliser les comptes rendus](/fr/customize-summaries), [Chat](/fr/chat), [Langues](/fr/languages) |
 | `crates/template-app-legacy` | Ancien moteur de prompts MiniJinja (hérité) | plugin `template` | aucune |
 | `crates/askama-utils` | Filtres et validation pour les gabarits Askama | `template-app` | [Langues](/fr/languages) |
-| `crates/mesure` | Reprise entre synthèse générée et version envoyée : normalisation, alignement par titres, diff mot à mot, classement lexical ou de fond ; ne rend que des compteurs | CLI (`syntheo mesure`) | [Référence CLI](/fr/reference/cli) |
+| `crates/mesure` | Reprise entre synthèse générée et version envoyée : normalisation, alignement par titres, diff mot à mot, classement lexical ou de fond ; lecture bornée des `.docx` ; ne rend que des compteurs | CLI (`syntheo mesure`), plugin `mesure` | [Référence CLI](/fr/reference/cli), [Données et confidentialité](/fr/data-and-privacy) |
 | `crates/summary` | Politique de longueur et mise en forme du compte rendu généré | plugin `template` | [Personnaliser les comptes rendus](/fr/customize-summaries), [Notes](/fr/notes) |
 | `crates/notification` | Affichage des notifications natives (façade) | plugin `notification` | [Capture automatique](/fr/automatic-capture) |
 | `crates/notification-interface` | Types communs des notifications | `notification`, backends, plugin `detect` | [Capture automatique](/fr/automatic-capture) |

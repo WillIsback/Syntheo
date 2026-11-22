@@ -52,6 +52,7 @@ La colonne « Interface » indique si `apps/desktop/src` importe le paquet `@syn
 | `permissions` | Autorisations système (micro, audio, accessibilité) | Oui | [/quickstart](/fr/quickstart), [/troubleshooting](/fr/troubleshooting) |
 | `local-auth` | Authentification locale du système | Oui | aucune |
 | `deeplink2` | Liens `syntheo://` et serveur de rappel local | Oui | aucune |
+| `mesure` | Mesure de la reprise d'une synthèse (bêta), sans état ni base | Oui | aucune |
 | `opener2` | Ouverture d'URL et de fichiers | Oui | aucune |
 | `tracing` | Journaux de l'application | Non (Rust seul) | [/troubleshooting](/fr/troubleshooting), [/data-and-privacy](/fr/data-and-privacy) |
 | `misc` | Informations techniques diverses | Oui | aucune |
@@ -163,6 +164,7 @@ La colonne « Interface » indique si `apps/desktop/src` importe le paquet `@syn
 | `permissions` | `check_permission`, `request_permission`, `open_permission`, `reset_permission`, `permission_guidance`, `close_permission_assistant` | `crates/audio` ; plugin `sidecar2` | [/quickstart](/fr/quickstart), [/troubleshooting](/fr/troubleshooting) |
 | `local-auth` | `available`, `authenticate`. Implémenté sous macOS et Windows ; ailleurs, `available` renvoie `false`. Utilisé par le verrouillage de l'application (`apps/desktop/src/lock/auth.ts`). | aucune | aucune |
 | `deeplink2` | `start_callback_server`, `stop_callback_server`, `take_pending_deep_links`, `list_pending_share_opens`, `take_pending_share_open` ; événements `DeepLinkEvent`, `ShareOpenPendingEvent`. Les types de liens `auth_callback`, `billing_refresh`, `integration_callback` et `share/open` viennent d'Anarlog. | aucune | aucune |
+| `mesure` | `measure`, `measure_differences` (mode Calibrage, extraits rendus à l'écran seulement) | `crates/mesure` | [/fr/data-and-privacy](/fr/data-and-privacy) |
 | `opener2` | `open_url`, `open_path`, `reveal_item_in_dir` | aucune | aucune |
 | `tracing` | `do_log`, appelée par le script injecté dans la webview pour recopier la console dans `app.log`, avec le contenu des messages masqué. Pas de paquet TypeScript. | `crates/user-error` | [/troubleshooting](/fr/troubleshooting), [/data-and-privacy](/fr/data-and-privacy) |
 | `misc` | `get_git_hash`, `get_device_info`, `get_process_memory_bytes`, `opinionated_md_to_html` | `crates/buffer` | aucune |

@@ -218,6 +218,27 @@ pub async fn update_generated_summary_body(
         .await?
     };
 
+    // Corps produit, avant toute retouche : la version générée de la mesure
+    // de la bêta (issue 671), remplacé à chaque régénération.
+    if result.rows_affected() == 1 {
+        sqlx::query(
+            "INSERT INTO summary_generated_bodies
+               (document_id, session_id, body_format, body, generated_at)
+             VALUES (?, ?, 'prosemirror_json', ?, ?)
+             ON CONFLICT(document_id) DO UPDATE SET
+               session_id = excluded.session_id,
+               body_format = excluded.body_format,
+               body = excluded.body,
+               generated_at = excluded.generated_at",
+        )
+        .bind(note_id)
+        .bind(session_id)
+        .bind(next_body)
+        .bind(updated_at)
+        .execute(&mut *conn)
+        .await?;
+    }
+
     Ok(result.rows_affected())
 }
 

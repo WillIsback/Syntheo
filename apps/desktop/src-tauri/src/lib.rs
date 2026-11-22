@@ -150,6 +150,7 @@ pub fn main() {
 
     builder = builder
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_mesure::init())
         .plugin(tauri_plugin_opener2::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_tracing::init());

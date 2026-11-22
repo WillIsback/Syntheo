@@ -6,6 +6,7 @@ publish = false
 description = "Reprise entre une synthèse générée et la version envoyée : calcul déterministe, sans IA, qui ne rend que des compteurs."
 
 [dependencies]
+flate2 = "1.1"
 serde = { workspace = true, features = ["derive"] }
 similar = "2.7"
 thiserror = { workspace = true }

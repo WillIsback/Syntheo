@@ -8,6 +8,7 @@ import {
   type SynthesisView,
 } from "./summary-switcher-view";
 
+import { MeasureDialog } from "~/mesure/measure-dialog";
 import { useEnhancedNoteActions } from "~/session/components/note-input/enhanced-actions";
 import {
   useEnhancedViewTitle,
@@ -23,6 +24,7 @@ import {
   useEnhancedNote,
   useSummaryVersions,
 } from "~/session/queries";
+import { useConfigValues } from "~/shared/config";
 
 export { formatVersionDate, type SynthesisView };
 
@@ -91,6 +93,10 @@ function SummarySwitcherForNote({
     onSelectNote,
   });
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [measureOpen, setMeasureOpen] = useState(false);
+  const { measurement_enabled } = useConfigValues([
+    "measurement_enabled",
+  ] as const);
   const pickerRequested = useRef(false);
 
   const versionOptions = useMemo(
@@ -126,57 +132,71 @@ function SummarySwitcherForNote({
   }, [currentNoteId, enhancedNoteIds, onSelectNote]);
 
   return (
-    <TemplatePickerPopover
-      open={pickerOpen}
-      onOpenChange={setPickerOpen}
-      onSelectTemplate={(selection) => {
-        onSelectView({ kind: "summary" });
-        selectTemplate(selection);
-      }}
-      usedTemplateId={note?.templateId?.trim() || null}
-      onRegenerateUsed={regenerate}
-      isRegenerating={isGenerating}
-      trigger={
-        <SummarySwitcherView
-          view={view}
-          onSelectView={onSelectView}
-          currentVersion={(versions[0]?.version ?? 0) + 1}
-          currentDate={formatVersionDate(note?.generatedAt, i18n.locale)}
-          versions={versionOptions}
-          isGenerating={isGenerating}
-          summaryItems={
-            enhancedNoteIds.length > 1
-              ? enhancedNoteIds.map((id) => (
-                  <SummaryTemplateItem key={id} enhancedNoteId={id} />
-                ))
-              : undefined
-          }
-          currentNoteId={currentNoteId}
-          onSelectNote={onSelectNote}
-          canCopy={noteMarkdown.length > 0}
-          canRemove={currentNoteId !== enhancedNoteIds[0]}
-          onRegenerate={regenerate}
-          onChangeTemplate={() => {
-            pickerRequested.current = true;
-            setPickerOpen(true);
-          }}
-          onCopy={() => {
-            void copyTextToClipboard(noteMarkdown, {
-              success: t`Copied to clipboard`,
-              error: t`Failed to copy`,
-            });
-          }}
-          onRemove={handleRemove}
-          onMenuCloseAutoFocus={(event) => {
-            // Le sélecteur de modèle prend le focus à la place du menu.
-            if (pickerRequested.current) {
-              pickerRequested.current = false;
-              event.preventDefault();
-            }
-          }}
+    <>
+      {measurement_enabled ? (
+        <MeasureDialog
+          open={measureOpen}
+          onOpenChange={setMeasureOpen}
+          sessionId={sessionId}
+          documentId={currentNoteId}
+          summaryMarkdown={noteMarkdown}
         />
-      }
-    />
+      ) : null}
+      <TemplatePickerPopover
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        onSelectTemplate={(selection) => {
+          onSelectView({ kind: "summary" });
+          selectTemplate(selection);
+        }}
+        usedTemplateId={note?.templateId?.trim() || null}
+        onRegenerateUsed={regenerate}
+        isRegenerating={isGenerating}
+        trigger={
+          <SummarySwitcherView
+            view={view}
+            onSelectView={onSelectView}
+            currentVersion={(versions[0]?.version ?? 0) + 1}
+            currentDate={formatVersionDate(note?.generatedAt, i18n.locale)}
+            versions={versionOptions}
+            isGenerating={isGenerating}
+            summaryItems={
+              enhancedNoteIds.length > 1
+                ? enhancedNoteIds.map((id) => (
+                    <SummaryTemplateItem key={id} enhancedNoteId={id} />
+                  ))
+                : undefined
+            }
+            currentNoteId={currentNoteId}
+            onSelectNote={onSelectNote}
+            canCopy={noteMarkdown.length > 0}
+            canRemove={currentNoteId !== enhancedNoteIds[0]}
+            onRegenerate={regenerate}
+            onChangeTemplate={() => {
+              pickerRequested.current = true;
+              setPickerOpen(true);
+            }}
+            onCopy={() => {
+              void copyTextToClipboard(noteMarkdown, {
+                success: t`Copied to clipboard`,
+                error: t`Failed to copy`,
+              });
+            }}
+            onMeasure={
+              measurement_enabled ? () => setMeasureOpen(true) : undefined
+            }
+            onRemove={handleRemove}
+            onMenuCloseAutoFocus={(event) => {
+              // Le sélecteur de modèle prend le focus à la place du menu.
+              if (pickerRequested.current) {
+                pickerRequested.current = false;
+                event.preventDefault();
+              }
+            }}
+          />
+        }
+      />
+    </>
   );
 }
 

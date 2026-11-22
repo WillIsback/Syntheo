@@ -88,6 +88,8 @@ const SYN_LABELS = {
   "Back to the note": "Revenir à la note",
   "Backspace": "Retour arrière",
   "Begin listening": "Commencer l'écoute",
+  "Beta: measure rework": "Bêta : mesure de la reprise",
+  "Calibration mode": "Mode Calibrage",
   "Cancel": "Annuler",
   "Cancel dictation": "Annuler la dictée",
   "Capture meeting chat in the note": "Capturer le chat de la réunion dans la note",
@@ -164,6 +166,7 @@ const SYN_LABELS = {
   "Low": "Faible",
   "Main language": "Langue principale",
   "Me": "Moi",
+  "Measure rework of summaries": "Mesurer la reprise des synthèses",
   "Medium": "Moyen",
   "Meeting info": "Informations sur la réunion",
   "Meetings": "Réunions",
@@ -2356,8 +2359,10 @@ const SynSectionDictation = ({ focus }) => {
 };
 
 // Paramètres › Confidentialité : apps/desktop/src/settings/privacy/index.tsx
-// (un seul réglage, « Verrouiller l'application », grisé quand le système
-// n'offre pas d'authentification de l'appareil). focus : "lock".
+// (« Verrouiller l'application », grisé quand le système n'offre pas
+// d'authentification de l'appareil ; puis la section bêta de la mesure de la
+// reprise, deux interrupteurs désactivés par défaut, le second grisé tant que
+// le premier est coupé). focus : "lock", "measure".
 // Paramètres › Autorisations : apps/desktop/src/settings/general/permissions.tsx,
 // branche Linux et Windows (AudioPermissions runtimeCapabilities : la flèche
 // relance un vrai test de la source, sans ouvrir les réglages du système).
@@ -2397,6 +2402,8 @@ const SynPrivDemo = ({ value, onChange }) => {
 const SynSectionPrivacy = ({ focus }) => {
   const [os, setOs] = useState("linux");
   const [locked, setLocked] = useState(false);
+  const [measuring, setMeasuring] = useState(false);
+  const [calibrating, setCalibrating] = useState(false);
   const available = os === "windows";
   const description = available
     ? L("Require Windows Hello face, PIN, or password when opening Syntheo.")
@@ -2420,6 +2427,45 @@ const SynSectionPrivacy = ({ focus }) => {
                 describedBy: labels["aria-describedby"],
               }),
           })}
+        </div>,
+      )}
+      {h(
+        SynHere,
+        { active: focus === "measure" },
+        <div className="syn-perm-group">
+          <h3>{L("Beta: measure rework")}</h3>
+          <div className="syn-rows" style={{ borderTop: 0 }}>
+            {h(SynRow, {
+              title: L("Measure rework of summaries"),
+              description: L(
+                "Adds “Measure rework…” to the summary menu. You paste the version you sent; only counts are kept on this computer, never text, and nothing is sent.",
+              ),
+              children: (labels) =>
+                h(SynSwitch, {
+                  checked: measuring,
+                  onChange: (next) => {
+                    setMeasuring(next);
+                    if (!next) setCalibrating(false);
+                  },
+                  labelledBy: labels["aria-labelledby"],
+                  describedBy: labels["aria-describedby"],
+                }),
+            })}
+            {h(SynRow, {
+              title: L("Calibration mode"),
+              description: L(
+                "After a measurement, lists each difference so you can classify it by hand. Excerpts stay on screen; only the agreement counts are kept.",
+              ),
+              children: (labels) =>
+                h(SynSwitch, {
+                  checked: calibrating,
+                  disabled: !measuring,
+                  onChange: setCalibrating,
+                  labelledBy: labels["aria-labelledby"],
+                  describedBy: labels["aria-describedby"],
+                }),
+            })}
+          </div>
         </div>,
       )}
       {h(SynPrivDemo, {

@@ -7,6 +7,7 @@
 
 #![forbid(unsafe_code)]
 
+mod docx;
 mod normalize;
 
 use std::collections::HashMap;
@@ -14,6 +15,7 @@ use std::collections::HashMap;
 use serde::Serialize;
 use similar::{Algorithm, DiffOp, capture_diff_slices};
 
+pub use docx::{MAX_DOCX_BYTES, docx_to_html};
 pub use normalize::Format;
 use normalize::{Block, Token};
 
@@ -34,6 +36,49 @@ pub enum MeasureError {
     TooManyTokens,
     #[error("dictionary too large (more than {MAX_DICTIONARY_TERMS} terms)")]
     DictionaryTooLarge,
+    #[error("unreadable document")]
+    InvalidDocument,
+    #[error("unsupported file type (use .md, .txt, .html or .docx)")]
+    UnsupportedFile,
+    #[error("file is not UTF-8 text")]
+    NotUtf8,
+    #[error("cannot read file")]
+    Unreadable,
+}
+
+/// Texte d'un fichier et son format, d'après l'extension : `.md`, `.txt`,
+/// `.html` (UTF-8, 4 Mio au plus) ou `.docx` (lu par `docx_to_html`, 16 Mio au
+/// plus). Même lecture pour la CLI et l'application.
+pub fn load_file(path: &std::path::Path) -> Result<(String, Format), MeasureError> {
+    let extension = path
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(str::to_ascii_lowercase)
+        .ok_or(MeasureError::UnsupportedFile)?;
+    let limit = if extension == "docx" {
+        MAX_DOCX_BYTES
+    } else {
+        MAX_INPUT_BYTES
+    };
+    let format = if extension == "docx" {
+        None
+    } else {
+        Some(Format::from_extension(&extension).ok_or(MeasureError::UnsupportedFile)?)
+    };
+    let size = std::fs::metadata(path)
+        .map_err(|_| MeasureError::Unreadable)?
+        .len();
+    if size > limit as u64 {
+        return Err(MeasureError::TooLarge);
+    }
+    let bytes = std::fs::read(path).map_err(|_| MeasureError::Unreadable)?;
+    match format {
+        Some(format) => Ok((
+            String::from_utf8(bytes).map_err(|_| MeasureError::NotUtf8)?,
+            format,
+        )),
+        None => Ok((docx_to_html(&bytes)?, Format::Html)),
+    }
 }
 
 /// Termes du dictionnaire de l'utilisateur, comparés sans tenir compte de la

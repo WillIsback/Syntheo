@@ -134,6 +134,7 @@ tauri-plugin-fs-sync = { path = "plugins/fs-sync" }
 tauri-plugin-icon = { path = "plugins/icon" }
 tauri-plugin-local-api = { path = "plugins/local-api" }
 tauri-plugin-local-auth = { path = "plugins/local-auth" }
+tauri-plugin-mesure = { path = "plugins/mesure" }
 tauri-plugin-misc = { path = "plugins/misc" }
 tauri-plugin-notification = { path = "plugins/notification" }
 tauri-plugin-notify = { path = "plugins/notify" }
