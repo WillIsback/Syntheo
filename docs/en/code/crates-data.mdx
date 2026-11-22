@@ -26,7 +26,7 @@ In the Cargo workspace, each crate is declared under a `syntheo-*` alias (for ex
 | `crates/template-app` | LLM prompts (Askama) | plugin `template`, crate `transcript` | [Customize summaries](/en/customize-summaries), [Chat](/en/chat), [Languages](/en/languages) |
 | `crates/template-app-legacy` | Old MiniJinja prompt engine (inherited) | plugin `template` | none |
 | `crates/askama-utils` | Filters and validation for Askama templates | `template-app` | [Languages](/en/languages) |
-| `crates/mesure` | Rework between a generated summary and the sent version: normalization, heading alignment, word diff, lexical or content classification; bounded `.docx` reading; returns counters only | CLI (`syntheo mesure`), `mesure` plugin | [CLI reference](/en/reference/cli), [Data and privacy](/en/data-and-privacy) |
+| `crates/mesure` | Rework between a generated summary and the sent version: normalization, heading alignment, word diff, lexical or content classification; bounded `.docx` reading; returns counters only | CLI (`syntheo mesure`), `mesure` plugin | [CLI reference](/en/reference/cli), [Data and privacy](/en/data-and-privacy), [Beta: measurement and transparency](/en/beta) |
 | `crates/summary` | Length policy and formatting of the generated summary | plugin `template` | [Customize summaries](/en/customize-summaries), [Notes](/en/notes) |
 | `crates/notification` | Displaying native notifications (facade) | plugin `notification` | [Automatic capture](/en/automatic-capture) |
 | `crates/notification-interface` | Common notification types | `notification`, backends, plugin `detect` | [Automatic capture](/en/automatic-capture) |

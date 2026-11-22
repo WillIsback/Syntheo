@@ -92,6 +92,7 @@
                 "group": "Privacy and security",
                 "pages": [
                   "en/data-and-privacy",
+                  "en/beta",
                   "en/offline",
                   "en/security",
                   "en/conformite/rgpd"
@@ -233,6 +234,7 @@
                 "group": "Confidentialité et sécurité",
                 "pages": [
                   "fr/data-and-privacy",
+                  "fr/beta",
                   "fr/offline",
                   "fr/security",
                   "fr/conformite/rgpd"
