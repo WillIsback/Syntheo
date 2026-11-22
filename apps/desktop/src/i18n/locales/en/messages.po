@@ -2021,8 +2021,8 @@ msgid "Every speaker has a name."
 msgstr "Every speaker has a name."
 
 #: src/home/home-view.tsx
-msgid "Everything is processed on your local server"
-msgstr "Everything is processed on your local server"
+msgid "Everything is processed on your server"
+msgstr "Everything is processed on your server"
 
 #: src/templates/auto-format-examples-dialog.tsx
 msgid "Example summary"
@@ -6259,8 +6259,16 @@ msgid "This computer can transcribe your meetings on its own: {0}."
 msgstr "This computer can transcribe your meetings on its own: {0}."
 
 #: src/onboarding/on-device-proposal.tsx
+msgid "This computer can transcribe your meetings on its own. You can set it up in Settings › Transcription."
+msgstr "This computer can transcribe your meetings on its own. You can set it up in Settings › Transcription."
+
+#: src/onboarding/on-device-proposal.tsx
 msgid "This computer cannot transcribe on its own; Syntheo uses your transcription server."
 msgstr "This computer cannot transcribe on its own; Syntheo uses your transcription server."
+
+#: src/onboarding/on-device-proposal.tsx
+msgid "This computer cannot transcribe on its own. To transcribe your meetings, set up a transcription server in Settings › Transcription."
+msgstr "This computer cannot transcribe on its own. To transcribe your meetings, set up a transcription server in Settings › Transcription."
 
 #: src/stt/live-transcript-interrupted.ts
 msgid "this computer does not allow the transcription program to run from the Syntheo data folder (application control policy or noexec mount); ask your administrator"
@@ -6566,6 +6574,18 @@ msgstr "Transcription on this computer uses the microphone only: the computer's 
 #: src/sidebar/toast/registry.tsx
 msgid "Transcription provider needed"
 msgstr "Transcription provider needed"
+
+#: src/home/home-view.tsx
+msgid "Transcription runs on this computer"
+msgstr "Transcription runs on this computer"
+
+#: src/home/home-view.tsx
+msgid "Transcription runs on this computer; summaries on your server"
+msgstr "Transcription runs on this computer; summaries on your server"
+
+#: src/home/home-view.tsx
+msgid "Transcription runs on your server"
+msgstr "Transcription runs on your server"
 
 #: src/settings/dictation.tsx
 msgid "Transcription server ›"

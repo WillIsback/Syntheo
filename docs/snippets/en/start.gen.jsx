@@ -123,7 +123,7 @@ const SYN_LABELS = {
   "Enter another name": "Enter another name",
   "Erase my measurements…": "Erase my measurements…",
   "Esc": "Esc",
-  "Everything is processed on your local server": "Everything is processed on your local server",
+  "Everything is processed on your server": "Everything is processed on your server",
   "Export": "Export",
   "Export location": "Export location",
   "Export my measurements…": "Export my measurements…",
@@ -3053,7 +3053,7 @@ export const AppHome = () => {
           ) : null}
           <p className="syn-muted" style={{ display: "flex", alignItems: "center", gap: 8, margin: 0, fontSize: 13 }}>
             <i className="syn-pip" aria-hidden="true" />
-            {L("Everything is processed on your local server")}
+            {L("Everything is processed on your server")}
           </p>
         </div>
       </div>

@@ -51,7 +51,7 @@ describe("HomeView", () => {
     expect(props.onStart).toHaveBeenCalledTimes(1);
   });
 
-  it("affiche le filigrane 茶 décoratif et le pied local", () => {
+  it("affiche le filigrane 茶 décoratif", () => {
     renderHome();
     const watermark = document.querySelector("[data-home-watermark]");
     expect(watermark?.textContent).toBe("茶");
@@ -60,9 +60,55 @@ describe("HomeView", () => {
     expect(watermark?.className).toContain("text-primary");
     expect(watermark?.className).toContain("opacity-[0.06]");
     expect(watermark?.className).toContain("text-[300px]");
-    expect(
-      screen.getByText("Everything is processed on your local server"),
-    ).toBeTruthy();
+  });
+
+  // QA 0.8.0-3 : la ligne du bas dit où se fait le traitement, au lieu d'un
+  // « serveur local » affiché en dur.
+  describe("ligne du traitement", () => {
+    const line = () => document.querySelector("[data-home-processing]");
+
+    it("transcription sur ce poste, synthèse sur le serveur", () => {
+      renderHome({
+        processing: { transcription: "on_device", summary: true },
+      });
+      expect(line()?.textContent).toBe(
+        "Transcription runs on this computer; summaries on your server",
+      );
+      expect(line()?.querySelector(".bg-primary")).toBeTruthy();
+    });
+
+    it("transcription sur ce poste, sans modèle de synthèse", () => {
+      renderHome({
+        processing: { transcription: "on_device", summary: false },
+      });
+      expect(line()?.textContent).toBe("Transcription runs on this computer");
+    });
+
+    it("transcription par un serveur : « votre serveur », pas « local »", () => {
+      renderHome({ processing: { transcription: "server", summary: true } });
+      expect(line()?.textContent).toBe(
+        "Everything is processed on your server",
+      );
+      expect(screen.queryByText(/local server/)).toBeNull();
+    });
+
+    it("serveur de transcription sans modèle de synthèse", () => {
+      renderHome({ processing: { transcription: "server", summary: false } });
+      expect(line()?.textContent).toBe("Transcription runs on your server");
+    });
+
+    it("rien d'utilisable : ni pastille ni texte", () => {
+      renderHome({ processing: { transcription: null, summary: true } });
+      expect(line()).toBeNull();
+      expect(document.querySelector("[data-home] .size-\\[7px\\]")).toBeNull();
+    });
+
+    it("pendant le chargement : rien à affirmer", () => {
+      renderHome({
+        processing: { transcription: null, summary: false, loading: true },
+      });
+      expect(line()).toBeNull();
+    });
   });
 
   it.each([
