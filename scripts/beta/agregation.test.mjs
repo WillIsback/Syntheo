@@ -3,6 +3,7 @@
 
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import {
   mkdirSync,
   mkdtempSync,
@@ -22,6 +23,7 @@ import {
   checkExport,
   csvCell,
   dictionaryTerms,
+  fmtSeuils,
   insufficientMessage,
   loadDirectory,
   median,
@@ -83,10 +85,11 @@ function tester(n, fonds, options = {}) {
     abandoned = 0,
     decisionAdds = 0,
     sections = true,
+    lexical = 0,
     terms = [],
   } = options;
   const meetings = fonds.map((fond, i) =>
-    meeting(i, { fond, decisionAdds, sections }),
+    meeting(i, { fond, decisionAdds, sections, lexical }),
   );
   const enrolled = fonds.length + 30;
   const summaries = meetings.map((_, i) => ({
@@ -292,11 +295,12 @@ function dictionaryTester(n, treated, control) {
       errors: errorsOf(isTreated ? { 2: 1, 3: 1 } : { 2: 1, 3: 1, 5: 1, 7: 1 }),
     });
   }
-  return tester(n, repeat(50, 10), { terms });
+  return tester(n, repeat(50, 10), { terms, lexical: 2 });
 }
 
 test("dictionnaire : entrée, traités, témoins et fenêtres", () => {
   const data = tester(1, repeat(50, 10), {
+    lexical: 2,
     terms: [
       { term: "t1", added_after: "m4", errors: errorsOf({ 2: 1, 3: 1 }) },
       // Ajout après la 2e réunion qui suit l'entrée : encore traité.
@@ -542,3 +546,114 @@ test("la ligne de commande refuse proprement un dossier introuvable", () => {
   assert.match(missing.stderr, /^Dossier d'exports introuvable/);
   assert.doesNotMatch(missing.stderr, /at |Error/);
 });
+
+// ---------------------------------------------------------------------------
+// Constats de la revue indépendante (issue 673)
+
+test("refuse un terme avec plus d'erreurs que de mots remplacés en lexical", () => {
+  const data = tester(1, repeat(50, 5), { lexical: 2 });
+  data.terms = [
+    { term: "t1", added_after: null, errors: [{ meeting: "m3", count: 2 }] },
+  ];
+  assert.ok(checkExport(data).export);
+  data.terms[0].errors[0].count = 1000000;
+  assert.deepEqual(checkExport(data), {
+    refus: "incoherent",
+    detail: "erreurs_au_dela_des_compteurs",
+  });
+});
+
+test("refuse une réunion sans mot généré qui aurait des remplacements", () => {
+  const data = tester(1, repeat(50, 5));
+  Object.assign(data.meetings[0], {
+    aligned: false,
+    headings_matched: 0,
+    sections: [],
+    total: counters(0, 0, 0, 0, 1),
+  });
+  assert.deepEqual(checkExport(data), {
+    refus: "incoherent",
+    detail: "compteurs_incoherents",
+  });
+});
+
+test("dictionnaire : les réunions à 0 mot généré ne comptent pas dans les fenêtres", () => {
+  const data = tester(1, repeat(50, 10), {
+    lexical: 2,
+    terms: [
+      // Entrée en m4 ; avant : m1 et m2 vides, m3 seule réunion mesurée.
+      { term: "t1", added_after: null, errors: errorsOf({ 2: 1, 3: 1 }) },
+      // Entrée en m6 : m3, m4, m5 mesurées avant ; ajout désigné par m7.
+      { term: "t2", added_after: "m7", errors: errorsOf({ 4: 1, 5: 1 }) },
+    ],
+  });
+  for (const i of [0, 1, 6]) {
+    Object.assign(data.meetings[i], {
+      aligned: false,
+      headings_matched: 0,
+      sections: [],
+      total: counters(0),
+    });
+  }
+  assert.ok(checkExport(data).export);
+  const { terms, excluded } = dictionaryTerms(data);
+  assert.equal(excluded.fenetre_courte, 1);
+  assert.equal(terms.length, 1);
+  // m7 est vide : l'ajout se rapporte à m6, la réunion d'entrée.
+  assert.equal(terms[0].traite, true);
+});
+
+test("l'arrondi affiché ne contredit jamais le verdict au seuil", () => {
+  assert.equal(fmtSeuils(100.04, [100, 250]), "100.04");
+  assert.equal(fmtSeuils(99.96, [100, 250]), "99.96");
+  assert.equal(fmtSeuils(100, [100, 250]), "100.0");
+  assert.equal(fmtSeuils(250.01, [100, 250]), "250.01");
+  assert.equal(fmtSeuils(100 + 1e-14, [100]), "> 100");
+  assert.equal(fmtSeuils(20.19, [20], 0), "20.2");
+
+  // Abandon médian 21 / 104 = 20,19 % : au-dessus du seuil, zone grise.
+  const exports = [1, 2, 3, 4, 5].map((n) =>
+    tester(n, repeat(20, 83), { abandoned: 21 }),
+  );
+  // Un testeur à 100,04 ‰ : 2 501 mots repris sur 25 000.
+  for (const m of exports[0].meetings) {
+    Object.assign(m, {
+      aligned: false,
+      headings_matched: 0,
+      sections: [],
+      total: counters(25000, 0, 2501),
+    });
+  }
+  const result = run(exports);
+  assert.equal(result.verdict.code, "zone_grise");
+  assert.equal(result.verdict.testeurs_sous_seuil_succes, 4);
+  const markdown = renderMarkdown(result);
+  assert.match(
+    markdown,
+    /abandon médian des testeurs qualifiés : 20\.2 % \(seuil 20 %\)/,
+  );
+  assert.match(markdown, /\| T1 \| 83 \| 100\.04 \|/);
+  assert.match(renderCsv(result), /^T1,83,oui,100\.04,/m);
+});
+
+test(
+  "refuse un tube nommé sans bloquer",
+  { skip: process.platform === "win32", timeout: 5000 },
+  (t) => {
+    const dir = mkdtempSync(join(tmpdir(), "agregation-fifo-"));
+    t.after(() => rmSync(dir, { recursive: true, force: true }));
+    writeFileSync(
+      join(dir, "ok.json"),
+      JSON.stringify(tester(1, repeat(50, 5))),
+    );
+    execFileSync("mkfifo", [join(dir, "tube.json")]);
+    const { accepted, refused } = loadDirectory(dir);
+    assert.deepEqual(
+      accepted.map((c) => c.fichier),
+      ["ok.json"],
+    );
+    assert.deepEqual(refused, [
+      { fichier: "tube.json", raison: "non_fichier" },
+    ]);
+  },
+);

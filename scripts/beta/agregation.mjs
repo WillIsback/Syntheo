@@ -22,6 +22,7 @@ import {
   constants,
   existsSync,
   fstatSync,
+  lstatSync,
   mkdirSync,
   openSync,
   readdirSync,
@@ -110,7 +111,19 @@ export const RAISONS = deepFreeze({
 // Lecture et contrôle d'un export
 
 function readCapped(path) {
-  const flags = constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0);
+  // Tout ce qui n'est pas un fichier ordinaire (dossier, lien, tube nommé,
+  // périphérique, socket) est refusé avant l'ouverture : ouvrir un tube nommé
+  // attendrait un écrivain indéfiniment. O_NONBLOCK couvre en plus un
+  // remplacement entre lstat et open.
+  try {
+    if (!lstatSync(path).isFile()) return { refus: "non_fichier" };
+  } catch {
+    return { refus: "illisible" };
+  }
+  const flags =
+    constants.O_RDONLY |
+    (constants.O_NOFOLLOW ?? 0) |
+    (constants.O_NONBLOCK ?? 0);
   let fd;
   try {
     fd = openSync(path, flags);
@@ -182,12 +195,12 @@ function coherence(data) {
     }
   }
 
-  const meetings = new Set();
+  const meetings = new Map();
   const measuredSummaries = new Set();
   let previousDay = 0;
   for (const meeting of data.meetings) {
     if (meetings.has(meeting.meeting)) return "reunion_doublon";
-    meetings.add(meeting.meeting);
+    meetings.set(meeting.meeting, meeting);
     const summary = summaries.get(meeting.summary);
     if (!summary) return "synthese_inconnue";
     if (summary.measured === null) return "synthese_non_mesuree";
@@ -207,6 +220,15 @@ function coherence(data) {
       if (indexes.has(section.index)) return "section_doublon";
       indexes.add(section.index);
       for (const key of COUNTER_KEYS) sum[key] += section.counters[key];
+    }
+    // Sans mot généré, rien ne peut avoir été supprimé ni remplacé.
+    if (
+      meeting.total.generated === 0 &&
+      (meeting.total.deleted > 0 ||
+        meeting.total.replaced_content > 0 ||
+        meeting.total.replaced_lexical > 0)
+    ) {
+      return "compteurs_incoherents";
     }
     // Le total est la somme des sections, plus les mots des sections
     // présentes seulement dans la version envoyée (comptés en ajouts).
@@ -231,9 +253,16 @@ function coherence(data) {
     }
     const seen = new Set();
     for (const error of term.errors) {
-      if (!meetings.has(error.meeting)) return "reunion_inconnue";
+      const meeting = meetings.get(error.meeting);
+      if (!meeting) return "reunion_inconnue";
       if (seen.has(error.meeting)) return "erreur_doublon";
       seen.add(error.meeting);
+      // Chaque erreur est un remplacement lexical d'au moins un mot : un terme
+      // ne peut pas avoir plus d'erreurs dans une réunion que celle-ci n'a de
+      // mots remplacés en correction lexicale.
+      if (error.count > meeting.total.replaced_lexical) {
+        return "erreurs_au_dela_des_compteurs";
+      }
     }
   }
   return null;
@@ -433,9 +462,21 @@ function testerStats(data) {
 // Termes du dispositif §3 pour un testeur.
 export function dictionaryTerms(data) {
   const d = SEUILS.dictionnaire;
-  const index = new Map(data.meetings.map((m, i) => [m.meeting, i]));
-  const generated = data.meetings.map((m) => m.total.generated);
-  const n = data.meetings.length;
+  // Seules les réunions mesurées (au moins un mot généré) forment la suite
+  // des réunions : celles à G = 0 sont ignorées, comme dans testerStats, et
+  // ne comptent pas dans le minimum de réunions par fenêtre. Une réunion
+  // ignorée n'a aucune erreur (contrôlé par coherence) ; un ajout désigné
+  // par elle se rapporte à la dernière réunion mesurée qui la précède.
+  const measured = data.meetings.filter((m) => m.total.generated > 0);
+  const index = new Map(measured.map((m, i) => [m.meeting, i]));
+  const position = new Map();
+  let last = -1;
+  for (const m of data.meetings) {
+    if (index.has(m.meeting)) last = index.get(m.meeting);
+    position.set(m.meeting, last);
+  }
+  const generated = measured.map((m) => m.total.generated);
+  const n = measured.length;
   const out = [];
   const excluded = {
     non_entre: 0,
@@ -444,7 +485,9 @@ export function dictionaryTerms(data) {
   };
   for (const term of data.terms) {
     const errors = new Array(n).fill(0);
-    for (const e of term.errors) errors[index.get(e.meeting)] += e.count;
+    for (const e of term.errors) {
+      if (index.has(e.meeting)) errors[index.get(e.meeting)] += e.count;
+    }
     let cumulative = 0;
     let entry = -1;
     for (let i = 0; i < n; i++) {
@@ -459,7 +502,7 @@ export function dictionaryTerms(data) {
       continue;
     }
     const added =
-      term.added_after === null ? null : index.get(term.added_after);
+      term.added_after === null ? null : position.get(term.added_after);
     if (added !== null && added < entry) {
       excluded.ajoute_avant_entree++;
       continue;
@@ -661,8 +704,37 @@ export function aggregate(accepted, refused = []) {
 
 const fmt = (value, digits = 1) =>
   value === null || value === undefined ? "n/d" : value.toFixed(digits);
+
+// Arrondit sans jamais changer la position de la valeur par rapport aux
+// seuils qui décident du verdict : près d'un seuil, des décimales sont
+// ajoutées jusqu'à ce que l'arrondi tombe du même côté que la valeur exacte
+// (ou sur le seuil seulement si elle y est exactement).
+export function fmtSeuils(value, thresholds, digits = 1) {
+  if (value === null || value === undefined) return "n/d";
+  const crossed = (text) =>
+    thresholds.find(
+      (t) => Math.sign(Number(text) - t) !== Math.sign(value - t),
+    );
+  for (let k = digits; k <= 12; k++) {
+    const text = value.toFixed(k);
+    if (crossed(text) === undefined) return text;
+  }
+  // Écart au seuil sous 10^-12 : on écrit le côté plutôt qu'un chiffre.
+  const t = crossed(value.toFixed(12));
+  return `${value > t ? ">" : "<"} ${t}`;
+}
+
+const SEUILS_FOND = [
+  SEUILS.succes.mediane_fond_max,
+  SEUILS.echec.mediane_fond_au_dessus_de,
+];
+const SEUILS_SECTION = [SEUILS.garde_fou_section.ajouts_max];
+const fond = (value) => fmtSeuils(value, SEUILS_FOND);
+const section = (value) => fmtSeuils(value, SEUILS_SECTION);
 const pct = (value) =>
-  value === null ? "n/d" : `${(value * 100).toFixed(0)} %`;
+  value === null
+    ? "n/d"
+    : `${fmtSeuils(value * 100, [SEUILS.succes.abandon_max * 100], 0)} %`;
 
 const VERDICTS = {
   non_publiable:
@@ -732,9 +804,9 @@ export function renderMarkdown(result) {
       continue;
     }
     lines.push(
-      `| ${t.libelle} | ${t.reunions_mesurees} | ${fmt(t.mediane_fond)} | ${fmt(t.mediane_lexicale)} | ${fmt(
+      `| ${t.libelle} | ${t.reunions_mesurees} | ${fond(t.mediane_fond)} | ${fmt(t.mediane_lexicale)} | ${section(
         t.garde_fou.decisions,
-      )} | ${fmt(t.garde_fou.actions)} | ${pct(t.taux_abandon)} (${t.syntheses_abandonnees}/${t.syntheses_eligibles}) |`,
+      )} | ${section(t.garde_fou.actions)} | ${pct(t.taux_abandon)} (${t.syntheses_abandonnees}/${t.syntheses_eligibles}) |`,
     );
   }
   lines.push("");
@@ -795,11 +867,13 @@ export function renderCsv(result) {
           t.libelle,
           t.reunions_mesurees,
           "oui",
-          fmt(t.mediane_fond),
+          fond(t.mediane_fond),
           fmt(t.mediane_lexicale),
-          fmt(t.garde_fou.decisions),
-          fmt(t.garde_fou.actions),
-          t.taux_abandon === null ? "n/d" : t.taux_abandon.toFixed(3),
+          section(t.garde_fou.decisions),
+          section(t.garde_fou.actions),
+          t.taux_abandon === null
+            ? "n/d"
+            : fmtSeuils(t.taux_abandon, [SEUILS.succes.abandon_max], 3),
         ]
       : [t.libelle, t.reunions_mesurees, "insuffisant", "", "", "", "", ""],
   );

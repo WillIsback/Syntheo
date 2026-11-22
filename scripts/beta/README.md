@@ -31,7 +31,8 @@ Chaque export est traité comme une donnée non fiable. Un fichier refusé est
 listé avec une raison fixe, sans rien recopier de son contenu, et n'empêche pas
 l'agrégation des autres :
 
-- fichier qui n'est pas un fichier ordinaire (dossier, lien symbolique) ;
+- fichier qui n'est pas un fichier ordinaire (dossier, lien symbolique, tube
+  nommé, périphérique, socket), écarté avant toute ouverture ;
 - fichier de plus de 2 Mio (contrôlé avant lecture, puis pendant la lecture) ;
 - UTF-8 ou JSON invalide ;
 - export hors schéma : objet avec un champ en trop, chaîne hors motif ou hors
@@ -42,13 +43,18 @@ l'agrégation des autres :
   mesurée deux fois ou réunion sur une synthèse non mesurée, jour postérieur à
   l'export ou antérieur à la génération, réunions hors ordre chronologique,
   titres retrouvés plus nombreux que les titres générés, total différent de la
-  somme des sections ;
+  somme des sections, réunion sans mot généré qui aurait des mots supprimés ou
+  remplacés, terme avec plus d'erreurs dans une réunion que celle-ci n'a de
+  mots remplacés en correction lexicale (`replaced_lexical`) ;
 - au-delà de 1 000 fichiers.
 
 Un nom de fichier n'est recopié dans le rapport que s'il est fait de lettres
 ASCII, chiffres, `.`, `_` et `-` (et commence par une lettre ou un chiffre) ;
 sinon il est désigné par son rang. Le CSV préfixe d'une apostrophe toute
-cellule qui commencerait par `=`, `+`, `-` ou `@`. L'outil ne produit pas de
+cellule qui commencerait par `=`, `+`, `-` ou `@`. Les valeurs comparées à
+un seuil (médiane de fond, ajouts par section, abandon) sont affichées avec
+assez de décimales pour que l'arrondi tombe du même côté du seuil que la
+valeur exacte, sur laquelle le verdict est calculé. L'outil ne produit pas de
 HTML.
 
 ## Choix d'interprétation (version 1)
@@ -78,7 +84,9 @@ HTML.
   garde-fou est calculable (au moins une section de ce rôle) ; le rapport
   affiche « garde-fou non calculable pour N testeurs ».
 - **Effet du dictionnaire** : l'ordre des réunions est celui du tableau
-  `meetings`. Un terme entre à la réunion où ses erreurs cumulées atteignent 2.
+  `meetings`, réunions sans mot généré exclues : elles ne comptent pas dans
+  les fenêtres, et un ajout désigné par l'une d'elles se rapporte à la
+  dernière réunion mesurée qui la précède. Un terme entre à la réunion où ses erreurs cumulées atteignent 2.
   Il est **traité** si `added_after` désigne la réunion d'entrée ou l'une des 2
   suivantes, **témoin** s'il n'est pas ajouté ou l'est plus tard, exclu s'il a
   été ajouté avant son entrée. La réunion d'entrée n'appartient à aucune
