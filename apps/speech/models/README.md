@@ -26,15 +26,15 @@ La quantification ne tient pas sur un runner GitHub gratuit. La publication se f
 
 Tant que `sources` est vide, une construction release sans devtools qui livre le compagnon échoue (build.rs de l'application) ; les sources s'épinglent après la publication, dans un commit à part. La release GitHub `speech-models-1` (gabarit `{name}`, assets à plat) est épinglée ; la source Hugging Face attend la révision que donnera la publication CI (voir ci-dessous).
 
-### Épingler Hugging Face après publication
+### Source Hugging Face
 
-À faire après `publish-speech-models.yml` (passage en prerelease puis envoi vers Hugging Face), dans un commit à part : ajouter à la fin de `sources`, après la release GitHub, le gabarit
+Le dépôt `WillisBack/syntheo-speech-models` a été rempli le 22 novembre 2026, avant la release, depuis les fichiers du brouillon `speech-models-1` (vérifiés avant l'envoi, puis retéléchargés à la révision obtenue et vérifiés). `sources` l'épingle après la release GitHub, à cette révision :
 
 ```
-https://huggingface.co/WillisBack/syntheo-speech-models/resolve/<révision>/{path}
+https://huggingface.co/WillisBack/syntheo-speech-models/resolve/bffcd9b4676654bca14ea4d4b256ae8fbc488761/{path}
 ```
 
-en remplaçant `<révision>` par la révision Hugging Face (40 caractères hexadécimaux) que donne le résumé du job, jamais par `main` : une révision épinglée garantit que la source sert toujours les fichiers vérifiés. Les fichiers y sont en arborescence (`nemotron/…`, `diar/…`), d'où `{path}`. `models.json` est compilé dans l'application et ne porte que ce qu'elle lit : aucun gabarit provisoire n'y est mis avant cette date.
+Jamais `main` : une révision épinglée garantit que la source sert toujours les fichiers vérifiés. Les fichiers y sont en arborescence (`nemotron/…`, `diar/…`), d'où `{path}`. Tant que la release GitHub reste un brouillon, sa source répond 404 et l'application passe à Hugging Face. `publish-speech-models.yml` n'envoie rien si Hugging Face contient déjà des fichiers identiques (même SHA-256) et reprend alors la révision existante.
 
 Fichiers : `verify.py` (contrôle), `flatten.py` (arborescence ↔ à plat), `download-draft.sh` (assets d'un brouillon), `publish-local.sh`, `release-notes.md`, `model-card.md` (fiche Hugging Face), `hf_upload.py` et `hf_upload.py.lock`.
 
