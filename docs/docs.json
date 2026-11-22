@@ -68,6 +68,7 @@
                   "en/uninstall",
                   "en/ai-setup",
                   "en/local-transcription-service",
+                  "en/on-device-transcription",
                   "en/quickstart",
                   "en/philosophy"
                 ]
@@ -210,6 +211,7 @@
                   "fr/uninstall",
                   "fr/ai-setup",
                   "fr/local-transcription-service",
+                  "fr/on-device-transcription",
                   "fr/quickstart",
                   "fr/philosophy"
                 ]

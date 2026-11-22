@@ -1,0 +1,77 @@
+---
+title: "Transcribe on this computer"
+sidebarTitle: "On this computer"
+description: "Transcribe meetings without a server: local transcription module, installation, measured commissioning, profiles, network and licenses."
+---
+
+The **On this computer** source transcribes your meetings without a server: a transcription module, installed separately, runs on your computer, and audio never leaves it. It serves the live transcription of a recording; dictation and imported files still go through the configured server (see [Set up transcription and AI](/en/ai-setup)).
+
+<Note>
+  **Availability: forthcoming.** The module is distributed signed by Syntheo. Until a signed module is published, the **On this computer** card says transcription on this computer is coming soon, and nothing can be installed.
+</Note>
+
+## What you need
+
+- An x86-64 processor with AVX2 instructions (Linux or Windows).
+- 1.5 GB of free memory and 2 GB of disk space for the module and its models.
+- A computer fast enough for real time: commissioning checks it (see below).
+
+**Test this computer**, in the **On this computer** card of **Settings → Transcription**, measures the processor, memory and disk in a few seconds and tells whether the computer can work. When installation is available, onboarding offers the same one-click check (about 5 s). On battery or in power saving mode, plug in or switch to performance mode, then run the test again.
+
+## Install the module
+
+1. In **Settings → Transcription**, **On this computer** card, choose **Install from a file…**.
+2. Select the `manifest.json` file of the module folder, on this computer (a network share is refused).
+3. Syntheo checks the manifest signature and then every file, copies the module into its data folder, checks the copy and puts it in place. A failed installation leaves the installed module intact.
+
+**Uninstall** removes the module. Installing and uninstalling are refused during a recording.
+
+Downloading the module from Syntheo is forthcoming.
+
+## Commissioning
+
+After installation, Syntheo **measures this computer** for one to two minutes: it transcribes a 30-second audio sample shipped with the module, in two streams like a recording, and keeps the first profile that keeps up in real time, in this order:
+
+| Profile | What is transcribed |
+| --- | --- |
+| Microphone and system audio, with speakers | The whole meeting, speakers told apart |
+| Microphone and system audio, without speakers | The whole meeting, without telling speakers apart |
+| Microphone only, with speakers | Your microphone only: the computer's sound (remote participants) is not transcribed |
+| Microphone only, without speakers | Your microphone only, without telling speakers apart |
+
+A profile keeps up in real time when its final text arrives less than 2 s after speech ends (at the 95th percentile, end-of-sentence wait deducted), without falling behind during the measurement. The card shows the progress ("Measuring profile 2 of 4…"), then the profile kept. If none keeps up, the computer is not offered.
+
+**Measure again** repeats the measurement, for example after a hardware change. A new module is measured again.
+
+Once the computer is measured, tick **Use this computer for transcription instead of the server**. With the microphone only, a reminder says so at the start of each recording.
+
+## During a recording
+
+- If the computer falls more than 2 s behind, Syntheo spaces out speaker recognition, then turns it off, and restores it once the delay drops; transcription goes on. After such a change, speakers may get new labels.
+- If the module stops, Syntheo restarts it with a new token, within 3 launches in 10 minutes; beyond that, it waits for those 10 minutes to end.
+- The audio of an "On this computer" recording **never** goes to the server, not even to repair a dropped passage or after a restart. If the module is missing, refused or keeps crashing, live transcription pauses and says so; a missed passage stays marked in the note.
+
+## Network and data
+
+- The module only listens on the loopback (`127.0.0.1`) and opens no outbound connection.
+- The app and the module authenticate each other on every connection; another program on the computer can neither receive the audio by posing as the module nor connect to it.
+- The module only logs durations and counts, never transcribed text.
+- Files added to the app data folder (`~/.local/share/fr.willisback.syntheo` on Linux, `%APPDATA%\fr.willisback.syntheo` on Windows): the module in `modules/speech`, the commissioning result (`modules/speech.commissioning.json`) and the latest accepted module number (`modules/speech.floor`). No audio.
+
+See also [Data and privacy](/en/data-and-privacy) and, for the threat model, [Security](/en/security#on-device-transcription-module).
+
+## Forbid the module
+
+An organization can forbid the module with the managed setting `on_device_transcription_enabled` set to `false` in `managed_settings.json` (see [Security](/en/security#enterprise-deployment)). The **On this computer** card no longer appears; if the source was chosen, it is unticked with a message, and transcription goes through the configured server.
+
+## Licenses
+
+The module ships its licenses in its `licenses/` folder:
+
+| Component | License |
+| --- | --- |
+| `syntheo-speech` module | MIT |
+| NVIDIA Nemotron 3.5 ASR Streaming and Nemotron 3 Diarization models, quantized to int8 by Syntheo | OpenMDW-1.1 (agreement and model cards included) |
+| ONNX Runtime 1.31.0, linked into the module | MIT, with its third-party notices |
+| Rust crates of the module | MIT, Apache-2.0 and other permissive licenses (list generated at build time) |
+| Commissioning audio, from Multilingual LibriSpeech (LibriVox recordings) | CC BY 4.0 for the dataset; public-domain recordings (attribution included) |

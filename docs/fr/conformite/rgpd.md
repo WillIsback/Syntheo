@@ -42,9 +42,17 @@ Tout est stocké sur le poste, dans le dossier de données de l'application
 
 Aucune de ces données n'est envoyée à l'éditeur.
 
-**Aucune inférence sur le poste** : l'application ne
-télécharge ni n'exécute aucun modèle (transcription, LLM, diarisation ou
-empreintes vocales). Une version antérieure a pu laisser des fichiers de
+**Inférence sur le poste, seulement si l'utilisateur l'installe** : par
+défaut, l'application n'exécute aucun modèle (transcription, LLM, diarisation
+ou empreintes vocales). La source facultative « Sur ce poste » (à venir)
+installe un module de transcription signé, `syntheo-speech`, dans
+`modules/speech` du dossier de données de l'application, avec ses modèles,
+l'audio de mise en service, le résultat de la mise en service et le dernier
+numéro de module accepté. Le module transcrit l'audio de l'écoute en mémoire,
+sur la boucle locale, sans rien écrire d'audio ni journaliser de texte ; il se
+supprime avec **Désinstaller** ou avec le dossier de données. Un réglage géré
+(`on_device_transcription_enabled`) permet à une organisation de l'interdire.
+Voir [Transcrire sur ce poste](/fr/on-device-transcription). Une version antérieure a pu laisser des fichiers de
 modèles dans les dossiers `models/stt` et `models/llm` du dossier de données,
 ainsi que dans le cache de modèles Soniqo sous macOS : ils ne sont plus ni lus
 ni chargés, et peuvent être supprimés à la main. Les empreintes vocales
@@ -55,6 +63,12 @@ une suppression, l'effacement est retenté au lancement suivant.
 
 ## Flux réseau
 
+- **Module de transcription sur le poste** (source facultative « Sur ce
+  poste ») : l'audio de l'écoute part vers le module, sur la boucle locale
+  (`127.0.0.1`) du poste, après authentification mutuelle ; rien ne quitte le
+  poste, et le module n'ouvre aucune connexion vers l'extérieur. Pour une
+  écoute « Sur ce poste », aucun audio ne part vers le serveur, même pour
+  réparer un passage coupé.
 - **Endpoints d'inférence configurés par l'utilisateur**, et eux seuls : ASR
   (protocole OpenAI : Realtime et `/v1/audio/transcriptions` ; NVIDIA
   NeMo-Speech.cpp : WebSocket `/v1/audio/transcriptions/realtime`) et

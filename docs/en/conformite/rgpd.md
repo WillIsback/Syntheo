@@ -42,9 +42,16 @@ Linux).
 
 None of this data is sent to the vendor.
 
-**No inference on the computer**: the app neither
-downloads nor runs any model (transcription, LLM, diarization or
-voiceprints). An earlier version may have left model files in the
+**On-device inference, only if the user installs it**: by default, the app
+runs no model (transcription, LLM, diarization or voiceprints). The optional
+"On this computer" source (forthcoming) installs a signed transcription module,
+`syntheo-speech`, in `modules/speech` of the app data folder, with its models,
+the commissioning audio, the commissioning result and the latest accepted
+module number. The module transcribes the recording audio in memory, on the
+loopback, writing no audio and logging no text; it is removed with
+**Uninstall** or with the data folder. A managed setting
+(`on_device_transcription_enabled`) lets an organization forbid it. See
+[Transcribe on this computer](/en/on-device-transcription). An earlier version may have left model files in the
 `models/stt` and `models/llm` folders of the data folder, as well as in the
 Soniqo model cache on macOS: they are no longer read or loaded, and can be
 deleted by hand. Voiceprints that an earlier version may have saved (vectors
@@ -54,6 +61,12 @@ a deletion, erasure is retried at the next launch.
 
 ## Network flows
 
+- **On-device transcription module** (optional "On this computer" source):
+  the recording audio goes to the module, on the computer's loopback
+  (`127.0.0.1`), after mutual authentication; nothing leaves the computer, and
+  the module opens no outbound connection. For an "On this computer"
+  recording, no audio goes to the server, not even to repair a dropped
+  passage.
 - **Inference endpoints configured by the user**, and only those: ASR
   (OpenAI protocol: Realtime and `/v1/audio/transcriptions`; NVIDIA
   NeMo-Speech.cpp: WebSocket `/v1/audio/transcriptions/realtime`) and the
