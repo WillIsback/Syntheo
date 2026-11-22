@@ -12,6 +12,7 @@
 #   - `manifest` : `manifest.json` et `files.sha256` du module construit
 #     (binaire, bibliothèques, licences, puis les modèles de
 #     apps/speech/models/models.json avec leur URL).
+#   - (sur une PR qui touche le module : `build` et `manifest` seulement.)
 #   - `sign-manifest` : signature du manifeste (manifest.json.sig), avec une
 #     clé propre au module, distincte de celle des mises à jour Tauri, rangée
 #     dans l'environnement `speech-signing` (limité à main). Seulement sur
@@ -26,6 +27,13 @@
 name: build-speech
 
 on:
+  # CI du module (Linux et Windows) sur une PR qui le touche : construction,
+  # SBOM et manifeste, sans signature ni aucun secret (jamais
+  # pull_request_target).
+  pull_request:
+    paths:
+      - "apps/speech/**"
+      - ".github/workflows/build-speech.yml"
   workflow_dispatch:
     inputs:
       min-app-version:
@@ -215,8 +223,9 @@ jobs:
         shell: bash
         env:
           TARGET: ${{ matrix.target }}
-          MIN_APP_VERSION: ${{ inputs.min-app-version }}
-          MODELS_BASE_URL: ${{ inputs.models-base-url }}
+          # Sur une PR, pas d'entrées : valeurs par défaut du lancement manuel.
+          MIN_APP_VERSION: ${{ inputs.min-app-version || '0.8.0' }}
+          MODELS_BASE_URL: ${{ inputs.models-base-url || 'https://github.com/WillIsback/Syntheo/releases/download/speech-models-1' }}
         run: |
           set -euo pipefail
           python3 -I apps/speech/supply-chain/make_manifest.py module "$TARGET" "$MIN_APP_VERSION" "$MODELS_BASE_URL"
@@ -235,7 +244,7 @@ jobs:
   sign-manifest:
     name: Signature du manifeste (${{ matrix.target }})
     needs: manifest
-    if: inputs.sign && github.ref == 'refs/heads/main'
+    if: github.event_name != 'pull_request' && inputs.sign && github.ref == 'refs/heads/main'
     strategy:
       matrix:
         target: [x86_64-unknown-linux-gnu, x86_64-pc-windows-msvc]
