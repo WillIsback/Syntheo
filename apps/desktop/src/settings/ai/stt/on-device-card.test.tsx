@@ -166,6 +166,31 @@ describe("OnDeviceCard", () => {
     await waitFor(() => expect(mocks.commission).toHaveBeenCalled());
   });
 
+  // QA de 0.8.0-2 : pendant que le sélecteur de dossier est ouvert, rien
+  // n'est encore installé ; l'avancement n'apparaît qu'après le choix.
+  it("shows no installation while the folder picker is open", async () => {
+    let finish: (value: unknown) => void = () => {};
+    mocks.install.mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
+    mocks.status = { ...mocks.status, downloadable: false };
+    setup();
+    fireEvent.click(await screen.findByText("Install from a folder…"));
+    await waitFor(() => expect(mocks.install).toHaveBeenCalled());
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(screen.queryByTestId("on-device-install-progress")).toBeNull();
+    expect(screen.queryByText("Cancel")).toBeNull();
+    // Dossier choisi : l'hôte rend un avancement.
+    mocks.installProgress = { doneBytes: 0, totalBytes: 1_066_000_000 };
+    await screen.findByTestId("on-device-install-progress", undefined, {
+      timeout: 3000,
+    });
+    mocks.installProgress = null;
+    finish({ status: "ok", data: null });
+  });
+
   it("does nothing when the folder choice is cancelled", async () => {
     mocks.install.mockResolvedValue({ status: "ok", data: null });
     setup();

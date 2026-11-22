@@ -234,7 +234,10 @@ export function OnDeviceCard() {
     onSuccess: afterInstall,
     onError: installError,
   });
-  const installingHere = downloading.isPending || fromFolder.isPending;
+  // Installation depuis un dossier : la commande attend d'abord le choix du
+  // dossier ; l'installation ne commence (et l'hôte ne rend un avancement)
+  // qu'une fois le dossier choisi.
+  const pendingHere = downloading.isPending || fromFolder.isPending;
   // Toujours lu tant que la carte est affichée : une carte remontée pendant
   // une installation (lancée avant de quitter les réglages) en reprend
   // l'affichage et bloque les boutons.
@@ -244,10 +247,12 @@ export function OnDeviceCard() {
       const result = await transcriptionCommands.onDeviceInstallProgress();
       return result.status === "ok" ? result.data : null;
     },
-    refetchInterval: (query) =>
-      installingHere || query.state.data ? 500 : 2000,
+    refetchInterval: (query) => (pendingHere || query.state.data ? 500 : 2000),
   });
-  const installingElsewhere = !installingHere && !!installProgress.data;
+  const choosingFolder = fromFolder.isPending && !installProgress.data;
+  const installingHere =
+    downloading.isPending || (fromFolder.isPending && !choosingFolder);
+  const installingElsewhere = !pendingHere && !!installProgress.data;
   const installingAny = installingHere || installingElsewhere;
   // Fin d'une installation suivie depuis une carte remontée : état relu.
   const [sawElsewhere, setSawElsewhere] = useState(false);
@@ -285,7 +290,8 @@ export function OnDeviceCard() {
   const chosen = !!stt_on_device;
   const measuringElsewhere = !commissioningRun.isPending && !!progress.data;
   const measuringAny = commissioningRun.isPending || measuringElsewhere;
-  const busy = installingAny || removing.isPending || measuringAny;
+  const busy =
+    installingAny || choosingFolder || removing.isPending || measuringAny;
   const done = installProgress.data;
   const measured = commissioning.data;
   const progressValue = progress.data;
