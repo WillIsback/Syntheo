@@ -510,11 +510,16 @@ impl SpeechHost {
         if self.measuring.load(std::sync::atomic::Ordering::SeqCst) {
             return Err(HostError::Measuring);
         }
-        let result = self.launch_target().await;
-        if matches!(result, Err(HostError::ExecutionBlocked)) {
-            self.forget_profile_after_refusal(HostError::ExecutionBlocked);
-        }
-        result
+        // Revue QA 0.8.0-3, constat 5 : seul un refus sûrement définitif
+        // retire le profil enregistré. Un accès refusé répété sous Windows
+        // (peut-être un antivirus) ne fait échouer que cette écoute ; la
+        // suivante retente le lancement.
+        self.launch_target_inner().await.map_err(|failure| {
+            if failure.persists_refusal() {
+                self.forget_profile_after_refusal(HostError::ExecutionBlocked);
+            }
+            failure.into_host()
+        })
     }
 
     /// QA 0.8.0-3 : le système refuse d'exécuter le programme après une mise
@@ -543,6 +548,13 @@ impl SpeechHost {
 
     /// `target` sans les refus d'état (la mesure elle-même).
     async fn launch_target(&self) -> Result<OnDeviceTarget, HostError> {
+        self.launch_target_inner()
+            .await
+            .map_err(TargetFailure::into_host)
+    }
+
+    /// `launch_target`, qui dit en plus d'où vient un refus d'exécution.
+    async fn launch_target_inner(&self) -> Result<OnDeviceTarget, TargetFailure> {
         let mut state = self.state.lock().await;
         let now = Instant::now();
         if let Some(running) = state.running.as_mut() {
@@ -559,10 +571,10 @@ impl SpeechHost {
             state.running = None;
         }
         if let Some(message) = &state.rejected {
-            return Err(HostError::Verify(message.clone()));
+            return Err(HostError::Verify(message.clone()).into());
         }
         if state.blocked_until.is_some_and(|until| now < until) {
-            return Err(HostError::RestartBudget);
+            return Err(HostError::RestartBudget.into());
         }
         state.blocked_until = None;
         let window = self.policy.window;
@@ -570,7 +582,7 @@ impl SpeechHost {
         if state.attempts.len() >= self.policy.max_attempts {
             tracing::warn!(target: "syntheo_speech", "module keeps stopping; launches paused");
             state.blocked_until = Some(now + window);
-            return Err(HostError::RestartBudget);
+            return Err(HostError::RestartBudget.into());
         }
         state.attempts.push(now);
         // Sous Windows, un accès refusé (ERROR_ACCESS_DENIED) peut venir d'un
@@ -596,15 +608,15 @@ impl SpeechHost {
                 // Erreur d'entrée-sortie (disque plein…) : passagère, comptée
                 // comme un lancement raté, jamais rangée comme refus.
                 Ok(Err(crate::verify::VerifyError::Io)) => {
-                    return Err(HostError::Launch(
-                        crate::verify::VerifyError::Io.to_string(),
-                    ));
+                    return Err(
+                        HostError::Launch(crate::verify::VerifyError::Io.to_string()).into(),
+                    );
                 }
                 Ok(Err(error)) => {
                     state.rejected = Some(error.code().to_owned());
-                    return Err(HostError::Verify(error.code().to_owned()));
+                    return Err(HostError::Verify(error.code().to_owned()).into());
                 }
-                Err(_) => return Err(HostError::Verify("io".into())),
+                Err(_) => return Err(HostError::Verify("io".into()).into()),
             };
             match launch(
                 verified,
@@ -624,8 +636,10 @@ impl SpeechHost {
                     );
                     retried = true;
                 }
-                Err(LaunchFailure::AccessDenied) => return Err(HostError::ExecutionBlocked),
-                Err(LaunchFailure::Host(error)) => return Err(error),
+                Err(LaunchFailure::AccessDenied) => {
+                    return Err(TargetFailure::RepeatedAccessDenied);
+                }
+                Err(LaunchFailure::Host(error)) => return Err(error.into()),
             }
         };
         let mut running = running;
@@ -998,6 +1012,39 @@ impl From<HostError> for LaunchFailure {
     }
 }
 
+/// Échec de `launch_target_inner`. L'erreur publique est la même pour les
+/// deux refus d'exécution ; seule leur persistance diffère.
+#[derive(Debug, PartialEq, Eq)]
+enum TargetFailure {
+    Host(HostError),
+    /// Windows : accès refusé deux fois de suite (deux copies neuves). Peut
+    /// venir d'un antivirus qui tient la copie : refus de cette écoute
+    /// seulement, jamais enregistré.
+    RepeatedAccessDenied,
+}
+
+impl From<HostError> for TargetFailure {
+    fn from(error: HostError) -> Self {
+        Self::Host(error)
+    }
+}
+
+impl TargetFailure {
+    /// Le refus est sûrement définitif (politique 1260 sous Windows, EACCES
+    /// ou noexec ailleurs : `SpawnRefusal::Blocked`) : la mise en service
+    /// enregistrée perd son profil.
+    fn persists_refusal(&self) -> bool {
+        matches!(self, Self::Host(HostError::ExecutionBlocked))
+    }
+
+    fn into_host(self) -> HostError {
+        match self {
+            Self::Host(error) => error,
+            Self::RepeatedAccessDenied => HostError::ExecutionBlocked,
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Eq)]
 enum SpawnRefusal {
     /// Refus définitif : politique (AppLocker, SRP) ou montage noexec.
@@ -1029,7 +1076,22 @@ fn classify_spawn_error(error: &std::io::Error, windows: bool) -> SpawnRefusal {
 
 #[cfg(test)]
 mod tests {
-    use super::{SpawnRefusal, classify_spawn_error, parse_load};
+    use super::{HostError, SpawnRefusal, TargetFailure, classify_spawn_error, parse_load};
+
+    // Revue QA 0.8.0-3, constat 5 : seul un refus sûrement définitif est
+    // enregistré ; un accès refusé répété sous Windows ne l'est pas. Pour
+    // l'écoute, les deux rendent la même erreur publique.
+    #[test]
+    fn only_a_definitive_refusal_is_persisted() {
+        let blocked = TargetFailure::Host(HostError::ExecutionBlocked);
+        assert!(blocked.persists_refusal());
+        assert_eq!(blocked.into_host(), HostError::ExecutionBlocked);
+        let repeated = TargetFailure::RepeatedAccessDenied;
+        assert!(!repeated.persists_refusal());
+        assert_eq!(repeated.into_host(), HostError::ExecutionBlocked);
+        let launch = TargetFailure::Host(HostError::Launch("NotFound".into()));
+        assert!(!launch.persists_refusal());
+    }
 
     // Revue, R4 et vérification de f84794c4 : refus de politique définitif
     // tout de suite ; sous Windows, accès refusé retenté une fois ; sous

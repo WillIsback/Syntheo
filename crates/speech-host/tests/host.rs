@@ -873,3 +873,44 @@ async fn a_launch_refused_after_commissioning_forgets_the_profile() {
         Some("execution_blocked")
     );
 }
+
+// Revue QA 0.8.0-3, constat 5 : sous Windows, un accès refusé répété (deux
+// copies neuves refusées, peut-être par un antivirus) fait échouer l'écoute
+// en cours seulement. Le profil retenu reste, rien n'est écrit, et l'écoute
+// suivante retente le lancement.
+#[cfg(unix)]
+#[tokio::test]
+async fn a_repeated_access_denied_during_listening_keeps_the_profile() {
+    use speech_host::commissioning::{Commissioning, Profile, load, save};
+    let fixture = blocked_fixture();
+    let build = fixture.companion().build_id() ^ speech_host::models::fingerprint();
+    let kept = Commissioning {
+        profile: Some(Profile::TwoStreamsDiarized),
+        measures: vec![],
+        measured_at: 1,
+        module_build: build,
+    };
+    save(fixture.data.path(), &kept).unwrap();
+    let host = fixture.host().with_windows_spawn_rules();
+    assert!(host.profile().is_some());
+
+    assert_eq!(
+        host.target(true).await.unwrap_err(),
+        HostError::ExecutionBlocked
+    );
+    assert_eq!(host.verifications().await, 2);
+    assert!(host.profile().is_some());
+    assert_eq!(host.launch_refusal(), None);
+    assert_eq!(load(fixture.data.path(), build), Some(kept.clone()));
+
+    // L'écoute suivante relance le module (deux nouvelles copies).
+    assert_eq!(
+        host.target(true).await.unwrap_err(),
+        HostError::ExecutionBlocked
+    );
+    assert_eq!(host.verifications().await, 4);
+    assert!(host.profile().is_some());
+    assert_eq!(load(fixture.data.path(), build), Some(kept));
+    // Un nouvel hôte (redémarrage de l'application) garde le profil.
+    assert_eq!(fixture.host().launch_refusal(), None);
+}
