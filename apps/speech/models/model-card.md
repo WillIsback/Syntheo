@@ -57,9 +57,16 @@ which Syntheo also compiles in and checks before every launch.
 
 ## Accuracy
 
-Word error rate on French (FLEURS and Multilingual LibriSpeech test sets),
-measured by Syntheo: **10.73 %** with these int8 weights, against **10.64 %** in
-FP32.
+Word error rate on French, measured by Syntheo: **10.73 %** with these int8
+weights (95 % bootstrap interval 9.20 to 12.25), against **10.64 %** in FP32
+(9.16 to 12.12).
+
+The sample holds 150 utterances (4,475 words, 29.8 minutes of read speech): 100
+from FLEURS `fr_fr` (test split) and 50 from Multilingual LibriSpeech `french`
+(test split), drawn at random with fixed seeds. The intervals come from 1,000
+bootstrap resamples of the utterances. With this sample size, a degradation
+smaller than about 0.5 point between int8 and FP32 cannot be detected, and
+spontaneous, noisy or far-field speech is not measured.
 
 ## License
 
