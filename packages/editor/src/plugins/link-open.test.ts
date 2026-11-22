@@ -53,6 +53,19 @@ describe("linkOpenPlugin", () => {
     expect(onOpen).toHaveBeenCalledWith("https://linear.app/example/path");
   });
 
+  // Issue 676 (QA 0.8.0-1) : un mailto: part vers Rust, qui reste juge
+  // (une seule adresse simple ; ?subject= ou deux adresses refusés là-bas).
+  it("hands mailto links to the opener, which decides", () => {
+    const { anchor, onOpen } = createLinkedEditor("mailto:adresse@exemple.org");
+    anchor.dispatchEvent(
+      new MouseEvent("click", { bubbles: true, cancelable: true }),
+    );
+    expect(onOpen).toHaveBeenCalledWith("mailto:adresse@exemple.org");
+    expect(getOpenableHref("mailto:a@exemple.org?subject=x")).toBe(
+      "mailto:a@exemple.org?subject=x",
+    );
+  });
+
   it("blocks unsafe link schemes", () => {
     const { anchor, onOpen } = createLinkedEditor("javascript:alert(1)");
     const event = new MouseEvent("click", {
@@ -100,9 +113,12 @@ describe("getOpenableHref", () => {
     );
   });
 
-  it("rejects non-web URLs", () => {
-    expect(getOpenableHref("mailto:hello@example.com")).toBeNull();
+  it("rejects other schemes and relative paths", () => {
+    expect(getOpenableHref("mailto:hello@example.com")).toBe(
+      "mailto:hello@example.com",
+    );
     expect(getOpenableHref("file:///tmp/note.txt")).toBeNull();
+    expect(getOpenableHref("javascript:alert(1)")).toBeNull();
     expect(getOpenableHref("/relative/path")).toBeNull();
   });
 });

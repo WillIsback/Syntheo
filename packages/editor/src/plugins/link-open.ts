@@ -3,7 +3,9 @@ import type { EditorView } from "prosemirror-view";
 
 export type LinkOpenHandler = (href: string) => Promise<void> | void;
 
-const OPENABLE_PROTOCOLS = new Set(["http:", "https:"]);
+// `mailto:` passe : la politique Rust d'opener2 (issue 676) reste juge et
+// n'accepte qu'une seule adresse simple, sans en-têtes ni paramètres.
+const OPENABLE_PROTOCOLS = new Set(["http:", "https:", "mailto:"]);
 
 export function getOpenableHref(href: string | null): string | null {
   if (!href) {
