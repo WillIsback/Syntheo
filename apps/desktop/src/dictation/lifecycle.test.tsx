@@ -42,6 +42,7 @@ vi.mock("@tauri-apps/api/core", () => ({
 vi.mock("~/stt/useSTTConnection", () => ({
   useSTTConnection: () => ({
     conn: mocks.connection,
+    serverConn: mocks.connection,
   }),
 }));
 vi.mock("@tauri-apps/plugin-os", () => ({ platform: () => mocks.platform }));

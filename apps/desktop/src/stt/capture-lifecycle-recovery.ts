@@ -354,6 +354,7 @@ export function createCaptureRecovery(
     ...(refreshSummaryAfterRepair ? { refreshSummaryAfterRepair: true } : {}),
     ...(inheritedCaptures.length > 0 ? { inheritedCaptures } : {}),
     ...(state.inheritedOnly ? { inheritedOnly: true } : {}),
+    ...(state.onDevice ? { onDevice: true } : {}),
   });
   const releaseMarker = async () => {
     const inheritedAudioRemains =

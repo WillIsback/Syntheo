@@ -57,12 +57,14 @@ pub enum HostError {
     Launch(String),
     /// Trop de tentatives rapprochées : le module plante en boucle.
     RestartBudget,
+    /// Une installation du module est en cours.
+    Installing,
 }
 
 impl HostError {
     /// Refus définitif pour la durée de l'écoute : ne pas réessayer.
     pub fn is_permanent(&self) -> bool {
-        !matches!(self, Self::Launch(_))
+        !matches!(self, Self::Launch(_) | Self::Installing)
     }
 
     /// Erreur à transmettre au listener.
@@ -73,6 +75,7 @@ impl HostError {
             Self::Verify(_) => Kind::Invalid,
             Self::RestartBudget => Kind::Crashing,
             Self::Launch(_) => Kind::FailedToStart,
+            Self::Installing => Kind::Installing,
         };
         owhisper_client::OnDeviceError {
             kind,
@@ -109,6 +112,7 @@ impl std::fmt::Display for HostError {
             Self::Verify(message) => write!(f, "on-device module rejected: {message}"),
             Self::Launch(message) => write!(f, "on-device module failed to start: {message}"),
             Self::RestartBudget => f.write_str("on-device module keeps stopping"),
+            Self::Installing => f.write_str("on-device module is being installed"),
         }
     }
 }
@@ -266,6 +270,17 @@ pub struct SpeechHost {
     /// Version de l'application, comparée à `min_app_version`.
     app_version: String,
     state: Mutex<HostState>,
+    /// Installation ou désinstallation en cours : `target()` refuse aussitôt.
+    installing: std::sync::atomic::AtomicBool,
+}
+
+/// Libère l'indicateur d'installation, même en cas d'erreur.
+struct InstallingGuard<'a>(&'a std::sync::atomic::AtomicBool);
+
+impl Drop for InstallingGuard<'_> {
+    fn drop(&mut self) {
+        self.0.store(false, std::sync::atomic::Ordering::SeqCst);
+    }
 }
 
 #[derive(Default)]
@@ -293,6 +308,7 @@ impl SpeechHost {
             manifest_key: crate::manifest::MODULE_PUBLIC_KEY.map(str::to_owned),
             app_version: app_version.to_owned(),
             state: Mutex::new(HostState::default()),
+            installing: Default::default(),
         }
     }
 
@@ -322,6 +338,11 @@ impl SpeechHost {
         if !allowed {
             self.stop().await;
             return Err(HostError::Disabled);
+        }
+        // Pendant une installation, refus immédiat plutôt qu'une attente du
+        // verrou pendant toute la copie.
+        if self.installing.load(std::sync::atomic::Ordering::SeqCst) {
+            return Err(HostError::Installing);
         }
         let mut state = self.state.lock().await;
         let now = Instant::now();
@@ -409,6 +430,87 @@ impl SpeechHost {
             .running
             .as_mut()
             .is_some_and(|r| matches!(r.child.try_wait(), Ok(None)))
+    }
+
+    /// État du module installé (sans hachage).
+    pub async fn module_status(&self) -> crate::install::ModuleStatus {
+        let (dir, key, version) = (
+            self.dir.clone(),
+            self.manifest_key.clone(),
+            self.app_version.clone(),
+        );
+        tokio::task::spawn_blocking(move || crate::install::status(&dir, key.as_deref(), &version))
+            .await
+            .unwrap_or(crate::install::ModuleStatus::NotInstalled)
+    }
+
+    /// Une clé de signature des modules est configurée : sans elle, aucun
+    /// module ne peut être installé ni chargé.
+    pub fn installable(&self) -> bool {
+        self.manifest_key.is_some()
+    }
+
+    /// Marque une installation en cours ; refuse si le module tourne ou si
+    /// une autre installation est en cours.
+    async fn begin_install(&self) -> Result<InstallingGuard<'_>, &'static str> {
+        use std::sync::atomic::Ordering;
+        if self
+            .installing
+            .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+            .is_err()
+        {
+            return Err("installing");
+        }
+        let guard = InstallingGuard(&self.installing);
+        let mut state = self.state.lock().await;
+        if state
+            .running
+            .as_mut()
+            .is_some_and(|r| matches!(r.child.try_wait(), Ok(None)))
+        {
+            return Err("running");
+        }
+        state.running = None;
+        Ok(guard)
+    }
+
+    /// Installe le module du dossier `source`, après vérification complète ;
+    /// refusé pendant qu'il tourne. Pendant la copie, le verrou de l'hôte
+    /// n'est pas tenu : `target()` refuse aussitôt (installation en cours).
+    /// Erreur : un code stable pour l'interface.
+    pub async fn install_from(
+        &self,
+        source: PathBuf,
+    ) -> Result<crate::install::ModuleStatus, &'static str> {
+        let _guard = self.begin_install().await?;
+        let (dir, key, version) = (
+            self.dir.clone(),
+            self.manifest_key.clone(),
+            self.app_version.clone(),
+        );
+        let status = tokio::task::spawn_blocking(move || {
+            crate::install::install(&source, &dir, key.as_deref(), &version)
+        })
+        .await
+        .map_err(|_| "io")?
+        .map_err(|error| error.code())?;
+        let mut state = self.state.lock().await;
+        state.rejected = None;
+        state.attempts.clear();
+        state.blocked_until = None;
+        Ok(status)
+    }
+
+    /// Désinstalle le module ; refusé pendant qu'il tourne.
+    pub async fn uninstall(&self) -> Result<(), &'static str> {
+        let _guard = self.begin_install().await?;
+        let dir = self.dir.clone();
+        tokio::task::spawn_blocking(move || crate::install::uninstall(&dir))
+            .await
+            .map_err(|_| "io")?
+            .map_err(|_| "io")?;
+        self.state.lock().await.rejected = None;
+        Ok(())
     }
 
     /// Vérifications faites depuis la création (essais).

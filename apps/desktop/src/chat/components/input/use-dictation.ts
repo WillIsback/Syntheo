@@ -35,7 +35,7 @@ export function useDictation({
     `chat-dictation-${crypto.randomUUID()}`,
   ).current;
   const runBatch = useRunBatch(transcriptionSessionId);
-  const { conn } = useSTTConnection();
+  const { serverConn: conn } = useSTTConnection();
   const microphoneDevice = useConfigValue("microphone_device");
   const [phase, setPhaseState] = useState<DictationPhase>("idle");
   const [elapsedSeconds, setElapsedSeconds] = useState(0);

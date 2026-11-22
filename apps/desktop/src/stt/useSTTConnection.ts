@@ -6,16 +6,46 @@ import { type ProviderId, PROVIDERS } from "~/settings/ai/stt/shared";
 import { useAiProvidersState } from "~/settings/providers";
 import { useSettingsReady } from "~/settings/queries";
 import { useConfigValues } from "~/shared/config";
+import { getDefaultSttModel } from "~/stt/model-selection";
+import { ON_DEVICE_BASE_URL, useOnDeviceStatus } from "~/stt/on-device";
+
+/**
+ * Source « Sur ce poste » choisie : connexion au module local, ou aucune si
+ * le module manque. Une source interdite par l'organisation est ignorée : la
+ * transcription repasse par le serveur configuré.
+ */
+export function resolveOnDeviceConnection({
+  chosen,
+  allowed,
+  installed,
+}: {
+  chosen: boolean;
+  allowed: boolean | undefined;
+  installed: boolean;
+}) {
+  if (!chosen || allowed === false) return undefined;
+  if (!installed) return null;
+  return {
+    provider: "nvidia" as ProviderId,
+    model: getDefaultSttModel("nvidia") ?? "",
+    baseUrl: ON_DEVICE_BASE_URL,
+    apiKey: "",
+  };
+}
 
 export const useSTTConnection = () => {
   const settingsReady = useSettingsReady();
-  const { current_stt_provider, current_stt_model } = useConfigValues([
-    "current_stt_provider",
-    "current_stt_model",
-  ] as const) as {
-    current_stt_provider: ProviderId | undefined;
-    current_stt_model: string | undefined;
-  };
+  const { current_stt_provider, current_stt_model, stt_on_device } =
+    useConfigValues([
+      "current_stt_provider",
+      "current_stt_model",
+      "stt_on_device",
+    ] as const) as {
+      current_stt_provider: ProviderId | undefined;
+      current_stt_model: string | undefined;
+      stt_on_device: boolean | undefined;
+    };
+  const onDevice = useOnDeviceStatus();
 
   const { providers, isReady: providerConfigReady } =
     useAiProvidersState("stt");
@@ -23,7 +53,7 @@ export const useSTTConnection = () => {
     current_stt_provider ? providers[`stt:${current_stt_provider}`] : undefined
   ) as AIProviderStorage | undefined;
 
-  const connection = useMemo(() => {
+  const serverConnection = useMemo(() => {
     if (!current_stt_provider || !current_stt_model) {
       return null;
     }
@@ -55,11 +85,27 @@ export const useSTTConnection = () => {
     };
   }, [current_stt_provider, current_stt_model, providerConfig]);
 
+  // Écoute en direct : la source « Sur ce poste » si elle est choisie. La
+  // dictée et la transcription de fichiers passent toujours par le serveur
+  // (`serverConn`) : le module ne fait que le direct d'une écoute.
+  const connection = useMemo(() => {
+    const local = resolveOnDeviceConnection({
+      chosen: !!stt_on_device,
+      allowed: onDevice.data?.allowed,
+      installed: onDevice.data?.module.kind === "installed",
+    });
+    return local === undefined ? serverConnection : local;
+  }, [serverConnection, stt_on_device, onDevice.data]);
+
   return {
     conn: connection,
+    serverConn: serverConnection,
     isReady: settingsReady && connection !== null && providerConfigReady,
     // Réglages ou fournisseurs encore en chargement : `conn` null ne veut pas
     // encore dire « aucun fournisseur » (issue 515).
-    isLoading: !settingsReady || !providerConfigReady,
+    isLoading:
+      !settingsReady ||
+      !providerConfigReady ||
+      (!!stt_on_device && onDevice.isLoading),
   };
 };

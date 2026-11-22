@@ -33,6 +33,8 @@ vi.mock("~/shared/relaunch", () => ({
   flushAutomaticRelaunch: mocks.flushAutomaticRelaunch,
 }));
 
+// La proposition « Sur ce poste » a ses propres essais.
+vi.mock("./on-device-proposal", () => ({ OnDeviceProposal: () => null }));
 vi.mock("~/types/tauri.gen", () => ({
   commands: { setOnboardingNeeded: mocks.setOnboardingNeeded },
 }));

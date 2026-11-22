@@ -74,6 +74,10 @@ const DENIED_COMMANDS: &[&str] = &[
     // Sonde de la transcription sur le poste (issue 682) : le micro-banc
     // occupe tous les cœurs ; il ne se déclenche pas à distance.
     "plugin:transcription|probe_local_transcription",
+    // Module de transcription sur le poste (issue 685) : installer ou retirer
+    // un exécutable ne se décide pas à distance.
+    "plugin:transcription|on_device_install",
+    "plugin:transcription|on_device_uninstall",
 ];
 
 pub(crate) fn is_denied_command(cmd: &str) -> bool {

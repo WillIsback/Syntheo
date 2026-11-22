@@ -24,6 +24,7 @@ syntheo-speech-probe = { workspace = true, features = ["specta"] }
 syntheo-storage = { workspace = true }
 syntheo-transcript = { workspace = true }
 syntheo-transcription-core = { workspace = true, features = ["specta", "tauri-event"] }
+tauri-plugin-dialog = { workspace = true }
 
 owhisper-client = { workspace = true }
 owhisper-interface = { workspace = true }

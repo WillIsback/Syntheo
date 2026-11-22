@@ -30,6 +30,10 @@ pub struct InheritedCapture {
     pub provider: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub model: Option<String>,
+    /// Capture « Sur ce poste » (issue 685) : son audio ne part jamais au
+    /// serveur, réparation comprise.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub on_device: Option<bool>,
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, specta::Type)]
@@ -70,6 +74,10 @@ pub struct CaptureLifecycleMarker {
     pub inherited_captures: Option<Vec<InheritedCapture>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub inherited_only: Option<bool>,
+    /// Capture « Sur ce poste » (issue 685) : son audio ne part jamais au
+    /// serveur, réparation et reprise comprises.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub on_device: Option<bool>,
 }
 
 pub fn parse_marker(value_json: &str, session_id: &str) -> Option<CaptureLifecycleMarker> {
@@ -128,6 +136,7 @@ pub fn parse_marker(value_json: &str, session_id: &str) -> Option<CaptureLifecyc
             .get("model")
             .and_then(Value::as_str)
             .map(str::to_string),
+        on_device: object.get("onDevice").and_then(Value::as_bool),
         summary_mode: object.get("summaryMode").and_then(Value::as_str).and_then(
             |mode| match mode {
                 "regenerate" => Some(SummaryMode::Regenerate),
@@ -204,6 +213,7 @@ fn parse_inherited_capture(value: &Value) -> Option<InheritedCapture> {
             .get("model")
             .and_then(Value::as_str)
             .map(str::to_string),
+        on_device: object.get("onDevice").and_then(Value::as_bool),
     })
 }
 
@@ -328,8 +338,10 @@ mod tests {
                 retain_audio: Some(true),
                 provider: Some("provider-2".to_string()),
                 model: Some("model-2".to_string()),
+                on_device: Some(true),
             }]),
             inherited_only: Some(true),
+            on_device: Some(true),
         };
         let value_json = serde_json::to_string(&marker).unwrap();
 

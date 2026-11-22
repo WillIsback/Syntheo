@@ -59,7 +59,7 @@ export const useRunBatch = (sessionId: string) => {
 
   const startTranscription = useListener((state) => state.startTranscription);
   const stopTranscription = useListener((state) => state.stopTranscription);
-  const { conn } = useSTTConnection();
+  const { serverConn: conn } = useSTTConnection();
   const aiLanguage = useConfigValue("ai_language");
   const spokenLanguages = useConfigValue("spoken_languages");
   const dictionaryTerms = useConfigValue("personalization_dictionary_terms");

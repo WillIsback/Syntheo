@@ -107,7 +107,10 @@ vi.mock("@syntheo/ui/components/ui/toast", () => ({
 }));
 
 vi.mock("./useSTTConnection", () => ({
-  useSTTConnection: () => ({ conn: sttConnection.value }),
+  useSTTConnection: () => ({
+    conn: sttConnection.value,
+    serverConn: sttConnection.value,
+  }),
 }));
 
 vi.mock("./contexts", () => ({

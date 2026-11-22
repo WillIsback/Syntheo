@@ -46,6 +46,8 @@ function onDeviceCause(reason: string) {
       return t`the transcription module of this computer keeps stopping`;
     case "failed_to_start":
       return t`the transcription module of this computer did not start`;
+    case "installing":
+      return t`the transcription module of this computer is being installed`;
     default:
       return t`on-device transcription is not available`;
   }

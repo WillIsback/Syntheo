@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 
 import { CircleNotch } from "@syntheo/ui/components/icons";
 
+import { OnDeviceProposal } from "./on-device-proposal";
 import { OnboardingButton } from "./shared";
 import {
   getOrCreateWelcomeSession,
@@ -71,6 +72,7 @@ export function FinalDescription() {
         </p>
         <NoteSeal />
       </div>
+      <OnDeviceProposal />
     </div>
   );
 }

@@ -18,12 +18,32 @@ export type CaptureLifecycleDeps = {
   sessionUserId: string | undefined;
   connProvider: string | undefined;
   connModel: string | undefined;
+  /** La capture démarre sur la source « Sur ce poste » (issue 685). */
+  connOnDevice: boolean;
   transcriptExistence: boolean | null | undefined;
   runBatchRef: { current: ReturnType<typeof useRunBatch> };
   canRunBatchRef: { current: boolean };
   setBatchTranscriptionPending: (sessionId: string, pending: boolean) => void;
   stopMeetingChatTasks: () => Promise<void>;
 };
+
+/**
+ * Source d'une capture (issue 685) : celle du marqueur repris après un
+ * redémarrage, sinon celle de la connexion au démarrage ; une capture
+ * héritée « Sur ce poste » rend l'ensemble local.
+ */
+export function captureIsOnDevice(
+  recoveredMarker: CaptureLifecycleMarker | undefined,
+  inheritedCaptures: readonly InheritedCapture[],
+  connOnDevice: boolean,
+): boolean {
+  const inherited = inheritedCaptures.some(
+    (capture) => capture.onDevice === true,
+  );
+  return recoveredMarker
+    ? recoveredMarker.onDevice === true || inherited
+    : connOnDevice || inherited;
+}
 
 /**
  * État d'une capture : constantes calculées au démarrage et variables
@@ -56,6 +76,7 @@ export function createCaptureContext(
               ? { provider: pendingMarker.provider }
               : {}),
             ...(pendingMarker.model ? { model: pendingMarker.model } : {}),
+            ...(pendingMarker.onDevice ? { onDevice: true } : {}),
           },
         ]
       : []);
@@ -92,6 +113,14 @@ export function createCaptureContext(
     recoveredMarker?.preserveExistingTranscript ??
     transcriptExistence !== false;
   const ownerUserId = recoveredMarker?.ownerUserId ?? deps.sessionUserId ?? "";
+  // Source portée par la capture (issue 685) : une capture « Sur ce poste »,
+  // ou qui hérite d'une telle capture, ne répare jamais par le serveur, même
+  // après un redémarrage.
+  const onDevice = captureIsOnDevice(
+    recoveredMarker,
+    inheritedCaptures,
+    deps.connOnDevice,
+  );
   const provider = recoveredMarker?.provider ?? deps.connProvider;
   const model = recoveredMarker?.model ?? deps.connModel;
   // Règle audio de Syntheo : jamais de conservation, même pour un marqueur
@@ -115,6 +144,7 @@ export function createCaptureContext(
       : Promise.resolve(0);
 
   const state = {
+    onDevice,
     recoveredMarker,
     pendingMarker,
     inheritedCaptures,

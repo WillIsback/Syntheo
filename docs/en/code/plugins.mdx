@@ -76,7 +76,7 @@ The "Interface" column shows whether `apps/desktop/src` imports the `@syntheo/pl
   - Subtitles: `parse_subtitle`, `export_to_vtt`.
   - Languages: `is_supported_languages_live` and `_batch`, `suggest_providers_for_languages_live` and `_batch`, `list_documented_language_codes_live` and `_batch`.
   - In-memory audio: `list_capture_audio_chunks`, `delete_transcribed_capture_audio`, `delete_processed_session_audio`.
-  - On-device transcription: `probe_local_transcription` (probe from `crates/speech-probe`, refused during a capture and by the relay).
+  - On-device transcription: `probe_local_transcription` (probe from `crates/speech-probe`, refused during a capture and by the relay); `on_device_status` (managed policy and installed module), `on_device_install` (the `manifest.json` file is picked on the Rust side, local paths only, checked before it is put in place; errors are codes translated by the interface) and `on_device_uninstall`, both refused during a capture and by the relay (issue 685).
 - **Events**: `CaptureLifecycleEvent`, `CaptureStatusEvent`, `CaptureDataEvent`, `LiveTranscriptPersistenceEvent`, `SessionAudioRetentionEvent`, `TranscriptionEvent`.
 - **Internal dependencies**: `crates/audio`, `crates/db-app`, `crates/language`, `crates/speech-host`, `crates/speech-probe`, `crates/storage`, `crates/transcript`, `crates/transcription-core`, `crates/owhisper-client`, `crates/owhisper-interface`; plugins `db`, `fs-sync`, `settings`, `store2`, `tray`.
 - **Affected doc pages**: [/en/meetings](/en/meetings), [/en/import-recordings](/en/import-recordings), [/en/languages](/en/languages), [/en/ai-setup](/en/ai-setup), [/en/offline](/en/offline), [/en/data-and-privacy](/en/data-and-privacy), [/en/troubleshooting](/en/troubleshooting).

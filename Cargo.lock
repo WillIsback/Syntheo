@@ -12674,6 +12674,7 @@ dependencies = [
  "tauri",
  "tauri-plugin",
  "tauri-plugin-db",
+ "tauri-plugin-dialog",
  "tauri-plugin-fs-sync",
  "tauri-plugin-settings",
  "tauri-plugin-store2",

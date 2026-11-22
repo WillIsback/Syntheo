@@ -61,4 +61,7 @@ permissions = [
     "allow-append-audio-upload",
     "allow-discard-audio-upload",
   "allow-probe-local-transcription",
+  "allow-on-device-status",
+  "allow-on-device-install",
+  "allow-on-device-uninstall",
 ]

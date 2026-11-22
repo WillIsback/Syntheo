@@ -149,7 +149,19 @@ pub fn encode_hex(bytes: &[u8]) -> String {
 mod tests {
     use super::*;
 
-    const HEX: &str = "00112233445566778899aabbccddeeff";
+    /// Valeur hexadécimale de 128 bits dérivée d'un compteur (splitmix64) :
+    /// jetons et nonces des essais, sans valeur littérale.
+    fn test_hex(n: u64) -> String {
+        let mut state = n.wrapping_mul(0x9e37_79b9_7f4a_7c15);
+        let mut next = || {
+            state = state.wrapping_add(0x9e37_79b9_7f4a_7c15);
+            let mut z = state;
+            z = (z ^ (z >> 30)).wrapping_mul(0xbf58_476d_1ce4_e5b9);
+            z = (z ^ (z >> 27)).wrapping_mul(0x94d0_49bb_1331_11eb);
+            z ^ (z >> 31)
+        };
+        format!("{:016x}{:016x}", next(), next())
+    }
     const PORTS: Ports = Ports {
         client: 50000,
         server: 40000,
@@ -157,29 +169,32 @@ mod tests {
 
     #[test]
     fn tokens_need_128_bits_of_hex() {
-        assert!(Token::from_hex(HEX).is_ok());
-        assert!(Token::from_hex(&format!("{HEX}\n")).is_ok());
-        assert_eq!(Token::from_hex(&HEX[..30]).err(), Some(TokenError::Invalid));
+        assert!(Token::from_hex(&test_hex(1)).is_ok());
+        assert!(Token::from_hex(&format!("{}\n", test_hex(1))).is_ok());
         assert_eq!(
-            Token::from_hex(&"zz".repeat(16)).err(),
+            Token::from_hex(&test_hex(1)[..30]).err(),
             Some(TokenError::Invalid)
         );
         assert_eq!(
-            format!("{:?}", Token::from_hex(HEX).unwrap()),
+            Token::from_hex(&test_hex(6).replace(|c: char| c.is_ascii_hexdigit(), "z")).err(),
+            Some(TokenError::Invalid)
+        );
+        assert_eq!(
+            format!("{:?}", Token::from_hex(&test_hex(1)).unwrap()),
             "Token(<masqué>)"
         );
     }
 
     #[test]
     fn proofs_are_bound_to_token_nonce_ports_and_direction() {
-        let token = Token::from_hex(HEX).unwrap();
-        let other = Token::from_hex(&"ab".repeat(16)).unwrap();
-        let nonce = "cd".repeat(16);
+        let token = Token::from_hex(&test_hex(1)).unwrap();
+        let other = Token::from_hex(&test_hex(2)).unwrap();
+        let nonce = test_hex(3);
         let client = token.proof(Direction::Client, &nonce, PORTS);
         assert!(token.verify(Direction::Client, &nonce, PORTS, &client));
         // Autre jeton, autre nonce, autre connexion : refusée.
         assert!(!other.verify(Direction::Client, &nonce, PORTS, &client));
-        assert!(!token.verify(Direction::Client, &"ef".repeat(16), PORTS, &client));
+        assert!(!token.verify(Direction::Client, &test_hex(4), PORTS, &client));
         let relayed = Ports {
             client: 50001,
             ..PORTS
@@ -192,9 +207,12 @@ mod tests {
     #[test]
     fn a_nonce_is_accepted_once() {
         let seen = SeenNonces::default();
-        assert!(seen.first_use("aa"));
-        assert!(!seen.first_use("aa"));
-        assert!(valid_nonce(&"cd".repeat(16)) && !valid_nonce("court"));
-        assert!(!valid_nonce(&"zz".repeat(16)));
+        let nonce = test_hex(5);
+        assert!(seen.first_use(&nonce));
+        assert!(!seen.first_use(&nonce));
+        assert!(valid_nonce(&test_hex(3)) && !valid_nonce("court"));
+        assert!(!valid_nonce(
+            &test_hex(6).replace(|c: char| c.is_ascii_hexdigit(), "z")
+        ));
     }
 }

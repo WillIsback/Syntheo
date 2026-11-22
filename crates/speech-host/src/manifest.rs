@@ -34,7 +34,7 @@ pub const MODULE_PUBLIC_KEY: Option<&str> = None;
 
 /// Plancher anti-retour, à côté du dossier du module (il survit à une
 /// désinstallation).
-fn floor_path(dir: &Path) -> Option<std::path::PathBuf> {
+pub fn floor_path(dir: &Path) -> Option<std::path::PathBuf> {
     let name = dir.file_name()?.to_string_lossy();
     Some(dir.parent()?.join(format!("{name}.floor")))
 }
@@ -141,6 +141,20 @@ pub enum ManifestError {
     ListMismatch,
 }
 
+impl ManifestError {
+    /// Code stable pour l'interface.
+    pub fn code(&self) -> &'static str {
+        match self {
+            Self::NoKey => "no_key",
+            Self::Missing | Self::Invalid | Self::ListMismatch => "module_incomplete",
+            Self::BadSignature => "bad_signature",
+            Self::Incompatible => "incompatible",
+            Self::AppTooOld => "app_too_old",
+            Self::ModuleTooOld => "module_too_old",
+        }
+    }
+}
+
 impl std::fmt::Display for ManifestError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(match self {
@@ -157,11 +171,7 @@ impl std::fmt::Display for ManifestError {
 }
 
 fn read_small(path: &Path) -> Result<Vec<u8>, ManifestError> {
-    let metadata = std::fs::symlink_metadata(path).map_err(|_| ManifestError::Missing)?;
-    if !metadata.is_file() || metadata.len() > MAX_MANIFEST_BYTES {
-        return Err(ManifestError::Missing);
-    }
-    std::fs::read(path).map_err(|_| ManifestError::Missing)
+    crate::verify::read_bounded(path, MAX_MANIFEST_BYTES).ok_or(ManifestError::Missing)
 }
 
 /// Décode une clé ou une signature au format de `tauri signer` (texte
@@ -215,6 +225,39 @@ pub fn verify_manifest_with(
     min_module_version: &str,
     list: &BTreeMap<String, String>,
 ) -> Result<BTreeMap<String, u64>, ManifestError> {
+    verify_manifest_at(
+        dir,
+        public_key,
+        app_version,
+        min_module_version,
+        floor_path(dir).as_deref(),
+        list,
+    )
+}
+
+/// `verify_manifest` avec le plancher anti-retour donné : celui du module
+/// installé, même quand le dossier vérifié est une source ou une copie
+/// d'installation.
+pub fn verify_manifest_at(
+    dir: &Path,
+    public_key: Option<&str>,
+    app_version: &str,
+    min_module_version: &str,
+    floor: Option<&Path>,
+    list: &BTreeMap<String, String>,
+) -> Result<BTreeMap<String, u64>, ManifestError> {
+    let manifest = read_signed(dir, public_key)?;
+    let sizes = accept(&manifest, app_version, min_module_version, floor, list)?;
+    // Manifeste authentique et accepté : le plancher monte (au mieux).
+    if let Some(path) = floor {
+        raise_floor_for(path, manifest.build, app_version);
+    }
+    Ok(sizes)
+}
+
+/// Manifeste dont la signature est vérifiée, avant toute autre lecture du
+/// dossier.
+pub fn read_signed(dir: &Path, public_key: Option<&str>) -> Result<Manifest, ManifestError> {
     let public_key = public_key.ok_or(ManifestError::NoKey)?;
     let manifest_bytes = read_small(&dir.join(MANIFEST_FILE))?;
     let signature_bytes = read_small(&dir.join(SIGNATURE_FILE))?;
@@ -224,9 +267,18 @@ pub fn verify_manifest_with(
         .map_err(|_| ManifestError::BadSignature)?;
     key.verify(&manifest_bytes, &signature, false)
         .map_err(|_| ManifestError::BadSignature)?;
+    serde_json::from_slice(&manifest_bytes).map_err(|_| ManifestError::Invalid)
+}
 
-    let manifest: Manifest =
-        serde_json::from_slice(&manifest_bytes).map_err(|_| ManifestError::Invalid)?;
+/// Contrôles d'un manifeste signé : module, cible, versions, construction
+/// contre le plancher (lu, jamais écrit ici), liste. Rend les tailles.
+pub fn accept(
+    manifest: &Manifest,
+    app_version: &str,
+    min_module_version: &str,
+    floor: Option<&Path>,
+    list: &BTreeMap<String, String>,
+) -> Result<BTreeMap<String, u64>, ManifestError> {
     if manifest.schema != 1 || manifest.module != "syntheo-speech" {
         return Err(ManifestError::Invalid);
     }
@@ -253,13 +305,11 @@ pub fn verify_manifest_with(
         return Err(ManifestError::Invalid);
     }
     let ceiling = build_base(app_version).map_or(0, |b| b + 99);
-    let floor_path = floor_path(dir);
-    if let Some(path) = &floor_path
+    if let Some(path) = floor
         && manifest.build < read_floor(path, ceiling)
     {
         return Err(ManifestError::ModuleTooOld);
     }
-
     let mut entries = BTreeMap::new();
     for entry in manifest.files.iter().chain(&manifest.models) {
         if !valid_entry(entry) || entries.insert(entry.path.clone(), entry).is_some() {
@@ -273,14 +323,17 @@ pub fn verify_manifest_with(
     if !same {
         return Err(ManifestError::ListMismatch);
     }
-    // Manifeste authentique : le plancher monte (au mieux).
-    if let Some(path) = &floor_path {
-        raise_floor(path, manifest.build, ceiling);
-    }
     Ok(entries
         .into_iter()
-        .map(|(path, entry)| (path, entry.size))
+        .map(|(path, entry)| (path.clone(), entry.size))
         .collect())
+}
+
+/// Monte le plancher à `build` (après une installation réussie, ou au
+/// lancement d'un module accepté).
+pub fn raise_floor_for(path: &Path, build: u64, app_version: &str) {
+    let ceiling = build_base(app_version).map_or(0, |b| b + 99);
+    raise_floor(path, build, ceiling);
 }
 
 #[cfg(test)]
