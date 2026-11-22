@@ -120,7 +120,7 @@ struct Running {
     stdin: Option<ChildStdin>,
     target: OnDeviceTarget,
     started_at: Instant,
-    /// Objets vérifiés gardés tant que le processus vit (Windows).
+    /// Objets vérifiés gardés tant que le processus vit.
     _staging: Option<crate::verify::Staging>,
 }
 
@@ -166,6 +166,24 @@ async fn launch(verified: Verified, engine: &str, threads: usize) -> Result<Runn
     for name in KEPT_ENV {
         if let Some(value) = std::env::var_os(name) {
             command.env(name, value);
+        }
+    }
+    #[cfg(unix)]
+    {
+        // Les modèles vérifiés passent par descripteur hérité : seuls ceux-là
+        // perdent FD_CLOEXEC, dans le processus fils, juste avant exec.
+        let fds = verified.staging.inherited_fds();
+        // SAFETY : fcntl est sûr entre fork et exec ; aucune allocation.
+        unsafe {
+            command.pre_exec(move || {
+                for fd in &fds {
+                    let flags = libc::fcntl(*fd, libc::F_GETFD);
+                    if flags < 0 || libc::fcntl(*fd, libc::F_SETFD, flags & !libc::FD_CLOEXEC) < 0 {
+                        return Err(std::io::Error::last_os_error());
+                    }
+                }
+                Ok(())
+            });
         }
     }
     #[cfg(windows)]
@@ -222,12 +240,9 @@ async fn launch(verified: Verified, engine: &str, threads: usize) -> Result<Runn
     }
     let port = port.ok_or_else(|| HostError::Launch("invalid port".into()))? as u16;
     let token = OnDeviceToken::new(token).ok_or_else(|| HostError::Launch("token".into()))?;
-    // Le module a chargé son binaire et ses modèles avant d'annoncer : la
-    // copie privée peut partir ; les handles Windows restent jusqu'à sa mort.
-    let staging = match verified.staging {
-        crate::verify::Staging::Copy(_) => None,
-        locked => Some(locked),
-    };
+    // Le module rouvre le modèle de diarisation à chaque session : copie
+    // privée, descripteurs et handles restent jusqu'à sa mort.
+    let staging = Some(verified.staging);
     Ok(Running {
         child,
         stdin: Some(stdin),
@@ -349,6 +364,13 @@ impl SpeechHost {
         .await
         {
             Ok(Ok(verified)) => verified,
+            // Erreur d'entrée-sortie (disque plein…) : passagère, comptée
+            // comme un lancement raté, jamais rangée comme refus.
+            Ok(Err(crate::verify::VerifyError::Io)) => {
+                return Err(HostError::Launch(
+                    crate::verify::VerifyError::Io.to_string(),
+                ));
+            }
             Ok(Err(error)) => {
                 state.rejected = Some(error.to_string());
                 return Err(HostError::Verify(error.to_string()));

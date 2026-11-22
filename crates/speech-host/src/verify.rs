@@ -44,6 +44,8 @@ pub enum VerifyError {
     WrongSize,
     /// Manifeste signé absent, invalide ou incompatible.
     Manifest(crate::manifest::ManifestError),
+    /// Erreur d'entrée-sortie (disque plein…) : passagère, pas un refus.
+    Io,
 }
 
 impl std::fmt::Display for VerifyError {
@@ -59,6 +61,7 @@ impl std::fmt::Display for VerifyError {
             Self::Unlisted => "the module folder has an unlisted file",
             Self::NoBinary => "the module binary is not listed",
             Self::WrongSize => "a module file does not match its size",
+            Self::Io => "the module could not be prepared (input/output error)",
             Self::Manifest(_) => unreachable!(),
         })
     }
@@ -66,35 +69,55 @@ impl std::fmt::Display for VerifyError {
 
 /// Module vérifié : chemins à utiliser pour le lancement, et garde des objets
 /// vérifiés. On exécute exactement ce qui a été haché :
-/// - Linux et macOS : une copie privée par lancement (dossier 0700, à côté du
-///   module pour profiter d'une copie par référence), hachée depuis la copie
-///   et supprimée par `Staging` ;
-/// - Windows : les fichiers d'origine, ouverts sans partage en écriture ni en
-///   suppression, hachés depuis ces handles, gardés ouverts jusqu'à la mort
-///   du processus.
+/// - le binaire et ses bibliothèques sont copiés dans un dossier privé neuf
+///   par lancement (Linux : 0700 ; Windows : ACL limitée au propriétaire,
+///   posée à la création), hachés depuis la copie, puis exécutés depuis elle ;
+/// - les modèles ne sont pas copiés. Linux : chaque modèle est ouvert, haché
+///   depuis son descripteur, et le module en hérite ; le dossier privé
+///   l'expose par un lien `/proc/self/fd/N`. Windows : chaque modèle et
+///   chaque dossier de son chemin sont ouverts sans partage en écriture ni en
+///   suppression, points de réanalyse refusés, chemin final vérifié.
+///
+/// Le tout vit aussi longtemps que le processus (`Staging`).
 #[derive(Debug)]
 pub struct Verified {
-    pub dir: PathBuf,
     pub binary: PathBuf,
     pub models: PathBuf,
     pub staging: Staging,
 }
 
-/// Garde des objets vérifiés (voir `Verified`).
-#[derive(Debug)]
-pub enum Staging {
-    /// Copie privée, supprimée à la libération.
-    Copy(PathBuf),
-    /// Handles sans partage en écriture ni en suppression.
-    Locked(Vec<std::fs::File>),
+/// Garde des objets vérifiés (voir `Verified`) : le dossier privé, supprimé
+/// à la libération, et les fichiers ouverts.
+#[derive(Debug, Default)]
+pub struct Staging {
+    dir: Option<PathBuf>,
+    handles: Vec<std::fs::File>,
+}
+
+impl Staging {
+    /// Descripteurs que le module doit hériter (Linux).
+    #[cfg(unix)]
+    pub fn inherited_fds(&self) -> Vec<i32> {
+        use std::os::fd::AsRawFd;
+        self.handles.iter().map(AsRawFd::as_raw_fd).collect()
+    }
 }
 
 impl Drop for Staging {
     fn drop(&mut self) {
-        if let Self::Copy(dir) = self {
+        self.handles.clear();
+        if let Some(dir) = self.dir.take() {
             let _ = std::fs::remove_dir_all(dir);
         }
     }
+}
+
+fn is_model(path: &str) -> bool {
+    path.starts_with("models/")
+}
+
+fn io(_: std::io::Error) -> VerifyError {
+    VerifyError::Io
 }
 
 /// Préfixe des copies privées, à côté du dossier du module.
@@ -233,37 +256,36 @@ pub fn verify(
             return Err(VerifyError::WrongSize);
         }
     }
-    let (root, staging) = stage(dir, &entries)?;
-    Ok(Verified {
-        binary: root.join(binary_name()),
-        models: root.join("models"),
-        dir: root,
-        staging,
-    })
+    stage(dir, &entries)
 }
 
-/// Copie privée, puis hachage depuis la copie.
-#[cfg(not(windows))]
-fn stage(
-    dir: &Path,
-    entries: &BTreeMap<String, String>,
-) -> Result<(PathBuf, Staging), VerifyError> {
-    use std::os::unix::fs::{DirBuilderExt, PermissionsExt};
+/// Dossier privé neuf, à côté du module.
+fn private_dir_path(dir: &Path) -> Result<PathBuf, VerifyError> {
     let name = dir
         .file_name()
         .ok_or(VerifyError::Missing)?
         .to_string_lossy();
     let parent = dir.parent().ok_or(VerifyError::Missing)?;
-    let root = parent.join(format!(
+    Ok(parent.join(format!(
         "{name}{RUN_PREFIX}{}",
         uuid::Uuid::new_v4().simple()
-    ));
+    )))
+}
+
+#[cfg(not(windows))]
+fn stage(dir: &Path, entries: &BTreeMap<String, String>) -> Result<Verified, VerifyError> {
+    use std::os::fd::AsRawFd;
+    use std::os::unix::fs::{DirBuilderExt, OpenOptionsExt, PermissionsExt};
+    let root = private_dir_path(dir)?;
     std::fs::DirBuilder::new()
         .mode(0o700)
         .create(&root)
-        .map_err(|_| VerifyError::Missing)?;
-    // Supprimée si la vérification échoue.
-    let staging = Staging::Copy(root.clone());
+        .map_err(io)?;
+    // Supprimé si la vérification échoue.
+    let mut staging = Staging {
+        dir: Some(root.clone()),
+        handles: Vec::new(),
+    };
     for (path, expected) in entries {
         let target = root.join(path);
         if let Some(parent) = target.parent() {
@@ -271,47 +293,212 @@ fn stage(
                 .mode(0o700)
                 .recursive(true)
                 .create(parent)
-                .map_err(|_| VerifyError::Missing)?;
+                .map_err(io)?;
         }
-        std::fs::copy(dir.join(path), &target).map_err(|_| VerifyError::Missing)?;
-        let mode = if path == binary_name() { 0o700 } else { 0o600 };
-        std::fs::set_permissions(&target, std::fs::Permissions::from_mode(mode))
-            .map_err(|_| VerifyError::Missing)?;
-        if &sha256(&target).map_err(|_| VerifyError::Missing)? != expected {
-            return Err(VerifyError::Altered);
+        if is_model(path) {
+            // Ouvert, haché depuis le descripteur, hérité par le module.
+            let mut file = std::fs::OpenOptions::new()
+                .read(true)
+                .custom_flags(libc::O_NOFOLLOW)
+                .open(dir.join(path))
+                .map_err(|_| VerifyError::Missing)?;
+            if !file.metadata().map_err(io)?.is_file() {
+                return Err(VerifyError::Missing);
+            }
+            if &sha256_reader(&mut file).map_err(io)? != expected {
+                return Err(VerifyError::Altered);
+            }
+            std::os::unix::fs::symlink(format!("/proc/self/fd/{}", file.as_raw_fd()), &target)
+                .map_err(io)?;
+            staging.handles.push(file);
+        } else {
+            std::fs::copy(dir.join(path), &target).map_err(io)?;
+            let mode = if path == binary_name() { 0o700 } else { 0o600 };
+            std::fs::set_permissions(&target, std::fs::Permissions::from_mode(mode)).map_err(io)?;
+            if &sha256(&target).map_err(io)? != expected {
+                return Err(VerifyError::Altered);
+            }
         }
     }
-    Ok((root, staging))
+    Ok(Verified {
+        binary: root.join(binary_name()),
+        models: root.join("models"),
+        staging,
+    })
 }
 
-/// Handles sans partage en écriture ni en suppression, hachés tels quels.
 #[cfg(windows)]
-fn stage(
-    dir: &Path,
-    entries: &BTreeMap<String, String>,
-) -> Result<(PathBuf, Staging), VerifyError> {
+mod windows_stage {
+    use std::os::windows::ffi::{OsStrExt, OsStringExt};
     use std::os::windows::fs::{MetadataExt, OpenOptionsExt};
+    use std::os::windows::io::AsRawHandle;
+    use std::path::{Path, PathBuf};
+
+    use windows::Win32::Foundation::{HANDLE, HLOCAL, LocalFree};
+    use windows::Win32::Security::Authorization::{
+        ConvertStringSecurityDescriptorToSecurityDescriptorW, SDDL_REVISION_1,
+    };
+    use windows::Win32::Security::{PSECURITY_DESCRIPTOR, SECURITY_ATTRIBUTES};
+    use windows::Win32::Storage::FileSystem::{
+        CreateDirectoryW, FILE_NAME_NORMALIZED, GetFinalPathNameByHandleW,
+    };
+    use windows::core::PCWSTR;
+
+    use super::VerifyError;
+
     const FILE_SHARE_READ: u32 = 0x1;
+    const FILE_FLAG_BACKUP_SEMANTICS: u32 = 0x0200_0000;
     const FILE_FLAG_OPEN_REPARSE_POINT: u32 = 0x0020_0000;
     const FILE_ATTRIBUTE_REPARSE_POINT: u32 = 0x400;
-    let mut handles = Vec::with_capacity(entries.len());
-    for (path, expected) in entries {
-        let mut file = std::fs::OpenOptions::new()
+
+    fn wide(path: &Path) -> Vec<u16> {
+        path.as_os_str().encode_wide().chain([0]).collect()
+    }
+
+    /// Dossier neuf dont la DACL protégée ne donne accès qu'au propriétaire
+    /// (l'utilisateur) et au système, posée à la création.
+    pub fn create_private_dir(path: &Path) -> Result<(), VerifyError> {
+        let sddl: Vec<u16> = "D:P(A;OICI;FA;;;OW)(A;OICI;FA;;;SY)"
+            .encode_utf16()
+            .chain([0])
+            .collect();
+        let mut descriptor = PSECURITY_DESCRIPTOR::default();
+        // SAFETY : chaînes terminées par zéro ; descripteur libéré ci-dessous.
+        unsafe {
+            ConvertStringSecurityDescriptorToSecurityDescriptorW(
+                PCWSTR(sddl.as_ptr()),
+                SDDL_REVISION_1,
+                &mut descriptor,
+                None,
+            )
+            .map_err(|_| VerifyError::Io)?;
+            let attributes = SECURITY_ATTRIBUTES {
+                nLength: std::mem::size_of::<SECURITY_ATTRIBUTES>() as u32,
+                lpSecurityDescriptor: descriptor.0,
+                bInheritHandle: false.into(),
+            };
+            let path = wide(path);
+            let created = CreateDirectoryW(PCWSTR(path.as_ptr()), Some(&attributes));
+            let _ = LocalFree(Some(HLOCAL(descriptor.0)));
+            created.map_err(|_| VerifyError::Io)
+        }
+    }
+
+    /// Ouvre sans partage en écriture ni en suppression ; refuse un point de
+    /// réanalyse.
+    pub fn open_locked(path: &Path, directory: bool) -> Result<std::fs::File, VerifyError> {
+        let mut flags = FILE_FLAG_OPEN_REPARSE_POINT;
+        if directory {
+            flags |= FILE_FLAG_BACKUP_SEMANTICS;
+        }
+        let file = std::fs::OpenOptions::new()
             .read(true)
             .share_mode(FILE_SHARE_READ)
-            .custom_flags(FILE_FLAG_OPEN_REPARSE_POINT)
-            .open(dir.join(path))
+            .custom_flags(flags)
+            .open(path)
             .map_err(|_| VerifyError::Missing)?;
-        let metadata = file.metadata().map_err(|_| VerifyError::Missing)?;
-        if !metadata.is_file() || metadata.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0 {
+        let metadata = file.metadata().map_err(|_| VerifyError::Io)?;
+        let kind_ok = if directory {
+            metadata.is_dir()
+        } else {
+            metadata.is_file()
+        };
+        if !kind_ok || metadata.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0 {
             return Err(VerifyError::Missing);
         }
-        if &sha256_reader(&mut file).map_err(|_| VerifyError::Missing)? != expected {
-            return Err(VerifyError::Altered);
-        }
-        handles.push(file);
+        Ok(file)
     }
-    Ok((dir.to_path_buf(), Staging::Locked(handles)))
+
+    /// Chemin final de l'objet ouvert.
+    pub fn final_path(file: &std::fs::File) -> Result<PathBuf, VerifyError> {
+        let handle = HANDLE(file.as_raw_handle());
+        let mut buffer = vec![0u16; 1024];
+        loop {
+            // SAFETY : handle ouvert, tampon de la taille annoncée.
+            let len =
+                unsafe { GetFinalPathNameByHandleW(handle, &mut buffer, FILE_NAME_NORMALIZED) }
+                    as usize;
+            if len == 0 {
+                return Err(VerifyError::Io);
+            }
+            if len < buffer.len() {
+                buffer.truncate(len);
+                return Ok(PathBuf::from(std::ffi::OsString::from_wide(&buffer)));
+            }
+            buffer.resize(len + 1, 0);
+        }
+    }
+
+    pub fn same_path(a: &Path, b: &Path) -> bool {
+        a.to_string_lossy().to_lowercase() == b.to_string_lossy().to_lowercase()
+    }
+}
+
+#[cfg(windows)]
+fn stage(dir: &Path, entries: &BTreeMap<String, String>) -> Result<Verified, VerifyError> {
+    use windows_stage::{create_private_dir, final_path, open_locked, same_path};
+    let root = private_dir_path(dir)?;
+    create_private_dir(&root)?;
+    let mut staging = Staging {
+        dir: Some(root.clone()),
+        handles: Vec::new(),
+    };
+    // Le dossier du module et chaque dossier du chemin d'un modèle, verrouillés.
+    let base = open_locked(dir, true)?;
+    let base_final = final_path(&base)?;
+    staging.handles.push(base);
+    let mut locked_dirs = std::collections::BTreeSet::new();
+    for path in entries.keys().filter(|p| is_model(p)) {
+        let mut current = String::new();
+        for part in path
+            .split('/')
+            .collect::<Vec<_>>()
+            .iter()
+            .rev()
+            .skip(1)
+            .rev()
+        {
+            current = if current.is_empty() {
+                (*part).to_owned()
+            } else {
+                format!("{current}/{part}")
+            };
+            if locked_dirs.insert(current.clone()) {
+                staging
+                    .handles
+                    .push(open_locked(&dir.join(&current), true)?);
+            }
+        }
+    }
+    for (path, expected) in entries {
+        if is_model(path) {
+            let mut file = open_locked(&dir.join(path), false)?;
+            let expected_path = base_final.join(path.replace('/', "\\"));
+            if !same_path(&final_path(&file)?, &expected_path) {
+                return Err(VerifyError::UnsafePath);
+            }
+            if &sha256_reader(&mut file).map_err(io)? != expected {
+                return Err(VerifyError::Altered);
+            }
+            staging.handles.push(file);
+        } else {
+            let target = root.join(path.replace('/', "\\"));
+            if let Some(parent) = target.parent() {
+                std::fs::create_dir_all(parent).map_err(io)?;
+            }
+            std::fs::copy(dir.join(path), &target).map_err(io)?;
+            let mut file = open_locked(&target, false)?;
+            if &sha256_reader(&mut file).map_err(io)? != expected {
+                return Err(VerifyError::Altered);
+            }
+            staging.handles.push(file);
+        }
+    }
+    Ok(Verified {
+        binary: root.join(binary_name()),
+        models: dir.join("models"),
+        staging,
+    })
 }
 
 #[cfg(test)]
@@ -357,17 +544,21 @@ mod tests {
         {
             use std::os::unix::fs::PermissionsExt;
             // Copie privée : ni le dossier du module, ni lisible par d'autres.
-            assert_ne!(verified.dir, dir.path());
-            let mode = std::fs::metadata(&verified.dir)
-                .unwrap()
-                .permissions()
-                .mode();
+            let private = verified.binary.parent().unwrap().to_path_buf();
+            assert_ne!(private, dir.path());
+            let mode = std::fs::metadata(&private).unwrap().permissions().mode();
             assert_eq!(mode & 0o777, 0o700);
             // Modifier l'original après la vérification ne touche pas ce qui
             // sera exécuté.
             write(dir.path(), binary_name(), b"binairX");
             assert_eq!(std::fs::read(&verified.binary).unwrap(), b"binaire");
-            let copy = verified.dir.clone();
+            // Le modèle est exposé par un lien vers le descripteur vérifié.
+            let link = std::fs::read_link(verified.models.join("nemotron/encoder.onnx")).unwrap();
+            assert!(
+                link.to_string_lossy().starts_with("/proc/self/fd/"),
+                "{link:?}"
+            );
+            let copy = private.clone();
             drop(verified);
             assert!(!copy.exists(), "copie supprimée");
         }

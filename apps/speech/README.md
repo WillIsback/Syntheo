@@ -43,8 +43,8 @@ SYNTHEO_SPEECH_MODELS=<dossier> SYNTHEO_SPEECH_AUDIO=<wav 16 kHz mono PCM16> car
 
 Le workflow `.github/workflows/build-speech.yml` (`workflow_dispatch` et `workflow_call`) construit le module en release pour `x86_64-unknown-linux-gnu` (ubuntu-24.04) et `x86_64-pc-windows-msvc` (windows-latest). Il part d'un registre Cargo et d'un cache vides : aucun cache n'est partagé avec les autres workflows. Il ne publie rien. Il produit en artefacts :
 
-- le dossier du module : binaire, runtime Visual C++ sous Windows, `licenses/`, `manifest.json` et `files.sha256` ;
-- le SBOM CycloneDX 1.5 des dépendances Rust (`cargo-cyclonedx` 0.5.10, version figée) ;
+- le dossier du module : binaire, runtime Visual C++ sous Windows, `licenses/` (voir `supply-chain/notices/README.md`), `manifest.json` et `files.sha256`. Le binaire est uploadé dès l'assemblage, avant tout outil tiers ;
+- le SBOM CycloneDX 1.5 des dépendances Rust (`cargo-cyclonedx` 0.5.10) et les notices des crates (`cargo-about` 0.9.3), versions figées, produits dans des jobs qui ne voient pas le module construit ;
 - sur demande, depuis main, `manifest.json.sig` (voir « Manifeste signé »).
 
 ### ONNX Runtime
@@ -66,8 +66,8 @@ Sous Windows, `dist.tsv` n'a pas de variante sans accélérateur : c'est la vari
 `models/models.json` fige les sources des modèles et les empreintes des fichiers livrés.
 
 - **Sources** : l'export ONNX de `altunenes/parakeet-rs` sur Hugging Face, révision `26684938ff242cb4f7a65fad712476c6015a4477`, à partir de `nvidia/nemotron-3.5-asr-streaming-0.6b` et `nvidia/Nemotron-3-Diarization`.
-- **Quantification** : `models/quantize.py` (onnxruntime 1.32.0, onnx 1.23.2, versions figées) produit l'int8 retenu par l'issue 680. Encodeur et décodeur sont quantifiés par canal, la diarisation par tenseur. Le script vérifie chaque source et chaque fichier produit ; la reconstruction redonne exactement les empreintes de `models.json`.
-- **Licence** : OpenMDW-1.1, pour les modèles NVIDIA comme pour l'export, dont l'auteur renvoie aux licences de NVIDIA. L'accord permet de redistribuer les modèles, modifiés ou non (« deal in the Model Materials without restriction »), à condition de garder une copie de l'accord et les avis d'origine. Le module livre `licenses/LICENSE.OpenMDW-1.1` ; il faudra y ajouter les fiches des modèles (avis d'origine) avant la publication.
+- **Quantification** : `models/quantize.py` produit l'int8 retenu par l'issue 680 : Python 3.12, onnxruntime 1.32.0 et onnx 1.23.2, toutes les dépendances transitives figées par `quantize.py.lock` (`uv run --locked --script`). Encodeur et décodeur sont quantifiés par canal, la diarisation par tenseur. Le script écrit dans un dossier neuf, vérifie chaque source et chaque fichier produit ; la reconstruction redonne exactement les empreintes de `models.json`.
+- **Licence** : OpenMDW-1.1, pour les modèles NVIDIA comme pour l'export, dont l'auteur renvoie aux licences de NVIDIA. L'accord permet de redistribuer les modèles, modifiés ou non (« deal in the Model Materials without restriction »), à condition de garder une copie de l'accord et les avis d'origine. Le module livre l'accord et les fiches des modèles et de l'export, aux révisions figées (`supply-chain/notices/models/`), ainsi que la licence et les notices d'ONNX Runtime et les notices des crates : tout est listé dans le manifeste signé.
 - **Hébergement** : à décider. Proposé, une release GitHub dédiée (tag `speech-models-1`), une ressource par fichier (moins de 2 Go chacune). Les modèles restent ainsi dans le même dépôt et sous les mêmes droits que le reste, et l'attestation de provenance d'Actions s'applique. L'autre option est un dépôt Hugging Face, avec une révision épinglée. L'URL de base est un paramètre du workflow ; le manifeste porte l'URL de chaque fichier.
 
 ### Manifeste signé
@@ -82,7 +82,7 @@ Sous Windows, `dist.tsv` n'a pas de variante sans accélérateur : c'est la vari
 Avant chaque lancement, `crates/speech-host` vérifie dans l'ordre :
 
 1. la signature, avec la clé publique `MODULE_PUBLIC_KEY` ;
-2. la cible, le protocole, la version minimale de l'application et la version minimale du module (`MIN_MODULE_VERSION`, contre le retour à une ancienne version signée) ;
+2. la cible, le protocole, la version minimale de l'application, la version minimale du module (`MIN_MODULE_VERSION`, relevée à chaque correctif de sécurité) et le numéro de construction (`build`, le numéro d'exécution du workflow) : l'application garde le plus haut accepté (`<modules>/speech.floor`) et refuse un module plus ancien ;
 3. que `files.sha256` liste exactement les fichiers du manifeste ;
 4. la taille et l'empreinte de chaque fichier ;
 5. qu'aucun fichier hors liste n'est présent.
@@ -91,8 +91,10 @@ Tant que la clé n'existe pas, `MODULE_PUBLIC_KEY` est vide et aucun module n'es
 
 On exécute exactement ce qui a été vérifié :
 
-- sous Linux, chaque lancement copie le module dans un dossier privé (0700, à côté du module pour une copie par référence quand le système de fichiers le permet), hache la copie et exécute la copie, supprimée dès l'annonce ;
-- sous Windows, chaque fichier est ouvert sans partage en écriture ni en suppression, haché depuis ce handle, et les handles restent ouverts jusqu'à la mort du processus. Le module limite la recherche de bibliothèques à son dossier et à System32 (`SetDefaultDllDirectories`) ;
+- le binaire et ses bibliothèques sont copiés dans un dossier privé neuf par lancement (Linux : 0700 ; Windows : DACL protégée limitée au propriétaire et au système, posée à la création), hachés depuis la copie et exécutés depuis elle ;
+- les modèles ne sont pas copiés. Sous Linux, chaque modèle est ouvert, haché depuis son descripteur, et le module en hérite ; le dossier privé l'expose par un lien `/proc/self/fd/N`, que le module rouvre à chaque session (diarisation). Un autre processus du même utilisateur pourrait encore réécrire le fichier en place : Linux n'offre pas de verrou obligatoire à un utilisateur ordinaire. Sous Windows, chaque modèle et chaque dossier de son chemin sont ouverts sans partage en écriture ni en suppression, les points de réanalyse sont refusés et le chemin final est vérifié (`GetFinalPathNameByHandleW`) ;
+- tout cela vit aussi longtemps que le processus. Une erreur d'entrée-sortie (disque plein) est un lancement raté, réessayable, jamais un module refusé ;
+- le module limite la recherche de bibliothèques à son dossier et à System32 (`SetDefaultDllDirectories`) ;
 - le dossier courant du processus n'est jamais le dossier du module (`/`, ou System32).
 
 La clé privée sera rangée dans un environnement GitHub `speech-signing`, limité à main comme `release-signing`, sous les secrets `SPEECH_MANIFEST_PRIVATE_KEY` et `SPEECH_MANIFEST_PRIVATE_KEY_PASSWORD`. Le job `sign-manifest` ne tourne que sur demande (`sign`) et depuis main.

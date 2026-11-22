@@ -10651,6 +10651,7 @@ dependencies = [
  "base64 0.23.1",
  "bytes",
  "futures-util",
+ "libc",
  "minisign",
  "minisign-verify",
  "owhisper-client",
@@ -10663,6 +10664,7 @@ dependencies = [
  "tokio",
  "tracing",
  "uuid",
+ "windows",
 ]
 
 [[package]]

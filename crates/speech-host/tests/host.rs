@@ -76,6 +76,56 @@ async fn session(target: owhisper_client::OnDeviceTarget) -> usize {
     finals
 }
 
+/// Session diarisée (paramètres par défaut) sur de l'audio PCM16 16 kHz ;
+/// rend le nombre de mots finaux attribués à un intervenant.
+async fn diarized_session(target: owhisper_client::OnDeviceTarget, pcm: &[u8]) -> usize {
+    let client = ListenClient::builder()
+        .adapter::<NvidiaAdapter>()
+        .api_base(target.base_url)
+        .params(owhisper_interface::ListenParams {
+            languages: vec!["fr".parse().unwrap()],
+            ..Default::default()
+        })
+        .on_device(target.token)
+        .build_single()
+        .await
+        .unwrap();
+    let audio: Vec<owhisper_client::ListenClientInput> = pcm
+        .chunks(640)
+        .take(50 * 30)
+        .map(|chunk| MixedMessage::Audio(bytes::Bytes::copy_from_slice(chunk)))
+        .collect();
+    let input = futures_util::stream::iter(audio).chain(futures_util::stream::pending());
+    let (output, handle) = client.from_realtime_audio(Box::pin(input)).await.unwrap();
+    let mut output = Box::pin(output);
+    let mut speakers = 0;
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(120);
+    let mut finalized = false;
+    while tokio::time::Instant::now() < deadline {
+        match tokio::time::timeout(Duration::from_secs(10), output.next()).await {
+            Ok(Some(Ok(StreamResponse::TranscriptResponse {
+                is_final: true,
+                channel,
+                ..
+            }))) => {
+                speakers += channel.alternatives[0]
+                    .words
+                    .iter()
+                    .filter(|w| w.speaker.is_some())
+                    .count();
+            }
+            Ok(Some(Ok(_))) => {}
+            Ok(Some(Err(_))) | Ok(None) => break,
+            Err(_) if !finalized => {
+                handle.finalize().await;
+                finalized = true;
+            }
+            Err(_) => break,
+        }
+    }
+    speakers
+}
+
 #[cfg(target_os = "linux")]
 fn proc_text(pid: u32, file: &str) -> String {
     String::from_utf8_lossy(&std::fs::read(format!("/proc/{pid}/{file}")).unwrap_or_default())
@@ -105,14 +155,21 @@ async fn launch_session_restart_with_a_new_token_and_stop() {
         assert!(environ.is_empty(), "environnement vidé : {environ:?}");
         assert!(!proc_text(pid, "cmdline").to_lowercase().contains("token"));
         assert_eq!(format!("{:?}", first.token), "OnDeviceToken(<masqué>)");
-        // On exécute la copie vérifiée, supprimée après l'annonce, et le
+        // On exécute la copie vérifiée, gardée tant que le module vit, et le
         // dossier courant n'est pas celui du module.
         let exe = std::fs::read_link(format!("/proc/{pid}/exe")).unwrap();
-        let exe = exe.to_string_lossy();
+        let exe = exe.to_string_lossy().into_owned();
         assert!(
-            exe.contains(".speech-run-") && exe.ends_with(" (deleted)"),
+            exe.contains(".speech-run-") && !exe.ends_with(" (deleted)"),
             "{exe}"
         );
+        // Le modèle vérifié est hérité par descripteur (zéro copie).
+        let inherited = std::fs::read_dir(format!("/proc/{pid}/fd"))
+            .unwrap()
+            .flatten()
+            .filter_map(|fd| std::fs::read_link(fd.path()).ok())
+            .any(|target| target == dir.path().join("models/placeholder"));
+        assert!(inherited, "modèle hérité par descripteur");
         assert_eq!(
             std::fs::read_link(format!("/proc/{pid}/cwd")).unwrap(),
             Path::new("/")
@@ -237,7 +294,15 @@ async fn a_real_signed_module_starts_and_accepts_a_session() {
     };
     let host = SpeechHost::new(dir.into(), 2, "0.8.0").with_manifest_key(&key);
     let target = host.target(true).await.expect("module vérifié et lancé");
-    session(target).await;
+    // Revue de l'issue 683 : une session diarisée, ouverte après l'annonce,
+    // recharge le modèle de diarisation depuis le chemin vérifié.
+    if let Ok(audio) = std::env::var("SYNTHEO_SPEECH_AUDIO") {
+        let bytes = std::fs::read(audio).unwrap();
+        let speakers = diarized_session(target.clone(), &bytes[44..]).await;
+        assert!(speakers > 0, "mots attribués à un intervenant");
+    } else {
+        session(target).await;
+    }
     host.stop().await;
     assert!(!host.is_running().await);
 }

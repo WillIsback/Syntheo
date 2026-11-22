@@ -32,6 +32,30 @@ pub const MIN_MODULE_VERSION: &str = "0.1.0";
 /// tant que la clé n'est pas créée : aucun module n'est alors chargé.
 pub const MODULE_PUBLIC_KEY: Option<&str> = None;
 
+/// Plancher anti-retour, à côté du dossier du module (il survit à une
+/// désinstallation).
+fn floor_path(dir: &Path) -> Option<std::path::PathBuf> {
+    let name = dir.file_name()?.to_string_lossy();
+    Some(dir.parent()?.join(format!("{name}.floor")))
+}
+
+fn read_floor(path: &Path) -> u64 {
+    std::fs::read_to_string(path)
+        .ok()
+        .and_then(|text| text.trim().parse().ok())
+        .unwrap_or(0)
+}
+
+fn raise_floor(path: &Path, build: u64) {
+    if build <= read_floor(path) {
+        return;
+    }
+    let temp = path.with_extension(format!("floor-{}", std::process::id()));
+    if std::fs::write(&temp, build.to_string()).is_ok() {
+        let _ = std::fs::rename(&temp, path);
+    }
+}
+
 /// Cible de cette application.
 pub fn current_target() -> &'static str {
     if cfg!(all(target_os = "windows", target_arch = "x86_64")) {
@@ -49,6 +73,9 @@ pub struct Manifest {
     pub schema: u32,
     pub module: String,
     pub version: String,
+    /// Numéro de construction croissant (anti-retour) : l'application garde
+    /// le plus haut accepté et refuse les inférieurs.
+    pub build: u64,
     pub protocol: u64,
     pub engine: String,
     pub target: String,
@@ -83,7 +110,8 @@ pub enum ManifestError {
     Incompatible,
     /// L'application est plus ancienne que la version minimale demandée.
     AppTooOld,
-    /// Module plus ancien que `MIN_MODULE_VERSION`.
+    /// Module plus ancien que `MIN_MODULE_VERSION`, ou construction plus
+    /// ancienne que la plus récente déjà acceptée (retour en arrière).
     ModuleTooOld,
     /// `files.sha256` ne correspond pas au manifeste.
     ListMismatch,
@@ -193,6 +221,12 @@ pub fn verify_manifest_with(
     if Some(module) < version_tuple(min_module_version) {
         return Err(ManifestError::ModuleTooOld);
     }
+    let floor_path = floor_path(dir);
+    if let Some(path) = &floor_path
+        && manifest.build < read_floor(path)
+    {
+        return Err(ManifestError::ModuleTooOld);
+    }
 
     let mut entries = BTreeMap::new();
     for entry in manifest.files.iter().chain(&manifest.models) {
@@ -206,6 +240,10 @@ pub fn verify_manifest_with(
             .all(|(path, entry)| list.get(path) == Some(&entry.sha256));
     if !same {
         return Err(ManifestError::ListMismatch);
+    }
+    // Manifeste authentique : le plancher monte (au mieux).
+    if let Some(path) = &floor_path {
+        raise_floor(path, manifest.build);
     }
     Ok(entries
         .into_iter()
@@ -258,5 +296,43 @@ mod tests {
             verify_manifest_with(dir.path(), Some(&public), "0.8.0", "0.2.0", &list).err(),
             Some(ManifestError::ModuleTooOld)
         );
+    }
+
+    #[test]
+    fn an_older_build_is_refused_once_a_newer_one_was_accepted() {
+        use crate::test_signing::TestKey;
+        let parent = tempfile::tempdir().unwrap();
+        let dir = parent.path().join("speech");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join(crate::verify::binary_name()), b"x").unwrap();
+        let key = TestKey::new();
+        let public = key.public();
+        let sign = |build: u64| {
+            let manifest = crate::test_signing::current_manifest(
+                &dir,
+                &[crate::verify::binary_name()],
+                &[],
+                "0.8.0",
+            )
+            .replace("\"build\": 1", &format!("\"build\": {build}"));
+            key.sign_module(&dir, &manifest);
+            let list = std::fs::read_to_string(dir.join(crate::verify::LIST_FILE)).unwrap();
+            list.lines()
+                .map(|l| {
+                    let (hash, path) = l.split_once("  ").unwrap();
+                    (path.to_owned(), hash.to_owned())
+                })
+                .collect::<BTreeMap<String, String>>()
+        };
+        let list = sign(7);
+        assert!(verify_manifest(&dir, Some(&public), "0.8.0", &list).is_ok());
+        let list = sign(6);
+        assert_eq!(
+            verify_manifest(&dir, Some(&public), "0.8.0", &list).err(),
+            Some(ManifestError::ModuleTooOld)
+        );
+        let list = sign(8);
+        assert!(verify_manifest(&dir, Some(&public), "0.8.0", &list).is_ok());
+        assert_eq!(read_floor(&parent.path().join("speech.floor")), 8);
     }
 }

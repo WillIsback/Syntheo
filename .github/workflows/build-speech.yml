@@ -7,10 +7,14 @@
 #   - `build` (Linux, Windows) : compilation release depuis un registre Cargo
 #     et un cache vides (aucun cache partagé avec les autres workflows), avec
 #     la chaîne d'ONNX Runtime vérifiée avant et après la compilation
-#     (apps/speech/supply-chain/check_ort.py) ; SBOM CycloneDX. Sous Windows,
-#     runtime Visual C++ embarqué et imports vérifiés. Aucun identifiant.
-#   - `manifest` : `manifest.json` et `files.sha256` du module construit
-#     (binaire, bibliothèques, licences, puis les modèles de
+#     (apps/speech/supply-chain/check_ort.py). Sous Windows, runtime Visual
+#     C++ embarqué et imports vérifiés. Le module est uploadé dès
+#     l'assemblage, avant tout outil tiers. Aucun identifiant.
+#   - `sbom` et `notices` : SBOM CycloneDX et notices des crates
+#     (cargo about), dans des jobs qui ne voient pas le module construit.
+#   - `manifest` : licences et avis d'origine ajoutés au module, puis
+#     `manifest.json` et `files.sha256` (binaire, bibliothèques, licences,
+#     puis les modèles de
 #     apps/speech/models/models.json avec leur URL).
 #   - (sur une PR qui touche le module : `build` et `manifest` seulement.)
 #   - `sign-manifest` : signature du manifeste (manifest.json.sig), avec une
@@ -137,9 +141,8 @@ jobs:
           BINARY: ${{ matrix.binary }}
         run: |
           set -euo pipefail
-          mkdir -p dist/licenses
+          mkdir -p dist
           cp "apps/speech/target/release/$BINARY" dist/
-          cp apps/speech/supply-chain/LICENSE.OpenMDW-1.1 dist/licenses/
 
       # Le binaire est lié au CRT dynamique (MSVC par défaut) : runtime
       # Visual C++ embarqué à côté, comme pour syntheo.exe. Toute DLL hors
@@ -170,6 +173,35 @@ jobs:
           Get-ChildItem dist -Recurse -File | ForEach-Object { Write-Host "$($_.Length)  $($_.FullName)" }
 
       # SBOM des dépendances Rust du module, outil à version figée.
+      # Le module est figé dès l'assemblage : un artefact uploadé n'est plus
+      # modifiable. Aucun outil tiers (SBOM, notices) ne tourne dans ce job.
+      - name: Upload du module (non signé)
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: syntheo-speech-unsigned-${{ matrix.target }}
+          path: dist/
+          retention-days: 7
+
+  # SBOM des dépendances Rust du module, dans un job à part qui ne voit pas
+  # le module construit. Outil à version figée.
+  sbom:
+    name: SBOM (${{ matrix.target }})
+    strategy:
+      matrix:
+        target: [x86_64-unknown-linux-gnu, x86_64-pc-windows-msvc]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Toolchain Rust
+        uses: ./.github/actions/rust_install
+        with:
+          cache: "false"
+
       - name: SBOM (CycloneDX)
         shell: bash
         env:
@@ -185,13 +217,6 @@ jobs:
           [ "${#boms[@]}" -eq 1 ] || { echo "::error::SBOM introuvable ou multiple : ${boms[*]}"; exit 1; }
           mv "${boms[0]}" "sbom/syntheo-speech-$TARGET.cdx.json"
 
-      - name: Upload du module (non signé)
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: syntheo-speech-unsigned-${{ matrix.target }}
-          path: dist/
-          retention-days: 7
-
       - name: Upload du SBOM
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -199,9 +224,43 @@ jobs:
           path: sbom/
           retention-days: 30
 
+  # Notices des crates du binaire (licences MIT, Apache-2.0…), livrées dans
+  # le module. Job à part, outil à version figée, sans le module construit.
+  notices:
+    name: Notices des crates
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Toolchain Rust
+        uses: ./.github/actions/rust_install
+        with:
+          cache: "false"
+
+      - name: cargo about
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo install --locked cargo-about --version 0.9.3
+          mkdir -p notices
+          cargo about generate --fail -m apps/speech/Cargo.toml -c apps/speech/supply-chain/about.toml \
+            -o notices/THIRD-PARTY-RUST.html apps/speech/supply-chain/about.hbs
+          test -s notices/THIRD-PARTY-RUST.html
+
+      - name: Upload des notices
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: syntheo-speech-notices
+          path: notices/
+          retention-days: 7
+
   manifest:
     name: Manifeste (${{ matrix.target }})
-    needs: build
+    needs: [build, notices]
     strategy:
       matrix:
         target: [x86_64-unknown-linux-gnu, x86_64-pc-windows-msvc]
@@ -219,6 +278,22 @@ jobs:
           name: syntheo-speech-unsigned-${{ matrix.target }}
           path: module
 
+      - name: Télécharger les notices des crates
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: syntheo-speech-notices
+          path: crate-notices
+
+      # Licences et avis d'origine (ONNX Runtime, crates, modèles), listés
+      # ensuite dans le manifeste signé comme tout fichier du module.
+      - name: Ajouter les licences
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p module/licenses
+          cp -R apps/speech/supply-chain/notices/. module/licenses/
+          cp crate-notices/THIRD-PARTY-RUST.html module/licenses/
+
       - name: Écrire manifest.json et files.sha256
         shell: bash
         env:
@@ -226,9 +301,11 @@ jobs:
           # Sur une PR, pas d'entrées : valeurs par défaut du lancement manuel.
           MIN_APP_VERSION: ${{ inputs.min-app-version || '0.8.0' }}
           MODELS_BASE_URL: ${{ inputs.models-base-url || 'https://github.com/WillIsback/Syntheo/releases/download/speech-models-1' }}
+          # Numéro de construction croissant (anti-retour).
+          BUILD: ${{ github.run_number }}
         run: |
           set -euo pipefail
-          python3 -I apps/speech/supply-chain/make_manifest.py module "$TARGET" "$MIN_APP_VERSION" "$MODELS_BASE_URL"
+          python3 -I apps/speech/supply-chain/make_manifest.py module "$TARGET" "$MIN_APP_VERSION" "$MODELS_BASE_URL" "$BUILD"
           cat module/files.sha256
 
       - name: Upload du module et de son manifeste

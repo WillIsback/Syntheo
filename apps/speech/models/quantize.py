@@ -1,10 +1,11 @@
 # /// script
-# requires-python = ">=3.11"
+# requires-python = "==3.12.*"
 # dependencies = ["onnxruntime==1.32.0", "onnx==1.23.2"]
 # ///
 """Reconstruit les modèles int8 de syntheo-speech à partir des sources figées.
 
-Usage : uv run --no-project apps/speech/models/quantize.py <dossier de sortie>
+Usage : uv run --locked --script apps/speech/models/quantize.py <dossier de sortie neuf>
+(dépendances transitives figées par quantize.py.lock)
 (SYNTHEO_SPEECH_SOURCES : dossier des sources, réutilisées si leur empreinte
 correspond ; sans liens symboliques, que onnx refuse.)
 
@@ -50,6 +51,10 @@ def main() -> None:
     if len(sys.argv) != 2:
         sys.exit(__doc__)
     out = Path(sys.argv[1]).resolve()
+    # Dossier neuf : onnx ajoute à la suite d'un .data existant au lieu de le
+    # remplacer, ce qui fausserait les empreintes.
+    if out.exists() and any(out.iterdir()):
+        sys.exit(f"{out} n'est pas vide : choisir un dossier de sortie neuf")
     manifest = json.loads((HERE / "models.json").read_text(encoding="utf-8"))
     spec = manifest["source"]
     # Dossier des sources téléchargées (réutilisées si l'empreinte correspond).

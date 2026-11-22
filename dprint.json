@@ -16,6 +16,7 @@
   },
   "excludes": [
     "crates/tiptap/vendor/mdast_util_to_markdown",
+    "apps/speech/supply-chain/notices/models",
     ".venv",
     "**/*-lock.yaml",
     "**/*-lock.json",

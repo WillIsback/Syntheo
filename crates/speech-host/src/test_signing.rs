@@ -85,6 +85,7 @@ pub fn current_manifest(
         "schema": 1,
         "module": "syntheo-speech",
         "version": "0.1.0",
+        "build": 1,
         "protocol": crate::host::PROTOCOL,
         "engine": "parakeet",
         "target": crate::manifest::current_target(),
