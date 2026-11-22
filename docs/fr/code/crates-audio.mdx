@@ -47,7 +47,7 @@ Dans les `Cargo.toml`, ces crates sont référencées par l'alias de workspace `
 | --- | --- | --- |
 | `crates/vad` | Détection de parole avec `earshot`, derrière la feature du même nom (module `earshot`). | `vad-masking`, `fs-sync-core` |
 | `crates/vad-masking` | Masquage des silences avant envoi au STT, en lot (`masking`) ou en flux (`streaming`, `VadConfig`). | `listener-core` |
-| `crates/onnx` | Chargement de modèles ONNX avec `ort` (`load_model_from_bytes`, `load_model_from_path`, variante accélérée) ; réexporte `ort` et `ndarray`. | `aec` |
+| `crates/onnx` | Chargement de modèles ONNX avec `ort` (`load_model_from_bytes`) ; réexporte `ort` et `ndarray`. | `aec` |
 
 **Pages de doc concernées** : [/meetings](/fr/meetings) pour `vad-masking` ; aucune pour `vad` et `onnx` pris isolément.
 
@@ -95,8 +95,8 @@ Dans les `Cargo.toml`, ces crates sont référencées par l'alias de workspace `
 
 ### `crates/transcript`
 
-- **Rôle** : transforme les mots reçus du STT en transcription : traitement (`TranscriptProcessor`), post-traitement, segments (`build_segments`), étiquettes de locuteurs (`SpeakerLabeler`, `render_speaker_label`), contexte des locuteurs, raffinement après lot (`batch_refine`), matérialisation en direct et rendu.
-- **Dépendances internes** : `template-app`, `owhisper-interface`.
+- **Rôle** : transforme les mots reçus du STT en transcription : traitement (`TranscriptProcessor`), segments (`build_segments`), étiquettes de locuteurs (`SpeakerLabeler`, `render_speaker_label`), contexte des locuteurs, raffinement après lot (`batch_refine`), matérialisation en direct et rendu.
+- **Dépendances internes** : `owhisper-interface`.
 - **Utilisée par** : `listener-core`, `plugins/transcription`, `agent-access` (CLI et serveur MCP).
 - **Pages de doc concernées** : [/meetings](/fr/meetings), [/notes](/fr/notes), [/contacts](/fr/contacts), [/reference/cli](/fr/reference/cli), [/reference/mcp](/fr/reference/mcp).
 

@@ -11,15 +11,6 @@ pub struct Token {
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "specta", derive(specta::Type))]
-pub struct VttWord {
-    pub text: String,
-    pub start_ms: u64,
-    pub end_ms: u64,
-    pub speaker: Option<String>,
-}
-
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
-#[cfg_attr(feature = "specta", derive(specta::Type))]
 pub struct Subtitle {
     tokens: Vec<Token>,
 }

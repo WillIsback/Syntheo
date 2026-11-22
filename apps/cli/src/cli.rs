@@ -36,8 +36,6 @@ pub struct Args {
     pub command: Command,
 }
 
-impl Args {}
-
 #[derive(Debug, Subcommand)]
 pub enum Command {
     /// Check the local CLI and database connection without changing data

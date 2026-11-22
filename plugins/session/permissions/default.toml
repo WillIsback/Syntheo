@@ -22,6 +22,5 @@ permissions = [
   "allow-rename-folder-catalog",
   "allow-delete-folder-catalog",
   "allow-update-folder-instructions",
-  "allow-update-folder-workspace",
   "allow-update-folder-icon",
 ]

@@ -158,6 +158,17 @@ mod tests {
     }
 
     #[test]
+    fn test_custom_format_can_use_tojson() {
+        let rendered = render_enhance_system(&EnhanceSystem {
+            language: Some("fr".to_string()),
+            format_override: "Langue : {{ language | tojson }}.".to_string(),
+        })
+        .unwrap();
+
+        assert!(rendered.contains("Langue : \"French\"."), "{rendered}");
+    }
+
+    #[test]
     fn test_custom_format_keeps_protected_instructions() {
         let rendered = render_enhance_system(&EnhanceSystem {
             language: Some("ko".to_string()),

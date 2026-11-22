@@ -1,12 +1,10 @@
 use tauri::Wry;
 
 mod commands;
-mod ext;
 mod generated_summary;
 mod session_content;
 mod transaction_utils;
 
-pub use ext::TemplatePluginExt;
 pub use syntheo_template_app::Template;
 
 const PLUGIN_NAME: &str = "template";

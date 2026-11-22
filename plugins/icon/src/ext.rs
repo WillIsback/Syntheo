@@ -6,13 +6,11 @@ mod overlay_state {
     pub struct State {
         pub original_icon_data: Option<Vec<u8>>,
         pub recording_active: bool,
-        pub notification_count: Option<u8>,
     }
 
     static STATE: Mutex<State> = Mutex::new(State {
         original_icon_data: None,
         recording_active: false,
-        notification_count: None,
     });
 
     pub fn get() -> State {
@@ -223,14 +221,9 @@ fn compose_icon(
     base_image: &objc2_app_kit::NSImage,
     state: &overlay_state::State,
 ) -> Option<objc2::rc::Retained<objc2_app_kit::NSImage>> {
-    if state.recording_active {
-        return Some(crate::overlay::Overlay::Recording.draw(base_image));
-    }
-
     state
-        .notification_count
-        .filter(|count| *count > 0)
-        .map(|count| crate::overlay::Overlay::Notification(count).draw(base_image))
+        .recording_active
+        .then(|| crate::overlay::Overlay::Recording.draw(base_image))
 }
 
 pub trait IconPluginExt<R: tauri::Runtime> {

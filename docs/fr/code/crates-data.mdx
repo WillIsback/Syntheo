@@ -23,7 +23,7 @@ Dans le workspace Cargo, chaque crate est déclarée sous un alias `syntheo-*` (
 | `crates/frontmatter` | Lecture et écriture de Markdown avec en-tête YAML | `fs-sync-core` | aucune |
 | `crates/tiptap` | Conversion entre JSON Tiptap/ProseMirror et Markdown | `agent-access`, `fs-sync-core` | [CLI pour agents](/fr/agents/cli), [Serveur MCP](/fr/agents/mcp) |
 | `crates/export-core` | Rendu PDF avec Typst | plugin `export` | [Notes](/fr/notes) |
-| `crates/template-app` | Prompts du LLM (Askama) | plugin `template`, crate `transcript` | [Personnaliser les comptes rendus](/fr/customize-summaries), [Chat](/fr/chat), [Langues](/fr/languages) |
+| `crates/template-app` | Prompts du LLM (Askama) | plugin `template` | [Personnaliser les comptes rendus](/fr/customize-summaries), [Chat](/fr/chat), [Langues](/fr/languages) |
 | `crates/askama-utils` | Filtres et validation pour les gabarits Askama | `template-app` | [Langues](/fr/languages) |
 | `crates/mesure` | Reprise entre synthèse générée et version envoyée : normalisation, alignement par titres, diff mot à mot, classement lexical ou de fond ; lecture bornée des `.docx` ; ne rend que des compteurs | CLI (`syntheo mesure`), plugin `mesure` | [Référence CLI](/fr/reference/cli), [Données et confidentialité](/fr/data-and-privacy), [Bêta : mesure et transparence](/fr/beta) |
 | `crates/summary` | Politique de longueur et mise en forme du compte rendu généré | plugin `template` | [Personnaliser les comptes rendus](/fr/customize-summaries), [Notes](/fr/notes) |
@@ -118,7 +118,7 @@ Ne décrivez pas le comportement du produit à partir du schéma SQL brut. Parte
 ### fs-sync-core
 
 - **Chemin** : `crates/fs-sync-core`
-- **Rôle** : gère les dossiers de sessions sur disque pour le plugin `fs-sync` : liste, création, renommage et déplacement de dossiers, lecture du contenu d'une session, pièces jointes, fichiers audio (`audio` : import dans une session, métadonnées, crêtes, détection de parole, suppression des orphelins expirés).
+- **Rôle** : gère les dossiers de sessions sur disque pour le plugin `fs-sync` : liste, création, renommage et déplacement de dossiers, lecture du contenu d'une session, pièces jointes, fichiers audio (`audio` : import dans une session, métadonnées, détection de parole).
 - **API** : `FsSyncCore` (`list_folders`, `move_session`, `create_folder`), modules `scan`, `session_content`, `folder`, `audio`, `path`.
 - **Dépendances internes** : `syntheo-storage`, `syntheo-fs-format`, `syntheo-frontmatter`, `syntheo-tiptap`, `syntheo-audio-utils`, `syntheo-vad` ; `syntheo-data` en dev-dependency.
 - **Pages de doc concernées** : [Notes](/fr/notes), [Importer des enregistrements](/fr/import-recordings), [Réunions](/fr/meetings).

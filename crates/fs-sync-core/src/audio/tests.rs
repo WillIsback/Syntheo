@@ -1,24 +1,9 @@
 use super::*;
 use assert_fs::TempDir;
-use std::time::SystemTime;
 
 struct NoopRuntime;
 impl AudioImportRuntime for NoopRuntime {
     fn emit(&self, _event: AudioImportEvent) {}
-}
-
-const KNOWN_SESSION_ID: &str = "11111111-1111-4111-8111-111111111111";
-const ORPHAN_SESSION_ID: &str = "22222222-2222-4222-8222-222222222222";
-const META_SESSION_ID: &str = "33333333-3333-4333-8333-333333333333";
-const FRESH_ORPHAN_SESSION_ID: &str = "44444444-4444-4444-8444-444444444444";
-
-fn now_ms() -> u64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_millis()
-        .try_into()
-        .unwrap()
 }
 
 fn write_audio(path: &Path) {
@@ -115,26 +100,6 @@ fn retention_deletes_recovery_even_when_the_archive_cannot_be_removed() {
 }
 
 #[test]
-fn orphan_expiry_observes_recent_writes_inside_an_old_recovery_directory() {
-    let temp = TempDir::new().unwrap();
-    let dir = temp.path().join(ORPHAN_SESSION_ID);
-    let recovery = dir.join("audio-recovery");
-    std::fs::create_dir_all(&recovery).unwrap();
-    let chunk = recovery.join("recording.part");
-    write_audio(&chunk);
-    let created_ms = now_ms();
-    let recent = UNIX_EPOCH + Duration::from_millis(created_ms + 100_000);
-    std::fs::File::options()
-        .write(true)
-        .open(&chunk)
-        .unwrap()
-        .set_times(std::fs::FileTimes::new().set_modified(recent))
-        .unwrap();
-    assert!(!orphan_audio_expired(&dir, created_ms + 50_000).unwrap());
-    assert!(orphan_audio_expired(&dir, created_ms + 150_000).unwrap());
-}
-
-#[test]
 fn metadata_hashes_the_selected_final_audio_file() {
     let temp = TempDir::new().unwrap();
     std::fs::write(temp.path().join("audio.mp3"), b"abc").unwrap();
@@ -216,50 +181,6 @@ fn delete_preserves_primary_audio_when_auxiliary_deletion_fails() {
     assert!(primary_path.exists());
 }
 
-#[test]
-fn test_delete_orphaned_expired_removes_nested_orphan_audio() {
-    let temp = TempDir::new().unwrap();
-    let sessions_dir = temp.path();
-    let orphan_dir = sessions_dir.join("folder").join(ORPHAN_SESSION_ID);
-    let known_dir = sessions_dir.join(KNOWN_SESSION_ID);
-    let meta_dir = sessions_dir.join(META_SESSION_ID);
-    std::fs::create_dir_all(&orphan_dir).unwrap();
-    std::fs::create_dir_all(&known_dir).unwrap();
-    std::fs::create_dir_all(&meta_dir).unwrap();
-    write_audio(&orphan_dir.join("audio.wav"));
-    write_audio(&orphan_dir.join("audio_mic.wav"));
-    write_audio(&known_dir.join("audio.wav"));
-    write_audio(&meta_dir.join("audio.wav"));
-    std::fs::write(meta_dir.join("_meta.json"), b"{}").unwrap();
-
-    let deleted =
-        delete_orphaned_expired(sessions_dir, &[KNOWN_SESSION_ID.to_string()], 0, now_ms())
-            .unwrap();
-
-    assert_eq!(deleted, vec![ORPHAN_SESSION_ID.to_string()]);
-    assert!(!orphan_dir.join("audio.wav").exists());
-    assert!(!orphan_dir.join("audio_mic.wav").exists());
-    assert!(known_dir.join("audio.wav").exists());
-    assert!(meta_dir.join("audio.wav").exists());
-}
-
-#[cfg(unix)]
-#[test]
-fn delete_orphaned_expired_ignores_symlinked_session_dirs() {
-    let temp = TempDir::new().unwrap();
-    let sessions_dir = temp.path().join("sessions");
-    let outside_dir = temp.path().join("outside");
-    std::fs::create_dir_all(&sessions_dir).unwrap();
-    std::fs::create_dir_all(&outside_dir).unwrap();
-    write_audio(&outside_dir.join("audio.wav"));
-    std::os::unix::fs::symlink(&outside_dir, sessions_dir.join(ORPHAN_SESSION_ID)).unwrap();
-
-    let deleted = delete_orphaned_expired(&sessions_dir, &[], 0, now_ms()).unwrap();
-
-    assert!(deleted.is_empty());
-    assert!(outside_dir.join("audio.wav").exists());
-}
-
 #[cfg(unix)]
 #[test]
 fn copy_refuses_a_dangling_symlink_in_the_target_session() {
@@ -326,20 +247,6 @@ fn delete_removes_symlinks_but_not_their_targets() {
         b"sentinel"
     );
     assert!(outside.join("recovery").join("chunk.mp3").exists());
-}
-
-#[test]
-fn test_delete_orphaned_expired_keeps_fresh_orphan_audio() {
-    let temp = TempDir::new().unwrap();
-    let sessions_dir = temp.path();
-    let orphan_dir = sessions_dir.join(FRESH_ORPHAN_SESSION_ID);
-    std::fs::create_dir_all(&orphan_dir).unwrap();
-    write_audio(&orphan_dir.join("audio.wav"));
-
-    let deleted = delete_orphaned_expired(sessions_dir, &[], u64::MAX, now_ms()).unwrap();
-
-    assert!(deleted.is_empty());
-    assert!(orphan_dir.join("audio.wav").exists());
 }
 
 #[test]

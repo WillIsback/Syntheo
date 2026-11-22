@@ -228,7 +228,6 @@ markdown = "1"
 # Vendored 0.0.2 with byte-indexed Unicode escaping fixed; upstream still uses chars().nth(byte_offset).
 mdast_util_to_markdown = { path = "crates/tiptap/vendor/mdast_util_to_markdown" }
 minijinja = "2.7.0"
-minijinja-contrib = "2.7.0"
 minisign-verify = "0.3"
 
 env_logger = "0.11.8"
@@ -248,7 +247,6 @@ cpal = "0.17"
 dasp = { version = "0.11.0", features = ["interpolate", "interpolate-linear"] }
 earshot = "0.1.0"
 hound = "3.5.1"
-htmd = "0.5.0"
 macos-accessibility-client = "0.0.2"
 mp3lame-encoder = "0.3.0"
 realfft = "3.5.0"
