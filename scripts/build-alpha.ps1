@@ -185,8 +185,12 @@ try {
 
   # Programme compagnon syntheo-speech (issue 683), avant `tauri build` qui
   # l'embarque et en épingle l'empreinte (avec celle du runtime Visual C++).
-  Invoke-Checked powershell @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
-    (Join-Path $Root "scripts\build-speech.ps1"), "-Dumpbin", $dumpbin.FullName)
+  # -Dumpbin seulement si dumpbin a été trouvé (sinon, sans contrôle des DLL
+  # importées, comme le contrôle de syntheo.exe plus bas).
+  $speechArgs = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
+    (Join-Path $Root "scripts\build-speech.ps1"))
+  if ($dumpbin) { $speechArgs += @("-Dumpbin", $dumpbin.FullName) }
+  Invoke-Checked powershell $speechArgs
 
   # Valeur factice exigée par des intégrations cloud héritées (chantier 04d).
   $env:VITE_API_URL = "http://127.0.0.1:9"
@@ -194,6 +198,9 @@ try {
   $buildArgs = @("-F", "desktop", "tauri", "build", "--ci", "--bundles", "nsis,msi")
   if ($UpdaterTest) {
     Write-Host "-- build de test de la mise à jour : sans devtools, surcouche $UpdaterTest"
+    # Build de test jamais distribué : le compagnon peut partir sans source de
+    # téléchargement des modèles (garde du build.rs de l'application).
+    $env:SYNTHEO_SPEECH_ALLOW_NO_SOURCES = "1"
   }
   else {
     $buildArgs += @("--features", "devtools")

@@ -417,6 +417,17 @@ jobs:
             --config ./src-tauri/tauri.speech.conf.json \
             --config "$SIGNING_CONF"
 
+      # Tauri signe le compagnon sur place (binaries/) : son empreinte
+      # stable à la signature doit rester celle que syntheo.exe a épinglée
+      # à la compilation, sinon l'application refuserait son compagnon.
+      - name: Contrôler l'empreinte du compagnon signé
+        shell: pwsh
+        run: |
+          ./scripts/check-companion-pins.ps1 `
+            -Exe apps/desktop/src-tauri/target/release/syntheo.exe `
+            -Companion apps/desktop/src-tauri/binaries/syntheo-speech-x86_64-pc-windows-msvc.exe `
+            -Vcrt apps/desktop/src-tauri/vcrt
+
       - name: Vérifier la signature des installeurs
         id: verify
         shell: pwsh
