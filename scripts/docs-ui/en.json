@@ -310,9 +310,6 @@
     "~/Téléchargements": "~/Downloads",
     "useState(\"fr\")": "useState(\"en\")"
   },
-  "settings-servers.jsx.tpl": {
-    "Utilisez HTTPS : le HTTP n'est accepté que sur cette machine ou un réseau privé.": "Use HTTPS: HTTP is only accepted on this machine or a private network."
-  },
   "settings.jsx.tpl": {
     "Dans l'app, cette entrée ouvre sa propre vue, décrite dans la page de la documentation qui lui est consacrée.": "In the app, this entry opens its own view, described on its own documentation page.",
     "Cette section n'est pas reproduite ici : la page de la documentation qui la concerne la décrit.": "This section is not replicated here: its documentation page describes it."

@@ -1,11 +1,16 @@
+import { useLingui } from "@lingui/react/macro";
+
 import { Logo } from "@syntheo/ui/components/logo";
 import { cn } from "@syntheo/utils";
 
+// Toujours rendu sous un fournisseur Lingui : AppI18nProvider (__root,
+// verrou) ou celui de LongLoadGate, qui suit la langue du système.
 export function BrandLoadingView({ detail }: { detail?: string }) {
+  const { t } = useLingui();
   return (
     <div
       role="status"
-      aria-label="Loading"
+      aria-label={t`Loading`}
       data-tauri-drag-region
       className={cn([
         "bg-background flex h-screen w-screen items-center justify-center",

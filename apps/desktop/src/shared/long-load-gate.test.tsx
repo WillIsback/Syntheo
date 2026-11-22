@@ -96,8 +96,8 @@ describe("LongLoadGate", () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(LONG_LOAD_SPLASH_DELAY_MS);
     });
-
-    expect(screen.getByRole("status", { name: "Loading" })).toBeTruthy();
+    // Le catalogue de démarrage se charge ensuite (import dynamique).
+    await advanceUntil(() => screen.getByRole("status", { name: "Loading" }));
     expect(
       screen.getByText(
         "Migrating your local database (2 of 5). This may take a few minutes.",
@@ -121,13 +121,59 @@ describe("LongLoadGate", () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(LONG_LOAD_SPLASH_DELAY_MS);
     });
+    await advanceUntil(() =>
+      screen.getByText(
+        "Checking your local database. This is taking longer than expected.",
+      ),
+    );
+    expect(screen.queryByText(/Migrating your local database/)).toBeNull();
+  });
 
+  // Revue de 0.8.0-3 (constat 15) : l'écran d'attente, monté avant le
+  // réglage de langue, suit la langue du système, lecteur d'écran compris.
+  it("shows the waiting screen in the system language", async () => {
+    systemLanguages.value = ["fr-FR"];
+    waitUntilReady.mockReturnValue(new Promise<void>(() => {}));
+    getStartupStatus.mockResolvedValue({
+      phase: "migrating_database",
+      migrationCurrent: 3,
+      migrationTotal: 7,
+    });
+    const bootSplash = document.createElement("div");
+    bootSplash.id = "boot-splash";
+    document.body.append(bootSplash);
+    vi.useFakeTimers();
+
+    renderLongLoadGate();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(LONG_LOAD_SPLASH_DELAY_MS);
+    });
+    const status = await advanceUntil(() =>
+      screen.getByRole("status", { name: "Chargement" }),
+    );
+    expect(status.textContent).toMatch(/3 sur 7/);
+    expect(document.body.textContent).not.toMatch(/Migrating|Loading/);
+    expect(document.getElementById("boot-splash")).toBeNull();
+  });
+
+  it("keeps English on the waiting screen when the catalog cannot load", async () => {
+    systemLanguages.value = ["fr-FR"];
+    catalogFails.value = true;
+    waitUntilReady.mockReturnValue(new Promise<void>(() => {}));
+    vi.useFakeTimers();
+
+    renderLongLoadGate();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(LONG_LOAD_SPLASH_DELAY_MS);
+    });
+    await advanceUntil(() => screen.getByRole("status", { name: "Loading" }));
     expect(
       screen.getByText(
         "Checking your local database. This is taking longer than expected.",
       ),
     ).toBeTruthy();
-    expect(screen.queryByText(/Migrating your local database/)).toBeNull();
   });
 
   it("shows an update prompt when startup reports a newer schema", async () => {
@@ -201,6 +247,18 @@ describe("LongLoadGate", () => {
     expect(document.body.textContent).not.toMatch(/managed_settings/);
   });
 });
+
+// Sous horloge factice, React Query planifie ses notifications par
+// setTimeout : on avance le temps jusqu'à ce que le catalogue de démarrage
+// (import dynamique) soit chargé et l'écran affiché.
+async function advanceUntil<T>(find: () => T): Promise<T> {
+  return vi.waitFor(async () => {
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(20);
+    });
+    return find();
+  });
+}
 
 function renderLongLoadGate() {
   const queryClient = new QueryClient({

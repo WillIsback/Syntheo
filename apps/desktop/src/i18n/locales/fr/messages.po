@@ -990,6 +990,10 @@ msgstr "Vérifier si ce poste peut transcrire seul (environ 5 s)"
 msgid "Checking for updates…"
 msgstr "Recherche des mises à jour…"
 
+#: src/shared/long-load-gate.tsx
+msgid "Checking your local database. This is taking longer than expected."
+msgstr "Vérification de votre base locale. Cela prend plus de temps que prévu."
+
 #: src/settings/developers/cli.tsx
 msgid "Checking…"
 msgstr "Vérification…"
@@ -2848,6 +2852,10 @@ msgstr "Transcription en direct reprise."
 msgid "Live transcription: {language}"
 msgstr "Transcription en direct : {language}"
 
+#: src/shared/brand-loading-view.tsx
+msgid "Loading"
+msgstr "Chargement"
+
 #: src/templates/auto-form.tsx
 msgid "Loading Auto format..."
 msgstr "Chargement du formatage automatique..."
@@ -3195,6 +3203,14 @@ msgstr "Micro indisponible"
 #: src/store/zustand/listener/general-shared.ts
 msgid "Microphone unavailable. System audio continues"
 msgstr "Micro indisponible. L'audio système continue"
+
+#: src/shared/long-load-gate.tsx
+msgid "Migrating your local database ({current} of {total}). This may take a few minutes."
+msgstr "Migration de votre base locale ({current} sur {total}). Cela peut prendre quelques minutes."
+
+#: src/shared/long-load-gate.tsx
+msgid "Migrating your local database. This may take a few minutes."
+msgstr "Migration de votre base locale. Cela peut prendre quelques minutes."
 
 #: src/main/windows-window-controls.tsx
 msgid "Minimize"
