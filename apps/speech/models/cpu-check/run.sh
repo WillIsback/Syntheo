@@ -14,7 +14,11 @@
 #                   (modèles défectueux, pour vérifier que le garde-fou les voit)
 # Variables :
 #   CPU_CHECK_BIN  exécutable cpu-check déjà construit (sinon : cargo build
-#                  --release --locked --example cpu-check dans apps/speech)
+#                  --release --locked --example cpu-check dans apps/speech),
+#                  construit sur la même distribution que celle qui
+#                  l'exécute : il est lié dynamiquement à la glibc (un
+#                  binaire construit sur Arch exige une glibc plus récente
+#                  qu'Ubuntu 24.04). La CI le construit sur son runner.
 #   QEMU           émulateur (défaut : qemu-x86_64-static, sinon qemu-x86_64)
 #   QEMU_CPU       modèle de CPU émulé (défaut : Skylake-Client)
 #   THREADS        fils ONNX Runtime (défaut : 4)
