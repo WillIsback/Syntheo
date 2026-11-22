@@ -1,3 +1,4 @@
+import { setupI18n, type I18n } from "@lingui/core";
 import { I18nProvider } from "@lingui/react";
 import { Trans, useLingui } from "@lingui/react/macro";
 import { useQuery } from "@tanstack/react-query";
@@ -17,7 +18,11 @@ import { cn } from "@syntheo/utils";
 import { BrandLoadingView } from "./brand-loading-view";
 
 import { createI18n } from "~/i18n/catalogs";
-import { UI_LANGUAGE_AUTO, resolveDisplayLocale } from "~/i18n/locales";
+import {
+  SOURCE_LOCALE,
+  UI_LANGUAGE_AUTO,
+  resolveDisplayLocale,
+} from "~/i18n/locales";
 import { loadSystemLanguages } from "~/i18n/system-languages";
 
 export const LONG_LOAD_SPLASH_DELAY_MS = 400;
@@ -104,6 +109,17 @@ function getStartupDetail(status: StartupStatus | undefined) {
   }
 }
 
+let fallback: I18n | null = null;
+function fallbackI18n(): I18n {
+  if (!fallback) {
+    fallback = setupI18n({
+      locale: SOURCE_LOCALE,
+      messages: { [SOURCE_LOCALE]: {} },
+    });
+  }
+  return fallback;
+}
+
 // La base n'a pas démarré : le réglage de langue n'est pas lisible. L'écran
 // d'erreur suit la langue du système, comme le réglage « automatique ».
 async function loadStartupI18n() {
@@ -119,9 +135,10 @@ function StartupErrorView({ error }: { error: Error }) {
     staleTime: Number.POSITIVE_INFINITY,
   });
   if (!i18n && !isError) return null;
-  if (!i18n) return <StartupErrorContent error={error} />;
+  // Catalogue illisible : textes sources (anglais), jamais une fenêtre
+  // blanche (useLingui exige un fournisseur).
   return (
-    <I18nProvider i18n={i18n}>
+    <I18nProvider i18n={i18n ?? fallbackI18n()}>
       <StartupErrorContent error={error} />
     </I18nProvider>
   );

@@ -19,6 +19,17 @@ vi.mock("@tauri-apps/plugin-process", () => ({
 }));
 
 const systemLanguages = vi.hoisted(() => ({ value: ["en-US"] }));
+const catalogFails = vi.hoisted(() => ({ value: false }));
+vi.mock("~/i18n/catalogs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/i18n/catalogs")>();
+  return {
+    ...actual,
+    createI18n: (locale: Parameters<typeof actual.createI18n>[0]) =>
+      catalogFails.value
+        ? Promise.reject(new Error("catalogue illisible"))
+        : actual.createI18n(locale),
+  };
+});
 vi.mock("@syntheo/plugin-detect", () => ({
   commands: {
     getPreferredLanguages: async () => ({
@@ -33,6 +44,7 @@ import { LONG_LOAD_SPLASH_DELAY_MS, LongLoadGate } from "./long-load-gate";
 describe("LongLoadGate", () => {
   beforeEach(() => {
     systemLanguages.value = ["en-US"];
+    catalogFails.value = false;
     getStartupStatus.mockReset();
     getStartupStatus.mockResolvedValue({
       phase: "preparing_database",
@@ -156,6 +168,26 @@ describe("LongLoadGate", () => {
     expect(
       screen.getByRole("button", { name: "Redémarrer l'application" }),
     ).toBeTruthy();
+  });
+
+  // Vérification de f84794c4 : catalogue illisible, textes anglais et non
+  // une fenêtre blanche.
+  it("falls back to English when the catalog cannot load", async () => {
+    systemLanguages.value = ["fr-FR"];
+    catalogFails.value = true;
+    waitUntilReady.mockRejectedValue(
+      new Error(
+        "encountered unexpected or invalid data: invalid managed settings file",
+      ),
+    );
+
+    renderLongLoadGate();
+
+    await waitFor(() => {
+      expect(screen.getByText("Syntheo could not start")).toBeTruthy();
+    });
+    expect(document.body.textContent).toMatch(/managed_settings\.json/);
+    expect(screen.getByRole("button", { name: "Restart App" })).toBeTruthy();
   });
 
   it("keeps the generic message in English for other startup errors", async () => {
