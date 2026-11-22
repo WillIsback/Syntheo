@@ -10574,6 +10574,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "speech-probe"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "specta",
+ "sysinfo",
+ "windows",
+]
+
+[[package]]
 name = "spin"
 version = "0.9.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -12562,6 +12573,7 @@ dependencies = [
  "serde_json",
  "specta",
  "specta-typescript",
+ "speech-probe",
  "sqlx",
  "storage",
  "tauri",

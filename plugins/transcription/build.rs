@@ -58,6 +58,7 @@ const COMMANDS: &[&str] = &[
     "begin_audio_upload",
     "append_audio_upload",
     "discard_audio_upload",
+    "probe_local_transcription",
 ];
 
 fn main() {
