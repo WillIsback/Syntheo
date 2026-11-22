@@ -318,6 +318,69 @@ describe("mise en service", () => {
     await waitFor(() => expect(mocks.commission).toHaveBeenCalled());
   });
 
+  // QA de 0.8.0-2 : exécution refusée par le système pendant la mise en
+  // service. Ni « trop lent » ni « Prêt » : la raison.
+  it("shows a blocked execution instead of a too slow computer", async () => {
+    mocks.status = { ...mocks.status, models: installed };
+    mocks.config = { stt_on_device: true };
+    mocks.commissioning = {
+      profile: null,
+      measures: [
+        {
+          profile: "two_streams_diarized",
+          finals: 0,
+          p95Ms: 0,
+          driftMs: 0,
+          rawP95Ms: 0,
+          rawDriftMs: 0,
+          passed: false,
+          error: "execution_blocked",
+        },
+      ],
+      measuredAt: 1,
+    };
+    setup();
+    await waitFor(() =>
+      expect(screen.getByTestId("on-device-commissioning").textContent).toMatch(
+        /does not allow the transcription program to run/,
+      ),
+    );
+    expect(screen.queryByText(/too slow/)).toBeNull();
+    expect(screen.queryByText("Ready")).toBeNull();
+    expect(screen.getByTestId("on-device-missing").textContent).toMatch(
+      /does not allow the transcription program to run/,
+    );
+  });
+
+  it("explains a blocked execution right after a measurement", async () => {
+    mocks.status = { ...mocks.status, models: installed };
+    mocks.commission.mockResolvedValue({
+      status: "ok",
+      data: {
+        profile: null,
+        measures: [
+          {
+            profile: "two_streams_diarized",
+            finals: 0,
+            p95Ms: 0,
+            driftMs: 0,
+            rawP95Ms: 0,
+            rawDriftMs: 0,
+            passed: false,
+            error: "execution_blocked",
+          },
+        ],
+        measuredAt: 2,
+      },
+    });
+    setup();
+    fireEvent.click(await screen.findByText("Measure again"));
+    await screen.findByText(
+      /The measurement did not complete: This computer does not allow/,
+    );
+    expect(screen.queryByText(/Measurement done/)).toBeNull();
+  });
+
   it("keeps the source off until the computer is measured", async () => {
     mocks.status = { ...mocks.status, models: installed };
     mocks.commissioning = null;

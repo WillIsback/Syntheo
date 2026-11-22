@@ -16,6 +16,7 @@ import { useSetSettingValues } from "~/settings/queries";
 import { useConfigValues } from "~/shared/config";
 import {
   describeOnDeviceError,
+  launchRefusal,
   downloadOnDeviceModels,
   installOnDeviceModelsFromFolder,
   isEligible,
@@ -157,11 +158,19 @@ export function OnDeviceCard() {
     onSuccess: (result) => {
       setError(null);
       queryClient.setQueryData(ON_DEVICE_COMMISSIONING_QUERY_KEY, result);
-      setNotice(
-        result.profile
-          ? t`Measurement done: ${profileLabels[result.profile as Profile]}.`
-          : t`Measurement done: this computer is too slow for live transcription.`,
-      );
+      const refusal = launchRefusal(result);
+      if (refusal) {
+        setNotice(null);
+        setError(
+          t`The measurement did not complete: ${describeOnDeviceError(refusal)}`,
+        );
+      } else {
+        setNotice(
+          result.profile
+            ? t`Measurement done: ${profileLabels[result.profile as Profile]}.`
+            : t`Measurement done: this computer is too slow for live transcription.`,
+        );
+      }
       if (!result.profile) setSettings({ stt_on_device: false });
     },
     onError: (e: Error) =>
@@ -281,12 +290,13 @@ export function OnDeviceCard() {
   const measured = commissioning.data;
   const progressValue = progress.data;
   const usable = installed && !!measured?.profile;
+  const refusal = launchRefusal(measured);
 
   return (
     <ServerCard
       title={<Trans>On this computer</Trans>}
       status={
-        installed ? (
+        installed && !refusal ? (
           <span className="bg-accent text-accent-foreground rounded-full px-2.5 py-0.5 text-[13px] font-medium">
             <Trans>Ready</Trans>
           </span>
@@ -438,9 +448,11 @@ export function OnDeviceCard() {
                 : t`Measuring this computer (one to two minutes)…`
               : measured?.profile
                 ? t`Measured: ${profileLabels[measured.profile as Profile]}.`
-                : measured
-                  ? t`Measured: this computer is too slow for live transcription.`
-                  : t`This computer has not been measured yet.`}
+                : refusal
+                  ? describeOnDeviceError(refusal)
+                  : measured
+                    ? t`Measured: this computer is too slow for live transcription.`
+                    : t`This computer has not been measured yet.`}
           </p>
           <div>
             <button
@@ -493,6 +505,8 @@ export function OnDeviceCard() {
                 Syntheo does not include transcription on this computer: live
                 transcription is paused.
               </Trans>
+            ) : installed && refusal ? (
+              t`This computer is chosen for transcription, but live transcription is paused: ${describeOnDeviceError(refusal)}`
             ) : installed ? (
               <Trans>
                 This computer is chosen for transcription, but it has not been

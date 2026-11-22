@@ -129,6 +129,14 @@ pub async fn target<R: tauri::Runtime>(
     // Pas d'écoute sans mise en service réussie (issue 686) : le profil dit
     // si le poste tient le temps réel.
     if allowed && host.profile().is_none() {
+        // Mise en service arrêtée parce que le système refuse d'exécuter le
+        // programme : la même raison à l'écoute, pas « non mesuré ».
+        if host.launch_refusal().as_deref() == Some("execution_blocked") {
+            return Err(OnDeviceError {
+                kind: OnDeviceErrorKind::ExecutionBlocked,
+                message: "the system refused to run the on-device program".to_owned(),
+            });
+        }
         return Err(OnDeviceError {
             kind: OnDeviceErrorKind::NotCommissioned,
             message: "on-device module not commissioned".to_owned(),

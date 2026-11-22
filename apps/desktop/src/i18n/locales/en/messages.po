@@ -5884,6 +5884,7 @@ msgid "The measurement could not run. Try again."
 msgstr "The measurement could not run. Try again."
 
 #. placeholder {0}: describeOnDeviceError(e.message)
+#. placeholder {0}: describeOnDeviceError(refusal)
 #: src/settings/ai/stt/on-device-card.tsx
 msgid "The measurement did not complete: {0}"
 msgstr "The measurement did not complete: {0}"
@@ -6107,8 +6108,16 @@ msgid "the transcription module of this computer keeps stopping"
 msgstr "the transcription module of this computer keeps stopping"
 
 #: src/stt/on-device.ts
+msgid "The transcription program keeps stopping. Try again in a few minutes."
+msgstr "The transcription program keeps stopping. Try again in a few minutes."
+
+#: src/stt/on-device.ts
 msgid "The transcription program of this computer has been modified. Reinstall Syntheo."
 msgstr "The transcription program of this computer has been modified. Reinstall Syntheo."
+
+#: src/stt/on-device.ts
+msgid "The transcription program or its models have been modified or are missing. Reinstall Syntheo or install the models again."
+msgstr "The transcription program or its models have been modified or are missing. Reinstall Syntheo or install the models again."
 
 #: src/stt/live-transcript-interrupted.ts
 msgid "the transcription service"
@@ -6224,6 +6233,11 @@ msgstr "This computer is chosen for transcription, but it has not been measured 
 #: src/settings/ai/stt/on-device-card.tsx
 msgid "This computer is chosen for transcription, but its models are not installed: live transcription is paused."
 msgstr "This computer is chosen for transcription, but its models are not installed: live transcription is paused."
+
+#. placeholder {0}: describeOnDeviceError(refusal)
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "This computer is chosen for transcription, but live transcription is paused: {0}"
+msgstr "This computer is chosen for transcription, but live transcription is paused: {0}"
 
 #: src/settings/ai/stt/on-device-card.tsx
 msgid "This computer is chosen for transcription, but this version of Syntheo does not include transcription on this computer: live transcription is paused."

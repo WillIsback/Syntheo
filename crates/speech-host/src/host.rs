@@ -761,6 +761,21 @@ impl SpeechHost {
         loaded
     }
 
+    /// Refus de lancement qui a arrêté la dernière mise en service (par
+    /// exemple `execution_blocked`), s'il n'y a pas de profil retenu.
+    pub fn launch_refusal(&self) -> Option<String> {
+        let commissioning = self.commissioning()?;
+        if commissioning.profile.is_some() {
+            return None;
+        }
+        commissioning
+            .measures
+            .last()?
+            .error
+            .clone()
+            .filter(|code| LAUNCH_REFUSALS.contains(&code.as_str()))
+    }
+
     /// Profil retenu, pour l'écoute.
     pub fn profile(&self) -> Option<owhisper_client::OnDeviceProfile> {
         self.commissioning()?
@@ -818,6 +833,15 @@ impl SpeechHost {
                 Ok(target) => measure(&target, profile, &audio, duration)
                     .await
                     .map_err(|_| "measure_failed".to_owned()),
+                // Refus de lancement définitif (exécution refusée par le
+                // système, compagnon ou modèles refusés, plantages en boucle,
+                // réglage géré) : les profils suivants échoueraient de même ;
+                // la mesure s'arrête sur ce refus, enregistré avec sa raison.
+                Err(error) if error.is_permanent() => {
+                    let reason = error.to_on_device_error().kind.code().to_owned();
+                    measures.push(crate::commissioning::Measure::failed(profile, reason));
+                    break;
+                }
                 Err(error) => Err(error.to_on_device_error().kind.code().to_owned()),
             };
             let mut result = match measured {
@@ -883,6 +907,10 @@ impl SpeechHost {
             .and_then(|r| r.child.id())
     }
 }
+
+/// Codes des refus de lancement définitifs qui arrêtent une mise en service
+/// (`OnDeviceErrorKind::code`).
+const LAUNCH_REFUSALS: [&str; 4] = ["execution_blocked", "invalid", "crashing", "disabled"];
 
 /// Lancement refusé par le système : accès refusé (montage noexec, droits),
 /// ou, sous Windows, `ERROR_ACCESS_DISABLED_BY_POLICY` (1260) d'AppLocker

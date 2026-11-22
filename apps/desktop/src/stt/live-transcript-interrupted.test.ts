@@ -67,6 +67,22 @@ describe("getLiveTranscriptPausedMessage", () => {
     ).toMatch(/did not start.*Reconnecting/);
   });
 
+  // QA de 0.8.0-2 : exécution refusée par le système, raison nommée, sans
+  // reconnexion.
+  it("names a blocked execution of the on-device program", () => {
+    const message = getLiveTranscriptPausedMessage({
+      degraded: {
+        type: "on_device_unavailable",
+        reason: "execution_blocked",
+        permanent: true,
+      },
+      sttProvider: null,
+      online: true,
+    });
+    expect(message).toMatch(/does not allow the transcription program to run/);
+    expect(message).not.toMatch(/Reconnecting/);
+  });
+
   it("names the provider when it reports an outage", () => {
     expect(
       getLiveTranscriptPausedMessage({

@@ -706,3 +706,54 @@ async fn only_crashes_count_between_intentional_stops() {
         HostError::RestartBudget
     );
 }
+
+/// Compagnon que le système refuse d'exécuter : son interpréteur n'est pas
+/// exécutable, `execve` rend EACCES comme sur un montage noexec ou sous une
+/// règle AppLocker.
+#[cfg(unix)]
+fn blocked_fixture() -> Fixture {
+    use std::os::unix::fs::PermissionsExt;
+    let install = tempfile::tempdir().unwrap();
+    let binary = install.path().join(binary_name());
+    std::fs::write(&binary, "#!/etc/passwd\n").unwrap();
+    std::fs::set_permissions(&binary, std::fs::Permissions::from_mode(0o755)).unwrap();
+    fixture_in(install)
+}
+
+// QA de 0.8.0-2 : exécution refusée par le système. La mise en service
+// s'arrête au premier refus, avec sa raison, sans tenter les autres profils
+// ni finir en « crashing » ; l'hôte rend la même raison ensuite.
+#[cfg(unix)]
+#[tokio::test]
+async fn a_blocked_launch_stops_commissioning_with_its_reason() {
+    let fixture = blocked_fixture();
+    let host = fixture.host();
+    let result = host
+        .commission(true, Duration::from_secs(1))
+        .await
+        .expect("mesure enregistrée");
+    assert_eq!(result.profile, None);
+    assert_eq!(result.measures.len(), 1, "{:?}", result.measures);
+    assert_eq!(
+        result.measures[0].error.as_deref(),
+        Some("execution_blocked")
+    );
+    assert_eq!(host.launch_refusal().as_deref(), Some("execution_blocked"));
+    assert_eq!(host.verifications().await, 1);
+    assert_eq!(
+        host.target(true).await.unwrap_err(),
+        HostError::ExecutionBlocked
+    );
+}
+
+// Un module qui ne fait que s'arrêter n'est pas un refus de lancement : la
+// mesure reste « trop lent » sans raison de refus.
+#[cfg(unix)]
+#[tokio::test]
+async fn a_failed_measure_is_not_a_launch_refusal() {
+    let fixture = crashing_fixture();
+    let host = fixture.host();
+    let result = host.commission(true, Duration::from_secs(1)).await.unwrap();
+    assert_eq!(result.profile, None);
+    assert_ne!(host.launch_refusal().as_deref(), Some("execution_blocked"));
+}
