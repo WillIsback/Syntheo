@@ -12,6 +12,9 @@ Usage : uv run --locked --script hf_upload.py <dossier> <dépôt> <message> [--d
   <dépôt>    par exemple WillisBack/syntheo-speech-models
   --dry-run  compare seulement, n'envoie rien
 
+Le dossier doit exister et contenir chaque fichier de models.json, à sa
+taille et à son SHA-256 ; sinon rien n'est envoyé (code 2).
+
 Avant tout envoi, le dossier est comparé à la branche principale du dépôt :
 si chaque fichier y est déjà, identique (SHA-256 pour un fichier LFS,
 identifiant de blob git sinon), rien n'est envoyé et la révision existante
@@ -48,6 +51,21 @@ def local_files(folder: Path) -> dict[str, tuple[int, str, str]]:
     return files
 
 
+def model_problems(
+    local: dict[str, tuple[int, str, str]], models: list[dict]
+) -> list[str]:
+    """Fichiers de models.json absents du dossier, ou d'une autre taille ou
+    empreinte : on n'envoie jamais un dépôt incomplet ou différent."""
+    problems = []
+    for entry in models:
+        mine = local.get(entry["path"])
+        if mine is None:
+            problems.append(f"{entry['path']} absent")
+        elif mine[0] != entry["size"] or mine[1] != entry["sha256"]:
+            problems.append(f"{entry['path']} différent de models.json")
+    return problems
+
+
 def differences(
     local: dict[str, tuple[int, str, str]],
     remote: dict[str, tuple[int | None, str | None, str | None]],
@@ -76,6 +94,23 @@ def main() -> int:
         print(__doc__, file=sys.stderr)
         return 2
     folder, repo, message = args
+    root = Path(folder)
+    if not root.is_dir():
+        print(f"dossier absent : {folder}", file=sys.stderr)
+        return 2
+    local = local_files(root)
+    if not local:
+        print(f"dossier vide : {folder}", file=sys.stderr)
+        return 2
+    import json
+
+    models = json.loads(
+        (Path(__file__).resolve().parent / "models.json").read_text(encoding="utf-8")
+    )["files"]
+    problems = model_problems(local, models)
+    if problems:
+        print("dossier refusé : " + " ; ".join(problems), file=sys.stderr)
+        return 2
     token = os.environ.get("HF_TOKEN")
     if not token:
         print("HF_TOKEN absent", file=sys.stderr)
@@ -88,7 +123,7 @@ def main() -> int:
         s.rfilename: (s.size, s.lfs.sha256 if s.lfs else None, s.blob_id)
         for s in info.siblings or []
     }
-    changed = differences(local_files(Path(folder)), remote)
+    changed = differences(local, remote)
     if not changed:
         print(f"identique au dépôt : rien n'est envoyé (révision {info.sha})")
         print(info.sha)

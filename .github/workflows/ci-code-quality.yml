@@ -291,6 +291,40 @@ jobs:
         shell: pwsh
         run: ./scripts/check-companion-pins.ps1 -Fixtures crates/image-hash/tests/fixtures
 
+  # Publication des modèles de la transcription sur le poste : tests de
+  # hf_upload.py (comparaison avec Hugging Face, dossier incomplet refusé),
+  # sans réseau. Sur une PR, sauté si apps/speech/models ne change pas.
+  speech-models:
+    name: ci-code-quality (modèles de la transcription sur le poste)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: ${{ github.event_name == 'pull_request' && '0' || '1' }}
+          persist-credentials: false
+
+      - name: Détection des chemins modifiés
+        id: changes
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          if [ -z "${BASE_SHA:-}" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          elif git diff --name-only "$BASE_SHA" HEAD -- 'apps/speech/models/' '.github/workflows/ci-code-quality.yml' '.github/workflows/publish-speech-models.yml' | grep -q .; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "apps/speech/models non modifié : tests sautés."
+          fi
+
+      - name: Tests de l'envoi vers Hugging Face
+        if: steps.changes.outputs.run == 'true'
+        run: python3 -I -m unittest discover -s apps/speech/models -p 'test_*.py'
+
   meta:
     name: ci-code-quality (PR et workflows)
     # PR uniquement : titre de PR, actionlint, zizmor.

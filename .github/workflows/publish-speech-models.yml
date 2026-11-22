@@ -161,6 +161,11 @@ jobs:
       - name: Contrôle bloquant contre models.json
         run: python3 -I apps/speech/models/verify.py assets --flat
 
+      # Tests de hf_upload.py (comparaison avec Hugging Face, dossier
+      # incomplet refusé), avant l'attestation, le tag et tout envoi.
+      - name: Tests de l'envoi vers Hugging Face
+        run: python3 -I -m unittest discover -s apps/speech/models -p 'test_*.py'
+
       # Reprise : les assets publiés doivent porter l'attestation de
       # provenance de ce workflow, faite au premier passage.
       - name: Exiger l'attestation des assets (reprise)
@@ -247,10 +252,6 @@ jobs:
           cp apps/speech/supply-chain/notices/models/*.md hf/NOTICES/
           python3 -I apps/speech/models/verify.py hf
           find hf -type f | sort
-
-      - name: Tests de la comparaison avec Hugging Face
-        if: inputs.publish
-        run: python3 -I -m unittest discover -s apps/speech/models -p 'test_*.py'
 
       - name: Envoyer vers Hugging Face
         if: inputs.publish
