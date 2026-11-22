@@ -179,6 +179,19 @@ fn build_extra_prefers_explicit_stream_offset() {
     assert_eq!(offset_secs, 12.5);
 }
 
+// Revue de l'issue 684 : une preuve du module fausse n'est pas une clé
+// d'API refusée.
+#[test]
+fn a_wrong_module_proof_is_not_an_api_key_error() {
+    assert!(matches!(
+        classify_ws_connect_failure(
+            "nvidia",
+            &syntheo_ws_client::Error::PeerAuthenticationFailed
+        ),
+        DegradedError::OnDeviceAuthenticationFailed
+    ));
+}
+
 #[test]
 fn websocket_connect_failures_are_classified() {
     let error = syntheo_ws_client::Error::ConnectFailed {
@@ -334,11 +347,18 @@ impl crate::ListenerRuntime for OnDeviceRuntime {
 
     fn on_device_target(
         &self,
-    ) -> futures_util::future::BoxFuture<'static, Result<owhisper_client::OnDeviceTarget, String>>
-    {
+    ) -> futures_util::future::BoxFuture<
+        'static,
+        Result<owhisper_client::OnDeviceTarget, owhisper_client::OnDeviceError>,
+    > {
         self.calls.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         let target = self.target.clone();
-        Box::pin(async move { target.ok_or_else(|| "module unavailable".to_owned()) })
+        Box::pin(async move {
+            target.ok_or_else(|| owhisper_client::OnDeviceError {
+                kind: owhisper_client::OnDeviceErrorKind::Crashing,
+                message: "module unavailable".to_owned(),
+            })
+        })
     }
 }
 
@@ -352,7 +372,8 @@ async fn on_device_target_is_resolved_by_the_runtime_for_each_listener() {
         calls: Default::default(),
     });
     args.runtime = runtime.clone();
-    assert!(connection_target(&args).await.is_err());
+    let error = connection_target(&args).await.expect_err("refusé");
+    assert!(error.to_string().contains("on_device_unavailable"));
     let token = owhisper_client::OnDeviceToken::new(vec![1; 16]).unwrap();
     let runtime = Arc::new(OnDeviceRuntime {
         target: Some(owhisper_client::OnDeviceTarget {

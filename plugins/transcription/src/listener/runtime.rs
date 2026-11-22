@@ -44,8 +44,10 @@ impl syntheo_storage::StorageRuntime for TauriRuntime {
 impl ListenerRuntime for TauriRuntime {
     fn on_device_target(
         &self,
-    ) -> futures_util::future::BoxFuture<'static, Result<owhisper_client::OnDeviceTarget, String>>
-    {
+    ) -> futures_util::future::BoxFuture<
+        'static,
+        Result<owhisper_client::OnDeviceTarget, owhisper_client::OnDeviceError>,
+    > {
         let app = self.app.clone();
         Box::pin(async move { crate::on_device::target(&app).await })
     }

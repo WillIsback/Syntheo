@@ -294,7 +294,18 @@ export type CompletedTranscription = {
 	response: BatchResponse,
 };
 
-export type DegradedError = { type: "authentication_failed"; provider: string } | { type: "upstream_unavailable"; message: string } | { type: "connection_timeout" } | { type: "provider_configuration"; provider: string; message: string } | { type: "stream_error"; message: string };
+export type DegradedError = { type: "authentication_failed"; provider: string } | { type: "upstream_unavailable"; message: string } | { type: "connection_timeout" } | { type: "provider_configuration"; provider: string; message: string } | { type: "stream_error"; message: string } | 
+/**
+ *  Source « Sur ce poste » indisponible (issue 684). `reason` : code de
+ *  `owhisper_client::OnDeviceErrorKind` ; `permanent` : pas de nouvelle
+ *  tentative pendant l'écoute.
+ */
+{ type: "on_device_unavailable"; reason: string; permanent: boolean } | 
+/**
+ *  Le module de la source « Sur ce poste » n'a pas prouvé connaître le
+ *  jeton du lancement : rien n'a été envoyé, pas de nouvelle tentative.
+ */
+{ type: "on_device_authentication_failed" };
 
 /**
  *  Moteur de transcription sur le poste ; la décision entre les deux tombera

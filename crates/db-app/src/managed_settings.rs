@@ -64,9 +64,9 @@ fn validate(bytes: &[u8]) -> Result<ManagedSettings, sqlx::Error> {
     Ok(doc)
 }
 
-/// Read policy from the directory containing the actual opened database, on
-/// desktop and mobile alike. Malformed or unreadable policy fails startup.
-pub async fn apply_managed_settings(pool: &SqlitePool) -> Result<(), sqlx::Error> {
+/// `managed_settings.json` beside the actual opened database, or `None` for
+/// an in-memory database.
+async fn policy_path(pool: &SqlitePool) -> Result<Option<std::path::PathBuf>, sqlx::Error> {
     let files: Vec<(i64, String, String)> = sqlx::query_as("PRAGMA database_list")
         .fetch_all(pool)
         .await?;
@@ -76,17 +76,57 @@ pub async fn apply_managed_settings(pool: &SqlitePool) -> Result<(), sqlx::Error
         .map(|(_, _, file)| file.as_str())
         .unwrap_or("");
     if file.is_empty() {
-        return Ok(());
+        return Ok(None);
     }
-    let path = std::path::Path::new(file)
-        .parent()
-        .ok_or_else(invalid)?
-        .join("managed_settings.json");
-    let settings = match tokio::fs::read(path).await {
-        Ok(bytes) => validate(&bytes)?.settings,
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => BTreeMap::new(),
-        Err(e) => return Err(sqlx::Error::Io(e)),
+    Ok(Some(
+        std::path::Path::new(file)
+            .parent()
+            .ok_or_else(invalid)?
+            .join("managed_settings.json"),
+    ))
+}
+
+async fn read_policy(path: &std::path::Path) -> Result<BTreeMap<String, Value>, sqlx::Error> {
+    match tokio::fs::read(path).await {
+        Ok(bytes) => Ok(validate(&bytes)?.settings),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(BTreeMap::new()),
+        Err(e) => Err(sqlx::Error::Io(e)),
+    }
+}
+
+/// Validated policy, read from the file and never from the database, for
+/// security decisions taken in Rust: the webview can write `app_settings`
+/// through `plugin:db|execute`, so the stored copy is only a mirror for the
+/// interface.
+#[derive(Debug, Clone, Default)]
+pub struct ManagedPolicy {
+    settings: BTreeMap<String, Value>,
+}
+
+impl ManagedPolicy {
+    /// The on-device transcription module (issue 684) may be loaded.
+    pub fn on_device_transcription_allowed(&self) -> bool {
+        self.settings.get("on_device_transcription_enabled") != Some(&Value::Bool(false))
+    }
+}
+
+/// Reads the policy beside the opened database. Callers load it once and keep
+/// it in memory, like the policy applied at startup.
+pub async fn load_managed_policy(pool: &SqlitePool) -> Result<ManagedPolicy, sqlx::Error> {
+    let settings = match policy_path(pool).await? {
+        Some(path) => read_policy(&path).await?,
+        None => BTreeMap::new(),
     };
+    Ok(ManagedPolicy { settings })
+}
+
+/// Read policy from the directory containing the actual opened database, on
+/// desktop and mobile alike. Malformed or unreadable policy fails startup.
+pub async fn apply_managed_settings(pool: &SqlitePool) -> Result<(), sqlx::Error> {
+    let Some(path) = policy_path(pool).await? else {
+        return Ok(());
+    };
+    let settings = read_policy(&path).await?;
     let stop_measurement =
         settings.get("measurement_enabled") == Some(&serde_json::Value::Bool(false));
     let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
@@ -254,6 +294,47 @@ mod tests {
                 .await
                 .unwrap();
         assert_eq!((bodies, open), (0, 0));
+    }
+
+    // Issue 684, revue : la webview peut écrire en SQL ; la politique lue
+    // pour une décision de sécurité vient du fichier, pas de la base.
+    #[tokio::test]
+    async fn rewriting_the_database_does_not_lift_the_on_device_ban() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("app.db");
+        std::fs::write(
+            dir.path().join("managed_settings.json"),
+            br#"{"schema_version":1,"settings":{"on_device_transcription_enabled":false}}"#,
+        )
+        .unwrap();
+        let db = syntheo_db_core::Db::connect_local_plain(&path)
+            .await
+            .unwrap();
+        crate::prepare_schema(&db).await.unwrap();
+        sqlx::query("DELETE FROM managed_app_settings")
+            .execute(db.pool())
+            .await
+            .unwrap();
+        sqlx::query(
+            "UPDATE app_settings SET value_json='true' WHERE id='on_device_transcription_enabled'",
+        )
+        .execute(db.pool())
+        .await
+        .unwrap();
+        let policy = load_managed_policy(db.pool()).await.unwrap();
+        assert!(!policy.on_device_transcription_allowed());
+        // Sans politique : autorisé.
+        let dir = tempfile::tempdir().unwrap();
+        let db = syntheo_db_core::Db::connect_local_plain(&dir.path().join("app.db"))
+            .await
+            .unwrap();
+        crate::prepare_schema(&db).await.unwrap();
+        assert!(
+            load_managed_policy(db.pool())
+                .await
+                .unwrap()
+                .on_device_transcription_allowed()
+        );
     }
 
     #[tokio::test]

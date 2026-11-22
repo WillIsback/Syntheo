@@ -311,6 +311,30 @@ fn listener_retry_delay_adds_jitter_and_honors_retry_after() {
     assert!(rate_limited <= Duration::from_secs(36));
 }
 
+// Revue de l'issue 684 : un refus définitif de la source « Sur ce poste »
+// (politique, module altéré, plantages en boucle, preuve fausse) n'est pas
+// relancé ; seul un lancement raté l'est, dans le budget de l'hôte.
+#[test]
+fn on_device_refusals_do_not_retry_but_a_failed_launch_does() {
+    for reason in ["disabled", "invalid", "crashing", "unavailable"] {
+        assert!(!should_retry_listener_failure(
+            &DegradedError::OnDeviceUnavailable {
+                reason: reason.to_string(),
+                permanent: true,
+            }
+        ));
+    }
+    assert!(!should_retry_listener_failure(
+        &DegradedError::OnDeviceAuthenticationFailed
+    ));
+    assert!(should_retry_listener_failure(
+        &DegradedError::OnDeviceUnavailable {
+            reason: "failed_to_start".to_string(),
+            permanent: false,
+        }
+    ));
+}
+
 #[test]
 fn permanent_listener_failures_do_not_retry() {
     assert!(!should_retry_listener_failure(

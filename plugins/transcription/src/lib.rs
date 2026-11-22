@@ -245,6 +245,7 @@ pub fn init() -> tauri::plugin::TauriPlugin<tauri::Wry> {
             });
             listener2::load_completed_batches(&batch_registry);
             app.manage(batch_registry);
+            app.manage(on_device::OnDevicePolicy::default());
             if let Some(dir) = on_device::module_dir(app.app_handle()) {
                 app.manage(Arc::new(syntheo_speech_host::SpeechHost::new(
                     dir,

@@ -11,8 +11,15 @@ pub trait ListenerRuntime: syntheo_storage::StorageRuntime {
     /// démarrage d'un listener, reconnexion comprise. Par défaut : indisponible.
     fn on_device_target(
         &self,
-    ) -> futures_util::future::BoxFuture<'static, Result<owhisper_client::OnDeviceTarget, String>>
-    {
-        Box::pin(async { Err("on-device transcription is not available".to_owned()) })
+    ) -> futures_util::future::BoxFuture<
+        'static,
+        Result<owhisper_client::OnDeviceTarget, owhisper_client::OnDeviceError>,
+    > {
+        Box::pin(async {
+            Err(owhisper_client::OnDeviceError {
+                kind: owhisper_client::OnDeviceErrorKind::Unavailable,
+                message: "on-device transcription is not available".to_owned(),
+            })
+        })
     }
 }

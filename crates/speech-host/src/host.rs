@@ -7,16 +7,21 @@
 //!   un journal), annonce lue sur la sortie standard.
 //! - Le jeton et le port du lancement en cours restent en mémoire ; un module
 //!   mort est relancé avec un nouveau jeton et un nouveau port, jamais
-//!   reconnecté à l'ancien. Les relances sont bornées.
+//!   reconnecté à l'ancien.
+//! - Chaque tentative de lancement compte, réussie ou non, avant la
+//!   vérification : au-delà de `RestartPolicy::max_attempts` dans la fenêtre,
+//!   l'hôte est « en panne » et refuse tout lancement jusqu'à la fin de la
+//!   fenêtre. Le compte repart à zéro après un lancement resté vivant
+//!   `RestartPolicy::stable_after`. Un module refusé à la vérification n'est
+//!   plus revérifié avant `stop` (fin d'écoute).
 //! - Arrêt : fermeture de l'entrée standard (le module s'arrête), puis arrêt
 //!   forcé après un délai. Le processus meurt aussi avec l'application.
 
 use std::path::PathBuf;
 use std::process::Stdio;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use owhisper_client::{OnDeviceTarget, OnDeviceToken};
-use syntheo_supervisor::{RestartBudget, RestartTracker};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::{Child, ChildStdin, Command};
 use tokio::sync::Mutex;
@@ -49,8 +54,51 @@ pub enum HostError {
     Verify(String),
     /// Le processus n'a pas démarré ou n'a pas annoncé son port.
     Launch(String),
-    /// Trop de relances rapprochées : le module plante en boucle.
+    /// Trop de tentatives rapprochées : le module plante en boucle.
     RestartBudget,
+}
+
+impl HostError {
+    /// Refus définitif pour la durée de l'écoute : ne pas réessayer.
+    pub fn is_permanent(&self) -> bool {
+        !matches!(self, Self::Launch(_))
+    }
+
+    /// Erreur à transmettre au listener.
+    pub fn to_on_device_error(&self) -> owhisper_client::OnDeviceError {
+        use owhisper_client::OnDeviceErrorKind as Kind;
+        let kind = match self {
+            Self::Disabled => Kind::Disabled,
+            Self::Verify(_) => Kind::Invalid,
+            Self::RestartBudget => Kind::Crashing,
+            Self::Launch(_) => Kind::FailedToStart,
+        };
+        owhisper_client::OnDeviceError {
+            kind,
+            message: self.to_string(),
+        }
+    }
+}
+
+/// Borne des tentatives de lancement.
+#[derive(Debug, Clone)]
+pub struct RestartPolicy {
+    /// Tentatives admises dans la fenêtre.
+    pub max_attempts: usize,
+    /// Fenêtre de comptage, et durée de l'état « en panne ».
+    pub window: Duration,
+    /// Durée de vie après laquelle un lancement remet le compte à zéro.
+    pub stable_after: Duration,
+}
+
+impl Default for RestartPolicy {
+    fn default() -> Self {
+        Self {
+            max_attempts: 3,
+            window: Duration::from_secs(10 * 60),
+            stable_after: Duration::from_secs(60),
+        }
+    }
 }
 
 impl std::fmt::Display for HostError {
@@ -70,6 +118,7 @@ struct Running {
     /// Gardée ouverte : sa fermeture arrête le module.
     stdin: Option<ChildStdin>,
     target: OnDeviceTarget,
+    started_at: Instant,
 }
 
 /// Tire un jeton de 32 octets (deux UUID v4 : 244 bits aléatoires).
@@ -161,6 +210,7 @@ async fn launch(verified: &Verified, engine: &str, threads: usize) -> Result<Run
     Ok(Running {
         child,
         stdin: Some(stdin),
+        started_at: Instant::now(),
         target: OnDeviceTarget {
             base_url: format!("http://127.0.0.1:{port}"),
             token,
@@ -173,13 +223,21 @@ pub struct SpeechHost {
     dir: PathBuf,
     engine: String,
     threads: usize,
+    policy: RestartPolicy,
     state: Mutex<HostState>,
 }
 
+#[derive(Default)]
 struct HostState {
     running: Option<Running>,
-    restarts: RestartTracker,
-    budget: RestartBudget,
+    /// Tentatives de lancement dans la fenêtre.
+    attempts: Vec<Instant>,
+    /// « En panne » jusqu'à cet instant.
+    blocked_until: Option<Instant>,
+    /// Refus de vérification, rendu sans revérifier jusqu'à `stop`.
+    rejected: Option<String>,
+    /// Nombre de vérifications faites (essais).
+    verifications: usize,
 }
 
 impl SpeechHost {
@@ -189,11 +247,8 @@ impl SpeechHost {
             dir,
             engine: "parakeet".to_owned(),
             threads,
-            state: Mutex::new(HostState {
-                running: None,
-                restarts: RestartTracker::new(),
-                budget: RestartBudget::default(),
-            }),
+            policy: RestartPolicy::default(),
+            state: Mutex::new(HostState::default()),
         }
     }
 
@@ -201,6 +256,12 @@ impl SpeechHost {
     /// un binaire construit avec le moteur factice).
     pub fn with_engine(mut self, engine: &str) -> Self {
         self.engine = engine.to_owned();
+        self
+    }
+
+    /// Borne des tentatives (essais).
+    pub fn with_restart_policy(mut self, policy: RestartPolicy) -> Self {
+        self.policy = policy;
         self
     }
 
@@ -212,35 +273,60 @@ impl SpeechHost {
             return Err(HostError::Disabled);
         }
         let mut state = self.state.lock().await;
+        let now = Instant::now();
         if let Some(running) = state.running.as_mut() {
-            match running.child.try_wait() {
-                Ok(None) => return Ok(running.target.clone()),
-                // Mort : jamais de reconnexion à son port.
-                _ => {
-                    tracing::warn!(target: "syntheo_speech", "module stopped; restarting");
-                    state.running = None;
-                    let budget = state.budget.clone();
-                    state.restarts.maybe_reset(&budget);
-                    if !state.restarts.record_restart(&budget) {
-                        return Err(HostError::RestartBudget);
-                    }
+            if matches!(running.child.try_wait(), Ok(None)) {
+                let stable = now.duration_since(running.started_at) >= self.policy.stable_after;
+                let target = running.target.clone();
+                if stable {
+                    state.attempts.clear();
                 }
+                return Ok(target);
             }
+            // Mort : jamais de reconnexion à son port.
+            tracing::warn!(target: "syntheo_speech", "module stopped");
+            state.running = None;
         }
+        if let Some(message) = &state.rejected {
+            return Err(HostError::Verify(message.clone()));
+        }
+        if state.blocked_until.is_some_and(|until| now < until) {
+            return Err(HostError::RestartBudget);
+        }
+        state.blocked_until = None;
+        let window = self.policy.window;
+        state.attempts.retain(|at| now.duration_since(*at) < window);
+        if state.attempts.len() >= self.policy.max_attempts {
+            tracing::warn!(target: "syntheo_speech", "module keeps stopping; launches paused");
+            state.blocked_until = Some(now + window);
+            return Err(HostError::RestartBudget);
+        }
+        state.attempts.push(now);
+        state.verifications += 1;
         let dir = self.dir.clone();
-        let verified = tokio::task::spawn_blocking(move || verify(&dir))
-            .await
-            .map_err(|_| HostError::Verify("verification failed".into()))?
-            .map_err(|e| HostError::Verify(e.to_string()))?;
+        let verified = match tokio::task::spawn_blocking(move || verify(&dir)).await {
+            Ok(Ok(verified)) => verified,
+            Ok(Err(error)) => {
+                state.rejected = Some(error.to_string());
+                return Err(HostError::Verify(error.to_string()));
+            }
+            Err(_) => return Err(HostError::Verify("verification failed".into())),
+        };
         let running = launch(&verified, &self.engine, self.threads).await?;
         let target = running.target.clone();
         state.running = Some(running);
         Ok(target)
     }
 
-    /// Arrête le lancement en cours, s'il y en a un.
+    /// Arrête le lancement en cours, s'il y en a un ; un module refusé à la
+    /// vérification sera revérifié au prochain lancement. L'état « en panne »
+    /// dure jusqu'à la fin de sa fenêtre.
     pub async fn stop(&self) {
-        let running = self.state.lock().await.running.take();
+        let running = {
+            let mut state = self.state.lock().await;
+            state.rejected = None;
+            state.running.take()
+        };
         let Some(mut running) = running else { return };
         drop(running.stdin.take());
         if tokio::time::timeout(STOP_TIMEOUT, running.child.wait())
@@ -258,6 +344,11 @@ impl SpeechHost {
             .running
             .as_mut()
             .is_some_and(|r| matches!(r.child.try_wait(), Ok(None)))
+    }
+
+    /// Vérifications faites depuis la création (essais).
+    pub async fn verifications(&self) -> usize {
+        self.state.lock().await.verifications
     }
 
     /// PID du lancement en cours (essais).

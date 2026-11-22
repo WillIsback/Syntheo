@@ -23,6 +23,47 @@ pub struct OnDeviceTarget {
     pub token: OnDeviceToken,
 }
 
+/// Pourquoi la source « Sur ce poste » n'est pas disponible.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OnDeviceErrorKind {
+    /// Pas de module dans cette application.
+    Unavailable,
+    /// Interdit par un réglage géré.
+    Disabled,
+    /// Module absent, altéré, non signé ou incompatible.
+    Invalid,
+    /// Le module plante en boucle : lancements suspendus.
+    Crashing,
+    /// Le lancement a échoué ; une nouvelle tentative peut réussir.
+    FailedToStart,
+}
+
+impl OnDeviceErrorKind {
+    /// Code stable, transmis à l'interface.
+    pub fn code(self) -> &'static str {
+        match self {
+            Self::Unavailable => "unavailable",
+            Self::Disabled => "disabled",
+            Self::Invalid => "invalid",
+            Self::Crashing => "crashing",
+            Self::FailedToStart => "failed_to_start",
+        }
+    }
+
+    /// Refus définitif pour la durée de l'écoute : ne pas réessayer.
+    pub fn is_permanent(self) -> bool {
+        !matches!(self, Self::FailedToStart)
+    }
+}
+
+/// Erreur de résolution de la source « Sur ce poste ».
+#[derive(Debug, Clone)]
+pub struct OnDeviceError {
+    pub kind: OnDeviceErrorKind,
+    /// Détail pour le journal (jamais le jeton).
+    pub message: String,
+}
+
 /// `true` pour l'adresse réservée de la source « Sur ce poste ».
 pub fn is_on_device(base_url: &str) -> bool {
     base_url == ON_DEVICE_BASE_URL

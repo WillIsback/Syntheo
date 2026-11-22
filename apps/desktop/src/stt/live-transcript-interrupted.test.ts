@@ -18,6 +18,53 @@ afterEach(() => {
 });
 
 describe("getLiveTranscriptPausedMessage", () => {
+  // Revue de l'issue 684 : la preuve refusée du module local n'est pas une
+  // clé d'API, et un refus définitif n'annonce pas de reconnexion.
+  it("explains an on-device module that could not be authenticated", () => {
+    const message = getLiveTranscriptPausedMessage({
+      degraded: { type: "on_device_authentication_failed" },
+      sttProvider: "nvidia",
+      online: false,
+    });
+    expect(message).toMatch(
+      /the transcription module of this computer could not be authenticated/,
+    );
+    expect(message).not.toMatch(/API key|Reconnecting/);
+    activateFrench();
+    expect(
+      getLiveTranscriptPausedMessage({
+        degraded: { type: "on_device_authentication_failed" },
+        sttProvider: "nvidia",
+        online: true,
+      }),
+    ).toMatch(/le module de transcription de ce poste n'a pas pu être authentifié/);
+  });
+
+  it("only reconnects the on-device module after a failed launch", () => {
+    expect(
+      getLiveTranscriptPausedMessage({
+        degraded: {
+          type: "on_device_unavailable",
+          reason: "disabled",
+          permanent: true,
+        },
+        sttProvider: null,
+        online: true,
+      }),
+    ).not.toMatch(/Reconnecting/);
+    expect(
+      getLiveTranscriptPausedMessage({
+        degraded: {
+          type: "on_device_unavailable",
+          reason: "failed_to_start",
+          permanent: false,
+        },
+        sttProvider: null,
+        online: true,
+      }),
+    ).toMatch(/did not start.*Reconnecting/);
+  });
+
   it("names the provider when it reports an outage", () => {
     expect(
       getLiveTranscriptPausedMessage({

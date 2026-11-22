@@ -147,3 +147,67 @@ async fn an_altered_module_never_starts() {
     assert!(matches!(host.target(true).await, Err(HostError::Verify(_))));
     assert!(!host.is_running().await);
 }
+
+/// Dossier de module dont le « binaire » est un script qui sort aussitôt.
+#[cfg(unix)]
+fn crashing_module_dir() -> tempfile::TempDir {
+    use std::os::unix::fs::PermissionsExt;
+    let dir = tempfile::tempdir().unwrap();
+    let binary = dir.path().join(speech_host::verify::binary_name());
+    std::fs::write(&binary, "#!/bin/sh\nexit 1\n").unwrap();
+    std::fs::set_permissions(&binary, std::fs::Permissions::from_mode(0o755)).unwrap();
+    let list = format!(
+        "{}  {}\n",
+        sha256(&binary),
+        speech_host::verify::binary_name()
+    );
+    std::fs::write(dir.path().join(speech_host::verify::LIST_FILE), list).unwrap();
+    dir
+}
+
+// Revue de l'issue 684 : chaque tentative compte, réussie ou non ; au-delà
+// du maximum, refus sans relancer pendant toute la fenêtre.
+#[cfg(unix)]
+#[tokio::test]
+async fn a_module_that_exits_at_once_is_refused_after_the_last_attempt() {
+    let dir = crashing_module_dir();
+    let host = SpeechHost::new(dir.path().to_path_buf(), 1).with_restart_policy(
+        speech_host::host::RestartPolicy {
+            max_attempts: 2,
+            window: Duration::from_secs(60),
+            stable_after: Duration::from_secs(60),
+        },
+    );
+    for _ in 0..2 {
+        let error = host.target(true).await.unwrap_err();
+        assert!(matches!(error, HostError::Launch(_)), "{error:?}");
+        assert!(!error.is_permanent());
+    }
+    for _ in 0..3 {
+        let error = host.target(true).await.unwrap_err();
+        assert_eq!(error, HostError::RestartBudget);
+        assert!(error.is_permanent());
+    }
+    // Fin d'écoute : l'état « en panne » dure jusqu'à la fin de la fenêtre.
+    host.stop().await;
+    assert_eq!(
+        host.target(true).await.unwrap_err(),
+        HostError::RestartBudget
+    );
+    assert_eq!(host.verifications().await, 2);
+}
+
+// Un module altéré : une seule tentative, un seul hachage, refus définitif.
+#[cfg(unix)]
+#[tokio::test]
+async fn an_altered_module_is_checked_once() {
+    let dir = crashing_module_dir();
+    std::fs::write(dir.path().join("intrus.so"), b"x").unwrap();
+    let host = SpeechHost::new(dir.path().to_path_buf(), 1);
+    for _ in 0..5 {
+        let error = host.target(true).await.unwrap_err();
+        assert!(matches!(error, HostError::Verify(_)), "{error:?}");
+        assert!(error.is_permanent());
+    }
+    assert_eq!(host.verifications().await, 1);
+}

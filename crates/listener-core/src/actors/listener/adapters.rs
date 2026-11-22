@@ -46,20 +46,27 @@ async fn connection_target(
     }
     match args.runtime.on_device_target().await {
         Ok(target) => Ok((target.base_url, Some(target.token))),
-        Err(message) => {
+        Err(error) => {
             args.runtime.emit_error(SessionErrorEvent::ConnectionError {
                 session_id: args.session_id.clone(),
-                error: message.clone(),
+                error: error.message.clone(),
             });
             Err(actor_error_with_degraded(
-                format!("on_device_unavailable: {message}"),
-                DegradedError::UpstreamUnavailable { message },
+                format!("on_device_unavailable: {}", error.message),
+                DegradedError::OnDeviceUnavailable {
+                    reason: error.kind.code().to_owned(),
+                    permanent: error.kind.is_permanent(),
+                },
             ))
         }
     }
 }
 
 fn classify_ws_connect_failure(provider: &str, error: &syntheo_ws_client::Error) -> DegradedError {
+    // Preuve du module « Sur ce poste » absente ou fausse : pas une clé d'API.
+    if matches!(error, syntheo_ws_client::Error::PeerAuthenticationFailed) {
+        return DegradedError::OnDeviceAuthenticationFailed;
+    }
     if error.is_auth_error() {
         return DegradedError::AuthenticationFailed {
             provider: provider.to_string(),

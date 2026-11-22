@@ -23,11 +23,32 @@ function isProviderSideStreamError(message: string) {
 // Le listener (crates/listener-core, supervisor) ne retente pas la connexion
 // après un refus de clé ou de réglages : seule une action de l'utilisateur
 // peut alors relancer la transcription en direct.
+// La source « Sur ce poste » (issue 684) n'est pas non plus retentée après
+// un refus définitif ni après une preuve du module refusée.
 function isRetriedAutomatically(degraded: DegradedError | null) {
+  if (degraded?.type === "on_device_unavailable") {
+    return !degraded.permanent;
+  }
   return (
     degraded?.type !== "authentication_failed" &&
-    degraded?.type !== "provider_configuration"
+    degraded?.type !== "provider_configuration" &&
+    degraded?.type !== "on_device_authentication_failed"
   );
+}
+
+function onDeviceCause(reason: string) {
+  switch (reason) {
+    case "disabled":
+      return t`on-device transcription is disabled by your organization`;
+    case "invalid":
+      return t`the transcription module of this computer is missing or has been modified`;
+    case "crashing":
+      return t`the transcription module of this computer keeps stopping`;
+    case "failed_to_start":
+      return t`the transcription module of this computer did not start`;
+    default:
+      return t`on-device transcription is not available`;
+  }
 }
 
 function getPauseCause({
@@ -41,6 +62,15 @@ function getPauseCause({
 }) {
   const providerName =
     providerDisplayName(sttProvider) ?? t`the transcription service`;
+
+  // Le module local ne dépend pas du réseau : cause avant « hors ligne ».
+  if (degraded?.type === "on_device_authentication_failed") {
+    return t`the transcription module of this computer could not be authenticated`;
+  }
+
+  if (degraded?.type === "on_device_unavailable") {
+    return onDeviceCause(degraded.reason);
+  }
 
   if (!online) {
     return t`you are offline`;
@@ -81,6 +111,12 @@ export function getLiveTranscriptPausedMessage({
   // Sans nouvelle tentative (clé ou réglages refusés), le passage manque tant
   // que la personne n'agit pas : formulation ferme.
   if (!isRetriedAutomatically(degraded)) {
+    if (
+      degraded?.type === "on_device_unavailable" ||
+      degraded?.type === "on_device_authentication_failed"
+    ) {
+      return t`Live transcription paused: ${cause}. No audio is kept: this passage will be missing from the transcription.`;
+    }
     return t`Live transcription paused: ${cause}. No audio is kept: this passage will be missing from the transcription. Check the transcription server settings.`;
   }
   // Une coupure courte est rejouée au flux suivant (issue 446) : la perte
