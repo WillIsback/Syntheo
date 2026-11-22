@@ -75,6 +75,7 @@ syntheo-intercept = { path = "crates/intercept", package = "intercept" }
 syntheo-language = { path = "crates/language", package = "language" }
 syntheo-listener-core = { path = "crates/listener-core", package = "listener-core" }
 syntheo-listener2-core = { path = "crates/listener2-core", package = "listener2-core" }
+syntheo-mesure = { path = "crates/mesure", package = "mesure" }
 syntheo-mp3 = { path = "crates/mp3", package = "mp3" }
 syntheo-notification = { path = "crates/notification", package = "notification" }
 syntheo-notification-interface = { path = "crates/notification-interface", package = "notification-interface" }

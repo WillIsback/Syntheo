@@ -17,6 +17,16 @@ pub const VERSION: &str = match option_env!("APP_VERSION") {
 };
 
 pub async fn run(mut args: Args) -> Result<u8> {
+    // Mesure : fichiers locaux seulement, sans base ni réseau.
+    if let cli::Command::Mesure {
+        generated,
+        sent,
+        dictionary,
+    } = &args.command
+    {
+        commands::mesure::run(generated, sent, dictionary.as_deref(), args.json)?;
+        return Ok(0);
+    }
     if matches!(&args.command, cli::Command::Doctor) {
         let ready = commands::doctor::run(&args, args.json).await?;
         return Ok(if ready { 0 } else { 1 });
@@ -87,6 +97,7 @@ pub async fn run(mut args: Args) -> Result<u8> {
             let db = db::open_write(&args).await?;
             commands::proposals::run(&db, command, json).await?
         }
+        cli::Command::Mesure { .. } => unreachable!("mesure returns before opening the database"),
         cli::Command::Mcp => {
             let db = std::sync::Arc::new(db::open_write(&args).await?);
             mcp::serve(db).await?

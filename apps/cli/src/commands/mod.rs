@@ -1,5 +1,6 @@
 pub mod doctor;
 pub mod meetings;
+pub mod mesure;
 pub mod proposals;
 pub mod recording_import;
 

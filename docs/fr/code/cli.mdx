@@ -52,6 +52,7 @@ Deux tests de `apps/cli` lisent directement la documentation publique. Un change
 | `meetings initialize-managed`, `delete` | `commands/meeting_delete.rs` | Préparation de la base selon une politique gérée ; suppression définitive d'une réunion terminée (exige `--source local` et `--require-transcription-complete`). |
 | `proposals create`, `list`, `show`, `decline` | `commands/proposals.rs` | Écriture dans la table des propositions, jamais dans la note. |
 | `mcp` | `mcp.rs` | Écriture (propositions, imports). |
+| `mesure` | `commands/mesure.rs` | N'ouvre pas la base ; lit deux fichiers locaux et n'affiche que des nombres (crate `mesure`). |
 
 Options globales : `--base` (`SYNTHEO_BASE`), `--db-path` (`SYNTHEO_DB_PATH`), `--json`. `meetings` accepte `--source` (`SYNTHEO_SOURCE`, `local` par défaut ; `auto` est un alias de `local`).
 

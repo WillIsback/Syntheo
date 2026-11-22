@@ -23,6 +23,7 @@ syntheo [--base DIR] [--db-path FILE] [--json] <commande>
 | `meetings` | Parcourt, exporte et importe des réunions. |
 | `proposals` | Propose des modifications de réunion, à valider dans l'application. |
 | `mcp` | Lance le serveur MCP Syntheo en stdio. |
+| `mesure` | Mesure la reprise entre une synthèse générée et la version envoyée ; n'affiche que des nombres. |
 
 ## Source des réunions
 
@@ -119,6 +120,41 @@ Lance le serveur MCP local en stdio. Les lectures sont idempotentes. Les outils 
 <Warning>
   N'écrivez rien d'autre sur la sortie standard du serveur : toute autre sortie corrompt le flux du protocole MCP.
 </Warning>
+
+## Commande mesure
+
+```bash
+syntheo mesure --generated generee.md --sent publiee.txt
+syntheo mesure --generated generee.md --sent publiee.html --dictionary termes.txt
+syntheo --json mesure --generated generee.md --sent publiee.md
+```
+
+Calcule la reprise entre une synthèse générée et la version envoyée ou publiée, sans IA et sans réseau, et **n'affiche que des nombres** : aucun mot des textes, aucun titre. La commande n'ouvre pas la base de données et n'écrit aucun fichier. Elle sert au calibrage local de la mesure de la bêta.
+
+- `--generated` et `--sent` : fichiers `.md`, `.txt` ou `.html`, en UTF-8, de 4 Mio au plus. Le format suit l'extension.
+- `--dictionary` (facultatif) : un terme par ligne ; un remplacement court qui touche un de ces termes compte comme une correction lexicale.
+
+Le calcul retire la mise en forme, découpe les deux textes par les titres de la version générée (une ligne identique à un titre suffit dans la version envoyée), compare mot à mot, puis classe chaque différence :
+
+- **lexicale** : remplacement de 1 à 3 mots par 1 à 3 mots, dont l'un a la forme d'un nom propre ou d'un sigle, ou figure au dictionnaire ;
+- **fond** : tout le reste, y compris un nom propre ajouté ou supprimé seul.
+
+Sortie, une valeur par ligne (`clé`, tabulation, nombre) :
+
+| Clé | Valeur |
+| --- | --- |
+| `rule_version` | Version de la règle de calcul. |
+| `aligned` | `1` si au moins la moitié des titres générés se retrouvent (mesure par section), `0` sinon (mesure globale). |
+| `headings_generated`, `headings_matched` | Titres de la version générée, et combien se retrouvent. |
+| `generated` | Mots générés (`G`). |
+| `added`, `deleted` | Mots ajoutés (`A`) et supprimés (`S`). |
+| `replaced_content`, `replaced_lexical` | Mots remplacés, fond (`Rf`) et lexical (`Rl`). |
+| `unmatched_sent_words` | Mots des sections de la version envoyée absentes de la générée (comptés dans `added`). |
+| `content_per_mille` | `(A + S + Rf) / G × 1000`. |
+| `lexical_per_mille` | `Rl / G × 1000`. |
+| `section` | Par section générée : rang, retrouvée (`1` ou `0`), `G`, `A`, `S`, `Rf`, `Rl`, `A / G × 1000`. |
+
+Avec `--json`, les mêmes nombres sont rendus sous `data` (champs `total`, `sections`, `content_per_mille`…).
 
 ## Aide et version
 

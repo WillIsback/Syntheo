@@ -12,6 +12,7 @@ path = "src/main.rs"
 syntheo-agent-access = { workspace = true }
 syntheo-db-app = { workspace = true }
 syntheo-db-core = { workspace = true }
+syntheo-mesure = { workspace = true }
 
 base64 = { workspace = true }
 clap = { workspace = true, features = ["derive", "env"] }
