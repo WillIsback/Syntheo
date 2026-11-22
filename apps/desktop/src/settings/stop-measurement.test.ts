@@ -49,12 +49,17 @@ describe("turning measurement off", () => {
     );
   });
 
-  it("turning it on touches nothing else", async () => {
+  // Vérification 0.8.0 (second tour), point 4 : activer inscrit la personne
+  // dans la transaction du réglage, après lui (garde SQL sur le réglage).
+  it("turning it on enrolls in the same transaction, and clears nothing", async () => {
     await setSettingValues({ measurement_enabled: true });
     const sql = (mocks.executeTransaction.mock.calls[0][0] as Statement[]).map(
       (s) => s.sql,
     );
-    expect(sql).toHaveLength(1);
+    expect(sql).toHaveLength(2);
+    expect(sql[0]).toContain("INSERT INTO app_settings");
+    expect(sql[1]).toContain("INSERT INTO beta_enrollment");
+    expect(sql[1]).toContain("measurement_enabled");
     expect(mocks.execute).not.toHaveBeenCalled();
   });
 });

@@ -606,6 +606,37 @@ fn a_tracked_term_inside_a_longer_dictionary_entry_is_recognised() {
         assert!(!none.hashes().contains(&term.hash));
     }
 
+    // Vérification 0.8.0 (second tour), point 3 : une mesure postérieure à
+    // l'ajout suit toujours les mots, jamais l'entrée entière : « Dupont »
+    // garde la même empreinte qu'avant l'ajout.
+    let dupont = {
+        let first = measure(
+            "Le dossier est suivi par Dupond depuis lundi.",
+            Format::Text,
+            "Le dossier est suivi par Dupont depuis lundi.",
+            Format::Text,
+            &none,
+        )
+        .unwrap();
+        first.corrected_terms[0].hash.clone()
+    };
+    let after = measure(
+        "Le dossier est suivi par Jeanne Dupond depuis lundi.",
+        Format::Text,
+        "Le dossier est suivi par Jean Dupont depuis lundi.",
+        Format::Text,
+        &with_entry,
+    )
+    .unwrap();
+    assert_eq!(after.corrected_terms.len(), 2);
+    assert!(after.corrected_terms.iter().any(|t| t.hash == dupont));
+    let whole = Dictionary::new(["Jean Dupont"]).unwrap().with_term_key(KEY);
+    assert_eq!(
+        whole.hashes().len(),
+        2,
+        "un mot par empreinte, pas l'entrée entière"
+    );
+
     let debug = format!("{with_entry:?}");
     assert!(debug.contains("<masquée>") && !debug.contains("[7, 7"));
 }

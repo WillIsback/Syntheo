@@ -84,26 +84,9 @@ pub async fn apply_managed_settings(pool: &SqlitePool) -> Result<(), sqlx::Error
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => BTreeMap::new(),
         Err(e) => return Err(sqlx::Error::Io(e)),
     };
-    // Mesure de la bêta (issue 672) imposée à false : comme une désactivation,
-    // la copie des synthèses générées est vidée, en effacement sûr, et les
-    // générations ouvertes sont closes.
     let stop_measurement =
         settings.get("measurement_enabled") == Some(&serde_json::Value::Bool(false));
     let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
-    if stop_measurement {
-        sqlx::query("PRAGMA secure_delete = ON")
-            .execute(&mut *tx)
-            .await?;
-        sqlx::query("DELETE FROM summary_generated_bodies")
-            .execute(&mut *tx)
-            .await?;
-        sqlx::query(
-            "UPDATE beta_generations SET closed_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
-             WHERE closed_at IS NULL",
-        )
-        .execute(&mut *tx)
-        .await?;
-    }
     sqlx::query("DELETE FROM managed_app_settings")
         .execute(&mut *tx)
         .await?;
@@ -117,6 +100,35 @@ pub async fn apply_managed_settings(pool: &SqlitePool) -> Result<(), sqlx::Error
             .execute(&mut *tx)
             .await?;
     }
+    tx.commit().await?;
+    // Mesure de la bêta (issue 672) imposée à false : comme une désactivation,
+    // la copie des synthèses générées est vidée, en effacement sûr, et les
+    // générations ouvertes sont closes. Après la politique et au mieux : une
+    // erreur ici est journalisée et n'empêche jamais le démarrage.
+    if stop_measurement && let Err(error) = stop_beta_measurement(pool).await {
+        let kind = error
+            .as_database_error()
+            .and_then(|e| e.code())
+            .map_or_else(|| "other".to_owned(), |code| format!("sqlite:{code}"));
+        tracing::warn!(kind, "managed beta measurement cleanup skipped");
+    }
+    Ok(())
+}
+
+async fn stop_beta_measurement(pool: &SqlitePool) -> Result<(), sqlx::Error> {
+    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+    sqlx::query("PRAGMA secure_delete = ON")
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM summary_generated_bodies")
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query(
+        "UPDATE beta_generations SET closed_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
+         WHERE closed_at IS NULL",
+    )
+    .execute(&mut *tx)
+    .await?;
     tx.commit().await
 }
 
@@ -157,6 +169,45 @@ mod tests {
             assert!(validate(text.as_bytes()).is_err(), "{text}");
         }
     }
+    #[tokio::test]
+    // Vérification 0.8.0, point 1c : une erreur du nettoyage de la bêta (ici,
+    // table absente) n'empêche ni le démarrage ni l'application de la
+    // politique.
+    async fn a_beta_cleanup_error_never_blocks_startup() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("app.db");
+        let db = syntheo_db_core::Db::connect_local_plain(&path)
+            .await
+            .unwrap();
+        crate::prepare_schema(&db).await.unwrap();
+        sqlx::query("DROP TABLE beta_generations")
+            .execute(db.pool())
+            .await
+            .unwrap();
+        db.pool().close().await;
+        std::fs::write(
+            dir.path().join("managed_settings.json"),
+            br#"{"schema_version":1,"settings":{"measurement_enabled":false}}"#,
+        )
+        .unwrap();
+        let db = syntheo_db_core::Db::connect_local_plain(&path)
+            .await
+            .unwrap();
+        crate::prepare_schema(&db).await.unwrap();
+        let value: String = sqlx::query_scalar(
+            "SELECT value_json FROM app_settings WHERE id = 'measurement_enabled'",
+        )
+        .fetch_one(db.pool())
+        .await
+        .unwrap();
+        assert_eq!(value, "false");
+        let managed: i64 = sqlx::query_scalar("SELECT count(*) FROM managed_app_settings")
+            .fetch_one(db.pool())
+            .await
+            .unwrap();
+        assert_eq!(managed, 1);
+    }
+
     #[tokio::test]
     // Vérification 0.8.0, point 4 : une mesure imposée à false au démarrage
     // vide la copie des synthèses générées et clôt les générations.

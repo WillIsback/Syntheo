@@ -99,7 +99,11 @@ export function calibrationStatement(
         auto_content_true_lexical, auto_lexical_true_content,
         auto_lexical_true_lexical
       )
-      VALUES (?, ?, ?, ?, ?, ?)
+      SELECT ?, ?, ?, ?, ?, ?
+      WHERE EXISTS (
+        SELECT 1 FROM app_settings
+        WHERE id = 'measurement_enabled' AND value_json = 'true'
+      )
       ON CONFLICT(id) DO UPDATE SET
         rule_version = excluded.rule_version,
         auto_content_true_content = excluded.auto_content_true_content,

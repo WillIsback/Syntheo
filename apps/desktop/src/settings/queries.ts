@@ -16,7 +16,11 @@ import {
 import { executeTransaction, liveQueryClient, useLiveQuery } from "~/db";
 import { enqueueDatabaseWrite } from "~/db/write-queue";
 import { resolveUiLanguagePreference } from "~/i18n/locales";
-import { checkpointAfterErase, stopMeasurementStatements } from "~/mesure/beta";
+import {
+  checkpointAfterErase,
+  enrollmentStatement,
+  stopMeasurementStatements,
+} from "~/mesure/beta";
 import { normalizeStoredLlmSelection } from "~/settings/ai/llm/selection";
 import {
   SETTING_DEFINITIONS,
@@ -318,6 +322,11 @@ async function persistSettingValues(values: SettingValues): Promise<void> {
   // même transaction, en effacement sûr.
   const stopping = values.measurement_enabled === false;
   if (stopping) statements.push(...stopMeasurementStatements(now));
+  // Activer la mesure inscrit la personne dans la même transaction (garde SQL
+  // sur le réglage, qui précède dans la liste).
+  if (values.measurement_enabled === true) {
+    statements.push(enrollmentStatement(now));
+  }
   if (statements.length > 0) await executeTransaction(statements);
   if (stopping) checkpointAfterErase();
   applySettingSideEffects(values);

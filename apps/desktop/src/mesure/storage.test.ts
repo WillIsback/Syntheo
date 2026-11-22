@@ -104,6 +104,17 @@ describe("measurement storage", () => {
         autoLexicalTrueLexical: 0,
       }).sql,
     ).toContain("ON CONFLICT(id) DO UPDATE");
+    // Vérification 0.8.0 (second tour), point 4 : un calibrage écrit après un
+    // effacement (mesure désactivée) ne réapparaît pas.
+    expect(
+      calibrationStatement(ID, {
+        ruleVersion: 1,
+        autoContentTrueContent: 1,
+        autoContentTrueLexical: 0,
+        autoLexicalTrueContent: 0,
+        autoLexicalTrueLexical: 0,
+      }).sql,
+    ).toContain("measurement_enabled");
   });
 });
 

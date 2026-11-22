@@ -337,6 +337,63 @@ describe("buildExport", () => {
     const data = buildExport(input, "0.8.0", NOW);
     expect(await checkExport(data)).toEqual({ export: data });
     expect(data.meetings).toEqual([]);
+    // La génération close au jour 3, inutilisée avant, n'est pas exportée
+    // (fenêtre de 7 jours non observée) ; celle mesurée sur une synthèse
+    // retouchée reste, non mesurée.
+    expect(data.summaries).toEqual([
+      {
+        summary: "s1",
+        generated_day: 2,
+        measured: null,
+        exported: null,
+        shared: null,
+      },
+    ]);
+  });
+
+  // Vérification 0.8.0 (second tour), point 5 : une génération close avant
+  // la fin de sa fenêtre de 7 jours et inutilisée avant la clôture n'est pas
+  // exportée ; utilisée avant, ou close après ses 7 jours, elle l'est.
+  it("leaves out a generation closed before its window was observed", async () => {
+    const input: ExportRows = {
+      ...rows(),
+      measurements: [],
+      sections: [],
+      generations: [
+        {
+          documentId: "summary:unused",
+          generatedAt: at(1),
+          exportedAt: null,
+          sharedAt: null,
+          closedAt: at(3),
+        },
+        {
+          documentId: "summary:shared",
+          generatedAt: at(1),
+          exportedAt: null,
+          sharedAt: at(2),
+          closedAt: at(3),
+        },
+        {
+          documentId: "summary:late",
+          generatedAt: at(1),
+          exportedAt: null,
+          sharedAt: null,
+          closedAt: at(9),
+        },
+        {
+          documentId: "summary:shared-after",
+          generatedAt: at(1, 12),
+          exportedAt: null,
+          sharedAt: at(4),
+          closedAt: at(3),
+        },
+      ],
+      termErrors: [],
+    };
+    const data = buildExport(input, "0.8.0", NOW);
+    expect(await checkExport(data)).toEqual({ export: data });
+    // Ordre : date de génération, puis identifiant (« late » avant « shared »).
     expect(data.summaries).toEqual([
       {
         summary: "s1",
@@ -347,11 +404,47 @@ describe("buildExport", () => {
       },
       {
         summary: "s2",
-        generated_day: 2,
+        generated_day: 1,
         measured: null,
         exported: null,
-        shared: null,
+        shared: 2,
       },
+    ]);
+  });
+
+  // Vérification 0.8.0 (second tour), point 6 : G1 mesurée puis close ; G2
+  // générée et mesurée après la réactivation : deux réunions, fichier accepté.
+  it("a generation measured after reactivation sits beside the closed one", async () => {
+    const input: ExportRows = {
+      ...rows(),
+      measurements: [
+        measurement("g1", DOC, at(2)),
+        measurement("g2", DOC, at(6)),
+      ],
+      sections: [],
+      generations: [
+        {
+          documentId: DOC,
+          generatedAt: at(1),
+          exportedAt: null,
+          sharedAt: null,
+          closedAt: at(3),
+        },
+        {
+          documentId: DOC,
+          generatedAt: at(5),
+          exportedAt: null,
+          sharedAt: null,
+          closedAt: null,
+        },
+      ],
+      termErrors: [],
+    };
+    const data = buildExport(input, "0.8.0", NOW);
+    expect(await checkExport(data)).toEqual({ export: data });
+    expect(data.meetings.map((m) => [m.meeting, m.summary, m.day])).toEqual([
+      ["m1", "s1", 2],
+      ["m2", "s2", 6],
     ]);
   });
 

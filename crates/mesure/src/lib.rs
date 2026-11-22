@@ -132,10 +132,12 @@ impl Dictionary {
         self
     }
 
-    /// Empreintes de chaque suite de mots des entrées (un mot, deux mots…,
-    /// l'entrée entière), triées et sans doublon (voir `term_hash`) ; vide
-    /// sans clé. Un terme suivi contenu dans une entrée y est ainsi reconnu :
-    /// « Dupont » corrigé, puis « Jean Dupont » ajouté au dictionnaire.
+    /// Empreintes de chaque mot des entrées, triées et sans doublon (voir
+    /// `term_hash`) ; vide sans clé. Les termes suivis sont des mots : un
+    /// terme contenu dans une entrée y est reconnu (« Dupont » corrigé, puis
+    /// « Jean Dupont » ajouté au dictionnaire). Limite connue : un mot à
+    /// majuscule d'une entrée compte comme couvert même dans un autre sens
+    /// (« Jean » de « Lycée Jean Moulin »).
     pub fn hashes(&self) -> Vec<String> {
         let Some(key) = &self.term_key else {
             return Vec::new();
@@ -143,24 +145,22 @@ impl Dictionary {
         let mut out: Vec<String> = self
             .terms
             .iter()
-            .flat_map(|term| {
-                (1..=term.len()).flat_map(move |size| {
-                    term.windows(size).map(move |window| term_hash(key, window))
-                })
-            })
+            .flatten()
+            .map(|word| term_hash(key, std::slice::from_ref(word)))
             .collect();
         out.sort();
         out.dedup();
         out
     }
 
-    /// Termes corrigés d'un remplacement lexical, côté envoyé : les termes du
-    /// dictionnaire qu'il contient, puis chaque nom propre ou sigle hors de
-    /// ces termes. Mots en minuscules, comme les entrées du dictionnaire.
+    /// Termes corrigés d'un remplacement lexical, côté envoyé, toujours mot
+    /// par mot : chaque nom propre ou sigle, et chaque mot d'une entrée du
+    /// dictionnaire qu'il contient. En minuscules, comme les entrées du
+    /// dictionnaire. Une entrée de plusieurs mots n'est jamais suivie entière :
+    /// « Jean Dupont » ajouté au dictionnaire, « Dupont » reste le même terme.
     fn corrected_terms(&self, new_words: &[&Token]) -> Vec<Vec<String>> {
         let lower: Vec<String> = new_words.iter().map(|t| t.text.to_lowercase()).collect();
         let mut covered = vec![false; lower.len()];
-        let mut out: Vec<Vec<String>> = Vec::new();
         for term in &self.terms {
             if term.len() > lower.len() {
                 continue;
@@ -168,14 +168,12 @@ impl Dictionary {
             for start in 0..=lower.len() - term.len() {
                 if lower[start..start + term.len()] == term[..] {
                     covered[start..start + term.len()].fill(true);
-                    if !out.contains(term) {
-                        out.push(term.clone());
-                    }
                 }
             }
         }
+        let mut out: Vec<Vec<String>> = Vec::new();
         for (i, token) in new_words.iter().enumerate() {
-            if !covered[i] && proper_noun_or_acronym(token) {
+            if covered[i] || proper_noun_or_acronym(token) {
                 let term = vec![lower[i].clone()];
                 if !out.contains(&term) {
                     out.push(term);

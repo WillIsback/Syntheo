@@ -6,7 +6,6 @@ import { useMountEffect } from "@syntheo/ui/hooks/use-mount-effect";
 import { useLiveQuery } from "~/db";
 import { DEVICE_AUTH_REASON } from "~/lock/auth";
 import { useAppLock } from "~/lock/store";
-import { ensureEnrollment } from "~/mesure/beta";
 import { BetaData } from "~/mesure/beta-data";
 import { privacyMessages } from "~/settings/general/app-settings";
 import { SettingsPageTitle } from "~/settings/page-title";
@@ -118,13 +117,8 @@ export function SettingsPrivacy() {
                 ? { measurement_enabled: true }
                 : { measurement_enabled: false, calibration_enabled: false },
             );
-            // Inscription à la bêta (issue 672) : pseudonyme aléatoire et
-            // date de référence, créés une fois, effaçables ci-dessous.
-            if (next) {
-              void ensureEnrollment().catch((cause) =>
-                console.error("[mesure] failed to enroll", cause),
-              );
-            }
+            // L'inscription à la bêta (issue 672) se fait dans la
+            // transaction du réglage (settings/queries.ts).
           }}
         />
         <SettingSwitchRow

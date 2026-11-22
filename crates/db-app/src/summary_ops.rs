@@ -218,50 +218,12 @@ pub async fn update_generated_summary_body(
         .await?
     };
 
-    // Bêta de la mesure (issues 671 et 672), seulement pendant que la mesure
-    // est active : le corps produit avant toute retouche (la version générée
-    // de la mesure, remplacée à chaque régénération), et la génération
-    // elle-même, une ligne par génération, si la personne est inscrite.
+    // Bêta de la mesure (issues 671 et 672) : jamais au prix de la synthèse.
+    // Ses écritures vont dans un point de sauvegarde ; une erreur (table
+    // absente, disque plein, corruption) l'annule, une ligne de journal sans
+    // contenu le dit, et la synthèse reste enregistrée.
     if result.rows_affected() == 1 {
-        sqlx::query(
-            "INSERT INTO summary_generated_bodies
-               (document_id, session_id, body_format, body, generated_at)
-             SELECT ?, ?, 'prosemirror_json', ?, ?
-             WHERE EXISTS (
-               SELECT 1 FROM app_settings
-               WHERE id = 'measurement_enabled' AND value_json = 'true'
-             )
-             ON CONFLICT(document_id) DO UPDATE SET
-               session_id = excluded.session_id,
-               body_format = excluded.body_format,
-               body = excluded.body,
-               generated_at = excluded.generated_at",
-        )
-        .bind(note_id)
-        .bind(session_id)
-        .bind(next_body)
-        .bind(updated_at)
-        .execute(&mut *conn)
-        .await?;
-    }
-    // `beta_generations` contrôle la forme des identifiants : une forme
-    // inattendue fait sauter la ligne de la bêta, jamais la synthèse.
-    if result.rows_affected() == 1 && beta_row_fits(note_id, session_id, updated_at) {
-        sqlx::query(
-            "INSERT INTO beta_generations (document_id, session_id, generated_at)
-             SELECT ?, ?, ?
-             WHERE EXISTS (
-               SELECT 1 FROM app_settings
-               WHERE id = 'measurement_enabled' AND value_json = 'true'
-             )
-               AND EXISTS (SELECT 1 FROM beta_enrollment)
-             ON CONFLICT(document_id, generated_at) DO NOTHING",
-        )
-        .bind(note_id)
-        .bind(session_id)
-        .bind(updated_at)
-        .execute(&mut *conn)
-        .await?;
+        record_beta_generation(conn, note_id, session_id, next_body, updated_at).await;
     }
 
     Ok(result.rows_affected())
@@ -404,4 +366,106 @@ fn beta_row_fits(document_id: &str, session_id: &str, generated_at: &str) -> boo
             })
     };
     date && fits(document_id, 96, true) && fits(session_id, 64, false)
+}
+
+/// Écritures de la bêta, seulement pendant que la mesure est active : le corps
+/// produit avant toute retouche (la version générée de la mesure, remplacée à
+/// chaque régénération), et la génération elle-même, une ligne par
+/// génération, si la personne est inscrite.
+async fn record_beta_generation(
+    conn: &mut SqliteConnection,
+    note_id: &str,
+    session_id: &str,
+    next_body: &str,
+    updated_at: &str,
+) {
+    if let Err(error) = sqlx::query("SAVEPOINT beta_measurement")
+        .execute(&mut *conn)
+        .await
+    {
+        tracing::warn!(
+            kind = beta_error_kind(&error),
+            "beta measurement write skipped"
+        );
+        return;
+    }
+    match write_beta_generation(conn, note_id, session_id, next_body, updated_at).await {
+        Ok(()) => {
+            if let Err(error) = sqlx::query("RELEASE beta_measurement")
+                .execute(&mut *conn)
+                .await
+            {
+                tracing::warn!(
+                    kind = beta_error_kind(&error),
+                    "beta measurement release failed"
+                );
+            }
+        }
+        Err(error) => {
+            tracing::warn!(
+                kind = beta_error_kind(&error),
+                "beta measurement write skipped"
+            );
+            for statement in ["ROLLBACK TO beta_measurement", "RELEASE beta_measurement"] {
+                let _ = sqlx::query(statement).execute(&mut *conn).await;
+            }
+        }
+    }
+}
+
+/// Nature d'une erreur, sans son message (qui peut citer des valeurs).
+fn beta_error_kind(error: &sqlx::Error) -> String {
+    match error.as_database_error().and_then(|e| e.code()) {
+        Some(code) => format!("sqlite:{code}"),
+        None => "other".to_owned(),
+    }
+}
+
+async fn write_beta_generation(
+    conn: &mut SqliteConnection,
+    note_id: &str,
+    session_id: &str,
+    next_body: &str,
+    updated_at: &str,
+) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        "INSERT INTO summary_generated_bodies
+           (document_id, session_id, body_format, body, generated_at)
+         SELECT ?, ?, 'prosemirror_json', ?, ?
+         WHERE EXISTS (
+           SELECT 1 FROM app_settings
+           WHERE id = 'measurement_enabled' AND value_json = 'true'
+         )
+         ON CONFLICT(document_id) DO UPDATE SET
+           session_id = excluded.session_id,
+           body_format = excluded.body_format,
+           body = excluded.body,
+           generated_at = excluded.generated_at",
+    )
+    .bind(note_id)
+    .bind(session_id)
+    .bind(next_body)
+    .bind(updated_at)
+    .execute(&mut *conn)
+    .await?;
+    // `beta_generations` contrôle la forme des identifiants : une forme
+    // inattendue fait sauter la ligne, sans erreur.
+    if beta_row_fits(note_id, session_id, updated_at) {
+        sqlx::query(
+            "INSERT INTO beta_generations (document_id, session_id, generated_at)
+             SELECT ?, ?, ?
+             WHERE EXISTS (
+               SELECT 1 FROM app_settings
+               WHERE id = 'measurement_enabled' AND value_json = 'true'
+             )
+               AND EXISTS (SELECT 1 FROM beta_enrollment)
+             ON CONFLICT(document_id, generated_at) DO NOTHING",
+        )
+        .bind(note_id)
+        .bind(session_id)
+        .bind(updated_at)
+        .execute(&mut *conn)
+        .await?;
+    }
+    Ok(())
 }

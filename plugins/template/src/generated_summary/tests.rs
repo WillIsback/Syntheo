@@ -248,6 +248,43 @@ async fn an_odd_identifier_never_fails_the_summary() {
     assert_eq!(rows, 0);
 }
 
+// Vérification 0.8.0, point 1b : une erreur des tables de la bêta (ici,
+// tables absentes) n'empêche jamais d'enregistrer la synthèse.
+#[tokio::test]
+async fn a_beta_write_error_never_fails_the_summary() {
+    let db = test_db().await;
+    set_measurement(&db, true).await;
+    enroll(&db).await;
+    for table in ["beta_generations", "summary_generated_bodies"] {
+        sqlx::query(sqlx::AssertSqlSafe(format!("DROP TABLE {table}")))
+            .execute(db.pool())
+            .await
+            .unwrap();
+        let mut request = request(vec![]);
+        let current: String =
+            sqlx::query_scalar("SELECT body FROM session_documents WHERE id = 'note-1'")
+                .fetch_one(db.pool())
+                .await
+                .unwrap();
+        let format: String =
+            sqlx::query_scalar("SELECT body_format FROM session_documents WHERE id = 'note-1'")
+                .fetch_one(db.pool())
+                .await
+                .unwrap();
+        request.current_body = current;
+        request.current_body_format = format;
+        request.next_body = format!(r#"{{"type":"doc","content":[],"attrs":{{"t":"{table}"}}}}"#);
+        let next = request.next_body.clone();
+        save_generated_summary(db.pool(), request).await.unwrap();
+        let body: String =
+            sqlx::query_scalar("SELECT body FROM session_documents WHERE id = 'note-1'")
+                .fetch_one(db.pool())
+                .await
+                .unwrap();
+        assert_eq!(body, next, "{table}");
+    }
+}
+
 #[tokio::test]
 async fn first_generation_into_an_empty_summary_keeps_no_version() {
     let db = test_db().await;

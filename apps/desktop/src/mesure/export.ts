@@ -95,6 +95,8 @@ export class ExportError extends Error {}
 
 const APP_VERSION = /^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}(-[0-9]{1,4})?$/;
 const DAY_MS = 86_400_000;
+/** Fenêtre du taux d'abandon (spec §4) : 7 jours après la génération. */
+const ABANDON_WINDOW_MS = 7 * DAY_MS;
 
 /** Règle de calcul de la reprise (crate `mesure`, `RULE_VERSION`). */
 const RULE_VERSION = 1;
@@ -159,7 +161,22 @@ export function buildExport(
     }
   }
 
-  const summaryIndex = new Map(generations.map((g, i) => [g, `s${i + 1}`]));
+  // Fenêtre d'abandon (7 jours) non observée : une génération close avant
+  // la fin de sa fenêtre sans avoir servi avant la clôture n'est pas
+  // exportée ; elle compterait à tort comme abandonnée.
+  const usedBefore = (at: string | null, g: (typeof generations)[number]) =>
+    at !== null &&
+    at >= g.generatedAt &&
+    (g.closedAt === null || at < g.closedAt);
+  const observed = generations.filter(
+    (g) =>
+      g.closedAt === null ||
+      Date.parse(g.closedAt) - Date.parse(g.generatedAt) >= ABANDON_WINDOW_MS ||
+      firstMeasurement.has(g) ||
+      usedBefore(g.exportedAt, g) ||
+      usedBefore(g.sharedAt, g),
+  );
+  const summaryIndex = new Map(observed.map((g, i) => [g, `s${i + 1}`]));
   const measured = [...firstMeasurement.entries()].sort(([, a], [, b]) =>
     a.measuredAt.localeCompare(b.measuredAt),
   );
@@ -186,7 +203,7 @@ export function buildExport(
       })),
   }));
 
-  const summaries = generations.map((g) => {
+  const summaries = observed.map((g) => {
     // Un événement antérieur à la génération appartient à une autre.
     const after = (at: string | null) =>
       at !== null &&
