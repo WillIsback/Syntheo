@@ -12,7 +12,6 @@ const {
   listenCaptureDataMock,
   listenCaptureLifecycleMock,
   listenCaptureStatusMock,
-  runEventHooksMock,
   setRecordingIndicatorMock,
   startCaptureMock,
   stopCaptureMock,
@@ -23,7 +22,6 @@ const {
   listenCaptureDataMock: vi.fn(),
   listenCaptureLifecycleMock: vi.fn(),
   listenCaptureStatusMock: vi.fn(),
-  runEventHooksMock: vi.fn(),
   setRecordingIndicatorMock: vi.fn(),
   startCaptureMock: vi.fn(),
   stopCaptureMock: vi.fn(),
@@ -47,10 +45,6 @@ vi.mock("@syntheo/plugin-detect", () => ({
   commands: {
     listMicUsingApplications: vi.fn(async () => ({ status: "ok", data: [] })),
   },
-}));
-
-vi.mock("@syntheo/plugin-hooks", () => ({
-  commands: { runEventHooks: runEventHooksMock },
 }));
 
 vi.mock("@syntheo/plugin-icon", () => ({
@@ -164,7 +158,6 @@ describe("pause de l'écoute", () => {
     });
     listenCaptureDataMock.mockResolvedValue(() => {});
     listenCaptureStatusMock.mockResolvedValue(() => {});
-    runEventHooksMock.mockResolvedValue({ status: "ok", data: null });
     setRecordingIndicatorMock.mockResolvedValue({ status: "ok", data: null });
     startCaptureMock.mockResolvedValue({ status: "ok", data: null });
     stopCaptureMock.mockResolvedValue({ status: "ok", data: null });

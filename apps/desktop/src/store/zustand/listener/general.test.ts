@@ -14,7 +14,6 @@ const {
   listenCaptureStatusMock,
   listMicrophoneDevicesMock,
   listMicUsingApplicationsMock,
-  runEventHooksMock,
   setRecordingIndicatorMock,
   startCaptureMock,
   stopCaptureMock,
@@ -30,7 +29,6 @@ const {
   listenCaptureStatusMock: vi.fn(),
   listMicrophoneDevicesMock: vi.fn(),
   listMicUsingApplicationsMock: vi.fn(),
-  runEventHooksMock: vi.fn(),
   setRecordingIndicatorMock: vi.fn(),
   startCaptureMock: vi.fn(),
   stopCaptureMock: vi.fn(),
@@ -51,12 +49,6 @@ vi.mock("@tauri-apps/api/app", () => ({
 vi.mock("@syntheo/plugin-detect", () => ({
   commands: {
     listMicUsingApplications: listMicUsingApplicationsMock,
-  },
-}));
-
-vi.mock("@syntheo/plugin-hooks", () => ({
-  commands: {
-    runEventHooks: runEventHooksMock,
   },
 }));
 
@@ -379,7 +371,6 @@ describe("General Listener Slice", () => {
       status: "ok",
       data: ["Built-in Microphone"],
     });
-    runEventHooksMock.mockResolvedValue({ status: "ok", data: null });
     setRecordingIndicatorMock.mockResolvedValue({ status: "ok", data: null });
     startCaptureMock.mockResolvedValue({ status: "ok", data: null });
     stopCaptureMock.mockResolvedValue({ status: "ok", data: null });
@@ -1772,13 +1763,12 @@ describe("General Listener Slice", () => {
       },
       {
         failure: "a pre-capture startup failure",
-        error: "storage unavailable",
+        error: "app detection unavailable",
         captureCalled: false,
         arrange: () =>
-          vaultBaseMock.mockResolvedValueOnce({
-            status: "error",
-            error: "storage unavailable",
-          }),
+          listMicUsingApplicationsMock.mockRejectedValueOnce(
+            new Error("app detection unavailable"),
+          ),
       },
     ])(
       "keeps $failure visible without classifying it as an audio error",

@@ -42,7 +42,6 @@
     "@syntheo/plugin-dictation": "workspace:*",
     "@syntheo/plugin-export": "workspace:*",
     "@syntheo/plugin-fs-sync": "workspace:*",
-    "@syntheo/plugin-hooks": "workspace:*",
     "@syntheo/plugin-icon": "workspace:*",
     "@syntheo/plugin-local-api": "workspace:*",
     "@syntheo/plugin-local-auth": "workspace:*",

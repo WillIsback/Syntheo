@@ -43,7 +43,6 @@ La colonne « Interface » indique si `apps/desktop/src` importe le paquet `@syn
 | `template` | Rendu des prompts et enregistrement des comptes rendus | Oui | [/customize-summaries](/fr/customize-summaries), [/languages](/fr/languages), [/chat](/fr/chat) |
 | `export` | Export et impression PDF | Oui | [/notes](/fr/notes) |
 | `local-api` | Webhooks sortants, export Markdown | Oui | [/reference/webhooks](/fr/reference/webhooks), [/automations](/fr/automations) |
-| `hooks` | Commandes locales déclenchées par des événements | Oui | aucune |
 | `settings` | Fichier de réglages et dossiers de base | Oui | [/data-and-privacy](/fr/data-and-privacy) |
 | `store2` | Préférences clé-valeur et secrets dans le trousseau | Oui | [/security](/fr/security), [/ai-setup](/fr/ai-setup), [/data-and-privacy](/fr/data-and-privacy), [/uninstall](/fr/uninstall) |
 | `windows` | Fenêtres, onglets, barre flottante, sous-titres en direct | Oui | [/automatic-capture](/fr/automatic-capture), [/meetings](/fr/meetings) |
@@ -140,7 +139,6 @@ La colonne « Interface » indique si `apps/desktop/src` importe le paquet `@syn
 | `tantivy` | `search`, `reindex`, `add_document`, `update_document`, `update_documents`, `remove_document` | `crates/language` ; plugin `settings` | [/notes](/fr/notes) (palette de recherche), [/architecture](/fr/architecture) |
 | `export` | `export`, `export_text`, `choose_export_path`, `print_pdf`, `cleanup_print_files` | `crates/export-core` ; plugin `db` | [/notes](/fr/notes) |
 | `local-api` | Webhooks (`list_webhooks`, `create_webhook`, `delete_webhook`, `set_webhook_active`, `test_webhook`, `dispatch_event`), `export_meeting_markdown` (utilisé par `apps/desktop/src/automations/step-runners.ts`), `prepare_drive_markdown`, `get_cloud_snapshot`, `list_cloud_snapshot_ids` | `crates/agent-access`, `crates/db-app` ; plugin `db` | [/reference/webhooks](/fr/reference/webhooks), [/automations](/fr/automations) |
-| `hooks` | `run_event_hooks`, appelé pendant l'écoute (`apps/desktop/src/store/zustand/listener/general-live.ts`). La configuration est lue sous la clé `hooks` des réglages. | `crates/hooks` ; plugin `settings` | aucune |
 | `settings` | `settings_path`, `global_base`, `vault_base`, `load`, `save` | `crates/storage` | [/data-and-privacy](/fr/data-and-privacy) |
 | `store2` | Préférences typées (`get_str`, `set_str`, `get_bool`, `set_number`…, `save`) et secrets (`get_secret`, `set_secret`, `delete_secret`, `repair_keychain_access`) rangés dans le trousseau via `keyring` | `crates/storage` ; plugin `settings` | [/security](/fr/security), [/ai-setup](/fr/ai-setup), [/data-and-privacy](/fr/data-and-privacy), [/uninstall](/fr/uninstall) |
 
