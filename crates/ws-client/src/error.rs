@@ -38,6 +38,9 @@ pub enum Error {
     Timeout(tokio::time::error::Elapsed),
     #[error("send error")]
     SendError(String),
+    /// Le pair n'a pas prouvé qu'il connaît le secret partagé (`PeerProof`).
+    #[error("peer authentication failed")]
+    PeerAuthenticationFailed,
 }
 
 fn format_connection_error(e: &tokio_tungstenite::tungstenite::Error) -> String {
@@ -91,6 +94,7 @@ impl std::fmt::Debug for Error {
             Error::ParseError { message } => write!(f, "ParseError({message})"),
             Error::Timeout(e) => write!(f, "Timeout({:?})", e),
             Error::SendError(message) => write!(f, "SendError({message})"),
+            Error::PeerAuthenticationFailed => write!(f, "PeerAuthenticationFailed"),
         }
     }
 }
@@ -103,6 +107,9 @@ impl Error {
     }
 
     pub fn is_auth_error(&self) -> bool {
+        if matches!(self, Error::PeerAuthenticationFailed) {
+            return true;
+        }
         if let Error::ConnectFailed { is_auth, .. } = self {
             return *is_auth;
         }
@@ -133,7 +140,8 @@ impl Error {
             | Error::RemoteClosed { .. }
             | Error::ParseError { .. }
             | Error::Timeout(_)
-            | Error::SendError(_) => false,
+            | Error::SendError(_)
+            | Error::PeerAuthenticationFailed => false,
         }
     }
 

@@ -652,6 +652,12 @@ fn describe_degraded(degraded: &DegradedError) -> String {
         | DegradedError::StreamError { message }
         | DegradedError::ProviderConfiguration { message, .. } => message.clone(),
         DegradedError::ConnectionTimeout => "connection timed out".to_string(),
+        DegradedError::OnDeviceUnavailable { reason, .. } => {
+            format!("on-device transcription unavailable ({reason})")
+        }
+        DegradedError::OnDeviceAuthenticationFailed => {
+            "on-device transcription module could not be authenticated".to_string()
+        }
     }
 }
 

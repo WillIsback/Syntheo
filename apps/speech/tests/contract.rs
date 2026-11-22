@@ -508,3 +508,72 @@ async fn the_real_binary_opens_no_outbound_connection() {
         "arrêt à la fermeture de l'entrée standard"
     );
 }
+
+/// Issue 684 : le vrai client de l'application (`ListenClient` en mode « Sur
+/// ce poste ») et le module parlent le même handshake : preuves croisées,
+/// puis une session complète.
+#[tokio::test]
+async fn the_app_client_handshakes_with_the_module() {
+    use owhisper_client::{FinalizeHandle, ListenClient, OnDeviceToken};
+    use owhisper_interface::MixedMessage;
+    let (port, _stop) = start(4).await;
+    let token_bytes = (0..TOKEN.len())
+        .step_by(2)
+        .map(|i| u8::from_str_radix(&TOKEN[i..i + 2], 16).unwrap())
+        .collect();
+    let client = ListenClient::builder()
+        .adapter::<NvidiaAdapter>()
+        .api_base(format!("http://127.0.0.1:{port}"))
+        .params(params(true))
+        .on_device(OnDeviceToken::new(token_bytes).unwrap())
+        .build_single()
+        .await
+        .unwrap();
+    let audio: Vec<owhisper_client::ListenClientInput> = (0..100)
+        .map(|_| MixedMessage::Audio(bytes::Bytes::from(vec![0u8; 640])))
+        .collect();
+    // L'audio, puis un flux ouvert : la fin passe par la poignée, comme dans
+    // l'application.
+    let input = futures_util::stream::iter(audio).chain(futures_util::stream::pending());
+    let (output, handle) = client
+        .from_realtime_audio(Box::pin(input))
+        .await
+        .expect("handshake à preuves accepté par le module");
+    tokio::time::sleep(Duration::from_millis(200)).await;
+    handle.finalize().await;
+    let mut output = Box::pin(output);
+    let mut finals = 0;
+    while let Ok(Some(Ok(response))) =
+        tokio::time::timeout(Duration::from_secs(5), output.next()).await
+    {
+        if let StreamResponse::TranscriptResponse {
+            is_final: true,
+            channel,
+            ..
+        } = &response
+            && channel.alternatives[0].transcript == "Bonjour toi"
+        {
+            finals += 1;
+        }
+    }
+    assert_eq!(finals, 1);
+}
+
+/// Un client de l'application avec un autre jeton est refusé par le module.
+#[tokio::test]
+async fn the_app_client_with_another_token_is_refused() {
+    use owhisper_client::{ListenClient, OnDeviceToken};
+    let (port, _stop) = start(4).await;
+    let client = ListenClient::builder()
+        .adapter::<NvidiaAdapter>()
+        .api_base(format!("http://127.0.0.1:{port}"))
+        .params(params(true))
+        .on_device(OnDeviceToken::new(vec![9; 16]).unwrap())
+        .build_single()
+        .await
+        .unwrap();
+    let result = client
+        .from_realtime_audio(futures_util::stream::pending())
+        .await;
+    assert!(result.is_err());
+}

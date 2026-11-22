@@ -8141,6 +8141,7 @@ dependencies = [
  "bytes",
  "data",
  "futures-util",
+ "hmac 0.13.0",
  "language",
  "openai-transcription",
  "owhisper-interface",
@@ -8149,6 +8150,7 @@ dependencies = [
  "reqwest-tracing",
  "serde",
  "serde_json",
+ "sha2 0.11.1",
  "strum 0.28.0",
  "thiserror 2.0.21",
  "tokio",
@@ -10574,6 +10576,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "speech-host"
+version = "0.1.0"
+dependencies = [
+ "bytes",
+ "futures-util",
+ "owhisper-client",
+ "owhisper-interface",
+ "serde_json",
+ "sha2 0.11.1",
+ "tempfile",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "speech-probe"
 version = "0.1.0"
 dependencies = [
@@ -12573,6 +12591,7 @@ dependencies = [
  "serde_json",
  "specta",
  "specta-typescript",
+ "speech-host",
  "speech-probe",
  "sqlx",
  "storage",
@@ -15554,6 +15573,7 @@ dependencies = [
  "tokio-tungstenite 0.29.0",
  "tracing",
  "url",
+ "uuid",
 ]
 
 [[package]]

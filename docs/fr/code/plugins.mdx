@@ -78,7 +78,7 @@ La colonne « Interface » indique si `apps/desktop/src` importe le paquet `@syn
   - Audio en mémoire : `list_capture_audio_chunks`, `delete_transcribed_capture_audio`, `delete_processed_session_audio`.
   - Transcription sur le poste : `probe_local_transcription` (sonde de `crates/speech-probe`, refusée pendant une écoute et par le relay).
 - **Événements** : `CaptureLifecycleEvent`, `CaptureStatusEvent`, `CaptureDataEvent`, `LiveTranscriptPersistenceEvent`, `SessionAudioRetentionEvent`, `TranscriptionEvent`.
-- **Dépendances internes** : `crates/audio`, `crates/db-app`, `crates/language`, `crates/speech-probe`, `crates/storage`, `crates/transcript`, `crates/transcription-core`, `crates/owhisper-client`, `crates/owhisper-interface` ; plugins `db`, `fs-sync`, `settings`, `store2`, `tray`.
+- **Dépendances internes** : `crates/audio`, `crates/db-app`, `crates/language`, `crates/speech-host`, `crates/speech-probe`, `crates/storage`, `crates/transcript`, `crates/transcription-core`, `crates/owhisper-client`, `crates/owhisper-interface` ; plugins `db`, `fs-sync`, `settings`, `store2`, `tray`.
 - **Pages de doc concernées** : [/meetings](/fr/meetings), [/import-recordings](/fr/import-recordings), [/languages](/fr/languages), [/ai-setup](/fr/ai-setup), [/offline](/fr/offline), [/data-and-privacy](/fr/data-and-privacy), [/troubleshooting](/fr/troubleshooting).
 
 ### `dictation`

@@ -19,6 +19,7 @@ mod listener;
 mod listener2;
 mod live_journal;
 mod local_probe;
+mod on_device;
 mod session_transcript;
 mod stopped_captures;
 
@@ -244,6 +245,13 @@ pub fn init() -> tauri::plugin::TauriPlugin<tauri::Wry> {
             });
             listener2::load_completed_batches(&batch_registry);
             app.manage(batch_registry);
+            app.manage(on_device::OnDevicePolicy::default());
+            if let Some(dir) = on_device::module_dir(app.app_handle()) {
+                app.manage(Arc::new(syntheo_speech_host::SpeechHost::new(
+                    dir,
+                    on_device::threads_per_session(),
+                )));
+            }
 
             let audio = app.state::<Arc<dyn AudioProvider>>().inner().clone();
             let session_state_cache: SessionStateCache = Arc::new(StdMutex::new(HashMap::new()));
@@ -304,7 +312,9 @@ mod test {
 /// Adresse du serveur d'inférence revalidée au démarrage (issue 646). Une
 /// adresse vide passe : elle échoue plus loin, comme avant.
 pub(crate) fn validate_base_url(base_url: &str) -> std::result::Result<(), String> {
-    if base_url.trim().is_empty() {
+    // Source « Sur ce poste » : adresse interne réservée, résolue au
+    // lancement du module (issue 684).
+    if base_url.trim().is_empty() || owhisper_client::is_on_device(base_url) {
         return Ok(());
     }
     owhisper_client::validate_provider_base_url(base_url)
@@ -319,6 +329,7 @@ mod base_url_tests {
         assert!(super::validate_base_url("http://192.168.1.87:8000/v1?provider=nvidia").is_ok());
         assert!(super::validate_base_url("https://api.example.com/v1").is_ok());
         assert!(super::validate_base_url("").is_ok());
+        assert!(super::validate_base_url(owhisper_client::ON_DEVICE_BASE_URL).is_ok());
         assert!(super::validate_base_url("http://api.example.com/v1").is_err());
         assert!(super::validate_base_url("::not a url::").is_err());
     }

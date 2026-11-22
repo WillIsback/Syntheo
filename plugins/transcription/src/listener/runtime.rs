@@ -42,6 +42,16 @@ impl syntheo_storage::StorageRuntime for TauriRuntime {
 }
 
 impl ListenerRuntime for TauriRuntime {
+    fn on_device_target(
+        &self,
+    ) -> futures_util::future::BoxFuture<
+        'static,
+        Result<owhisper_client::OnDeviceTarget, owhisper_client::OnDeviceError>,
+    > {
+        let app = self.app.clone();
+        Box::pin(async move { crate::on_device::target(&app).await })
+    }
+
     fn emit_lifecycle(&self, event: syntheo_transcription_core::listener::SessionLifecycleEvent) {
         use tauri_plugin_tray::TrayPluginExt;
         match &event {
@@ -65,6 +75,8 @@ impl ListenerRuntime for TauriRuntime {
                             let _ = app.tray().set_start_disabled(false);
                             let _ = app.tray().set_recording(false);
                             let _ = app.tray().set_degraded(false);
+                            // Fin d'écoute : le module « Sur ce poste » s'arrête.
+                            crate::on_device::stop(&app).await;
                         }
                     }
                 });

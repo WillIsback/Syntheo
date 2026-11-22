@@ -2735,6 +2735,10 @@ msgid "Live transcription interrupted"
 msgstr "Live transcription interrupted"
 
 #: src/stt/live-transcript-interrupted.ts
+msgid "Live transcription paused: {cause}. No audio is kept: this passage will be missing from the transcription."
+msgstr "Live transcription paused: {cause}. No audio is kept: this passage will be missing from the transcription."
+
+#: src/stt/live-transcript-interrupted.ts
 msgid "Live transcription paused: {cause}. No audio is kept: this passage will be missing from the transcription. Check the transcription server settings."
 msgstr "Live transcription paused: {cause}. No audio is kept: this passage will be missing from the transcription. Check the transcription server settings."
 
@@ -3647,6 +3651,14 @@ msgstr "On Wayland, approve the shortcuts in your desktop's prompt. Use Control 
 #: src/session/components/note-input/enhanced/streaming.tsx
 msgid "On-device models can take a few minutes to warm up before text appears."
 msgstr "On-device models can take a few minutes to warm up before text appears."
+
+#: src/stt/live-transcript-interrupted.ts
+msgid "on-device transcription is disabled by your organization"
+msgstr "on-device transcription is disabled by your organization"
+
+#: src/stt/live-transcript-interrupted.ts
+msgid "on-device transcription is not available"
+msgstr "on-device transcription is not available"
 
 #: src/settings/ai/llm/server-card.tsx
 msgid "Only on-premise OpenAI-compatible servers are supported (vLLM, Ollama, llama.cpp server, LM Studio…). The address usually ends with /v1, for example http://localhost:8000/v1."
@@ -5809,6 +5821,22 @@ msgstr "The transcript was saved, but Syntheo could not start the summary. Try g
 #: src/session/components/note-input/transcript/screens/listening.tsx
 msgid "The transcription is still being written."
 msgstr "The transcription is still being written."
+
+#: src/stt/live-transcript-interrupted.ts
+msgid "the transcription module of this computer could not be authenticated"
+msgstr "the transcription module of this computer could not be authenticated"
+
+#: src/stt/live-transcript-interrupted.ts
+msgid "the transcription module of this computer did not start"
+msgstr "the transcription module of this computer did not start"
+
+#: src/stt/live-transcript-interrupted.ts
+msgid "the transcription module of this computer is missing or has been modified"
+msgstr "the transcription module of this computer is missing or has been modified"
+
+#: src/stt/live-transcript-interrupted.ts
+msgid "the transcription module of this computer keeps stopping"
+msgstr "the transcription module of this computer keeps stopping"
 
 #: src/stt/live-transcript-interrupted.ts
 msgid "the transcription service"

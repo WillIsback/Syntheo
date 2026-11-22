@@ -8,6 +8,42 @@ use tokio_tungstenite::{connect_async, tungstenite::client::IntoClientRequest};
 
 pub type WebSocketRetryCallback = Arc<dyn Fn(WebSocketRetryEvent) + Send + Sync>;
 
+/// Authentification mutuelle par preuves, sans secret transmis (module
+/// `syntheo-speech` sur le poste, issues 681 et 684). À chaque tentative :
+/// - la connexion TCP est ouverte d'abord, pour connaître le port source ;
+/// - un nonce frais part dans `nonce_header`, avec la preuve du client
+///   `client_proof(nonce, port source, port serveur)` dans
+///   `client_proof_header` ;
+/// - la réponse doit porter dans `proof_header` une preuve que
+///   `verify_server(nonce, port source, port serveur, preuve)` accepte.
+///
+/// Sinon la connexion est fermée avant tout envoi, sans nouvelle tentative :
+/// un autre processus a pu prendre le port. Réservé à `ws://` sur la boucle
+/// locale.
+/// `(nonce, port source, port serveur)` → preuve du client.
+pub type ClientProofFn = Arc<dyn Fn(&str, u16, u16) -> String + Send + Sync>;
+/// `(nonce, port source, port serveur, preuve reçue)` → preuve du serveur valide.
+pub type VerifyServerFn = Arc<dyn Fn(&str, u16, u16, &str) -> bool + Send + Sync>;
+
+#[derive(Clone)]
+pub struct PeerProof {
+    pub nonce_header: &'static str,
+    pub client_proof_header: &'static str,
+    pub proof_header: &'static str,
+    pub client_proof: ClientProofFn,
+    pub verify_server: VerifyServerFn,
+}
+
+impl fmt::Debug for PeerProof {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("PeerProof")
+            .field("nonce_header", &self.nonce_header)
+            .field("client_proof_header", &self.client_proof_header)
+            .field("proof_header", &self.proof_header)
+            .finish_non_exhaustive()
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct WebSocketConnectPolicy {
     pub connect_timeout: std::time::Duration,
@@ -36,13 +72,14 @@ pub(crate) async fn connect_with_retry(
     request: tokio_tungstenite::tungstenite::ClientRequestBuilder,
     policy: &WebSocketConnectPolicy,
     on_retry: Option<&WebSocketRetryCallback>,
+    peer_proof: Option<&PeerProof>,
 ) -> Result<
     tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>,
     crate::Error,
 > {
     let max_attempts = policy.max_attempts.max(1);
     if max_attempts == 1 {
-        return try_connect(request, policy.connect_timeout, 1, max_attempts).await;
+        return try_connect(request, policy.connect_timeout, 1, max_attempts, peer_proof).await;
     }
 
     let attempts_made = Arc::new(AtomicUsize::new(0));
@@ -53,7 +90,14 @@ pub(crate) async fn connect_with_retry(
         let attempts_ref = attempts_ref.clone();
         async move {
             let attempt = attempts_ref.fetch_add(1, Ordering::SeqCst) + 1;
-            try_connect(request, policy.connect_timeout, attempt, max_attempts).await
+            try_connect(
+                request,
+                policy.connect_timeout,
+                attempt,
+                max_attempts,
+                peer_proof,
+            )
+            .await
         }
     })
     .retry(
@@ -113,6 +157,7 @@ async fn try_connect(
     timeout: std::time::Duration,
     attempt: usize,
     max_attempts: usize,
+    peer_proof: Option<&PeerProof>,
 ) -> Result<
     tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>,
     crate::Error,
@@ -138,10 +183,19 @@ async fn try_connect(
         "connect_async"
     );
 
-    let connect_result = tokio::time::timeout(timeout, connect_async(req)).await;
+    let connect_result = match peer_proof {
+        None => tokio::time::timeout(timeout, connect_async(req))
+            .await
+            .map(|result| result.map_err(ProofConnectError::Connect)),
+        Some(proof) => tokio::time::timeout(timeout, connect_with_proof(req, proof)).await,
+    };
     let (ws_stream, _) = match connect_result {
         Ok(Ok(stream)) => stream,
-        Ok(Err(error)) => {
+        Ok(Err(ProofConnectError::Rejected)) => {
+            tracing::warn!(attempt, max_attempts, "peer_proof_rejected");
+            return Err(crate::Error::PeerAuthenticationFailed);
+        }
+        Ok(Err(ProofConnectError::Connect(error))) => {
             tracing::warn!(
                 attempt,
                 max_attempts,
@@ -151,10 +205,79 @@ async fn try_connect(
             );
             return Err(crate::Error::connect_failed(attempt, max_attempts, &error));
         }
+        Ok(Err(ProofConnectError::Invalid(message))) => {
+            return Err(crate::Error::invalid_request(message));
+        }
         Err(_) => return Err(crate::Error::connect_timeout(attempt, max_attempts)),
     };
 
     Ok(ws_stream)
+}
+
+type ClientStream =
+    tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>;
+type ClientResponse = tokio_tungstenite::tungstenite::handshake::client::Response;
+
+enum ProofConnectError {
+    Rejected,
+    Invalid(String),
+    Connect(tokio_tungstenite::tungstenite::Error),
+}
+
+impl From<tokio_tungstenite::tungstenite::Error> for ProofConnectError {
+    fn from(error: tokio_tungstenite::tungstenite::Error) -> Self {
+        Self::Connect(error)
+    }
+}
+
+/// Handshake avec preuves (voir `PeerProof`) : `ws://` sur la boucle locale
+/// seulement ; rien n'est envoyé après le handshake si la preuve du serveur
+/// manque ou est fausse.
+async fn connect_with_proof(
+    mut req: tokio_tungstenite::tungstenite::handshake::client::Request,
+    proof: &PeerProof,
+) -> Result<(ClientStream, ClientResponse), ProofConnectError> {
+    let uri = req.uri().clone();
+    let host = uri.host().unwrap_or_default().trim_matches(['[', ']']);
+    let loopback = host
+        .parse::<std::net::IpAddr>()
+        .is_ok_and(|ip| ip.is_loopback());
+    if uri.scheme_str() != Some("ws") || !loopback {
+        return Err(ProofConnectError::Invalid(
+            "peer proof requires ws:// on the loopback".to_owned(),
+        ));
+    }
+    let port = uri.port_u16().unwrap_or(80);
+    let ip: std::net::IpAddr = host.parse().map_err(|_| ProofConnectError::Rejected)?;
+    let tcp = tokio::net::TcpStream::connect((ip, port))
+        .await
+        .map_err(|e| ProofConnectError::Connect(e.into()))?;
+    let client_port = tcp
+        .local_addr()
+        .map_err(|e| ProofConnectError::Connect(e.into()))?
+        .port();
+    let nonce = uuid::Uuid::new_v4().simple().to_string();
+    let header = |value: String| {
+        HeaderValue::from_str(&value).map_err(|e| ProofConnectError::Invalid(e.to_string()))
+    };
+    req.headers_mut()
+        .insert(proof.nonce_header, header(nonce.clone())?);
+    req.headers_mut().insert(
+        proof.client_proof_header,
+        header((proof.client_proof)(&nonce, client_port, port))?,
+    );
+    let (stream, response) =
+        tokio_tungstenite::client_async(req, tokio_tungstenite::MaybeTlsStream::Plain(tcp)).await?;
+    let answered = response
+        .headers()
+        .get(proof.proof_header)
+        .and_then(|value| value.to_str().ok());
+    if !answered.is_some_and(|answer| (proof.verify_server)(&nonce, client_port, port, answer)) {
+        // Fermeture sans envoyer quoi que ce soit d'autre.
+        drop(stream);
+        return Err(ProofConnectError::Rejected);
+    }
+    Ok((stream, response))
 }
 
 struct RedactedRequest<'a>(&'a tokio_tungstenite::tungstenite::handshake::client::Request);
