@@ -19,6 +19,7 @@ const mocks = vi.hoisted(() => ({
   uninstall: vi.fn(),
   commission: vi.fn(),
   commissioning: null as unknown,
+  progress: null as unknown,
 }));
 
 vi.mock("@syntheo/plugin-transcription", () => ({
@@ -30,7 +31,7 @@ vi.mock("@syntheo/plugin-transcription", () => ({
     onDeviceCommission: mocks.commission,
     onDeviceCommissionProgress: async () => ({
       status: "ok",
-      data: { current: 2, total: 4 },
+      data: mocks.progress,
     }),
     onDeviceCommissioning: async () => ({
       status: "ok",
@@ -76,6 +77,7 @@ beforeEach(() => {
   mocks.probe = probe({ kind: "propose", profile: "two_streams_diarized" });
   mocks.install.mockResolvedValue({ status: "ok", data: installed });
   mocks.uninstall.mockResolvedValue({ status: "ok", data: null });
+  mocks.progress = null;
   mocks.commissioning = {
     profile: "two_streams_diarized",
     measures: [],
@@ -190,7 +192,9 @@ describe("OnDeviceCard", () => {
     fireEvent.click(await screen.findByText("Test this computer"));
     expect(
       (await screen.findByTestId("on-device-verdict")).textContent,
-    ).toMatch(/reduced profile: one audio stream, without speakers/);
+    ).toMatch(
+      /reduced profile: microphone only, without speakers: the computer's sound \(remote participants\) is not transcribed/,
+    );
   });
 });
 
@@ -262,11 +266,32 @@ describe("avancement", () => {
     );
     setup();
     fireEvent.click(await screen.findByText("Measure again"));
-    expect(await screen.findByText("Measuring profile 2 of 4…")).toBeTruthy();
+    mocks.progress = { current: 2, total: 4 };
+    expect(
+      await screen.findByText("Measuring profile 2 of 4…", undefined, {
+        timeout: 3000,
+      }),
+    ).toBeTruthy();
+    mocks.progress = null;
     finish({
       status: "ok",
       data: { profile: "two_streams", measures: [], measuredAt: 4 },
     });
     await screen.findByText(/Measurement done/);
+  });
+});
+
+// Revue de l'issue 686, constat 2 : une carte remontée pendant une mesure
+// en reprend l'affichage et bloque le bouton.
+describe("mesure en cours ailleurs", () => {
+  it("shows the progress and disables measuring again", async () => {
+    mocks.status = { ...mocks.status, module: installed };
+    mocks.progress = { current: 2, total: 4 };
+    setup();
+    expect(await screen.findByText("Measuring profile 2 of 4…")).toBeTruthy();
+    const button = (await screen.findByText("Measure again")).closest(
+      "button",
+    ) as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
   });
 });

@@ -2974,6 +2974,12 @@ msgstr "Mesure terminée : ce poste est trop lent pour la transcription en direc
 msgid "Measurements and pseudonym erased from this computer. Measurement is now off."
 msgstr "Mesures et pseudonyme effacés de ce poste. La mesure est désactivée."
 
+#. placeholder {0}: progressValue.current
+#. placeholder {1}: progressValue.total
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Measuring profile {0} of {1}…"
+msgstr "Mesure du profil {0} sur {1}…"
+
 #: src/settings/ai/stt/on-device-card.tsx
 msgid "Measuring this computer (one to two minutes)…"
 msgstr "Mesure de ce poste (une à deux minutes)…"
@@ -3128,6 +3134,14 @@ msgstr "micro et son du poste, sans les intervenants"
 #: src/settings/search-index.ts
 msgid "Microphone detection"
 msgstr "Détection du microphone"
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "microphone only, with speakers: the computer's sound (remote participants) is not transcribed"
+msgstr "micro seul, avec les intervenants : le son de l'ordinateur (participants à distance) n'est pas transcrit"
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "microphone only, without speakers: the computer's sound (remote participants) is not transcribed"
+msgstr "micro seul, sans les intervenants : le son de l'ordinateur (participants à distance) n'est pas transcrit"
 
 #: src/store/zustand/listener/general-shared.ts
 msgid "Microphone unavailable"
@@ -3784,14 +3798,6 @@ msgstr "la transcription sur ce poste n'est pas disponible"
 #: src/settings/ai/stt/on-device-card.tsx
 msgid "Once the module is installed, you can turn it on here."
 msgstr "Une fois le module installé, vous pourrez l'activer ici."
-
-#: src/settings/ai/stt/on-device-card.tsx
-msgid "one audio stream, with speakers"
-msgstr "un seul flux audio, avec les intervenants"
-
-#: src/settings/ai/stt/on-device-card.tsx
-msgid "one audio stream, without speakers"
-msgstr "un seul flux audio, sans les intervenants"
 
 #: src/settings/ai/llm/server-card.tsx
 msgid "Only on-premise OpenAI-compatible servers are supported (vLLM, Ollama, llama.cpp server, LM Studio…). The address usually ends with /v1, for example http://localhost:8000/v1."
@@ -6421,6 +6427,10 @@ msgstr "La transcription sur ce poste arrive bientôt."
 #: src/settings/ai/stt/on-device-card.tsx
 msgid "Transcription on this computer is disabled by your administrator; transcription now goes through the server."
 msgstr "La transcription sur ce poste est désactivée par votre administrateur ; la transcription passe par le serveur."
+
+#: src/stt/on-device.ts
+msgid "Transcription on this computer uses the microphone only: the computer's sound (remote participants) is not transcribed."
+msgstr "La transcription sur ce poste utilise le micro seul : le son de l'ordinateur (participants à distance) n'est pas transcrit."
 
 #: src/sidebar/toast/registry.tsx
 msgid "Transcription provider needed"

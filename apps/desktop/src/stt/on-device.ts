@@ -141,3 +141,12 @@ export function describeOnDeviceError(code: string): string {
       return t`The operation failed. Try again.`;
   }
 }
+
+/** Profil « un seul flux » : seul le micro est transcrit. */
+export function isSingleStreamProfile(profile: string | null | undefined) {
+  return profile === "one_stream" || profile === "one_stream_diarized";
+}
+
+export function getSingleStreamReminderMessage() {
+  return t`Transcription on this computer uses the microphone only: the computer's sound (remote participants) is not transcribed.`;
+}

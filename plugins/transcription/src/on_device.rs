@@ -253,7 +253,12 @@ pub struct OnDeviceMeasure {
     pub finals: u32,
     pub p95_ms: f64,
     pub drift_ms: f64,
+    /// Retard brut (attente de fin d'énoncé comprise).
+    pub raw_p95_ms: f64,
+    pub raw_drift_ms: f64,
     pub passed: bool,
+    /// Mesure impossible : code de la raison.
+    pub error: Option<String>,
 }
 
 /// Mise en service enregistrée.
@@ -287,7 +292,10 @@ fn commissioning_of(
                 finals: m.finals as u32,
                 p95_ms: m.p95_ms as f64,
                 drift_ms: m.drift_ms as f64,
+                raw_p95_ms: m.raw_p95_ms as f64,
+                raw_drift_ms: m.raw_drift_ms as f64,
                 passed: m.passed,
+                error: m.error,
             })
             .collect(),
         measured_at: result.measured_at as f64,
@@ -337,8 +345,12 @@ pub async fn on_device_commission<R: tauri::Runtime>(
     let result = host
         .commission(true, syntheo_speech_host::commissioning::MEASURE)
         .await;
-    // Le module de mesure s'arrête : la prochaine écoute le relance.
-    host.stop().await;
+    // Le module de mesure s'arrête (la prochaine écoute le relance), mais
+    // seulement si cet appel a conduit la mesure : un second appel refusé
+    // (« measuring ») ne doit pas tuer la mesure en cours.
+    if result.as_ref().err().map(String::as_str) != Some("measuring") {
+        host.stop().await;
+    }
     result.map(commissioning_of)
 }
 

@@ -486,3 +486,48 @@ async fn a_real_module_is_commissioned() {
     );
     host.stop().await;
 }
+
+// Revue de l'issue 686, constat 3 : le module tombe pendant la mesure d'un
+// profil ; ce profil est refusé avec sa raison, le module est relancé et la
+// mesure passe au profil suivant.
+#[cfg(unix)]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_profile_that_errors_is_refused_and_the_next_is_measured() {
+    let Some(binary) = binary() else { return };
+    let dir = commissioning_module_dir(&binary, 6);
+    let host =
+        std::sync::Arc::new(host(dir.path()).with_extra_args(&["--fake-cost", "0.1,0.1,0.1"]));
+    let killer = {
+        let host = host.clone();
+        tokio::spawn(async move {
+            for _ in 0..100 {
+                tokio::time::sleep(Duration::from_millis(100)).await;
+                if host.commissioning_progress() == Some((1, 4))
+                    && let Some(pid) = host.pid().await
+                {
+                    tokio::time::sleep(Duration::from_secs(2)).await;
+                    std::process::Command::new("kill")
+                        .arg("-9")
+                        .arg(pid.to_string())
+                        .status()
+                        .unwrap();
+                    return;
+                }
+            }
+        })
+    };
+    let result = host
+        .commission(true, Duration::from_secs(6))
+        .await
+        .expect("mise en service");
+    killer.await.unwrap();
+    use speech_host::commissioning::Profile;
+    assert!(!result.measures[0].passed);
+    assert!(
+        result.measures[0].error.is_some(),
+        "{:?}",
+        result.measures[0]
+    );
+    assert_eq!(result.profile, Some(Profile::TwoStreams), "{result:?}");
+    host.stop().await;
+}

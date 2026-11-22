@@ -149,6 +149,7 @@ fn diarization_levels_change_mid_session() {
     ];
     let mut with_speaker = [0usize; 4];
     let mut words = [0usize; 4];
+    let mut labels: [Vec<u32>; 4] = Default::default();
     for (part, level) in levels.iter().enumerate() {
         recognizer.set_diarization(*level);
         assert_eq!(recognizer.diarization(), *level);
@@ -164,6 +165,7 @@ fn diarization_levels_change_mid_session() {
             if let Event::Completed { words: w, .. } = event {
                 words[part] += w.len();
                 with_speaker[part] += w.iter().filter(|w| w.speaker.is_some()).count();
+                labels[part].extend(w.iter().filter_map(|w| w.speaker));
             }
         }
     }
@@ -171,6 +173,13 @@ fn diarization_levels_change_mid_session() {
     assert!(words.iter().sum::<usize>() > 0, "transcription continue");
     assert_eq!(with_speaker[2], 0, "coupée : aucun intervenant");
     assert!(with_speaker[3] > 0, "retour : intervenants de nouveau");
+    // Revue de l'issue 686 : chaque génération du diarizer a ses propres
+    // étiquettes, jamais celles d'avant (pas de fusion de deux personnes).
+    // Complète : 1–4 ; espacée (génération 1) : 5–8 ; retour après coupée
+    // (génération 2) : 9–12.
+    assert!(labels[0].iter().all(|l| (1..=4).contains(l)), "{labels:?}");
+    assert!(labels[1].iter().all(|l| (5..=8).contains(l)), "{labels:?}");
+    assert!(labels[3].iter().all(|l| (9..=12).contains(l)), "{labels:?}");
 }
 
 /// Coût de calcul de chaque niveau de diarisation sur le même audio (mesure

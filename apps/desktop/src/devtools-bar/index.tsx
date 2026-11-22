@@ -442,7 +442,9 @@ function OnDeviceMetric() {
             ],
             ...(measured?.measures ?? []).map((m): [string, string] => [
               m.profile,
-              `p95 ${m.p95Ms}ms · drift ${m.driftMs}ms · ${m.passed ? "ok" : "too slow"}`,
+              m.error
+                ? `error ${m.error}`
+                : `net p95 ${m.p95Ms}ms, drift ${m.driftMs}ms · raw p95 ${m.rawP95Ms}ms, drift ${m.rawDriftMs}ms · ${m.passed ? "ok" : "too slow"}`,
             ]),
           ]}
         />

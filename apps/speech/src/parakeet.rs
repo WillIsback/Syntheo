@@ -110,7 +110,16 @@ struct Speakers {
     segments: Vec<SpeakerSegment>,
     last: Option<u32>,
     enabled: bool,
+    /// Génération du diarizer : à chaque changement de niveau, le diarizer
+    /// repart de zéro et renumérote les voix dans l'ordre où il les entend.
+    /// Les étiquettes d'une nouvelle génération sont donc distinctes des
+    /// précédentes (discontinuité signalée) : l'application ne fusionne pas
+    /// deux personnes, au prix de scinder parfois la même.
+    generation: u32,
 }
+
+/// Voix distinguées par le diarizer (Sortformer : 4).
+const SPEAKERS_PER_GENERATION: u32 = 4;
 
 impl Speakers {
     /// Intervenant à l'instant `at` : segment qui le couvre, ou le dernier
@@ -126,7 +135,7 @@ impl Speakers {
             .iter()
             .rev()
             .find(|s| s.start <= sample && sample < s.end)
-            .map(|s| s.speaker_id as u32 + 1);
+            .map(|s| s.speaker_id as u32 + 1 + self.generation * SPEAKERS_PER_GENERATION);
         if found.is_some() {
             self.last = found;
         }
@@ -296,6 +305,10 @@ impl Recognizer for ParakeetRecognizer {
     /// décalés de l'audio déjà remis) ; coupée : le diarizer est libéré ;
     /// au retour, il est rechargé depuis son modèle.
     fn set_diarization(&mut self, level: DiarizationLevel) {
+        // Même niveau : rien à changer (pas de remise à zéro du diarizer).
+        if level == self.level {
+            return;
+        }
         let Some(source) = self.diarizer_source.as_ref() else {
             return;
         };
@@ -314,6 +327,10 @@ impl Recognizer for ParakeetRecognizer {
         if ok {
             self.level = level;
             self.diarizer_offset = self.fed;
+            // Nouvel état du diarizer : nouvelle génération d'étiquettes,
+            // et plus de « dernier intervenant » hérité de l'ancienne.
+            self.speakers.generation += 1;
+            self.speakers.last = None;
         } else {
             self.diarizer = None;
             self.level = DiarizationLevel::Off;

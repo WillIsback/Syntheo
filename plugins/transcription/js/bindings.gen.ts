@@ -462,7 +462,12 @@ export type OnDeviceMeasure = {
 	finals: number,
 	p95Ms: number,
 	driftMs: number,
+	/**  Retard brut (attente de fin d'énoncé comprise). */
+	rawP95Ms: number,
+	rawDriftMs: number,
 	passed: boolean,
+	/**  Mesure impossible : code de la raison. */
+	error: string | null,
 };
 
 /**  Module installé, pour l'interface. */

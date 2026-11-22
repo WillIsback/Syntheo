@@ -26,7 +26,8 @@ pub(super) const WORD_BOOST: f64 = 2.0;
 /// result when the stream is committed. Its 800 ms default split a speaker's
 /// sentence at an ordinary pause on a French meeting recording; 1200 ms merged
 /// up to ten seconds of three voices into one result.
-const ENDPOINTING_MS: u32 = 1000;
+pub const NVIDIA_ENDPOINTING_MS: u32 = 1000;
+const ENDPOINTING_MS: u32 = NVIDIA_ENDPOINTING_MS;
 
 const SAMPLE_RATE: u32 = 16_000;
 

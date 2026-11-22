@@ -14,7 +14,10 @@
 //! serveur). Le résultat est enregistré à côté du module, avec la mesure.
 //!
 //! Retard d'un final : instant de sa réception moins l'instant où la fin de
-//! son audio a été envoyée. Dérive : écart entre la médiane des retards du
+//! son dernier mot a été envoyée (retard brut), puis moins l'attente de fin
+//! d'énoncé (`endpointing_ms` envoyé dans le `session.update`) : le retard
+//! net, qui ne dépend que du poste. Le seuil porte sur le retard net ; les
+//! deux sont enregistrés. Dérive : écart entre la médiane des retards du
 //! dernier tiers et celle du premier tiers.
 
 use std::path::{Path, PathBuf};
@@ -75,9 +78,36 @@ impl Profile {
 pub struct Measure {
     pub profile: Profile,
     pub finals: usize,
+    /// Retard net (attente de fin d'énoncé déduite), au 95e centile.
     pub p95_ms: u64,
+    /// Dérive du retard net.
     pub drift_ms: i64,
+    /// Retard brut au 95e centile.
+    #[serde(default)]
+    pub raw_p95_ms: u64,
+    /// Dérive du retard brut.
+    #[serde(default)]
+    pub raw_drift_ms: i64,
     pub passed: bool,
+    /// Mesure impossible (module tombé, session fermée) : sa raison.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+}
+
+impl Measure {
+    /// Profil refusé faute de mesure.
+    pub fn failed(profile: Profile, reason: String) -> Self {
+        Self {
+            profile,
+            finals: 0,
+            p95_ms: 0,
+            drift_ms: 0,
+            raw_p95_ms: 0,
+            raw_drift_ms: 0,
+            passed: false,
+            error: Some(reason),
+        }
+    }
 }
 
 /// Résultat enregistré de la mise en service.
@@ -160,8 +190,7 @@ fn median(values: &mut [f64]) -> f64 {
     percentile(values, 0.5)
 }
 
-/// Verdict d'une série de finals : `(fin d'audio, retard)` en secondes.
-pub fn evaluate(profile: Profile, finals: &[(f64, f64)]) -> Measure {
+fn stats(finals: &[(f64, f64)]) -> (f64, f64) {
     let mut latencies: Vec<f64> = finals.iter().map(|(_, lag)| *lag).collect();
     latencies.sort_by(f64::total_cmp);
     let p95 = percentile(&latencies, 0.95);
@@ -178,6 +207,19 @@ pub fn evaluate(profile: Profile, finals: &[(f64, f64)]) -> Measure {
     } else {
         0.0
     };
+    (p95, drift)
+}
+
+/// Verdict d'une série de finals : `(fin du dernier mot, retard brut)` en
+/// secondes ; `endpointing` : attente de fin d'énoncé envoyée au module.
+pub fn evaluate(profile: Profile, finals: &[(f64, f64)], endpointing: Duration) -> Measure {
+    let (raw_p95, raw_drift) = stats(finals);
+    let wait = endpointing.as_secs_f64();
+    let net: Vec<(f64, f64)> = finals
+        .iter()
+        .map(|(end, lag)| (*end, (lag - wait).max(0.0)))
+        .collect();
+    let (p95, drift) = stats(&net);
     // Sans final, rien n'a été mesuré : échec.
     let passed =
         !finals.is_empty() && p95 < MAX_P95.as_secs_f64() && drift < MAX_DRIFT.as_secs_f64();
@@ -186,7 +228,10 @@ pub fn evaluate(profile: Profile, finals: &[(f64, f64)]) -> Measure {
         finals: finals.len(),
         p95_ms: (p95 * 1000.0).round() as u64,
         drift_ms: (drift * 1000.0).round() as i64,
+        raw_p95_ms: (raw_p95 * 1000.0).round() as u64,
+        raw_drift_ms: (raw_drift * 1000.0).round() as i64,
         passed,
+        error: None,
     }
 }
 
@@ -300,35 +345,57 @@ pub async fn measure(
     for result in futures_util::future::join_all(streams).await {
         finals.extend(result?);
     }
-    Ok(evaluate(profile, &finals))
+    // L'attente de fin d'énoncé réellement envoyée par l'adaptateur nvidia.
+    let endpointing = Duration::from_millis(u64::from(owhisper_client::NVIDIA_ENDPOINTING_MS));
+    Ok(evaluate(profile, &finals, endpointing))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    const ENDPOINTING: Duration = Duration::from_millis(1000);
+
+    /// Finals toutes les 2,5 s sur 30 s, retard brut donné par `lag(i)`.
+    fn finals(lag: impl Fn(usize) -> f64) -> Vec<(f64, f64)> {
+        (0..12).map(|i| (2.5 * (i + 1) as f64, lag(i))).collect()
+    }
+
+    // Décision de l'issue 686 : seuil sur le retard net de l'attente de fin
+    // d'énoncé ; valeurs inspirées des mesures réelles.
     #[test]
-    fn a_fast_steady_profile_passes() {
-        let finals: Vec<(f64, f64)> = (1..=15).map(|i| (2.0 * i as f64, 0.8)).collect();
-        let m = evaluate(Profile::TwoStreamsDiarized, &finals);
+    fn a_fast_computer_with_the_endpointing_floor_passes() {
+        // Omarchy : brut 1,6 à 2,2 s (plancher de l'endpointing), net 0,6 à 1,2.
+        let fast = finals(|i| {
+            [
+                2.19, 1.6, 1.7, 1.9, 1.65, 1.8, 2.1, 1.7, 1.75, 1.9, 1.62, 1.85,
+            ][i]
+        });
+        let m = evaluate(Profile::TwoStreamsDiarized, &fast, ENDPOINTING);
         assert!(m.passed, "{m:?}");
-        assert_eq!(m.p95_ms, 800);
-        assert_eq!(m.drift_ms, 0);
+        assert!(m.raw_p95_ms > 2000 && m.p95_ms < 2000, "{m:?}");
+    }
+
+    #[test]
+    fn the_thinkpad_and_a_drifting_two_core_computer_fail() {
+        // ThinkPad en performance avec diarisation : finals de 6,5 à 9,2 s.
+        let thinkpad = finals(|i| 6.5 + 0.245 * i as f64);
+        assert!(!evaluate(Profile::TwoStreamsDiarized, &thinkpad, ENDPOINTING).passed);
+        // 2 cœurs, deux flux diarisés : de 1,5 s jusqu'à 3,8 s en fin de flux.
+        let drifting = finals(|i| 1.5 + 0.21 * i as f64);
+        let m = evaluate(Profile::TwoStreamsDiarized, &drifting, ENDPOINTING);
+        assert!(!m.passed && m.drift_ms > 1000, "{m:?}");
+        // Aucun final : échec.
+        assert!(!evaluate(Profile::OneStream, &[], ENDPOINTING).passed);
     }
 
     #[test]
     fn a_slow_or_drifting_profile_fails() {
-        // p95 au-delà de 2 s.
-        let slow: Vec<(f64, f64)> = (1..=15).map(|i| (2.0 * i as f64, 2.5)).collect();
-        assert!(!evaluate(Profile::TwoStreams, &slow).passed);
-        // Sous 2 s mais en dérive : 0,2 s → 1,9 s.
-        let drifting: Vec<(f64, f64)> = (0..15)
-            .map(|i| (2.0 * (i + 1) as f64, 0.2 + 0.12 * i as f64))
-            .collect();
-        let m = evaluate(Profile::TwoStreams, &drifting);
+        let slow = finals(|_| 3.5);
+        assert!(!evaluate(Profile::TwoStreams, &slow, ENDPOINTING).passed);
+        let drifting = finals(|i| 1.2 + 0.14 * i as f64);
+        let m = evaluate(Profile::TwoStreams, &drifting, ENDPOINTING);
         assert!(m.p95_ms < 2000 && m.drift_ms > 1000 && !m.passed, "{m:?}");
-        // Aucun final : échec.
-        assert!(!evaluate(Profile::OneStream, &[]).passed);
     }
 
     #[test]

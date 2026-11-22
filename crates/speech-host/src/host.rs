@@ -726,13 +726,24 @@ impl SpeechHost {
         for (index, profile) in Profile::ALL.into_iter().enumerate() {
             self.measuring_profile
                 .store(index + 1, std::sync::atomic::Ordering::SeqCst);
-            let target = self
-                .launch_target()
-                .await
-                .map_err(|e| e.to_on_device_error().kind.code().to_owned())?;
-            let mut result = measure(&target, profile, &audio, duration)
-                .await
-                .map_err(|_| "measure_failed".to_owned())?;
+            // Mesures de charge du profil précédent : oubliées.
+            *self.load.lock().unwrap_or_else(|e| e.into_inner()) = None;
+            // Une erreur (module tombé, session fermée) refuse ce profil avec
+            // sa raison, et la mesure passe au suivant ; le module est relancé
+            // au besoin, dans le budget de relances.
+            let measured = match self.launch_target().await {
+                Ok(target) => measure(&target, profile, &audio, duration)
+                    .await
+                    .map_err(|_| "measure_failed".to_owned()),
+                Err(error) => Err(error.to_on_device_error().kind.code().to_owned()),
+            };
+            let mut result = match measured {
+                Ok(result) => result,
+                Err(reason) => {
+                    measures.push(crate::commissioning::Measure::failed(profile, reason));
+                    continue;
+                }
+            };
             // Le module a dû espacer ou couper la diarisation : le profil ne
             // tient pas tel quel.
             if profile.diarization()

@@ -1,9 +1,5 @@
 import { Trans, useLingui } from "@lingui/react/macro";
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
 import {
@@ -42,8 +38,8 @@ function useLabels() {
   const profile: Record<Profile, string> = {
     two_streams_diarized: t`microphone and system audio, with speakers`,
     two_streams: t`microphone and system audio, without speakers`,
-    one_stream_diarized: t`one audio stream, with speakers`,
-    one_stream: t`one audio stream, without speakers`,
+    one_stream_diarized: t`microphone only, with speakers: the computer's sound (remote participants) is not transcribed`,
+    one_stream: t`microphone only, without speakers: the computer's sound (remote participants) is not transcribed`,
   };
   const refusal: Record<Refusal, string> = {
     no_avx2: t`the processor lacks AVX2 instructions`,
@@ -142,8 +138,9 @@ export function OnDeviceCard() {
       const result = await transcriptionCommands.onDeviceCommissionProgress();
       return result.status === "ok" ? result.data : null;
     },
-    refetchInterval: 1000,
-    enabled: measuringNow,
+    // Toujours lu tant que la carte est affichée : une carte remontée
+    // pendant une mesure en reprend l'affichage et bloque le bouton.
+    refetchInterval: measuringNow ? 1000 : 2000,
   });
 
   // Mise en service (issue 686) : après l'installation, puis à la demande.
@@ -227,10 +224,9 @@ export function OnDeviceCard() {
   const installable = status.data.installable;
   const installed = module.kind === "installed";
   const chosen = !!stt_on_device;
-  const busy =
-    installing.isPending ||
-    uninstalling.isPending ||
-    commissioningRun.isPending;
+  const measuringElsewhere = !commissioningRun.isPending && !!progress.data;
+  const measuringAny = commissioningRun.isPending || measuringElsewhere;
+  const busy = installing.isPending || uninstalling.isPending || measuringAny;
   const measured = commissioning.data;
   const progressValue = progress.data;
   const usable = installed && !!measured?.profile;
@@ -349,7 +345,7 @@ export function OnDeviceCard() {
           className="flex flex-col gap-2"
         >
           <p className="text-[13px]" data-testid="on-device-commissioning">
-            {commissioningRun.isPending
+            {measuringAny
               ? progressValue
                 ? t`Measuring profile ${progressValue.current} of ${progressValue.total}…`
                 : t`Measuring this computer (one to two minutes)…`
@@ -366,7 +362,7 @@ export function OnDeviceCard() {
               onClick={() => commissioningRun.mutate()}
               className="border-border hover:bg-muted inline-flex items-center gap-2 rounded-md border px-2.5 py-1 text-[13px] disabled:opacity-60"
             >
-              {commissioningRun.isPending ? (
+              {measuringAny ? (
                 <CircleNotch className="size-3.5 animate-spin motion-reduce:animate-none" />
               ) : null}
               {measured ? (
@@ -397,7 +393,7 @@ export function OnDeviceCard() {
         <Trans>Use this computer for transcription instead of the server</Trans>
       </label>
 
-      {chosen && !usable && !commissioningRun.isPending ? (
+      {chosen && !usable && !measuringAny ? (
         <div
           data-testid="on-device-missing"
           role="alert"

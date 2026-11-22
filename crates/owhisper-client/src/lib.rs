@@ -12,7 +12,7 @@ pub use providers::{Provider, is_meta_model};
 
 pub use adapter::{
     AdapterKind, BatchSttAdapter, BatchUploadLimit, LanguageQuality, LanguageSupport,
-    NvidiaAdapter, OpenAIAdapter, RealtimeSttAdapter, append_provider_param,
+    NVIDIA_ENDPOINTING_MS, NvidiaAdapter, OpenAIAdapter, RealtimeSttAdapter, append_provider_param,
     documented_language_codes_batch, documented_language_codes_live, normalize_languages,
 };
 pub use adapter::{

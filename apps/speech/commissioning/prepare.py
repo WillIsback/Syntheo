@@ -42,7 +42,9 @@ def with_turns(audio, np):
     tours de parole d'une réunion, ce qui donne des finals à mesurer."""
     frame = RATE // 50
     frames = len(audio) // frame
-    energy = np.sqrt(np.mean(audio[: frames * frame].reshape(frames, frame) ** 2, axis=1))
+    energy = np.sqrt(
+        np.mean(audio[: frames * frame].reshape(frames, frame) ** 2, axis=1)
+    )
     threshold = 0.25 * np.median(energy)
     quiet = energy < threshold
     need = int(QUIET_S * 50)
@@ -90,7 +92,9 @@ def main() -> None:
     for name, track in spec["tracks"].items():
         pieces = []
         for utterance in track["utterances"]:
-            audio, rate = sf.read(io.BytesIO(rows[utterance]["audio"]["bytes"]), dtype="float64")
+            audio, rate = sf.read(
+                io.BytesIO(rows[utterance]["audio"]["bytes"]), dtype="float64"
+            )
             if audio.ndim > 1:
                 audio = audio.mean(axis=1)
             if rate != RATE:

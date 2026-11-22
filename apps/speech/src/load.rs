@@ -17,8 +17,12 @@ pub const DEGRADE_ABOVE: Duration = Duration::from_secs(2);
 pub const RECOVER_BELOW: Duration = Duration::from_secs(1);
 /// Durée du dépassement avant de descendre.
 const DEGRADE_AFTER: Duration = Duration::from_secs(2);
-/// Durée sous le seuil bas avant de remonter.
-const RECOVER_AFTER: Duration = Duration::from_secs(30);
+/// Durée sous le seuil bas avant de remonter (doublée après chaque rechute
+/// rapide, jusqu'à `MAX_RECOVER_AFTER`).
+const RECOVER_AFTER: Duration = Duration::from_secs(60);
+const MAX_RECOVER_AFTER: Duration = Duration::from_secs(600);
+/// Une descente moins de ce délai après une remontée est une rechute.
+const RELAPSE_WITHIN: Duration = Duration::from_secs(120);
 /// Pause minimale entre deux changements.
 const COOLDOWN: Duration = Duration::from_secs(5);
 
@@ -31,6 +35,10 @@ pub struct LoadController {
     above_since: Option<Instant>,
     below_since: Option<Instant>,
     changed_at: Option<Instant>,
+    /// Dernière remontée, pour reconnaître une rechute.
+    recovered_at: Option<Instant>,
+    /// Attente avant de remonter, allongée à chaque rechute (anti-oscillation).
+    recover_after: Duration,
 }
 
 impl LoadController {
@@ -41,6 +49,8 @@ impl LoadController {
             above_since: None,
             below_since: None,
             changed_at: None,
+            recovered_at: None,
+            recover_after: RECOVER_AFTER,
         }
     }
 
@@ -56,17 +66,24 @@ impl LoadController {
             if now.duration_since(since) >= DEGRADE_AFTER && self.cooled(now) {
                 let next = self.level.lower();
                 if next != self.level {
+                    if self
+                        .recovered_at
+                        .is_some_and(|at| now.duration_since(at) < RELAPSE_WITHIN)
+                    {
+                        self.recover_after = (self.recover_after * 2).min(MAX_RECOVER_AFTER);
+                    }
                     return Some(self.change(next, now));
                 }
             }
         } else if lag < RECOVER_BELOW {
             self.above_since = None;
             let since = *self.below_since.get_or_insert(now);
-            if now.duration_since(since) >= RECOVER_AFTER
+            if now.duration_since(since) >= self.recover_after
                 && self.cooled(now)
                 && self.level < self.ceiling
             {
                 let next = self.level.higher().min(self.ceiling);
+                self.recovered_at = Some(now);
                 return Some(self.change(next, now));
             }
         } else {
@@ -179,22 +196,51 @@ mod tests {
             c.observe(secs(3.0), t0 + secs(9.5)),
             Some(DiarizationLevel::Off)
         );
-        // Plus bas que coupée : rien.
         assert_eq!(c.observe(secs(3.0), t0 + secs(20.0)), None);
-        // Retour sous 1 s, 30 s durant : un niveau à la fois.
+        // Retour sous 1 s, 60 s durant : un niveau à la fois.
         assert_eq!(c.observe(secs(0.4), t0 + secs(30.0)), None);
+        assert_eq!(c.observe(secs(0.4), t0 + secs(60.0)), None);
         assert_eq!(
-            c.observe(secs(0.4), t0 + secs(60.0)),
+            c.observe(secs(0.4), t0 + secs(90.0)),
             Some(DiarizationLevel::Spaced)
         );
-        // Chaque montée attend de nouveau 30 s sous le seuil.
-        assert_eq!(c.observe(secs(0.4), t0 + secs(61.0)), None);
-        assert_eq!(c.observe(secs(0.4), t0 + secs(80.0)), None);
+        assert_eq!(c.observe(secs(0.4), t0 + secs(91.0)), None);
         assert_eq!(
-            c.observe(secs(0.4), t0 + secs(95.0)),
+            c.observe(secs(0.4), t0 + secs(151.0)),
             Some(DiarizationLevel::Full)
         );
-        assert_eq!(c.observe(secs(0.4), t0 + secs(200.0)), None);
+        assert_eq!(c.observe(secs(0.4), t0 + secs(400.0)), None);
+    }
+
+    // Revue de l'issue 686, constat 5 : sous une charge limite, une rechute
+    // rapide après une remontée double l'attente avant la remontée suivante.
+    #[test]
+    fn a_quick_relapse_slows_the_next_recovery() {
+        let t0 = Instant::now();
+        let mut c = LoadController::new(DiarizationLevel::Full);
+        c.observe(secs(2.5), t0);
+        assert_eq!(
+            c.observe(secs(2.5), t0 + secs(2.0)),
+            Some(DiarizationLevel::Spaced)
+        );
+        c.observe(secs(0.5), t0 + secs(3.0));
+        assert_eq!(
+            c.observe(secs(0.5), t0 + secs(63.0)),
+            Some(DiarizationLevel::Full)
+        );
+        // Rechute 10 s après la remontée.
+        c.observe(secs(2.5), t0 + secs(70.0));
+        assert_eq!(
+            c.observe(secs(2.5), t0 + secs(72.0)),
+            Some(DiarizationLevel::Spaced)
+        );
+        // 60 s sous le seuil ne suffisent plus : il en faut 120.
+        c.observe(secs(0.5), t0 + secs(73.0));
+        assert_eq!(c.observe(secs(0.5), t0 + secs(133.0)), None);
+        assert_eq!(
+            c.observe(secs(0.5), t0 + secs(193.0)),
+            Some(DiarizationLevel::Full)
+        );
     }
 
     #[test]
