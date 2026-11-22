@@ -133,7 +133,7 @@ pub struct SessionAudioRetentionEvent {
     pub phase: SessionAudioRetentionPhase,
 }
 
-fn db_pool<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Option<SqlitePool> {
+pub(crate) fn db_pool<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Option<SqlitePool> {
     app.try_state::<tauri_plugin_db::ManagedState>()
         .map(|state| state.pool().clone())
 }

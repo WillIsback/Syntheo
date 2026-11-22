@@ -4,6 +4,7 @@ mod batch;
 mod error;
 mod http_client;
 mod live;
+pub mod on_device;
 mod providers;
 
 use owhisper_interface::ListenParams;
@@ -27,6 +28,7 @@ pub use live::{
     DualHandle, FinalizeHandle, ListenClient, ListenClientBuilder, ListenClientDual,
     ListenClientDualInput, ListenClientInput,
 };
+pub use on_device::{ON_DEVICE_BASE_URL, OnDeviceTarget, OnDeviceToken, is_on_device};
 pub use syntheo_ws_client;
 
 pub(crate) fn log_provider_failure(

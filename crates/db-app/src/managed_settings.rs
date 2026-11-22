@@ -27,7 +27,10 @@ fn validate(bytes: &[u8]) -> Result<ManagedSettings, sqlx::Error> {
             "cloud_sync_enabled"
             | "automatic_updates"
             | "measurement_enabled"
-            | "calibration_enabled" => value == &Value::Bool(false),
+            | "calibration_enabled"
+            // Module de transcription sur le poste (issue 684) : à false, il
+            // n'est jamais chargé.
+            | "on_device_transcription_enabled" => value == &Value::Bool(false),
             "intelligence_disabled" => value == &Value::Bool(true),
             "auto_start_scheduled_meetings" | "save_recordings" => value.is_boolean(),
             "current_llm_provider" | "current_llm_model" => value.as_str() == Some(""),
@@ -145,8 +148,15 @@ mod tests {
     #[test]
     fn secrets_and_unsafe_values_are_rejected() {
         assert!(validate(br#"{"schema_version":1,"settings":{"intelligence_disabled":true,"cloud_sync_enabled":false}}"#).is_ok());
+        assert!(
+            validate(
+                br#"{"schema_version":1,"settings":{"on_device_transcription_enabled":false}}"#
+            )
+            .is_ok()
+        );
         for text in [
             r#"{"schema_version":1,"settings":{"cloud_sync_enabled":true}}"#,
+            r#"{"schema_version":1,"settings":{"on_device_transcription_enabled":true}}"#,
             r#"{"schema_version":1,"settings":{"api_key":"secret"}}"#,
             r#"{"schema_version":2,"settings":{}}"#,
         ] {

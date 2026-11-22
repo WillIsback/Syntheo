@@ -8,7 +8,10 @@ pub use tokio_tungstenite::tungstenite::{
     ClientRequestBuilder, Utf8Bytes, client::IntoClientRequest, protocol::Message,
 };
 
-pub use crate::retry::{WebSocketConnectPolicy, WebSocketRetryCallback, WebSocketRetryEvent};
+pub use crate::retry::{
+    ClientProofFn, PeerProof, VerifyServerFn, WebSocketConnectPolicy, WebSocketRetryCallback,
+    WebSocketRetryEvent,
+};
 
 const TRAILING_MESSAGE_GRACE: std::time::Duration = std::time::Duration::from_secs(5);
 
@@ -72,6 +75,7 @@ pub struct WebSocketClient {
     keep_alive: Option<KeepAliveConfig>,
     connect_policy: WebSocketConnectPolicy,
     on_retry: Option<WebSocketRetryCallback>,
+    peer_proof: Option<PeerProof>,
     initial_response_type: Option<&'static str>,
     initial_response_field: &'static str,
 }
@@ -83,6 +87,7 @@ impl WebSocketClient {
             keep_alive: None,
             connect_policy: WebSocketConnectPolicy::default(),
             on_retry: None,
+            peer_proof: None,
             initial_response_type: None,
             initial_response_field: "type",
         }
@@ -112,6 +117,12 @@ impl WebSocketClient {
         self
     }
 
+    /// Exige du pair une preuve au handshake (voir `PeerProof`).
+    pub fn with_peer_proof(mut self, proof: PeerProof) -> Self {
+        self.peer_proof = Some(proof);
+        self
+    }
+
     pub fn on_retry(mut self, callback: WebSocketRetryCallback) -> Self {
         self.on_retry = Some(callback);
         self
@@ -133,6 +144,7 @@ impl WebSocketClient {
             self.request.clone(),
             &self.connect_policy,
             self.on_retry.as_ref(),
+            self.peer_proof.as_ref(),
         )
         .await?;
 

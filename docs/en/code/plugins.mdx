@@ -78,7 +78,7 @@ The "Interface" column shows whether `apps/desktop/src` imports the `@syntheo/pl
   - In-memory audio: `list_capture_audio_chunks`, `delete_transcribed_capture_audio`, `delete_processed_session_audio`.
   - On-device transcription: `probe_local_transcription` (probe from `crates/speech-probe`, refused during a capture and by the relay).
 - **Events**: `CaptureLifecycleEvent`, `CaptureStatusEvent`, `CaptureDataEvent`, `LiveTranscriptPersistenceEvent`, `SessionAudioRetentionEvent`, `TranscriptionEvent`.
-- **Internal dependencies**: `crates/audio`, `crates/db-app`, `crates/language`, `crates/speech-probe`, `crates/storage`, `crates/transcript`, `crates/transcription-core`, `crates/owhisper-client`, `crates/owhisper-interface`; plugins `db`, `fs-sync`, `settings`, `store2`, `tray`.
+- **Internal dependencies**: `crates/audio`, `crates/db-app`, `crates/language`, `crates/speech-host`, `crates/speech-probe`, `crates/storage`, `crates/transcript`, `crates/transcription-core`, `crates/owhisper-client`, `crates/owhisper-interface`; plugins `db`, `fs-sync`, `settings`, `store2`, `tray`.
 - **Affected doc pages**: [/en/meetings](/en/meetings), [/en/import-recordings](/en/import-recordings), [/en/languages](/en/languages), [/en/ai-setup](/en/ai-setup), [/en/offline](/en/offline), [/en/data-and-privacy](/en/data-and-privacy), [/en/troubleshooting](/en/troubleshooting).
 
 ### `dictation`

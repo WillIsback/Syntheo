@@ -1659,6 +1659,7 @@ dependencies = [
  "base64 0.23.1",
  "bytes",
  "futures-util",
+ "hmac",
  "language",
  "openai-transcription",
  "owhisper-interface",
@@ -1667,6 +1668,7 @@ dependencies = [
  "reqwest-tracing",
  "serde",
  "serde_json",
+ "sha2",
  "strum",
  "thiserror",
  "tokio",
@@ -3548,6 +3550,7 @@ dependencies = [
  "tokio-tungstenite",
  "tracing",
  "url",
+ "uuid",
 ]
 
 [[package]]

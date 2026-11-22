@@ -309,3 +309,72 @@ async fn nemo_session_keeps_diarization_when_offered_or_unknown() {
         assert_ne!(params.num_speakers, Some(1), "{base}");
     }
 }
+
+/// Runtime qui rend une cible « Sur ce poste » fixe, et compte ses appels.
+struct OnDeviceRuntime {
+    target: Option<owhisper_client::OnDeviceTarget>,
+    calls: std::sync::atomic::AtomicUsize,
+}
+
+impl syntheo_storage::StorageRuntime for OnDeviceRuntime {
+    fn global_base(&self) -> Result<std::path::PathBuf, syntheo_storage::Error> {
+        Ok(std::path::PathBuf::from("/tmp"))
+    }
+
+    fn vault_base(&self) -> Result<std::path::PathBuf, syntheo_storage::Error> {
+        Ok(std::path::PathBuf::from("/tmp"))
+    }
+}
+
+impl crate::ListenerRuntime for OnDeviceRuntime {
+    fn emit_lifecycle(&self, _event: crate::SessionLifecycleEvent) {}
+    fn emit_progress(&self, _event: crate::SessionProgressEvent) {}
+    fn emit_data(&self, _event: crate::SessionDataEvent) {}
+    fn emit_error(&self, _event: crate::SessionErrorEvent) {}
+
+    fn on_device_target(
+        &self,
+    ) -> futures_util::future::BoxFuture<'static, Result<owhisper_client::OnDeviceTarget, String>>
+    {
+        self.calls.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        let target = self.target.clone();
+        Box::pin(async move { target.ok_or_else(|| "module unavailable".to_owned()) })
+    }
+}
+
+// Issue 684 : l'adresse réservée de la source « Sur ce poste » est résolue
+// par le runtime à chaque listener ; sans module, échec net et lisible.
+#[tokio::test]
+async fn on_device_target_is_resolved_by_the_runtime_for_each_listener() {
+    let mut args = listener_args(owhisper_client::ON_DEVICE_BASE_URL, "");
+    let runtime = Arc::new(OnDeviceRuntime {
+        target: None,
+        calls: Default::default(),
+    });
+    args.runtime = runtime.clone();
+    assert!(connection_target(&args).await.is_err());
+    let token = owhisper_client::OnDeviceToken::new(vec![1; 16]).unwrap();
+    let runtime = Arc::new(OnDeviceRuntime {
+        target: Some(owhisper_client::OnDeviceTarget {
+            base_url: "http://127.0.0.1:4242".to_owned(),
+            token,
+        }),
+        calls: Default::default(),
+    });
+    args.runtime = runtime.clone();
+    for _ in 0..2 {
+        let (base_url, token) = connection_target(&args).await.unwrap();
+        assert_eq!(base_url, "http://127.0.0.1:4242");
+        assert!(token.is_some());
+    }
+    assert_eq!(runtime.calls.load(std::sync::atomic::Ordering::SeqCst), 2);
+    // Un serveur distant ne passe jamais par le runtime ni par la preuve.
+    let remote = listener_args("https://asr.example/v1/realtime?provider=nvidia", "");
+    let (base_url, token) = connection_target(&remote).await.unwrap();
+    assert_eq!(base_url, "https://asr.example/v1/realtime?provider=nvidia");
+    assert!(token.is_none());
+    assert_eq!(
+        AdapterKind::from_url_and_languages(owhisper_client::ON_DEVICE_BASE_URL, &[], None),
+        AdapterKind::Nvidia
+    );
+}

@@ -1,0 +1,24 @@
+[package]
+name = "speech-host"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+publish = false
+
+[dependencies]
+syntheo-supervisor = { workspace = true }
+
+owhisper-client = { workspace = true }
+
+serde_json = { workspace = true }
+sha2 = { workspace = true }
+tokio = { workspace = true, features = ["fs", "io-util", "macros", "process", "rt", "sync", "time"] }
+tracing = { workspace = true }
+uuid = { workspace = true, features = ["v4"] }
+
+[dev-dependencies]
+bytes = { workspace = true }
+futures-util = { workspace = true }
+owhisper-interface = { workspace = true }
+tempfile = { workspace = true }
+tokio = { workspace = true, features = ["fs", "io-util", "macros", "process", "rt-multi-thread", "sync", "time"] }

@@ -35,6 +35,30 @@ fn client_build_error(args: &ListenerArgs, error: owhisper_client::Error) -> Act
     }
 }
 
+/// Adresse de connexion, et preuve pour la source « Sur ce poste » : résolue
+/// à chaque listener (reconnexion comprise), donc toujours le port et le
+/// jeton du lancement en cours du module, jamais un port mémorisé.
+async fn connection_target(
+    args: &ListenerArgs,
+) -> Result<(String, Option<owhisper_client::OnDeviceToken>), ActorProcessingErr> {
+    if !owhisper_client::is_on_device(&args.base_url) {
+        return Ok((args.base_url.clone(), None));
+    }
+    match args.runtime.on_device_target().await {
+        Ok(target) => Ok((target.base_url, Some(target.token))),
+        Err(message) => {
+            args.runtime.emit_error(SessionErrorEvent::ConnectionError {
+                session_id: args.session_id.clone(),
+                error: message.clone(),
+            });
+            Err(actor_error_with_degraded(
+                format!("on_device_unavailable: {message}"),
+                DegradedError::UpstreamUnavailable { message },
+            ))
+        }
+    }
+}
+
 fn classify_ws_connect_failure(provider: &str, error: &syntheo_ws_client::Error) -> DegradedError {
     if error.is_auth_error() {
         return DegradedError::AuthenticationFailed {
@@ -214,12 +238,17 @@ async fn spawn_rx_task_single_with_adapter<A: RealtimeSttAdapter>(
 
     let (tx, rx) = tokio::sync::mpsc::channel::<MixedMessage<Bytes, ControlMessage>>(32);
 
-    let client = owhisper_client::ListenClient::builder()
+    let (base_url, on_device) = connection_target(&args).await?;
+    let mut builder = owhisper_client::ListenClient::builder()
         .adapter::<A>()
-        .api_base(args.base_url.clone())
+        .api_base(base_url)
         .api_key(args.api_key.clone())
         .params(params)
-        .connect_policy(desktop_connect_policy())
+        .connect_policy(desktop_connect_policy());
+    if let Some(token) = on_device {
+        builder = builder.on_device(token);
+    }
+    let client = builder
         .build_single()
         .await
         .map_err(|error| client_build_error(&args, error))?;
@@ -265,12 +294,17 @@ async fn spawn_rx_task_dual_with_adapter<A: RealtimeSttAdapter>(
 
     let (tx, rx) = tokio::sync::mpsc::channel::<MixedMessage<(Bytes, Bytes), ControlMessage>>(32);
 
-    let client = owhisper_client::ListenClient::builder()
+    let (base_url, on_device) = connection_target(&args).await?;
+    let mut builder = owhisper_client::ListenClient::builder()
         .adapter::<A>()
-        .api_base(args.base_url.clone())
+        .api_base(base_url)
         .api_key(args.api_key.clone())
         .params(params)
-        .connect_policy(desktop_connect_policy())
+        .connect_policy(desktop_connect_policy());
+    if let Some(token) = on_device {
+        builder = builder.on_device(token);
+    }
+    let client = builder
         .build_dual()
         .await
         .map_err(|error| client_build_error(&args, error))?;
