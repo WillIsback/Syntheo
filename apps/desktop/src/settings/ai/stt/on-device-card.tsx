@@ -120,6 +120,8 @@ export function OnDevicePolicyNotice() {
   );
 }
 
+const INSTALL_PROGRESS_QUERY_KEY = ["on-device-install-progress"] as const;
+
 export function OnDeviceCard() {
   const { t } = useLingui();
   const queryClient = useQueryClient();
@@ -201,15 +203,25 @@ export function OnDeviceCard() {
     );
     void refresh();
   };
+  // Fin d'une installation lancée ici : l'avancement est oublié aussitôt
+  // (l'hôte l'a déjà effacé), sans attendre la lecture suivante.
+  const forgetInstallProgress = async () => {
+    await queryClient.cancelQueries({
+      queryKey: INSTALL_PROGRESS_QUERY_KEY,
+    });
+    queryClient.setQueryData(INSTALL_PROGRESS_QUERY_KEY, null);
+  };
   const downloading = useMutation({
     mutationFn: downloadOnDeviceModels,
     onMutate: () => setNotice(null),
+    onSettled: forgetInstallProgress,
     onSuccess: afterInstall,
     onError: installError,
   });
   const fromFolder = useMutation({
     mutationFn: installOnDeviceModelsFromFolder,
     onMutate: () => setNotice(null),
+    onSettled: forgetInstallProgress,
     onSuccess: afterInstall,
     onError: installError,
   });
@@ -218,7 +230,7 @@ export function OnDeviceCard() {
   // une installation (lancée avant de quitter les réglages) en reprend
   // l'affichage et bloque les boutons.
   const installProgress = useQuery({
-    queryKey: ["on-device-install-progress"],
+    queryKey: INSTALL_PROGRESS_QUERY_KEY,
     queryFn: async () => {
       const result = await transcriptionCommands.onDeviceInstallProgress();
       return result.status === "ok" ? result.data : null;
@@ -477,9 +489,9 @@ export function OnDeviceCard() {
           <p>
             {!companion ? (
               <Trans>
-                This computer is chosen for transcription, but the transcription
-                program is missing from this installation of Syntheo: live
-                transcription is paused. Reinstall Syntheo, or use the server.
+                This computer is chosen for transcription, but this version of
+                Syntheo does not include transcription on this computer: live
+                transcription is paused.
               </Trans>
             ) : installed ? (
               <Trans>

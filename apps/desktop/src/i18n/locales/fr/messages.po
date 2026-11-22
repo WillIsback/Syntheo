@@ -6226,8 +6226,8 @@ msgid "This computer is chosen for transcription, but its models are not install
 msgstr "Ce poste est choisi pour la transcription, mais ses modèles ne sont pas installés : la transcription en direct est en pause."
 
 #: src/settings/ai/stt/on-device-card.tsx
-msgid "This computer is chosen for transcription, but the transcription program is missing from this installation of Syntheo: live transcription is paused. Reinstall Syntheo, or use the server."
-msgstr "Ce poste est choisi pour la transcription, mais le programme de transcription manque dans cette installation de Syntheo : la transcription en direct est en pause. Réinstallez Syntheo, ou utilisez le serveur."
+msgid "This computer is chosen for transcription, but this version of Syntheo does not include transcription on this computer: live transcription is paused."
+msgstr "Ce poste est choisi pour la transcription, mais cette version de Syntheo n'inclut pas la transcription sur le poste : la transcription en direct est en pause."
 
 #. placeholder {0}: verdict.reasons.map((r) => labels.refusal[r]).join(", ")
 #: src/settings/ai/stt/on-device-card.tsx

@@ -6226,8 +6226,8 @@ msgid "This computer is chosen for transcription, but its models are not install
 msgstr "This computer is chosen for transcription, but its models are not installed: live transcription is paused."
 
 #: src/settings/ai/stt/on-device-card.tsx
-msgid "This computer is chosen for transcription, but the transcription program is missing from this installation of Syntheo: live transcription is paused. Reinstall Syntheo, or use the server."
-msgstr "This computer is chosen for transcription, but the transcription program is missing from this installation of Syntheo: live transcription is paused. Reinstall Syntheo, or use the server."
+msgid "This computer is chosen for transcription, but this version of Syntheo does not include transcription on this computer: live transcription is paused."
+msgstr "This computer is chosen for transcription, but this version of Syntheo does not include transcription on this computer: live transcription is paused."
 
 #. placeholder {0}: verdict.reasons.map((r) => labels.refusal[r]).join(", ")
 #: src/settings/ai/stt/on-device-card.tsx

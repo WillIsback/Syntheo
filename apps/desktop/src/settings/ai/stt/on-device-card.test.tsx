@@ -123,7 +123,9 @@ describe("OnDeviceCard", () => {
     mocks.config = { stt_on_device: true };
     setup();
     const alert = await screen.findByTestId("on-device-missing");
-    expect(alert.textContent).toMatch(/transcription program is missing/);
+    expect(alert.textContent).toMatch(
+      /does not include transcription on this computer/,
+    );
     expect(alert.textContent).not.toMatch(/models are not installed/);
   });
 
@@ -209,6 +211,9 @@ describe("OnDeviceCard", () => {
     mocks.installProgress = null;
     finish({ status: "error", error: "cancelled" });
     await screen.findByText(/Installation cancelled/);
+    // Revue, R10 : l'avancement est oublié dès la fin, sans attendre la
+    // lecture suivante.
+    expect(screen.queryByTestId("on-device-install-progress")).toBeNull();
   });
 
   it("offers to resume a partial download", async () => {
