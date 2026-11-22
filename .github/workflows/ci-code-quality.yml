@@ -296,15 +296,15 @@ jobs:
   # sans réseau, puis garde-fou sous un CPU sans VNNI : les modèles de
   # models.json, téléchargés depuis ses `sources`, doivent rendre des mots
   # sous qemu Skylake-Client (apps/speech/models/cpu-check). Sur une PR, sauté
-  # si ni apps/speech/models, ni l'exemple cpu-check, ni l'audio de mise en
-  # service ne changent.
+  # si rien ne change dans apps/speech (moteur, ONNX Runtime, Cargo.lock,
+  # modèles, exemple, audio de mise en service), dans l'action rust_install,
+  # dans rust-toolchain.toml ni dans ce workflow ou publish-speech-models.yml.
+  # Comme build-speech : sans rust-cache ni sccache, registre et compilation
+  # partent de zéro.
   speech-models:
     name: ci-code-quality (modèles de la transcription sur le poste)
     runs-on: ubuntu-24.04
     timeout-minutes: 60
-    env:
-      SCCACHE_GHA_ENABLED: "true"
-      RUSTC_WRAPPER: sccache
     steps:
       - name: Checkout du code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -321,11 +321,12 @@ jobs:
           set -euo pipefail
           if [ -z "${BASE_SHA:-}" ]; then
             echo "run=true" >> "$GITHUB_OUTPUT"
-          elif git diff --name-only "$BASE_SHA" HEAD -- 'apps/speech/models/' 'apps/speech/examples/' 'apps/speech/commissioning/' '.github/workflows/ci-code-quality.yml' '.github/workflows/publish-speech-models.yml' | grep -q .; then
+          elif git diff --name-only "$BASE_SHA" HEAD -- 'apps/speech/' '.github/actions/rust_install/' 'rust-toolchain.toml' \
+            '.github/workflows/ci-code-quality.yml' '.github/workflows/publish-speech-models.yml' | grep -q .; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
             echo "run=false" >> "$GITHUB_OUTPUT"
-            echo "apps/speech/models non modifié : tests sautés."
+            echo "apps/speech, rust_install et rust-toolchain.toml non modifiés : tests sautés."
           fi
 
       - name: Tests de l'envoi vers Hugging Face
@@ -335,10 +336,8 @@ jobs:
       - name: Toolchain Rust
         if: steps.changes.outputs.run == 'true'
         uses: ./.github/actions/rust_install
-
-      - name: Cache du compilateur (sccache)
-        if: steps.changes.outputs.run == 'true'
-        uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba # v0.0.11
+        with:
+          cache: "false"
 
       # Même ONNX Runtime que le module livré : archive épinglée contrôlée
       # avant et après la compilation (check_ort.py, cache vide au départ).
@@ -358,9 +357,19 @@ jobs:
         if: steps.changes.outputs.run == 'true'
         run: python3 -I apps/speech/models/fetch.py "$RUNNER_TEMP/models"
 
+      # DNS publics et miroir apt du runner écarté s'il est trop lent (v0.7.2,
+      # #604), comme install_desktop_deps ; un échec de la mesure du miroir ne
+      # doit pas arrêter le job.
       - name: Installer qemu-user
         if: steps.changes.outputs.run == 'true'
-        run: sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends qemu-user-static
+        timeout-minutes: 15
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash scripts/ci/public-dns.sh
+          bash scripts/ci/apt-mirror.sh || echo "::warning::Mesure du miroir apt en échec : miroirs inchangés"
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends qemu-user-static
 
       - name: Garde-fou sous un CPU sans VNNI (qemu Skylake-Client)
         if: steps.changes.outputs.run == 'true'

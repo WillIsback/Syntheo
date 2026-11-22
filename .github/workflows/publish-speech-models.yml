@@ -3,11 +3,25 @@
 # de release créé en local par apps/speech/models/publish-local.sh (la
 # quantification ne tient pas sur un runner gratuit).
 #
-# Déclenchement manuel depuis main seulement, dans l'environnement
-# `speech-models` (validation requise ; secrets HF_TOKEN et
-# SPEECH_MODELS_RELEASE_TOKEN, jeton GitHub à grain fin limité à ce dépôt,
-# droits Contents et Workflows en écriture : GITHUB_TOKEN ne peut pas créer
-# un tag sur un commit qui modifie des workflows). Étapes :
+# Déclenchement manuel depuis main seulement. Deux jobs, sur le modèle de
+# release.yml (compilation sans privilège, publication à part) :
+#
+# cpu-check, sans environnement ni secret, sans id-token ni attestation : il
+# télécharge les assets du brouillon (de la prerelease en reprise), les
+# contrôle contre apps/speech/models/models.json (taille et SHA-256), seule
+# référence, puis lance le garde-fou bloquant sous un CPU sans VNNI : les
+# fichiers doivent rendre des mots sous qemu Skylake-Client
+# (apps/speech/models/cpu-check). Il tourne aussi avec publish=false et en
+# reprise. Seul job qui compile du code (crates d'apps/speech, ONNX Runtime) :
+# registre Cargo et compilation partent de zéro, sans rust-cache ni sccache.
+#
+# publish, après cpu-check (needs), dans l'environnement `speech-models`
+# (validation requise ; secrets HF_TOKEN et SPEECH_MODELS_RELEASE_TOKEN, jeton
+# GitHub à grain fin limité à ce dépôt, droits Contents et Workflows en
+# écriture : GITHUB_TOKEN ne peut pas créer un tag sur un commit qui modifie
+# des workflows). Il ne compile ni n'exécute rien d'autre que Python
+# (bibliothèque standard, puis hf_upload.py par uv après l'attestation) et gh.
+# Étapes :
 #   1. la release <version> doit exister, être un brouillon et être la seule
 #      à porter ce tag ; un tag déjà présent n'est admis que sur ce commit
 #      (relance après un échec entre la création du tag et la publication) ;
@@ -15,12 +29,11 @@
 #      doit alors être une prerelease publiée, non « latest », avec son tag
 #      sur un commit de main et l'attestation de ses assets ; les étapes 3 et
 #      4 sont sautées.)
-#   2. téléchargement des assets du brouillon, contrôle bloquant contre
-#      apps/speech/models/models.json (taille et SHA-256), seule référence,
-#      puis garde-fou bloquant sous un CPU sans VNNI : les fichiers doivent
-#      rendre des mots sous qemu Skylake-Client (apps/speech/models/cpu-check) ;
+#   2. nouveau téléchargement des assets et contrôle bloquant contre
+#      models.json ;
 #   (publish=false : arrêt ici, rien n'est publié.)
-#   3. attestation de provenance des fichiers vérifiés ;
+#   3. dernier contrôle contre models.json avec les scripts relus depuis le
+#      commit, puis attestation de provenance des fichiers vérifiés ;
 #   4. création du tag sur le commit vérifié (jeton dédié), puis passage du
 #      brouillon en prerelease, jamais « latest » (le système de mise à jour
 #      de l'application ne doit pas la prendre pour une version) ;
@@ -59,8 +72,98 @@ permissions:
   contents: read
 
 jobs:
+  # Garde-fou, avant l'attestation, le tag et tout envoi : des poids int8 sur
+  # 8 bits saturaient le noyau AVX2 d'ONNX Runtime sans VNNI (0 mot sur ces
+  # CPU, modèles de la 0.8.0-3). Même ONNX Runtime que le module livré
+  # (archive épinglée, check_ort.py avant et après).
+  cpu-check:
+    name: Garde-fou sous un CPU sans VNNI (${{ inputs.version }})
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    # Ni environnement, ni secret, ni id-token, ni attestation. contents:
+    # write seulement parce que l'API ne liste un brouillon de release qu'à
+    # un jeton qui a le droit d'écrire (contents: read ne voit que les
+    # releases publiées). GITHUB_TOKEN n'est passé qu'à l'étape de
+    # téléchargement, avant toute compilation ; le job publish retélécharge
+    # et revérifie lui-même les assets contre models.json.
+    permissions:
+      contents: write # lecture du brouillon de release (voir ci-dessus)
+    env:
+      VERSION: ${{ inputs.version }}
+      STATE: ${{ inputs.resume && 'prerelease' || 'draft' }}
+    steps:
+      - name: Contrôler la référence et la version
+        shell: bash
+        env:
+          REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          [ "$REF" = "refs/heads/main" ] || { echo "::error::depuis main seulement ($REF)"; exit 1; }
+          [[ "$VERSION" =~ ^speech-models-[0-9]+$ ]] || { echo "::error::version invalide : $VERSION"; exit 1; }
+
+      - name: Checkout du code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Télécharger les assets de la release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          mkdir -p assets
+          bash apps/speech/models/download-draft.sh "$REPO" "$VERSION" assets "$STATE"
+          ls -l assets
+
+      - name: Contrôle bloquant contre models.json
+        run: python3 -I apps/speech/models/verify.py assets --flat
+
+      # Sans rust-cache ni sccache : registre et compilation partent de zéro.
+      - name: Toolchain Rust
+        uses: ./.github/actions/rust_install
+        with:
+          cache: "false"
+
+      - name: Construire cpu-check
+        working-directory: apps/speech
+        shell: bash
+        run: |
+          set -euo pipefail
+          export ORT_CACHE_DIR="$RUNNER_TEMP/ort-cache"
+          cargo fetch --locked
+          python3 -I supply-chain/check_ort.py before x86_64-unknown-linux-gnu
+          cargo build --release --locked --example cpu-check
+          python3 -I supply-chain/check_ort.py after x86_64-unknown-linux-gnu
+
+      # DNS publics et miroir apt du runner écarté s'il est trop lent (v0.7.2,
+      # #604), comme install_desktop_deps ; un échec de la mesure du miroir ne
+      # doit pas arrêter le job.
+      - name: Installer qemu-user
+        timeout-minutes: 15
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash scripts/ci/public-dns.sh
+          bash scripts/ci/apt-mirror.sh || echo "::warning::Mesure du miroir apt en échec : miroirs inchangés"
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends qemu-user-static
+
+      - name: Garde-fou sous un CPU sans VNNI (qemu Skylake-Client)
+        shell: bash
+        env:
+          CPU_CHECK_BIN: apps/speech/target/release/examples/cpu-check
+        run: |
+          set -euo pipefail
+          python3 -I apps/speech/models/flatten.py --tree assets "$RUNNER_TEMP/models"
+          python3 -I apps/speech/models/verify.py "$RUNNER_TEMP/models"
+          bash apps/speech/models/cpu-check/run.sh "$RUNNER_TEMP/models"
+
   publish:
     name: Publication des modèles (${{ inputs.version }})
+    needs: cpu-check
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 90
@@ -149,6 +252,7 @@ jobs:
             fi
           fi
 
+      # Assets retéléchargés ici : ceux du job cpu-check ne sont pas repris.
       - name: Télécharger les assets du brouillon
         shell: bash
         env:
@@ -162,37 +266,6 @@ jobs:
 
       - name: Contrôle bloquant contre models.json
         run: python3 -I apps/speech/models/verify.py assets --flat
-
-      # Garde-fou, avant l'attestation, le tag et tout envoi : des poids int8
-      # sur 8 bits saturaient le noyau AVX2 d'ONNX Runtime sans VNNI (0 mot
-      # sur ces CPU, modèles de la 0.8.0-3). Même ONNX Runtime que le module
-      # livré (archive épinglée, check_ort.py avant et après).
-      - name: Toolchain Rust
-        uses: ./.github/actions/rust_install
-
-      - name: Construire cpu-check
-        working-directory: apps/speech
-        shell: bash
-        run: |
-          set -euo pipefail
-          export ORT_CACHE_DIR="$RUNNER_TEMP/ort-cache"
-          cargo fetch --locked
-          python3 -I supply-chain/check_ort.py before x86_64-unknown-linux-gnu
-          cargo build --release --locked --example cpu-check
-          python3 -I supply-chain/check_ort.py after x86_64-unknown-linux-gnu
-
-      - name: Installer qemu-user
-        run: sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends qemu-user-static
-
-      - name: Garde-fou sous un CPU sans VNNI (qemu Skylake-Client)
-        shell: bash
-        env:
-          CPU_CHECK_BIN: apps/speech/target/release/examples/cpu-check
-        run: |
-          set -euo pipefail
-          python3 -I apps/speech/models/flatten.py --tree assets "$RUNNER_TEMP/models"
-          python3 -I apps/speech/models/verify.py "$RUNNER_TEMP/models"
-          bash apps/speech/models/cpu-check/run.sh "$RUNNER_TEMP/models"
 
       # Tests de hf_upload.py (comparaison avec Hugging Face, dossier
       # incomplet refusé), avant l'attestation, le tag et tout envoi.
@@ -222,6 +295,19 @@ jobs:
           RELEASE_TOKEN: ${{ secrets.SPEECH_MODELS_RELEASE_TOKEN }}
         run: |
           [ -n "$RELEASE_TOKEN" ] || { echo "::error::secret SPEECH_MODELS_RELEASE_TOKEN absent de l'environnement speech-models"; exit 1; }
+
+      # Dernier contrôle juste avant l'attestation, avec verify.py et
+      # models.json relus depuis le commit vérifié (rien de ce qui précède
+      # ne doit avoir changé les fichiers attestés ni les scripts).
+      - name: Contrôle des assets avant l'attestation
+        if: inputs.publish && !inputs.resume
+        shell: bash
+        env:
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          git checkout "$SHA" -- apps/speech/models
+          python3 -I apps/speech/models/verify.py assets --flat
 
       - name: Attestation de provenance
         if: inputs.publish && !inputs.resume
