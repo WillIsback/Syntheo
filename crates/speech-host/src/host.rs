@@ -139,6 +139,9 @@ struct Running {
     stdin: Option<ChildStdin>,
     target: OnDeviceTarget,
     started_at: Instant,
+    /// Tentative comptée pour ce lancement (instant ajouté à `attempts`) :
+    /// retirée si le lancement se termine par un arrêt voulu.
+    attempt: Option<Instant>,
     /// Objets vérifiés gardés tant que le processus vit.
     _staging: Option<crate::verify::Staging>,
 }
@@ -341,6 +344,7 @@ async fn launch(
         stdin: Some(stdin),
         _staging: staging,
         started_at: Instant::now(),
+        attempt: None,
         target: OnDeviceTarget {
             base_url: format!("http://127.0.0.1:{port}"),
             token,
@@ -561,6 +565,8 @@ impl SpeechHost {
             self.load.clone(),
         )
         .await?;
+        let mut running = running;
+        running.attempt = Some(now);
         let target = running.target.clone();
         state.running = Some(running);
         Ok(target)
@@ -569,11 +575,23 @@ impl SpeechHost {
     /// Arrête le lancement en cours, s'il y en a un ; un refus de
     /// vérification sera revérifié au prochain lancement. L'état « en panne »
     /// dure jusqu'à la fin de sa fenêtre.
+    ///
+    /// Un arrêt voulu d'un module encore vivant (fin d'écoute, fin de mesure)
+    /// n'est pas un plantage : la tentative de ce lancement est retirée du
+    /// compte. Un module déjà mort au moment de l'arrêt reste compté.
     pub async fn stop(&self) {
         let running = {
             let mut state = self.state.lock().await;
             state.rejected = None;
-            state.running.take()
+            let mut running = state.running.take();
+            if let Some(running) = running.as_mut()
+                && matches!(running.child.try_wait(), Ok(None))
+                && let Some(at) = running.attempt
+                && let Some(index) = state.attempts.iter().position(|a| *a == at)
+            {
+                state.attempts.remove(index);
+            }
+            running
         };
         let Some(mut running) = running else { return };
         drop(running.stdin.take());

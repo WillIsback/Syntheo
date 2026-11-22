@@ -610,3 +610,99 @@ fn a_blocked_launch_has_its_own_permanent_code() {
     assert!(error.is_permanent());
     assert_eq!(error.to_on_device_error().kind.code(), "execution_blocked");
 }
+
+fn kill(pid: u32) {
+    std::process::Command::new("kill")
+        .arg("-9")
+        .arg(pid.to_string())
+        .status()
+        .unwrap();
+}
+
+fn tight_policy() -> speech_host::host::RestartPolicy {
+    speech_host::host::RestartPolicy {
+        max_attempts: 3,
+        window: Duration::from_secs(600),
+        stable_after: Duration::from_secs(600),
+    }
+}
+
+// QA de 0.8.0-2 : des écoutes successives (lancement, arrêt voulu en fin
+// d'écoute) ne sont pas des plantages et ne bloquent jamais la source.
+#[tokio::test]
+async fn intentional_stops_never_exhaust_the_restart_budget() {
+    let Some(binary) = binary() else { return };
+    let fixture = fixture(&binary);
+    let host = fixture.host().with_restart_policy(tight_policy());
+    for cycle in 0..10 {
+        let target = host
+            .target(true)
+            .await
+            .unwrap_or_else(|e| panic!("cycle {cycle} : {e:?}"));
+        assert!(target.base_url.starts_with("http://127.0.0.1:"));
+        host.stop().await;
+        assert!(!host.is_running().await);
+    }
+    assert_eq!(host.verifications().await, 10);
+}
+
+// Le garde-fou reste entier : 3 morts non voulues dans la fenêtre bloquent.
+#[tokio::test]
+async fn unintended_deaths_still_exhaust_the_restart_budget() {
+    let Some(binary) = binary() else { return };
+    let fixture = fixture(&binary);
+    let host = fixture.host().with_restart_policy(tight_policy());
+    for _ in 0..3 {
+        host.target(true).await.expect("lancement");
+        kill(host.pid().await.unwrap());
+        tokio::time::sleep(Duration::from_millis(200)).await;
+    }
+    assert_eq!(
+        host.target(true).await.unwrap_err(),
+        HostError::RestartBudget
+    );
+}
+
+// Un module mort pendant la session, puis arrêté par la fin d'écoute, reste
+// compté : l'arrêt voulu ne blanchit pas un plantage.
+#[tokio::test]
+async fn a_crash_followed_by_a_stop_still_counts() {
+    let Some(binary) = binary() else { return };
+    let fixture = fixture(&binary);
+    let host = fixture.host().with_restart_policy(tight_policy());
+    for _ in 0..3 {
+        host.target(true).await.expect("lancement");
+        kill(host.pid().await.unwrap());
+        tokio::time::sleep(Duration::from_millis(200)).await;
+        host.stop().await;
+    }
+    assert_eq!(
+        host.target(true).await.unwrap_err(),
+        HostError::RestartBudget
+    );
+}
+
+// Arrêts voulus et plantages mêlés : seuls les plantages comptent.
+#[tokio::test]
+async fn only_crashes_count_between_intentional_stops() {
+    let Some(binary) = binary() else { return };
+    let fixture = fixture(&binary);
+    let host = fixture.host().with_restart_policy(tight_policy());
+    for _ in 0..2 {
+        host.target(true).await.expect("lancement");
+        kill(host.pid().await.unwrap());
+        tokio::time::sleep(Duration::from_millis(200)).await;
+        for _ in 0..3 {
+            host.target(true).await.expect("relance puis écoutes");
+            host.stop().await;
+        }
+    }
+    // Deux plantages comptés sur trois admis : un lancement passe encore.
+    host.target(true).await.expect("encore admis");
+    kill(host.pid().await.unwrap());
+    tokio::time::sleep(Duration::from_millis(200)).await;
+    assert_eq!(
+        host.target(true).await.unwrap_err(),
+        HostError::RestartBudget
+    );
+}
