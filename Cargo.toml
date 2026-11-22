@@ -81,6 +81,7 @@ syntheo-notification-interface = { path = "crates/notification-interface", packa
 syntheo-onnx = { path = "crates/onnx", package = "onnx" }
 syntheo-opencode = { path = "crates/opencode", package = "opencode" }
 syntheo-overlay-kit = { path = "crates/overlay-kit", package = "overlay-kit" }
+syntheo-pinned-fetch = { path = "crates/pinned-fetch", package = "pinned-fetch" }
 syntheo-resampler = { path = "crates/resampler", package = "resampler" }
 syntheo-session-ingest = { path = "crates/session-ingest", package = "session-ingest" }
 syntheo-shortcut-macos = { path = "crates/shortcut-macos", package = "shortcut-macos" }
