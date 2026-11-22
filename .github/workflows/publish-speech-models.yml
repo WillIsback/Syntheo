@@ -1,0 +1,195 @@
+# Workflow : publish-speech-models
+# Publication des modèles de syntheo-speech (issue 683), depuis le brouillon
+# de release créé en local par apps/speech/models/publish-local.sh (la
+# quantification ne tient pas sur un runner gratuit).
+#
+# Déclenchement manuel depuis main seulement, dans l'environnement
+# `speech-models` (validation requise, secret HF_TOKEN). Étapes :
+#   1. la release <version> doit exister, être un brouillon et être la seule
+#      à porter ce tag ; le tag ne doit pas encore exister ;
+#   2. téléchargement des assets du brouillon, contrôle bloquant contre
+#      apps/speech/models/models.json (taille et SHA-256), seule référence ;
+#   (publish=false : arrêt ici, rien n'est publié.)
+#   3. attestation de provenance des fichiers vérifiés ;
+#   4. passage du brouillon en prerelease, jamais « latest » (le système de
+#      mise à jour de l'application ne doit pas la prendre pour une version) ;
+#   5. envoi vers Hugging Face (fichiers, fiche du modèle, accord OpenMDW et
+#      avis NVIDIA), jeton par variable d'environnement seulement ;
+#   6. second contrôle : retéléchargement depuis les deux hôtes ;
+#   7. révision Hugging Face et sources à épingler dans models.json, dans le
+#      résumé du job.
+name: publish-speech-models
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release des modèles (speech-models-N), créée en brouillon par publish-local.sh"
+        type: string
+        required: true
+      publish:
+        description: "Publier (sinon : contrôles seulement, jusqu'aux empreintes)"
+        type: boolean
+        required: false
+        default: true
+
+concurrency:
+  group: publish-speech-models
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Publication des modèles (${{ inputs.version }})
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    environment: speech-models
+    permissions:
+      contents: write # brouillon visible et passage en prerelease
+      id-token: write # attestation de provenance
+      attestations: write # attestation de provenance
+    env:
+      VERSION: ${{ inputs.version }}
+      HF_REPO: WillisBack/syntheo-speech-models
+    steps:
+      - name: Contrôler la référence et la version
+        shell: bash
+        env:
+          REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          [ "$REF" = "refs/heads/main" ] || { echo "::error::depuis main seulement ($REF)"; exit 1; }
+          [[ "$VERSION" =~ ^speech-models-[0-9]+$ ]] || { echo "::error::version invalide : $VERSION"; exit 1; }
+
+      - name: Checkout du code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Un brouillon n'a pas encore de tag : un tag existant, une release
+      # publiée ou deux releases pour ce nom arrêtent tout.
+      - name: Exiger un brouillon unique, sans tag
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          releases=$(gh api --paginate "repos/$REPO/releases" --jq ".[] | select(.tag_name == \"$VERSION\") | .draft")
+          count=$(printf '%s\n' "$releases" | grep -c . || true)
+          [ "$count" = "1" ] || { echo "::error::$count release(s) pour $VERSION, une seule attendue"; exit 1; }
+          [ "$releases" = "true" ] || { echo "::error::la release $VERSION n'est plus un brouillon"; exit 1; }
+          if gh api "repos/$REPO/git/ref/tags/$VERSION" > /dev/null 2>&1; then
+            echo "::error::le tag $VERSION existe déjà"; exit 1
+          fi
+
+      - name: Télécharger les assets du brouillon
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          mkdir -p assets
+          bash apps/speech/models/download-draft.sh "$REPO" "$VERSION" assets
+          ls -l assets
+
+      - name: Contrôle bloquant contre models.json
+        run: python3 -I apps/speech/models/verify.py assets --flat
+
+      - name: Attestation de provenance
+        if: inputs.publish
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: "assets/*"
+
+      - name: Passer le brouillon en prerelease (jamais latest)
+        if: inputs.publish
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          id=$(gh api --paginate "repos/$REPO/releases" --jq ".[] | select(.tag_name == \"$VERSION\" and .draft == true) | .id")
+          [ -n "$id" ] || { echo "::error::brouillon $VERSION introuvable"; exit 1; }
+          gh api -X PATCH "repos/$REPO/releases/$id" -F draft=false -F prerelease=true -f make_latest=false > /dev/null
+          state=$(gh api "repos/$REPO/releases/$id" --jq '[.draft, .prerelease] | @tsv')
+          [ "$state" = "$(printf 'false\ttrue')" ] || { echo "::error::état inattendu : $state"; exit 1; }
+          latest=$(gh api "repos/$REPO/releases/latest" --jq .tag_name)
+          [ "$latest" != "$VERSION" ] || { echo "::error::$VERSION est devenue latest"; exit 1; }
+
+      - name: uv
+        if: inputs.publish
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          enable-cache: false
+
+      - name: Préparer le dépôt Hugging Face
+        if: inputs.publish
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p hf/NOTICES
+          python3 -I apps/speech/models/flatten.py --tree assets hf
+          cp apps/speech/models/model-card.md hf/README.md
+          cp apps/speech/supply-chain/notices/models/LICENSE.OpenMDW-1.1 hf/
+          cp apps/speech/supply-chain/notices/models/*.md hf/NOTICES/
+          python3 -I apps/speech/models/verify.py hf
+          find hf -type f | sort
+
+      - name: Envoyer vers Hugging Face
+        if: inputs.publish
+        id: hf
+        shell: bash
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          set -euo pipefail
+          revision=$(uv run --locked --script apps/speech/models/hf_upload.py hf "$HF_REPO" "Modèles de syntheo-speech ($VERSION)" | tail -1)
+          [[ "$revision" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::révision Hugging Face inattendue"; exit 1; }
+          echo "revision=$revision" >> "$GITHUB_OUTPUT"
+
+      - name: Second contrôle depuis les deux hôtes
+        if: inputs.publish
+        shell: bash
+        env:
+          REPO: ${{ github.repository }}
+          REVISION: ${{ steps.hf.outputs.revision }}
+        run: |
+          set -euo pipefail
+          mkdir -p check-github check-hf
+          names=$(python3 -I -c 'import json;print("\n".join(f["path"] for f in json.load(open("apps/speech/models/models.json"))["files"]))')
+          while IFS= read -r path; do
+            name=${path##*/}
+            curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 \
+              -o "check-github/$name" "https://github.com/$REPO/releases/download/$VERSION/$name"
+            mkdir -p "check-hf/$(dirname "$path")"
+            curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 \
+              -o "check-hf/$path" "https://huggingface.co/$HF_REPO/resolve/$REVISION/$path"
+          done <<< "$names"
+          python3 -I apps/speech/models/verify.py check-github --flat
+          python3 -I apps/speech/models/verify.py check-hf
+
+      - name: Résumé (sources à épingler)
+        if: inputs.publish
+        shell: bash
+        env:
+          REPO: ${{ github.repository }}
+          REVISION: ${{ steps.hf.outputs.revision }}
+        run: |
+          {
+            echo "## Modèles $VERSION publiés"
+            echo
+            echo "Révision Hugging Face : \`$REVISION\`"
+            echo
+            echo "Sources à épingler (\`sources\` de apps/speech/models/models.json, ou \`SYNTHEO_SPEECH_MODELS_URLS\`) :"
+            echo
+            echo '```'
+            echo "https://github.com/$REPO/releases/download/$VERSION/{name}"
+            echo "https://huggingface.co/$HF_REPO/resolve/$REVISION/{path}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
