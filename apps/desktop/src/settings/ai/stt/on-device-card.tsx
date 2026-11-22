@@ -1,5 +1,9 @@
 import { Trans, useLingui } from "@lingui/react/macro";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
 import {
@@ -126,13 +130,27 @@ export function OnDeviceCard() {
   const [probe, setProbe] = useState<Probe | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [measuringNow, setMeasuringNow] = useState(false);
   const installedNow = status.data?.module.kind === "installed";
   const commissioning = useOnDeviceCommissioning(installedNow);
   const profileLabels = useLabels().profile;
 
+  // Avancement de la mesure, lu chaque seconde pendant qu'elle tourne.
+  const progress = useQuery({
+    queryKey: ["on-device-commission-progress"],
+    queryFn: async () => {
+      const result = await transcriptionCommands.onDeviceCommissionProgress();
+      return result.status === "ok" ? result.data : null;
+    },
+    refetchInterval: 1000,
+    enabled: measuringNow,
+  });
+
   // Mise en service (issue 686) : après l'installation, puis à la demande.
   const commissioningRun = useMutation({
     mutationFn: runOnDeviceCommissioning,
+    onMutate: () => setMeasuringNow(true),
+    onSettled: () => setMeasuringNow(false),
     onSuccess: (result) => {
       setError(null);
       queryClient.setQueryData(ON_DEVICE_COMMISSIONING_QUERY_KEY, result);
@@ -214,6 +232,7 @@ export function OnDeviceCard() {
     uninstalling.isPending ||
     commissioningRun.isPending;
   const measured = commissioning.data;
+  const progressValue = progress.data;
   const usable = installed && !!measured?.profile;
 
   return (
@@ -331,7 +350,9 @@ export function OnDeviceCard() {
         >
           <p className="text-[13px]" data-testid="on-device-commissioning">
             {commissioningRun.isPending
-              ? t`Measuring this computer (one to two minutes)…`
+              ? progressValue
+                ? t`Measuring profile ${progressValue.current} of ${progressValue.total}…`
+                : t`Measuring this computer (one to two minutes)…`
               : measured?.profile
                 ? t`Measured: ${profileLabels[measured.profile as Profile]}.`
                 : measured

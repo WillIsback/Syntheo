@@ -65,6 +65,7 @@ const COMMANDS: &[&str] = &[
     "on_device_commissioning",
     "on_device_commission",
     "on_device_load",
+    "on_device_commission_progress",
 ];
 
 fn main() {

@@ -70,6 +70,7 @@ Default permissions for the plugin
 - `allow-on-device-commissioning`
 - `allow-on-device-commission`
 - `allow-on-device-load`
+- `allow-on-device-commission-progress`
 
 ## Permission Table
 
@@ -1038,6 +1039,32 @@ Enables the on_device_commission command without any pre-configured scope.
 <td>
 
 Denies the on_device_commission command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:allow-on-device-commission-progress`
+
+</td>
+<td>
+
+Enables the on_device_commission_progress command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:deny-on-device-commission-progress`
+
+</td>
+<td>
+
+Denies the on_device_commission_progress command without any pre-configured scope.
 
 </td>
 </tr>

@@ -369,6 +369,7 @@ jobs:
           mkdir -p module/licenses
           cp -R apps/speech/supply-chain/notices/. module/licenses/
           cp crate-notices/THIRD-PARTY-RUST.html module/licenses/
+          cp apps/speech/commissioning/ATTRIBUTION.md module/licenses/commissioning-audio-ATTRIBUTION.md
 
       - name: Écrire manifest.json et files.sha256
         shell: bash

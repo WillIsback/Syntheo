@@ -99,6 +99,8 @@ export const commands = {
 	onDeviceCommission: () => typedError<OnDeviceCommissioning, string>(__TAURI_INVOKE("plugin:transcription|on_device_commission")),
 	/**  Charge du module pendant une écoute ; vide hors écoute. */
 	onDeviceLoad: () => typedError<OnDeviceSessionLoad[], string>(__TAURI_INVOKE("plugin:transcription|on_device_load")),
+	/**  Profil en cours de mesure, pendant une mise en service. */
+	onDeviceCommissionProgress: () => typedError<OnDeviceProgress | null, string>(__TAURI_INVOKE("plugin:transcription|on_device_commission_progress")),
 };
 
 /** Events */
@@ -467,6 +469,12 @@ export type OnDeviceMeasure = {
 export type OnDeviceModule = { kind: "not_installed" } | { kind: "installed"; version: string; sizeBytes: number } | 
 /**  Présent mais refusé (non signé, altéré, incompatible). */
 { kind: "invalid"; reason: string };
+
+/**  Avancement d'une mise en service. */
+export type OnDeviceProgress = {
+	current: number,
+	total: number,
+};
 
 /**  Charge du module pendant une écoute (barre de diagnostic). */
 export type OnDeviceSessionLoad = {

@@ -67,4 +67,5 @@ permissions = [
   "allow-on-device-commissioning",
   "allow-on-device-commission",
   "allow-on-device-load",
+  "allow-on-device-commission-progress",
 ]

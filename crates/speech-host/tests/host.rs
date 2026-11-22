@@ -377,10 +377,27 @@ async fn commissioning_picks_the_first_profile_that_keeps_up() {
     let Some(binary) = binary() else { return };
     let dir = commissioning_module_dir(&binary, 8);
     let host = host(dir.path()).with_extra_args(&["--fake-cost", "0.9,0.6,0.2"]);
-    let result = host
-        .commission(true, Duration::from_secs(8))
-        .await
-        .expect("mise en service");
+    assert_eq!(host.commissioning_progress(), None);
+    let (result, seen) = tokio::join!(host.commission(true, Duration::from_secs(8)), async {
+        let mut seen = Vec::new();
+        for _ in 0..400 {
+            tokio::time::sleep(Duration::from_millis(100)).await;
+            if let Some(progress) = host.commissioning_progress()
+                && seen.last() != Some(&progress)
+            {
+                seen.push(progress);
+            }
+            if seen.len() == 2 {
+                break;
+            }
+        }
+        seen
+    });
+    let result = result.expect("mise en service");
+    // Avancement : profil 1 puis 2 sur 4, et arrêt au premier retenu.
+    assert_eq!(seen, vec![(1, 4), (2, 4)]);
+    assert_eq!(result.measures.len(), 2);
+    assert_eq!(host.commissioning_progress(), None);
     use speech_host::commissioning::Profile;
     assert_eq!(result.measures[0].profile, Profile::TwoStreamsDiarized);
     assert!(!result.measures[0].passed, "{:?}", result.measures[0]);
@@ -439,5 +456,33 @@ async fn the_module_reports_its_load() {
     assert_eq!(load.sessions.len(), 1);
     assert_eq!(load.sessions[0].diarization, "full");
     assert!(load.sessions[0].rtf > 0.0);
+    host.stop().await;
+}
+
+/// Mise en service réelle (binaire release, vrais modèles, audio MLS),
+/// module signé par `tauri signer` : `SYNTHEO_SPEECH_MODULE_DIR` et
+/// `SYNTHEO_SPEECH_MODULE_KEY`. Mesure d'appoint, 30 s par profil.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "mise en service réelle, une à deux minutes"]
+async fn a_real_module_is_commissioned() {
+    let (Some(dir), Some(key)) = (
+        std::env::var_os("SYNTHEO_SPEECH_MODULE_DIR"),
+        std::env::var("SYNTHEO_SPEECH_MODULE_KEY").ok(),
+    ) else {
+        return;
+    };
+    let host = SpeechHost::new(dir.into(), 2, "0.8.0").with_manifest_key(&key);
+    let result = host
+        .commission(true, speech_host::commissioning::MEASURE)
+        .await
+        .expect("mise en service");
+    for measure in &result.measures {
+        eprintln!("{measure:?}");
+    }
+    eprintln!("profil retenu : {:?}", result.profile);
+    assert!(
+        result.measures.iter().all(|m| m.finals >= 6),
+        "assez de finals mesurés"
+    );
     host.stop().await;
 }

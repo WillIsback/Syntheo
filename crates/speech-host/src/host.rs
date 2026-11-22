@@ -351,6 +351,8 @@ pub struct SpeechHost {
     installing: std::sync::atomic::AtomicBool,
     /// Mesure de mise en service en cours : `target()` refuse aussitôt.
     measuring: std::sync::atomic::AtomicBool,
+    /// Profil en cours de mesure (1 à 4), 0 hors mesure.
+    measuring_profile: std::sync::atomic::AtomicUsize,
     /// Mise en service du module installé, lue une fois puis gardée.
     commissioned: std::sync::Mutex<Option<Option<crate::commissioning::Commissioning>>>,
 }
@@ -393,6 +395,7 @@ impl SpeechHost {
             installing: Default::default(),
             commissioned: Default::default(),
             measuring: Default::default(),
+            measuring_profile: Default::default(),
             load: LoadSlot::default(),
         }
     }
@@ -712,7 +715,17 @@ impl SpeechHost {
         let audio = self.commissioning_audio()?;
         let mut measures = Vec::new();
         let mut chosen = None;
-        for profile in Profile::ALL {
+        struct ProgressReset<'a>(&'a std::sync::atomic::AtomicUsize);
+        impl Drop for ProgressReset<'_> {
+            fn drop(&mut self) {
+                self.0.store(0, std::sync::atomic::Ordering::SeqCst);
+            }
+        }
+        let _progress = ProgressReset(&self.measuring_profile);
+        // Arrêt au premier profil retenu (ordre de conclusion-680 §4).
+        for (index, profile) in Profile::ALL.into_iter().enumerate() {
+            self.measuring_profile
+                .store(index + 1, std::sync::atomic::Ordering::SeqCst);
             let target = self
                 .launch_target()
                 .await
@@ -747,6 +760,15 @@ impl SpeechHost {
         save(&self.dir, &result).map_err(|_| "io".to_owned())?;
         *self.commissioned.lock().unwrap_or_else(|e| e.into_inner()) = Some(Some(result.clone()));
         Ok(result)
+    }
+
+    /// Profil en cours de mesure, `(rang, total)`, pendant une mise en
+    /// service.
+    pub fn commissioning_progress(&self) -> Option<(usize, usize)> {
+        let current = self
+            .measuring_profile
+            .load(std::sync::atomic::Ordering::SeqCst);
+        (current > 0).then_some((current, crate::commissioning::Profile::ALL.len()))
     }
 
     /// Dernières mesures de charge, si elles datent de moins de 15 s.

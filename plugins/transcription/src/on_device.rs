@@ -342,6 +342,27 @@ pub async fn on_device_commission<R: tauri::Runtime>(
     result.map(commissioning_of)
 }
 
+/// Avancement d'une mise en service.
+#[derive(Debug, Clone, serde::Serialize, specta::Type)]
+pub struct OnDeviceProgress {
+    pub current: u32,
+    pub total: u32,
+}
+
+/// Profil en cours de mesure, pendant une mise en service.
+#[tauri::command]
+#[specta::specta]
+pub async fn on_device_commission_progress<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+) -> Result<Option<OnDeviceProgress>, String> {
+    Ok(host(&app)?
+        .commissioning_progress()
+        .map(|(current, total)| OnDeviceProgress {
+            current: current as u32,
+            total: total as u32,
+        }))
+}
+
 /// Charge du module pendant une écoute ; vide hors écoute.
 #[tauri::command]
 #[specta::specta]

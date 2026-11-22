@@ -28,6 +28,10 @@ vi.mock("@syntheo/plugin-transcription", () => ({
     onDeviceInstall: mocks.install,
     onDeviceUninstall: mocks.uninstall,
     onDeviceCommission: mocks.commission,
+    onDeviceCommissionProgress: async () => ({
+      status: "ok",
+      data: { current: 2, total: 4 },
+    }),
     onDeviceCommissioning: async () => ({
       status: "ok",
       data: mocks.commissioning,
@@ -244,5 +248,25 @@ describe("mise en service", () => {
     fireEvent.click(await screen.findByText("Measure again"));
     await screen.findByText(/Measurement done: this computer is too slow/);
     expect(mocks.setSettings).toHaveBeenCalledWith({ stt_on_device: false });
+  });
+});
+
+describe("avancement", () => {
+  it("shows which profile is being measured", async () => {
+    mocks.status = { ...mocks.status, module: installed };
+    let finish: (value: unknown) => void = () => {};
+    mocks.commission.mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
+    setup();
+    fireEvent.click(await screen.findByText("Measure again"));
+    expect(await screen.findByText("Measuring profile 2 of 4…")).toBeTruthy();
+    finish({
+      status: "ok",
+      data: { profile: "two_streams", measures: [], measuredAt: 4 },
+    });
+    await screen.findByText(/Measurement done/);
   });
 });
