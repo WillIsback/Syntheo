@@ -111,6 +111,10 @@ In the `Cargo.toml` files, these crates are referenced by the workspace alias `s
 
 No Whisper model: the crate only contains the `Language` enum of the Whisper tokenizer's languages (`whisper_index`). Only `crates/language` uses it. **Affected doc pages**: none.
 
+### `crates/speech-probe`
+
+On-device transcription probe (issue 682), with nothing downloaded. `hardware::read` reads in a few milliseconds AVX2, physical and logical cores, available memory, free space on the data disk, power plan (Linux: ACPI profile; Windows: active plan and battery saver), mains or battery, and GPUs with their video memory when the system reports it. `bench::run` is a micro-benchmark of about 4 s: a q8_0 matrix product with AVX2, shaped like an encoder layer, on as many threads as physical cores; it returns a throughput in GMAC/s. `predict::predict` turns that throughput into an RTF per engine (`Engine::ParakeetOnnx` or `Engine::NemoGgml`) and per profile, interpolating between points measured by the issue 680 bench. `predict::decide` applies the thresholds: full profile offered up to an RTF of 0.5, degraded profile up to 1.0, refused beyond, or without AVX2, under 1.5 GB of free memory or under 2 GB of disk. Exposed by the `probe_local_transcription` command of `plugins/transcription`, refused during a capture and by the relay. The `probe` example prints the probe as JSON, to calibrate a reference machine. **Affected doc pages**: none yet (no interface so far).
+
 ## Meeting detection
 
 ### `crates/detect`

@@ -18,6 +18,7 @@ mod legacy_voiceprints;
 mod listener;
 mod listener2;
 mod live_journal;
+mod local_probe;
 mod session_transcript;
 mod stopped_captures;
 
@@ -199,6 +200,7 @@ fn make_specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
             audio_upload::begin_audio_upload::<tauri::Wry>,
             audio_upload::append_audio_upload::<tauri::Wry>,
             audio_upload::discard_audio_upload::<tauri::Wry>,
+            local_probe::probe_local_transcription::<tauri::Wry>,
         ])
         .events(tauri_specta::collect_events![
             CaptureLifecycleEvent,

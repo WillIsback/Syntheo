@@ -63,6 +63,7 @@ Default permissions for the plugin
 - `allow-begin-audio-upload`
 - `allow-append-audio-upload`
 - `allow-discard-audio-upload`
+- `allow-probe-local-transcription`
 
 ## Permission Table
 
@@ -1031,6 +1032,32 @@ Enables the parse_subtitle command without any pre-configured scope.
 <td>
 
 Denies the parse_subtitle command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:allow-probe-local-transcription`
+
+</td>
+<td>
+
+Enables the probe_local_transcription command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:deny-probe-local-transcription`
+
+</td>
+<td>
+
+Denies the probe_local_transcription command without any pre-configured scope.
 
 </td>
 </tr>

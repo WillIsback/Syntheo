@@ -71,6 +71,9 @@ const DENIED_COMMANDS: &[&str] = &[
     // du Calibrage ne sortent pas par le relay.
     "plugin:mesure|measure",
     "plugin:mesure|measure_differences",
+    // Sonde de la transcription sur le poste (issue 682) : le micro-banc
+    // occupe tous les cœurs ; il ne se déclenche pas à distance.
+    "plugin:transcription|probe_local_transcription",
 ];
 
 pub(crate) fn is_denied_command(cmd: &str) -> bool {

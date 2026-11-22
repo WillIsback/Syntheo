@@ -111,6 +111,10 @@ Dans les `Cargo.toml`, ces crates sont référencées par l'alias de workspace `
 
 Aucun modèle Whisper : la crate ne contient que l'énumération `Language` des langues du tokenizer Whisper (`whisper_index`). Seule `crates/language` l'utilise. **Pages de doc concernées** : aucune.
 
+### `crates/speech-probe`
+
+Sonde de la transcription sur le poste (issue 682), sans rien télécharger. `hardware::read` lit en quelques millisecondes AVX2, cœurs physiques et logiques, mémoire disponible, espace libre du disque des données, plan d'alimentation (Linux : profil ACPI ; Windows : plan actif et économiseur de batterie), secteur ou batterie, et GPU avec leur mémoire vidéo quand le système la donne. `bench::run` est un micro-banc d'environ 4 s : un produit matriciel q8_0 en AVX2, de forme proche d'une couche de l'encodeur, sur autant de fils que de cœurs physiques ; il rend un débit en GMAC/s. `predict::predict` convertit ce débit en RTF par moteur (`Engine::ParakeetOnnx` ou `Engine::NemoGgml`) et par profil, en interpolant entre des points mesurés par le banc de l'issue 680. `predict::decide` applique les seuils : profil complet proposé jusqu'à un RTF de 0,5, profil dégradé jusqu'à 1,0, refus au-delà, ou sans AVX2, sous 1,5 Go de mémoire libre ou sous 2 Go de disque. Exposée par la commande `probe_local_transcription` de `plugins/transcription`, refusée pendant une écoute et par le relay. L'exemple `probe` affiche la sonde en JSON, pour étalonner un poste de référence. **Pages de doc concernées** : aucune pour l'instant (pas encore d'interface).
+
 ## Détection de réunion
 
 ### `crates/detect`

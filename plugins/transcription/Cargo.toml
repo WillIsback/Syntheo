@@ -19,6 +19,7 @@ syntheo-db-core = { workspace = true }
 syntheo-audio = { workspace = true }
 syntheo-db-app = { workspace = true }
 syntheo-language = { workspace = true }
+syntheo-speech-probe = { workspace = true, features = ["specta"] }
 syntheo-storage = { workspace = true }
 syntheo-transcript = { workspace = true }
 syntheo-transcription-core = { workspace = true, features = ["specta", "tauri-event"] }

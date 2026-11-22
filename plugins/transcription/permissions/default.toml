@@ -60,4 +60,5 @@ permissions = [
     "allow-begin-audio-upload",
     "allow-append-audio-upload",
     "allow-discard-audio-upload",
+  "allow-probe-local-transcription",
 ]

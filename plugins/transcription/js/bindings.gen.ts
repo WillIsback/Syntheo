@@ -76,6 +76,12 @@ export const commands = {
 	beginAudioUpload: (fileName: string, sizeBytes: number) => typedError<string, string>(__TAURI_INVOKE("plugin:transcription|begin_audio_upload", { fileName, sizeBytes })),
 	appendAudioUpload: (uploadId: string, dataBase64: string) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|append_audio_upload", { uploadId, dataBase64 })),
 	discardAudioUpload: (uploadId: string) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|discard_audio_upload", { uploadId })),
+	/**
+	 *  Sonde le poste pour `engine`. Refusée pendant une écoute ou une
+	 *  finalisation : le micro-banc occupe tous les cœurs et ralentirait la
+	 *  transcription en cours.
+	 */
+	probeLocalTranscription: (engine: Engine) => typedError<Probe, string>(__TAURI_INVOKE("plugin:transcription|probe_local_transcription", { engine })),
 };
 
 /** Events */
@@ -162,6 +168,18 @@ export type BatchWord = {
 	channel?: number,
 	speaker: number | null,
 	punctuated_word: string | null,
+};
+
+export type BenchResult = {
+	/**  Débit soutenu, en GMAC/s. */
+	gmacs: number,
+	threads: number,
+	seconds: number,
+	/**
+	 *  Noyau utilisé : `avx2` ou `scalar` (sans AVX2, le poste est de toute
+	 *  façon refusé ; la valeur sert au diagnostic).
+	 */
+	kernel: string,
 };
 
 export type CaptureAudioGap = {
@@ -282,6 +300,16 @@ export type CompletedTranscription = {
 
 export type DegradedError = { type: "authentication_failed"; provider: string } | { type: "upstream_unavailable"; message: string } | { type: "connection_timeout" } | { type: "provider_configuration"; provider: string; message: string } | { type: "stream_error"; message: string };
 
+/**
+ *  Moteur de transcription sur le poste ; la décision entre les deux tombera
+ *  après le banc du ThinkPad et le WER (issue 680).
+ */
+export type Engine = 
+/**  A : parakeet-rs (ONNX Runtime), int8. */
+"parakeet_onnx" | 
+/**  B : NeMo-Speech.cpp (ggml), q8_0. */
+"nemo_ggml";
+
 export type FinalizedWord = {
 	id: string,
 	text: string,
@@ -290,6 +318,29 @@ export type FinalizedWord = {
 	channel: number,
 	state: WordState,
 	speaker_index?: number | null,
+};
+
+export type Gpu = {
+	name: string,
+	/**  Mémoire vidéo dédiée, si le système la donne. */
+	vramBytes: number | null,
+};
+
+export type Hardware = {
+	avx2: boolean,
+	physicalCores: number,
+	logicalCores: number,
+	totalMemoryBytes: number,
+	availableMemoryBytes: number,
+	/**  Espace libre du disque qui porte le dossier de données. */
+	freeDiskBytes: number | null,
+	powerPlan: PowerPlan,
+	/**
+	 *  `Some(true)` sur batterie, `Some(false)` sur secteur, `None` sans
+	 *  batterie connue (poste fixe).
+	 */
+	onBattery: boolean | null,
+	gpus: Gpu[],
 };
 
 export type IdentityAssignment = {
@@ -360,6 +411,41 @@ export type PartialWord = {
 	speaker_index?: number | null,
 };
 
+/**  Plan d'alimentation actif, ramené à trois classes. */
+export type PowerPlan = 
+/**
+ *  Économie d'énergie (Windows : « Économiseur d'énergie » ou économiseur
+ *  de batterie ; Linux : `low-power`, `power-saver`, `quiet`, `cool`).
+ */
+"power_saver" | "balanced" | "performance" | "unknown";
+
+/**  Résultat complet de la sonde. */
+export type Probe = {
+	engine: Engine,
+	hardware: Hardware,
+	/**  Absent quand les contrôles statiques refusent déjà le poste. */
+	bench: BenchResult | null,
+	predicted: ProfileRtfs | null,
+	verdict: Verdict,
+	/**
+	 *  Économie d'énergie ou batterie : conseiller le secteur ou le mode
+	 *  performance, puis refaire la sonde.
+	 */
+	powerAdvice: boolean,
+};
+
+/**
+ *  Profils, du plus complet au plus réduit : l'ordre de choix de la mise en
+ *  service (issue 686).
+ */
+export type Profile = "two_streams_diarized" | "two_streams" | "one_stream_diarized" | "one_stream";
+
+/**
+ *  RTF cumulé prédit (ou mesuré) pour chaque profil, dans l'ordre de
+ *  `Profile::ALL`.
+ */
+export type ProfileRtfs = [number, number, number, number];
+
 export type ProvisionalSpeakerLabel = {
 	name: string,
 	human_id: string | null,
@@ -374,6 +460,8 @@ export type RecoveryAudioChunk = {
 	audio_start_ms: number,
 	end_ms: number,
 };
+
+export type Refusal = "no_avx2" | "not_enough_memory" | "not_enough_disk" | "too_slow";
 
 export type RenderSessionTranscriptRequest = {
 	session_id: string,
@@ -617,6 +705,17 @@ export type TranscriptionSession = {
 };
 
 export type Value = null | boolean | number | string | Value[] | { [key in string]: Value };
+
+export type Verdict = 
+/**  Profil complet dans le budget. */
+{ kind: "propose"; profile: Profile } | 
+/**
+ *  Profil complet entre le budget et la limite : le premier profil
+ *  réduit qui tient le budget.
+ */
+{ kind: "propose_degraded"; profile: Profile } | 
+/**  Pas de proposition, ni de téléchargement. */
+{ kind: "refuse"; reasons: Refusal[] };
 
 export type VttWord = {
 	text: string,

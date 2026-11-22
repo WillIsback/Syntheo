@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-probe-local-transcription"
+description = "Enables the probe_local_transcription command without any pre-configured scope."
+commands.allow = ["probe_local_transcription"]
+
+[[permission]]
+identifier = "deny-probe-local-transcription"
+description = "Denies the probe_local_transcription command without any pre-configured scope."
+commands.deny = ["probe_local_transcription"]
