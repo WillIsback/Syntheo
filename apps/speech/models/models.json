@@ -17,7 +17,9 @@
     "weight_type": "QInt8",
     "op_types": ["MatMul", "Gemm"]
   },
-  "sources": [],
+  "sources": [
+    "https://github.com/WillIsback/Syntheo/releases/download/speech-models-1/{name}"
+  ],
   "files": [
     {
       "path": "nemotron/config.json",

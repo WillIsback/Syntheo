@@ -24,7 +24,17 @@ La quantification ne tient pas sur un runner GitHub gratuit. La publication se f
 1. **En local**, `bash apps/speech/models/publish-local.sh speech-models-N` : quantification dans un dossier neuf, contrôle bloquant contre `models.json`, puis création d'une release GitHub **en brouillon** (invisible du public, jamais « latest ») avec un fichier par asset, `SHA256SUMS`, l'accord OpenMDW-1.1 et les fiches NVIDIA d'origine ; enfin, téléchargement du brouillon et nouveau contrôle. `--dry-run` s'arrête avant tout envoi. Le script refuse une release ou un tag déjà existant.
 2. **En CI**, `publish-speech-models.yml` (depuis main, environnement `speech-models` avec validation) : brouillon unique et sans tag exigé, téléchargement de ses assets et contrôle bloquant, attestation de provenance, création du tag sur le commit vérifié avec un jeton dédié (`SPEECH_MODELS_RELEASE_TOKEN`, droits Contents et Workflows sur ce dépôt), passage en **prerelease** avec `make_latest=false` (le système de mise à jour de l'application ne doit pas la prendre pour une version), envoi vers Hugging Face (`WillisBack/syntheo-speech-models` : fichiers en arborescence, fiche `model-card.md`, accord et fiches NVIDIA ; jeton `HF_TOKEN` par variable d'environnement seulement, `hf_upload.py` à dépendances figées), second contrôle par retéléchargement depuis les deux hôtes. Le résumé du job donne la révision Hugging Face et les deux sources à épingler dans `models.json`. Après un échec entre la création du tag et la publication, une simple relance admet le tag s'il pointe sur le même commit. Après un échec côté Hugging Face (release déjà en prerelease), relancer avec `resume` : tag sur un commit de main et attestation des assets exigés, assets relus et revérifiés, puis l'envoi reprend.
 
-Tant que `sources` est vide, une construction release sans devtools qui livre le compagnon échoue (build.rs de l'application) ; les sources s'épinglent après la publication, dans un commit à part.
+Tant que `sources` est vide, une construction release sans devtools qui livre le compagnon échoue (build.rs de l'application) ; les sources s'épinglent après la publication, dans un commit à part. La release GitHub `speech-models-1` (gabarit `{name}`, assets à plat) est épinglée ; la source Hugging Face attend la révision que donnera la publication CI (voir ci-dessous).
+
+### Épingler Hugging Face après publication
+
+À faire après `publish-speech-models.yml` (passage en prerelease puis envoi vers Hugging Face), dans un commit à part : ajouter à la fin de `sources`, après la release GitHub, le gabarit
+
+```
+https://huggingface.co/WillisBack/syntheo-speech-models/resolve/<révision>/{path}
+```
+
+en remplaçant `<révision>` par la révision Hugging Face (40 caractères hexadécimaux) que donne le résumé du job, jamais par `main` : une révision épinglée garantit que la source sert toujours les fichiers vérifiés. Les fichiers y sont en arborescence (`nemotron/…`, `diar/…`), d'où `{path}`. `models.json` est compilé dans l'application et ne porte que ce qu'elle lit : aucun gabarit provisoire n'y est mis avant cette date.
 
 Fichiers : `verify.py` (contrôle), `flatten.py` (arborescence ↔ à plat), `download-draft.sh` (assets d'un brouillon), `publish-local.sh`, `release-notes.md`, `model-card.md` (fiche Hugging Face), `hf_upload.py` et `hf_upload.py.lock`.
 
