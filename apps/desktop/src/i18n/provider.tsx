@@ -2,25 +2,15 @@ import { I18nProvider } from "@lingui/react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { type ReactNode, useLayoutEffect } from "react";
 
-import { commands as detectCommands } from "@syntheo/plugin-detect";
-
 import { createI18n } from "./catalogs";
 import {
   UI_LANGUAGE_AUTO,
   resolveDisplayLocale,
   resolveUiLanguagePreference,
 } from "./locales";
+import { loadSystemLanguages } from "./system-languages";
 
 import { useStoredSettingValues } from "~/settings/queries";
-
-async function loadSystemLanguages(): Promise<string[]> {
-  try {
-    const result = await detectCommands.getPreferredLanguages();
-    return result.status === "ok" ? result.data : [];
-  } catch {
-    return [];
-  }
-}
 
 // La langue de l'interface suit le réglage `ui_language` (issue 549), et non
 // plus la langue de transcription. En automatique, la langue du système.

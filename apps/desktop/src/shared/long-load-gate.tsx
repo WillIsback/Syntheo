@@ -1,3 +1,5 @@
+import { I18nProvider } from "@lingui/react";
+import { Trans, useLingui } from "@lingui/react/macro";
 import { useQuery } from "@tanstack/react-query";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { useEffect, useState, type ReactNode } from "react";
@@ -13,6 +15,10 @@ import { useMountEffect } from "@syntheo/ui/hooks/use-mount-effect";
 import { cn } from "@syntheo/utils";
 
 import { BrandLoadingView } from "./brand-loading-view";
+
+import { createI18n } from "~/i18n/catalogs";
+import { UI_LANGUAGE_AUTO, resolveDisplayLocale } from "~/i18n/locales";
+import { loadSystemLanguages } from "~/i18n/system-languages";
 
 export const LONG_LOAD_SPLASH_DELAY_MS = 400;
 const STARTUP_STATUS_REFETCH_INTERVAL_MS = 250;
@@ -98,9 +104,38 @@ function getStartupDetail(status: StartupStatus | undefined) {
   }
 }
 
+// La base n'a pas démarré : le réglage de langue n'est pas lisible. L'écran
+// d'erreur suit la langue du système, comme le réglage « automatique ».
+async function loadStartupI18n() {
+  const languages = await loadSystemLanguages();
+  return createI18n(resolveDisplayLocale(UI_LANGUAGE_AUTO, languages));
+}
+
 function StartupErrorView({ error }: { error: Error }) {
+  const { data: i18n, isError } = useQuery({
+    queryKey: ["startup-error-i18n"],
+    queryFn: loadStartupI18n,
+    retry: false,
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+  if (!i18n && !isError) return null;
+  if (!i18n) return <StartupErrorContent error={error} />;
+  return (
+    <I18nProvider i18n={i18n}>
+      <StartupErrorContent error={error} />
+    </I18nProvider>
+  );
+}
+
+function StartupErrorContent({ error }: { error: Error }) {
+  const { t } = useLingui();
   const needsUpdate = error.message.includes(
     "created by a newer version of Syntheo",
+  );
+  // Réglages gérés invalides (crates/db-app, managed_settings.rs) : le
+  // fichier est nommé, son contenu jamais affiché.
+  const invalidManagedSettings = error.message.includes(
+    "invalid managed settings file",
   );
 
   const handleRestart = async () => {
@@ -118,17 +153,21 @@ function StartupErrorView({ error }: { error: Error }) {
     >
       <div className="flex max-w-sm flex-col items-center gap-4 text-center">
         <h1 className="text-foreground text-base font-semibold">
-          {needsUpdate ? "Syntheo needs an update" : "Syntheo could not start"}
+          {needsUpdate
+            ? t`Syntheo needs an update`
+            : t`Syntheo could not start`}
         </h1>
         <p className="text-muted-foreground text-sm leading-relaxed">
           {needsUpdate
-            ? "Your data was updated by a newer version of Syntheo, such as Syntheo Nightly, and this version cannot open it yet. Your existing data was left unchanged. Install the latest version of Syntheo, or keep using the newer app until this version catches up."
-            : "Your existing data was left unchanged. Please restart the app. If the problem continues, contact support."}
+            ? t`Your data was updated by a newer version of Syntheo, such as Syntheo Nightly, and this version cannot open it yet. Your existing data was left unchanged. Install the latest version of Syntheo, or keep using the newer app until this version catches up.`
+            : invalidManagedSettings
+              ? t`The settings file managed by your organization (managed_settings.json) is invalid, so Syntheo does not start. Your existing data was left unchanged. Contact your administrator: Syntheo will start once the file is fixed.`
+              : t`Your existing data was left unchanged. Please restart the app. If the problem continues, contact support.`}
         </p>
         {needsUpdate ? null : (
           <Button size="sm" onClick={() => void handleRestart()}>
             <ArrowClockwise className="mr-1.5 h-3.5 w-3.5" />
-            Restart App
+            <Trans>Restart App</Trans>
           </Button>
         )}
       </div>

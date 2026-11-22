@@ -10,14 +10,29 @@ vi.mock("@syntheo/plugin-db", () => ({
   waitUntilReady,
 }));
 
+// Vraie traduction (catalogues compilés) pour l'écran d'erreur.
+vi.unmock("@lingui/react");
+vi.unmock("@lingui/react/macro");
+
 vi.mock("@tauri-apps/plugin-process", () => ({
   relaunch: vi.fn(),
+}));
+
+const systemLanguages = vi.hoisted(() => ({ value: ["en-US"] }));
+vi.mock("@syntheo/plugin-detect", () => ({
+  commands: {
+    getPreferredLanguages: async () => ({
+      status: "ok",
+      data: systemLanguages.value,
+    }),
+  },
 }));
 
 import { LONG_LOAD_SPLASH_DELAY_MS, LongLoadGate } from "./long-load-gate";
 
 describe("LongLoadGate", () => {
   beforeEach(() => {
+    systemLanguages.value = ["en-US"];
     getStartupStatus.mockReset();
     getStartupStatus.mockResolvedValue({
       phase: "preparing_database",
@@ -117,6 +132,41 @@ describe("LongLoadGate", () => {
     });
     expect(screen.queryByText("app")).toBeNull();
     expect(screen.queryByRole("button", { name: "Restart App" })).toBeNull();
+  });
+
+  // QA de 0.8.0-2 : réglages gérés invalides. Message traduit dans la
+  // langue du système, qui nomme le fichier sans en montrer le contenu.
+  it("names an invalid managed settings file in the system language", async () => {
+    systemLanguages.value = ["fr-FR"];
+    waitUntilReady.mockRejectedValue(
+      new Error(
+        "encountered unexpected or invalid data: invalid managed settings file",
+      ),
+    );
+
+    renderLongLoadGate();
+
+    await waitFor(() => {
+      expect(screen.getByText("Syntheo n'a pas pu démarrer")).toBeTruthy();
+    });
+    const text = document.body.textContent ?? "";
+    expect(text).toMatch(/managed_settings\.json/);
+    expect(text).toMatch(/administrateur/);
+    expect(text).not.toMatch(/invalid data/);
+    expect(
+      screen.getByRole("button", { name: "Redémarrer l'application" }),
+    ).toBeTruthy();
+  });
+
+  it("keeps the generic message in English for other startup errors", async () => {
+    waitUntilReady.mockRejectedValue(new Error("disk I/O error"));
+
+    renderLongLoadGate();
+
+    await waitFor(() => {
+      expect(screen.getByText("Syntheo could not start")).toBeTruthy();
+    });
+    expect(document.body.textContent).not.toMatch(/managed_settings/);
   });
 });
 

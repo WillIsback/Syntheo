@@ -4514,6 +4514,7 @@ msgid "Respect Do-Not-Disturb mode"
 msgstr "Respecter le mode Ne pas déranger"
 
 #: src/shared/control.tsx
+#: src/shared/long-load-gate.tsx
 msgid "Restart App"
 msgstr "Redémarrer l'application"
 
@@ -5448,6 +5449,10 @@ msgstr "Syntheo n'a pas pu supprimer l'audio temporaire. Le nettoyage sera relan
 msgid "Syntheo could not save part of the live transcript."
 msgstr "Syntheo n'a pas pu enregistrer une partie de la transcription en direct."
 
+#: src/shared/long-load-gate.tsx
+msgid "Syntheo could not start"
+msgstr "Syntheo n'a pas pu démarrer"
+
 #: src/shared/keychain.ts
 msgid "Syntheo couldn't access the system keyring. Unlock your login keyring, or install one (GNOME Keyring, KWallet), then try again."
 msgstr "Syntheo n'a pas pu accéder au trousseau du système. Déverrouillez votre trousseau de session, ou installez un trousseau (GNOME Keyring, KWallet), puis réessayez."
@@ -5483,6 +5488,10 @@ msgstr "Syntheo continue d'écouter pendant la reconnexion de la transcription e
 #: src/onboarding/index.tsx
 msgid "Syntheo needs access to your microphone and system audio to record and transcribe your meetings"
 msgstr "Syntheo a besoin d'accéder à votre microphone et à l'audio système pour enregistrer et transcrire vos réunions"
+
+#: src/shared/long-load-gate.tsx
+msgid "Syntheo needs an update"
+msgstr "Syntheo doit être mis à jour"
 
 #: src/onboarding/index.tsx
 msgid "Syntheo needs microphone and system audio to transcribe your meetings, plus Accessibility to read meeting controls, visible chat."
@@ -6016,6 +6025,10 @@ msgstr "Le serveur qui transforme la voix en texte, pendant la réunion. L'audio
 #: src/settings/ai/stt/server-card.tsx
 msgid "The server transcribes with the model it loaded, whatever the model chosen here."
 msgstr "Le serveur transcrit avec le modèle qu'il a chargé, quel que soit le modèle choisi ici."
+
+#: src/shared/long-load-gate.tsx
+msgid "The settings file managed by your organization (managed_settings.json) is invalid, so Syntheo does not start. Your existing data was left unchanged. Contact your administrator: Syntheo will start once the file is fixed."
+msgstr "Le fichier de réglages géré par votre organisation (managed_settings.json) est invalide : Syntheo ne démarre pas. Vos données n'ont pas été modifiées. Adressez-vous à votre administrateur : Syntheo démarrera une fois le fichier corrigé."
 
 #: src/chat/components/message/tool/edit-summary.tsx
 msgid "The summary edit could not be applied."
@@ -7054,9 +7067,17 @@ msgstr "Votre administrateur a désactivé la transcription sur ce poste."
 msgid "Your choice"
 msgstr "Votre choix"
 
+#: src/shared/long-load-gate.tsx
+msgid "Your data was updated by a newer version of Syntheo, such as Syntheo Nightly, and this version cannot open it yet. Your existing data was left unchanged. Install the latest version of Syntheo, or keep using the newer app until this version catches up."
+msgstr "Vos données ont été mises à jour par une version plus récente de Syntheo, par exemple Syntheo Nightly, et cette version ne peut pas encore les ouvrir. Vos données n'ont pas été modifiées. Installez la dernière version de Syntheo, ou continuez avec la version plus récente en attendant."
+
 #: src/settings/dictionary/index.tsx
 msgid "Your dictionary is empty"
 msgstr "Votre dictionnaire est vide"
+
+#: src/shared/long-load-gate.tsx
+msgid "Your existing data was left unchanged. Please restart the app. If the problem continues, contact support."
+msgstr "Vos données n'ont pas été modifiées. Redémarrez l'application. Si le problème persiste, contactez le support."
 
 #: src/home/folder-cards.tsx
 msgid "Your folders"
