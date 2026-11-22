@@ -81,6 +81,11 @@ fn pe_layout(bytes: &[u8]) -> Option<PeLayout> {
     } else {
         return None;
     };
+    // Le contenu haché doit couvrir les champs ignorés (image forgée dont le
+    // bloc de certificats commencerait dans l'en-tête).
+    if end < (certificates + 8) as u64 {
+        return None;
+    }
     Some(PeLayout {
         checksum: checksum..checksum + 4,
         certificates: certificates..certificates + 8,
@@ -210,6 +215,27 @@ mod tests {
         forged[CERTS..CERTS + 4].copy_from_slice(&offset.to_le_bytes());
         forged[CERTS + 4..CERTS + 8].copy_from_slice(&1u32.to_le_bytes());
         assert_ne!(image_hash(&unsigned), image_hash(&forged));
+    }
+
+    // Revue, R1 : bloc de certificats déclaré dans l'en-tête d'une image
+    // courte (fin des en-têtes et des sections avant l'entrée de la table) :
+    // pas de panic, fichier haché en entier.
+    #[test]
+    fn a_certificate_block_inside_the_headers_does_not_panic() {
+        let mut forged = pe();
+        // En-têtes et section déclarés minuscules : fin réelle à 8.
+        forged[OPTIONAL + 60..OPTIONAL + 64].copy_from_slice(&8u32.to_le_bytes());
+        forged[SECTIONS + 16..SECTIONS + 20].copy_from_slice(&0u32.to_le_bytes());
+        let size = forged.len() as u32 - 8;
+        forged[CERTS..CERTS + 4].copy_from_slice(&8u32.to_le_bytes());
+        forged[CERTS + 4..CERTS + 8].copy_from_slice(&size.to_le_bytes());
+        assert_eq!(
+            image_hash(&forged),
+            Sha256::digest(&forged)
+                .iter()
+                .map(|b| format!("{b:02x}"))
+                .collect::<String>()
+        );
     }
 
     // Octets ajoutés après l'image, sans table de certificats : hachés.

@@ -158,6 +158,9 @@ fn secure(url: &reqwest::Url) -> bool {
     }
 }
 
+/// Redirections HTTPS suivies au plus, vers n'importe quel hôte.
+pub const MAX_REDIRECTS: usize = 5;
+
 /// Client de téléchargement : HTTPS seulement, redirections comprises.
 pub struct Fetcher {
     client: reqwest::Client,
@@ -169,7 +172,9 @@ impl Fetcher {
     /// faut tant qu'il avance).
     pub fn new(connect: Duration, read: Duration) -> Result<Self, FetchError> {
         let policy = reqwest::redirect::Policy::custom(|attempt| {
-            if attempt.previous().len() >= 5 || !secure(attempt.url()) {
+            // `previous()` compte l'adresse de départ : au plus
+            // MAX_REDIRECTS redirections suivies.
+            if attempt.previous().len() > MAX_REDIRECTS || !secure(attempt.url()) {
                 attempt.stop()
             } else {
                 attempt.follow()
@@ -239,38 +244,48 @@ impl Fetcher {
         if cancel.load(Ordering::Relaxed) {
             return Err(FetchError::Cancelled);
         }
-        let mut request = self.client.get(url);
-        if size > 0 {
-            request = request.header(reqwest::header::RANGE, format!("bytes={size}-"));
-        }
-        let response = tokio::select! {
-            response = request.send() => response?,
-            () = cancelled(cancel) => return Err(FetchError::Cancelled),
-        };
-        // Avant de toucher au `.part` : une redirection refusée (non HTTPS,
-        // trop de sauts) arrive ici en 3xx, un serveur quelconque peut rendre
-        // un autre 2xx. Seuls 200, ou 206 en reprise, sont acceptés.
-        let status = response.status();
-        if status.is_redirection() {
-            return Err(FetchError::Insecure);
-        }
-        let mut response = response.error_for_status()?;
-        let resumed = match status {
-            reqwest::StatusCode::OK => false,
-            reqwest::StatusCode::PARTIAL_CONTENT if size > 0 => {
-                // La plage doit reprendre exactement où on s'était arrêté, et
-                // porter sur le fichier épinglé tout entier.
-                let range = response
-                    .headers()
-                    .get(reqwest::header::CONTENT_RANGE)
-                    .and_then(|v| v.to_str().ok())
-                    .and_then(parse_content_range);
-                if range != Some((size, pinned.size)) {
-                    return Err(FetchError::Unexpected);
-                }
-                true
+        let (mut response, resumed) = loop {
+            let mut request = self.client.get(url.clone());
+            if size > 0 {
+                request = request.header(reqwest::header::RANGE, format!("bytes={size}-"));
             }
-            _ => return Err(FetchError::Unexpected),
+            let response = tokio::select! {
+                response = request.send() => response?,
+                () = cancelled(cancel) => return Err(FetchError::Cancelled),
+            };
+            // Avant de toucher au `.part` : une redirection refusée (non
+            // HTTPS, trop de sauts) arrive ici en 3xx, un serveur quelconque
+            // peut rendre un autre 2xx. Seuls 200, ou 206 en reprise, sont
+            // acceptés.
+            let status = response.status();
+            if status.is_redirection() {
+                return Err(FetchError::Insecure);
+            }
+            let response = response.error_for_status()?;
+            match status {
+                reqwest::StatusCode::OK => break (response, false),
+                reqwest::StatusCode::PARTIAL_CONTENT if size > 0 => {
+                    // La plage doit reprendre exactement où on s'était arrêté,
+                    // sur le fichier épinglé (total inconnu « * » admis).
+                    let range = response
+                        .headers()
+                        .get(reqwest::header::CONTENT_RANGE)
+                        .and_then(|v| v.to_str().ok())
+                        .and_then(parse_content_range);
+                    if matches!(range, Some((start, total)) if start == size
+                        && total.is_none_or(|t| t == pinned.size))
+                    {
+                        break (response, true);
+                    }
+                    // Plage fausse (intermédiaire non conforme) : la reprise
+                    // est abandonnée, le fichier repart de zéro, sans Range.
+                    drop(response);
+                    let _ = tokio::fs::remove_file(&part).await;
+                    hasher = Sha256::new();
+                    size = 0;
+                }
+                _ => return Err(FetchError::Unexpected),
+            }
         };
         let mut output = if resumed {
             progress(size);
@@ -320,14 +335,18 @@ async fn cancelled(cancel: &AtomicBool) {
     }
 }
 
-/// `bytes <début>-<fin>/<total>` → `(début, total)`, si cohérent.
-fn parse_content_range(value: &str) -> Option<(u64, u64)> {
+/// `bytes <début>-<fin>/<total>` → `(début, total)`, si cohérent ; total
+/// `None` s'il est inconnu (`*`).
+fn parse_content_range(value: &str) -> Option<(u64, Option<u64>)> {
     let range = value.trim().strip_prefix("bytes ")?;
     let (span, total) = range.split_once('/')?;
     let (start, end) = span.split_once('-')?;
-    let (start, end, total): (u64, u64, u64) =
-        (start.parse().ok()?, end.parse().ok()?, total.parse().ok()?);
-    (start <= end && end < total).then_some((start, total))
+    let (start, end): (u64, u64) = (start.parse().ok()?, end.parse().ok()?);
+    let total = match total {
+        "*" => None,
+        total => Some(total.parse::<u64>().ok()?),
+    };
+    (start <= end && total.is_none_or(|t| end < t)).then_some((start, total))
 }
 
 #[cfg(test)]

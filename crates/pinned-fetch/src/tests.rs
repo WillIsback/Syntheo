@@ -9,8 +9,11 @@ enum Mode {
     /// Sert le corps ; honore `Range: bytes=N-` (206 avec Content-Range) si
     /// `ranges`.
     Normal { ranges: bool },
-    /// 206 avec une plage qui repart de zéro, quelle que soit la demande.
+    /// 206 avec une plage qui repart de zéro si une plage est demandée,
+    /// 200 sinon.
     WrongRange,
+    /// 206 au bon octet, total inconnu (`*`).
+    UnknownTotal,
     /// 200 sans Content-Length, corps coupé après `n` octets puis fermeture.
     ShortCloseDelimited(usize),
     /// Statut imposé, corps vide.
@@ -68,6 +71,23 @@ async fn serve_with(body: Vec<u8>, mode: Mode) -> Server {
                         ),
                         &[],
                     ),
+                    Mode::WrongRange | Mode::UnknownTotal if start.is_none() => (
+                        format!(
+                            "HTTP/1.1 200 OK\r\ncontent-length: {len}\r\nconnection: close\r\n\r\n"
+                        ),
+                        &body[..],
+                    ),
+                    Mode::UnknownTotal => {
+                        let start = start.unwrap_or(0);
+                        (
+                            format!(
+                                "HTTP/1.1 206 Partial Content\r\ncontent-range: bytes {start}-{}/*\r\ncontent-length: {}\r\nconnection: close\r\n\r\n",
+                                len - 1,
+                                len - start
+                            ),
+                            &body[start.min(len)..],
+                        )
+                    }
                     Mode::WrongRange => (
                         format!(
                             "HTTP/1.1 206 Partial Content\r\ncontent-range: bytes 0-{}/{len}\r\ncontent-length: {len}\r\nconnection: close\r\n\r\n",
@@ -348,22 +368,35 @@ async fn fetch_once(
         .await
 }
 
+// Revue, R3 : une plage fausse fait repartir de zéro, sans Range, au lieu
+// de bloquer la reprise pour de bon.
 #[tokio::test]
-async fn a_resume_with_the_wrong_range_keeps_the_partial_file() {
+async fn a_resume_with_the_wrong_range_starts_over() {
     let bytes = body();
     let server = serve_with(bytes.clone(), Mode::WrongRange).await;
     let dir = tempfile::tempdir().unwrap();
     let dest = dir.path().join("model.onnx");
     std::fs::write(part_path(&dest), &bytes[..BLOCK]).unwrap();
-    let result = fetch_once(&server.url, &dest, &bytes, &AtomicBool::new(false)).await;
-    assert!(matches!(result, Err(FetchError::Unexpected)), "{result:?}");
-    assert_eq!(std::fs::read(part_path(&dest)).unwrap(), &bytes[..BLOCK]);
-    // La reprise auprès d'une source correcte termine le fichier.
-    let good = serve(bytes.clone(), true, None).await;
-    fetch_once(&good.url, &dest, &bytes, &AtomicBool::new(false))
+    fetch_once(&server.url, &dest, &bytes, &AtomicBool::new(false))
         .await
         .unwrap();
     assert_eq!(std::fs::read(&dest).unwrap(), bytes);
+    assert_eq!(server.requests.load(Ordering::SeqCst), 2);
+}
+
+// Total inconnu (« * ») admis quand la plage reprend au bon octet.
+#[tokio::test]
+async fn a_resume_with_an_unknown_total_is_accepted() {
+    let bytes = body();
+    let server = serve_with(bytes.clone(), Mode::UnknownTotal).await;
+    let dir = tempfile::tempdir().unwrap();
+    let dest = dir.path().join("model.onnx");
+    std::fs::write(part_path(&dest), &bytes[..BLOCK]).unwrap();
+    fetch_once(&server.url, &dest, &bytes, &AtomicBool::new(false))
+        .await
+        .unwrap();
+    assert_eq!(std::fs::read(&dest).unwrap(), bytes);
+    assert_eq!(server.requests.load(Ordering::SeqCst), 1);
 }
 
 #[tokio::test]
@@ -415,9 +448,12 @@ async fn a_cancelled_download_sends_nothing() {
 
 #[test]
 fn content_range_is_parsed_strictly() {
-    assert_eq!(parse_content_range("bytes 10-99/100"), Some((10, 100)));
+    assert_eq!(
+        parse_content_range("bytes 10-99/100"),
+        Some((10, Some(100)))
+    );
+    assert_eq!(parse_content_range("bytes 10-99/*"), Some((10, None)));
     for bad in [
-        "bytes 10-99/*",
         "bytes */100",
         "bytes 50-10/100",
         "bytes 10-100/100",
@@ -477,5 +513,30 @@ fn copies_only_a_matching_regular_file() {
             )
             .is_err()
         );
+    }
+}
+
+// Revue, R9 : exactement MAX_REDIRECTS redirections suivies, pas une de plus.
+#[tokio::test]
+async fn follows_at_most_five_redirects() {
+    let bytes = body();
+    let (size, sha) = pin(&bytes);
+    for (hops, ok) in [(MAX_REDIRECTS, true), (MAX_REDIRECTS + 1, false)] {
+        let mut url = serve(bytes.clone(), false, None).await.url;
+        for _ in 0..hops {
+            url = serve(bytes.clone(), false, Some(url)).await.url;
+        }
+        let dir = tempfile::tempdir().unwrap();
+        let dest = dir.path().join("model.onnx");
+        let result = fetcher()
+            .fetch(
+                &url,
+                &dest,
+                Pinned { size, sha256: &sha },
+                &AtomicBool::new(false),
+                &mut |_| {},
+            )
+            .await;
+        assert_eq!(result.is_ok(), ok, "{hops} redirections : {result:?}");
     }
 }

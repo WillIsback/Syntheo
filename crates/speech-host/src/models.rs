@@ -67,9 +67,19 @@ const MODELS_JSON: &str = include_str!("../../../apps/speech/models/models.json"
 
 /// Empreinte de la liste des modèles compilée (60 bits) : une autre liste,
 /// donc d'autres modèles, demande une nouvelle mise en service.
+/// Seuls les fichiers (chemin, taille, empreinte) comptent : épingler ou
+/// changer les sources ne demande pas de nouvelle mesure.
 pub fn fingerprint() -> u64 {
+    fingerprint_of(files())
+}
+
+fn fingerprint_of(files: &[ModelFile]) -> u64 {
     use sha2::{Digest, Sha256};
-    let digest = Sha256::digest(MODELS_JSON.as_bytes());
+    let mut hasher = Sha256::new();
+    for file in files {
+        hasher.update(format!("{}\0{}\0{}\n", file.path, file.size, file.sha256).as_bytes());
+    }
+    let digest = hasher.finalize();
     u64::from_be_bytes(digest[..8].try_into().unwrap_or_default()) >> 4
 }
 
@@ -574,5 +584,19 @@ mod tests {
         .unwrap_err();
         assert_eq!(error, InstallError::Mismatch);
         assert!(!other.path().join("diar/two.onnx").exists());
+    }
+
+    // Revue, R5 : l'empreinte de mise en service ne dépend que des fichiers.
+    #[test]
+    fn the_fingerprint_ignores_the_sources() {
+        let sha = "0".repeat(64);
+        let bare = format!(r#"{{"files":[{{"path":"a/x.onnx","size":2,"sha256":"{sha}"}}]}}"#);
+        let pinned = format!(
+            r#"{{"files":[{{"path":"a/x.onnx","size":2,"sha256":"{sha}"}}],"sources":["https://a.example/{{path}}"]}}"#
+        );
+        let other = format!(r#"{{"files":[{{"path":"a/x.onnx","size":3,"sha256":"{sha}"}}]}}"#);
+        let of = |json: &str| fingerprint_of(&parse(json).unwrap());
+        assert_eq!(of(&bare), of(&pinned));
+        assert_ne!(of(&bare), of(&other));
     }
 }
