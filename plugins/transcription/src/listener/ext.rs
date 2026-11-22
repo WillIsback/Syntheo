@@ -144,27 +144,9 @@ impl<'a, R: tauri::Runtime, M: tauri::Manager<R>> Listener<'a, R, M> {
     }
 
     #[tracing::instrument(skip_all)]
-    pub async fn get_mic_muted(&self) -> bool {
-        if let Some(actor) = active_source().await {
-            call_t!(actor, SourceMsg::GetMicMute, 100).unwrap_or_default()
-        } else {
-            false
-        }
-    }
-
-    #[tracing::instrument(skip_all)]
     pub async fn set_mic_muted(&self, muted: bool) {
         if let Some(actor) = active_source().await {
             let _ = actor.cast(SourceMsg::SetMicMute(muted));
-        }
-    }
-
-    #[tracing::instrument(skip_all)]
-    pub async fn get_speaker_muted(&self) -> bool {
-        if let Some(actor) = active_source().await {
-            call_t!(actor, SourceMsg::GetSpeakerMute, 100).unwrap_or_default()
-        } else {
-            false
         }
     }
 

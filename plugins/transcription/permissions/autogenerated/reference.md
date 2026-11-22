@@ -22,16 +22,12 @@ Default permissions for the plugin
 - `allow-save-capture-lifecycle-marker`
 - `allow-clear-capture-lifecycle-marker`
 - `allow-get-capture-lifecycle-marker`
-- `allow-list-capture-lifecycle-markers`
 - `allow-list-capture-recoveries`
 - `allow-get-capture-audio-gaps`
-- `allow-mark-capture-audio-saved`
 - `allow-clear-capture-audio-saved`
 - `allow-stop-capture`
 - `allow-stop-capture-for-session`
-- `allow-get-mic-muted`
 - `allow-set-mic-muted`
-- `allow-get-speaker-muted`
 - `allow-set-speaker-muted`
 - `allow-get-capture-state`
 - `allow-get-capture-snapshot`
@@ -42,8 +38,6 @@ Default permissions for the plugin
 - `allow-acknowledge-capture-audio-chunk`
 - `allow-delete-transcribed-capture-audio`
 - `allow-is-supported-languages-live`
-- `allow-suggest-providers-for-languages-live`
-- `allow-list-documented-language-codes-live`
 - `allow-render-transcript-segments`
 - `allow-render-session-transcript`
 - `allow-start-transcription`
@@ -53,11 +47,7 @@ Default permissions for the plugin
 - `allow-acknowledge-completed-transcription`
 - `allow-delete-processed-session-audio`
 - `allow-parse-subtitle`
-- `allow-export-to-vtt`
 - `allow-is-supported-languages-batch`
-- `allow-suggest-providers-for-languages-batch`
-- `allow-list-documented-language-codes-batch`
-- `allow-refine-batch-transcript`
 - `allow-save-batch-transcript`
 - `allow-reconcile-refined-speaker-clusters`
 - `allow-begin-audio-upload`
@@ -370,32 +360,6 @@ Denies the discard_audio_upload command without any pre-configured scope.
 <tr>
 <td>
 
-`transcription:allow-export-to-vtt`
-
-</td>
-<td>
-
-Enables the export_to_vtt command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`transcription:deny-export-to-vtt`
-
-</td>
-<td>
-
-Denies the export_to_vtt command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
 `transcription:allow-flush-live-transcript`
 
 </td>
@@ -630,58 +594,6 @@ Denies the get_current_microphone_device command without any pre-configured scop
 <tr>
 <td>
 
-`transcription:allow-get-mic-muted`
-
-</td>
-<td>
-
-Enables the get_mic_muted command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`transcription:deny-get-mic-muted`
-
-</td>
-<td>
-
-Denies the get_mic_muted command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`transcription:allow-get-speaker-muted`
-
-</td>
-<td>
-
-Enables the get_speaker_muted command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`transcription:deny-get-speaker-muted`
-
-</td>
-<td>
-
-Denies the get_speaker_muted command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
 `transcription:allow-get-stopped-capture`
 
 </td>
@@ -786,32 +698,6 @@ Denies the list_capture_audio_chunks command without any pre-configured scope.
 <tr>
 <td>
 
-`transcription:allow-list-capture-lifecycle-markers`
-
-</td>
-<td>
-
-Enables the list_capture_lifecycle_markers command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`transcription:deny-list-capture-lifecycle-markers`
-
-</td>
-<td>
-
-Denies the list_capture_lifecycle_markers command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
 `transcription:allow-list-capture-recoveries`
 
 </td>
@@ -831,58 +717,6 @@ Enables the list_capture_recoveries command without any pre-configured scope.
 <td>
 
 Denies the list_capture_recoveries command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`transcription:allow-list-documented-language-codes-batch`
-
-</td>
-<td>
-
-Enables the list_documented_language_codes_batch command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`transcription:deny-list-documented-language-codes-batch`
-
-</td>
-<td>
-
-Denies the list_documented_language_codes_batch command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`transcription:allow-list-documented-language-codes-live`
-
-</td>
-<td>
-
-Enables the list_documented_language_codes_live command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`transcription:deny-list-documented-language-codes-live`
-
-</td>
-<td>
-
-Denies the list_documented_language_codes_live command without any pre-configured scope.
 
 </td>
 </tr>
@@ -987,32 +821,6 @@ Enables the list_transcription_sessions command without any pre-configured scope
 <td>
 
 Denies the list_transcription_sessions command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`transcription:allow-mark-capture-audio-saved`
-
-</td>
-<td>
-
-Enables the mark_capture_audio_saved command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`transcription:deny-mark-capture-audio-saved`
-
-</td>
-<td>
-
-Denies the mark_capture_audio_saved command without any pre-configured scope.
 
 </td>
 </tr>
@@ -1273,32 +1081,6 @@ Enables the reconcile_refined_speaker_clusters command without any pre-configure
 <td>
 
 Denies the reconcile_refined_speaker_clusters command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`transcription:allow-refine-batch-transcript`
-
-</td>
-<td>
-
-Enables the refine_batch_transcript command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`transcription:deny-refine-batch-transcript`
-
-</td>
-<td>
-
-Denies the refine_batch_transcript command without any pre-configured scope.
 
 </td>
 </tr>
@@ -1741,58 +1523,6 @@ Enables the stop_transcription command without any pre-configured scope.
 <td>
 
 Denies the stop_transcription command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`transcription:allow-suggest-providers-for-languages-batch`
-
-</td>
-<td>
-
-Enables the suggest_providers_for_languages_batch command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`transcription:deny-suggest-providers-for-languages-batch`
-
-</td>
-<td>
-
-Denies the suggest_providers_for_languages_batch command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`transcription:allow-suggest-providers-for-languages-live`
-
-</td>
-<td>
-
-Enables the suggest_providers_for_languages_live command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`transcription:deny-suggest-providers-for-languages-live`
-
-</td>
-<td>
-
-Denies the suggest_providers_for_languages_live command without any pre-configured scope.
 
 </td>
 </tr>

@@ -225,26 +225,12 @@ pub async fn get_current_microphone_device<R: tauri::Runtime>(
 
 #[tauri::command]
 #[specta::specta]
-pub async fn get_mic_muted<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Result<bool, String> {
-    Ok(app.listener().get_mic_muted().await)
-}
-
-#[tauri::command]
-#[specta::specta]
 pub async fn set_mic_muted<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
     muted: bool,
 ) -> Result<(), String> {
     app.listener().set_mic_muted(muted).await;
     Ok(())
-}
-
-#[tauri::command]
-#[specta::specta]
-pub async fn get_speaker_muted<R: tauri::Runtime>(
-    app: tauri::AppHandle<R>,
-) -> Result<bool, String> {
-    Ok(app.listener().get_speaker_muted().await)
 }
 
 /// Coupe ou rétablit le son système de l'écoute en cours (issue 447), sans la relancer.
@@ -423,14 +409,6 @@ pub async fn get_capture_lifecycle_marker<R: tauri::Runtime>(
 
 #[tauri::command]
 #[specta::specta]
-pub async fn list_capture_lifecycle_markers<R: tauri::Runtime>(
-    app: tauri::AppHandle<R>,
-) -> Result<Vec<crate::CaptureLifecycleMarker>, String> {
-    crate::capture_markers::list_markers(&app).await
-}
-
-#[tauri::command]
-#[specta::specta]
 pub async fn list_capture_recoveries<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
 ) -> Result<Vec<crate::CaptureRecovery>, String> {
@@ -485,15 +463,6 @@ pub async fn get_capture_audio_gaps<R: tauri::Runtime>(
     app.try_state::<crate::CaptureGapRegistry>()
         .map(|registry| registry.get(&session_id))
         .ok_or_else(|| "capture gap registry is not available".to_string())
-}
-
-#[tauri::command]
-#[specta::specta]
-pub async fn mark_capture_audio_saved<R: tauri::Runtime>(
-    app: tauri::AppHandle<R>,
-    session_id: String,
-) -> Result<(), String> {
-    crate::capture_markers::mark_audio_saved(&app, &session_id).await
 }
 
 #[tauri::command]
@@ -577,31 +546,6 @@ pub async fn is_supported_languages_live<R: tauri::Runtime>(
         .map_err(|e| format!("unknown_language: {}", e))?;
 
     listener2_core::is_supported_languages_live(&provider, model.as_deref(), &languages_parsed)
-}
-
-#[tauri::command]
-#[specta::specta]
-pub async fn suggest_providers_for_languages_live<R: tauri::Runtime>(
-    _app: tauri::AppHandle<R>,
-    languages: Vec<String>,
-) -> Result<Vec<String>, String> {
-    let languages_parsed = languages
-        .iter()
-        .map(|s| syntheo_language::Language::from_str(s))
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|e| format!("unknown_language: {}", e))?;
-
-    Ok(listener2_core::suggest_providers_for_languages_live(
-        &languages_parsed,
-    ))
-}
-
-#[tauri::command]
-#[specta::specta]
-pub async fn list_documented_language_codes_live<R: tauri::Runtime>(
-    _app: tauri::AppHandle<R>,
-) -> Result<Vec<String>, String> {
-    Ok(owhisper_client::documented_language_codes_live())
 }
 
 #[tauri::command]

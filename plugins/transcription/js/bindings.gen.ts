@@ -22,9 +22,7 @@ export const commands = {
 	getCapturedSpeakerDevice: (preferred: string | null) => typedError<CapturedSpeakerDevice | null, string>(__TAURI_INVOKE("plugin:transcription|get_captured_speaker_device", { preferred })),
 	startSpeakerLevelMonitor: (owner: string, device: string | null, levels: Channel<number | null>) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|start_speaker_level_monitor", { owner, device, levels })),
 	stopSpeakerLevelMonitor: (owner: string) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|stop_speaker_level_monitor", { owner })),
-	getMicMuted: () => typedError<boolean, string>(__TAURI_INVOKE("plugin:transcription|get_mic_muted")),
 	setMicMuted: (muted: boolean) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|set_mic_muted", { muted })),
-	getSpeakerMuted: () => typedError<boolean, string>(__TAURI_INVOKE("plugin:transcription|get_speaker_muted")),
 	/**  Coupe ou rétablit le son système de l'écoute en cours (issue 447), sans la relancer. */
 	setSpeakerMuted: (muted: boolean) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|set_speaker_muted", { muted })),
 	startCapture: (params: CaptureParams) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|start_capture", { params })),
@@ -37,10 +35,8 @@ export const commands = {
 	saveCaptureLifecycleMarker: (marker: CaptureLifecycleMarker, replaceTranscriptId: string | null) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|save_capture_lifecycle_marker", { marker, replaceTranscriptId })),
 	clearCaptureLifecycleMarker: (sessionId: string, transcriptId: string) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|clear_capture_lifecycle_marker", { sessionId, transcriptId })),
 	getCaptureLifecycleMarker: (sessionId: string) => typedError<CaptureLifecycleMarker | null, string>(__TAURI_INVOKE("plugin:transcription|get_capture_lifecycle_marker", { sessionId })),
-	listCaptureLifecycleMarkers: () => typedError<CaptureLifecycleMarker[], string>(__TAURI_INVOKE("plugin:transcription|list_capture_lifecycle_markers")),
 	listCaptureRecoveries: () => typedError<CaptureRecovery[], string>(__TAURI_INVOKE("plugin:transcription|list_capture_recoveries")),
 	getCaptureAudioGaps: (sessionId: string) => typedError<CaptureAudioGaps | null, string>(__TAURI_INVOKE("plugin:transcription|get_capture_audio_gaps", { sessionId })),
-	markCaptureAudioSaved: (sessionId: string) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|mark_capture_audio_saved", { sessionId })),
 	clearCaptureAudioSaved: (sessionId: string) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|clear_capture_audio_saved", { sessionId })),
 	stopCapture: () => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|stop_capture")),
 	stopCaptureForSession: (sessionId: string) => typedError<boolean, string>(__TAURI_INVOKE("plugin:transcription|stop_capture_for_session", { sessionId })),
@@ -54,11 +50,8 @@ export const commands = {
 	acknowledgeCaptureAudioChunk: (sessionId: string, chunkId: string) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|acknowledge_capture_audio_chunk", { sessionId, chunkId })),
 	deleteTranscribedCaptureAudio: (sessionId: string) => typedError<boolean, string>(__TAURI_INVOKE("plugin:transcription|delete_transcribed_capture_audio", { sessionId })),
 	isSupportedLanguagesLive: (provider: string, model: string | null, languages: string[]) => typedError<boolean, string>(__TAURI_INVOKE("plugin:transcription|is_supported_languages_live", { provider, model, languages })),
-	suggestProvidersForLanguagesLive: (languages: string[]) => typedError<string[], string>(__TAURI_INVOKE("plugin:transcription|suggest_providers_for_languages_live", { languages })),
-	listDocumentedLanguageCodesLive: () => typedError<string[], string>(__TAURI_INVOKE("plugin:transcription|list_documented_language_codes_live")),
 	renderTranscriptSegments: (params: RenderTranscriptRequest) => typedError<RenderedTranscriptSegment[], string>(__TAURI_INVOKE("plugin:transcription|render_transcript_segments", { params })),
 	renderSessionTranscript: (request: RenderSessionTranscriptRequest) => typedError<RenderedSessionTranscript | null, string>(__TAURI_INVOKE("plugin:transcription|render_session_transcript", { request })),
-	refineBatchTranscript: (request: BatchRefinementRequest) => typedError<BatchRefinementOutcome, string>(__TAURI_INVOKE("plugin:transcription|refine_batch_transcript", { request })),
 	saveBatchTranscript: (request: SaveBatchTranscriptRequest) => typedError<SaveBatchTranscriptOutcome, string>(__TAURI_INVOKE("plugin:transcription|save_batch_transcript", { request })),
 	reconcileRefinedSpeakerClusters: (request: SpeakerClusterReconciliationRequest) => typedError<StoredSpeakerHint[], string>(__TAURI_INVOKE("plugin:transcription|reconcile_refined_speaker_clusters", { request })),
 	startTranscription: (params: TranscriptionParams) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|start_transcription", { params })),
@@ -67,10 +60,7 @@ export const commands = {
 	getCompletedTranscription: (sessionId: string) => typedError<CompletedTranscription | null, string>(__TAURI_INVOKE("plugin:transcription|get_completed_transcription", { sessionId })),
 	acknowledgeCompletedTranscription: (sessionId: string) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|acknowledge_completed_transcription", { sessionId })),
 	parseSubtitle: (path: string) => typedError<Subtitle, string>(__TAURI_INVOKE("plugin:transcription|parse_subtitle", { path })),
-	exportToVtt: (sessionId: string, words: VttWord[]) => typedError<string, string>(__TAURI_INVOKE("plugin:transcription|export_to_vtt", { sessionId, words })),
 	isSupportedLanguagesBatch: (provider: string, model: string | null, languages: string[]) => typedError<boolean, string>(__TAURI_INVOKE("plugin:transcription|is_supported_languages_batch", { provider, model, languages })),
-	suggestProvidersForLanguagesBatch: (languages: string[]) => typedError<string[], string>(__TAURI_INVOKE("plugin:transcription|suggest_providers_for_languages_batch", { languages })),
-	listDocumentedLanguageCodesBatch: () => typedError<string[], string>(__TAURI_INVOKE("plugin:transcription|list_documented_language_codes_batch")),
 	/**  Deletes local audio right after processing when the retention policy is `none`. */
 	deleteProcessedSessionAudio: (sessionId: string) => typedError<boolean, string>(__TAURI_INVOKE("plugin:transcription|delete_processed_session_audio", { sessionId })),
 	beginAudioUpload: (fileName: string, sizeBytes: number) => typedError<string, string>(__TAURI_INVOKE("plugin:transcription|begin_audio_upload", { fileName, sizeBytes })),
@@ -142,15 +132,6 @@ export type BatchProvider = "openai" |
  *  fournisseur (issue 463), hors de `run_batch`.
  */
 "realtime";
-
-export type BatchRefinementOutcome = { status: "ready"; words: StoredTranscriptWord[]; speaker_hints: StoredSpeakerHint[]; replace_session: boolean; replace_transcript_id: string | null; started_at: number | null } | { status: "empty_current_capture" } | { status: "truncated" };
-
-export type BatchRefinementRequest = {
-	words: StoredTranscriptWord[],
-	hints: StoredSpeakerHint[],
-	promotion: BatchTranscriptPromotion,
-	previous_transcripts: BatchRefinementSource[],
-};
 
 export type BatchRefinementSource = {
 	id: string,
@@ -819,13 +800,6 @@ export type Verdict =
 { kind: "refuse"; reasons: Refusal[] } | 
 /**  Micro-banc interrompu par le démarrage d'une écoute : à refaire. */
 { kind: "interrupted" };
-
-export type VttWord = {
-	text: string,
-	start_ms: number,
-	end_ms: number,
-	speaker: string | null,
-};
 
 /**
  *  Whether a finalized word is stable or awaiting correction.
