@@ -74,9 +74,12 @@ une suppression, l'effacement est retenté au lancement suivant.
 - **Téléchargement des modèles de la transcription sur le poste**, seulement
   quand l'utilisateur choisit **Télécharger les modèles** : requêtes HTTPS
   pour les fichiers des modèles vers la release GitHub de Syntheo
-  (`github.com`, `objects.githubusercontent.com`), puis vers Hugging Face
-  (`huggingface.co` et ses serveurs de contenu) en secours, ou vers le seul
-  miroir défini par l'administrateur (`speech_models_urls`). Aucune donnée de
+  (`github.com`, redirigé vers `release-assets.githubusercontent.com`), puis
+  vers Hugging Face (`huggingface.co`, redirigé vers ses serveurs de contenu
+  sous `hf.co`, par exemple `cas-bridge.xethub.hf.co`) en secours, ou vers le
+  miroir défini par l'administrateur (`speech_models_urls`) à la place ; les
+  redirections HTTPS sont suivies (5 au plus), y compris celles du miroir
+  vers un autre hôte. Aucune donnée de
   réunion n'est envoyée ; ces hôtes voient l'adresse IP du poste. Aucun flux
   si les modèles sont installés depuis un dossier.
 - **Endpoints d'inférence configurés par l'utilisateur**, et eux seuls : ASR

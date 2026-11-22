@@ -71,10 +71,12 @@ a deletion, erasure is retried at the next launch.
   dropped passage.
 - **Download of the on-device transcription models**, only when the user
   chooses **Download the models**: HTTPS requests for the model files to
-  Syntheo's GitHub release (`github.com`, `objects.githubusercontent.com`),
-  then to Hugging Face (`huggingface.co` and its content servers) as a
-  fallback, or only to the mirror set by the administrator
-  (`speech_models_urls`). No meeting data is sent; these hosts see the
+  Syntheo's GitHub release (`github.com`, redirected to
+  `release-assets.githubusercontent.com`), then to Hugging Face
+  (`huggingface.co`, redirected to its content servers under `hf.co`, for
+  example `cas-bridge.xethub.hf.co`) as a fallback, or to the mirror set by
+  the administrator (`speech_models_urls`) instead; HTTPS redirects are
+  followed (5 at most), including the mirror's redirects to another host. No meeting data is sent; these hosts see the
   computer's IP address. No flow if the models are installed from a folder.
 - **Inference endpoints configured by the user**, and only those: ASR
   (OpenAI protocol: Realtime and `/v1/audio/transcriptions`; NVIDIA

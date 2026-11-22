@@ -128,7 +128,7 @@ export function describeOnDeviceError(code: string): string {
     case "models_mismatch":
       return t`A model file does not match the expected file (damaged or another version).`;
     case "not_enough_disk":
-      return t`Not enough free disk space for the models (about 1.2 GB needed).`;
+      return t`Not enough free disk space for the models (2 GB needed).`;
     case "no_download_source":
       return t`Downloading the models is not available: install them from a folder.`;
     case "network":

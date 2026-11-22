@@ -3632,8 +3632,8 @@ msgid "not enough free disk space (2 GB needed)"
 msgstr "pas assez d'espace disque libre (2 Go nécessaires)"
 
 #: src/stt/on-device.ts
-msgid "Not enough free disk space for the models (about 1.2 GB needed)."
-msgstr "Pas assez d'espace disque libre pour les modèles (environ 1,2 Go nécessaires)."
+msgid "Not enough free disk space for the models (2 GB needed)."
+msgstr "Pas assez d'espace disque libre pour les modèles (2 Go nécessaires)."
 
 #: src/settings/ai/stt/on-device-card.tsx
 msgid "not enough free memory (1.5 GB needed)"

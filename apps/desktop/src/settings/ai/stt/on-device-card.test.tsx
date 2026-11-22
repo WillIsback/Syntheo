@@ -129,7 +129,10 @@ describe("OnDeviceCard", () => {
 
   // Revue de 7d72caf6, constat 21 : carte remontée pendant une installation.
   it("picks up an installation started before the card was mounted", async () => {
-    mocks.installProgress = { doneBytes: 100_000_000, totalBytes: 1_066_000_000 };
+    mocks.installProgress = {
+      doneBytes: 100_000_000,
+      totalBytes: 1_066_000_000,
+    };
     setup();
     await screen.findByTestId("on-device-install-progress");
     expect(screen.getByText("Cancel")).toBeTruthy();

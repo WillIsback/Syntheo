@@ -80,7 +80,7 @@ The [On this computer](/en/on-device-transcription) source relies on a companion
 
 ### What is guaranteed
 
-- **Program shipped with the app**: it is installed, updated and uninstalled with Syntheo, and signed with it on Windows (same Authenticode signer, checked by the release pipeline). The app only launches it from its own installation folder, a path resolved in Rust (canonical folder of the executable; symlink or reparse point refused), never from a path coming from the interface.
+- **Program shipped with the app**: it is installed, updated and uninstalled with Syntheo, and signed with it on Windows (same Authenticode signer, checked by the release pipeline). The app only takes it from its own installation folder, a path resolved in Rust (canonical folder of the executable; symlink or reparse point refused), never from a path coming from the interface, then runs it from a checked copy (see below).
 - **Compiled checksums**: at build time, the app pins the program's checksum (excluding the Authenticode signature, which signing adds afterwards) and, on Windows, that of the Visual C++ runtime it loads; it also compiles the model list with each file's size and SHA-256 checksum.
 - **Check before every launch**: the program and the models must match these checksums; a missing or different file, or one replaced by a symlink, is refused.
 - **Same objects checked and run**: the program (and on Windows its runtime) is copied into a fresh private folder at every launch (rights limited to your account), hashed from that copy and run from it. Models are opened once and hashed from the open file: on Linux, the program inherits these open files; on Windows, each model and each folder of its path stay locked against writing and deletion while it runs.
@@ -94,6 +94,7 @@ The [On this computer](/en/on-device-transcription) source relies on a companion
 ### Limits
 
 - **Same user account**: a malicious program already running under your account can modify the app data folder and, if Syntheo is installed for your account, the app itself. On Linux, it could still rewrite a model file in place while the program uses it: Linux offers no mandatory lock to an ordinary user. Replacing it by path or symlink is no longer possible.
+- **Application control**: the copy that runs sits in the app's data folder. An AppLocker or SRP policy with path rules, or a home folder mounted `noexec`, blocks it: the launch fails with the code `execution_blocked`, with no retry during the recording (see [Computers with application control](/en/on-device-transcription#computers-with-application-control)).
 - **Model hosting**: the sources (GitHub, Hugging Face or a mirror) are not trusted as such; only the compiled checksums are. An unavailable or tampered source prevents the download, without ever getting another file accepted.
 - **Windows**: the Windows-specific protections (locks, private folder with restricted rights, library search) have been compiled and built on Windows, but not yet tested against an attack on a real computer.
 - **Audit**: the program has not had an external audit yet; it was reviewed internally at every step.
@@ -154,7 +155,7 @@ The settings most useful to an IT department:
     | `cloud_sync_enabled` | `false` only (feature absent from Syntheo) |
     | `measurement_enabled`, `calibration_enabled` | `false` only: turns off the beta rework measurement, and its Calibration mode (see [Data and privacy](/en/data-and-privacy#rework-measurement-beta)) |
     | `on_device_transcription_enabled` | `false` only: forbids on-device transcription; the `syntheo-speech` program, shipped with the app, is never launched |
-    | `speech_models_urls` | List of 1 to 8 HTTPS addresses (`{path}` or `{name}` markers allowed), with no credentials, query or fragment: replaces the download sources of the on-device transcription models, for example with an internal mirror ([details](/en/on-device-transcription#require-a-model-mirror)) |
+    | `speech_models_urls` | List of 1 to 8 HTTPS addresses (`{path}` or `{name}` markers allowed), with no credentials, query, fragment or comma: replaces the download sources of the on-device transcription models, for example with an internal mirror ([details](/en/on-device-transcription#require-a-model-mirror)) |
     | `save_recordings` | `true` or `false` |
 
     Any other key, or any other value, makes the file invalid. The file cannot contain any secret: an API key is entered on each computer.

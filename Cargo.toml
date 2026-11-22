@@ -83,12 +83,12 @@ syntheo-onnx = { path = "crates/onnx", package = "onnx" }
 syntheo-opencode = { path = "crates/opencode", package = "opencode" }
 syntheo-overlay-kit = { path = "crates/overlay-kit", package = "overlay-kit" }
 syntheo-pinned-fetch = { path = "crates/pinned-fetch", package = "pinned-fetch" }
-syntheo-speech-sources = { path = "crates/speech-sources", package = "speech-sources" }
 syntheo-resampler = { path = "crates/resampler", package = "resampler" }
 syntheo-session-ingest = { path = "crates/session-ingest", package = "session-ingest" }
 syntheo-shortcut-macos = { path = "crates/shortcut-macos", package = "shortcut-macos" }
 syntheo-speech-host = { path = "crates/speech-host", package = "speech-host" }
 syntheo-speech-probe = { path = "crates/speech-probe", package = "speech-probe" }
+syntheo-speech-sources = { path = "crates/speech-sources", package = "speech-sources" }
 syntheo-storage = { path = "crates/storage", package = "storage" }
 syntheo-summary = { path = "crates/summary", package = "summary" }
 syntheo-tcc = { path = "crates/tcc", package = "tcc" }

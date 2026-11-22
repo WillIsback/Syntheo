@@ -477,10 +477,9 @@ export function OnDeviceCard() {
           <p>
             {!companion ? (
               <Trans>
-                This computer is chosen for transcription, but the
-                transcription program is missing from this installation of
-                Syntheo: live transcription is paused. Reinstall Syntheo, or
-                use the server.
+                This computer is chosen for transcription, but the transcription
+                program is missing from this installation of Syntheo: live
+                transcription is paused. Reinstall Syntheo, or use the server.
               </Trans>
             ) : installed ? (
               <Trans>
