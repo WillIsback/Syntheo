@@ -13,10 +13,16 @@
 #
 # Usage : pwsh scripts/check-companion-pins.ps1 -Exe <syntheo.exe>
 #           -Companion <syntheo-speech-….exe> -Vcrt <dossier des DLL>
+#         pwsh scripts/check-companion-pins.ps1 -Fixtures <dossier>
+#           (images de référence de crates/image-hash/tests/fixtures et leur
+#           expected.txt : la même empreinte que la crate est exigée ; lancé
+#           par le job Windows de ci-code-quality)
+[CmdletBinding(DefaultParameterSetName = "Pins")]
 param(
-  [Parameter(Mandatory)][string]$Exe,
-  [Parameter(Mandatory)][string]$Companion,
-  [Parameter(Mandatory)][string]$Vcrt
+  [Parameter(Mandatory, ParameterSetName = "Pins")][string]$Exe,
+  [Parameter(Mandatory, ParameterSetName = "Pins")][string]$Companion,
+  [Parameter(Mandatory, ParameterSetName = "Pins")][string]$Vcrt,
+  [Parameter(Mandatory, ParameterSetName = "Fixtures")][string]$Fixtures
 )
 $ErrorActionPreference = "Stop"
 
@@ -85,6 +91,22 @@ function Get-ImageHash([string]$Path) {
     $digest = $sha.Hash
   }
   return -join ($digest | ForEach-Object { $_.ToString("x2") })
+}
+
+if ($PSCmdlet.ParameterSetName -eq "Fixtures") {
+  $failed = $false
+  $count = 0
+  foreach ($line in Get-Content -LiteralPath (Join-Path $Fixtures "expected.txt")) {
+    if (-not $line) { continue }
+    $expected, $name = $line.Split(" ", 2)
+    $actual = Get-ImageHash (Join-Path $Fixtures $name)
+    $count++
+    if ($actual -ne $expected) { $failed = $true; Write-Host "$name : attendue $expected ; script $actual -> DIFFÉRENTE" }
+    else { Write-Host "$name : identique" }
+  }
+  if ($count -eq 0) { throw "aucune image de référence dans $Fixtures" }
+  if ($failed) { throw "le script et crates/image-hash ne donnent pas la même empreinte" }
+  return
 }
 
 # Spec épinglée dans syntheo.exe : la chaîne commence par le nom du binaire.

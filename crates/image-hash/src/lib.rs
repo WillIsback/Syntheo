@@ -283,4 +283,59 @@ mod tests {
         // Un en-tête PE tronqué n'est pas une image : SHA-256 simple.
         assert_eq!(image_hash(b"MZ"), plain(b"MZ"));
     }
+
+    /// Images de référence partagées avec `scripts/check-companion-pins.ps1`
+    /// (job Windows de ci-code-quality) : `tests/fixtures/expected.txt`
+    /// donne l'empreinte attendue de chaque fichier. Régénérer avec
+    /// `SYNTHEO_WRITE_IMAGE_HASH_FIXTURES=1 cargo test -p image-hash fixtures`.
+    #[test]
+    fn fixtures_match_their_expected_hash() {
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures");
+        if std::env::var_os("SYNTHEO_WRITE_IMAGE_HASH_FIXTURES").is_some() {
+            std::fs::create_dir_all(&dir).unwrap();
+            let unsigned = pe();
+            let mut appended = unsigned.clone();
+            appended.extend(b"octets ajoutes");
+            let files = [
+                ("unsigned.bin", unsigned.clone()),
+                (
+                    "signed.bin",
+                    sign(&unsigned, b"certificat Authenticode factice"),
+                ),
+                ("appended.bin", appended),
+                ("plain.bin", b"pas une image PE".to_vec()),
+            ];
+            let mut expected = String::new();
+            for (name, bytes) in files {
+                std::fs::write(dir.join(name), &bytes).unwrap();
+                expected.push_str(&format!("{} {name}\n", image_hash(&bytes)));
+            }
+            std::fs::write(dir.join("expected.txt"), expected).unwrap();
+        }
+        let expected = std::fs::read_to_string(dir.join("expected.txt")).unwrap();
+        let mut lines = 0;
+        for line in expected.lines() {
+            let (hash, name) = line.split_once(' ').unwrap();
+            assert_eq!(
+                image_hash(&std::fs::read(dir.join(name)).unwrap()),
+                hash,
+                "{name}"
+            );
+            lines += 1;
+        }
+        assert_eq!(lines, 4);
+        // Signée ou non, même empreinte ; octets ajoutés, empreinte différente.
+        let hash_of = |name: &str| {
+            expected
+                .lines()
+                .find(|l| l.ends_with(&format!(" {name}")))
+                .unwrap()
+                .split_once(' ')
+                .unwrap()
+                .0
+                .to_owned()
+        };
+        assert_eq!(hash_of("unsigned.bin"), hash_of("signed.bin"));
+        assert_ne!(hash_of("unsigned.bin"), hash_of("appended.bin"));
+    }
 }
