@@ -38,9 +38,6 @@ impl ModelFile {
 #[derive(serde::Deserialize)]
 struct ModelsJson {
     files: Vec<ModelFile>,
-    /// Sources de téléchargement, dans l'ordre (gabarits, voir `Source`).
-    #[serde(default)]
-    sources: Vec<String>,
 }
 
 /// Chemin relatif sûr : composantes ordinaires, séparateur `/`.
@@ -68,6 +65,14 @@ pub fn parse(json: &str) -> Option<Vec<ModelFile>> {
 
 const MODELS_JSON: &str = include_str!("../../../apps/speech/models/models.json");
 
+/// Empreinte de la liste des modèles compilée (60 bits) : une autre liste,
+/// donc d'autres modèles, demande une nouvelle mise en service.
+pub fn fingerprint() -> u64 {
+    use sha2::{Digest, Sha256};
+    let digest = Sha256::digest(MODELS_JSON.as_bytes());
+    u64::from_be_bytes(digest[..8].try_into().unwrap_or_default()) >> 4
+}
+
 /// Modèles de cette application, compilés.
 pub fn files() -> &'static [ModelFile] {
     static FILES: LazyLock<Vec<ModelFile>> =
@@ -79,10 +84,9 @@ pub fn files() -> &'static [ModelFile] {
 /// l'ordre ; vide tant que les modèles ne sont pas publiés. Une liste
 /// invalide compte pour vide.
 pub fn compiled_sources() -> Vec<Source> {
-    serde_json::from_str::<ModelsJson>(MODELS_JSON)
-        .ok()
-        .and_then(|json| parse_sources(json.sources.iter().map(String::as_str)))
-        .unwrap_or_default()
+    // Une liste invalide fait échouer la construction (build.rs de
+    // l'application) : ce repli ne sert qu'aux essais.
+    syntheo_speech_sources::models_json_sources(MODELS_JSON).unwrap_or_default()
 }
 
 /// Taille totale des modèles.
@@ -197,10 +201,19 @@ fn check_space(dir: &Path, needed: u64) -> Result<(), InstallError> {
 
 /// Dossier source : les modèles sont soit directement dedans, soit dans un
 /// sous-dossier `models`.
-fn source_root(source: &Path, files: &[ModelFile]) -> Option<PathBuf> {
-    [source.join("models"), source.to_path_buf()]
-        .into_iter()
-        .find(|root| files.iter().any(|f| f.under(root).is_file()))
+/// Emplacement de `file` dans le dossier choisi : arborescence de models.json
+/// (`<dossier>[/models]/nemotron/encoder.onnx`) ou fichiers à plat, comme les
+/// assets d'une release GitHub (`<dossier>[/models]/encoder.onnx`). Les noms
+/// sont uniques dans models.json et chaque fichier est vérifié contre son
+/// empreinte : la disposition ne change rien à ce qui est installé.
+fn locate(source: &Path, file: &ModelFile) -> Option<PathBuf> {
+    let name = file.path.rsplit('/').next().unwrap_or(&file.path);
+    let roots = [source.join("models"), source.to_path_buf()];
+    roots
+        .iter()
+        .map(|root| file.under(root))
+        .chain(roots.iter().map(|root| root.join(name)))
+        .find(|path| std::fs::symlink_metadata(path).is_ok_and(|m| m.is_file()))
 }
 
 /// Installe depuis un dossier local (bloquant) : chaque fichier manquant est
@@ -218,15 +231,15 @@ pub fn install_from_dir(
     if todo.is_empty() {
         return Ok(());
     }
-    let root = source_root(source, files).ok_or(InstallError::NotFound)?;
+    let sources: Vec<PathBuf> = todo
+        .iter()
+        .map(|file| locate(source, file))
+        .collect::<Option<_>>()
+        .ok_or(InstallError::NotFound)?;
     let needed: u64 = todo.iter().map(|f| f.size).sum();
     check_space(dir, needed)?;
     let mut done = 0u64;
-    for file in todo {
-        let from = file.under(&root);
-        if !std::fs::symlink_metadata(&from).is_ok_and(|m| m.is_file()) {
-            return Err(InstallError::NotFound);
-        }
+    for (file, from) in todo.into_iter().zip(sources) {
         syntheo_pinned_fetch::copy_verified(
             &from,
             &file.under(dir),
@@ -243,65 +256,7 @@ pub fn install_from_dir(
 
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(20);
 const READ_TIMEOUT: Duration = Duration::from_secs(60);
-/// Au plus ce nombre de sources.
-const MAX_SOURCES: usize = 8;
-
-/// Une source de téléchargement : gabarit d'URL HTTPS, sans identifiants.
-/// `{path}` : chemin relatif du fichier (`nemotron/encoder.onnx`, pour une
-/// arborescence, par exemple Hugging Face `…/resolve/<révision>/{path}`) ;
-/// `{name}` : son seul nom (`encoder.onnx`, pour des fichiers à plat, par
-/// exemple les assets d'une release GitHub `…/download/<tag>/{name}`). Sans
-/// marqueur, l'adresse est une base à laquelle `/{path}` est ajouté.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Source(String);
-
-impl Source {
-    /// Valide une source : `https://`, hôte présent, sans identifiants
-    /// (`user:pass@`), ni requête ni fragment, ni autre marqueur que `{path}`
-    /// et `{name}`.
-    pub fn parse(raw: &str) -> Option<Self> {
-        let raw = raw.trim();
-        let probe = raw.replace("{path}", "p").replace("{name}", "n");
-        if probe.contains(['{', '}']) || probe.contains(char::is_whitespace) {
-            return None;
-        }
-        // `https:///x` serait lu comme l'hôte `x` : hôte explicite exigé.
-        if raw.strip_prefix("https://")?.starts_with('/') {
-            return None;
-        }
-        let url = url::Url::parse(&probe).ok()?;
-        let valid = url.scheme() == "https"
-            && url.host_str().is_some_and(|h| !h.is_empty())
-            && url.username().is_empty()
-            && url.password().is_none()
-            && url.query().is_none()
-            && url.fragment().is_none();
-        valid.then(|| Self(raw.to_owned()))
-    }
-
-    /// Adresse du fichier `file` sur cette source.
-    pub fn url_for(&self, file: &ModelFile) -> String {
-        let name = file.path.rsplit('/').next().unwrap_or(&file.path);
-        if self.0.contains("{path}") || self.0.contains("{name}") {
-            self.0.replace("{path}", &file.path).replace("{name}", name)
-        } else {
-            format!("{}/{}", self.0.trim_end_matches('/'), file.path)
-        }
-    }
-}
-
-/// Liste ordonnée de sources, séparées par des virgules (ou une liste déjà
-/// découpée). Une seule source invalide rend toute la liste invalide :
-/// mieux vaut refuser qu'ignorer en silence un miroir mal saisi.
-pub fn parse_sources<'a>(items: impl IntoIterator<Item = &'a str>) -> Option<Vec<Source>> {
-    let mut sources = Vec::new();
-    for item in items {
-        for raw in item.split(',').map(str::trim).filter(|r| !r.is_empty()) {
-            sources.push(Source::parse(raw)?);
-        }
-    }
-    (!sources.is_empty() && sources.len() <= MAX_SOURCES).then_some(sources)
-}
+pub use syntheo_speech_sources::{Source, parse_sources};
 
 /// Échec d'une source pour un fichier : on passe à la suivante (réseau,
 /// statut HTTP d'erreur, adresse refusée, contenu différent). Annulation et
@@ -348,10 +303,13 @@ pub async fn download(
         let mut last = InstallError::Network;
         let mut fetched = false;
         for (index, source) in sources.iter().enumerate() {
+            if cancel.load(std::sync::atomic::Ordering::Relaxed) {
+                return Err(InstallError::Cancelled);
+            }
             let mut file_done = 0u64;
             let result = fetcher
                 .fetch(
-                    &source.url_for(file),
+                    &source.url_for(&file.path),
                     &file.under(dir),
                     file.pinned(),
                     cancel,
@@ -412,9 +370,8 @@ mod tests {
 
     #[test]
     fn the_compiled_list_is_valid() {
-        let json: ModelsJson = serde_json::from_str(MODELS_JSON).unwrap();
-        // Sources compilées : toutes valides, ou aucune.
-        assert_eq!(compiled_sources().len(), json.sources.len());
+        // Sources compilées : valides (vides avant publication).
+        assert!(syntheo_speech_sources::models_json_sources(MODELS_JSON).is_some());
         let files = files();
         assert!(files.len() >= 2);
         assert!(total_size(files) > 500 << 20, "≈ 1 Go attendu");
@@ -436,7 +393,7 @@ mod tests {
     #[test]
     fn installs_from_a_folder_with_or_without_a_models_subfolder() {
         let files = vec![file("a/one.onnx", b"un"), file("two.bin", b"deux")];
-        for nested in [false, true] {
+        for (nested, flat) in [(false, false), (true, false), (false, true), (true, true)] {
             let source = tempfile::tempdir().unwrap();
             let root = if nested {
                 source.path().join("models")
@@ -444,7 +401,9 @@ mod tests {
                 source.path().to_path_buf()
             };
             std::fs::create_dir_all(root.join("a")).unwrap();
-            std::fs::write(root.join("a/one.onnx"), b"un").unwrap();
+            // À plat (assets d'une release) ou en arborescence.
+            let one = if flat { "one.onnx" } else { "a/one.onnx" };
+            std::fs::write(root.join(one), b"un").unwrap();
             std::fs::write(root.join("two.bin"), b"deux").unwrap();
             let dest = tempfile::tempdir().unwrap();
             let dir = dest.path().join("models");
@@ -578,9 +537,9 @@ mod tests {
         .await;
         let flat = serve(vec![("two.onnx".into(), b"deux".to_vec())]).await;
         let sources = vec![
-            Source(format!("{missing}/ok/{{path}}")),
-            Source(format!("{wrong}/ok/{{path}}")),
-            Source(format!("{flat}/ok/{{name}}")),
+            Source::unchecked_for_tests(format!("{missing}/ok/{{path}}")),
+            Source::unchecked_for_tests(format!("{wrong}/ok/{{path}}")),
+            Source::unchecked_for_tests(format!("{flat}/ok/{{name}}")),
         ];
         let dest = tempfile::tempdir().unwrap();
         let mut last = (0, 0);
@@ -615,44 +574,5 @@ mod tests {
         .unwrap_err();
         assert_eq!(error, InstallError::Mismatch);
         assert!(!other.path().join("diar/two.onnx").exists());
-    }
-
-    #[test]
-    fn sources_are_https_templates_without_credentials() {
-        let model = file("nemotron/encoder.onnx", b"x");
-        let github = Source::parse(
-            "https://github.com/WillIsback/Syntheo/releases/download/speech-models-1/{name}",
-        )
-        .unwrap();
-        assert_eq!(
-            github.url_for(&model),
-            "https://github.com/WillIsback/Syntheo/releases/download/speech-models-1/encoder.onnx"
-        );
-        let hf = Source::parse("https://huggingface.co/x/y/resolve/0123abcd/{path}").unwrap();
-        assert_eq!(
-            hf.url_for(&model),
-            "https://huggingface.co/x/y/resolve/0123abcd/nemotron/encoder.onnx"
-        );
-        let base = Source::parse("https://miroir.example/modeles/").unwrap();
-        assert_eq!(
-            base.url_for(&model),
-            "https://miroir.example/modeles/nemotron/encoder.onnx"
-        );
-        for bad in [
-            "http://miroir.example/{path}",
-            "https://user:secret@miroir.example/{path}",
-            "https://jeton@miroir.example/{path}",
-            "https://miroir.example/{path}?token=1",
-            "https://miroir.example/{autre}",
-            "file:///etc/{path}",
-            "https:///{path}",
-            "",
-        ] {
-            assert!(Source::parse(bad).is_none(), "{bad}");
-        }
-        let list = parse_sources(["https://a.example/{name}, https://b.example/{path}"]).unwrap();
-        assert_eq!(list.len(), 2);
-        assert!(parse_sources(["https://a.example/{name},http://b.example/{path}"]).is_none());
-        assert!(parse_sources([" , "]).is_none());
     }
 }

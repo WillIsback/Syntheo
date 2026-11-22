@@ -29,7 +29,12 @@ pub struct CompiledSources(pub Vec<syntheo_speech_host::models::Source>);
 impl CompiledSources {
     pub fn of(build: SpeechBuild) -> Self {
         Self(match build.models_urls.filter(|u| !u.trim().is_empty()) {
-            Some(urls) => syntheo_speech_host::models::parse_sources([urls]).unwrap_or_default(),
+            // Validée par le build.rs de l'application (construction en échec
+            // si invalide) : ce repli vide ne sert qu'aux essais.
+            Some(urls) => syntheo_speech_host::models::parse_sources([urls]).unwrap_or_else(|| {
+                tracing::warn!(target: "syntheo_speech", "compiled model sources are invalid");
+                Vec::new()
+            }),
             None => syntheo_speech_host::models::compiled_sources(),
         })
     }
@@ -71,8 +76,17 @@ async fn policy<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Policy {
                 Ok(policy) => Policy {
                     allowed: policy.on_device_transcription_allowed(),
                     sources: policy.speech_models_urls().map(|urls| {
+                        // Même validateur que managed_settings.json : un
+                        // refus ici ne devrait pas arriver ; il est journalisé
+                        // et ne retombe pas sur les sources compilées.
                         syntheo_speech_host::models::parse_sources(urls.iter().map(String::as_str))
-                            .unwrap_or_default()
+                            .unwrap_or_else(|| {
+                                tracing::warn!(
+                                    target: "syntheo_speech",
+                                    "managed model sources are invalid; download disabled"
+                                );
+                                Vec::new()
+                            })
                     }),
                 },
                 Err(_) => Policy::default(),

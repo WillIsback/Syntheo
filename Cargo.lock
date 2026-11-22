@@ -2404,6 +2404,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2 0.11.1",
+ "speech-sources",
  "sqlx",
  "tempfile",
  "thiserror 2.0.21",
@@ -2625,6 +2626,7 @@ dependencies = [
  "serde_json",
  "specta",
  "specta-typescript",
+ "speech-sources",
  "sqlx",
  "storage",
  "strum 0.28.0",
@@ -10518,10 +10520,10 @@ dependencies = [
  "serde_json",
  "sha2 0.11.1",
  "speech-probe",
+ "speech-sources",
  "tempfile",
  "tokio",
  "tracing",
- "url",
  "uuid",
  "windows",
 ]
@@ -10535,6 +10537,14 @@ dependencies = [
  "specta",
  "sysinfo",
  "windows",
+]
+
+[[package]]
+name = "speech-sources"
+version = "0.1.0"
+dependencies = [
+ "serde_json",
+ "url",
 ]
 
 [[package]]

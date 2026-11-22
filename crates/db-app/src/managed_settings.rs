@@ -27,18 +27,6 @@ fn plain_https(s: &str) -> bool {
         })
 }
 
-/// Source de téléchargement des modèles de transcription sur le poste
-/// (issue 683) : gabarit HTTPS, marqueurs `{path}` et `{name}` seulement.
-fn model_source(s: &str) -> bool {
-    let probe = s.replace("{path}", "p").replace("{name}", "n");
-    !probe.contains(['{', '}', ','])
-        && !probe.contains(char::is_whitespace)
-        && !s
-            .strip_prefix("https://")
-            .is_some_and(|r| r.starts_with('/'))
-        && plain_https(&probe)
-}
-
 fn validate(bytes: &[u8]) -> Result<ManagedSettings, sqlx::Error> {
     if bytes.len() > 64 * 1024 {
         return Err(invalid());
@@ -72,9 +60,16 @@ fn validate(bytes: &[u8]) -> Result<ManagedSettings, sqlx::Error> {
             }),
             // Miroir des modèles de transcription sur le poste (issue 683) :
             // remplace les sources compilées.
+            // Même validateur que speech-host (syntheo-speech-sources) : une
+            // liste acceptée ici sert telle quelle au téléchargement.
             "speech_models_urls" => value.as_array().is_some_and(|urls| {
-                (1..=8).contains(&urls.len())
-                    && urls.iter().all(|u| u.as_str().is_some_and(model_source))
+                urls.iter()
+                    .map(Value::as_str)
+                    .collect::<Option<Vec<_>>>()
+                    .is_some_and(|urls| {
+                        urls.len() == urls.iter().filter(|u| !u.contains(',')).count()
+                            && syntheo_speech_sources::parse_sources(urls).is_some()
+                    })
             }),
             _ => false,
         };
@@ -260,6 +255,9 @@ mod tests {
             r#"["https://a.example/{autre}"]"#,
             r#"["https:///{path}"]"#,
             r#"["https://a.example/{path},https://b.example"]"#,
+            r#"["HTTPS://a.example/{path}"]"#,
+            r#"["https:a.example/{path}"]"#,
+            r#"["https://a.example/{path}", "https://b.example/{path}", "https://c.example/{path}", "https://d.example/{path}", "https://e.example/{path}", "https://f.example/{path}", "https://g.example/{path}", "https://h.example/{path}", "https://i.example/{path}"]"#,
             r#"[1]"#,
         ] {
             assert!(validate(doc(bad).as_bytes()).is_err(), "{bad}");

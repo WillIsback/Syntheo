@@ -226,7 +226,9 @@ build_steps() {
   if [ "${SYNTHEO_UPDATER_TEST:-}" = 1 ]; then
     [ -f "$root/$UPDATER_TEST_CONF" ] || die "surcouche du build de test absente de la source."
     echo "-- build de test de la mise à jour : sans devtools, surcouche $UPDATER_TEST_CONF"
-    pnpm -F desktop tauri build --ci --bundles appimage,deb \
+    # Build de test jamais distribué : le compagnon peut partir sans source de
+    # téléchargement des modèles (garde du build.rs de l'application).
+    SYNTHEO_SPEECH_ALLOW_NO_SOURCES=1 pnpm -F desktop tauri build --ci --bundles appimage,deb \
       --config ./src-tauri/tauri.conf.syntheo.json --config ./src-tauri/tauri.speech.conf.json \
       --config "./src-tauri/${UPDATER_TEST_CONF##*/}"
   else

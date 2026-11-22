@@ -582,3 +582,31 @@ async fn real_models_install_from_a_folder_and_run() {
     session(target).await;
     host.stop().await;
 }
+
+// Revue de 7d72caf6, constat 18 : une annulation demandée hors installation
+// n'annule pas l'installation suivante.
+#[tokio::test]
+async fn a_cancel_outside_an_installation_is_ignored() {
+    let data = tempfile::tempdir().unwrap();
+    let source = tempfile::tempdir().unwrap();
+    std::fs::write(source.path().join("placeholder"), b"x").unwrap();
+    let host = SpeechHost::new(data.path().to_path_buf(), None, 1).with_models(vec![placeholder()]);
+    host.cancel_install();
+    host.install_models_from(source.path().to_path_buf())
+        .await
+        .expect("installation non annulée");
+    assert_eq!(
+        std::fs::read(data.path().join("models/placeholder")).unwrap(),
+        b"x"
+    );
+    assert!(host.install_progress().is_none());
+}
+
+// Revue de 7d72caf6, constat 7 : un lancement refusé par le système a son
+// propre code, définitif.
+#[test]
+fn a_blocked_launch_has_its_own_permanent_code() {
+    let error = HostError::ExecutionBlocked;
+    assert!(error.is_permanent());
+    assert_eq!(error.to_on_device_error().kind.code(), "execution_blocked");
+}

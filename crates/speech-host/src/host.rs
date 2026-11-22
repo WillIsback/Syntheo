@@ -65,6 +65,9 @@ pub enum HostError {
     Installing,
     /// Une mesure de mise en service est en cours.
     Measuring,
+    /// Le système a refusé d'exécuter la copie vérifiée du programme (dossier
+    /// de données) : AppLocker ou SRP par règles de chemin, montage noexec.
+    ExecutionBlocked,
 }
 
 impl HostError {
@@ -81,6 +84,7 @@ impl HostError {
             Self::Verify(_) => Kind::Invalid,
             Self::RestartBudget => Kind::Crashing,
             Self::Launch(_) => Kind::FailedToStart,
+            Self::ExecutionBlocked => Kind::ExecutionBlocked,
             Self::Installing => Kind::Installing,
             Self::Measuring => Kind::Measuring,
         };
@@ -121,6 +125,9 @@ impl std::fmt::Display for HostError {
             Self::RestartBudget => f.write_str("on-device module keeps stopping"),
             Self::Installing => f.write_str("on-device module is being installed"),
             Self::Measuring => f.write_str("on-device module is being measured"),
+            Self::ExecutionBlocked => f.write_str(
+                "the system refused to run the on-device program from the app data folder (application control policy or noexec mount)",
+            ),
         }
     }
 }
@@ -253,9 +260,16 @@ async fn launch(
         const CREATE_NO_WINDOW: u32 = 0x0800_0000;
         command.creation_flags(CREATE_NO_WINDOW);
     }
-    let mut child = command
-        .spawn()
-        .map_err(|e| HostError::Launch(format!("{:?}", e.kind())))?;
+    let mut child = command.spawn().map_err(|e| {
+        // La copie vérifiée s'exécute depuis le dossier de données : une
+        // politique de contrôle des applications par chemin (AppLocker,
+        // SRP) ou un montage noexec la refuse (issue 683, revue 7).
+        if e.kind() == std::io::ErrorKind::PermissionDenied {
+            HostError::ExecutionBlocked
+        } else {
+            HostError::Launch(format!("{:?}", e.kind()))
+        }
+    })?;
 
     let token = fresh_token();
     let mut stdin = child
@@ -614,13 +628,16 @@ impl SpeechHost {
             return Err("running");
         }
         state.running = None;
-        self.cancel.store(false, Ordering::SeqCst);
         *self.progress.lock().unwrap_or_else(|e| e.into_inner()) = Some((0, 0));
         Ok(guard)
     }
 
     /// Fin d'une installation : refus et compteurs oubliés.
     async fn end_install(&self) {
+        // Remise à zéro en fin d'installation (pas au début : une annulation
+        // demandée pendant les contrôles qui précèdent reste prise en compte).
+        self.cancel
+            .store(false, std::sync::atomic::Ordering::SeqCst);
         *self.progress.lock().unwrap_or_else(|e| e.into_inner()) = None;
         let mut state = self.state.lock().await;
         state.rejected = None;
@@ -668,8 +685,13 @@ impl SpeechHost {
 
     /// Demande l'annulation de l'installation en cours (un téléchargement
     /// annulé reprendra où il s'était arrêté).
+    /// Sans effet hors installation : une demande laissée en attente
+    /// annulerait la suivante.
     pub fn cancel_install(&self) {
-        self.cancel.store(true, std::sync::atomic::Ordering::SeqCst);
+        use std::sync::atomic::Ordering;
+        if self.installing.load(Ordering::SeqCst) {
+            self.cancel.store(true, Ordering::SeqCst);
+        }
     }
 
     /// Avancement de l'installation en cours : `(écrits, à écrire)`.
@@ -694,11 +716,13 @@ impl SpeechHost {
         self.state.lock().await.verifications
     }
 
-    /// Construction du compagnon, si compagnon et modèles sont en place.
+    /// Construction du module (compagnon et liste des modèles compilée), si
+    /// compagnon et modèles sont en place : une nouvelle version de l'un ou
+    /// de l'autre se mesure à nouveau.
     fn module_build(&self) -> Option<u64> {
         let companion = self.companion.as_ref()?;
         crate::verify::check(Some(companion), &self.models_dir(), &self.models).ok()?;
-        Some(companion.build_id())
+        Some(companion.build_id() ^ crate::models::fingerprint())
     }
 
     /// Mise en service enregistrée pour le module installé (lue une fois,
