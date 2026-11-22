@@ -14,7 +14,7 @@ L'installeur de l'application livre ce dossier (`speech-licenses/`, posé par `s
 
 - Les fiches des modèles sont les `README.md` des dépôts ci-dessus, aux révisions indiquées, sans modification, avec leurs sous-fiches NVIDIA (`bias.md`, `explainability.md`, `privacy.md`, `safety.md`, en `models/<modèle>.<sous-fiche>.md`) : ce sont les avis d'origine que l'accord OpenMDW-1.1 demande de conserver. Aucun autre avis de droit d'auteur ne figure dans ces dépôts.
 - Les poids distribués par Syntheo (release GitHub, dépôt Hugging Face) sont quantifiés en int8 par Syntheo (`../../models/quantize.py`), à partir de l'export ci-dessus.
-- Sous Windows, ONNX Runtime est la variante DirectML. Ni le programme ni l'application ne livrent `DirectML.dll` : tous deux chargent celle de Windows (System32), quel que soit l'installeur (NSIS ou MSI).
+- Sous Windows, ONNX Runtime est la variante DirectML. Ni le programme ni l'application ne livrent `DirectML.dll` : tous deux chargent celle de Windows (System32), quel que soit l'installeur (NSIS ou MSI), et l'importent au chargement par l'ordinal de `DMLCreateDevice1` (DirectML 1.1.0, intégrée à Windows 10 depuis la version 2004, build 19041) : Windows 10 2004 ou plus récent est requis.
 - Le runtime Visual C++ livré sous Windows avec l'application (`vcruntime140*.dll`, `msvcp140*.dll`), que le programme charge aussi, est redistribuable selon la licence de Visual Studio.
 
 ---
