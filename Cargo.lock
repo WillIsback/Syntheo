@@ -11892,7 +11892,6 @@ dependencies = [
  "tokio",
  "tokio-tungstenite 0.29.0",
  "tokio-util",
- "url",
  "windows",
 ]
 

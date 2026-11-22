@@ -1,10 +1,4 @@
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { Streamdown } from "streamdown";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -48,34 +42,27 @@ function images() {
 describe("rendu sûr des images", () => {
   beforeEach(() => {
     mocks.fetch.mockReset();
-    vi.stubGlobal(
-      "URL",
-      Object.assign(URL, {
-        createObjectURL: vi.fn(() => "blob:http://localhost/image-1"),
-        revokeObjectURL: vi.fn(),
-      }),
-    );
   });
   afterEach(() => {
     cleanup();
   });
 
+  // Issue 678 : une image distante n'est plus chargée du tout, même au clic.
   it.each([
     ["synthèse", streamdownComponents],
     ["chat", { img: SafeMarkdownImage }],
   ])(
-    "%s : une image distante Markdown ou HTML n'est pas rendue en <img>",
+    "%s : une image distante Markdown ou HTML laisse son texte alternatif, sans requête",
     (_, components) => {
       renderMarkdown(
         `Texte\n\n![logo](${REMOTE})\n\n<img src="${REMOTE}" alt="brut">`,
         components,
       );
-      expect(images().map((image) => image.getAttribute("src"))).toEqual([]);
-      expect(
-        screen.getAllByRole("button", { name: "Load image" }),
-      ).toHaveLength(2);
-      expect(document.body.textContent).toContain("attaquant.example");
-      expect(document.body.innerHTML).not.toContain("d=secret");
+      expect(images()).toEqual([]);
+      expect(screen.queryByRole("button")).toBeNull();
+      expect(document.body.textContent).toContain("logo");
+      expect(document.body.textContent).toContain("brut");
+      expect(document.body.innerHTML).not.toContain("attaquant.example");
       expect(mocks.fetch).not.toHaveBeenCalled();
     },
   );
@@ -92,40 +79,10 @@ describe("rendu sûr des images", () => {
       components,
     );
     expect(images()).toEqual([]);
-    expect(screen.queryByRole("button", { name: "Load image" })).toBeNull();
+    expect(screen.queryByRole("button")).toBeNull();
     expect(document.body.textContent).toContain("local");
     expect(document.body.textContent).toContain("reseau");
     expect(document.body.innerHTML).not.toContain("192.0.2.1");
-  });
-
-  it("charge l'image distante au clic, par le client HTTP, puis l'affiche en blob:", async () => {
-    mocks.fetch.mockResolvedValue({
-      ok: true,
-      status: 200,
-      headers: new Headers({ "content-type": "image/png" }),
-      blob: async () => new Blob(["png"], { type: "image/png" }),
-    });
-    renderMarkdown(`![logo](${REMOTE})`);
-    fireEvent.click(screen.getByRole("button", { name: "Load image" }));
-    await waitFor(() =>
-      expect(images().map((image) => image.getAttribute("src"))).toEqual([
-        "blob:http://localhost/image-1",
-      ]),
-    );
-    expect(mocks.fetch).toHaveBeenCalledWith(REMOTE, { method: "GET" });
-  });
-
-  it("refuse une réponse qui n'est pas une image", async () => {
-    mocks.fetch.mockResolvedValue({
-      ok: true,
-      status: 200,
-      headers: new Headers({ "content-type": "text/html" }),
-      blob: async () => new Blob(["<b>"], { type: "text/html" }),
-    });
-    renderMarkdown(`![logo](${REMOTE})`);
-    fireEvent.click(screen.getByRole("button", { name: "Load image" }));
-    await screen.findByRole("button", { name: "Image unavailable" });
-    expect(images()).toEqual([]);
   });
 
   it("préfixe les id et name du HTML brut (pas de clobbering de document)", () => {

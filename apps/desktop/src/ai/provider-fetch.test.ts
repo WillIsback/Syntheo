@@ -71,8 +71,10 @@ describe("providerFetch", () => {
     const url = new URL("http://localhost:11434/v1/chat/completions");
     const init = { headers: { Origin: "http://localhost:11434" } };
     await providerFetch(url, init);
-    expect(tauriFetch).toHaveBeenCalledWith(url, init);
-    expect(vi.mocked(tauriFetch).mock.calls[0][1]).toBe(init);
+    expect(tauriFetch).toHaveBeenCalledWith(url, {
+      ...init,
+      maxRedirections: 0,
+    });
   });
 
   it.each([
@@ -83,8 +85,32 @@ describe("providerFetch", () => {
   ])("leaves other endpoints unchanged: %s", async (url) => {
     const init = { headers: { Authorization: "Bearer remote-key" } };
     await providerFetch(url, init);
-    expect(vi.mocked(tauriFetch).mock.calls[0]).toEqual([url, init]);
-    expect(vi.mocked(tauriFetch).mock.calls[0][1]).toBe(init);
+    expect(vi.mocked(tauriFetch).mock.calls[0]).toEqual([
+      url,
+      { ...init, maxRedirections: 0 },
+    ]);
+  });
+
+  // Issue 678 : aucune redirection suivie, règle d'adresse revalidée à chaque
+  // requête, avant tout envoi.
+  it("never follows redirects", async () => {
+    await providerFetch("https://api.openai.com/v1/models", {
+      redirect: "follow",
+    });
+    expect(vi.mocked(tauriFetch).mock.calls[0][1]).toMatchObject({
+      maxRedirections: 0,
+    });
+  });
+
+  it.each([
+    "http://api.example.com/v1/chat/completions",
+    "http://203.0.113.5:8000/v1/models",
+    "https://user:secret@api.example.com/v1/models",
+    "file:///etc/passwd",
+    "not a url",
+  ])("refuses %s before sending anything", async (url) => {
+    await expect(providerFetch(url)).rejects.toThrow();
+    expect(tauriFetch).not.toHaveBeenCalled();
   });
 
   it.each(["custom", "openai"])(

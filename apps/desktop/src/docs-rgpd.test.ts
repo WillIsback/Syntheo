@@ -23,7 +23,7 @@ it("docs_rgpd_is_referenced", () => {
 it("docs_rgpd_lists_every_known_flow_and_store", () => {
   const rgpd = readFileSync(join(ROOT, "docs/fr/conformite/rgpd.md"), "utf8");
   // Flux réseau hors inférence encore présents dans le code.
-  for (const flow of ["api.github.com", "Charger l'image"]) {
+  for (const flow of ["api.github.com"]) {
     expect(rgpd).toContain(flow);
   }
   // Stockages locaux annexes.
@@ -122,5 +122,21 @@ it("docs_do_not_list_iconify_as_a_network_flow", () => {
     expect(readFileSync(join(ROOT, page), "utf8")).not.toContain(
       "api.iconify.design",
     );
+  }
+});
+
+// Issue 678 : le chargement d'une image distante au clic est retiré ; la doc
+// ne doit plus le présenter comme un flux sortant.
+it("docs_do_not_list_click_to_load_images_as_a_network_flow", () => {
+  for (const page of [
+    "docs/fr/conformite/rgpd.md",
+    "docs/en/conformite/rgpd.md",
+    "docs/fr/data-and-privacy.mdx",
+    "docs/en/data-and-privacy.mdx",
+    "SECURITY.md",
+  ]) {
+    const text = readFileSync(join(ROOT, page), "utf8");
+    expect(text).not.toContain("Charger l'image");
+    expect(text).not.toContain("Load image");
   }
 });

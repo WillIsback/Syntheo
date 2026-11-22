@@ -90,21 +90,6 @@ export function isGeneratedImageSrc(src: unknown): boolean {
   );
 }
 
-/** Adresse web http(s) d'un autre site (le protocole asset en est exclu). */
-export function isRemoteWebImageSrc(src: unknown): boolean {
-  if (typeof src !== "string") return false;
-  try {
-    const url = new URL(src.trim());
-    return (
-      (url.protocol === "https:" || url.protocol === "http:") &&
-      url.hostname !== "" &&
-      url.hostname !== "asset.localhost"
-    );
-  } catch {
-    return false;
-  }
-}
-
 const ATTACHMENT_ID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
