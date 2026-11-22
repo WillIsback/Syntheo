@@ -222,8 +222,8 @@ fn stage(
             0o600
         };
         std::fs::set_permissions(&target, std::fs::Permissions::from_mode(mode)).map_err(io)?;
-        let mut copy = std::fs::File::open(&target).map_err(io)?;
-        if sha256_reader(&mut copy).map_err(io)? != file.sha256 {
+        let copy = std::fs::read(&target).map_err(io)?;
+        if syntheo_image_hash::image_hash(&copy) != file.sha256 {
             return Err(VerifyError::CompanionAltered);
         }
     }
@@ -400,7 +400,9 @@ fn stage(
             }
         })?;
         let mut copy = open_locked(&target, false).map_err(|_| VerifyError::Io)?;
-        if sha256_reader(&mut copy).map_err(io)? != file.sha256 {
+        let mut bytes = Vec::new();
+        copy.read_to_end(&mut bytes).map_err(io)?;
+        if syntheo_image_hash::image_hash(&bytes) != file.sha256 {
             return Err(VerifyError::CompanionAltered);
         }
         staging.handles.push(copy);

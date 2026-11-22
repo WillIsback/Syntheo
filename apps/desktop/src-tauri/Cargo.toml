@@ -18,7 +18,7 @@ name = "syntheo_desktop_lib"
 crate-type = ["staticlib", "rlib"]
 
 [build-dependencies]
-sha2 = { workspace = true }
+syntheo-image-hash = { workspace = true }
 tauri-build = { workspace = true, features = [] }
 
 [dependencies]

@@ -21,17 +21,17 @@ pub struct SpeechBuild {
     pub models_urls: Option<&'static str>,
 }
 
-/// Sources compilées des modèles (vides : installation depuis un dossier).
+/// Sources compilées des modèles (vides : installation depuis un dossier) :
+/// `SYNTHEO_SPEECH_MODELS_URLS` à la construction s'il est défini et non
+/// vide, sinon les `sources` de models.json.
 pub struct CompiledSources(pub Vec<syntheo_speech_host::models::Source>);
 
 impl CompiledSources {
     pub fn of(build: SpeechBuild) -> Self {
-        Self(
-            build
-                .models_urls
-                .and_then(|urls| syntheo_speech_host::models::parse_sources([urls]))
-                .unwrap_or_default(),
-        )
+        Self(match build.models_urls.filter(|u| !u.trim().is_empty()) {
+            Some(urls) => syntheo_speech_host::models::parse_sources([urls]).unwrap_or_default(),
+            None => syntheo_speech_host::models::compiled_sources(),
+        })
     }
 }
 

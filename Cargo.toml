@@ -70,6 +70,7 @@ syntheo-fs-format = { path = "crates/fs-format", package = "fs-format" }
 syntheo-fs-sync-core = { path = "crates/fs-sync-core", package = "fs-sync-core" }
 syntheo-gbnf = { path = "crates/gbnf", package = "gbnf" }
 syntheo-host = { path = "crates/host", package = "host" }
+syntheo-image-hash = { path = "crates/image-hash", package = "image-hash" }
 syntheo-intercept = { path = "crates/intercept", package = "intercept" }
 syntheo-language = { path = "crates/language", package = "language" }
 syntheo-listener-core = { path = "crates/listener-core", package = "listener-core" }

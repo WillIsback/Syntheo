@@ -38,6 +38,9 @@ impl ModelFile {
 #[derive(serde::Deserialize)]
 struct ModelsJson {
     files: Vec<ModelFile>,
+    /// Sources de téléchargement, dans l'ordre (gabarits, voir `Source`).
+    #[serde(default)]
+    sources: Vec<String>,
 }
 
 /// Chemin relatif sûr : composantes ordinaires, séparateur `/`.
@@ -63,13 +66,23 @@ pub fn parse(json: &str) -> Option<Vec<ModelFile>> {
     valid.then_some(parsed.files)
 }
 
+const MODELS_JSON: &str = include_str!("../../../apps/speech/models/models.json");
+
 /// Modèles de cette application, compilés.
 pub fn files() -> &'static [ModelFile] {
-    static FILES: LazyLock<Vec<ModelFile>> = LazyLock::new(|| {
-        parse(include_str!("../../../apps/speech/models/models.json"))
-            .expect("models.json compilé invalide")
-    });
+    static FILES: LazyLock<Vec<ModelFile>> =
+        LazyLock::new(|| parse(MODELS_JSON).expect("models.json compilé invalide"));
     &FILES
+}
+
+/// Sources de téléchargement compilées (`sources` de models.json), dans
+/// l'ordre ; vide tant que les modèles ne sont pas publiés. Une liste
+/// invalide compte pour vide.
+pub fn compiled_sources() -> Vec<Source> {
+    serde_json::from_str::<ModelsJson>(MODELS_JSON)
+        .ok()
+        .and_then(|json| parse_sources(json.sources.iter().map(String::as_str)))
+        .unwrap_or_default()
 }
 
 /// Taille totale des modèles.
@@ -392,6 +405,9 @@ mod tests {
 
     #[test]
     fn the_compiled_list_is_valid() {
+        let json: ModelsJson = serde_json::from_str(MODELS_JSON).unwrap();
+        // Sources compilées : toutes valides, ou aucune.
+        assert_eq!(compiled_sources().len(), json.sources.len());
         let files = files();
         assert!(files.len() >= 2);
         assert!(total_size(files) > 500 << 20, "≈ 1 Go attendu");

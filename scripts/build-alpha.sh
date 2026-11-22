@@ -215,15 +215,23 @@ build_steps() {
   fi
   echo "-- packages/ui : $((SECONDS - t0)) s"
 
+  # Programme compagnon syntheo-speech (issue 683), construit dans le même
+  # environnement que l'application (glibc de la CI en mode Docker), avant
+  # `tauri build` qui l'embarque et en épingle l'empreinte.
+  t0=$SECONDS
+  SPEECH_TARGET_DIR="$target_dir/speech" bash scripts/build-speech.sh x86_64-unknown-linux-gnu
+  echo "-- syntheo-speech : $((SECONDS - t0)) s"
+
   t0=$SECONDS
   if [ "${SYNTHEO_UPDATER_TEST:-}" = 1 ]; then
     [ -f "$root/$UPDATER_TEST_CONF" ] || die "surcouche du build de test absente de la source."
     echo "-- build de test de la mise à jour : sans devtools, surcouche $UPDATER_TEST_CONF"
     pnpm -F desktop tauri build --ci --bundles appimage,deb \
-      --config ./src-tauri/tauri.conf.syntheo.json --config "./src-tauri/${UPDATER_TEST_CONF##*/}"
+      --config ./src-tauri/tauri.conf.syntheo.json --config ./src-tauri/tauri.speech.conf.json \
+      --config "./src-tauri/${UPDATER_TEST_CONF##*/}"
   else
     pnpm -F desktop tauri build --ci --bundles appimage --features devtools \
-      --config ./src-tauri/tauri.conf.syntheo.json
+      --config ./src-tauri/tauri.conf.syntheo.json --config ./src-tauri/tauri.speech.conf.json
   fi
   echo "-- tauri build : $((SECONDS - t0)) s"
 

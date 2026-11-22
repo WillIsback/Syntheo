@@ -11,7 +11,8 @@
 
 use std::path::{Path, PathBuf};
 
-/// Un fichier du compagnon : nom (sans dossier), taille, SHA-256.
+/// Un fichier du compagnon : nom (sans dossier), taille à la construction,
+/// empreinte (`syntheo-image-hash` : stable à la signature Authenticode).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CompanionFile {
     pub name: String,
@@ -102,11 +103,11 @@ impl Companion {
         let files = names
             .iter()
             .map(|name| {
-                let (size, sha256) = syntheo_pinned_fetch::hash_file(&dir.join(name))?;
+                let bytes = std::fs::read(dir.join(name))?;
                 Ok(CompanionFile {
                     name: (*name).to_owned(),
-                    size,
-                    sha256,
+                    size: bytes.len() as u64,
+                    sha256: syntheo_image_hash::image_hash(&bytes),
                 })
             })
             .collect::<std::io::Result<_>>()?;
@@ -116,12 +117,13 @@ impl Companion {
         })
     }
 
-    /// Fichiers présents, ordinaires (ni lien ni point de réanalyse), à la
-    /// bonne taille. Sans hachage.
+    /// Fichiers présents et ordinaires (ni lien ni point de réanalyse). Sans
+    /// hachage ni taille : la signature Windows allonge le binaire après la
+    /// construction ; le contenu est contrôlé à chaque lancement.
     pub fn present(&self) -> bool {
         self.files.iter().all(|f| {
             std::fs::symlink_metadata(self.dir.join(&f.name))
-                .is_ok_and(|m| m.is_file() && !is_reparse(&m) && m.len() == f.size)
+                .is_ok_and(|m| m.is_file() && !is_reparse(&m))
         })
     }
 
@@ -180,14 +182,18 @@ mod tests {
     }
 
     #[test]
-    fn presence_checks_kind_and_size() {
+    fn presence_checks_the_kind_of_file() {
         let dir = tempfile::tempdir().unwrap();
         std::fs::write(dir.path().join(binary_name()), b"binaire").unwrap();
         let companion = Companion::hashed_now(dir.path(), &[binary_name()]).unwrap();
         assert!(companion.present());
         assert_ne!(companion.build_id(), 0);
-        std::fs::write(dir.path().join(binary_name()), b"binaire plus long").unwrap();
+        std::fs::remove_file(dir.path().join(binary_name())).unwrap();
         assert!(!companion.present());
+        std::fs::create_dir(dir.path().join(binary_name())).unwrap();
+        assert!(!companion.present());
+        std::fs::remove_dir(dir.path().join(binary_name())).unwrap();
+        std::fs::write(dir.path().join(binary_name()), b"binaire").unwrap();
         #[cfg(unix)]
         {
             let other = tempfile::tempdir().unwrap();

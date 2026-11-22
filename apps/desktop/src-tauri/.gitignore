@@ -12,3 +12,4 @@
 # Programme compagnon syntheo-speech construit avant `tauri build` (issue 683,
 # scripts/build-speech.sh et .ps1)
 /binaries/syntheo-speech-*
+/speech-licenses/

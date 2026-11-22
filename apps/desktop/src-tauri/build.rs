@@ -104,13 +104,14 @@ fn same_contents(a: &Path, b: &Path) -> bool {
 /// Programme compagnon `syntheo-speech` (issue 683) : posé dans `binaries/`
 /// par scripts/build-speech.sh ou .ps1 avant `tauri build`, livré par
 /// `bundle.externalBin` (tauri.conf.syntheo.json). Ses fichiers sont épinglés
-/// ici, taille et SHA-256, et compilés dans l'application
+/// ici, taille et empreinte (`syntheo-image-hash` : SHA-256, hors signature
+/// Authenticode pour une image PE, que le job de signature Windows ajoute
+/// après cette compilation), et compilés dans l'application
 /// (`SYNTHEO_SPEECH_FILES`, `nom:sha256:taille` séparés par `;`, binaire en
 /// premier) : l'application ne lance qu'un compagnon identique. Sous
 /// Windows, le runtime Visual C++ embarqué à côté (`vcrt/`) en fait partie.
 /// Sans binaire (développement, CI), liste vide : compagnon indisponible.
 fn speech_companion() {
-    use sha2::{Digest, Sha256};
     use std::path::PathBuf;
 
     let manifest_dir = PathBuf::from(std::env::var_os("CARGO_MANIFEST_DIR").unwrap());
@@ -125,11 +126,8 @@ fn speech_companion() {
 
     let pin = |name: &str, path: &std::path::Path| -> Option<String> {
         let bytes = std::fs::read(path).ok()?;
-        let sha: String = Sha256::digest(&bytes)
-            .iter()
-            .map(|b| format!("{b:02x}"))
-            .collect();
-        Some(format!("{name}:{sha}:{}", bytes.len()))
+        let hash = syntheo_image_hash::image_hash(&bytes);
+        Some(format!("{name}:{hash}:{}", bytes.len()))
     };
     let mut files = Vec::new();
     if let Some(entry) = pin(&format!("syntheo-speech{exe}"), &binary) {

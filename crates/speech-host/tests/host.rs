@@ -550,3 +550,35 @@ async fn a_profile_that_errors_is_refused_and_the_next_is_measured() {
     assert_eq!(result.profile, Some(Profile::TwoStreams), "{result:?}");
     host.stop().await;
 }
+
+/// Installation réelle depuis un dossier (issue 683) : les vrais modèles,
+/// vérifiés contre les empreintes compilées de models.json, puis lancement
+/// du compagnon release et une session : `SYNTHEO_SPEECH_RELEASE_BIN` et
+/// `SYNTHEO_SPEECH_MODELS_SRC` (dossier qui contient nemotron/ et diar/).
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "copie ≈ 1 Go et lance le vrai moteur"]
+async fn real_models_install_from_a_folder_and_run() {
+    let (Some(binary), Some(source)) = (
+        std::env::var_os("SYNTHEO_SPEECH_RELEASE_BIN"),
+        std::env::var_os("SYNTHEO_SPEECH_MODELS_SRC"),
+    ) else {
+        return;
+    };
+    let install = tempfile::tempdir().unwrap();
+    std::fs::copy(binary, install.path().join(binary_name())).unwrap();
+    let companion = Companion::hashed_now(install.path(), &[binary_name()]).unwrap();
+    let data = tempfile::tempdir().unwrap();
+    let host = SpeechHost::new(data.path().to_path_buf(), Some(companion), 2);
+    let started = std::time::Instant::now();
+    host.install_models_from(source.into())
+        .await
+        .expect("modèles installés");
+    eprintln!("installation : {:?}", started.elapsed());
+    assert!(matches!(
+        host.status().await.models,
+        speech_host::models::ModelsStatus::Installed { .. }
+    ));
+    let target = host.target(true).await.expect("compagnon vérifié et lancé");
+    session(target).await;
+    host.stop().await;
+}

@@ -126,6 +126,18 @@ jobs:
           CONF=apps/desktop/src-tauri/tauri.conf.syntheo.json
           jq --arg v "${VERSION#v}" '.version = $v' "$CONF" > "$CONF.tmp" && mv "$CONF.tmp" "$CONF"
 
+      # Programme compagnon syntheo-speech (issue 683) : construit avant
+      # `tauri build`, qui l'embarque (externalBin) et en épingle l'empreinte.
+      # ONNX Runtime épinglé et contrôlé par check_ort.py.
+      - name: Construire syntheo-speech et ses licences
+        env:
+          ORT_CACHE_DIR: ${{ runner.temp }}/ort-cache
+        run: |
+          set -euo pipefail
+          cargo install --locked cargo-about --version 0.9.3 --features cli
+          bash scripts/build-speech.sh x86_64-unknown-linux-gnu
+          test -s apps/desktop/src-tauri/speech-licenses/THIRD-PARTY-RUST.html
+
       - name: Build .deb et AppImage
         env:
           # Valeur factice exigée par des intégrations cloud héritées (chantier 04d).
@@ -133,7 +145,17 @@ jobs:
         run: |
           set -euo pipefail
           pnpm -F ui build
-          pnpm -F desktop tauri build --ci --bundles deb,appimage --config ./src-tauri/tauri.conf.syntheo.json
+          pnpm -F desktop tauri build --ci --bundles deb,appimage \
+            --config ./src-tauri/tauri.conf.syntheo.json --config ./src-tauri/tauri.speech.conf.json
+
+      # Le compagnon est livré, exécutable, dans les deux paquets.
+      - name: Vérifier le compagnon dans le .deb et l'AppImage
+        run: |
+          set -euo pipefail
+          bundle=apps/desktop/src-tauri/target/release/bundle
+          dpkg-deb -c "$bundle"/deb/*.deb | grep -E '^-rwxr-xr-x .* \./usr/bin/syntheo-speech$'
+          appdir=$(find "$bundle/appimage" -maxdepth 1 -type d -name '*.AppDir' | head -1)
+          test -x "$appdir/usr/bin/syntheo-speech"
 
       # Réempaquette l'AppDir : retire Wayland et PipeWire embarqués (ils
       # doivent venir de l'hôte), puis recompresse le squashfs en zstd 19 à

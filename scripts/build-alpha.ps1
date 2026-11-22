@@ -183,6 +183,11 @@ try {
     Remove-Item (Join-Path $bundleDir $sub) -Recurse -Force -ErrorAction SilentlyContinue
   }
 
+  # Programme compagnon syntheo-speech (issue 683), avant `tauri build` qui
+  # l'embarque et en épingle l'empreinte (avec celle du runtime Visual C++).
+  Invoke-Checked powershell @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
+    (Join-Path $Root "scripts\build-speech.ps1"), "-Dumpbin", $dumpbin.FullName)
+
   # Valeur factice exigée par des intégrations cloud héritées (chantier 04d).
   $env:VITE_API_URL = "http://127.0.0.1:9"
   Invoke-Checked pnpm @("-F", "ui", "build")
@@ -194,7 +199,8 @@ try {
     $buildArgs += @("--features", "devtools")
   }
   $buildArgs += @("--config", "./src-tauri/tauri.conf.syntheo.json",
-    "--config", "./src-tauri/tauri.windows-vcrt.conf.json")
+    "--config", "./src-tauri/tauri.windows-vcrt.conf.json",
+    "--config", "./src-tauri/tauri.speech.conf.json")
   if ($UpdaterTest) { $buildArgs += @("--config", $UpdaterTest) }
   Invoke-Checked pnpm $buildArgs
 }

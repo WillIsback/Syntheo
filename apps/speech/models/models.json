@@ -17,6 +17,7 @@
     "weight_type": "QInt8",
     "op_types": ["MatMul", "Gemm"]
   },
+  "sources": [],
   "files": [
     {
       "path": "nemotron/config.json",

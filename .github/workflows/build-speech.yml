@@ -1,87 +1,28 @@
 # Workflow : build-speech
-# Construction du module de transcription sur le poste `syntheo-speech`
-# (apps/speech, issue 683) pour Linux x86-64 et Windows x86-64, sans
-# publication.
+# CI du programme compagnon de transcription sur le poste `syntheo-speech`
+# (apps/speech, issue 683), livré dans l'installeur de l'application
+# (externalBin) : les chaînes de release le construisent elles-mêmes
+# (scripts/build-speech.sh et .ps1) avant `tauri build`. Ce workflow le
+# vérifie sur les PR qui le touchent, sans rien publier ni signer.
 #
 # Jobs :
-#   - `build` (Linux, Windows) : compilation release depuis un registre Cargo
-#     et un cache vides (aucun cache partagé avec les autres workflows), avec
-#     la chaîne d'ONNX Runtime vérifiée avant et après la compilation
-#     (apps/speech/supply-chain/check_ort.py). Sous Windows, runtime Visual
-#     C++ embarqué et imports vérifiés. Le module est uploadé dès
-#     l'assemblage, avant tout outil tiers. Aucun identifiant.
+#   - `build` (Linux, Windows) : construction release par les scripts des
+#     chaînes de release, depuis un registre Cargo et un cache vides, ONNX
+#     Runtime épinglé et contrôlé avant et après (check_ort.py) ; sous
+#     Windows, DLL importées contrôlées. Puis tests du compagnon (moteur
+#     factice). Aucun identifiant.
 #   - `sbom` et `notices` : SBOM CycloneDX et notices des crates
-#     (cargo about), dans des jobs qui ne voient pas le module construit.
-#   - `manifest` : licences et avis d'origine ajoutés au module, puis
-#     `manifest.json` et `files.sha256` (binaire, bibliothèques, licences,
-#     puis les modèles de
-#     apps/speech/models/models.json avec leur URL).
-#   - (sur une PR qui touche le module : `build` et `manifest` seulement.)
-#   - `sign-manifest` : signature du manifeste (manifest.json.sig), avec une
-#     clé propre au module, distincte de celle des mises à jour Tauri, rangée
-#     dans l'environnement `speech-signing` (limité à main). Seulement sur
-#     demande (`sign`) et depuis main : désactivé tant que la clé n'existe pas.
-#
-# Signature Authenticode (prévue, pas encore active) : un job `authenticode`
-# se placera entre `build` et `manifest` pour la cible Windows, sur le modèle
-# du job `sign` de build-windows.yml : environnement `windows-signing`, OIDC
-# (`id-token: write` limité à ce job), client Artifact Signing à empreinte
-# figée, `signtool sign` de syntheo-speech.exe, puis vérification du
-# signataire. Le manifeste est calculé après, sur l'exécutable signé.
+#     (cargo about), dans des jobs qui ne voient pas le binaire construit.
 name: build-speech
 
 on:
-  # CI du module (Linux et Windows) sur une PR qui le touche : construction,
-  # SBOM et manifeste, sans signature ni aucun secret (jamais
-  # pull_request_target).
   pull_request:
     paths:
       - "apps/speech/**"
+      - "scripts/build-speech.sh"
+      - "scripts/build-speech.ps1"
       - ".github/workflows/build-speech.yml"
   workflow_dispatch:
-    inputs:
-      min-app-version:
-        description: "Version minimale de l'application (x.y.z)"
-        type: string
-        required: false
-        default: "0.8.0"
-      models-base-url:
-        description: "URL de base des modèles (https://)"
-        type: string
-        required: false
-        default: "https://github.com/WillIsback/Syntheo/releases/download/speech-models-1"
-      rebuild:
-        description: "Reconstruction de la même version (0 à 99), pour le numéro de construction"
-        type: number
-        required: false
-        default: 0
-      sign:
-        description: "Signer le manifeste (main uniquement, environnement speech-signing)"
-        type: boolean
-        required: false
-        default: false
-  workflow_call:
-    secrets:
-      SPEECH_MANIFEST_PRIVATE_KEY:
-        required: false
-      SPEECH_MANIFEST_PRIVATE_KEY_PASSWORD:
-        required: false
-    inputs:
-      min-app-version:
-        type: string
-        required: true
-      models-base-url:
-        type: string
-        required: false
-        default: "https://github.com/WillIsback/Syntheo/releases/download/speech-models-1"
-      rebuild:
-        type: number
-        required: false
-        default: 0
-      sign:
-        type: boolean
-        required: false
-        default: false
 
 concurrency:
   group: build-speech-${{ github.ref }}
@@ -99,23 +40,10 @@ jobs:
         include:
           - os: ubuntu-24.04
             target: x86_64-unknown-linux-gnu
-            binary: syntheo-speech
-            key: linux
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            binary: syntheo-speech.exe
-            key: windows
     runs-on: ${{ matrix.os }}
     timeout-minutes: 90
-    # Identifiant et empreinte de l'artefact de chaque cible : les jobs
-    # suivants téléchargent par identifiant et contrôlent l'empreinte.
-    outputs:
-      id-linux: ${{ steps.record.outputs.id-linux }}
-      tree-linux: ${{ steps.record.outputs.tree-linux }}
-      id-windows: ${{ steps.record.outputs.id-windows }}
-      tree-windows: ${{ steps.record.outputs.tree-windows }}
-    env:
-      ORT_CACHE_DIR: ${{ github.workspace }}/../ort-cache
     steps:
       - name: Checkout du code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -128,103 +56,33 @@ jobs:
         with:
           cache: "false"
 
-      - name: Récupérer les dépendances (Cargo.lock figé)
-        working-directory: apps/speech
-        run: cargo fetch --locked
-
-      - name: Vérifier l'épinglage d'ONNX Runtime
-        shell: bash
+      - name: Construire (Linux)
+        if: runner.os == 'Linux'
         env:
+          ORT_CACHE_DIR: ${{ runner.temp }}/ort-cache
           TARGET: ${{ matrix.target }}
-        run: python3 -I apps/speech/supply-chain/check_ort.py before "$TARGET"
+        run: bash scripts/build-speech.sh "$TARGET"
 
-      # Features par défaut (moteur parakeet) ; jamais `fake-engine`.
-      - name: Compiler le module (release)
-        working-directory: apps/speech
-        shell: bash
-        run: |
-          set -euo pipefail
-          rm -rf "$ORT_CACHE_DIR"
-          cargo build --release --locked
-
-      - name: Vérifier l'archive ONNX Runtime utilisée
-        shell: bash
-        env:
-          TARGET: ${{ matrix.target }}
-        run: python3 -I apps/speech/supply-chain/check_ort.py after "$TARGET"
-
-      - name: Assembler le module
-        shell: bash
-        env:
-          BINARY: ${{ matrix.binary }}
-        run: |
-          set -euo pipefail
-          mkdir -p dist
-          cp "apps/speech/target/release/$BINARY" dist/
-          # Audio de mise en service (issue 686), listé au manifeste : deux
-          # flux de 30 s, 16 kHz mono PCM16.
-          if [ -f apps/speech/commissioning/mic.wav ] && [ -f apps/speech/commissioning/sys.wav ]; then
-            mkdir -p dist/commissioning
-            cp apps/speech/commissioning/mic.wav apps/speech/commissioning/sys.wav dist/commissioning/
-          else
-            echo "::warning::Audio de mise en service absent (apps/speech/commissioning) : le module ne pourra pas être mis en service."
-          fi
-
-      # Le binaire est lié au CRT dynamique (MSVC par défaut) : runtime
-      # Visual C++ embarqué à côté, comme pour syntheo.exe. Toute DLL hors
-      # Windows importée par le binaire doit être dans le dossier du module.
-      - name: Runtime Visual C++ et imports (Windows)
+      - name: Construire (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
+        env:
+          ORT_CACHE_DIR: ${{ runner.temp }}\ort-cache
+          TARGET: ${{ matrix.target }}
         run: |
           $vswhere = Join-Path ${env:ProgramFiles(x86)} "Microsoft Visual Studio\Installer\vswhere.exe"
           $vs = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
           if (-not $vs) { throw "Visual Studio (outils VC x64) introuvable" }
-          $redist = Get-ChildItem (Join-Path $vs "VC\Redist\MSVC") -Directory |
-            Where-Object { $_.Name -match '^\d+\.\d+\.\d+$' -and (Test-Path (Join-Path $_.FullName "x64\Microsoft.VC143.CRT")) } |
-            Sort-Object { [version]$_.Name } -Descending | Select-Object -First 1
-          if (-not $redist) { throw "Microsoft.VC143.CRT introuvable" }
-          $crt = Join-Path $redist.FullName "x64\Microsoft.VC143.CRT"
           $dumpbin = Get-ChildItem (Join-Path $vs "VC\Tools\MSVC\*\bin\Hostx64\x64\dumpbin.exe") |
             Sort-Object FullName -Descending | Select-Object -First 1
-          $imports = & $dumpbin.FullName /nologo /dependents dist/syntheo-speech.exe |
-            ForEach-Object { $_.Trim() } | Where-Object { $_ -match '\.dll$' }
-          Write-Host "Imports de syntheo-speech.exe :"
-          $imports | ForEach-Object { Write-Host "  $_" }
-          foreach ($dll in $imports | Where-Object { $_ -match '^(msvcp|vcruntime|concrt|vcomp)' }) {
-            Copy-Item (Join-Path $crt $dll) dist/ -ErrorAction Stop
-          }
-          $missing = $imports | Where-Object { $_ -match '^onnxruntime' -and -not (Test-Path (Join-Path dist $_)) }
-          if ($missing) { throw "DLL ONNX Runtime importées mais absentes du module : $($missing -join ', ')" }
-          Get-ChildItem dist -Recurse -File | ForEach-Object { Write-Host "$($_.Length)  $($_.FullName)" }
+          ./scripts/build-speech.ps1 -Target $env:TARGET -Dumpbin $dumpbin.FullName
 
-      # SBOM des dépendances Rust du module, outil à version figée.
-      # Le module est figé dès l'assemblage : un artefact uploadé n'est plus
-      # modifiable. Aucun outil tiers (SBOM, notices) ne tourne dans ce job.
-      - name: Empreinte du module
-        id: tree
+      # Tests du compagnon : protocole, jeton, moteur factice ; les essais
+      # avec les vrais modèles sont ignorés (modèles absents en CI).
+      - name: Tests du compagnon
+        working-directory: apps/speech
         shell: bash
-        run: echo "digest=$(bash apps/speech/supply-chain/tree-digest.sh dist)" >> "$GITHUB_OUTPUT"
-
-      - name: Upload du module (non signé)
-        id: upload
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: syntheo-speech-unsigned-${{ matrix.target }}
-          path: dist/
-          retention-days: 7
-
-      - name: Identifiant et empreinte en sortie
-        id: record
-        shell: bash
-        env:
-          KEY: ${{ matrix.key }}
-          ID: ${{ steps.upload.outputs.artifact-id }}
-          TREE: ${{ steps.tree.outputs.digest }}
-        run: |
-          set -euo pipefail
-          echo "id-$KEY=$ID" >> "$GITHUB_OUTPUT"
-          echo "tree-$KEY=$TREE" >> "$GITHUB_OUTPUT"
+        run: cargo test --locked --features fake-engine
 
   # SBOM des dépendances Rust du module, dans un job à part qui ne voit pas
   # le module construit. Outil à version figée.
@@ -269,14 +127,11 @@ jobs:
           retention-days: 30
 
   # Notices des crates du binaire (licences MIT, Apache-2.0…), livrées dans
-  # le module. Job à part, outil à version figée, sans le module construit.
+  # l'installeur (les chaînes de release les génèrent aussi). Job à part, outil à version figée, sans le module construit.
   notices:
     name: Notices des crates
     runs-on: ubuntu-24.04
     timeout-minutes: 30
-    outputs:
-      id: ${{ steps.upload.outputs.artifact-id }}
-      tree: ${{ steps.tree.outputs.digest }}
     steps:
       - name: Checkout du code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -298,188 +153,9 @@ jobs:
             -o notices/THIRD-PARTY-RUST.html apps/speech/supply-chain/about.hbs
           test -s notices/THIRD-PARTY-RUST.html
 
-      - name: Empreinte des notices
-        id: tree
-        run: echo "digest=$(bash apps/speech/supply-chain/tree-digest.sh notices)" >> "$GITHUB_OUTPUT"
-
       - name: Upload des notices
-        id: upload
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: syntheo-speech-notices
           path: notices/
           retention-days: 7
-
-  manifest:
-    name: Manifeste (${{ matrix.target }})
-    needs: [build, notices]
-    strategy:
-      matrix:
-        include:
-          - target: x86_64-unknown-linux-gnu
-            key: linux
-          - target: x86_64-pc-windows-msvc
-            key: windows
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    outputs:
-      id-linux: ${{ steps.record.outputs.id-linux }}
-      tree-linux: ${{ steps.record.outputs.tree-linux }}
-      id-windows: ${{ steps.record.outputs.id-windows }}
-      tree-windows: ${{ steps.record.outputs.tree-windows }}
-    steps:
-      - name: Checkout du code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - name: Télécharger le module (par identifiant)
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          artifact-ids: ${{ needs.build.outputs[format('id-{0}', matrix.key)] }}
-          merge-multiple: true
-          path: module
-
-      - name: Télécharger les notices des crates (par identifiant)
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          artifact-ids: ${{ needs.notices.outputs.id }}
-          merge-multiple: true
-          path: crate-notices
-
-      # Ce qui est haché doit être exactement ce que les jobs build et
-      # notices ont produit.
-      - name: Contrôler les empreintes
-        shell: bash
-        env:
-          MODULE_TREE: ${{ needs.build.outputs[format('tree-{0}', matrix.key)] }}
-          NOTICES_TREE: ${{ needs.notices.outputs.tree }}
-        run: |
-          set -euo pipefail
-          [ -n "$MODULE_TREE" ] && [ -n "$NOTICES_TREE" ] || { echo "::error::Empreinte attendue absente"; exit 1; }
-          [ "$(bash apps/speech/supply-chain/tree-digest.sh module)" = "$MODULE_TREE" ] || { echo "::error::Module différent de celui du job build"; exit 1; }
-          [ "$(bash apps/speech/supply-chain/tree-digest.sh crate-notices)" = "$NOTICES_TREE" ] || { echo "::error::Notices différentes de celles du job notices"; exit 1; }
-
-      # Licences et avis d'origine (ONNX Runtime, crates, modèles), listés
-      # ensuite dans le manifeste signé comme tout fichier du module.
-      - name: Ajouter les licences
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p module/licenses
-          cp -R apps/speech/supply-chain/notices/. module/licenses/
-          cp crate-notices/THIRD-PARTY-RUST.html module/licenses/
-          cp apps/speech/commissioning/ATTRIBUTION.md module/licenses/commissioning-audio-ATTRIBUTION.md
-
-      - name: Écrire manifest.json et files.sha256
-        shell: bash
-        env:
-          TARGET: ${{ matrix.target }}
-          # Sur une PR, pas d'entrées : valeurs par défaut du lancement manuel.
-          MIN_APP_VERSION: ${{ inputs.min-app-version || '0.8.0' }}
-          MODELS_BASE_URL: ${{ inputs.models-base-url || 'https://github.com/WillIsback/Syntheo/releases/download/speech-models-1' }}
-          # Numéro de construction : dérivé de la version, plus la
-          # reconstruction (anti-retour, monotone d'une release à l'autre).
-          REBUILD: ${{ inputs.rebuild || 0 }}
-        run: |
-          set -euo pipefail
-          python3 -I apps/speech/supply-chain/make_manifest.py module "$TARGET" "$MIN_APP_VERSION" "$MODELS_BASE_URL" "$REBUILD"
-          cat module/files.sha256
-
-      - name: Empreinte du module complet
-        id: tree
-        run: echo "digest=$(bash apps/speech/supply-chain/tree-digest.sh module)" >> "$GITHUB_OUTPUT"
-
-      - name: Upload du module et de son manifeste
-        id: upload
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: syntheo-speech-${{ matrix.target }}
-          path: module/
-          retention-days: 14
-
-      - name: Identifiant et empreinte en sortie
-        id: record
-        env:
-          KEY: ${{ matrix.key }}
-          ID: ${{ steps.upload.outputs.artifact-id }}
-          TREE: ${{ steps.tree.outputs.digest }}
-        run: |
-          set -euo pipefail
-          echo "id-$KEY=$ID" >> "$GITHUB_OUTPUT"
-          echo "tree-$KEY=$TREE" >> "$GITHUB_OUTPUT"
-
-  # Signature du manifeste : clé du module (pas celle des mises à jour),
-  # environnement `speech-signing` limité à main. Seul l'outil de signature est
-  # installé (version et empreintes figées de .github/signing).
-  sign-manifest:
-    name: Signature du manifeste (${{ matrix.target }})
-    needs: manifest
-    if: github.event_name != 'pull_request' && inputs.sign && github.ref == 'refs/heads/main'
-    strategy:
-      matrix:
-        include:
-          - target: x86_64-unknown-linux-gnu
-            key: linux
-          - target: x86_64-pc-windows-msvc
-            key: windows
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    environment: speech-signing
-    steps:
-      - name: Checkout du code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - name: Node.js
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: "22.23.4"
-
-      - name: Installer l'outil de signature (version et empreintes figées)
-        working-directory: .github/signing
-        run: npm ci --ignore-scripts --no-audit --no-fund
-
-      - name: Télécharger le module (par identifiant)
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          artifact-ids: ${{ needs.manifest.outputs[format('id-{0}', matrix.key)] }}
-          merge-multiple: true
-          path: module
-
-      - name: Contrôler l'empreinte
-        env:
-          TREE: ${{ needs.manifest.outputs[format('tree-{0}', matrix.key)] }}
-        run: |
-          set -euo pipefail
-          [ -n "$TREE" ] && [ "$(bash apps/speech/supply-chain/tree-digest.sh module)" = "$TREE" ] || { echo "::error::Module différent de celui du job manifest"; exit 1; }
-
-      # Pas de module signé sans audio de mise en service : il ne servirait
-      # jamais (aucun profil mesurable).
-      - name: Exiger l'audio de mise en service
-        run: |
-          set -euo pipefail
-          grep -q '"commissioning/mic.wav"' module/manifest.json && grep -q '"commissioning/sys.wav"' module/manifest.json \
-            || { echo "::error::Audio de mise en service absent du manifeste."; exit 1; }
-
-      - name: Signer manifest.json (clé du module)
-        shell: bash
-        env:
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.SPEECH_MANIFEST_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.SPEECH_MANIFEST_PRIVATE_KEY_PASSWORD }}
-        run: |
-          set -euo pipefail
-          if [ -z "${TAURI_SIGNING_PRIVATE_KEY}" ]; then
-            echo "::error::Secret SPEECH_MANIFEST_PRIVATE_KEY absent de l'environnement speech-signing."
-            exit 1
-          fi
-          .github/signing/node_modules/.bin/tauri signer sign module/manifest.json > /dev/null
-          test -s module/manifest.json.sig || { echo "::error::Signature absente ou vide"; exit 1; }
-
-      - name: Upload de la signature
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: syntheo-speech-signature-${{ matrix.target }}
-          path: module/manifest.json.sig
-          retention-days: 14

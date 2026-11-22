@@ -13,6 +13,7 @@ owhisper-interface = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 sha2 = { workspace = true }
+syntheo-image-hash = { workspace = true }
 syntheo-pinned-fetch = { workspace = true }
 syntheo-speech-probe = { workspace = true }
 tokio = { workspace = true, features = ["fs", "io-util", "macros", "process", "rt", "sync", "time"] }
