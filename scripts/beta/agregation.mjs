@@ -22,7 +22,6 @@ import {
   constants,
   existsSync,
   fstatSync,
-  lstatSync,
   mkdirSync,
   openSync,
   readdirSync,
@@ -112,14 +111,10 @@ export const RAISONS = deepFreeze({
 
 function readCapped(path) {
   // Tout ce qui n'est pas un fichier ordinaire (dossier, lien, tube nommé,
-  // périphérique, socket) est refusé avant l'ouverture : ouvrir un tube nommé
-  // attendrait un écrivain indéfiniment. O_NONBLOCK couvre en plus un
-  // remplacement entre lstat et open.
-  try {
-    if (!lstatSync(path).isFile()) return { refus: "non_fichier" };
-  } catch {
-    return { refus: "illisible" };
-  }
+  // périphérique, socket) est refusé : O_NOFOLLOW refuse un lien, O_NONBLOCK
+  // ouvre un tube nommé sans attendre d'écrivain, puis fstat sur le
+  // descripteur ouvert décide, sans course entre contrôle et ouverture.
+  // Sous Windows, ces deux options valent 0 : le contrôle fstat reste.
   const flags =
     constants.O_RDONLY |
     (constants.O_NOFOLLOW ?? 0) |
