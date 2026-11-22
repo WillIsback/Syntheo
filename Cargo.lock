@@ -2655,6 +2655,7 @@ dependencies = [
  "tauri-plugin-icon",
  "tauri-plugin-local-api",
  "tauri-plugin-local-auth",
+ "tauri-plugin-mesure",
  "tauri-plugin-misc",
  "tauri-plugin-notification",
  "tauri-plugin-notify",
@@ -6877,6 +6878,7 @@ dependencies = [
 name = "mesure"
 version = "0.1.0"
 dependencies = [
+ "flate2",
  "serde",
  "serde_json",
  "similar",
@@ -12086,6 +12088,23 @@ dependencies = [
  "tauri-specta",
  "thiserror 2.0.21",
  "windows",
+]
+
+[[package]]
+name = "tauri-plugin-mesure"
+version = "0.1.0"
+dependencies = [
+ "base64 0.23.1",
+ "db-app",
+ "mesure",
+ "serde",
+ "serde_json",
+ "specta",
+ "specta-typescript",
+ "tauri",
+ "tauri-plugin",
+ "tauri-plugin-db",
+ "tauri-specta",
 ]
 
 [[package]]

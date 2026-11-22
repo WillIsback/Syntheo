@@ -10,7 +10,8 @@
 use std::path::Path;
 
 use syntheo_mesure::{
-    ChangeKind, Dictionary, Difference, Format, MAX_INPUT_BYTES, Report, differences, measure,
+    ChangeKind, Dictionary, Difference, Format, MAX_INPUT_BYTES, Report, differences, load_file,
+    measure,
 };
 
 use crate::output;
@@ -27,11 +28,8 @@ fn read_text(path: &Path, what: &'static str) -> Result<String> {
     String::from_utf8(bytes).map_err(|_| Error::operation(what, "file is not UTF-8 text"))
 }
 
-fn format_of(path: &Path, what: &'static str) -> Result<Format> {
-    path.extension()
-        .and_then(|ext| ext.to_str())
-        .and_then(Format::from_extension)
-        .ok_or_else(|| Error::operation(what, "unsupported file type (use .md, .txt or .html)"))
+fn load(path: &Path, what: &'static str) -> Result<(String, Format)> {
+    load_file(path).map_err(|error| Error::operation(what, error.to_string()))
 }
 
 struct Inputs {
@@ -43,8 +41,8 @@ struct Inputs {
 }
 
 fn inputs(generated: &Path, sent: &Path, dictionary: Option<&Path>) -> Result<Inputs> {
-    let generated_format = format_of(generated, "read generated summary")?;
-    let sent_format = format_of(sent, "read sent version")?;
+    let (generated, generated_format) = load(generated, "read generated summary")?;
+    let (sent, sent_format) = load(sent, "read sent version")?;
     let dictionary = match dictionary {
         Some(path) => {
             let text = read_text(path, "read dictionary")?;
@@ -54,9 +52,9 @@ fn inputs(generated: &Path, sent: &Path, dictionary: Option<&Path>) -> Result<In
         None => Dictionary::default(),
     };
     Ok(Inputs {
-        generated: read_text(generated, "read generated summary")?,
+        generated,
         generated_format,
-        sent: read_text(sent, "read sent version")?,
+        sent,
         sent_format,
         dictionary,
     })
@@ -228,7 +226,7 @@ mod tests {
 
     #[test]
     fn unsupported_files_are_refused_without_reading_them() {
-        assert!(format_of(Path::new("notes.docx"), "read sent version").is_err());
-        assert!(format_of(Path::new("notes"), "read sent version").is_err());
+        assert!(load(Path::new("notes.pdf"), "read sent version").is_err());
+        assert!(load(Path::new("notes"), "read sent version").is_err());
     }
 }

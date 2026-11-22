@@ -72,10 +72,10 @@ pub enum Command {
     /// Measure how much of a generated summary was reworked before sending
     /// (local calibration; prints numbers only, never text)
     Mesure {
-        /// Generated summary (.md, .txt or .html)
+        /// Generated summary (.md, .txt, .html or .docx)
         #[arg(long, value_name = "FILE")]
         generated: PathBuf,
-        /// Version actually sent or published (.md, .txt or .html)
+        /// Version actually sent or published (.md, .txt, .html or .docx)
         #[arg(long, value_name = "FILE")]
         sent: PathBuf,
         /// Dictionary terms, one per line

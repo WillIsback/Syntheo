@@ -42,6 +42,10 @@ msgstr "« {title} » a été lancée sur cette note"
 msgid "(default)"
 msgstr "(par défaut)"
 
+#: src/mesure/measure-dialog.tsx
+msgid "(measured as a whole)"
+msgstr "(mesurée d'un seul bloc)"
+
 #: src/settings/general/audio-settings.tsx
 msgid "(Unavailable — using current default)"
 msgstr "(Indisponible — utilisation de la valeur par défaut actuelle)"
@@ -125,6 +129,10 @@ msgstr "{chain} · échec de la dernière exécution {relative}"
 #: src/settings/automations/index.tsx
 msgid "{chain} · never run"
 msgstr "{chain} · jamais exécutée"
+
+#: src/mesure/measure-dialog.tsx
+msgid "{content} words of content reworked per 100 generated, plus {lexical} words of names or acronyms corrected."
+msgstr "{content} mots de fond retouchés pour 100 mots générés, plus {lexical} mots de noms propres ou de sigles corrigés."
 
 #: src/folders/project/folder-subfolders.tsx
 #: src/search/unified/labels.ts
@@ -444,6 +452,10 @@ msgstr "Ajouter aux favoris"
 msgid "Add webhook"
 msgstr "Ajoutez un webhook"
 
+#: src/mesure/measure-dialog.tsx
+msgid "Added"
+msgstr "Ajout"
+
 #: src/chat/components/message/tool/session-correction.tsx
 msgid "Added to your dictionary:"
 msgstr "Ajoutés à votre dictionnaire :"
@@ -461,6 +473,10 @@ msgstr "Langues parlées supplémentaires"
 msgid "Address (URL)"
 msgstr "Adresse (URL)"
 
+#: src/settings/privacy/index.tsx
+msgid "Adds “Measure rework…” to the summary menu. You paste the version you sent; only counts are kept on this computer, never text, and nothing is sent."
+msgstr "Ajoute « Mesurer la reprise… » au menu de la synthèse. Vous collez la version envoyée ; seuls des nombres sont gardés sur cet ordinateur, jamais de texte, et rien n'est envoyé."
+
 #: src/shared/shortcuts.ts
 msgid "Adjust"
 msgstr "Régler"
@@ -470,6 +486,10 @@ msgstr "Régler"
 #: src/sidebar/settings-nav-groups.ts
 msgid "Advanced"
 msgstr "Avancé"
+
+#: src/settings/privacy/index.tsx
+msgid "After a measurement, lists each difference so you can classify it by hand. Excerpts stay on screen; only the agreement counts are kept."
+msgstr "Après une mesure, liste chaque différence pour que vous la classiez à la main. Les extraits restent à l'écran ; seuls les nombres de la matrice d'accord sont gardés."
 
 #: src/folders/project/next-meeting-slot.tsx
 msgid "Agenda"
@@ -483,6 +503,17 @@ msgstr "Ordre du jour proposé à partir des points restés ouverts (modifiable)
 #: src/settings/search-index.ts
 msgid "Agent skills"
 msgstr "Compétences de l'agent"
+
+#: src/mesure/measure-dialog.tsx
+msgid "Agreement"
+msgstr "Accord"
+
+#. placeholder {0}: agreementPercent(matrix)?.toFixed(1)
+#. placeholder {1}: labeledCount(matrix)
+#. placeholder {2}: matrix.ruleVersion
+#: src/mesure/measure-dialog.tsx
+msgid "Agreement: {0}% on {1} differences (rule {2})."
+msgstr "Accord : {0} % sur {1} différences (règle {2})."
 
 #: src/contacts/details-sections.tsx
 msgid "AI-generated summary of all interactions and notes with this contact will appear here. This will synthesize key discussion points, action items, and relationship context across all meetings and notes."
@@ -703,6 +734,7 @@ msgstr "Auto"
 msgid "Auto summary format"
 msgstr "Format de résumé automatique"
 
+#: src/mesure/measure-dialog.tsx
 #: src/session/components/living-document/meeting-type-picker.tsx
 #: src/templates/auto-form.tsx
 #: src/templates/template-sidebar.tsx
@@ -784,8 +816,21 @@ msgid "Begins in {time}"
 msgstr "Début dans {time}"
 
 #: src/chat/components/body/empty.tsx
+#: src/settings/privacy/index.tsx
 msgid "Beta"
 msgstr "Bêta"
+
+#: src/settings/search-index.ts
+msgid "beta, calibration, differences, agreement"
+msgstr "bêta, calibrage, différences, accord"
+
+#: src/settings/search-index.ts
+msgid "beta, measure, rework, sent version, pilot"
+msgstr "bêta, mesure, reprise, version envoyée, pilote"
+
+#: src/settings/privacy/index.tsx
+msgid "Beta: measure rework"
+msgstr "Bêta : mesure de la reprise"
 
 #: src/settings/general/notification.tsx
 msgid "Bloom"
@@ -803,6 +848,19 @@ msgstr "Canevas clair"
 #: src/templates/utils.ts
 msgid "by {name}"
 msgstr "par {name}"
+
+#: src/mesure/measure-dialog.tsx
+msgid "Calibration"
+msgstr "Calibrage"
+
+#: src/settings/privacy/index.tsx
+#: src/settings/search-index.ts
+msgid "Calibration mode"
+msgstr "Mode Calibrage"
+
+#: src/mesure/measure-dialog.tsx
+msgid "Calibration: classify each difference"
+msgstr "Calibrage : classez chaque différence"
 
 #: src/stt/audio-import-feedback.ts
 msgid "Can't import this audio"
@@ -926,6 +984,10 @@ msgstr "Choisir"
 msgid "Choose a file format and what to include."
 msgstr "Choisissez un format de fichier et les éléments à inclure."
 
+#: src/mesure/measure-dialog.tsx
+msgid "Choose a file…"
+msgstr "Choisir un fichier…"
+
 #: src/session/components/living-document/fiche-folder.tsx
 msgid "Choose a folder"
 msgstr "Choisir un dossier"
@@ -1012,6 +1074,11 @@ msgstr "Choisissez d'abord le programme à lancer."
 msgid "Choose…"
 msgstr "Choisir…"
 
+#. placeholder {0}: index + 1
+#: src/mesure/measure-dialog.tsx
+msgid "Class of difference {0}"
+msgstr "Classe de la différence {0}"
+
 #: src/contacts/related-notes.tsx
 #: src/contacts/shared.tsx
 #: src/folders/sidebar.tsx
@@ -1046,6 +1113,7 @@ msgstr "Dupliquer"
 #: src/changelog/index.tsx
 #: src/main/windows-title-bar.tsx
 #: src/main/windows-window-controls.tsx
+#: src/mesure/measure-dialog.tsx
 #: src/session/components/note-input/search/bar.tsx
 #: src/shared/open-note-dialog.tsx
 #: src/shared/ui/localized-dialog-labels.tsx
@@ -1121,6 +1189,10 @@ msgstr "Sortie de la commande"
 msgid "Company"
 msgstr "Entreprise"
 
+#: src/mesure/measure-dialog.tsx
+msgid "Compared with the current summary: its original generated version was not kept (summary generated before version 0.8.0)."
+msgstr "Comparée à la synthèse actuelle : sa version générée d'origine n'a pas été gardée (synthèse générée avant la version 0.8.0)."
+
 #: src/settings/automations/step-forms.tsx
 msgid "Complete the note with the same title"
 msgstr "Compléter la note du même titre"
@@ -1189,6 +1261,7 @@ msgstr "Options de contact"
 msgid "Contacts"
 msgstr "Contacts"
 
+#: src/mesure/measure-dialog.tsx
 #: src/settings/automations/step-forms.tsx
 msgid "Content"
 msgstr "Contenu"
@@ -1209,6 +1282,7 @@ msgstr "Contrôler l'écoute sans rouvrir Syntheo."
 msgid "Copied"
 msgstr "Copié"
 
+#: src/mesure/measure-dialog.tsx
 #: src/session/components/living-document/summary-switcher.tsx
 msgid "Copied to clipboard"
 msgstr "Copié dans le presse-papiers"
@@ -1242,6 +1316,10 @@ msgstr "Copier la dernière dictée"
 #: src/stt/meeting-disclosure.ts
 msgid "Copy message"
 msgstr "Copier le message"
+
+#: src/mesure/measure-dialog.tsx
+msgid "Copy the matrix"
+msgstr "Copier la matrice"
 
 #: src/settings/developers/webhooks.tsx
 msgid "Copy this signing secret now — it is only shown once."
@@ -1499,6 +1577,10 @@ msgstr "Supprimer le dossier « {name} »"
 #: src/templates/sections-editor.tsx
 msgid "Delete section {position}"
 msgstr "Supprimer la section {position}"
+
+#: src/mesure/measure-dialog.tsx
+msgid "Deleted"
+msgstr "Suppression"
 
 #: src/templates/sections-editor.tsx
 msgid "Describe in one line what Syntheo should write here."
@@ -1933,6 +2015,7 @@ msgstr "Extraire les tâches"
 msgid "Extract the tasks."
 msgstr "Extraire les tâches."
 
+#: src/mesure/measure-dialog.tsx
 #: src/session/components/living-document/summary-switcher.tsx
 msgid "Failed to copy"
 msgstr "La copie a échoué"
@@ -2105,6 +2188,10 @@ msgstr "Générer le compte rendu"
 msgid "Generate with the local model"
 msgstr "Générer avec le modèle local"
 
+#: src/mesure/measure-dialog.tsx
+msgid "Generated"
+msgstr "Générée"
+
 #: src/automations/labels.ts
 msgid "Generated text"
 msgstr "Texte généré"
@@ -2112,6 +2199,10 @@ msgstr "Texte généré"
 #: src/automations/action-runners.ts
 msgid "Generated text ({length} characters)"
 msgstr "Texte généré ({length} caractères)"
+
+#: src/mesure/measure-dialog.tsx
+msgid "Generated words"
+msgstr "Mots générés"
 
 #: src/session/components/note-input/enhanced/streaming.tsx
 #: src/session/components/title-input.tsx
@@ -2541,6 +2632,10 @@ msgstr "Moins d'une minute restante"
 msgid "Lets you know when the automation has finished."
 msgstr "Vous prévient quand l'automatisation a terminé."
 
+#: src/mesure/measure-dialog.tsx
+msgid "Lexical"
+msgstr "Lexical"
+
 #: src/settings/appearance/theme.tsx
 msgid "Light"
 msgstr "Clair"
@@ -2723,6 +2818,10 @@ msgstr "Correspondre à votre appareil"
 msgid "Materials"
 msgstr "Matériels"
 
+#: src/mesure/measure-dialog.tsx
+msgid "Matrix saved"
+msgstr "Matrice enregistrée"
+
 #: src/main/windows-window-controls.tsx
 msgid "Maximize"
 msgstr "Agrandir"
@@ -2743,6 +2842,23 @@ msgstr "MCP, configuration, agent IA, assistant"
 #: src/sidebar/settings-nav-groups.ts
 msgid "Me"
 msgstr "Moi"
+
+#: src/mesure/measure-dialog.tsx
+msgid "Measure"
+msgstr "Mesurer"
+
+#: src/mesure/measure-dialog.tsx
+msgid "Measure rework"
+msgstr "Mesurer la reprise"
+
+#: src/settings/privacy/index.tsx
+#: src/settings/search-index.ts
+msgid "Measure rework of summaries"
+msgstr "Mesurer la reprise des synthèses"
+
+#: src/session/components/living-document/summary-switcher-view.tsx
+msgid "Measure rework…"
+msgstr "Mesurer la reprise…"
 
 #: src/settings/ai/llm/server-card.tsx
 msgid "Medium"
@@ -3692,6 +3808,14 @@ msgstr "Coller"
 msgid "Paste a past summary you like..."
 msgstr "Collez un résumé précédent que vous aimez..."
 
+#: src/mesure/measure-dialog.tsx
+msgid "Paste or drop the version you actually sent. It stays in this window: only counts are saved, never text."
+msgstr "Collez ou déposez la version que vous avez réellement envoyée. Elle reste dans cette fenêtre : seuls des nombres sont enregistrés, jamais de texte."
+
+#: src/mesure/measure-dialog.tsx
+msgid "Paste the sent version here, or drop a .txt, .md, .html or .docx file."
+msgstr "Collez ici la version envoyée, ou déposez un fichier .txt, .md, .html ou .docx."
+
 #: src/home/live-note-card.tsx
 #: src/meeting-float/overlay/bar.tsx
 #: src/settings/developers/webhooks.tsx
@@ -4116,6 +4240,18 @@ msgstr "Tout remplacer"
 msgid "Replace with..."
 msgstr "Remplacer par..."
 
+#: src/mesure/measure-dialog.tsx
+msgid "Replaced"
+msgstr "Remplacement"
+
+#: src/mesure/measure-dialog.tsx
+msgid "Replaced (content)"
+msgstr "Remplacés (fond)"
+
+#: src/mesure/measure-dialog.tsx
+msgid "Replaced (names, acronyms)"
+msgstr "Remplacés (noms propres, sigles)"
+
 #: src/settings/automations/workflow-test-panel.tsx
 msgid "replaces the content of the clipboard"
 msgstr "remplace le contenu du presse-papiers"
@@ -4283,6 +4419,10 @@ msgstr "Enregistrer les exports PDF, texte, Markdown et Org dans ce dossier."
 msgid "Save slides and screens others share in meetings. Requires Screen Recording."
 msgstr "Enregistrer les diapositives et les écrans partagés par d'autres pendant les réunions. Nécessite l'enregistrement d'écran."
 
+#: src/mesure/measure-dialog.tsx
+msgid "Save the matrix"
+msgstr "Enregistrer la matrice"
+
 #: src/settings/general/meeting-settings.tsx
 msgid "Save visible chat from supported meetings using Accessibility."
 msgstr "Enregistrer la discussion visible des réunions prises en charge à l'aide de l'accessibilité."
@@ -4442,6 +4582,10 @@ msgstr "Titre de la section"
 msgid "Sections"
 msgstr "Sections"
 
+#: src/mesure/measure-dialog.tsx
+msgid "Sections found"
+msgstr "Sections retrouvées"
+
 #. placeholder {0}: results.length
 #: src/shared/palette-settings-group.tsx
 msgid "See all {0} settings"
@@ -4519,9 +4663,17 @@ msgstr "envoie le JSON à l'adresse, hors de votre ordinateur"
 msgid "sent"
 msgstr "envoyé"
 
+#: src/mesure/measure-dialog.tsx
+msgid "Sent"
+msgstr "Envoyée"
+
 #: src/automations/action-runners.ts
 msgid "Sent to {host} (status {status})"
 msgstr "Envoyé à {host} (statut {status})"
+
+#: src/mesure/measure-dialog.tsx
+msgid "Sent version"
+msgstr "Version envoyée"
 
 #: src/settings/appearance/note-ink.tsx
 msgid "Sentences that come from your notes appear in green. When off, your notes are shown in a separate block."
@@ -4554,6 +4706,7 @@ msgid "Session title"
 msgstr "Titre de la session"
 
 #: src/settings/general/update-section.tsx
+#: src/settings/privacy/index.tsx
 msgid "Set by your administrator."
 msgstr "Réglé par votre administrateur."
 
@@ -5407,6 +5560,14 @@ msgstr "La commande n'a pas été confirmée : elle n'a pas été lancée."
 msgid "The correction could not be applied."
 msgstr "La correction n'a pas pu être appliquée."
 
+#: src/mesure/measure-dialog.tsx
+msgid "The counters could not be saved."
+msgstr "Les nombres n'ont pas pu être enregistrés."
+
+#: src/mesure/measure-dialog.tsx
+msgid "The differences could not be listed."
+msgstr "Les différences n'ont pas pu être listées."
+
 #: src/settings/general/update-section.tsx
 msgid "The download was interrupted. Try again."
 msgstr "Le téléchargement a été interrompu. Réessayez."
@@ -5454,6 +5615,10 @@ msgstr "Le modèle local liste les actions à faire et les ajoute au coffre."
 #: src/automations/action-runners.ts
 msgid "The local model returned an empty answer."
 msgstr "Le modèle local a renvoyé une réponse vide."
+
+#: src/mesure/measure-dialog.tsx
+msgid "The matrix could not be saved."
+msgstr "La matrice n'a pas pu être enregistrée."
 
 #: src/chat/components/message/tool/move-tools.tsx
 msgid "The meeting contents could not be moved."
@@ -5519,6 +5684,11 @@ msgstr "Le modèle choisi n'a pas répondu : {0}"
 #: src/stt/run-batch-helpers.ts
 msgid "The selected transcription provider"
 msgstr "Le fournisseur de transcription sélectionné"
+
+#. placeholder {0}: measured.error
+#: src/mesure/measure-dialog.tsx
+msgid "The sent version could not be measured: {0}"
+msgstr "La version envoyée n'a pas pu être mesurée : {0}"
 
 #: src/settings/ai/shared/server-card.tsx
 msgid "The server answered with an error (HTTP {status}). It may still be starting: wait a minute, then test again."
@@ -5646,6 +5816,10 @@ msgstr "Ensuite"
 msgid "There is nothing to copy."
 msgstr "Il n'y a rien à copier."
 
+#: src/mesure/measure-dialog.tsx
+msgid "These excerpts are shown only here and are never saved."
+msgstr "Ces extraits ne s'affichent qu'ici et ne sont jamais enregistrés."
+
 #: src/settings/automations/workflow-test-panel.tsx
 msgid "These steps will be simulated: nothing is written, sent or run."
 msgstr "Ces étapes seront simulées : rien n'est écrit, envoyé ni lancé."
@@ -5683,9 +5857,17 @@ msgstr "Cette modification n'a pas pu être enregistrée. Réessayez."
 msgid "This edit is no longer pending."
 msgstr "Cette modification n'est plus en attente."
 
+#: src/mesure/measure-dialog.tsx
+msgid "This file is not UTF-8 text."
+msgstr "Ce fichier n'est pas du texte UTF-8."
+
 #: src/stt/audio-import-feedback.ts
 msgid "This file is too large to import (2 GB maximum)."
 msgstr "Ce fichier est trop lourd pour être importé (2 Go maximum)."
+
+#: src/mesure/measure-dialog.tsx
+msgid "This file is too large to measure."
+msgstr "Ce fichier est trop volumineux pour être mesuré."
 
 #: src/session/late-filing.ts
 msgid "This folder uses the {title} template"
@@ -5908,6 +6090,7 @@ msgstr "Essayer"
 msgid "Try speaking a little closer to the microphone."
 msgstr "Essayez de parler un peu plus près du microphone."
 
+#: src/mesure/measure-dialog.tsx
 #: src/session/components/living-document/fiche.tsx
 msgid "Type"
 msgstr "Type"
@@ -6074,6 +6257,10 @@ msgstr "Téléverser une transcription"
 #: src/settings/search-index.ts
 msgid "Use 24-hour time"
 msgstr "Utilisez le format 24 heures"
+
+#: src/mesure/measure-dialog.tsx
+msgid "Use a .txt, .md, .html or .docx file."
+msgstr "Utilisez un fichier .txt, .md, .html ou .docx."
 
 #: src/settings/automations/step-forms.tsx
 msgid "Use an http:// or https:// address."
@@ -6410,6 +6597,10 @@ msgstr "vous êtes hors ligne"
 #: src/templates/auto-format-examples-dialog.tsx
 msgid "You can use up to three example summaries."
 msgstr "Vous pouvez utiliser jusqu'à trois exemples de résumés."
+
+#: src/mesure/measure-dialog.tsx
+msgid "Your choice"
+msgstr "Votre choix"
 
 #: src/settings/dictionary/index.tsx
 msgid "Your dictionary is empty"

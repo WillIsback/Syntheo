@@ -47,6 +47,7 @@
     "@syntheo/plugin-local-auth": "workspace:*",
     "@syntheo/plugin-misc": "workspace:*",
     "@syntheo/plugin-notification": "workspace:*",
+    "@syntheo/plugin-mesure": "workspace:*",
     "@syntheo/plugin-opener2": "workspace:*",
     "@syntheo/plugin-permissions": "workspace:*",
     "@syntheo/plugin-relay": "workspace:*",

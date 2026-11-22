@@ -62,6 +62,7 @@
     "fs-sync:default",
     "os:default",
     "os:allow-hostname",
+    "mesure:default",
     "opener2:default",
     "detect:default",
     "dock:default",

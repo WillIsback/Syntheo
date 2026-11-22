@@ -158,6 +158,9 @@ importers:
       '@syntheo/plugin-local-auth':
         specifier: workspace:*
         version: link:../../plugins/local-auth
+      '@syntheo/plugin-mesure':
+        specifier: workspace:*
+        version: link:../../plugins/mesure
       '@syntheo/plugin-misc':
         specifier: workspace:*
         version: link:../../plugins/misc
@@ -776,6 +779,12 @@ importers:
         version: 2.12.4
 
   plugins/local-auth:
+    dependencies:
+      '@tauri-apps/api':
+        specifier: ^2.12.4
+        version: 2.12.4
+
+  plugins/mesure:
     dependencies:
       '@tauri-apps/api':
         specifier: ^2.12.4

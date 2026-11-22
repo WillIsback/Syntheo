@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-measure-differences"
+description = "Enables the measure_differences command without any pre-configured scope."
+commands.allow = ["measure_differences"]
+
+[[permission]]
+identifier = "deny-measure-differences"
+description = "Denies the measure_differences command without any pre-configured scope."
+commands.deny = ["measure_differences"]

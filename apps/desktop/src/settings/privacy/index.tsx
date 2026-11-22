@@ -3,6 +3,7 @@ import { platform } from "@tauri-apps/plugin-os";
 
 import { useMountEffect } from "@syntheo/ui/hooks/use-mount-effect";
 
+import { useLiveQuery } from "~/db";
 import { DEVICE_AUTH_REASON } from "~/lock/auth";
 import { useAppLock } from "~/lock/store";
 import { privacyMessages } from "~/settings/general/app-settings";
@@ -14,6 +15,23 @@ import {
 import { SettingSwitchRow } from "~/settings/setting-row";
 import { resolveConfigValue } from "~/shared/config";
 
+const MANAGED_BETA_SQL = `
+  SELECT id FROM managed_app_settings
+  WHERE id IN ('measurement_enabled', 'calibration_enabled')
+`;
+
+/** Réglages de la bêta fixés par l'administration du poste. */
+function useManagedBetaSettings(): Set<string> {
+  const { data = new Set<string>() } = useLiveQuery<
+    { id: string },
+    Set<string>
+  >({
+    sql: MANAGED_BETA_SQL,
+    mapRows: (rows) => new Set(rows.map((row) => row.id)),
+  });
+  return data;
+}
+
 export function SettingsPrivacy() {
   const { i18n, t } = useLingui();
   const settingsQuery = useStoredSettingValuesQuery();
@@ -23,6 +41,7 @@ export function SettingsPrivacy() {
   const authenticate = useAppLock((state) => state.authenticate);
   const lockApp = useAppLock((state) => state.lockApp);
   const refreshAvailability = useAppLock((state) => state.refreshAvailability);
+  const managedBeta = useManagedBetaSettings();
 
   useMountEffect(() => {
     void refreshAvailability();
@@ -36,6 +55,15 @@ export function SettingsPrivacy() {
   }
 
   const lockAppEnabled = resolveConfigValue("lock_app", settingsQuery.data);
+  const measurementManaged = managedBeta.has("measurement_enabled");
+  const calibrationManaged = managedBeta.has("calibration_enabled");
+  const measurementEnabled =
+    resolveConfigValue("measurement_enabled", settingsQuery.data) &&
+    !measurementManaged;
+  const calibrationEnabled =
+    measurementEnabled &&
+    resolveConfigValue("calibration_enabled", settingsQuery.data) &&
+    !calibrationManaged;
   const authAvailable = available === true;
   const lockAppDescription = !authAvailable
     ? t`Device authentication is not available on this computer.`
@@ -66,6 +94,41 @@ export function SettingsPrivacy() {
               if (next) lockApp();
             })();
           }}
+        />
+      </section>
+
+      {/* Bêta (issue 671) : mesure de la reprise, désactivée par défaut. */}
+      <section className="flex flex-col gap-4" aria-label={t`Beta`}>
+        <h2 className="text-sm font-semibold">{t`Beta: measure rework`}</h2>
+        <SettingSwitchRow
+          settingId="measurement-enabled"
+          title={t`Measure rework of summaries`}
+          description={
+            measurementManaged
+              ? t`Set by your administrator.`
+              : t`Adds “Measure rework…” to the summary menu. You paste the version you sent; only counts are kept on this computer, never text, and nothing is sent.`
+          }
+          checked={measurementEnabled}
+          disabled={measurementManaged}
+          onChange={(next) =>
+            setSettingValues(
+              next
+                ? { measurement_enabled: true }
+                : { measurement_enabled: false, calibration_enabled: false },
+            )
+          }
+        />
+        <SettingSwitchRow
+          settingId="calibration-enabled"
+          title={t`Calibration mode`}
+          description={
+            calibrationManaged
+              ? t`Set by your administrator.`
+              : t`After a measurement, lists each difference so you can classify it by hand. Excerpts stay on screen; only the agreement counts are kept.`
+          }
+          checked={calibrationEnabled}
+          disabled={calibrationManaged || !measurementEnabled}
+          onChange={(next) => setSettingValues({ calibration_enabled: next })}
         />
       </section>
     </div>

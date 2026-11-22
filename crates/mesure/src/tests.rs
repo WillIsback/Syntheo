@@ -377,11 +377,17 @@ Le projet avance bien. Le budget est validé par le comité de direction.
     );
 }
 
-// Garde-fou : seule la CLI active la fonctionnalité `differences` ; ni
-// l'application ni un plugin n'ont accès aux extraits.
+// Garde-fou : seuls la CLI et le plugin `mesure` (mode Calibrage, sans base
+// ni journal : son test `plugin_persists_nothing`) activent la fonctionnalité
+// `differences`. Ni l'application elle-même ni un autre plugin n'ont accès aux
+// extraits.
 #[test]
-fn only_the_cli_enables_differences() {
+fn only_the_cli_and_the_calibration_plugin_enable_differences() {
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let allowed = [
+        root.join("apps/cli/Cargo.toml"),
+        root.join("plugins/mesure/Cargo.toml"),
+    ];
     let mut manifests = vec![root.join("apps/desktop/src-tauri/Cargo.toml")];
     for dir in ["plugins", "crates"] {
         for entry in std::fs::read_dir(root.join(dir)).unwrap() {
@@ -392,6 +398,9 @@ fn only_the_cli_enables_differences() {
         }
     }
     for manifest in manifests {
+        if allowed.contains(&manifest) {
+            continue;
+        }
         let text = std::fs::read_to_string(&manifest).unwrap();
         for line in text.lines().filter(|l| l.contains("syntheo-mesure")) {
             assert!(
@@ -401,8 +410,12 @@ fn only_the_cli_enables_differences() {
             );
         }
     }
-    let cli = std::fs::read_to_string(root.join("apps/cli/Cargo.toml")).unwrap();
-    assert!(cli.contains(r#"syntheo-mesure = { workspace = true, features = ["differences"] }"#));
+    for manifest in &allowed {
+        let text = std::fs::read_to_string(manifest).unwrap();
+        assert!(
+            text.contains(r#"syntheo-mesure = { workspace = true, features = ["differences"] }"#)
+        );
+    }
 }
 
 // Contrat d'export de la bêta (issue 672), `schema/export-v1.json` : tout

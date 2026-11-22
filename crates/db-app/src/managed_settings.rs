@@ -24,7 +24,10 @@ fn validate(bytes: &[u8]) -> Result<ManagedSettings, sqlx::Error> {
     }
     for (key, value) in &doc.settings {
         let valid = match key.as_str() {
-            "cloud_sync_enabled" | "automatic_updates" => value == &Value::Bool(false),
+            "cloud_sync_enabled"
+            | "automatic_updates"
+            | "measurement_enabled"
+            | "calibration_enabled" => value == &Value::Bool(false),
             "intelligence_disabled" => value == &Value::Bool(true),
             "auto_start_scheduled_meetings" | "save_recordings" => value.is_boolean(),
             "current_llm_provider" | "current_llm_model" => value.as_str() == Some(""),
