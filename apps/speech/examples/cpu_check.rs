@@ -5,14 +5,21 @@
 //! saturaient le noyau AVX2 d'ONNX Runtime et l'ASR ne rendait que des
 //! sorties vides (issue 683).
 //!
-//! Usage : cpu-check --models <dossier> [--threads N] [--min-words N]
+//! Usage : cpu-check --models <dossier> [--threads N] [--min-word-ratio R]
 //!         [--max-wer P] <audio.wav>=<référence.txt> [...]
 //!   audio : WAV 16 kHz mono PCM16, en-tête canonique de 44 octets.
-//!   Une ligne JSON par fichier, puis une ligne de total ; code 1 si le total
-//!   des mots est sous --min-words, si le WER total (en %) dépasse --max-wer,
-//!   ou si un mot n'a pas d'intervenant ; code 2 pour une erreur d'usage ou de
-//!   chargement.
+//!   référence.txt : transcription FP32 figée ; à côté, la même avec `.json`
+//!   au lieu de `.txt` (mic.fp32.txt -> mic.fp32.json) donne la diarisation
+//!   FP32 figée : `{"speakers": N}`, nombre d'intervenants distincts.
+//!   Les seuils valent pour chaque fichier : il doit rendre au moins R fois
+//!   les mots de sa référence normalisée (défaut 0.8), à un WER d'au plus P %
+//!   (défaut 5), avec un intervenant pour chaque mot et autant d'intervenants
+//!   distincts que la référence. Une ligne JSON par fichier, puis une ligne de
+//!   total (`ok` si tous les fichiers le sont ; `words` total, que le témoin
+//!   négatif de run.sh veut à 0). Code 0 si tout est accepté, 1 si un fichier
+//!   est refusé, 2 pour une erreur d'usage ou de chargement.
 
+use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
 use syntheo_speech::engine::Engine;
@@ -22,7 +29,7 @@ use syntheo_speech::protocol::{Event, SessionConfig, pcm16_to_f32};
 struct Args {
     models: PathBuf,
     threads: usize,
-    min_words: usize,
+    min_word_ratio: f64,
     max_wer: f64,
     files: Vec<(PathBuf, PathBuf)>,
 }
@@ -31,8 +38,8 @@ fn parse_args() -> Result<Args, String> {
     let mut args = std::env::args().skip(1);
     let mut models = None;
     let mut threads = 4;
-    let mut min_words = 1;
-    let mut max_wer = 100.0;
+    let mut min_word_ratio = 0.8;
+    let mut max_wer = 5.0;
     let mut files = Vec::new();
     while let Some(arg) = args.next() {
         let mut value = || {
@@ -42,7 +49,9 @@ fn parse_args() -> Result<Args, String> {
         match arg.as_str() {
             "--models" => models = Some(PathBuf::from(value()?)),
             "--threads" => threads = value()?.parse().map_err(|_| "invalid --threads")?,
-            "--min-words" => min_words = value()?.parse().map_err(|_| "invalid --min-words")?,
+            "--min-word-ratio" => {
+                min_word_ratio = value()?.parse().map_err(|_| "invalid --min-word-ratio")?
+            }
             "--max-wer" => max_wer = value()?.parse().map_err(|_| "invalid --max-wer")?,
             _ => {
                 let (audio, reference) = arg
@@ -58,7 +67,7 @@ fn parse_args() -> Result<Args, String> {
     Ok(Args {
         models: models.ok_or("missing --models")?,
         threads,
-        min_words,
+        min_word_ratio,
         max_wer,
         files,
     })
@@ -112,6 +121,7 @@ struct Transcript {
     text: String,
     words: usize,
     with_speaker: usize,
+    speakers: BTreeSet<u32>,
 }
 
 fn transcribe(engine: &ParakeetEngine, audio: &Path) -> Result<Transcript, String> {
@@ -136,6 +146,7 @@ fn transcribe(engine: &ParakeetEngine, audio: &Path) -> Result<Transcript, Strin
         text: String::new(),
         words: 0,
         with_speaker: 0,
+        speakers: BTreeSet::new(),
     };
     for event in events {
         if let Event::Completed {
@@ -148,54 +159,95 @@ fn transcribe(engine: &ParakeetEngine, audio: &Path) -> Result<Transcript, Strin
             }
             transcript.text.push_str(&t);
             transcript.words += words.len();
-            transcript.with_speaker += words.iter().filter(|w| w.speaker.is_some()).count();
+            for speaker in words.iter().filter_map(|w| w.speaker) {
+                transcript.with_speaker += 1;
+                transcript.speakers.insert(speaker);
+            }
         }
     }
     Ok(transcript)
 }
 
+/// Mesures d'un fichier face à sa référence FP32 figée.
+struct FileCheck {
+    words: usize,
+    reference_words: usize,
+    wer: f64,
+    with_speaker: usize,
+    speakers: usize,
+    reference_speakers: usize,
+}
+
+impl FileCheck {
+    /// Décision par fichier : assez de mots, WER sous le seuil, un intervenant
+    /// pour chaque mot et autant d'intervenants distincts que la référence.
+    fn ok(&self, min_word_ratio: f64, max_wer: f64) -> bool {
+        self.words as f64 >= min_word_ratio * self.reference_words as f64
+            && self.wer <= max_wer
+            && self.with_speaker == self.words
+            && self.speakers == self.reference_speakers
+    }
+}
+
+/// Diarisation FP32 figée : `{"speakers": N}` à côté de la référence texte.
+fn reference_speakers(reference: &Path) -> Result<usize, String> {
+    let path = reference.with_extension("json");
+    let raw = std::fs::read_to_string(&path).map_err(|e| format!("{}: {e}", path.display()))?;
+    let value: serde_json::Value =
+        serde_json::from_str(&raw).map_err(|e| format!("{}: {e}", path.display()))?;
+    value["speakers"]
+        .as_u64()
+        .map(|n| n as usize)
+        .ok_or_else(|| format!("{}: expected {{\"speakers\": N}}", path.display()))
+}
+
 fn run(args: &Args) -> Result<bool, String> {
     let engine = ParakeetEngine::load(&args.models, args.threads).map_err(|e| e.to_string())?;
-    let (mut words, mut with_speaker, mut errors, mut reference_words) = (0, 0, 0, 0);
-    for (audio, reference) in &args.files {
-        let reference = std::fs::read_to_string(reference)
-            .map_err(|e| format!("{}: {e}", reference.display()))?;
+    let (mut words, mut all_ok) = (0, true);
+    for (audio, reference_path) in &args.files {
+        let reference = std::fs::read_to_string(reference_path)
+            .map_err(|e| format!("{}: {e}", reference_path.display()))?;
         let reference = normalize(&reference);
+        let reference_speakers = reference_speakers(reference_path)?;
         let transcript = transcribe(&engine, audio)?;
         let hypothesis = normalize(&transcript.text);
-        let wrong = edits(&reference, &hypothesis);
+        let check = FileCheck {
+            words: transcript.words,
+            reference_words: reference.len(),
+            wer: percent(edits(&reference, &hypothesis), reference.len()),
+            with_speaker: transcript.with_speaker,
+            speakers: transcript.speakers.len(),
+            reference_speakers,
+        };
+        let ok = check.ok(args.min_word_ratio, args.max_wer);
         println!(
             "{}",
             serde_json::json!({
                 "file": audio.display().to_string(),
-                "words": transcript.words,
-                "with_speaker": transcript.with_speaker,
-                "reference_words": reference.len(),
-                "wer": percent(wrong, reference.len()),
+                "words": check.words,
+                "reference_words": check.reference_words,
+                "wer": check.wer,
+                "with_speaker": check.with_speaker,
+                "speakers": check.speakers,
+                "reference_speakers": check.reference_speakers,
+                "ok": ok,
                 "text": transcript.text,
             })
         );
-        words += transcript.words;
-        with_speaker += transcript.with_speaker;
-        errors += wrong;
-        reference_words += reference.len();
+        words += check.words;
+        all_ok &= ok;
     }
-    let wer = percent(errors, reference_words);
-    let ok = words >= args.min_words && wer <= args.max_wer && with_speaker == words;
     println!(
         "{}",
         serde_json::json!({
             "total": true,
             "words": words,
-            "with_speaker": with_speaker,
-            "reference_words": reference_words,
-            "wer": wer,
-            "min_words": args.min_words,
+            "min_word_ratio": args.min_word_ratio,
             "max_wer": args.max_wer,
-            "ok": ok,
+            "ok": all_ok,
         })
     );
-    Ok(ok)
+    Ok(all_ok)
 }
 
 fn percent(errors: usize, total: usize) -> f64 {
@@ -244,5 +296,59 @@ mod tests {
         assert_eq!(edits(&words("a b c"), &words("a b c")), 0);
         assert_eq!(edits(&words("a b c"), &words("a x c d")), 2);
         assert_eq!(edits(&words("a b c"), &[]), 3);
+    }
+
+    #[test]
+    fn each_file_is_judged_on_its_own() {
+        // Mesures FP32 de mic.wav : 82 mots de référence, un intervenant.
+        let good = FileCheck {
+            words: 81,
+            reference_words: 82,
+            wer: 1.2,
+            with_speaker: 81,
+            speakers: 1,
+            reference_speakers: 1,
+        };
+        assert!(good.ok(0.8, 5.0));
+        // Un fichier dégradé est refusé même si l'autre est parfait.
+        let wer = FileCheck { wer: 27.0, ..good };
+        assert!(!wer.ok(0.8, 5.0));
+        let few = FileCheck {
+            words: 65,
+            with_speaker: 65,
+            ..good
+        };
+        assert!(!few.ok(0.8, 5.0));
+        let unlabelled = FileCheck {
+            with_speaker: 80,
+            ..good
+        };
+        assert!(!unlabelled.ok(0.8, 5.0));
+        let speakers = FileCheck {
+            speakers: 2,
+            ..good
+        };
+        assert!(!speakers.ok(0.8, 5.0));
+        // Le témoin négatif (aucun mot) n'est jamais accepté.
+        let empty = FileCheck {
+            words: 0,
+            wer: 100.0,
+            with_speaker: 0,
+            speakers: 0,
+            ..good
+        };
+        assert!(!empty.ok(0.8, 5.0));
+    }
+
+    #[test]
+    fn diarization_reference_sits_next_to_the_text() {
+        let dir = std::env::temp_dir().join(format!("cpu-check-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let text = dir.join("mic.fp32.txt");
+        std::fs::write(dir.join("mic.fp32.json"), r#"{"speakers": 2}"#).unwrap();
+        assert_eq!(reference_speakers(&text), Ok(2));
+        std::fs::write(dir.join("mic.fp32.json"), r#"{"speaker": 2}"#).unwrap();
+        assert!(reference_speakers(&text).is_err());
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 }

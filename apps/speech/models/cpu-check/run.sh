@@ -4,9 +4,11 @@
 # Transcrit l'audio de mise en service (apps/speech/commissioning/mic.wav et
 # sys.wav, 30 s chacun) avec le vrai moteur, diarisation comprise, sous
 # `qemu-x86_64 -cpu Skylake-Client` (AVX2 sans VNNI ; l'émulation logicielle
-# n'a pas d'AVX-512), et exige des mots proches de la transcription FP32 de
-# référence (mic.fp32.txt, sys.fp32.txt). Des poids int8 sur 8 bits saturaient
-# le noyau AVX2 d'ONNX Runtime : 0 mot sur ces CPU (modèles de la 0.8.0-3).
+# n'a pas d'AVX-512), et exige pour chaque fichier des mots proches de la
+# transcription FP32 figée (mic.fp32.txt, sys.fp32.txt) et autant
+# d'intervenants distincts que la diarisation FP32 figée (mic.fp32.json,
+# sys.fp32.json). Des poids int8 sur 8 bits saturaient le noyau AVX2 d'ONNX
+# Runtime : 0 mot sur ces CPU (modèles de la 0.8.0-3).
 #
 # Usage : bash apps/speech/models/cpu-check/run.sh <dossier des modèles> [--expect-empty]
 #   dossier     arborescence de models.json (nemotron/…, diar/…)
@@ -24,10 +26,14 @@
 #   THREADS        fils ONNX Runtime (défaut : 4)
 set -euo pipefail
 
-# Seuils : 127 mots dans la référence FP32 ; en natif comme sous émulation, les
-# modèles int8 en rendent environ 123, à 1,6 % de WER de la référence.
-MIN_WORDS=100
-MAX_WER=10
+# Seuils, appliqués à chaque fichier : au moins 80 % des mots de sa référence
+# FP32 normalisée et un WER d'au plus 5 %, un intervenant pour chaque mot, et
+# le nombre d'intervenants distincts de la référence (un par fichier). Mesures
+# des modèles int8 (en natif comme sous émulation) : environ 123 mots rendus
+# pour 127 de référence (82 + 45), WER de 1,2 % (mic) et 2,2 % (sys) ; les
+# modèles FP32 rendent 81 + 43 mots, à 0 % de WER.
+MIN_WORD_RATIO=0.8
+MAX_WER=5
 
 HERE=$(cd "$(dirname "$0")" && pwd)
 SPEECH=$(cd "$HERE/../.." && pwd)
@@ -52,7 +58,7 @@ OUT=$(mktemp)
 trap 'rm -f "$OUT"' EXIT
 set +e
 "$QEMU" -cpu "${QEMU_CPU:-Skylake-Client}" "$BIN" --models "$MODELS" --threads "${THREADS:-4}" \
-  --min-words "$MIN_WORDS" --max-wer "$MAX_WER" \
+  --min-word-ratio "$MIN_WORD_RATIO" --max-wer "$MAX_WER" \
   "$COMMISSIONING/mic.wav=$HERE/mic.fp32.txt" "$COMMISSIONING/sys.wav=$HERE/sys.fp32.txt" > "$OUT"
 code=$?
 set -e
@@ -64,5 +70,5 @@ if $EXPECT_EMPTY; then
   echo "-- témoin négatif : 0 mot, comme attendu."
   exit 0
 fi
-[ "$code" = 0 ] || { echo "Erreur : modèles refusés sous ${QEMU_CPU:-Skylake-Client} ($words mot(s), seuils : au moins $MIN_WORDS mots, WER d'au plus $MAX_WER %, intervenant pour chaque mot)." >&2; exit 1; }
+[ "$code" = 0 ] || { echo "Erreur : modèles refusés sous ${QEMU_CPU:-Skylake-Client} ($words mot(s) ; seuils par fichier : au moins $MIN_WORD_RATIO fois les mots de la référence, WER d'au plus $MAX_WER %, intervenant pour chaque mot, autant d'intervenants que la référence FP32)." >&2; exit 1; }
 echo "-- modèles acceptés sous ${QEMU_CPU:-Skylake-Client}."
