@@ -64,4 +64,8 @@ permissions = [
   "allow-on-device-status",
   "allow-on-device-install",
   "allow-on-device-uninstall",
+  "allow-on-device-commissioning",
+  "allow-on-device-commission",
+  "allow-on-device-load",
+  "allow-on-device-commission-progress",
 ]

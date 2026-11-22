@@ -17,6 +17,9 @@ const mocks = vi.hoisted(() => ({
   setSettings: vi.fn(),
   install: vi.fn(),
   uninstall: vi.fn(),
+  commission: vi.fn(),
+  commissioning: null as unknown,
+  progress: null as unknown,
 }));
 
 vi.mock("@syntheo/plugin-transcription", () => ({
@@ -25,6 +28,15 @@ vi.mock("@syntheo/plugin-transcription", () => ({
     probeLocalTranscription: async () => ({ status: "ok", data: mocks.probe }),
     onDeviceInstall: mocks.install,
     onDeviceUninstall: mocks.uninstall,
+    onDeviceCommission: mocks.commission,
+    onDeviceCommissionProgress: async () => ({
+      status: "ok",
+      data: mocks.progress,
+    }),
+    onDeviceCommissioning: async () => ({
+      status: "ok",
+      data: mocks.commissioning,
+    }),
   },
 }));
 vi.mock("~/settings/queries", () => ({
@@ -65,6 +77,16 @@ beforeEach(() => {
   mocks.probe = probe({ kind: "propose", profile: "two_streams_diarized" });
   mocks.install.mockResolvedValue({ status: "ok", data: installed });
   mocks.uninstall.mockResolvedValue({ status: "ok", data: null });
+  mocks.progress = null;
+  mocks.commissioning = {
+    profile: "two_streams_diarized",
+    measures: [],
+    measuredAt: 1,
+  };
+  mocks.commission.mockResolvedValue({
+    status: "ok",
+    data: { profile: "two_streams", measures: [], measuredAt: 2 },
+  });
 });
 
 afterEach(cleanup);
@@ -92,10 +114,12 @@ describe("OnDeviceCard", () => {
     expect(screen.getByRole<HTMLInputElement>("checkbox").disabled).toBe(true);
     fireEvent.click(screen.getByText("Install from a file…"));
     await waitFor(() => expect(mocks.install).toHaveBeenCalledWith());
-    expect(await screen.findByText("Module installed.")).toBeTruthy();
-    expect(
-      screen.getByText("Module installed.").closest("[aria-live='polite']"),
-    ).not.toBeNull();
+    // Issue 686 : la mise en service suit l'installation.
+    await waitFor(() => expect(mocks.commission).toHaveBeenCalled());
+    const done = await screen.findByText(
+      /Measurement done: microphone and system audio, without speakers/,
+    );
+    expect(done.closest("[aria-live='polite']")).not.toBeNull();
   });
 
   // Constat 11 : codes traduits, jamais le texte brut de Rust.
@@ -168,7 +192,9 @@ describe("OnDeviceCard", () => {
     fireEvent.click(await screen.findByText("Test this computer"));
     expect(
       (await screen.findByTestId("on-device-verdict")).textContent,
-    ).toMatch(/reduced profile: one audio stream, without speakers/);
+    ).toMatch(
+      /reduced profile: microphone only, without speakers: the computer's sound \(remote participants\) is not transcribed/,
+    );
   });
 });
 
@@ -190,5 +216,82 @@ describe("OnDevicePolicyNotice", () => {
     setup(<OnDevicePolicyNotice />);
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(screen.queryByTestId("on-device-policy-notice")).toBeNull();
+  });
+});
+
+// Issue 686 : la source ne se choisit qu'avec un profil mesuré.
+describe("mise en service", () => {
+  it("shows the measured profile and measures again on demand", async () => {
+    mocks.status = { ...mocks.status, module: installed };
+    setup();
+    await waitFor(() =>
+      expect(screen.getByTestId("on-device-commissioning").textContent).toMatch(
+        /Measured: microphone and system audio, with speakers/,
+      ),
+    );
+    fireEvent.click(screen.getByText("Measure again"));
+    await waitFor(() => expect(mocks.commission).toHaveBeenCalled());
+  });
+
+  it("keeps the source off until the computer is measured", async () => {
+    mocks.status = { ...mocks.status, module: installed };
+    mocks.commissioning = null;
+    setup();
+    await screen.findByText(/has not been measured yet/);
+    expect(screen.getByRole<HTMLInputElement>("checkbox").disabled).toBe(true);
+  });
+
+  it("unticks the source when the computer is too slow", async () => {
+    mocks.status = { ...mocks.status, module: installed };
+    mocks.config = { stt_on_device: true };
+    mocks.commission.mockResolvedValue({
+      status: "ok",
+      data: { profile: null, measures: [], measuredAt: 3 },
+    });
+    setup();
+    fireEvent.click(await screen.findByText("Measure again"));
+    await screen.findByText(/Measurement done: this computer is too slow/);
+    expect(mocks.setSettings).toHaveBeenCalledWith({ stt_on_device: false });
+  });
+});
+
+describe("avancement", () => {
+  it("shows which profile is being measured", async () => {
+    mocks.status = { ...mocks.status, module: installed };
+    let finish: (value: unknown) => void = () => {};
+    mocks.commission.mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
+    setup();
+    fireEvent.click(await screen.findByText("Measure again"));
+    mocks.progress = { current: 2, total: 4 };
+    expect(
+      await screen.findByText("Measuring profile 2 of 4…", undefined, {
+        timeout: 3000,
+      }),
+    ).toBeTruthy();
+    mocks.progress = null;
+    finish({
+      status: "ok",
+      data: { profile: "two_streams", measures: [], measuredAt: 4 },
+    });
+    await screen.findByText(/Measurement done/);
+  });
+});
+
+// Revue de l'issue 686, constat 2 : une carte remontée pendant une mesure
+// en reprend l'affichage et bloque le bouton.
+describe("mesure en cours ailleurs", () => {
+  it("shows the progress and disables measuring again", async () => {
+    mocks.status = { ...mocks.status, module: installed };
+    mocks.progress = { current: 2, total: 4 };
+    setup();
+    expect(await screen.findByText("Measuring profile 2 of 4…")).toBeTruthy();
+    const button = (await screen.findByText("Measure again")).closest(
+      "button",
+    ) as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
   });
 });

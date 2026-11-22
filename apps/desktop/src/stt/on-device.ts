@@ -50,6 +50,31 @@ export function isEligible(probe: Probe | null | undefined) {
   );
 }
 
+export const ON_DEVICE_COMMISSIONING_QUERY_KEY = [
+  "on-device-commissioning",
+] as const;
+
+export async function loadOnDeviceCommissioning() {
+  const result = await transcriptionCommands.onDeviceCommissioning();
+  if (result.status === "error") throw new Error(result.error);
+  return result.data;
+}
+
+export function useOnDeviceCommissioning(enabled: boolean) {
+  return useQuery({
+    queryKey: ON_DEVICE_COMMISSIONING_QUERY_KEY,
+    queryFn: loadOnDeviceCommissioning,
+    enabled,
+  });
+}
+
+/** Mesure les profils (une à deux minutes) et enregistre le résultat. */
+export async function runOnDeviceCommissioning() {
+  const result = await transcriptionCommands.onDeviceCommission();
+  if (result.status === "error") throw new Error(result.error);
+  return result.data;
+}
+
 export async function runOnDeviceProbe(): Promise<Probe> {
   const result =
     await transcriptionCommands.probeLocalTranscription(ON_DEVICE_ENGINE);
@@ -104,9 +129,24 @@ export function describeOnDeviceError(code: string): string {
       return t`This module needs a newer version of Syntheo.`;
     case "module_too_old":
       return t`This module is older than the one already accepted.`;
+    case "measuring":
+      return t`A measurement is already in progress.`;
+    case "no_commissioning_audio":
+      return t`The module has no measurement audio. Install it again.`;
+    case "measure_failed":
+      return t`The measurement could not run. Try again.`;
     case "io":
       return t`The module files could not be read or written (disk full?). Try again.`;
     default:
       return t`The operation failed. Try again.`;
   }
+}
+
+/** Profil « un seul flux » : seul le micro est transcrit. */
+export function isSingleStreamProfile(profile: string | null | undefined) {
+  return profile === "one_stream" || profile === "one_stream_diarized";
+}
+
+export function getSingleStreamReminderMessage() {
+  return t`Transcription on this computer uses the microphone only: the computer's sound (remote participants) is not transcribed.`;
 }

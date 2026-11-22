@@ -57,3 +57,29 @@ fn permanent_provider_errors_do_not_use_the_retryable_stream_error() {
         DegradedError::StreamError { .. }
     ));
 }
+
+// Revue de l'issue 686, constat 4 : en micro seul (profil « un seul flux »),
+// le son du poste n'est pas envoyé et ne compte pas pour le chien de garde.
+// Micro silencieux et son du poste actif pendant 60 s : aucun arrêt.
+#[test]
+fn mic_only_watchdog_ignores_the_unsent_speaker_audio() {
+    let silent = bytes::Bytes::from(vec![0u8; 3200]);
+    let loud: Vec<u8> = (0..1600)
+        .flat_map(|i| (if i % 2 == 0 { 8000i16 } else { -8000i16 }).to_le_bytes())
+        .collect();
+    let loud = bytes::Bytes::from(loud);
+    let start = std::time::Instant::now();
+    for (mode, expect_stop) in [
+        (crate::actors::ChannelMode::MicOnly, false),
+        (crate::actors::ChannelMode::MicAndSpeaker, true),
+    ] {
+        let mut progress = super::stream::StreamProgress::new(start);
+        let mut stopped = false;
+        for tick in 1..=600u64 {
+            let now = start + std::time::Duration::from_millis(100 * tick);
+            let samples = dual_active_samples(mode, &silent, &loud);
+            stopped |= progress.observe_audio(samples, now);
+        }
+        assert_eq!(stopped, expect_stop, "{mode:?}");
+    }
+}

@@ -23,6 +23,15 @@ pub struct OnDeviceTarget {
     pub token: OnDeviceToken,
 }
 
+/// Profil retenu par la mise en service du module (issue 686).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct OnDeviceProfile {
+    /// Deux flux (micro et son système) ; sinon le micro seul.
+    pub two_streams: bool,
+    /// Diarisation demandée.
+    pub diarization: bool,
+}
+
 /// Pourquoi la source « Sur ce poste » n'est pas disponible.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OnDeviceErrorKind {
@@ -38,6 +47,11 @@ pub enum OnDeviceErrorKind {
     FailedToStart,
     /// Une installation du module est en cours ; à réessayer ensuite.
     Installing,
+    /// Mesure de mise en service en cours ; à réessayer ensuite.
+    Measuring,
+    /// Mise en service pas encore faite, ou poste trop lent pour le temps
+    /// réel (aucun profil ne tient).
+    NotCommissioned,
 }
 
 impl OnDeviceErrorKind {
@@ -50,12 +64,17 @@ impl OnDeviceErrorKind {
             Self::Crashing => "crashing",
             Self::FailedToStart => "failed_to_start",
             Self::Installing => "installing",
+            Self::NotCommissioned => "not_commissioned",
+            Self::Measuring => "measuring",
         }
     }
 
     /// Refus définitif pour la durée de l'écoute : ne pas réessayer.
     pub fn is_permanent(self) -> bool {
-        !matches!(self, Self::FailedToStart | Self::Installing)
+        !matches!(
+            self,
+            Self::FailedToStart | Self::Installing | Self::Measuring
+        )
     }
 }
 

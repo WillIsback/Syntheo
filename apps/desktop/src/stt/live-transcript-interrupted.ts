@@ -48,6 +48,10 @@ function onDeviceCause(reason: string) {
       return t`the transcription module of this computer did not start`;
     case "installing":
       return t`the transcription module of this computer is being installed`;
+    case "measuring":
+      return t`the transcription module of this computer is being measured`;
+    case "not_commissioned":
+      return t`this computer has not been measured, or is too slow for live transcription`;
     default:
       return t`on-device transcription is not available`;
   }

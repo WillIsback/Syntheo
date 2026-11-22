@@ -53,10 +53,16 @@ async fn start(max_sessions: usize) -> (u16, tokio::sync::oneshot::Sender<()>) {
     let config = ServerConfig {
         token: token(),
         max_sessions,
+        registry: Default::default(),
     };
-    tokio::spawn(serve(listener, config, Arc::new(FakeEngine), async {
-        let _ = stopped.await;
-    }));
+    tokio::spawn(serve(
+        listener,
+        config,
+        Arc::new(FakeEngine::default()),
+        async {
+            let _ = stopped.await;
+        },
+    ));
     (port, stop)
 }
 

@@ -89,7 +89,18 @@ pub(super) async fn spawn_listener(
     stream_offset_secs: Option<f64>,
     gap_replayed: bool,
 ) -> Result<(ActorCell, bool), ractor::SpawnErr> {
-    let mode = ChannelMode::determine(ctx.params.onboarding);
+    let mut mode = ChannelMode::determine(ctx.params.onboarding);
+    // Source « Sur ce poste » mesurée en un seul flux (issue 686) : seul le
+    // micro est transcrit.
+    if mode == ChannelMode::MicAndSpeaker
+        && owhisper_client::is_on_device(&ctx.params.base_url)
+        && ctx
+            .runtime
+            .on_device_profile()
+            .is_some_and(|profile| !profile.two_streams)
+    {
+        mode = ChannelMode::MicOnly;
+    }
     let mic_isolated = source_mic_isolated(ctx).await;
     let (listener_ref, _): (ActorRef<crate::actors::ListenerMsg>, _) = Actor::spawn_linked(
         Some(ListenerActor::name(&ctx.params.session_id)),

@@ -1,0 +1,37 @@
+{
+  "about": "Audio de mise en service de syntheo-speech (issue 686) : deux extraits de MLS French, deux locuteurs et deux livres LibriVox (domaine public), 30 s chacun avec 1,2 s de silence aux pauses naturelles (tours de parole), 16 kHz mono PCM16. Voir prepare.py et ATTRIBUTION.md.",
+  "seconds": 30,
+  "source": {
+    "repository": "https://huggingface.co/datasets/facebook/multilingual_librispeech",
+    "revision": "2e83e61823b4c47dcbcb1980bb88601274127609",
+    "file": "french/1_hours-00000-of-00001.parquet",
+    "sha256": "289811be92a1f41b6d7cc92b342a7d6f6839a78f54ad6bcbaf9e10e034d8b554",
+    "license": "CC-BY-4.0 (MLS) ; enregistrements LibriVox dans le domaine public"
+  },
+  "tracks": {
+    "mic.wav": {
+      "speaker_id": "6381",
+      "chapter_id": "4703",
+      "librivox": "https://archive.org/details/miserables_t3_1108_librivox",
+      "book": "Victor Hugo, Les Misérables, tome 3",
+      "utterances": [
+        "6381_4703_000002",
+        "6381_4703_000003",
+        "6381_4703_000005"
+      ],
+      "sha256": "427adab040cab3d261443442b462525c8ed0c2e78b2ccbeb35df0c2c8c24116c"
+    },
+    "sys.wav": {
+      "speaker_id": "3344",
+      "chapter_id": "2567",
+      "librivox": "https://archive.org/details/fables_de_la_fontaine_06_0901_librivox",
+      "book": "Jean de La Fontaine, Fables, livre 6",
+      "utterances": [
+        "3344_2567_000000",
+        "3344_2567_000001",
+        "3344_2567_000002"
+      ],
+      "sha256": "1de74ab2b59c0ff49175f5dfd659e5271ccfe713964d45ded6974ab5c46557d9"
+    }
+  }
+}

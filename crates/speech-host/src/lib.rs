@@ -3,6 +3,7 @@
 //! lancement sur la boucle locale avec un jeton par lancement, supervision et
 //! arrêt.
 
+pub mod commissioning;
 pub mod host;
 pub mod install;
 pub mod manifest;

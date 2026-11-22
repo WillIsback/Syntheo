@@ -89,6 +89,18 @@ export const commands = {
 	onDeviceInstall: () => typedError<OnDeviceModule | null, string>(__TAURI_INVOKE("plugin:transcription|on_device_install")),
 	/**  Désinstalle le module. */
 	onDeviceUninstall: () => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|on_device_uninstall")),
+	/**  Mise en service enregistrée du module installé. */
+	onDeviceCommissioning: () => typedError<OnDeviceCommissioning | null, string>(__TAURI_INVOKE("plugin:transcription|on_device_commissioning")),
+	/**
+	 *  Mesure les profils (environ 30 s chacun, du plus complet au plus réduit)
+	 *  et enregistre le premier qui tient le temps réel. Refusée pendant une
+	 *  écoute et par le relay.
+	 */
+	onDeviceCommission: () => typedError<OnDeviceCommissioning, string>(__TAURI_INVOKE("plugin:transcription|on_device_commission")),
+	/**  Charge du module pendant une écoute ; vide hors écoute. */
+	onDeviceLoad: () => typedError<OnDeviceSessionLoad[], string>(__TAURI_INVOKE("plugin:transcription|on_device_load")),
+	/**  Profil en cours de mesure, pendant une mise en service. */
+	onDeviceCommissionProgress: () => typedError<OnDeviceProgress | null, string>(__TAURI_INVOKE("plugin:transcription|on_device_commission_progress")),
 };
 
 /** Events */
@@ -431,10 +443,52 @@ export type LiveTranscriptTarget = {
 	model: string | null,
 };
 
+/**  Mise en service enregistrée. */
+export type OnDeviceCommissioning = {
+	/**  Profil retenu ; `None` : poste inéligible. */
+	profile: string | null,
+	measures: OnDeviceMeasure[],
+	/**  Secondes depuis l'époque Unix. */
+	measuredAt: number,
+};
+
+/**  Mesure d'un profil, pour l'interface et la barre de diagnostic. */
+export type OnDeviceMeasure = {
+	/**
+	 *  `two_streams_diarized`, `two_streams`, `one_stream_diarized`,
+	 *  `one_stream`.
+	 */
+	profile: string,
+	finals: number,
+	p95Ms: number,
+	driftMs: number,
+	/**  Retard brut (attente de fin d'énoncé comprise). */
+	rawP95Ms: number,
+	rawDriftMs: number,
+	passed: boolean,
+	/**  Mesure impossible : code de la raison. */
+	error: string | null,
+};
+
 /**  Module installé, pour l'interface. */
 export type OnDeviceModule = { kind: "not_installed" } | { kind: "installed"; version: string; sizeBytes: number } | 
 /**  Présent mais refusé (non signé, altéré, incompatible). */
 { kind: "invalid"; reason: string };
+
+/**  Avancement d'une mise en service. */
+export type OnDeviceProgress = {
+	current: number,
+	total: number,
+};
+
+/**  Charge du module pendant une écoute (barre de diagnostic). */
+export type OnDeviceSessionLoad = {
+	lagMs: number,
+	rtf: number,
+	/**  `full`, `spaced` ou `off`. */
+	diarization: string,
+	audioS: number,
+};
 
 /**  État de la source « Sur ce poste ». */
 export type OnDeviceStatus = {

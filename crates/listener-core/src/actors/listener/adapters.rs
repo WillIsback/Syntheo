@@ -35,6 +35,26 @@ fn client_build_error(args: &ListenerArgs, error: owhisper_client::Error) -> Act
     }
 }
 
+/// Source « Sur ce poste » mesurée sans diarisation (issue 686) : un seul
+/// intervenant annoncé, donc pas de diarisation demandée au module.
+fn on_device_params(
+    args: &ListenerArgs,
+    mut params: owhisper_interface::ListenParams,
+) -> owhisper_interface::ListenParams {
+    if owhisper_client::is_on_device(&args.base_url)
+        && args
+            .runtime
+            .on_device_profile()
+            .is_some_and(|profile| !profile.diarization)
+    {
+        params.num_speakers = Some(1);
+        params.min_speakers = None;
+        params.max_speakers = None;
+        params.mic_num_speakers = None;
+    }
+    params
+}
+
 /// Adresse de connexion, et preuve pour la source « Sur ce poste » : résolue
 /// à chaque listener (reconnexion comprise), donc toujours le port et le
 /// jeton du lancement en cours du module, jamais un port mémorisé.
@@ -246,6 +266,7 @@ async fn spawn_rx_task_single_with_adapter<A: RealtimeSttAdapter>(
     let (tx, rx) = tokio::sync::mpsc::channel::<MixedMessage<Bytes, ControlMessage>>(32);
 
     let (base_url, on_device) = connection_target(&args).await?;
+    let params = on_device_params(&args, params);
     let mut builder = owhisper_client::ListenClient::builder()
         .adapter::<A>()
         .api_base(base_url)
@@ -302,6 +323,7 @@ async fn spawn_rx_task_dual_with_adapter<A: RealtimeSttAdapter>(
     let (tx, rx) = tokio::sync::mpsc::channel::<MixedMessage<(Bytes, Bytes), ControlMessage>>(32);
 
     let (base_url, on_device) = connection_target(&args).await?;
+    let params = on_device_params(&args, params);
     let mut builder = owhisper_client::ListenClient::builder()
         .adapter::<A>()
         .api_base(base_url)

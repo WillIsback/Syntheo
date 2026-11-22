@@ -35,6 +35,12 @@ import {
   getTranscriptionLanguages,
 } from "~/stt/capabilities";
 import {
+  getSingleStreamReminderMessage,
+  isSingleStreamProfile,
+  loadOnDeviceCommissioning,
+  ON_DEVICE_BASE_URL,
+} from "~/stt/on-device";
+import {
   getSessionParticipantHumanIds,
   useSessionParticipantHumanIds,
 } from "~/stt/queries";
@@ -158,6 +164,20 @@ export function useStartListeningState(
         id: "capture-reminder",
         duration: 8000,
       });
+    }
+    // Écoute « Sur ce poste » en un seul flux (issue 686) : rappel que le son
+    // de l'ordinateur n'est pas transcrit.
+    if (conn?.baseUrl === ON_DEVICE_BASE_URL) {
+      void loadOnDeviceCommissioning()
+        .then((measured) => {
+          if (isSingleStreamProfile(measured?.profile)) {
+            toast.info(getSingleStreamReminderMessage(), {
+              id: "on-device-single-stream",
+              duration: 8000,
+            });
+          }
+        })
+        .catch(() => {});
     }
     await stopMeetingChatTasks();
     const previousMarker = await loadCaptureLifecycleMarker(sessionId).catch(

@@ -138,6 +138,22 @@ pub(super) fn actor_error(msg: impl Into<String>) -> ActorProcessingErr {
     })
 }
 
+/// Audio actif réellement envoyé, pour le chien de garde : en micro seul
+/// (profil « un seul flux », issue 686), le son du poste n'est pas transmis
+/// et ne doit pas compter, sinon un monologue distant déclencherait une
+/// reconnexion faute de texte.
+pub(super) fn dual_active_samples(
+    mode: crate::actors::ChannelMode,
+    mic: &bytes::Bytes,
+    spk: &bytes::Bytes,
+) -> usize {
+    if mode == crate::actors::ChannelMode::MicOnly {
+        stream::active_audio_samples(mic)
+    } else {
+        stream::active_audio_samples(mic).max(stream::active_audio_samples(spk))
+    }
+}
+
 pub(super) fn actor_error_with_degraded(
     msg: impl Into<String>,
     degraded: DegradedError,
@@ -292,8 +308,7 @@ impl Actor for ListenerActor {
             }
 
             ListenerMsg::AudioDual(mic, spk, reply) => {
-                let active_samples =
-                    stream::active_audio_samples(&mic).max(stream::active_audio_samples(&spk));
+                let active_samples = dual_active_samples(state.args.mode, &mic, &spk);
                 let result = match &state.tx {
                     ChannelSender::Dual(tx) => match tx.try_send(MixedMessage::Audio((mic, spk))) {
                         Ok(()) => ListenerAudioResult::Accepted,
@@ -304,6 +319,20 @@ impl Actor for ListenerActor {
                             ListenerAudioResult::Closed
                         }
                     },
+                    // Profil « un seul flux » (issue 686) : seul le micro part.
+                    ChannelSender::Single(tx)
+                        if state.args.mode == crate::actors::ChannelMode::MicOnly =>
+                    {
+                        match tx.try_send(MixedMessage::Audio(mic)) {
+                            Ok(()) => ListenerAudioResult::Accepted,
+                            Err(tokio::sync::mpsc::error::TrySendError::Full(_)) => {
+                                ListenerAudioResult::Backpressured
+                            }
+                            Err(tokio::sync::mpsc::error::TrySendError::Closed(_)) => {
+                                ListenerAudioResult::Closed
+                            }
+                        }
+                    }
                     ChannelSender::Single(_) => ListenerAudioResult::ModeMismatch,
                 };
                 let _ = reply.send(result);

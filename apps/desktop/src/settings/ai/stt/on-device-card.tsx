@@ -1,5 +1,5 @@
 import { Trans, useLingui } from "@lingui/react/macro";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
 import {
@@ -17,7 +17,10 @@ import { useConfigValues } from "~/shared/config";
 import {
   describeOnDeviceError,
   isEligible,
+  ON_DEVICE_COMMISSIONING_QUERY_KEY,
   ON_DEVICE_STATUS_QUERY_KEY,
+  runOnDeviceCommissioning,
+  useOnDeviceCommissioning,
   runOnDeviceProbe,
   useOnDeviceStatus,
 } from "~/stt/on-device";
@@ -35,8 +38,8 @@ function useLabels() {
   const profile: Record<Profile, string> = {
     two_streams_diarized: t`microphone and system audio, with speakers`,
     two_streams: t`microphone and system audio, without speakers`,
-    one_stream_diarized: t`one audio stream, with speakers`,
-    one_stream: t`one audio stream, without speakers`,
+    one_stream_diarized: t`microphone only, with speakers: the computer's sound (remote participants) is not transcribed`,
+    one_stream: t`microphone only, without speakers: the computer's sound (remote participants) is not transcribed`,
   };
   const refusal: Record<Refusal, string> = {
     no_avx2: t`the processor lacks AVX2 instructions`,
@@ -123,6 +126,43 @@ export function OnDeviceCard() {
   const [probe, setProbe] = useState<Probe | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [measuringNow, setMeasuringNow] = useState(false);
+  const installedNow = status.data?.module.kind === "installed";
+  const commissioning = useOnDeviceCommissioning(installedNow);
+  const profileLabels = useLabels().profile;
+
+  // Avancement de la mesure, lu chaque seconde pendant qu'elle tourne.
+  const progress = useQuery({
+    queryKey: ["on-device-commission-progress"],
+    queryFn: async () => {
+      const result = await transcriptionCommands.onDeviceCommissionProgress();
+      return result.status === "ok" ? result.data : null;
+    },
+    // Toujours lu tant que la carte est affichée : une carte remontée
+    // pendant une mesure en reprend l'affichage et bloque le bouton.
+    refetchInterval: measuringNow ? 1000 : 2000,
+  });
+
+  // Mise en service (issue 686) : après l'installation, puis à la demande.
+  const commissioningRun = useMutation({
+    mutationFn: runOnDeviceCommissioning,
+    onMutate: () => setMeasuringNow(true),
+    onSettled: () => setMeasuringNow(false),
+    onSuccess: (result) => {
+      setError(null);
+      queryClient.setQueryData(ON_DEVICE_COMMISSIONING_QUERY_KEY, result);
+      setNotice(
+        result.profile
+          ? t`Measurement done: ${profileLabels[result.profile as Profile]}.`
+          : t`Measurement done: this computer is too slow for live transcription.`,
+      );
+      if (!result.profile) setSettings({ stt_on_device: false });
+    },
+    onError: (e: Error) =>
+      setError(
+        t`The measurement did not complete: ${describeOnDeviceError(e.message)}`,
+      ),
+  });
 
   const refresh = () =>
     queryClient.invalidateQueries({ queryKey: ON_DEVICE_STATUS_QUERY_KEY });
@@ -145,7 +185,15 @@ export function OnDeviceCard() {
     },
     onSuccess: (installed) => {
       setError(null);
-      if (installed) setNotice(t`Module installed.`);
+      if (installed) {
+        setNotice(
+          t`Module installed. Measuring this computer (one to two minutes)…`,
+        );
+        void queryClient.invalidateQueries({
+          queryKey: ON_DEVICE_COMMISSIONING_QUERY_KEY,
+        });
+        if (installed.kind === "installed") commissioningRun.mutate();
+      }
       void refresh();
     },
     onError: (e: Error) =>
@@ -176,7 +224,12 @@ export function OnDeviceCard() {
   const installable = status.data.installable;
   const installed = module.kind === "installed";
   const chosen = !!stt_on_device;
-  const busy = installing.isPending || uninstalling.isPending;
+  const measuringElsewhere = !commissioningRun.isPending && !!progress.data;
+  const measuringAny = commissioningRun.isPending || measuringElsewhere;
+  const busy = installing.isPending || uninstalling.isPending || measuringAny;
+  const measured = commissioning.data;
+  const progressValue = progress.data;
+  const usable = installed && !!measured?.profile;
 
   return (
     <ServerCard
@@ -286,16 +339,52 @@ export function OnDeviceCard() {
         ) : null}
       </div>
 
+      {installed ? (
+        <div
+          data-setting-id="stt-on-device-commissioning"
+          className="flex flex-col gap-2"
+        >
+          <p className="text-[13px]" data-testid="on-device-commissioning">
+            {measuringAny
+              ? progressValue
+                ? t`Measuring profile ${progressValue.current} of ${progressValue.total}…`
+                : t`Measuring this computer (one to two minutes)…`
+              : measured?.profile
+                ? t`Measured: ${profileLabels[measured.profile as Profile]}.`
+                : measured
+                  ? t`Measured: this computer is too slow for live transcription.`
+                  : t`This computer has not been measured yet.`}
+          </p>
+          <div>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => commissioningRun.mutate()}
+              className="border-border hover:bg-muted inline-flex items-center gap-2 rounded-md border px-2.5 py-1 text-[13px] disabled:opacity-60"
+            >
+              {measuringAny ? (
+                <CircleNotch className="size-3.5 animate-spin motion-reduce:animate-none" />
+              ) : null}
+              {measured ? (
+                <Trans>Measure again</Trans>
+              ) : (
+                <Trans>Measure this computer</Trans>
+              )}
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       <label
         data-setting-id="stt-on-device-use"
         className={cn([
           "flex items-center gap-2 text-[13px]",
-          !installed && !chosen && "text-muted-foreground",
+          !usable && !chosen && "text-muted-foreground",
         ])}
       >
         <input
           type="checkbox"
-          disabled={!installed && !chosen}
+          disabled={!usable && !chosen}
           checked={chosen}
           onChange={(event) =>
             setSettings({ stt_on_device: event.target.checked })
@@ -304,14 +393,19 @@ export function OnDeviceCard() {
         <Trans>Use this computer for transcription instead of the server</Trans>
       </label>
 
-      {chosen && !installed ? (
+      {chosen && !usable && !measuringAny ? (
         <div
           data-testid="on-device-missing"
           role="alert"
           className="bg-alert text-alert-foreground flex flex-col gap-2 rounded-md px-3 py-2 text-[13px]"
         >
           <p>
-            {module.kind === "invalid" ? (
+            {installed ? (
+              <Trans>
+                This computer is chosen for transcription, but it has not been
+                measured or is too slow: live transcription is paused.
+              </Trans>
+            ) : module.kind === "invalid" ? (
               <Trans>
                 This computer is chosen for transcription, but its module is
                 refused: live transcription is paused.
@@ -324,7 +418,16 @@ export function OnDeviceCard() {
             )}
           </p>
           <div className="flex flex-wrap gap-1.5">
-            {installable ? (
+            {installed ? (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => commissioningRun.mutate()}
+                className="border-border hover:bg-muted rounded-md border px-2.5 py-1 disabled:opacity-60"
+              >
+                <Trans>Measure this computer</Trans>
+              </button>
+            ) : installable ? (
               <button
                 type="button"
                 disabled={busy}

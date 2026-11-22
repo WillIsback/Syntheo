@@ -307,6 +307,10 @@ msgstr "Un dossier de ce nom existe déjà à cet endroit."
 msgid "A folder with this name already exists."
 msgstr "Un dossier portant ce nom existe déjà."
 
+#: src/stt/on-device.ts
+msgid "A measurement is already in progress."
+msgstr "Une mesure est déjà en cours."
+
 #: src/onboarding/final.tsx
 msgid "A meeting can't be replayed: audio is never kept, only the note remains. Your notes belong to you."
 msgstr "La réunion ne se rejoue pas : l'audio n'est jamais conservé, seule la note reste. Vos notes vous appartiennent."
@@ -2922,6 +2926,10 @@ msgstr "Moi"
 msgid "Measure"
 msgstr "Mesurer"
 
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Measure again"
+msgstr "Mesurer à nouveau"
+
 #: src/mesure/measure-dialog.tsx
 msgid "Measure rework"
 msgstr "Mesurer la reprise"
@@ -2935,14 +2943,46 @@ msgstr "Mesurer la reprise des synthèses"
 msgid "Measure rework…"
 msgstr "Mesurer la reprise…"
 
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Measure this computer"
+msgstr "Mesurer ce poste"
+
 #. placeholder {0}: preview.meetings
 #: src/mesure/beta-data.tsx
 msgid "Measured meetings: {0}"
 msgstr "Réunions mesurées : {0}"
 
+#. placeholder {0}: profileLabels[measured.profile as Profile]
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Measured: {0}."
+msgstr "Mesuré : {0}."
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Measured: this computer is too slow for live transcription."
+msgstr "Mesuré : ce poste est trop lent pour la transcription en direct."
+
+#. placeholder {0}: profileLabels[result.profile as Profile]
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Measurement done: {0}."
+msgstr "Mesure terminée : {0}."
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Measurement done: this computer is too slow for live transcription."
+msgstr "Mesure terminée : ce poste est trop lent pour la transcription en direct."
+
 #: src/mesure/beta-data.tsx
 msgid "Measurements and pseudonym erased from this computer. Measurement is now off."
 msgstr "Mesures et pseudonyme effacés de ce poste. La mesure est désactivée."
+
+#. placeholder {0}: progressValue.current
+#. placeholder {1}: progressValue.total
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Measuring profile {0} of {1}…"
+msgstr "Mesure du profil {0} sur {1}…"
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Measuring this computer (one to two minutes)…"
+msgstr "Mesure de ce poste (une à deux minutes)…"
 
 #: src/settings/ai/llm/server-card.tsx
 msgid "Medium"
@@ -3095,6 +3135,14 @@ msgstr "micro et son du poste, sans les intervenants"
 msgid "Microphone detection"
 msgstr "Détection du microphone"
 
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "microphone only, with speakers: the computer's sound (remote participants) is not transcribed"
+msgstr "micro seul, avec les intervenants : le son de l'ordinateur (participants à distance) n'est pas transcrit"
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "microphone only, without speakers: the computer's sound (remote participants) is not transcribed"
+msgstr "micro seul, sans les intervenants : le son de l'ordinateur (participants à distance) n'est pas transcrit"
+
 #: src/store/zustand/listener/general-shared.ts
 msgid "Microphone unavailable"
 msgstr "Micro indisponible"
@@ -3136,8 +3184,8 @@ msgid "Module installed: version {0}, {1}."
 msgstr "Module installé : version {0}, {1}."
 
 #: src/settings/ai/stt/on-device-card.tsx
-msgid "Module installed."
-msgstr "Module installé."
+msgid "Module installed. Measuring this computer (one to two minutes)…"
+msgstr "Module installé. Mesure de ce poste (une à deux minutes)…"
 
 #: src/settings/ai/stt/on-device-card.tsx
 msgid "Module not installed. Download from Syntheo is coming soon."
@@ -3750,14 +3798,6 @@ msgstr "la transcription sur ce poste n'est pas disponible"
 #: src/settings/ai/stt/on-device-card.tsx
 msgid "Once the module is installed, you can turn it on here."
 msgstr "Une fois le module installé, vous pourrez l'activer ici."
-
-#: src/settings/ai/stt/on-device-card.tsx
-msgid "one audio stream, with speakers"
-msgstr "un seul flux audio, avec les intervenants"
-
-#: src/settings/ai/stt/on-device-card.tsx
-msgid "one audio stream, without speakers"
-msgstr "un seul flux audio, sans les intervenants"
 
 #: src/settings/ai/llm/server-card.tsx
 msgid "Only on-premise OpenAI-compatible servers are supported (vLLM, Ollama, llama.cpp server, LM Studio…). The address usually ends with /v1, for example http://localhost:8000/v1."
@@ -5803,6 +5843,15 @@ msgstr "Le modèle local a renvoyé une réponse vide."
 msgid "The matrix could not be saved."
 msgstr "La matrice n'a pas pu être enregistrée."
 
+#: src/stt/on-device.ts
+msgid "The measurement could not run. Try again."
+msgstr "La mesure n'a pas pu se lancer. Réessayez."
+
+#. placeholder {0}: describeOnDeviceError(e.message)
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "The measurement did not complete: {0}"
+msgstr "La mesure n'a pas abouti : {0}"
+
 #: src/chat/components/message/tool/move-tools.tsx
 msgid "The meeting contents could not be moved."
 msgstr "Le contenu de la réunion n'a pas pu être déplacé."
@@ -5830,6 +5879,10 @@ msgstr "Les fichiers du module n'ont pas pu être lus ou écrits (disque plein ?
 #: src/stt/on-device.ts
 msgid "The module folder is incomplete or contains unexpected files."
 msgstr "Le dossier du module est incomplet ou contient des fichiers inattendus."
+
+#: src/stt/on-device.ts
+msgid "The module has no measurement audio. Install it again."
+msgstr "Le module n'a pas d'audio de mesure. Réinstallez-le."
 
 #: src/stt/on-device.ts
 msgid "The module is in use. Stop the recording, then try again."
@@ -6009,6 +6062,10 @@ msgid "the transcription module of this computer is being installed"
 msgstr "le module de transcription de ce poste est en cours d'installation"
 
 #: src/stt/live-transcript-interrupted.ts
+msgid "the transcription module of this computer is being measured"
+msgstr "le module de transcription de ce poste est en cours de mesure"
+
+#: src/stt/live-transcript-interrupted.ts
 msgid "the transcription module of this computer is missing or has been modified"
 msgstr "le module de transcription de ce poste est absent ou a été modifié"
 
@@ -6114,6 +6171,18 @@ msgstr "Ce poste peut transcrire vos réunions seul : {0}."
 #: src/onboarding/on-device-proposal.tsx
 msgid "This computer cannot transcribe on its own; Syntheo uses your transcription server."
 msgstr "Ce poste ne peut pas transcrire seul ; Syntheo utilise votre serveur de transcription."
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "This computer has not been measured yet."
+msgstr "Ce poste n'a pas encore été mesuré."
+
+#: src/stt/live-transcript-interrupted.ts
+msgid "this computer has not been measured, or is too slow for live transcription"
+msgstr "ce poste n'a pas été mesuré, ou il est trop lent pour la transcription en direct"
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "This computer is chosen for transcription, but it has not been measured or is too slow: live transcription is paused."
+msgstr "Ce poste est choisi pour la transcription, mais il n'a pas été mesuré ou il est trop lent : la transcription en direct est en pause."
 
 #: src/settings/ai/stt/on-device-card.tsx
 msgid "This computer is chosen for transcription, but its module is not installed: live transcription is paused."
@@ -6358,6 +6427,10 @@ msgstr "La transcription sur ce poste arrive bientôt."
 #: src/settings/ai/stt/on-device-card.tsx
 msgid "Transcription on this computer is disabled by your administrator; transcription now goes through the server."
 msgstr "La transcription sur ce poste est désactivée par votre administrateur ; la transcription passe par le serveur."
+
+#: src/stt/on-device.ts
+msgid "Transcription on this computer uses the microphone only: the computer's sound (remote participants) is not transcribed."
+msgstr "La transcription sur ce poste utilise le micro seul : le son de l'ordinateur (participants à distance) n'est pas transcrit."
 
 #: src/sidebar/toast/registry.tsx
 msgid "Transcription provider needed"

@@ -78,6 +78,9 @@ const DENIED_COMMANDS: &[&str] = &[
     // un exécutable ne se décide pas à distance.
     "plugin:transcription|on_device_install",
     "plugin:transcription|on_device_uninstall",
+    // Mise en service (issue 686) : charge tous les cœurs une à deux
+    // minutes ; jamais déclenchée à distance.
+    "plugin:transcription|on_device_commission",
 ];
 
 pub(crate) fn is_denied_command(cmd: &str) -> bool {
