@@ -74,6 +74,29 @@ The low or informational findings still open concern: handling of imported files
 
 To report a vulnerability, see [Report a vulnerability](#report-a-vulnerability).
 
+## On-device transcription module
+
+The [On this computer](/en/on-device-transcription) source relies on an executable shipped separately, the `syntheo-speech` module, which the app installs and then runs with its models. This section describes what Syntheo guarantees about it, and what it does not.
+
+### What is guaranteed
+
+- **Signature**: the module is only loaded if its manifest is signed with Syntheo's module signing key, separate from the app update key. The manifest gives the target, the minimum app version, and the SHA-256 checksum and size of every file: binary, libraries, models, licenses, commissioning audio. Without a key configured in the app, no module is loaded.
+- **Check before every launch**: signature first, before any other read, then a closed list of files (no extra file, no symlink, no path leaving the folder), sizes and checksums.
+- **Same objects checked and run**: the binary and its libraries are copied into a fresh private folder at every launch (rights limited to your account), hashed from that copy and run from it. Models are opened once and hashed from the open file: on Linux, the module inherits these open files; on Windows, each model and each folder of its path stay locked against writing and deletion while the module runs.
+- **No rollback**: a manifest older than the newest one accepted on this computer, or than the minimum version set by the app, is refused.
+- **Loopback only**: the module only listens on `127.0.0.1`, refuses browser requests (`Origin` header) and opens no outbound connection.
+- **Mutual authentication**: a random 256-bit token, drawn at every launch and passed on standard input, never travels on the network, nor is written to a log, a setting, the command line or the module's environment. On every connection, the app and the module prove to each other that they know it, with an HMAC bound to a fresh nonce and both ports of the connection. No audio leaves before the module's proof; a wrong proof closes the connection, with no retry.
+- **Contained launch**: cleared environment, working directory outside the module folder, library search limited to the module folder and System32 on Windows, bounded restarts, stop with the app.
+- **Policy**: the managed setting `on_device_transcription_enabled` set to `false` is read from `managed_settings.json` and kept in memory: rewriting the app database does not lift it. Installation, uninstallation and commissioning are refused through the relay.
+- **No audio to the server** for an "On this computer" recording, repairs included.
+
+### Limits
+
+- **Same user account**: a malicious program already running under your account can modify the app data folder, and also the app itself, installed for your account. On Linux, it could still rewrite a model file in place while the module uses it: Linux offers no mandatory lock to an ordinary user. Replacing it by path or symlink is no longer possible.
+- **Local floor**: the latest accepted module number is stored in the data folder. It protects against a rollback through the distribution channel, not against a local attacker, who can modify that file; it disappears if you delete the app data.
+- **Windows**: the Windows-specific protections (locks, private folder with restricted rights, library search) are checked at compile time by CI, not yet at run time on a real computer.
+- **Audit**: the module has not had an external audit yet; it was reviewed internally at every step.
+
 ## API keys
 
 Inference server keys are optional. When you enter one, Syntheo stores it in the system keychain: Secret Service on Linux (an unlocked keyring is required, for example GNOME Keyring or KWallet), Credential Manager on Windows. It is never written in plain text to the local database nor compiled into the app. "Reset this server…", in the "Advanced" section of the server card, removes it from the keychain.

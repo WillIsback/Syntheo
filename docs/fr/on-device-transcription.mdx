@@ -1,0 +1,77 @@
+---
+title: "Transcrire sur ce poste"
+sidebarTitle: "Sur ce poste"
+description: "Transcrire les réunions sans serveur : module de transcription local, installation, mise en service mesurée, profils, réseau et licences."
+---
+
+La source **Sur ce poste** transcrit vos réunions sans serveur : un module de transcription, installé à part, tourne sur votre ordinateur, et l'audio ne le quitte pas. Elle sert à la transcription en direct d'une écoute ; la dictée et l'import d'un fichier passent toujours par le serveur configuré (voir [Configurer la transcription et l'IA](/fr/ai-setup)).
+
+<Note>
+  **Disponibilité : à venir.** Le module se distribue signé par Syntheo. Tant qu'aucun module signé n'est publié, la carte **Sur ce poste** indique que la transcription sur ce poste arrive bientôt, et rien ne peut être installé.
+</Note>
+
+## Ce qu'il faut
+
+- Un processeur x86-64 avec les instructions AVX2 (Linux ou Windows).
+- 1,5 Go de mémoire libre et 2 Go d'espace disque pour le module et ses modèles.
+- Un poste assez rapide pour le temps réel : la mise en service le vérifie (voir plus bas).
+
+**Tester ce poste**, dans la carte **Sur ce poste** de **Paramètres → Transcription**, mesure le processeur, la mémoire et le disque en quelques secondes et dit si le poste peut convenir. Quand l'installation est disponible, l'accueil propose la même vérification d'un clic (environ 5 s). Sur batterie ou en mode économie d'énergie, branchez le secteur ou passez en mode performance, puis relancez le test.
+
+## Installer le module
+
+1. Dans **Paramètres → Transcription**, carte **Sur ce poste**, choisissez **Installer depuis un fichier…**.
+2. Sélectionnez le fichier `manifest.json` du dossier du module, sur ce poste (un partage réseau est refusé).
+3. Syntheo vérifie la signature du manifeste puis chacun des fichiers, copie le module dans son dossier de données, vérifie la copie et la met en place. Une installation ratée laisse le module déjà installé intact.
+
+**Désinstaller** retire le module. Installation et désinstallation sont refusées pendant une écoute.
+
+Le téléchargement du module depuis Syntheo est à venir.
+
+## Mise en service
+
+Après l'installation, Syntheo **mesure ce poste**, une à deux minutes : il transcrit un audio de 30 s fourni avec le module, en deux flux comme une écoute, et retient le premier profil qui tient le temps réel, dans cet ordre :
+
+| Profil | Ce qui est transcrit |
+| --- | --- |
+| Micro et son du poste, avec les intervenants | Toute la réunion, intervenants distingués |
+| Micro et son du poste, sans les intervenants | Toute la réunion, sans distinguer les intervenants |
+| Micro seul, avec les intervenants | Votre micro seulement : le son de l'ordinateur (participants à distance) n'est pas transcrit |
+| Micro seul, sans les intervenants | Votre micro seulement, sans distinguer les intervenants |
+
+Un profil tient le temps réel quand ses textes définitifs arrivent moins de 2 s après la fin de la parole (au 95e centile, l'attente de fin de phrase déduite), sans prendre de retard au fil de la mesure. La carte affiche l'avancement (« Mesure du profil 2 sur 4… »), puis le profil retenu. Si aucun ne tient, le poste n'est pas proposé.
+
+**Mesurer à nouveau** refait la mesure, par exemple après un changement de matériel. Un nouveau module se mesure à nouveau.
+
+Une fois le poste mesuré, cochez **Utiliser ce poste pour la transcription, à la place du serveur**. En micro seul, un rappel le dit au début de chaque écoute.
+
+## Pendant une écoute
+
+- Si le poste prend plus de 2 s de retard, Syntheo espace la reconnaissance des intervenants, puis la coupe, et la rétablit quand le retard redescend ; la transcription continue. Après un tel changement, les intervenants peuvent recevoir de nouvelles étiquettes.
+- Si le module s'arrête, Syntheo le relance avec un nouveau jeton, dans une limite de 3 lancements en 10 minutes ; au-delà, il attend la fin de ces 10 minutes.
+- L'audio d'une écoute « Sur ce poste » ne part **jamais** au serveur, même pour réparer un passage coupé ou après un redémarrage. Si le module manque, est refusé ou plante en boucle, la transcription en direct se met en pause et le dit ; un passage manqué reste marqué dans la note.
+
+## Réseau et données
+
+- Le module n'écoute que sur la boucle locale (`127.0.0.1`) et n'ouvre aucune connexion vers l'extérieur.
+- L'application et le module s'authentifient l'un l'autre à chaque connexion ; un autre programme du poste ne peut ni recevoir l'audio en se faisant passer pour le module, ni s'y connecter.
+- Le module ne journalise que des durées et des nombres, jamais de texte transcrit.
+- Fichiers ajoutés au dossier de données de l'application (`~/.local/share/fr.willisback.syntheo` sous Linux, `%APPDATA%\fr.willisback.syntheo` sous Windows) : le module dans `modules/speech`, le résultat de la mise en service (`modules/speech.commissioning.json`) et le dernier numéro de module accepté (`modules/speech.floor`). Aucun audio.
+
+Voir aussi [Données et confidentialité](/fr/data-and-privacy) et, pour le modèle de menace, [Sécurité](/fr/security#module-de-transcription-sur-le-poste).
+
+## Interdire le module
+
+Une organisation peut interdire le module avec le réglage géré `on_device_transcription_enabled` à `false` dans `managed_settings.json` (voir [Sécurité](/fr/security#déploiement-en-entreprise)). La carte **Sur ce poste** n'apparaît plus ; si la source était choisie, elle est décochée avec un message, et la transcription passe par le serveur configuré.
+
+## Licences
+
+Le module livre ses licences dans son dossier `licenses/` :
+
+| Composant | Licence |
+| --- | --- |
+| Module `syntheo-speech` | MIT |
+| Modèles NVIDIA Nemotron 3.5 ASR Streaming et Nemotron 3 Diarization, quantifiés en int8 par Syntheo | OpenMDW-1.1 (accord et fiches des modèles fournis) |
+| ONNX Runtime 1.31.0, lié au module | MIT, avec ses notices tierces |
+| Crates Rust du module | MIT, Apache-2.0 et autres licences permissives (liste générée à la construction) |
+| Audio de mise en service, tiré de Multilingual LibriSpeech (enregistrements LibriVox) | CC BY 4.0 pour le jeu de données ; enregistrements du domaine public (attribution fournie) |

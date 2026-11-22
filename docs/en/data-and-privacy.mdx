@@ -25,6 +25,7 @@ Everything is in the app's data folder:
 | Technical logs | The app's log folder, with sensitive content masked (keys and tokens, addresses, identifiers) and size-based rotation. For a failed webhook, only the host is logged, never the URL path |
 | Inference server API keys and webhook signing secrets | System keychain (Secret Service on Linux, Credential Manager on Windows), never in plain text in the database. With no keychain available on Linux, a webhook secret stays in the database |
 | Exports | Folder chosen in "Export location" (**Settings → Profile**) |
+| On-device transcription module, if installed | `modules/speech` in the app data folder (`~/.local/share/fr.willisback.syntheo` on Linux, `%APPDATA%\fr.willisback.syntheo` on Windows), with its commissioning result; see [Transcribe on this computer](/en/on-device-transcription) |
 | Audio | **Nowhere**: see below |
 
 <Warning>
@@ -52,6 +53,7 @@ As a result, if transcription stops (server unreachable, key rejected), the pass
 | Destination | What is sent | When |
 | --- | --- | --- |
 | Your transcription server | The audio of the capture, the dictation or the imported file | During transcription |
+| The [On this computer](/en/on-device-transcription) module, on your computer's loopback | The recording audio, if chosen: nothing leaves the computer | During an "On this computer" recording |
 | Your summary server | The text needed for the task: transcript, notes, summary template instructions, chat question | Summary, chat, "Suggest sections", a folder's project thread and agenda, an automation's "Generate" step |
 | Your [webhooks](/en/reference/webhooks)' addresses | Meeting events (note, summaries, participants, transcript) | At each event, if you added an endpoint |
 | The address of an [automation](/en/automations)'s webhook step | The content you put in it | When the automation runs |
