@@ -13,7 +13,6 @@ export const commands = {
 	saveGeneratedTitle: (request: SaveGeneratedTitleRequest) => typedError<null, string>(__TAURI_INVOKE("plugin:template|save_generated_title", { request })),
 	applySessionContentCorrections: (request: SessionContentCorrectionsRequest) => typedError<null, string>(__TAURI_INVOKE("plugin:template|apply_session_content_corrections", { request })),
 	render: (tpl: Template) => typedError<string, string>(__TAURI_INVOKE("plugin:template|render", { tpl })),
-	renderCustom: (templateContent: string, ctx: { [key in string]: Value }) => typedError<string, string>(__TAURI_INVOKE("plugin:template|render_custom", { templateContent, ctx })),
 	getTemplateSource: (template: EditableTemplate) => typedError<string, string>(__TAURI_INVOKE("plugin:template|get_template_source", { template })),
 };
 
@@ -289,8 +288,6 @@ export type TranscriptPatchSystem = {
 export type TranscriptPatchUser = {
 	transcriptJson: string,
 };
-
-export type Value = null | boolean | number | string | Value[] | { [key in string]: Value };
 
 /* Tauri Specta runtime */
 async function typedError<T, E>(result: Promise<T>): Promise<{ status: "ok"; data: T } | { status: "error"; error: E }> {

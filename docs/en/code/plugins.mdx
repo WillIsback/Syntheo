@@ -128,8 +128,8 @@ The "Interface" column shows whether `apps/desktop/src` imports the `@syntheo/pl
 
 - **Path**: `plugins/template`
 - **Role**: renders Jinja prompts and saves the generation result.
-- **Commands**: `render`, `render_custom`, `get_template_source`, `summary_length_policy`, `dominant_language`, `prepare_generated_summary`, `compose_generated_summary`, `save_generated_summary`, `save_generated_title`, `apply_session_content_corrections`.
-- **Internal dependencies**: `crates/template-app`, `crates/template-app-legacy`, `crates/summary`, `crates/gbnf`, `crates/language`, `crates/db-app`; plugin `db`.
+- **Commands**: `render`, `get_template_source`, `summary_length_policy`, `dominant_language`, `prepare_generated_summary`, `compose_generated_summary`, `save_generated_summary`, `save_generated_title`, `apply_session_content_corrections`.
+- **Internal dependencies**: `crates/template-app`, `crates/summary`, `crates/gbnf`, `crates/language`, `crates/db-app`; plugin `db`.
 - **Affected doc pages**: [/en/customize-summaries](/en/customize-summaries), [/en/languages](/en/languages) (language of summaries and titles), [/en/chat](/en/chat).
 
 ### Other data plugins
@@ -138,7 +138,7 @@ The "Interface" column shows whether `apps/desktop/src` imports the `@syntheo/pl
 | --- | --- | --- | --- |
 | `contacts` | `create_human`, `create_organization`, `save_personal_contact`, `update_human`, `update_organization`, `soft_delete_contact`, `update_contact_avatar`, `toggle_contact_pin`, `reorder_pinned_contacts`, `merge_humans` | `crates/db-app`; plugin `db` | [/en/contacts](/en/contacts) |
 | `fs-sync` | Notes and folders (`list_folders`, `create_folder`, `rename_folder`, `delete_folder`, `move_session`, `load_session_content`), document batches (`write_document_batch`), attachments (`attachment_*`, `folder_attachment_*`), imported audio (`audio_import`, `audio_has_speech`, `audio_delete`…); event `AudioImportEvent` | `crates/fs-sync-core`; plugins `notify`, `settings` | [/en/notes](/en/notes), [/en/import-recordings](/en/import-recordings), [/en/data-and-privacy](/en/data-and-privacy) |
-| `tantivy` | `search`, `reindex`, `add_document`, `update_document`, `update_documents`, `remove_document` | `crates/language`; plugin `settings` | [/en/notes](/en/notes) (search palette), [/en/architecture](/en/architecture) |
+| `tantivy` | `search` | `crates/language`; plugin `settings` | [/en/notes](/en/notes) (search palette), [/en/architecture](/en/architecture) |
 | `export` | `export`, `export_text`, `choose_export_path`, `print_pdf`, `cleanup_print_files` | `crates/export-core`; plugin `db` | [/en/notes](/en/notes) |
 | `local-api` | Webhooks (`list_webhooks`, `create_webhook`, `delete_webhook`, `set_webhook_active`, `test_webhook`, `dispatch_event`), `export_meeting_markdown` (used by `apps/desktop/src/automations/step-runners.ts`) | `crates/agent-access`, `crates/db-app`; plugin `db` | [/en/reference/webhooks](/en/reference/webhooks), [/en/automations](/en/automations) |
 | `settings` | `settings_path`, `global_base`, `vault_base`, `load`, `save` | `crates/storage` | [/en/data-and-privacy](/en/data-and-privacy) |
@@ -168,13 +168,13 @@ The "Interface" column shows whether `apps/desktop/src` imports the `@syntheo/pl
 | `mesure` | `measure`, `measure_differences` (Calibration mode, excerpts returned to the screen only) | `crates/mesure` | [/en/data-and-privacy](/en/data-and-privacy) |
 | `opener2` | `open_url`, `open_path`, `reveal_item_in_dir` | none | none |
 | `tracing` | `do_log`, called by the script injected into the webview to copy the console into `app.log`, with message content masked. No TypeScript package. | `crates/user-error` | [/en/troubleshooting](/en/troubleshooting), [/en/data-and-privacy](/en/data-and-privacy) |
-| `misc` | `get_git_hash`, `get_device_info`, `get_process_memory_bytes`, `opinionated_md_to_html` | `crates/buffer` | none |
+| `misc` | `get_git_hash`, `get_device_info`, `get_process_memory_bytes` | none | none |
 
 ### Internal, macOS-specific or inherited plugins
 
 | Plugin | Status | Details |
 | --- | --- | --- |
-| `icon` | macOS only | `set_dock_icon`, `reset_dock_icon`, `get_icon`, `set_recording_indicator`, `set_notification_badge`. Outside macOS, these commands do nothing. |
+| `icon` | macOS only | `set_dock_icon`, `set_recording_indicator`. Outside macOS, these commands do nothing. |
 | `dock` | macOS only | No commands. Installs the Dock menu (new note, settings, update, restart, quit). |
 | `sidecar2` | Internal | No commands. Resolves and launches sidecar binaries, including in debug. Used by `permissions`. |
 | `relay` | Development only | Serves the interface over HTTP on `127.0.0.1` only (port 1423, or `RELAY_PORT`) and relays IPC over WebSocket. On by default in debug builds; in a build with the `devtools` feature, only with `SYNTHEO_RELAY=1`. The browser connects through a single-use bootstrap URL, printed in the console and written to the `relay-token` file in the app data folder (readable by the user only). Commands that run a program or read secrets do not go through the relay. The Vite shim `@syntheo/plugin-relay/vite` is loaded in `apps/desktop/vite.config.ts`. |

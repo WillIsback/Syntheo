@@ -58,10 +58,6 @@ impl<'a, R: tauri::Runtime, M: tauri::Manager<R>> Misc<'a, R, M> {
             .map(|process| process.memory())
             .ok_or_else(|| "current process not found".to_string())
     }
-
-    pub fn opinionated_md_to_html(&self, text: impl AsRef<str>) -> Result<String, String> {
-        syntheo_buffer::opinionated_md_to_html(text.as_ref()).map_err(|e| e.to_string())
-    }
 }
 
 pub trait MiscPluginExt<R: tauri::Runtime> {

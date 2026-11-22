@@ -161,7 +161,6 @@ No macOS build is published (see [Architecture](/en/architecture)). These crates
 | --- | --- | --- | --- |
 | `crates/session-ingest` | Session import format (`SessionIngestEnvelope`, `IngestSession`, `IngestTranscript`…) and applying it to the database (`apply_session_envelope`, `apply` feature). | Exposed by the `apply_session_ingest` command of `plugins/db`. No call found in `apps/desktop/src`. | none |
 | `crates/gbnf` | `Grammar` enum that produces GBNF grammars (`build`). | Only registered as a `specta` type by `plugins/template`. | none |
-| `crates/buffer` | `opinionated_md_to_html`: Markdown to HTML conversion. | Exposed by `plugins/misc`. No call found in `apps/desktop/src`. | none |
 | `crates/audacity` | Writes Audacity projects (`Project`, `Track`, `Bundle`) to inspect tracks. | Test tool: dev dependency of `aec` and `vad-masking`. | none |
 | `crates/audio-snapshot` | Spectral fingerprints and audio non-regression assertions (`compute_snapshot`, `assert_or_update`). | Test tool: dev dependency of `aec`. | none |
 

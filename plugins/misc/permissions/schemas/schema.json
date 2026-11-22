@@ -403,18 +403,6 @@
           "markdownDescription": "Denies the get_process_memory_bytes command without any pre-configured scope."
         },
         {
-          "description": "Enables the opinionated_md_to_html command without any pre-configured scope.",
-          "type": "string",
-          "const": "allow-opinionated-md-to-html",
-          "markdownDescription": "Enables the opinionated_md_to_html command without any pre-configured scope."
-        },
-        {
-          "description": "Denies the opinionated_md_to_html command without any pre-configured scope.",
-          "type": "string",
-          "const": "deny-opinionated-md-to-html",
-          "markdownDescription": "Denies the opinionated_md_to_html command without any pre-configured scope."
-        },
-        {
           "description": "Enables the reveal_session_in_finder command without any pre-configured scope.",
           "type": "string",
           "const": "allow-reveal-session-in-finder",
@@ -427,10 +415,10 @@
           "markdownDescription": "Denies the reveal_session_in_finder command without any pre-configured scope."
         },
         {
-          "description": "Default permissions for the plugin\n#### This default permission set includes:\n\n- `allow-get-git-hash`\n- `allow-get-device-info`\n- `allow-get-process-memory-bytes`\n- `allow-opinionated-md-to-html`",
+          "description": "Default permissions for the plugin\n#### This default permission set includes:\n\n- `allow-get-git-hash`\n- `allow-get-device-info`\n- `allow-get-process-memory-bytes`",
           "type": "string",
           "const": "default",
-          "markdownDescription": "Default permissions for the plugin\n#### This default permission set includes:\n\n- `allow-get-git-hash`\n- `allow-get-device-info`\n- `allow-get-process-memory-bytes`\n- `allow-opinionated-md-to-html`"
+          "markdownDescription": "Default permissions for the plugin\n#### This default permission set includes:\n\n- `allow-get-git-hash`\n- `allow-get-device-info`\n- `allow-get-process-memory-bytes`"
         }
       ]
     }

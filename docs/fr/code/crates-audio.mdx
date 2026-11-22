@@ -161,7 +161,6 @@ Aucun build macOS n'est publié (voir [Architecture](/fr/architecture)). Ces cra
 | --- | --- | --- | --- |
 | `crates/session-ingest` | Format d'import d'une session (`SessionIngestEnvelope`, `IngestSession`, `IngestTranscript`…) et application en base (`apply_session_envelope`, feature `apply`). | Exposée par la commande `apply_session_ingest` de `plugins/db`. Aucun appel trouvé dans `apps/desktop/src`. | aucune |
 | `crates/gbnf` | Énumération `Grammar` qui produit des grammaires GBNF (`build`). | Seulement enregistrée comme type `specta` par `plugins/template`. | aucune |
-| `crates/buffer` | `opinionated_md_to_html` : conversion Markdown vers HTML. | Exposée par `plugins/misc`. Aucun appel trouvé dans `apps/desktop/src`. | aucune |
 | `crates/audacity` | Écrit des projets Audacity (`Project`, `Track`, `Bundle`) pour inspecter des pistes. | Outil de test : dépendance de dev de `aec` et `vad-masking`. | aucune |
 | `crates/audio-snapshot` | Empreintes spectrales et assertions de non-régression audio (`compute_snapshot`, `assert_or_update`). | Outil de test : dépendance de dev de `aec`. | aucune |
 

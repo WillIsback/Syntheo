@@ -7,7 +7,6 @@ Default permissions for the plugin
 - `allow-get-git-hash`
 - `allow-get-device-info`
 - `allow-get-process-memory-bytes`
-- `allow-opinionated-md-to-html`
 
 ## Permission Table
 
@@ -248,32 +247,6 @@ Enables the get_process_memory_bytes command without any pre-configured scope.
 <td>
 
 Denies the get_process_memory_bytes command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`misc:allow-opinionated-md-to-html`
-
-</td>
-<td>
-
-Enables the opinionated_md_to_html command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`misc:deny-opinionated-md-to-html`
-
-</td>
-<td>
-
-Denies the opinionated_md_to_html command without any pre-configured scope.
 
 </td>
 </tr>

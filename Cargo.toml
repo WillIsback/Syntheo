@@ -50,7 +50,6 @@ syntheo-audio-snapshot = { path = "crates/audio-snapshot", package = "audio-snap
 syntheo-audio-sync = { path = "crates/audio-sync", package = "audio-sync" }
 syntheo-audio-utils = { path = "crates/audio-utils", package = "audio-utils" }
 syntheo-brand = { path = "crates/brand", package = "brand" }
-syntheo-buffer = { path = "crates/buffer", package = "buffer" }
 syntheo-bundle = { path = "crates/bundle", package = "bundle" }
 syntheo-claude = { path = "crates/claude", package = "claude" }
 syntheo-cli-process = { path = "crates/cli-process", package = "cli-process" }
@@ -91,7 +90,6 @@ syntheo-storage = { path = "crates/storage", package = "storage" }
 syntheo-summary = { path = "crates/summary", package = "summary" }
 syntheo-tcc = { path = "crates/tcc", package = "tcc" }
 syntheo-template-app = { path = "crates/template-app", package = "template-app" }
-syntheo-template-app-legacy = { path = "crates/template-app-legacy", package = "template-app-legacy" }
 syntheo-tiptap = { path = "crates/tiptap", package = "tiptap" }
 syntheo-transcript = { path = "crates/transcript", package = "transcript" }
 syntheo-transcription-core = { path = "crates/transcription-core", package = "transcription-core" }

@@ -2,7 +2,6 @@
 description = "Default permissions for the plugin"
 permissions = [
     "allow-list-installed-applications",
-    "allow-get-installed-application-icons",
     "allow-list-mic-using-applications",
     "allow-inspect-meeting-accessibility",
     "allow-send-meeting-chat-message",
@@ -13,7 +12,6 @@ permissions = [
     "allow-set-included-bundle-ids",
     "allow-list-default-ignored-bundle-ids",
     "allow-get-preferred-languages",
-    "allow-get-current-locale-identifier",
     "allow-set-mic-active-threshold",
     "allow-set-detect-enabled",
 ]

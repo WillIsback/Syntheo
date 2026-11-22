@@ -24,7 +24,6 @@ Dans le workspace Cargo, chaque crate est déclarée sous un alias `syntheo-*` (
 | `crates/tiptap` | Conversion entre JSON Tiptap/ProseMirror et Markdown | `agent-access`, `fs-sync-core` | [CLI pour agents](/fr/agents/cli), [Serveur MCP](/fr/agents/mcp) |
 | `crates/export-core` | Rendu PDF avec Typst | plugin `export` | [Notes](/fr/notes) |
 | `crates/template-app` | Prompts du LLM (Askama) | plugin `template`, crate `transcript` | [Personnaliser les comptes rendus](/fr/customize-summaries), [Chat](/fr/chat), [Langues](/fr/languages) |
-| `crates/template-app-legacy` | Ancien moteur de prompts MiniJinja (hérité) | plugin `template` | aucune |
 | `crates/askama-utils` | Filtres et validation pour les gabarits Askama | `template-app` | [Langues](/fr/languages) |
 | `crates/mesure` | Reprise entre synthèse générée et version envoyée : normalisation, alignement par titres, diff mot à mot, classement lexical ou de fond ; lecture bornée des `.docx` ; ne rend que des compteurs | CLI (`syntheo mesure`), plugin `mesure` | [Référence CLI](/fr/reference/cli), [Données et confidentialité](/fr/data-and-privacy), [Bêta : mesure et transparence](/fr/beta) |
 | `crates/summary` | Politique de longueur et mise en forme du compte rendu généré | plugin `template` | [Personnaliser les comptes rendus](/fr/customize-summaries), [Notes](/fr/notes) |
@@ -167,14 +166,6 @@ Ne décrivez pas le comportement du produit à partir du schéma SQL brut. Parte
 - **API** : `summary_length_policy`, `summary_length_policy_for_texts`, `prepare_generated_summary`, `compose_generated_summary`, `extract_tag_names`. Le plugin `template` les expose comme commandes.
 - **Dépendances internes** : aucune.
 - **Pages de doc concernées** : [Personnaliser les comptes rendus](/fr/customize-summaries), [Notes](/fr/notes).
-
-### template-app-legacy
-
-- **Chemin** : `crates/template-app-legacy`
-- **Rôle** : ancien moteur MiniJinja hérité d'Anarlog, avec ses gabarits (`enhance`, `title`, `chat`, `auto_generate_tags`, `postprocess_transcript`, `highlight`).
-- **Usage** : le plugin `template` initialise son environnement au démarrage et s'en sert pour la commande `render_custom`, qu'aucun code de `apps/desktop/src` n'appelle hors tests.
-- **Dépendances internes** : aucune.
-- **Pages de doc concernées** : aucune.
 
 ## Notifications
 

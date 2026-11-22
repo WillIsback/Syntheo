@@ -16,8 +16,6 @@ vergen-gix = { workspace = true, features = ["build"] }
 specta-typescript = { workspace = true }
 
 [dependencies]
-syntheo-buffer = { workspace = true }
-
 tauri = { workspace = true }
 tauri-specta = { workspace = true, features = ["derive", "typescript"] }
 

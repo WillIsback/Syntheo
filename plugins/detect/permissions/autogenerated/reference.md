@@ -5,7 +5,6 @@ Default permissions for the plugin
 #### This default permission set includes the following:
 
 - `allow-list-installed-applications`
-- `allow-get-installed-application-icons`
 - `allow-list-mic-using-applications`
 - `allow-inspect-meeting-accessibility`
 - `allow-send-meeting-chat-message`
@@ -16,7 +15,6 @@ Default permissions for the plugin
 - `allow-set-included-bundle-ids`
 - `allow-list-default-ignored-bundle-ids`
 - `allow-get-preferred-languages`
-- `allow-get-current-locale-identifier`
 - `allow-set-mic-active-threshold`
 - `allow-set-detect-enabled`
 
@@ -77,58 +75,6 @@ Enables the capture_meeting_screen_share command without any pre-configured scop
 <td>
 
 Denies the capture_meeting_screen_share command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`detect:allow-get-current-locale-identifier`
-
-</td>
-<td>
-
-Enables the get_current_locale_identifier command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`detect:deny-get-current-locale-identifier`
-
-</td>
-<td>
-
-Denies the get_current_locale_identifier command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`detect:allow-get-installed-application-icons`
-
-</td>
-<td>
-
-Enables the get_installed_application_icons command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`detect:deny-get-installed-application-icons`
-
-</td>
-<td>
-
-Denies the get_installed_application_icons command without any pre-configured scope.
 
 </td>
 </tr>

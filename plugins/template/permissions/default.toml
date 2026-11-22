@@ -9,7 +9,6 @@ permissions = [
   "allow-save-generated-title",
   "allow-apply-session-content-corrections",
   "allow-render",
-  "allow-render-custom",
   "allow-render-support",
   "allow-get-template-source",
 ]

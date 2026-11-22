@@ -128,8 +128,8 @@ La colonne « Interface » indique si `apps/desktop/src` importe le paquet `@syn
 
 - **Chemin** : `plugins/template`
 - **Rôle** : rend les prompts Jinja et enregistre le résultat de la génération.
-- **Commandes** : `render`, `render_custom`, `get_template_source`, `summary_length_policy`, `dominant_language`, `prepare_generated_summary`, `compose_generated_summary`, `save_generated_summary`, `save_generated_title`, `apply_session_content_corrections`.
-- **Dépendances internes** : `crates/template-app`, `crates/template-app-legacy`, `crates/summary`, `crates/gbnf`, `crates/language`, `crates/db-app` ; plugin `db`.
+- **Commandes** : `render`, `get_template_source`, `summary_length_policy`, `dominant_language`, `prepare_generated_summary`, `compose_generated_summary`, `save_generated_summary`, `save_generated_title`, `apply_session_content_corrections`.
+- **Dépendances internes** : `crates/template-app`, `crates/summary`, `crates/gbnf`, `crates/language`, `crates/db-app` ; plugin `db`.
 - **Pages de doc concernées** : [/customize-summaries](/fr/customize-summaries), [/languages](/fr/languages) (langue des résumés et des titres), [/chat](/fr/chat).
 
 ### Autres plugins de données
@@ -138,7 +138,7 @@ La colonne « Interface » indique si `apps/desktop/src` importe le paquet `@syn
 | --- | --- | --- | --- |
 | `contacts` | `create_human`, `create_organization`, `save_personal_contact`, `update_human`, `update_organization`, `soft_delete_contact`, `update_contact_avatar`, `toggle_contact_pin`, `reorder_pinned_contacts`, `merge_humans` | `crates/db-app` ; plugin `db` | [/contacts](/fr/contacts) |
 | `fs-sync` | Notes et dossiers (`list_folders`, `create_folder`, `rename_folder`, `delete_folder`, `move_session`, `load_session_content`), lots de documents (`write_document_batch`), pièces jointes (`attachment_*`, `folder_attachment_*`), audio importé (`audio_import`, `audio_has_speech`, `audio_delete`…) ; événement `AudioImportEvent` | `crates/fs-sync-core` ; plugins `notify`, `settings` | [/notes](/fr/notes), [/import-recordings](/fr/import-recordings), [/data-and-privacy](/fr/data-and-privacy) |
-| `tantivy` | `search`, `reindex`, `add_document`, `update_document`, `update_documents`, `remove_document` | `crates/language` ; plugin `settings` | [/notes](/fr/notes) (palette de recherche), [/architecture](/fr/architecture) |
+| `tantivy` | `search` | `crates/language` ; plugin `settings` | [/notes](/fr/notes) (palette de recherche), [/architecture](/fr/architecture) |
 | `export` | `export`, `export_text`, `choose_export_path`, `print_pdf`, `cleanup_print_files` | `crates/export-core` ; plugin `db` | [/notes](/fr/notes) |
 | `local-api` | Webhooks (`list_webhooks`, `create_webhook`, `delete_webhook`, `set_webhook_active`, `test_webhook`, `dispatch_event`), `export_meeting_markdown` (utilisé par `apps/desktop/src/automations/step-runners.ts`) | `crates/agent-access`, `crates/db-app` ; plugin `db` | [/reference/webhooks](/fr/reference/webhooks), [/automations](/fr/automations) |
 | `settings` | `settings_path`, `global_base`, `vault_base`, `load`, `save` | `crates/storage` | [/data-and-privacy](/fr/data-and-privacy) |
@@ -168,13 +168,13 @@ La colonne « Interface » indique si `apps/desktop/src` importe le paquet `@syn
 | `mesure` | `measure`, `measure_differences` (mode Calibrage, extraits rendus à l'écran seulement) | `crates/mesure` | [/fr/data-and-privacy](/fr/data-and-privacy) |
 | `opener2` | `open_url`, `open_path`, `reveal_item_in_dir` | aucune | aucune |
 | `tracing` | `do_log`, appelée par le script injecté dans la webview pour recopier la console dans `app.log`, avec le contenu des messages masqué. Pas de paquet TypeScript. | `crates/user-error` | [/troubleshooting](/fr/troubleshooting), [/data-and-privacy](/fr/data-and-privacy) |
-| `misc` | `get_git_hash`, `get_device_info`, `get_process_memory_bytes`, `opinionated_md_to_html` | `crates/buffer` | aucune |
+| `misc` | `get_git_hash`, `get_device_info`, `get_process_memory_bytes` | aucune | aucune |
 
 ### Plugins internes, spécifiques à macOS ou hérités
 
 | Plugin | État | Détail |
 | --- | --- | --- |
-| `icon` | macOS uniquement | `set_dock_icon`, `reset_dock_icon`, `get_icon`, `set_recording_indicator`, `set_notification_badge`. Hors macOS, ces commandes ne font rien. |
+| `icon` | macOS uniquement | `set_dock_icon`, `set_recording_indicator`. Hors macOS, ces commandes ne font rien. |
 | `dock` | macOS uniquement | Aucune commande. Installe le menu du Dock (nouvelle note, réglages, mise à jour, redémarrage, quitter). |
 | `sidecar2` | Interne | Aucune commande. Résout et lance les binaires sidecar, y compris en debug. Utilisé par `permissions`. |
 | `relay` | Développement uniquement | Sert l'interface en HTTP sur `127.0.0.1` seulement (port 1423, ou `RELAY_PORT`) et relaie l'IPC par WebSocket. Actif par défaut en build de debug ; dans une build avec la feature `devtools`, seulement avec `SYNTHEO_RELAY=1`. Le navigateur se connecte par une URL d'amorçage à usage unique, affichée en console et écrite dans le fichier `relay-token` du dossier de données de l'application (lisible par le seul utilisateur). Les commandes qui lancent un programme ou lisent les secrets ne passent pas par le relay. Le shim Vite `@syntheo/plugin-relay/vite` est chargé dans `apps/desktop/vite.config.ts`. |

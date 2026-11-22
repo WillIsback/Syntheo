@@ -12,7 +12,6 @@ fn make_specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
             commands::get_git_hash::<tauri::Wry>,
             commands::get_device_info::<tauri::Wry>,
             commands::get_process_memory_bytes::<tauri::Wry>,
-            commands::opinionated_md_to_html::<tauri::Wry>,
         ])
         .error_handling(tauri_specta::ErrorHandlingMode::Result)
 }

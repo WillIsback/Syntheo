@@ -12,7 +12,6 @@ Default permissions for the plugin
 - `allow-save-generated-title`
 - `allow-apply-session-content-corrections`
 - `allow-render`
-- `allow-render-custom`
 - `allow-render-support`
 - `allow-get-template-source`
 
@@ -177,32 +176,6 @@ Enables the render command without any pre-configured scope.
 <td>
 
 Denies the render command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`template:allow-render-custom`
-
-</td>
-<td>
-
-Enables the render_custom command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`template:deny-render-custom`
-
-</td>
-<td>
-
-Denies the render_custom command without any pre-configured scope.
 
 </td>
 </tr>

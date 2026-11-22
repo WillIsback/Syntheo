@@ -6,11 +6,6 @@ import { invoke as __TAURI_INVOKE } from "@tauri-apps/api/core";
 /** Commands */
 export const commands = {
 	search: (request: SearchRequest) => typedError<SearchResult, string>(__TAURI_INVOKE("plugin:tantivy|search", { request })),
-	reindex: (collection: string | null) => typedError<null, string>(__TAURI_INVOKE("plugin:tantivy|reindex", { collection })),
-	addDocument: (document: SearchDocument, collection: string | null) => typedError<null, string>(__TAURI_INVOKE("plugin:tantivy|add_document", { document, collection })),
-	updateDocument: (document: SearchDocument, collection: string | null) => typedError<null, string>(__TAURI_INVOKE("plugin:tantivy|update_document", { document, collection })),
-	updateDocuments: (documents: SearchDocument[], collection: string | null) => typedError<null, string>(__TAURI_INVOKE("plugin:tantivy|update_documents", { documents, collection })),
-	removeDocument: (id: string, collection: string | null) => typedError<null, string>(__TAURI_INVOKE("plugin:tantivy|remove_document", { id, collection })),
 };
 
 /* Types */
