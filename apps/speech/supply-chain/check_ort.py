@@ -25,7 +25,9 @@ SPEECH = HERE.parent
 
 def pinned(target: str) -> dict:
     with (HERE / "ort.tsv").open(encoding="utf-8") as handle:
-        rows = [r for r in csv.DictReader(handle, delimiter="\t") if r["target"] == target]
+        rows = [
+            r for r in csv.DictReader(handle, delimiter="\t") if r["target"] == target
+        ]
     if len(rows) != 1:
         sys.exit(f"aucun épinglage ONNX Runtime pour {target}")
     return rows[0]
@@ -46,16 +48,26 @@ def before(target: str) -> None:
     pin = pinned(target)
     cargo_home = Path(os.environ.get("CARGO_HOME", Path.home() / ".cargo"))
     version = ort_sys_version()
-    candidates = list((cargo_home / "registry" / "src").glob(f"*/ort-sys-{version}/build/download/dist.tsv"))
+    candidates = list(
+        (cargo_home / "registry" / "src").glob(
+            f"*/ort-sys-{version}/build/download/dist.tsv"
+        )
+    )
     if len(candidates) != 1:
-        sys.exit(f"dist.tsv d'ort-sys {version} introuvable (cargo fetch --locked d'abord)")
+        sys.exit(
+            f"dist.tsv d'ort-sys {version} introuvable (cargo fetch --locked d'abord)"
+        )
     with candidates[0].open(encoding="utf-8") as handle:
         rows = [
             r
             for r in csv.DictReader(handle, delimiter="\t")
             if r["target"] == target and r["feature_set"] == pin["feature_set"]
         ]
-    if len(rows) != 1 or rows[0]["url"] != pin["url"] or rows[0]["sha256_hash"] != pin["sha256"]:
+    if (
+        len(rows) != 1
+        or rows[0]["url"] != pin["url"]
+        or rows[0]["sha256_hash"] != pin["sha256"]
+    ):
         sys.exit(f"ort-sys {version} n'épingle pas l'archive attendue pour {target}")
     print(f"ort-sys {version} : {pin['url']} {pin['sha256']}")
 
@@ -68,7 +80,9 @@ def after(target: str) -> None:
     extracted = Path(cache) / "dfbin" / target
     found = sorted(p.name for p in extracted.iterdir()) if extracted.is_dir() else []
     if found != [pin["sha256"]]:
-        sys.exit(f"archives ONNX Runtime utilisées : {found}, attendue : {pin['sha256']}")
+        sys.exit(
+            f"archives ONNX Runtime utilisées : {found}, attendue : {pin['sha256']}"
+        )
     print(f"ONNX Runtime utilisé : {pin['sha256']}")
 
 

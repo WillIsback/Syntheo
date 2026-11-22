@@ -40,8 +40,15 @@ def module_version() -> str:
 def main() -> None:
     if len(sys.argv) != 5:
         sys.exit(__doc__)
-    out, target, min_app, base_url = Path(sys.argv[1]), sys.argv[2], sys.argv[3], sys.argv[4]
-    if not re.fullmatch(r"\d+\.\d+\.\d+", min_app) or not base_url.startswith("https://"):
+    out, target, min_app, base_url = (
+        Path(sys.argv[1]),
+        sys.argv[2],
+        sys.argv[3],
+        sys.argv[4],
+    )
+    if not re.fullmatch(r"\d+\.\d+\.\d+", min_app) or not base_url.startswith(
+        "https://"
+    ):
         sys.exit("version minimale x.y.z et URL https:// attendues")
     files = []
     for path in sorted(p for p in out.rglob("*") if p.is_file() or p.is_symlink()):
@@ -50,8 +57,12 @@ def main() -> None:
             continue
         if path.is_symlink():
             sys.exit(f"lien symbolique refusé : {relative}")
-        files.append({"path": relative, "sha256": sha256(path), "size": path.stat().st_size})
-    models_spec = json.loads((SPEECH / "models" / "models.json").read_text(encoding="utf-8"))
+        files.append(
+            {"path": relative, "sha256": sha256(path), "size": path.stat().st_size}
+        )
+    models_spec = json.loads(
+        (SPEECH / "models" / "models.json").read_text(encoding="utf-8")
+    )
     models = [
         {
             "path": f"models/{entry['path']}",
@@ -72,7 +83,9 @@ def main() -> None:
         "files": files,
         "models": models,
     }
-    (out / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    (out / "manifest.json").write_text(
+        json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
+    )
     lines = [f"{e['sha256']}  {e['path']}\n" for e in files + models]
     (out / "files.sha256").write_text("".join(lines), encoding="utf-8", newline="\n")
     print(f"{len(files)} fichier(s), {len(models)} modèle(s)")

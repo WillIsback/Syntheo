@@ -53,7 +53,12 @@ def main() -> None:
     manifest = json.loads((HERE / "models.json").read_text(encoding="utf-8"))
     spec = manifest["source"]
     # Dossier des sources téléchargées (réutilisées si l'empreinte correspond).
-    cache = Path(os.environ.get("SYNTHEO_SPEECH_SOURCES", Path(tempfile.gettempdir()) / "syntheo-speech-sources"))
+    cache = Path(
+        os.environ.get(
+            "SYNTHEO_SPEECH_SOURCES",
+            Path(tempfile.gettempdir()) / "syntheo-speech-sources",
+        )
+    )
     from onnxruntime.quantization import QuantType, quantize_dynamic
 
     quant = manifest["quantization"]
@@ -64,9 +69,16 @@ def main() -> None:
         if transform.startswith("output-of:"):
             pass
         else:
-            source = fetch(spec, entry["source"], entry["source_sha256"], cache / entry["source"])
+            source = fetch(
+                spec, entry["source"], entry["source_sha256"], cache / entry["source"]
+            )
             if "source_data" in entry:
-                fetch(spec, entry["source_data"], entry["source_data_sha256"], cache / entry["source_data"])
+                fetch(
+                    spec,
+                    entry["source_data"],
+                    entry["source_data_sha256"],
+                    cache / entry["source_data"],
+                )
             if transform == "copy":
                 shutil.copyfile(source, target)
             else:
