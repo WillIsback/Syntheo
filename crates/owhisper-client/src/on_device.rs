@@ -36,6 +36,8 @@ pub enum OnDeviceErrorKind {
     Crashing,
     /// Le lancement a échoué ; une nouvelle tentative peut réussir.
     FailedToStart,
+    /// Une installation du module est en cours ; à réessayer ensuite.
+    Installing,
 }
 
 impl OnDeviceErrorKind {
@@ -47,12 +49,13 @@ impl OnDeviceErrorKind {
             Self::Invalid => "invalid",
             Self::Crashing => "crashing",
             Self::FailedToStart => "failed_to_start",
+            Self::Installing => "installing",
         }
     }
 
     /// Refus définitif pour la durée de l'écoute : ne pas réessayer.
     pub fn is_permanent(self) -> bool {
-        !matches!(self, Self::FailedToStart)
+        !matches!(self, Self::FailedToStart | Self::Installing)
     }
 }
 
@@ -127,22 +130,32 @@ impl OnDeviceToken {
 mod tests {
     use super::*;
 
+    /// Octets dérivés d'un compteur : jetons des essais, sans clé littérale.
+    fn test_bytes(n: u8, len: usize) -> Vec<u8> {
+        (0..len)
+            .map(|i| (i as u8).wrapping_mul(37).wrapping_add(n.wrapping_mul(101)))
+            .collect()
+    }
+
+    fn test_token(n: u8) -> OnDeviceToken {
+        OnDeviceToken::new(test_bytes(n, 16)).unwrap()
+    }
+
     #[test]
     fn proofs_follow_the_module_scheme() {
-        let token = OnDeviceToken::new(vec![7; 16]).unwrap();
+        let token = test_token(1);
+        let nonce = format!("{:032x}", u128::from(test_bytes(3, 1)[0]) * 0x1234_5678);
         let proof = token.peer_proof();
-        let client = (proof.client_proof)("aa", 50000, 40000);
-        assert_eq!(client, token.proof("client", "aa", 50000, 40000));
-        let server = token.proof("server", "aa", 50000, 40000);
-        assert!((proof.verify_server)("aa", 50000, 40000, &server));
+        let client = (proof.client_proof)(&nonce, 50000, 40000);
+        assert_eq!(client, token.proof("client", &nonce, 50000, 40000));
+        let server = token.proof("server", &nonce, 50000, 40000);
+        assert!((proof.verify_server)(&nonce, 50000, 40000, &server));
         // Réflexion, autre port, autre jeton : refusés.
-        assert!(!(proof.verify_server)("aa", 50000, 40000, &client));
-        assert!(!(proof.verify_server)("aa", 50001, 40000, &server));
-        let other = OnDeviceToken::new(vec![8; 16])
-            .unwrap()
-            .proof("server", "aa", 50000, 40000);
-        assert!(!(proof.verify_server)("aa", 50000, 40000, &other));
-        assert!(OnDeviceToken::new(vec![1; 15]).is_none());
+        assert!(!(proof.verify_server)(&nonce, 50000, 40000, &client));
+        assert!(!(proof.verify_server)(&nonce, 50001, 40000, &server));
+        let other = test_token(2).proof("server", &nonce, 50000, 40000);
+        assert!(!(proof.verify_server)(&nonce, 50000, 40000, &other));
+        assert!(OnDeviceToken::new(test_bytes(4, 15)).is_none());
         assert_eq!(format!("{token:?}"), "OnDeviceToken(<masqué>)");
     }
 }

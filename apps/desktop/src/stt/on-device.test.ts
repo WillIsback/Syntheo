@@ -48,18 +48,21 @@ describe("source « Sur ce poste »", () => {
     expect(
       isOnDeviceUsable({
         allowed: true,
+        installable: true,
         module: { kind: "installed", version: "0.1.0", sizeBytes: 1 },
       }),
     ).toBe(true);
     expect(
       isOnDeviceUsable({
         allowed: true,
+        installable: true,
         module: { kind: "invalid", reason: "x" },
       }),
     ).toBe(false);
     expect(
       isOnDeviceUsable({
         allowed: false,
+        installable: true,
         module: { kind: "installed", version: "0.1.0", sizeBytes: 1 },
       }),
     ).toBe(false);

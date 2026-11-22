@@ -1,7 +1,6 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { open as selectFile } from "@tauri-apps/plugin-dialog";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   commands as transcriptionCommands,
@@ -16,6 +15,7 @@ import { ServerCard } from "~/settings/ai/shared/server-card";
 import { useSetSettingValues } from "~/settings/queries";
 import { useConfigValues } from "~/shared/config";
 import {
+  describeOnDeviceError,
   isEligible,
   ON_DEVICE_STATUS_QUERY_KEY,
   runOnDeviceProbe,
@@ -82,6 +82,38 @@ export function ProbeVerdict({ probe }: { probe: Probe }) {
   );
 }
 
+/**
+ * Source choisie mais interdite par l'organisation (revue 685, constat 5) :
+ * jamais de retour silencieux au serveur. La case est décochée et la
+ * personne est prévenue.
+ */
+export function OnDevicePolicyNotice() {
+  const status = useOnDeviceStatus();
+  const { stt_on_device } = useConfigValues(["stt_on_device"] as const);
+  const setSettings = useSetSettingValues();
+  const [shown, setShown] = useState(false);
+  const forbidden = status.data?.allowed === false && !!stt_on_device;
+  useEffect(() => {
+    if (forbidden) {
+      setShown(true);
+      setSettings({ stt_on_device: false });
+    }
+  }, [forbidden, setSettings]);
+  if (!shown) return null;
+  return (
+    <p
+      data-testid="on-device-policy-notice"
+      role="status"
+      className="bg-alert text-alert-foreground rounded-md px-3 py-2 text-[13px]"
+    >
+      <Trans>
+        Transcription on this computer is disabled by your administrator;
+        transcription now goes through the server.
+      </Trans>
+    </p>
+  );
+}
+
 export function OnDeviceCard() {
   const { t } = useLingui();
   const queryClient = useQueryClient();
@@ -90,6 +122,7 @@ export function OnDeviceCard() {
   const setSettings = useSetSettingValues();
   const [probe, setProbe] = useState<Probe | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const refresh = () =>
     queryClient.invalidateQueries({ queryKey: ON_DEVICE_STATUS_QUERY_KEY });
@@ -103,23 +136,22 @@ export function OnDeviceCard() {
     onError: () => setError(t`The test could not run. Try again later.`),
   });
 
+  // Le fichier est choisi côté Rust : aucun chemin ne part de l'interface.
   const installing = useMutation({
     mutationFn: async () => {
-      const selected = await selectFile({
-        multiple: false,
-        directory: false,
-        filters: [{ name: "manifest.json", extensions: ["json"] }],
-      });
-      if (typeof selected !== "string") return;
-      const result = await transcriptionCommands.onDeviceInstall(selected);
+      const result = await transcriptionCommands.onDeviceInstall();
       if (result.status === "error") throw new Error(result.error);
+      return result.data;
     },
-    onSuccess: () => {
+    onSuccess: (installed) => {
       setError(null);
+      if (installed) setNotice(t`Module installed.`);
       void refresh();
     },
     onError: (e: Error) =>
-      setError(t`The module was not installed: ${e.message}`),
+      setError(
+        t`The module was not installed: ${describeOnDeviceError(e.message)}`,
+      ),
   });
 
   const uninstalling = useMutation({
@@ -130,15 +162,20 @@ export function OnDeviceCard() {
     },
     onSuccess: () => {
       setError(null);
+      setNotice(t`Module uninstalled.`);
       void refresh();
     },
     onError: (e: Error) =>
-      setError(t`The module was not uninstalled: ${e.message}`),
+      setError(
+        t`The module was not uninstalled: ${describeOnDeviceError(e.message)}`,
+      ),
   });
 
   if (!status.data?.allowed) return null;
   const module = status.data.module;
+  const installable = status.data.installable;
   const installed = module.kind === "installed";
+  const chosen = !!stt_on_device;
   const busy = installing.isPending || uninstalling.isPending;
 
   return (
@@ -163,7 +200,9 @@ export function OnDeviceCard() {
         data-setting-id="stt-on-device-probe"
         className="flex flex-col gap-2"
       >
-        {probe ? <ProbeVerdict probe={probe} /> : null}
+        <div aria-live="polite">
+          {probe ? <ProbeVerdict probe={probe} /> : null}
+        </div>
         <div>
           <button
             type="button"
@@ -193,57 +232,71 @@ export function OnDeviceCard() {
           </p>
         ) : module.kind === "invalid" ? (
           <p className="text-destructive text-[13px]" role="alert">
-            {t`The installed module is refused: ${module.reason}.`}
+            {t`The installed module is refused: ${describeOnDeviceError(module.reason)}`}
           </p>
-        ) : (
+        ) : installable ? (
           <p className="text-muted-foreground text-[13px]">
             <Trans>
               Module not installed. Download from Syntheo is coming soon.
             </Trans>
           </p>
+        ) : (
+          <p className="text-muted-foreground text-[13px]">
+            <Trans>Transcription on this computer is coming soon.</Trans>
+          </p>
         )}
-        <div className="flex flex-wrap gap-1.5">
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => installing.mutate()}
-            className="border-border hover:bg-muted inline-flex items-center gap-2 rounded-md border px-2.5 py-1 text-[13px] disabled:opacity-60"
-          >
-            {installing.isPending ? (
-              <CircleNotch className="size-3.5 animate-spin motion-reduce:animate-none" />
+        {installable || module.kind !== "not_installed" ? (
+          <div className="flex flex-wrap gap-1.5">
+            {installable ? (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => installing.mutate()}
+                className="border-border hover:bg-muted inline-flex items-center gap-2 rounded-md border px-2.5 py-1 text-[13px] disabled:opacity-60"
+              >
+                {installing.isPending ? (
+                  <CircleNotch className="size-3.5 animate-spin motion-reduce:animate-none" />
+                ) : null}
+                {installing.isPending ? (
+                  <Trans>Installing…</Trans>
+                ) : (
+                  <Trans>Install from a file…</Trans>
+                )}
+              </button>
             ) : null}
-            <Trans>Install from a file…</Trans>
-          </button>
-          {module.kind !== "not_installed" ? (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => uninstalling.mutate()}
-              className="border-border hover:bg-muted rounded-md border px-2.5 py-1 text-[13px] disabled:opacity-60"
-            >
-              <Trans>Uninstall</Trans>
-            </button>
-          ) : null}
-        </div>
-        <p className="text-muted-foreground text-[12px]">
-          <Trans>
-            Choose the manifest.json file of a module folder. Its signature and
-            every file are checked before installation.
-          </Trans>
-        </p>
+            {module.kind !== "not_installed" ? (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => uninstalling.mutate()}
+                className="border-border hover:bg-muted rounded-md border px-2.5 py-1 text-[13px] disabled:opacity-60"
+              >
+                <Trans>Uninstall</Trans>
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+        {installable ? (
+          <p className="text-muted-foreground text-[12px]">
+            <Trans>
+              Choose the manifest.json file of a module folder. Its signature
+              and every file are checked before installation.
+            </Trans>
+          </p>
+        ) : null}
       </div>
 
       <label
         data-setting-id="stt-on-device-use"
         className={cn([
           "flex items-center gap-2 text-[13px]",
-          !installed && "text-muted-foreground",
+          !installed && !chosen && "text-muted-foreground",
         ])}
       >
         <input
           type="checkbox"
-          disabled={!installed}
-          checked={installed && !!stt_on_device}
+          disabled={!installed && !chosen}
+          checked={chosen}
           onChange={(event) =>
             setSettings({ stt_on_device: event.target.checked })
           }
@@ -251,12 +304,57 @@ export function OnDeviceCard() {
         <Trans>Use this computer for transcription instead of the server</Trans>
       </label>
 
-      {error ? (
-        <p className="text-destructive text-[13px]" role="alert">
-          {error}
-        </p>
+      {chosen && !installed ? (
+        <div
+          data-testid="on-device-missing"
+          role="alert"
+          className="bg-alert text-alert-foreground flex flex-col gap-2 rounded-md px-3 py-2 text-[13px]"
+        >
+          <p>
+            {module.kind === "invalid" ? (
+              <Trans>
+                This computer is chosen for transcription, but its module is
+                refused: live transcription is paused.
+              </Trans>
+            ) : (
+              <Trans>
+                This computer is chosen for transcription, but its module is not
+                installed: live transcription is paused.
+              </Trans>
+            )}
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {installable ? (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => installing.mutate()}
+                className="border-border hover:bg-muted rounded-md border px-2.5 py-1 disabled:opacity-60"
+              >
+                <Trans>Install</Trans>
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => setSettings({ stt_on_device: false })}
+              className="border-border hover:bg-muted rounded-md border px-2.5 py-1"
+            >
+              <Trans>Go back to the server</Trans>
+            </button>
+          </div>
+        </div>
       ) : null}
-      {isEligible(probe) && !installed ? (
+
+      <div aria-live="polite">
+        {error ? (
+          <p className="text-destructive text-[13px]" role="alert">
+            {error}
+          </p>
+        ) : notice ? (
+          <p className="text-muted-foreground text-[13px]">{notice}</p>
+        ) : null}
+      </div>
+      {isEligible(probe) && !installed && installable ? (
         <p className="text-muted-foreground text-[13px]">
           <Trans>Once the module is installed, you can turn it on here.</Trans>
         </p>

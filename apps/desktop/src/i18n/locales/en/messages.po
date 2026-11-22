@@ -291,6 +291,10 @@ msgstr "1 pending edit"
 msgid "1 result"
 msgstr "1 result"
 
+#: src/stt/on-device.ts
+msgid "A file of the module has been modified."
+msgstr "A file of the module has been modified."
+
 #: src/folders/folder-actions.tsx
 msgid "A folder cannot be moved into one of its own subfolders."
 msgstr "A folder cannot be moved into one of its own subfolders."
@@ -566,6 +570,10 @@ msgstr "Always on Top"
 #: src/automations/command-confirmation-dialog.tsx
 msgid "An automation wants to run a program on your computer for the first time."
 msgstr "An automation wants to run a program on your computer for the first time."
+
+#: src/stt/on-device.ts
+msgid "An installation is already in progress."
+msgstr "An installation is already in progress."
 
 #: src/shared/control.tsx
 msgid "An unexpected error occurred."
@@ -965,6 +973,10 @@ msgstr "Check that your vault folder is available and your disk has free space, 
 msgid "Check the spelling, or try a shorter word."
 msgstr "Check the spelling, or try a shorter word."
 
+#: src/onboarding/on-device-proposal.tsx
+msgid "Check whether this computer can transcribe on its own (about 5 s)"
+msgstr "Check whether this computer can transcribe on its own (about 5 s)"
+
 #: src/settings/general/update-section.tsx
 msgid "Checking for updates…"
 msgstr "Checking for updates…"
@@ -1000,6 +1012,10 @@ msgstr "Choose a language model in Settings to propose the agenda."
 #: src/folders/project/folder-thread-card.tsx
 msgid "Choose a language model in Settings to write the thread."
 msgstr "Choose a language model in Settings to write the thread."
+
+#: src/stt/on-device.ts
+msgid "Choose a module folder on this computer (not on a network share)."
+msgstr "Choose a module folder on this computer (not on a network share)."
 
 #: src/store/zustand/listener/general-live-helpers.ts
 msgid "Choose a working audio device and retry. Audio missing during this interruption cannot be recovered."
@@ -1062,6 +1078,10 @@ msgstr "Choose the folder that will contain this folder."
 #: src/settings/ai/stt/on-device-card.tsx
 msgid "Choose the manifest.json file of a module folder. Its signature and every file are checked before installation."
 msgstr "Choose the manifest.json file of a module folder. Its signature and every file are checked before installation."
+
+#: src/stt/on-device.ts
+msgid "Choose the manifest.json file of the module folder."
+msgstr "Choose the manifest.json file of the module folder."
 
 #: src/settings/general/audio-settings.tsx
 msgid "Choose the microphone that captures your voice."
@@ -2251,6 +2271,10 @@ msgstr "Get your attention when a summary is ready in the background."
 msgid "Give the vault note a title first."
 msgstr "Give the vault note a title first."
 
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Go back to the server"
+msgstr "Go back to the server"
+
 #: src/sidebar/custom-sidebar-header.tsx
 msgid "Go home"
 msgstr "Go home"
@@ -2461,6 +2485,10 @@ msgstr "Include"
 msgid "Include meeting ID"
 msgstr "Include meeting ID"
 
+#: src/stt/capture-lifecycle-session.ts
+msgid "Incomplete transcription: the transcription module of this computer is unavailable. The missing passage stays marked; audio is not sent to the server."
+msgstr "Incomplete transcription: the transcription module of this computer is unavailable. The missing passage stays marked; audio is not sent to the server."
+
 #: src/settings/general/microphone-level.tsx
 msgid "Input level"
 msgstr "Input level"
@@ -2472,6 +2500,10 @@ msgstr "Input level unavailable"
 #: src/settings/automations/variable-field.tsx
 msgid "Insert"
 msgstr "Insert"
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Install"
+msgstr "Install"
 
 #: src/settings/general/update-section.tsx
 msgid "Install and restart"
@@ -2505,6 +2537,14 @@ msgstr "Installed version: {version}"
 #: src/settings/general/update-section.tsx
 msgid "Installed version: unknown"
 msgstr "Installed version: unknown"
+
+#: src/stt/on-device.ts
+msgid "Installing the module is not available yet."
+msgstr "Installing the module is not available yet."
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Installing…"
+msgstr "Installing…"
 
 #: src/settings/general/update-section.tsx
 msgid "Installing… Syntheo will restart."
@@ -3096,8 +3136,16 @@ msgid "Module installed: version {0}, {1}."
 msgstr "Module installed: version {0}, {1}."
 
 #: src/settings/ai/stt/on-device-card.tsx
+msgid "Module installed."
+msgstr "Module installed."
+
+#: src/settings/ai/stt/on-device-card.tsx
 msgid "Module not installed. Download from Syntheo is coming soon."
 msgstr "Module not installed. Download from Syntheo is coming soon."
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Module uninstalled."
+msgstr "Module uninstalled."
 
 #: src/session/components/outer-header/overflow/index.tsx
 msgid "More"
@@ -5127,6 +5175,10 @@ msgstr "Stop response"
 msgid "Stop the current recording, or wait for it to finish saving, then try again."
 msgstr "Stop the current recording, or wait for it to finish saving, then try again."
 
+#: src/stt/on-device.ts
+msgid "Stop the recording first."
+msgstr "Stop the recording first."
+
 #: src/session/components/note-input/transcript/screens/empty.tsx
 msgid "Stop transcription"
 msgstr "Stop transcription"
@@ -5646,6 +5698,10 @@ msgstr "The chat suggests adding step {number}: {title}"
 msgid "The chat suggests changing step {number}: {title}"
 msgstr "The chat suggests changing step {number}: {title}"
 
+#: src/onboarding/on-device-proposal.tsx
+msgid "The check could not run. You can run it later in Settings › Transcription."
+msgstr "The check could not run. You can run it later in Settings › Transcription."
+
 #: src/settings/developers/cli.tsx
 msgid "The CLI is not bundled with the app. Install it from a clone of the Syntheo repository:"
 msgstr "The CLI is not bundled with the app. Install it from a clone of the Syntheo repository:"
@@ -5702,10 +5758,10 @@ msgstr "The import of {name} was abandoned: {reason}"
 msgid "The import was abandoned: {reason}"
 msgstr "The import was abandoned: {reason}"
 
-#. placeholder {0}: module.reason
+#. placeholder {0}: describeOnDeviceError(module.reason)
 #: src/settings/ai/stt/on-device-card.tsx
-msgid "The installed module is refused: {0}."
-msgstr "The installed module is refused: {0}."
+msgid "The installed module is refused: {0}"
+msgstr "The installed module is refused: {0}"
 
 #: src/automations/action-runners.ts
 msgid "The JSON body is not valid once the variables are filled in."
@@ -5767,12 +5823,28 @@ msgstr "The microphone and system audio are muted: nothing is being transcribed.
 msgid "The models could not be downloaded (offline?). Listening continues without it."
 msgstr "The models could not be downloaded (offline?). Listening continues without it."
 
-#. placeholder {0}: e.message
+#: src/stt/on-device.ts
+msgid "The module files could not be read or written (disk full?). Try again."
+msgstr "The module files could not be read or written (disk full?). Try again."
+
+#: src/stt/on-device.ts
+msgid "The module folder is incomplete or contains unexpected files."
+msgstr "The module folder is incomplete or contains unexpected files."
+
+#: src/stt/on-device.ts
+msgid "The module is in use. Stop the recording, then try again."
+msgstr "The module is in use. Stop the recording, then try again."
+
+#: src/stt/on-device.ts
+msgid "The module is not signed by Syntheo."
+msgstr "The module is not signed by Syntheo."
+
+#. placeholder {0}: describeOnDeviceError(e.message)
 #: src/settings/ai/stt/on-device-card.tsx
 msgid "The module was not installed: {0}"
 msgstr "The module was not installed: {0}"
 
-#. placeholder {0}: e.message
+#. placeholder {0}: describeOnDeviceError(e.message)
 #: src/settings/ai/stt/on-device-card.tsx
 msgid "The module was not uninstalled: {0}"
 msgstr "The module was not uninstalled: {0}"
@@ -5796,6 +5868,10 @@ msgstr "The one that captures your voice."
 #: src/settings/automations/step-forms.tsx
 msgid "The only step that leaves your computer: the JSON is sent to the address below. Use an address you trust, such as n8n, Home Assistant or a home server."
 msgstr "The only step that leaves your computer: the JSON is sent to the address below. Use an address you trust, such as n8n, Home Assistant or a home server."
+
+#: src/stt/on-device.ts
+msgid "The operation failed. Try again."
+msgstr "The operation failed. Try again."
 
 #: src/shared/control.tsx
 msgid "The page you're looking for doesn't exist."
@@ -5929,8 +6005,20 @@ msgid "the transcription module of this computer did not start"
 msgstr "the transcription module of this computer did not start"
 
 #: src/stt/live-transcript-interrupted.ts
+msgid "the transcription module of this computer is being installed"
+msgstr "the transcription module of this computer is being installed"
+
+#: src/stt/live-transcript-interrupted.ts
 msgid "the transcription module of this computer is missing or has been modified"
 msgstr "the transcription module of this computer is missing or has been modified"
+
+#: src/settings/ai/stt/health.tsx
+msgid "The transcription module of this computer is not installed. Install it or go back to the server in Settings › Transcription."
+msgstr "The transcription module of this computer is not installed. Install it or go back to the server in Settings › Transcription."
+
+#: src/settings/ai/stt/health.tsx
+msgid "The transcription module of this computer is refused. Install it again or go back to the server in Settings › Transcription."
+msgstr "The transcription module of this computer is refused. Install it again or go back to the server in Settings › Transcription."
 
 #: src/stt/live-transcript-interrupted.ts
 msgid "the transcription module of this computer keeps stopping"
@@ -6023,6 +6111,18 @@ msgstr "This computer can transcribe with a reduced profile: {0}."
 msgid "This computer can transcribe your meetings on its own: {0}."
 msgstr "This computer can transcribe your meetings on its own: {0}."
 
+#: src/onboarding/on-device-proposal.tsx
+msgid "This computer cannot transcribe on its own; Syntheo uses your transcription server."
+msgstr "This computer cannot transcribe on its own; Syntheo uses your transcription server."
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "This computer is chosen for transcription, but its module is not installed: live transcription is paused."
+msgstr "This computer is chosen for transcription, but its module is not installed: live transcription is paused."
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "This computer is chosen for transcription, but its module is refused: live transcription is paused."
+msgstr "This computer is chosen for transcription, but its module is refused: live transcription is paused."
+
 #. placeholder {0}: verdict.reasons.map((r) => labels.refusal[r]).join(", ")
 #: src/settings/ai/stt/on-device-card.tsx
 msgid "This computer is not eligible: {0}."
@@ -6092,6 +6192,18 @@ msgstr "This model only transcribes after the recording, which would require kee
 #: src/chat/components/input/use-dictation.ts
 msgid "This model only transcribes live: voice input in the chat requires a batch transcription model."
 msgstr "This model only transcribes live: voice input in the chat requires a batch transcription model."
+
+#: src/stt/on-device.ts
+msgid "This module is not made for this computer."
+msgstr "This module is not made for this computer."
+
+#: src/stt/on-device.ts
+msgid "This module is older than the one already accepted."
+msgstr "This module is older than the one already accepted."
+
+#: src/stt/on-device.ts
+msgid "This module needs a newer version of Syntheo."
+msgstr "This module needs a newer version of Syntheo."
 
 #: src/chat/components/message/tool/edit-summary.tsx
 msgid "This note has no summary to edit yet."
@@ -6238,6 +6350,14 @@ msgstr "Transcription interrupted {gaps}"
 #: src/settings/search-index.ts
 msgid "transcription model, Whisper, Nemotron, speech recognition"
 msgstr "transcription model, Whisper, Nemotron, speech recognition"
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Transcription on this computer is coming soon."
+msgstr "Transcription on this computer is coming soon."
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Transcription on this computer is disabled by your administrator; transcription now goes through the server."
+msgstr "Transcription on this computer is disabled by your administrator; transcription now goes through the server."
 
 #: src/sidebar/toast/registry.tsx
 msgid "Transcription provider needed"
@@ -6801,6 +6921,10 @@ msgstr "you are offline"
 #: src/templates/auto-format-examples-dialog.tsx
 msgid "You can use up to three example summaries."
 msgstr "You can use up to three example summaries."
+
+#: src/stt/on-device.ts
+msgid "Your administrator has disabled transcription on this computer."
+msgstr "Your administrator has disabled transcription on this computer."
 
 #: src/mesure/measure-dialog.tsx
 msgid "Your choice"

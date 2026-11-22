@@ -91,6 +91,9 @@ pub enum OnDeviceModule {
 pub struct OnDeviceStatus {
     /// Autorisée par la politique de l'organisation.
     pub allowed: bool,
+    /// Une clé de signature des modules est configurée dans cette
+    /// application : sans elle, rien ne peut être installé.
+    pub installable: bool,
     pub module: OnDeviceModule,
 }
 
@@ -109,12 +112,14 @@ fn module_of(status: syntheo_speech_host::install::ModuleStatus) -> OnDeviceModu
     }
 }
 
+/// Erreurs des commandes : des codes stables, traduits par l'interface
+/// (jamais de texte technique affiché tel quel).
 fn host<R: tauri::Runtime>(
     app: &tauri::AppHandle<R>,
 ) -> Result<Arc<syntheo_speech_host::SpeechHost>, String> {
     app.try_state::<Arc<syntheo_speech_host::SpeechHost>>()
         .map(|state| state.inner().clone())
-        .ok_or_else(|| "on-device transcription is not available".to_owned())
+        .ok_or_else(|| "unavailable".to_owned())
 }
 
 /// Installation et désinstallation : seulement sans écoute en cours.
@@ -122,8 +127,21 @@ async fn require_no_capture<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Res
     use crate::{CaptureState, ListenerPluginExt};
     match app.listener().capture_state_checked().await {
         Some(CaptureState::Inactive) => Ok(()),
-        Some(_) => Err("capture in progress".to_owned()),
-        None => Err("capture state unavailable".to_owned()),
+        _ => Err("capture_in_progress".to_owned()),
+    }
+}
+
+/// Chemin local ordinaire : absolu, sans partage réseau (UNC), ni chemin
+/// verbatim ou de périphérique.
+fn is_plain_local_path(path: &std::path::Path) -> bool {
+    use std::path::{Component, Prefix};
+    if !path.is_absolute() {
+        return false;
+    }
+    match path.components().next() {
+        Some(Component::Prefix(prefix)) => matches!(prefix.kind(), Prefix::Disk(_)),
+        Some(Component::RootDir) => !cfg!(windows),
+        _ => false,
     }
 }
 
@@ -134,37 +152,68 @@ pub async fn on_device_status<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
 ) -> Result<OnDeviceStatus, String> {
     let allowed = allowed(&app).await;
-    let module = match host(&app) {
-        Ok(host) => module_of(host.module_status().await),
-        Err(_) => OnDeviceModule::NotInstalled,
+    let (installable, module) = match host(&app) {
+        Ok(host) => (host.installable(), module_of(host.module_status().await)),
+        Err(_) => (false, OnDeviceModule::NotInstalled),
     };
-    Ok(OnDeviceStatus { allowed, module })
+    Ok(OnDeviceStatus {
+        allowed,
+        installable,
+        module,
+    })
 }
 
-/// Installe le module depuis le `manifest.json` d'un dossier de module
-/// préparé : manifeste signé, liste fermée et empreintes vérifiés avant la
-/// mise en place.
+/// Installe le module : le fichier `manifest.json` d'un dossier de module est
+/// choisi ici, côté Rust (aucun chemin ne vient de la webview). Manifeste
+/// signé, liste fermée et empreintes sont vérifiés avant la mise en place.
+/// `None` : choix annulé.
 #[tauri::command]
 #[specta::specta]
 pub async fn on_device_install<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
-    manifest_path: String,
-) -> Result<OnDeviceModule, String> {
+    window: tauri::Window<R>,
+) -> Result<Option<OnDeviceModule>, String> {
+    use tauri_plugin_dialog::DialogExt;
     if !allowed(&app).await {
-        return Err("on-device transcription is disabled by policy".to_owned());
+        return Err("disabled".to_owned());
+    }
+    let host = host(&app)?;
+    if !host.installable() {
+        return Err("no_key".to_owned());
     }
     require_no_capture(&app).await?;
-    let manifest = std::path::PathBuf::from(manifest_path);
+    let mut dialog = app.dialog().file().add_filter("manifest.json", &["json"]);
+    #[cfg(desktop)]
+    {
+        dialog = dialog.set_parent(&window);
+    }
+    #[cfg(not(desktop))]
+    let _ = &window;
+    let chosen = tauri::async_runtime::spawn_blocking(move || dialog.blocking_pick_file())
+        .await
+        .map_err(|_| "unavailable".to_owned())?;
+    let Some(chosen) = chosen else {
+        return Ok(None);
+    };
+    let manifest = chosen.into_path().map_err(|_| "unsafe_path".to_owned())?;
+    if !is_plain_local_path(&manifest) {
+        return Err("unsafe_path".to_owned());
+    }
     if manifest.file_name().and_then(|n| n.to_str())
         != Some(syntheo_speech_host::manifest::MANIFEST_FILE)
     {
-        return Err("choose the manifest.json file of the module".to_owned());
+        return Err("not_manifest".to_owned());
     }
     let source = manifest
         .parent()
-        .ok_or_else(|| "invalid module folder".to_owned())?
+        .ok_or_else(|| "not_manifest".to_owned())?
         .to_path_buf();
-    host(&app)?.install_from(source).await.map(module_of)
+    // L'écoute a pu démarrer pendant le choix du fichier.
+    require_no_capture(&app).await?;
+    host.install_from(source)
+        .await
+        .map(|status| Some(module_of(status)))
+        .map_err(str::to_owned)
 }
 
 /// Désinstalle le module.
@@ -174,5 +223,28 @@ pub async fn on_device_uninstall<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
 ) -> Result<(), String> {
     require_no_capture(&app).await?;
-    host(&app)?.uninstall().await
+    host(&app)?.uninstall().await.map_err(str::to_owned)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::is_plain_local_path;
+    use std::path::Path;
+
+    #[test]
+    fn only_plain_local_paths_are_accepted() {
+        assert!(!is_plain_local_path(Path::new("relative/manifest.json")));
+        if cfg!(windows) {
+            assert!(is_plain_local_path(Path::new(r"C:\Modules\manifest.json")));
+            assert!(!is_plain_local_path(Path::new(
+                r"\\server\share\manifest.json"
+            )));
+            assert!(!is_plain_local_path(Path::new(r"\\?\C:\m\manifest.json")));
+            assert!(!is_plain_local_path(Path::new(r"\\.\pipe\manifest.json")));
+        } else {
+            assert!(is_plain_local_path(Path::new(
+                "/home/u/module/manifest.json"
+            )));
+        }
+    }
 }

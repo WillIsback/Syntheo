@@ -374,7 +374,12 @@ async fn on_device_target_is_resolved_by_the_runtime_for_each_listener() {
     args.runtime = runtime.clone();
     let error = connection_target(&args).await.expect_err("refusé");
     assert!(error.to_string().contains("on_device_unavailable"));
-    let token = owhisper_client::OnDeviceToken::new(vec![1; 16]).unwrap();
+    let token = owhisper_client::OnDeviceToken::new(
+        (0u8..16)
+            .map(|i| i.wrapping_mul(13).wrapping_add(5))
+            .collect(),
+    )
+    .unwrap();
     let runtime = Arc::new(OnDeviceRuntime {
         target: Some(owhisper_client::OnDeviceTarget {
             base_url: "http://127.0.0.1:4242".to_owned(),

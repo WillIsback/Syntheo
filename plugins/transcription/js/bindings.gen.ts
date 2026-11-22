@@ -81,11 +81,12 @@ export const commands = {
 	/**  État de la source « Sur ce poste » : politique et module installé. */
 	onDeviceStatus: () => typedError<OnDeviceStatus, string>(__TAURI_INVOKE("plugin:transcription|on_device_status")),
 	/**
-	 *  Installe le module depuis le `manifest.json` d'un dossier de module
-	 *  préparé : manifeste signé, liste fermée et empreintes vérifiés avant la
-	 *  mise en place.
+	 *  Installe le module : le fichier `manifest.json` d'un dossier de module est
+	 *  choisi ici, côté Rust (aucun chemin ne vient de la webview). Manifeste
+	 *  signé, liste fermée et empreintes sont vérifiés avant la mise en place.
+	 *  `None` : choix annulé.
 	 */
-	onDeviceInstall: (manifestPath: string) => typedError<OnDeviceModule, string>(__TAURI_INVOKE("plugin:transcription|on_device_install", { manifestPath })),
+	onDeviceInstall: () => typedError<OnDeviceModule | null, string>(__TAURI_INVOKE("plugin:transcription|on_device_install")),
 	/**  Désinstalle le module. */
 	onDeviceUninstall: () => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|on_device_uninstall")),
 };
@@ -243,6 +244,11 @@ export type CaptureLifecycleMarker = {
 	refreshSummaryAfterRepair?: boolean | null,
 	inheritedCaptures?: InheritedCapture[] | null,
 	inheritedOnly?: boolean | null,
+	/**
+	 *  Capture « Sur ce poste » (issue 685) : son audio ne part jamais au
+	 *  serveur, réparation et reprise comprises.
+	 */
+	onDevice?: boolean | null,
 };
 
 export type CaptureParams = {
@@ -376,6 +382,11 @@ export type InheritedCapture = {
 	retainAudio?: boolean | null,
 	provider?: string | null,
 	model?: string | null,
+	/**
+	 *  Capture « Sur ce poste » (issue 685) : son audio ne part jamais au
+	 *  serveur, réparation comprise.
+	 */
+	onDevice?: boolean | null,
 };
 
 export type LiveTranscriptDelta = {
@@ -429,6 +440,11 @@ export type OnDeviceModule = { kind: "not_installed" } | { kind: "installed"; ve
 export type OnDeviceStatus = {
 	/**  Autorisée par la politique de l'organisation. */
 	allowed: boolean,
+	/**
+	 *  Une clé de signature des modules est configurée dans cette
+	 *  application : sans elle, rien ne peut être installé.
+	 */
+	installable: boolean,
 	module: OnDeviceModule,
 };
 

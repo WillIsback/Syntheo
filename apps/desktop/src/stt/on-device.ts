@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { useQuery } from "@tanstack/react-query";
 
 import {
@@ -28,6 +29,13 @@ export function useOnDeviceStatus() {
     queryFn: loadOnDeviceStatus,
     staleTime: 30_000,
   });
+}
+
+/** Une installation est possible : clé de signature configurée. */
+export function isOnDeviceInstallable(
+  status: OnDeviceStatus | null | undefined,
+) {
+  return !!status?.allowed && status.installable;
 }
 
 /** La source peut servir : autorisée et module installé et signé. */
@@ -63,3 +71,42 @@ export const REFUSALS: readonly Refusal[] = [
   "disk_unknown",
   "too_slow",
 ];
+
+/**
+ * Message clair pour un code d'erreur du module (commandes du plugin, état
+ * « refusé ») : jamais de texte technique affiché tel quel.
+ */
+export function describeOnDeviceError(code: string): string {
+  switch (code) {
+    case "capture_in_progress":
+      return t`Stop the recording first.`;
+    case "disabled":
+      return t`Your administrator has disabled transcription on this computer.`;
+    case "no_key":
+      return t`Installing the module is not available yet.`;
+    case "not_manifest":
+      return t`Choose the manifest.json file of the module folder.`;
+    case "unsafe_path":
+      return t`Choose a module folder on this computer (not on a network share).`;
+    case "running":
+      return t`The module is in use. Stop the recording, then try again.`;
+    case "installing":
+      return t`An installation is already in progress.`;
+    case "bad_signature":
+      return t`The module is not signed by Syntheo.`;
+    case "module_altered":
+      return t`A file of the module has been modified.`;
+    case "module_incomplete":
+      return t`The module folder is incomplete or contains unexpected files.`;
+    case "incompatible":
+      return t`This module is not made for this computer.`;
+    case "app_too_old":
+      return t`This module needs a newer version of Syntheo.`;
+    case "module_too_old":
+      return t`This module is older than the one already accepted.`;
+    case "io":
+      return t`The module files could not be read or written (disk full?). Try again.`;
+    default:
+      return t`The operation failed. Try again.`;
+  }
+}

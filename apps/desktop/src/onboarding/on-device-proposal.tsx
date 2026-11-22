@@ -1,31 +1,63 @@
 import { Trans } from "@lingui/react/macro";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 
 import {
   isEligible,
+  isOnDeviceInstallable,
   runOnDeviceProbe,
   useOnDeviceStatus,
 } from "~/stt/on-device";
 
-// Proposition « Sur ce poste » à l'accueil (issue 685) : la sonde tourne en
-// fond si l'organisation autorise le module, et la proposition n'apparaît que
-// si le poste est éligible. Rien n'est installé ni activé ici.
+// Proposition « Sur ce poste » à l'accueil (issue 685) : seulement si
+// l'organisation autorise le module et qu'il peut être installé (clé de
+// signature configurée). La sonde ne tourne qu'au clic : pas de calcul
+// surprise, sur batterie notamment. Rien n'est installé ni activé ici.
 export function OnDeviceProposal() {
   const status = useOnDeviceStatus();
-  const probe = useQuery({
-    queryKey: ["on-device-probe", "onboarding"],
-    queryFn: runOnDeviceProbe,
-    enabled: !!status.data?.allowed,
-    staleTime: Infinity,
-    retry: false,
-  });
-  if (!status.data?.allowed || !isEligible(probe.data)) return null;
+  const probe = useMutation({ mutationFn: runOnDeviceProbe });
+  if (!isOnDeviceInstallable(status.data)) return null;
   return (
-    <p data-testid="on-device-proposal" className="text-muted-foreground">
-      <Trans>
-        This computer can also transcribe your meetings on its own, without a
-        server. You can set it up in Settings › Transcription.
-      </Trans>
-    </p>
+    <div data-testid="on-device-proposal" className="flex flex-col gap-1.5">
+      {!probe.data && !probe.isError ? (
+        <div>
+          <button
+            type="button"
+            disabled={probe.isPending}
+            onClick={() => probe.mutate()}
+            className="border-border hover:bg-muted rounded-md border px-2.5 py-1 text-sm disabled:opacity-60"
+          >
+            <Trans>
+              Check whether this computer can transcribe on its own (about 5 s)
+            </Trans>
+          </button>
+        </div>
+      ) : null}
+      <div aria-live="polite" className="text-muted-foreground">
+        {probe.data ? (
+          isEligible(probe.data) ? (
+            <p>
+              <Trans>
+                This computer can also transcribe your meetings on its own,
+                without a server. You can set it up in Settings › Transcription.
+              </Trans>
+            </p>
+          ) : (
+            <p>
+              <Trans>
+                This computer cannot transcribe on its own; Syntheo uses your
+                transcription server.
+              </Trans>
+            </p>
+          )
+        ) : probe.isError ? (
+          <p>
+            <Trans>
+              The check could not run. You can run it later in Settings ›
+              Transcription.
+            </Trans>
+          </p>
+        ) : null}
+      </div>
+    </div>
   );
 }

@@ -107,12 +107,16 @@ In the replica below, change the "Server address": Syntheo saves it, then tests 
 The **On this computer** card, above the server card, sets up transcription without a server: a transcription module runs on your computer, and audio never leaves it.
 
 1. **Test this computer** measures the processor, memory and disk in a few seconds. The verdict says whether the computer can transcribe on its own, with a reduced profile (for example without telling speakers apart), or why it cannot. On battery or in power saving mode, plug it in or switch to performance mode, then run the test again.
-2. **Install from a file…** installs a module provided by Syntheo: choose the `manifest.json` file of the module folder. Its signature and every file are checked before installation. Download from Syntheo is coming soon.
+2. **Install from a file…** installs a module provided by Syntheo: choose the `manifest.json` file of the module folder, on this computer (not on a network share). Its signature and every file are checked before installation; a failed installation leaves the installed module intact. Download from Syntheo is coming soon.
 3. Once the module is installed, tick **Use this computer for transcription instead of the server**.
 
-The module only serves the live transcription of a recording: dictation and imported files still go through the configured server. If the module is missing or refused, live transcription does not fall back to the server: it pauses and says so. **Uninstall** removes the module.
+The module only serves the live transcription of a recording: dictation and imported files still go through the configured server.
 
-Your organization can forbid the module (managed setting `on_device_transcription_enabled`, see [Security](/en/security)): the card is then hidden. Onboarding offers this option only when the computer is eligible.
+The audio of an "On this computer" recording never goes to the server, not even to repair a dropped passage or after a restart. If the module is missing or refused, live transcription pauses and says so, with **Install** or **Go back to the server**; a missed passage stays marked in the note.
+
+**Uninstall** removes the module. Until installation is available, the card says transcription on this computer is coming soon.
+
+Your organization can forbid the module (managed setting `on_device_transcription_enabled`, see [Security](/en/security)): the card is then hidden, and if the source was chosen, it is unticked with a message; transcription goes through the server. Onboarding offers a one-click check of the computer (about 5 s), only when installation is available.
 
 ### Live transcription or file only
 

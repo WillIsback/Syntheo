@@ -48,6 +48,21 @@ pub enum VerifyError {
     Io,
 }
 
+impl VerifyError {
+    /// Code stable pour l'interface (messages traduits côté interface).
+    pub fn code(&self) -> &'static str {
+        match self {
+            Self::InvalidList | Self::UnsafePath | Self::Unlisted | Self::NoBinary => {
+                "module_incomplete"
+            }
+            Self::Missing | Self::WrongSize => "module_incomplete",
+            Self::Altered => "module_altered",
+            Self::Io => "io",
+            Self::Manifest(error) => error.code(),
+        }
+    }
+}
+
 impl std::fmt::Display for VerifyError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if let Self::Manifest(error) = self {
@@ -252,12 +267,13 @@ pub fn check(
     public_key: Option<&str>,
     app_version: &str,
 ) -> Result<BTreeMap<String, String>, VerifyError> {
-    check_with_floor(
-        dir,
-        public_key,
-        app_version,
-        crate::manifest::floor_path(dir).as_deref(),
-    )
+    // Module installé et accepté : son plancher monte (au mieux).
+    let floor = crate::manifest::floor_path(dir);
+    let checked = check_at(dir, public_key, app_version, floor.as_deref())?;
+    if let Some(path) = &floor {
+        crate::manifest::raise_floor_for(path, checked.build, app_version);
+    }
+    Ok(checked.entries)
 }
 
 /// `check` avec le plancher anti-retour du module installé (installation).
@@ -267,12 +283,57 @@ pub fn check_with_floor(
     app_version: &str,
     floor: Option<&Path>,
 ) -> Result<BTreeMap<String, String>, VerifyError> {
-    let list =
-        std::fs::read_to_string(dir.join(LIST_FILE)).map_err(|_| VerifyError::InvalidList)?;
+    // Installation : plancher lu seulement, monté après la mise en place.
+    Ok(check_at(dir, public_key, app_version, floor)?.entries)
+}
+
+/// Dossier contrôlé : liste et construction du manifeste signé.
+#[derive(Debug)]
+pub struct Checked {
+    pub entries: BTreeMap<String, String>,
+    pub sizes: BTreeMap<String, u64>,
+    pub build: u64,
+}
+
+/// Lit au plus `max` octets d'un fichier ordinaire, sans suivre de lien ni
+/// bloquer sur un fichier spécial.
+pub fn read_bounded(path: &Path, max: u64) -> Option<Vec<u8>> {
+    let mut options = std::fs::OpenOptions::new();
+    options.read(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.custom_flags(libc::O_NOFOLLOW | libc::O_NONBLOCK);
+    }
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::OpenOptionsExt;
+        options.custom_flags(0x0020_0000); // FILE_FLAG_OPEN_REPARSE_POINT
+    }
+    let file = options.open(path).ok()?;
+    let metadata = file.metadata().ok()?;
+    if !metadata.is_file() || metadata.len() > max {
+        return None;
+    }
+    let mut bytes = Vec::new();
+    file.take(max + 1).read_to_end(&mut bytes).ok()?;
+    (bytes.len() as u64 <= max).then_some(bytes)
+}
+
+/// Contrôles sans hachage, sans écrire le plancher : signature du manifeste
+/// d'abord, puis liste (lue bornée), versions, fichiers et tailles.
+pub fn check_at(
+    dir: &Path,
+    public_key: Option<&str>,
+    app_version: &str,
+    floor: Option<&Path>,
+) -> Result<Checked, VerifyError> {
+    let manifest = crate::manifest::read_signed(dir, public_key).map_err(VerifyError::Manifest)?;
+    let list = read_bounded(&dir.join(LIST_FILE), 64 * 1024).ok_or(VerifyError::InvalidList)?;
+    let list = String::from_utf8(list).map_err(|_| VerifyError::InvalidList)?;
     let entries = parse_list(&list)?;
-    let sizes = crate::manifest::verify_manifest_at(
-        dir,
-        public_key,
+    let sizes = crate::manifest::accept(
+        &manifest,
         app_version,
         crate::manifest::MIN_MODULE_VERSION,
         floor,
@@ -299,7 +360,11 @@ pub fn check_with_floor(
             return Err(VerifyError::WrongSize);
         }
     }
-    Ok(entries)
+    Ok(Checked {
+        entries,
+        sizes,
+        build: manifest.build,
+    })
 }
 
 /// Hache les fichiers listés en place (installation : le dossier haché est
@@ -667,7 +732,13 @@ mod tests {
             assert!(parse_list(&bad).is_err(), "{bad}");
         }
         let dir = tempfile::tempdir().unwrap();
-        assert_eq!(check(dir.path(), "x").err(), Some(VerifyError::InvalidList));
+        // Signature d'abord : sans manifeste, rien d'autre n'est lu.
+        assert_eq!(
+            check(dir.path(), "x").err(),
+            Some(VerifyError::Manifest(
+                crate::manifest::ManifestError::Missing
+            ))
+        );
     }
 
     // Une ouverture refusée (ici, droits retirés) est passagère : jamais un
