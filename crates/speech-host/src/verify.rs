@@ -120,6 +120,16 @@ fn io(_: std::io::Error) -> VerifyError {
     VerifyError::Io
 }
 
+/// Ouverture d'un fichier listé : absent → refus ; toute autre erreur
+/// (descripteurs épuisés, E/S, accès, violation de partage) → passagère.
+fn open_error(error: std::io::Error) -> VerifyError {
+    if error.kind() == std::io::ErrorKind::NotFound {
+        VerifyError::Missing
+    } else {
+        VerifyError::Io
+    }
+}
+
 /// Préfixe des copies privées, à côté du dossier du module.
 const RUN_PREFIX: &str = ".speech-run-";
 
@@ -297,11 +307,20 @@ fn stage(dir: &Path, entries: &BTreeMap<String, String>) -> Result<Verified, Ver
         }
         if is_model(path) {
             // Ouvert, haché depuis le descripteur, hérité par le module.
+            // O_NONBLOCK : un FIFO posé entre walk() et open() ne bloque pas ;
+            // il est refusé ci-dessous (pas un fichier ordinaire).
             let mut file = std::fs::OpenOptions::new()
                 .read(true)
-                .custom_flags(libc::O_NOFOLLOW)
+                .custom_flags(libc::O_NOFOLLOW | libc::O_NONBLOCK)
                 .open(dir.join(path))
-                .map_err(|_| VerifyError::Missing)?;
+                .map_err(|error| {
+                    // O_NOFOLLOW sur un lien : ELOOP, un refus.
+                    if error.raw_os_error() == Some(libc::ELOOP) {
+                        VerifyError::Missing
+                    } else {
+                        open_error(error)
+                    }
+                })?;
             if !file.metadata().map_err(io)?.is_file() {
                 return Err(VerifyError::Missing);
             }
@@ -396,7 +415,7 @@ mod windows_stage {
             .share_mode(FILE_SHARE_READ)
             .custom_flags(flags)
             .open(path)
-            .map_err(|_| VerifyError::Missing)?;
+            .map_err(super::open_error)?;
         let metadata = file.metadata().map_err(|_| VerifyError::Io)?;
         let kind_ok = if directory {
             metadata.is_dir()
@@ -496,7 +515,8 @@ fn stage(dir: &Path, entries: &BTreeMap<String, String>) -> Result<Verified, Ver
     }
     Ok(Verified {
         binary: root.join(binary_name()),
-        models: dir.join("models"),
+        // Chemin final vérifié du dossier verrouillé, pas le chemin donné.
+        models: base_final.join("models"),
         staging,
     })
 }
@@ -603,6 +623,22 @@ mod tests {
         }
         let dir = tempfile::tempdir().unwrap();
         assert_eq!(check(dir.path(), "x").err(), Some(VerifyError::InvalidList));
+    }
+
+    // Une ouverture refusée (ici, droits retirés) est passagère : jamais un
+    // module refusé.
+    #[cfg(unix)]
+    #[test]
+    fn an_unreadable_model_is_a_transient_error() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let key = module(dir.path());
+        let model = dir.path().join("models/nemotron/encoder.onnx");
+        std::fs::set_permissions(&model, std::fs::Permissions::from_mode(0o000)).unwrap();
+        if std::fs::File::open(&model).is_ok() {
+            return; // root : les droits ne s'appliquent pas.
+        }
+        assert_eq!(check(dir.path(), &key).err(), Some(VerifyError::Io));
     }
 
     #[cfg(unix)]

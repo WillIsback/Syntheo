@@ -67,18 +67,19 @@ impl Engine for ParakeetEngine {
                 .map_err(|_| EngineError("unsupported language"))?;
         }
         let diarizer = match (&self.diarizer, session.diarization) {
-            (Some(path), true) => {
-                let mut diarizer = Sortformer::with_config(
-                    path,
-                    Some(self.config.clone()),
-                    DiarizationConfig::default(),
-                )
-                .map_err(|_| EngineError("diarization model failed to load"))?;
-                diarizer
-                    .set_profile(StreamingProfile::low_latency())
-                    .map_err(|_| EngineError("diarization model failed to load"))?;
-                Some(diarizer)
-            }
+            // Un échec de la diarisation dégrade la session en « sans
+            // intervenant » : la transcription continue.
+            (Some(path), true) => Sortformer::with_config(
+                path,
+                Some(self.config.clone()),
+                DiarizationConfig::default(),
+            )
+            .and_then(|mut diarizer| {
+                diarizer.set_profile(StreamingProfile::low_latency())?;
+                Ok(diarizer)
+            })
+            .map_err(|_| crate::server::log("diarization unavailable; session without speakers"))
+            .ok(),
             _ => None,
         };
         // Taille de tranche lue dans le modèle (géométrie de l'export ONNX).

@@ -39,20 +39,44 @@ fn floor_path(dir: &Path) -> Option<std::path::PathBuf> {
     Some(dir.parent()?.join(format!("{name}.floor")))
 }
 
-fn read_floor(path: &Path) -> u64 {
-    std::fs::read_to_string(path)
-        .ok()
-        .and_then(|text| text.trim().parse().ok())
-        .unwrap_or(0)
+/// Numéro de construction d'une version x.y.z : `MAJEUR·10⁶ + MINEUR·10³ +
+/// CORRECTIF`, suivi de deux chiffres de reconstruction. Monotone d'une
+/// release de l'application à l'autre.
+pub fn build_base(version: &str) -> Option<u64> {
+    let (major, minor, patch) = version_tuple(version)?;
+    (minor < 1000 && patch < 1000).then(|| (major * 1_000_000 + minor * 1_000 + patch) * 100)
 }
 
-fn raise_floor(path: &Path, build: u64) {
-    if build <= read_floor(path) {
+/// Plancher enregistré ; une valeur au-delà de ce que cette application peut
+/// accepter (`ceiling`) est aberrante : ignorée (puis réécrite).
+fn read_floor(path: &Path, ceiling: u64) -> u64 {
+    let value = std::fs::read_to_string(path)
+        .ok()
+        .and_then(|text| text.trim().parse::<u64>().ok())
+        .unwrap_or(0);
+    if value > ceiling {
+        tracing::warn!(target: "syntheo_speech", "module floor out of range; ignored");
+        return 0;
+    }
+    value
+}
+
+/// Monte le plancher : fichier temporaire, fsync, renommage ; erreurs
+/// journalisées, temporaire nettoyé.
+fn raise_floor(path: &Path, build: u64, ceiling: u64) {
+    use std::io::Write;
+    if build <= read_floor(path, ceiling) {
         return;
     }
     let temp = path.with_extension(format!("floor-{}", std::process::id()));
-    if std::fs::write(&temp, build.to_string()).is_ok() {
-        let _ = std::fs::rename(&temp, path);
+    let written = std::fs::File::create(&temp).and_then(|mut file| {
+        file.write_all(build.to_string().as_bytes())?;
+        file.sync_all()
+    });
+    let result = written.and_then(|()| std::fs::rename(&temp, path));
+    if let Err(error) = result {
+        tracing::warn!(target: "syntheo_speech", kind = ?error.kind(), "module floor not saved");
+        let _ = std::fs::remove_file(&temp);
     }
 }
 
@@ -221,9 +245,17 @@ pub fn verify_manifest_with(
     if Some(module) < version_tuple(min_module_version) {
         return Err(ManifestError::ModuleTooOld);
     }
+    // Construction dérivée de la version minimale de l'application (deux
+    // chiffres de reconstruction) : cohérente, et monotone d'une release à
+    // l'autre.
+    let base = build_base(&manifest.min_app_version).ok_or(ManifestError::Invalid)?;
+    if manifest.build < base || manifest.build > base + 99 {
+        return Err(ManifestError::Invalid);
+    }
+    let ceiling = build_base(app_version).map_or(0, |b| b + 99);
     let floor_path = floor_path(dir);
     if let Some(path) = &floor_path
-        && manifest.build < read_floor(path)
+        && manifest.build < read_floor(path, ceiling)
     {
         return Err(ManifestError::ModuleTooOld);
     }
@@ -243,7 +275,7 @@ pub fn verify_manifest_with(
     }
     // Manifeste authentique : le plancher monte (au mieux).
     if let Some(path) = &floor_path {
-        raise_floor(path, manifest.build);
+        raise_floor(path, manifest.build, ceiling);
     }
     Ok(entries
         .into_iter()
@@ -307,15 +339,16 @@ mod tests {
         std::fs::write(dir.join(crate::verify::binary_name()), b"x").unwrap();
         let key = TestKey::new();
         let public = key.public();
-        let sign = |build: u64| {
+        let sign = |min_app: &str, build: u64| {
             let manifest = crate::test_signing::current_manifest(
                 &dir,
                 &[crate::verify::binary_name()],
                 &[],
-                "0.8.0",
-            )
-            .replace("\"build\": 1", &format!("\"build\": {build}"));
-            key.sign_module(&dir, &manifest);
+                min_app,
+            );
+            let mut value: serde_json::Value = serde_json::from_str(&manifest).unwrap();
+            value["build"] = build.into();
+            key.sign_module(&dir, &value.to_string());
             let list = std::fs::read_to_string(dir.join(crate::verify::LIST_FILE)).unwrap();
             list.lines()
                 .map(|l| {
@@ -324,15 +357,29 @@ mod tests {
                 })
                 .collect::<BTreeMap<String, String>>()
         };
-        let list = sign(7);
-        assert!(verify_manifest(&dir, Some(&public), "0.8.0", &list).is_ok());
-        let list = sign(6);
+        let floor = parent.path().join("speech.floor");
+        // 0.8.0, reconstruction 1 puis 0 (retour), puis 0.8.1.
+        let list = sign("0.8.0", 800_001);
+        assert!(verify_manifest(&dir, Some(&public), "0.8.1", &list).is_ok());
+        let list = sign("0.8.0", 800_000);
         assert_eq!(
-            verify_manifest(&dir, Some(&public), "0.8.0", &list).err(),
+            verify_manifest(&dir, Some(&public), "0.8.1", &list).err(),
             Some(ManifestError::ModuleTooOld)
         );
-        let list = sign(8);
-        assert!(verify_manifest(&dir, Some(&public), "0.8.0", &list).is_ok());
-        assert_eq!(read_floor(&parent.path().join("speech.floor")), 8);
+        let list = sign("0.8.1", 800_100);
+        assert!(verify_manifest(&dir, Some(&public), "0.8.1", &list).is_ok());
+        assert_eq!(read_floor(&floor, u64::MAX), 800_100);
+        // Construction incohérente avec la version minimale : invalide.
+        let list = sign("0.8.1", 900_000);
+        assert_eq!(
+            verify_manifest(&dir, Some(&public), "0.8.1", &list).err(),
+            Some(ManifestError::Invalid)
+        );
+        // Plancher aberrant (au-delà de cette application) : ignoré et réécrit.
+        std::fs::write(&floor, "99999999999").unwrap();
+        let list = sign("0.8.1", 800_100);
+        assert!(verify_manifest(&dir, Some(&public), "0.8.1", &list).is_ok());
+        assert_eq!(read_floor(&floor, u64::MAX), 800_100);
+        assert_eq!(build_base("1.2.3"), Some(100_200_300));
     }
 }

@@ -292,8 +292,32 @@ async fn a_real_signed_module_starts_and_accepts_a_session() {
         eprintln!("SYNTHEO_SPEECH_MODULE_DIR ou SYNTHEO_SPEECH_MODULE_KEY absent : essai sauté");
         return;
     };
-    let host = SpeechHost::new(dir.into(), 2, "0.8.0").with_manifest_key(&key);
+    let dir: std::path::PathBuf = dir.into();
+    let host = SpeechHost::new(dir.clone(), 2, "0.8.0").with_manifest_key(&key);
     let target = host.target(true).await.expect("module vérifié et lancé");
+    #[cfg(target_os = "linux")]
+    {
+        // ONNX Runtime a chargé encoder.onnx.data (données externes) par le
+        // lien du dossier privé vers le descripteur hérité.
+        let pid = host.pid().await.unwrap();
+        let exe = std::fs::read_link(format!("/proc/{pid}/exe")).unwrap();
+        let data = exe
+            .parent()
+            .unwrap()
+            .join("models/nemotron/encoder.onnx.data");
+        let link = std::fs::read_link(&data).unwrap();
+        assert!(link.starts_with("/proc/self/fd/"), "{link:?}");
+        let fd = link.file_name().unwrap().to_string_lossy().into_owned();
+        assert_eq!(
+            std::fs::read_link(format!("/proc/{pid}/fd/{fd}")).unwrap(),
+            dir.join("models/nemotron/encoder.onnx.data"),
+            "descripteur hérité par le module"
+        );
+        eprintln!(
+            "encoder.onnx.data : {} -> {link:?} (fd {fd} du module)",
+            data.display()
+        );
+    }
     // Revue de l'issue 683 : une session diarisée, ouverte après l'annonce,
     // recharge le modèle de diarisation depuis le chemin vérifié.
     if let Ok(audio) = std::env::var("SYNTHEO_SPEECH_AUDIO") {

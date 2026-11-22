@@ -82,7 +82,7 @@ Sous Windows, `dist.tsv` n'a pas de variante sans accélérateur : c'est la vari
 Avant chaque lancement, `crates/speech-host` vérifie dans l'ordre :
 
 1. la signature, avec la clé publique `MODULE_PUBLIC_KEY` ;
-2. la cible, le protocole, la version minimale de l'application, la version minimale du module (`MIN_MODULE_VERSION`, relevée à chaque correctif de sécurité) et le numéro de construction (`build`, le numéro d'exécution du workflow) : l'application garde le plus haut accepté (`<modules>/speech.floor`) et refuse un module plus ancien ;
+2. la cible, le protocole, la version minimale de l'application, la version minimale du module (`MIN_MODULE_VERSION`, relevée à chaque correctif de sécurité) et le numéro de construction (`build`). Ce numéro est dérivé de la version minimale de l'application, `(MAJEUR·10⁶ + MINEUR·10³ + CORRECTIF)·100 + reconstruction` (entrée `rebuild` du workflow), donc monotone d'une release à l'autre et cohérent avec `min_app_version`. L'application garde le plus haut accepté (`<modules>/speech.floor`, écrit par fichier temporaire, fsync et renommage) et refuse un module plus ancien ; une valeur au-delà de ce qu'elle peut accepter est ignorée puis réécrite. Ce plancher protège contre un retour en arrière par le canal de distribution, pas contre un attaquant local (qui peut modifier le fichier), et il disparaît si l'utilisateur supprime les données de l'application ;
 3. que `files.sha256` liste exactement les fichiers du manifeste ;
 4. la taille et l'empreinte de chaque fichier ;
 5. qu'aucun fichier hors liste n'est présent.
@@ -93,6 +93,7 @@ On exécute exactement ce qui a été vérifié :
 
 - le binaire et ses bibliothèques sont copiés dans un dossier privé neuf par lancement (Linux : 0700 ; Windows : DACL protégée limitée au propriétaire et au système, posée à la création), hachés depuis la copie et exécutés depuis elle ;
 - les modèles ne sont pas copiés. Sous Linux, chaque modèle est ouvert, haché depuis son descripteur, et le module en hérite ; le dossier privé l'expose par un lien `/proc/self/fd/N`, que le module rouvre à chaque session (diarisation). Un autre processus du même utilisateur pourrait encore réécrire le fichier en place : Linux n'offre pas de verrou obligatoire à un utilisateur ordinaire. Sous Windows, chaque modèle et chaque dossier de son chemin sont ouverts sans partage en écriture ni en suppression, les points de réanalyse sont refusés et le chemin final est vérifié (`GetFinalPathNameByHandleW`) ;
+- l'installation d'un module écrit toujours une copie neuve puis la met en place par renommage, jamais en place : sous Linux, un descripteur ouvert voit l'inode d'origine, et une écriture en place changerait les octets sous un module en cours ;
 - tout cela vit aussi longtemps que le processus. Une erreur d'entrée-sortie (disque plein) est un lancement raté, réessayable, jamais un module refusé ;
 - le module limite la recherche de bibliothèques à son dossier et à System32 (`SetDefaultDllDirectories`) ;
 - le dossier courant du processus n'est jamais le dossier du module (`/`, ou System32).

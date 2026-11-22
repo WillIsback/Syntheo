@@ -50,6 +50,11 @@ on:
         type: string
         required: false
         default: "https://github.com/WillIsback/Syntheo/releases/download/speech-models-1"
+      rebuild:
+        description: "Reconstruction de la même version (0 à 99), pour le numéro de construction"
+        type: number
+        required: false
+        default: 0
       sign:
         description: "Signer le manifeste (main uniquement, environnement speech-signing)"
         type: boolean
@@ -69,6 +74,10 @@ on:
         type: string
         required: false
         default: "https://github.com/WillIsback/Syntheo/releases/download/speech-models-1"
+      rebuild:
+        type: number
+        required: false
+        default: 0
       sign:
         type: boolean
         required: false
@@ -91,11 +100,20 @@ jobs:
           - os: ubuntu-24.04
             target: x86_64-unknown-linux-gnu
             binary: syntheo-speech
+            key: linux
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             binary: syntheo-speech.exe
+            key: windows
     runs-on: ${{ matrix.os }}
     timeout-minutes: 90
+    # Identifiant et empreinte de l'artefact de chaque cible : les jobs
+    # suivants téléchargent par identifiant et contrôlent l'empreinte.
+    outputs:
+      id-linux: ${{ steps.record.outputs.id-linux }}
+      tree-linux: ${{ steps.record.outputs.tree-linux }}
+      id-windows: ${{ steps.record.outputs.id-windows }}
+      tree-windows: ${{ steps.record.outputs.tree-windows }}
     env:
       ORT_CACHE_DIR: ${{ github.workspace }}/../ort-cache
     steps:
@@ -175,12 +193,30 @@ jobs:
       # SBOM des dépendances Rust du module, outil à version figée.
       # Le module est figé dès l'assemblage : un artefact uploadé n'est plus
       # modifiable. Aucun outil tiers (SBOM, notices) ne tourne dans ce job.
+      - name: Empreinte du module
+        id: tree
+        shell: bash
+        run: echo "digest=$(bash apps/speech/supply-chain/tree-digest.sh dist)" >> "$GITHUB_OUTPUT"
+
       - name: Upload du module (non signé)
+        id: upload
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: syntheo-speech-unsigned-${{ matrix.target }}
           path: dist/
           retention-days: 7
+
+      - name: Identifiant et empreinte en sortie
+        id: record
+        shell: bash
+        env:
+          KEY: ${{ matrix.key }}
+          ID: ${{ steps.upload.outputs.artifact-id }}
+          TREE: ${{ steps.tree.outputs.digest }}
+        run: |
+          set -euo pipefail
+          echo "id-$KEY=$ID" >> "$GITHUB_OUTPUT"
+          echo "tree-$KEY=$TREE" >> "$GITHUB_OUTPUT"
 
   # SBOM des dépendances Rust du module, dans un job à part qui ne voit pas
   # le module construit. Outil à version figée.
@@ -230,6 +266,9 @@ jobs:
     name: Notices des crates
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    outputs:
+      id: ${{ steps.upload.outputs.artifact-id }}
+      tree: ${{ steps.tree.outputs.digest }}
     steps:
       - name: Checkout du code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -251,7 +290,12 @@ jobs:
             -o notices/THIRD-PARTY-RUST.html apps/speech/supply-chain/about.hbs
           test -s notices/THIRD-PARTY-RUST.html
 
+      - name: Empreinte des notices
+        id: tree
+        run: echo "digest=$(bash apps/speech/supply-chain/tree-digest.sh notices)" >> "$GITHUB_OUTPUT"
+
       - name: Upload des notices
+        id: upload
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: syntheo-speech-notices
@@ -263,26 +307,50 @@ jobs:
     needs: [build, notices]
     strategy:
       matrix:
-        target: [x86_64-unknown-linux-gnu, x86_64-pc-windows-msvc]
+        include:
+          - target: x86_64-unknown-linux-gnu
+            key: linux
+          - target: x86_64-pc-windows-msvc
+            key: windows
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    outputs:
+      id-linux: ${{ steps.record.outputs.id-linux }}
+      tree-linux: ${{ steps.record.outputs.tree-linux }}
+      id-windows: ${{ steps.record.outputs.id-windows }}
+      tree-windows: ${{ steps.record.outputs.tree-windows }}
     steps:
       - name: Checkout du code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      - name: Télécharger le module
+      - name: Télécharger le module (par identifiant)
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: syntheo-speech-unsigned-${{ matrix.target }}
+          artifact-ids: ${{ needs.build.outputs[format('id-{0}', matrix.key)] }}
+          merge-multiple: true
           path: module
 
-      - name: Télécharger les notices des crates
+      - name: Télécharger les notices des crates (par identifiant)
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: syntheo-speech-notices
+          artifact-ids: ${{ needs.notices.outputs.id }}
+          merge-multiple: true
           path: crate-notices
+
+      # Ce qui est haché doit être exactement ce que les jobs build et
+      # notices ont produit.
+      - name: Contrôler les empreintes
+        shell: bash
+        env:
+          MODULE_TREE: ${{ needs.build.outputs[format('tree-{0}', matrix.key)] }}
+          NOTICES_TREE: ${{ needs.notices.outputs.tree }}
+        run: |
+          set -euo pipefail
+          [ -n "$MODULE_TREE" ] && [ -n "$NOTICES_TREE" ] || { echo "::error::Empreinte attendue absente"; exit 1; }
+          [ "$(bash apps/speech/supply-chain/tree-digest.sh module)" = "$MODULE_TREE" ] || { echo "::error::Module différent de celui du job build"; exit 1; }
+          [ "$(bash apps/speech/supply-chain/tree-digest.sh crate-notices)" = "$NOTICES_TREE" ] || { echo "::error::Notices différentes de celles du job notices"; exit 1; }
 
       # Licences et avis d'origine (ONNX Runtime, crates, modèles), listés
       # ensuite dans le manifeste signé comme tout fichier du module.
@@ -301,19 +369,36 @@ jobs:
           # Sur une PR, pas d'entrées : valeurs par défaut du lancement manuel.
           MIN_APP_VERSION: ${{ inputs.min-app-version || '0.8.0' }}
           MODELS_BASE_URL: ${{ inputs.models-base-url || 'https://github.com/WillIsback/Syntheo/releases/download/speech-models-1' }}
-          # Numéro de construction croissant (anti-retour).
-          BUILD: ${{ github.run_number }}
+          # Numéro de construction : dérivé de la version, plus la
+          # reconstruction (anti-retour, monotone d'une release à l'autre).
+          REBUILD: ${{ inputs.rebuild || 0 }}
         run: |
           set -euo pipefail
-          python3 -I apps/speech/supply-chain/make_manifest.py module "$TARGET" "$MIN_APP_VERSION" "$MODELS_BASE_URL" "$BUILD"
+          python3 -I apps/speech/supply-chain/make_manifest.py module "$TARGET" "$MIN_APP_VERSION" "$MODELS_BASE_URL" "$REBUILD"
           cat module/files.sha256
 
+      - name: Empreinte du module complet
+        id: tree
+        run: echo "digest=$(bash apps/speech/supply-chain/tree-digest.sh module)" >> "$GITHUB_OUTPUT"
+
       - name: Upload du module et de son manifeste
+        id: upload
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: syntheo-speech-${{ matrix.target }}
           path: module/
           retention-days: 14
+
+      - name: Identifiant et empreinte en sortie
+        id: record
+        env:
+          KEY: ${{ matrix.key }}
+          ID: ${{ steps.upload.outputs.artifact-id }}
+          TREE: ${{ steps.tree.outputs.digest }}
+        run: |
+          set -euo pipefail
+          echo "id-$KEY=$ID" >> "$GITHUB_OUTPUT"
+          echo "tree-$KEY=$TREE" >> "$GITHUB_OUTPUT"
 
   # Signature du manifeste : clé du module (pas celle des mises à jour),
   # environnement `speech-signing` limité à main. Seul l'outil de signature est
@@ -324,7 +409,11 @@ jobs:
     if: github.event_name != 'pull_request' && inputs.sign && github.ref == 'refs/heads/main'
     strategy:
       matrix:
-        target: [x86_64-unknown-linux-gnu, x86_64-pc-windows-msvc]
+        include:
+          - target: x86_64-unknown-linux-gnu
+            key: linux
+          - target: x86_64-pc-windows-msvc
+            key: windows
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     environment: speech-signing
@@ -343,11 +432,19 @@ jobs:
         working-directory: .github/signing
         run: npm ci --ignore-scripts --no-audit --no-fund
 
-      - name: Télécharger le manifeste
+      - name: Télécharger le module (par identifiant)
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: syntheo-speech-${{ matrix.target }}
+          artifact-ids: ${{ needs.manifest.outputs[format('id-{0}', matrix.key)] }}
+          merge-multiple: true
           path: module
+
+      - name: Contrôler l'empreinte
+        env:
+          TREE: ${{ needs.manifest.outputs[format('tree-{0}', matrix.key)] }}
+        run: |
+          set -euo pipefail
+          [ -n "$TREE" ] && [ "$(bash apps/speech/supply-chain/tree-digest.sh module)" = "$TREE" ] || { echo "::error::Module différent de celui du job manifest"; exit 1; }
 
       - name: Signer manifest.json (clé du module)
         shell: bash

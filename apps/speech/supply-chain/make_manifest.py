@@ -6,11 +6,13 @@ empreinte et sa taille, puis les modèles de models.json, sous `models/`, avec
 leur URL de téléchargement. Le manifeste est ensuite signé (manifest.json.sig)
 par le job de signature ; speech-host le vérifie avant `files.sha256`.
 
-Usage : python3 -I make_manifest.py <dossier> <cible> <version min. de l'app> <URL de base des modèles> <construction>
+Usage : python3 -I make_manifest.py <dossier> <cible> <version min. de l'app> <URL de base des modèles> [reconstruction]
 
-<construction> : numéro croissant (en CI, le numéro d'exécution du workflow) ;
-l'application refuse un module dont la construction est inférieure à la plus
-haute déjà acceptée.
+Numéro de construction (anti-retour) : dérivé de la version minimale de
+l'application, (MAJEUR·10⁶ + MINEUR·10³ + CORRECTIF)·100 + reconstruction
+(0 à 99, 0 par défaut). Monotone d'une release à l'autre ; l'application
+refuse un module dont la construction est inférieure à la plus haute déjà
+acceptée.
 """
 
 import hashlib
@@ -42,7 +44,7 @@ def module_version() -> str:
 
 
 def main() -> None:
-    if len(sys.argv) != 6:
+    if len(sys.argv) not in (5, 6):
         sys.exit(__doc__)
     out, target, min_app, base_url = (
         Path(sys.argv[1]),
@@ -54,9 +56,13 @@ def main() -> None:
         "https://"
     ):
         sys.exit("version minimale x.y.z et URL https:// attendues")
-    if not sys.argv[5].isdigit() or int(sys.argv[5]) < 1:
-        sys.exit("numéro de construction entier positif attendu")
-    build = int(sys.argv[5])
+    rebuild = sys.argv[5] if len(sys.argv) == 6 else "0"
+    if not rebuild.isdigit() or int(rebuild) > 99:
+        sys.exit("reconstruction : entier de 0 à 99")
+    major, minor, patch = (int(part) for part in min_app.split("."))
+    if minor > 999 or patch > 999:
+        sys.exit("version minimale hors plage")
+    build = (major * 1_000_000 + minor * 1_000 + patch) * 100 + int(rebuild)
     files = []
     for path in sorted(p for p in out.rglob("*") if p.is_file() or p.is_symlink()):
         relative = path.relative_to(out).as_posix()
