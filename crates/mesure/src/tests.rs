@@ -1,0 +1,305 @@
+use super::*;
+
+fn run(generated: &str, sent: &str) -> Report {
+    measure(
+        generated,
+        Format::Markdown,
+        sent,
+        Format::Markdown,
+        &Dictionary::default(),
+    )
+    .unwrap()
+}
+
+fn counters(generated: u64, added: u64, deleted: u64, rf: u64, rl: u64) -> Counters {
+    Counters {
+        generated,
+        added,
+        deleted,
+        replaced_content: rf,
+        replaced_lexical: rl,
+    }
+}
+
+const GENERATED: &str = "# Résumé
+
+Le projet avance bien. Le budget est validé par la direction.
+
+## Décisions
+
+- Lancer le pilote en janvier avec Martin.
+- Garder le serveur actuel.
+
+## Actions
+
+- Envoyer le compte rendu à l'équipe.
+";
+
+#[test]
+fn identical_texts_have_no_rework() {
+    let report = run(GENERATED, GENERATED);
+    assert!(report.aligned);
+    assert_eq!(report.headings_generated, 3);
+    assert_eq!(report.headings_matched, 3);
+    assert_eq!(report.total, counters(28, 0, 0, 0, 0));
+    assert_eq!(report.content_per_mille, Some(0.0));
+}
+
+// Paire de référence : chiffres attendus par catégorie et par section.
+#[test]
+fn reference_pair_counts_each_category() {
+    let sent = "# Résumé
+
+Le projet avance bien. Le budget est validé par le comité de direction.
+
+## Décisions
+
+- Lancer le pilote en février avec Marten.
+- Garder le serveur actuel.
+- Former les testeurs.
+
+## Actions
+
+- Envoyer le compte rendu.
+";
+    let report = run(GENERATED, sent);
+    assert!(report.aligned);
+    // Résumé : « la » → « le comité de » : remplacement de 1 par 3 mots, sans
+    // nom propre : fond, poids 3.
+    assert_eq!(report.sections[0].counters, counters(11, 0, 0, 3, 0));
+    // Décisions : « janvier » → « février » (fond, 1) ; « Martin » →
+    // « Marten » (nom propre, lexical, 1) ; « Former les testeurs » ajouté (3).
+    assert_eq!(report.sections[1].counters, counters(11, 3, 0, 1, 1));
+    // Actions : « à l'équipe » supprimé (2 mots, l'élision reste un mot ; le
+    // point reste).
+    assert_eq!(report.sections[2].counters, counters(6, 0, 2, 0, 0));
+    assert_eq!(report.total, counters(28, 3, 2, 4, 1));
+    assert_eq!(report.unmatched_sent_words, 0);
+    let fond = report.content_per_mille.unwrap();
+    assert!((fond - 9000.0 / 28.0).abs() < 1e-9, "{fond}");
+    let lex = report.lexical_per_mille.unwrap();
+    assert!((lex - 1000.0 / 28.0).abs() < 1e-9, "{lex}");
+}
+
+#[test]
+fn acronyms_mixed_tokens_and_dictionary_terms_are_lexical() {
+    let generated = "Nous utilisons le modele de cri et la version gpt quatre.";
+    let sent = "Nous utilisons le modele de CRI et la version GPT4.";
+    let report = measure(
+        generated,
+        Format::Text,
+        sent,
+        Format::Text,
+        &Dictionary::default(),
+    )
+    .unwrap();
+    // « cri » → « CRI » (sigle) ; « gpt quatre » → « GPT4 » (2 → 1 mot).
+    assert_eq!(report.total, counters(11, 0, 0, 0, 3));
+
+    let dictionary = Dictionary::new(["nemotron"]).unwrap();
+    let report = measure(
+        "Le modèle nemo tron répond.",
+        Format::Text,
+        "Le modèle nemotron répond.",
+        Format::Text,
+        &dictionary,
+    )
+    .unwrap();
+    assert_eq!(report.total, counters(5, 0, 0, 0, 2));
+}
+
+#[test]
+fn capital_at_sentence_start_is_not_a_proper_noun() {
+    let report = measure(
+        "Projet validé. Suite demain.",
+        Format::Text,
+        "Projet validé. Fin demain.",
+        Format::Text,
+        &Dictionary::default(),
+    )
+    .unwrap();
+    assert_eq!(report.total, counters(4, 0, 0, 1, 0));
+}
+
+#[test]
+fn a_proper_noun_added_or_removed_alone_is_content() {
+    let report = measure(
+        "Réunion avec Alice et Bob.",
+        Format::Text,
+        "Réunion avec Alice.",
+        Format::Text,
+        &Dictionary::default(),
+    )
+    .unwrap();
+    assert_eq!(report.total, counters(5, 0, 2, 0, 0));
+}
+
+// Une reformulation longue est du fond, même avec des noms propres ; seul le
+// remplacement court d'un nom propre (« Lyon » → « Paris ») est lexical.
+#[test]
+fn long_replacements_are_content_even_with_proper_nouns() {
+    let report = measure(
+        "Martin présente le plan de Lyon.",
+        Format::Text,
+        "Sophie Durand expose la feuille de route de Paris.",
+        Format::Text,
+        &Dictionary::default(),
+    )
+    .unwrap();
+    assert_eq!(report.total.replaced_lexical, 1);
+    assert!(report.total.replaced_content >= 5, "{:?}", report.total);
+}
+
+#[test]
+fn missing_section_counts_as_deleted_and_extra_section_as_added() {
+    let sent = "# Résumé
+
+Le projet avance bien. Le budget est validé par la direction.
+
+## Décisions
+
+- Lancer le pilote en janvier avec Martin.
+- Garder le serveur actuel.
+
+## Risques
+
+Calendrier serré.
+";
+    let report = run(GENERATED, sent);
+    assert!(report.aligned);
+    assert_eq!(report.headings_matched, 2);
+    assert!(!report.sections[2].matched);
+    assert_eq!(report.sections[2].counters, counters(6, 0, 6, 0, 0));
+    assert_eq!(report.unmatched_sent_words, 2);
+    assert_eq!(report.total, counters(28, 2, 6, 0, 0));
+}
+
+#[test]
+fn global_measure_when_less_than_half_of_titles_match() {
+    let sent = "Le projet avance bien. Le budget est validé par la direction. Lancer le pilote en janvier avec Martin. Garder le serveur actuel. Envoyer le compte rendu à l'équipe.";
+    let report = measure(
+        GENERATED,
+        Format::Markdown,
+        sent,
+        Format::Text,
+        &Dictionary::default(),
+    )
+    .unwrap();
+    assert!(!report.aligned);
+    assert_eq!(report.headings_matched, 0);
+    assert!(report.sections.is_empty());
+    assert_eq!(report.total, counters(28, 0, 0, 0, 0));
+}
+
+// Texte collé depuis un wiki : titres sans mise en forme, retrouvés par leur
+// libellé ; formats d'entrée différents (Markdown généré, HTML envoyé).
+#[test]
+fn plain_and_html_titles_are_aligned_with_generated_headings() {
+    let plain = "Résumé\nLe projet avance bien. Le budget est validé par la direction.\nDécisions\nLancer le pilote en janvier avec Martin.\nGarder le serveur actuel.\nActions :\nEnvoyer le compte rendu à l'équipe.";
+    let report = measure(
+        GENERATED,
+        Format::Markdown,
+        plain,
+        Format::Text,
+        &Dictionary::default(),
+    )
+    .unwrap();
+    assert!(report.aligned);
+    assert_eq!(report.headings_matched, 3);
+    assert_eq!(report.total, counters(28, 0, 0, 0, 0));
+
+    let html = "<h1>Résumé</h1><p>Le projet avance bien. Le budget est validé par la direction.</p><h2>Décisions</h2><ul><li>Lancer le pilote en janvier avec Martin.</li><li>Garder le serveur actuel.</li></ul><h2>Actions</h2><ul><li>Envoyer le compte rendu à l&#39;équipe.</li></ul>";
+    let report = measure(
+        GENERATED,
+        Format::Markdown,
+        html,
+        Format::Html,
+        &Dictionary::default(),
+    )
+    .unwrap();
+    assert!(report.aligned);
+    assert_eq!(report.total, counters(28, 0, 0, 0, 0));
+}
+
+#[test]
+fn limits_are_enforced() {
+    let huge = "a ".repeat(MAX_INPUT_BYTES);
+    assert_eq!(
+        measure(
+            &huge,
+            Format::Text,
+            "a",
+            Format::Text,
+            &Dictionary::default()
+        ),
+        Err(MeasureError::TooLarge)
+    );
+    let long = "mot ".repeat(MAX_TOKENS + 1);
+    assert_eq!(
+        measure(
+            &long,
+            Format::Text,
+            "a",
+            Format::Text,
+            &Dictionary::default()
+        ),
+        Err(MeasureError::TooManyTokens)
+    );
+    let terms: Vec<String> = (0..=MAX_DICTIONARY_TERMS)
+        .map(|i| format!("terme{i}"))
+        .collect();
+    assert!(matches!(
+        Dictionary::new(terms.iter().map(String::as_str)),
+        Err(MeasureError::DictionaryTooLarge)
+    ));
+}
+
+// Aucune chaîne dans le rapport : seulement des nombres, des booléens et des
+// clés fixes. Un champ texte ajouté plus tard fait échouer ce test.
+#[test]
+fn report_contains_no_free_text() {
+    fn walk(value: &serde_json::Value, path: &str) {
+        match value {
+            serde_json::Value::String(s) => panic!("chaîne dans le rapport à {path} : {s:?}"),
+            serde_json::Value::Array(items) => {
+                for (i, item) in items.iter().enumerate() {
+                    walk(item, &format!("{path}[{i}]"));
+                }
+            }
+            serde_json::Value::Object(map) => {
+                for (key, item) in map {
+                    assert!(
+                        key.chars().all(|c| c.is_ascii_lowercase() || c == '_'),
+                        "clé inattendue {key:?}"
+                    );
+                    walk(item, &format!("{path}.{key}"));
+                }
+            }
+            _ => {}
+        }
+    }
+    let sent = "# Résumé\n\nTexte secret ajouté par Alice.\n\n## Nouvelle section\n\nContenu confidentiel.";
+    let report = run(GENERATED, sent);
+    let json = serde_json::to_value(&report).unwrap();
+    walk(&json, "$");
+    let text = json.to_string();
+    for leak in [
+        "secret",
+        "Alice",
+        "Nouvelle",
+        "confidentiel",
+        "Résumé",
+        "Décisions",
+    ] {
+        assert!(!text.contains(leak), "{leak}");
+    }
+}
+
+#[test]
+fn format_from_extension() {
+    assert_eq!(Format::from_extension("MD"), Some(Format::Markdown));
+    assert_eq!(Format::from_extension("htm"), Some(Format::Html));
+    assert_eq!(Format::from_extension("txt"), Some(Format::Text));
+    assert_eq!(Format::from_extension("docx"), None);
+    assert_eq!(Format::from_extension("pdf"), None);
+}

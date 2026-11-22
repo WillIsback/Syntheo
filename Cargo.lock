@@ -6874,6 +6874,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "mesure"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "similar",
+ "thiserror 2.0.21",
+ "unicode-normalization",
+]
+
+[[package]]
 name = "mime"
 version = "0.3.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -11257,6 +11268,7 @@ dependencies = [
  "db-core",
  "dirs 7.0.0",
  "insta",
+ "mesure",
  "rmcp",
  "schemars 1.2.3",
  "serde",

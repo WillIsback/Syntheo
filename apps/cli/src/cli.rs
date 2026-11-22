@@ -69,6 +69,19 @@ pub enum Command {
     },
     /// Run the Syntheo MCP server over stdio
     Mcp,
+    /// Measure how much of a generated summary was reworked before sending
+    /// (local calibration; prints numbers only, never text)
+    Mesure {
+        /// Generated summary (.md, .txt or .html)
+        #[arg(long, value_name = "FILE")]
+        generated: PathBuf,
+        /// Version actually sent or published (.md, .txt or .html)
+        #[arg(long, value_name = "FILE")]
+        sent: PathBuf,
+        /// Dictionary terms, one per line
+        #[arg(long, value_name = "FILE")]
+        dictionary: Option<PathBuf>,
+    },
 }
 
 #[derive(Debug, Subcommand)]

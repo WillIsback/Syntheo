@@ -23,6 +23,7 @@ syntheo [--base DIR] [--db-path FILE] [--json] <command>
 | `meetings` | Browses, exports and imports meetings. |
 | `proposals` | Proposes meeting edits, to be approved in the app. |
 | `mcp` | Starts the Syntheo MCP server over stdio. |
+| `mesure` | Measures the rework between a generated summary and the sent version; prints numbers only. |
 
 ## Meeting source
 
@@ -119,6 +120,41 @@ Starts the local MCP server over stdio. Reads are idempotent. Proposal tools pre
 <Warning>
   Don't write anything else to the server's standard output: any other output corrupts the MCP protocol stream.
 </Warning>
+
+## mesure command
+
+```bash
+syntheo mesure --generated generated.md --sent published.txt
+syntheo mesure --generated generated.md --sent published.html --dictionary terms.txt
+syntheo --json mesure --generated generated.md --sent published.md
+```
+
+Computes how much of a generated summary was reworked before it was sent or published, without AI and without network, and **prints numbers only**: no word of the texts, no heading. The command does not open the database and writes no file. It serves the local calibration of the beta measurement.
+
+- `--generated` and `--sent`: `.md`, `.txt` or `.html` files, UTF-8, 4 MiB at most. The format follows the extension.
+- `--dictionary` (optional): one term per line; a short replacement touching one of these terms counts as a lexical correction.
+
+The calculation strips formatting, splits both texts by the headings of the generated version (a line identical to a heading is enough in the sent version), compares word by word, then classifies each difference:
+
+- **lexical**: replacement of 1 to 3 words by 1 to 3 words, one of which looks like a proper noun or an acronym, or is in the dictionary;
+- **content**: everything else, including a proper noun added or removed alone.
+
+Output, one value per line (`key`, tab, number):
+
+| Key | Value |
+| --- | --- |
+| `rule_version` | Version of the calculation rule. |
+| `aligned` | `1` if at least half of the generated headings are found (per-section measurement), `0` otherwise (global measurement). |
+| `headings_generated`, `headings_matched` | Headings of the generated version, and how many are found. |
+| `generated` | Generated words (`G`). |
+| `added`, `deleted` | Added (`A`) and deleted (`S`) words. |
+| `replaced_content`, `replaced_lexical` | Replaced words, content (`Rf`) and lexical (`Rl`). |
+| `unmatched_sent_words` | Words of sent sections missing from the generated version (counted in `added`). |
+| `content_per_mille` | `(A + S + Rf) / G × 1000`. |
+| `lexical_per_mille` | `Rl / G × 1000`. |
+| `section` | Per generated section: rank, found (`1` or `0`), `G`, `A`, `S`, `Rf`, `Rl`, `A / G × 1000`. |
+
+With `--json`, the same numbers are returned under `data` (fields `total`, `sections`, `content_per_mille`…).
 
 ## Help and version
 

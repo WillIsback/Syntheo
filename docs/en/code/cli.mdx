@@ -52,6 +52,7 @@ Two tests in `apps/cli` read the public documentation directly. A command or MCP
 | `meetings initialize-managed`, `delete` | `commands/meeting_delete.rs` | Database preparation according to a managed policy; permanent deletion of a completed meeting (requires `--source local` and `--require-transcription-complete`). |
 | `proposals create`, `list`, `show`, `decline` | `commands/proposals.rs` | Write to the proposals table, never to the note. |
 | `mcp` | `mcp.rs` | Write (proposals, imports). |
+| `mesure` | `commands/mesure.rs` | Does not open the database; reads two local files and prints numbers only (`mesure` crate). |
 
 Global options: `--base` (`SYNTHEO_BASE`), `--db-path` (`SYNTHEO_DB_PATH`), `--json`. `meetings` accepts `--source` (`SYNTHEO_SOURCE`, `local` by default; `auto` is an alias of `local`).
 
