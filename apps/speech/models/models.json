@@ -20,10 +20,6 @@
   "sources": [
     "https://github.com/WillIsback/Syntheo/releases/download/speech-models-1/{name}"
   ],
-  "sources_pending": {
-    "note": "À ÉPINGLER après publish-speech-models.yml : ajouter ce gabarit à la fin de `sources`, <révision> remplacée par la révision Hugging Face (40 caractères hexadécimaux) donnée dans le résumé du job, puis retirer cette clé. Jamais lue par l'application.",
-    "template": "https://huggingface.co/WillisBack/syntheo-speech-models/resolve/<révision>/{path}"
-  },
   "files": [
     {
       "path": "nemotron/config.json",

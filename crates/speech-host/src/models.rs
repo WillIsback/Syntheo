@@ -617,7 +617,7 @@ mod tests {
         assert!(urls.contains(
             "https://github.com/WillIsback/Syntheo/releases/download/speech-models-1/encoder.onnx.data"
         ));
-        // Le gabarit Hugging Face en attente n'est jamais une source.
+        // Aucun gabarit provisoire (révision Hugging Face à venir) parmi les sources.
         assert!(sources.iter().all(|s| !s.as_str().contains('<')));
     }
 }
