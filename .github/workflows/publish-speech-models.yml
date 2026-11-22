@@ -9,10 +9,12 @@
 # droits Contents et Workflows en écriture : GITHUB_TOKEN ne peut pas créer
 # un tag sur un commit qui modifie des workflows). Étapes :
 #   1. la release <version> doit exister, être un brouillon et être la seule
-#      à porter ce tag ; le tag ne doit pas encore exister ;
+#      à porter ce tag ; un tag déjà présent n'est admis que sur ce commit
+#      (relance après un échec entre la création du tag et la publication) ;
 #      (resume=true : reprise après un échec côté Hugging Face ; la release
-#      doit alors être une prerelease publiée, non « latest », avec son tag ;
-#      les étapes 3 et 4 sont sautées.)
+#      doit alors être une prerelease publiée, non « latest », avec son tag
+#      sur un commit de main et l'attestation de ses assets ; les étapes 3 et
+#      4 sont sautées.)
 #   2. téléchargement des assets du brouillon, contrôle bloquant contre
 #      apps/speech/models/models.json (taille et SHA-256), seule référence ;
 #   (publish=false : arrêt ici, rien n'est publié.)
@@ -83,29 +85,42 @@ jobs:
         with:
           persist-credentials: false
 
-      # Premier passage : un brouillon n'a pas encore de tag ; un tag existant,
-      # une release publiée ou deux releases pour ce nom arrêtent tout.
+      # Premier passage : la release doit être un brouillon unique. Un tag
+      # existant n'est admis que s'il pointe sur ce commit (échec entre la
+      # création du tag et le passage en prerelease) : il n'est pas recréé.
       # Reprise : une seule release, prerelease publiée, non « latest », tag
-      # présent sur un commit de main.
+      # léger sur un commit de l'historique de main (l'attestation est
+      # contrôlée après le téléchargement des assets).
       - name: Exiger l'état attendu de la release
+        id: state
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
           releases=$(gh api --paginate "repos/$REPO/releases" --jq ".[] | select(.tag_name == \"$VERSION\") | [.draft, .prerelease] | @tsv")
           count=$(printf '%s\n' "$releases" | grep -c . || true)
           [ "$count" = "1" ] || { echo "::error::$count release(s) pour $VERSION, une seule attendue"; exit 1; }
+          # Tag : « commit <sha> » pour un tag léger, vide s'il n'existe pas.
+          tag=$(gh api "repos/$REPO/git/ref/tags/$VERSION" --jq '"\(.object.type) \(.object.sha)"' 2> /dev/null || true)
           if [ "$RESUME" = "true" ]; then
             [ "$releases" = "$(printf 'false\ttrue')" ] || { echo "::error::reprise : $VERSION doit être une prerelease publiée"; exit 1; }
-            gh api "repos/$REPO/git/ref/tags/$VERSION" > /dev/null || { echo "::error::reprise : tag $VERSION absent"; exit 1; }
+            [ "${tag%% *}" = "commit" ] || { echo "::error::reprise : tag léger $VERSION absent"; exit 1; }
+            status=$(gh api "repos/$REPO/compare/${tag#* }...main" --jq .status)
+            case "$status" in
+              ahead | identical) ;;
+              *) echo "::error::reprise : le tag $VERSION ne pointe pas sur un commit de main ($status)"; exit 1 ;;
+            esac
             latest=$(gh api "repos/$REPO/releases/latest" --jq .tag_name 2> /dev/null || true)
             [ "$latest" != "$VERSION" ] || { echo "::error::$VERSION est « latest »"; exit 1; }
           else
             [ "${releases%%$'\t'*}" = "true" ] || { echo "::error::la release $VERSION n'est plus un brouillon (reprise : resume=true)"; exit 1; }
-            if gh api "repos/$REPO/git/ref/tags/$VERSION" > /dev/null 2>&1; then
-              echo "::error::le tag $VERSION existe déjà"; exit 1
+            if [ -n "$tag" ]; then
+              [ "$tag" = "commit $SHA" ] || { echo "::error::le tag $VERSION existe déjà sur un autre commit ($tag)"; exit 1; }
+              echo "::notice::tag $VERSION déjà présent sur ce commit : il n'est pas recréé"
+              echo "tag_exists=true" >> "$GITHUB_OUTPUT"
             fi
           fi
 
@@ -122,6 +137,22 @@ jobs:
 
       - name: Contrôle bloquant contre models.json
         run: python3 -I apps/speech/models/verify.py assets --flat
+
+      # Reprise : les assets publiés doivent porter l'attestation de
+      # provenance de ce workflow, faite au premier passage.
+      - name: Exiger l'attestation des assets (reprise)
+        if: inputs.resume
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          for file in assets/*; do
+            gh attestation verify "$file" --repo "$REPO" \
+              --signer-workflow "$REPO/.github/workflows/publish-speech-models.yml" > /dev/null \
+              || { echo "::error::reprise : attestation absente pour ${file#assets/}"; exit 1; }
+          done
 
       - name: Exiger le jeton de release
         if: inputs.publish && !inputs.resume
@@ -147,11 +178,14 @@ jobs:
           GH_TOKEN: ${{ secrets.SPEECH_MODELS_RELEASE_TOKEN }}
           REPO: ${{ github.repository }}
           SHA: ${{ github.sha }}
+          TAG_EXISTS: ${{ steps.state.outputs.tag_exists }}
         run: |
           set -euo pipefail
           id=$(gh api --paginate "repos/$REPO/releases" --jq ".[] | select(.tag_name == \"$VERSION\" and .draft == true) | .id")
           [ -n "$id" ] || { echo "::error::brouillon $VERSION introuvable"; exit 1; }
-          gh api -X POST "repos/$REPO/git/refs" -f ref="refs/tags/$VERSION" -f sha="$SHA" > /dev/null
+          if [ "$TAG_EXISTS" != "true" ]; then
+            gh api -X POST "repos/$REPO/git/refs" -f ref="refs/tags/$VERSION" -f sha="$SHA" > /dev/null
+          fi
           gh api -X PATCH "repos/$REPO/releases/$id" -f tag_name="$VERSION" -f target_commitish="$SHA" \
             -F draft=false -F prerelease=true -f make_latest=false > /dev/null
           state=$(gh api "repos/$REPO/releases/$id" --jq '[.draft, .prerelease] | @tsv')

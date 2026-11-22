@@ -214,6 +214,8 @@ try {
 finally {
   Copy-Item $confBackup $Conf -Force
   Remove-Item $confBackup -Force -ErrorAction SilentlyContinue
+  # Autorisation du build de test seulement : jamais laissée à la session.
+  Remove-Item Env:SYNTHEO_SPEECH_ALLOW_NO_SOURCES -ErrorAction SilentlyContinue
 }
 
 # Toute DLL du runtime Visual C++ importée par syntheo.exe doit être embarquée.
