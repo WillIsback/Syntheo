@@ -264,28 +264,3 @@ impl AudioProvider for ActualAudio {
         speaker::captured_output(preferred.as_deref())
     }
 }
-
-#[cfg(all(test, target_os = "macos"))]
-pub(crate) fn play_sine_for_sec(seconds: u64) -> std::thread::JoinHandle<()> {
-    use rodio::{
-        Player, nz,
-        source::{Function::Sine, SignalGenerator, Source},
-    };
-    use std::{
-        thread::{sleep, spawn},
-        time::Duration,
-    };
-
-    spawn(move || {
-        let stream = syntheo_audio_utils::open_default_playback_sink().unwrap();
-        let source = SignalGenerator::new(nz!(44100u32), 440.0, Sine);
-
-        let source = source
-            .take_duration(Duration::from_secs(seconds))
-            .amplify(0.01);
-
-        let player = Player::connect_new(stream.mixer());
-        player.append(source);
-        sleep(Duration::from_secs(seconds));
-    })
-}

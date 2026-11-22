@@ -51,7 +51,7 @@ The `app.db` database is the heart of the data. The crates are organized in laye
 
 - **Path**: `crates/db-core`
 - **Role**: opens a SQLite pool and attaches a `ChangeNotifier` to it.
-- **API**: `Db` (`open`, `connect_memory`, `connect_local_read_write`, `connect_local_read_only`, `pool`, `change_notifier`), `DbOpenOptions`, `DbStorage`, `ManagedDb`.
+- **API**: `Db` (`open`, `connect_local_read_write`, `connect_local_read_only`, `pool`, `change_notifier`), `DbOpenOptions`, `DbStorage`, `ManagedDb`.
 - **Internal dependencies**: `syntheo-db-change`.
 - **Note**: the CLI opens the database with `connect_local_read_only` (`apps/cli/src/db.rs`), which guarantees the read-only access described in [CLI for agents](/en/agents/cli).
 - **Affected doc pages**: [Data and privacy](/en/data-and-privacy), [CLI for agents](/en/agents/cli).
@@ -147,7 +147,7 @@ Don't describe product behavior from the raw SQL schema. Start from the operatio
 
 - **Path**: `crates/template-app`, templates in `crates/template-app/assets/*.md.jinja`.
 - **Role**: renders the prompts sent to the LLM. The templates are compiled with Askama.
-- **API**: `render(Template)`, enum `Template` (`EnhanceSystem`, `EnhanceUser`, `TitleSystem`, `TitleUser`, `ChatSystem`, `ContextBlock`, `ToolSearchSessions`, `TranscriptPatchSystem`, `TranscriptPatchUser`, `ActivityCaptureSystem`, `DailySummarySystem`, `EventContactSystem`…), `EditableTemplate` (`EnhanceFormat`, `EnhanceUser`, `TitleUser`) and `template_source`.
+- **API**: `render(Template)`, enum `Template` (`EnhanceSystem`, `EnhanceUser`, `TitleSystem`, `TitleUser`, `ChatSystem`, `ContextBlock`, `ToolSearchSessions`, `ActivityCaptureSystem`, `DailySummarySystem`, `EventContactSystem`…), `EditableTemplate` (`EnhanceFormat`, `EnhanceUser`, `TitleUser`) and `template_source`.
 - **Internal dependencies**: `syntheo-askama-utils`.
 - **Note**: the `template` plugin exposes `render` and `get_template_source`. The interface reads the `enhanceFormat` source in the form of the "Automatic" template (`apps/desktop/src/templates/auto-form.tsx`).
 - **Affected doc pages**: [Customize summaries](/en/customize-summaries), [Notes](/en/notes), [Chat](/en/chat), [Languages](/en/languages).

@@ -64,7 +64,7 @@ In the `Cargo.toml` files, these crates are referenced by the workspace alias `s
 ### `crates/listener2-core`
 
 - **Role**: batch transcription of an imported file. `src/batch/` offers a simple mode and a progressive mode; `upload.rs` splits the audio into in-memory MP3 segments before sending.
-- **API**: `BatchRuntime`, `BatchParams`, `BatchEvent`, `BatchRunMode`; `is_supported_languages_live` / `_batch`, `suggest_providers_for_languages_live` / `_batch`, `list_documented_language_codes_batch`; subtitle reading and export (`parse_subtitle_from_path`, `export_words_to_vtt_file`).
+- **API**: `BatchRuntime`, `BatchParams`, `BatchEvent`, `BatchRunMode`; `is_supported_languages_live` / `_batch`, `suggest_providers_for_languages_live` / `_batch`; subtitle reading (`parse_subtitle_from_path`).
 - **Internal dependencies**: `audio-utils`, `language`, `mp3`, `user-error`, `owhisper-client`, `owhisper-interface`.
 - **Affected doc pages**: [/en/import-recordings](/en/import-recordings), [/en/languages](/en/languages).
 

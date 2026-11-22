@@ -67,21 +67,6 @@ impl Db {
         &self.change_notifier
     }
 
-    pub async fn connect_memory() -> Result<Self, sqlx::Error> {
-        let options =
-            apply_internal_connect_policy(SqliteConnectOptions::from_str("sqlite::memory:")?);
-        let (change_notifier, pool_options) = syntheo_db_change::ChangeNotifier::disabled();
-        let pool = apply_internal_pool_policy(pool_options)
-            .max_connections(1)
-            .connect_with(options)
-            .await?;
-
-        Ok(Self {
-            pool,
-            change_notifier,
-        })
-    }
-
     pub async fn connect_local_plain(path: impl AsRef<Path>) -> Result<Self, sqlx::Error> {
         ensure_parent_dir(path.as_ref()).await?;
         let options = apply_internal_connect_policy(SqliteConnectOptions::new())

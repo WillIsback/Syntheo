@@ -14,4 +14,3 @@ directml = ["ort/directml"]
 ndarray = "0.16"
 ort = { version = "=2.0.0-rc.10", features = ["ndarray"] }
 thiserror = { workspace = true }
-tracing = { workspace = true }

@@ -36,19 +36,7 @@ pub struct Args {
     pub command: Command,
 }
 
-impl Args {
-    pub fn needs_write(&self) -> bool {
-        matches!(
-            self.command,
-            Command::Proposals {
-                command: ProposalCommand::Create { .. } | ProposalCommand::Decline { .. },
-            } | Command::Meetings {
-                command: MeetingCommand::Import { .. },
-                ..
-            } | Command::Mcp
-        )
-    }
-}
+impl Args {}
 
 #[derive(Debug, Subcommand)]
 pub enum Command {

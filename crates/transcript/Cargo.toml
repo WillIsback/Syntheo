@@ -7,11 +7,8 @@ license = "MIT"
 [dependencies]
 owhisper-interface = { workspace = true }
 
-json-patch = "5.0"
 regex = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 specta = { workspace = true, features = ["serde_json"] }
-syntheo-template-app = { workspace = true }
-thiserror = { workspace = true }
 uuid = { workspace = true, features = ["v4"] }

@@ -51,7 +51,7 @@ La base `app.db` est le cœur des données. Les crates se répartissent en couch
 
 - **Chemin** : `crates/db-core`
 - **Rôle** : ouvre un pool SQLite et y attache un `ChangeNotifier`.
-- **API** : `Db` (`open`, `connect_memory`, `connect_local_read_write`, `connect_local_read_only`, `pool`, `change_notifier`), `DbOpenOptions`, `DbStorage`, `ManagedDb`.
+- **API** : `Db` (`open`, `connect_local_read_write`, `connect_local_read_only`, `pool`, `change_notifier`), `DbOpenOptions`, `DbStorage`, `ManagedDb`.
 - **Dépendances internes** : `syntheo-db-change`.
 - **À noter** : la CLI ouvre la base avec `connect_local_read_only` (`apps/cli/src/db.rs`), ce qui garantit la lecture seule décrite dans [CLI pour agents](/fr/agents/cli).
 - **Pages de doc concernées** : [Données et confidentialité](/fr/data-and-privacy), [CLI pour agents](/fr/agents/cli).
@@ -147,7 +147,7 @@ Ne décrivez pas le comportement du produit à partir du schéma SQL brut. Parte
 
 - **Chemin** : `crates/template-app`, gabarits dans `crates/template-app/assets/*.md.jinja`.
 - **Rôle** : rend les prompts envoyés au LLM. Les gabarits sont compilés avec Askama.
-- **API** : `render(Template)`, enum `Template` (`EnhanceSystem`, `EnhanceUser`, `TitleSystem`, `TitleUser`, `ChatSystem`, `ContextBlock`, `ToolSearchSessions`, `TranscriptPatchSystem`, `TranscriptPatchUser`, `ActivityCaptureSystem`, `DailySummarySystem`, `EventContactSystem`…), `EditableTemplate` (`EnhanceFormat`, `EnhanceUser`, `TitleUser`) et `template_source`.
+- **API** : `render(Template)`, enum `Template` (`EnhanceSystem`, `EnhanceUser`, `TitleSystem`, `TitleUser`, `ChatSystem`, `ContextBlock`, `ToolSearchSessions`, `ActivityCaptureSystem`, `DailySummarySystem`, `EventContactSystem`…), `EditableTemplate` (`EnhanceFormat`, `EnhanceUser`, `TitleUser`) et `template_source`.
 - **Dépendances internes** : `syntheo-askama-utils`.
 - **À noter** : le plugin `template` expose `render` et `get_template_source`. L'interface lit la source de `enhanceFormat` dans le formulaire du modèle « Automatique » (`apps/desktop/src/templates/auto-form.tsx`).
 - **Pages de doc concernées** : [Personnaliser les comptes rendus](/fr/customize-summaries), [Notes](/fr/notes), [Chat](/fr/chat), [Langues](/fr/languages).
