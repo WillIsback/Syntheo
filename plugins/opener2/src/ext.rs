@@ -18,6 +18,7 @@ impl<'a, R: tauri::Runtime, M: tauri::Manager<R>> Opener2<'a, R, M> {
     /// Ouvre un fichier avec le programme associé par le système, jamais avec
     /// un programme choisi par l'appelant (issue 676).
     pub fn open_path(&self, path: &str) -> crate::Result<()> {
+        crate::policy::check_openable_path(path)?;
         self.manager.opener().open_path(path, None::<&str>)?;
         Ok(())
     }

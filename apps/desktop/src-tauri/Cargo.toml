@@ -79,6 +79,9 @@ syntheo-storage = { workspace = true }
 
 chrono = { workspace = true }
 dirs = { workspace = true }
+# Protocole `asset` de l'application (src/asset_protocol.rs), mêmes versions que tauri.
+http-range = "0.1.5"
+percent-encoding = "2.3"
 pico-args = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
@@ -87,6 +90,7 @@ specta-typescript = { workspace = true }
 sqlx = { workspace = true, features = ["runtime-tokio", "sqlite"] }
 strum = { workspace = true, features = ["derive"] }
 tauri-specta = { workspace = true, features = ["derive", "typescript"] }
+tauri-utils = "2.10"
 tokio = { workspace = true, features = ["fs", "rt-multi-thread", "macros", "sync", "time"] }
 tracing = { workspace = true }
 

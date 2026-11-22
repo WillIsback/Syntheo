@@ -2,6 +2,7 @@ mod aec_models;
 mod agent_skills;
 mod agents;
 mod appearance;
+mod asset_protocol;
 mod cli_status;
 mod commands;
 mod db;
@@ -122,7 +123,10 @@ pub fn main() {
         create_audio_provider(&context.config().identifier);
     let mut builder = tauri_plugin_windows::extend_builder(tauri::Builder::default())
         .manage(audio)
-        .manage(db.clone());
+        .manage(db.clone())
+        // Remplace le protocole `asset` de Tauri : chemins réseau refusés avant
+        // toute résolution (issue 677).
+        .register_asynchronous_uri_scheme_protocol("asset", asset_protocol::handle);
 
     #[cfg(target_os = "macos")]
     {

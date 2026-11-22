@@ -5,6 +5,7 @@ mod policy;
 
 pub use error::{Error, Result};
 pub use ext::*;
+pub use policy::is_local_path;
 
 const PLUGIN_NAME: &str = "opener2";
 

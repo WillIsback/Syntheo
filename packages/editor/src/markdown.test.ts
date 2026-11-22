@@ -3,7 +3,8 @@ import { describe, expect, it, test } from "vitest";
 
 import {
   EMPTY_DOC,
-  isLocalImageSrc,
+  isGeneratedImageSrc,
+  isRemoteWebImageSrc,
   isValidContent,
   json2md,
   type JSONContent,
@@ -1057,35 +1058,87 @@ describe("md2json stripRemoteImages", () => {
     expect(text).not.toContain('"image"');
   });
 
-  it("garde les images locales et le contenu sans option", () => {
-    const local = md2json(
-      "![a](asset://localhost/tmp/a.png)\n\n![b](http://asset.localhost/tmp/b.png)\n\n![c](data:image/png;base64,AAAA)",
-      { stripRemoteImages: true },
-    );
-    expect(local.content?.filter((node) => node.type === "image")).toHaveLength(
-      3,
+  it("garde data:image et le contenu sans option", () => {
+    const kept = md2json("![c](data:image/png;base64,AAAA)", {
+      stripRemoteImages: true,
+    });
+    expect(kept.content?.filter((node) => node.type === "image")).toHaveLength(
+      1,
     );
 
     const untouched = md2json("![logo](https://example.com/p.png)");
     expect(JSON.stringify(untouched)).toContain("https://example.com/p.png");
   });
+
+  // Issue 677 : aucun fichier local ni chemin réseau dans un contenu généré.
+  it("retire les images de fichiers locaux et de chemins réseau", () => {
+    const json = md2json(
+      [
+        "![a](asset://localhost/tmp/a.png)",
+        "![b](http://asset.localhost/%5C%5C192.0.2.1%5Cshare%5Cb.png)",
+        "![c](file:///etc/c.png)",
+        "![d](/home/user/d.png)",
+        "![e](//192.0.2.1/share/e.png)",
+      ].join("\n\n"),
+      { stripRemoteImages: true },
+    );
+    const text = JSON.stringify(json);
+    expect(text).not.toContain('"image"');
+    // `file:` n'est pas un lien pour le parseur : la ligne reste du texte.
+    for (const leak of ["asset", "192.0.2.1", "/home/user"]) {
+      expect(text).not.toContain(leak);
+    }
+    expect(text).toContain('"text":"a"');
+  });
+
+  it("ne garde une pièce jointe que par identifiant, sans adresse", () => {
+    const id = "0b9f2c1e-4d3a-4b5c-8d7e-1f2a3b4c5d6e";
+    const json = md2json(
+      `[rapport.pdf](attachment://${id})\n\n[secret.pdf](asset://localhost/C:/Users/x/secret.pdf)`,
+      { stripRemoteImages: true },
+    );
+    const attachments = (json.content ?? []).filter(
+      (node) => node.type === "fileAttachment",
+    );
+    expect(attachments).toHaveLength(1);
+    expect(attachments[0].attrs?.attachmentId).toBe(id);
+    expect(attachments[0].attrs?.src).toBeUndefined();
+    const text = JSON.stringify(json);
+    expect(text).not.toContain("asset://");
+    expect(text).toContain('"text":"secret.pdf"');
+  });
 });
 
-describe("isLocalImageSrc", () => {
+describe("isGeneratedImageSrc", () => {
   it.each([
-    ["asset://localhost/a.png", true],
-    ["http://asset.localhost/a.png", true],
     ["data:image/png;base64,AAAA", true],
-    ["blob:http://localhost/1", true],
-    ["/assets/syntheo-icon.png", true],
+    ["DATA:image/gif;base64,R0lG", true],
+    ["asset://localhost/a.png", false],
+    ["http://asset.localhost/a.png", false],
+    ["blob:http://localhost/1", false],
+    ["/assets/syntheo-icon.png", false],
+    ["file:///tmp/a.png", false],
+    ["\\\\server\\share\\a.png", false],
     ["https://example.com/a.png", false],
-    ["http://example.com/a.png", false],
-    ["//example.com/a.png", false],
     ["data:text/html,<b>x</b>", false],
-    ["javascript:alert(1)", false],
     ["", false],
     [undefined, false],
   ])("%s → %s", (src, expected) => {
-    expect(isLocalImageSrc(src)).toBe(expected);
+    expect(isGeneratedImageSrc(src)).toBe(expected);
+  });
+});
+
+describe("isRemoteWebImageSrc", () => {
+  it.each([
+    ["https://example.com/a.png", true],
+    ["http://example.com/a.png", true],
+    ["http://asset.localhost/a.png", false],
+    ["https://asset.localhost/a.png", false],
+    ["asset://localhost/a.png", false],
+    ["//example.com/a.png", false],
+    ["javascript:alert(1)", false],
+    [undefined, false],
+  ])("%s → %s", (src, expected) => {
+    expect(isRemoteWebImageSrc(src)).toBe(expected);
   });
 });

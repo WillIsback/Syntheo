@@ -3,7 +3,10 @@ import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import { useEffect, useState } from "react";
 import { defaultRehypePlugins, type StreamdownProps } from "streamdown";
 
-import { isLocalImageSrc } from "@syntheo/editor/markdown";
+import {
+  isGeneratedImageSrc,
+  isRemoteWebImageSrc,
+} from "@syntheo/editor/markdown";
 import { cn } from "@syntheo/utils";
 
 // Rendu des contenus générés (synthèses, chat, propositions) : une image
@@ -14,7 +17,7 @@ import { cn } from "@syntheo/utils";
 
 const MAX_REMOTE_IMAGE_BYTES = 10 * 1024 * 1024;
 
-export { isLocalImageSrc };
+export { isGeneratedImageSrc, isRemoteWebImageSrc };
 
 async function loadRemoteImage(src: string): Promise<string> {
   const url = new URL(src);
@@ -108,15 +111,19 @@ export function RemoteImage({
   );
 }
 
-/** `img` des rendus Markdown : locale affichée, distante chargée au clic. */
+/**
+ * `img` des rendus Markdown de contenu généré : `data:image` affichée, image
+ * web chargée au clic, toute autre adresse (fichier local, chemin réseau)
+ * remplacée par son texte alternatif (issue 677).
+ */
 export function SafeMarkdownImage(
   props: React.ImgHTMLAttributes<HTMLImageElement>,
 ) {
   const { src, alt, title, className, style } = props;
-  if (typeof src === "string" && isLocalImageSrc(src)) {
+  if (isGeneratedImageSrc(src)) {
     return <img {...props} />;
   }
-  if (typeof src !== "string" || !src) {
+  if (typeof src !== "string" || !isRemoteWebImageSrc(src)) {
     return alt ? <span>{alt}</span> : null;
   }
   return (
