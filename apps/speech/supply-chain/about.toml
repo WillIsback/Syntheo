@@ -1,0 +1,26 @@
+# cargo about (notices des crates du module, issue 683) : mêmes licences que
+# la politique de cargo deny (deny.toml à la racine).
+accepted = [
+  "MIT",
+  "MIT-0",
+  "Apache-2.0",
+  "Apache-2.0 WITH LLVM-exception",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "ISC",
+  "0BSD",
+  "Zlib",
+  "Unicode-3.0",
+  "Unicode-DFS-2016",
+  "CC0-1.0",
+  "BSL-1.0",
+  "MPL-2.0",
+  "CDLA-Permissive-2.0",
+  "OpenSSL",
+  "Unlicense",
+  "LGPL-2.1-or-later",
+  "NCSA",
+]
+targets = ["x86_64-unknown-linux-gnu", "x86_64-pc-windows-msvc"]
+ignore-build-dependencies = true
+ignore-dev-dependencies = true

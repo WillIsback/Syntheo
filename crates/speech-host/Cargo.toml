@@ -5,17 +5,34 @@ edition = "2024"
 license = "MIT"
 publish = false
 
+[features]
+# Signature de manifestes pour les essais d'intégration ; jamais activée par
+# l'application.
+test-signing = ["dep:minisign"]
+
 [dependencies]
+base64 = { workspace = true }
+minisign = { version = "0.10", optional = true }
+minisign-verify = { workspace = true }
 owhisper-client = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 sha2 = { workspace = true }
 tokio = { workspace = true, features = ["fs", "io-util", "macros", "process", "rt", "sync", "time"] }
 tracing = { workspace = true }
 uuid = { workspace = true, features = ["v4"] }
 
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[target.'cfg(windows)'.dependencies]
+windows = { workspace = true, features = ["Win32_Foundation", "Win32_Security", "Win32_Security_Authorization", "Win32_Storage_FileSystem"] }
+
 [dev-dependencies]
 bytes = { workspace = true }
 futures-util = { workspace = true }
+minisign = "0.10"
 owhisper-interface = { workspace = true }
+speech-host = { path = ".", features = ["test-signing"] }
 tempfile = { workspace = true }
 tokio = { workspace = true, features = ["fs", "io-util", "macros", "process", "rt-multi-thread", "sync", "time"] }

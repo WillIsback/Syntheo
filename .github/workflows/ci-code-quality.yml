@@ -13,7 +13,8 @@
 # CIBLE WINDOWS : le job léger `rust-windows` lance le clippy de
 # `audio-device` pour x86_64-pc-windows-msvc (depuis Linux, sans linker) sur
 # les PR qui touchent `crates/audio-device/**` ou `Cargo.lock`, et toujours
-# hors PR (voir issue 382).
+# hors PR (voir issue 382). Le job `rust-windows-speech` (runner Windows)
+# fait de même pour `speech-host` et `speech-probe`.
 name: ci-code-quality
 
 on:
@@ -230,6 +231,51 @@ jobs:
           set -euo pipefail
           cargo clippy --locked --target x86_64-pc-windows-msvc -p audio-device \
             --all-targets -- -D warnings
+
+  # Clippy Windows du module de transcription sur le poste (issues 683-685) :
+  # `speech-host` (lancement, vérification verrouillée, ACL) et `speech-probe`
+  # (sonde). Runner Windows : `speech-host` tire aws-lc-sys (C), que clippy ne
+  # peut pas préparer depuis Linux sans MSVC. Sur une PR, sauté si ni ces
+  # crates, ni le client qu'elles utilisent, ni Cargo.lock ne changent.
+  rust-windows-speech:
+    name: ci-code-quality (Rust Windows, module sur le poste)
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: ${{ github.event_name == 'pull_request' && '0' || '1' }}
+          persist-credentials: false
+
+      - name: Détection des chemins modifiés
+        id: changes
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          if [ -z "${BASE_SHA:-}" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "Hors PR : clippy Windows du module exécuté."
+          elif git diff --name-only "$BASE_SHA" HEAD -- 'crates/speech-host/' 'crates/speech-probe/' 'crates/owhisper-client/' 'crates/ws-client/' 'Cargo.lock' '.github/workflows/ci-code-quality.yml' | grep -q .; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "Module sur le poste ou Cargo.lock modifié : clippy Windows exécuté."
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "Module sur le poste non modifié : clippy Windows sauté."
+          fi
+
+      - name: Toolchain Rust
+        if: steps.changes.outputs.run == 'true'
+        uses: ./.github/actions/rust_install
+
+      - name: Lint (cargo clippy, Windows)
+        if: steps.changes.outputs.run == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo clippy --locked -p speech-host -p speech-probe --all-targets -- -D warnings
 
   meta:
     name: ci-code-quality (PR et workflows)
