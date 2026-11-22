@@ -20,12 +20,14 @@
 import {
   closeSync,
   constants,
+  existsSync,
   fstatSync,
   mkdirSync,
   openSync,
   readdirSync,
   readFileSync,
   readSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import { join, resolve } from "node:path";
@@ -817,13 +819,22 @@ function main(argv) {
     out = args[outIndex + 1];
     args.splice(outIndex, 2);
   }
-  if (args.length !== 1 || out === undefined) {
-    process.stderr.write(
-      "Usage : node scripts/beta/agregation.mjs <dossier-exports> [--out <dossier-sortie>]\n",
-    );
+  const usage =
+    "Usage : node scripts/beta/agregation.mjs <dossier-exports> [--out <dossier-sortie>]\n";
+  if (args.includes("--help") || args.includes("-h")) {
+    process.stdout.write(usage);
+    return 0;
+  }
+  if (args.length !== 1 || out === undefined || args[0].startsWith("-")) {
+    process.stderr.write(usage);
     return 2;
   }
-  const { accepted, refused } = loadDirectory(resolve(args[0]));
+  const dir = resolve(args[0]);
+  if (!existsSync(dir) || !statSync(dir).isDirectory()) {
+    process.stderr.write(`Dossier d'exports introuvable : ${args[0]}\n`);
+    return 2;
+  }
+  const { accepted, refused } = loadDirectory(dir);
   const result = aggregate(accepted, refused);
   const markdown = renderMarkdown(result);
   if (out === null) {

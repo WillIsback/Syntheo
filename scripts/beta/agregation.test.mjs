@@ -2,6 +2,7 @@
 // synthétiques générés ici : aucune donnée réelle.
 
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import {
   mkdirSync,
   mkdtempSync,
@@ -13,6 +14,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
 import {
   aggregate,
@@ -520,4 +522,23 @@ test("médiane", () => {
   assert.equal(median([3, 1, 2]), 2);
   assert.equal(median([4, 1, 2, 3]), 2.5);
   assert.equal(median([]), null);
+});
+
+// Ligne de commande : aide et dossier introuvable, sans trace d'erreur.
+test("la ligne de commande refuse proprement un dossier introuvable", () => {
+  const run = (...args) =>
+    spawnSync(
+      process.execPath,
+      [fileURLToPath(new URL("./agregation.mjs", import.meta.url)), ...args],
+      {
+        encoding: "utf8",
+      },
+    );
+  const help = run("--help");
+  assert.equal(help.status, 0);
+  assert.match(help.stdout, /^Usage :/);
+  const missing = run("/dossier/qui/n/existe/pas");
+  assert.equal(missing.status, 2);
+  assert.match(missing.stderr, /^Dossier d'exports introuvable/);
+  assert.doesNotMatch(missing.stderr, /at |Error/);
 });
