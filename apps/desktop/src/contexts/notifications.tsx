@@ -2,7 +2,7 @@ import { createContext, type ReactNode, useMemo } from "react";
 
 import { useConfigValues } from "~/shared/config";
 import { useTabs } from "~/store/zustand/tabs";
-import { isConfiguredSttModel } from "~/stt/capabilities";
+import { useUsableTranscription } from "~/stt/usable-transcription";
 
 interface NotificationState {
   hasActiveBanner: boolean;
@@ -14,20 +14,15 @@ interface NotificationState {
 const NotificationContext = createContext<NotificationState | null>(null);
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
-  const {
-    current_stt_provider,
-    current_stt_model,
-    current_llm_provider,
-    current_llm_model,
-  } = useConfigValues([
-    "current_stt_provider",
-    "current_stt_model",
+  const { current_llm_provider, current_llm_model } = useConfigValues([
     "current_llm_provider",
     "current_llm_model",
   ] as const);
+  const transcription = useUsableTranscription();
 
   const hasConfigBanner =
-    !isConfiguredSttModel(current_stt_provider, current_stt_model) ||
+    transcription.needsProvider ||
+    transcription.onDeviceNotReady ||
     !current_llm_provider ||
     !current_llm_model;
 

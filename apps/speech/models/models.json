@@ -18,7 +18,8 @@
     "op_types": ["MatMul", "Gemm"]
   },
   "sources": [
-    "https://github.com/WillIsback/Syntheo/releases/download/speech-models-1/{name}"
+    "https://github.com/WillIsback/Syntheo/releases/download/speech-models-1/{name}",
+    "https://huggingface.co/WillisBack/syntheo-speech-models/resolve/bffcd9b4676654bca14ea4d4b256ae8fbc488761/{path}"
   ],
   "files": [
     {

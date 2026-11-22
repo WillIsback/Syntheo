@@ -69,6 +69,8 @@ WEBKIT_DISABLE_DMABUF_RENDERER=1 WEBKIT_DISABLE_COMPOSITING_MODE=1 syntheo
 
 ## Windows
 
+Windows 10 version 2004 (build 19041) or later, or Windows 11, on x64. Syntheo and its transcription program load the Windows DirectML library (`System32\DirectML.dll`) and call `DMLCreateDevice1`, available since DirectML 1.1.0, built into Windows since version 2004; on an earlier version, Syntheo does not start.
+
 ### Installer
 
 Download [`Syntheo-windows-x64-setup.exe`](https://github.com/WillIsback/Syntheo/releases/latest/download/Syntheo-windows-x64-setup.exe), then run it. It installs into your user profile, without administrator rights.

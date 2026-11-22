@@ -610,3 +610,220 @@ fn a_blocked_launch_has_its_own_permanent_code() {
     assert!(error.is_permanent());
     assert_eq!(error.to_on_device_error().kind.code(), "execution_blocked");
 }
+
+fn kill(pid: u32) {
+    std::process::Command::new("kill")
+        .arg("-9")
+        .arg(pid.to_string())
+        .status()
+        .unwrap();
+}
+
+fn tight_policy() -> speech_host::host::RestartPolicy {
+    speech_host::host::RestartPolicy {
+        max_attempts: 3,
+        window: Duration::from_secs(600),
+        stable_after: Duration::from_secs(600),
+    }
+}
+
+// QA de 0.8.0-2 : des écoutes successives (lancement, arrêt voulu en fin
+// d'écoute) ne sont pas des plantages et ne bloquent jamais la source.
+#[tokio::test]
+async fn intentional_stops_never_exhaust_the_restart_budget() {
+    let Some(binary) = binary() else { return };
+    let fixture = fixture(&binary);
+    let host = fixture.host().with_restart_policy(tight_policy());
+    for cycle in 0..10 {
+        let target = host
+            .target(true)
+            .await
+            .unwrap_or_else(|e| panic!("cycle {cycle} : {e:?}"));
+        assert!(target.base_url.starts_with("http://127.0.0.1:"));
+        host.stop().await;
+        assert!(!host.is_running().await);
+    }
+    assert_eq!(host.verifications().await, 10);
+}
+
+// Le garde-fou reste entier : 3 morts non voulues dans la fenêtre bloquent.
+#[tokio::test]
+async fn unintended_deaths_still_exhaust_the_restart_budget() {
+    let Some(binary) = binary() else { return };
+    let fixture = fixture(&binary);
+    let host = fixture.host().with_restart_policy(tight_policy());
+    for _ in 0..3 {
+        host.target(true).await.expect("lancement");
+        kill(host.pid().await.unwrap());
+        tokio::time::sleep(Duration::from_millis(200)).await;
+    }
+    assert_eq!(
+        host.target(true).await.unwrap_err(),
+        HostError::RestartBudget
+    );
+}
+
+// Un module mort pendant la session, puis arrêté par la fin d'écoute, reste
+// compté : l'arrêt voulu ne blanchit pas un plantage.
+#[tokio::test]
+async fn a_crash_followed_by_a_stop_still_counts() {
+    let Some(binary) = binary() else { return };
+    let fixture = fixture(&binary);
+    let host = fixture.host().with_restart_policy(tight_policy());
+    for _ in 0..3 {
+        host.target(true).await.expect("lancement");
+        kill(host.pid().await.unwrap());
+        tokio::time::sleep(Duration::from_millis(200)).await;
+        host.stop().await;
+    }
+    assert_eq!(
+        host.target(true).await.unwrap_err(),
+        HostError::RestartBudget
+    );
+}
+
+// Arrêts voulus et plantages mêlés : seuls les plantages comptent.
+#[tokio::test]
+async fn only_crashes_count_between_intentional_stops() {
+    let Some(binary) = binary() else { return };
+    let fixture = fixture(&binary);
+    let host = fixture.host().with_restart_policy(tight_policy());
+    for _ in 0..2 {
+        host.target(true).await.expect("lancement");
+        kill(host.pid().await.unwrap());
+        tokio::time::sleep(Duration::from_millis(200)).await;
+        for _ in 0..3 {
+            host.target(true).await.expect("relance puis écoutes");
+            host.stop().await;
+        }
+    }
+    // Deux plantages comptés sur trois admis : un lancement passe encore.
+    host.target(true).await.expect("encore admis");
+    kill(host.pid().await.unwrap());
+    tokio::time::sleep(Duration::from_millis(200)).await;
+    assert_eq!(
+        host.target(true).await.unwrap_err(),
+        HostError::RestartBudget
+    );
+}
+
+/// Compagnon que le système refuse d'exécuter : son interpréteur n'est pas
+/// exécutable, `execve` rend EACCES comme sur un montage noexec ou sous une
+/// règle AppLocker.
+#[cfg(unix)]
+fn blocked_fixture() -> Fixture {
+    use std::os::unix::fs::PermissionsExt;
+    let install = tempfile::tempdir().unwrap();
+    let binary = install.path().join(binary_name());
+    std::fs::write(&binary, "#!/etc/passwd\n").unwrap();
+    std::fs::set_permissions(&binary, std::fs::Permissions::from_mode(0o755)).unwrap();
+    fixture_in(install)
+}
+
+// QA de 0.8.0-2 : exécution refusée par le système. La mise en service
+// s'arrête au premier refus, avec sa raison, sans tenter les autres profils
+// ni finir en « crashing » ; l'hôte rend la même raison ensuite.
+#[cfg(unix)]
+#[tokio::test]
+async fn a_blocked_launch_stops_commissioning_with_its_reason() {
+    let fixture = blocked_fixture();
+    let host = fixture.host();
+    let result = host
+        .commission(true, Duration::from_secs(1))
+        .await
+        .expect("mesure enregistrée");
+    assert_eq!(result.profile, None);
+    assert_eq!(result.measures.len(), 1, "{:?}", result.measures);
+    assert_eq!(
+        result.measures[0].error.as_deref(),
+        Some("execution_blocked")
+    );
+    assert_eq!(host.launch_refusal().as_deref(), Some("execution_blocked"));
+    assert_eq!(host.verifications().await, 1);
+    assert_eq!(
+        host.target(true).await.unwrap_err(),
+        HostError::ExecutionBlocked
+    );
+}
+
+// Un module qui s'arrête aussitôt n'est pas un refus d'exécution : chaque
+// profil échoue (lancement raté, passager) jusqu'à la pause de relances, et
+// la mesure est alors refusée sans rien enregistrer.
+#[cfg(unix)]
+#[tokio::test]
+async fn a_crashing_module_is_not_a_launch_refusal() {
+    let fixture = crashing_fixture();
+    let host = fixture.host();
+    let error = host
+        .commission(true, Duration::from_secs(1))
+        .await
+        .unwrap_err();
+    assert_eq!(error, "crashing");
+    assert!(host.commissioning().is_none());
+    assert_eq!(host.launch_refusal(), None);
+}
+
+// Vérification de f84794c4 : sous Windows, un accès refusé peut venir d'un
+// antivirus qui tient la copie privée tout juste écrite. Une seule nouvelle
+// tentative, avec une copie neuve, avant de le déclarer définitif.
+#[cfg(unix)]
+#[tokio::test]
+async fn windows_retries_an_access_denied_launch_once_with_a_fresh_copy() {
+    let fixture = blocked_fixture();
+    let host = fixture.host().with_windows_spawn_rules();
+    assert_eq!(
+        host.target(true).await.unwrap_err(),
+        HostError::ExecutionBlocked
+    );
+    // Deux vérifications (deux copies) pour une seule tentative comptée.
+    assert_eq!(host.verifications().await, 2);
+    // Sans les règles de Windows (Linux, noexec) : définitif tout de suite.
+    let linux_fixture = blocked_fixture();
+    let linux = linux_fixture.host();
+    assert_eq!(
+        linux.target(true).await.unwrap_err(),
+        HostError::ExecutionBlocked
+    );
+    assert_eq!(linux.verifications().await, 1);
+}
+
+// Vérification de f84794c4 : un poste mesuré dont le module plante en boucle
+// pendant l'écoute. « Mesurer à nouveau » pendant le refus de 10 min est
+// refusé sans rien écrire ; le profil retenu est gardé.
+#[cfg(unix)]
+#[tokio::test]
+async fn a_measure_during_the_restart_pause_keeps_the_profile() {
+    use speech_host::commissioning::{Commissioning, Profile, load, save};
+    let fixture = crashing_fixture();
+    let build = fixture.companion().build_id() ^ speech_host::models::fingerprint();
+    let kept = Commissioning {
+        profile: Some(Profile::TwoStreamsDiarized),
+        measures: vec![],
+        measured_at: 1,
+        module_build: build,
+    };
+    save(fixture.data.path(), &kept).unwrap();
+    let host = fixture
+        .host()
+        .with_restart_policy(speech_host::host::RestartPolicy {
+            max_attempts: 2,
+            window: Duration::from_secs(600),
+            stable_after: Duration::from_secs(600),
+        });
+    assert!(host.profile().is_some());
+    for _ in 0..2 {
+        assert!(matches!(host.target(true).await, Err(HostError::Launch(_))));
+    }
+    assert_eq!(
+        host.target(true).await.unwrap_err(),
+        HostError::RestartBudget
+    );
+    let error = host
+        .commission(true, Duration::from_secs(1))
+        .await
+        .unwrap_err();
+    assert_eq!(error, "crashing");
+    assert!(host.profile().is_some());
+    assert_eq!(load(fixture.data.path(), build), Some(kept));
+    assert_eq!(host.launch_refusal(), None);
+}

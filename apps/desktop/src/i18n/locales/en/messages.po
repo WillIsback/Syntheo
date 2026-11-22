@@ -2469,6 +2469,10 @@ msgstr "Import"
 msgid "Import progress"
 msgstr "Import progress"
 
+#: src/stt/audio-import-feedback.ts
+msgid "Importing a file goes through a transcription server: transcription on this computer only transcribes live recordings. Add a server in Settings › Transcription."
+msgstr "Importing a file goes through a transcription server: transcription on this computer only transcribes live recordings. Add a server in Settings › Transcription."
+
 #: src/session/components/note-input/transcript/screens/empty.tsx
 msgid "Importing audio..."
 msgstr "Importing audio..."
@@ -3831,6 +3835,7 @@ msgstr "Only on-premise OpenAI-compatible servers are supported (vLLM, Ollama, l
 #: src/home/note-index.tsx
 #: src/session/move-note.tsx
 #: src/shared/open-note-dialog.tsx
+#: src/sidebar/toast/registry.tsx
 msgid "Open"
 msgstr "Open"
 
@@ -4514,6 +4519,7 @@ msgid "Respect Do-Not-Disturb mode"
 msgstr "Respect Do-Not-Disturb mode"
 
 #: src/shared/control.tsx
+#: src/shared/long-load-gate.tsx
 msgid "Restart App"
 msgstr "Restart App"
 
@@ -5448,6 +5454,10 @@ msgstr "Syntheo could not remove the temporary audio. Cleanup will be retried au
 msgid "Syntheo could not save part of the live transcript."
 msgstr "Syntheo could not save part of the live transcript."
 
+#: src/shared/long-load-gate.tsx
+msgid "Syntheo could not start"
+msgstr "Syntheo could not start"
+
 #: src/shared/keychain.ts
 msgid "Syntheo couldn't access the system keyring. Unlock your login keyring, or install one (GNOME Keyring, KWallet), then try again."
 msgstr "Syntheo couldn't access the system keyring. Unlock your login keyring, or install one (GNOME Keyring, KWallet), then try again."
@@ -5483,6 +5493,10 @@ msgstr "Syntheo keeps listening while live transcription reconnects. No audio is
 #: src/onboarding/index.tsx
 msgid "Syntheo needs access to your microphone and system audio to record and transcribe your meetings"
 msgstr "Syntheo needs access to your microphone and system audio to record and transcribe your meetings"
+
+#: src/shared/long-load-gate.tsx
+msgid "Syntheo needs an update"
+msgstr "Syntheo needs an update"
 
 #: src/onboarding/index.tsx
 msgid "Syntheo needs microphone and system audio to transcribe your meetings, plus Accessibility to read meeting controls, visible chat."
@@ -5884,6 +5898,7 @@ msgid "The measurement could not run. Try again."
 msgstr "The measurement could not run. Try again."
 
 #. placeholder {0}: describeOnDeviceError(e.message)
+#. placeholder {0}: describeOnDeviceError(refusal)
 #: src/settings/ai/stt/on-device-card.tsx
 msgid "The measurement did not complete: {0}"
 msgstr "The measurement did not complete: {0}"
@@ -6016,6 +6031,10 @@ msgstr "The server that turns speech into text during your meetings. Audio is ne
 msgid "The server transcribes with the model it loaded, whatever the model chosen here."
 msgstr "The server transcribes with the model it loaded, whatever the model chosen here."
 
+#: src/shared/long-load-gate.tsx
+msgid "The settings file managed by your organization (managed_settings.json) is invalid, so Syntheo does not start. Your existing data was left unchanged. Contact your administrator: Syntheo will start once the file is fixed."
+msgstr "The settings file managed by your organization (managed_settings.json) is invalid, so Syntheo does not start. Your existing data was left unchanged. Contact your administrator: Syntheo will start once the file is fixed."
+
 #: src/chat/components/message/tool/edit-summary.tsx
 msgid "The summary edit could not be applied."
 msgstr "The summary edit could not be applied."
@@ -6107,8 +6126,16 @@ msgid "the transcription module of this computer keeps stopping"
 msgstr "the transcription module of this computer keeps stopping"
 
 #: src/stt/on-device.ts
+msgid "The transcription program keeps stopping. Try again in a few minutes."
+msgstr "The transcription program keeps stopping. Try again in a few minutes."
+
+#: src/stt/on-device.ts
 msgid "The transcription program of this computer has been modified. Reinstall Syntheo."
 msgstr "The transcription program of this computer has been modified. Reinstall Syntheo."
+
+#: src/stt/on-device.ts
+msgid "The transcription program or its models have been modified or are missing. Reinstall Syntheo or install the models again."
+msgstr "The transcription program or its models have been modified or are missing. Reinstall Syntheo or install the models again."
 
 #: src/stt/live-transcript-interrupted.ts
 msgid "the transcription service"
@@ -6224,6 +6251,11 @@ msgstr "This computer is chosen for transcription, but it has not been measured 
 #: src/settings/ai/stt/on-device-card.tsx
 msgid "This computer is chosen for transcription, but its models are not installed: live transcription is paused."
 msgstr "This computer is chosen for transcription, but its models are not installed: live transcription is paused."
+
+#. placeholder {0}: describeOnDeviceError(refusal)
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "This computer is chosen for transcription, but live transcription is paused: {0}"
+msgstr "This computer is chosen for transcription, but live transcription is paused: {0}"
 
 #: src/settings/ai/stt/on-device-card.tsx
 msgid "This computer is chosen for transcription, but this version of Syntheo does not include transcription on this computer: live transcription is paused."
@@ -6426,6 +6458,10 @@ msgid "Transcription"
 msgstr "Transcription"
 
 #: src/sidebar/settings-server-status.tsx
+msgid "Transcription · checking…"
+msgstr "Transcription · checking…"
+
+#: src/sidebar/settings-server-status.tsx
 msgid "Transcription · connected"
 msgstr "Transcription · connected"
 
@@ -6438,8 +6474,16 @@ msgid "Transcription · not tested"
 msgstr "Transcription · not tested"
 
 #: src/sidebar/settings-server-status.tsx
+msgid "Transcription · on this computer"
+msgstr "Transcription · on this computer"
+
+#: src/sidebar/settings-server-status.tsx
 msgid "Transcription · testing…"
 msgstr "Transcription · testing…"
+
+#: src/sidebar/settings-server-status.tsx
+msgid "Transcription · this computer is not ready"
+msgstr "Transcription · this computer is not ready"
 
 #: src/sidebar/settings-server-status.tsx
 msgid "Transcription · unreachable"
@@ -6468,6 +6512,10 @@ msgstr "Transcription on this computer is disabled by your administrator; transc
 #: src/stt/on-device.ts
 msgid "Transcription on this computer is in use. Stop the recording, then try again."
 msgstr "Transcription on this computer is in use. Stop the recording, then try again."
+
+#: src/sidebar/toast/registry.tsx
+msgid "Transcription on this computer is not ready"
+msgstr "Transcription on this computer is not ready"
 
 #: src/stt/on-device.ts
 msgid "Transcription on this computer uses the microphone only: the computer's sound (remote participants) is not transcribed."
@@ -7040,9 +7088,17 @@ msgstr "Your administrator has disabled transcription on this computer."
 msgid "Your choice"
 msgstr "Your choice"
 
+#: src/shared/long-load-gate.tsx
+msgid "Your data was updated by a newer version of Syntheo, such as Syntheo Nightly, and this version cannot open it yet. Your existing data was left unchanged. Install the latest version of Syntheo, or keep using the newer app until this version catches up."
+msgstr "Your data was updated by a newer version of Syntheo, such as Syntheo Nightly, and this version cannot open it yet. Your existing data was left unchanged. Install the latest version of Syntheo, or keep using the newer app until this version catches up."
+
 #: src/settings/dictionary/index.tsx
 msgid "Your dictionary is empty"
 msgstr "Your dictionary is empty"
+
+#: src/shared/long-load-gate.tsx
+msgid "Your existing data was left unchanged. Please restart the app. If the problem continues, contact support."
+msgstr "Your existing data was left unchanged. Please restart the app. If the problem continues, contact support."
 
 #: src/home/folder-cards.tsx
 msgid "Your folders"

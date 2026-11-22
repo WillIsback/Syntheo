@@ -15,6 +15,9 @@ type ToastRegistryParams = {
   onOpenUpdate?: () => void;
   hasLLMConfigured: boolean;
   hasSttConfigured: boolean;
+  // « Sur ce poste » choisi mais pas prêt (modèles absents, poste non
+  // mesuré) : l'écoute est en pause, un serveur n'y changerait rien.
+  onDeviceNotReady?: boolean;
   isAiTranscriptionTabActive: boolean;
   isAiIntelligenceTabActive: boolean;
   onOpenLLMSettings: () => void;
@@ -32,6 +35,7 @@ export function createToastRegistry({
   onOpenUpdate = () => {},
   hasLLMConfigured,
   hasSttConfigured,
+  onDeviceNotReady = false,
   isAiTranscriptionTabActive,
   isAiIntelligenceTabActive,
   onOpenLLMSettings,
@@ -72,6 +76,18 @@ export function createToastRegistry({
         lifecycle: { type: "condition-bound" },
       },
       condition: () => !hasUsableSttConfigured && !isAiTranscriptionTabActive,
+    },
+    {
+      toast: {
+        id: "on-device-not-ready",
+        description: t`Transcription on this computer is not ready`,
+        primaryAction: {
+          label: t`Open`,
+          onClick: onOpenSTTSettings,
+        },
+        lifecycle: { type: "condition-bound" },
+      },
+      condition: () => onDeviceNotReady && !isAiTranscriptionTabActive,
     },
     {
       toast: {

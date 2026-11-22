@@ -23,7 +23,9 @@
 #      brouillon en prerelease, jamais « latest » (le système de mise à jour
 #      de l'application ne doit pas la prendre pour une version) ;
 #   5. envoi vers Hugging Face (fichiers, fiche du modèle, accord OpenMDW et
-#      avis NVIDIA), jeton par variable d'environnement seulement ;
+#      avis NVIDIA), jeton par variable d'environnement seulement ; si le
+#      dépôt contient déjà ces fichiers à l'identique (même SHA-256), rien
+#      n'est envoyé et la révision existante est reprise ;
 #   6. second contrôle : retéléchargement depuis les deux hôtes ;
 #   7. révision Hugging Face et sources à épingler dans models.json, dans le
 #      résumé du job.
@@ -159,6 +161,11 @@ jobs:
       - name: Contrôle bloquant contre models.json
         run: python3 -I apps/speech/models/verify.py assets --flat
 
+      # Tests de hf_upload.py (comparaison avec Hugging Face, dossier
+      # incomplet refusé), avant l'attestation, le tag et tout envoi.
+      - name: Tests de l'envoi vers Hugging Face
+        run: python3 -I -m unittest discover -s apps/speech/models -p 'test_*.py'
+
       # Reprise : les assets publiés doivent porter l'attestation de
       # provenance de ce workflow, faite au premier passage.
       - name: Exiger l'attestation des assets (reprise)
@@ -258,9 +265,16 @@ jobs:
           UV_PYTHON_DOWNLOADS: never
         run: |
           set -euo pipefail
-          revision=$(uv run --locked --script apps/speech/models/hf_upload.py hf "$HF_REPO" "Modèles de syntheo-speech ($VERSION)" | tail -1)
+          # Fichiers déjà identiques sur le dépôt : rien n'est envoyé, la
+          # révision existante est reprise (contrôle et résumé ci-dessous).
+          out=$(uv run --locked --script apps/speech/models/hf_upload.py hf "$HF_REPO" "Modèles de syntheo-speech ($VERSION)")
+          printf '%s\n' "$out" | head -n -1
+          revision=$(printf '%s\n' "$out" | tail -1)
           [[ "$revision" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::révision Hugging Face inattendue"; exit 1; }
           echo "revision=$revision" >> "$GITHUB_OUTPUT"
+          if printf '%s\n' "$out" | grep -q '^identique au dépôt'; then
+            echo "reused=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Second contrôle depuis les deux hôtes
         if: inputs.publish
@@ -289,10 +303,15 @@ jobs:
         env:
           REPO: ${{ github.repository }}
           REVISION: ${{ steps.hf.outputs.revision }}
+          REUSED: ${{ steps.hf.outputs.reused }}
         run: |
           {
             echo "## Modèles $VERSION publiés"
             echo
+            if [ "$REUSED" = "true" ]; then
+              echo "Hugging Face contenait déjà ces fichiers à l'identique : aucun envoi, révision existante reprise."
+              echo
+            fi
             echo "Révision Hugging Face : \`$REVISION\`"
             echo
             echo "Sources à épingler (\`sources\` de apps/speech/models/models.json, ou \`SYNTHEO_SPEECH_MODELS_URLS\`) :"

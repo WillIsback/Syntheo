@@ -12,5 +12,10 @@ directml = ["ort/directml"]
 
 [dependencies]
 ndarray = "0.16"
-ort = { version = "=2.0.0-rc.10", features = ["ndarray"] }
+# Sans `copy-dylibs` (défaut d'ort) : il copiait DirectML.dll à côté de
+# l'exécutable, que le bundler MSI de Tauri embarque (tout *.dll du dossier
+# de sortie) et pas NSIS ; l'application chargeait alors une autre DirectML
+# selon l'installeur. Elle utilise celle de Windows (System32), comme le
+# compagnon. ONNX Runtime reste lié statiquement.
+ort = { version = "=2.0.0-rc.10", default-features = false, features = ["std", "ndarray", "tracing", "download-binaries"] }
 thiserror = { workspace = true }

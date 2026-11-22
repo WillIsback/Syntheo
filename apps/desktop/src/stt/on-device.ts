@@ -137,6 +137,10 @@ export function describeOnDeviceError(code: string): string {
       return t`Installation cancelled. A download resumes where it stopped.`;
     case "measuring":
       return t`A measurement is already in progress.`;
+    case "invalid":
+      return t`The transcription program or its models have been modified or are missing. Reinstall Syntheo or install the models again.`;
+    case "crashing":
+      return t`The transcription program keeps stopping. Try again in a few minutes.`;
     case "execution_blocked":
       return t`This computer does not allow the transcription program to run from the Syntheo data folder (application control policy or noexec mount). Ask your administrator.`;
     case "no_commissioning_audio":
@@ -148,6 +152,25 @@ export function describeOnDeviceError(code: string): string {
     default:
       return t`The operation failed. Try again.`;
   }
+}
+
+// Refus de lancement qui arrête une mise en service (codes de l'hôte) : la
+// mesure n'a pas eu lieu, le poste n'est pas « trop lent ».
+const LAUNCH_REFUSALS = ["execution_blocked", "invalid", "disabled"] as const;
+
+/** Raison du refus de lancement enregistrée par la dernière mise en service. */
+export function launchRefusal(
+  commissioning:
+    | { profile: string | null; measures: { error: string | null }[] }
+    | null
+    | undefined,
+): string | null {
+  if (!commissioning || commissioning.profile) return null;
+  const last = commissioning.measures[commissioning.measures.length - 1];
+  const error = last?.error ?? null;
+  return error && (LAUNCH_REFUSALS as readonly string[]).includes(error)
+    ? error
+    : null;
 }
 
 /** Profil « un seul flux » : seul le micro est transcrit. */

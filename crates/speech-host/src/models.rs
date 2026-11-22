@@ -603,7 +603,7 @@ mod tests {
     // Sources épinglées : la release GitHub speech-models-1, à plat ; chaque
     // fichier y a un nom unique (un asset par fichier).
     #[test]
-    fn the_compiled_sources_point_to_the_github_release() {
+    fn the_compiled_sources_point_to_the_github_release_then_hugging_face() {
         let sources = compiled_sources();
         assert_eq!(
             sources.first().map(Source::as_str),
@@ -617,7 +617,24 @@ mod tests {
         assert!(urls.contains(
             "https://github.com/WillIsback/Syntheo/releases/download/speech-models-1/encoder.onnx.data"
         ));
-        // Aucun gabarit provisoire (révision Hugging Face à venir) parmi les sources.
+        // Puis Hugging Face, en arborescence, à une révision épinglée.
+        assert_eq!(sources.len(), 2);
+        let hf = sources[1].as_str();
+        let revision = hf
+            .strip_prefix("https://huggingface.co/WillisBack/syntheo-speech-models/resolve/")
+            .and_then(|rest| rest.strip_suffix("/{path}"))
+            .expect("gabarit Hugging Face");
+        assert!(
+            revision.len() == 40 && revision.bytes().all(|b| b.is_ascii_hexdigit()),
+            "révision épinglée : {revision}"
+        );
+        assert_eq!(
+            sources[1].url_for("diar/nemotron3_diar_v3.onnx"),
+            format!(
+                "https://huggingface.co/WillisBack/syntheo-speech-models/resolve/{revision}/diar/nemotron3_diar_v3.onnx"
+            )
+        );
+        // Aucun gabarit provisoire parmi les sources.
         assert!(sources.iter().all(|s| !s.as_str().contains('<')));
     }
 }

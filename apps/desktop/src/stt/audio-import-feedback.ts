@@ -8,6 +8,7 @@ import {
   getBatchProvider,
   getFileTranscriptionRoute,
 } from "./transcription-route";
+import { useUsableTranscription } from "./usable-transcription";
 import { useSTTConnection } from "./useSTTConnection";
 
 import { useTabs } from "~/store/zustand/tabs";
@@ -21,13 +22,19 @@ import { useTabs } from "~/store/zustand/tabs";
 type AudioImportAvailability =
   | { status: "ready"; route: "batch" | "realtime" }
   | { status: "no_provider" }
+  | { status: "server_required" }
   | { status: "unsupported" };
 
 export function getAudioImportAvailability(
   conn: { provider: string; model: string } | null,
+  onDeviceActive = false,
 ): AudioImportAvailability {
   if (!conn) {
-    return { status: "no_provider" };
+    // « Sur ce poste » ne transcrit que le direct d'une écoute : l'import
+    // d'un fichier passe toujours par un serveur.
+    return onDeviceActive
+      ? { status: "server_required" }
+      : { status: "no_provider" };
   }
   // Même choix de cible que `useRunBatch` avec `allowRealtimeStream`.
   const route = getFileTranscriptionRoute(conn);
@@ -56,7 +63,11 @@ export function getBatchAvailability(
 
 export function useAudioImportAvailability(): AudioImportAvailability {
   const { serverConn: conn } = useSTTConnection();
-  return useMemo(() => getAudioImportAvailability(conn), [conn]);
+  const onDeviceActive = useUsableTranscription().active === "on_device";
+  return useMemo(
+    () => getAudioImportAvailability(conn, onDeviceActive),
+    [conn, onDeviceActive],
+  );
 }
 
 export function describeAudioImportUnavailable(
@@ -69,6 +80,8 @@ export function describeAudioImportUnavailable(
       return t`This model can't transcribe a file. Choose another transcription model.`;
     case "no_provider":
       return t`No transcription service is set up: importing a file requires a transcription model.`;
+    case "server_required":
+      return t`Importing a file goes through a transcription server: transcription on this computer only transcribes live recordings. Add a server in Settings › Transcription.`;
   }
 }
 

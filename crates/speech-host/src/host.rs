@@ -139,6 +139,9 @@ struct Running {
     stdin: Option<ChildStdin>,
     target: OnDeviceTarget,
     started_at: Instant,
+    /// Tentative comptée pour ce lancement (instant ajouté à `attempts`) :
+    /// retirée si le lancement se termine par un arrêt voulu.
+    attempt: Option<Instant>,
     /// Objets vérifiés gardés tant que le processus vit.
     _staging: Option<crate::verify::Staging>,
 }
@@ -215,7 +218,8 @@ async fn launch(
     threads: usize,
     extra_args: &[String],
     load: LoadSlot,
-) -> Result<Running, HostError> {
+    windows_rules: bool,
+) -> Result<Running, LaunchFailure> {
     let mut command = Command::new(&verified.binary);
     command.args(extra_args);
     command
@@ -264,10 +268,12 @@ async fn launch(
         // La copie vérifiée s'exécute depuis le dossier de données : une
         // politique de contrôle des applications par chemin (AppLocker,
         // SRP) ou un montage noexec la refuse (issue 683, revue 7).
-        if launch_blocked(&e) {
-            HostError::ExecutionBlocked
-        } else {
-            HostError::Launch(format!("{:?}", e.kind()))
+        match classify_spawn_error(&e, windows_rules) {
+            SpawnRefusal::Blocked => LaunchFailure::Host(HostError::ExecutionBlocked),
+            SpawnRefusal::AccessDenied => LaunchFailure::AccessDenied,
+            SpawnRefusal::Other => {
+                LaunchFailure::Host(HostError::Launch(format!("{:?}", e.kind())))
+            }
         }
     })?;
 
@@ -311,7 +317,7 @@ async fn launch(
         .map_err(|_| HostError::Launch("invalid announcement".into()))?;
     let port = value["port"].as_u64().filter(|p| (1..=65535).contains(p));
     if value["event"] != "listening" || value["protocol"].as_u64() != Some(PROTOCOL) {
-        return Err(HostError::Launch("unexpected announcement".into()));
+        return Err(HostError::Launch("unexpected announcement".into()).into());
     }
     let port = port.ok_or_else(|| HostError::Launch("invalid port".into()))? as u16;
     let token = OnDeviceToken::new(token).ok_or_else(|| HostError::Launch("token".into()))?;
@@ -341,6 +347,7 @@ async fn launch(
         stdin: Some(stdin),
         _staging: staging,
         started_at: Instant::now(),
+        attempt: None,
         target: OnDeviceTarget {
             base_url: format!("http://127.0.0.1:{port}"),
             token,
@@ -380,6 +387,9 @@ pub struct SpeechHost {
     measuring_profile: std::sync::atomic::AtomicUsize,
     /// Mise en service du compagnon, lue une fois puis gardée.
     commissioned: std::sync::Mutex<Option<Option<crate::commissioning::Commissioning>>>,
+    /// Règles de lancement de Windows (accès refusé retenté une fois) ;
+    /// activables sur une autre plateforme pour les essais.
+    windows_spawn_rules: bool,
 }
 
 /// Libère un indicateur (installation, mesure), même en cas d'erreur.
@@ -438,7 +448,15 @@ impl SpeechHost {
             measuring: Default::default(),
             measuring_profile: Default::default(),
             load: LoadSlot::default(),
+            windows_spawn_rules: cfg!(windows),
         }
+    }
+
+    /// Essais : applique les règles de lancement de Windows.
+    #[doc(hidden)]
+    pub fn with_windows_spawn_rules(mut self) -> Self {
+        self.windows_spawn_rules = true;
+        self
     }
 
     /// Modèles attendus (essais : un modèle factice).
@@ -527,40 +545,63 @@ impl SpeechHost {
             return Err(HostError::RestartBudget);
         }
         state.attempts.push(now);
-        state.verifications += 1;
-        let (root, companion, models) = (
-            self.root.clone(),
-            self.companion.clone(),
-            self.models.clone(),
-        );
-        let verified = match tokio::task::spawn_blocking(move || {
-            crate::verify::remove_stale_copies(&root);
-            verify(companion.as_ref(), &root.join("models"), &models, &root)
-        })
-        .await
-        {
-            Ok(Ok(verified)) => verified,
-            // Erreur d'entrée-sortie (disque plein…) : passagère, comptée
-            // comme un lancement raté, jamais rangée comme refus.
-            Ok(Err(crate::verify::VerifyError::Io)) => {
-                return Err(HostError::Launch(
-                    crate::verify::VerifyError::Io.to_string(),
-                ));
+        // Sous Windows, un accès refusé (ERROR_ACCESS_DENIED) peut venir d'un
+        // antivirus qui tient encore la copie privée tout juste écrite : une
+        // seule nouvelle tentative, avec une copie neuve, avant de le déclarer
+        // définitif. Un refus de politique (1260) ou, sous Linux, un montage
+        // noexec est définitif tout de suite.
+        let mut retried = false;
+        let running = loop {
+            state.verifications += 1;
+            let (root, companion, models) = (
+                self.root.clone(),
+                self.companion.clone(),
+                self.models.clone(),
+            );
+            let verified = match tokio::task::spawn_blocking(move || {
+                crate::verify::remove_stale_copies(&root);
+                verify(companion.as_ref(), &root.join("models"), &models, &root)
+            })
+            .await
+            {
+                Ok(Ok(verified)) => verified,
+                // Erreur d'entrée-sortie (disque plein…) : passagère, comptée
+                // comme un lancement raté, jamais rangée comme refus.
+                Ok(Err(crate::verify::VerifyError::Io)) => {
+                    return Err(HostError::Launch(
+                        crate::verify::VerifyError::Io.to_string(),
+                    ));
+                }
+                Ok(Err(error)) => {
+                    state.rejected = Some(error.code().to_owned());
+                    return Err(HostError::Verify(error.code().to_owned()));
+                }
+                Err(_) => return Err(HostError::Verify("io".into())),
+            };
+            match launch(
+                verified,
+                &self.engine,
+                self.threads,
+                &self.extra_args,
+                self.load.clone(),
+                self.windows_spawn_rules,
+            )
+            .await
+            {
+                Ok(running) => break running,
+                Err(LaunchFailure::AccessDenied) if !retried => {
+                    tracing::warn!(
+                        target: "syntheo_speech",
+                        "launch refused (access denied); retrying once with a fresh copy"
+                    );
+                    retried = true;
+                }
+                Err(LaunchFailure::AccessDenied) => return Err(HostError::ExecutionBlocked),
+                Err(LaunchFailure::Host(error)) => return Err(error),
             }
-            Ok(Err(error)) => {
-                state.rejected = Some(error.code().to_owned());
-                return Err(HostError::Verify(error.code().to_owned()));
-            }
-            Err(_) => return Err(HostError::Verify("io".into())),
         };
-        let running = launch(
-            verified,
-            &self.engine,
-            self.threads,
-            &self.extra_args,
-            self.load.clone(),
-        )
-        .await?;
+        let mut running = running;
+        running.attempt = Some(now);
         let target = running.target.clone();
         state.running = Some(running);
         Ok(target)
@@ -569,11 +610,23 @@ impl SpeechHost {
     /// Arrête le lancement en cours, s'il y en a un ; un refus de
     /// vérification sera revérifié au prochain lancement. L'état « en panne »
     /// dure jusqu'à la fin de sa fenêtre.
+    ///
+    /// Un arrêt voulu d'un module encore vivant (fin d'écoute, fin de mesure)
+    /// n'est pas un plantage : la tentative de ce lancement est retirée du
+    /// compte. Un module déjà mort au moment de l'arrêt reste compté.
     pub async fn stop(&self) {
         let running = {
             let mut state = self.state.lock().await;
             state.rejected = None;
-            state.running.take()
+            let mut running = state.running.take();
+            if let Some(running) = running.as_mut()
+                && matches!(running.child.try_wait(), Ok(None))
+                && let Some(at) = running.attempt
+                && let Some(index) = state.attempts.iter().position(|a| *a == at)
+            {
+                state.attempts.remove(index);
+            }
+            running
         };
         let Some(mut running) = running else { return };
         drop(running.stdin.take());
@@ -743,6 +796,21 @@ impl SpeechHost {
         loaded
     }
 
+    /// Refus de lancement qui a arrêté la dernière mise en service (par
+    /// exemple `execution_blocked`), s'il n'y a pas de profil retenu.
+    pub fn launch_refusal(&self) -> Option<String> {
+        let commissioning = self.commissioning()?;
+        if commissioning.profile.is_some() {
+            return None;
+        }
+        commissioning
+            .measures
+            .last()?
+            .error
+            .clone()
+            .filter(|code| LAUNCH_REFUSALS.contains(&code.as_str()))
+    }
+
     /// Profil retenu, pour l'écoute.
     pub fn profile(&self) -> Option<owhisper_client::OnDeviceProfile> {
         self.commissioning()?
@@ -800,6 +868,25 @@ impl SpeechHost {
                 Ok(target) => measure(&target, profile, &audio, duration)
                     .await
                     .map_err(|_| "measure_failed".to_owned()),
+                // Plantages en boucle : refus passager (10 min), qui ne dit
+                // rien du poste. La mesure est refusée sans rien écrire : un
+                // profil déjà retenu est gardé.
+                Err(HostError::RestartBudget) => {
+                    return Err(HostError::RestartBudget
+                        .to_on_device_error()
+                        .kind
+                        .code()
+                        .to_owned());
+                }
+                // Refus de lancement définitif (exécution refusée par le
+                // système, compagnon ou modèles refusés, réglage géré) : les
+                // profils suivants échoueraient de même ; la mesure s'arrête
+                // sur ce refus, enregistré avec sa raison.
+                Err(error) if error.is_permanent() => {
+                    let reason = error.to_on_device_error().kind.code().to_owned();
+                    measures.push(crate::commissioning::Measure::failed(profile, reason));
+                    break;
+                }
                 Err(error) => Err(error.to_on_device_error().kind.code().to_owned()),
             };
             let mut result = match measured {
@@ -866,34 +953,73 @@ impl SpeechHost {
     }
 }
 
-/// Lancement refusé par le système : accès refusé (montage noexec, droits),
-/// ou, sous Windows, `ERROR_ACCESS_DISABLED_BY_POLICY` (1260) d'AppLocker
-/// et des stratégies de restriction logicielle, que std ne classe pas.
-fn launch_blocked(error: &std::io::Error) -> bool {
+/// Codes des refus de lancement définitifs qui arrêtent une mise en service
+/// (`OnDeviceErrorKind::code`).
+const LAUNCH_REFUSALS: [&str; 3] = ["execution_blocked", "invalid", "disabled"];
+
+/// Échec d'un lancement : erreur de l'hôte, ou accès refusé sous Windows,
+/// peut-être passager (nouvelle tentative possible).
+enum LaunchFailure {
+    Host(HostError),
+    AccessDenied,
+}
+
+impl From<HostError> for LaunchFailure {
+    fn from(error: HostError) -> Self {
+        Self::Host(error)
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum SpawnRefusal {
+    /// Refus définitif : politique (AppLocker, SRP) ou montage noexec.
+    Blocked,
+    /// Windows, ERROR_ACCESS_DENIED : politique ou antivirus qui tient la
+    /// copie ; définitif seulement s'il se répète.
+    AccessDenied,
+    Other,
+}
+
+/// Classe une erreur de lancement. Sous Windows,
+/// `ERROR_ACCESS_DISABLED_BY_POLICY` (1260, que std ne classe pas) est un
+/// refus de politique ; un accès refusé (5) peut être passager. Ailleurs, un
+/// accès refusé (EACCES : noexec, droits) est définitif.
+fn classify_spawn_error(error: &std::io::Error, windows: bool) -> SpawnRefusal {
     const ERROR_ACCESS_DISABLED_BY_POLICY: i32 = 1260;
-    error.kind() == std::io::ErrorKind::PermissionDenied
-        || (cfg!(windows) && error.raw_os_error() == Some(ERROR_ACCESS_DISABLED_BY_POLICY))
+    if windows && error.raw_os_error() == Some(ERROR_ACCESS_DISABLED_BY_POLICY) {
+        SpawnRefusal::Blocked
+    } else if error.kind() == std::io::ErrorKind::PermissionDenied {
+        if windows {
+            SpawnRefusal::AccessDenied
+        } else {
+            SpawnRefusal::Blocked
+        }
+    } else {
+        SpawnRefusal::Other
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{launch_blocked, parse_load};
+    use super::{SpawnRefusal, classify_spawn_error, parse_load};
 
-    // Revue, R4 : refus de la politique d'exécution reconnus.
+    // Revue, R4 et vérification de f84794c4 : refus de politique définitif
+    // tout de suite ; sous Windows, accès refusé retenté une fois ; sous
+    // Linux, EACCES (noexec) définitif.
     #[test]
-    fn recognizes_a_blocked_launch() {
-        assert!(launch_blocked(&std::io::Error::from(
-            std::io::ErrorKind::PermissionDenied
-        )));
+    fn classifies_launch_refusals() {
+        use std::io::{Error, ErrorKind};
+        let policy = Error::from_raw_os_error(1260);
+        let denied = Error::from(ErrorKind::PermissionDenied);
+        let missing = Error::from(ErrorKind::NotFound);
+        assert_eq!(classify_spawn_error(&policy, true), SpawnRefusal::Blocked);
         assert_eq!(
-            launch_blocked(&std::io::Error::from_raw_os_error(1260)),
-            cfg!(windows)
+            classify_spawn_error(&denied, true),
+            SpawnRefusal::AccessDenied
         );
-        assert!(!launch_blocked(&std::io::Error::from(
-            std::io::ErrorKind::NotFound
-        )));
-        // ERROR_INVALID_FUNCTION (1) n'est pas un refus de politique.
-        assert!(!cfg!(windows) || !launch_blocked(&std::io::Error::from_raw_os_error(1)));
+        assert_eq!(classify_spawn_error(&missing, true), SpawnRefusal::Other);
+        assert_eq!(classify_spawn_error(&denied, false), SpawnRefusal::Blocked);
+        assert_eq!(classify_spawn_error(&missing, false), SpawnRefusal::Other);
     }
 
     #[test]

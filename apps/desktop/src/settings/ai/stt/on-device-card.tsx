@@ -16,6 +16,7 @@ import { useSetSettingValues } from "~/settings/queries";
 import { useConfigValues } from "~/shared/config";
 import {
   describeOnDeviceError,
+  launchRefusal,
   downloadOnDeviceModels,
   installOnDeviceModelsFromFolder,
   isEligible,
@@ -157,11 +158,19 @@ export function OnDeviceCard() {
     onSuccess: (result) => {
       setError(null);
       queryClient.setQueryData(ON_DEVICE_COMMISSIONING_QUERY_KEY, result);
-      setNotice(
-        result.profile
-          ? t`Measurement done: ${profileLabels[result.profile as Profile]}.`
-          : t`Measurement done: this computer is too slow for live transcription.`,
-      );
+      const refusal = launchRefusal(result);
+      if (refusal) {
+        setNotice(null);
+        setError(
+          t`The measurement did not complete: ${describeOnDeviceError(refusal)}`,
+        );
+      } else {
+        setNotice(
+          result.profile
+            ? t`Measurement done: ${profileLabels[result.profile as Profile]}.`
+            : t`Measurement done: this computer is too slow for live transcription.`,
+        );
+      }
       if (!result.profile) setSettings({ stt_on_device: false });
     },
     onError: (e: Error) =>
@@ -225,7 +234,10 @@ export function OnDeviceCard() {
     onSuccess: afterInstall,
     onError: installError,
   });
-  const installingHere = downloading.isPending || fromFolder.isPending;
+  // Installation depuis un dossier : la commande attend d'abord le choix du
+  // dossier ; l'installation ne commence (et l'hôte ne rend un avancement)
+  // qu'une fois le dossier choisi.
+  const pendingHere = downloading.isPending || fromFolder.isPending;
   // Toujours lu tant que la carte est affichée : une carte remontée pendant
   // une installation (lancée avant de quitter les réglages) en reprend
   // l'affichage et bloque les boutons.
@@ -235,10 +247,12 @@ export function OnDeviceCard() {
       const result = await transcriptionCommands.onDeviceInstallProgress();
       return result.status === "ok" ? result.data : null;
     },
-    refetchInterval: (query) =>
-      installingHere || query.state.data ? 500 : 2000,
+    refetchInterval: (query) => (pendingHere || query.state.data ? 500 : 2000),
   });
-  const installingElsewhere = !installingHere && !!installProgress.data;
+  const choosingFolder = fromFolder.isPending && !installProgress.data;
+  const installingHere =
+    downloading.isPending || (fromFolder.isPending && !choosingFolder);
+  const installingElsewhere = !pendingHere && !!installProgress.data;
   const installingAny = installingHere || installingElsewhere;
   // Fin d'une installation suivie depuis une carte remontée : état relu.
   const [sawElsewhere, setSawElsewhere] = useState(false);
@@ -276,17 +290,19 @@ export function OnDeviceCard() {
   const chosen = !!stt_on_device;
   const measuringElsewhere = !commissioningRun.isPending && !!progress.data;
   const measuringAny = commissioningRun.isPending || measuringElsewhere;
-  const busy = installingAny || removing.isPending || measuringAny;
+  const busy =
+    installingAny || choosingFolder || removing.isPending || measuringAny;
   const done = installProgress.data;
   const measured = commissioning.data;
   const progressValue = progress.data;
   const usable = installed && !!measured?.profile;
+  const refusal = launchRefusal(measured);
 
   return (
     <ServerCard
       title={<Trans>On this computer</Trans>}
       status={
-        installed ? (
+        installed && !refusal ? (
           <span className="bg-accent text-accent-foreground rounded-full px-2.5 py-0.5 text-[13px] font-medium">
             <Trans>Ready</Trans>
           </span>
@@ -438,9 +454,11 @@ export function OnDeviceCard() {
                 : t`Measuring this computer (one to two minutes)…`
               : measured?.profile
                 ? t`Measured: ${profileLabels[measured.profile as Profile]}.`
-                : measured
-                  ? t`Measured: this computer is too slow for live transcription.`
-                  : t`This computer has not been measured yet.`}
+                : refusal
+                  ? describeOnDeviceError(refusal)
+                  : measured
+                    ? t`Measured: this computer is too slow for live transcription.`
+                    : t`This computer has not been measured yet.`}
           </p>
           <div>
             <button
@@ -493,6 +511,8 @@ export function OnDeviceCard() {
                 Syntheo does not include transcription on this computer: live
                 transcription is paused.
               </Trans>
+            ) : installed && refusal ? (
+              t`This computer is chosen for transcription, but live transcription is paused: ${describeOnDeviceError(refusal)}`
             ) : installed ? (
               <Trans>
                 This computer is chosen for transcription, but it has not been

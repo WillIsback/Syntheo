@@ -166,6 +166,31 @@ describe("OnDeviceCard", () => {
     await waitFor(() => expect(mocks.commission).toHaveBeenCalled());
   });
 
+  // QA de 0.8.0-2 : pendant que le sélecteur de dossier est ouvert, rien
+  // n'est encore installé ; l'avancement n'apparaît qu'après le choix.
+  it("shows no installation while the folder picker is open", async () => {
+    let finish: (value: unknown) => void = () => {};
+    mocks.install.mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
+    mocks.status = { ...mocks.status, downloadable: false };
+    setup();
+    fireEvent.click(await screen.findByText("Install from a folder…"));
+    await waitFor(() => expect(mocks.install).toHaveBeenCalled());
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(screen.queryByTestId("on-device-install-progress")).toBeNull();
+    expect(screen.queryByText("Cancel")).toBeNull();
+    // Dossier choisi : l'hôte rend un avancement.
+    mocks.installProgress = { doneBytes: 0, totalBytes: 1_066_000_000 };
+    await screen.findByTestId("on-device-install-progress", undefined, {
+      timeout: 3000,
+    });
+    mocks.installProgress = null;
+    finish({ status: "ok", data: null });
+  });
+
   it("does nothing when the folder choice is cancelled", async () => {
     mocks.install.mockResolvedValue({ status: "ok", data: null });
     setup();
@@ -316,6 +341,69 @@ describe("mise en service", () => {
     );
     fireEvent.click(screen.getByText("Measure again"));
     await waitFor(() => expect(mocks.commission).toHaveBeenCalled());
+  });
+
+  // QA de 0.8.0-2 : exécution refusée par le système pendant la mise en
+  // service. Ni « trop lent » ni « Prêt » : la raison.
+  it("shows a blocked execution instead of a too slow computer", async () => {
+    mocks.status = { ...mocks.status, models: installed };
+    mocks.config = { stt_on_device: true };
+    mocks.commissioning = {
+      profile: null,
+      measures: [
+        {
+          profile: "two_streams_diarized",
+          finals: 0,
+          p95Ms: 0,
+          driftMs: 0,
+          rawP95Ms: 0,
+          rawDriftMs: 0,
+          passed: false,
+          error: "execution_blocked",
+        },
+      ],
+      measuredAt: 1,
+    };
+    setup();
+    await waitFor(() =>
+      expect(screen.getByTestId("on-device-commissioning").textContent).toMatch(
+        /does not allow the transcription program to run/,
+      ),
+    );
+    expect(screen.queryByText(/too slow/)).toBeNull();
+    expect(screen.queryByText("Ready")).toBeNull();
+    expect(screen.getByTestId("on-device-missing").textContent).toMatch(
+      /does not allow the transcription program to run/,
+    );
+  });
+
+  it("explains a blocked execution right after a measurement", async () => {
+    mocks.status = { ...mocks.status, models: installed };
+    mocks.commission.mockResolvedValue({
+      status: "ok",
+      data: {
+        profile: null,
+        measures: [
+          {
+            profile: "two_streams_diarized",
+            finals: 0,
+            p95Ms: 0,
+            driftMs: 0,
+            rawP95Ms: 0,
+            rawDriftMs: 0,
+            passed: false,
+            error: "execution_blocked",
+          },
+        ],
+        measuredAt: 2,
+      },
+    });
+    setup();
+    fireEvent.click(await screen.findByText("Measure again"));
+    await screen.findByText(
+      /The measurement did not complete: This computer does not allow/,
+    );
+    expect(screen.queryByText(/Measurement done/)).toBeNull();
   });
 
   it("keeps the source off until the computer is measured", async () => {

@@ -24,7 +24,7 @@ import { useConfigValues } from "~/shared/config";
 import { useLatestRef } from "~/shared/hooks/useLatestRef";
 import { useDevtoolsToastPreview } from "~/store/zustand/devtools-toast-preview";
 import { useTabs } from "~/store/zustand/tabs";
-import { isConfiguredSttModel } from "~/stt/capabilities";
+import { useUsableTranscription } from "~/stt/usable-transcription";
 
 export function ToastNotifications() {
   const { dismissToast, isDismissed } = useDismissedToasts();
@@ -38,22 +38,17 @@ export function ToastNotifications() {
     state.phase === "available" && state.update ? state.update.version : null,
   );
 
-  const {
-    current_llm_provider,
-    current_llm_model,
-    current_stt_provider,
-    current_stt_model,
-  } = useConfigValues([
+  const { current_llm_provider, current_llm_model } = useConfigValues([
     "current_llm_provider",
     "current_llm_model",
-    "current_stt_provider",
-    "current_stt_model",
   ] as const);
   const hasLLMConfigured = !!(current_llm_provider && current_llm_model);
-  const hasSttConfigured = isConfiguredSttModel(
-    current_stt_provider,
-    current_stt_model,
-  );
+  // Le toast ne demande un fournisseur que s'il n'y a aucune source : « Sur
+  // ce poste » choisi mais pas prêt a son statut rouge, et ajouter un serveur
+  // n'y changerait rien (l'écoute ne repasse pas par lui).
+  const transcription = useUsableTranscription();
+  const hasSttConfigured = !transcription.needsProvider;
+  const onDeviceNotReady = transcription.onDeviceNotReady;
 
   const currentTab = useTabs((state) => state.currentTab);
   const devtoolsPreview = useDevtoolsToastPreview((state) => state.preview);
@@ -96,6 +91,7 @@ export function ToastNotifications() {
         onOpenUpdate: openUpdateSettings,
         hasLLMConfigured,
         hasSttConfigured,
+        onDeviceNotReady,
         isAiTranscriptionTabActive,
         isAiIntelligenceTabActive,
         onOpenLLMSettings: handleOpenLLMSettings,
@@ -105,6 +101,7 @@ export function ToastNotifications() {
       availableUpdate,
       hasLLMConfigured,
       hasSttConfigured,
+      onDeviceNotReady,
       isAiTranscriptionTabActive,
       isAiIntelligenceTabActive,
       handleOpenLLMSettings,
