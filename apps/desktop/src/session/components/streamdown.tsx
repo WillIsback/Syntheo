@@ -1,11 +1,7 @@
 import { parseImageMetadata } from "@syntheo/editor/node-views";
 import { cn } from "@syntheo/utils";
 
-import {
-  isGeneratedImageSrc,
-  isRemoteWebImageSrc,
-  RemoteImage,
-} from "~/shared/safe-markdown";
+import { isGeneratedImageSrc } from "~/shared/safe-markdown";
 
 // Typography comes from the shared `.note-typography` scope (see
 // packages/editor styles) so the streaming view matches the editor exactly;
@@ -30,32 +26,19 @@ export const streamdownComponents = {
       ])}
     />
   ),
-  // Image distante : jamais chargée d'office (issue 642).
+  // Contenu généré : seule une image `data:image` est affichée ; toute autre
+  // adresse (distante ou de fichier local) laisse son texte alternatif, sans
+  // aucune requête (issues 642, 677 et 678).
   img: (props: React.ImgHTMLAttributes<HTMLImageElement>) => {
+    if (!isGeneratedImageSrc(props.src)) {
+      return props.alt ? <span>{props.alt}</span> : null;
+    }
     const { editorWidth, title } = parseImageMetadata(props.title);
     const className = cn(["max-w-full", props.className]);
     const style = {
       ...(editorWidth ? { width: `${editorWidth}%` } : {}),
       ...(props.style || {}),
     };
-
-    // Contenu généré : ni fichier local ni chemin réseau (issue 677).
-    if (isGeneratedImageSrc(props.src)) {
-      return (
-        <img {...props} title={title} className={className} style={style} />
-      );
-    }
-    if (typeof props.src !== "string" || !isRemoteWebImageSrc(props.src)) {
-      return props.alt ? <span>{props.alt}</span> : null;
-    }
-    return (
-      <RemoteImage
-        src={props.src}
-        alt={props.alt}
-        title={title}
-        className={className}
-        style={style}
-      />
-    );
+    return <img {...props} title={title} className={className} style={style} />;
   },
 } as const;

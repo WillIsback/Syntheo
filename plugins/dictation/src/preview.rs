@@ -89,8 +89,9 @@ async fn run(
     updates: &Channel<RecordingUpdate>,
 ) -> Result<String, ()> {
     use owhisper_client::*;
-    let url = url::Url::parse(&config.base_url).map_err(|_| ())?;
-    if !matches!(url.scheme(), "http" | "https" | "ws" | "wss") || url.host_str().is_none() {
+    // Même règle d'adresse qu'au démarrage d'une capture (issue 678) : HTTPS,
+    // ou HTTP clair seulement vers cette machine ou un réseau privé.
+    if !preview_base_url_allowed(&config.base_url) {
         return Err(());
     }
     match config.provider.as_str() {
@@ -98,6 +99,10 @@ async fn run(
         "nvidia" => listen::<NvidiaAdapter>(config, receiver, updates).await,
         _ => Err(()),
     }
+}
+
+fn preview_base_url_allowed(base_url: &str) -> bool {
+    owhisper_client::validate_provider_base_url(base_url).is_ok()
 }
 
 async fn listen<A: RealtimeSttAdapter>(
@@ -216,6 +221,30 @@ mod tests {
     use std::time::Duration;
     use tauri::ipc::InvokeResponseBody;
     use tokio_tungstenite::tungstenite::Message;
+
+    // Issue 678 : l'aperçu applique la règle d'adresse de la capture.
+    #[test]
+    fn preview_base_url_follows_the_capture_rule() {
+        for url in [
+            "https://asr.example.com/v1",
+            "http://localhost:8000/v1",
+            "http://192.168.1.20:8000",
+            "http://gpu.local:8000",
+            "https://spark.tailnet.ts.net:9443",
+        ] {
+            assert!(preview_base_url_allowed(url), "{url}");
+        }
+        for url in [
+            "http://asr.example.com/v1",
+            "http://203.0.113.5:8000",
+            "https://user:secret@asr.example.com",
+            "ws://asr.example.com/v1",
+            "ftp://asr.example.com",
+            "not a url",
+        ] {
+            assert!(!preview_base_url_allowed(url), "{url}");
+        }
+    }
 
     fn response(start: f64, text: &str, is_final: bool) -> StreamResponse {
         StreamResponse::TranscriptResponse {

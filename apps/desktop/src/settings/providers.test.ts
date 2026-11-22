@@ -30,7 +30,11 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@tauri-apps/plugin-http", () => ({ fetch: mocks.fetch }));
 
-vi.mock("@syntheo/provider-validation", () => ({
+vi.mock("@syntheo/provider-validation", async (importOriginal) => ({
+  // Règle d'adresse réelle pour chaque requête de providerFetch (issue 678).
+  validateProviderRequestUrl: (
+    await importOriginal<typeof import("@syntheo/provider-validation")>()
+  ).validateProviderRequestUrl,
   validateProviderBaseUrl: mocks.validateBaseUrl,
   verifyProviderCredentials: mocks.verify,
   usesDeferredProviderAuthentication: (type: string, provider: string) =>

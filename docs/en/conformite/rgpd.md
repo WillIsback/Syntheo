@@ -79,10 +79,6 @@ a deletion, erasure is retried at the next launch.
     `automatic_updates`): **unauthenticated** read of `latest.json` on GitHub,
     then download of the installer if the user updates. No personal data
     sent; GitHub sees the computer's IP address;
-  - remote image in a summary, a proposal or a chat answer: nothing is
-    loaded automatically; a click on "Load image" sends a request to the
-    site hosting it, which sees the computer's IP address and the full image
-    address;
 - **No account, no sync, no error reports, nothing installed without the
   user's action** (the built-in update, AppImage and Windows installer,
   installs on request with a signed installer; .deb and MSI: link to GitHub

@@ -82,10 +82,6 @@ une suppression, l'effacement est retenté au lancement suivant.
     authentifiée** de `latest.json` sur GitHub, puis téléchargement de
     l'installeur si l'utilisateur met à jour. Aucune donnée personnelle
     transmise ; GitHub voit l'adresse IP du poste ;
-  - image distante dans un compte rendu, une proposition ou une réponse du
-    chat : rien n'est chargé d'office ; un clic sur « Charger l'image »
-    envoie une requête au site qui l'héberge, qui voit l'adresse IP du poste
-    et l'adresse complète de l'image ;
 - **Pas de compte, pas de synchronisation, pas de rapport d'erreur, pas
   d'installation sans action de l'utilisateur** (la mise à jour intégrée,
   AppImage et installeur Windows, s'installe sur demande, installeur signé ;

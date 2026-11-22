@@ -10,7 +10,7 @@ Syntheo Desktop est un client local, sans serveur éditeur. La surface à évalu
 - **Aucun compte, aucune authentification** auprès de l'éditeur. Aucun service Syntheo ne reçoit vos données.
 - **Aucune télémétrie, aucun rapport d'erreur** : le code d'analyse et de rapport d'erreur est retiré, il n'y a rien à désactiver.
 - **Aucun audio sur disque**, sur aucun chemin (capture, dictée, import).
-- **Réseau limité** aux serveurs d'inférence et aux webhooks que vous configurez, plus deux flux mineurs sans contenu de réunion (recherche de mises à jour et notes de version sur GitHub) et le chargement d'une image distante quand vous cliquez sur « Charger l'image ». Ces flux sont listés dans [la fiche RGPD](/fr/conformite/rgpd).
+- **Réseau limité** aux serveurs d'inférence et aux webhooks que vous configurez, plus deux flux mineurs sans contenu de réunion : recherche de mises à jour et notes de version sur GitHub. Ces flux sont listés dans [la fiche RGPD](/fr/conformite/rgpd).
 - **Aucune bascule** vers un service tiers quand un serveur d'inférence ne répond pas.
 - **Code ouvert** : tout est vérifiable dans le [dépôt GitHub](https://github.com/WillIsback/Syntheo).
 
@@ -43,7 +43,7 @@ Gravités actuelles : aucune critique, aucune élevée, 3 moyennes, 19 faibles, 
 
 ### Ce que la 0.7.5 a changé
 
-- **Images distantes** : une image hébergée sur un autre site, dans un compte rendu, une proposition ou une réponse du chat, n'est plus chargée d'office. Elle ne l'est que si vous cliquez sur « Charger l'image ». Une politique de sécurité du contenu (CSP) stricte encadre aussi l'interface.
+- **Images distantes** : une image hébergée sur un autre site, dans un compte rendu, une proposition ou une réponse du chat, n'est plus chargée d'office : en 0.7.5, seulement sur un clic sur « Charger l'image » ; depuis la 0.8.0, plus du tout, son texte alternatif s'affiche à sa place. Une politique de sécurité du contenu (CSP) stricte encadre aussi l'interface.
 - **Modifications du chat validées** : le chat ne modifie plus une réunion, ne déplace plus son contenu et ne range plus de réunions sans votre clic sur « Appliquer ». Les termes qu'il propose pour le dictionnaire sont bornés et passent par la même carte.
 - **HTTP en clair** : une adresse de serveur en HTTP vers une autre machine que la vôtre n'est enregistrée qu'après confirmation, puis reste signalée sur la carte du serveur.
 - **Journaux et données locales** : le journal masque davantage de clés et de jetons ; les secrets de signature des webhooks sont dans le trousseau du système ; sous Linux, le dossier de données, la base et les journaux sont réservés à votre compte.

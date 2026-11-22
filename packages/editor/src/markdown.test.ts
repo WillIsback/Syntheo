@@ -4,7 +4,6 @@ import { describe, expect, it, test } from "vitest";
 import {
   EMPTY_DOC,
   isGeneratedImageSrc,
-  isRemoteWebImageSrc,
   isValidContent,
   json2md,
   type JSONContent,
@@ -1125,20 +1124,5 @@ describe("isGeneratedImageSrc", () => {
     [undefined, false],
   ])("%s → %s", (src, expected) => {
     expect(isGeneratedImageSrc(src)).toBe(expected);
-  });
-});
-
-describe("isRemoteWebImageSrc", () => {
-  it.each([
-    ["https://example.com/a.png", true],
-    ["http://example.com/a.png", true],
-    ["http://asset.localhost/a.png", false],
-    ["https://asset.localhost/a.png", false],
-    ["asset://localhost/a.png", false],
-    ["//example.com/a.png", false],
-    ["javascript:alert(1)", false],
-    [undefined, false],
-  ])("%s → %s", (src, expected) => {
-    expect(isRemoteWebImageSrc(src)).toBe(expected);
   });
 });

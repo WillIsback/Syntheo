@@ -61,6 +61,31 @@ export function validateProviderBaseUrl(baseUrl: string): URL {
   return base;
 }
 
+// Règle d'adresse revalidée à chaque requête vers un serveur d'inférence
+// (issue 678) : même règle que `validateProviderBaseUrl`, appliquée à l'URL
+// complète de la requête (chemin et paramètres permis). Une adresse écrite en
+// base sans passer par l'enregistrement est ainsi refusée avant tout envoi.
+export function validateProviderRequestUrl(input: string | URL): URL {
+  let url: URL;
+  try {
+    url = new URL(input);
+  } catch {
+    throw new ProviderCredentialError("Saisissez une URL de base valide.");
+  }
+  if (url.username || url.password)
+    throw new ProviderCredentialError(
+      "Saisissez une URL de base sans identifiants ni paramètres de requête.",
+    );
+  if (
+    url.protocol !== "https:" &&
+    !(url.protocol === "http:" && isPrivateHost(url.hostname))
+  )
+    throw new ProviderCredentialError(
+      "Utilisez HTTPS : le HTTP n'est accepté que sur cette machine ou un réseau privé.",
+    );
+  return url;
+}
+
 export async function verifyProviderCredentials(
   credential: ProviderCredential,
   fetcher: CredentialFetch,

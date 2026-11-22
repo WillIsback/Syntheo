@@ -8,6 +8,7 @@ import {
   ProviderCredentialError,
   providerCredentialIdentity,
   validateProviderBaseUrl,
+  validateProviderRequestUrl,
   verifyProviderCredentials,
 } from "./index.ts";
 
@@ -343,5 +344,28 @@ test("isLoopbackHost_ne_reconnait_que_cette_machine", () => {
   }
   for (const host of ["192.168.1.87", "gpu.local", "a.ts.net", "128.0.0.1"]) {
     assert.equal(isLoopbackHost(host), false, host);
+  }
+});
+
+test("revalidates each request URL with the base URL rule (issue 678)", () => {
+  for (const url of [
+    "https://api.openai.com/v1/models?limit=10",
+    "http://localhost:8000/v1/chat/completions",
+    "http://192.168.1.20:8000/v1/models",
+    "https://spark.tailnet.ts.net:9443/v1/models",
+  ]) {
+    assert.equal(validateProviderRequestUrl(url).href, new URL(url).href);
+  }
+  for (const url of [
+    "http://api.example.com/v1/models",
+    "http://203.0.113.5:8000/v1",
+    "https://user:secret@api.example.com/v1",
+    "ftp://api.example.com",
+    "not a url",
+  ]) {
+    assert.throws(
+      () => validateProviderRequestUrl(url),
+      ProviderCredentialError,
+    );
   }
 });
