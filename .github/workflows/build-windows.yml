@@ -11,7 +11,9 @@
 #   3. les secrets Azure sont transmis explicitement par release.yml.
 # La compilation (dépendances, build.rs, Vite) tourne sans aucun identifiant.
 # Seule l'étape qui assemble et signe les installeurs reçoit les identifiants
-# Azure. Sinon, build non signé. Voir docs/fr/desktop-installation.mdx.
+# Azure. Sinon, build non signé. Cette isolation est par étape, dans le même
+# job que la compilation : elle ne vaut pas celle d'un job de signature séparé,
+# suivi dans #663. Voir docs/fr/desktop-installation.mdx.
 name: build-windows
 
 on:

@@ -12,7 +12,10 @@ en décrivant le problème, son impact et un moyen de le reproduire.
 
 ## Périmètre
 
-Syntheo Desktop ne communique qu'avec les endpoints d'inférence configurés par
-l'utilisateur et ne conserve jamais l'audio. Toute communication réseau vers un
-autre hôte, ou toute écriture d'audio sur disque, est considérée comme une
-vulnérabilité.
+Syntheo Desktop ne communique qu'avec les endpoints d'inférence et les webhooks
+configurés par l'utilisateur, plus les flux documentés dans
+[Données et confidentialité](docs/fr/data-and-privacy.mdx) : recherche de mises
+à jour et notes de version sur GitHub, et image distante chargée seulement sur
+clic explicite (« Charger l'image »). Il ne conserve jamais l'audio. Toute autre
+communication réseau, ou toute écriture d'audio sur disque, est considérée
+comme une vulnérabilité.

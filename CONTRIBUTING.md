@@ -275,8 +275,8 @@ La release signe l'AppImage et l'installeur NSIS avec une clé Tauri dédiée
 `latest.json` (`scripts/generate-updater-manifest.mjs`). La clé privée et son
 mot de passe sont les secrets `TAURI_SIGNING_PRIVATE_KEY` et
 `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` de l'environnement GitHub
-`release-signing` (branches de déploiement limitées à `main`, relecteur
-requis), lus par ce seul job ; une copie de sauvegarde est gardée hors du dépôt
+`release-signing` (branches de déploiement limitées à `main` ; sans relecteur,
+mainteneur seul, décision du 2026-11-21), lus par ce seul job ; une copie de sauvegarde est gardée hors du dépôt
 par le mainteneur. Le job ne tourne que depuis `main`, jamais en `dry_run`, et
 n'installe que l'outil de signature, à version et empreintes figées
 (`.github/signing`, à garder à la version de `@tauri-apps/cli` de
@@ -293,8 +293,9 @@ Rotation (clé compromise ou remplacée) :
 2. Publier une release encore signée par l'**ancienne** clé, dont la
    configuration embarque la **nouvelle** clé publique : les postes s'y mettent
    à jour, puis ne font plus confiance qu'à la nouvelle clé.
-3. Remplacer les deux secrets du dépôt par la nouvelle clé, mettre à jour la
-   clé publique et son identifiant dans `docs/*/desktop-installation.mdx`.
+3. Remplacer les deux secrets de l'environnement `release-signing` par la
+   nouvelle clé, mettre à jour la clé publique et son identifiant dans
+   `docs/*/desktop-installation.mdx`.
 4. Une clé compromise ne peut pas être révoquée à distance : les postes
    restés sur une version antérieure à l'étape 2 doivent être réinstallés.
 

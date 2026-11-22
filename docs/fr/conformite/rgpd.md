@@ -66,7 +66,8 @@ une suppression, l'effacement est retenté au lancement suivant.
 - **TLS recommandé** dès que l'endpoint n'est pas sur la machine ou un réseau de
   confiance (par exemple via un reverse proxy ou un VPN). L'application accepte
   HTTP en clair uniquement vers un hôte privé (machine locale, réseau local,
-  plage Tailscale, noms `.local`) et exige HTTPS ailleurs.
+  plage Tailscale, noms `.local`), après confirmation hors de la machine, et
+  exige HTTPS ailleurs.
 - Un endpoint exploité par un tiers devient **sous-traitant de l'utilisateur**
   (art. 28 RGPD) : contrat et localisation des données à vérifier.
 - **Autres flux, hors inférence** :
@@ -81,8 +82,10 @@ une suppression, l'effacement est retenté au lancement suivant.
     authentifiée** de `latest.json` sur GitHub, puis téléchargement de
     l'installeur si l'utilisateur met à jour. Aucune donnée personnelle
     transmise ; GitHub voit l'adresse IP du poste ;
-  - icônes de certains écrans chargées depuis `api.iconify.design` (aucune
-    donnée personnelle transmise, mais une requête réseau) ;
+  - image distante dans un compte rendu, une proposition ou une réponse du
+    chat : rien n'est chargé d'office ; un clic sur « Charger l'image »
+    envoie une requête au site qui l'héberge, qui voit l'adresse IP du poste
+    et l'adresse complète de l'image ;
 - **Pas de compte, pas de synchronisation, pas de rapport d'erreur, pas
   d'installation sans action de l'utilisateur** (la mise à jour intégrée,
   AppImage et installeur Windows, s'installe sur demande, installeur signé ;
