@@ -3,11 +3,16 @@
 //!
 //! Sous Windows, le job de signature signe `syntheo-speech.exe` après la
 //! compilation de l'application, qui en a déjà épinglé l'empreinte : signer
-//! ajoute un bloc de certificats en fin de fichier et modifie deux champs de
-//! l'en-tête (somme de contrôle, entrée « table des certificats »). Comme
-//! Authenticode, l'empreinte d'une image PE ignore ces deux champs et le bloc
-//! de certificats ; les zéros de fin (alignement ajouté avant le bloc) sont
-//! ignorés aussi. Tout autre fichier : SHA-256 de son contenu.
+//! complète le fichier par des zéros jusqu'à un multiple de 8, ajoute un bloc
+//! de certificats en fin de fichier et modifie deux champs de l'en-tête
+//! (somme de contrôle, entrée « table des certificats »). Comme Authenticode,
+//! l'empreinte d'une image PE ignore ces deux champs et le bloc de
+//! certificats. Le bloc n'est reconnu qu'après la fin réelle de l'image (fin
+//! des en-têtes et des sections), aligné sur 8 : aucun octet de l'image ne
+//! peut être exclu en déclarant une fausse table de certificats. Le contenu
+//! haché est complété par au plus 7 zéros jusqu'à un multiple de 8, ce qui
+//! absorbe l'alignement ajouté par la signature. Tout autre fichier : SHA-256
+//! de son contenu.
 
 use sha2::{Digest, Sha256};
 
@@ -19,56 +24,87 @@ fn u32_at(bytes: &[u8], at: usize) -> Option<u32> {
     Some(u32::from_le_bytes(bytes.get(at..at + 4)?.try_into().ok()?))
 }
 
-/// Plages à ignorer d'une image PE : somme de contrôle, entrée de la table
-/// des certificats, et le bloc de certificats lui-même. `None` : pas une
-/// image PE lisible.
-fn pe_skips(bytes: &[u8]) -> Option<([std::ops::Range<usize>; 2], usize)> {
+/// Ce qu'il faut ignorer d'une image PE : somme de contrôle et entrée de la
+/// table des certificats (plages), et la fin du contenu signé (début du bloc
+/// de certificats, ou fin du fichier). `None` : pas une image PE lisible, ou
+/// table des certificats incohérente (le fichier est alors haché en entier).
+struct PeLayout {
+    checksum: std::ops::Range<usize>,
+    certificates: std::ops::Range<usize>,
+    end: usize,
+}
+
+fn pe_layout(bytes: &[u8]) -> Option<PeLayout> {
     if bytes.get(0..2)? != b"MZ" {
         return None;
     }
     let pe = u32_at(bytes, 0x3c)? as usize;
-    if bytes.get(pe..pe + 4)? != b"PE\0\0" {
+    if bytes.get(pe..pe.checked_add(4)?)? != b"PE\0\0" {
         return None;
     }
+    let sections = u16_at(bytes, pe + 6)? as usize;
+    let optional_size = u16_at(bytes, pe + 20)? as usize;
     let optional = pe + 24;
-    let directories = match u16_at(bytes, optional)? {
-        0x10b => optional + 96,
-        0x20b => optional + 112,
+    let (directories, rva_count) = match u16_at(bytes, optional)? {
+        0x10b => (optional + 96, u32_at(bytes, optional + 92)?),
+        0x20b => (optional + 112, u32_at(bytes, optional + 108)?),
         _ => return None,
     };
     let checksum = optional + 64;
     let certificates = directories + 4 * 8;
-    let offset = u32_at(bytes, certificates)? as usize;
-    let size = u32_at(bytes, certificates + 4)? as usize;
-    // Fin du contenu signé : le bloc de certificats est en fin de fichier.
-    let end = if size > 0 && offset.checked_add(size)? == bytes.len() && offset >= certificates + 8
+    // L'entrée « table des certificats » doit exister et tenir dans l'en-tête
+    // optionnel déclaré.
+    if rva_count <= 4 || certificates + 8 > optional + optional_size {
+        return None;
+    }
+    // Fin réelle de l'image : en-têtes, puis données brutes des sections.
+    let mut image_end = u32_at(bytes, optional + 60)? as u64;
+    let table = optional + optional_size;
+    for index in 0..sections {
+        let section = table + index * 40;
+        let raw_size = u32_at(bytes, section + 16)? as u64;
+        let raw_pointer = u32_at(bytes, section + 20)? as u64;
+        if raw_size > 0 {
+            image_end = image_end.max(raw_pointer + raw_size);
+        }
+    }
+    let offset = u32_at(bytes, certificates)? as u64;
+    let size = u32_at(bytes, certificates + 4)? as u64;
+    let len = bytes.len() as u64;
+    let end = if size == 0 && offset == 0 {
+        len
+    } else if offset >= image_end
+        && offset == image_end.next_multiple_of(8)
+        && offset.checked_add(size)? == len
     {
         offset
     } else {
-        bytes.len()
+        return None;
     };
-    Some((
-        [checksum..checksum + 4, certificates..certificates + 8],
-        end,
-    ))
+    Some(PeLayout {
+        checksum: checksum..checksum + 4,
+        certificates: certificates..certificates + 8,
+        end: usize::try_from(end).ok()?,
+    })
 }
 
 /// Empreinte hexadécimale (minuscules) du contenu, stable à la signature
 /// Authenticode pour une image PE.
 pub fn image_hash(bytes: &[u8]) -> String {
     let mut hasher = Sha256::new();
-    match pe_skips(bytes) {
-        Some(([checksum, certificates], end)) => {
-            let mut content = &bytes[..end];
-            while let [rest @ .., 0] = content {
-                content = rest;
-            }
-            let len = content.len();
-            let clip = |r: std::ops::Range<usize>| r.start.min(len)..r.end.min(len);
-            let (checksum, certificates) = (clip(checksum), clip(certificates));
+    match pe_layout(bytes) {
+        Some(PeLayout {
+            checksum,
+            certificates,
+            end,
+        }) => {
+            let content = &bytes[..end];
             hasher.update(&content[..checksum.start]);
             hasher.update(&content[checksum.end..certificates.start]);
             hasher.update(&content[certificates.end..]);
+            // Alignement sur 8 qu'ajoute la signature : au plus 7 zéros.
+            let padding = end.next_multiple_of(8) - end;
+            hasher.update(&[0u8; 7][..padding]);
         }
         None => hasher.update(bytes),
     }
@@ -83,18 +119,36 @@ pub fn image_hash(bytes: &[u8]) -> String {
 mod tests {
     use super::*;
 
+    const OPTIONAL: usize = 0x80 + 24;
+    const OPTIONAL_SIZE: usize = 112 + 16 * 8;
+    const SECTIONS: usize = OPTIONAL + OPTIONAL_SIZE;
+    const CERTS: usize = OPTIONAL + 112 + 4 * 8;
+
     /// Image PE32+ minimale, non signée : en-tête DOS, signature PE, en-tête
-    /// COFF, en-tête optionnel avec 16 répertoires, puis du code.
+    /// COFF (1 section), en-tête optionnel avec 16 répertoires, table des
+    /// sections, puis la section, qui finit par des zéros de bourrage.
     fn pe() -> Vec<u8> {
         let mut bytes = vec![0u8; 0x80];
         bytes[0..2].copy_from_slice(b"MZ");
         bytes[0x3c..0x40].copy_from_slice(&0x80u32.to_le_bytes());
         bytes.extend(b"PE\0\0");
-        bytes.extend([0u8; 20]);
-        let optional = bytes.len();
-        bytes.extend(vec![0u8; 112 + 16 * 8]);
-        bytes[optional..optional + 2].copy_from_slice(&0x20bu16.to_le_bytes());
-        bytes.extend((0..1000u32).map(|i| (i % 251) as u8 + 1));
+        let mut coff = [0u8; 20];
+        coff[2..4].copy_from_slice(&1u16.to_le_bytes());
+        coff[16..18].copy_from_slice(&(OPTIONAL_SIZE as u16).to_le_bytes());
+        bytes.extend(coff);
+        bytes.extend(vec![0u8; OPTIONAL_SIZE]);
+        bytes[OPTIONAL..OPTIONAL + 2].copy_from_slice(&0x20bu16.to_le_bytes());
+        bytes[OPTIONAL + 108..OPTIONAL + 112].copy_from_slice(&16u32.to_le_bytes());
+        let headers = (SECTIONS + 40).next_multiple_of(0x200);
+        bytes[OPTIONAL + 60..OPTIONAL + 64].copy_from_slice(&(headers as u32).to_le_bytes());
+        let mut section = [0u8; 40];
+        section[0..5].copy_from_slice(b".text");
+        section[16..20].copy_from_slice(&1001u32.to_le_bytes());
+        section[20..24].copy_from_slice(&(headers as u32).to_le_bytes());
+        bytes.extend(section);
+        bytes.resize(headers, 0);
+        bytes.extend((0..990u32).map(|i| (i % 251) as u8 + 1));
+        bytes.extend([0u8; 11]);
         bytes
     }
 
@@ -107,17 +161,16 @@ mod tests {
         }
         let offset = bytes.len() as u32;
         bytes.extend(certificate);
-        let optional = 0x80 + 24;
-        bytes[optional + 64..optional + 68].copy_from_slice(&0xdead_beefu32.to_le_bytes());
-        let entry = optional + 112 + 4 * 8;
-        bytes[entry..entry + 4].copy_from_slice(&offset.to_le_bytes());
-        bytes[entry + 4..entry + 8].copy_from_slice(&(certificate.len() as u32).to_le_bytes());
+        bytes[OPTIONAL + 64..OPTIONAL + 68].copy_from_slice(&0xdead_beefu32.to_le_bytes());
+        bytes[CERTS..CERTS + 4].copy_from_slice(&offset.to_le_bytes());
+        bytes[CERTS + 4..CERTS + 8].copy_from_slice(&(certificate.len() as u32).to_le_bytes());
         bytes
     }
 
     #[test]
     fn signing_does_not_change_the_image_hash() {
         let unsigned = pe();
+        assert!(!unsigned.len().is_multiple_of(8), "alignement à ajouter");
         let signed = sign(&unsigned, b"certificat Authenticode factice");
         assert_ne!(Sha256::digest(&unsigned), Sha256::digest(&signed));
         assert_eq!(image_hash(&unsigned), image_hash(&signed));
@@ -130,11 +183,45 @@ mod tests {
     fn any_change_to_the_code_changes_the_hash() {
         let unsigned = pe();
         let mut altered = unsigned.clone();
-        let last = altered.len() - 10;
+        let last = altered.len() - 20;
         altered[last] ^= 0xff;
         assert_ne!(image_hash(&unsigned), image_hash(&altered));
         let signed_altered = sign(&altered, b"certificat");
         assert_ne!(image_hash(&unsigned), image_hash(&signed_altered));
+    }
+
+    // Revue de 7d72caf6, constat 6 : remplacer les zéros de fin de l'image
+    // par d'autres octets en déclarant une fausse table de certificats ne
+    // doit pas garder l'empreinte.
+    #[test]
+    fn trailing_zeros_cannot_be_replaced_behind_a_fake_certificate_table() {
+        let unsigned = pe();
+        let trimmed = unsigned.len() - 11;
+        let mut forged = unsigned[..trimmed].to_vec();
+        let offset = forged.len() as u32;
+        forged.extend(b"code arbitraire");
+        forged[CERTS..CERTS + 4].copy_from_slice(&offset.to_le_bytes());
+        forged[CERTS + 4..CERTS + 8].copy_from_slice(&15u32.to_le_bytes());
+        assert_ne!(image_hash(&unsigned), image_hash(&forged));
+        // Même chose avec le bloc placé à la fin de l'image, mais non aligné.
+        let mut forged = unsigned.clone();
+        let offset = forged.len() as u32;
+        forged.extend(b"x");
+        forged[CERTS..CERTS + 4].copy_from_slice(&offset.to_le_bytes());
+        forged[CERTS + 4..CERTS + 8].copy_from_slice(&1u32.to_le_bytes());
+        assert_ne!(image_hash(&unsigned), image_hash(&forged));
+    }
+
+    // Octets ajoutés après l'image, sans table de certificats : hachés.
+    #[test]
+    fn bytes_appended_after_the_image_change_the_hash() {
+        let unsigned = pe();
+        let mut appended = unsigned.clone();
+        appended.extend(b"octets ajoutes");
+        assert_ne!(image_hash(&unsigned), image_hash(&appended));
+        let mut zeros = unsigned.clone();
+        zeros.extend([0u8; 16]);
+        assert_ne!(image_hash(&unsigned), image_hash(&zeros));
     }
 
     /// Vraie signature Authenticode : paires « signé, désigné » (par exemple
@@ -159,19 +246,15 @@ mod tests {
 
     #[test]
     fn other_files_use_a_plain_sha256() {
-        let text = b"ELF ou autre contenu";
-        let plain: String = Sha256::digest(text)
-            .iter()
-            .map(|b| format!("{b:02x}"))
-            .collect();
-        assert_eq!(image_hash(text), plain);
-        // Un en-tête PE tronqué n'est pas une image : SHA-256 simple.
-        assert_eq!(image_hash(b"MZ"), {
-            let d: String = Sha256::digest(b"MZ")
+        let plain = |data: &[u8]| -> String {
+            Sha256::digest(data)
                 .iter()
                 .map(|b| format!("{b:02x}"))
-                .collect();
-            d
-        });
+                .collect()
+        };
+        let text = b"ELF ou autre contenu";
+        assert_eq!(image_hash(text), plain(text));
+        // Un en-tête PE tronqué n'est pas une image : SHA-256 simple.
+        assert_eq!(image_hash(b"MZ"), plain(b"MZ"));
     }
 }
