@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-on-device-install-models"
+description = "Enables the on_device_install_models command without any pre-configured scope."
+commands.allow = ["on_device_install_models"]
+
+[[permission]]
+identifier = "deny-on-device-install-models"
+description = "Denies the on_device_install_models command without any pre-configured scope."
+commands.deny = ["on_device_install_models"]

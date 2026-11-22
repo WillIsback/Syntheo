@@ -1,9 +1,10 @@
-//! Source « Sur ce poste » (issue 684) : le module `syntheo-speech`, installé
-//! dans `<données>/modules/speech`, lancé au début d'une écoute, relancé s'il
-//! meurt (nouveau jeton, nouveau port), arrêté à la fin. Un réglage géré
-//! (`on_device_transcription_enabled` à false) interdit son chargement : il
-//! est lu dans `managed_settings.json` une fois, gardé en mémoire, et jamais
-//! dans la base, que la webview peut réécrire.
+//! Source « Sur ce poste » (issues 683 et 684) : le programme compagnon
+//! `syntheo-speech`, livré avec l'application, et ses modèles, installés dans
+//! `<données>/speech/models` ; lancé au début d'une écoute, relancé s'il meurt
+//! (nouveau jeton, nouveau port), arrêté à la fin. Les réglages gérés
+//! (`on_device_transcription_enabled` à false, `speech_models_urls`) sont lus
+//! dans `managed_settings.json` une fois, gardés en mémoire, et jamais dans la
+//! base, que la webview peut réécrire.
 
 use std::sync::Arc;
 
@@ -11,16 +12,44 @@ use owhisper_client::{OnDeviceError, OnDeviceErrorKind};
 use tauri::Manager;
 use tokio::sync::OnceCell;
 
-/// Politique gérée chargée au premier usage ; illisible : module refusé.
-#[derive(Default)]
-pub struct OnDevicePolicy(OnceCell<bool>);
+/// Ce que la construction de l'application fixe : fichiers du compagnon
+/// (`SYNTHEO_SPEECH_FILES`) et sources des modèles
+/// (`SYNTHEO_SPEECH_MODELS_URLS`), compilés par l'application.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct SpeechBuild {
+    pub companion_files: Option<&'static str>,
+    pub models_urls: Option<&'static str>,
+}
 
-/// Dossier du module installé.
-pub fn module_dir<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Option<std::path::PathBuf> {
-    app.path()
-        .app_data_dir()
-        .ok()
-        .map(|dir| dir.join("modules").join("speech"))
+/// Sources compilées des modèles (vides : installation depuis un dossier).
+pub struct CompiledSources(pub Vec<syntheo_speech_host::models::Source>);
+
+impl CompiledSources {
+    pub fn of(build: SpeechBuild) -> Self {
+        Self(
+            build
+                .models_urls
+                .and_then(|urls| syntheo_speech_host::models::parse_sources([urls]))
+                .unwrap_or_default(),
+        )
+    }
+}
+
+/// Politique gérée, chargée au premier usage et gardée en mémoire.
+#[derive(Debug, Clone, Default)]
+struct Policy {
+    allowed: bool,
+    /// Sources imposées ; `Some(vide)` : réglage présent mais invalide.
+    sources: Option<Vec<syntheo_speech_host::models::Source>>,
+}
+
+/// Politique gérée chargée au premier usage ; illisible : source refusée.
+#[derive(Default)]
+pub struct OnDevicePolicy(OnceCell<Policy>);
+
+/// Dossier de données de la source.
+pub fn data_dir<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Option<std::path::PathBuf> {
+    app.path().app_data_dir().ok().map(|dir| dir.join("speech"))
 }
 
 /// Fils ONNX Runtime par session : deux flux partagent les cœurs.
@@ -28,22 +57,47 @@ pub fn threads_per_session() -> usize {
     std::thread::available_parallelism().map_or(1, |n| (n.get() / 4).max(1))
 }
 
-async fn allowed<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> bool {
-    let Some(policy) = app.try_state::<OnDevicePolicy>() else {
-        return false;
+async fn policy<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Policy {
+    let Some(state) = app.try_state::<OnDevicePolicy>() else {
+        return Policy::default();
     };
-    *policy
+    state
         .0
         .get_or_init(|| async {
             let Some(pool) = crate::audio_retention::db_pool(app) else {
-                return false;
+                return Policy::default();
             };
             match syntheo_db_app::load_managed_policy(&pool).await {
-                Ok(policy) => policy.on_device_transcription_allowed(),
-                Err(_) => false,
+                Ok(policy) => Policy {
+                    allowed: policy.on_device_transcription_allowed(),
+                    sources: policy.speech_models_urls().map(|urls| {
+                        syntheo_speech_host::models::parse_sources(urls.iter().map(String::as_str))
+                            .unwrap_or_default()
+                    }),
+                },
+                Err(_) => Policy::default(),
             }
         })
         .await
+        .clone()
+}
+
+async fn allowed<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> bool {
+    policy(app).await.allowed
+}
+
+/// Sources des modèles : celles de l'organisation si le réglage existe (elles
+/// remplacent les sources compilées), sinon les sources compilées.
+async fn sources<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+) -> Vec<syntheo_speech_host::models::Source> {
+    match policy(app).await.sources {
+        Some(managed) => managed,
+        None => app
+            .try_state::<CompiledSources>()
+            .map(|s| s.0.clone())
+            .unwrap_or_default(),
+    }
 }
 
 /// Cible du lancement en cours, après vérification et lancement au besoin.
@@ -87,19 +141,24 @@ pub async fn stop<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
     }
 }
 
-/// Module installé, pour l'interface.
+/// Modèles installés, pour l'interface.
 #[derive(Debug, Clone, serde::Serialize, specta::Type)]
 #[serde(tag = "kind", rename_all = "snake_case")]
-pub enum OnDeviceModule {
-    NotInstalled,
-    Installed {
-        version: String,
-        #[serde(rename = "sizeBytes")]
-        size_bytes: f64,
+pub enum OnDeviceModels {
+    Missing {
+        #[serde(rename = "totalBytes")]
+        total_bytes: f64,
     },
-    /// Présent mais refusé (non signé, altéré, incompatible).
-    Invalid {
-        reason: String,
+    /// Installation interrompue.
+    Partial {
+        #[serde(rename = "presentBytes")]
+        present_bytes: f64,
+        #[serde(rename = "totalBytes")]
+        total_bytes: f64,
+    },
+    Installed {
+        #[serde(rename = "totalBytes")]
+        total_bytes: f64,
     },
 }
 
@@ -108,24 +167,30 @@ pub enum OnDeviceModule {
 pub struct OnDeviceStatus {
     /// Autorisée par la politique de l'organisation.
     pub allowed: bool,
-    /// Une clé de signature des modules est configurée dans cette
-    /// application : sans elle, rien ne peut être installé.
-    pub installable: bool,
-    pub module: OnDeviceModule,
+    /// Le programme compagnon est livré avec cette application et présent.
+    pub companion: bool,
+    pub models: OnDeviceModels,
+    /// Au moins une source de téléchargement (compilée ou imposée par
+    /// l'organisation) : sinon, installation depuis un dossier seulement.
+    pub downloadable: bool,
 }
 
-fn module_of(status: syntheo_speech_host::install::ModuleStatus) -> OnDeviceModule {
-    use syntheo_speech_host::install::ModuleStatus;
+fn models_of(status: syntheo_speech_host::models::ModelsStatus) -> OnDeviceModels {
+    use syntheo_speech_host::models::ModelsStatus;
     match status {
-        ModuleStatus::NotInstalled => OnDeviceModule::NotInstalled,
-        ModuleStatus::Installed {
-            version,
-            size_bytes,
-        } => OnDeviceModule::Installed {
-            version,
-            size_bytes: size_bytes as f64,
+        ModelsStatus::Missing { total_bytes } => OnDeviceModels::Missing {
+            total_bytes: total_bytes as f64,
         },
-        ModuleStatus::Invalid { reason } => OnDeviceModule::Invalid { reason },
+        ModelsStatus::Partial {
+            present_bytes,
+            total_bytes,
+        } => OnDeviceModels::Partial {
+            present_bytes: present_bytes as f64,
+            total_bytes: total_bytes as f64,
+        },
+        ModelsStatus::Installed { total_bytes } => OnDeviceModels::Installed {
+            total_bytes: total_bytes as f64,
+        },
     }
 }
 
@@ -139,7 +204,7 @@ fn host<R: tauri::Runtime>(
         .ok_or_else(|| "unavailable".to_owned())
 }
 
-/// Installation et désinstallation : seulement sans écoute en cours.
+/// Installation et retrait : seulement sans écoute en cours.
 async fn require_no_capture<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Result<(), String> {
     use crate::{CaptureState, ListenerPluginExt};
     match app.listener().capture_state_checked().await {
@@ -162,85 +227,137 @@ fn is_plain_local_path(path: &std::path::Path) -> bool {
     }
 }
 
-/// État de la source « Sur ce poste » : politique et module installé.
+/// État de la source « Sur ce poste » : politique, compagnon et modèles.
 #[tauri::command]
 #[specta::specta]
 pub async fn on_device_status<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
 ) -> Result<OnDeviceStatus, String> {
     let allowed = allowed(&app).await;
-    let (installable, module) = match host(&app) {
-        Ok(host) => (host.installable(), module_of(host.module_status().await)),
-        Err(_) => (false, OnDeviceModule::NotInstalled),
+    let downloadable = !sources(&app).await.is_empty();
+    let (companion, models) = match host(&app) {
+        Ok(host) => {
+            let status = host.status().await;
+            (status.companion, models_of(status.models))
+        }
+        Err(_) => (false, OnDeviceModels::Missing { total_bytes: 0.0 }),
     };
     Ok(OnDeviceStatus {
         allowed,
-        installable,
-        module,
+        companion,
+        models,
+        downloadable,
     })
 }
 
-/// Installe le module : le fichier `manifest.json` d'un dossier de module est
-/// choisi ici, côté Rust (aucun chemin ne vient de la webview). Manifeste
-/// signé, liste fermée et empreintes sont vérifiés avant la mise en place.
+/// Refus communs avant une installation de modèles.
+async fn before_install<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+) -> Result<Arc<syntheo_speech_host::SpeechHost>, String> {
+    if !allowed(app).await {
+        return Err("disabled".to_owned());
+    }
+    let host = host(app)?;
+    if !host.status().await.companion {
+        return Err("companion_missing".to_owned());
+    }
+    require_no_capture(app).await?;
+    Ok(host)
+}
+
+/// Télécharge les modèles (≈ 1 Go) depuis les sources compilées ou imposées
+/// par l'organisation, chaque fichier vérifié avant sa mise en place ; rend
+/// la main à la fin. Avancement : `on_device_install_progress`.
+#[tauri::command]
+#[specta::specta]
+pub async fn on_device_download_models<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+) -> Result<OnDeviceModels, String> {
+    let host = before_install(&app).await?;
+    let sources = sources(&app).await;
+    host.download_models(&sources)
+        .await
+        .map_err(str::to_owned)?;
+    Ok(models_of(host.status().await.models))
+}
+
+/// Installe les modèles depuis un dossier choisi ici, côté Rust (aucun chemin
+/// ne vient de la webview), chaque fichier vérifié avant sa mise en place.
 /// `None` : choix annulé.
 #[tauri::command]
 #[specta::specta]
-pub async fn on_device_install<R: tauri::Runtime>(
+pub async fn on_device_install_models<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
     window: tauri::Window<R>,
-) -> Result<Option<OnDeviceModule>, String> {
+) -> Result<Option<OnDeviceModels>, String> {
     use tauri_plugin_dialog::DialogExt;
-    if !allowed(&app).await {
-        return Err("disabled".to_owned());
-    }
-    let host = host(&app)?;
-    if !host.installable() {
-        return Err("no_key".to_owned());
-    }
-    require_no_capture(&app).await?;
-    let mut dialog = app.dialog().file().add_filter("manifest.json", &["json"]);
+    let host = before_install(&app).await?;
+    let mut dialog = app.dialog().file();
     #[cfg(desktop)]
     {
         dialog = dialog.set_parent(&window);
     }
     #[cfg(not(desktop))]
     let _ = &window;
-    let chosen = tauri::async_runtime::spawn_blocking(move || dialog.blocking_pick_file())
+    let chosen = tauri::async_runtime::spawn_blocking(move || dialog.blocking_pick_folder())
         .await
         .map_err(|_| "unavailable".to_owned())?;
     let Some(chosen) = chosen else {
         return Ok(None);
     };
-    let manifest = chosen.into_path().map_err(|_| "unsafe_path".to_owned())?;
-    if !is_plain_local_path(&manifest) {
+    let source = chosen.into_path().map_err(|_| "unsafe_path".to_owned())?;
+    if !is_plain_local_path(&source) {
         return Err("unsafe_path".to_owned());
     }
-    if manifest.file_name().and_then(|n| n.to_str())
-        != Some(syntheo_speech_host::manifest::MANIFEST_FILE)
-    {
-        return Err("not_manifest".to_owned());
-    }
-    let source = manifest
-        .parent()
-        .ok_or_else(|| "not_manifest".to_owned())?
-        .to_path_buf();
-    // L'écoute a pu démarrer pendant le choix du fichier.
+    // L'écoute a pu démarrer pendant le choix du dossier.
     require_no_capture(&app).await?;
-    host.install_from(source)
+    host.install_models_from(source)
         .await
-        .map(|status| Some(module_of(status)))
-        .map_err(str::to_owned)
+        .map_err(str::to_owned)?;
+    Ok(Some(models_of(host.status().await.models)))
 }
 
-/// Désinstalle le module.
+/// Avancement de l'installation des modèles.
+#[derive(Debug, Clone, serde::Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct OnDeviceInstallProgress {
+    pub done_bytes: f64,
+    pub total_bytes: f64,
+}
+
+/// Avancement de l'installation en cours ; `None` hors installation.
 #[tauri::command]
 #[specta::specta]
-pub async fn on_device_uninstall<R: tauri::Runtime>(
+pub async fn on_device_install_progress<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+) -> Result<Option<OnDeviceInstallProgress>, String> {
+    Ok(host(&app)?
+        .install_progress()
+        .map(|(done, total)| OnDeviceInstallProgress {
+            done_bytes: done as f64,
+            total_bytes: total as f64,
+        }))
+}
+
+/// Annule l'installation en cours (un téléchargement reprendra plus tard où
+/// il s'était arrêté).
+#[tauri::command]
+#[specta::specta]
+pub async fn on_device_cancel_install<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+) -> Result<(), String> {
+    host(&app)?.cancel_install();
+    Ok(())
+}
+
+/// Retire les modèles.
+#[tauri::command]
+#[specta::specta]
+pub async fn on_device_remove_models<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
 ) -> Result<(), String> {
     require_no_capture(&app).await?;
-    host(&app)?.uninstall().await.map_err(str::to_owned)
+    host(&app)?.remove_models().await.map_err(str::to_owned)
 }
 
 /// Mesure d'un profil, pour l'interface et la barre de diagnostic.
@@ -405,18 +522,14 @@ mod tests {
 
     #[test]
     fn only_plain_local_paths_are_accepted() {
-        assert!(!is_plain_local_path(Path::new("relative/manifest.json")));
+        assert!(!is_plain_local_path(Path::new("relative/models")));
         if cfg!(windows) {
-            assert!(is_plain_local_path(Path::new(r"C:\Modules\manifest.json")));
-            assert!(!is_plain_local_path(Path::new(
-                r"\\server\share\manifest.json"
-            )));
-            assert!(!is_plain_local_path(Path::new(r"\\?\C:\m\manifest.json")));
-            assert!(!is_plain_local_path(Path::new(r"\\.\pipe\manifest.json")));
+            assert!(is_plain_local_path(Path::new(r"C:\Modeles")));
+            assert!(!is_plain_local_path(Path::new(r"\\server\share\modeles")));
+            assert!(!is_plain_local_path(Path::new(r"\\?\C:\m")));
+            assert!(!is_plain_local_path(Path::new(r"\\.\pipe\m")));
         } else {
-            assert!(is_plain_local_path(Path::new(
-                "/home/u/module/manifest.json"
-            )));
+            assert!(is_plain_local_path(Path::new("/home/u/modeles")));
         }
     }
 }

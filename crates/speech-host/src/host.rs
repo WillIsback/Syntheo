@@ -1,7 +1,7 @@
 //! Cycle de vie du processus `syntheo-speech` (issue 684).
 //!
-//! - Avant chaque lancement : manifeste signé, puis liste fermée des fichiers
-//!   et de leurs empreintes (`verify`).
+//! - Avant chaque lancement : fichiers du compagnon et modèles contrôlés
+//!   contre leurs empreintes compilées (`verify`).
 //! - Lancement : environnement vidé (aucune clé d'API héritée), dossier du
 //!   module comme dossier courant, jeton aléatoire écrit sur l'entrée
 //!   standard (jamais sur la ligne de commande, dans l'environnement ni dans
@@ -29,6 +29,8 @@ use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::process::{Child, ChildStdin, Command};
 use tokio::sync::Mutex;
 
+use crate::companion::Companion;
+use crate::models::{ModelFile, ModelsStatus, Source};
 use crate::verify::{Verified, verify};
 
 /// Version du protocole entre l'application et le module.
@@ -332,32 +334,41 @@ async fn launch(
     })
 }
 
-/// Hôte du module : un lancement à la fois, relancé au besoin.
+/// Hôte du compagnon : un lancement à la fois, relancé au besoin.
 pub struct SpeechHost {
-    dir: PathBuf,
+    /// Dossier de données de la source (`<données>/speech`) : modèles, copies
+    /// privées de lancement, mise en service.
+    root: PathBuf,
+    /// Compagnon livré avec l'application ; `None` : construction sans lui.
+    companion: Option<Companion>,
+    /// Modèles attendus (compilés).
+    models: Vec<ModelFile>,
+    /// Audio de mise en service (PCM16 16 kHz), compilé.
+    audio: [Vec<u8>; 2],
     engine: String,
     /// Arguments supplémentaires du module (essais : coût du moteur factice).
     extra_args: Vec<String>,
     threads: usize,
     policy: RestartPolicy,
-    /// Clé publique des manifestes de module.
-    manifest_key: Option<String>,
-    /// Version de l'application, comparée à `min_app_version`.
-    app_version: String,
     state: Mutex<HostState>,
     /// Dernières mesures de charge du module.
     load: LoadSlot,
-    /// Installation ou désinstallation en cours : `target()` refuse aussitôt.
+    /// Installation ou retrait des modèles en cours : `target()` refuse
+    /// aussitôt.
     installing: std::sync::atomic::AtomicBool,
+    /// Demande d'annulation de l'installation en cours.
+    cancel: Arc<std::sync::atomic::AtomicBool>,
+    /// Avancement de l'installation : octets écrits, octets à écrire.
+    progress: Arc<std::sync::Mutex<Option<(u64, u64)>>>,
     /// Mesure de mise en service en cours : `target()` refuse aussitôt.
     measuring: std::sync::atomic::AtomicBool,
     /// Profil en cours de mesure (1 à 4), 0 hors mesure.
     measuring_profile: std::sync::atomic::AtomicUsize,
-    /// Mise en service du module installé, lue une fois puis gardée.
+    /// Mise en service du compagnon, lue une fois puis gardée.
     commissioned: std::sync::Mutex<Option<Option<crate::commissioning::Commissioning>>>,
 }
 
-/// Libère l'indicateur d'installation, même en cas d'erreur.
+/// Libère un indicateur (installation, mesure), même en cas d'erreur.
 struct InstallingGuard<'a>(&'a std::sync::atomic::AtomicBool);
 
 impl Drop for InstallingGuard<'_> {
@@ -379,25 +390,53 @@ struct HostState {
     verifications: usize,
 }
 
+/// État de la source, pour l'interface (sans hachage).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SpeechStatus {
+    /// Le compagnon est livré avec l'application et présent.
+    pub companion: bool,
+    pub models: ModelsStatus,
+}
+
 impl SpeechHost {
-    /// `dir` : dossier du module installé ; `threads` : fils par session ;
-    /// `app_version` : version de l'application.
-    pub fn new(dir: PathBuf, threads: usize, app_version: &str) -> Self {
+    /// `root` : dossier de données de la source ; `companion` : compagnon de
+    /// l'application ; `threads` : fils par session.
+    pub fn new(root: PathBuf, companion: Option<Companion>, threads: usize) -> Self {
+        let audio = crate::commissioning::AUDIO.map(|wav| {
+            crate::commissioning::wav_pcm16(wav)
+                .unwrap_or_default()
+                .to_vec()
+        });
         Self {
-            dir,
+            root,
+            companion,
+            models: crate::models::files().to_vec(),
+            audio,
             engine: "parakeet".to_owned(),
             extra_args: Vec::new(),
             threads,
             policy: RestartPolicy::default(),
-            manifest_key: crate::manifest::MODULE_PUBLIC_KEY.map(str::to_owned),
-            app_version: app_version.to_owned(),
             state: Mutex::new(HostState::default()),
             installing: Default::default(),
+            cancel: Default::default(),
+            progress: Default::default(),
             commissioned: Default::default(),
             measuring: Default::default(),
             measuring_profile: Default::default(),
             load: LoadSlot::default(),
         }
+    }
+
+    /// Modèles attendus (essais : un modèle factice).
+    pub fn with_models(mut self, models: Vec<ModelFile>) -> Self {
+        self.models = models;
+        self
+    }
+
+    /// Audio de mise en service, PCM16 16 kHz (essais : plus court).
+    pub fn with_commissioning_audio(mut self, mic: Vec<u8>, sys: Vec<u8>) -> Self {
+        self.audio = [mic, sys];
+        self
     }
 
     /// Moteur du module (`parakeet` par défaut ; `fake` pour les essais avec
@@ -419,11 +458,9 @@ impl SpeechHost {
         self
     }
 
-    /// Clé publique des manifestes, à la place de `MODULE_PUBLIC_KEY`
-    /// (essais avec une clé jetable).
-    pub fn with_manifest_key(mut self, key: &str) -> Self {
-        self.manifest_key = Some(key.to_owned());
-        self
+    /// Dossier des modèles installés.
+    pub fn models_dir(&self) -> PathBuf {
+        self.root.join("models")
     }
 
     /// Cible du lancement en cours ; lance ou relance le module au besoin
@@ -477,12 +514,14 @@ impl SpeechHost {
         }
         state.attempts.push(now);
         state.verifications += 1;
-        let dir = self.dir.clone();
-        let key = self.manifest_key.clone();
-        let app_version = self.app_version.clone();
+        let (root, companion, models) = (
+            self.root.clone(),
+            self.companion.clone(),
+            self.models.clone(),
+        );
         let verified = match tokio::task::spawn_blocking(move || {
-            crate::verify::remove_stale_copies(&dir);
-            verify(&dir, key.as_deref(), &app_version)
+            crate::verify::remove_stale_copies(&root);
+            verify(companion.as_ref(), &root.join("models"), &models, &root)
         })
         .await
         {
@@ -495,10 +534,10 @@ impl SpeechHost {
                 ));
             }
             Ok(Err(error)) => {
-                state.rejected = Some(error.to_string());
-                return Err(HostError::Verify(error.to_string()));
+                state.rejected = Some(error.code().to_owned());
+                return Err(HostError::Verify(error.code().to_owned()));
             }
-            Err(_) => return Err(HostError::Verify("verification failed".into())),
+            Err(_) => return Err(HostError::Verify("io".into())),
         };
         let running = launch(
             verified,
@@ -513,7 +552,7 @@ impl SpeechHost {
         Ok(target)
     }
 
-    /// Arrête le lancement en cours, s'il y en a un ; un module refusé à la
+    /// Arrête le lancement en cours, s'il y en a un ; un refus de
     /// vérification sera revérifié au prochain lancement. L'état « en panne »
     /// dure jusqu'à la fin de sa fenêtre.
     pub async fn stop(&self) {
@@ -541,28 +580,23 @@ impl SpeechHost {
             .is_some_and(|r| matches!(r.child.try_wait(), Ok(None)))
     }
 
-    /// État du module installé (sans hachage).
-    pub async fn module_status(&self) -> crate::install::ModuleStatus {
-        let (dir, key, version) = (
-            self.dir.clone(),
-            self.manifest_key.clone(),
-            self.app_version.clone(),
-        );
-        tokio::task::spawn_blocking(move || crate::install::status(&dir, key.as_deref(), &version))
+    /// État du compagnon et des modèles (sans hachage).
+    pub async fn status(&self) -> SpeechStatus {
+        let (dir, models) = (self.models_dir(), self.models.clone());
+        let companion = self.companion.as_ref().is_some_and(Companion::present);
+        let models = tokio::task::spawn_blocking(move || crate::models::status(&dir, &models))
             .await
-            .unwrap_or(crate::install::ModuleStatus::NotInstalled)
+            .unwrap_or(ModelsStatus::Missing { total_bytes: 0 });
+        SpeechStatus { companion, models }
     }
 
-    /// Une clé de signature des modules est configurée : sans elle, aucun
-    /// module ne peut être installé ni chargé.
-    pub fn installable(&self) -> bool {
-        self.manifest_key.is_some()
-    }
-
-    /// Marque une installation en cours ; refuse si le module tourne ou si
-    /// une autre installation est en cours.
+    /// Marque une installation en cours ; refuse si le module tourne, se
+    /// mesure, ou si une autre installation est en cours.
     async fn begin_install(&self) -> Result<InstallingGuard<'_>, &'static str> {
         use std::sync::atomic::Ordering;
+        if self.measuring.load(Ordering::SeqCst) {
+            return Err("measuring");
+        }
         if self
             .installing
             .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
@@ -580,50 +614,79 @@ impl SpeechHost {
             return Err("running");
         }
         state.running = None;
+        self.cancel.store(false, Ordering::SeqCst);
+        *self.progress.lock().unwrap_or_else(|e| e.into_inner()) = Some((0, 0));
         Ok(guard)
     }
 
-    /// Installe le module du dossier `source`, après vérification complète ;
-    /// refusé pendant qu'il tourne. Pendant la copie, le verrou de l'hôte
-    /// n'est pas tenu : `target()` refuse aussitôt (installation en cours).
-    /// Erreur : un code stable pour l'interface.
-    pub async fn install_from(
-        &self,
-        source: PathBuf,
-    ) -> Result<crate::install::ModuleStatus, &'static str> {
-        let _guard = self.begin_install().await?;
-        let (dir, key, version) = (
-            self.dir.clone(),
-            self.manifest_key.clone(),
-            self.app_version.clone(),
-        );
-        let status = tokio::task::spawn_blocking(move || {
-            crate::install::install(&source, &dir, key.as_deref(), &version)
-        })
-        .await
-        .map_err(|_| "io")?
-        .map_err(|error| error.code())?;
+    /// Fin d'une installation : refus et compteurs oubliés.
+    async fn end_install(&self) {
+        *self.progress.lock().unwrap_or_else(|e| e.into_inner()) = None;
         let mut state = self.state.lock().await;
         state.rejected = None;
         state.attempts.clear();
         state.blocked_until = None;
-        // Autre module : sa mise en service est à refaire (liée à sa
-        // construction).
-        self.forget_commissioning();
-        Ok(status)
     }
 
-    /// Désinstalle le module ; refusé pendant qu'il tourne.
-    pub async fn uninstall(&self) -> Result<(), &'static str> {
+    fn progress_sink(&self) -> impl FnMut(u64, u64) + Send + 'static {
+        let progress = self.progress.clone();
+        move |done, total| {
+            *progress.lock().unwrap_or_else(|e| e.into_inner()) = Some((done, total));
+        }
+    }
+
+    /// Installe les modèles depuis le dossier local `source`, chaque fichier
+    /// vérifié avant sa mise en place. Erreur : un code stable.
+    pub async fn install_models_from(&self, source: PathBuf) -> Result<(), &'static str> {
         let _guard = self.begin_install().await?;
-        let dir = self.dir.clone();
-        tokio::task::spawn_blocking(move || crate::install::uninstall(&dir))
+        let (dir, models) = (self.models_dir(), self.models.clone());
+        let cancel = self.cancel.clone();
+        let mut sink = self.progress_sink();
+        let result = tokio::task::spawn_blocking(move || {
+            crate::models::install_from_dir(&source, &dir, &models, &cancel, &mut sink)
+        })
+        .await
+        .unwrap_or(Err(crate::models::InstallError::Io));
+        self.end_install().await;
+        result.map_err(|e| e.code())
+    }
+
+    /// Télécharge les modèles manquants depuis `sources` (compilées, ou
+    /// imposées par l'organisation), fichier par fichier, source après
+    /// source.
+    pub async fn download_models(&self, sources: &[Source]) -> Result<(), &'static str> {
+        if sources.is_empty() {
+            return Err("no_download_source");
+        }
+        let _guard = self.begin_install().await?;
+        let (dir, models) = (self.models_dir(), self.models.clone());
+        let mut sink = self.progress_sink();
+        let result = crate::models::download(sources, &dir, &models, &self.cancel, &mut sink).await;
+        self.end_install().await;
+        result.map_err(|e| e.code())
+    }
+
+    /// Demande l'annulation de l'installation en cours (un téléchargement
+    /// annulé reprendra où il s'était arrêté).
+    pub fn cancel_install(&self) {
+        self.cancel.store(true, std::sync::atomic::Ordering::SeqCst);
+    }
+
+    /// Avancement de l'installation en cours : `(écrits, à écrire)`.
+    pub fn install_progress(&self) -> Option<(u64, u64)> {
+        *self.progress.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
+    /// Retire les modèles ; refusé pendant que le module tourne.
+    pub async fn remove_models(&self) -> Result<(), &'static str> {
+        let _guard = self.begin_install().await?;
+        let dir = self.models_dir();
+        let result = tokio::task::spawn_blocking(move || crate::models::remove(&dir))
             .await
-            .map_err(|_| "io")?
-            .map_err(|_| "io")?;
-        self.state.lock().await.rejected = None;
-        self.forget_commissioning();
-        Ok(())
+            .map_err(|_| "io")
+            .and_then(|r| r.map_err(|_| "io"));
+        self.end_install().await;
+        result
     }
 
     /// Vérifications faites depuis la création (essais).
@@ -631,11 +694,11 @@ impl SpeechHost {
         self.state.lock().await.verifications
     }
 
-    /// Construction du module installé (manifeste vérifié), sans hachage.
+    /// Construction du compagnon, si compagnon et modèles sont en place.
     fn module_build(&self) -> Option<u64> {
-        crate::verify::check(&self.dir, self.manifest_key.as_deref(), &self.app_version).ok()?;
-        let bytes = std::fs::read(self.dir.join(crate::manifest::MANIFEST_FILE)).ok()?;
-        serde_json::from_slice::<serde_json::Value>(&bytes).ok()?["build"].as_u64()
+        let companion = self.companion.as_ref()?;
+        crate::verify::check(Some(companion), &self.models_dir(), &self.models).ok()?;
+        Some(companion.build_id())
     }
 
     /// Mise en service enregistrée pour le module installé (lue une fois,
@@ -648,7 +711,7 @@ impl SpeechHost {
         }
         let loaded = self
             .module_build()
-            .and_then(|build| crate::commissioning::load(&self.dir, build));
+            .and_then(|build| crate::commissioning::load(&self.root, build));
         *cached = Some(loaded.clone());
         loaded
     }
@@ -661,34 +724,6 @@ impl SpeechHost {
                 two_streams: profile.streams() == 2,
                 diarization: profile.diarization(),
             })
-    }
-
-    fn forget_commissioning(&self) {
-        *self.commissioned.lock().unwrap_or_else(|e| e.into_inner()) = None;
-    }
-
-    /// Audio de mise en service du module installé, vérifié contre sa liste.
-    fn commissioning_audio(&self) -> Result<[Vec<u8>; 2], String> {
-        use sha2::{Digest, Sha256};
-        let entries =
-            crate::verify::check(&self.dir, self.manifest_key.as_deref(), &self.app_version)
-                .map_err(|e| e.code().to_owned())?;
-        let mut audio = [Vec::new(), Vec::new()];
-        for (slot, path) in audio.iter_mut().zip(crate::commissioning::AUDIO_FILES) {
-            let expected = entries.get(path).ok_or("no_commissioning_audio")?;
-            let bytes = std::fs::read(self.dir.join(path)).map_err(|_| "io")?;
-            let hash: String = Sha256::digest(&bytes)
-                .iter()
-                .map(|b| format!("{b:02x}"))
-                .collect();
-            if &hash != expected {
-                return Err("module_altered".to_owned());
-            }
-            *slot = crate::commissioning::wav_pcm16(&bytes)
-                .ok_or("no_commissioning_audio")?
-                .to_vec();
-        }
-        Ok(audio)
     }
 
     /// Mesure les profils dans l'ordre, retient le premier qui tient, et
@@ -711,8 +746,11 @@ impl SpeechHost {
             return Err("measuring".to_owned());
         }
         let _guard = InstallingGuard(&self.measuring);
-        let build = self.module_build().ok_or("module_incomplete")?;
-        let audio = self.commissioning_audio()?;
+        let build = self.module_build().ok_or("models_missing")?;
+        if self.audio.iter().any(Vec::is_empty) {
+            return Err("no_commissioning_audio".to_owned());
+        }
+        let audio = self.audio.clone();
         let mut measures = Vec::new();
         let mut chosen = None;
         struct ProgressReset<'a>(&'a std::sync::atomic::AtomicUsize);
@@ -768,7 +806,7 @@ impl SpeechHost {
                 .map_or(0, |d| d.as_secs()),
             module_build: build,
         };
-        save(&self.dir, &result).map_err(|_| "io".to_owned())?;
+        save(&self.root, &result).map_err(|_| "io".to_owned())?;
         *self.commissioned.lock().unwrap_or_else(|e| e.into_inner()) = Some(Some(result.clone()));
         Ok(result)
     }

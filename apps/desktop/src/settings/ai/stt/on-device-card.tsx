@@ -16,6 +16,8 @@ import { useSetSettingValues } from "~/settings/queries";
 import { useConfigValues } from "~/shared/config";
 import {
   describeOnDeviceError,
+  downloadOnDeviceModels,
+  installOnDeviceModelsFromFolder,
   isEligible,
   ON_DEVICE_COMMISSIONING_QUERY_KEY,
   ON_DEVICE_STATUS_QUERY_KEY,
@@ -25,8 +27,9 @@ import {
   useOnDeviceStatus,
 } from "~/stt/on-device";
 
-// Carte « Sur ce poste » (issue 685) : sonde du poste, module installé,
-// choix de la source. Masquée quand l'organisation interdit le module.
+// Carte « Sur ce poste » (issues 683 et 685) : sonde du poste, modèles du
+// programme compagnon livré avec l'application, mise en service, choix de la
+// source. Masquée quand l'organisation interdit la source.
 
 function formatSize(bytes: number) {
   const gb = bytes / 1e9;
@@ -127,7 +130,8 @@ export function OnDeviceCard() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [measuringNow, setMeasuringNow] = useState(false);
-  const installedNow = status.data?.module.kind === "installed";
+  const installedNow =
+    !!status.data?.companion && status.data.models.kind === "installed";
   const commissioning = useOnDeviceCommissioning(installedNow);
   const profileLabels = useLabels().profile;
 
@@ -176,57 +180,75 @@ export function OnDeviceCard() {
     onError: () => setError(t`The test could not run. Try again later.`),
   });
 
-  // Le fichier est choisi côté Rust : aucun chemin ne part de l'interface.
-  const installing = useMutation({
-    mutationFn: async () => {
-      const result = await transcriptionCommands.onDeviceInstall();
-      if (result.status === "error") throw new Error(result.error);
-      return result.data;
+  // Modèles (issue 683) : téléchargés ou installés depuis un dossier choisi
+  // côté Rust (aucun chemin ne part de l'interface), puis mise en service.
+  const afterInstall = (models: { kind: string } | null) => {
+    setError(null);
+    if (models?.kind === "installed") {
+      setNotice(
+        t`Models installed. Measuring this computer (one to two minutes)…`,
+      );
+      void queryClient.invalidateQueries({
+        queryKey: ON_DEVICE_COMMISSIONING_QUERY_KEY,
+      });
+      commissioningRun.mutate();
+    }
+    void refresh();
+  };
+  const installError = (e: Error) => {
+    setError(
+      t`The models were not installed: ${describeOnDeviceError(e.message)}`,
+    );
+    void refresh();
+  };
+  const downloading = useMutation({
+    mutationFn: downloadOnDeviceModels,
+    onMutate: () => setNotice(null),
+    onSuccess: afterInstall,
+    onError: installError,
+  });
+  const fromFolder = useMutation({
+    mutationFn: installOnDeviceModelsFromFolder,
+    onMutate: () => setNotice(null),
+    onSuccess: afterInstall,
+    onError: installError,
+  });
+  const installingAny = downloading.isPending || fromFolder.isPending;
+  const installProgress = useQuery({
+    queryKey: ["on-device-install-progress"],
+    queryFn: async () => {
+      const result = await transcriptionCommands.onDeviceInstallProgress();
+      return result.status === "ok" ? result.data : null;
     },
-    onSuccess: (installed) => {
-      setError(null);
-      if (installed) {
-        setNotice(
-          t`Module installed. Measuring this computer (one to two minutes)…`,
-        );
-        void queryClient.invalidateQueries({
-          queryKey: ON_DEVICE_COMMISSIONING_QUERY_KEY,
-        });
-        if (installed.kind === "installed") commissioningRun.mutate();
-      }
-      void refresh();
-    },
-    onError: (e: Error) =>
-      setError(
-        t`The module was not installed: ${describeOnDeviceError(e.message)}`,
-      ),
+    enabled: installingAny,
+    refetchInterval: installingAny ? 500 : false,
   });
 
-  const uninstalling = useMutation({
+  const removing = useMutation({
     mutationFn: async () => {
-      const result = await transcriptionCommands.onDeviceUninstall();
+      const result = await transcriptionCommands.onDeviceRemoveModels();
       if (result.status === "error") throw new Error(result.error);
       setSettings({ stt_on_device: false });
     },
     onSuccess: () => {
       setError(null);
-      setNotice(t`Module uninstalled.`);
+      setNotice(t`Models removed.`);
       void refresh();
     },
     onError: (e: Error) =>
       setError(
-        t`The module was not uninstalled: ${describeOnDeviceError(e.message)}`,
+        t`The models were not removed: ${describeOnDeviceError(e.message)}`,
       ),
   });
 
   if (!status.data?.allowed) return null;
-  const module = status.data.module;
-  const installable = status.data.installable;
-  const installed = module.kind === "installed";
+  const { companion, models, downloadable } = status.data;
+  const installed = installedNow;
   const chosen = !!stt_on_device;
   const measuringElsewhere = !commissioningRun.isPending && !!progress.data;
   const measuringAny = commissioningRun.isPending || measuringElsewhere;
-  const busy = installing.isPending || uninstalling.isPending || measuringAny;
+  const busy = installingAny || removing.isPending || measuringAny;
+  const done = installProgress.data;
   const measured = commissioning.data;
   const progressValue = progress.data;
   const usable = installed && !!measured?.profile;
@@ -237,15 +259,15 @@ export function OnDeviceCard() {
       status={
         installed ? (
           <span className="bg-accent text-accent-foreground rounded-full px-2.5 py-0.5 text-[13px] font-medium">
-            <Trans>Installed</Trans>
+            <Trans>Ready</Trans>
           </span>
         ) : null
       }
     >
       <p className="text-muted-foreground text-[13px]">
         <Trans>
-          Transcribe without a server: the transcription module runs on this
-          computer and audio never leaves it.
+          Transcribe without a server: transcription runs on this computer and
+          audio never leaves it.
         </Trans>
       </p>
 
@@ -279,62 +301,98 @@ export function OnDeviceCard() {
         data-setting-id="stt-on-device-module"
         className="flex flex-col gap-2"
       >
-        {module.kind === "installed" ? (
-          <p className="text-[13px]">
-            {t`Module installed: version ${module.version}, ${formatSize(module.sizeBytes)}.`}
-          </p>
-        ) : module.kind === "invalid" ? (
-          <p className="text-destructive text-[13px]" role="alert">
-            {t`The installed module is refused: ${describeOnDeviceError(module.reason)}`}
-          </p>
-        ) : installable ? (
+        {!companion ? (
           <p className="text-muted-foreground text-[13px]">
             <Trans>
-              Module not installed. Download from Syntheo is coming soon.
+              This version of Syntheo does not include transcription on this
+              computer.
             </Trans>
+          </p>
+        ) : installingAny ? (
+          <p className="text-[13px]" data-testid="on-device-install-progress">
+            {done && done.totalBytes > 0
+              ? t`Installing the models: ${formatSize(done.doneBytes)} of ${formatSize(done.totalBytes)}…`
+              : t`Installing the models…`}
+          </p>
+        ) : models.kind === "installed" ? (
+          <p className="text-[13px]">
+            {t`Models installed (${formatSize(models.totalBytes)}).`}
+          </p>
+        ) : models.kind === "partial" ? (
+          <p className="text-muted-foreground text-[13px]">
+            {t`Models partly installed: ${formatSize(models.presentBytes)} of ${formatSize(models.totalBytes)}.`}
           </p>
         ) : (
           <p className="text-muted-foreground text-[13px]">
-            <Trans>Transcription on this computer is coming soon.</Trans>
+            {t`The transcription models (${formatSize(models.totalBytes)}) are not installed yet.`}
           </p>
         )}
-        {installable || module.kind !== "not_installed" ? (
+        {companion ? (
           <div className="flex flex-wrap gap-1.5">
-            {installable ? (
+            {installingAny ? (
               <button
                 type="button"
-                disabled={busy}
-                onClick={() => installing.mutate()}
-                className="border-border hover:bg-muted inline-flex items-center gap-2 rounded-md border px-2.5 py-1 text-[13px] disabled:opacity-60"
+                onClick={() =>
+                  void transcriptionCommands.onDeviceCancelInstall()
+                }
+                className="border-border hover:bg-muted inline-flex items-center gap-2 rounded-md border px-2.5 py-1 text-[13px]"
               >
-                {installing.isPending ? (
-                  <CircleNotch className="size-3.5 animate-spin motion-reduce:animate-none" />
-                ) : null}
-                {installing.isPending ? (
-                  <Trans>Installing…</Trans>
-                ) : (
-                  <Trans>Install from a file…</Trans>
-                )}
+                <CircleNotch className="size-3.5 animate-spin motion-reduce:animate-none" />
+                <Trans>Cancel</Trans>
               </button>
+            ) : models.kind !== "installed" ? (
+              <>
+                {downloadable ? (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => downloading.mutate()}
+                    className="border-border hover:bg-muted rounded-md border px-2.5 py-1 text-[13px] disabled:opacity-60"
+                  >
+                    {models.kind === "partial" ? (
+                      <Trans>Resume the download</Trans>
+                    ) : (
+                      t`Download the models (${formatSize(models.totalBytes)})`
+                    )}
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => fromFolder.mutate()}
+                  className="border-border hover:bg-muted rounded-md border px-2.5 py-1 text-[13px] disabled:opacity-60"
+                >
+                  <Trans>Install from a folder…</Trans>
+                </button>
+              </>
             ) : null}
-            {module.kind !== "not_installed" ? (
+            {models.kind !== "missing" && !installingAny ? (
               <button
                 type="button"
                 disabled={busy}
-                onClick={() => uninstalling.mutate()}
+                onClick={() => removing.mutate()}
                 className="border-border hover:bg-muted rounded-md border px-2.5 py-1 text-[13px] disabled:opacity-60"
               >
-                <Trans>Uninstall</Trans>
+                <Trans>Remove the models</Trans>
               </button>
             ) : null}
           </div>
         ) : null}
-        {installable ? (
+        {companion && models.kind !== "installed" && !installingAny ? (
           <p className="text-muted-foreground text-[12px]">
-            <Trans>
-              Choose the manifest.json file of a module folder. Its signature
-              and every file are checked before installation.
-            </Trans>
+            {downloadable ? (
+              <Trans>
+                Each file is checked against the version expected by this
+                application before it is put in place. Without network access,
+                install them from a folder that contains them.
+              </Trans>
+            ) : (
+              <Trans>
+                Choose the folder that contains the model files. Each file is
+                checked against the version expected by this application before
+                it is put in place.
+              </Trans>
+            )}
           </p>
         ) : null}
       </div>
@@ -405,15 +463,10 @@ export function OnDeviceCard() {
                 This computer is chosen for transcription, but it has not been
                 measured or is too slow: live transcription is paused.
               </Trans>
-            ) : module.kind === "invalid" ? (
-              <Trans>
-                This computer is chosen for transcription, but its module is
-                refused: live transcription is paused.
-              </Trans>
             ) : (
               <Trans>
-                This computer is chosen for transcription, but its module is not
-                installed: live transcription is paused.
+                This computer is chosen for transcription, but its models are
+                not installed: live transcription is paused.
               </Trans>
             )}
           </p>
@@ -427,14 +480,23 @@ export function OnDeviceCard() {
               >
                 <Trans>Measure this computer</Trans>
               </button>
-            ) : installable ? (
+            ) : companion && downloadable ? (
               <button
                 type="button"
                 disabled={busy}
-                onClick={() => installing.mutate()}
+                onClick={() => downloading.mutate()}
                 className="border-border hover:bg-muted rounded-md border px-2.5 py-1 disabled:opacity-60"
               >
-                <Trans>Install</Trans>
+                <Trans>Download the models</Trans>
+              </button>
+            ) : companion ? (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => fromFolder.mutate()}
+                className="border-border hover:bg-muted rounded-md border px-2.5 py-1 disabled:opacity-60"
+              >
+                <Trans>Install from a folder…</Trans>
               </button>
             ) : null}
             <button
@@ -457,9 +519,9 @@ export function OnDeviceCard() {
           <p className="text-muted-foreground text-[13px]">{notice}</p>
         ) : null}
       </div>
-      {isEligible(probe) && !installed && installable ? (
+      {isEligible(probe) && !installed && companion ? (
         <p className="text-muted-foreground text-[13px]">
-          <Trans>Once the module is installed, you can turn it on here.</Trans>
+          <Trans>Once the models are installed, you can turn it on here.</Trans>
         </p>
       ) : null}
     </ServerCard>

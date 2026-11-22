@@ -29,16 +29,35 @@ export function useOnDeviceStatus() {
   });
 }
 
-/** Une installation est possible : clé de signature configurée. */
+/**
+ * Les modèles peuvent être installés (issue 683) : source autorisée et
+ * programme compagnon livré avec cette version de l'application.
+ */
 export function isOnDeviceInstallable(
   status: OnDeviceStatus | null | undefined,
 ) {
-  return !!status?.allowed && status.installable;
+  return !!status?.allowed && status.companion;
 }
 
-/** La source peut servir : autorisée et module installé et signé. */
+/** La source peut servir : autorisée, compagnon présent, modèles installés. */
 export function isOnDeviceUsable(status: OnDeviceStatus | null | undefined) {
-  return !!status?.allowed && status.module.kind === "installed";
+  return (
+    !!status?.allowed && status.companion && status.models.kind === "installed"
+  );
+}
+
+/** Télécharge les modèles depuis les sources de l'application. */
+export async function downloadOnDeviceModels() {
+  const result = await transcriptionCommands.onDeviceDownloadModels();
+  if (result.status === "error") throw new Error(result.error);
+  return result.data;
+}
+
+/** Installe les modèles depuis un dossier choisi côté Rust ; `null` : annulé. */
+export async function installOnDeviceModelsFromFolder() {
+  const result = await transcriptionCommands.onDeviceInstallModels();
+  if (result.status === "error") throw new Error(result.error);
+  return result.data;
 }
 
 export function isEligible(probe: Probe | null | undefined) {
@@ -90,36 +109,40 @@ export function describeOnDeviceError(code: string): string {
       return t`Stop the recording first.`;
     case "disabled":
       return t`Your administrator has disabled transcription on this computer.`;
-    case "no_key":
-      return t`Installing the module is not available yet.`;
-    case "not_manifest":
-      return t`Choose the manifest.json file of the module folder.`;
     case "unsafe_path":
-      return t`Choose a module folder on this computer (not on a network share).`;
+      return t`Choose a folder on this computer (not on a network share).`;
     case "running":
-      return t`The module is in use. Stop the recording, then try again.`;
+      return t`Transcription on this computer is in use. Stop the recording, then try again.`;
     case "installing":
       return t`An installation is already in progress.`;
-    case "bad_signature":
-      return t`The module is not signed by Syntheo.`;
-    case "module_altered":
-      return t`A file of the module has been modified.`;
-    case "module_incomplete":
-      return t`The module folder is incomplete or contains unexpected files.`;
-    case "incompatible":
-      return t`This module is not made for this computer.`;
-    case "app_too_old":
-      return t`This module needs a newer version of Syntheo.`;
-    case "module_too_old":
-      return t`This module is older than the one already accepted.`;
+    case "companion_missing":
+      return t`This version of Syntheo does not include transcription on this computer, or its program is missing. Reinstall Syntheo.`;
+    case "companion_altered":
+      return t`The transcription program of this computer has been modified. Reinstall Syntheo.`;
+    case "models_missing":
+      return t`The models are not installed or are incomplete.`;
+    case "models_altered":
+      return t`A model file has been modified. Remove the models and install them again.`;
+    case "models_not_found":
+      return t`This folder does not contain the models. Choose the folder that contains the model files.`;
+    case "models_mismatch":
+      return t`A model file does not match the expected file (damaged or another version).`;
+    case "not_enough_disk":
+      return t`Not enough free disk space for the models (about 1.2 GB needed).`;
+    case "no_download_source":
+      return t`Downloading the models is not available: install them from a folder.`;
+    case "network":
+      return t`The models could not be downloaded (network or server). Try again: the download resumes where it stopped.`;
+    case "cancelled":
+      return t`Installation cancelled. A download resumes where it stopped.`;
     case "measuring":
       return t`A measurement is already in progress.`;
     case "no_commissioning_audio":
-      return t`The module has no measurement audio. Install it again.`;
+      return t`The measurement audio is missing from this version of Syntheo.`;
     case "measure_failed":
       return t`The measurement could not run. Try again.`;
     case "io":
-      return t`The module files could not be read or written (disk full?). Try again.`;
+      return t`The files could not be read or written (disk full?). Try again.`;
     default:
       return t`The operation failed. Try again.`;
   }

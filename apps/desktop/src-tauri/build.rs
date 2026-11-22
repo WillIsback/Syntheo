@@ -12,6 +12,8 @@ fn main() {
     #[cfg(target_os = "macos")]
     println!("cargo:rustc-link-arg=-fapple-link-rtlib");
 
+    speech_companion();
+
     #[cfg(target_os = "macos")]
     if std::env::var_os("CARGO_FEATURE_APP_STORE").is_none() {
         build_check_permissions();
@@ -97,4 +99,55 @@ fn same_contents(a: &Path, b: &Path) -> bool {
         (Ok(a), Ok(b)) => a == b,
         _ => false,
     }
+}
+
+/// Programme compagnon `syntheo-speech` (issue 683) : posé dans `binaries/`
+/// par scripts/build-speech.sh ou .ps1 avant `tauri build`, livré par
+/// `bundle.externalBin` (tauri.conf.syntheo.json). Ses fichiers sont épinglés
+/// ici, taille et SHA-256, et compilés dans l'application
+/// (`SYNTHEO_SPEECH_FILES`, `nom:sha256:taille` séparés par `;`, binaire en
+/// premier) : l'application ne lance qu'un compagnon identique. Sous
+/// Windows, le runtime Visual C++ embarqué à côté (`vcrt/`) en fait partie.
+/// Sans binaire (développement, CI), liste vide : compagnon indisponible.
+fn speech_companion() {
+    use sha2::{Digest, Sha256};
+    use std::path::PathBuf;
+
+    let manifest_dir = PathBuf::from(std::env::var_os("CARGO_MANIFEST_DIR").unwrap());
+    let target = std::env::var("TARGET").unwrap_or_default();
+    let windows = target.contains("windows");
+    let binaries = manifest_dir.join("binaries");
+    let exe = if windows { ".exe" } else { "" };
+    let binary = binaries.join(format!("syntheo-speech-{target}{exe}"));
+    println!("cargo:rerun-if-changed={}", binaries.display());
+    println!("cargo:rerun-if-changed={}", binary.display());
+    println!("cargo:rerun-if-env-changed=SYNTHEO_SPEECH_MODELS_URLS");
+
+    let pin = |name: &str, path: &std::path::Path| -> Option<String> {
+        let bytes = std::fs::read(path).ok()?;
+        let sha: String = Sha256::digest(&bytes)
+            .iter()
+            .map(|b| format!("{b:02x}"))
+            .collect();
+        Some(format!("{name}:{sha}:{}", bytes.len()))
+    };
+    let mut files = Vec::new();
+    if let Some(entry) = pin(&format!("syntheo-speech{exe}"), &binary) {
+        files.push(entry);
+        if windows {
+            let vcrt = manifest_dir.join("vcrt");
+            println!("cargo:rerun-if-changed={}", vcrt.display());
+            for dll in [
+                "vcruntime140.dll",
+                "vcruntime140_1.dll",
+                "msvcp140.dll",
+                "msvcp140_1.dll",
+            ] {
+                if let Some(entry) = pin(dll, &vcrt.join(dll)) {
+                    files.push(entry);
+                }
+            }
+        }
+    }
+    println!("cargo:rustc-env=SYNTHEO_SPEECH_FILES={}", files.join(";"));
 }

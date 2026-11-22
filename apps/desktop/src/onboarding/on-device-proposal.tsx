@@ -9,8 +9,8 @@ import {
 } from "~/stt/on-device";
 
 // Proposition « Sur ce poste » à l'accueil (issue 685) : seulement si
-// l'organisation autorise le module et qu'il peut être installé (clé de
-// signature configurée). La sonde ne tourne qu'au clic : pas de calcul
+// l'organisation autorise la source et que cette version de l'application
+// livre le programme compagnon (issue 683). La sonde ne tourne qu'au clic : pas de calcul
 // surprise, sur batterie notamment. Rien n'est installé ni activé ici.
 export function OnDeviceProposal() {
   const status = useOnDeviceStatus();

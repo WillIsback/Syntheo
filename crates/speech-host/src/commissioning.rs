@@ -35,8 +35,12 @@ pub const MAX_P95: Duration = Duration::from_secs(2);
 pub const MAX_DRIFT: Duration = Duration::from_secs(1);
 /// Durée de mesure d'un profil.
 pub const MEASURE: Duration = Duration::from_secs(30);
-/// Audio de mise en service, dans le dossier du module (listé au manifeste).
-pub const AUDIO_FILES: [&str; 2] = ["commissioning/mic.wav", "commissioning/sys.wav"];
+/// Audio de mise en service (issue 686), compilé dans l'application : deux
+/// flux de 30 s, 16 kHz mono PCM16 (attribution dans les licences livrées).
+pub const AUDIO: [&[u8]; 2] = [
+    include_bytes!("../../../apps/speech/commissioning/mic.wav"),
+    include_bytes!("../../../apps/speech/commissioning/sys.wav"),
+];
 /// Trames de 20 ms à 16 kHz, PCM16.
 const FRAME_BYTES: usize = 640;
 const FRAME: Duration = Duration::from_millis(20);
@@ -118,14 +122,13 @@ pub struct Commissioning {
     pub measures: Vec<Measure>,
     /// Secondes depuis l'époque Unix.
     pub measured_at: u64,
-    /// Construction du module mesuré : une autre construction se remesure.
+    /// Construction du compagnon mesuré : une autre construction se remesure.
     pub module_build: u64,
 }
 
-/// Fichier du résultat, à côté du dossier du module.
-pub fn result_path(dir: &Path) -> Option<PathBuf> {
-    let name = dir.file_name()?.to_string_lossy();
-    Some(dir.parent()?.join(format!("{name}.commissioning.json")))
+/// Fichier du résultat, dans le dossier de données de la source.
+pub fn result_path(root: &Path) -> Option<PathBuf> {
+    Some(root.join("commissioning.json"))
 }
 
 /// Résultat enregistré pour la construction `module_build`.
@@ -141,7 +144,8 @@ pub fn load(dir: &Path, module_build: u64) -> Option<Commissioning> {
 
 /// Enregistre le résultat (fichier temporaire puis renommage).
 pub fn save(dir: &Path, result: &Commissioning) -> std::io::Result<()> {
-    let path = result_path(dir).ok_or_else(|| std::io::Error::other("no module folder"))?;
+    std::fs::create_dir_all(dir)?;
+    let path = result_path(dir).ok_or_else(|| std::io::Error::other("no data folder"))?;
     let temp = path.with_extension(format!("json-{}", std::process::id()));
     std::fs::write(
         &temp,
@@ -416,6 +420,15 @@ mod tests {
         let mut stereo = wav.clone();
         stereo[22] = 2;
         assert_eq!(wav_pcm16(&stereo), None);
+    }
+
+    #[test]
+    fn the_compiled_audio_is_two_canonical_wavs() {
+        for audio in AUDIO {
+            let pcm = wav_pcm16(audio).unwrap();
+            // Environ 30 s à 16 kHz, 2 octets par échantillon.
+            assert!(pcm.len() > 25 * 16_000 * 2, "{}", pcm.len());
+        }
     }
 
     #[test]

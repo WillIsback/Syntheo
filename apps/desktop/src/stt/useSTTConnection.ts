@@ -92,7 +92,8 @@ export const useSTTConnection = () => {
     const local = resolveOnDeviceConnection({
       chosen: !!stt_on_device,
       allowed: onDevice.data?.allowed,
-      installed: onDevice.data?.module.kind === "installed",
+      installed:
+        !!onDevice.data?.companion && onDevice.data.models.kind === "installed",
     });
     return local === undefined ? serverConnection : local;
   }, [serverConnection, stt_on_device, onDevice.data]);

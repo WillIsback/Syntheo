@@ -74,10 +74,13 @@ const DENIED_COMMANDS: &[&str] = &[
     // Sonde de la transcription sur le poste (issue 682) : le micro-banc
     // occupe tous les cœurs ; il ne se déclenche pas à distance.
     "plugin:transcription|probe_local_transcription",
-    // Module de transcription sur le poste (issue 685) : installer ou retirer
-    // un exécutable ne se décide pas à distance.
-    "plugin:transcription|on_device_install",
-    "plugin:transcription|on_device_uninstall",
+    // Modèles de la transcription sur le poste (issue 683) : télécharger
+    // ≈ 1 Go, installer depuis un dossier ou retirer ne se décide pas à
+    // distance.
+    "plugin:transcription|on_device_download_models",
+    "plugin:transcription|on_device_install_models",
+    "plugin:transcription|on_device_cancel_install",
+    "plugin:transcription|on_device_remove_models",
     // Mise en service (issue 686) : charge tous les cœurs une à deux
     // minutes ; jamais déclenchée à distance.
     "plugin:transcription|on_device_commission",

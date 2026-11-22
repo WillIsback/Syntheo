@@ -68,17 +68,29 @@ export const commands = {
 	discardAudioUpload: (uploadId: string) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|discard_audio_upload", { uploadId })),
 	/**  Sonde le poste pour `engine`. */
 	probeLocalTranscription: (engine: Engine) => typedError<Probe, string>(__TAURI_INVOKE("plugin:transcription|probe_local_transcription", { engine })),
-	/**  État de la source « Sur ce poste » : politique et module installé. */
+	/**  État de la source « Sur ce poste » : politique, compagnon et modèles. */
 	onDeviceStatus: () => typedError<OnDeviceStatus, string>(__TAURI_INVOKE("plugin:transcription|on_device_status")),
 	/**
-	 *  Installe le module : le fichier `manifest.json` d'un dossier de module est
-	 *  choisi ici, côté Rust (aucun chemin ne vient de la webview). Manifeste
-	 *  signé, liste fermée et empreintes sont vérifiés avant la mise en place.
+	 *  Télécharge les modèles (≈ 1 Go) depuis les sources compilées ou imposées
+	 *  par l'organisation, chaque fichier vérifié avant sa mise en place ; rend
+	 *  la main à la fin. Avancement : `on_device_install_progress`.
+	 */
+	onDeviceDownloadModels: () => typedError<OnDeviceModels, string>(__TAURI_INVOKE("plugin:transcription|on_device_download_models")),
+	/**
+	 *  Installe les modèles depuis un dossier choisi ici, côté Rust (aucun chemin
+	 *  ne vient de la webview), chaque fichier vérifié avant sa mise en place.
 	 *  `None` : choix annulé.
 	 */
-	onDeviceInstall: () => typedError<OnDeviceModule | null, string>(__TAURI_INVOKE("plugin:transcription|on_device_install")),
-	/**  Désinstalle le module. */
-	onDeviceUninstall: () => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|on_device_uninstall")),
+	onDeviceInstallModels: () => typedError<OnDeviceModels | null, string>(__TAURI_INVOKE("plugin:transcription|on_device_install_models")),
+	/**  Avancement de l'installation en cours ; `None` hors installation. */
+	onDeviceInstallProgress: () => typedError<OnDeviceInstallProgress | null, string>(__TAURI_INVOKE("plugin:transcription|on_device_install_progress")),
+	/**
+	 *  Annule l'installation en cours (un téléchargement reprendra plus tard où
+	 *  il s'était arrêté).
+	 */
+	onDeviceCancelInstall: () => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|on_device_cancel_install")),
+	/**  Retire les modèles. */
+	onDeviceRemoveModels: () => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|on_device_remove_models")),
 	/**  Mise en service enregistrée du module installé. */
 	onDeviceCommissioning: () => typedError<OnDeviceCommissioning | null, string>(__TAURI_INVOKE("plugin:transcription|on_device_commissioning")),
 	/**
@@ -433,6 +445,12 @@ export type OnDeviceCommissioning = {
 	measuredAt: number,
 };
 
+/**  Avancement de l'installation des modèles. */
+export type OnDeviceInstallProgress = {
+	doneBytes: number,
+	totalBytes: number,
+};
+
 /**  Mesure d'un profil, pour l'interface et la barre de diagnostic. */
 export type OnDeviceMeasure = {
 	/**
@@ -451,10 +469,10 @@ export type OnDeviceMeasure = {
 	error: string | null,
 };
 
-/**  Module installé, pour l'interface. */
-export type OnDeviceModule = { kind: "not_installed" } | { kind: "installed"; version: string; sizeBytes: number } | 
-/**  Présent mais refusé (non signé, altéré, incompatible). */
-{ kind: "invalid"; reason: string };
+/**  Modèles installés, pour l'interface. */
+export type OnDeviceModels = { kind: "missing"; totalBytes: number } | 
+/**  Installation interrompue. */
+{ kind: "partial"; presentBytes: number; totalBytes: number } | { kind: "installed"; totalBytes: number };
 
 /**  Avancement d'une mise en service. */
 export type OnDeviceProgress = {
@@ -475,12 +493,14 @@ export type OnDeviceSessionLoad = {
 export type OnDeviceStatus = {
 	/**  Autorisée par la politique de l'organisation. */
 	allowed: boolean,
+	/**  Le programme compagnon est livré avec cette application et présent. */
+	companion: boolean,
+	models: OnDeviceModels,
 	/**
-	 *  Une clé de signature des modules est configurée dans cette
-	 *  application : sans elle, rien ne peut être installé.
+	 *  Au moins une source de téléchargement (compilée ou imposée par
+	 *  l'organisation) : sinon, installation depuis un dossier seulement.
 	 */
-	installable: boolean,
-	module: OnDeviceModule,
+	downloadable: boolean,
 };
 
 export type PartialWord = {
