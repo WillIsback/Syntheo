@@ -3835,6 +3835,7 @@ msgstr "Only on-premise OpenAI-compatible servers are supported (vLLM, Ollama, l
 #: src/home/note-index.tsx
 #: src/session/move-note.tsx
 #: src/shared/open-note-dialog.tsx
+#: src/sidebar/toast/registry.tsx
 msgid "Open"
 msgstr "Open"
 
@@ -6457,6 +6458,10 @@ msgid "Transcription"
 msgstr "Transcription"
 
 #: src/sidebar/settings-server-status.tsx
+msgid "Transcription · checking…"
+msgstr "Transcription · checking…"
+
+#: src/sidebar/settings-server-status.tsx
 msgid "Transcription · connected"
 msgstr "Transcription · connected"
 
@@ -6507,6 +6512,10 @@ msgstr "Transcription on this computer is disabled by your administrator; transc
 #: src/stt/on-device.ts
 msgid "Transcription on this computer is in use. Stop the recording, then try again."
 msgstr "Transcription on this computer is in use. Stop the recording, then try again."
+
+#: src/sidebar/toast/registry.tsx
+msgid "Transcription on this computer is not ready"
+msgstr "Transcription on this computer is not ready"
 
 #: src/stt/on-device.ts
 msgid "Transcription on this computer uses the microphone only: the computer's sound (remote participants) is not transcribed."

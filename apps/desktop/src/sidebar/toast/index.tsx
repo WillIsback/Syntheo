@@ -43,8 +43,12 @@ export function ToastNotifications() {
     "current_llm_model",
   ] as const);
   const hasLLMConfigured = !!(current_llm_provider && current_llm_model);
-  // Serveur configuré, ou « Sur ce poste » choisi et prêt.
-  const hasSttConfigured = useUsableTranscription().usable;
+  // Le toast ne demande un fournisseur que s'il n'y a aucune source : « Sur
+  // ce poste » choisi mais pas prêt a son statut rouge, et ajouter un serveur
+  // n'y changerait rien (l'écoute ne repasse pas par lui).
+  const transcription = useUsableTranscription();
+  const hasSttConfigured = !transcription.needsProvider;
+  const onDeviceNotReady = transcription.onDeviceNotReady;
 
   const currentTab = useTabs((state) => state.currentTab);
   const devtoolsPreview = useDevtoolsToastPreview((state) => state.preview);
@@ -87,6 +91,7 @@ export function ToastNotifications() {
         onOpenUpdate: openUpdateSettings,
         hasLLMConfigured,
         hasSttConfigured,
+        onDeviceNotReady,
         isAiTranscriptionTabActive,
         isAiIntelligenceTabActive,
         onOpenLLMSettings: handleOpenLLMSettings,
@@ -96,6 +101,7 @@ export function ToastNotifications() {
       availableUpdate,
       hasLLMConfigured,
       hasSttConfigured,
+      onDeviceNotReady,
       isAiTranscriptionTabActive,
       isAiIntelligenceTabActive,
       handleOpenLLMSettings,

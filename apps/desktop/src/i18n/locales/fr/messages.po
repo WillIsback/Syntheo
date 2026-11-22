@@ -3835,6 +3835,7 @@ msgstr "Seuls les serveurs compatibles OpenAI hébergés chez vous sont pris en 
 #: src/home/note-index.tsx
 #: src/session/move-note.tsx
 #: src/shared/open-note-dialog.tsx
+#: src/sidebar/toast/registry.tsx
 msgid "Open"
 msgstr "Ouvrir"
 
@@ -6457,6 +6458,10 @@ msgid "Transcription"
 msgstr "Transcription"
 
 #: src/sidebar/settings-server-status.tsx
+msgid "Transcription · checking…"
+msgstr "Transcription · vérification…"
+
+#: src/sidebar/settings-server-status.tsx
 msgid "Transcription · connected"
 msgstr "Transcription · connectée"
 
@@ -6507,6 +6512,10 @@ msgstr "La transcription sur ce poste est désactivée par votre administrateur 
 #: src/stt/on-device.ts
 msgid "Transcription on this computer is in use. Stop the recording, then try again."
 msgstr "La transcription sur ce poste est en cours d'utilisation. Arrêtez l'écoute, puis réessayez."
+
+#: src/sidebar/toast/registry.tsx
+msgid "Transcription on this computer is not ready"
+msgstr "La transcription sur ce poste n'est pas prête"
 
 #: src/stt/on-device.ts
 msgid "Transcription on this computer uses the microphone only: the computer's sound (remote participants) is not transcribed."

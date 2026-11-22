@@ -72,6 +72,9 @@ function useStatus(kind: ServerKind): { label: string; tone: Tone } {
   const { state } = useServerConnection(kind);
   const serverLabel = useStatusLabel(kind, state);
   const transcription = useUsableTranscription();
+  if (kind === "stt" && transcription.isLoading) {
+    return { label: t`Transcription · checking…`, tone: "idle" };
+  }
   if (kind === "stt" && transcription.active === "on_device") {
     return { label: t`Transcription · on this computer`, tone: "ok" };
   }

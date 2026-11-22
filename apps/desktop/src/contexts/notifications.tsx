@@ -21,7 +21,10 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const transcription = useUsableTranscription();
 
   const hasConfigBanner =
-    !transcription.usable || !current_llm_provider || !current_llm_model;
+    transcription.needsProvider ||
+    transcription.onDeviceNotReady ||
+    !current_llm_provider ||
+    !current_llm_model;
 
   const hasActiveEnhancement = false;
 
