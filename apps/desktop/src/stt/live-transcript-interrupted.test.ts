@@ -37,7 +37,9 @@ describe("getLiveTranscriptPausedMessage", () => {
         sttProvider: "nvidia",
         online: true,
       }),
-    ).toMatch(/le module de transcription de ce poste n'a pas pu être authentifié/);
+    ).toMatch(
+      /le module de transcription de ce poste n'a pas pu être authentifié/,
+    );
   });
 
   it("only reconnects the on-device module after a failed launch", () => {
