@@ -37,7 +37,6 @@ members = [
 keyring = "4.1.4"
 syntheo-aec = { path = "crates/aec", package = "aec" }
 syntheo-agent-access = { path = "crates/agent-access", package = "agent-access" }
-syntheo-agent-core = { path = "crates/agent-core", package = "agent-core" }
 syntheo-askama-utils = { path = "crates/askama-utils", package = "askama-utils" }
 syntheo-audacity = { path = "crates/audacity", package = "audacity" }
 syntheo-audio = { path = "crates/audio", package = "audio" }
@@ -51,9 +50,6 @@ syntheo-audio-sync = { path = "crates/audio-sync", package = "audio-sync" }
 syntheo-audio-utils = { path = "crates/audio-utils", package = "audio-utils" }
 syntheo-brand = { path = "crates/brand", package = "brand" }
 syntheo-bundle = { path = "crates/bundle", package = "bundle" }
-syntheo-claude = { path = "crates/claude", package = "claude" }
-syntheo-cli-process = { path = "crates/cli-process", package = "cli-process" }
-syntheo-codex = { path = "crates/codex", package = "codex" }
 syntheo-data = { path = "crates/data", package = "data" }
 syntheo-db-app = { path = "crates/db-app", package = "db-app" }
 syntheo-db-change = { path = "crates/db-change", package = "db-change" }
@@ -80,7 +76,6 @@ syntheo-mp3 = { path = "crates/mp3", package = "mp3" }
 syntheo-notification = { path = "crates/notification", package = "notification" }
 syntheo-notification-interface = { path = "crates/notification-interface", package = "notification-interface" }
 syntheo-onnx = { path = "crates/onnx", package = "onnx" }
-syntheo-opencode = { path = "crates/opencode", package = "opencode" }
 syntheo-overlay-kit = { path = "crates/overlay-kit", package = "overlay-kit" }
 syntheo-pinned-fetch = { path = "crates/pinned-fetch", package = "pinned-fetch" }
 syntheo-resampler = { path = "crates/resampler", package = "resampler" }
@@ -203,7 +198,6 @@ shellexpand = "3"
 strum = "0.28"
 tempfile = "3"
 thiserror = "2"
-toml = "0.8"
 unicode-normalization = "0.1.25"
 unicode-width = "0.2"
 url = "2"

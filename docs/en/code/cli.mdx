@@ -114,24 +114,6 @@ Resources: `syntheo://meetings/{meeting_id}` (Markdown), `syntheo://meetings/{me
 - **Used by**: only the `apps/cli` tests (`dev-dependencies`), for the contract snapshot.
 - **Affected doc pages**: none directly; protects [/en/reference/cli](/en/reference/cli) against unnoticed drift.
 
-### `crates/agent-core`
-
-- **Path**: `crates/agent-core` (alias `syntheo-agent-core`).
-- **Role**: diagnosis and installation of a hook-based integration for three third-party agent CLIs: Codex, Claude Code and OpenCode (`ProviderKind`).
-- **Main API**: `health_check`, `install_cli`, `uninstall_cli`, `upgrade_hooks`; types `ProviderHealth`, `ProviderHealthStatus`, `ProviderAuthStatus`.
-- **Internal dependencies**: `crates/claude`, `crates/codex`, `crates/opencode`.
-- **Used by**: nothing since the `agent` plugin was removed (#546); the crate is kept for a future integration.
-- **Status**: inherited from Anarlog. The hooks it installs call the `char` command (for example `char claude notify`), not `syntheo`, and `upgrade_hooks` no longer runs at startup. Nothing here serves the `syntheo` CLI.
-- **Affected doc pages**: none. The agent skills installation documented in [/en/agents/skills](/en/agents/skills) goes through `apps/desktop/src-tauri/src/agent_skills.rs`, not through this crate.
-
-### `crates/cli-process`
-
-- **Path**: `crates/cli-process` (alias `syntheo-cli-process`).
-- **Role**: launching child processes with tokio: `spawn_with_retry`, `run_to_string`, `spawn_streaming_lines` (stream of typed lines), bounded reading of stdout and stderr (`MAX_PROCESS_STDOUT_BYTES` 64 MB, `MAX_PROCESS_STDERR_BYTES` 1 MB).
-- **Internal dependencies**: none.
-- **Used by**: `crates/claude`, `crates/codex`, `crates/opencode`. Neither `apps/cli` nor the MCP server uses it.
-- **Affected doc pages**: none.
-
 ## App side
 
 The app documents the CLI and reports whether it is installed, but this code lives in `apps/desktop`:

@@ -113,11 +113,8 @@ labels! {
     TrayStart => { fr: "Démarrer une réunion", en: "Start a Meeting" },
     TraySettings => { fr: "Paramètres", en: "Settings" },
     TrayCheckUpdates => { fr: "Rechercher des mises à jour…", en: "Check for Updates…" },
-    TrayShowEvents => { fr: "Afficher les prochaines réunions", en: "Show Upcoming Meetings" },
     TrayHide => { fr: "Masquer la fenêtre", en: "Hide Window" },
     TrayQuitCompletely => { fr: "Quitter complètement…", en: "Quit Completely…" },
-    AgendaToday => { fr: "Aujourd’hui", en: "Today" },
-    AgendaTomorrow => { fr: "Demain", en: "Tomorrow" },
     // Boîtes de dialogue natives
     QuitCompletelyTitle => { fr: "Quitter complètement {app} ?", en: "Quit {app} completely?" },
     QuitCompletelyMessage => {

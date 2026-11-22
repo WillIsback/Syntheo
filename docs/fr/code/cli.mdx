@@ -114,24 +114,6 @@ Ressources : `syntheo://meetings/{meeting_id}` (Markdown), `syntheo://meetings/{
 - **Utilisé par** : seulement les tests de `apps/cli` (`dev-dependencies`), pour le snapshot du contrat.
 - **Pages de doc concernées** : aucune directement ; protège [/reference/cli](/fr/reference/cli) contre une dérive non vue.
 
-### `crates/agent-core`
-
-- **Chemin** : `crates/agent-core` (alias `syntheo-agent-core`).
-- **Rôle** : diagnostic et installation d'une intégration par hook pour trois CLI d'agents tierces : Codex, Claude Code et OpenCode (`ProviderKind`).
-- **API principale** : `health_check`, `install_cli`, `uninstall_cli`, `upgrade_hooks` ; types `ProviderHealth`, `ProviderHealthStatus`, `ProviderAuthStatus`.
-- **Dépendances internes** : `crates/claude`, `crates/codex`, `crates/opencode`.
-- **Utilisé par** : rien depuis le retrait du plugin `agent` (#546) ; la crate est gardée pour une intégration future.
-- **État** : hérité d'Anarlog. Les hooks qu'elle installe appellent la commande `char` (par exemple `char claude notify`), pas `syntheo`, et `upgrade_hooks` ne tourne plus au démarrage. Rien ne sert la CLI `syntheo` ici.
-- **Pages de doc concernées** : aucune. L'installation des compétences d'agents documentée dans [/agents/skills](/fr/agents/skills) passe par `apps/desktop/src-tauri/src/agent_skills.rs`, pas par cette crate.
-
-### `crates/cli-process`
-
-- **Chemin** : `crates/cli-process` (alias `syntheo-cli-process`).
-- **Rôle** : lancement de processus enfants avec tokio : `spawn_with_retry`, `run_to_string`, `spawn_streaming_lines` (flux de lignes typées), lecture bornée de stdout et stderr (`MAX_PROCESS_STDOUT_BYTES` 64 Mo, `MAX_PROCESS_STDERR_BYTES` 1 Mo).
-- **Dépendances internes** : aucune.
-- **Utilisé par** : `crates/claude`, `crates/codex`, `crates/opencode`. Ni `apps/cli` ni le serveur MCP ne l'utilisent.
-- **Pages de doc concernées** : aucune.
-
 ## Côté application
 
 L'application documente la CLI et indique si elle est installée, mais ce code vit dans `apps/desktop` :

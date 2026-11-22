@@ -38,9 +38,6 @@ Dans le workspace Cargo, chaque crate est déclarée sous un alias `syntheo-*` (
 | `crates/brand` | Noms et identifiants du produit | desktop, plugins `store2`, `tray`, `windows`, crates `notification-linux`, `storage` | [Désinstaller](/fr/uninstall), [Données et confidentialité](/fr/data-and-privacy) |
 | `crates/host` | Architecture CPU, version de l'OS, arrêt de processus | desktop | aucune |
 | `crates/user-error` | Reconnaissance des erreurs dues au compte utilisateur | plugin `tracing`, crates `listener2-core`, `owhisper-client` | aucune |
-| `crates/claude` | Pilotage de la CLI Claude Code | `agent-core` | aucune |
-| `crates/codex` | Pilotage de la CLI Codex | `agent-core` | aucune |
-| `crates/opencode` | Pilotage de la CLI OpenCode | `agent-core` | aucune |
 | `crates/data` | Échantillons audio pour les tests | `audio-mock` ; dev-dependency ailleurs | aucune |
 
 ## Base de données
@@ -193,14 +190,6 @@ Ne décrivez pas le comportement du produit à partir du schéma SQL brut. Parte
 | `crates/bundle` | `get_ancestor_bundle_id`, `bundle_id_for_pid`, `read_bundle_info` | aucune | Code compilé sur macOS uniquement. |
 
 - **Pages de doc concernées** : voir la colonne Remarques ; aucune pour `host`, `user-error`, `shortcut-macos`, `overlay-kit` et `bundle`.
-
-## Intégrations d'agents de code
-
-`crates/claude`, `crates/codex` et `crates/opencode` pilotent les CLI Claude Code, Codex et OpenCode : options, flux d'événements, sessions ou threads, vérification d'installation (`health_check_with_options`) et lecture ou écriture de leur configuration. `codex` et `opencode` exposent aussi des liens profonds (`new_thread_deeplink`, `open_project_deeplink`).
-
-- **Dépendances internes** : `syntheo-cli-process` pour les trois.
-- **Usage** : seule `crates/agent-core` les utilise, pour installer un hook de notification dans la configuration de chaque agent (commande `char … notify`, héritée d'Anarlog). `agent-core` n'a elle-même plus d'utilisateur depuis le retrait du plugin `agent` (#546) : les quatre crates sont gardées, mais rien dans l'application ne les appelle.
-- **Pages de doc concernées** : aucune. L'installation des compétences décrite dans [Compétences](/fr/agents/skills) ne passe pas par ces crates.
 
 ## Outillage et données de test
 

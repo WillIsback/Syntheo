@@ -6,11 +6,10 @@ mod locale;
 mod macos_position;
 mod menu_items;
 mod schedule;
-mod schedule_labels;
 mod tray_icon;
 
 pub use ext::*;
-pub use menu_items::{SyntheoMenuItem, handle_agenda_menu_event, quit_completely};
+pub use menu_items::{SyntheoMenuItem, quit_completely};
 
 const PLUGIN_NAME: &str = "syntheo-tray";
 

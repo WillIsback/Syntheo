@@ -71,20 +71,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "agent-core"
-version = "0.1.0"
-dependencies = [
- "claude",
- "codex 0.1.0",
- "opencode",
- "serde",
- "serde_json",
- "specta",
- "tempfile",
- "toml 0.8.2",
-]
-
-[[package]]
 name = "aho-corasick"
 version = "1.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1596,38 +1582,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c8d4a3bb8b1e0c1050499d1815f5ab16d04f0959b233085fb31653fbfc9d98f9"
 
 [[package]]
-name = "claude"
-version = "0.1.0"
-dependencies = [
- "cli-process",
- "dirs 7.0.0",
- "futures-util",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 2.0.21",
- "tokio",
- "tokio-util",
-]
-
-[[package]]
 name = "cli-docs"
 version = "0.1.0"
 dependencies = [
  "clap",
  "serde",
  "serde_json",
-]
-
-[[package]]
-name = "cli-process"
-version = "0.1.0"
-dependencies = [
- "futures-util",
- "thiserror 2.0.21",
- "tokio",
- "tokio-stream",
- "tokio-util",
 ]
 
 [[package]]
@@ -1704,23 +1664,6 @@ dependencies = [
  "csv",
  "serde",
  "tera",
-]
-
-[[package]]
-name = "codex"
-version = "0.1.0"
-dependencies = [
- "cli-process",
- "dirs 7.0.0",
- "futures-util",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 2.0.21",
- "tokio",
- "tokio-util",
- "toml 0.8.2",
- "url",
 ]
 
 [[package]]
@@ -7871,22 +7814,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "opencode"
-version = "0.1.0"
-dependencies = [
- "cli-process",
- "dirs 7.0.0",
- "futures-util",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 2.0.21",
- "tokio",
- "tokio-util",
- "url",
-]
-
-[[package]]
 name = "openssl"
 version = "0.10.81"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -12424,8 +12351,6 @@ dependencies = [
  "objc2-app-kit",
  "objc2-foundation",
  "open",
- "serde",
- "serde_json",
  "specta",
  "specta-typescript",
  "tauri",
@@ -13646,7 +13571,7 @@ checksum = "4cab0200105831a9158e63718a0f6141c78cb2c1722ed17d19ad28941e3b8491"
 dependencies = [
  "az",
  "bumpalo",
- "codex 0.2.0",
+ "codex",
  "comemo",
  "ecow",
  "either",
@@ -13685,7 +13610,7 @@ dependencies = [
  "bumpalo",
  "chinese-number",
  "ciborium",
- "codex 0.2.0",
+ "codex",
  "comemo",
  "csv",
  "ecow",
