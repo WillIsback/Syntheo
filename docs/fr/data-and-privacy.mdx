@@ -25,7 +25,7 @@ Tout se trouve dans le dossier de données de l'application :
 | Journaux techniques | Dossier de logs de l'application, avec masquage du contenu sensible (clés et jetons, adresses, identifiants) et rotation par taille. Pour un webhook en échec, seul l'hôte est journalisé, jamais le chemin de l'URL |
 | Clés API des serveurs d'inférence et secrets de signature des webhooks | Trousseau du système (Secret Service sous Linux, Gestionnaire d'informations d'identification sous Windows), jamais en clair dans la base. Sans trousseau disponible sous Linux, le secret d'un webhook reste dans la base |
 | Exports | Dossier choisi dans « Emplacement d'export » (**Paramètres → Profil**) |
-| Module de transcription sur le poste, s'il est installé | `modules/speech` dans le dossier de données de l'application (`~/.local/share/fr.willisback.syntheo` sous Linux, `%APPDATA%\fr.willisback.syntheo` sous Windows), avec le résultat de sa mise en service ; voir [Transcrire sur ce poste](/fr/on-device-transcription) |
+| Modèles de la transcription sur le poste, s'ils sont installés | `speech/models` dans le dossier de données de l'application (`~/.local/share/fr.willisback.syntheo` sous Linux, `%APPDATA%\fr.willisback.syntheo` sous Windows), avec le résultat de la mise en service (`speech/commissioning.json`) ; voir [Transcrire sur ce poste](/fr/on-device-transcription) |
 | Audio | **Nulle part** : voir ci-dessous |
 
 <Warning>
@@ -53,7 +53,8 @@ Conséquence : si la transcription s'interrompt (serveur injoignable, clé refus
 | Destination | Ce qui est envoyé | Quand |
 | --- | --- | --- |
 | Votre serveur de transcription | L'audio de la capture, de la dictée ou du fichier importé | Pendant la transcription |
-| Le module [Sur ce poste](/fr/on-device-transcription), sur la boucle locale de votre poste | L'audio de l'écoute, s'il est choisi : rien ne quitte le poste | Pendant une écoute « Sur ce poste » |
+| Le programme [Sur ce poste](/fr/on-device-transcription), sur la boucle locale de votre poste | L'audio de l'écoute, s'il est choisi : rien ne quitte le poste | Pendant une écoute « Sur ce poste » |
+| Les sources des modèles de la transcription sur le poste : release GitHub de Syntheo (`github.com`, `objects.githubusercontent.com`), puis Hugging Face (`huggingface.co` et ses serveurs de contenu) en secours, ou le miroir défini par votre organisation (`speech_models_urls`) | Des requêtes HTTPS pour les fichiers des modèles, rien de vos réunions ; ces hôtes voient votre adresse IP | Seulement quand vous choisissez **Télécharger les modèles** ; aucune connexion si vous les installez depuis un dossier |
 | Votre serveur de synthèse | Le texte utile à la tâche : transcription, notes, consignes du modèle de compte rendu, question du chat | Compte rendu, chat, « Proposer des sections », fil rouge et ordre du jour d'un dossier, étape « Générer » d'une automatisation |
 | Les adresses de vos [webhooks](/fr/reference/webhooks) | Les événements de réunion (note, résumés, participants, transcription) | À chaque événement, si vous avez ajouté un point de terminaison |
 | L'adresse de l'étape webhook d'une [automatisation](/fr/automations) | Le contenu que vous y placez | Quand l'automatisation s'exécute |

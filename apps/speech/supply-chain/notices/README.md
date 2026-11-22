@@ -1,6 +1,6 @@
-# Licences et avis du module syntheo-speech
+# Licences et avis du programme syntheo-speech
 
-Le module livré contient ce dossier (sous `licenses/`), listé dans le manifeste signé.
+L'installeur de l'application livre ce dossier (`speech-licenses/`, posé par `scripts/build-speech.sh` et `.ps1`), avec l'attribution de l'audio de mise en service et la liste des crates (`THIRD-PARTY-RUST.html`). Les sources des modèles publient l'accord et les fiches à côté des fichiers.
 
 | Composant                                                                          | Origine (révision figée)                                                                                                                          | Licence                                             | Fichiers                                                                             |
 | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------ |
@@ -15,8 +15,8 @@ Le module livré contient ce dossier (sous `licenses/`), listé dans le manifest
 - Les fiches des modèles sont les `README.md` des dépôts ci-dessus, aux révisions indiquées, sans modification : ce sont les avis d'origine que l'accord OpenMDW-1.1 demande de conserver.
 - Les poids livrés sont quantifiés en int8 par Syntheo (`../../models/quantize.py`), à partir de l'export ci-dessus.
 - Sous Windows, ONNX Runtime est la variante DirectML. `DirectML.dll` n'est pas livrée : c'est celle de Windows (System32).
-- Le runtime Visual C++ livré sous Windows (`vcruntime140*.dll`, `msvcp140*.dll`) est redistribuable selon la licence de Visual Studio.
+- Le runtime Visual C++ livré sous Windows avec l'application (`vcruntime140*.dll`, `msvcp140*.dll`), que le programme charge aussi, est redistribuable selon la licence de Visual Studio.
 
 ---
 
-The module bundles ONNX Runtime 1.31.0 (MIT, third-party notices in `onnxruntime/ThirdPartyNotices.txt`), Rust crates (notices in `THIRD-PARTY-RUST.html`), and the Nemotron 3.5 ASR Streaming and Nemotron 3 Diarization models quantized to int8 (OpenMDW-1.1, model cards and agreement text under `models/`). Sources and revisions are listed in the table above.
+The program bundles ONNX Runtime 1.31.0 (MIT, third-party notices in `onnxruntime/ThirdPartyNotices.txt`), Rust crates (notices in `THIRD-PARTY-RUST.html`), and the Nemotron 3.5 ASR Streaming and Nemotron 3 Diarization models quantized to int8 (OpenMDW-1.1, model cards and agreement text under `models/`). Sources and revisions are listed in the table above.
