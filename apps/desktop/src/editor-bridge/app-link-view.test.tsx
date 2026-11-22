@@ -61,7 +61,7 @@ describe("AppLinkView", () => {
     fireEvent.click(chip);
 
     await waitFor(() => {
-      expect(hoisted.openUrl).toHaveBeenCalledWith(url, null);
+      expect(hoisted.openUrl).toHaveBeenCalledWith(url);
     });
   });
 

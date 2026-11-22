@@ -28,7 +28,7 @@ export function SettingsDevelopers() {
           size="sm"
           onClick={() =>
             void openerCommands
-              .openUrl(documentationUrl(i18n.locale, "agents/overview"), null)
+              .openUrl(documentationUrl(i18n.locale, "agents/overview"))
               .catch((error) =>
                 console.error(
                   "[settings] failed to open developers guide",

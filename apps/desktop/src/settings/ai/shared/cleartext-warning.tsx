@@ -24,7 +24,7 @@ function HttpsHelpLink() {
       className="text-foreground underline underline-offset-2"
       onClick={() =>
         void openerCommands
-          .openUrl(httpsHelpUrl(i18n.locale), null)
+          .openUrl(httpsHelpUrl(i18n.locale))
           .catch((error) =>
             console.error("[server] failed to open the HTTPS guide", error),
           )

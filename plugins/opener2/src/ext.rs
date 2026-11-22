@@ -7,13 +7,18 @@ pub struct Opener2<'a, R: tauri::Runtime, M: tauri::Manager<R>> {
 }
 
 impl<'a, R: tauri::Runtime, M: tauri::Manager<R>> Opener2<'a, R, M> {
-    pub fn open_url(&self, url: &str, with: Option<&str>) -> crate::Result<()> {
-        self.manager.opener().open_url(url, with)?;
+    /// Ouvre une page http(s) ou une adresse `mailto:` simple avec le
+    /// programme par défaut ; tout autre schéma est refusé (issue 676).
+    pub fn open_url(&self, url: &str) -> crate::Result<()> {
+        crate::policy::check_openable_url(url)?;
+        self.manager.opener().open_url(url.trim(), None::<&str>)?;
         Ok(())
     }
 
-    pub fn open_path(&self, path: &str, with: Option<&str>) -> crate::Result<()> {
-        self.manager.opener().open_path(path, with)?;
+    /// Ouvre un fichier avec le programme associé par le système, jamais avec
+    /// un programme choisi par l'appelant (issue 676).
+    pub fn open_path(&self, path: &str) -> crate::Result<()> {
+        self.manager.opener().open_path(path, None::<&str>)?;
         Ok(())
     }
 

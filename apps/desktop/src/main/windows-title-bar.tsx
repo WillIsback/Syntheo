@@ -188,7 +188,7 @@ export function WindowsTitleBar() {
             <DropdownMenuItem
               onSelect={() =>
                 void openerCommands
-                  .openUrl(documentationUrl(i18n.locale), null)
+                  .openUrl(documentationUrl(i18n.locale))
                   .catch((error) =>
                     console.error(
                       "[title-bar] failed to open documentation",
@@ -203,7 +203,7 @@ export function WindowsTitleBar() {
             <DropdownMenuItem
               onSelect={() =>
                 void openerCommands
-                  .openUrl("https://github.com/WillIsback/Syntheo/issues", null)
+                  .openUrl("https://github.com/WillIsback/Syntheo/issues")
                   .catch((error) =>
                     console.error(
                       "[title-bar] failed to open issue tracker",
@@ -217,7 +217,7 @@ export function WindowsTitleBar() {
             <DropdownMenuItem
               onSelect={() =>
                 void openerCommands
-                  .openUrl("https://github.com/WillIsback/Syntheo/issues", null)
+                  .openUrl("https://github.com/WillIsback/Syntheo/issues")
                   .catch((error) =>
                     console.error(
                       "[title-bar] failed to open issue tracker",

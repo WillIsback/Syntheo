@@ -38,7 +38,7 @@ export async function printPdf(input: ExportInput): Promise<void> {
 
   schedulePrintCleanup();
 
-  const opened = await openerCommands.openPath(created.data, null);
+  const opened = await openerCommands.openPath(created.data);
   if (opened.status === "error") {
     throw new PrintPdfError(opened.error);
   }

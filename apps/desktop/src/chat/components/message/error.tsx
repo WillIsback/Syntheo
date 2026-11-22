@@ -49,7 +49,7 @@ export function ErrorMessage({
 
   const handleOpenFaq = () => {
     void openerCommands
-      .openUrl(contextLengthHelpUrl(i18n.locale), null)
+      .openUrl(contextLengthHelpUrl(i18n.locale))
       .catch((error) =>
         console.error("[chat] failed to open help link", error),
       );
