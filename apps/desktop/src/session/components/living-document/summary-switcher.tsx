@@ -8,6 +8,7 @@ import {
   type SynthesisView,
 } from "./summary-switcher-view";
 
+import { recordSummaryEvent } from "~/mesure/beta";
 import { MeasureDialog } from "~/mesure/measure-dialog";
 import { useEnhancedNoteActions } from "~/session/components/note-input/enhanced-actions";
 import {
@@ -183,6 +184,11 @@ function SummarySwitcherForNote({
               void copyTextToClipboard(noteMarkdown, {
                 success: t`Copied to clipboard`,
                 error: t`Failed to copy`,
+              }).then((copied) => {
+                // Bêta (issue 672) : partage de la synthèse, pour l'abandon.
+                if (copied) {
+                  void recordSummaryEvent("shared", currentNoteId);
+                }
               });
             }}
             onMeasure={

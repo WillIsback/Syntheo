@@ -50,14 +50,15 @@ The lexical or content classification relies on a simple rule that can be wrong.
 
 ### In the app
 
-<Note>
-  Measuring from a note is under development for version 0.8.0. The labels below may still change.
-</Note>
-
 Two settings, off by default, are in **Settings → Advanced → Privacy**:
 
 - **Measure rework of summaries** adds the "Measure rework…" action to the summary menu. You paste or drop the sent version; only numbers are kept on your computer, never text.
 - **Calibration mode** is used to check the classification: after a measurement, it lists each difference so you can classify it by hand. Excerpts stay on screen; only the agreement counts are kept.
+
+Below these settings, two buttons:
+
+- **Export my measurements…** shows the whole export file; **Save the file…** saves it where you choose. Nothing is sent.
+- **Erase my measurements…**, then **Erase all measurements and my pseudonym**, erases from your computer the counters, the calibration, the term and summary tracking, the copy of generated summaries and the pseudonym, then **turns measurement off** along with Calibration mode. If you turn it back on, you start again with a new pseudonym.
 
 A managed deployment can turn measurement off through a managed setting.
 
@@ -116,13 +117,9 @@ Terms are designated by an index (`t1`, `t2`…). The mapping between the index 
 
 ### On your computer
 
-Syntheo keeps counters and identifiers, never text: not the summary, not the sent version, not the section headings. An automated test fails if a measurement table or export contains free text.
+Syntheo keeps counters, identifiers, dates and, for each corrected term, a fingerprint with a local key (HMAC-SHA-256, with a key drawn at random when you join and destroyed when you erase): not the sent version, not the section headings, not the terms themselves. A copy of the summary as generated is kept on your computer while measurement is on, to compare it with the sent version; it is cleared when you turn measurement off or erase your measurements, and is never exported. For the abandonment rate, Syntheo notes each summary generation and the date of its first file export and first share (copy or webhook send), only while measurement is on: a summary generated while measurement is off is not in the export, even if measured later. A regenerated summary counts as a new summary. Turning measurement off closes the summaries in progress: a measurement or share made after turning it back on does not attach to them, and a summary closed before its 7 days without being used is not in the export, since it was not observed long enough. Only measurements compared with the summary as generated go into the export; a measurement made without that copy (compared with the already reworked summary) stays on your computer. An automated test fails if a measurement table or export contains free text.
 
 ### In the export
-
-<Note>
-  The export is under development for version 0.8.0. Its format, below, is frozen: it is version 1 of the schema, `crates/mesure/schema/export-v1.json` in the [repository](https://github.com/WillIsback/Syntheo).
-</Note>
 
 You export by hand. Syntheo shows you the whole file before saving it and sends nothing: you hand it over yourself, through the channel set by the organization running the pilot. The schema is closed: no field outside this list is accepted, and every text value follows a fixed format or a closed list.
 
@@ -193,7 +190,7 @@ The tool that gathers exports (`scripts/beta/` in the [repository](https://githu
 ## Your rights
 
 - **Stop at any time**, without giving a reason: turn off "Measure rework of summaries". Nothing more is measured.
-- **Erase your measurements on your computer**: your counters and your pseudonym can be erased. The exact steps will be described here with version 0.8.0.
+- **Erase your measurements on your computer**: **Settings → Advanced → Privacy**, **Erase my measurements…**, then confirm. The counters and the pseudonym are erased and measurement is turned off; an export already handed over cannot be taken back from your computer.
 - **Ask for files already handed over to be deleted**: contact the organization running the pilot and give your pseudonym (`p-…`). It is the only way to find your files, since they do not contain your name.
 
 Not taking part, or stopping, changes nothing in how you use Syntheo.

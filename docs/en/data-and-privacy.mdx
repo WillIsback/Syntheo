@@ -90,9 +90,9 @@ For the beta, Syntheo can measure how much you reworked a summary before sending
 
 In the summary menu, "Measure rework…" opens a window where you paste the version you sent, or drop a `.txt`, `.md`, `.html` or `.docx` file. The calculation runs on your computer, without AI or network, with the same rule as the [`syntheo mesure`](/en/reference/cli#mesure-command) command. It shows raw numbers: words of content reworked per 100 generated words, and names or acronyms corrected.
 
-- **What is kept**: counts only (words generated, added, deleted, replaced), per summary and per section identified by its rank, with the version of the calculation rule, in the local database.
+- **What is kept**: counts only (words generated, added, deleted, replaced), per summary and per section identified by its rank and its role (decisions, actions or other), with the version of the calculation rule, in the local database. Added to these, only while measurement is on: a random pseudonym; a fingerprint with a local key of corrected terms, never the terms, the key being destroyed when you erase; each summary generation with the date of its first file export and first share (copy or webhook); and a copy of the summary as generated, to compare it, cleared when measurement is turned off and never exported.
 - **What is never kept**: the sent version, excerpts, headings. Pasted text lives only in the window and disappears when it closes. The measurement tables refuse any text.
-- **Nothing is sent.**
+- **Nothing is sent.** "Export my measurements…" shows the whole pseudonymized file before you save it; you hand it over yourself. Its content is described in [Beta](/en/beta).
 
 **Calibration mode**, a separate setting also off by default, lets you check the rule by hand: after a measurement, each difference is shown with its two excerpts and its automatic class (content or lexical), and you choose the true class. The agreement matrix (numbers) is shown, can be copied, and can be saved. Excerpts and your line-by-line choices stay on screen: they go neither to the database, nor to the log, nor to any export.
 
@@ -100,6 +100,7 @@ In the summary menu, "Measure rework…" opens a window where you paste the vers
 
 - **A meeting**: delete it in the app. Its transcript, its notes and its entry in the search index disappear.
 - **An API key**: in **Settings → Transcription** or **Settings → Synthesis**, open "Advanced", click "Reset this server…", then "Reset". The address and the key are forgotten; the key is removed from the keychain.
+- **Your beta measurements**: in **Settings → Advanced → Privacy**, "Erase my measurements…", then confirm. The counters, the calibration, the term and summary tracking, the copy of generated summaries and the pseudonym are erased, and measurement is turned off.
 - **Everything**: run a [complete uninstall](/en/uninstall), which removes the database, logs, cache, configuration and API keys, then delete the exports you produced.
 
 ## Inform participants

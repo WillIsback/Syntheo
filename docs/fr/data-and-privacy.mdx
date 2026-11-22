@@ -90,9 +90,9 @@ Pour la bêta, Syntheo peut mesurer combien vous avez retouché une synthèse av
 
 Dans le menu de la synthèse, « Mesurer la reprise… » ouvre une fenêtre où vous collez la version envoyée, ou déposez un fichier `.txt`, `.md`, `.html` ou `.docx`. Le calcul a lieu sur votre poste, sans IA ni réseau, avec la même règle que la commande [`syntheo mesure`](/fr/reference/cli#commande-mesure). Il affiche des nombres bruts : mots de fond retouchés pour 100 mots générés, et noms propres ou sigles corrigés.
 
-- **Ce qui est gardé** : seulement des compteurs (mots générés, ajoutés, supprimés, remplacés), par synthèse et par section désignée par son rang, avec la version de la règle de calcul, dans la base locale.
+- **Ce qui est gardé** : seulement des compteurs (mots générés, ajoutés, supprimés, remplacés), par synthèse et par section désignée par son rang et son rôle (décisions, actions ou autre), avec la version de la règle de calcul, dans la base locale. S'y ajoutent, seulement pendant que la mesure est active : un pseudonyme aléatoire ; une empreinte à clé locale des termes corrigés, jamais les termes, la clé étant détruite à l'effacement ; chaque génération de synthèse avec la date de son premier export de fichier et de son premier partage (copie ou webhook) ; et une copie de la synthèse telle que générée, pour la comparer, vidée quand la mesure est désactivée et jamais exportée.
 - **Ce qui n'est jamais gardé** : la version envoyée, les extraits, les titres. Le texte collé ne vit que dans la fenêtre et disparaît à sa fermeture. Les tables de mesure refusent tout texte.
-- **Rien n'est envoyé.**
+- **Rien n'est envoyé.** « Exporter mes mesures… » montre le fichier pseudonymisé en entier avant que vous l'enregistriez ; c'est vous qui le transmettez. Son contenu est décrit dans [Bêta](/fr/beta).
 
 Le **mode Calibrage**, réglage séparé et lui aussi désactivé par défaut, sert à vérifier la règle à la main : après une mesure, chaque différence s'affiche avec ses deux extraits et sa classe automatique (fond ou lexical), et vous choisissez la vraie classe. La matrice d'accord (des nombres) s'affiche, se copie, et peut être enregistrée. Les extraits et vos choix ligne par ligne restent à l'écran : ils ne vont ni dans la base, ni dans le journal, ni dans un export.
 
@@ -100,6 +100,7 @@ Le **mode Calibrage**, réglage séparé et lui aussi désactivé par défaut, s
 
 - **Une réunion** : supprimez-la dans l'application. Sa transcription, ses notes et son entrée dans l'index de recherche disparaissent.
 - **Une clé d'API** : dans **Paramètres → Transcription** ou **Paramètres → Synthèse**, ouvrez « Avancé », cliquez sur « Réinitialiser ce serveur… », puis sur « Réinitialiser ». L'adresse et la clé sont oubliées ; la clé est retirée du trousseau.
+- **Vos mesures de la bêta** : dans **Paramètres → Avancé → Confidentialité**, « Effacer mes mesures… », puis confirmez. Les compteurs, le calibrage, le suivi des termes et des synthèses, la copie des synthèses générées et le pseudonyme sont effacés, et la mesure est désactivée.
 - **Tout** : lancez une [désinstallation complète](/fr/uninstall), qui retire la base, les journaux, le cache, la configuration et les clés d'API, puis supprimez les exports que vous avez produits.
 
 ## Informer les participants

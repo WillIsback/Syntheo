@@ -83,9 +83,23 @@ pub fn load_file(path: &std::path::Path) -> Result<(String, Format), MeasureErro
 
 /// Termes du dictionnaire de l'utilisateur, comparés sans tenir compte de la
 /// casse.
-#[derive(Debug, Default, Clone)]
+#[derive(Default, Clone)]
 pub struct Dictionary {
     terms: Vec<Vec<String>>,
+    /// Clé locale des empreintes de termes (bêta, issue 672) : tirée à
+    /// l'inscription, détruite à l'effacement. Sans clé, aucun terme n'est
+    /// suivi.
+    term_key: Option<[u8; 32]>,
+}
+
+// La clé des empreintes n'apparaît jamais dans un journal ni un message.
+impl std::fmt::Debug for Dictionary {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Dictionary")
+            .field("terms", &self.terms.len())
+            .field("term_key", &self.term_key.map(|_| "<masquée>"))
+            .finish()
+    }
 }
 
 impl Dictionary {
@@ -106,7 +120,67 @@ impl Dictionary {
                 return Err(MeasureError::DictionaryTooLarge);
             }
         }
-        Ok(Self { terms: out })
+        Ok(Self {
+            terms: out,
+            term_key: None,
+        })
+    }
+
+    /// Active le suivi des termes avec la clé locale de l'inscription.
+    pub fn with_term_key(mut self, key: [u8; 32]) -> Self {
+        self.term_key = Some(key);
+        self
+    }
+
+    /// Empreintes de chaque mot des entrées, triées et sans doublon (voir
+    /// `term_hash`) ; vide sans clé. Les termes suivis sont des mots : un
+    /// terme contenu dans une entrée y est reconnu (« Dupont » corrigé, puis
+    /// « Jean Dupont » ajouté au dictionnaire). Limite connue : un mot à
+    /// majuscule d'une entrée compte comme couvert même dans un autre sens
+    /// (« Jean » de « Lycée Jean Moulin »).
+    pub fn hashes(&self) -> Vec<String> {
+        let Some(key) = &self.term_key else {
+            return Vec::new();
+        };
+        let mut out: Vec<String> = self
+            .terms
+            .iter()
+            .flatten()
+            .map(|word| term_hash(key, std::slice::from_ref(word)))
+            .collect();
+        out.sort();
+        out.dedup();
+        out
+    }
+
+    /// Termes corrigés d'un remplacement lexical, côté envoyé, toujours mot
+    /// par mot : chaque nom propre ou sigle, et chaque mot d'une entrée du
+    /// dictionnaire qu'il contient. En minuscules, comme les entrées du
+    /// dictionnaire. Une entrée de plusieurs mots n'est jamais suivie entière :
+    /// « Jean Dupont » ajouté au dictionnaire, « Dupont » reste le même terme.
+    fn corrected_terms(&self, new_words: &[&Token]) -> Vec<Vec<String>> {
+        let lower: Vec<String> = new_words.iter().map(|t| t.text.to_lowercase()).collect();
+        let mut covered = vec![false; lower.len()];
+        for term in &self.terms {
+            if term.len() > lower.len() {
+                continue;
+            }
+            for start in 0..=lower.len() - term.len() {
+                if lower[start..start + term.len()] == term[..] {
+                    covered[start..start + term.len()].fill(true);
+                }
+            }
+        }
+        let mut out: Vec<Vec<String>> = Vec::new();
+        for (i, token) in new_words.iter().enumerate() {
+            if covered[i] || proper_noun_or_acronym(token) {
+                let term = vec![lower[i].clone()];
+                if !out.contains(&term) {
+                    out.push(term);
+                }
+            }
+        }
+        out
     }
 
     fn matches(&self, words: &[&Token]) -> bool {
@@ -170,9 +244,111 @@ fn per_mille(count: u64, generated: u64) -> Option<f64> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct SectionReport {
     pub index: u32,
+    /// Rôle de la section dans le modèle de compte rendu, déduit de son titre
+    /// (le titre lui-même n'est jamais rendu).
+    pub role: SectionRole,
     /// Section retrouvée dans la version envoyée (même titre).
     pub matched: bool,
     pub counters: Counters,
+}
+
+/// Rôle d'une section, pour le garde-fou Décisions et Actions de la bêta
+/// (spec §4) ; liste fermée.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum SectionRole {
+    Decisions,
+    Actions,
+    Other,
+}
+
+impl SectionRole {
+    /// Déduit d'un titre de section, par correspondance exacte avec une liste
+    /// fermée de titres normalisés (casse, espaces et apostrophe typographique
+    /// ignorées), tirée des modèles par défaut de Syntheo en français et en
+    /// anglais. Un titre inconnu donne `Other`.
+    pub fn from_title(title: Option<&str>) -> Self {
+        let Some(title) = title else {
+            return Self::Other;
+        };
+        let key = title
+            .replace('\u{2019}', "'")
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ")
+            .trim_end_matches([':', '.'])
+            .trim()
+            .to_lowercase();
+        if DECISION_TITLES.contains(&key.as_str()) {
+            Self::Decisions
+        } else if ACTION_TITLES.contains(&key.as_str()) {
+            Self::Actions
+        } else {
+            Self::Other
+        }
+    }
+}
+
+/// Titres de sections Décisions (modèles par défaut, et formes courtes).
+const DECISION_TITLES: &[&str] = &[
+    "décisions",
+    "décisions du conseil",
+    "décisions majeures",
+    "décisions prises",
+    "décisions actées",
+    "décisions et actions",
+    "decisions",
+    "board decisions",
+    "major decisions",
+    "decisions made",
+    "decisions & action items",
+    "decisions and action items",
+];
+
+/// Titres de sections Actions (modèles par défaut, et formes courtes).
+const ACTION_TITLES: &[&str] = &[
+    "actions",
+    "actions à suivre",
+    "plan d'action",
+    "prochaines étapes",
+    "prochaine étape",
+    "à faire",
+    "éléments à fournir",
+    "suites à donner",
+    "suite à donner",
+    "action items",
+    "action plan",
+    "next steps",
+    "next step",
+    "follow-up items",
+    "follow-ups",
+    "to-do",
+    "to do",
+];
+
+/// Terme corrigé (côté envoyé d'une correction lexicale), désigné par une
+/// empreinte HMAC-SHA-256 à clé locale : son texte n'est jamais rendu.
+/// Sert au suivi des termes de la bêta (spec §3).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct CorrectedTerm {
+    pub hash: String,
+    pub count: u32,
+}
+
+/// Empreinte d'un terme : HMAC-SHA-256, avec la clé locale, de ses mots en
+/// minuscules séparés par une espace. Même calcul pour un terme corrigé et
+/// pour un terme du dictionnaire. Sans la clé, une empreinte ne se relie à
+/// aucun terme, même par une liste de noms.
+fn term_hash(key: &[u8; 32], words: &[String]) -> String {
+    use hmac::{Hmac, KeyInit, Mac};
+    let mut mac = <Hmac<sha2::Sha256> as KeyInit>::new_from_slice(key)
+        .expect("hmac accepts keys of any length");
+    mac.update(words.join(" ").as_bytes());
+    mac.finalize()
+        .into_bytes()
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect()
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -193,6 +369,10 @@ pub struct Report {
     pub content_per_mille: Option<f64>,
     /// `Rl / G × 1000` sur le total.
     pub lexical_per_mille: Option<f64>,
+    /// Termes corrigés par une correction lexicale, par empreinte, triés.
+    pub corrected_terms: Vec<CorrectedTerm>,
+    /// Empreintes des termes du dictionnaire au moment de la mesure, triées.
+    pub dictionary_hashes: Vec<String>,
 }
 
 /// Mesure la reprise entre `generated` et `sent`. Les textes ne sont pas
@@ -208,17 +388,32 @@ pub fn measure(
     let mut total = Counters::default();
     let mut reports = Vec::new();
     let mut unmatched_sent_words = 0;
+    let mut corrected = std::collections::BTreeMap::<String, u32>::new();
     for pair in prepared.pairs() {
         let mut counters = Counters {
             generated: word_count(&pair.generated),
             ..Counters::default()
         };
-        diff(&pair.generated, &pair.sent, dictionary, |_, _, change| {
-            counters.record(change)
+        diff(&pair.generated, &pair.sent, dictionary, |_, new, change| {
+            counters.record(change);
+            if let Some(key) = &dictionary.term_key
+                && change.kind == ChangeKind::Replaced
+                && change.lexical
+            {
+                let words: Vec<&Token> = new.iter().filter(|t| t.word).collect();
+                for term in dictionary.corrected_terms(&words) {
+                    *corrected.entry(term_hash(key, &term)).or_default() += 1;
+                }
+            }
         });
         match pair.place {
-            Place::Section { index, matched } => reports.push(SectionReport {
+            Place::Section {
                 index,
+                role,
+                matched,
+            } => reports.push(SectionReport {
+                index,
+                role,
                 matched,
                 counters,
             }),
@@ -237,6 +432,11 @@ pub fn measure(
         unmatched_sent_words,
         content_per_mille: total.content_per_mille(),
         lexical_per_mille: total.lexical_per_mille(),
+        corrected_terms: corrected
+            .into_iter()
+            .map(|(hash, count)| CorrectedTerm { hash, count })
+            .collect(),
+        dictionary_hashes: dictionary.hashes(),
     })
 }
 
@@ -339,7 +539,11 @@ struct Prepared {
 }
 
 enum Place {
-    Section { index: u32, matched: bool },
+    Section {
+        index: u32,
+        role: SectionRole,
+        matched: bool,
+    },
     UnmatchedSent,
     Global,
 }
@@ -407,6 +611,7 @@ impl Prepared {
             pairs.push(Pair {
                 place: Place::Section {
                     index: index as u32,
+                    role: SectionRole::from_title(section.title.as_deref()),
                     matched: counterpart.is_some(),
                 },
                 generated: Cow::Borrowed(&section.tokens),

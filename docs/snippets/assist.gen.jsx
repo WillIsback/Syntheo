@@ -158,12 +158,14 @@ const SYN_LABELS = {
   "Enter": "Entrée",
   "Enter a full address, for example {placeholder}.": "Saisissez une adresse complète, par exemple {placeholder}.",
   "Enter another name": "Saisir un autre nom",
+  "Erase my measurements…": "Effacer mes mesures…",
   "Esc": "Échap",
   "Every finished meeting is saved as a Markdown file in a folder.": "Chaque réunion terminée est enregistrée en Markdown dans un dossier.",
   "Export": "Exporter",
   "Export as Markdown": "Exporter en Markdown",
   "Export folder": "Dossier d'export",
   "Export location": "Emplacement d'export",
+  "Export my measurements…": "Exporter mes mesures…",
   "Exported file": "Fichier exporté",
   "Extract tasks": "Extraire les tâches",
   "Find key decisions.": "Trouvez les décisions clés.",
@@ -2603,6 +2605,10 @@ const SynSectionPrivacy = ({ focus }) => {
                   describedBy: labels["aria-describedby"],
                 }),
             })}
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
+            <button type="button" className="syn-btn">{L("Export my measurements…")}</button>
+            <button type="button" className="syn-btn">{L("Erase my measurements…")}</button>
           </div>
         </div>,
       )}

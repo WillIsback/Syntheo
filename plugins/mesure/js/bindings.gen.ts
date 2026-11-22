@@ -15,6 +15,11 @@ export const commands = {
 };
 
 /* Types */
+export type CorrectedTermCount = {
+	hash: string,
+	count: number,
+};
+
 export type DifferenceKind = "added" | "deleted" | "replaced";
 
 /**
@@ -50,13 +55,21 @@ export type MeasureResult = {
 	unmatchedSentWords: number,
 	contentPerMille: number | null,
 	lexicalPerMille: number | null,
+	/**  Termes corrigés (corrections lexicales), par empreinte SHA-256. */
+	correctedTerms: CorrectedTermCount[],
+	/**  Empreintes des termes du dictionnaire au moment de la mesure. */
+	dictionaryHashes: string[],
 };
 
 export type SectionMeasure = {
 	index: number,
+	role: SectionRole,
 	matched: boolean,
 	counters: MeasureCounters,
 };
+
+/**  Rôle d'une section dans le modèle de compte rendu (liste fermée). */
+export type SectionRole = "decisions" | "actions" | "other";
 
 export type SentFormat = "text" | "markdown" | "html";
 

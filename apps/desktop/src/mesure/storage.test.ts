@@ -2,6 +2,16 @@ import { describe, expect, it } from "vitest";
 
 import type { MeasureResult } from "@syntheo/plugin-mesure";
 
+import {
+  enrollmentStatement,
+  eraseStatements,
+  randomPseudonym,
+  randomTermIndexes,
+  randomTermKey,
+  stopMeasurementStatements,
+  summaryEventStatement,
+  termStatements,
+} from "./beta";
 import { calibrationStatement, measurementStatements } from "./storage";
 
 const result: MeasureResult = {
@@ -19,6 +29,7 @@ const result: MeasureResult = {
   sections: [
     {
       index: 0,
+      role: "decisions",
       matched: true,
       counters: {
         generated: 11,
@@ -32,6 +43,8 @@ const result: MeasureResult = {
   unmatchedSentWords: 0,
   contentPerMille: 321.4,
   lexicalPerMille: 35.7,
+  correctedTerms: [{ hash: "a".repeat(64), count: 1 }],
+  dictionaryHashes: ["a".repeat(64), "b".repeat(64)],
 };
 
 const ID = "0b9f2c1e-4d3a-4b5c-8d7e-1f2a3b4c5d6e";
@@ -50,10 +63,21 @@ describe("measurement storage", () => {
       result,
     );
     expect(statements).toHaveLength(2);
+    // Vérification 0.8.0, point 5 : rien n'est enregistré mesure désactivée
+    // ou sans inscription, même depuis une écriture déjà en file.
+    expect(statements[0].sql).toContain("measurement_enabled");
+    expect(statements[0].sql).toContain(
+      "EXISTS (SELECT 1 FROM beta_enrollment)",
+    );
+    expect(statements[1].sql).toContain(
+      "EXISTS (SELECT 1 FROM summary_measurements WHERE id = ?)",
+    );
     for (const { params } of statements) {
       for (const value of params) {
         if (typeof value === "string") {
-          expect([ID, "session-1", "doc-1", "original"]).toContain(value);
+          expect([ID, "session-1", "doc-1", "original", "decisions"]).toContain(
+            value,
+          );
         } else {
           expect(Number.isInteger(value)).toBe(true);
         }
@@ -80,5 +104,132 @@ describe("measurement storage", () => {
         autoLexicalTrueLexical: 0,
       }).sql,
     ).toContain("ON CONFLICT(id) DO UPDATE");
+    // Vérification 0.8.0 (second tour), point 4 : un calibrage écrit après un
+    // effacement (mesure désactivée) ne réapparaît pas.
+    expect(
+      calibrationStatement(ID, {
+        ruleVersion: 1,
+        autoContentTrueContent: 1,
+        autoContentTrueLexical: 0,
+        autoLexicalTrueContent: 0,
+        autoLexicalTrueLexical: 0,
+      }).sql,
+    ).toContain("measurement_enabled");
+  });
+});
+
+// Issue 672 : termes par empreinte, jamais en clair ; index tN tirés au
+// hasard ; constat d'ajout au dictionnaire.
+describe("beta term tracking", () => {
+  it("records corrected terms by hash only, with a random index", () => {
+    const now = "2026-11-25T09:00:00.000Z";
+    const statements = termStatements(
+      ID,
+      result.correctedTerms,
+      result.dictionaryHashes,
+      now,
+    );
+    expect(statements).toHaveLength(3);
+    expect(statements[0].sql).toContain("json_each");
+    expect(statements[0].sql).not.toContain("MAX(term_index)");
+    const [hash, candidates, seenAt, first, guard] = statements[0].params as [
+      string,
+      string,
+      string,
+      number,
+      string,
+    ];
+    expect([hash, seenAt, first, guard]).toEqual(["a".repeat(64), now, 1, ID]);
+    const indexes = JSON.parse(candidates) as number[];
+    expect(indexes).toHaveLength(8);
+    for (const index of indexes) {
+      expect(Number.isInteger(index) && index >= 1 && index <= 99_999).toBe(
+        true,
+      );
+    }
+    expect(statements[1].params).toEqual([ID, "a".repeat(64), 1, ID]);
+    expect(statements[2].params).toEqual([
+      now,
+      JSON.stringify(["a".repeat(64), "b".repeat(64)]),
+      ID,
+    ]);
+    // Rien ne s'écrit si la mesure n'a pas été insérée (mesure désactivée).
+    for (const { sql } of statements) {
+      expect(sql).toContain(
+        "EXISTS (SELECT 1 FROM summary_measurements WHERE id = ?)",
+      );
+    }
+  });
+
+  it("draws term indexes over the whole range", () => {
+    const drawn = new Set(randomTermIndexes(2000));
+    expect(drawn.size).toBeGreaterThan(1900);
+    expect([...drawn].some((index) => index > 50_000)).toBe(true);
+  });
+
+  it("records a share on the current generation, only when the beta is on", () => {
+    const { sql, params } = summaryEventStatement(
+      "shared",
+      "doc-1",
+      "2026-11-25T09:00:00.000Z",
+    );
+    expect(sql).toContain("measurement_enabled");
+    expect(sql).toContain("EXISTS (SELECT 1 FROM beta_enrollment)");
+    expect(sql).toContain("ORDER BY generated_at DESC");
+    expect(sql).toContain("closed_at IS NULL");
+    expect(sql).toContain("COALESCE(shared_at");
+    expect(params).toEqual(["2026-11-25T09:00:00.000Z", "doc-1"]);
+  });
+
+  // Revue 0.8.0, constats 5 et 8 : l'effacement vide aussi les générations et
+  // la copie des synthèses générées, et arrête la mesure et le Calibrage.
+  it("erases every beta table and turns measurement off", () => {
+    const statements = eraseStatements("2026-11-25T09:00:00.000Z");
+    expect(statements[0].sql).toBe("PRAGMA secure_delete = ON");
+    const tables = statements
+      .filter(({ sql }) => sql.startsWith("DELETE FROM "))
+      .map(({ sql }) => sql.replace("DELETE FROM ", ""));
+    expect(tables.sort()).toEqual([
+      "beta_enrollment",
+      "beta_generations",
+      "beta_term_errors",
+      "beta_terms",
+      "calibration_results",
+      "summary_generated_bodies",
+      "summary_measurement_sections",
+      "summary_measurements",
+    ]);
+    const settings = statements.filter(({ sql }) =>
+      sql.includes("app_settings"),
+    );
+    expect(settings.map(({ params }) => params[0])).toEqual([
+      "measurement_enabled",
+      "calibration_enabled",
+    ]);
+    for (const { sql } of settings) expect(sql).toContain("'false'");
+  });
+
+  it("enrolls with a random pseudonym and a random 32-byte term key", () => {
+    const a = randomPseudonym();
+    expect(a).toMatch(/^p-[0-9a-f]{32}$/);
+    expect(randomPseudonym()).not.toBe(a);
+    const key = randomTermKey();
+    expect(key).toMatch(/^[0-9a-f]{64}$/);
+    expect(randomTermKey()).not.toBe(key);
+    const { sql, params } = enrollmentStatement("2026-11-25T09:00:00.000Z");
+    expect(params[2]).toMatch(/^[0-9a-f]{64}$/);
+    // Vérification 0.8.0, point 5 : jamais d'inscription mesure désactivée.
+    expect(sql).toContain("measurement_enabled");
+  });
+
+  // Vérification 0.8.0, points 3 et 8 : l'arrêt de la mesure vide la copie
+  // des synthèses générées et clôt les générations ouvertes, en effacement sûr.
+  it("stopping measurement clears the copy and closes open generations", () => {
+    const statements = stopMeasurementStatements("2026-11-25T09:00:00.000Z");
+    expect(statements.map(({ sql }) => sql)).toEqual([
+      "PRAGMA secure_delete = ON",
+      "DELETE FROM summary_generated_bodies",
+      "UPDATE beta_generations SET closed_at = ? WHERE closed_at IS NULL",
+    ]);
   });
 });

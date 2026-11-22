@@ -254,13 +254,23 @@ fn limits_are_enforced() {
     ));
 }
 
-// Aucune chaîne dans le rapport : seulement des nombres, des booléens et des
-// clés fixes. Un champ texte ajouté plus tard fait échouer ce test.
+// Aucune chaîne libre dans le rapport : des nombres, des booléens et des clés
+// fixes ; les seules chaînes admises sont des empreintes SHA-256 (termes, issue
+// 672) et les rôles de section, liste fermée. Un champ texte ajouté plus tard
+// fait échouer ce test.
 #[test]
 fn report_contains_no_free_text() {
     fn walk(value: &serde_json::Value, path: &str) {
         match value {
-            serde_json::Value::String(s) => panic!("chaîne dans le rapport à {path} : {s:?}"),
+            serde_json::Value::String(s) => {
+                let hash = (path.ends_with(".hash") || path.contains(".dictionary_hashes["))
+                    && s.len() == 64
+                    && s.chars()
+                        .all(|c| c.is_ascii_digit() || ('a'..='f').contains(&c));
+                let role = path.ends_with(".role")
+                    && ["decisions", "actions", "other"].contains(&s.as_str());
+                assert!(hash || role, "chaîne dans le rapport à {path} : {s:?}");
+            }
             serde_json::Value::Array(items) => {
                 for (i, item) in items.iter().enumerate() {
                     walk(item, &format!("{path}[{i}]"));
@@ -475,4 +485,246 @@ fn export_schema_is_closed_and_has_no_free_string() {
     ] {
         serde_json::from_str::<serde_json::Value>(example).unwrap();
     }
+}
+
+// Issue 672 : rôle des sections déduit du titre, termes corrigés par empreinte
+// à clé (même empreinte qu'un terme du dictionnaire), jamais en clair.
+const KEY: [u8; 32] = [7; 32];
+
+#[test]
+fn section_roles_and_corrected_terms() {
+    let sent = "# Résumé\n\nLe projet avance bien. Le budget est validé par la direction.\n\n## Décisions\n\n- Lancer le pilote en janvier avec Marten.\n- Garder le serveur actuel.\n\n## Actions\n\n- Envoyer le compte rendu à l'équipe.\n";
+    let dictionary = Dictionary::new(["Marten", "Nemotron"])
+        .unwrap()
+        .with_term_key(KEY);
+    let report = measure(
+        GENERATED,
+        Format::Markdown,
+        sent,
+        Format::Markdown,
+        &dictionary,
+    )
+    .unwrap();
+    let roles: Vec<_> = report.sections.iter().map(|s| s.role).collect();
+    assert_eq!(
+        roles,
+        [
+            SectionRole::Other,
+            SectionRole::Decisions,
+            SectionRole::Actions
+        ]
+    );
+    assert_eq!(report.corrected_terms.len(), 1);
+    assert_eq!(report.corrected_terms[0].count, 1);
+    assert!(
+        report
+            .dictionary_hashes
+            .contains(&report.corrected_terms[0].hash)
+    );
+    assert_eq!(report.dictionary_hashes.len(), 2); // deux entrées d'un mot
+    let json = serde_json::to_string(&report).unwrap();
+    assert!(!json.contains("Marten") && !json.contains("marten"));
+
+    // Sans clé, aucun terme n'est suivi ; une autre clé donne d'autres empreintes.
+    let plain = Dictionary::new(["Marten"]).unwrap();
+    let report = measure(GENERATED, Format::Markdown, sent, Format::Markdown, &plain).unwrap();
+    assert!(report.corrected_terms.is_empty() && report.dictionary_hashes.is_empty());
+    let other = Dictionary::new(["Marten"]).unwrap().with_term_key([8; 32]);
+    let a = Dictionary::new(["Marten"])
+        .unwrap()
+        .with_term_key(KEY)
+        .hashes();
+    assert_ne!(a, other.hashes());
+}
+
+// Revue 0.8.0, constat 12 : l'empreinte porte sur le mot qui a fait le
+// classement lexical, pas sur tout le remplacement ; l'ajout au dictionnaire
+// d'un terme corrigé se retrouve donc par la même empreinte.
+#[test]
+fn corrected_term_is_the_word_that_made_it_lexical() {
+    let generated = "Le dossier est suivi par Dupond depuis lundi.";
+    let sent = "Le dossier est suivi par Dupont depuis lundi.";
+    let before = Dictionary::new(["Nemotron"]).unwrap().with_term_key(KEY);
+    let first = measure(generated, Format::Text, sent, Format::Text, &before).unwrap();
+    assert_eq!(first.corrected_terms.len(), 1);
+    assert!(!before.hashes().contains(&first.corrected_terms[0].hash));
+    let after = Dictionary::new(["Nemotron", "Dupont"])
+        .unwrap()
+        .with_term_key(KEY);
+    assert!(after.hashes().contains(&first.corrected_terms[0].hash));
+
+    // « au rectorat » remplacé par « à la DRASI » : le terme est « DRASI ».
+    let generated = "Le dossier part au rectorat demain.";
+    let sent = "Le dossier part à la DRASI demain.";
+    let report = measure(generated, Format::Text, sent, Format::Text, &before).unwrap();
+    let drasi = Dictionary::new(["DRASI"])
+        .unwrap()
+        .with_term_key(KEY)
+        .hashes();
+    let hashes: Vec<_> = report.corrected_terms.iter().map(|t| &t.hash).collect();
+    assert_eq!(hashes, [&drasi[0]]);
+}
+
+// Vérification 0.8.0, point 2 : un terme suivi contenu dans une entrée de
+// plusieurs mots du dictionnaire est reconnu, et la clé ne paraît jamais dans
+// un `Debug`.
+#[test]
+fn a_tracked_term_inside_a_longer_dictionary_entry_is_recognised() {
+    let none = Dictionary::new(["Nemotron"]).unwrap().with_term_key(KEY);
+    let with_entry = Dictionary::new(["Nemotron", "Jean Dupont"])
+        .unwrap()
+        .with_term_key(KEY);
+
+    let report = measure(
+        "Le dossier est suivi par Dupond depuis lundi.",
+        Format::Text,
+        "Le dossier est suivi par Dupont depuis lundi.",
+        Format::Text,
+        &none,
+    )
+    .unwrap();
+    assert_eq!(report.corrected_terms.len(), 1);
+    assert!(
+        with_entry
+            .hashes()
+            .contains(&report.corrected_terms[0].hash)
+    );
+
+    // « Jeanne Dupond » corrigé en « Jean Dupont » : deux termes, tous deux
+    // contenus dans l'entrée ajoutée ensuite.
+    let report = measure(
+        "Le dossier est suivi par Jeanne Dupond depuis lundi.",
+        Format::Text,
+        "Le dossier est suivi par Jean Dupont depuis lundi.",
+        Format::Text,
+        &none,
+    )
+    .unwrap();
+    assert_eq!(report.corrected_terms.len(), 2);
+    for term in &report.corrected_terms {
+        assert!(with_entry.hashes().contains(&term.hash));
+        assert!(!none.hashes().contains(&term.hash));
+    }
+
+    // Vérification 0.8.0 (second tour), point 3 : une mesure postérieure à
+    // l'ajout suit toujours les mots, jamais l'entrée entière : « Dupont »
+    // garde la même empreinte qu'avant l'ajout.
+    let dupont = {
+        let first = measure(
+            "Le dossier est suivi par Dupond depuis lundi.",
+            Format::Text,
+            "Le dossier est suivi par Dupont depuis lundi.",
+            Format::Text,
+            &none,
+        )
+        .unwrap();
+        first.corrected_terms[0].hash.clone()
+    };
+    let after = measure(
+        "Le dossier est suivi par Jeanne Dupond depuis lundi.",
+        Format::Text,
+        "Le dossier est suivi par Jean Dupont depuis lundi.",
+        Format::Text,
+        &with_entry,
+    )
+    .unwrap();
+    assert_eq!(after.corrected_terms.len(), 2);
+    assert!(after.corrected_terms.iter().any(|t| t.hash == dupont));
+    let whole = Dictionary::new(["Jean Dupont"]).unwrap().with_term_key(KEY);
+    assert_eq!(
+        whole.hashes().len(),
+        2,
+        "un mot par empreinte, pas l'entrée entière"
+    );
+
+    let debug = format!("{with_entry:?}");
+    assert!(debug.contains("<masquée>") && !debug.contains("[7, 7"));
+}
+
+// Revue 0.8.0, constat 13 : liste fermée, correspondance exacte, testée sur
+// les titres de tous les modèles par défaut, en français et en anglais.
+#[test]
+fn section_roles_follow_the_default_templates() {
+    let mut titles = Vec::new();
+    for source in [
+        include_str!("../../../apps/desktop/src/templates/default-templates-fr.ts"),
+        include_str!("../../../apps/desktop/src/templates/default-templates-en.ts"),
+    ] {
+        // Les sections sont des paires ["Titre", "Description"].
+        for line in source.split("sections: [").skip(1) {
+            let block = &line[..line.find("\n    ],").unwrap_or(line.len())];
+            for pair in block.split('[').skip(1) {
+                if let Some(title) = pair
+                    .trim_start()
+                    .strip_prefix('"')
+                    .and_then(|t| t.split('"').next())
+                {
+                    titles.push(title.to_string());
+                }
+            }
+        }
+    }
+    assert!(titles.len() > 200, "titres lus : {}", titles.len());
+    let decisions = [
+        "Décisions du conseil",
+        "Décisions majeures",
+        "Décisions prises",
+        "Décisions actées",
+        "Décisions et actions",
+        "Board Decisions",
+        "Major Decisions",
+        "Decisions Made",
+        "Decisions & Action Items",
+    ];
+    let actions = [
+        "Prochaines étapes",
+        "Actions",
+        "Éléments à fournir",
+        "À faire",
+        "Plan d'action",
+        "Actions à suivre",
+        "Prochaine étape",
+        "Next Steps",
+        "Action Items",
+        "Follow-up Items",
+        "Action Plan",
+        "Next Step",
+    ];
+    for title in &titles {
+        let expected = if decisions.contains(&title.as_str()) {
+            SectionRole::Decisions
+        } else if actions.contains(&title.as_str()) {
+            SectionRole::Actions
+        } else {
+            SectionRole::Other
+        };
+        assert_eq!(SectionRole::from_title(Some(title)), expected, "{title}");
+    }
+    // Chaque titre attendu existe bien dans un modèle par défaut.
+    for title in decisions.iter().chain(&actions) {
+        assert!(
+            titles.iter().any(|t| t == title),
+            "{title} absent des modèles"
+        );
+    }
+    // Pas de sous-chaîne : « action » dans un autre mot ne suffit pas.
+    for title in [
+        "Rédaction",
+        "Transactions",
+        "Interactions",
+        "Satisfaction client",
+        "Décisionnaires",
+    ] {
+        assert_eq!(
+            SectionRole::from_title(Some(title)),
+            SectionRole::Other,
+            "{title}"
+        );
+    }
+    assert_eq!(
+        SectionRole::from_title(Some("  Prochaines  étapes : ")),
+        SectionRole::Actions
+    );
+    assert_eq!(SectionRole::from_title(Some("To-do")), SectionRole::Actions);
+    assert_eq!(SectionRole::from_title(None), SectionRole::Other);
 }

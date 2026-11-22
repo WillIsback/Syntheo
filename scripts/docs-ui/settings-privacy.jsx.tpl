@@ -106,6 +106,10 @@ const SynSectionPrivacy = ({ focus }) => {
                 }),
             })}
           </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
+            <button type="button" className="syn-btn">{L("Export my measurements…")}</button>
+            <button type="button" className="syn-btn">{L("Erase my measurements…")}</button>
+          </div>
         </div>,
       )}
       {h(SynPrivDemo, {

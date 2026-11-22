@@ -29,6 +29,11 @@ vi.mock("~/db", () => ({
 vi.mock("~/db/write-queue", () => ({
   enqueueDatabaseWrite: (_key: string, write: () => Promise<void>) => write(),
 }));
+// L'inscription avant le calcul (clé des empreintes) est testée à part.
+vi.mock("./beta", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./beta")>()),
+  ensureEnrollment: async () => {},
+}));
 vi.mock("~/shared/config", () => ({
   useConfigValues: () => mocks.config,
 }));
@@ -56,6 +61,8 @@ const RESULT = {
   unmatchedSentWords: 0,
   contentPerMille: 400,
   lexicalPerMille: 200,
+  correctedTerms: [{ hash: "c".repeat(64), count: 1 }],
+  dictionaryHashes: [],
 };
 const ROWS = [
   {

@@ -42,7 +42,7 @@ vi.mock("~/session/hooks/useEnhancedNotes", () => ({
   useIsSessionEnhancing: () => false,
 }));
 vi.mock("~/session/components/note-input/header-shared", () => ({
-  copyTextToClipboard: vi.fn(),
+  copyTextToClipboard: vi.fn(async () => true),
   getStoredNoteMarkdown: (content: string | undefined) => content ?? "",
 }));
 vi.mock("~/session/components/outer-header/overflow/export-modal", () => ({

@@ -1,5 +1,6 @@
 import type { MeasureResult } from "@syntheo/plugin-mesure";
 
+import { enrollmentStatement, termStatements } from "./beta";
 import type { AgreementMatrix } from "./calibration";
 
 import { executeTransaction } from "~/db";
@@ -33,7 +34,12 @@ export function measurementStatements(
           deleted_words, replaced_content, replaced_lexical,
           unmatched_sent_words, generated_source
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+        WHERE EXISTS (
+          SELECT 1 FROM app_settings
+          WHERE id = 'measurement_enabled' AND value_json = 'true'
+        )
+          AND EXISTS (SELECT 1 FROM beta_enrollment)
       `,
       params: [
         id,
@@ -56,9 +62,11 @@ export function measurementStatements(
       sql: `
         INSERT INTO summary_measurement_sections (
           measurement_id, section_index, matched, generated_words,
-          added_words, deleted_words, replaced_content, replaced_lexical
+          added_words, deleted_words, replaced_content, replaced_lexical,
+          role
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?
+        WHERE EXISTS (SELECT 1 FROM summary_measurements WHERE id = ?)
       `,
       params: [
         id,
@@ -69,6 +77,8 @@ export function measurementStatements(
         section.counters.deleted,
         section.counters.replacedContent,
         section.counters.replacedLexical,
+        section.role,
+        id,
       ],
     })),
   ];
@@ -89,7 +99,11 @@ export function calibrationStatement(
         auto_content_true_lexical, auto_lexical_true_content,
         auto_lexical_true_lexical
       )
-      VALUES (?, ?, ?, ?, ?, ?)
+      SELECT ?, ?, ?, ?, ?, ?
+      WHERE EXISTS (
+        SELECT 1 FROM app_settings
+        WHERE id = 'measurement_enabled' AND value_json = 'true'
+      )
       ON CONFLICT(id) DO UPDATE SET
         rule_version = excluded.rule_version,
         auto_content_true_content = excluded.auto_content_true_content,
@@ -113,9 +127,29 @@ export function saveMeasurement(
   result: MeasureResult,
 ): Promise<void> {
   return enqueueDatabaseWrite("summary-measurements", async () => {
-    await executeTransaction(
-      measurementStatements(crypto.randomUUID(), ids, result),
-    );
+    // Une mesure inscrit à la bêta si ce n'est déjà fait, puis enregistre ses
+    // compteurs et le suivi de ses termes (issue 672), en une transaction.
+    // Les index de termes sont tirés au hasard : sur une collision (tous les
+    // candidats pris), la transaction échoue et on retire.
+    for (let attempt = 1; ; attempt++) {
+      const id = crypto.randomUUID();
+      const now = new Date().toISOString();
+      try {
+        await executeTransaction([
+          enrollmentStatement(now),
+          ...measurementStatements(id, ids, result),
+          ...termStatements(
+            id,
+            result.correctedTerms,
+            result.dictionaryHashes,
+            now,
+          ),
+        ]);
+        return;
+      } catch (cause) {
+        if (attempt >= 3 || result.correctedTerms.length === 0) throw cause;
+      }
+    }
   });
 }
 

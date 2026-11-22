@@ -50,6 +50,7 @@ pub struct MeasureCounters {
 #[serde(rename_all = "camelCase")]
 pub struct SectionMeasure {
     pub index: u32,
+    pub role: SectionRole,
     pub matched: bool,
     pub counters: MeasureCounters,
 }
@@ -67,6 +68,26 @@ pub struct MeasureResult {
     pub unmatched_sent_words: u32,
     pub content_per_mille: Option<f64>,
     pub lexical_per_mille: Option<f64>,
+    /// Termes corrigés (corrections lexicales), par empreinte SHA-256.
+    pub corrected_terms: Vec<CorrectedTermCount>,
+    /// Empreintes des termes du dictionnaire au moment de la mesure.
+    pub dictionary_hashes: Vec<String>,
+}
+
+/// Rôle d'une section dans le modèle de compte rendu (liste fermée).
+#[derive(Debug, Clone, Copy, Serialize, specta::Type, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum SectionRole {
+    Decisions,
+    Actions,
+    Other,
+}
+
+#[derive(Debug, Clone, Serialize, specta::Type, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct CorrectedTermCount {
+    pub hash: String,
+    pub count: u32,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, specta::Type, PartialEq, Eq)]
@@ -124,14 +145,33 @@ fn sent_text(sent: SentInput) -> Result<(String, Format), String> {
     }
 }
 
-fn dictionary(terms: &[String]) -> Result<Dictionary, String> {
-    Dictionary::new(terms.iter().map(String::as_str)).map_err(error)
+fn dictionary(terms: &[String], term_key: Option<[u8; 32]>) -> Result<Dictionary, String> {
+    let dictionary = Dictionary::new(terms.iter().map(String::as_str)).map_err(error)?;
+    Ok(match term_key {
+        Some(key) => dictionary.with_term_key(key),
+        None => dictionary,
+    })
+}
+
+/// Clé d'empreinte stockée en hexadécimal (64 chiffres) ; toute autre forme
+/// désactive le suivi des termes.
+pub(crate) fn parse_term_key(hex: Option<&str>) -> Option<[u8; 32]> {
+    let hex = hex?;
+    if hex.len() != 64 || !hex.bytes().all(|b| b.is_ascii_hexdigit()) {
+        return None;
+    }
+    let mut key = [0u8; 32];
+    for (i, byte) in key.iter_mut().enumerate() {
+        *byte = u8::from_str_radix(&hex[2 * i..2 * i + 2], 16).ok()?;
+    }
+    Some(key)
 }
 
 pub(crate) fn run_measure(
     generated: &str,
     sent: SentInput,
     terms: &[String],
+    term_key: Option<[u8; 32]>,
 ) -> Result<MeasureResult, String> {
     let (sent, sent_format) = sent_text(sent)?;
     let report = syntheo_mesure::measure(
@@ -139,7 +179,7 @@ pub(crate) fn run_measure(
         Format::Markdown,
         &sent,
         sent_format,
-        &dictionary(terms)?,
+        &dictionary(terms, term_key)?,
     )
     .map_err(error)?;
     Ok(MeasureResult {
@@ -153,6 +193,11 @@ pub(crate) fn run_measure(
             .iter()
             .map(|s| SectionMeasure {
                 index: s.index,
+                role: match s.role {
+                    syntheo_mesure::SectionRole::Decisions => SectionRole::Decisions,
+                    syntheo_mesure::SectionRole::Actions => SectionRole::Actions,
+                    syntheo_mesure::SectionRole::Other => SectionRole::Other,
+                },
                 matched: s.matched,
                 counters: counters(&s.counters),
             })
@@ -160,6 +205,15 @@ pub(crate) fn run_measure(
         unmatched_sent_words: n(report.unmatched_sent_words),
         content_per_mille: report.content_per_mille,
         lexical_per_mille: report.lexical_per_mille,
+        corrected_terms: report
+            .corrected_terms
+            .into_iter()
+            .map(|t| CorrectedTermCount {
+                hash: t.hash,
+                count: t.count,
+            })
+            .collect(),
+        dictionary_hashes: report.dictionary_hashes,
     })
 }
 
@@ -174,7 +228,7 @@ pub(crate) fn run_differences(
         Format::Markdown,
         &sent,
         sent_format,
-        &dictionary(terms)?,
+        &dictionary(terms, None)?,
     )
     .map_err(error)?;
     Ok(list
@@ -217,10 +271,12 @@ pub(crate) fn check_enabled(
     Ok(())
 }
 
+/// Vérifie les réglages, puis rend la clé d'empreinte de l'inscription
+/// (lecture seule).
 async fn ensure_enabled<R: tauri::Runtime>(
     app: &tauri::AppHandle<R>,
     need_calibration: bool,
-) -> Result<(), String> {
+) -> Result<Option<[u8; 32]>, String> {
     use tauri::Manager;
     let Some(db) = app.try_state::<tauri_plugin_db::ManagedState>() else {
         return Err("database unavailable".to_owned());
@@ -240,7 +296,11 @@ async fn ensure_enabled<R: tauri::Runtime>(
         measurement.as_deref(),
         calibration.as_deref(),
         need_calibration,
-    )
+    )?;
+    let key = syntheo_db_app::get_beta_term_key(&pool)
+        .await
+        .map_err(|_| "settings unavailable".to_owned())?;
+    Ok(parse_term_key(key.as_deref()))
 }
 
 /// Mesure la reprise de `generated` (Markdown de la synthèse) par rapport à la
@@ -253,10 +313,12 @@ pub(crate) async fn measure<R: tauri::Runtime>(
     sent: SentInput,
     dictionary: Vec<String>,
 ) -> Result<MeasureResult, String> {
-    ensure_enabled(&app, false).await?;
-    tauri::async_runtime::spawn_blocking(move || run_measure(&generated, sent, &dictionary))
-        .await
-        .map_err(|_| "measure task failed".to_owned())?
+    let term_key = ensure_enabled(&app, false).await?;
+    tauri::async_runtime::spawn_blocking(move || {
+        run_measure(&generated, sent, &dictionary, term_key)
+    })
+    .await
+    .map_err(|_| "measure task failed".to_owned())?
 }
 
 /// Différences avec leurs extraits, pour le mode Calibrage.
@@ -291,7 +353,7 @@ mod tests {
     // Paire de référence : mêmes nombres que `syntheo mesure` (référence CLI).
     #[test]
     fn reference_pair_gives_the_cli_numbers() {
-        let result = run_measure(GENERATED, text(SentFormat::Text), &[]).unwrap();
+        let result = run_measure(GENERATED, text(SentFormat::Text), &[], None).unwrap();
         assert!(result.aligned);
         assert_eq!(
             result.total,
@@ -327,6 +389,7 @@ mod tests {
                 format: SentFormat::Markdown,
             },
             &[],
+            None,
         )
         .unwrap();
         assert!(result.aligned);
@@ -351,6 +414,7 @@ mod tests {
                 base64: base64::engine::general_purpose::STANDARD.encode(b"not a zip"),
             },
             &[],
+            None,
         );
         assert!(refused.is_err());
     }
@@ -370,15 +434,23 @@ mod tests {
     // clés fixes seulement.
     #[test]
     fn measure_result_contains_no_free_text() {
+        // Seules chaînes admises : empreintes SHA-256 et rôles (liste fermée).
         fn walk(value: &serde_json::Value) {
             match value {
-                serde_json::Value::String(s) => panic!("chaîne dans le résultat : {s:?}"),
+                serde_json::Value::String(s) => {
+                    let hash = s.len() == 64
+                        && s.chars()
+                            .all(|c| c.is_ascii_digit() || ('a'..='f').contains(&c));
+                    let role = ["decisions", "actions", "other"].contains(&s.as_str());
+                    assert!(hash || role, "chaîne dans le résultat : {s:?}");
+                }
                 serde_json::Value::Array(items) => items.iter().for_each(walk),
                 serde_json::Value::Object(map) => map.values().for_each(walk),
                 _ => {}
             }
         }
-        let result = run_measure(GENERATED, text(SentFormat::Text), &[]).unwrap();
+        let result = run_measure(GENERATED, text(SentFormat::Text), &[], Some([3; 32])).unwrap();
+        assert!(!result.corrected_terms.is_empty());
         walk(&serde_json::to_value(&result).unwrap());
     }
 
@@ -390,5 +462,14 @@ mod tests {
         assert!(rows[2].lexical);
         let lexical: u32 = rows.iter().filter(|r| r.lexical).map(|r| r.weight).sum();
         assert_eq!(lexical, 1);
+    }
+
+    #[test]
+    fn term_key_is_read_only_in_its_stored_form() {
+        assert_eq!(parse_term_key(Some(&"0a".repeat(32))), Some([10; 32]));
+        for bad in ["", "0a", &"zz".repeat(32), &"0a".repeat(33)] {
+            assert_eq!(parse_term_key(Some(bad)), None, "{bad}");
+        }
+        assert_eq!(parse_term_key(None), None);
     }
 }

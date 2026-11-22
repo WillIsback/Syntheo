@@ -4,6 +4,7 @@ import {
   fireEvent,
   render,
   screen,
+  waitFor,
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -37,7 +38,8 @@ const mocks = vi.hoisted(() => ({
   isMainWebviewWindow: true,
   sendChatEvent: vi.fn(),
   leaveOverlayTab: vi.fn(),
-  copyTextToClipboard: vi.fn(),
+  copyTextToClipboard: vi.fn(async () => true),
+  recordSummaryEvent: vi.fn(),
   rawMd: "",
   enhancedContent: undefined as string | undefined,
   enhancedNotes: [] as Array<{ id: string; content: string }>,
@@ -136,6 +138,10 @@ vi.mock("~/session/hooks/useEnhancedNotes", () => ({
 vi.mock("~/session/components/note-input/header-shared", () => ({
   copyTextToClipboard: mocks.copyTextToClipboard,
   getStoredNoteMarkdown: (content: string | undefined) => content ?? "",
+}));
+
+vi.mock("~/mesure/beta", () => ({
+  recordSummaryEvent: mocks.recordSummaryEvent,
 }));
 
 vi.mock("~/session/components/outer-header/overflow/export-modal", () => ({
@@ -414,7 +420,7 @@ describe("SessionCapsule", () => {
     expect(mocks.sendChatEvent).toHaveBeenCalledWith({ type: "OPEN" });
   });
 
-  it("copies the summary shown in the document", () => {
+  it("copies the summary shown in the document", async () => {
     mocks.enhancedContent = "## Décisions";
     mocks.rawMd = "mes notes";
     renderCapsule({
@@ -427,6 +433,10 @@ describe("SessionCapsule", () => {
     expect(mocks.copyTextToClipboard).toHaveBeenCalledWith(
       "## Décisions",
       expect.any(Object),
+    );
+    // Bêta (issue 672) : la copie d'une synthèse compte comme partage.
+    await waitFor(() =>
+      expect(mocks.recordSummaryEvent).toHaveBeenCalledWith("shared", "note-1"),
     );
   });
 

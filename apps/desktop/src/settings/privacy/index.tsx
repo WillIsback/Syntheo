@@ -6,6 +6,7 @@ import { useMountEffect } from "@syntheo/ui/hooks/use-mount-effect";
 import { useLiveQuery } from "~/db";
 import { DEVICE_AUTH_REASON } from "~/lock/auth";
 import { useAppLock } from "~/lock/store";
+import { BetaData } from "~/mesure/beta-data";
 import { privacyMessages } from "~/settings/general/app-settings";
 import { SettingsPageTitle } from "~/settings/page-title";
 import {
@@ -110,13 +111,15 @@ export function SettingsPrivacy() {
           }
           checked={measurementEnabled}
           disabled={measurementManaged}
-          onChange={(next) =>
+          onChange={(next) => {
             setSettingValues(
               next
                 ? { measurement_enabled: true }
                 : { measurement_enabled: false, calibration_enabled: false },
-            )
-          }
+            );
+            // L'inscription à la bêta (issue 672) se fait dans la
+            // transaction du réglage (settings/queries.ts).
+          }}
         />
         <SettingSwitchRow
           settingId="calibration-enabled"
@@ -130,6 +133,8 @@ export function SettingsPrivacy() {
           disabled={calibrationManaged || !measurementEnabled}
           onChange={(next) => setSettingValues({ calibration_enabled: next })}
         />
+        {/* Issue 672 : export pseudonymisé et effacement, même désactivée. */}
+        <BetaData />
       </section>
     </div>
   );

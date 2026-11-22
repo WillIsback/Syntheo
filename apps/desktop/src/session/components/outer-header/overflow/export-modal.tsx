@@ -29,6 +29,7 @@ import {
 } from "./export-folder";
 import { printPdf } from "./print-pdf";
 
+import { recordSummaryEvent } from "~/mesure/beta";
 import { useTranscriptExportSegments } from "~/session/components/note-input/transcript/export-data";
 import {
   useEnhancedNote,
@@ -79,7 +80,10 @@ export function ExportModal({
   const enhancedNoteContent = useEnhancedNote(enhancedNoteId)?.content;
   // Hors de l'onglet d'un résumé (Mémo, Transcription), le premier résumé de
   // la note : l'export ne dépend pas de l'onglet affiché.
-  const firstSummaryContent = useEnhancedNoteRecords(sessionId)[0]?.content;
+  const firstSummary = useEnhancedNoteRecords(sessionId)[0];
+  const firstSummaryContent = firstSummary?.content;
+  const exportedSummaryId =
+    currentView.type === "enhanced" ? currentView.id : firstSummary?.id;
   const summaryContent =
     currentView.type === "enhanced" ? enhancedNoteContent : firstSummaryContent;
   const participants = useSessionParticipants(sessionId);
@@ -198,6 +202,10 @@ export function ExportModal({
         }
       }
 
+      // Bêta (issue 672) : export de fichier d'une synthèse, pour l'abandon.
+      if (includeSummary && summaryMd && exportedSummaryId) {
+        void recordSummaryEvent("exported", exportedSummaryId);
+      }
       return path;
     },
     onSuccess: (path) => {

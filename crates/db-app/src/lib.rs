@@ -1,6 +1,7 @@
 #![forbid(unsafe_code)]
 
 mod attachment_ops;
+mod beta_ops;
 mod capture_lifecycle_ops;
 mod contact_ops;
 mod folder_catalog_ops;
@@ -28,6 +29,7 @@ mod webhook_ops;
 mod webhook_types;
 
 pub use attachment_ops::*;
+pub use beta_ops::*;
 pub use capture_lifecycle_ops::*;
 pub use contact_ops::*;
 pub use folder_catalog_ops::*;

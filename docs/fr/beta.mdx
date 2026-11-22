@@ -50,14 +50,15 @@ Le classement lexical ou fond repose sur une règle simple, qui peut se tromper.
 
 ### Dans l'application
 
-<Note>
-  La mesure depuis une note est en cours de développement pour la version 0.8.0. Les libellés ci-dessous peuvent encore changer.
-</Note>
-
 Deux réglages, désactivés par défaut, se trouvent dans **Paramètres → Avancé → Confidentialité** :
 
 - **Mesurer la reprise des synthèses** ajoute l'action « Mesurer la reprise… » au menu de la synthèse. Vous collez ou déposez la version envoyée ; seuls des nombres sont gardés sur votre poste, jamais de texte.
 - **Mode Calibrage** sert à vérifier le classement : après une mesure, il liste chaque différence pour que vous la classiez à la main. Les extraits restent à l'écran ; seuls les nombres d'accord sont gardés.
+
+Sous ces réglages, deux boutons :
+
+- **Exporter mes mesures…** affiche le fichier d'export en entier ; **Enregistrer le fichier…** l'enregistre là où vous choisissez. Rien n'est envoyé.
+- **Effacer mes mesures…**, puis **Effacer toutes les mesures et mon pseudonyme**, efface du poste les compteurs, le calibrage, le suivi des termes et des synthèses, la copie des synthèses générées et le pseudonyme, puis **désactive la mesure** et le mode Calibrage. Si vous la réactivez, vous recommencez avec un nouveau pseudonyme.
 
 Un déploiement administré peut désactiver la mesure par réglage géré.
 
@@ -116,13 +117,9 @@ Les termes sont désignés par un index (`t1`, `t2`…). La correspondance entre
 
 ### Sur votre poste
 
-Syntheo garde des compteurs et des identifiants, jamais de texte : ni la synthèse, ni la version envoyée, ni les titres des sections. Un test automatique échoue si une table ou un export de mesure contient du texte libre.
+Syntheo garde des compteurs, des identifiants, des dates et, pour chaque terme corrigé, une empreinte à clé locale (HMAC-SHA-256, avec une clé tirée au hasard à l'inscription et détruite à l'effacement) : ni la version envoyée, ni les titres des sections, ni les termes eux-mêmes. Une copie de la synthèse telle que générée est gardée sur le poste pendant que la mesure est active, pour la comparer à la version envoyée ; elle est vidée quand vous désactivez la mesure ou effacez vos mesures, et n'est jamais exportée. Pour le taux d'abandon, Syntheo note chaque génération de synthèse et la date de son premier export de fichier et de son premier partage (copie ou envoi par webhook), seulement pendant que la mesure est active : une synthèse générée pendant que la mesure est désactivée n'entre pas dans l'export, même mesurée plus tard. Une synthèse régénérée compte comme une nouvelle synthèse. Désactiver la mesure clôt les synthèses en cours : une mesure ou un partage fait après la réactivation ne s'y rattache pas, et une synthèse close avant ses 7 jours sans avoir servi n'entre pas dans l'export, faute d'avoir été observée assez longtemps. Seules les mesures comparées à la synthèse telle que générée entrent dans l'export ; une mesure faite sans cette copie (comparée à la synthèse déjà retouchée) reste sur le poste. Un test automatique échoue si une table ou un export de mesure contient du texte libre.
 
 ### Dans l'export
-
-<Note>
-  L'export est en cours de développement pour la version 0.8.0. Son format, ci-dessous, est figé : c'est la version 1 du schéma, `crates/mesure/schema/export-v1.json` dans le [dépôt](https://github.com/WillIsback/Syntheo).
-</Note>
 
 L'export se fait à la main. Syntheo vous montre le fichier en entier avant de l'enregistrer, et n'envoie rien : c'est vous qui le transmettez, par le canal prévu par l'organisation qui mène le pilote. Le schéma est fermé : aucun champ en dehors de cette liste n'est accepté, et chaque valeur texte suit un format imposé ou une liste fermée.
 
@@ -193,7 +190,7 @@ L'outil qui rassemble les exports (`scripts/beta/` dans le [dépôt](https://git
 ## Vos droits
 
 - **Arrêter à tout moment**, sans avoir à vous justifier : désactivez « Mesurer la reprise des synthèses ». Plus rien n'est mesuré.
-- **Effacer vos mesures sur le poste** : vos compteurs et votre pseudonyme peuvent être effacés. Le geste exact sera décrit ici avec la version 0.8.0.
+- **Effacer vos mesures sur le poste** : **Paramètres → Avancé → Confidentialité**, **Effacer mes mesures…**, puis confirmez. Les compteurs et le pseudonyme sont effacés et la mesure est désactivée ; un export déjà transmis ne peut pas être repris depuis le poste.
 - **Demander la suppression des fichiers déjà transmis** : adressez-vous à l'organisation qui mène le pilote, en donnant votre pseudonyme (`p-…`). C'est le seul moyen de retrouver vos fichiers, puisqu'ils ne contiennent pas votre nom.
 
 Ne pas participer, ou arrêter, ne change rien à votre usage de Syntheo.
