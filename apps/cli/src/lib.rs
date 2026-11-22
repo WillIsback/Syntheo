@@ -22,9 +22,14 @@ pub async fn run(mut args: Args) -> Result<u8> {
         generated,
         sent,
         dictionary,
+        differences,
     } = &args.command
     {
-        commands::mesure::run(generated, sent, dictionary.as_deref(), args.json)?;
+        if *differences {
+            commands::mesure::run_differences(generated, sent, dictionary.as_deref())?;
+        } else {
+            commands::mesure::run(generated, sent, dictionary.as_deref(), args.json)?;
+        }
         return Ok(0);
     }
     if matches!(&args.command, cli::Command::Doctor) {

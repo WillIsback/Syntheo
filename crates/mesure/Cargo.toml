@@ -13,3 +13,8 @@ unicode-normalization = { workspace = true }
 
 [dev-dependencies]
 serde_json = { workspace = true }
+
+[features]
+# Extraits des différences, pour le calibrage manuel par la CLI
+# (`syntheo mesure --differences`). L'application ne l'active jamais.
+differences = []

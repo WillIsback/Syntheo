@@ -712,13 +712,19 @@ expression: canonicalize_json(contract)
           "value_name": "FILE"
         },
         {
+          "flags": "--differences",
+          "help": "Print each difference with text excerpts (TSV, standard output only) for manual calibration; never with --json",
+          "is_flag": true,
+          "required": false
+        },
+        {
           "flags": "-h, --help",
           "help": "Print help",
           "is_flag": false,
           "required": false
         }
       ],
-      "synopsis": "syntheo mesure <--generated> <--sent> [--dictionary] [-h]"
+      "synopsis": "syntheo mesure <--generated> <--sent> [--dictionary] [--differences] [-h]"
     }
   ],
   "synopsis": "syntheo [--base] [--db-path] [--json] [-h] [-V] <command>"

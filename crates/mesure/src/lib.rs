@@ -159,78 +159,229 @@ pub fn measure(
     sent_format: Format,
     dictionary: &Dictionary,
 ) -> Result<Report, MeasureError> {
-    if generated.len() > MAX_INPUT_BYTES || sent.len() > MAX_INPUT_BYTES {
-        return Err(MeasureError::TooLarge);
-    }
-    let generated = sections(normalize::blocks(generated, generated_format), &[])?;
-    let titles: Vec<String> = generated.iter().filter_map(|s| s.title.clone()).collect();
-    let sent = sections(normalize::blocks(sent, sent_format), &titles)?;
-
-    let headings_generated = titles.len() as u32;
-    let sent_by_title: HashMap<&str, &Section> = sent
-        .iter()
-        .filter_map(|s| s.title.as_deref().map(|t| (t, s)))
-        .collect();
-    let headings_matched = titles
-        .iter()
-        .filter(|t| sent_by_title.contains_key(t.as_str()))
-        .count() as u32;
-    let aligned = headings_generated > 0 && headings_matched * 2 >= headings_generated;
-
+    let prepared = prepare(generated, generated_format, sent, sent_format)?;
     let mut total = Counters::default();
     let mut reports = Vec::new();
     let mut unmatched_sent_words = 0;
-    if aligned {
-        let empty = Section::default();
-        for (index, section) in generated.iter().enumerate() {
-            let counterpart = match &section.title {
-                Some(title) => sent_by_title.get(title.as_str()).copied(),
-                None => sent.iter().find(|s| s.title.is_none()),
-            };
-            let counters = diff(
-                &section.tokens,
-                &counterpart.unwrap_or(&empty).tokens,
-                dictionary,
-            );
-            total.add(counters);
-            reports.push(SectionReport {
-                index: index as u32,
-                matched: counterpart.is_some(),
-                counters,
-            });
-        }
-        let generated_titles: Vec<&str> = titles.iter().map(String::as_str).collect();
-        for section in &sent {
-            let known = match &section.title {
-                Some(title) => generated_titles.contains(&title.as_str()),
-                None => generated.iter().any(|s| s.title.is_none()),
-            };
-            if !known {
-                unmatched_sent_words += word_count(&section.tokens);
-            }
-        }
-        total.added += unmatched_sent_words;
-    } else {
-        let all = |sections: &[Section]| -> Vec<Token> {
-            sections
-                .iter()
-                .flat_map(|s| s.tokens.iter().cloned())
-                .collect()
+    for pair in prepared.pairs() {
+        let mut counters = Counters {
+            generated: word_count(&pair.generated),
+            ..Counters::default()
         };
-        total = diff(&all(&generated), &all(&sent), dictionary);
+        diff(&pair.generated, &pair.sent, dictionary, |_, _, change| {
+            counters.record(change)
+        });
+        match pair.place {
+            Place::Section { index, matched } => reports.push(SectionReport {
+                index,
+                matched,
+                counters,
+            }),
+            Place::UnmatchedSent => unmatched_sent_words += counters.added,
+            Place::Global => {}
+        }
+        total.add(counters);
     }
-
     Ok(Report {
         rule_version: RULE_VERSION,
-        aligned,
-        headings_generated,
-        headings_matched,
+        aligned: prepared.aligned,
+        headings_generated: prepared.titles.len() as u32,
+        headings_matched: prepared.headings_matched,
         total,
         sections: reports,
         unmatched_sent_words,
         content_per_mille: total.content_per_mille(),
         lexical_per_mille: total.lexical_per_mille(),
     })
+}
+
+/// Nature d'une différence.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ChangeKind {
+    Added,
+    Deleted,
+    Replaced,
+}
+
+/// Une différence classée : nature, classe (un ajout ou une suppression est
+/// toujours du fond) et poids en mots.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Change {
+    pub kind: ChangeKind,
+    pub lexical: bool,
+    pub weight: u64,
+}
+
+impl Counters {
+    fn record(&mut self, change: Change) {
+        match change.kind {
+            ChangeKind::Added => self.added += change.weight,
+            ChangeKind::Deleted => self.deleted += change.weight,
+            ChangeKind::Replaced if change.lexical => self.replaced_lexical += change.weight,
+            ChangeKind::Replaced => self.replaced_content += change.weight,
+        }
+    }
+}
+
+/// Différence avec ses extraits, pour le calibrage manuel de l'étape 0
+/// (`syntheo mesure --differences`). Fonction de la CLI seulement, derrière la
+/// fonctionnalité `differences` : l'application n'active pas cette
+/// fonctionnalité et n'a donc jamais accès aux extraits.
+#[cfg(feature = "differences")]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Difference {
+    /// Rang de la section générée ; `None` en mesure globale ou pour une
+    /// section envoyée absente de la générée.
+    pub section: Option<u32>,
+    pub change: Change,
+    pub generated: String,
+    pub sent: String,
+}
+
+#[cfg(feature = "differences")]
+pub fn differences(
+    generated: &str,
+    generated_format: Format,
+    sent: &str,
+    sent_format: Format,
+    dictionary: &Dictionary,
+) -> Result<Vec<Difference>, MeasureError> {
+    let prepared = prepare(generated, generated_format, sent, sent_format)?;
+    let mut out = Vec::new();
+    for pair in prepared.pairs() {
+        let section = match pair.place {
+            Place::Section { index, .. } => Some(index),
+            Place::UnmatchedSent | Place::Global => None,
+        };
+        diff(
+            &pair.generated,
+            &pair.sent,
+            dictionary,
+            |old, new, change| {
+                out.push(Difference {
+                    section,
+                    change,
+                    generated: join_tokens(old),
+                    sent: join_tokens(new),
+                })
+            },
+        );
+    }
+    Ok(out)
+}
+
+/// Extrait lisible : mots séparés par une espace, ponctuation collée au mot
+/// qui la précède.
+#[cfg(feature = "differences")]
+fn join_tokens(tokens: &[Token]) -> String {
+    let mut out = String::new();
+    for token in tokens {
+        if !out.is_empty() && token.word {
+            out.push(' ');
+        }
+        out.push_str(&token.text);
+    }
+    out
+}
+
+struct Prepared {
+    generated: Vec<Section>,
+    sent: Vec<Section>,
+    titles: Vec<String>,
+    aligned: bool,
+    headings_matched: u32,
+}
+
+enum Place {
+    Section { index: u32, matched: bool },
+    UnmatchedSent,
+    Global,
+}
+
+struct Pair<'a> {
+    place: Place,
+    generated: std::borrow::Cow<'a, [Token]>,
+    sent: std::borrow::Cow<'a, [Token]>,
+}
+
+fn prepare(
+    generated: &str,
+    generated_format: Format,
+    sent: &str,
+    sent_format: Format,
+) -> Result<Prepared, MeasureError> {
+    if generated.len() > MAX_INPUT_BYTES || sent.len() > MAX_INPUT_BYTES {
+        return Err(MeasureError::TooLarge);
+    }
+    let generated = sections(normalize::blocks(generated, generated_format), &[])?;
+    let titles: Vec<String> = generated.iter().filter_map(|s| s.title.clone()).collect();
+    let sent = sections(normalize::blocks(sent, sent_format), &titles)?;
+    let headings_matched = titles
+        .iter()
+        .filter(|t| sent.iter().any(|s| s.title.as_ref() == Some(*t)))
+        .count() as u32;
+    let aligned = !titles.is_empty() && headings_matched as usize * 2 >= titles.len();
+    Ok(Prepared {
+        generated,
+        sent,
+        titles,
+        aligned,
+        headings_matched,
+    })
+}
+
+impl Prepared {
+    /// Paires de textes à comparer, dans l'ordre de la version générée.
+    fn pairs(&self) -> Vec<Pair<'_>> {
+        use std::borrow::Cow;
+        if !self.aligned {
+            let all = |sections: &[Section]| -> Vec<Token> {
+                sections
+                    .iter()
+                    .flat_map(|s| s.tokens.iter().cloned())
+                    .collect()
+            };
+            return vec![Pair {
+                place: Place::Global,
+                generated: Cow::Owned(all(&self.generated)),
+                sent: Cow::Owned(all(&self.sent)),
+            }];
+        }
+        let sent_by_title: HashMap<&str, &Section> = self
+            .sent
+            .iter()
+            .filter_map(|s| s.title.as_deref().map(|t| (t, s)))
+            .collect();
+        let mut pairs = Vec::new();
+        for (index, section) in self.generated.iter().enumerate() {
+            let counterpart = match &section.title {
+                Some(title) => sent_by_title.get(title.as_str()).copied(),
+                None => self.sent.iter().find(|s| s.title.is_none()),
+            };
+            pairs.push(Pair {
+                place: Place::Section {
+                    index: index as u32,
+                    matched: counterpart.is_some(),
+                },
+                generated: Cow::Borrowed(&section.tokens),
+                sent: Cow::Borrowed(counterpart.map_or(&[][..], |s| &s.tokens)),
+            });
+        }
+        for section in &self.sent {
+            let known = match &section.title {
+                Some(title) => self.titles.contains(title),
+                None => self.generated.iter().any(|s| s.title.is_none()),
+            };
+            if !known {
+                pairs.push(Pair {
+                    place: Place::UnmatchedSent,
+                    generated: Cow::Borrowed(&[][..]),
+                    sent: Cow::Borrowed(&section.tokens),
+                });
+            }
+        }
+        pairs
+    }
 }
 
 #[derive(Debug, Default)]
@@ -292,14 +443,16 @@ fn word_count(tokens: &[Token]) -> u64 {
     tokens.iter().filter(|t| t.word).count() as u64
 }
 
-/// Diff mot à mot (plus courte suite d'éditions, Myers) puis classement.
-fn diff(generated: &[Token], sent: &[Token], dictionary: &Dictionary) -> Counters {
+/// Diff mot à mot (plus courte suite d'éditions, Myers) puis classement de
+/// chaque différence, transmise à `visit` avec ses deux côtés.
+fn diff(
+    generated: &[Token],
+    sent: &[Token],
+    dictionary: &Dictionary,
+    mut visit: impl FnMut(&[Token], &[Token], Change),
+) {
     let old: Vec<&str> = generated.iter().map(|t| t.text.as_str()).collect();
     let new: Vec<&str> = sent.iter().map(|t| t.text.as_str()).collect();
-    let mut counters = Counters {
-        generated: word_count(generated),
-        ..Counters::default()
-    };
     // Suppression et insertion adjacentes : un remplacement.
     let mut pending: Option<(std::ops::Range<usize>, std::ops::Range<usize>)> = None;
     let mut ops = capture_diff_slices(Algorithm::Myers, &old, &new);
@@ -311,8 +464,11 @@ fn diff(generated: &[Token], sent: &[Token], dictionary: &Dictionary) -> Counter
     for op in ops {
         match op {
             DiffOp::Equal { .. } => {
-                if let Some((o, n)) = pending.take() {
-                    classify(&generated[o], &sent[n], dictionary, &mut counters);
+                if let Some((o, n)) = pending.take()
+                    && let Some(change) =
+                        classify(&generated[o.clone()], &sent[n.clone()], dictionary)
+                {
+                    visit(&generated[o], &sent[n], change);
                 }
             }
             DiffOp::Delete {
@@ -344,19 +500,25 @@ fn diff(generated: &[Token], sent: &[Token], dictionary: &Dictionary) -> Counter
             }
         }
     }
-    counters
 }
 
-fn classify(old: &[Token], new: &[Token], dictionary: &Dictionary, counters: &mut Counters) {
+/// Classe une différence ; `None` si elle ne touche que la ponctuation.
+fn classify(old: &[Token], new: &[Token], dictionary: &Dictionary) -> Option<Change> {
     let old_words: Vec<&Token> = old.iter().filter(|t| t.word).collect();
     let new_words: Vec<&Token> = new.iter().filter(|t| t.word).collect();
     let (o, n) = (old_words.len() as u64, new_words.len() as u64);
+    let change = |kind, lexical, weight| {
+        Some(Change {
+            kind,
+            lexical,
+            weight,
+        })
+    };
     match (o, n) {
-        (0, 0) => {}
-        (0, n) => counters.added += n,
-        (o, 0) => counters.deleted += o,
+        (0, 0) => None,
+        (0, n) => change(ChangeKind::Added, false, n),
+        (o, 0) => change(ChangeKind::Deleted, false, o),
         (o, n) => {
-            let weight = o.max(n);
             let short = (1..=3).contains(&o) && (1..=3).contains(&n);
             let lexical = short
                 && (old_words
@@ -365,11 +527,7 @@ fn classify(old: &[Token], new: &[Token], dictionary: &Dictionary, counters: &mu
                     .any(|t| proper_noun_or_acronym(t))
                     || dictionary.matches(&old_words)
                     || dictionary.matches(&new_words));
-            if lexical {
-                counters.replaced_lexical += weight;
-            } else {
-                counters.replaced_content += weight;
-            }
+            change(ChangeKind::Replaced, lexical, o.max(n))
         }
     }
 }

@@ -1,10 +1,17 @@
 //! `syntheo mesure` : reprise entre une synthèse générée et la version envoyée
 //! (calibrage local de la bêta). N'affiche que des nombres ; aucun texte n'est
-//! écrit, ni à l'écran ni sur disque. Aucun accès à la base ni au réseau.
+//! écrit sur disque. Aucun accès à la base ni au réseau.
+//!
+//! Seule exception, demandée explicitement : `--differences` liste chaque
+//! différence avec ses extraits, sur la sortie standard seulement (jamais avec
+//! `--json`, donc jamais dans un export), pour le classement manuel de
+//! l'étape 0.
 
 use std::path::Path;
 
-use syntheo_mesure::{Dictionary, Format, MAX_INPUT_BYTES, Report, measure};
+use syntheo_mesure::{
+    ChangeKind, Dictionary, Difference, Format, MAX_INPUT_BYTES, Report, differences, measure,
+};
 
 use crate::output;
 use crate::{Error, Result};
@@ -27,7 +34,15 @@ fn format_of(path: &Path, what: &'static str) -> Result<Format> {
         .ok_or_else(|| Error::operation(what, "unsupported file type (use .md, .txt or .html)"))
 }
 
-pub fn run(generated: &Path, sent: &Path, dictionary: Option<&Path>, json: bool) -> Result<()> {
+struct Inputs {
+    generated: String,
+    generated_format: Format,
+    sent: String,
+    sent_format: Format,
+    dictionary: Dictionary,
+}
+
+fn inputs(generated: &Path, sent: &Path, dictionary: Option<&Path>) -> Result<Inputs> {
     let generated_format = format_of(generated, "read generated summary")?;
     let sent_format = format_of(sent, "read sent version")?;
     let dictionary = match dictionary {
@@ -38,15 +53,24 @@ pub fn run(generated: &Path, sent: &Path, dictionary: Option<&Path>, json: bool)
         }
         None => Dictionary::default(),
     };
+    Ok(Inputs {
+        generated: read_text(generated, "read generated summary")?,
+        generated_format,
+        sent: read_text(sent, "read sent version")?,
+        sent_format,
+        dictionary,
+    })
+}
+
+pub fn run(generated: &Path, sent: &Path, dictionary: Option<&Path>, json: bool) -> Result<()> {
     let report = {
-        let generated = read_text(generated, "read generated summary")?;
-        let sent = read_text(sent, "read sent version")?;
+        let i = inputs(generated, sent, dictionary)?;
         measure(
-            &generated,
-            generated_format,
-            &sent,
-            sent_format,
-            &dictionary,
+            &i.generated,
+            i.generated_format,
+            &i.sent,
+            i.sent_format,
+            &i.dictionary,
         )
         .map_err(|error| Error::operation("measure", error.to_string()))?
     };
@@ -56,6 +80,51 @@ pub fn run(generated: &Path, sent: &Path, dictionary: Option<&Path>, json: bool)
         output::emit(&human(&report));
     }
     Ok(())
+}
+
+/// Différences avec leurs extraits, en TSV sur la sortie standard, précédées
+/// d'un avertissement sur la sortie d'erreur.
+pub fn run_differences(generated: &Path, sent: &Path, dictionary: Option<&Path>) -> Result<()> {
+    let list = {
+        let i = inputs(generated, sent, dictionary)?;
+        differences(
+            &i.generated,
+            i.generated_format,
+            &i.sent,
+            i.sent_format,
+            &i.dictionary,
+        )
+        .map_err(|error| Error::operation("measure", error.to_string()))?
+    };
+    eprintln!("contient des extraits des textes : ne pas partager");
+    output::emit(&differences_tsv(&list));
+    Ok(())
+}
+
+/// Colonnes : `n`, `section` (rang, `-` hors section), `type`, `classe_auto`,
+/// `poids`, `genere`, `envoye`, `classe_vraie` (vide, à remplir à la main).
+fn differences_tsv(list: &[Difference]) -> String {
+    let cell = |text: &str| text.replace(['\t', '\n', '\r'], " ");
+    let mut lines =
+        vec!["n\tsection\ttype\tclasse_auto\tpoids\tgenere\tenvoye\tclasse_vraie".to_owned()];
+    for (n, d) in list.iter().enumerate() {
+        let kind = match d.change.kind {
+            ChangeKind::Added => "ajout",
+            ChangeKind::Deleted => "suppression",
+            ChangeKind::Replaced => "remplacement",
+        };
+        lines.push(format!(
+            "{}\t{}\t{}\t{}\t{}\t{}\t{}\t",
+            n + 1,
+            d.section.map_or_else(|| "-".to_owned(), |s| s.to_string()),
+            kind,
+            if d.change.lexical { "lexical" } else { "fond" },
+            d.change.weight,
+            cell(&d.generated),
+            cell(&d.sent),
+        ));
+    }
+    lines.join("\n")
 }
 
 fn rate(value: Option<f64>) -> String {
@@ -134,6 +203,27 @@ mod tests {
         assert!(!text.contains("Martin") && !text.contains("Alice"));
         assert!(text.contains("replaced_lexical\t1"));
         assert!(text.contains("added\t2"));
+    }
+
+    #[test]
+    fn differences_are_listed_as_tsv_with_an_empty_true_class() {
+        let list = differences(
+            "# Résumé\n\nLe projet avance avec Martin.\n",
+            Format::Markdown,
+            "Résumé\nMerci\tAlice. Le projet avance avec Marten.\n",
+            Format::Text,
+            &Dictionary::default(),
+        )
+        .unwrap();
+        let tsv = differences_tsv(&list);
+        let lines: Vec<&str> = tsv.lines().collect();
+        assert_eq!(
+            lines[0],
+            "n\tsection\ttype\tclasse_auto\tpoids\tgenere\tenvoye\tclasse_vraie"
+        );
+        assert_eq!(lines[1], "1\t0\tajout\tfond\t2\t\tMerci Alice.\t");
+        assert_eq!(lines[2], "2\t0\tremplacement\tlexical\t1\tMartin\tMarten\t");
+        assert!(lines.iter().all(|l| l.split('\t').count() == 8));
     }
 
     #[test]

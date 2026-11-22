@@ -81,6 +81,10 @@ pub enum Command {
         /// Dictionary terms, one per line
         #[arg(long, value_name = "FILE")]
         dictionary: Option<PathBuf>,
+        /// Print each difference with text excerpts (TSV, standard output
+        /// only) for manual calibration; never with --json
+        #[arg(long, conflicts_with = "json")]
+        differences: bool,
     },
 }
 

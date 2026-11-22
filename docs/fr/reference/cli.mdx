@@ -156,6 +156,16 @@ Sortie, une valeur par ligne (`clé`, tabulation, nombre) :
 
 Avec `--json`, les mêmes nombres sont rendus sous `data` (champs `total`, `sections`, `content_per_mille`…).
 
+### Calibrage : `--differences`
+
+```bash
+syntheo mesure --generated generee.md --sent publiee.txt --differences > differences.tsv
+```
+
+Pour vérifier le classement à la main, `--differences` liste chaque différence **avec ses extraits**, en TSV sur la sortie standard, au lieu des nombres. La commande n'écrit rien sur disque elle-même et refuse `--json`. Un avertissement sur la sortie d'erreur rappelle que le résultat contient des extraits des textes : ne le partagez pas.
+
+Colonnes : `n`, `section` (rang de la section générée, `-` hors section), `type` (`ajout`, `suppression` ou `remplacement`), `classe_auto` (`fond` ou `lexical`), `poids` (mots), `genere`, `envoye`, puis `classe_vraie`, vide, à remplir dans un tableur. Les tabulations et retours à la ligne des extraits sont remplacés par des espaces.
+
 ## Aide et version
 
 ```bash

@@ -156,6 +156,16 @@ Output, one value per line (`key`, tab, number):
 
 With `--json`, the same numbers are returned under `data` (fields `total`, `sections`, `content_per_mille`…).
 
+### Calibration: `--differences`
+
+```bash
+syntheo mesure --generated generated.md --sent published.txt --differences > differences.tsv
+```
+
+To check the classification by hand, `--differences` lists each difference **with its excerpts**, as TSV on standard output, instead of the numbers. The command writes nothing to disk itself and refuses `--json`. A warning on standard error reminds you that the result contains excerpts of the texts: do not share it.
+
+Columns: `n`, `section` (rank of the generated section, `-` outside a section), `type` (`ajout` added, `suppression` deleted or `remplacement` replaced), `classe_auto` (`fond` content or `lexical`), `poids` (words), `genere`, `envoye`, then `classe_vraie`, empty, to fill in a spreadsheet. Tabs and line breaks in excerpts are replaced by spaces.
+
 ## Help and version
 
 ```bash
