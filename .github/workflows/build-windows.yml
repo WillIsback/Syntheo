@@ -429,11 +429,12 @@ jobs:
           $expectedSubject = @("CN=William Derue", "O=William Derue")
           # Le programme compagnon (issue 683) est signé par le même
           # signataire que syntheo.exe : contrôle bloquant comme les autres.
+          # Tauri le signe sur place, dans binaries/, avant de l'embarquer.
           $files = @(
             Get-ChildItem apps/desktop/src-tauri/target/release/bundle/nsis/*.exe
             Get-ChildItem apps/desktop/src-tauri/target/release/bundle/msi/*.msi
             Get-Item apps/desktop/src-tauri/target/release/syntheo.exe
-            Get-Item apps/desktop/src-tauri/target/release/syntheo-speech.exe
+            Get-Item apps/desktop/src-tauri/binaries/syntheo-speech-x86_64-pc-windows-msvc.exe
           )
           $failed = $false
           foreach ($file in $files) {
