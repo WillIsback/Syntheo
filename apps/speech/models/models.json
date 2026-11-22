@@ -15,11 +15,12 @@
     "onnxruntime": "1.32.0",
     "onnx": "1.23.2",
     "weight_type": "QInt8",
+    "reduce_range": true,
     "op_types": ["MatMul", "Gemm"]
   },
   "sources": [
     "https://github.com/WillIsback/Syntheo/releases/download/speech-models-1/{name}",
-    "https://huggingface.co/WillisBack/syntheo-speech-models/resolve/bffcd9b4676654bca14ea4d4b256ae8fbc488761/{path}"
+    "https://huggingface.co/WillisBack/syntheo-speech-models/resolve/16e4ca54b924297bf6af2cbc5f9c9c2eca9a94bf/{path}"
   ],
   "files": [
     {
@@ -45,13 +46,13 @@
       "source_data": "nemotron-3.5-asr-streaming-0.6b-onnx/encoder.onnx.data",
       "source_data_sha256": "1cdddec47b0570170183716dff74df8ca827facb41b11302ebdd479616171988",
       "transform": "int8-per-channel-external-data",
-      "sha256": "477de59bf032d21319cc4ea6b3812aab6b4bfe96cd6fb872d75ef5ed5d5b9700",
+      "sha256": "6de5db92a264bfe83d9e889a504c5fea4dfd0c004e0b4265a55511f1a3b29232",
       "size": 5688611
     },
     {
       "path": "nemotron/encoder.onnx.data",
       "transform": "output-of:nemotron/encoder.onnx",
-      "sha256": "26543e2783137d632e1199c11eea086a790ecc636666c1a02f8c224bf1c78f8a",
+      "sha256": "3e65a535f3ef69394c891c4deaed7b03acf21613d5c662422b0af94dfe577225",
       "size": 883175424
     },
     {
@@ -59,7 +60,7 @@
       "source": "nemotron-3.5-asr-streaming-0.6b-onnx/decoder_joint.onnx",
       "source_sha256": "a4258dfb3a4c5c15ef3ff7e52483bf9b4fcf721ae5a8d2dac777178e8fa39252",
       "transform": "int8-per-channel",
-      "sha256": "6c37167e42b06526729ee522ddb088ac53b1ee2a58d0f7dedf90eb451476eb71",
+      "sha256": "29797c4b1340ea61d70cf17ac9876ead195ae838fdcbbcc98fd73a4e1510c39a",
       "size": 69399105
     },
     {
@@ -67,7 +68,7 @@
       "source": "nemotron-3-diarization/nemotron3_diar_v3.onnx",
       "source_sha256": "c32d6056f1ca52bdd50a74e1e7c66d91e5147bc29f19ffa4c39cbe5452397d15",
       "transform": "int8-per-tensor",
-      "sha256": "62936c5aa9d7175d707bffd75fe010bf9c79d86e9cb0abcfbca361b66b74873d",
+      "sha256": "90b418344d01b56845f3a63bbf3f2a75b4a4dca41452fcffc97bac01ec26b8f2",
       "size": 107437992
     }
   ]

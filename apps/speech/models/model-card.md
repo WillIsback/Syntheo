@@ -25,12 +25,15 @@ speech recognition and speaker diarization, run locally with ONNX Runtime.
 The models, their weights and their license are NVIDIA's. Syntheo only
 quantized them to int8; nothing else was trained or changed.
 
-| File                                                  | Source                                                                                                                                                       | Quantization                     |
-| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------- |
-| `nemotron/encoder.onnx`, `nemotron/encoder.onnx.data` | [nvidia/nemotron-3.5-asr-streaming-0.6b](https://huggingface.co/nvidia/nemotron-3.5-asr-streaming-0.6b), revision `ea30d66debe3740a08b573244286791d423d6b3e` | int8, per channel (MatMul, Gemm) |
-| `nemotron/decoder_joint.onnx`                         | same                                                                                                                                                         | int8, per channel (MatMul, Gemm) |
-| `nemotron/tokenizer.model`, `nemotron/config.json`    | same                                                                                                                                                         | unchanged                        |
-| `diar/nemotron3_diar_v3.onnx`                         | [nvidia/Nemotron-3-Diarization](https://huggingface.co/nvidia/Nemotron-3-Diarization), revision `52a432672732425e4c19765b9fec9b5810e6f4ba`                   | int8, per tensor (MatMul, Gemm)  |
+| File                                                  | Source                                                                                                                                                       | Quantization                                    |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------- |
+| `nemotron/encoder.onnx`, `nemotron/encoder.onnx.data` | [nvidia/nemotron-3.5-asr-streaming-0.6b](https://huggingface.co/nvidia/nemotron-3.5-asr-streaming-0.6b), revision `ea30d66debe3740a08b573244286791d423d6b3e` | int8, per channel (MatMul, Gemm), 7-bit weights |
+| `nemotron/decoder_joint.onnx`                         | same                                                                                                                                                         | int8, per channel (MatMul, Gemm), 7-bit weights |
+| `nemotron/tokenizer.model`, `nemotron/config.json`    | same                                                                                                                                                         | unchanged                                       |
+| `diar/nemotron3_diar_v3.onnx`                         | [nvidia/Nemotron-3-Diarization](https://huggingface.co/nvidia/Nemotron-3-Diarization), revision `52a432672732425e4c19765b9fec9b5810e6f4ba`                   | int8, per tensor (MatMul, Gemm), 7-bit weights  |
+
+Weights are quantized on 7 bits (`reduce_range`) so that the models also work on
+CPUs without VNNI; see [CPU compatibility](#cpu-compatibility).
 
 The ONNX exports come from
 [altunenes/parakeet-rs](https://huggingface.co/altunenes/parakeet-rs), revision
@@ -89,16 +92,35 @@ which Syntheo also compiles in and checks before every launch.
 
 ## Accuracy
 
-Word error rate on French, measured by Syntheo: **10.73 %** with these int8
-weights (95 % bootstrap interval 9.20 to 12.25), against **10.64 %** in FP32
-(9.16 to 12.12).
+Word error rate on French, measured by Syntheo on a computer with VNNI (AMD
+Ryzen 9 9950X, 4 cores): **12.55 %** with these int8 weights (95 % bootstrap
+interval 10.73 to 14.45), against **12.52 %** in FP32 (10.72 to 14.35). The
+paired difference is +0.02 point (−0.39 to +0.44): no measurable degradation.
 
-The sample holds 150 utterances (4,475 words, 29.8 minutes of read speech): 100
+The sample holds 150 utterances (4,208 words, 29.9 minutes of read speech): 100
 from FLEURS `fr_fr` (test split) and 50 from Multilingual LibriSpeech `french`
 (test split), drawn at random with fixed seeds. The intervals come from 1,000
 bootstrap resamples of the utterances. With this sample size, a degradation
 smaller than about 0.5 point between int8 and FP32 cannot be detected, and
 spontaneous, noisy or far-field speech is not measured.
+
+## CPU compatibility
+
+ONNX Runtime multiplies int8 weights by uint8 activations. On x86 CPUs without
+VNNI (Intel up to most 10th-generation Core, AMD up to Zen 3), its AVX2 kernel
+adds two such products in a 16-bit integer, which overflows with 8-bit weights:
+an earlier quantization of these models produced no words at all on those CPUs.
+With 7-bit weights the worst case (255 × 63 × 2 = 32,130) fits in 16 bits.
+
+Under emulation of a CPU without VNNI (QEMU `Skylake-Client` and `Haswell`,
+AVX2), on 16 utterances of the sample above (530 words), these weights give a
+word error rate of 12.08 % against 11.32 % in FP32 (paired difference +0.75
+point, −0.19 to +1.87), and every utterance is transcribed. Each release is
+checked the same way before publication (`apps/speech/models/cpu-check`).
+
+Verified natively on AVX-512 with VNNI and under emulation on AVX2 without
+VNNI; AVX-512 without VNNI (for example first-generation Xeon Scalable) is not
+verified.
 
 ## License
 
