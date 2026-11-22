@@ -5,6 +5,7 @@
 //! que `predict` convertit en RTF par moteur. Rien n'est téléchargé, rien
 //! n'est écrit.
 
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
 /// Taille d'un bloc q8_0, comme dans ggml.
@@ -106,8 +107,9 @@ fn dot(avx2: bool, a: &[i8], b: &[i8], sa: &[f32], sb: &[f32]) -> f32 {
 }
 
 /// Lance le micro-banc pendant environ `duration` (3 à 5 s conseillé), sur
-/// `threads` fils. Une passe d'échauffement courte précède la mesure.
-pub fn run(threads: u32, duration: Duration) -> BenchResult {
+/// `threads` fils. Une passe d'échauffement courte précède la mesure. Rend
+/// `None` si `cancel` est levé en cours (une écoute démarre).
+pub fn run(threads: u32, duration: Duration, cancel: &AtomicBool) -> Option<BenchResult> {
     let threads = threads.max(1) as usize;
     let avx2 = has_avx2();
     let activations = quantized(ROWS, K, 7);
@@ -122,7 +124,7 @@ pub fn run(threads: u32, duration: Duration) -> BenchResult {
                         let rows = (t * per_thread)..((t + 1) * per_thread).min(N);
                         let mut macs = 0u64;
                         let mut sink = 0.0f32;
-                        while Instant::now() < deadline {
+                        while Instant::now() < deadline && !cancel.load(Ordering::Relaxed) {
                             for n in rows.clone() {
                                 let w = &weights.values[n * K..(n + 1) * K];
                                 let sw = &weights.scales[n * K / BLOCK..(n + 1) * K / BLOCK];
@@ -147,12 +149,15 @@ pub fn run(threads: u32, duration: Duration) -> BenchResult {
     let start = Instant::now();
     let macs = pass(start + duration);
     let seconds = start.elapsed().as_secs_f64();
-    BenchResult {
+    if cancel.load(Ordering::Relaxed) {
+        return None;
+    }
+    Some(BenchResult {
         gmacs: macs as f64 / seconds / 1e9,
         threads: threads as u32,
         seconds,
         kernel: if avx2 { "avx2" } else { "scalar" },
-    }
+    })
 }
 
 #[cfg(test)]
@@ -173,8 +178,24 @@ mod tests {
 
     #[test]
     fn a_short_run_reports_a_positive_rate() {
-        let result = run(2, Duration::from_millis(200));
+        let result = run(2, Duration::from_millis(200), &AtomicBool::new(false)).unwrap();
         assert!(result.gmacs > 0.0);
         assert_eq!(result.threads, 2);
+    }
+
+    // Revue 0.8.0 (sonde), constat 3 : une écoute qui démarre interrompt le
+    // micro-banc.
+    #[test]
+    fn a_raised_cancel_flag_interrupts_the_run() {
+        let cancel = AtomicBool::new(false);
+        std::thread::scope(|scope| {
+            scope.spawn(|| {
+                std::thread::sleep(Duration::from_millis(100));
+                cancel.store(true, Ordering::Relaxed);
+            });
+            let started = Instant::now();
+            assert_eq!(run(2, Duration::from_secs(5), &cancel), None);
+            assert!(started.elapsed() < Duration::from_secs(2));
+        });
     }
 }

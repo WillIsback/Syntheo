@@ -76,14 +76,32 @@ pub fn read(data_dir: &Path) -> Hardware {
 }
 
 /// Disque dont le point de montage est le plus long préfixe du dossier.
+/// `None` : disque introuvable, traité comme un refus, jamais comme accepté.
 fn free_disk(dir: &Path) -> Option<u64> {
     let dir = std::fs::canonicalize(dir).unwrap_or_else(|_| dir.to_path_buf());
+    let dir = std::path::PathBuf::from(strip_verbatim(&dir.to_string_lossy()));
     let disks = sysinfo::Disks::new_with_refreshed_list().ok()?;
     disks
         .iter()
         .filter(|d| dir.starts_with(d.mount_point()))
         .max_by_key(|d| d.mount_point().as_os_str().len())
         .map(|d| d.available_space())
+}
+
+/// Sous Windows, `canonicalize` rend un chemin `\\?\D:\…` ou
+/// `\\?\UNC\serveur\partage\…`, que les points de montage (`D:\`) ne
+/// préfixent pas : on revient à la forme usuelle.
+pub(crate) fn strip_verbatim(path: &str) -> String {
+    if let Some(rest) = path.strip_prefix(r"\\?\UNC\") {
+        return format!(r"\\{rest}");
+    }
+    if let Some(rest) = path.strip_prefix(r"\\?\") {
+        let bytes = rest.as_bytes();
+        if bytes.len() >= 2 && bytes[0].is_ascii_alphabetic() && bytes[1] == b':' {
+            return rest.to_owned();
+        }
+    }
+    path.to_owned()
 }
 
 /// Classe un nom de profil Linux (`power-profiles-daemon` ou ACPI).
@@ -122,7 +140,14 @@ fn on_battery() -> Option<bool> {
                     mains = Some(false);
                 }
             }
-            "Battery" => battery = true,
+            // Batterie d'un périphérique (souris, manette, casque) : pas
+            // celle du poste.
+            "Battery" => {
+                let scope = std::fs::read_to_string(path.join("scope")).unwrap_or_default();
+                if scope.trim() != "Device" {
+                    battery = true;
+                }
+            }
             _ => {}
         }
     }
@@ -164,6 +189,14 @@ fn gpus() -> Vec<Gpu> {
 }
 
 #[cfg(target_os = "windows")]
+#[link(name = "powrprof")]
+unsafe extern "system" {
+    /// Mode d'alimentation de Windows 10 et 11 (surcouche du plan actif),
+    /// absent du crate `windows`. Rend 0 en cas de succès.
+    fn PowerGetEffectiveOverlayScheme(effective: *mut windows::core::GUID) -> u32;
+}
+
+#[cfg(target_os = "windows")]
 fn power_plan() -> PowerPlan {
     use windows::Win32::System::Power::{
         GetSystemPowerStatus, PowerGetActiveScheme, SYSTEM_POWER_STATUS,
@@ -173,6 +206,16 @@ fn power_plan() -> PowerPlan {
     // SAFETY : appel Win32 sur une structure locale.
     if unsafe { GetSystemPowerStatus(&mut status) }.is_ok() && status.SystemStatusFlag == 1 {
         return PowerPlan::PowerSaver;
+    }
+    // Mode d'alimentation (« meilleure efficacité énergétique »…) : il prime
+    // sur le plan quand il est défini.
+    let mut overlay = windows::core::GUID::zeroed();
+    // SAFETY : écrit un GUID dans une variable locale.
+    if unsafe { PowerGetEffectiveOverlayScheme(&mut overlay) } == 0 {
+        let mode = windows_overlay(&format!("{overlay:?}"));
+        if mode != PowerPlan::Unknown {
+            return mode;
+        }
     }
     let mut guid = std::ptr::null_mut();
     // SAFETY : la fonction alloue le GUID, libéré par LocalFree ci-dessous.
@@ -196,6 +239,19 @@ pub(crate) fn windows_scheme(guid: &str) -> PowerPlan {
         "a1841308-3541-4fab-bc81-f71556f20b4a" => PowerPlan::PowerSaver,
         "381b4222-f694-41f0-9685-ff5bb260df2e" => PowerPlan::Balanced,
         "8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c" | "e9a42b02-d5df-448d-aa00-03f14749eb61" => {
+            PowerPlan::Performance
+        }
+        _ => PowerPlan::Unknown,
+    }
+}
+
+/// GUID des modes d'alimentation de Windows 10 et 11. Le mode « Équilibré »
+/// n'a pas de surcouche (GUID nul) : le plan actif décide alors.
+#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
+pub(crate) fn windows_overlay(guid: &str) -> PowerPlan {
+    match guid.to_ascii_lowercase().as_str() {
+        "961cc777-2547-4f9d-8174-7d86181b8a7a" => PowerPlan::PowerSaver,
+        "3af9b8d9-7c97-431d-ad78-34a8bfea439f" | "ded574b5-45a0-4f42-8737-46345c09c238" => {
             PowerPlan::Performance
         }
         _ => PowerPlan::Unknown,
@@ -286,6 +342,33 @@ mod tests {
         assert_eq!(
             windows_scheme("8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c"),
             PowerPlan::Performance
+        );
+    }
+
+    // Revue 0.8.0 (sonde), constats 1 et 5.
+    #[test]
+    fn verbatim_prefixes_and_overlays() {
+        assert_eq!(
+            strip_verbatim(r"\\?\C:\Users\a\AppData"),
+            r"C:\Users\a\AppData"
+        );
+        assert_eq!(strip_verbatim(r"\\?\UNC\srv\share\x"), r"\\srv\share\x");
+        assert_eq!(
+            strip_verbatim("/home/a/.local/share"),
+            "/home/a/.local/share"
+        );
+        assert_eq!(strip_verbatim(r"\\?\Volume{abc}\x"), r"\\?\Volume{abc}\x");
+        assert_eq!(
+            windows_overlay("961CC777-2547-4F9D-8174-7D86181B8A7A"),
+            PowerPlan::PowerSaver
+        );
+        assert_eq!(
+            windows_overlay("ded574b5-45a0-4f42-8737-46345c09c238"),
+            PowerPlan::Performance
+        );
+        assert_eq!(
+            windows_overlay("00000000-0000-0000-0000-000000000000"),
+            PowerPlan::Unknown
         );
     }
 

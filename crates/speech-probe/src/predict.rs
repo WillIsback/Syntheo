@@ -100,17 +100,28 @@ fn points(engine: Engine) -> &'static [Point] {
     }
 }
 
-/// Interpolation log-log entre les points (triés par débit), pente du
-/// segment extrême au-delà.
+/// Interpolation log-log entre les points (triés par débit). Hors de la
+/// plage mesurée, jamais plus favorable que le point extrême : au-dessus du
+/// plus rapide, son RTF ; sous le plus lent, la pente prolongée, et au moins
+/// son RTF.
 fn interpolate(points: &[Point], profile: usize, gmacs: f64) -> f64 {
     let gmacs = gmacs.max(1e-3);
+    let (slowest, fastest) = (&points[0], &points[points.len() - 1]);
+    if gmacs >= fastest.gmacs {
+        return fastest.rtfs[profile];
+    }
     let segment = points
         .windows(2)
         .position(|w| gmacs <= w[1].gmacs)
         .unwrap_or(points.len() - 2);
     let (a, b) = (&points[segment], &points[segment + 1]);
     let slope = (b.rtfs[profile].ln() - a.rtfs[profile].ln()) / (b.gmacs.ln() - a.gmacs.ln());
-    (a.rtfs[profile].ln() + slope * (gmacs.ln() - a.gmacs.ln())).exp()
+    let rtf = (a.rtfs[profile].ln() + slope * (gmacs.ln() - a.gmacs.ln())).exp();
+    if gmacs < slowest.gmacs {
+        rtf.max(slowest.rtfs[profile])
+    } else {
+        rtf
+    }
 }
 
 /// RTF prédits pour chaque profil, d'après le débit du micro-banc.
@@ -137,6 +148,8 @@ pub enum Refusal {
     NoAvx2,
     NotEnoughMemory,
     NotEnoughDisk,
+    /// Disque des données introuvable : refusé, jamais accepté par défaut.
+    DiskUnknown,
     TooSlow,
 }
 
@@ -151,6 +164,8 @@ pub enum Verdict {
     ProposeDegraded { profile: Profile },
     /// Pas de proposition, ni de téléchargement.
     Refuse { reasons: Vec<Refusal> },
+    /// Micro-banc interrompu par le démarrage d'une écoute : à refaire.
+    Interrupted,
 }
 
 /// Résultat complet de la sonde.
@@ -178,11 +193,10 @@ pub fn static_refusals(hardware: &Hardware) -> Vec<Refusal> {
     if hardware.available_memory_bytes < MIN_AVAILABLE_MEMORY {
         reasons.push(Refusal::NotEnoughMemory);
     }
-    if hardware
-        .free_disk_bytes
-        .is_some_and(|free| free < MIN_FREE_DISK)
-    {
-        reasons.push(Refusal::NotEnoughDisk);
+    match hardware.free_disk_bytes {
+        Some(free) if free < MIN_FREE_DISK => reasons.push(Refusal::NotEnoughDisk),
+        Some(_) => {}
+        None => reasons.push(Refusal::DiskUnknown),
     }
     reasons
 }
@@ -221,8 +235,14 @@ pub fn needs_new_probe(previous: &Probe, now: &Hardware) -> bool {
 }
 
 /// Sonde complète : contrôles statiques, puis micro-banc (environ
-/// `duration`) sur autant de fils que de cœurs physiques.
-pub fn probe(engine: Engine, data_dir: &std::path::Path, duration: std::time::Duration) -> Probe {
+/// `duration`) sur autant de fils que de cœurs physiques. `cancel` levé en
+/// cours : verdict `Interrupted`.
+pub fn probe(
+    engine: Engine,
+    data_dir: &std::path::Path,
+    duration: std::time::Duration,
+    cancel: &std::sync::atomic::AtomicBool,
+) -> Probe {
     let hardware = crate::hardware::read(data_dir);
     let advice = power_advice(&hardware);
     let refusals = static_refusals(&hardware);
@@ -236,7 +256,16 @@ pub fn probe(engine: Engine, data_dir: &std::path::Path, duration: std::time::Du
             power_advice: advice,
         };
     }
-    let bench = crate::bench::run(hardware.physical_cores, duration);
+    let Some(bench) = crate::bench::run(hardware.physical_cores, duration, cancel) else {
+        return Probe {
+            engine,
+            hardware,
+            bench: None,
+            predicted: None,
+            verdict: Verdict::Interrupted,
+            power_advice: advice,
+        };
+    };
     let predicted = predict(engine, bench.gmacs);
     Probe {
         engine,
@@ -270,6 +299,25 @@ mod tests {
                         "{engine:?} {profile}"
                     );
                 }
+            }
+        }
+    }
+
+    // Revue 0.8.0 (sonde), constat 7 : hors de la plage mesurée, jamais plus
+    // favorable que le point extrême.
+    #[test]
+    fn extrapolation_is_never_more_favourable() {
+        for (engine, points) in [
+            (Engine::ParakeetOnnx, PARAKEET_POINTS),
+            (Engine::NemoGgml, NEMO_POINTS),
+        ] {
+            let (slowest, fastest) = (&points[0], &points[points.len() - 1]);
+            for profile in 0..4 {
+                assert!(predict(engine, 10.0).0[profile] >= slowest.rtfs[profile]);
+                assert!(close(
+                    predict(engine, 5000.0).0[profile],
+                    fastest.rtfs[profile]
+                ));
             }
         }
     }
@@ -369,6 +417,12 @@ mod tests {
                 Refusal::NotEnoughDisk
             ]
         );
+        // Revue 0.8.0 (sonde), constat 1 : disque inconnu, refusé.
+        let unknown = Hardware {
+            free_disk_bytes: None,
+            ..hardware()
+        };
+        assert_eq!(static_refusals(&unknown), [Refusal::DiskUnknown]);
     }
 
     #[test]

@@ -76,11 +76,7 @@ export const commands = {
 	beginAudioUpload: (fileName: string, sizeBytes: number) => typedError<string, string>(__TAURI_INVOKE("plugin:transcription|begin_audio_upload", { fileName, sizeBytes })),
 	appendAudioUpload: (uploadId: string, dataBase64: string) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|append_audio_upload", { uploadId, dataBase64 })),
 	discardAudioUpload: (uploadId: string) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|discard_audio_upload", { uploadId })),
-	/**
-	 *  Sonde le poste pour `engine`. Refusée pendant une écoute ou une
-	 *  finalisation : le micro-banc occupe tous les cœurs et ralentirait la
-	 *  transcription en cours.
-	 */
+	/**  Sonde le poste pour `engine`. */
 	probeLocalTranscription: (engine: Engine) => typedError<Probe, string>(__TAURI_INVOKE("plugin:transcription|probe_local_transcription", { engine })),
 };
 
@@ -461,7 +457,9 @@ export type RecoveryAudioChunk = {
 	end_ms: number,
 };
 
-export type Refusal = "no_avx2" | "not_enough_memory" | "not_enough_disk" | "too_slow";
+export type Refusal = "no_avx2" | "not_enough_memory" | "not_enough_disk" | 
+/**  Disque des données introuvable : refusé, jamais accepté par défaut. */
+"disk_unknown" | "too_slow";
 
 export type RenderSessionTranscriptRequest = {
 	session_id: string,
@@ -715,7 +713,9 @@ export type Verdict =
  */
 { kind: "propose_degraded"; profile: Profile } | 
 /**  Pas de proposition, ni de téléchargement. */
-{ kind: "refuse"; reasons: Refusal[] };
+{ kind: "refuse"; reasons: Refusal[] } | 
+/**  Micro-banc interrompu par le démarrage d'une écoute : à refaire. */
+{ kind: "interrupted" };
 
 export type VttWord = {
 	text: string,
