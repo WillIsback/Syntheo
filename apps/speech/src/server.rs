@@ -58,6 +58,8 @@ pub struct ServerConfig {
     pub token: Token,
     /// Deux flux par écoute (micro et son système), plus une marge.
     pub max_sessions: usize,
+    /// Mesures de charge des sessions (issue 686).
+    pub registry: Arc<crate::load::Registry>,
 }
 
 /// Journal du module : des nombres et des états, jamais de texte transcrit.
@@ -203,12 +205,13 @@ async fn connection(
         return;
     };
     let _permit = permit;
-    session(ws, engine).await;
+    session(ws, engine, context.config.registry.clone()).await;
 }
 
 /// Commandes vers le fil de reconnaissance.
 enum Work {
-    Audio(Vec<f32>),
+    /// Audio et instant de sa réception.
+    Audio(Vec<f32>, std::time::Instant),
     Finish,
 }
 
@@ -222,6 +225,7 @@ enum Output {
 async fn session(
     ws: tokio_tungstenite::WebSocketStream<tokio::net::TcpStream>,
     engine: Arc<dyn Engine>,
+    registry: Arc<crate::load::Registry>,
 ) {
     let (mut sink, mut source) = ws.split();
     let send = |value: serde_json::Value| Message::Text(value.to_string().into());
@@ -271,7 +275,11 @@ async fn session(
     // attend (contre-pression TCP) au lieu d'accumuler l'audio en mémoire.
     let (work_tx, work_rx) = mpsc::channel::<Work>(AUDIO_QUEUE);
     let (out_tx, mut out_rx) = mpsc::unbounded_channel::<Output>();
-    let worker = std::thread::spawn(move || recognize(recognizer, work_rx, out_tx));
+    let metrics_id = registry.open();
+    let worker = {
+        let registry = registry.clone();
+        std::thread::spawn(move || recognize(recognizer, work_rx, out_tx, &registry, metrics_id))
+    };
     log(&format!(
         "session opened (diarization {})",
         config.diarization
@@ -287,7 +295,7 @@ async fn session(
                 Some(Ok(Message::Binary(bytes))) => {
                     let audio = pcm16_to_f32(&bytes);
                     samples += audio.len() as u64;
-                    if work_tx.send(Work::Audio(audio)).await.is_err() {
+                    if work_tx.send(Work::Audio(audio, std::time::Instant::now())).await.is_err() {
                         break;
                     }
                 }
@@ -334,6 +342,7 @@ async fn session(
     }
     drop(work_tx);
     let _ = tokio::task::spawn_blocking(move || worker.join()).await;
+    registry.close(metrics_id);
     log(&format!(
         "session closed ({:.1} s of audio, {utterances} utterances)",
         samples as f64 / f64::from(crate::protocol::SAMPLE_RATE)
@@ -341,24 +350,60 @@ async fn session(
 }
 
 /// Fil de reconnaissance d'une session : regroupe l'audio en attente avant
-/// chaque appel au moteur.
+/// chaque appel au moteur, mesure le retard et le RTF, et ajuste la
+/// diarisation sous charge (issue 686).
 fn recognize(
     mut recognizer: Box<dyn Recognizer>,
     mut work: mpsc::Receiver<Work>,
     out: mpsc::UnboundedSender<Output>,
+    registry: &crate::load::Registry,
+    metrics_id: u64,
 ) {
+    let mut controller = crate::load::LoadController::new(recognizer.diarization());
+    let mut rtf = 0.0_f64;
+    let mut audio_total = 0.0_f64;
     while let Some(first) = work.blocking_recv() {
         let mut audio = Vec::new();
         let mut finish = false;
+        let mut arrived = None;
         let queued = std::iter::from_fn(|| work.try_recv().ok());
         for item in std::iter::once(first).chain(queued) {
             match item {
-                Work::Audio(samples) => audio.extend(samples),
+                Work::Audio(samples, at) => {
+                    audio.extend(samples);
+                    // Le plus ancien audio du lot : son attente est le retard.
+                    arrived.get_or_insert(at);
+                }
                 Work::Finish => finish = true,
             }
         }
         if !audio.is_empty() {
-            match recognizer.push(&audio) {
+            let started = std::time::Instant::now();
+            let pushed = recognizer.push(&audio);
+            let now = std::time::Instant::now();
+            let seconds = audio.len() as f64 / f64::from(crate::protocol::SAMPLE_RATE);
+            audio_total += seconds;
+            let spent = now.duration_since(started).as_secs_f64();
+            rtf = if rtf == 0.0 {
+                spent / seconds
+            } else {
+                0.9 * rtf + 0.1 * spent / seconds
+            };
+            let lag = arrived.map_or(std::time::Duration::ZERO, |at| now.duration_since(at));
+            if let Some(level) = controller.observe(lag, now) {
+                log(&format!("load: diarization {}", level.as_str()));
+                recognizer.set_diarization(level);
+            }
+            registry.update(
+                metrics_id,
+                crate::load::SessionMetrics {
+                    lag_ms: lag.as_millis() as u64,
+                    rtf,
+                    diarization: recognizer.diarization(),
+                    audio_s: audio_total,
+                },
+            );
+            match pushed {
                 Ok(events) if !events.is_empty() => {
                     let _ = out.send(Output::Events(events));
                 }

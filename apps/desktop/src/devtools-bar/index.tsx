@@ -3,6 +3,7 @@ import { getIdentifier, getVersion } from "@tauri-apps/api/app";
 import { useReducer, useState } from "react";
 
 import { commands as miscCommands } from "@syntheo/plugin-misc";
+import { commands as transcriptionCommands } from "@syntheo/plugin-transcription";
 import { Copy, Minus } from "@syntheo/ui/components/icons";
 import {
   DropdownMenu,
@@ -252,6 +253,7 @@ function LiveMetrics() {
 
   return (
     <>
+      <OnDeviceMetric />
       <Metric
         label="FPS"
         value={fps ?? "–"}
@@ -393,6 +395,60 @@ function describeChange(history: DevtoolsMetrics["memoryBytes"]): string {
   const delta = history[history.length - 1]! - history[0]!;
   const sign = delta >= 0 ? "+" : "−";
   return `${sign}${formatBytes(Math.abs(delta))} over ${history.length * 2}s`;
+}
+
+/**
+ * Module « Sur ce poste » pendant une écoute (issue 686) : retard le plus
+ * fort des sessions, RTF et niveau de diarisation, avec le profil retenu par
+ * la mise en service. Rien hors écoute.
+ */
+function OnDeviceMetric() {
+  const load = useQuery({
+    queryKey: ["devtools-bar", "on-device-load"],
+    queryFn: async () => {
+      const result = await transcriptionCommands.onDeviceLoad();
+      return result.status === "ok" ? result.data : [];
+    },
+    refetchInterval: 2000,
+  });
+  const commissioning = useQuery({
+    queryKey: ["devtools-bar", "on-device-commissioning"],
+    queryFn: async () => {
+      const result = await transcriptionCommands.onDeviceCommissioning();
+      return result.status === "ok" ? result.data : null;
+    },
+    staleTime: 60_000,
+  });
+  const sessions = load.data ?? [];
+  if (sessions.length === 0) return null;
+  const lag = Math.max(...sessions.map((s) => s.lagMs));
+  const measured = commissioning.data;
+  return (
+    <Metric
+      label="STT"
+      value={`${Math.round(lag)}ms`}
+      tone={toneAbove(lag, 1000, 2000)}
+      tooltip={
+        <Rows
+          title="On-device module: lag, RTF and diarization per stream"
+          rows={[
+            ...sessions.map((s, i): [string, string] => [
+              `stream ${i + 1}`,
+              `${Math.round(s.lagMs)}ms · RTF ${s.rtf.toFixed(2)} · ${s.diarization}`,
+            ]),
+            [
+              "profile",
+              measured?.profile ?? (measured ? "ineligible" : "not measured"),
+            ],
+            ...(measured?.measures ?? []).map((m): [string, string] => [
+              m.profile,
+              `p95 ${m.p95Ms}ms · drift ${m.driftMs}ms · ${m.passed ? "ok" : "too slow"}`,
+            ]),
+          ]}
+        />
+      }
+    />
+  );
 }
 
 function Metric(props: {

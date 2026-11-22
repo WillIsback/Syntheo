@@ -62,6 +62,9 @@ const COMMANDS: &[&str] = &[
     "on_device_status",
     "on_device_install",
     "on_device_uninstall",
+    "on_device_commissioning",
+    "on_device_commission",
+    "on_device_load",
 ];
 
 fn main() {

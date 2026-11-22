@@ -23,7 +23,9 @@ use std::process::Stdio;
 use std::time::{Duration, Instant};
 
 use owhisper_client::{OnDeviceTarget, OnDeviceToken};
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+use std::sync::Arc;
+
+use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::process::{Child, ChildStdin, Command};
 use tokio::sync::Mutex;
 
@@ -59,12 +61,14 @@ pub enum HostError {
     RestartBudget,
     /// Une installation du module est en cours.
     Installing,
+    /// Une mesure de mise en service est en cours.
+    Measuring,
 }
 
 impl HostError {
     /// Refus définitif pour la durée de l'écoute : ne pas réessayer.
     pub fn is_permanent(&self) -> bool {
-        !matches!(self, Self::Launch(_) | Self::Installing)
+        !matches!(self, Self::Launch(_) | Self::Installing | Self::Measuring)
     }
 
     /// Erreur à transmettre au listener.
@@ -76,6 +80,7 @@ impl HostError {
             Self::RestartBudget => Kind::Crashing,
             Self::Launch(_) => Kind::FailedToStart,
             Self::Installing => Kind::Installing,
+            Self::Measuring => Kind::Measuring,
         };
         owhisper_client::OnDeviceError {
             kind,
@@ -113,6 +118,7 @@ impl std::fmt::Display for HostError {
             Self::Launch(message) => write!(f, "on-device module failed to start: {message}"),
             Self::RestartBudget => f.write_str("on-device module keeps stopping"),
             Self::Installing => f.write_str("on-device module is being installed"),
+            Self::Measuring => f.write_str("on-device module is being measured"),
         }
     }
 }
@@ -152,8 +158,57 @@ fn neutral_dir() -> PathBuf {
     }
 }
 
-async fn launch(verified: Verified, engine: &str, threads: usize) -> Result<Running, HostError> {
+/// Mesures de charge publiées par le module pendant une écoute (issue 686).
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
+pub struct SessionLoad {
+    pub lag_ms: u64,
+    pub rtf: f64,
+    /// `full`, `spaced` ou `off`.
+    pub diarization: String,
+    pub audio_s: f64,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize)]
+pub struct ModuleLoad {
+    pub sessions: Vec<SessionLoad>,
+}
+
+/// Lit une ligne de mesures ; tout autre contenu est ignoré.
+fn parse_load(line: &str) -> Option<ModuleLoad> {
+    let value: serde_json::Value = serde_json::from_str(line).ok()?;
+    if value["event"] != "metrics" {
+        return None;
+    }
+    let sessions = value["sessions"]
+        .as_array()?
+        .iter()
+        .take(16)
+        .filter_map(|s| {
+            let diarization = s["diarization"].as_str()?;
+            ["full", "spaced", "off"]
+                .contains(&diarization)
+                .then(|| SessionLoad {
+                    lag_ms: s["lag_ms"].as_u64().unwrap_or(0),
+                    rtf: s["rtf"].as_f64().unwrap_or(0.0),
+                    diarization: diarization.to_owned(),
+                    audio_s: s["audio_s"].as_f64().unwrap_or(0.0),
+                })
+        })
+        .collect();
+    Some(ModuleLoad { sessions })
+}
+
+type LoadSlot = Arc<std::sync::Mutex<Option<(Instant, ModuleLoad)>>>;
+
+async fn launch(
+    verified: Verified,
+    engine: &str,
+    threads: usize,
+    extra_args: &[String],
+    load: LoadSlot,
+) -> Result<Running, HostError> {
     let mut command = Command::new(&verified.binary);
+    command.args(extra_args);
     command
         .arg("--engine")
         .arg(engine)
@@ -244,6 +299,24 @@ async fn launch(verified: Verified, engine: &str, threads: usize) -> Result<Runn
     }
     let port = port.ok_or_else(|| HostError::Launch("invalid port".into()))? as u16;
     let token = OnDeviceToken::new(token).ok_or_else(|| HostError::Launch("token".into()))?;
+    // Après l'annonce, la sortie standard porte les mesures de charge (toutes
+    // les 5 s pendant une écoute) ; lignes bornées.
+    tokio::spawn(async move {
+        let mut line = String::new();
+        loop {
+            line.clear();
+            let read = (&mut reader).take(64 * 1024).read_line(&mut line).await;
+            match read {
+                Ok(0) | Err(_) => break,
+                Ok(_) => {
+                    if let Some(parsed) = parse_load(&line) {
+                        *load.lock().unwrap_or_else(|e| e.into_inner()) =
+                            Some((Instant::now(), parsed));
+                    }
+                }
+            }
+        }
+    });
     // Le module rouvre le modèle de diarisation à chaque session : copie
     // privée, descripteurs et handles restent jusqu'à sa mort.
     let staging = Some(verified.staging);
@@ -263,6 +336,8 @@ async fn launch(verified: Verified, engine: &str, threads: usize) -> Result<Runn
 pub struct SpeechHost {
     dir: PathBuf,
     engine: String,
+    /// Arguments supplémentaires du module (essais : coût du moteur factice).
+    extra_args: Vec<String>,
     threads: usize,
     policy: RestartPolicy,
     /// Clé publique des manifestes de module.
@@ -270,8 +345,14 @@ pub struct SpeechHost {
     /// Version de l'application, comparée à `min_app_version`.
     app_version: String,
     state: Mutex<HostState>,
+    /// Dernières mesures de charge du module.
+    load: LoadSlot,
     /// Installation ou désinstallation en cours : `target()` refuse aussitôt.
     installing: std::sync::atomic::AtomicBool,
+    /// Mesure de mise en service en cours : `target()` refuse aussitôt.
+    measuring: std::sync::atomic::AtomicBool,
+    /// Mise en service du module installé, lue une fois puis gardée.
+    commissioned: std::sync::Mutex<Option<Option<crate::commissioning::Commissioning>>>,
 }
 
 /// Libère l'indicateur d'installation, même en cas d'erreur.
@@ -303,12 +384,16 @@ impl SpeechHost {
         Self {
             dir,
             engine: "parakeet".to_owned(),
+            extra_args: Vec::new(),
             threads,
             policy: RestartPolicy::default(),
             manifest_key: crate::manifest::MODULE_PUBLIC_KEY.map(str::to_owned),
             app_version: app_version.to_owned(),
             state: Mutex::new(HostState::default()),
             installing: Default::default(),
+            commissioned: Default::default(),
+            measuring: Default::default(),
+            load: LoadSlot::default(),
         }
     }
 
@@ -316,6 +401,12 @@ impl SpeechHost {
     /// un binaire construit avec le moteur factice).
     pub fn with_engine(mut self, engine: &str) -> Self {
         self.engine = engine.to_owned();
+        self
+    }
+
+    /// Arguments supplémentaires du module (essais).
+    pub fn with_extra_args(mut self, args: &[&str]) -> Self {
+        self.extra_args = args.iter().map(|a| (*a).to_owned()).collect();
         self
     }
 
@@ -344,6 +435,14 @@ impl SpeechHost {
         if self.installing.load(std::sync::atomic::Ordering::SeqCst) {
             return Err(HostError::Installing);
         }
+        if self.measuring.load(std::sync::atomic::Ordering::SeqCst) {
+            return Err(HostError::Measuring);
+        }
+        self.launch_target().await
+    }
+
+    /// `target` sans les refus d'état (la mesure elle-même).
+    async fn launch_target(&self) -> Result<OnDeviceTarget, HostError> {
         let mut state = self.state.lock().await;
         let now = Instant::now();
         if let Some(running) = state.running.as_mut() {
@@ -398,7 +497,14 @@ impl SpeechHost {
             }
             Err(_) => return Err(HostError::Verify("verification failed".into())),
         };
-        let running = launch(verified, &self.engine, self.threads).await?;
+        let running = launch(
+            verified,
+            &self.engine,
+            self.threads,
+            &self.extra_args,
+            self.load.clone(),
+        )
+        .await?;
         let target = running.target.clone();
         state.running = Some(running);
         Ok(target)
@@ -498,6 +604,9 @@ impl SpeechHost {
         state.rejected = None;
         state.attempts.clear();
         state.blocked_until = None;
+        // Autre module : sa mise en service est à refaire (liée à sa
+        // construction).
+        self.forget_commissioning();
         Ok(status)
     }
 
@@ -510,12 +619,142 @@ impl SpeechHost {
             .map_err(|_| "io")?
             .map_err(|_| "io")?;
         self.state.lock().await.rejected = None;
+        self.forget_commissioning();
         Ok(())
     }
 
     /// Vérifications faites depuis la création (essais).
     pub async fn verifications(&self) -> usize {
         self.state.lock().await.verifications
+    }
+
+    /// Construction du module installé (manifeste vérifié), sans hachage.
+    fn module_build(&self) -> Option<u64> {
+        crate::verify::check(&self.dir, self.manifest_key.as_deref(), &self.app_version).ok()?;
+        let bytes = std::fs::read(self.dir.join(crate::manifest::MANIFEST_FILE)).ok()?;
+        serde_json::from_slice::<serde_json::Value>(&bytes).ok()?["build"].as_u64()
+    }
+
+    /// Mise en service enregistrée pour le module installé (lue une fois,
+    /// sans hachage, puis gardée en mémoire jusqu'à une nouvelle mesure ou
+    /// une installation).
+    pub fn commissioning(&self) -> Option<crate::commissioning::Commissioning> {
+        let mut cached = self.commissioned.lock().unwrap_or_else(|e| e.into_inner());
+        if let Some(value) = cached.as_ref() {
+            return value.clone();
+        }
+        let loaded = self
+            .module_build()
+            .and_then(|build| crate::commissioning::load(&self.dir, build));
+        *cached = Some(loaded.clone());
+        loaded
+    }
+
+    /// Profil retenu, pour l'écoute.
+    pub fn profile(&self) -> Option<owhisper_client::OnDeviceProfile> {
+        self.commissioning()?
+            .profile
+            .map(|profile| owhisper_client::OnDeviceProfile {
+                two_streams: profile.streams() == 2,
+                diarization: profile.diarization(),
+            })
+    }
+
+    fn forget_commissioning(&self) {
+        *self.commissioned.lock().unwrap_or_else(|e| e.into_inner()) = None;
+    }
+
+    /// Audio de mise en service du module installé, vérifié contre sa liste.
+    fn commissioning_audio(&self) -> Result<[Vec<u8>; 2], String> {
+        use sha2::{Digest, Sha256};
+        let entries =
+            crate::verify::check(&self.dir, self.manifest_key.as_deref(), &self.app_version)
+                .map_err(|e| e.code().to_owned())?;
+        let mut audio = [Vec::new(), Vec::new()];
+        for (slot, path) in audio.iter_mut().zip(crate::commissioning::AUDIO_FILES) {
+            let expected = entries.get(path).ok_or("no_commissioning_audio")?;
+            let bytes = std::fs::read(self.dir.join(path)).map_err(|_| "io")?;
+            let hash: String = Sha256::digest(&bytes)
+                .iter()
+                .map(|b| format!("{b:02x}"))
+                .collect();
+            if &hash != expected {
+                return Err("module_altered".to_owned());
+            }
+            *slot = crate::commissioning::wav_pcm16(&bytes)
+                .ok_or("no_commissioning_audio")?
+                .to_vec();
+        }
+        Ok(audio)
+    }
+
+    /// Mesure les profils dans l'ordre, retient le premier qui tient, et
+    /// enregistre le résultat. `duration` : durée de mesure d'un profil.
+    pub async fn commission(
+        &self,
+        allowed: bool,
+        duration: Duration,
+    ) -> Result<crate::commissioning::Commissioning, String> {
+        use crate::commissioning::{Commissioning, Profile, measure, save};
+        use std::sync::atomic::Ordering;
+        if !allowed {
+            return Err("disabled".to_owned());
+        }
+        if self
+            .measuring
+            .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+            .is_err()
+        {
+            return Err("measuring".to_owned());
+        }
+        let _guard = InstallingGuard(&self.measuring);
+        let build = self.module_build().ok_or("module_incomplete")?;
+        let audio = self.commissioning_audio()?;
+        let mut measures = Vec::new();
+        let mut chosen = None;
+        for profile in Profile::ALL {
+            let target = self
+                .launch_target()
+                .await
+                .map_err(|e| e.to_on_device_error().kind.code().to_owned())?;
+            let mut result = measure(&target, profile, &audio, duration)
+                .await
+                .map_err(|_| "measure_failed".to_owned())?;
+            // Le module a dû espacer ou couper la diarisation : le profil ne
+            // tient pas tel quel.
+            if profile.diarization()
+                && self
+                    .load()
+                    .is_some_and(|load| load.sessions.iter().any(|s| s.diarization != "full"))
+            {
+                result.passed = false;
+            }
+            let passed = result.passed;
+            measures.push(result);
+            if passed {
+                chosen = Some(profile);
+                break;
+            }
+        }
+        let result = Commissioning {
+            profile: chosen,
+            measures,
+            measured_at: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map_or(0, |d| d.as_secs()),
+            module_build: build,
+        };
+        save(&self.dir, &result).map_err(|_| "io".to_owned())?;
+        *self.commissioned.lock().unwrap_or_else(|e| e.into_inner()) = Some(Some(result.clone()));
+        Ok(result)
+    }
+
+    /// Dernières mesures de charge, si elles datent de moins de 15 s.
+    pub fn load(&self) -> Option<ModuleLoad> {
+        let slot = self.load.lock().unwrap_or_else(|e| e.into_inner());
+        slot.as_ref()
+            .filter(|(at, _)| at.elapsed() < Duration::from_secs(15))
+            .map(|(_, load)| load.clone())
     }
 
     /// PID du lancement en cours (essais).
@@ -526,5 +765,25 @@ impl SpeechHost {
             .running
             .as_ref()
             .and_then(|r| r.child.id())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_load;
+
+    #[test]
+    fn reads_load_lines_and_ignores_the_rest() {
+        let load = parse_load(
+            r#"{"event":"metrics","sessions":[{"lag_ms":420,"rtf":0.21,"diarization":"spaced","audio_s":12.3}]}"#,
+        )
+        .unwrap();
+        assert_eq!(load.sessions[0].lag_ms, 420);
+        assert_eq!(load.sessions[0].diarization, "spaced");
+        assert!(parse_load(r#"{"event":"listening","port":1}"#).is_none());
+        assert!(parse_load("pas du json").is_none());
+        let odd =
+            parse_load(r#"{"event":"metrics","sessions":[{"diarization":"<script>"}]}"#).unwrap();
+        assert!(odd.sessions.is_empty());
     }
 }

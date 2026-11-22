@@ -307,6 +307,10 @@ msgstr "A folder with this name already exists there."
 msgid "A folder with this name already exists."
 msgstr "A folder with this name already exists."
 
+#: src/stt/on-device.ts
+msgid "A measurement is already in progress."
+msgstr "A measurement is already in progress."
+
 #: src/onboarding/final.tsx
 msgid "A meeting can't be replayed: audio is never kept, only the note remains. Your notes belong to you."
 msgstr "A meeting can't be replayed: audio is never kept, only the note remains. Your notes belong to you."
@@ -2922,6 +2926,10 @@ msgstr "Me"
 msgid "Measure"
 msgstr "Measure"
 
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Measure again"
+msgstr "Measure again"
+
 #: src/mesure/measure-dialog.tsx
 msgid "Measure rework"
 msgstr "Measure rework"
@@ -2935,14 +2943,40 @@ msgstr "Measure rework of summaries"
 msgid "Measure rework…"
 msgstr "Measure rework…"
 
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Measure this computer"
+msgstr "Measure this computer"
+
 #. placeholder {0}: preview.meetings
 #: src/mesure/beta-data.tsx
 msgid "Measured meetings: {0}"
 msgstr "Measured meetings: {0}"
 
+#. placeholder {0}: profileLabels[measured.profile as Profile]
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Measured: {0}."
+msgstr "Measured: {0}."
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Measured: this computer is too slow for live transcription."
+msgstr "Measured: this computer is too slow for live transcription."
+
+#. placeholder {0}: profileLabels[result.profile as Profile]
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Measurement done: {0}."
+msgstr "Measurement done: {0}."
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Measurement done: this computer is too slow for live transcription."
+msgstr "Measurement done: this computer is too slow for live transcription."
+
 #: src/mesure/beta-data.tsx
 msgid "Measurements and pseudonym erased from this computer. Measurement is now off."
 msgstr "Measurements and pseudonym erased from this computer. Measurement is now off."
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Measuring this computer (one to two minutes)…"
+msgstr "Measuring this computer (one to two minutes)…"
 
 #: src/settings/ai/llm/server-card.tsx
 msgid "Medium"
@@ -3136,8 +3170,8 @@ msgid "Module installed: version {0}, {1}."
 msgstr "Module installed: version {0}, {1}."
 
 #: src/settings/ai/stt/on-device-card.tsx
-msgid "Module installed."
-msgstr "Module installed."
+msgid "Module installed. Measuring this computer (one to two minutes)…"
+msgstr "Module installed. Measuring this computer (one to two minutes)…"
 
 #: src/settings/ai/stt/on-device-card.tsx
 msgid "Module not installed. Download from Syntheo is coming soon."
@@ -5803,6 +5837,15 @@ msgstr "The local model returned an empty answer."
 msgid "The matrix could not be saved."
 msgstr "The matrix could not be saved."
 
+#: src/stt/on-device.ts
+msgid "The measurement could not run. Try again."
+msgstr "The measurement could not run. Try again."
+
+#. placeholder {0}: describeOnDeviceError(e.message)
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "The measurement did not complete: {0}"
+msgstr "The measurement did not complete: {0}"
+
 #: src/chat/components/message/tool/move-tools.tsx
 msgid "The meeting contents could not be moved."
 msgstr "The meeting contents could not be moved."
@@ -5830,6 +5873,10 @@ msgstr "The module files could not be read or written (disk full?). Try again."
 #: src/stt/on-device.ts
 msgid "The module folder is incomplete or contains unexpected files."
 msgstr "The module folder is incomplete or contains unexpected files."
+
+#: src/stt/on-device.ts
+msgid "The module has no measurement audio. Install it again."
+msgstr "The module has no measurement audio. Install it again."
 
 #: src/stt/on-device.ts
 msgid "The module is in use. Stop the recording, then try again."
@@ -6009,6 +6056,10 @@ msgid "the transcription module of this computer is being installed"
 msgstr "the transcription module of this computer is being installed"
 
 #: src/stt/live-transcript-interrupted.ts
+msgid "the transcription module of this computer is being measured"
+msgstr "the transcription module of this computer is being measured"
+
+#: src/stt/live-transcript-interrupted.ts
 msgid "the transcription module of this computer is missing or has been modified"
 msgstr "the transcription module of this computer is missing or has been modified"
 
@@ -6114,6 +6165,18 @@ msgstr "This computer can transcribe your meetings on its own: {0}."
 #: src/onboarding/on-device-proposal.tsx
 msgid "This computer cannot transcribe on its own; Syntheo uses your transcription server."
 msgstr "This computer cannot transcribe on its own; Syntheo uses your transcription server."
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "This computer has not been measured yet."
+msgstr "This computer has not been measured yet."
+
+#: src/stt/live-transcript-interrupted.ts
+msgid "this computer has not been measured, or is too slow for live transcription"
+msgstr "this computer has not been measured, or is too slow for live transcription"
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "This computer is chosen for transcription, but it has not been measured or is too slow: live transcription is paused."
+msgstr "This computer is chosen for transcription, but it has not been measured or is too slow: live transcription is paused."
 
 #: src/settings/ai/stt/on-device-card.tsx
 msgid "This computer is chosen for transcription, but its module is not installed: live transcription is paused."

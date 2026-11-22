@@ -100,6 +100,14 @@ On exécute exactement ce qui a été vérifié :
 
 La clé privée sera rangée dans un environnement GitHub `speech-signing`, limité à main comme `release-signing`, sous les secrets `SPEECH_MANIFEST_PRIVATE_KEY` et `SPEECH_MANIFEST_PRIVATE_KEY_PASSWORD`. Le job `sign-manifest` ne tourne que sur demande (`sign`) et depuis main.
 
+### Mise en service et charge (issue 686)
+
+- **Mise en service** (`crates/speech-host`, `commissioning`) : après l'installation, puis à la demande, chaque profil est mesuré environ 30 s en temps réel sur l'audio de mise en service (`commissioning/`, deux flux), dans l'ordre de la conclusion du banc 680 (§4) : deux flux avec diarisation, deux flux sans, un seul flux (micro) avec, un seul flux sans. Le premier dont le retard des finals reste sous 2 s au 95e centile, sans dérive (écart des médianes du dernier et du premier tiers sous 1 s), est retenu ; sinon le poste est inéligible. Le résultat est enregistré à côté du module (`speech.commissioning.json`), lié à la construction du module, avec la mesure. Pas d'écoute « Sur ce poste » sans profil retenu.
+- **Application du profil** : un seul flux, seul le micro est transcrit ; sans diarisation, la session annonce un seul intervenant.
+- **Charge pendant l'écoute** (`load`) : le module mesure le retard de chaque session (attente de l'audio le plus ancien de chaque lot) et son RTF. Au-delà de 2 s de retard pendant 2 s, la diarisation passe en espacée (tranches de 2,2 s au lieu de 1,04 s), puis en coupée ; elle remonte d'un niveau après 30 s sous 1 s. Mesure du coût sur 45 s d'audio : RTF 0,104 en complète, 0,077 en espacée, 0,059 en coupée.
+- **Mesures publiées** : toutes les 5 s pendant une écoute, une ligne JSON `{"event":"metrics","sessions":[…]}` sur la sortie standard (retard, RTF, niveau, durée), lue par l'hôte et affichée dans la barre de diagnostic des alphas devtools.
+- Moteur factice : `--fake-cost complète,espacée,coupée` simule le coût de calcul sous un verrou commun aux sessions, pour les essais.
+
 ### Signature Authenticode (prévue)
 
 Un job `authenticode` se placera entre `build` et `manifest` pour la cible Windows, sur le modèle du job `sign` de `build-windows.yml` :

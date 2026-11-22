@@ -9,6 +9,12 @@ pub trait ListenerRuntime: syntheo_storage::StorageRuntime {
     /// Source « Sur ce poste » (issue 684) : cible du lancement en cours du
     /// module `syntheo-speech`, démarré ou relancé au besoin. Appelée à chaque
     /// démarrage d'un listener, reconnexion comprise. Par défaut : indisponible.
+    /// Profil retenu par la mise en service du module (issue 686) : un ou
+    /// deux flux, diarisation ou non. Lu au démarrage de chaque session.
+    fn on_device_profile(&self) -> Option<owhisper_client::OnDeviceProfile> {
+        None
+    }
+
     fn on_device_target(
         &self,
     ) -> futures_util::future::BoxFuture<

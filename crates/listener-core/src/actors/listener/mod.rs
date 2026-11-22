@@ -304,6 +304,20 @@ impl Actor for ListenerActor {
                             ListenerAudioResult::Closed
                         }
                     },
+                    // Profil « un seul flux » (issue 686) : seul le micro part.
+                    ChannelSender::Single(tx)
+                        if state.args.mode == crate::actors::ChannelMode::MicOnly =>
+                    {
+                        match tx.try_send(MixedMessage::Audio(mic)) {
+                            Ok(()) => ListenerAudioResult::Accepted,
+                            Err(tokio::sync::mpsc::error::TrySendError::Full(_)) => {
+                                ListenerAudioResult::Backpressured
+                            }
+                            Err(tokio::sync::mpsc::error::TrySendError::Closed(_)) => {
+                                ListenerAudioResult::Closed
+                            }
+                        }
+                    }
                     ChannelSender::Single(_) => ListenerAudioResult::ModeMismatch,
                 };
                 let _ = reply.send(result);

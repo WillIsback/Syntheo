@@ -58,9 +58,26 @@ pub async fn target<R: tauri::Runtime>(
             message: "on-device transcription is not available".to_owned(),
         })?;
     let allowed = allowed(app).await;
+    // Pas d'écoute sans mise en service réussie (issue 686) : le profil dit
+    // si le poste tient le temps réel.
+    if allowed && host.profile().is_none() {
+        return Err(OnDeviceError {
+            kind: OnDeviceErrorKind::NotCommissioned,
+            message: "on-device module not commissioned".to_owned(),
+        });
+    }
     host.target(allowed)
         .await
         .map_err(|error| error.to_on_device_error())
+}
+
+/// Profil retenu par la mise en service (pour la session qui démarre).
+pub fn profile<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+) -> Option<owhisper_client::OnDeviceProfile> {
+    app.try_state::<Arc<syntheo_speech_host::SpeechHost>>()?
+        .inner()
+        .profile()
 }
 
 /// Arrête le module s'il tourne.
@@ -224,6 +241,128 @@ pub async fn on_device_uninstall<R: tauri::Runtime>(
 ) -> Result<(), String> {
     require_no_capture(&app).await?;
     host(&app)?.uninstall().await.map_err(str::to_owned)
+}
+
+/// Mesure d'un profil, pour l'interface et la barre de diagnostic.
+#[derive(Debug, Clone, serde::Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct OnDeviceMeasure {
+    /// `two_streams_diarized`, `two_streams`, `one_stream_diarized`,
+    /// `one_stream`.
+    pub profile: String,
+    pub finals: u32,
+    pub p95_ms: f64,
+    pub drift_ms: f64,
+    pub passed: bool,
+}
+
+/// Mise en service enregistrée.
+#[derive(Debug, Clone, serde::Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct OnDeviceCommissioning {
+    /// Profil retenu ; `None` : poste inéligible.
+    pub profile: Option<String>,
+    pub measures: Vec<OnDeviceMeasure>,
+    /// Secondes depuis l'époque Unix.
+    pub measured_at: f64,
+}
+
+fn profile_name(profile: syntheo_speech_host::commissioning::Profile) -> String {
+    serde_json::to_value(profile)
+        .ok()
+        .and_then(|v| v.as_str().map(str::to_owned))
+        .unwrap_or_default()
+}
+
+fn commissioning_of(
+    result: syntheo_speech_host::commissioning::Commissioning,
+) -> OnDeviceCommissioning {
+    OnDeviceCommissioning {
+        profile: result.profile.map(profile_name),
+        measures: result
+            .measures
+            .into_iter()
+            .map(|m| OnDeviceMeasure {
+                profile: profile_name(m.profile),
+                finals: m.finals as u32,
+                p95_ms: m.p95_ms as f64,
+                drift_ms: m.drift_ms as f64,
+                passed: m.passed,
+            })
+            .collect(),
+        measured_at: result.measured_at as f64,
+    }
+}
+
+/// Charge du module pendant une écoute (barre de diagnostic).
+#[derive(Debug, Clone, serde::Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct OnDeviceSessionLoad {
+    pub lag_ms: f64,
+    pub rtf: f64,
+    /// `full`, `spaced` ou `off`.
+    pub diarization: String,
+    pub audio_s: f64,
+}
+
+/// Mise en service enregistrée du module installé.
+#[tauri::command]
+#[specta::specta]
+pub async fn on_device_commissioning<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+) -> Result<Option<OnDeviceCommissioning>, String> {
+    let host = host(&app)?;
+    Ok(
+        tauri::async_runtime::spawn_blocking(move || host.commissioning())
+            .await
+            .map_err(|_| "io".to_owned())?
+            .map(commissioning_of),
+    )
+}
+
+/// Mesure les profils (environ 30 s chacun, du plus complet au plus réduit)
+/// et enregistre le premier qui tient le temps réel. Refusée pendant une
+/// écoute et par le relay.
+#[tauri::command]
+#[specta::specta]
+pub async fn on_device_commission<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+) -> Result<OnDeviceCommissioning, String> {
+    let allowed = allowed(&app).await;
+    if !allowed {
+        return Err("disabled".to_owned());
+    }
+    require_no_capture(&app).await?;
+    let host = host(&app)?;
+    let result = host
+        .commission(true, syntheo_speech_host::commissioning::MEASURE)
+        .await;
+    // Le module de mesure s'arrête : la prochaine écoute le relance.
+    host.stop().await;
+    result.map(commissioning_of)
+}
+
+/// Charge du module pendant une écoute ; vide hors écoute.
+#[tauri::command]
+#[specta::specta]
+pub async fn on_device_load<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+) -> Result<Vec<OnDeviceSessionLoad>, String> {
+    let host = host(&app)?;
+    Ok(host
+        .load()
+        .map(|load| {
+            load.sessions
+                .into_iter()
+                .map(|s| OnDeviceSessionLoad {
+                    lag_ms: s.lag_ms as f64,
+                    rtf: s.rtf,
+                    diarization: s.diarization,
+                    audio_s: s.audio_s,
+                })
+                .collect()
+        })
+        .unwrap_or_default())
 }
 
 #[cfg(test)]

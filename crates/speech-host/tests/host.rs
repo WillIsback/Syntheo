@@ -330,3 +330,114 @@ async fn a_real_signed_module_starts_and_accepts_a_session() {
     host.stop().await;
     assert!(!host.is_running().await);
 }
+
+/// WAV 16 kHz mono PCM16 de `seconds` secondes (le moteur factice ne lit
+/// pas le contenu).
+fn wav(seconds: usize) -> Vec<u8> {
+    let data = vec![0u8; seconds * 32_000];
+    let mut out = b"RIFF".to_vec();
+    out.extend((36 + data.len() as u32).to_le_bytes());
+    out.extend(b"WAVEfmt ");
+    out.extend(16u32.to_le_bytes());
+    out.extend(1u16.to_le_bytes());
+    out.extend(1u16.to_le_bytes());
+    out.extend(16_000u32.to_le_bytes());
+    out.extend(32_000u32.to_le_bytes());
+    out.extend(2u16.to_le_bytes());
+    out.extend(16u16.to_le_bytes());
+    out.extend(b"data");
+    out.extend((data.len() as u32).to_le_bytes());
+    out.extend(data);
+    out
+}
+
+/// Dossier de module avec l'audio de mise en service.
+fn commissioning_module_dir(binary: &Path, seconds: usize) -> tempfile::TempDir {
+    let dir = tempfile::tempdir().unwrap();
+    let name = speech_host::verify::binary_name();
+    std::fs::copy(binary, dir.path().join(name)).unwrap();
+    std::fs::create_dir_all(dir.path().join("models")).unwrap();
+    std::fs::write(dir.path().join("models/placeholder"), b"x").unwrap();
+    std::fs::create_dir_all(dir.path().join("commissioning")).unwrap();
+    for file in speech_host::commissioning::AUDIO_FILES {
+        std::fs::write(dir.path().join(file), wav(seconds)).unwrap();
+    }
+    let mut files = vec![name];
+    files.extend(speech_host::commissioning::AUDIO_FILES);
+    let manifest = current_manifest(dir.path(), &files, &["models/placeholder"], "0.8.0");
+    KEY.with(|key| key.sign_module(dir.path(), &manifest));
+    dir
+}
+
+// Issue 686 : mise en service mesurée, dans l'ordre de conclusion-680 §4.
+// Moteur factice à coût simulé : deux flux diarisés dépassent le temps réel
+// (2 × 0,9), deux flux sans diarisation tiennent (2 × 0,2).
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn commissioning_picks_the_first_profile_that_keeps_up() {
+    let Some(binary) = binary() else { return };
+    let dir = commissioning_module_dir(&binary, 8);
+    let host = host(dir.path()).with_extra_args(&["--fake-cost", "0.9,0.6,0.2"]);
+    let result = host
+        .commission(true, Duration::from_secs(8))
+        .await
+        .expect("mise en service");
+    use speech_host::commissioning::Profile;
+    assert_eq!(result.measures[0].profile, Profile::TwoStreamsDiarized);
+    assert!(!result.measures[0].passed, "{:?}", result.measures[0]);
+    assert_eq!(result.profile, Some(Profile::TwoStreams), "{result:?}");
+    let last = result.measures.last().unwrap();
+    assert!(
+        last.passed && last.finals >= 4 && last.p95_ms < 2000,
+        "{last:?}"
+    );
+    // Enregistrée, liée à la construction du module.
+    assert_eq!(host.commissioning(), Some(result));
+    assert_eq!(
+        host.profile(),
+        Some(owhisper_client::OnDeviceProfile {
+            two_streams: true,
+            diarization: false
+        })
+    );
+    host.stop().await;
+}
+
+// Le module publie ses mesures de charge pendant une écoute.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn the_module_reports_its_load() {
+    let Some(binary) = binary() else { return };
+    let dir = module_dir(&binary);
+    let host = host(dir.path()).with_extra_args(&["--fake-cost", "0.1,0.1,0.1"]);
+    let target = host.target(true).await.unwrap();
+    let client = ListenClient::builder()
+        .adapter::<NvidiaAdapter>()
+        .api_base(target.base_url)
+        .params(owhisper_interface::ListenParams {
+            languages: vec!["fr".parse().unwrap()],
+            ..Default::default()
+        })
+        .on_device(target.token)
+        .build_single()
+        .await
+        .unwrap();
+    let (tx, mut rx) = tokio::sync::mpsc::channel::<owhisper_client::ListenClientInput>(8);
+    let input = futures_util::stream::poll_fn(move |cx| rx.poll_recv(cx))
+        .chain(futures_util::stream::pending());
+    let (_output, _handle) = client.from_realtime_audio(Box::pin(input)).await.unwrap();
+    let mut load = None;
+    for _ in 0..400 {
+        let _ = tx
+            .send(MixedMessage::Audio(bytes::Bytes::from(vec![0u8; 640])))
+            .await;
+        tokio::time::sleep(Duration::from_millis(20)).await;
+        if let Some(found) = host.load() {
+            load = Some(found);
+            break;
+        }
+    }
+    let load = load.expect("mesures publiées");
+    assert_eq!(load.sessions.len(), 1);
+    assert_eq!(load.sessions[0].diarization, "full");
+    assert!(load.sessions[0].rtf > 0.0);
+    host.stop().await;
+}

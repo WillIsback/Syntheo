@@ -42,6 +42,10 @@ impl syntheo_storage::StorageRuntime for TauriRuntime {
 }
 
 impl ListenerRuntime for TauriRuntime {
+    fn on_device_profile(&self) -> Option<owhisper_client::OnDeviceProfile> {
+        crate::on_device::profile(&self.app)
+    }
+
     fn on_device_target(
         &self,
     ) -> futures_util::future::BoxFuture<

@@ -161,6 +161,14 @@ jobs:
           set -euo pipefail
           mkdir -p dist
           cp "apps/speech/target/release/$BINARY" dist/
+          # Audio de mise en service (issue 686), listé au manifeste : deux
+          # flux de 30 s, 16 kHz mono PCM16.
+          if [ -f apps/speech/commissioning/mic.wav ] && [ -f apps/speech/commissioning/sys.wav ]; then
+            mkdir -p dist/commissioning
+            cp apps/speech/commissioning/mic.wav apps/speech/commissioning/sys.wav dist/commissioning/
+          else
+            echo "::warning::Audio de mise en service absent (apps/speech/commissioning) : le module ne pourra pas être mis en service."
+          fi
 
       # Le binaire est lié au CRT dynamique (MSVC par défaut) : runtime
       # Visual C++ embarqué à côté, comme pour syntheo.exe. Toute DLL hors
@@ -445,6 +453,14 @@ jobs:
         run: |
           set -euo pipefail
           [ -n "$TREE" ] && [ "$(bash apps/speech/supply-chain/tree-digest.sh module)" = "$TREE" ] || { echo "::error::Module différent de celui du job manifest"; exit 1; }
+
+      # Pas de module signé sans audio de mise en service : il ne servirait
+      # jamais (aucun profil mesurable).
+      - name: Exiger l'audio de mise en service
+        run: |
+          set -euo pipefail
+          grep -q '"commissioning/mic.wav"' module/manifest.json && grep -q '"commissioning/sys.wav"' module/manifest.json \
+            || { echo "::error::Audio de mise en service absent du manifeste."; exit 1; }
 
       - name: Signer manifest.json (clé du module)
         shell: bash

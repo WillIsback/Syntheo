@@ -29,8 +29,8 @@ pub use live::{
     ListenClientDualInput, ListenClientInput,
 };
 pub use on_device::{
-    ON_DEVICE_BASE_URL, OnDeviceError, OnDeviceErrorKind, OnDeviceTarget, OnDeviceToken,
-    is_on_device,
+    ON_DEVICE_BASE_URL, OnDeviceError, OnDeviceErrorKind, OnDeviceProfile, OnDeviceTarget,
+    OnDeviceToken, is_on_device,
 };
 pub use syntheo_ws_client;
 

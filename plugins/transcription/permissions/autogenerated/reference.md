@@ -67,6 +67,9 @@ Default permissions for the plugin
 - `allow-on-device-status`
 - `allow-on-device-install`
 - `allow-on-device-uninstall`
+- `allow-on-device-commissioning`
+- `allow-on-device-commission`
+- `allow-on-device-load`
 
 ## Permission Table
 
@@ -1016,6 +1019,58 @@ Denies the mark_capture_audio_saved command without any pre-configured scope.
 <tr>
 <td>
 
+`transcription:allow-on-device-commission`
+
+</td>
+<td>
+
+Enables the on_device_commission command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:deny-on-device-commission`
+
+</td>
+<td>
+
+Denies the on_device_commission command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:allow-on-device-commissioning`
+
+</td>
+<td>
+
+Enables the on_device_commissioning command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:deny-on-device-commissioning`
+
+</td>
+<td>
+
+Denies the on_device_commissioning command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
 `transcription:allow-on-device-install`
 
 </td>
@@ -1035,6 +1090,32 @@ Enables the on_device_install command without any pre-configured scope.
 <td>
 
 Denies the on_device_install command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:allow-on-device-load`
+
+</td>
+<td>
+
+Enables the on_device_load command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:deny-on-device-load`
+
+</td>
+<td>
+
+Denies the on_device_load command without any pre-configured scope.
 
 </td>
 </tr>

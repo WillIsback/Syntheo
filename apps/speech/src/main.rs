@@ -30,6 +30,9 @@ struct Args {
     engine: String,
     threads: usize,
     max_sessions: usize,
+    /// Moteur factice : coût simulé (essais de la mise en service).
+    #[cfg(feature = "fake-engine")]
+    fake_cost: Option<syntheo_speech::fake::FakeCost>,
 }
 
 fn parse_args() -> Result<Args, String> {
@@ -40,6 +43,8 @@ fn parse_args() -> Result<Args, String> {
         .map_or(2, |n| n.get() / 2)
         .max(1);
     let mut max_sessions = 4;
+    #[cfg(feature = "fake-engine")]
+    let mut fake_cost = None;
     while let Some(arg) = args.next() {
         let mut value = || {
             args.next()
@@ -52,6 +57,13 @@ fn parse_args() -> Result<Args, String> {
             "--max-sessions" => {
                 max_sessions = value()?.parse().map_err(|_| "invalid --max-sessions")?
             }
+            #[cfg(feature = "fake-engine")]
+            "--fake-cost" => {
+                fake_cost = Some(
+                    syntheo_speech::fake::FakeCost::parse(&value()?)
+                        .ok_or("invalid --fake-cost")?,
+                )
+            }
             _ => return Err(format!("unknown argument {arg}")),
         }
     }
@@ -60,6 +72,8 @@ fn parse_args() -> Result<Args, String> {
         engine,
         threads,
         max_sessions,
+        #[cfg(feature = "fake-engine")]
+        fake_cost,
     })
 }
 
@@ -70,7 +84,9 @@ fn load_engine(args: &Args) -> Result<Arc<dyn Engine>, String> {
             .map(|engine| Arc::new(engine) as Arc<dyn Engine>)
             .map_err(|error| error.to_string()),
         #[cfg(feature = "fake-engine")]
-        "fake" => Ok(Arc::new(syntheo_speech::fake::FakeEngine) as Arc<dyn Engine>),
+        "fake" => Ok(Arc::new(syntheo_speech::fake::FakeEngine {
+            cost: args.fake_cost,
+        }) as Arc<dyn Engine>),
         _ => Err("unsupported engine".to_owned()),
     }
 }
@@ -156,9 +172,28 @@ async fn run() -> Result<(), String> {
             }
         }
     };
+    // Mesures de charge publiées toutes les 5 s pendant une écoute
+    // (issue 686) : des nombres et des états, jamais de texte.
+    let registry = Arc::new(syntheo_speech::load::Registry::default());
+    {
+        let registry = registry.clone();
+        tokio::spawn(async move {
+            let mut tick = tokio::time::interval(Duration::from_secs(5));
+            loop {
+                tick.tick().await;
+                if let Some(line) = registry.json_line()
+                    && (stdout.write_all(line.as_bytes()).await.is_err()
+                        || stdout.flush().await.is_err())
+                {
+                    break;
+                }
+            }
+        });
+    }
     let config = ServerConfig {
         token,
         max_sessions: args.max_sessions,
+        registry,
     };
     server::serve(listener, config, engine, parent_gone).await;
     server::log("stopped: standard input closed");
