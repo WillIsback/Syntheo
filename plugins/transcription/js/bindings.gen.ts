@@ -78,6 +78,16 @@ export const commands = {
 	discardAudioUpload: (uploadId: string) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|discard_audio_upload", { uploadId })),
 	/**  Sonde le poste pour `engine`. */
 	probeLocalTranscription: (engine: Engine) => typedError<Probe, string>(__TAURI_INVOKE("plugin:transcription|probe_local_transcription", { engine })),
+	/**  État de la source « Sur ce poste » : politique et module installé. */
+	onDeviceStatus: () => typedError<OnDeviceStatus, string>(__TAURI_INVOKE("plugin:transcription|on_device_status")),
+	/**
+	 *  Installe le module depuis le `manifest.json` d'un dossier de module
+	 *  préparé : manifeste signé, liste fermée et empreintes vérifiés avant la
+	 *  mise en place.
+	 */
+	onDeviceInstall: (manifestPath: string) => typedError<OnDeviceModule, string>(__TAURI_INVOKE("plugin:transcription|on_device_install", { manifestPath })),
+	/**  Désinstalle le module. */
+	onDeviceUninstall: () => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|on_device_uninstall")),
 };
 
 /** Events */
@@ -408,6 +418,18 @@ export type LiveTranscriptTarget = {
 	memo: string,
 	provider: string | null,
 	model: string | null,
+};
+
+/**  Module installé, pour l'interface. */
+export type OnDeviceModule = { kind: "not_installed" } | { kind: "installed"; version: string; sizeBytes: number } | 
+/**  Présent mais refusé (non signé, altéré, incompatible). */
+{ kind: "invalid"; reason: string };
+
+/**  État de la source « Sur ce poste ». */
+export type OnDeviceStatus = {
+	/**  Autorisée par la politique de l'organisation. */
+	allowed: boolean,
+	module: OnDeviceModule,
 };
 
 export type PartialWord = {

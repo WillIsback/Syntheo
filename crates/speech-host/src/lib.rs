@@ -4,6 +4,7 @@
 //! arrêt.
 
 pub mod host;
+pub mod install;
 pub mod manifest;
 pub mod verify;
 

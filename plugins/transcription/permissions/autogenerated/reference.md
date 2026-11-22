@@ -64,6 +64,9 @@ Default permissions for the plugin
 - `allow-append-audio-upload`
 - `allow-discard-audio-upload`
 - `allow-probe-local-transcription`
+- `allow-on-device-status`
+- `allow-on-device-install`
+- `allow-on-device-uninstall`
 
 ## Permission Table
 
@@ -1006,6 +1009,84 @@ Enables the mark_capture_audio_saved command without any pre-configured scope.
 <td>
 
 Denies the mark_capture_audio_saved command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:allow-on-device-install`
+
+</td>
+<td>
+
+Enables the on_device_install command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:deny-on-device-install`
+
+</td>
+<td>
+
+Denies the on_device_install command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:allow-on-device-status`
+
+</td>
+<td>
+
+Enables the on_device_status command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:deny-on-device-status`
+
+</td>
+<td>
+
+Denies the on_device_status command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:allow-on-device-uninstall`
+
+</td>
+<td>
+
+Enables the on_device_uninstall command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:deny-on-device-uninstall`
+
+</td>
+<td>
+
+Denies the on_device_uninstall command without any pre-configured scope.
 
 </td>
 </tr>

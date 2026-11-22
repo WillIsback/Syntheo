@@ -44,7 +44,7 @@ vi.mock("~/session/queries", () => ({
 vi.mock("~/services/enhancer", () => ({ getEnhancerService: () => null }));
 
 vi.mock("./useSTTConnection", () => ({
-  useSTTConnection: () => ({ conn: null }),
+  useSTTConnection: () => ({ conn: null, serverConn: null }),
 }));
 
 vi.mock("~/stt/useRunBatch", () => ({

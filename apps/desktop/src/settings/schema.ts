@@ -338,6 +338,14 @@ export const SETTING_DEFINITIONS = {
     type: "string",
     path: ["ai", "current_stt_provider"],
   },
+  // Source « Sur ce poste » (issue 685) : le module syntheo-speech, à la
+  // place du serveur ; sans effet si le module manque ou si l'organisation
+  // l'interdit.
+  stt_on_device: {
+    type: "boolean",
+    path: ["ai", "stt_on_device"],
+    default: false as boolean,
+  },
   current_stt_model: {
     type: "string",
     path: ["ai", "current_stt_model"],

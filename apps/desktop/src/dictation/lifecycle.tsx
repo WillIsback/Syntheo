@@ -87,7 +87,7 @@ function ActiveDictation({
   const livePreview = useConfigValue("dictation_live_preview");
   const dictionary = useConfigValue("personalization_dictionary_terms");
   const languages = useConfigValue("spoken_languages");
-  const { conn } = useSTTConnection();
+  const { serverConn: conn } = useSTTConnection();
   const current = useRef({
     runBatch,
     microphone,

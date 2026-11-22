@@ -10,7 +10,7 @@ use std::path::{Component, Path, PathBuf};
 
 use sha2::{Digest, Sha256};
 
-use crate::manifest::{MANIFEST_FILE, SIGNATURE_FILE, verify_manifest};
+use crate::manifest::{MANIFEST_FILE, SIGNATURE_FILE};
 
 /// Liste des fichiers : lignes `<sha256>  <chemin relatif>`, séparateur `/`.
 pub const LIST_FILE: &str = "files.sha256";
@@ -241,11 +241,44 @@ pub fn verify(
     public_key: Option<&str>,
     app_version: &str,
 ) -> Result<Verified, VerifyError> {
+    let entries = check(dir, public_key, app_version)?;
+    stage(dir, &entries)
+}
+
+/// Contrôles sans hachage : manifeste signé, liste fermée, fichiers
+/// ordinaires et tailles. Rend la liste (chemin → empreinte).
+pub fn check(
+    dir: &Path,
+    public_key: Option<&str>,
+    app_version: &str,
+) -> Result<BTreeMap<String, String>, VerifyError> {
+    check_with_floor(
+        dir,
+        public_key,
+        app_version,
+        crate::manifest::floor_path(dir).as_deref(),
+    )
+}
+
+/// `check` avec le plancher anti-retour du module installé (installation).
+pub fn check_with_floor(
+    dir: &Path,
+    public_key: Option<&str>,
+    app_version: &str,
+    floor: Option<&Path>,
+) -> Result<BTreeMap<String, String>, VerifyError> {
     let list =
         std::fs::read_to_string(dir.join(LIST_FILE)).map_err(|_| VerifyError::InvalidList)?;
     let entries = parse_list(&list)?;
-    let sizes =
-        verify_manifest(dir, public_key, app_version, &entries).map_err(VerifyError::Manifest)?;
+    let sizes = crate::manifest::verify_manifest_at(
+        dir,
+        public_key,
+        app_version,
+        crate::manifest::MIN_MODULE_VERSION,
+        floor,
+        &entries,
+    )
+    .map_err(VerifyError::Manifest)?;
     if !entries.contains_key(binary_name()) {
         return Err(VerifyError::NoBinary);
     }
@@ -266,7 +299,19 @@ pub fn verify(
             return Err(VerifyError::WrongSize);
         }
     }
-    stage(dir, &entries)
+    Ok(entries)
+}
+
+/// Hache les fichiers listés en place (installation : le dossier haché est
+/// une copie privée de l'application, pas encore utilisée).
+pub fn hash_in_place(dir: &Path, entries: &BTreeMap<String, String>) -> Result<(), VerifyError> {
+    for (path, expected) in entries {
+        let mut file = std::fs::File::open(dir.join(path)).map_err(|_| VerifyError::Missing)?;
+        if &sha256_reader(&mut file).map_err(io)? != expected {
+            return Err(VerifyError::Altered);
+        }
+    }
+    Ok(())
 }
 
 /// Dossier privé neuf, à côté du module.

@@ -1,6 +1,7 @@
 import { Trans } from "@lingui/react/macro";
 
 import { TranscriptionLanguageWarningToast } from "./language-warning";
+import { OnDeviceCard } from "./on-device-card";
 import { SttServerCard } from "./server-card";
 
 import { SettingsPageTitle } from "~/settings/page-title";
@@ -18,6 +19,7 @@ export function STT() {
         }
       />
       <TranscriptionLanguageWarningToast />
+      <OnDeviceCard />
       <SttServerCard />
     </div>
   );

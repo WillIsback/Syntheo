@@ -411,6 +411,68 @@ impl SpeechHost {
             .is_some_and(|r| matches!(r.child.try_wait(), Ok(None)))
     }
 
+    /// État du module installé (sans hachage).
+    pub async fn module_status(&self) -> crate::install::ModuleStatus {
+        let (dir, key, version) = (
+            self.dir.clone(),
+            self.manifest_key.clone(),
+            self.app_version.clone(),
+        );
+        tokio::task::spawn_blocking(move || crate::install::status(&dir, key.as_deref(), &version))
+            .await
+            .unwrap_or(crate::install::ModuleStatus::NotInstalled)
+    }
+
+    /// Installe le module du dossier `source`, après vérification complète ;
+    /// refusé pendant qu'il tourne. Remet à zéro les refus et les tentatives.
+    pub async fn install_from(
+        &self,
+        source: PathBuf,
+    ) -> Result<crate::install::ModuleStatus, String> {
+        let mut state = self.state.lock().await;
+        if state
+            .running
+            .as_mut()
+            .is_some_and(|r| matches!(r.child.try_wait(), Ok(None)))
+        {
+            return Err("on-device module is running".to_owned());
+        }
+        let (dir, key, version) = (
+            self.dir.clone(),
+            self.manifest_key.clone(),
+            self.app_version.clone(),
+        );
+        let status = tokio::task::spawn_blocking(move || {
+            crate::install::install(&source, &dir, key.as_deref(), &version)
+        })
+        .await
+        .map_err(|_| "installation failed".to_owned())?
+        .map_err(|error| error.to_string())?;
+        state.rejected = None;
+        state.attempts.clear();
+        state.blocked_until = None;
+        Ok(status)
+    }
+
+    /// Désinstalle le module ; refusé pendant qu'il tourne.
+    pub async fn uninstall(&self) -> Result<(), String> {
+        let mut state = self.state.lock().await;
+        if state
+            .running
+            .as_mut()
+            .is_some_and(|r| matches!(r.child.try_wait(), Ok(None)))
+        {
+            return Err("on-device module is running".to_owned());
+        }
+        state.running = None;
+        state.rejected = None;
+        let dir = self.dir.clone();
+        tokio::task::spawn_blocking(move || crate::install::uninstall(&dir))
+            .await
+            .map_err(|_| "uninstall failed".to_owned())?
+            .map_err(|error| error.kind().to_string())
+    }
+
     /// Vérifications faites depuis la création (essais).
     pub async fn verifications(&self) -> usize {
         self.state.lock().await.verifications

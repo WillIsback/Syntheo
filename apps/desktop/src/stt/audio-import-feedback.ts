@@ -55,7 +55,7 @@ export function getBatchAvailability(
 }
 
 export function useAudioImportAvailability(): AudioImportAvailability {
-  const { conn } = useSTTConnection();
+  const { serverConn: conn } = useSTTConnection();
   return useMemo(() => getAudioImportAvailability(conn), [conn]);
 }
 

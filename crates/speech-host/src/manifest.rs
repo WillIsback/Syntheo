@@ -34,7 +34,7 @@ pub const MODULE_PUBLIC_KEY: Option<&str> = None;
 
 /// Plancher anti-retour, à côté du dossier du module (il survit à une
 /// désinstallation).
-fn floor_path(dir: &Path) -> Option<std::path::PathBuf> {
+pub fn floor_path(dir: &Path) -> Option<std::path::PathBuf> {
     let name = dir.file_name()?.to_string_lossy();
     Some(dir.parent()?.join(format!("{name}.floor")))
 }
@@ -215,6 +215,27 @@ pub fn verify_manifest_with(
     min_module_version: &str,
     list: &BTreeMap<String, String>,
 ) -> Result<BTreeMap<String, u64>, ManifestError> {
+    verify_manifest_at(
+        dir,
+        public_key,
+        app_version,
+        min_module_version,
+        floor_path(dir).as_deref(),
+        list,
+    )
+}
+
+/// `verify_manifest` avec le plancher anti-retour donné : celui du module
+/// installé, même quand le dossier vérifié est une source ou une copie
+/// d'installation.
+pub fn verify_manifest_at(
+    dir: &Path,
+    public_key: Option<&str>,
+    app_version: &str,
+    min_module_version: &str,
+    floor: Option<&Path>,
+    list: &BTreeMap<String, String>,
+) -> Result<BTreeMap<String, u64>, ManifestError> {
     let public_key = public_key.ok_or(ManifestError::NoKey)?;
     let manifest_bytes = read_small(&dir.join(MANIFEST_FILE))?;
     let signature_bytes = read_small(&dir.join(SIGNATURE_FILE))?;
@@ -253,8 +274,7 @@ pub fn verify_manifest_with(
         return Err(ManifestError::Invalid);
     }
     let ceiling = build_base(app_version).map_or(0, |b| b + 99);
-    let floor_path = floor_path(dir);
-    if let Some(path) = &floor_path
+    if let Some(path) = floor
         && manifest.build < read_floor(path, ceiling)
     {
         return Err(ManifestError::ModuleTooOld);
@@ -274,7 +294,7 @@ pub fn verify_manifest_with(
         return Err(ManifestError::ListMismatch);
     }
     // Manifeste authentique : le plancher monte (au mieux).
-    if let Some(path) = &floor_path {
+    if let Some(path) = floor {
         raise_floor(path, manifest.build, ceiling);
     }
     Ok(entries

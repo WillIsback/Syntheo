@@ -102,6 +102,18 @@ Dans la reproduction ci-dessous, modifiez l'« Adresse du serveur » : Syntheo l
 
 <AppSettings section="transcription" />
 
+### Transcrire sur ce poste
+
+La carte **Sur ce poste**, au-dessus de la carte serveur, prépare la transcription sans serveur : un module de transcription tourne sur votre ordinateur, et l'audio ne le quitte pas.
+
+1. **Tester ce poste** mesure le processeur, la mémoire et le disque en quelques secondes. Le verdict dit si le poste peut transcrire seul, avec un profil réduit (par exemple sans distinguer les intervenants), ou pourquoi il ne le peut pas. Sur batterie ou en mode économie d'énergie, branchez le secteur ou passez en mode performance, puis relancez le test.
+2. **Installer depuis un fichier…** installe un module fourni par Syntheo : choisissez le fichier `manifest.json` du dossier du module. Sa signature et chacun de ses fichiers sont vérifiés avant l'installation. Le téléchargement depuis Syntheo arrive bientôt.
+3. Une fois le module installé, cochez **Utiliser ce poste pour la transcription, à la place du serveur**.
+
+Le module ne sert qu'à la transcription en direct d'une écoute : la dictée et la transcription d'un fichier importé passent toujours par le serveur configuré. Si le module manque ou est refusé, la transcription en direct ne passe pas par le serveur à sa place : elle se met en pause et le dit. **Désinstaller** retire le module.
+
+Votre organisation peut interdire le module (réglage géré `on_device_transcription_enabled`, voir [Sécurité](/fr/security)) : la carte n'apparaît alors pas. L'accueil propose cette option seulement si le poste est éligible.
+
 ### Transcription en direct ou fichier seul
 
 Syntheo transcrit les réunions **pendant** la capture, et seulement ainsi : l'audio n'étant jamais conservé, il n'y a pas de transcription après coup. Le modèle choisi doit donc savoir diffuser en temps réel.

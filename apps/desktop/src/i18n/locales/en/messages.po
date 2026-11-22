@@ -1059,6 +1059,10 @@ msgstr "Choose the folder for this note."
 msgid "Choose the folder that will contain this folder."
 msgstr "Choose the folder that will contain this folder."
 
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Choose the manifest.json file of a module folder. Its signature and every file are checked before installation."
+msgstr "Choose the manifest.json file of a module folder. Its signature and every file are checked before installation."
+
 #: src/settings/general/audio-settings.tsx
 msgid "Choose the microphone that captures your voice."
 msgstr "Choose the microphone that captures your voice."
@@ -2477,6 +2481,10 @@ msgstr "Install and restart"
 msgid "Install command copied"
 msgstr "Install command copied"
 
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Install from a file…"
+msgstr "Install from a file…"
+
 #: src/settings/developers/skills.tsx
 msgid "Install to all agents"
 msgstr "Install to all agents"
@@ -2485,6 +2493,7 @@ msgstr "Install to all agents"
 msgid "Installation guide"
 msgstr "Installation guide"
 
+#: src/settings/ai/stt/on-device-card.tsx
 #: src/settings/developers/cli.tsx
 msgid "Installed"
 msgstr "Installed"
@@ -3033,6 +3042,14 @@ msgstr "Microphone \"{missing}\" not found"
 msgid "Microphone access turned on"
 msgstr "Microphone access turned on"
 
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "microphone and system audio, with speakers"
+msgstr "microphone and system audio, with speakers"
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "microphone and system audio, without speakers"
+msgstr "microphone and system audio, without speakers"
+
 #: src/settings/general/notification.tsx
 #: src/settings/search-index.ts
 msgid "Microphone detection"
@@ -3071,6 +3088,16 @@ msgstr "Model name"
 #: src/settings/ai/shared/server-card.tsx
 msgid "Model name served by your server"
 msgstr "Model name served by your server"
+
+#. placeholder {0}: module.version
+#. placeholder {1}: formatSize(module.sizeBytes)
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Module installed: version {0}, {1}."
+msgstr "Module installed: version {0}, {1}."
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Module not installed. Download from Syntheo is coming soon."
+msgstr "Module not installed. Download from Syntheo is coming soon."
 
 #: src/session/components/outer-header/overflow/index.tsx
 msgid "More"
@@ -3484,6 +3511,14 @@ msgstr "No transcription service is set up."
 msgid "None"
 msgstr "None"
 
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "not enough free disk space (2 GB needed)"
+msgstr "not enough free disk space (2 GB needed)"
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "not enough free memory (1.5 GB needed)"
+msgstr "not enough free memory (1.5 GB needed)"
+
 #: src/services/enhancer/eligibility.ts
 msgid "Not enough words recorded ({wordCount}/{minWords} minimum)"
 msgstr "Not enough words recorded ({wordCount}/{minWords} minimum)"
@@ -3644,6 +3679,10 @@ msgstr "Oldest"
 msgid "On Linux (Wayland or X11)"
 msgstr "On Linux (Wayland or X11)"
 
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "On this computer"
+msgstr "On this computer"
+
 #: src/settings/dictation.tsx
 msgid "On Wayland, approve the shortcuts in your desktop's prompt. Use Control + Alt + Escape to cancel. On X11, press Escape to cancel. The target app must expose an editable accessibility field."
 msgstr "On Wayland, approve the shortcuts in your desktop's prompt. Use Control + Alt + Escape to cancel. On X11, press Escape to cancel. The target app must expose an editable accessibility field."
@@ -3659,6 +3698,18 @@ msgstr "on-device transcription is disabled by your organization"
 #: src/stt/live-transcript-interrupted.ts
 msgid "on-device transcription is not available"
 msgstr "on-device transcription is not available"
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Once the module is installed, you can turn it on here."
+msgstr "Once the module is installed, you can turn it on here."
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "one audio stream, with speakers"
+msgstr "one audio stream, with speakers"
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "one audio stream, without speakers"
+msgstr "one audio stream, without speakers"
 
 #: src/settings/ai/llm/server-card.tsx
 msgid "Only on-premise OpenAI-compatible servers are supported (vLLM, Ollama, llama.cpp server, LM Studio…). The address usually ends with /v1, for example http://localhost:8000/v1."
@@ -5514,6 +5565,14 @@ msgstr "Test running…"
 msgid "Test the connection to list the models served."
 msgstr "Test the connection to list the models served."
 
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Test this computer"
+msgstr "Test this computer"
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Test this computer again"
+msgstr "Test this computer again"
+
 #: src/settings/ai/shared/server-card.tsx
 msgid "Testing…"
 msgstr "Testing…"
@@ -5607,6 +5666,10 @@ msgstr "The command failed (code {code})."
 msgid "The command was not confirmed, so it did not run."
 msgstr "The command was not confirmed, so it did not run."
 
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "The computer is on battery or in power saving mode: plug it in or switch to performance mode, then run the test again."
+msgstr "The computer is on battery or in power saving mode: plug it in or switch to performance mode, then run the test again."
+
 #: src/chat/components/message/tool/session-correction.tsx
 msgid "The correction could not be applied."
 msgstr "The correction could not be applied."
@@ -5614,6 +5677,10 @@ msgstr "The correction could not be applied."
 #: src/mesure/measure-dialog.tsx
 msgid "The counters could not be saved."
 msgstr "The counters could not be saved."
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "the data disk could not be checked"
+msgstr "the data disk could not be checked"
 
 #: src/mesure/measure-dialog.tsx
 msgid "The differences could not be listed."
@@ -5634,6 +5701,11 @@ msgstr "The import of {name} was abandoned: {reason}"
 #: src/stt/audio-import-feedback.ts
 msgid "The import was abandoned: {reason}"
 msgstr "The import was abandoned: {reason}"
+
+#. placeholder {0}: module.reason
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "The installed module is refused: {0}."
+msgstr "The installed module is refused: {0}."
 
 #: src/automations/action-runners.ts
 msgid "The JSON body is not valid once the variables are filled in."
@@ -5695,6 +5767,16 @@ msgstr "The microphone and system audio are muted: nothing is being transcribed.
 msgid "The models could not be downloaded (offline?). Listening continues without it."
 msgstr "The models could not be downloaded (offline?). Listening continues without it."
 
+#. placeholder {0}: e.message
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "The module was not installed: {0}"
+msgstr "The module was not installed: {0}"
+
+#. placeholder {0}: e.message
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "The module was not uninstalled: {0}"
+msgstr "The module was not uninstalled: {0}"
+
 #: src/session/components/speaker-naming/speaker-card.tsx
 msgid "The name could not be saved. Try again."
 msgstr "The name could not be saved. Try again."
@@ -5726,6 +5808,14 @@ msgstr "The PDF opens in your reader. Choose Print."
 #: src/store/zustand/listener/general-live-events.ts
 msgid "The previous recording needs recovery"
 msgstr "The previous recording needs recovery"
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "the processor is too slow for live transcription"
+msgstr "the processor is too slow for live transcription"
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "the processor lacks AVX2 instructions"
+msgstr "the processor lacks AVX2 instructions"
 
 #: src/chat/components/message/tool/edit-summary.tsx
 msgid "The proposed edit could not be saved."
@@ -5804,6 +5894,14 @@ msgstr "The test changes neither the last run nor the list of notes already proc
 #: src/settings/automations/workflow-test-panel.tsx
 msgid "The test could not run"
 msgstr "The test could not run"
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "The test could not run. Try again later."
+msgstr "The test could not run. Try again later."
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "The test was interrupted by a recording. Run it again."
+msgstr "The test was interrupted by a recording. Run it again."
 
 #: src/folders/project/folder-thread-card.tsx
 msgid "The thread could not be updated. Check the language model, then try again."
@@ -5910,6 +6008,25 @@ msgstr "This advanced step runs a program on your computer. It is only added if 
 #: src/settings/automations/advanced-step-proposals.tsx
 msgid "This advanced step sends the note's data outside your computer, to this address. It is only added if you confirm."
 msgstr "This advanced step sends the note's data outside your computer, to this address. It is only added if you confirm."
+
+#: src/onboarding/on-device-proposal.tsx
+msgid "This computer can also transcribe your meetings on its own, without a server. You can set it up in Settings › Transcription."
+msgstr "This computer can also transcribe your meetings on its own, without a server. You can set it up in Settings › Transcription."
+
+#. placeholder {0}: labels.profile[verdict.profile]
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "This computer can transcribe with a reduced profile: {0}."
+msgstr "This computer can transcribe with a reduced profile: {0}."
+
+#. placeholder {0}: labels.profile[verdict.profile]
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "This computer can transcribe your meetings on its own: {0}."
+msgstr "This computer can transcribe your meetings on its own: {0}."
+
+#. placeholder {0}: verdict.reasons.map((r) => labels.refusal[r]).join(", ")
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "This computer is not eligible: {0}."
+msgstr "This computer is not eligible: {0}."
 
 #. placeholder {0}: approval.sessionTitle
 #: src/chat/components/message/tool/approval.tsx
@@ -6041,6 +6158,10 @@ msgstr "To move a section with the keyboard, focus its handle and use the up and
 #: src/folders/folder-actions.tsx
 msgid "Top level"
 msgstr "Top level"
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Transcribe without a server: the transcription module runs on this computer and audio never leaves it."
+msgstr "Transcribe without a server: the transcription module runs on this computer and audio never leaves it."
 
 #: src/chat/components/input/index.tsx
 msgid "Transcribing voice input"
@@ -6192,6 +6313,10 @@ msgstr "Unencrypted connection to {host}"
 #: src/settings/ai/shared/cleartext-warning.tsx
 msgid "Unencrypted connection: the audio, your notes and the API key travel in clear text on the network."
 msgstr "Unencrypted connection: the audio, your notes and the API key travel in clear text on the network."
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Uninstall"
+msgstr "Uninstall"
 
 #: src/session/components/note-input/transcript/renderer/speaker-participants.ts
 msgid "Unknown"
@@ -6359,6 +6484,10 @@ msgstr "Use system audio to capture other speakers"
 #: src/session/components/note-conflict-banner.tsx
 msgid "Use the other version"
 msgstr "Use the other version"
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Use this computer for transcription instead of the server"
+msgstr "Use this computer for transcription instead of the server"
 
 #: src/settings/ai/stt/server-card.tsx
 msgid "Use this protocol"

@@ -59,6 +59,9 @@ const COMMANDS: &[&str] = &[
     "append_audio_upload",
     "discard_audio_upload",
     "probe_local_transcription",
+    "on_device_status",
+    "on_device_install",
+    "on_device_uninstall",
 ];
 
 fn main() {
