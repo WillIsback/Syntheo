@@ -30,6 +30,15 @@ pub enum FetchError {
     /// Taille ou empreinte différente de celle épinglée.
     #[error("file does not match its pinned size or checksum")]
     Mismatch,
+    /// Réponse inattendue : statut autre que 200 (ou 206 en reprise), ou
+    /// plage (`Content-Range`) qui ne reprend pas où on s'était arrêté. Le
+    /// `.part` est gardé.
+    #[error("unexpected response from the server")]
+    Unexpected,
+    /// Flux terminé avant la taille attendue : le `.part` est gardé pour une
+    /// reprise.
+    #[error("download ended before the end of the file")]
+    Incomplete,
     #[error("cancelled")]
     Cancelled,
     #[error("input/output error: {0}")]
@@ -227,12 +236,42 @@ impl Fetcher {
         if size == pinned.size {
             return finish(&part, dest, size, hex(hasher.finalize()), pinned);
         }
+        if cancel.load(Ordering::Relaxed) {
+            return Err(FetchError::Cancelled);
+        }
         let mut request = self.client.get(url);
         if size > 0 {
             request = request.header(reqwest::header::RANGE, format!("bytes={size}-"));
         }
-        let mut response = request.send().await?.error_for_status()?;
-        let resumed = size > 0 && response.status() == reqwest::StatusCode::PARTIAL_CONTENT;
+        let response = tokio::select! {
+            response = request.send() => response?,
+            () = cancelled(cancel) => return Err(FetchError::Cancelled),
+        };
+        // Avant de toucher au `.part` : une redirection refusée (non HTTPS,
+        // trop de sauts) arrive ici en 3xx, un serveur quelconque peut rendre
+        // un autre 2xx. Seuls 200, ou 206 en reprise, sont acceptés.
+        let status = response.status();
+        if status.is_redirection() {
+            return Err(FetchError::Insecure);
+        }
+        let mut response = response.error_for_status()?;
+        let resumed = match status {
+            reqwest::StatusCode::OK => false,
+            reqwest::StatusCode::PARTIAL_CONTENT if size > 0 => {
+                // La plage doit reprendre exactement où on s'était arrêté, et
+                // porter sur le fichier épinglé tout entier.
+                let range = response
+                    .headers()
+                    .get(reqwest::header::CONTENT_RANGE)
+                    .and_then(|v| v.to_str().ok())
+                    .and_then(parse_content_range);
+                if range != Some((size, pinned.size)) {
+                    return Err(FetchError::Unexpected);
+                }
+                true
+            }
+            _ => return Err(FetchError::Unexpected),
+        };
         let mut output = if resumed {
             progress(size);
             tokio::fs::OpenOptions::new()
@@ -244,11 +283,15 @@ impl Fetcher {
             size = 0;
             tokio::fs::File::create(&part).await?
         };
-        while let Some(chunk) = response.chunk().await? {
-            if cancel.load(Ordering::Relaxed) {
-                output.flush().await?;
-                return Err(FetchError::Cancelled);
-            }
+        loop {
+            let chunk = tokio::select! {
+                chunk = response.chunk() => chunk,
+                () = cancelled(cancel) => {
+                    output.flush().await?;
+                    return Err(FetchError::Cancelled);
+                }
+            };
+            let Some(chunk) = chunk? else { break };
             size += chunk.len() as u64;
             if size > pinned.size {
                 drop(output);
@@ -261,8 +304,30 @@ impl Fetcher {
         }
         output.sync_all().await?;
         drop(output);
+        if size < pinned.size {
+            // Fin propre mais trop tôt (corps délimité par la fermeture, plage
+            // plafonnée) : le préfixe écrit est gardé pour une reprise.
+            return Err(FetchError::Incomplete);
+        }
         finish(&part, dest, size, hex(hasher.finalize()), pinned)
     }
+}
+
+/// Se termine quand l'annulation est demandée (lue toutes les 100 ms).
+async fn cancelled(cancel: &AtomicBool) {
+    while !cancel.load(Ordering::Relaxed) {
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
+}
+
+/// `bytes <début>-<fin>/<total>` → `(début, total)`, si cohérent.
+fn parse_content_range(value: &str) -> Option<(u64, u64)> {
+    let range = value.trim().strip_prefix("bytes ")?;
+    let (span, total) = range.split_once('/')?;
+    let (start, end) = span.split_once('-')?;
+    let (start, end, total): (u64, u64, u64) =
+        (start.parse().ok()?, end.parse().ok()?, total.parse().ok()?);
+    (start <= end && end < total).then_some((start, total))
 }
 
 #[cfg(test)]

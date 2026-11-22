@@ -3,14 +3,36 @@ use std::sync::atomic::AtomicUsize;
 
 use super::*;
 
-/// Serveur HTTP local minimal : sert `body`, honore `Range: bytes=N-` si
-/// `ranges`, compte les requêtes, et peut rediriger.
+/// Comportement du serveur local de test.
+#[derive(Clone)]
+enum Mode {
+    /// Sert le corps ; honore `Range: bytes=N-` (206 avec Content-Range) si
+    /// `ranges`.
+    Normal { ranges: bool },
+    /// 206 avec une plage qui repart de zéro, quelle que soit la demande.
+    WrongRange,
+    /// 200 sans Content-Length, corps coupé après `n` octets puis fermeture.
+    ShortCloseDelimited(usize),
+    /// Statut imposé, corps vide.
+    Status(&'static str),
+    /// Redirection vers `location`.
+    Redirect(String),
+}
+
+/// Serveur HTTP local minimal, qui compte les requêtes.
 struct Server {
     url: String,
     requests: Arc<AtomicUsize>,
 }
 
 async fn serve(body: Vec<u8>, ranges: bool, redirect: Option<String>) -> Server {
+    match redirect {
+        Some(location) => serve_with(body, Mode::Redirect(location)).await,
+        None => serve_with(body, Mode::Normal { ranges }).await,
+    }
+}
+
+async fn serve_with(body: Vec<u8>, mode: Mode) -> Server {
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let url = format!("http://{}/file", listener.local_addr().unwrap());
@@ -23,33 +45,60 @@ async fn serve(body: Vec<u8>, ranges: bool, redirect: Option<String>) -> Server 
             };
             count.fetch_add(1, Ordering::SeqCst);
             let body = body.clone();
-            let redirect = redirect.clone();
+            let mode = mode.clone();
             tokio::spawn(async move {
                 let mut request = vec![0u8; 4096];
                 let n = socket.read(&mut request).await.unwrap_or(0);
                 let request = String::from_utf8_lossy(&request[..n]).to_lowercase();
-                if let Some(location) = redirect {
-                    let head = format!(
-                        "HTTP/1.1 302 Found\r\nlocation: {location}\r\ncontent-length: 0\r\nconnection: close\r\n\r\n"
-                    );
-                    let _ = socket.write_all(head.as_bytes()).await;
-                    return;
-                }
                 let start = request
                     .lines()
                     .find_map(|l| l.strip_prefix("range: bytes="))
-                    .and_then(|r| r.trim().trim_end_matches('-').parse::<usize>().ok())
-                    .filter(|_| ranges);
-                let (status, part) = match start {
-                    Some(start) => ("206 Partial Content", &body[start.min(body.len())..]),
-                    None => ("200 OK", &body[..]),
+                    .and_then(|r| r.trim().trim_end_matches('-').parse::<usize>().ok());
+                let len = body.len();
+                let (head, part): (String, &[u8]) = match &mode {
+                    Mode::Redirect(location) => (
+                        format!(
+                            "HTTP/1.1 302 Found\r\nlocation: {location}\r\ncontent-length: 0\r\nconnection: close\r\n\r\n"
+                        ),
+                        &[],
+                    ),
+                    Mode::Status(status) => (
+                        format!(
+                            "HTTP/1.1 {status}\r\ncontent-length: 0\r\nconnection: close\r\n\r\n"
+                        ),
+                        &[],
+                    ),
+                    Mode::WrongRange => (
+                        format!(
+                            "HTTP/1.1 206 Partial Content\r\ncontent-range: bytes 0-{}/{len}\r\ncontent-length: {len}\r\nconnection: close\r\n\r\n",
+                            len - 1
+                        ),
+                        &body[..],
+                    ),
+                    Mode::ShortCloseDelimited(cut) => (
+                        "HTTP/1.1 200 OK\r\nconnection: close\r\n\r\n".to_owned(),
+                        &body[..*cut],
+                    ),
+                    Mode::Normal { ranges } => match start.filter(|_| *ranges) {
+                        Some(start) => (
+                            format!(
+                                "HTTP/1.1 206 Partial Content\r\ncontent-range: bytes {start}-{}/{len}\r\ncontent-length: {}\r\nconnection: close\r\n\r\n",
+                                len - 1,
+                                len - start
+                            ),
+                            &body[start.min(len)..],
+                        ),
+                        None => (
+                            format!(
+                                "HTTP/1.1 200 OK\r\ncontent-length: {len}\r\nconnection: close\r\n\r\n"
+                            ),
+                            &body[..],
+                        ),
+                    },
                 };
-                let head = format!(
-                    "HTTP/1.1 {status}\r\ncontent-length: {}\r\nconnection: close\r\n\r\n",
-                    part.len()
-                );
                 let _ = socket.write_all(head.as_bytes()).await;
                 let _ = socket.write_all(part).await;
+                let _ = socket.shutdown().await;
             });
         }
     });
@@ -259,7 +308,9 @@ async fn only_https_is_accepted_even_after_a_redirect() {
             "{url}"
         );
     }
-    // Redirection vers une adresse http hors boucle locale : pas suivie.
+    // Redirection vers une adresse http hors boucle locale : pas suivie,
+    // refusée comme adresse non sûre, sans toucher à un `.part` en reprise.
+    std::fs::write(part_path(&dest), &bytes[..BLOCK]).unwrap();
     let server = serve(bytes, true, Some("http://example.com/model.onnx".into())).await;
     let result = fetcher()
         .fetch(
@@ -270,9 +321,111 @@ async fn only_https_is_accepted_even_after_a_redirect() {
             &mut |_| {},
         )
         .await;
-    assert!(result.is_err());
+    assert!(matches!(result, Err(FetchError::Insecure)), "{result:?}");
     assert_eq!(server.requests.load(Ordering::SeqCst), 1);
     assert!(!dest.exists());
+    assert_eq!(
+        std::fs::metadata(part_path(&dest)).unwrap().len(),
+        BLOCK as u64
+    );
+}
+
+async fn fetch_once(
+    url: &str,
+    dest: &Path,
+    bytes: &[u8],
+    cancel: &AtomicBool,
+) -> Result<(), FetchError> {
+    let (size, sha) = pin(bytes);
+    fetcher()
+        .fetch(
+            url,
+            dest,
+            Pinned { size, sha256: &sha },
+            cancel,
+            &mut |_| {},
+        )
+        .await
+}
+
+#[tokio::test]
+async fn a_resume_with_the_wrong_range_keeps_the_partial_file() {
+    let bytes = body();
+    let server = serve_with(bytes.clone(), Mode::WrongRange).await;
+    let dir = tempfile::tempdir().unwrap();
+    let dest = dir.path().join("model.onnx");
+    std::fs::write(part_path(&dest), &bytes[..BLOCK]).unwrap();
+    let result = fetch_once(&server.url, &dest, &bytes, &AtomicBool::new(false)).await;
+    assert!(matches!(result, Err(FetchError::Unexpected)), "{result:?}");
+    assert_eq!(std::fs::read(part_path(&dest)).unwrap(), &bytes[..BLOCK]);
+    // La reprise auprès d'une source correcte termine le fichier.
+    let good = serve(bytes.clone(), true, None).await;
+    fetch_once(&good.url, &dest, &bytes, &AtomicBool::new(false))
+        .await
+        .unwrap();
+    assert_eq!(std::fs::read(&dest).unwrap(), bytes);
+}
+
+#[tokio::test]
+async fn a_body_that_ends_too_early_keeps_the_partial_file() {
+    let bytes = body();
+    let server = serve_with(bytes.clone(), Mode::ShortCloseDelimited(BLOCK + 5)).await;
+    let dir = tempfile::tempdir().unwrap();
+    let dest = dir.path().join("model.onnx");
+    let result = fetch_once(&server.url, &dest, &bytes, &AtomicBool::new(false)).await;
+    assert!(matches!(result, Err(FetchError::Incomplete)), "{result:?}");
+    assert_eq!(
+        std::fs::read(part_path(&dest)).unwrap(),
+        &bytes[..BLOCK + 5]
+    );
+    let good = serve(bytes.clone(), true, None).await;
+    fetch_once(&good.url, &dest, &bytes, &AtomicBool::new(false))
+        .await
+        .unwrap();
+    assert_eq!(std::fs::read(&dest).unwrap(), bytes);
+}
+
+#[tokio::test]
+async fn other_statuses_are_refused_before_touching_the_partial_file() {
+    let bytes = body();
+    for status in ["204 No Content", "203 Non-Authoritative Information"] {
+        let server = serve_with(bytes.clone(), Mode::Status(status)).await;
+        let dir = tempfile::tempdir().unwrap();
+        let dest = dir.path().join("model.onnx");
+        std::fs::write(part_path(&dest), &bytes[..10]).unwrap();
+        let result = fetch_once(&server.url, &dest, &bytes, &AtomicBool::new(false)).await;
+        assert!(
+            matches!(result, Err(FetchError::Unexpected)),
+            "{status}: {result:?}"
+        );
+        assert_eq!(std::fs::read(part_path(&dest)).unwrap(), &bytes[..10]);
+    }
+}
+
+#[tokio::test]
+async fn a_cancelled_download_sends_nothing() {
+    let bytes = body();
+    let server = serve(bytes.clone(), true, None).await;
+    let dir = tempfile::tempdir().unwrap();
+    let dest = dir.path().join("model.onnx");
+    let result = fetch_once(&server.url, &dest, &bytes, &AtomicBool::new(true)).await;
+    assert!(matches!(result, Err(FetchError::Cancelled)));
+    assert_eq!(server.requests.load(Ordering::SeqCst), 0);
+}
+
+#[test]
+fn content_range_is_parsed_strictly() {
+    assert_eq!(parse_content_range("bytes 10-99/100"), Some((10, 100)));
+    for bad in [
+        "bytes 10-99/*",
+        "bytes */100",
+        "bytes 50-10/100",
+        "bytes 10-100/100",
+        "items 1-2/3",
+        "",
+    ] {
+        assert_eq!(parse_content_range(bad), None, "{bad}");
+    }
 }
 
 #[test]

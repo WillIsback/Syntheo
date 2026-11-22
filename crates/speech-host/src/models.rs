@@ -162,7 +162,10 @@ impl From<FetchError> for InstallError {
         match error {
             FetchError::Mismatch => Self::Mismatch,
             FetchError::Cancelled => Self::Cancelled,
-            FetchError::Http(_) | FetchError::Insecure => Self::Network,
+            FetchError::Http(_)
+            | FetchError::Insecure
+            | FetchError::Unexpected
+            | FetchError::Incomplete => Self::Network,
             FetchError::Io(_) => Self::Io,
         }
     }
@@ -306,7 +309,11 @@ pub fn parse_sources<'a>(items: impl IntoIterator<Item = &'a str>) -> Option<Vec
 fn try_next_source(error: &FetchError) -> bool {
     matches!(
         error,
-        FetchError::Http(_) | FetchError::Insecure | FetchError::Mismatch
+        FetchError::Http(_)
+            | FetchError::Insecure
+            | FetchError::Mismatch
+            | FetchError::Unexpected
+            | FetchError::Incomplete
     )
 }
 

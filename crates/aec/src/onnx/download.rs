@@ -56,6 +56,9 @@ fn fetch_error(error: FetchError, name: &'static str) -> crate::Error {
     match error {
         FetchError::Http(error) => crate::Error::Download(error),
         FetchError::Io(error) => crate::Error::Io(error),
+        FetchError::Unexpected | FetchError::Incomplete => {
+            crate::Error::ModelUnavailable(format!("{name}: {error}"))
+        }
         FetchError::Mismatch | FetchError::Insecure | FetchError::Cancelled => {
             crate::Error::ModelChecksum(name)
         }
