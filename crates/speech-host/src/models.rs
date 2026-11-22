@@ -110,10 +110,14 @@ pub fn total_size(files: &[ModelFile]) -> u64 {
 pub enum ModelsStatus {
     /// Aucun fichier en place.
     Missing { total_bytes: u64 },
-    /// Une partie en place (installation interrompue).
+    /// Une partie en place (installation interrompue). `present_bytes`
+    /// compte les fichiers en place et les octets déjà téléchargés dans les
+    /// `.part` (QA 0.8.0-3) ; `resumable` : au moins un `.part`, que le
+    /// téléchargement reprendra.
     Partial {
         present_bytes: u64,
         total_bytes: u64,
+        resumable: bool,
     },
     /// Tous les fichiers en place, à la bonne taille.
     Installed { total_bytes: u64 },
@@ -121,21 +125,28 @@ pub enum ModelsStatus {
 
 pub fn status(dir: &Path, files: &[ModelFile]) -> ModelsStatus {
     let total_bytes = total_size(files);
-    let present_bytes: u64 = files
-        .iter()
-        .filter(|f| {
-            std::fs::symlink_metadata(f.under(dir)).is_ok_and(|m| m.is_file() && m.len() == f.size)
-        })
-        .map(|f| f.size)
-        .sum();
-    if present_bytes == total_bytes {
+    let mut installed_bytes = 0u64;
+    let mut partial_bytes = 0u64;
+    for file in files {
+        let path = file.under(dir);
+        if std::fs::symlink_metadata(&path).is_ok_and(|m| m.is_file() && m.len() == file.size) {
+            installed_bytes += file.size;
+        } else if let Ok(part) = std::fs::symlink_metadata(syntheo_pinned_fetch::part_path(&path))
+            && part.is_file()
+        {
+            // Téléchargement interrompu : repris là où il s'est arrêté.
+            partial_bytes += part.len().min(file.size);
+        }
+    }
+    if installed_bytes == total_bytes {
         ModelsStatus::Installed { total_bytes }
-    } else if present_bytes == 0 {
+    } else if installed_bytes + partial_bytes == 0 {
         ModelsStatus::Missing { total_bytes }
     } else {
         ModelsStatus::Partial {
-            present_bytes,
+            present_bytes: installed_bytes + partial_bytes,
             total_bytes,
+            resumable: partial_bytes > 0,
         }
     }
 }
@@ -439,6 +450,40 @@ mod tests {
         }
     }
 
+    // QA 0.8.0-3 : un téléchargement interrompu compte ses `.part` (plafonnés
+    // à la taille attendue) et se dit reprenable, même sans fichier complet.
+    #[test]
+    fn interrupted_downloads_count_their_part_files() {
+        let files = vec![file("one.onnx", b"un"), file("two.bin", b"deux")];
+        let dest = tempfile::tempdir().unwrap();
+        let dir = dest.path();
+        std::fs::write(dir.join("two.bin.part"), b"de").unwrap();
+        assert_eq!(
+            status(dir, &files),
+            ModelsStatus::Partial {
+                present_bytes: 2,
+                total_bytes: 6,
+                resumable: true,
+            }
+        );
+        std::fs::write(dir.join("one.onnx"), b"un").unwrap();
+        std::fs::write(dir.join("two.bin.part"), b"deux et plus").unwrap();
+        assert_eq!(
+            status(dir, &files),
+            ModelsStatus::Partial {
+                present_bytes: 6,
+                total_bytes: 6,
+                resumable: true,
+            }
+        );
+        std::fs::remove_file(dir.join("two.bin.part")).unwrap();
+        std::fs::write(dir.join("two.bin"), b"deux").unwrap();
+        assert_eq!(
+            status(dir, &files),
+            ModelsStatus::Installed { total_bytes: 6 }
+        );
+    }
+
     #[test]
     fn a_wrong_or_missing_file_is_refused_and_good_ones_are_kept() {
         let files = vec![file("one.onnx", b"un"), file("two.bin", b"deux")];
@@ -456,7 +501,8 @@ mod tests {
             status(&dir, &files),
             ModelsStatus::Partial {
                 present_bytes: 2,
-                total_bytes: 6
+                total_bytes: 6,
+                resumable: false,
             }
         );
         assert!(!dir.join("two.bin").exists());

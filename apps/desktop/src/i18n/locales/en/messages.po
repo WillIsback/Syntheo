@@ -1755,6 +1755,12 @@ msgstr "Documentation"
 msgid "Done"
 msgstr "Done"
 
+#. placeholder {0}: formatSize(models.presentBytes)
+#. placeholder {1}: formatSize(models.totalBytes)
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Download interrupted: {0} of {1} downloaded. You can resume it."
+msgstr "Download interrupted: {0} of {1} downloaded. You can resume it."
+
 #: src/settings/general/update-section.tsx
 msgid "Download progress"
 msgstr "Download progress"
@@ -1956,9 +1962,21 @@ msgstr "end of meeting, stop, question, alert"
 msgid "Enter"
 msgstr "Enter"
 
+#: src/settings/ai/shared/provider-credential-error.ts
+msgid "Enter a base URL without credentials or query parameters."
+msgstr "Enter a base URL without credentials or query parameters."
+
 #: src/settings/ai/shared/server-address.tsx
 msgid "Enter a full address, for example {placeholder}."
 msgstr "Enter a full address, for example {placeholder}."
+
+#: src/settings/ai/shared/provider-credential-error.ts
+msgid "Enter a valid API key."
+msgstr "Enter a valid API key."
+
+#: src/settings/ai/shared/provider-credential-error.ts
+msgid "Enter a valid base URL."
+msgstr "Enter a valid base URL."
 
 #: src/session/components/outer-header/metadata/date.tsx
 msgid "Enter a valid date and time"
@@ -2842,6 +2860,10 @@ msgstr "Loading edit…"
 #: src/settings/hydration-boundary.tsx
 msgid "Loading settings"
 msgstr "Loading settings"
+
+#: src/routes/__root.tsx
+msgid "Loading your workspace. This should only take a moment."
+msgstr "Loading your workspace. This should only take a moment."
 
 #: src/contacts/details-sections.tsx
 #: src/settings/general/account-profile.tsx
@@ -5989,6 +6011,18 @@ msgstr "the processor lacks AVX2 instructions"
 msgid "The proposed edit could not be saved."
 msgstr "The proposed edit could not be saved."
 
+#: src/settings/ai/shared/provider-credential-error.ts
+msgid "The provider did not confirm this key. Check the key and the connection."
+msgstr "The provider did not confirm this key. Check the key and the connection."
+
+#: src/settings/ai/shared/provider-credential-error.ts
+msgid "The provider is limiting verifications. Try again in a few moments."
+msgstr "The provider is limiting verifications. Try again in a few moments."
+
+#: src/settings/ai/shared/provider-credential-error.ts
+msgid "The provider rejected this key or its permissions. Check the key and try again."
+msgstr "The provider rejected this key or its permissions. Check the key and try again."
+
 #. placeholder {0}: health.message ?? ""
 #: src/settings/ai/llm/server-card.tsx
 msgid "The selected model did not answer: {0}"
@@ -6229,8 +6263,8 @@ msgid "This computer cannot transcribe on its own; Syntheo uses your transcripti
 msgstr "This computer cannot transcribe on its own; Syntheo uses your transcription server."
 
 #: src/stt/live-transcript-interrupted.ts
-msgid "this computer does not allow the transcription program to run (application control policy)"
-msgstr "this computer does not allow the transcription program to run (application control policy)"
+msgid "this computer does not allow the transcription program to run from the Syntheo data folder (application control policy or noexec mount); ask your administrator"
+msgstr "this computer does not allow the transcription program to run from the Syntheo data folder (application control policy or noexec mount); ask your administrator"
 
 #: src/stt/on-device.ts
 msgid "This computer does not allow the transcription program to run from the Syntheo data folder (application control policy or noexec mount). Ask your administrator."
@@ -6318,6 +6352,14 @@ msgstr "This is a real test: these steps really act."
 #: src/mesure/beta-data.tsx
 msgid "This is the whole file: counts, local indexes and days since you joined, under a random pseudonym. No text, title, name or date. Nothing is sent: you save the file and choose whether to share it."
 msgstr "This is the whole file: counts, local indexes and days since you joined, under a random pseudonym. No text, title, name or date. Nothing is sent: you save the file and choose whether to share it."
+
+#: src/settings/ai/shared/provider-credential-error.ts
+msgid "This key could not be verified with the provider. Check the connection and try again."
+msgstr "This key could not be verified with the provider. Check the connection and try again."
+
+#: src/settings/ai/shared/provider-credential-error.ts
+msgid "This key could not be verified. Check your connection and try again."
+msgstr "This key could not be verified. Check your connection and try again."
 
 #: src/session/components/living-document/after-meeting-folder-suggestion.tsx
 msgid "This meeting looks like {folderName} ({reason})"
@@ -6749,6 +6791,10 @@ msgstr "Use an http:// or https:// address."
 #: src/templates/template-form.tsx
 msgid "Use by default"
 msgstr "Use by default"
+
+#: src/settings/ai/shared/provider-credential-error.ts
+msgid "Use HTTPS: plain HTTP is only accepted on this computer or a private network."
+msgstr "Use HTTPS: plain HTTP is only accepted on this computer or a private network."
 
 #: src/settings/general/index.tsx
 #: src/settings/search-index.ts

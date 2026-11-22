@@ -827,3 +827,49 @@ async fn a_measure_during_the_restart_pause_keeps_the_profile() {
     assert_eq!(load(fixture.data.path(), build), Some(kept));
     assert_eq!(host.launch_refusal(), None);
 }
+
+// QA 0.8.0-3 : le système refuse d'exécuter le programme pendant une écoute,
+// après une mise en service réussie (politique ajoutée, montage noexec). Le
+// profil retenu ne vaut plus : la mise en service enregistrée le perd, avec
+// ce refus pour raison ; l'hôte et l'application le disent jusqu'à une
+// nouvelle mesure.
+#[cfg(unix)]
+#[tokio::test]
+async fn a_launch_refused_after_commissioning_forgets_the_profile() {
+    use speech_host::commissioning::{Commissioning, Profile, load, save};
+    let fixture = blocked_fixture();
+    let build = fixture.companion().build_id() ^ speech_host::models::fingerprint();
+    save(
+        fixture.data.path(),
+        &Commissioning {
+            profile: Some(Profile::TwoStreamsDiarized),
+            measures: vec![],
+            measured_at: 1,
+            module_build: build,
+        },
+    )
+    .unwrap();
+    let host = fixture.host();
+    assert!(host.profile().is_some());
+    assert_eq!(host.launch_refusal(), None);
+
+    assert_eq!(
+        host.target(true).await.unwrap_err(),
+        HostError::ExecutionBlocked
+    );
+    assert!(host.profile().is_none());
+    assert_eq!(host.launch_refusal().as_deref(), Some("execution_blocked"));
+    let saved = load(fixture.data.path(), build).expect("mise en service gardée");
+    assert_eq!(saved.profile, None);
+    assert_eq!(saved.measures.len(), 1);
+    assert_eq!(saved.measures[0].profile, Profile::TwoStreamsDiarized);
+    assert_eq!(
+        saved.measures[0].error.as_deref(),
+        Some("execution_blocked")
+    );
+    // Un nouvel hôte (redémarrage de l'application) lit le même état.
+    assert_eq!(
+        fixture.host().launch_refusal().as_deref(),
+        Some("execution_blocked")
+    );
+}

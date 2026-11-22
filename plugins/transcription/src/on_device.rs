@@ -171,12 +171,14 @@ pub enum OnDeviceModels {
         #[serde(rename = "totalBytes")]
         total_bytes: f64,
     },
-    /// Installation interrompue.
+    /// Installation interrompue : `presentBytes` compte aussi les octets
+    /// déjà téléchargés ; `resumable`, un téléchargement à reprendre.
     Partial {
         #[serde(rename = "presentBytes")]
         present_bytes: f64,
         #[serde(rename = "totalBytes")]
         total_bytes: f64,
+        resumable: bool,
     },
     Installed {
         #[serde(rename = "totalBytes")]
@@ -206,9 +208,11 @@ fn models_of(status: syntheo_speech_host::models::ModelsStatus) -> OnDeviceModel
         ModelsStatus::Partial {
             present_bytes,
             total_bytes,
+            resumable,
         } => OnDeviceModels::Partial {
             present_bytes: present_bytes as f64,
             total_bytes: total_bytes as f64,
+            resumable,
         },
         ModelsStatus::Installed { total_bytes } => OnDeviceModels::Installed {
             total_bytes: total_bytes as f64,

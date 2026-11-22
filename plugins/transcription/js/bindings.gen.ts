@@ -471,8 +471,11 @@ export type OnDeviceMeasure = {
 
 /**  Modèles installés, pour l'interface. */
 export type OnDeviceModels = { kind: "missing"; totalBytes: number } | 
-/**  Installation interrompue. */
-{ kind: "partial"; presentBytes: number; totalBytes: number } | { kind: "installed"; totalBytes: number };
+/**
+ *  Installation interrompue : `presentBytes` compte aussi les octets
+ *  déjà téléchargés ; `resumable`, un téléchargement à reprendre.
+ */
+{ kind: "partial"; presentBytes: number; totalBytes: number; resumable: boolean } | { kind: "installed"; totalBytes: number };
 
 /**  Avancement d'une mise en service. */
 export type OnDeviceProgress = {

@@ -5,13 +5,13 @@ import { type ReactNode, useId, useRef, useState } from "react";
 
 import {
   isCleartextRemoteUrl,
-  ProviderCredentialError,
   validateProviderBaseUrl,
 } from "@syntheo/provider-validation";
 import { CircleNotch } from "@syntheo/ui/components/icons";
 import { Button } from "@syntheo/ui/components/ui/button";
 
 import { CleartextConfirmation, CleartextNotice } from "./cleartext-warning";
+import { describeProviderCredentialError } from "./provider-credential-error";
 import { FieldLabel, SERVER_INPUT_CLASS } from "./server-card";
 import type { ServerKind } from "./server-connection";
 
@@ -105,9 +105,8 @@ function ServerAddressFields({
           validateProviderBaseUrl(baseUrl);
         } catch (error) {
           setUrlError(
-            error instanceof ProviderCredentialError
-              ? error.message
-              : t`Enter a full address, for example ${placeholder}.`,
+            describeProviderCredentialError(error) ??
+              t`Enter a full address, for example ${placeholder}.`,
           );
           return;
         }
@@ -169,7 +168,8 @@ function ServerAddressFields({
 
   const saveError =
     mutation.error && !isKeychainAccessError(mutation.error)
-      ? mutation.error.message
+      ? (describeProviderCredentialError(mutation.error) ??
+        mutation.error.message)
       : null;
 
   return (

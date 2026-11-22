@@ -510,7 +510,35 @@ impl SpeechHost {
         if self.measuring.load(std::sync::atomic::Ordering::SeqCst) {
             return Err(HostError::Measuring);
         }
-        self.launch_target().await
+        let result = self.launch_target().await;
+        if matches!(result, Err(HostError::ExecutionBlocked)) {
+            self.forget_profile_after_refusal(HostError::ExecutionBlocked);
+        }
+        result
+    }
+
+    /// QA 0.8.0-3 : le système refuse d'exécuter le programme après une mise
+    /// en service réussie (politique ajoutée, montage noexec). Le profil
+    /// retenu ne vaut plus : la mise en service enregistrée le perd, avec ce
+    /// refus pour raison, comme une mise en service arrêtée par lui ; la
+    /// carte et le statut le disent jusqu'à une nouvelle mesure.
+    fn forget_profile_after_refusal(&self, error: HostError) {
+        let Some(mut commissioning) = self.commissioning() else {
+            return;
+        };
+        let Some(profile) = commissioning.profile.take() else {
+            return;
+        };
+        let reason = error.to_on_device_error().kind.code().to_owned();
+        tracing::warn!(target: "syntheo_speech", "launch refused after commissioning: {reason}");
+        commissioning
+            .measures
+            .push(crate::commissioning::Measure::failed(profile, reason));
+        // Même en cas d'échec d'écriture, la mémoire ne retient plus le profil.
+        if crate::commissioning::save(&self.root, &commissioning).is_err() {
+            tracing::warn!(target: "syntheo_speech", "commissioning not saved after refusal");
+        }
+        *self.commissioned.lock().unwrap_or_else(|e| e.into_inner()) = Some(Some(commissioning));
     }
 
     /// `target` sans les refus d'état (la mesure elle-même).

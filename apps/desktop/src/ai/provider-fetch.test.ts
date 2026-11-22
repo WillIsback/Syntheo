@@ -151,7 +151,7 @@ describe("providerFetch", () => {
           { ...credential, apiKey: "wrong-key" },
           providerFetch,
         ),
-      ).rejects.toThrow("Le fournisseur a refusé cette clé");
+      ).rejects.toMatchObject({ code: "key_rejected" });
     },
   );
 });
