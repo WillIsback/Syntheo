@@ -431,10 +431,7 @@ test("refuse les exports hors schéma ou incohérents, sans bloquer les autres",
   write("compteurs.json", badCounters);
 
   const proto = tester(10, repeat(50, 5));
-  write(
-    "proto.json",
-    JSON.stringify(proto).replace("{", '{"__proto__":{"x":1},'),
-  );
+  write("proto.json", '{"__proto__":{"x":1},' + JSON.stringify(proto).slice(1));
 
   // Contenu valide, nom de fichier dangereux : retenu, nom non recopié.
   write("=HYPERLINK(1).json", tester(11, repeat(50, 5)));
