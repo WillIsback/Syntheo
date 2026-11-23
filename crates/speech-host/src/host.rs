@@ -636,8 +636,16 @@ impl SpeechHost {
                     );
                     retried = true;
                 }
+                // Refus d'exécution : aucun processus n'a démarré. Le budget
+                // de relances ne compte que les morts non voulues d'un module
+                // lancé : la tentative de ce lancement est retirée.
                 Err(LaunchFailure::AccessDenied) => {
+                    state.attempts.pop();
                     return Err(TargetFailure::RepeatedAccessDenied);
+                }
+                Err(LaunchFailure::Host(HostError::ExecutionBlocked)) => {
+                    state.attempts.pop();
+                    return Err(HostError::ExecutionBlocked.into());
                 }
                 Err(LaunchFailure::Host(error)) => return Err(error.into()),
             }

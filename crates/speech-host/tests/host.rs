@@ -910,7 +910,31 @@ async fn a_repeated_access_denied_during_listening_keeps_the_profile() {
     );
     assert_eq!(host.verifications().await, 4);
     assert!(host.profile().is_some());
-    assert_eq!(load(fixture.data.path(), build), Some(kept));
+    assert_eq!(load(fixture.data.path(), build), Some(kept.clone()));
     // Un nouvel hôte (redémarrage de l'application) garde le profil.
     assert_eq!(fixture.host().launch_refusal(), None);
+
+    // Vérification 789ef9bb (V1) : un refus d'exécution ne démarre aucun
+    // processus et ne consomme pas le budget de relances (3 lancements en
+    // 10 min). Cinq écoutes de suite restent « exécution refusée », jamais
+    // « crashing ».
+    for _ in 0..3 {
+        assert_eq!(
+            host.target(true).await.unwrap_err(),
+            HostError::ExecutionBlocked
+        );
+    }
+    assert_eq!(host.verifications().await, 10);
+    assert!(host.profile().is_some());
+    // « Mesurer à nouveau » n'est pas bloqué par une pause de relances : la
+    // mesure s'arrête sur le refus et l'enregistre.
+    let result = host
+        .commission(true, Duration::from_secs(1))
+        .await
+        .expect("mesure enregistrée");
+    assert_eq!(result.profile, None);
+    assert_eq!(
+        result.measures.last().and_then(|m| m.error.as_deref()),
+        Some("execution_blocked")
+    );
 }
