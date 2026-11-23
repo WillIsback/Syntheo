@@ -20,6 +20,7 @@ import {
   useTrayUpdateCheck,
 } from "~/services/updater/startup";
 import { useUpdater } from "~/services/updater/store";
+import { useIntelligenceDisabled } from "~/settings/managed";
 import { useConfigValues } from "~/shared/config";
 import { useLatestRef } from "~/shared/hooks/useLatestRef";
 import { useDevtoolsToastPreview } from "~/store/zustand/devtools-toast-preview";
@@ -43,6 +44,7 @@ export function ToastNotifications() {
     "current_llm_model",
   ] as const);
   const hasLLMConfigured = !!(current_llm_provider && current_llm_model);
+  const llmManagedOff = useIntelligenceDisabled().blocked;
   // Le toast ne demande un fournisseur que s'il n'y a aucune source : « Sur
   // ce poste » choisi mais pas prêt a son statut rouge, et ajouter un serveur
   // n'y changerait rien (l'écoute ne repasse pas par lui).
@@ -90,6 +92,7 @@ export function ToastNotifications() {
         availableUpdate,
         onOpenUpdate: openUpdateSettings,
         hasLLMConfigured,
+        llmManagedOff,
         hasSttConfigured,
         onDeviceNotReady,
         isAiTranscriptionTabActive,
@@ -100,6 +103,7 @@ export function ToastNotifications() {
     [
       availableUpdate,
       hasLLMConfigured,
+      llmManagedOff,
       hasSttConfigured,
       onDeviceNotReady,
       isAiTranscriptionTabActive,

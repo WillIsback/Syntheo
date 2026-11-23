@@ -1,5 +1,5 @@
 import { useLiveQuery } from "~/db";
-import { useConfigValue } from "~/shared/config";
+import { useConfigValues } from "~/shared/config";
 
 // Réglages fixés par l'administration du poste (managed_settings.json). La
 // politique est recopiée dans app_settings, mais la copie y reste quand
@@ -36,6 +36,8 @@ export function useIntelligenceDisabled(): {
   blocked: boolean;
 } {
   const managed = useIsManagedSetting("intelligence_disabled");
-  const stored = useConfigValue("intelligence_disabled");
-  return { managed, blocked: managed || !!stored };
+  const { intelligence_disabled } = useConfigValues([
+    "intelligence_disabled",
+  ] as const);
+  return { managed, blocked: managed || !!intelligence_disabled };
 }
