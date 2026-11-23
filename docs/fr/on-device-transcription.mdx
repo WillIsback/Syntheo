@@ -31,7 +31,7 @@ Quand une nouvelle version de Syntheo attend d'autres modèles, la carte l'indiq
 
 ## Mise en service
 
-Après l'installation, Syntheo **mesure ce poste**, une à deux minutes : il transcrit un audio de 30 s fourni avec l'application, en deux flux comme une écoute, et retient le premier profil qui tient le temps réel, dans cet ordre :
+Après l'installation, Syntheo **mesure ce poste**, de moins d'une minute à environ trois minutes selon le nombre de profils essayés (chaque profil est mesuré sur 30 s) : il transcrit un audio de 30 s fourni avec l'application, en deux flux comme une écoute, et retient le premier profil qui tient le temps réel, dans cet ordre :
 
 | Profil | Ce qui est transcrit |
 | --- | --- |
@@ -41,6 +41,8 @@ Après l'installation, Syntheo **mesure ce poste**, une à deux minutes : il tra
 | Micro seul, sans les intervenants | Votre micro seulement, sans distinguer les intervenants |
 
 Un profil tient le temps réel quand ses textes définitifs arrivent moins de 2 s après la fin de la parole (au 95e centile, l'attente de fin de phrase déduite), sans prendre de retard au fil de la mesure. La carte affiche l'avancement (« Mesure du profil 2 sur 4… »), puis le profil retenu. Si aucun ne tient, le poste n'est pas proposé.
+
+**Exemple : un portable de 2019.** Sur un Intel Core i7-10510U (4 cœurs, sans VNNI), Syntheo retient **Micro et son du poste, sans les intervenants** sur secteur ou en mode performance, et **Micro seul, sans les intervenants** en mode économie d'énergie. Sur un tel poste, branchez le secteur ou passez en mode performance avant **Mesurer à nouveau**.
 
 **Mesurer à nouveau** refait la mesure, par exemple après un changement de matériel. Une nouvelle version du programme de transcription ou des modèles se mesure à nouveau.
 

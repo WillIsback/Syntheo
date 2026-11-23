@@ -31,7 +31,7 @@ When a new version of Syntheo expects other models, the card says so (**A model 
 
 ## Commissioning
 
-After installation, Syntheo **measures this computer** for one to two minutes: it transcribes a 30-second audio sample shipped with the app, in two streams like a recording, and keeps the first profile that keeps up in real time, in this order:
+After installation, Syntheo **measures this computer**, from under a minute to about three minutes depending on how many profiles it tries (each profile is measured over 30 s): it transcribes a 30-second audio sample shipped with the app, in two streams like a recording, and keeps the first profile that keeps up in real time, in this order:
 
 | Profile | What is transcribed |
 | --- | --- |
@@ -41,6 +41,8 @@ After installation, Syntheo **measures this computer** for one to two minutes: i
 | Microphone only, without speakers | Your microphone only, without telling speakers apart |
 
 A profile keeps up in real time when its final text arrives less than 2 s after speech ends (at the 95th percentile, end-of-sentence wait deducted), without falling behind during the measurement. The card shows the progress ("Measuring profile 2 of 4…"), then the profile kept. If none keeps up, the computer is not offered.
+
+**Example: a 2019 laptop.** On an Intel Core i7-10510U (4 cores, no VNNI), Syntheo keeps **Microphone and system audio, without speakers** on mains power or in performance mode, and **Microphone only, without speakers** in power-saving mode. On such a computer, plug it in or switch to performance mode before **Measure again**.
 
 **Measure again** repeats the measurement, for example after a hardware change. A new version of the transcription program or of the models is measured again.
 
