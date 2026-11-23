@@ -327,6 +327,9 @@ async fn a_real_companion_starts_and_accepts_a_session() {
         return;
     };
     let target = host.target(true).await.expect("module vérifié et lancé");
+    // `dir` ne sert qu'au contrôle des données externes, propre à Linux.
+    #[cfg(not(target_os = "linux"))]
+    let _ = &dir;
     #[cfg(target_os = "linux")]
     {
         // ONNX Runtime a chargé encoder.onnx.data (données externes) par le
