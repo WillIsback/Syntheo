@@ -8,6 +8,7 @@ import {
   type ServerProtocol,
 } from "./connection-test";
 
+import { useIntelligenceDisabled } from "~/settings/managed";
 import { useAiProviders } from "~/settings/providers";
 import { useSettingsReady } from "~/settings/queries";
 import { useConfigValue } from "~/shared/config";
@@ -53,13 +54,16 @@ export function resolveServerProviderId(
 
 export function useServerConnection(kind: ServerKind) {
   const settingsReady = useSettingsReady();
-  const intelligenceDisabled = useConfigValue("intelligence_disabled");
+  const intelligence = useIntelligenceDisabled();
   // LLM désactivé par réglage géré (intelligence_disabled) : aucune requête
   // vers le serveur LLM, pas même la sonde de la page Synthèse ou du point
   // d'état du menu. Tant que les réglages ne sont pas lus, rien ne part non
   // plus, sinon la sonde précéderait la lecture du réglage (issue 707).
-  const disabled = kind === "llm" && intelligenceDisabled;
-  const blocked = kind === "llm" && (!settingsReady || intelligenceDisabled);
+  // L'état « désactivée » affiché suit la politique en vigueur
+  // (managed_app_settings) ; le blocage vaut aussi pour la copie
+  // d'app_settings.
+  const disabled = kind === "llm" && intelligence.managed;
+  const blocked = kind === "llm" && (!settingsReady || intelligence.blocked);
   const sttProvider = useConfigValue("current_stt_provider");
   const providers = useAiProviders(kind);
   const providerId = resolveServerProviderId(kind, sttProvider, providers);
@@ -89,7 +93,11 @@ export function useServerConnection(kind: ServerKind) {
     apiKey,
     disabled,
     state: toConnectionState(baseUrl, query),
-    test: () => void query.refetch(),
+    // refetch ignore `enabled` : sans cette garde, « Tester » sonderait un
+    // serveur LLM bloqué.
+    test: () => {
+      if (!blocked) void query.refetch();
+    },
   };
 }
 

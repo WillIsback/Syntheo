@@ -1,5 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Issue 707 : intelligence_disabled, imposé par réglage géré, coupe aussi la
@@ -7,6 +13,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // lieu d'offrir des choix dont l'écriture serait refusée.
 const mocks = vi.hoisted(() => ({
   settings: {} as Record<string, unknown>,
+  // Lignes de managed_app_settings : la politique en vigueur.
+  managed: [] as Array<{ id: string }>,
   ready: true,
   probeServer: vi.fn(async () => ({
     ok: true as const,
@@ -19,6 +27,19 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@tauri-apps/plugin-http", () => ({ fetch: vi.fn() }));
+vi.mock("~/db", () => ({
+  useLiveQuery: ({
+    sql,
+    mapRows,
+  }: {
+    sql: string;
+    mapRows: (rows: unknown[]) => unknown;
+  }) => ({
+    data: sql.includes("managed_app_settings")
+      ? mapRows(mocks.managed)
+      : undefined,
+  }),
+}));
 vi.mock("~/settings/providers", () => ({
   useAiProviders: (kind: string) =>
     kind === "llm"
@@ -65,6 +86,15 @@ function Probe({ kind }: { kind: "llm" | "stt" }) {
   );
 }
 
+function TestButton() {
+  const { test } = useServerConnection("llm");
+  return (
+    <button type="button" onClick={test}>
+      test
+    </button>
+  );
+}
+
 function renderWithQuery(node: React.ReactNode) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -77,6 +107,7 @@ function renderWithQuery(node: React.ReactNode) {
 describe("intelligence_disabled", () => {
   beforeEach(() => {
     mocks.settings = {};
+    mocks.managed = [];
     mocks.ready = true;
     mocks.probeServer.mockClear();
     mocks.listCustomModels.mockClear();
@@ -86,6 +117,7 @@ describe("intelligence_disabled", () => {
 
   it("ne sonde pas le serveur LLM, mais sonde toujours la transcription", async () => {
     mocks.settings = { intelligence_disabled: true };
+    mocks.managed = [{ id: "intelligence_disabled" }];
     renderWithQuery(
       <>
         <Probe kind="llm" />
@@ -112,6 +144,7 @@ describe("intelligence_disabled", () => {
 
   it("la page Synthèse affiche le réglage géré, sans carte serveur ni requête", async () => {
     mocks.settings = { intelligence_disabled: true };
+    mocks.managed = [{ id: "intelligence_disabled" }];
     renderWithQuery(<LLM />);
     expect(screen.getByRole("note").textContent).toBe(
       "Set by your administrator.",
@@ -132,5 +165,42 @@ describe("intelligence_disabled", () => {
       expect.anything(),
     );
     expect(screen.queryByRole("note")).toBeNull();
+  });
+
+  // Issue 707 : la politique retirée, la copie d'app_settings reste à vrai.
+  // Le message « Réglé par votre administrateur. » suit managed_app_settings ;
+  // aucune requête ne part tant que la copie vaut vrai.
+  it("politique retirée : ni message ni état désactivé, toujours aucune sonde LLM", async () => {
+    mocks.settings = { intelligence_disabled: true };
+    renderWithQuery(
+      <>
+        <LLM />
+        <Probe kind="llm" />
+        <TestButton />
+      </>,
+    );
+    expect(screen.queryByRole("note")).toBeNull();
+    expect(screen.getByTestId("server-address")).toBeTruthy();
+    expect(screen.getByTestId("llm").textContent).toBe("untested");
+    // « Tester » (refetch, qui ignore `enabled`) ne sonde pas non plus.
+    fireEvent.click(screen.getByRole("button", { name: "test" }));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(mocks.probeServer).not.toHaveBeenCalled();
+  });
+
+  it("politique en vigueur sans copie d'app_settings : message et blocage", async () => {
+    mocks.managed = [{ id: "intelligence_disabled" }];
+    renderWithQuery(
+      <>
+        <LLM />
+        <Probe kind="llm" />
+      </>,
+    );
+    expect(screen.getByRole("note").textContent).toBe(
+      "Set by your administrator.",
+    );
+    expect(screen.getByTestId("llm").textContent).toBe("untested disabled");
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(mocks.probeServer).not.toHaveBeenCalled();
   });
 });

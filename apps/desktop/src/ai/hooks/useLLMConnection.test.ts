@@ -7,7 +7,15 @@ import { z } from "zod";
 import { useLanguageModel, useLLMConnection } from "./useLLMConnection";
 
 const mocks = vi.hoisted(() => ({ provider: "custom" as string }));
-const managed = vi.hoisted(() => ({ ready: true, disabled: false }));
+const managed = vi.hoisted(() => ({
+  ready: true,
+  disabled: false,
+  policy: false,
+}));
+vi.mock("~/settings/managed", () => ({
+  useIsManagedSetting: (id: string) =>
+    id === "intelligence_disabled" && managed.policy,
+}));
 vi.mock("@tauri-apps/plugin-http", () => ({ fetch: vi.fn() }));
 vi.mock("~/settings/queries", () => ({
   useSettingsReady: () => managed.ready,
@@ -130,13 +138,17 @@ it("sends the JSON schema of a structured output to the server", async () => {
 });
 
 it.each([
-  { ready: true, disabled: true },
-  { ready: false, disabled: false },
+  { ready: true, disabled: true, policy: false },
+  // Issue 707 : politique en vigueur (managed_app_settings) sans copie dans
+  // app_settings.
+  { ready: true, disabled: false, policy: true },
+  { ready: false, disabled: false, policy: false },
 ])(
   "constructs no model before settings load or while intelligence is managed off (%j)",
   (state) => {
     managed.ready = state.ready;
     managed.disabled = state.disabled;
+    managed.policy = state.policy;
     vi.mocked(tauriFetch).mockClear();
     try {
       const { result, unmount } = renderHook(() => useLanguageModel());
@@ -146,6 +158,7 @@ it.each([
     } finally {
       managed.ready = true;
       managed.disabled = false;
+      managed.policy = false;
     }
   },
 );
