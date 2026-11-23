@@ -36,8 +36,14 @@ vi.mock("~/settings/ai/shared/server-connection", async (importOriginal) => ({
   useServerConnection: () => mocks.connection,
 }));
 vi.mock("~/settings/ai/shared/server-address", () => ({
-  ServerAddressForm: ({ onTest }: { onTest: () => void }) => (
-    <button type="button" onClick={onTest}>
+  ServerAddressForm: ({
+    onTest,
+    managed,
+  }: {
+    onTest: () => void;
+    managed?: boolean;
+  }) => (
+    <button type="button" onClick={onTest} data-managed={String(!!managed)}>
       Test connection
     </button>
   ),
@@ -49,6 +55,7 @@ vi.mock("~/settings/ai/shared/persist-selection", () => ({
   },
 }));
 vi.mock("~/settings/managed", () => ({
+  useManagedSettingIds: () => mocks.managed,
   useIsManagedSetting: (id: string) => mocks.managed.has(id),
 }));
 vi.mock("~/settings/providers", () => ({
@@ -286,5 +293,107 @@ describe("SttServerCard", () => {
     setup();
     fireEvent.click(screen.getByRole("button", { name: "Test connection" }));
     expect(mocks.connection.test).toHaveBeenCalled();
+  });
+
+  // Issue 710 : serveur imposé par managed_settings.json. La carte passe en
+  // lecture seule (adresse, protocole, modèle) avec la mention.
+  describe("réglage géré", () => {
+    function expectLocked() {
+      expect(screen.getByTestId("stt-server-managed").textContent).toBe(
+        "Set by your administrator.",
+      );
+      expect(
+        screen
+          .getByRole("button", { name: "Test connection" })
+          .getAttribute("data-managed"),
+      ).toBe("true");
+      for (const radio of screen.getAllByRole("radio")) {
+        expect((radio as HTMLButtonElement).disabled).toBe(true);
+      }
+      expect(
+        screen.queryByRole("button", { name: "Enter another name" }),
+      ).toBeNull();
+      expect(
+        screen.queryByRole("button", { name: "Use this protocol" }),
+      ).toBeNull();
+    }
+
+    it.each([
+      "ai_provider:stt:openai",
+      "current_stt_provider",
+      "current_stt_model",
+    ])("%s géré : protocole et modèle verrouillés", (id) => {
+      mocks.managed = new Set([id]);
+      mocks.connection.state = {
+        status: "connected",
+        latencyMs: 12,
+        protocol: "openai",
+        models: ["voxtral-mini", "whisper-large-v3"],
+      };
+      setup();
+
+      expectLocked();
+      fireEvent.click(
+        screen.getByRole("radio", { name: "NVIDIA NeMo-Speech.cpp" }),
+      );
+      fireEvent.click(screen.getByRole("radio", { name: /whisper-large-v3/ }));
+      expect(mocks.setSelection).not.toHaveBeenCalled();
+      // Tester la connexion reste possible.
+      fireEvent.click(screen.getByRole("button", { name: "Test connection" }));
+      expect(mocks.connection.test).toHaveBeenCalled();
+    });
+
+    it("modèle hors liste : affiché dans un champ désactivé", () => {
+      mocks.managed = new Set(["current_stt_model"]);
+      setup();
+
+      const input = screen.getByRole("textbox", { name: "Model name" });
+      expect((input as HTMLInputElement).disabled).toBe(true);
+      expect((input as HTMLInputElement).value).toBe("voxtral-mini");
+    });
+
+    it("ne propose pas d'adopter un autre protocole détecté", () => {
+      mocks.managed = new Set(["ai_provider:stt:openai"]);
+      mocks.connection.state = {
+        status: "connected",
+        latencyMs: 12,
+        protocol: "nvidia",
+        models: ["nemotron-3.5-asr-streaming-0.6b.q8_0"],
+      };
+      setup();
+
+      expectLocked();
+      expect(mocks.setAiProvider).not.toHaveBeenCalled();
+    });
+
+    it("adresse d'un autre fournisseur gérée : cette carte reste modifiable", () => {
+      mocks.managed = new Set(["ai_provider:stt:nvidia"]);
+      setup();
+
+      expect(screen.queryByTestId("stt-server-managed")).toBeNull();
+    });
+
+    it("rien de géré : carte modifiable, sans mention", () => {
+      mocks.connection.state = {
+        status: "connected",
+        latencyMs: 12,
+        protocol: "openai",
+        models: ["voxtral-mini", "whisper-large-v3"],
+      };
+      setup();
+
+      expect(screen.queryByTestId("stt-server-managed")).toBeNull();
+      expect(
+        screen
+          .getByRole("button", { name: "Test connection" })
+          .getAttribute("data-managed"),
+      ).toBe("false");
+      for (const radio of screen.getAllByRole("radio")) {
+        expect((radio as HTMLButtonElement).disabled).toBe(false);
+      }
+      expect(
+        screen.getByRole("button", { name: "Enter another name" }),
+      ).toBeTruthy();
+    });
   });
 });

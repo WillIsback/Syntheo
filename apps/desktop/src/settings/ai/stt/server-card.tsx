@@ -26,7 +26,7 @@ import {
   STT_SERVER_PROTOCOLS,
   useServerConnection,
 } from "~/settings/ai/shared/server-connection";
-import { useIsManagedSetting } from "~/settings/managed";
+import { useManagedSettingIds } from "~/settings/managed";
 import { setAiProvider } from "~/settings/providers";
 import { useSetSettingValues } from "~/settings/queries";
 import { useConfigValues } from "~/shared/config";
@@ -49,9 +49,16 @@ export function SttServerCard() {
   ] as const);
   const setSelection = useSetSettingValues();
   const lastModels = useRef<Record<string, string>>({});
-  // Modèle imposé par l'administration : le déclencheur de
-  // managed_app_settings refuserait en silence toute autre écriture.
-  const modelManaged = useIsManagedSetting("current_stt_model");
+  // Réglages imposés par l'administration (managed_settings.json) : les
+  // déclencheurs de managed_app_settings refuseraient en silence toute autre
+  // écriture. Adresse de ce fournisseur, protocole ou modèle géré : la carte
+  // passe en lecture seule, hormis la clé API (issue 710).
+  const managedIds = useManagedSettingIds();
+  const selectionManaged =
+    managedIds.has("current_stt_provider") ||
+    managedIds.has("current_stt_model");
+  const managed =
+    selectionManaged || managedIds.has(`ai_provider:stt:${providerId}`);
 
   const model =
     current_stt_provider === providerId &&
@@ -99,13 +106,13 @@ export function SttServerCard() {
     : model || fallbackModel || "";
   const persistDefault =
     !!baseUrl &&
-    !modelManaged &&
+    !selectionManaged &&
     (current_stt_provider !== providerId ||
       (!model && !!fallbackModel) ||
       staleNvidiaModel);
 
   const chooseProtocol = (next: Protocol) => {
-    if (next === providerId) return;
+    if (managed || next === providerId) return;
     // Revenir au protocole précédent retrouve le modèle qu'il utilisait.
     if (model) lastModels.current[providerId] = model;
     setSelection({
@@ -119,7 +126,7 @@ export function SttServerCard() {
     state.status === "connected" ? state.protocol : null;
   const detectedLabel = detected ? protocols[detected].label : "";
   const adoptDetected = async () => {
-    if (!detected || detected === providerId) return;
+    if (managed || !detected || detected === providerId) return;
     await setAiProvider("stt", detected, {
       base_url: baseUrl,
       api_key: connection.apiKey,
@@ -163,7 +170,16 @@ export function SttServerCard() {
           testing={state.status === "testing"}
           onTest={connection.test}
           isCurrentProvider={current_stt_provider === providerId}
+          managed={managed}
         />
+        {managed ? (
+          <p
+            data-testid="stt-server-managed"
+            className="text-muted-foreground mt-1.5 text-[13px]"
+          >
+            <Trans>Set by your administrator.</Trans>
+          </p>
+        ) : null}
       </div>
       <div data-setting-id="stt-protocol" className="flex flex-col gap-2">
         <span
@@ -191,13 +207,17 @@ export function SttServerCard() {
                 type="button"
                 role="radio"
                 aria-checked={checked}
+                disabled={managed}
                 title={protocols[id].hint}
                 onClick={() => chooseProtocol(id)}
                 className={cn([
                   "focus-visible:ring-ring rounded-md border px-2.5 py-0.5 text-[13px] transition-colors focus-visible:ring-2 focus-visible:outline-hidden",
                   checked
                     ? "border-primary bg-accent text-accent-foreground font-medium"
-                    : "border-border text-muted-foreground hover:bg-muted",
+                    : "border-border text-muted-foreground",
+                  !checked && !managed && "hover:bg-muted",
+                  managed && "cursor-not-allowed",
+                  managed && !checked && "opacity-60",
                 ])}
               >
                 {protocols[id].label}
@@ -218,7 +238,7 @@ export function SttServerCard() {
             </Trans>
           </p>
         ) : null}
-        {detected && detected !== providerId ? (
+        {detected && detected !== providerId && !managed ? (
           <p className="text-muted-foreground text-[13px]">
             {t`This server answers as ${detectedLabel}.`}{" "}
             <button
@@ -238,6 +258,7 @@ export function SttServerCard() {
             label={t`Model`}
             models={models}
             value={model}
+            disabled={managed}
             onChange={(next) =>
               setSelection({
                 current_stt_provider: providerId,

@@ -4965,6 +4965,7 @@ msgstr "Titre de la session"
 
 #: src/session/components/note-input/enhanced/index.tsx
 #: src/settings/ai/llm/index.tsx
+#: src/settings/ai/stt/server-card.tsx
 #: src/settings/general/update-section.tsx
 #: src/settings/privacy/index.tsx
 msgid "Set by your administrator."

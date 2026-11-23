@@ -41,10 +41,11 @@ vi.mock("@syntheo/plugin-opener2", () => ({
 
 import { ServerAddressForm } from "./server-address";
 
-function renderForm() {
+function renderForm(managed?: boolean) {
   return render(
     <QueryClientProvider client={new QueryClient()}>
       <ServerAddressForm
+        managed={managed}
         kind="stt"
         providerId="openai"
         label="Server address"
@@ -130,5 +131,69 @@ describe("ServerAddressForm, HTTP clair", () => {
     expect(
       screen.queryByRole("button", { name: "Use unencrypted HTTP anyway" }),
     ).toBeNull();
+  });
+});
+
+// Issue 710 : adresse imposée par managed_settings.json.
+describe("ServerAddressForm, adresse gérée", () => {
+  beforeEach(() => {
+    mocks.saved = {
+      "stt:openai": { base_url: "https://asr.example.com/v1", api_key: "" },
+    };
+    mocks.mutateAsync.mockClear();
+  });
+  afterEach(cleanup);
+
+  it("affiche l'adresse sans champ éditable ni « Réinitialiser »", () => {
+    renderForm(true);
+
+    expect(screen.getByTestId("server-address-managed").textContent).toBe(
+      "https://asr.example.com/v1",
+    );
+    expect(
+      screen.queryByPlaceholderText("http://localhost:8000/v1"),
+    ).toBeNull();
+    expect(screen.queryAllByRole("textbox")).toHaveLength(0);
+    expect(screen.queryByRole("button", { name: /Reset/ })).toBeNull();
+    expect(screen.queryByRole("note")).toBeNull();
+    expect(
+      (
+        screen.getByRole("button", {
+          name: "Test connection",
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(false);
+  });
+
+  it("garde la clé API saisissable, sans toucher à l'adresse", async () => {
+    renderForm(true);
+
+    fireEvent.change(screen.getByLabelText("API key (optional)"), {
+      target: { value: "sk-poste" },
+    });
+
+    await waitFor(
+      () =>
+        expect(mocks.mutateAsync).toHaveBeenCalledWith({
+          base_url: "https://asr.example.com/v1",
+          api_key: "sk-poste",
+        }),
+      { timeout: 2000 },
+    );
+    expect(
+      screen.queryByRole("button", { name: "Use unencrypted HTTP anyway" }),
+    ).toBeNull();
+  });
+
+  it("non géré : champ d'adresse et « Réinitialiser » présents", () => {
+    renderForm();
+
+    expect(
+      screen.getByPlaceholderText("http://localhost:8000/v1"),
+    ).toBeTruthy();
+    expect(screen.queryByTestId("server-address-managed")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Reset this server…" }),
+    ).toBeTruthy();
   });
 });
