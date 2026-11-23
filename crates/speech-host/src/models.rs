@@ -215,6 +215,10 @@ fn cached_sha256(path: &Path) -> std::io::Result<String> {
 struct Present {
     /// `present[i]` : `files[i]` est en place.
     present: Vec<bool>,
+    /// Les fichiers comptés en place sont sûrs : marqueur correspondant, ou
+    /// tous hachés. Faux si un fichier illisible a été compté sans hachage :
+    /// le marqueur ne doit alors pas être écrit (vérification 789ef9bb, V2).
+    verified: bool,
 }
 
 impl Present {
@@ -227,7 +231,10 @@ impl Present {
             })
             .collect();
         if marker_matches(dir, files) {
-            return Self { present: sized };
+            return Self {
+                present: sized,
+                verified: true,
+            };
         }
         let mut all_hashed = true;
         let present: Vec<bool> = files
@@ -249,7 +256,10 @@ impl Present {
             // appel.
             let _ = write_marker(dir, files);
         }
-        Self { present }
+        Self {
+            present,
+            verified: all_hashed,
+        }
     }
 }
 
@@ -332,13 +342,17 @@ impl From<FetchError> for InstallError {
 
 /// Fichiers qui manquent, n'ont pas la taille attendue ou, sans marqueur
 /// correspondant, pas l'empreinte attendue (voir [`Present`]) : ils seront
-/// remplacés (le `.part` est renommé par-dessus).
-fn missing<'a>(dir: &Path, files: &'a [ModelFile]) -> Vec<&'a ModelFile> {
-    files
+/// remplacés (le `.part` est renommé par-dessus). Rend aussi si les fichiers
+/// gardés sont sûrs ([`Present::verified`]) : sinon, pas de marqueur après
+/// l'installation.
+fn missing<'a>(dir: &Path, files: &'a [ModelFile]) -> (Vec<&'a ModelFile>, bool) {
+    let present = Present::of(dir, files);
+    let todo = files
         .iter()
-        .zip(Present::of(dir, files).present)
+        .zip(present.present)
         .filter_map(|(f, present)| (!present).then_some(f))
-        .collect()
+        .collect();
+    (todo, present.verified)
 }
 
 /// Marge gardée libre en plus des modèles.
@@ -383,7 +397,7 @@ pub fn install_from_dir(
     cancel: &AtomicBool,
     progress: &mut dyn FnMut(u64, u64),
 ) -> Result<(), InstallError> {
-    let todo = missing(dir, files);
+    let (todo, kept_verified) = missing(dir, files);
     if todo.is_empty() {
         return Ok(());
     }
@@ -407,7 +421,10 @@ pub fn install_from_dir(
             },
         )?;
     }
-    write_marker(dir, files).map_err(|_| InstallError::Io)
+    if kept_verified {
+        write_marker(dir, files).map_err(|_| InstallError::Io)?;
+    }
+    Ok(())
 }
 
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(20);
@@ -444,20 +461,21 @@ pub async fn download(
     }
     // Le rehachage éventuel (≈ 1 Go sans marqueur) se fait hors de la boucle
     // asynchrone.
-    let todo: Vec<&ModelFile> = {
+    let (todo, kept_verified): (Vec<&ModelFile>, bool) = {
         let (owned_dir, owned) = (dir.to_path_buf(), files.to_vec());
-        let indices = tokio::task::spawn_blocking(move || {
-            let todo = missing(&owned_dir, &owned);
-            owned
+        let (indices, verified) = tokio::task::spawn_blocking(move || {
+            let (todo, verified) = missing(&owned_dir, &owned);
+            let indices = owned
                 .iter()
                 .enumerate()
                 .filter(|(_, f)| todo.contains(f))
                 .map(|(i, _)| i)
-                .collect::<Vec<usize>>()
+                .collect::<Vec<usize>>();
+            (indices, verified)
         })
         .await
         .map_err(|_| InstallError::Io)?;
-        indices.into_iter().map(|i| &files[i]).collect()
+        (indices.into_iter().map(|i| &files[i]).collect(), verified)
     };
     if todo.is_empty() {
         return Ok(());
@@ -519,7 +537,10 @@ pub async fn download(
         }
         done += file.size;
     }
-    write_marker(dir, files).map_err(|_| InstallError::Io)
+    if kept_verified {
+        write_marker(dir, files).map_err(|_| InstallError::Io)?;
+    }
+    Ok(())
 }
 
 /// Retire les modèles (avec les `.part` et le marqueur) ; garde le reste du
@@ -683,7 +704,7 @@ mod tests {
                 resumable: false,
             }
         );
-        assert_eq!(missing(&dir, &files), vec![&files[1]]);
+        assert_eq!(missing(&dir, &files).0, vec![&files[1]]);
         assert!(!dir.join(MARKER).exists());
         let server = serve(vec![
             ("a/one.onnx".into(), b"un".to_vec()),
@@ -711,6 +732,44 @@ mod tests {
         );
     }
 
+    // Vérification 789ef9bb (V2) : un fichier gardé qui n'a pas pu être haché
+    // (illisible) compte comme présent, mais le marqueur n'est pas écrit après
+    // le téléchargement des autres : le prochain statut le rehachera.
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn no_marker_when_a_kept_file_could_not_be_hashed() {
+        use std::os::unix::fs::PermissionsExt;
+        let files = vec![file("a/one.onnx", b"un"), file("two.bin", b"deux")];
+        let dest = tempfile::tempdir().unwrap();
+        let dir = dest.path().join("models");
+        std::fs::create_dir_all(dir.join("a")).unwrap();
+        let kept = dir.join("a/one.onnx");
+        std::fs::write(&kept, b"un").unwrap();
+        std::fs::set_permissions(&kept, std::fs::Permissions::from_mode(0o000)).unwrap();
+        if std::fs::read(&kept).is_ok() {
+            // Lancé avec des droits qui ignorent le mode (root) : rien à vérifier.
+            return;
+        }
+        let server = serve(vec![
+            ("a/one.onnx".into(), b"un".to_vec()),
+            ("two.bin".into(), b"deux".to_vec()),
+        ])
+        .await;
+        let sources = vec![Source::unchecked_for_tests(format!("{server}/ok/{{path}}"))];
+        download(
+            &sources,
+            &dir,
+            &files,
+            &AtomicBool::new(false),
+            &mut |_, _| {},
+        )
+        .await
+        .unwrap();
+        assert_eq!(std::fs::read(dir.join("two.bin")).unwrap(), b"deux");
+        assert!(!dir.join(MARKER).exists());
+        std::fs::set_permissions(&kept, std::fs::Permissions::from_mode(0o644)).unwrap();
+    }
+
     // Marqueur égal : tailles seulement, sans rehachage. Marqueur absent ou
     // d'une autre liste : rehachage, puis installation depuis un dossier qui
     // remplace le fichier faux. `remove` retire le marqueur avec le reste.
@@ -734,12 +793,12 @@ mod tests {
             status(&dir, &files),
             ModelsStatus::Installed { total_bytes: 6 }
         );
-        assert!(missing(&dir, &files).is_empty());
+        assert!(missing(&dir, &files).0.is_empty());
         // Marqueur d'une autre liste : rehachage, le fichier faux manque.
         let other = vec![file("one.onnx", b"un")];
         write_marker(&dir, &other).unwrap();
         assert!(!marker_matches(&dir, &files));
-        assert_eq!(missing(&dir, &files), vec![&files[1]]);
+        assert_eq!(missing(&dir, &files).0, vec![&files[1]]);
         assert_eq!(
             status(&dir, &files),
             ModelsStatus::Partial {
