@@ -13,6 +13,7 @@ import { CircleNotch } from "@syntheo/ui/components/icons";
 import { cn } from "@syntheo/utils";
 
 import { ServerCard } from "~/settings/ai/shared/server-card";
+import { formatSize } from "~/settings/ai/stt/format-size";
 import { useSetSettingValues } from "~/settings/queries";
 import { useConfigValues } from "~/shared/config";
 import {
@@ -33,13 +34,6 @@ import {
 // Carte « Sur ce poste » (issues 683 et 685) : sonde du poste, modèles du
 // programme compagnon livré avec l'application, mise en service, choix de la
 // source. Masquée quand l'organisation interdit la source.
-
-// Une taille non nulle n'est jamais affichée « 0 MB » (QA 0.8.0-4) : les Mo
-// sont arrondis au-dessus.
-function formatSize(bytes: number) {
-  const gb = bytes / 1e9;
-  return gb >= 1 ? `${gb.toFixed(1)} GB` : `${Math.ceil(bytes / 1e6)} MB`;
-}
 
 /**
  * Modèles d'une autre version en place (QA 0.8.0-4) : fichiers gardés sans
@@ -139,7 +133,8 @@ export function OnDevicePolicyNotice() {
 const INSTALL_PROGRESS_QUERY_KEY = ["on-device-install-progress"] as const;
 
 export function OnDeviceCard() {
-  const { t } = useLingui();
+  const { t, i18n } = useLingui();
+  const size = (bytes: number) => formatSize(bytes, i18n.locale);
   const queryClient = useQueryClient();
   const status = useOnDeviceStatus();
   const { stt_on_device } = useConfigValues(["stt_on_device"] as const);
@@ -371,28 +366,28 @@ export function OnDeviceCard() {
         ) : installingAny ? (
           <p className="text-[13px]" data-testid="on-device-install-progress">
             {done && done.totalBytes > 0
-              ? t`Installing the models: ${formatSize(done.doneBytes)} of ${formatSize(done.totalBytes)}…`
+              ? t`Installing the models: ${size(done.doneBytes)} of ${size(done.totalBytes)}…`
               : t`Installing the models…`}
           </p>
         ) : models.kind === "installed" ? (
           <p className="text-[13px]">
-            {t`Models installed (${formatSize(models.totalBytes)}).`}
+            {t`Models installed (${size(models.totalBytes)}).`}
           </p>
         ) : models.kind === "partial" && isModelsUpdate(models) ? (
           <p className="text-muted-foreground text-[13px]">
-            {t`A model update is available (${formatSize(models.totalBytes - models.presentBytes)} to download).`}
+            {t`A model update is available (${size(models.totalBytes - models.presentBytes)} to download).`}
           </p>
         ) : models.kind === "partial" ? (
           // Les octets des téléchargements interrompus comptent (QA 0.8.0-3) :
           // le téléchargement reprend là où il s'est arrêté.
           <p className="text-muted-foreground text-[13px]">
             {models.resumable && downloadable
-              ? t`Download interrupted: ${formatSize(models.presentBytes)} of ${formatSize(models.totalBytes)} downloaded. You can resume it.`
-              : t`Models partly installed: ${formatSize(models.presentBytes)} of ${formatSize(models.totalBytes)}.`}
+              ? t`Download interrupted: ${size(models.presentBytes)} of ${size(models.totalBytes)} downloaded. You can resume it.`
+              : t`Models partly installed: ${size(models.presentBytes)} of ${size(models.totalBytes)}.`}
           </p>
         ) : (
           <p className="text-muted-foreground text-[13px]">
-            {t`The transcription models (${formatSize(models.totalBytes)}) are not installed yet.`}
+            {t`The transcription models (${size(models.totalBytes)}) are not installed yet.`}
           </p>
         )}
         {companion ? (
@@ -422,7 +417,7 @@ export function OnDeviceCard() {
                     ) : models.kind === "partial" ? (
                       <Trans>Resume the download</Trans>
                     ) : (
-                      t`Download the models (${formatSize(models.totalBytes)})`
+                      t`Download the models (${size(models.totalBytes)})`
                     )}
                   </button>
                 ) : null}

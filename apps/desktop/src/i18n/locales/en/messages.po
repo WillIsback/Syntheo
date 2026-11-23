@@ -323,7 +323,7 @@ msgstr "A model file does not match the expected file (damaged or another versio
 msgid "A model file has been modified. Remove the models and install them again."
 msgstr "A model file has been modified. Remove the models and install them again."
 
-#. placeholder {0}: formatSize(models.totalBytes - models.presentBytes)
+#. placeholder {0}: size(models.totalBytes - models.presentBytes)
 #: src/settings/ai/stt/on-device-card.tsx
 msgid "A model update is available ({0} to download)."
 msgstr "A model update is available ({0} to download)."
@@ -1764,8 +1764,8 @@ msgstr "Documentation"
 msgid "Done"
 msgstr "Done"
 
-#. placeholder {0}: formatSize(models.presentBytes)
-#. placeholder {1}: formatSize(models.totalBytes)
+#. placeholder {0}: size(models.presentBytes)
+#. placeholder {1}: size(models.totalBytes)
 #: src/settings/ai/stt/on-device-card.tsx
 msgid "Download interrupted: {0} of {1} downloaded. You can resume it."
 msgstr "Download interrupted: {0} of {1} downloaded. You can resume it."
@@ -1778,7 +1778,7 @@ msgstr "Download progress"
 msgid "Download the models"
 msgstr "Download the models"
 
-#. placeholder {0}: formatSize(models.totalBytes)
+#. placeholder {0}: size(models.totalBytes)
 #: src/settings/ai/stt/on-device-card.tsx
 msgid "Download the models ({0})"
 msgstr "Download the models ({0})"
@@ -2590,8 +2590,8 @@ msgstr "Installed version: {version}"
 msgid "Installed version: unknown"
 msgstr "Installed version: unknown"
 
-#. placeholder {0}: formatSize(done.doneBytes)
-#. placeholder {1}: formatSize(done.totalBytes)
+#. placeholder {0}: size(done.doneBytes)
+#. placeholder {1}: size(done.totalBytes)
 #: src/settings/ai/stt/on-device-card.tsx
 msgid "Installing the models: {0} of {1}…"
 msgstr "Installing the models: {0} of {1}…"
@@ -3243,7 +3243,7 @@ msgstr "Model name"
 msgid "Model name served by your server"
 msgstr "Model name served by your server"
 
-#. placeholder {0}: formatSize(models.totalBytes)
+#. placeholder {0}: size(models.totalBytes)
 #: src/settings/ai/stt/on-device-card.tsx
 msgid "Models installed ({0})."
 msgstr "Models installed ({0})."
@@ -3252,8 +3252,8 @@ msgstr "Models installed ({0})."
 msgid "Models installed. Measuring this computer (one to two minutes)…"
 msgstr "Models installed. Measuring this computer (one to two minutes)…"
 
-#. placeholder {0}: formatSize(models.presentBytes)
-#. placeholder {1}: formatSize(models.totalBytes)
+#. placeholder {0}: size(models.presentBytes)
+#. placeholder {1}: size(models.totalBytes)
 #: src/settings/ai/stt/on-device-card.tsx
 msgid "Models partly installed: {0} of {1}."
 msgstr "Models partly installed: {0} of {1}."
@@ -6147,7 +6147,7 @@ msgstr "The transcript was saved, but Syntheo could not start the summary. Try g
 msgid "The transcription is still being written."
 msgstr "The transcription is still being written."
 
-#. placeholder {0}: formatSize(models.totalBytes)
+#. placeholder {0}: size(models.totalBytes)
 #: src/settings/ai/stt/on-device-card.tsx
 msgid "The transcription models ({0}) are not installed yet."
 msgstr "The transcription models ({0}) are not installed yet."
