@@ -1,8 +1,6 @@
 use std::convert::TryFrom;
 
 use bytes::{BufMut, Bytes, BytesMut};
-use futures_util::{Stream, StreamExt};
-use syntheo_audio_interface::AsyncSource;
 
 mod decoder;
 mod error;
@@ -43,32 +41,6 @@ pub struct AudioMetadata {
     pub channels: u8,
 }
 
-impl<T: AsyncSource> AudioFormatExt for T {}
-
-pub trait AudioFormatExt: AsyncSource {
-    fn to_i16_le_chunks(
-        self,
-        sample_rate: u32,
-        chunk_size: usize,
-    ) -> impl Stream<Item = Bytes> + Send + Unpin
-    where
-        Self: Sized + Send + Unpin + 'static,
-    {
-        syntheo_resampler::ResamplerDynamicOld::new(self, sample_rate)
-            .chunks(chunk_size)
-            .map(|chunk| {
-                let n = std::mem::size_of::<f32>() * chunk.len();
-
-                let mut buf = BytesMut::with_capacity(n);
-                for sample in chunk {
-                    let scaled = (sample * I16_SCALE).clamp(-I16_SCALE, I16_SCALE);
-                    buf.put_i16_le(scaled as i16);
-                }
-                buf.freeze()
-            })
-    }
-}
-
 pub fn f32_to_i16_samples(samples: &[f32]) -> Vec<i16> {
     samples
         .iter()
@@ -90,26 +62,6 @@ where
     }
     buf.freeze()
 }
-
-pub fn interleave(channels: &[Vec<f32>]) -> Vec<f32> {
-    if channels.is_empty() {
-        return Vec::new();
-    }
-    let frames = channels.iter().map(|c| c.len()).max().unwrap_or(0);
-    let mut output = Vec::with_capacity(frames * channels.len());
-    for frame in 0..frames {
-        for ch in channels {
-            output.push(ch.get(frame).copied().unwrap_or(0.0));
-        }
-    }
-    output
-}
-
-pub fn mix_sample_f32(mic: f32, speaker: f32) -> f32 {
-    (mic + speaker).clamp(-1.0, 1.0)
-}
-
-pub use syntheo_audio_mime::content_type_to_extension;
 
 /// Decode the first audio track of a file. Video tracks of an mp4, mov, mkv
 /// or webm are skipped (issue 524).
@@ -475,14 +427,6 @@ fn process_resampled_chunk(
     let skip = written.min(*frames_to_trim);
     *frames_to_trim -= skip;
     Ok((skip, written))
-}
-
-#[derive(Debug)]
-pub struct ChunkedAudio {
-    pub chunks: Vec<Bytes>,
-    pub sample_count: usize,
-    pub frame_count: usize,
-    pub metadata: AudioMetadata,
 }
 
 pub fn chunk_size_for_stt(sample_rate: u32) -> usize {

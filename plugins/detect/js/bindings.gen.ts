@@ -7,7 +7,6 @@ import * as __TAURI_EVENT from "@tauri-apps/api/event";
 /** Commands */
 export const commands = {
 	listInstalledApplications: () => typedError<InstalledApp[], string>(__TAURI_INVOKE("plugin:detect|list_installed_applications")),
-	getInstalledApplicationIcons: (appIds: string[]) => typedError<InstalledApplicationIcon[], string>(__TAURI_INVOKE("plugin:detect|get_installed_application_icons", { appIds })),
 	listMicUsingApplications: () => typedError<InstalledApp[], string>(__TAURI_INVOKE("plugin:detect|list_mic_using_applications")),
 	setRespectDoNotDisturb: (enabled: boolean) => typedError<null, string>(__TAURI_INVOKE("plugin:detect|set_respect_do_not_disturb", { enabled })),
 	setIgnoredBundleIds: (bundleIds: string[]) => typedError<null, string>(__TAURI_INVOKE("plugin:detect|set_ignored_bundle_ids", { bundleIds })),
@@ -22,7 +21,6 @@ export const commands = {
 	 */
 	captureMeetingScreenShare: (reset: boolean) => typedError<MeetingScreenShareCapture, string>(__TAURI_INVOKE("plugin:detect|capture_meeting_screen_share", { reset })),
 	getPreferredLanguages: () => typedError<string[], string>(__TAURI_INVOKE("plugin:detect|get_preferred_languages")),
-	getCurrentLocaleIdentifier: () => typedError<string, string>(__TAURI_INVOKE("plugin:detect|get_current_locale_identifier")),
 	setMicActiveThreshold: (secs: number) => typedError<null, string>(__TAURI_INVOKE("plugin:detect|set_mic_active_threshold", { secs })),
 	setDetectEnabled: (enabled: boolean) => typedError<null, string>(__TAURI_INVOKE("plugin:detect|set_detect_enabled", { enabled })),
 };
@@ -38,11 +36,6 @@ export type DetectEvent = { type: "micDetected"; key: string; apps: InstalledApp
 export type InstalledApp = {
 	id: string,
 	name: string,
-};
-
-export type InstalledApplicationIcon = {
-	id: string,
-	dataUrl: string,
 };
 
 export type MeetingAccessibilityInspection = {

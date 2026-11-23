@@ -42,6 +42,10 @@ msgstr "“{title}” ran on this note"
 msgid "(default)"
 msgstr "(default)"
 
+#: src/mesure/measure-dialog.tsx
+msgid "(measured as a whole)"
+msgstr "(measured as a whole)"
+
 #: src/settings/general/audio-settings.tsx
 msgid "(Unavailable — using current default)"
 msgstr "(Unavailable — using current default)"
@@ -125,6 +129,10 @@ msgstr "{chain} · last run failed {relative}"
 #: src/settings/automations/index.tsx
 msgid "{chain} · never run"
 msgstr "{chain} · never run"
+
+#: src/mesure/measure-dialog.tsx
+msgid "{content} words of content reworked per 100 generated, plus {lexical} words of names or acronyms corrected."
+msgstr "{content} words of content reworked per 100 generated, plus {lexical} words of names or acronyms corrected."
 
 #: src/folders/project/folder-subfolders.tsx
 #: src/search/unified/labels.ts
@@ -295,6 +303,10 @@ msgstr "A folder with this name already exists there."
 msgid "A folder with this name already exists."
 msgstr "A folder with this name already exists."
 
+#: src/stt/on-device.ts
+msgid "A measurement is already in progress."
+msgstr "A measurement is already in progress."
+
 #: src/onboarding/final.tsx
 msgid "A meeting can't be replayed: audio is never kept, only the note remains. Your notes belong to you."
 msgstr "A meeting can't be replayed: audio is never kept, only the note remains. Your notes belong to you."
@@ -302,6 +314,19 @@ msgstr "A meeting can't be replayed: audio is never kept, only the note remains.
 #: src/settings/general/update-section.tsx
 msgid "A meeting is being recorded: install the update once it ends."
 msgstr "A meeting is being recorded: install the update once it ends."
+
+#: src/stt/on-device.ts
+msgid "A model file does not match the expected file (damaged or another version)."
+msgstr "A model file does not match the expected file (damaged or another version)."
+
+#: src/stt/on-device.ts
+msgid "A model file has been modified. Remove the models and install them again."
+msgstr "A model file has been modified. Remove the models and install them again."
+
+#. placeholder {0}: size(models.totalBytes - models.presentBytes)
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "A model update is available ({0} to download)."
+msgstr "A model update is available ({0} to download)."
 
 #: src/folders/project/next-meeting-slot.tsx
 msgid "A new proposal replaces your changes to the agenda."
@@ -444,6 +469,10 @@ msgstr "Add to favorites"
 msgid "Add webhook"
 msgstr "Add webhook"
 
+#: src/mesure/measure-dialog.tsx
+msgid "Added"
+msgstr "Added"
+
 #: src/chat/components/message/tool/session-correction.tsx
 msgid "Added to your dictionary:"
 msgstr "Added to your dictionary:"
@@ -461,6 +490,10 @@ msgstr "Additional spoken languages"
 msgid "Address (URL)"
 msgstr "Address (URL)"
 
+#: src/settings/privacy/index.tsx
+msgid "Adds “Measure rework…” to the summary menu. You paste the version you sent; only counts are kept on this computer, never text, and nothing is sent."
+msgstr "Adds “Measure rework…” to the summary menu. You paste the version you sent; only counts are kept on this computer, never text, and nothing is sent."
+
 #: src/shared/shortcuts.ts
 msgid "Adjust"
 msgstr "Adjust"
@@ -470,6 +503,10 @@ msgstr "Adjust"
 #: src/sidebar/settings-nav-groups.ts
 msgid "Advanced"
 msgstr "Advanced"
+
+#: src/settings/privacy/index.tsx
+msgid "After a measurement, lists each difference so you can classify it by hand. Excerpts stay on screen; only the agreement counts are kept."
+msgstr "After a measurement, lists each difference so you can classify it by hand. Excerpts stay on screen; only the agreement counts are kept."
 
 #: src/folders/project/next-meeting-slot.tsx
 msgid "Agenda"
@@ -483,6 +520,17 @@ msgstr "Agenda proposed from the points still open (editable):"
 #: src/settings/search-index.ts
 msgid "Agent skills"
 msgstr "Agent skills"
+
+#: src/mesure/measure-dialog.tsx
+msgid "Agreement"
+msgstr "Agreement"
+
+#. placeholder {0}: agreementPercent(matrix)?.toFixed(1)
+#. placeholder {1}: labeledCount(matrix)
+#. placeholder {2}: matrix.ruleVersion
+#: src/mesure/measure-dialog.tsx
+msgid "Agreement: {0}% on {1} differences (rule {2})."
+msgstr "Agreement: {0}% on {1} differences (rule {2})."
 
 #: src/contacts/details-sections.tsx
 msgid "AI-generated summary of all interactions and notes with this contact will appear here. This will synthesize key discussion points, action items, and relationship context across all meetings and notes."
@@ -535,6 +583,10 @@ msgstr "Always on Top"
 #: src/automations/command-confirmation-dialog.tsx
 msgid "An automation wants to run a program on your computer for the first time."
 msgstr "An automation wants to run a program on your computer for the first time."
+
+#: src/stt/on-device.ts
+msgid "An installation is already in progress."
+msgstr "An installation is already in progress."
 
 #: src/shared/control.tsx
 msgid "An unexpected error occurred."
@@ -703,6 +755,7 @@ msgstr "Auto"
 msgid "Auto summary format"
 msgstr "Auto summary format"
 
+#: src/mesure/measure-dialog.tsx
 #: src/session/components/living-document/meeting-type-picker.tsx
 #: src/templates/auto-form.tsx
 #: src/templates/template-sidebar.tsx
@@ -784,8 +837,21 @@ msgid "Begins in {time}"
 msgstr "Begins in {time}"
 
 #: src/chat/components/body/empty.tsx
+#: src/settings/privacy/index.tsx
 msgid "Beta"
 msgstr "Beta"
+
+#: src/settings/search-index.ts
+msgid "beta, calibration, differences, agreement"
+msgstr "beta, calibration, differences, agreement"
+
+#: src/settings/search-index.ts
+msgid "beta, measure, rework, sent version, pilot"
+msgstr "beta, measure, rework, sent version, pilot"
+
+#: src/settings/privacy/index.tsx
+msgid "Beta: measure rework"
+msgstr "Beta: measure rework"
 
 #: src/settings/general/notification.tsx
 msgid "Bloom"
@@ -804,6 +870,19 @@ msgstr "Bright canvas"
 msgid "by {name}"
 msgstr "by {name}"
 
+#: src/mesure/measure-dialog.tsx
+msgid "Calibration"
+msgstr "Calibration"
+
+#: src/settings/privacy/index.tsx
+#: src/settings/search-index.ts
+msgid "Calibration mode"
+msgstr "Calibration mode"
+
+#: src/mesure/measure-dialog.tsx
+msgid "Calibration: classify each difference"
+msgstr "Calibration: classify each difference"
+
 #: src/stt/audio-import-feedback.ts
 msgid "Can't import this audio"
 msgstr "Can't import this audio"
@@ -814,8 +893,10 @@ msgstr "Can't reach the update server. Check your connection, then try again."
 
 #: src/folders/folder-actions.tsx
 #: src/folders/project/next-meeting-slot.tsx
+#: src/mesure/beta-data.tsx
 #: src/session/components/capsule/index.tsx
 #: src/settings/ai/shared/server-address.tsx
+#: src/settings/ai/stt/on-device-card.tsx
 #: src/settings/automations/workflow-test-panel.tsx
 #: src/settings/dictionary/index.tsx
 #: src/shared/ui/destructive-confirmation-dialog.tsx
@@ -906,9 +987,17 @@ msgstr "Check that your vault folder is available and your disk has free space, 
 msgid "Check the spelling, or try a shorter word."
 msgstr "Check the spelling, or try a shorter word."
 
+#: src/onboarding/on-device-proposal.tsx
+msgid "Check whether this computer can transcribe on its own (about 5 s)"
+msgstr "Check whether this computer can transcribe on its own (about 5 s)"
+
 #: src/settings/general/update-section.tsx
 msgid "Checking for updates…"
 msgstr "Checking for updates…"
+
+#: src/shared/long-load-gate.tsx
+msgid "Checking your local database. This is taking longer than expected."
+msgstr "Checking your local database. This is taking longer than expected."
 
 #: src/settings/developers/cli.tsx
 msgid "Checking…"
@@ -926,9 +1015,17 @@ msgstr "Choose"
 msgid "Choose a file format and what to include."
 msgstr "Choose a file format and what to include."
 
+#: src/mesure/measure-dialog.tsx
+msgid "Choose a file…"
+msgstr "Choose a file…"
+
 #: src/session/components/living-document/fiche-folder.tsx
 msgid "Choose a folder"
 msgstr "Choose a folder"
+
+#: src/stt/on-device.ts
+msgid "Choose a folder on this computer (not on a network share)."
+msgstr "Choose a folder on this computer (not on a network share)."
 
 #: src/folders/project/next-meeting-slot.tsx
 msgid "Choose a language model in Settings to propose the agenda."
@@ -992,6 +1089,10 @@ msgstr "Choose the colors of Syntheo. Each palette follows the light or dark the
 msgid "Choose the folder for this note."
 msgstr "Choose the folder for this note."
 
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Choose the folder that contains the model files. Each file is checked against the version expected by this application before it is put in place."
+msgstr "Choose the folder that contains the model files. Each file is checked against the version expected by this application before it is put in place."
+
 #: src/folders/folder-actions.tsx
 msgid "Choose the folder that will contain this folder."
 msgstr "Choose the folder that will contain this folder."
@@ -1011,6 +1112,11 @@ msgstr "Choose the program to run first."
 #: src/session/components/living-document/after-meeting-folder-suggestion.tsx
 msgid "Choose…"
 msgstr "Choose…"
+
+#. placeholder {0}: index + 1
+#: src/mesure/measure-dialog.tsx
+msgid "Class of difference {0}"
+msgstr "Class of difference {0}"
 
 #: src/contacts/related-notes.tsx
 #: src/contacts/shared.tsx
@@ -1046,6 +1152,8 @@ msgstr "Clone"
 #: src/changelog/index.tsx
 #: src/main/windows-title-bar.tsx
 #: src/main/windows-window-controls.tsx
+#: src/mesure/beta-data.tsx
+#: src/mesure/measure-dialog.tsx
 #: src/session/components/note-input/search/bar.tsx
 #: src/shared/open-note-dialog.tsx
 #: src/shared/ui/localized-dialog-labels.tsx
@@ -1121,6 +1229,10 @@ msgstr "Command output"
 msgid "Company"
 msgstr "Company"
 
+#: src/mesure/measure-dialog.tsx
+msgid "Compared with the current summary: its original generated version was not kept (summary generated before version 0.8.0)."
+msgstr "Compared with the current summary: its original generated version was not kept (summary generated before version 0.8.0)."
+
 #: src/settings/automations/step-forms.tsx
 msgid "Complete the note with the same title"
 msgstr "Complete the note with the same title"
@@ -1189,6 +1301,7 @@ msgstr "Contact options"
 msgid "Contacts"
 msgstr "Contacts"
 
+#: src/mesure/measure-dialog.tsx
 #: src/settings/automations/step-forms.tsx
 msgid "Content"
 msgstr "Content"
@@ -1209,6 +1322,7 @@ msgstr "Control listening without reopening Syntheo."
 msgid "Copied"
 msgstr "Copied"
 
+#: src/mesure/measure-dialog.tsx
 #: src/session/components/living-document/summary-switcher.tsx
 msgid "Copied to clipboard"
 msgstr "Copied to clipboard"
@@ -1242,6 +1356,10 @@ msgstr "Copy last dictation"
 #: src/stt/meeting-disclosure.ts
 msgid "Copy message"
 msgstr "Copy message"
+
+#: src/mesure/measure-dialog.tsx
+msgid "Copy the matrix"
+msgstr "Copy the matrix"
 
 #: src/settings/developers/webhooks.tsx
 msgid "Copy this signing secret now — it is only shown once."
@@ -1500,6 +1618,10 @@ msgstr "Delete folder “{name}”"
 msgid "Delete section {position}"
 msgstr "Delete section {position}"
 
+#: src/mesure/measure-dialog.tsx
+msgid "Deleted"
+msgstr "Deleted"
+
 #: src/templates/sections-editor.tsx
 msgid "Describe in one line what Syntheo should write here."
 msgstr "Describe in one line what Syntheo should write here."
@@ -1642,17 +1764,32 @@ msgstr "Documentation"
 msgid "Done"
 msgstr "Done"
 
+#. placeholder {0}: size(models.presentBytes)
+#. placeholder {1}: size(models.totalBytes)
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Download interrupted: {0} of {1} downloaded. You can resume it."
+msgstr "Download interrupted: {0} of {1} downloaded. You can resume it."
+
 #: src/settings/general/update-section.tsx
 msgid "Download progress"
 msgstr "Download progress"
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Download the models"
+msgstr "Download the models"
+
+#. placeholder {0}: size(models.totalBytes)
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Download the models ({0})"
+msgstr "Download the models ({0})"
 
 #: src/settings/general/update-section.tsx
 msgid "Download the update"
 msgstr "Download the update"
 
-#: src/settings/general/audio-settings.tsx
-msgid "Downloading the echo cancellation models…"
-msgstr "Downloading the echo cancellation models…"
+#: src/stt/on-device.ts
+msgid "Downloading the models is not available: install them from a folder."
+msgstr "Downloading the models is not available: install them from a folder."
 
 #. placeholder {0}: formatBytes(progress?.downloaded ?? 0, i18n.locale)
 #: src/settings/general/update-section.tsx
@@ -1714,6 +1851,10 @@ msgstr "e.g. Weekly, HR team"
 msgid "Each example must be 12,000 characters or fewer."
 msgstr "Each example must be 12,000 characters or fewer."
 
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Each file is checked against the version expected by this application before it is put in place. Without network access, install them from a folder that contains them."
+msgstr "Each file is checked against the version expected by this application before it is put in place. Without network access, install them from a folder that contains them."
+
 #: src/settings/automations/add-step-menu.tsx
 msgid "Each new step runs after the previous one."
 msgstr "Each new step runs after the previous one."
@@ -1725,14 +1866,6 @@ msgstr "Earlier version, read only. The latest summary stays the current one."
 #: src/session/components/version-history-dialog.tsx
 msgid "Earlier versions of this note, newest first."
 msgstr "Earlier versions of this note, newest first."
-
-#: src/settings/general/audio-settings.tsx
-msgid "Echo cancellation"
-msgstr "Echo cancellation"
-
-#: src/stt/aec-model-unavailable-notice.tsx
-msgid "Echo cancellation unavailable"
-msgstr "Echo cancellation unavailable"
 
 #: src/main/windows-title-bar.tsx
 #: src/session/components/living-document/transcript-margin.tsx
@@ -1826,9 +1959,21 @@ msgstr "end of meeting, stop, question, alert"
 msgid "Enter"
 msgstr "Enter"
 
+#: src/settings/ai/shared/provider-credential-error.ts
+msgid "Enter a base URL without credentials or query parameters."
+msgstr "Enter a base URL without credentials or query parameters."
+
 #: src/settings/ai/shared/server-address.tsx
 msgid "Enter a full address, for example {placeholder}."
 msgstr "Enter a full address, for example {placeholder}."
+
+#: src/settings/ai/shared/provider-credential-error.ts
+msgid "Enter a valid API key."
+msgstr "Enter a valid API key."
+
+#: src/settings/ai/shared/provider-credential-error.ts
+msgid "Enter a valid base URL."
+msgstr "Enter a valid base URL."
 
 #: src/session/components/outer-header/metadata/date.tsx
 msgid "Enter a valid date and time"
@@ -1842,6 +1987,14 @@ msgstr "Enter a valid folder name."
 #: src/settings/ai/shared/server-card.tsx
 msgid "Enter another name"
 msgstr "Enter another name"
+
+#: src/mesure/beta-data.tsx
+msgid "Erase all measurements and my pseudonym"
+msgstr "Erase all measurements and my pseudonym"
+
+#: src/mesure/beta-data.tsx
+msgid "Erase my measurements…"
+msgstr "Erase my measurements…"
 
 #: src/shared/open-note-dialog.tsx
 #: src/shared/shortcuts.ts
@@ -1865,8 +2018,8 @@ msgid "Every speaker has a name."
 msgstr "Every speaker has a name."
 
 #: src/home/home-view.tsx
-msgid "Everything is processed on your local server"
-msgstr "Everything is processed on your local server"
+msgid "Everything is processed on your server"
+msgstr "Everything is processed on your server"
 
 #: src/templates/auto-format-examples-dialog.tsx
 msgid "Example summary"
@@ -1911,6 +2064,14 @@ msgstr "Export folder"
 msgid "Export location"
 msgstr "Export location"
 
+#: src/mesure/beta-data.tsx
+msgid "Export my measurements"
+msgstr "Export my measurements"
+
+#: src/mesure/beta-data.tsx
+msgid "Export my measurements…"
+msgstr "Export my measurements…"
+
 #: src/session/components/outer-header/overflow/export-modal.tsx
 #: src/shared/shortcuts.ts
 msgid "Export or print"
@@ -1933,6 +2094,7 @@ msgstr "Extract tasks"
 msgid "Extract the tasks."
 msgstr "Extract the tasks."
 
+#: src/mesure/measure-dialog.tsx
 #: src/session/components/living-document/summary-switcher.tsx
 msgid "Failed to copy"
 msgstr "Failed to copy"
@@ -1961,6 +2123,10 @@ msgstr "File format"
 #: src/session/components/living-document/after-meeting-folder-suggestion.tsx
 msgid "File it"
 msgstr "File it"
+
+#: src/mesure/beta-data.tsx
+msgid "File saved."
+msgstr "File saved."
 
 #: src/settings/automations/markdown-export-options.tsx
 msgid "Filename"
@@ -2105,6 +2271,10 @@ msgstr "Generate the summary"
 msgid "Generate with the local model"
 msgstr "Generate with the local model"
 
+#: src/mesure/measure-dialog.tsx
+msgid "Generated"
+msgstr "Generated"
+
 #: src/automations/labels.ts
 msgid "Generated text"
 msgstr "Generated text"
@@ -2112,6 +2282,10 @@ msgstr "Generated text"
 #: src/automations/action-runners.ts
 msgid "Generated text ({length} characters)"
 msgstr "Generated text ({length} characters)"
+
+#: src/mesure/measure-dialog.tsx
+msgid "Generated words"
+msgstr "Generated words"
 
 #: src/session/components/note-input/enhanced/streaming.tsx
 #: src/session/components/title-input.tsx
@@ -2133,6 +2307,10 @@ msgstr "Get your attention when a summary is ready in the background."
 #: src/automations/action-runners.ts
 msgid "Give the vault note a title first."
 msgstr "Give the vault note a title first."
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Go back to the server"
+msgstr "Go back to the server"
 
 #: src/sidebar/custom-sidebar-header.tsx
 msgid "Go home"
@@ -2298,10 +2476,6 @@ msgstr "Ignore these apps?"
 msgid "Ignore this app?"
 msgstr "Ignore this app?"
 
-#: src/shared/safe-markdown.tsx
-msgid "Image unavailable"
-msgstr "Image unavailable"
-
 #: src/session/components/capsule/import-progress.tsx
 msgid "Import"
 msgstr "Import"
@@ -2309,6 +2483,10 @@ msgstr "Import"
 #: src/session/components/capsule/import-progress.tsx
 msgid "Import progress"
 msgstr "Import progress"
+
+#: src/stt/audio-import-feedback.ts
+msgid "Importing a file goes through a transcription server: transcription on this computer only transcribes live recordings. Add a server in Settings › Transcription."
+msgstr "Importing a file goes through a transcription server: transcription on this computer only transcribes live recordings. Add a server in Settings › Transcription."
 
 #: src/session/components/note-input/transcript/screens/empty.tsx
 msgid "Importing audio..."
@@ -2348,6 +2526,10 @@ msgstr "Include"
 msgid "Include meeting ID"
 msgstr "Include meeting ID"
 
+#: src/stt/capture-lifecycle-session.ts
+msgid "Incomplete transcription: the transcription module of this computer is unavailable. The missing passage stays marked; audio is not sent to the server."
+msgstr "Incomplete transcription: the transcription module of this computer is unavailable. The missing passage stays marked; audio is not sent to the server."
+
 #: src/settings/general/microphone-level.tsx
 msgid "Input level"
 msgstr "Input level"
@@ -2368,9 +2550,17 @@ msgstr "Install and restart"
 msgid "Install command copied"
 msgstr "Install command copied"
 
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Install from a folder…"
+msgstr "Install from a folder…"
+
 #: src/settings/developers/skills.tsx
 msgid "Install to all agents"
 msgstr "Install to all agents"
+
+#: src/stt/on-device.ts
+msgid "Installation cancelled. A download resumes where it stopped."
+msgstr "Installation cancelled. A download resumes where it stopped."
 
 #: src/settings/developers/cli.tsx
 msgid "Installation guide"
@@ -2387,6 +2577,16 @@ msgstr "Installed version: {version}"
 #: src/settings/general/update-section.tsx
 msgid "Installed version: unknown"
 msgstr "Installed version: unknown"
+
+#. placeholder {0}: size(done.doneBytes)
+#. placeholder {1}: size(done.totalBytes)
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Installing the models: {0} of {1}…"
+msgstr "Installing the models: {0} of {1}…"
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Installing the models…"
+msgstr "Installing the models…"
 
 #: src/settings/general/update-section.tsx
 msgid "Installing… Syntheo will restart."
@@ -2545,6 +2745,10 @@ msgstr "Less than a minute remaining"
 msgid "Lets you know when the automation has finished."
 msgstr "Lets you know when the automation has finished."
 
+#: src/mesure/measure-dialog.tsx
+msgid "Lexical"
+msgstr "Lexical"
+
 #: src/settings/appearance/theme.tsx
 msgid "Light"
 msgstr "Light"
@@ -2622,6 +2826,10 @@ msgid "Live transcription interrupted"
 msgstr "Live transcription interrupted"
 
 #: src/stt/live-transcript-interrupted.ts
+msgid "Live transcription paused: {cause}. No audio is kept: this passage will be missing from the transcription."
+msgstr "Live transcription paused: {cause}. No audio is kept: this passage will be missing from the transcription."
+
+#: src/stt/live-transcript-interrupted.ts
 msgid "Live transcription paused: {cause}. No audio is kept: this passage will be missing from the transcription. Check the transcription server settings."
 msgstr "Live transcription paused: {cause}. No audio is kept: this passage will be missing from the transcription. Check the transcription server settings."
 
@@ -2637,9 +2845,9 @@ msgstr "Live transcription resumed."
 msgid "Live transcription: {language}"
 msgstr "Live transcription: {language}"
 
-#: src/shared/safe-markdown.tsx
-msgid "Load image"
-msgstr "Load image"
+#: src/shared/brand-loading-view.tsx
+msgid "Loading"
+msgstr "Loading"
 
 #: src/templates/auto-form.tsx
 msgid "Loading Auto format..."
@@ -2653,6 +2861,10 @@ msgstr "Loading edit…"
 #: src/settings/hydration-boundary.tsx
 msgid "Loading settings"
 msgstr "Loading settings"
+
+#: src/routes/__root.tsx
+msgid "Loading your workspace. This should only take a moment."
+msgstr "Loading your workspace. This should only take a moment."
 
 #: src/contacts/details-sections.tsx
 #: src/settings/general/account-profile.tsx
@@ -2731,6 +2943,10 @@ msgstr "Match your device"
 msgid "Materials"
 msgstr "Materials"
 
+#: src/mesure/measure-dialog.tsx
+msgid "Matrix saved"
+msgstr "Matrix saved"
+
 #: src/main/windows-window-controls.tsx
 msgid "Maximize"
 msgstr "Maximize"
@@ -2751,6 +2967,68 @@ msgstr "MCP, configuration, AI agent, assistant"
 #: src/sidebar/settings-nav-groups.ts
 msgid "Me"
 msgstr "Me"
+
+#: src/mesure/measure-dialog.tsx
+msgid "Measure"
+msgstr "Measure"
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Measure again"
+msgstr "Measure again"
+
+#: src/mesure/measure-dialog.tsx
+msgid "Measure rework"
+msgstr "Measure rework"
+
+#: src/settings/privacy/index.tsx
+#: src/settings/search-index.ts
+msgid "Measure rework of summaries"
+msgstr "Measure rework of summaries"
+
+#: src/session/components/living-document/summary-switcher-view.tsx
+msgid "Measure rework…"
+msgstr "Measure rework…"
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Measure this computer"
+msgstr "Measure this computer"
+
+#. placeholder {0}: preview.meetings
+#: src/mesure/beta-data.tsx
+msgid "Measured meetings: {0}"
+msgstr "Measured meetings: {0}"
+
+#. placeholder {0}: profileLabels[measured.profile as Profile]
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Measured: {0}."
+msgstr "Measured: {0}."
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Measured: this computer is too slow for live transcription."
+msgstr "Measured: this computer is too slow for live transcription."
+
+#. placeholder {0}: profileLabels[result.profile as Profile]
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Measurement done: {0}."
+msgstr "Measurement done: {0}."
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Measurement done: this computer is too slow for live transcription."
+msgstr "Measurement done: this computer is too slow for live transcription."
+
+#: src/mesure/beta-data.tsx
+msgid "Measurements and pseudonym erased from this computer. Measurement is now off."
+msgstr "Measurements and pseudonym erased from this computer. Measurement is now off."
+
+#. placeholder {0}: progressValue.current
+#. placeholder {1}: progressValue.total
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Measuring profile {0} of {1}…"
+msgstr "Measuring profile {0} of {1}…"
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Measuring this computer (from under a minute to about three minutes)…"
+msgstr "Measuring this computer (from under a minute to about three minutes)…"
 
 #: src/settings/ai/llm/server-card.tsx
 msgid "Medium"
@@ -2890,10 +3168,26 @@ msgstr "Microphone \"{missing}\" not found"
 msgid "Microphone access turned on"
 msgstr "Microphone access turned on"
 
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "microphone and system audio, with speakers"
+msgstr "microphone and system audio, with speakers"
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "microphone and system audio, without speakers"
+msgstr "microphone and system audio, without speakers"
+
 #: src/settings/general/notification.tsx
 #: src/settings/search-index.ts
 msgid "Microphone detection"
 msgstr "Microphone detection"
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "microphone only, with speakers: the computer's sound (remote participants) is not transcribed"
+msgstr "microphone only, with speakers: the computer's sound (remote participants) is not transcribed"
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "microphone only, without speakers: the computer's sound (remote participants) is not transcribed"
+msgstr "microphone only, without speakers: the computer's sound (remote participants) is not transcribed"
 
 #: src/store/zustand/listener/general-shared.ts
 msgid "Microphone unavailable"
@@ -2902,6 +3196,14 @@ msgstr "Microphone unavailable"
 #: src/store/zustand/listener/general-shared.ts
 msgid "Microphone unavailable. System audio continues"
 msgstr "Microphone unavailable. System audio continues"
+
+#: src/shared/long-load-gate.tsx
+msgid "Migrating your local database ({current} of {total}). This may take a few minutes."
+msgstr "Migrating your local database ({current} of {total}). This may take a few minutes."
+
+#: src/shared/long-load-gate.tsx
+msgid "Migrating your local database. This may take a few minutes."
+msgstr "Migrating your local database. This may take a few minutes."
 
 #: src/main/windows-window-controls.tsx
 msgid "Minimize"
@@ -2928,6 +3230,25 @@ msgstr "Model name"
 #: src/settings/ai/shared/server-card.tsx
 msgid "Model name served by your server"
 msgstr "Model name served by your server"
+
+#. placeholder {0}: size(models.totalBytes)
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Models installed ({0})."
+msgstr "Models installed ({0})."
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Models installed. Measuring this computer (from under a minute to about three minutes)…"
+msgstr "Models installed. Measuring this computer (from under a minute to about three minutes)…"
+
+#. placeholder {0}: size(models.presentBytes)
+#. placeholder {1}: size(models.totalBytes)
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Models partly installed: {0} of {1}."
+msgstr "Models partly installed: {0} of {1}."
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Models removed."
+msgstr "Models removed."
 
 #: src/session/components/outer-header/overflow/index.tsx
 msgid "More"
@@ -3217,6 +3538,10 @@ msgstr "No matching languages found"
 msgid "No matching people"
 msgstr "No matching people"
 
+#: src/mesure/beta-data.tsx
+msgid "No measurement yet: measure a summary first."
+msgstr "No measurement yet: measure a summary first."
+
 #: src/session/components/living-document/meeting-type-picker.tsx
 msgid "No meeting type found"
 msgstr "No meeting type found"
@@ -3336,6 +3661,18 @@ msgstr "No transcription service is set up."
 #: src/folders/project/folder-template-field.tsx
 msgid "None"
 msgstr "None"
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "not enough free disk space (2 GB needed)"
+msgstr "not enough free disk space (2 GB needed)"
+
+#: src/stt/on-device.ts
+msgid "Not enough free disk space for the models (2 GB needed)."
+msgstr "Not enough free disk space for the models (2 GB needed)."
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "not enough free memory (1.5 GB needed)"
+msgstr "not enough free memory (1.5 GB needed)"
 
 #: src/services/enhancer/eligibility.ts
 msgid "Not enough words recorded ({wordCount}/{minWords} minimum)"
@@ -3497,6 +3834,10 @@ msgstr "Oldest"
 msgid "On Linux (Wayland or X11)"
 msgstr "On Linux (Wayland or X11)"
 
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "On this computer"
+msgstr "On this computer"
+
 #: src/settings/dictation.tsx
 msgid "On Wayland, approve the shortcuts in your desktop's prompt. Use Control + Alt + Escape to cancel. On X11, press Escape to cancel. The target app must expose an editable accessibility field."
 msgstr "On Wayland, approve the shortcuts in your desktop's prompt. Use Control + Alt + Escape to cancel. On X11, press Escape to cancel. The target app must expose an editable accessibility field."
@@ -3504,6 +3845,18 @@ msgstr "On Wayland, approve the shortcuts in your desktop's prompt. Use Control 
 #: src/session/components/note-input/enhanced/streaming.tsx
 msgid "On-device models can take a few minutes to warm up before text appears."
 msgstr "On-device models can take a few minutes to warm up before text appears."
+
+#: src/stt/live-transcript-interrupted.ts
+msgid "on-device transcription is disabled by your organization"
+msgstr "on-device transcription is disabled by your organization"
+
+#: src/stt/live-transcript-interrupted.ts
+msgid "on-device transcription is not available"
+msgstr "on-device transcription is not available"
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Once the models are installed, you can turn it on here."
+msgstr "Once the models are installed, you can turn it on here."
 
 #: src/settings/ai/llm/server-card.tsx
 msgid "Only on-premise OpenAI-compatible servers are supported (vLLM, Ollama, llama.cpp server, LM Studio…). The address usually ends with /v1, for example http://localhost:8000/v1."
@@ -3513,6 +3866,7 @@ msgstr "Only on-premise OpenAI-compatible servers are supported (vLLM, Ollama, l
 #: src/home/note-index.tsx
 #: src/session/move-note.tsx
 #: src/shared/open-note-dialog.tsx
+#: src/sidebar/toast/registry.tsx
 msgid "Open"
 msgstr "Open"
 
@@ -3699,6 +4053,14 @@ msgstr "Paste"
 #: src/templates/auto-format-examples-dialog.tsx
 msgid "Paste a past summary you like..."
 msgstr "Paste a past summary you like..."
+
+#: src/mesure/measure-dialog.tsx
+msgid "Paste or drop the version you actually sent. It stays in this window: only counts are saved, never text."
+msgstr "Paste or drop the version you actually sent. It stays in this window: only counts are saved, never text."
+
+#: src/mesure/measure-dialog.tsx
+msgid "Paste the sent version here, or drop a .txt, .md, .html or .docx file."
+msgstr "Paste the sent version here, or drop a .txt, .md, .html or .docx file."
 
 #: src/home/live-note-card.tsx
 #: src/meeting-float/overlay/bar.tsx
@@ -3917,6 +4279,7 @@ msgstr "Read what each speaker said, then say who it is. Tab moves to the next s
 msgid "Reads the latest version on GitHub. Nothing is installed without your action."
 msgstr "Reads the latest version on GitHub. Nothing is installed without your action."
 
+#: src/settings/ai/stt/on-device-card.tsx
 #: src/settings/general/notification.tsx
 msgid "Ready"
 msgstr "Ready"
@@ -4086,6 +4449,10 @@ msgstr "Remove step {stepNumber}"
 msgid "Remove the {name} folder filter"
 msgstr "Remove the {name} folder filter"
 
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Remove the models"
+msgstr "Remove the models"
+
 #: src/shared/open-note-dialog.tsx
 msgid "Remove the Settings filter"
 msgstr "Remove the Settings filter"
@@ -4123,6 +4490,18 @@ msgstr "Replace all"
 #: src/session/components/note-input/search/bar.tsx
 msgid "Replace with..."
 msgstr "Replace with..."
+
+#: src/mesure/measure-dialog.tsx
+msgid "Replaced"
+msgstr "Replaced"
+
+#: src/mesure/measure-dialog.tsx
+msgid "Replaced (content)"
+msgstr "Replaced (content)"
+
+#: src/mesure/measure-dialog.tsx
+msgid "Replaced (names, acronyms)"
+msgstr "Replaced (names, acronyms)"
 
 #: src/settings/automations/workflow-test-panel.tsx
 msgid "replaces the content of the clipboard"
@@ -4171,6 +4550,7 @@ msgid "Respect Do-Not-Disturb mode"
 msgstr "Respect Do-Not-Disturb mode"
 
 #: src/shared/control.tsx
+#: src/shared/long-load-gate.tsx
 msgid "Restart App"
 msgstr "Restart App"
 
@@ -4204,13 +4584,15 @@ msgstr "Resume auto-dismiss"
 msgid "Resume listening"
 msgstr "Resume listening"
 
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Resume the download"
+msgstr "Resume the download"
+
 #: src/chat/components/message/error.tsx
 #: src/contacts/profile-photo.tsx
 #: src/session/components/note-input/enhanced/enhance-error.tsx
 #: src/settings/general/account-profile.tsx
-#: src/settings/general/audio-settings.tsx
 #: src/store/zustand/listener/general-live-helpers.ts
-#: src/stt/aec-model-unavailable-notice.tsx
 msgid "Retry"
 msgstr "Retry"
 
@@ -4290,6 +4672,14 @@ msgstr "Save PDF, text, Markdown, and Org exports to this folder."
 #: src/settings/general/meeting-settings.tsx
 msgid "Save slides and screens others share in meetings. Requires Screen Recording."
 msgstr "Save slides and screens others share in meetings. Requires Screen Recording."
+
+#: src/mesure/beta-data.tsx
+msgid "Save the file…"
+msgstr "Save the file…"
+
+#: src/mesure/measure-dialog.tsx
+msgid "Save the matrix"
+msgstr "Save the matrix"
 
 #: src/settings/general/meeting-settings.tsx
 msgid "Save visible chat from supported meetings using Accessibility."
@@ -4450,6 +4840,10 @@ msgstr "Section title"
 msgid "Sections"
 msgstr "Sections"
 
+#: src/mesure/measure-dialog.tsx
+msgid "Sections found"
+msgstr "Sections found"
+
 #. placeholder {0}: results.length
 #: src/shared/palette-settings-group.tsx
 msgid "See all {0} settings"
@@ -4527,9 +4921,17 @@ msgstr "sends the JSON to the address, outside your computer"
 msgid "sent"
 msgstr "sent"
 
+#: src/mesure/measure-dialog.tsx
+msgid "Sent"
+msgstr "Sent"
+
 #: src/automations/action-runners.ts
 msgid "Sent to {host} (status {status})"
 msgstr "Sent to {host} (status {status})"
+
+#: src/mesure/measure-dialog.tsx
+msgid "Sent version"
+msgstr "Sent version"
 
 #: src/settings/appearance/note-ink.tsx
 msgid "Sentences that come from your notes appear in green. When off, your notes are shown in a separate block."
@@ -4561,7 +4963,11 @@ msgstr "Server that writes the summary"
 msgid "Session title"
 msgstr "Session title"
 
+#: src/session/components/note-input/enhanced/index.tsx
+#: src/settings/ai/llm/index.tsx
+#: src/settings/ai/stt/server-card.tsx
 #: src/settings/general/update-section.tsx
+#: src/settings/privacy/index.tsx
 msgid "Set by your administrator."
 msgstr "Set by your administrator."
 
@@ -4880,6 +5286,10 @@ msgstr "Stop response"
 msgid "Stop the current recording, or wait for it to finish saving, then try again."
 msgstr "Stop the current recording, or wait for it to finish saving, then try again."
 
+#: src/stt/on-device.ts
+msgid "Stop the recording first."
+msgstr "Stop the recording first."
+
 #: src/session/components/note-input/transcript/screens/empty.tsx
 msgid "Stop transcription"
 msgstr "Stop transcription"
@@ -5076,6 +5486,10 @@ msgstr "Syntheo could not remove the temporary audio. Cleanup will be retried au
 msgid "Syntheo could not save part of the live transcript."
 msgstr "Syntheo could not save part of the live transcript."
 
+#: src/shared/long-load-gate.tsx
+msgid "Syntheo could not start"
+msgstr "Syntheo could not start"
+
 #: src/shared/keychain.ts
 msgid "Syntheo couldn't access the system keyring. Unlock your login keyring, or install one (GNOME Keyring, KWallet), then try again."
 msgstr "Syntheo couldn't access the system keyring. Unlock your login keyring, or install one (GNOME Keyring, KWallet), then try again."
@@ -5111,6 +5525,10 @@ msgstr "Syntheo keeps listening while live transcription reconnects. No audio is
 #: src/onboarding/index.tsx
 msgid "Syntheo needs access to your microphone and system audio to record and transcribe your meetings"
 msgstr "Syntheo needs access to your microphone and system audio to record and transcribe your meetings"
+
+#: src/shared/long-load-gate.tsx
+msgid "Syntheo needs an update"
+msgstr "Syntheo needs an update"
 
 #: src/onboarding/index.tsx
 msgid "Syntheo needs microphone and system audio to transcribe your meetings, plus Accessibility to read meeting controls, visible chat."
@@ -5162,6 +5580,10 @@ msgstr "Synthesis"
 #: src/sidebar/settings-server-status.tsx
 msgid "Synthesis · connected"
 msgstr "Synthesis · connected"
+
+#: src/sidebar/settings-server-status.tsx
+msgid "Synthesis · disabled"
+msgstr "Synthesis · disabled"
 
 #: src/sidebar/settings-server-status.tsx
 msgid "Synthesis · no server"
@@ -5318,6 +5740,14 @@ msgstr "Test running…"
 msgid "Test the connection to list the models served."
 msgstr "Test the connection to list the models served."
 
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Test this computer"
+msgstr "Test this computer"
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Test this computer again"
+msgstr "Test this computer again"
+
 #: src/settings/ai/shared/server-card.tsx
 msgid "Testing…"
 msgstr "Testing…"
@@ -5391,6 +5821,10 @@ msgstr "The chat suggests adding step {number}: {title}"
 msgid "The chat suggests changing step {number}: {title}"
 msgstr "The chat suggests changing step {number}: {title}"
 
+#: src/onboarding/on-device-proposal.tsx
+msgid "The check could not run. You can run it later in Settings › Transcription."
+msgstr "The check could not run. You can run it later in Settings › Transcription."
+
 #: src/settings/developers/cli.tsx
 msgid "The CLI is not bundled with the app. Install it from a clone of the Syntheo repository:"
 msgstr "The CLI is not bundled with the app. Install it from a clone of the Syntheo repository:"
@@ -5411,13 +5845,37 @@ msgstr "The command failed (code {code})."
 msgid "The command was not confirmed, so it did not run."
 msgstr "The command was not confirmed, so it did not run."
 
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "The computer is on battery or in power saving mode: plug it in or switch to performance mode, then run the test again."
+msgstr "The computer is on battery or in power saving mode: plug it in or switch to performance mode, then run the test again."
+
 #: src/chat/components/message/tool/session-correction.tsx
 msgid "The correction could not be applied."
 msgstr "The correction could not be applied."
 
+#: src/mesure/measure-dialog.tsx
+msgid "The counters could not be saved."
+msgstr "The counters could not be saved."
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "the data disk could not be checked"
+msgstr "the data disk could not be checked"
+
+#: src/mesure/measure-dialog.tsx
+msgid "The differences could not be listed."
+msgstr "The differences could not be listed."
+
 #: src/settings/general/update-section.tsx
 msgid "The download was interrupted. Try again."
 msgstr "The download was interrupted. Try again."
+
+#: src/mesure/beta-data.tsx
+msgid "The export could not be built or saved."
+msgstr "The export could not be built or saved."
+
+#: src/stt/on-device.ts
+msgid "The files could not be read or written (disk full?). Try again."
+msgstr "The files could not be read or written (disk full?). Try again."
 
 #: src/stt/audio-import-feedback.ts
 msgid "The import of {name} was abandoned: {reason}"
@@ -5463,6 +5921,24 @@ msgstr "The local model lists the actions to take and adds them to the vault."
 msgid "The local model returned an empty answer."
 msgstr "The local model returned an empty answer."
 
+#: src/mesure/measure-dialog.tsx
+msgid "The matrix could not be saved."
+msgstr "The matrix could not be saved."
+
+#: src/stt/on-device.ts
+msgid "The measurement audio is missing from this version of Syntheo."
+msgstr "The measurement audio is missing from this version of Syntheo."
+
+#: src/stt/on-device.ts
+msgid "The measurement could not run. Try again."
+msgstr "The measurement could not run. Try again."
+
+#. placeholder {0}: describeOnDeviceErrorAfterColon(e.message)
+#. placeholder {0}: describeOnDeviceErrorAfterColon(refusal)
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "The measurement did not complete: {0}"
+msgstr "The measurement did not complete: {0}"
+
 #: src/chat/components/message/tool/move-tools.tsx
 msgid "The meeting contents could not be moved."
 msgstr "The meeting contents could not be moved."
@@ -5479,9 +5955,23 @@ msgstr "The memo edit could not be prepared."
 msgid "The microphone and system audio are muted: nothing is being transcribed."
 msgstr "The microphone and system audio are muted: nothing is being transcribed."
 
-#: src/stt/aec-model-unavailable-notice.tsx
-msgid "The models could not be downloaded (offline?). Listening continues without it."
-msgstr "The models could not be downloaded (offline?). Listening continues without it."
+#: src/stt/on-device.ts
+msgid "The models are not installed or are incomplete."
+msgstr "The models are not installed or are incomplete."
+
+#: src/stt/on-device.ts
+msgid "The models could not be downloaded (network or server). Try again: the download resumes where it stopped."
+msgstr "The models could not be downloaded (network or server). Try again: the download resumes where it stopped."
+
+#. placeholder {0}: describeOnDeviceErrorAfterColon(e.message)
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "The models were not installed: {0}"
+msgstr "The models were not installed: {0}"
+
+#. placeholder {0}: describeOnDeviceErrorAfterColon(e.message)
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "The models were not removed: {0}"
+msgstr "The models were not removed: {0}"
 
 #: src/session/components/speaker-naming/speaker-card.tsx
 msgid "The name could not be saved. Try again."
@@ -5503,6 +5993,10 @@ msgstr "The one that captures your voice."
 msgid "The only step that leaves your computer: the JSON is sent to the address below. Use an address you trust, such as n8n, Home Assistant or a home server."
 msgstr "The only step that leaves your computer: the JSON is sent to the address below. Use an address you trust, such as n8n, Home Assistant or a home server."
 
+#: src/stt/on-device.ts
+msgid "The operation failed. Try again."
+msgstr "The operation failed. Try again."
+
 #: src/shared/control.tsx
 msgid "The page you're looking for doesn't exist."
 msgstr "The page you're looking for doesn't exist."
@@ -5515,9 +6009,29 @@ msgstr "The PDF opens in your reader. Choose Print."
 msgid "The previous recording needs recovery"
 msgstr "The previous recording needs recovery"
 
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "the processor is too slow for live transcription"
+msgstr "the processor is too slow for live transcription"
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "the processor lacks AVX2 instructions"
+msgstr "the processor lacks AVX2 instructions"
+
 #: src/chat/components/message/tool/edit-summary.tsx
 msgid "The proposed edit could not be saved."
 msgstr "The proposed edit could not be saved."
+
+#: src/settings/ai/shared/provider-credential-error.ts
+msgid "The provider did not confirm this key. Check the key and the connection."
+msgstr "The provider did not confirm this key. Check the key and the connection."
+
+#: src/settings/ai/shared/provider-credential-error.ts
+msgid "The provider is limiting verifications. Try again in a few moments."
+msgstr "The provider is limiting verifications. Try again in a few moments."
+
+#: src/settings/ai/shared/provider-credential-error.ts
+msgid "The provider rejected this key or its permissions. Check the key and try again."
+msgstr "The provider rejected this key or its permissions. Check the key and try again."
 
 #. placeholder {0}: health.message ?? ""
 #: src/settings/ai/llm/server-card.tsx
@@ -5527,6 +6041,11 @@ msgstr "The selected model did not answer: {0}"
 #: src/stt/run-batch-helpers.ts
 msgid "The selected transcription provider"
 msgstr "The selected transcription provider"
+
+#. placeholder {0}: measured.error
+#: src/mesure/measure-dialog.tsx
+msgid "The sent version could not be measured: {0}"
+msgstr "The sent version could not be measured: {0}"
 
 #: src/settings/ai/shared/server-card.tsx
 msgid "The server answered with an error (HTTP {status}). It may still be starting: wait a minute, then test again."
@@ -5555,6 +6074,10 @@ msgstr "The server that turns speech into text during your meetings. Audio is ne
 #: src/settings/ai/stt/server-card.tsx
 msgid "The server transcribes with the model it loaded, whatever the model chosen here."
 msgstr "The server transcribes with the model it loaded, whatever the model chosen here."
+
+#: src/shared/long-load-gate.tsx
+msgid "The settings file managed by your organization (managed_settings.json) is invalid, so Syntheo does not start. Your existing data was left unchanged. Contact your administrator: Syntheo will start once the file is fixed."
+msgstr "The settings file managed by your organization (managed_settings.json) is invalid, so Syntheo does not start. Your existing data was left unchanged. Contact your administrator: Syntheo will start once the file is fixed."
 
 #: src/chat/components/message/tool/edit-summary.tsx
 msgid "The summary edit could not be applied."
@@ -5588,6 +6111,14 @@ msgstr "The test changes neither the last run nor the list of notes already proc
 msgid "The test could not run"
 msgstr "The test could not run"
 
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "The test could not run. Try again later."
+msgstr "The test could not run. Try again later."
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "The test was interrupted by a recording. Run it again."
+msgstr "The test was interrupted by a recording. Run it again."
+
 #: src/folders/project/folder-thread-card.tsx
 msgid "The thread could not be updated. Check the language model, then try again."
 msgstr "The thread could not be updated. Check the language model, then try again."
@@ -5604,6 +6135,51 @@ msgstr "The transcript was saved, but Syntheo could not start the summary. Try g
 #: src/session/components/note-input/transcript/screens/listening.tsx
 msgid "The transcription is still being written."
 msgstr "The transcription is still being written."
+
+#. placeholder {0}: size(models.totalBytes)
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "The transcription models ({0}) are not installed yet."
+msgstr "The transcription models ({0}) are not installed yet."
+
+#: src/settings/ai/stt/health.tsx
+msgid "The transcription models of this computer are not installed. Install them or go back to the server in Settings › Transcription."
+msgstr "The transcription models of this computer are not installed. Install them or go back to the server in Settings › Transcription."
+
+#: src/stt/live-transcript-interrupted.ts
+msgid "the transcription module of this computer could not be authenticated"
+msgstr "the transcription module of this computer could not be authenticated"
+
+#: src/stt/live-transcript-interrupted.ts
+msgid "the transcription module of this computer did not start"
+msgstr "the transcription module of this computer did not start"
+
+#: src/stt/live-transcript-interrupted.ts
+msgid "the transcription module of this computer is being installed"
+msgstr "the transcription module of this computer is being installed"
+
+#: src/stt/live-transcript-interrupted.ts
+msgid "the transcription module of this computer is being measured"
+msgstr "the transcription module of this computer is being measured"
+
+#: src/stt/live-transcript-interrupted.ts
+msgid "the transcription module of this computer is missing or has been modified"
+msgstr "the transcription module of this computer is missing or has been modified"
+
+#: src/stt/live-transcript-interrupted.ts
+msgid "the transcription module of this computer keeps stopping"
+msgstr "the transcription module of this computer keeps stopping"
+
+#: src/stt/on-device.ts
+msgid "The transcription program keeps stopping. Try again in a few minutes."
+msgstr "The transcription program keeps stopping. Try again in a few minutes."
+
+#: src/stt/on-device.ts
+msgid "The transcription program of this computer has been modified. Reinstall Syntheo."
+msgstr "The transcription program of this computer has been modified. Reinstall Syntheo."
+
+#: src/stt/on-device.ts
+msgid "The transcription program or its models have been modified or are missing. Reinstall Syntheo or install the models again."
+msgstr "The transcription program or its models have been modified or are missing. Reinstall Syntheo or install the models again."
 
 #: src/stt/live-transcript-interrupted.ts
 msgid "the transcription service"
@@ -5654,6 +6230,10 @@ msgstr "Then"
 msgid "There is nothing to copy."
 msgstr "There is nothing to copy."
 
+#: src/mesure/measure-dialog.tsx
+msgid "These excerpts are shown only here and are never saved."
+msgstr "These excerpts are shown only here and are never saved."
+
 #: src/settings/automations/workflow-test-panel.tsx
 msgid "These steps will be simulated: nothing is written, sent or run."
 msgstr "These steps will be simulated: nothing is written, sent or run."
@@ -5674,6 +6254,70 @@ msgstr "This advanced step runs a program on your computer. It is only added if 
 msgid "This advanced step sends the note's data outside your computer, to this address. It is only added if you confirm."
 msgstr "This advanced step sends the note's data outside your computer, to this address. It is only added if you confirm."
 
+#: src/onboarding/on-device-proposal.tsx
+msgid "This computer can also transcribe your meetings on its own, without a server. You can set it up in Settings › Transcription."
+msgstr "This computer can also transcribe your meetings on its own, without a server. You can set it up in Settings › Transcription."
+
+#. placeholder {0}: labels.profile[verdict.profile]
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "This computer can transcribe with a reduced profile: {0}."
+msgstr "This computer can transcribe with a reduced profile: {0}."
+
+#. placeholder {0}: labels.profile[verdict.profile]
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "This computer can transcribe your meetings on its own: {0}."
+msgstr "This computer can transcribe your meetings on its own: {0}."
+
+#: src/onboarding/on-device-proposal.tsx
+msgid "This computer can transcribe your meetings on its own. You can set it up in Settings › Transcription."
+msgstr "This computer can transcribe your meetings on its own. You can set it up in Settings › Transcription."
+
+#: src/onboarding/on-device-proposal.tsx
+msgid "This computer cannot transcribe on its own; Syntheo uses your transcription server."
+msgstr "This computer cannot transcribe on its own; Syntheo uses your transcription server."
+
+#: src/onboarding/on-device-proposal.tsx
+msgid "This computer cannot transcribe on its own. To transcribe your meetings, set up a transcription server in Settings › Transcription."
+msgstr "This computer cannot transcribe on its own. To transcribe your meetings, set up a transcription server in Settings › Transcription."
+
+#: src/stt/live-transcript-interrupted.ts
+msgid "this computer does not allow the transcription program to run from the Syntheo data folder (application control policy or noexec mount); ask your administrator"
+msgstr "this computer does not allow the transcription program to run from the Syntheo data folder (application control policy or noexec mount); ask your administrator"
+
+#: src/stt/on-device.ts
+msgid "This computer does not allow the transcription program to run from the Syntheo data folder (application control policy or noexec mount). Ask your administrator."
+msgstr "This computer does not allow the transcription program to run from the Syntheo data folder (application control policy or noexec mount). Ask your administrator."
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "This computer has not been measured yet."
+msgstr "This computer has not been measured yet."
+
+#: src/stt/live-transcript-interrupted.ts
+msgid "this computer has not been measured, or is too slow for live transcription"
+msgstr "this computer has not been measured, or is too slow for live transcription"
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "This computer is chosen for transcription, but it has not been measured or is too slow: live transcription is paused."
+msgstr "This computer is chosen for transcription, but it has not been measured or is too slow: live transcription is paused."
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "This computer is chosen for transcription, but its models are not installed: live transcription is paused."
+msgstr "This computer is chosen for transcription, but its models are not installed: live transcription is paused."
+
+#. placeholder {0}: describeOnDeviceErrorAfterColon(refusal)
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "This computer is chosen for transcription, but live transcription is paused: {0}"
+msgstr "This computer is chosen for transcription, but live transcription is paused: {0}"
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "This computer is chosen for transcription, but this version of Syntheo does not include transcription on this computer: live transcription is paused."
+msgstr "This computer is chosen for transcription, but this version of Syntheo does not include transcription on this computer: live transcription is paused."
+
+#. placeholder {0}: verdict.reasons.map((r) => labels.refusal[r]).join(", ")
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "This computer is not eligible: {0}."
+msgstr "This computer is not eligible: {0}."
+
 #. placeholder {0}: approval.sessionTitle
 #: src/chat/components/message/tool/approval.tsx
 msgid "This correction changes another note: {0}"
@@ -5691,9 +6335,21 @@ msgstr "This edit could not be saved. Try again."
 msgid "This edit is no longer pending."
 msgstr "This edit is no longer pending."
 
+#: src/mesure/measure-dialog.tsx
+msgid "This file is not UTF-8 text."
+msgstr "This file is not UTF-8 text."
+
 #: src/stt/audio-import-feedback.ts
 msgid "This file is too large to import (2 GB maximum)."
 msgstr "This file is too large to import (2 GB maximum)."
+
+#: src/mesure/measure-dialog.tsx
+msgid "This file is too large to measure."
+msgstr "This file is too large to measure."
+
+#: src/stt/on-device.ts
+msgid "This folder does not contain the models. Choose the folder that contains the model files."
+msgstr "This folder does not contain the models. Choose the folder that contains the model files."
 
 #: src/session/late-filing.ts
 msgid "This folder uses the {title} template"
@@ -5710,6 +6366,18 @@ msgstr "This installation (.deb or MSI) is updated by downloading the new packag
 #: src/settings/automations/workflow-test-panel.tsx
 msgid "This is a real test: these steps really act."
 msgstr "This is a real test: these steps really act."
+
+#: src/mesure/beta-data.tsx
+msgid "This is the whole file: counts, local indexes and days since you joined, under a random pseudonym. No text, title, name or date. Nothing is sent: you save the file and choose whether to share it."
+msgstr "This is the whole file: counts, local indexes and days since you joined, under a random pseudonym. No text, title, name or date. Nothing is sent: you save the file and choose whether to share it."
+
+#: src/settings/ai/shared/provider-credential-error.ts
+msgid "This key could not be verified with the provider. Check the connection and try again."
+msgstr "This key could not be verified with the provider. Check the connection and try again."
+
+#: src/settings/ai/shared/provider-credential-error.ts
+msgid "This key could not be verified. Check your connection and try again."
+msgstr "This key could not be verified. Check your connection and try again."
 
 #: src/session/components/living-document/after-meeting-folder-suggestion.tsx
 msgid "This meeting looks like {folderName} ({reason})"
@@ -5750,6 +6418,18 @@ msgstr "This server has no diarization model loaded: transcripts will not tell s
 #: src/session/components/note-input/transcript/index.tsx
 msgid "This transcription is incomplete."
 msgstr "This transcription is incomplete."
+
+#: src/stt/on-device.ts
+msgid "This version of Syntheo does not include transcription on this computer, or its program is missing. Reinstall Syntheo."
+msgstr "This version of Syntheo does not include transcription on this computer, or its program is missing. Reinstall Syntheo."
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "This version of Syntheo does not include transcription on this computer."
+msgstr "This version of Syntheo does not include transcription on this computer."
+
+#: src/settings/ai/stt/health.tsx
+msgid "This version of Syntheo does not include transcription on this computer. Go back to the server in Settings › Transcription."
+msgstr "This version of Syntheo does not include transcription on this computer. Go back to the server in Settings › Transcription."
 
 #: src/session/components/living-document/welcome-card.tsx
 msgid "Three settings to get started"
@@ -5793,6 +6473,10 @@ msgstr "To move a section with the keyboard, focus its handle and use the up and
 msgid "Top level"
 msgstr "Top level"
 
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Transcribe without a server: transcription runs on this computer and audio never leaves it."
+msgstr "Transcribe without a server: transcription runs on this computer and audio never leaves it."
+
 #: src/chat/components/input/index.tsx
 msgid "Transcribing voice input"
 msgstr "Transcribing voice input"
@@ -5834,6 +6518,10 @@ msgid "Transcription"
 msgstr "Transcription"
 
 #: src/sidebar/settings-server-status.tsx
+msgid "Transcription · checking…"
+msgstr "Transcription · checking…"
+
+#: src/sidebar/settings-server-status.tsx
 msgid "Transcription · connected"
 msgstr "Transcription · connected"
 
@@ -5846,8 +6534,16 @@ msgid "Transcription · not tested"
 msgstr "Transcription · not tested"
 
 #: src/sidebar/settings-server-status.tsx
+msgid "Transcription · on this computer"
+msgstr "Transcription · on this computer"
+
+#: src/sidebar/settings-server-status.tsx
 msgid "Transcription · testing…"
 msgstr "Transcription · testing…"
+
+#: src/sidebar/settings-server-status.tsx
+msgid "Transcription · this computer is not ready"
+msgstr "Transcription · this computer is not ready"
 
 #: src/sidebar/settings-server-status.tsx
 msgid "Transcription · unreachable"
@@ -5869,9 +6565,37 @@ msgstr "Transcription interrupted {gaps}"
 msgid "transcription model, Whisper, Nemotron, speech recognition"
 msgstr "transcription model, Whisper, Nemotron, speech recognition"
 
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Transcription on this computer is disabled by your administrator; transcription now goes through the server."
+msgstr "Transcription on this computer is disabled by your administrator; transcription now goes through the server."
+
+#: src/stt/on-device.ts
+msgid "Transcription on this computer is in use. Stop the recording, then try again."
+msgstr "Transcription on this computer is in use. Stop the recording, then try again."
+
+#: src/sidebar/toast/registry.tsx
+msgid "Transcription on this computer is not ready"
+msgstr "Transcription on this computer is not ready"
+
+#: src/stt/on-device.ts
+msgid "Transcription on this computer uses the microphone only: the computer's sound (remote participants) is not transcribed."
+msgstr "Transcription on this computer uses the microphone only: the computer's sound (remote participants) is not transcribed."
+
 #: src/sidebar/toast/registry.tsx
 msgid "Transcription provider needed"
 msgstr "Transcription provider needed"
+
+#: src/home/home-view.tsx
+msgid "Transcription runs on this computer"
+msgstr "Transcription runs on this computer"
+
+#: src/home/home-view.tsx
+msgid "Transcription runs on this computer; summaries on your server"
+msgstr "Transcription runs on this computer; summaries on your server"
+
+#: src/home/home-view.tsx
+msgid "Transcription runs on your server"
+msgstr "Transcription runs on your server"
 
 #: src/settings/dictation.tsx
 msgid "Transcription server ›"
@@ -5916,6 +6640,7 @@ msgstr "Try it"
 msgid "Try speaking a little closer to the microphone."
 msgstr "Try speaking a little closer to the microphone."
 
+#: src/mesure/measure-dialog.tsx
 #: src/session/components/living-document/fiche.tsx
 msgid "Type"
 msgstr "Type"
@@ -5923,10 +6648,6 @@ msgstr "Type"
 #: src/session/components/speaker-naming/speaker-card.tsx
 msgid "Type a name"
 msgstr "Type a name"
-
-#: src/settings/general/audio-settings.tsx
-msgid "Unavailable: the models could not be downloaded (offline?). Listening works without it."
-msgstr "Unavailable: the models could not be downloaded (offline?). Listening works without it."
 
 #: src/chat/components/message/tool/session-correction.tsx
 #: src/main/windows-title-bar.tsx
@@ -6046,6 +6767,10 @@ msgstr "up to date as of {coveredDate}"
 msgid "Update"
 msgstr "Update"
 
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Update the models"
+msgstr "Update the models"
+
 #: src/settings/search-index.ts
 msgid "update, automatic, startup, network, GitHub"
 msgstr "update, automatic, startup, network, GitHub"
@@ -6083,6 +6808,10 @@ msgstr "Upload transcript"
 msgid "Use 24-hour time"
 msgstr "Use 24-hour time"
 
+#: src/mesure/measure-dialog.tsx
+msgid "Use a .txt, .md, .html or .docx file."
+msgstr "Use a .txt, .md, .html or .docx file."
+
 #: src/settings/automations/step-forms.tsx
 msgid "Use an http:// or https:// address."
 msgstr "Use an http:// or https:// address."
@@ -6092,6 +6821,10 @@ msgstr "Use an http:// or https:// address."
 #: src/templates/template-form.tsx
 msgid "Use by default"
 msgstr "Use by default"
+
+#: src/settings/ai/shared/provider-credential-error.ts
+msgid "Use HTTPS: plain HTTP is only accepted on this computer or a private network."
+msgstr "Use HTTPS: plain HTTP is only accepted on this computer or a private network."
 
 #: src/settings/general/index.tsx
 #: src/settings/search-index.ts
@@ -6105,6 +6838,10 @@ msgstr "Use system audio to capture other speakers"
 #: src/session/components/note-conflict-banner.tsx
 msgid "Use the other version"
 msgstr "Use the other version"
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Use this computer for transcription instead of the server"
+msgstr "Use this computer for transcription instead of the server"
 
 #: src/settings/ai/stt/server-card.tsx
 msgid "Use this protocol"
@@ -6419,9 +7156,25 @@ msgstr "you are offline"
 msgid "You can use up to three example summaries."
 msgstr "You can use up to three example summaries."
 
+#: src/stt/on-device.ts
+msgid "Your administrator has disabled transcription on this computer."
+msgstr "Your administrator has disabled transcription on this computer."
+
+#: src/mesure/measure-dialog.tsx
+msgid "Your choice"
+msgstr "Your choice"
+
+#: src/shared/long-load-gate.tsx
+msgid "Your data was updated by a newer version of Syntheo, such as Syntheo Nightly, and this version cannot open it yet. Your existing data was left unchanged. Install the latest version of Syntheo, or keep using the newer app until this version catches up."
+msgstr "Your data was updated by a newer version of Syntheo, such as Syntheo Nightly, and this version cannot open it yet. Your existing data was left unchanged. Install the latest version of Syntheo, or keep using the newer app until this version catches up."
+
 #: src/settings/dictionary/index.tsx
 msgid "Your dictionary is empty"
 msgstr "Your dictionary is empty"
+
+#: src/shared/long-load-gate.tsx
+msgid "Your existing data was left unchanged. Please restart the app. If the problem continues, contact support."
+msgstr "Your existing data was left unchanged. Please restart the app. If the problem continues, contact support."
 
 #: src/home/folder-cards.tsx
 msgid "Your folders"

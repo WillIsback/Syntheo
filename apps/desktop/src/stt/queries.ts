@@ -20,7 +20,7 @@ import {
   updateTranscriptHints,
 } from "~/stt/utils";
 
-export { type TranscriptRecord, type TranscriptMetadata } from "./queries-rows";
+export { type TranscriptRecord } from "./queries-rows";
 export {
   useSessionTranscripts,
   useTranscript,

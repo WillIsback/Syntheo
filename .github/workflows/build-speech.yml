@@ -1,0 +1,161 @@
+# Workflow : build-speech
+# CI du programme compagnon de transcription sur le poste `syntheo-speech`
+# (apps/speech, issue 683), livré dans l'installeur de l'application
+# (externalBin) : les chaînes de release le construisent elles-mêmes
+# (scripts/build-speech.sh et .ps1) avant `tauri build`. Ce workflow le
+# vérifie sur les PR qui le touchent, sans rien publier ni signer.
+#
+# Jobs :
+#   - `build` (Linux, Windows) : construction release par les scripts des
+#     chaînes de release, depuis un registre Cargo et un cache vides, ONNX
+#     Runtime épinglé et contrôlé avant et après (check_ort.py) ; sous
+#     Windows, DLL importées contrôlées. Puis tests du compagnon (moteur
+#     factice). Aucun identifiant.
+#   - `sbom` et `notices` : SBOM CycloneDX et notices des crates
+#     (cargo about), dans des jobs qui ne voient pas le binaire construit.
+name: build-speech
+
+on:
+  pull_request:
+    paths:
+      - "apps/speech/**"
+      - "scripts/build-speech.sh"
+      - "scripts/build-speech.ps1"
+      - ".github/workflows/build-speech.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: build-speech-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build syntheo-speech (${{ matrix.target }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Sans rust-cache ni sccache : registre et compilation partent de zéro.
+      - name: Toolchain Rust
+        uses: ./.github/actions/rust_install
+        with:
+          cache: "false"
+
+      - name: Construire (Linux)
+        if: runner.os == 'Linux'
+        env:
+          ORT_CACHE_DIR: ${{ runner.temp }}/ort-cache
+          TARGET: ${{ matrix.target }}
+        run: bash scripts/build-speech.sh "$TARGET"
+
+      - name: Construire (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          ORT_CACHE_DIR: ${{ runner.temp }}\ort-cache
+          TARGET: ${{ matrix.target }}
+        run: |
+          $vswhere = Join-Path ${env:ProgramFiles(x86)} "Microsoft Visual Studio\Installer\vswhere.exe"
+          $vs = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if (-not $vs) { throw "Visual Studio (outils VC x64) introuvable" }
+          $dumpbin = Get-ChildItem (Join-Path $vs "VC\Tools\MSVC\*\bin\Hostx64\x64\dumpbin.exe") |
+            Sort-Object FullName -Descending | Select-Object -First 1
+          ./scripts/build-speech.ps1 -Target $env:TARGET -Dumpbin $dumpbin.FullName
+
+      # Tests du compagnon : protocole, jeton, moteur factice ; les essais
+      # avec les vrais modèles sont ignorés (modèles absents en CI).
+      - name: Tests du compagnon
+        working-directory: apps/speech
+        shell: bash
+        run: cargo test --locked --features fake-engine
+
+  # SBOM des dépendances Rust du module, dans un job à part qui ne voit pas
+  # le module construit. Outil à version figée.
+  sbom:
+    name: SBOM (${{ matrix.target }})
+    strategy:
+      matrix:
+        target: [x86_64-unknown-linux-gnu, x86_64-pc-windows-msvc]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Toolchain Rust
+        uses: ./.github/actions/rust_install
+        with:
+          cache: "false"
+
+      - name: SBOM (CycloneDX)
+        shell: bash
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          set -euo pipefail
+          cargo install --locked cargo-cyclonedx --version 0.5.10
+          cargo cyclonedx --manifest-path apps/speech/Cargo.toml --format json --spec-version 1.5 \
+            --target "$TARGET" --override-filename syntheo-speech
+          mkdir -p sbom
+          shopt -s nullglob
+          boms=(apps/speech/syntheo-speech*.json)
+          [ "${#boms[@]}" -eq 1 ] || { echo "::error::SBOM introuvable ou multiple : ${boms[*]}"; exit 1; }
+          mv "${boms[0]}" "sbom/syntheo-speech-$TARGET.cdx.json"
+
+      - name: Upload du SBOM
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: syntheo-speech-sbom-${{ matrix.target }}
+          path: sbom/
+          retention-days: 30
+
+  # Notices des crates du binaire (licences MIT, Apache-2.0…), livrées dans
+  # l'installeur (les chaînes de release les génèrent aussi). Job à part, outil à version figée, sans le module construit.
+  notices:
+    name: Notices des crates
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Toolchain Rust
+        uses: ./.github/actions/rust_install
+        with:
+          cache: "false"
+
+      - name: cargo about
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo install --locked cargo-about --version 0.9.3 --features cli
+          mkdir -p notices
+          cargo about generate --fail -m apps/speech/Cargo.toml -c apps/speech/supply-chain/about.toml \
+            -o notices/THIRD-PARTY-RUST.html apps/speech/supply-chain/about.hbs
+          test -s notices/THIRD-PARTY-RUST.html
+
+      - name: Upload des notices
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: syntheo-speech-notices
+          path: notices/
+          retention-days: 7

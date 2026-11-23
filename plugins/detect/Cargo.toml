@@ -19,8 +19,8 @@ test-support = []
 tauri-plugin = { workspace = true, features = ["build"] }
 
 [dev-dependencies]
-specta-typescript = { workspace = true }
 syntheo-detect = { workspace = true, features = ["mic"] }
+syntheo-specta-export = { workspace = true }
 tauri = { workspace = true, features = ["test"] }
 tauri-plugin-detect = { path = ".", features = ["test-support"] }
 tokio = { workspace = true, features = ["test-util"] }
@@ -42,9 +42,3 @@ uuid = { workspace = true, features = ["v4"] }
 tokio = { workspace = true, features = ["rt-multi-thread", "macros", "sync", "time"] }
 tokio-util = { workspace = true }
 tracing = { workspace = true }
-
-[target."cfg(target_os = \"macos\")".dependencies]
-base64 = { workspace = true }
-objc2 = { workspace = true }
-objc2-app-kit = { workspace = true, features = ["NSBitmapImageRep", "NSImage", "NSImageRep", "NSWorkspace"] }
-objc2-foundation = { workspace = true, features = ["NSData", "NSDictionary", "NSString"] }

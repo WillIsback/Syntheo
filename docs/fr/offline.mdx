@@ -25,18 +25,11 @@ Ces fonctions ne font appel à aucun serveur :
 Sans serveur de transcription joignable, **il n'y a pas de transcription**. Syntheo ne conserve jamais l'audio : il ne peut donc pas enregistrer maintenant pour transcrire plus tard.
 
 - Si aucun fournisseur de transcription n'est configuré, Syntheo refuse de démarrer la capture : « Aucun fournisseur de transcription n'est configuré. Syntheo ne conserve pas l'audio : configurez un endpoint de transcription avant d'enregistrer. »
-- Si le serveur devient injoignable pendant une réunion, la transcription en direct se met en pause et Syntheo tente de se reconnecter. Le passage prononcé pendant la coupure manquera à la transcription.
+- Si le serveur devient injoignable pendant une réunion, la transcription en direct se met en pause et Syntheo tente de se reconnecter. Syntheo garde en mémoire les dernières secondes d'audio (une quinzaine au plus) et les rejoue au serveur dès qu'il revient : une coupure de quelques secondes ne laisse aucun trou. Au-delà, le début de la coupure manquera à la transcription ; à la fin de l'écoute, un bandeau daté le signale au-dessus de la transcription.
 
-## Modèles d'annulation d'écho
+## Annulation d'écho
 
-L'annulation d'écho retire la voix des autres participants que votre micro capte depuis vos haut-parleurs. Ses modèles ne sont pas fournis avec l'application : Syntheo les télécharge une fois, depuis GitHub (`raw.githubusercontent.com`), au premier lancement, puis les garde sur votre poste.
-
-Si ce premier lancement a lieu hors ligne, ou derrière un proxy qui bloque cette adresse, **l'écoute fonctionne quand même**, sans annulation d'écho :
-
-- pendant l'écoute, un message indique « Annulation d'écho indisponible » : « Les modèles n'ont pas pu être téléchargés (hors ligne ?). L'écoute continue sans. », avec un bouton « Réessayer » ;
-- sous **Paramètres → Mes réunions → Réunions → Audio**, la ligne « Annulation d'écho » reste affichée tant que les modèles manquent, avec un bouton « Réessayer ».
-
-Syntheo réessaie aussi de lui-même, après 1 minute, puis 5 et 15 minutes, puis toutes les heures. Dès que le téléchargement aboutit, l'annulation d'écho s'active, même en pleine écoute. En attendant, portez un casque : le micro ne capte alors pas le son des haut-parleurs.
+L'annulation d'écho retire la voix des autres participants que votre micro capte depuis vos haut-parleurs. Ses modèles sont fournis avec l'application : elle fonctionne dès le premier lancement, hors ligne, sans rien télécharger.
 
 ## Ce qui exige le serveur de synthèse
 
@@ -53,13 +46,13 @@ Sans serveur de synthèse joignable, vos transcriptions restent disponibles : vo
     Par exemple speaches ou vLLM pour la transcription, Ollama ou llama.cpp server pour le LLM. Téléchargez les modèles **avant** de vous déconnecter.
   </Step>
   <Step title="Les déclarer dans Syntheo">
-    Suivez [Configurer la transcription et l'IA](/fr/ai-setup) avec des URL locales, par exemple `http://localhost:8000/v1` et `http://localhost:11434/v1`. HTTP en clair est accepté vers `localhost` et les adresses privées.
+    Suivez [Configurer la transcription et l'IA](/fr/ai-setup) avec des URL locales, par exemple `http://localhost:8000/v1` et `http://localhost:11434/v1`. HTTP en clair est accepté vers `localhost` et, après confirmation, vers une adresse privée, avec un avertissement permanent sur la carte du serveur.
   </Step>
   <Step title="Tester avant la réunion">
-    Lancez Syntheo une fois avec le réseau, pour qu'il télécharge les modèles d'annulation d'écho. Lancez ensuite une courte écoute, puis générez un compte rendu. Si les deux fonctionnent avec le réseau coupé, vous êtes prêt.
+    Coupez le réseau, lancez une courte écoute, puis générez un compte rendu. Si les deux fonctionnent, vous êtes prêt.
   </Step>
 </Steps>
 
 <Note>
-  Hors inférence, Syntheo émet très peu de requêtes : le téléchargement unique des modèles d'annulation d'écho (GitHub), la recherche de mises à jour au démarrage (GitHub, désactivable), l'affichage des notes de version d'une autre version que celle installée (GitHub) et quelques icônes d'interface. Elles ne transportent aucun contenu de réunion et leur échec n'empêche rien. Liste complète dans [Syntheo Desktop et le RGPD](/fr/conformite/rgpd).
+  Hors inférence, Syntheo émet très peu de requêtes : la recherche de mises à jour sur GitHub, 15 secondes après le démarrage (désactivable) ou à la demande, le téléchargement de l'installeur quand vous mettez à jour et, seulement si vous les demandez, les modèles de la transcription « Sur ce poste ». Elles ne transportent aucun contenu de réunion et leur échec n'empêche rien. Liste complète dans [Syntheo Desktop et le RGPD](/fr/conformite/rgpd).
 </Note>

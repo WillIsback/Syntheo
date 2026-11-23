@@ -1,22 +1,12 @@
-mod activity_capture;
 mod chat;
-mod daily_summary;
 mod enhance;
-mod event_contact;
 mod title;
-mod tool;
-mod transcript_patch;
 mod types;
 mod validate;
 
-pub use activity_capture::*;
 pub use chat::*;
-pub use daily_summary::*;
 pub use enhance::*;
-pub use event_contact::*;
 pub use title::*;
-pub use tool::*;
-pub use transcript_patch::*;
 pub use types::*;
 pub use validate::*;
 
@@ -39,21 +29,12 @@ common_derives! {
 
 common_derives! {
     pub enum Template {
-        ActivityCaptureSystem(ActivityCaptureSystem),
-        ActivityCaptureUser(Box<ActivityCaptureUser>),
-        DailySummarySystem(DailySummarySystem),
-        DailySummaryUser(Box<DailySummaryUser>),
         EnhanceSystem(EnhanceSystem),
         EnhanceUser(Box<EnhanceUser>),
-        EventContactSystem(EventContactSystem),
-        EventContactUser(EventContactUser),
         TitleSystem(TitleSystem),
         TitleUser(TitleUser),
         ChatSystem(ChatSystem),
         ContextBlock(ContextBlock),
-        ToolSearchSessions(ToolSearchSessions),
-        TranscriptPatchSystem(TranscriptPatchSystem),
-        TranscriptPatchUser(Box<TranscriptPatchUser>),
     }
 }
 
@@ -72,20 +53,11 @@ pub enum Error {
 pub fn render(t: Template) -> Result<String, Error> {
     match t {
         Template::EnhanceSystem(t) => render_enhance_system(&t),
-        Template::ActivityCaptureSystem(t) => Ok(askama::Template::render(&t)?),
-        Template::ActivityCaptureUser(t) => Ok(askama::Template::render(&*t)?),
-        Template::DailySummarySystem(t) => Ok(askama::Template::render(&t)?),
-        Template::DailySummaryUser(t) => Ok(askama::Template::render(&*t)?),
         Template::EnhanceUser(t) => Ok(askama::Template::render(&*t)?),
-        Template::EventContactSystem(t) => Ok(askama::Template::render(&t)?),
-        Template::EventContactUser(t) => Ok(askama::Template::render(&t)?),
         Template::TitleSystem(t) => Ok(askama::Template::render(&t)?),
         Template::TitleUser(t) => Ok(askama::Template::render(&t)?),
         Template::ChatSystem(t) => Ok(askama::Template::render(&t)?),
         Template::ContextBlock(t) => Ok(askama::Template::render(&t)?),
-        Template::ToolSearchSessions(t) => Ok(askama::Template::render(&t)?),
-        Template::TranscriptPatchSystem(t) => Ok(askama::Template::render(&t)?),
-        Template::TranscriptPatchUser(t) => Ok(askama::Template::render(&*t)?),
     }
 }
 

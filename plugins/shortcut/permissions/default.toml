@@ -4,6 +4,4 @@ permissions = [
   "allow-configure",
   "allow-validate",
   "allow-set-active",
-  "allow-register-hotkey",
-  "allow-unregister-hotkey",
 ]

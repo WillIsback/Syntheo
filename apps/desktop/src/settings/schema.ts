@@ -41,6 +41,19 @@ export const SETTING_DEFINITIONS = {
     path: ["general", "automatic_updates"],
     default: true as boolean,
   },
+  // Bêta (issue 671) : mesure de la reprise d'une synthèse, désactivée par
+  // défaut. Un poste géré peut la couper (managed_settings, clés
+  // measurement_enabled et calibration_enabled à false).
+  measurement_enabled: {
+    type: "boolean",
+    path: ["beta", "measurement_enabled"],
+    default: false as boolean,
+  },
+  calibration_enabled: {
+    type: "boolean",
+    path: ["beta", "calibration_enabled"],
+    default: false as boolean,
+  },
   auto_stop_meetings: {
     type: "boolean",
     path: ["general", "auto_stop_meetings"],
@@ -324,6 +337,14 @@ export const SETTING_DEFINITIONS = {
   current_stt_provider: {
     type: "string",
     path: ["ai", "current_stt_provider"],
+  },
+  // Source « Sur ce poste » (issue 685) : le module syntheo-speech, à la
+  // place du serveur ; sans effet si le module manque ou si l'organisation
+  // l'interdit.
+  stt_on_device: {
+    type: "boolean",
+    path: ["ai", "stt_on_device"],
+    default: false as boolean,
   },
   current_stt_model: {
     type: "string",

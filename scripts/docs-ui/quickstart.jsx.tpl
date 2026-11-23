@@ -257,7 +257,7 @@ export const AppHome = () => {
           ) : null}
           <p className="syn-muted" style={{ display: "flex", alignItems: "center", gap: 8, margin: 0, fontSize: 13 }}>
             <i className="syn-pip" aria-hidden="true" />
-            {L("Everything is processed on your local server")}
+            {L("Everything is processed on your server")}
           </p>
         </div>
       </div>

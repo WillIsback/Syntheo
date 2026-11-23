@@ -13,9 +13,9 @@ import { useEffect, useRef, useState } from "react";
 // remonter la durée restante, et la reprise qui le suit est lissée.
 
 /** Aucune estimation avant 30 s de transcription… */
-export const ESTIMATE_MIN_ELAPSED_MS = 30_000;
+const ESTIMATE_MIN_ELAPSED_MS = 30_000;
 /** …ni avant 5 % de l'audio traité. */
-export const ESTIMATE_MIN_PROGRESS = 0.05;
+const ESTIMATE_MIN_PROGRESS = 0.05;
 /**
  * Une reprise de l'avancement après une pause plus longue signale une
  * reconnexion mesurée : son coût est alors dans la moyenne.
@@ -34,7 +34,7 @@ const PRE_STALL_PRUDENCE = 0.6;
 const SHOWN_END_TIME_CONSTANT_MS = 30_000;
 
 /** Mesures du débit d'une transcription, mises à jour à chaque seconde. */
-export type BatchThroughput = {
+type BatchThroughput = {
   /** Début de la phase : identifie la transcription suivie. */
   startedAtMs: number;
   /**

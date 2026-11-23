@@ -28,7 +28,7 @@ Ce qu'elle attend :
 
 ### 2.1 Structure
 
-- **Fenêtres (routes TanStack)** : `routes/app/main/` (fenêtre principale), `routes/app/note.$sessionId.tsx` (note dans une fenêtre autonome, sans les raccourcis globaux), `onboarding.tsx`, `floating-bar.tsx`, `live-caption.tsx`, `composer.tsx`, `instruction.tsx`.
+- **Fenêtres (routes TanStack)** : `routes/app/main/` (fenêtre principale), `routes/app/note.$sessionId.tsx` (note dans une fenêtre autonome, sans les raccourcis globaux), `onboarding.tsx`, `floating-bar.tsx`, `composer.tsx`, `instruction.tsx`.
 - **Écrans de la fenêtre principale** : un seul onglet visible à la fois (`store/zustand/tabs/schema.ts`) : accueil (`empty`), note (`sessions`), paramètres (`settings`, 13 pages `SettingsTab`), modèles, calendrier, contacts, dossiers, automatisations, journal des changements. Plus de barre latérale permanente (`main/body.tsx`) ; les vues à sous-pages portent leur propre navigation (`main/view-navigation.tsx`).
 
 ### 2.2 Points d'entrée visibles

@@ -26,7 +26,6 @@ export const commands = {
 	renameFolderCatalog: (request: RenameFolderCatalogRequest) => typedError<null, string>(__TAURI_INVOKE("plugin:session|rename_folder_catalog", { request })),
 	deleteFolderCatalog: (request: DeleteFolderCatalogRequest) => typedError<null, string>(__TAURI_INVOKE("plugin:session|delete_folder_catalog", { request })),
 	updateFolderInstructions: (request: UpdateFolderInstructionsRequest) => typedError<null, string>(__TAURI_INVOKE("plugin:session|update_folder_instructions", { request })),
-	updateFolderWorkspace: (request: UpdateFolderWorkspaceRequest) => typedError<null, string>(__TAURI_INVOKE("plugin:session|update_folder_workspace", { request })),
 	updateFolderIcon: (request: UpdateFolderIconRequest) => typedError<null, string>(__TAURI_INVOKE("plugin:session|update_folder_icon", { request })),
 };
 
@@ -150,11 +149,6 @@ export type UpdateFolderIconRequest = {
 export type UpdateFolderInstructionsRequest = {
 	path: string,
 	instructions: string,
-};
-
-export type UpdateFolderWorkspaceRequest = {
-	path: string,
-	workspace_id: string,
 };
 
 /* Tauri Specta runtime */

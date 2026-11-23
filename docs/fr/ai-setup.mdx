@@ -6,7 +6,7 @@ description: "Reliez Syntheo à vos serveurs d'inférence auto-hébergés : un s
 
 import { AppSettings, Kbd, SettingsPath } from "/snippets/start.gen.jsx";
 
-Syntheo n'embarque aucun modèle et n'appelle aucun service cloud. Il se connecte à **vos** serveurs d'inférence, sur votre poste ou votre réseau, par des protocoles standard. Vous configurez deux choses indépendantes :
+Syntheo n'appelle aucun service cloud d'IA. Il se connecte à **vos** serveurs d'inférence, sur votre poste ou votre réseau, par des protocoles standard ; la transcription en direct peut aussi tourner sur ce poste, sans serveur (voir [Transcrire sur ce poste](#transcrire-sur-ce-poste)). Vous configurez deux choses indépendantes :
 
 | Réglage | Rôle | Protocole |
 | --- | --- | --- |
@@ -65,7 +65,7 @@ La pastille d'état prend l'une de ces valeurs :
 | « Connecté · … ms » | Le serveur répond ; la pastille indique la latence mesurée. Pour la synthèse, elle indique plutôt le nombre de modèles disponibles (« Connecté · … modèles disponibles »). |
 | « Injoignable » | Le serveur n'a pas répondu. |
 | « Clé refusée » | Le serveur a refusé la clé d'API. |
-| « Adresse invalide » | L'adresse n'est pas acceptée (voir la note ci-dessus). |
+| « Adresse invalide » | Une adresse enregistrée auparavant n'est plus acceptée (voir la note ci-dessus). À la saisie, une adresse refusée n'est pas enregistrée : le motif s'affiche sous le champ, par exemple « Saisissez une URL de base valide. ». |
 
 En cas d'échec, un message sous le titre de la carte dit quoi faire, par exemple : « Le serveur n'a pas répondu à localhost:8000/v1. Vérifiez qu'il est démarré et que vous êtes sur le bon réseau (VPN, Tailscale), puis relancez le test. »
 
@@ -101,6 +101,27 @@ En cas d'échec, un message sous le titre de la carte dit quoi faire, par exempl
 Dans la reproduction ci-dessous, modifiez l'« Adresse du serveur » : Syntheo l'enregistre puis la teste. Essayez `http://localhost:9000` (un serveur NeMo-Speech.cpp, puis « Utiliser ce protocole »), un port où rien n'écoute comme `http://localhost:8001/v1` (« Injoignable »), ou `http://gpu.entreprise.lan/v1` (refus du HTTP). Ouvrez « Avancé » et « Aide », puis cliquez sur un autre modèle.
 
 <AppSettings section="transcription" />
+
+### Transcrire sur ce poste
+
+Le détail (prérequis, mise en service, profils, réseau, licences) est sur la page [Transcrire sur ce poste](/fr/on-device-transcription).
+
+La carte **Sur ce poste**, au-dessus de la carte serveur, prépare la transcription sans serveur : le programme de transcription livré avec Syntheo tourne sur votre ordinateur, et l'audio ne le quitte pas.
+
+1. **Tester ce poste** mesure le processeur, la mémoire et le disque en quelques secondes. Le verdict dit si le poste peut transcrire seul, avec un profil réduit (par exemple sans distinguer les intervenants), ou pourquoi il ne le peut pas. Sur batterie ou en mode économie d'énergie, branchez le secteur ou passez en mode performance, puis relancez le test.
+2. **Télécharger les modèles (1,1 Go)** ou **Installer depuis un dossier…** installe les modèles du programme. Chaque fichier est comparé à la version attendue par Syntheo avant d'être mis en place ; un téléchargement interrompu reprend là où il s'était arrêté.
+3. Après l'installation, Syntheo **mesure ce poste**, de moins d'une minute à environ trois minutes : il transcrit un audio fourni avec l'application et retient le profil le plus complet qui tient le temps réel (micro et son du poste avec les intervenants, puis sans, puis le micro seul). En micro seul, le son de l'ordinateur, donc les participants à distance, n'est pas transcrit ; un rappel le dit au début de chaque écoute. **Mesurer à nouveau** refait la mesure, par exemple après un changement de matériel. Un poste trop lent n'est pas proposé.
+4. Une fois le poste mesuré, cochez **Utiliser ce poste pour la transcription, à la place du serveur**.
+
+Pendant une écoute, si le poste prend plus de 2 s de retard, Syntheo espace la reconnaissance des intervenants, puis la coupe, et la rétablit quand le retard redescend : la transcription continue. Après un tel changement, les intervenants peuvent recevoir de nouvelles étiquettes.
+
+La transcription sur le poste ne sert qu'à la transcription en direct d'une écoute : la dictée et la transcription d'un fichier importé passent toujours par le serveur configuré.
+
+L'audio d'une écoute « Sur ce poste » ne part jamais au serveur, même pour réparer un passage coupé ou après un redémarrage. Si les modèles manquent ou sont refusés, la transcription en direct se met en pause et le dit, avec l'installation des modèles ou **Revenir au serveur** ; un passage manqué reste marqué dans la note.
+
+**Retirer les modèles** les supprime.
+
+Votre organisation peut interdire la transcription sur le poste (réglage géré `on_device_transcription_enabled`) ou imposer un miroir des modèles (`speech_models_urls`), voir [Sécurité](/fr/security) : dans le premier cas, la carte n'apparaît pas, et si la source était choisie, elle est décochée avec un message ; la transcription passe par le serveur. L'accueil propose de vérifier le poste d'un clic (environ 5 s).
 
 ### Transcription en direct ou fichier seul
 

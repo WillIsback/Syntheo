@@ -5,9 +5,6 @@ const mocks = vi.hoisted(() => ({
   hide: vi.fn(),
   update: vi.fn(),
   updateAmplitude: vi.fn(),
-  liveCaptionShow: vi.fn(),
-  liveCaptionHide: vi.fn(),
-  liveCaptionUpdate: vi.fn(),
   windowShow: vi.fn(),
   windowHide: vi.fn(),
 }));
@@ -28,9 +25,6 @@ vi.mock("@syntheo/plugin-windows", () => ({
     floatingBarHide: mocks.hide,
     floatingBarUpdate: mocks.update,
     floatingBarUpdateAmplitude: mocks.updateAmplitude,
-    liveCaptionShow: mocks.liveCaptionShow,
-    liveCaptionHide: mocks.liveCaptionHide,
-    liveCaptionUpdate: mocks.liveCaptionUpdate,
   },
 }));
 
@@ -86,9 +80,6 @@ describe("floating meeting window synchronizer", () => {
     mocks.hide.mockResolvedValue({ status: "ok", data: null });
     mocks.update.mockResolvedValue({ status: "ok", data: null });
     mocks.updateAmplitude.mockResolvedValue({ status: "ok", data: null });
-    mocks.liveCaptionShow.mockResolvedValue({ status: "ok", data: null });
-    mocks.liveCaptionHide.mockResolvedValue({ status: "ok", data: null });
-    mocks.liveCaptionUpdate.mockResolvedValue({ status: "ok", data: null });
     mocks.windowShow.mockResolvedValue(undefined);
     mocks.windowHide.mockResolvedValue(undefined);
   });

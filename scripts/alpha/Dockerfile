@@ -30,7 +30,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 # Les scripts du dépôt passent par sudo, comme sur les runners GitHub.
 RUN apt-get update -qq \
-    && apt-get install -y -qq --no-install-recommends sudo ca-certificates curl git xz-utils jq \
+    && apt-get install -y -qq --no-install-recommends sudo ca-certificates curl git xz-utils jq python3 \
     && rm -rf /var/lib/apt/lists/*
 
 COPY scripts/bash-guard.sh scripts/setup-linux-tauri.sh scripts/setup-linux-others.sh /tmp/setup/

@@ -114,19 +114,11 @@ impl CreateTranscriptionOptions {
         }
     }
 
-    pub fn whisper() -> Self {
-        Self::Whisper(CreateWhisperTranscriptionOptions::default())
-    }
-
     pub fn gpt(model: GptTranscriptionModel) -> Self {
         Self::Gpt(CreateGptTranscriptionOptions {
             model,
             ..Default::default()
         })
-    }
-
-    pub fn diarize() -> Self {
-        Self::Diarize(CreateDiarizedTranscriptionOptions::default())
     }
 
     pub fn model(&self) -> AudioModel {
@@ -256,14 +248,10 @@ fn append_common_fields(
     fields: &mut Vec<MultipartTextField>,
     common: &CommonTranscriptionOptions,
 ) -> Result<(), serde_json::Error> {
-    if let Some(chunking_strategy) = &common.chunking_strategy {
-        let value = match chunking_strategy {
-            ChunkingStrategy::Auto(_) => "auto".to_string(),
-            strategy => serde_json::to_string(strategy)?,
-        };
+    if let Some(ChunkingStrategy::Auto(_)) = &common.chunking_strategy {
         fields.push(MultipartTextField {
             name: "chunking_strategy",
-            value,
+            value: "auto".to_string(),
         });
     }
 
@@ -316,7 +304,6 @@ fn append_common_fields(
 #[serde(untagged)]
 pub enum ChunkingStrategy {
     Auto(AutoChunkingStrategy),
-    ServerVad(ServerVadConfig),
 }
 
 impl ChunkingStrategy {
@@ -329,27 +316,6 @@ impl ChunkingStrategy {
 pub enum AutoChunkingStrategy {
     #[serde(rename = "auto")]
     Auto,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct ServerVadConfig {
-    #[serde(rename = "type")]
-    pub kind: ServerVadType,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub prefix_padding_ms: Option<u32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub silence_duration_ms: Option<u32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub threshold: Option<f32>,
-}
-
-#[derive(
-    Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash, EnumString, Display, AsRefStr,
-)]
-pub enum ServerVadType {
-    #[serde(rename = "server_vad")]
-    #[strum(serialize = "server_vad")]
-    ServerVad,
 }
 
 #[derive(

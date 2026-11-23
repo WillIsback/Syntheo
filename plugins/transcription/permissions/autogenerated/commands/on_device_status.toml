@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-on-device-status"
+description = "Enables the on_device_status command without any pre-configured scope."
+commands.allow = ["on_device_status"]
+
+[[permission]]
+identifier = "deny-on-device-status"
+description = "Denies the on_device_status command without any pre-configured scope."
+commands.deny = ["on_device_status"]

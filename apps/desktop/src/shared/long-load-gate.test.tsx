@@ -10,14 +10,41 @@ vi.mock("@syntheo/plugin-db", () => ({
   waitUntilReady,
 }));
 
+// Vraie traduction (catalogues compilés) pour l'écran d'erreur.
+vi.unmock("@lingui/react");
+vi.unmock("@lingui/react/macro");
+
 vi.mock("@tauri-apps/plugin-process", () => ({
   relaunch: vi.fn(),
+}));
+
+const systemLanguages = vi.hoisted(() => ({ value: ["en-US"] }));
+const catalogFails = vi.hoisted(() => ({ value: false }));
+vi.mock("~/i18n/catalogs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/i18n/catalogs")>();
+  return {
+    ...actual,
+    createI18n: (locale: Parameters<typeof actual.createI18n>[0]) =>
+      catalogFails.value
+        ? Promise.reject(new Error("catalogue illisible"))
+        : actual.createI18n(locale),
+  };
+});
+vi.mock("@syntheo/plugin-detect", () => ({
+  commands: {
+    getPreferredLanguages: async () => ({
+      status: "ok",
+      data: systemLanguages.value,
+    }),
+  },
 }));
 
 import { LONG_LOAD_SPLASH_DELAY_MS, LongLoadGate } from "./long-load-gate";
 
 describe("LongLoadGate", () => {
   beforeEach(() => {
+    systemLanguages.value = ["en-US"];
+    catalogFails.value = false;
     getStartupStatus.mockReset();
     getStartupStatus.mockResolvedValue({
       phase: "preparing_database",
@@ -69,8 +96,8 @@ describe("LongLoadGate", () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(LONG_LOAD_SPLASH_DELAY_MS);
     });
-
-    expect(screen.getByRole("status", { name: "Loading" })).toBeTruthy();
+    // Le catalogue de démarrage se charge ensuite (import dynamique).
+    await advanceUntil(() => screen.getByRole("status", { name: "Loading" }));
     expect(
       screen.getByText(
         "Migrating your local database (2 of 5). This may take a few minutes.",
@@ -94,13 +121,59 @@ describe("LongLoadGate", () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(LONG_LOAD_SPLASH_DELAY_MS);
     });
+    await advanceUntil(() =>
+      screen.getByText(
+        "Checking your local database. This is taking longer than expected.",
+      ),
+    );
+    expect(screen.queryByText(/Migrating your local database/)).toBeNull();
+  });
 
+  // Revue de 0.8.0-3 (constat 15) : l'écran d'attente, monté avant le
+  // réglage de langue, suit la langue du système, lecteur d'écran compris.
+  it("shows the waiting screen in the system language", async () => {
+    systemLanguages.value = ["fr-FR"];
+    waitUntilReady.mockReturnValue(new Promise<void>(() => {}));
+    getStartupStatus.mockResolvedValue({
+      phase: "migrating_database",
+      migrationCurrent: 3,
+      migrationTotal: 7,
+    });
+    const bootSplash = document.createElement("div");
+    bootSplash.id = "boot-splash";
+    document.body.append(bootSplash);
+    vi.useFakeTimers();
+
+    renderLongLoadGate();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(LONG_LOAD_SPLASH_DELAY_MS);
+    });
+    const status = await advanceUntil(() =>
+      screen.getByRole("status", { name: "Chargement" }),
+    );
+    expect(status.textContent).toMatch(/3 sur 7/);
+    expect(document.body.textContent).not.toMatch(/Migrating|Loading/);
+    expect(document.getElementById("boot-splash")).toBeNull();
+  });
+
+  it("keeps English on the waiting screen when the catalog cannot load", async () => {
+    systemLanguages.value = ["fr-FR"];
+    catalogFails.value = true;
+    waitUntilReady.mockReturnValue(new Promise<void>(() => {}));
+    vi.useFakeTimers();
+
+    renderLongLoadGate();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(LONG_LOAD_SPLASH_DELAY_MS);
+    });
+    await advanceUntil(() => screen.getByRole("status", { name: "Loading" }));
     expect(
       screen.getByText(
         "Checking your local database. This is taking longer than expected.",
       ),
     ).toBeTruthy();
-    expect(screen.queryByText(/Migrating your local database/)).toBeNull();
   });
 
   it("shows an update prompt when startup reports a newer schema", async () => {
@@ -118,7 +191,74 @@ describe("LongLoadGate", () => {
     expect(screen.queryByText("app")).toBeNull();
     expect(screen.queryByRole("button", { name: "Restart App" })).toBeNull();
   });
+
+  // QA de 0.8.0-2 : réglages gérés invalides. Message traduit dans la
+  // langue du système, qui nomme le fichier sans en montrer le contenu.
+  it("names an invalid managed settings file in the system language", async () => {
+    systemLanguages.value = ["fr-FR"];
+    waitUntilReady.mockRejectedValue(
+      new Error(
+        "encountered unexpected or invalid data: invalid managed settings file",
+      ),
+    );
+
+    renderLongLoadGate();
+
+    await waitFor(() => {
+      expect(screen.getByText("Syntheo n'a pas pu démarrer")).toBeTruthy();
+    });
+    const text = document.body.textContent ?? "";
+    expect(text).toMatch(/managed_settings\.json/);
+    expect(text).toMatch(/administrateur/);
+    expect(text).not.toMatch(/invalid data/);
+    expect(
+      screen.getByRole("button", { name: "Redémarrer l'application" }),
+    ).toBeTruthy();
+  });
+
+  // Vérification de f84794c4 : catalogue illisible, textes anglais et non
+  // une fenêtre blanche.
+  it("falls back to English when the catalog cannot load", async () => {
+    systemLanguages.value = ["fr-FR"];
+    catalogFails.value = true;
+    waitUntilReady.mockRejectedValue(
+      new Error(
+        "encountered unexpected or invalid data: invalid managed settings file",
+      ),
+    );
+
+    renderLongLoadGate();
+
+    await waitFor(() => {
+      expect(screen.getByText("Syntheo could not start")).toBeTruthy();
+    });
+    expect(document.body.textContent).toMatch(/managed_settings\.json/);
+    expect(screen.getByRole("button", { name: "Restart App" })).toBeTruthy();
+  });
+
+  it("keeps the generic message in English for other startup errors", async () => {
+    waitUntilReady.mockRejectedValue(new Error("disk I/O error"));
+
+    renderLongLoadGate();
+
+    await waitFor(() => {
+      expect(screen.getByText("Syntheo could not start")).toBeTruthy();
+    });
+    expect(document.body.textContent).not.toMatch(/managed_settings/);
+  });
 });
+
+// Sous horloge factice, React Query planifie ses notifications par
+// setTimeout : on avance le temps jusqu'à ce que le catalogue de démarrage
+// (import dynamique) soit chargé et l'écran affiché.
+async function advanceUntil<T>(find: () => T): Promise<T> {
+  return vi.waitFor(async () => {
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(20);
+    });
+    return find();
+  });
+}
 
 function renderLongLoadGate() {
   const queryClient = new QueryClient({
@@ -138,3 +278,20 @@ function renderLongLoadGate() {
     </QueryClientProvider>,
   );
 }
+
+// Build de production : la macro Lingui ne garde que l'identifiant du
+// message. Le repli doit donc porter le catalogue anglais, sinon il
+// afficherait l'identifiant au lieu du texte.
+describe("fallbackI18n", () => {
+  it("translates id-only messages in English", async () => {
+    const { fallbackI18n } = await import("./long-load-gate");
+    const { messages } = await import("~/i18n/locales/en/messages");
+    const text =
+      "Checking your local database. This is taking longer than expected.";
+    const id = Object.entries(messages).find(
+      ([, value]) => Array.isArray(value) && value.join("") === text,
+    )?.[0];
+    expect(id).toBeTruthy();
+    expect(fallbackI18n()._({ id: id! })).toBe(text);
+  });
+});

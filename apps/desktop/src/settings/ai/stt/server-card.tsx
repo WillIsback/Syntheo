@@ -26,6 +26,7 @@ import {
   STT_SERVER_PROTOCOLS,
   useServerConnection,
 } from "~/settings/ai/shared/server-connection";
+import { useManagedSettingIds } from "~/settings/managed";
 import { setAiProvider } from "~/settings/providers";
 import { useSetSettingValues } from "~/settings/queries";
 import { useConfigValues } from "~/shared/config";
@@ -48,6 +49,21 @@ export function SttServerCard() {
   ] as const);
   const setSelection = useSetSettingValues();
   const lastModels = useRef<Record<string, string>>({});
+  // Réglages imposés par l'administration (managed_settings.json). Les
+  // déclencheurs de managed_app_settings refusent toute autre valeur, et
+  // avec elle la transaction entière : chaque champ ne se verrouille que si
+  // sa propre clé est gérée, et aucune écriture ne vise une clé gérée
+  // (issue 710). La clé API reste saisissable dans tous les cas.
+  const managedIds = useManagedSettingIds();
+  const addressManaged = managedIds.has(`ai_provider:stt:${providerId}`);
+  const providerManaged = managedIds.has("current_stt_provider");
+  const modelManaged = managedIds.has("current_stt_model");
+  const anyManaged = addressManaged || providerManaged || modelManaged;
+  // Fournisseur et modèle à écrire, sans les clés gérées.
+  const selection = (provider: string, model: string) => ({
+    ...(providerManaged ? {} : { current_stt_provider: provider }),
+    ...(modelManaged ? {} : { current_stt_model: model }),
+  });
 
   const model =
     current_stt_provider === providerId &&
@@ -93,28 +109,42 @@ export function SttServerCard() {
   const persistedModel = staleNvidiaModel
     ? announced[0]
     : model || fallbackModel || "";
-  const persistDefault =
-    !!baseUrl &&
+  // Le fournisseur s'écrit avec le modèle, ou seul s'il change ; jamais une
+  // clé gérée.
+  const modelToPersist =
     (current_stt_provider !== providerId ||
       (!model && !!fallbackModel) ||
-      staleNvidiaModel);
+      staleNvidiaModel) &&
+    !modelManaged;
+  const providerToPersist =
+    !providerManaged && (current_stt_provider !== providerId || modelToPersist);
+  const persistDefault = !!baseUrl && (providerToPersist || modelToPersist);
 
   const chooseProtocol = (next: Protocol) => {
-    if (next === providerId) return;
+    if (providerManaged || next === providerId) return;
     // Revenir au protocole précédent retrouve le modèle qu'il utilisait.
     if (model) lastModels.current[providerId] = model;
-    setSelection({
-      current_stt_provider: next,
-      current_stt_model:
+    setSelection(
+      selection(
+        next,
         lastModels.current[next] ?? getDefaultSttModel(next) ?? "",
-    });
+      ),
+    );
   };
 
   const detected: ServerProtocol | null =
     state.status === "connected" ? state.protocol : null;
   const detectedLabel = detected ? protocols[detected].label : "";
+  // Adopter le protocole détecté recopie l'adresse sur l'autre fournisseur :
+  // impossible si le protocole ou l'adresse de cet autre fournisseur est
+  // imposé.
+  const canAdoptDetected =
+    !!detected &&
+    detected !== providerId &&
+    !providerManaged &&
+    !managedIds.has(`ai_provider:stt:${detected}`);
   const adoptDetected = async () => {
-    if (!detected || detected === providerId) return;
+    if (!canAdoptDetected || !detected) return;
     await setAiProvider("stt", detected, {
       base_url: baseUrl,
       api_key: connection.apiKey,
@@ -130,12 +160,23 @@ export function SttServerCard() {
       title={<Trans>My server</Trans>}
       status={<ServerStatusChip state={state} />}
     >
+      {/* En tête de carte (issue 710) : sous l'adresse, la mention tombait
+          juste après la clé d'API quand « Avancé » est ouvert, comme si la
+          clé était imposée ; elle reste saisissable. */}
+      {anyManaged ? (
+        <p
+          data-testid="stt-server-managed"
+          className="text-muted-foreground -mt-1.5 text-[13px]"
+        >
+          <Trans>Set by your administrator.</Trans>
+        </p>
+      ) : null}
       {persistDefault ? (
         <PersistAiSelection
-          key={`stt:${providerId}:${persistedModel}`}
+          key={`stt:${providerId}:${persistedModel}:${String(providerToPersist)}:${String(modelToPersist)}`}
           type="stt"
-          provider={providerId}
-          model={persistedModel}
+          provider={providerToPersist ? providerId : undefined}
+          model={modelToPersist ? persistedModel : undefined}
         />
       ) : null}
       {state.status === "failed" ? (
@@ -158,6 +199,8 @@ export function SttServerCard() {
           testing={state.status === "testing"}
           onTest={connection.test}
           isCurrentProvider={current_stt_provider === providerId}
+          managed={addressManaged}
+          selectionManaged={modelManaged}
         />
       </div>
       <div data-setting-id="stt-protocol" className="flex flex-col gap-2">
@@ -186,13 +229,17 @@ export function SttServerCard() {
                 type="button"
                 role="radio"
                 aria-checked={checked}
+                disabled={providerManaged}
                 title={protocols[id].hint}
                 onClick={() => chooseProtocol(id)}
                 className={cn([
                   "focus-visible:ring-ring rounded-md border px-2.5 py-0.5 text-[13px] transition-colors focus-visible:ring-2 focus-visible:outline-hidden",
                   checked
                     ? "border-primary bg-accent text-accent-foreground font-medium"
-                    : "border-border text-muted-foreground hover:bg-muted",
+                    : "border-border text-muted-foreground",
+                  !checked && !providerManaged && "hover:bg-muted",
+                  providerManaged && "cursor-not-allowed",
+                  providerManaged && !checked && "opacity-60",
                 ])}
               >
                 {protocols[id].label}
@@ -213,7 +260,7 @@ export function SttServerCard() {
             </Trans>
           </p>
         ) : null}
-        {detected && detected !== providerId ? (
+        {canAdoptDetected ? (
           <p className="text-muted-foreground text-[13px]">
             {t`This server answers as ${detectedLabel}.`}{" "}
             <button
@@ -233,12 +280,10 @@ export function SttServerCard() {
             label={t`Model`}
             models={models}
             value={model}
-            onChange={(next) =>
-              setSelection({
-                current_stt_provider: providerId,
-                current_stt_model: next,
-              })
-            }
+            disabled={modelManaged}
+            onChange={(next) => {
+              if (!modelManaged) setSelection(selection(providerId, next));
+            }}
             footer={
               providerId === "nvidia"
                 ? t`The server transcribes with the model it loaded, whatever the model chosen here.`
@@ -280,7 +325,6 @@ export function SttServerCard() {
             void openerCommands
               .openUrl(
                 documentationUrl(i18n.locale, "local-transcription-service"),
-                null,
               )
               .catch((error) =>
                 console.error(

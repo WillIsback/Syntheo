@@ -10,7 +10,6 @@ mod folder_materials;
 mod move_contents;
 mod participants;
 mod proposals;
-mod transaction_utils;
 
 #[cfg(test)]
 mod attachment_folder_tests;
@@ -44,7 +43,6 @@ fn make_specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
             commands::rename_folder_catalog::<Wry>,
             commands::delete_folder_catalog::<Wry>,
             commands::update_folder_instructions::<Wry>,
-            commands::update_folder_workspace::<Wry>,
             commands::update_folder_icon::<Wry>,
         ])
         .error_handling(tauri_specta::ErrorHandlingMode::Result)
@@ -64,18 +62,9 @@ mod test {
 
     #[test]
     fn export_types() {
-        const OUTPUT_FILE: &str = "./js/bindings.gen.ts";
-
-        make_specta_builder::<tauri::Wry>()
-            .disable_serde_phases()
-            .semantic_types(
-                specta_typescript::semantic::Configuration::empty().enable_lossless_floats(),
-            )
-            .dangerously_cast_bigints_to_number()
-            .export(specta_typescript::Typescript::default(), OUTPUT_FILE)
-            .unwrap();
-
-        let content = std::fs::read_to_string(OUTPUT_FILE).unwrap();
-        std::fs::write(OUTPUT_FILE, format!("// @ts-nocheck\n{content}")).unwrap();
+        syntheo_specta_export::write_bindings(
+            make_specta_builder::<tauri::Wry>(),
+            "./js/bindings.gen.ts",
+        );
     }
 }

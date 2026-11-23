@@ -685,6 +685,46 @@ expression: canonicalize_json(contract)
         }
       ],
       "synopsis": "syntheo mcp [-h]"
+    },
+    {
+      "about": "Measure how much of a generated summary was reworked before sending (local calibration; prints numbers only, never text)",
+      "name": "syntheo mesure",
+      "options": [
+        {
+          "flags": "--generated",
+          "help": "Generated summary (.md, .txt, .html or .docx)",
+          "is_flag": false,
+          "required": true,
+          "value_name": "FILE"
+        },
+        {
+          "flags": "--sent",
+          "help": "Version actually sent or published (.md, .txt, .html or .docx)",
+          "is_flag": false,
+          "required": true,
+          "value_name": "FILE"
+        },
+        {
+          "flags": "--dictionary",
+          "help": "Dictionary terms, one per line",
+          "is_flag": false,
+          "required": false,
+          "value_name": "FILE"
+        },
+        {
+          "flags": "--differences",
+          "help": "Print each difference with text excerpts (TSV, standard output only) for manual calibration; never with --json",
+          "is_flag": true,
+          "required": false
+        },
+        {
+          "flags": "-h, --help",
+          "help": "Print help",
+          "is_flag": false,
+          "required": false
+        }
+      ],
+      "synopsis": "syntheo mesure <--generated> <--sent> [--dictionary] [--differences] [-h]"
     }
   ],
   "synopsis": "syntheo [--base] [--db-path] [--json] [-h] [-V] <command>"

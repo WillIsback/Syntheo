@@ -3,8 +3,7 @@ import { useCallback } from "react";
 
 import { toast } from "@syntheo/ui/components/ui/toast";
 
-import { useAITaskTask } from "~/ai/hooks";
-import { useLanguageModel } from "~/ai/hooks";
+import { useAITaskTask, useLanguageModel } from "~/ai/hooks";
 import {
   isMainAITaskHostWindow,
   requestMainAITaskCancel,
@@ -17,6 +16,7 @@ import {
 } from "~/services/enhancer/eligibility";
 import { loadSessionContentSnapshot } from "~/session/content-queries";
 import { useEnhancedNote } from "~/session/queries";
+import { useIntelligenceDisabled } from "~/settings/managed";
 import { createTaskId } from "~/store/zustand/ai-task/task-configs";
 
 export function useEnhancedNoteActions({
@@ -35,10 +35,14 @@ export function useEnhancedNoteActions({
   const noteTemplateId = note?.templateId || undefined;
 
   const enhanceTask = useAITaskTask(taskId, "enhance");
+  // Synthèse coupée (intelligence_disabled, politique en vigueur ou copie
+  // restée dans app_settings) : les points d'entrée « Régénérer » sont
+  // retirés, et un appel resté en vol ne part pas (issue 707).
+  const summaryOff = useIntelligenceDisabled().blocked;
 
   const onRegenerate = useCallback(
     async (templateId: string | null) => {
-      if (!enhancedNoteId) {
+      if (!enhancedNoteId || summaryOff) {
         return;
       }
 
@@ -88,7 +92,15 @@ export function useEnhancedNoteActions({
         },
       });
     },
-    [enhancedNoteId, model, enhanceTask.start, sessionId, noteTemplateId, note],
+    [
+      enhancedNoteId,
+      summaryOff,
+      model,
+      enhanceTask.start,
+      sessionId,
+      noteTemplateId,
+      note,
+    ],
   );
 
   const onCancel = useCallback(() => {
@@ -108,6 +120,7 @@ export function useEnhancedNoteActions({
     isGenerating: enhanceTask.isGenerating,
     isError: enhanceTask.isError,
     error: enhanceTask.error,
+    summaryOff,
     onRegenerate,
     onCancel,
   };

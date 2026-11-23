@@ -1,0 +1,512 @@
+# Workflow : publish-speech-models
+# Publication des modèles de syntheo-speech (issue 683), depuis le brouillon
+# de release créé en local par apps/speech/models/publish-local.sh (la
+# quantification ne tient pas sur un runner gratuit).
+#
+# Déclenchement manuel depuis main seulement. Trois jobs, sur le modèle de
+# release.yml (compilation sans privilège, publication à part) :
+#
+# fetch-draft, sans environnement ni secret, sans id-token ni attestation, et
+# sans compilation : contents: write seulement parce que l'API ne liste un
+# brouillon de release qu'à un jeton qui peut écrire. Il télécharge les assets
+# du brouillon (de la prerelease en reprise), les contrôle contre
+# apps/speech/models/models.json (taille et SHA-256), seule référence, et les
+# transmet en artefact (rétention 1 jour).
+#
+# cpu-check, après fetch-draft, en contents: read, sans environnement ni
+# secret : il reprend l'artefact, le recontrôle contre models.json, puis lance
+# le garde-fou bloquant sous un CPU sans VNNI : les fichiers doivent rendre des
+# mots sous qemu Skylake-Client (apps/speech/models/cpu-check ; qemu 8.2.2
+# compilé dans le job depuis l'archive officielle, empreinte épinglée, voir
+# build-qemu.sh). Seul job qui compile du code (crates d'apps/speech, ONNX
+# Runtime, qemu) : registre Cargo et compilation partent de zéro, sans
+# rust-cache ni sccache. Matrice `audio`
+# (mic, sys) : un fichier de mise en service par job, mêmes seuils, comme dans
+# ci-code-quality (sous TCG, un fichier demande environ 10 min sur un runner
+# rapide et près de trois fois plus sur un runner lent). Les deux premiers
+# jobs tournent aussi avec publish=false et en reprise.
+#
+# publish, après cpu-check (needs : les deux jobs de la matrice réussis), dans l'environnement `speech-models`
+# (validation requise ; secrets HF_TOKEN et SPEECH_MODELS_RELEASE_TOKEN, jeton
+# GitHub à grain fin limité à ce dépôt, droits Contents et Workflows en
+# écriture : GITHUB_TOKEN ne peut pas créer un tag sur un commit qui modifie
+# des workflows). Il ne compile ni n'exécute rien d'autre que Python
+# (bibliothèque standard, puis hf_upload.py par uv après l'attestation) et gh.
+# Étapes :
+#   1. la release <version> doit exister, être un brouillon et être la seule
+#      à porter ce tag ; un tag déjà présent n'est admis que sur ce commit
+#      (relance après un échec entre la création du tag et la publication) ;
+#      (resume=true : reprise après un échec côté Hugging Face ; la release
+#      doit alors être une prerelease publiée, non « latest », avec son tag
+#      sur un commit de main et l'attestation de ses assets ; les étapes 3 et
+#      4 sont sautées.)
+#   2. nouveau téléchargement des assets et contrôle bloquant contre
+#      models.json ;
+#   (publish=false : arrêt ici, rien n'est publié.)
+#   3. dernier contrôle contre models.json avec les scripts relus depuis le
+#      commit, puis attestation de provenance des fichiers vérifiés ;
+#   4. création du tag sur le commit vérifié (jeton dédié), puis passage du
+#      brouillon en prerelease, jamais « latest » (le système de mise à jour
+#      de l'application ne doit pas la prendre pour une version) ;
+#   5. envoi vers Hugging Face (fichiers, fiche du modèle, accord OpenMDW et
+#      avis NVIDIA), jeton par variable d'environnement seulement ; si le
+#      dépôt contient déjà ces fichiers à l'identique (même SHA-256), rien
+#      n'est envoyé et la révision existante est reprise ;
+#   6. second contrôle : retéléchargement depuis les deux hôtes ;
+#   7. révision Hugging Face et sources à épingler dans models.json, dans le
+#      résumé du job.
+name: publish-speech-models
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release des modèles (speech-models-N), créée en brouillon par publish-local.sh"
+        type: string
+        required: true
+      publish:
+        description: "Publier (sinon : contrôles seulement, jusqu'aux empreintes)"
+        type: boolean
+        required: false
+        default: true
+      resume:
+        description: "Reprendre après un échec côté Hugging Face (release déjà en prerelease)"
+        type: boolean
+        required: false
+        default: false
+
+concurrency:
+  group: publish-speech-models
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  # Téléchargement du brouillon, sans aucune compilation : seul job qui
+  # porte un jeton d'écriture avant le garde-fou.
+  fetch-draft:
+    name: Assets de la release (${{ inputs.version }})
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    # Ni environnement, ni secret, ni id-token, ni attestation. contents:
+    # write seulement parce que l'API ne liste un brouillon de release qu'à un
+    # jeton qui a le droit d'écrire (contents: read ne voit que les releases
+    # publiées). Aucun code tiers n'est compilé ni exécuté ici (gh, bash et
+    # Python de la bibliothèque standard).
+    permissions:
+      contents: write # lecture du brouillon de release (voir ci-dessus)
+    env:
+      VERSION: ${{ inputs.version }}
+      STATE: ${{ inputs.resume && 'prerelease' || 'draft' }}
+    steps:
+      - name: Contrôler la référence et la version
+        shell: bash
+        env:
+          REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          [ "$REF" = "refs/heads/main" ] || { echo "::error::depuis main seulement ($REF)"; exit 1; }
+          [[ "$VERSION" =~ ^speech-models-[0-9]+$ ]] || { echo "::error::version invalide : $VERSION"; exit 1; }
+
+      - name: Checkout du code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Télécharger les assets de la release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          mkdir -p assets
+          bash apps/speech/models/download-draft.sh "$REPO" "$VERSION" assets "$STATE"
+          ls -l assets
+
+      - name: Contrôle bloquant contre models.json
+        run: python3 -I apps/speech/models/verify.py assets --flat
+
+      # Modèles déjà compressés : pas de compression de l'artefact.
+      - name: Transmettre les assets au garde-fou
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: speech-models-assets
+          path: assets/
+          retention-days: 1
+          compression-level: 0
+          if-no-files-found: error
+
+  # Garde-fou, avant l'attestation, le tag et tout envoi : des poids int8 sur
+  # toute la plage saturaient le noyau AVX2 d'ONNX Runtime sans VNNI (0 mot sur
+  # ces CPU, modèles de la 0.8.0-3). Même ONNX Runtime que le module livré
+  # (archive épinglée, check_ort.py avant et après). Il compile et exécute du
+  # code tiers avec un jeton en lecture seule, sans environnement ni secret.
+  cpu-check:
+    name: Garde-fou sous un CPU sans VNNI (${{ inputs.version }}, ${{ matrix.audio }})
+    needs: fetch-draft
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        audio: [mic, sys]
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Reprendre les assets de la release
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: speech-models-assets
+          path: assets
+
+      - name: Contrôle bloquant contre models.json
+        run: python3 -I apps/speech/models/verify.py assets --flat
+
+      # Sans rust-cache ni sccache : registre et compilation partent de zéro.
+      - name: Toolchain Rust
+        uses: ./.github/actions/rust_install
+        with:
+          cache: "false"
+
+      - name: Construire cpu-check
+        working-directory: apps/speech
+        shell: bash
+        run: |
+          set -euo pipefail
+          export ORT_CACHE_DIR="$RUNNER_TEMP/ort-cache"
+          cargo fetch --locked
+          python3 -I supply-chain/check_ort.py before x86_64-unknown-linux-gnu
+          cargo build --release --locked --example cpu-check
+          python3 -I supply-chain/check_ort.py after x86_64-unknown-linux-gnu
+
+      # qemu 8.2.2 compilé depuis l'archive officielle pour x86-64-v3, au lieu
+      # de qemu-user-static d'Ubuntu (compilé pour x86-64 de base) : ses
+      # fonctions d'aide flottantes en SSE classique tournent avec la moitié
+      # haute des ymm non nulle (qemu n'exécute vzeroupper qu'en sortie de bloc
+      # TCG) et paient sur les Xeon récents de certains runners une pénalité de
+      # transition SSE/AVX (×236 mesuré) : plus de 50 min pour un fichier.
+      # build-qemu.sh vérifie l'empreinte SHA-256 épinglée de l'archive avant
+      # de l'extraire ; environ 1 min de construction, sans cache. DNS publics
+      # et miroir apt du runner écarté s'il est trop lent (v0.7.2, #604), comme
+      # install_desktop_deps ; un échec de la mesure du miroir ne doit pas
+      # arrêter le job.
+      - name: Construire qemu-user (8.2.2, x86-64-v3)
+        timeout-minutes: 15
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash scripts/ci/public-dns.sh
+          bash scripts/ci/apt-mirror.sh || echo "::warning::Mesure du miroir apt en échec : miroirs inchangés"
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends ninja-build python3-venv pkg-config libglib2.0-dev flex bison
+          bash apps/speech/models/cpu-check/build-qemu.sh "$RUNNER_TEMP/qemu-x86_64"
+
+      # Délai propre à l'étape : sur un runner lent, la relance après une
+      # erreur interne de qemu peut ne pas y tenir (échec, jamais acceptation).
+      - name: Garde-fou sous un CPU sans VNNI (qemu Skylake-Client, ${{ matrix.audio }})
+        shell: bash
+        timeout-minutes: 50
+        env:
+          CPU_CHECK_BIN: apps/speech/target/release/examples/cpu-check
+          FILES: ${{ matrix.audio }}
+          QEMU: ${{ runner.temp }}/qemu-x86_64
+          # Délai interne de run.sh (48 min), sous celui de l'étape : le relevé
+          # fil par fil de qemu sort avant la coupure.
+          DEADLINE: "2880"
+        run: |
+          set -euo pipefail
+          python3 -I apps/speech/models/flatten.py --tree assets "$RUNNER_TEMP/models"
+          python3 -I apps/speech/models/verify.py "$RUNNER_TEMP/models"
+          bash apps/speech/models/cpu-check/run.sh "$RUNNER_TEMP/models"
+
+  # needs: cpu-check attend les deux jobs de la matrice ; le `if` sans
+  # fonction de statut vaut success() && …, donc un seul échec ou une seule
+  # annulation suffit à sauter la publication.
+  publish:
+    name: Publication des modèles (${{ inputs.version }})
+    needs: cpu-check
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    environment: speech-models
+    permissions:
+      contents: write # brouillon visible et passage en prerelease
+      id-token: write # attestation de provenance
+      attestations: write # attestation de provenance
+    env:
+      VERSION: ${{ inputs.version }}
+      HF_REPO: WillisBack/syntheo-speech-models
+      RESUME: ${{ inputs.resume }}
+      STATE: ${{ inputs.resume && 'prerelease' || 'draft' }}
+    steps:
+      - name: Contrôler la référence et la version
+        shell: bash
+        env:
+          REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          [ "$REF" = "refs/heads/main" ] || { echo "::error::depuis main seulement ($REF)"; exit 1; }
+          [[ "$VERSION" =~ ^speech-models-[0-9]+$ ]] || { echo "::error::version invalide : $VERSION"; exit 1; }
+
+      - name: Checkout du code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Premier passage : la release doit être un brouillon unique. Un tag
+      # existant n'est admis que s'il pointe sur ce commit (échec entre la
+      # création du tag et le passage en prerelease) : il n'est pas recréé.
+      # Reprise : une seule release, prerelease publiée, non « latest », tag
+      # léger sur un commit de l'historique de main (l'attestation est
+      # contrôlée après le téléchargement des assets).
+      - name: Exiger l'état attendu de la release
+        id: state
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          # Release « latest », vide s'il n'y en a aucune (404) ; toute autre
+          # erreur arrête le job.
+          latest_tag() {
+            local out err
+            err=$(mktemp)
+            if out=$(gh api "repos/$REPO/releases/latest" --jq .tag_name 2> "$err"); then
+              printf '%s' "$out"
+            elif grep -q 'HTTP 404' "$err"; then
+              printf ''
+            else
+              cat "$err" >&2; exit 1
+            fi
+          }
+          releases=$(gh api --paginate "repos/$REPO/releases" --jq ".[] | select(.tag_name == \"$VERSION\") | [.draft, .prerelease] | @tsv")
+          count=$(printf '%s\n' "$releases" | grep -c . || true)
+          [ "$count" = "1" ] || { echo "::error::$count release(s) pour $VERSION, une seule attendue"; exit 1; }
+          # Tag : « commit <sha> » pour un tag léger (« tag <sha> » s'il est
+          # annoté), vide s'il n'existe pas. matching-refs répond 200 avec une
+          # liste vide quand le tag manque (git/ref rendrait un 404, dont gh
+          # écrit le corps sur stdout sans appliquer --jq) ; toute autre
+          # erreur arrête le job (set -e).
+          tag=$(gh api --paginate "repos/$REPO/git/matching-refs/tags/$VERSION" \
+            --jq ".[] | select(.ref == \"refs/tags/$VERSION\") | \"\(.object.type) \(.object.sha)\"")
+          if [ -n "$tag" ] && ! [[ "$tag" =~ ^(commit|tag)\ [0-9a-f]{40}$ ]]; then
+            echo "::error::référence du tag $VERSION inattendue"; exit 1
+          fi
+          if [ "$RESUME" = "true" ]; then
+            [ "$releases" = "$(printf 'false\ttrue')" ] || { echo "::error::reprise : $VERSION doit être une prerelease publiée"; exit 1; }
+            [ "${tag%% *}" = "commit" ] || { echo "::error::reprise : tag léger $VERSION absent"; exit 1; }
+            status=$(gh api "repos/$REPO/compare/${tag#* }...main" --jq .status)
+            case "$status" in
+              ahead | identical) ;;
+              *) echo "::error::reprise : le tag $VERSION ne pointe pas sur un commit de main ($status)"; exit 1 ;;
+            esac
+            latest=$(latest_tag)
+            [ "$latest" != "$VERSION" ] || { echo "::error::$VERSION est « latest »"; exit 1; }
+          else
+            [ "${releases%%$'\t'*}" = "true" ] || { echo "::error::la release $VERSION n'est plus un brouillon (reprise : resume=true)"; exit 1; }
+            if [ -n "$tag" ]; then
+              [ "$tag" = "commit $SHA" ] || { echo "::error::le tag $VERSION existe déjà sur un autre commit ($tag)"; exit 1; }
+              echo "::notice::tag $VERSION déjà présent sur ce commit : il n'est pas recréé"
+              echo "tag_exists=true" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
+      # Assets retéléchargés ici : ceux du job cpu-check ne sont pas repris.
+      - name: Télécharger les assets du brouillon
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          mkdir -p assets
+          bash apps/speech/models/download-draft.sh "$REPO" "$VERSION" assets "$STATE"
+          ls -l assets
+
+      - name: Contrôle bloquant contre models.json
+        run: python3 -I apps/speech/models/verify.py assets --flat
+
+      # Tests de hf_upload.py (comparaison avec Hugging Face, dossier
+      # incomplet refusé), avant l'attestation, le tag et tout envoi.
+      - name: Tests de l'envoi vers Hugging Face
+        run: python3 -I -m unittest discover -s apps/speech/models -p 'test_*.py'
+
+      # Reprise : les assets publiés doivent porter l'attestation de
+      # provenance de ce workflow, faite au premier passage.
+      - name: Exiger l'attestation des assets (reprise)
+        if: inputs.resume
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          for file in assets/*; do
+            gh attestation verify "$file" --repo "$REPO" \
+              --signer-workflow "$REPO/.github/workflows/publish-speech-models.yml" > /dev/null \
+              || { echo "::error::reprise : attestation absente pour ${file#assets/}"; exit 1; }
+          done
+
+      - name: Exiger le jeton de release
+        if: inputs.publish && !inputs.resume
+        shell: bash
+        env:
+          RELEASE_TOKEN: ${{ secrets.SPEECH_MODELS_RELEASE_TOKEN }}
+        run: |
+          [ -n "$RELEASE_TOKEN" ] || { echo "::error::secret SPEECH_MODELS_RELEASE_TOKEN absent de l'environnement speech-models"; exit 1; }
+
+      # Dernier contrôle juste avant l'attestation, avec verify.py et
+      # models.json relus depuis le commit vérifié (rien de ce qui précède
+      # ne doit avoir changé les fichiers attestés ni les scripts).
+      - name: Contrôle des assets avant l'attestation
+        if: inputs.publish && !inputs.resume
+        shell: bash
+        env:
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          git checkout "$SHA" -- apps/speech/models
+          python3 -I apps/speech/models/verify.py assets --flat
+
+      - name: Attestation de provenance
+        if: inputs.publish && !inputs.resume
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: "assets/*"
+
+      # Le tag est créé d'abord, sur le commit vérifié, avec le jeton dédié :
+      # publier un brouillon sans tag le ferait créer par GITHUB_TOKEN, refusé
+      # (403) si le commit modifie des workflows.
+      - name: Créer le tag, puis passer le brouillon en prerelease (jamais latest)
+        if: inputs.publish && !inputs.resume
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.SPEECH_MODELS_RELEASE_TOKEN }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+          TAG_EXISTS: ${{ steps.state.outputs.tag_exists }}
+        run: |
+          set -euo pipefail
+          # Release « latest », vide s'il n'y en a aucune (404).
+          latest_tag() {
+            local out err
+            err=$(mktemp)
+            if out=$(gh api "repos/$REPO/releases/latest" --jq .tag_name 2> "$err"); then
+              printf '%s' "$out"
+            elif grep -q 'HTTP 404' "$err"; then
+              printf ''
+            else
+              cat "$err" >&2; exit 1
+            fi
+          }
+          id=$(gh api --paginate "repos/$REPO/releases" --jq ".[] | select(.tag_name == \"$VERSION\" and .draft == true) | .id")
+          [ -n "$id" ] || { echo "::error::brouillon $VERSION introuvable"; exit 1; }
+          if [ "$TAG_EXISTS" != "true" ]; then
+            gh api -X POST "repos/$REPO/git/refs" -f ref="refs/tags/$VERSION" -f sha="$SHA" > /dev/null
+          fi
+          gh api -X PATCH "repos/$REPO/releases/$id" -f tag_name="$VERSION" -f target_commitish="$SHA" \
+            -F draft=false -F prerelease=true -f make_latest=false > /dev/null
+          state=$(gh api "repos/$REPO/releases/$id" --jq '[.draft, .prerelease] | @tsv')
+          [ "$state" = "$(printf 'false\ttrue')" ] || { echo "::error::état inattendu : $state"; exit 1; }
+          latest=$(latest_tag)
+          [ "$latest" != "$VERSION" ] || { echo "::error::$VERSION est devenue latest"; exit 1; }
+
+      - name: uv
+        if: inputs.publish
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.13.1"
+          enable-cache: false
+
+      - name: Préparer le dépôt Hugging Face
+        if: inputs.publish
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p hf/NOTICES
+          python3 -I apps/speech/models/flatten.py --tree assets hf
+          cp apps/speech/models/model-card.md hf/README.md
+          cp apps/speech/supply-chain/notices/models/LICENSE.OpenMDW-1.1 hf/
+          cp apps/speech/supply-chain/notices/models/*.md hf/NOTICES/
+          python3 -I apps/speech/models/verify.py hf
+          find hf -type f | sort
+
+      - name: Envoyer vers Hugging Face
+        if: inputs.publish
+        id: hf
+        shell: bash
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          # Interpréteur du runner (Python 3.12 d'Ubuntu 24.04), aucun
+          # téléchargement d'interpréteur pendant que le jeton est présent.
+          UV_PYTHON: /usr/bin/python3.12
+          UV_PYTHON_DOWNLOADS: never
+        run: |
+          set -euo pipefail
+          # Fichiers déjà identiques sur le dépôt : rien n'est envoyé, la
+          # révision existante est reprise (contrôle et résumé ci-dessous).
+          out=$(uv run --locked --script apps/speech/models/hf_upload.py hf "$HF_REPO" "Modèles de syntheo-speech ($VERSION)")
+          printf '%s\n' "$out" | head -n -1
+          revision=$(printf '%s\n' "$out" | tail -1)
+          [[ "$revision" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::révision Hugging Face inattendue"; exit 1; }
+          echo "revision=$revision" >> "$GITHUB_OUTPUT"
+          if printf '%s\n' "$out" | grep -q '^identique au dépôt'; then
+            echo "reused=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Second contrôle depuis les deux hôtes
+        if: inputs.publish
+        shell: bash
+        env:
+          REPO: ${{ github.repository }}
+          REVISION: ${{ steps.hf.outputs.revision }}
+        run: |
+          set -euo pipefail
+          mkdir -p check-github check-hf
+          names=$(python3 -I -c 'import json;print("\n".join(f["path"] for f in json.load(open("apps/speech/models/models.json"))["files"]))')
+          while IFS= read -r path; do
+            name=${path##*/}
+            curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 \
+              -o "check-github/$name" "https://github.com/$REPO/releases/download/$VERSION/$name"
+            mkdir -p "check-hf/$(dirname "$path")"
+            curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 \
+              -o "check-hf/$path" "https://huggingface.co/$HF_REPO/resolve/$REVISION/$path"
+          done <<< "$names"
+          python3 -I apps/speech/models/verify.py check-github --flat
+          python3 -I apps/speech/models/verify.py check-hf
+
+      - name: Résumé (sources à épingler)
+        if: inputs.publish
+        shell: bash
+        env:
+          REPO: ${{ github.repository }}
+          REVISION: ${{ steps.hf.outputs.revision }}
+          REUSED: ${{ steps.hf.outputs.reused }}
+        run: |
+          {
+            echo "## Modèles $VERSION publiés"
+            echo
+            if [ "$REUSED" = "true" ]; then
+              echo "Hugging Face contenait déjà ces fichiers à l'identique : aucun envoi, révision existante reprise."
+              echo
+            fi
+            echo "Révision Hugging Face : \`$REVISION\`"
+            echo
+            echo "Sources à épingler (\`sources\` de apps/speech/models/models.json, ou \`SYNTHEO_SPEECH_MODELS_URLS\`) :"
+            echo
+            echo '```'
+            echo "https://github.com/$REPO/releases/download/$VERSION/{name}"
+            echo "https://huggingface.co/$HF_REPO/resolve/$REVISION/{path}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

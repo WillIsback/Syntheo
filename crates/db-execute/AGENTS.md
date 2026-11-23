@@ -8,6 +8,7 @@ Reusable one-shot SQL execution over `db-core::Db`. Transport-agnostic and non-r
 
 - `DbExecutor`, `ProxyQueryMethod`, `ProxyQueryResult`.
 - SQL param binding from JSON values.
+- JSON-described transactions (`TransactionStatement`), with explicit rollback on error or cancellation; `plugins/db` delegates `execute_transaction` here.
 - Named-row and positional-row serialization.
 
 ## Does Not Own

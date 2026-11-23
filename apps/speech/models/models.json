@@ -1,0 +1,75 @@
+{
+  "schema": 1,
+  "about": "Modèles du moteur A de syntheo-speech (issue 683) : sources figées, quantification int8 reproductible (quantize.py), empreintes des fichiers livrés.",
+  "license": "OpenMDW-1.1",
+  "source": {
+    "repository": "https://huggingface.co/altunenes/parakeet-rs",
+    "revision": "26684938ff242cb4f7a65fad712476c6015a4477",
+    "origin": [
+      "https://huggingface.co/nvidia/nemotron-3.5-asr-streaming-0.6b",
+      "https://huggingface.co/nvidia/Nemotron-3-Diarization"
+    ]
+  },
+  "quantization": {
+    "tool": "onnxruntime.quantization.quantize_dynamic",
+    "onnxruntime": "1.32.0",
+    "onnx": "1.23.2",
+    "weight_type": "QInt8",
+    "reduce_range": true,
+    "op_types": ["MatMul", "Gemm"]
+  },
+  "sources": [
+    "https://github.com/WillIsback/Syntheo/releases/download/speech-models-1/{name}",
+    "https://huggingface.co/WillisBack/syntheo-speech-models/resolve/16e4ca54b924297bf6af2cbc5f9c9c2eca9a94bf/{path}"
+  ],
+  "files": [
+    {
+      "path": "nemotron/config.json",
+      "source": "nemotron-3.5-asr-streaming-0.6b-onnx/config.json",
+      "source_sha256": "d538922d70151e2a0bc1153d8e02cdf341d8d059d1e33ab4365cdb1a958c3fcc",
+      "transform": "copy",
+      "sha256": "d538922d70151e2a0bc1153d8e02cdf341d8d059d1e33ab4365cdb1a958c3fcc",
+      "size": 2995
+    },
+    {
+      "path": "nemotron/tokenizer.model",
+      "source": "nemotron-3.5-asr-streaming-0.6b-onnx/tokenizer.model",
+      "source_sha256": "ce3895e40806f02a26c3a225161b96ef682d6c0054bae32a245dec4258d7d291",
+      "transform": "copy",
+      "sha256": "ce3895e40806f02a26c3a225161b96ef682d6c0054bae32a245dec4258d7d291",
+      "size": 406554
+    },
+    {
+      "path": "nemotron/encoder.onnx",
+      "source": "nemotron-3.5-asr-streaming-0.6b-onnx/encoder.onnx",
+      "source_sha256": "487519292b5b12178442dabc9ad5803f859354680ec929140d4027dceb16a20d",
+      "source_data": "nemotron-3.5-asr-streaming-0.6b-onnx/encoder.onnx.data",
+      "source_data_sha256": "1cdddec47b0570170183716dff74df8ca827facb41b11302ebdd479616171988",
+      "transform": "int8-per-channel-external-data",
+      "sha256": "6de5db92a264bfe83d9e889a504c5fea4dfd0c004e0b4265a55511f1a3b29232",
+      "size": 5688611
+    },
+    {
+      "path": "nemotron/encoder.onnx.data",
+      "transform": "output-of:nemotron/encoder.onnx",
+      "sha256": "3e65a535f3ef69394c891c4deaed7b03acf21613d5c662422b0af94dfe577225",
+      "size": 883175424
+    },
+    {
+      "path": "nemotron/decoder_joint.onnx",
+      "source": "nemotron-3.5-asr-streaming-0.6b-onnx/decoder_joint.onnx",
+      "source_sha256": "a4258dfb3a4c5c15ef3ff7e52483bf9b4fcf721ae5a8d2dac777178e8fa39252",
+      "transform": "int8-per-channel",
+      "sha256": "29797c4b1340ea61d70cf17ac9876ead195ae838fdcbbcc98fd73a4e1510c39a",
+      "size": 69399105
+    },
+    {
+      "path": "diar/nemotron3_diar_v3.onnx",
+      "source": "nemotron-3-diarization/nemotron3_diar_v3.onnx",
+      "source_sha256": "c32d6056f1ca52bdd50a74e1e7c66d91e5147bc29f19ffa4c39cbe5452397d15",
+      "transform": "int8-per-tensor",
+      "sha256": "90b418344d01b56845f3a63bbf3f2a75b4a4dca41452fcffc97bac01ec26b8f2",
+      "size": 107437992
+    }
+  ]
+}

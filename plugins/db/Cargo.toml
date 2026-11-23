@@ -12,7 +12,6 @@ description = ""
 serde = { workspace = true }
 serde_json = { workspace = true }
 specta = { workspace = true, features = ["serde_json"] }
-specta-typescript = { workspace = true }
 sqlx = { workspace = true, features = ["runtime-tokio", "sqlite", "sqlite-unbundled", "macros"] }
 syntheo-agent-access = { workspace = true }
 syntheo-db-app = { workspace = true }
@@ -20,16 +19,15 @@ syntheo-db-core = { workspace = true }
 syntheo-db-execute = { workspace = true }
 syntheo-db-migrate = { workspace = true }
 syntheo-db-reactive = { workspace = true, features = ["specta"] }
-syntheo-session-ingest = { workspace = true }
 tauri = { workspace = true }
 tauri-specta = { workspace = true, features = ["derive", "typescript"] }
 thiserror = { workspace = true }
 tokio = { workspace = true, features = ["fs", "rt", "sync", "time"] }
-tracing = { workspace = true }
 
 [dev-dependencies]
 serde_json = { workspace = true }
 syntheo-db-core = { workspace = true, features = ["test-utils"] }
+syntheo-specta-export = { workspace = true }
 tokio = { workspace = true, features = ["macros", "rt", "sync", "time"] }
 
 [build-dependencies]

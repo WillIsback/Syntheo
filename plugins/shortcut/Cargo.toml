@@ -10,7 +10,7 @@ links = "tauri-plugin-shortcut"
 tauri-plugin = { workspace = true, features = ["build"] }
 
 [dev-dependencies]
-specta-typescript = { workspace = true }
+syntheo-specta-export = { workspace = true }
 
 [dependencies]
 serde = { workspace = true }

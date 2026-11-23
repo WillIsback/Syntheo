@@ -38,7 +38,6 @@
     "windows:allow-floating-bar-update",
     "windows:allow-floating-bar-update-amplitude",
     "windows:allow-floating-bar-current-state",
-    "windows:allow-live-caption-current-state",
     "tracing:default",
     "syntheo-tray:default",
 
@@ -47,7 +46,6 @@
     "store2:default",
     "process:default",
     "dialog:default",
-    "hooks:default",
     "icon:default",
     "transcription:default",
     "template:default",
@@ -63,6 +61,7 @@
     "fs-sync:default",
     "os:default",
     "os:allow-hostname",
+    "mesure:default",
     "opener2:default",
     "detect:default",
     "dock:default",

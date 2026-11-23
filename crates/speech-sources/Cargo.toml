@@ -1,0 +1,13 @@
+[package]
+name = "speech-sources"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+
+[features]
+# Essais seulement : source sans validation (serveur local http).
+test-unchecked = []
+
+[dependencies]
+serde_json = { workspace = true }
+url = { workspace = true }

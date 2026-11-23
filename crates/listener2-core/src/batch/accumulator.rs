@@ -212,7 +212,6 @@ fn append_non_overlapping_words(
 
 #[cfg(test)]
 mod test {
-    use owhisper_interface::batch_stream::BatchStreamEvent;
     use owhisper_interface::stream::{Alternatives, Channel, Metadata, ModelInfo, Word};
 
     use super::*;

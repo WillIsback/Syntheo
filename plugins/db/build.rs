@@ -6,7 +6,6 @@ const COMMANDS: &[&str] = &[
     "get_meeting_transcript",
     "get_recurring_meeting_history",
     "list_meetings",
-    "apply_session_ingest",
     "subscribe",
     "unsubscribe",
     "get_startup_status",

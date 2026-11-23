@@ -13,7 +13,7 @@ Browse a topic, then expand the question. If something does not work, see [Troub
   </Accordion>
 
   <Accordion title="Who does the transcription and the summaries?" id="qui-fait-l-inference">
-    Your own servers. Syntheo ships no model and uses no cloud AI service. In the settings, you enter the URL of a transcription server (STT) and the URL of a language model server (LLM), hosted on your computer or in your organization. See [Transcription and AI](/en/ai-setup).
+    Your own servers, or your computer. Syntheo uses no cloud AI service. In the settings, you enter the URL of a transcription server (STT) and the URL of a language model server (LLM), hosted on your computer or in your organization. For live transcription, the optional **On this computer** source runs the program shipped with Syntheo on your computer. Its models (about 1.1 GB) are not in the installer: you download them from Syntheo's sources (its GitHub release, then Hugging Face as a fallback) or from your organization's mirror, or you install them from a folder. See [Transcription and AI](/en/ai-setup) and [Transcribe on this computer](/en/on-device-transcription).
   </Accordion>
 
   <Accordion title="Which servers are compatible?" id="serveurs-compatibles">
@@ -42,7 +42,7 @@ Browse a topic, then expand the question. If something does not work, see [Troub
   </Accordion>
 
   <Accordion title="What happens if the transcription server goes down during a meeting?" id="coupure-stt">
-    Syntheo tries to reconnect. Since the audio is not kept, the part of the meeting spoken during the outage is missing from the transcript. A banner shows it with its times, for example "Transcription interrupted 14:32–14:35". See [Troubleshooting](/en/troubleshooting).
+    Syntheo tries to reconnect. Audio is not kept on disk: Syntheo only keeps the last seconds in memory (about fifteen at most) and replays them to the server when it reconnects, so a short outage leaves no gap. After a longer outage, the start of the passage is missing from the transcript. A banner shows it with its times, for example "Transcription interrupted 14:32–14:35.". See [Troubleshooting](/en/troubleshooting).
   </Accordion>
 
   <Accordion title="Where is my data stored?" id="stockage">

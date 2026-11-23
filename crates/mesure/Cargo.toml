@@ -1,0 +1,24 @@
+[package]
+name = "mesure"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "Reprise entre une synthèse générée et la version envoyée : calcul déterministe, sans IA, qui ne rend que des compteurs."
+
+[dependencies]
+flate2 = "1.1"
+hmac = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+sha2 = { workspace = true }
+similar = "2.7"
+thiserror = { workspace = true }
+unicode-normalization = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }
+
+[features]
+# Extraits des différences, pour le calibrage manuel : CLI
+# (`syntheo mesure --differences`) et plugin `mesure` (mode Calibrage, à
+# l'écran seulement). Aucun autre crate ne l'active (test de garde-fou).
+differences = []

@@ -30,7 +30,11 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@tauri-apps/plugin-http", () => ({ fetch: mocks.fetch }));
 
-vi.mock("@syntheo/provider-validation", () => ({
+vi.mock("@syntheo/provider-validation", async (importOriginal) => ({
+  // Règle d'adresse réelle pour chaque requête de providerFetch (issue 678).
+  validateProviderRequestUrl: (
+    await importOriginal<typeof import("@syntheo/provider-validation")>()
+  ).validateProviderRequestUrl,
   validateProviderBaseUrl: mocks.validateBaseUrl,
   verifyProviderCredentials: mocks.verify,
   usesDeferredProviderAuthentication: (type: string, provider: string) =>
@@ -145,7 +149,7 @@ describe("SQLite AI providers", () => {
         base_url: "http://8.8.8.8/v1",
         api_key: "",
       }),
-    ).rejects.toThrow("Utilisez HTTPS");
+    ).rejects.toMatchObject({ code: "https_required" });
     expect(mocks.executeTransaction).not.toHaveBeenCalled();
     unmount();
     queryClient.clear();
@@ -213,7 +217,7 @@ describe("SQLite AI providers", () => {
     expect(mocks.executeTransaction).toHaveBeenCalledOnce();
     await expect(
       result.current.mutateAsync({ ...draft, api_key: "wrong-key" }),
-    ).rejects.toThrow("Le fournisseur a refusé cette clé");
+    ).rejects.toMatchObject({ code: "key_rejected" });
     expect(mocks.setSecret).toHaveBeenCalledOnce();
     expect(mocks.executeTransaction).toHaveBeenCalledOnce();
     unmount();
@@ -246,7 +250,7 @@ describe("SQLite AI providers", () => {
         base_url: "http://8.8.8.8/v1",
         api_key: "",
       }),
-    ).rejects.toThrow("Utilisez HTTPS");
+    ).rejects.toMatchObject({ code: "https_required" });
     expect(mocks.executeTransaction).not.toHaveBeenCalled();
 
     unmount();

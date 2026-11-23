@@ -169,6 +169,24 @@ export function discardPendingAutoEnhanceJob(
   });
 }
 
+/**
+ * Retire la tâche durable de synthèse automatique d'une réunion, quelle
+ * qu'elle soit : synthèse coupée par l'administration (issue 707), elle ne
+ * serait jamais reprise.
+ */
+export function discardPendingAutoEnhanceForSession(
+  sessionId: string,
+): Promise<void> {
+  return enqueueDatabaseWrite(`session:${sessionId}`, async () => {
+    await executeTransaction([
+      {
+        sql: `DELETE FROM app_settings WHERE id = ?`,
+        params: [`${PENDING_AUTO_ENHANCE_SETTING_PREFIX}${sessionId}`],
+      },
+    ]);
+  });
+}
+
 async function restoreRetiredDefaultSummary(
   sessionId: string,
 ): Promise<boolean> {

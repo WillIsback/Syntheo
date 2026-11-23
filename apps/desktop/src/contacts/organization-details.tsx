@@ -176,7 +176,7 @@ export function OrganizationDetailsColumn({
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     void openerCommands
-                                      .openUrl(`mailto:${human.email}`, null)
+                                      .openUrl(`mailto:${human.email}`)
                                       .catch((error) =>
                                         console.error(
                                           "[contacts] failed to open email client",
@@ -200,7 +200,7 @@ export function OrganizationDetailsColumn({
                                       ? v
                                       : `https://www.linkedin.com/in/${v.replace(/^@/, "")}`;
                                     void openerCommands
-                                      .openUrl(href, null)
+                                      .openUrl(href)
                                       .catch((error) =>
                                         console.error(
                                           "[contacts] failed to open LinkedIn profile",

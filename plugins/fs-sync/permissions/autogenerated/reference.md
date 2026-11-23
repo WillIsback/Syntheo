@@ -5,9 +5,7 @@ Default permissions for the fs-sync plugin
 #### This default permission set includes the following:
 
 - `allow-deserialize`
-- `allow-write-json-batch`
 - `allow-write-document-batch`
-- `allow-read-document-batch`
 - `allow-list-folders`
 - `allow-move-session`
 - `allow-create-folder`
@@ -16,25 +14,20 @@ Default permissions for the fs-sync plugin
 - `allow-audio-exist`
 - `allow-audio-delete`
 - `allow-audio-metadata`
-- `allow-audio-delete-orphaned-expired`
 - `allow-audio-import`
 - `allow-audio-source-metadata`
 - `allow-audio-has-speech`
 - `allow-audio-path`
-- `allow-audio-peaks`
 - `allow-audio-copy`
 - `allow-session-dir`
 - `allow-load-session-content`
 - `allow-delete-session-folder`
 - `allow-scan-and-read`
-- `allow-chat-dir`
-- `allow-entity-dir`
 - `allow-attachment-save`
 - `allow-attachment-list`
 - `allow-attachment-read`
 - `allow-attachment-remove`
 - `allow-folder-attachment-save`
-- `allow-folder-attachment-list`
 - `allow-folder-attachment-read`
 - `allow-folder-attachment-remove`
 
@@ -206,32 +199,6 @@ Denies the audio_delete command without any pre-configured scope.
 <tr>
 <td>
 
-`fs-sync:allow-audio-delete-orphaned-expired`
-
-</td>
-<td>
-
-Enables the audio_delete_orphaned_expired command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`fs-sync:deny-audio-delete-orphaned-expired`
-
-</td>
-<td>
-
-Denies the audio_delete_orphaned_expired command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
 `fs-sync:allow-audio-exist`
 
 </td>
@@ -362,32 +329,6 @@ Denies the audio_path command without any pre-configured scope.
 <tr>
 <td>
 
-`fs-sync:allow-audio-peaks`
-
-</td>
-<td>
-
-Enables the audio_peaks command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`fs-sync:deny-audio-peaks`
-
-</td>
-<td>
-
-Denies the audio_peaks command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
 `fs-sync:allow-audio-source-metadata`
 
 </td>
@@ -407,32 +348,6 @@ Enables the audio_source_metadata command without any pre-configured scope.
 <td>
 
 Denies the audio_source_metadata command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`fs-sync:allow-chat-dir`
-
-</td>
-<td>
-
-Enables the chat_dir command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`fs-sync:deny-chat-dir`
-
-</td>
-<td>
-
-Denies the chat_dir command without any pre-configured scope.
 
 </td>
 </tr>
@@ -563,58 +478,6 @@ Enables the deserialize command without any pre-configured scope.
 <td>
 
 Denies the deserialize command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`fs-sync:allow-entity-dir`
-
-</td>
-<td>
-
-Enables the entity_dir command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`fs-sync:deny-entity-dir`
-
-</td>
-<td>
-
-Denies the entity_dir command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`fs-sync:allow-folder-attachment-list`
-
-</td>
-<td>
-
-Enables the folder_attachment_list command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`fs-sync:deny-folder-attachment-list`
-
-</td>
-<td>
-
-Denies the folder_attachment_list command without any pre-configured scope.
 
 </td>
 </tr>
@@ -778,32 +641,6 @@ Denies the move_session command without any pre-configured scope.
 <tr>
 <td>
 
-`fs-sync:allow-read-document-batch`
-
-</td>
-<td>
-
-Enables the read_document_batch command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`fs-sync:deny-read-document-batch`
-
-</td>
-<td>
-
-Denies the read_document_batch command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
 `fs-sync:allow-rename-folder`
 
 </td>
@@ -901,32 +738,6 @@ Enables the write_document_batch command without any pre-configured scope.
 <td>
 
 Denies the write_document_batch command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`fs-sync:allow-write-json-batch`
-
-</td>
-<td>
-
-Enables the write_json_batch command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`fs-sync:deny-write-json-batch`
-
-</td>
-<td>
-
-Denies the write_json_batch command without any pre-configured scope.
 
 </td>
 </tr>

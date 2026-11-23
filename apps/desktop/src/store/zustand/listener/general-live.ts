@@ -3,8 +3,6 @@ import { Effect, Exit } from "effect";
 import type { StoreApi } from "zustand";
 
 import { commands as detectCommands } from "@syntheo/plugin-detect";
-import { commands as hooksCommands } from "@syntheo/plugin-hooks";
-import { commands as settingsCommands } from "@syntheo/plugin-settings";
 import { type CaptureParams } from "@syntheo/plugin-transcription";
 
 import { createSessionEventHandlers } from "./general-live-events";
@@ -29,13 +27,11 @@ import {
 } from "./general-shared";
 import { flushLiveTranscriptBatches } from "./live-transcript-batch";
 
-import { getSessionResourcePath } from "~/session/resource-path";
 import { recordDetectedMeetingApps } from "~/stt/meeting-source-apps";
 import { stopSpeakerContextCapture } from "~/stt/speaker-context-capture";
 
 export {
   updateLiveSessionConfig,
-  openMicrophoneSettings,
   dispatchMeetingCompleted,
 } from "./general-live-helpers";
 export { attachLiveSession } from "./general-live-attach";
@@ -69,13 +65,9 @@ export const startLiveSession = <T extends LiveStore>(
       live.eventUnlistenersBySession[targetSessionId] = unlisteners;
     });
 
-    const [dataDirPath, micUsingApps, bundleId] = yield* Effect.tryPromise({
+    const [micUsingApps, bundleId] = yield* Effect.tryPromise({
       try: () =>
         Promise.all([
-          settingsCommands.vaultBase().then((r) => {
-            if (r.status === "error") throw new Error(r.error);
-            return r.data;
-          }),
           detectCommands
             .listMicUsingApplications()
             .then((r) => (r.status === "ok" ? r.data : null)),
@@ -84,9 +76,7 @@ export const startLiveSession = <T extends LiveStore>(
       catch: (error) => error,
     });
 
-    const sessionPath = getSessionResourcePath(dataDirPath, targetSessionId);
     const micUsingAppIds = micUsingApps?.map((app) => app.id) ?? null;
-    const app_meeting = micUsingAppIds?.[0] ?? null;
     const triggerAppIds = getAutoStopTriggerAppIds(micUsingAppIds, bundleId);
 
     if (triggerAppIds.length > 0) {
@@ -96,23 +86,6 @@ export const startLiveSession = <T extends LiveStore>(
         }
       });
     }
-
-    yield* Effect.tryPromise({
-      try: () =>
-        hooksCommands.runEventHooks({
-          beforeListeningStarted: {
-            args: {
-              resource_dir: sessionPath,
-              app_syntheo: bundleId,
-              app_meeting,
-            },
-          },
-        }),
-      catch: (error) => {
-        console.error("[hooks] BeforeListeningStarted failed:", error);
-        return error;
-      },
-    });
 
     yield* startSessionEffect(params);
 
@@ -235,34 +208,7 @@ export const stopLiveSession = <T extends GeneralState>(
           live.loading = false;
         });
       },
-      onSuccess: () => {
-        if (!sessionId) {
-          return;
-        }
-
-        void Promise.all([
-          settingsCommands.vaultBase().then((r) => {
-            if (r.status === "error") throw new Error(r.error);
-            return r.data;
-          }),
-          getIdentifier().catch(() => "fr.willisback.syntheo"),
-        ])
-          .then(([dataDirPath, bundleId]) => {
-            const sessionPath = getSessionResourcePath(dataDirPath, sessionId);
-            return hooksCommands.runEventHooks({
-              afterListeningStopped: {
-                args: {
-                  resource_dir: sessionPath,
-                  app_syntheo: bundleId,
-                  app_meeting: null,
-                },
-              },
-            });
-          })
-          .catch((error) => {
-            console.error("[hooks] AfterListeningStopped failed:", error);
-          });
-      },
+      onSuccess: () => undefined,
     });
   });
 };

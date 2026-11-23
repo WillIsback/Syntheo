@@ -71,7 +71,6 @@ const m = vi.hoisted(() => ({
   softDeleteTranscript: vi.fn(),
   saveCaptureLifecycleMarker: vi.fn(),
   loadCaptureLifecycleMarker: vi.fn(),
-  markCaptureAudioSaved: vi.fn(() => Promise.resolve()),
   clearCaptureAudioSaved: vi.fn(() => Promise.resolve()),
   getCaptureSnapshot: vi.fn(),
   getStoppedCapture: vi.fn(),
@@ -122,9 +121,7 @@ vi.mock("@syntheo/plugin-transcription", () => ({
       data: null,
     })),
     deleteTranscribedCaptureAudio: m.deleteTranscribedCaptureAudio,
-    updateCaptureCredentials: vi.fn(async () => ({ status: "ok", data: null })),
     getCaptureSnapshot: m.getCaptureSnapshot,
-    listStoppedCaptures: vi.fn(async () => ({ status: "ok", data: [] })),
   },
   events: {
     captureLifecycleEvent: { listen: vi.fn(async () => () => {}) },
@@ -254,7 +251,6 @@ vi.mock("~/stt/capture-lifecycle-storage", () => ({
   }) => marker.chunkedAudio === true && marker.retainAudio === false,
   loadCaptureLifecycleMarker: m.loadCaptureLifecycleMarker,
   saveCaptureLifecycleMarker: m.saveCaptureLifecycleMarker,
-  markCaptureAudioSaved: m.markCaptureAudioSaved,
   clearCaptureAudioSaved: m.clearCaptureAudioSaved,
 }));
 vi.mock("~/stt/capture-recovery-requests", () => ({
@@ -1447,7 +1443,6 @@ describe("useStartListening", () => {
         outcome = await resume.result.current();
       });
       expect(outcome).not.toBe("awaiting_user");
-      expect(m.markCaptureAudioSaved).not.toHaveBeenCalled();
     });
   });
 

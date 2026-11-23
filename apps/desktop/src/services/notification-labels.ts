@@ -38,7 +38,7 @@ export function nativeNotificationLabels(): NotificationLabels {
  * Joint les libellés natifs, dans la langue active de l'interface au moment de
  * l'affichage, sauf si l'appelant en fournit déjà.
  */
-export function withNativeNotificationLabels(
+function withNativeNotificationLabels(
   notification: Notification,
 ): Notification {
   return {

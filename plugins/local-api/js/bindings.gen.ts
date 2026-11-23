@@ -12,9 +12,6 @@ export const commands = {
 	testWebhook: (id: string) => typedError<WebhookDelivery, string>(__TAURI_INVOKE("plugin:local-api|test_webhook", { id })),
 	dispatchEvent: (event: string, meetingId: string) => typedError<number, string>(__TAURI_INVOKE("plugin:local-api|dispatch_event", { event, meetingId })),
 	exportMeetingMarkdown: (meetingId: string, directory: string, options: MarkdownExportOptions | null, previous: MarkdownExportFile | null) => typedError<MarkdownExportFile, string>(__TAURI_INVOKE("plugin:local-api|export_meeting_markdown", { meetingId, directory, options, previous })),
-	prepareDriveMarkdown: (meetingId: string) => typedError<DriveMarkdownExport, string>(__TAURI_INVOKE("plugin:local-api|prepare_drive_markdown", { meetingId })),
-	getCloudSnapshot: (meetingId: string) => typedError<Value, string>(__TAURI_INVOKE("plugin:local-api|get_cloud_snapshot", { meetingId })),
-	listCloudSnapshotIds: () => typedError<string[], string>(__TAURI_INVOKE("plugin:local-api|list_cloud_snapshot_ids")),
 	/**
 	 *  Étape « Lancer une commande » : programme et arguments sans interpréteur
 	 *  de commandes, après la confirmation demandée par l'application.
@@ -34,11 +31,6 @@ export type CreatedWebhook = {
 	secret: string,
 } & WebhookInfo;
 
-export type DriveMarkdownExport = {
-	filename: string,
-	markdown: string,
-};
-
 export type MarkdownExportFile = {
 	path: string,
 	sha256: string,
@@ -52,8 +44,6 @@ export type MarkdownExportOptions = {
 	filename?: string,
 	include_id_suffix?: boolean,
 };
-
-export type Value = null | boolean | number | string | Value[] | { [key in string]: Value };
 
 export type WebhookDelivery = {
 	delivered: boolean,

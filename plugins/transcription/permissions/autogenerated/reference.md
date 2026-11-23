@@ -16,34 +16,26 @@ Default permissions for the plugin
 - `allow-retry-audio-capture`
 - `allow-flush-live-transcript`
 - `allow-release-live-transcript`
-- `allow-list-stopped-captures`
 - `allow-get-stopped-capture`
 - `allow-acknowledge-stopped-capture`
 - `allow-save-capture-lifecycle-marker`
 - `allow-clear-capture-lifecycle-marker`
 - `allow-get-capture-lifecycle-marker`
-- `allow-list-capture-lifecycle-markers`
 - `allow-list-capture-recoveries`
 - `allow-get-capture-audio-gaps`
-- `allow-mark-capture-audio-saved`
 - `allow-clear-capture-audio-saved`
 - `allow-stop-capture`
 - `allow-stop-capture-for-session`
-- `allow-get-mic-muted`
 - `allow-set-mic-muted`
-- `allow-get-speaker-muted`
 - `allow-set-speaker-muted`
 - `allow-get-capture-state`
 - `allow-get-capture-snapshot`
-- `allow-update-capture-credentials`
 - `allow-list-capture-audio-chunks`
 - `allow-get-capture-audio-cleanup-status`
 - `allow-acknowledge-capture-audio-cleanup-status`
 - `allow-acknowledge-capture-audio-chunk`
 - `allow-delete-transcribed-capture-audio`
 - `allow-is-supported-languages-live`
-- `allow-suggest-providers-for-languages-live`
-- `allow-list-documented-language-codes-live`
 - `allow-render-transcript-segments`
 - `allow-render-session-transcript`
 - `allow-start-transcription`
@@ -53,16 +45,23 @@ Default permissions for the plugin
 - `allow-acknowledge-completed-transcription`
 - `allow-delete-processed-session-audio`
 - `allow-parse-subtitle`
-- `allow-export-to-vtt`
 - `allow-is-supported-languages-batch`
-- `allow-suggest-providers-for-languages-batch`
-- `allow-list-documented-language-codes-batch`
-- `allow-refine-batch-transcript`
 - `allow-save-batch-transcript`
 - `allow-reconcile-refined-speaker-clusters`
 - `allow-begin-audio-upload`
 - `allow-append-audio-upload`
 - `allow-discard-audio-upload`
+- `allow-probe-local-transcription`
+- `allow-on-device-status`
+- `allow-on-device-download-models`
+- `allow-on-device-install-models`
+- `allow-on-device-install-progress`
+- `allow-on-device-cancel-install`
+- `allow-on-device-remove-models`
+- `allow-on-device-commissioning`
+- `allow-on-device-commission`
+- `allow-on-device-load`
+- `allow-on-device-commission-progress`
 
 ## Permission Table
 
@@ -362,32 +361,6 @@ Denies the discard_audio_upload command without any pre-configured scope.
 <tr>
 <td>
 
-`transcription:allow-export-to-vtt`
-
-</td>
-<td>
-
-Enables the export_to_vtt command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`transcription:deny-export-to-vtt`
-
-</td>
-<td>
-
-Denies the export_to_vtt command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
 `transcription:allow-flush-live-transcript`
 
 </td>
@@ -622,58 +595,6 @@ Denies the get_current_microphone_device command without any pre-configured scop
 <tr>
 <td>
 
-`transcription:allow-get-mic-muted`
-
-</td>
-<td>
-
-Enables the get_mic_muted command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`transcription:deny-get-mic-muted`
-
-</td>
-<td>
-
-Denies the get_mic_muted command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`transcription:allow-get-speaker-muted`
-
-</td>
-<td>
-
-Enables the get_speaker_muted command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`transcription:deny-get-speaker-muted`
-
-</td>
-<td>
-
-Denies the get_speaker_muted command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
 `transcription:allow-get-stopped-capture`
 
 </td>
@@ -778,32 +699,6 @@ Denies the list_capture_audio_chunks command without any pre-configured scope.
 <tr>
 <td>
 
-`transcription:allow-list-capture-lifecycle-markers`
-
-</td>
-<td>
-
-Enables the list_capture_lifecycle_markers command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`transcription:deny-list-capture-lifecycle-markers`
-
-</td>
-<td>
-
-Denies the list_capture_lifecycle_markers command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
 `transcription:allow-list-capture-recoveries`
 
 </td>
@@ -823,58 +718,6 @@ Enables the list_capture_recoveries command without any pre-configured scope.
 <td>
 
 Denies the list_capture_recoveries command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`transcription:allow-list-documented-language-codes-batch`
-
-</td>
-<td>
-
-Enables the list_documented_language_codes_batch command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`transcription:deny-list-documented-language-codes-batch`
-
-</td>
-<td>
-
-Denies the list_documented_language_codes_batch command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`transcription:allow-list-documented-language-codes-live`
-
-</td>
-<td>
-
-Enables the list_documented_language_codes_live command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`transcription:deny-list-documented-language-codes-live`
-
-</td>
-<td>
-
-Denies the list_documented_language_codes_live command without any pre-configured scope.
 
 </td>
 </tr>
@@ -934,32 +777,6 @@ Denies the list_speaker_devices command without any pre-configured scope.
 <tr>
 <td>
 
-`transcription:allow-list-stopped-captures`
-
-</td>
-<td>
-
-Enables the list_stopped_captures command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`transcription:deny-list-stopped-captures`
-
-</td>
-<td>
-
-Denies the list_stopped_captures command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
 `transcription:allow-list-transcription-sessions`
 
 </td>
@@ -986,12 +803,12 @@ Denies the list_transcription_sessions command without any pre-configured scope.
 <tr>
 <td>
 
-`transcription:allow-mark-capture-audio-saved`
+`transcription:allow-on-device-cancel-install`
 
 </td>
 <td>
 
-Enables the mark_capture_audio_saved command without any pre-configured scope.
+Enables the on_device_cancel_install command without any pre-configured scope.
 
 </td>
 </tr>
@@ -999,12 +816,246 @@ Enables the mark_capture_audio_saved command without any pre-configured scope.
 <tr>
 <td>
 
-`transcription:deny-mark-capture-audio-saved`
+`transcription:deny-on-device-cancel-install`
 
 </td>
 <td>
 
-Denies the mark_capture_audio_saved command without any pre-configured scope.
+Denies the on_device_cancel_install command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:allow-on-device-commission`
+
+</td>
+<td>
+
+Enables the on_device_commission command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:deny-on-device-commission`
+
+</td>
+<td>
+
+Denies the on_device_commission command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:allow-on-device-commission-progress`
+
+</td>
+<td>
+
+Enables the on_device_commission_progress command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:deny-on-device-commission-progress`
+
+</td>
+<td>
+
+Denies the on_device_commission_progress command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:allow-on-device-commissioning`
+
+</td>
+<td>
+
+Enables the on_device_commissioning command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:deny-on-device-commissioning`
+
+</td>
+<td>
+
+Denies the on_device_commissioning command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:allow-on-device-download-models`
+
+</td>
+<td>
+
+Enables the on_device_download_models command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:deny-on-device-download-models`
+
+</td>
+<td>
+
+Denies the on_device_download_models command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:allow-on-device-install-models`
+
+</td>
+<td>
+
+Enables the on_device_install_models command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:deny-on-device-install-models`
+
+</td>
+<td>
+
+Denies the on_device_install_models command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:allow-on-device-install-progress`
+
+</td>
+<td>
+
+Enables the on_device_install_progress command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:deny-on-device-install-progress`
+
+</td>
+<td>
+
+Denies the on_device_install_progress command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:allow-on-device-load`
+
+</td>
+<td>
+
+Enables the on_device_load command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:deny-on-device-load`
+
+</td>
+<td>
+
+Denies the on_device_load command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:allow-on-device-remove-models`
+
+</td>
+<td>
+
+Enables the on_device_remove_models command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:deny-on-device-remove-models`
+
+</td>
+<td>
+
+Denies the on_device_remove_models command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:allow-on-device-status`
+
+</td>
+<td>
+
+Enables the on_device_status command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:deny-on-device-status`
+
+</td>
+<td>
+
+Denies the on_device_status command without any pre-configured scope.
 
 </td>
 </tr>
@@ -1038,6 +1089,32 @@ Denies the parse_subtitle command without any pre-configured scope.
 <tr>
 <td>
 
+`transcription:allow-probe-local-transcription`
+
+</td>
+<td>
+
+Enables the probe_local_transcription command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`transcription:deny-probe-local-transcription`
+
+</td>
+<td>
+
+Denies the probe_local_transcription command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
 `transcription:allow-reconcile-refined-speaker-clusters`
 
 </td>
@@ -1057,32 +1134,6 @@ Enables the reconcile_refined_speaker_clusters command without any pre-configure
 <td>
 
 Denies the reconcile_refined_speaker_clusters command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`transcription:allow-refine-batch-transcript`
-
-</td>
-<td>
-
-Enables the refine_batch_transcript command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`transcription:deny-refine-batch-transcript`
-
-</td>
-<td>
-
-Denies the refine_batch_transcript command without any pre-configured scope.
 
 </td>
 </tr>
@@ -1525,84 +1576,6 @@ Enables the stop_transcription command without any pre-configured scope.
 <td>
 
 Denies the stop_transcription command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`transcription:allow-suggest-providers-for-languages-batch`
-
-</td>
-<td>
-
-Enables the suggest_providers_for_languages_batch command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`transcription:deny-suggest-providers-for-languages-batch`
-
-</td>
-<td>
-
-Denies the suggest_providers_for_languages_batch command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`transcription:allow-suggest-providers-for-languages-live`
-
-</td>
-<td>
-
-Enables the suggest_providers_for_languages_live command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`transcription:deny-suggest-providers-for-languages-live`
-
-</td>
-<td>
-
-Denies the suggest_providers_for_languages_live command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`transcription:allow-update-capture-credentials`
-
-</td>
-<td>
-
-Enables the update_capture_credentials command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`transcription:deny-update-capture-credentials`
-
-</td>
-<td>
-
-Denies the update_capture_credentials command without any pre-configured scope.
 
 </td>
 </tr>

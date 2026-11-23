@@ -4,6 +4,7 @@ import {
   fireEvent,
   render,
   screen,
+  waitFor,
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -37,13 +38,19 @@ const mocks = vi.hoisted(() => ({
   isMainWebviewWindow: true,
   sendChatEvent: vi.fn(),
   leaveOverlayTab: vi.fn(),
-  copyTextToClipboard: vi.fn(),
+  copyTextToClipboard: vi.fn(async () => true),
+  recordSummaryEvent: vi.fn(),
   rawMd: "",
   enhancedContent: undefined as string | undefined,
   enhancedNotes: [] as Array<{ id: string; content: string }>,
   enhancing: false,
   exportModal: vi.fn(),
   toastInfo: vi.fn(),
+  intelligence: { managed: false, blocked: false },
+}));
+
+vi.mock("~/settings/managed", () => ({
+  useIntelligenceDisabled: () => mocks.intelligence,
 }));
 
 vi.mock("@tauri-apps/plugin-os", () => ({ platform: () => "linux" }));
@@ -138,6 +145,10 @@ vi.mock("~/session/components/note-input/header-shared", () => ({
   getStoredNoteMarkdown: (content: string | undefined) => content ?? "",
 }));
 
+vi.mock("~/mesure/beta", () => ({
+  recordSummaryEvent: mocks.recordSummaryEvent,
+}));
+
 vi.mock("~/session/components/outer-header/overflow/export-modal", () => ({
   ExportModal: (props: { open: boolean; currentView: EditorView }) => {
     mocks.exportModal(props);
@@ -183,6 +194,7 @@ describe("SessionCapsule", () => {
     mocks.enhancedContent = undefined;
     mocks.enhancedNotes = [];
     mocks.enhancing = false;
+    mocks.intelligence = { managed: false, blocked: false };
     vi.clearAllMocks();
   });
 
@@ -364,6 +376,32 @@ describe("SessionCapsule", () => {
     ).not.toBeNull();
   });
 
+  // Synthèse coupée par l'administration (issue 707) : comme l'onglet
+  // « Synthèse », la capsule n'offre pas de génération vouée à l'échec.
+  it("hides Generate the summary when the policy turns summaries off", () => {
+    mocks.intelligence = { managed: true, blocked: true };
+    renderCapsule({
+      stage: "synthesis",
+      currentView: { type: "enhanced", id: "summary-session-1" },
+    });
+
+    expect(
+      screen.queryByRole("button", { name: "Generate the summary" }),
+    ).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Resume listening" }),
+    ).not.toBeNull();
+  });
+
+  it("hides Generate the summary when only the stored copy turns summaries off", () => {
+    mocks.intelligence = { managed: false, blocked: true };
+    renderCapsule({ stage: "synthesis", currentView: { type: "raw" } });
+
+    expect(
+      screen.queryByRole("button", { name: "Generate the summary" }),
+    ).toBeNull();
+  });
+
   it("does not offer to generate a summary while one is being written", () => {
     mocks.enhancing = true;
     renderCapsule({ stage: "synthesis", currentView: { type: "raw" } });
@@ -414,7 +452,7 @@ describe("SessionCapsule", () => {
     expect(mocks.sendChatEvent).toHaveBeenCalledWith({ type: "OPEN" });
   });
 
-  it("copies the summary shown in the document", () => {
+  it("copies the summary shown in the document", async () => {
     mocks.enhancedContent = "## Décisions";
     mocks.rawMd = "mes notes";
     renderCapsule({
@@ -427,6 +465,10 @@ describe("SessionCapsule", () => {
     expect(mocks.copyTextToClipboard).toHaveBeenCalledWith(
       "## Décisions",
       expect.any(Object),
+    );
+    // Bêta (issue 672) : la copie d'une synthèse compte comme partage.
+    await waitFor(() =>
+      expect(mocks.recordSummaryEvent).toHaveBeenCalledWith("shared", "note-1"),
     );
   });
 

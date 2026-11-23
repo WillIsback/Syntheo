@@ -36,6 +36,7 @@ pub struct ListenClientBuilder<A: RealtimeSttAdapter = OpenAIAdapter> {
     pub(crate) api_key: Option<String>,
     pub(crate) params: Option<ListenParams>,
     pub(crate) connect_policy: Option<syntheo_ws_client::client::WebSocketConnectPolicy>,
+    pub(crate) peer_proof: Option<syntheo_ws_client::client::PeerProof>,
     pub(crate) _marker: PhantomData<A>,
 }
 
@@ -46,6 +47,7 @@ impl Default for ListenClientBuilder {
             api_key: None,
             params: None,
             connect_policy: None,
+            peer_proof: None,
             _marker: PhantomData,
         }
     }
@@ -75,12 +77,22 @@ impl<A: RealtimeSttAdapter> ListenClientBuilder<A> {
         self
     }
 
+    /// Source « Sur ce poste » (issue 684) : handshake à preuves avec le
+    /// module `syntheo-speech`, aucune clé envoyée ; rien ne part avant la
+    /// preuve du module. Les serveurs distants ne l'utilisent pas.
+    pub fn on_device(mut self, token: crate::OnDeviceToken) -> Self {
+        self.api_key = None;
+        self.peer_proof = Some(token.peer_proof());
+        self
+    }
+
     pub fn adapter<B: RealtimeSttAdapter>(self) -> ListenClientBuilder<B> {
         ListenClientBuilder {
             api_base: self.api_base,
             api_key: self.api_key,
             params: self.params,
             connect_policy: self.connect_policy,
+            peer_proof: self.peer_proof,
             _marker: PhantomData,
         }
     }
@@ -148,6 +160,7 @@ impl<A: RealtimeSttAdapter> ListenClientBuilder<A> {
             request,
             initial_message,
             connect_policy: self.connect_policy,
+            peer_proof: self.peer_proof,
         })
     }
 
@@ -182,6 +195,7 @@ impl<A: RealtimeSttAdapter> ListenClientBuilder<A> {
             mic_adapter,
             initial_message,
             connect_policy: self.connect_policy,
+            peer_proof: self.peer_proof,
             api_key: self.api_key,
             params,
         })
@@ -197,6 +211,7 @@ pub struct ListenClient<A: RealtimeSttAdapter = OpenAIAdapter> {
     pub(crate) request: ClientRequestBuilder,
     pub(crate) initial_message: Option<Message>,
     pub(crate) connect_policy: Option<syntheo_ws_client::client::WebSocketConnectPolicy>,
+    pub(crate) peer_proof: Option<syntheo_ws_client::client::PeerProof>,
 }
 
 #[derive(Clone)]
@@ -207,6 +222,7 @@ pub struct ListenClientDual<A: RealtimeSttAdapter> {
     pub(crate) mic_adapter: Option<A>,
     pub(crate) initial_message: Option<Message>,
     pub(crate) connect_policy: Option<syntheo_ws_client::client::WebSocketConnectPolicy>,
+    pub(crate) peer_proof: Option<syntheo_ws_client::client::PeerProof>,
     pub(crate) api_key: Option<String>,
     pub(crate) params: ListenParams,
 }
@@ -388,8 +404,12 @@ impl<A: RealtimeSttAdapter> ListenClient<A> {
         syntheo_ws_client::Error,
     > {
         let finalize_message = finalize_message_factory(&self.adapter);
-        let ws =
-            websocket_client_with_keep_alive(&self.request, &self.adapter, self.connect_policy);
+        let ws = websocket_client_with_keep_alive(
+            &self.request,
+            &self.adapter,
+            self.connect_policy,
+            self.peer_proof,
+        );
 
         // Transform audio stream to use adapter's audio_messages method
         let adapter_for_transform = self.adapter.clone();
@@ -449,8 +469,12 @@ impl<A: RealtimeSttAdapter> ListenClientDual<A> {
         stream: impl Stream<Item = ListenClientDualInput> + Send + Unpin + 'static,
     ) -> Result<(DualOutputStream, DualHandle), syntheo_ws_client::Error> {
         let finalize_message = finalize_message_factory(&self.adapter);
-        let ws =
-            websocket_client_with_keep_alive(&self.request, &self.adapter, self.connect_policy);
+        let ws = websocket_client_with_keep_alive(
+            &self.request,
+            &self.adapter,
+            self.connect_policy,
+            self.peer_proof,
+        );
 
         // Transform audio stream to use adapter's audio_to_message method
         let adapter_for_transform = self.adapter.clone();
@@ -503,9 +527,14 @@ impl<A: RealtimeSttAdapter> ListenClientDual<A> {
             self.mic_request.as_ref().unwrap_or(&self.request),
             &mic_adapter,
             self.connect_policy.clone(),
+            self.peer_proof.clone(),
         );
-        let spk_ws =
-            websocket_client_with_keep_alive(&self.request, &spk_adapter, self.connect_policy);
+        let spk_ws = websocket_client_with_keep_alive(
+            &self.request,
+            &spk_adapter,
+            self.connect_policy,
+            self.peer_proof,
+        );
 
         let mic_outbound = tokio_stream::wrappers::ReceiverStream::new(mic_rx);
         let spk_outbound = tokio_stream::wrappers::ReceiverStream::new(spk_rx);
@@ -670,6 +699,7 @@ fn websocket_client_with_keep_alive<A: RealtimeSttAdapter>(
     request: &ClientRequestBuilder,
     adapter: &A,
     connect_policy: Option<syntheo_ws_client::client::WebSocketConnectPolicy>,
+    peer_proof: Option<syntheo_ws_client::client::PeerProof>,
 ) -> WebSocketClient {
     let mut client = WebSocketClient::new(request.clone());
     if let Some(event_type) = adapter.initial_response_type() {
@@ -680,6 +710,9 @@ fn websocket_client_with_keep_alive<A: RealtimeSttAdapter>(
 
     if let Some(connect_policy) = connect_policy {
         client = client.with_connect_policy(connect_policy);
+    }
+    if let Some(peer_proof) = peer_proof {
+        client = client.with_peer_proof(peer_proof);
     }
 
     if let Some(keep_alive) = adapter.keep_alive_message() {

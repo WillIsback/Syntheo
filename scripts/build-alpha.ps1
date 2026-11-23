@@ -68,6 +68,20 @@ $SrcTauri = Join-Path $Root "apps\desktop\src-tauri"
 $Conf = Join-Path $SrcTauri "tauri.conf.syntheo.json"
 Set-Location $Root
 
+# Restes d'un plugin ou d'une crate retirés (issue 692) : un dossier de plugins\ ou crates\ sans
+# aucun fichier suivi ni Cargo.toml / package.json (par exemple le node_modules d'un plugin
+# supprimé) serait pris pour un membre du workspace, et `cargo metadata` échouerait.
+foreach ($top in "plugins", "crates") {
+  Get-ChildItem -Directory -Path $top -ErrorAction SilentlyContinue | ForEach-Object {
+    $dir = $_.FullName
+    if ((Test-Path (Join-Path $dir "Cargo.toml")) -or (Test-Path (Join-Path $dir "package.json"))) { return }
+    $relative = "$top/$($_.Name)"
+    if (git ls-files -- $relative | Select-Object -First 1) { return }
+    Write-Host "-- reste d'un membre retiré supprimé : $relative"
+    Remove-Item -Recurse -Force -LiteralPath $dir
+  }
+}
+
 function Invoke-Checked {
   param([string]$Exe, [string[]]$Arguments)
   & $Exe @Arguments
@@ -168,6 +182,19 @@ try {
   foreach ($sub in "nsis", "msi") {
     Remove-Item (Join-Path $bundleDir $sub) -Recurse -Force -ErrorAction SilentlyContinue
   }
+  # DirectML.dll laissée par un ancien build (copy-dylibs d'ort, retiré) : le
+  # bundler MSI embarque tout *.dll de target\release ; l'application utilise
+  # celle de Windows, comme avec l'installeur NSIS.
+  Remove-Item (Join-Path $targetDir "release\DirectML.dll") -Force -ErrorAction SilentlyContinue
+
+  # Programme compagnon syntheo-speech (issue 683), avant `tauri build` qui
+  # l'embarque et en épingle l'empreinte (avec celle du runtime Visual C++).
+  # -Dumpbin seulement si dumpbin a été trouvé (sinon, sans contrôle des DLL
+  # importées, comme le contrôle de syntheo.exe plus bas).
+  $speechArgs = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
+    (Join-Path $Root "scripts\build-speech.ps1"))
+  if ($dumpbin) { $speechArgs += @("-Dumpbin", $dumpbin.FullName) }
+  Invoke-Checked powershell $speechArgs
 
   # Valeur factice exigée par des intégrations cloud héritées (chantier 04d).
   $env:VITE_API_URL = "http://127.0.0.1:9"
@@ -175,18 +202,24 @@ try {
   $buildArgs = @("-F", "desktop", "tauri", "build", "--ci", "--bundles", "nsis,msi")
   if ($UpdaterTest) {
     Write-Host "-- build de test de la mise à jour : sans devtools, surcouche $UpdaterTest"
+    # Build de test jamais distribué : le compagnon peut partir sans source de
+    # téléchargement des modèles (garde du build.rs de l'application).
+    $env:SYNTHEO_SPEECH_ALLOW_NO_SOURCES = "1"
   }
   else {
     $buildArgs += @("--features", "devtools")
   }
   $buildArgs += @("--config", "./src-tauri/tauri.conf.syntheo.json",
-    "--config", "./src-tauri/tauri.windows-vcrt.conf.json")
+    "--config", "./src-tauri/tauri.windows-vcrt.conf.json",
+    "--config", "./src-tauri/tauri.speech.conf.json")
   if ($UpdaterTest) { $buildArgs += @("--config", $UpdaterTest) }
   Invoke-Checked pnpm $buildArgs
 }
 finally {
   Copy-Item $confBackup $Conf -Force
   Remove-Item $confBackup -Force -ErrorAction SilentlyContinue
+  # Autorisation du build de test seulement : jamais laissée à la session.
+  Remove-Item Env:SYNTHEO_SPEECH_ALLOW_NO_SOURCES -ErrorAction SilentlyContinue
 }
 
 # Toute DLL du runtime Visual C++ importée par syntheo.exe doit être embarquée.

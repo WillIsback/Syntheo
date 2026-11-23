@@ -1,6 +1,5 @@
 import type { SyntheoUIMessage } from "../types";
-import { CONTEXT_ENTITY_SOURCES } from "./entities";
-import type { ContextRef } from "./entities";
+import { CONTEXT_ENTITY_SOURCES, type ContextRef } from "./entities";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;

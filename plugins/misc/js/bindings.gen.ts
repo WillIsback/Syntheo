@@ -8,7 +8,6 @@ export const commands = {
 	getGitHash: () => typedError<string, string>(__TAURI_INVOKE("plugin:misc|get_git_hash")),
 	getDeviceInfo: (locale: string | null) => typedError<DeviceInfo, string>(__TAURI_INVOKE("plugin:misc|get_device_info", { locale })),
 	getProcessMemoryBytes: () => typedError<number, string>(__TAURI_INVOKE("plugin:misc|get_process_memory_bytes")),
-	opinionatedMdToHtml: (text: string) => typedError<string, string>(__TAURI_INVOKE("plugin:misc|opinionated_md_to_html", { text })),
 };
 
 /* Types */

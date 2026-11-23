@@ -199,7 +199,7 @@ function CliInstallHint() {
         className="h-auto self-start p-0 text-xs"
         onClick={() =>
           void openerCommands
-            .openUrl(documentationUrl(i18n.locale, "installation"), null)
+            .openUrl(documentationUrl(i18n.locale, "installation"))
             .catch((error) =>
               console.error(
                 "[settings] failed to open installation guide",

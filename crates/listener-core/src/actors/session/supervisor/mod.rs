@@ -55,7 +55,6 @@ pub enum SessionMsg {
     RetryListener,
     SourceHealthy,
     SourceRoutingChanged,
-    UpdateCredentials(String),
     UpdateConfig(SessionConfigUpdate),
 }
 
@@ -150,15 +149,6 @@ impl Actor for SessionActor {
                 state.shutting_down = true;
                 children::shutdown_children(state, "session_stop").await;
                 myself.stop(None);
-            }
-            SessionMsg::UpdateCredentials(api_key) => {
-                if !api_key.is_empty() && api_key != state.ctx.params.api_key {
-                    state.ctx.params.api_key = api_key;
-                    if state.listener_cell.is_none() && !state.shutting_down {
-                        state.listener_retry_attempt = 0;
-                        retry_listener(myself, state).await;
-                    }
-                }
             }
             SessionMsg::RetryListener => {
                 retry_listener(myself, state).await;

@@ -388,26 +388,6 @@ pub async fn update_folder_instructions(
     Ok(result.rows_affected())
 }
 
-pub async fn update_folder_workspace(
-    conn: &mut SqliteConnection,
-    path: &str,
-    workspace_id: &str,
-) -> Result<u64, sqlx::Error> {
-    let result = sqlx::query(
-        "UPDATE folders
-        SET
-          workspace_id = ?,
-          updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
-        WHERE path = ?
-          AND deleted_at IS NULL",
-    )
-    .bind(workspace_id)
-    .bind(path)
-    .execute(&mut *conn)
-    .await?;
-    Ok(result.rows_affected())
-}
-
 pub async fn update_folder_icon(
     conn: &mut SqliteConnection,
     path: &str,

@@ -22,10 +22,6 @@ it("docs_rgpd_is_referenced", () => {
 
 it("docs_rgpd_lists_every_known_flow_and_store", () => {
   const rgpd = readFileSync(join(ROOT, "docs/fr/conformite/rgpd.md"), "utf8");
-  // Flux réseau hors inférence encore présents dans le code.
-  for (const flow of ["api.github.com", "Charger l'image"]) {
-    expect(rgpd).toContain(flow);
-  }
   // Stockages locaux annexes.
   for (const store of ["app.log", "tantivy", "export"]) {
     expect(rgpd).toContain(store);
@@ -71,6 +67,8 @@ it("rgpd_lists_no_model_download", () => {
   expect(rgpd).not.toContain("models.anarlog.so");
   expect(rgpd).toContain("models/stt");
   expect(rgpd).toContain("models/llm");
+  // Modèles d'annulation d'écho téléchargés par les versions 0.7.x (issue 702).
+  expect(rgpd).toContain("models/aec");
   expect(rgpd).not.toMatch(/diarisation locale/i);
 });
 
@@ -122,5 +120,153 @@ it("docs_do_not_list_iconify_as_a_network_flow", () => {
     expect(readFileSync(join(ROOT, page), "utf8")).not.toContain(
       "api.iconify.design",
     );
+  }
+});
+
+// Issue 678 : le chargement d'une image distante au clic est retiré ; la doc
+// ne doit plus le présenter comme un flux sortant.
+it("docs_do_not_list_click_to_load_images_as_a_network_flow", () => {
+  for (const page of [
+    "docs/fr/conformite/rgpd.md",
+    "docs/en/conformite/rgpd.md",
+    "docs/fr/data-and-privacy.mdx",
+    "docs/en/data-and-privacy.mdx",
+    "SECURITY.md",
+  ]) {
+    const text = readFileSync(join(ROOT, page), "utf8");
+    expect(text).not.toContain("Charger l'image");
+    expect(text).not.toContain("Load image");
+  }
+});
+
+// Issue 702 : hors serveurs de l'utilisateur, il ne reste que trois flux
+// (recherche de mise à jour, installeur au clic, modèles « Sur ce poste » au
+// clic). La fiche RGPD, en français et en anglais, les déclare tous, avec le
+// réglage géré qui les coupe ; les flux disparus n'y figurent plus.
+it("rgpd_lists_exactly_the_remaining_outbound_flows", () => {
+  const sheets = {
+    fr: {
+      path: "docs/fr/conformite/rgpd.md",
+      flows: [
+        // (a) Recherche de mise à jour : hôte réel, délai, réglage géré.
+        "github.com/WillIsback/Syntheo/releases/latest/download/latest.json",
+        "15 secondes après le démarrage",
+        "`automatic_updates` à `false`",
+        "à la demande de l'utilisateur",
+        // (b) Installeur, au clic.
+        "téléchargement de l'installeur d'une mise à jour",
+        // (c) Modèles « Sur ce poste » : sources, miroir, réglage géré.
+        "Télécharger les modèles",
+        "release-assets.githubusercontent.com",
+        "huggingface.co",
+        "speech_models_urls",
+        "`on_device_transcription_enabled` à `false`",
+      ],
+    },
+    en: {
+      path: "docs/en/conformite/rgpd.md",
+      flows: [
+        "github.com/WillIsback/Syntheo/releases/latest/download/latest.json",
+        "15 seconds after startup",
+        "`automatic_updates` set to `false`",
+        "on the user's request",
+        "download of the installer of an update",
+        "Download the models",
+        "release-assets.githubusercontent.com",
+        "huggingface.co",
+        "speech_models_urls",
+        "`on_device_transcription_enabled` set to `false`",
+      ],
+    },
+  };
+  for (const { path, flows } of Object.values(sheets)) {
+    // Retours à la ligne du Markdown ramenés à une espace.
+    const sheet = readFileSync(join(ROOT, path), "utf8").replace(/\s+/g, " ");
+    for (const flow of flows) {
+      expect(sheet, `${path} : ${flow}`).toContain(flow);
+    }
+    // Flux disparus : notes de version d'une autre version (0.7.1),
+    // téléchargement des modèles d'annulation d'écho (0.8.0).
+    for (const gone of ["api.github.com", "raw.githubusercontent.com"]) {
+      expect(sheet, `${path} : ${gone}`).not.toContain(gone);
+    }
+    expect(sheet).not.toMatch(
+      /afficher celles d'une autre version|showing those of another version/,
+    );
+  }
+});
+
+// Ni les notes de version d'une autre version, ni des icônes distantes, ni le
+// téléchargement des modèles d'annulation d'écho ne sont des flux réseau ; la
+// recherche de mise à jour, activée par défaut, n'est pas niée non plus. Pages
+// et gabarits docs-ui (schéma DataFlows) ; le texte est normalisé (espaces et
+// retours à la ligne ramenés à une espace), pour qu'une formulation coupée sur
+// deux lignes ne passe pas.
+it("docs_do_not_list_removed_flows", () => {
+  const docsUi = readdirSync(join(ROOT, "scripts/docs-ui"))
+    .filter((name) => /\.(tpl|json)$/.test(name))
+    .map((name) => join("scripts/docs-ui", name));
+  for (const page of [
+    "docs/fr/security.mdx",
+    "docs/en/security.mdx",
+    "docs/fr/data-and-privacy.mdx",
+    "docs/en/data-and-privacy.mdx",
+    "docs/fr/offline.mdx",
+    "docs/en/offline.mdx",
+    "docs/fr/philosophy.mdx",
+    "docs/en/philosophy.mdx",
+    "SECURITY.md",
+    ...docsUi,
+  ]) {
+    const text = readFileSync(join(ROOT, page), "utf8").replace(/\s+/g, " ");
+    for (const gone of [
+      "notes de version sur GitHub",
+      "release notes on GitHub",
+      "notes de version d'une",
+      "release notes of a version other",
+      "icônes d'interface",
+      "interface icons",
+      "raw.githubusercontent.com",
+      "api.github.com",
+      "pas de vérification de mise à jour",
+      "no update checks",
+    ]) {
+      expect(text, `${page} : ${gone}`).not.toContain(gone);
+    }
+  }
+});
+
+// Revue de l'issue 702 : les webhooks envoient du contenu de réunion vers
+// l'adresse saisie (plugins/local-api dispatch.rs, étape d'automatisation
+// step-effects.ts). La fiche RGPD, en français et en anglais, les déclare avec
+// leur contenu et leur destinataire, et ne dit plus que les endpoints
+// d'inférence sont les seuls à recevoir des données.
+it("rgpd_declares_webhooks", () => {
+  const sheets = {
+    "docs/fr/conformite/rgpd.md": [
+      "Webhooks configurés par l'utilisateur",
+      "désactivés tant qu'aucune adresse n'est saisie",
+      "`meeting.completed`",
+      "`note.enhanced`",
+      "texte complet de la transcription",
+      "Envoyer vers une adresse (webhook)",
+      "le destinataire est l'adresse choisie par l'utilisateur",
+    ],
+    "docs/en/conformite/rgpd.md": [
+      "Webhooks configured by the user",
+      "off until an address is entered",
+      "`meeting.completed`",
+      "`note.enhanced`",
+      "full transcript text",
+      "Send to an address (webhook)",
+      "the recipient is the address the user chose",
+    ],
+  };
+  for (const [path, required] of Object.entries(sheets)) {
+    const sheet = readFileSync(join(ROOT, path), "utf8").replace(/\s+/g, " ");
+    for (const text of required) {
+      expect(sheet, `${path} : ${text}`).toContain(text);
+    }
+    expect(sheet).not.toMatch(/et eux seuls|and only those/);
   }
 });

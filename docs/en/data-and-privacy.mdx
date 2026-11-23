@@ -25,13 +25,14 @@ Everything is in the app's data folder:
 | Technical logs | The app's log folder, with sensitive content masked (keys and tokens, addresses, identifiers) and size-based rotation. For a failed webhook, only the host is logged, never the URL path |
 | Inference server API keys and webhook signing secrets | System keychain (Secret Service on Linux, Credential Manager on Windows), never in plain text in the database. With no keychain available on Linux, a webhook secret stays in the database |
 | Exports | Folder chosen in "Export location" (**Settings → Profile**) |
+| On-device transcription models, if installed | `speech/models` in the app data folder (`~/.local/share/fr.willisback.syntheo` on Linux, `%APPDATA%\fr.willisback.syntheo` on Windows), with the commissioning result (`speech/commissioning.json`); see [Transcribe on this computer](/en/on-device-transcription) |
 | Audio | **Nowhere**: see below |
 
 <Warning>
   Syntheo does not encrypt the local database. Turn on disk encryption (BitLocker on Windows, LUKS or the encryption offered at installation on Linux) and lock your session: this is what protects your notes if the computer or a backup is lost. Do not edit `app.db` by hand: you risk corrupting your notes. For a portable copy, use export.
 </Warning>
 
-On Linux, Syntheo restricts its data folder to your account: the folder is `0700`, the database and logs `0600`, corrected at every start. Backups left by a database reset (`app.db.<date>.bak`) are deleted after 30 days; the most recent one is always kept.
+On Linux, Syntheo restricts its data folder to your account: the folder is `0700`, the database and logs `0600`, corrected at every start. Backups left by a database reset (`app.db.<timestamp>.bak`, where the timestamp is in Unix seconds) are deleted after 30 days; the most recent one is always kept.
 
 ## Audio is never kept
 
@@ -45,13 +46,15 @@ Capture audio lives in memory just long enough to be sent to your transcription 
 
 When you mute the microphone or system audio during listening, Syntheo sends silence in place of that source: what it captures does not leave your computer. See [Record a meeting](/en/meetings), section "Mute the microphone or system audio".
 
-As a result, if transcription stops (server unreachable, key rejected), the passage concerned is missing from the transcript. Syntheo says so and reconnects, but cannot recover it.
+As a result, if transcription stops (network outage, server unreachable or down), Syntheo says so and reconnects. If the server refuses the key or the settings, Syntheo does not retry: fix them in **Settings → Transcription**, then restart listening. When it reconnects, it replays the last seconds kept in memory (about fifteen at most) to the new stream: a short outage leaves no gap. Beyond that, the passage before those last seconds is missing from the transcript and cannot be recovered, since no audio is saved.
 
 ## What leaves your computer
 
 | Destination | What is sent | When |
 | --- | --- | --- |
 | Your transcription server | The audio of the capture, the dictation or the imported file | During transcription |
+| The [On this computer](/en/on-device-transcription) program, on your computer's loopback | The recording audio, if chosen: nothing leaves the computer | During an "On this computer" recording |
+| The sources of the on-device transcription models: Syntheo's GitHub release (`github.com`, redirected to `release-assets.githubusercontent.com`), then Hugging Face (`huggingface.co`, redirected to its content servers under `hf.co`) as a fallback, or the mirror set by your organization (`speech_models_urls`); HTTPS redirects are followed | HTTPS requests for the model files, nothing about your meetings; these hosts see your IP address | Only when you choose **Download the models**; no connection if you install them from a folder |
 | Your summary server | The text needed for the task: transcript, notes, summary template instructions, chat question | Summary, chat, "Suggest sections", a folder's project thread and agenda, an automation's "Generate" step |
 | Your [webhooks](/en/reference/webhooks)' addresses | Meeting events (note, summaries, participants, transcript) | At each event, if you added an endpoint |
 | The address of an [automation](/en/automations)'s webhook step | The content you put in it | When the automation runs |
@@ -62,11 +65,11 @@ Choose an activity in the diagram below: it shows the destination that receives 
 
 <DataFlows />
 
-Apart from inference, two minor flows remain, with no meeting content: the update check (reading `latest.json` on GitHub, then downloading the installer if you update) and showing the release notes of a version other than the installed one (a request to GitHub).
+Apart from the servers and addresses you configure (inference, webhooks) and the "On this computer" models (table above), only updates leave the computer, with no meeting content: Syntheo reads `latest.json` on GitHub 15 seconds after startup (can be turned off) or when you start the check, and this file also carries the new version's release notes. The installer is downloaded only if you choose to update.
 
-An image hosted on another site, in a summary, an edit proposal or a chat answer, is never loaded automatically. The "Load image" button shows the site's name. When you click it, Syntheo requests the image from that site, which sees the computer's IP address and the full image address. Click only if you trust the source.
+An image hosted on another site, in a summary, an edit proposal or a chat answer, is never loaded: its alternative text shows instead, and no request goes to that site.
 
-Nothing is sent to the vendor: no account, no usage statistics, no error reports, The update check, on by default and optional, sends no personal data; GitHub sees the computer's IP address. See [Update](/en/desktop-installation#update).
+Nothing is sent to the vendor: no account, no usage statistics, no error reports. The update check, on by default and optional, sends no personal data; GitHub sees the computer's IP address. See [Update](/en/desktop-installation#update).
 
 <Note>
   An inference server run by a third party becomes your processor within the meaning of the GDPR (Art. 28): check the contract and where the data is located. A self-hosted server stays under your control.
@@ -74,7 +77,7 @@ Nothing is sent to the vendor: no account, no usage statistics, no error reports
 
 ## Lock the app
 
-The "Privacy" screen contains a single setting, "Lock app":
+The "Privacy" screen contains the "Lock app" setting, and the [rework measurement](#rework-measurement-beta) settings (beta):
 
 <SettingsPath steps={["Settings", "Advanced", "Privacy"]} />
 
@@ -84,10 +87,23 @@ In the replica, choose the system shown below the screen: on Windows, the switch
 
 <AppSettings section="privacy" focus="lock" />
 
+## Rework measurement (beta)
+
+For the beta, Syntheo can measure how much you reworked a summary before sending it. This feature is **off by default**: turn on "Measure rework of summaries" in **Settings → Advanced → Privacy**. An administrator can turn it off through `managed_settings.json` (keys `measurement_enabled` and `calibration_enabled` set to `false`, see [Security](/en/security#enterprise-deployment)).
+
+In the summary menu, "Measure rework…" opens a window where you paste the version you sent, or drop a `.txt`, `.md`, `.html` or `.docx` file. The calculation runs on your computer, without AI or network, with the same rule as the [`syntheo mesure`](/en/reference/cli#mesure-command) command. It shows raw numbers: words of content reworked per 100 generated words, and names or acronyms corrected.
+
+- **What is kept**: counts only (words generated, added, deleted, replaced), per summary and per section identified by its rank and its role (decisions, actions or other), with the version of the calculation rule, in the local database. Added to these, only while measurement is on: a random pseudonym; a fingerprint with a local key of corrected terms, never the terms, the key being destroyed when you erase; each summary generation with the date of its first file export and first share (copy or webhook); and a copy of the summary as generated, to compare it, cleared when measurement is turned off and never exported.
+- **What is never kept**: the sent version, excerpts, headings. Pasted text lives only in the window and disappears when it closes. The measurement tables refuse any text.
+- **Nothing is sent.** "Export my measurements…" shows the whole pseudonymized file before you save it; you hand it over yourself. Its content is described in [Beta](/en/beta).
+
+**Calibration mode**, a separate setting also off by default, lets you check the rule by hand: after a measurement, each difference is shown with its two excerpts and its automatic class (content or lexical), and you choose the true class. The agreement matrix (numbers) is shown, can be copied, and can be saved. Excerpts and your line-by-line choices stay on screen: they go neither to the database, nor to the log, nor to any export.
+
 ## Delete your data
 
-- **A meeting**: delete it in the app. Its transcript, its notes and its entry in the search index disappear.
+- **A meeting**: delete it in the app. It disappears from the app and from search, but its content (title, notes, transcript, earlier versions) stays for now in the computer's local database. To erase it permanently today, delete the data folder; a real purge is planned.
 - **An API key**: in **Settings → Transcription** or **Settings → Synthesis**, open "Advanced", click "Reset this server…", then "Reset". The address and the key are forgotten; the key is removed from the keychain.
+- **Your beta measurements**: in **Settings → Advanced → Privacy**, "Erase my measurements…", then confirm. The counters, the calibration, the term and summary tracking, the copy of generated summaries and the pseudonym are erased, and measurement is turned off.
 - **Everything**: run a [complete uninstall](/en/uninstall), which removes the database, logs, cache, configuration and API keys, then delete the exports you produced.
 
 ## Inform participants

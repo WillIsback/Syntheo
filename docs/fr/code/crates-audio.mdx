@@ -23,14 +23,13 @@ Dans les `Cargo.toml`, ces crates sont référencées par l'alias de workspace `
 | `crates/audio-actual` | Implémentation réelle (`ActualAudio`) : capture micro via `cpal`, capture de l'audio système, annulation d'écho et resynchronisation. | `apps/desktop/src-tauri` |
 | `crates/audio-mock` | Fournisseur factice `MockAudio`, qui rejoue des fichiers de `syntheo-data`. | `apps/desktop/src-tauri`, seulement avec les features `dev` ou `devtools` |
 | `crates/audio-device` | Énumération des périphériques et choix par défaut par plateforme (`backend()`, `AudioDeviceBackend`), gestion des entrées Bluetooth et des sorties casque. | `audio-actual`, `device-monitor`, `listener-core` |
-| `crates/device-monitor` | Surveille les changements de périphériques (`DeviceMonitor`, `DeviceSwitchMonitor`, `DeviceUpdateMonitor`) avec un anti-rebond de 1 s. | `listener-core` |
+| `crates/device-monitor` | Surveille les changements de périphériques (`DeviceSwitchMonitor`) avec un anti-rebond de 1 s. | `listener-core` |
 | `crates/audio-sync` | Mesure du décalage micro / audio système (`GccPhatLagEstimator`, `SyncProbe`, qui suit aussi la dérive d'horloge entre les deux périphériques) et des niveaux (`LevelAccumulator`, dBFS). | `audio-actual` |
-| `crates/aec` | Annulation d'écho acoustique par modèle ONNX (`AEC`, `BLOCK_SIZE`, `BLOCK_SHIFT`). Feature `onnx` active par défaut. | `audio-actual` (`capture/echo_gate.rs`) |
+| `crates/aec` | Annulation d'écho acoustique par modèle ONNX (`AEC`, `BLOCK_SIZE`, `BLOCK_SHIFT`). Les deux modèles DTLN de la variante compilée (feature `128` par défaut, ou `256`, `512`) sont embarqués dans le binaire et vérifiés au chargement (taille et SHA-256) ; aucun accès réseau. Feature `onnx` active par défaut. | `audio-actual` (`capture/echo_gate.rs`) |
 | `crates/audio-interface` | Trait `AsyncSource`, abstraction d'une source audio asynchrone. | `audio-actual`, `audio-utils`, `resampler` |
 | `crates/audio-utils` | Outils PCM : décodage (`rodio`, `symphonia`), métadonnées, rééchantillonnage, conversion `f32` / `i16`, découpage pour le STT (`chunk_size_for_stt`), lecture (`open_default_playback_sink`). | `aec`, `audio-actual`, `audio-mock`, `listener-core`, `listener2-core`, `mp3`, `vad-masking`, `fs-sync-core`, `plugins/sfx` |
-| `crates/audio-mime` | Une fonction : `content_type_to_extension`. | `audio-utils` |
 | `crates/resampler` | Rééchantillonnage par blocs (`RubatoChunkResampler`) au-dessus de `rubato`. | `audio-actual`, `audio-utils` |
-| `crates/mp3` | Encodage MP3 et WAV en flux ou par segments, en mémoire (`encode_mono_segments_in_memory`). | `listener2-core` (`batch/upload.rs`) |
+| `crates/mp3` | Encodage MP3 mono en flux ou par segments, en mémoire (`encode_mono_segments_in_memory`), et décodage MP3 vers WAV pour les tests (`decode_to_wav`). | `listener2-core` (`batch/upload.rs`) |
 
 ### `crates/audio-actual`
 
@@ -47,7 +46,7 @@ Dans les `Cargo.toml`, ces crates sont référencées par l'alias de workspace `
 | --- | --- | --- |
 | `crates/vad` | Détection de parole avec `earshot`, derrière la feature du même nom (module `earshot`). | `vad-masking`, `fs-sync-core` |
 | `crates/vad-masking` | Masquage des silences avant envoi au STT, en lot (`masking`) ou en flux (`streaming`, `VadConfig`). | `listener-core` |
-| `crates/onnx` | Chargement de modèles ONNX avec `ort` (`load_model_from_bytes`, `load_model_from_path`, variante accélérée) ; réexporte `ort` et `ndarray`. | `aec` |
+| `crates/onnx` | Chargement de modèles ONNX avec `ort` (`load_model_from_bytes`) ; réexporte `ort` et `ndarray`. | `aec` |
 
 **Pages de doc concernées** : [/meetings](/fr/meetings) pour `vad-masking` ; aucune pour `vad` et `onnx` pris isolément.
 
@@ -64,7 +63,7 @@ Dans les `Cargo.toml`, ces crates sont référencées par l'alias de workspace `
 ### `crates/listener2-core`
 
 - **Rôle** : transcription par lot d'un fichier importé. `src/batch/` propose un mode simple et un mode progressif ; `upload.rs` découpe l'audio en segments MP3 en mémoire avant envoi.
-- **API** : `BatchRuntime`, `BatchParams`, `BatchEvent`, `BatchRunMode` ; `is_supported_languages_live` / `_batch`, `suggest_providers_for_languages_live` / `_batch`, `list_documented_language_codes_batch` ; lecture et export de sous-titres (`parse_subtitle_from_path`, `export_words_to_vtt_file`).
+- **API** : `BatchRuntime`, `BatchParams`, `BatchEvent`, `BatchRunMode` ; `is_supported_languages_live` / `_batch` ; lecture de sous-titres (`parse_subtitle_from_path`).
 - **Dépendances internes** : `audio-utils`, `language`, `mp3`, `user-error`, `owhisper-client`, `owhisper-interface`.
 - **Pages de doc concernées** : [/import-recordings](/fr/import-recordings), [/languages](/fr/languages).
 
@@ -76,7 +75,7 @@ Dans les `Cargo.toml`, ces crates sont référencées par l'alias de workspace `
 
 ### `crates/supervisor`
 
-- **Rôle** : supervision d'acteurs : budget de redémarrages (`RestartBudget`, `RestartTracker`), relance avec stratégie (`RetryStrategy`, `spawn_with_retry`), superviseur dynamique (`dynamic`).
+- **Rôle** : supervision d'acteurs : budget de redémarrages (`RestartBudget`, `RestartTracker`), relance avec stratégie (`RetryStrategy`, `spawn_with_retry`).
 - **Utilisée par** : `listener-core` (redémarrage de la source audio).
 - **Pages de doc concernées** : [/meetings](/fr/meetings) (reprise sans redémarrer la capture).
 
@@ -95,14 +94,14 @@ Dans les `Cargo.toml`, ces crates sont référencées par l'alias de workspace `
 
 ### `crates/transcript`
 
-- **Rôle** : transforme les mots reçus du STT en transcription : traitement (`TranscriptProcessor`), post-traitement, segments (`build_segments`), étiquettes de locuteurs (`SpeakerLabeler`, `render_speaker_label`), contexte des locuteurs, raffinement après lot (`batch_refine`), matérialisation en direct et rendu.
-- **Dépendances internes** : `template-app`, `owhisper-interface`.
+- **Rôle** : transforme les mots reçus du STT en transcription : traitement (`TranscriptProcessor`), segments (`build_segments`), étiquettes de locuteurs (`SpeakerLabeler`, `render_speaker_label`), contexte des locuteurs, raffinement après lot (`batch_refine`), matérialisation en direct et rendu.
+- **Dépendances internes** : `owhisper-interface`.
 - **Utilisée par** : `listener-core`, `plugins/transcription`, `agent-access` (CLI et serveur MCP).
 - **Pages de doc concernées** : [/meetings](/fr/meetings), [/notes](/fr/notes), [/contacts](/fr/contacts), [/reference/cli](/fr/reference/cli), [/reference/mcp](/fr/reference/mcp).
 
 ### `crates/language`
 
-- **Rôle** : codes de langue ISO 639-1 (`ISO639`, `Language`), listes de langues supportées (`whisper_multilingual`, `parakeet_tdt_v3_languages`), détection (`detect`, via `whatlang`) et langue dominante d'un texte (`dominant_language`).
+- **Rôle** : codes de langue ISO 639-1 (`ISO639`, `Language`), listes de langues supportées (`whisper_multilingual`), détection (`detect`, via `whatlang`) et langue dominante d'un texte (`dominant_language`).
 - **Dépendances internes** : `whisper` (feature `whisper`, active par défaut).
 - **Utilisée par** : `detect`, `listener-core`, `listener2-core`, `owhisper-client`, `owhisper-interface`, `plugins/tantivy`, `plugins/template` (commande `dominant_language`), `plugins/transcription`.
 - **Pages de doc concernées** : [/languages](/fr/languages).
@@ -110,6 +109,32 @@ Dans les `Cargo.toml`, ces crates sont référencées par l'alias de workspace `
 ### `crates/whisper`
 
 Aucun modèle Whisper : la crate ne contient que l'énumération `Language` des langues du tokenizer Whisper (`whisper_index`). Seule `crates/language` l'utilise. **Pages de doc concernées** : aucune.
+
+### `crates/speech-probe`
+
+Sonde de la transcription sur le poste (issue 682), sans rien télécharger. `hardware::read` lit en quelques millisecondes AVX2, cœurs physiques et logiques, mémoire disponible, espace libre du disque des données, plan d'alimentation (Linux : profil ACPI ; Windows : plan actif et économiseur de batterie), secteur ou batterie, et GPU avec leur mémoire vidéo quand le système la donne. `bench::run` est un micro-banc d'environ 4 s : un produit matriciel q8_0 en AVX2, de forme proche d'une couche de l'encodeur, sur autant de fils que de cœurs physiques ; il rend un débit en GMAC/s. `predict::predict` convertit ce débit en RTF par moteur (`Engine::ParakeetOnnx` ou `Engine::NemoGgml`) et par profil, en interpolant entre des points mesurés par le banc de l'issue 680. `predict::decide` applique les seuils : profil complet proposé jusqu'à un RTF de 0,5, profil dégradé jusqu'à 1,0, refus au-delà, ou sans AVX2, sous 1,5 Go de mémoire libre, sous 2 Go de disque ou si le disque est introuvable ; hors de la plage mesurée, la prédiction n'est jamais plus favorable que le point extrême. Exposée par la commande `probe_local_transcription` de `plugins/transcription` : une seule sonde à la fois, refusée pendant une écoute, si l'état de capture ne répond pas, et par le relay ; une écoute qui démarre l'interrompt (verdict `interrupted`). L'exemple `probe` affiche la sonde en JSON, pour étalonner un poste de référence. **Pages de doc concernées** : [/on-device-transcription](/fr/on-device-transcription).
+
+### `crates/speech-host`
+
+Hôte du programme compagnon `syntheo-speech` dans l'application (issues 683 et 684), livré dans l'installeur à côté de l'exécutable (`bundle.externalBin`). `companion` résout le dossier canonique de l'exécutable (lien ou point de réanalyse refusé) et lit la liste compilée de ses fichiers (`SYNTHEO_SPEECH_FILES`, calculée par le build.rs de l'application : le binaire et, sous Windows, le runtime Visual C++), avec des empreintes `image-hash`, stables à la signature Authenticode. `models` porte la liste compilée des modèles (`apps/speech/models/models.json` : chemins, tailles, SHA-256, sources) : état sans hachage, installation depuis un dossier, téléchargement depuis une liste ordonnée de sources HTTPS à gabarit (`{path}`, `{name}`), fichier par fichier, source suivante en cas d'échec, avec reprise et contrôle d'espace (`pinned-fetch`). `verify::verify` contrôle compagnon et modèles avant chaque lancement et exécute ce qui a été haché : fichiers du compagnon copiés dans un dossier privé neuf par lancement (0700 sous Linux, DACL limitée au propriétaire sous Windows) ; modèles hérités par descripteur sous Linux (lien `/proc/self/fd/N`), verrouillés avec les dossiers de leur chemin sous Windows ; le tout gardé jusqu'à la mort du processus. Le dossier courant du programme n'est jamais son dossier. `SpeechHost::target` lance le programme au besoin : environnement vidé, jeton aléatoire de 256 bits écrit sur l'entrée standard, annonce lue sur la sortie standard. Le jeton et le port restent en mémoire, jamais dans un journal, un réglage, la ligne de commande ou l'environnement du programme. Un programme mort est relancé avec un nouveau jeton et un nouveau port ; l'ancien port n'est jamais réutilisé. Chaque tentative de lancement compte, réussie ou non : au-delà de 3 en 10 min, l'hôte refuse tout lancement jusqu'à la fin de la fenêtre, et le compte repart à zéro après un lancement resté vivant 1 min. Un refus de vérification n'est pas revérifié avant la fin de l'écoute. Les refus définitifs (politique, compagnon ou modèles absents ou altérés, plantages en boucle, preuve du programme refusée) remontent en `DegradedError::OnDeviceUnavailable` ou `OnDeviceAuthenticationFailed` et ne sont pas réessayés par le superviseur de session ; seul un lancement raté l'est. Pendant une installation ou un retrait des modèles, `target()` refuse aussitôt (`installing`) ; `install_progress` et `cancel_install` suivent et annulent. `commission` fait la mise en service (issue 686) : chaque profil mesuré environ 30 s sur l'audio compilé dans l'application, dans l'ordre de la conclusion du banc 680, premier profil sous 2 s de retard des finals au 95e centile et sans dérive retenu, résultat enregistré (`speech/commissioning.json`, lié à la construction du compagnon et à la liste des modèles) et appliqué à l'écoute (un ou deux flux, diarisation ou non) ; `load` rend les mesures de charge publiées par le programme (retard, RTF, niveau de diarisation). `SpeechHost::stop` ferme l'entrée standard, puis arrête le processus après 3 s. Branché par `plugins/transcription` (`on_device`) : la source « Sur ce poste » a une adresse interne réservée (`owhisper_client::ON_DEVICE_BASE_URL`), résolue par `ListenerRuntime::on_device_target` à chaque connexion d'un listener. Le client se connecte alors avec la preuve du pair (`OnDeviceToken`, `ws_client::PeerProof`) : rien n'est envoyé avant d'avoir vérifié la preuve du programme, et une preuve fausse ferme la connexion sans nouvelle tentative. Le programme s'arrête à la fin de l'écoute. Les réglages gérés `on_device_transcription_enabled` (à `false`, la source est interdite) et `speech_models_urls` (sources des modèles imposées) sont lus dans `managed_settings.json` (`db_app::load_managed_policy`) et gardés en mémoire, jamais dans la base, que la webview peut réécrire. **Pages de doc concernées** : [/on-device-transcription](/fr/on-device-transcription), [/security](/fr/security).
+
+### `crates/pinned-fetch`, `crates/image-hash` et `crates/speech-sources`
+
+`pinned-fetch` télécharge en HTTPS seulement (redirections comprises) ou copie depuis un dossier un fichier épinglé par sa taille et son SHA-256 : écriture dans un `.part` haché à la volée, contrôle, puis renommage ; reprise par `Range` d'un `.part` re-haché, acceptée seulement sur un 206 dont le `Content-Range` reprend au bon octet, sinon le fichier repart de zéro sans `Range` (tout autre statut que 200 ou 206 est refusé avant de toucher au `.part` ; 5 redirections HTTPS au plus) ; un flux terminé trop tôt garde le `.part` ; annulation lue pendant l'envoi et la lecture, qui garde le `.part`. Utilisée par `speech-host` (modèles de la transcription sur le poste). `image-hash` calcule l'empreinte d'un fichier du compagnon, stable à la signature Authenticode (somme de contrôle, entrée et bloc de certificats d'une image PE ignorés, ce bloc n'étant reconnu qu'à la fin réelle de l'image ; reproduite en PowerShell par `scripts/check-companion-pins.ps1` pour le contrôle bloquant du job sign) : le job sign de build-windows.yml signe le compagnon après que l'application en a épinglé l'empreinte. Utilisée par le build.rs de l'application et par `speech-host`. `speech-sources` est le seul validateur des sources de téléchargement des modèles (`https://` littéral, sans identifiants, requête, fragment ni virgule, 8 au plus), partagé par le build.rs de l'application (sources compilées ; une liste invalide, ou une release sans devtools qui livre le compagnon sans aucune source, fait échouer la construction), `db-app` (réglage géré `speech_models_urls`) et `speech-host`. **Pages de doc concernées** : [/security](/fr/security), [/on-device-transcription](/fr/on-device-transcription).
+
+### `apps/speech` : programme compagnon `syntheo-speech`
+
+Programme de transcription sur le poste (issues 681 et 683), livré dans l'installeur de l'application : un processus séparé que l'application lance et arrête, joignable seulement sur la boucle locale, qui parle le protocole temps réel de NeMo-Speech.cpp, celui de l'adaptateur `nvidia` de `crates/owhisper-client`. C'est un **workspace Cargo à part**, avec son propre `Cargo.lock` : le moteur A (`parakeet-rs`, ONNX Runtime) épingle une version d'`ort` différente de celle de l'application ; il est construit à part (`scripts/build-speech.sh` et `.ps1`) avant l'application.
+
+- **Moteurs derrière un trait** (`engine::Engine`, `engine::Recognizer`) : A, `parakeet::ParakeetEngine` (Nemotron 3.5 en flux, int8 per-channel, et diarisation Nemotron-3), est implémenté ; B pourra s'y brancher.
+- **Lancement** : le jeton (au moins 128 bits) arrive sur l'entrée standard, jamais sur la ligne de commande ; le module écoute sur `127.0.0.1`, sur un port libre, l'annonce en JSON sur la sortie standard et s'arrête quand l'entrée standard se ferme.
+- **Canal local** (`auth`, `server`) : le jeton ne circule jamais. Le client envoie un nonce et une preuve, et le module répond par la sienne : des HMAC du jeton liés au nonce, aux deux ports de la connexion et au sens, ce qui empêche le relais et la réflexion. Un nonce n'est accepté qu'une fois (rejeu refusé). En-tête `Origin` refusé ; `Host` limité à la boucle locale. Handshake borné dans le temps et en nombre, sessions simultanées bornées, file audio bornée.
+- **Journaux** : des durées et des nombres, jamais de texte transcrit.
+- **Charge** (`load`, issue 686) : retard et RTF de chaque session ; au-delà de 2 s de retard, diarisation espacée puis coupée, rétablie sous 1 s ; mesures publiées toutes les 5 s sur la sortie standard.
+- **Construction** (issue 683) : programme compagnon livré dans l'installeur de l'application. `scripts/build-speech.sh` et `.ps1` le construisent avant `tauri build` (chaînes de release et scripts d'alpha), ONNX Runtime vérifié contre notre épinglage (`supply-chain/check_ort.py`, `ort.tsv`), DLL importées contrôlées sous Windows, et posent ses licences (`speech-licenses/`). `build-speech.yml` le construit et le teste sur les PR, avec un SBOM CycloneDX et les notices des crates (`cargo about`). Les modèles int8 se reconstruisent à l'identique depuis des sources figées (`models/models.json`, `models/quantize.py`) et se vérifient par `models/verify.py` ; leur publication passe par un brouillon de release créé en local (`models/publish-local.sh`) puis par `publish-speech-models.yml` (environnement `speech-models` avec validation : contrôle, attestation, prerelease, Hugging Face).
+- **Tests** : découpage en énoncés, horodatages et intervenants testés sans modèle (`segment`) ; contrat avec l'adaptateur `nvidia` sur un moteur factice (feature `fake-engine`, jamais livrée) ; handshake (relais, rejeu, réflexion, connexions muettes) ; aucune connexion sortante du binaire réel (Linux) ; essai avec le vrai modèle si `SYNTHEO_SPEECH_MODELS` et `SYNTHEO_SPEECH_AUDIO` sont définis.
+
+**Pages de doc concernées** : [/on-device-transcription](/fr/on-device-transcription).
 
 ## Détection de réunion
 
@@ -127,9 +152,9 @@ Aucun build macOS n'est publié (voir [Architecture](/fr/architecture)). Ces cra
 
 | Crate | Rôle | Utilisée par |
 | --- | --- | --- |
-| `crates/tcc` | Statut, demande et réinitialisation des permissions TCC (capture audio, capture d'écran, micro). | `plugins/permissions`, seulement avec la feature optionnelle `private-tcc` |
-| `crates/intercept` | Gestionnaire de fermeture forcée et overlay de sortie (`setup_force_quit_handler`, `should_force_quit`, `show_quit_overlay`). Hors macOS, seul le drapeau `should_force_quit` / `set_force_quit` est compilé. | `apps/desktop/src-tauri`, `plugins/tray`, `plugins/dock` (macOS) |
-| `crates/dictation-ui-macos` | Overlay natif de dictée (`show`, `hide`, `update_state`) et insertion du texte dans l'application cible (`capture_target`, `insert_text`). | `plugins/dictation` (dépendance macOS uniquement) |
+| `crates/tcc` | Statut des permissions TCC de capture audio et de capture d'écran, et demande de la capture d'écran. | `plugins/permissions`, seulement avec la feature optionnelle `private-tcc` |
+| `crates/intercept` | Gestionnaire de fermeture forcée, avec son overlay de sortie (`setup_force_quit_handler`, `should_force_quit`). Hors macOS, seul le drapeau `should_force_quit` / `set_force_quit` est compilé. | `apps/desktop/src-tauri`, `plugins/tray`, `plugins/dock` (macOS) |
+| `crates/dictation-ui-macos` | Insertion du texte dicté dans l'application cible (`capture_target`, `insert_text`). | `plugins/dictation` (dépendance macOS uniquement) |
 
 **Pages de doc concernées** : aucune, tant que macOS n'est pas distribué.
 
@@ -137,9 +162,6 @@ Aucun build macOS n'est publié (voir [Architecture](/fr/architecture)). Ces cra
 
 | Crate | Rôle | Statut | Pages de doc concernées |
 | --- | --- | --- | --- |
-| `crates/session-ingest` | Format d'import d'une session (`SessionIngestEnvelope`, `IngestSession`, `IngestTranscript`…) et application en base (`apply_session_envelope`, feature `apply`). | Exposée par la commande `apply_session_ingest` de `plugins/db`. Aucun appel trouvé dans `apps/desktop/src`. | aucune |
-| `crates/gbnf` | Énumération `Grammar` qui produit des grammaires GBNF (`build`). | Seulement enregistrée comme type `specta` par `plugins/template`. | aucune |
-| `crates/buffer` | `opinionated_md_to_html` : conversion Markdown vers HTML. | Exposée par `plugins/misc`. Aucun appel trouvé dans `apps/desktop/src`. | aucune |
 | `crates/audacity` | Écrit des projets Audacity (`Project`, `Track`, `Bundle`) pour inspecter des pistes. | Outil de test : dépendance de dev de `aec` et `vad-masking`. | aucune |
 | `crates/audio-snapshot` | Empreintes spectrales et assertions de non-régression audio (`compute_snapshot`, `assert_or_update`). | Outil de test : dépendance de dev de `aec`. | aucune |
 

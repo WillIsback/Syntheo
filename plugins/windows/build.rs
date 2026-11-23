@@ -1,11 +1,7 @@
 const COMMANDS: &[&str] = &[
     "window_show",
     "window_hide",
-    "window_destroy",
-    "window_navigate",
     "window_emit_navigate",
-    "window_is_exists",
-    "window_is_occluded",
     "webview_health_ack",
     "webview_health_ready",
     "window_set_frame_animated",
@@ -19,10 +15,6 @@ const COMMANDS: &[&str] = &[
     "floating_bar_update",
     "floating_bar_update_amplitude",
     "floating_bar_current_state",
-    "live_caption_show",
-    "live_caption_hide",
-    "live_caption_update",
-    "live_caption_current_state",
 ];
 
 fn main() {

@@ -36,20 +36,6 @@ pub struct Args {
     pub command: Command,
 }
 
-impl Args {
-    pub fn needs_write(&self) -> bool {
-        matches!(
-            self.command,
-            Command::Proposals {
-                command: ProposalCommand::Create { .. } | ProposalCommand::Decline { .. },
-            } | Command::Meetings {
-                command: MeetingCommand::Import { .. },
-                ..
-            } | Command::Mcp
-        )
-    }
-}
-
 #[derive(Debug, Subcommand)]
 pub enum Command {
     /// Check the local CLI and database connection without changing data
@@ -69,6 +55,23 @@ pub enum Command {
     },
     /// Run the Syntheo MCP server over stdio
     Mcp,
+    /// Measure how much of a generated summary was reworked before sending
+    /// (local calibration; prints numbers only, never text)
+    Mesure {
+        /// Generated summary (.md, .txt, .html or .docx)
+        #[arg(long, value_name = "FILE")]
+        generated: PathBuf,
+        /// Version actually sent or published (.md, .txt, .html or .docx)
+        #[arg(long, value_name = "FILE")]
+        sent: PathBuf,
+        /// Dictionary terms, one per line
+        #[arg(long, value_name = "FILE")]
+        dictionary: Option<PathBuf>,
+        /// Print each difference with text excerpts (TSV, standard output
+        /// only) for manual calibration; never with --json
+        #[arg(long, conflicts_with = "json")]
+        differences: bool,
+    },
 }
 
 #[derive(Debug, Subcommand)]

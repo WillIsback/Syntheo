@@ -6,8 +6,6 @@ import * as __TAURI_EVENT from "@tauri-apps/api/event";
 
 /** Commands */
 export const commands = {
-	registerHotkey: (hotkey: HotKey, options: Options) => typedError<null, string>(__TAURI_INVOKE("plugin:shortcut|register_hotkey", { hotkey, options })),
-	unregisterHotkey: () => typedError<null, string>(__TAURI_INVOKE("plugin:shortcut|unregister_hotkey")),
 	configure: (shortcut: string | null) => typedError<null, string>(__TAURI_INVOKE("plugin:shortcut|configure", { shortcut })),
 	validate: (shortcut: string) => typedError<null, string>(__TAURI_INVOKE("plugin:shortcut|validate", { shortcut })),
 	setActive: (active: boolean) => typedError<null, string>(__TAURI_INVOKE("plugin:shortcut|set_active", { active })),
@@ -19,19 +17,6 @@ export const events = {
 };
 
 /* Types */
-export type HotKey = {
-	key: number | null,
-	modifiers: Modifier[],
-};
-
-export type Modifier = "command" | "rightcommand" | "option" | "shift" | "control" | "fn";
-
-export type Options = {
-	useDoubleTapOnly?: boolean,
-	doubleTapLockEnabled?: boolean,
-	minimumKeyTimeMs?: number,
-};
-
 export type ShortcutEvent = { type: "pressed" } | { type: "released" } | { type: "cancelled" } | { type: "discarded" };
 
 /* Tauri Specta runtime */

@@ -18,6 +18,8 @@ name = "syntheo_desktop_lib"
 crate-type = ["staticlib", "rlib"]
 
 [build-dependencies]
+syntheo-image-hash = { workspace = true }
+syntheo-speech-sources = { workspace = true }
 tauri-build = { workspace = true, features = [] }
 
 [dependencies]
@@ -36,11 +38,11 @@ tauri-plugin-dictation = { workspace = true }
 tauri-plugin-dock = { workspace = true }
 tauri-plugin-export = { workspace = true }
 tauri-plugin-fs-sync = { workspace = true }
-tauri-plugin-hooks = { workspace = true }
 tauri-plugin-http = { workspace = true }
 tauri-plugin-icon = { workspace = true }
 tauri-plugin-local-api = { workspace = true }
 tauri-plugin-local-auth = { workspace = true }
+tauri-plugin-mesure = { workspace = true }
 tauri-plugin-misc = { workspace = true }
 tauri-plugin-notification = { workspace = true }
 tauri-plugin-notify = { workspace = true }
@@ -69,7 +71,6 @@ tauri-plugin-updater = { workspace = true }
 tauri-plugin-window-state = { workspace = true }
 tauri-plugin-windows = { workspace = true }
 
-syntheo-aec = { workspace = true, features = ["download"] }
 syntheo-audio-actual = { workspace = true }
 syntheo-audio-mock = { workspace = true, optional = true }
 syntheo-db-app = { workspace = true }
@@ -80,14 +81,17 @@ syntheo-storage = { workspace = true }
 
 chrono = { workspace = true }
 dirs = { workspace = true }
+# Protocole `asset` de l'application (src/asset_protocol.rs), mêmes versions que tauri.
+http-range = "0.1.5"
+percent-encoding = "2.3"
 pico-args = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 specta = { workspace = true }
-specta-typescript = { workspace = true }
 sqlx = { workspace = true, features = ["runtime-tokio", "sqlite"] }
 strum = { workspace = true, features = ["derive"] }
 tauri-specta = { workspace = true, features = ["derive", "typescript"] }
+tauri-utils = "2.10"
 tokio = { workspace = true, features = ["fs", "rt-multi-thread", "macros", "sync", "time"] }
 tracing = { workspace = true }
 
@@ -108,6 +112,7 @@ devtools = [
 # Même analyse des motifs d'URL que tauri-plugin-http (tests/http_scope.rs).
 regex = { workspace = true }
 reqwest = { workspace = true }
+syntheo-specta-export = { workspace = true }
 tauri = { workspace = true, features = ["test"] }
 tempfile = { workspace = true }
 url = { workspace = true }

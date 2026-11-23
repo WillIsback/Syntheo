@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "app_version": "0.8.0",
+  "rule_version": 1,
+  "rubric_version": 0,
+  "pseudonym": "Alice Martin",
+  "enrolled_days": 21,
+  "meetings": [
+    {
+      "meeting": "m1",
+      "summary": "s1",
+      "day": 2,
+      "mode": "paste",
+      "aligned": true,
+      "headings_generated": 3,
+      "headings_matched": 3,
+      "unmatched_sent_words": 0,
+      "total": {
+        "generated": 28,
+        "added": 3,
+        "deleted": 2,
+        "replaced_content": 4,
+        "replaced_lexical": 1
+      },
+      "sections": [
+        {
+          "index": 0,
+          "role": "Décisions du comité",
+          "matched": true,
+          "counters": {
+            "generated": 11,
+            "added": 0,
+            "deleted": 0,
+            "replaced_content": 3,
+            "replaced_lexical": 0
+          }
+        }
+      ],
+      "title": "Comité de pilotage du projet Atlas"
+    }
+  ],
+  "summaries": [],
+  "terms": [
+    { "term": "Nemotron", "added_after": null, "errors": [] }
+  ]
+}

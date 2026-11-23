@@ -138,19 +138,10 @@ mod test {
 
     #[test]
     fn export_types() {
-        const OUTPUT_FILE: &str = "./js/bindings.gen.ts";
-
-        make_specta_builder::<tauri::Wry>()
-            .disable_serde_phases()
-            .semantic_types(
-                specta_typescript::semantic::Configuration::empty().enable_lossless_floats(),
-            )
-            .dangerously_cast_bigints_to_number()
-            .export(specta_typescript::Typescript::default(), OUTPUT_FILE)
-            .unwrap();
-
-        let content = std::fs::read_to_string(OUTPUT_FILE).unwrap();
-        std::fs::write(OUTPUT_FILE, format!("// @ts-nocheck\n{content}")).unwrap();
+        syntheo_specta_export::write_bindings(
+            make_specta_builder::<tauri::Wry>(),
+            "./js/bindings.gen.ts",
+        );
     }
 
     fn create_app<R: tauri::Runtime>(
@@ -191,7 +182,6 @@ mod test {
         impl ScopedStoreKey for TestKey {}
 
         let scoped_store = app.store2().scoped_store::<TestKey>("test")?;
-        scoped_store.clear()?;
         assert!(scoped_store.get::<String>(TestKey::KeyA)?.is_none());
 
         scoped_store.set(TestKey::KeyA, "test".to_string())?;

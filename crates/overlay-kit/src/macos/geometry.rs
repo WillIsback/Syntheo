@@ -1,16 +1,14 @@
 use objc2_app_kit::NSScreen;
 use objc2_core_foundation::{CGPoint, CGRect, CGSize};
 use objc2_core_graphics::{CGDirectDisplayID, CGDisplayBounds};
-use objc2_foundation::{MainThreadMarker, NSNumber, NSRect, NSSize, NSString};
+use objc2_foundation::{MainThreadMarker, NSNumber, NSRect, NSString};
 
 use crate::geometry::{CheckedRect, InvalidRect};
-
-use super::support::rect;
 
 /// `NSRect` is a type alias for `CGRect` on macOS, so these conversions cover
 /// both AppKit and Core Graphics rectangles. They validate numeric soundness
 /// only; coordinate-space flips remain explicit via helpers such as
-/// [`top_left_rect_to_appkit`] and [`cg_frame_to_appkit`].
+/// [`cg_frame_to_appkit`].
 impl TryFrom<CGRect> for CheckedRect {
     type Error = InvalidRect;
 
@@ -32,26 +30,6 @@ impl From<CheckedRect> for CGRect {
             CGSize::new(value.width(), value.height()),
         )
     }
-}
-
-pub fn main_screen_frame(mtm: MainThreadMarker, fallback_size: NSSize) -> NSRect {
-    NSScreen::mainScreen(mtm)
-        .map(|screen| screen.frame())
-        .filter(|frame| CheckedRect::try_from(*frame).is_ok())
-        .unwrap_or_else(|| rect(0.0, 0.0, fallback_size.width, fallback_size.height))
-}
-
-pub fn top_left_rect_to_appkit(target: CheckedRect, screen_height: f64) -> Option<NSRect> {
-    if !screen_height.is_finite() || screen_height <= 0.0 {
-        return None;
-    }
-    let converted = CheckedRect::new(
-        target.x(),
-        screen_height - target.y() - target.height(),
-        target.width(),
-        target.height(),
-    )?;
-    Some(converted.into())
 }
 
 #[derive(Clone, Copy, Debug)]

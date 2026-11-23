@@ -7,8 +7,6 @@ Default permissions for the plugin
 - `allow-configure`
 - `allow-validate`
 - `allow-set-active`
-- `allow-register-hotkey`
-- `allow-unregister-hotkey`
 
 ## Permission Table
 
@@ -48,32 +46,6 @@ Denies the configure command without any pre-configured scope.
 <tr>
 <td>
 
-`shortcut:allow-register-hotkey`
-
-</td>
-<td>
-
-Enables the register_hotkey command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`shortcut:deny-register-hotkey`
-
-</td>
-<td>
-
-Denies the register_hotkey command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
 `shortcut:allow-set-active`
 
 </td>
@@ -93,32 +65,6 @@ Enables the set_active command without any pre-configured scope.
 <td>
 
 Denies the set_active command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`shortcut:allow-unregister-hotkey`
-
-</td>
-<td>
-
-Enables the unregister_hotkey command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`shortcut:deny-unregister-hotkey`
-
-</td>
-<td>
-
-Denies the unregister_hotkey command without any pre-configured scope.
 
 </td>
 </tr>

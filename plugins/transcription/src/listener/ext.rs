@@ -74,6 +74,20 @@ impl<'a, R: tauri::Runtime, M: tauri::Manager<R>> Listener<'a, R, M> {
         }
     }
 
+    /// État de capture, ou `None` si l'acteur racine ne répond pas à temps :
+    /// à traiter comme « peut-être actif », jamais comme inactif.
+    pub(crate) async fn capture_state_checked(&self) -> Option<CaptureState> {
+        match registry::where_is(RootActor::name()) {
+            Some(cell) => {
+                let actor: ActorRef<RootMsg> = cell.into();
+                call_t!(actor, RootMsg::GetState, 100)
+                    .ok()
+                    .map(CaptureState::from)
+            }
+            None => Some(CaptureState::Inactive),
+        }
+    }
+
     #[tracing::instrument(skip_all)]
     pub async fn get_capture_state(&self) -> CaptureState {
         if let Some(cell) = registry::where_is(RootActor::name()) {
@@ -130,27 +144,9 @@ impl<'a, R: tauri::Runtime, M: tauri::Manager<R>> Listener<'a, R, M> {
     }
 
     #[tracing::instrument(skip_all)]
-    pub async fn get_mic_muted(&self) -> bool {
-        if let Some(actor) = active_source().await {
-            call_t!(actor, SourceMsg::GetMicMute, 100).unwrap_or_default()
-        } else {
-            false
-        }
-    }
-
-    #[tracing::instrument(skip_all)]
     pub async fn set_mic_muted(&self, muted: bool) {
         if let Some(actor) = active_source().await {
             let _ = actor.cast(SourceMsg::SetMicMute(muted));
-        }
-    }
-
-    #[tracing::instrument(skip_all)]
-    pub async fn get_speaker_muted(&self) -> bool {
-        if let Some(actor) = active_source().await {
-            call_t!(actor, SourceMsg::GetSpeakerMute, 100).unwrap_or_default()
-        } else {
-            false
         }
     }
 
@@ -180,6 +176,9 @@ impl<'a, R: tauri::Runtime, M: tauri::Manager<R>> Listener<'a, R, M> {
 
     #[tracing::instrument(skip_all)]
     pub async fn start_capture(&self, params: CaptureParams) -> Result<(), crate::Error> {
+        // Une écoute a la priorité sur la sonde du poste (issue 682) : le
+        // micro-banc en cours s'arrête.
+        crate::local_probe::cancel_running_probe();
         // Revalidée ici, pas seulement à l'enregistrement (issue 646).
         crate::validate_base_url(&params.base_url).map_err(crate::Error::InvalidBaseUrl)?;
         let params: SessionParams = params.into();

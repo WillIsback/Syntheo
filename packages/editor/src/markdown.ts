@@ -79,44 +79,100 @@ export function parseJsonContent(raw: string | undefined | null): JSONContent {
 }
 
 /**
- * Image servie par l'application elle-même : protocole asset (pièces jointes,
- * médias), `data:image`, `blob:` ou chemin relatif. Toute autre adresse est
- * distante.
+ * Image qu'un contenu généré peut afficher (issues 642 et 677) : seulement
+ * `data:image`. Une adresse de fichier local (protocole asset, `file:`, chemin,
+ * chemin réseau) ou distante n'est jamais rendue d'office.
  */
-export function isLocalImageSrc(src: unknown): boolean {
-  if (typeof src !== "string") return false;
-  const value = src.trim();
-  if (!value) return false;
-  const lower = value.toLowerCase();
-  if (
-    lower.startsWith("asset:") ||
-    lower.startsWith("http://asset.localhost/") ||
-    lower.startsWith("https://asset.localhost/") ||
-    lower.startsWith("data:image/") ||
-    lower.startsWith("blob:")
-  ) {
-    return true;
-  }
-  // Chemin relatif ou absolu de l'application, sans schéma ni hôte.
-  return !/^[a-z][a-z0-9+.-]*:/i.test(value) && !value.startsWith("//");
+export function isGeneratedImageSrc(src: unknown): boolean {
+  return (
+    typeof src === "string" &&
+    src.trim().toLowerCase().startsWith("data:image/")
+  );
 }
 
-// Contenu généré (issue 642) : une image distante émettrait une requête à
-// chaque affichage. Elle est remplacée par son texte alternatif, s'il existe.
+const ATTACHMENT_ID =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+
+function attachmentIdOf(node: JSONContent): string | null {
+  const id = node.attrs?.attachmentId;
+  return typeof id === "string" && ATTACHMENT_ID.test(id) ? id : null;
+}
+
+function textOf(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+// Image que le parseur Markdown a laissée en texte brut (adresse `file:` refusée
+// par markdown-it, HTML non interprété) : seul son texte alternatif reste
+// (QA 0.8.0-1, issue 678). Jamais dans du code.
+// Linéaires (CodeQL js/polynomial-redos) : le texte alternatif exclut les
+// crochets, l'adresse les parenthèses et la balise les chevrons, avec une
+// longueur bornée ; sinon `![\![\…`, `![](![](…` ou `<img<img…` répétés
+// coûtaient un temps quadratique.
+const RAW_MARKDOWN_IMAGE = /!\[([^[\]\n]{0,1000})\]\([^()\n]{0,2048}\)/g;
+const RAW_HTML_IMAGE = /<img\b[^<>]{0,4096}>/gi;
+const HTML_ALT = /\balt\s*=\s*(?:"([^"]*)"|'([^']*)')/i;
+
+function scrubRawImages(text: string): string {
+  return text
+    .replace(RAW_MARKDOWN_IMAGE, (_, alt: string) => alt.trim())
+    .replace(RAW_HTML_IMAGE, (tag) => {
+      const match = HTML_ALT.exec(tag);
+      return (match?.[1] ?? match?.[2] ?? "").trim();
+    });
+}
+
+function isCode(node: JSONContent): boolean {
+  return (
+    node.type === "codeBlock" ||
+    (node.marks ?? []).some((mark) => mark.type === "code")
+  );
+}
+
+// Contenu généré : une image n'est gardée que si elle est en `data:image` ou si
+// c'est une pièce jointe désignée par son identifiant (sans adresse) ; sinon,
+// son texte alternatif la remplace. Une pièce jointe de fichier n'est gardée
+// que par identifiant ; une adresse de fichier local laisse le nom seul.
 function stripRemoteImageNodes(nodes: JSONContent[]): JSONContent[] {
   const out: JSONContent[] = [];
   for (const node of nodes) {
-    if (node.type === "image" && !isLocalImageSrc(node.attrs?.src)) {
-      const alt =
-        typeof node.attrs?.alt === "string" ? node.attrs.alt.trim() : "";
-      if (alt) out.push({ type: "text", text: alt });
+    if (node.type === "image" || node.type === "fileAttachment") {
+      const attachmentId = attachmentIdOf(node);
+      if (attachmentId) {
+        const { src: _src, path: _path, ...attrs } = node.attrs ?? {};
+        out.push({ ...node, attrs: { ...attrs, attachmentId } });
+        continue;
+      }
+      if (node.type === "image" && isGeneratedImageSrc(node.attrs?.src)) {
+        out.push(node);
+        continue;
+      }
+      const label = textOf(
+        node.type === "image" ? node.attrs?.alt : node.attrs?.name,
+      );
+      if (label) out.push({ type: "text", text: label });
       continue;
     }
-    out.push(
-      node.content
-        ? { ...node, content: stripRemoteImageNodes(node.content) }
-        : node,
-    );
+    if (
+      node.type === "text" &&
+      typeof node.text === "string" &&
+      !isCode(node)
+    ) {
+      const text = scrubRawImages(node.text);
+      if (text) out.push(text === node.text ? node : { ...node, text });
+      continue;
+    }
+    if (!node.content || isCode(node)) {
+      out.push(node);
+      continue;
+    }
+    const content = stripRemoteImageNodes(node.content);
+    if (content.length > 0) {
+      out.push({ ...node, content });
+    } else {
+      const { content: _content, ...rest } = node;
+      out.push(rest);
+    }
   }
   return out;
 }

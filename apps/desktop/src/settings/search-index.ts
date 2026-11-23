@@ -333,6 +333,18 @@ export const SETTINGS_SEARCH_INDEX = [
     label: msg`Lock app`,
     keywords: msg`password, PIN, Windows Hello, security, fingerprint, privacy`,
   },
+  {
+    id: "measurement-enabled",
+    page: "privacy",
+    label: msg`Measure rework of summaries`,
+    keywords: msg`beta, measure, rework, sent version, pilot`,
+  },
+  {
+    id: "calibration-enabled",
+    page: "privacy",
+    label: msg`Calibration mode`,
+    keywords: msg`beta, calibration, differences, agreement`,
+  },
 
   // Développeurs
   {

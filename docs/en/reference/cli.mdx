@@ -23,6 +23,7 @@ syntheo [--base DIR] [--db-path FILE] [--json] <command>
 | `meetings` | Browses, exports and imports meetings. |
 | `proposals` | Proposes meeting edits, to be approved in the app. |
 | `mcp` | Starts the Syntheo MCP server over stdio. |
+| `mesure` | Measures the rework between a generated summary and the sent version; prints numbers only. |
 
 ## Meeting source
 
@@ -120,6 +121,51 @@ Starts the local MCP server over stdio. Reads are idempotent. Proposal tools pre
   Don't write anything else to the server's standard output: any other output corrupts the MCP protocol stream.
 </Warning>
 
+## mesure command
+
+```bash
+syntheo mesure --generated generated.md --sent published.txt
+syntheo mesure --generated generated.md --sent published.html --dictionary terms.txt
+syntheo --json mesure --generated generated.md --sent published.md
+```
+
+Computes how much of a generated summary was reworked before it was sent or published, without AI and without network, and **prints numbers only**: no word of the texts, no heading. The command does not open the database and writes no file. It serves the local calibration of the beta measurement.
+
+- `--generated` and `--sent`: `.md`, `.txt` or `.html` files in UTF-8 (4 MiB at most), or `.docx` (16 MiB at most, read without network or external entities). The format follows the extension.
+- `--dictionary` (optional): one term per line; a short replacement touching one of these terms counts as a lexical correction.
+
+The calculation strips formatting, splits both texts by the headings of the generated version (a line identical to a heading is enough in the sent version), compares word by word, then classifies each difference:
+
+- **lexical**: replacement of 1 to 3 words by 1 to 3 words, one of which looks like a proper noun or an acronym, or is in the dictionary;
+- **content**: everything else, including a proper noun added or removed alone.
+
+Output, one value per line (`key`, tab, number):
+
+| Key | Value |
+| --- | --- |
+| `rule_version` | Version of the calculation rule. |
+| `aligned` | `1` if at least half of the generated headings are found (per-section measurement), `0` otherwise (global measurement). |
+| `headings_generated`, `headings_matched` | Headings of the generated version, and how many are found. |
+| `generated` | Generated words (`G`). |
+| `added`, `deleted` | Added (`A`) and deleted (`S`) words. |
+| `replaced_content`, `replaced_lexical` | Replaced words, content (`Rf`) and lexical (`Rl`). |
+| `unmatched_sent_words` | Words of sent sections missing from the generated version (counted in `added`). |
+| `content_per_mille` | `(A + S + Rf) / G × 1000`. |
+| `lexical_per_mille` | `Rl / G × 1000`. |
+| `section` | Per generated section: rank, found (`1` or `0`), `G`, `A`, `S`, `Rf`, `Rl`, `A / G × 1000`. |
+
+With `--json`, the same numbers are returned under `data` (fields `total`, `sections`, `content_per_mille`…).
+
+### Calibration: `--differences`
+
+```bash
+syntheo mesure --generated generated.md --sent published.txt --differences > differences.tsv
+```
+
+To check the classification by hand, `--differences` lists each difference **with its excerpts**, as TSV on standard output, instead of the numbers. The command writes nothing to disk itself and refuses `--json`. A warning on standard error reminds you that the result contains excerpts of the texts: do not share it.
+
+Columns: `n`, `section` (rank of the generated section, `-` outside a section), `type` (`ajout` added, `suppression` deleted or `remplacement` replaced), `classe_auto` (`fond` content or `lexical`), `poids` (words), `genere`, `envoye`, then `classe_vraie`, empty, to fill in a spreadsheet. Tabs and line breaks in excerpts are replaced by spaces.
+
 ## Help and version
 
 ```bash
@@ -144,7 +190,7 @@ These commands are for managed deployments (legal hold, usage measurement). They
 | `meetings hold-list` | `--after ID`, `--limit 1..200`, `--database-only` | Lists all persisted meetings, including deleted ones, for retention. |
 | `meetings hold-export ID` | `--database-only` | Streams a meeting's raw history as NDJSON, for encrypted retention. |
 | `meetings pilot-usage` | `--from-ms MS`, `--until-ms MS` | Reads local capture intervals, without content or meeting IDs. |
-| `meetings delete ID` | `--if-export-sha256 HASH`, `--require-transcription-complete` | Permanently deletes a completed local meeting. |
+| `meetings delete ID` | `--if-export-sha256 HASH`, `--require-transcription-complete` | Permanently deletes a completed local meeting that is still in the app, with a complete transcript, while the app is closed. |
 
 ### `meetings initialize-managed`
 
@@ -184,4 +230,10 @@ Requires `--json` and `--source local`. `--from-ms` and `--until-ms` are Unix mi
 syntheo --json meetings --source local delete MEETING_ID --if-export-sha256 HASH --require-transcription-complete
 ```
 
-Permanently deletes a completed local meeting: document history, transcripts and derived search index. Requires `--source local`, `--if-export-sha256` (the SHA-256 of the full JSON export, as printed on standard output with its final newline, or as saved with `--output`) and `--require-transcription-complete`. Close the app first. A modified export, an unfinished transcript or a pending proposal prevents the deletion. An interrupted deletion resumes with the same ID and the same digest.
+Permanently deletes a completed local meeting: document history, transcripts and derived search index. Requires `--source local`, `--if-export-sha256` (the SHA-256 of the full JSON export, as printed on standard output with its final newline, or as saved with `--output`) and `--require-transcription-complete`. The deletion only happens under three conditions:
+
+- **Meeting still in the app**: a meeting already deleted from the app is not found by the CLI and is not purged.
+- **Complete transcript**: the meeting has ended and its transcript is final.
+- **App closed**: otherwise the command fails with "close Syntheo before deletion".
+
+A modified export or a pending proposal also prevents the deletion. An interrupted deletion resumes with the same ID and the same digest.

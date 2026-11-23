@@ -7,9 +7,7 @@ import * as __TAURI_EVENT from "@tauri-apps/api/event";
 /** Commands */
 export const commands = {
 	deserialize: (input: string) => typedError<ParsedDocument, string>(__TAURI_INVOKE("plugin:fs-sync|deserialize", { input })),
-	writeJsonBatch: (items: ([Value, string])[]) => typedError<null, string>(__TAURI_INVOKE("plugin:fs-sync|write_json_batch", { items })),
 	writeDocumentBatch: (items: ([ParsedDocument, string])[]) => typedError<null, string>(__TAURI_INVOKE("plugin:fs-sync|write_document_batch", { items })),
-	readDocumentBatch: (dirPath: string) => typedError<{ [key in string]: ParsedDocument }, string>(__TAURI_INVOKE("plugin:fs-sync|read_document_batch", { dirPath })),
 	listFolders: () => typedError<ListFoldersResult, string>(__TAURI_INVOKE("plugin:fs-sync|list_folders")),
 	moveSession: (sessionId: string, fromFolderPath: string, targetFolderPath: string) => typedError<MoveSessionResult, string>(__TAURI_INVOKE("plugin:fs-sync|move_session", { sessionId, fromFolderPath, targetFolderPath })),
 	createFolder: (folderPath: string) => typedError<null, string>(__TAURI_INVOKE("plugin:fs-sync|create_folder", { folderPath })),
@@ -18,25 +16,20 @@ export const commands = {
 	audioExist: (sessionId: string) => typedError<boolean, string>(__TAURI_INVOKE("plugin:fs-sync|audio_exist", { sessionId })),
 	audioDelete: (sessionId: string) => typedError<boolean, string>(__TAURI_INVOKE("plugin:fs-sync|audio_delete", { sessionId })),
 	audioMetadata: (sessionId: string) => typedError<AudioFileMetadata | null, string>(__TAURI_INVOKE("plugin:fs-sync|audio_metadata", { sessionId })),
-	audioDeleteOrphanedExpired: (knownSessionIds: string[], retentionMs: number, nowMs: number) => typedError<string[], string>(__TAURI_INVOKE("plugin:fs-sync|audio_delete_orphaned_expired", { knownSessionIds, retentionMs, nowMs })),
 	audioImport: (sessionId: string, sourcePath: string) => typedError<string, string>(__TAURI_INVOKE("plugin:fs-sync|audio_import", { sessionId, sourcePath })),
 	audioSourceMetadata: (sourcePath: string) => typedError<AudioSourceMetadata, string>(__TAURI_INVOKE("plugin:fs-sync|audio_source_metadata", { sourcePath })),
 	audioHasSpeech: (sessionId: string) => typedError<boolean, string>(__TAURI_INVOKE("plugin:fs-sync|audio_has_speech", { sessionId })),
 	audioPath: (sessionId: string) => typedError<string, string>(__TAURI_INVOKE("plugin:fs-sync|audio_path", { sessionId })),
-	audioPeaks: (sessionId: string) => typedError<AudioPeaks, string>(__TAURI_INVOKE("plugin:fs-sync|audio_peaks", { sessionId })),
 	audioCopy: (sourceSessionId: string, targetSessionId: string) => typedError<boolean, string>(__TAURI_INVOKE("plugin:fs-sync|audio_copy", { sourceSessionId, targetSessionId })),
 	sessionDir: (sessionId: string) => typedError<string, string>(__TAURI_INVOKE("plugin:fs-sync|session_dir", { sessionId })),
 	loadSessionContent: (sessionId: string) => typedError<SessionContentData, string>(__TAURI_INVOKE("plugin:fs-sync|load_session_content", { sessionId })),
 	deleteSessionFolder: (sessionId: string) => typedError<null, string>(__TAURI_INVOKE("plugin:fs-sync|delete_session_folder", { sessionId })),
 	scanAndRead: (scanDir: string, filePatterns: string[], recursive: boolean, pathFilter: string | null) => typedError<ScanResult, string>(__TAURI_INVOKE("plugin:fs-sync|scan_and_read", { scanDir, filePatterns, recursive, pathFilter })),
-	chatDir: (chatGroupId: string) => typedError<string, string>(__TAURI_INVOKE("plugin:fs-sync|chat_dir", { chatGroupId })),
-	entityDir: (dirName: string) => typedError<string, string>(__TAURI_INVOKE("plugin:fs-sync|entity_dir", { dirName })),
 	attachmentSave: (sessionId: string, data: number[], filename: string) => typedError<AttachmentSaveResult, string>(__TAURI_INVOKE("plugin:fs-sync|attachment_save", { sessionId, data, filename })),
 	attachmentList: (sessionId: string) => typedError<AttachmentInfo[], string>(__TAURI_INVOKE("plugin:fs-sync|attachment_list", { sessionId })),
 	attachmentRead: (sessionId: string, attachmentId: string) => typedError<number[], string>(__TAURI_INVOKE("plugin:fs-sync|attachment_read", { sessionId, attachmentId })),
 	attachmentRemove: (sessionId: string, attachmentId: string) => typedError<null, string>(__TAURI_INVOKE("plugin:fs-sync|attachment_remove", { sessionId, attachmentId })),
 	folderAttachmentSave: (folderPath: string, data: number[], filename: string) => typedError<AttachmentSaveResult, string>(__TAURI_INVOKE("plugin:fs-sync|folder_attachment_save", { folderPath, data, filename })),
-	folderAttachmentList: (folderPath: string) => typedError<AttachmentInfo[], string>(__TAURI_INVOKE("plugin:fs-sync|folder_attachment_list", { folderPath })),
 	folderAttachmentRead: (folderPath: string, attachmentId: string) => typedError<number[], string>(__TAURI_INVOKE("plugin:fs-sync|folder_attachment_read", { folderPath, attachmentId })),
 	folderAttachmentRemove: (folderPath: string, attachmentId: string) => typedError<null, string>(__TAURI_INVOKE("plugin:fs-sync|folder_attachment_remove", { folderPath, attachmentId })),
 };
@@ -67,11 +60,6 @@ export type AudioFileMetadata = {
 };
 
 export type AudioImportEvent = { type: "audioImportStarted"; session_id: string } | { type: "audioImportProgress"; session_id: string; percentage: number } | { type: "audioImportCompleted"; session_id: string } | { type: "audioImportFailed"; session_id: string; error: string };
-
-export type AudioPeaks = {
-	duration: number,
-	channels: number[][],
-};
 
 export type AudioSourceMetadata = {
 	createdAt: string | null,

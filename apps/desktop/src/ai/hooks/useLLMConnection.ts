@@ -20,6 +20,7 @@ import {
   getProviderSelectionBlockers,
   type ProviderEligibilityContext,
 } from "~/settings/ai/shared/eligibility";
+import { useIsManagedSetting } from "~/settings/managed";
 import { useAiProvider } from "~/settings/providers";
 import { useSettingsReady } from "~/settings/queries";
 import { useConfigValues } from "~/shared/config";
@@ -78,17 +79,19 @@ export const useLLMConnection = (): LLMConnectionResult => {
   const providerConfig = useAiProvider("llm", current_llm_provider) as
     | AIProviderStorage
     | undefined;
+  // Bloqué si la politique en vigueur (managed_app_settings) ou sa copie
+  // d'app_settings coupe la synthèse (issue 707).
+  const managedDisabled = useIsManagedSetting("intelligence_disabled");
+  const disabled = managedDisabled || !!intelligence_disabled;
 
   return useMemo<LLMConnectionResult>(
     () =>
-      !settingsReady || intelligence_disabled
+      !settingsReady || disabled
         ? {
             conn: null,
             status: {
               status: "pending",
-              reason: intelligence_disabled
-                ? "managed_disabled"
-                : "settings_loading",
+              reason: disabled ? "managed_disabled" : "settings_loading",
             },
           }
         : resolveLLMConnection({
@@ -101,7 +104,7 @@ export const useLLMConnection = (): LLMConnectionResult => {
           }),
     [
       settingsReady,
-      intelligence_disabled,
+      disabled,
       current_llm_model,
       current_llm_provider,
       current_llm_reasoning_effort,

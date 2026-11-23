@@ -1,0 +1,271 @@
+"""Tests de cpu-check/run.sh avec un faux qemu (sans réseau ni modèle) :
+une erreur interne de qemu (SIGBUS, code 135, ou qemu figé qui ne consomme
+plus de CPU) est relancée une seule fois, un verdict (code 1) ne l'est jamais,
+deux erreurs internes de suite échouent, et le délai interne DEADLINE arrête
+qemu après le relevé fil par fil, relance comprise.
+
+python3 -I -m unittest discover -s apps/speech/models -p 'test_*.py'
+"""
+
+import json
+import os
+import signal
+import stat
+import subprocess
+import tempfile
+import time
+import unittest
+from pathlib import Path
+
+RUN = Path(__file__).resolve().parent / "cpu-check" / "run.sh"
+
+OK_LINES = "\n".join(
+    json.dumps(line)
+    for line in (
+        {"file": "mic.wav", "words": 80, "ok": True},
+        {"file": "sys.wav", "words": 43, "ok": True},
+        {"total": True, "words": 123, "ok": True},
+    )
+)
+MUTE_LINES = "\n".join(
+    json.dumps(line)
+    for line in (
+        {"file": "mic.wav", "words": 0, "ok": False},
+        {"file": "sys.wav", "words": 0, "ok": False},
+        {"total": True, "words": 0, "ok": False},
+    )
+)
+
+# Faux qemu : rejoue, appel après appel, le scénario donné (un état par ligne
+# de SCENARIO) et compte ses appels dans CALLS.
+FAKE_QEMU = """#!/usr/bin/env bash
+[ "$1" = --version ] && { echo "qemu-x86_64 version factice"; exit 0; }
+printf '%s\n' "$@" > "$ARGS_SEEN"
+n=$(( $(cat "$CALLS" 2> /dev/null || echo 0) + 1 ))
+echo "$n" > "$CALLS"
+state=$(sed -n "${n}p" "$SCENARIO")
+case "$state" in
+  sigbus) echo "qemu-x86_64-static: QEMU internal SIGBUS {code=ADRERR, addr=0x0}" >&2; exit 135 ;;
+  sigbus-message) echo "qemu-x86_64-static: QEMU internal SIGBUS {code=ADRERR, addr=0x0}" >&2; exit 134 ;;
+  ok) cat "$OK" ; exit 0 ;;
+  mute) cat "$MUTE" ; exit 1 ;;
+  hang) exec sleep 30 ;;
+  busy) end=$((SECONDS + 3)); while [ $SECONDS -lt $end ]; do :; done; cat "$OK"; exit 0 ;;
+  *) echo "état inconnu : $state" >&2; exit 2 ;;
+esac
+"""
+
+
+class RunShTest(unittest.TestCase):
+    final_newline = "\n"
+
+    def run_scenario(self, states, *extra, env_extra=None):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            qemu = tmp / "qemu"
+            qemu.write_text(FAKE_QEMU)
+            qemu.chmod(qemu.stat().st_mode | stat.S_IXUSR)
+            (tmp / "scenario").write_text("\n".join(states) + "\n")
+            (tmp / "ok.jsonl").write_text(OK_LINES + self.final_newline)
+            (tmp / "mute.jsonl").write_text(MUTE_LINES + self.final_newline)
+            models = tmp / "models"
+            models.mkdir()
+            env = {
+                **os.environ,
+                "QEMU": str(qemu),
+                "CPU_CHECK_BIN": "/bin/true",
+                "CALLS": str(tmp / "calls"),
+                "SCENARIO": str(tmp / "scenario"),
+                "OK": str(tmp / "ok.jsonl"),
+                "MUTE": str(tmp / "mute.jsonl"),
+                "ARGS_SEEN": str(tmp / "args"),
+                **(env_extra or {}),
+            }
+            result = subprocess.run(
+                ["bash", str(RUN), str(models), *extra],
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+            calls_file = tmp / "calls"
+            calls = int(calls_file.read_text()) if calls_file.exists() else 0
+            args_file = tmp / "args"
+            self.args_seen = (
+                args_file.read_text().splitlines() if args_file.exists() else []
+            )
+        return result, calls
+
+    def test_one_sigbus_is_retried_once_with_a_warning(self):
+        result, calls = self.run_scenario(["sigbus", "ok"])
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(calls, 2)
+        self.assertIn("::warning::", result.stdout)
+        self.assertIn("modèles acceptés", result.stdout)
+
+    def test_the_sigbus_message_alone_is_recognised(self):
+        result, calls = self.run_scenario(["sigbus-message", "ok"])
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(calls, 2)
+
+    def test_two_sigbus_in_a_row_fail(self):
+        result, calls = self.run_scenario(["sigbus", "sigbus", "ok"])
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(calls, 2)
+        self.assertIn("non conclusif", result.stderr)
+
+    FAST_WATCH = {"HEARTBEAT": "1", "STALL_LIMIT": "2"}
+
+    def test_a_frozen_qemu_is_stopped_and_retried_once(self):
+        result, calls = self.run_scenario(["hang", "ok"], env_extra=self.FAST_WATCH)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(calls, 2)
+        self.assertIn("::warning::qemu : erreur interne (figé", result.stdout)
+        self.assertIn("temps CPU de qemu", result.stdout)
+        self.assertIn("fils 1 (R 0, S 1, D 0)", result.stdout)
+        self.assertIn("-- qemu (figé) : fils 1", result.stderr)
+        self.assertRegex(result.stderr, r"fil \d+ : S, CPU 0 s, attente ")
+        self.assertIn("modèles acceptés", result.stdout)
+
+    def test_two_frozen_runs_in_a_row_fail(self):
+        result, calls = self.run_scenario(
+            ["hang", "hang", "ok"], env_extra=self.FAST_WATCH
+        )
+        self.assertEqual(result.returncode, 2)
+        self.assertEqual(calls, 2)
+        self.assertIn("non conclusif", result.stderr)
+
+    def test_a_busy_qemu_is_not_stopped(self):
+        result, calls = self.run_scenario(["busy"], env_extra=self.FAST_WATCH)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(calls, 1)
+        self.assertNotIn("::warning::", result.stdout)
+
+    def test_each_json_line_is_shown_once(self):
+        for newline in ("\n", ""):
+            self.final_newline = newline
+            result, _ = self.run_scenario(["ok"])
+            self.assertEqual(result.returncode, 0, result.stderr)
+            for line in OK_LINES.splitlines():
+                self.assertEqual(result.stdout.count(line), 1, (newline, line))
+        self.final_newline = "\n"
+
+    def test_invalid_watch_settings_are_refused(self):
+        for env in (
+            {"HEARTBEAT": "0"},
+            {"HEARTBEAT": "2m"},
+            {"STALL_LIMIT": "-1"},
+            {"DEADLINE": "0"},
+            {"DEADLINE": "30m"},
+        ):
+            result, calls = self.run_scenario(["ok"], env_extra=env)
+            self.assertEqual(result.returncode, 2, env)
+            self.assertEqual(calls, 0)
+
+    def test_the_deadline_dumps_the_threads_and_fails_inconclusive(self):
+        result, calls = self.run_scenario(
+            ["hang", "ok"], env_extra={"DEADLINE": "2", "HEARTBEAT": "60"}
+        )
+        self.assertEqual(result.returncode, 2, result.stderr)
+        self.assertEqual(calls, 1)
+        self.assertIn("-- qemu (délai interne de 2 s) : fils 1", result.stderr)
+        self.assertRegex(result.stderr, r"fil \d+ : S, CPU 0 s, attente ")
+        self.assertIn("délai interne de 2 s dépassé", result.stderr)
+        self.assertNotIn("::warning::", result.stdout)
+
+    def test_the_deadline_also_covers_the_retry(self):
+        result, calls = self.run_scenario(
+            ["sigbus", "hang", "ok"], env_extra={"DEADLINE": "2", "HEARTBEAT": "60"}
+        )
+        self.assertEqual(result.returncode, 2, result.stderr)
+        self.assertEqual(calls, 2)
+        self.assertIn("délai interne de 2 s dépassé", result.stderr)
+
+    def test_a_run_within_the_deadline_is_accepted(self):
+        result, calls = self.run_scenario(["ok"], env_extra={"DEADLINE": "60"})
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(calls, 1)
+
+    def test_an_interruption_dumps_the_threads_and_stops_qemu(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            qemu = tmp / "qemu"
+            qemu.write_text(FAKE_QEMU)
+            qemu.chmod(qemu.stat().st_mode | stat.S_IXUSR)
+            (tmp / "scenario").write_text("hang\n")
+            (tmp / "models").mkdir()
+            env = {
+                **os.environ,
+                "QEMU": str(qemu),
+                "CPU_CHECK_BIN": "/bin/true",
+                "CALLS": str(tmp / "calls"),
+                "SCENARIO": str(tmp / "scenario"),
+                "ARGS_SEEN": str(tmp / "args"),
+            }
+            proc = subprocess.Popen(
+                ["bash", str(RUN), str(tmp / "models")],
+                env=env,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            deadline = time.monotonic() + 10
+            while not (tmp / "calls").exists() and time.monotonic() < deadline:
+                time.sleep(0.1)
+            time.sleep(1.5)
+            fake = int(
+                subprocess.run(
+                    ["pgrep", "-P", str(proc.pid), "-x", "sleep"],
+                    capture_output=True,
+                    text=True,
+                ).stdout.split()[0]
+            )
+            proc.send_signal(signal.SIGTERM)
+            _, stderr = proc.communicate(timeout=10)
+            self.assertEqual(proc.returncode, 130, stderr)
+            self.assertIn("-- qemu (interruption) : fils 1", stderr)
+            time.sleep(0.2)
+            self.assertFalse(
+                Path(f"/proc/{fake}").exists(), "qemu factice resté en vie"
+            )
+
+    def test_the_host_and_the_emulator_are_logged_first(self):
+        result, _ = self.run_scenario(["ok"])
+        first = result.stdout.splitlines()[0]
+        self.assertTrue(first.startswith("-- hôte : "), first)
+        self.assertIn("qemu-x86_64 version factice -cpu Skylake-Client", first)
+
+    def test_both_files_by_default(self):
+        result, _ = self.run_scenario(["ok"])
+        self.assertEqual(result.returncode, 0, result.stderr)
+        audio = [a for a in self.args_seen if ".wav=" in a]
+        self.assertEqual(
+            [Path(a.split("=")[0]).name for a in audio], ["mic.wav", "sys.wav"]
+        )
+
+    def test_files_selects_one_file(self):
+        result, _ = self.run_scenario(["ok"], env_extra={"FILES": "sys"})
+        self.assertEqual(result.returncode, 0, result.stderr)
+        audio = [a for a in self.args_seen if ".wav=" in a]
+        self.assertEqual(len(audio), 1)
+        self.assertTrue(audio[0].endswith("sys.fp32.txt"), audio)
+
+    def test_unknown_or_empty_files_are_refused(self):
+        for value in ("mic other", " "):
+            result, calls = self.run_scenario(["ok"], env_extra={"FILES": value})
+            self.assertEqual(result.returncode, 2, value)
+            self.assertEqual(calls, 0)
+
+    def test_a_verdict_is_never_retried(self):
+        result, calls = self.run_scenario(["mute", "ok"])
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(calls, 1)
+        self.assertNotIn("::warning::", result.stdout)
+
+    def test_the_negative_control_still_expects_no_words(self):
+        result, calls = self.run_scenario(["mute"], "--expect-empty")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(calls, 1)
+
+
+if __name__ == "__main__":
+    unittest.main()

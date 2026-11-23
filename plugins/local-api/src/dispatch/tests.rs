@@ -503,3 +503,193 @@ async fn startup_migration_gives_up_without_a_database() {
         .await
     );
 }
+
+/// Serveur HTTP minimal sur un fil : répond `response` à chaque requête et
+/// compte les requêtes reçues.
+#[derive(Default)]
+struct Receiver {
+    hits: AtomicUsize,
+    last_request: Mutex<String>,
+}
+
+fn local_receiver(response: String) -> (String, Arc<Receiver>) {
+    use std::io::{Read as _, Write as _};
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let address = format!("127.0.0.1:{}", listener.local_addr().unwrap().port());
+    let hits = Arc::new(Receiver::default());
+    let counter = hits.clone();
+    std::thread::spawn(move || {
+        for stream in listener.incoming() {
+            let Ok(mut stream) = stream else { return };
+            counter.hits.fetch_add(1, Ordering::SeqCst);
+            let mut request = Vec::new();
+            let mut buffer = [0u8; 4096];
+            // En-têtes, puis le corps annoncé par content-length.
+            while let Ok(read) = stream.read(&mut buffer) {
+                if read == 0 {
+                    break;
+                }
+                request.extend_from_slice(&buffer[..read]);
+                let text = String::from_utf8_lossy(&request).to_ascii_lowercase();
+                if let Some(end) = text.find("\r\n\r\n") {
+                    let length = text
+                        .lines()
+                        .find_map(|line| line.strip_prefix("content-length:"))
+                        .and_then(|value| value.trim().parse::<usize>().ok())
+                        .unwrap_or(0);
+                    if request.len() >= end + 4 + length {
+                        break;
+                    }
+                }
+            }
+            let request = String::from_utf8_lossy(&request).into_owned();
+            *counter.last_request.lock().unwrap() = request;
+            let _ = stream.write_all(response.as_bytes());
+        }
+    });
+    (address, hits)
+}
+
+// Issue 707 : une redirection n'est jamais suivie ; le statut ne garde que
+// l'hôte de la cible, jamais son chemin.
+#[tokio::test]
+async fn delivery_does_not_follow_redirects() {
+    let (target, target_hits) =
+        local_receiver("HTTP/1.1 200 OK\r\ncontent-length: 0\r\nconnection: close\r\n\r\n".into());
+    for code in [
+        "301 Moved Permanently",
+        "307 Temporary Redirect",
+        "308 Permanent Redirect",
+    ] {
+        let (receiver, receiver_hits) = local_receiver(format!(
+            "HTTP/1.1 {code}\r\nlocation: http://{target}/hooks/s3cr3t-token\r\ncontent-length: 0\r\nconnection: close\r\n\r\n"
+        ));
+        let (_, secrets) = memory_secrets();
+        let row = syntheo_db_app::WebhookEndpointRow {
+            id: "webhook-1".to_string(),
+            url: format!("http://{receiver}/hook"),
+            secret: uuid::Uuid::new_v4().simple().to_string(),
+            events_json: "[]".to_string(),
+            active: true,
+            created_at: String::new(),
+            last_delivery_at: None,
+            last_delivery_status: String::new(),
+        };
+        let outcome = deliver_once(
+            &secrets,
+            &row,
+            EVENT_TEST,
+            &Bytes::from_static(b"{\"note\":\"contenu\"}"),
+            "dlv_1",
+        )
+        .await;
+        assert!(!outcome.delivered, "{code}");
+        assert_eq!(receiver_hits.hits.load(Ordering::SeqCst), 1, "{code}");
+        assert!(outcome.status.contains(&target), "{}", outcome.status);
+        assert!(!outcome.status.contains("s3cr3t"), "{}", outcome.status);
+    }
+    assert_eq!(target_hits.hits.load(Ordering::SeqCst), 0);
+}
+
+// Issue 707 : une URL avec identifiants est refusée à la création.
+#[tokio::test]
+async fn endpoint_creation_rejects_credentials_in_the_url() {
+    let db = syntheo_db_core::Db::connect_memory_plain().await.unwrap();
+    syntheo_db_app::prepare_schema(&db).await.unwrap();
+    for url in [
+        "https://user:motdepasse@example.com/hook",
+        "https://jeton@example.com/hook",
+        "http://:motdepasse@192.168.1.10/hook",
+    ] {
+        assert_eq!(
+            create_endpoint(db.pool(), &memory_secrets().1, url, &[])
+                .await
+                .unwrap_err(),
+            "url must not contain credentials",
+            "{url}"
+        );
+    }
+    assert!(
+        syntheo_db_app::list_webhook_endpoints(db.pool())
+            .await
+            .unwrap()
+            .is_empty()
+    );
+    // Un « @ » dans le chemin n'est pas un identifiant.
+    create_endpoint(
+        db.pool(),
+        &memory_secrets().1,
+        "https://example.com/hook/@equipe",
+        &[],
+    )
+    .await
+    .unwrap();
+}
+
+// Issue 707 : une URL illisible (port hors bornes, espace dans l'hôte)
+// échappait au refus des identifiants, puis était stockée et affichée telle
+// quelle. Toute URL que le parseur rejette est refusée.
+#[tokio::test]
+async fn endpoint_creation_rejects_unparseable_urls() {
+    let db = syntheo_db_core::Db::connect_memory_plain().await.unwrap();
+    syntheo_db_app::prepare_schema(&db).await.unwrap();
+    for url in [
+        "https://user:motdepasse@example.com:99999/hook",
+        "https://user:motdepasse@exa mple.com/hook",
+        "http://[::1/hook",
+    ] {
+        assert_eq!(
+            create_endpoint(db.pool(), &memory_secrets().1, url, &[])
+                .await
+                .unwrap_err(),
+            "url is invalid",
+            "{url}"
+        );
+    }
+    assert!(
+        syntheo_db_app::list_webhook_endpoints(db.pool())
+            .await
+            .unwrap()
+            .is_empty()
+    );
+}
+
+// Issue 707 : une ligne antérieure au refus est affichée sans ses
+// identifiants, et la livraison ne les envoie plus en Basic.
+#[tokio::test]
+async fn legacy_credentials_are_masked_and_never_sent() {
+    let (receiver, hits) =
+        local_receiver("HTTP/1.1 200 OK\r\ncontent-length: 0\r\nconnection: close\r\n\r\n".into());
+    let row = syntheo_db_app::WebhookEndpointRow {
+        id: "webhook-1".to_string(),
+        url: format!("http://user:motdepasse@{receiver}/hook"),
+        secret: uuid::Uuid::new_v4().simple().to_string(),
+        events_json: "[]".to_string(),
+        active: true,
+        created_at: String::new(),
+        last_delivery_at: None,
+        last_delivery_status: String::new(),
+    };
+    let info = crate::WebhookInfo::from(row.clone());
+    assert_eq!(info.url, format!("http://***@{receiver}/hook"));
+    assert_eq!(
+        without_credentials(&row.url, ""),
+        format!("http://{receiver}/hook")
+    );
+    let (_, secrets) = memory_secrets();
+    let outcome = deliver_once(
+        &secrets,
+        &row,
+        EVENT_TEST,
+        &Bytes::from_static(b"{}"),
+        "dlv_1",
+    )
+    .await;
+    assert!(outcome.delivered, "{}", outcome.status);
+    assert_eq!(hits.hits.load(Ordering::SeqCst), 1);
+    let request = hits.last_request.lock().unwrap().clone();
+    assert!(
+        !request.to_ascii_lowercase().contains("authorization"),
+        "{request}"
+    );
+}

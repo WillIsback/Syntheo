@@ -1,0 +1,8 @@
+[package]
+name = "image-hash"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+
+[dependencies]
+sha2 = { workspace = true }

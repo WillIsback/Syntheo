@@ -12,11 +12,8 @@ import { DEFAULT_USER_ID, id } from "~/shared/utils";
 export {
   type ContactSummaryRecord,
   type HumanRecord,
-  type HumanDisplayRecord,
   type OrganizationRecord,
-  type OrganizationDisplayRecord,
   type HumanSessionRecord,
-  type ContactSearchRecord,
 } from "./queries-rows";
 export {
   useHumans,

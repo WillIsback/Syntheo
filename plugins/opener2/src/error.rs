@@ -6,4 +6,8 @@ pub enum Error {
     Io(#[from] std::io::Error),
     #[error(transparent)]
     Opener(#[from] tauri_plugin_opener::Error),
+    #[error("url not allowed: only http(s) pages and plain mailto addresses can be opened")]
+    UrlNotAllowed,
+    #[error("path not allowed: network and device paths cannot be opened")]
+    PathNotAllowed,
 }

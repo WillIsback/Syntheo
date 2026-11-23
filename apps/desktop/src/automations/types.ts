@@ -24,8 +24,3 @@ export function parseAutomationRunRecord(
   }
   return null;
 }
-
-export type AutomationTargetRef = {
-  id: string;
-  name: string;
-};

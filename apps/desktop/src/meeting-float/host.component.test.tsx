@@ -24,9 +24,6 @@ const mocks = vi.hoisted(() => ({
   floatingBarShow: vi.fn(async () => ({ status: "ok", data: null })),
   floatingBarHide: vi.fn(async () => ({ status: "ok", data: null })),
   floatingBarUpdate: vi.fn(async () => ({ status: "ok", data: null })),
-  liveCaptionShow: vi.fn(async () => ({ status: "ok", data: null })),
-  liveCaptionHide: vi.fn(async () => ({ status: "ok", data: null })),
-  liveCaptionUpdate: vi.fn(async () => ({ status: "ok", data: null })),
   windowShow: vi.fn(async () => ({ status: "ok", data: null })),
   listen: vi.fn(async () => vi.fn()),
   setSettingValue: vi.fn(async () => undefined),
@@ -94,9 +91,6 @@ vi.mock("@syntheo/plugin-windows", () => ({
     floatingBarShow: mocks.floatingBarShow,
     floatingBarHide: mocks.floatingBarHide,
     floatingBarUpdate: mocks.floatingBarUpdate,
-    liveCaptionShow: mocks.liveCaptionShow,
-    liveCaptionHide: mocks.liveCaptionHide,
-    liveCaptionUpdate: mocks.liveCaptionUpdate,
     windowShow: mocks.windowShow,
   },
   events: {
@@ -208,8 +202,6 @@ describe("FloatingMeetingWindowHost", () => {
         }),
       );
     });
-    expect(mocks.liveCaptionShow).not.toHaveBeenCalled();
-    expect(mocks.liveCaptionHide).toHaveBeenCalled();
     expect(mocks.floatingBarShow).toHaveBeenCalledOnce();
     expect(mocks.floatingBarHide).not.toHaveBeenCalled();
   });

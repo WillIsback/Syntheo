@@ -141,6 +141,20 @@ jobs:
             Sort-Object FullName -Descending | Select-Object -First 1
           "DUMPBIN=$($dumpbin.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
 
+      # Programme compagnon syntheo-speech (issue 683) : construit avant la
+      # compilation de l'application, qui l'embarque (externalBin) et en
+      # épingle l'empreinte, stable à la signature Authenticode. ONNX Runtime
+      # épinglé et contrôlé ; DLL importées contrôlées (dumpbin).
+      - name: Construire syntheo-speech et ses licences
+        shell: pwsh
+        env:
+          ORT_CACHE_DIR: ${{ runner.temp }}\ort-cache
+        run: |
+          cargo install --locked cargo-about --version 0.9.3 --features cli
+          if ($LASTEXITCODE -ne 0) { throw "cargo install cargo-about a échoué" }
+          ./scripts/build-speech.ps1 -Dumpbin $env:DUMPBIN
+          if (-not (Test-Path apps/desktop/src-tauri/speech-licenses/THIRD-PARTY-RUST.html)) { throw "THIRD-PARTY-RUST.html absent" }
+
       # Décision unique de signature : seul un booléen sort de cette étape.
       - name: Décider de la signature (release depuis main uniquement)
         id: signing
@@ -184,7 +198,8 @@ jobs:
           pnpm -F ui build
           pnpm -F desktop tauri build --ci --no-bundle \
             --config ./src-tauri/tauri.conf.syntheo.json \
-            --config ./src-tauri/tauri.windows-vcrt.conf.json "${extra[@]}"
+            --config ./src-tauri/tauri.windows-vcrt.conf.json \
+            --config ./src-tauri/tauri.speech.conf.json "${extra[@]}"
 
       - name: Assembler les installeurs MSI et NSIS (non signés)
         if: steps.signing.outputs.enabled != 'true'
@@ -199,7 +214,8 @@ jobs:
           fi
           pnpm -F desktop tauri bundle --ci --bundles nsis,msi \
             --config ./src-tauri/tauri.conf.syntheo.json \
-            --config ./src-tauri/tauri.windows-vcrt.conf.json "${extra[@]}"
+            --config ./src-tauri/tauri.windows-vcrt.conf.json \
+            --config ./src-tauri/tauri.speech.conf.json "${extra[@]}"
 
       - name: Vérifier que le runtime Visual C++ importé est embarqué
         shell: pwsh
@@ -223,9 +239,11 @@ jobs:
         if: steps.signing.outputs.enabled == 'true'
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force -Path signing-input/vcrt | Out-Null
+          New-Item -ItemType Directory -Force -Path signing-input/vcrt, signing-input/binaries | Out-Null
           Copy-Item apps/desktop/src-tauri/target/release/syntheo.exe signing-input/ -ErrorAction Stop
           Copy-Item apps/desktop/src-tauri/vcrt/*.dll signing-input/vcrt/ -ErrorAction Stop
+          Copy-Item apps/desktop/src-tauri/binaries/syntheo-speech-x86_64-pc-windows-msvc.exe signing-input/binaries/ -ErrorAction Stop
+          Copy-Item apps/desktop/src-tauri/speech-licenses signing-input/speech-licenses -Recurse -ErrorAction Stop
           Get-ChildItem -Recurse signing-input -File | ForEach-Object {
             "$((Get-FileHash -Algorithm SHA256 $_.FullName).Hash.ToLower())  $($_.FullName)"
           }
@@ -298,12 +316,14 @@ jobs:
           name: syntheo-desktop-windows-unsigned
           path: signing-input
 
-      - name: Placer l'exécutable et le runtime Visual C++
+      - name: Placer l'exécutable, le compagnon et le runtime Visual C++
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force -Path apps/desktop/src-tauri/target/release, apps/desktop/src-tauri/vcrt | Out-Null
+          New-Item -ItemType Directory -Force -Path apps/desktop/src-tauri/target/release, apps/desktop/src-tauri/vcrt, apps/desktop/src-tauri/binaries | Out-Null
           Copy-Item signing-input/syntheo.exe apps/desktop/src-tauri/target/release/ -ErrorAction Stop
           Copy-Item signing-input/vcrt/*.dll apps/desktop/src-tauri/vcrt/ -ErrorAction Stop
+          Copy-Item signing-input/binaries/syntheo-speech-x86_64-pc-windows-msvc.exe apps/desktop/src-tauri/binaries/ -ErrorAction Stop
+          Copy-Item signing-input/speech-licenses apps/desktop/src-tauri/speech-licenses -Recurse -ErrorAction Stop
 
       - name: Injecter la version dans la configuration Syntheo
         shell: pwsh
@@ -394,7 +414,19 @@ jobs:
           ../../.github/signing/node_modules/.bin/tauri bundle --ci --bundles nsis,msi \
             --config ./src-tauri/tauri.conf.syntheo.json \
             --config ./src-tauri/tauri.windows-vcrt.conf.json \
+            --config ./src-tauri/tauri.speech.conf.json \
             --config "$SIGNING_CONF"
+
+      # Tauri signe le compagnon sur place (binaries/) : son empreinte
+      # stable à la signature doit rester celle que syntheo.exe a épinglée
+      # à la compilation, sinon l'application refuserait son compagnon.
+      - name: Contrôler l'empreinte du compagnon signé
+        shell: pwsh
+        run: |
+          ./scripts/check-companion-pins.ps1 `
+            -Exe apps/desktop/src-tauri/target/release/syntheo.exe `
+            -Companion apps/desktop/src-tauri/binaries/syntheo-speech-x86_64-pc-windows-msvc.exe `
+            -Vcrt apps/desktop/src-tauri/vcrt
 
       - name: Vérifier la signature des installeurs
         id: verify
@@ -406,10 +438,14 @@ jobs:
           # d'Artifact Signing n'est pas dans le magasin du runner : la chaîne
           # ne se construit pas, mais la signature reste valide.
           $expectedSubject = @("CN=William Derue", "O=William Derue")
+          # Le programme compagnon (issue 683) est signé par le même
+          # signataire que syntheo.exe : contrôle bloquant comme les autres.
+          # Tauri le signe sur place, dans binaries/, avant de l'embarquer.
           $files = @(
             Get-ChildItem apps/desktop/src-tauri/target/release/bundle/nsis/*.exe
             Get-ChildItem apps/desktop/src-tauri/target/release/bundle/msi/*.msi
             Get-Item apps/desktop/src-tauri/target/release/syntheo.exe
+            Get-Item apps/desktop/src-tauri/binaries/syntheo-speech-x86_64-pc-windows-msvc.exe
           )
           $failed = $false
           foreach ($file in $files) {

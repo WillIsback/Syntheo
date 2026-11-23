@@ -5,7 +5,7 @@
 # reportés dans .trivyignore (Trivy) ou deny.toml (cargo deny).
 ---
 exceptions:
-  - cve: "RUSTSEC-2023-0071, RUSTSEC-2026-0387, RUSTSEC-2026-0346, RUSTSEC-2026-0349, RUSTSEC-2026-0098, RUSTSEC-2026-0099, RUSTSEC-2026-0104, RUSTSEC-2026-0382, RUSTSEC-2026-0258, CVE-2026-18140, GHSA-82j2-j2ch-gfr8"
+  - cve: "CVE-2026-18140, GHSA-82j2-j2ch-gfr8"
     reason: >-
       Dette héritée d'Syntheo : rsa (jsonwebtoken), crypto-bigint, rustls 0.21,
       rustls-webpki 0.101, h2 0.3 et aws-smithy-json sont tirés par le compte
@@ -14,7 +14,7 @@ exceptions:
     expires: "2027-01-31"
     author: "WillIsback"
     path: "Cargo.lock"
-  - cve: "RUSTSEC-2025-0111, CVE-2025-62518, CVE-2026-40034, CVE-2026-44471, GHSA-fr8x-3vfx-f45h, GHSA-p3hw-mv63-rf9w, GHSA-pg4w-g64p-qwhj, GHSA-x494-mj8g-cj27, RUSTSEC-2026-0194, RUSTSEC-2026-0195"
+  - cve: "CVE-2025-62518, CVE-2026-40034, CVE-2026-44471, GHSA-fr8x-3vfx-f45h, GHSA-p3hw-mv63-rf9w, GHSA-pg4w-g64p-qwhj, GHSA-x494-mj8g-cj27, RUSTSEC-2026-0194, RUSTSEC-2026-0195"
     reason: >-
       Outils de build et de test absents du binaire livré : tokio-tar
       (testcontainers, dev-dependency), gix (vergen-gix, script de build),
@@ -40,7 +40,7 @@ exceptions:
     expires: "2027-01-31"
     author: "WillIsback"
     path: "Cargo.lock, crates/transcribe-soniqo/swift-lib/Package.resolved"
-  - cve: "RUSTSEC-2026-0293, LGPL-3.0 (mp3lame-encoder, mp3lame-sys)"
+  - cve: "LGPL-3.0 (mp3lame-encoder, mp3lame-sys)"
     reason: >-
       Capture audio héritée : ringbuf 0.4 (audio-actual) et l'encodeur MP3 LGPL
       de l'enregistrement. Le chantier 04c (aucun audio sur disque) supprime
@@ -55,18 +55,6 @@ exceptions:
     expires: "2027-01-31"
     author: "WillIsback"
     path: "pnpm-lock.yaml"
-  - cve: "RUSTSEC-2026-0391, RUSTSEC-2026-0398, RUSTSEC-2026-0403, RUSTSEC-2026-0410"
-    reason: >-
-      Compression de l'index de recherche local : zstd 0.13 / zstd-safe 7 /
-      zstd-sys 2.0, tirés par tantivy 0.6 (tantivy-sstable). Les correctifs
-      exigent un saut majeur (zstd 0.14.3, zstd-safe 8.2.0, zstd-sys 2.1.2)
-      incompatible avec tantivy 0.6. RUSTSEC-2026-0410 ne concerne que wasm32,
-      non livré ; les scénarios décrits (archive non fiable, contexte partagé
-      entre utilisateurs) ne s'appliquent pas à un index local. À réévaluer au
-      prochain saut de version de tantivy.
-    expires: "2027-01-31"
-    author: "WillIsback"
-    path: "Cargo.lock"
   - cve: "RUSTSEC-2026-0459"
     reason: >-
       libsqlite3-sys 0.35 (SQLite C embarqué, CVE-2026-119375 corrigée en

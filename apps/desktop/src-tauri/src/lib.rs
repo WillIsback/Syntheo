@@ -1,7 +1,7 @@
-mod aec_models;
 mod agent_skills;
 mod agents;
 mod appearance;
+mod asset_protocol;
 mod cli_status;
 mod commands;
 mod db;
@@ -122,7 +122,10 @@ pub fn main() {
         create_audio_provider(&context.config().identifier);
     let mut builder = tauri_plugin_windows::extend_builder(tauri::Builder::default())
         .manage(audio)
-        .manage(db.clone());
+        .manage(db.clone())
+        // Remplace le protocole `asset` de Tauri : chemins réseau refusés avant
+        // toute résolution (issue 677).
+        .register_asynchronous_uri_scheme_protocol("asset", asset_protocol::handle);
 
     #[cfg(target_os = "macos")]
     {
@@ -146,6 +149,7 @@ pub fn main() {
 
     builder = builder
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_mesure::init())
         .plugin(tauri_plugin_opener2::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_tracing::init());
@@ -153,8 +157,6 @@ pub fn main() {
     builder = builder.plugin(tauri_plugin_db::init(db.clone()));
 
     builder = builder.plugin(tauri_plugin_contacts::init());
-
-    builder = builder.plugin(tauri_plugin_hooks::init());
 
     builder = builder
         .plugin(tauri_plugin_icon::init())
@@ -193,10 +195,15 @@ pub fn main() {
         .plugin(
             tauri_plugin_window_state::Builder::default()
                 .with_state_flags(tauri_plugin_windows::persisted_window_state_flags())
-                .with_denylist(&["composer", "dictation-overlay"])
+                .with_denylist(&["composer"])
                 .build(),
         )
-        .plugin(tauri_plugin_transcription::init())
+        .plugin(tauri_plugin_transcription::init_with(
+            tauri_plugin_transcription::SpeechBuild {
+                companion_files: Some(env!("SYNTHEO_SPEECH_FILES")),
+                models_urls: option_env!("SYNTHEO_SPEECH_MODELS_URLS"),
+            },
+        ))
         .plugin(tauri_plugin_tantivy::init());
 
     // Mise à jour intégrée (issue 593) : absente des alphas `devtools`, qui
@@ -258,7 +265,6 @@ pub fn main() {
                 }
             }
             tauri_plugin_shortcut::initialize_global_shortcuts(&app_handle);
-            aec_models::install(&app_handle);
 
             specta_builder.mount_events(&app_handle);
 
@@ -323,8 +329,6 @@ pub fn main() {
                 app_handle.on_menu_event(|app, event| {
                     if let Ok(item) = SyntheoMenuItem::try_from(event.id().clone()) {
                         item.handle(app);
-                    } else {
-                        tauri_plugin_tray::handle_agenda_menu_event(app, event.id());
                     }
                 });
             }
@@ -562,8 +566,6 @@ fn make_specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
             commands::check_cli_status,
             commands::list_skill_agents,
             commands::install_agent_skill,
-            commands::get_aec_model_status,
-            commands::retry_aec_model_download,
             updater::updater_supported,
             updater::updater_check::<tauri::Wry>,
             updater::updater_download::<tauri::Wry>,
@@ -636,18 +638,9 @@ mod test {
 
     #[test]
     fn export_types() {
-        const OUTPUT_FILE: &str = "../src/types/tauri.gen.ts";
-
-        make_specta_builder::<tauri::Wry>()
-            .disable_serde_phases()
-            .semantic_types(
-                specta_typescript::semantic::Configuration::empty().enable_lossless_floats(),
-            )
-            .dangerously_cast_bigints_to_number()
-            .export(specta_typescript::Typescript::default(), OUTPUT_FILE)
-            .unwrap();
-
-        let content = std::fs::read_to_string(OUTPUT_FILE).unwrap();
-        std::fs::write(OUTPUT_FILE, format!("// @ts-nocheck\n{content}")).unwrap();
+        syntheo_specta_export::write_bindings(
+            make_specta_builder::<tauri::Wry>(),
+            "../src/types/tauri.gen.ts",
+        );
     }
 }

@@ -58,12 +58,32 @@ const SLOW_CLIENT_CLOSE_CODE: u16 = 1013;
 /// Commandes que le relay ne transmet jamais (issue 645) : lancer un
 /// programme, lire ou modifier les secrets du trousseau, ouvrir un fichier avec
 /// un programme au choix. Le reste de l'interface reste pilotable.
+/// Les hooks de settings.json, qui lançaient des commandes au début et à la fin
+/// de l'écoute, sont retirés de l'application (issue 675) : leur commande
+/// n'existe plus, il n'y a rien à refuser de ce côté.
 const DENIED_COMMANDS: &[&str] = &[
     "plugin:local-api|run_automation_command",
     "plugin:store2|get_secret",
     "plugin:store2|set_secret",
     "plugin:store2|delete_secret",
     "plugin:opener2|open_path",
+    // Mesure de la bêta (issue 671) : réservée à l'écran local, les extraits
+    // du Calibrage ne sortent pas par le relay.
+    "plugin:mesure|measure",
+    "plugin:mesure|measure_differences",
+    // Sonde de la transcription sur le poste (issue 682) : le micro-banc
+    // occupe tous les cœurs ; il ne se déclenche pas à distance.
+    "plugin:transcription|probe_local_transcription",
+    // Modèles de la transcription sur le poste (issue 683) : télécharger
+    // ≈ 1 Go, installer depuis un dossier ou retirer ne se décide pas à
+    // distance.
+    "plugin:transcription|on_device_download_models",
+    "plugin:transcription|on_device_install_models",
+    "plugin:transcription|on_device_cancel_install",
+    "plugin:transcription|on_device_remove_models",
+    // Mise en service (issue 686) : charge tous les cœurs une à deux
+    // minutes ; jamais déclenchée à distance.
+    "plugin:transcription|on_device_commission",
 ];
 
 pub(crate) fn is_denied_command(cmd: &str) -> bool {

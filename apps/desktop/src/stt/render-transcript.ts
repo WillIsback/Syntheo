@@ -17,11 +17,7 @@ import {
   syntheticChunkStartMs,
 } from "./render-transcript-request";
 
-export {
-  type RenderedTranscriptSegmentWithWordMetadata,
-  type TranscriptRow,
-  type RenderTranscriptRequestHumans,
-} from "./render-transcript-request";
+export { type TranscriptRow } from "./render-transcript-request";
 
 export async function renderTranscriptSegments(
   request: RenderTranscriptRequest,

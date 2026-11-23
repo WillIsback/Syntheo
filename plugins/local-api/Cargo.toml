@@ -11,8 +11,8 @@ description = "Outbound meeting webhooks, markdown export, and cloud snapshot pr
 tauri-plugin = { workspace = true, features = ["build"] }
 
 [dev-dependencies]
-specta-typescript = { workspace = true }
 syntheo-db-core = { workspace = true }
+syntheo-specta-export = { workspace = true }
 
 [dependencies]
 syntheo-agent-access = { workspace = true }

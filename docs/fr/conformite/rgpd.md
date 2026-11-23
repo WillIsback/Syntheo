@@ -28,24 +28,35 @@ Tout est stocké sur le poste, dans le dossier de données de l'application
 (`syntheo` sous le répertoire de données de l'utilisateur, par exemple
 `~/.local/share/syntheo` sous Linux).
 
-| Donnée                                     | Où                                                                                                                                               | Durée                                 | Suppression                                                            |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------- | ---------------------------------------------------------------------- |
-| Transcripts (texte, horodatage, locuteurs) | base SQLite locale `app.db`                                                                                                                      | jusqu'à suppression par l'utilisateur | suppression de la réunion dans l'application, ou du dossier de données |
-| Notes et comptes rendus générés            | base SQLite locale                                                                                                                               | idem                                  | idem                                                                   |
-| Contacts, dossiers, réglages               | base SQLite locale                                                                                                                               | idem                                  | idem                                                                   |
-| Clés d'API des endpoints d'inférence       | trousseau du système (Keychain, Secret Service, Credential Manager) ; jamais en clair dans la base                                               | jusqu'à suppression du provider       | retrait du provider dans les réglages                                  |
-| Index de recherche plein texte (tantivy)   | dossier de données (copie indexée des transcripts et notes)                                                                                      | tant que les réunions existent        | suit la suppression des réunions, ou suppression du dossier de données |
-| Journaux techniques `app.log`              | dossier de logs de l'application ; contenu filtré par un module de masquage (`RedactingWriter`), rotation par taille                             | rotation automatique                  | suppression du dossier de logs                                         |
-| Exports (Markdown, etc.)                   | dossier export choisi par l'utilisateur                                                                                                          | sous le contrôle de l'utilisateur     | suppression des fichiers exportés                                      |
-| Audio d'une réunion                        | **jamais sur disque** : en mémoire le temps d'être envoyé à l'endpoint STT ; une coupure de transcription laisse un trou daté dans le transcript | —                                     | —                                                                      |
-| Audio de la dictée ou d'un import          | **jamais sur disque**, même temporairement : la dictée produit un WAV en mémoire, l'import lit le fichier à son emplacement d'origine sans copie | —                                     | —                                                                      |
+| Donnée                                        | Où                                                                                                                                                  | Durée                                 | Suppression                                                                                                                                                                                                                       |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Transcriptions (texte, horodatage, locuteurs) | base SQLite locale `app.db`                                                                                                                         | jusqu'à suppression par l'utilisateur | supprimer la réunion dans l'application la retire de l'application et de la recherche ; son contenu reste dans `app.db`. Pour l'effacer définitivement aujourd'hui, supprimer le dossier de données (une purge réelle est prévue) |
+| Notes et comptes rendus générés               | base SQLite locale                                                                                                                                  | idem                                  | comme les transcriptions                                                                                                                                                                                                          |
+| Contacts, dossiers, réglages                  | base SQLite locale                                                                                                                                  | idem                                  | suppression du dossier de données                                                                                                                                                                                                 |
+| Clés d'API des endpoints d'inférence          | trousseau du système (Keychain, Secret Service, Credential Manager) ; jamais en clair dans la base                                                  | jusqu'à suppression du provider       | retrait du provider dans les réglages                                                                                                                                                                                             |
+| Index de recherche plein texte (tantivy)      | dossier de données (copie indexée des transcriptions et notes)                                                                                      | tant que les réunions existent        | suit la suppression des réunions, ou suppression du dossier de données                                                                                                                                                            |
+| Journaux techniques `app.log`                 | dossier de logs de l'application ; contenu filtré par un module de masquage (`RedactingWriter`), rotation par taille                                | rotation automatique                  | suppression du dossier de logs                                                                                                                                                                                                    |
+| Exports (Markdown, etc.)                      | dossier export choisi par l'utilisateur                                                                                                             | sous le contrôle de l'utilisateur     | suppression des fichiers exportés                                                                                                                                                                                                 |
+| Audio d'une réunion                           | **jamais sur disque** : en mémoire le temps d'être envoyé à l'endpoint STT ; une coupure de transcription laisse un trou daté dans la transcription | —                                     | —                                                                                                                                                                                                                                 |
+| Audio de la dictée ou d'un import             | **jamais sur disque**, même temporairement : la dictée produit un WAV en mémoire, l'import lit le fichier à son emplacement d'origine sans copie    | —                                     | —                                                                                                                                                                                                                                 |
 
 Aucune de ces données n'est envoyée à l'éditeur.
 
-**Aucune inférence sur le poste** : l'application ne
-télécharge ni n'exécute aucun modèle (transcription, LLM, diarisation ou
-empreintes vocales). Une version antérieure a pu laisser des fichiers de
-modèles dans les dossiers `models/stt` et `models/llm` du dossier de données,
+**Inférence sur le poste, seulement si l'utilisateur installe les modèles** :
+par défaut, l'application n'exécute aucun modèle (transcription, LLM,
+diarisation ou empreintes vocales). Le programme de transcription sur le poste,
+`syntheo-speech`, est livré avec l'application mais ne tourne que si
+l'utilisateur choisit la source facultative « Sur ce poste » et installe ses
+modèles (environ 1,1 Go) dans `speech/models` du dossier de données ; le
+résultat de la mise en service est dans `speech/commissioning.json`. Le
+programme transcrit l'audio de l'écoute en mémoire, sur la boucle locale, sans
+rien écrire d'audio ni journaliser de texte. Les modèles se suppriment avec
+**Retirer les modèles** ou avec le dossier de données. Les réglages gérés
+`on_device_transcription_enabled` (interdire la source) et
+`speech_models_urls` (imposer un miroir des modèles) sont à la disposition de
+l'organisation. Voir [Transcrire sur ce poste](/fr/on-device-transcription). Une version antérieure a pu laisser des fichiers de
+modèles dans les dossiers `models/stt`, `models/llm` et `models/aec` (modèles
+d'annulation d'écho, désormais fournis avec l'application) du dossier de données,
 ainsi que dans le cache de modèles Soniqo sous macOS : ils ne sont plus ni lus
 ni chargés, et peuvent être supprimés à la main. Les empreintes vocales
 qu'une version antérieure a pu enregistrer (vecteurs dans le trousseau du
@@ -55,11 +66,30 @@ une suppression, l'effacement est retenté au lancement suivant.
 
 ## Flux réseau
 
-- **Endpoints d'inférence configurés par l'utilisateur**, et eux seuls : ASR
+- **Transcription sur le poste** (source facultative « Sur ce poste ») :
+  l'audio de l'écoute part vers le programme `syntheo-speech`, sur la boucle
+  locale (`127.0.0.1`) du poste, après authentification mutuelle ; rien ne
+  quitte le poste, et le programme n'ouvre aucune connexion vers l'extérieur.
+  Pour une écoute « Sur ce poste », aucun audio ne part vers le serveur, même
+  pour réparer un passage coupé.
+- **Téléchargement des modèles de la transcription sur le poste**, seulement
+  quand l'utilisateur choisit **Télécharger les modèles** : requêtes HTTPS
+  pour les fichiers des modèles vers la release GitHub de Syntheo
+  (`github.com`, redirigé vers `release-assets.githubusercontent.com`), puis
+  vers Hugging Face (`huggingface.co`, redirigé vers ses serveurs de contenu
+  sous `hf.co`, par exemple `cas-bridge.xethub.hf.co`) en secours, ou vers le
+  miroir défini par l'administrateur (`speech_models_urls`) à la place ; les
+  redirections HTTPS sont suivies (5 au plus), y compris celles du miroir
+  vers un autre hôte. Aucune donnée de
+  réunion n'est envoyée ; ces hôtes voient l'adresse IP du poste. Aucun flux
+  si les modèles sont installés depuis un dossier. L'administrateur coupe ce
+  flux, avec tout le module, par la clé `on_device_transcription_enabled` à
+  `false` dans `managed_settings.json`.
+- **Endpoints d'inférence configurés par l'utilisateur** : ASR
   (protocole OpenAI : Realtime et `/v1/audio/transcriptions` ; NVIDIA
   NeMo-Speech.cpp : WebSocket `/v1/audio/transcriptions/realtime`) et
   l'endpoint LLM configuré (API OpenAI-compatible). L'audio de
-  la capture et le texte (transcript, notes, prompts) y transitent, sans
+  la capture et le texte (transcription, notes, prompts) y transitent, sans
   empreinte d'appareil ni identifiant de tâche dans les en-têtes. Une URL de transcription non
   reconnue est traitée avec le protocole OpenAI, jamais renvoyée vers un
   service tiers.
@@ -68,24 +98,39 @@ une suppression, l'effacement est retenté au lancement suivant.
   HTTP en clair uniquement vers un hôte privé (machine locale, réseau local,
   plage Tailscale, noms `.local`), après confirmation hors de la machine, et
   exige HTTPS ailleurs.
+- **Webhooks configurés par l'utilisateur**, désactivés tant qu'aucune
+  adresse n'est saisie :
+  - webhooks de l'API locale (Paramètres → Développeurs) : à la fin d'une
+    réunion (`meeting.completed`) ou d'un résumé (`note.enhanced`), requête
+    `POST` signée (HMAC-SHA256) vers l'adresse saisie, avec la note, les
+    résumés, les participants, les actions à mener et le texte complet de la
+    transcription ;
+  - étape « Envoyer vers une adresse (webhook) » d'une automatisation : le
+    corps JSON composé par l'utilisateur, qui peut inclure les mêmes données,
+    vers l'adresse saisie, sans signature.
+  - dans les deux cas, le destinataire est l'adresse choisie par
+    l'utilisateur (`http://` ou `https://`). Contrairement aux endpoints,
+    HTTPS n'est pas exigé : préférer HTTPS ou un réseau privé.
 - Un endpoint exploité par un tiers devient **sous-traitant de l'utilisateur**
   (art. 28 RGPD) : contrat et localisation des données à vérifier.
 - **Autres flux, hors inférence** :
-  - notes de version : celles de la version installée sont incluses dans
-    l'application ; afficher celles d'une autre version déclenche une requête
-    **non authentifiée** vers GitHub (`raw.githubusercontent.com`, ou l'API
-    publique `api.github.com` pour une version nightly). Seul le numéro de
-    version est transmis ;
-  - recherche de mises à jour (au démarrage, activée par défaut et
-    désactivable par l'utilisateur ou par l'administrateur via
-    `managed_settings.json`, clé `automatic_updates`) : lecture **non
-    authentifiée** de `latest.json` sur GitHub, puis téléchargement de
-    l'installeur si l'utilisateur met à jour. Aucune donnée personnelle
-    transmise ; GitHub voit l'adresse IP du poste ;
-  - image distante dans un compte rendu, une proposition ou une réponse du
-    chat : rien n'est chargé d'office ; un clic sur « Charger l'image »
-    envoie une requête au site qui l'héberge, qui voit l'adresse IP du poste
-    et l'adresse complète de l'image ;
+  - recherche de mises à jour : 15 secondes après le démarrage, activée par
+    défaut et désactivable par l'utilisateur ou par l'administrateur
+    (`managed_settings.json`, clé `automatic_updates` à `false`), et à tout
+    moment à la demande de l'utilisateur, même quand la recherche au démarrage
+    est coupée. Lecture **non authentifiée** de `latest.json`
+    (`github.com/WillIsback/Syntheo/releases/latest/download/latest.json`,
+    redirigé par GitHub vers ses serveurs de contenu), qui porte aussi les
+    notes de la nouvelle version ; celles de la version installée sont
+    incluses dans l'application. Aucune donnée personnelle transmise ; GitHub
+    voit l'adresse IP du poste ;
+  - téléchargement de l'installeur d'une mise à jour, seulement quand
+    l'utilisateur le demande : fichier de la release GitHub indiquée par
+    `latest.json`, dont la signature est vérifiée avant l'installation ;
+  - modèles de la transcription sur le poste : voir plus haut (au clic
+    seulement, coupés par `on_device_transcription_enabled`) ;
+  - modèles d'annulation d'écho : fournis avec l'application, aucun
+    téléchargement.
 - **Pas de compte, pas de synchronisation, pas de rapport d'erreur, pas
   d'installation sans action de l'utilisateur** (la mise à jour intégrée,
   AppImage et installeur Windows, s'installe sur demande, installeur signé ;
@@ -129,8 +174,11 @@ une suppression, l'effacement est retenté au lancement suivant.
 - **Choisir les endpoints d'inférence** et en assumer le traitement : un
   endpoint auto-hébergé reste sous le contrôle de l'utilisateur ; un endpoint
   tiers est un sous-traitant.
-- **Gérer la durée de conservation** des transcripts et des notes, et les
-  supprimer quand ils ne sont plus nécessaires.
+- **Gérer la durée de conservation** des transcriptions et des notes, et les
+  supprimer quand elles ne sont plus nécessaires. Supprimer une réunion dans
+  l'application la retire de l'application et de la recherche, mais son
+  contenu reste dans la base locale. Pour l'effacer définitivement aujourd'hui,
+  supprimez le dossier de données ; une purge réelle est prévue.
 - **Analyse d'impact (AIPD)** : à envisager par une organisation qui déploie
   l'outil à grande échelle ou pour des réunions sensibles (art. 35 RGPD).
 - **Protéger le poste** (chiffrement du disque, session verrouillée) : les

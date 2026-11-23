@@ -1,11 +1,12 @@
 use std::collections::BTreeSet;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 mod labels;
 
 pub use labels::{MINUTES_PLACEHOLDER, NotificationLabels, TIME_PLACEHOLDER};
 
 mod builder;
+pub mod callbacks;
 mod timer;
 
 pub use builder::NotificationBuilder;
@@ -244,6 +245,30 @@ impl Notification {
     pub fn should_dismiss_started(&self, now_unix: i64) -> bool {
         self.start_time
             .is_some_and(|start_time| should_dismiss_started_notification(start_time, now_unix))
+    }
+
+    /// Temps restant avant l'heure de début, si la notification en a une.
+    pub fn schedule_remaining(&self) -> Option<Duration> {
+        let start_time = self.start_time?;
+        Some(Duration::from_secs(
+            start_time.saturating_sub(unix_now()).max(0) as u64,
+        ))
+    }
+
+    /// Temps restant affiché par la vue compacte : l'heure de début, sinon le
+    /// décompte d'arrêt mené par `dismiss_timer`.
+    pub fn compact_remaining(
+        &self,
+        dismiss_timer: Option<&DismissTimer>,
+        now: Instant,
+    ) -> Option<Duration> {
+        if self.start_time.is_some() {
+            self.schedule_remaining()
+        } else if self.shows_stop_countdown() {
+            dismiss_timer.map(|timer| timer.remaining(now))
+        } else {
+            None
+        }
     }
 
     pub fn compact_message(&self, remaining: Option<Duration>) -> String {

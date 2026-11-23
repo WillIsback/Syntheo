@@ -200,7 +200,7 @@
     "RH:": "HR:"
   },
   "import.jsx.tpl": {
-    "« Téléverser un transcript » : choisissez un fichier .vtt ou .srt ; le texte horodaté est ajouté à la note.": "“Upload transcript”: choose a .vtt or .srt file; the timestamped text is added to the note.",
+    "« Téléverser une transcription » : choisissez un fichier .vtt ou .srt ; le texte horodaté est ajouté à la note.": "“Upload transcript”: choose a .vtt or .srt file; the timestamped text is added to the note.",
     "Transcription terminée : Syntheo rédige le compte rendu si un serveur de synthèse est configuré.": "Transcription finished: Syntheo writes the summary if a summary server is set up.",
     "<p><b>Vous</b> — Oui, si les échantillons arrivent lundi.</p>": "<p><b>You</b> — Yes, if the samples arrive on Monday.</p>",
     "<p><b>Hélène</b> — On garde la livraison au 2 décembre ?</p>": "<p><b>Helen</b> — Do we keep delivery on December 2?</p>",
@@ -310,9 +310,6 @@
     "~/Téléchargements": "~/Downloads",
     "useState(\"fr\")": "useState(\"en\")"
   },
-  "settings-servers.jsx.tpl": {
-    "Utilisez HTTPS : le HTTP n'est accepté que sur cette machine ou un réseau privé.": "Use HTTPS: HTTP is only accepted on this machine or a private network."
-  },
   "settings.jsx.tpl": {
     "Dans l'app, cette entrée ouvre sa propre vue, décrite dans la page de la documentation qui lui est consacrée.": "In the app, this entry opens its own view, described on its own documentation page.",
     "Cette section n'est pas reproduite ici : la page de la documentation qui la concerne la décrit.": "This section is not replicated here: its documentation page describes it."
@@ -357,7 +354,7 @@
     "\"Webhooks des Paramètres\", \"hooks\", \"Les événements de réunion (note, résumés, participants, transcription).\", \"À chaque événement, si vous avez ajouté un point de terminaison\"": "\"Webhooks in Settings\", \"hooks\", \"Meeting events (note, summaries, participants, transcript).\", \"On each event, if you added an endpoint\"",
     "<>Une source coupée a son icône barrée sur fond rouge. Rétablissez-la d'un clic, ou avec Ctrl + {L(\"Shift\")} + M (micro) et Ctrl + {L(\"Shift\")} + S (son système).</>": "<>A muted source has its icon crossed out on a red background. Turn it back on with a click, or with Ctrl + {L(\"Shift\")} + M (microphone) and Ctrl + {L(\"Shift\")} + S (system sound).</>",
     "<>Choisissez sous « {L(\"System sound\")} » la sortie où vous entendez les autres participants. « {L(\"Captured right now:\")} » donne la sortie réellement captée.</>": "<>Under “{L(\"System sound\")}”, choose the output where you hear the other participants. “{L(\"Captured right now:\")}” gives the output actually captured.</>",
-    "<strong>Éditeur de Syntheo</strong> : rien. Pas de compte, pas de statistiques d'usage, pas de rapport d'erreur, pas de vérification de mise à jour.": "<strong>Syntheo's publisher</strong>: nothing. No account, no usage statistics, no error reports, no update checks.",
+    "<strong>Éditeur de Syntheo</strong> : seulement la recherche de mise à jour (désactivable). Pas de compte, pas de statistiques d'usage, pas de rapport d'erreur.": "<strong>Syntheo's publisher</strong>: only the update check (can be turned off). No account, no usage statistics, no error reports.",
     "<>Clé ou réglages refusés : pas de nouvelle tentative. Corrigez le serveur dans les paramètres « {L(\"Transcription\")} », puis relancez l'écoute.</>": "<>Key or settings refused: no new attempt. Fix the server in the “{L(\"Transcription\")}” settings, then restart listening.</>",
     "\"Import d'un fichier audio\", \"stt\", \"L'audio du fichier, lu à son emplacement d'origine, sans copie.\", \"Pendant la transcription\"": "\"Importing an audio file\", \"stt\", \"The file's audio, read from its original location, without a copy.\", \"During transcription\"",
     "\"Étape webhook d'une automatisation\", \"auto\", \"Le contenu que vous y placez.\", \"Quand l'automatisation s'exécute\"": "\"An automation's webhook step\", \"auto\", \"The content you put in it.\", \"When the automation runs\"",

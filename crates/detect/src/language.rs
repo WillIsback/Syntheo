@@ -8,10 +8,6 @@ fn locale_to_language(locale: &str) -> Option<syntheo_language::Language> {
     locale.parse().ok()
 }
 
-pub fn get_current_locale_identifier() -> String {
-    sys_locale::get_locale().unwrap_or_default()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

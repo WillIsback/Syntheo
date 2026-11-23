@@ -10,21 +10,17 @@ use super::{
     AEC_ROBUST_GAIN_MIN_SEGMENTS, AEC_ROBUST_GAIN_SEGMENTS,
 };
 
-/// `None` quand les modèles DTLN ne sont pas encore installés (ils sont téléchargés à la
-/// demande, issue 429) : la capture continue avec le micro brut, et la boucle réessaie dès
-/// qu'un téléchargement aboutit (voir [`syntheo_aec::model_generation`]).
+/// `None` seulement si les modèles DTLN embarqués ne se chargent pas (octets altérés, ONNX
+/// Runtime absent ou en échec) : la capture continue alors avec le micro brut, et le journal
+/// en donne la raison.
 pub(super) fn build_aec(sample_rate: u32) -> Option<GatedEchoCanceller<AEC>> {
     match AEC::new() {
         Ok(aec) => Some(GatedEchoCanceller::new(aec, sample_rate)),
-        Err(error @ syntheo_aec::Error::ModelUnavailable(_)) => {
-            tracing::warn!(
-                error.message = %error,
-                "aec_model_unavailable: echo cancellation disabled until the models are downloaded"
-            );
-            None
-        }
         Err(error) => {
-            tracing::warn!(error.message = ?error, "aec_init_failed");
+            tracing::error!(
+                error.message = %error,
+                "aec_init_failed: capture continues without echo cancellation"
+            );
             None
         }
     }

@@ -1,0 +1,102 @@
+---
+title: "Transcrire sur ce poste"
+sidebarTitle: "Sur ce poste"
+description: "Transcrire les réunions sans serveur : programme de transcription livré avec Syntheo, modèles à installer, mise en service mesurée, profils, réseau et licences."
+---
+
+La source **Sur ce poste** transcrit vos réunions sans serveur : un programme de transcription, `syntheo-speech`, livré avec Syntheo, tourne sur votre ordinateur, et l'audio ne le quitte pas. Elle sert à la transcription en direct d'une écoute ; la dictée et l'import d'un fichier passent toujours par le serveur configuré (voir [Configurer la transcription et l'IA](/fr/ai-setup)).
+
+Le programme est installé avec Syntheo. Ses modèles (environ 1,1 Go) s'installent à part, une fois, depuis la carte **Sur ce poste**.
+
+## Ce qu'il faut
+
+- Un processeur x86-64 avec les instructions AVX2 (Linux ou Windows).
+- 1,5 Go de mémoire libre et 2 Go d'espace disque libre (les modèles en occupent environ 1,1 Go).
+- Un poste assez rapide pour le temps réel : la mise en service le vérifie (voir plus bas).
+
+**Tester ce poste**, dans la carte **Sur ce poste** de **Paramètres → Transcription**, mesure le processeur, la mémoire et le disque en quelques secondes et dit si le poste peut convenir. L'accueil propose la même vérification d'un clic (environ 5 s). Sur batterie ou en mode économie d'énergie, branchez le secteur ou passez en mode performance, puis relancez le test.
+
+## Installer les modèles
+
+Dans **Paramètres → Transcription**, carte **Sur ce poste** :
+
+- **Télécharger les modèles (1,1 Go)** les télécharge depuis les sources de Syntheo (voir [Réseau et données](#réseau-et-données)). Un téléchargement interrompu reprend là où il s'était arrêté ; **Annuler** l'interrompt.
+- **Installer depuis un dossier…** les copie depuis un dossier de ce poste, pour un poste sans accès au réseau ou un dossier préparé par votre organisation (sous Windows, un chemin réseau `\\serveur\partage` est refusé ; copiez d'abord le dossier sur le poste). Le dossier contient les fichiers des modèles, directement ou dans un sous-dossier `models`, soit à plat comme les fichiers de la release GitHub (`encoder.onnx`, `nemotron3_diar_v3.onnx`…), soit en arborescence comme le dépôt Hugging Face (`nemotron/…`, `diar/…`). Chaque fichier est vérifié avant d'être mis en place.
+
+Chaque fichier est comparé à la version attendue par cette version de Syntheo (taille et empreinte SHA-256) avant d'être mis en place ; un fichier différent est refusé. La carte affiche l'avancement, puis Syntheo mesure le poste (voir plus bas).
+
+Quand une nouvelle version de Syntheo attend d'autres modèles, la carte l'indique (**Une mise à jour des modèles est disponible**, avec la taille à télécharger) : **Mettre à jour les modèles** télécharge seulement les fichiers qui ont changé, puis Syntheo mesure de nouveau le poste.
+
+**Retirer les modèles** les supprime. Installer et retirer sont refusés pendant une écoute.
+
+## Mise en service
+
+Après l'installation, Syntheo **mesure ce poste**, de moins d'une minute à environ trois minutes selon le nombre de profils essayés (chaque profil est mesuré sur 30 s) : il transcrit un audio de 30 s fourni avec l'application, en deux flux comme une écoute, et retient le premier profil qui tient le temps réel, dans cet ordre :
+
+| Profil | Ce qui est transcrit |
+| --- | --- |
+| Micro et son du poste, avec les intervenants | Toute la réunion, intervenants distingués |
+| Micro et son du poste, sans les intervenants | Toute la réunion, sans distinguer les intervenants |
+| Micro seul, avec les intervenants | Votre micro seulement : le son de l'ordinateur (participants à distance) n'est pas transcrit |
+| Micro seul, sans les intervenants | Votre micro seulement, sans distinguer les intervenants |
+
+Un profil tient le temps réel quand ses textes définitifs arrivent moins de 2 s après la fin de la parole (au 95e centile, l'attente de fin de phrase déduite), sans prendre de retard au fil de la mesure. La carte affiche l'avancement (« Mesure du profil 2 sur 4… »), puis le profil retenu. Si aucun ne tient, le poste n'est pas proposé.
+
+**Exemple : un portable de 2019.** Sur un Intel Core i7-10510U (4 cœurs, sans VNNI), Syntheo retient **Micro et son du poste, sans les intervenants** sur secteur ou en mode performance, et **Micro seul, sans les intervenants** en mode économie d'énergie. Sur un tel poste, branchez le secteur ou passez en mode performance avant **Mesurer à nouveau**.
+
+**Mesurer à nouveau** refait la mesure, par exemple après un changement de matériel. Une nouvelle version du programme de transcription ou des modèles se mesure à nouveau.
+
+Une fois le poste mesuré, cochez **Utiliser ce poste pour la transcription, à la place du serveur**. En micro seul, un rappel le dit au début de chaque écoute.
+
+## Pendant une écoute
+
+- Si le poste prend plus de 2 s de retard, Syntheo espace la reconnaissance des intervenants, puis la coupe, et la rétablit quand le retard redescend ; la transcription continue. Après un tel changement, les intervenants peuvent recevoir de nouvelles étiquettes.
+- Si le programme s'arrête, Syntheo le relance avec un nouveau jeton, dans une limite de 3 lancements en 10 minutes ; au-delà, il attend la fin de ces 10 minutes.
+- L'audio d'une écoute « Sur ce poste » ne part **jamais** au serveur, même après un redémarrage du programme. Une coupure courte est rejouée de mémoire au programme relancé, comme avec un serveur. Si les modèles manquent, sont refusés ou si le programme plante en boucle, la transcription en direct se met en pause et le dit ; un passage manqué est signalé par un bandeau daté au-dessus de la transcription.
+
+## Réseau et données
+
+- **Téléchargement des modèles** : seulement quand vous choisissez **Télécharger les modèles**, en HTTPS, vers les sources de Syntheo, dans l'ordre : la release `speech-models-1` du dépôt GitHub de Syntheo (`github.com`, qui redirige vers `release-assets.githubusercontent.com`), puis le dépôt Hugging Face de Syntheo (`huggingface.co`, qui redirige vers ses serveurs de contenu sous `hf.co`, par exemple `cas-bridge.xethub.hf.co` ou `us.aws.cdn.hf.co` selon la région) en secours. Les redirections HTTPS sont suivies (5 au plus) ; un filtrage des sorties doit donc autoriser ces hôtes. Une organisation peut les remplacer par son propre miroir (voir [Imposer un miroir des modèles](#imposer-un-miroir-des-modèles)). Seuls les fichiers des modèles sont demandés ; rien de vos réunions n'est envoyé.
+- **Installation depuis un dossier** : aucune connexion.
+- **Pendant une écoute** : le programme n'écoute que sur la boucle locale (`127.0.0.1`) et n'ouvre aucune connexion vers l'extérieur. L'application et le programme s'authentifient l'un l'autre à chaque connexion ; un autre programme du poste ne peut ni recevoir l'audio en se faisant passer pour lui, ni s'y connecter.
+- Le programme ne journalise que des durées et des nombres, jamais de texte transcrit.
+- Fichiers ajoutés au dossier de données de l'application (`~/.local/share/fr.willisback.syntheo` sous Linux, `%APPDATA%\fr.willisback.syntheo` sous Windows), dans `speech/` : les modèles (`speech/models`) et le résultat de la mise en service (`speech/commissioning.json`). Aucun audio.
+
+Voir aussi [Données et confidentialité](/fr/data-and-privacy) et, pour le modèle de menace, [Sécurité](/fr/security#transcription-sur-le-poste).
+
+## Interdire la source
+
+Une organisation peut interdire la transcription sur le poste avec le réglage géré `on_device_transcription_enabled` à `false` dans `managed_settings.json` (voir [Sécurité](/fr/security#déploiement-en-entreprise)). La carte **Sur ce poste** n'apparaît plus ; si la source était choisie, elle est décochée avec un message, et la transcription passe par le serveur configuré. Le programme reste installé avec Syntheo, mais n'est jamais lancé.
+
+## Postes à contrôle des applications
+
+Avant chaque lancement, Syntheo copie le programme de transcription dans un dossier privé de son dossier de données (`%APPDATA%\fr.willisback.syntheo\speech` sous Windows, `~/.local/share/fr.willisback.syntheo/speech` sous Linux), le vérifie et l'exécute depuis cette copie. Une politique qui n'autorise l'exécution que depuis certains chemins (AppLocker ou stratégies de restriction logicielle avec les règles de chemin par défaut, qui n'autorisent que `Program Files` et `Windows`) ou un dossier personnel monté sans droit d'exécution (`noexec`) bloque donc le programme : la carte et l'écoute indiquent que le poste n'autorise pas son exécution (code `execution_blocked`). Aucun repli n'est automatique : constaté pendant la mesure, le blocage empêche de retenir le poste, la case **Utiliser ce poste pour la transcription, à la place du serveur** reste décochée et le serveur reste utilisé ; survenu plus tard, pendant une écoute, il met la transcription en direct en pause, et **Revenir au serveur** (ou décocher la case) repasse sur le serveur. Sous Windows, une règle d'éditeur sur la signature de Syntheo autorise la copie, qui reste signée.
+
+## Imposer un miroir des modèles
+
+Le réglage géré `speech_models_urls`, une liste d'adresses HTTPS, remplace les sources de Syntheo : les modèles sont alors demandés à ces adresses, dans l'ordre, par exemple à un miroir interne, et plus jamais aux sources de Syntheo. Si le miroir redirige (HTTPS seulement, 5 redirections au plus), la redirection est suivie, y compris vers un autre hôte. Chaque adresse peut contenir `{path}` (chemin du fichier, par exemple `nemotron/encoder.onnx`) ou `{name}` (son seul nom, `encoder.onnx`) ; sans marqueur, `/{path}` est ajouté à l'adresse. Chaque adresse commence par `https://` et ne contient ni identifiants (`utilisateur:motdepasse@`), ni requête, ni fragment, ni virgule ; 8 adresses au plus. Une seule adresse invalide rend tout `managed_settings.json` invalide, et Syntheo ne démarre pas (voir [Sécurité](/fr/security#déploiement-en-entreprise)) : vérifiez le fichier sur un poste avant de le déployer.
+
+```json
+{
+  "schema_version": 1,
+  "settings": {
+    "speech_models_urls": ["https://miroir.exemple.fr/syntheo/modeles/{path}"]
+  }
+}
+```
+
+Le miroir doit servir exactement les fichiers publiés par Syntheo : leur taille et leur empreinte sont vérifiées comme pour les autres sources. Pour préparer le miroir ou un dossier d'installation, voir `apps/speech/models/README.md` dans le dépôt de Syntheo.
+
+## Licences
+
+Syntheo livre ces licences dans son dossier d'installation (`speech-licenses`) :
+
+| Composant | Licence |
+| --- | --- |
+| Programme `syntheo-speech` | MIT |
+| Modèles NVIDIA Nemotron 3.5 ASR Streaming et Nemotron 3 Diarization, quantifiés en int8 par Syntheo | OpenMDW-1.1 (accord et fiches des modèles fournis) |
+| ONNX Runtime 1.31.0, lié au programme | MIT, avec ses notices tierces |
+| Crates Rust du programme | MIT, Apache-2.0 et autres licences permissives (liste générée à la construction) |
+| Audio de mise en service, tiré de Multilingual LibriSpeech (enregistrements LibriVox) | CC BY 4.0 pour le jeu de données ; enregistrements du domaine public (attribution fournie) |
+
+Les modèles téléchargés ou copiés sont accompagnés, sur leurs sources, de l'accord OpenMDW-1.1 et des fiches NVIDIA d'origine.

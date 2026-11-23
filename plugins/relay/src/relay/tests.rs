@@ -105,6 +105,14 @@ fn denies_commands_that_run_programs_or_read_secrets() {
         "plugin:store2|set_secret",
         "plugin:store2|delete_secret",
         "plugin:opener2|open_path",
+        "plugin:mesure|measure",
+        "plugin:mesure|measure_differences",
+        "plugin:transcription|probe_local_transcription",
+        "plugin:transcription|on_device_download_models",
+        "plugin:transcription|on_device_install_models",
+        "plugin:transcription|on_device_cancel_install",
+        "plugin:transcription|on_device_remove_models",
+        "plugin:transcription|on_device_commission",
     ] {
         assert!(super::is_denied_command(cmd), "{cmd}");
     }

@@ -29,7 +29,20 @@ const mocks = vi.hoisted(() => ({
     current_llm_model: "model" as string | null,
     current_stt_provider: "local" as string | null,
     current_stt_model: "model" as string | null,
+    stt_on_device: false as boolean,
   },
+  onDevice: null as unknown,
+  commissioning: null as unknown,
+  onDeviceLoading: false,
+  commissioningLoading: false,
+  llmManagedOff: false,
+}));
+
+vi.mock("~/settings/managed", () => ({
+  useIntelligenceDisabled: () => ({
+    managed: mocks.llmManagedOff,
+    blocked: mocks.llmManagedOff,
+  }),
 }));
 
 vi.mock("@syntheo/ui/components/ui/toast", async (importOriginal) => {
@@ -77,8 +90,32 @@ vi.mock("~/store/zustand/tabs", () => ({
 }));
 
 vi.mock("~/stt/capabilities", () => ({
-  isConfiguredSttModel: () => true,
+  isConfiguredSttModel: (provider?: string | null, model?: string | null) =>
+    !!provider && !!model,
   isSyntheoCloudSttModel: () => false,
+}));
+
+vi.mock("~/stt/useSTTConnection", () => ({
+  useSTTConnection: () => ({
+    serverConn:
+      mocks.config.current_stt_provider && mocks.config.current_stt_model
+        ? { provider: mocks.config.current_stt_provider }
+        : null,
+    // Comme useSTTConnection : l'état du poste ne compte que s'il est choisi.
+    isLoading: !!mocks.config.stt_on_device && mocks.onDeviceLoading,
+  }),
+}));
+
+vi.mock("~/stt/on-device", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/stt/on-device")>()),
+  useOnDeviceStatus: () => ({
+    data: mocks.onDevice,
+    isLoading: mocks.onDeviceLoading,
+  }),
+  useOnDeviceCommissioning: () => ({
+    data: mocks.commissioning,
+    isLoading: mocks.commissioningLoading,
+  }),
 }));
 
 vi.mock("~/stt/contexts", () => ({
@@ -127,6 +164,150 @@ describe("ToastNotifications", () => {
     mocks.config.current_llm_model = "model";
     mocks.config.current_stt_provider = "local";
     mocks.config.current_stt_model = "model";
+    mocks.config.stt_on_device = false;
+    mocks.onDevice = null;
+    mocks.commissioning = null;
+    mocks.onDeviceLoading = false;
+    mocks.commissioningLoading = false;
+    mocks.llmManagedOff = false;
+  });
+
+  // Issue 707 : synthèse coupée par l'administration, aucun modèle de
+  // langage à demander.
+  it.each([
+    [false, true],
+    [true, false],
+  ])(
+    "asks for a language model only when synthesis is not managed off (managed off: %s)",
+    (managedOff, shown) => {
+      mocks.config.current_llm_provider = "";
+      mocks.config.current_llm_model = "";
+      mocks.llmManagedOff = managedOff;
+
+      render(<ToastNotifications />);
+      act(() => vi.advanceTimersByTime(500));
+
+      const descriptions = mocks.message.mock.calls.map((call) => call[0]);
+      expect(descriptions.includes("Language model needed")).toBe(shown);
+    },
+  );
+
+  // QA de 0.8.0-2 (William) : seule la transcription sur ce poste, prête.
+  it("asks for no transcription provider when this computer is ready", () => {
+    mocks.config.current_stt_provider = null;
+    mocks.config.current_stt_model = null;
+    mocks.config.stt_on_device = true;
+    mocks.onDevice = {
+      allowed: true,
+      companion: true,
+      models: { kind: "installed", totalBytes: 1 },
+      downloadable: true,
+    };
+    mocks.commissioning = {
+      profile: "two_streams",
+      measures: [],
+      measuredAt: 1,
+    };
+
+    render(<ToastNotifications />);
+    act(() => vi.advanceTimersByTime(500));
+
+    const descriptions = mocks.message.mock.calls.map((call) => call[0]);
+    expect(descriptions).not.toContain("Transcription provider needed");
+  });
+
+  // Revue de 8d988afd : « Sur ce poste » choisi mais pas mesuré a son propre
+  // toast ; « Fournisseur requis » n'y changerait rien.
+  it("says this computer is not ready when it is chosen but not measured", () => {
+    mocks.config.current_stt_provider = null;
+    mocks.config.current_stt_model = null;
+    mocks.config.stt_on_device = true;
+    mocks.onDevice = {
+      allowed: true,
+      companion: true,
+      models: { kind: "installed", totalBytes: 1 },
+      downloadable: true,
+    };
+    mocks.commissioning = { profile: null, measures: [], measuredAt: 1 };
+
+    render(<ToastNotifications />);
+    act(() => vi.advanceTimersByTime(500));
+
+    const descriptions = mocks.message.mock.calls.map((call) => call[0]);
+    expect(descriptions).not.toContain("Transcription provider needed");
+    expect(descriptions).toContain(
+      "Transcription on this computer is not ready",
+    );
+  });
+
+  it("says this computer is not ready even with a configured server", () => {
+    mocks.config.stt_on_device = true;
+    mocks.onDevice = {
+      allowed: true,
+      companion: true,
+      models: { kind: "missing", totalBytes: 1 },
+      downloadable: true,
+    };
+
+    render(<ToastNotifications />);
+    act(() => vi.advanceTimersByTime(500));
+
+    const descriptions = mocks.message.mock.calls.map((call) => call[0]);
+    expect(descriptions).not.toContain("Transcription provider needed");
+    expect(descriptions).toContain(
+      "Transcription on this computer is not ready",
+    );
+  });
+
+  it("shows no transcription toast while the measurement loads", () => {
+    mocks.config.current_stt_provider = null;
+    mocks.config.current_stt_model = null;
+    mocks.config.stt_on_device = true;
+    mocks.onDevice = {
+      allowed: true,
+      companion: true,
+      models: { kind: "installed", totalBytes: 1 },
+      downloadable: true,
+    };
+    mocks.commissioning = undefined;
+    mocks.commissioningLoading = true;
+
+    render(<ToastNotifications />);
+    act(() => vi.advanceTimersByTime(500));
+
+    const descriptions = mocks.message.mock.calls.map((call) => call[0]);
+    expect(descriptions).not.toContain("Transcription provider needed");
+    expect(descriptions).not.toContain(
+      "Transcription on this computer is not ready",
+    );
+  });
+
+  it("asks for no provider while the state of this computer loads", () => {
+    mocks.config.current_stt_provider = null;
+    mocks.config.current_stt_model = null;
+    mocks.config.stt_on_device = true;
+    mocks.onDeviceLoading = true;
+
+    render(<ToastNotifications />);
+    act(() => vi.advanceTimersByTime(500));
+
+    const descriptions = mocks.message.mock.calls.map((call) => call[0]);
+    expect(descriptions).not.toContain("Transcription provider needed");
+    expect(descriptions).not.toContain(
+      "Transcription on this computer is not ready",
+    );
+  });
+
+  it("asks for a provider without any transcription source", () => {
+    mocks.config.current_stt_provider = null;
+    mocks.config.current_stt_model = null;
+    mocks.config.stt_on_device = false;
+
+    render(<ToastNotifications />);
+    act(() => vi.advanceTimersByTime(500));
+
+    const descriptions = mocks.message.mock.calls.map((call) => call[0]);
+    expect(descriptions).toContain("Transcription provider needed");
   });
 
   afterEach(() => {

@@ -1,6 +1,5 @@
 use std::collections::HashSet;
 
-use crate::transaction_utils::{js_iso8601_timestamp, rollback_row_count_mismatch};
 use serde::{Deserialize, Serialize};
 use specta::Type;
 use sqlx::SqlitePool;
@@ -8,6 +7,7 @@ use syntheo_db_app::{
     GeneratedSummaryBodyUpdate, PendingAutoEnhanceMatch, delete_pending_auto_enhance,
     update_generated_summary_body, upsert_session_tag, upsert_tag,
 };
+use syntheo_db_core::{js_iso8601_timestamp, rollback_row_count_mismatch};
 
 const DEFAULT_USER_ID: &str = "00000000-0000-0000-0000-000000000000";
 const PENDING_AUTO_ENHANCE_SETTING_PREFIX: &str = "auto_enhance_pending:";

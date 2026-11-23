@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use super::truncate;
 use crate::cli::ProposalCommand;
 use crate::{Result, output};
 use syntheo_agent_access::{
@@ -122,16 +123,4 @@ fn render_proposal(proposal: &Proposal) -> String {
         proposal.created_at,
         proposal.diff.trim_end()
     )
-}
-
-fn truncate(value: &str, width: usize) -> String {
-    if value.chars().count() <= width {
-        return value.to_string();
-    }
-    let mut text = value
-        .chars()
-        .take(width.saturating_sub(1))
-        .collect::<String>();
-    text.push('…');
-    text
 }

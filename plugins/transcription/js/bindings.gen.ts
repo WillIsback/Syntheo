@@ -22,43 +22,34 @@ export const commands = {
 	getCapturedSpeakerDevice: (preferred: string | null) => typedError<CapturedSpeakerDevice | null, string>(__TAURI_INVOKE("plugin:transcription|get_captured_speaker_device", { preferred })),
 	startSpeakerLevelMonitor: (owner: string, device: string | null, levels: Channel<number | null>) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|start_speaker_level_monitor", { owner, device, levels })),
 	stopSpeakerLevelMonitor: (owner: string) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|stop_speaker_level_monitor", { owner })),
-	getMicMuted: () => typedError<boolean, string>(__TAURI_INVOKE("plugin:transcription|get_mic_muted")),
 	setMicMuted: (muted: boolean) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|set_mic_muted", { muted })),
-	getSpeakerMuted: () => typedError<boolean, string>(__TAURI_INVOKE("plugin:transcription|get_speaker_muted")),
 	/**  Coupe ou rétablit le son système de l'écoute en cours (issue 447), sans la relancer. */
 	setSpeakerMuted: (muted: boolean) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|set_speaker_muted", { muted })),
 	startCapture: (params: CaptureParams) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|start_capture", { params })),
 	retryAudioCapture: (sessionId: string, device: string | null) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|retry_audio_capture", { sessionId, device })),
 	flushLiveTranscript: (sessionId: string) => typedError<LiveTranscriptPersistence | null, string>(__TAURI_INVOKE("plugin:transcription|flush_live_transcript", { sessionId })),
 	releaseLiveTranscript: (sessionId: string, transcriptId: string) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|release_live_transcript", { sessionId, transcriptId })),
-	listStoppedCaptures: () => typedError<StoppedCapture[], string>(__TAURI_INVOKE("plugin:transcription|list_stopped_captures")),
 	getStoppedCapture: (sessionId: string) => typedError<StoppedCapture | null, string>(__TAURI_INVOKE("plugin:transcription|get_stopped_capture", { sessionId })),
 	acknowledgeStoppedCapture: (sessionId: string, stoppedAtMs: number) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|acknowledge_stopped_capture", { sessionId, stoppedAtMs })),
 	saveCaptureLifecycleMarker: (marker: CaptureLifecycleMarker, replaceTranscriptId: string | null) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|save_capture_lifecycle_marker", { marker, replaceTranscriptId })),
 	clearCaptureLifecycleMarker: (sessionId: string, transcriptId: string) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|clear_capture_lifecycle_marker", { sessionId, transcriptId })),
 	getCaptureLifecycleMarker: (sessionId: string) => typedError<CaptureLifecycleMarker | null, string>(__TAURI_INVOKE("plugin:transcription|get_capture_lifecycle_marker", { sessionId })),
-	listCaptureLifecycleMarkers: () => typedError<CaptureLifecycleMarker[], string>(__TAURI_INVOKE("plugin:transcription|list_capture_lifecycle_markers")),
 	listCaptureRecoveries: () => typedError<CaptureRecovery[], string>(__TAURI_INVOKE("plugin:transcription|list_capture_recoveries")),
 	getCaptureAudioGaps: (sessionId: string) => typedError<CaptureAudioGaps | null, string>(__TAURI_INVOKE("plugin:transcription|get_capture_audio_gaps", { sessionId })),
-	markCaptureAudioSaved: (sessionId: string) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|mark_capture_audio_saved", { sessionId })),
 	clearCaptureAudioSaved: (sessionId: string) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|clear_capture_audio_saved", { sessionId })),
 	stopCapture: () => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|stop_capture")),
 	stopCaptureForSession: (sessionId: string) => typedError<boolean, string>(__TAURI_INVOKE("plugin:transcription|stop_capture_for_session", { sessionId })),
 	updateCaptureConfig: (update: CaptureConfigUpdate) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|update_capture_config", { update })),
 	getCaptureState: () => typedError<CaptureState, string>(__TAURI_INVOKE("plugin:transcription|get_capture_state")),
 	getCaptureSnapshot: () => typedError<CaptureSnapshot, string>(__TAURI_INVOKE("plugin:transcription|get_capture_snapshot")),
-	updateCaptureCredentials: (sessionId: string, apiKey: string) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|update_capture_credentials", { sessionId, apiKey })),
 	listCaptureAudioChunks: (sessionId: string) => typedError<RecoveryAudioChunk[], string>(__TAURI_INVOKE("plugin:transcription|list_capture_audio_chunks", { sessionId })),
 	getCaptureAudioCleanupStatus: () => typedError<{ [key in string]: string }, string>(__TAURI_INVOKE("plugin:transcription|get_capture_audio_cleanup_status")),
 	acknowledgeCaptureAudioCleanupStatus: (sessionId: string, error: string) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|acknowledge_capture_audio_cleanup_status", { sessionId, error })),
 	acknowledgeCaptureAudioChunk: (sessionId: string, chunkId: string) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|acknowledge_capture_audio_chunk", { sessionId, chunkId })),
 	deleteTranscribedCaptureAudio: (sessionId: string) => typedError<boolean, string>(__TAURI_INVOKE("plugin:transcription|delete_transcribed_capture_audio", { sessionId })),
 	isSupportedLanguagesLive: (provider: string, model: string | null, languages: string[]) => typedError<boolean, string>(__TAURI_INVOKE("plugin:transcription|is_supported_languages_live", { provider, model, languages })),
-	suggestProvidersForLanguagesLive: (languages: string[]) => typedError<string[], string>(__TAURI_INVOKE("plugin:transcription|suggest_providers_for_languages_live", { languages })),
-	listDocumentedLanguageCodesLive: () => typedError<string[], string>(__TAURI_INVOKE("plugin:transcription|list_documented_language_codes_live")),
 	renderTranscriptSegments: (params: RenderTranscriptRequest) => typedError<RenderedTranscriptSegment[], string>(__TAURI_INVOKE("plugin:transcription|render_transcript_segments", { params })),
 	renderSessionTranscript: (request: RenderSessionTranscriptRequest) => typedError<RenderedSessionTranscript | null, string>(__TAURI_INVOKE("plugin:transcription|render_session_transcript", { request })),
-	refineBatchTranscript: (request: BatchRefinementRequest) => typedError<BatchRefinementOutcome, string>(__TAURI_INVOKE("plugin:transcription|refine_batch_transcript", { request })),
 	saveBatchTranscript: (request: SaveBatchTranscriptRequest) => typedError<SaveBatchTranscriptOutcome, string>(__TAURI_INVOKE("plugin:transcription|save_batch_transcript", { request })),
 	reconcileRefinedSpeakerClusters: (request: SpeakerClusterReconciliationRequest) => typedError<StoredSpeakerHint[], string>(__TAURI_INVOKE("plugin:transcription|reconcile_refined_speaker_clusters", { request })),
 	startTranscription: (params: TranscriptionParams) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|start_transcription", { params })),
@@ -67,15 +58,49 @@ export const commands = {
 	getCompletedTranscription: (sessionId: string) => typedError<CompletedTranscription | null, string>(__TAURI_INVOKE("plugin:transcription|get_completed_transcription", { sessionId })),
 	acknowledgeCompletedTranscription: (sessionId: string) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|acknowledge_completed_transcription", { sessionId })),
 	parseSubtitle: (path: string) => typedError<Subtitle, string>(__TAURI_INVOKE("plugin:transcription|parse_subtitle", { path })),
-	exportToVtt: (sessionId: string, words: VttWord[]) => typedError<string, string>(__TAURI_INVOKE("plugin:transcription|export_to_vtt", { sessionId, words })),
 	isSupportedLanguagesBatch: (provider: string, model: string | null, languages: string[]) => typedError<boolean, string>(__TAURI_INVOKE("plugin:transcription|is_supported_languages_batch", { provider, model, languages })),
-	suggestProvidersForLanguagesBatch: (languages: string[]) => typedError<string[], string>(__TAURI_INVOKE("plugin:transcription|suggest_providers_for_languages_batch", { languages })),
-	listDocumentedLanguageCodesBatch: () => typedError<string[], string>(__TAURI_INVOKE("plugin:transcription|list_documented_language_codes_batch")),
 	/**  Deletes local audio right after processing when the retention policy is `none`. */
 	deleteProcessedSessionAudio: (sessionId: string) => typedError<boolean, string>(__TAURI_INVOKE("plugin:transcription|delete_processed_session_audio", { sessionId })),
 	beginAudioUpload: (fileName: string, sizeBytes: number) => typedError<string, string>(__TAURI_INVOKE("plugin:transcription|begin_audio_upload", { fileName, sizeBytes })),
 	appendAudioUpload: (uploadId: string, dataBase64: string) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|append_audio_upload", { uploadId, dataBase64 })),
 	discardAudioUpload: (uploadId: string) => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|discard_audio_upload", { uploadId })),
+	/**  Sonde le poste pour `engine`. */
+	probeLocalTranscription: (engine: Engine) => typedError<Probe, string>(__TAURI_INVOKE("plugin:transcription|probe_local_transcription", { engine })),
+	/**  État de la source « Sur ce poste » : politique, compagnon et modèles. */
+	onDeviceStatus: () => typedError<OnDeviceStatus, string>(__TAURI_INVOKE("plugin:transcription|on_device_status")),
+	/**
+	 *  Télécharge les modèles (≈ 1 Go) depuis les sources compilées ou imposées
+	 *  par l'organisation, chaque fichier vérifié avant sa mise en place ; rend
+	 *  la main à la fin. Avancement : `on_device_install_progress`.
+	 */
+	onDeviceDownloadModels: () => typedError<OnDeviceModels, string>(__TAURI_INVOKE("plugin:transcription|on_device_download_models")),
+	/**
+	 *  Installe les modèles depuis un dossier choisi ici, côté Rust (aucun chemin
+	 *  ne vient de la webview), chaque fichier vérifié avant sa mise en place.
+	 *  `None` : choix annulé.
+	 */
+	onDeviceInstallModels: () => typedError<OnDeviceModels | null, string>(__TAURI_INVOKE("plugin:transcription|on_device_install_models")),
+	/**  Avancement de l'installation en cours ; `None` hors installation. */
+	onDeviceInstallProgress: () => typedError<OnDeviceInstallProgress | null, string>(__TAURI_INVOKE("plugin:transcription|on_device_install_progress")),
+	/**
+	 *  Annule l'installation en cours (un téléchargement reprendra plus tard où
+	 *  il s'était arrêté).
+	 */
+	onDeviceCancelInstall: () => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|on_device_cancel_install")),
+	/**  Retire les modèles. */
+	onDeviceRemoveModels: () => typedError<null, string>(__TAURI_INVOKE("plugin:transcription|on_device_remove_models")),
+	/**  Mise en service enregistrée du module installé. */
+	onDeviceCommissioning: () => typedError<OnDeviceCommissioning | null, string>(__TAURI_INVOKE("plugin:transcription|on_device_commissioning")),
+	/**
+	 *  Mesure les profils (environ 30 s chacun, du plus complet au plus réduit)
+	 *  et enregistre le premier qui tient le temps réel. Refusée pendant une
+	 *  écoute et par le relay.
+	 */
+	onDeviceCommission: () => typedError<OnDeviceCommissioning, string>(__TAURI_INVOKE("plugin:transcription|on_device_commission")),
+	/**  Charge du module pendant une écoute ; vide hors écoute. */
+	onDeviceLoad: () => typedError<OnDeviceSessionLoad[], string>(__TAURI_INVOKE("plugin:transcription|on_device_load")),
+	/**  Profil en cours de mesure, pendant une mise en service. */
+	onDeviceCommissionProgress: () => typedError<OnDeviceProgress | null, string>(__TAURI_INVOKE("plugin:transcription|on_device_commission_progress")),
 };
 
 /** Events */
@@ -118,15 +143,6 @@ export type BatchProvider = "openai" |
  */
 "realtime";
 
-export type BatchRefinementOutcome = { status: "ready"; words: StoredTranscriptWord[]; speaker_hints: StoredSpeakerHint[]; replace_session: boolean; replace_transcript_id: string | null; started_at: number | null } | { status: "empty_current_capture" } | { status: "truncated" };
-
-export type BatchRefinementRequest = {
-	words: StoredTranscriptWord[],
-	hints: StoredSpeakerHint[],
-	promotion: BatchTranscriptPromotion,
-	previous_transcripts: BatchRefinementSource[],
-};
-
 export type BatchRefinementSource = {
 	id: string,
 	started_at: number,
@@ -162,6 +178,18 @@ export type BatchWord = {
 	channel?: number,
 	speaker: number | null,
 	punctuated_word: string | null,
+};
+
+export type BenchResult = {
+	/**  Débit soutenu, en GMAC/s. */
+	gmacs: number,
+	threads: number,
+	seconds: number,
+	/**
+	 *  Noyau utilisé : `avx2` ou `scalar` (sans AVX2, le poste est de toute
+	 *  façon refusé ; la valeur sert au diagnostic).
+	 */
+	kernel: string,
 };
 
 export type CaptureAudioGap = {
@@ -219,6 +247,11 @@ export type CaptureLifecycleMarker = {
 	refreshSummaryAfterRepair?: boolean | null,
 	inheritedCaptures?: InheritedCapture[] | null,
 	inheritedOnly?: boolean | null,
+	/**
+	 *  Capture « Sur ce poste » (issue 685) : son audio ne part jamais au
+	 *  serveur, réparation et reprise comprises.
+	 */
+	onDevice?: boolean | null,
 };
 
 export type CaptureParams = {
@@ -280,7 +313,28 @@ export type CompletedTranscription = {
 	response: BatchResponse,
 };
 
-export type DegradedError = { type: "authentication_failed"; provider: string } | { type: "upstream_unavailable"; message: string } | { type: "connection_timeout" } | { type: "provider_configuration"; provider: string; message: string } | { type: "stream_error"; message: string };
+export type DegradedError = { type: "authentication_failed"; provider: string } | { type: "upstream_unavailable"; message: string } | { type: "connection_timeout" } | { type: "provider_configuration"; provider: string; message: string } | { type: "stream_error"; message: string } | 
+/**
+ *  Source « Sur ce poste » indisponible (issue 684). `reason` : code de
+ *  `owhisper_client::OnDeviceErrorKind` ; `permanent` : pas de nouvelle
+ *  tentative pendant l'écoute.
+ */
+{ type: "on_device_unavailable"; reason: string; permanent: boolean } | 
+/**
+ *  Le module de la source « Sur ce poste » n'a pas prouvé connaître le
+ *  jeton du lancement : rien n'a été envoyé, pas de nouvelle tentative.
+ */
+{ type: "on_device_authentication_failed" };
+
+/**
+ *  Moteur de transcription sur le poste ; la décision entre les deux tombera
+ *  après le banc du ThinkPad et le WER (issue 680).
+ */
+export type Engine = 
+/**  A : parakeet-rs (ONNX Runtime), int8. */
+"parakeet_onnx" | 
+/**  B : NeMo-Speech.cpp (ggml), q8_0. */
+"nemo_ggml";
 
 export type FinalizedWord = {
 	id: string,
@@ -290,6 +344,29 @@ export type FinalizedWord = {
 	channel: number,
 	state: WordState,
 	speaker_index?: number | null,
+};
+
+export type Gpu = {
+	name: string,
+	/**  Mémoire vidéo dédiée, si le système la donne. */
+	vramBytes: number | null,
+};
+
+export type Hardware = {
+	avx2: boolean,
+	physicalCores: number,
+	logicalCores: number,
+	totalMemoryBytes: number,
+	availableMemoryBytes: number,
+	/**  Espace libre du disque qui porte le dossier de données. */
+	freeDiskBytes: number | null,
+	powerPlan: PowerPlan,
+	/**
+	 *  `Some(true)` sur batterie, `Some(false)` sur secteur, `None` sans
+	 *  batterie connue (poste fixe).
+	 */
+	onBattery: boolean | null,
+	gpus: Gpu[],
 };
 
 export type IdentityAssignment = {
@@ -308,6 +385,11 @@ export type InheritedCapture = {
 	retainAudio?: boolean | null,
 	provider?: string | null,
 	model?: string | null,
+	/**
+	 *  Capture « Sur ce poste » (issue 685) : son audio ne part jamais au
+	 *  serveur, réparation comprise.
+	 */
+	onDevice?: boolean | null,
 };
 
 export type LiveTranscriptDelta = {
@@ -352,6 +434,76 @@ export type LiveTranscriptTarget = {
 	model: string | null,
 };
 
+/**  Mise en service enregistrée. */
+export type OnDeviceCommissioning = {
+	/**  Profil retenu ; `None` : poste inéligible. */
+	profile: string | null,
+	measures: OnDeviceMeasure[],
+	/**  Secondes depuis l'époque Unix. */
+	measuredAt: number,
+};
+
+/**  Avancement de l'installation des modèles. */
+export type OnDeviceInstallProgress = {
+	doneBytes: number,
+	totalBytes: number,
+};
+
+/**  Mesure d'un profil, pour l'interface et la barre de diagnostic. */
+export type OnDeviceMeasure = {
+	/**
+	 *  `two_streams_diarized`, `two_streams`, `one_stream_diarized`,
+	 *  `one_stream`.
+	 */
+	profile: string,
+	finals: number,
+	p95Ms: number,
+	driftMs: number,
+	/**  Retard brut (attente de fin d'énoncé comprise). */
+	rawP95Ms: number,
+	rawDriftMs: number,
+	passed: boolean,
+	/**  Mesure impossible : code de la raison. */
+	error: string | null,
+};
+
+/**  Modèles installés, pour l'interface. */
+export type OnDeviceModels = { kind: "missing"; totalBytes: number } | 
+/**
+ *  Installation interrompue : `presentBytes` compte aussi les octets
+ *  déjà téléchargés ; `resumable`, un téléchargement à reprendre.
+ */
+{ kind: "partial"; presentBytes: number; totalBytes: number; resumable: boolean } | { kind: "installed"; totalBytes: number };
+
+/**  Avancement d'une mise en service. */
+export type OnDeviceProgress = {
+	current: number,
+	total: number,
+};
+
+/**  Charge du module pendant une écoute (barre de diagnostic). */
+export type OnDeviceSessionLoad = {
+	lagMs: number,
+	rtf: number,
+	/**  `full`, `spaced` ou `off`. */
+	diarization: string,
+	audioS: number,
+};
+
+/**  État de la source « Sur ce poste ». */
+export type OnDeviceStatus = {
+	/**  Autorisée par la politique de l'organisation. */
+	allowed: boolean,
+	/**  Le programme compagnon est livré avec cette application et présent. */
+	companion: boolean,
+	models: OnDeviceModels,
+	/**
+	 *  Au moins une source de téléchargement (compilée ou imposée par
+	 *  l'organisation) : sinon, installation depuis un dossier seulement.
+	 */
+	downloadable: boolean,
+};
+
 export type PartialWord = {
 	text: string,
 	start_ms: number,
@@ -359,6 +511,41 @@ export type PartialWord = {
 	channel: number,
 	speaker_index?: number | null,
 };
+
+/**  Plan d'alimentation actif, ramené à trois classes. */
+export type PowerPlan = 
+/**
+ *  Économie d'énergie (Windows : « Économiseur d'énergie » ou économiseur
+ *  de batterie ; Linux : `low-power`, `power-saver`, `quiet`, `cool`).
+ */
+"power_saver" | "balanced" | "performance" | "unknown";
+
+/**  Résultat complet de la sonde. */
+export type Probe = {
+	engine: Engine,
+	hardware: Hardware,
+	/**  Absent quand les contrôles statiques refusent déjà le poste. */
+	bench: BenchResult | null,
+	predicted: ProfileRtfs | null,
+	verdict: Verdict,
+	/**
+	 *  Économie d'énergie ou batterie : conseiller le secteur ou le mode
+	 *  performance, puis refaire la sonde.
+	 */
+	powerAdvice: boolean,
+};
+
+/**
+ *  Profils, du plus complet au plus réduit : l'ordre de choix de la mise en
+ *  service (issue 686).
+ */
+export type Profile = "two_streams_diarized" | "two_streams" | "one_stream_diarized" | "one_stream";
+
+/**
+ *  RTF cumulé prédit (ou mesuré) pour chaque profil, dans l'ordre de
+ *  `Profile::ALL`.
+ */
+export type ProfileRtfs = [number, number, number, number];
 
 export type ProvisionalSpeakerLabel = {
 	name: string,
@@ -374,6 +561,10 @@ export type RecoveryAudioChunk = {
 	audio_start_ms: number,
 	end_ms: number,
 };
+
+export type Refusal = "no_avx2" | "not_enough_memory" | "not_enough_disk" | 
+/**  Disque des données introuvable : refusé, jamais accepté par défaut. */
+"disk_unknown" | "too_slow";
 
 export type RenderSessionTranscriptRequest = {
 	session_id: string,
@@ -618,12 +809,18 @@ export type TranscriptionSession = {
 
 export type Value = null | boolean | number | string | Value[] | { [key in string]: Value };
 
-export type VttWord = {
-	text: string,
-	start_ms: number,
-	end_ms: number,
-	speaker: string | null,
-};
+export type Verdict = 
+/**  Profil complet dans le budget. */
+{ kind: "propose"; profile: Profile } | 
+/**
+ *  Profil complet entre le budget et la limite : le premier profil
+ *  réduit qui tient le budget.
+ */
+{ kind: "propose_degraded"; profile: Profile } | 
+/**  Pas de proposition, ni de téléchargement. */
+{ kind: "refuse"; reasons: Refusal[] } | 
+/**  Micro-banc interrompu par le démarrage d'une écoute : à refaire. */
+{ kind: "interrupted" };
 
 /**
  *  Whether a finalized word is stable or awaiting correction.

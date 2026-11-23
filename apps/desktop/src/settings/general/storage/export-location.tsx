@@ -56,7 +56,7 @@ export function ExportLocationRow() {
           onClick={() => {
             if (path)
               void openerCommands
-                .openPath(path, null)
+                .openPath(path)
                 .catch((error) =>
                   console.error(
                     "[settings] failed to open export location",

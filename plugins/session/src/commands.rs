@@ -172,13 +172,6 @@ session_write_command!(
     ()
 );
 session_write_command!(
-    update_folder_workspace,
-    folder_catalog,
-    update_folder_workspace,
-    folder_catalog::UpdateFolderWorkspaceRequest,
-    ()
-);
-session_write_command!(
     update_folder_icon,
     folder_catalog,
     update_folder_icon,

@@ -89,20 +89,6 @@ final class FloatingPanelPositionController: NSObject, NSWindowDelegate {
     programmaticOrigin = nil
   }
 
-  func preparePinnedFrameForReplacement(_ panel: NSPanel, size: NSSize) {
-    guard pinnedOrigin != nil else { return }
-
-    let frame = NSRect(
-      x: panel.frame.minX,
-      y: panel.frame.maxY - size.height,
-      width: size.width,
-      height: size.height)
-    pinnedOrigin = frame.origin
-    pinnedAnchor = nil
-    activeScreenId =
-      (screen(containing: frame) ?? panel.screen).flatMap { displayId(for: $0) }
-  }
-
   func windowDidMove(_ notification: Notification) {
     guard let panel = notification.object as? NSPanel else { return }
     let origin = panel.frame.origin
@@ -125,11 +111,6 @@ final class FloatingPanelPositionController: NSObject, NSWindowDelegate {
     pinnedOrigin = origin
     pinnedAnchor = nil
     activeScreenId = panel.screen.flatMap { displayId(for: $0) }
-  }
-
-  func anchorPoint(for panel: NSPanel, offset: NSPoint) -> NSPoint {
-    pinnedAnchor
-      ?? NSPoint(x: panel.frame.minX + offset.x, y: panel.frame.minY + offset.y)
   }
 
   private func move(_ panel: NSPanel, to origin: NSPoint) {

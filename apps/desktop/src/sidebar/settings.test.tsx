@@ -30,6 +30,16 @@ const mocks = vi.hoisted(() => ({
     stt: { status: "failed", failure: { ok: false, reason: "unreachable" } },
     llm: { status: "connected", latencyMs: 84, protocol: "openai", models: [] },
   } as Record<string, unknown>,
+  llmDisabled: false,
+  config: {
+    current_stt_provider: "local" as string | null,
+    current_stt_model: "model" as string | null,
+    stt_on_device: false as boolean,
+  },
+  onDevice: null as unknown,
+  commissioning: null as unknown,
+  onDeviceLoading: false,
+  commissioningLoading: false,
 }));
 
 const lingui = vi.hoisted(() => {
@@ -79,8 +89,39 @@ vi.mock("./custom-sidebar-header", () => ({
   CustomSidebarHeader: () => <div />,
 }));
 
+vi.mock("~/shared/config", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/shared/config")>()),
+  useConfigValues: () => mocks.config,
+}));
+
+vi.mock("~/stt/useSTTConnection", () => ({
+  useSTTConnection: () => ({
+    serverConn:
+      mocks.config.current_stt_provider && mocks.config.current_stt_model
+        ? { provider: mocks.config.current_stt_provider }
+        : null,
+    // Comme useSTTConnection : l'état du poste ne compte que s'il est choisi.
+    isLoading: !!mocks.config.stt_on_device && mocks.onDeviceLoading,
+  }),
+}));
+
+vi.mock("~/stt/on-device", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/stt/on-device")>()),
+  useOnDeviceStatus: () => ({
+    data: mocks.onDevice,
+    isLoading: mocks.onDeviceLoading,
+  }),
+  useOnDeviceCommissioning: () => ({
+    data: mocks.commissioning,
+    isLoading: mocks.commissioningLoading,
+  }),
+}));
+
 vi.mock("~/settings/ai/shared/server-connection", () => ({
-  useServerConnection: (kind: string) => ({ state: mocks.serverStates[kind] }),
+  useServerConnection: (kind: string) => ({
+    state: mocks.serverStates[kind],
+    disabled: kind === "llm" && mocks.llmDisabled,
+  }),
 }));
 
 vi.mock("~/settings/team/mirror", () => ({
@@ -119,6 +160,25 @@ describe("SettingsNav", () => {
   afterEach(cleanup);
 
   beforeEach(() => {
+    mocks.config = {
+      current_stt_provider: "local",
+      current_stt_model: "model",
+      stt_on_device: false,
+    };
+    mocks.onDevice = null;
+    mocks.commissioning = null;
+    mocks.onDeviceLoading = false;
+    mocks.commissioningLoading = false;
+    mocks.serverStates = {
+      stt: { status: "failed", failure: { ok: false, reason: "unreachable" } },
+      llm: {
+        status: "connected",
+        latencyMs: 84,
+        protocol: "openai",
+        models: [],
+      },
+    };
+    mocks.llmDisabled = false;
     mocks.currentTab = { type: "settings", state: { tab: "app" } };
     mocks.tabs = [];
     mocks.openNew.mockClear();
@@ -198,6 +258,134 @@ describe("SettingsNav", () => {
     const footer = screen.getByRole("status", { name: "Server status" });
     expect(footer.textContent).toContain("Transcription · unreachable");
     expect(footer.textContent).toContain("Synthesis · connected");
+  });
+
+  // Issue 707 : synthèse désactivée par réglage géré (intelligence_disabled),
+  // aucune sonde ne part ; le menu le dit au lieu de « non testée ».
+  it("shows the synthesis as disabled when the administrator turned it off", () => {
+    mocks.llmDisabled = true;
+    mocks.serverStates = { ...mocks.serverStates, llm: { status: "untested" } };
+    render(<SettingsNav />);
+
+    expect(
+      screen.getByRole("button", { name: /^Synthesis/ }).textContent,
+    ).toContain("Synthesis · disabled");
+    const footer = screen.getByRole("status", { name: "Server status" });
+    expect(footer.textContent).toContain("Synthesis · disabled");
+    expect(footer.textContent).not.toContain("Synthesis · not tested");
+  });
+
+  // QA de 0.8.0-2 (William) : « Sur ce poste » prêt, aucun serveur.
+  it("shows this computer as the active transcription source", () => {
+    mocks.config = {
+      current_stt_provider: null,
+      current_stt_model: null,
+      stt_on_device: true,
+    };
+    mocks.serverStates.stt = { status: "unconfigured" };
+    mocks.onDevice = {
+      allowed: true,
+      companion: true,
+      models: { kind: "installed", totalBytes: 1 },
+      downloadable: true,
+    };
+    mocks.commissioning = {
+      profile: "two_streams",
+      measures: [],
+      measuredAt: 1,
+    };
+    render(<SettingsNav />);
+
+    const footer = screen.getByRole("status", { name: "Server status" });
+    expect(footer.textContent).toContain("Transcription · on this computer");
+    expect(footer.textContent).not.toContain("no server");
+    expect(
+      screen.getByRole("button", { name: /^Transcription/ }).textContent,
+    ).toContain("Transcription · on this computer");
+  });
+
+  it("says this computer is not ready when it is chosen but not measured", () => {
+    mocks.config = {
+      current_stt_provider: null,
+      current_stt_model: null,
+      stt_on_device: true,
+    };
+    mocks.serverStates.stt = { status: "unconfigured" };
+    mocks.onDevice = {
+      allowed: true,
+      companion: true,
+      models: { kind: "installed", totalBytes: 1 },
+      downloadable: true,
+    };
+    mocks.commissioning = { profile: null, measures: [], measuredAt: 1 };
+    render(<SettingsNav />);
+
+    const footer = screen.getByRole("status", { name: "Server status" });
+    expect(footer.textContent).toContain(
+      "Transcription · this computer is not ready",
+    );
+  });
+
+  // Revue de 8d988afd : même avec un serveur configuré, la case cochée
+  // décide.
+  it("keeps this computer not ready even with a configured server", () => {
+    mocks.config = {
+      current_stt_provider: "local",
+      current_stt_model: "model",
+      stt_on_device: true,
+    };
+    mocks.serverStates.stt = { status: "connected", latencyMs: 10, models: [] };
+    mocks.onDevice = {
+      allowed: true,
+      companion: true,
+      models: { kind: "installed", totalBytes: 1 },
+      downloadable: true,
+    };
+    mocks.commissioning = { profile: null, measures: [], measuredAt: 1 };
+    render(<SettingsNav />);
+
+    const footer = screen.getByRole("status", { name: "Server status" });
+    expect(footer.textContent).toContain(
+      "Transcription · this computer is not ready",
+    );
+  });
+
+  it("shows no red status while the measurement loads", () => {
+    mocks.config = {
+      current_stt_provider: null,
+      current_stt_model: null,
+      stt_on_device: true,
+    };
+    mocks.serverStates.stt = { status: "unconfigured" };
+    mocks.onDevice = {
+      allowed: true,
+      companion: true,
+      models: { kind: "installed", totalBytes: 1 },
+      downloadable: true,
+    };
+    mocks.commissioning = undefined;
+    mocks.commissioningLoading = true;
+    render(<SettingsNav />);
+
+    const footer = screen.getByRole("status", { name: "Server status" });
+    expect(footer.textContent).toContain("Transcription · checking…");
+    expect(footer.textContent).not.toContain("not ready");
+  });
+
+  it("shows no red status while the state of this computer loads", () => {
+    mocks.config = {
+      current_stt_provider: null,
+      current_stt_model: null,
+      stt_on_device: true,
+    };
+    mocks.serverStates.stt = { status: "unconfigured" };
+    mocks.onDeviceLoading = true;
+    render(<SettingsNav />);
+
+    const footer = screen.getByRole("status", { name: "Server status" });
+    expect(footer.textContent).toContain("Transcription · checking…");
+    expect(footer.textContent).not.toContain("not ready");
+    expect(footer.textContent).not.toContain("no server");
   });
 
   it.each([

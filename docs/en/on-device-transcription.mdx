@@ -1,0 +1,102 @@
+---
+title: "Transcribe on this computer"
+sidebarTitle: "On this computer"
+description: "Transcribe meetings without a server: transcription program shipped with Syntheo, models to install, measured commissioning, profiles, network and licenses."
+---
+
+The **On this computer** source transcribes your meetings without a server: a transcription program, `syntheo-speech`, shipped with Syntheo, runs on your computer, and audio never leaves it. It serves the live transcription of a recording; dictation and imported files still go through the configured server (see [Set up transcription and AI](/en/ai-setup)).
+
+The program is installed with Syntheo. Its models (about 1.1 GB) are installed separately, once, from the **On this computer** card.
+
+## What you need
+
+- An x86-64 processor with AVX2 instructions (Linux or Windows).
+- 1.5 GB of free memory and 2 GB of free disk space (the models take about 1.1 GB).
+- A computer fast enough for real time: commissioning checks it (see below).
+
+**Test this computer**, in the **On this computer** card of **Settings → Transcription**, measures the processor, memory and disk in a few seconds and tells whether the computer can work. Onboarding offers the same one-click check (about 5 s). On battery or in power saving mode, plug in or switch to performance mode, then run the test again.
+
+## Install the models
+
+In **Settings → Transcription**, **On this computer** card:
+
+- **Download the models (1.1 GB)** downloads them from Syntheo's sources (see [Network and data](#network-and-data)). An interrupted download resumes where it stopped; **Cancel** interrupts it.
+- **Install from a folder…** copies them from a folder on this computer, for a computer without network access or a folder prepared by your organization (on Windows, a `\\server\share` network path is refused; copy the folder to the computer first). The folder holds the model files, directly or in a `models` subfolder, either flat like the files of the GitHub release (`encoder.onnx`, `nemotron3_diar_v3.onnx`…) or as a tree like the Hugging Face repository (`nemotron/…`, `diar/…`). Each file is checked before it is put in place.
+
+Each file is compared with the version this version of Syntheo expects (size and SHA-256 checksum) before it is put in place; a different file is refused. The card shows the progress, then Syntheo measures the computer (see below).
+
+When a new version of Syntheo expects other models, the card says so (**A model update is available**, with the size to download): **Update the models** downloads only the files that changed, then Syntheo measures the computer again.
+
+**Remove the models** deletes them. Installing and removing are refused during a recording.
+
+## Commissioning
+
+After installation, Syntheo **measures this computer**, from under a minute to about three minutes depending on how many profiles it tries (each profile is measured over 30 s): it transcribes a 30-second audio sample shipped with the app, in two streams like a recording, and keeps the first profile that keeps up in real time, in this order:
+
+| Profile | What is transcribed |
+| --- | --- |
+| Microphone and system audio, with speakers | The whole meeting, speakers told apart |
+| Microphone and system audio, without speakers | The whole meeting, without telling speakers apart |
+| Microphone only, with speakers | Your microphone only: the computer's sound (remote participants) is not transcribed |
+| Microphone only, without speakers | Your microphone only, without telling speakers apart |
+
+A profile keeps up in real time when its final text arrives less than 2 s after speech ends (at the 95th percentile, end-of-sentence wait deducted), without falling behind during the measurement. The card shows the progress ("Measuring profile 2 of 4…"), then the profile kept. If none keeps up, the computer is not offered.
+
+**Example: a 2019 laptop.** On an Intel Core i7-10510U (4 cores, no VNNI), Syntheo keeps **Microphone and system audio, without speakers** on mains power or in performance mode, and **Microphone only, without speakers** in power-saving mode. On such a computer, plug it in or switch to performance mode before **Measure again**.
+
+**Measure again** repeats the measurement, for example after a hardware change. A new version of the transcription program or of the models is measured again.
+
+Once the computer is measured, tick **Use this computer for transcription instead of the server**. With the microphone only, a reminder says so at the start of each recording.
+
+## During a recording
+
+- If the computer falls more than 2 s behind, Syntheo spaces out speaker recognition, then turns it off, and restores it once the delay drops; transcription goes on. After such a change, speakers may get new labels.
+- If the program stops, Syntheo restarts it with a new token, within 3 launches in 10 minutes; beyond that, it waits for those 10 minutes to end.
+- The audio of an "On this computer" recording **never** goes to the server, not even after the program restarts. A short outage is replayed from memory to the restarted program, as with a server. If the models are missing or refused, or the program keeps crashing, live transcription pauses and says so; a missed passage is flagged by a dated banner above the transcript.
+
+## Network and data
+
+- **Model download**: only when you choose **Download the models**, over HTTPS, from Syntheo's sources, in order: the `speech-models-1` release of Syntheo's GitHub repository (`github.com`, which redirects to `release-assets.githubusercontent.com`), then Syntheo's Hugging Face repository (`huggingface.co`, which redirects to its content servers under `hf.co`, for example `cas-bridge.xethub.hf.co` or `us.aws.cdn.hf.co` depending on the region) as a fallback. HTTPS redirects are followed (5 at most), so an egress filter must allow these hosts. An organization can replace them with its own mirror (see [Require a model mirror](#require-a-model-mirror)). Only the model files are requested; nothing about your meetings is sent.
+- **Install from a folder**: no connection.
+- **During a recording**: the program only listens on the loopback (`127.0.0.1`) and opens no outbound connection. The app and the program authenticate each other on every connection; another program on the computer can neither receive the audio by posing as it nor connect to it.
+- The program only logs durations and counts, never transcribed text.
+- Files added to the app data folder (`~/.local/share/fr.willisback.syntheo` on Linux, `%APPDATA%\fr.willisback.syntheo` on Windows), in `speech/`: the models (`speech/models`) and the commissioning result (`speech/commissioning.json`). No audio.
+
+See also [Data and privacy](/en/data-and-privacy) and, for the threat model, [Security](/en/security#on-device-transcription).
+
+## Forbid the source
+
+An organization can forbid on-device transcription with the managed setting `on_device_transcription_enabled` set to `false` in `managed_settings.json` (see [Security](/en/security#enterprise-deployment)). The **On this computer** card no longer appears; if the source was chosen, it is unticked with a message, and transcription goes through the configured server. The program stays installed with Syntheo but is never launched.
+
+## Computers with application control
+
+Before each launch, Syntheo copies the transcription program into a private folder of its data folder (`%APPDATA%\fr.willisback.syntheo\speech` on Windows, `~/.local/share/fr.willisback.syntheo/speech` on Linux), checks it and runs it from this copy. A policy that only allows running programs from some paths (AppLocker or Software Restriction Policies with the default path rules, which only allow `Program Files` and `Windows`) or a home folder mounted without execute permission (`noexec`) therefore blocks the program: the card and the recording say that the computer does not allow it to run (code `execution_blocked`). Nothing falls back automatically: found during the measurement, the block prevents keeping the computer, the **Use this computer for transcription instead of the server** box stays unticked and the server stays in use; occurring later, during a recording, it pauses live transcription, and **Go back to the server** (or unticking the box) switches back to the server. On Windows, a publisher rule on Syntheo's signature allows the copy, which stays signed.
+
+## Require a model mirror
+
+The managed setting `speech_models_urls`, a list of HTTPS addresses, replaces Syntheo's sources: models are then requested from these addresses, in order, for example from an internal mirror, and never from Syntheo's sources. If the mirror redirects (HTTPS only, 5 redirects at most), the redirect is followed, including to another host. Each address can contain `{path}` (the file path, for example `nemotron/encoder.onnx`) or `{name}` (its name only, `encoder.onnx`); without a marker, `/{path}` is appended to the address. Each address starts with `https://` and holds no credentials (`user:password@`), query, fragment or comma; 8 addresses at most. A single invalid address makes the whole `managed_settings.json` invalid, and Syntheo does not start (see [Security](/en/security#enterprise-deployment)): check the file on one computer before deploying it.
+
+```json
+{
+  "schema_version": 1,
+  "settings": {
+    "speech_models_urls": ["https://mirror.example.com/syntheo/models/{path}"]
+  }
+}
+```
+
+The mirror must serve exactly the files Syntheo published: their size and checksum are checked as for the other sources. To prepare the mirror or an installation folder, see `apps/speech/models/README.md` in Syntheo's repository.
+
+## Licenses
+
+Syntheo ships these licenses in its installation folder (`speech-licenses`):
+
+| Component | License |
+| --- | --- |
+| `syntheo-speech` program | MIT |
+| NVIDIA Nemotron 3.5 ASR Streaming and Nemotron 3 Diarization models, quantized to int8 by Syntheo | OpenMDW-1.1 (agreement and model cards included) |
+| ONNX Runtime 1.31.0, linked into the program | MIT, with its third-party notices |
+| Rust crates of the program | MIT, Apache-2.0 and other permissive licenses (list generated at build time) |
+| Commissioning audio, from Multilingual LibriSpeech (LibriVox recordings) | CC BY 4.0 for the dataset; public-domain recordings (attribution included) |
+
+The downloaded or copied models come, on their sources, with the OpenMDW-1.1 agreement and NVIDIA's original model cards.

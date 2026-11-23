@@ -25,7 +25,6 @@ Default permissions for the plugin
 - `allow-rename-folder-catalog`
 - `allow-delete-folder-catalog`
 - `allow-update-folder-instructions`
-- `allow-update-folder-workspace`
 - `allow-update-folder-icon`
 
 ## Permission Table
@@ -605,32 +604,6 @@ Enables the update_folder_instructions command without any pre-configured scope.
 <td>
 
 Denies the update_folder_instructions command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`session:allow-update-folder-workspace`
-
-</td>
-<td>
-
-Enables the update_folder_workspace command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`session:deny-update-folder-workspace`
-
-</td>
-<td>
-
-Denies the update_folder_workspace command without any pre-configured scope.
 
 </td>
 </tr>

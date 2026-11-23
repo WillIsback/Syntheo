@@ -278,6 +278,30 @@ describe("late filing proposal on every filing path", () => {
     }
   });
 
+  // Issue 707 : sous intelligence_disabled géré, « Regenerate » ne mènerait
+  // à rien ; la copie restée dans app_settings coupe aussi la proposition.
+  it.each([
+    [
+      "managed by the policy",
+      `INSERT INTO managed_app_settings (id, value_json) VALUES ('intelligence_disabled', 'true');
+       INSERT INTO app_settings (id, value_json) VALUES ('intelligence_disabled', 'true');`,
+    ],
+    [
+      "left in app_settings",
+      `INSERT INTO app_settings (id, value_json) VALUES ('intelligence_disabled', 'true');`,
+    ],
+  ])(
+    "offers no regeneration while summaries are turned off (%s)",
+    async (_case, policy) => {
+      seed();
+      mocks.database!.exec(policy);
+      await fileWithHeaderPicker("Atlas");
+
+      await expectNoProposal();
+      expect(mocks.enhance).not.toHaveBeenCalled();
+    },
+  );
+
   it("proposes nothing when a move is undone", async () => {
     seed();
     await updateSession(

@@ -28,7 +28,6 @@ const mocks = vi.hoisted(() => ({
   renameNamedFolder: vi.fn(),
   updateFolderIcon: vi.fn(),
   updateFolderInstructions: vi.fn(),
-  updateFolderWorkspace: vi.fn(),
   upload: vi.fn(),
   personalWorkspaceId: "",
   workspaces: [] as Array<{ id: string; name: string }>,
@@ -74,7 +73,6 @@ vi.mock("~/session/folder-catalog", () => ({
   renameNamedFolder: mocks.renameNamedFolder,
   updateFolderIcon: mocks.updateFolderIcon,
   updateFolderInstructions: mocks.updateFolderInstructions,
-  updateFolderWorkspace: mocks.updateFolderWorkspace,
   useFolderInstructions: () => mocks.instructions,
 }));
 
@@ -163,7 +161,6 @@ describe("Folders workspace", () => {
     mocks.renameNamedFolder.mockReset();
     mocks.updateFolderIcon.mockReset();
     mocks.updateFolderInstructions.mockReset();
-    mocks.updateFolderWorkspace.mockReset();
     mocks.upload.mockReset();
     mocks.folders = [];
     mocks.icons = {};
@@ -177,7 +174,6 @@ describe("Folders workspace", () => {
     mocks.renameNamedFolder.mockResolvedValue("Algorithms");
     mocks.updateFolderIcon.mockResolvedValue(undefined);
     mocks.updateFolderInstructions.mockResolvedValue(undefined);
-    mocks.updateFolderWorkspace.mockResolvedValue(undefined);
     mocks.upload.mockResolvedValue({
       path: "/vault/sessions/CS 101/materials/syllabus.pdf",
       attachmentId: "syllabus.pdf",

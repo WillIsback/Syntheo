@@ -427,18 +427,6 @@
           "markdownDescription": "Denies the discard_audio_upload command without any pre-configured scope."
         },
         {
-          "description": "Enables the export_to_vtt command without any pre-configured scope.",
-          "type": "string",
-          "const": "allow-export-to-vtt",
-          "markdownDescription": "Enables the export_to_vtt command without any pre-configured scope."
-        },
-        {
-          "description": "Denies the export_to_vtt command without any pre-configured scope.",
-          "type": "string",
-          "const": "deny-export-to-vtt",
-          "markdownDescription": "Denies the export_to_vtt command without any pre-configured scope."
-        },
-        {
           "description": "Enables the flush_live_transcript command without any pre-configured scope.",
           "type": "string",
           "const": "allow-flush-live-transcript",
@@ -547,30 +535,6 @@
           "markdownDescription": "Denies the get_current_microphone_device command without any pre-configured scope."
         },
         {
-          "description": "Enables the get_mic_muted command without any pre-configured scope.",
-          "type": "string",
-          "const": "allow-get-mic-muted",
-          "markdownDescription": "Enables the get_mic_muted command without any pre-configured scope."
-        },
-        {
-          "description": "Denies the get_mic_muted command without any pre-configured scope.",
-          "type": "string",
-          "const": "deny-get-mic-muted",
-          "markdownDescription": "Denies the get_mic_muted command without any pre-configured scope."
-        },
-        {
-          "description": "Enables the get_speaker_muted command without any pre-configured scope.",
-          "type": "string",
-          "const": "allow-get-speaker-muted",
-          "markdownDescription": "Enables the get_speaker_muted command without any pre-configured scope."
-        },
-        {
-          "description": "Denies the get_speaker_muted command without any pre-configured scope.",
-          "type": "string",
-          "const": "deny-get-speaker-muted",
-          "markdownDescription": "Denies the get_speaker_muted command without any pre-configured scope."
-        },
-        {
           "description": "Enables the get_stopped_capture command without any pre-configured scope.",
           "type": "string",
           "const": "allow-get-stopped-capture",
@@ -619,18 +583,6 @@
           "markdownDescription": "Denies the list_capture_audio_chunks command without any pre-configured scope."
         },
         {
-          "description": "Enables the list_capture_lifecycle_markers command without any pre-configured scope.",
-          "type": "string",
-          "const": "allow-list-capture-lifecycle-markers",
-          "markdownDescription": "Enables the list_capture_lifecycle_markers command without any pre-configured scope."
-        },
-        {
-          "description": "Denies the list_capture_lifecycle_markers command without any pre-configured scope.",
-          "type": "string",
-          "const": "deny-list-capture-lifecycle-markers",
-          "markdownDescription": "Denies the list_capture_lifecycle_markers command without any pre-configured scope."
-        },
-        {
           "description": "Enables the list_capture_recoveries command without any pre-configured scope.",
           "type": "string",
           "const": "allow-list-capture-recoveries",
@@ -641,30 +593,6 @@
           "type": "string",
           "const": "deny-list-capture-recoveries",
           "markdownDescription": "Denies the list_capture_recoveries command without any pre-configured scope."
-        },
-        {
-          "description": "Enables the list_documented_language_codes_batch command without any pre-configured scope.",
-          "type": "string",
-          "const": "allow-list-documented-language-codes-batch",
-          "markdownDescription": "Enables the list_documented_language_codes_batch command without any pre-configured scope."
-        },
-        {
-          "description": "Denies the list_documented_language_codes_batch command without any pre-configured scope.",
-          "type": "string",
-          "const": "deny-list-documented-language-codes-batch",
-          "markdownDescription": "Denies the list_documented_language_codes_batch command without any pre-configured scope."
-        },
-        {
-          "description": "Enables the list_documented_language_codes_live command without any pre-configured scope.",
-          "type": "string",
-          "const": "allow-list-documented-language-codes-live",
-          "markdownDescription": "Enables the list_documented_language_codes_live command without any pre-configured scope."
-        },
-        {
-          "description": "Denies the list_documented_language_codes_live command without any pre-configured scope.",
-          "type": "string",
-          "const": "deny-list-documented-language-codes-live",
-          "markdownDescription": "Denies the list_documented_language_codes_live command without any pre-configured scope."
         },
         {
           "description": "Enables the list_microphone_devices command without any pre-configured scope.",
@@ -691,18 +619,6 @@
           "markdownDescription": "Denies the list_speaker_devices command without any pre-configured scope."
         },
         {
-          "description": "Enables the list_stopped_captures command without any pre-configured scope.",
-          "type": "string",
-          "const": "allow-list-stopped-captures",
-          "markdownDescription": "Enables the list_stopped_captures command without any pre-configured scope."
-        },
-        {
-          "description": "Denies the list_stopped_captures command without any pre-configured scope.",
-          "type": "string",
-          "const": "deny-list-stopped-captures",
-          "markdownDescription": "Denies the list_stopped_captures command without any pre-configured scope."
-        },
-        {
           "description": "Enables the list_transcription_sessions command without any pre-configured scope.",
           "type": "string",
           "const": "allow-list-transcription-sessions",
@@ -715,16 +631,124 @@
           "markdownDescription": "Denies the list_transcription_sessions command without any pre-configured scope."
         },
         {
-          "description": "Enables the mark_capture_audio_saved command without any pre-configured scope.",
+          "description": "Enables the on_device_cancel_install command without any pre-configured scope.",
           "type": "string",
-          "const": "allow-mark-capture-audio-saved",
-          "markdownDescription": "Enables the mark_capture_audio_saved command without any pre-configured scope."
+          "const": "allow-on-device-cancel-install",
+          "markdownDescription": "Enables the on_device_cancel_install command without any pre-configured scope."
         },
         {
-          "description": "Denies the mark_capture_audio_saved command without any pre-configured scope.",
+          "description": "Denies the on_device_cancel_install command without any pre-configured scope.",
           "type": "string",
-          "const": "deny-mark-capture-audio-saved",
-          "markdownDescription": "Denies the mark_capture_audio_saved command without any pre-configured scope."
+          "const": "deny-on-device-cancel-install",
+          "markdownDescription": "Denies the on_device_cancel_install command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the on_device_commission command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-on-device-commission",
+          "markdownDescription": "Enables the on_device_commission command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the on_device_commission command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-on-device-commission",
+          "markdownDescription": "Denies the on_device_commission command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the on_device_commission_progress command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-on-device-commission-progress",
+          "markdownDescription": "Enables the on_device_commission_progress command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the on_device_commission_progress command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-on-device-commission-progress",
+          "markdownDescription": "Denies the on_device_commission_progress command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the on_device_commissioning command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-on-device-commissioning",
+          "markdownDescription": "Enables the on_device_commissioning command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the on_device_commissioning command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-on-device-commissioning",
+          "markdownDescription": "Denies the on_device_commissioning command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the on_device_download_models command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-on-device-download-models",
+          "markdownDescription": "Enables the on_device_download_models command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the on_device_download_models command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-on-device-download-models",
+          "markdownDescription": "Denies the on_device_download_models command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the on_device_install_models command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-on-device-install-models",
+          "markdownDescription": "Enables the on_device_install_models command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the on_device_install_models command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-on-device-install-models",
+          "markdownDescription": "Denies the on_device_install_models command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the on_device_install_progress command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-on-device-install-progress",
+          "markdownDescription": "Enables the on_device_install_progress command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the on_device_install_progress command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-on-device-install-progress",
+          "markdownDescription": "Denies the on_device_install_progress command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the on_device_load command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-on-device-load",
+          "markdownDescription": "Enables the on_device_load command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the on_device_load command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-on-device-load",
+          "markdownDescription": "Denies the on_device_load command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the on_device_remove_models command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-on-device-remove-models",
+          "markdownDescription": "Enables the on_device_remove_models command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the on_device_remove_models command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-on-device-remove-models",
+          "markdownDescription": "Denies the on_device_remove_models command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the on_device_status command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-on-device-status",
+          "markdownDescription": "Enables the on_device_status command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the on_device_status command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-on-device-status",
+          "markdownDescription": "Denies the on_device_status command without any pre-configured scope."
         },
         {
           "description": "Enables the parse_subtitle command without any pre-configured scope.",
@@ -739,6 +763,18 @@
           "markdownDescription": "Denies the parse_subtitle command without any pre-configured scope."
         },
         {
+          "description": "Enables the probe_local_transcription command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-probe-local-transcription",
+          "markdownDescription": "Enables the probe_local_transcription command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the probe_local_transcription command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-probe-local-transcription",
+          "markdownDescription": "Denies the probe_local_transcription command without any pre-configured scope."
+        },
+        {
           "description": "Enables the reconcile_refined_speaker_clusters command without any pre-configured scope.",
           "type": "string",
           "const": "allow-reconcile-refined-speaker-clusters",
@@ -749,18 +785,6 @@
           "type": "string",
           "const": "deny-reconcile-refined-speaker-clusters",
           "markdownDescription": "Denies the reconcile_refined_speaker_clusters command without any pre-configured scope."
-        },
-        {
-          "description": "Enables the refine_batch_transcript command without any pre-configured scope.",
-          "type": "string",
-          "const": "allow-refine-batch-transcript",
-          "markdownDescription": "Enables the refine_batch_transcript command without any pre-configured scope."
-        },
-        {
-          "description": "Denies the refine_batch_transcript command without any pre-configured scope.",
-          "type": "string",
-          "const": "deny-refine-batch-transcript",
-          "markdownDescription": "Denies the refine_batch_transcript command without any pre-configured scope."
         },
         {
           "description": "Enables the release_live_transcript command without any pre-configured scope.",
@@ -967,46 +991,10 @@
           "markdownDescription": "Denies the stop_transcription command without any pre-configured scope."
         },
         {
-          "description": "Enables the suggest_providers_for_languages_batch command without any pre-configured scope.",
-          "type": "string",
-          "const": "allow-suggest-providers-for-languages-batch",
-          "markdownDescription": "Enables the suggest_providers_for_languages_batch command without any pre-configured scope."
-        },
-        {
-          "description": "Denies the suggest_providers_for_languages_batch command without any pre-configured scope.",
-          "type": "string",
-          "const": "deny-suggest-providers-for-languages-batch",
-          "markdownDescription": "Denies the suggest_providers_for_languages_batch command without any pre-configured scope."
-        },
-        {
-          "description": "Enables the suggest_providers_for_languages_live command without any pre-configured scope.",
-          "type": "string",
-          "const": "allow-suggest-providers-for-languages-live",
-          "markdownDescription": "Enables the suggest_providers_for_languages_live command without any pre-configured scope."
-        },
-        {
-          "description": "Denies the suggest_providers_for_languages_live command without any pre-configured scope.",
-          "type": "string",
-          "const": "deny-suggest-providers-for-languages-live",
-          "markdownDescription": "Denies the suggest_providers_for_languages_live command without any pre-configured scope."
-        },
-        {
-          "description": "Enables the update_capture_credentials command without any pre-configured scope.",
-          "type": "string",
-          "const": "allow-update-capture-credentials",
-          "markdownDescription": "Enables the update_capture_credentials command without any pre-configured scope."
-        },
-        {
-          "description": "Denies the update_capture_credentials command without any pre-configured scope.",
-          "type": "string",
-          "const": "deny-update-capture-credentials",
-          "markdownDescription": "Denies the update_capture_credentials command without any pre-configured scope."
-        },
-        {
-          "description": "Default permissions for the plugin\n#### This default permission set includes:\n\n- `allow-list-microphone-devices`\n- `allow-get-current-microphone-device`\n- `allow-start-microphone-level-monitor`\n- `allow-stop-microphone-level-monitor`\n- `allow-list-speaker-devices`\n- `allow-get-captured-speaker-device`\n- `allow-start-speaker-level-monitor`\n- `allow-stop-speaker-level-monitor`\n- `allow-start-capture`\n- `allow-retry-audio-capture`\n- `allow-flush-live-transcript`\n- `allow-release-live-transcript`\n- `allow-list-stopped-captures`\n- `allow-get-stopped-capture`\n- `allow-acknowledge-stopped-capture`\n- `allow-save-capture-lifecycle-marker`\n- `allow-clear-capture-lifecycle-marker`\n- `allow-get-capture-lifecycle-marker`\n- `allow-list-capture-lifecycle-markers`\n- `allow-list-capture-recoveries`\n- `allow-get-capture-audio-gaps`\n- `allow-mark-capture-audio-saved`\n- `allow-clear-capture-audio-saved`\n- `allow-stop-capture`\n- `allow-stop-capture-for-session`\n- `allow-get-mic-muted`\n- `allow-set-mic-muted`\n- `allow-get-speaker-muted`\n- `allow-set-speaker-muted`\n- `allow-get-capture-state`\n- `allow-get-capture-snapshot`\n- `allow-update-capture-credentials`\n- `allow-list-capture-audio-chunks`\n- `allow-get-capture-audio-cleanup-status`\n- `allow-acknowledge-capture-audio-cleanup-status`\n- `allow-acknowledge-capture-audio-chunk`\n- `allow-delete-transcribed-capture-audio`\n- `allow-is-supported-languages-live`\n- `allow-suggest-providers-for-languages-live`\n- `allow-list-documented-language-codes-live`\n- `allow-render-transcript-segments`\n- `allow-render-session-transcript`\n- `allow-start-transcription`\n- `allow-stop-transcription`\n- `allow-list-transcription-sessions`\n- `allow-get-completed-transcription`\n- `allow-acknowledge-completed-transcription`\n- `allow-delete-processed-session-audio`\n- `allow-parse-subtitle`\n- `allow-export-to-vtt`\n- `allow-is-supported-languages-batch`\n- `allow-suggest-providers-for-languages-batch`\n- `allow-list-documented-language-codes-batch`\n- `allow-refine-batch-transcript`\n- `allow-save-batch-transcript`\n- `allow-reconcile-refined-speaker-clusters`\n- `allow-begin-audio-upload`\n- `allow-append-audio-upload`\n- `allow-discard-audio-upload`",
+          "description": "Default permissions for the plugin\n#### This default permission set includes:\n\n- `allow-list-microphone-devices`\n- `allow-get-current-microphone-device`\n- `allow-start-microphone-level-monitor`\n- `allow-stop-microphone-level-monitor`\n- `allow-list-speaker-devices`\n- `allow-get-captured-speaker-device`\n- `allow-start-speaker-level-monitor`\n- `allow-stop-speaker-level-monitor`\n- `allow-start-capture`\n- `allow-retry-audio-capture`\n- `allow-flush-live-transcript`\n- `allow-release-live-transcript`\n- `allow-get-stopped-capture`\n- `allow-acknowledge-stopped-capture`\n- `allow-save-capture-lifecycle-marker`\n- `allow-clear-capture-lifecycle-marker`\n- `allow-get-capture-lifecycle-marker`\n- `allow-list-capture-recoveries`\n- `allow-get-capture-audio-gaps`\n- `allow-clear-capture-audio-saved`\n- `allow-stop-capture`\n- `allow-stop-capture-for-session`\n- `allow-set-mic-muted`\n- `allow-set-speaker-muted`\n- `allow-get-capture-state`\n- `allow-get-capture-snapshot`\n- `allow-list-capture-audio-chunks`\n- `allow-get-capture-audio-cleanup-status`\n- `allow-acknowledge-capture-audio-cleanup-status`\n- `allow-acknowledge-capture-audio-chunk`\n- `allow-delete-transcribed-capture-audio`\n- `allow-is-supported-languages-live`\n- `allow-render-transcript-segments`\n- `allow-render-session-transcript`\n- `allow-start-transcription`\n- `allow-stop-transcription`\n- `allow-list-transcription-sessions`\n- `allow-get-completed-transcription`\n- `allow-acknowledge-completed-transcription`\n- `allow-delete-processed-session-audio`\n- `allow-parse-subtitle`\n- `allow-is-supported-languages-batch`\n- `allow-save-batch-transcript`\n- `allow-reconcile-refined-speaker-clusters`\n- `allow-begin-audio-upload`\n- `allow-append-audio-upload`\n- `allow-discard-audio-upload`\n- `allow-probe-local-transcription`\n- `allow-on-device-status`\n- `allow-on-device-download-models`\n- `allow-on-device-install-models`\n- `allow-on-device-install-progress`\n- `allow-on-device-cancel-install`\n- `allow-on-device-remove-models`\n- `allow-on-device-commissioning`\n- `allow-on-device-commission`\n- `allow-on-device-load`\n- `allow-on-device-commission-progress`",
           "type": "string",
           "const": "default",
-          "markdownDescription": "Default permissions for the plugin\n#### This default permission set includes:\n\n- `allow-list-microphone-devices`\n- `allow-get-current-microphone-device`\n- `allow-start-microphone-level-monitor`\n- `allow-stop-microphone-level-monitor`\n- `allow-list-speaker-devices`\n- `allow-get-captured-speaker-device`\n- `allow-start-speaker-level-monitor`\n- `allow-stop-speaker-level-monitor`\n- `allow-start-capture`\n- `allow-retry-audio-capture`\n- `allow-flush-live-transcript`\n- `allow-release-live-transcript`\n- `allow-list-stopped-captures`\n- `allow-get-stopped-capture`\n- `allow-acknowledge-stopped-capture`\n- `allow-save-capture-lifecycle-marker`\n- `allow-clear-capture-lifecycle-marker`\n- `allow-get-capture-lifecycle-marker`\n- `allow-list-capture-lifecycle-markers`\n- `allow-list-capture-recoveries`\n- `allow-get-capture-audio-gaps`\n- `allow-mark-capture-audio-saved`\n- `allow-clear-capture-audio-saved`\n- `allow-stop-capture`\n- `allow-stop-capture-for-session`\n- `allow-get-mic-muted`\n- `allow-set-mic-muted`\n- `allow-get-speaker-muted`\n- `allow-set-speaker-muted`\n- `allow-get-capture-state`\n- `allow-get-capture-snapshot`\n- `allow-update-capture-credentials`\n- `allow-list-capture-audio-chunks`\n- `allow-get-capture-audio-cleanup-status`\n- `allow-acknowledge-capture-audio-cleanup-status`\n- `allow-acknowledge-capture-audio-chunk`\n- `allow-delete-transcribed-capture-audio`\n- `allow-is-supported-languages-live`\n- `allow-suggest-providers-for-languages-live`\n- `allow-list-documented-language-codes-live`\n- `allow-render-transcript-segments`\n- `allow-render-session-transcript`\n- `allow-start-transcription`\n- `allow-stop-transcription`\n- `allow-list-transcription-sessions`\n- `allow-get-completed-transcription`\n- `allow-acknowledge-completed-transcription`\n- `allow-delete-processed-session-audio`\n- `allow-parse-subtitle`\n- `allow-export-to-vtt`\n- `allow-is-supported-languages-batch`\n- `allow-suggest-providers-for-languages-batch`\n- `allow-list-documented-language-codes-batch`\n- `allow-refine-batch-transcript`\n- `allow-save-batch-transcript`\n- `allow-reconcile-refined-speaker-clusters`\n- `allow-begin-audio-upload`\n- `allow-append-audio-upload`\n- `allow-discard-audio-upload`"
+          "markdownDescription": "Default permissions for the plugin\n#### This default permission set includes:\n\n- `allow-list-microphone-devices`\n- `allow-get-current-microphone-device`\n- `allow-start-microphone-level-monitor`\n- `allow-stop-microphone-level-monitor`\n- `allow-list-speaker-devices`\n- `allow-get-captured-speaker-device`\n- `allow-start-speaker-level-monitor`\n- `allow-stop-speaker-level-monitor`\n- `allow-start-capture`\n- `allow-retry-audio-capture`\n- `allow-flush-live-transcript`\n- `allow-release-live-transcript`\n- `allow-get-stopped-capture`\n- `allow-acknowledge-stopped-capture`\n- `allow-save-capture-lifecycle-marker`\n- `allow-clear-capture-lifecycle-marker`\n- `allow-get-capture-lifecycle-marker`\n- `allow-list-capture-recoveries`\n- `allow-get-capture-audio-gaps`\n- `allow-clear-capture-audio-saved`\n- `allow-stop-capture`\n- `allow-stop-capture-for-session`\n- `allow-set-mic-muted`\n- `allow-set-speaker-muted`\n- `allow-get-capture-state`\n- `allow-get-capture-snapshot`\n- `allow-list-capture-audio-chunks`\n- `allow-get-capture-audio-cleanup-status`\n- `allow-acknowledge-capture-audio-cleanup-status`\n- `allow-acknowledge-capture-audio-chunk`\n- `allow-delete-transcribed-capture-audio`\n- `allow-is-supported-languages-live`\n- `allow-render-transcript-segments`\n- `allow-render-session-transcript`\n- `allow-start-transcription`\n- `allow-stop-transcription`\n- `allow-list-transcription-sessions`\n- `allow-get-completed-transcription`\n- `allow-acknowledge-completed-transcription`\n- `allow-delete-processed-session-audio`\n- `allow-parse-subtitle`\n- `allow-is-supported-languages-batch`\n- `allow-save-batch-transcript`\n- `allow-reconcile-refined-speaker-clusters`\n- `allow-begin-audio-upload`\n- `allow-append-audio-upload`\n- `allow-discard-audio-upload`\n- `allow-probe-local-transcription`\n- `allow-on-device-status`\n- `allow-on-device-download-models`\n- `allow-on-device-install-models`\n- `allow-on-device-install-progress`\n- `allow-on-device-cancel-install`\n- `allow-on-device-remove-models`\n- `allow-on-device-commissioning`\n- `allow-on-device-commission`\n- `allow-on-device-load`\n- `allow-on-device-commission-progress`"
         }
       ]
     }

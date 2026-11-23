@@ -8,6 +8,8 @@ import {
   type SynthesisView,
 } from "./summary-switcher-view";
 
+import { recordSummaryEvent } from "~/mesure/beta";
+import { MeasureDialog } from "~/mesure/measure-dialog";
 import { useEnhancedNoteActions } from "~/session/components/note-input/enhanced-actions";
 import {
   useEnhancedViewTitle,
@@ -23,8 +25,9 @@ import {
   useEnhancedNote,
   useSummaryVersions,
 } from "~/session/queries";
+import { useConfigValues } from "~/shared/config";
 
-export { formatVersionDate, type SynthesisView };
+export { type SynthesisView };
 
 // Sélecteur « Mes notes | Synthèse · vN ▾ » de l'étape Synthèse (issue 415).
 // Il remplace l'ancien sélecteur de comptes rendus : le menu ▾ liste les
@@ -80,7 +83,7 @@ function SummarySwitcherForNote({
   const { t, i18n } = useLingui();
   const note = useEnhancedNote(currentNoteId);
   const versions = useSummaryVersions(currentNoteId);
-  const { isGenerating, onRegenerate } = useEnhancedNoteActions({
+  const { isGenerating, summaryOff, onRegenerate } = useEnhancedNoteActions({
     sessionId,
     enhancedNoteId: currentNoteId,
   });
@@ -91,6 +94,10 @@ function SummarySwitcherForNote({
     onSelectNote,
   });
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [measureOpen, setMeasureOpen] = useState(false);
+  const { measurement_enabled } = useConfigValues([
+    "measurement_enabled",
+  ] as const);
   const pickerRequested = useRef(false);
 
   const versionOptions = useMemo(
@@ -126,57 +133,85 @@ function SummarySwitcherForNote({
   }, [currentNoteId, enhancedNoteIds, onSelectNote]);
 
   return (
-    <TemplatePickerPopover
-      open={pickerOpen}
-      onOpenChange={setPickerOpen}
-      onSelectTemplate={(selection) => {
-        onSelectView({ kind: "summary" });
-        selectTemplate(selection);
-      }}
-      usedTemplateId={note?.templateId?.trim() || null}
-      onRegenerateUsed={regenerate}
-      isRegenerating={isGenerating}
-      trigger={
-        <SummarySwitcherView
-          view={view}
-          onSelectView={onSelectView}
-          currentVersion={(versions[0]?.version ?? 0) + 1}
-          currentDate={formatVersionDate(note?.generatedAt, i18n.locale)}
-          versions={versionOptions}
-          isGenerating={isGenerating}
-          summaryItems={
-            enhancedNoteIds.length > 1
-              ? enhancedNoteIds.map((id) => (
-                  <SummaryTemplateItem key={id} enhancedNoteId={id} />
-                ))
-              : undefined
-          }
-          currentNoteId={currentNoteId}
-          onSelectNote={onSelectNote}
-          canCopy={noteMarkdown.length > 0}
-          canRemove={currentNoteId !== enhancedNoteIds[0]}
-          onRegenerate={regenerate}
-          onChangeTemplate={() => {
-            pickerRequested.current = true;
-            setPickerOpen(true);
-          }}
-          onCopy={() => {
-            void copyTextToClipboard(noteMarkdown, {
-              success: t`Copied to clipboard`,
-              error: t`Failed to copy`,
-            });
-          }}
-          onRemove={handleRemove}
-          onMenuCloseAutoFocus={(event) => {
-            // Le sélecteur de modèle prend le focus à la place du menu.
-            if (pickerRequested.current) {
-              pickerRequested.current = false;
-              event.preventDefault();
-            }
-          }}
+    <>
+      {/* Démontée à la fermeture et liée à la synthèse : rien de la mesure ne
+          survit d'une ouverture à l'autre (revue du lot 0.8.0, constat 21). */}
+      {measurement_enabled && measureOpen ? (
+        <MeasureDialog
+          key={currentNoteId}
+          open={measureOpen}
+          onOpenChange={setMeasureOpen}
+          sessionId={sessionId}
+          documentId={currentNoteId}
+          summaryMarkdown={noteMarkdown}
         />
-      }
-    />
+      ) : null}
+      <TemplatePickerPopover
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        onSelectTemplate={(selection) => {
+          onSelectView({ kind: "summary" });
+          selectTemplate(selection);
+        }}
+        usedTemplateId={note?.templateId?.trim() || null}
+        onRegenerateUsed={regenerate}
+        isRegenerating={isGenerating}
+        trigger={
+          <SummarySwitcherView
+            view={view}
+            onSelectView={onSelectView}
+            currentVersion={(versions[0]?.version ?? 0) + 1}
+            currentDate={formatVersionDate(note?.generatedAt, i18n.locale)}
+            versions={versionOptions}
+            isGenerating={isGenerating}
+            summaryItems={
+              enhancedNoteIds.length > 1
+                ? enhancedNoteIds.map((id) => (
+                    <SummaryTemplateItem key={id} enhancedNoteId={id} />
+                  ))
+                : undefined
+            }
+            currentNoteId={currentNoteId}
+            onSelectNote={onSelectNote}
+            canCopy={noteMarkdown.length > 0}
+            canRemove={currentNoteId !== enhancedNoteIds[0]}
+            // Synthèse coupée (issue 707) : ni « Régénérer » ni « Changer de
+            // modèle », qui relanceraient une génération vouée à l'échec.
+            onRegenerate={summaryOff ? undefined : regenerate}
+            onChangeTemplate={
+              summaryOff
+                ? undefined
+                : () => {
+                    pickerRequested.current = true;
+                    setPickerOpen(true);
+                  }
+            }
+            onCopy={() => {
+              void copyTextToClipboard(noteMarkdown, {
+                success: t`Copied to clipboard`,
+                error: t`Failed to copy`,
+              }).then((copied) => {
+                // Bêta (issue 672) : partage de la synthèse, pour l'abandon.
+                if (copied) {
+                  void recordSummaryEvent("shared", currentNoteId);
+                }
+              });
+            }}
+            onMeasure={
+              measurement_enabled ? () => setMeasureOpen(true) : undefined
+            }
+            onRemove={handleRemove}
+            onMenuCloseAutoFocus={(event) => {
+              // Le sélecteur de modèle prend le focus à la place du menu.
+              if (pickerRequested.current) {
+                pickerRequested.current = false;
+                event.preventDefault();
+              }
+            }}
+          />
+        }
+      />
+    </>
   );
 }
 

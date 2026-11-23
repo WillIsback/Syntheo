@@ -13,22 +13,10 @@ export const commands = {
 	saveGeneratedTitle: (request: SaveGeneratedTitleRequest) => typedError<null, string>(__TAURI_INVOKE("plugin:template|save_generated_title", { request })),
 	applySessionContentCorrections: (request: SessionContentCorrectionsRequest) => typedError<null, string>(__TAURI_INVOKE("plugin:template|apply_session_content_corrections", { request })),
 	render: (tpl: Template) => typedError<string, string>(__TAURI_INVOKE("plugin:template|render", { tpl })),
-	renderCustom: (templateContent: string, ctx: { [key in string]: Value }) => typedError<string, string>(__TAURI_INVOKE("plugin:template|render_custom", { templateContent, ctx })),
 	getTemplateSource: (template: EditableTemplate) => typedError<string, string>(__TAURI_INVOKE("plugin:template|get_template_source", { template })),
 };
 
 /* Types */
-export type ActivityCaptureSystem = {
-	language: string | null,
-};
-
-export type ActivityCaptureUser = {
-	appName: string,
-	windowTitle: string | null,
-	reason: string,
-	fingerprint: string,
-};
-
 export type ChatSystem = {
 	language: string | null,
 };
@@ -42,42 +30,6 @@ export type ComposeGeneratedSummaryRequest = {
 export type ContextBlock = {
 	contexts: SessionContext[],
 	currentSessionId: string | null,
-};
-
-export type DailySummaryAnalysis = {
-	time: string,
-	appName: string,
-	windowTitle: string | null,
-	reason: string,
-	summary: string,
-};
-
-export type DailySummaryAppStat = {
-	appName: string,
-	count: number,
-};
-
-export type DailySummaryStats = {
-	signalCount: number,
-	screenshotCount: number,
-	analysisCount: number,
-	uniqueAppCount: number,
-	firstSignal: string | null,
-	lastSignal: string | null,
-};
-
-export type DailySummarySystem = {
-	language: string | null,
-};
-
-export type DailySummaryUser = {
-	date: string,
-	timezone: string | null,
-	stats: DailySummaryStats,
-	topApps: DailySummaryAppStat[],
-	analyses: DailySummaryAnalysis[],
-	totalAnalysisCount: number,
-	existingSummary: string | null,
 };
 
 export type DominantLanguageRequest = {
@@ -110,23 +62,6 @@ export type EnhanceUser = {
 export type Event = {
 	name: string,
 };
-
-export type EventContactCandidate = {
-	name: string | null,
-	email: string | null,
-	isCurrentUser: boolean,
-	isOrganizer: boolean,
-};
-
-export type EventContactSystem = Record<string, never>;
-
-export type EventContactUser = {
-	title: string | null,
-	description: string | null,
-	candidates: EventContactCandidate[],
-};
-
-export type Grammar = { task: "enhance"; sections: string[] | null } | { task: "title" } | { task: "tags" } | { task: "email-to-name" };
 
 export type Participant = {
 	name: string,
@@ -233,7 +168,7 @@ export type SummaryLengthPolicyRequest = {
 	template_section_count: number,
 };
 
-export type Template = ({ activityCaptureSystem: ActivityCaptureSystem }) & { activityCaptureUser?: never; chatSystem?: never; contextBlock?: never; dailySummarySystem?: never; dailySummaryUser?: never; enhanceSystem?: never; enhanceUser?: never; eventContactSystem?: never; eventContactUser?: never; titleSystem?: never; titleUser?: never; toolSearchSessions?: never; transcriptPatchSystem?: never; transcriptPatchUser?: never } | ({ activityCaptureUser: ActivityCaptureUser }) & { activityCaptureSystem?: never; chatSystem?: never; contextBlock?: never; dailySummarySystem?: never; dailySummaryUser?: never; enhanceSystem?: never; enhanceUser?: never; eventContactSystem?: never; eventContactUser?: never; titleSystem?: never; titleUser?: never; toolSearchSessions?: never; transcriptPatchSystem?: never; transcriptPatchUser?: never } | ({ dailySummarySystem: DailySummarySystem }) & { activityCaptureSystem?: never; activityCaptureUser?: never; chatSystem?: never; contextBlock?: never; dailySummaryUser?: never; enhanceSystem?: never; enhanceUser?: never; eventContactSystem?: never; eventContactUser?: never; titleSystem?: never; titleUser?: never; toolSearchSessions?: never; transcriptPatchSystem?: never; transcriptPatchUser?: never } | ({ dailySummaryUser: DailySummaryUser }) & { activityCaptureSystem?: never; activityCaptureUser?: never; chatSystem?: never; contextBlock?: never; dailySummarySystem?: never; enhanceSystem?: never; enhanceUser?: never; eventContactSystem?: never; eventContactUser?: never; titleSystem?: never; titleUser?: never; toolSearchSessions?: never; transcriptPatchSystem?: never; transcriptPatchUser?: never } | ({ enhanceSystem: EnhanceSystem }) & { activityCaptureSystem?: never; activityCaptureUser?: never; chatSystem?: never; contextBlock?: never; dailySummarySystem?: never; dailySummaryUser?: never; enhanceUser?: never; eventContactSystem?: never; eventContactUser?: never; titleSystem?: never; titleUser?: never; toolSearchSessions?: never; transcriptPatchSystem?: never; transcriptPatchUser?: never } | ({ enhanceUser: EnhanceUser }) & { activityCaptureSystem?: never; activityCaptureUser?: never; chatSystem?: never; contextBlock?: never; dailySummarySystem?: never; dailySummaryUser?: never; enhanceSystem?: never; eventContactSystem?: never; eventContactUser?: never; titleSystem?: never; titleUser?: never; toolSearchSessions?: never; transcriptPatchSystem?: never; transcriptPatchUser?: never } | ({ eventContactSystem: EventContactSystem }) & { activityCaptureSystem?: never; activityCaptureUser?: never; chatSystem?: never; contextBlock?: never; dailySummarySystem?: never; dailySummaryUser?: never; enhanceSystem?: never; enhanceUser?: never; eventContactUser?: never; titleSystem?: never; titleUser?: never; toolSearchSessions?: never; transcriptPatchSystem?: never; transcriptPatchUser?: never } | ({ eventContactUser: EventContactUser }) & { activityCaptureSystem?: never; activityCaptureUser?: never; chatSystem?: never; contextBlock?: never; dailySummarySystem?: never; dailySummaryUser?: never; enhanceSystem?: never; enhanceUser?: never; eventContactSystem?: never; titleSystem?: never; titleUser?: never; toolSearchSessions?: never; transcriptPatchSystem?: never; transcriptPatchUser?: never } | ({ titleSystem: TitleSystem }) & { activityCaptureSystem?: never; activityCaptureUser?: never; chatSystem?: never; contextBlock?: never; dailySummarySystem?: never; dailySummaryUser?: never; enhanceSystem?: never; enhanceUser?: never; eventContactSystem?: never; eventContactUser?: never; titleUser?: never; toolSearchSessions?: never; transcriptPatchSystem?: never; transcriptPatchUser?: never } | ({ titleUser: TitleUser }) & { activityCaptureSystem?: never; activityCaptureUser?: never; chatSystem?: never; contextBlock?: never; dailySummarySystem?: never; dailySummaryUser?: never; enhanceSystem?: never; enhanceUser?: never; eventContactSystem?: never; eventContactUser?: never; titleSystem?: never; toolSearchSessions?: never; transcriptPatchSystem?: never; transcriptPatchUser?: never } | ({ chatSystem: ChatSystem }) & { activityCaptureSystem?: never; activityCaptureUser?: never; contextBlock?: never; dailySummarySystem?: never; dailySummaryUser?: never; enhanceSystem?: never; enhanceUser?: never; eventContactSystem?: never; eventContactUser?: never; titleSystem?: never; titleUser?: never; toolSearchSessions?: never; transcriptPatchSystem?: never; transcriptPatchUser?: never } | ({ contextBlock: ContextBlock }) & { activityCaptureSystem?: never; activityCaptureUser?: never; chatSystem?: never; dailySummarySystem?: never; dailySummaryUser?: never; enhanceSystem?: never; enhanceUser?: never; eventContactSystem?: never; eventContactUser?: never; titleSystem?: never; titleUser?: never; toolSearchSessions?: never; transcriptPatchSystem?: never; transcriptPatchUser?: never } | ({ toolSearchSessions: ToolSearchSessions }) & { activityCaptureSystem?: never; activityCaptureUser?: never; chatSystem?: never; contextBlock?: never; dailySummarySystem?: never; dailySummaryUser?: never; enhanceSystem?: never; enhanceUser?: never; eventContactSystem?: never; eventContactUser?: never; titleSystem?: never; titleUser?: never; transcriptPatchSystem?: never; transcriptPatchUser?: never } | ({ transcriptPatchSystem: TranscriptPatchSystem }) & { activityCaptureSystem?: never; activityCaptureUser?: never; chatSystem?: never; contextBlock?: never; dailySummarySystem?: never; dailySummaryUser?: never; enhanceSystem?: never; enhanceUser?: never; eventContactSystem?: never; eventContactUser?: never; titleSystem?: never; titleUser?: never; toolSearchSessions?: never; transcriptPatchUser?: never } | ({ transcriptPatchUser: TranscriptPatchUser }) & { activityCaptureSystem?: never; activityCaptureUser?: never; chatSystem?: never; contextBlock?: never; dailySummarySystem?: never; dailySummaryUser?: never; enhanceSystem?: never; enhanceUser?: never; eventContactSystem?: never; eventContactUser?: never; titleSystem?: never; titleUser?: never; toolSearchSessions?: never; transcriptPatchSystem?: never };
+export type Template = ({ enhanceSystem: EnhanceSystem }) & { chatSystem?: never; contextBlock?: never; enhanceUser?: never; titleSystem?: never; titleUser?: never } | ({ enhanceUser: EnhanceUser }) & { chatSystem?: never; contextBlock?: never; enhanceSystem?: never; titleSystem?: never; titleUser?: never } | ({ titleSystem: TitleSystem }) & { chatSystem?: never; contextBlock?: never; enhanceSystem?: never; enhanceUser?: never; titleUser?: never } | ({ titleUser: TitleUser }) & { chatSystem?: never; contextBlock?: never; enhanceSystem?: never; enhanceUser?: never; titleSystem?: never } | ({ chatSystem: ChatSystem }) & { contextBlock?: never; enhanceSystem?: never; enhanceUser?: never; titleSystem?: never; titleUser?: never } | ({ contextBlock: ContextBlock }) & { chatSystem?: never; enhanceSystem?: never; enhanceUser?: never; titleSystem?: never; titleUser?: never };
 
 export type TemplateSection = {
 	title: string,
@@ -253,20 +188,6 @@ export type TitleUser = {
 	enhancedNote: string,
 };
 
-export type ToolSearchSessionItem = {
-	id: string,
-	title: string | null,
-	excerpt: string | null,
-	score: number,
-	createdAt: number | null,
-	sessionContext: SessionContext | null,
-};
-
-export type ToolSearchSessions = {
-	query: string,
-	results: ToolSearchSessionItem[],
-};
-
 export type Transcript = {
 	segments: Segment[],
 	startedAt: number | null,
@@ -281,16 +202,6 @@ export type TranscriptCorrection = {
 	next_words_json: string,
 	next_memo: string,
 };
-
-export type TranscriptPatchSystem = {
-	language: string | null,
-};
-
-export type TranscriptPatchUser = {
-	transcriptJson: string,
-};
-
-export type Value = null | boolean | number | string | Value[] | { [key in string]: Value };
 
 /* Tauri Specta runtime */
 async function typedError<T, E>(result: Promise<T>): Promise<{ status: "ok"; data: T } | { status: "error"; error: E }> {

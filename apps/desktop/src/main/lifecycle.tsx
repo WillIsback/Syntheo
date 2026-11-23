@@ -17,7 +17,6 @@ import { useConfigValue } from "~/shared/config";
 import { useDesktopTabLifecycle } from "~/shared/desktop-tab-lifecycle";
 import { folderIdForNewNote, useSidebarNotes } from "~/sidebar/note-filter";
 import { useTabs } from "~/store/zustand/tabs";
-import { AecModelUnavailableNotice } from "~/stt/aec-model-unavailable-notice";
 import { BatchTranscriptionRecovery } from "~/stt/batch-transcription-recovery";
 import { LiveCaptureRecovery } from "~/stt/live-capture-recovery";
 import { RecordingImportWorker } from "~/stt/recording-import";
@@ -50,7 +49,6 @@ export function ClassicMainServices() {
     <>
       <LiveCaptureRecovery />
       <SystemAudioChangeNotice />
-      <AecModelUnavailableNotice />
       <BatchTranscriptionRecovery />
       <RecordingImportWorker />
       <MainListenerControlBridge />
@@ -106,13 +104,16 @@ function EnhancerInit() {
   });
 
   const model = useLanguageModel();
-  const { conn: llmConn } = useLLMConnection();
+  const { conn: llmConn, status: llmStatus } = useLLMConnection();
   const selectedTemplateId = useConfigValue("selected_template_id");
 
   const modelRef = useRef(model);
   modelRef.current = model;
   const llmConnRef = useRef(llmConn);
   llmConnRef.current = llmConn;
+  const managedOffRef = useRef(false);
+  managedOffRef.current =
+    llmStatus.status === "pending" && llmStatus.reason === "managed_disabled";
   const templateIdRef = useRef(selectedTemplateId);
   templateIdRef.current = selectedTemplateId;
 
@@ -128,6 +129,7 @@ function EnhancerInit() {
       getLLMConn: () => llmConnRef.current,
       getSelectedTemplateId: () => templateIdRef.current || undefined,
       getFolderTemplateId: loadSessionFolderTemplateId,
+      isIntelligenceManagedOff: () => managedOffRef.current,
     });
 
     return () => service.dispose();

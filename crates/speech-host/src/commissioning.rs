@@ -1,0 +1,448 @@
+//! Mise en service mesurée du module (issue 686, conclusion du banc 680 §4).
+//!
+//! Sur l'audio de mise en service fourni avec le module (deux flux, listés
+//! dans le manifeste et vérifiés), chaque profil est mesuré environ 30 s en
+//! temps réel, dans l'ordre :
+//!
+//! 1. deux flux avec diarisation ;
+//! 2. deux flux sans diarisation ;
+//! 3. un seul flux (micro) avec diarisation ;
+//! 4. un seul flux sans diarisation.
+//!
+//! Le premier profil dont le retard des finals reste sous 2 s au 95e centile,
+//! sans dérive, est retenu ; sinon le poste est inéligible (renvoi vers le
+//! serveur). Le résultat est enregistré à côté du module, avec la mesure.
+//!
+//! Retard d'un final : instant de sa réception moins l'instant où la fin de
+//! son dernier mot a été envoyée (retard brut), puis moins l'attente de fin
+//! d'énoncé (`endpointing_ms` envoyé dans le `session.update`) : le retard
+//! net, qui ne dépend que du poste. Le seuil porte sur le retard net ; les
+//! deux sont enregistrés. Dérive : écart entre la médiane des retards du
+//! dernier tiers et celle du premier tiers.
+
+use std::path::{Path, PathBuf};
+use std::time::{Duration, Instant};
+
+use futures_util::StreamExt;
+use owhisper_client::{FinalizeHandle, ListenClient, NvidiaAdapter, OnDeviceTarget};
+use owhisper_interface::MixedMessage;
+use owhisper_interface::stream::StreamResponse;
+use serde::{Deserialize, Serialize};
+
+/// Retard des finals au 95e centile au-delà duquel un profil échoue.
+pub const MAX_P95: Duration = Duration::from_secs(2);
+/// Dérive au-delà de laquelle un profil échoue.
+pub const MAX_DRIFT: Duration = Duration::from_secs(1);
+/// Durée de mesure d'un profil.
+pub const MEASURE: Duration = Duration::from_secs(30);
+/// Audio de mise en service (issue 686), compilé dans l'application : deux
+/// flux de 30 s, 16 kHz mono PCM16 (attribution dans les licences livrées).
+pub const AUDIO: [&[u8]; 2] = [
+    include_bytes!("../../../apps/speech/commissioning/mic.wav"),
+    include_bytes!("../../../apps/speech/commissioning/sys.wav"),
+];
+/// Trames de 20 ms à 16 kHz, PCM16.
+const FRAME_BYTES: usize = 640;
+const FRAME: Duration = Duration::from_millis(20);
+/// Attente des derniers finals après la fin de l'audio.
+const DRAIN: Duration = Duration::from_secs(8);
+
+/// Profils, du plus complet au plus réduit.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Profile {
+    TwoStreamsDiarized,
+    TwoStreams,
+    OneStreamDiarized,
+    OneStream,
+}
+
+impl Profile {
+    pub const ALL: [Profile; 4] = [
+        Self::TwoStreamsDiarized,
+        Self::TwoStreams,
+        Self::OneStreamDiarized,
+        Self::OneStream,
+    ];
+
+    pub fn streams(self) -> usize {
+        match self {
+            Self::TwoStreamsDiarized | Self::TwoStreams => 2,
+            _ => 1,
+        }
+    }
+
+    pub fn diarization(self) -> bool {
+        matches!(self, Self::TwoStreamsDiarized | Self::OneStreamDiarized)
+    }
+}
+
+/// Mesure d'un profil.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Measure {
+    pub profile: Profile,
+    pub finals: usize,
+    /// Retard net (attente de fin d'énoncé déduite), au 95e centile.
+    pub p95_ms: u64,
+    /// Dérive du retard net.
+    pub drift_ms: i64,
+    /// Retard brut au 95e centile.
+    #[serde(default)]
+    pub raw_p95_ms: u64,
+    /// Dérive du retard brut.
+    #[serde(default)]
+    pub raw_drift_ms: i64,
+    pub passed: bool,
+    /// Mesure impossible (module tombé, session fermée) : sa raison.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+}
+
+impl Measure {
+    /// Profil refusé faute de mesure.
+    pub fn failed(profile: Profile, reason: String) -> Self {
+        Self {
+            profile,
+            finals: 0,
+            p95_ms: 0,
+            drift_ms: 0,
+            raw_p95_ms: 0,
+            raw_drift_ms: 0,
+            passed: false,
+            error: Some(reason),
+        }
+    }
+}
+
+/// Résultat enregistré de la mise en service.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Commissioning {
+    /// Profil retenu ; `None` : inéligible.
+    pub profile: Option<Profile>,
+    pub measures: Vec<Measure>,
+    /// Secondes depuis l'époque Unix.
+    pub measured_at: u64,
+    /// Construction du compagnon mesuré : une autre construction se remesure.
+    pub module_build: u64,
+}
+
+/// Fichier du résultat, dans le dossier de données de la source.
+pub fn result_path(root: &Path) -> Option<PathBuf> {
+    Some(root.join("commissioning.json"))
+}
+
+/// Résultat enregistré pour la construction `module_build`.
+pub fn load(dir: &Path, module_build: u64) -> Option<Commissioning> {
+    let bytes = std::fs::read(result_path(dir)?).ok()?;
+    if bytes.len() > 64 * 1024 {
+        return None;
+    }
+    serde_json::from_slice::<Commissioning>(&bytes)
+        .ok()
+        .filter(|c| c.module_build == module_build)
+}
+
+/// Enregistre le résultat (fichier temporaire puis renommage).
+pub fn save(dir: &Path, result: &Commissioning) -> std::io::Result<()> {
+    std::fs::create_dir_all(dir)?;
+    let path = result_path(dir).ok_or_else(|| std::io::Error::other("no data folder"))?;
+    let temp = path.with_extension(format!("json-{}", std::process::id()));
+    std::fs::write(
+        &temp,
+        serde_json::to_vec_pretty(result).map_err(std::io::Error::other)?,
+    )?;
+    std::fs::rename(&temp, &path).inspect_err(|_| {
+        let _ = std::fs::remove_file(&temp);
+    })
+}
+
+/// Données PCM16 16 kHz mono d'un WAV (bloc `data`).
+pub fn wav_pcm16(bytes: &[u8]) -> Option<&[u8]> {
+    if bytes.len() < 12 || &bytes[0..4] != b"RIFF" || &bytes[8..12] != b"WAVE" {
+        return None;
+    }
+    let mut at = 12;
+    let mut format_ok = false;
+    while at + 8 <= bytes.len() {
+        let id = &bytes[at..at + 4];
+        let len = u32::from_le_bytes(bytes[at + 4..at + 8].try_into().ok()?) as usize;
+        let body = bytes.get(at + 8..at + 8 + len)?;
+        if id == b"fmt " && body.len() >= 16 {
+            let format = u16::from_le_bytes([body[0], body[1]]);
+            let channels = u16::from_le_bytes([body[2], body[3]]);
+            let rate = u32::from_le_bytes([body[4], body[5], body[6], body[7]]);
+            let bits = u16::from_le_bytes([body[14], body[15]]);
+            format_ok = format == 1 && channels == 1 && rate == 16_000 && bits == 16;
+        } else if id == b"data" {
+            return format_ok.then_some(body);
+        }
+        at += 8 + len + (len % 2);
+    }
+    None
+}
+
+fn percentile(sorted: &[f64], p: f64) -> f64 {
+    if sorted.is_empty() {
+        return 0.0;
+    }
+    let rank = ((p * sorted.len() as f64).ceil() as usize).clamp(1, sorted.len());
+    sorted[rank - 1]
+}
+
+fn median(values: &mut [f64]) -> f64 {
+    values.sort_by(f64::total_cmp);
+    percentile(values, 0.5)
+}
+
+fn stats(finals: &[(f64, f64)]) -> (f64, f64) {
+    let mut latencies: Vec<f64> = finals.iter().map(|(_, lag)| *lag).collect();
+    latencies.sort_by(f64::total_cmp);
+    let p95 = percentile(&latencies, 0.95);
+    let mut by_time: Vec<(f64, f64)> = finals.to_vec();
+    by_time.sort_by(|a, b| a.0.total_cmp(&b.0));
+    let third = by_time.len() / 3;
+    let drift = if third > 0 {
+        let mut first: Vec<f64> = by_time[..third].iter().map(|f| f.1).collect();
+        let mut last: Vec<f64> = by_time[by_time.len() - third..]
+            .iter()
+            .map(|f| f.1)
+            .collect();
+        median(&mut last) - median(&mut first)
+    } else {
+        0.0
+    };
+    (p95, drift)
+}
+
+/// Verdict d'une série de finals : `(fin du dernier mot, retard brut)` en
+/// secondes ; `endpointing` : attente de fin d'énoncé envoyée au module.
+pub fn evaluate(profile: Profile, finals: &[(f64, f64)], endpointing: Duration) -> Measure {
+    let (raw_p95, raw_drift) = stats(finals);
+    let wait = endpointing.as_secs_f64();
+    let net: Vec<(f64, f64)> = finals
+        .iter()
+        .map(|(end, lag)| (*end, (lag - wait).max(0.0)))
+        .collect();
+    let (p95, drift) = stats(&net);
+    // Sans final, rien n'a été mesuré : échec.
+    let passed =
+        !finals.is_empty() && p95 < MAX_P95.as_secs_f64() && drift < MAX_DRIFT.as_secs_f64();
+    Measure {
+        profile,
+        finals: finals.len(),
+        p95_ms: (p95 * 1000.0).round() as u64,
+        drift_ms: (drift * 1000.0).round() as i64,
+        raw_p95_ms: (raw_p95 * 1000.0).round() as u64,
+        raw_drift_ms: (raw_drift * 1000.0).round() as i64,
+        passed,
+        error: None,
+    }
+}
+
+/// Un flux : envoie l'audio en temps réel, rend `(fin d'audio, retard)` de
+/// chaque final.
+async fn stream(
+    target: OnDeviceTarget,
+    diarization: bool,
+    audio: Vec<u8>,
+    t0: Instant,
+) -> Result<Vec<(f64, f64)>, String> {
+    let client = ListenClient::builder()
+        .adapter::<NvidiaAdapter>()
+        .api_base(target.base_url)
+        .params(owhisper_interface::ListenParams {
+            languages: vec!["fr".parse().map_err(|_| "language")?],
+            // Sans diarisation : un seul intervenant annoncé.
+            num_speakers: (!diarization).then_some(1),
+            ..Default::default()
+        })
+        .on_device(target.token)
+        .build_single()
+        .await
+        .map_err(|e| e.to_string())?;
+    let (tx, rx) = tokio::sync::mpsc::channel::<owhisper_client::ListenClientInput>(64);
+    let input = tokio_stream_from(rx).chain(futures_util::stream::pending());
+    let (output, handle) = client
+        .from_realtime_audio(Box::pin(input))
+        .await
+        .map_err(|e| e.to_string())?;
+    let sender = tokio::spawn(async move {
+        let mut tick = tokio::time::interval_at(t0.into(), FRAME);
+        tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Burst);
+        for frame in audio.chunks(FRAME_BYTES) {
+            tick.tick().await;
+            if tx
+                .send(MixedMessage::Audio(bytes::Bytes::copy_from_slice(frame)))
+                .await
+                .is_err()
+            {
+                break;
+            }
+        }
+        tx
+    });
+    let mut output = Box::pin(output);
+    let mut finals = Vec::new();
+    let mut sender = Some(sender);
+    let mut drain_until: Option<Instant> = None;
+    loop {
+        if drain_until.is_none() && sender.as_ref().is_some_and(|s| s.is_finished()) {
+            // Fin de l'audio : on demande les derniers finals.
+            let _keep_open = sender.take().map(|s| s.into_future());
+            handle.finalize().await;
+            drain_until = Some(Instant::now() + DRAIN);
+        }
+        let wait = drain_until.map_or(Duration::from_millis(200), |until| {
+            until.saturating_duration_since(Instant::now())
+        });
+        if drain_until.is_some() && wait.is_zero() {
+            break;
+        }
+        match tokio::time::timeout(wait.min(Duration::from_millis(200)), output.next()).await {
+            Ok(Some(Ok(StreamResponse::TranscriptResponse {
+                is_final: true,
+                start,
+                duration,
+                channel,
+                ..
+            }))) => {
+                if !channel
+                    .alternatives
+                    .first()
+                    .is_some_and(|a| a.transcript.is_empty())
+                {
+                    let end = start + duration;
+                    let lag = t0.elapsed().as_secs_f64() - end;
+                    finals.push((end, lag.max(0.0)));
+                }
+            }
+            Ok(Some(Ok(_))) | Err(_) => {}
+            Ok(Some(Err(error))) => return Err(error.to_string()),
+            Ok(None) => break,
+        }
+    }
+    Ok(finals)
+}
+
+/// Flux tokio vers flux `futures`.
+fn tokio_stream_from<T: Send + 'static>(
+    mut rx: tokio::sync::mpsc::Receiver<T>,
+) -> impl futures_util::Stream<Item = T> + Send {
+    futures_util::stream::poll_fn(move |cx| rx.poll_recv(cx))
+}
+
+/// Mesure un profil sur le lancement en cours.
+pub async fn measure(
+    target: &OnDeviceTarget,
+    profile: Profile,
+    audio: &[Vec<u8>; 2],
+    duration: Duration,
+) -> Result<Measure, String> {
+    let bytes = ((duration.as_secs_f64() * 16_000.0) as usize) * 2;
+    // Départ commun un peu plus tard : les connexions s'ouvrent d'abord.
+    let t0 = Instant::now() + Duration::from_millis(500);
+    let streams = (0..profile.streams()).map(|i| {
+        let audio = audio[i][..audio[i].len().min(bytes)].to_vec();
+        stream(target.clone(), profile.diarization(), audio, t0)
+    });
+    let mut finals = Vec::new();
+    for result in futures_util::future::join_all(streams).await {
+        finals.extend(result?);
+    }
+    // L'attente de fin d'énoncé réellement envoyée par l'adaptateur nvidia.
+    let endpointing = Duration::from_millis(u64::from(owhisper_client::NVIDIA_ENDPOINTING_MS));
+    Ok(evaluate(profile, &finals, endpointing))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const ENDPOINTING: Duration = Duration::from_millis(1000);
+
+    /// Finals toutes les 2,5 s sur 30 s, retard brut donné par `lag(i)`.
+    fn finals(lag: impl Fn(usize) -> f64) -> Vec<(f64, f64)> {
+        (0..12).map(|i| (2.5 * (i + 1) as f64, lag(i))).collect()
+    }
+
+    // Décision de l'issue 686 : seuil sur le retard net de l'attente de fin
+    // d'énoncé ; valeurs inspirées des mesures réelles.
+    #[test]
+    fn a_fast_computer_with_the_endpointing_floor_passes() {
+        // Omarchy : brut 1,6 à 2,2 s (plancher de l'endpointing), net 0,6 à 1,2.
+        let fast = finals(|i| {
+            [
+                2.19, 1.6, 1.7, 1.9, 1.65, 1.8, 2.1, 1.7, 1.75, 1.9, 1.62, 1.85,
+            ][i]
+        });
+        let m = evaluate(Profile::TwoStreamsDiarized, &fast, ENDPOINTING);
+        assert!(m.passed, "{m:?}");
+        assert!(m.raw_p95_ms > 2000 && m.p95_ms < 2000, "{m:?}");
+    }
+
+    #[test]
+    fn the_thinkpad_and_a_drifting_two_core_computer_fail() {
+        // ThinkPad en performance avec diarisation : finals de 6,5 à 9,2 s.
+        let thinkpad = finals(|i| 6.5 + 0.245 * i as f64);
+        assert!(!evaluate(Profile::TwoStreamsDiarized, &thinkpad, ENDPOINTING).passed);
+        // 2 cœurs, deux flux diarisés : de 1,5 s jusqu'à 3,8 s en fin de flux.
+        let drifting = finals(|i| 1.5 + 0.21 * i as f64);
+        let m = evaluate(Profile::TwoStreamsDiarized, &drifting, ENDPOINTING);
+        assert!(!m.passed && m.drift_ms > 1000, "{m:?}");
+        // Aucun final : échec.
+        assert!(!evaluate(Profile::OneStream, &[], ENDPOINTING).passed);
+    }
+
+    #[test]
+    fn a_slow_or_drifting_profile_fails() {
+        let slow = finals(|_| 3.5);
+        assert!(!evaluate(Profile::TwoStreams, &slow, ENDPOINTING).passed);
+        let drifting = finals(|i| 1.2 + 0.14 * i as f64);
+        let m = evaluate(Profile::TwoStreams, &drifting, ENDPOINTING);
+        assert!(m.p95_ms < 2000 && m.drift_ms > 1000 && !m.passed, "{m:?}");
+    }
+
+    #[test]
+    fn reads_a_canonical_wav() {
+        let mut wav = b"RIFF\0\0\0\0WAVEfmt ".to_vec();
+        wav.extend(16u32.to_le_bytes());
+        wav.extend(1u16.to_le_bytes());
+        wav.extend(1u16.to_le_bytes());
+        wav.extend(16_000u32.to_le_bytes());
+        wav.extend(32_000u32.to_le_bytes());
+        wav.extend(2u16.to_le_bytes());
+        wav.extend(16u16.to_le_bytes());
+        wav.extend(b"data");
+        wav.extend(4u32.to_le_bytes());
+        wav.extend([1, 2, 3, 4]);
+        assert_eq!(wav_pcm16(&wav), Some(&[1u8, 2, 3, 4][..]));
+        // Stéréo : refusé.
+        let mut stereo = wav.clone();
+        stereo[22] = 2;
+        assert_eq!(wav_pcm16(&stereo), None);
+    }
+
+    #[test]
+    fn the_compiled_audio_is_two_canonical_wavs() {
+        for audio in AUDIO {
+            let pcm = wav_pcm16(audio).unwrap();
+            // Environ 30 s à 16 kHz, 2 octets par échantillon.
+            assert!(pcm.len() > 25 * 16_000 * 2, "{}", pcm.len());
+        }
+    }
+
+    #[test]
+    fn the_result_is_tied_to_the_module_build() {
+        let parent = tempfile::tempdir().unwrap();
+        let dir = parent.path().join("speech");
+        let result = Commissioning {
+            profile: Some(Profile::TwoStreams),
+            measures: vec![],
+            measured_at: 1,
+            module_build: 800_000,
+        };
+        save(&dir, &result).unwrap();
+        assert_eq!(load(&dir, 800_000), Some(result));
+        assert_eq!(load(&dir, 800_100), None);
+    }
+}

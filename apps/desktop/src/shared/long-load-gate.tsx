@@ -1,3 +1,6 @@
+import { setupI18n, type I18n } from "@lingui/core";
+import { I18nProvider } from "@lingui/react";
+import { Trans, useLingui } from "@lingui/react/macro";
 import { useQuery } from "@tanstack/react-query";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { useEffect, useState, type ReactNode } from "react";
@@ -13,6 +16,15 @@ import { useMountEffect } from "@syntheo/ui/hooks/use-mount-effect";
 import { cn } from "@syntheo/utils";
 
 import { BrandLoadingView } from "./brand-loading-view";
+
+import { createI18n } from "~/i18n/catalogs";
+import {
+  SOURCE_LOCALE,
+  UI_LANGUAGE_AUTO,
+  resolveDisplayLocale,
+} from "~/i18n/locales";
+import { messages as sourceMessages } from "~/i18n/locales/en/messages";
+import { loadSystemLanguages } from "~/i18n/system-languages";
 
 export const LONG_LOAD_SPLASH_DELAY_MS = 400;
 const STARTUP_STATUS_REFETCH_INTERVAL_MS = 250;
@@ -33,11 +45,29 @@ export function LongLoadGate({ children }: { children: ReactNode }) {
     retry: false,
   });
 
+  // Monté au-dessus d'AppI18nProvider, sans réglage de langue lisible : les
+  // écrans d'attente et d'erreur suivent la langue du système, avec un seul
+  // catalogue chargé pour les deux. Le splash statique reste affiché tant
+  // qu'il n'est pas prêt : jamais de texte anglais remplacé un instant plus
+  // tard, ni de fenêtre blanche.
+  const startupI18n = useQuery({
+    queryKey: ["startup-i18n"],
+    queryFn: loadStartupI18n,
+    enabled: !ready && (showSplash || error !== null),
+    retry: false,
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+  // Catalogue illisible : textes sources (anglais), jamais une fenêtre
+  // blanche (useLingui exige un fournisseur).
+  const i18n =
+    startupI18n.data ?? (startupI18n.isError ? fallbackI18n() : undefined);
+  const viewReady = i18n !== undefined && (showSplash || error !== null);
+
   useEffect(() => {
-    if (ready || showSplash || error) {
+    if (ready || viewReady) {
       dismissBootSplash();
     }
-  }, [ready, showSplash, error]);
+  }, [ready, viewReady]);
 
   useMountEffect(() => {
     let cancelled = false;
@@ -68,39 +98,85 @@ export function LongLoadGate({ children }: { children: ReactNode }) {
     };
   });
 
-  if (error) {
-    return <StartupErrorView error={error} />;
-  }
-  if (ready) {
+  if (ready && !error) {
     return children;
   }
-  if (!showSplash) {
+  if (!viewReady) {
     return null;
   }
-  return <BrandLoadingView detail={getStartupDetail(startupStatus)} />;
+  return (
+    <I18nProvider i18n={i18n}>
+      {error ? (
+        <StartupErrorContent error={error} />
+      ) : (
+        <StartupSplashContent status={startupStatus} />
+      )}
+    </I18nProvider>
+  );
 }
 
-function getStartupDetail(status: StartupStatus | undefined) {
+// Les t`` restent dans le composant : la macro ne transforme que le t issu
+// de useLingui dans sa portée.
+function StartupSplashContent({
+  status,
+}: {
+  status: StartupStatus | undefined;
+}) {
+  const { t } = useLingui();
+  let detail: string | undefined;
   switch (status?.phase) {
     case "preparing_database":
-      return "Checking your local database. This is taking longer than expected.";
+      detail = t`Checking your local database. This is taking longer than expected.`;
+      break;
     case "migrating_database": {
-      const progress =
-        status.migrationCurrent && status.migrationTotal
-          ? ` (${status.migrationCurrent} of ${status.migrationTotal})`
-          : "";
-      return `Migrating your local database${progress}. This may take a few minutes.`;
+      const current = status.migrationCurrent;
+      const total = status.migrationTotal;
+      detail =
+        current && total
+          ? t`Migrating your local database (${current} of ${total}). This may take a few minutes.`
+          : t`Migrating your local database. This may take a few minutes.`;
+      break;
     }
     case "ready":
     case "failed":
     case undefined:
-      return undefined;
+      break;
   }
+  return <BrandLoadingView detail={detail} />;
 }
 
-function StartupErrorView({ error }: { error: Error }) {
+// Repli si le catalogue de la langue du système ne se charge pas : le
+// catalogue anglais, embarqué. En production, la macro Lingui ne garde que
+// les identifiants des messages ; un catalogue vide afficherait donc ces
+// identifiants au lieu des textes anglais.
+let fallback: I18n | null = null;
+export function fallbackI18n(): I18n {
+  if (!fallback) {
+    fallback = setupI18n({
+      locale: SOURCE_LOCALE,
+      messages: { [SOURCE_LOCALE]: sourceMessages },
+    });
+  }
+  return fallback;
+}
+
+// La base n'a pas démarré : le réglage de langue n'est pas lisible. Les
+// écrans d'attente et d'erreur suivent la langue du système, comme le
+// réglage « automatique ».
+async function loadStartupI18n() {
+  const languages = await loadSystemLanguages();
+  return createI18n(resolveDisplayLocale(UI_LANGUAGE_AUTO, languages));
+}
+
+function StartupErrorContent({ error }: { error: Error }) {
+  const { t } = useLingui();
   const needsUpdate = error.message.includes(
     "created by a newer version of Syntheo",
+  );
+  // Réglages gérés invalides (crates/db-app, managed_settings.rs) : le
+  // fichier est nommé, son contenu jamais affiché.
+  const invalidManagedSettings = error.message.includes(
+    "invalid managed settings file",
   );
 
   const handleRestart = async () => {
@@ -118,17 +194,21 @@ function StartupErrorView({ error }: { error: Error }) {
     >
       <div className="flex max-w-sm flex-col items-center gap-4 text-center">
         <h1 className="text-foreground text-base font-semibold">
-          {needsUpdate ? "Syntheo needs an update" : "Syntheo could not start"}
+          {needsUpdate
+            ? t`Syntheo needs an update`
+            : t`Syntheo could not start`}
         </h1>
         <p className="text-muted-foreground text-sm leading-relaxed">
           {needsUpdate
-            ? "Your data was updated by a newer version of Syntheo, such as Syntheo Nightly, and this version cannot open it yet. Your existing data was left unchanged. Install the latest version of Syntheo, or keep using the newer app until this version catches up."
-            : "Your existing data was left unchanged. Please restart the app. If the problem continues, contact support."}
+            ? t`Your data was updated by a newer version of Syntheo, such as Syntheo Nightly, and this version cannot open it yet. Your existing data was left unchanged. Install the latest version of Syntheo, or keep using the newer app until this version catches up.`
+            : invalidManagedSettings
+              ? t`The settings file managed by your organization (managed_settings.json) is invalid, so Syntheo does not start. Your existing data was left unchanged. Contact your administrator: Syntheo will start once the file is fixed.`
+              : t`Your existing data was left unchanged. Please restart the app. If the problem continues, contact support.`}
         </p>
         {needsUpdate ? null : (
           <Button size="sm" onClick={() => void handleRestart()}>
             <ArrowClockwise className="mr-1.5 h-3.5 w-3.5" />
-            Restart App
+            <Trans>Restart App</Trans>
           </Button>
         )}
       </div>

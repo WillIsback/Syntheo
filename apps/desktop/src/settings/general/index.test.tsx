@@ -27,11 +27,6 @@ vi.mock("@tanstack/react-query", () => ({
   }),
 }));
 
-vi.mock("~/stt/aec-model-status", () => ({
-  useAecModelState: () => "ready",
-  useRetryAecModelDownload: () => vi.fn(),
-}));
-
 vi.mock("~/settings/queries", () => ({
   setSettingValue: vi.fn(),
   useSetSettingValues: () => mocks.setSettingValues,

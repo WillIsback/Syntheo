@@ -88,6 +88,8 @@ const SYN_LABELS = {
   "Back to the note": "Back to the note",
   "Backspace": "Backspace",
   "Begin listening": "Begin listening",
+  "Beta: measure rework": "Beta: measure rework",
+  "Calibration mode": "Calibration mode",
   "Cancel": "Cancel",
   "Cancel dictation": "Cancel dictation",
   "Capture meeting chat in the note": "Capture meeting chat in the note",
@@ -124,11 +126,13 @@ const SYN_LABELS = {
   "Enter": "Enter",
   "Enter a full address, for example {placeholder}.": "Enter a full address, for example {placeholder}.",
   "Enter another name": "Enter another name",
+  "Erase my measurements…": "Erase my measurements…",
   "Esc": "Esc",
   "Estimating…": "Estimating…",
   "Exclude apps from detection": "Exclude apps from detection",
   "Export": "Export",
   "Export location": "Export location",
+  "Export my measurements…": "Export my measurements…",
   "Finish": "Finish",
   "Finish the meeting": "Finish the meeting",
   "Finishing…": "Finishing…",
@@ -164,6 +168,7 @@ const SYN_LABELS = {
   "Low": "Low",
   "Main language": "Main language",
   "Me": "Me",
+  "Measure rework of summaries": "Measure rework of summaries",
   "Medium": "Medium",
   "Meeting info": "Meeting info",
   "Meetings": "Meetings",
@@ -287,6 +292,7 @@ const SYN_LABELS = {
   "Updates": "Updates",
   "Upload audio": "Upload audio",
   "Upload transcript": "Upload transcript",
+  "Use HTTPS: plain HTTP is only accepted on this computer or a private network.": "Use HTTPS: plain HTTP is only accepted on this computer or a private network.",
   "Use main language for summaries": "Use main language for summaries",
   "Use this protocol": "Use this protocol",
   "Used for transcription and automatic summary language detection.": "Used for transcription and automatic summary language detection.",
@@ -1273,9 +1279,6 @@ const SYN_CSS_SERVERS = `
 .syn-srv-seg button[aria-pressed=true]{background:var(--syn-primary);color:var(--syn-primary-foreground);font-weight:600}
 `;
 
-// Le message de refus du HTTP vient de packages/provider-validation (en
-// français dans le code, hors messages.po).
-const SYN_SRV_HTTPS = "Use HTTPS: HTTP is only accepted on this machine or a private network.";
 const SYN_SRV_OPENAI_PH = "http://localhost:8000/v1";
 const SYN_SRV_NEMO_PH = "http://localhost:9000";
 const SYN_SRV_STT_MODELS = ["mistralai/Voxtral-Mini-4B-Realtime-2602", "Systran/faster-whisper-large-v3"];
@@ -1353,7 +1356,8 @@ const useSynServer = (kind, initial, placeholder) => {
         return;
       }
       if (url.protocol === "http:" && !synSrvPrivate(url.hostname)) {
-        setUrlError(SYN_SRV_HTTPS);
+        // Même message que l'app : provider-credential-error.ts, par messages.po.
+        setUrlError(L("Use HTTPS: plain HTTP is only accepted on this computer or a private network."));
         return;
       }
     }
@@ -2356,8 +2360,10 @@ const SynSectionDictation = ({ focus }) => {
 };
 
 // Paramètres › Confidentialité : apps/desktop/src/settings/privacy/index.tsx
-// (un seul réglage, « Verrouiller l'application », grisé quand le système
-// n'offre pas d'authentification de l'appareil). focus : "lock".
+// (« Verrouiller l'application », grisé quand le système n'offre pas
+// d'authentification de l'appareil ; puis la section bêta de la mesure de la
+// reprise, deux interrupteurs désactivés par défaut, le second grisé tant que
+// le premier est coupé). focus : "lock", "measure".
 // Paramètres › Autorisations : apps/desktop/src/settings/general/permissions.tsx,
 // branche Linux et Windows (AudioPermissions runtimeCapabilities : la flèche
 // relance un vrai test de la source, sans ouvrir les réglages du système).
@@ -2397,6 +2403,8 @@ const SynPrivDemo = ({ value, onChange }) => {
 const SynSectionPrivacy = ({ focus }) => {
   const [os, setOs] = useState("linux");
   const [locked, setLocked] = useState(false);
+  const [measuring, setMeasuring] = useState(false);
+  const [calibrating, setCalibrating] = useState(false);
   const available = os === "windows";
   const description = available
     ? L("Require Windows Hello face, PIN, or password when opening Syntheo.")
@@ -2420,6 +2428,49 @@ const SynSectionPrivacy = ({ focus }) => {
                 describedBy: labels["aria-describedby"],
               }),
           })}
+        </div>,
+      )}
+      {h(
+        SynHere,
+        { active: focus === "measure" },
+        <div className="syn-perm-group">
+          <h3>{L("Beta: measure rework")}</h3>
+          <div className="syn-rows" style={{ borderTop: 0 }}>
+            {h(SynRow, {
+              title: L("Measure rework of summaries"),
+              description: L(
+                "Adds “Measure rework…” to the summary menu. You paste the version you sent; only counts are kept on this computer, never text, and nothing is sent.",
+              ),
+              children: (labels) =>
+                h(SynSwitch, {
+                  checked: measuring,
+                  onChange: (next) => {
+                    setMeasuring(next);
+                    if (!next) setCalibrating(false);
+                  },
+                  labelledBy: labels["aria-labelledby"],
+                  describedBy: labels["aria-describedby"],
+                }),
+            })}
+            {h(SynRow, {
+              title: L("Calibration mode"),
+              description: L(
+                "After a measurement, lists each difference so you can classify it by hand. Excerpts stay on screen; only the agreement counts are kept.",
+              ),
+              children: (labels) =>
+                h(SynSwitch, {
+                  checked: calibrating,
+                  disabled: !measuring,
+                  onChange: setCalibrating,
+                  labelledBy: labels["aria-labelledby"],
+                  describedBy: labels["aria-describedby"],
+                }),
+            })}
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
+            <button type="button" className="syn-btn">{L("Export my measurements…")}</button>
+            <button type="button" className="syn-btn">{L("Erase my measurements…")}</button>
+          </div>
         </div>,
       )}
       {h(SynPrivDemo, {
@@ -3397,7 +3448,7 @@ const SYN_IMP_HINT = "Empty note: the ••• menu offers both imports.";
 const synImpInitial = () => ({ stage: "prepare", phase: "importing", fraction: 0, elapsed: 0, hint: SYN_IMP_HINT });
 
 /**
- * Note vide, menu ••• (« Téléverser un audio », « Téléverser un transcript »)
+ * Note vide, menu ••• (« Téléverser un audio », « Téléverser une transcription »)
  * puis import audio : avancement dans la marge et capsule en état « Import ».
  */
 export const ImportScreen = ({ markers = true }) => {

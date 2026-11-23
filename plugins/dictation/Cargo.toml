@@ -10,14 +10,13 @@ links = "tauri-plugin-dictation"
 tauri-plugin = { workspace = true, features = ["build"] }
 
 [dev-dependencies]
-specta-typescript = { workspace = true }
+syntheo-specta-export = { workspace = true }
 tokio-tungstenite = { workspace = true }
 
 [dependencies]
 owhisper-client = { workspace = true }
 owhisper-interface = { workspace = true }
 syntheo-audio = { workspace = true }
-url = { workspace = true }
 
 base64 = { workspace = true }
 futures-util = { workspace = true }

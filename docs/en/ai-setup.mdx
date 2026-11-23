@@ -6,7 +6,7 @@ description: "Connect Syntheo to your self-hosted inference servers: a transcrip
 
 import { AppSettings, Kbd, SettingsPath } from "/snippets/en/start.gen.jsx";
 
-Syntheo ships no model and calls no cloud service. It connects to **your** inference servers, on your computer or your network, through standard protocols. You configure two independent things:
+Syntheo calls no cloud AI service. It connects to **your** inference servers, on your computer or your network, through standard protocols; live transcription can also run on this computer, without a server (see [Transcribe on this computer](#transcribe-on-this-computer)). You configure two independent things:
 
 | Setting | Role | Protocol |
 | --- | --- | --- |
@@ -38,7 +38,7 @@ Sample base URLs for a server running on the same computer, with the default por
 The ports depend on how you start each server. If two servers run on the same machine, give them different ports.
 
 <Note>
-  Syntheo accepts plain HTTP only to a private host: `localhost`, `[::1]`, `.local` names, and the IPv4 addresses `127.0.0.0/8`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, and `100.64.0.0/10` (the range Tailscale uses), as well as Tailscale `.ts.net` names. Everywhere else, including for an internal host name such as `gpu.entreprise.lan`, the URL must use HTTPS; otherwise saving is refused with the message "Use HTTPS: HTTP is only accepted on this machine or a private network.". The URL must contain neither credentials nor query parameters.
+  Syntheo accepts plain HTTP only to a private host: `localhost`, `[::1]`, `.local` names, and the IPv4 addresses `127.0.0.0/8`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, and `100.64.0.0/10` (the range Tailscale uses), as well as Tailscale `.ts.net` names. Everywhere else, including for an internal host name such as `gpu.entreprise.lan`, the URL must use HTTPS; otherwise saving is refused with the message "Use HTTPS: plain HTTP is only accepted on this computer or a private network.". The URL must contain neither credentials nor query parameters.
 
   Outside this machine (`localhost`, `127.0.0.0/8`, `[::1]`), a plain HTTP address is saved only after you confirm it ("Use unencrypted HTTP anyway"), and the card then shows a permanent reminder that the connection is not encrypted: the audio, your notes, and the API key travel in clear text on the network, and on another network, or with Tailscale stopped, another machine can answer at the same address. See [Switch your server to HTTPS](#switch-your-server-to-https).
 </Note>
@@ -65,7 +65,7 @@ The status pill takes one of these values:
 | "Connected · … ms" | The server answers; the pill shows the measured latency. For synthesis, it shows the number of available models instead ("Connected · … models available"). |
 | "Unreachable" | The server did not answer. |
 | "Key refused" | The server refused the API key. |
-| "Invalid address" | The address is not accepted (see the note above). |
+| "Invalid address" | An address saved earlier is no longer accepted (see the note above). While typing, a refused address is not saved: the reason shows under the field, for example "Enter a valid base URL.". |
 
 If something fails, a message under the card title says what to do, for example: "The server did not answer at localhost:8000/v1. Check that it is running and that you are on the right network (VPN, Tailscale), then test again."
 
@@ -101,6 +101,27 @@ If something fails, a message under the card title says what to do, for example:
 In the replica below, change the "Server address": Syntheo saves it, then tests it. Try `http://localhost:9000` (a NeMo-Speech.cpp server, then "Use this protocol"), a port where nothing listens such as `http://localhost:8001/v1` ("Unreachable"), or `http://gpu.entreprise.lan/v1` (HTTP refused). Open "Advanced" and "Help", then click another model.
 
 <AppSettings section="transcription" />
+
+### Transcribe on this computer
+
+The details (requirements, commissioning, profiles, network, licenses) are on the [Transcribe on this computer](/en/on-device-transcription) page.
+
+The **On this computer** card, above the server card, prepares transcription without a server: the transcription program shipped with Syntheo runs on your computer, and audio never leaves it.
+
+1. **Test this computer** measures the processor, memory and disk in a few seconds. The verdict says whether the computer can transcribe on its own, with a reduced profile (for example without telling speakers apart), or why it cannot. On battery or in power saving mode, plug in or switch to performance mode, then run the test again.
+2. **Download the models (1.1 GB)** or **Install from a folder…** installs the program's models. Each file is compared with the version Syntheo expects before it is put in place; an interrupted download resumes where it stopped.
+3. After installation, Syntheo **measures this computer**, from under a minute to about three minutes: it transcribes an audio sample shipped with the app and keeps the most complete profile that keeps up in real time (microphone and system audio with speakers, then without, then the microphone only). With the microphone only, the computer's sound, and so remote participants, is not transcribed; a reminder says so at the start of each recording. **Measure again** repeats the measurement, for example after a hardware change. A computer that is too slow is not offered.
+4. Once the computer is measured, tick **Use this computer for transcription instead of the server**.
+
+During a recording, if the computer falls more than 2 s behind, Syntheo spaces out speaker recognition, then turns it off, and restores it once the delay drops: transcription goes on. After such a change, speakers may get new labels.
+
+On-device transcription only serves the live transcription of a recording: dictation and imported files still go through the configured server.
+
+The audio of an "On this computer" recording never goes to the server, not even to repair a dropped passage or after a restart. If the models are missing or refused, live transcription pauses and says so, with the model installation or **Go back to the server**; a missed passage stays marked in the note.
+
+**Remove the models** deletes them.
+
+Your organization can forbid on-device transcription (managed setting `on_device_transcription_enabled`) or require a model mirror (`speech_models_urls`), see [Security](/en/security): in the first case, the card is hidden, and if the source was chosen, it is unticked with a message; transcription goes through the server. Onboarding offers a one-click check of the computer (about 5 s).
 
 ### Live transcription or file only
 
@@ -166,7 +187,7 @@ API keys are stored in the system keychain, never in plain text in the local dat
 
 | Symptom | What to check |
 | --- | --- |
-| "Use HTTPS: HTTP is only accepted on this machine or a private network." | The host is not recognized as private: switch to HTTPS (reverse proxy, VPN) or use a private address. |
+| "Use HTTPS: plain HTTP is only accepted on this computer or a private network." | The host is not recognized as private: switch to HTTPS (reverse proxy, VPN) or use a private address. |
 | The pill shows "Unreachable" | The server did not answer. Check that it is running and that you are on the right network (VPN, Tailscale), then test again. |
 | The pill shows "Key refused" | Check the key in "Advanced", then test again. |
 | The synthesis model list is empty | Check that `base URL/models` answers (for example `curl http://localhost:11434/v1/models`) and that the address ends with `/v1`. |

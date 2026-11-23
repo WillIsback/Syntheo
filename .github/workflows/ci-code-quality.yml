@@ -13,7 +13,8 @@
 # CIBLE WINDOWS : le job léger `rust-windows` lance le clippy de
 # `audio-device` pour x86_64-pc-windows-msvc (depuis Linux, sans linker) sur
 # les PR qui touchent `crates/audio-device/**` ou `Cargo.lock`, et toujours
-# hors PR (voir issue 382).
+# hors PR (voir issue 382). Le job `rust-windows-speech` (runner Windows)
+# fait de même pour `speech-host` et `speech-probe`.
 name: ci-code-quality
 
 on:
@@ -230,6 +231,178 @@ jobs:
           set -euo pipefail
           cargo clippy --locked --target x86_64-pc-windows-msvc -p audio-device \
             --all-targets -- -D warnings
+
+  # Clippy Windows du module de transcription sur le poste (issues 683-685) :
+  # `speech-host` (lancement, vérification verrouillée, ACL) et `speech-probe`
+  # (sonde). Runner Windows : `speech-host` tire aws-lc-sys (C), que clippy ne
+  # peut pas préparer depuis Linux sans MSVC. Sur une PR, sauté si ni ces
+  # crates, ni le client qu'elles utilisent, ni Cargo.lock ne changent.
+  rust-windows-speech:
+    name: ci-code-quality (Rust Windows, module sur le poste)
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: ${{ github.event_name == 'pull_request' && '0' || '1' }}
+          persist-credentials: false
+
+      - name: Détection des chemins modifiés
+        id: changes
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          if [ -z "${BASE_SHA:-}" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "Hors PR : clippy Windows du module exécuté."
+          elif git diff --name-only "$BASE_SHA" HEAD -- 'crates/speech-host/' 'crates/speech-probe/' 'crates/owhisper-client/' 'crates/ws-client/' 'crates/image-hash/' 'scripts/check-companion-pins.ps1' 'Cargo.lock' '.github/workflows/ci-code-quality.yml' | grep -q .; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "Module sur le poste ou Cargo.lock modifié : clippy Windows exécuté."
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "Module sur le poste non modifié : clippy Windows sauté."
+          fi
+
+      - name: Toolchain Rust
+        if: steps.changes.outputs.run == 'true'
+        uses: ./.github/actions/rust_install
+
+      - name: Lint (cargo clippy, Windows)
+        if: steps.changes.outputs.run == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo clippy --locked -p speech-host -p speech-probe --all-targets -- -D warnings
+
+      # Le job sign de build-windows.yml contrôle l'empreinte du compagnon
+      # signé avec check-companion-pins.ps1, qui reproduit image-hash : les
+      # deux doivent donner les empreintes de référence, pour ne pas
+      # découvrir un écart au moment d'une release.
+      - name: Empreintes de référence (crate image-hash)
+        if: steps.changes.outputs.run == 'true'
+        shell: bash
+        run: cargo test --locked -p image-hash
+
+      - name: Empreintes de référence (check-companion-pins.ps1)
+        if: steps.changes.outputs.run == 'true'
+        shell: pwsh
+        run: ./scripts/check-companion-pins.ps1 -Fixtures crates/image-hash/tests/fixtures
+
+  # Publication des modèles de la transcription sur le poste : tests de
+  # hf_upload.py (comparaison avec Hugging Face, dossier incomplet refusé),
+  # sans réseau, puis garde-fou sous un CPU sans VNNI : les modèles de
+  # models.json, téléchargés depuis ses `sources`, doivent rendre des mots
+  # sous qemu Skylake-Client (apps/speech/models/cpu-check). Sur une PR, sauté
+  # si rien ne change dans apps/speech (moteur, ONNX Runtime, Cargo.lock,
+  # modèles, exemple, audio de mise en service), dans l'action rust_install,
+  # dans rust-toolchain.toml ni dans ce workflow ou publish-speech-models.yml.
+  # Comme build-speech : sans rust-cache ni sccache, registre et compilation
+  # partent de zéro. Sous TCG (qemu compilé dans le job, voir l'étape qui le
+  # construit), un fichier de 30 s demande environ 10 à 12 min sur un runner
+  # rapide (4 fils sur 2 cœurs) et près de trois fois plus sur un runner
+  # lent : les deux fichiers de mise en service sont répartis sur deux jobs
+  # (matrice `audio`), chacun avec les seuils du contrôle complet.
+  speech-models:
+    name: ci-code-quality (modèles de la transcription sur le poste, ${{ matrix.audio }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        audio: [mic, sys]
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: ${{ github.event_name == 'pull_request' && '0' || '1' }}
+          persist-credentials: false
+
+      - name: Détection des chemins modifiés
+        id: changes
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          if [ -z "${BASE_SHA:-}" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          elif git diff --name-only "$BASE_SHA" HEAD -- 'apps/speech/' '.github/actions/rust_install/' 'rust-toolchain.toml' \
+            '.github/workflows/ci-code-quality.yml' '.github/workflows/publish-speech-models.yml' | grep -q .; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "apps/speech, rust_install et rust-toolchain.toml non modifiés : tests sautés."
+          fi
+
+      - name: Tests de l'envoi vers Hugging Face
+        if: steps.changes.outputs.run == 'true' && matrix.audio == 'mic'
+        run: python3 -I -m unittest discover -s apps/speech/models -p 'test_*.py'
+
+      - name: Toolchain Rust
+        if: steps.changes.outputs.run == 'true'
+        uses: ./.github/actions/rust_install
+        with:
+          cache: "false"
+
+      # Même ONNX Runtime que le module livré : archive épinglée contrôlée
+      # avant et après la compilation (check_ort.py, cache vide au départ).
+      - name: Construire cpu-check
+        if: steps.changes.outputs.run == 'true'
+        working-directory: apps/speech
+        shell: bash
+        run: |
+          set -euo pipefail
+          export ORT_CACHE_DIR="$RUNNER_TEMP/ort-cache"
+          cargo fetch --locked
+          python3 -I supply-chain/check_ort.py before x86_64-unknown-linux-gnu
+          cargo build --release --locked --example cpu-check
+          python3 -I supply-chain/check_ort.py after x86_64-unknown-linux-gnu
+
+      - name: Télécharger les modèles de models.json
+        if: steps.changes.outputs.run == 'true'
+        run: python3 -I apps/speech/models/fetch.py "$RUNNER_TEMP/models"
+
+      # qemu 8.2.2 compilé depuis l'archive officielle pour x86-64-v3, au lieu
+      # de qemu-user-static d'Ubuntu (compilé pour x86-64 de base) : ses
+      # fonctions d'aide flottantes en SSE classique tournent avec la moitié
+      # haute des ymm non nulle (qemu n'exécute vzeroupper qu'en sortie de bloc
+      # TCG) et paient sur les Xeon récents de certains runners une pénalité de
+      # transition SSE/AVX (×236 mesuré) : plus de 50 min pour un fichier.
+      # build-qemu.sh vérifie l'empreinte SHA-256 épinglée de l'archive avant
+      # de l'extraire ; environ 1 min de construction, sans cache. DNS publics
+      # et miroir apt du runner écarté s'il est trop lent (v0.7.2, #604), comme
+      # install_desktop_deps ; un échec de la mesure du miroir ne doit pas
+      # arrêter le job.
+      - name: Construire qemu-user (8.2.2, x86-64-v3)
+        if: steps.changes.outputs.run == 'true'
+        timeout-minutes: 15
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash scripts/ci/public-dns.sh
+          bash scripts/ci/apt-mirror.sh || echo "::warning::Mesure du miroir apt en échec : miroirs inchangés"
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends ninja-build python3-venv pkg-config libglib2.0-dev flex bison
+          bash apps/speech/models/cpu-check/build-qemu.sh "$RUNNER_TEMP/qemu-x86_64"
+
+      # Délai propre à l'étape, dans les 60 min du job (environ 4 min de mise en
+      # place avant) : un dépassement est attribué au garde-fou. Sur un runner
+      # lent, la relance après une erreur interne de qemu peut ne pas y tenir :
+      # l'étape échoue alors sur le délai, jamais sur une acceptation.
+      - name: Garde-fou sous un CPU sans VNNI (qemu Skylake-Client, ${{ matrix.audio }})
+        if: steps.changes.outputs.run == 'true'
+        timeout-minutes: 50
+        env:
+          CPU_CHECK_BIN: apps/speech/target/release/examples/cpu-check
+          FILES: ${{ matrix.audio }}
+          QEMU: ${{ runner.temp }}/qemu-x86_64
+          # Délai interne de run.sh (48 min), sous celui de l'étape : le relevé
+          # fil par fil de qemu sort avant la coupure.
+          DEADLINE: "2880"
+        run: bash apps/speech/models/cpu-check/run.sh "$RUNNER_TEMP/models"
 
   meta:
     name: ci-code-quality (PR et workflows)

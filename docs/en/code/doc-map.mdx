@@ -20,7 +20,8 @@ This page links each documentation page to the sources that determine its conten
 | [Syntheo](/en/index) | Editorial content, with no source in the code. |
 | [Install the app](/en/desktop-installation) | `apps/desktop/src-tauri/src/lib.rs` |
 | [Uninstall Syntheo](/en/uninstall) | `plugins/store2`<br />`crates/storage`<br />`crates/brand` |
-| [Set up transcription and AI](/en/ai-setup) | `packages/provider-validation`<br />`packages/store`<br />`crates/owhisper-client`<br />`crates/owhisper-interface`<br />`crates/openai-transcription`<br />`crates/ws-client`<br />`plugins/transcription`<br />`plugins/store2`<br />`apps/desktop/src/ai`<br />`apps/desktop/src/onboarding`<br />`apps/desktop/src/settings/ai/stt`<br />`apps/desktop/src/settings/ai/llm` |
+| [Set up transcription and AI](/en/ai-setup) | `packages/provider-validation`<br />`packages/store`<br />`crates/owhisper-client`<br />`crates/owhisper-interface`<br />`crates/openai-transcription`<br />`crates/ws-client`<br />`plugins/transcription`<br />`plugins/store2`<br />`apps/desktop/src/ai`<br />`apps/desktop/src/onboarding`<br />`apps/desktop/src/settings/ai/stt`<br />`apps/desktop/src/stt/on-device.ts`<br />`crates/speech-host`<br />`apps/desktop/src/settings/ai/llm` |
+| [Transcribe on this computer](/en/on-device-transcription) | `apps/speech`<br />`crates/speech-host`<br />`crates/pinned-fetch`<br />`crates/image-hash`<br />`crates/speech-sources`<br />`scripts/build-speech.sh`<br />`scripts/build-speech.ps1`<br />`apps/desktop/src-tauri/tauri.speech.conf.json`<br />`.github/workflows/publish-speech-models.yml`<br />`crates/speech-probe`<br />`plugins/transcription/src/on_device.rs`<br />`apps/desktop/src/settings/ai/stt/on-device-card.tsx`<br />`apps/desktop/src/stt/on-device.ts`<br />`apps/desktop/src/onboarding/on-device-proposal.tsx`<br />`.github/workflows/build-speech.yml` |
 | [Install the local transcription service](/en/local-transcription-service) | `deploy/transcription` |
 | [Your first meeting](/en/quickstart) | `plugins/permissions`<br />`apps/desktop/src/home`<br />`apps/desktop/src/onboarding` |
 | [The Syntheo philosophy](/en/philosophy) | Editorial content, with no source in the code. |
@@ -46,8 +47,9 @@ This page links each documentation page to the sources that determine its conten
 | Page | Sources |
 | --- | --- |
 | [Data and privacy](/en/data-and-privacy) | `packages/db`<br />`crates/audio-actual`<br />`crates/listener-core`<br />`plugins/transcription`<br />`plugins/db`<br />`plugins/fs-sync`<br />`plugins/settings`<br />`plugins/store2`<br />`plugins/tracing`<br />`crates/db-core`<br />`crates/db-app/src/managed_settings.rs`<br />`crates/db-app (session_audio_ops, capture_lifecycle_ops, session_hold, session_purge)`<br />`crates/storage`<br />`crates/brand`<br />`apps/desktop/src-tauri/src/db.rs`<br />`apps/desktop/src/services/audio-retention.ts`<br />`apps/desktop/src/lock`<br />`apps/desktop/src/settings/privacy` |
+| [Beta: measurement and transparency](/en/beta) | `crates/mesure`<br />`crates/mesure/schema/export-v1.json`<br />`apps/cli/src/commands/mesure.rs`<br />`apps/desktop/src/settings/privacy`<br />`scripts/beta` |
 | [Use Syntheo offline](/en/offline) | `packages/provider-validation`<br />`crates/listener-core`<br />`crates/owhisper-client`<br />`plugins/transcription`<br />`apps/desktop/src/ai`<br />`apps/desktop/src/settings/ai/stt`<br />`apps/desktop/src/settings/ai/llm` |
-| [Security](/en/security) | `packages/provider-validation`<br />`plugins/store2`<br />`crates/db-app/src/managed_settings.rs`<br />`apps/desktop/src/lock`<br />`apps/desktop/src/settings/privacy` |
+| [Security](/en/security) | `packages/provider-validation`<br />`plugins/store2`<br />`crates/db-app/src/managed_settings.rs`<br />`crates/speech-host`<br />`apps/desktop/src/lock`<br />`apps/desktop/src/settings/privacy` |
 | [Syntheo Desktop and the GDPR](/en/conformite/rgpd) | `crates/owhisper-client`<br />`apps/desktop/src/services/audio-retention.ts`<br />`apps/desktop/src/docs-rgpd.test.ts` |
 
 ## CLI and agents
@@ -70,7 +72,7 @@ This page links each documentation page to the sources that determine its conten
 
 | Page | Sources |
 | --- | --- |
-| [CLI reference](/en/reference/cli) | `skills/syntheo`<br />`crates/transcript`<br />`crates/tiptap`<br />`apps/cli/src/cli.rs`<br />`apps/cli/src/output.rs`<br />`apps/cli/src/commands/recording_import.rs`<br />`apps/cli/src/commands/proposals.rs`<br />`apps/cli/src/commands/meetings.rs`<br />`apps/cli/src/commands/doctor.rs`<br />`crates/agent-access/src/lib.rs`<br />`crates/agent-access/src/export_markdown.rs`<br />`crates/cli-docs` |
+| [CLI reference](/en/reference/cli) | `skills/syntheo`<br />`crates/mesure`<br />`apps/cli/src/commands/mesure.rs`<br />`crates/transcript`<br />`crates/tiptap`<br />`apps/cli/src/cli.rs`<br />`apps/cli/src/output.rs`<br />`apps/cli/src/commands/recording_import.rs`<br />`apps/cli/src/commands/proposals.rs`<br />`apps/cli/src/commands/meetings.rs`<br />`apps/cli/src/commands/doctor.rs`<br />`crates/agent-access/src/lib.rs`<br />`crates/agent-access/src/export_markdown.rs`<br />`crates/cli-docs` |
 | [MCP reference](/en/reference/mcp) | `skills/syntheo`<br />`crates/transcript`<br />`apps/cli/src/mcp/`<br />`crates/agent-access/src/lib.rs`<br />`crates/agent-access/src/recording_import.rs`<br />`crates/agent-access/src/proposals.rs` |
 | [Webhooks reference](/en/reference/webhooks) | `plugins/local-api`<br />`crates/db-app (webhook_ops, webhook_types)`<br />`apps/desktop/src/settings/developers/webhooks.tsx` |
 | [Errors and exit codes](/en/reference/errors) | `skills/syntheo`<br />`apps/cli/src/error.rs` |

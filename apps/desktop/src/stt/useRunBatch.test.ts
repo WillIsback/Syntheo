@@ -10,8 +10,8 @@ import {
   getBatchProvider,
   getSessionSpeakerCount,
   isTerminalTranscriptionError,
+  useRunBatch,
 } from "./useRunBatch";
-import { useRunBatch } from "./useRunBatch";
 
 import { acknowledgeCompletedBatch } from "~/store/zustand/listener/general-batch";
 
@@ -105,15 +105,14 @@ vi.mock("~/store/zustand/listener/general-batch", () => ({
 const LOCAL_URL = "http://192.168.1.87:8000/v1";
 
 function setConnection(overrides: Record<string, unknown> = {}) {
-  m.useSTTConnection.mockReturnValue({
-    conn: {
-      provider: "openai",
-      model: "whisper-large-v3",
-      baseUrl: LOCAL_URL,
-      apiKey: "test-key",
-      ...overrides,
-    },
-  });
+  const conn = {
+    provider: "openai",
+    model: "whisper-large-v3",
+    baseUrl: LOCAL_URL,
+    apiKey: "test-key",
+    ...overrides,
+  };
+  m.useSTTConnection.mockReturnValue({ conn, serverConn: conn });
 }
 
 // Configuration : langue « en », toute autre clé vaut [] sauf surcharge.
@@ -797,7 +796,7 @@ describe("useRunBatch", () => {
     };
 
     beforeEach(() => {
-      m.useSTTConnection.mockReturnValue({ conn: nvidia });
+      m.useSTTConnection.mockReturnValue({ conn: nvidia, serverConn: nvidia });
       m.isSupportedLanguagesLive.mockResolvedValue(true);
       emits(
         [batchWord(" Bonjour", 1_000, 1_400, 2)],

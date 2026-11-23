@@ -28,24 +28,34 @@ Everything is stored on the computer, in the app's data folder (`syntheo`
 under the user's data directory, for example `~/.local/share/syntheo` on
 Linux).
 
-| Data                                     | Where                                                                                                                                     | Retention                     | Deletion                                              |
-| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- | ----------------------------------------------------- |
-| Transcripts (text, timestamps, speakers) | local SQLite database `app.db`                                                                                                            | until the user deletes them   | deleting the meeting in the app, or the data folder   |
-| Notes and generated summaries            | local SQLite database                                                                                                                     | same                          | same                                                  |
-| Contacts, folders, settings              | local SQLite database                                                                                                                     | same                          | same                                                  |
-| Inference endpoint API keys              | system keychain (Keychain, Secret Service, Credential Manager); never in plain text in the database                                       | until the provider is deleted | removing the provider in the settings                 |
-| Full-text search index (tantivy)         | data folder (indexed copy of transcripts and notes)                                                                                       | as long as the meetings exist | follows meeting deletion, or deleting the data folder |
-| Technical logs `app.log`                 | the app's log folder; content filtered by a masking module (`RedactingWriter`), size-based rotation                                       | automatic rotation            | deleting the log folder                               |
-| Exports (Markdown, etc.)                 | export folder chosen by the user                                                                                                          | under the user's control      | deleting the exported files                           |
-| Meeting audio                            | **never on disk**: in memory just long enough to be sent to the STT endpoint; a transcription outage leaves a dated gap in the transcript | —                             | —                                                     |
-| Dictation or import audio                | **never on disk**, not even temporarily: dictation produces a WAV in memory, import reads the file where it is without a copy             | —                             | —                                                     |
+| Data                                     | Where                                                                                                                                     | Retention                     | Deletion                                                                                                                                                                                |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Transcripts (text, timestamps, speakers) | local SQLite database `app.db`                                                                                                            | until the user deletes them   | deleting the meeting in the app removes it from the app and from search; its content stays in `app.db`. To erase it permanently today, delete the data folder (a real purge is planned) |
+| Notes and generated summaries            | local SQLite database                                                                                                                     | same                          | same as transcripts                                                                                                                                                                     |
+| Contacts, folders, settings              | local SQLite database                                                                                                                     | same                          | deleting the data folder                                                                                                                                                                |
+| Inference endpoint API keys              | system keychain (Keychain, Secret Service, Credential Manager); never in plain text in the database                                       | until the provider is deleted | removing the provider in the settings                                                                                                                                                   |
+| Full-text search index (tantivy)         | data folder (indexed copy of transcripts and notes)                                                                                       | as long as the meetings exist | follows meeting deletion, or deleting the data folder                                                                                                                                   |
+| Technical logs `app.log`                 | the app's log folder; content filtered by a masking module (`RedactingWriter`), size-based rotation                                       | automatic rotation            | deleting the log folder                                                                                                                                                                 |
+| Exports (Markdown, etc.)                 | export folder chosen by the user                                                                                                          | under the user's control      | deleting the exported files                                                                                                                                                             |
+| Meeting audio                            | **never on disk**: in memory just long enough to be sent to the STT endpoint; a transcription outage leaves a dated gap in the transcript | —                             | —                                                                                                                                                                                       |
+| Dictation or import audio                | **never on disk**, not even temporarily: dictation produces a WAV in memory, import reads the file where it is without a copy             | —                             | —                                                                                                                                                                                       |
 
 None of this data is sent to the vendor.
 
-**No inference on the computer**: the app neither
-downloads nor runs any model (transcription, LLM, diarization or
-voiceprints). An earlier version may have left model files in the
-`models/stt` and `models/llm` folders of the data folder, as well as in the
+**On-device inference, only if the user installs the models**: by default,
+the app runs no model (transcription, LLM, diarization or voiceprints). The
+on-device transcription program, `syntheo-speech`, ships with the app but only
+runs if the user chooses the optional "On this computer" source and installs
+its models (about 1.1 GB) in `speech/models` of the app data folder; the
+commissioning result is in `speech/commissioning.json`. The program
+transcribes the recording audio in memory, on the loopback, writing no audio
+and logging no text. The models are removed with **Remove the models** or with
+the data folder. The managed settings `on_device_transcription_enabled`
+(forbid the source) and `speech_models_urls` (require a model mirror) are
+available to the organization. See
+[Transcribe on this computer](/en/on-device-transcription). An earlier version may have left model files in the
+`models/stt`, `models/llm` and `models/aec` (echo cancellation models, now
+shipped with the app) folders of the data folder, as well as in the
 Soniqo model cache on macOS: they are no longer read or loaded, and can be
 deleted by hand. Voiceprints that an earlier version may have saved (vectors
 in the system keychain, references in the `voiceprint_exemplars` and
@@ -54,7 +64,25 @@ a deletion, erasure is retried at the next launch.
 
 ## Network flows
 
-- **Inference endpoints configured by the user**, and only those: ASR
+- **On-device transcription** (optional "On this computer" source): the
+  recording audio goes to the `syntheo-speech` program, on the computer's
+  loopback (`127.0.0.1`), after mutual authentication; nothing leaves the
+  computer, and the program opens no outbound connection. For an "On this
+  computer" recording, no audio goes to the server, not even to repair a
+  dropped passage.
+- **Download of the on-device transcription models**, only when the user
+  chooses **Download the models**: HTTPS requests for the model files to
+  Syntheo's GitHub release (`github.com`, redirected to
+  `release-assets.githubusercontent.com`), then to Hugging Face
+  (`huggingface.co`, redirected to its content servers under `hf.co`, for
+  example `cas-bridge.xethub.hf.co`) as a fallback, or to the mirror set by
+  the administrator (`speech_models_urls`) instead; HTTPS redirects are
+  followed (5 at most), including the mirror's redirects to another host. No meeting data is sent; these hosts see the
+  computer's IP address. No flow if the models are installed from a folder.
+  The administrator turns this flow off, with the whole module, through the
+  key `on_device_transcription_enabled` set to `false` in
+  `managed_settings.json`.
+- **Inference endpoints configured by the user**: ASR
   (OpenAI protocol: Realtime and `/v1/audio/transcriptions`; NVIDIA
   NeMo-Speech.cpp: WebSocket `/v1/audio/transcriptions/realtime`) and the
   configured LLM endpoint (OpenAI-compatible API). Capture
@@ -67,22 +95,36 @@ a deletion, erasure is retried at the next launch.
   plain HTTP only toward a private host (local machine, local network,
   Tailscale range, `.local` names), after confirmation outside the machine,
   and requires HTTPS elsewhere.
+- **Webhooks configured by the user**, off until an address is entered:
+  - local API webhooks (Settings → Developers): when a meeting ends
+    (`meeting.completed`) or a summary is produced (`note.enhanced`), a
+    signed `POST` request (HMAC-SHA256) to the address entered, carrying the
+    note, the summaries, the participants, the action items and the full
+    transcript text;
+  - the "Send to an address (webhook)" automation step: the JSON body the
+    user writes, which can include the same data, to the address entered,
+    without a signature.
+  - in both cases, the recipient is the address the user chose
+    (`http://` or `https://`). Unlike the endpoints, HTTPS is not required:
+    prefer HTTPS or a private network.
 - An endpoint run by a third party becomes the **user's processor**
   (Art. 28 GDPR): contract and data location to be checked.
 - **Other flows, apart from inference**:
-  - release notes: those of the installed version are included in the app;
-    showing those of another version triggers an **unauthenticated** request
-    to GitHub (`raw.githubusercontent.com`, or the public API
-    `api.github.com` for a nightly version). Only the version number is sent;
-  - update check (at startup, on by default, can be turned off by the user
-    or by the administrator through `managed_settings.json`, key
-    `automatic_updates`): **unauthenticated** read of `latest.json` on GitHub,
-    then download of the installer if the user updates. No personal data
-    sent; GitHub sees the computer's IP address;
-  - remote image in a summary, a proposal or a chat answer: nothing is
-    loaded automatically; a click on "Load image" sends a request to the
-    site hosting it, which sees the computer's IP address and the full image
-    address;
+  - update check: 15 seconds after startup, on by default, can be turned off
+    by the user or by the administrator (`managed_settings.json`, key
+    `automatic_updates` set to `false`), and at any time on the user's
+    request, even when the startup check is off. **Unauthenticated** read of
+    `latest.json`
+    (`github.com/WillIsback/Syntheo/releases/latest/download/latest.json`,
+    redirected by GitHub to its content servers), which also carries the new
+    version's release notes; those of the installed version are included in
+    the app. No personal data sent; GitHub sees the computer's IP address;
+  - download of the installer of an update, only when the user asks for it:
+    file from the GitHub release named in `latest.json`, whose signature is
+    checked before installation;
+  - on-device transcription models: see above (on click only, turned off by
+    `on_device_transcription_enabled`);
+  - echo cancellation models: bundled with the app, no download.
 - **No account, no sync, no error reports, nothing installed without the
   user's action** (the built-in update, AppImage and Windows installer,
   installs on request with a signed installer; .deb and MSI: link to GitHub
@@ -125,7 +167,10 @@ a deletion, erasure is retried at the next launch.
   processing: a self-hosted endpoint stays under the user's control; a
   third-party endpoint is a processor.
 - **Manage the retention period** of transcripts and notes, and delete them
-  when they are no longer needed.
+  when they are no longer needed. Deleting a meeting in the app removes it
+  from the app and from search, but its content stays in the local database.
+  To erase it permanently today, delete the data folder; a real purge is
+  planned.
 - **Data protection impact assessment (DPIA)**: to be considered by an
   organization that deploys the tool at scale or for sensitive meetings
   (Art. 35 GDPR).

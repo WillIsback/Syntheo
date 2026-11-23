@@ -14,9 +14,7 @@ fn make_specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
         .plugin_name(PLUGIN_NAME)
         .commands(tauri_specta::collect_commands![
             commands::deserialize,
-            commands::write_json_batch::<tauri::Wry>,
             commands::write_document_batch::<tauri::Wry>,
-            commands::read_document_batch,
             commands::list_folders::<tauri::Wry>,
             commands::move_session::<tauri::Wry>,
             commands::create_folder::<tauri::Wry>,
@@ -25,25 +23,20 @@ fn make_specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
             commands::audio_exist::<tauri::Wry>,
             commands::audio_delete::<tauri::Wry>,
             commands::audio_metadata::<tauri::Wry>,
-            commands::audio_delete_orphaned_expired::<tauri::Wry>,
             commands::audio_import::<tauri::Wry>,
             commands::audio_source_metadata,
             commands::audio_has_speech::<tauri::Wry>,
             commands::audio_path::<tauri::Wry>,
-            commands::audio_peaks::<tauri::Wry>,
             commands::audio_copy::<tauri::Wry>,
             commands::session_dir::<tauri::Wry>,
             commands::load_session_content::<tauri::Wry>,
             commands::delete_session_folder::<tauri::Wry>,
             commands::scan_and_read::<tauri::Wry>,
-            commands::chat_dir::<tauri::Wry>,
-            commands::entity_dir::<tauri::Wry>,
             commands::attachment_save::<tauri::Wry>,
             commands::attachment_list::<tauri::Wry>,
             commands::attachment_read::<tauri::Wry>,
             commands::attachment_remove::<tauri::Wry>,
             commands::folder_attachment_save::<tauri::Wry>,
-            commands::folder_attachment_list::<tauri::Wry>,
             commands::folder_attachment_read::<tauri::Wry>,
             commands::folder_attachment_remove::<tauri::Wry>,
         ])
@@ -72,18 +65,9 @@ mod test {
 
     #[test]
     fn export_types() {
-        const OUTPUT_FILE: &str = "./js/bindings.gen.ts";
-
-        make_specta_builder::<tauri::Wry>()
-            .disable_serde_phases()
-            .semantic_types(
-                specta_typescript::semantic::Configuration::empty().enable_lossless_floats(),
-            )
-            .dangerously_cast_bigints_to_number()
-            .export(specta_typescript::Typescript::default(), OUTPUT_FILE)
-            .unwrap();
-
-        let content = std::fs::read_to_string(OUTPUT_FILE).unwrap();
-        std::fs::write(OUTPUT_FILE, format!("// @ts-nocheck\n{content}")).unwrap();
+        syntheo_specta_export::write_bindings(
+            make_specta_builder::<tauri::Wry>(),
+            "./js/bindings.gen.ts",
+        );
     }
 }

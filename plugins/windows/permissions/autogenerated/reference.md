@@ -6,11 +6,7 @@ Default permissions for the plugin
 
 - `allow-window-show`
 - `allow-window-hide`
-- `allow-window-destroy`
-- `allow-window-navigate`
 - `allow-window-emit-navigate`
-- `allow-window-is-exists`
-- `allow-window-is-occluded`
 - `allow-webview-health-ack`
 - `allow-webview-health-ready`
 - `allow-window-set-frame-animated`
@@ -24,10 +20,6 @@ Default permissions for the plugin
 - `allow-floating-bar-update`
 - `allow-floating-bar-update-amplitude`
 - `allow-floating-bar-current-state`
-- `allow-live-caption-show`
-- `allow-live-caption-hide`
-- `allow-live-caption-update`
-- `allow-live-caption-current-state`
 
 ## Permission Table
 
@@ -171,110 +163,6 @@ Denies the floating_bar_update_amplitude command without any pre-configured scop
 <tr>
 <td>
 
-`windows:allow-live-caption-current-state`
-
-</td>
-<td>
-
-Enables the live_caption_current_state command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`windows:deny-live-caption-current-state`
-
-</td>
-<td>
-
-Denies the live_caption_current_state command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`windows:allow-live-caption-hide`
-
-</td>
-<td>
-
-Enables the live_caption_hide command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`windows:deny-live-caption-hide`
-
-</td>
-<td>
-
-Denies the live_caption_hide command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`windows:allow-live-caption-show`
-
-</td>
-<td>
-
-Enables the live_caption_show command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`windows:deny-live-caption-show`
-
-</td>
-<td>
-
-Denies the live_caption_show command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`windows:allow-live-caption-update`
-
-</td>
-<td>
-
-Enables the live_caption_update command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`windows:deny-live-caption-update`
-
-</td>
-<td>
-
-Denies the live_caption_update command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
 `windows:allow-remove-fake-window`
 
 </td>
@@ -405,32 +293,6 @@ Denies the webview_health_ready command without any pre-configured scope.
 <tr>
 <td>
 
-`windows:allow-window-destroy`
-
-</td>
-<td>
-
-Enables the window_destroy command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`windows:deny-window-destroy`
-
-</td>
-<td>
-
-Denies the window_destroy command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
 `windows:allow-window-emit-navigate`
 
 </td>
@@ -502,84 +364,6 @@ Enables the window_hide command without any pre-configured scope.
 <td>
 
 Denies the window_hide command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`windows:allow-window-is-exists`
-
-</td>
-<td>
-
-Enables the window_is_exists command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`windows:deny-window-is-exists`
-
-</td>
-<td>
-
-Denies the window_is_exists command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`windows:allow-window-is-occluded`
-
-</td>
-<td>
-
-Enables the window_is_occluded command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`windows:deny-window-is-occluded`
-
-</td>
-<td>
-
-Denies the window_is_occluded command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`windows:allow-window-navigate`
-
-</td>
-<td>
-
-Enables the window_navigate command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`windows:deny-window-navigate`
-
-</td>
-<td>
-
-Denies the window_navigate command without any pre-configured scope.
 
 </td>
 </tr>

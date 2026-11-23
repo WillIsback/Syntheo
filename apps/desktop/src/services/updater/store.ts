@@ -15,7 +15,7 @@ import {
 // l'installation sont séparés : on peut télécharger pendant une réunion et
 // n'installer qu'ensuite.
 
-export type AvailableUpdate = {
+type AvailableUpdate = {
   version: string;
   notes: string | null;
   date: string | null;
@@ -24,7 +24,7 @@ export type AvailableUpdate = {
   releaseUrl: string;
 };
 
-export type UpdaterPhase =
+type UpdaterPhase =
   | "idle"
   | "unavailable"
   | "checking"
@@ -53,7 +53,7 @@ type UpdaterState = {
 };
 
 /** Écoute ou finalisation en cours : aucune installation ni relance. */
-export function isListeningNow(): boolean {
+function isListeningNow(): boolean {
   const status = listenerStore.getState().live.status;
   return status === "active" || status === "finalizing";
 }

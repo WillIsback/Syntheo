@@ -8,7 +8,7 @@ import { AppPalette, Kbd, NoteActions, SettingsPath } from "/snippets/organize.g
 Une fois l'écoute terminée, la note passe à l'étape **Synthèse**. Tout tient dans un seul document :
 
 - **le compte rendu**, rédigé par votre serveur de synthèse ;
-- **« Vos notes »**, les notes que vous avez prises vous-même, sous le compte rendu ;
+- **vos notes**, celles que vous avez prises vous-même, dans l'onglet « Mes notes » : dans le compte rendu, les phrases qui en viennent sont en vert, et elles ne forment un bloc « Vos notes » sous le compte rendu que si « Colorer mes notes dans le compte rendu » est désactivé ;
 - **la transcription**, que vous affichez dans la marge de droite.
 
 Une légende « Provenance du texte » rappelle qui a écrit quoi : vos notes sont en vert (« Vos notes »), le texte de Syntheo est à l'encre normale (« Complété par Syntheo »). Le sceau 記 en bas du compte rendu indique qu'il est terminé.
@@ -32,11 +32,11 @@ En haut à droite de la note, à côté du sélecteur de dossier, le menu **•�
 
 - « Informations sur la réunion » : la date et les participants ;
 - « Historique des versions » ;
-- « Téléverser un audio » et « Téléverser un transcript », seulement dans une note vide ;
-- « Lancer une automatisation », avec les automatisations prêtes ;
+- « Téléverser un audio » et « Téléverser une transcription », seulement dans une note vide ;
+- « Lancer une automatisation » : les automatisations prêtes, à lancer sur cette note. Ce groupe n'apparaît que si au moins une automatisation est prête, et jamais pendant l'écoute ;
 - « Ouvrir dans une nouvelle fenêtre », et « Ouvrir le panneau flottant » pendant une capture ;
 - « Toujours au premier plan » ;
-- « Verrouiller la note » et « Supprimer ».
+- « Verrouiller la note » et « Supprimer ». « Verrouiller la note » n'apparaît que sous Windows, quand Windows Hello est disponible : sous Linux, l'authentification de l'appareil n'existe pas et l'entrée est absente.
 
 Essayez ci-dessous : ouvrez le menu **•••** (1), puis cliquez sur « Exporter » dans la capsule (2). Le bouton « Transcription » (3) affiche la marge de droite. Dans la fenêtre d'export, choisissez un format (4) et les éléments à inclure (5) : décochez tout, « Enregistrer » devient inactif.
 
@@ -73,13 +73,13 @@ Consultez [Personnaliser les comptes rendus](/fr/customize-summaries) pour crée
 
 Une note restée sans compte rendu, par exemple parce que vous avez quitté Syntheo pendant une pause, propose dans sa capsule « Reprendre l'écoute » et « Générer le compte rendu ». « Reprendre l'écoute » ajoute une nouvelle capture à la même note. Pour une pause en cours de réunion, utilisez plutôt « Mettre en pause » dans la capsule : voir [Faire une pause](/fr/meetings#faire-une-pause).
 
-Dans une note vide, le même menu propose aussi « Téléverser un audio » et « Téléverser un transcript ». Voir [Importer un enregistrement](/fr/import-recordings).
+Dans une note vide, le même menu propose aussi « Téléverser un audio » et « Téléverser une transcription ». Voir [Importer un enregistrement](/fr/import-recordings).
 
 ## Exporter une réunion
 
 1. Cliquez sur « Exporter » dans la capsule, ou appuyez sur <Kbd keys="Ctrl+P" />. Sur l'accueil, vous pouvez aussi faire un clic droit sur une note de « Reprendre » et choisir « Exporter… », sans l'ouvrir.
 2. Sous « Format de fichier », choisissez PDF, TXT, Markdown ou Org.
-3. Sous « Inclure », cochez « Mémo », « Résumé » et « Transcript », dans la combinaison de votre choix.
+3. Sous « Inclure », cochez « Mémo », « Résumé » et « Transcription », dans la combinaison de votre choix.
 
 4. Cliquez sur « Enregistrer ». « Imprimer… » ouvre toujours un PDF dans votre lecteur, quel que soit le format choisi : choisissez-y Imprimer.
 

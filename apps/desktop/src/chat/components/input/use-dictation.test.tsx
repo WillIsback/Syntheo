@@ -43,7 +43,10 @@ vi.mock("~/shared/config", () => ({
 }));
 
 vi.mock("~/stt/useSTTConnection", () => ({
-  useSTTConnection: () => ({ conn: mocks.connection }),
+  useSTTConnection: () => ({
+    conn: mocks.connection,
+    serverConn: mocks.connection,
+  }),
 }));
 
 vi.mock("~/stt/useRunBatch", () => ({

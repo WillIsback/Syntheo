@@ -1,6 +1,10 @@
 import type { ChatModeState } from "./chat-mode";
-import type { NavigationState, TabHistory } from "./navigation";
-import { pushHistory, updateHistoryCurrent } from "./navigation";
+import {
+  pushHistory,
+  updateHistoryCurrent,
+  type NavigationState,
+  type TabHistory,
+} from "./navigation";
 import {
   getDefaultState,
   isSameTab,
@@ -11,7 +15,7 @@ import {
 
 import { id } from "~/shared/utils";
 
-export const RETURN_ORIGIN_TAB_TYPES: Tab["type"][] = [
+const RETURN_ORIGIN_TAB_TYPES: Tab["type"][] = [
   "automations",
   "contacts",
   "folders",

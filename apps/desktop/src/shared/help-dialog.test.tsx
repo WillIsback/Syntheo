@@ -78,10 +78,7 @@ describe("Aide et raccourcis (F1, issue 372)", () => {
       }),
     );
 
-    expect(hoisted.openUrl).toHaveBeenCalledWith(
-      `${DOCUMENTATION_URL}/en`,
-      null,
-    );
+    expect(hoisted.openUrl).toHaveBeenCalledWith(`${DOCUMENTATION_URL}/en`);
   });
 
   it("s'ouvre depuis n'importe où avec openHelpDialog", async () => {

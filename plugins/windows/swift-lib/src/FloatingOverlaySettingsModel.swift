@@ -2,11 +2,6 @@ import Combine
 import Foundation
 
 struct FloatingOverlaySettingsChangePayload: Codable {
-  var floatingBarOpacity: Double?
-  var liveCaptionOpacity: Double?
-  var liveCaptionWidth: Double?
-  var liveCaptionLineCount: Int?
-  var liveCaptionPosition: LiveCaptionPosition?
   var liveCaptionMinimized: Bool?
 }
 
@@ -27,11 +22,6 @@ final class FloatingOverlaySettingsModel: ObservableObject {
   @Published var liveCaptionPosition: LiveCaptionPosition = .topCenter
   @Published var liveCaptionMinimized: Bool = true
 
-  private var pendingFloatingBarOpacity: Double?
-  private var pendingLiveCaptionOpacity: Double?
-  private var pendingLiveCaptionWidth: Double?
-  private var pendingLiveCaptionLineCount: Int?
-  private var pendingLiveCaptionPosition: LiveCaptionPosition?
   private var pendingLiveCaptionMinimized: Bool?
 
   private init() {}
@@ -47,62 +37,6 @@ final class FloatingOverlaySettingsModel: ObservableObject {
     }
   }
 
-  func apply(liveCaptionState state: LiveCaptionStatePayload) -> Bool {
-    applyLiveCaptionOpacity(state.opacity)
-    return applyLiveCaptionLayout(state)
-  }
-
-  func applyLiveCaptionLayout(_ state: LiveCaptionStatePayload) -> Bool {
-    applyLiveCaptionWidth(state.width)
-    applyLiveCaptionLineCount(state.lineCount)
-    let positionChanged = applyLiveCaptionPosition(state.position)
-    let minimizedChanged = applyLiveCaptionMinimized(state.minimized)
-    return positionChanged || minimizedChanged
-  }
-
-  func setFloatingBarOpacity(_ value: Double) {
-    let nextValue = clampedFloatingBarOpacity(value)
-    guard floatingBarOpacity != nextValue else { return }
-    floatingBarOpacity = nextValue
-    pendingFloatingBarOpacity = nextValue
-    RustBridge.floatingBarSettingsChanged(
-      FloatingOverlaySettingsChangePayload(floatingBarOpacity: nextValue))
-  }
-
-  func setLiveCaptionOpacity(_ value: Double) {
-    let nextValue = clampedLiveCaptionOpacity(value)
-    guard liveCaptionOpacity != nextValue else { return }
-    liveCaptionOpacity = nextValue
-    pendingLiveCaptionOpacity = nextValue
-    RustBridge.floatingBarSettingsChanged(
-      FloatingOverlaySettingsChangePayload(liveCaptionOpacity: nextValue))
-  }
-
-  func setLiveCaptionSize(width: Double, lineCount: Int) {
-    let nextWidth = clampedLiveCaptionWidth(width)
-    let nextLineCount = clampedLiveCaptionLineCount(lineCount)
-    guard !numbersMatch(liveCaptionWidth, nextWidth) || liveCaptionLineCount != nextLineCount else {
-      return
-    }
-
-    liveCaptionWidth = nextWidth
-    liveCaptionLineCount = nextLineCount
-    pendingLiveCaptionWidth = nextWidth
-    pendingLiveCaptionLineCount = nextLineCount
-    RustBridge.floatingBarSettingsChanged(
-      FloatingOverlaySettingsChangePayload(
-        liveCaptionWidth: nextWidth,
-        liveCaptionLineCount: nextLineCount))
-  }
-
-  func setLiveCaptionPosition(_ value: LiveCaptionPosition) {
-    guard liveCaptionPosition != value else { return }
-    liveCaptionPosition = value
-    pendingLiveCaptionPosition = value
-    RustBridge.floatingBarSettingsChanged(
-      FloatingOverlaySettingsChangePayload(liveCaptionPosition: value))
-  }
-
   func setLiveCaptionMinimized(_ value: Bool) {
     guard liveCaptionMinimized != value else { return }
     liveCaptionMinimized = value
@@ -113,54 +47,29 @@ final class FloatingOverlaySettingsModel: ObservableObject {
 
   private func applyFloatingBarOpacity(_ value: Double) {
     let nextValue = clampedFloatingBarOpacity(value)
-    if let pendingFloatingBarOpacity {
-      guard opacitiesMatch(pendingFloatingBarOpacity, nextValue) else { return }
-      self.pendingFloatingBarOpacity = nil
-    }
-
     guard !opacitiesMatch(floatingBarOpacity, nextValue) else { return }
     floatingBarOpacity = nextValue
   }
 
   private func applyLiveCaptionOpacity(_ value: Double) {
     let nextValue = clampedLiveCaptionOpacity(value)
-    if let pendingLiveCaptionOpacity {
-      guard opacitiesMatch(pendingLiveCaptionOpacity, nextValue) else { return }
-      self.pendingLiveCaptionOpacity = nil
-    }
-
     guard !opacitiesMatch(liveCaptionOpacity, nextValue) else { return }
     liveCaptionOpacity = nextValue
   }
 
   private func applyLiveCaptionWidth(_ value: Double) {
     let nextValue = clampedLiveCaptionWidth(value)
-    if let pendingLiveCaptionWidth {
-      guard numbersMatch(pendingLiveCaptionWidth, nextValue) else { return }
-      self.pendingLiveCaptionWidth = nil
-    }
-
     guard !numbersMatch(liveCaptionWidth, nextValue) else { return }
     liveCaptionWidth = nextValue
   }
 
   private func applyLiveCaptionLineCount(_ value: Int) {
     let nextValue = clampedLiveCaptionLineCount(value)
-    if let pendingLiveCaptionLineCount {
-      guard pendingLiveCaptionLineCount == nextValue else { return }
-      self.pendingLiveCaptionLineCount = nil
-    }
-
     guard liveCaptionLineCount != nextValue else { return }
     liveCaptionLineCount = nextValue
   }
 
   private func applyLiveCaptionPosition(_ value: LiveCaptionPosition) -> Bool {
-    if let pendingLiveCaptionPosition {
-      guard pendingLiveCaptionPosition == value else { return false }
-      self.pendingLiveCaptionPosition = nil
-    }
-
     guard liveCaptionPosition != value else { return false }
     liveCaptionPosition = value
     return true

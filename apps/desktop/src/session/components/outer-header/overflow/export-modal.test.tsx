@@ -258,7 +258,6 @@ describe("ExportModal : exporter ou imprimer (issue 374)", () => {
     expect(mocks.exportText).not.toHaveBeenCalled();
     expect(mocks.openPath).toHaveBeenCalledWith(
       "/cache/print/Project review-0f8c.pdf",
-      null,
     );
     expect(mocks.printPdf.mock.invocationCallOrder[0]).toBeLessThan(
       mocks.openPath.mock.invocationCallOrder[0],

@@ -7,7 +7,7 @@ use syntheo_db_app::{
     update_title_document as update_generated_title_document,
 };
 
-use crate::transaction_utils::{js_iso8601_timestamp, rollback_row_count_mismatch};
+use syntheo_db_core::{js_iso8601_timestamp, rollback_row_count_mismatch};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
 pub struct SessionDocumentUpdate {

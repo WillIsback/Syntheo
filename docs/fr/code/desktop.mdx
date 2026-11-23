@@ -12,7 +12,7 @@ Cette page relie les modules de l'application desktop aux pages de documentation
 | Interface | `apps/desktop/src` | React 19, routage TanStack Router (`routes/`), état Zustand (`store/zustand/`), textes traduits avec Lingui (`i18n/`). |
 | Cœur natif | `apps/desktop/src-tauri/src` | Démarrage, ouverture de la base, enregistrement des plugins Tauri, index de recherche, installation de la CLI et des compétences d'agents. |
 
-**Dépendances internes du paquet `@syntheo/desktop`** (`apps/desktop/package.json`) : `@syntheo/changelog`, `db`, `db-react`, `db-tauri`, `editor`, `provider-validation`, `store`, `ui`, `utils`, `design-system` (dev), et les liaisons TypeScript des plugins `contacts`, `db`, `deeplink2`, `detect`, `dictation`, `export`, `fs-sync`, `hooks`, `icon`, `local-api`, `local-auth`, `misc`, `notification`, `opener2`, `permissions`, `relay`, `session`, `settings`, `sfx`, `shortcut`, `store2`, `tantivy`, `template`, `transcription`, `tray`, `windows`.
+**Dépendances internes du paquet `@syntheo/desktop`** (`apps/desktop/package.json`) : `@syntheo/changelog`, `db`, `db-react`, `db-tauri`, `editor`, `provider-validation`, `store`, `ui`, `utils`, `design-system` (dev), et les liaisons TypeScript des plugins `contacts`, `db`, `deeplink2`, `detect`, `dictation`, `export`, `fs-sync`, `icon`, `local-api`, `local-auth`, `mesure`, `misc`, `notification`, `opener2`, `permissions`, `relay`, `session`, `settings`, `sfx`, `shortcut`, `store2`, `tantivy`, `template`, `transcription`, `tray`, `windows`.
 
 ## Cœur natif : `apps/desktop/src-tauri/src`
 
@@ -42,7 +42,7 @@ Commandes exposées à l'interface (`commands.rs`) : `get_onboarding_needed`, `s
 | --- | --- |
 | `routes/app/main/_layout*.tsx` | Fenêtre principale : onglets (notes, paramètres, modèles, contacts, dossiers, automatisations…), mise en page dans `main/` et `shared/main/`. |
 | `routes/app/note.$sessionId.tsx` | Note ouverte dans sa propre fenêtre. |
-| `routes/app/floating-bar.tsx`, `live-caption.tsx` | Barre flottante de réunion et sous-titres en direct (`meeting-float/`). |
+| `routes/app/floating-bar.tsx` | Barre flottante de réunion (`meeting-float/`). |
 | `routes/app/composer.tsx` | Fenêtre de chat rapide (`composer/`). |
 | `routes/app/onboarding.tsx` | Premier lancement (`onboarding/`). |
 | `routes/app/instruction.tsx` | Écran « continuer dans le navigateur » ; connexion, facturation et intégrations cloud ont disparu. |
@@ -54,7 +54,7 @@ Les types d'onglets sont dans `store/zustand/tabs/schema.ts`. Les anciens onglet
 | Module | Rôle | Plugins et paquets utilisés | Pages de doc concernées |
 | --- | --- | --- | --- |
 | `stt/` | Capture en réunion : démarrage (`useStartListening`), connexion STT (`useSTTConnection`), segments en direct, reprise après coupure, pause et sourdine par canal, arrêt automatique, consentement et annonce de réunion, détection des applications de visio (`detect-events.ts`, `meeting-apps.ts`), démarrage automatique (`session-auto-start.tsx`), import de fichiers audio (`useUploadFile`, `recording-import.tsx`). | `plugin-transcription`, `plugin-detect`, `plugin-permissions`, `plugin-notification`, `plugin-fs-sync`, `plugin-settings` | [/meetings](/fr/meetings), [/automatic-capture](/fr/automatic-capture), [/import-recordings](/fr/import-recordings), [/languages](/fr/languages), [/troubleshooting](/fr/troubleshooting) |
-| `store/zustand/listener/` | État de la session d'écoute : capture en direct ou par lot, sourdine, repli sur un autre micro, transcription en cours. | `plugin-transcription`, `plugin-settings`, `plugin-local-api`, `plugin-hooks`, `plugin-detect` | [/meetings](/fr/meetings) |
+| `store/zustand/listener/` | État de la session d'écoute : capture en direct ou par lot, sourdine, repli sur un autre micro, transcription en cours. | `plugin-transcription`, `plugin-settings`, `plugin-local-api`, `plugin-detect` | [/meetings](/fr/meetings) |
 | `store/zustand/ai-task/` | Tâches LLM : génération du compte rendu (`enhance-*`) et du titre (`title-*`), noms préférés des participants. | `plugin-template`, `plugin-transcription`, `plugin-local-api`, `@syntheo/editor` | [/meetings](/fr/meetings), [/customize-summaries](/fr/customize-summaries) |
 | `services/enhancer/` | Déclenche le compte rendu en fin de réunion : éligibilité, langue et longueur du résumé, notification. | `plugin-template`, `plugin-notification` | [/customize-summaries](/fr/customize-summaries), [/meetings](/fr/meetings) |
 | `services/` (reste) | `audio-retention*` et `audio-cleanup` (suppression de l'audio traité), `tray-recording`, `event-listeners`, `native-menu-locale`, `task-manager`. | `plugin-tray`, `plugin-windows`, `plugin-transcription` | [/data-and-privacy](/fr/data-and-privacy), [/conformite/rgpd](/fr/conformite/rgpd) |
@@ -69,11 +69,11 @@ Les types d'onglets sont dans `store/zustand/tabs/schema.ts`. Les anciens onglet
 | `folders/`, `sidebar/` | Dossiers en espaces projet (`folders/project/` : fil rouge, prochaine réunion et ordre du jour, modèle par dossier, suggestion de dossier) et barre latérale (arborescence des dossiers, navigation des paramètres, état du serveur). | aucun plugin propre | [/folders](/fr/folders), [/notes](/fr/notes) |
 | `home/` | Accueil : index des notes, bouton de démarrage, export. | aucun plugin propre | [/quickstart](/fr/quickstart), [/notes](/fr/notes) |
 | `search/` | Recherche plein texte (`contexts/engine`). | `plugin-tantivy` | [/notes](/fr/notes) |
-| `meeting-float/` | Barre flottante et sous-titres en direct pendant la capture. | `plugin-windows`, `plugin-transcription` | [/meetings](/fr/meetings), [/automatic-capture](/fr/automatic-capture) |
+| `meeting-float/` | Barre flottante pendant la capture. | `plugin-windows`, `plugin-transcription` | [/meetings](/fr/meetings), [/automatic-capture](/fr/automatic-capture) |
 | `lock/` | Verrouillage de l'application et des notes par authentification de l'appareil. | `plugin-local-auth` | [/security](/fr/security), [/data-and-privacy](/fr/data-and-privacy) |
 | `onboarding/` | Premier lancement : configuration, permissions, note de bienvenue. | `plugin-permissions` | [/quickstart](/fr/quickstart), [/ai-setup](/fr/ai-setup) |
 | `settings/` | Paramètres, détaillés plus bas. | voir plus bas | voir plus bas |
-| `i18n/` | Catalogues Lingui ; français par défaut, anglais disponible. | aucun | [/languages](/fr/languages) |
+| `i18n/` | Catalogues Lingui ; suit la langue du système (français si c'est la première langue préférée), anglais sinon. | aucun | [/languages](/fr/languages) |
 | `changelog/` | Onglet des nouveautés. | `@syntheo/changelog` | aucune |
 | `db/` | Accès aux données côté interface, file d'écriture avec reprise. | `plugin-db`, `@syntheo/db*` | aucune |
 | `editor-bridge/`, `edit/`, `contexts/`, `shared/`, `main/`, `styles/`, `types/` | Infrastructure d'interface : liens et mentions dans l'éditeur, onglet d'édition, registre d'outils, raccourcis, thème, liens profonds. | divers | aucune |

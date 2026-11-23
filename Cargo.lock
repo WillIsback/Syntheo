@@ -28,12 +28,10 @@ dependencies = [
  "hound",
  "onnx",
  "realfft",
- "reqwest 0.13.5",
  "rodio",
  "serde",
  "sha2 0.11.1",
  "thiserror 2.0.21",
- "tokio",
 ]
 
 [[package]]
@@ -67,20 +65,6 @@ dependencies = [
  "transcript",
  "utoipa",
  "uuid",
-]
-
-[[package]]
-name = "agent-core"
-version = "0.1.0"
-dependencies = [
- "claude",
- "codex 0.1.0",
- "opencode",
- "serde",
- "serde_json",
- "specta",
- "tempfile",
- "toml 0.8.2",
 ]
 
 [[package]]
@@ -678,8 +662,6 @@ dependencies = [
  "cidre",
  "cpal",
  "dasp",
- "data",
- "ebur128",
  "futures-util",
  "hound",
  "libpulse-binding",
@@ -725,10 +707,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "audio-mime"
-version = "0.1.0"
-
-[[package]]
 name = "audio-mock"
 version = "0.1.0"
 dependencies = [
@@ -768,12 +746,9 @@ dependencies = [
 name = "audio-utils"
 version = "0.1.0"
 dependencies = [
- "audio-interface",
- "audio-mime",
  "audioadapter-buffers",
  "bytes",
  "data",
- "futures-util",
  "hound",
  "resampler",
  "rodio",
@@ -1154,18 +1129,6 @@ dependencies = [
  "memchr",
  "regex-automata",
  "serde",
-]
-
-[[package]]
-name = "buffer"
-version = "0.1.0"
-dependencies = [
- "insta",
- "markdown",
- "mdast_util_to_markdown",
- "regex",
- "thiserror 2.0.21",
- "tl",
 ]
 
 [[package]]
@@ -1607,38 +1570,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c8d4a3bb8b1e0c1050499d1815f5ab16d04f0959b233085fb31653fbfc9d98f9"
 
 [[package]]
-name = "claude"
-version = "0.1.0"
-dependencies = [
- "cli-process",
- "dirs 7.0.0",
- "futures-util",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 2.0.21",
- "tokio",
- "tokio-util",
-]
-
-[[package]]
 name = "cli-docs"
 version = "0.1.0"
 dependencies = [
  "clap",
  "serde",
  "serde_json",
-]
-
-[[package]]
-name = "cli-process"
-version = "0.1.0"
-dependencies = [
- "futures-util",
- "thiserror 2.0.21",
- "tokio",
- "tokio-stream",
- "tokio-util",
 ]
 
 [[package]]
@@ -1715,23 +1652,6 @@ dependencies = [
  "csv",
  "serde",
  "tera",
-]
-
-[[package]]
-name = "codex"
-version = "0.1.0"
-dependencies = [
- "cli-process",
- "dirs 7.0.0",
- "futures-util",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 2.0.21",
- "tokio",
- "tokio-util",
- "toml 0.8.2",
- "url",
 ]
 
 [[package]]
@@ -1843,9 +1763,9 @@ dependencies = [
 
 [[package]]
 name = "cookie"
-version = "0.18.1"
+version = "0.18.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4ddef33a339a91ea89fb53151bd0a4689cfce27055c291dfa69945475d22c747"
+checksum = "d55f2d6c30eeec7d5c6f98bd4395d4abb1895629eab97ee6522d340623615f8a"
 dependencies = [
  "percent-encoding",
  "time",
@@ -2415,10 +2335,12 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2 0.11.1",
+ "speech-sources",
  "sqlx",
  "tempfile",
  "thiserror 2.0.21",
  "tokio",
+ "tracing",
  "url",
  "uuid",
 ]
@@ -2435,6 +2357,7 @@ dependencies = [
 name = "db-core"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "db-change",
  "libsqlite3-sys",
  "sqlx",
@@ -2453,6 +2376,7 @@ dependencies = [
  "sqlx",
  "thiserror 2.0.21",
  "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -2615,7 +2539,6 @@ dependencies = [
 name = "desktop"
 version = "0.0.0"
 dependencies = [
- "aec",
  "audio-actual",
  "audio-mock",
  "brand",
@@ -2624,14 +2547,18 @@ dependencies = [
  "db-core",
  "dirs 7.0.0",
  "host",
+ "http-range",
+ "image-hash",
  "intercept",
+ "percent-encoding",
  "pico-args",
  "regex",
  "reqwest 0.13.5",
  "serde",
  "serde_json",
  "specta",
- "specta-typescript",
+ "specta-export",
+ "speech-sources",
  "sqlx",
  "storage",
  "strum 0.28.0",
@@ -2649,11 +2576,11 @@ dependencies = [
  "tauri-plugin-dock",
  "tauri-plugin-export",
  "tauri-plugin-fs-sync",
- "tauri-plugin-hooks",
  "tauri-plugin-http",
  "tauri-plugin-icon",
  "tauri-plugin-local-api",
  "tauri-plugin-local-auth",
+ "tauri-plugin-mesure",
  "tauri-plugin-misc",
  "tauri-plugin-notification",
  "tauri-plugin-notify",
@@ -2682,6 +2609,7 @@ dependencies = [
  "tauri-plugin-window-state",
  "tauri-plugin-windows",
  "tauri-specta",
+ "tauri-utils",
  "tempfile",
  "tokio",
  "tracing",
@@ -2743,11 +2671,6 @@ dependencies = [
 name = "dictation-ui-macos"
 version = "0.1.0"
 dependencies = [
- "objc2",
- "objc2-app-kit",
- "objc2-foundation",
- "serde",
- "serde_json",
  "swift-rs 1.0.7",
 ]
 
@@ -2892,7 +2815,7 @@ dependencies = [
  "bit-set",
  "cssparser",
  "foldhash 0.2.0",
- "html5ever 0.39.0",
+ "html5ever",
  "precomputed-hash",
  "selectors",
  "tendril",
@@ -3012,18 +2935,6 @@ name = "earshot"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "88d6e21bffead7abb6d9202cfb3285b34b2e750335d8cf3460b004f886c6f6db"
-
-[[package]]
-name = "ebur128"
-version = "0.1.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a4cc730f4c2c61221890fbec2ccc3dd645e93a5e83d67c4ccd3552d90f513149"
-dependencies = [
- "bitflags 1.3.2",
- "dasp_frame",
- "dasp_sample",
- "smallvec 1.16.5",
-]
 
 [[package]]
 name = "ecow"
@@ -3477,9 +3388,9 @@ checksum = "aa9a19cbb55df58761df49b23516a86d432839add4af60fc256da840f66ed35b"
 
 [[package]]
 name = "form_urlencoded"
-version = "1.2.2"
+version = "1.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cb4cb245038516f5f85277875cdaa4f7d2c9a0fa0468de06ed190163b1581fcf"
+checksum = "afa489199eaffb1211795df1c6236ce1ad0d41a6fa45250add73e3b02420f06e"
 dependencies = [
  "percent-encoding",
 ]
@@ -3531,7 +3442,6 @@ dependencies = [
  "specta",
  "storage",
  "tauri-specta",
- "tempfile",
  "thiserror 2.0.21",
  "tiptap",
  "tracing",
@@ -3689,14 +3599,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c13a5f2acc785d8fb6bf6b7ab6bfb0ef5dad4f4d97e8e70bb8e470722312f76f"
 dependencies = [
  "libc",
-]
-
-[[package]]
-name = "gbnf"
-version = "0.1.0"
-dependencies = [
- "serde",
- "specta",
 ]
 
 [[package]]
@@ -5294,19 +5196,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "hooks"
-version = "0.1.0"
-dependencies = [
- "futures-util",
- "serde",
- "serde_json",
- "shellexpand",
- "specta",
- "thiserror 2.0.21",
- "tokio",
-]
-
-[[package]]
 name = "host"
 version = "0.1.0"
 dependencies = [
@@ -5320,34 +5209,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "62adaabb884c94955b19907d60019f4e145d091c75345379e70d1ee696f7854f"
 
 [[package]]
-name = "htmd"
-version = "0.5.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "efd66117e0b1eac329399e316f30b9530afcb7cfbd0df59a007023b6673a6c37"
-dependencies = [
- "html5ever 0.38.0",
- "markup5ever_rcdom",
- "phf 0.13.1",
-]
-
-[[package]]
-name = "html5ever"
-version = "0.38.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1054432bae2f14e0061e33d23402fbaa67a921d319d56adc6bcf887ddad1cbc2"
-dependencies = [
- "log",
- "markup5ever 0.38.0",
-]
-
-[[package]]
 name = "html5ever"
 version = "0.39.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "46a1761807faccc9a19e86944bbf40610014066306f96edcdedc2fb714bcb7b8"
 dependencies = [
  "log",
- "markup5ever 0.39.0",
+ "markup5ever",
 ]
 
 [[package]]
@@ -5827,6 +5695,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "image-hash"
+version = "0.1.0"
+dependencies = [
+ "sha2 0.11.1",
+]
+
+[[package]]
 name = "image-webp"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5933,9 +5808,6 @@ dependencies = [
 name = "intercept"
 version = "0.1.0"
 dependencies = [
- "objc2",
- "objc2-app-kit",
- "objc2-foundation",
  "swift-rs 1.0.7",
 ]
 
@@ -6189,19 +6061,7 @@ version = "4.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7421438de105a0827e44fadd05377727847d717c80ce29a229f85fd04c427b72"
 dependencies = [
- "jsonptr 0.7.1",
- "serde",
- "serde_json",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "json-patch"
-version = "5.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aa295c8f71b9bad32d060e0e145f96dcba0cc6c6171e129646140d1c96b05617"
-dependencies = [
- "jsonptr 0.8.2",
+ "jsonptr",
  "serde",
  "serde_json",
  "thiserror 2.0.21",
@@ -6212,16 +6072,6 @@ name = "jsonptr"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a5a3cc660ba5d72bce0b3bb295bf20847ccbb40fd423f3f05b61273672e561fe"
-dependencies = [
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "jsonptr"
-version = "0.8.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "72c22d99362c7aac7d77efab6b49c2181674b165d7e6e7c755b3432ded64bf51"
 dependencies = [
  "serde",
  "serde_json",
@@ -6770,17 +6620,6 @@ dependencies = [
 
 [[package]]
 name = "markup5ever"
-version = "0.38.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8983d30f2915feeaaab2d6babdd6bc7e9ed1a00b66b5e6d74df19aa9c0e91862"
-dependencies = [
- "log",
- "tendril",
- "web_atoms",
-]
-
-[[package]]
-name = "markup5ever"
 version = "0.39.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7122d987ec5f704ee56f6e5b41a7d93722e9aae27ae07cafa4036c4d3f9757de"
@@ -6788,18 +6627,6 @@ dependencies = [
  "log",
  "tendril",
  "web_atoms",
-]
-
-[[package]]
-name = "markup5ever_rcdom"
-version = "0.38.0+unofficial"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "333171ccdf66e915257740d44e38ea5b1b19ce7b45d33cc35cb6f118fbd981ff"
-dependencies = [
- "html5ever 0.38.0",
- "markup5ever 0.38.0",
- "tendril",
- "xml5ever",
 ]
 
 [[package]]
@@ -6885,6 +6712,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "mesure"
+version = "0.1.0"
+dependencies = [
+ "flate2",
+ "hmac 0.13.0",
+ "serde",
+ "serde_json",
+ "sha2 0.11.1",
+ "similar",
+ "thiserror 2.0.21",
+ "unicode-normalization",
+]
+
+[[package]]
 name = "mime"
 version = "0.3.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6906,20 +6747,9 @@ version = "2.24.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "86886cf6dbf4e614b19c9a1eec9775f021869d7eadde0fc73921a81b90c9b4c9"
 dependencies = [
- "indexmap 2.14.2",
  "memo-map",
  "serde",
  "serde_json",
-]
-
-[[package]]
-name = "minijinja-contrib"
-version = "2.24.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bd3e5f077bc2379f0f7d911e7cfdd921114ed99fc884533dca502944cb355b11"
-dependencies = [
- "minijinja",
- "serde",
 ]
 
 [[package]]
@@ -7916,7 +7746,6 @@ dependencies = [
  "ndarray",
  "ort",
  "thiserror 2.0.21",
- "tracing",
 ]
 
 [[package]]
@@ -7943,22 +7772,6 @@ dependencies = [
  "serde",
  "serde_json",
  "strum 0.28.0",
-]
-
-[[package]]
-name = "opencode"
-version = "0.1.0"
-dependencies = [
- "cli-process",
- "dirs 7.0.0",
- "futures-util",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 2.0.21",
- "tokio",
- "tokio-util",
- "url",
 ]
 
 [[package]]
@@ -8136,6 +7949,7 @@ dependencies = [
  "bytes",
  "data",
  "futures-util",
+ "hmac 0.13.0",
  "language",
  "openai-transcription",
  "owhisper-interface",
@@ -8144,6 +7958,7 @@ dependencies = [
  "reqwest-tracing",
  "serde",
  "serde_json",
+ "sha2 0.11.1",
  "strum 0.28.0",
  "thiserror 2.0.21",
  "tokio",
@@ -8519,6 +8334,17 @@ name = "pin-project-lite"
 version = "0.2.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a89322df9ebe1c1578d689c92318e070967d1042b512afbe49518723f4e6d5cd"
+
+[[package]]
+name = "pinned-fetch"
+version = "0.1.0"
+dependencies = [
+ "reqwest 0.13.5",
+ "sha2 0.11.1",
+ "tempfile",
+ "thiserror 2.0.21",
+ "tokio",
+]
 
 [[package]]
 name = "piper"
@@ -9313,7 +9139,6 @@ dependencies = [
  "base64 0.23.1",
  "bytes",
  "encoding_rs",
- "futures-channel",
  "futures-core",
  "futures-util",
  "h2",
@@ -9386,7 +9211,6 @@ version = "0.0.1"
 dependencies = [
  "audio-interface",
  "audioadapter-buffers",
- "dasp",
  "data",
  "futures-util",
  "pin-project",
@@ -10215,21 +10039,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "session-ingest"
-version = "0.1.0"
-dependencies = [
- "agent-access",
- "db-app",
- "db-core",
- "serde",
- "serde_json",
- "sha2 0.11.1",
- "sqlx",
- "thiserror 2.0.21",
- "tokio",
-]
-
-[[package]]
 name = "sha1"
 version = "0.10.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -10529,6 +10338,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "specta-export"
+version = "0.1.0"
+dependencies = [
+ "specta-typescript",
+ "tauri",
+ "tauri-specta",
+]
+
+[[package]]
 name = "specta-macros"
 version = "2.0.0-rc.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -10566,6 +10384,48 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d9bf531215ea70fba8264edecf98f12600462cf359f2038602a47aeda5ecd5b8"
 dependencies = [
  "specta",
+]
+
+[[package]]
+name = "speech-host"
+version = "0.1.0"
+dependencies = [
+ "bytes",
+ "futures-util",
+ "image-hash",
+ "libc",
+ "owhisper-client",
+ "owhisper-interface",
+ "pinned-fetch",
+ "serde",
+ "serde_json",
+ "sha2 0.11.1",
+ "speech-probe",
+ "speech-sources",
+ "tempfile",
+ "tokio",
+ "tracing",
+ "uuid",
+ "windows",
+]
+
+[[package]]
+name = "speech-probe"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "specta",
+ "sysinfo",
+ "windows",
+]
+
+[[package]]
+name = "speech-sources"
+version = "0.1.0"
+dependencies = [
+ "serde_json",
+ "url",
 ]
 
 [[package]]
@@ -10829,7 +10689,6 @@ dependencies = [
  "parking_lot",
  "phf_shared 0.13.1",
  "precomputed-hash",
- "serde",
 ]
 
 [[package]]
@@ -10935,7 +10794,6 @@ name = "supervisor"
 version = "0.1.0"
 dependencies = [
  "ractor",
- "thiserror 2.0.21",
  "tokio",
  "tracing",
 ]
@@ -11268,6 +11126,7 @@ dependencies = [
  "db-core",
  "dirs 7.0.0",
  "insta",
+ "mesure",
  "rmcp",
  "schemars 1.2.3",
  "serde",
@@ -11641,7 +11500,7 @@ dependencies = [
  "dirs 7.0.0",
  "glob",
  "heck 0.5.0",
- "json-patch 4.2.0",
+ "json-patch",
  "schemars 0.8.22",
  "semver",
  "serde",
@@ -11662,7 +11521,7 @@ dependencies = [
  "base64 0.23.1",
  "brotli",
  "ico",
- "json-patch 4.2.0",
+ "json-patch",
  "plist",
  "png 0.18.1",
  "proc-macro2",
@@ -11755,13 +11614,12 @@ dependencies = [
 name = "tauri-plugin-contacts"
 version = "0.1.0"
 dependencies = [
- "chrono",
  "db-app",
  "db-core",
  "serde",
  "serde_json",
  "specta",
- "specta-typescript",
+ "specta-export",
  "sqlx",
  "tauri",
  "tauri-plugin",
@@ -11782,16 +11640,14 @@ dependencies = [
  "db-reactive",
  "serde",
  "serde_json",
- "session-ingest",
  "specta",
- "specta-typescript",
+ "specta-export",
  "sqlx",
  "tauri",
  "tauri-plugin",
  "tauri-specta",
  "thiserror 2.0.21",
  "tokio",
- "tracing",
 ]
 
 [[package]]
@@ -11819,37 +11675,28 @@ dependencies = [
 name = "tauri-plugin-deeplink2"
 version = "0.1.0"
 dependencies = [
- "askama",
- "axum",
- "open",
  "serde",
  "serde_qs",
  "specta",
- "specta-typescript",
+ "specta-export",
  "tauri",
  "tauri-plugin",
  "tauri-plugin-deep-link",
  "tauri-specta",
  "thiserror 2.0.21",
- "tokio",
  "tracing",
  "url",
- "uuid",
 ]
 
 [[package]]
 name = "tauri-plugin-detect"
 version = "0.1.0"
 dependencies = [
- "base64 0.23.1",
  "detect",
  "notification-interface",
- "objc2",
- "objc2-app-kit",
- "objc2-foundation",
  "serde",
  "specta",
- "specta-typescript",
+ "specta-export",
  "tauri",
  "tauri-plugin",
  "tauri-plugin-detect",
@@ -11895,7 +11742,7 @@ dependencies = [
  "serde",
  "serde_json",
  "specta",
- "specta-typescript",
+ "specta-export",
  "tauri",
  "tauri-plugin",
  "tauri-specta",
@@ -11903,7 +11750,6 @@ dependencies = [
  "tokio",
  "tokio-tungstenite 0.29.0",
  "tokio-util",
- "url",
  "windows",
 ]
 
@@ -11928,7 +11774,7 @@ version = "0.1.0"
 dependencies = [
  "export-core",
  "specta",
- "specta-typescript",
+ "specta-export",
  "sqlx",
  "tauri",
  "tauri-plugin",
@@ -11970,9 +11816,8 @@ version = "0.1.0"
 dependencies = [
  "fs-sync-core",
  "rayon",
- "serde_json",
  "specta",
- "specta-typescript",
+ "specta-export",
  "tauri",
  "tauri-plugin",
  "tauri-plugin-notify",
@@ -11994,21 +11839,6 @@ dependencies = [
  "serde_json",
  "tauri",
  "tauri-plugin",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "tauri-plugin-hooks"
-version = "0.1.0"
-dependencies = [
- "hooks",
- "serde",
- "specta",
- "specta-typescript",
- "tauri",
- "tauri-plugin",
- "tauri-plugin-settings",
- "tauri-specta",
  "thiserror 2.0.21",
 ]
 
@@ -12041,13 +11871,12 @@ dependencies = [
 name = "tauri-plugin-icon"
 version = "0.1.0"
 dependencies = [
- "base64 0.23.1",
  "objc2",
  "objc2-app-kit",
  "objc2-foundation",
  "serde",
  "specta",
- "specta-typescript",
+ "specta-export",
  "tauri",
  "tauri-plugin",
  "tauri-specta",
@@ -12071,7 +11900,7 @@ dependencies = [
  "serde_json",
  "sha2 0.11.1",
  "specta",
- "specta-typescript",
+ "specta-export",
  "sqlx",
  "sys-locale",
  "tauri",
@@ -12095,7 +11924,7 @@ dependencies = [
  "objc2-foundation",
  "objc2-local-authentication",
  "specta",
- "specta-typescript",
+ "specta-export",
  "tauri",
  "tauri-plugin",
  "tauri-specta",
@@ -12104,13 +11933,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "tauri-plugin-mesure"
+version = "0.1.0"
+dependencies = [
+ "base64 0.23.1",
+ "db-app",
+ "mesure",
+ "serde",
+ "serde_json",
+ "specta",
+ "specta-export",
+ "tauri",
+ "tauri-plugin",
+ "tauri-plugin-db",
+ "tauri-specta",
+]
+
+[[package]]
 name = "tauri-plugin-misc"
 version = "0.1.0"
 dependencies = [
- "buffer",
  "serde",
  "specta",
- "specta-typescript",
+ "specta-export",
  "sysinfo",
  "tauri",
  "tauri-plugin",
@@ -12125,7 +11970,7 @@ dependencies = [
  "notification",
  "serde",
  "specta",
- "specta-typescript",
+ "specta-export",
  "tauri",
  "tauri-plugin",
  "tauri-plugin-windows",
@@ -12177,12 +12022,13 @@ name = "tauri-plugin-opener2"
 version = "0.1.0"
 dependencies = [
  "specta",
- "specta-typescript",
+ "specta-export",
  "tauri",
  "tauri-plugin",
  "tauri-plugin-opener",
  "tauri-specta",
  "thiserror 2.0.21",
+ "url",
 ]
 
 [[package]]
@@ -12223,7 +12069,7 @@ dependencies = [
  "overlay-kit",
  "serde",
  "specta",
- "specta-typescript",
+ "specta-export",
  "tauri",
  "tauri-plugin",
  "tauri-plugin-shell",
@@ -12280,12 +12126,11 @@ dependencies = [
 name = "tauri-plugin-session"
 version = "0.1.0"
 dependencies = [
- "chrono",
  "db-app",
  "db-core",
  "serde",
  "specta",
- "specta-typescript",
+ "specta-export",
  "sqlx",
  "tauri",
  "tauri-plugin",
@@ -12303,7 +12148,7 @@ dependencies = [
  "serde",
  "serde_json",
  "specta",
- "specta-typescript",
+ "specta-export",
  "storage",
  "tauri",
  "tauri-plugin",
@@ -12322,7 +12167,7 @@ dependencies = [
  "serde",
  "serde_json",
  "specta",
- "specta-typescript",
+ "specta-export",
  "tauri",
  "tauri-plugin",
  "tauri-specta",
@@ -12362,7 +12207,7 @@ dependencies = [
  "serde_json",
  "shortcut-macos",
  "specta",
- "specta-typescript",
+ "specta-export",
  "tauri",
  "tauri-plugin",
  "tauri-plugin-global-shortcut",
@@ -12432,7 +12277,7 @@ dependencies = [
  "serde",
  "serde_json",
  "specta",
- "specta-typescript",
+ "specta-export",
  "storage",
  "strum 0.28.0",
  "tauri",
@@ -12455,10 +12300,8 @@ dependencies = [
  "objc2-app-kit",
  "objc2-foundation",
  "open",
- "serde",
- "serde_json",
  "specta",
- "specta-typescript",
+ "specta-export",
  "tauri",
  "tauri-plugin",
  "tauri-plugin-clipboard-manager",
@@ -12480,7 +12323,7 @@ dependencies = [
  "language",
  "serde",
  "specta",
- "specta-typescript",
+ "specta-export",
  "tantivy",
  "tauri",
  "tauri-plugin",
@@ -12495,15 +12338,13 @@ dependencies = [
 name = "tauri-plugin-template"
 version = "0.1.0"
 dependencies = [
- "chrono",
  "db-app",
  "db-core",
- "gbnf",
  "language",
  "serde",
  "serde_json",
  "specta",
- "specta-typescript",
+ "specta-export",
  "sqlx",
  "summary",
  "tauri",
@@ -12511,9 +12352,7 @@ dependencies = [
  "tauri-plugin-db",
  "tauri-specta",
  "template-app",
- "template-app-legacy",
  "tokio",
- "tracing",
 ]
 
 [[package]]
@@ -12553,12 +12392,15 @@ dependencies = [
  "serde",
  "serde_json",
  "specta",
- "specta-typescript",
+ "specta-export",
+ "speech-host",
+ "speech-probe",
  "sqlx",
  "storage",
  "tauri",
  "tauri-plugin",
  "tauri-plugin-db",
+ "tauri-plugin-dialog",
  "tauri-plugin-fs-sync",
  "tauri-plugin-settings",
  "tauri-plugin-store2",
@@ -12630,13 +12472,11 @@ dependencies = [
  "gtk-layer-shell",
  "objc2",
  "objc2-app-kit",
- "objc2-core-foundation",
- "objc2-core-graphics",
  "objc2-foundation",
  "serde",
  "serde_json",
  "specta",
- "specta-typescript",
+ "specta-export",
  "strum 0.28.0",
  "swift-rs 1.0.7",
  "tauri",
@@ -12750,7 +12590,7 @@ dependencies = [
  "glob",
  "http",
  "infer 0.22.0",
- "json-patch 4.2.0",
+ "json-patch",
  "log",
  "memchr",
  "phf 0.13.1",
@@ -12814,21 +12654,6 @@ dependencies = [
  "minijinja",
  "serde",
  "specta",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "template-app-legacy"
-version = "0.1.0"
-dependencies = [
- "htmd",
- "minijinja",
- "minijinja-contrib",
- "reqwest 0.13.5",
- "serde",
- "serde_json",
- "specta",
- "strum 0.28.0",
  "thiserror 2.0.21",
 ]
 
@@ -13053,12 +12878,6 @@ dependencies = [
  "mdast_util_to_markdown",
  "serde_json",
 ]
-
-[[package]]
-name = "tl"
-version = "0.7.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b130bd8a58c163224b44e217b4239ca7b927d82bf6cc2fea1fc561d15056e3f7"
 
 [[package]]
 name = "tokio"
@@ -13434,14 +13253,11 @@ dependencies = [
 name = "transcript"
 version = "0.1.0"
 dependencies = [
- "json-patch 5.0.0",
  "owhisper-interface",
  "regex",
  "serde",
  "serde_json",
  "specta",
- "template-app",
- "thiserror 2.0.21",
  "uuid",
 ]
 
@@ -13702,7 +13518,7 @@ checksum = "4cab0200105831a9158e63718a0f6141c78cb2c1722ed17d19ad28941e3b8491"
 dependencies = [
  "az",
  "bumpalo",
- "codex 0.2.0",
+ "codex",
  "comemo",
  "ecow",
  "either",
@@ -13741,7 +13557,7 @@ dependencies = [
  "bumpalo",
  "chinese-number",
  "ciborium",
- "codex 0.2.0",
+ "codex",
  "comemo",
  "csv",
  "ecow",
@@ -14136,9 +13952,9 @@ dependencies = [
 
 [[package]]
 name = "url"
-version = "2.5.8"
+version = "2.5.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ff67a8a4397373c3ef660812acab3268222035010ab8680ec4215f38ba3d0eed"
+checksum = "f00cd2407bb42c0ef17be88d4cf020f5cceffd121665bac9b8b9493a369b3b1a"
 dependencies = [
  "form_urlencoded",
  "idna",
@@ -15534,6 +15350,7 @@ dependencies = [
  "tokio-tungstenite 0.29.0",
  "tracing",
  "url",
+ "uuid",
 ]
 
 [[package]]
@@ -15637,16 +15454,6 @@ name = "xml-rs"
 version = "0.8.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e450f9b2ed1dff33c94c12589a87338689467b9c4f5d8a5710bd09a847d2c8a7"
-
-[[package]]
-name = "xml5ever"
-version = "0.38.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d3dc9559429edf0cd3f327cc0afd9d6b36fa8cec6d93107b7fbe64f806b5f2d9"
-dependencies = [
- "log",
- "markup5ever 0.38.0",
-]
 
 [[package]]
 name = "xmlparser"

@@ -177,20 +177,6 @@ class NotificationInstance {
     }
   }
 
-  func restartDismissTimer() {
-    guard timeoutSeconds > 0 else { return }
-    dismissTimer?.invalidate()
-    dismissTimer = nil
-    remainingDismissSeconds = timeoutSeconds
-    dismissStartTime = Date()
-    scheduleDismissTimer(after: timeoutSeconds)
-    startStopCountdownUpdates()
-
-    if let compactActionButton {
-      compactActionButton.startProgress(duration: timeoutSeconds)
-    }
-  }
-
   func dismiss() {
     guard !isDismissing else { return }
     isDismissing = true

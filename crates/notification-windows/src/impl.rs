@@ -22,9 +22,10 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 use windows::core::{PCWSTR, w};
 
-use syntheo_notification_interface::{DismissTimer, Notification, PrimaryAction, unix_now};
+use syntheo_notification_interface::{
+    DismissTimer, Notification, PrimaryAction, callbacks, unix_now,
+};
 
-use crate::callbacks;
 use crate::expanded::expanded_body;
 use crate::icon::{destroy_icon, load_notification_icon};
 use crate::layout::{HitTarget, MAX_NOTIFICATIONS, NotificationLayout, fit_stack, stacked_origin};
@@ -595,7 +596,7 @@ impl NotificationInstance {
     fn redraw(&mut self) {
         let now = Instant::now();
         let body = if self.is_expanded {
-            expanded_body(&self.payload, self.schedule_remaining())
+            expanded_body(&self.payload, self.payload.schedule_remaining())
         } else {
             self.payload.compact_message(self.compact_remaining(now))
         };
@@ -631,23 +632,9 @@ impl NotificationInstance {
         self.rendered = Some(key);
     }
 
-    fn schedule_remaining(&self) -> Option<Duration> {
-        let start_time = self.payload.start_time?;
-        Some(Duration::from_secs(
-            start_time.saturating_sub(unix_now()).max(0) as u64,
-        ))
-    }
-
     fn compact_remaining(&self, now: Instant) -> Option<Duration> {
-        if self.payload.start_time.is_some() {
-            self.schedule_remaining()
-        } else if self.payload.shows_stop_countdown() {
-            self.dismiss_timer
-                .as_ref()
-                .map(|timer| timer.remaining(now))
-        } else {
-            None
-        }
+        self.payload
+            .compact_remaining(self.dismiss_timer.as_ref(), now)
     }
 }
 

@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use super::truncate;
 use crate::cli::{DocumentKind, ExportFormat, MeetingCommand, MeetingSource};
 use crate::{Args, Error, Result, db, output};
 use syntheo_agent_access::{
@@ -368,18 +369,6 @@ fn render_documents(documents: &[Document]) -> String {
         })
         .collect::<Vec<_>>()
         .join("\n\n")
-}
-
-fn truncate(value: &str, width: usize) -> String {
-    if value.chars().count() <= width {
-        return value.to_string();
-    }
-    let mut text = value
-        .chars()
-        .take(width.saturating_sub(1))
-        .collect::<String>();
-    text.push('…');
-    text
 }
 
 #[cfg(test)]

@@ -10,7 +10,7 @@ Syntheo Desktop est un client local, sans serveur éditeur. La surface à évalu
 - **Aucun compte, aucune authentification** auprès de l'éditeur. Aucun service Syntheo ne reçoit vos données.
 - **Aucune télémétrie, aucun rapport d'erreur** : le code d'analyse et de rapport d'erreur est retiré, il n'y a rien à désactiver.
 - **Aucun audio sur disque**, sur aucun chemin (capture, dictée, import).
-- **Réseau limité** aux serveurs d'inférence et aux webhooks que vous configurez, plus deux flux mineurs sans contenu de réunion (recherche de mises à jour et notes de version sur GitHub) et le chargement d'une image distante quand vous cliquez sur « Charger l'image ». Ces flux sont listés dans [la fiche RGPD](/fr/conformite/rgpd).
+- **Réseau limité** aux serveurs d'inférence et aux webhooks que vous configurez, plus trois flux sans contenu de réunion : la recherche de mises à jour (`latest.json` sur GitHub, 15 secondes après le démarrage, désactivable, ou à la demande), le téléchargement de l'installeur quand vous mettez à jour et, seulement si vous les demandez, les modèles de la transcription « Sur ce poste » (GitHub, Hugging Face en secours, ou le miroir de votre organisation). Ces flux sont listés dans [la fiche RGPD](/fr/conformite/rgpd).
 - **Aucune bascule** vers un service tiers quand un serveur d'inférence ne répond pas.
 - **Code ouvert** : tout est vérifiable dans le [dépôt GitHub](https://github.com/WillIsback/Syntheo).
 
@@ -43,7 +43,7 @@ Gravités actuelles : aucune critique, aucune élevée, 3 moyennes, 19 faibles, 
 
 ### Ce que la 0.7.5 a changé
 
-- **Images distantes** : une image hébergée sur un autre site, dans un compte rendu, une proposition ou une réponse du chat, n'est plus chargée d'office. Elle ne l'est que si vous cliquez sur « Charger l'image ». Une politique de sécurité du contenu (CSP) stricte encadre aussi l'interface.
+- **Images distantes** : une image hébergée sur un autre site, dans un compte rendu, une proposition ou une réponse du chat, n'est plus chargée d'office : en 0.7.5, seulement sur un clic sur « Charger l'image » ; depuis la 0.8.0, plus du tout, son texte alternatif s'affiche à sa place. Une politique de sécurité du contenu (CSP) stricte encadre aussi l'interface.
 - **Modifications du chat validées** : le chat ne modifie plus une réunion, ne déplace plus son contenu et ne range plus de réunions sans votre clic sur « Appliquer ». Les termes qu'il propose pour le dictionnaire sont bornés et passent par la même carte.
 - **HTTP en clair** : une adresse de serveur en HTTP vers une autre machine que la vôtre n'est enregistrée qu'après confirmation, puis reste signalée sur la carte du serveur.
 - **Journaux et données locales** : le journal masque davantage de clés et de jetons ; les secrets de signature des webhooks sont dans le trousseau du système ; sous Linux, le dossier de données, la base et les journaux sont réservés à votre compte.
@@ -74,6 +74,31 @@ Les constats faibles ou pour information encore ouverts touchent : le traitement
 
 Pour signaler une vulnérabilité, voir [Signaler une vulnérabilité](#signaler-une-vulnérabilité).
 
+## Transcription sur le poste
+
+La source [Sur ce poste](/fr/on-device-transcription) s'appuie sur un programme compagnon, `syntheo-speech`, livré dans l'installeur de Syntheo à côté de l'application, et sur des modèles téléchargés ou installés à part. Cette section décrit ce que Syntheo garantit à leur sujet, et ce qu'il ne garantit pas.
+
+### Ce qui est garanti
+
+- **Programme livré avec l'application** : il est installé, mis à jour et désinstallé avec Syntheo, et signé avec elle sous Windows (même signataire Authenticode, contrôlé par la chaîne de release). L'application ne le prend que dans son propre dossier d'installation, chemin résolu côté Rust (dossier canonique de l'exécutable ; lien ou point de réanalyse refusé), jamais depuis un chemin venu de l'interface, puis l'exécute depuis une copie vérifiée (voir plus bas).
+- **Empreintes compilées** : à la construction, l'application épingle l'empreinte du programme (hors signature Authenticode, que la signature ajoute ensuite) et, sous Windows, celle du runtime Visual C++ qu'il charge ; elle compile aussi la liste des modèles avec leur taille et leur empreinte SHA-256.
+- **Vérification avant chaque lancement** : le programme et les modèles doivent correspondre à ces empreintes ; un fichier absent, différent ou remplacé par un lien est refusé.
+- **Mêmes objets vérifiés et exécutés** : le programme (et sous Windows son runtime) est copié dans un dossier privé neuf à chaque lancement (droits limités à votre compte), haché depuis cette copie et exécuté depuis elle. Les modèles sont ouverts une fois et hachés depuis le fichier ouvert : sous Linux, le programme hérite de ces fichiers ouverts ; sous Windows, chaque modèle et chaque dossier de son chemin restent verrouillés contre l'écriture et la suppression tant qu'il tourne.
+- **Modèles vérifiés à l'installation** : téléchargés en HTTPS seulement (redirections comprises) ou copiés depuis un dossier local choisi côté Rust, chaque fichier est écrit à côté, haché pendant l'écriture, comparé à sa taille et à son empreinte compilées, puis mis en place ; une source qui sert un autre contenu est écartée, sans rien mettre en place.
+- **Boucle locale seulement** : le programme n'écoute que sur `127.0.0.1`, refuse les requêtes de navigateur (en-tête `Origin`) et n'ouvre aucune connexion vers l'extérieur.
+- **Authentification mutuelle** : un jeton aléatoire de 256 bits, tiré à chaque lancement et passé sur l'entrée standard, n'est jamais transmis sur le réseau, ni écrit dans un journal, un réglage, la ligne de commande ou l'environnement du programme. À chaque connexion, l'application et le programme se prouvent mutuellement qu'ils le connaissent, par un HMAC lié à un nonce neuf et aux deux ports de la connexion. Aucun audio ne part avant la preuve du programme ; une preuve fausse ferme la connexion, sans nouvelle tentative.
+- **Lancement contenu** : environnement vidé, dossier courant hors du dossier du programme, recherche de bibliothèques limitée à son dossier privé et à System32 sous Windows, relances bornées, arrêt avec l'application.
+- **Politique** : les réglages gérés `on_device_transcription_enabled` et `speech_models_urls` sont lus dans `managed_settings.json` et gardés en mémoire : réécrire la base de l'application ne les lève pas. Téléchargement, installation et retrait des modèles, et mise en service, sont refusés par le relay.
+- **Aucun audio vers le serveur** pour une écoute « Sur ce poste », réparation comprise.
+
+### Limites
+
+- **Même compte utilisateur** : un programme malveillant qui tourne déjà sous votre compte peut modifier le dossier de données de l'application, et, si Syntheo est installé pour votre compte, l'application elle-même. Sous Linux, il pourrait encore réécrire un fichier modèle en place pendant que le programme l'utilise : Linux n'offre pas de verrou obligatoire à un utilisateur ordinaire. Le remplacement par chemin ou par lien, lui, n'est plus possible.
+- **Contrôle des applications** : la copie exécutée se trouve dans le dossier de données de l'application. Une politique AppLocker ou SRP à règles de chemin, ou un dossier personnel monté `noexec`, la bloque : le lancement échoue avec le code `execution_blocked`, sans nouvelle tentative pendant l'écoute (voir [Postes à contrôle des applications](/fr/on-device-transcription#postes-à-contrôle-des-applications)).
+- **Hébergement des modèles** : les sources (GitHub, Hugging Face ou un miroir) ne sont pas de confiance en elles-mêmes ; seules les empreintes compilées le sont. Une source indisponible ou falsifiée empêche le téléchargement, sans jamais faire accepter un autre fichier.
+- **Windows** : les protections propres à Windows (verrous, dossier privé à droits restreints, recherche de bibliothèques) ont été compilées et construites sous Windows, mais pas encore éprouvées par un test d'attaque sur un poste réel.
+- **Audit** : le programme n'a pas encore fait l'objet d'un audit externe ; il a été relu en interne à chaque étape.
+
 ## Clés API
 
 Les clés des serveurs d'inférence sont facultatives. Quand vous en saisissez une, Syntheo la range dans le trousseau du système : Secret Service sous Linux (il faut un trousseau déverrouillé, par exemple GNOME Keyring ou KWallet), Gestionnaire d'informations d'identification sous Windows. Elle n'est jamais écrite en clair dans la base locale ni compilée dans l'application. « Réinitialiser ce serveur… », dans la section « Avancé » de la carte serveur, la retire du trousseau.
@@ -96,9 +121,9 @@ Un administrateur peut imposer certains réglages en plaçant un fichier `manage
 
 Les réglages les plus utiles à une DSI :
 
-- **Serveur de transcription imposé en HTTPS** : `stt:openai` ou `stt:nvidia`, avec `current_stt_provider` et `current_stt_model`. L'adresse doit être en `https://` : le fichier n'accepte pas le HTTP clair, même vers un réseau privé. Voir [Passer son serveur en HTTPS](/fr/ai-setup#passer-son-serveur-en-https).
+- **Serveur de transcription imposé en HTTPS** : `stt:openai` ou `stt:nvidia`, avec `current_stt_provider` et `current_stt_model`. L'adresse doit être en `https://` : le fichier n'accepte pas le HTTP clair, même vers un réseau privé. Dans **Paramètres › Mes serveurs › Transcription**, la carte « Mon serveur » affiche alors la mention « Réglé par votre administrateur. » et ne fige que ce que le fichier impose : l'adresse, sans champ de saisie ni « Réinitialiser ce serveur… », quand `stt:<id>` la fixe ; le protocole quand `current_stt_provider` est fixé ; le modèle quand `current_stt_model` l'est. Le reste se règle normalement : sans `current_stt_model`, le modèle se choisit dans la liste. « Tester la connexion » reste disponible, et la clé d'API, que le fichier laisse vide, se saisit toujours sous « Avancé ». Voir [Passer son serveur en HTTPS](/fr/ai-setup#passer-son-serveur-en-https).
 - **Pas de recherche de mise à jour au démarrage** : `automatic_updates` à `false`. Syntheo ne contacte plus GitHub au lancement, et l'interrupteur « Rechercher les mises à jour au démarrage » de **Paramètres › Profil** est désactivé avec la mention « Réglé par votre administrateur. ». Une recherche manuelle reste possible depuis cette section et depuis la zone de notification. Voir [Mettre à jour](/fr/desktop-installation#mettre-à-jour).
-- **Pas de modèle de langage** : `intelligence_disabled` à `true`, avec `current_llm_provider` et `current_llm_model` à `""`. Aucune demande n'est envoyée à un serveur LLM : pas de compte rendu ni de chat ; un import d'enregistrement demandé par un agent (CLI ou MCP, `import_recording`) est refusé. La transcription reste disponible.
+- **Pas de modèle de langage** : `intelligence_disabled` à `true`, avec `current_llm_provider` et `current_llm_model` à `""`. Aucune demande n'est envoyée à un serveur LLM : pas de compte rendu ni de chat, et la page **Paramètres › Synthèse** affiche « Réglé par votre administrateur. » sans interroger le serveur ; un import d'enregistrement demandé par un agent (CLI ou MCP, `import_recording`) est refusé. La transcription reste disponible.
 
 ```json
 {
@@ -121,14 +146,17 @@ Les réglages les plus utiles à une DSI :
     | --- | --- |
     | `current_stt_provider` | `openai` ou `nvidia` |
     | `current_stt_model` | identifiant non vide (200 caractères au plus) |
-    | `stt:openai`, `stt:nvidia` | objet `{ "type": "stt", "api_key": "", "base_url": "https://…" }` : URL en HTTPS uniquement, sans identifiants ni paramètres, clé obligatoirement vide |
+    | `stt:openai`, `stt:nvidia` | objet `{ "type": "stt", "api_key": "", "base_url": "https://…" }` : URL en HTTPS uniquement, sans identifiants ni paramètres (les blancs en tête et en fin sont ignorés), clé obligatoirement vide |
     | `intelligence_disabled` | `true` uniquement |
     | `current_llm_provider`, `current_llm_model` | `""` uniquement |
     | `auto_start_scheduled_meetings` | `true` ou `false` |
     | `audio_retention` | `"none"` uniquement (l'audio n'est de toute façon jamais conservé) |
     | `automatic_updates` | `false` uniquement : coupe la recherche de mise à jour au démarrage (voir ci-dessus) |
     | `cloud_sync_enabled` | `false` uniquement (fonction absente de Syntheo) |
-    | `save_recordings` | `true` ou `false` |
+    | `measurement_enabled`, `calibration_enabled` | `false` uniquement : coupe la mesure de la reprise de la bêta, et son mode Calibrage (voir [Données et confidentialité](/fr/data-and-privacy#mesure-de-la-reprise-bêta)) |
+    | `on_device_transcription_enabled` | `false` uniquement : interdit la transcription sur le poste ; le programme `syntheo-speech`, livré avec l'application, n'est jamais lancé |
+    | `speech_models_urls` | Liste de 1 à 8 adresses HTTPS (marqueurs `{path}` ou `{name}` permis), sans identifiants, requête, fragment ni virgule : remplace les sources de téléchargement des modèles de la transcription sur le poste, par exemple par un miroir interne ([détails](/fr/on-device-transcription#imposer-un-miroir-des-modèles)) |
+    | `save_recordings` | `true` ou `false` : clé héritée, acceptée puis sans effet, la rétention de l'audio étant toujours forcée à « aucune » (`none`) |
 
     Toute autre clé, ou toute autre valeur, rend le fichier invalide. Le fichier ne peut contenir aucun secret : une clé API se saisit sur chaque poste.
   </Accordion>

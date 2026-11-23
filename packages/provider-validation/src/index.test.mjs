@@ -8,6 +8,7 @@ import {
   ProviderCredentialError,
   providerCredentialIdentity,
   validateProviderBaseUrl,
+  validateProviderRequestUrl,
   verifyProviderCredentials,
 } from "./index.ts";
 
@@ -37,11 +38,11 @@ test("accepts an authenticated model response, without sending keys in URLs", as
 });
 
 for (const [status, message] of [
-  [401, /a refusé/],
-  [403, /autorisations/],
-  [429, /limite les vérifications/],
-  [500, /Impossible de vérifier/],
-  [404, /Impossible de vérifier/],
+  [401, { code: "key_rejected", retryable: false }],
+  [403, { code: "key_rejected", retryable: false }],
+  [429, { code: "rate_limited", retryable: true }],
+  [500, { code: "verification_unavailable", retryable: true }],
+  [404, { code: "verification_unavailable", retryable: true }],
 ]) {
   test(`does not save on HTTP ${status}, or expose response secrets`, async () => {
     await assert.rejects(
@@ -50,10 +51,10 @@ for (const [status, message] of [
         async () => new Response("secret-key-echo", { status }),
       ),
       (error) => {
-        assert.match(error.message, message);
         assert.ok(!error.message.includes("secret-key-echo"));
         assert.ok(error instanceof ProviderCredentialError);
-        assert.equal(error.retryable, status !== 401 && status !== 403);
+        assert.equal(error.code, message.code);
+        assert.equal(error.retryable, message.retryable);
         return true;
       },
     );
@@ -121,7 +122,7 @@ test("cancellation does not validate a key", async () => {
       },
       controller.signal,
     ),
-    /Impossible de vérifier/,
+    { code: "network" },
   );
 });
 
@@ -130,7 +131,7 @@ test("network failures are not mislabeled as invalid credentials", async () => {
     verifyProviderCredentials(credential, async () => {
       throw Error("secret-key");
     }),
-    /Impossible de vérifier cette clé\. Vérifiez votre connexion/,
+    { code: "network", retryable: true },
   );
 });
 
@@ -185,10 +186,9 @@ test("never caches a failed verification as accepted", async () => {
       ? new Response(null, { status: 401 })
       : Response.json({ data: [] });
   };
-  await assert.rejects(
-    verifyProviderCredentials(credential, fetcher),
-    /a refusé/,
-  );
+  await assert.rejects(verifyProviderCredentials(credential, fetcher), {
+    code: "key_rejected",
+  });
   rejected = false;
   await verifyProviderCredentials(credential, fetcher);
   assert.equal(calls, 2);
@@ -257,18 +257,17 @@ test("custom_llm_skips_control_key_probe", async () => {
 });
 
 test("validateProviderBaseUrl_rejects_plain_http_on_a_public_host", () => {
-  assert.throws(
-    () => validateProviderBaseUrl("http://8.8.8.8/v1"),
-    /Utilisez HTTPS/,
-  );
+  assert.throws(() => validateProviderBaseUrl("http://8.8.8.8/v1"), {
+    code: "https_required",
+  });
   assert.throws(
     () => validateProviderBaseUrl("https://user:pass@example.com/v1"),
-    /sans identifiants ni paramètres de requête/,
+    { code: "url_with_credentials" },
   );
-  assert.throws(
-    () => validateProviderBaseUrl("not-a-url"),
-    /URL de base valide/,
-  );
+  assert.throws(() => validateProviderBaseUrl("not-a-url"), {
+    code: "invalid_url",
+    message: "Enter a valid base URL.",
+  });
 });
 
 test("validateProviderBaseUrl_accepts_private_hosts_and_https", () => {
@@ -306,10 +305,11 @@ test("isPrivateHost_refuse_les_imitations_du_suffixe_ts_net", () => {
   ]) {
     assert.equal(isPrivateHost(host), false, host);
   }
-  assert.throws(
-    () => validateProviderBaseUrl("http://evil-ts.net:9000"),
-    /Utilisez HTTPS : le HTTP n'est accepté que sur cette machine ou un réseau privé\./,
-  );
+  assert.throws(() => validateProviderBaseUrl("http://evil-ts.net:9000"), {
+    code: "https_required",
+    message:
+      "Use HTTPS: plain HTTP is only accepted on this computer or a private network.",
+  });
 });
 
 // Issue 646 : HTTP clair hors de cette machine signalé, sans exemption sur la
@@ -343,5 +343,28 @@ test("isLoopbackHost_ne_reconnait_que_cette_machine", () => {
   }
   for (const host of ["192.168.1.87", "gpu.local", "a.ts.net", "128.0.0.1"]) {
     assert.equal(isLoopbackHost(host), false, host);
+  }
+});
+
+test("revalidates each request URL with the base URL rule (issue 678)", () => {
+  for (const url of [
+    "https://api.openai.com/v1/models?limit=10",
+    "http://localhost:8000/v1/chat/completions",
+    "http://192.168.1.20:8000/v1/models",
+    "https://spark.tailnet.ts.net:9443/v1/models",
+  ]) {
+    assert.equal(validateProviderRequestUrl(url).href, new URL(url).href);
+  }
+  for (const url of [
+    "http://api.example.com/v1/models",
+    "http://203.0.113.5:8000/v1",
+    "https://user:secret@api.example.com/v1",
+    "ftp://api.example.com",
+    "not a url",
+  ]) {
+    assert.throws(
+      () => validateProviderRequestUrl(url),
+      ProviderCredentialError,
+    );
   }
 });

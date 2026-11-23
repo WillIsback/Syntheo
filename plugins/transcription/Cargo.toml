@@ -12,16 +12,19 @@ description = ""
 tauri-plugin = { workspace = true, features = ["build"] }
 
 [dev-dependencies]
-specta-typescript = { workspace = true }
 syntheo-db-core = { workspace = true }
+syntheo-specta-export = { workspace = true }
 
 [dependencies]
 syntheo-audio = { workspace = true }
 syntheo-db-app = { workspace = true }
 syntheo-language = { workspace = true }
+syntheo-speech-host = { workspace = true }
+syntheo-speech-probe = { workspace = true, features = ["specta"] }
 syntheo-storage = { workspace = true }
 syntheo-transcript = { workspace = true }
 syntheo-transcription-core = { workspace = true, features = ["specta", "tauri-event"] }
+tauri-plugin-dialog = { workspace = true }
 
 owhisper-client = { workspace = true }
 owhisper-interface = { workspace = true }

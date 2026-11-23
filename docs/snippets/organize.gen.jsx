@@ -103,6 +103,8 @@ const SYN_LABELS = {
   "Back": "Retour",
   "Backspace": "Retour arrière",
   "Begin listening": "Commencer l'écoute",
+  "Beta: measure rework": "Bêta : mesure de la reprise",
+  "Calibration mode": "Mode Calibrage",
   "Cancel": "Annuler",
   "Cancel dictation": "Annuler la dictée",
   "Capture meeting chat in the note": "Capturer le chat de la réunion dans la note",
@@ -163,9 +165,11 @@ const SYN_LABELS = {
   "Enter": "Entrée",
   "Enter a full address, for example {placeholder}.": "Saisissez une adresse complète, par exemple {placeholder}.",
   "Enter another name": "Saisir un autre nom",
+  "Erase my measurements…": "Effacer mes mesures…",
   "Esc": "Échap",
   "Export": "Exporter",
   "Export location": "Emplacement d'export",
+  "Export my measurements…": "Exporter mes mesures…",
   "Export or print": "Exporter ou imprimer",
   "Favorites": "Favoris",
   "File format": "Format de fichier",
@@ -208,6 +212,7 @@ const SYN_LABELS = {
   "Main language": "Langue principale",
   "Materials": "Matériels",
   "Me": "Moi",
+  "Measure rework of summaries": "Mesurer la reprise des synthèses",
   "Medium": "Moyen",
   "Meeting info": "Informations sur la réunion",
   "Meetings": "Réunions",
@@ -400,6 +405,7 @@ const SYN_LABELS = {
   "Untitled section": "Section sans titre",
   "Update": "Mettre à jour",
   "Updates": "Mises à jour",
+  "Use HTTPS: plain HTTP is only accepted on this computer or a private network.": "Utilisez HTTPS : le HTTP n'est accepté que sur cette machine ou un réseau privé.",
   "Use by default": "Utiliser par défaut",
   "Use main language for summaries": "Utiliser la langue principale pour les résumés",
   "Use this protocol": "Utiliser ce protocole",
@@ -1413,9 +1419,6 @@ const SYN_CSS_SERVERS = `
 .syn-srv-seg button[aria-pressed=true]{background:var(--syn-primary);color:var(--syn-primary-foreground);font-weight:600}
 `;
 
-// Le message de refus du HTTP vient de packages/provider-validation (en
-// français dans le code, hors messages.po).
-const SYN_SRV_HTTPS = "Utilisez HTTPS : le HTTP n'est accepté que sur cette machine ou un réseau privé.";
 const SYN_SRV_OPENAI_PH = "http://localhost:8000/v1";
 const SYN_SRV_NEMO_PH = "http://localhost:9000";
 const SYN_SRV_STT_MODELS = ["mistralai/Voxtral-Mini-4B-Realtime-2602", "Systran/faster-whisper-large-v3"];
@@ -1493,7 +1496,8 @@ const useSynServer = (kind, initial, placeholder) => {
         return;
       }
       if (url.protocol === "http:" && !synSrvPrivate(url.hostname)) {
-        setUrlError(SYN_SRV_HTTPS);
+        // Même message que l'app : provider-credential-error.ts, par messages.po.
+        setUrlError(L("Use HTTPS: plain HTTP is only accepted on this computer or a private network."));
         return;
       }
     }
@@ -2496,8 +2500,10 @@ const SynSectionDictation = ({ focus }) => {
 };
 
 // Paramètres › Confidentialité : apps/desktop/src/settings/privacy/index.tsx
-// (un seul réglage, « Verrouiller l'application », grisé quand le système
-// n'offre pas d'authentification de l'appareil). focus : "lock".
+// (« Verrouiller l'application », grisé quand le système n'offre pas
+// d'authentification de l'appareil ; puis la section bêta de la mesure de la
+// reprise, deux interrupteurs désactivés par défaut, le second grisé tant que
+// le premier est coupé). focus : "lock", "measure".
 // Paramètres › Autorisations : apps/desktop/src/settings/general/permissions.tsx,
 // branche Linux et Windows (AudioPermissions runtimeCapabilities : la flèche
 // relance un vrai test de la source, sans ouvrir les réglages du système).
@@ -2537,6 +2543,8 @@ const SynPrivDemo = ({ value, onChange }) => {
 const SynSectionPrivacy = ({ focus }) => {
   const [os, setOs] = useState("linux");
   const [locked, setLocked] = useState(false);
+  const [measuring, setMeasuring] = useState(false);
+  const [calibrating, setCalibrating] = useState(false);
   const available = os === "windows";
   const description = available
     ? L("Require Windows Hello face, PIN, or password when opening Syntheo.")
@@ -2560,6 +2568,49 @@ const SynSectionPrivacy = ({ focus }) => {
                 describedBy: labels["aria-describedby"],
               }),
           })}
+        </div>,
+      )}
+      {h(
+        SynHere,
+        { active: focus === "measure" },
+        <div className="syn-perm-group">
+          <h3>{L("Beta: measure rework")}</h3>
+          <div className="syn-rows" style={{ borderTop: 0 }}>
+            {h(SynRow, {
+              title: L("Measure rework of summaries"),
+              description: L(
+                "Adds “Measure rework…” to the summary menu. You paste the version you sent; only counts are kept on this computer, never text, and nothing is sent.",
+              ),
+              children: (labels) =>
+                h(SynSwitch, {
+                  checked: measuring,
+                  onChange: (next) => {
+                    setMeasuring(next);
+                    if (!next) setCalibrating(false);
+                  },
+                  labelledBy: labels["aria-labelledby"],
+                  describedBy: labels["aria-describedby"],
+                }),
+            })}
+            {h(SynRow, {
+              title: L("Calibration mode"),
+              description: L(
+                "After a measurement, lists each difference so you can classify it by hand. Excerpts stay on screen; only the agreement counts are kept.",
+              ),
+              children: (labels) =>
+                h(SynSwitch, {
+                  checked: calibrating,
+                  disabled: !measuring,
+                  onChange: setCalibrating,
+                  labelledBy: labels["aria-labelledby"],
+                  describedBy: labels["aria-describedby"],
+                }),
+            })}
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
+            <button type="button" className="syn-btn">{L("Export my measurements…")}</button>
+            <button type="button" className="syn-btn">{L("Erase my measurements…")}</button>
+          </div>
         </div>,
       )}
       {h(SynPrivDemo, {

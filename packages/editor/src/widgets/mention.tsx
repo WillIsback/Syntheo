@@ -1,16 +1,5 @@
 import {
-  autoUpdate,
-  computePosition,
-  flip,
-  limitShift,
-  offset,
-  shift,
-  type VirtualElement,
-} from "@floating-ui/dom";
-import {
-  useEditorEffect,
   useEditorEventCallback,
-  useEditorEventListener,
   useEditorState,
 } from "@handlewithcare/react-prosemirror";
 import {
@@ -20,10 +9,13 @@ import {
   PluginKey,
   TextSelection,
 } from "prosemirror-state";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { Buildings, Folder, Note, User } from "@syntheo/ui/components/icons";
+
+import { useFloatingPopup } from "./use-floating-popup";
+import { useListKeyboard } from "./use-list-keyboard";
 
 export interface MentionItem {
   id: string;
@@ -123,8 +115,6 @@ export function useMentionSearch(
 // ---------------------------------------------------------------------------
 export function MentionSuggestion({ config }: { config: MentionConfig }) {
   const [dismissedFrom, setDismissedFrom] = useState<number | null>(null);
-  const popupRef = useRef<HTMLDivElement>(null);
-  const cleanupRef = useRef<(() => void) | null>(null);
 
   const editorState = useEditorState();
   const mentionState = editorState
@@ -169,71 +159,20 @@ export function MentionSuggestion({ config }: { config: MentionConfig }) {
     setDismissedFrom(mentionState.from);
   });
 
-  useEditorEventListener("keydown", (_view, event) => {
-    if (!active || items.length === 0) return false;
-
-    if (event.key === "Escape") {
-      event.preventDefault();
+  useListKeyboard({
+    active,
+    items,
+    selectedIndex,
+    setSelectedIndex,
+    onDismiss: () => {
       if (mentionState) setDismissedFrom(mentionState.from);
-      return true;
-    }
-
-    if (event.key === "ArrowUp") {
-      event.preventDefault();
-      setSelectedIndex(
-        (prev) => (prev + items.length - 1) % Math.max(items.length, 1),
-      );
-      return true;
-    }
-
-    if (event.key === "ArrowDown") {
-      event.preventDefault();
-      setSelectedIndex((prev) => (prev + 1) % Math.max(items.length, 1));
-      return true;
-    }
-
-    if (event.key === "Enter") {
-      event.preventDefault();
-      const item = items[selectedIndex];
-      if (item) insertMention(item);
-      return true;
-    }
-
-    return false;
+    },
+    onChoose: insertMention,
   });
 
-  useEditorEffect((view) => {
-    if (!view || !active || items.length === 0) {
-      cleanupRef.current?.();
-      cleanupRef.current = null;
-      return;
-    }
-
-    const popup = popupRef.current;
-    if (!popup) return;
-
-    const coords = view.coordsAtPos(mentionState!.from);
-    const referenceEl: VirtualElement = {
-      getBoundingClientRect: () =>
-        new DOMRect(coords.left, coords.top, 0, coords.bottom - coords.top),
-    };
-
-    const update = () => {
-      void computePosition(referenceEl, popup, {
-        placement: "bottom-start",
-        middleware: [offset(4), flip(), shift({ limiter: limitShift() })],
-      }).then(({ x, y }) => {
-        Object.assign(popup.style, {
-          left: `${x}px`,
-          top: `${y}px`,
-        });
-      });
-    };
-
-    cleanupRef.current?.();
-    cleanupRef.current = autoUpdate(referenceEl, popup, update);
-    update();
-  });
+  const popupRef = useFloatingPopup(
+    active && items.length > 0 ? mentionState.from : null,
+  );
 
   if (!active || items.length === 0) return null;
 

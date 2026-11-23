@@ -16,6 +16,11 @@ import {
 import { executeTransaction, liveQueryClient, useLiveQuery } from "~/db";
 import { enqueueDatabaseWrite } from "~/db/write-queue";
 import { resolveUiLanguagePreference } from "~/i18n/locales";
+import {
+  checkpointAfterErase,
+  enrollmentStatement,
+  stopMeasurementStatements,
+} from "~/mesure/beta";
 import { normalizeStoredLlmSelection } from "~/settings/ai/llm/selection";
 import {
   SETTING_DEFINITIONS,
@@ -122,12 +127,28 @@ export async function initializeApplicationSettings(): Promise<void> {
     updates.auto_summary_prompt = migratedAutoPrompt;
   }
 
+  // Issue 707 : le déclencheur de managed_app_settings refuse toute autre
+  // valeur d'une clé gérée, et avec elle la transaction entière (langues
+  // comprises). Une politique valide peut imposer un modèle que la
+  // normalisation remplacerait (nom retiré de NeMo) ou viderait (fournisseur
+  // enregistré retiré) : la valeur imposée reste telle quelle.
+  for (const id of await getManagedSettingIds()) {
+    delete updates[id as SettingKey];
+  }
+
   if (Object.keys(updates).length > 0) {
     await setSettingValues(updates);
   }
   const current =
     Object.keys(updates).length > 0 ? await getStoredSettingValues() : stored;
   applySettingSideEffects(current.values);
+}
+
+async function getManagedSettingIds(): Promise<string[]> {
+  const rows = await liveQueryClient.execute<{ id: string }>(
+    "SELECT id FROM managed_app_settings",
+  );
+  return rows.map((row) => row.id);
 }
 
 function collectSelectionUpdates(
@@ -287,7 +308,9 @@ export function useSetSettingValues() {
 
 async function persistSettingValues(values: SettingValues): Promise<void> {
   const now = new Date().toISOString();
-  const statements = Object.entries(values).map(([key, value]) => ({
+  const statements: { sql: string; params: unknown[] }[] = Object.entries(
+    values,
+  ).map(([key, value]) => ({
     sql: SYNCED_SETTING_KEYS.has(key as SettingKey)
       ? `
       INSERT INTO synced_preferences (id, workspace_id, value_json, updated_at)
@@ -310,7 +333,18 @@ async function persistSettingValues(values: SettingValues): Promise<void> {
     `,
     params: [key, JSON.stringify(value), now],
   }));
+  // Bêta de la mesure (issue 672) : arrêter la mesure vide la copie des
+  // synthèses telles que générées et clôt les générations ouvertes, dans la
+  // même transaction, en effacement sûr.
+  const stopping = values.measurement_enabled === false;
+  if (stopping) statements.push(...stopMeasurementStatements(now));
+  // Activer la mesure inscrit la personne dans la même transaction (garde SQL
+  // sur le réglage, qui précède dans la liste).
+  if (values.measurement_enabled === true) {
+    statements.push(enrollmentStatement(now));
+  }
   if (statements.length > 0) await executeTransaction(statements);
+  if (stopping) checkpointAfterErase();
   applySettingSideEffects(values);
 }
 

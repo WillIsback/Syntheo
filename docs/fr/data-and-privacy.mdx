@@ -25,13 +25,14 @@ Tout se trouve dans le dossier de données de l'application :
 | Journaux techniques | Dossier de logs de l'application, avec masquage du contenu sensible (clés et jetons, adresses, identifiants) et rotation par taille. Pour un webhook en échec, seul l'hôte est journalisé, jamais le chemin de l'URL |
 | Clés API des serveurs d'inférence et secrets de signature des webhooks | Trousseau du système (Secret Service sous Linux, Gestionnaire d'informations d'identification sous Windows), jamais en clair dans la base. Sans trousseau disponible sous Linux, le secret d'un webhook reste dans la base |
 | Exports | Dossier choisi dans « Emplacement d'export » (**Paramètres → Profil**) |
+| Modèles de la transcription sur le poste, s'ils sont installés | `speech/models` dans le dossier de données de l'application (`~/.local/share/fr.willisback.syntheo` sous Linux, `%APPDATA%\fr.willisback.syntheo` sous Windows), avec le résultat de la mise en service (`speech/commissioning.json`) ; voir [Transcrire sur ce poste](/fr/on-device-transcription) |
 | Audio | **Nulle part** : voir ci-dessous |
 
 <Warning>
   La base locale n'est pas chiffrée par Syntheo. Activez le chiffrement du disque (BitLocker sous Windows, LUKS ou le chiffrement proposé à l'installation sous Linux) et verrouillez la session : c'est ce qui protège vos notes si le poste ou une sauvegarde est perdu. Ne modifiez pas `app.db` à la main : vous risquez de corrompre vos notes. Pour une copie portable, utilisez l'export.
 </Warning>
 
-Sous Linux, Syntheo réserve son dossier de données à votre compte : le dossier est en `0700`, la base et les journaux en `0600`, corrigés à chaque démarrage. Les sauvegardes laissées par une réinitialisation de la base (`app.db.<date>.bak`) sont supprimées après 30 jours ; la plus récente est toujours gardée.
+Sous Linux, Syntheo réserve son dossier de données à votre compte : le dossier est en `0700`, la base et les journaux en `0600`, corrigés à chaque démarrage. Les sauvegardes laissées par une réinitialisation de la base (`app.db.<horodatage>.bak`, où l'horodatage est en secondes Unix) sont supprimées après 30 jours ; la plus récente est toujours gardée.
 
 ## L'audio n'est jamais conservé
 
@@ -45,13 +46,15 @@ L'audio de la capture vit en mémoire le temps d'être envoyé à votre serveur 
 
 Quand vous coupez le micro ou le son système pendant l'écoute, Syntheo envoie du silence à la place de cette source : ce qu'elle capte ne quitte pas votre poste. Voir [Enregistrer une réunion](/fr/meetings), section « Couper le micro ou le son système ».
 
-Conséquence : si la transcription s'interrompt (serveur injoignable, clé refusée), le passage concerné manque à la transcription. Syntheo l'indique et se reconnecte, mais ne peut pas le rattraper.
+Conséquence : si la transcription s'interrompt (coupure réseau, serveur injoignable ou en panne), Syntheo l'indique et se reconnecte. Si le serveur refuse la clé ou les réglages, Syntheo ne retente pas : corrigez-les dans **Paramètres → Transcription**, puis relancez l'écoute. À la reconnexion, il rejoue au nouveau flux les dernières secondes gardées en mémoire (une quinzaine au plus) : une coupure courte ne laisse aucun trou. Au-delà, le passage qui précède ces dernières secondes manque à la transcription et ne peut pas être rattrapé, faute d'audio enregistré.
 
 ## Ce qui sort de votre poste
 
 | Destination | Ce qui est envoyé | Quand |
 | --- | --- | --- |
 | Votre serveur de transcription | L'audio de la capture, de la dictée ou du fichier importé | Pendant la transcription |
+| Le programme [Sur ce poste](/fr/on-device-transcription), sur la boucle locale de votre poste | L'audio de l'écoute, s'il est choisi : rien ne quitte le poste | Pendant une écoute « Sur ce poste » |
+| Les sources des modèles de la transcription sur le poste : release GitHub de Syntheo (`github.com`, redirigé vers `release-assets.githubusercontent.com`), puis Hugging Face (`huggingface.co`, redirigé vers ses serveurs de contenu sous `hf.co`) en secours, ou le miroir défini par votre organisation (`speech_models_urls`) ; les redirections HTTPS sont suivies | Des requêtes HTTPS pour les fichiers des modèles, rien de vos réunions ; ces hôtes voient votre adresse IP | Seulement quand vous choisissez **Télécharger les modèles** ; aucune connexion si vous les installez depuis un dossier |
 | Votre serveur de synthèse | Le texte utile à la tâche : transcription, notes, consignes du modèle de compte rendu, question du chat | Compte rendu, chat, « Proposer des sections », fil rouge et ordre du jour d'un dossier, étape « Générer » d'une automatisation |
 | Les adresses de vos [webhooks](/fr/reference/webhooks) | Les événements de réunion (note, résumés, participants, transcription) | À chaque événement, si vous avez ajouté un point de terminaison |
 | L'adresse de l'étape webhook d'une [automatisation](/fr/automations) | Le contenu que vous y placez | Quand l'automatisation s'exécute |
@@ -62,11 +65,11 @@ Choisissez une activité dans le schéma ci-dessous : il indique la destination 
 
 <DataFlows />
 
-Hors inférence, deux flux mineurs subsistent, sans contenu de réunion : la recherche de mises à jour (lecture de `latest.json` sur GitHub, puis téléchargement de l'installeur si vous mettez à jour) et l'affichage des notes de version d'une version autre que celle installée (requête vers GitHub).
+Hors serveurs et adresses que vous configurez (inférence, webhooks) et hors modèles « Sur ce poste » (tableau ci-dessus), seule la mise à jour sort du poste, sans contenu de réunion : Syntheo lit `latest.json` sur GitHub 15 secondes après le démarrage (désactivable) ou quand vous lancez la recherche, et ce fichier porte aussi les notes de la nouvelle version. L'installeur n'est téléchargé que si vous choisissez de mettre à jour.
 
-Une image hébergée sur un autre site, dans un compte rendu, une proposition de modification ou une réponse du chat, n'est jamais chargée d'office. Le bouton « Charger l'image » indique le nom du site. Au clic, Syntheo demande l'image à ce site, qui voit l'adresse IP du poste et l'adresse complète de l'image. Ne cliquez que si vous faites confiance à la source.
+Une image hébergée sur un autre site, dans un compte rendu, une proposition de modification ou une réponse du chat, n'est jamais chargée : son texte alternatif s'affiche à sa place, et aucune requête ne part vers ce site.
 
-Rien n'est envoyé à l'éditeur : pas de compte, pas de statistiques d'usage, pas de rapport d'erreur, La recherche de mises à jour, activée par défaut et désactivable, ne transmet aucune donnée personnelle ; GitHub voit l'adresse IP du poste. Voir [Mettre à jour](/fr/desktop-installation#mettre-à-jour).
+Rien n'est envoyé à l'éditeur : pas de compte, pas de statistiques d'usage, pas de rapport d'erreur. La recherche de mises à jour, activée par défaut et désactivable, ne transmet aucune donnée personnelle ; GitHub voit l'adresse IP du poste. Voir [Mettre à jour](/fr/desktop-installation#mettre-à-jour).
 
 <Note>
   Un serveur d'inférence exploité par un tiers devient votre sous-traitant au sens du RGPD (art. 28) : vérifiez le contrat et la localisation des données. Un serveur auto-hébergé reste sous votre contrôle.
@@ -74,7 +77,7 @@ Rien n'est envoyé à l'éditeur : pas de compte, pas de statistiques d'usage, p
 
 ## Verrouiller l'application
 
-L'écran « Confidentialité » contient un seul réglage, « Verrouiller l'application » :
+L'écran « Confidentialité » contient le réglage « Verrouiller l'application », et les réglages de la [mesure de la reprise](#mesure-de-la-reprise-bêta) (bêta) :
 
 <SettingsPath steps={["Paramètres", "Avancé", "Confidentialité"]} />
 
@@ -84,10 +87,23 @@ Dans la reproduction, choisissez le système montré sous l'écran : sous Window
 
 <AppSettings section="privacy" focus="lock" />
 
+## Mesure de la reprise (bêta)
+
+Pour la bêta, Syntheo peut mesurer combien vous avez retouché une synthèse avant de l'envoyer. Cette fonction est **désactivée par défaut** : activez « Mesurer la reprise des synthèses » dans **Paramètres → Avancé → Confidentialité**. Un administrateur peut la couper par `managed_settings.json` (clés `measurement_enabled` et `calibration_enabled` à `false`, voir [Sécurité](/fr/security#déploiement-en-entreprise)).
+
+Dans le menu de la synthèse, « Mesurer la reprise… » ouvre une fenêtre où vous collez la version envoyée, ou déposez un fichier `.txt`, `.md`, `.html` ou `.docx`. Le calcul a lieu sur votre poste, sans IA ni réseau, avec la même règle que la commande [`syntheo mesure`](/fr/reference/cli#commande-mesure). Il affiche des nombres bruts : mots de fond retouchés pour 100 mots générés, et noms propres ou sigles corrigés.
+
+- **Ce qui est gardé** : seulement des compteurs (mots générés, ajoutés, supprimés, remplacés), par synthèse et par section désignée par son rang et son rôle (décisions, actions ou autre), avec la version de la règle de calcul, dans la base locale. S'y ajoutent, seulement pendant que la mesure est active : un pseudonyme aléatoire ; une empreinte à clé locale des termes corrigés, jamais les termes, la clé étant détruite à l'effacement ; chaque génération de synthèse avec la date de son premier export de fichier et de son premier partage (copie ou webhook) ; et une copie de la synthèse telle que générée, pour la comparer, vidée quand la mesure est désactivée et jamais exportée.
+- **Ce qui n'est jamais gardé** : la version envoyée, les extraits, les titres. Le texte collé ne vit que dans la fenêtre et disparaît à sa fermeture. Les tables de mesure refusent tout texte.
+- **Rien n'est envoyé.** « Exporter mes mesures… » montre le fichier pseudonymisé en entier avant que vous l'enregistriez ; c'est vous qui le transmettez. Son contenu est décrit dans [Bêta](/fr/beta).
+
+Le **mode Calibrage**, réglage séparé et lui aussi désactivé par défaut, sert à vérifier la règle à la main : après une mesure, chaque différence s'affiche avec ses deux extraits et sa classe automatique (fond ou lexical), et vous choisissez la vraie classe. La matrice d'accord (des nombres) s'affiche, se copie, et peut être enregistrée. Les extraits et vos choix ligne par ligne restent à l'écran : ils ne vont ni dans la base, ni dans le journal, ni dans un export.
+
 ## Supprimer vos données
 
-- **Une réunion** : supprimez-la dans l'application. Sa transcription, ses notes et son entrée dans l'index de recherche disparaissent.
+- **Une réunion** : supprimez-la dans l'application. Elle disparaît de l'application et de la recherche, mais son contenu (titre, notes, transcription, anciennes versions) reste pour l'instant dans la base locale du poste. Pour l'effacer définitivement aujourd'hui, supprimez le dossier de données ; une purge réelle est prévue.
 - **Une clé d'API** : dans **Paramètres → Transcription** ou **Paramètres → Synthèse**, ouvrez « Avancé », cliquez sur « Réinitialiser ce serveur… », puis sur « Réinitialiser ». L'adresse et la clé sont oubliées ; la clé est retirée du trousseau.
+- **Vos mesures de la bêta** : dans **Paramètres → Avancé → Confidentialité**, « Effacer mes mesures… », puis confirmez. Les compteurs, le calibrage, le suivi des termes et des synthèses, la copie des synthèses générées et le pseudonyme sont effacés, et la mesure est désactivée.
 - **Tout** : lancez une [désinstallation complète](/fr/uninstall), qui retire la base, les journaux, le cache, la configuration et les clés d'API, puis supprimez les exports que vous avez produits.
 
 ## Informer les participants

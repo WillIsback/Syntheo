@@ -11,14 +11,17 @@ import { EnhancedEditor } from "./editor";
 import { EnhanceError } from "./enhance-error";
 import { StreamingView } from "./streaming";
 
-import { useAITaskTask } from "~/ai/hooks";
-import { useLLMConnectionStatus } from "~/ai/hooks";
+import { useAITaskTask, useLLMConnectionStatus } from "~/ai/hooks";
 import { getStoredNoteMarkdown } from "~/session/components/note-input/header-shared";
 import { hasStoredNoteContent } from "~/session/components/shared";
 import { SpeakerNamingBar } from "~/session/components/speaker-naming/bar";
-import { shouldShowEmptySummaryConfigError } from "~/session/enhance-config";
+import {
+  isSummaryOff,
+  shouldShowEmptySummaryConfigError,
+} from "~/session/enhance-config";
 import { useGenerateSummary } from "~/session/hooks/useGenerateSummary";
 import { useEnhancedNote } from "~/session/queries";
+import { useIntelligenceDisabled } from "~/settings/managed";
 import { createTaskId } from "~/store/zustand/ai-task/task-configs";
 
 export const Enhanced = forwardRef<
@@ -56,6 +59,8 @@ export const Enhanced = forwardRef<
       status === "success" && streamedText.trim().length > 0 && !hasContent;
     const showStreaming = status === "generating" || isAwaitingPersistedContent;
     const isConfigError = shouldShowEmptySummaryConfigError(llmStatus);
+    const isOff = isSummaryOff(llmStatus);
+    const managedOff = useIntelligenceDisabled().managed;
 
     if (status === "error") {
       return (
@@ -75,12 +80,18 @@ export const Enhanced = forwardRef<
           enhancedNoteId={enhancedNoteId}
         />
       ) : enhancedNoteId === defaultSummaryDocumentId(sessionId) ? (
-        isConfigError ? (
+        isOff ? (
+          <SummaryOff managed={managedOff} />
+        ) : isConfigError ? (
           <ConfigError />
         ) : (
           <EmptySummary sessionId={sessionId} />
         )
       ) : null;
+    }
+
+    if (status === "idle" && isOff && !hasContent) {
+      return <SummaryOff managed={managedOff} />;
     }
 
     if (status === "idle" && isConfigError && !hasContent) {
@@ -129,6 +140,20 @@ function EmptySummary({ sessionId }: { sessionId: string }) {
         <Trans>Generate summary</Trans>
       </Button>
       {generate.error && <p role="alert">{generate.error.message}</p>}
+    </div>
+  );
+}
+
+// Sous la seule copie d'app_settings (politique retirée), l'onglet reste
+// neutre : ni message d'administration, ni bouton.
+function SummaryOff({ managed }: { managed: boolean }) {
+  return (
+    <div className="flex h-full flex-col items-center justify-center px-6">
+      {managed && (
+        <p role="note" className="text-muted-foreground text-sm">
+          <Trans>Set by your administrator.</Trans>
+        </p>
+      )}
     </div>
   );
 }

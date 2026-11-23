@@ -3,11 +3,7 @@ description = "Default permissions for the plugin"
 permissions = [
     "allow-window-show",
     "allow-window-hide",
-    "allow-window-destroy",
-    "allow-window-navigate",
     "allow-window-emit-navigate",
-    "allow-window-is-exists",
-    "allow-window-is-occluded",
     "allow-webview-health-ack",
     "allow-webview-health-ready",
     "allow-window-set-frame-animated",
@@ -21,8 +17,4 @@ permissions = [
     "allow-floating-bar-update",
     "allow-floating-bar-update-amplitude",
     "allow-floating-bar-current-state",
-    "allow-live-caption-show",
-    "allow-live-caption-hide",
-    "allow-live-caption-update",
-    "allow-live-caption-current-state",
 ]

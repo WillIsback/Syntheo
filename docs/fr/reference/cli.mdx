@@ -23,6 +23,7 @@ syntheo [--base DIR] [--db-path FILE] [--json] <commande>
 | `meetings` | Parcourt, exporte et importe des réunions. |
 | `proposals` | Propose des modifications de réunion, à valider dans l'application. |
 | `mcp` | Lance le serveur MCP Syntheo en stdio. |
+| `mesure` | Mesure la reprise entre une synthèse générée et la version envoyée ; n'affiche que des nombres. |
 
 ## Source des réunions
 
@@ -120,6 +121,51 @@ Lance le serveur MCP local en stdio. Les lectures sont idempotentes. Les outils 
   N'écrivez rien d'autre sur la sortie standard du serveur : toute autre sortie corrompt le flux du protocole MCP.
 </Warning>
 
+## Commande mesure
+
+```bash
+syntheo mesure --generated generee.md --sent publiee.txt
+syntheo mesure --generated generee.md --sent publiee.html --dictionary termes.txt
+syntheo --json mesure --generated generee.md --sent publiee.md
+```
+
+Calcule la reprise entre une synthèse générée et la version envoyée ou publiée, sans IA et sans réseau, et **n'affiche que des nombres** : aucun mot des textes, aucun titre. La commande n'ouvre pas la base de données et n'écrit aucun fichier. Elle sert au calibrage local de la mesure de la bêta.
+
+- `--generated` et `--sent` : fichiers `.md`, `.txt` ou `.html` en UTF-8 (4 Mio au plus), ou `.docx` (16 Mio au plus, lu sans réseau ni entité externe). Le format suit l'extension.
+- `--dictionary` (facultatif) : un terme par ligne ; un remplacement court qui touche un de ces termes compte comme une correction lexicale.
+
+Le calcul retire la mise en forme, découpe les deux textes par les titres de la version générée (une ligne identique à un titre suffit dans la version envoyée), compare mot à mot, puis classe chaque différence :
+
+- **lexicale** : remplacement de 1 à 3 mots par 1 à 3 mots, dont l'un a la forme d'un nom propre ou d'un sigle, ou figure au dictionnaire ;
+- **fond** : tout le reste, y compris un nom propre ajouté ou supprimé seul.
+
+Sortie, une valeur par ligne (`clé`, tabulation, nombre) :
+
+| Clé | Valeur |
+| --- | --- |
+| `rule_version` | Version de la règle de calcul. |
+| `aligned` | `1` si au moins la moitié des titres générés se retrouvent (mesure par section), `0` sinon (mesure globale). |
+| `headings_generated`, `headings_matched` | Titres de la version générée, et combien se retrouvent. |
+| `generated` | Mots générés (`G`). |
+| `added`, `deleted` | Mots ajoutés (`A`) et supprimés (`S`). |
+| `replaced_content`, `replaced_lexical` | Mots remplacés, fond (`Rf`) et lexical (`Rl`). |
+| `unmatched_sent_words` | Mots des sections de la version envoyée absentes de la générée (comptés dans `added`). |
+| `content_per_mille` | `(A + S + Rf) / G × 1000`. |
+| `lexical_per_mille` | `Rl / G × 1000`. |
+| `section` | Par section générée : rang, retrouvée (`1` ou `0`), `G`, `A`, `S`, `Rf`, `Rl`, `A / G × 1000`. |
+
+Avec `--json`, les mêmes nombres sont rendus sous `data` (champs `total`, `sections`, `content_per_mille`…).
+
+### Calibrage : `--differences`
+
+```bash
+syntheo mesure --generated generee.md --sent publiee.txt --differences > differences.tsv
+```
+
+Pour vérifier le classement à la main, `--differences` liste chaque différence **avec ses extraits**, en TSV sur la sortie standard, au lieu des nombres. La commande n'écrit rien sur disque elle-même et refuse `--json`. Un avertissement sur la sortie d'erreur rappelle que le résultat contient des extraits des textes : ne le partagez pas.
+
+Colonnes : `n`, `section` (rang de la section générée, `-` hors section), `type` (`ajout`, `suppression` ou `remplacement`), `classe_auto` (`fond` ou `lexical`), `poids` (mots), `genere`, `envoye`, puis `classe_vraie`, vide, à remplir dans un tableur. Les tabulations et retours à la ligne des extraits sont remplacés par des espaces.
+
 ## Aide et version
 
 ```bash
@@ -144,7 +190,7 @@ Ces commandes servent aux déploiements administrés (conservation légale, mesu
 | `meetings hold-list` | `--after ID`, `--limit 1..200`, `--database-only` | Liste toutes les réunions persistées, y compris supprimées, pour conservation. |
 | `meetings hold-export ID` | `--database-only` | Diffuse l'historique brut d'une réunion en NDJSON, pour une conservation chiffrée. |
 | `meetings pilot-usage` | `--from-ms MS`, `--until-ms MS` | Lit les intervalles de capture locaux, sans contenu ni identifiant de réunion. |
-| `meetings delete ID` | `--if-export-sha256 HASH`, `--require-transcription-complete` | Supprime définitivement une réunion locale terminée. |
+| `meetings delete ID` | `--if-export-sha256 HASH`, `--require-transcription-complete` | Supprime définitivement une réunion locale terminée, encore présente dans l'application, à transcription complète, application fermée. |
 
 ### `meetings initialize-managed`
 
@@ -184,4 +230,10 @@ Exige `--json` et `--source local`. `--from-ms` et `--until-ms` sont des millise
 syntheo --json meetings --source local delete MEETING_ID --if-export-sha256 HASH --require-transcription-complete
 ```
 
-Supprime définitivement une réunion locale terminée : historique des documents, transcriptions et index de recherche dérivé. Exige `--source local`, `--if-export-sha256` (le SHA-256 de l'export JSON complet, tel qu'imprimé sur la sortie standard avec son retour à la ligne final, ou tel qu'enregistré avec `--output`) et `--require-transcription-complete`. Fermez l'application avant. Un export modifié, une transcription inachevé ou une proposition en attente empêche la suppression. Une suppression interrompue reprend avec le même identifiant et la même empreinte.
+Supprime définitivement une réunion locale terminée : historique des documents, transcriptions et index de recherche dérivé. Exige `--source local`, `--if-export-sha256` (le SHA-256 de l'export JSON complet, tel qu'imprimé sur la sortie standard avec son retour à la ligne final, ou tel qu'enregistré avec `--output`) et `--require-transcription-complete`. La suppression n'a lieu qu'à trois conditions :
+
+- **Réunion encore présente dans l'application** : une réunion déjà supprimée depuis l'application est introuvable pour la CLI et n'est pas purgée.
+- **Transcription complète** : réunion terminée, transcription finalisée.
+- **Application fermée** : sinon la commande échoue avec « close Syntheo before deletion ».
+
+Un export modifié ou une proposition en attente empêche aussi la suppression. Une suppression interrompue reprend avec le même identifiant et la même empreinte.

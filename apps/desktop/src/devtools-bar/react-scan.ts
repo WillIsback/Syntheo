@@ -8,8 +8,11 @@ import {
   type ScanNotification,
 } from "react-scan";
 
-import type { ReactScanSettings } from "./react-tools";
-import { registerReactTools, updateReactTools } from "./react-tools";
+import {
+  registerReactTools,
+  updateReactTools,
+  type ReactScanSettings,
+} from "./react-tools";
 import { publishScanData, registerScanData, type ScanEvent } from "./scan-data";
 
 const OPTIONS_KEY = "react-scan-options";

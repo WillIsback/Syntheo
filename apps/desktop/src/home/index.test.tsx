@@ -23,6 +23,11 @@ const mocks = vi.hoisted(() => ({
     pause: null,
   },
   menus: [] as MenuItemDef[][],
+  transcription: {
+    active: "on_device" as "on_device" | "server" | null,
+    isLoading: false,
+  },
+  llmConn: { providerId: "openai" } as object | null,
   firstName: "Camille",
   recentNotes: [
     {
@@ -46,6 +51,14 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@tauri-apps/plugin-os", () => ({ platform: mocks.platform }));
+
+vi.mock("~/stt/usable-transcription", () => ({
+  useUsableTranscription: () => mocks.transcription,
+}));
+
+vi.mock("~/ai/hooks", () => ({
+  useLLMConnection: () => ({ conn: mocks.llmConn }),
+}));
 
 vi.mock("./queries", () => ({
   RECENT_NOTES_LIMIT: 5,
@@ -135,11 +148,30 @@ describe("HomePage", () => {
     };
     mocks.menus = [];
     mocks.platform.mockReturnValue("linux");
+    mocks.transcription = { active: "on_device", isLoading: false };
+    mocks.llmConn = { providerId: "openai" };
   });
 
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
+  });
+
+  // QA 0.8.0-3 : « Sur ce poste » prêt, aucun serveur de transcription, LLM
+  // configuré pour la synthèse.
+  it("dit que la transcription se fait sur ce poste et la synthèse sur le serveur", () => {
+    render(<HomePage />);
+    expect(
+      screen.getByText(
+        "Transcription runs on this computer; summaries on your server",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("sans transcription utilisable, pas de ligne de traitement", () => {
+    mocks.transcription = { active: null, isLoading: false };
+    render(<HomePage />);
+    expect(document.querySelector("[data-home-processing]")).toBeNull();
   });
 
   it("Démarrer crée une note vierge", () => {

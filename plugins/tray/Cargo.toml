@@ -15,7 +15,7 @@ name = "tauri_plugin_tray"
 tauri-plugin = { workspace = true, features = ["build"] }
 
 [dev-dependencies]
-specta-typescript = { workspace = true }
+syntheo-specta-export = { workspace = true }
 
 [dependencies]
 syntheo-brand = { workspace = true }
@@ -31,8 +31,6 @@ tauri-plugin-store2 = { workspace = true }
 tauri-plugin-windows = { workspace = true }
 
 open = { workspace = true }
-serde = { workspace = true, features = ["derive"] }
-serde_json = { workspace = true }
 specta = { workspace = true }
 tokio = { workspace = true, features = ["time"] }
 tracing = { workspace = true }

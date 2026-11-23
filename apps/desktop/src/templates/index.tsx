@@ -10,7 +10,7 @@ export {
   useUserTemplate,
   useUserTemplates,
 } from "./queries";
-export type { UserTemplate, UserTemplateDraft } from "./queries";
+export type { UserTemplate } from "./queries";
 export { DEFAULT_TEMPLATE_ICON, TemplateIconGlyph } from "./template-icon";
 export type { TemplateIcon } from "./template-icon";
 export { useOpenTemplatesTab } from "./use-open-templates-tab";

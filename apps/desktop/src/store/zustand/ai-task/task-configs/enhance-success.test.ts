@@ -9,6 +9,8 @@ import { enhanceSuccess, runEnhanceSuccess } from "./enhance-success";
 import { useLiveTitle } from "~/store/zustand/live-title";
 
 const mocks = vi.hoisted(() => ({
+  dispatchEvent: vi.fn(),
+  recordSummaryEvent: vi.fn(),
   loadSessionContentSnapshot: vi.fn(),
   playCompletionSound: vi.fn(),
   persistGeneratedEnhancedNote: vi.fn().mockResolvedValue(undefined),
@@ -22,6 +24,14 @@ vi.mock("@syntheo/plugin-template", () => ({
     prepareGeneratedSummary: mocks.prepareGeneratedSummary,
     composeGeneratedSummary: mocks.composeGeneratedSummary,
   },
+}));
+
+vi.mock("@syntheo/plugin-local-api", () => ({
+  commands: { dispatchEvent: mocks.dispatchEvent },
+}));
+
+vi.mock("~/mesure/beta", () => ({
+  recordSummaryEvent: mocks.recordSummaryEvent,
 }));
 
 vi.mock("~/session/content-queries", () => ({
@@ -130,6 +140,7 @@ describe("enhanceSuccess.onSuccess", () => {
     mocks.loadSessionContentSnapshot.mockResolvedValue(createSnapshot());
     mocks.persistGeneratedEnhancedNote.mockResolvedValue(undefined);
     mocks.persistGeneratedTitle.mockResolvedValue(true);
+    mocks.dispatchEvent.mockResolvedValue({ status: "ok", data: 0 });
     mocks.prepareGeneratedSummary
       .mockReset()
       .mockImplementation(async ({ text }) => ({
@@ -275,6 +286,19 @@ describe("enhanceSuccess.onSuccess", () => {
     expect(onPersisted).toHaveBeenCalledOnce();
     expect(mocks.persistGeneratedEnhancedNote).toHaveBeenCalledBefore(
       onPersisted,
+    );
+  });
+
+  // Bêta (issue 672) : seul un envoi réel par webhook compte comme partage.
+  it("records a share only when a webhook received the summary", async () => {
+    await runEnhanceSuccess(createParams());
+    await vi.waitFor(() => expect(mocks.dispatchEvent).toHaveBeenCalledOnce());
+    expect(mocks.recordSummaryEvent).not.toHaveBeenCalled();
+
+    mocks.dispatchEvent.mockResolvedValue({ status: "ok", data: 2 });
+    await runEnhanceSuccess(createParams());
+    await vi.waitFor(() =>
+      expect(mocks.recordSummaryEvent).toHaveBeenCalledWith("shared", "note-1"),
     );
   });
 

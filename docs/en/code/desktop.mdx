@@ -12,7 +12,7 @@ This page links the desktop app's modules to the documentation pages to update w
 | Interface | `apps/desktop/src` | React 19, TanStack Router routing (`routes/`), Zustand state (`store/zustand/`), texts translated with Lingui (`i18n/`). |
 | Native core | `apps/desktop/src-tauri/src` | Startup, database opening, Tauri plugin registration, search index, installation of the CLI and agent skills. |
 
-**Internal dependencies of the `@syntheo/desktop` package** (`apps/desktop/package.json`): `@syntheo/changelog`, `db`, `db-react`, `db-tauri`, `editor`, `provider-validation`, `store`, `ui`, `utils`, `design-system` (dev), and the TypeScript bindings of the plugins `contacts`, `db`, `deeplink2`, `detect`, `dictation`, `export`, `fs-sync`, `hooks`, `icon`, `local-api`, `local-auth`, `misc`, `notification`, `opener2`, `permissions`, `relay`, `session`, `settings`, `sfx`, `shortcut`, `store2`, `tantivy`, `template`, `transcription`, `tray`, `windows`.
+**Internal dependencies of the `@syntheo/desktop` package** (`apps/desktop/package.json`): `@syntheo/changelog`, `db`, `db-react`, `db-tauri`, `editor`, `provider-validation`, `store`, `ui`, `utils`, `design-system` (dev), and the TypeScript bindings of the plugins `contacts`, `db`, `deeplink2`, `detect`, `dictation`, `export`, `fs-sync`, `icon`, `local-api`, `local-auth`, `mesure`, `misc`, `notification`, `opener2`, `permissions`, `relay`, `session`, `settings`, `sfx`, `shortcut`, `store2`, `tantivy`, `template`, `transcription`, `tray`, `windows`.
 
 ## Native core: `apps/desktop/src-tauri/src`
 
@@ -42,7 +42,7 @@ Commands exposed to the interface (`commands.rs`): `get_onboarding_needed`, `set
 | --- | --- |
 | `routes/app/main/_layout*.tsx` | Main window: tabs (notes, settings, templates, contacts, folders, automations…), layout in `main/` and `shared/main/`. |
 | `routes/app/note.$sessionId.tsx` | Note opened in its own window. |
-| `routes/app/floating-bar.tsx`, `live-caption.tsx` | Floating meeting bar and live captions (`meeting-float/`). |
+| `routes/app/floating-bar.tsx` | Floating meeting bar (`meeting-float/`). |
 | `routes/app/composer.tsx` | Quick chat window (`composer/`). |
 | `routes/app/onboarding.tsx` | First launch (`onboarding/`). |
 | `routes/app/instruction.tsx` | "Continue in the browser" screen; sign-in, billing and cloud integrations are gone. |
@@ -54,7 +54,7 @@ Tab types are in `store/zustand/tabs/schema.ts`. The old `calendar` and `task` t
 | Module | Role | Plugins and packages used | Affected doc pages |
 | --- | --- | --- | --- |
 | `stt/` | Meeting capture: start (`useStartListening`), STT connection (`useSTTConnection`), live segments, recovery after a cut, per-channel pause and mute, automatic stop, meeting consent and announcement, video-call app detection (`detect-events.ts`, `meeting-apps.ts`), automatic start (`session-auto-start.tsx`), audio file import (`useUploadFile`, `recording-import.tsx`). | `plugin-transcription`, `plugin-detect`, `plugin-permissions`, `plugin-notification`, `plugin-fs-sync`, `plugin-settings` | [/en/meetings](/en/meetings), [/en/automatic-capture](/en/automatic-capture), [/en/import-recordings](/en/import-recordings), [/en/languages](/en/languages), [/en/troubleshooting](/en/troubleshooting) |
-| `store/zustand/listener/` | Listening session state: live or batch capture, mute, fallback to another microphone, ongoing transcription. | `plugin-transcription`, `plugin-settings`, `plugin-local-api`, `plugin-hooks`, `plugin-detect` | [/en/meetings](/en/meetings) |
+| `store/zustand/listener/` | Listening session state: live or batch capture, mute, fallback to another microphone, ongoing transcription. | `plugin-transcription`, `plugin-settings`, `plugin-local-api`, `plugin-detect` | [/en/meetings](/en/meetings) |
 | `store/zustand/ai-task/` | LLM tasks: summary generation (`enhance-*`) and title generation (`title-*`), participants' preferred names. | `plugin-template`, `plugin-transcription`, `plugin-local-api`, `@syntheo/editor` | [/en/meetings](/en/meetings), [/en/customize-summaries](/en/customize-summaries) |
 | `services/enhancer/` | Triggers the summary at the end of a meeting: eligibility, summary language and length, notification. | `plugin-template`, `plugin-notification` | [/en/customize-summaries](/en/customize-summaries), [/en/meetings](/en/meetings) |
 | `services/` (rest) | `audio-retention*` and `audio-cleanup` (deletion of processed audio), `tray-recording`, `event-listeners`, `native-menu-locale`, `task-manager`. | `plugin-tray`, `plugin-windows`, `plugin-transcription` | [/en/data-and-privacy](/en/data-and-privacy), [/en/conformite/rgpd](/en/conformite/rgpd) |
@@ -69,11 +69,11 @@ Tab types are in `store/zustand/tabs/schema.ts`. The old `calendar` and `task` t
 | `folders/`, `sidebar/` | Folders as project spaces (`folders/project/`: common thread, next meeting and agenda, per-folder template, folder suggestion) and sidebar (folder tree, settings navigation, server status). | no dedicated plugin | [/en/folders](/en/folders), [/en/notes](/en/notes) |
 | `home/` | Home: notes index, start button, export. | no dedicated plugin | [/en/quickstart](/en/quickstart), [/en/notes](/en/notes) |
 | `search/` | Full-text search (`contexts/engine`). | `plugin-tantivy` | [/en/notes](/en/notes) |
-| `meeting-float/` | Floating bar and live captions during capture. | `plugin-windows`, `plugin-transcription` | [/en/meetings](/en/meetings), [/en/automatic-capture](/en/automatic-capture) |
+| `meeting-float/` | Floating bar during capture. | `plugin-windows`, `plugin-transcription` | [/en/meetings](/en/meetings), [/en/automatic-capture](/en/automatic-capture) |
 | `lock/` | Locking the app and notes with device authentication. | `plugin-local-auth` | [/en/security](/en/security), [/en/data-and-privacy](/en/data-and-privacy) |
 | `onboarding/` | First launch: configuration, permissions, welcome note. | `plugin-permissions` | [/en/quickstart](/en/quickstart), [/en/ai-setup](/en/ai-setup) |
 | `settings/` | Settings, detailed below. | see below | see below |
-| `i18n/` | Lingui catalogs; French by default, English available. | none | [/en/languages](/en/languages) |
+| `i18n/` | Lingui catalogs; follows the system language (French if it is the first preferred language), English otherwise. | none | [/en/languages](/en/languages) |
 | `changelog/` | What's new tab. | `@syntheo/changelog` | none |
 | `db/` | Interface-side data access, write queue with retry. | `plugin-db`, `@syntheo/db*` | none |
 | `editor-bridge/`, `edit/`, `contexts/`, `shared/`, `main/`, `styles/`, `types/` | Interface infrastructure: links and mentions in the editor, edit tab, tool registry, shortcuts, theme, deep links. | various | none |

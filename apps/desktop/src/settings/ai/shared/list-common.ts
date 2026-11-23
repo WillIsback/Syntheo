@@ -176,22 +176,6 @@ export const isDateSnapshot = (id: string): boolean => {
   return false;
 };
 
-export const isNonChatModel = (id: string): boolean => {
-  const lowerId = id.toLowerCase();
-  const name = modelName(id);
-
-  if (/^o\d/.test(name)) return true;
-  if (name.startsWith("gpt-4o-")) return true;
-  if (name.startsWith("gpt-4.1")) return true;
-  if (name.startsWith("ft:") || lowerId.startsWith("ft:")) return true;
-  if (name.startsWith("nano-banana")) return true;
-  // Coding-agent-only and deep-research variants, not general chat.
-  if (/^grok-(?:build|code-fast)/.test(name)) return true;
-  if (/multi-agent/.test(name)) return true;
-
-  return false;
-};
-
 export const isNonStreamingModel = (id: string): boolean => {
   const name = modelName(id);
   return /^gpt-\d+(?:\.\d+)*-pro(?:$|-)/.test(name);

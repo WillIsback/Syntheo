@@ -94,6 +94,15 @@ pub enum DegradedError {
     ProviderConfiguration { provider: String, message: String },
     #[serde(rename = "stream_error")]
     StreamError { message: String },
+    /// Source « Sur ce poste » indisponible (issue 684). `reason` : code de
+    /// `owhisper_client::OnDeviceErrorKind` ; `permanent` : pas de nouvelle
+    /// tentative pendant l'écoute.
+    #[serde(rename = "on_device_unavailable")]
+    OnDeviceUnavailable { reason: String, permanent: bool },
+    /// Le module de la source « Sur ce poste » n'a pas prouvé connaître le
+    /// jeton du lancement : rien n'a été envoyé, pas de nouvelle tentative.
+    #[serde(rename = "on_device_authentication_failed")]
+    OnDeviceAuthenticationFailed,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]

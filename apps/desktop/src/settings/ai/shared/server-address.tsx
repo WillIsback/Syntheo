@@ -5,13 +5,13 @@ import { type ReactNode, useId, useRef, useState } from "react";
 
 import {
   isCleartextRemoteUrl,
-  ProviderCredentialError,
   validateProviderBaseUrl,
 } from "@syntheo/provider-validation";
 import { CircleNotch } from "@syntheo/ui/components/icons";
 import { Button } from "@syntheo/ui/components/ui/button";
 
 import { CleartextConfirmation, CleartextNotice } from "./cleartext-warning";
+import { describeProviderCredentialError } from "./provider-credential-error";
 import { FieldLabel, SERVER_INPUT_CLASS } from "./server-card";
 import type { ServerKind } from "./server-connection";
 
@@ -38,6 +38,20 @@ export function ServerAddressForm(props: {
   testing: boolean;
   onTest: () => void;
   isCurrentProvider: boolean;
+  /**
+   * Adresse de ce fournisseur imposée par l'administration
+   * (managed_settings.json, ligne `ai_provider:<kind>:<id>` gérée) :
+   * l'adresse enregistrée est affichée sans champ, « Réinitialiser »
+   * disparaît. La clé API reste saisissable : elle va au trousseau, la ligne
+   * gérée garde une clé vide.
+   */
+  managed?: boolean;
+  /**
+   * Modèle courant imposé par l'administration : « Réinitialiser » oublie
+   * l'adresse et la clé sans toucher au modèle, que le déclencheur refuserait
+   * de vider (issue 710).
+   */
+  selectionManaged?: boolean;
 }) {
   const { providers, isReady } = useAiProvidersState(props.kind);
   if (!isReady) return null;
@@ -65,6 +79,8 @@ function ServerAddressFields({
   testing,
   onTest,
   isCurrentProvider,
+  managed = false,
+  selectionManaged = false,
   hasSaved,
   hasSavedAddress,
   initial,
@@ -76,6 +92,8 @@ function ServerAddressFields({
   testing: boolean;
   onTest: () => void;
   isCurrentProvider: boolean;
+  managed?: boolean;
+  selectionManaged?: boolean;
   hasSaved: boolean;
   hasSavedAddress: boolean;
   initial: Values;
@@ -95,19 +113,25 @@ function ServerAddressFields({
     isCleartextRemoteUrl(initial.base_url) ? initial.base_url.trim() : null,
   );
   const [pendingHttpUrl, setPendingHttpUrl] = useState<string | null>(null);
+  // L'adresse n'est figée que si la politique impose celle de ce
+  // fournisseur ; un protocole ou un modèle imposé la laisse saisissable.
+  const addressLocked = managed;
 
   const form = useForm({
     defaultValues: initial,
     onSubmit: async ({ value }) => {
-      const baseUrl = value.base_url.trim();
+      // Adresse imposée : seule la clé API peut changer, l'adresse
+      // enregistrée est réécrite telle quelle.
+      const baseUrl = (
+        addressLocked ? initial.base_url : value.base_url
+      ).trim();
       if (baseUrl) {
         try {
           validateProviderBaseUrl(baseUrl);
         } catch (error) {
           setUrlError(
-            error instanceof ProviderCredentialError
-              ? error.message
-              : t`Enter a full address, for example ${placeholder}.`,
+            describeProviderCredentialError(error) ??
+              t`Enter a full address, for example ${placeholder}.`,
           );
           return;
         }
@@ -151,7 +175,7 @@ function ServerAddressFields({
   const reset = async () => {
     try {
       await clear.mutateAsync();
-      if (isCurrentProvider) {
+      if (isCurrentProvider && !selectionManaged) {
         await setSettingValues(
           kind === "llm"
             ? { current_llm_provider: "", current_llm_model: "" }
@@ -169,7 +193,8 @@ function ServerAddressFields({
 
   const saveError =
     mutation.error && !isKeychainAccessError(mutation.error)
-      ? mutation.error.message
+      ? (describeProviderCredentialError(mutation.error) ??
+        mutation.error.message)
       : null;
 
   return (
@@ -196,20 +221,30 @@ function ServerAddressFields({
       <div className="flex flex-col gap-1.5">
         <FieldLabel htmlFor={urlId}>{label}</FieldLabel>
         <div className="flex gap-2">
-          <form.Field name="base_url">
-            {(field) => (
-              <input
-                id={urlId}
-                className={SERVER_INPUT_CLASS}
-                value={field.state.value}
-                placeholder={placeholder}
-                spellCheck={false}
-                autoComplete="off"
-                aria-invalid={!!urlError}
-                onChange={(event) => field.handleChange(event.target.value)}
-              />
-            )}
-          </form.Field>
+          {addressLocked ? (
+            <output
+              id={urlId}
+              data-testid="server-address-managed"
+              className="min-w-0 flex-1 self-center truncate font-mono text-sm"
+            >
+              {initial.base_url}
+            </output>
+          ) : (
+            <form.Field name="base_url">
+              {(field) => (
+                <input
+                  id={urlId}
+                  className={SERVER_INPUT_CLASS}
+                  value={field.state.value}
+                  placeholder={placeholder}
+                  spellCheck={false}
+                  autoComplete="off"
+                  aria-invalid={!!urlError}
+                  onChange={(event) => field.handleChange(event.target.value)}
+                />
+              )}
+            </form.Field>
+          )}
           <Button
             type="button"
             variant="outline"
@@ -272,7 +307,7 @@ function ServerAddressFields({
               )}
             </form.Field>
           </div>
-          {hasSaved ? (
+          {hasSaved && !managed ? (
             confirmReset ? (
               <div className="flex flex-wrap items-center gap-2 text-sm">
                 <span>

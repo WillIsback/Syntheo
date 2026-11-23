@@ -33,23 +33,68 @@ import {
 } from "~/stt/capture-lifecycle-storage";
 import { softDeleteTranscript } from "~/stt/queries";
 
+/** Réparation refusée pour une capture « Sur ce poste ». */
+export class OnDeviceRepairUnavailableError extends Error {
+  constructor() {
+    super("on-device capture: repair through the server is not allowed");
+    this.name = "OnDeviceRepairUnavailableError";
+  }
+}
+
+let onDeviceRepairNotified = false;
+
+function notifyOnDeviceRepairUnavailable() {
+  toast.warning(
+    t`Incomplete transcription: the transcription module of this computer is unavailable. The missing passage stays marked; audio is not sent to the server.`,
+  );
+}
+
+const refuseOnDeviceBatch = (async () => {
+  if (!onDeviceRepairNotified) {
+    onDeviceRepairNotified = true;
+    notifyOnDeviceRepairUnavailable();
+  }
+  throw new OnDeviceRepairUnavailableError();
+}) as unknown as CaptureLifecycleDeps["runBatchRef"]["current"];
+
+/**
+ * Dépendances d'une capture « Sur ce poste » : aucun lot ne part au serveur
+ * (réparation des trous, réparation à l'arrêt, reprise).
+ */
+export function onDeviceGuardedDeps(
+  deps: CaptureLifecycleDeps,
+  onDevice: boolean,
+): CaptureLifecycleDeps {
+  return onDevice
+    ? {
+        ...deps,
+        runBatchRef: { current: refuseOnDeviceBatch },
+        canRunBatchRef: { current: false },
+      }
+    : deps;
+}
+
 /**
  * Construit le cycle de vie d'une capture : arrêt, reprise après
  * redémarrage, persistance du marqueur et nettoyage d'un démarrage raté.
  */
 export function createCaptureLifecycleSession(
-  deps: CaptureLifecycleDeps,
+  baseDeps: CaptureLifecycleDeps,
   recoveredMarker: CaptureLifecycleMarker | undefined,
   startedAutomatically: boolean,
   pendingMarker: CaptureLifecycleMarker | undefined,
 ) {
-  const { sessionId, canRunBatchRef } = deps;
   const state = createCaptureContext(
-    deps,
+    baseDeps,
     recoveredMarker,
     startedAutomatically,
     pendingMarker,
   );
+  // Capture « Sur ce poste » (issue 685) : aucun lot vers le serveur, ni
+  // pour réparer un trou, ni à l'arrêt, ni à la reprise. Le module ne fait
+  // que le direct : le trou reste marqué et la personne est prévenue.
+  const deps = onDeviceGuardedDeps(baseDeps, state.onDevice);
+  const { sessionId, canRunBatchRef } = deps;
   const {
     inheritedCaptures,
     inheritedAudioPending,

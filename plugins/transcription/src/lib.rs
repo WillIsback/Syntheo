@@ -18,6 +18,9 @@ mod legacy_voiceprints;
 mod listener;
 mod listener2;
 mod live_journal;
+mod local_probe;
+mod on_device;
+pub use on_device::SpeechBuild;
 mod session_transcript;
 mod stopped_captures;
 
@@ -34,9 +37,8 @@ pub use syntheo_transcription_core::listener::{
     LiveTranscriptSegment, LiveTranscriptSegmentDelta, LiveTranscriptUpdate,
 };
 pub use syntheo_transcription_core::listener2::{
-    Error as Listener2Error, Result as Listener2Result, Subtitle, Token, VttWord,
-    export_words_to_vtt_file, is_supported_languages_batch, list_documented_language_codes_batch,
-    parse_subtitle_from_path, suggest_providers_for_languages_batch,
+    Error as Listener2Error, Result as Listener2Result, Subtitle, Token,
+    is_supported_languages_batch, parse_subtitle_from_path,
 };
 
 use syntheo_audio::AudioProvider;
@@ -147,42 +149,33 @@ fn make_specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
             listener::commands::get_captured_speaker_device::<tauri::Wry>,
             listener::commands::start_speaker_level_monitor::<tauri::Wry>,
             listener::commands::stop_speaker_level_monitor::<tauri::Wry>,
-            listener::commands::get_mic_muted::<tauri::Wry>,
             listener::commands::set_mic_muted::<tauri::Wry>,
-            listener::commands::get_speaker_muted::<tauri::Wry>,
             listener::commands::set_speaker_muted::<tauri::Wry>,
             listener::commands::start_capture::<tauri::Wry>,
             listener::commands::retry_audio_capture::<tauri::Wry>,
             listener::commands::flush_live_transcript::<tauri::Wry>,
             listener::commands::release_live_transcript::<tauri::Wry>,
-            listener::commands::list_stopped_captures::<tauri::Wry>,
             listener::commands::get_stopped_capture::<tauri::Wry>,
             listener::commands::acknowledge_stopped_capture::<tauri::Wry>,
             listener::commands::save_capture_lifecycle_marker::<tauri::Wry>,
             listener::commands::clear_capture_lifecycle_marker::<tauri::Wry>,
             listener::commands::get_capture_lifecycle_marker::<tauri::Wry>,
-            listener::commands::list_capture_lifecycle_markers::<tauri::Wry>,
             listener::commands::list_capture_recoveries::<tauri::Wry>,
             listener::commands::get_capture_audio_gaps::<tauri::Wry>,
-            listener::commands::mark_capture_audio_saved::<tauri::Wry>,
             listener::commands::clear_capture_audio_saved::<tauri::Wry>,
             listener::commands::stop_capture::<tauri::Wry>,
             listener::commands::stop_capture_for_session::<tauri::Wry>,
             listener::commands::update_capture_config::<tauri::Wry>,
             listener::commands::get_capture_state::<tauri::Wry>,
             listener::commands::get_capture_snapshot::<tauri::Wry>,
-            listener::commands::update_capture_credentials::<tauri::Wry>,
             listener::commands::list_capture_audio_chunks::<tauri::Wry>,
             listener::commands::get_capture_audio_cleanup_status::<tauri::Wry>,
             listener::commands::acknowledge_capture_audio_cleanup_status::<tauri::Wry>,
             listener::commands::acknowledge_capture_audio_chunk::<tauri::Wry>,
             listener::commands::delete_transcribed_capture_audio::<tauri::Wry>,
             listener::commands::is_supported_languages_live::<tauri::Wry>,
-            listener::commands::suggest_providers_for_languages_live::<tauri::Wry>,
-            listener::commands::list_documented_language_codes_live::<tauri::Wry>,
             listener::commands::render_transcript_segments,
             listener2::commands::render_session_transcript::<tauri::Wry>,
-            listener2::commands::refine_batch_transcript,
             listener2::commands::save_batch_transcript::<tauri::Wry>,
             listener2::commands::reconcile_refined_speaker_clusters,
             listener2::commands::start_transcription::<tauri::Wry>,
@@ -191,14 +184,22 @@ fn make_specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
             listener2::commands::get_completed_transcription::<tauri::Wry>,
             listener2::commands::acknowledge_completed_transcription::<tauri::Wry>,
             listener2::commands::parse_subtitle::<tauri::Wry>,
-            listener2::commands::export_to_vtt::<tauri::Wry>,
             listener2::commands::is_supported_languages_batch::<tauri::Wry>,
-            listener2::commands::suggest_providers_for_languages_batch::<tauri::Wry>,
-            listener2::commands::list_documented_language_codes_batch::<tauri::Wry>,
             audio_retention::delete_processed_session_audio::<tauri::Wry>,
             audio_upload::begin_audio_upload::<tauri::Wry>,
             audio_upload::append_audio_upload::<tauri::Wry>,
             audio_upload::discard_audio_upload::<tauri::Wry>,
+            local_probe::probe_local_transcription::<tauri::Wry>,
+            on_device::on_device_status::<tauri::Wry>,
+            on_device::on_device_download_models::<tauri::Wry>,
+            on_device::on_device_install_models::<tauri::Wry>,
+            on_device::on_device_install_progress::<tauri::Wry>,
+            on_device::on_device_cancel_install::<tauri::Wry>,
+            on_device::on_device_remove_models::<tauri::Wry>,
+            on_device::on_device_commissioning::<tauri::Wry>,
+            on_device::on_device_commission::<tauri::Wry>,
+            on_device::on_device_load::<tauri::Wry>,
+            on_device::on_device_commission_progress::<tauri::Wry>,
         ])
         .events(tauri_specta::collect_events![
             CaptureLifecycleEvent,
@@ -212,6 +213,12 @@ fn make_specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
 }
 
 pub fn init() -> tauri::plugin::TauriPlugin<tauri::Wry> {
+    init_with(on_device::SpeechBuild::default())
+}
+
+/// `speech` : compagnon et sources des modèles fixés par la construction de
+/// l'application (issue 683).
+pub fn init_with(speech: on_device::SpeechBuild) -> tauri::plugin::TauriPlugin<tauri::Wry> {
     let specta_builder = make_specta_builder();
 
     tauri::plugin::Builder::new(PLUGIN_NAME)
@@ -242,6 +249,15 @@ pub fn init() -> tauri::plugin::TauriPlugin<tauri::Wry> {
             });
             listener2::load_completed_batches(&batch_registry);
             app.manage(batch_registry);
+            app.manage(on_device::OnDevicePolicy::default());
+            app.manage(on_device::CompiledSources::of(speech));
+            if let Some(dir) = on_device::data_dir(app.app_handle()) {
+                app.manage(Arc::new(syntheo_speech_host::SpeechHost::new(
+                    dir,
+                    syntheo_speech_host::Companion::of_this_app(speech.companion_files),
+                    on_device::threads_per_session(),
+                )));
+            }
 
             let audio = app.state::<Arc<dyn AudioProvider>>().inner().clone();
             let session_state_cache: SessionStateCache = Arc::new(StdMutex::new(HashMap::new()));
@@ -283,26 +299,19 @@ mod test {
 
     #[test]
     fn export_types() {
-        const OUTPUT_FILE: &str = "./js/bindings.gen.ts";
-
-        make_specta_builder::<tauri::Wry>()
-            .disable_serde_phases()
-            .semantic_types(
-                specta_typescript::semantic::Configuration::empty().enable_lossless_floats(),
-            )
-            .dangerously_cast_bigints_to_number()
-            .export(specta_typescript::Typescript::default(), OUTPUT_FILE)
-            .unwrap();
-
-        let content = std::fs::read_to_string(OUTPUT_FILE).unwrap();
-        std::fs::write(OUTPUT_FILE, format!("// @ts-nocheck\n{content}")).unwrap();
+        syntheo_specta_export::write_bindings(
+            make_specta_builder::<tauri::Wry>(),
+            "./js/bindings.gen.ts",
+        );
     }
 }
 
 /// Adresse du serveur d'inférence revalidée au démarrage (issue 646). Une
 /// adresse vide passe : elle échoue plus loin, comme avant.
 pub(crate) fn validate_base_url(base_url: &str) -> std::result::Result<(), String> {
-    if base_url.trim().is_empty() {
+    // Source « Sur ce poste » : adresse interne réservée, résolue au
+    // lancement du module (issue 684).
+    if base_url.trim().is_empty() || owhisper_client::is_on_device(base_url) {
         return Ok(());
     }
     owhisper_client::validate_provider_base_url(base_url)
@@ -317,6 +326,7 @@ mod base_url_tests {
         assert!(super::validate_base_url("http://192.168.1.87:8000/v1?provider=nvidia").is_ok());
         assert!(super::validate_base_url("https://api.example.com/v1").is_ok());
         assert!(super::validate_base_url("").is_ok());
+        assert!(super::validate_base_url(owhisper_client::ON_DEVICE_BASE_URL).is_ok());
         assert!(super::validate_base_url("http://api.example.com/v1").is_err());
         assert!(super::validate_base_url("::not a url::").is_err());
     }

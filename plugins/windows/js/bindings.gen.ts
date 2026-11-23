@@ -8,11 +8,7 @@ import * as __TAURI_EVENT from "@tauri-apps/api/event";
 export const commands = {
 	windowShow: (window: AppWindow) => typedError<null, string>(__TAURI_INVOKE("plugin:windows|window_show", { window })),
 	windowHide: (window: AppWindow) => typedError<null, string>(__TAURI_INVOKE("plugin:windows|window_hide", { window })),
-	windowDestroy: (window: AppWindow) => typedError<null, string>(__TAURI_INVOKE("plugin:windows|window_destroy", { window })),
-	windowNavigate: (window: AppWindow, path: string) => typedError<null, string>(__TAURI_INVOKE("plugin:windows|window_navigate", { window, path })),
 	windowEmitNavigate: (window: AppWindow, event: Navigate) => typedError<null, string>(__TAURI_INVOKE("plugin:windows|window_emit_navigate", { window, event })),
-	windowIsExists: (window: AppWindow) => typedError<boolean, string>(__TAURI_INVOKE("plugin:windows|window_is_exists", { window })),
-	windowIsOccluded: (window: AppWindow) => typedError<boolean, string>(__TAURI_INVOKE("plugin:windows|window_is_occluded", { window })),
 	webviewHealthAck: (requestId: string) => typedError<null, string>(__TAURI_INVOKE("plugin:windows|webview_health_ack", { requestId })),
 	webviewHealthReady: () => typedError<null, string>(__TAURI_INVOKE("plugin:windows|webview_health_ready")),
 	windowSetFrameAnimated: (window: AppWindow, anchor: Anchor, width: number, height: number) => typedError<null, string>(__TAURI_INVOKE("plugin:windows|window_set_frame_animated", { window, anchor, width, height })),
@@ -26,10 +22,6 @@ export const commands = {
 	floatingBarUpdate: (state: FloatingBarState) => typedError<null, string>(__TAURI_INVOKE("plugin:windows|floating_bar_update", { state })),
 	floatingBarUpdateAmplitude: (amplitude: number) => typedError<null, string>(__TAURI_INVOKE("plugin:windows|floating_bar_update_amplitude", { amplitude })),
 	floatingBarCurrentState: () => typedError<FloatingBarState | null, string>(__TAURI_INVOKE("plugin:windows|floating_bar_current_state")),
-	liveCaptionShow: () => typedError<null, string>(__TAURI_INVOKE("plugin:windows|live_caption_show")),
-	liveCaptionHide: () => typedError<null, string>(__TAURI_INVOKE("plugin:windows|live_caption_hide")),
-	liveCaptionUpdate: (state: LiveCaptionState) => typedError<null, string>(__TAURI_INVOKE("plugin:windows|live_caption_update", { state })),
-	liveCaptionCurrentState: () => typedError<LiveCaptionState | null, string>(__TAURI_INVOKE("plugin:windows|live_caption_current_state")),
 };
 
 /** Events */
@@ -41,7 +33,6 @@ export const events = {
 	floatingBarOverlayState: makeEvent<FloatingBarOverlayState, FloatingBarOverlayState>("plugin:windows:floating-bar-overlay-state"),
 	floatingBarSettingsChange: makeEvent<FloatingBarSettingsChange, FloatingBarSettingsChange>("plugin:windows:floating-bar-settings-change"),
 	floatingBarStop: makeEvent<FloatingBarStop, FloatingBarStop>("plugin:windows:floating-bar-stop"),
-	liveCaptionOverlayState: makeEvent<LiveCaptionOverlayState, LiveCaptionOverlayState>("plugin:windows:live-caption-overlay-state"),
 	navigate: makeEvent<Navigate, Navigate>("plugin:windows:navigate"),
 	openTab: makeEvent<OpenTab, OpenTab>("plugin:windows:open-tab"),
 	visibilityEvent: makeEvent<VisibilityEvent, VisibilityEvent>("plugin:windows:visibility-event"),
@@ -170,20 +161,7 @@ export type FloatingTranscriptBubble = {
 
 export type ListeningPanelAction = "pause" | "resume" | "muteMic" | "unmuteMic";
 
-export type LiveCaptionOverlayState = {
-	state: LiveCaptionState,
-};
-
 export type LiveCaptionPosition = "topCenter" | "topLeft" | "topRight" | "bottomLeft" | "bottomRight" | "bottomCenter";
-
-export type LiveCaptionState = {
-	text: string,
-	opacity: number,
-	width: number,
-	lineCount: number,
-	position: LiveCaptionPosition,
-	minimized: boolean,
-};
 
 export type Navigate = {
 	path: string,

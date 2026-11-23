@@ -58,7 +58,7 @@ fn ratio_db(numerator: f64, denominator: f64) -> f64 {
     10.0 * (numerator / denominator.max(1e-12)).log10()
 }
 
-fn run(mic: &[f32], lpb: &[f32], strategy: Strategy) -> Option<Run> {
+fn run(mic: &[f32], lpb: &[f32], strategy: Strategy) -> Run {
     // Le micro entend la référence `BASE_LAG` échantillons plus tard : l'alignement vrai est
     // `DelaySpeaker(BASE_LAG)`.
     let len = mic.len().min(lpb.len());
@@ -71,9 +71,7 @@ fn run(mic: &[f32], lpb: &[f32], strategy: Strategy) -> Option<Run> {
         .chain(std::iter::repeat_n(0.0, BASE_LAG))
         .collect();
 
-    crate::capture::use_source_aec_models();
-    let mut aec = build_aec(RATE);
-    aec.as_ref()?;
+    let mut aec = Some(build_aec(RATE).expect("modèles DTLN embarqués"));
     let latency = syntheo_aec::BLOCK_SIZE - syntheo_aec::BLOCK_SHIFT;
     let mut linear_echo_gain = None;
     let mut aligner = AecReferenceAligner::new(RATE);
@@ -132,18 +130,19 @@ fn run(mic: &[f32], lpb: &[f32], strategy: Strategy) -> Option<Run> {
             &mut linear_echo_gain,
             &aligned_mic,
             &aligned_speaker,
-        )?;
+        )
+        .expect("aec_failed");
         output.extend_from_slice(&processed);
     }
 
     // La sortie retarde le micro de la latence du modèle : on les recale.
     let usable = mic_in.len() - latency;
-    Some(Run {
+    Run {
         mic: mic_in[..usable].to_vec(),
         output: output[latency..latency + usable].to_vec(),
         resets,
         change_starts,
-    })
+    }
 }
 
 #[test]
@@ -164,10 +163,7 @@ fn aec_jitter_erle_on_recordings() {
         ),
     ] {
         let (lpb, mic) = (load(lpb), load(mic));
-        let Some(ideal) = run(&mic, &lpb, Strategy::Ideal) else {
-            println!("modèle indisponible, mesure ignorée");
-            return;
-        };
+        let ideal = run(&mic, &lpb, Strategy::Ideal);
         let mut erle = Vec::new();
         for strategy in [
             Strategy::Ideal,
@@ -175,7 +171,7 @@ fn aec_jitter_erle_on_recordings() {
             Strategy::Hysteresis,
             Strategy::ShiftWithoutReset,
         ] {
-            let result = run(&mic, &lpb, strategy).unwrap();
+            let result = run(&mic, &lpb, strategy);
             let window = |from: usize, to: usize, signal: &[f32]| {
                 energy(&signal[from.min(signal.len())..to.min(signal.len())])
             };

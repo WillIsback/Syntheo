@@ -18,9 +18,6 @@ const mocks = vi.hoisted(() => ({
   meeting: { status: "inactive", loading: false },
   configure: vi.fn(),
   setActive: vi.fn(),
-  show: vi.fn(),
-  hide: vi.fn(),
-  setPhase: vi.fn(),
   captureTarget: vi.fn(),
   startSystemRecording: vi.fn(),
   stopRecording: vi.fn(),
@@ -42,6 +39,7 @@ vi.mock("@tauri-apps/api/core", () => ({
 vi.mock("~/stt/useSTTConnection", () => ({
   useSTTConnection: () => ({
     conn: mocks.connection,
+    serverConn: mocks.connection,
   }),
 }));
 vi.mock("@tauri-apps/plugin-os", () => ({ platform: () => mocks.platform }));
@@ -67,9 +65,6 @@ vi.mock("@syntheo/plugin-shortcut", () => ({
 }));
 vi.mock("@syntheo/plugin-dictation", () => ({
   commands: {
-    show: mocks.show,
-    hide: mocks.hide,
-    setPhase: mocks.setPhase,
     captureTarget: mocks.captureTarget,
     startSystemRecording: mocks.startSystemRecording,
     stopRecording: mocks.stopRecording,
@@ -147,9 +142,6 @@ describe("dictation access and lifecycle", () => {
     for (const fn of [
       mocks.configure,
       mocks.setActive,
-      mocks.show,
-      mocks.hide,
-      mocks.setPhase,
       mocks.startSystemRecording,
       mocks.cancelRecording,
       mocks.insertText,

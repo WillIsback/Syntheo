@@ -283,6 +283,10 @@ impl AdapterKind {
         _languages: &[syntheo_language::Language],
         _model: Option<&str>,
     ) -> Self {
+        // Source « Sur ce poste » : le module parle le protocole nvidia.
+        if crate::is_on_device(base_url) {
+            return Self::Nvidia;
+        }
         if let Ok(url) = url::Url::parse(base_url)
             && let Some(kind) = url
                 .query_pairs()

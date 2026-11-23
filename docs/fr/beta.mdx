@@ -1,0 +1,206 @@
+---
+title: "Bêta : mesure et transparence"
+description: "Ce que la bêta de Syntheo cherche à vérifier, comment la reprise des synthèses est mesurée, les seuils fixés à l'avance et le contenu exact de l'export."
+---
+
+La bêta de Syntheo pose une seule question : **une synthèse générée par Syntheo est-elle envoyable sans beaucoup de retouches de fond ?** Cette page décrit la méthode, les seuils fixés avant le premier résultat, les données collectées et vos droits. Elle s'adresse aux testeurs comme à ceux qui évaluent le pilote.
+
+La participation est volontaire. La mesure est désactivée par défaut, se calcule sur votre poste, sans IA, et Syntheo n'envoie rien : c'est vous qui transmettez un fichier d'export, si vous le souhaitez.
+
+## Ce qui est établi, et ce qui ne l'est pas
+
+| Statut | Ce qui est concerné |
+| --- | --- |
+| **Éprouvé, hors du champ de la bêta** | La transcription en direct en français. |
+| **Conçu ainsi, hors du champ de la bêta** | Syntheo est conçu pour ne garder aucun audio et n'envoyer les réunions qu'aux serveurs configurés ; aucun flux automatique n'a été trouvé par l'audit statique. Voir [Données et confidentialité](/fr/data-and-privacy) et [Sécurité](/fr/security). |
+| **Observé une seule fois** | Un compte rendu construit avec Syntheo et partagé après une retouche partielle, par son concepteur. Un seul utilisateur, qui connaît l'outil : ce n'est pas une preuve. |
+| **Jamais vérifié : c'est l'objet de la bêta** | Qu'une autre personne obtienne, sur ses propres réunions, une synthèse envoyable avec peu de reprise de fond. Que l'ajout d'un terme au dictionnaire réduise les corrections de noms propres et de sigles. |
+
+## La méthode en clair
+
+### Ce qui est comparé
+
+Deux versions d'une même synthèse :
+
+- la **version générée**, produite par Syntheo, avant toute retouche ;
+- la **version envoyée**, celle que vous avez réellement diffusée, après vos corrections.
+
+La différence entre les deux est la **reprise** : ce que vous avez dû changer avant d'envoyer.
+
+### Comment
+
+Le calcul est déterministe : les mêmes textes donnent toujours les mêmes nombres. Aucun modèle d'IA n'intervient, et rien ne passe par le réseau.
+
+1. **Normalisation.** La mise en forme est retirée (titres, puces, gras, liens, dont on garde le texte). Les espaces sont fusionnés et la ponctuation est séparée des mots. Les majuscules sont conservées.
+2. **Découpage par sections.** Les titres de la version générée découpent les deux textes. Une section absente d'un côté compte entièrement comme ajoutée ou supprimée. Si moins de la moitié des titres se retrouvent dans la version envoyée, la mesure porte sur le texte entier, et l'export l'indique.
+3. **Comparaison mot à mot.** Chaque différence est un ajout, une suppression ou un remplacement. Un remplacement pèse le nombre de mots du côté le plus long.
+4. **Classement.** Une différence est **lexicale** si c'est un remplacement court (1 à 3 mots de chaque côté) qui touche un nom propre, un sigle ou un terme de votre dictionnaire : par exemple un nom de personne mal orthographié. Tout le reste est du **fond**, y compris un nom propre ajouté ou retiré seul : un nom manquant est une information manquante.
+5. **Compteurs.** Seuls des nombres de mots sont gardés : mots générés, ajoutés, supprimés, remplacés (fond) et remplacés (lexical), au total et par section. Les textes sont libérés aussitôt.
+
+Deux indicateurs en découlent, pour 1 000 mots générés :
+
+- **reprise de fond** = (ajoutés + supprimés + remplacés sur le fond) ÷ générés × 1 000. C'est l'indicateur principal ;
+- **reprise lexicale** = remplacés (lexical) ÷ générés × 1 000.
+
+Les deux ne sont jamais additionnés. Le détail du calcul et de ses sorties est dans la [référence de la commande `syntheo mesure`](/fr/reference/cli#commande-mesure), qui applique la même règle depuis un terminal.
+
+### Le classement est vérifié à la main
+
+Le classement lexical ou fond repose sur une règle simple, qui peut se tromper. Avant la bêta, au moins 200 différences sont classées à la main et comparées à la règle. La cible est d'au moins 85 % d'accord ; en dessous, la règle est corrigée avant la bêta. Le taux d'accord mesuré est publié avec les résultats.
+
+### Dans l'application
+
+Deux réglages, désactivés par défaut, se trouvent dans **Paramètres → Avancé → Confidentialité** :
+
+- **Mesurer la reprise des synthèses** ajoute l'action « Mesurer la reprise… » au menu de la synthèse. Vous collez ou déposez la version envoyée ; seuls des nombres sont gardés sur votre poste, jamais de texte.
+- **Mode Calibrage** sert à vérifier le classement : après une mesure, il liste chaque différence pour que vous la classiez à la main. Les extraits restent à l'écran ; seuls les nombres d'accord sont gardés.
+
+Sous ces réglages, deux boutons :
+
+- **Exporter mes mesures…** affiche le fichier d'export en entier ; **Enregistrer le fichier…** l'enregistre là où vous choisissez. Rien n'est envoyé.
+- **Effacer mes mesures…**, puis **Effacer toutes les mesures et mon pseudonyme**, efface du poste les compteurs, le calibrage, le suivi des termes et des synthèses, la copie des synthèses générées et le pseudonyme, puis **désactive la mesure** et le mode Calibrage. Si vous la réactivez, vous recommencez avec un nouveau pseudonyme.
+
+Un déploiement administré peut désactiver la mesure par réglage géré.
+
+## Ce qui est mesuré, et ce qui ne l'est pas
+
+Trois indicateurs sont mesurés :
+
+| Indicateur | Rôle | Lecture |
+| --- | --- | --- |
+| Reprise de fond | Principal | Par réunion, puis médiane par testeur |
+| Reprise lexicale | Appui | Par terme, avant et après son ajout au dictionnaire |
+| Taux d'abandon | Garde-fou | Par testeur : part des synthèses générées ni mesurées, ni exportées, ni partagées dans les 7 jours, puis médiane des testeurs qualifiés |
+
+Ne sont **pas** mesurés : le nombre de réunions ou de synthèses, la durée d'usage, la satisfaction déclarée, ni une note attribuée par une IA. Aucun score ne mélange fond et lexical.
+
+### Les limites, sans détour
+
+- **Ce n'est pas une preuve.** Les participants sont peu nombreux, volontaires, proches les uns des autres, et ne sont pas tirés au sort.
+- **La version envoyée est déclarée par vous.** Elle peut contenir des ajouts venus d'ailleurs, et personne ne peut le vérifier.
+- **Le classement lexical est approximatif.** Son taux d'erreur est publié.
+- **Une faible reprise ne prouve pas une bonne synthèse.** Elle peut venir d'une relecture rapide : la mesure ne voit pas ce qui aurait dû être corrigé et ne l'a pas été.
+- **Le temps de correction**, s'il est mesuré plus tard, ne portera que sur les personnes qui corrigent dans Syntheo.
+
+## Les seuils, fixés à l'avance
+
+Les seuils ci-dessous sont fixés avant la bêta. **Aucun seuil ne sera modifié après la réception du premier export.** Toute modification ultérieure sera datée et publiée sur cette page, avec sa raison.
+
+| Seuil | Règle |
+| --- | --- |
+| Testeur qualifié | Au moins 5 réunions mesurées. Sinon, le testeur est noté « insuffisant », sans chiffre. |
+| Résultat publiable | Au moins 5 testeurs qualifiés. Sinon, les chiffres sont donnés testeur par testeur, sans conclusion. |
+| **Succès** | Médiane de reprise de fond de 100 pour 1 000 ou moins chez au moins 2 testeurs qualifiés sur 3, **et** médiane des taux d'abandon des testeurs qualifiés de 20 % ou moins. |
+| **Échec net** | Médiane de reprise de fond au-dessus de 250 pour 1 000 chez la majorité des testeurs qualifiés. |
+| Zone grise | Tout le reste. Rapporté comme tel. |
+| Garde-fou Décisions et Actions | Si les ajouts dépassent 50 mots pour 1 000 générés dans la section Décisions ou Actions chez au moins un tiers des testeurs qualifiés pour qui le garde-fou est calculable, c'est signalé, même en cas de succès. Pour chaque testeur, la valeur retenue est la médiane sur ses réunions. Le garde-fou n'est pas calculable pour un testeur dont aucune section Décisions ou Actions n'est reconnue : ce testeur sort du calcul du tiers, et le résultat l'indique (« non calculable pour N testeurs »). |
+| Abandon | Une synthèse générée qui n'a été ni mesurée, ni exportée, ni partagée dans les 7 jours qui suivent sa génération. Une synthèse dont ces 7 jours ne sont pas écoulés à la date de l'export ne compte pas encore. Partager veut dire copier la synthèse dans le presse-papiers (pour la coller dans un courriel ou un wiki, le cas courant) ou l'envoyer par webhook. |
+
+Pour fixer les idées : 100 pour 1 000 veut dire qu'environ un mot sur dix de la synthèse a été ajouté, retiré ou changé sur le fond.
+
+### Le dictionnaire aide-t-il vraiment ?
+
+Quand vous corrigez souvent un nom, vous l'ajoutez au dictionnaire, puis il revient moins. Mais il serait peut-être revenu moins de toute façon : un terme corrigé plusieurs fois de suite redevient souvent rare de lui-même (c'est le retour à la moyenne). Pour séparer les deux effets, la bêta compare deux groupes de termes choisis par la même règle, au même moment :
+
+- un terme **entre dans l'étude** dès qu'il a été corrigé 2 fois ;
+- il est **traité** s'il est ajouté au dictionnaire à la réunion de son entrée ou dans les 2 réunions qui suivent ;
+- il est **comparé** s'il est ajouté plus tard, ou jamais ;
+- il est **exclu** s'il avait été ajouté avant son entrée ;
+- pour chaque terme, on compte ses erreurs sur les 5 réunions avant et les 5 réunions après son entrée ; la réunion d'entrée n'appartient à aucune des deux fenêtres, et il faut au moins 3 réunions avec des mots générés de chaque côté ;
+- l'effet du dictionnaire est la baisse des termes traités, moins la baisse des termes comparés, avec un intervalle d'incertitude.
+
+Le résultat n'est affiché qu'avec au moins 20 termes traités et 20 termes comparés, venant d'au moins 3 testeurs ; sinon, le résultat indique « il manque N termes » ou « il manque N testeurs ». Limite : vous choisissez quels termes ajouter, ce n'est pas tiré au sort. La fréquence de départ des deux groupes est publiée pour qu'on puisse en juger.
+
+Les termes sont désignés par un index (`t1`, `t2`…). La correspondance entre l'index et le terme reste sur votre poste et n'est jamais exportée.
+
+## Les données
+
+### Sur votre poste
+
+Syntheo garde des compteurs, des identifiants, des dates et, pour chaque terme corrigé, une empreinte à clé locale (HMAC-SHA-256, avec une clé tirée au hasard à l'inscription et détruite à l'effacement) : ni la version envoyée, ni les titres des sections, ni les termes eux-mêmes. Une copie de la synthèse telle que générée est gardée sur le poste pendant que la mesure est active, pour la comparer à la version envoyée ; elle est vidée quand vous désactivez la mesure ou effacez vos mesures, et n'est jamais exportée. Pour le taux d'abandon, Syntheo note chaque génération de synthèse et la date de son premier export de fichier et de son premier partage (copie ou envoi par webhook), seulement pendant que la mesure est active : une synthèse générée pendant que la mesure est désactivée n'entre pas dans l'export, même mesurée plus tard. Une synthèse régénérée compte comme une nouvelle synthèse. Désactiver la mesure clôt les synthèses en cours : une mesure ou un partage fait après la réactivation ne s'y rattache pas, et une synthèse close avant ses 7 jours sans avoir servi n'entre pas dans l'export, faute d'avoir été observée assez longtemps. Seules les mesures comparées à la synthèse telle que générée entrent dans l'export ; une mesure faite sans cette copie (comparée à la synthèse déjà retouchée) reste sur le poste. Un test automatique échoue si une table ou un export de mesure contient du texte libre.
+
+### Dans l'export
+
+L'export se fait à la main. Syntheo vous montre le fichier en entier avant de l'enregistrer, et n'envoie rien : c'est vous qui le transmettez, par le canal prévu par l'organisation qui mène le pilote. Le schéma est fermé : aucun champ en dehors de cette liste n'est accepté, et chaque valeur texte suit un format imposé ou une liste fermée.
+
+**En-tête du fichier**
+
+| Champ | Sens | Exemple |
+| --- | --- | --- |
+| `schema_version` | Version du format d'export. | `1` |
+| `app_version` | Version de Syntheo qui a produit l'export. | `"0.8.0"` |
+| `rule_version` | Version de la règle de calcul de la reprise. | `1` |
+| `rubric_version` | Version de la grille d'un futur classement par IA ; `0` tant qu'il n'existe pas. | `0` |
+| `pseudonym` | Pseudonyme aléatoire tiré à l'inscription, effaçable. Il ne dérive d'aucune donnée de la personne ni du poste. | `"p-3f9a1c0e7b2d4f6a8c1e3b5d7f9a2c4e"` |
+| `enrolled_days` | Jours écoulés entre l'inscription et l'export. | `21` |
+| `meetings` | Une entrée par synthèse mesurée (voir ci-dessous). | |
+| `summaries` | Une entrée par synthèse générée, mesurée ou non, pour le taux d'abandon : une synthèse sans mesure, ni export, ni partage dans les 7 jours qui suivent sa génération est comptée comme abandonnée. | |
+| `terms` | Une entrée par terme suivi pour l'étude du dictionnaire. | |
+
+**Chaque réunion mesurée (`meetings`)**
+
+| Champ | Sens | Exemple |
+| --- | --- | --- |
+| `meeting` | Index de la réunion mesurée, sans lien avec ses identifiants dans Syntheo. | `"m1"` |
+| `summary` | Index de la synthèse générée correspondante. | `"s1"` |
+| `day` | Jour de la mesure, compté depuis l'inscription. | `2` |
+| `mode` | Comment la version envoyée a été obtenue : `paste` (collée ou déposée) ou `correction` (corrigée dans Syntheo, plus tard). | `"paste"` |
+| `aligned` | `true` si la mesure a pu se faire section par section, `false` si elle porte sur le texte entier. | `true` |
+| `headings_generated`, `headings_matched` | Nombre de titres de la version générée, et combien se retrouvent dans la version envoyée. | `3`, `3` |
+| `unmatched_sent_words` | Mots des sections de la version envoyée absentes de la version générée. | `0` |
+| `total` | Les compteurs de la réunion entière (voir ci-dessous). | |
+| `sections` | Pour chaque section : `index` (son rang), `role` (`decisions` ou `actions` d'après le modèle de compte rendu, `other` sinon), `matched` (retrouvée ou non) et `counters` (ses compteurs, voir ci-dessous). Jamais son titre. | `{"index": 1, "role": "decisions", "matched": true, "counters": {…}}` |
+
+**Compteurs (`total` et `counters` de chaque section)**
+
+| Champ | Sens | Exemple |
+| --- | --- | --- |
+| `generated` | Mots de la version générée. | `28` |
+| `added` | Mots ajoutés. | `3` |
+| `deleted` | Mots supprimés. | `2` |
+| `replaced_content` | Mots remplacés sur le fond. | `4` |
+| `replaced_lexical` | Mots remplacés dans des corrections lexicales. | `1` |
+
+**Chaque synthèse générée (`summaries`)**
+
+| Champ | Sens | Exemple |
+| --- | --- | --- |
+| `summary` | Index de la synthèse. | `"s1"` |
+| `generated_day` | Jour de génération, depuis l'inscription. | `2` |
+| `measured` | Jour de la première mesure, ou `null`. | `2` |
+| `exported` | Jour du premier export de la note en fichier (Markdown, PDF…), ou `null`. | `null` |
+| `shared` | Jour du premier partage : synthèse copiée dans le presse-papiers ou envoyée par webhook, ou `null`. | `3` |
+
+**Chaque terme suivi (`terms`)**
+
+| Champ | Sens | Exemple |
+| --- | --- | --- |
+| `term` | Index du terme. Jamais le terme lui-même. | `"t1"` |
+| `added_after` | Réunion mesurée après laquelle le terme a été ajouté au dictionnaire, ou `null`. | `"m1"` |
+| `errors` | Nombre de corrections du terme, réunion par réunion (`meeting`, `count`). Une réunion absente vaut 0. | `[{"meeting": "m1", "count": 1}]` |
+
+**Ce qui n'est jamais dans l'export** : aucun texte de réunion, de synthèse ou de version envoyée, aucun titre de section ou de note, aucun terme du dictionnaire, aucun nom de personne ou de participant, aucune date ni heure réelle (seulement des jours comptés depuis l'inscription), aucun identifiant du poste ni de compte.
+
+<Warning>
+  **L'export est pseudonymisé, pas anonyme.** Le pseudonyme est aléatoire, mais avec peu de participants, quelqu'un qui connaît le pilote peut parfois reconnaître un fichier (par son nombre de réunions ou son rythme). L'export reste donc une donnée personnelle, traitée comme telle.
+</Warning>
+
+L'outil qui rassemble les exports (`scripts/beta/` dans le [dépôt](https://github.com/WillIsback/Syntheo)) traite chaque fichier comme non fiable. Il refuse un fichier qui ne respecte pas le schéma ou dont le contenu est incohérent (par exemple un partage daté d'avant la génération). Pour un même pseudonyme, il ne garde que l'export le plus récent ; si deux exports différents se disputent cette place, il les refuse.
+
+## Vos droits
+
+- **Arrêter à tout moment**, sans avoir à vous justifier : désactivez « Mesurer la reprise des synthèses ». Plus rien n'est mesuré.
+- **Effacer vos mesures sur le poste** : **Paramètres → Avancé → Confidentialité**, **Effacer mes mesures…**, puis confirmez. Les compteurs et le pseudonyme sont effacés et la mesure est désactivée ; un export déjà transmis ne peut pas être repris depuis le poste.
+- **Demander la suppression des fichiers déjà transmis** : adressez-vous à l'organisation qui mène le pilote, en donnant votre pseudonyme (`p-…`). C'est le seul moyen de retrouver vos fichiers, puisqu'ils ne contiennent pas votre nom.
+
+Ne pas participer, ou arrêter, ne change rien à votre usage de Syntheo.
+
+## Un résultat décevant sera publié
+
+Si la reprise de fond dépasse le seuil, ou si les termes ajoutés au dictionnaire ne font pas mieux que les autres, le résultat sera publié tel quel, sur cette page, avec la même place qu'un succès.
+
+## Voir aussi
+
+- [Référence de la CLI : commande `mesure`](/fr/reference/cli#commande-mesure)
+- [Données et confidentialité](/fr/data-and-privacy)
+- [Syntheo Desktop et le RGPD](/fr/conformite/rgpd)

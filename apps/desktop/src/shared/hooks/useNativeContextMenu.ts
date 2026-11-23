@@ -18,9 +18,7 @@ export type MenuItemDef =
  * le menu au pointeur, loin de l'élément (issue 600). `null` pour un
  * événement souris : le menu suit le pointeur.
  */
-export function keyboardMenuPosition(
-  e: SyntheticEvent,
-): LogicalPosition | null {
+function keyboardMenuPosition(e: SyntheticEvent): LogicalPosition | null {
   const native = e.nativeEvent;
   if (
     native instanceof MouseEvent &&

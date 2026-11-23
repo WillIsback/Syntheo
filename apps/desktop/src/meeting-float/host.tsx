@@ -43,7 +43,6 @@ import {
 import {
   createFloatingMeetingWindowSynchronizer,
   hideFloatingMeetingPanel,
-  hideLiveCaptionPanel,
   showFloatingMeetingWindow,
 } from "./window-panel";
 
@@ -95,7 +94,6 @@ export function FloatingMeetingWindowHost() {
       ) : (
         <FloatingMeetingWindowDisabled />
       )}
-      <LiveCaptionWindowDisabled />
     </>
   );
 }
@@ -173,14 +171,6 @@ function LiveCaptionDefaultVisibilitySync() {
 function FloatingMeetingWindowDisabled() {
   useMountEffect(() => {
     void hideFloatingMeetingPanel();
-  });
-
-  return null;
-}
-
-function LiveCaptionWindowDisabled() {
-  useMountEffect(() => {
-    void hideLiveCaptionPanel();
   });
 
   return null;

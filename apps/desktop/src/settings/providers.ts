@@ -28,11 +28,7 @@ import { providerFetch } from "~/ai/provider-fetch";
 import { executeTransaction, liveQueryClient, useLiveQuery } from "~/db";
 import { enqueueDatabaseWrite } from "~/db/write-queue";
 
-export {
-  type AiProviderType,
-  type AiProviderConfig,
-  parseAiProviders,
-} from "./providers-storage";
+export { parseAiProviders } from "./providers-storage";
 
 export { isKeychainAccessError, repairKeychainAccess } from "~/shared/keychain";
 const EMPTY_PROVIDER_API_KEYS: Record<string, string> = {};

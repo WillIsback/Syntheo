@@ -11,6 +11,7 @@ import { TITLE_GENERATION_TIMEOUT_MS } from "./title-workflow";
 
 import { runNoteEnhancedAutomations } from "~/automations/engine";
 import { retryDatabaseLock } from "~/db/retry";
+import { recordSummaryEvent } from "~/mesure/beta";
 import { showSummaryReadyNotification } from "~/services/enhancer/summary-notification";
 import {
   extractNoteLines,
@@ -200,6 +201,12 @@ export const runEnhanceSuccess = async ({
     if (!signal.aborted) {
       void localApiCommands
         .dispatchEvent("note.enhanced", args.sessionId)
+        .then((result) => {
+          // Bêta (issue 672) : un envoi réel par webhook partage la synthèse.
+          if (result.status === "ok" && result.data > 0) {
+            void recordSummaryEvent("shared", args.enhancedNoteId);
+          }
+        })
         .catch((error) =>
           console.error(
             "[enhancer] failed to dispatch note.enhanced event",

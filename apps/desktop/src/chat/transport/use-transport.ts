@@ -5,8 +5,7 @@ import { useMemo } from "react";
 
 import { commands as templateCommands } from "@syntheo/plugin-template";
 
-import { CustomChatTransport } from "./index";
-import type { ResolvedChatContext } from "./index";
+import { CustomChatTransport, type ResolvedChatContext } from "./index";
 
 import { useLanguageModel } from "~/ai/hooks";
 import { buildAutomationSystemPrompt } from "~/automations/chat-prompt";

@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use specta::Type;
 use sqlx::SqlitePool;
 
-use crate::transaction_utils::{js_iso8601_timestamp, rollback_row_count_mismatch};
+use syntheo_db_core::{js_iso8601_timestamp, rollback_row_count_mismatch};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
 pub struct MoveSessionContentsRequest {

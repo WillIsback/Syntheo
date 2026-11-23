@@ -10,7 +10,7 @@ Syntheo Desktop is a local client, with no vendor server. The surface to assess 
 - **No account, no authentication** with the vendor. No Syntheo service receives your data.
 - **No telemetry, no error reports**: the analytics and error reporting code is removed, there is nothing to turn off.
 - **No audio on disk**, on any path (capture, dictation, import).
-- **Network limited** to the inference servers and webhooks you configure, plus two minor flows with no meeting content (update check and release notes on GitHub) and loading a remote image when you click "Load image". These flows are listed in [the GDPR sheet](/en/conformite/rgpd).
+- **Network limited** to the inference servers and webhooks you configure, plus three flows with no meeting content: the update check (`latest.json` on GitHub, 15 seconds after startup, can be turned off, or on demand), downloading the installer when you update and, only when you ask for them, the models for "On this computer" transcription (GitHub, Hugging Face as a fallback, or your organization's mirror). These flows are listed in [the GDPR sheet](/en/conformite/rgpd).
 - **No fallback** to a third-party service when an inference server does not respond.
 - **Open source**: everything can be checked in the [GitHub repository](https://github.com/WillIsback/Syntheo).
 
@@ -43,7 +43,7 @@ Current severities: none critical, none high, 3 medium, 19 low, 12 informational
 
 ### What 0.7.5 changed
 
-- **Remote images**: an image hosted on another site, in a summary, a proposal or a chat answer, is no longer loaded automatically. It loads only if you click "Load image". A strict content security policy (CSP) also restricts the interface.
+- **Remote images**: an image hosted on another site, in a summary, a proposal or a chat answer, is no longer loaded automatically: in 0.7.5, only when you clicked "Load image"; since 0.8.0, not at all, its alternative text shows instead. A strict content security policy (CSP) also restricts the interface.
 - **Chat edits confirmed**: the chat no longer edits a meeting, moves its content or files meetings without your click on "Apply". The terms it suggests for the dictionary are bounded and go through the same card.
 - **Plain HTTP**: a server address in HTTP toward another machine than yours is saved only after confirmation, then stays flagged on the server card.
 - **Logs and local data**: the log masks more keys and tokens; webhook signing secrets are in the system keychain; on Linux, the data folder, the database and the logs are restricted to your account.
@@ -74,6 +74,31 @@ The low or informational findings still open concern: handling of imported files
 
 To report a vulnerability, see [Report a vulnerability](#report-a-vulnerability).
 
+## On-device transcription
+
+The [On this computer](/en/on-device-transcription) source relies on a companion program, `syntheo-speech`, shipped in Syntheo's installer next to the app, and on models downloaded or installed separately. This section describes what Syntheo guarantees about them, and what it does not.
+
+### What is guaranteed
+
+- **Program shipped with the app**: it is installed, updated and uninstalled with Syntheo, and signed with it on Windows (same Authenticode signer, checked by the release pipeline). The app only takes it from its own installation folder, a path resolved in Rust (canonical folder of the executable; symlink or reparse point refused), never from a path coming from the interface, then runs it from a checked copy (see below).
+- **Compiled checksums**: at build time, the app pins the program's checksum (excluding the Authenticode signature, which signing adds afterwards) and, on Windows, that of the Visual C++ runtime it loads; it also compiles the model list with each file's size and SHA-256 checksum.
+- **Check before every launch**: the program and the models must match these checksums; a missing or different file, or one replaced by a symlink, is refused.
+- **Same objects checked and run**: the program (and on Windows its runtime) is copied into a fresh private folder at every launch (rights limited to your account), hashed from that copy and run from it. Models are opened once and hashed from the open file: on Linux, the program inherits these open files; on Windows, each model and each folder of its path stay locked against writing and deletion while it runs.
+- **Models checked at installation**: downloaded over HTTPS only (redirects included) or copied from a local folder chosen in Rust, each file is written next to its destination, hashed while written, compared with its compiled size and checksum, then put in place; a source serving other content is skipped, with nothing put in place.
+- **Loopback only**: the program only listens on `127.0.0.1`, refuses browser requests (`Origin` header) and opens no outbound connection.
+- **Mutual authentication**: a random 256-bit token, drawn at every launch and passed on standard input, never travels on the network, nor is written to a log, a setting, the command line or the program's environment. On every connection, the app and the program prove to each other that they know it, with an HMAC bound to a fresh nonce and both ports of the connection. No audio leaves before the program's proof; a wrong proof closes the connection, with no retry.
+- **Contained launch**: cleared environment, working directory outside the program folder, library search limited to its private folder and System32 on Windows, bounded restarts, stop with the app.
+- **Policy**: the managed settings `on_device_transcription_enabled` and `speech_models_urls` are read from `managed_settings.json` and kept in memory: rewriting the app database does not lift them. Downloading, installing and removing models, and commissioning, are refused through the relay.
+- **No audio to the server** for an "On this computer" recording, repairs included.
+
+### Limits
+
+- **Same user account**: a malicious program already running under your account can modify the app data folder and, if Syntheo is installed for your account, the app itself. On Linux, it could still rewrite a model file in place while the program uses it: Linux offers no mandatory lock to an ordinary user. Replacing it by path or symlink is no longer possible.
+- **Application control**: the copy that runs sits in the app's data folder. An AppLocker or SRP policy with path rules, or a home folder mounted `noexec`, blocks it: the launch fails with the code `execution_blocked`, with no retry during the recording (see [Computers with application control](/en/on-device-transcription#computers-with-application-control)).
+- **Model hosting**: the sources (GitHub, Hugging Face or a mirror) are not trusted as such; only the compiled checksums are. An unavailable or tampered source prevents the download, without ever getting another file accepted.
+- **Windows**: the Windows-specific protections (locks, private folder with restricted rights, library search) have been compiled and built on Windows, but not yet tested against an attack on a real computer.
+- **Audit**: the program has not had an external audit yet; it was reviewed internally at every step.
+
 ## API keys
 
 Inference server keys are optional. When you enter one, Syntheo stores it in the system keychain: Secret Service on Linux (an unlocked keyring is required, for example GNOME Keyring or KWallet), Credential Manager on Windows. It is never written in plain text to the local database nor compiled into the app. "Reset this server…", in the "Advanced" section of the server card, removes it from the keychain.
@@ -96,9 +121,9 @@ An administrator can enforce some settings by placing a `managed_settings.json` 
 
 The settings most useful to an IT department:
 
-- **Transcription server enforced over HTTPS**: `stt:openai` or `stt:nvidia`, with `current_stt_provider` and `current_stt_model`. The address must use `https://`: the file does not accept plain HTTP, even to a private network. See [Switch your server to HTTPS](/en/ai-setup#switch-your-server-to-https).
+- **Transcription server enforced over HTTPS**: `stt:openai` or `stt:nvidia`, with `current_stt_provider` and `current_stt_model`. The address must use `https://`: the file does not accept plain HTTP, even to a private network. In **Settings › My servers › Transcription**, the "My server" card then shows the mention "Set by your administrator." and locks only what the file sets: the address, with no input field and no "Reset this server…", when `stt:<id>` sets it; the protocol when `current_stt_provider` is set; the model when `current_stt_model` is. Everything else works as usual: without `current_stt_model`, the model is picked from the list. "Test connection" stays available, and the API key, which the file leaves empty, can still be entered under "Advanced". See [Switch your server to HTTPS](/en/ai-setup#switch-your-server-to-https).
 - **No update check at startup**: `automatic_updates` set to `false`. Syntheo no longer contacts GitHub at launch, and the "Check for updates at startup" switch in **Settings › Profile** is disabled with the mention "Set by your administrator.". A manual check is still possible from that section and from the notification area. See [Update](/en/desktop-installation#update).
-- **No language model**: `intelligence_disabled` set to `true`, with `current_llm_provider` and `current_llm_model` set to `""`. No request is sent to an LLM server: no summary and no chat; a recording import requested by an agent (CLI or MCP, `import_recording`) is refused. Transcription stays available.
+- **No language model**: `intelligence_disabled` set to `true`, with `current_llm_provider` and `current_llm_model` set to `""`. No request is sent to an LLM server: no summary and no chat, and the **Settings › Synthesis** page shows "Set by your administrator." without querying the server; a recording import requested by an agent (CLI or MCP, `import_recording`) is refused. Transcription stays available.
 
 ```json
 {
@@ -121,14 +146,17 @@ The settings most useful to an IT department:
     | --- | --- |
     | `current_stt_provider` | `openai` or `nvidia` |
     | `current_stt_model` | non-empty identifier (200 characters at most) |
-    | `stt:openai`, `stt:nvidia` | object `{ "type": "stt", "api_key": "", "base_url": "https://…" }`: HTTPS URL only, with no credentials or parameters, key must be empty |
+    | `stt:openai`, `stt:nvidia` | object `{ "type": "stt", "api_key": "", "base_url": "https://…" }`: HTTPS URL only, with no credentials or parameters (leading and trailing blanks are ignored), key must be empty |
     | `intelligence_disabled` | `true` only |
     | `current_llm_provider`, `current_llm_model` | `""` only |
     | `auto_start_scheduled_meetings` | `true` or `false` |
     | `audio_retention` | `"none"` only (audio is never kept anyway) |
     | `automatic_updates` | `false` only: turns off the update check at startup (see above) |
     | `cloud_sync_enabled` | `false` only (feature absent from Syntheo) |
-    | `save_recordings` | `true` or `false` |
+    | `measurement_enabled`, `calibration_enabled` | `false` only: turns off the beta rework measurement, and its Calibration mode (see [Data and privacy](/en/data-and-privacy#rework-measurement-beta)) |
+    | `on_device_transcription_enabled` | `false` only: forbids on-device transcription; the `syntheo-speech` program, shipped with the app, is never launched |
+    | `speech_models_urls` | List of 1 to 8 HTTPS addresses (`{path}` or `{name}` markers allowed), with no credentials, query, fragment or comma: replaces the download sources of the on-device transcription models, for example with an internal mirror ([details](/en/on-device-transcription#require-a-model-mirror)) |
+    | `save_recordings` | `true` or `false`: legacy key, accepted but with no effect, since audio retention is always forced to "none" (`none`) |
 
     Any other key, or any other value, makes the file invalid. The file cannot contain any secret: an API key is entered on each computer.
   </Accordion>

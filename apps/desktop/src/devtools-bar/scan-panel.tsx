@@ -10,18 +10,20 @@ import { useMountEffect } from "@syntheo/ui/hooks/use-mount-effect";
 import { cn } from "@syntheo/utils";
 
 import { useDevtoolsMetrics } from "./metrics";
-import type { ReactScanSettings, ReactToolsState } from "./react-tools";
 import {
   setReactInspecting,
   setReactToolbarVisible,
   setReactScanSettings,
+  type ReactScanSettings,
+  type ReactToolsState,
 } from "./react-tools";
-import type { PromptMode, ScanEvent } from "./scan-data";
 import {
   clearScanHistory,
   getScanPrompt,
   mountScanInspector,
   useScanData,
+  type PromptMode,
+  type ScanEvent,
 } from "./scan-data";
 import { RESIZE_HANDLES, useScanPanelLayout } from "./scan-panel-layout";
 

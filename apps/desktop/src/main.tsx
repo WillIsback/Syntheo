@@ -27,6 +27,7 @@ import { FloatingMeetingWindowHost } from "./meeting-float/host";
 import { routeTree } from "./routeTree.gen";
 import { EventListeners } from "./services/event-listeners";
 import { NativeMenuLocaleSync } from "./services/native-menu-locale";
+import { OnDeviceRefusalSync } from "./services/on-device-refusal-sync";
 import { TaskManager } from "./services/task-manager";
 import { TrayRecordingSync } from "./services/tray-recording";
 import { useRemoteSessionDeletionUndoListener } from "./session/hooks/useDeleteSession";
@@ -121,6 +122,7 @@ function ReadyApp() {
             {isMainWindow ? <FloatingMeetingWindowHost /> : null}
             {isMainWindow ? <EventListeners /> : null}
             {isMainWindow ? <TrayRecordingSync /> : null}
+            {isMainWindow ? <OnDeviceRefusalSync /> : null}
             <LocalizedToaster position="bottom-right" theme={theme} />
           </AppLockGate>
         </LocalizedDialogLabels>

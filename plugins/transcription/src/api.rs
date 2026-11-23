@@ -288,13 +288,6 @@ pub struct CompletedTranscription {
     pub response: owhisper_interface::batch::Response,
 }
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
-pub struct TranscriptionOutput {
-    pub session_id: String,
-    pub mode: TranscriptionRunMode,
-    pub response: owhisper_interface::batch::Response,
-}
-
 #[derive(serde::Serialize, Clone, specta::Type, tauri_specta::Event)]
 #[serde(tag = "type")]
 pub enum TranscriptionEvent {
@@ -487,16 +480,6 @@ impl From<TranscriptionParams> for listener2::BatchParams {
             num_speakers: value.num_speakers,
             min_speakers: value.min_speakers,
             max_speakers: value.max_speakers,
-        }
-    }
-}
-
-impl From<listener2::BatchRunOutput> for TranscriptionOutput {
-    fn from(value: listener2::BatchRunOutput) -> Self {
-        Self {
-            session_id: value.session_id,
-            mode: value.mode,
-            response: value.response,
         }
     }
 }

@@ -10,11 +10,46 @@ export type ProviderCredential = {
 type CredentialFetch = (url: string, init: RequestInit) => Promise<Response>;
 const verified = new WeakMap<CredentialFetch, Map<string, number>>();
 
+// Raison d'un refus : l'application en tire son message traduit
+// (`describeProviderCredentialError`) ; le message anglais de l'erreur n'est
+// qu'un repli pour les journaux.
+export type ProviderCredentialErrorCode =
+  | "invalid_url"
+  | "url_with_credentials"
+  | "https_required"
+  | "invalid_api_key"
+  | "key_rejected"
+  | "rate_limited"
+  | "verification_unavailable"
+  | "key_not_confirmed"
+  | "network";
+
+const FALLBACK_MESSAGES: Record<ProviderCredentialErrorCode, string> = {
+  invalid_url: "Enter a valid base URL.",
+  url_with_credentials:
+    "Enter a base URL without credentials or query parameters.",
+  https_required:
+    "Use HTTPS: plain HTTP is only accepted on this computer or a private network.",
+  invalid_api_key: "Enter a valid API key.",
+  key_rejected:
+    "The provider rejected this key or its permissions. Check the key and try again.",
+  rate_limited:
+    "The provider is limiting verifications. Try again in a few moments.",
+  verification_unavailable:
+    "This key could not be verified with the provider. Check the connection and try again.",
+  key_not_confirmed:
+    "The provider did not confirm this key. Check the key and the connection.",
+  network:
+    "This key could not be verified. Check your connection and try again.",
+};
+
 export class ProviderCredentialError extends Error {
+  readonly code: ProviderCredentialErrorCode;
   readonly retryable: boolean;
 
-  constructor(message: string, retryable = false) {
-    super(message);
+  constructor(code: ProviderCredentialErrorCode, retryable = false) {
+    super(FALLBACK_MESSAGES[code]);
+    this.code = code;
     this.retryable = retryable;
   }
 }
@@ -45,20 +80,37 @@ export function validateProviderBaseUrl(baseUrl: string): URL {
   try {
     base = new URL(baseUrl);
   } catch {
-    throw new ProviderCredentialError("Saisissez une URL de base valide.");
+    throw new ProviderCredentialError("invalid_url");
   }
   if (base.username || base.password || base.search || base.hash)
-    throw new ProviderCredentialError(
-      "Saisissez une URL de base sans identifiants ni paramètres de requête.",
-    );
+    throw new ProviderCredentialError("url_with_credentials");
   if (
     base.protocol !== "https:" &&
     !(base.protocol === "http:" && isPrivateHost(base.hostname))
   )
-    throw new ProviderCredentialError(
-      "Utilisez HTTPS : le HTTP n'est accepté que sur cette machine ou un réseau privé.",
-    );
+    throw new ProviderCredentialError("https_required");
   return base;
+}
+
+// Règle d'adresse revalidée à chaque requête vers un serveur d'inférence
+// (issue 678) : même règle que `validateProviderBaseUrl`, appliquée à l'URL
+// complète de la requête (chemin et paramètres permis). Une adresse écrite en
+// base sans passer par l'enregistrement est ainsi refusée avant tout envoi.
+export function validateProviderRequestUrl(input: string | URL): URL {
+  let url: URL;
+  try {
+    url = new URL(input);
+  } catch {
+    throw new ProviderCredentialError("invalid_url");
+  }
+  if (url.username || url.password)
+    throw new ProviderCredentialError("url_with_credentials");
+  if (
+    url.protocol !== "https:" &&
+    !(url.protocol === "http:" && isPrivateHost(url.hostname))
+  )
+    throw new ProviderCredentialError("https_required");
+  return url;
 }
 
 export async function verifyProviderCredentials(
@@ -69,7 +121,7 @@ export async function verifyProviderCredentials(
   const apiKey = credential.apiKey.trim();
   // Les serveurs on-prem acceptent d'être lancés sans clé.
   if (apiKey.length > 8192 || /[\r\n]/.test(apiKey))
-    throw new ProviderCredentialError("Saisissez une clé d'API valide.");
+    throw new ProviderCredentialError("invalid_api_key");
   validateProviderBaseUrl(credential.baseUrl);
 
   signal?.throwIfAborted();
@@ -97,24 +149,18 @@ export async function verifyProviderCredentials(
     });
     if (response.status === 401 || response.status === 403) {
       await response.body?.cancel();
-      throw new ProviderCredentialError(
-        "Le fournisseur a refusé cette clé ou ses autorisations. Vérifiez la clé et réessayez.",
-      );
+      throw new ProviderCredentialError("key_rejected");
     }
     if (!response.ok) {
       await response.body?.cancel();
       throw new ProviderCredentialError(
-        response.status === 429
-          ? "Le fournisseur limite les vérifications. Réessayez dans quelques instants."
-          : "Impossible de vérifier cette clé auprès du fournisseur. Vérifiez la connexion et réessayez.",
+        response.status === 429 ? "rate_limited" : "verification_unavailable",
         true,
       );
     }
     const body = await readResponse(response, request.plainText);
     if (!request.accept(body))
-      throw new ProviderCredentialError(
-        "Le fournisseur n'a pas confirmé cette clé. Vérifiez la clé et la connexion.",
-      );
+      throw new ProviderCredentialError("key_not_confirmed");
 
     controller.signal.throwIfAborted();
     // Saving and refreshing availability use the same proof, without retaining
@@ -123,10 +169,7 @@ export async function verifyProviderCredentials(
     if (recent.size > 128) recent.delete(recent.keys().next().value!);
   } catch (error) {
     if (error instanceof ProviderCredentialError) throw error;
-    throw new ProviderCredentialError(
-      "Impossible de vérifier cette clé. Vérifiez votre connexion et réessayez.",
-      true,
-    );
+    throw new ProviderCredentialError("network", true);
   } finally {
     clearTimeout(timer);
     signal?.removeEventListener("abort", abort);

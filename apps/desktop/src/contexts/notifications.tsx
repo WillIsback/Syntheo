@@ -1,8 +1,9 @@
 import { createContext, type ReactNode, useMemo } from "react";
 
+import { useIntelligenceDisabled } from "~/settings/managed";
 import { useConfigValues } from "~/shared/config";
 import { useTabs } from "~/store/zustand/tabs";
-import { isConfiguredSttModel } from "~/stt/capabilities";
+import { useUsableTranscription } from "~/stt/usable-transcription";
 
 interface NotificationState {
   hasActiveBanner: boolean;
@@ -13,23 +14,43 @@ interface NotificationState {
 
 const NotificationContext = createContext<NotificationState | null>(null);
 
+/**
+ * Un réglage manque. Synthèse coupée par l'administration
+ * (intelligence_disabled) : le modèle de langage absent n'est pas compté,
+ * comme le toast « missing-llm » (issue 707).
+ */
+export function needsConfigBanner({
+  needsSttProvider,
+  onDeviceNotReady,
+  hasLLMConfigured,
+  llmManagedOff,
+}: {
+  needsSttProvider: boolean;
+  onDeviceNotReady: boolean;
+  hasLLMConfigured: boolean;
+  llmManagedOff: boolean;
+}): boolean {
+  return (
+    needsSttProvider ||
+    onDeviceNotReady ||
+    (!hasLLMConfigured && !llmManagedOff)
+  );
+}
+
 export function NotificationProvider({ children }: { children: ReactNode }) {
-  const {
-    current_stt_provider,
-    current_stt_model,
-    current_llm_provider,
-    current_llm_model,
-  } = useConfigValues([
-    "current_stt_provider",
-    "current_stt_model",
+  const { current_llm_provider, current_llm_model } = useConfigValues([
     "current_llm_provider",
     "current_llm_model",
   ] as const);
+  const transcription = useUsableTranscription();
+  const llmManagedOff = useIntelligenceDisabled().blocked;
 
-  const hasConfigBanner =
-    !isConfiguredSttModel(current_stt_provider, current_stt_model) ||
-    !current_llm_provider ||
-    !current_llm_model;
+  const hasConfigBanner = needsConfigBanner({
+    needsSttProvider: transcription.needsProvider,
+    onDeviceNotReady: transcription.onDeviceNotReady,
+    hasLLMConfigured: !!(current_llm_provider && current_llm_model),
+    llmManagedOff,
+  });
 
   const hasActiveEnhancement = false;
 

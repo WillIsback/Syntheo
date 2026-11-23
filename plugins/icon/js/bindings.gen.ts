@@ -6,10 +6,7 @@ import { invoke as __TAURI_INVOKE } from "@tauri-apps/api/core";
 /** Commands */
 export const commands = {
 	setDockIcon: (name: string) => typedError<null, string>(__TAURI_INVOKE("plugin:icon|set_dock_icon", { name })),
-	resetDockIcon: () => typedError<null, string>(__TAURI_INVOKE("plugin:icon|reset_dock_icon")),
-	getIcon: () => typedError<string | null, string>(__TAURI_INVOKE("plugin:icon|get_icon")),
 	setRecordingIndicator: (show: boolean) => typedError<null, string>(__TAURI_INVOKE("plugin:icon|set_recording_indicator", { show })),
-	setNotificationBadge: (count: number | null) => typedError<null, string>(__TAURI_INVOKE("plugin:icon|set_notification_badge", { count })),
 };
 
 /* Tauri Specta runtime */

@@ -89,7 +89,13 @@ pub(super) async fn handle_listener_failure(
 pub(super) fn should_retry_listener_failure(degraded: &DegradedError) -> bool {
     !matches!(
         degraded,
-        DegradedError::AuthenticationFailed { .. } | DegradedError::ProviderConfiguration { .. }
+        DegradedError::AuthenticationFailed { .. }
+            | DegradedError::ProviderConfiguration { .. }
+            | DegradedError::OnDeviceAuthenticationFailed
+            | DegradedError::OnDeviceUnavailable {
+                permanent: true,
+                ..
+            }
     )
 }
 

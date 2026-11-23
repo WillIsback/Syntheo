@@ -121,10 +121,72 @@ jobs:
         uses: ./.github/actions/pnpm_install
 
       - name: Tests des scripts
-        run: node --test scripts/*.test.mjs scripts/lib/*.test.mjs
+        run: node --test scripts/*.test.mjs scripts/lib/*.test.mjs scripts/beta/*.test.mjs
 
       - name: Compétence Syntheo publiée à jour
         run: node scripts/publish-syntheo-skill.mjs --check
+
+  # Module de transcription sur le poste (issue 681) : workspace Cargo à part
+  # (apps/speech, son propre Cargo.lock), hors du job Rust de
+  # ci-code-quality. Clippy bloquant et tests, dont le contrat avec
+  # l'adaptateur nvidia d'owhisper-client ; l'essai avec le vrai modèle est
+  # sauté sans SYNTHEO_SPEECH_MODELS. Sur une PR, sauté si ni apps/speech/
+  # ni owhisper-client (le contrat) ni ce workflow ne changent.
+  speech:
+    name: ci-test (module syntheo-speech)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      SCCACHE_GHA_ENABLED: "true"
+      RUSTC_WRAPPER: sccache
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Historique complet sur une PR seulement, pour comparer à sa base.
+          fetch-depth: ${{ github.event_name == 'pull_request' && '0' || '1' }}
+          persist-credentials: false
+
+      - name: Détection des chemins modifiés
+        id: changes
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          if [ -z "${BASE_SHA:-}" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "Hors PR : module syntheo-speech vérifié."
+          elif git diff --name-only "$BASE_SHA" HEAD -- 'apps/speech/' 'crates/owhisper-client/' 'crates/owhisper-interface/' 'crates/ws-client/' '.github/workflows/ci-test.yml' | grep -q .; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "Module, adaptateur ou workflow modifié : module syntheo-speech vérifié."
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "Ni le module ni l'adaptateur modifiés : module syntheo-speech sauté."
+          fi
+
+      - name: Toolchain Rust
+        if: steps.changes.outputs.run == 'true'
+        uses: ./.github/actions/rust_install
+
+      - name: Cache du compilateur (sccache)
+        if: steps.changes.outputs.run == 'true'
+        uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba # v0.0.11
+
+      - name: Lint (cargo clippy)
+        if: steps.changes.outputs.run == 'true'
+        working-directory: apps/speech
+        run: |
+          set -euo pipefail
+          cargo clippy --locked --all-targets -- -D warnings
+          cargo clippy --locked --all-targets --features fake-engine -- -D warnings
+
+      - name: Tests
+        if: steps.changes.outputs.run == 'true'
+        working-directory: apps/speech
+        # Le moteur factice (feature fake-engine, jamais livré) sert aux tests
+        # de contrat et au test du binaire réel.
+        run: cargo test --locked --features fake-engine
 
   # Les tests Rust sont exécutés dans ci-code-quality (job Rust fusionné), qui
   # compile le workspace une seule fois pour clippy et cargo test. Ce job ne

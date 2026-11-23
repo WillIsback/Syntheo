@@ -58,7 +58,7 @@ function ExternalLink({
       onClick={(e) => {
         e.preventDefault();
         void openerCommands
-          .openUrl(href, null)
+          .openUrl(href)
           .catch((error) =>
             console.error("[changelog] failed to open link", error),
           );

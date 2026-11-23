@@ -19,7 +19,7 @@ required-features = ["examples"]
 tauri-plugin = { workspace = true, features = ["build"] }
 
 [dev-dependencies]
-specta-typescript = { workspace = true }
+syntheo-specta-export = { workspace = true }
 tempfile = { workspace = true }
 
 [target."cfg(target_os = \"macos\")".dev-dependencies]
@@ -31,7 +31,6 @@ objc2-foundation = { workspace = true }
 tauri = { workspace = true }
 tauri-specta = { workspace = true, features = ["derive", "typescript"] }
 
-base64 = { workspace = true }
 serde = { workspace = true }
 specta = { workspace = true }
 thiserror = { workspace = true }

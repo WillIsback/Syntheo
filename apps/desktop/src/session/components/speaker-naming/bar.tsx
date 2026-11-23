@@ -46,7 +46,7 @@ export function SpeakerNamingBar({
   const requested = useSpeakerNamingStore(
     (state) => state.requested === sessionId,
   );
-  const { isGenerating, onRegenerate } = useEnhancedNoteActions({
+  const { isGenerating, summaryOff, onRegenerate } = useEnhancedNoteActions({
     sessionId,
     enhancedNoteId,
   });
@@ -73,9 +73,11 @@ export function SpeakerNamingBar({
     [requested],
   );
 
+  // Synthèse coupée (issue 707) : pas de régénération proposée.
   const proposeRegenerate =
     ready &&
     !isGenerating &&
+    !summaryOff &&
     summaryMentionsAnonymousSpeakers(summaryMarkdown) &&
     (count === 0 || named);
 

@@ -22,7 +22,7 @@ while IFS= read -r lib; do
   crate_dir="${lib%/src/lib.rs}"
   name="$(sed -n 's/^name = "\(.*\)"$/\1/p' "$crate_dir/Cargo.toml" | head -n 1)"
   packages+=("-p" "$name")
-done < <(grep -l 'specta_typescript::Typescript::default' plugins/*/src/lib.rs apps/desktop/src-tauri/src/lib.rs)
+done < <(grep -l 'syntheo_specta_export::write_bindings' plugins/*/src/lib.rs apps/desktop/src-tauri/src/lib.rs)
 
 if [[ ${#packages[@]} -eq 0 ]]; then
   echo "Aucun crate exportateur de liaisons trouvé." >&2

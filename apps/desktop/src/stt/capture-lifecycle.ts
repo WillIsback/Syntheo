@@ -7,13 +7,13 @@ import { useSTTConnection } from "./useSTTConnection";
 
 import { useSession, useSessionTranscriptExistence } from "~/session/queries";
 import type { CaptureLifecycleMarker } from "~/stt/capture-lifecycle-storage";
+import { ON_DEVICE_BASE_URL } from "~/stt/on-device";
 import { useSessionParticipantHumanIds } from "~/stt/queries";
 
 export {
   getAudioDurationMs,
   getPostCaptureAction,
   getPostCaptureRepairReasons,
-  type PostCaptureRepairReason,
 } from "./capture-lifecycle-helpers";
 
 export function useCaptureLifecycle(sessionId: string) {
@@ -67,6 +67,7 @@ export function useCaptureLifecycle(sessionId: string) {
           sessionUserId: session?.user_id,
           connProvider: conn?.provider,
           connModel: conn?.model,
+          connOnDevice: conn?.baseUrl === ON_DEVICE_BASE_URL,
           transcriptExistence,
           runBatchRef,
           canRunBatchRef,
@@ -79,6 +80,7 @@ export function useCaptureLifecycle(sessionId: string) {
       ),
     [
       conn?.model,
+      conn?.baseUrl,
       conn?.provider,
       participantHumanIds,
       session?.raw_md,

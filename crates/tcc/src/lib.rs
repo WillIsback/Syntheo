@@ -2,16 +2,11 @@
 //! crate n'y est jamais utilisée, mais `cargo clippy --workspace` la compile.
 #![cfg(target_os = "macos")]
 
-use swift_rs::{Bool, Int, SRString, swift};
+use swift_rs::{Bool, Int, swift};
 
 swift!(fn _audio_capture_permission_status() -> Int);
 swift!(fn _screen_capture_permission_status() -> Int);
 swift!(fn _request_screen_capture_permission() -> Bool);
-
-swift!(fn _reset_audio_capture_permission(bundle_id: SRString) -> Bool);
-swift!(fn _reset_screen_capture_permission(bundle_id: SRString) -> Bool);
-
-swift!(fn _reset_microphone_permission(bundle_id: SRString) -> Bool);
 
 pub const TCC_ERROR: isize = -1;
 pub const NEVER_ASKED: isize = 2;
@@ -28,18 +23,6 @@ pub fn screen_capture_permission_status() -> isize {
 
 pub fn request_screen_capture_permission() -> bool {
     unsafe { _request_screen_capture_permission() }
-}
-
-pub fn reset_audio_capture_permission(bundle_id: impl Into<SRString>) -> bool {
-    unsafe { _reset_audio_capture_permission(bundle_id.into()) }
-}
-
-pub fn reset_screen_capture_permission(bundle_id: impl Into<SRString>) -> bool {
-    unsafe { _reset_screen_capture_permission(bundle_id.into()) }
-}
-
-pub fn reset_microphone_permission(bundle_id: impl Into<SRString>) -> bool {
-    unsafe { _reset_microphone_permission(bundle_id.into()) }
 }
 
 #[cfg(test)]

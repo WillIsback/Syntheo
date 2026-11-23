@@ -27,7 +27,6 @@ export {
   updateTranscriptWords,
   updateTranscriptHints,
   createTranscriptAccumulator,
-  TranscriptAccumulator,
 } from "./utils-accumulator";
 
 export function applyLiveTranscriptDelta(
