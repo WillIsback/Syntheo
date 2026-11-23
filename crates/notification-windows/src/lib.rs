@@ -1,6 +1,5 @@
 pub use syntheo_notification_interface::*;
 
-mod callbacks;
 #[cfg(any(target_os = "windows", test))]
 mod expanded;
 mod icon;
@@ -16,7 +15,7 @@ mod r#impl;
 #[cfg(target_os = "windows")]
 mod render;
 
-pub use callbacks::{
+pub use syntheo_notification_interface::callbacks::{
     setup_notification_accept_handler, setup_notification_confirm_handler,
     setup_notification_dismiss_handler, setup_notification_footer_action_handler,
     setup_notification_option_selected_handler, setup_notification_timeout_handler,

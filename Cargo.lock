@@ -2360,6 +2360,7 @@ dependencies = [
 name = "db-core"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "db-change",
  "libsqlite3-sys",
  "sqlx",
@@ -2378,6 +2379,7 @@ dependencies = [
  "sqlx",
  "thiserror 2.0.21",
  "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -2559,7 +2561,7 @@ dependencies = [
  "serde",
  "serde_json",
  "specta",
- "specta-typescript",
+ "specta-export",
  "speech-sources",
  "sqlx",
  "storage",
@@ -10340,6 +10342,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "specta-export"
+version = "0.1.0"
+dependencies = [
+ "specta-typescript",
+ "tauri",
+ "tauri-specta",
+]
+
+[[package]]
 name = "specta-macros"
 version = "2.0.0-rc.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -11607,13 +11618,12 @@ dependencies = [
 name = "tauri-plugin-contacts"
 version = "0.1.0"
 dependencies = [
- "chrono",
  "db-app",
  "db-core",
  "serde",
  "serde_json",
  "specta",
- "specta-typescript",
+ "specta-export",
  "sqlx",
  "tauri",
  "tauri-plugin",
@@ -11635,14 +11645,13 @@ dependencies = [
  "serde",
  "serde_json",
  "specta",
- "specta-typescript",
+ "specta-export",
  "sqlx",
  "tauri",
  "tauri-plugin",
  "tauri-specta",
  "thiserror 2.0.21",
  "tokio",
- "tracing",
 ]
 
 [[package]]
@@ -11673,7 +11682,7 @@ dependencies = [
  "serde",
  "serde_qs",
  "specta",
- "specta-typescript",
+ "specta-export",
  "tauri",
  "tauri-plugin",
  "tauri-plugin-deep-link",
@@ -11691,7 +11700,7 @@ dependencies = [
  "notification-interface",
  "serde",
  "specta",
- "specta-typescript",
+ "specta-export",
  "tauri",
  "tauri-plugin",
  "tauri-plugin-detect",
@@ -11737,7 +11746,7 @@ dependencies = [
  "serde",
  "serde_json",
  "specta",
- "specta-typescript",
+ "specta-export",
  "tauri",
  "tauri-plugin",
  "tauri-specta",
@@ -11769,7 +11778,7 @@ version = "0.1.0"
 dependencies = [
  "export-core",
  "specta",
- "specta-typescript",
+ "specta-export",
  "sqlx",
  "tauri",
  "tauri-plugin",
@@ -11812,7 +11821,7 @@ dependencies = [
  "fs-sync-core",
  "rayon",
  "specta",
- "specta-typescript",
+ "specta-export",
  "tauri",
  "tauri-plugin",
  "tauri-plugin-notify",
@@ -11871,7 +11880,7 @@ dependencies = [
  "objc2-foundation",
  "serde",
  "specta",
- "specta-typescript",
+ "specta-export",
  "tauri",
  "tauri-plugin",
  "tauri-specta",
@@ -11895,7 +11904,7 @@ dependencies = [
  "serde_json",
  "sha2 0.11.1",
  "specta",
- "specta-typescript",
+ "specta-export",
  "sqlx",
  "sys-locale",
  "tauri",
@@ -11919,7 +11928,7 @@ dependencies = [
  "objc2-foundation",
  "objc2-local-authentication",
  "specta",
- "specta-typescript",
+ "specta-export",
  "tauri",
  "tauri-plugin",
  "tauri-specta",
@@ -11937,7 +11946,7 @@ dependencies = [
  "serde",
  "serde_json",
  "specta",
- "specta-typescript",
+ "specta-export",
  "tauri",
  "tauri-plugin",
  "tauri-plugin-db",
@@ -11950,7 +11959,7 @@ version = "0.1.0"
 dependencies = [
  "serde",
  "specta",
- "specta-typescript",
+ "specta-export",
  "sysinfo",
  "tauri",
  "tauri-plugin",
@@ -11965,7 +11974,7 @@ dependencies = [
  "notification",
  "serde",
  "specta",
- "specta-typescript",
+ "specta-export",
  "tauri",
  "tauri-plugin",
  "tauri-plugin-windows",
@@ -12017,7 +12026,7 @@ name = "tauri-plugin-opener2"
 version = "0.1.0"
 dependencies = [
  "specta",
- "specta-typescript",
+ "specta-export",
  "tauri",
  "tauri-plugin",
  "tauri-plugin-opener",
@@ -12064,7 +12073,7 @@ dependencies = [
  "overlay-kit",
  "serde",
  "specta",
- "specta-typescript",
+ "specta-export",
  "tauri",
  "tauri-plugin",
  "tauri-plugin-shell",
@@ -12121,12 +12130,11 @@ dependencies = [
 name = "tauri-plugin-session"
 version = "0.1.0"
 dependencies = [
- "chrono",
  "db-app",
  "db-core",
  "serde",
  "specta",
- "specta-typescript",
+ "specta-export",
  "sqlx",
  "tauri",
  "tauri-plugin",
@@ -12144,7 +12152,7 @@ dependencies = [
  "serde",
  "serde_json",
  "specta",
- "specta-typescript",
+ "specta-export",
  "storage",
  "tauri",
  "tauri-plugin",
@@ -12163,7 +12171,7 @@ dependencies = [
  "serde",
  "serde_json",
  "specta",
- "specta-typescript",
+ "specta-export",
  "tauri",
  "tauri-plugin",
  "tauri-specta",
@@ -12203,7 +12211,7 @@ dependencies = [
  "serde_json",
  "shortcut-macos",
  "specta",
- "specta-typescript",
+ "specta-export",
  "tauri",
  "tauri-plugin",
  "tauri-plugin-global-shortcut",
@@ -12273,7 +12281,7 @@ dependencies = [
  "serde",
  "serde_json",
  "specta",
- "specta-typescript",
+ "specta-export",
  "storage",
  "strum 0.28.0",
  "tauri",
@@ -12297,7 +12305,7 @@ dependencies = [
  "objc2-foundation",
  "open",
  "specta",
- "specta-typescript",
+ "specta-export",
  "tauri",
  "tauri-plugin",
  "tauri-plugin-clipboard-manager",
@@ -12319,7 +12327,7 @@ dependencies = [
  "language",
  "serde",
  "specta",
- "specta-typescript",
+ "specta-export",
  "tantivy",
  "tauri",
  "tauri-plugin",
@@ -12334,14 +12342,13 @@ dependencies = [
 name = "tauri-plugin-template"
 version = "0.1.0"
 dependencies = [
- "chrono",
  "db-app",
  "db-core",
  "language",
  "serde",
  "serde_json",
  "specta",
- "specta-typescript",
+ "specta-export",
  "sqlx",
  "summary",
  "tauri",
@@ -12389,7 +12396,7 @@ dependencies = [
  "serde",
  "serde_json",
  "specta",
- "specta-typescript",
+ "specta-export",
  "speech-host",
  "speech-probe",
  "sqlx",
@@ -12473,7 +12480,7 @@ dependencies = [
  "serde",
  "serde_json",
  "specta",
- "specta-typescript",
+ "specta-export",
  "strum 0.28.0",
  "swift-rs 1.0.7",
  "tauri",

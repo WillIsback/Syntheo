@@ -22,7 +22,7 @@ use serde::{Deserialize, Serialize};
 use specta::Type;
 use sqlx::SqlitePool;
 
-use crate::transaction_utils::rollback_error;
+use syntheo_db_core::rollback_error;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(rename_all = "snake_case")]

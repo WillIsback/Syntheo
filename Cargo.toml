@@ -78,6 +78,7 @@ syntheo-overlay-kit = { path = "crates/overlay-kit", package = "overlay-kit" }
 syntheo-pinned-fetch = { path = "crates/pinned-fetch", package = "pinned-fetch" }
 syntheo-resampler = { path = "crates/resampler", package = "resampler" }
 syntheo-shortcut-macos = { path = "crates/shortcut-macos", package = "shortcut-macos" }
+syntheo-specta-export = { path = "crates/specta-export", package = "specta-export" }
 syntheo-speech-host = { path = "crates/speech-host", package = "speech-host" }
 syntheo-speech-probe = { path = "crates/speech-probe", package = "speech-probe" }
 syntheo-speech-sources = { path = "crates/speech-sources", package = "speech-sources" }

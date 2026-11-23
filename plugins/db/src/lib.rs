@@ -19,6 +19,16 @@ pub struct TransactionStatement {
     pub expected_rows_affected: Option<u64>,
 }
 
+impl From<TransactionStatement> for syntheo_db_execute::TransactionStatement {
+    fn from(statement: TransactionStatement) -> Self {
+        Self {
+            sql: statement.sql,
+            params: statement.params,
+            expected_rows_affected: statement.expected_rows_affected,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, serde::Serialize, specta::Type, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum StartupPhase {
@@ -146,19 +156,10 @@ mod tests {
 
     #[test]
     fn export_types() {
-        const OUTPUT_FILE: &str = "./js/bindings.gen.ts";
-
-        make_specta_builder::<tauri::Wry>()
-            .disable_serde_phases()
-            .semantic_types(
-                specta_typescript::semantic::Configuration::empty().enable_lossless_floats(),
-            )
-            .dangerously_cast_bigints_to_number()
-            .export(specta_typescript::Typescript::default(), OUTPUT_FILE)
-            .unwrap();
-
-        let content = std::fs::read_to_string(OUTPUT_FILE).unwrap();
-        std::fs::write(OUTPUT_FILE, format!("// @ts-nocheck\n{content}")).unwrap();
+        syntheo_specta_export::write_bindings(
+            make_specta_builder::<tauri::Wry>(),
+            "./js/bindings.gen.ts",
+        );
     }
 
     #[test]

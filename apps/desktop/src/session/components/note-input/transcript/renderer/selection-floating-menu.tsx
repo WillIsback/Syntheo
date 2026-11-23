@@ -17,8 +17,8 @@ import {
   getTranscriptRangeRects,
   getTranscriptSelectionFromRange,
   isRangeCoveredBySelection,
+  type TranscriptWordSelection,
 } from "./selection";
-import type { TranscriptWordSelection } from "./selection";
 
 const MENU_CONTAINER_CLASSES = [
   "pointer-events-auto",

@@ -23,12 +23,13 @@ import {
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createDerivedInk } from "../plugins/derived-ink";
-import type { JSONContent, NoteEditorRef } from "./index";
 import {
   createReadOnlyPlugin,
   getEditorCompositionWaitMs,
   NoteEditor,
   shouldReplaceEditorContent,
+  type JSONContent,
+  type NoteEditorRef,
 } from "./index";
 import { schema } from "./schema";
 

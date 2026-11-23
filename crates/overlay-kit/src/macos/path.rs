@@ -148,7 +148,6 @@ mod tests {
     use super::*;
     use crate::layout::LayoutSize;
     use crate::macos::support::rect;
-    use crate::path::PathWinding;
 
     #[test]
     fn renderer_preserves_top_left_path_intent() {

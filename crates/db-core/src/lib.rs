@@ -5,6 +5,10 @@ use std::time::Duration;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::{Connection, SqlitePool};
 
+mod transaction;
+
+pub use transaction::{js_iso8601_timestamp, rollback_error, rollback_row_count_mismatch};
+
 #[derive(Clone, Copy, Debug)]
 pub enum DbStorage<'a> {
     Local(&'a Path),

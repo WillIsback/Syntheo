@@ -1,5 +1,3 @@
-import { useRef } from "react";
-
 import {
   ADDITIONAL_EMAILS_JSON_EACH_SQL,
   ADDITIONAL_EMAILS_SQL,
@@ -28,6 +26,7 @@ import {
 } from "./queries-rows";
 
 import { liveQueryClient, useLiveQuery } from "~/db";
+import { useHeldLiveQueryRows } from "~/db/held-live-query-rows";
 
 export function useHumans(): HumanRecord[] {
   const { data = EMPTY_HUMANS } = useLiveQuery<HumanSqlRow, HumanRecord[]>({
@@ -309,20 +308,4 @@ export function usePersonalContact(humanId: string) {
     params: [humanId],
     mapRows: (rows) => (rows[0] ? mapHumanRow(rows[0]) : null),
   });
-}
-
-function useHeldLiveQueryRows<T>(
-  data: T[] | undefined,
-  empty: T[],
-  enabled: boolean,
-): T[] {
-  const previous = useRef(empty);
-  if (data !== undefined) {
-    previous.current = data;
-  }
-  if (!enabled) {
-    previous.current = empty;
-    return empty;
-  }
-  return data ?? previous.current;
 }

@@ -121,7 +121,7 @@ La colonne « Interface » indique si `apps/desktop/src` importe le paquet `@syn
 - **Chemin** : `plugins/session`
 - **Rôle** : écritures transactionnelles sur les notes et les dossiers.
 - **Commandes** : `create_session`, `soft_delete_session`, `restore_deleted_session`, `add_session_participant`, `remove_session_participant`, `persist_chat_session_proposal`, `set_session_proposal_status`, `resolve_session_conflicts`, `move_session_contents`, catalogue des pièces jointes et de l'audio (`catalog_note_attachment`, `catalog_session_audio`, `tombstone_session_audio`…), catalogue des dossiers (`ensure_folder_catalog`, `rename_folder_catalog`, `update_folder_instructions`, `update_folder_icon`…).
-- **Dépendances internes** : `crates/db-app` ; plugin `db`.
+- **Dépendances internes** : `crates/db-app`, `crates/db-core` ; plugin `db`.
 - **Pages de doc concernées** : [/notes](/fr/notes), [/meetings](/fr/meetings), [/chat](/fr/chat) (propositions issues du chat).
 
 ### `template`
@@ -129,14 +129,14 @@ La colonne « Interface » indique si `apps/desktop/src` importe le paquet `@syn
 - **Chemin** : `plugins/template`
 - **Rôle** : rend les prompts Jinja et enregistre le résultat de la génération.
 - **Commandes** : `render`, `get_template_source`, `summary_length_policy`, `dominant_language`, `prepare_generated_summary`, `compose_generated_summary`, `save_generated_summary`, `save_generated_title`, `apply_session_content_corrections`.
-- **Dépendances internes** : `crates/template-app`, `crates/summary`, `crates/language`, `crates/db-app` ; plugin `db`.
+- **Dépendances internes** : `crates/template-app`, `crates/summary`, `crates/language`, `crates/db-app`, `crates/db-core` ; plugin `db`.
 - **Pages de doc concernées** : [/customize-summaries](/fr/customize-summaries), [/languages](/fr/languages) (langue des résumés et des titres), [/chat](/fr/chat).
 
 ### Autres plugins de données
 
 | Plugin | Commandes et événements | Dépendances internes | Pages de doc concernées |
 | --- | --- | --- | --- |
-| `contacts` | `create_human`, `create_organization`, `save_personal_contact`, `update_human`, `update_organization`, `soft_delete_contact`, `update_contact_avatar`, `toggle_contact_pin`, `reorder_pinned_contacts`, `merge_humans` | `crates/db-app` ; plugin `db` | [/contacts](/fr/contacts) |
+| `contacts` | `create_human`, `create_organization`, `save_personal_contact`, `update_human`, `update_organization`, `soft_delete_contact`, `update_contact_avatar`, `toggle_contact_pin`, `reorder_pinned_contacts`, `merge_humans` | `crates/db-app`, `crates/db-core` ; plugin `db` | [/contacts](/fr/contacts) |
 | `fs-sync` | Notes et dossiers (`list_folders`, `create_folder`, `rename_folder`, `delete_folder`, `move_session`, `load_session_content`), lots de documents (`write_document_batch`), pièces jointes (`attachment_*`, `folder_attachment_*`), audio importé (`audio_import`, `audio_has_speech`, `audio_delete`…) ; événement `AudioImportEvent` | `crates/fs-sync-core` ; plugins `notify`, `settings` | [/notes](/fr/notes), [/import-recordings](/fr/import-recordings), [/data-and-privacy](/fr/data-and-privacy) |
 | `tantivy` | `search` | `crates/language` ; plugin `settings` | [/notes](/fr/notes) (palette de recherche), [/architecture](/fr/architecture) |
 | `export` | `export`, `export_text`, `choose_export_path`, `print_pdf`, `cleanup_print_files` | `crates/export-core` ; plugin `db` | [/notes](/fr/notes) |

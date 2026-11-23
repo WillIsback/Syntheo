@@ -39,6 +39,7 @@ In the Cargo workspace, each crate is declared under a `syntheo-*` alias (for ex
 | `crates/host` | CPU architecture, OS version, process termination | desktop | none |
 | `crates/user-error` | Recognizing errors caused by the user's account | plugin `tracing`, crates `listener2-core`, `owhisper-client` | none |
 | `crates/data` | Audio samples for tests | `audio-mock`; dev-dependency elsewhere | none |
+| `crates/specta-export` | Writing the tauri-specta TypeScript bindings | dev-dependency of the desktop app and plugins | none |
 
 ## Database
 
@@ -48,7 +49,7 @@ The `app.db` database is the heart of the data. The crates are organized in laye
 
 - **Path**: `crates/db-core`
 - **Role**: opens a SQLite pool and attaches a `ChangeNotifier` to it.
-- **API**: `Db` (`open`, `connect_local_read_write`, `connect_local_read_only`, `pool`, `change_notifier`), `DbOpenOptions`, `DbStorage`, `ManagedDb`.
+- **API**: `Db` (`open`, `connect_local_read_write`, `connect_local_read_only`, `pool`, `change_notifier`), `DbOpenOptions`, `DbStorage`, `ManagedDb`. Transaction helpers for the `session`, `template` and `contacts` plugins: `js_iso8601_timestamp`, `rollback_row_count_mismatch`, `rollback_error`.
 - **Internal dependencies**: `syntheo-db-change`.
 - **Note**: the CLI opens the database with `connect_local_read_only` (`apps/cli/src/db.rs`), which guarantees the read-only access described in [CLI for agents](/en/agents/cli).
 - **Affected doc pages**: [Data and privacy](/en/data-and-privacy), [CLI for agents](/en/agents/cli).
@@ -91,7 +92,7 @@ Don't describe product behavior from the raw SQL schema. Start from the operatio
 ### db-change, db-execute, db-reactive
 
 - **db-change** (`crates/db-change`): `ChangeNotifier`, `TableChange` and `TableChangeKind` report modified tables. No internal dependencies.
-- **db-execute** (`crates/db-execute`): `DbExecutor` runs a query, a "proxy" query or a transaction described in JSON (`TransactionStatement`). Depends on `syntheo-db-core`.
+- **db-execute** (`crates/db-execute`): `DbExecutor` runs a query, a "proxy" query or a transaction described in JSON (`TransactionStatement`). The transaction is rolled back explicitly on error, and in the background if the call is dropped. The `db` plugin uses it for `execute_transaction`. Depends on `syntheo-db-core`.
 - **db-reactive** (`crates/db-reactive`): `LiveQueryRuntime` extracts the tables read by a query (`extract_dependencies`, through `EXPLAIN`) and replays it when one of them changes. The `db` plugin exposes it through the `subscribe` and `unsubscribe` commands. Depends on `syntheo-db-core`, `syntheo-db-change`, `syntheo-db-execute`, `syntheo-db-migrate`.
 - **Affected doc pages**: none.
 
@@ -170,7 +171,7 @@ Don't describe product behavior from the raw SQL schema. Start from the operatio
 
 | Crate | Platform | Content |
 | --- | --- | --- |
-| `crates/notification-interface` | all | Types `Notification`, `NotificationKey` (`mic_started`, `mic_stopped`), `NotificationEvent`, `NotificationLabels`. No internal dependencies. |
+| `crates/notification-interface` | all | Types `Notification`, `NotificationKey` (`mic_started`, `mic_stopped`), `NotificationEvent`, `NotificationLabels`, and the `callbacks` module (action handlers shared by the Linux and Windows backends). No internal dependencies. |
 | `crates/notification` | all | `show`, `clear` and the `setup_*_handler` handlers. Depends on `syntheo-notification-interface` and the platform backend. |
 | `crates/notification-linux` | Linux | GTK 3 window (`gtk`, `gdk`, `pango`). Depends on `syntheo-brand`, `syntheo-notification-interface`. |
 | `crates/notification-windows` | Windows | Win32 rendering (`windows` crate). Depends on `syntheo-notification-interface`. |
@@ -194,3 +195,4 @@ Don't describe product behavior from the raw SQL schema. Start from the operatio
 ## Tooling and test data
 
 - **data** (`crates/data`): English audio samples (WAV and other formats) included at compile time. Regular dependency of `crates/audio-mock`, dev-dependency of `audio-utils`, `fs-sync-core`, `owhisper-client`, `resampler` and `vad`. Affected doc pages: none.
+- **specta-export** (`crates/specta-export`): `write_bindings` writes the `bindings.gen.ts` file with the shared configuration; `assert_command_manifest_is_single_source` compares a plugin's command manifest with the generated bindings and permissions. Dev-dependency of the plugins that export bindings and of the desktop app, called by their `export_types` tests. Affected doc pages: none.

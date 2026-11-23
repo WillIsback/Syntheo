@@ -103,6 +103,8 @@ Le paquet n'a pas d'export racine ; chaque sous-chemin est un point d'entrée.
 | `./comments` | Ancrage des commentaires dans le texte. | non importé par l'application à ce jour |
 | `./styles.css` | Styles ProseMirror. | oui |
 
+Les schémas de `./note` et de `./markdown` partagent leurs nœuds et marques communs (paragraphes, titres, listes, tableaux, marques) dans `src/schema/base.ts` ; chacun n'ajoute que ses nœuds propres.
+
 Le fichier `packages/editor/daily/cfm.md` est une note de conception héritée (« Char-Flavored-Markdown ») ; aucun code ne l'importe.
 
 ## `@syntheo/store`

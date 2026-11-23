@@ -12,18 +12,17 @@ description = ""
 tauri-plugin = { workspace = true, features = ["build"] }
 
 [dev-dependencies]
-specta-typescript = { workspace = true }
-syntheo-db-core = { workspace = true }
+syntheo-specta-export = { workspace = true }
 tokio = { workspace = true, features = ["macros", "rt"] }
 
 [dependencies]
 syntheo-db-app = { workspace = true }
+syntheo-db-core = { workspace = true }
 syntheo-language = { workspace = true, features = ["dominant"] }
 syntheo-summary = { workspace = true }
 syntheo-template-app = { workspace = true }
 tauri-plugin-db = { workspace = true }
 
-chrono = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 sqlx = { workspace = true, features = ["runtime-tokio", "sqlite", "sqlite-unbundled", "macros"] }

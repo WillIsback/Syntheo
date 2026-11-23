@@ -81,24 +81,9 @@ struct NotificationPayload<'a> {
     labels: &'a syntheo_notification_interface::NotificationLabels,
 }
 
-fn resolve_default_icon(
-    notification: &syntheo_notification_interface::Notification,
-) -> syntheo_notification_interface::Notification {
-    let mut resolved = notification.clone();
-
-    if resolved.icon.is_none() {
-        resolved.icon = resolved
-            .source
-            .as_ref()
-            .and_then(NotificationSource::default_icon);
-    }
-
-    resolved
-}
-
+/// Affiche la notification telle quelle : `notification::show` a déjà résolu
+/// l'icône par défaut.
 pub fn show(notification: &syntheo_notification_interface::Notification) {
-    let notification = resolve_default_icon(notification);
-
     let key = notification
         .key
         .as_deref()

@@ -15,7 +15,7 @@ tauri-plugin = { workspace = true, features = ["build"] }
 swift-rs = { workspace = true, features = ["build"] }
 
 [dev-dependencies]
-specta-typescript = { workspace = true }
+syntheo-specta-export = { workspace = true }
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]

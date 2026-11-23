@@ -20,12 +20,6 @@ pub enum Error {
     Reactive(#[from] syntheo_db_reactive::Error),
     #[error(transparent)]
     Json(#[from] serde_json::Error),
-    #[error("transaction statement {statement_index} affected {actual} rows; expected {expected}")]
-    UnexpectedRowsAffected {
-        statement_index: usize,
-        expected: u64,
-        actual: u64,
-    },
 }
 
 impl Serialize for Error {

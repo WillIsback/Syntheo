@@ -103,6 +103,8 @@ The package has no root export; each subpath is an entry point.
 | `./comments` | Anchoring comments in the text. | not imported by the app to date |
 | `./styles.css` | ProseMirror styles. | yes |
 
+The `./note` and `./markdown` schemas share their common nodes and marks (paragraphs, headings, lists, tables, marks) in `src/schema/base.ts`; each adds only its own nodes.
+
 The `packages/editor/daily/cfm.md` file is an inherited design note ("Char-Flavored-Markdown"); no code imports it.
 
 ## `@syntheo/store`

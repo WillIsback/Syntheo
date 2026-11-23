@@ -28,8 +28,11 @@ import {
   TranscriptSelectionProvider,
   useTranscriptSelectionSources,
 } from "./selection-context";
-import { MultiSelectionBar, SelectionMenu } from "./selection-menu";
-import type { TranscriptContextMenuRequest } from "./selection-menu";
+import {
+  MultiSelectionBar,
+  SelectionMenu,
+  type TranscriptContextMenuRequest,
+} from "./selection-menu";
 import { RenderTranscript } from "./transcript";
 import { useAutoScroll, useScrollDetection } from "./viewport-hooks";
 

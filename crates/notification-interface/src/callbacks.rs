@@ -1,4 +1,6 @@
-#![cfg_attr(not(target_os = "windows"), allow(dead_code))]
+//! Rappels des actions de notification, partagés par les backends Linux et
+//! Windows : chaque backend appelle `confirm`, `accept`… et l'application
+//! enregistre ses gestionnaires avec les fonctions `setup_*`.
 
 use std::sync::Mutex;
 
@@ -54,37 +56,37 @@ where
     *FOOTER_ACTION_CB.lock().unwrap() = Some(Box::new(f));
 }
 
-pub(crate) fn confirm(key: String) {
+pub fn confirm(key: String) {
     if let Some(cb) = CONFIRM_CB.lock().unwrap().as_ref() {
         cb(key);
     }
 }
 
-pub(crate) fn accept(key: String) {
+pub fn accept(key: String) {
     if let Some(cb) = ACCEPT_CB.lock().unwrap().as_ref() {
         cb(key);
     }
 }
 
-pub(crate) fn dismiss(key: String) {
+pub fn dismiss(key: String) {
     if let Some(cb) = DISMISS_CB.lock().unwrap().as_ref() {
         cb(key);
     }
 }
 
-pub(crate) fn timeout(key: String) {
+pub fn timeout(key: String) {
     if let Some(cb) = TIMEOUT_CB.lock().unwrap().as_ref() {
         cb(key);
     }
 }
 
-pub(crate) fn option_selected(key: String, index: i32) {
+pub fn option_selected(key: String, index: i32) {
     if let Some(cb) = OPTION_SELECTED_CB.lock().unwrap().as_ref() {
         cb(key, index);
     }
 }
 
-pub(crate) fn footer_action(key: String) {
+pub fn footer_action(key: String) {
     if let Some(cb) = FOOTER_ACTION_CB.lock().unwrap().as_ref() {
         cb(key);
     }
@@ -97,8 +99,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn routes_each_windows_notification_action_to_its_registered_handler() {
+    fn routes_each_notification_action_to_its_registered_handler() {
         let events = Arc::new(Mutex::new(Vec::new()));
+
         let record = |event: &'static str| {
             let events = events.clone();
             move |key: String| events.lock().unwrap().push(format!("{event}:{key}"))
@@ -109,6 +112,7 @@ mod tests {
         setup_notification_dismiss_handler(record("dismiss"));
         setup_notification_timeout_handler(record("timeout"));
         setup_notification_footer_action_handler(record("footer"));
+
         let option_events = events.clone();
         setup_notification_option_selected_handler(move |key, index| {
             option_events

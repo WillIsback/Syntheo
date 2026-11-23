@@ -1,8 +1,7 @@
 import type { StoreApi } from "zustand";
 
 import type { BasicState } from "./basic";
-import type { NavigationState } from "./navigation";
-import { updateHistoryCurrent } from "./navigation";
+import { updateHistoryCurrent, type NavigationState } from "./navigation";
 import { isSameTab, type Tab } from "./schema";
 
 export type StateBasicActions = {

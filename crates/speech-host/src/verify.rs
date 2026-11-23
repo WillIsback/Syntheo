@@ -452,7 +452,6 @@ fn stage(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::ModelFile;
 
     fn write(dir: &Path, path: &str, content: &[u8]) {
         let full = dir.join(path);
