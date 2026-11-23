@@ -1053,6 +1053,28 @@ describe("md2json stripRemoteImages", () => {
     );
   });
 
+  // CodeQL js/polynomial-redos (alerte 109) : 50 000 répétitions de chaque
+  // motif, de quoi rendre visible un coût quadratique (≈ 2,5 s chacun avec les
+  // anciennes expressions, sur le seul nettoyage).
+  it.each([
+    ["![\\", "![\\".repeat(50_000)],
+    ["![](", "![](".repeat(50_000)],
+    ["<img", "<img".repeat(50_000)],
+  ])("nettoie en temps linéaire 50 000 répétitions de « %s »", (_, md) => {
+    const started = performance.now();
+    md2json(md, { stripRemoteImages: true });
+    expect(performance.now() - started).toBeLessThan(750);
+  });
+
+  it("garde le texte alternatif d'une image brute avec une adresse longue", () => {
+    const text = JSON.stringify(
+      md2json(`Avant ![photo](file:///${"a".repeat(1500)}.png) après`, {
+        stripRemoteImages: true,
+      }),
+    );
+    expect(text).toContain('"text":"Avant photo après"');
+  });
+
   it("retire une image distante de bloc et garde son texte alternatif", () => {
     const json = md2json(
       "Intro\n\n![logo](https://attaquant.example/p.png?d=secret)\n\nFin",

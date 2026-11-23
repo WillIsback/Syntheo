@@ -105,8 +105,12 @@ function textOf(value: unknown): string {
 // Image que le parseur Markdown a laissée en texte brut (adresse `file:` refusée
 // par markdown-it, HTML non interprété) : seul son texte alternatif reste
 // (QA 0.8.0-1, issue 678). Jamais dans du code.
-const RAW_MARKDOWN_IMAGE = /!\[([^\]\n]*)\]\([^)\n]*\)/g;
-const RAW_HTML_IMAGE = /<img\b[^>]*>/gi;
+// Linéaires (CodeQL js/polynomial-redos) : le texte alternatif exclut les
+// crochets, l'adresse les parenthèses et la balise les chevrons, avec une
+// longueur bornée ; sinon `![\![\…`, `![](![](…` ou `<img<img…` répétés
+// coûtaient un temps quadratique.
+const RAW_MARKDOWN_IMAGE = /!\[([^[\]\n]{0,1000})\]\([^()\n]{0,2048}\)/g;
+const RAW_HTML_IMAGE = /<img\b[^<>]{0,4096}>/gi;
 const HTML_ALT = /\balt\s*=\s*(?:"([^"]*)"|'([^']*)')/i;
 
 function scrubRawImages(text: string): string {
