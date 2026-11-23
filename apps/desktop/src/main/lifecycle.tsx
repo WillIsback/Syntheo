@@ -104,13 +104,16 @@ function EnhancerInit() {
   });
 
   const model = useLanguageModel();
-  const { conn: llmConn } = useLLMConnection();
+  const { conn: llmConn, status: llmStatus } = useLLMConnection();
   const selectedTemplateId = useConfigValue("selected_template_id");
 
   const modelRef = useRef(model);
   modelRef.current = model;
   const llmConnRef = useRef(llmConn);
   llmConnRef.current = llmConn;
+  const managedOffRef = useRef(false);
+  managedOffRef.current =
+    llmStatus.status === "pending" && llmStatus.reason === "managed_disabled";
   const templateIdRef = useRef(selectedTemplateId);
   templateIdRef.current = selectedTemplateId;
 
@@ -126,6 +129,7 @@ function EnhancerInit() {
       getLLMConn: () => llmConnRef.current,
       getSelectedTemplateId: () => templateIdRef.current || undefined,
       getFolderTemplateId: loadSessionFolderTemplateId,
+      isIntelligenceManagedOff: () => managedOffRef.current,
     });
 
     return () => service.dispose();

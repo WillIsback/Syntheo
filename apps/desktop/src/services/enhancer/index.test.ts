@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   loadSessionContentSnapshot: vi.fn(),
   loadPendingAutoEnhanceJobs: vi.fn(),
   discardPendingAutoEnhanceJob: vi.fn(),
+  discardPendingAutoEnhanceForSession: vi.fn(),
   ensurePendingAutoEnhanceDocument: vi.fn(),
   ensureSummaryDocument: vi.fn(),
   replaceSummaryDocumentTemplate: vi.fn().mockResolvedValue(undefined),
@@ -22,6 +23,8 @@ vi.mock("~/session/content-queries", () => ({
 }));
 
 vi.mock("./storage", () => ({
+  discardPendingAutoEnhanceForSession:
+    mocks.discardPendingAutoEnhanceForSession,
   discardPendingAutoEnhanceJob: mocks.discardPendingAutoEnhanceJob,
   ensurePendingAutoEnhanceDocument: mocks.ensurePendingAutoEnhanceDocument,
   ensureSummaryDocument: mocks.ensureSummaryDocument,
@@ -980,6 +983,68 @@ describe("EnhancerService", () => {
     expect(info.mock.calls[0]?.[0]).toMatch(/^\[enhancer:resume-pending\] /);
     info.mockRestore();
     service.dispose();
+  });
+
+  // Issue 707 : synthèse coupée par l'administration (managed_disabled). Ni
+  // document vide « Untitled », ni tâche durable reprise toutes les 5 s.
+  describe("intelligence coupée par l'administration", () => {
+    const managedOffDeps = () =>
+      createDeps({
+        getModel: () => null,
+        isIntelligenceManagedOff: () => true,
+      });
+
+    it("ne crée aucun document et purge la tâche de la réunion", async () => {
+      snapshot = createSnapshot({ wordCount: 40 });
+      const service = new EnhancerService(managedOffDeps());
+
+      await expect(
+        service.queueAutoEnhanceIfSummaryEmpty("session-1"),
+      ).resolves.toEqual({ type: "managed_off" });
+      await service.requestAutoEnhance("session-1", "regenerate");
+      await service.requestAutoEnhance("session-1", "refresh");
+
+      expect(mocks.ensurePendingAutoEnhanceDocument).not.toHaveBeenCalled();
+      expect(mocks.ensureSummaryDocument).not.toHaveBeenCalled();
+      expect(mocks.discardPendingAutoEnhanceForSession).toHaveBeenCalledWith(
+        "session-1",
+      );
+    });
+
+    it("purge les tâches restantes au lieu de les reprendre toutes les 5 s", async () => {
+      vi.useFakeTimers();
+      const pendingJob = createPendingJob();
+      mocks.loadPendingAutoEnhanceJobs.mockResolvedValue([pendingJob]);
+      const service = new EnhancerService(managedOffDeps());
+
+      service.start();
+      await vi.advanceTimersByTimeAsync(30_000);
+
+      expect(mocks.discardPendingAutoEnhanceJob).toHaveBeenCalledWith(
+        pendingJob,
+      );
+      expect(mocks.loadPendingAutoEnhanceJobs).toHaveBeenCalledOnce();
+      service.dispose();
+    });
+
+    it("une tâche sans modèle est purgée, pas replanifiée", async () => {
+      vi.useFakeTimers();
+      snapshot = createSnapshot({ wordCount: 40 });
+      const pendingJob = createPendingJob();
+      const service = new EnhancerService(managedOffDeps());
+      service.start();
+      await vi.advanceTimersByTimeAsync(0);
+      mocks.loadPendingAutoEnhanceJobs.mockClear();
+
+      service.queueAutoEnhance("session-1", pendingJob);
+      await vi.advanceTimersByTimeAsync(30_000);
+
+      expect(mocks.discardPendingAutoEnhanceJob).toHaveBeenCalledWith(
+        pendingJob,
+      );
+      expect(mocks.loadPendingAutoEnhanceJobs).not.toHaveBeenCalled();
+      service.dispose();
+    });
   });
 
   it("emits no-model and started auto-enhance outcomes", async () => {

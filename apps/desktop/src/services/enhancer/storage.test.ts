@@ -36,6 +36,7 @@ vi.mock("~/shared/utils", () => ({
 }));
 
 import {
+  discardPendingAutoEnhanceForSession,
   discardPendingAutoEnhanceJob,
   ensurePendingAutoEnhanceDocument,
   ensureSummaryDocument,
@@ -149,6 +150,20 @@ describe("enhancer SQLite storage", () => {
       "",
       "prosemirror_json",
     ]);
+  });
+
+  // Issue 707 : synthèse coupée par l'administration, la tâche de la
+  // réunion est retirée quelle que soit sa génération.
+  it("discards the session's auto-enhance marker whatever its generation", async () => {
+    await discardPendingAutoEnhanceForSession("session-1");
+
+    expect(mocks.enqueueDatabaseWrite).toHaveBeenCalledWith(
+      "session:session-1",
+      expect.any(Function),
+    );
+    const statement = mocks.executeTransaction.mock.calls[0][0][0];
+    expect(statement.sql).toBe("DELETE FROM app_settings WHERE id = ?");
+    expect(statement.params).toEqual(["auto_enhance_pending:session-1"]);
   });
 
   it("persists the auto-enhance marker with a new empty summary", async () => {

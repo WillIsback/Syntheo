@@ -11,6 +11,7 @@ import {
   getSummaryIneligibilityReason,
 } from "./eligibility";
 import {
+  discardPendingAutoEnhanceForSession,
   discardPendingAutoEnhanceJob,
   type EnhancerNote,
   type PendingAutoEnhanceJob,
@@ -43,6 +44,7 @@ type EnhanceResult =
 
 type QueueEmptySummaryResult =
   | { type: "queued" }
+  | { type: "managed_off" }
   | { type: "summary_exists"; noteId: string };
 
 // "refresh" regenerates an existing summary and otherwise behaves like "if_empty".
@@ -75,6 +77,9 @@ type EnhancerDeps = {
   getSelectedTemplateId: () => string | undefined;
   // Modèle du dossier de la note ou de son parent le plus proche (issue 502).
   getFolderTemplateId?: (sessionId: string) => Promise<string | undefined>;
+  // Synthèse coupée par l'administration (intelligence_disabled, statut
+  // managed_disabled) : rien n'est créé ni planifié (issue 707).
+  isIntelligenceManagedOff?: () => boolean;
 };
 
 const UUID_TITLE_RE =
@@ -186,6 +191,11 @@ export class EnhancerService {
   async queueAutoEnhanceIfSummaryEmpty(
     sessionId: string,
   ): Promise<QueueEmptySummaryResult> {
+    // Synthèse coupée par l'administration : ni document vide « Untitled »,
+    // ni tâche reprise toutes les 5 s sans fin (issue 707).
+    if (await this.skipWhenIntelligenceManagedOff(sessionId)) {
+      return { type: "managed_off" };
+    }
     return retryDatabaseLock(async () => {
       const snapshot = await this.loadSession(sessionId);
       const templateId = await this.resolveTemplateId(snapshot);
@@ -218,6 +228,7 @@ export class EnhancerService {
   }
 
   async requestAutoEnhance(sessionId: string, mode: AutoEnhanceMode) {
+    if (await this.skipWhenIntelligenceManagedOff(sessionId)) return;
     if (mode === "refresh" && !(await this.hasGeneratingSummary(sessionId))) {
       const result = await this.queueAutoEnhanceIfSummaryEmpty(sessionId);
       if (result.type !== "summary_exists") return;
@@ -246,6 +257,23 @@ export class EnhancerService {
     await this.queueAutoEnhanceIfSummaryEmpty(sessionId);
   }
 
+  private isIntelligenceManagedOff(): boolean {
+    return this.deps.isIntelligenceManagedOff?.() ?? false;
+  }
+
+  /** Purge la tâche durable de la réunion quand la synthèse est coupée. */
+  private async skipWhenIntelligenceManagedOff(
+    sessionId: string,
+  ): Promise<boolean> {
+    if (!this.isIntelligenceManagedOff()) return false;
+    this.activeAutoEnhance.delete(sessionId);
+    this.clearRetry(sessionId);
+    await retryDatabaseLock(() =>
+      discardPendingAutoEnhanceForSession(sessionId),
+    );
+    return true;
+  }
+
   private runAutoEnhance(sessionId: string, attempt: number) {
     void retryDatabaseLock(() => this.tryAutoEnhance(sessionId, attempt)).catch(
       (error) => {
@@ -269,6 +297,15 @@ export class EnhancerService {
     try {
       const jobs = await retryDatabaseLock(loadPendingAutoEnhanceJobs);
       if (!this.started) return;
+
+      // Synthèse coupée par l'administration : les tâches restantes ne
+      // seraient jamais reprises, elles sont purgées (issue 707).
+      if (this.isIntelligenceManagedOff()) {
+        for (const job of jobs) {
+          await retryDatabaseLock(() => discardPendingAutoEnhanceJob(job));
+        }
+        return;
+      }
 
       for (const job of jobs) {
         const live = listenerStore.getState().live;
@@ -349,7 +386,9 @@ export class EnhancerService {
 
     if (result.type === "no_model") {
       this.activeAutoEnhance.delete(sessionId);
-      if (pendingAutoEnhance) {
+      if (pendingAutoEnhance && this.isIntelligenceManagedOff()) {
+        await discardPendingAutoEnhanceJob(pendingAutoEnhance);
+      } else if (pendingAutoEnhance) {
         this.schedulePendingAutoEnhanceResume();
       }
       this.emit({ type: "auto-enhance-no-model", sessionId });
