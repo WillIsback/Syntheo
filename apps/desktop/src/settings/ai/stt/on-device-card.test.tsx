@@ -235,26 +235,57 @@ describe("OnDeviceCard", () => {
     expect(mocks.cancel).toHaveBeenCalled();
     mocks.installProgress = null;
     finish({ status: "error", error: "cancelled" });
-    await screen.findByText(/Installation cancelled/);
+    await screen.findByText(
+      /The models were not installed: installation cancelled/,
+    );
     // Revue, R10 : l'avancement est oublié dès la fin, sans attendre la
     // lecture suivante.
     expect(screen.queryByTestId("on-device-install-progress")).toBeNull();
   });
 
-  it("offers to resume a partial download", async () => {
+  // QA 0.8.0-4 : fichiers d'une autre version gardés (montée des modèles),
+  // rien d'interrompu : une mise à jour, pas une reprise ; la taille à
+  // télécharger ne tombe pas à 0 MB.
+  it("offers a model update when files of another version are present", async () => {
     mocks.status = {
       ...mocks.status,
       models: {
         kind: "partial",
-        presentBytes: 500_000_000,
-        totalBytes: 1_066_000_000,
+        presentBytes: 409_549,
+        totalBytes: 1_066_110_000,
         resumable: false,
       },
     };
     setup();
-    await screen.findByText(/partly installed: 500 MB of 1\.1 GB/);
-    fireEvent.click(screen.getByText("Resume the download"));
+    await screen.findByText(
+      "A model update is available (1.1 GB to download).",
+    );
+    expect(screen.queryByText("Resume the download")).toBeNull();
+    expect(screen.queryByText(/partly installed/)).toBeNull();
+    fireEvent.click(screen.getByText("Update the models"));
     await waitFor(() => expect(mocks.download).toHaveBeenCalled());
+  });
+
+  it("never shows a non-empty remaining size as 0 MB", async () => {
+    mocks.status = {
+      ...mocks.status,
+      models: {
+        kind: "partial",
+        presentBytes: 1_000_000,
+        totalBytes: 1_400_000,
+        resumable: false,
+      },
+    };
+    setup();
+    await screen.findByText("A model update is available (1 MB to download).");
+  });
+
+  it("offers to download missing models", async () => {
+    setup();
+    await screen.findByText(/are not installed yet/);
+    expect(screen.queryByText("Update the models")).toBeNull();
+    expect(screen.queryByText("Resume the download")).toBeNull();
+    expect(screen.getByText(/^Download the models \(/)).toBeTruthy();
   });
 
   // QA 0.8.0-3 : les octets déjà téléchargés (fichiers .part) comptent, et la
@@ -421,8 +452,9 @@ describe("mise en service", () => {
     });
     setup();
     fireEvent.click(await screen.findByText("Measure again"));
+    // QA 0.8.0-4 : pas de majuscule après les deux-points.
     await screen.findByText(
-      /The measurement did not complete: This computer does not allow/,
+      /The measurement did not complete: this computer does not allow/,
     );
     expect(screen.queryByText(/Measurement done/)).toBeNull();
   });

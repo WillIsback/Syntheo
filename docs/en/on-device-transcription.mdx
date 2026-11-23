@@ -8,10 +8,6 @@ The **On this computer** source transcribes your meetings without a server: a tr
 
 The program is installed with Syntheo. Its models (about 1.1 GB) are installed separately, once, from the **On this computer** card.
 
-<Note>
-  **Model download: forthcoming.** Until the models are published, the card only offers **Install from a folder…**, with a folder that holds the model files.
-</Note>
-
 ## What you need
 
 - An x86-64 processor with AVX2 instructions (Linux or Windows).
@@ -28,6 +24,8 @@ In **Settings → Transcription**, **On this computer** card:
 - **Install from a folder…** copies them from a folder on this computer, for a computer without network access or a folder prepared by your organization (on Windows, a `\\server\share` network path is refused; copy the folder to the computer first). The folder holds the model files, directly or in a `models` subfolder, either flat like the files of the GitHub release (`encoder.onnx`, `nemotron3_diar_v3.onnx`…) or as a tree like the Hugging Face repository (`nemotron/…`, `diar/…`). Each file is checked before it is put in place.
 
 Each file is compared with the version this version of Syntheo expects (size and SHA-256 checksum) before it is put in place; a different file is refused. The card shows the progress, then Syntheo measures the computer (see below).
+
+When a new version of Syntheo expects other models, the card says so (**A model update is available**, with the size to download): **Update the models** downloads only the files that changed, then Syntheo measures the computer again.
 
 **Remove the models** deletes them. Installing and removing are refused during a recording.
 
@@ -70,7 +68,7 @@ An organization can forbid on-device transcription with the managed setting `on_
 
 ## Computers with application control
 
-Before each launch, Syntheo copies the transcription program into a private folder of its data folder (`%APPDATA%\fr.willisback.syntheo\speech` on Windows, `~/.local/share/fr.willisback.syntheo/speech` on Linux), checks it and runs it from this copy. A policy that only allows running programs from some paths (AppLocker or Software Restriction Policies with the default path rules, which only allow `Program Files` and `Windows`) or a home folder mounted without execute permission (`noexec`) therefore blocks the program: the card and the recording say that the computer does not allow it to run (code `execution_blocked`), and transcription goes through the server. On Windows, a publisher rule on Syntheo's signature allows the copy, which stays signed.
+Before each launch, Syntheo copies the transcription program into a private folder of its data folder (`%APPDATA%\fr.willisback.syntheo\speech` on Windows, `~/.local/share/fr.willisback.syntheo/speech` on Linux), checks it and runs it from this copy. A policy that only allows running programs from some paths (AppLocker or Software Restriction Policies with the default path rules, which only allow `Program Files` and `Windows`) or a home folder mounted without execute permission (`noexec`) therefore blocks the program: the card and the recording say that the computer does not allow it to run (code `execution_blocked`). Nothing falls back automatically: found during the measurement, the block prevents keeping the computer, the **Use this computer for transcription instead of the server** box stays unticked and the server stays in use; occurring later, during a recording, it pauses live transcription, and **Go back to the server** (or unticking the box) switches back to the server. On Windows, a publisher rule on Syntheo's signature allows the copy, which stays signed.
 
 ## Require a model mirror
 
