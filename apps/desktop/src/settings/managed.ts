@@ -1,4 +1,4 @@
-import { useLiveQuery } from "~/db";
+import { liveQueryClient, useLiveQuery } from "~/db";
 import { useConfigValues } from "~/shared/config";
 
 // Réglages fixés par l'administration du poste (managed_settings.json). La
@@ -40,4 +40,20 @@ export function useIntelligenceDisabled(): {
     "intelligence_disabled",
   ] as const);
   return { managed, blocked: managed || !!intelligence_disabled };
+}
+
+// Même règle que `blocked` ci-dessus, hors d'un composant : la clé est gérée,
+// ou sa copie dans app_settings vaut vrai (la clé n'est pas synchronisée).
+const INTELLIGENCE_BLOCKED_SQL = `SELECT
+  EXISTS (SELECT 1 FROM managed_app_settings
+    WHERE id = 'intelligence_disabled')
+  OR EXISTS (SELECT 1 FROM app_settings
+    WHERE id = 'intelligence_disabled' AND value_json = 'true') AS blocked`;
+
+/** Synthèse coupée (`useIntelligenceDisabled().blocked`), lue à la demande. */
+export async function loadIntelligenceBlocked(): Promise<boolean> {
+  const [row] = await liveQueryClient.execute<{ blocked: number }>(
+    INTELLIGENCE_BLOCKED_SQL,
+  );
+  return !!row?.blocked;
 }

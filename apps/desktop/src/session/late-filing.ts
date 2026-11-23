@@ -11,6 +11,7 @@ import { loadSessionFolderTemplateId } from "~/folders/folder-template";
 import { getEnhancerService } from "~/services/enhancer";
 import { loadSessionContentSnapshot } from "~/session/content-queries";
 import { lateFilingToastId, type UndoMove } from "~/session/queries/sessions";
+import { loadIntelligenceBlocked } from "~/settings/managed";
 import { getTemplateById } from "~/templates/queries";
 
 // Rangement tardif (issue 502) : une note déjà synthétisée qui entre dans un
@@ -114,8 +115,15 @@ export async function proposeLateFiling(
   isCurrent: () => boolean = () => true,
   undoMove?: UndoMove,
 ): Promise<void> {
-  const proposal = await loadLateFilingProposal(sessionId);
-  if (!proposal) {
+  // Synthèse coupée (intelligence_disabled, politique en vigueur ou copie
+  // restée dans app_settings) : « Regenerate » ne mènerait à rien, comme les
+  // autres générations manuelles retirées (issue 707). Le message du
+  // déplacement reste seul, avec son « Annuler ».
+  const [proposal, blocked] = await Promise.all([
+    loadLateFilingProposal(sessionId),
+    loadIntelligenceBlocked(),
+  ]);
+  if (!proposal || blocked) {
     return;
   }
   const template = await getTemplateById(proposal.templateId);
