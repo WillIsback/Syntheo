@@ -123,7 +123,7 @@ The settings most useful to an IT department:
 
 - **Transcription server enforced over HTTPS**: `stt:openai` or `stt:nvidia`, with `current_stt_provider` and `current_stt_model`. The address must use `https://`: the file does not accept plain HTTP, even to a private network. See [Switch your server to HTTPS](/en/ai-setup#switch-your-server-to-https).
 - **No update check at startup**: `automatic_updates` set to `false`. Syntheo no longer contacts GitHub at launch, and the "Check for updates at startup" switch in **Settings › Profile** is disabled with the mention "Set by your administrator.". A manual check is still possible from that section and from the notification area. See [Update](/en/desktop-installation#update).
-- **No language model**: `intelligence_disabled` set to `true`, with `current_llm_provider` and `current_llm_model` set to `""`. No request is sent to an LLM server: no summary and no chat; a recording import requested by an agent (CLI or MCP, `import_recording`) is refused. Transcription stays available.
+- **No language model**: `intelligence_disabled` set to `true`, with `current_llm_provider` and `current_llm_model` set to `""`. No request is sent to an LLM server: no summary and no chat, and the **Settings › Synthesis** page shows "Set by your administrator." without querying the server; a recording import requested by an agent (CLI or MCP, `import_recording`) is refused. Transcription stays available.
 
 ```json
 {

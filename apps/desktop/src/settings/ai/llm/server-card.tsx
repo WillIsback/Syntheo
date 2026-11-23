@@ -50,7 +50,7 @@ export function LlmServerCard() {
     ],
     queryFn: async () =>
       removeNonStreamingModels(await listCustomModels(baseUrl, apiKey)),
-    enabled: state.status === "connected",
+    enabled: state.status === "connected" && !connection.disabled,
     retry: false,
     staleTime: 60_000,
   });

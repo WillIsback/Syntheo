@@ -4963,6 +4963,7 @@ msgstr "Server that writes the summary"
 msgid "Session title"
 msgstr "Session title"
 
+#: src/settings/ai/llm/index.tsx
 #: src/settings/general/update-section.tsx
 #: src/settings/privacy/index.tsx
 msgid "Set by your administrator."

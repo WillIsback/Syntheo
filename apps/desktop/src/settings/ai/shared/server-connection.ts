@@ -9,6 +9,7 @@ import {
 } from "./connection-test";
 
 import { useAiProviders } from "~/settings/providers";
+import { useSettingsReady } from "~/settings/queries";
 import { useConfigValue } from "~/shared/config";
 
 export type ServerKind = "stt" | "llm";
@@ -51,6 +52,14 @@ export function resolveServerProviderId(
 }
 
 export function useServerConnection(kind: ServerKind) {
+  const settingsReady = useSettingsReady();
+  const intelligenceDisabled = useConfigValue("intelligence_disabled");
+  // LLM désactivé par réglage géré (intelligence_disabled) : aucune requête
+  // vers le serveur LLM, pas même la sonde de la page Synthèse ou du point
+  // d'état du menu. Tant que les réglages ne sont pas lus, rien ne part non
+  // plus, sinon la sonde précéderait la lecture du réglage (issue 707).
+  const disabled = kind === "llm" && intelligenceDisabled;
+  const blocked = kind === "llm" && (!settingsReady || intelligenceDisabled);
   const sttProvider = useConfigValue("current_stt_provider");
   const providers = useAiProviders(kind);
   const providerId = resolveServerProviderId(kind, sttProvider, providers);
@@ -68,7 +77,7 @@ export function useServerConnection(kind: ServerKind) {
     ],
     queryFn: ({ signal }) =>
       probeServer({ type: kind, baseUrl, apiKey }, { signal }),
-    enabled: baseUrl.length > 0,
+    enabled: baseUrl.length > 0 && !blocked,
     retry: false,
     staleTime: 5 * 60_000,
     refetchOnWindowFocus: false,
@@ -78,6 +87,7 @@ export function useServerConnection(kind: ServerKind) {
     providerId,
     baseUrl,
     apiKey,
+    disabled,
     state: toConnectionState(baseUrl, query),
     test: () => void query.refetch(),
   };

@@ -123,7 +123,7 @@ Les réglages les plus utiles à une DSI :
 
 - **Serveur de transcription imposé en HTTPS** : `stt:openai` ou `stt:nvidia`, avec `current_stt_provider` et `current_stt_model`. L'adresse doit être en `https://` : le fichier n'accepte pas le HTTP clair, même vers un réseau privé. Voir [Passer son serveur en HTTPS](/fr/ai-setup#passer-son-serveur-en-https).
 - **Pas de recherche de mise à jour au démarrage** : `automatic_updates` à `false`. Syntheo ne contacte plus GitHub au lancement, et l'interrupteur « Rechercher les mises à jour au démarrage » de **Paramètres › Profil** est désactivé avec la mention « Réglé par votre administrateur. ». Une recherche manuelle reste possible depuis cette section et depuis la zone de notification. Voir [Mettre à jour](/fr/desktop-installation#mettre-à-jour).
-- **Pas de modèle de langage** : `intelligence_disabled` à `true`, avec `current_llm_provider` et `current_llm_model` à `""`. Aucune demande n'est envoyée à un serveur LLM : pas de compte rendu ni de chat ; un import d'enregistrement demandé par un agent (CLI ou MCP, `import_recording`) est refusé. La transcription reste disponible.
+- **Pas de modèle de langage** : `intelligence_disabled` à `true`, avec `current_llm_provider` et `current_llm_model` à `""`. Aucune demande n'est envoyée à un serveur LLM : pas de compte rendu ni de chat, et la page **Paramètres › Synthèse** affiche « Réglé par votre administrateur. » sans interroger le serveur ; un import d'enregistrement demandé par un agent (CLI ou MCP, `import_recording`) est refusé. La transcription reste disponible.
 
 ```json
 {
