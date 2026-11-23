@@ -416,11 +416,32 @@ describe("SttServerCard", () => {
       mocks.config = { current_stt_provider: "openai" };
       setup();
 
+      expectMention();
       const input = screen.getByRole("textbox", { name: "Model name" });
       expect((input as HTMLInputElement).disabled).toBe(false);
       fireEvent.change(input, { target: { value: "voxtral-mini" } });
       expect(mocks.setSelection).toHaveBeenCalledWith({
         current_stt_model: "voxtral-mini",
+      });
+    });
+
+    it("fournisseur seul : protocole figé, adresse et modèle modifiables", () => {
+      mocks.managed = new Set(["current_stt_provider"]);
+      mocks.connection.state = CONNECTED;
+      setup();
+
+      expectMention();
+      expect(addressButton().getAttribute("data-managed")).toBe("false");
+      expect(disabled(protocolRadios())).toEqual([true, true]);
+      expect(disabled(modelRadios())).toEqual([false, false]);
+
+      fireEvent.click(
+        screen.getByRole("radio", { name: "NVIDIA NeMo-Speech.cpp" }),
+      );
+      expect(mocks.setSelection).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByRole("radio", { name: /whisper-large-v3/ }));
+      expect(mocks.setSelection).toHaveBeenCalledWith({
+        current_stt_model: "whisper-large-v3",
       });
     });
 
@@ -463,7 +484,9 @@ describe("SttServerCard", () => {
       expectMention();
     });
 
-    it("modèle géré : les modèles non retenus s'estompent comme le protocole", () => {
+    // Non-régression : les radios avaient déjà cet aspect avant le correctif
+    // de l'issue 710, qui ne visait que le champ libre (test précédent).
+    it("modèle géré : les radios non retenues restent estompées comme le protocole", () => {
       mocks.managed = new Set(["current_stt_model"]);
       mocks.connection.state = CONNECTED;
       setup();
