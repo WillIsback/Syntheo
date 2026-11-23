@@ -1,7 +1,8 @@
 """Tests de cpu-check/run.sh avec un faux qemu (sans réseau ni modèle) :
 une erreur interne de qemu (SIGBUS, code 135, ou qemu figé qui ne consomme
 plus de CPU) est relancée une seule fois, un verdict (code 1) ne l'est jamais,
-deux erreurs internes de suite échouent.
+deux erreurs internes de suite échouent, et le délai interne DEADLINE arrête
+qemu après le relevé fil par fil, relance comprise.
 
 python3 -I -m unittest discover -s apps/speech/models -p 'test_*.py'
 """
@@ -149,10 +150,40 @@ class RunShTest(unittest.TestCase):
         self.final_newline = "\n"
 
     def test_invalid_watch_settings_are_refused(self):
-        for env in ({"HEARTBEAT": "0"}, {"HEARTBEAT": "2m"}, {"STALL_LIMIT": "-1"}):
+        for env in (
+            {"HEARTBEAT": "0"},
+            {"HEARTBEAT": "2m"},
+            {"STALL_LIMIT": "-1"},
+            {"DEADLINE": "0"},
+            {"DEADLINE": "30m"},
+        ):
             result, calls = self.run_scenario(["ok"], env_extra=env)
             self.assertEqual(result.returncode, 2, env)
             self.assertEqual(calls, 0)
+
+    def test_the_deadline_dumps_the_threads_and_fails_inconclusive(self):
+        result, calls = self.run_scenario(
+            ["hang", "ok"], env_extra={"DEADLINE": "2", "HEARTBEAT": "60"}
+        )
+        self.assertEqual(result.returncode, 2, result.stderr)
+        self.assertEqual(calls, 1)
+        self.assertIn("-- qemu (délai interne de 2 s) : fils 1", result.stderr)
+        self.assertRegex(result.stderr, r"fil \d+ : S, CPU 0 s, attente ")
+        self.assertIn("délai interne de 2 s dépassé", result.stderr)
+        self.assertNotIn("::warning::", result.stdout)
+
+    def test_the_deadline_also_covers_the_retry(self):
+        result, calls = self.run_scenario(
+            ["sigbus", "hang", "ok"], env_extra={"DEADLINE": "2", "HEARTBEAT": "60"}
+        )
+        self.assertEqual(result.returncode, 2, result.stderr)
+        self.assertEqual(calls, 2)
+        self.assertIn("délai interne de 2 s dépassé", result.stderr)
+
+    def test_a_run_within_the_deadline_is_accepted(self):
+        result, calls = self.run_scenario(["ok"], env_extra={"DEADLINE": "60"})
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(calls, 1)
 
     def test_an_interruption_dumps_the_threads_and_stops_qemu(self):
         with tempfile.TemporaryDirectory() as tmp:
