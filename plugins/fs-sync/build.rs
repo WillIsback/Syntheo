@@ -23,7 +23,6 @@ const COMMANDS: &[&str] = &[
     "attachment_read",
     "attachment_remove",
     "folder_attachment_save",
-    "folder_attachment_list",
     "folder_attachment_read",
     "folder_attachment_remove",
 ];

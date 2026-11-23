@@ -45,7 +45,7 @@ La colonne « Interface » indique si `apps/desktop/src` importe le paquet `@syn
 | `local-api` | Webhooks sortants, export Markdown | Oui | [/reference/webhooks](/fr/reference/webhooks), [/automations](/fr/automations) |
 | `settings` | Fichier de réglages et dossiers de base | Oui | [/data-and-privacy](/fr/data-and-privacy) |
 | `store2` | Préférences clé-valeur et secrets dans le trousseau | Oui | [/security](/fr/security), [/ai-setup](/fr/ai-setup), [/data-and-privacy](/fr/data-and-privacy), [/uninstall](/fr/uninstall) |
-| `windows` | Fenêtres, onglets, barre flottante, sous-titres en direct | Oui | [/automatic-capture](/fr/automatic-capture), [/meetings](/fr/meetings) |
+| `windows` | Fenêtres, onglets, barre flottante | Oui | [/automatic-capture](/fr/automatic-capture), [/meetings](/fr/meetings) |
 | `tray` | Icône et menu de la zone de notification | Oui | aucune |
 | `notification` | Notifications natives interactives | Oui | [/automatic-capture](/fr/automatic-capture) |
 | `notify` | Surveillance des fichiers du dossier de données | Non (Rust seul, utilisé par `fs-sync`) | aucune |
@@ -69,8 +69,8 @@ La colonne « Interface » indique si `apps/desktop/src` importe le paquet `@syn
 - **Rôle** : pilote la capture du micro et de l'audio système, la transcription en direct, la transcription par lot des fichiers importés et la rétention des segments audio en attente d'envoi. C'est le plugin le plus utilisé par l'interface.
 - **Commandes principales** :
   - Périphériques et niveaux : `list_microphone_devices`, `list_speaker_devices`, `start_microphone_level_monitor`, `set_mic_muted`, `set_speaker_muted`.
-  - Capture : `start_capture`, `stop_capture`, `stop_capture_for_session`, `retry_audio_capture`, `update_capture_config`, `update_capture_credentials`, `get_capture_state`, `get_capture_snapshot`, `get_capture_audio_gaps`.
-  - Reprise après arrêt : `list_stopped_captures`, `list_capture_recoveries`, marqueurs de cycle de vie (`save_capture_lifecycle_marker`…).
+  - Capture : `start_capture`, `stop_capture`, `stop_capture_for_session`, `retry_audio_capture`, `update_capture_config`, `get_capture_state`, `get_capture_snapshot`, `get_capture_audio_gaps`.
+  - Reprise après arrêt : `list_capture_recoveries`, marqueurs de cycle de vie (`save_capture_lifecycle_marker`…).
   - Transcription en direct : `flush_live_transcript`, `render_transcript_segments`, `render_session_transcript`.
   - Lot et import : `start_transcription`, `stop_transcription`, `begin_audio_upload`, `append_audio_upload`, `save_batch_transcript`, `reconcile_refined_speaker_clusters`.
   - Sous-titres : `parse_subtitle`.
@@ -111,8 +111,8 @@ La colonne « Interface » indique si `apps/desktop/src` importe le paquet `@syn
 
 - **Chemin** : `plugins/db`
 - **Rôle** : expose la base SQLite à l'interface. Applique les migrations, exécute les requêtes et pousse les changements aux abonnés.
-- **Commandes** : `execute`, `execute_transaction`, `execute_proxy`, `subscribe`, `unsubscribe`, `list_meetings`, `get_meeting`, `get_meeting_transcript`, `get_recurring_meeting_history`, `apply_session_ingest`, `get_startup_status`, `wait_until_ready`.
-- **Dépendances internes** : `crates/db-core`, `crates/db-app`, `crates/db-execute`, `crates/db-migrate`, `crates/db-reactive`, `crates/session-ingest`, `crates/agent-access`.
+- **Commandes** : `execute`, `execute_transaction`, `execute_proxy`, `subscribe`, `unsubscribe`, `list_meetings`, `get_meeting`, `get_meeting_transcript`, `get_recurring_meeting_history`, `get_startup_status`, `wait_until_ready`.
+- **Dépendances internes** : `crates/db-core`, `crates/db-app`, `crates/db-execute`, `crates/db-migrate`, `crates/db-reactive`, `crates/agent-access`.
 - **Consommateurs** : `packages/db-tauri` et l'interface ; les plugins `session`, `contacts`, `template`, `export`, `local-api` et `transcription` en dépendent côté Rust.
 - **Pages de doc concernées** : [/meetings](/fr/meetings), [/notes](/fr/notes), [/data-and-privacy](/fr/data-and-privacy).
 
@@ -129,7 +129,7 @@ La colonne « Interface » indique si `apps/desktop/src` importe le paquet `@syn
 - **Chemin** : `plugins/template`
 - **Rôle** : rend les prompts Jinja et enregistre le résultat de la génération.
 - **Commandes** : `render`, `get_template_source`, `summary_length_policy`, `dominant_language`, `prepare_generated_summary`, `compose_generated_summary`, `save_generated_summary`, `save_generated_title`, `apply_session_content_corrections`.
-- **Dépendances internes** : `crates/template-app`, `crates/summary`, `crates/gbnf`, `crates/language`, `crates/db-app` ; plugin `db`.
+- **Dépendances internes** : `crates/template-app`, `crates/summary`, `crates/language`, `crates/db-app` ; plugin `db`.
 - **Pages de doc concernées** : [/customize-summaries](/fr/customize-summaries), [/languages](/fr/languages) (langue des résumés et des titres), [/chat](/fr/chat).
 
 ### Autres plugins de données
@@ -149,9 +149,9 @@ La colonne « Interface » indique si `apps/desktop/src` importe le paquet `@syn
 ### `windows`
 
 - **Chemin** : `plugins/windows`
-- **Rôle** : ouvre, masque et anime les fenêtres et onglets, et pilote deux fenêtres superposées : la barre flottante et les sous-titres en direct.
-- **Commandes** : `window_show`, `window_hide`, `window_emit_navigate`, `window_save_frame`, `window_restore_frame_animated`, `set_show_app_in_dock`, `webview_health_ack`, `floating_bar_show`, `floating_bar_hide`, `floating_bar_update`, `live_caption_show`, `live_caption_hide`, `live_caption_update`.
-- **Événements** : `Navigate`, `OpenTab`, `WindowDestroyed`, `VisibilityEvent`, `WebviewHealthCheck`, `FloatingBarStop`, `FloatingBarDictationAction`, `FloatingBarListeningAction`, `FloatingBarOpenMain`, `FloatingBarSettingsChange`, `LiveCaptionOverlayState`…
+- **Rôle** : ouvre, masque et anime les fenêtres et onglets, et pilote la fenêtre superposée de la barre flottante.
+- **Commandes** : `window_show`, `window_hide`, `window_emit_navigate`, `window_save_frame`, `window_restore_frame_animated`, `set_show_app_in_dock`, `webview_health_ack`, `floating_bar_show`, `floating_bar_hide`, `floating_bar_update`.
+- **Événements** : `Navigate`, `OpenTab`, `WindowDestroyed`, `VisibilityEvent`, `WebviewHealthCheck`, `FloatingBarStop`, `FloatingBarDictationAction`, `FloatingBarListeningAction`, `FloatingBarOpenMain`, `FloatingBarSettingsChange`…
 - **Dépendances internes** : `crates/brand`.
 - **Pages de doc concernées** : [/automatic-capture](/fr/automatic-capture) (« Garder les commandes à portée de main »), [/meetings](/fr/meetings).
 

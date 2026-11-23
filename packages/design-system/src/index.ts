@@ -251,17 +251,6 @@ export type DesignColorSet = Record<
 /** Palette Thé vert (défaut), conservée pour les usages existants. */
 export const DesignColors = DesignPalettes.cha;
 
-export const DesignSpacing = {
-  none: 0,
-  xs: 4,
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 24,
-  xxl: 32,
-  xxxl: 40,
-} as const;
-
 export const DesignRadius = {
   sm: 4,
   md: 6,
@@ -270,57 +259,4 @@ export const DesignRadius = {
   panel: 20,
   sheet: 24,
   pill: 999,
-} as const;
-
-export const DesignTypography = {
-  largeTitle: {
-    fontSize: 34,
-    lineHeight: 40,
-    fontWeight: "700",
-    letterSpacing: -0.7,
-  },
-  title: {
-    fontSize: 24,
-    lineHeight: 30,
-    fontWeight: "700",
-    letterSpacing: -0.35,
-  },
-  section: {
-    fontSize: 16,
-    lineHeight: 22,
-    fontWeight: "700",
-  },
-  body: {
-    fontSize: 15,
-    lineHeight: 22,
-    fontWeight: "400",
-  },
-  bodyStrong: {
-    fontSize: 15,
-    lineHeight: 20,
-    fontWeight: "600",
-  },
-  label: {
-    fontSize: 14,
-    lineHeight: 18,
-    fontWeight: "600",
-  },
-  caption: {
-    fontSize: 12,
-    lineHeight: 16,
-    fontWeight: "400",
-  },
-  captionStrong: {
-    fontSize: 12,
-    lineHeight: 16,
-    fontWeight: "600",
-  },
-} as const;
-
-export const DesignControl = {
-  compact: 36,
-  default: 44,
-  large: 52,
-  listening: 72,
-  editorAccessory: 52,
 } as const;

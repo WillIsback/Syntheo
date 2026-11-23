@@ -1,10 +1,6 @@
 mod dynamic_new;
-mod dynamic_old;
-mod static_new;
 
 pub use dynamic_new::*;
-pub use dynamic_old::*;
-pub use static_new::*;
 
 #[cfg(test)]
 mod tests {
@@ -111,16 +107,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_dynamic_old_resampler() {
-        let source = create_test_source();
-        let samples = ResamplerDynamicOld::new(source, 16000)
-            .collect::<Vec<_>>()
-            .await;
-
-        assert_eq!(samples.len(), 2791776);
-    }
-
-    #[tokio::test]
     async fn test_dynamic_new_resampler() {
         let source = create_test_source();
         let chunk_size = 1920;
@@ -167,21 +153,6 @@ mod tests {
 
         assert_eq!(resampler_sample_rate, original_sample_rate);
         assert_eq!(resampled_samples, original_samples);
-    }
-
-    #[tokio::test]
-    async fn test_static_new_resampler() {
-        let static_source = DynamicRateSource::new(vec![get_samples_with_rate(
-            syntheo_data::english_1::AUDIO_PART1_8000HZ_PATH,
-        )]);
-
-        let chunk_size = 1920;
-        let resampler = ResamplerStaticNew::new(static_source, 16000, chunk_size).unwrap();
-
-        let chunks: Vec<_> = resampler.collect().await;
-        let total_samples: usize = chunks.iter().map(|c| c.as_ref().unwrap().len()).sum();
-
-        assert!(total_samples > 0);
     }
 
     #[tokio::test]

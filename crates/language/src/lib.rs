@@ -95,24 +95,6 @@ impl Language {
         }
         code
     }
-
-    // Fallbacks derive less specific codes instead of mutating the canonical
-    // tag. An alpha region intentionally blocks the language-only fallback
-    // ("en-US" does not match ["en"]), matching the pre-script-aware behavior
-    // where only region-less tags fell back to the bare language code.
-    pub fn matches_any_code(&self, supported: &[&str]) -> bool {
-        let bcp47 = self.bcp47_code();
-        if supported.contains(&bcp47.as_str()) {
-            return true;
-        }
-        match &self.region {
-            Some(region) if region.chars().all(|c| c.is_ascii_alphabetic()) => {
-                let language_region = format!("{}-{}", self.iso639.code(), region);
-                language_region != bcp47 && supported.contains(&language_region.as_str())
-            }
-            _ => supported.contains(&self.iso639.code()),
-        }
-    }
 }
 
 fn is_ascii_alpha(part: &str) -> bool {
@@ -238,14 +220,6 @@ pub fn whisper_multilingual() -> Vec<Language> {
         .collect()
 }
 
-pub fn parakeet_tdt_v3_languages() -> Vec<Language> {
-    PARAKEET_TDT_V3_LANGUAGE_CODES
-        .iter()
-        .filter_map(|code| code.parse::<ISO639>().ok())
-        .map(Language::from)
-        .collect()
-}
-
 pub fn is_parakeet_tdt_v3_language(language: &Language) -> bool {
     PARAKEET_TDT_V3_LANGUAGE_CODES.contains(&language.iso639_code())
 }
@@ -365,29 +339,6 @@ mod tests {
     }
 
     #[test]
-    fn test_matches_any_code_fallbacks() {
-        let zh_hans_cn: Language = "zh-Hans-CN".parse().unwrap();
-        assert!(zh_hans_cn.matches_any_code(&["zh-Hans-CN"]));
-        assert!(zh_hans_cn.matches_any_code(&["zh-CN"]));
-        assert!(!zh_hans_cn.matches_any_code(&["zh"]));
-
-        let zh_hans: Language = "zh-Hans".parse().unwrap();
-        assert!(zh_hans.matches_any_code(&["zh"]));
-
-        let es_419: Language = "es-419".parse().unwrap();
-        assert!(es_419.matches_any_code(&["es-419"]));
-        assert!(es_419.matches_any_code(&["es"]));
-
-        let en_us: Language = "en-US".parse().unwrap();
-        assert!(en_us.matches_any_code(&["en-US"]));
-        assert!(!en_us.matches_any_code(&["en"]));
-
-        let en: Language = "en".parse().unwrap();
-        assert!(en.matches_any_code(&["en"]));
-        assert!(!en.matches_any_code(&["fr", "de"]));
-    }
-
-    #[test]
     fn test_parse_korean_us() {
         let lang: Language = "ko-US".parse().unwrap();
         assert_eq!(lang.iso639(), ISO639::Ko);
@@ -408,7 +359,6 @@ mod tests {
         let english_us: Language = "en-US".parse().unwrap();
         let korean: Language = "ko".parse().unwrap();
 
-        assert_eq!(parakeet_tdt_v3_languages().len(), 25);
         assert!(is_parakeet_tdt_v3_language(&english_us));
         assert!(!is_parakeet_tdt_v3_language(&korean));
     }

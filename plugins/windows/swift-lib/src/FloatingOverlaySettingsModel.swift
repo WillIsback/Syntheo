@@ -47,19 +47,6 @@ final class FloatingOverlaySettingsModel: ObservableObject {
     }
   }
 
-  func apply(liveCaptionState state: LiveCaptionStatePayload) -> Bool {
-    applyLiveCaptionOpacity(state.opacity)
-    return applyLiveCaptionLayout(state)
-  }
-
-  func applyLiveCaptionLayout(_ state: LiveCaptionStatePayload) -> Bool {
-    applyLiveCaptionWidth(state.width)
-    applyLiveCaptionLineCount(state.lineCount)
-    let positionChanged = applyLiveCaptionPosition(state.position)
-    let minimizedChanged = applyLiveCaptionMinimized(state.minimized)
-    return positionChanged || minimizedChanged
-  }
-
   func setFloatingBarOpacity(_ value: Double) {
     let nextValue = clampedFloatingBarOpacity(value)
     guard floatingBarOpacity != nextValue else { return }
@@ -67,40 +54,6 @@ final class FloatingOverlaySettingsModel: ObservableObject {
     pendingFloatingBarOpacity = nextValue
     RustBridge.floatingBarSettingsChanged(
       FloatingOverlaySettingsChangePayload(floatingBarOpacity: nextValue))
-  }
-
-  func setLiveCaptionOpacity(_ value: Double) {
-    let nextValue = clampedLiveCaptionOpacity(value)
-    guard liveCaptionOpacity != nextValue else { return }
-    liveCaptionOpacity = nextValue
-    pendingLiveCaptionOpacity = nextValue
-    RustBridge.floatingBarSettingsChanged(
-      FloatingOverlaySettingsChangePayload(liveCaptionOpacity: nextValue))
-  }
-
-  func setLiveCaptionSize(width: Double, lineCount: Int) {
-    let nextWidth = clampedLiveCaptionWidth(width)
-    let nextLineCount = clampedLiveCaptionLineCount(lineCount)
-    guard !numbersMatch(liveCaptionWidth, nextWidth) || liveCaptionLineCount != nextLineCount else {
-      return
-    }
-
-    liveCaptionWidth = nextWidth
-    liveCaptionLineCount = nextLineCount
-    pendingLiveCaptionWidth = nextWidth
-    pendingLiveCaptionLineCount = nextLineCount
-    RustBridge.floatingBarSettingsChanged(
-      FloatingOverlaySettingsChangePayload(
-        liveCaptionWidth: nextWidth,
-        liveCaptionLineCount: nextLineCount))
-  }
-
-  func setLiveCaptionPosition(_ value: LiveCaptionPosition) {
-    guard liveCaptionPosition != value else { return }
-    liveCaptionPosition = value
-    pendingLiveCaptionPosition = value
-    RustBridge.floatingBarSettingsChanged(
-      FloatingOverlaySettingsChangePayload(liveCaptionPosition: value))
   }
 
   func setLiveCaptionMinimized(_ value: Bool) {

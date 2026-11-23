@@ -11,12 +11,12 @@ Dans le workspace Cargo, chaque crate est déclarée sous un alias `syntheo-*` (
 
 | Crate | Rôle | Utilisée par | Pages de doc concernées |
 | --- | --- | --- | --- |
-| `crates/db-core` | Ouverture de la base SQLite (sqlx) | CLI, desktop, plugins `db`, `local-api`, `session`, `template`, `transcription`, `contacts`, crates `agent-access`, `session-ingest` | [Données et confidentialité](/fr/data-and-privacy) |
+| `crates/db-core` | Ouverture de la base SQLite (sqlx) | CLI, desktop, plugins `db`, `local-api`, `session`, `template`, `transcription`, `contacts`, crate `agent-access` | [Données et confidentialité](/fr/data-and-privacy) |
 | `crates/db-change` | Suivi des tables modifiées | `db-core`, `db-reactive` | aucune |
 | `crates/db-execute` | Exécution de requêtes SQL décrites en JSON | plugin `db`, `db-reactive` | aucune |
 | `crates/db-reactive` | Requêtes « vivantes » rejouées à chaque changement | plugin `db` | aucune |
 | `crates/db-migrate` | Moteur de migrations | `db-app`, `db-reactive`, plugin `db` | aucune |
-| `crates/db-app` | Schéma, migrations et opérations métier sur `app.db` | CLI, desktop, plugins `db`, `local-api`, `session`, `template`, `transcription`, `contacts`, crates `agent-access`, `session-ingest` | voir [db-app](#db-app) |
+| `crates/db-app` | Schéma, migrations et opérations métier sur `app.db` | CLI, desktop, plugins `db`, `local-api`, `session`, `template`, `transcription`, `contacts`, crate `agent-access` | voir [db-app](#db-app) |
 | `crates/storage` | Dossiers de données et écriture sûre de fichiers | desktop, plugins `settings`, `store2`, `transcription`, crates `fs-sync-core`, `listener-core` | [Données et confidentialité](/fr/data-and-privacy), [Désinstaller](/fr/uninstall) |
 | `crates/fs-sync-core` | Dossiers de sessions, pièces jointes et fichiers audio sur disque | plugin `fs-sync` | [Notes](/fr/notes), [Importer des enregistrements](/fr/import-recordings) |
 | `crates/fs-format` | Format JSON des transcriptions sur disque | `fs-sync-core` | aucune |
@@ -144,7 +144,7 @@ Ne décrivez pas le comportement du produit à partir du schéma SQL brut. Parte
 
 - **Chemin** : `crates/template-app`, gabarits dans `crates/template-app/assets/*.md.jinja`.
 - **Rôle** : rend les prompts envoyés au LLM. Les gabarits sont compilés avec Askama.
-- **API** : `render(Template)`, enum `Template` (`EnhanceSystem`, `EnhanceUser`, `TitleSystem`, `TitleUser`, `ChatSystem`, `ContextBlock`, `ToolSearchSessions`, `ActivityCaptureSystem`, `DailySummarySystem`, `EventContactSystem`…), `EditableTemplate` (`EnhanceFormat`, `EnhanceUser`, `TitleUser`) et `template_source`.
+- **API** : `render(Template)`, enum `Template` (`EnhanceSystem`, `EnhanceUser`, `TitleSystem`, `TitleUser`, `ChatSystem`, `ContextBlock`), `EditableTemplate` (`EnhanceFormat`, `EnhanceUser`, `TitleUser`) et `template_source`.
 - **Dépendances internes** : `syntheo-askama-utils`.
 - **À noter** : le plugin `template` expose `render` et `get_template_source`. L'interface lit la source de `enhanceFormat` dans le formulaire du modèle « Automatique » (`apps/desktop/src/templates/auto-form.tsx`).
 - **Pages de doc concernées** : [Personnaliser les comptes rendus](/fr/customize-summaries), [Notes](/fr/notes), [Chat](/fr/chat), [Langues](/fr/languages).
@@ -193,4 +193,4 @@ Ne décrivez pas le comportement du produit à partir du schéma SQL brut. Parte
 
 ## Outillage et données de test
 
-- **data** (`crates/data`) : échantillons audio WAV (anglais et coréen) inclus à la compilation. Dépendance normale de `crates/audio-mock`, dev-dependency de `audio-actual`, `audio-utils`, `fs-sync-core`, `owhisper-client`, `resampler` et `vad`. Pages de doc concernées : aucune.
+- **data** (`crates/data`) : échantillons audio anglais (WAV et autres formats) inclus à la compilation. Dépendance normale de `crates/audio-mock`, dev-dependency de `audio-utils`, `fs-sync-core`, `owhisper-client`, `resampler` et `vad`. Pages de doc concernées : aucune.

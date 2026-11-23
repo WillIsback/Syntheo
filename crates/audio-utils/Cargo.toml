@@ -7,9 +7,6 @@ license = "MIT"
 [dependencies]
 audioadapter-buffers = "5.2"
 bytes = { workspace = true }
-futures-util = { workspace = true }
-syntheo-audio-interface = { workspace = true }
-syntheo-audio-mime = { workspace = true }
 syntheo-resampler = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }

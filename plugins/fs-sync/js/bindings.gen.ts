@@ -30,7 +30,6 @@ export const commands = {
 	attachmentRead: (sessionId: string, attachmentId: string) => typedError<number[], string>(__TAURI_INVOKE("plugin:fs-sync|attachment_read", { sessionId, attachmentId })),
 	attachmentRemove: (sessionId: string, attachmentId: string) => typedError<null, string>(__TAURI_INVOKE("plugin:fs-sync|attachment_remove", { sessionId, attachmentId })),
 	folderAttachmentSave: (folderPath: string, data: number[], filename: string) => typedError<AttachmentSaveResult, string>(__TAURI_INVOKE("plugin:fs-sync|folder_attachment_save", { folderPath, data, filename })),
-	folderAttachmentList: (folderPath: string) => typedError<AttachmentInfo[], string>(__TAURI_INVOKE("plugin:fs-sync|folder_attachment_list", { folderPath })),
 	folderAttachmentRead: (folderPath: string, attachmentId: string) => typedError<number[], string>(__TAURI_INVOKE("plugin:fs-sync|folder_attachment_read", { folderPath, attachmentId })),
 	folderAttachmentRemove: (folderPath: string, attachmentId: string) => typedError<null, string>(__TAURI_INVOKE("plugin:fs-sync|folder_attachment_remove", { folderPath, attachmentId })),
 };

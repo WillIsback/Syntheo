@@ -37,7 +37,6 @@ fn make_specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
             commands::attachment_read::<tauri::Wry>,
             commands::attachment_remove::<tauri::Wry>,
             commands::folder_attachment_save::<tauri::Wry>,
-            commands::folder_attachment_list::<tauri::Wry>,
             commands::folder_attachment_read::<tauri::Wry>,
             commands::folder_attachment_remove::<tauri::Wry>,
         ])

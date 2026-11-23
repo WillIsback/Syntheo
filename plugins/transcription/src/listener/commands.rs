@@ -328,15 +328,6 @@ pub async fn release_live_transcript<R: tauri::Runtime>(
 
 #[tauri::command]
 #[specta::specta]
-pub async fn list_stopped_captures<R: tauri::Runtime>(
-    app: tauri::AppHandle<R>,
-) -> Result<Vec<StoppedCapture>, String> {
-    use tauri::Manager;
-    Ok(app.state::<crate::StoppedCaptureRegistry>().list())
-}
-
-#[tauri::command]
-#[specta::specta]
 pub async fn get_stopped_capture<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
     session_id: String,
@@ -554,20 +545,4 @@ pub async fn render_transcript_segments(
     params: RenderTranscriptRequest,
 ) -> Result<Vec<RenderedTranscriptSegment>, String> {
     Ok(syntheo_transcript::render_transcript_segments(params))
-}
-
-#[tauri::command]
-#[specta::specta]
-pub async fn update_capture_credentials<R: tauri::Runtime>(
-    _app: tauri::AppHandle<R>,
-    session_id: String,
-    api_key: String,
-) -> Result<(), String> {
-    use syntheo_transcription_core::listener::actors::{SessionMsg, session_supervisor_name};
-    let cell = ractor::registry::where_is(session_supervisor_name(&session_id))
-        .ok_or("Capture is not active")?;
-    let actor: ractor::ActorRef<SessionMsg> = cell.into();
-    actor
-        .cast(SessionMsg::UpdateCredentials(api_key))
-        .map_err(|_| "Capture credentials could not be updated".to_string())
 }

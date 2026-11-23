@@ -24,47 +24,33 @@ enum LiveCaptionPosition: String, Codable, CaseIterable {
       return "Bottom"
     }
   }
-
-  func origin(in frame: NSRect, size: NSSize) -> NSPoint {
-    let margin = LiveCaptionLayout.screenMargin
-    let topY = frame.maxY - size.height - LiveCaptionLayout.topOffset
-    let bottomY = frame.minY + margin
-    let centerX = frame.midX - size.width / 2
-    let leftX = frame.minX + margin
-    let rightX = frame.maxX - size.width - margin
-
-    let origin: NSPoint
-    switch self {
-    case .topCenter:
-      origin = NSPoint(x: centerX, y: topY)
-    case .topLeft:
-      origin = NSPoint(x: leftX, y: topY)
-    case .topRight:
-      origin = NSPoint(x: rightX, y: topY)
-    case .bottomLeft:
-      origin = NSPoint(x: leftX, y: bottomY)
-    case .bottomRight:
-      origin = NSPoint(x: rightX, y: bottomY)
-    case .bottomCenter:
-      origin = NSPoint(x: centerX, y: bottomY)
-    }
-
-    let minX = frame.minX + margin
-    let maxX = max(minX, frame.maxX - margin - size.width)
-    let minY = frame.minY + margin
-    let maxY = max(minY, frame.maxY - margin - size.height)
-
-    return NSPoint(
-      x: min(max(origin.x, minX), maxX),
-      y: min(max(origin.y, minY), maxY))
-  }
 }
 
-struct LiveCaptionStatePayload: Codable {
-  let text: String
-  let opacity: Double
-  let width: Double
-  let lineCount: Int
-  let position: LiveCaptionPosition
-  let minimized: Bool
+enum LiveCaptionLayout {
+  static let minWidth: CGFloat = 260
+  static let defaultWidth: CGFloat = 440
+  static let maxWidth: CGFloat = 640
+  static let minLineCount = 1
+  static let defaultLineCount = 1
+  static let maxLineCount = 4
+  static let lineHeight: CGFloat = 22
+  static let horizontalPadding: CGFloat = 16
+  static let verticalPadding: CGFloat = 10
+  static let footerHeight: CGFloat = 32
+  static let footerSeparatorHeight: CGFloat = 1
+  static let cornerRadius: CGFloat = 12
+  static let screenMargin: CGFloat = 12
+  static let topOffset: CGFloat = 18
+
+  static func height(forLineCount lineCount: Int) -> CGFloat {
+    let clampedLineCount = min(max(lineCount, minLineCount), maxLineCount)
+    return verticalPadding * 2 + lineHeight * CGFloat(clampedLineCount) + footerSeparatorHeight
+      + footerHeight
+  }
+
+  static func lineCount(forHeight height: CGFloat) -> Int {
+    let textHeight = height - verticalPadding * 2 - footerSeparatorHeight - footerHeight
+    let rawLineCount = (textHeight / lineHeight).rounded()
+    return min(max(Int(rawLineCount), minLineCount), maxLineCount)
+  }
 }

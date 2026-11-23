@@ -580,36 +580,6 @@ pub async fn floating_bar_current_state()
     Ok(crate::window::floating_bar::current_state())
 }
 
-#[tauri::command]
-#[specta::specta]
-pub async fn live_caption_show() -> Result<(), String> {
-    crate::window::live_caption::show().map_err(|e| e.to_string())?;
-    Ok(())
-}
-
-#[tauri::command]
-#[specta::specta]
-pub async fn live_caption_hide() -> Result<(), String> {
-    crate::window::live_caption::hide().map_err(|e| e.to_string())?;
-    Ok(())
-}
-
-#[tauri::command]
-#[specta::specta]
-pub async fn live_caption_update(
-    state: crate::window::live_caption::LiveCaptionState,
-) -> Result<(), String> {
-    crate::window::live_caption::update(state).map_err(|e| e.to_string())?;
-    Ok(())
-}
-
-#[tauri::command]
-#[specta::specta]
-pub async fn live_caption_current_state()
--> Result<Option<crate::window::live_caption::LiveCaptionState>, String> {
-    Ok(crate::window::live_caption::current_state())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

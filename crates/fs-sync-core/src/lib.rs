@@ -240,11 +240,6 @@ impl FsSyncCore {
         })
     }
 
-    pub fn folder_attachment_list(&self, folder_path: &str) -> Result<Vec<AttachmentInfo>> {
-        let materials_dir = self.resolve_folder_materials_dir(folder_path)?;
-        list_named_files(&materials_dir)
-    }
-
     pub fn folder_attachment_read(
         &self,
         folder_path: &str,

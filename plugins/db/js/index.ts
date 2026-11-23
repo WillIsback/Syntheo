@@ -7,7 +7,6 @@ import type {
   ListMeetingsInput as GeneratedListMeetingsInput,
   Meeting,
   MeetingPage,
-  SessionIngestApplyResult,
   StartupStatus,
   SubscriptionRegistration,
   TranscriptPage,
@@ -17,7 +16,6 @@ export type {
   GetMeetingInput,
   Meeting,
   MeetingPage,
-  SessionIngestApplyResult,
   StartupStatus,
   TranscriptPage,
 } from "./bindings.gen";
@@ -87,13 +85,6 @@ export function executeProxy(
   method: "run" | "all" | "get" | "values",
 ): Promise<{ rows: unknown[] }> {
   return invoke("plugin:db|execute_proxy", { sql, params, method });
-}
-
-export function applySessionIngest(
-  workspaceId: string,
-  envelope: Record<string, unknown>,
-): Promise<SessionIngestApplyResult> {
-  return invoke("plugin:db|apply_session_ingest", { workspaceId, envelope });
 }
 
 export function waitUntilReady(): Promise<void> {

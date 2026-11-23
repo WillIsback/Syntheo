@@ -4,7 +4,6 @@ Default permissions for the plugin
 
 #### This default permission set includes the following:
 
-- `allow-apply-session-ingest`
 - `allow-execute`
 - `allow-execute-proxy`
 - `allow-execute-transaction`
@@ -25,32 +24,6 @@ Default permissions for the plugin
 <th>Description</th>
 </tr>
 
-
-<tr>
-<td>
-
-`db:allow-apply-session-ingest`
-
-</td>
-<td>
-
-Enables the apply_session_ingest command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`db:deny-apply-session-ingest`
-
-</td>
-<td>
-
-Denies the apply_session_ingest command without any pre-configured scope.
-
-</td>
-</tr>
 
 <tr>
 <td>

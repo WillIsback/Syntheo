@@ -6,7 +6,6 @@ license = "MIT"
 
 [dependencies]
 ractor = { workspace = true, features = ["async-trait"] }
-thiserror = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }
 

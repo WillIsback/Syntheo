@@ -399,10 +399,6 @@ fn folder_attachment_save_and_read() {
         .folder_attachment_read("CS 101", "syllabus.txt")
         .unwrap();
     assert_eq!(bytes, b"syllabus");
-
-    let listed = core.folder_attachment_list("CS 101").unwrap();
-    assert_eq!(listed.len(), 1);
-    assert_eq!(listed[0].attachment_id, "syllabus.txt");
 }
 
 #[test]
@@ -712,14 +708,4 @@ fn list_folders_only_shows_sessions_that_stay_inside_the_vault() {
     core.attachment_save(UUID_2, b"x", "note.txt").unwrap();
     crate::session::delete_session(&core.sessions_dir, UUID_2).unwrap();
     kept.assert(predicates::path::missing());
-}
-
-#[test]
-fn folder_attachment_list_missing_dir_is_empty() {
-    let temp = TempDir::new().unwrap();
-    temp.child("sessions").create_dir_all().unwrap();
-    let core = FsSyncCore::new(temp.path().to_path_buf());
-
-    let listed = core.folder_attachment_list("CS 101").unwrap();
-    assert!(listed.is_empty());
 }

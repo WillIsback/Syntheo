@@ -16,7 +16,6 @@ Default permissions for the plugin
 - `allow-retry-audio-capture`
 - `allow-flush-live-transcript`
 - `allow-release-live-transcript`
-- `allow-list-stopped-captures`
 - `allow-get-stopped-capture`
 - `allow-acknowledge-stopped-capture`
 - `allow-save-capture-lifecycle-marker`
@@ -31,7 +30,6 @@ Default permissions for the plugin
 - `allow-set-speaker-muted`
 - `allow-get-capture-state`
 - `allow-get-capture-snapshot`
-- `allow-update-capture-credentials`
 - `allow-list-capture-audio-chunks`
 - `allow-get-capture-audio-cleanup-status`
 - `allow-acknowledge-capture-audio-cleanup-status`
@@ -772,32 +770,6 @@ Enables the list_speaker_devices command without any pre-configured scope.
 <td>
 
 Denies the list_speaker_devices command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`transcription:allow-list-stopped-captures`
-
-</td>
-<td>
-
-Enables the list_stopped_captures command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`transcription:deny-list-stopped-captures`
-
-</td>
-<td>
-
-Denies the list_stopped_captures command without any pre-configured scope.
 
 </td>
 </tr>
@@ -1604,32 +1576,6 @@ Enables the stop_transcription command without any pre-configured scope.
 <td>
 
 Denies the stop_transcription command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`transcription:allow-update-capture-credentials`
-
-</td>
-<td>
-
-Enables the update_capture_credentials command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`transcription:deny-update-capture-credentials`
-
-</td>
-<td>
-
-Denies the update_capture_credentials command without any pre-configured scope.
 
 </td>
 </tr>

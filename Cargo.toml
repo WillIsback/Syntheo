@@ -43,7 +43,6 @@ syntheo-audio = { path = "crates/audio", package = "audio" }
 syntheo-audio-actual = { path = "crates/audio-actual", package = "audio-actual" }
 syntheo-audio-device = { path = "crates/audio-device", package = "audio-device" }
 syntheo-audio-interface = { path = "crates/audio-interface", package = "audio-interface" }
-syntheo-audio-mime = { path = "crates/audio-mime", package = "audio-mime" }
 syntheo-audio-mock = { path = "crates/audio-mock", package = "audio-mock" }
 syntheo-audio-snapshot = { path = "crates/audio-snapshot", package = "audio-snapshot" }
 syntheo-audio-sync = { path = "crates/audio-sync", package = "audio-sync" }
@@ -64,7 +63,6 @@ syntheo-export-core = { path = "crates/export-core", package = "export-core" }
 syntheo-frontmatter = { path = "crates/frontmatter", package = "frontmatter" }
 syntheo-fs-format = { path = "crates/fs-format", package = "fs-format" }
 syntheo-fs-sync-core = { path = "crates/fs-sync-core", package = "fs-sync-core" }
-syntheo-gbnf = { path = "crates/gbnf", package = "gbnf" }
 syntheo-host = { path = "crates/host", package = "host" }
 syntheo-image-hash = { path = "crates/image-hash", package = "image-hash" }
 syntheo-intercept = { path = "crates/intercept", package = "intercept" }
@@ -79,7 +77,6 @@ syntheo-onnx = { path = "crates/onnx", package = "onnx" }
 syntheo-overlay-kit = { path = "crates/overlay-kit", package = "overlay-kit" }
 syntheo-pinned-fetch = { path = "crates/pinned-fetch", package = "pinned-fetch" }
 syntheo-resampler = { path = "crates/resampler", package = "resampler" }
-syntheo-session-ingest = { path = "crates/session-ingest", package = "session-ingest" }
 syntheo-shortcut-macos = { path = "crates/shortcut-macos", package = "shortcut-macos" }
 syntheo-speech-host = { path = "crates/speech-host", package = "speech-host" }
 syntheo-speech-probe = { path = "crates/speech-probe", package = "speech-probe" }
@@ -241,7 +238,7 @@ tauri-specta = "=2.0.0-rc.26"
 
 cidre = { version = "0.15", default-features = false, features = ["app", "async", "av", "ax", "blocks", "cm", "core_audio", "dispatch", "io_kit", "io_pm", "macos_15_0"] }
 cpal = "0.17"
-dasp = { version = "0.11.0", features = ["interpolate", "interpolate-linear"] }
+dasp = "0.11.0"
 earshot = "0.1.0"
 hound = "3.5.1"
 macos-accessibility-client = "0.0.2"

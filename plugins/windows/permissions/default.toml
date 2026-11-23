@@ -17,8 +17,4 @@ permissions = [
     "allow-floating-bar-update",
     "allow-floating-bar-update-amplitude",
     "allow-floating-bar-current-state",
-    "allow-live-caption-show",
-    "allow-live-caption-hide",
-    "allow-live-caption-update",
-    "allow-live-caption-current-state",
 ]

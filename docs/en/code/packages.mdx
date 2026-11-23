@@ -12,7 +12,7 @@ All packages are private (`"private": true`) and published under the `@syntheo/*
 | Package | Path | Role | Consumers | Affected doc pages |
 | --- | --- | --- | --- | --- |
 | `@syntheo/changelog` | `packages/changelog` | Release notes and Markdown rendering of the "What's new" view. | `apps/desktop` | none |
-| `@syntheo/db` | `packages/db` | Drizzle schema of the local database and `createDb` factory. | `apps/desktop` | [/en/data-and-privacy](/en/data-and-privacy), [/en/architecture](/en/architecture) |
+| `@syntheo/db` | `packages/db` | Drizzle schema of the `templates` table and `createDb` factory. | `apps/desktop` | [/en/data-and-privacy](/en/data-and-privacy), [/en/architecture](/en/architecture) |
 | `@syntheo/db-react` | `packages/db-react` | React hooks for reactive queries. | `apps/desktop` | none |
 | `@syntheo/db-runtime` | `packages/db-runtime` | Type contracts for the database transport. | `db`, `db-react`, `db-tauri` | none |
 | `@syntheo/db-tauri` | `packages/db-tauri` | Tauri transport to the `plugins/db` plugin. | `apps/desktop` | none |
@@ -56,7 +56,7 @@ Four packages form the SQLite access stack on the TypeScript side. The app assem
 - Path: `packages/db`
 - Role: thin Drizzle adapter on top of a `DrizzleProxyClient` client (see `packages/db/AGENTS.md`).
 - Main API: `createDb(client)`, the schema exported by `./schema` and the re-exported Drizzle helpers (`eq`, `and`, `or`, `desc`, `asc`, `sql`, `count`, `max`, `ne`).
-- Tables declared in `packages/db/src/schema.ts`: `sessions`, `session_documents`, `transcripts`, `session_participants`, `action_items`, `session_attachments`, `humans`, `organizations`, `workspaces`, `folders`, `folder_attachments`, `tags`, `session_tags`, `entity_mentions`, `chat_groups`, `chat_messages`, `daily_notes`, `templates`, `app_settings`, `synced_preferences`, as well as tables for local library connections, attachment state and import migration.
+- Table declared in `packages/db/src/schema.ts`: `templates`, the only one the app reads or writes through Drizzle. The other tables go through raw SQL (`liveQueryClient`).
 - Internal dependencies: `db-runtime`.
 - Affected doc pages: [/en/data-and-privacy](/en/data-and-privacy) (what is stored locally), [/en/architecture](/en/architecture) (local storage).
 
@@ -140,7 +140,7 @@ The `packages/editor/daily/cfm.md` file is an inherited design note ("Char-Flavo
 
 - Path: `packages/design-system`
 - Role: design tokens in TypeScript and CSS.
-- Main API: `PALETTE_IDS` (`cha`, `fuji`, `enji`), `DEFAULT_PALETTE` (`cha`), `isPaletteId`, `DesignPalettes`, `DesignColors`, `DesignSpacing`, `DesignRadius`, `DesignTypography`, `DesignControl`, stylesheet `./tokens.css`. The `assets/brand` folder contains the brand assets.
+- Main API: `PALETTE_IDS` (`cha`, `fuji`, `enji`), `DEFAULT_PALETTE` (`cha`), `isPaletteId`, `DesignPalettes`, `DesignColors`, `DesignRadius`, stylesheet `./tokens.css`. The `assets/brand` folder contains the brand assets.
 - Internal dependencies: none.
 - Consumers: `ui`, `apps/desktop` (including `src/settings/appearance/palette.tsx`).
 - Affected doc pages: none. No page describes the appearance palettes to date.

@@ -5,12 +5,6 @@ pub enum Error {
     #[error("unsupported channel count: {0} (expected 1 or 2)")]
     UnsupportedChannelCount(u16),
 
-    #[error("unsupported float bit depth: {0}")]
-    UnsupportedFloatBitDepth(u16),
-
-    #[error("unsupported integer bit depth: {0}")]
-    UnsupportedIntBitDepth(u16),
-
     #[error("invalid segment duration: {0:?}")]
     InvalidSegmentDuration(std::time::Duration),
 

@@ -340,13 +340,3 @@ async function setFloatingBarWindowVisible(visible: boolean) {
     );
   }
 }
-
-export async function hideLiveCaptionPanel() {
-  const result = await windowsCommands.liveCaptionHide();
-  if (result.status === "error") {
-    console.error(
-      "[meeting-float] failed to hide the live caption panel",
-      result.error,
-    );
-  }
-}

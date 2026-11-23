@@ -20,7 +20,6 @@ syntheo-db-core = { workspace = true }
 syntheo-db-execute = { workspace = true }
 syntheo-db-migrate = { workspace = true }
 syntheo-db-reactive = { workspace = true, features = ["specta"] }
-syntheo-session-ingest = { workspace = true }
 tauri = { workspace = true }
 tauri-specta = { workspace = true, features = ["derive", "typescript"] }
 thiserror = { workspace = true }

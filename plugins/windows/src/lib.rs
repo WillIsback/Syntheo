@@ -328,7 +328,6 @@ fn make_specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             events::FloatingBarOpenMain,
             events::FloatingBarOverlayState,
             events::FloatingBarOverlayAmplitude,
-            events::LiveCaptionOverlayState,
             events::FloatingBarSettingsChange,
         ])
         .commands(tauri_specta::collect_commands![
@@ -348,10 +347,6 @@ fn make_specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             commands::floating_bar_update,
             commands::floating_bar_update_amplitude,
             commands::floating_bar_current_state,
-            commands::live_caption_show,
-            commands::live_caption_hide,
-            commands::live_caption_update,
-            commands::live_caption_current_state,
         ])
         .error_handling(tauri_specta::ErrorHandlingMode::Result)
 }
@@ -365,7 +360,6 @@ pub fn init() -> tauri::plugin::TauriPlugin<tauri::Wry> {
             specta_builder.mount_events(app);
 
             crate::window::floating_bar::set_app_handle(app.clone());
-            crate::window::live_caption::set_app_handle(app.clone());
 
             {
                 let ready_state = WindowReadyState::default();

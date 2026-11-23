@@ -91,39 +91,6 @@ pub(crate) async fn execute_proxy(
 
 #[tauri::command]
 #[specta::specta]
-pub(crate) async fn apply_session_ingest(
-    state: tauri::State<'_, ManagedState>,
-    workspace_id: String,
-    envelope: serde_json::Value,
-) -> Result<crate::SessionIngestApplyResult, String> {
-    let envelope = match serde_json::from_value(envelope) {
-        Ok(envelope) => envelope,
-        Err(error) => {
-            tracing::warn!(%workspace_id, %error, "rejected malformed session ingest envelope");
-            return Ok(crate::SessionIngestApplyResult::Rejected);
-        }
-    };
-    match syntheo_session_ingest::apply_session_envelope(state.pool(), &workspace_id, &envelope)
-        .await
-    {
-        Ok(outcome) => Ok(match outcome {
-            syntheo_session_ingest::ApplyOutcome::Applied => {
-                crate::SessionIngestApplyResult::Applied
-            }
-            syntheo_session_ingest::ApplyOutcome::AlreadyApplied => {
-                crate::SessionIngestApplyResult::AlreadyApplied
-            }
-        }),
-        Err(error) if error.is_retryable() => Err(error.to_string()),
-        Err(error) => {
-            tracing::warn!(%workspace_id, %error, "rejected permanent session ingest envelope");
-            Ok(crate::SessionIngestApplyResult::Rejected)
-        }
-    }
-}
-
-#[tauri::command]
-#[specta::specta]
 pub(crate) async fn subscribe<R: tauri::Runtime>(
     webview: tauri::Webview<R>,
     state: tauri::State<'_, ManagedState>,

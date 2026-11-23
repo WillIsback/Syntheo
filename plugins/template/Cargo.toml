@@ -18,7 +18,6 @@ tokio = { workspace = true, features = ["macros", "rt"] }
 
 [dependencies]
 syntheo-db-app = { workspace = true }
-syntheo-gbnf = { workspace = true }
 syntheo-language = { workspace = true, features = ["dominant"] }
 syntheo-summary = { workspace = true }
 syntheo-template-app = { workspace = true }

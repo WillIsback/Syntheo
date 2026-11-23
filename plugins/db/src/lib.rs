@@ -46,14 +46,6 @@ impl StartupStatus {
     }
 }
 
-#[derive(Debug, Clone, Copy, serde::Serialize, specta::Type, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum SessionIngestApplyResult {
-    Applied,
-    AlreadyApplied,
-    Rejected,
-}
-
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type, PartialEq)]
 pub struct ExecuteProxyResult {
     rows: Vec<serde_json::Value>,
@@ -79,7 +71,6 @@ fn make_specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
             commands::execute,
             commands::execute_transaction,
             commands::execute_proxy,
-            commands::apply_session_ingest,
             commands::subscribe::<tauri::Wry>,
             commands::unsubscribe,
             commands::get_startup_status,

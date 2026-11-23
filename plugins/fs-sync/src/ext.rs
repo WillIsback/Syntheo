@@ -106,13 +106,6 @@ impl<'a, R: tauri::Runtime, M: tauri::Manager<R>> FsSync<'a, R, M> {
             .folder_attachment_save(folder_path, data, filename)
     }
 
-    pub fn folder_attachment_list(
-        &self,
-        folder_path: &str,
-    ) -> Result<Vec<crate::AttachmentInfo>, crate::Error> {
-        self.core()?.folder_attachment_list(folder_path)
-    }
-
     pub fn folder_attachment_read(
         &self,
         folder_path: &str,

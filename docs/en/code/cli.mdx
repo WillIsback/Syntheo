@@ -99,7 +99,7 @@ Resources: `syntheo://meetings/{meeting_id}` (Markdown), `syntheo://meetings/{me
   - rendering: `to_markdown`, `to_export_markdown`, `ExportLocale`, `format_export_date`, `localize_speaker_label` (`export_markdown.rs`, `transcript_render.rs`);
   - limits: `DEFAULT_LIST_LIMIT` 20, `MAX_LIST_LIMIT` 200, `DEFAULT_TRANSCRIPT_LIMIT` 200, `MAX_TRANSCRIPT_LIMIT` 500, `DEFAULT_FOLDER_LIST_LIMIT` 100.
 - **Internal dependencies**: `crates/db-app`, `crates/tiptap`, `crates/transcript`.
-- **Used by**: `apps/cli`, `plugins/db` (meeting export), `plugins/local-api`, `crates/session-ingest`.
+- **Used by**: `apps/cli`, `plugins/db` (meeting export), `plugins/local-api`.
 - **Affected doc pages**: [/en/reference/cli](/en/reference/cli), [/en/reference/mcp](/en/reference/mcp), [/en/agents/cli](/en/agents/cli), [/en/agents/mcp](/en/agents/mcp), [/en/import-recordings](/en/import-recordings), [/en/notes](/en/notes) (Markdown export).
 
 <Warning>

@@ -7,7 +7,6 @@ license = "MIT"
 [features]
 default = ["async-source"]
 async-source = [
-  "dep:dasp",
   "dep:futures-util",
   "dep:syntheo-audio-interface",
   "dep:pin-project",
@@ -15,7 +14,6 @@ async-source = [
 
 [dependencies]
 audioadapter-buffers = "5.2"
-dasp = { workspace = true, optional = true }
 futures-util = { workspace = true, optional = true }
 pin-project = { workspace = true, optional = true }
 rubato = "5.0.1"

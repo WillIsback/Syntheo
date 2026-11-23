@@ -22,7 +22,6 @@ const RGB = /\brgba?\(/g;
 // Fichiers exclus en entier, avec la raison.
 const ALLOWED_FILES: Record<string, string> = {
   // Logos de marques tierces : leurs couleurs appartiennent aux marques.
-  "packages/ui/src/components/icons/outlook.tsx": "logo Outlook",
   "apps/desktop/src/editor-bridge/app-link-view.tsx":
     "logos Slack, Discord, Atlassian, Asana, Trello, Airtable, Miro, Loom, Dropbox, Zoom, Calendly",
   "apps/desktop/src/settings/developers/skills.tsx": "logo OpenCode",

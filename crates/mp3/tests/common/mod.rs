@@ -56,65 +56,6 @@ pub fn write_fixture_wav(path: &Path, case: Case) -> TestResult<Vec<f32>> {
     Ok(samples)
 }
 
-pub fn write_fixture_wav_int(path: &Path, case: Case, bits_per_sample: u16) -> TestResult {
-    let spec = hound::WavSpec {
-        channels: case.channels,
-        sample_rate: case.sample_rate,
-        bits_per_sample,
-        sample_format: hound::SampleFormat::Int,
-    };
-
-    let max_amplitude = match bits_per_sample {
-        8 => i8::MAX as f32,
-        16 => i16::MAX as f32,
-        17..=31 => ((1i64 << (bits_per_sample - 1)) - 1) as f32,
-        32 => i32::MAX as f32,
-        bits => return Err(format!("unsupported bit depth: {bits}").into()),
-    };
-
-    let mut writer = hound::WavWriter::create(path, spec)?;
-    for frame in 0..case.frames {
-        for channel in 0..case.channels as usize {
-            let sample = fixture_sample(frame, channel);
-            writer.write_sample((sample * max_amplitude) as i32)?;
-        }
-    }
-    writer.finalize()?;
-    Ok(())
-}
-
-pub fn write_malformed_stereo_wav_with_odd_samples(path: &Path) -> TestResult {
-    let sample_rate = 44_100u32;
-    let channels = 2u16;
-    let bits_per_sample = 16u16;
-    let block_align = channels * (bits_per_sample / 8);
-    let byte_rate = sample_rate * u32::from(block_align);
-    let samples = [0i16, i16::MAX, i16::MIN];
-    let data_size = (samples.len() * std::mem::size_of::<i16>()) as u32;
-    let riff_chunk_size = 4 + (8 + 16) + (8 + data_size);
-
-    let mut bytes = Vec::with_capacity((riff_chunk_size + 8) as usize);
-    bytes.extend_from_slice(b"RIFF");
-    bytes.extend_from_slice(&riff_chunk_size.to_le_bytes());
-    bytes.extend_from_slice(b"WAVE");
-    bytes.extend_from_slice(b"fmt ");
-    bytes.extend_from_slice(&16u32.to_le_bytes());
-    bytes.extend_from_slice(&1u16.to_le_bytes());
-    bytes.extend_from_slice(&channels.to_le_bytes());
-    bytes.extend_from_slice(&sample_rate.to_le_bytes());
-    bytes.extend_from_slice(&byte_rate.to_le_bytes());
-    bytes.extend_from_slice(&block_align.to_le_bytes());
-    bytes.extend_from_slice(&bits_per_sample.to_le_bytes());
-    bytes.extend_from_slice(b"data");
-    bytes.extend_from_slice(&data_size.to_le_bytes());
-    for sample in samples {
-        bytes.extend_from_slice(&sample.to_le_bytes());
-    }
-
-    std::fs::write(path, bytes)?;
-    Ok(())
-}
-
 pub fn read_wav(path: &Path) -> TestResult<(hound::WavSpec, Vec<f32>)> {
     let mut reader = hound::WavReader::open(path)?;
     let spec = reader.spec();

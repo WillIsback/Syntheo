@@ -12,7 +12,7 @@ Tous les paquets sont privés (`"private": true`) et publiés sous la portée `@
 | Paquet | Chemin | Rôle | Consommateurs | Pages de doc concernées |
 | --- | --- | --- | --- | --- |
 | `@syntheo/changelog` | `packages/changelog` | Notes de version et rendu Markdown de la vue « Nouveautés ». | `apps/desktop` | aucune |
-| `@syntheo/db` | `packages/db` | Schéma Drizzle de la base locale et fabrique `createDb`. | `apps/desktop` | [/data-and-privacy](/fr/data-and-privacy), [/architecture](/fr/architecture) |
+| `@syntheo/db` | `packages/db` | Schéma Drizzle de la table `templates` et fabrique `createDb`. | `apps/desktop` | [/data-and-privacy](/fr/data-and-privacy), [/architecture](/fr/architecture) |
 | `@syntheo/db-react` | `packages/db-react` | Hooks React de requêtes réactives. | `apps/desktop` | aucune |
 | `@syntheo/db-runtime` | `packages/db-runtime` | Contrats de types du transport de base de données. | `db`, `db-react`, `db-tauri` | aucune |
 | `@syntheo/db-tauri` | `packages/db-tauri` | Transport Tauri vers le plugin `plugins/db`. | `apps/desktop` | aucune |
@@ -56,7 +56,7 @@ Quatre paquets forment la pile d'accès à la base SQLite côté TypeScript. L'a
 - Chemin : `packages/db`
 - Rôle : adaptateur Drizzle mince au-dessus d'un client `DrizzleProxyClient` (voir `packages/db/AGENTS.md`).
 - API principale : `createDb(client)`, le schéma exporté par `./schema` et les helpers Drizzle réexportés (`eq`, `and`, `or`, `desc`, `asc`, `sql`, `count`, `max`, `ne`).
-- Tables déclarées dans `packages/db/src/schema.ts` : `sessions`, `session_documents`, `transcripts`, `session_participants`, `action_items`, `session_attachments`, `humans`, `organizations`, `workspaces`, `folders`, `folder_attachments`, `tags`, `session_tags`, `entity_mentions`, `chat_groups`, `chat_messages`, `daily_notes`, `templates`, `app_settings`, `synced_preferences`, ainsi que des tables de connexion de bibliothèque locale, d'état des pièces jointes et de migration d'import.
+- Table déclarée dans `packages/db/src/schema.ts` : `templates`, la seule que l'app lit ou écrit par Drizzle. Les autres tables passent par du SQL brut (`liveQueryClient`).
 - Dépendances internes : `db-runtime`.
 - Pages de doc concernées : [/data-and-privacy](/fr/data-and-privacy) (ce qui est stocké localement), [/architecture](/fr/architecture) (stockage local).
 
@@ -140,7 +140,7 @@ Le fichier `packages/editor/daily/cfm.md` est une note de conception héritée (
 
 - Chemin : `packages/design-system`
 - Rôle : jetons de design en TypeScript et en CSS.
-- API principale : `PALETTE_IDS` (`cha`, `fuji`, `enji`), `DEFAULT_PALETTE` (`cha`), `isPaletteId`, `DesignPalettes`, `DesignColors`, `DesignSpacing`, `DesignRadius`, `DesignTypography`, `DesignControl`, feuille `./tokens.css`. Le dossier `assets/brand` contient les ressources de marque.
+- API principale : `PALETTE_IDS` (`cha`, `fuji`, `enji`), `DEFAULT_PALETTE` (`cha`), `isPaletteId`, `DesignPalettes`, `DesignColors`, `DesignRadius`, feuille `./tokens.css`. Le dossier `assets/brand` contient les ressources de marque.
 - Dépendances internes : aucune.
 - Consommateurs : `ui`, `apps/desktop` (dont `src/settings/appearance/palette.tsx`).
 - Pages de doc concernées : aucune. Aucune page ne décrit les palettes d'apparence à ce jour.

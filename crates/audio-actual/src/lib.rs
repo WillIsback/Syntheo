@@ -2,12 +2,10 @@ mod async_ring;
 mod capture;
 mod mic;
 mod mic_candidates;
-mod norm;
 mod rt_ring;
 mod speaker;
 
 pub use mic::*;
-pub use norm::*;
 pub use speaker::*;
 
 pub use cpal;
