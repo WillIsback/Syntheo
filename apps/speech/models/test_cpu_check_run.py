@@ -8,9 +8,11 @@ python3 -I -m unittest discover -s apps/speech/models -p 'test_*.py'
 
 import json
 import os
+import signal
 import stat
 import subprocess
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -118,6 +120,9 @@ class RunShTest(unittest.TestCase):
         self.assertEqual(calls, 2)
         self.assertIn("::warning::qemu : erreur interne (figé", result.stdout)
         self.assertIn("temps CPU de qemu", result.stdout)
+        self.assertIn("fils 1 (R 0, S 1, D 0)", result.stdout)
+        self.assertIn("-- qemu (figé) : fils 1", result.stderr)
+        self.assertRegex(result.stderr, r"fil \d+ : S, CPU 0 s, attente ")
         self.assertIn("modèles acceptés", result.stdout)
 
     def test_two_frozen_runs_in_a_row_fail(self):
@@ -148,6 +153,49 @@ class RunShTest(unittest.TestCase):
             result, calls = self.run_scenario(["ok"], env_extra=env)
             self.assertEqual(result.returncode, 2, env)
             self.assertEqual(calls, 0)
+
+    def test_an_interruption_dumps_the_threads_and_stops_qemu(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            qemu = tmp / "qemu"
+            qemu.write_text(FAKE_QEMU)
+            qemu.chmod(qemu.stat().st_mode | stat.S_IXUSR)
+            (tmp / "scenario").write_text("hang\n")
+            (tmp / "models").mkdir()
+            env = {
+                **os.environ,
+                "QEMU": str(qemu),
+                "CPU_CHECK_BIN": "/bin/true",
+                "CALLS": str(tmp / "calls"),
+                "SCENARIO": str(tmp / "scenario"),
+                "ARGS_SEEN": str(tmp / "args"),
+            }
+            proc = subprocess.Popen(
+                ["bash", str(RUN), str(tmp / "models")],
+                env=env,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            deadline = time.monotonic() + 10
+            while not (tmp / "calls").exists() and time.monotonic() < deadline:
+                time.sleep(0.1)
+            time.sleep(1.5)
+            fake = int(
+                subprocess.run(
+                    ["pgrep", "-P", str(proc.pid), "-x", "sleep"],
+                    capture_output=True,
+                    text=True,
+                ).stdout.split()[0]
+            )
+            proc.send_signal(signal.SIGTERM)
+            _, stderr = proc.communicate(timeout=10)
+            self.assertEqual(proc.returncode, 130, stderr)
+            self.assertIn("-- qemu (interruption) : fils 1", stderr)
+            time.sleep(0.2)
+            self.assertFalse(
+                Path(f"/proc/{fake}").exists(), "qemu factice resté en vie"
+            )
 
     def test_the_host_and_the_emulator_are_logged_first(self):
         result, _ = self.run_scenario(["ok"])

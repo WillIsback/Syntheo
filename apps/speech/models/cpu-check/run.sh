@@ -72,7 +72,7 @@ QPID=
 # qemu tourne en arrière-plan : arrêté avec le script (Ctrl-C, docker stop,
 # délai de l'étape), sinon il continuerait seul.
 trap '[ -z "$QPID" ] || kill -KILL "$QPID" 2> /dev/null; rm -f "$OUT" "$ERR"' EXIT
-trap 'exit 130' INT TERM
+trap 'dump_threads "interruption"; exit 130' INT TERM
 
 # Battement toutes les HEARTBEAT secondes (défaut 120) : durée écoulée et temps
 # CPU cumulé de qemu, pour distinguer un runner lent d'un émulateur figé. Si
@@ -91,12 +91,37 @@ HZ=$(getconf CLK_TCK)
 # Hôte, émulateur et réglages en tête du journal : la durée sous TCG dépend
 # surtout du processeur hôte (runner GitHub variable).
 host_cpu=$(grep -m1 '^model name' /proc/cpuinfo | cut -d: -f2- | sed 's/^ *//' || true)
-echo "-- hôte : ${host_cpu:-inconnu}, $(nproc) CPU ; $("$QEMU" --version | head -n1) -cpu ${QEMU_CPU:-Skylake-Client} ; THREADS=${THREADS:-4} ; fichiers : ${FILES:-mic sys}"
+# Extensions de l'hôte que le générateur de code de TCG peut employer.
+host_isa=$(grep -m1 '^flags' /proc/cpuinfo | tr ' ' '\n' | grep -xE 'avx2|avx512f|avx512vl|avx512_vnni|avx_vnni' | paste -sd' ' || true)
+mem_gb() { awk -v k="$1" '$1 == k":" {printf "%.1f", $2 / 1048576}' /proc/meminfo; }
+echo "-- hôte : ${host_cpu:-inconnu}, $(nproc) CPU, extensions ${host_isa:-aucune}, mémoire $(mem_gb MemTotal) Go, swap $(mem_gb SwapTotal) Go ; $("$QEMU" --version | head -n1) -cpu ${QEMU_CPU:-Skylake-Client} ; THREADS=${THREADS:-4} ; fichiers : ${FILES:-mic sys}"
 
 alive() { # un processus terminé reste zombie (kill -0 réussit) jusqu'au wait
   local state
   state=$(sed 's/.*) //' "/proc/$1/stat" 2> /dev/null | cut -d' ' -f1) || return 1
   [ -n "$state" ] && [ "$state" != Z ]
+}
+# Battement détaillé : fils de qemu par état (R en calcul, S en attente, D en
+# E/S), mémoire résidente et pic, mémoire disponible et swap utilisé de l'hôte.
+# Un gel montre des fils tous en S et un temps CPU figé ; un manque de mémoire,
+# du swap et des fils en D.
+qemu_state() {
+  local states rss hwm
+  states=$(sed 's/.*) //' /proc/"$1"/task/*/stat 2> /dev/null | awk '{n[$1]++; t++} END {printf "fils %d (R %d, S %d, D %d)", t, n["R"], n["S"], n["D"]}')
+  rss=$(awk '$1 == "VmRSS:" {printf "%.1f", $2 / 1048576}' /proc/"$1"/status 2> /dev/null)
+  hwm=$(awk '$1 == "VmHWM:" {printf "%.1f", $2 / 1048576}' /proc/"$1"/status 2> /dev/null)
+  echo "$states ; RSS ${rss:-?} Go (pic ${hwm:-?}) ; hôte : $(mem_gb MemAvailable) Go disponibles, swap utilisé $(awk '$1 == "SwapTotal:" {t = $2} $1 == "SwapFree:" {f = $2} END {printf "%.1f", (t - f) / 1048576}' /proc/meminfo) Go"
+}
+# Relevé fil par fil (état, temps CPU, fonction noyau en attente, appel
+# système en cours) au moment d'un gel ou d'une interruption (délai de
+# l'étape dépassé) : la trace qui manquait aux runs annulés.
+dump_threads() {
+  [ -n "${QPID:-}" ] && [ -d "/proc/$QPID" ] || return 0
+  echo "-- qemu ($1) : $(qemu_state "$QPID")" >&2
+  local t
+  for t in /proc/"$QPID"/task/*; do
+    echo "   fil ${t##*/} : $(sed 's/.*) //' "$t/stat" 2> /dev/null | awk -v hz="$HZ" '{printf "%s, CPU %d s", $1, ($12 + $13) / hz}'), attente $(cat "$t/wchan" 2> /dev/null || echo ?), appel $(cut -d' ' -f1 "$t/syscall" 2> /dev/null || echo ?)" >&2
+  done
 }
 cpu_seconds() { sed 's/.*) //' "/proc/$1/stat" 2> /dev/null | awk -v hz="$HZ" '{print int(($12+$13)/hz)}'; }
 # Lignes complètes de cpu-check (stdout) et de son stderr, au fil de l'eau ;
@@ -143,10 +168,11 @@ run_once() {
       next=$((next + HEARTBEAT))
       cpu=$(cpu_seconds "$QPID")
       [ -n "$cpu" ] || continue
-      echo "-- cpu-check : $((elapsed / 60)) min $((elapsed % 60)) s écoulées, temps CPU de qemu ${cpu} s."
+      echo "-- cpu-check : $((elapsed / 60)) min $((elapsed % 60)) s écoulées, temps CPU de qemu ${cpu} s ; $(qemu_state "$QPID")."
       if [ $((cpu - last)) -lt 1 ]; then stalls=$((stalls + 1)); else stalls=0; fi
       last=$cpu
       if [ "$stalls" -ge "$STALL_LIMIT" ]; then
+        dump_threads "figé"
         kill -KILL "$QPID" 2> /dev/null && stalled=true
         break
       fi
