@@ -146,7 +146,7 @@ Les réglages les plus utiles à une DSI :
     | --- | --- |
     | `current_stt_provider` | `openai` ou `nvidia` |
     | `current_stt_model` | identifiant non vide (200 caractères au plus) |
-    | `stt:openai`, `stt:nvidia` | objet `{ "type": "stt", "api_key": "", "base_url": "https://…" }` : URL en HTTPS uniquement, sans identifiants ni paramètres, clé obligatoirement vide |
+    | `stt:openai`, `stt:nvidia` | objet `{ "type": "stt", "api_key": "", "base_url": "https://…" }` : URL en HTTPS uniquement, sans identifiants ni paramètres (les blancs en tête et en fin sont ignorés), clé obligatoirement vide |
     | `intelligence_disabled` | `true` uniquement |
     | `current_llm_provider`, `current_llm_model` | `""` uniquement |
     | `auto_start_scheduled_meetings` | `true` ou `false` |

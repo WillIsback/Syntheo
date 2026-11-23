@@ -146,7 +146,7 @@ The settings most useful to an IT department:
     | --- | --- |
     | `current_stt_provider` | `openai` or `nvidia` |
     | `current_stt_model` | non-empty identifier (200 characters at most) |
-    | `stt:openai`, `stt:nvidia` | object `{ "type": "stt", "api_key": "", "base_url": "https://…" }`: HTTPS URL only, with no credentials or parameters, key must be empty |
+    | `stt:openai`, `stt:nvidia` | object `{ "type": "stt", "api_key": "", "base_url": "https://…" }`: HTTPS URL only, with no credentials or parameters (leading and trailing blanks are ignored), key must be empty |
     | `intelligence_disabled` | `true` only |
     | `current_llm_provider`, `current_llm_model` | `""` only |
     | `auto_start_scheduled_meetings` | `true` or `false` |
