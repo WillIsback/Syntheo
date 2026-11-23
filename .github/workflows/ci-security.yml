@@ -60,14 +60,14 @@ jobs:
           "$RUNNER_TEMP/exc-venv/bin/python" scripts/check_security_exceptions.py
 
       - name: "Dépendances Rust (cargo deny : advisories, licences, sources)"
-        uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2
+        uses: EmbarkStudios/cargo-deny-action@70f81531115945ba6eb6b941ec9d39d063438eb9 # v2
         with:
           command: check advisories licenses bans sources
 
       # Module syntheo-speech (issue 681) : workspace Cargo à part, avec son
       # propre Cargo.lock ; même politique (deny.toml à la racine).
       - name: "Dépendances Rust du module syntheo-speech (cargo deny)"
-        uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2
+        uses: EmbarkStudios/cargo-deny-action@70f81531115945ba6eb6b941ec9d39d063438eb9 # v2
         with:
           manifest-path: apps/speech/Cargo.toml
           command: check advisories licenses bans sources
