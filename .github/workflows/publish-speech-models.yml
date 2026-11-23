@@ -18,10 +18,13 @@
 # le garde-fou bloquant sous un CPU sans VNNI : les fichiers doivent rendre des
 # mots sous qemu Skylake-Client (apps/speech/models/cpu-check). Seul job qui
 # compile du code (crates d'apps/speech, ONNX Runtime) : registre Cargo et
-# compilation partent de zéro, sans rust-cache ni sccache. Les deux premiers
+# compilation partent de zéro, sans rust-cache ni sccache. Matrice `audio`
+# (mic, sys) : un fichier de mise en service par job, mêmes seuils, comme dans
+# ci-code-quality (sous TCG, un fichier demande environ 10 min sur un runner
+# rapide et près de trois fois plus sur un runner lent). Les deux premiers
 # jobs tournent aussi avec publish=false et en reprise.
 #
-# publish, après cpu-check (needs), dans l'environnement `speech-models`
+# publish, après cpu-check (needs : les deux jobs de la matrice réussis), dans l'environnement `speech-models`
 # (validation requise ; secrets HF_TOKEN et SPEECH_MODELS_RELEASE_TOKEN, jeton
 # GitHub à grain fin limité à ce dépôt, droits Contents et Workflows en
 # écriture : GITHUB_TOKEN ne peut pas créer un tag sur un commit qui modifie
@@ -140,11 +143,15 @@ jobs:
   # (archive épinglée, check_ort.py avant et après). Il compile et exécute du
   # code tiers avec un jeton en lecture seule, sans environnement ni secret.
   cpu-check:
-    name: Garde-fou sous un CPU sans VNNI (${{ inputs.version }})
+    name: Garde-fou sous un CPU sans VNNI (${{ inputs.version }}, ${{ matrix.audio }})
     needs: fetch-draft
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        audio: [mic, sys]
     permissions:
       contents: read
     steps:
@@ -192,16 +199,23 @@ jobs:
           sudo apt-get update -q
           sudo apt-get install -y -q --no-install-recommends qemu-user-static
 
-      - name: Garde-fou sous un CPU sans VNNI (qemu Skylake-Client)
+      # Délai propre à l'étape : sur un runner lent, la relance après une
+      # erreur interne de qemu peut ne pas y tenir (échec, jamais acceptation).
+      - name: Garde-fou sous un CPU sans VNNI (qemu Skylake-Client, ${{ matrix.audio }})
         shell: bash
+        timeout-minutes: 50
         env:
           CPU_CHECK_BIN: apps/speech/target/release/examples/cpu-check
+          FILES: ${{ matrix.audio }}
         run: |
           set -euo pipefail
           python3 -I apps/speech/models/flatten.py --tree assets "$RUNNER_TEMP/models"
           python3 -I apps/speech/models/verify.py "$RUNNER_TEMP/models"
           bash apps/speech/models/cpu-check/run.sh "$RUNNER_TEMP/models"
 
+  # needs: cpu-check attend les deux jobs de la matrice ; le `if` sans
+  # fonction de statut vaut success() && …, donc un seul échec ou une seule
+  # annulation suffit à sauter la publication.
   publish:
     name: Publication des modèles (${{ inputs.version }})
     needs: cpu-check
