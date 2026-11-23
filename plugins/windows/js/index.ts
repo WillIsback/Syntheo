@@ -8,7 +8,6 @@ export type WindowLabel =
   | "composer"
   | "floating"
   | "floating-bar"
-  | "live-caption"
   | `note-${string}`
   | "settings";
 

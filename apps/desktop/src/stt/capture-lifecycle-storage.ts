@@ -1,5 +1,7 @@
-import { commands as listenerCommands } from "@syntheo/plugin-transcription";
-import type { CaptureLifecycleMarker } from "@syntheo/plugin-transcription";
+import {
+  commands as listenerCommands,
+  type CaptureLifecycleMarker,
+} from "@syntheo/plugin-transcription";
 
 import { enqueueDatabaseWrite } from "~/db/write-queue";
 

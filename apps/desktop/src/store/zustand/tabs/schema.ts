@@ -85,10 +85,6 @@ type SettingsState = {
   tab: SettingsTab | null;
 };
 
-type DailySummaryState = {
-  activeTab: "timeline" | "raw" | null;
-};
-
 type BaseTab = {
   active: boolean;
   slotId: string;
@@ -130,12 +126,7 @@ export type Tab =
     })
   | (BaseTab & { type: "settings"; state: SettingsState })
   | (BaseTab & { type: "onboarding" })
-  | (BaseTab & { type: "edit"; requestId: string })
-  | (BaseTab & {
-      type: "daily_summary";
-      id: string;
-      state: DailySummaryState;
-    });
+  | (BaseTab & { type: "edit"; requestId: string });
 
 export const getDefaultState = (tab: TabInput): Tab => {
   const base = { active: false, slotId: "", pinned: false };
@@ -243,8 +234,6 @@ export const uniqueIdfromTab = (tab: Tab): string => {
       return `onboarding`;
     case "edit":
       return `edit-${tab.requestId}`;
-    case "daily_summary":
-      return `daily_summary-${tab.id}`;
   }
 };
 

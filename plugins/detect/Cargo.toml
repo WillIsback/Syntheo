@@ -19,8 +19,8 @@ test-support = []
 tauri-plugin = { workspace = true, features = ["build"] }
 
 [dev-dependencies]
-specta-typescript = { workspace = true }
 syntheo-detect = { workspace = true, features = ["mic"] }
+syntheo-specta-export = { workspace = true }
 tauri = { workspace = true, features = ["test"] }
 tauri-plugin-detect = { path = ".", features = ["test-support"] }
 tokio = { workspace = true, features = ["test-util"] }

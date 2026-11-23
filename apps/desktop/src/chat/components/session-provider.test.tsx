@@ -8,8 +8,6 @@ import {
 import { type ComponentProps, StrictMode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { PersistedChatMessage } from "~/chat/store/persisted-messages";
-
 const mocks = vi.hoisted(() => ({
   chatRegenerate: vi.fn(),
   chatSendMessage: vi.fn(),
@@ -90,6 +88,7 @@ import {
 import {
   buildPersistedChatMessage,
   type ChatMessageRecord,
+  type PersistedChatMessage,
 } from "~/chat/store/persisted-messages";
 import type { SyntheoUIMessage } from "~/chat/types";
 

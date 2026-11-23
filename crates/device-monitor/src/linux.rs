@@ -1,4 +1,4 @@
-use crate::{DeviceEvent, DeviceSwitch, DeviceUpdate};
+use crate::DeviceSwitch;
 use libpulse_binding::{
     callbacks::ListResult,
     context::{
@@ -301,35 +301,6 @@ pub(crate) fn monitor_device_change(
     cleanup_pulseaudio(mainloop, context);
 
     tracing::info!("monitor_device_change_stopped");
-}
-
-pub(crate) fn monitor_volume_mute(
-    _event_tx: mpsc::Sender<DeviceUpdate>,
-    stop_rx: mpsc::Receiver<()>,
-) {
-    tracing::warn!("volume_mute_monitoring_unsupported_on_linux");
-    let _ = stop_rx.recv();
-}
-
-pub(crate) fn monitor(event_tx: mpsc::SyncSender<DeviceEvent>, stop_rx: mpsc::Receiver<()>) {
-    let Some((mainloop, context)) = setup_pulseaudio(&stop_rx) else {
-        return;
-    };
-
-    let emit: DeviceSwitchEmit = Rc::new(move |switch| {
-        let _ = event_tx.try_send(DeviceEvent::Switch(switch));
-    });
-    subscribe_pulse_device_events(&context, emit);
-
-    mainloop.borrow_mut().unlock();
-
-    tracing::info!("monitor_started");
-
-    let _ = stop_rx.recv();
-
-    cleanup_pulseaudio(mainloop, context);
-
-    tracing::info!("monitor_stopped");
 }
 
 #[cfg(test)]

@@ -45,32 +45,108 @@ pub async fn run_transaction(
     db: &Db,
     statements: Vec<TransactionStatement>,
 ) -> crate::Result<Vec<u64>> {
-    let mut transaction = db.pool().begin_with("BEGIN IMMEDIATE").await?;
+    let mut transaction =
+        ExplicitRollbackTransaction::new(db.pool().begin_with("BEGIN IMMEDIATE").await?);
     let mut rows_affected = Vec::with_capacity(statements.len());
 
     for (statement_index, statement) in statements.into_iter().enumerate() {
-        let result = bind_params(
+        let result = match bind_params(
             sqlx::query(sqlx::AssertSqlSafe(statement.sql.as_str())),
             &statement.params,
         )
-        .execute(&mut *transaction)
-        .await?;
+        .execute(transaction.connection())
+        .await
+        {
+            Ok(result) => result,
+            Err(error) => {
+                if let Err(rollback_error) = transaction.rollback().await {
+                    tracing::error!(
+                        %rollback_error,
+                        "sqlite_failed_transaction_rollback_failed"
+                    );
+                }
+                return Err(error.into());
+            }
+        };
         let actual = result.rows_affected();
         if let Some(expected) = statement.expected_rows_affected
             && actual != expected
         {
-            transaction.rollback().await?;
-            return Err(Error::UnexpectedRowsAffected {
+            let error = Error::UnexpectedRowsAffected {
                 statement_index,
                 expected,
                 actual,
-            });
+            };
+            if let Err(rollback_error) = transaction.rollback().await {
+                tracing::error!(
+                    %rollback_error,
+                    "sqlite_mismatched_transaction_rollback_failed"
+                );
+            }
+            return Err(error);
         }
         rows_affected.push(actual);
     }
 
     transaction.commit().await?;
     Ok(rows_affected)
+}
+
+/// Transaction annulée explicitement : sur erreur, et en tâche de fond si le
+/// futur qui la porte est abandonné avant la validation.
+struct ExplicitRollbackTransaction {
+    transaction: Option<sqlx::Transaction<'static, sqlx::Sqlite>>,
+}
+
+impl ExplicitRollbackTransaction {
+    fn new(transaction: sqlx::Transaction<'static, sqlx::Sqlite>) -> Self {
+        Self {
+            transaction: Some(transaction),
+        }
+    }
+
+    fn connection(&mut self) -> &mut sqlx::SqliteConnection {
+        &mut *self
+            .transaction
+            .as_mut()
+            .expect("transaction should be present")
+    }
+
+    async fn commit(mut self) -> std::result::Result<(), sqlx::Error> {
+        self.transaction
+            .take()
+            .expect("transaction should be present")
+            .commit()
+            .await
+    }
+
+    async fn rollback(mut self) -> std::result::Result<(), sqlx::Error> {
+        self.transaction
+            .take()
+            .expect("transaction should be present")
+            .rollback()
+            .await
+    }
+}
+
+impl Drop for ExplicitRollbackTransaction {
+    fn drop(&mut self) {
+        let Some(transaction) = self.transaction.take() else {
+            return;
+        };
+
+        let Ok(runtime) = tokio::runtime::Handle::try_current() else {
+            tracing::error!("sqlite_transaction_cancelled_without_async_runtime");
+            drop(transaction);
+            return;
+        };
+
+        runtime.spawn(async move {
+            if let Err(error) = transaction.rollback().await {
+                tracing::error!(%error, "sqlite_cancelled_transaction_rollback_failed");
+            }
+        });
+    }
 }
 
 async fn fetch_rows(

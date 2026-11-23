@@ -1,8 +1,10 @@
 import type { UIMessage } from "ai";
 import { z } from "zod";
 
-import { CONTEXT_ENTITY_SOURCES } from "~/chat/context/entities";
-import type { ContextRef } from "~/chat/context/entities";
+import {
+  CONTEXT_ENTITY_SOURCES,
+  type ContextRef,
+} from "~/chat/context/entities";
 
 export type ChatScope = "general" | "automations";
 

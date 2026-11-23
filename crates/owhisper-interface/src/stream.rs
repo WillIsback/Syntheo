@@ -144,15 +144,6 @@ common_derives! {
 }
 
 impl StreamResponse {
-    pub fn text(&self) -> Option<&str> {
-        match self {
-            StreamResponse::TranscriptResponse { channel, .. } => {
-                channel.alternatives.first().map(|a| a.transcript.as_str())
-            }
-            _ => None,
-        }
-    }
-
     pub fn apply_offset(&mut self, offset_secs: f64) {
         match self {
             StreamResponse::TranscriptResponse { start, channel, .. } => {

@@ -96,7 +96,6 @@ vi.mock("~/store/zustand/tabs", () => {
         case "sessions":
         case "humans":
         case "organizations":
-        case "daily_summary":
           return `${tab.type}-${tab.id}`;
         case "edit":
           return `edit-${tab.requestId}`;

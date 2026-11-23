@@ -89,7 +89,6 @@ pico-args = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 specta = { workspace = true }
-specta-typescript = { workspace = true }
 sqlx = { workspace = true, features = ["runtime-tokio", "sqlite"] }
 strum = { workspace = true, features = ["derive"] }
 tauri-specta = { workspace = true, features = ["derive", "typescript"] }
@@ -114,6 +113,7 @@ devtools = [
 # Même analyse des motifs d'URL que tauri-plugin-http (tests/http_scope.rs).
 regex = { workspace = true }
 reqwest = { workspace = true }
+syntheo-specta-export = { workspace = true }
 tauri = { workspace = true, features = ["test"] }
 tempfile = { workspace = true }
 url = { workspace = true }

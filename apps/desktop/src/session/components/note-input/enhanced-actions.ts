@@ -3,8 +3,7 @@ import { useCallback } from "react";
 
 import { toast } from "@syntheo/ui/components/ui/toast";
 
-import { useAITaskTask } from "~/ai/hooks";
-import { useLanguageModel } from "~/ai/hooks";
+import { useAITaskTask, useLanguageModel } from "~/ai/hooks";
 import {
   isMainAITaskHostWindow,
   requestMainAITaskCancel,

@@ -13,7 +13,7 @@ tauri-plugin = { workspace = true, features = ["build"] }
 
 [dev-dependencies]
 serde_json = { workspace = true }
-specta-typescript = { workspace = true }
+syntheo-specta-export = { workspace = true }
 tauri = { workspace = true, features = ["test"] }
 
 [dependencies]

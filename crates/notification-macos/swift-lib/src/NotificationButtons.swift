@@ -551,12 +551,6 @@ class FooterActionButton: NotificationButton {
   }
 }
 
-class DetailsButton: NotificationButton {
-  override func performAction() {
-    notification?.toggleExpansion()
-  }
-}
-
 class OptionsButton: NotificationButton {
   var options: [String] = []
 

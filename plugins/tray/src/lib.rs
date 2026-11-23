@@ -6,11 +6,10 @@ mod locale;
 mod macos_position;
 mod menu_items;
 mod schedule;
-mod schedule_labels;
 mod tray_icon;
 
 pub use ext::*;
-pub use menu_items::{SyntheoMenuItem, handle_agenda_menu_event, quit_completely};
+pub use menu_items::{SyntheoMenuItem, quit_completely};
 
 const PLUGIN_NAME: &str = "syntheo-tray";
 
@@ -39,18 +38,6 @@ mod test {
 
     #[test]
     fn export_types() {
-        const OUTPUT_FILE: &str = "./js/bindings.gen.ts";
-
-        make_specta_builder()
-            .disable_serde_phases()
-            .semantic_types(
-                specta_typescript::semantic::Configuration::empty().enable_lossless_floats(),
-            )
-            .dangerously_cast_bigints_to_number()
-            .export(specta_typescript::Typescript::default(), OUTPUT_FILE)
-            .unwrap();
-
-        let content = std::fs::read_to_string(OUTPUT_FILE).unwrap();
-        std::fs::write(OUTPUT_FILE, format!("// @ts-nocheck\n{content}")).unwrap();
+        syntheo_specta_export::write_bindings(make_specta_builder(), "./js/bindings.gen.ts");
     }
 }

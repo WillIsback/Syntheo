@@ -5,7 +5,7 @@ use std::sync::{
     mpsc,
 };
 
-use crate::{DeviceEvent, DeviceSwitch, DeviceUpdate};
+use crate::{DeviceSwitch, DeviceUpdate};
 use syntheo_audio_device::macos::is_headphone_from_default_output_device;
 
 type ListenerFn = extern "C-unwind" fn(ca::Obj, u32, *const ca::PropAddr, *mut ()) -> os::Status;
@@ -38,36 +38,6 @@ impl EventSender for mpsc::SyncSender<DeviceSwitch> {
         }
     }
     fn send_update(&self, _update: DeviceUpdate) {}
-}
-
-impl EventSender for mpsc::Sender<DeviceUpdate> {
-    fn send_switch(&self, _switch: DeviceSwitch) -> bool {
-        true
-    }
-    fn send_update(&self, update: DeviceUpdate) {
-        let _ = self.send(update);
-    }
-}
-
-impl EventSender for mpsc::Sender<DeviceEvent> {
-    fn send_switch(&self, switch: DeviceSwitch) -> bool {
-        self.send(DeviceEvent::Switch(switch)).is_ok()
-    }
-    fn send_update(&self, update: DeviceUpdate) {
-        let _ = self.send(DeviceEvent::Update(update));
-    }
-}
-
-impl EventSender for mpsc::SyncSender<DeviceEvent> {
-    fn send_switch(&self, switch: DeviceSwitch) -> bool {
-        match self.try_send(DeviceEvent::Switch(switch)) {
-            Ok(()) | Err(mpsc::TrySendError::Full(_)) => true,
-            Err(mpsc::TrySendError::Disconnected(_)) => false,
-        }
-    }
-    fn send_update(&self, update: DeviceUpdate) {
-        let _ = self.try_send(DeviceEvent::Update(update));
-    }
 }
 
 fn as_ptr<T>(value: &T) -> *mut () {
@@ -596,17 +566,6 @@ pub(crate) fn monitor_device_change(
     stop_rx: mpsc::Receiver<()>,
 ) {
     monitor_internal(event_tx, stop_rx, true, false, "monitor_device_change");
-}
-
-pub(crate) fn monitor_volume_mute(
-    event_tx: mpsc::Sender<DeviceUpdate>,
-    stop_rx: mpsc::Receiver<()>,
-) {
-    monitor_internal(event_tx, stop_rx, false, true, "monitor_volume_mute");
-}
-
-pub(crate) fn monitor(event_tx: mpsc::SyncSender<DeviceEvent>, stop_rx: mpsc::Receiver<()>) {
-    monitor_internal(event_tx, stop_rx, true, true, "monitor");
 }
 
 #[cfg(test)]

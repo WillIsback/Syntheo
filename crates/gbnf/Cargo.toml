@@ -1,9 +1,0 @@
-[package]
-name = "gbnf"
-version = "0.1.0"
-edition = "2024"
-license = "MIT"
-
-[dependencies]
-serde = { workspace = true, features = ["derive"] }
-specta = { workspace = true, features = ["derive"] }

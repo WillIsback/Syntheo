@@ -1,0 +1,10 @@
+[package]
+name = "specta-export"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+
+[dependencies]
+specta-typescript = { workspace = true }
+tauri = { workspace = true }
+tauri-specta = { workspace = true, features = ["typescript"] }

@@ -8,5 +8,7 @@ license = "MIT"
 hound = { workspace = true }
 mp3lame-encoder = { workspace = true }
 syntheo-audio-utils = { workspace = true }
-tempfile = { workspace = true }
 thiserror = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }

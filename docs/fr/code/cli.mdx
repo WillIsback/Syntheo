@@ -99,7 +99,7 @@ Ressources : `syntheo://meetings/{meeting_id}` (Markdown), `syntheo://meetings/{
   - rendu : `to_markdown`, `to_export_markdown`, `ExportLocale`, `format_export_date`, `localize_speaker_label` (`export_markdown.rs`, `transcript_render.rs`) ;
   - limites : `DEFAULT_LIST_LIMIT` 20, `MAX_LIST_LIMIT` 200, `DEFAULT_TRANSCRIPT_LIMIT` 200, `MAX_TRANSCRIPT_LIMIT` 500, `DEFAULT_FOLDER_LIST_LIMIT` 100.
 - **Dépendances internes** : `crates/db-app`, `crates/tiptap`, `crates/transcript`.
-- **Utilisé par** : `apps/cli`, `plugins/db` (export de réunion), `plugins/local-api`, `crates/session-ingest`.
+- **Utilisé par** : `apps/cli`, `plugins/db` (export de réunion), `plugins/local-api`.
 - **Pages de doc concernées** : [/reference/cli](/fr/reference/cli), [/reference/mcp](/fr/reference/mcp), [/agents/cli](/fr/agents/cli), [/agents/mcp](/fr/agents/mcp), [/import-recordings](/fr/import-recordings), [/notes](/fr/notes) (export Markdown).
 
 <Warning>
@@ -113,24 +113,6 @@ Ressources : `syntheo://meetings/{meeting_id}` (Markdown), `syntheo://meetings/{
 - **Dépendances internes** : aucune.
 - **Utilisé par** : seulement les tests de `apps/cli` (`dev-dependencies`), pour le snapshot du contrat.
 - **Pages de doc concernées** : aucune directement ; protège [/reference/cli](/fr/reference/cli) contre une dérive non vue.
-
-### `crates/agent-core`
-
-- **Chemin** : `crates/agent-core` (alias `syntheo-agent-core`).
-- **Rôle** : diagnostic et installation d'une intégration par hook pour trois CLI d'agents tierces : Codex, Claude Code et OpenCode (`ProviderKind`).
-- **API principale** : `health_check`, `install_cli`, `uninstall_cli`, `upgrade_hooks` ; types `ProviderHealth`, `ProviderHealthStatus`, `ProviderAuthStatus`.
-- **Dépendances internes** : `crates/claude`, `crates/codex`, `crates/opencode`.
-- **Utilisé par** : rien depuis le retrait du plugin `agent` (#546) ; la crate est gardée pour une intégration future.
-- **État** : hérité d'Anarlog. Les hooks qu'elle installe appellent la commande `char` (par exemple `char claude notify`), pas `syntheo`, et `upgrade_hooks` ne tourne plus au démarrage. Rien ne sert la CLI `syntheo` ici.
-- **Pages de doc concernées** : aucune. L'installation des compétences d'agents documentée dans [/agents/skills](/fr/agents/skills) passe par `apps/desktop/src-tauri/src/agent_skills.rs`, pas par cette crate.
-
-### `crates/cli-process`
-
-- **Chemin** : `crates/cli-process` (alias `syntheo-cli-process`).
-- **Rôle** : lancement de processus enfants avec tokio : `spawn_with_retry`, `run_to_string`, `spawn_streaming_lines` (flux de lignes typées), lecture bornée de stdout et stderr (`MAX_PROCESS_STDOUT_BYTES` 64 Mo, `MAX_PROCESS_STDERR_BYTES` 1 Mo).
-- **Dépendances internes** : aucune.
-- **Utilisé par** : `crates/claude`, `crates/codex`, `crates/opencode`. Ni `apps/cli` ni le serveur MCP ne l'utilisent.
-- **Pages de doc concernées** : aucune.
 
 ## Côté application
 

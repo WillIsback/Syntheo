@@ -32,27 +32,3 @@ common_derives! {
         },
     }
 }
-
-impl BatchStreamEvent {
-    pub fn percentage(&self) -> f64 {
-        match self {
-            Self::Progress { percentage, .. } | Self::Segment { percentage, .. } => *percentage,
-            Self::Terminal { .. } | Self::Result { .. } => 1.0,
-            Self::Error { .. } => 0.0,
-        }
-    }
-
-    pub fn text(&self) -> Option<&str> {
-        match self {
-            Self::Progress { partial_text, .. } => partial_text.as_deref(),
-            Self::Segment { response, .. } => response.text(),
-            Self::Result { response } => response
-                .results
-                .channels
-                .first()
-                .and_then(|channel| channel.alternatives.first())
-                .map(|alternative| alternative.transcript.as_str()),
-            Self::Terminal { .. } | Self::Error { .. } => None,
-        }
-    }
-}

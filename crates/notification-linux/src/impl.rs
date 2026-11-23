@@ -10,9 +10,8 @@ use gtk::{
 };
 use indexmap::IndexMap;
 
-use syntheo_notification_interface::{DismissTimer, PrimaryAction, unix_now};
+use syntheo_notification_interface::{DismissTimer, PrimaryAction, callbacks, unix_now};
 
-use crate::callbacks;
 use crate::icon;
 
 const NOTIFICATION_WIDTH: i32 = 360;
@@ -64,23 +63,9 @@ impl NotificationInstance {
         }
     }
 
-    fn schedule_remaining(&self) -> Option<Duration> {
-        let start_time = self.payload.start_time?;
-        Some(Duration::from_secs(
-            start_time.saturating_sub(unix_now()).max(0) as u64,
-        ))
-    }
-
     fn compact_remaining(&self, now: Instant) -> Option<Duration> {
-        if self.payload.start_time.is_some() {
-            self.schedule_remaining()
-        } else if self.payload.shows_stop_countdown() {
-            self.dismiss_timer
-                .as_ref()
-                .map(|timer| timer.remaining(now))
-        } else {
-            None
-        }
+        self.payload
+            .compact_remaining(self.dismiss_timer.as_ref(), now)
     }
 
     fn mount(&mut self) {
@@ -347,7 +332,7 @@ impl NotificationInstance {
         container.pack_start(&action_button, false, false, 0);
 
         if payload.start_time.is_some() {
-            let remaining = self.schedule_remaining().unwrap_or_default();
+            let remaining = self.payload.schedule_remaining().unwrap_or_default();
             let timer = Label::new(Some(&payload.expanded_schedule_message(remaining)));
             timer.style_context().add_class("notification-message");
             container.pack_start(&timer, false, false, 0);
@@ -509,11 +494,9 @@ impl NotificationManager {
             );
         }
         if let Some(label) = &instance.expanded_timer_label {
-            label.set_text(
-                &instance
-                    .payload
-                    .expanded_schedule_message(instance.schedule_remaining().unwrap_or_default()),
-            );
+            label.set_text(&instance.payload.expanded_schedule_message(
+                instance.payload.schedule_remaining().unwrap_or_default(),
+            ));
         }
     }
 

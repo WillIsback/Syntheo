@@ -12,7 +12,6 @@ export const commands = {
 	execute: (sql: string, params: Value[]) => typedError<Value[], string>(__TAURI_INVOKE("plugin:db|execute", { sql, params })),
 	executeTransaction: (statements: TransactionStatement[]) => typedError<number[], string>(__TAURI_INVOKE("plugin:db|execute_transaction", { statements })),
 	executeProxy: (sql: string, params: Value[], method: string) => typedError<ExecuteProxyResult, string>(__TAURI_INVOKE("plugin:db|execute_proxy", { sql, params, method })),
-	applySessionIngest: (workspaceId: string, envelope: Value) => typedError<SessionIngestApplyResult, string>(__TAURI_INVOKE("plugin:db|apply_session_ingest", { workspaceId, envelope })),
 	subscribe: (sql: string, params: Value[], onEvent: Channel<QueryEvent>) => typedError<SubscriptionRegistration, string>(__TAURI_INVOKE("plugin:db|subscribe", { sql, params, onEvent })),
 	unsubscribe: (subscriptionId: string) => typedError<null, string>(__TAURI_INVOKE("plugin:db|unsubscribe", { subscriptionId })),
 	getStartupStatus: () => __TAURI_INVOKE<StartupStatus>("plugin:db|get_startup_status"),
@@ -134,8 +133,6 @@ export type Participant = {
 };
 
 export type QueryEvent = { event: "result"; data: Value[] } | { event: "error"; data: string };
-
-export type SessionIngestApplyResult = "applied" | "already_applied" | "rejected";
 
 export type StartupPhase = "preparing_database" | "migrating_database" | "ready" | "failed";
 

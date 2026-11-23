@@ -11,8 +11,7 @@ import { EnhancedEditor } from "./editor";
 import { EnhanceError } from "./enhance-error";
 import { StreamingView } from "./streaming";
 
-import { useAITaskTask } from "~/ai/hooks";
-import { useLLMConnectionStatus } from "~/ai/hooks";
+import { useAITaskTask, useLLMConnectionStatus } from "~/ai/hooks";
 import { getStoredNoteMarkdown } from "~/session/components/note-input/header-shared";
 import { hasStoredNoteContent } from "~/session/components/shared";
 import { SpeakerNamingBar } from "~/session/components/speaker-naming/bar";

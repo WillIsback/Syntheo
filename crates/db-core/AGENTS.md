@@ -12,6 +12,7 @@ Database substrate layer. Owns `Db`/`DbPool`, SQLite open options, pool lifecycl
 - Database recreation primitives for upper layers.
 - Connection-scoped CloudSync helpers.
 - `DbPool` as ergonomic `SqlitePool` wrapper.
+- Small transaction helpers shared by write plugins (`js_iso8601_timestamp`, rollback helpers).
 
 ## Does Not Own
 

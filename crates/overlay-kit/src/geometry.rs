@@ -71,28 +71,6 @@ impl CheckedRect {
     pub fn bottom(self) -> f64 {
         self.bottom
     }
-
-    pub fn area(self) -> f64 {
-        self.width * self.height
-    }
-
-    pub fn encloses(self, inner: Self, tolerance: f64) -> bool {
-        if !tolerance.is_finite() || tolerance < 0.0 {
-            return false;
-        }
-        let left = self.x - tolerance;
-        let top = self.y - tolerance;
-        let right = self.right + tolerance;
-        let bottom = self.bottom + tolerance;
-        left.is_finite()
-            && top.is_finite()
-            && right.is_finite()
-            && bottom.is_finite()
-            && inner.x >= left
-            && inner.y >= top
-            && inner.right <= right
-            && inner.bottom <= bottom
-    }
 }
 
 #[cfg(test)]
@@ -129,17 +107,5 @@ mod tests {
         assert_eq!(rect.height(), 0.25);
         assert!(rect.right().is_finite());
         assert!(rect.bottom().is_finite());
-    }
-
-    #[test]
-    fn computes_area_and_tolerance_aware_enclosure() {
-        let outer = CheckedRect::new(-10.0, 20.0, 100.0, 50.0).expect("outer rectangle");
-        let inner = CheckedRect::new(-11.0, 21.0, 102.0, 48.0).expect("inner rectangle");
-
-        assert_eq!(outer.area(), 5_000.0);
-        assert!(!outer.encloses(inner, 0.0));
-        assert!(outer.encloses(inner, 1.0));
-        assert!(!outer.encloses(inner, -1.0));
-        assert!(!outer.encloses(inner, f64::NAN));
     }
 }

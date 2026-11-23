@@ -94,30 +94,6 @@ pub enum CreateTranscriptionResponse {
     Standard(TranscriptionResponse),
 }
 
-impl CreateTranscriptionResponse {
-    pub fn text(&self) -> &str {
-        match self {
-            Self::Diarized(response) => &response.text,
-            Self::Verbose(response) => &response.text,
-            Self::Standard(response) => &response.text,
-        }
-    }
-
-    pub fn language(&self) -> Option<&str> {
-        match self {
-            Self::Diarized(_) | Self::Standard(_) => None,
-            Self::Verbose(response) => Some(response.language.as_str()),
-        }
-    }
-
-    pub fn words(&self) -> &[TranscriptionWord] {
-        match self {
-            Self::Diarized(_) | Self::Standard(_) => &[],
-            Self::Verbose(response) => response.words.as_slice(),
-        }
-    }
-}
-
 #[derive(Debug, Clone, Deserialize, PartialEq)]
 pub struct TranscriptionResponse {
     pub text: String,
@@ -297,9 +273,10 @@ mod tests {
         )
         .expect("parse response");
 
-        assert_eq!(response.text(), "hello world");
-        assert_eq!(response.language(), None);
-        assert!(response.words().is_empty());
+        let CreateTranscriptionResponse::Standard(response) = response else {
+            panic!("expected a standard response");
+        };
+        assert_eq!(response.text, "hello world");
     }
 
     #[test]
@@ -322,9 +299,12 @@ mod tests {
         )
         .expect("parse verbose response");
 
-        assert_eq!(response.text(), "hello world");
-        assert_eq!(response.language(), Some("english"));
-        assert_eq!(response.words().len(), 2);
+        let CreateTranscriptionResponse::Verbose(response) = response else {
+            panic!("expected a verbose response");
+        };
+        assert_eq!(response.text, "hello world");
+        assert_eq!(response.language, "english");
+        assert_eq!(response.words.len(), 2);
     }
 
     #[test]
@@ -352,8 +332,10 @@ mod tests {
         )
         .expect("parse diarized response");
 
-        assert_eq!(response.text(), "Agent: hi");
-        assert!(response.words().is_empty());
+        let CreateTranscriptionResponse::Diarized(response) = response else {
+            panic!("expected a diarized response");
+        };
+        assert_eq!(response.text, "Agent: hi");
     }
 
     #[test]

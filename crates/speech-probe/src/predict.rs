@@ -226,14 +226,6 @@ pub fn power_advice(hardware: &Hardware) -> bool {
     hardware.power_plan == PowerPlan::PowerSaver || hardware.on_battery == Some(true)
 }
 
-/// Le plan d'alimentation ou le secteur ont changé depuis la sonde : la
-/// mesure est refaite, jamais extrapolée.
-pub fn needs_new_probe(previous: &Probe, now: &Hardware) -> bool {
-    previous.hardware.power_plan != now.power_plan
-        || previous.hardware.on_battery != now.on_battery
-        || previous.hardware.physical_cores != now.physical_cores
-}
-
 /// Sonde complète : contrôles statiques, puis micro-banc (environ
 /// `duration`) sur autant de fils que de cœurs physiques. `cancel` levé en
 /// cours : verdict `Interrupted`.
@@ -426,7 +418,7 @@ mod tests {
     }
 
     #[test]
-    fn power_saving_is_advised_and_triggers_a_new_probe() {
+    fn power_saving_is_advised() {
         let saving = Hardware {
             power_plan: PowerPlan::PowerSaver,
             ..hardware()
@@ -437,17 +429,5 @@ mod tests {
             ..hardware()
         }));
         assert!(!power_advice(&hardware()));
-        let previous = Probe {
-            engine: Engine::ParakeetOnnx,
-            hardware: saving,
-            bench: None,
-            predicted: None,
-            verdict: Verdict::Refuse {
-                reasons: vec![Refusal::TooSlow],
-            },
-            power_advice: true,
-        };
-        assert!(needs_new_probe(&previous, &hardware()));
-        assert!(!needs_new_probe(&previous, &previous.hardware.clone()));
     }
 }

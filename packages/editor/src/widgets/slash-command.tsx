@@ -1,23 +1,12 @@
 import {
-  autoUpdate,
-  computePosition,
-  flip,
-  limitShift,
-  offset,
-  shift,
-  type VirtualElement,
-} from "@floating-ui/dom";
-import {
-  useEditorEffect,
   useEditorEventCallback,
-  useEditorEventListener,
   useEditorState,
 } from "@handlewithcare/react-prosemirror";
 import { setBlockType } from "prosemirror-commands";
 import { wrapInList } from "prosemirror-schema-list";
 import type { EditorState, Transaction } from "prosemirror-state";
 import type { EditorView } from "prosemirror-view";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { createPortal } from "react-dom";
 
 import {
@@ -36,6 +25,8 @@ import { cn } from "@syntheo/utils";
 
 import { schema } from "../note/schema";
 import { createTaskItemAttrs } from "../tasks";
+import { useFloatingPopup } from "./use-floating-popup";
+import { useListKeyboard } from "./use-list-keyboard";
 
 // ---------------------------------------------------------------------------
 // Slash command items
@@ -256,8 +247,6 @@ function filterCommands(query: string): SlashCommandItem[] {
 // React component
 // ---------------------------------------------------------------------------
 export function SlashCommandMenu() {
-  const popupRef = useRef<HTMLDivElement>(null);
-  const cleanupRef = useRef<(() => void) | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [dismissedFrom, setDismissedFrom] = useState<number | null>(null);
 
@@ -284,71 +273,22 @@ export function SlashCommandMenu() {
     },
   );
 
-  useEditorEventListener("keydown", (_view, event) => {
-    if (!active || items.length === 0) return false;
-
-    if (event.key === "Escape") {
-      event.preventDefault();
+  useListKeyboard({
+    active,
+    items,
+    selectedIndex,
+    setSelectedIndex,
+    onDismiss: () => {
       if (slashState) {
         setDismissedFrom(slashState.from);
       }
-      return true;
-    }
-
-    if (event.key === "ArrowUp") {
-      event.preventDefault();
-      setSelectedIndex((prev) => (prev + items.length - 1) % items.length);
-      return true;
-    }
-
-    if (event.key === "ArrowDown") {
-      event.preventDefault();
-      setSelectedIndex((prev) => (prev + 1) % items.length);
-      return true;
-    }
-
-    if (event.key === "Enter") {
-      event.preventDefault();
-      const item = items[selectedIndex];
-      if (item) executeCommand(item);
-      return true;
-    }
-
-    return false;
+    },
+    onChoose: executeCommand,
   });
 
-  useEditorEffect((view) => {
-    if (!view || !active || items.length === 0) {
-      cleanupRef.current?.();
-      cleanupRef.current = null;
-      return;
-    }
-
-    const popup = popupRef.current;
-    if (!popup) return;
-
-    const coords = view.coordsAtPos(slashState!.from);
-    const referenceEl: VirtualElement = {
-      getBoundingClientRect: () =>
-        new DOMRect(coords.left, coords.top, 0, coords.bottom - coords.top),
-    };
-
-    const update = () => {
-      void computePosition(referenceEl, popup, {
-        placement: "bottom-start",
-        middleware: [offset(4), flip(), shift({ limiter: limitShift() })],
-      }).then(({ x, y }) => {
-        Object.assign(popup.style, {
-          left: `${x}px`,
-          top: `${y}px`,
-        });
-      });
-    };
-
-    cleanupRef.current?.();
-    cleanupRef.current = autoUpdate(referenceEl, popup, update);
-    update();
-  });
+  const popupRef = useFloatingPopup(
+    active && items.length > 0 ? slashState.from : null,
+  );
 
   if (!active || items.length === 0) return null;
 

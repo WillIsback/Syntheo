@@ -25,7 +25,6 @@ cpal = { workspace = true }
 dasp = { workspace = true }
 rodio = { workspace = true }
 
-ebur128 = "0.1.10"
 ringbuf = { workspace = true }
 
 [target.'cfg(target_os = "macos")'.dependencies]
@@ -43,6 +42,5 @@ hound = { workspace = true }
 rodio = { workspace = true }
 serial_test = { workspace = true }
 syntheo-audio-utils = { workspace = true }
-syntheo-data = { workspace = true }
 syntheo-resampler = { workspace = true }
 tokio = { workspace = true, features = ["test-util"] }

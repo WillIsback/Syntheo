@@ -328,7 +328,6 @@ fn make_specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             events::FloatingBarOpenMain,
             events::FloatingBarOverlayState,
             events::FloatingBarOverlayAmplitude,
-            events::LiveCaptionOverlayState,
             events::FloatingBarSettingsChange,
         ])
         .commands(tauri_specta::collect_commands![
@@ -348,10 +347,6 @@ fn make_specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             commands::floating_bar_update,
             commands::floating_bar_update_amplitude,
             commands::floating_bar_current_state,
-            commands::live_caption_show,
-            commands::live_caption_hide,
-            commands::live_caption_update,
-            commands::live_caption_current_state,
         ])
         .error_handling(tauri_specta::ErrorHandlingMode::Result)
 }
@@ -365,7 +360,6 @@ pub fn init() -> tauri::plugin::TauriPlugin<tauri::Wry> {
             specta_builder.mount_events(app);
 
             crate::window::floating_bar::set_app_handle(app.clone());
-            crate::window::live_caption::set_app_handle(app.clone());
 
             {
                 let ready_state = WindowReadyState::default();
@@ -513,18 +507,6 @@ mod test {
 
     #[test]
     fn export_types() {
-        const OUTPUT_FILE: &str = "./js/bindings.gen.ts";
-
-        make_specta_builder()
-            .disable_serde_phases()
-            .semantic_types(
-                specta_typescript::semantic::Configuration::empty().enable_lossless_floats(),
-            )
-            .dangerously_cast_bigints_to_number()
-            .export(specta_typescript::Typescript::default(), OUTPUT_FILE)
-            .unwrap();
-
-        let content = std::fs::read_to_string(OUTPUT_FILE).unwrap();
-        std::fs::write(OUTPUT_FILE, format!("// @ts-nocheck\n{content}")).unwrap();
+        syntheo_specta_export::write_bindings(make_specta_builder(), "./js/bindings.gen.ts");
     }
 }

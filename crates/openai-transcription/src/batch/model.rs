@@ -1,31 +1,6 @@
 use serde::{Deserialize, Serialize};
 use strum::{AsRefStr, Display, EnumString};
 
-use super::request::AudioResponseFormat;
-
-pub const MODEL_WHISPER_1: AudioModel = AudioModel::Whisper1;
-pub const MODEL_GPT_TRANSCRIBE: AudioModel = AudioModel::GptTranscribe;
-pub const MODEL_GPT_4O_TRANSCRIBE: AudioModel = AudioModel::Gpt4oTranscribe;
-pub const MODEL_GPT_4O_MINI_TRANSCRIBE: AudioModel = AudioModel::Gpt4oMiniTranscribe;
-pub const MODEL_GPT_4O_MINI_TRANSCRIBE_2025_12_15: AudioModel =
-    AudioModel::Gpt4oMiniTranscribe20251215;
-pub const MODEL_GPT_4O_TRANSCRIBE_DIARIZE: AudioModel = AudioModel::Gpt4oTranscribeDiarize;
-
-pub fn supports_timestamp_granularities(model: impl AsRef<str>) -> bool {
-    model
-        .as_ref()
-        .parse()
-        .is_ok_and(AudioModel::supports_timestamp_granularities)
-}
-
-pub fn default_response_format(model: impl AsRef<str>) -> AudioResponseFormat {
-    model
-        .as_ref()
-        .parse()
-        .map(AudioModel::default_response_format)
-        .unwrap_or(AudioResponseFormat::Json)
-}
-
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, EnumString, Display, AsRefStr,
 )]
@@ -48,23 +23,6 @@ pub enum AudioModel {
     #[serde(rename = "gpt-4o-transcribe-diarize")]
     #[strum(serialize = "gpt-4o-transcribe-diarize")]
     Gpt4oTranscribeDiarize,
-}
-
-impl AudioModel {
-    pub fn supports_timestamp_granularities(self) -> bool {
-        matches!(self, Self::Whisper1)
-    }
-
-    pub fn default_response_format(self) -> AudioResponseFormat {
-        match self {
-            Self::Whisper1 => AudioResponseFormat::VerboseJson,
-            Self::GptTranscribe
-            | Self::Gpt4oTranscribe
-            | Self::Gpt4oMiniTranscribe
-            | Self::Gpt4oMiniTranscribe20251215
-            | Self::Gpt4oTranscribeDiarize => AudioResponseFormat::Json,
-        }
-    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

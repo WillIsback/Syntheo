@@ -28,7 +28,6 @@ Default permissions for the fs-sync plugin
 - `allow-attachment-read`
 - `allow-attachment-remove`
 - `allow-folder-attachment-save`
-- `allow-folder-attachment-list`
 - `allow-folder-attachment-read`
 - `allow-folder-attachment-remove`
 
@@ -479,32 +478,6 @@ Enables the deserialize command without any pre-configured scope.
 <td>
 
 Denies the deserialize command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`fs-sync:allow-folder-attachment-list`
-
-</td>
-<td>
-
-Enables the folder_attachment_list command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`fs-sync:deny-folder-attachment-list`
-
-</td>
-<td>
-
-Denies the folder_attachment_list command without any pre-configured scope.
 
 </td>
 </tr>

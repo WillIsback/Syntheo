@@ -25,7 +25,6 @@ permissions = [
     "allow-attachment-read",
     "allow-attachment-remove",
     "allow-folder-attachment-save",
-    "allow-folder-attachment-list",
     "allow-folder-attachment-read",
     "allow-folder-attachment-remove",
 ]

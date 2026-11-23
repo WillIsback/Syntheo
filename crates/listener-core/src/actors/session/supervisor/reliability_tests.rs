@@ -4,7 +4,7 @@ use std::sync::Arc;
 use bytes::Bytes;
 use futures_util::{SinkExt, StreamExt};
 use ractor::{Actor, ActorRef, ActorStatus, registry};
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::mpsc;
 use tokio::time::{Duration, timeout};
 use tokio_tungstenite::{accept_async, tungstenite::Message};
 
@@ -158,91 +158,6 @@ async fn send_audio(listener: &ActorRef<ListenerMsg>) {
 enum StreamFailure {
     Silent,
     Unfinalized,
-}
-
-#[tokio::test]
-#[allow(
-    clippy::result_large_err,
-    reason = "Tungstenite requires an unboxed HTTP response in handshake callbacks"
-)]
-async fn refreshed_credentials_resume_live_transcription_after_authentication_failure() {
-    use tokio_tungstenite::tungstenite::handshake::server::{Request, Response};
-
-    let socket = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-    let address = socket.local_addr().unwrap();
-    let (rejected_tx, rejected_rx) = oneshot::channel();
-    let server = tokio::spawn(async move {
-        let (stream, _) = socket.accept().await.unwrap();
-        let rejected = tokio_tungstenite::accept_hdr_async(
-            stream,
-            |request: &Request, _response: Response| {
-                assert_eq!(request.headers()["authorization"], "Bearer test-key");
-                Err(Response::builder()
-                    .status(401)
-                    .body(Some("Expired".into()))
-                    .unwrap())
-            },
-        )
-        .await;
-        assert!(rejected.is_err());
-        rejected_tx.send(()).unwrap();
-        let (stream, _) = socket.accept().await.unwrap();
-        let mut ws =
-            tokio_tungstenite::accept_hdr_async(stream, |request: &Request, response: Response| {
-                assert_eq!(request.headers()["authorization"], "Bearer refreshed-token");
-                Ok(response)
-            })
-            .await
-            .unwrap();
-        while let Some(Ok(message)) = ws.next().await {
-            match message {
-                message if is_audio(&message) => {
-                    ws.send(response("recovered", true)).await.unwrap();
-                }
-                Message::Text(text) if text.contains("input_audio_buffer.commit") => {
-                    let _ = ws.close(None).await;
-                    break;
-                }
-                _ => {}
-            }
-        }
-    });
-    let vault = tempfile::tempdir().unwrap();
-    let (events_tx, mut events) = mpsc::unbounded_channel();
-    let mut ctx = test_ctx();
-    ctx.runtime = Arc::new(TranscriptRuntime { events: events_tx });
-    ctx.app_dir = vault.path().to_path_buf();
-    ctx.params.session_id = uuid::Uuid::new_v4().to_string();
-    ctx.params.base_url = format!("http://{address}/v1");
-    // Un seul flux : le protocole OpenAI ouvre une connexion par canal.
-    ctx.params.onboarding = true;
-    ctx.params.model = "cloud".into();
-    ctx.params.retain_audio = Some(false);
-    let session_id = ctx.params.session_id.clone();
-    let (supervisor, supervisor_task) = Actor::spawn(None, SessionActor, ctx).await.unwrap();
-    timeout(Duration::from_secs(10), rejected_rx)
-        .await
-        .unwrap()
-        .unwrap();
-    supervisor
-        .cast(SessionMsg::UpdateCredentials("refreshed-token".into()))
-        .unwrap();
-    let listener = wait_for_listener(&session_id, None).await;
-    send_audio(&listener).await;
-    wait_for_word(&mut events, "recovered").await;
-    supervisor.cast(SessionMsg::Shutdown).unwrap();
-    timeout(Duration::from_secs(10), supervisor_task)
-        .await
-        .unwrap()
-        .unwrap();
-    timeout(Duration::from_secs(5), server)
-        .await
-        .unwrap()
-        .unwrap();
-    assert_eq!(
-        audio_files_in(&vault.path().join(&session_id)),
-        Vec::<PathBuf>::new()
-    );
 }
 
 fn audio_files_in(dir: &std::path::Path) -> Vec<PathBuf> {

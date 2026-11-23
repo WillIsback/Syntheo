@@ -12,7 +12,7 @@ description = ""
 tauri-plugin = { workspace = true, features = ["build"] }
 
 [dev-dependencies]
-specta-typescript = { workspace = true }
+syntheo-specta-export = { workspace = true }
 tokio = { workspace = true, features = ["macros", "rt", "time"] }
 
 [dependencies]

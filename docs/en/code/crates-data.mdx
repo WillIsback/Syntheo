@@ -11,12 +11,12 @@ In the Cargo workspace, each crate is declared under a `syntheo-*` alias (for ex
 
 | Crate | Role | Used by | Affected doc pages |
 | --- | --- | --- | --- |
-| `crates/db-core` | Opening the SQLite database (sqlx) | CLI, desktop, plugins `db`, `local-api`, `session`, `template`, `transcription`, `contacts`, crates `agent-access`, `session-ingest` | [Data and privacy](/en/data-and-privacy) |
+| `crates/db-core` | Opening the SQLite database (sqlx) | CLI, desktop, plugins `db`, `local-api`, `session`, `template`, `transcription`, `contacts`, crate `agent-access` | [Data and privacy](/en/data-and-privacy) |
 | `crates/db-change` | Tracking modified tables | `db-core`, `db-reactive` | none |
 | `crates/db-execute` | Running SQL queries described in JSON | plugin `db`, `db-reactive` | none |
 | `crates/db-reactive` | "Live" queries replayed on each change | plugin `db` | none |
 | `crates/db-migrate` | Migration engine | `db-app`, `db-reactive`, plugin `db` | none |
-| `crates/db-app` | Schema, migrations and business operations on `app.db` | CLI, desktop, plugins `db`, `local-api`, `session`, `template`, `transcription`, `contacts`, crates `agent-access`, `session-ingest` | see [db-app](#db-app) |
+| `crates/db-app` | Schema, migrations and business operations on `app.db` | CLI, desktop, plugins `db`, `local-api`, `session`, `template`, `transcription`, `contacts`, crate `agent-access` | see [db-app](#db-app) |
 | `crates/storage` | Data folders and safe file writing | desktop, plugins `settings`, `store2`, `transcription`, crates `fs-sync-core`, `listener-core` | [Data and privacy](/en/data-and-privacy), [Uninstall](/en/uninstall) |
 | `crates/fs-sync-core` | Session folders, attachments and audio files on disk | plugin `fs-sync` | [Notes](/en/notes), [Import recordings](/en/import-recordings) |
 | `crates/fs-format` | JSON format of transcripts on disk | `fs-sync-core` | none |
@@ -38,10 +38,8 @@ In the Cargo workspace, each crate is declared under a `syntheo-*` alias (for ex
 | `crates/brand` | Product names and identifiers | desktop, plugins `store2`, `tray`, `windows`, crates `notification-linux`, `storage` | [Uninstall](/en/uninstall), [Data and privacy](/en/data-and-privacy) |
 | `crates/host` | CPU architecture, OS version, process termination | desktop | none |
 | `crates/user-error` | Recognizing errors caused by the user's account | plugin `tracing`, crates `listener2-core`, `owhisper-client` | none |
-| `crates/claude` | Driving the Claude Code CLI | `agent-core` | none |
-| `crates/codex` | Driving the Codex CLI | `agent-core` | none |
-| `crates/opencode` | Driving the OpenCode CLI | `agent-core` | none |
 | `crates/data` | Audio samples for tests | `audio-mock`; dev-dependency elsewhere | none |
+| `crates/specta-export` | Writing the tauri-specta TypeScript bindings | dev-dependency of the desktop app and plugins | none |
 
 ## Database
 
@@ -51,7 +49,7 @@ The `app.db` database is the heart of the data. The crates are organized in laye
 
 - **Path**: `crates/db-core`
 - **Role**: opens a SQLite pool and attaches a `ChangeNotifier` to it.
-- **API**: `Db` (`open`, `connect_local_read_write`, `connect_local_read_only`, `pool`, `change_notifier`), `DbOpenOptions`, `DbStorage`, `ManagedDb`.
+- **API**: `Db` (`open`, `connect_local_read_write`, `connect_local_read_only`, `pool`, `change_notifier`), `DbOpenOptions`, `DbStorage`, `ManagedDb`. Transaction helpers for the `session`, `template` and `contacts` plugins: `js_iso8601_timestamp`, `rollback_row_count_mismatch`, `rollback_error`.
 - **Internal dependencies**: `syntheo-db-change`.
 - **Note**: the CLI opens the database with `connect_local_read_only` (`apps/cli/src/db.rs`), which guarantees the read-only access described in [CLI for agents](/en/agents/cli).
 - **Affected doc pages**: [Data and privacy](/en/data-and-privacy), [CLI for agents](/en/agents/cli).
@@ -94,7 +92,7 @@ Don't describe product behavior from the raw SQL schema. Start from the operatio
 ### db-change, db-execute, db-reactive
 
 - **db-change** (`crates/db-change`): `ChangeNotifier`, `TableChange` and `TableChangeKind` report modified tables. No internal dependencies.
-- **db-execute** (`crates/db-execute`): `DbExecutor` runs a query, a "proxy" query or a transaction described in JSON (`TransactionStatement`). Depends on `syntheo-db-core`.
+- **db-execute** (`crates/db-execute`): `DbExecutor` runs a query, a "proxy" query or a transaction described in JSON (`TransactionStatement`). The transaction is rolled back explicitly on error, and in the background if the call is dropped. The `db` plugin uses it for `execute_transaction`. Depends on `syntheo-db-core`.
 - **db-reactive** (`crates/db-reactive`): `LiveQueryRuntime` extracts the tables read by a query (`extract_dependencies`, through `EXPLAIN`) and replays it when one of them changes. The `db` plugin exposes it through the `subscribe` and `unsubscribe` commands. Depends on `syntheo-db-core`, `syntheo-db-change`, `syntheo-db-execute`, `syntheo-db-migrate`.
 - **Affected doc pages**: none.
 
@@ -147,7 +145,7 @@ Don't describe product behavior from the raw SQL schema. Start from the operatio
 
 - **Path**: `crates/template-app`, templates in `crates/template-app/assets/*.md.jinja`.
 - **Role**: renders the prompts sent to the LLM. The templates are compiled with Askama.
-- **API**: `render(Template)`, enum `Template` (`EnhanceSystem`, `EnhanceUser`, `TitleSystem`, `TitleUser`, `ChatSystem`, `ContextBlock`, `ToolSearchSessions`, `ActivityCaptureSystem`, `DailySummarySystem`, `EventContactSystem`…), `EditableTemplate` (`EnhanceFormat`, `EnhanceUser`, `TitleUser`) and `template_source`.
+- **API**: `render(Template)`, enum `Template` (`EnhanceSystem`, `EnhanceUser`, `TitleSystem`, `TitleUser`, `ChatSystem`, `ContextBlock`), `EditableTemplate` (`EnhanceFormat`, `EnhanceUser`, `TitleUser`) and `template_source`.
 - **Internal dependencies**: `syntheo-askama-utils`.
 - **Note**: the `template` plugin exposes `render` and `get_template_source`. The interface reads the `enhanceFormat` source in the form of the "Automatic" template (`apps/desktop/src/templates/auto-form.tsx`).
 - **Affected doc pages**: [Customize summaries](/en/customize-summaries), [Notes](/en/notes), [Chat](/en/chat), [Languages](/en/languages).
@@ -173,7 +171,7 @@ Don't describe product behavior from the raw SQL schema. Start from the operatio
 
 | Crate | Platform | Content |
 | --- | --- | --- |
-| `crates/notification-interface` | all | Types `Notification`, `NotificationKey` (`mic_started`, `mic_stopped`), `NotificationEvent`, `NotificationLabels`. No internal dependencies. |
+| `crates/notification-interface` | all | Types `Notification`, `NotificationKey` (`mic_started`, `mic_stopped`), `NotificationEvent`, `NotificationLabels`, and the `callbacks` module (action handlers shared by the Linux and Windows backends). No internal dependencies. |
 | `crates/notification` | all | `show`, `clear` and the `setup_*_handler` handlers. Depends on `syntheo-notification-interface` and the platform backend. |
 | `crates/notification-linux` | Linux | GTK 3 window (`gtk`, `gdk`, `pango`). Depends on `syntheo-brand`, `syntheo-notification-interface`. |
 | `crates/notification-windows` | Windows | Win32 rendering (`windows` crate). Depends on `syntheo-notification-interface`. |
@@ -194,14 +192,7 @@ Don't describe product behavior from the raw SQL schema. Start from the operatio
 
 - **Affected doc pages**: see the Remarks column; none for `host`, `user-error`, `shortcut-macos`, `overlay-kit` and `bundle`.
 
-## Coding agent integrations
-
-`crates/claude`, `crates/codex` and `crates/opencode` drive the Claude Code, Codex and OpenCode CLIs: options, event streams, sessions or threads, installation check (`health_check_with_options`) and reading or writing their configuration. `codex` and `opencode` also expose deep links (`new_thread_deeplink`, `open_project_deeplink`).
-
-- **Internal dependencies**: `syntheo-cli-process` for all three.
-- **Usage**: only `crates/agent-core` uses them, to install a notification hook in each agent's configuration (`char … notify` command, inherited from Anarlog). `agent-core` itself has no user since the `agent` plugin was removed (#546): the four crates are kept, but nothing in the app calls them.
-- **Affected doc pages**: none. The skills installation described in [Skills](/en/agents/skills) doesn't go through these crates.
-
 ## Tooling and test data
 
-- **data** (`crates/data`): WAV audio samples (English and Korean) included at compile time. Regular dependency of `crates/audio-mock`, dev-dependency of `audio-actual`, `audio-utils`, `fs-sync-core`, `owhisper-client`, `resampler` and `vad`. Affected doc pages: none.
+- **data** (`crates/data`): English audio samples (WAV and other formats) included at compile time. Regular dependency of `crates/audio-mock`, dev-dependency of `audio-utils`, `fs-sync-core`, `owhisper-client`, `resampler` and `vad`. Affected doc pages: none.
+- **specta-export** (`crates/specta-export`): `write_bindings` writes the `bindings.gen.ts` file with the shared configuration; `assert_command_manifest_is_single_source` compares a plugin's command manifest with the generated bindings and permissions. Dev-dependency of the plugins that export bindings and of the desktop app, called by their `export_types` tests. Affected doc pages: none.

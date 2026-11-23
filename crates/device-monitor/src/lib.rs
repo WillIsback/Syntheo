@@ -24,12 +24,6 @@ pub enum DeviceUpdate {
     MuteChanged { device_uid: String, is_muted: bool },
 }
 
-#[derive(Debug, Clone)]
-pub enum DeviceEvent {
-    Switch(DeviceSwitch),
-    Update(DeviceUpdate),
-}
-
 pub(crate) enum EventOutput<T> {
     Unbounded(mpsc::Sender<T>),
     Bounded(mpsc::SyncSender<T>),
@@ -85,49 +79,28 @@ impl Drop for DeviceMonitorHandle {
 
 pub const DEFAULT_DEBOUNCE_DELAY: Duration = Duration::from_millis(1000);
 const MAX_RAW_SWITCH_EVENTS: usize = 3;
-const MAX_RAW_DEVICE_EVENTS: usize = 64;
 
 pub struct DeviceSwitchMonitor;
 
 impl DeviceSwitchMonitor {
-    pub fn spawn(event_tx: mpsc::Sender<DeviceSwitch>) -> DeviceMonitorHandle {
-        Self::spawn_with_debounce(event_tx, None)
-    }
-
-    pub fn spawn_debounced(event_tx: mpsc::Sender<DeviceSwitch>) -> DeviceMonitorHandle {
-        Self::spawn_with_debounce(event_tx, Some(DEFAULT_DEBOUNCE_DELAY))
-    }
-
     pub fn spawn_debounced_bounded(
         event_tx: mpsc::SyncSender<DeviceSwitch>,
     ) -> DeviceMonitorHandle {
-        Self::spawn_with_output(event_tx.into(), Some(DEFAULT_DEBOUNCE_DELAY))
-    }
-
-    pub fn spawn_with_debounce(
-        event_tx: mpsc::Sender<DeviceSwitch>,
-        debounce_delay: Option<Duration>,
-    ) -> DeviceMonitorHandle {
-        Self::spawn_with_output(event_tx.into(), debounce_delay)
+        Self::spawn_with_output(event_tx.into(), DEFAULT_DEBOUNCE_DELAY)
     }
 
     fn spawn_with_output(
         event_tx: EventOutput<DeviceSwitch>,
-        debounce_delay: Option<Duration>,
+        debounce_delay: Duration,
     ) -> DeviceMonitorHandle {
         let (stop_tx, stop_rx) = mpsc::channel();
         let (raw_tx, raw_rx) = mpsc::sync_channel(MAX_RAW_SWITCH_EVENTS);
 
-        match debounce_delay {
-            Some(delay) => {
-                debounce::spawn_debounced_by_key(delay, raw_rx, event_tx, |switch| match switch {
-                    DeviceSwitch::DefaultInputChanged => 0u8,
-                    DeviceSwitch::DefaultOutputChanged { .. } => 1u8,
-                    DeviceSwitch::DeviceListChanged => 2u8,
-                });
-            }
-            None => debounce::spawn_forwarder(raw_rx, event_tx),
-        }
+        debounce::spawn_debounced_by_key(debounce_delay, raw_rx, event_tx, |switch| match switch {
+            DeviceSwitch::DefaultInputChanged => 0u8,
+            DeviceSwitch::DefaultOutputChanged { .. } => 1u8,
+            DeviceSwitch::DeviceListChanged => 2u8,
+        });
 
         let thread_handle = std::thread::spawn(move || {
             #[cfg(target_os = "macos")]
@@ -143,100 +116,6 @@ impl DeviceSwitchMonitor {
             #[cfg(target_os = "windows")]
             {
                 windows::monitor_device_change(raw_tx, stop_rx);
-            }
-
-            #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
-            {
-                let _ = raw_tx;
-                tracing::warn!("device_monitoring_unsupported");
-                let _ = stop_rx.recv();
-            }
-        });
-
-        DeviceMonitorHandle {
-            stop_tx: Some(stop_tx),
-            thread_handle: Some(thread_handle),
-        }
-    }
-}
-
-pub struct DeviceUpdateMonitor;
-
-impl DeviceUpdateMonitor {
-    pub fn spawn(event_tx: mpsc::Sender<DeviceUpdate>) -> DeviceMonitorHandle {
-        let (stop_tx, stop_rx) = mpsc::channel();
-
-        let thread_handle = std::thread::spawn(move || {
-            #[cfg(target_os = "macos")]
-            {
-                macos::monitor_volume_mute(event_tx, stop_rx);
-            }
-
-            #[cfg(target_os = "linux")]
-            {
-                linux::monitor_volume_mute(event_tx, stop_rx);
-            }
-
-            #[cfg(target_os = "windows")]
-            {
-                windows::monitor_volume_mute(event_tx, stop_rx);
-            }
-
-            #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
-            {
-                let _ = event_tx;
-                tracing::warn!("device_monitoring_unsupported");
-                let _ = stop_rx.recv();
-            }
-        });
-
-        DeviceMonitorHandle {
-            stop_tx: Some(stop_tx),
-            thread_handle: Some(thread_handle),
-        }
-    }
-}
-
-pub struct DeviceMonitor;
-
-impl DeviceMonitor {
-    pub fn spawn(event_tx: mpsc::Sender<DeviceEvent>) -> DeviceMonitorHandle {
-        Self::spawn_with_debounce(event_tx, None)
-    }
-
-    pub fn spawn_debounced(event_tx: mpsc::Sender<DeviceEvent>) -> DeviceMonitorHandle {
-        Self::spawn_with_debounce(event_tx, Some(DEFAULT_DEBOUNCE_DELAY))
-    }
-
-    pub fn spawn_with_debounce(
-        event_tx: mpsc::Sender<DeviceEvent>,
-        debounce_delay: Option<Duration>,
-    ) -> DeviceMonitorHandle {
-        let (stop_tx, stop_rx) = mpsc::channel();
-        let (raw_tx, raw_rx) = mpsc::sync_channel(MAX_RAW_DEVICE_EVENTS);
-        let event_tx = EventOutput::Unbounded(event_tx);
-
-        match debounce_delay {
-            Some(delay) => {
-                debounce::spawn_device_event_debouncer(delay, raw_rx, event_tx);
-            }
-            None => debounce::spawn_forwarder(raw_rx, event_tx),
-        }
-
-        let thread_handle = std::thread::spawn(move || {
-            #[cfg(target_os = "macos")]
-            {
-                macos::monitor(raw_tx, stop_rx);
-            }
-
-            #[cfg(target_os = "linux")]
-            {
-                linux::monitor(raw_tx, stop_rx);
-            }
-
-            #[cfg(target_os = "windows")]
-            {
-                windows::monitor(raw_tx, stop_rx);
             }
 
             #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]

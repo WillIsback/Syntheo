@@ -23,14 +23,13 @@ In the `Cargo.toml` files, these crates are referenced by the workspace alias `s
 | `crates/audio-actual` | Real implementation (`ActualAudio`): microphone capture through `cpal`, system audio capture, echo cancellation and resynchronization. | `apps/desktop/src-tauri` |
 | `crates/audio-mock` | Fake provider `MockAudio`, which replays files from `syntheo-data`. | `apps/desktop/src-tauri`, only with the `dev` or `devtools` features |
 | `crates/audio-device` | Device enumeration and per-platform default choice (`backend()`, `AudioDeviceBackend`), handling of Bluetooth inputs and headset outputs. | `audio-actual`, `device-monitor`, `listener-core` |
-| `crates/device-monitor` | Watches device changes (`DeviceMonitor`, `DeviceSwitchMonitor`, `DeviceUpdateMonitor`) with a 1 s debounce. | `listener-core` |
+| `crates/device-monitor` | Watches device changes (`DeviceSwitchMonitor`) with a 1 s debounce. | `listener-core` |
 | `crates/audio-sync` | Measures the microphone / system audio offset (`GccPhatLagEstimator`, `SyncProbe`, which also tracks the clock drift between the two devices) and levels (`LevelAccumulator`, dBFS). | `audio-actual` |
 | `crates/aec` | Acoustic echo cancellation with an ONNX model (`AEC`, `BLOCK_SIZE`, `BLOCK_SHIFT`). `onnx` feature enabled by default. | `audio-actual` (`capture/echo_gate.rs`) |
 | `crates/audio-interface` | `AsyncSource` trait, abstraction of an asynchronous audio source. | `audio-actual`, `audio-utils`, `resampler` |
 | `crates/audio-utils` | PCM tools: decoding (`rodio`, `symphonia`), metadata, resampling, `f32` / `i16` conversion, chunking for STT (`chunk_size_for_stt`), playback (`open_default_playback_sink`). | `aec`, `audio-actual`, `audio-mock`, `listener-core`, `listener2-core`, `mp3`, `vad-masking`, `fs-sync-core`, `plugins/sfx` |
-| `crates/audio-mime` | One function: `content_type_to_extension`. | `audio-utils` |
 | `crates/resampler` | Block resampling (`RubatoChunkResampler`) on top of `rubato`. | `audio-actual`, `audio-utils` |
-| `crates/mp3` | Streaming or segmented MP3 and WAV encoding, in memory (`encode_mono_segments_in_memory`). | `listener2-core` (`batch/upload.rs`) |
+| `crates/mp3` | Streaming or segmented mono MP3 encoding, in memory (`encode_mono_segments_in_memory`), and MP3 decoding to WAV for the tests (`decode_to_wav`). | `listener2-core` (`batch/upload.rs`) |
 
 ### `crates/audio-actual`
 
@@ -64,7 +63,7 @@ In the `Cargo.toml` files, these crates are referenced by the workspace alias `s
 ### `crates/listener2-core`
 
 - **Role**: batch transcription of an imported file. `src/batch/` offers a simple mode and a progressive mode; `upload.rs` splits the audio into in-memory MP3 segments before sending.
-- **API**: `BatchRuntime`, `BatchParams`, `BatchEvent`, `BatchRunMode`; `is_supported_languages_live` / `_batch`, `suggest_providers_for_languages_live` / `_batch`; subtitle reading (`parse_subtitle_from_path`).
+- **API**: `BatchRuntime`, `BatchParams`, `BatchEvent`, `BatchRunMode`; `is_supported_languages_live` / `_batch`; subtitle reading (`parse_subtitle_from_path`).
 - **Internal dependencies**: `audio-utils`, `language`, `mp3`, `user-error`, `owhisper-client`, `owhisper-interface`.
 - **Affected doc pages**: [/en/import-recordings](/en/import-recordings), [/en/languages](/en/languages).
 
@@ -76,7 +75,7 @@ In the `Cargo.toml` files, these crates are referenced by the workspace alias `s
 
 ### `crates/supervisor`
 
-- **Role**: actor supervision: restart budget (`RestartBudget`, `RestartTracker`), retry with strategy (`RetryStrategy`, `spawn_with_retry`), dynamic supervisor (`dynamic`).
+- **Role**: actor supervision: restart budget (`RestartBudget`, `RestartTracker`), retry with strategy (`RetryStrategy`, `spawn_with_retry`).
 - **Used by**: `listener-core` (audio source restart).
 - **Affected doc pages**: [/en/meetings](/en/meetings) (recovery without restarting the capture).
 
@@ -102,7 +101,7 @@ In the `Cargo.toml` files, these crates are referenced by the workspace alias `s
 
 ### `crates/language`
 
-- **Role**: ISO 639-1 language codes (`ISO639`, `Language`), lists of supported languages (`whisper_multilingual`, `parakeet_tdt_v3_languages`), detection (`detect`, through `whatlang`) and dominant language of a text (`dominant_language`).
+- **Role**: ISO 639-1 language codes (`ISO639`, `Language`), lists of supported languages (`whisper_multilingual`), detection (`detect`, through `whatlang`) and dominant language of a text (`dominant_language`).
 - **Internal dependencies**: `whisper` (`whisper` feature, enabled by default).
 - **Used by**: `detect`, `listener-core`, `listener2-core`, `owhisper-client`, `owhisper-interface`, `plugins/tantivy`, `plugins/template` (`dominant_language` command), `plugins/transcription`.
 - **Affected doc pages**: [/en/languages](/en/languages).
@@ -153,9 +152,9 @@ No macOS build is published (see [Architecture](/en/architecture)). These crates
 
 | Crate | Role | Used by |
 | --- | --- | --- |
-| `crates/tcc` | Status, request and reset of TCC permissions (audio capture, screen capture, microphone). | `plugins/permissions`, only with the optional `private-tcc` feature |
-| `crates/intercept` | Force-quit handler and quit overlay (`setup_force_quit_handler`, `should_force_quit`, `show_quit_overlay`). Outside macOS, only the `should_force_quit` / `set_force_quit` flag is compiled. | `apps/desktop/src-tauri`, `plugins/tray`, `plugins/dock` (macOS) |
-| `crates/dictation-ui-macos` | Native dictation overlay (`show`, `hide`, `update_state`) and text insertion into the target app (`capture_target`, `insert_text`). | `plugins/dictation` (macOS-only dependency) |
+| `crates/tcc` | Status of the audio capture and screen capture TCC permissions, and screen capture request. | `plugins/permissions`, only with the optional `private-tcc` feature |
+| `crates/intercept` | Force-quit handler, with its quit overlay (`setup_force_quit_handler`, `should_force_quit`). Outside macOS, only the `should_force_quit` / `set_force_quit` flag is compiled. | `apps/desktop/src-tauri`, `plugins/tray`, `plugins/dock` (macOS) |
+| `crates/dictation-ui-macos` | Inserts the dictated text into the target app (`capture_target`, `insert_text`). | `plugins/dictation` (macOS-only dependency) |
 
 **Affected doc pages**: none, as long as macOS is not distributed.
 
@@ -163,8 +162,6 @@ No macOS build is published (see [Architecture](/en/architecture)). These crates
 
 | Crate | Role | Status | Affected doc pages |
 | --- | --- | --- | --- |
-| `crates/session-ingest` | Session import format (`SessionIngestEnvelope`, `IngestSession`, `IngestTranscript`…) and applying it to the database (`apply_session_envelope`, `apply` feature). | Exposed by the `apply_session_ingest` command of `plugins/db`. No call found in `apps/desktop/src`. | none |
-| `crates/gbnf` | `Grammar` enum that produces GBNF grammars (`build`). | Only registered as a `specta` type by `plugins/template`. | none |
 | `crates/audacity` | Writes Audacity projects (`Project`, `Track`, `Bundle`) to inspect tracks. | Test tool: dev dependency of `aec` and `vad-masking`. | none |
 | `crates/audio-snapshot` | Spectral fingerprints and audio non-regression assertions (`compute_snapshot`, `assert_or_update`). | Test tool: dev dependency of `aec`. | none |
 

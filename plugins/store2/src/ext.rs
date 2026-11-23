@@ -203,31 +203,4 @@ impl<R: tauri::Runtime, K: ScopedStoreKey> ScopedStore<R, K> {
         self.store.set(&self.scope, json_string);
         save_store_locked(&self.store, &self.path)
     }
-
-    pub fn delete(&self, key: K) -> Result<(), crate::Error> {
-        let _guard = STORE_WRITE_LOCK.lock().unwrap();
-
-        let mut sub_store = match self.store.get(&self.scope) {
-            Some(v) => match v.as_str() {
-                Some(s) => serde_json::from_str::<serde_json::Value>(s)?,
-                None => return Ok(()),
-            },
-            None => return Ok(()),
-        };
-
-        if let Some(obj) = sub_store.as_object_mut() {
-            obj.remove(key.to_string().as_str());
-        }
-
-        let json_string = serde_json::to_string(&sub_store)?;
-        self.store.set(&self.scope, json_string);
-        save_store_locked(&self.store, &self.path)
-    }
-
-    pub fn clear(&self) -> Result<(), crate::Error> {
-        let _guard = STORE_WRITE_LOCK.lock().unwrap();
-
-        self.store.delete(&self.scope);
-        save_store_locked(&self.store, &self.path)
-    }
 }

@@ -1,6 +1,10 @@
 import type { ChatModeState } from "./chat-mode";
-import type { NavigationState, TabHistory } from "./navigation";
-import { pushHistory, updateHistoryCurrent } from "./navigation";
+import {
+  pushHistory,
+  updateHistoryCurrent,
+  type NavigationState,
+  type TabHistory,
+} from "./navigation";
 import {
   getDefaultState,
   isSameTab,

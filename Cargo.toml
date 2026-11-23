@@ -37,23 +37,18 @@ members = [
 keyring = "4.1.4"
 syntheo-aec = { path = "crates/aec", package = "aec" }
 syntheo-agent-access = { path = "crates/agent-access", package = "agent-access" }
-syntheo-agent-core = { path = "crates/agent-core", package = "agent-core" }
 syntheo-askama-utils = { path = "crates/askama-utils", package = "askama-utils" }
 syntheo-audacity = { path = "crates/audacity", package = "audacity" }
 syntheo-audio = { path = "crates/audio", package = "audio" }
 syntheo-audio-actual = { path = "crates/audio-actual", package = "audio-actual" }
 syntheo-audio-device = { path = "crates/audio-device", package = "audio-device" }
 syntheo-audio-interface = { path = "crates/audio-interface", package = "audio-interface" }
-syntheo-audio-mime = { path = "crates/audio-mime", package = "audio-mime" }
 syntheo-audio-mock = { path = "crates/audio-mock", package = "audio-mock" }
 syntheo-audio-snapshot = { path = "crates/audio-snapshot", package = "audio-snapshot" }
 syntheo-audio-sync = { path = "crates/audio-sync", package = "audio-sync" }
 syntheo-audio-utils = { path = "crates/audio-utils", package = "audio-utils" }
 syntheo-brand = { path = "crates/brand", package = "brand" }
 syntheo-bundle = { path = "crates/bundle", package = "bundle" }
-syntheo-claude = { path = "crates/claude", package = "claude" }
-syntheo-cli-process = { path = "crates/cli-process", package = "cli-process" }
-syntheo-codex = { path = "crates/codex", package = "codex" }
 syntheo-data = { path = "crates/data", package = "data" }
 syntheo-db-app = { path = "crates/db-app", package = "db-app" }
 syntheo-db-change = { path = "crates/db-change", package = "db-change" }
@@ -68,7 +63,6 @@ syntheo-export-core = { path = "crates/export-core", package = "export-core" }
 syntheo-frontmatter = { path = "crates/frontmatter", package = "frontmatter" }
 syntheo-fs-format = { path = "crates/fs-format", package = "fs-format" }
 syntheo-fs-sync-core = { path = "crates/fs-sync-core", package = "fs-sync-core" }
-syntheo-gbnf = { path = "crates/gbnf", package = "gbnf" }
 syntheo-host = { path = "crates/host", package = "host" }
 syntheo-image-hash = { path = "crates/image-hash", package = "image-hash" }
 syntheo-intercept = { path = "crates/intercept", package = "intercept" }
@@ -80,12 +74,11 @@ syntheo-mp3 = { path = "crates/mp3", package = "mp3" }
 syntheo-notification = { path = "crates/notification", package = "notification" }
 syntheo-notification-interface = { path = "crates/notification-interface", package = "notification-interface" }
 syntheo-onnx = { path = "crates/onnx", package = "onnx" }
-syntheo-opencode = { path = "crates/opencode", package = "opencode" }
 syntheo-overlay-kit = { path = "crates/overlay-kit", package = "overlay-kit" }
 syntheo-pinned-fetch = { path = "crates/pinned-fetch", package = "pinned-fetch" }
 syntheo-resampler = { path = "crates/resampler", package = "resampler" }
-syntheo-session-ingest = { path = "crates/session-ingest", package = "session-ingest" }
 syntheo-shortcut-macos = { path = "crates/shortcut-macos", package = "shortcut-macos" }
+syntheo-specta-export = { path = "crates/specta-export", package = "specta-export" }
 syntheo-speech-host = { path = "crates/speech-host", package = "speech-host" }
 syntheo-speech-probe = { path = "crates/speech-probe", package = "speech-probe" }
 syntheo-speech-sources = { path = "crates/speech-sources", package = "speech-sources" }
@@ -203,7 +196,6 @@ shellexpand = "3"
 strum = "0.28"
 tempfile = "3"
 thiserror = "2"
-toml = "0.8"
 unicode-normalization = "0.1.25"
 unicode-width = "0.2"
 url = "2"
@@ -247,7 +239,7 @@ tauri-specta = "=2.0.0-rc.26"
 
 cidre = { version = "0.15", default-features = false, features = ["app", "async", "av", "ax", "blocks", "cm", "core_audio", "dispatch", "io_kit", "io_pm", "macos_15_0"] }
 cpal = "0.17"
-dasp = { version = "0.11.0", features = ["interpolate", "interpolate-linear"] }
+dasp = "0.11.0"
 earshot = "0.1.0"
 hound = "3.5.1"
 macos-accessibility-client = "0.0.2"

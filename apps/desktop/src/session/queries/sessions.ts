@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { useCallback } from "react";
 
 import { md2json } from "@syntheo/editor/markdown";
 import { toast } from "@syntheo/ui/components/ui/toast";
@@ -11,6 +11,7 @@ import type {
 } from "./types";
 
 import { executeTransaction, liveQueryClient, useLiveQuery } from "~/db";
+import { useHeldLiveQueryRows } from "~/db/held-live-query-rows";
 import { enqueueDatabaseWrite } from "~/db/write-queue";
 import { isLockedFlag } from "~/lock/flag";
 
@@ -425,22 +426,6 @@ function offerLateFilingRegeneration(
     .catch((error) => {
       console.error("[late-filing] failed to check the folder template", error);
     });
-}
-
-function useHeldLiveQueryRows<T>(
-  data: T[] | undefined,
-  empty: T[],
-  enabled: boolean,
-): T[] {
-  const previous = useRef(empty);
-  if (data !== undefined) {
-    previous.current = data;
-  }
-  if (!enabled) {
-    previous.current = empty;
-    return empty;
-  }
-  return data ?? previous.current;
 }
 
 function mapSessionRow(row: SessionSqlRow): SessionRecord {

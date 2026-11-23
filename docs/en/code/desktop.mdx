@@ -42,7 +42,7 @@ Commands exposed to the interface (`commands.rs`): `get_onboarding_needed`, `set
 | --- | --- |
 | `routes/app/main/_layout*.tsx` | Main window: tabs (notes, settings, templates, contacts, folders, automations…), layout in `main/` and `shared/main/`. |
 | `routes/app/note.$sessionId.tsx` | Note opened in its own window. |
-| `routes/app/floating-bar.tsx`, `live-caption.tsx` | Floating meeting bar and live captions (`meeting-float/`). |
+| `routes/app/floating-bar.tsx` | Floating meeting bar (`meeting-float/`). |
 | `routes/app/composer.tsx` | Quick chat window (`composer/`). |
 | `routes/app/onboarding.tsx` | First launch (`onboarding/`). |
 | `routes/app/instruction.tsx` | "Continue in the browser" screen; sign-in, billing and cloud integrations are gone. |
@@ -69,7 +69,7 @@ Tab types are in `store/zustand/tabs/schema.ts`. The old `calendar` and `task` t
 | `folders/`, `sidebar/` | Folders as project spaces (`folders/project/`: common thread, next meeting and agenda, per-folder template, folder suggestion) and sidebar (folder tree, settings navigation, server status). | no dedicated plugin | [/en/folders](/en/folders), [/en/notes](/en/notes) |
 | `home/` | Home: notes index, start button, export. | no dedicated plugin | [/en/quickstart](/en/quickstart), [/en/notes](/en/notes) |
 | `search/` | Full-text search (`contexts/engine`). | `plugin-tantivy` | [/en/notes](/en/notes) |
-| `meeting-float/` | Floating bar and live captions during capture. | `plugin-windows`, `plugin-transcription` | [/en/meetings](/en/meetings), [/en/automatic-capture](/en/automatic-capture) |
+| `meeting-float/` | Floating bar during capture. | `plugin-windows`, `plugin-transcription` | [/en/meetings](/en/meetings), [/en/automatic-capture](/en/automatic-capture) |
 | `lock/` | Locking the app and notes with device authentication. | `plugin-local-auth` | [/en/security](/en/security), [/en/data-and-privacy](/en/data-and-privacy) |
 | `onboarding/` | First launch: configuration, permissions, welcome note. | `plugin-permissions` | [/en/quickstart](/en/quickstart), [/en/ai-setup](/en/ai-setup) |
 | `settings/` | Settings, detailed below. | see below | see below |

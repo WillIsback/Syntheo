@@ -3,7 +3,7 @@ use specta::Type;
 use sqlx::SqlitePool;
 
 use crate::contacts::{ContactKind, run_write};
-use crate::transaction_utils::js_iso8601_timestamp;
+use syntheo_db_core::js_iso8601_timestamp;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
 pub struct UpdateHumanRequest {

@@ -45,7 +45,7 @@ The "Interface" column shows whether `apps/desktop/src` imports the `@syntheo/pl
 | `local-api` | Outgoing webhooks, Markdown export | Yes | [/en/reference/webhooks](/en/reference/webhooks), [/en/automations](/en/automations) |
 | `settings` | Settings file and base folders | Yes | [/en/data-and-privacy](/en/data-and-privacy) |
 | `store2` | Key-value preferences and secrets in the keychain | Yes | [/en/security](/en/security), [/en/ai-setup](/en/ai-setup), [/en/data-and-privacy](/en/data-and-privacy), [/en/uninstall](/en/uninstall) |
-| `windows` | Windows, tabs, floating bar, live captions | Yes | [/en/automatic-capture](/en/automatic-capture), [/en/meetings](/en/meetings) |
+| `windows` | Windows, tabs, floating bar | Yes | [/en/automatic-capture](/en/automatic-capture), [/en/meetings](/en/meetings) |
 | `tray` | Notification area icon and menu | Yes | none |
 | `notification` | Interactive native notifications | Yes | [/en/automatic-capture](/en/automatic-capture) |
 | `notify` | Watching the data folder files | No (Rust only, used by `fs-sync`) | none |
@@ -69,8 +69,8 @@ The "Interface" column shows whether `apps/desktop/src` imports the `@syntheo/pl
 - **Role**: drives microphone and system audio capture, live transcription, batch transcription of imported files and retention of audio segments waiting to be sent. It is the plugin the interface uses most.
 - **Main commands**:
   - Devices and levels: `list_microphone_devices`, `list_speaker_devices`, `start_microphone_level_monitor`, `set_mic_muted`, `set_speaker_muted`.
-  - Capture: `start_capture`, `stop_capture`, `stop_capture_for_session`, `retry_audio_capture`, `update_capture_config`, `update_capture_credentials`, `get_capture_state`, `get_capture_snapshot`, `get_capture_audio_gaps`.
-  - Recovery after a stop: `list_stopped_captures`, `list_capture_recoveries`, lifecycle markers (`save_capture_lifecycle_marker`…).
+  - Capture: `start_capture`, `stop_capture`, `stop_capture_for_session`, `retry_audio_capture`, `update_capture_config`, `get_capture_state`, `get_capture_snapshot`, `get_capture_audio_gaps`.
+  - Recovery after a stop: `list_capture_recoveries`, lifecycle markers (`save_capture_lifecycle_marker`…).
   - Live transcription: `flush_live_transcript`, `render_transcript_segments`, `render_session_transcript`.
   - Batch and import: `start_transcription`, `stop_transcription`, `begin_audio_upload`, `append_audio_upload`, `save_batch_transcript`, `reconcile_refined_speaker_clusters`.
   - Subtitles: `parse_subtitle`.
@@ -85,7 +85,7 @@ The "Interface" column shows whether `apps/desktop/src` imports the `@syntheo/pl
 
 - **Path**: `plugins/dictation`
 - **Role**: records the voice, sends it to the STT server and inserts the text into the active app. Insertion has a Linux implementation and a Windows one (`src/insertion/`).
-- **Commands**: `show`, `hide`, `set_phase`, `update_amplitude`, `start_recording`, `start_system_recording`, `stop_recording`, `cancel_recording`, `capture_target`, `insert_text`.
+- **Commands**: `start_recording`, `start_system_recording`, `stop_recording`, `cancel_recording`, `capture_target`, `insert_text`.
 - **Internal dependencies**: `crates/owhisper-client`, `crates/owhisper-interface`, `crates/audio`.
 - **Affected doc pages**: [/en/dictation](/en/dictation).
 
@@ -111,8 +111,8 @@ The "Interface" column shows whether `apps/desktop/src` imports the `@syntheo/pl
 
 - **Path**: `plugins/db`
 - **Role**: exposes the SQLite database to the interface. Applies migrations, runs queries and pushes changes to subscribers.
-- **Commands**: `execute`, `execute_transaction`, `execute_proxy`, `subscribe`, `unsubscribe`, `list_meetings`, `get_meeting`, `get_meeting_transcript`, `get_recurring_meeting_history`, `apply_session_ingest`, `get_startup_status`, `wait_until_ready`.
-- **Internal dependencies**: `crates/db-core`, `crates/db-app`, `crates/db-execute`, `crates/db-migrate`, `crates/db-reactive`, `crates/session-ingest`, `crates/agent-access`.
+- **Commands**: `execute`, `execute_transaction`, `execute_proxy`, `subscribe`, `unsubscribe`, `list_meetings`, `get_meeting`, `get_meeting_transcript`, `get_recurring_meeting_history`, `get_startup_status`, `wait_until_ready`.
+- **Internal dependencies**: `crates/db-core`, `crates/db-app`, `crates/db-execute`, `crates/db-migrate`, `crates/db-reactive`, `crates/agent-access`.
 - **Consumers**: `packages/db-tauri` and the interface; the `session`, `contacts`, `template`, `export`, `local-api` and `transcription` plugins depend on it on the Rust side.
 - **Affected doc pages**: [/en/meetings](/en/meetings), [/en/notes](/en/notes), [/en/data-and-privacy](/en/data-and-privacy).
 
@@ -121,7 +121,7 @@ The "Interface" column shows whether `apps/desktop/src` imports the `@syntheo/pl
 - **Path**: `plugins/session`
 - **Role**: transactional writes on notes and folders.
 - **Commands**: `create_session`, `soft_delete_session`, `restore_deleted_session`, `add_session_participant`, `remove_session_participant`, `persist_chat_session_proposal`, `set_session_proposal_status`, `resolve_session_conflicts`, `move_session_contents`, attachments and audio catalog (`catalog_note_attachment`, `catalog_session_audio`, `tombstone_session_audio`…), folder catalog (`ensure_folder_catalog`, `rename_folder_catalog`, `update_folder_instructions`, `update_folder_icon`…).
-- **Internal dependencies**: `crates/db-app`; plugin `db`.
+- **Internal dependencies**: `crates/db-app`, `crates/db-core`; plugin `db`.
 - **Affected doc pages**: [/en/notes](/en/notes), [/en/meetings](/en/meetings), [/en/chat](/en/chat) (proposals from the chat).
 
 ### `template`
@@ -129,14 +129,14 @@ The "Interface" column shows whether `apps/desktop/src` imports the `@syntheo/pl
 - **Path**: `plugins/template`
 - **Role**: renders Jinja prompts and saves the generation result.
 - **Commands**: `render`, `get_template_source`, `summary_length_policy`, `dominant_language`, `prepare_generated_summary`, `compose_generated_summary`, `save_generated_summary`, `save_generated_title`, `apply_session_content_corrections`.
-- **Internal dependencies**: `crates/template-app`, `crates/summary`, `crates/gbnf`, `crates/language`, `crates/db-app`; plugin `db`.
+- **Internal dependencies**: `crates/template-app`, `crates/summary`, `crates/language`, `crates/db-app`, `crates/db-core`; plugin `db`.
 - **Affected doc pages**: [/en/customize-summaries](/en/customize-summaries), [/en/languages](/en/languages) (language of summaries and titles), [/en/chat](/en/chat).
 
 ### Other data plugins
 
 | Plugin | Commands and events | Internal dependencies | Affected doc pages |
 | --- | --- | --- | --- |
-| `contacts` | `create_human`, `create_organization`, `save_personal_contact`, `update_human`, `update_organization`, `soft_delete_contact`, `update_contact_avatar`, `toggle_contact_pin`, `reorder_pinned_contacts`, `merge_humans` | `crates/db-app`; plugin `db` | [/en/contacts](/en/contacts) |
+| `contacts` | `create_human`, `create_organization`, `save_personal_contact`, `update_human`, `update_organization`, `soft_delete_contact`, `update_contact_avatar`, `toggle_contact_pin`, `reorder_pinned_contacts`, `merge_humans` | `crates/db-app`, `crates/db-core`; plugin `db` | [/en/contacts](/en/contacts) |
 | `fs-sync` | Notes and folders (`list_folders`, `create_folder`, `rename_folder`, `delete_folder`, `move_session`, `load_session_content`), document batches (`write_document_batch`), attachments (`attachment_*`, `folder_attachment_*`), imported audio (`audio_import`, `audio_has_speech`, `audio_delete`…); event `AudioImportEvent` | `crates/fs-sync-core`; plugins `notify`, `settings` | [/en/notes](/en/notes), [/en/import-recordings](/en/import-recordings), [/en/data-and-privacy](/en/data-and-privacy) |
 | `tantivy` | `search` | `crates/language`; plugin `settings` | [/en/notes](/en/notes) (search palette), [/en/architecture](/en/architecture) |
 | `export` | `export`, `export_text`, `choose_export_path`, `print_pdf`, `cleanup_print_files` | `crates/export-core`; plugin `db` | [/en/notes](/en/notes) |
@@ -149,9 +149,9 @@ The "Interface" column shows whether `apps/desktop/src` imports the `@syntheo/pl
 ### `windows`
 
 - **Path**: `plugins/windows`
-- **Role**: opens, hides and animates windows and tabs, and drives two overlay windows: the floating bar and the live captions.
-- **Commands**: `window_show`, `window_hide`, `window_emit_navigate`, `window_save_frame`, `window_restore_frame_animated`, `set_show_app_in_dock`, `webview_health_ack`, `floating_bar_show`, `floating_bar_hide`, `floating_bar_update`, `live_caption_show`, `live_caption_hide`, `live_caption_update`.
-- **Events**: `Navigate`, `OpenTab`, `WindowDestroyed`, `VisibilityEvent`, `WebviewHealthCheck`, `FloatingBarStop`, `FloatingBarDictationAction`, `FloatingBarListeningAction`, `FloatingBarOpenMain`, `FloatingBarSettingsChange`, `LiveCaptionOverlayState`…
+- **Role**: opens, hides and animates windows and tabs, and drives the floating bar overlay window.
+- **Commands**: `window_show`, `window_hide`, `window_emit_navigate`, `window_save_frame`, `window_restore_frame_animated`, `set_show_app_in_dock`, `webview_health_ack`, `floating_bar_show`, `floating_bar_hide`, `floating_bar_update`.
+- **Events**: `Navigate`, `OpenTab`, `WindowDestroyed`, `VisibilityEvent`, `WebviewHealthCheck`, `FloatingBarStop`, `FloatingBarDictationAction`, `FloatingBarListeningAction`, `FloatingBarOpenMain`, `FloatingBarSettingsChange`…
 - **Internal dependencies**: `crates/brand`.
 - **Affected doc pages**: [/en/automatic-capture](/en/automatic-capture) ("Keep the controls at hand"), [/en/meetings](/en/meetings).
 

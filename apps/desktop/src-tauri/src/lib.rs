@@ -196,7 +196,7 @@ pub fn main() {
         .plugin(
             tauri_plugin_window_state::Builder::default()
                 .with_state_flags(tauri_plugin_windows::persisted_window_state_flags())
-                .with_denylist(&["composer", "dictation-overlay"])
+                .with_denylist(&["composer"])
                 .build(),
         )
         .plugin(tauri_plugin_transcription::init_with(
@@ -331,8 +331,6 @@ pub fn main() {
                 app_handle.on_menu_event(|app, event| {
                     if let Ok(item) = SyntheoMenuItem::try_from(event.id().clone()) {
                         item.handle(app);
-                    } else {
-                        tauri_plugin_tray::handle_agenda_menu_event(app, event.id());
                     }
                 });
             }
@@ -644,18 +642,9 @@ mod test {
 
     #[test]
     fn export_types() {
-        const OUTPUT_FILE: &str = "../src/types/tauri.gen.ts";
-
-        make_specta_builder::<tauri::Wry>()
-            .disable_serde_phases()
-            .semantic_types(
-                specta_typescript::semantic::Configuration::empty().enable_lossless_floats(),
-            )
-            .dangerously_cast_bigints_to_number()
-            .export(specta_typescript::Typescript::default(), OUTPUT_FILE)
-            .unwrap();
-
-        let content = std::fs::read_to_string(OUTPUT_FILE).unwrap();
-        std::fs::write(OUTPUT_FILE, format!("// @ts-nocheck\n{content}")).unwrap();
+        syntheo_specta_export::write_bindings(
+            make_specta_builder::<tauri::Wry>(),
+            "../src/types/tauri.gen.ts",
+        );
     }
 }

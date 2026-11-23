@@ -15,9 +15,6 @@ func rustOnDismiss(_: UnsafePointer<CChar>, _: Int32) {}
 @_cdecl("rust_on_collapsed_timeout")
 func rustOnCollapsedTimeout(_: UnsafePointer<CChar>, _: Int32) {}
 
-@_cdecl("rust_on_expanded_start_time_reached")
-func rustOnExpandedStartTimeReached(_: UnsafePointer<CChar>, _: Int32) {}
-
 @_cdecl("rust_on_option_selected")
 func rustOnOptionSelected(_: UnsafePointer<CChar>, _: Int32) {}
 

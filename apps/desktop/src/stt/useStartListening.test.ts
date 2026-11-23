@@ -121,9 +121,7 @@ vi.mock("@syntheo/plugin-transcription", () => ({
       data: null,
     })),
     deleteTranscribedCaptureAudio: m.deleteTranscribedCaptureAudio,
-    updateCaptureCredentials: vi.fn(async () => ({ status: "ok", data: null })),
     getCaptureSnapshot: m.getCaptureSnapshot,
-    listStoppedCaptures: vi.fn(async () => ({ status: "ok", data: [] })),
   },
   events: {
     captureLifecycleEvent: { listen: vi.fn(async () => () => {}) },

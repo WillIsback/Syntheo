@@ -39,50 +39,6 @@ pub fn is_supported_languages_batch(
     Ok(adapter_kind.is_supported_languages_batch(languages, model))
 }
 
-pub fn suggest_providers_for_languages_live(
-    languages: &[syntheo_language::Language],
-) -> Vec<String> {
-    let all_providers = [AdapterKind::OpenAI, AdapterKind::Nvidia];
-
-    let mut with_support: Vec<_> = all_providers
-        .iter()
-        .map(|kind| {
-            let support = kind.language_support_live(languages, None);
-            (*kind, support)
-        })
-        .filter(|(_, support)| support.is_supported())
-        .collect();
-
-    with_support.sort_by(|(_, s1), (_, s2)| s2.cmp(s1));
-
-    with_support
-        .into_iter()
-        .map(|(kind, _)| kind.to_string())
-        .collect()
-}
-
-pub fn suggest_providers_for_languages_batch(
-    languages: &[syntheo_language::Language],
-) -> Vec<String> {
-    let all_providers = [AdapterKind::OpenAI];
-
-    let mut with_support: Vec<_> = all_providers
-        .iter()
-        .map(|kind| {
-            let support = kind.language_support_batch(languages, None);
-            (*kind, support)
-        })
-        .filter(|(_, support)| support.is_supported())
-        .collect();
-
-    with_support.sort_by(|(_, s1), (_, s2)| s2.cmp(s1));
-
-    with_support
-        .into_iter()
-        .map(|(kind, _)| kind.to_string())
-        .collect()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -94,13 +50,5 @@ mod tests {
         assert!(is_supported_languages_batch("openai", Some("whisper-large-v3"), &french).unwrap());
         assert!(!is_supported_languages_batch("nvidia", None, &french).unwrap());
         assert!(is_supported_languages_live("soniqo", None, &french).is_err());
-    }
-
-    #[test]
-    fn openai_protocol_is_suggested_for_french() {
-        let french = vec!["fr-FR".parse().unwrap()];
-
-        assert!(suggest_providers_for_languages_live(&french).contains(&"openai".to_string()));
-        assert!(suggest_providers_for_languages_batch(&french).contains(&"openai".to_string()));
     }
 }

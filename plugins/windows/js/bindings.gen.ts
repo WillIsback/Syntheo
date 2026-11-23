@@ -22,10 +22,6 @@ export const commands = {
 	floatingBarUpdate: (state: FloatingBarState) => typedError<null, string>(__TAURI_INVOKE("plugin:windows|floating_bar_update", { state })),
 	floatingBarUpdateAmplitude: (amplitude: number) => typedError<null, string>(__TAURI_INVOKE("plugin:windows|floating_bar_update_amplitude", { amplitude })),
 	floatingBarCurrentState: () => typedError<FloatingBarState | null, string>(__TAURI_INVOKE("plugin:windows|floating_bar_current_state")),
-	liveCaptionShow: () => typedError<null, string>(__TAURI_INVOKE("plugin:windows|live_caption_show")),
-	liveCaptionHide: () => typedError<null, string>(__TAURI_INVOKE("plugin:windows|live_caption_hide")),
-	liveCaptionUpdate: (state: LiveCaptionState) => typedError<null, string>(__TAURI_INVOKE("plugin:windows|live_caption_update", { state })),
-	liveCaptionCurrentState: () => typedError<LiveCaptionState | null, string>(__TAURI_INVOKE("plugin:windows|live_caption_current_state")),
 };
 
 /** Events */
@@ -37,7 +33,6 @@ export const events = {
 	floatingBarOverlayState: makeEvent<FloatingBarOverlayState, FloatingBarOverlayState>("plugin:windows:floating-bar-overlay-state"),
 	floatingBarSettingsChange: makeEvent<FloatingBarSettingsChange, FloatingBarSettingsChange>("plugin:windows:floating-bar-settings-change"),
 	floatingBarStop: makeEvent<FloatingBarStop, FloatingBarStop>("plugin:windows:floating-bar-stop"),
-	liveCaptionOverlayState: makeEvent<LiveCaptionOverlayState, LiveCaptionOverlayState>("plugin:windows:live-caption-overlay-state"),
 	navigate: makeEvent<Navigate, Navigate>("plugin:windows:navigate"),
 	openTab: makeEvent<OpenTab, OpenTab>("plugin:windows:open-tab"),
 	visibilityEvent: makeEvent<VisibilityEvent, VisibilityEvent>("plugin:windows:visibility-event"),
@@ -166,20 +161,7 @@ export type FloatingTranscriptBubble = {
 
 export type ListeningPanelAction = "pause" | "resume" | "muteMic" | "unmuteMic";
 
-export type LiveCaptionOverlayState = {
-	state: LiveCaptionState,
-};
-
 export type LiveCaptionPosition = "topCenter" | "topLeft" | "topRight" | "bottomLeft" | "bottomRight" | "bottomCenter";
-
-export type LiveCaptionState = {
-	text: string,
-	opacity: number,
-	width: number,
-	lineCount: number,
-	position: LiveCaptionPosition,
-	minimized: boolean,
-};
 
 export type Navigate = {
 	path: string,

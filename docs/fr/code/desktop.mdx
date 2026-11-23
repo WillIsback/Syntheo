@@ -42,7 +42,7 @@ Commandes exposées à l'interface (`commands.rs`) : `get_onboarding_needed`, `s
 | --- | --- |
 | `routes/app/main/_layout*.tsx` | Fenêtre principale : onglets (notes, paramètres, modèles, contacts, dossiers, automatisations…), mise en page dans `main/` et `shared/main/`. |
 | `routes/app/note.$sessionId.tsx` | Note ouverte dans sa propre fenêtre. |
-| `routes/app/floating-bar.tsx`, `live-caption.tsx` | Barre flottante de réunion et sous-titres en direct (`meeting-float/`). |
+| `routes/app/floating-bar.tsx` | Barre flottante de réunion (`meeting-float/`). |
 | `routes/app/composer.tsx` | Fenêtre de chat rapide (`composer/`). |
 | `routes/app/onboarding.tsx` | Premier lancement (`onboarding/`). |
 | `routes/app/instruction.tsx` | Écran « continuer dans le navigateur » ; connexion, facturation et intégrations cloud ont disparu. |
@@ -69,7 +69,7 @@ Les types d'onglets sont dans `store/zustand/tabs/schema.ts`. Les anciens onglet
 | `folders/`, `sidebar/` | Dossiers en espaces projet (`folders/project/` : fil rouge, prochaine réunion et ordre du jour, modèle par dossier, suggestion de dossier) et barre latérale (arborescence des dossiers, navigation des paramètres, état du serveur). | aucun plugin propre | [/folders](/fr/folders), [/notes](/fr/notes) |
 | `home/` | Accueil : index des notes, bouton de démarrage, export. | aucun plugin propre | [/quickstart](/fr/quickstart), [/notes](/fr/notes) |
 | `search/` | Recherche plein texte (`contexts/engine`). | `plugin-tantivy` | [/notes](/fr/notes) |
-| `meeting-float/` | Barre flottante et sous-titres en direct pendant la capture. | `plugin-windows`, `plugin-transcription` | [/meetings](/fr/meetings), [/automatic-capture](/fr/automatic-capture) |
+| `meeting-float/` | Barre flottante pendant la capture. | `plugin-windows`, `plugin-transcription` | [/meetings](/fr/meetings), [/automatic-capture](/fr/automatic-capture) |
 | `lock/` | Verrouillage de l'application et des notes par authentification de l'appareil. | `plugin-local-auth` | [/security](/fr/security), [/data-and-privacy](/fr/data-and-privacy) |
 | `onboarding/` | Premier lancement : configuration, permissions, note de bienvenue. | `plugin-permissions` | [/quickstart](/fr/quickstart), [/ai-setup](/fr/ai-setup) |
 | `settings/` | Paramètres, détaillés plus bas. | voir plus bas | voir plus bas |
