@@ -28,6 +28,7 @@ import {
   useEnhancedNoteRecords,
   useSession,
 } from "~/session/queries";
+import { useIntelligenceDisabled } from "~/settings/managed";
 import { showFinishListeningToExport } from "~/shared/export-shortcut";
 import { leaveOverlayTab } from "~/shared/leave-overlay-tab";
 import { registerShortcutAction } from "~/shared/shortcut-actions";
@@ -269,6 +270,11 @@ export function SessionCapsule({
   const summary = useGenerateSummary(sessionId);
   const summaryExists = useSummaryExists(sessionId, session?.title);
   const withoutSummary = stage === "synthesis" && !summaryExists;
+  // Synthèse coupée (intelligence_disabled, politique en vigueur ou copie
+  // restée dans app_settings) : comme l'onglet « Synthèse », pas de bouton
+  // qui finirait sur « Set up AI summaries first. » (issue 707). La capsule
+  // garde « Demander à la note » à la place.
+  const summaryBlocked = useIntelligenceDisabled().blocked;
   const generateSummary = useCallback(() => {
     summary.generate(undefined, {
       onError: (error) => toast.error(error.message),
@@ -323,7 +329,8 @@ export function SessionCapsule({
           onToggleMic: toggleMic,
           onToggleSpeaker: toggleSpeaker,
           onResumeListening: withoutSummary ? resume : undefined,
-          onGenerateSummary: withoutSummary ? generateSummary : undefined,
+          onGenerateSummary:
+            withoutSummary && !summaryBlocked ? generateSummary : undefined,
           generateSummaryDisabled: summary.pending,
           onCopy: copy,
           copyDisabled: markdown.length === 0,

@@ -6,6 +6,8 @@ const mocks = vi.hoisted(() => ({
   // portent pas sur la migration de `ui_language` (issue 549) n'en voient pas
   // l'écriture. `null` simule un profil d'avant ce réglage.
   storedUiLanguage: "fr" as string | null,
+  // Réglages gérés (managed_app_settings), lus par leur propre requête.
+  managedIds: [] as string[],
   getPreferredLanguages: vi.fn(),
   getTemplateSource: vi.fn(),
   executeTransaction: vi.fn(
@@ -30,6 +32,9 @@ vi.mock("~/db", () => ({
   executeTransaction: mocks.executeTransaction,
   liveQueryClient: {
     execute: async (sql: string) => {
+      if (sql.includes("managed_app_settings")) {
+        return mocks.managedIds.map((id) => ({ id }));
+      }
       const rows: Array<{ id: string; value_json: string }> =
         (await mocks.execute(sql)) ?? [];
       return mocks.storedUiLanguage === null ||
@@ -62,6 +67,7 @@ describe("SQLite settings", () => {
     await flushDatabaseWrites();
     vi.clearAllMocks();
     mocks.storedUiLanguage = "fr";
+    mocks.managedIds = [];
     mocks.executeTransaction.mockResolvedValue([1]);
     mocks.execute.mockResolvedValue([]);
     mocks.getPreferredLanguages.mockResolvedValue({
@@ -260,6 +266,48 @@ describe("SQLite settings", () => {
         ["spoken_languages", JSON.stringify(JSON.stringify(["en"]))],
         ["ui_language", JSON.stringify("auto")],
       ],
+    );
+  });
+
+  // Issue 707 : le déclencheur de managed_app_settings refuse toute autre
+  // valeur d'une clé gérée, et avec elle toute la transaction (ui_language
+  // compris). La normalisation du démarrage n'écrit jamais une clé gérée.
+  it("n'écrit pas un modèle de transcription géré, même retiré", async () => {
+    mocks.storedUiLanguage = null;
+    mocks.managedIds = ["current_stt_provider", "current_stt_model"];
+    mocks.execute.mockResolvedValue([
+      { id: "current_stt_provider", value_json: JSON.stringify("nvidia") },
+      {
+        id: "current_stt_model",
+        value_json: JSON.stringify("parakeet-tdt-0.6b-v3"),
+      },
+      { id: "ai_language", value_json: JSON.stringify("fr") },
+      { id: "spoken_languages", value_json: JSON.stringify("[]") },
+    ]);
+
+    await initializeApplicationSettings();
+
+    const statements = mocks.executeTransaction.mock.calls[0][0];
+    expect(statements.map((statement) => statement.params.slice(0, 2))).toEqual(
+      [["ui_language", JSON.stringify("fr")]],
+    );
+  });
+
+  it("n'efface pas un modèle géré quand le fournisseur enregistré est retiré", async () => {
+    mocks.managedIds = ["current_stt_model"];
+    mocks.execute.mockResolvedValue([
+      { id: "current_stt_provider", value_json: JSON.stringify("deepgram") },
+      {
+        id: "current_stt_model",
+        value_json: JSON.stringify("whisper-large-v3"),
+      },
+    ]);
+
+    await initializeApplicationSettings();
+
+    const statements = mocks.executeTransaction.mock.calls[0][0];
+    expect(statements.map((statement) => statement.params.slice(0, 2))).toEqual(
+      [["current_stt_provider", JSON.stringify("")]],
     );
   });
 

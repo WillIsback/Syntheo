@@ -32,7 +32,7 @@ Tout se trouve dans le dossier de données de l'application :
   La base locale n'est pas chiffrée par Syntheo. Activez le chiffrement du disque (BitLocker sous Windows, LUKS ou le chiffrement proposé à l'installation sous Linux) et verrouillez la session : c'est ce qui protège vos notes si le poste ou une sauvegarde est perdu. Ne modifiez pas `app.db` à la main : vous risquez de corrompre vos notes. Pour une copie portable, utilisez l'export.
 </Warning>
 
-Sous Linux, Syntheo réserve son dossier de données à votre compte : le dossier est en `0700`, la base et les journaux en `0600`, corrigés à chaque démarrage. Les sauvegardes laissées par une réinitialisation de la base (`app.db.<date>.bak`) sont supprimées après 30 jours ; la plus récente est toujours gardée.
+Sous Linux, Syntheo réserve son dossier de données à votre compte : le dossier est en `0700`, la base et les journaux en `0600`, corrigés à chaque démarrage. Les sauvegardes laissées par une réinitialisation de la base (`app.db.<horodatage>.bak`, où l'horodatage est en secondes Unix) sont supprimées après 30 jours ; la plus récente est toujours gardée.
 
 ## L'audio n'est jamais conservé
 
@@ -46,7 +46,7 @@ L'audio de la capture vit en mémoire le temps d'être envoyé à votre serveur 
 
 Quand vous coupez le micro ou le son système pendant l'écoute, Syntheo envoie du silence à la place de cette source : ce qu'elle capte ne quitte pas votre poste. Voir [Enregistrer une réunion](/fr/meetings), section « Couper le micro ou le son système ».
 
-Conséquence : si la transcription s'interrompt (serveur injoignable, clé refusée), le passage concerné manque à la transcription. Syntheo l'indique et se reconnecte, mais ne peut pas le rattraper.
+Conséquence : si la transcription s'interrompt (coupure réseau, serveur injoignable ou en panne), Syntheo l'indique et se reconnecte. Si le serveur refuse la clé ou les réglages, Syntheo ne retente pas : corrigez-les dans **Paramètres → Transcription**, puis relancez l'écoute. À la reconnexion, il rejoue au nouveau flux les dernières secondes gardées en mémoire (une quinzaine au plus) : une coupure courte ne laisse aucun trou. Au-delà, le passage qui précède ces dernières secondes manque à la transcription et ne peut pas être rattrapé, faute d'audio enregistré.
 
 ## Ce qui sort de votre poste
 
@@ -101,7 +101,7 @@ Le **mode Calibrage**, réglage séparé et lui aussi désactivé par défaut, s
 
 ## Supprimer vos données
 
-- **Une réunion** : supprimez-la dans l'application. Sa transcription, ses notes et son entrée dans l'index de recherche disparaissent.
+- **Une réunion** : supprimez-la dans l'application. Elle disparaît de l'application et de la recherche, mais son contenu (titre, notes, transcription, anciennes versions) reste pour l'instant dans la base locale du poste. Pour l'effacer définitivement aujourd'hui, supprimez le dossier de données ; une purge réelle est prévue.
 - **Une clé d'API** : dans **Paramètres → Transcription** ou **Paramètres → Synthèse**, ouvrez « Avancé », cliquez sur « Réinitialiser ce serveur… », puis sur « Réinitialiser ». L'adresse et la clé sont oubliées ; la clé est retirée du trousseau.
 - **Vos mesures de la bêta** : dans **Paramètres → Avancé → Confidentialité**, « Effacer mes mesures… », puis confirmez. Les compteurs, le calibrage, le suivi des termes et des synthèses, la copie des synthèses générées et le pseudonyme sont effacés, et la mesure est désactivée.
 - **Tout** : lancez une [désinstallation complète](/fr/uninstall), qui retire la base, les journaux, le cache, la configuration et les clés d'API, puis supprimez les exports que vous avez produits.

@@ -155,6 +155,16 @@ pub async fn create_endpoint(
     if !url.starts_with("http://") && !url.starts_with("https://") {
         return Err("url must start with http:// or https://".to_string());
     }
+    // Comme l'étape d'automatisation et les serveurs d'inférence : un mot de
+    // passe dans l'URL serait stocké en clair et affiché (issue 707).
+    // Une URL que le parseur rejette échapperait à ce contrôle, puis serait
+    // stockée et affichée telle quelle : elle est refusée.
+    let Ok(parsed) = url::Url::parse(url) else {
+        return Err("url is invalid".to_string());
+    };
+    if has_credentials(&parsed) {
+        return Err("url must not contain credentials".to_string());
+    }
     if let Some(unknown) = events
         .iter()
         .find(|event| !KNOWN_EVENTS.contains(&event.as_str()))
@@ -369,6 +379,11 @@ async fn deliver_once(
     };
     let client = match reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(DELIVERY_TIMEOUT_SECS))
+        // Aucune redirection suivie, comme l'étape d'automatisation « Envoyer
+        // vers une adresse » : un 307 ou 308 renverrait le contenu de la
+        // réunion et sa signature à un autre hôte, un 301 ou 302 le perdrait
+        // en GET sans corps (issue 707).
+        .redirect(reqwest::redirect::Policy::none())
         .build()
     {
         Ok(client) => client,
@@ -380,8 +395,10 @@ async fn deliver_once(
         }
     };
 
+    // Lignes créées avant le refus des identifiants : ils ne partent plus en
+    // Basic (reqwest les reprendrait de l'URL).
     let response = client
-        .post(&endpoint.url)
+        .post(without_credentials(&endpoint.url, ""))
         .header("content-type", "application/json")
         .header("x-syntheo-event", event)
         .header("x-syntheo-delivery", delivery_id)
@@ -398,6 +415,10 @@ async fn deliver_once(
         .await;
 
     match response {
+        Ok(response) if response.status().is_redirection() => DeliveryOutcome {
+            delivered: false,
+            status: redirect_status(&endpoint.url, &response),
+        },
         Ok(response) => DeliveryOutcome {
             delivered: response.status().is_success(),
             status: response.status().to_string(),
@@ -407,6 +428,40 @@ async fn deliver_once(
             status: delivery_error_status(error),
         },
     }
+}
+
+fn has_credentials(url: &url::Url) -> bool {
+    !url.username().is_empty() || url.password().is_some()
+}
+
+/// L'URL dont les identifiants sont remplacés par `user` (vide : retirés),
+/// ou l'URL telle quelle si elle n'en a pas ou ne se lit pas.
+pub(crate) fn without_credentials(url: &str, user: &str) -> String {
+    match url::Url::parse(url) {
+        Ok(mut parsed) if has_credentials(&parsed) => {
+            if parsed.set_password(None).is_ok() && parsed.set_username(user).is_ok() {
+                parsed.into()
+            } else {
+                url.to_string()
+            }
+        }
+        _ => url.to_string(),
+    }
+}
+
+/// Statut d'une redirection refusée : la cible n'est donnée que par son hôte,
+/// car son chemin peut porter un jeton comme celui du webhook.
+fn redirect_status(url: &str, response: &reqwest::Response) -> String {
+    let target = response
+        .headers()
+        .get(reqwest::header::LOCATION)
+        .and_then(|location| location.to_str().ok())
+        .and_then(|location| url::Url::parse(url).ok()?.join(location).ok())
+        .map_or_else(
+            || "unknown host".to_string(),
+            |target| webhook_host(target.as_str()),
+        );
+    format!("{}: redirect to {target} not followed", response.status())
 }
 
 /// Hôte (et port) d'une URL de webhook, sans chemin ni requête.

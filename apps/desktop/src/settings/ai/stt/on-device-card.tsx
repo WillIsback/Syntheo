@@ -207,7 +207,7 @@ export function OnDeviceCard() {
     setError(null);
     if (models?.kind === "installed") {
       setNotice(
-        t`Models installed. Measuring this computer (one to two minutes)…`,
+        t`Models installed. Measuring this computer (from under a minute to about three minutes)…`,
       );
       void queryClient.invalidateQueries({
         queryKey: ON_DEVICE_COMMISSIONING_QUERY_KEY,
@@ -471,7 +471,7 @@ export function OnDeviceCard() {
             {measuringAny
               ? progressValue
                 ? t`Measuring profile ${progressValue.current} of ${progressValue.total}…`
-                : t`Measuring this computer (one to two minutes)…`
+                : t`Measuring this computer (from under a minute to about three minutes)…`
               : measured?.profile
                 ? t`Measured: ${profileLabels[measured.profile as Profile]}.`
                 : refusal

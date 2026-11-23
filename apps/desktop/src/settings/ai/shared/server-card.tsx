@@ -160,12 +160,15 @@ export function ModelRadioList({
   value,
   onChange,
   footer,
+  disabled = false,
 }: {
   label: string;
   models: readonly ModelOption[];
   value: string;
   onChange: (model: string) => void;
   footer?: ReactNode;
+  /** Modèle imposé par l'administration : affiché, pas modifiable. */
+  disabled?: boolean;
 }) {
   const labelId = useId();
   const { t } = useLingui();
@@ -196,16 +199,19 @@ export function ModelRadioList({
                 type="button"
                 role="radio"
                 aria-checked={checked}
+                disabled={disabled}
                 onClick={() => {
                   setCustom(false);
                   setDraft("");
                   onChange(model.id);
                 }}
                 className={cn([
-                  "focus-visible:ring-ring flex w-full items-center gap-3 rounded-[10px] border px-3 py-2.5 text-left transition-colors focus-visible:ring-2 focus-visible:outline-hidden",
+                  "focus-visible:ring-ring flex w-full items-center gap-3 rounded-[10px] border px-3 py-2.5 text-left transition-colors focus-visible:ring-2 focus-visible:outline-hidden disabled:cursor-not-allowed",
                   checked
                     ? "border-primary bg-accent"
-                    : "border-border bg-background hover:bg-muted",
+                    : "border-border bg-background",
+                  !checked && !disabled && "hover:bg-muted",
+                  disabled && !checked && "opacity-60",
                 ])}
               >
                 <span
@@ -235,8 +241,13 @@ export function ModelRadioList({
       {showCustom ? (
         <input
           aria-label={t`Model name`}
-          className={SERVER_INPUT_CLASS}
-          value={draft}
+          // Même aspect désactivé que le protocole imposé (issue 710).
+          className={cn([
+            SERVER_INPUT_CLASS,
+            disabled && "cursor-not-allowed opacity-60",
+          ])}
+          disabled={disabled}
+          value={disabled ? value : draft}
           placeholder={t`Model name served by your server`}
           onChange={(event) => {
             setCustom(true);
@@ -247,7 +258,7 @@ export function ModelRadioList({
       ) : null}
       <p className="text-muted-foreground text-[13px]">
         {footer}
-        {!showCustom ? (
+        {!showCustom && !disabled ? (
           <>
             {footer ? " " : null}
             <button

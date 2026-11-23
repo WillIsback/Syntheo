@@ -35,6 +35,14 @@ const mocks = vi.hoisted(() => ({
   commissioning: null as unknown,
   onDeviceLoading: false,
   commissioningLoading: false,
+  llmManagedOff: false,
+}));
+
+vi.mock("~/settings/managed", () => ({
+  useIntelligenceDisabled: () => ({
+    managed: mocks.llmManagedOff,
+    blocked: mocks.llmManagedOff,
+  }),
 }));
 
 vi.mock("@syntheo/ui/components/ui/toast", async (importOriginal) => {
@@ -161,7 +169,28 @@ describe("ToastNotifications", () => {
     mocks.commissioning = null;
     mocks.onDeviceLoading = false;
     mocks.commissioningLoading = false;
+    mocks.llmManagedOff = false;
   });
+
+  // Issue 707 : synthèse coupée par l'administration, aucun modèle de
+  // langage à demander.
+  it.each([
+    [false, true],
+    [true, false],
+  ])(
+    "asks for a language model only when synthesis is not managed off (managed off: %s)",
+    (managedOff, shown) => {
+      mocks.config.current_llm_provider = "";
+      mocks.config.current_llm_model = "";
+      mocks.llmManagedOff = managedOff;
+
+      render(<ToastNotifications />);
+      act(() => vi.advanceTimersByTime(500));
+
+      const descriptions = mocks.message.mock.calls.map((call) => call[0]);
+      expect(descriptions.includes("Language model needed")).toBe(shown);
+    },
+  );
 
   // QA de 0.8.0-2 (William) : seule la transcription sur ce poste, prête.
   it("asks for no transcription provider when this computer is ready", () => {

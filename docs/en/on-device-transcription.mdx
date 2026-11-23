@@ -52,7 +52,7 @@ Once the computer is measured, tick **Use this computer for transcription instea
 
 - If the computer falls more than 2 s behind, Syntheo spaces out speaker recognition, then turns it off, and restores it once the delay drops; transcription goes on. After such a change, speakers may get new labels.
 - If the program stops, Syntheo restarts it with a new token, within 3 launches in 10 minutes; beyond that, it waits for those 10 minutes to end.
-- The audio of an "On this computer" recording **never** goes to the server, not even to repair a dropped passage or after a restart. If the models are missing or refused, or the program keeps crashing, live transcription pauses and says so; a missed passage stays marked in the note.
+- The audio of an "On this computer" recording **never** goes to the server, not even after the program restarts. A short outage is replayed from memory to the restarted program, as with a server. If the models are missing or refused, or the program keeps crashing, live transcription pauses and says so; a missed passage is flagged by a dated banner above the transcript.
 
 ## Network and data
 

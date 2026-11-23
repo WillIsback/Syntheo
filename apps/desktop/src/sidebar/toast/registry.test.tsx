@@ -39,6 +39,13 @@ describe("sidebar toast registry", () => {
     },
   );
 
+  // Issue 707 : synthèse coupée par l'administration.
+  it("never asks for a language model when synthesis is managed off", () => {
+    expect(
+      showToast({ hasLLMConfigured: false, llmManagedOff: true }),
+    ).toBeNull();
+  });
+
   it("never shows sign-in or upgrade prompts (no account)", () => {
     // Fully configured on-prem providers: nothing to promote.
     expect(showToast()).toBeNull();

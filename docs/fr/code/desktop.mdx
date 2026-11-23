@@ -73,7 +73,7 @@ Les types d'onglets sont dans `store/zustand/tabs/schema.ts`. Les anciens onglet
 | `lock/` | Verrouillage de l'application et des notes par authentification de l'appareil. | `plugin-local-auth` | [/security](/fr/security), [/data-and-privacy](/fr/data-and-privacy) |
 | `onboarding/` | Premier lancement : configuration, permissions, note de bienvenue. | `plugin-permissions` | [/quickstart](/fr/quickstart), [/ai-setup](/fr/ai-setup) |
 | `settings/` | Paramètres, détaillés plus bas. | voir plus bas | voir plus bas |
-| `i18n/` | Catalogues Lingui ; français par défaut, anglais disponible. | aucun | [/languages](/fr/languages) |
+| `i18n/` | Catalogues Lingui ; suit la langue du système (français si c'est la première langue préférée), anglais sinon. | aucun | [/languages](/fr/languages) |
 | `changelog/` | Onglet des nouveautés. | `@syntheo/changelog` | aucune |
 | `db/` | Accès aux données côté interface, file d'écriture avec reprise. | `plugin-db`, `@syntheo/db*` | aucune |
 | `editor-bridge/`, `edit/`, `contexts/`, `shared/`, `main/`, `styles/`, `types/` | Infrastructure d'interface : liens et mentions dans l'éditeur, onglet d'édition, registre d'outils, raccourcis, thème, liens profonds. | divers | aucune |

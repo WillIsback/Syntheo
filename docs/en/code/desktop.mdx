@@ -73,7 +73,7 @@ Tab types are in `store/zustand/tabs/schema.ts`. The old `calendar` and `task` t
 | `lock/` | Locking the app and notes with device authentication. | `plugin-local-auth` | [/en/security](/en/security), [/en/data-and-privacy](/en/data-and-privacy) |
 | `onboarding/` | First launch: configuration, permissions, welcome note. | `plugin-permissions` | [/en/quickstart](/en/quickstart), [/en/ai-setup](/en/ai-setup) |
 | `settings/` | Settings, detailed below. | see below | see below |
-| `i18n/` | Lingui catalogs; French by default, English available. | none | [/en/languages](/en/languages) |
+| `i18n/` | Lingui catalogs; follows the system language (French if it is the first preferred language), English otherwise. | none | [/en/languages](/en/languages) |
 | `changelog/` | What's new tab. | `@syntheo/changelog` | none |
 | `db/` | Interface-side data access, write queue with retry. | `plugin-db`, `@syntheo/db*` | none |
 | `editor-bridge/`, `edit/`, `contexts/`, `shared/`, `main/`, `styles/`, `types/` | Interface infrastructure: links and mentions in the editor, edit tab, tool registry, shortcuts, theme, deep links. | various | none |

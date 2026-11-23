@@ -83,7 +83,7 @@ function SummarySwitcherForNote({
   const { t, i18n } = useLingui();
   const note = useEnhancedNote(currentNoteId);
   const versions = useSummaryVersions(currentNoteId);
-  const { isGenerating, onRegenerate } = useEnhancedNoteActions({
+  const { isGenerating, summaryOff, onRegenerate } = useEnhancedNoteActions({
     sessionId,
     enhancedNoteId: currentNoteId,
   });
@@ -175,11 +175,17 @@ function SummarySwitcherForNote({
             onSelectNote={onSelectNote}
             canCopy={noteMarkdown.length > 0}
             canRemove={currentNoteId !== enhancedNoteIds[0]}
-            onRegenerate={regenerate}
-            onChangeTemplate={() => {
-              pickerRequested.current = true;
-              setPickerOpen(true);
-            }}
+            // Synthèse coupée (issue 707) : ni « Régénérer » ni « Changer de
+            // modèle », qui relanceraient une génération vouée à l'échec.
+            onRegenerate={summaryOff ? undefined : regenerate}
+            onChangeTemplate={
+              summaryOff
+                ? undefined
+                : () => {
+                    pickerRequested.current = true;
+                    setPickerOpen(true);
+                  }
+            }
             onCopy={() => {
               void copyTextToClipboard(noteMarkdown, {
                 success: t`Copied to clipboard`,

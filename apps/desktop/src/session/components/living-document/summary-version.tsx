@@ -97,7 +97,7 @@ export function NotesChangedBanner({
 }) {
   const sourceNoteFingerprint =
     useEnhancedNote(enhancedNoteId)?.sourceNoteFingerprint;
-  const { isGenerating, onRegenerate } = useEnhancedNoteActions({
+  const { isGenerating, summaryOff, onRegenerate } = useEnhancedNoteActions({
     sessionId,
     enhancedNoteId,
   });
@@ -113,7 +113,9 @@ export function NotesChangedBanner({
     await onRegenerate(null);
   }, [editorRef, onRegenerate, onShowSummary, sessionId]);
 
-  return changed ? (
+  // Synthèse coupée (issue 707) : pas de bandeau qui proposerait de
+  // régénérer.
+  return changed && !summaryOff ? (
     <RegenerateWithNotesBanner
       isGenerating={isGenerating}
       onRegenerate={handleRegenerate}

@@ -13,7 +13,7 @@ Parcourez un thème, puis dépliez la question. Si quelque chose ne fonctionne p
   </Accordion>
 
   <Accordion title="Qui fait la transcription et les résumés ?" id="qui-fait-l-inference">
-    Vos propres serveurs. Syntheo n'embarque aucun modèle et n'utilise aucun service cloud d'IA. Vous indiquez dans les paramètres l'URL d'un serveur de transcription (STT) et celle d'un serveur de modèle de langue (LLM), hébergés sur votre poste ou dans votre organisation. Voir [Transcription et IA](/fr/ai-setup).
+    Vos propres serveurs, ou votre ordinateur. Syntheo n'utilise aucun service cloud d'IA. Vous indiquez dans les paramètres l'URL d'un serveur de transcription (STT) et celle d'un serveur de modèle de langue (LLM), hébergés sur votre poste ou dans votre organisation. Pour la transcription en direct, la source facultative **Sur ce poste** fait tourner sur votre ordinateur le programme livré avec Syntheo. Ses modèles (environ 1,1 Go) ne sont pas dans l'installeur : vous les téléchargez depuis les sources de Syntheo (sa release GitHub, puis Hugging Face en secours) ou depuis le miroir de votre organisation, ou vous les installez depuis un dossier. Voir [Transcription et IA](/fr/ai-setup) et [Transcrire sur ce poste](/fr/on-device-transcription).
   </Accordion>
 
   <Accordion title="Quels serveurs sont compatibles ?" id="serveurs-compatibles">
@@ -42,7 +42,7 @@ Parcourez un thème, puis dépliez la question. Si quelque chose ne fonctionne p
   </Accordion>
 
   <Accordion title="Que se passe-t-il si le serveur de transcription se coupe pendant une réunion ?" id="coupure-stt">
-    Syntheo tente de se reconnecter. Comme l'audio n'est pas conservé, la partie de la réunion prononcée pendant la coupure manque à la transcription. Un bandeau l'indique avec ses horaires, par exemple « Transcription interrompue 14:32–14:35 ». Voir [Dépannage](/fr/troubleshooting).
+    Syntheo tente de se reconnecter. L'audio n'est pas conservé sur le disque : Syntheo garde seulement en mémoire les dernières secondes (une quinzaine au plus) et les rejoue au serveur à la reconnexion, si bien qu'une coupure courte ne laisse aucun trou. Après une coupure plus longue, le début du passage manque à la transcription. Un bandeau l'indique avec ses horaires, par exemple « Transcription interrompue 14:32–14:35. ». Voir [Dépannage](/fr/troubleshooting).
   </Accordion>
 
   <Accordion title="Où sont stockées mes données ?" id="stockage">

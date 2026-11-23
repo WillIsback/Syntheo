@@ -3448,7 +3448,7 @@ const SYN_IMP_HINT = "Note vide : le menu ••• propose les deux imports.";
 const synImpInitial = () => ({ stage: "prepare", phase: "importing", fraction: 0, elapsed: 0, hint: SYN_IMP_HINT });
 
 /**
- * Note vide, menu ••• (« Téléverser un audio », « Téléverser un transcript »)
+ * Note vide, menu ••• (« Téléverser un audio », « Téléverser une transcription »)
  * puis import audio : avancement dans la marge et capsule en état « Import ».
  */
 export const ImportScreen = ({ markers = true }) => {
@@ -3488,7 +3488,7 @@ export const ImportScreen = ({ markers = true }) => {
     ...(stage === "prepare"
       ? [
           { label: L("Upload audio"), icon: I("Waveform"), onSelect: () => patch({ stage: "batch", phase: "importing", fraction: 0, elapsed: 0, hint: `Fichier choisi : ${SYN_IMP_FILE} (52 min).` }) },
-          { label: L("Upload transcript"), icon: I("FileText"), onSelect: () => patch({ hint: "« Téléverser un transcript » : choisissez un fichier .vtt ou .srt ; le texte horodaté est ajouté à la note." }) },
+          { label: L("Upload transcript"), icon: I("FileText"), onSelect: () => patch({ hint: "« Téléverser une transcription » : choisissez un fichier .vtt ou .srt ; le texte horodaté est ajouté à la note." }) },
           { separator: true },
         ]
       : []),

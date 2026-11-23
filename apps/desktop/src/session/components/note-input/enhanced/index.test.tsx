@@ -42,6 +42,14 @@ const hoisted = vi.hoisted(() => ({
   sessionTitle: "",
   enhancedEditorMountCount: 0,
   generate: vi.fn(),
+  intelligenceManaged: false,
+}));
+
+vi.mock("~/settings/managed", () => ({
+  useIntelligenceDisabled: () => ({
+    managed: hoisted.intelligenceManaged,
+    blocked: true,
+  }),
 }));
 
 vi.mock("~/services/enhancer", () => ({
@@ -167,6 +175,7 @@ describe("Enhanced", () => {
     hoisted.sessionTitle = "";
     hoisted.enhancedEditorMountCount = 0;
     hoisted.generate.mockReset();
+    hoisted.intelligenceManaged = false;
   });
 
   it("renders an empty editor before the auto-enhance task is visible", () => {
@@ -466,5 +475,62 @@ describe("Enhanced", () => {
     view.rerender(element());
     expect(screen.getByText("Generated summary")).not.toBeNull();
     client.clear();
+  });
+
+  // Issue 707 : synthèse coupée par l'administration. Le bouton « Generate
+  // summary » aboutissait à « Set up AI summaries first. » : l'onglet dit
+  // que le réglage est géré, sans bouton.
+  it.each([
+    ["missing default summary", false, "summary:session-1"],
+    ["empty summary document", true, "note-1"],
+  ])(
+    "shows the managed setting instead of generation (%s)",
+    (_label, noteExists, enhancedNoteId) => {
+      hoisted.llmStatus = { status: "pending", reason: "managed_disabled" };
+      hoisted.intelligenceManaged = true;
+      hoisted.noteExists = noteExists;
+
+      render(
+        <Enhanced sessionId="session-1" enhancedNoteId={enhancedNoteId} />,
+      );
+
+      expect(screen.getByRole("note").textContent).toBe(
+        "Set by your administrator.",
+      );
+      expect(screen.queryByRole("button")).toBeNull();
+      expect(screen.queryByText("Enhanced editor")).toBeNull();
+    },
+  );
+
+  // Politique retirée, copie restée à vrai dans app_settings : la synthèse
+  // reste bloquée, mais l'onglet ne prétend plus que l'administrateur l'impose.
+  it.each([
+    ["missing default summary", false, "summary:session-1"],
+    ["empty summary document", true, "note-1"],
+  ])(
+    "stays neutral when only the app_settings copy blocks synthesis (%s)",
+    (_label, noteExists, enhancedNoteId) => {
+      hoisted.llmStatus = { status: "pending", reason: "managed_disabled" };
+      hoisted.intelligenceManaged = false;
+      hoisted.noteExists = noteExists;
+
+      render(
+        <Enhanced sessionId="session-1" enhancedNoteId={enhancedNoteId} />,
+      );
+
+      expect(screen.queryByText("Set by your administrator.")).toBeNull();
+      expect(screen.queryByRole("button")).toBeNull();
+      expect(screen.queryByText("Enhanced editor")).toBeNull();
+    },
+  );
+
+  it("keeps an existing summary readable when synthesis is managed off", () => {
+    hoisted.llmStatus = { status: "pending", reason: "managed_disabled" };
+    hoisted.content = "Stored summary";
+
+    render(<Enhanced sessionId="session-1" enhancedNoteId="note-1" />);
+
+    expect(screen.getByText("Stored summary")).not.toBeNull();
+    expect(screen.queryByRole("note")).toBeNull();
   });
 });

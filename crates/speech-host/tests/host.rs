@@ -485,7 +485,7 @@ async fn the_module_reports_its_load() {
 /// compilé) : mêmes variables que `a_real_companion_starts…`. Mesure
 /// d'appoint, 30 s par profil.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-#[ignore = "mise en service réelle, une à deux minutes"]
+#[ignore = "mise en service réelle, de moins d'une minute à environ trois minutes"]
 async fn a_real_companion_is_commissioned() {
     let Some((host, _dir, _install)) = real_host() else {
         return;

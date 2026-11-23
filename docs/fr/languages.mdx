@@ -10,7 +10,7 @@ Syntheo distingue la langue utilisée pour les résumés et le chat des langues 
 <SettingsPath steps={["Paramètres", "Moi", "Profil", "Langue et région"]} />
 
 <Note>
-  La langue de l'interface (le français par défaut) est indépendante de ces réglages.
+  La langue de l'interface se règle à part, dans la même section (« Langue de l'interface ») : pour un nouveau profil, « Automatique (système) » suit la langue de votre système, en anglais si Syntheo n'est pas traduit dans cette langue ; un profil mis à jour depuis une version antérieure garde la langue qu'il affichait, déduite de sa « Langue principale » (anglais si c'est l'anglais, français sinon). Sous une politique d'administration (`managed_settings.json`) qui impose un réglage de l'application, par exemple `current_stt_provider` ou `automatic_updates`, un nouveau profil part en français, quelle que soit la langue du système, et « Français » reste enregistré comme langue de l'interface. Une politique qui n'impose que l'adresse du serveur (`stt:<id>`), les sources des modèles, la transcription sur le poste ou le démarrage automatique des réunions laisse un nouveau profil en « Automatique (système) ».
 </Note>
 
 ## Choisir la langue principale

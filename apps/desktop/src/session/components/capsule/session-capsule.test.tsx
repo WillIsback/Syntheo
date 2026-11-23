@@ -46,6 +46,11 @@ const mocks = vi.hoisted(() => ({
   enhancing: false,
   exportModal: vi.fn(),
   toastInfo: vi.fn(),
+  intelligence: { managed: false, blocked: false },
+}));
+
+vi.mock("~/settings/managed", () => ({
+  useIntelligenceDisabled: () => mocks.intelligence,
 }));
 
 vi.mock("@tauri-apps/plugin-os", () => ({ platform: () => "linux" }));
@@ -189,6 +194,7 @@ describe("SessionCapsule", () => {
     mocks.enhancedContent = undefined;
     mocks.enhancedNotes = [];
     mocks.enhancing = false;
+    mocks.intelligence = { managed: false, blocked: false };
     vi.clearAllMocks();
   });
 
@@ -368,6 +374,32 @@ describe("SessionCapsule", () => {
     expect(
       screen.getByRole("button", { name: "Generate the summary" }),
     ).not.toBeNull();
+  });
+
+  // Synthèse coupée par l'administration (issue 707) : comme l'onglet
+  // « Synthèse », la capsule n'offre pas de génération vouée à l'échec.
+  it("hides Generate the summary when the policy turns summaries off", () => {
+    mocks.intelligence = { managed: true, blocked: true };
+    renderCapsule({
+      stage: "synthesis",
+      currentView: { type: "enhanced", id: "summary-session-1" },
+    });
+
+    expect(
+      screen.queryByRole("button", { name: "Generate the summary" }),
+    ).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Resume listening" }),
+    ).not.toBeNull();
+  });
+
+  it("hides Generate the summary when only the stored copy turns summaries off", () => {
+    mocks.intelligence = { managed: false, blocked: true };
+    renderCapsule({ stage: "synthesis", currentView: { type: "raw" } });
+
+    expect(
+      screen.queryByRole("button", { name: "Generate the summary" }),
+    ).toBeNull();
   });
 
   it("does not offer to generate a summary while one is being written", () => {

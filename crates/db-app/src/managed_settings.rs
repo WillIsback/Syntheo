@@ -14,9 +14,29 @@ fn invalid() -> sqlx::Error {
     sqlx::Error::Protocol("invalid managed settings file".into())
 }
 
-/// Adresse HTTPS sans identifiants, requête ni fragment.
+/// Caractère que `String.prototype.trim` retire en JavaScript : les blancs
+/// Unicode de Rust, sauf U+0085, plus U+FEFF (marque d'ordre des octets).
+fn js_trim_char(c: char) -> bool {
+    (c.is_whitespace() && c != '\u{85}') || c == '\u{feff}'
+}
+
+/// Adresse imposée telle qu'elle est stockée : débarrassée en tête et en fin
+/// de ce que retire le `trim()` de l'interface. Une politique déjà déployée
+/// avec un espace final reste acceptée, et le texte stocké est exactement
+/// celui que l'interface réécrit en enregistrant la clé API (issue 707).
+fn normalized_base_url(s: &str) -> &str {
+    s.trim_matches(js_trim_char)
+}
+
+/// Adresse HTTPS sans identifiants, requête ni fragment, une fois normalisée.
+///
+/// Le parseur d'URL retire tabulations et sauts de ligne à l'intérieur : une
+/// telle adresse, écrite brute, ne correspondrait plus à celle qu'il
+/// interprète. Elles restent refusées.
 fn plain_https(s: &str) -> bool {
+    let s = normalized_base_url(s);
     s.len() <= 2048
+        && !s.contains(['\t', '\r', '\n'])
         && url::Url::parse(s).is_ok_and(|u| {
             u.scheme() == "https"
                 && u.host_str().is_some()
@@ -145,6 +165,39 @@ pub async fn load_managed_policy(pool: &SqlitePool) -> Result<ManagedPolicy, sql
     Ok(ManagedPolicy { settings })
 }
 
+/// Ligne d'`app_settings` d'une clé du fichier. La clé documentée `stt:<id>`
+/// désigne le fournisseur que l'interface range sous `ai_provider:stt:<id>`
+/// (providers-storage.ts) : sans cette traduction, l'adresse imposée était
+/// écrite sur une ligne que personne ne lit, et les déclencheurs gardaient
+/// cette ligne-là au lieu de celle du fournisseur.
+fn storage_id(key: String) -> String {
+    match key.strip_prefix("stt:") {
+        Some(provider) => format!("ai_provider:stt:{provider}"),
+        None => key,
+    }
+}
+
+/// Texte écrit pour une clé du fichier. Les déclencheurs de
+/// `managed_app_settings` comparent le texte : pour `stt:<id>`, la valeur
+/// suit l'ordre de `setAiProvider` (providers.ts, `JSON.stringify({type,
+/// base_url, api_key})`), sinon l'interface ne pourrait plus réécrire la
+/// même ligne en enregistrant la clé API au trousseau (« setting is
+/// managed »). serde_json, sans preserve_order, trierait les clés.
+fn storage_json(key: &str, value: &Value) -> Result<String, sqlx::Error> {
+    if key.starts_with("stt:") {
+        let base_url = value
+            .get("base_url")
+            .and_then(Value::as_str)
+            .map(normalized_base_url)
+            .ok_or_else(invalid)?;
+        let base_url = serde_json::to_string(base_url).map_err(|_| invalid())?;
+        return Ok(format!(
+            r#"{{"type":"stt","base_url":{base_url},"api_key":""}}"#
+        ));
+    }
+    serde_json::to_string(value).map_err(|_| invalid())
+}
+
 /// Read policy from the directory containing the actual opened database, on
 /// desktop and mobile alike. Malformed or unreadable policy fails startup.
 pub async fn apply_managed_settings(pool: &SqlitePool) -> Result<(), sqlx::Error> {
@@ -158,8 +211,9 @@ pub async fn apply_managed_settings(pool: &SqlitePool) -> Result<(), sqlx::Error
     sqlx::query("DELETE FROM managed_app_settings")
         .execute(&mut *tx)
         .await?;
-    for (id, value) in settings {
-        let json = serde_json::to_string(&value).map_err(|_| invalid())?;
+    for (key, value) in settings {
+        let json = storage_json(&key, &value)?;
+        let id = storage_id(key);
         sqlx::query("INSERT INTO app_settings(id,value_json) VALUES(?,?) ON CONFLICT(id) DO UPDATE SET value_json=excluded.value_json,updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')")
             .bind(&id).bind(&json).execute(&mut *tx).await?;
         sqlx::query("INSERT INTO managed_app_settings(id,value_json) VALUES(?,?)")
@@ -285,6 +339,50 @@ mod tests {
             assert!(validate(text.as_bytes()).is_err(), "{text}");
         }
     }
+
+    // Issue 707 : les blancs de tête et de fin sont retirés (normalisation,
+    // voir la base ci-dessous) ; tabulations et sauts de ligne à l'intérieur,
+    // que le parseur d'URL retirerait en silence, restent refusés.
+    #[test]
+    fn managed_stt_base_url_normalizes_surrounding_but_rejects_embedded_whitespace() {
+        for (base_url, ok) in [
+            (" https://asr.example.com/v1", true),
+            ("https://asr.example.com/v1 ", true),
+            (r"\thttps://asr.example.com/v1", true),
+            (r"https://asr.example.com/v1\n", true),
+            (r"\ufeffhttps://asr.example.com/v1\u00a0", true),
+            (r"https://asr.exa\tmple.com/v1", false),
+            (r"https://asr.example.com/v\r1", false),
+            (r"https://asr.example.com/v\n1", false),
+            (r" http://asr.example.com/v1 ", false),
+            ("   ", false),
+        ] {
+            let text = format!(
+                r#"{{"schema_version":1,"settings":{{"stt:openai":{{"type":"stt","api_key":"","base_url":"{base_url}"}}}}}}"#
+            );
+            // Échappements JSON : le document est valide, seule l'adresse
+            // est en cause.
+            assert!(serde_json::from_str::<Value>(&text).is_ok(), "{base_url:?}");
+            assert_eq!(validate(text.as_bytes()).is_ok(), ok, "{base_url:?}");
+        }
+    }
+
+    // La normalisation retire exactement ce que retire `trim()` en
+    // JavaScript (liste relevée avec Node : String.fromCharCode(c).trim()).
+    #[test]
+    fn base_url_normalization_matches_javascript_trim() {
+        const JS_TRIM: &[u32] = &[
+            0x9, 0xa, 0xb, 0xc, 0xd, 0x20, 0xa0, 0x1680, 0x2000, 0x2001, 0x2002, 0x2003, 0x2004,
+            0x2005, 0x2006, 0x2007, 0x2008, 0x2009, 0x200a, 0x2028, 0x2029, 0x202f, 0x205f, 0x3000,
+            0xfeff,
+        ];
+        for code in 0..=0xffff_u32 {
+            if let Some(c) = char::from_u32(code) {
+                assert_eq!(js_trim_char(c), JS_TRIM.contains(&code), "U+{code:04X}");
+            }
+        }
+    }
+
     #[tokio::test]
     // Vérification 0.8.0, point 1c : une erreur du nettoyage de la bêta (ici,
     // table absente) n'empêche ni le démarrage ni l'application de la
@@ -401,6 +499,131 @@ mod tests {
                 .unwrap()
                 .on_device_transcription_allowed()
         );
+    }
+
+    // Issue 707 : la politique stt:<id> impose l'adresse du fournisseur sur
+    // la ligne que lit l'interface, et cette ligne est verrouillée.
+    #[tokio::test]
+    async fn managed_stt_provider_locks_the_row_the_interface_reads() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("app.db");
+        let db = syntheo_db_core::Db::connect_local_plain(&path)
+            .await
+            .unwrap();
+        crate::prepare_schema(&db).await.unwrap();
+        // Adresse saisie avant la politique : elle doit être remplacée.
+        sqlx::query(
+            r#"INSERT INTO app_settings(id,value_json) VALUES('ai_provider:stt:openai','{"type":"stt","base_url":"http://192.168.1.87:8000/v1","api_key":""}')"#,
+        )
+        .execute(db.pool())
+        .await
+        .unwrap();
+        db.pool().close().await;
+        std::fs::write(
+            dir.path().join("managed_settings.json"),
+            br#"{"schema_version":1,"settings":{"current_stt_provider":"openai","stt:openai":{"type":"stt","api_key":"","base_url":"https://asr.example.com/v1"}}}"#,
+        )
+        .unwrap();
+        let db = syntheo_db_core::Db::connect_local_plain(&path)
+            .await
+            .unwrap();
+        crate::prepare_schema(&db).await.unwrap();
+        let stored: String = sqlx::query_scalar(
+            "SELECT value_json FROM app_settings WHERE id='ai_provider:stt:openai'",
+        )
+        .fetch_one(db.pool())
+        .await
+        .unwrap();
+        // Même texte que JSON.stringify({type, base_url, api_key}) de
+        // setAiProvider (providers.ts).
+        assert_eq!(
+            stored,
+            r#"{"type":"stt","base_url":"https://asr.example.com/v1","api_key":""}"#
+        );
+        let raw: i64 = sqlx::query_scalar(
+            "SELECT (SELECT count(*) FROM app_settings WHERE id='stt:openai')
+                  + (SELECT count(*) FROM managed_app_settings WHERE id='stt:openai')",
+        )
+        .fetch_one(db.pool())
+        .await
+        .unwrap();
+        assert_eq!(raw, 0);
+        assert!(
+            sqlx::query(
+                r#"UPDATE app_settings SET value_json='{"type":"stt","base_url":"http://evil.example/v1","api_key":""}' WHERE id='ai_provider:stt:openai'"#,
+            )
+            .execute(db.pool())
+            .await
+            .is_err()
+        );
+        // Saisie de la clé API du fournisseur imposé : l'interface réécrit la
+        // même valeur, dans son ordre ; l'écriture passe.
+        let written = sqlx::query(
+            r#"UPDATE app_settings SET value_json='{"type":"stt","base_url":"https://asr.example.com/v1","api_key":""}', updated_at='2026-11-23T00:00:00.000Z' WHERE id='ai_provider:stt:openai' AND value_json=?"#,
+        )
+        .bind(&stored)
+        .execute(db.pool())
+        .await
+        .unwrap();
+        assert_eq!(written.rows_affected(), 1);
+        assert!(
+            sqlx::query("DELETE FROM app_settings WHERE id='ai_provider:stt:openai'")
+                .execute(db.pool())
+                .await
+                .is_err()
+        );
+    }
+
+    // Issue 707 : une politique déployée avec un espace final ou une marque
+    // d'ordre des octets (U+FEFF) démarre ; l'adresse est stockée normalisée,
+    // et l'interface, qui réécrit JSON.stringify({type, base_url: trim(),
+    // api_key}), peut enregistrer la clé API.
+    #[tokio::test]
+    async fn managed_stt_base_url_with_surrounding_blanks_is_normalized() {
+        for raw in [
+            r"https://asr.example.com/v1 ",
+            r"﻿https://asr.example.com/v1",
+            r" ﻿https://asr.example.com/v1　\n",
+        ] {
+            let dir = tempfile::tempdir().unwrap();
+            std::fs::write(
+                dir.path().join("managed_settings.json"),
+                format!(
+                    r#"{{"schema_version":1,"settings":{{"stt:openai":{{"type":"stt","api_key":"","base_url":"{raw}"}}}}}}"#
+                ),
+            )
+            .unwrap();
+            let db = syntheo_db_core::Db::connect_local_plain(&dir.path().join("app.db"))
+                .await
+                .unwrap();
+            crate::prepare_schema(&db).await.unwrap();
+            let expected = r#"{"type":"stt","base_url":"https://asr.example.com/v1","api_key":""}"#;
+            let stored: String = sqlx::query_scalar(
+                "SELECT value_json FROM app_settings WHERE id='ai_provider:stt:openai'",
+            )
+            .fetch_one(db.pool())
+            .await
+            .unwrap();
+            assert_eq!(stored, expected, "{raw:?}");
+            let managed: String = sqlx::query_scalar(
+                "SELECT value_json FROM managed_app_settings WHERE id='ai_provider:stt:openai'",
+            )
+            .fetch_one(db.pool())
+            .await
+            .unwrap();
+            assert_eq!(managed, expected, "{raw:?}");
+            // Écriture de l'interface (persistProviderConfig) à l'enregistrement
+            // de la clé API.
+            let written = sqlx::query(
+                "UPDATE app_settings SET value_json=?, updated_at='2026-11-23T00:00:00.000Z' WHERE id='ai_provider:stt:openai' AND value_json=?",
+            )
+            .bind(expected)
+            .bind(&stored)
+            .execute(db.pool())
+            .await
+            .unwrap();
+            assert_eq!(written.rows_affected(), 1, "{raw:?}");
+        }
     }
 
     #[tokio::test]

@@ -18,7 +18,7 @@ To read meeting data instead of receiving it, use the [CLI](/en/reference/cli) o
 ## Add an endpoint
 
 1. Open **Settings → Developers**.
-2. In the "Webhooks" section, enter a URL starting with `http://` or `https://`, then click "Add webhook".
+2. In the "Webhooks" section, enter a URL starting with `http://` or `https://`, without credentials (`user:password@` is rejected), then click "Add webhook".
 3. Copy the signing secret (`whsec_...`) with "Copy".
 4. Click "Test" to send a `webhook.test` delivery and check that your service responds.
 
@@ -59,6 +59,8 @@ For `webhook.test`, `data` only contains a `message` field.
 ## Delivery and retries
 
 Each request times out after 10 seconds. On failure, Syntheo retries after 5 seconds, then after 30 seconds. A `webhook.test` delivery makes only one attempt.
+
+Syntheo does not follow redirects. A 3xx response counts as a failure, like any non-2xx response: the last delivery status shows only the host the server redirects to, never the path. Enter the final address directly, for example with `https://` if your server redirects HTTP.
 
 Each request contains these headers:
 

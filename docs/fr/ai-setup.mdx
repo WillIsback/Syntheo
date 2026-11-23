@@ -6,7 +6,7 @@ description: "Reliez Syntheo à vos serveurs d'inférence auto-hébergés : un s
 
 import { AppSettings, Kbd, SettingsPath } from "/snippets/start.gen.jsx";
 
-Syntheo n'embarque aucun modèle et n'appelle aucun service cloud. Il se connecte à **vos** serveurs d'inférence, sur votre poste ou votre réseau, par des protocoles standard. Vous configurez deux choses indépendantes :
+Syntheo n'appelle aucun service cloud d'IA. Il se connecte à **vos** serveurs d'inférence, sur votre poste ou votre réseau, par des protocoles standard ; la transcription en direct peut aussi tourner sur ce poste, sans serveur (voir [Transcrire sur ce poste](#transcrire-sur-ce-poste)). Vous configurez deux choses indépendantes :
 
 | Réglage | Rôle | Protocole |
 | --- | --- | --- |
@@ -65,7 +65,7 @@ La pastille d'état prend l'une de ces valeurs :
 | « Connecté · … ms » | Le serveur répond ; la pastille indique la latence mesurée. Pour la synthèse, elle indique plutôt le nombre de modèles disponibles (« Connecté · … modèles disponibles »). |
 | « Injoignable » | Le serveur n'a pas répondu. |
 | « Clé refusée » | Le serveur a refusé la clé d'API. |
-| « Adresse invalide » | L'adresse n'est pas acceptée (voir la note ci-dessus). |
+| « Adresse invalide » | Une adresse enregistrée auparavant n'est plus acceptée (voir la note ci-dessus). À la saisie, une adresse refusée n'est pas enregistrée : le motif s'affiche sous le champ, par exemple « Saisissez une URL de base valide. ». |
 
 En cas d'échec, un message sous le titre de la carte dit quoi faire, par exemple : « Le serveur n'a pas répondu à localhost:8000/v1. Vérifiez qu'il est démarré et que vous êtes sur le bon réseau (VPN, Tailscale), puis relancez le test. »
 

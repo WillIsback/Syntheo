@@ -190,7 +190,7 @@ These commands are for managed deployments (legal hold, usage measurement). They
 | `meetings hold-list` | `--after ID`, `--limit 1..200`, `--database-only` | Lists all persisted meetings, including deleted ones, for retention. |
 | `meetings hold-export ID` | `--database-only` | Streams a meeting's raw history as NDJSON, for encrypted retention. |
 | `meetings pilot-usage` | `--from-ms MS`, `--until-ms MS` | Reads local capture intervals, without content or meeting IDs. |
-| `meetings delete ID` | `--if-export-sha256 HASH`, `--require-transcription-complete` | Permanently deletes a completed local meeting. |
+| `meetings delete ID` | `--if-export-sha256 HASH`, `--require-transcription-complete` | Permanently deletes a completed local meeting that is still in the app, with a complete transcript, while the app is closed. |
 
 ### `meetings initialize-managed`
 
@@ -230,4 +230,10 @@ Requires `--json` and `--source local`. `--from-ms` and `--until-ms` are Unix mi
 syntheo --json meetings --source local delete MEETING_ID --if-export-sha256 HASH --require-transcription-complete
 ```
 
-Permanently deletes a completed local meeting: document history, transcripts and derived search index. Requires `--source local`, `--if-export-sha256` (the SHA-256 of the full JSON export, as printed on standard output with its final newline, or as saved with `--output`) and `--require-transcription-complete`. Close the app first. A modified export, an unfinished transcript or a pending proposal prevents the deletion. An interrupted deletion resumes with the same ID and the same digest.
+Permanently deletes a completed local meeting: document history, transcripts and derived search index. Requires `--source local`, `--if-export-sha256` (the SHA-256 of the full JSON export, as printed on standard output with its final newline, or as saved with `--output`) and `--require-transcription-complete`. The deletion only happens under three conditions:
+
+- **Meeting still in the app**: a meeting already deleted from the app is not found by the CLI and is not purged.
+- **Complete transcript**: the meeting has ended and its transcript is final.
+- **App closed**: otherwise the command fails with "close Syntheo before deletion".
+
+A modified export or a pending proposal also prevents the deletion. An interrupted deletion resumes with the same ID and the same digest.

@@ -200,7 +200,7 @@
     "RH:": "HR:"
   },
   "import.jsx.tpl": {
-    "« Téléverser un transcript » : choisissez un fichier .vtt ou .srt ; le texte horodaté est ajouté à la note.": "“Upload transcript”: choose a .vtt or .srt file; the timestamped text is added to the note.",
+    "« Téléverser une transcription » : choisissez un fichier .vtt ou .srt ; le texte horodaté est ajouté à la note.": "“Upload transcript”: choose a .vtt or .srt file; the timestamped text is added to the note.",
     "Transcription terminée : Syntheo rédige le compte rendu si un serveur de synthèse est configuré.": "Transcription finished: Syntheo writes the summary if a summary server is set up.",
     "<p><b>Vous</b> — Oui, si les échantillons arrivent lundi.</p>": "<p><b>You</b> — Yes, if the samples arrive on Monday.</p>",
     "<p><b>Hélène</b> — On garde la livraison au 2 décembre ?</p>": "<p><b>Helen</b> — Do we keep delivery on December 2?</p>",

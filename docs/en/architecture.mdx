@@ -62,11 +62,11 @@ These guarantees are enforced in the code and protected by tests. The tests in `
 | Guarantee | Guard tests |
 | --- | --- |
 | **No audio on disk.** The audio stays in memory long enough to be sent to the STT server. There is no audio player and no retranscription afterward. | `no-audio-at-rest.test.ts`; on the Rust side, `supervisor_writes_no_audio_to_session_dir` (`crates/listener-core`) checks that no audio file appears in the session folder, and `managed_settings_require_no_audio_retention` (`crates/db-app`) refuses any retention other than "none". |
-| **Inference only to the configured endpoints.** Only on-premise STT adapters and one OpenAI-compatible LLM provider exist, with no default URL. Plain HTTP is only accepted to a private host. No device fingerprint is sent in the headers. | `stt-on-prem.test.ts`, `llm-on-prem.test.ts` |
+| **Inference only to the configured endpoints.** Only on-premise STT adapters and one OpenAI-compatible LLM provider exist, with no default URL. The one exception: the optional "On this computer" source transcribes on the loopback, with models downloaded from pinned sources (or the `speech_models_urls` mirror) and checked against their hashes. Plain HTTP is only accepted to a private host. No device fingerprint is sent in the headers. | `stt-on-prem.test.ts`, `llm-on-prem.test.ts` |
 | **No account, no cloud, no telemetry.** The authentication, sharing, and sync modules are removed, and no analytics or error-reporting dependency is declared. | `no-cloud-imports.test.ts` |
 | **Repository scope.** Only the desktop app and the CLI remain: no server, web, or mobile application. | `monorepo-scope.test.ts` |
 | **Documented compliance.** `docs/fr/conformite/rgpd.md` must list every network flow and every storage location. | `docs-rgpd.test.ts` |
-| **French first.** The interface shows in French by default, and English remains available. | `apps/desktop/src/i18n/locales.test.ts` |
+| **French and English interface.** The interface follows the system language: French if it is the first preferred language, otherwise English (the source language), including for a language without a translation. The "Interface language" setting (Automatic (system), Français, English) overrides it. A profile updated from an earlier version keeps the language deduced from its "Main language"; only a new profile starts on automatic, except under a `managed_settings.json` policy that sets an app setting (such as `current_stt_provider` or `automatic_updates`): it then starts in French and keeps it. | `apps/desktop/src/i18n/locales.test.ts` |
 
 The network flows unrelated to inference that are still present in the code are listed on the [GDPR](/en/conformite/rgpd) page.
 
@@ -83,7 +83,7 @@ The workflows are in `.github/workflows/`.
 
 - **Pull request gates**: `ci-test` (Vitest), `ci-code-quality` (formatting, lint, type checking, consistency of commits and lockfiles; clippy and `cargo test` on `main`), `ci-security` (dependency analysis, secret detection), `ci-codeql`, and `ci-traceability` (linked issue, PR type, semver impact).
 - **Release** (`release.yml`, on every push to `main`): the version is computed from Conventional Commits. `feat` gives a minor version, `fix` and `perf` a patch, and a `!` a major version. A commit marked `[skip release]` publishes nothing.
-- **Packages**: AppImage and `.deb` for Linux. For Windows, `build-windows.yml` produces an NSIS installer (`.exe`) and a `.msi`, signed through Azure Artifact Signing when the Azure secrets are provided.
+- **Packages**: AppImage and `.deb` for Linux. For Windows, `build-windows.yml` produces an NSIS installer (`.exe`) and a `.msi`. For a release from `main`, an isolated step (OIDC federated identity, no client secret) signs them with Azure Artifact Signing, along with `syntheo.exe` and the `syntheo-speech` program, then checks the signer; the release is cancelled if any file is unsigned.
 - **Integrity**: an SPDX SBOM (Syft), `SHA256SUMS` and `SHA256SUMS-windows` files, a provenance attestation you can check with `gh attestation verify`, then a release on GitHub Releases.
 
 No macOS build is published yet.

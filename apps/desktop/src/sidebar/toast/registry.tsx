@@ -14,6 +14,9 @@ type ToastRegistryParams = {
   availableUpdate?: string | null;
   onOpenUpdate?: () => void;
   hasLLMConfigured: boolean;
+  // Synthèse coupée par l'administration (intelligence_disabled) : aucun
+  // modèle de langage à demander (issue 707).
+  llmManagedOff?: boolean;
   hasSttConfigured: boolean;
   // « Sur ce poste » choisi mais pas prêt (modèles absents, poste non
   // mesuré) : l'écoute est en pause, un serveur n'y changerait rien.
@@ -34,6 +37,7 @@ export function createToastRegistry({
   availableUpdate = null,
   onOpenUpdate = () => {},
   hasLLMConfigured,
+  llmManagedOff = false,
   hasSttConfigured,
   onDeviceNotReady = false,
   isAiTranscriptionTabActive,
@@ -42,7 +46,7 @@ export function createToastRegistry({
   onOpenSTTSettings,
 }: ToastRegistryParams): ToastRegistryEntry[] {
   const hasUsableSttConfigured = hasSttConfigured;
-  const hasUsableLlmConfigured = hasLLMConfigured;
+  const hasUsableLlmConfigured = hasLLMConfigured || llmManagedOff;
 
   // order matters
   return [

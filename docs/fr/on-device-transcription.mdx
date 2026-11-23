@@ -52,7 +52,7 @@ Une fois le poste mesuré, cochez **Utiliser ce poste pour la transcription, à 
 
 - Si le poste prend plus de 2 s de retard, Syntheo espace la reconnaissance des intervenants, puis la coupe, et la rétablit quand le retard redescend ; la transcription continue. Après un tel changement, les intervenants peuvent recevoir de nouvelles étiquettes.
 - Si le programme s'arrête, Syntheo le relance avec un nouveau jeton, dans une limite de 3 lancements en 10 minutes ; au-delà, il attend la fin de ces 10 minutes.
-- L'audio d'une écoute « Sur ce poste » ne part **jamais** au serveur, même pour réparer un passage coupé ou après un redémarrage. Si les modèles manquent, sont refusés ou si le programme plante en boucle, la transcription en direct se met en pause et le dit ; un passage manqué reste marqué dans la note.
+- L'audio d'une écoute « Sur ce poste » ne part **jamais** au serveur, même après un redémarrage du programme. Une coupure courte est rejouée de mémoire au programme relancé, comme avec un serveur. Si les modèles manquent, sont refusés ou si le programme plante en boucle, la transcription en direct se met en pause et le dit ; un passage manqué est signalé par un bandeau daté au-dessus de la transcription.
 
 ## Réseau et données
 

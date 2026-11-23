@@ -121,9 +121,9 @@ Un administrateur peut imposer certains réglages en plaçant un fichier `manage
 
 Les réglages les plus utiles à une DSI :
 
-- **Serveur de transcription imposé en HTTPS** : `stt:openai` ou `stt:nvidia`, avec `current_stt_provider` et `current_stt_model`. L'adresse doit être en `https://` : le fichier n'accepte pas le HTTP clair, même vers un réseau privé. Voir [Passer son serveur en HTTPS](/fr/ai-setup#passer-son-serveur-en-https).
+- **Serveur de transcription imposé en HTTPS** : `stt:openai` ou `stt:nvidia`, avec `current_stt_provider` et `current_stt_model`. L'adresse doit être en `https://` : le fichier n'accepte pas le HTTP clair, même vers un réseau privé. Dans **Paramètres › Mes serveurs › Transcription**, la carte « Mon serveur » affiche alors la mention « Réglé par votre administrateur. » et ne fige que ce que le fichier impose : l'adresse, sans champ de saisie ni « Réinitialiser ce serveur… », quand `stt:<id>` la fixe ; le protocole quand `current_stt_provider` est fixé ; le modèle quand `current_stt_model` l'est. Le reste se règle normalement : sans `current_stt_model`, le modèle se choisit dans la liste. « Tester la connexion » reste disponible, et la clé d'API, que le fichier laisse vide, se saisit toujours sous « Avancé ». Voir [Passer son serveur en HTTPS](/fr/ai-setup#passer-son-serveur-en-https).
 - **Pas de recherche de mise à jour au démarrage** : `automatic_updates` à `false`. Syntheo ne contacte plus GitHub au lancement, et l'interrupteur « Rechercher les mises à jour au démarrage » de **Paramètres › Profil** est désactivé avec la mention « Réglé par votre administrateur. ». Une recherche manuelle reste possible depuis cette section et depuis la zone de notification. Voir [Mettre à jour](/fr/desktop-installation#mettre-à-jour).
-- **Pas de modèle de langage** : `intelligence_disabled` à `true`, avec `current_llm_provider` et `current_llm_model` à `""`. Aucune demande n'est envoyée à un serveur LLM : pas de compte rendu ni de chat ; un import d'enregistrement demandé par un agent (CLI ou MCP, `import_recording`) est refusé. La transcription reste disponible.
+- **Pas de modèle de langage** : `intelligence_disabled` à `true`, avec `current_llm_provider` et `current_llm_model` à `""`. Aucune demande n'est envoyée à un serveur LLM : pas de compte rendu ni de chat, et la page **Paramètres › Synthèse** affiche « Réglé par votre administrateur. » sans interroger le serveur ; un import d'enregistrement demandé par un agent (CLI ou MCP, `import_recording`) est refusé. La transcription reste disponible.
 
 ```json
 {
@@ -146,7 +146,7 @@ Les réglages les plus utiles à une DSI :
     | --- | --- |
     | `current_stt_provider` | `openai` ou `nvidia` |
     | `current_stt_model` | identifiant non vide (200 caractères au plus) |
-    | `stt:openai`, `stt:nvidia` | objet `{ "type": "stt", "api_key": "", "base_url": "https://…" }` : URL en HTTPS uniquement, sans identifiants ni paramètres, clé obligatoirement vide |
+    | `stt:openai`, `stt:nvidia` | objet `{ "type": "stt", "api_key": "", "base_url": "https://…" }` : URL en HTTPS uniquement, sans identifiants ni paramètres (les blancs en tête et en fin sont ignorés), clé obligatoirement vide |
     | `intelligence_disabled` | `true` uniquement |
     | `current_llm_provider`, `current_llm_model` | `""` uniquement |
     | `auto_start_scheduled_meetings` | `true` ou `false` |
@@ -156,7 +156,7 @@ Les réglages les plus utiles à une DSI :
     | `measurement_enabled`, `calibration_enabled` | `false` uniquement : coupe la mesure de la reprise de la bêta, et son mode Calibrage (voir [Données et confidentialité](/fr/data-and-privacy#mesure-de-la-reprise-bêta)) |
     | `on_device_transcription_enabled` | `false` uniquement : interdit la transcription sur le poste ; le programme `syntheo-speech`, livré avec l'application, n'est jamais lancé |
     | `speech_models_urls` | Liste de 1 à 8 adresses HTTPS (marqueurs `{path}` ou `{name}` permis), sans identifiants, requête, fragment ni virgule : remplace les sources de téléchargement des modèles de la transcription sur le poste, par exemple par un miroir interne ([détails](/fr/on-device-transcription#imposer-un-miroir-des-modèles)) |
-    | `save_recordings` | `true` ou `false` |
+    | `save_recordings` | `true` ou `false` : clé héritée, acceptée puis sans effet, la rétention de l'audio étant toujours forcée à « aucune » (`none`) |
 
     Toute autre clé, ou toute autre valeur, rend le fichier invalide. Le fichier ne peut contenir aucun secret : une clé API se saisit sur chaque poste.
   </Accordion>

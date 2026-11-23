@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   summaryTemplateId: "",
   summaryContent: "",
   folderTemplateId: undefined as string | undefined,
+  intelligenceBlocked: false,
   toast: vi.fn(),
   dismiss: vi.fn(),
   enhance: vi.fn(async () => ({ type: "started", noteId: "summary-1" })),
@@ -40,6 +41,9 @@ vi.mock("~/templates/queries", () => ({
 }));
 vi.mock("~/services/enhancer", () => ({
   getEnhancerService: () => ({ enhance: mocks.enhance }),
+}));
+vi.mock("~/settings/managed", () => ({
+  loadIntelligenceBlocked: async () => mocks.intelligenceBlocked,
 }));
 vi.mock("~/ai/task-window-sync", () => ({
   isMainAITaskHostWindow: () => true,
@@ -116,6 +120,7 @@ describe("proposeLateFiling", () => {
     mocks.summaryTemplateId = "";
     mocks.summaryContent = WRITTEN;
     mocks.folderTemplateId = "weekly";
+    mocks.intelligenceBlocked = false;
   });
 
   afterEach(() => {
@@ -180,5 +185,19 @@ describe("proposeLateFiling", () => {
     mocks.folderTemplateId = "deleted";
     await proposeLateFiling("session-1");
     expect(mocks.toast).not.toHaveBeenCalled();
+  });
+
+  // Issue 707 : synthèse coupée (politique ou copie d'app_settings), comme
+  // les autres générations manuelles. Le message du déplacement reste seul.
+  it("offers no regeneration while summaries are turned off", async () => {
+    mocks.intelligenceBlocked = true;
+    await proposeLateFiling("session-1", () => true, {
+      toastId: "move-note-session-1",
+      label: "Undo",
+      onClick: vi.fn(),
+    });
+    expect(mocks.toast).not.toHaveBeenCalled();
+    expect(mocks.dismiss).not.toHaveBeenCalled();
+    expect(mocks.enhance).not.toHaveBeenCalled();
   });
 });

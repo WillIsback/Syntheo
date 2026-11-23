@@ -3,11 +3,11 @@ import { platform } from "@tauri-apps/plugin-os";
 
 import { useMountEffect } from "@syntheo/ui/hooks/use-mount-effect";
 
-import { useLiveQuery } from "~/db";
 import { DEVICE_AUTH_REASON } from "~/lock/auth";
 import { useAppLock } from "~/lock/store";
 import { BetaData } from "~/mesure/beta-data";
 import { privacyMessages } from "~/settings/general/app-settings";
+import { useManagedSettingIds } from "~/settings/managed";
 import { SettingsPageTitle } from "~/settings/page-title";
 import {
   useSetSettingValues,
@@ -15,23 +15,6 @@ import {
 } from "~/settings/queries";
 import { SettingSwitchRow } from "~/settings/setting-row";
 import { resolveConfigValue } from "~/shared/config";
-
-const MANAGED_BETA_SQL = `
-  SELECT id FROM managed_app_settings
-  WHERE id IN ('measurement_enabled', 'calibration_enabled')
-`;
-
-/** Réglages de la bêta fixés par l'administration du poste. */
-function useManagedBetaSettings(): Set<string> {
-  const { data = new Set<string>() } = useLiveQuery<
-    { id: string },
-    Set<string>
-  >({
-    sql: MANAGED_BETA_SQL,
-    mapRows: (rows) => new Set(rows.map((row) => row.id)),
-  });
-  return data;
-}
 
 export function SettingsPrivacy() {
   const { i18n, t } = useLingui();
@@ -42,7 +25,7 @@ export function SettingsPrivacy() {
   const authenticate = useAppLock((state) => state.authenticate);
   const lockApp = useAppLock((state) => state.lockApp);
   const refreshAvailability = useAppLock((state) => state.refreshAvailability);
-  const managedBeta = useManagedBetaSettings();
+  const managedBeta = useManagedSettingIds();
 
   useMountEffect(() => {
     void refreshAvailability();

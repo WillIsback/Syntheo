@@ -18,7 +18,7 @@ Pour lire les données de réunion plutôt que de les recevoir, utilisez la [CLI
 ## Ajouter un point de terminaison
 
 1. Ouvrez **Paramètres → Développeurs**.
-2. Dans la section « Webhooks », saisissez une URL commençant par `http://` ou `https://`, puis cliquez sur « Ajoutez un webhook ».
+2. Dans la section « Webhooks », saisissez une URL commençant par `http://` ou `https://`, sans identifiants (`utilisateur:motdepasse@` est refusé), puis cliquez sur « Ajoutez un webhook ».
 3. Copiez le secret de signature (`whsec_...`) avec « Copier ».
 4. Cliquez sur « Test » pour envoyer une livraison `webhook.test` et vérifier que votre service répond.
 
@@ -59,6 +59,8 @@ Pour `webhook.test`, `data` contient seulement un champ `message`.
 ## Livraison et nouvelles tentatives
 
 Chaque requête expire après 10 secondes. En cas d'échec, Syntheo réessaie après 5 secondes, puis après 30 secondes. Une livraison `webhook.test` ne fait qu'une tentative.
+
+Syntheo ne suit pas les redirections. Une réponse 3xx compte comme un échec, comme toute réponse hors 2xx : l'état de la dernière livraison indique seulement l'hôte vers lequel le serveur redirige, jamais le chemin. Saisissez directement l'adresse finale, par exemple en `https://` si votre serveur redirige le HTTP.
 
 Chaque requête contient ces en-têtes :
 

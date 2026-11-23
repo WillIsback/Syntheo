@@ -3027,8 +3027,8 @@ msgid "Measuring profile {0} of {1}…"
 msgstr "Measuring profile {0} of {1}…"
 
 #: src/settings/ai/stt/on-device-card.tsx
-msgid "Measuring this computer (one to two minutes)…"
-msgstr "Measuring this computer (one to two minutes)…"
+msgid "Measuring this computer (from under a minute to about three minutes)…"
+msgstr "Measuring this computer (from under a minute to about three minutes)…"
 
 #: src/settings/ai/llm/server-card.tsx
 msgid "Medium"
@@ -3237,8 +3237,8 @@ msgid "Models installed ({0})."
 msgstr "Models installed ({0})."
 
 #: src/settings/ai/stt/on-device-card.tsx
-msgid "Models installed. Measuring this computer (one to two minutes)…"
-msgstr "Models installed. Measuring this computer (one to two minutes)…"
+msgid "Models installed. Measuring this computer (from under a minute to about three minutes)…"
+msgstr "Models installed. Measuring this computer (from under a minute to about three minutes)…"
 
 #. placeholder {0}: size(models.presentBytes)
 #. placeholder {1}: size(models.totalBytes)
@@ -4963,6 +4963,9 @@ msgstr "Server that writes the summary"
 msgid "Session title"
 msgstr "Session title"
 
+#: src/session/components/note-input/enhanced/index.tsx
+#: src/settings/ai/llm/index.tsx
+#: src/settings/ai/stt/server-card.tsx
 #: src/settings/general/update-section.tsx
 #: src/settings/privacy/index.tsx
 msgid "Set by your administrator."
@@ -5577,6 +5580,10 @@ msgstr "Synthesis"
 #: src/sidebar/settings-server-status.tsx
 msgid "Synthesis · connected"
 msgstr "Synthesis · connected"
+
+#: src/sidebar/settings-server-status.tsx
+msgid "Synthesis · disabled"
+msgstr "Synthesis · disabled"
 
 #: src/sidebar/settings-server-status.tsx
 msgid "Synthesis · no server"

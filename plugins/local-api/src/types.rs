@@ -16,7 +16,9 @@ impl From<syntheo_db_app::WebhookEndpointRow> for WebhookInfo {
     fn from(row: syntheo_db_app::WebhookEndpointRow) -> Self {
         Self {
             id: row.id,
-            url: row.url,
+            // Identifiants d'une ligne antérieure au refus (issue 707) masqués
+            // à l'affichage.
+            url: crate::dispatch::without_credentials(&row.url, "***"),
             events: serde_json::from_str(&row.events_json).unwrap_or_default(),
             active: row.active,
             created_at: row.created_at,
