@@ -127,12 +127,28 @@ export async function initializeApplicationSettings(): Promise<void> {
     updates.auto_summary_prompt = migratedAutoPrompt;
   }
 
+  // Issue 707 : le déclencheur de managed_app_settings refuse toute autre
+  // valeur d'une clé gérée, et avec elle la transaction entière (langues
+  // comprises). Une politique valide peut imposer un modèle que la
+  // normalisation remplacerait (nom retiré de NeMo) ou viderait (fournisseur
+  // enregistré retiré) : la valeur imposée reste telle quelle.
+  for (const id of await getManagedSettingIds()) {
+    delete updates[id as SettingKey];
+  }
+
   if (Object.keys(updates).length > 0) {
     await setSettingValues(updates);
   }
   const current =
     Object.keys(updates).length > 0 ? await getStoredSettingValues() : stored;
   applySettingSideEffects(current.values);
+}
+
+async function getManagedSettingIds(): Promise<string[]> {
+  const rows = await liveQueryClient.execute<{ id: string }>(
+    "SELECT id FROM managed_app_settings",
+  );
+  return rows.map((row) => row.id);
 }
 
 function collectSelectionUpdates(
