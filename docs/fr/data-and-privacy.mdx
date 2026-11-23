@@ -65,11 +65,11 @@ Choisissez une activité dans le schéma ci-dessous : il indique la destination 
 
 <DataFlows />
 
-Hors inférence, deux flux mineurs subsistent, sans contenu de réunion : la recherche de mises à jour (lecture de `latest.json` sur GitHub, puis téléchargement de l'installeur si vous mettez à jour) et l'affichage des notes de version d'une version autre que celle installée (requête vers GitHub).
+Hors inférence et hors modèles « Sur ce poste » (tableau ci-dessus), seule la mise à jour sort du poste, sans contenu de réunion : Syntheo lit `latest.json` sur GitHub 15 secondes après le démarrage (désactivable) ou quand vous lancez la recherche, et ce fichier porte aussi les notes de la nouvelle version. L'installeur n'est téléchargé que si vous choisissez de mettre à jour.
 
 Une image hébergée sur un autre site, dans un compte rendu, une proposition de modification ou une réponse du chat, n'est jamais chargée : son texte alternatif s'affiche à sa place, et aucune requête ne part vers ce site.
 
-Rien n'est envoyé à l'éditeur : pas de compte, pas de statistiques d'usage, pas de rapport d'erreur, La recherche de mises à jour, activée par défaut et désactivable, ne transmet aucune donnée personnelle ; GitHub voit l'adresse IP du poste. Voir [Mettre à jour](/fr/desktop-installation#mettre-à-jour).
+Rien n'est envoyé à l'éditeur : pas de compte, pas de statistiques d'usage, pas de rapport d'erreur. La recherche de mises à jour, activée par défaut et désactivable, ne transmet aucune donnée personnelle ; GitHub voit l'adresse IP du poste. Voir [Mettre à jour](/fr/desktop-installation#mettre-à-jour).
 
 <Note>
   Un serveur d'inférence exploité par un tiers devient votre sous-traitant au sens du RGPD (art. 28) : vérifiez le contrat et la localisation des données. Un serveur auto-hébergé reste sous votre contrôle.

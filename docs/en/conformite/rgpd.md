@@ -79,6 +79,9 @@ a deletion, erasure is retried at the next launch.
   the administrator (`speech_models_urls`) instead; HTTPS redirects are
   followed (5 at most), including the mirror's redirects to another host. No meeting data is sent; these hosts see the
   computer's IP address. No flow if the models are installed from a folder.
+  The administrator turns this flow off, with the whole module, through the
+  key `on_device_transcription_enabled` set to `false` in
+  `managed_settings.json`.
 - **Inference endpoints configured by the user**, and only those: ASR
   (OpenAI protocol: Realtime and `/v1/audio/transcriptions`; NVIDIA
   NeMo-Speech.cpp: WebSocket `/v1/audio/transcriptions/realtime`) and the
@@ -95,15 +98,21 @@ a deletion, erasure is retried at the next launch.
 - An endpoint run by a third party becomes the **user's processor**
   (Art. 28 GDPR): contract and data location to be checked.
 - **Other flows, apart from inference**:
-  - release notes: those of the installed version are included in the app;
-    showing those of another version triggers an **unauthenticated** request
-    to GitHub (`raw.githubusercontent.com`, or the public API
-    `api.github.com` for a nightly version). Only the version number is sent;
-  - update check (at startup, on by default, can be turned off by the user
-    or by the administrator through `managed_settings.json`, key
-    `automatic_updates`): **unauthenticated** read of `latest.json` on GitHub,
-    then download of the installer if the user updates. No personal data
-    sent; GitHub sees the computer's IP address;
+  - update check: 15 seconds after startup, on by default, can be turned off
+    by the user or by the administrator (`managed_settings.json`, key
+    `automatic_updates` set to `false`), and at any time on the user's
+    request, even when the startup check is off. **Unauthenticated** read of
+    `latest.json`
+    (`github.com/WillIsback/Syntheo/releases/latest/download/latest.json`,
+    redirected by GitHub to its content servers), which also carries the new
+    version's release notes; those of the installed version are included in
+    the app. No personal data sent; GitHub sees the computer's IP address;
+  - download of the installer of an update, only when the user asks for it:
+    file from the GitHub release named in `latest.json`, whose signature is
+    checked before installation;
+  - on-device transcription models: see above (on click only, turned off by
+    `on_device_transcription_enabled`);
+  - echo cancellation models: bundled with the app, no download.
 - **No account, no sync, no error reports, nothing installed without the
   user's action** (the built-in update, AppImage and Windows installer,
   installs on request with a signed installer; .deb and MSI: link to GitHub

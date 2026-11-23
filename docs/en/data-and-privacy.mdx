@@ -65,11 +65,11 @@ Choose an activity in the diagram below: it shows the destination that receives 
 
 <DataFlows />
 
-Apart from inference, two minor flows remain, with no meeting content: the update check (reading `latest.json` on GitHub, then downloading the installer if you update) and showing the release notes of a version other than the installed one (a request to GitHub).
+Apart from inference and the "On this computer" models (table above), only updates leave the computer, with no meeting content: Syntheo reads `latest.json` on GitHub 15 seconds after startup (can be turned off) or when you start the check, and this file also carries the new version's release notes. The installer is downloaded only if you choose to update.
 
 An image hosted on another site, in a summary, an edit proposal or a chat answer, is never loaded: its alternative text shows instead, and no request goes to that site.
 
-Nothing is sent to the vendor: no account, no usage statistics, no error reports, The update check, on by default and optional, sends no personal data; GitHub sees the computer's IP address. See [Update](/en/desktop-installation#update).
+Nothing is sent to the vendor: no account, no usage statistics, no error reports. The update check, on by default and optional, sends no personal data; GitHub sees the computer's IP address. See [Update](/en/desktop-installation#update).
 
 <Note>
   An inference server run by a third party becomes your processor within the meaning of the GDPR (Art. 28): check the contract and where the data is located. A self-hosted server stays under your control.

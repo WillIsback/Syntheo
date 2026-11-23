@@ -82,7 +82,9 @@ une suppression, l'effacement est retenté au lancement suivant.
   redirections HTTPS sont suivies (5 au plus), y compris celles du miroir
   vers un autre hôte. Aucune donnée de
   réunion n'est envoyée ; ces hôtes voient l'adresse IP du poste. Aucun flux
-  si les modèles sont installés depuis un dossier.
+  si les modèles sont installés depuis un dossier. L'administrateur coupe ce
+  flux, avec tout le module, par la clé `on_device_transcription_enabled` à
+  `false` dans `managed_settings.json`.
 - **Endpoints d'inférence configurés par l'utilisateur**, et eux seuls : ASR
   (protocole OpenAI : Realtime et `/v1/audio/transcriptions` ; NVIDIA
   NeMo-Speech.cpp : WebSocket `/v1/audio/transcriptions/realtime`) et
@@ -99,17 +101,23 @@ une suppression, l'effacement est retenté au lancement suivant.
 - Un endpoint exploité par un tiers devient **sous-traitant de l'utilisateur**
   (art. 28 RGPD) : contrat et localisation des données à vérifier.
 - **Autres flux, hors inférence** :
-  - notes de version : celles de la version installée sont incluses dans
-    l'application ; afficher celles d'une autre version déclenche une requête
-    **non authentifiée** vers GitHub (`raw.githubusercontent.com`, ou l'API
-    publique `api.github.com` pour une version nightly). Seul le numéro de
-    version est transmis ;
-  - recherche de mises à jour (au démarrage, activée par défaut et
-    désactivable par l'utilisateur ou par l'administrateur via
-    `managed_settings.json`, clé `automatic_updates`) : lecture **non
-    authentifiée** de `latest.json` sur GitHub, puis téléchargement de
-    l'installeur si l'utilisateur met à jour. Aucune donnée personnelle
-    transmise ; GitHub voit l'adresse IP du poste ;
+  - recherche de mises à jour : 15 secondes après le démarrage, activée par
+    défaut et désactivable par l'utilisateur ou par l'administrateur
+    (`managed_settings.json`, clé `automatic_updates` à `false`), et à tout
+    moment à la demande de l'utilisateur, même quand la recherche au démarrage
+    est coupée. Lecture **non authentifiée** de `latest.json`
+    (`github.com/WillIsback/Syntheo/releases/latest/download/latest.json`,
+    redirigé par GitHub vers ses serveurs de contenu), qui porte aussi les
+    notes de la nouvelle version ; celles de la version installée sont
+    incluses dans l'application. Aucune donnée personnelle transmise ; GitHub
+    voit l'adresse IP du poste ;
+  - téléchargement de l'installeur d'une mise à jour, seulement quand
+    l'utilisateur le demande : fichier de la release GitHub indiquée par
+    `latest.json`, dont la signature est vérifiée avant l'installation ;
+  - modèles de la transcription sur le poste : voir plus haut (au clic
+    seulement, coupés par `on_device_transcription_enabled`) ;
+  - modèles d'annulation d'écho : fournis avec l'application, aucun
+    téléchargement.
 - **Pas de compte, pas de synchronisation, pas de rapport d'erreur, pas
   d'installation sans action de l'utilisateur** (la mise à jour intégrée,
   AppImage et installeur Windows, s'installe sur demande, installeur signé ;

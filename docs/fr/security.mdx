@@ -10,7 +10,7 @@ Syntheo Desktop est un client local, sans serveur éditeur. La surface à évalu
 - **Aucun compte, aucune authentification** auprès de l'éditeur. Aucun service Syntheo ne reçoit vos données.
 - **Aucune télémétrie, aucun rapport d'erreur** : le code d'analyse et de rapport d'erreur est retiré, il n'y a rien à désactiver.
 - **Aucun audio sur disque**, sur aucun chemin (capture, dictée, import).
-- **Réseau limité** aux serveurs d'inférence et aux webhooks que vous configurez, plus deux flux mineurs sans contenu de réunion : recherche de mises à jour et notes de version sur GitHub. Ces flux sont listés dans [la fiche RGPD](/fr/conformite/rgpd).
+- **Réseau limité** aux serveurs d'inférence et aux webhooks que vous configurez, plus trois flux sans contenu de réunion : la recherche de mises à jour (`latest.json` sur GitHub, 15 secondes après le démarrage, désactivable, ou à la demande), le téléchargement de l'installeur quand vous mettez à jour et, seulement si vous les demandez, les modèles de la transcription « Sur ce poste » (GitHub, Hugging Face en secours, ou le miroir de votre organisation). Ces flux sont listés dans [la fiche RGPD](/fr/conformite/rgpd).
 - **Aucune bascule** vers un service tiers quand un serveur d'inférence ne répond pas.
 - **Code ouvert** : tout est vérifiable dans le [dépôt GitHub](https://github.com/WillIsback/Syntheo).
 
