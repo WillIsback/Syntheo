@@ -300,11 +300,18 @@ jobs:
   # modèles, exemple, audio de mise en service), dans l'action rust_install,
   # dans rust-toolchain.toml ni dans ce workflow ou publish-speech-models.yml.
   # Comme build-speech : sans rust-cache ni sccache, registre et compilation
-  # partent de zéro.
+  # partent de zéro. Sous TCG, un fichier de 30 s demande environ 10 à 12 min
+  # sur un runner rapide (4 fils sur 2 cœurs) et près de trois fois plus sur
+  # un runner lent : les deux fichiers de mise en service sont répartis sur
+  # deux jobs (matrice `audio`), chacun avec les seuils du contrôle complet.
   speech-models:
-    name: ci-code-quality (modèles de la transcription sur le poste)
+    name: ci-code-quality (modèles de la transcription sur le poste, ${{ matrix.audio }})
     runs-on: ubuntu-24.04
     timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        audio: [mic, sys]
     steps:
       - name: Checkout du code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -330,7 +337,7 @@ jobs:
           fi
 
       - name: Tests de l'envoi vers Hugging Face
-        if: steps.changes.outputs.run == 'true'
+        if: steps.changes.outputs.run == 'true' && matrix.audio == 'mic'
         run: python3 -I -m unittest discover -s apps/speech/models -p 'test_*.py'
 
       - name: Toolchain Rust
@@ -371,10 +378,14 @@ jobs:
           sudo apt-get update -q
           sudo apt-get install -y -q --no-install-recommends qemu-user-static
 
-      - name: Garde-fou sous un CPU sans VNNI (qemu Skylake-Client)
+      # Délai propre à l'étape (une relance après une erreur interne de qemu
+      # comprise) : un dépassement est attribué au garde-fou, pas au job.
+      - name: Garde-fou sous un CPU sans VNNI (qemu Skylake-Client, ${{ matrix.audio }})
         if: steps.changes.outputs.run == 'true'
+        timeout-minutes: 40
         env:
           CPU_CHECK_BIN: apps/speech/target/release/examples/cpu-check
+          FILES: ${{ matrix.audio }}
         run: bash apps/speech/models/cpu-check/run.sh "$RUNNER_TEMP/models"
 
   meta:

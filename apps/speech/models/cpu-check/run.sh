@@ -24,6 +24,10 @@
 #   QEMU           émulateur (défaut : qemu-x86_64-static, sinon qemu-x86_64)
 #   QEMU_CPU       modèle de CPU émulé (défaut : Skylake-Client)
 #   THREADS        fils ONNX Runtime (défaut : 4)
+#   FILES          fichiers de mise en service à transcrire, parmi mic et sys
+#                  (défaut : "mic sys") ; la CI les répartit sur deux jobs
+#   HEARTBEAT      secondes entre deux battements (défaut : 120)
+#   STALL_LIMIT    battements sans CPU avant d'arrêter un qemu figé (défaut : 3)
 set -euo pipefail
 
 # Seuils, appliqués à chaque fichier : au moins 80 % des mots de sa référence
@@ -54,38 +58,105 @@ if [ -z "$BIN" ]; then
 fi
 
 COMMISSIONING="$SPEECH/commissioning"
+AUDIO=()
+for f in ${FILES:-mic sys}; do
+  case "$f" in
+    mic | sys) AUDIO+=("$COMMISSIONING/$f.wav=$HERE/$f.fp32.txt") ;;
+    *) echo "Erreur : FILES=$FILES ; valeurs admises : mic, sys." >&2; exit 2 ;;
+  esac
+done
+[ ${#AUDIO[@]} -gt 0 ] || { echo "Erreur : FILES est vide." >&2; exit 2; }
 OUT=$(mktemp)
 ERR=$(mktemp)
 trap 'rm -f "$OUT" "$ERR"' EXIT
 
+# Hôte, émulateur et réglages en tête du journal : la durée sous TCG dépend
+# surtout du processeur hôte (runner GitHub variable).
+host_cpu=$(grep -m1 '^model name' /proc/cpuinfo | cut -d: -f2- | sed 's/^ *//' || true)
+echo "-- hôte : ${host_cpu:-inconnu}, $(nproc) CPU ; $("$QEMU" --version | head -n1) -cpu ${QEMU_CPU:-Skylake-Client} ; THREADS=${THREADS:-4} ; fichiers : ${FILES:-mic sys}"
+
+# Battement toutes les HEARTBEAT secondes (défaut 120) : durée écoulée et temps
+# CPU cumulé de qemu, pour distinguer un runner lent d'un émulateur figé. Si
+# qemu consomme moins d'une seconde de CPU sur STALL_LIMIT battements de suite
+# (défaut 3, soit 6 min ; en marche il en consomme plusieurs par seconde), il
+# est arrêté et traité comme une erreur interne de l'émulateur.
+HEARTBEAT=${HEARTBEAT:-120}
+STALL_LIMIT=${STALL_LIMIT:-3}
+HZ=$(getconf CLK_TCK)
+
+alive() { # un processus terminé reste zombie (kill -0 réussit) jusqu'au wait
+  local state
+  state=$(sed 's/.*) //' "/proc/$1/stat" 2> /dev/null | cut -d' ' -f1) || return 1
+  [ -n "$state" ] && [ "$state" != Z ]
+}
+cpu_seconds() { sed 's/.*) //' "/proc/$1/stat" 2> /dev/null | awk -v hz="$HZ" '{print int(($12+$13)/hz)}'; }
+flush_out() { # lignes JSON de cpu-check au fil de l'eau
+  local n
+  n=$(wc -l < "$OUT")
+  [ "$n" -gt "$shown" ] && sed -n "$((shown + 1)),${n}p" "$OUT"
+  shown=$n
+}
+
 run_once() {
+  : > "$OUT"
+  : > "$ERR"
+  shown=0
+  stalled=false
   set +e
   "$QEMU" -cpu "${QEMU_CPU:-Skylake-Client}" "$BIN" --models "$MODELS" --threads "${THREADS:-4}" \
     --min-word-ratio "$MIN_WORD_RATIO" --max-wer "$MAX_WER" \
-    "$COMMISSIONING/mic.wav=$HERE/mic.fp32.txt" "$COMMISSIONING/sys.wav=$HERE/sys.fp32.txt" > "$OUT" 2> "$ERR"
+    "${AUDIO[@]}" > "$OUT" 2> "$ERR" &
+  local pid=$! tick=0 last=0 stalls=0 cpu
+  while alive "$pid"; do
+    sleep 1
+    tick=$((tick + 1))
+    flush_out
+    if [ $((tick % HEARTBEAT)) = 0 ]; then
+      cpu=$(cpu_seconds "$pid")
+      [ -n "$cpu" ] || continue
+      echo "-- cpu-check : $((tick / 60)) min $((tick % 60)) s écoulées, temps CPU de qemu ${cpu} s."
+      if [ $((cpu - last)) -lt 1 ]; then stalls=$((stalls + 1)); else stalls=0; fi
+      last=$cpu
+      if [ "$stalls" -ge "$STALL_LIMIT" ]; then
+        stalled=true
+        kill -KILL "$pid" 2> /dev/null
+        break
+      fi
+    fi
+  done
+  wait "$pid"
   code=$?
   set -e
-  cat "$ERR" >&2
+  flush_out
+  # Avertissements « TCG doesn't support requested feature », un trio par fil
+  # créé : comptés, pas recopiés.
+  grep -v "TCG doesn't support requested feature" "$ERR" >&2 || true
+  local tcg
+  tcg=$(grep -c "TCG doesn't support requested feature" "$ERR" || true)
+  [ "${tcg:-0}" = 0 ] || echo "-- qemu : $tcg avertissement(s) « TCG doesn't support requested feature » (hle, rtm, xsavec) masqués." >&2
 }
 
-# Erreur interne de l'émulateur (QEMU internal SIGBUS, code 135), vue une fois
-# sur trois par la QA pendant sys.wav, sans rapport avec les modèles : une
-# seule relance, signalée. Un verdict (code 1 : muet, WER trop haut…) ou toute
-# autre erreur n'est jamais relancé ; deux SIGBUS de suite : échec.
-qemu_sigbus() {
-  [ "$code" = 135 ] || grep -q "QEMU internal SIGBUS" "$ERR"
+# Erreur interne de l'émulateur, sans rapport avec les modèles : QEMU internal
+# SIGBUS (code 135, vue une fois sur trois par la QA pendant sys.wav) ou qemu
+# figé (plus de CPU consommé). Une seule relance, signalée. Un verdict (code 1 :
+# muet, WER trop haut…) ou toute autre erreur n'est jamais relancé ; deux
+# erreurs internes de suite : échec non conclusif.
+qemu_internal() {
+  $stalled || [ "$code" = 135 ] || grep -q "QEMU internal SIGBUS" "$ERR"
+}
+qemu_reason() {
+  if $stalled; then echo "figé : moins d'une seconde de CPU en $((HEARTBEAT * STALL_LIMIT)) s"; else echo "SIGBUS, code $code"; fi
 }
 
 run_once
-if qemu_sigbus; then
-  echo "::warning::qemu : erreur interne (SIGBUS, code $code) pendant cpu-check, sans rapport avec les modèles ; une seule relance."
+if qemu_internal; then
+  echo "::warning::qemu : erreur interne ($(qemu_reason)) pendant cpu-check, sans rapport avec les modèles ; une seule relance."
   run_once
-  if qemu_sigbus; then
-    echo "Erreur : qemu s'est de nouveau arrêté sur une erreur interne (SIGBUS, code $code) : contrôle non conclusif." >&2
+  if qemu_internal; then
+    echo "Erreur : qemu s'est de nouveau arrêté sur une erreur interne ($(qemu_reason)) : contrôle non conclusif." >&2
     exit 2
   fi
 fi
-cat "$OUT"
 [ "$code" -le 1 ] || { echo "Erreur : cpu-check a échoué (code $code)." >&2; exit 2; }
 words=$(python3 -I -c 'import json,sys;print([json.loads(l) for l in open(sys.argv[1])][-1]["words"])' "$OUT")
 if $EXPECT_EMPTY; then
