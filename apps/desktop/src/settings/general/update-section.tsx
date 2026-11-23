@@ -7,25 +7,12 @@ import { streamdownIcons } from "@syntheo/ui/components/streamdown-icons";
 import { Button } from "@syntheo/ui/components/ui/button";
 import { useMountEffect } from "@syntheo/ui/hooks/use-mount-effect";
 
-import { useLiveQuery } from "~/db";
 import { type UpdaterErrorCode, useUpdater } from "~/services/updater/store";
+import { useIsManagedSetting } from "~/settings/managed";
 import { useSetSettingValue } from "~/settings/queries";
 import { SettingSwitchRow } from "~/settings/setting-row";
 import { useConfigValues } from "~/shared/config";
 import { useListener } from "~/stt/contexts";
-
-const MANAGED_SQL = `
-  SELECT 1 AS managed FROM managed_app_settings WHERE id = 'automatic_updates'
-`;
-
-/** La vérification au démarrage est fixée par l'administration du poste. */
-function useUpdatesManaged(): boolean {
-  const { data = false } = useLiveQuery<{ managed: number }, boolean>({
-    sql: MANAGED_SQL,
-    mapRows: (rows) => rows.length > 0,
-  });
-  return data;
-}
 
 /** Liste des versions, quand aucune mise à jour n'est connue. */
 const RELEASES_URL = "https://github.com/WillIsback/Syntheo/releases";
@@ -145,7 +132,7 @@ export function UpdateSection({
   const { t, i18n } = useLingui();
   const { automatic_updates } = useConfigValues(["automatic_updates"] as const);
   const setAutomaticUpdates = useSetSettingValue("automatic_updates");
-  const managed = useUpdatesManaged();
+  const managed = useIsManagedSetting("automatic_updates");
   const phase = useUpdater((state) => state.phase);
   const update = useUpdater((state) => state.update);
   const progress = useUpdater((state) => state.progress);

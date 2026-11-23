@@ -17,7 +17,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("~/db", () => ({
   useLiveQuery: ({ mapRows }: { mapRows: (rows: unknown[]) => unknown }) => ({
-    data: mapRows(mocks.managed ? [{ managed: 1 }] : []),
+    data: mapRows(mocks.managed ? [{ id: "automatic_updates" }] : []),
   }),
 }));
 
