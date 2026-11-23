@@ -85,7 +85,7 @@ The "Interface" column shows whether `apps/desktop/src` imports the `@syntheo/pl
 
 - **Path**: `plugins/dictation`
 - **Role**: records the voice, sends it to the STT server and inserts the text into the active app. Insertion has a Linux implementation and a Windows one (`src/insertion/`).
-- **Commands**: `show`, `hide`, `set_phase`, `update_amplitude`, `start_recording`, `start_system_recording`, `stop_recording`, `cancel_recording`, `capture_target`, `insert_text`.
+- **Commands**: `start_recording`, `start_system_recording`, `stop_recording`, `cancel_recording`, `capture_target`, `insert_text`.
 - **Internal dependencies**: `crates/owhisper-client`, `crates/owhisper-interface`, `crates/audio`.
 - **Affected doc pages**: [/en/dictation](/en/dictation).
 

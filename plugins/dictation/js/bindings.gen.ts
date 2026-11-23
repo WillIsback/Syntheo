@@ -5,10 +5,6 @@ import { invoke as __TAURI_INVOKE, Channel } from "@tauri-apps/api/core";
 
 /** Commands */
 export const commands = {
-	show: () => typedError<null, string>(__TAURI_INVOKE("plugin:dictation|show")),
-	hide: () => typedError<null, string>(__TAURI_INVOKE("plugin:dictation|hide")),
-	setPhase: (phase: Phase) => typedError<null, string>(__TAURI_INVOKE("plugin:dictation|set_phase", { phase })),
-	updateAmplitude: (amplitude: number) => typedError<null, string>(__TAURI_INVOKE("plugin:dictation|update_amplitude", { amplitude })),
 	startRecording: (microphoneDevice: string | null, owner: string) => typedError<null, string>(__TAURI_INVOKE("plugin:dictation|start_recording", { microphoneDevice, owner })),
 	startSystemRecording: (microphoneDevice: string | null, owner: string, preview: PreviewConfig | null, updates: Channel<RecordingUpdate>) => typedError<null, string>(__TAURI_INVOKE("plugin:dictation|start_system_recording", { microphoneDevice, owner, preview, updates })),
 	stopRecording: (owner: string) => typedError<RecordedAudio, string>(__TAURI_INVOKE("plugin:dictation|stop_recording", { owner })),
@@ -33,8 +29,6 @@ export type ListenParams = {
 } & {
 	language?: string[],
 });
-
-export type Phase = "recording" | "processing";
 
 export type PreviewConfig = {
 	provider: string,

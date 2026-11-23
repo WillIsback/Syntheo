@@ -54,11 +54,6 @@ define_notification_callback!(
     rust_on_collapsed_timeout
 );
 define_notification_callback!(
-    EXPANDED_START_TIME_REACHED_CB,
-    setup_expanded_start_time_reached_handler,
-    rust_on_expanded_start_time_reached
-);
-define_notification_callback!(
     OPTION_SELECTED_CB,
     setup_option_selected_handler,
     rust_on_option_selected

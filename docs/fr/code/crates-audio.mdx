@@ -152,9 +152,9 @@ Aucun build macOS n'est publié (voir [Architecture](/fr/architecture)). Ces cra
 
 | Crate | Rôle | Utilisée par |
 | --- | --- | --- |
-| `crates/tcc` | Statut, demande et réinitialisation des permissions TCC (capture audio, capture d'écran, micro). | `plugins/permissions`, seulement avec la feature optionnelle `private-tcc` |
-| `crates/intercept` | Gestionnaire de fermeture forcée et overlay de sortie (`setup_force_quit_handler`, `should_force_quit`, `show_quit_overlay`). Hors macOS, seul le drapeau `should_force_quit` / `set_force_quit` est compilé. | `apps/desktop/src-tauri`, `plugins/tray`, `plugins/dock` (macOS) |
-| `crates/dictation-ui-macos` | Overlay natif de dictée (`show`, `hide`, `update_state`) et insertion du texte dans l'application cible (`capture_target`, `insert_text`). | `plugins/dictation` (dépendance macOS uniquement) |
+| `crates/tcc` | Statut des permissions TCC de capture audio et de capture d'écran, et demande de la capture d'écran. | `plugins/permissions`, seulement avec la feature optionnelle `private-tcc` |
+| `crates/intercept` | Gestionnaire de fermeture forcée, avec son overlay de sortie (`setup_force_quit_handler`, `should_force_quit`). Hors macOS, seul le drapeau `should_force_quit` / `set_force_quit` est compilé. | `apps/desktop/src-tauri`, `plugins/tray`, `plugins/dock` (macOS) |
+| `crates/dictation-ui-macos` | Insertion du texte dicté dans l'application cible (`capture_target`, `insert_text`). | `plugins/dictation` (dépendance macOS uniquement) |
 
 **Pages de doc concernées** : aucune, tant que macOS n'est pas distribué.
 

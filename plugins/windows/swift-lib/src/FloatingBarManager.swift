@@ -102,7 +102,6 @@ final class FloatingBarManager {
   private func applyHide() {
     guard let panel else { return }
     stopObservingDisplayChanges()
-    FloatingOverlaySettingsPanelManager.shared.hide()
     panel.orderOut(nil)
     self.panel = nil
     placement.resetActiveScreen()

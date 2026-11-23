@@ -2,7 +2,6 @@
 
 import CoreGraphics
 import Foundation
-import SwiftRs
 
 private let TCC_PATH = "/System/Library/PrivateFrameworks/TCC.framework/Versions/A/TCC"
 
@@ -11,7 +10,6 @@ private let apiHandle: UnsafeMutableRawPointer? = {
 }()
 
 private typealias PreflightFuncType = @convention(c) (CFString, CFDictionary?) -> Int
-private typealias ResetFuncType = @convention(c) (CFString, CFString?) -> Int
 
 @_cdecl("_audio_capture_permission_status")
 public func _audio_capture_permission_status() -> Int {
@@ -42,43 +40,4 @@ public func _screen_capture_permission_status() -> Int {
 @_cdecl("_request_screen_capture_permission")
 public func _request_screen_capture_permission() -> Bool {
   CGRequestScreenCaptureAccess()
-}
-
-@_cdecl("_reset_audio_capture_permission")
-public func _reset_audio_capture_permission(bundleId: SRString) -> Bool {
-  guard let apiHandle,
-    let funcSym = dlsym(apiHandle, "TCCAccessReset"),
-    let reset = unsafeBitCast(funcSym, to: ResetFuncType.self) as ResetFuncType?
-  else {
-    return false
-  }
-
-  let nsString = NSString(string: String(describing: bundleId))
-  return reset("kTCCServiceAudioCapture" as CFString, nsString as CFString) == 0
-}
-
-@_cdecl("_reset_screen_capture_permission")
-public func _reset_screen_capture_permission(bundleId: SRString) -> Bool {
-  guard let apiHandle,
-    let funcSym = dlsym(apiHandle, "TCCAccessReset"),
-    let reset = unsafeBitCast(funcSym, to: ResetFuncType.self) as ResetFuncType?
-  else {
-    return false
-  }
-
-  let nsString = NSString(string: String(describing: bundleId))
-  return reset("kTCCServiceScreenCapture" as CFString, nsString as CFString) == 0
-}
-
-@_cdecl("_reset_microphone_permission")
-public func _reset_microphone_permission(bundleId: SRString) -> Bool {
-  guard let apiHandle,
-    let funcSym = dlsym(apiHandle, "TCCAccessReset"),
-    let reset = unsafeBitCast(funcSym, to: ResetFuncType.self) as ResetFuncType?
-  else {
-    return false
-  }
-
-  let nsString = NSString(string: String(describing: bundleId))
-  return reset("kTCCServiceMicrophone" as CFString, nsString as CFString) == 0
 }
