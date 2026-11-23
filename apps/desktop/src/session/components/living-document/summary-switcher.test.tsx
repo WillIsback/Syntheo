@@ -17,6 +17,7 @@ const mocks = vi.hoisted(() => ({
   generatedAt: "2026-11-08T14:32:00.000Z" as string | null,
   onRegenerate: vi.fn(() => Promise.resolve()),
   isGenerating: false,
+  summaryOff: false,
   selectTemplate: vi.fn(),
   deleteEnhancedNote: vi.fn(() => Promise.resolve()),
 }));
@@ -34,6 +35,7 @@ vi.mock("~/session/queries", () => ({
 vi.mock("~/session/components/note-input/enhanced-actions", () => ({
   useEnhancedNoteActions: () => ({
     isGenerating: mocks.isGenerating,
+    summaryOff: mocks.summaryOff,
     isError: false,
     onRegenerate: mocks.onRegenerate,
   }),
@@ -89,6 +91,7 @@ describe("SummarySwitcher", () => {
     mocks.versions = [];
     mocks.generatedAt = "2026-11-08T14:32:00.000Z";
     mocks.isGenerating = false;
+    mocks.summaryOff = false;
   });
 
   afterEach(() => {
@@ -210,6 +213,20 @@ describe("SummarySwitcher", () => {
     expect(
       screen.getByTestId("template-picker").getAttribute("data-open"),
     ).toBe("true");
+  });
+
+  // Synthèse coupée (issue 707) : ni régénération ni changement de modèle.
+  it("drops Regenerate and Change template when summaries are turned off", () => {
+    mocks.summaryOff = true;
+    renderSwitcher({ kind: "summary" });
+
+    openVersionsMenu();
+
+    expect(screen.queryByRole("menuitem", { name: "Regenerate" })).toBeNull();
+    expect(
+      screen.queryByRole("menuitem", { name: "Change template…" }),
+    ).toBeNull();
+    expect(screen.getByRole("menuitem", { name: "Copy" })).not.toBeNull();
   });
 
   it("renders nothing without a summary", () => {

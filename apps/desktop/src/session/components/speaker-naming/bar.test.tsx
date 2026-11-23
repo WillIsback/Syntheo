@@ -20,6 +20,7 @@ const mocks = vi.hoisted(() => ({
   ready: true,
   listening: false,
   isGenerating: false,
+  summaryOff: false,
   onRegenerate: vi.fn(),
   dialogProps: [] as Array<{
     open: boolean;
@@ -44,6 +45,7 @@ vi.mock("./dialog", () => ({
 vi.mock("~/session/components/note-input/enhanced-actions", () => ({
   useEnhancedNoteActions: () => ({
     isGenerating: mocks.isGenerating,
+    summaryOff: mocks.summaryOff,
     onRegenerate: mocks.onRegenerate,
   }),
 }));
@@ -88,6 +90,7 @@ describe("SpeakerNamingBar", () => {
     mocks.ready = true;
     mocks.listening = false;
     mocks.isGenerating = false;
+    mocks.summaryOff = false;
     mocks.onRegenerate.mockReset();
     mocks.dialogProps = [];
     useSpeakerNamingStore.setState({
@@ -217,6 +220,16 @@ describe("SpeakerNamingBar", () => {
     expect(
       screen.getByRole("button", { name: "Regenerate summary with names" }),
     ).not.toBeNull();
+  });
+
+  // Synthèse coupée (issue 707) : pas de régénération proposée.
+  it("hides the proposal when summaries are turned off", () => {
+    mocks.summaryOff = true;
+    renderBar("- **Speaker 2** : accord");
+
+    expect(
+      screen.queryByRole("button", { name: "Regenerate summary with names" }),
+    ).toBeNull();
   });
 
   it("hides the proposal while a summary is being generated", () => {

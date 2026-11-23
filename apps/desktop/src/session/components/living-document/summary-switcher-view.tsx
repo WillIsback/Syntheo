@@ -99,8 +99,9 @@ export function SummarySwitcherView({
   onSelectNote: (enhancedNoteId: string) => void;
   canCopy: boolean;
   canRemove: boolean;
-  onRegenerate: () => void;
-  onChangeTemplate: () => void;
+  // Absents quand la synthèse est coupée (issue 707) : entrées retirées.
+  onRegenerate?: () => void;
+  onChangeTemplate?: () => void;
   onCopy: () => void;
   /** Bêta (issue 671) : absent quand la mesure est désactivée. */
   onMeasure?: () => void;
@@ -212,14 +213,21 @@ export function SummarySwitcherView({
             </>
           ) : null}
           <DropdownMenuSeparator />
-          <DropdownMenuItem disabled={isGenerating} onSelect={onRegenerate}>
-            <ArrowClockwise aria-hidden="true" />
-            {t`Regenerate`}
-          </DropdownMenuItem>
-          <DropdownMenuItem disabled={isGenerating} onSelect={onChangeTemplate}>
-            <Swap aria-hidden="true" />
-            {t`Change template…`}
-          </DropdownMenuItem>
+          {onRegenerate ? (
+            <DropdownMenuItem disabled={isGenerating} onSelect={onRegenerate}>
+              <ArrowClockwise aria-hidden="true" />
+              {t`Regenerate`}
+            </DropdownMenuItem>
+          ) : null}
+          {onChangeTemplate ? (
+            <DropdownMenuItem
+              disabled={isGenerating}
+              onSelect={onChangeTemplate}
+            >
+              <Swap aria-hidden="true" />
+              {t`Change template…`}
+            </DropdownMenuItem>
+          ) : null}
           <DropdownMenuItem disabled={!canCopy} onSelect={onCopy}>
             <Copy aria-hidden="true" />
             {t`Copy`}

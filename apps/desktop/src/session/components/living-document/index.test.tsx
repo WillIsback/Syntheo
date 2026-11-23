@@ -21,6 +21,7 @@ const mocks = vi.hoisted(() => ({
   updateSession: vi.fn(() => Promise.resolve()),
   onRegenerate: vi.fn((_templateId: string | null) => Promise.resolve()),
   sourceNoteFingerprint: null as string | null,
+  summaryOff: false,
   proposal: null as null | {
     id: string;
     currentMarkdown: string;
@@ -126,6 +127,7 @@ vi.mock("streamdown", () => ({
 vi.mock("~/session/components/note-input/enhanced-actions", () => ({
   useEnhancedNoteActions: () => ({
     isGenerating: false,
+    summaryOff: mocks.summaryOff,
     onRegenerate: mocks.onRegenerate,
   }),
 }));
@@ -217,6 +219,7 @@ describe("LivingDocument", () => {
     mocks.updateSession.mockClear();
     mocks.onRegenerate.mockClear();
     mocks.sourceNoteFingerprint = null;
+    mocks.summaryOff = false;
     mocks.proposal = null;
   });
 
@@ -486,6 +489,23 @@ describe("LivingDocument", () => {
     await waitFor(() => expect(mocks.onRegenerate).toHaveBeenCalledWith(null));
     // Retour sur la synthèse pour suivre la nouvelle version.
     expect(screen.getByTestId("enhanced-editor")).not.toBeNull();
+  });
+
+  // Synthèse coupée (issue 707) : pas de régénération proposée.
+  it("hides the banner when summaries are turned off", () => {
+    mocks.summaryOff = true;
+    mocks.sourceNoteFingerprint = noteFingerprint(
+      JSON.stringify({
+        type: "doc",
+        content: [
+          { type: "paragraph", content: [{ type: "text", text: "budget" }] },
+        ],
+      }),
+    );
+    render(<LivingDocument {...synthesisProps()} />);
+    fireEvent.click(screen.getByRole("button", { name: "My notes" }));
+
+    expect(document.querySelector("[data-regenerate-banner]")).toBeNull();
   });
 
   it("hides the banner while the notes match the summary", () => {

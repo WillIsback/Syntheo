@@ -9,6 +9,11 @@ const mocks = vi.hoisted(() => ({
   isMainWindow: true,
   requestMainEnhance: vi.fn(),
   snapshot: null as unknown,
+  intelligence: { managed: false, blocked: false },
+}));
+
+vi.mock("~/settings/managed", () => ({
+  useIntelligenceDisabled: () => mocks.intelligence,
 }));
 
 vi.mock("@syntheo/ui/components/ui/toast", () => ({
@@ -56,6 +61,7 @@ describe("useEnhancedNoteActions", () => {
     mocks.model = null;
     mocks.isMainWindow = true;
     mocks.snapshot = null;
+    mocks.intelligence = { managed: false, blocked: false };
     mocks.start.mockReset();
     mocks.toastError.mockReset();
     mocks.toastWarning.mockReset();
@@ -73,6 +79,21 @@ describe("useEnhancedNoteActions", () => {
     expect(mocks.start).not.toHaveBeenCalled();
     expect(result.current.isError).toBe(false);
     expect(result.current.error).toBeNull();
+  });
+
+  // Synthèse coupée (issue 707) : rien ne part, aucun toast « configurez ».
+  it("does nothing when summaries are turned off", async () => {
+    mocks.intelligence = { managed: true, blocked: true };
+    mocks.model = { id: "model-1" };
+    mocks.isMainWindow = false;
+    const { result } = renderActions();
+
+    expect(result.current.summaryOff).toBe(true);
+    await act(() => result.current.onRegenerate(null));
+
+    expect(mocks.toastError).not.toHaveBeenCalled();
+    expect(mocks.requestMainEnhance).not.toHaveBeenCalled();
+    expect(mocks.start).not.toHaveBeenCalled();
   });
 
   it("shows the too-short toast instead of forwarding to main from a standalone window", async () => {
