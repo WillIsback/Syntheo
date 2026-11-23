@@ -15,7 +15,10 @@ import { useAITaskTask, useLLMConnectionStatus } from "~/ai/hooks";
 import { getStoredNoteMarkdown } from "~/session/components/note-input/header-shared";
 import { hasStoredNoteContent } from "~/session/components/shared";
 import { SpeakerNamingBar } from "~/session/components/speaker-naming/bar";
-import { shouldShowEmptySummaryConfigError } from "~/session/enhance-config";
+import {
+  isSummaryManagedOff,
+  shouldShowEmptySummaryConfigError,
+} from "~/session/enhance-config";
 import { useGenerateSummary } from "~/session/hooks/useGenerateSummary";
 import { useEnhancedNote } from "~/session/queries";
 import { createTaskId } from "~/store/zustand/ai-task/task-configs";
@@ -55,6 +58,7 @@ export const Enhanced = forwardRef<
       status === "success" && streamedText.trim().length > 0 && !hasContent;
     const showStreaming = status === "generating" || isAwaitingPersistedContent;
     const isConfigError = shouldShowEmptySummaryConfigError(llmStatus);
+    const isManagedOff = isSummaryManagedOff(llmStatus);
 
     if (status === "error") {
       return (
@@ -74,12 +78,18 @@ export const Enhanced = forwardRef<
           enhancedNoteId={enhancedNoteId}
         />
       ) : enhancedNoteId === defaultSummaryDocumentId(sessionId) ? (
-        isConfigError ? (
+        isManagedOff ? (
+          <ManagedOff />
+        ) : isConfigError ? (
           <ConfigError />
         ) : (
           <EmptySummary sessionId={sessionId} />
         )
       ) : null;
+    }
+
+    if (status === "idle" && isManagedOff && !hasContent) {
+      return <ManagedOff />;
     }
 
     if (status === "idle" && isConfigError && !hasContent) {
@@ -128,6 +138,16 @@ function EmptySummary({ sessionId }: { sessionId: string }) {
         <Trans>Generate summary</Trans>
       </Button>
       {generate.error && <p role="alert">{generate.error.message}</p>}
+    </div>
+  );
+}
+
+function ManagedOff() {
+  return (
+    <div className="flex h-full flex-col items-center justify-center px-6">
+      <p role="note" className="text-muted-foreground text-sm">
+        <Trans>Set by your administrator.</Trans>
+      </p>
     </div>
   );
 }

@@ -13,3 +13,12 @@ export function shouldShowEmptySummaryConfigError(status: LLMConnectionStatus) {
 
   return status.reason === "missing_config";
 }
+
+/**
+ * Synthèse coupée par l'administration (intelligence_disabled) : l'onglet le
+ * dit, sans bouton qui aboutirait à « Set up AI summaries first. »
+ * (issue 707).
+ */
+export function isSummaryManagedOff(status: LLMConnectionStatus) {
+  return status.status === "pending" && status.reason === "managed_disabled";
+}
