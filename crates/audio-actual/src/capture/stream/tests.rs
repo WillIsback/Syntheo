@@ -203,13 +203,8 @@ fn process_aec_runs_the_model_when_the_reference_plays() {
 
 #[test]
 fn process_aec_with_dtln_passes_the_mic_through_on_silence() {
-    let mut aec = build_aec(16_000);
-    let Some(latency) = aec
-        .as_ref()
-        .map(|_| syntheo_aec::BLOCK_SIZE - syntheo_aec::BLOCK_SHIFT)
-    else {
-        return;
-    };
+    let mut aec = Some(build_aec(16_000).expect("modèles DTLN embarqués"));
+    let latency = syntheo_aec::BLOCK_SIZE - syntheo_aec::BLOCK_SHIFT;
     let mut linear_echo_gain = None;
     let mic = test_signal(1_920);
     let speaker = vec![0.0_f32; 1_920];

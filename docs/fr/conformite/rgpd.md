@@ -55,7 +55,8 @@ rien écrire d'audio ni journaliser de texte. Les modèles se suppriment avec
 `on_device_transcription_enabled` (interdire la source) et
 `speech_models_urls` (imposer un miroir des modèles) sont à la disposition de
 l'organisation. Voir [Transcrire sur ce poste](/fr/on-device-transcription). Une version antérieure a pu laisser des fichiers de
-modèles dans les dossiers `models/stt` et `models/llm` du dossier de données,
+modèles dans les dossiers `models/stt`, `models/llm` et `models/aec` (modèles
+d'annulation d'écho, désormais fournis avec l'application) du dossier de données,
 ainsi que dans le cache de modèles Soniqo sous macOS : ils ne sont plus ni lus
 ni chargés, et peuvent être supprimés à la main. Les empreintes vocales
 qu'une version antérieure a pu enregistrer (vecteurs dans le trousseau du

@@ -71,6 +71,8 @@ it("rgpd_lists_no_model_download", () => {
   expect(rgpd).not.toContain("models.anarlog.so");
   expect(rgpd).toContain("models/stt");
   expect(rgpd).toContain("models/llm");
+  // Modèles d'annulation d'écho téléchargés par les versions 0.7.x (issue 702).
+  expect(rgpd).toContain("models/aec");
   expect(rgpd).not.toMatch(/diarisation locale/i);
 });
 

@@ -54,7 +54,8 @@ the data folder. The managed settings `on_device_transcription_enabled`
 (forbid the source) and `speech_models_urls` (require a model mirror) are
 available to the organization. See
 [Transcribe on this computer](/en/on-device-transcription). An earlier version may have left model files in the
-`models/stt` and `models/llm` folders of the data folder, as well as in the
+`models/stt`, `models/llm` and `models/aec` (echo cancellation models, now
+shipped with the app) folders of the data folder, as well as in the
 Soniqo model cache on macOS: they are no longer read or loaded, and can be
 deleted by hand. Voiceprints that an earlier version may have saved (vectors
 in the system keychain, references in the `voiceprint_exemplars` and
