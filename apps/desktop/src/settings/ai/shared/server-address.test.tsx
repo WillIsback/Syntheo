@@ -188,6 +188,40 @@ describe("ServerAddressForm, adresse gérée", () => {
     ).toBeNull();
   });
 
+  // Le formulaire garde l'adresse qu'il avait au montage : sans le
+  // garde-fou de onSubmit, la saisie de la clé réécrirait cette adresse
+  // périmée par-dessus celle qu'impose désormais la politique.
+  it("enregistre la clé avec l'adresse imposée en vigueur, pas celle du montage", async () => {
+    const view = renderForm(true);
+    fireEvent.change(screen.getByLabelText("API key (optional)"), {
+      target: { value: "sk-1" },
+    });
+    await waitFor(() => expect(mocks.mutateAsync).toHaveBeenCalled(), {
+      timeout: 2000,
+    });
+    mocks.mutateAsync.mockClear();
+
+    mocks.saved = {
+      "stt:openai": { base_url: "https://asr2.example.com/v1", api_key: "" },
+    };
+    view.rerender();
+    fireEvent.change(screen.getByLabelText("API key (optional)"), {
+      target: { value: "sk-2" },
+    });
+
+    await waitFor(
+      () =>
+        expect(mocks.mutateAsync).toHaveBeenCalledWith({
+          base_url: "https://asr2.example.com/v1",
+          api_key: "sk-2",
+        }),
+      { timeout: 2000 },
+    );
+    expect(mocks.mutateAsync).not.toHaveBeenCalledWith(
+      expect.objectContaining({ base_url: "https://asr.example.com/v1" }),
+    );
+  });
+
   // Politique limitée au protocole ou au modèle, sans adresse pour ce
   // fournisseur : l'adresse reste saisissable, la carte n'est pas une
   // impasse. « Réinitialiser » reste masqué.
