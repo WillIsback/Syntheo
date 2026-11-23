@@ -4090,7 +4090,7 @@ export const DataFlows = ({ activity = "listen" }) => {
               <span><strong style={{ fontWeight: 500 }}>{name}</strong><small>{id === dest ? "Receives data now" : "Nothing sent for this activity"}</small></span>
             </div>
           ))}
-          <p className="syn-muted" style={{ margin: 0, fontSize: 13 }}><strong>Syntheo's publisher</strong>: nothing. No account, no usage statistics, no error reports, no update checks.</p>
+          <p className="syn-muted" style={{ margin: 0, fontSize: 13 }}><strong>Syntheo's publisher</strong>: only the update check (can be turned off). No account, no usage statistics, no error reports.</p>
         </div>
       </div>
       <div className="syn-flow-box syn-flow" aria-live="polite" style={{ display: "block", margin: 0 }}>

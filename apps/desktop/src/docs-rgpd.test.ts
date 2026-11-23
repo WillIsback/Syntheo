@@ -197,8 +197,15 @@ it("rgpd_lists_exactly_the_remaining_outbound_flows", () => {
 });
 
 // Ni les notes de version d'une autre version, ni des icônes distantes, ni le
-// téléchargement des modèles d'annulation d'écho ne sont des flux réseau.
+// téléchargement des modèles d'annulation d'écho ne sont des flux réseau ; la
+// recherche de mise à jour, activée par défaut, n'est pas niée non plus. Pages
+// et gabarits docs-ui (schéma DataFlows) ; le texte est normalisé (espaces et
+// retours à la ligne ramenés à une espace), pour qu'une formulation coupée sur
+// deux lignes ne passe pas.
 it("docs_do_not_list_removed_flows", () => {
+  const docsUi = readdirSync(join(ROOT, "scripts/docs-ui"))
+    .filter((name) => /\.(tpl|json)$/.test(name))
+    .map((name) => join("scripts/docs-ui", name));
   for (const page of [
     "docs/fr/security.mdx",
     "docs/en/security.mdx",
@@ -209,8 +216,9 @@ it("docs_do_not_list_removed_flows", () => {
     "docs/fr/philosophy.mdx",
     "docs/en/philosophy.mdx",
     "SECURITY.md",
+    ...docsUi,
   ]) {
-    const text = readFileSync(join(ROOT, page), "utf8");
+    const text = readFileSync(join(ROOT, page), "utf8").replace(/\s+/g, " ");
     for (const gone of [
       "notes de version sur GitHub",
       "release notes on GitHub",
@@ -220,8 +228,45 @@ it("docs_do_not_list_removed_flows", () => {
       "interface icons",
       "raw.githubusercontent.com",
       "api.github.com",
+      "pas de vérification de mise à jour",
+      "no update checks",
     ]) {
       expect(text, `${page} : ${gone}`).not.toContain(gone);
     }
+  }
+});
+
+// Revue de l'issue 702 : les webhooks envoient du contenu de réunion vers
+// l'adresse saisie (plugins/local-api dispatch.rs, étape d'automatisation
+// step-effects.ts). La fiche RGPD, en français et en anglais, les déclare avec
+// leur contenu et leur destinataire, et ne dit plus que les endpoints
+// d'inférence sont les seuls à recevoir des données.
+it("rgpd_declares_webhooks", () => {
+  const sheets = {
+    "docs/fr/conformite/rgpd.md": [
+      "Webhooks configurés par l'utilisateur",
+      "désactivés tant qu'aucune adresse n'est saisie",
+      "`meeting.completed`",
+      "`note.enhanced`",
+      "texte complet de la transcription",
+      "Envoyer vers une adresse (webhook)",
+      "le destinataire est l'adresse choisie par l'utilisateur",
+    ],
+    "docs/en/conformite/rgpd.md": [
+      "Webhooks configured by the user",
+      "off until an address is entered",
+      "`meeting.completed`",
+      "`note.enhanced`",
+      "full transcript text",
+      "Send to an address (webhook)",
+      "the recipient is the address the user chose",
+    ],
+  };
+  for (const [path, required] of Object.entries(sheets)) {
+    const sheet = readFileSync(join(ROOT, path), "utf8").replace(/\s+/g, " ");
+    for (const text of required) {
+      expect(sheet, `${path} : ${text}`).toContain(text);
+    }
+    expect(sheet).not.toMatch(/et eux seuls|and only those/);
   }
 });

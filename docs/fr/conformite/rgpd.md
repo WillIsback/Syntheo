@@ -85,7 +85,7 @@ une suppression, l'effacement est retenté au lancement suivant.
   si les modèles sont installés depuis un dossier. L'administrateur coupe ce
   flux, avec tout le module, par la clé `on_device_transcription_enabled` à
   `false` dans `managed_settings.json`.
-- **Endpoints d'inférence configurés par l'utilisateur**, et eux seuls : ASR
+- **Endpoints d'inférence configurés par l'utilisateur** : ASR
   (protocole OpenAI : Realtime et `/v1/audio/transcriptions` ; NVIDIA
   NeMo-Speech.cpp : WebSocket `/v1/audio/transcriptions/realtime`) et
   l'endpoint LLM configuré (API OpenAI-compatible). L'audio de
@@ -98,6 +98,19 @@ une suppression, l'effacement est retenté au lancement suivant.
   HTTP en clair uniquement vers un hôte privé (machine locale, réseau local,
   plage Tailscale, noms `.local`), après confirmation hors de la machine, et
   exige HTTPS ailleurs.
+- **Webhooks configurés par l'utilisateur**, désactivés tant qu'aucune
+  adresse n'est saisie :
+  - webhooks de l'API locale (Paramètres → Développeurs) : à la fin d'une
+    réunion (`meeting.completed`) ou d'un résumé (`note.enhanced`), requête
+    `POST` signée (HMAC-SHA256) vers l'adresse saisie, avec la note, les
+    résumés, les participants, les actions à mener et le texte complet de la
+    transcription ;
+  - étape « Envoyer vers une adresse (webhook) » d'une automatisation : le
+    corps JSON composé par l'utilisateur, qui peut inclure les mêmes données,
+    vers l'adresse saisie, sans signature.
+  - dans les deux cas, le destinataire est l'adresse choisie par
+    l'utilisateur (`http://` ou `https://`). Contrairement aux endpoints,
+    HTTPS n'est pas exigé : préférer HTTPS ou un réseau privé.
 - Un endpoint exploité par un tiers devient **sous-traitant de l'utilisateur**
   (art. 28 RGPD) : contrat et localisation des données à vérifier.
 - **Autres flux, hors inférence** :

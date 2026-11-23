@@ -82,7 +82,7 @@ a deletion, erasure is retried at the next launch.
   The administrator turns this flow off, with the whole module, through the
   key `on_device_transcription_enabled` set to `false` in
   `managed_settings.json`.
-- **Inference endpoints configured by the user**, and only those: ASR
+- **Inference endpoints configured by the user**: ASR
   (OpenAI protocol: Realtime and `/v1/audio/transcriptions`; NVIDIA
   NeMo-Speech.cpp: WebSocket `/v1/audio/transcriptions/realtime`) and the
   configured LLM endpoint (OpenAI-compatible API). Capture
@@ -95,6 +95,18 @@ a deletion, erasure is retried at the next launch.
   plain HTTP only toward a private host (local machine, local network,
   Tailscale range, `.local` names), after confirmation outside the machine,
   and requires HTTPS elsewhere.
+- **Webhooks configured by the user**, off until an address is entered:
+  - local API webhooks (Settings → Developers): when a meeting ends
+    (`meeting.completed`) or a summary is produced (`note.enhanced`), a
+    signed `POST` request (HMAC-SHA256) to the address entered, carrying the
+    note, the summaries, the participants, the action items and the full
+    transcript text;
+  - the "Send to an address (webhook)" automation step: the JSON body the
+    user writes, which can include the same data, to the address entered,
+    without a signature.
+  - in both cases, the recipient is the address the user chose
+    (`http://` or `https://`). Unlike the endpoints, HTTPS is not required:
+    prefer HTTPS or a private network.
 - An endpoint run by a third party becomes the **user's processor**
   (Art. 28 GDPR): contract and data location to be checked.
 - **Other flows, apart from inference**:
