@@ -157,7 +157,12 @@ pub async fn create_endpoint(
     }
     // Comme l'étape d'automatisation et les serveurs d'inférence : un mot de
     // passe dans l'URL serait stocké en clair et affiché (issue 707).
-    if url::Url::parse(url).is_ok_and(|url| has_credentials(&url)) {
+    // Une URL que le parseur rejette échapperait à ce contrôle, puis serait
+    // stockée et affichée telle quelle : elle est refusée.
+    let Ok(parsed) = url::Url::parse(url) else {
+        return Err("url is invalid".to_string());
+    };
+    if has_credentials(&parsed) {
         return Err("url must not contain credentials".to_string());
     }
     if let Some(unknown) = events

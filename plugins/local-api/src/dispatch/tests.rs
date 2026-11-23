@@ -626,6 +626,34 @@ async fn endpoint_creation_rejects_credentials_in_the_url() {
     .unwrap();
 }
 
+// Issue 707 : une URL illisible (port hors bornes, espace dans l'hôte)
+// échappait au refus des identifiants, puis était stockée et affichée telle
+// quelle. Toute URL que le parseur rejette est refusée.
+#[tokio::test]
+async fn endpoint_creation_rejects_unparseable_urls() {
+    let db = syntheo_db_core::Db::connect_memory_plain().await.unwrap();
+    syntheo_db_app::prepare_schema(&db).await.unwrap();
+    for url in [
+        "https://user:motdepasse@example.com:99999/hook",
+        "https://user:motdepasse@exa mple.com/hook",
+        "http://[::1/hook",
+    ] {
+        assert_eq!(
+            create_endpoint(db.pool(), &memory_secrets().1, url, &[])
+                .await
+                .unwrap_err(),
+            "url is invalid",
+            "{url}"
+        );
+    }
+    assert!(
+        syntheo_db_app::list_webhook_endpoints(db.pool())
+            .await
+            .unwrap()
+            .is_empty()
+    );
+}
+
 // Issue 707 : une ligne antérieure au refus est affichée sans ses
 // identifiants, et la livraison ne les envoie plus en Basic.
 #[tokio::test]
