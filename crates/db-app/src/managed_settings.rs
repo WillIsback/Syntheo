@@ -15,8 +15,14 @@ fn invalid() -> sqlx::Error {
 }
 
 /// Adresse HTTPS sans identifiants, requête ni fragment.
+///
+/// Le parseur nettoie les blancs de tête et de fin et retire tabulations et
+/// sauts de ligne : une telle adresse, écrite brute, ne correspondrait plus à
+/// celle que l'interface réécrit (trim), et la clé API serait refusée.
 fn plain_https(s: &str) -> bool {
     s.len() <= 2048
+        && s == s.trim()
+        && !s.contains(['\t', '\r', '\n'])
         && url::Url::parse(s).is_ok_and(|u| {
             u.scheme() == "https"
                 && u.host_str().is_some()
@@ -316,6 +322,31 @@ mod tests {
             r#"{"schema_version":1,"settings":{"stt:nvidia":{"type":"stt","api_key":"secret","base_url":"https://asr.example"}}}"#,
         ] {
             assert!(validate(text.as_bytes()).is_err(), "{text}");
+        }
+    }
+
+    // Issue 707 : le parseur nettoie les blancs de tête et de fin et retire
+    // tabulations et sauts de ligne ; l'adresse brute, écrite telle quelle,
+    // différait de celle que l'interface (trim) réécrit, et le déclencheur
+    // refusait ensuite la clé API.
+    #[test]
+    fn managed_stt_base_url_rejects_surrounding_or_embedded_whitespace() {
+        for base_url in [
+            " https://asr.example.com/v1",
+            "https://asr.example.com/v1 ",
+            r"\thttps://asr.example.com/v1",
+            r"https://asr.example.com/v1\n",
+            r"https://asr.exa\tmple.com/v1",
+            r"https://asr.example.com/v\r1",
+            r"https://asr.example.com/v\n1",
+        ] {
+            let text = format!(
+                r#"{{"schema_version":1,"settings":{{"stt:openai":{{"type":"stt","api_key":"","base_url":"{base_url}"}}}}}}"#
+            );
+            // Échappements JSON : le document est valide, seule l'adresse
+            // est en cause.
+            assert!(serde_json::from_str::<Value>(&text).is_ok(), "{base_url:?}");
+            assert!(validate(text.as_bytes()).is_err(), "{base_url:?}");
         }
     }
     #[tokio::test]
