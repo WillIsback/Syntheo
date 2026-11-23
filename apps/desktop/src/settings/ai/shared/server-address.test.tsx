@@ -42,8 +42,9 @@ vi.mock("@syntheo/plugin-opener2", () => ({
 import { ServerAddressForm } from "./server-address";
 
 function renderForm(managed?: boolean) {
-  return render(
-    <QueryClientProvider client={new QueryClient()}>
+  const client = new QueryClient();
+  const tree = () => (
+    <QueryClientProvider client={client}>
       <ServerAddressForm
         managed={managed}
         kind="stt"
@@ -54,8 +55,10 @@ function renderForm(managed?: boolean) {
         onTest={vi.fn()}
         isCurrentProvider
       />
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+  const view = render(tree());
+  return { ...view, rerender: () => view.rerender(tree()) };
 }
 
 function typeAddress(value: string) {
@@ -183,6 +186,35 @@ describe("ServerAddressForm, adresse gérée", () => {
     expect(
       screen.queryByRole("button", { name: "Use unencrypted HTTP anyway" }),
     ).toBeNull();
+  });
+
+  // Politique limitée au protocole ou au modèle, sans adresse pour ce
+  // fournisseur : l'adresse reste saisissable, la carte n'est pas une
+  // impasse. « Réinitialiser » reste masqué.
+  it("géré sans adresse enregistrée : le champ d'adresse reste saisissable", async () => {
+    mocks.saved = {};
+    const view = renderForm(true);
+
+    expect(screen.queryByTestId("server-address-managed")).toBeNull();
+    typeAddress("https://asr.example.com/v1");
+
+    await waitFor(
+      () =>
+        expect(mocks.mutateAsync).toHaveBeenCalledWith({
+          base_url: "https://asr.example.com/v1",
+          api_key: "",
+        }),
+      { timeout: 2000 },
+    );
+    // Le champ ne se fige pas après le premier enregistrement.
+    mocks.saved = {
+      "stt:openai": { base_url: "https://asr.example.com/v1", api_key: "" },
+    };
+    view.rerender();
+    expect(
+      screen.getByPlaceholderText("http://localhost:8000/v1"),
+    ).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Reset/ })).toBeNull();
   });
 
   it("non géré : champ d'adresse et « Réinitialiser » présents", () => {

@@ -40,7 +40,7 @@ export function ServerAddressForm(props: {
   isCurrentProvider: boolean;
   /**
    * Serveur imposé par l'administration (managed_settings.json) : l'adresse
-   * est affichée sans champ, « Réinitialiser » disparaît. La clé API reste
+   * enregistrée est affichée sans champ, « Réinitialiser » disparaît. La clé API reste
    * saisissable : elle va au trousseau, la ligne gérée garde une clé vide.
    */
   managed?: boolean;
@@ -103,13 +103,22 @@ function ServerAddressFields({
     isCleartextRemoteUrl(initial.base_url) ? initial.base_url.trim() : null,
   );
   const [pendingHttpUrl, setPendingHttpUrl] = useState<string | null>(null);
+  // L'adresse n'est figée que si une adresse est enregistrée à l'ouverture.
+  // Une politique qui n'impose que le protocole ou le modèle, sans adresse
+  // pour ce fournisseur, laisse la saisir : sinon la carte resterait vide,
+  // sans moyen d'en indiquer une. Instantané pris au montage, pour que le
+  // champ ne disparaisse pas après le premier enregistrement.
+  const savedAddressAtMount = useRef(hasSavedAddress).current;
+  const addressLocked = managed && savedAddressAtMount;
 
   const form = useForm({
     defaultValues: initial,
     onSubmit: async ({ value }) => {
       // Adresse imposée : seule la clé API peut changer, l'adresse
       // enregistrée est réécrite telle quelle.
-      const baseUrl = (managed ? initial.base_url : value.base_url).trim();
+      const baseUrl = (
+        addressLocked ? initial.base_url : value.base_url
+      ).trim();
       if (baseUrl) {
         try {
           validateProviderBaseUrl(baseUrl);
@@ -206,7 +215,7 @@ function ServerAddressFields({
       <div className="flex flex-col gap-1.5">
         <FieldLabel htmlFor={urlId}>{label}</FieldLabel>
         <div className="flex gap-2">
-          {managed ? (
+          {addressLocked ? (
             <output
               id={urlId}
               data-testid="server-address-managed"
