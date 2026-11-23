@@ -38,7 +38,7 @@ Sample base URLs for a server running on the same computer, with the default por
 The ports depend on how you start each server. If two servers run on the same machine, give them different ports.
 
 <Note>
-  Syntheo accepts plain HTTP only to a private host: `localhost`, `[::1]`, `.local` names, and the IPv4 addresses `127.0.0.0/8`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, and `100.64.0.0/10` (the range Tailscale uses), as well as Tailscale `.ts.net` names. Everywhere else, including for an internal host name such as `gpu.entreprise.lan`, the URL must use HTTPS; otherwise saving is refused with the message "Use HTTPS: HTTP is only accepted on this machine or a private network.". The URL must contain neither credentials nor query parameters.
+  Syntheo accepts plain HTTP only to a private host: `localhost`, `[::1]`, `.local` names, and the IPv4 addresses `127.0.0.0/8`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, and `100.64.0.0/10` (the range Tailscale uses), as well as Tailscale `.ts.net` names. Everywhere else, including for an internal host name such as `gpu.entreprise.lan`, the URL must use HTTPS; otherwise saving is refused with the message "Use HTTPS: plain HTTP is only accepted on this computer or a private network.". The URL must contain neither credentials nor query parameters.
 
   Outside this machine (`localhost`, `127.0.0.0/8`, `[::1]`), a plain HTTP address is saved only after you confirm it ("Use unencrypted HTTP anyway"), and the card then shows a permanent reminder that the connection is not encrypted: the audio, your notes, and the API key travel in clear text on the network, and on another network, or with Tailscale stopped, another machine can answer at the same address. See [Switch your server to HTTPS](#switch-your-server-to-https).
 </Note>
@@ -187,7 +187,7 @@ API keys are stored in the system keychain, never in plain text in the local dat
 
 | Symptom | What to check |
 | --- | --- |
-| "Use HTTPS: HTTP is only accepted on this machine or a private network." | The host is not recognized as private: switch to HTTPS (reverse proxy, VPN) or use a private address. |
+| "Use HTTPS: plain HTTP is only accepted on this computer or a private network." | The host is not recognized as private: switch to HTTPS (reverse proxy, VPN) or use a private address. |
 | The pill shows "Unreachable" | The server did not answer. Check that it is running and that you are on the right network (VPN, Tailscale), then test again. |
 | The pill shows "Key refused" | Check the key in "Advanced", then test again. |
 | The synthesis model list is empty | Check that `base URL/models` answers (for example `curl http://localhost:11434/v1/models`) and that the address ends with `/v1`. |

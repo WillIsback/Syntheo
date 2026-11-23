@@ -1,7 +1,6 @@
-import {
-  ProviderCredentialError,
-  validateProviderBaseUrl,
-} from "@syntheo/provider-validation";
+import { validateProviderBaseUrl } from "@syntheo/provider-validation";
+
+import { describeProviderCredentialError } from "./provider-credential-error";
 
 import { providerFetch } from "~/ai/provider-fetch";
 
@@ -70,10 +69,7 @@ export async function probeServer(
     return {
       ok: false,
       reason: "invalid_url",
-      message:
-        error instanceof ProviderCredentialError
-          ? error.message
-          : String(error),
+      message: describeProviderCredentialError(error) ?? String(error),
     };
   }
 

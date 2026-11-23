@@ -52,8 +52,10 @@ function onDeviceCause(reason: string) {
       return t`the transcription module of this computer is being measured`;
     case "not_commissioned":
       return t`this computer has not been measured, or is too slow for live transcription`;
+    // Même raison que describeOnDeviceError (QA 0.8.0-3) : politique de
+    // contrôle des applications ou montage noexec du dossier de données.
     case "execution_blocked":
-      return t`this computer does not allow the transcription program to run (application control policy)`;
+      return t`this computer does not allow the transcription program to run from the Syntheo data folder (application control policy or noexec mount); ask your administrator`;
     default:
       return t`on-device transcription is not available`;
   }

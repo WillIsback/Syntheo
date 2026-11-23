@@ -123,7 +123,7 @@ const SYN_LABELS = {
   "Enter another name": "Saisir un autre nom",
   "Erase my measurements…": "Effacer mes mesures…",
   "Esc": "Échap",
-  "Everything is processed on your local server": "Tout est traité sur votre serveur local",
+  "Everything is processed on your server": "Tout est traité sur votre serveur",
   "Export": "Exporter",
   "Export location": "Emplacement d'export",
   "Export my measurements…": "Exporter mes mesures…",
@@ -278,6 +278,7 @@ const SYN_LABELS = {
   "Unmute the microphone": "Rétablir le micro",
   "Unreachable": "Injoignable",
   "Updates": "Mises à jour",
+  "Use HTTPS: plain HTTP is only accepted on this computer or a private network.": "Utilisez HTTPS : le HTTP n'est accepté que sur cette machine ou un réseau privé.",
   "Use main language for summaries": "Utiliser la langue principale pour les résumés",
   "Use this protocol": "Utiliser ce protocole",
   "Used for transcription and automatic summary language detection.": "Utilisé pour la transcription et la détection automatique de la langue des résumés.",
@@ -1256,9 +1257,6 @@ const SYN_CSS_SERVERS = `
 .syn-srv-seg button[aria-pressed=true]{background:var(--syn-primary);color:var(--syn-primary-foreground);font-weight:600}
 `;
 
-// Le message de refus du HTTP vient de packages/provider-validation (en
-// français dans le code, hors messages.po).
-const SYN_SRV_HTTPS = "Utilisez HTTPS : le HTTP n'est accepté que sur cette machine ou un réseau privé.";
 const SYN_SRV_OPENAI_PH = "http://localhost:8000/v1";
 const SYN_SRV_NEMO_PH = "http://localhost:9000";
 const SYN_SRV_STT_MODELS = ["mistralai/Voxtral-Mini-4B-Realtime-2602", "Systran/faster-whisper-large-v3"];
@@ -1336,7 +1334,8 @@ const useSynServer = (kind, initial, placeholder) => {
         return;
       }
       if (url.protocol === "http:" && !synSrvPrivate(url.hostname)) {
-        setUrlError(SYN_SRV_HTTPS);
+        // Même message que l'app : provider-credential-error.ts, par messages.po.
+        setUrlError(L("Use HTTPS: plain HTTP is only accepted on this computer or a private network."));
         return;
       }
     }
@@ -3053,7 +3052,7 @@ export const AppHome = () => {
           ) : null}
           <p className="syn-muted" style={{ display: "flex", alignItems: "center", gap: 8, margin: 0, fontSize: 13 }}>
             <i className="syn-pip" aria-hidden="true" />
-            {L("Everything is processed on your local server")}
+            {L("Everything is processed on your server")}
           </p>
         </div>
       </div>

@@ -364,8 +364,12 @@ export function OnDeviceCard() {
             {t`Models installed (${formatSize(models.totalBytes)}).`}
           </p>
         ) : models.kind === "partial" ? (
+          // Les octets des téléchargements interrompus comptent (QA 0.8.0-3) :
+          // le téléchargement reprend là où il s'est arrêté.
           <p className="text-muted-foreground text-[13px]">
-            {t`Models partly installed: ${formatSize(models.presentBytes)} of ${formatSize(models.totalBytes)}.`}
+            {models.resumable && downloadable
+              ? t`Download interrupted: ${formatSize(models.presentBytes)} of ${formatSize(models.totalBytes)} downloaded. You can resume it.`
+              : t`Models partly installed: ${formatSize(models.presentBytes)} of ${formatSize(models.totalBytes)}.`}
           </p>
         ) : (
           <p className="text-muted-foreground text-[13px]">

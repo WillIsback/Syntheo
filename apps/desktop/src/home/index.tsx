@@ -11,6 +11,7 @@ import {
   useRecentNotes,
 } from "./queries";
 
+import { useLLMConnection } from "~/ai/hooks";
 import { useFolderSelection } from "~/folders/selection";
 import { useDeleteSession } from "~/session/hooks/useDeleteSession";
 import { MoveNoteDialog, useMoveNoteDialog } from "~/session/move-note";
@@ -19,6 +20,7 @@ import { useOpenNoteDialog } from "~/shared/open-note-dialog";
 import { getShortcutPlatform } from "~/shared/shortcuts";
 import { useNewNote } from "~/shared/useNewNote";
 import { useTabs } from "~/store/zustand/tabs";
+import { useUsableTranscription } from "~/stt/usable-transcription";
 
 export function HomePage() {
   const firstName = useOwnerFirstName();
@@ -42,6 +44,17 @@ export function HomePage() {
   const { open: openSearch } = useOpenNoteDialog();
   const newNote = useNewNote({ behavior: "current" });
   const os = useMemo(() => getShortcutPlatform(), []);
+  // Ligne du bas : où se font la transcription et la synthèse (QA 0.8.0-3).
+  const transcription = useUsableTranscription();
+  const { conn: llmConn } = useLLMConnection();
+  const processing = useMemo(
+    () => ({
+      transcription: transcription.active,
+      summary: !!llmConn,
+      loading: transcription.isLoading,
+    }),
+    [transcription.active, transcription.isLoading, llmConn],
+  );
 
   const openNote = useCallback(
     (sessionId: string) => openCurrent({ type: "sessions", id: sessionId }),
@@ -106,6 +119,7 @@ export function HomePage() {
         onSearch={openSearch}
         onOpenFolder={openFolder}
         onOpenAllFolders={openAllFolders}
+        processing={processing}
         liveNote={
           liveSessionId ? (
             <HomeLiveNoteCard sessionId={liveSessionId} onOpen={openNote} />

@@ -80,6 +80,10 @@ describe("getLiveTranscriptPausedMessage", () => {
       online: true,
     });
     expect(message).toMatch(/does not allow the transcription program to run/);
+    // QA 0.8.0-3 : même raison que la carte (describeOnDeviceError).
+    expect(message).toMatch(
+      /from the Syntheo data folder \(application control policy or noexec mount\); ask your administrator/,
+    );
     expect(message).not.toMatch(/Reconnecting/);
   });
 

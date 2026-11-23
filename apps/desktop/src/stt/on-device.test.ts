@@ -58,7 +58,12 @@ describe("source « Sur ce poste »", () => {
       isOnDeviceUsable({
         allowed: true,
         companion: true,
-        models: { kind: "partial", presentBytes: 1, totalBytes: 2 },
+        models: {
+          kind: "partial",
+          presentBytes: 1,
+          totalBytes: 2,
+          resumable: false,
+        },
         downloadable: true,
       }),
     ).toBe(false);

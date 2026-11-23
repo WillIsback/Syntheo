@@ -93,6 +93,11 @@ def main() -> None:
                     weight_type=getattr(QuantType, quant["weight_type"]),
                     op_types_to_quantize=quant["op_types"],
                     per_channel=transform.startswith("int8-per-channel"),
+                    # Poids sur 7 bits : sans VNNI, le noyau AVX2 d'ONNX Runtime
+                    # (vpmaddubsw) somme deux produits u8 x s8 en 16 bits et
+                    # sature avec des poids sur 8 bits ; l'ASR ne rendait alors
+                    # que des sorties vides.
+                    reduce_range=quant["reduce_range"],
                     use_external_data_format=transform.endswith("external-data"),
                 )
     failures = 0

@@ -10,6 +10,7 @@ import { StartButton } from "./start-button";
 
 import type { ShortcutPlatform } from "~/shared/shortcuts";
 import { type PaletteId, useDocumentPalette } from "~/shared/theme/palette";
+import type { TranscriptionSource } from "~/stt/usable-transcription";
 import type { TemplateIcon } from "~/templates/template-icon";
 
 // Filigrane de l'accueil selon la palette (maquette, objet PAL) : 茶 Thé vert,
@@ -18,6 +19,16 @@ const WATERMARK: Record<PaletteId, string> = {
   cha: "茶",
   fuji: "藤",
   enji: "紅",
+};
+
+/** Où se fait le traitement, pour la ligne du bas de l'accueil (QA 0.8.0-3). */
+export type HomeProcessing = {
+  /** Source de transcription utilisable (useUsableTranscription), sinon `null`. */
+  transcription: TranscriptionSource | null;
+  /** Un modèle de synthèse est configuré. */
+  summary: boolean;
+  /** État encore en chargement : rien à affirmer. */
+  loading?: boolean;
 };
 
 export type HomeViewProps = {
@@ -36,6 +47,7 @@ export type HomeViewProps = {
   onOpenAllFolders?: () => void;
   // Carte « En cours » (issue 517), placée au-dessus des notes récentes.
   liveNote?: ReactNode;
+  processing?: HomeProcessing;
 };
 
 const NO_FOLDERS: readonly HomeFolder[] = [];
@@ -59,6 +71,7 @@ export function HomeView({
   onOpenFolder = noop,
   onOpenAllFolders = noop,
   liveNote = null,
+  processing,
 }: HomeViewProps) {
   const palette = useDocumentPalette();
 
@@ -101,16 +114,45 @@ export function HomeView({
             onDelete={onDeleteNote}
             onMove={onMoveNote}
           />
-          <p className="text-muted-foreground flex items-center gap-2 text-[13px]">
-            <span
-              aria-hidden="true"
-              className="bg-primary size-[7px] rounded-full"
-            />
-            <Trans>Everything is processed on your local server</Trans>
-          </p>
+          <ProcessingLine processing={processing} />
         </div>
       </div>
       <HomeCapsule onSearch={onSearch} os={os} />
     </div>
+  );
+}
+
+// Ligne du bas (QA 0.8.0-3) : dit où se fait le traitement, d'après la source
+// de transcription utilisable, au lieu d'un « serveur local » affiché en dur.
+// Sans transcription utilisable (ou pendant le chargement) : ni pastille ni
+// texte.
+function ProcessingLine({ processing }: { processing?: HomeProcessing }) {
+  if (!processing || processing.loading || !processing.transcription) {
+    return null;
+  }
+  let text: ReactNode;
+  if (processing.transcription === "on_device") {
+    text = processing.summary ? (
+      <Trans>
+        Transcription runs on this computer; summaries on your server
+      </Trans>
+    ) : (
+      <Trans>Transcription runs on this computer</Trans>
+    );
+  } else {
+    text = processing.summary ? (
+      <Trans>Everything is processed on your server</Trans>
+    ) : (
+      <Trans>Transcription runs on your server</Trans>
+    );
+  }
+  return (
+    <p
+      data-home-processing
+      className="text-muted-foreground flex items-center gap-2 text-[13px]"
+    >
+      <span aria-hidden="true" className="bg-primary size-[7px] rounded-full" />
+      {text}
+    </p>
   );
 }

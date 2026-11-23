@@ -7,6 +7,7 @@ import {
   runOnDeviceProbe,
   useOnDeviceStatus,
 } from "~/stt/on-device";
+import { useSTTConnection } from "~/stt/useSTTConnection";
 
 // Proposition « Sur ce poste » à l'accueil (issue 685) : seulement si
 // l'organisation autorise la source et que cette version de l'application
@@ -15,6 +16,9 @@ import {
 export function OnDeviceProposal() {
   const status = useOnDeviceStatus();
   const probe = useMutation({ mutationFn: runOnDeviceProbe });
+  // Sans serveur de transcription configuré, ne pas parler d'un serveur
+  // qui n'existe pas (QA 0.8.0-3).
+  const serverConfigured = !!useSTTConnection().serverConn;
   if (!isOnDeviceInstallable(status.data)) return null;
   return (
     <div data-testid="on-device-proposal" className="flex flex-col gap-1.5">
@@ -35,17 +39,35 @@ export function OnDeviceProposal() {
       <div aria-live="polite" className="text-muted-foreground">
         {probe.data ? (
           isEligible(probe.data) ? (
+            serverConfigured ? (
+              <p>
+                <Trans>
+                  This computer can also transcribe your meetings on its own,
+                  without a server. You can set it up in Settings ›
+                  Transcription.
+                </Trans>
+              </p>
+            ) : (
+              <p>
+                <Trans>
+                  This computer can transcribe your meetings on its own. You can
+                  set it up in Settings › Transcription.
+                </Trans>
+              </p>
+            )
+          ) : serverConfigured ? (
             <p>
               <Trans>
-                This computer can also transcribe your meetings on its own,
-                without a server. You can set it up in Settings › Transcription.
+                This computer cannot transcribe on its own; Syntheo uses your
+                transcription server.
               </Trans>
             </p>
           ) : (
             <p>
               <Trans>
-                This computer cannot transcribe on its own; Syntheo uses your
-                transcription server.
+                This computer cannot transcribe on its own. To transcribe your
+                meetings, set up a transcription server in Settings ›
+                Transcription.
               </Trans>
             </p>
           )

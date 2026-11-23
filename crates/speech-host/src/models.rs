@@ -104,38 +104,194 @@ pub fn total_size(files: &[ModelFile]) -> u64 {
     files.iter().map(|f| f.size).sum()
 }
 
-/// État des modèles installés, sans hachage (la vérification complète a lieu
-/// à chaque lancement).
+/// État des modèles installés. Sans hachage quand le marqueur d'installation
+/// correspond à la liste compilée ; sinon les fichiers de bonne taille sont
+/// rehachés une fois (voir [`Present`]). La vérification complète a lieu à
+/// chaque lancement.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ModelsStatus {
     /// Aucun fichier en place.
     Missing { total_bytes: u64 },
-    /// Une partie en place (installation interrompue).
+    /// Une partie en place (installation interrompue, ou fichiers d'une autre
+    /// liste de même taille). `present_bytes` compte les fichiers en place et
+    /// les octets déjà téléchargés dans les `.part` (QA 0.8.0-3) ;
+    /// `resumable` : au moins un `.part`, que le téléchargement reprendra.
     Partial {
         present_bytes: u64,
         total_bytes: u64,
+        resumable: bool,
     },
-    /// Tous les fichiers en place, à la bonne taille.
+    /// Tous les fichiers en place, à la bonne taille (et à la bonne
+    /// empreinte, vérifiée à l'installation ou rehachée depuis).
     Installed { total_bytes: u64 },
+}
+
+/// Marqueur écrit dans le dossier des modèles après une installation
+/// complète : l'empreinte de la liste installée.
+pub const MARKER: &str = "models.installed.json";
+const MARKER_FORMAT: u32 = 1;
+
+#[derive(serde::Serialize, serde::Deserialize)]
+struct Marker {
+    format: u32,
+    fingerprint: u64,
+}
+
+/// Le marqueur du dossier correspond à `files`.
+fn marker_matches(dir: &Path, files: &[ModelFile]) -> bool {
+    std::fs::read(dir.join(MARKER))
+        .ok()
+        .and_then(|bytes| serde_json::from_slice::<Marker>(&bytes).ok())
+        .is_some_and(|m| m.format == MARKER_FORMAT && m.fingerprint == fingerprint_of(files))
+}
+
+/// Écrit le marqueur de `files` : fichier temporaire puis renommage, pour ne
+/// jamais laisser un marqueur tronqué.
+fn write_marker(dir: &Path, files: &[ModelFile]) -> std::io::Result<()> {
+    let marker = Marker {
+        format: MARKER_FORMAT,
+        fingerprint: fingerprint_of(files),
+    };
+    let bytes = serde_json::to_vec(&marker).map_err(std::io::Error::other)?;
+    let tmp = dir.join(format!("{MARKER}.{}.tmp", uuid::Uuid::new_v4()));
+    let written =
+        std::fs::write(&tmp, &bytes).and_then(|()| std::fs::rename(&tmp, dir.join(MARKER)));
+    if written.is_err() {
+        let _ = std::fs::remove_file(&tmp);
+    }
+    written
+}
+
+/// Empreintes déjà calculées, par chemin : (taille, date de modification,
+/// SHA-256). Un fichier remplacé (renommage d'un `.part`, copie) change de
+/// date et est rehaché.
+type HashCache = std::collections::HashMap<PathBuf, (u64, std::time::SystemTime, String)>;
+static HASHES: LazyLock<std::sync::Mutex<HashCache>> = LazyLock::new(Default::default);
+
+/// SHA-256 de `path`, depuis le cache si le fichier n'a pas changé. La taille
+/// et la date viennent du fichier ouvert, celui qui est haché.
+fn cached_sha256(path: &Path) -> std::io::Result<String> {
+    let mut handle = std::fs::File::open(path)?;
+    let metadata = handle.metadata()?;
+    let key = (metadata.len(), metadata.modified()?);
+    let cache = || HASHES.lock().unwrap_or_else(|e| e.into_inner());
+    if let Some((len, modified, sha)) = cache().get(path)
+        && (*len, *modified) == key
+    {
+        return Ok(sha.clone());
+    }
+    let sha = {
+        use sha2::{Digest, Sha256};
+        use std::io::Read;
+        let mut hasher = Sha256::new();
+        let mut buffer = vec![0u8; 1 << 20];
+        loop {
+            let read = handle.read(&mut buffer)?;
+            if read == 0 {
+                break;
+            }
+            hasher.update(&buffer[..read]);
+        }
+        hasher
+            .finalize()
+            .iter()
+            .map(|b| format!("{b:02x}"))
+            .collect::<String>()
+    };
+    cache().insert(path.to_path_buf(), (key.0, key.1, sha.clone()));
+    Ok(sha)
+}
+
+/// Fichiers en place, à la bonne taille, et, sans marqueur correspondant
+/// (constats 6, 12 et 14 de la revue QA 0.8.0-3 : une requantification garde
+/// les tailles), à la bonne empreinte.
+///
+/// Coût : sans marqueur, chaque fichier de bonne taille est haché (≈ 1 Go),
+/// une fois par version du fichier grâce au cache. Quand tous concordent,
+/// le marqueur est écrit : le poste est à jour et les appels suivants ne
+/// regardent plus que les tailles. Un fichier illisible (rare : verrou d'un
+/// autre programme) compte comme présent, sans marqueur ; le lancement le
+/// revérifie.
+struct Present {
+    /// `present[i]` : `files[i]` est en place.
+    present: Vec<bool>,
+    /// Les fichiers comptés en place sont sûrs : marqueur correspondant, ou
+    /// tous hachés. Faux si un fichier illisible a été compté sans hachage :
+    /// le marqueur ne doit alors pas être écrit (vérification 789ef9bb, V2).
+    verified: bool,
+}
+
+impl Present {
+    fn of(dir: &Path, files: &[ModelFile]) -> Self {
+        let sized: Vec<bool> = files
+            .iter()
+            .map(|f| {
+                std::fs::symlink_metadata(f.under(dir))
+                    .is_ok_and(|m| m.is_file() && m.len() == f.size)
+            })
+            .collect();
+        if marker_matches(dir, files) {
+            return Self {
+                present: sized,
+                verified: true,
+            };
+        }
+        let mut all_hashed = true;
+        let present: Vec<bool> = files
+            .iter()
+            .zip(sized)
+            .map(|(file, sized)| {
+                sized
+                    && match cached_sha256(&file.under(dir)) {
+                        Ok(sha) => sha == file.sha256,
+                        Err(_) => {
+                            all_hashed = false;
+                            true
+                        }
+                    }
+            })
+            .collect();
+        if all_hashed && present.iter().all(|p| *p) {
+            // Erreur d'écriture : on rehachera (depuis le cache) au prochain
+            // appel.
+            let _ = write_marker(dir, files);
+        }
+        Self {
+            present,
+            verified: all_hashed,
+        }
+    }
 }
 
 pub fn status(dir: &Path, files: &[ModelFile]) -> ModelsStatus {
     let total_bytes = total_size(files);
-    let present_bytes: u64 = files
-        .iter()
-        .filter(|f| {
-            std::fs::symlink_metadata(f.under(dir)).is_ok_and(|m| m.is_file() && m.len() == f.size)
-        })
-        .map(|f| f.size)
-        .sum();
-    if present_bytes == total_bytes {
+    let present = Present::of(dir, files).present;
+    let mut installed_bytes = 0u64;
+    let mut partial_bytes = 0u64;
+    for (file, present) in files.iter().zip(present) {
+        if present {
+            installed_bytes += file.size;
+        } else if let Ok(part) = std::fs::symlink_metadata(syntheo_pinned_fetch::part_path(
+            &file.under(dir),
+            &file.sha256,
+        )) && part.is_file()
+            && part.len() <= file.size
+        {
+            // Téléchargement interrompu : repris là où il s'est arrêté. Un
+            // `.part` plus long que le fichier attendu est jeté par le
+            // téléchargement (constat 13) : il ne compte pas.
+            partial_bytes += part.len();
+        }
+    }
+    if installed_bytes == total_bytes {
         ModelsStatus::Installed { total_bytes }
-    } else if present_bytes == 0 {
+    } else if installed_bytes + partial_bytes == 0 {
         ModelsStatus::Missing { total_bytes }
     } else {
         ModelsStatus::Partial {
-            present_bytes,
+            present_bytes: installed_bytes + partial_bytes,
             total_bytes,
+            resumable: partial_bytes > 0,
         }
     }
 }
@@ -185,14 +341,19 @@ impl From<FetchError> for InstallError {
     }
 }
 
-/// Fichiers qui manquent ou n'ont pas la taille attendue.
-fn missing<'a>(dir: &Path, files: &'a [ModelFile]) -> Vec<&'a ModelFile> {
-    files
+/// Fichiers qui manquent, n'ont pas la taille attendue ou, sans marqueur
+/// correspondant, pas l'empreinte attendue (voir [`Present`]) : ils seront
+/// remplacés (le `.part` est renommé par-dessus). Rend aussi si les fichiers
+/// gardés sont sûrs ([`Present::verified`]) : sinon, pas de marqueur après
+/// l'installation.
+fn missing<'a>(dir: &Path, files: &'a [ModelFile]) -> (Vec<&'a ModelFile>, bool) {
+    let present = Present::of(dir, files);
+    let todo = files
         .iter()
-        .filter(|f| {
-            !std::fs::symlink_metadata(f.under(dir)).is_ok_and(|m| m.is_file() && m.len() == f.size)
-        })
-        .collect()
+        .zip(present.present)
+        .filter_map(|(f, present)| (!present).then_some(f))
+        .collect();
+    (todo, present.verified)
 }
 
 /// Marge gardée libre en plus des modèles.
@@ -229,7 +390,7 @@ fn locate(source: &Path, file: &ModelFile) -> Option<PathBuf> {
 /// Installe depuis un dossier local (bloquant) : chaque fichier manquant est
 /// copié, haché pendant la copie et mis en place s'il correspond. Un fichier
 /// absent du dossier choisi est une erreur ; les fichiers déjà en place sont
-/// gardés.
+/// gardés. Le marqueur est écrit à la fin (déjà écrit si rien ne manquait).
 pub fn install_from_dir(
     source: &Path,
     dir: &Path,
@@ -237,7 +398,7 @@ pub fn install_from_dir(
     cancel: &AtomicBool,
     progress: &mut dyn FnMut(u64, u64),
 ) -> Result<(), InstallError> {
-    let todo = missing(dir, files);
+    let (todo, kept_verified) = missing(dir, files);
     if todo.is_empty() {
         return Ok(());
     }
@@ -260,6 +421,9 @@ pub fn install_from_dir(
                 progress(done, needed);
             },
         )?;
+    }
+    if kept_verified {
+        write_marker(dir, files).map_err(|_| InstallError::Io)?;
     }
     Ok(())
 }
@@ -285,6 +449,7 @@ fn try_next_source(error: &FetchError) -> bool {
 /// Télécharge les fichiers manquants, fichier par fichier, depuis la
 /// première source qui le sert correctement ; reprise des téléchargements
 /// interrompus (les empreintes compilées valent pour toutes les sources).
+/// Le marqueur est écrit à la fin (déjà écrit si rien ne manquait).
 pub async fn download(
     sources: &[Source],
     dir: &Path,
@@ -295,16 +460,38 @@ pub async fn download(
     if sources.is_empty() {
         return Err(InstallError::NoSource);
     }
-    let todo = missing(dir, files);
+    // Le rehachage éventuel (≈ 1 Go sans marqueur) se fait hors de la boucle
+    // asynchrone.
+    let (todo, kept_verified): (Vec<&ModelFile>, bool) = {
+        let (owned_dir, owned) = (dir.to_path_buf(), files.to_vec());
+        let (indices, verified) = tokio::task::spawn_blocking(move || {
+            let (todo, verified) = missing(&owned_dir, &owned);
+            let indices = owned
+                .iter()
+                .enumerate()
+                .filter(|(_, f)| todo.contains(f))
+                .map(|(i, _)| i)
+                .collect::<Vec<usize>>();
+            (indices, verified)
+        })
+        .await
+        .map_err(|_| InstallError::Io)?;
+        (indices.into_iter().map(|i| &files[i]).collect(), verified)
+    };
     if todo.is_empty() {
         return Ok(());
     }
     let needed: u64 = todo.iter().map(|f| f.size).sum();
-    // Déjà téléchargé dans les `.part` : ne compte pas dans l'espace à prévoir.
+    // Déjà téléchargé dans les `.part` : ne compte pas dans l'espace à prévoir
+    // (un `.part` trop long sera jeté).
     let partial: u64 = todo
         .iter()
-        .filter_map(|f| std::fs::metadata(syntheo_pinned_fetch::part_path(&f.under(dir))).ok())
-        .map(|m| m.len())
+        .filter_map(|f| {
+            std::fs::metadata(syntheo_pinned_fetch::part_path(&f.under(dir), &f.sha256))
+                .ok()
+                .map(|m| m.len())
+                .filter(|len| *len <= f.size)
+        })
         .sum();
     check_space(dir, needed.saturating_sub(partial))?;
     let fetcher = Fetcher::new(CONNECT_TIMEOUT, READ_TIMEOUT)?;
@@ -351,10 +538,14 @@ pub async fn download(
         }
         done += file.size;
     }
+    if kept_verified {
+        write_marker(dir, files).map_err(|_| InstallError::Io)?;
+    }
     Ok(())
 }
 
-/// Retire les modèles (et les `.part`) ; garde le reste du dossier.
+/// Retire les modèles (avec les `.part` et le marqueur) ; garde le reste du
+/// dossier de données.
 pub fn remove(dir: &Path) -> std::io::Result<()> {
     match std::fs::remove_dir_all(dir) {
         Err(error) if error.kind() != std::io::ErrorKind::NotFound => Err(error),
@@ -439,6 +630,273 @@ mod tests {
         }
     }
 
+    // QA 0.8.0-3 : un téléchargement interrompu compte ses `.part` et se dit
+    // reprenable, même sans fichier complet. Constat 13 : un `.part` plus long
+    // que le fichier attendu, que le téléchargement jettera, ne compte pas.
+    #[test]
+    fn interrupted_downloads_count_their_part_files() {
+        let files = vec![file("one.onnx", b"un"), file("two.bin", b"deux")];
+        let dest = tempfile::tempdir().unwrap();
+        let dir = dest.path();
+        std::fs::write(
+            syntheo_pinned_fetch::part_path(&dir.join("two.bin"), &files[1].sha256),
+            b"de",
+        )
+        .unwrap();
+        assert_eq!(
+            status(dir, &files),
+            ModelsStatus::Partial {
+                present_bytes: 2,
+                total_bytes: 6,
+                resumable: true,
+            }
+        );
+        std::fs::write(
+            syntheo_pinned_fetch::part_path(&dir.join("two.bin"), &files[1].sha256),
+            b"deux",
+        )
+        .unwrap();
+        assert_eq!(
+            status(dir, &files),
+            ModelsStatus::Partial {
+                present_bytes: 4,
+                total_bytes: 6,
+                resumable: true,
+            }
+        );
+        std::fs::write(dir.join("one.onnx"), b"un").unwrap();
+        std::fs::write(
+            syntheo_pinned_fetch::part_path(&dir.join("two.bin"), &files[1].sha256),
+            b"deux et plus",
+        )
+        .unwrap();
+        assert_eq!(
+            status(dir, &files),
+            ModelsStatus::Partial {
+                present_bytes: 2,
+                total_bytes: 6,
+                resumable: false,
+            }
+        );
+        std::fs::remove_file(syntheo_pinned_fetch::part_path(
+            &dir.join("two.bin"),
+            &files[1].sha256,
+        ))
+        .unwrap();
+        std::fs::write(dir.join("two.bin"), b"deux").unwrap();
+        assert_eq!(
+            status(dir, &files),
+            ModelsStatus::Installed { total_bytes: 6 }
+        );
+    }
+
+    // Vérification 789ef9bb (V3) : un `.part` d'une autre version du fichier
+    // (ancien nommage, ou autre empreinte), même plus court que la taille
+    // attendue, n'est pas annoncé reprenable ; le téléchargement le supprime.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn a_part_of_another_version_is_not_resumable_and_is_removed() {
+        let files = vec![file("one.onnx", b"un"), file("two.bin", b"deux")];
+        let dest = tempfile::tempdir().unwrap();
+        let dir = dest.path().join("models");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("one.onnx"), b"un").unwrap();
+        let legacy = dir.join("two.bin.part");
+        let other = syntheo_pinned_fetch::part_path(&dir.join("two.bin"), &"e".repeat(64));
+        std::fs::write(&legacy, b"de").unwrap();
+        std::fs::write(&other, b"DE").unwrap();
+        assert_eq!(
+            status(&dir, &files),
+            ModelsStatus::Partial {
+                present_bytes: 2,
+                total_bytes: 6,
+                resumable: false,
+            }
+        );
+        let server = serve(vec![
+            ("one.onnx".into(), b"un".to_vec()),
+            ("two.bin".into(), b"deux".to_vec()),
+        ])
+        .await;
+        let sources = vec![Source::unchecked_for_tests(format!("{server}/ok/{{path}}"))];
+        let mut last = (0, 0);
+        download(
+            &sources,
+            &dir,
+            &files,
+            &AtomicBool::new(false),
+            &mut |d, t| last = (d, t),
+        )
+        .await
+        .unwrap();
+        assert_eq!(last, (4, 4), "rien n'est repris d'une autre version");
+        assert!(!legacy.exists() && !other.exists());
+        assert_eq!(
+            status(&dir, &files),
+            ModelsStatus::Installed { total_bytes: 6 }
+        );
+    }
+
+    /// Remplace le contenu de `path` sans changer sa taille, à une date de
+    /// modification nouvelle (le cache d'empreintes la regarde).
+    fn overwrite_same_size(path: &Path, bytes: &[u8], secs: u64) {
+        std::fs::write(path, bytes).unwrap();
+        std::fs::File::options()
+            .write(true)
+            .open(path)
+            .unwrap()
+            .set_modified(std::time::UNIX_EPOCH + Duration::from_secs(secs))
+            .unwrap();
+    }
+
+    // Constats 6, 12 et 14 : un fichier d'une autre liste, de même taille mais
+    // d'une autre empreinte, n'est pas « installé » tant qu'aucun marqueur ne
+    // le garantit ; le téléchargement le remplace et écrit le marqueur.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn a_same_size_file_from_another_list_is_downloaded_again() {
+        let files = vec![file("a/one.onnx", b"un"), file("two.bin", b"deux")];
+        let dest = tempfile::tempdir().unwrap();
+        let dir = dest.path().join("models");
+        std::fs::create_dir_all(dir.join("a")).unwrap();
+        std::fs::write(dir.join("a/one.onnx"), b"un").unwrap();
+        std::fs::write(dir.join("two.bin"), b"DEUX").unwrap();
+        assert_eq!(
+            status(&dir, &files),
+            ModelsStatus::Partial {
+                present_bytes: 2,
+                total_bytes: 6,
+                resumable: false,
+            }
+        );
+        assert_eq!(missing(&dir, &files).0, vec![&files[1]]);
+        assert!(!dir.join(MARKER).exists());
+        let server = serve(vec![
+            ("a/one.onnx".into(), b"un".to_vec()),
+            ("two.bin".into(), b"deux".to_vec()),
+        ])
+        .await;
+        let sources = vec![Source::unchecked_for_tests(format!("{server}/ok/{{path}}"))];
+        let mut last = (0, 0);
+        download(
+            &sources,
+            &dir,
+            &files,
+            &AtomicBool::new(false),
+            &mut |d, t| last = (d, t),
+        )
+        .await
+        .unwrap();
+        // Seul le fichier faux est retéléchargé.
+        assert_eq!(last, (4, 4));
+        assert_eq!(std::fs::read(dir.join("two.bin")).unwrap(), b"deux");
+        assert!(marker_matches(&dir, &files));
+        assert_eq!(
+            status(&dir, &files),
+            ModelsStatus::Installed { total_bytes: 6 }
+        );
+    }
+
+    // Vérification 789ef9bb (V2) : un fichier gardé qui n'a pas pu être haché
+    // (illisible) compte comme présent, mais le marqueur n'est pas écrit après
+    // le téléchargement des autres : le prochain statut le rehachera.
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn no_marker_when_a_kept_file_could_not_be_hashed() {
+        use std::os::unix::fs::PermissionsExt;
+        let files = vec![file("a/one.onnx", b"un"), file("two.bin", b"deux")];
+        let dest = tempfile::tempdir().unwrap();
+        let dir = dest.path().join("models");
+        std::fs::create_dir_all(dir.join("a")).unwrap();
+        let kept = dir.join("a/one.onnx");
+        std::fs::write(&kept, b"un").unwrap();
+        std::fs::set_permissions(&kept, std::fs::Permissions::from_mode(0o000)).unwrap();
+        if std::fs::read(&kept).is_ok() {
+            // Lancé avec des droits qui ignorent le mode (root) : rien à vérifier.
+            return;
+        }
+        let server = serve(vec![
+            ("a/one.onnx".into(), b"un".to_vec()),
+            ("two.bin".into(), b"deux".to_vec()),
+        ])
+        .await;
+        let sources = vec![Source::unchecked_for_tests(format!("{server}/ok/{{path}}"))];
+        download(
+            &sources,
+            &dir,
+            &files,
+            &AtomicBool::new(false),
+            &mut |_, _| {},
+        )
+        .await
+        .unwrap();
+        assert_eq!(std::fs::read(dir.join("two.bin")).unwrap(), b"deux");
+        assert!(!dir.join(MARKER).exists());
+        std::fs::set_permissions(&kept, std::fs::Permissions::from_mode(0o644)).unwrap();
+    }
+
+    // Marqueur égal : tailles seulement, sans rehachage. Marqueur absent ou
+    // d'une autre liste : rehachage, puis installation depuis un dossier qui
+    // remplace le fichier faux. `remove` retire le marqueur avec le reste.
+    #[test]
+    fn the_marker_spares_the_hashing_until_the_list_changes() {
+        let files = vec![file("one.onnx", b"un"), file("two.bin", b"deux")];
+        let dest = tempfile::tempdir().unwrap();
+        let dir = dest.path().join("models");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("one.onnx"), b"un").unwrap();
+        std::fs::write(dir.join("two.bin"), b"deux").unwrap();
+        // Sans marqueur, tout concorde après rehachage : le marqueur est écrit.
+        assert_eq!(
+            status(&dir, &files),
+            ModelsStatus::Installed { total_bytes: 6 }
+        );
+        assert!(marker_matches(&dir, &files));
+        // Contenu changé, taille gardée : le marqueur évite le hachage.
+        overwrite_same_size(&dir.join("two.bin"), b"DEUX", 1);
+        assert_eq!(
+            status(&dir, &files),
+            ModelsStatus::Installed { total_bytes: 6 }
+        );
+        assert!(missing(&dir, &files).0.is_empty());
+        // Marqueur d'une autre liste : rehachage, le fichier faux manque.
+        let other = vec![file("one.onnx", b"un")];
+        write_marker(&dir, &other).unwrap();
+        assert!(!marker_matches(&dir, &files));
+        assert_eq!(missing(&dir, &files).0, vec![&files[1]]);
+        assert_eq!(
+            status(&dir, &files),
+            ModelsStatus::Partial {
+                present_bytes: 2,
+                total_bytes: 6,
+                resumable: false,
+            }
+        );
+        let source = tempfile::tempdir().unwrap();
+        std::fs::write(source.path().join("two.bin"), b"deux").unwrap();
+        install_from_dir(
+            source.path(),
+            &dir,
+            &files,
+            &AtomicBool::new(false),
+            &mut |_, _| {},
+        )
+        .unwrap();
+        assert_eq!(std::fs::read(dir.join("two.bin")).unwrap(), b"deux");
+        assert!(marker_matches(&dir, &files));
+        // Aucun fichier temporaire laissé par l'écriture du marqueur.
+        let mut names: Vec<String> = std::fs::read_dir(&dir)
+            .unwrap()
+            .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+            .collect();
+        names.sort();
+        assert_eq!(names, [MARKER, "one.onnx", "two.bin"]);
+        remove(&dir).unwrap();
+        assert!(!dir.join(MARKER).exists());
+        assert_eq!(
+            status(&dir, &files),
+            ModelsStatus::Missing { total_bytes: 6 }
+        );
+    }
+
     #[test]
     fn a_wrong_or_missing_file_is_refused_and_good_ones_are_kept() {
         let files = vec![file("one.onnx", b"un"), file("two.bin", b"deux")];
@@ -456,7 +914,8 @@ mod tests {
             status(&dir, &files),
             ModelsStatus::Partial {
                 present_bytes: 2,
-                total_bytes: 6
+                total_bytes: 6,
+                resumable: false,
             }
         );
         assert!(!dir.join("two.bin").exists());

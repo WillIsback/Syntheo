@@ -248,10 +248,31 @@ describe("OnDeviceCard", () => {
         kind: "partial",
         presentBytes: 500_000_000,
         totalBytes: 1_066_000_000,
+        resumable: false,
       },
     };
     setup();
     await screen.findByText(/partly installed: 500 MB of 1\.1 GB/);
+    fireEvent.click(screen.getByText("Resume the download"));
+    await waitFor(() => expect(mocks.download).toHaveBeenCalled());
+  });
+
+  // QA 0.8.0-3 : les octets déjà téléchargés (fichiers .part) comptent, et la
+  // carte dit que le téléchargement peut reprendre.
+  it("counts an interrupted download and says it can be resumed", async () => {
+    mocks.status = {
+      ...mocks.status,
+      models: {
+        kind: "partial",
+        presentBytes: 800_000_000,
+        totalBytes: 1_066_000_000,
+        resumable: true,
+      },
+    };
+    setup();
+    await screen.findByText(
+      "Download interrupted: 800 MB of 1.1 GB downloaded. You can resume it.",
+    );
     fireEvent.click(screen.getByText("Resume the download"));
     await waitFor(() => expect(mocks.download).toHaveBeenCalled());
   });

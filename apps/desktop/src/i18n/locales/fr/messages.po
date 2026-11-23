@@ -990,6 +990,10 @@ msgstr "Vérifier si ce poste peut transcrire seul (environ 5 s)"
 msgid "Checking for updates…"
 msgstr "Recherche des mises à jour…"
 
+#: src/shared/long-load-gate.tsx
+msgid "Checking your local database. This is taking longer than expected."
+msgstr "Vérification de votre base locale. Cela prend plus de temps que prévu."
+
 #: src/settings/developers/cli.tsx
 msgid "Checking…"
 msgstr "Vérification…"
@@ -1755,6 +1759,12 @@ msgstr "Documentation"
 msgid "Done"
 msgstr "Terminé"
 
+#. placeholder {0}: formatSize(models.presentBytes)
+#. placeholder {1}: formatSize(models.totalBytes)
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "Download interrupted: {0} of {1} downloaded. You can resume it."
+msgstr "Téléchargement interrompu : {0} sur {1} téléchargés, reprise possible."
+
 #: src/settings/general/update-section.tsx
 msgid "Download progress"
 msgstr "Progression du téléchargement"
@@ -1956,9 +1966,21 @@ msgstr "fin de réunion, arrêter, question, alerte"
 msgid "Enter"
 msgstr "Entrée"
 
+#: src/settings/ai/shared/provider-credential-error.ts
+msgid "Enter a base URL without credentials or query parameters."
+msgstr "Saisissez une URL de base sans identifiants ni paramètres de requête."
+
 #: src/settings/ai/shared/server-address.tsx
 msgid "Enter a full address, for example {placeholder}."
 msgstr "Saisissez une adresse complète, par exemple {placeholder}."
+
+#: src/settings/ai/shared/provider-credential-error.ts
+msgid "Enter a valid API key."
+msgstr "Saisissez une clé d'API valide."
+
+#: src/settings/ai/shared/provider-credential-error.ts
+msgid "Enter a valid base URL."
+msgstr "Saisissez une URL de base valide."
 
 #: src/session/components/outer-header/metadata/date.tsx
 msgid "Enter a valid date and time"
@@ -2003,8 +2025,8 @@ msgid "Every speaker has a name."
 msgstr "Tous les intervenants ont un nom."
 
 #: src/home/home-view.tsx
-msgid "Everything is processed on your local server"
-msgstr "Tout est traité sur votre serveur local"
+msgid "Everything is processed on your server"
+msgstr "Tout est traité sur votre serveur"
 
 #: src/templates/auto-format-examples-dialog.tsx
 msgid "Example summary"
@@ -2830,6 +2852,10 @@ msgstr "Transcription en direct reprise."
 msgid "Live transcription: {language}"
 msgstr "Transcription en direct : {language}"
 
+#: src/shared/brand-loading-view.tsx
+msgid "Loading"
+msgstr "Chargement"
+
 #: src/templates/auto-form.tsx
 msgid "Loading Auto format..."
 msgstr "Chargement du formatage automatique..."
@@ -2842,6 +2868,10 @@ msgstr "Chargement de la modification…"
 #: src/settings/hydration-boundary.tsx
 msgid "Loading settings"
 msgstr "Chargement des paramètres"
+
+#: src/routes/__root.tsx
+msgid "Loading your workspace. This should only take a moment."
+msgstr "Chargement de votre espace de travail. Cela ne devrait prendre qu'un instant."
 
 #: src/contacts/details-sections.tsx
 #: src/settings/general/account-profile.tsx
@@ -3173,6 +3203,14 @@ msgstr "Micro indisponible"
 #: src/store/zustand/listener/general-shared.ts
 msgid "Microphone unavailable. System audio continues"
 msgstr "Micro indisponible. L'audio système continue"
+
+#: src/shared/long-load-gate.tsx
+msgid "Migrating your local database ({current} of {total}). This may take a few minutes."
+msgstr "Migration de votre base locale ({current} sur {total}). Cela peut prendre quelques minutes."
+
+#: src/shared/long-load-gate.tsx
+msgid "Migrating your local database. This may take a few minutes."
+msgstr "Migration de votre base locale. Cela peut prendre quelques minutes."
 
 #: src/main/windows-window-controls.tsx
 msgid "Minimize"
@@ -5989,6 +6027,18 @@ msgstr "le processeur n'a pas les instructions AVX2"
 msgid "The proposed edit could not be saved."
 msgstr "La modification proposée n'a pas pu être enregistrée."
 
+#: src/settings/ai/shared/provider-credential-error.ts
+msgid "The provider did not confirm this key. Check the key and the connection."
+msgstr "Le fournisseur n'a pas confirmé cette clé. Vérifiez la clé et la connexion."
+
+#: src/settings/ai/shared/provider-credential-error.ts
+msgid "The provider is limiting verifications. Try again in a few moments."
+msgstr "Le fournisseur limite les vérifications. Réessayez dans quelques instants."
+
+#: src/settings/ai/shared/provider-credential-error.ts
+msgid "The provider rejected this key or its permissions. Check the key and try again."
+msgstr "Le fournisseur a refusé cette clé ou ses autorisations. Vérifiez la clé et réessayez."
+
 #. placeholder {0}: health.message ?? ""
 #: src/settings/ai/llm/server-card.tsx
 msgid "The selected model did not answer: {0}"
@@ -6225,12 +6275,20 @@ msgid "This computer can transcribe your meetings on its own: {0}."
 msgstr "Ce poste peut transcrire vos réunions seul : {0}."
 
 #: src/onboarding/on-device-proposal.tsx
+msgid "This computer can transcribe your meetings on its own. You can set it up in Settings › Transcription."
+msgstr "Ce poste peut transcrire vos réunions seul. Vous pourrez le configurer dans Paramètres › Transcription."
+
+#: src/onboarding/on-device-proposal.tsx
 msgid "This computer cannot transcribe on its own; Syntheo uses your transcription server."
 msgstr "Ce poste ne peut pas transcrire seul ; Syntheo utilise votre serveur de transcription."
 
+#: src/onboarding/on-device-proposal.tsx
+msgid "This computer cannot transcribe on its own. To transcribe your meetings, set up a transcription server in Settings › Transcription."
+msgstr "Ce poste ne peut pas transcrire seul. Pour transcrire vos réunions, configurez un serveur de transcription dans Paramètres › Transcription."
+
 #: src/stt/live-transcript-interrupted.ts
-msgid "this computer does not allow the transcription program to run (application control policy)"
-msgstr "ce poste n'autorise pas l'exécution du programme de transcription (politique de contrôle des applications)"
+msgid "this computer does not allow the transcription program to run from the Syntheo data folder (application control policy or noexec mount); ask your administrator"
+msgstr "ce poste n'autorise pas l'exécution du programme de transcription depuis le dossier de données de Syntheo (politique de contrôle des applications ou montage noexec) ; adressez-vous à votre administrateur"
 
 #: src/stt/on-device.ts
 msgid "This computer does not allow the transcription program to run from the Syntheo data folder (application control policy or noexec mount). Ask your administrator."
@@ -6318,6 +6376,14 @@ msgstr "C'est un test réel : ces étapes agissent vraiment."
 #: src/mesure/beta-data.tsx
 msgid "This is the whole file: counts, local indexes and days since you joined, under a random pseudonym. No text, title, name or date. Nothing is sent: you save the file and choose whether to share it."
 msgstr "Voici le fichier en entier : des compteurs, des index locaux et des jours comptés depuis votre inscription, sous un pseudonyme aléatoire. Aucun texte, titre, nom ni date. Rien n'est envoyé : vous enregistrez le fichier et choisissez de le transmettre ou non."
+
+#: src/settings/ai/shared/provider-credential-error.ts
+msgid "This key could not be verified with the provider. Check the connection and try again."
+msgstr "Impossible de vérifier cette clé auprès du fournisseur. Vérifiez la connexion et réessayez."
+
+#: src/settings/ai/shared/provider-credential-error.ts
+msgid "This key could not be verified. Check your connection and try again."
+msgstr "Impossible de vérifier cette clé. Vérifiez votre connexion et réessayez."
 
 #: src/session/components/living-document/after-meeting-folder-suggestion.tsx
 msgid "This meeting looks like {folderName} ({reason})"
@@ -6524,6 +6590,18 @@ msgstr "La transcription sur ce poste utilise le micro seul : le son de l'ordina
 #: src/sidebar/toast/registry.tsx
 msgid "Transcription provider needed"
 msgstr "Fournisseur de transcription requis"
+
+#: src/home/home-view.tsx
+msgid "Transcription runs on this computer"
+msgstr "La transcription se fait sur ce poste"
+
+#: src/home/home-view.tsx
+msgid "Transcription runs on this computer; summaries on your server"
+msgstr "La transcription se fait sur ce poste ; la synthèse sur votre serveur"
+
+#: src/home/home-view.tsx
+msgid "Transcription runs on your server"
+msgstr "La transcription se fait sur votre serveur"
 
 #: src/settings/dictation.tsx
 msgid "Transcription server ›"
@@ -6749,6 +6827,10 @@ msgstr "Utilisez une adresse en http:// ou https://."
 #: src/templates/template-form.tsx
 msgid "Use by default"
 msgstr "Utiliser par défaut"
+
+#: src/settings/ai/shared/provider-credential-error.ts
+msgid "Use HTTPS: plain HTTP is only accepted on this computer or a private network."
+msgstr "Utilisez HTTPS : le HTTP n'est accepté que sur cette machine ou un réseau privé."
 
 #: src/settings/general/index.tsx
 #: src/settings/search-index.ts

@@ -404,6 +404,7 @@ const SYN_LABELS = {
   "Unreachable": "Injoignable",
   "Untitled automation": "Automatisation sans titre",
   "Updates": "Mises à jour",
+  "Use HTTPS: plain HTTP is only accepted on this computer or a private network.": "Utilisez HTTPS : le HTTP n'est accepté que sur cette machine ou un réseau privé.",
   "Use an http:// or https:// address.": "Utilisez une adresse en http:// ou https://.",
   "Use main language for summaries": "Utiliser la langue principale pour les résumés",
   "Use this protocol": "Utiliser ce protocole",
@@ -1416,9 +1417,6 @@ const SYN_CSS_SERVERS = `
 .syn-srv-seg button[aria-pressed=true]{background:var(--syn-primary);color:var(--syn-primary-foreground);font-weight:600}
 `;
 
-// Le message de refus du HTTP vient de packages/provider-validation (en
-// français dans le code, hors messages.po).
-const SYN_SRV_HTTPS = "Utilisez HTTPS : le HTTP n'est accepté que sur cette machine ou un réseau privé.";
 const SYN_SRV_OPENAI_PH = "http://localhost:8000/v1";
 const SYN_SRV_NEMO_PH = "http://localhost:9000";
 const SYN_SRV_STT_MODELS = ["mistralai/Voxtral-Mini-4B-Realtime-2602", "Systran/faster-whisper-large-v3"];
@@ -1496,7 +1494,8 @@ const useSynServer = (kind, initial, placeholder) => {
         return;
       }
       if (url.protocol === "http:" && !synSrvPrivate(url.hostname)) {
-        setUrlError(SYN_SRV_HTTPS);
+        // Même message que l'app : provider-credential-error.ts, par messages.po.
+        setUrlError(L("Use HTTPS: plain HTTP is only accepted on this computer or a private network."));
         return;
       }
     }
