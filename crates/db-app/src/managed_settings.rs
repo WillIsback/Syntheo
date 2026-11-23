@@ -145,6 +145,18 @@ pub async fn load_managed_policy(pool: &SqlitePool) -> Result<ManagedPolicy, sql
     Ok(ManagedPolicy { settings })
 }
 
+/// Ligne d'`app_settings` d'une clé du fichier. La clé documentée `stt:<id>`
+/// désigne le fournisseur que l'interface range sous `ai_provider:stt:<id>`
+/// (providers-storage.ts) : sans cette traduction, l'adresse imposée était
+/// écrite sur une ligne que personne ne lit, et les déclencheurs gardaient
+/// cette ligne-là au lieu de celle du fournisseur.
+fn storage_id(key: String) -> String {
+    match key.strip_prefix("stt:") {
+        Some(provider) => format!("ai_provider:stt:{provider}"),
+        None => key,
+    }
+}
+
 /// Read policy from the directory containing the actual opened database, on
 /// desktop and mobile alike. Malformed or unreadable policy fails startup.
 pub async fn apply_managed_settings(pool: &SqlitePool) -> Result<(), sqlx::Error> {
@@ -158,7 +170,8 @@ pub async fn apply_managed_settings(pool: &SqlitePool) -> Result<(), sqlx::Error
     sqlx::query("DELETE FROM managed_app_settings")
         .execute(&mut *tx)
         .await?;
-    for (id, value) in settings {
+    for (key, value) in settings {
+        let id = storage_id(key);
         let json = serde_json::to_string(&value).map_err(|_| invalid())?;
         sqlx::query("INSERT INTO app_settings(id,value_json) VALUES(?,?) ON CONFLICT(id) DO UPDATE SET value_json=excluded.value_json,updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')")
             .bind(&id).bind(&json).execute(&mut *tx).await?;
@@ -400,6 +413,66 @@ mod tests {
                 .await
                 .unwrap()
                 .on_device_transcription_allowed()
+        );
+    }
+
+    // Issue 707 : la politique stt:<id> impose l'adresse du fournisseur sur
+    // la ligne que lit l'interface, et cette ligne est verrouillée.
+    #[tokio::test]
+    async fn managed_stt_provider_locks_the_row_the_interface_reads() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("app.db");
+        let db = syntheo_db_core::Db::connect_local_plain(&path)
+            .await
+            .unwrap();
+        crate::prepare_schema(&db).await.unwrap();
+        // Adresse saisie avant la politique : elle doit être remplacée.
+        sqlx::query(
+            r#"INSERT INTO app_settings(id,value_json) VALUES('ai_provider:stt:openai','{"type":"stt","base_url":"http://192.168.1.87:8000/v1","api_key":""}')"#,
+        )
+        .execute(db.pool())
+        .await
+        .unwrap();
+        db.pool().close().await;
+        std::fs::write(
+            dir.path().join("managed_settings.json"),
+            br#"{"schema_version":1,"settings":{"current_stt_provider":"openai","stt:openai":{"type":"stt","api_key":"","base_url":"https://asr.example.com/v1"}}}"#,
+        )
+        .unwrap();
+        let db = syntheo_db_core::Db::connect_local_plain(&path)
+            .await
+            .unwrap();
+        crate::prepare_schema(&db).await.unwrap();
+        let stored: String = sqlx::query_scalar(
+            "SELECT value_json FROM app_settings WHERE id='ai_provider:stt:openai'",
+        )
+        .fetch_one(db.pool())
+        .await
+        .unwrap();
+        let stored: Value = serde_json::from_str(&stored).unwrap();
+        assert_eq!(stored["base_url"], "https://asr.example.com/v1");
+        assert_eq!(stored["type"], "stt");
+        let raw: i64 = sqlx::query_scalar(
+            "SELECT (SELECT count(*) FROM app_settings WHERE id='stt:openai')
+                  + (SELECT count(*) FROM managed_app_settings WHERE id='stt:openai')",
+        )
+        .fetch_one(db.pool())
+        .await
+        .unwrap();
+        assert_eq!(raw, 0);
+        assert!(
+            sqlx::query(
+                r#"UPDATE app_settings SET value_json='{"type":"stt","base_url":"http://evil.example/v1","api_key":""}' WHERE id='ai_provider:stt:openai'"#,
+            )
+            .execute(db.pool())
+            .await
+            .is_err()
+        );
+        assert!(
+            sqlx::query("DELETE FROM app_settings WHERE id='ai_provider:stt:openai'")
+                .execute(db.pool())
+                .await
+                .is_err()
         );
     }
 
