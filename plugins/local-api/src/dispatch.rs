@@ -155,6 +155,11 @@ pub async fn create_endpoint(
     if !url.starts_with("http://") && !url.starts_with("https://") {
         return Err("url must start with http:// or https://".to_string());
     }
+    // Comme l'étape d'automatisation et les serveurs d'inférence : un mot de
+    // passe dans l'URL serait stocké en clair et affiché (issue 707).
+    if url::Url::parse(url).is_ok_and(|url| has_credentials(&url)) {
+        return Err("url must not contain credentials".to_string());
+    }
     if let Some(unknown) = events
         .iter()
         .find(|event| !KNOWN_EVENTS.contains(&event.as_str()))
@@ -385,8 +390,10 @@ async fn deliver_once(
         }
     };
 
+    // Lignes créées avant le refus des identifiants : ils ne partent plus en
+    // Basic (reqwest les reprendrait de l'URL).
     let response = client
-        .post(&endpoint.url)
+        .post(without_credentials(&endpoint.url, ""))
         .header("content-type", "application/json")
         .header("x-syntheo-event", event)
         .header("x-syntheo-delivery", delivery_id)
@@ -415,6 +422,25 @@ async fn deliver_once(
             delivered: false,
             status: delivery_error_status(error),
         },
+    }
+}
+
+fn has_credentials(url: &url::Url) -> bool {
+    !url.username().is_empty() || url.password().is_some()
+}
+
+/// L'URL dont les identifiants sont remplacés par `user` (vide : retirés),
+/// ou l'URL telle quelle si elle n'en a pas ou ne se lit pas.
+pub(crate) fn without_credentials(url: &str, user: &str) -> String {
+    match url::Url::parse(url) {
+        Ok(mut parsed) if has_credentials(&parsed) => {
+            if parsed.set_password(None).is_ok() && parsed.set_username(user).is_ok() {
+                parsed.into()
+            } else {
+                url.to_string()
+            }
+        }
+        _ => url.to_string(),
     }
 }
 

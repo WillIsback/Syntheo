@@ -18,7 +18,7 @@ To read meeting data instead of receiving it, use the [CLI](/en/reference/cli) o
 ## Add an endpoint
 
 1. Open **Settings → Developers**.
-2. In the "Webhooks" section, enter a URL starting with `http://` or `https://`, then click "Add webhook".
+2. In the "Webhooks" section, enter a URL starting with `http://` or `https://`, without credentials (`user:password@` is rejected), then click "Add webhook".
 3. Copy the signing secret (`whsec_...`) with "Copy".
 4. Click "Test" to send a `webhook.test` delivery and check that your service responds.
 

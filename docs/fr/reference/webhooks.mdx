@@ -18,7 +18,7 @@ Pour lire les données de réunion plutôt que de les recevoir, utilisez la [CLI
 ## Ajouter un point de terminaison
 
 1. Ouvrez **Paramètres → Développeurs**.
-2. Dans la section « Webhooks », saisissez une URL commençant par `http://` ou `https://`, puis cliquez sur « Ajoutez un webhook ».
+2. Dans la section « Webhooks », saisissez une URL commençant par `http://` ou `https://`, sans identifiants (`utilisateur:motdepasse@` est refusé), puis cliquez sur « Ajoutez un webhook ».
 3. Copiez le secret de signature (`whsec_...`) avec « Copier ».
 4. Cliquez sur « Test » pour envoyer une livraison `webhook.test` et vérifier que votre service répond.
 
