@@ -225,7 +225,7 @@ export const DataFlows = ({ activity = "listen" }) => {
               <span><strong style={{ fontWeight: 500 }}>{name}</strong><small>{id === dest ? "Reçoit des données maintenant" : "Aucun envoi pour cette activité"}</small></span>
             </div>
           ))}
-          <p className="syn-muted" style={{ margin: 0, fontSize: 13 }}><strong>Éditeur de Syntheo</strong> : rien. Pas de compte, pas de statistiques d'usage, pas de rapport d'erreur, pas de vérification de mise à jour.</p>
+          <p className="syn-muted" style={{ margin: 0, fontSize: 13 }}><strong>Éditeur de Syntheo</strong> : seulement la recherche de mise à jour (désactivable). Pas de compte, pas de statistiques d'usage, pas de rapport d'erreur.</p>
         </div>
       </div>
       <div className="syn-flow-box syn-flow" aria-live="polite" style={{ display: "block", margin: 0 }}>

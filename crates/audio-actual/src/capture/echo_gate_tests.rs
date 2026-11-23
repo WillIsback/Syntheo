@@ -207,9 +207,7 @@ fn transitions_have_no_discontinuity() {
 
 #[test]
 fn dtln_latency_matches_the_declared_value() {
-    let Ok(mut aec) = syntheo_aec::AEC::new_from_dir(&syntheo_aec::source_model_dir()) else {
-        return;
-    };
+    let mut aec = syntheo_aec::AEC::new().expect("modèles DTLN embarqués");
     // Impulsions sur un fond tonal, référence muette : le modèle laisse passer le micro.
     let mic: Vec<f32> = (0..FRAME * 4)
         .map(|idx| if idx % 1_000 < 40 { 0.4 } else { 0.0 } + 0.05 * (idx as f32 * 0.37).sin())
@@ -236,9 +234,7 @@ fn dtln_latency_matches_the_declared_value() {
 // non finie, et après la traîne le micro passe tel quel, en phase.
 #[test]
 fn dtln_behind_the_gate_tolerates_a_reference_that_falls_to_zero() {
-    let Ok(aec) = syntheo_aec::AEC::new_from_dir(&syntheo_aec::source_model_dir()) else {
-        return;
-    };
+    let aec = syntheo_aec::AEC::new().expect("modèles DTLN embarqués");
     let latency = aec.latency_samples();
     let mut gate = GatedEchoCanceller::new(aec, RATE);
     let mic = load_wav("theo_mic.wav");
@@ -315,16 +311,13 @@ fn echo_gate_bench_half_silent_reference() {
                 }
             })
             .collect();
-        let mut always = syntheo_aec::AEC::new_from_dir(&syntheo_aec::source_model_dir()).unwrap();
+        let mut always = syntheo_aec::AEC::new().unwrap();
         let always = time_frames(&mic, &reference, |mic, reference| {
             std::hint::black_box(
                 EchoCanceller::process_streaming(&mut always, mic, reference).unwrap(),
             );
         });
-        let mut gate = GatedEchoCanceller::new(
-            syntheo_aec::AEC::new_from_dir(&syntheo_aec::source_model_dir()).unwrap(),
-            RATE,
-        );
+        let mut gate = GatedEchoCanceller::new(syntheo_aec::AEC::new().unwrap(), RATE);
         let gated = time_frames(&mic, &reference, |mic, reference| {
             std::hint::black_box(gate.process(mic, reference, |wet| wet).unwrap());
         });

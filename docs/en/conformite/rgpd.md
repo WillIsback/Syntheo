@@ -54,7 +54,8 @@ the data folder. The managed settings `on_device_transcription_enabled`
 (forbid the source) and `speech_models_urls` (require a model mirror) are
 available to the organization. See
 [Transcribe on this computer](/en/on-device-transcription). An earlier version may have left model files in the
-`models/stt` and `models/llm` folders of the data folder, as well as in the
+`models/stt`, `models/llm` and `models/aec` (echo cancellation models, now
+shipped with the app) folders of the data folder, as well as in the
 Soniqo model cache on macOS: they are no longer read or loaded, and can be
 deleted by hand. Voiceprints that an earlier version may have saved (vectors
 in the system keychain, references in the `voiceprint_exemplars` and
@@ -78,7 +79,10 @@ a deletion, erasure is retried at the next launch.
   the administrator (`speech_models_urls`) instead; HTTPS redirects are
   followed (5 at most), including the mirror's redirects to another host. No meeting data is sent; these hosts see the
   computer's IP address. No flow if the models are installed from a folder.
-- **Inference endpoints configured by the user**, and only those: ASR
+  The administrator turns this flow off, with the whole module, through the
+  key `on_device_transcription_enabled` set to `false` in
+  `managed_settings.json`.
+- **Inference endpoints configured by the user**: ASR
   (OpenAI protocol: Realtime and `/v1/audio/transcriptions`; NVIDIA
   NeMo-Speech.cpp: WebSocket `/v1/audio/transcriptions/realtime`) and the
   configured LLM endpoint (OpenAI-compatible API). Capture
@@ -91,18 +95,36 @@ a deletion, erasure is retried at the next launch.
   plain HTTP only toward a private host (local machine, local network,
   Tailscale range, `.local` names), after confirmation outside the machine,
   and requires HTTPS elsewhere.
+- **Webhooks configured by the user**, off until an address is entered:
+  - local API webhooks (Settings → Developers): when a meeting ends
+    (`meeting.completed`) or a summary is produced (`note.enhanced`), a
+    signed `POST` request (HMAC-SHA256) to the address entered, carrying the
+    note, the summaries, the participants, the action items and the full
+    transcript text;
+  - the "Send to an address (webhook)" automation step: the JSON body the
+    user writes, which can include the same data, to the address entered,
+    without a signature.
+  - in both cases, the recipient is the address the user chose
+    (`http://` or `https://`). Unlike the endpoints, HTTPS is not required:
+    prefer HTTPS or a private network.
 - An endpoint run by a third party becomes the **user's processor**
   (Art. 28 GDPR): contract and data location to be checked.
 - **Other flows, apart from inference**:
-  - release notes: those of the installed version are included in the app;
-    showing those of another version triggers an **unauthenticated** request
-    to GitHub (`raw.githubusercontent.com`, or the public API
-    `api.github.com` for a nightly version). Only the version number is sent;
-  - update check (at startup, on by default, can be turned off by the user
-    or by the administrator through `managed_settings.json`, key
-    `automatic_updates`): **unauthenticated** read of `latest.json` on GitHub,
-    then download of the installer if the user updates. No personal data
-    sent; GitHub sees the computer's IP address;
+  - update check: 15 seconds after startup, on by default, can be turned off
+    by the user or by the administrator (`managed_settings.json`, key
+    `automatic_updates` set to `false`), and at any time on the user's
+    request, even when the startup check is off. **Unauthenticated** read of
+    `latest.json`
+    (`github.com/WillIsback/Syntheo/releases/latest/download/latest.json`,
+    redirected by GitHub to its content servers), which also carries the new
+    version's release notes; those of the installed version are included in
+    the app. No personal data sent; GitHub sees the computer's IP address;
+  - download of the installer of an update, only when the user asks for it:
+    file from the GitHub release named in `latest.json`, whose signature is
+    checked before installation;
+  - on-device transcription models: see above (on click only, turned off by
+    `on_device_transcription_enabled`);
+  - echo cancellation models: bundled with the app, no download.
 - **No account, no sync, no error reports, nothing installed without the
   user's action** (the built-in update, AppImage and Windows installer,
   installs on request with a signed installer; .deb and MSI: link to GitHub

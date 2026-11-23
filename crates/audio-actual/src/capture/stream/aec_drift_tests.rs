@@ -353,15 +353,13 @@ enum ErleMode {
 }
 
 /// ERLE (dB) du vrai modèle DTLN, sur les passages où la référence joue après 6 s (temps
-/// d'acquisition), sortie recalée de la latence du modèle. `None` si le modèle est absent.
-fn run_drift_erle(scenario: Scenario, mode: ErleMode) -> Option<f64> {
+/// d'acquisition), sortie recalée de la latence du modèle.
+fn run_drift_erle(scenario: Scenario, mode: ErleMode) -> f64 {
     use super::aligner::SampleDelayLine;
 
     let (speaker, echo) = recorded_pair();
     let mic = drifted(&echo, scenario);
-    crate::capture::use_source_aec_models();
-    let mut aec = build_aec(RATE);
-    aec.as_ref()?;
+    let mut aec = Some(build_aec(RATE).expect("modèles DTLN embarqués"));
     let latency = syntheo_aec::BLOCK_SIZE - syntheo_aec::BLOCK_SHIFT;
     let mut linear_echo_gain = None;
     let mut aligner = AecReferenceAligner::new(RATE);
@@ -390,7 +388,8 @@ fn run_drift_erle(scenario: Scenario, mode: ErleMode) -> Option<f64> {
             &mut linear_echo_gain,
             &aligned_mic,
             &aligned_speaker,
-        )?;
+        )
+        .expect("aec_failed");
         output.extend_from_slice(&processed);
     }
     // La sortie suit le micro aligné : retard de la ligne du micro (nul ici, la référence étant
@@ -411,7 +410,7 @@ fn run_drift_erle(scenario: Scenario, mode: ErleMode) -> Option<f64> {
             .map(|&x| f64::from(x).powi(2))
             .sum::<f64>();
     }
-    Some(10.0 * (mic_energy / out_energy.max(1e-12)).log10())
+    10.0 * (mic_energy / out_energy.max(1e-12)).log10()
 }
 
 #[test]
@@ -425,12 +424,9 @@ fn aec_drift_erle_with_dtln() {
             jump_samples: 0.0,
             base_lag: BASE_LAG,
         };
-        let Some(ideal) = run_drift_erle(scenario, ErleMode::Ideal) else {
-            println!("modèle indisponible, mesure ignorée");
-            return;
-        };
-        let raw = run_drift_erle(scenario, ErleMode::Raw).unwrap();
-        let aligned = run_drift_erle(scenario, ErleMode::Aligner).unwrap();
+        let ideal = run_drift_erle(scenario, ErleMode::Ideal);
+        let raw = run_drift_erle(scenario, ErleMode::Raw);
+        let aligned = run_drift_erle(scenario, ErleMode::Aligner);
         println!("| {label} | {ideal:.2} dB | {raw:.2} dB | {aligned:.2} dB |");
     }
 }
@@ -504,7 +500,7 @@ fn active(signal: &[f32]) -> bool {
     signal.iter().any(|sample| sample.abs() > 1e-3)
 }
 
-fn run_lead(pair: SweepPair, scenario: Scenario, mode: LeadMode) -> Option<LeadMeasure> {
+fn run_lead(pair: SweepPair, scenario: Scenario, mode: LeadMode) -> LeadMeasure {
     use super::aligner::SampleDelayLine;
 
     let (speaker, echo) = match pair {
@@ -520,9 +516,7 @@ fn run_lead(pair: SweepPair, scenario: Scenario, mode: LeadMode) -> Option<LeadM
             *sample += voice;
         }
     }
-    crate::capture::use_source_aec_models();
-    let mut aec = build_aec(RATE);
-    aec.as_ref()?;
+    let mut aec = Some(build_aec(RATE).expect("modèles DTLN embarqués"));
     let latency = syntheo_aec::BLOCK_SIZE - syntheo_aec::BLOCK_SHIFT;
     let mut linear_echo_gain = None;
     let mut aligner = AecReferenceAligner::new(RATE);
@@ -557,12 +551,10 @@ fn run_lead(pair: SweepPair, scenario: Scenario, mode: LeadMode) -> Option<LeadM
                 )
             }
         };
-        output.extend_from_slice(&process_aec(
-            &mut aec,
-            &mut linear_echo_gain,
-            &aligned_mic,
-            &reference,
-        )?);
+        output.extend_from_slice(
+            &process_aec(&mut aec, &mut linear_echo_gain, &aligned_mic, &reference)
+                .expect("aec_failed"),
+        );
     }
 
     let skip = 6 * RATE as usize;
@@ -609,7 +601,7 @@ fn run_lead(pair: SweepPair, scenario: Scenario, mode: LeadMode) -> Option<LeadM
         }
     }
     let db = |num: f64, den: f64| 10.0 * (num / den.max(1e-12)).log10();
-    Some(LeadMeasure {
+    LeadMeasure {
         resets,
         erle_echo_only: db(echo_mic, echo_out),
         reduction_doubletalk: db(dt_mic, dt_out),
@@ -617,7 +609,7 @@ fn run_lead(pair: SweepPair, scenario: Scenario, mode: LeadMode) -> Option<LeadM
         near_correlation: near
             .as_ref()
             .map(|_| cross / (near_energy * out_dt).sqrt().max(1e-12)),
-    })
+    }
 }
 
 #[test]
@@ -640,10 +632,7 @@ fn aec_drift_lead_sweep_with_dtln() {
                 base_lag: BASE_LAG,
             };
             for lead in LEADS {
-                let Some(measure) = run_lead(pair, scenario, LeadMode::Emulated(lead)) else {
-                    println!("modèle indisponible, mesure ignorée");
-                    return;
-                };
+                let measure = run_lead(pair, scenario, LeadMode::Emulated(lead));
                 let optional = |value: Option<f64>, unit: &str| {
                     value.map_or("—".to_string(), |value| format!("{value:.2}{unit}"))
                 };
@@ -697,10 +686,7 @@ fn aec_drift_corrected_lead_with_dtln() {
                     jump_samples: 0.0,
                     base_lag,
                 };
-                let Some(measure) = run_lead(pair, scenario, LeadMode::Corrected) else {
-                    println!("modèle indisponible, mesure ignorée");
-                    return;
-                };
+                let measure = run_lead(pair, scenario, LeadMode::Corrected);
                 println!(
                     "| {pair_label} | {base_lag} | {drift_label} | {:.2} dB | {} | {} |",
                     measure.erle_echo_only,
@@ -933,7 +919,7 @@ enum IdealRead {
 
 /// Mesure de la chaîne DTLN avec une référence idéale (retard vrai moins l'avance), lue en pas
 /// entiers ou en retard fractionnaire. Mêmes passages et mêmes grandeurs que `run_lead`.
-fn run_ideal(pair: SweepPair, scenario: Scenario, read: IdealRead) -> Option<LeadMeasure> {
+fn run_ideal(pair: SweepPair, scenario: Scenario, read: IdealRead) -> LeadMeasure {
     let (speaker, echo) = match pair {
         SweepPair::Theo | SweepPair::TheoWithNearEnd => recorded_pair(),
         SweepPair::Doubletalk => {
@@ -976,19 +962,15 @@ fn run_ideal(pair: SweepPair, scenario: Scenario, read: IdealRead) -> Option<Lea
             }
         })
         .collect();
-    crate::capture::use_source_aec_models();
-    let mut aec = build_aec(RATE);
-    aec.as_ref()?;
+    let mut aec = Some(build_aec(RATE).expect("modèles DTLN embarqués"));
     let latency = syntheo_aec::BLOCK_SIZE - syntheo_aec::BLOCK_SHIFT;
     let mut linear_echo_gain = None;
     let mut output = Vec::with_capacity(mic.len());
     for (reference_chunk, mic_chunk) in reference.chunks(CHUNK).zip(mic.chunks(CHUNK)) {
-        output.extend_from_slice(&process_aec(
-            &mut aec,
-            &mut linear_echo_gain,
-            mic_chunk,
-            reference_chunk,
-        )?);
+        output.extend_from_slice(
+            &process_aec(&mut aec, &mut linear_echo_gain, mic_chunk, reference_chunk)
+                .expect("aec_failed"),
+        );
     }
 
     let skip = 6 * RATE as usize;
@@ -1028,7 +1010,7 @@ fn run_ideal(pair: SweepPair, scenario: Scenario, read: IdealRead) -> Option<Lea
         }
     }
     let db = |num: f64, den: f64| 10.0 * (num / den.max(1e-12)).log10();
-    Some(LeadMeasure {
+    LeadMeasure {
         resets: 0,
         erle_echo_only: db(echo_mic, echo_out),
         reduction_doubletalk: db(dt_mic, dt_out),
@@ -1036,7 +1018,7 @@ fn run_ideal(pair: SweepPair, scenario: Scenario, read: IdealRead) -> Option<Lea
         near_correlation: near
             .as_ref()
             .map(|_| cross / (near_energy * out_dt).sqrt().max(1e-12)),
-    })
+    }
 }
 
 type MeasureGetter = fn(&LeadMeasure) -> Option<f64>;
@@ -1059,12 +1041,9 @@ fn aec_fractional_delay_gain_with_dtln() {
                 jump_samples: 0.0,
                 base_lag: BASE_LAG,
             };
-            let Some(fractional) = run_ideal(pair, scenario, IdealRead::Fractional) else {
-                println!("modèle indisponible, mesure ignorée");
-                return;
-            };
-            let integer = run_ideal(pair, scenario, IdealRead::Integer).unwrap();
-            let real = run_lead(pair, scenario, LeadMode::Corrected).unwrap();
+            let fractional = run_ideal(pair, scenario, IdealRead::Fractional);
+            let integer = run_ideal(pair, scenario, IdealRead::Integer);
+            let real = run_lead(pair, scenario, LeadMode::Corrected);
             let rows: Vec<(&str, MeasureGetter)> = match pair {
                 SweepPair::Theo => vec![("ERLE écho seul", |m| Some(m.erle_echo_only))],
                 SweepPair::Doubletalk => {

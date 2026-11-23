@@ -55,7 +55,8 @@ rien écrire d'audio ni journaliser de texte. Les modèles se suppriment avec
 `on_device_transcription_enabled` (interdire la source) et
 `speech_models_urls` (imposer un miroir des modèles) sont à la disposition de
 l'organisation. Voir [Transcrire sur ce poste](/fr/on-device-transcription). Une version antérieure a pu laisser des fichiers de
-modèles dans les dossiers `models/stt` et `models/llm` du dossier de données,
+modèles dans les dossiers `models/stt`, `models/llm` et `models/aec` (modèles
+d'annulation d'écho, désormais fournis avec l'application) du dossier de données,
 ainsi que dans le cache de modèles Soniqo sous macOS : ils ne sont plus ni lus
 ni chargés, et peuvent être supprimés à la main. Les empreintes vocales
 qu'une version antérieure a pu enregistrer (vecteurs dans le trousseau du
@@ -81,8 +82,10 @@ une suppression, l'effacement est retenté au lancement suivant.
   redirections HTTPS sont suivies (5 au plus), y compris celles du miroir
   vers un autre hôte. Aucune donnée de
   réunion n'est envoyée ; ces hôtes voient l'adresse IP du poste. Aucun flux
-  si les modèles sont installés depuis un dossier.
-- **Endpoints d'inférence configurés par l'utilisateur**, et eux seuls : ASR
+  si les modèles sont installés depuis un dossier. L'administrateur coupe ce
+  flux, avec tout le module, par la clé `on_device_transcription_enabled` à
+  `false` dans `managed_settings.json`.
+- **Endpoints d'inférence configurés par l'utilisateur** : ASR
   (protocole OpenAI : Realtime et `/v1/audio/transcriptions` ; NVIDIA
   NeMo-Speech.cpp : WebSocket `/v1/audio/transcriptions/realtime`) et
   l'endpoint LLM configuré (API OpenAI-compatible). L'audio de
@@ -95,20 +98,39 @@ une suppression, l'effacement est retenté au lancement suivant.
   HTTP en clair uniquement vers un hôte privé (machine locale, réseau local,
   plage Tailscale, noms `.local`), après confirmation hors de la machine, et
   exige HTTPS ailleurs.
+- **Webhooks configurés par l'utilisateur**, désactivés tant qu'aucune
+  adresse n'est saisie :
+  - webhooks de l'API locale (Paramètres → Développeurs) : à la fin d'une
+    réunion (`meeting.completed`) ou d'un résumé (`note.enhanced`), requête
+    `POST` signée (HMAC-SHA256) vers l'adresse saisie, avec la note, les
+    résumés, les participants, les actions à mener et le texte complet de la
+    transcription ;
+  - étape « Envoyer vers une adresse (webhook) » d'une automatisation : le
+    corps JSON composé par l'utilisateur, qui peut inclure les mêmes données,
+    vers l'adresse saisie, sans signature.
+  - dans les deux cas, le destinataire est l'adresse choisie par
+    l'utilisateur (`http://` ou `https://`). Contrairement aux endpoints,
+    HTTPS n'est pas exigé : préférer HTTPS ou un réseau privé.
 - Un endpoint exploité par un tiers devient **sous-traitant de l'utilisateur**
   (art. 28 RGPD) : contrat et localisation des données à vérifier.
 - **Autres flux, hors inférence** :
-  - notes de version : celles de la version installée sont incluses dans
-    l'application ; afficher celles d'une autre version déclenche une requête
-    **non authentifiée** vers GitHub (`raw.githubusercontent.com`, ou l'API
-    publique `api.github.com` pour une version nightly). Seul le numéro de
-    version est transmis ;
-  - recherche de mises à jour (au démarrage, activée par défaut et
-    désactivable par l'utilisateur ou par l'administrateur via
-    `managed_settings.json`, clé `automatic_updates`) : lecture **non
-    authentifiée** de `latest.json` sur GitHub, puis téléchargement de
-    l'installeur si l'utilisateur met à jour. Aucune donnée personnelle
-    transmise ; GitHub voit l'adresse IP du poste ;
+  - recherche de mises à jour : 15 secondes après le démarrage, activée par
+    défaut et désactivable par l'utilisateur ou par l'administrateur
+    (`managed_settings.json`, clé `automatic_updates` à `false`), et à tout
+    moment à la demande de l'utilisateur, même quand la recherche au démarrage
+    est coupée. Lecture **non authentifiée** de `latest.json`
+    (`github.com/WillIsback/Syntheo/releases/latest/download/latest.json`,
+    redirigé par GitHub vers ses serveurs de contenu), qui porte aussi les
+    notes de la nouvelle version ; celles de la version installée sont
+    incluses dans l'application. Aucune donnée personnelle transmise ; GitHub
+    voit l'adresse IP du poste ;
+  - téléchargement de l'installeur d'une mise à jour, seulement quand
+    l'utilisateur le demande : fichier de la release GitHub indiquée par
+    `latest.json`, dont la signature est vérifiée avant l'installation ;
+  - modèles de la transcription sur le poste : voir plus haut (au clic
+    seulement, coupés par `on_device_transcription_enabled`) ;
+  - modèles d'annulation d'écho : fournis avec l'application, aucun
+    téléchargement.
 - **Pas de compte, pas de synchronisation, pas de rapport d'erreur, pas
   d'installation sans action de l'utilisateur** (la mise à jour intégrée,
   AppImage et installeur Windows, s'installe sur demande, installeur signé ;

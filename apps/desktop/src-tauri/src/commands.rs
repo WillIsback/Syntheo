@@ -1,6 +1,5 @@
 use crate::{
     AppExt,
-    aec_models::AecModelStatus,
     agent_skills::{SkillAgent, SkillAgentStatus},
     cli_status::CliStatus,
 };
@@ -111,18 +110,6 @@ pub async fn set_recently_opened_sessions<R: tauri::Runtime>(
 #[specta::specta]
 pub async fn check_cli_status() -> Result<CliStatus, String> {
     Ok(crate::cli_status::check())
-}
-
-#[tauri::command]
-#[specta::specta]
-pub async fn get_aec_model_status() -> Result<AecModelStatus, String> {
-    Ok(crate::aec_models::status())
-}
-
-#[tauri::command]
-#[specta::specta]
-pub async fn retry_aec_model_download() -> Result<AecModelStatus, String> {
-    Ok(crate::aec_models::retry_now())
 }
 
 #[tauri::command]

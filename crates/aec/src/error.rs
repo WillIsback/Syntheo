@@ -20,20 +20,9 @@ pub enum Error {
     #[error("Missing output tensor: {0}")]
     MissingOutput(String),
 
-    /// Modèle absent (premier lancement hors ligne, téléchargement pas encore fait).
-    #[error("echo cancellation model unavailable: {0}")]
-    ModelUnavailable(String),
-
-    /// Fichier tronqué, altéré ou plus grand que prévu.
+    /// Modèle embarqué dont la taille ou le SHA-256 ne correspond pas à l'empreinte épinglée.
     #[error("echo cancellation model failed verification: {0}")]
     ModelChecksum(&'static str),
-
-    #[error(transparent)]
-    Io(#[from] std::io::Error),
-
-    #[cfg(feature = "download")]
-    #[error(transparent)]
-    Download(#[from] reqwest::Error),
 }
 
 impl Serialize for Error {

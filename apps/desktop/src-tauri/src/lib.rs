@@ -1,4 +1,3 @@
-mod aec_models;
 mod agent_skills;
 mod agents;
 mod appearance;
@@ -266,7 +265,6 @@ pub fn main() {
                 }
             }
             tauri_plugin_shortcut::initialize_global_shortcuts(&app_handle);
-            aec_models::install(&app_handle);
 
             specta_builder.mount_events(&app_handle);
 
@@ -568,8 +566,6 @@ fn make_specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
             commands::check_cli_status,
             commands::list_skill_agents,
             commands::install_agent_skill,
-            commands::get_aec_model_status,
-            commands::retry_aec_model_download,
             updater::updater_supported,
             updater::updater_check::<tauri::Wry>,
             updater::updater_download::<tauri::Wry>,

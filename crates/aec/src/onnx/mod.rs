@@ -8,10 +8,7 @@ use syntheo_onnx::{
 
 use super::CircularBuffer;
 
-#[cfg(feature = "download")]
-pub(crate) mod download;
 pub(crate) mod model;
-pub(crate) mod store;
 
 struct ProcessingContext {
     scratch: Vec<Complex<f32>>,
@@ -70,19 +67,13 @@ pub struct AEC {
 }
 
 impl AEC {
-    /// Charge les modèles installés (voir [`store::set_model_dir`]). Sans modèle, renvoie
-    /// [`crate::Error::ModelUnavailable`] : la capture continue alors sans annulation d'écho.
+    /// Charge les modèles embarqués de la variante compilée, après vérification de leur taille
+    /// et de leur SHA-256. Une erreur ici est une vraie erreur de chargement (octets altérés,
+    /// ONNX Runtime absent ou en échec) : la capture continue alors sans annulation d'écho.
     pub fn new() -> Result<Self, crate::Error> {
-        let dir = store::model_dir().ok_or_else(|| {
-            crate::Error::ModelUnavailable("model directory not configured".into())
-        })?;
-        Self::new_from_dir(&dir)
-    }
-
-    pub fn new_from_dir(dir: &std::path::Path) -> Result<Self, crate::Error> {
-        let bytes_1 = store::read_verified(dir, &model::FILES[0])?;
-        let bytes_2 = store::read_verified(dir, &model::FILES[1])?;
-        Self::new_from_bytes(&bytes_1, &bytes_2)
+        let bytes_1 = model::FILES[0].verified_bytes()?;
+        let bytes_2 = model::FILES[1].verified_bytes()?;
+        Self::new_from_bytes(bytes_1, bytes_2)
     }
 
     fn new_from_bytes(bytes_1: &[u8], bytes_2: &[u8]) -> Result<Self, crate::Error> {
