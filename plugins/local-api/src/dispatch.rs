@@ -369,6 +369,11 @@ async fn deliver_once(
     };
     let client = match reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(DELIVERY_TIMEOUT_SECS))
+        // Aucune redirection suivie, comme l'étape d'automatisation « Envoyer
+        // vers une adresse » : un 307 ou 308 renverrait le contenu de la
+        // réunion et sa signature à un autre hôte, un 301 ou 302 le perdrait
+        // en GET sans corps (issue 707).
+        .redirect(reqwest::redirect::Policy::none())
         .build()
     {
         Ok(client) => client,
@@ -398,6 +403,10 @@ async fn deliver_once(
         .await;
 
     match response {
+        Ok(response) if response.status().is_redirection() => DeliveryOutcome {
+            delivered: false,
+            status: redirect_status(&endpoint.url, &response),
+        },
         Ok(response) => DeliveryOutcome {
             delivered: response.status().is_success(),
             status: response.status().to_string(),
@@ -407,6 +416,21 @@ async fn deliver_once(
             status: delivery_error_status(error),
         },
     }
+}
+
+/// Statut d'une redirection refusée : la cible n'est donnée que par son hôte,
+/// car son chemin peut porter un jeton comme celui du webhook.
+fn redirect_status(url: &str, response: &reqwest::Response) -> String {
+    let target = response
+        .headers()
+        .get(reqwest::header::LOCATION)
+        .and_then(|location| location.to_str().ok())
+        .and_then(|location| url::Url::parse(url).ok()?.join(location).ok())
+        .map_or_else(
+            || "unknown host".to_string(),
+            |target| webhook_host(target.as_str()),
+        );
+    format!("{}: redirect to {target} not followed", response.status())
 }
 
 /// Hôte (et port) d'une URL de webhook, sans chemin ni requête.

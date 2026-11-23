@@ -503,3 +503,82 @@ async fn startup_migration_gives_up_without_a_database() {
         .await
     );
 }
+
+/// Serveur HTTP minimal sur un fil : répond `response` à chaque requête et
+/// compte les requêtes reçues.
+fn local_receiver(response: String) -> (String, Arc<AtomicUsize>) {
+    use std::io::{Read as _, Write as _};
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let address = format!("127.0.0.1:{}", listener.local_addr().unwrap().port());
+    let hits = Arc::new(AtomicUsize::new(0));
+    let counter = hits.clone();
+    std::thread::spawn(move || {
+        for stream in listener.incoming() {
+            let Ok(mut stream) = stream else { return };
+            counter.fetch_add(1, Ordering::SeqCst);
+            let mut request = Vec::new();
+            let mut buffer = [0u8; 4096];
+            // En-têtes, puis le corps annoncé par content-length.
+            while let Ok(read) = stream.read(&mut buffer) {
+                if read == 0 {
+                    break;
+                }
+                request.extend_from_slice(&buffer[..read]);
+                let text = String::from_utf8_lossy(&request).to_ascii_lowercase();
+                if let Some(end) = text.find("\r\n\r\n") {
+                    let length = text
+                        .lines()
+                        .find_map(|line| line.strip_prefix("content-length:"))
+                        .and_then(|value| value.trim().parse::<usize>().ok())
+                        .unwrap_or(0);
+                    if request.len() >= end + 4 + length {
+                        break;
+                    }
+                }
+            }
+            let _ = stream.write_all(response.as_bytes());
+        }
+    });
+    (address, hits)
+}
+
+// Issue 707 : une redirection n'est jamais suivie ; le statut ne garde que
+// l'hôte de la cible, jamais son chemin.
+#[tokio::test]
+async fn delivery_does_not_follow_redirects() {
+    let (target, target_hits) =
+        local_receiver("HTTP/1.1 200 OK\r\ncontent-length: 0\r\nconnection: close\r\n\r\n".into());
+    for code in [
+        "301 Moved Permanently",
+        "307 Temporary Redirect",
+        "308 Permanent Redirect",
+    ] {
+        let (receiver, receiver_hits) = local_receiver(format!(
+            "HTTP/1.1 {code}\r\nlocation: http://{target}/hooks/s3cr3t-token\r\ncontent-length: 0\r\nconnection: close\r\n\r\n"
+        ));
+        let (_, secrets) = memory_secrets();
+        let row = syntheo_db_app::WebhookEndpointRow {
+            id: "webhook-1".to_string(),
+            url: format!("http://{receiver}/hook"),
+            secret: uuid::Uuid::new_v4().simple().to_string(),
+            events_json: "[]".to_string(),
+            active: true,
+            created_at: String::new(),
+            last_delivery_at: None,
+            last_delivery_status: String::new(),
+        };
+        let outcome = deliver_once(
+            &secrets,
+            &row,
+            EVENT_TEST,
+            &Bytes::from_static(b"{\"note\":\"contenu\"}"),
+            "dlv_1",
+        )
+        .await;
+        assert!(!outcome.delivered, "{code}");
+        assert_eq!(receiver_hits.load(Ordering::SeqCst), 1, "{code}");
+        assert!(outcome.status.contains(&target), "{}", outcome.status);
+        assert!(!outcome.status.contains("s3cr3t"), "{}", outcome.status);
+    }
+    assert_eq!(target_hits.load(Ordering::SeqCst), 0);
+}

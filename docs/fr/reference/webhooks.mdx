@@ -60,6 +60,8 @@ Pour `webhook.test`, `data` contient seulement un champ `message`.
 
 Chaque requête expire après 10 secondes. En cas d'échec, Syntheo réessaie après 5 secondes, puis après 30 secondes. Une livraison `webhook.test` ne fait qu'une tentative.
 
+Syntheo ne suit pas les redirections. Une réponse 3xx compte comme un échec, comme toute réponse hors 2xx : l'état de la dernière livraison indique seulement l'hôte vers lequel le serveur redirige, jamais le chemin. Saisissez directement l'adresse finale, par exemple en `https://` si votre serveur redirige le HTTP.
+
 Chaque requête contient ces en-têtes :
 
 | En-tête | Contenu |
