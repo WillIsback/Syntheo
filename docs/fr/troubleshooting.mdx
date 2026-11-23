@@ -11,9 +11,9 @@ Choisissez votre symptôme dans le vérificateur ci-dessous. Il liste les points
 
 ## Le serveur de transcription ou de synthèse est injoignable
 
-Syntheo ne contient aucun modèle : il dépend entièrement des serveurs dont vous avez saisi l'adresse dans **Paramètres → Transcription** et **Paramètres → Synthèse**.
+Hors transcription en direct « Sur ce poste », Syntheo dépend des serveurs dont vous avez saisi l'adresse dans **Paramètres → Transcription** et **Paramètres → Synthèse**.
 
-Commencez par cliquer sur « Tester la connexion » dans la carte du serveur. La pastille d'état et le message affiché disent quoi vérifier : « Injoignable », « Clé refusée » ou « Adresse invalide ». Voir [La carte serveur](/fr/ai-setup#la-carte-serveur).
+Commencez par cliquer sur « Tester la connexion » dans la carte du serveur. La pastille d'état et le message affiché disent quoi vérifier : « Injoignable » ou « Clé refusée » ; une adresse refusée à la saisie n'est pas enregistrée et le motif s'affiche sous le champ. Voir [La carte serveur](/fr/ai-setup#la-carte-serveur).
 
 Vérifiez dans l'ordre :
 
@@ -67,7 +67,7 @@ Les causes possibles sont : vous êtes hors ligne, le serveur a refusé votre cl
 - **Coupure réseau ou panne du serveur** : Syntheo tente de se reconnecter automatiquement. Quand le flux revient, il affiche brièvement « Transcription en direct reprise. ».
 - **Clé ou réglages refusés** : Syntheo ne retente pas la connexion. Le message se termine par « Vérifiez les réglages du serveur de transcription. ». Corrigez la clé ou le modèle dans **Paramètres → Transcription**, puis relancez l'écoute.
 
-Syntheo ne conserve pas l'audio. Ce qui a été dit pendant la coupure ne peut donc pas être transcrit après coup. Au-dessus de la transcription, un bandeau indique les périodes manquantes, par exemple « Transcription interrompue 14:32–14:35. ». Si les horaires ne sont pas connus, le bandeau indique « Cette transcription est incomplète. ».
+Syntheo ne conserve pas l'audio sur le disque : il garde seulement en mémoire les dernières secondes (une quinzaine au plus) et les rejoue au serveur à la reconnexion. Une coupure courte ne laisse donc aucun trou. Après une coupure plus longue, le début du passage manque et ne peut pas être transcrit après coup. À la fin de l'écoute, un bandeau au-dessus de la transcription indique les périodes concernées, par exemple « Transcription interrompue 14:32–14:35. » ou « Transcription interrompue quelques secondes à 14:32. » ; ces horaires sont approximatifs. Si les horaires ne sont pas connus, le bandeau indique « Cette transcription est incomplète. ».
 
 Pour limiter ces trous, vérifiez la stabilité du réseau entre votre poste et le serveur, ainsi que la charge du serveur (mémoire GPU, nombre de sessions simultanées).
 
@@ -124,10 +124,12 @@ Vérifiez ensuite la section « Audio » de l'écran « Réunions » :
 L'installeur Windows `.exe` est signé. Windows SmartScreen peut tout de même afficher « Windows a protégé votre ordinateur » tant que la signature n'a pas acquis assez de réputation auprès de Microsoft.
 
 1. Vérifiez que vous avez téléchargé le fichier depuis la [page des versions GitHub](https://github.com/WillIsback/Syntheo/releases/latest).
-2. Cliquez sur **Informations complémentaires** et vérifiez l'éditeur affiché.
+2. Cliquez sur **Informations complémentaires** et vérifiez que l'éditeur affiché est **William Derue**. S'il est indiqué « inconnu », n'exécutez pas le fichier.
 3. Cliquez sur **Exécuter quand même**.
 
 N'installez jamais un installeur obtenu par un autre canal.
+
+Une préversion de développement (alpha « devtools ») n'est jamais signée : SmartScreen y affiche un éditeur inconnu. Elle ne sert qu'aux tests du projet ; sur un poste de travail, installez uniquement une version publiée.
 
 ## L'application ne s'ouvre pas après l'installation sous Linux
 
@@ -181,7 +183,9 @@ Pour un fichier audio, votre serveur de transcription doit être configuré. Ave
 
 Si besoin, joignez le journal `app.log` de l'application, situé dans le dossier `logs` des données de l'application (sous Windows : `%LOCALAPPDATA%\fr.willisback.syntheo\logs`). Relisez-le avant de le partager.
 
-Les messages de la console de l'interface y apparaissent sous la forme `webview_console_event`, sans leur contenu : seuls le nombre d'arguments, l'étiquette du module qui les émet (par exemple `diagnostic="[speaker-context] error=Error(ERR_SQLITE_ERROR)"`) ainsi que le type et le code d'une erreur sont conservés. Le texte du message, celui des erreurs et toute autre valeur ne sont jamais écrits dans le journal.
+Dans la version publiée, les messages de la console de l'interface y apparaissent sous la forme `webview_console_event`, sans leur contenu : seuls le nombre d'arguments, l'étiquette du module qui les émet (par exemple `diagnostic="[speaker-context] error=Error(ERR_SQLITE_ERROR)"`) ainsi que le type et le code d'une erreur sont conservés. Le texte des messages et des erreurs n'est pas écrit dans le journal, à l'exception de quelques diagnostics techniques sans contenu de réunion, comme les violations de la politique de sécurité du contenu (`[csp]`).
+
+Les préversions de développement (alpha « devtools ») font exception : elles écrivent le texte complet de ces messages, tronqué et masqué pour les adresses, identifiants et secrets, mais pas pour le contenu. Leur journal peut donc contenir des extraits de notes, de transcriptions ou de synthèses : ne le partagez qu'avec l'équipe Syntheo.
 
 <Warning>
   Ne publiez jamais de clé API, de contenu de réunion ni l'adresse interne de vos serveurs dans une issue publique.

@@ -11,9 +11,9 @@ Choose your symptom in the checker below. It lists the points to check and opens
 
 ## The transcription or summary server is unreachable
 
-Syntheo contains no model: it depends entirely on the servers whose address you entered in **Settings → Transcription** and **Settings → Synthesis**.
+Apart from live transcription "On this computer", Syntheo depends on the servers whose address you entered in **Settings → Transcription** and **Settings → Synthesis**.
 
-Start by clicking "Test connection" on the server card. The status pill and the message shown say what to check: "Unreachable", "Key refused", or "Invalid address". See [The server card](/en/ai-setup#the-server-card).
+Start by clicking "Test connection" on the server card. The status pill and the message shown say what to check: "Unreachable" or "Key refused"; an address refused while typing is not saved and the reason shows under the field. See [The server card](/en/ai-setup#the-server-card).
 
 Check, in order:
 
@@ -67,7 +67,7 @@ The possible causes are: you are offline, the server refused your API key, it re
 - **Network outage or server failure**: Syntheo tries to reconnect automatically. When the stream comes back, it briefly shows "Live transcription resumed.".
 - **Key or settings refused**: Syntheo does not retry the connection. The message ends with "Check the transcription server settings.". Fix the key or the model in **Settings → Transcription**, then restart listening.
 
-Syntheo does not keep the audio. What was said during the outage therefore cannot be transcribed afterward. Above the transcript, a banner shows the missing periods, for example "Transcription interrupted 14:32–14:35.". If the times are not known, the banner shows "This transcription is incomplete.".
+Syntheo does not keep audio on disk: it only keeps the last seconds in memory (about fifteen at most) and replays them to the server when it reconnects. A short outage therefore leaves no gap. After a longer outage, the start of the passage is missing and cannot be transcribed afterward. When listening ends, a banner above the transcript shows the periods concerned, for example "Transcription interrupted 14:32–14:35." or "Transcription interrupted for a few seconds at 14:32."; these times are approximate. If the times are not known, the banner shows "This transcription is incomplete.".
 
 To limit these gaps, check the stability of the network between your computer and the server, and the server's load (GPU memory, number of concurrent sessions).
 
@@ -124,10 +124,12 @@ Then check the "Audio" section of the "Meetings" screen:
 The Windows `.exe` installer is signed. Windows SmartScreen may still show "Windows protected your PC" until the signature has built enough reputation with Microsoft.
 
 1. Check that you downloaded the file from the [GitHub releases page](https://github.com/WillIsback/Syntheo/releases/latest).
-2. Click **More info** and check the publisher shown.
+2. Click **More info** and check that the publisher shown is **William Derue**. If it says "Unknown publisher", do not run the file.
 3. Click **Run anyway**.
 
 Never install an installer obtained through another channel.
+
+A development pre-release ("devtools" alpha) is never signed: SmartScreen shows an unknown publisher for it. It is only for the project's testing; on a work computer, install only a published version.
 
 ## The app does not open after installation on Linux
 
@@ -181,7 +183,9 @@ For an audio file, your transcription server must be configured. With the "OpenA
 
 If needed, attach the app's `app.log` log, located in the `logs` folder of the app data (on Windows: `%LOCALAPPDATA%\fr.willisback.syntheo\logs`). Read it again before sharing it.
 
-Messages from the interface console appear in it as `webview_console_event`, without their content: only the number of arguments, the label of the module that emits them (for example `diagnostic="[speaker-context] error=Error(ERR_SQLITE_ERROR)"`), and the type and code of an error are kept. The message text, the error text, and any other value are never written to the log.
+In the published version, messages from the interface console appear in it as `webview_console_event`, without their content: only the number of arguments, the label of the module that emits them (for example `diagnostic="[speaker-context] error=Error(ERR_SQLITE_ERROR)"`), and the type and code of an error are kept. The text of messages and errors is not written to the log, except for a few technical diagnostics with no meeting content, such as content security policy violations (`[csp]`).
+
+Development pre-releases ("devtools" alpha) are the exception: they write the full text of these messages, truncated and masked for addresses, identifiers and secrets, but not for content. Their log can therefore contain excerpts of notes, transcripts or summaries: share it only with the Syntheo team.
 
 <Warning>
   Never publish an API key, meeting content, or the internal address of your servers in a public issue.

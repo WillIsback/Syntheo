@@ -25,7 +25,7 @@ These features call no server:
 Without a reachable transcription server, **there is no transcription**. Syntheo never keeps audio: so it cannot record now to transcribe later.
 
 - If no transcription provider is set up, Syntheo refuses to start the capture: "No transcription provider is set up. Syntheo does not keep audio: set up a transcription endpoint before recording."
-- If the server becomes unreachable during a meeting, live transcription pauses and Syntheo tries to reconnect. The passage spoken during the outage will be missing from the transcript.
+- If the server becomes unreachable during a meeting, live transcription pauses and Syntheo tries to reconnect. Syntheo keeps the last seconds of audio in memory (about fifteen at most) and replays them to the server as soon as it comes back: an outage of a few seconds leaves no gap. Beyond that, the start of the outage will be missing from the transcript; when listening ends, a dated banner above the transcript says so.
 
 ## Echo cancellation
 
@@ -46,7 +46,7 @@ Without a reachable summary server, your transcripts remain available: you can g
     For example speaches or vLLM for transcription, Ollama or llama.cpp server for the LLM. Download the models **before** you disconnect.
   </Step>
   <Step title="Declare them in Syntheo">
-    Follow [Set up transcription and AI](/en/ai-setup) with local URLs, for example `http://localhost:8000/v1` and `http://localhost:11434/v1`. Plain HTTP is accepted toward `localhost` and private addresses.
+    Follow [Set up transcription and AI](/en/ai-setup) with local URLs, for example `http://localhost:8000/v1` and `http://localhost:11434/v1`. Plain HTTP is accepted toward `localhost` and, after confirmation, toward a private address, with a permanent warning on the server card.
   </Step>
   <Step title="Test before the meeting">
     Cut the network, run a short listening session, then generate a summary. If both work, you are ready.

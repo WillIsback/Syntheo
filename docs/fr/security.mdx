@@ -156,7 +156,7 @@ Les réglages les plus utiles à une DSI :
     | `measurement_enabled`, `calibration_enabled` | `false` uniquement : coupe la mesure de la reprise de la bêta, et son mode Calibrage (voir [Données et confidentialité](/fr/data-and-privacy#mesure-de-la-reprise-bêta)) |
     | `on_device_transcription_enabled` | `false` uniquement : interdit la transcription sur le poste ; le programme `syntheo-speech`, livré avec l'application, n'est jamais lancé |
     | `speech_models_urls` | Liste de 1 à 8 adresses HTTPS (marqueurs `{path}` ou `{name}` permis), sans identifiants, requête, fragment ni virgule : remplace les sources de téléchargement des modèles de la transcription sur le poste, par exemple par un miroir interne ([détails](/fr/on-device-transcription#imposer-un-miroir-des-modèles)) |
-    | `save_recordings` | `true` ou `false` |
+    | `save_recordings` | `true` ou `false` : clé héritée, acceptée puis sans effet, la rétention de l'audio étant toujours forcée à « aucune » (`none`) |
 
     Toute autre clé, ou toute autre valeur, rend le fichier invalide. Le fichier ne peut contenir aucun secret : une clé API se saisit sur chaque poste.
   </Accordion>

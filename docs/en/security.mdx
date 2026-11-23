@@ -156,7 +156,7 @@ The settings most useful to an IT department:
     | `measurement_enabled`, `calibration_enabled` | `false` only: turns off the beta rework measurement, and its Calibration mode (see [Data and privacy](/en/data-and-privacy#rework-measurement-beta)) |
     | `on_device_transcription_enabled` | `false` only: forbids on-device transcription; the `syntheo-speech` program, shipped with the app, is never launched |
     | `speech_models_urls` | List of 1 to 8 HTTPS addresses (`{path}` or `{name}` markers allowed), with no credentials, query, fragment or comma: replaces the download sources of the on-device transcription models, for example with an internal mirror ([details](/en/on-device-transcription#require-a-model-mirror)) |
-    | `save_recordings` | `true` or `false` |
+    | `save_recordings` | `true` or `false`: legacy key, accepted but with no effect, since audio retention is always forced to "none" (`none`) |
 
     Any other key, or any other value, makes the file invalid. The file cannot contain any secret: an API key is entered on each computer.
   </Accordion>

@@ -3448,7 +3448,7 @@ const SYN_IMP_HINT = "Empty note: the ••• menu offers both imports.";
 const synImpInitial = () => ({ stage: "prepare", phase: "importing", fraction: 0, elapsed: 0, hint: SYN_IMP_HINT });
 
 /**
- * Note vide, menu ••• (« Téléverser un audio », « Téléverser un transcript »)
+ * Note vide, menu ••• (« Téléverser un audio », « Téléverser une transcription »)
  * puis import audio : avancement dans la marge et capsule en état « Import ».
  */
 export const ImportScreen = ({ markers = true }) => {

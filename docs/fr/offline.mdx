@@ -25,7 +25,7 @@ Ces fonctions ne font appel à aucun serveur :
 Sans serveur de transcription joignable, **il n'y a pas de transcription**. Syntheo ne conserve jamais l'audio : il ne peut donc pas enregistrer maintenant pour transcrire plus tard.
 
 - Si aucun fournisseur de transcription n'est configuré, Syntheo refuse de démarrer la capture : « Aucun fournisseur de transcription n'est configuré. Syntheo ne conserve pas l'audio : configurez un endpoint de transcription avant d'enregistrer. »
-- Si le serveur devient injoignable pendant une réunion, la transcription en direct se met en pause et Syntheo tente de se reconnecter. Le passage prononcé pendant la coupure manquera à la transcription.
+- Si le serveur devient injoignable pendant une réunion, la transcription en direct se met en pause et Syntheo tente de se reconnecter. Syntheo garde en mémoire les dernières secondes d'audio (une quinzaine au plus) et les rejoue au serveur dès qu'il revient : une coupure de quelques secondes ne laisse aucun trou. Au-delà, le début de la coupure manquera à la transcription ; à la fin de l'écoute, un bandeau daté le signale au-dessus de la transcription.
 
 ## Annulation d'écho
 
@@ -46,7 +46,7 @@ Sans serveur de synthèse joignable, vos transcriptions restent disponibles : vo
     Par exemple speaches ou vLLM pour la transcription, Ollama ou llama.cpp server pour le LLM. Téléchargez les modèles **avant** de vous déconnecter.
   </Step>
   <Step title="Les déclarer dans Syntheo">
-    Suivez [Configurer la transcription et l'IA](/fr/ai-setup) avec des URL locales, par exemple `http://localhost:8000/v1` et `http://localhost:11434/v1`. HTTP en clair est accepté vers `localhost` et les adresses privées.
+    Suivez [Configurer la transcription et l'IA](/fr/ai-setup) avec des URL locales, par exemple `http://localhost:8000/v1` et `http://localhost:11434/v1`. HTTP en clair est accepté vers `localhost` et, après confirmation, vers une adresse privée, avec un avertissement permanent sur la carte du serveur.
   </Step>
   <Step title="Tester avant la réunion">
     Coupez le réseau, lancez une courte écoute, puis générez un compte rendu. Si les deux fonctionnent, vous êtes prêt.

@@ -62,11 +62,11 @@ Ces garanties sont appliquées dans le code et protégées par des tests. Ceux d
 | Garantie | Tests garde-fous |
 | --- | --- |
 | **Aucun audio sur disque.** L'audio reste en mémoire le temps d'être envoyé au serveur STT. Il n'y a ni lecteur audio ni retranscription après coup. | `no-audio-at-rest.test.ts` ; côté Rust, `supervisor_writes_no_audio_to_session_dir` (`crates/listener-core`) vérifie qu'aucun fichier audio n'apparaît dans le dossier de session, et `managed_settings_require_no_audio_retention` (`crates/db-app`) refuse toute autre rétention que « aucune ». |
-| **Inférence uniquement vers les endpoints configurés.** Seuls les adaptateurs STT on-premise et un fournisseur LLM OpenAI-compatible existent, sans URL par défaut. HTTP en clair n'est accepté que vers un hôte privé. Aucune empreinte d'appareil n'est envoyée dans les en-têtes. | `stt-on-prem.test.ts`, `llm-on-prem.test.ts` |
+| **Inférence uniquement vers les endpoints configurés.** Seuls les adaptateurs STT on-premise et un fournisseur LLM OpenAI-compatible existent, sans URL par défaut. Seule exception : la source facultative « Sur ce poste » transcrit sur la boucle locale, avec des modèles téléchargés depuis des sources épinglées (ou le miroir `speech_models_urls`) et vérifiés par empreinte. HTTP en clair n'est accepté que vers un hôte privé. Aucune empreinte d'appareil n'est envoyée dans les en-têtes. | `stt-on-prem.test.ts`, `llm-on-prem.test.ts` |
 | **Ni compte, ni cloud, ni télémétrie.** Les modules d'authentification, de partage et de synchronisation sont supprimés, et aucune dépendance d'analyse ou de rapport d'erreur n'est déclarée. | `no-cloud-imports.test.ts` |
 | **Périmètre du dépôt.** Seuls le desktop et la CLI subsistent : aucune application serveur, web ou mobile. | `monorepo-scope.test.ts` |
 | **Conformité documentée.** `docs/fr/conformite/rgpd.md` doit inventorier chaque flux réseau et chaque stockage. | `docs-rgpd.test.ts` |
-| **Français d'abord.** L'interface s'affiche en français par défaut, et l'anglais reste disponible. | `apps/desktop/src/i18n/locales.test.ts` |
+| **Interface en français et en anglais.** L'interface suit la langue du système : en français si c'est la première langue préférée, sinon en anglais (langue source), y compris pour une langue sans traduction. Le réglage « Langue de l'interface » (Automatique (système), Français, English) l'impose. | `apps/desktop/src/i18n/locales.test.ts` |
 
 Les flux réseau sans rapport avec l'inférence, encore présents dans le code, sont listés dans la page [RGPD](/fr/conformite/rgpd).
 
@@ -83,7 +83,7 @@ Les workflows se trouvent dans `.github/workflows/`.
 
 - **Gates de pull request** : `ci-test` (Vitest), `ci-code-quality` (formatage, lint, typage, cohérence des commits et des lockfiles ; clippy et `cargo test` sur `main`), `ci-security` (analyse des dépendances, détection de secrets), `ci-codeql` et `ci-traceability` (issue liée, type de PR, impact semver).
 - **Release** (`release.yml`, à chaque push sur `main`) : la version est calculée depuis les Conventional Commits. `feat` donne une version mineure, `fix` et `perf` un correctif, et un `!` une version majeure. Un commit marqué `[skip release]` ne publie rien.
-- **Paquets** : AppImage et `.deb` pour Linux. Pour Windows, `build-windows.yml` produit un installeur NSIS (`.exe`) et un `.msi`, signés via Azure Artifact Signing lorsque les secrets Azure sont fournis.
+- **Paquets** : AppImage et `.deb` pour Linux. Pour Windows, `build-windows.yml` produit un installeur NSIS (`.exe`) et un `.msi`. Pour une release depuis `main`, une étape isolée (identité fédérée OIDC, sans secret client) les signe avec Azure Artifact Signing, ainsi que `syntheo.exe` et le programme `syntheo-speech`, puis vérifie le signataire ; la publication est annulée si un fichier n'est pas signé.
 - **Intégrité** : un SBOM SPDX (Syft), des fichiers `SHA256SUMS` et `SHA256SUMS-windows`, une attestation de provenance vérifiable avec `gh attestation verify`, puis une publication sur les GitHub Releases.
 
 Aucun build macOS n'est publié pour l'instant.

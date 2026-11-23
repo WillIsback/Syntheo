@@ -6,7 +6,7 @@ description: "Connect Syntheo to your self-hosted inference servers: a transcrip
 
 import { AppSettings, Kbd, SettingsPath } from "/snippets/en/start.gen.jsx";
 
-Syntheo ships no model and calls no cloud service. It connects to **your** inference servers, on your computer or your network, through standard protocols. You configure two independent things:
+Syntheo calls no cloud AI service. It connects to **your** inference servers, on your computer or your network, through standard protocols; live transcription can also run on this computer, without a server (see [Transcribe on this computer](#transcribe-on-this-computer)). You configure two independent things:
 
 | Setting | Role | Protocol |
 | --- | --- | --- |
@@ -65,7 +65,7 @@ The status pill takes one of these values:
 | "Connected · … ms" | The server answers; the pill shows the measured latency. For synthesis, it shows the number of available models instead ("Connected · … models available"). |
 | "Unreachable" | The server did not answer. |
 | "Key refused" | The server refused the API key. |
-| "Invalid address" | The address is not accepted (see the note above). |
+| "Invalid address" | An address saved earlier is no longer accepted (see the note above). While typing, a refused address is not saved: the reason shows under the field, for example "Enter a valid base URL.". |
 
 If something fails, a message under the card title says what to do, for example: "The server did not answer at localhost:8000/v1. Check that it is running and that you are on the right network (VPN, Tailscale), then test again."
 
