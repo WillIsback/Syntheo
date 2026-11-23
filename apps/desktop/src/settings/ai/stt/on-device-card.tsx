@@ -7,6 +7,7 @@ import {
   type Probe,
   type Profile,
   type Refusal,
+  type OnDeviceModels,
 } from "@syntheo/plugin-transcription";
 import { CircleNotch } from "@syntheo/ui/components/icons";
 import { cn } from "@syntheo/utils";
@@ -16,6 +17,7 @@ import { useSetSettingValues } from "~/settings/queries";
 import { useConfigValues } from "~/shared/config";
 import {
   describeOnDeviceError,
+  describeOnDeviceErrorAfterColon,
   launchRefusal,
   downloadOnDeviceModels,
   installOnDeviceModelsFromFolder,
@@ -32,9 +34,22 @@ import {
 // programme compagnon livré avec l'application, mise en service, choix de la
 // source. Masquée quand l'organisation interdit la source.
 
+// Une taille non nulle n'est jamais affichée « 0 MB » (QA 0.8.0-4) : les Mo
+// sont arrondis au-dessus.
 function formatSize(bytes: number) {
   const gb = bytes / 1e9;
-  return gb >= 1 ? `${gb.toFixed(1)} GB` : `${Math.round(bytes / 1e6)} MB`;
+  return gb >= 1 ? `${gb.toFixed(1)} GB` : `${Math.ceil(bytes / 1e6)} MB`;
+}
+
+/**
+ * Modèles d'une autre version en place (QA 0.8.0-4) : fichiers gardés sans
+ * téléchargement interrompu ; le reste est à télécharger, ce n'est pas une
+ * reprise.
+ */
+function isModelsUpdate(models: OnDeviceModels): boolean {
+  return (
+    models.kind === "partial" && !models.resumable && models.presentBytes > 0
+  );
 }
 
 function useLabels() {
@@ -162,7 +177,7 @@ export function OnDeviceCard() {
       if (refusal) {
         setNotice(null);
         setError(
-          t`The measurement did not complete: ${describeOnDeviceError(refusal)}`,
+          t`The measurement did not complete: ${describeOnDeviceErrorAfterColon(refusal)}`,
         );
       } else {
         setNotice(
@@ -175,7 +190,7 @@ export function OnDeviceCard() {
     },
     onError: (e: Error) =>
       setError(
-        t`The measurement did not complete: ${describeOnDeviceError(e.message)}`,
+        t`The measurement did not complete: ${describeOnDeviceErrorAfterColon(e.message)}`,
       ),
   });
 
@@ -208,7 +223,7 @@ export function OnDeviceCard() {
   };
   const installError = (e: Error) => {
     setError(
-      t`The models were not installed: ${describeOnDeviceError(e.message)}`,
+      t`The models were not installed: ${describeOnDeviceErrorAfterColon(e.message)}`,
     );
     void refresh();
   };
@@ -280,7 +295,7 @@ export function OnDeviceCard() {
     },
     onError: (e: Error) =>
       setError(
-        t`The models were not removed: ${describeOnDeviceError(e.message)}`,
+        t`The models were not removed: ${describeOnDeviceErrorAfterColon(e.message)}`,
       ),
   });
 
@@ -363,6 +378,10 @@ export function OnDeviceCard() {
           <p className="text-[13px]">
             {t`Models installed (${formatSize(models.totalBytes)}).`}
           </p>
+        ) : models.kind === "partial" && isModelsUpdate(models) ? (
+          <p className="text-muted-foreground text-[13px]">
+            {t`A model update is available (${formatSize(models.totalBytes - models.presentBytes)} to download).`}
+          </p>
         ) : models.kind === "partial" ? (
           // Les octets des téléchargements interrompus comptent (QA 0.8.0-3) :
           // le téléchargement reprend là où il s'est arrêté.
@@ -398,7 +417,9 @@ export function OnDeviceCard() {
                     onClick={() => downloading.mutate()}
                     className="border-border hover:bg-muted rounded-md border px-2.5 py-1 text-[13px] disabled:opacity-60"
                   >
-                    {models.kind === "partial" ? (
+                    {isModelsUpdate(models) ? (
+                      <Trans>Update the models</Trans>
+                    ) : models.kind === "partial" ? (
                       <Trans>Resume the download</Trans>
                     ) : (
                       t`Download the models (${formatSize(models.totalBytes)})`
@@ -516,7 +537,7 @@ export function OnDeviceCard() {
                 transcription is paused.
               </Trans>
             ) : installed && refusal ? (
-              t`This computer is chosen for transcription, but live transcription is paused: ${describeOnDeviceError(refusal)}`
+              t`This computer is chosen for transcription, but live transcription is paused: ${describeOnDeviceErrorAfterColon(refusal)}`
             ) : installed ? (
               <Trans>
                 This computer is chosen for transcription, but it has not been

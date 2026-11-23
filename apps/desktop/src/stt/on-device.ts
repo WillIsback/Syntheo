@@ -154,6 +154,31 @@ export function describeOnDeviceError(code: string): string {
   }
 }
 
+// Noms propres et sigles gardés tels quels en tête d'une phrase insérée.
+const KEEP_CAPITALIZED = new Set(["Syntheo", "Windows", "macOS", "Linux"]);
+
+/**
+ * Phrase insérée après deux-points dans une phrase composée (« … est en
+ * pause : ce poste n'autorise pas… ») : sa première lettre passe en
+ * minuscule, sauf pour un nom propre ou un sigle (QA 0.8.0-4).
+ */
+export function afterColon(sentence: string): string {
+  const first = sentence.split(/[\s'’,.:;]/, 1)[0] ?? "";
+  if (
+    !first ||
+    KEEP_CAPITALIZED.has(first) ||
+    (first.length > 1 && first === first.toLocaleUpperCase())
+  ) {
+    return sentence;
+  }
+  return sentence.charAt(0).toLocaleLowerCase() + sentence.slice(1);
+}
+
+/** Message d'erreur du module, à insérer après deux-points. */
+export function describeOnDeviceErrorAfterColon(code: string): string {
+  return afterColon(describeOnDeviceError(code));
+}
+
 // Refus de lancement qui arrête une mise en service (codes de l'hôte) : la
 // mesure n'a pas eu lieu, le poste n'est pas « trop lent ».
 const LAUNCH_REFUSALS = ["execution_blocked", "invalid", "disabled"] as const;
