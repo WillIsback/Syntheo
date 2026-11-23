@@ -10,7 +10,7 @@ Syntheo separates the language used for summaries and chat from the languages it
 <SettingsPath steps={["Settings", "Me", "Profile", "Language & Region"]} />
 
 <Note>
-  The interface language is set separately, in the same section ("Interface language"): for a new profile, "Automatic (system)" follows your system language, in English when Syntheo is not translated into it; a profile updated from an earlier version keeps the language it showed, deduced from its transcription language (English if that is English, French otherwise).
+  The interface language is set separately, in the same section ("Interface language"): for a new profile, "Automatic (system)" follows your system language, in English when Syntheo is not translated into it; a profile updated from an earlier version keeps the language it showed, deduced from its "Main language" (English if that is English, French otherwise). A new profile created under an administrator policy (`managed_settings.json`) that already sets app settings is treated as an existing profile with no main language: it starts in French, whatever the system language.
 </Note>
 
 ## Choose the main language

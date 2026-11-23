@@ -66,7 +66,7 @@ These guarantees are enforced in the code and protected by tests. The tests in `
 | **No account, no cloud, no telemetry.** The authentication, sharing, and sync modules are removed, and no analytics or error-reporting dependency is declared. | `no-cloud-imports.test.ts` |
 | **Repository scope.** Only the desktop app and the CLI remain: no server, web, or mobile application. | `monorepo-scope.test.ts` |
 | **Documented compliance.** `docs/fr/conformite/rgpd.md` must list every network flow and every storage location. | `docs-rgpd.test.ts` |
-| **French and English interface.** The interface follows the system language: French if it is the first preferred language, otherwise English (the source language), including for a language without a translation. The "Interface language" setting (Automatic (system), Français, English) overrides it. A profile updated from an earlier version keeps the language deduced from its transcription language; only a new profile starts on automatic. | `apps/desktop/src/i18n/locales.test.ts` |
+| **French and English interface.** The interface follows the system language: French if it is the first preferred language, otherwise English (the source language), including for a language without a translation. The "Interface language" setting (Automatic (system), Français, English) overrides it. A profile updated from an earlier version keeps the language deduced from its "Main language"; only a new profile starts on automatic, except under a `managed_settings.json` policy that already sets app settings: it then starts in French. | `apps/desktop/src/i18n/locales.test.ts` |
 
 The network flows unrelated to inference that are still present in the code are listed on the [GDPR](/en/conformite/rgpd) page.
 
