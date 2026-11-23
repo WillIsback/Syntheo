@@ -8,10 +8,6 @@ La source **Sur ce poste** transcrit vos réunions sans serveur : un programme d
 
 Le programme est installé avec Syntheo. Ses modèles (environ 1,1 Go) s'installent à part, une fois, depuis la carte **Sur ce poste**.
 
-<Note>
-  **Téléchargement des modèles : à venir.** Tant que les modèles ne sont pas publiés, la carte propose seulement **Installer depuis un dossier…**, avec un dossier qui contient les fichiers des modèles.
-</Note>
-
 ## Ce qu'il faut
 
 - Un processeur x86-64 avec les instructions AVX2 (Linux ou Windows).
@@ -28,6 +24,8 @@ Dans **Paramètres → Transcription**, carte **Sur ce poste** :
 - **Installer depuis un dossier…** les copie depuis un dossier de ce poste, pour un poste sans accès au réseau ou un dossier préparé par votre organisation (sous Windows, un chemin réseau `\\serveur\partage` est refusé ; copiez d'abord le dossier sur le poste). Le dossier contient les fichiers des modèles, directement ou dans un sous-dossier `models`, soit à plat comme les fichiers de la release GitHub (`encoder.onnx`, `nemotron3_diar_v3.onnx`…), soit en arborescence comme le dépôt Hugging Face (`nemotron/…`, `diar/…`). Chaque fichier est vérifié avant d'être mis en place.
 
 Chaque fichier est comparé à la version attendue par cette version de Syntheo (taille et empreinte SHA-256) avant d'être mis en place ; un fichier différent est refusé. La carte affiche l'avancement, puis Syntheo mesure le poste (voir plus bas).
+
+Quand une nouvelle version de Syntheo attend d'autres modèles, la carte l'indique (**Une mise à jour des modèles est disponible**, avec la taille à télécharger) : **Mettre à jour les modèles** télécharge seulement les fichiers qui ont changé, puis Syntheo mesure de nouveau le poste.
 
 **Retirer les modèles** les supprime. Installer et retirer sont refusés pendant une écoute.
 
