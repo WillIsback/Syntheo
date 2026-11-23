@@ -271,9 +271,10 @@ pub fn status(dir: &Path, files: &[ModelFile]) -> ModelsStatus {
     for (file, present) in files.iter().zip(present) {
         if present {
             installed_bytes += file.size;
-        } else if let Ok(part) =
-            std::fs::symlink_metadata(syntheo_pinned_fetch::part_path(&file.under(dir)))
-            && part.is_file()
+        } else if let Ok(part) = std::fs::symlink_metadata(syntheo_pinned_fetch::part_path(
+            &file.under(dir),
+            &file.sha256,
+        )) && part.is_file()
             && part.len() <= file.size
         {
             // Téléchargement interrompu : repris là où il s'est arrêté. Un
@@ -486,7 +487,7 @@ pub async fn download(
     let partial: u64 = todo
         .iter()
         .filter_map(|f| {
-            std::fs::metadata(syntheo_pinned_fetch::part_path(&f.under(dir)))
+            std::fs::metadata(syntheo_pinned_fetch::part_path(&f.under(dir), &f.sha256))
                 .ok()
                 .map(|m| m.len())
                 .filter(|len| *len <= f.size)
@@ -637,7 +638,11 @@ mod tests {
         let files = vec![file("one.onnx", b"un"), file("two.bin", b"deux")];
         let dest = tempfile::tempdir().unwrap();
         let dir = dest.path();
-        std::fs::write(dir.join("two.bin.part"), b"de").unwrap();
+        std::fs::write(
+            syntheo_pinned_fetch::part_path(&dir.join("two.bin"), &files[1].sha256),
+            b"de",
+        )
+        .unwrap();
         assert_eq!(
             status(dir, &files),
             ModelsStatus::Partial {
@@ -646,7 +651,11 @@ mod tests {
                 resumable: true,
             }
         );
-        std::fs::write(dir.join("two.bin.part"), b"deux").unwrap();
+        std::fs::write(
+            syntheo_pinned_fetch::part_path(&dir.join("two.bin"), &files[1].sha256),
+            b"deux",
+        )
+        .unwrap();
         assert_eq!(
             status(dir, &files),
             ModelsStatus::Partial {
@@ -656,7 +665,11 @@ mod tests {
             }
         );
         std::fs::write(dir.join("one.onnx"), b"un").unwrap();
-        std::fs::write(dir.join("two.bin.part"), b"deux et plus").unwrap();
+        std::fs::write(
+            syntheo_pinned_fetch::part_path(&dir.join("two.bin"), &files[1].sha256),
+            b"deux et plus",
+        )
+        .unwrap();
         assert_eq!(
             status(dir, &files),
             ModelsStatus::Partial {
@@ -665,10 +678,60 @@ mod tests {
                 resumable: false,
             }
         );
-        std::fs::remove_file(dir.join("two.bin.part")).unwrap();
+        std::fs::remove_file(syntheo_pinned_fetch::part_path(
+            &dir.join("two.bin"),
+            &files[1].sha256,
+        ))
+        .unwrap();
         std::fs::write(dir.join("two.bin"), b"deux").unwrap();
         assert_eq!(
             status(dir, &files),
+            ModelsStatus::Installed { total_bytes: 6 }
+        );
+    }
+
+    // Vérification 789ef9bb (V3) : un `.part` d'une autre version du fichier
+    // (ancien nommage, ou autre empreinte), même plus court que la taille
+    // attendue, n'est pas annoncé reprenable ; le téléchargement le supprime.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn a_part_of_another_version_is_not_resumable_and_is_removed() {
+        let files = vec![file("one.onnx", b"un"), file("two.bin", b"deux")];
+        let dest = tempfile::tempdir().unwrap();
+        let dir = dest.path().join("models");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("one.onnx"), b"un").unwrap();
+        let legacy = dir.join("two.bin.part");
+        let other = syntheo_pinned_fetch::part_path(&dir.join("two.bin"), &"e".repeat(64));
+        std::fs::write(&legacy, b"de").unwrap();
+        std::fs::write(&other, b"DE").unwrap();
+        assert_eq!(
+            status(&dir, &files),
+            ModelsStatus::Partial {
+                present_bytes: 2,
+                total_bytes: 6,
+                resumable: false,
+            }
+        );
+        let server = serve(vec![
+            ("one.onnx".into(), b"un".to_vec()),
+            ("two.bin".into(), b"deux".to_vec()),
+        ])
+        .await;
+        let sources = vec![Source::unchecked_for_tests(format!("{server}/ok/{{path}}"))];
+        let mut last = (0, 0);
+        download(
+            &sources,
+            &dir,
+            &files,
+            &AtomicBool::new(false),
+            &mut |d, t| last = (d, t),
+        )
+        .await
+        .unwrap();
+        assert_eq!(last, (4, 4), "rien n'est repris d'une autre version");
+        assert!(!legacy.exists() && !other.exists());
+        assert_eq!(
+            status(&dir, &files),
             ModelsStatus::Installed { total_bytes: 6 }
         );
     }

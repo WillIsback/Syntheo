@@ -52,11 +52,42 @@ fn hex(digest: impl AsRef<[u8]>) -> String {
     digest.as_ref().iter().map(|b| format!("{b:02x}")).collect()
 }
 
-/// `.part` à côté de la destination.
-pub fn part_path(dest: &Path) -> PathBuf {
+/// `.part` à côté de la destination, nommé d'après l'empreinte visée
+/// (`<nom>.<8 premiers caractères du sha256>.part`) : un téléchargement
+/// interrompu d'une autre version du fichier (même nom, autre empreinte) n'est
+/// jamais repris ni annoncé comme reprenable (vérification 789ef9bb, V3).
+pub fn part_path(dest: &Path, sha256: &str) -> PathBuf {
     let mut name = dest.file_name().unwrap_or_default().to_os_string();
+    name.push(".");
+    name.push(sha256.get(..8).unwrap_or(sha256));
     name.push(".part");
     dest.with_file_name(name)
+}
+
+/// Supprime les `.part` d'autres versions de `dest` (`<nom>.part`, ancien
+/// nommage, et `<nom>.<autre empreinte>.part`) : sans cela, jusqu'à la taille
+/// d'un modèle resterait orphelin à côté de lui.
+pub fn remove_stale_parts(dest: &Path, sha256: &str) {
+    let (Some(dir), Some(name)) = (dest.parent(), dest.file_name().and_then(|n| n.to_str())) else {
+        return;
+    };
+    let current = part_path(dest, sha256);
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let Some(other) = path.file_name().and_then(|n| n.to_str()) else {
+            continue;
+        };
+        let stale = other == format!("{name}.part")
+            || (other.starts_with(&format!("{name}."))
+                && other.ends_with(".part")
+                && other.len() == name.len() + 1 + 8 + 5);
+        if stale && path != current && entry.file_type().is_ok_and(|t| t.is_file()) {
+            let _ = std::fs::remove_file(&path);
+        }
+    }
 }
 
 /// Empreinte et taille d'un fichier, sans tout charger en mémoire.
@@ -118,7 +149,8 @@ pub fn copy_verified(
     if let Some(parent) = dest.parent() {
         std::fs::create_dir_all(parent)?;
     }
-    let part = part_path(dest);
+    remove_stale_parts(dest, pinned.sha256);
+    let part = part_path(dest, pinned.sha256);
     let mut input = std::fs::File::open(source)?.take(pinned.size + 1);
     let mut output = std::fs::File::create(&part)?;
     let mut hasher = Sha256::new();
@@ -207,7 +239,13 @@ impl Fetcher {
         if let Some(parent) = dest.parent() {
             tokio::fs::create_dir_all(parent).await?;
         }
-        let part = part_path(dest);
+        {
+            let (dest, sha) = (dest.to_path_buf(), pinned.sha256.to_owned());
+            tokio::task::spawn_blocking(move || remove_stale_parts(&dest, &sha))
+                .await
+                .map_err(|_| FetchError::Cancelled)?;
+        }
+        let part = part_path(dest, pinned.sha256);
         // Reprise : ce qui est déjà écrit est re-haché (fichier épinglé, donc
         // tout octet déjà écrit doit déjà être le bon).
         let mut hasher = Sha256::new();

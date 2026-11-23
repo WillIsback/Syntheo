@@ -157,7 +157,7 @@ async fn downloads_checks_and_renames() {
         .unwrap();
     assert_eq!(std::fs::read(&dest).unwrap(), bytes);
     assert_eq!(seen, size);
-    assert!(!part_path(&dest).exists());
+    assert!(!part_path(&dest, &sha).exists());
     assert!(matches(&dest, Pinned { size, sha256: &sha }));
 }
 
@@ -168,7 +168,7 @@ async fn resumes_a_partial_download() {
     let server = serve(bytes.clone(), true, None).await;
     let dir = tempfile::tempdir().unwrap();
     let dest = dir.path().join("model.onnx");
-    std::fs::write(part_path(&dest), &bytes[..BLOCK + 7]).unwrap();
+    std::fs::write(part_path(&dest, &sha), &bytes[..BLOCK + 7]).unwrap();
     let mut seen = 0u64;
     fetcher()
         .fetch(
@@ -191,7 +191,7 @@ async fn restarts_when_the_server_ignores_the_range() {
     let server = serve(bytes.clone(), false, None).await;
     let dir = tempfile::tempdir().unwrap();
     let dest = dir.path().join("model.onnx");
-    std::fs::write(part_path(&dest), &bytes[..100]).unwrap();
+    std::fs::write(part_path(&dest, &sha), &bytes[..100]).unwrap();
     fetcher()
         .fetch(
             &server.url,
@@ -227,7 +227,7 @@ async fn a_wrong_or_oversized_file_is_refused_and_removed() {
         .await
         .unwrap_err();
     assert!(matches!(error, FetchError::Mismatch), "{error}");
-    assert!(!dest.exists() && !part_path(&dest).exists());
+    assert!(!dest.exists() && !part_path(&dest, &wrong).exists());
     // Plus long que la taille épinglée : coupé avant la fin.
     let (_, sha) = pin(&bytes);
     let error = fetcher()
@@ -244,7 +244,7 @@ async fn a_wrong_or_oversized_file_is_refused_and_removed() {
         .await
         .unwrap_err();
     assert!(matches!(error, FetchError::Mismatch), "{error}");
-    assert!(!dest.exists() && !part_path(&dest).exists());
+    assert!(!dest.exists() && !part_path(&dest, &sha).exists());
 }
 
 #[tokio::test]
@@ -256,7 +256,7 @@ async fn a_corrupt_partial_file_fails_then_the_next_try_succeeds() {
     let dest = dir.path().join("model.onnx");
     let mut corrupt = bytes[..BLOCK].to_vec();
     corrupt[10] ^= 0xff;
-    std::fs::write(part_path(&dest), &corrupt).unwrap();
+    std::fs::write(part_path(&dest, &sha), &corrupt).unwrap();
     let pinned = Pinned { size, sha256: &sha };
     assert!(matches!(
         fetcher()
@@ -302,7 +302,7 @@ async fn cancelling_keeps_the_partial_file_for_later() {
         .await
         .unwrap_err();
     assert!(matches!(error, FetchError::Cancelled));
-    assert!(part_path(&dest).exists() && !dest.exists());
+    assert!(part_path(&dest, &sha).exists() && !dest.exists());
 }
 
 #[tokio::test]
@@ -330,7 +330,7 @@ async fn only_https_is_accepted_even_after_a_redirect() {
     }
     // Redirection vers une adresse http hors boucle locale : pas suivie,
     // refusée comme adresse non sûre, sans toucher à un `.part` en reprise.
-    std::fs::write(part_path(&dest), &bytes[..BLOCK]).unwrap();
+    std::fs::write(part_path(&dest, &sha), &bytes[..BLOCK]).unwrap();
     let server = serve(bytes, true, Some("http://example.com/model.onnx".into())).await;
     let result = fetcher()
         .fetch(
@@ -345,7 +345,7 @@ async fn only_https_is_accepted_even_after_a_redirect() {
     assert_eq!(server.requests.load(Ordering::SeqCst), 1);
     assert!(!dest.exists());
     assert_eq!(
-        std::fs::metadata(part_path(&dest)).unwrap().len(),
+        std::fs::metadata(part_path(&dest, &sha)).unwrap().len(),
         BLOCK as u64
     );
 }
@@ -373,10 +373,11 @@ async fn fetch_once(
 #[tokio::test]
 async fn a_resume_with_the_wrong_range_starts_over() {
     let bytes = body();
+    let (_, sha) = pin(&bytes);
     let server = serve_with(bytes.clone(), Mode::WrongRange).await;
     let dir = tempfile::tempdir().unwrap();
     let dest = dir.path().join("model.onnx");
-    std::fs::write(part_path(&dest), &bytes[..BLOCK]).unwrap();
+    std::fs::write(part_path(&dest, &sha), &bytes[..BLOCK]).unwrap();
     fetch_once(&server.url, &dest, &bytes, &AtomicBool::new(false))
         .await
         .unwrap();
@@ -388,10 +389,11 @@ async fn a_resume_with_the_wrong_range_starts_over() {
 #[tokio::test]
 async fn a_resume_with_an_unknown_total_is_accepted() {
     let bytes = body();
+    let (_, sha) = pin(&bytes);
     let server = serve_with(bytes.clone(), Mode::UnknownTotal).await;
     let dir = tempfile::tempdir().unwrap();
     let dest = dir.path().join("model.onnx");
-    std::fs::write(part_path(&dest), &bytes[..BLOCK]).unwrap();
+    std::fs::write(part_path(&dest, &sha), &bytes[..BLOCK]).unwrap();
     fetch_once(&server.url, &dest, &bytes, &AtomicBool::new(false))
         .await
         .unwrap();
@@ -402,13 +404,14 @@ async fn a_resume_with_an_unknown_total_is_accepted() {
 #[tokio::test]
 async fn a_body_that_ends_too_early_keeps_the_partial_file() {
     let bytes = body();
+    let (_, sha) = pin(&bytes);
     let server = serve_with(bytes.clone(), Mode::ShortCloseDelimited(BLOCK + 5)).await;
     let dir = tempfile::tempdir().unwrap();
     let dest = dir.path().join("model.onnx");
     let result = fetch_once(&server.url, &dest, &bytes, &AtomicBool::new(false)).await;
     assert!(matches!(result, Err(FetchError::Incomplete)), "{result:?}");
     assert_eq!(
-        std::fs::read(part_path(&dest)).unwrap(),
+        std::fs::read(part_path(&dest, &sha)).unwrap(),
         &bytes[..BLOCK + 5]
     );
     let good = serve(bytes.clone(), true, None).await;
@@ -421,17 +424,18 @@ async fn a_body_that_ends_too_early_keeps_the_partial_file() {
 #[tokio::test]
 async fn other_statuses_are_refused_before_touching_the_partial_file() {
     let bytes = body();
+    let (_, sha) = pin(&bytes);
     for status in ["204 No Content", "203 Non-Authoritative Information"] {
         let server = serve_with(bytes.clone(), Mode::Status(status)).await;
         let dir = tempfile::tempdir().unwrap();
         let dest = dir.path().join("model.onnx");
-        std::fs::write(part_path(&dest), &bytes[..10]).unwrap();
+        std::fs::write(part_path(&dest, &sha), &bytes[..10]).unwrap();
         let result = fetch_once(&server.url, &dest, &bytes, &AtomicBool::new(false)).await;
         assert!(
             matches!(result, Err(FetchError::Unexpected)),
             "{status}: {result:?}"
         );
-        assert_eq!(std::fs::read(part_path(&dest)).unwrap(), &bytes[..10]);
+        assert_eq!(std::fs::read(part_path(&dest, &sha)).unwrap(), &bytes[..10]);
     }
 }
 
@@ -498,7 +502,7 @@ fn copies_only_a_matching_regular_file() {
         ),
         Err(FetchError::Mismatch)
     ));
-    assert!(!dest2.exists() && !part_path(&dest2).exists());
+    assert!(!dest2.exists() && !part_path(&dest2, &wrong).exists());
     #[cfg(unix)]
     {
         let link = dir.path().join("link.onnx");
@@ -539,4 +543,40 @@ async fn follows_at_most_five_redirects() {
             .await;
         assert_eq!(result.is_ok(), ok, "{hops} redirections : {result:?}");
     }
+}
+
+// Vérification 789ef9bb (V3) : le `.part` porte l'empreinte visée ; les
+// `.part` d'une autre version (ancien nommage `<nom>.part`, ou autre
+// empreinte) ne sont jamais repris et sont supprimés au téléchargement.
+#[tokio::test]
+async fn parts_of_another_version_are_not_resumed_and_are_removed() {
+    let bytes = body();
+    let (size, sha) = pin(&bytes);
+    let server = serve(bytes.clone(), true, None).await;
+    let dir = tempfile::tempdir().unwrap();
+    let dest = dir.path().join("model.onnx");
+    let other = "f".repeat(64);
+    let legacy = dir.path().join("model.onnx.part");
+    std::fs::write(&legacy, &bytes[..10]).unwrap();
+    std::fs::write(part_path(&dest, &other), b"autre version").unwrap();
+    // Un fichier voisin d'un autre nom n'est pas touché.
+    let neighbour = dir.path().join("model.onnx.data.12345678.part");
+    std::fs::write(&neighbour, b"voisin").unwrap();
+    assert_ne!(part_path(&dest, &sha), part_path(&dest, &other));
+    let mut seen = 0u64;
+    fetcher()
+        .fetch(
+            &server.url,
+            &dest,
+            Pinned { size, sha256: &sha },
+            &AtomicBool::new(false),
+            &mut |n| seen += n,
+        )
+        .await
+        .unwrap();
+    assert_eq!(std::fs::read(&dest).unwrap(), bytes);
+    assert_eq!(seen, size, "rien n'est repris d'une autre version");
+    assert!(!legacy.exists());
+    assert!(!part_path(&dest, &other).exists());
+    assert!(neighbour.exists());
 }
