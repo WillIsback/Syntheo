@@ -16,11 +16,12 @@ import { getStoredNoteMarkdown } from "~/session/components/note-input/header-sh
 import { hasStoredNoteContent } from "~/session/components/shared";
 import { SpeakerNamingBar } from "~/session/components/speaker-naming/bar";
 import {
-  isSummaryManagedOff,
+  isSummaryOff,
   shouldShowEmptySummaryConfigError,
 } from "~/session/enhance-config";
 import { useGenerateSummary } from "~/session/hooks/useGenerateSummary";
 import { useEnhancedNote } from "~/session/queries";
+import { useIntelligenceDisabled } from "~/settings/managed";
 import { createTaskId } from "~/store/zustand/ai-task/task-configs";
 
 export const Enhanced = forwardRef<
@@ -58,7 +59,8 @@ export const Enhanced = forwardRef<
       status === "success" && streamedText.trim().length > 0 && !hasContent;
     const showStreaming = status === "generating" || isAwaitingPersistedContent;
     const isConfigError = shouldShowEmptySummaryConfigError(llmStatus);
-    const isManagedOff = isSummaryManagedOff(llmStatus);
+    const isOff = isSummaryOff(llmStatus);
+    const managedOff = useIntelligenceDisabled().managed;
 
     if (status === "error") {
       return (
@@ -78,8 +80,8 @@ export const Enhanced = forwardRef<
           enhancedNoteId={enhancedNoteId}
         />
       ) : enhancedNoteId === defaultSummaryDocumentId(sessionId) ? (
-        isManagedOff ? (
-          <ManagedOff />
+        isOff ? (
+          <SummaryOff managed={managedOff} />
         ) : isConfigError ? (
           <ConfigError />
         ) : (
@@ -88,8 +90,8 @@ export const Enhanced = forwardRef<
       ) : null;
     }
 
-    if (status === "idle" && isManagedOff && !hasContent) {
-      return <ManagedOff />;
+    if (status === "idle" && isOff && !hasContent) {
+      return <SummaryOff managed={managedOff} />;
     }
 
     if (status === "idle" && isConfigError && !hasContent) {
@@ -142,12 +144,16 @@ function EmptySummary({ sessionId }: { sessionId: string }) {
   );
 }
 
-function ManagedOff() {
+// Sous la seule copie d'app_settings (politique retirée), l'onglet reste
+// neutre : ni message d'administration, ni bouton.
+function SummaryOff({ managed }: { managed: boolean }) {
   return (
     <div className="flex h-full flex-col items-center justify-center px-6">
-      <p role="note" className="text-muted-foreground text-sm">
-        <Trans>Set by your administrator.</Trans>
-      </p>
+      {managed && (
+        <p role="note" className="text-muted-foreground text-sm">
+          <Trans>Set by your administrator.</Trans>
+        </p>
+      )}
     </div>
   );
 }
