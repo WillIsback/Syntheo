@@ -241,7 +241,11 @@ export function ModelRadioList({
       {showCustom ? (
         <input
           aria-label={t`Model name`}
-          className={SERVER_INPUT_CLASS}
+          // Même aspect désactivé que le protocole imposé (issue 710).
+          className={cn([
+            SERVER_INPUT_CLASS,
+            disabled && "cursor-not-allowed opacity-60",
+          ])}
           disabled={disabled}
           value={disabled ? value : draft}
           placeholder={t`Model name served by your server`}

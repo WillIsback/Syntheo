@@ -160,6 +160,17 @@ export function SttServerCard() {
       title={<Trans>My server</Trans>}
       status={<ServerStatusChip state={state} />}
     >
+      {/* En tête de carte (issue 710) : sous l'adresse, la mention tombait
+          juste après la clé d'API quand « Avancé » est ouvert, comme si la
+          clé était imposée ; elle reste saisissable. */}
+      {anyManaged ? (
+        <p
+          data-testid="stt-server-managed"
+          className="text-muted-foreground -mt-1.5 text-[13px]"
+        >
+          <Trans>Set by your administrator.</Trans>
+        </p>
+      ) : null}
       {persistDefault ? (
         <PersistAiSelection
           key={`stt:${providerId}:${persistedModel}:${String(providerToPersist)}:${String(modelToPersist)}`}
@@ -191,14 +202,6 @@ export function SttServerCard() {
           managed={addressManaged}
           selectionManaged={modelManaged}
         />
-        {anyManaged ? (
-          <p
-            data-testid="stt-server-managed"
-            className="text-muted-foreground mt-1.5 text-[13px]"
-          >
-            <Trans>Set by your administrator.</Trans>
-          </p>
-        ) : null}
       </div>
       <div data-setting-id="stt-protocol" className="flex flex-col gap-2">
         <span

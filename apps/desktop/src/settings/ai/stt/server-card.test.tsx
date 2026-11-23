@@ -45,14 +45,20 @@ vi.mock("~/settings/ai/shared/server-address", () => ({
     managed?: boolean;
     selectionManaged?: boolean;
   }) => (
-    <button
-      type="button"
-      onClick={onTest}
-      data-managed={String(!!managed)}
-      data-selection-managed={String(!!selectionManaged)}
-    >
-      Test connection
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={onTest}
+        data-managed={String(!!managed)}
+        data-selection-managed={String(!!selectionManaged)}
+      >
+        Test connection
+      </button>
+      <details open data-testid="advanced">
+        <summary>Advanced</summary>
+        <input aria-label="API key (optional)" />
+      </details>
+    </>
   ),
 }));
 vi.mock("~/settings/ai/shared/persist-selection", () => ({
@@ -326,9 +332,20 @@ describe("SttServerCard", () => {
       return elements.map((el) => (el as HTMLButtonElement).disabled);
     }
     function expectMention() {
-      expect(screen.getByTestId("stt-server-managed").textContent).toBe(
-        "Set by your administrator.",
-      );
+      const mention = screen.getByTestId("stt-server-managed");
+      expect(mention.textContent).toBe("Set by your administrator.");
+      // En tête de carte, avant l'adresse : jamais dans « Avancé » ni sous la
+      // clé d'API, qu'elle ferait passer pour imposée (issue 710).
+      expect(mention.closest("details")).toBeNull();
+      expect(
+        mention.compareDocumentPosition(addressButton()) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(
+        mention.compareDocumentPosition(
+          screen.getByRole("textbox", { name: "API key (optional)" }),
+        ) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
     }
 
     it("adresse seule : adresse figée, protocole et modèle modifiables", () => {
@@ -440,6 +457,21 @@ describe("SttServerCard", () => {
       const input = screen.getByRole("textbox", { name: "Model name" });
       expect((input as HTMLInputElement).disabled).toBe(true);
       expect((input as HTMLInputElement).value).toBe("voxtral-mini");
+      // Même aspect désactivé que le protocole imposé (issue 710).
+      expect(input.className).toContain("cursor-not-allowed");
+      expect(input.className).toContain("opacity-60");
+      expectMention();
+    });
+
+    it("modèle géré : les modèles non retenus s'estompent comme le protocole", () => {
+      mocks.managed = new Set(["current_stt_model"]);
+      mocks.connection.state = CONNECTED;
+      setup();
+
+      const [voxtral, whisper] = modelRadios();
+      expect(voxtral!.className).toContain("disabled:cursor-not-allowed");
+      expect(voxtral!.className).not.toContain("opacity-60");
+      expect(whisper!.className).toContain("opacity-60");
     });
 
     it("politique complète : tout est figé, rien n'est écrit", () => {
