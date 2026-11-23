@@ -5580,6 +5580,10 @@ msgid "Synthesis · connected"
 msgstr "Synthesis · connected"
 
 #: src/sidebar/settings-server-status.tsx
+msgid "Synthesis · disabled"
+msgstr "Synthesis · disabled"
+
+#: src/sidebar/settings-server-status.tsx
 msgid "Synthesis · no server"
 msgstr "Synthesis · no server"
 

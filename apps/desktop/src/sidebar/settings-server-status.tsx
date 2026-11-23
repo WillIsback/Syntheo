@@ -69,9 +69,14 @@ function useStatusLabel(kind: ServerKind, state: ServerConnectionState) {
 // avant l'état du serveur (même règle que le toast et le bandeau).
 function useStatus(kind: ServerKind): { label: string; tone: Tone } {
   const { t } = useLingui();
-  const { state } = useServerConnection(kind);
+  const { state, disabled } = useServerConnection(kind);
   const serverLabel = useStatusLabel(kind, state);
   const transcription = useUsableTranscription();
+  // Synthèse désactivée par réglage géré (intelligence_disabled) : aucune
+  // sonde ne part, l'état « non testée » serait trompeur (issue 707).
+  if (disabled) {
+    return { label: t`Synthesis · disabled`, tone: "idle" };
+  }
   if (kind === "stt" && transcription.isLoading) {
     return { label: t`Transcription · checking…`, tone: "idle" };
   }

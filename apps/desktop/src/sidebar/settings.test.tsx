@@ -30,6 +30,7 @@ const mocks = vi.hoisted(() => ({
     stt: { status: "failed", failure: { ok: false, reason: "unreachable" } },
     llm: { status: "connected", latencyMs: 84, protocol: "openai", models: [] },
   } as Record<string, unknown>,
+  llmDisabled: false,
   config: {
     current_stt_provider: "local" as string | null,
     current_stt_model: "model" as string | null,
@@ -117,7 +118,10 @@ vi.mock("~/stt/on-device", async (importOriginal) => ({
 }));
 
 vi.mock("~/settings/ai/shared/server-connection", () => ({
-  useServerConnection: (kind: string) => ({ state: mocks.serverStates[kind] }),
+  useServerConnection: (kind: string) => ({
+    state: mocks.serverStates[kind],
+    disabled: kind === "llm" && mocks.llmDisabled,
+  }),
 }));
 
 vi.mock("~/settings/team/mirror", () => ({
@@ -174,6 +178,7 @@ describe("SettingsNav", () => {
         models: [],
       },
     };
+    mocks.llmDisabled = false;
     mocks.currentTab = { type: "settings", state: { tab: "app" } };
     mocks.tabs = [];
     mocks.openNew.mockClear();
@@ -253,6 +258,21 @@ describe("SettingsNav", () => {
     const footer = screen.getByRole("status", { name: "Server status" });
     expect(footer.textContent).toContain("Transcription · unreachable");
     expect(footer.textContent).toContain("Synthesis · connected");
+  });
+
+  // Issue 707 : synthèse désactivée par réglage géré (intelligence_disabled),
+  // aucune sonde ne part ; le menu le dit au lieu de « non testée ».
+  it("shows the synthesis as disabled when the administrator turned it off", () => {
+    mocks.llmDisabled = true;
+    mocks.serverStates = { ...mocks.serverStates, llm: { status: "untested" } };
+    render(<SettingsNav />);
+
+    expect(
+      screen.getByRole("button", { name: /^Synthesis/ }).textContent,
+    ).toContain("Synthesis · disabled");
+    const footer = screen.getByRole("status", { name: "Server status" });
+    expect(footer.textContent).toContain("Synthesis · disabled");
+    expect(footer.textContent).not.toContain("Synthesis · not tested");
   });
 
   // QA de 0.8.0-2 (William) : « Sur ce poste » prêt, aucun serveur.
