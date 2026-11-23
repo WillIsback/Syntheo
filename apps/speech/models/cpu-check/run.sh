@@ -21,13 +21,18 @@
 #                  l'exécute : il est lié dynamiquement à la glibc (un
 #                  binaire construit sur Arch exige une glibc plus récente
 #                  qu'Ubuntu 24.04). La CI le construit sur son runner.
-#   QEMU           émulateur (défaut : qemu-x86_64-static, sinon qemu-x86_64)
+#   QEMU           émulateur (défaut : qemu-x86_64-static, sinon qemu-x86_64) ;
+#                  la CI passe celui que construit build-qemu.sh
 #   QEMU_CPU       modèle de CPU émulé (défaut : Skylake-Client)
 #   THREADS        fils ONNX Runtime (défaut : 4)
 #   FILES          fichiers de mise en service à transcrire, parmi mic et sys
 #                  (défaut : "mic sys") ; la CI les répartit sur deux jobs
 #   HEARTBEAT      secondes entre deux battements (défaut : 120)
 #   STALL_LIMIT    battements sans CPU avant d'arrêter un qemu figé (défaut : 3)
+#   DEADLINE       délai interne en secondes depuis le lancement, relance
+#                  comprise (défaut : aucun) : qemu est arrêté après le relevé
+#                  fil par fil, contrôle non conclusif. La CI le fixe sous le
+#                  délai de l'étape, pour que ce relevé sorte avant la coupure.
 set -euo pipefail
 
 # Seuils, appliqués à chaque fichier : au moins 80 % des mots de sa référence
@@ -81,9 +86,10 @@ trap 'dump_threads "interruption"; exit 130' INT TERM
 # est arrêté et traité comme une erreur interne de l'émulateur.
 HEARTBEAT=${HEARTBEAT:-120}
 STALL_LIMIT=${STALL_LIMIT:-3}
-for v in "$HEARTBEAT" "$STALL_LIMIT"; do
+DEADLINE=${DEADLINE:-}
+for v in "$HEARTBEAT" "$STALL_LIMIT" "${DEADLINE:-1}"; do
   case "$v" in
-    '' | *[!0-9]* | 0*) echo "Erreur : HEARTBEAT et STALL_LIMIT sont des entiers positifs (reçu : HEARTBEAT=$HEARTBEAT, STALL_LIMIT=$STALL_LIMIT)." >&2; exit 2 ;;
+    '' | *[!0-9]* | 0*) echo "Erreur : HEARTBEAT, STALL_LIMIT et DEADLINE sont des entiers positifs (reçu : HEARTBEAT=$HEARTBEAT, STALL_LIMIT=$STALL_LIMIT, DEADLINE=$DEADLINE)." >&2; exit 2 ;;
   esac
 done
 HZ=$(getconf CLK_TCK)
@@ -154,6 +160,7 @@ run_once() {
   shown_out=0
   shown_err=0
   stalled=false
+  timed_out=false
   set +e
   "$QEMU" -cpu "${QEMU_CPU:-Skylake-Client}" "$BIN" --models "$MODELS" --threads "${THREADS:-4}" \
     --min-word-ratio "$MIN_WORD_RATIO" --max-wer "$MAX_WER" \
@@ -164,6 +171,14 @@ run_once() {
     sleep 1
     flush
     elapsed=$((SECONDS - start))
+    # Délai interne compté depuis le lancement du script (SECONDS), relance
+    # comprise.
+    if [ -n "$DEADLINE" ] && [ "$SECONDS" -ge "$DEADLINE" ]; then
+      dump_threads "délai interne de $DEADLINE s"
+      kill -KILL "$QPID" 2> /dev/null
+      timed_out=true
+      break
+    fi
     if [ "$elapsed" -ge "$next" ]; then
       next=$((next + HEARTBEAT))
       cpu=$(cpu_seconds "$QPID")
@@ -197,10 +212,19 @@ qemu_reason() {
   if $stalled; then echo "figé : moins d'une seconde de CPU en $((HEARTBEAT * STALL_LIMIT)) s"; else echo "SIGBUS, code $code"; fi
 }
 
+deadline_exceeded() {
+  if $timed_out; then
+    echo "Erreur : délai interne de $DEADLINE s dépassé (qemu arrêté) : contrôle non conclusif." >&2
+    exit 2
+  fi
+}
+
 run_once
+deadline_exceeded
 if qemu_internal; then
   echo "::warning::qemu : erreur interne ($(qemu_reason)) pendant cpu-check, sans rapport avec les modèles ; une seule relance."
   run_once
+  deadline_exceeded
   if qemu_internal; then
     echo "Erreur : qemu s'est de nouveau arrêté sur une erreur interne ($(qemu_reason)) : contrôle non conclusif." >&2
     exit 2

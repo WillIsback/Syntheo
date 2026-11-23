@@ -300,10 +300,11 @@ jobs:
   # modèles, exemple, audio de mise en service), dans l'action rust_install,
   # dans rust-toolchain.toml ni dans ce workflow ou publish-speech-models.yml.
   # Comme build-speech : sans rust-cache ni sccache, registre et compilation
-  # partent de zéro. Sous TCG, un fichier de 30 s demande environ 10 à 12 min
-  # sur un runner rapide (4 fils sur 2 cœurs) et près de trois fois plus sur
-  # un runner lent : les deux fichiers de mise en service sont répartis sur
-  # deux jobs (matrice `audio`), chacun avec les seuils du contrôle complet.
+  # partent de zéro. Sous TCG (qemu compilé dans le job, voir l'étape qui le
+  # construit), un fichier de 30 s demande environ 10 à 12 min sur un runner
+  # rapide (4 fils sur 2 cœurs) et près de trois fois plus sur un runner
+  # lent : les deux fichiers de mise en service sont répartis sur deux jobs
+  # (matrice `audio`), chacun avec les seuils du contrôle complet.
   speech-models:
     name: ci-code-quality (modèles de la transcription sur le poste, ${{ matrix.audio }})
     runs-on: ubuntu-24.04
@@ -364,10 +365,18 @@ jobs:
         if: steps.changes.outputs.run == 'true'
         run: python3 -I apps/speech/models/fetch.py "$RUNNER_TEMP/models"
 
-      # DNS publics et miroir apt du runner écarté s'il est trop lent (v0.7.2,
-      # #604), comme install_desktop_deps ; un échec de la mesure du miroir ne
-      # doit pas arrêter le job.
-      - name: Installer qemu-user
+      # qemu 8.2.2 compilé depuis l'archive officielle pour x86-64-v3, au lieu
+      # de qemu-user-static d'Ubuntu (compilé pour x86-64 de base) : ses
+      # fonctions d'aide flottantes en SSE classique tournent avec la moitié
+      # haute des ymm non nulle (qemu n'exécute vzeroupper qu'en sortie de bloc
+      # TCG) et paient sur les Xeon récents de certains runners une pénalité de
+      # transition SSE/AVX (×236 mesuré) : plus de 50 min pour un fichier.
+      # build-qemu.sh vérifie l'empreinte SHA-256 épinglée de l'archive avant
+      # de l'extraire ; environ 1 min de construction, sans cache. DNS publics
+      # et miroir apt du runner écarté s'il est trop lent (v0.7.2, #604), comme
+      # install_desktop_deps ; un échec de la mesure du miroir ne doit pas
+      # arrêter le job.
+      - name: Construire qemu-user (8.2.2, x86-64-v3)
         if: steps.changes.outputs.run == 'true'
         timeout-minutes: 15
         shell: bash
@@ -376,7 +385,8 @@ jobs:
           bash scripts/ci/public-dns.sh
           bash scripts/ci/apt-mirror.sh || echo "::warning::Mesure du miroir apt en échec : miroirs inchangés"
           sudo apt-get update -q
-          sudo apt-get install -y -q --no-install-recommends qemu-user-static
+          sudo apt-get install -y -q --no-install-recommends ninja-build python3-venv pkg-config libglib2.0-dev flex bison
+          bash apps/speech/models/cpu-check/build-qemu.sh "$RUNNER_TEMP/qemu-x86_64"
 
       # Délai propre à l'étape, dans les 60 min du job (environ 4 min de mise en
       # place avant) : un dépassement est attribué au garde-fou. Sur un runner
@@ -388,6 +398,10 @@ jobs:
         env:
           CPU_CHECK_BIN: apps/speech/target/release/examples/cpu-check
           FILES: ${{ matrix.audio }}
+          QEMU: ${{ runner.temp }}/qemu-x86_64
+          # Délai interne de run.sh (48 min), sous celui de l'étape : le relevé
+          # fil par fil de qemu sort avant la coupure.
+          DEADLINE: "2880"
         run: bash apps/speech/models/cpu-check/run.sh "$RUNNER_TEMP/models"
 
   meta:
