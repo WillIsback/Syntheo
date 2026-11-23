@@ -22,7 +22,7 @@ const mocks = vi.hoisted(() => ({
   } as Record<string, string>,
   setSelection: vi.fn(),
   setAiProvider: vi.fn(),
-  persisted: [] as Array<{ provider: string; model: string }>,
+  persisted: [] as Array<{ provider?: string; model?: string }>,
   managed: new Set<string>(),
   openUrl: vi.fn(),
 }));
@@ -39,17 +39,24 @@ vi.mock("~/settings/ai/shared/server-address", () => ({
   ServerAddressForm: ({
     onTest,
     managed,
+    selectionManaged,
   }: {
     onTest: () => void;
     managed?: boolean;
+    selectionManaged?: boolean;
   }) => (
-    <button type="button" onClick={onTest} data-managed={String(!!managed)}>
+    <button
+      type="button"
+      onClick={onTest}
+      data-managed={String(!!managed)}
+      data-selection-managed={String(!!selectionManaged)}
+    >
       Test connection
     </button>
   ),
 }));
 vi.mock("~/settings/ai/shared/persist-selection", () => ({
-  PersistAiSelection: (props: { provider: string; model: string }) => {
+  PersistAiSelection: (props: { provider?: string; model?: string }) => {
     mocks.persisted.push({ provider: props.provider, model: props.model });
     return null;
   },
@@ -295,55 +302,138 @@ describe("SttServerCard", () => {
     expect(mocks.connection.test).toHaveBeenCalled();
   });
 
-  // Issue 710 : serveur imposé par managed_settings.json. La carte passe en
-  // lecture seule (adresse, protocole, modèle) avec la mention.
+  // Issue 710 : réglages imposés par managed_settings.json. Chaque champ ne se
+  // verrouille que si sa propre clé est gérée ; aucune écriture ne vise une
+  // clé gérée (le déclencheur refuserait toute la transaction).
   describe("réglage géré", () => {
-    function expectLocked() {
+    const CONNECTED = {
+      status: "connected",
+      latencyMs: 12,
+      protocol: "openai",
+      models: ["voxtral-mini", "whisper-large-v3"],
+    };
+
+    function addressButton() {
+      return screen.getByRole("button", { name: "Test connection" });
+    }
+    function protocolRadios() {
+      return screen.getAllByRole("radio", { name: /OpenAI|NVIDIA/ });
+    }
+    function modelRadios() {
+      return screen.getAllByRole("radio", { name: /voxtral|whisper/ });
+    }
+    function disabled(elements: HTMLElement[]) {
+      return elements.map((el) => (el as HTMLButtonElement).disabled);
+    }
+    function expectMention() {
       expect(screen.getByTestId("stt-server-managed").textContent).toBe(
         "Set by your administrator.",
       );
-      expect(
-        screen
-          .getByRole("button", { name: "Test connection" })
-          .getAttribute("data-managed"),
-      ).toBe("true");
-      for (const radio of screen.getAllByRole("radio")) {
-        expect((radio as HTMLButtonElement).disabled).toBe(true);
-      }
-      expect(
-        screen.queryByRole("button", { name: "Enter another name" }),
-      ).toBeNull();
-      expect(
-        screen.queryByRole("button", { name: "Use this protocol" }),
-      ).toBeNull();
     }
 
-    it.each([
-      "ai_provider:stt:openai",
-      "current_stt_provider",
-      "current_stt_model",
-    ])("%s géré : protocole et modèle verrouillés", (id) => {
-      mocks.managed = new Set([id]);
-      mocks.connection.state = {
-        status: "connected",
-        latencyMs: 12,
-        protocol: "openai",
-        models: ["voxtral-mini", "whisper-large-v3"],
-      };
+    it("adresse seule : adresse figée, protocole et modèle modifiables", () => {
+      mocks.managed = new Set(["ai_provider:stt:openai"]);
+      mocks.connection.state = CONNECTED;
       setup();
 
-      expectLocked();
+      expectMention();
+      expect(addressButton().getAttribute("data-managed")).toBe("true");
+      expect(addressButton().getAttribute("data-selection-managed")).toBe(
+        "false",
+      );
+      expect(disabled(protocolRadios())).toEqual([false, false]);
+      expect(disabled(modelRadios())).toEqual([false, false]);
+      expect(
+        screen.getByRole("button", { name: "Enter another name" }),
+      ).toBeTruthy();
+
+      fireEvent.click(screen.getByRole("radio", { name: /whisper-large-v3/ }));
+      expect(mocks.setSelection).toHaveBeenLastCalledWith({
+        current_stt_provider: "openai",
+        current_stt_model: "whisper-large-v3",
+      });
       fireEvent.click(
         screen.getByRole("radio", { name: "NVIDIA NeMo-Speech.cpp" }),
       );
-      fireEvent.click(screen.getByRole("radio", { name: /whisper-large-v3/ }));
-      expect(mocks.setSelection).not.toHaveBeenCalled();
-      // Tester la connexion reste possible.
-      fireEvent.click(screen.getByRole("button", { name: "Test connection" }));
-      expect(mocks.connection.test).toHaveBeenCalled();
+      expect(mocks.setSelection).toHaveBeenLastCalledWith({
+        current_stt_provider: "nvidia",
+        current_stt_model: "nemotron-3.5-asr-streaming-0.6b",
+      });
     });
 
-    it("modèle hors liste : affiché dans un champ désactivé", () => {
+    // Politique {"current_stt_provider":"openai","stt:openai":{…}} sans
+    // current_stt_model : le modèle doit pouvoir s'enregistrer et se choisir.
+    it("fournisseur et adresse, sans modèle : le modèle s'enregistre et se choisit", () => {
+      mocks.managed = new Set([
+        "current_stt_provider",
+        "ai_provider:stt:openai",
+      ]);
+      mocks.config = { current_stt_provider: "openai" };
+      mocks.connection.state = CONNECTED;
+      setup();
+
+      expectMention();
+      expect(addressButton().getAttribute("data-managed")).toBe("true");
+      expect(disabled(protocolRadios())).toEqual([true, true]);
+      expect(disabled(modelRadios())).toEqual([false, false]);
+      // Premier modèle annoncé enregistré, sans réécrire le fournisseur géré.
+      expect(mocks.persisted).toEqual([
+        { provider: undefined, model: "voxtral-mini" },
+      ]);
+
+      fireEvent.click(
+        screen.getByRole("radio", { name: "NVIDIA NeMo-Speech.cpp" }),
+      );
+      expect(mocks.setSelection).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByRole("radio", { name: /whisper-large-v3/ }));
+      expect(mocks.setSelection).toHaveBeenCalledWith({
+        current_stt_model: "whisper-large-v3",
+      });
+    });
+
+    it("fournisseur et adresse, sans test : le nom du modèle se saisit", () => {
+      mocks.managed = new Set([
+        "current_stt_provider",
+        "ai_provider:stt:openai",
+      ]);
+      mocks.config = { current_stt_provider: "openai" };
+      setup();
+
+      const input = screen.getByRole("textbox", { name: "Model name" });
+      expect((input as HTMLInputElement).disabled).toBe(false);
+      fireEvent.change(input, { target: { value: "voxtral-mini" } });
+      expect(mocks.setSelection).toHaveBeenCalledWith({
+        current_stt_model: "voxtral-mini",
+      });
+    });
+
+    it("modèle seul : modèle figé, adresse et protocole modifiables", () => {
+      mocks.managed = new Set(["current_stt_model"]);
+      mocks.connection.state = CONNECTED;
+      setup();
+
+      expectMention();
+      expect(addressButton().getAttribute("data-managed")).toBe("false");
+      expect(addressButton().getAttribute("data-selection-managed")).toBe(
+        "true",
+      );
+      expect(disabled(protocolRadios())).toEqual([false, false]);
+      expect(disabled(modelRadios())).toEqual([true, true]);
+      expect(
+        screen.queryByRole("button", { name: "Enter another name" }),
+      ).toBeNull();
+
+      fireEvent.click(screen.getByRole("radio", { name: /whisper-large-v3/ }));
+      expect(mocks.setSelection).not.toHaveBeenCalled();
+      fireEvent.click(
+        screen.getByRole("radio", { name: "NVIDIA NeMo-Speech.cpp" }),
+      );
+      expect(mocks.setSelection).toHaveBeenCalledWith({
+        current_stt_provider: "nvidia",
+      });
+    });
+
+    it("modèle hors liste, géré : affiché dans un champ désactivé", () => {
       mocks.managed = new Set(["current_stt_model"]);
       setup();
 
@@ -352,7 +442,53 @@ describe("SttServerCard", () => {
       expect((input as HTMLInputElement).value).toBe("voxtral-mini");
     });
 
-    it("ne propose pas d'adopter un autre protocole détecté", () => {
+    it("politique complète : tout est figé, rien n'est écrit", () => {
+      mocks.managed = new Set([
+        "ai_provider:stt:openai",
+        "current_stt_provider",
+        "current_stt_model",
+      ]);
+      mocks.connection.state = CONNECTED;
+      setup();
+
+      expectMention();
+      expect(addressButton().getAttribute("data-managed")).toBe("true");
+      expect(disabled(protocolRadios())).toEqual([true, true]);
+      expect(disabled(modelRadios())).toEqual([true, true]);
+      expect(
+        screen.queryByRole("button", { name: "Enter another name" }),
+      ).toBeNull();
+      fireEvent.click(
+        screen.getByRole("radio", { name: "NVIDIA NeMo-Speech.cpp" }),
+      );
+      fireEvent.click(screen.getByRole("radio", { name: /whisper-large-v3/ }));
+      expect(mocks.setSelection).not.toHaveBeenCalled();
+      expect(mocks.persisted).toEqual([]);
+      // Tester la connexion reste possible.
+      fireEvent.click(addressButton());
+      expect(mocks.connection.test).toHaveBeenCalled();
+    });
+
+    it.each([["current_stt_provider"], ["ai_provider:stt:nvidia"]])(
+      "%s géré : ne propose pas d'adopter le protocole détecté",
+      (id) => {
+        mocks.managed = new Set([id]);
+        mocks.connection.state = {
+          status: "connected",
+          latencyMs: 12,
+          protocol: "nvidia",
+          models: ["nemotron-3.5-asr-streaming-0.6b.q8_0"],
+        };
+        setup();
+
+        expect(
+          screen.queryByRole("button", { name: "Use this protocol" }),
+        ).toBeNull();
+        expect(mocks.setAiProvider).not.toHaveBeenCalled();
+      },
+    );
+
+    it("adresse seule : adopter le protocole détecté reste possible", () => {
       mocks.managed = new Set(["ai_provider:stt:openai"]);
       mocks.connection.state = {
         status: "connected",
@@ -362,8 +498,9 @@ describe("SttServerCard", () => {
       };
       setup();
 
-      expectLocked();
-      expect(mocks.setAiProvider).not.toHaveBeenCalled();
+      expect(
+        screen.getByRole("button", { name: "Use this protocol" }),
+      ).toBeTruthy();
     });
 
     it("adresse d'un autre fournisseur gérée : cette carte reste modifiable", () => {

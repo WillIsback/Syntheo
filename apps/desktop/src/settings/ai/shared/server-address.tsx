@@ -39,11 +39,19 @@ export function ServerAddressForm(props: {
   onTest: () => void;
   isCurrentProvider: boolean;
   /**
-   * Serveur imposé par l'administration (managed_settings.json) : l'adresse
-   * enregistrée est affichée sans champ, « Réinitialiser » disparaît. La clé API reste
-   * saisissable : elle va au trousseau, la ligne gérée garde une clé vide.
+   * Adresse de ce fournisseur imposée par l'administration
+   * (managed_settings.json, ligne `ai_provider:<kind>:<id>` gérée) :
+   * l'adresse enregistrée est affichée sans champ, « Réinitialiser »
+   * disparaît. La clé API reste saisissable : elle va au trousseau, la ligne
+   * gérée garde une clé vide.
    */
   managed?: boolean;
+  /**
+   * Modèle courant imposé par l'administration : « Réinitialiser » oublie
+   * l'adresse et la clé sans toucher au modèle, que le déclencheur refuserait
+   * de vider (issue 710).
+   */
+  selectionManaged?: boolean;
 }) {
   const { providers, isReady } = useAiProvidersState(props.kind);
   if (!isReady) return null;
@@ -72,6 +80,7 @@ function ServerAddressFields({
   onTest,
   isCurrentProvider,
   managed = false,
+  selectionManaged = false,
   hasSaved,
   hasSavedAddress,
   initial,
@@ -84,6 +93,7 @@ function ServerAddressFields({
   onTest: () => void;
   isCurrentProvider: boolean;
   managed?: boolean;
+  selectionManaged?: boolean;
   hasSaved: boolean;
   hasSavedAddress: boolean;
   initial: Values;
@@ -103,13 +113,9 @@ function ServerAddressFields({
     isCleartextRemoteUrl(initial.base_url) ? initial.base_url.trim() : null,
   );
   const [pendingHttpUrl, setPendingHttpUrl] = useState<string | null>(null);
-  // L'adresse n'est figée que si une adresse est enregistrée à l'ouverture.
-  // Une politique qui n'impose que le protocole ou le modèle, sans adresse
-  // pour ce fournisseur, laisse la saisir : sinon la carte resterait vide,
-  // sans moyen d'en indiquer une. Instantané pris au montage, pour que le
-  // champ ne disparaisse pas après le premier enregistrement.
-  const savedAddressAtMount = useRef(hasSavedAddress).current;
-  const addressLocked = managed && savedAddressAtMount;
+  // L'adresse n'est figée que si la politique impose celle de ce
+  // fournisseur ; un protocole ou un modèle imposé la laisse saisissable.
+  const addressLocked = managed;
 
   const form = useForm({
     defaultValues: initial,
@@ -169,7 +175,7 @@ function ServerAddressFields({
   const reset = async () => {
     try {
       await clear.mutateAsync();
-      if (isCurrentProvider) {
+      if (isCurrentProvider && !selectionManaged) {
         await setSettingValues(
           kind === "llm"
             ? { current_llm_provider: "", current_llm_model: "" }

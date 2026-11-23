@@ -13,6 +13,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   saved: {} as Record<string, { base_url?: string; api_key?: string }>,
   mutateAsync: vi.fn(async () => undefined),
+  clear: vi.fn(async () => undefined),
+  setSettingValues: vi.fn(async () => undefined),
 }));
 
 vi.mock("~/settings/providers", () => ({
@@ -23,7 +25,7 @@ vi.mock("~/settings/providers", () => ({
     error: null,
   }),
   useClearAiProvider: () => ({
-    mutateAsync: vi.fn(),
+    mutateAsync: mocks.clear,
     isPending: false,
     error: null,
   }),
@@ -31,7 +33,9 @@ vi.mock("~/settings/providers", () => ({
   repairKeychainAccess: vi.fn(),
 }));
 
-vi.mock("~/settings/queries", () => ({ setSettingValues: vi.fn() }));
+vi.mock("~/settings/queries", () => ({
+  setSettingValues: mocks.setSettingValues,
+}));
 vi.mock("~/shared/ui/settings-alert", () => ({
   SettingsAlertToast: () => null,
 }));
@@ -41,12 +45,13 @@ vi.mock("@syntheo/plugin-opener2", () => ({
 
 import { ServerAddressForm } from "./server-address";
 
-function renderForm(managed?: boolean) {
+function renderForm(managed?: boolean, selectionManaged?: boolean) {
   const client = new QueryClient();
   const tree = () => (
     <QueryClientProvider client={client}>
       <ServerAddressForm
         managed={managed}
+        selectionManaged={selectionManaged}
         kind="stt"
         providerId="openai"
         label="Server address"
@@ -222,33 +227,54 @@ describe("ServerAddressForm, adresse gérée", () => {
     );
   });
 
-  // Politique limitée au protocole ou au modèle, sans adresse pour ce
-  // fournisseur : l'adresse reste saisissable, la carte n'est pas une
-  // impasse. « Réinitialiser » reste masqué.
-  it("géré sans adresse enregistrée : le champ d'adresse reste saisissable", async () => {
-    mocks.saved = {};
-    const view = renderForm(true);
+  // Politique limitée au protocole ou au modèle : l'adresse de ce
+  // fournisseur n'est pas gérée. Elle reste saisissable, y compris quand une
+  // adresse est déjà enregistrée à l'ouverture (remontage de la carte).
+  it("adresse non gérée, déjà enregistrée : le champ reste saisissable", async () => {
+    renderForm(false, true);
 
     expect(screen.queryByTestId("server-address-managed")).toBeNull();
-    typeAddress("https://asr.example.com/v1");
-
+    typeAddress("https://asr2.example.com/v1");
     await waitFor(
       () =>
         expect(mocks.mutateAsync).toHaveBeenCalledWith({
-          base_url: "https://asr.example.com/v1",
+          base_url: "https://asr2.example.com/v1",
           api_key: "",
         }),
       { timeout: 2000 },
     );
-    // Le champ ne se fige pas après le premier enregistrement.
-    mocks.saved = {
-      "stt:openai": { base_url: "https://asr.example.com/v1", api_key: "" },
-    };
-    view.rerender();
-    expect(
-      screen.getByPlaceholderText("http://localhost:8000/v1"),
-    ).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /Reset/ })).toBeNull();
+  });
+
+  // Modèle géré : « Réinitialiser » oublie l'adresse sans tenter de vider le
+  // modèle, que le déclencheur refuserait.
+  it("modèle géré : « Réinitialiser » n'écrit pas le modèle", async () => {
+    mocks.clear.mockClear();
+    mocks.setSettingValues.mockClear();
+    renderForm(false, true);
+
+    fireEvent.click(screen.getByRole("button", { name: "Reset this server…" }));
+    fireEvent.click(screen.getByRole("button", { name: "Reset" }));
+
+    await waitFor(() => expect(mocks.clear).toHaveBeenCalled());
+    // Le bouton de confirmation disparaît une fois la réinitialisation finie.
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: "Reset" })).toBeNull(),
+    );
+    expect(mocks.setSettingValues).not.toHaveBeenCalled();
+  });
+
+  it("modèle non géré : « Réinitialiser » vide le modèle courant", async () => {
+    mocks.setSettingValues.mockClear();
+    renderForm();
+
+    fireEvent.click(screen.getByRole("button", { name: "Reset this server…" }));
+    fireEvent.click(screen.getByRole("button", { name: "Reset" }));
+
+    await waitFor(() =>
+      expect(mocks.setSettingValues).toHaveBeenCalledWith({
+        current_stt_model: "",
+      }),
+    );
   });
 
   it("non géré : champ d'adresse et « Réinitialiser » présents", () => {
