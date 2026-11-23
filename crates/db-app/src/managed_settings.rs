@@ -157,6 +157,26 @@ fn storage_id(key: String) -> String {
     }
 }
 
+/// Texte écrit pour une clé du fichier. Les déclencheurs de
+/// `managed_app_settings` comparent le texte : pour `stt:<id>`, la valeur
+/// suit l'ordre de `setAiProvider` (providers.ts, `JSON.stringify({type,
+/// base_url, api_key})`), sinon l'interface ne pourrait plus réécrire la
+/// même ligne en enregistrant la clé API au trousseau (« setting is
+/// managed »). serde_json, sans preserve_order, trierait les clés.
+fn storage_json(key: &str, value: &Value) -> Result<String, sqlx::Error> {
+    if key.starts_with("stt:") {
+        let base_url = value
+            .get("base_url")
+            .and_then(Value::as_str)
+            .ok_or_else(invalid)?;
+        let base_url = serde_json::to_string(base_url).map_err(|_| invalid())?;
+        return Ok(format!(
+            r#"{{"type":"stt","base_url":{base_url},"api_key":""}}"#
+        ));
+    }
+    serde_json::to_string(value).map_err(|_| invalid())
+}
+
 /// Read policy from the directory containing the actual opened database, on
 /// desktop and mobile alike. Malformed or unreadable policy fails startup.
 pub async fn apply_managed_settings(pool: &SqlitePool) -> Result<(), sqlx::Error> {
@@ -171,8 +191,8 @@ pub async fn apply_managed_settings(pool: &SqlitePool) -> Result<(), sqlx::Error
         .execute(&mut *tx)
         .await?;
     for (key, value) in settings {
+        let json = storage_json(&key, &value)?;
         let id = storage_id(key);
-        let json = serde_json::to_string(&value).map_err(|_| invalid())?;
         sqlx::query("INSERT INTO app_settings(id,value_json) VALUES(?,?) ON CONFLICT(id) DO UPDATE SET value_json=excluded.value_json,updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')")
             .bind(&id).bind(&json).execute(&mut *tx).await?;
         sqlx::query("INSERT INTO managed_app_settings(id,value_json) VALUES(?,?)")
@@ -449,9 +469,12 @@ mod tests {
         .fetch_one(db.pool())
         .await
         .unwrap();
-        let stored: Value = serde_json::from_str(&stored).unwrap();
-        assert_eq!(stored["base_url"], "https://asr.example.com/v1");
-        assert_eq!(stored["type"], "stt");
+        // Même texte que JSON.stringify({type, base_url, api_key}) de
+        // setAiProvider (providers.ts).
+        assert_eq!(
+            stored,
+            r#"{"type":"stt","base_url":"https://asr.example.com/v1","api_key":""}"#
+        );
         let raw: i64 = sqlx::query_scalar(
             "SELECT (SELECT count(*) FROM app_settings WHERE id='stt:openai')
                   + (SELECT count(*) FROM managed_app_settings WHERE id='stt:openai')",
@@ -468,6 +491,16 @@ mod tests {
             .await
             .is_err()
         );
+        // Saisie de la clé API du fournisseur imposé : l'interface réécrit la
+        // même valeur, dans son ordre ; l'écriture passe.
+        let written = sqlx::query(
+            r#"UPDATE app_settings SET value_json='{"type":"stt","base_url":"https://asr.example.com/v1","api_key":""}', updated_at='2026-11-23T00:00:00.000Z' WHERE id='ai_provider:stt:openai' AND value_json=?"#,
+        )
+        .bind(&stored)
+        .execute(db.pool())
+        .await
+        .unwrap();
+        assert_eq!(written.rows_affected(), 1);
         assert!(
             sqlx::query("DELETE FROM app_settings WHERE id='ai_provider:stt:openai'")
                 .execute(db.pool())
