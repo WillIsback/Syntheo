@@ -85,7 +85,7 @@ export function useOnDeviceCommissioning(enabled: boolean) {
   });
 }
 
-/** Mesure les profils (une à deux minutes) et enregistre le résultat. */
+/** Mesure les profils (de moins d'une minute à environ trois minutes) et enregistre le résultat. */
 export async function runOnDeviceCommissioning() {
   const result = await transcriptionCommands.onDeviceCommission();
   if (result.status === "error") throw new Error(result.error);

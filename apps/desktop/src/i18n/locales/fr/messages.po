@@ -3027,8 +3027,8 @@ msgid "Measuring profile {0} of {1}…"
 msgstr "Mesure du profil {0} sur {1}…"
 
 #: src/settings/ai/stt/on-device-card.tsx
-msgid "Measuring this computer (one to two minutes)…"
-msgstr "Mesure de ce poste (une à deux minutes)…"
+msgid "Measuring this computer (from under a minute to about three minutes)…"
+msgstr "Mesure de ce poste (de moins d'une minute à environ trois minutes)…"
 
 #: src/settings/ai/llm/server-card.tsx
 msgid "Medium"
@@ -3237,8 +3237,8 @@ msgid "Models installed ({0})."
 msgstr "Modèles installés ({0})."
 
 #: src/settings/ai/stt/on-device-card.tsx
-msgid "Models installed. Measuring this computer (one to two minutes)…"
-msgstr "Modèles installés. Mesure de ce poste (une à deux minutes)…"
+msgid "Models installed. Measuring this computer (from under a minute to about three minutes)…"
+msgstr "Modèles installés. Mesure de ce poste (de moins d'une minute à environ trois minutes)…"
 
 #. placeholder {0}: size(models.presentBytes)
 #. placeholder {1}: size(models.totalBytes)
