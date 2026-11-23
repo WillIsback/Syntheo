@@ -1787,10 +1787,6 @@ msgstr "Télécharger les modèles ({0})"
 msgid "Download the update"
 msgstr "Télécharger la mise à jour"
 
-#: src/settings/general/audio-settings.tsx
-msgid "Downloading the echo cancellation models…"
-msgstr "Téléchargement des modèles d'annulation d'écho…"
-
 #: src/stt/on-device.ts
 msgid "Downloading the models is not available: install them from a folder."
 msgstr "Le téléchargement des modèles n'est pas disponible : installez-les depuis un dossier."
@@ -1870,14 +1866,6 @@ msgstr "Version précédente, en lecture seule. La synthèse la plus récente re
 #: src/session/components/version-history-dialog.tsx
 msgid "Earlier versions of this note, newest first."
 msgstr "Versions antérieures de cette note, les plus récentes en premier."
-
-#: src/settings/general/audio-settings.tsx
-msgid "Echo cancellation"
-msgstr "Annulation d'écho"
-
-#: src/stt/aec-model-unavailable-notice.tsx
-msgid "Echo cancellation unavailable"
-msgstr "Annulation d'écho indisponible"
 
 #: src/main/windows-title-bar.tsx
 #: src/session/components/living-document/transcript-margin.tsx
@@ -4604,9 +4592,7 @@ msgstr "Reprendre le téléchargement"
 #: src/contacts/profile-photo.tsx
 #: src/session/components/note-input/enhanced/enhance-error.tsx
 #: src/settings/general/account-profile.tsx
-#: src/settings/general/audio-settings.tsx
 #: src/store/zustand/listener/general-live-helpers.ts
-#: src/stt/aec-model-unavailable-notice.tsx
 msgid "Retry"
 msgstr "Réessayer"
 
@@ -5970,10 +5956,6 @@ msgstr "Les modèles ne sont pas installés ou sont incomplets."
 msgid "The models could not be downloaded (network or server). Try again: the download resumes where it stopped."
 msgstr "Les modèles n'ont pas pu être téléchargés (réseau ou serveur). Réessayez : le téléchargement reprend là où il s'est arrêté."
 
-#: src/stt/aec-model-unavailable-notice.tsx
-msgid "The models could not be downloaded (offline?). Listening continues without it."
-msgstr "Les modèles n'ont pas pu être téléchargés (hors ligne ?). L'écoute continue sans."
-
 #. placeholder {0}: describeOnDeviceErrorAfterColon(e.message)
 #: src/settings/ai/stt/on-device-card.tsx
 msgid "The models were not installed: {0}"
@@ -6659,10 +6641,6 @@ msgstr "Type"
 #: src/session/components/speaker-naming/speaker-card.tsx
 msgid "Type a name"
 msgstr "Saisissez un nom"
-
-#: src/settings/general/audio-settings.tsx
-msgid "Unavailable: the models could not be downloaded (offline?). Listening works without it."
-msgstr "Indisponible : les modèles n'ont pas pu être téléchargés (hors ligne ?). L'écoute fonctionne sans."
 
 #: src/chat/components/message/tool/session-correction.tsx
 #: src/main/windows-title-bar.tsx

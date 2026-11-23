@@ -1787,10 +1787,6 @@ msgstr "Download the models ({0})"
 msgid "Download the update"
 msgstr "Download the update"
 
-#: src/settings/general/audio-settings.tsx
-msgid "Downloading the echo cancellation models…"
-msgstr "Downloading the echo cancellation models…"
-
 #: src/stt/on-device.ts
 msgid "Downloading the models is not available: install them from a folder."
 msgstr "Downloading the models is not available: install them from a folder."
@@ -1870,14 +1866,6 @@ msgstr "Earlier version, read only. The latest summary stays the current one."
 #: src/session/components/version-history-dialog.tsx
 msgid "Earlier versions of this note, newest first."
 msgstr "Earlier versions of this note, newest first."
-
-#: src/settings/general/audio-settings.tsx
-msgid "Echo cancellation"
-msgstr "Echo cancellation"
-
-#: src/stt/aec-model-unavailable-notice.tsx
-msgid "Echo cancellation unavailable"
-msgstr "Echo cancellation unavailable"
 
 #: src/main/windows-title-bar.tsx
 #: src/session/components/living-document/transcript-margin.tsx
@@ -4604,9 +4592,7 @@ msgstr "Resume the download"
 #: src/contacts/profile-photo.tsx
 #: src/session/components/note-input/enhanced/enhance-error.tsx
 #: src/settings/general/account-profile.tsx
-#: src/settings/general/audio-settings.tsx
 #: src/store/zustand/listener/general-live-helpers.ts
-#: src/stt/aec-model-unavailable-notice.tsx
 msgid "Retry"
 msgstr "Retry"
 
@@ -5970,10 +5956,6 @@ msgstr "The models are not installed or are incomplete."
 msgid "The models could not be downloaded (network or server). Try again: the download resumes where it stopped."
 msgstr "The models could not be downloaded (network or server). Try again: the download resumes where it stopped."
 
-#: src/stt/aec-model-unavailable-notice.tsx
-msgid "The models could not be downloaded (offline?). Listening continues without it."
-msgstr "The models could not be downloaded (offline?). Listening continues without it."
-
 #. placeholder {0}: describeOnDeviceErrorAfterColon(e.message)
 #: src/settings/ai/stt/on-device-card.tsx
 msgid "The models were not installed: {0}"
@@ -6659,10 +6641,6 @@ msgstr "Type"
 #: src/session/components/speaker-naming/speaker-card.tsx
 msgid "Type a name"
 msgstr "Type a name"
-
-#: src/settings/general/audio-settings.tsx
-msgid "Unavailable: the models could not be downloaded (offline?). Listening works without it."
-msgstr "Unavailable: the models could not be downloaded (offline?). Listening works without it."
 
 #: src/chat/components/message/tool/session-correction.tsx
 #: src/main/windows-title-bar.tsx

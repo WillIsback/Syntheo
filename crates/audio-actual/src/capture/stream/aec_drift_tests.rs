@@ -359,7 +359,6 @@ fn run_drift_erle(scenario: Scenario, mode: ErleMode) -> Option<f64> {
 
     let (speaker, echo) = recorded_pair();
     let mic = drifted(&echo, scenario);
-    crate::capture::use_source_aec_models();
     let mut aec = build_aec(RATE);
     aec.as_ref()?;
     let latency = syntheo_aec::BLOCK_SIZE - syntheo_aec::BLOCK_SHIFT;
@@ -520,7 +519,6 @@ fn run_lead(pair: SweepPair, scenario: Scenario, mode: LeadMode) -> Option<LeadM
             *sample += voice;
         }
     }
-    crate::capture::use_source_aec_models();
     let mut aec = build_aec(RATE);
     aec.as_ref()?;
     let latency = syntheo_aec::BLOCK_SIZE - syntheo_aec::BLOCK_SHIFT;
@@ -976,7 +974,6 @@ fn run_ideal(pair: SweepPair, scenario: Scenario, read: IdealRead) -> Option<Lea
             }
         })
         .collect();
-    crate::capture::use_source_aec_models();
     let mut aec = build_aec(RATE);
     aec.as_ref()?;
     let latency = syntheo_aec::BLOCK_SIZE - syntheo_aec::BLOCK_SHIFT;

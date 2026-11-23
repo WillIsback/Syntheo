@@ -20,8 +20,6 @@ export const commands = {
 	checkCliStatus: () => typedError<CliStatus, string>(__TAURI_INVOKE("check_cli_status")),
 	listSkillAgents: () => typedError<SkillAgentStatus[], string>(__TAURI_INVOKE("list_skill_agents")),
 	installAgentSkill: (agent: SkillAgent) => typedError<SkillAgentStatus, string>(__TAURI_INVOKE("install_agent_skill", { agent })),
-	getAecModelStatus: () => typedError<AecModelStatus, string>(__TAURI_INVOKE("get_aec_model_status")),
-	retryAecModelDownload: () => typedError<AecModelStatus, string>(__TAURI_INVOKE("retry_aec_model_download")),
 	/**
 	 *  La mise à jour intégrée existe dans ce build : faux pour les alphas
 	 *  `devtools`. Lue à l'ouverture des Paramètres, sans attendre une
@@ -40,16 +38,6 @@ export const commands = {
 };
 
 /* Types */
-/**
- *  Où en sont les modèles. `Failed` : le dernier téléchargement a échoué (hors ligne, proxy),
- *  l'annulation d'écho est inactive et un nouvel essai est programmé.
- */
-export type AecModelState = "downloading" | "ready" | "failed";
-
-export type AecModelStatus = {
-	state: AecModelState,
-};
-
 export type CliStatus = {
 	/**  Command the CLI installs (`syntheo`). */
 	commandName: string,

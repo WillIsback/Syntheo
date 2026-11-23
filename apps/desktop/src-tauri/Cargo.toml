@@ -71,7 +71,6 @@ tauri-plugin-updater = { workspace = true }
 tauri-plugin-window-state = { workspace = true }
 tauri-plugin-windows = { workspace = true }
 
-syntheo-aec = { workspace = true, features = ["download"] }
 syntheo-audio-actual = { workspace = true }
 syntheo-audio-mock = { workspace = true, optional = true }
 syntheo-db-app = { workspace = true }
