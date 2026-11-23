@@ -3,17 +3,23 @@
 # de release créé en local par apps/speech/models/publish-local.sh (la
 # quantification ne tient pas sur un runner gratuit).
 #
-# Déclenchement manuel depuis main seulement. Deux jobs, sur le modèle de
+# Déclenchement manuel depuis main seulement. Trois jobs, sur le modèle de
 # release.yml (compilation sans privilège, publication à part) :
 #
-# cpu-check, sans environnement ni secret, sans id-token ni attestation : il
-# télécharge les assets du brouillon (de la prerelease en reprise), les
-# contrôle contre apps/speech/models/models.json (taille et SHA-256), seule
-# référence, puis lance le garde-fou bloquant sous un CPU sans VNNI : les
-# fichiers doivent rendre des mots sous qemu Skylake-Client
-# (apps/speech/models/cpu-check). Il tourne aussi avec publish=false et en
-# reprise. Seul job qui compile du code (crates d'apps/speech, ONNX Runtime) :
-# registre Cargo et compilation partent de zéro, sans rust-cache ni sccache.
+# fetch-draft, sans environnement ni secret, sans id-token ni attestation, et
+# sans compilation : contents: write seulement parce que l'API ne liste un
+# brouillon de release qu'à un jeton qui peut écrire. Il télécharge les assets
+# du brouillon (de la prerelease en reprise), les contrôle contre
+# apps/speech/models/models.json (taille et SHA-256), seule référence, et les
+# transmet en artefact (rétention 1 jour).
+#
+# cpu-check, après fetch-draft, en contents: read, sans environnement ni
+# secret : il reprend l'artefact, le recontrôle contre models.json, puis lance
+# le garde-fou bloquant sous un CPU sans VNNI : les fichiers doivent rendre des
+# mots sous qemu Skylake-Client (apps/speech/models/cpu-check). Seul job qui
+# compile du code (crates d'apps/speech, ONNX Runtime) : registre Cargo et
+# compilation partent de zéro, sans rust-cache ni sccache. Les deux premiers
+# jobs tournent aussi avec publish=false et en reprise.
 #
 # publish, après cpu-check (needs), dans l'environnement `speech-models`
 # (validation requise ; secrets HF_TOKEN et SPEECH_MODELS_RELEASE_TOKEN, jeton
@@ -72,21 +78,18 @@ permissions:
   contents: read
 
 jobs:
-  # Garde-fou, avant l'attestation, le tag et tout envoi : des poids int8 sur
-  # 8 bits saturaient le noyau AVX2 d'ONNX Runtime sans VNNI (0 mot sur ces
-  # CPU, modèles de la 0.8.0-3). Même ONNX Runtime que le module livré
-  # (archive épinglée, check_ort.py avant et après).
-  cpu-check:
-    name: Garde-fou sous un CPU sans VNNI (${{ inputs.version }})
+  # Téléchargement du brouillon, sans aucune compilation : seul job qui
+  # porte un jeton d'écriture avant le garde-fou.
+  fetch-draft:
+    name: Assets de la release (${{ inputs.version }})
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
-    timeout-minutes: 90
+    timeout-minutes: 30
     # Ni environnement, ni secret, ni id-token, ni attestation. contents:
-    # write seulement parce que l'API ne liste un brouillon de release qu'à
-    # un jeton qui a le droit d'écrire (contents: read ne voit que les
-    # releases publiées). GITHUB_TOKEN n'est passé qu'à l'étape de
-    # téléchargement, avant toute compilation ; le job publish retélécharge
-    # et revérifie lui-même les assets contre models.json.
+    # write seulement parce que l'API ne liste un brouillon de release qu'à un
+    # jeton qui a le droit d'écrire (contents: read ne voit que les releases
+    # publiées). Aucun code tiers n'est compilé ni exécuté ici (gh, bash et
+    # Python de la bibliothèque standard).
     permissions:
       contents: write # lecture du brouillon de release (voir ci-dessus)
     env:
@@ -117,6 +120,44 @@ jobs:
           mkdir -p assets
           bash apps/speech/models/download-draft.sh "$REPO" "$VERSION" assets "$STATE"
           ls -l assets
+
+      - name: Contrôle bloquant contre models.json
+        run: python3 -I apps/speech/models/verify.py assets --flat
+
+      # Modèles déjà compressés : pas de compression de l'artefact.
+      - name: Transmettre les assets au garde-fou
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: speech-models-assets
+          path: assets/
+          retention-days: 1
+          compression-level: 0
+          if-no-files-found: error
+
+  # Garde-fou, avant l'attestation, le tag et tout envoi : des poids int8 sur
+  # toute la plage saturaient le noyau AVX2 d'ONNX Runtime sans VNNI (0 mot sur
+  # ces CPU, modèles de la 0.8.0-3). Même ONNX Runtime que le module livré
+  # (archive épinglée, check_ort.py avant et après). Il compile et exécute du
+  # code tiers avec un jeton en lecture seule, sans environnement ni secret.
+  cpu-check:
+    name: Garde-fou sous un CPU sans VNNI (${{ inputs.version }})
+    needs: fetch-draft
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Reprendre les assets de la release
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: speech-models-assets
+          path: assets
 
       - name: Contrôle bloquant contre models.json
         run: python3 -I apps/speech/models/verify.py assets --flat
