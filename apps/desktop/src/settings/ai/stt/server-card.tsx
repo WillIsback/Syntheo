@@ -26,6 +26,7 @@ import {
   STT_SERVER_PROTOCOLS,
   useServerConnection,
 } from "~/settings/ai/shared/server-connection";
+import { useIsManagedSetting } from "~/settings/managed";
 import { setAiProvider } from "~/settings/providers";
 import { useSetSettingValues } from "~/settings/queries";
 import { useConfigValues } from "~/shared/config";
@@ -48,6 +49,9 @@ export function SttServerCard() {
   ] as const);
   const setSelection = useSetSettingValues();
   const lastModels = useRef<Record<string, string>>({});
+  // Modèle imposé par l'administration : le déclencheur de
+  // managed_app_settings refuserait en silence toute autre écriture.
+  const modelManaged = useIsManagedSetting("current_stt_model");
 
   const model =
     current_stt_provider === providerId &&
@@ -95,6 +99,7 @@ export function SttServerCard() {
     : model || fallbackModel || "";
   const persistDefault =
     !!baseUrl &&
+    !modelManaged &&
     (current_stt_provider !== providerId ||
       (!model && !!fallbackModel) ||
       staleNvidiaModel);

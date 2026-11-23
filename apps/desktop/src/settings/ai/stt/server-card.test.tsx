@@ -23,6 +23,7 @@ const mocks = vi.hoisted(() => ({
   setSelection: vi.fn(),
   setAiProvider: vi.fn(),
   persisted: [] as Array<{ provider: string; model: string }>,
+  managed: new Set<string>(),
   openUrl: vi.fn(),
 }));
 
@@ -47,6 +48,9 @@ vi.mock("~/settings/ai/shared/persist-selection", () => ({
     return null;
   },
 }));
+vi.mock("~/settings/managed", () => ({
+  useIsManagedSetting: (id: string) => mocks.managed.has(id),
+}));
 vi.mock("~/settings/providers", () => ({
   setAiProvider: mocks.setAiProvider,
 }));
@@ -70,6 +74,7 @@ function setup() {
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.persisted = [];
+  mocks.managed = new Set();
   mocks.connection.providerId = "openai";
   mocks.connection.state = { status: "untested" };
   mocks.config = {
@@ -156,6 +161,28 @@ describe("SttServerCard", () => {
       provider: "nvidia",
       model: "nemotron-3.5-asr-streaming-0.6b.q8_0",
     });
+  });
+
+  // Issue 707 : modèle imposé par l'administration (current_stt_model géré),
+  // le serveur en annonce un autre. L'écriture serait refusée en silence par
+  // le déclencheur : rien n'est tenté.
+  it("NeMo-Speech.cpp connecté, modèle géré : n'écrit pas le modèle annoncé", () => {
+    mocks.managed = new Set(["current_stt_model"]);
+    mocks.connection.providerId = "nvidia";
+    mocks.connection.state = {
+      status: "connected",
+      latencyMs: 9,
+      protocol: "nvidia",
+      models: ["nemotron-3.5-asr-streaming-0.6b.q8_0"],
+    };
+    mocks.config = {
+      current_stt_provider: "nvidia",
+      current_stt_model: "nemotron-3.5-asr-streaming-0.6b",
+    };
+    setup();
+
+    expect(mocks.persisted).toEqual([]);
+    expect(mocks.setSelection).not.toHaveBeenCalled();
   });
 
   it.each([
