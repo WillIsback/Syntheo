@@ -42,7 +42,7 @@ Browse a topic, then expand the question. If something does not work, see [Troub
   </Accordion>
 
   <Accordion title="What happens if the transcription server goes down during a meeting?" id="coupure-stt">
-    Syntheo tries to reconnect. Since the audio is not kept, the part of the meeting spoken during the outage is missing from the transcript. A banner shows it with its times, for example "Transcription interrupted 14:32–14:35". See [Troubleshooting](/en/troubleshooting).
+    Syntheo tries to reconnect. Audio is not kept on disk: Syntheo only keeps the last seconds in memory (about fifteen at most) and replays them to the server when it reconnects, so a short outage leaves no gap. After a longer outage, the start of the passage is missing from the transcript. A banner shows it with its times, for example "Transcription interrupted 14:32–14:35.". See [Troubleshooting](/en/troubleshooting).
   </Accordion>
 
   <Accordion title="Where is my data stored?" id="stockage">
