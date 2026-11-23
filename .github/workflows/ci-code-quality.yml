@@ -378,11 +378,13 @@ jobs:
           sudo apt-get update -q
           sudo apt-get install -y -q --no-install-recommends qemu-user-static
 
-      # Délai propre à l'étape (une relance après une erreur interne de qemu
-      # comprise) : un dépassement est attribué au garde-fou, pas au job.
+      # Délai propre à l'étape, dans les 60 min du job (environ 4 min de mise en
+      # place avant) : un dépassement est attribué au garde-fou. Sur un runner
+      # lent, la relance après une erreur interne de qemu peut ne pas y tenir :
+      # l'étape échoue alors sur le délai, jamais sur une acceptation.
       - name: Garde-fou sous un CPU sans VNNI (qemu Skylake-Client, ${{ matrix.audio }})
         if: steps.changes.outputs.run == 'true'
-        timeout-minutes: 40
+        timeout-minutes: 50
         env:
           CPU_CHECK_BIN: apps/speech/target/release/examples/cpu-check
           FILES: ${{ matrix.audio }}

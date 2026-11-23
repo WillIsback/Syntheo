@@ -47,12 +47,15 @@ case "$state" in
   ok) cat "$OK" ; exit 0 ;;
   mute) cat "$MUTE" ; exit 1 ;;
   hang) exec sleep 30 ;;
+  busy) end=$((SECONDS + 3)); while [ $SECONDS -lt $end ]; do :; done; cat "$OK"; exit 0 ;;
   *) echo "état inconnu : $state" >&2; exit 2 ;;
 esac
 """
 
 
 class RunShTest(unittest.TestCase):
+    final_newline = "\n"
+
     def run_scenario(self, states, *extra, env_extra=None):
         with tempfile.TemporaryDirectory() as tmp:
             tmp = Path(tmp)
@@ -60,8 +63,8 @@ class RunShTest(unittest.TestCase):
             qemu.write_text(FAKE_QEMU)
             qemu.chmod(qemu.stat().st_mode | stat.S_IXUSR)
             (tmp / "scenario").write_text("\n".join(states) + "\n")
-            (tmp / "ok.jsonl").write_text(OK_LINES + "\n")
-            (tmp / "mute.jsonl").write_text(MUTE_LINES + "\n")
+            (tmp / "ok.jsonl").write_text(OK_LINES + self.final_newline)
+            (tmp / "mute.jsonl").write_text(MUTE_LINES + self.final_newline)
             models = tmp / "models"
             models.mkdir()
             env = {
@@ -72,8 +75,6 @@ class RunShTest(unittest.TestCase):
                 "SCENARIO": str(tmp / "scenario"),
                 "OK": str(tmp / "ok.jsonl"),
                 "MUTE": str(tmp / "mute.jsonl"),
-                "HEARTBEAT": "1",
-                "STALL_LIMIT": "2",
                 "ARGS_SEEN": str(tmp / "args"),
                 **(env_extra or {}),
             }
@@ -109,8 +110,10 @@ class RunShTest(unittest.TestCase):
         self.assertEqual(calls, 2)
         self.assertIn("non conclusif", result.stderr)
 
+    FAST_WATCH = {"HEARTBEAT": "1", "STALL_LIMIT": "2"}
+
     def test_a_frozen_qemu_is_stopped_and_retried_once(self):
-        result, calls = self.run_scenario(["hang", "ok"])
+        result, calls = self.run_scenario(["hang", "ok"], env_extra=self.FAST_WATCH)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(calls, 2)
         self.assertIn("::warning::qemu : erreur interne (figé", result.stdout)
@@ -118,10 +121,33 @@ class RunShTest(unittest.TestCase):
         self.assertIn("modèles acceptés", result.stdout)
 
     def test_two_frozen_runs_in_a_row_fail(self):
-        result, calls = self.run_scenario(["hang", "hang", "ok"])
+        result, calls = self.run_scenario(
+            ["hang", "hang", "ok"], env_extra=self.FAST_WATCH
+        )
         self.assertEqual(result.returncode, 2)
         self.assertEqual(calls, 2)
         self.assertIn("non conclusif", result.stderr)
+
+    def test_a_busy_qemu_is_not_stopped(self):
+        result, calls = self.run_scenario(["busy"], env_extra=self.FAST_WATCH)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(calls, 1)
+        self.assertNotIn("::warning::", result.stdout)
+
+    def test_each_json_line_is_shown_once(self):
+        for newline in ("\n", ""):
+            self.final_newline = newline
+            result, _ = self.run_scenario(["ok"])
+            self.assertEqual(result.returncode, 0, result.stderr)
+            for line in OK_LINES.splitlines():
+                self.assertEqual(result.stdout.count(line), 1, (newline, line))
+        self.final_newline = "\n"
+
+    def test_invalid_watch_settings_are_refused(self):
+        for env in ({"HEARTBEAT": "0"}, {"HEARTBEAT": "2m"}, {"STALL_LIMIT": "-1"}):
+            result, calls = self.run_scenario(["ok"], env_extra=env)
+            self.assertEqual(result.returncode, 2, env)
+            self.assertEqual(calls, 0)
 
     def test_the_host_and_the_emulator_are_logged_first(self):
         result, _ = self.run_scenario(["ok"])

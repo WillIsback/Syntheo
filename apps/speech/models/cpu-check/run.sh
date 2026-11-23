@@ -68,12 +68,11 @@ done
 [ ${#AUDIO[@]} -gt 0 ] || { echo "Erreur : FILES est vide." >&2; exit 2; }
 OUT=$(mktemp)
 ERR=$(mktemp)
-trap 'rm -f "$OUT" "$ERR"' EXIT
-
-# Hôte, émulateur et réglages en tête du journal : la durée sous TCG dépend
-# surtout du processeur hôte (runner GitHub variable).
-host_cpu=$(grep -m1 '^model name' /proc/cpuinfo | cut -d: -f2- | sed 's/^ *//' || true)
-echo "-- hôte : ${host_cpu:-inconnu}, $(nproc) CPU ; $("$QEMU" --version | head -n1) -cpu ${QEMU_CPU:-Skylake-Client} ; THREADS=${THREADS:-4} ; fichiers : ${FILES:-mic sys}"
+QPID=
+# qemu tourne en arrière-plan : arrêté avec le script (Ctrl-C, docker stop,
+# délai de l'étape), sinon il continuerait seul.
+trap '[ -z "$QPID" ] || kill -KILL "$QPID" 2> /dev/null; rm -f "$OUT" "$ERR"' EXIT
+trap 'exit 130' INT TERM
 
 # Battement toutes les HEARTBEAT secondes (défaut 120) : durée écoulée et temps
 # CPU cumulé de qemu, pour distinguer un runner lent d'un émulateur figé. Si
@@ -82,7 +81,17 @@ echo "-- hôte : ${host_cpu:-inconnu}, $(nproc) CPU ; $("$QEMU" --version | head
 # est arrêté et traité comme une erreur interne de l'émulateur.
 HEARTBEAT=${HEARTBEAT:-120}
 STALL_LIMIT=${STALL_LIMIT:-3}
+for v in "$HEARTBEAT" "$STALL_LIMIT"; do
+  case "$v" in
+    '' | *[!0-9]* | 0*) echo "Erreur : HEARTBEAT et STALL_LIMIT sont des entiers positifs (reçu : HEARTBEAT=$HEARTBEAT, STALL_LIMIT=$STALL_LIMIT)." >&2; exit 2 ;;
+  esac
+done
 HZ=$(getconf CLK_TCK)
+
+# Hôte, émulateur et réglages en tête du journal : la durée sous TCG dépend
+# surtout du processeur hôte (runner GitHub variable).
+host_cpu=$(grep -m1 '^model name' /proc/cpuinfo | cut -d: -f2- | sed 's/^ *//' || true)
+echo "-- hôte : ${host_cpu:-inconnu}, $(nproc) CPU ; $("$QEMU" --version | head -n1) -cpu ${QEMU_CPU:-Skylake-Client} ; THREADS=${THREADS:-4} ; fichiers : ${FILES:-mic sys}"
 
 alive() { # un processus terminé reste zombie (kill -0 réussit) jusqu'au wait
   local state
@@ -90,50 +99,64 @@ alive() { # un processus terminé reste zombie (kill -0 réussit) jusqu'au wait
   [ -n "$state" ] && [ "$state" != Z ]
 }
 cpu_seconds() { sed 's/.*) //' "/proc/$1/stat" 2> /dev/null | awk -v hz="$HZ" '{print int(($12+$13)/hz)}'; }
-flush_out() { # lignes JSON de cpu-check au fil de l'eau
+# Lignes complètes de cpu-check (stdout) et de son stderr, au fil de l'eau ;
+# les avertissements « TCG doesn't support requested feature » (un trio par
+# fil créé) sont comptés à la fin, pas recopiés.
+TCG="TCG doesn't support requested feature"
+flush() {
   local n
   n=$(wc -l < "$OUT")
-  [ "$n" -gt "$shown" ] && sed -n "$((shown + 1)),${n}p" "$OUT"
-  shown=$n
+  if [ "$n" -gt "$shown_out" ]; then sed -n "$((shown_out + 1)),${n}p" "$OUT"; fi
+  shown_out=$n
+  n=$(wc -l < "$ERR")
+  if [ "$n" -gt "$shown_err" ]; then sed -n "$((shown_err + 1)),${n}p" "$ERR" | { grep -v "$TCG" || true; } >&2; fi
+  shown_err=$n
+}
+flush_rest() { # après la fin de qemu : reste, dernière ligne sans saut compris
+  local rest
+  rest=$(tail -n +"$((shown_out + 1))" "$OUT")
+  if [ -n "$rest" ]; then printf '%s\n' "$rest"; fi
+  rest=$(tail -n +"$((shown_err + 1))" "$ERR" | { grep -v "$TCG" || true; })
+  if [ -n "$rest" ]; then printf '%s\n' "$rest" >&2; fi
+  local tcg
+  tcg=$(grep -c "$TCG" "$ERR" || true)
+  if [ "${tcg:-0}" != 0 ]; then echo "-- qemu : $tcg avertissement(s) « $TCG » (hle, rtm, xsavec) masqués." >&2; fi
 }
 
 run_once() {
   : > "$OUT"
   : > "$ERR"
-  shown=0
+  shown_out=0
+  shown_err=0
   stalled=false
   set +e
   "$QEMU" -cpu "${QEMU_CPU:-Skylake-Client}" "$BIN" --models "$MODELS" --threads "${THREADS:-4}" \
     --min-word-ratio "$MIN_WORD_RATIO" --max-wer "$MAX_WER" \
     "${AUDIO[@]}" > "$OUT" 2> "$ERR" &
-  local pid=$! tick=0 last=0 stalls=0 cpu
-  while alive "$pid"; do
+  QPID=$!
+  local start=$SECONDS next=$HEARTBEAT last=0 stalls=0 elapsed cpu
+  while alive "$QPID"; do
     sleep 1
-    tick=$((tick + 1))
-    flush_out
-    if [ $((tick % HEARTBEAT)) = 0 ]; then
-      cpu=$(cpu_seconds "$pid")
+    flush
+    elapsed=$((SECONDS - start))
+    if [ "$elapsed" -ge "$next" ]; then
+      next=$((next + HEARTBEAT))
+      cpu=$(cpu_seconds "$QPID")
       [ -n "$cpu" ] || continue
-      echo "-- cpu-check : $((tick / 60)) min $((tick % 60)) s écoulées, temps CPU de qemu ${cpu} s."
+      echo "-- cpu-check : $((elapsed / 60)) min $((elapsed % 60)) s écoulées, temps CPU de qemu ${cpu} s."
       if [ $((cpu - last)) -lt 1 ]; then stalls=$((stalls + 1)); else stalls=0; fi
       last=$cpu
       if [ "$stalls" -ge "$STALL_LIMIT" ]; then
-        stalled=true
-        kill -KILL "$pid" 2> /dev/null
+        kill -KILL "$QPID" 2> /dev/null && stalled=true
         break
       fi
     fi
   done
-  wait "$pid"
+  wait "$QPID"
   code=$?
+  QPID=
   set -e
-  flush_out
-  # Avertissements « TCG doesn't support requested feature », un trio par fil
-  # créé : comptés, pas recopiés.
-  grep -v "TCG doesn't support requested feature" "$ERR" >&2 || true
-  local tcg
-  tcg=$(grep -c "TCG doesn't support requested feature" "$ERR" || true)
-  [ "${tcg:-0}" = 0 ] || echo "-- qemu : $tcg avertissement(s) « TCG doesn't support requested feature » (hle, rtm, xsavec) masqués." >&2
+  flush_rest
 }
 
 # Erreur interne de l'émulateur, sans rapport avec les modèles : QEMU internal
