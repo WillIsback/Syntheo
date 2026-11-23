@@ -55,13 +55,36 @@ fi
 
 COMMISSIONING="$SPEECH/commissioning"
 OUT=$(mktemp)
-trap 'rm -f "$OUT"' EXIT
-set +e
-"$QEMU" -cpu "${QEMU_CPU:-Skylake-Client}" "$BIN" --models "$MODELS" --threads "${THREADS:-4}" \
-  --min-word-ratio "$MIN_WORD_RATIO" --max-wer "$MAX_WER" \
-  "$COMMISSIONING/mic.wav=$HERE/mic.fp32.txt" "$COMMISSIONING/sys.wav=$HERE/sys.fp32.txt" > "$OUT"
-code=$?
-set -e
+ERR=$(mktemp)
+trap 'rm -f "$OUT" "$ERR"' EXIT
+
+run_once() {
+  set +e
+  "$QEMU" -cpu "${QEMU_CPU:-Skylake-Client}" "$BIN" --models "$MODELS" --threads "${THREADS:-4}" \
+    --min-word-ratio "$MIN_WORD_RATIO" --max-wer "$MAX_WER" \
+    "$COMMISSIONING/mic.wav=$HERE/mic.fp32.txt" "$COMMISSIONING/sys.wav=$HERE/sys.fp32.txt" > "$OUT" 2> "$ERR"
+  code=$?
+  set -e
+  cat "$ERR" >&2
+}
+
+# Erreur interne de l'émulateur (QEMU internal SIGBUS, code 135), vue une fois
+# sur trois par la QA pendant sys.wav, sans rapport avec les modèles : une
+# seule relance, signalée. Un verdict (code 1 : muet, WER trop haut…) ou toute
+# autre erreur n'est jamais relancé ; deux SIGBUS de suite : échec.
+qemu_sigbus() {
+  [ "$code" = 135 ] || grep -q "QEMU internal SIGBUS" "$ERR"
+}
+
+run_once
+if qemu_sigbus; then
+  echo "::warning::qemu : erreur interne (SIGBUS, code $code) pendant cpu-check, sans rapport avec les modèles ; une seule relance."
+  run_once
+  if qemu_sigbus; then
+    echo "Erreur : qemu s'est de nouveau arrêté sur une erreur interne (SIGBUS, code $code) : contrôle non conclusif." >&2
+    exit 2
+  fi
+fi
 cat "$OUT"
 [ "$code" -le 1 ] || { echo "Erreur : cpu-check a échoué (code $code)." >&2; exit 2; }
 words=$(python3 -I -c 'import json,sys;print([json.loads(l) for l in open(sys.argv[1])][-1]["words"])' "$OUT")
