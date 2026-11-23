@@ -59,14 +59,23 @@ weights (convolutions, embeddings, normalization) stay in float32.
 ## Performance
 
 Real-time factor (processing time divided by audio duration, lower is faster)
-with ONNX Runtime on the CPU, for the two streams of a meeting (microphone and
-system audio) with speaker diarization, as Syntheo runs them:
+with ONNX Runtime on the CPU, outside real time, and the profile Syntheo keeps
+after measuring the computer:
 
-| Computer                                    | Speech recognition, 1 stream | Diarization, 1 stream | 2 streams with diarization |
-| ------------------------------------------- | ---------------------------- | --------------------- | -------------------------- |
-| AMD Ryzen 9 9950X, limited to 4 cores       | 0.086                        | 0.049                 | 0.19                       |
-| Intel Core i7-10510U, 4 cores, performance  | to be measured               | to be measured        | to be measured             |
-| Intel Core i7-10510U, 4 cores, power saving | to be measured               | to be measured        | to be measured             |
+| Computer                                              | Speech recognition, 1 stream | Diarization, 1 stream | 2 streams with diarization | Profile kept by Syntheo                        |
+| ----------------------------------------------------- | ---------------------------- | --------------------- | -------------------------- | ---------------------------------------------- |
+| AMD Ryzen 9 9950X, limited to 4 cores                 | 0.086                        | 0.049                 | 0.19                       | microphone and system audio, with speakers (1) |
+| Intel Core i7-10510U (2019), mains power, performance | 0.227                        | 0.353                 | 1.139                      | microphone and system audio, without speakers  |
+| Intel Core i7-10510U (2019), battery, performance     | 0.233                        | 0.365                 | 1.166                      | microphone and system audio, without speakers  |
+| Intel Core i7-10510U (2019), battery, power saving    | 0.686                        | 1.046                 | 2.552                      | microphone only, without speakers              |
+
+(1) Measured without the 4-core limit.
+
+The Intel Core i7-10510U (4 cores, 8 threads, 7.6 GB of RAM) has AVX2 but no
+VNNI. With two streams and diarization it does not keep up with real time
+(real-time factor above 1), so Syntheo keeps two streams without diarization,
+or the microphone alone without diarization in power-saving mode. Memory use is about 1.0 GB for
+speech recognition and about 1.4 GB for two streams with diarization.
 
 Syntheo measures each computer before using it (about 30 seconds per profile)
 and keeps transcription on the computer only if final results arrive less than
@@ -128,8 +137,16 @@ give every word a speaker, and find the same number of distinct speakers as the
 FP32 reference. This check guards against a failure on CPUs without VNNI; it
 does not measure accuracy.
 
-Verified natively on AVX-512 with VNNI and under emulation on AVX2 without
-VNNI; AVX-512 without VNNI (for example first-generation Xeon Scalable) is not
+Verified natively on AVX-512 with VNNI, under emulation on AVX2 without VNNI,
+and natively on AVX2 without VNNI: on an Intel Core i7-10510U (Comet Lake,
+2019), these weights give 113 and 112 words on two 45-second meeting clips
+(microphone and system audio), where the earlier quantization gave no words at
+all on the same computer. QEMU `Skylake-Client` emulation gives the same 113
+words on the microphone clip. Word counts differ from a CPU with VNNI (125 and
+116 words on an AMD Ryzen 9 9950X), because the two code paths round
+differently; on these two clips, the output without VNNI differs from the FP32
+transcript by 2.0 % and 2.9 % of words, and the output with VNNI by 12.7 % and
+5.8 %. AVX-512 without VNNI (for example first-generation Xeon Scalable) is not
 verified.
 
 ## License
