@@ -23,6 +23,7 @@ import {
   UI_LANGUAGE_AUTO,
   resolveDisplayLocale,
 } from "~/i18n/locales";
+import { messages as sourceMessages } from "~/i18n/locales/en/messages";
 import { loadSystemLanguages } from "~/i18n/system-languages";
 
 export const LONG_LOAD_SPLASH_DELAY_MS = 400;
@@ -144,12 +145,16 @@ function StartupSplashContent({
   return <BrandLoadingView detail={detail} />;
 }
 
+// Repli si le catalogue de la langue du système ne se charge pas : le
+// catalogue anglais, embarqué. En production, la macro Lingui ne garde que
+// les identifiants des messages ; un catalogue vide afficherait donc ces
+// identifiants au lieu des textes anglais.
 let fallback: I18n | null = null;
-function fallbackI18n(): I18n {
+export function fallbackI18n(): I18n {
   if (!fallback) {
     fallback = setupI18n({
       locale: SOURCE_LOCALE,
-      messages: { [SOURCE_LOCALE]: {} },
+      messages: { [SOURCE_LOCALE]: sourceMessages },
     });
   }
   return fallback;

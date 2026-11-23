@@ -278,3 +278,20 @@ function renderLongLoadGate() {
     </QueryClientProvider>,
   );
 }
+
+// Build de production : la macro Lingui ne garde que l'identifiant du
+// message. Le repli doit donc porter le catalogue anglais, sinon il
+// afficherait l'identifiant au lieu du texte.
+describe("fallbackI18n", () => {
+  it("translates id-only messages in English", async () => {
+    const { fallbackI18n } = await import("./long-load-gate");
+    const { messages } = await import("~/i18n/locales/en/messages");
+    const text =
+      "Checking your local database. This is taking longer than expected.";
+    const id = Object.entries(messages).find(
+      ([, value]) => Array.isArray(value) && value.join("") === text,
+    )?.[0];
+    expect(id).toBeTruthy();
+    expect(fallbackI18n()._({ id: id! })).toBe(text);
+  });
+});
