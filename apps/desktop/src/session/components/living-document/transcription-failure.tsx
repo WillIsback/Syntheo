@@ -4,6 +4,7 @@ import { Button } from "@syntheo/ui/components/ui/button";
 
 import {
   clearTranscriptionFailure,
+  INTERRUPTED_IMPORT_CODE,
   useTranscriptionFailure,
 } from "~/session/transcription-failure";
 import { useListener } from "~/stt/contexts";
@@ -28,7 +29,9 @@ export function TranscriptionFailureNotice({
   const reason =
     failure.code === "no_speech"
       ? t`No speech was detected in the audio.`
-      : failure.message;
+      : failure.code === INTERRUPTED_IMPORT_CODE
+        ? t`Syntheo was closed before the import finished. Import the file again.`
+        : failure.message;
 
   const dismiss = () => {
     clearBatchSession(sessionId);

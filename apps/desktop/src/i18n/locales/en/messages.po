@@ -738,6 +738,10 @@ msgstr "Audio could not be deleted"
 msgid "Audio import failed"
 msgstr "Audio import failed"
 
+#: src/stt/audio-import-feedback.ts
+msgid "Audio import interrupted"
+msgstr "Audio import interrupted"
+
 #: src/store/zustand/listener/general-live-helpers.ts
 msgid "Audio retry failed"
 msgstr "Audio retry failed"
@@ -4047,6 +4051,10 @@ msgstr "Opens your web browser."
 msgid "Options"
 msgstr "Options"
 
+#: src/stt/audio-import-feedback.ts
+msgid "Opus files (.ogg, .opus, .webm in Opus) are not supported yet: convert the file to MP3, M4A or WAV, then import it again."
+msgstr "Opus files (.ogg, .opus, .webm in Opus) are not supported yet: convert the file to MP3, M4A or WAV, then import it again."
+
 #: src/contacts/details-organization.tsx
 msgid "Organization"
 msgstr "Organization"
@@ -5631,6 +5639,15 @@ msgstr "Syntheo structures the summary itself, without a fixed template. Used wh
 #: src/settings/general/account-profile.tsx
 msgid "Syntheo uses it to recognize you among the participants of your meetings, so you are not counted twice. It stays on this device."
 msgstr "Syntheo uses it to recognize you among the participants of your meetings, so you are not counted twice. It stays on this device."
+
+#: src/session/components/living-document/transcription-failure.tsx
+#: src/stt/audio-import-feedback.ts
+msgid "Syntheo was closed before the import finished. Import the file again."
+msgstr "Syntheo was closed before the import finished. Import the file again."
+
+#: src/stt/audio-import-feedback.ts
+msgid "Syntheo was closed before the import of {name} finished. Import the file again."
+msgstr "Syntheo was closed before the import of {name} finished. Import the file again."
 
 #: src/stt/auto-stop.ts
 msgid "Syntheo will stop listening in {seconds} seconds."
