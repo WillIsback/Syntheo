@@ -338,18 +338,13 @@ fn typographic_changes_alone_give_no_rework() {
     }
 }
 
-// Formats qui portent des titres. Limite connue de la règle v2 : dans un
-// texte brut collé, seule une ligne identique à un titre généré ouvre une
-// section ; un titre corrigé y redevient du texte, et sa section compte en
-// suppressions et en ajouts.
+// Dans tous les formats, texte brut compris : une ligne corrigée d'un mot
+// face à un titre généré pas encore retrouvé ouvre une section (issue 730).
 #[test]
 fn a_title_corrected_by_one_word_counts_one_word() {
     for (name, markdown) in CORPUS {
         let generated = report(markdown, markdown, Format::Markdown).total.generated;
-        for (format, sent, sent_format) in renderings(&title_typo(markdown))
-            .into_iter()
-            .filter(|(format, _, _)| *format != "text")
-        {
+        for (format, sent, sent_format) in renderings(&title_typo(markdown)) {
             let r = report(markdown, &sent, sent_format);
             assert!(r.sections.iter().all(|s| s.matched), "{name} {format}");
             assert_eq!(r.total.added + r.total.deleted, 0, "{name} {format}");
