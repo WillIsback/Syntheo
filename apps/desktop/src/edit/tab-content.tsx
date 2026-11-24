@@ -19,6 +19,7 @@ import {
   useSessionSummary,
 } from "~/session/queries";
 import { StandardContentWrapper } from "~/shared/main";
+import { describeServiceError } from "~/shared/service-error";
 import type { Tab } from "~/store/zustand/tabs";
 
 type EditTab = Extract<Tab, { type: "edit" }>;
@@ -107,11 +108,8 @@ export function TabContentEdit({ tab }: { tab: EditTab }) {
         await declineProposalReview(tab.requestId, queryClient);
       }
     } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "Failed to update this proposal.",
-      );
+      // Issue 713 : message traduit, sans détail brut.
+      setError(describeServiceError(cause));
       setBusy(false);
     }
   };

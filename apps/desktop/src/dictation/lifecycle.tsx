@@ -20,6 +20,7 @@ import { useDictationStatus } from "./state";
 
 import { useSettingsReady } from "~/settings/queries";
 import { useConfigValue } from "~/shared/config";
+import { describeServiceError } from "~/shared/service-error";
 import { useListener } from "~/stt/contexts";
 import { canStreamFile } from "~/stt/transcription-route";
 import { useRunBatch } from "~/stt/useRunBatch";
@@ -116,7 +117,8 @@ function ActiveDictation({
     let presentation: Promise<void> = Promise.resolve();
     const onError = (error: unknown) => {
       if (disposed) return;
-      const message = error instanceof Error ? error.message : String(error);
+      // Issue 713 : message traduit, sans l'adresse du serveur.
+      const message = describeServiceError(error);
       useDictationStatus.setState({ error: message });
       toast.error(message);
     };

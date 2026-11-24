@@ -3721,6 +3721,11 @@ msgstr "Pas assez d'espace disque libre pour les modèles (2 Go nécessaires)."
 msgid "not enough free memory (1.5 GB needed)"
 msgstr "pas assez de mémoire libre (1,5 Go nécessaire)"
 
+#: src/session/hooks/useGenerateSummary.ts
+#: src/shared/service-error.ts
+msgid "Not enough transcript was recorded to write a summary."
+msgstr "La transcription est trop courte pour rédiger un compte rendu."
+
 #: src/services/enhancer/eligibility.ts
 msgid "Not enough words recorded ({wordCount}/{minWords} minimum)"
 msgstr "Pas assez de mots enregistrés ({wordCount}/{minWords} minimum)"
@@ -5038,6 +5043,10 @@ msgstr "Configurez un modèle de langage (endpoint compatible OpenAI de votre in
 msgid "Set up AI summaries"
 msgstr "Configurez les résumés par IA"
 
+#: src/session/hooks/useGenerateSummary.ts
+msgid "Set up AI summaries first."
+msgstr "Configurez d'abord les comptes rendus par l'IA."
+
 #: src/session/components/note-input/enhanced-actions.ts
 msgid "Set up Intelligence in Settings before regenerating this summary."
 msgstr "Configurez l'IA dans les Paramètres avant de régénérer ce résumé."
@@ -5185,6 +5194,10 @@ msgstr "Une erreur s'est produite"
 #: src/session/components/note-input/enhanced/enhance-error.tsx
 msgid "Something went wrong while generating the summary."
 msgstr "Une erreur s'est produite lors de la génération du résumé."
+
+#: src/shared/service-error.ts
+msgid "Something went wrong. Try again."
+msgstr "Une erreur est survenue. Réessayez."
 
 #: src/contacts/related-notes.tsx
 #: src/contacts/shared.tsx
@@ -5446,6 +5459,10 @@ msgstr "Le format du résumé ne peut pas être vide."
 #: src/session/components/note-input/enhanced/enhance-error.tsx
 msgid "Summary generation failed"
 msgstr "Échec de la génération du résumé"
+
+#: src/session/hooks/useGenerateSummary.ts
+msgid "Summary generation is not ready yet."
+msgstr "La génération du compte rendu n'est pas encore prête."
 
 #: src/templates/template-preview.tsx
 msgid "Summary preview"
@@ -5904,6 +5921,10 @@ msgstr "La commande n'a pas été confirmée : elle n'a pas été lancée."
 msgid "The computer is on battery or in power saving mode: plug it in or switch to performance mode, then run the test again."
 msgstr "Le poste est sur batterie ou en mode économie d'énergie : branchez-le sur secteur ou passez en mode performance, puis relancez le test."
 
+#: src/shared/service-error.ts
+msgid "The connection to the server was interrupted. Try again."
+msgstr "La connexion au serveur a été interrompue. Réessayez."
+
 #: src/chat/components/message/tool/session-correction.tsx
 msgid "The correction could not be applied."
 msgstr "La correction n'a pas pu être appliquée."
@@ -6122,17 +6143,45 @@ msgstr "Le serveur répond, mais ni comme un serveur OpenAI ni comme NVIDIA NeMo
 msgid "The server answers, but not as an OpenAI-compatible API. Check that the address ends with /v1, then test again."
 msgstr "Le serveur répond, mais pas comme une API compatible OpenAI. Vérifiez que l'adresse se termine par /v1, puis relancez le test."
 
+#: src/shared/service-error.ts
+msgid "The server could not be reached. Check that it is running and that its address in Settings is correct."
+msgstr "Le serveur est injoignable. Vérifiez qu'il est démarré et que son adresse dans les réglages est correcte."
+
+#: src/shared/service-error.ts
+msgid "The server could not process this request ({status}). Check the model and the server settings."
+msgstr "Le serveur n'a pas pu traiter la demande ({status}). Vérifiez le modèle et les réglages du serveur."
+
 #: src/settings/ai/shared/server-card.tsx
 msgid "The server did not answer at {host}. Check that it is running and that you are on the right network (VPN, Tailscale), then test again."
 msgstr "Le serveur n'a pas répondu à {host}. Vérifiez qu'il est démarré et que vous êtes sur le bon réseau (VPN, Tailscale), puis relancez le test."
+
+#: src/shared/service-error.ts
+msgid "The server is busy or the quota is reached. Try again in a few minutes."
+msgstr "Le serveur est surchargé ou le quota est atteint. Réessayez dans quelques minutes."
 
 #: src/settings/ai/shared/server-card.tsx
 msgid "The server refused the API key. Check it under “Advanced”, then test again."
 msgstr "Le serveur a refusé la clé d'API. Vérifiez-la dans « Avancé », puis relancez le test."
 
+#: src/shared/service-error.ts
+msgid "The server refused the request. Check that the API key is allowed to use this model."
+msgstr "Le serveur a refusé la demande. Vérifiez que la clé d'API autorise ce modèle."
+
+#: src/shared/service-error.ts
+msgid "The server rejected the API key. Check it in Settings."
+msgstr "Le serveur a refusé la clé d'API. Vérifiez-la dans les réglages."
+
+#: src/shared/service-error.ts
+msgid "The server returned an error ({status}). Try again later, or check the server logs."
+msgstr "Le serveur a renvoyé une erreur ({status}). Réessayez plus tard, ou consultez les journaux du serveur."
+
 #: src/settings/ai/stt/index.tsx
 msgid "The server that turns speech into text during your meetings. Audio is never written to disk."
 msgstr "Le serveur qui transforme la voix en texte, pendant la réunion. L'audio n'est jamais écrit sur le disque."
+
+#: src/shared/service-error.ts
+msgid "The server took too long to answer. Try again."
+msgstr "Le serveur a mis trop de temps à répondre. Réessayez."
 
 #: src/settings/ai/stt/server-card.tsx
 msgid "The server transcribes with the model it loaded, whatever the model chosen here."
@@ -6469,6 +6518,10 @@ msgstr "Cette note n'a pas encore de résumé à modifier."
 #: src/session/components/note-conflict-banner.tsx
 msgid "This note was edited on another device at the same time. The later edit was kept."
 msgstr "Cette note a été modifiée sur un autre appareil en même temps. La modification la plus récente a été conservée."
+
+#: src/shared/service-error.ts
+msgid "This proposal is out of date: the meeting changed after it was created."
+msgstr "Cette proposition n'est plus à jour : la réunion a changé depuis sa création."
 
 #: src/chat/components/session-provider.tsx
 msgid "This recording is using batch transcription, so the transcript isn't available to chat yet. Ask again after transcription finishes, or switch to a Pro model for live transcription."

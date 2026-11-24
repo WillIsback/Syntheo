@@ -6,6 +6,7 @@ import { Button } from "@syntheo/ui/components/ui/button";
 import { useAITask } from "~/ai/contexts";
 import { useLanguageModel } from "~/ai/hooks";
 import { useEnhancedNote } from "~/session/queries";
+import { describeServiceError } from "~/shared/service-error";
 import { getAIErrorSource } from "~/store/zustand/ai-task/shared/error-source";
 import { createTaskId } from "~/store/zustand/ai-task/task-configs";
 
@@ -47,7 +48,9 @@ export function EnhanceError({
           <Trans>Summary generation failed</Trans>
         </p>
         <p className="text-muted-foreground text-sm leading-relaxed">
-          {error?.message || (
+          {error?.message ? (
+            describeServiceError(error)
+          ) : (
             <Trans>Something went wrong while generating the summary.</Trans>
           )}
         </p>

@@ -82,12 +82,14 @@ function getPauseCause({
     return onDeviceCause(degraded.reason);
   }
 
-  if (!online) {
-    return t`you are offline`;
-  }
-
+  // Un refus de la clé (401) prouve que le serveur répond : il passe avant
+  // « hors ligne » (issue 713).
   if (degraded?.type === "authentication_failed") {
     return t`${providerName} rejected your API key`;
+  }
+
+  if (!online) {
+    return t`you are offline`;
   }
 
   if (degraded?.type === "provider_configuration") {

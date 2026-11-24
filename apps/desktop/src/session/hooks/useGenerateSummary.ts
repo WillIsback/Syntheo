@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { useMutation } from "@tanstack/react-query";
 
 import {
@@ -15,12 +16,14 @@ export function useGenerateSummary(sessionId: string) {
         return;
       }
       const service = getEnhancerService();
-      if (!service) throw new Error("Summary generation is not ready yet.");
+      if (!service) throw new Error(t`Summary generation is not ready yet.`);
       const result = await service.enhance(sessionId);
       if (result.type === "no_model")
-        throw new Error("Set up AI summaries first.");
+        throw new Error(t`Set up AI summaries first.`);
       if (result.type === "too_short")
-        throw new Error("Not enough transcript recorded to summarize.");
+        throw new Error(
+          t`Not enough transcript was recorded to write a summary.`,
+        );
     },
   });
 
