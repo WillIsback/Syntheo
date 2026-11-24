@@ -397,6 +397,7 @@ export function isSameFloatingRouteState(
     left?.dictation?.previewEnabled === right?.dictation?.previewEnabled &&
     left?.dictation?.previewUnavailable ===
       right?.dictation?.previewUnavailable &&
+    left?.dictation?.cleartextHost === right?.dictation?.cleartextHost &&
     isSameFloatingTranscriptBubbles(
       left?.transcriptBubbles,
       right?.transcriptBubbles,

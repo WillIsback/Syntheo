@@ -59,6 +59,10 @@ pub struct FloatingDictationState {
     pub partial: String,
     pub preview_enabled: bool,
     pub preview_unavailable: bool,
+    /// Hôte du serveur de transcription quand l'audio part en HTTP clair
+    /// hors de ce poste (issue 665) : rappel affiché dans le panneau.
+    #[serde(default)]
+    pub cleartext_host: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]

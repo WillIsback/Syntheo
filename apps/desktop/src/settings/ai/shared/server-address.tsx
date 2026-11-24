@@ -10,6 +10,7 @@ import {
 import { CircleNotch } from "@syntheo/ui/components/icons";
 import { Button } from "@syntheo/ui/components/ui/button";
 
+import { confirmCleartextUrl } from "./cleartext-confirmations";
 import { CleartextConfirmation, CleartextNotice } from "./cleartext-warning";
 import { describeProviderCredentialError } from "./provider-credential-error";
 import { FieldLabel, SERVER_INPUT_CLASS } from "./server-card";
@@ -273,6 +274,14 @@ function ServerAddressFields({
                 host={new URL(baseUrl).host}
                 onConfirm={() => {
                   confirmedHttpUrl.current = baseUrl;
+                  // Confirmation gardée : pas de nouvelle demande au
+                  // lancement suivant (issue 665).
+                  void confirmCleartextUrl(baseUrl).catch((error) =>
+                    console.error(
+                      "[server] failed to save the confirmation",
+                      error,
+                    ),
+                  );
                   setPendingHttpUrl(null);
                   void form.handleSubmit();
                 }}

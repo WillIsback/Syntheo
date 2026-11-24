@@ -259,6 +259,13 @@ export const SETTING_DEFINITIONS = {
     path: ["general", "capture_reminder_enabled"],
     default: true as boolean,
   },
+  // Adresses HTTP clair hors de ce poste confirmées par l'utilisateur
+  // (issue 665) : liste JSON, une confirmation par adresse, une seule fois.
+  cleartext_http_confirmed: {
+    type: "string",
+    path: ["general", "cleartext_http_confirmed"],
+    default: "[]" as string,
+  },
   cloud_sync_enabled: {
     type: "boolean",
     path: ["general", "cloud_sync_enabled"],

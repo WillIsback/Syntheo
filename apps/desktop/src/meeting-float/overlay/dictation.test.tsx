@@ -140,4 +140,25 @@ describe("dictation floating panel", () => {
     );
     expect(screen.queryByText("My dictated sentence.")).toBeNull();
   });
+
+  // Issue 665 : rappel dans le panneau quand la voix part en HTTP clair.
+  it("reminds of an unencrypted connection while dictating", () => {
+    useDictationStatus.setState({
+      ...useDictationStatus.getInitialState(),
+      owner: "test",
+      phase: "recording",
+      expanded: true,
+      cleartextHost: "192.168.1.87:8000",
+    });
+    render(
+      <FloatingBarOverlay
+        state={state()}
+        onStop={vi.fn()}
+        onToggleExpanded={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByText(/Unencrypted connection to 192.168.1.87:8000/),
+    ).toBeTruthy();
+  });
 });

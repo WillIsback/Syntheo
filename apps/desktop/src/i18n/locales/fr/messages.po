@@ -2667,6 +2667,10 @@ msgstr "Laissez Syntheo en cours d'exécution pour utiliser votre raccourci dans
 msgid "Keep this version"
 msgstr "Conserver cette version"
 
+#: src/settings/ai/shared/cleartext-confirmations.ts
+msgid "Keep unencrypted HTTP"
+msgstr "Garder le HTTP non chiffré"
+
 #: src/settings/ai/shared/server-card.tsx
 msgid "Key refused"
 msgstr "Clé refusée"
@@ -3964,6 +3968,10 @@ msgstr "Ouvrir les autorisations"
 #: src/home/active-folders.ts
 msgid "Open points"
 msgstr "Points ouverts"
+
+#: src/settings/ai/shared/cleartext-confirmations.ts
+msgid "Open settings"
+msgstr "Ouvrir les réglages"
 
 #: src/composer/index.tsx
 #: src/onboarding/final.tsx
@@ -6715,9 +6723,21 @@ msgstr "Saisissez un nom"
 msgid "Undo"
 msgstr "Annuler"
 
+#: src/meeting-float/overlay/dictation.tsx
+msgid "Unencrypted connection to {cleartextHost}: your voice travels in clear text."
+msgstr "Connexion non chiffrée vers {cleartextHost} : votre voix passe en clair."
+
 #: src/settings/ai/shared/cleartext-warning.tsx
 msgid "Unencrypted connection to {host}"
 msgstr "Connexion non chiffrée vers {host}"
+
+#: src/settings/ai/shared/cleartext-confirmations.ts
+msgid "Unencrypted connection to {host}: the audio, your notes and the API key travel in clear text on the network. Keep this address, or switch the server to HTTPS."
+msgstr "Connexion non chiffrée vers {host} : l'audio, vos notes et la clé d'API passent en clair sur le réseau. Gardez cette adresse, ou passez le serveur en HTTPS."
+
+#: src/stt/useStartListening.ts
+msgid "Unencrypted connection to {host}: the meeting audio travels in clear text on the network."
+msgstr "Connexion non chiffrée vers {host} : l'audio de la réunion passe en clair sur le réseau."
 
 #: src/settings/ai/shared/cleartext-warning.tsx
 msgid "Unencrypted connection: the audio, your notes and the API key travel in clear text on the network."
@@ -6874,10 +6894,6 @@ msgstr "Utilisez le format 24 heures"
 #: src/mesure/measure-dialog.tsx
 msgid "Use a .txt, .md, .html or .docx file."
 msgstr "Utilisez un fichier .txt, .md, .html ou .docx."
-
-#: src/settings/automations/step-forms.tsx
-#~ msgid "Use an http:// or https:// address."
-#~ msgstr "Utilisez une adresse en http:// ou https://."
 
 #: src/settings/automations/step-forms.tsx
 msgid "Use an https:// address, or http:// only to this computer or a private network, without a user name or password."
