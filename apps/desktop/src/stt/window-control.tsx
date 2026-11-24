@@ -10,7 +10,8 @@ import { finishPausedListening } from "./pause-listening";
 import { useStartListeningWithBatchOverride } from "./useStartListeningWithBatchOverride";
 
 import { useLatestRef } from "~/shared/hooks/useLatestRef";
-import type { LivePause } from "~/store/zustand/listener/general-shared";
+import type { LiveTimingState } from "~/store/zustand/listener/general-shared";
+import type { LiveState } from "~/store/zustand/listener/general-shared-state";
 import { listenerStore } from "~/store/zustand/listener/instance";
 
 const LISTENER_CONTROL_EVENT = "syntheo:listener-control";
@@ -118,8 +119,31 @@ async function stopCaptureForSession(sessionId: string) {
   }
 }
 
-function broadcastPauseState(pause: LivePause | null) {
-  void emit(LISTENER_PAUSE_STATE_EVENT, pause).catch((error) => {
+/**
+ * Pause et cumul du minuteur de la fenêtre principale : seule elle connaît le
+ * cumul après une reprise, les autres fenêtres le reçoivent (issue 716).
+ */
+export function liveTimingState(
+  live: Pick<LiveState, "pause" | "sessionId" | "elapsedOffsetSeconds">,
+): LiveTimingState {
+  return {
+    pause: live.pause,
+    offset: live.sessionId
+      ? { sessionId: live.sessionId, seconds: live.elapsedOffsetSeconds }
+      : null,
+  };
+}
+
+function sameTiming(a: LiveTimingState, b: LiveTimingState): boolean {
+  return (
+    a.pause === b.pause &&
+    a.offset?.sessionId === b.offset?.sessionId &&
+    a.offset?.seconds === b.offset?.seconds
+  );
+}
+
+function broadcastPauseState(timing: LiveTimingState) {
+  void emit(LISTENER_PAUSE_STATE_EVENT, timing).catch((error) => {
     console.error("Failed to broadcast the listening pause state:", error);
   });
 }
@@ -138,7 +162,7 @@ export function useMainListenerPauseState() {
 
     let active = true;
     let unlisten: (() => void) | undefined;
-    void listen<LivePause | null>(LISTENER_PAUSE_STATE_EVENT, (event) => {
+    void listen<LiveTimingState>(LISTENER_PAUSE_STATE_EVENT, (event) => {
       if (active) {
         syncRef.current(event.payload);
       }
@@ -164,11 +188,12 @@ export function MainListenerControlBridge() {
   useMountEffect(() => {
     let active = true;
     let unlisten: (() => void) | undefined;
-    let pause = listenerStore.getState().live.pause;
+    let timing = liveTimingState(listenerStore.getState().live);
     const unsubscribe = listenerStore.subscribe((state) => {
-      if (state.live.pause !== pause) {
-        pause = state.live.pause;
-        broadcastPauseState(pause);
+      const next = liveTimingState(state.live);
+      if (!sameTiming(next, timing)) {
+        timing = next;
+        broadcastPauseState(timing);
       }
     });
     const enqueue = (request: ListenerControlRequest) => {
@@ -277,7 +302,7 @@ function MainListenerControlRequestRunner({
           }
           break;
         case "sync":
-          broadcastPauseState(live.pause);
+          broadcastPauseState(liveTimingState(live));
           break;
         default: {
           const mute = CHANNEL_MUTE_ACTIONS[request.action];

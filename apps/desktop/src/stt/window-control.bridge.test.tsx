@@ -9,6 +9,7 @@ type Live = {
   status: "inactive" | "active" | "finalizing";
   loading: boolean;
   pause: { sessionId: string; elapsedSeconds: number; phase: string } | null;
+  elapsedOffsetSeconds?: number;
 };
 
 const hoisted = vi.hoisted(() => {
@@ -184,9 +185,31 @@ describe("MainListenerControlBridge", () => {
       hoisted.store.publish({ ...hoisted.state.live, pause });
     });
 
-    expect(hoisted.emit).toHaveBeenCalledWith(
-      "syntheo:listener-pause-state",
+    expect(hoisted.emit).toHaveBeenCalledWith("syntheo:listener-pause-state", {
       pause,
+      offset: null,
+    });
+  });
+
+  // Issue 716 : à la reprise, le cumul part avec la fin de pause, pour la
+  // note détachée.
+  test("diffuse le cumul du minuteur à la reprise", async () => {
+    render(<MainListenerControlBridge />);
+    await act(async () => {});
+
+    act(() => {
+      hoisted.store.publish({
+        ...hoisted.state.live,
+        sessionId: "session-1",
+        status: "active",
+        pause: null,
+        elapsedOffsetSeconds: 331,
+      } as Live);
+    });
+
+    expect(hoisted.emit).toHaveBeenLastCalledWith(
+      "syntheo:listener-pause-state",
+      { pause: null, offset: { sessionId: "session-1", seconds: 331 } },
     );
   });
 });

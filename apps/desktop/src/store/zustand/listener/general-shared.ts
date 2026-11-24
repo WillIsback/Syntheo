@@ -22,6 +22,7 @@ export {
   type SessionMode,
   type LiveIntervalId,
   type LivePause,
+  type LiveTimingState,
   TRANSCRIPTION_STALL_AUDIBLE_SECONDS,
   TRANSCRIPTION_FINAL_STALL_AUDIBLE_SECONDS,
   type GeneralState,
@@ -75,6 +76,10 @@ export const markLiveCaptureStarted = (live: LiveState, sessionId: string) => {
   if (live.pause?.sessionId === sessionId) {
     live.elapsedOffsetSeconds = live.pause.elapsedSeconds;
     live.pause = null;
+  } else if (live.mainElapsedOffset?.sessionId === sessionId) {
+    // Fenêtre secondaire : le cumul vient de la fenêtre principale, même si
+    // la fin de pause est arrivée avant la reprise native (issue 716).
+    live.elapsedOffsetSeconds = live.mainElapsedOffset.seconds;
   } else if (live.sessionId !== sessionId) {
     live.elapsedOffsetSeconds = 0;
   }
@@ -180,6 +185,7 @@ export const markLiveInactive = (
   live.speakerMuted = initialLiveState.speakerMuted;
   live.triggerAppIds = null;
   live.elapsedOffsetSeconds = 0;
+  live.mainElapsedOffset = null;
 };
 
 export const markLiveStartFailed = (
@@ -216,6 +222,7 @@ export const markLiveStartFailed = (
   live.transcriptionStalled = false;
   live.triggerAppIds = null;
   live.elapsedOffsetSeconds = 0;
+  live.mainElapsedOffset = null;
 };
 
 // Live STT can hang mid-session without any error or degraded event from the
