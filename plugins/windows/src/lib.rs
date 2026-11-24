@@ -2,6 +2,7 @@ mod commands;
 mod errors;
 mod events;
 mod ext;
+mod navigation;
 mod tab;
 mod window;
 

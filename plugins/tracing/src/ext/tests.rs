@@ -191,10 +191,10 @@ fn console_override_sends_error_message_and_stack_in_devtools_builds() {
                 globalThis.setTimeout = function(fn) { fn(); };
                 globalThis.console = { log() {}, debug() {}, info() {}, warn() {}, error() {} };
                 globalThis.sent = [];
-                globalThis.window.__TAURI__ = { core: { invoke: function(_cmd, payload) {
+                globalThis.window.__TAURI_INTERNALS__ = { invoke: function(_cmd, payload) {
                     globalThis.sent.push(payload);
                     return Promise.resolve();
-                } } };
+                } };
             "#,
         )
         .unwrap();
@@ -227,10 +227,10 @@ fn console_override_sends_error_kind_but_not_error_message() {
                 globalThis.setTimeout = function(fn) { fn(); };
                 globalThis.console = { log() {}, debug() {}, info() {}, warn() {}, error() {} };
                 globalThis.sent = [];
-                globalThis.window.__TAURI__ = { core: { invoke: function(_cmd, payload) {
+                globalThis.window.__TAURI_INTERNALS__ = { invoke: function(_cmd, payload) {
                     globalThis.sent.push(payload);
                     return Promise.resolve();
-                } } };
+                } };
             "#,
         )
         .unwrap();
@@ -277,10 +277,8 @@ fn test_js_init_script() {
                     };
                 }
                 
-                globalThis.window.__TAURI__ = {
-                    core: {
-                        invoke: function() { return Promise.resolve(); }
-                    }
+                globalThis.window.__TAURI_INTERNALS__ = {
+                    invoke: function() { return Promise.resolve(); }
                 };
             "#;
         ctx.eval::<(), _>(setup).unwrap();
