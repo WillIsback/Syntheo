@@ -69,26 +69,42 @@ Chaque requête contient ces en-têtes :
 | `x-syntheo-event` | Nom de l'événement. |
 | `x-syntheo-delivery` | Identifiant unique de la livraison (identique pour toutes ses tentatives). |
 | `x-syntheo-timestamp` | Horodatage Unix, en secondes. |
-| `x-syntheo-signature` | `sha256=<hex>` : HMAC-SHA256 du corps brut de la requête, calculé avec le secret `whsec_...` du point de terminaison. |
+| `x-syntheo-signature` | `sha256=<hex>` : HMAC-SHA256 du corps brut de la requête, calculé avec le secret `whsec_...` du point de terminaison. Gardé pour les intégrations existantes. |
+| `x-syntheo-signature-v2` | `t=<horodatage>,v1=<hex>` : HMAC-SHA256 de `<horodatage>.<corps brut>`, avec le même secret. L'horodatage est celui de `x-syntheo-timestamp` ; étant signé, il permet de refuser une livraison rejouée. |
 
 ## Vérifier la signature
 
-Calculez le HMAC sur le corps brut exact, avant tout parsing JSON :
+Vérifiez de préférence `x-syntheo-signature-v2`. Calculez le HMAC sur `<horodatage>.` suivi du corps brut exact, avant tout parsing JSON, et refusez un horodatage écarté de plus de 5 minutes de l'heure de votre serveur :
 
 ```js
 import crypto from "node:crypto";
 
-const expected = `sha256=${
-  crypto.createHmac("sha256", secret).update(rawBody).digest("hex")
-}`;
-const signature = request.headers["x-syntheo-signature"];
-const received = typeof signature === "string" ? signature : "";
-const valid =
-  Buffer.byteLength(received) === Buffer.byteLength(expected) &&
-  crypto.timingSafeEqual(Buffer.from(received), Buffer.from(expected));
+const TOLERANCE_SECONDS = 300;
+
+function verifySyntheoWebhook(rawBody, header, secret) {
+  // header : valeur de x-syntheo-signature-v2, « t=1764000000,v1=<hex> »
+  const parts = Object.fromEntries(
+    String(header ?? "").split(",").map((part) => part.split("=", 2)),
+  );
+  const timestamp = Number(parts.t);
+  if (!Number.isInteger(timestamp)) return false;
+  if (Math.abs(Date.now() / 1000 - timestamp) > TOLERANCE_SECONDS) return false;
+  const expected = crypto
+    .createHmac("sha256", secret)
+    .update(`${timestamp}.`)
+    .update(rawBody)
+    .digest("hex");
+  const received = String(parts.v1 ?? "");
+  return (
+    Buffer.byteLength(received) === Buffer.byteLength(expected) &&
+    crypto.timingSafeEqual(Buffer.from(received), Buffer.from(expected))
+  );
+}
 ```
 
-Pour vous protéger du rejeu, rejetez les `created_at` trop anciens et enregistrez chaque `id` de charge utile afin de ne traiter qu'une fois une livraison réessayée.
+Chaque tentative (y compris une nouvelle tentative après un échec) porte un nouvel horodatage et une nouvelle signature. Pour ne traiter qu'une fois une livraison réessayée, enregistrez son `x-syntheo-delivery` ou l'`id` de la charge utile.
+
+L'en-tête historique `x-syntheo-signature` (`sha256=` suivi du HMAC du corps seul) reste envoyé ; il ne protège pas contre le rejeu.
 
 ## Limites
 

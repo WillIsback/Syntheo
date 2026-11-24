@@ -198,4 +198,25 @@ describe("command confirmation", () => {
     fireEvent.click(screen.getByRole("button", { name: "Allow and run" }));
     expect(onAnswer.mock.calls).toEqual([[false], [true]]);
   });
+
+  // Issue 656 : la fenêtre montre les valeurs réelles de cette exécution,
+  // avec l'argument tel que saisi en dessous.
+  it("shows the real values with the typed argument below", () => {
+    render(
+      <Dialog open>
+        <CommandConfirmationContent
+          pending={{
+            program: "/usr/bin/publish",
+            args: ["--file", "{{title}}.md"],
+            renderedArgs: ["--file", "Planning.md"],
+            workflowTitle: "Publish",
+          }}
+          onAnswer={vi.fn()}
+        />
+      </Dialog>,
+    );
+    expect(screen.getByText("Planning.md")).toBeTruthy();
+    expect(screen.getByText("Entered as {{title}}.md")).toBeTruthy();
+    expect(screen.queryAllByText(/Entered as --file/)).toHaveLength(0);
+  });
 });

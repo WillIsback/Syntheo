@@ -99,6 +99,17 @@ pub fn sign_payload(secret: &str, body: &str) -> String {
     sign_payload_bytes(secret, body.as_bytes())
 }
 
+/// En-tête `x-syntheo-signature-v2` (issue 656) : `t=<horodatage>,v1=<HMAC>`
+/// où le HMAC-SHA256 couvre `<horodatage>.<corps>`. L'horodatage étant
+/// signé, un récepteur peut refuser une livraison rejouée hors de sa
+/// fenêtre (5 minutes conseillées). L'en-tête historique
+/// `x-syntheo-signature`, sur le corps seul, reste envoyé.
+pub(crate) fn signature_v2(secret: &str, timestamp: i64, body: &[u8]) -> String {
+    let mut message = format!("{timestamp}.").into_bytes();
+    message.extend_from_slice(body);
+    format!("t={timestamp},v1={}", sign_payload_bytes(secret, &message))
+}
+
 fn sign_payload_bytes(secret: &str, body: &[u8]) -> String {
     let mut mac = <Hmac<Sha256> as KeyInit>::new_from_slice(secret.as_bytes())
         .expect("hmac accepts keys of any length");
@@ -415,18 +426,20 @@ async fn deliver_once(
 
     // Lignes créées avant le refus des identifiants : ils ne partent plus en
     // Basic (reqwest les reprendrait de l'URL).
+    let timestamp = chrono::Utc::now().timestamp();
     let response = client
         .post(without_credentials(&endpoint.url, ""))
         .header("content-type", "application/json")
         .header("x-syntheo-event", event)
         .header("x-syntheo-delivery", delivery_id)
-        .header(
-            "x-syntheo-timestamp",
-            chrono::Utc::now().timestamp().to_string(),
-        )
+        .header("x-syntheo-timestamp", timestamp.to_string())
         .header(
             "x-syntheo-signature",
             format!("sha256={}", sign_payload_bytes(&secret, body.as_ref())),
+        )
+        .header(
+            "x-syntheo-signature-v2",
+            signature_v2(&secret, timestamp, body.as_ref()),
         )
         .body(body.clone())
         .send()

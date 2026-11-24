@@ -7,6 +7,45 @@ use crate::error::Error;
 
 const MAX_ERROR_BODY_BYTES: usize = 64 * 1024;
 
+/// Plafond d'une réponse de transcription réussie (issue 656) : plusieurs
+/// heures de mots horodatés tiennent en quelques Mo ; au-delà, la réponse
+/// est refusée au lieu d'être lue en entier en mémoire.
+pub const MAX_TRANSCRIPT_BODY_BYTES: usize = 64 * 1024 * 1024;
+
+/// Plafond d'une petite réponse de service (liste des modèles).
+pub const MAX_SMALL_BODY_BYTES: usize = 1024 * 1024;
+
+/// Lit un corps JSON réussi, par morceaux, sans dépasser `limit` octets.
+pub async fn json_body_with_limit<T: serde::de::DeserializeOwned>(
+    mut response: Response,
+    limit: usize,
+) -> Result<T, Error> {
+    let status = response.status();
+    let too_large = || Error::ProviderFailure {
+        message: format!("response body larger than {limit} bytes"),
+        retryable: false,
+        status: Some(status),
+    };
+    if response
+        .content_length()
+        .is_some_and(|length| length > limit as u64)
+    {
+        return Err(too_large());
+    }
+    let mut body = Vec::new();
+    while let Some(chunk) = response.chunk().await? {
+        if body.len() + chunk.len() > limit {
+            return Err(too_large());
+        }
+        body.extend_from_slice(&chunk);
+    }
+    serde_json::from_slice(&body).map_err(|error| Error::ProviderFailure {
+        message: format!("invalid JSON response: {error}"),
+        retryable: false,
+        status: Some(status),
+    })
+}
+
 pub async fn ensure_success(response: Response) -> Result<Response, Error> {
     let status = response.status();
     if status.is_success() {
@@ -142,7 +181,32 @@ pub async fn streaming_file_part(file_path: &Path) -> Result<Part, Error> {
 mod tests {
     use wiremock::{Mock, MockServer, ResponseTemplate, matchers::path};
 
-    use super::{error_body_with_limit, streaming_bytes_part};
+    use super::{error_body_with_limit, json_body_with_limit, streaming_bytes_part};
+
+    // Issue 656 : une réponse réussie trop grosse est refusée sans être lue
+    // en entier ; une réponse sous le plafond est décodée normalement.
+    #[tokio::test]
+    async fn success_body_is_capped() {
+        let server = MockServer::start().await;
+        Mock::given(path("/big"))
+            .respond_with(
+                ResponseTemplate::new(200)
+                    .set_body_string(format!("{{\"text\":\"{}\"}}", "a".repeat(64))),
+            )
+            .mount(&server)
+            .await;
+        let get = || async { reqwest::get(format!("{}/big", server.uri())).await.unwrap() };
+
+        let error = json_body_with_limit::<serde_json::Value>(get().await, 32)
+            .await
+            .unwrap_err();
+        assert!(
+            error.to_string().contains("larger than 32 bytes"),
+            "{error}"
+        );
+        let value: serde_json::Value = json_body_with_limit(get().await, 1024).await.unwrap();
+        assert_eq!(value["text"].as_str().unwrap().len(), 64);
+    }
 
     #[tokio::test]
     async fn error_body_is_capped_and_marked() {

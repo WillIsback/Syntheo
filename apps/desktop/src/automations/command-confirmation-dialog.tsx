@@ -43,7 +43,8 @@ export function CommandConfirmationContent({
   pending: Pick<
     PendingCommandConfirmation,
     "program" | "args" | "workflowTitle"
-  >;
+  > &
+    Partial<Pick<PendingCommandConfirmation, "renderedArgs">>;
   onAnswer: (approved: boolean) => void;
 }) {
   const workflowTitle = pending.workflowTitle.trim();
@@ -82,11 +83,26 @@ export function CommandConfirmationContent({
               <Trans>Arguments</Trans>
             </span>
             <ol className="list-decimal pl-5">
-              {pending.args.map((arg, index) => (
-                <li key={index} className="break-all whitespace-pre-wrap">
-                  {arg}
-                </li>
-              ))}
+              {pending.args.map((arg, index) => {
+                const rendered = pending.renderedArgs?.[index] ?? arg;
+                return (
+                  <li
+                    key={index}
+                    className="break-all whitespace-pre-wrap"
+                    data-command-arg
+                  >
+                    {rendered}
+                    {rendered !== arg ? (
+                      <span
+                        className="text-muted-foreground block font-sans"
+                        data-command-arg-template
+                      >
+                        <Trans>Entered as {arg}</Trans>
+                      </span>
+                    ) : null}
+                  </li>
+                );
+              })}
             </ol>
           </div>
         ) : null}
