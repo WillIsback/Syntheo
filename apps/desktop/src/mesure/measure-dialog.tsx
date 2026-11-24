@@ -149,7 +149,7 @@ export function MeasureDialog({
   documentId: string;
   summaryMarkdown: string;
 }) {
-  const { t } = useLingui();
+  const { t, i18n } = useLingui();
   const { calibration_enabled, personalization_dictionary_terms } =
     useConfigValues([
       "calibration_enabled",
@@ -375,14 +375,20 @@ export function MeasureDialog({
               <>
                 <p className="text-sm">
                   <AgreementLine
-                    percent={agreementPercent(matrix)?.toFixed(1) ?? ""}
+                    percent={formatOneDecimal(
+                      agreementPercent(matrix),
+                      i18n.locale,
+                    )}
                     differences={labeledCount(matrix)}
                     rule={matrix.ruleVersion}
                   />
                 </p>
                 <p className="text-sm">
                   <WeightedAgreementLine
-                    percent={weightedAgreementPercent(matrix)?.toFixed(1) ?? ""}
+                    percent={formatOneDecimal(
+                      weightedAgreementPercent(matrix),
+                      i18n.locale,
+                    )}
                     words={labeledWords(matrix)}
                   />
                 </p>
@@ -475,8 +481,24 @@ export function MeasureDialog({
   );
 }
 
-function perHundred(perMille: number | null): string {
-  return perMille === null ? "-" : (perMille / 10).toFixed(1);
+/**
+ * Nombre à une décimale, au format de la langue de l'interface (« 0,5 » en
+ * français ; passe QA 0.8.1-2). Affichage seulement : le TSV copié et
+ * l'export gardent le point.
+ */
+export function formatOneDecimal(
+  value: number | null | undefined,
+  locale: string,
+): string {
+  if (value === null || value === undefined) return "-";
+  return new Intl.NumberFormat(locale, {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  }).format(value);
+}
+
+function perHundred(perMille: number | null, locale: string): string {
+  return formatOneDecimal(perMille === null ? null : perMille / 10, locale);
 }
 
 /** Raison d'un statut, en clair (codes fermés du crate `mesure`). */
@@ -522,8 +544,9 @@ function MeasureSummary({
   result: MeasureResult;
   generatedSource: "original" | "current";
 }) {
+  const { i18n } = useLingui();
   const total = result.total;
-  const content = perHundred(result.contentPerMille);
+  const content = perHundred(result.contentPerMille, i18n.locale);
   const lexical = total.replacedLexical;
   // Accords au singulier et au pluriel (passe QA 0.8.1-1 : « 1 mots »).
   const lexicalWords = plural(lexical, {

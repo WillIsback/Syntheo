@@ -99,7 +99,6 @@ const SYN_LABELS = {
   "Click the shortcut to record a new key combination. Press Escape to cancel.": "Cliquez sur le raccourci pour enregistrer une nouvelle combinaison de touches. Appuyez sur Échap pour annuler.",
   "Close": "Fermer",
   "Computer audio": "Son de l'ordinateur",
-  "Connected · {0} models available": "Connecté · {0} modèles disponibles",
   "Connected · {0} ms": "Connecté · {0} ms",
   "Contacts": "Contacts",
   "Control listening without reopening Syntheo.": "Contrôler l'écoute sans rouvrir Syntheo.",
@@ -283,7 +282,8 @@ const SYN_LABELS = {
   "detected automatically": "détecté automatiquement",
   "dictionary": "dictionnaire",
   "vLLM, speaches, faster-whisper-server": "vLLM, speaches, faster-whisper-server",
-  "{count, plural, one {# meeting} other {# meetings}}": "{count, plural, one {# réunion} other {# réunions}}"
+  "{count, plural, one {# meeting} other {# meetings}}": "{count, plural, one {# réunion} other {# réunions}}",
+  "{count, plural, one {Connected · # model available} other {Connected · # models available}}": "{count, plural, one {Connecté · # modèle disponible} other {Connecté · # modèles disponibles}}"
 };
 const SYN_ICONS = {
   "ArrowRight": "<path d=\"M18.5 12L4.99997 12\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/><path d=\"M13 18C13 18 19 13.5811 19 12C19 10.4188 13 6 13 6\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\"/>",
@@ -1620,7 +1620,7 @@ const SynSectionIntelligence = ({ focus }) => {
         <section className="syn-srv-card" aria-label={L("My server")}>
           <div className="syn-srv-head">
             <h3>{L("My server")}</h3>
-            {h(SynSrvChip, { server, connectedLabel: connected && models.length ? LF("Connected · {0} models available", { 0: models.length }) : undefined })}
+            {h(SynSrvChip, { server, connectedLabel: connected && models.length ? LP("{count, plural, one {Connected · # model available} other {Connected · # models available}}", models.length) : undefined })}
           </div>
           {h(SynSrvBanner, { server })}
           {h(SynSrvAddress, { server, label: L("Server address (OpenAI-compatible: vLLM, Ollama, llama.cpp, LM Studio)") })}

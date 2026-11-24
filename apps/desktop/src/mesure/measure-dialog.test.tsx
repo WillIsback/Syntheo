@@ -42,7 +42,7 @@ vi.mock("~/session/components/note-input/header-shared", () => ({
   getStoredNoteMarkdown: (content: string | undefined) => content?.trim() ?? "",
 }));
 
-import { fileInput, MeasureDialog } from "./measure-dialog";
+import { fileInput, formatOneDecimal, MeasureDialog } from "./measure-dialog";
 
 const SENT = "Le projet avance avec Marten et un secret confidentiel.";
 const RESULT = {
@@ -489,5 +489,16 @@ describe("fileInput", () => {
       ok: false,
       reason: "type",
     });
+  });
+});
+
+// Passe QA 0.8.1-2 : décimales au format de la langue de l'interface, à
+// l'affichage seulement.
+describe("formatOneDecimal", () => {
+  it("uses the comma in French and the point in English", () => {
+    expect(formatOneDecimal(0.5, "fr")).toBe("0,5");
+    expect(formatOneDecimal(100, "fr")).toBe("100,0");
+    expect(formatOneDecimal(9.25, "en")).toBe("9.3");
+    expect(formatOneDecimal(null, "fr")).toBe("-");
   });
 });
