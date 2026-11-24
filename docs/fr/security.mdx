@@ -60,7 +60,12 @@ Trois risques résiduels de gravité moyenne sont identifiés, chacun avec sa pa
 - **Signature des installeurs Windows** : son isolement dans la chaîne de publication doit encore être renforcé. Parade : vérifier les empreintes et l'attestation de provenance des installeurs avant de les déployer.
 - **HTTP en clair vers un serveur privé** : il reste possible après confirmation. Parade : des serveurs en HTTPS uniquement.
 
-Les constats faibles ou pour information encore ouverts touchent : le traitement des fichiers importés et des pièces jointes, le durcissement de l'interface au-delà de la CSP, les échanges réseau et les automatisations, l'accès des agents (CLI et MCP) et la dictée, et le retrait de code inutilisé. Chacun est suivi dans une issue publique.
+La version 0.8.1 traite les constats faibles ou pour information sur les fichiers importés et les pièces jointes, l'interface au-delà de la CSP, les échanges réseau et les automatisations, l'accès des agents (CLI et MCP) et la dictée. Le code inutilisé a été retiré. Quelques suites restent planifiées, chacune dans une issue publique :
+
+- capacités de l'interface séparées par fenêtre ([#741](https://github.com/WillIsback/Syntheo/issues/741)) ;
+- confirmation native, côté application, avant qu'une automatisation lance un programme ([#742](https://github.com/WillIsback/Syntheo/issues/742)) ;
+- approbation dans l'application d'un import d'enregistrement demandé par un agent ([#743](https://github.com/WillIsback/Syntheo/issues/743)), et fichier importé ouvert une seule fois ([#744](https://github.com/WillIsback/Syntheo/issues/744)) ;
+- lecture des PDF dans un processus isolé et traitement de l'audio importé en flux ([#745](https://github.com/WillIsback/Syntheo/issues/745)).
 
 ### Recommandations aux organisations qui déploient
 
@@ -113,7 +118,9 @@ HTTP en clair sur un réseau local reste lisible par quiconque y a accès, et la
 
 Les notes et transcriptions sont stockées en clair dans la base locale. Activez le chiffrement du disque et le verrouillage de session.
 
-Une pièce jointe qui peut lancer un programme (exécutable, script, raccourci, installeur, image disque, document Office à macros) n'est jamais ouverte d'un clic : Syntheo la montre dans son dossier. Les PDF joints sont lus avec des plafonds de taille et de temps, et un enregistrement importé ne peut pas dépasser 6 heures.
+Une pièce jointe qui peut lancer un programme (exécutable, script, raccourci, installeur, image disque, document Office à macros) n'est jamais ouverte d'un clic : Syntheo la montre dans son dossier. Les PDF joints sont lus avec des plafonds de taille et de temps, et un enregistrement importé ne peut pas dépasser 6 heures. Sous Windows, chaque pièce jointe enregistrée reçoit la marque « venu d'internet » : SmartScreen et le mode protégé d'Office la traitent comme un fichier reçu.
+
+Les fenêtres de Syntheo n'affichent que l'application : un lien glissé dans une fenêtre ne la remplace pas par une page web, et un lien qui demande une nouvelle fenêtre s'ouvre dans votre navigateur.
 
 Sous Windows, **Paramètres → Avancé → Confidentialité** → « Verrouiller l'application » exige Windows Hello (visage, code PIN ou mot de passe) à l'ouverture de Syntheo. Sous Linux, cette option n'est pas disponible : la page affiche « L'authentification de l'appareil n'est pas disponible sur cet ordinateur. ».
 

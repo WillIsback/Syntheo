@@ -60,7 +60,12 @@ Three medium-severity residual risks are identified, each with its countermeasur
 - **Windows installer signing**: its isolation in the release pipeline still needs strengthening. Countermeasure: check the checksums and provenance attestation of installers before deploying them.
 - **Plain HTTP toward a private server**: still possible after confirmation. Countermeasure: HTTPS servers only.
 
-The low or informational findings still open concern: handling of imported files and attachments, hardening the interface beyond the CSP, network exchanges and automations, agent access (CLI and MCP) and dictation, and removal of unused code. Each is tracked in a public issue.
+Version 0.8.1 addresses the low or informational findings on imported files and attachments, the interface beyond the CSP, network exchanges and automations, agent access (CLI and MCP) and dictation. Unused code has been removed. A few follow-ups remain planned, each in a public issue:
+
+- interface capabilities split per window ([#741](https://github.com/WillIsback/Syntheo/issues/741));
+- native confirmation, on the app side, before an automation runs a program ([#742](https://github.com/WillIsback/Syntheo/issues/742));
+- in-app approval of a recording import requested by an agent ([#743](https://github.com/WillIsback/Syntheo/issues/743)), and an imported file opened only once ([#744](https://github.com/WillIsback/Syntheo/issues/744));
+- PDF reading in an isolated process and streaming of imported audio ([#745](https://github.com/WillIsback/Syntheo/issues/745)).
 
 ### Recommendations for organizations deploying Syntheo
 
@@ -113,7 +118,9 @@ Plain HTTP on a local network can be read by anyone with access to it, and the s
 
 Notes and transcripts are stored in plain text in the local database. Turn on disk encryption and session locking.
 
-An attachment that can run a program (executable, script, shortcut, installer, disk image, Office document with macros) is never opened with a click: Syntheo shows it in its folder. Attached PDFs are read with size and time limits, and an imported recording cannot exceed 6 hours.
+An attachment that can run a program (executable, script, shortcut, installer, disk image, Office document with macros) is never opened with a click: Syntheo shows it in its folder. Attached PDFs are read with size and time limits, and an imported recording cannot exceed 6 hours. On Windows, each saved attachment gets the "downloaded from the internet" mark: SmartScreen and Office Protected View treat it as a received file.
+
+Syntheo's windows only show the app: a link dropped on a window does not replace it with a web page, and a link that asks for a new window opens in your browser.
 
 On Windows, **Settings → Advanced → Privacy** → "Lock app" requires Windows Hello (face, PIN or password) when Syntheo opens. On Linux, this option is not available: the page shows "Device authentication is not available on this computer.".
 
