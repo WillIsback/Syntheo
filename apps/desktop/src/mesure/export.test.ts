@@ -7,7 +7,7 @@ import { RULE_VERSION } from "@syntheo/plugin-mesure";
 
 import { buildExport, ExportError, type ExportRows } from "./export";
 
-// Contrôle de l'outil d'agrégation (issue 673) : schéma export-v1 et
+// Contrôle de l'outil d'agrégation (issue 673) : schéma export-v2 et
 // cohérence. Lancé dans Node : sous jsdom, le script ne trouve pas son schéma.
 // Vitest tourne depuis apps/desktop : la racine est deux niveaux au-dessus.
 async function checkExport(
@@ -66,6 +66,16 @@ function measurement(
     headingsMatched: 3,
     unmatchedSentWords: 0,
     total: counters(28, 3, 2, 4, 1),
+    guardVersion: 1,
+    status: "ok",
+    statusReasons: [],
+    controls: {
+      generated_kept_words: 22,
+      sections_matched_exact: 3,
+      sections_matched_near: 0,
+      deleted_section_words: 0,
+      residual_entities: 0,
+    },
   };
 }
 
@@ -143,7 +153,7 @@ function rows(): ExportRows {
 const NOW = new Date(at(21, 8));
 
 describe("buildExport", () => {
-  it("builds a valid, coherent export-v1 file", async () => {
+  it("builds a valid, coherent export-v2 file", async () => {
     const data = buildExport(rows(), "0.8.0", NOW);
     expect(await checkExport(data)).toEqual({ export: data });
     expect(data.enrolled_days).toBe(21);
@@ -543,6 +553,58 @@ describe("buildExport", () => {
     }));
     data.termErrors = [];
     expect(buildExport(data, "0.8.1", NOW).meetings).toHaveLength(0);
+  });
+
+  // Issue 733 : une mesure refusée n'est jamais exportée ; la première
+  // mesure non refusée l'est, et une mesure douteuse garde son statut.
+  it("skips refused measurements and keeps doubtful ones with their reasons", async () => {
+    const data = rows();
+    data.measurements = [
+      {
+        ...measurement("m-refused", DOC, at(2)),
+        status: "refused",
+        statusReasons: ["entity_left"],
+      },
+      {
+        ...measurement("m-doubtful", DOC, at(3)),
+        status: "doubtful",
+        statusReasons: ["unmatched_sections"],
+        // 7 mots sur 28 dans une section non retrouvée : plus de 10 %.
+        controls: {
+          ...measurement("m-doubtful", DOC, at(3)).controls!,
+          deleted_section_words: 7,
+        },
+      },
+    ];
+    data.sections = [...sections("m-refused"), ...sections("m-doubtful")];
+    data.termErrors = [];
+    const exported = buildExport(data, "0.8.1", NOW);
+    expect(exported.schema_version).toBe(2);
+    expect(exported.meetings).toHaveLength(1);
+    expect(exported.meetings[0]?.status).toBe("doubtful");
+    expect(exported.meetings[0]?.status_reasons).toEqual([
+      "unmatched_sections",
+    ]);
+    expect(exported.meetings[0]?.guard_version).toBe(1);
+    expect(exported.meetings[0]?.controls.sections_matched_exact).toBe(3);
+    expect((await checkExport(exported)).export).toBeTruthy();
+  });
+
+  it("counts a refused measurement as use of the summary, not as a meeting", () => {
+    const data = rows();
+    data.measurements = [
+      {
+        ...measurement("m-refused", DOC, at(2)),
+        status: "refused",
+        statusReasons: ["too_few_words_kept"],
+      },
+    ];
+    data.sections = sections("m-refused");
+    data.termErrors = [];
+    const exported = buildExport(data, "0.8.1", NOW);
+    expect(exported.meetings).toHaveLength(0);
+    const used = exported.summaries.find((s) => s.summary === "s1");
+    expect(used?.measured).toBe(2);
   });
 
   it("refuses to build without enrollment or with an odd app version", () => {

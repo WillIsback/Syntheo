@@ -39,6 +39,8 @@ Le calcul est déterministe : les mêmes textes donnent toujours les mêmes nomb
 
 Chaque mesure garde la version de la règle de calcul. Quand la règle change, une synthèse mesurée seulement sous une ancienne règle affiche « Mesure à refaire (règle mise à jour) » dans son menu, et ses anciennes mesures ne sont pas exportées : seule compte la première mesure faite sous la règle en vigueur.
 
+Des garde-fous jugent aussi chaque mesure, avec des seuils provisoires, réglés plus tard sur un jeu de comptes rendus de référence. Une mesure est **refusée**, sans chiffre affiché ni exporté, si un code HTML reste illisible dans la version envoyée ou si moins de la moitié des mots générés y sont retrouvés. Elle est **douteuse**, chiffres grisés et raison affichée, si moins de la moitié des titres sont retrouvés ou si plus de 10 % des mots générés sont dans des sections non retrouvées.
+
 Deux indicateurs en découlent, pour 1 000 mots générés :
 
 - **reprise de fond** = (ajoutés + supprimés + remplacés sur le fond) ÷ générés × 1 000. C'est l'indicateur principal ;
@@ -129,13 +131,13 @@ L'export se fait à la main. Syntheo vous montre le fichier en entier avant de l
 
 | Champ | Sens | Exemple |
 | --- | --- | --- |
-| `schema_version` | Version du format d'export. | `1` |
-| `app_version` | Version de Syntheo qui a produit l'export. | `"0.8.0"` |
+| `schema_version` | Version du format d'export. Un export au format 1 (Syntheo 0.8.0) n'est plus accepté par l'outil d'agrégation. | `2` |
+| `app_version` | Version de Syntheo qui a produit l'export. | `"0.8.1"` |
 | `rule_version` | Version de la règle de calcul de la reprise. | `2` |
 | `rubric_version` | Version de la grille d'un futur classement par IA ; `0` tant qu'il n'existe pas. | `0` |
 | `pseudonym` | Pseudonyme aléatoire tiré à l'inscription, effaçable. Il ne dérive d'aucune donnée de la personne ni du poste. | `"p-3f9a1c0e7b2d4f6a8c1e3b5d7f9a2c4e"` |
 | `enrolled_days` | Jours écoulés entre l'inscription et l'export. | `21` |
-| `meetings` | Une entrée par synthèse mesurée (voir ci-dessous). | |
+| `meetings` | Une entrée par synthèse mesurée : sa première mesure faite sous la règle en vigueur et non refusée (voir ci-dessous). | |
 | `summaries` | Une entrée par synthèse générée, mesurée ou non, pour le taux d'abandon : une synthèse sans mesure, ni export, ni partage dans les 7 jours qui suivent sa génération est comptée comme abandonnée. | |
 | `terms` | Une entrée par terme suivi pour l'étude du dictionnaire. | |
 
@@ -151,6 +153,10 @@ L'export se fait à la main. Syntheo vous montre le fichier en entier avant de l
 | `headings_generated`, `headings_matched` | Nombre de titres de la version générée, et combien se retrouvent dans la version envoyée. | `3`, `3` |
 | `unmatched_sent_words` | Mots des sections de la version envoyée absentes de la version générée. | `0` |
 | `total` | Les compteurs de la réunion entière (voir ci-dessous). | |
+| `guard_version` | Version des garde-fous qui ont donné le statut. | `1` |
+| `status` | `ok`, ou `doubtful` si la mesure est douteuse. Une mesure refusée n'est jamais exportée. | `"ok"` |
+| `status_reasons` | Raisons d'un statut douteux : `global_alignment` (moins de la moitié des titres retrouvés, mesure sur le texte entier) ou `unmatched_sections` (plus de 10 % des mots générés dans des sections non retrouvées). Vide si `ok`. | `[]` |
+| `controls` | Métriques de contrôle, des nombres : `generated_kept_words` (mots générés retrouvés tels quels), `sections_matched_exact` et `sections_matched_near` (sections retrouvées par un titre identique ou proche), `deleted_section_words` (mots des sections générées non retrouvées), `residual_entities` (toujours `0` dans un export). | `{"generated_kept_words": 22, …}` |
 | `sections` | Pour chaque section : `index` (son rang), `role` (`decisions` ou `actions` d'après le modèle de compte rendu, `other` sinon), `matched` (retrouvée ou non) et `counters` (ses compteurs, voir ci-dessous). Jamais son titre. | `{"index": 1, "role": "decisions", "matched": true, "counters": {…}}` |
 
 **Compteurs (`total` et `counters` de chaque section)**

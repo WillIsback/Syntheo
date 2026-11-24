@@ -15,7 +15,17 @@ import {
 import { calibrationStatement, measurementStatements } from "./storage";
 
 const result: MeasureResult = {
-  ruleVersion: 1,
+  ruleVersion: 2,
+  guardVersion: 1,
+  status: "doubtful",
+  statusReasons: ["unmatched_sections"],
+  controls: {
+    generatedKeptWords: 20,
+    sectionsMatchedExact: 3,
+    sectionsMatchedNear: 0,
+    deletedSectionWords: 7,
+    residualEntities: 0,
+  },
   aligned: true,
   headingsGenerated: 3,
   headingsMatched: 3,
@@ -72,12 +82,31 @@ describe("measurement storage", () => {
     expect(statements[1].sql).toContain(
       "EXISTS (SELECT 1 FROM summary_measurements WHERE id = ?)",
     );
+    // Garde-fous (issue 733) : version, statut, raisons en 0/1, contrôles.
+    expect(statements[0].params.slice(14)).toEqual([
+      1,
+      "doubtful",
+      0,
+      0,
+      0,
+      1,
+      20,
+      3,
+      0,
+      7,
+      0,
+    ]);
     for (const { params } of statements) {
       for (const value of params) {
         if (typeof value === "string") {
-          expect([ID, "session-1", "doc-1", "original", "decisions"]).toContain(
-            value,
-          );
+          expect([
+            ID,
+            "session-1",
+            "doc-1",
+            "original",
+            "decisions",
+            "doubtful",
+          ]).toContain(value);
         } else {
           expect(Number.isInteger(value)).toBe(true);
         }

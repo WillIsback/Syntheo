@@ -1,4 +1,4 @@
-import type { MeasureResult } from "@syntheo/plugin-mesure";
+import type { MeasureResult, StatusReason } from "@syntheo/plugin-mesure";
 
 import { enrollmentStatement, termStatements } from "./beta";
 import type { AgreementMatrix } from "./calibration";
@@ -33,6 +33,9 @@ type MeasurementIds = {
   generatedSource: "original" | "current";
 };
 
+const reason = (result: MeasureResult, code: StatusReason) =>
+  result.statusReasons.includes(code) ? 1 : 0;
+
 export function measurementStatements(
   id: string,
   ids: MeasurementIds,
@@ -46,9 +49,14 @@ export function measurementStatements(
           id, document_id, session_id, rule_version, aligned,
           headings_generated, headings_matched, generated_words, added_words,
           deleted_words, replaced_content, replaced_lexical,
-          unmatched_sent_words, generated_source
+          unmatched_sent_words, generated_source, guard_version, status,
+          reason_entity_left, reason_too_few_words_kept,
+          reason_global_alignment, reason_unmatched_sections,
+          generated_kept_words, sections_matched_exact, sections_matched_near,
+          deleted_section_words, residual_entities
         )
-        SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+        SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+          ?, ?, ?
         WHERE EXISTS (
           SELECT 1 FROM app_settings
           WHERE id = 'measurement_enabled' AND value_json = 'true'
@@ -70,6 +78,18 @@ export function measurementStatements(
         t.replacedLexical,
         result.unmatchedSentWords,
         ids.generatedSource,
+        // Garde-fous (issue 733) : statut, raisons en 0/1, contrôles.
+        result.guardVersion,
+        result.status,
+        reason(result, "entity_left"),
+        reason(result, "too_few_words_kept"),
+        reason(result, "global_alignment"),
+        reason(result, "unmatched_sections"),
+        result.controls.generatedKeptWords,
+        result.controls.sectionsMatchedExact,
+        result.controls.sectionsMatchedNear,
+        result.controls.deletedSectionWords,
+        result.controls.residualEntities,
       ],
     },
     ...result.sections.map((section) => ({

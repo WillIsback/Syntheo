@@ -28,6 +28,19 @@ use normalize::{Block, Token};
 ///   (issue 730), diff de patience, fusion par mots-outils et appariement
 ///   mot à mot dans un remplacement (issue 732).
 pub const RULE_VERSION: u32 = 2;
+/// Version des garde-fous (statut et raisons, issue 733), à reporter avec
+/// chaque résultat. Régler un seuil change cette version, pas
+/// `RULE_VERSION` : les compteurs ne bougent pas.
+///
+/// - 1 (0.8.1) : seuils provisoires de la stratégie de mesure v2, à régler
+///   sur la partie réglage du jeu d'or puis figer.
+pub const GUARD_VERSION: u32 = 1;
+/// Refusé si moins de ce pourcentage des mots générés est retrouvé tel quel.
+pub const MIN_KEPT_PERCENT: u64 = 50;
+/// Douteux si plus de ce pourcentage des mots générés est dans des sections
+/// non retrouvées.
+pub const MAX_UNMATCHED_PERCENT: u64 = 10;
+
 /// Taille maximale d'un texte (4 Mio).
 pub const MAX_INPUT_BYTES: usize = 4 * 1024 * 1024;
 /// Nombre maximal de mots et de signes d'un texte : borne le diff.
@@ -359,9 +372,85 @@ fn term_hash(key: &[u8; 32], words: &[String]) -> String {
         .collect()
 }
 
+/// Métriques de contrôle d'une mesure (issue 733), des nombres seulement.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize)]
+pub struct Controls {
+    /// Mots générés retrouvés tels quels dans la version envoyée.
+    pub generated_kept_words: u64,
+    /// Sections titrées retrouvées par un titre identique, ou proche.
+    pub sections_matched_exact: u32,
+    pub sections_matched_near: u32,
+    /// Mots (titre compris) des sections générées sans homologue.
+    pub deleted_section_words: u64,
+    /// Entités HTML restées telles quelles après décodage (`&nom;`,
+    /// `&#…;`), dans les deux textes : signe d'une lecture ratée.
+    pub residual_entities: u32,
+}
+
+/// Statut d'une mesure : `refused` n'affiche ni n'exporte aucun chiffre,
+/// `doubtful` l'affiche grisé avec sa raison.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum MeasureStatus {
+    Ok,
+    Doubtful,
+    Refused,
+}
+
+/// Raison d'un statut, liste fermée.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum StatusReason {
+    /// Refusé : une entité HTML reste après décodage.
+    EntityLeft,
+    /// Refusé : moins de `MIN_KEPT_PERCENT` % des mots générés retrouvés.
+    TooFewWordsKept,
+    /// Douteux : moins de la moitié des titres retrouvés, mesure globale.
+    GlobalAlignment,
+    /// Douteux : plus de `MAX_UNMATCHED_PERCENT` % des mots générés dans
+    /// des sections non retrouvées.
+    UnmatchedSections,
+}
+
+/// Statut et raisons, d'après les compteurs et les contrôles. Entiers
+/// seulement, aucun flottant dans la décision.
+pub fn guard(
+    generated: u64,
+    aligned: bool,
+    controls: &Controls,
+) -> (MeasureStatus, Vec<StatusReason>) {
+    let mut refused = Vec::new();
+    if controls.residual_entities > 0 {
+        refused.push(StatusReason::EntityLeft);
+    }
+    if controls.generated_kept_words * 100 < generated * MIN_KEPT_PERCENT {
+        refused.push(StatusReason::TooFewWordsKept);
+    }
+    if !refused.is_empty() {
+        return (MeasureStatus::Refused, refused);
+    }
+    let mut doubtful = Vec::new();
+    if !aligned {
+        doubtful.push(StatusReason::GlobalAlignment);
+    }
+    if controls.deleted_section_words * 100 > generated * MAX_UNMATCHED_PERCENT {
+        doubtful.push(StatusReason::UnmatchedSections);
+    }
+    if doubtful.is_empty() {
+        (MeasureStatus::Ok, doubtful)
+    } else {
+        (MeasureStatus::Doubtful, doubtful)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Report {
     pub rule_version: u32,
+    /// Version des garde-fous (`GUARD_VERSION`) qui ont donné `status`.
+    pub guard_version: u32,
+    pub status: MeasureStatus,
+    pub status_reasons: Vec<StatusReason>,
+    pub controls: Controls,
     /// `true` si au moins la moitié des titres générés se retrouvent : mesure
     /// par section. Sinon, mesure globale (`sections` vide).
     pub aligned: bool,
@@ -397,6 +486,13 @@ pub fn measure(
     let mut total = Counters::default();
     let mut reports = Vec::new();
     let mut unmatched_sent_words = 0;
+    let mut controls = Controls {
+        generated_kept_words: prepared.generated_kept_words,
+        residual_entities: prepared.residual_entities,
+        sections_matched_exact: prepared.sections_matched_exact,
+        sections_matched_near: prepared.headings_matched - prepared.sections_matched_exact,
+        ..Controls::default()
+    };
     let mut corrected = std::collections::BTreeMap::<String, u32>::new();
     for pair in prepared.pairs() {
         let mut counters = Counters {
@@ -420,19 +516,29 @@ pub fn measure(
                 index,
                 role,
                 matched,
-            } => reports.push(SectionReport {
-                index,
-                role,
-                matched,
-                counters,
-            }),
+            } => {
+                if !matched {
+                    controls.deleted_section_words += counters.generated;
+                }
+                reports.push(SectionReport {
+                    index,
+                    role,
+                    matched,
+                    counters,
+                })
+            }
             Place::UnmatchedSent => unmatched_sent_words += counters.added,
             Place::Global => {}
         }
         total.add(counters);
     }
+    let (status, status_reasons) = guard(total.generated, prepared.aligned, &controls);
     Ok(Report {
         rule_version: RULE_VERSION,
+        guard_version: GUARD_VERSION,
+        status,
+        status_reasons,
+        controls,
         aligned: prepared.aligned,
         headings_generated: prepared.titles as u32,
         headings_matched: prepared.headings_matched,
@@ -542,6 +648,9 @@ struct Prepared {
     titles: usize,
     aligned: bool,
     headings_matched: u32,
+    sections_matched_exact: u32,
+    residual_entities: u32,
+    generated_kept_words: u64,
 }
 
 enum Place {
@@ -565,14 +674,19 @@ struct Pair<'a> {
 }
 
 impl Pair<'_> {
-    fn diff(&self, dictionary: &Dictionary, mut visit: impl FnMut(&[Token], &[Token], Change)) {
+    /// Diff du titre puis du corps ; rend les mots générés retrouvés tels
+    /// quels.
+    fn diff(
+        &self,
+        dictionary: &Dictionary,
+        mut visit: impl FnMut(&[Token], &[Token], Change),
+    ) -> u64 {
         diff(
             self.generated_title,
             self.sent_title,
             dictionary,
             &mut visit,
-        );
-        diff(&self.generated, &self.sent, dictionary, &mut visit);
+        ) + diff(&self.generated, &self.sent, dictionary, &mut visit)
     }
 
     fn generated_words(&self) -> u64 {
@@ -589,7 +703,20 @@ fn prepare(
     if generated.len() > MAX_INPUT_BYTES || sent.len() > MAX_INPUT_BYTES {
         return Err(MeasureError::TooLarge);
     }
-    let generated = sections(normalize::blocks(generated, generated_format), &[], false)?;
+    let generated_blocks = normalize::blocks(generated, generated_format);
+    let sent_blocks = normalize::blocks(sent, sent_format);
+    // Entités visibles dans la version envoyée au-delà de la générée : une
+    // entité citée volontairement des deux côtés ne compte pas.
+    let entities = |blocks: &[Block]| -> usize {
+        blocks
+            .iter()
+            .map(|block| normalize::residual_entities(&block.text))
+            .sum()
+    };
+    let residual_entities = entities(&sent_blocks)
+        .saturating_sub(entities(&generated_blocks))
+        .min(u32::MAX as usize) as u32;
+    let generated = sections(generated_blocks, &[], false)?;
     let titles: Vec<String> = generated.iter().filter_map(|s| s.title.clone()).collect();
     let known: Vec<KnownTitle> = generated
         .iter()
@@ -600,18 +727,36 @@ fn prepare(
             })
         })
         .collect();
-    let sent = sections(
-        normalize::blocks(sent, sent_format),
-        &known,
-        sent_format == Format::Text,
-    )?;
+    let sent = sections(sent_blocks, &known, sent_format == Format::Text)?;
     let matches = match_sections(&generated, &sent);
     let headings_matched = generated
         .iter()
         .zip(&matches)
         .filter(|(section, matched)| section.title.is_some() && matched.is_some())
         .count() as u32;
+    let sections_matched_exact = generated
+        .iter()
+        .zip(&matches)
+        .filter(|(section, matched)| {
+            section.title.is_some() && matched.is_some_and(|j| sent[j].title == section.title)
+        })
+        .count() as u32;
     let aligned = !titles.is_empty() && headings_matched as usize * 2 >= titles.len();
+    // Mots générés retrouvés tels quels, par un diff des deux textes entiers
+    // (titres et corps), indépendant de l'appariement des sections : une
+    // section retitrée garde ses mots retrouvés.
+    let all = |sections: &[Section]| -> Vec<Token> {
+        sections
+            .iter()
+            .flat_map(|s| s.title_tokens.iter().chain(&s.tokens).cloned())
+            .collect()
+    };
+    let generated_kept_words = diff(
+        &all(&generated),
+        &all(&sent),
+        &Dictionary::default(),
+        &mut |_, _, _| {},
+    );
     Ok(Prepared {
         generated,
         sent,
@@ -619,6 +764,9 @@ fn prepare(
         titles: titles.len(),
         aligned,
         headings_matched,
+        sections_matched_exact,
+        residual_entities,
+        generated_kept_words,
     })
 }
 
@@ -1056,7 +1204,7 @@ fn diff(
     sent: &[Token],
     dictionary: &Dictionary,
     visit: &mut impl FnMut(&[Token], &[Token], Change),
-) {
+) -> u64 {
     // Comparaison sur la clé normalisée (issue 729) : `’` et `'`, `‑` et `-`
     // ne font pas deux mots différents.
     let old: Vec<&str> = generated.iter().map(|t| t.key.as_str()).collect();
@@ -1100,9 +1248,15 @@ fn diff(
         }
         open = true;
     }
+    // Mots générés retrouvés tels quels : hors des différences, ou appariés
+    // à un mot identique dans une différence.
+    let mut kept = word_count(generated);
     for (o, n) in hunks {
-        classify_hunk(&generated[o], &sent[n], dictionary, visit);
+        let hunk = &generated[o.clone()];
+        let identical = classify_hunk(hunk, &sent[n], dictionary, visit);
+        kept -= word_count(hunk) - identical;
     }
+    kept
 }
 
 /// Classe une différence : appariement mot à mot, puis chaque paire proche
@@ -1112,7 +1266,8 @@ fn classify_hunk(
     new: &[Token],
     dictionary: &Dictionary,
     visit: &mut impl FnMut(&[Token], &[Token], Change),
-) {
+) -> u64 {
+    let mut identical = 0;
     let mut emit = |o: &[Token], n: &[Token]| {
         if let Some(change) = classify(o, n, dictionary) {
             visit(o, n, change);
@@ -1121,12 +1276,15 @@ fn classify_hunk(
     let (mut prev_o, mut prev_n) = (0, 0);
     for (i, j) in pair_words(old, new) {
         emit(&old[prev_o..i], &new[prev_n..j]);
-        if old[i].key != new[j].key {
+        if old[i].key == new[j].key {
+            identical += 1;
+        } else {
             emit(&old[i..=i], &new[j..=j]);
         }
         (prev_o, prev_n) = (i + 1, j + 1);
     }
     emit(&old[prev_o..], &new[prev_n..]);
+    identical
 }
 
 /// Distance d'édition entre deux mots si elle est d'au plus `MAX_NEAR_EDITS`,

@@ -1,7 +1,7 @@
 // Agrégation des exports de mesure de la bêta (issue 673).
 //
 // Lit un dossier d'exports `*.json` produits à la main par les testeurs
-// (schéma crates/mesure/schema/export-v1.json) et en tire la synthèse décrite
+// (schéma crates/mesure/schema/export-v2.json) et en tire la synthèse décrite
 // par la spécification de mesure : reprise de fond par testeur, verdict selon
 // les seuils pré-enregistrés, taux d'abandon, garde-fou des sections Décisions
 // et Actions, effet du dictionnaire avec groupe témoin.
@@ -85,12 +85,22 @@ export const TAILLE_MAX_OCTETS = 2 * 1024 * 1024;
 export const FICHIERS_MAX = 1000;
 
 const SCHEMA_URL = new URL(
-  "../../crates/mesure/schema/export-v1.json",
+  "../../crates/mesure/schema/export-v2.json",
   import.meta.url,
 );
 const SCHEMA = JSON.parse(readFileSync(SCHEMA_URL, "utf8"));
 export const VERSION_SCHEMA = SCHEMA.properties.schema_version.const;
 const validateSchema = compileSchema(SCHEMA);
+
+// Seuils des garde-fous de la mesure par version (crate mesure,
+// GUARD_VERSION, MIN_KEPT_PERCENT, MAX_UNMATCHED_PERCENT) : l'outil recalcule
+// le statut de chaque réunion pour vérifier sa cohérence.
+export const GARDE_FOUS = deepFreeze({
+  1: {
+    mots_retrouves_min_pourcent: 50,
+    sections_non_retrouvees_max_pourcent: 10,
+  },
+});
 
 // Raisons de refus : textes fixes, jamais dérivés du contenu du fichier.
 export const RAISONS = deepFreeze({
@@ -99,6 +109,8 @@ export const RAISONS = deepFreeze({
   trop_gros: `dépasse ${TAILLE_MAX_OCTETS} octets`,
   trop_de_fichiers: `au-delà des ${FICHIERS_MAX} premiers fichiers`,
   json_invalide: "JSON ou UTF-8 invalide",
+  version_ancienne:
+    "export au format 1 (Syntheo 0.8.0) : refaites l'export avec Syntheo 0.8.1 ou plus récent",
   hors_schema: "hors schéma",
   incoherent: "incohérent",
   pseudonyme_remplace: "pseudonyme repris par un export plus récent",
@@ -148,6 +160,16 @@ function readCapped(path) {
 // Contrôle un export déjà décodé. Rend `{ export }` ou `{ refus, detail }`,
 // où `detail` est un code fixe (mot-clé du schéma ou règle de cohérence).
 export function checkExport(data) {
+  // Format 1 (0.8.0) : règle de calcul 1, sans garde-fous ; refusé avec une
+  // raison claire plutôt que « hors schéma ».
+  if (
+    typeof data === "object" &&
+    data !== null &&
+    !Array.isArray(data) &&
+    data.schema_version === 1
+  ) {
+    return { refus: "version_ancienne" };
+  }
   const keyword = validateSchema(data);
   if (keyword) return { refus: "hors_schema", detail: keyword };
   const incoherence = coherence(data);
@@ -236,6 +258,44 @@ function coherence(data) {
       }
     } else if (meeting.unmatched_sent_words > meeting.total.added) {
       return "compteurs_incoherents";
+    }
+    // Garde-fous (issue 733) : statut et raisons recalculés à partir des
+    // entiers du fichier, selon les seuils de la version déclarée ; une
+    // version inconnue de cet outil est refusée.
+    const c = meeting.controls;
+    const guard = GARDE_FOUS[meeting.guard_version];
+    if (!guard) return "garde_fous_inconnus";
+    if (
+      c.sections_matched_exact + c.sections_matched_near !==
+        meeting.headings_matched ||
+      c.generated_kept_words + meeting.total.deleted >
+        meeting.total.generated ||
+      c.deleted_section_words > meeting.total.generated ||
+      c.residual_entities !== 0
+    ) {
+      return "controles_incoherents";
+    }
+    const generated = meeting.total.generated;
+    if (
+      c.residual_entities > 0 ||
+      c.generated_kept_words * 100 <
+        generated * guard.mots_retrouves_min_pourcent
+    ) {
+      return "statut_incoherent"; // une mesure refusée n'est pas exportable
+    }
+    const expected = [];
+    if (!meeting.aligned) expected.push("global_alignment");
+    if (
+      c.deleted_section_words * 100 >
+      generated * guard.sections_non_retrouvees_max_pourcent
+    ) {
+      expected.push("unmatched_sections");
+    }
+    if (
+      meeting.status !== (expected.length ? "doubtful" : "ok") ||
+      meeting.status_reasons.join() !== expected.join()
+    ) {
+      return "statut_incoherent";
     }
   }
 
@@ -672,6 +732,13 @@ export function aggregate(accepted, refused = []) {
     return result.terms;
   });
 
+  const doubtful = accepted.reduce(
+    (count, candidate) =>
+      count +
+      candidate.export.meetings.filter((m) => m.status === "doubtful").length,
+    0,
+  );
+
   return {
     versions: {
       agregation: VERSION_AGREGATION,
@@ -685,6 +752,7 @@ export function aggregate(accepted, refused = []) {
     seuils: SEUILS,
     fichiers_retenus: accepted.length,
     fichiers_refuses: refused,
+    reunions_douteuses: doubtful,
     testeurs: testers,
     testeurs_qualifies: qualified.length,
     publiable: qualified.length >= SEUILS.publiable_testeurs_min,
@@ -752,6 +820,8 @@ export function renderMarkdown(result) {
   );
   lines.push(
     `Exports retenus : ${result.fichiers_retenus} · refusés : ${result.fichiers_refuses.length} · testeurs qualifiés (au moins ${SEUILS.testeur_qualifie_reunions_min} réunions mesurées) : ${result.testeurs_qualifies}`,
+    "",
+    `Réunions mesurées au statut douteux (garde-fous) : ${result.reunions_douteuses}`,
     "",
   );
 

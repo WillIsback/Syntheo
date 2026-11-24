@@ -399,9 +399,69 @@ fn injected_edits_give_the_same_counters_in_every_format() {
     }
 }
 
-/// Empreinte SHA-256 des rapports du corpus, dans un ordre fixe : chaque
-/// scénario en Markdown, et les retouches injectées dans chaque format.
-fn corpus_fingerprint() -> String {
+// Garde-fous sur le corpus (issue 733) : le même contenu, les retouches
+// typographiques et un titre corrigé restent « ok » ; une section supprimée
+// est signalée, sans refus.
+#[test]
+fn corpus_statuses_follow_the_guards() {
+    for (name, markdown) in CORPUS {
+        for (scenario, sent) in [
+            ("identite", markdown.to_owned()),
+            ("typographie", typographic(markdown)),
+            ("titre", title_typo(markdown)),
+            ("retouches", injected(markdown)),
+        ] {
+            for (format, text, sent_format) in renderings(&sent) {
+                let r = report(markdown, &text, sent_format);
+                assert_eq!(r.status, MeasureStatus::Ok, "{name} {scenario} {format}");
+                assert!(r.status_reasons.is_empty(), "{name} {scenario} {format}");
+                assert_eq!(
+                    r.controls.residual_entities, 0,
+                    "{name} {scenario} {format}"
+                );
+            }
+        }
+        let r = report(markdown, &title_typo(markdown), Format::Markdown);
+        assert_eq!(r.controls.sections_matched_near, 1, "{name}");
+        let r = report(markdown, &without_last_section(markdown), Format::Markdown);
+        assert_ne!(r.status, MeasureStatus::Refused, "{name}");
+        assert_eq!(
+            r.controls.deleted_section_words,
+            r.sections.last().unwrap().counters.generated,
+            "{name}"
+        );
+    }
+}
+
+/// Partie « calcul » d'un rapport, liée à `RULE_VERSION` : compteurs,
+/// alignement et sections. Les garde-fous (statut, raisons, contrôles) ont
+/// leur propre empreinte, liée à `GUARD_VERSION` (issue 733).
+fn calculation(r: &Report) -> String {
+    serde_json::json!({
+        "aligned": r.aligned,
+        "headings_generated": r.headings_generated,
+        "headings_matched": r.headings_matched,
+        "total": r.total,
+        "sections": r.sections,
+        "unmatched_sent_words": r.unmatched_sent_words,
+    })
+    .to_string()
+}
+
+/// Partie « garde-fous » d'un rapport, liée à `GUARD_VERSION`.
+fn guards(r: &Report) -> String {
+    serde_json::json!({
+        "status": r.status,
+        "status_reasons": r.status_reasons,
+        "controls": r.controls,
+    })
+    .to_string()
+}
+
+/// Empreinte SHA-256 d'une projection des rapports du corpus, dans un ordre
+/// fixe : chaque scénario en Markdown, et les retouches injectées dans
+/// chaque format.
+fn corpus_fingerprint(project: fn(&Report) -> String) -> String {
     let mut lines = Vec::new();
     for (name, markdown) in CORPUS {
         let scenarios = [
@@ -413,17 +473,11 @@ fn corpus_fingerprint() -> String {
         ];
         for (scenario, sent) in scenarios {
             let r = report(markdown, &sent, Format::Markdown);
-            lines.push(format!(
-                "{name}\t{scenario}\t{}",
-                serde_json::to_string(&r).unwrap()
-            ));
+            lines.push(format!("{name}\t{scenario}\t{}", project(&r)));
         }
         for (format, sent, sent_format) in renderings(&injected(markdown)) {
             let r = report(markdown, &sent, sent_format);
-            lines.push(format!(
-                "{name}\tretouches-{format}\t{}",
-                serde_json::to_string(&r).unwrap()
-            ));
+            lines.push(format!("{name}\tretouches-{format}\t{}", project(&r)));
         }
     }
     Sha256::digest(lines.join("\n").as_bytes())
@@ -432,41 +486,69 @@ fn corpus_fingerprint() -> String {
         .collect()
 }
 
-// Toute sortie modifiée exige une nouvelle version de la règle (stratégie de
-// mesure v2, principe 5) : la CI échoue si les sorties du corpus changent
-// sans ligne `RULE_VERSION` correspondante dans `corpus/FINGERPRINTS`.
-#[test]
-fn corpus_outputs_match_the_rule_version_fingerprint() {
-    let fingerprint = corpus_fingerprint();
-    let recorded: Vec<(u32, &str)> = FINGERPRINTS
+/// Lignes `<genre> <version>\t<empreinte>` de `corpus/FINGERPRINTS` pour un
+/// genre (`rule` ou `guard`) : versions croissantes, empreintes distinctes.
+fn recorded(kind: &str) -> Vec<(u32, &'static str)> {
+    let lines: Vec<(u32, &str)> = FINGERPRINTS
         .lines()
         .filter(|line| !line.starts_with('#') && !line.trim().is_empty())
-        .map(|line| {
-            let (version, hash) = line.split_once('\t').expect("version<TAB>empreinte");
-            (version.parse().expect("version entière"), hash)
+        .filter_map(|line| {
+            let (label, hash) = line
+                .split_once('\t')
+                .expect("<genre> <version><TAB>empreinte");
+            let (genre, version) = label.split_once(' ').expect("<genre> <version>");
+            (genre == kind).then(|| (version.parse().expect("version entière"), hash))
         })
         .collect();
-    // Une version par ligne, croissantes, empreintes toutes différentes.
-    assert!(recorded.windows(2).all(|w| w[0].0 < w[1].0));
-    let mut hashes: Vec<&str> = recorded.iter().map(|(_, hash)| *hash).collect();
+    assert!(lines.windows(2).all(|w| w[0].0 < w[1].0), "{kind}");
+    let mut hashes: Vec<&str> = lines.iter().map(|(_, hash)| *hash).collect();
     hashes.sort_unstable();
     hashes.dedup();
     assert_eq!(
         hashes.len(),
-        recorded.len(),
-        "deux versions, une même empreinte"
+        lines.len(),
+        "{kind} : deux versions, une même empreinte"
     );
-    let current = recorded
-        .iter()
-        .find(|(version, _)| *version == RULE_VERSION)
-        .map(|(_, hash)| *hash);
+    lines
+}
+
+fn assert_fingerprint(kind: &str, constant: &str, version: u32, fingerprint: &str) {
+    let current = recorded(kind)
+        .into_iter()
+        .find(|(v, _)| *v == version)
+        .map(|(_, hash)| hash);
     assert_eq!(
         current,
-        Some(fingerprint.as_str()),
-        "Les sorties du corpus ne correspondent pas à RULE_VERSION = {RULE_VERSION}. \
-         Si la règle a changé : incrémentez RULE_VERSION, datez la spec, puis ajoutez \
-         la ligne « {}\\t{fingerprint} » à corpus/FINGERPRINTS. Ne modifiez jamais une \
-         ligne existante.",
-        RULE_VERSION + u32::from(current.is_some())
+        Some(fingerprint),
+        "Les sorties du corpus ne correspondent pas à {constant} = {version}. \
+         Si elles devaient changer : incrémentez {constant}, datez la spec, puis ajoutez \
+         la ligne « {kind} {}\\t{fingerprint} » à corpus/FINGERPRINTS. Ne modifiez \
+         jamais une ligne existante.",
+        version + u32::from(current.is_some())
+    );
+}
+
+// Toute sortie du calcul modifiée exige une nouvelle version de la règle
+// (stratégie de mesure v2, principe 5) : la CI échoue si les compteurs du
+// corpus changent sans ligne `rule <RULE_VERSION>` correspondante.
+#[test]
+fn corpus_outputs_match_the_rule_version_fingerprint() {
+    assert_fingerprint(
+        "rule",
+        "RULE_VERSION",
+        RULE_VERSION,
+        &corpus_fingerprint(calculation),
+    );
+}
+
+// Les statuts, raisons et contrôles du corpus sont liés à `GUARD_VERSION`
+// (issue 733) : régler un seuil change cette version, pas la règle.
+#[test]
+fn corpus_guards_match_the_guard_version_fingerprint() {
+    assert_fingerprint(
+        "guard",
+        "GUARD_VERSION",
+        GUARD_VERSION,
+        &corpus_fingerprint(guards),
     );
 }

@@ -14,8 +14,8 @@
 use std::path::Path;
 
 use syntheo_mesure::{
-    ChangeKind, Dictionary, Difference, Format, MAX_INPUT_BYTES, Report, differences, load_file,
-    measure,
+    ChangeKind, Dictionary, Difference, Format, MAX_INPUT_BYTES, MeasureStatus, Report,
+    StatusReason, differences, load_file, measure,
 };
 
 use crate::output;
@@ -232,6 +232,36 @@ fn human(report: &Report) -> String {
         format!("content_per_mille\t{}", rate(report.content_per_mille)),
         format!("lexical_per_mille\t{}", rate(report.lexical_per_mille)),
     ];
+    // Garde-fous (issue 733), en nombres : statut 0 (ok), 1 (douteux) ou 2
+    // (refusé), puis une ligne 0/1 par raison.
+    let c = &report.controls;
+    lines.extend([
+        format!("guard_version\t{}", report.guard_version),
+        format!(
+            "status\t{}",
+            match report.status {
+                MeasureStatus::Ok => 0,
+                MeasureStatus::Doubtful => 1,
+                MeasureStatus::Refused => 2,
+            }
+        ),
+        format!("generated_kept_words\t{}", c.generated_kept_words),
+        format!("sections_matched_exact\t{}", c.sections_matched_exact),
+        format!("sections_matched_near\t{}", c.sections_matched_near),
+        format!("deleted_section_words\t{}", c.deleted_section_words),
+        format!("residual_entities\t{}", c.residual_entities),
+    ]);
+    for (reason, key) in [
+        (StatusReason::EntityLeft, "reason_entity_left"),
+        (StatusReason::TooFewWordsKept, "reason_too_few_words_kept"),
+        (StatusReason::GlobalAlignment, "reason_global_alignment"),
+        (StatusReason::UnmatchedSections, "reason_unmatched_sections"),
+    ] {
+        lines.push(format!(
+            "{key}\t{}",
+            u8::from(report.status_reasons.contains(&reason))
+        ));
+    }
     for section in &report.sections {
         let c = &section.counters;
         lines.push(format!(
@@ -355,7 +385,8 @@ mod tests {
         }
         assert!(text.contains("gold_replaced_lexical\t1"));
         assert!(text.contains("delta_content_per_mille\t"));
-        assert!(!text.contains("gold_section"));
+        assert!(!text.lines().any(|line| line.starts_with("gold_section\t")));
+        assert!(text.contains("gold_status\t0"));
         assert!(!text.contains("Martin") && !text.contains("diffusion"));
     }
 

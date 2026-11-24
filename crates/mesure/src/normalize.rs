@@ -11,7 +11,7 @@
 
 use unicode_normalization::UnicodeNormalization;
 
-use crate::entities::NAMED_ENTITIES;
+use crate::entities::{LEGACY_ENTITIES, NAMED_ENTITIES};
 
 /// Bloc de texte : un titre ou une ligne de corps.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -514,13 +514,61 @@ fn entity_at(text: &str) -> Option<(String, usize)> {
     Some((NAMED_ENTITIES[at].1.to_owned(), end + 1))
 }
 
+/// Entités HTML visibles dans un texte déjà décodé (issue 733) : `&nom;`
+/// d'une entité HTML5 connue (`NAMED_ENTITIES`) ou `&#…;`. L'appelant ne
+/// retient que celles de la version envoyée au-delà de la version générée :
+/// une entité citée volontairement des deux côtés ne compte pas. Temps
+/// linéaire.
+pub(crate) fn residual_entities(text: &str) -> usize {
+    let bytes = text.as_bytes();
+    let mut count = 0;
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] != b'&' {
+            i += 1;
+            continue;
+        }
+        let rest = &bytes[i + 1..];
+        let (body, digits_ok): (usize, fn(u8) -> bool) = match rest.first() {
+            Some(b'#') if matches!(rest.get(1), Some(b'x' | b'X')) => {
+                (2, |c: u8| c.is_ascii_hexdigit())
+            }
+            Some(b'#') => (1, |c: u8| c.is_ascii_digit()),
+            _ => (0, |c: u8| c.is_ascii_alphanumeric()),
+        };
+        let run = rest[body..]
+            .iter()
+            .take(33)
+            .take_while(|c| digits_ok(**c))
+            .count();
+        let named_starts_with_letter =
+            body > 0 || rest.first().is_some_and(u8::is_ascii_alphabetic);
+        let known = body > 0
+            || NAMED_ENTITIES
+                .binary_search_by(|(name, _)| name.as_bytes().cmp(&rest[..run]))
+                .is_ok();
+        if run > 0
+            && run <= 32
+            && named_starts_with_letter
+            && known
+            && rest.get(body + run) == Some(&b';')
+        {
+            count += 1;
+            i += 1 + body + run + 1;
+        } else {
+            i += 1;
+        }
+    }
+    count
+}
+
 fn decode_entities(text: &str) -> String {
     let mut out = String::with_capacity(text.len());
     let mut rest = text;
     while let Some(amp) = rest.find('&') {
         out.push_str(&rest[..amp]);
         rest = &rest[amp..];
-        match entity_at(rest) {
+        match entity_at(rest).or_else(|| legacy_entity_at(rest)) {
             Some((decoded, len)) => {
                 out.push_str(&decoded);
                 rest = &rest[len..];
@@ -533,6 +581,23 @@ fn decode_entities(text: &str) -> String {
     }
     out.push_str(rest);
     out
+}
+
+/// Entité historique sans point-virgule (`&nbsp`, `&eacute`), que HTML5
+/// décode dans le texte : le plus long nom de `LEGACY_ENTITIES` en tête.
+/// HTML seulement ; le Markdown (CommonMark) exige le point-virgule.
+fn legacy_entity_at(text: &str) -> Option<(String, usize)> {
+    let name: String = text[1..]
+        .chars()
+        .take(8)
+        .take_while(char::is_ascii_alphanumeric)
+        .collect();
+    (1..=name.len()).rev().find_map(|len| {
+        LEGACY_ENTITIES
+            .binary_search_by(|(legacy, _)| legacy.as_bytes().cmp(&name.as_bytes()[..len]))
+            .ok()
+            .map(|at| (LEGACY_ENTITIES[at].1.to_owned(), len + 1))
+    })
 }
 
 // --- Mots -----------------------------------------------------------------
@@ -767,6 +832,10 @@ mod tests {
             ("&#xD800;", "\u{fffd}"),
             ("&#99999999999;", "\u{fffd}"),
             ("&#00000000000000000000000000233;", "é"),
+            // Formes historiques sans point-virgule, décodées par HTML5.
+            ("&eacute", "é"),
+            ("Le&nbspprojet", "Le\u{a0}projet"),
+            ("&notit", "¬it"),
         ] {
             assert_eq!(decode_entities(entity), expected, "{entity}");
         }
@@ -778,7 +847,6 @@ mod tests {
             "&#12a;",
             "&inconnue;",
             "R&D",
-            "&eacute",
             "a & b ; c",
         ] {
             assert_eq!(decode_entities(kept), kept);

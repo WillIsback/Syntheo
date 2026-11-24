@@ -275,7 +275,21 @@ fn report_contains_no_free_text() {
                         .all(|c| c.is_ascii_digit() || ('a'..='f').contains(&c));
                 let role = path.ends_with(".role")
                     && ["decisions", "actions", "other"].contains(&s.as_str());
-                assert!(hash || role, "chaîne dans le rapport à {path} : {s:?}");
+                // Codes fermés des garde-fous (issue 733).
+                let status =
+                    path == "$.status" && ["ok", "doubtful", "refused"].contains(&s.as_str());
+                let reason = path.starts_with("$.status_reasons[")
+                    && [
+                        "entity_left",
+                        "too_few_words_kept",
+                        "global_alignment",
+                        "unmatched_sections",
+                    ]
+                    .contains(&s.as_str());
+                assert!(
+                    hash || role || status || reason,
+                    "chaîne dans le rapport à {path} : {s:?}"
+                );
             }
             serde_json::Value::Array(items) => {
                 for (i, item) in items.iter().enumerate() {
@@ -434,7 +448,7 @@ fn only_the_cli_and_the_calibration_plugin_enable_differences() {
     }
 }
 
-// Contrat d'export de la bêta (issue 672), `schema/export-v1.json` : tout
+// Contrat d'export de la bêta (issue 672), `schema/export-v2.json` : tout
 // objet est fermé et toute chaîne a un motif, une liste fermée ou une
 // constante. Un champ libre ajouté au schéma fait échouer ce test.
 #[test]
@@ -480,14 +494,47 @@ fn export_schema_is_closed_and_has_no_free_string() {
         }
     }
     let schema: serde_json::Value =
-        serde_json::from_str(include_str!("../schema/export-v1.json")).unwrap();
-    assert_eq!(schema["properties"]["schema_version"]["const"], 1);
+        serde_json::from_str(include_str!("../schema/export-v2.json")).unwrap();
+    assert_eq!(schema["properties"]["schema_version"]["const"], 2);
     walk(&schema, "$");
+    // Garde-fous (issue 733) : codes du schéma identiques à ceux du crate ;
+    // une mesure refusée n'est pas exportable.
+    let meeting = &schema["$defs"]["meeting"]["properties"];
+    assert_eq!(
+        meeting["status"]["enum"],
+        serde_json::json!(["ok", "doubtful"])
+    );
+    assert_eq!(
+        meeting["status_reasons"]["items"]["enum"],
+        serde_json::json!(["global_alignment", "unmatched_sections"])
+    );
+    let controls = serde_json::to_value(Controls::default()).unwrap();
+    let mut crate_keys: Vec<&String> = controls.as_object().unwrap().keys().collect();
+    let mut schema_keys: Vec<&String> = schema["$defs"]["controls"]["properties"]
+        .as_object()
+        .unwrap()
+        .keys()
+        .collect();
+    crate_keys.sort();
+    schema_keys.sort();
+    assert_eq!(crate_keys, schema_keys);
+    for reason in ["global_alignment", "unmatched_sections"] {
+        assert!(
+            serde_json::to_value([
+                StatusReason::GlobalAlignment,
+                StatusReason::UnmatchedSections
+            ])
+            .unwrap()
+            .as_array()
+            .unwrap()
+            .contains(&serde_json::json!(reason))
+        );
+    }
     // Les exemples restent du JSON valide (leur validation par le schéma est
     // faite par l'outil d'agrégation, issue 673).
     for example in [
-        include_str!("../schema/export-v1.example.json"),
-        include_str!("../schema/export-v1.invalid.json"),
+        include_str!("../schema/export-v2.example.json"),
+        include_str!("../schema/export-v2.invalid.json"),
     ] {
         serde_json::from_str::<serde_json::Value>(example).unwrap();
     }
@@ -1337,4 +1384,156 @@ fn a_plain_text_line_one_word_from_a_title_opens_its_section() {
     )
     .unwrap();
     assert!(!report.sections[0].matched);
+}
+
+// --- Garde-fous (issue 733) ------------------------------------------------
+// Noms fictifs uniquement.
+
+fn html_report(sent: &str) -> Report {
+    measure(
+        GENERATED,
+        Format::Markdown,
+        sent,
+        Format::Html,
+        &Dictionary::default(),
+    )
+    .unwrap()
+}
+
+// Collage encodé deux fois (`&amp;eacute;`) : après décodage, le texte
+// montre encore `&eacute;`, comme la page d'origine. La lecture a échoué.
+#[test]
+fn a_paste_with_undecoded_entities_is_refused() {
+    let sent = "<h1>R&eacute;sum&eacute;</h1><p>Le projet avance bien. Le budget est valid&eacute; par la direction.</p><h2>D&eacute;cisions</h2><ul><li>Lancer le pilote en janvier avec Martin.</li><li>Garder le serveur actuel.</li></ul><h2>Actions</h2><ul><li>Envoyer le compte rendu &agrave; l&amp;rsquo;&amp;eacute;quipe.</li></ul>";
+    let report = html_report(sent);
+    assert_eq!(report.controls.residual_entities, 2);
+    assert_eq!(report.status, MeasureStatus::Refused);
+    assert_eq!(report.status_reasons, [StatusReason::EntityLeft]);
+}
+
+#[test]
+fn too_few_words_kept_is_refused() {
+    let report = run(
+        GENERATED,
+        "# Résumé\n\nTout a été réécrit autrement.\n\n## Décisions\n\nRien ne reste.\n\n## Actions\n\nAucune phrase commune.\n",
+    );
+    assert!(report.controls.generated_kept_words * 2 < report.total.generated);
+    assert_eq!(report.status, MeasureStatus::Refused);
+    assert_eq!(report.status_reasons, [StatusReason::TooFewWordsKept]);
+}
+
+#[test]
+fn global_alignment_and_missing_sections_are_doubtful() {
+    // Texte sans titres : mesure globale.
+    let sent = "Le projet avance bien. Le budget est validé par la direction. Lancer le pilote en janvier avec Martin. Garder le serveur actuel. Envoyer le compte rendu à l'équipe.";
+    let report = measure(
+        GENERATED,
+        Format::Markdown,
+        sent,
+        Format::Text,
+        &Dictionary::default(),
+    )
+    .unwrap();
+    assert_eq!(report.status, MeasureStatus::Doubtful);
+    assert_eq!(report.status_reasons, [StatusReason::GlobalAlignment]);
+    // Section « Actions » absente : 7 mots sur 31, plus de 10 %.
+    let sent = "# Résumé\n\nLe projet avance bien. Le budget est validé par la direction.\n\n## Décisions\n\n- Lancer le pilote en janvier avec Martin.\n- Garder le serveur actuel.\n";
+    let report = run(GENERATED, sent);
+    assert_eq!(report.controls.deleted_section_words, 7);
+    assert_eq!(report.status, MeasureStatus::Doubtful);
+    assert_eq!(report.status_reasons, [StatusReason::UnmatchedSections]);
+}
+
+#[test]
+fn a_near_title_is_reported_and_an_identical_text_is_ok() {
+    let report = run(GENERATED, GENERATED);
+    assert_eq!(report.status, MeasureStatus::Ok);
+    assert_eq!(report.guard_version, GUARD_VERSION);
+    assert_eq!(report.controls.generated_kept_words, report.total.generated);
+    assert_eq!(report.controls.sections_matched_exact, 3);
+    assert_eq!(report.controls.sections_matched_near, 0);
+    let report = run(GENERATED, &GENERATED.replace("## Actions", "## Action"));
+    assert_eq!(report.controls.sections_matched_exact, 2);
+    assert_eq!(report.controls.sections_matched_near, 1);
+    assert_eq!(report.status, MeasureStatus::Ok);
+}
+
+#[test]
+fn guard_thresholds_use_integers_at_the_boundary() {
+    let controls = |kept, deleted| Controls {
+        generated_kept_words: kept,
+        deleted_section_words: deleted,
+        ..Controls::default()
+    };
+    // Exactement 50 % retrouvés : pas refusé ; exactement 10 % non
+    // retrouvés : pas douteux.
+    assert_eq!(guard(100, true, &controls(50, 10)).0, MeasureStatus::Ok);
+    assert_eq!(guard(100, true, &controls(49, 0)).0, MeasureStatus::Refused);
+    assert_eq!(
+        guard(100, true, &controls(100, 11)).0,
+        MeasureStatus::Doubtful
+    );
+    assert_eq!(guard(0, true, &controls(0, 0)).0, MeasureStatus::Ok);
+}
+
+#[test]
+fn residual_entities_are_counted_in_linear_time() {
+    // Entités connues et références numériques seulement : `&foo;` ou
+    // `R&D;` ne sont pas des entités.
+    assert_eq!(
+        normalize::residual_entities("a &foo; b &#12; &nbsp; &#xZ; & ; &1x; &abc R&D;"),
+        2
+    );
+    let started = std::time::Instant::now();
+    assert_eq!(normalize::residual_entities(&"&".repeat(1_000_000)), 0);
+    assert_eq!(normalize::residual_entities(&"&a".repeat(500_000)), 0);
+    assert!(started.elapsed() < std::time::Duration::from_secs(2));
+}
+
+// Relecture de l'issue 733 : une entité citée volontairement des deux côtés
+// ne fait pas refuser la mesure ; une section retitrée garde ses mots
+// retrouvés (douteux au plus, jamais refusé pour cela).
+#[test]
+fn quoted_entities_and_renamed_sections_are_not_refused() {
+    for (text, format) in [
+        (
+            "# Note\n\nRemplacez &amp;nbsp; par une espace.\n",
+            Format::Markdown,
+        ),
+        ("# Note\n\n```\nTom &amp; Jerry\n```\n", Format::Markdown),
+        (
+            "<h1>Note</h1><p>Remplacez &amp;nbsp; par une espace.</p>",
+            Format::Html,
+        ),
+        ("Note\nQ&A; demain, R&D; ensuite.\n", Format::Text),
+    ] {
+        let report = measure(text, format, text, format, &Dictionary::default()).unwrap();
+        assert_eq!(report.controls.residual_entities, 0, "{text}");
+        assert!(
+            !report.status_reasons.contains(&StatusReason::EntityLeft),
+            "{text}"
+        );
+        assert_ne!(report.status, MeasureStatus::Refused, "{text}");
+    }
+    let generated = "# Compte rendu\n\n## Participants\n\nHélène, Bastien.\n\n## Points abordés\n\nLe prestataire livre la deuxième version du portail et les tests d'accessibilité commencent la semaine prochaine avec les équipes des trois sites, puis un bilan sera présenté au comité de pilotage du mois suivant avec les premiers résultats et les difficultés rencontrées.\n\n## Décisions\n\nGarder le prestataire.\n\n## Actions\n\nEnvoyer le compte rendu.\n";
+    let sent = generated.replace("## Points abordés", "## Discussion");
+    let report = run(generated, &sent);
+    assert!(report.controls.generated_kept_words + 2 >= report.total.generated);
+    assert_eq!(report.status, MeasureStatus::Doubtful);
+    assert_eq!(report.status_reasons, [StatusReason::UnmatchedSections]);
+}
+
+// L'outil d'agrégation recalcule le statut avec ses propres seuils : ils
+// doivent rester ceux du crate pour la version courante des garde-fous.
+#[test]
+fn aggregation_tool_uses_the_crate_guard_thresholds() {
+    // Espaces et retours à la ligne fusionnés : indépendant du formatage.
+    let tool: String = include_str!("../../../scripts/beta/agregation.mjs")
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
+    let line = format!(
+        "{GUARD_VERSION}: {{ mots_retrouves_min_pourcent: {MIN_KEPT_PERCENT}, sections_non_retrouvees_max_pourcent: {MAX_UNMATCHED_PERCENT}, }}"
+    );
+    assert!(tool.contains(&line), "{line}");
 }
