@@ -1,17 +1,23 @@
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 
 import { useChatContext } from "./chat-context";
 
 import type { ChatScope } from "~/chat/types";
+import { useIntelligenceDisabled } from "~/settings/managed";
 import { useTabs } from "~/store/zustand/tabs";
 
 export function useChatMode() {
   const mode = useTabs((state) => state.chatMode);
   const transitionChatMode = useTabs((state) => state.transitionChatMode);
-  const scope = useTabs(
-    (state): ChatScope =>
-      state.currentTab?.type === "automations" ? "automations" : "general",
+  const setChatBlocked = useTabs((state) => state.setChatBlocked);
+  const chatBlocked = useIntelligenceDisabled().blocked;
+  // Issue 718 : synthèse coupée par l'administration, pas de chat non plus.
+  useEffect(() => {
+    setChatBlocked(chatBlocked);
+  }, [chatBlocked, setChatBlocked]);
+  const scope = useTabs((state): ChatScope =>
+    state.currentTab?.type === "automations" ? "automations" : "general",
   );
 
   const selection = useChatContext((state) => state.chatByScope[scope]);
