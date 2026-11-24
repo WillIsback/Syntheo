@@ -3721,6 +3721,11 @@ msgstr "Not enough free disk space for the models (2 GB needed)."
 msgid "not enough free memory (1.5 GB needed)"
 msgstr "not enough free memory (1.5 GB needed)"
 
+#: src/session/hooks/useGenerateSummary.ts
+#: src/shared/service-error.ts
+msgid "Not enough transcript was recorded to write a summary."
+msgstr "Not enough transcript was recorded to write a summary."
+
 #: src/services/enhancer/eligibility.ts
 msgid "Not enough words recorded ({wordCount}/{minWords} minimum)"
 msgstr "Not enough words recorded ({wordCount}/{minWords} minimum)"
@@ -5038,6 +5043,10 @@ msgstr "Set up a language model (an OpenAI-compatible endpoint on your infrastru
 msgid "Set up AI summaries"
 msgstr "Set up AI summaries"
 
+#: src/session/hooks/useGenerateSummary.ts
+msgid "Set up AI summaries first."
+msgstr "Set up AI summaries first."
+
 #: src/session/components/note-input/enhanced-actions.ts
 msgid "Set up Intelligence in Settings before regenerating this summary."
 msgstr "Set up Intelligence in Settings before regenerating this summary."
@@ -5185,6 +5194,10 @@ msgstr "Something went wrong"
 #: src/session/components/note-input/enhanced/enhance-error.tsx
 msgid "Something went wrong while generating the summary."
 msgstr "Something went wrong while generating the summary."
+
+#: src/shared/service-error.ts
+msgid "Something went wrong. Try again."
+msgstr "Something went wrong. Try again."
 
 #: src/contacts/related-notes.tsx
 #: src/contacts/shared.tsx
@@ -5446,6 +5459,10 @@ msgstr "Summary format cannot be empty."
 #: src/session/components/note-input/enhanced/enhance-error.tsx
 msgid "Summary generation failed"
 msgstr "Summary generation failed"
+
+#: src/session/hooks/useGenerateSummary.ts
+msgid "Summary generation is not ready yet."
+msgstr "Summary generation is not ready yet."
 
 #: src/templates/template-preview.tsx
 msgid "Summary preview"
@@ -5904,6 +5921,10 @@ msgstr "The command was not confirmed, so it did not run."
 msgid "The computer is on battery or in power saving mode: plug it in or switch to performance mode, then run the test again."
 msgstr "The computer is on battery or in power saving mode: plug it in or switch to performance mode, then run the test again."
 
+#: src/shared/service-error.ts
+msgid "The connection to the server was interrupted. Try again."
+msgstr "The connection to the server was interrupted. Try again."
+
 #: src/chat/components/message/tool/session-correction.tsx
 msgid "The correction could not be applied."
 msgstr "The correction could not be applied."
@@ -6122,17 +6143,45 @@ msgstr "The server answers, but neither as an OpenAI server nor as NVIDIA NeMo-S
 msgid "The server answers, but not as an OpenAI-compatible API. Check that the address ends with /v1, then test again."
 msgstr "The server answers, but not as an OpenAI-compatible API. Check that the address ends with /v1, then test again."
 
+#: src/shared/service-error.ts
+msgid "The server could not be reached. Check that it is running and that its address in Settings is correct."
+msgstr "The server could not be reached. Check that it is running and that its address in Settings is correct."
+
+#: src/shared/service-error.ts
+msgid "The server could not process this request ({status}). Check the model and the server settings."
+msgstr "The server could not process this request ({status}). Check the model and the server settings."
+
 #: src/settings/ai/shared/server-card.tsx
 msgid "The server did not answer at {host}. Check that it is running and that you are on the right network (VPN, Tailscale), then test again."
 msgstr "The server did not answer at {host}. Check that it is running and that you are on the right network (VPN, Tailscale), then test again."
+
+#: src/shared/service-error.ts
+msgid "The server is busy or the quota is reached. Try again in a few minutes."
+msgstr "The server is busy or the quota is reached. Try again in a few minutes."
 
 #: src/settings/ai/shared/server-card.tsx
 msgid "The server refused the API key. Check it under “Advanced”, then test again."
 msgstr "The server refused the API key. Check it under “Advanced”, then test again."
 
+#: src/shared/service-error.ts
+msgid "The server refused the request. Check that the API key is allowed to use this model."
+msgstr "The server refused the request. Check that the API key is allowed to use this model."
+
+#: src/shared/service-error.ts
+msgid "The server rejected the API key. Check it in Settings."
+msgstr "The server rejected the API key. Check it in Settings."
+
+#: src/shared/service-error.ts
+msgid "The server returned an error ({status}). Try again later, or check the server logs."
+msgstr "The server returned an error ({status}). Try again later, or check the server logs."
+
 #: src/settings/ai/stt/index.tsx
 msgid "The server that turns speech into text during your meetings. Audio is never written to disk."
 msgstr "The server that turns speech into text during your meetings. Audio is never written to disk."
+
+#: src/shared/service-error.ts
+msgid "The server took too long to answer. Try again."
+msgstr "The server took too long to answer. Try again."
 
 #: src/settings/ai/stt/server-card.tsx
 msgid "The server transcribes with the model it loaded, whatever the model chosen here."
@@ -6469,6 +6518,10 @@ msgstr "This note has no summary to edit yet."
 #: src/session/components/note-conflict-banner.tsx
 msgid "This note was edited on another device at the same time. The later edit was kept."
 msgstr "This note was edited on another device at the same time. The later edit was kept."
+
+#: src/shared/service-error.ts
+msgid "This proposal is out of date: the meeting changed after it was created."
+msgstr "This proposal is out of date: the meeting changed after it was created."
 
 #: src/chat/components/session-provider.tsx
 msgid "This recording is using batch transcription, so the transcript isn't available to chat yet. Ask again after transcription finishes, or switch to a Pro model for live transcription."

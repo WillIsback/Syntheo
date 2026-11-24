@@ -27,6 +27,7 @@ import {
   loadSessionContentSnapshot,
   type SessionContentSnapshot,
 } from "~/session/content-queries";
+import { describeServiceError } from "~/shared/service-error";
 import { createTaskId } from "~/store/zustand/ai-task/task-configs";
 import {
   isRetryableAIError,
@@ -451,7 +452,8 @@ export class EnhancerService {
   private handleAutoEnhanceError(sessionId: string, error: unknown) {
     this.activeAutoEnhance.delete(sessionId);
     this.clearRetry(sessionId);
-    const reason = error instanceof Error ? error.message : String(error);
+    // Issue 713 : raison traduite, sans l'adresse du serveur.
+    const reason = describeServiceError(error);
     console.error("[enhancer] auto-enhance failed", error);
     this.schedulePendingAutoEnhanceResume();
     this.emit({

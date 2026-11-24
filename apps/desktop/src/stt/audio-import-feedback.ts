@@ -11,6 +11,7 @@ import {
 import { useUsableTranscription } from "./usable-transcription";
 import { useSTTConnection } from "./useSTTConnection";
 
+import { describeServiceError } from "~/shared/service-error";
 import { useTabs } from "~/store/zustand/tabs";
 
 /**
@@ -121,7 +122,9 @@ export function describeAudioImportError(error: unknown): string {
   if (/^audio_upload_/.test(message)) {
     return t`Syntheo couldn't read this file.`;
   }
-  return message;
+  // Issue 713 : message traduit, sans adresse complète (« UnexpectedStatus
+  // { status: 500, … } » et autres messages bruts du transport).
+  return describeServiceError(error);
 }
 
 /** Assez long pour lire et cliquer, sans rester sur les écrans suivants. */

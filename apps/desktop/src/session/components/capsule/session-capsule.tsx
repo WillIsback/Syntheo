@@ -31,6 +31,7 @@ import {
 import { useIntelligenceDisabled } from "~/settings/managed";
 import { showFinishListeningToExport } from "~/shared/export-shortcut";
 import { leaveOverlayTab } from "~/shared/leave-overlay-tab";
+import { describeServiceError } from "~/shared/service-error";
 import { registerShortcutAction } from "~/shared/shortcut-actions";
 import { getShortcut, getShortcutPlatform } from "~/shared/shortcuts";
 import { ignoreUnlessTyped } from "~/shared/typed-key";
@@ -277,7 +278,7 @@ export function SessionCapsule({
   const summaryBlocked = useIntelligenceDisabled().blocked;
   const generateSummary = useCallback(() => {
     summary.generate(undefined, {
-      onError: (error) => toast.error(error.message),
+      onError: (error) => toast.error(describeServiceError(error)),
     });
   }, [summary]);
 

@@ -42,6 +42,17 @@ describe("getLiveTranscriptPausedMessage", () => {
     );
   });
 
+  // Issue 713 : un 401 n'est plus annoncé « hors ligne ».
+  it("reports a rejected API key even when the connection looks offline", () => {
+    const message = getLiveTranscriptPausedMessage({
+      degraded: { type: "authentication_failed", provider: "nvidia" },
+      sttProvider: "nvidia",
+      online: false,
+    });
+    expect(message).toMatch(/rejected your API key/);
+    expect(message).not.toMatch(/offline/);
+  });
+
   it("only reconnects the on-device module after a failed launch", () => {
     expect(
       getLiveTranscriptPausedMessage({

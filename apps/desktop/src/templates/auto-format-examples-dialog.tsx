@@ -28,6 +28,7 @@ import {
 } from "./auto-format-inference";
 
 import { useLanguageModel } from "~/ai/hooks";
+import { describeServiceError } from "~/shared/service-error";
 
 export function AutoFormatExamplesDialog({
   onClose,
@@ -59,7 +60,7 @@ export function AutoFormatExamplesDialog({
       onGenerated(format);
       onClose();
     },
-    onError: (error) => toast.error(error.message),
+    onError: (error) => toast.error(describeServiceError(error)),
   });
 
   const updateExample = (index: number, value: string) => {
