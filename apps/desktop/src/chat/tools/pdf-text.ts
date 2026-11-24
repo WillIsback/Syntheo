@@ -1,5 +1,12 @@
+// Issue 654 : un PDF joint vient de l'extérieur. Ces plafonds bornent la
+// mémoire (flux décompressés par morceaux, budget total) et le temps (flux
+// traités un par un, lecteurs linéaires).
 const MAX_STREAMS = 64;
 const MAX_INFLATE_BYTES = 2_000_000;
+const MAX_TOTAL_INFLATE_BYTES = 8_000_000;
+
+/** Jeton ouvert jamais fermé : la suite du flux ne peut plus être lue. */
+const UNTERMINATED = Symbol("unterminated");
 
 export function isPdfMaterial(contentType: string, filename: string): boolean {
   return (
@@ -22,16 +29,19 @@ export async function extractPdfText(
     return null;
   }
 
-  const streams = collectPdfStreams(data).slice(0, MAX_STREAMS);
-  const decoded = await Promise.all(
-    streams.map((stream) => decodePdfStream(stream)),
-  );
-
+  const streams = collectPdfStreams(data);
   const chunks: string[] = [];
-  for (const content of decoded) {
-    if (!content) {
+  let budget = MAX_TOTAL_INFLATE_BYTES;
+  for (const stream of streams) {
+    if (budget <= 0) {
+      break;
+    }
+    const decoded = await decodePdfStream(stream, budget);
+    if (!decoded) {
       continue;
     }
+    budget -= decoded.inflatedBytes;
+    const content = decoded.text;
     const text = extractPdfOperators(content);
     if (text) {
       chunks.push(text);
@@ -73,7 +83,7 @@ function collectPdfStreams(bytes: Uint8Array): PdfStream[] {
   const streams: PdfStream[] = [];
   const pattern = /stream\r?\n/g;
   let match: RegExpExecArray | null = pattern.exec(source);
-  while (match) {
+  while (match && streams.length < MAX_STREAMS) {
     const dictionary = source.slice(
       Math.max(0, match.index - 512),
       match.index,
@@ -118,22 +128,29 @@ function pdfStreamByteLength(
   return Number.isFinite(declared) ? declared : null;
 }
 
-async function decodePdfStream(stream: PdfStream): Promise<string | null> {
+async function decodePdfStream(
+  stream: PdfStream,
+  budget: number,
+): Promise<{ text: string; inflatedBytes: number } | null> {
   const filtered = /\/Filter\b/.test(stream.dictionary);
   const flate = /\/FlateDecode\b/.test(stream.dictionary);
   if (flate) {
-    const inflated = await inflateZlib(trimPdfStream(stream.data));
+    const inflated = await inflateZlib(
+      trimPdfStream(stream.data),
+      Math.min(MAX_INFLATE_BYTES, budget),
+    );
     if (!inflated) {
       return null;
     }
-    return latin1Decode(inflated);
+    return { text: latin1Decode(inflated), inflatedBytes: inflated.length };
   }
 
   if (filtered) {
     return null;
   }
 
-  return latin1Decode(trimPdfStream(stream.data));
+  const raw = trimPdfStream(stream.data).subarray(0, MAX_INFLATE_BYTES);
+  return { text: latin1Decode(raw), inflatedBytes: raw.length };
 }
 
 function trimPdfStream(data: Uint8Array): Uint8Array {
@@ -153,24 +170,50 @@ function trimPdfStream(data: Uint8Array): Uint8Array {
   return data;
 }
 
-async function inflateZlib(data: Uint8Array): Promise<Uint8Array | null> {
+/**
+ * Décompresse par morceaux et s'arrête à `limit` octets : une « bombe »
+ * zlib (quelques Ko qui en donnent des Go) n'est jamais décompressée en
+ * entier (issue 654).
+ */
+export async function inflateZlib(
+  data: Uint8Array,
+  limit = MAX_INFLATE_BYTES,
+): Promise<Uint8Array | null> {
   const copy = Uint8Array.from(data);
   for (const format of ["deflate", "deflate-raw"] as const) {
+    const decompressor = new DecompressionStream(format);
+    const writer = decompressor.writable.getWriter();
+    // Écrit sans attendre : la lecture ci-dessous vide la sortie au fur et
+    // à mesure, et l'annulation interrompt l'écriture.
+    void writer
+      .write(copy)
+      .then(() => writer.close())
+      .catch(() => undefined);
+    const reader = decompressor.readable.getReader();
+    const parts: Uint8Array[] = [];
+    let total = 0;
     try {
-      const decompressor = new DecompressionStream(format);
-      const writer = decompressor.writable.getWriter();
-      await writer.write(copy);
-      await writer.close();
-      const inflated = new Uint8Array(
-        await new Response(decompressor.readable).arrayBuffer(),
-      );
-      if (inflated.byteLength > MAX_INFLATE_BYTES) {
-        return inflated.subarray(0, MAX_INFLATE_BYTES);
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const keep = Math.min(value.length, limit - total);
+        parts.push(value.subarray(0, keep));
+        total += keep;
+        if (total >= limit) {
+          await reader.cancel().catch(() => undefined);
+          break;
+        }
       }
-      return inflated;
     } catch {
       continue;
     }
+    const inflated = new Uint8Array(total);
+    let offset = 0;
+    for (const part of parts) {
+      inflated.set(part, offset);
+      offset += part.length;
+    }
+    return inflated;
   }
   return null;
 }
@@ -181,6 +224,11 @@ function extractPdfOperators(content: string): string {
 
   while (index < content.length) {
     const operand = readPdfOperand(content, index);
+    if (operand === UNTERMINATED) {
+      // Un jeton jamais fermé : le relire à chaque position suivante
+      // rendrait la lecture quadratique (issue 654).
+      break;
+    }
     if (!operand) {
       index += 1;
       continue;
@@ -197,10 +245,10 @@ function extractPdfOperators(content: string): string {
 function readPdfOperand(
   content: string,
   index: number,
-): { end: number; text: string | null } | null {
+): { end: number; text: string | null } | null | typeof UNTERMINATED {
   const parsed = readPdfOperandValue(content, index);
-  if (!parsed) {
-    return null;
+  if (!parsed || parsed === UNTERMINATED) {
+    return parsed;
   }
   return {
     end: parsed.end,
@@ -208,7 +256,9 @@ function readPdfOperand(
   };
 }
 
-function readPdfOperandValue(content: string, index: number): PdfToken | null {
+type PdfRead = PdfToken | null | typeof UNTERMINATED;
+
+function readPdfOperandValue(content: string, index: number): PdfRead {
   const char = content[index];
   if (char === "(") {
     return readPdfLiteral(content, index);
@@ -222,13 +272,16 @@ function readPdfOperandValue(content: string, index: number): PdfToken | null {
   return null;
 }
 
-const SHOW_OPERATOR_PATTERN = /^\s*('|"|Tj|TJ)/;
+// Expression collante (« y ») : testée à la position voulue, sans copier
+// la fin du flux à chaque opérande.
+const SHOW_OPERATOR_PATTERN = /\s*('|"|Tj|TJ)/y;
 
 function isPdfShowOperator(content: string, index: number): boolean {
-  return SHOW_OPERATOR_PATTERN.exec(content.slice(index)) !== null;
+  SHOW_OPERATOR_PATTERN.lastIndex = index;
+  return SHOW_OPERATOR_PATTERN.test(content);
 }
 
-function readPdfLiteral(content: string, start: number): PdfToken | null {
+function readPdfLiteral(content: string, start: number): PdfRead {
   if (content[start] !== "(") {
     return null;
   }
@@ -260,7 +313,7 @@ function readPdfLiteral(content: string, start: number): PdfToken | null {
     }
   }
 
-  return null;
+  return UNTERMINATED;
 }
 
 function unescapePdfChar(char: string): string {
@@ -280,14 +333,14 @@ function unescapePdfChar(char: string): string {
   }
 }
 
-function readPdfHex(content: string, start: number): PdfToken | null {
+function readPdfHex(content: string, start: number): PdfRead {
   if (content[start] !== "<") {
     return null;
   }
 
   const end = content.indexOf(">", start + 1);
   if (end < 0) {
-    return null;
+    return UNTERMINATED;
   }
 
   const clean = content.slice(start + 1, end).replace(/\s+/g, "");
@@ -302,7 +355,7 @@ function readPdfHex(content: string, start: number): PdfToken | null {
   return { value, end: end + 1 };
 }
 
-function readPdfTjArray(content: string, start: number): PdfToken | null {
+function readPdfTjArray(content: string, start: number): PdfRead {
   if (content[start] !== "[") {
     return null;
   }
@@ -316,8 +369,8 @@ function readPdfTjArray(content: string, start: number): PdfToken | null {
     }
     if (char === "(") {
       const parsed = readPdfLiteral(content, index);
-      if (!parsed) {
-        return null;
+      if (!parsed || parsed === UNTERMINATED) {
+        return parsed;
       }
       parts.push(parsed.value);
       index = parsed.end;
@@ -325,8 +378,8 @@ function readPdfTjArray(content: string, start: number): PdfToken | null {
     }
     if (char === "<" && content[index + 1] !== "<") {
       const parsed = readPdfHex(content, index);
-      if (!parsed) {
-        return null;
+      if (!parsed || parsed === UNTERMINATED) {
+        return parsed;
       }
       parts.push(parsed.value);
       index = parsed.end;
@@ -335,7 +388,7 @@ function readPdfTjArray(content: string, start: number): PdfToken | null {
     index += 1;
   }
 
-  return null;
+  return UNTERMINATED;
 }
 
 function latin1Decode(bytes: Uint8Array): string {

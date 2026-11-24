@@ -122,6 +122,10 @@ export function describeAudioImportError(error: unknown): string {
   if (/^audio_upload_/.test(message)) {
     return t`Syntheo couldn't read this file.`;
   }
+  // Issue 654 : enregistrement plus long que le plafond d'import (6 h).
+  if (/recording_too_long/.test(message)) {
+    return t`This recording is longer than 6 hours: split it into shorter files, then import them.`;
+  }
   // Issue 714 : pas encore de décodeur Opus, refus avant tout envoi.
   if (/unsupported audio codec: opus/i.test(message)) {
     return t`Opus files (.ogg, .opus, .webm in Opus) are not supported yet: convert the file to MP3, M4A or WAV, then import it again.`;
