@@ -166,7 +166,14 @@ function SummarySwitcherForNote({
             view={view}
             onSelectView={onSelectView}
             currentVersion={(versions[0]?.version ?? 0) + 1}
-            hasSummary={!!note || isGenerating || versions.length > 0}
+            // Un corps vide jamais généré (document créé à l'arrêt) ne
+            // compte pas comme un compte rendu (passe QA 0.8.1-1).
+            hasSummary={
+              noteMarkdown.length > 0 ||
+              !!note?.generatedAt ||
+              isGenerating ||
+              versions.length > 0
+            }
             currentDate={formatVersionDate(note?.generatedAt, i18n.locale)}
             versions={versionOptions}
             isGenerating={isGenerating}

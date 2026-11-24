@@ -1,9 +1,12 @@
+import { t } from "@lingui/core/macro";
+
 import { md2json } from "@syntheo/editor/markdown";
 import type { JSONContent, PlaceholderFunction } from "@syntheo/editor/note";
 
+// Titre vide du document : texte d'attente traduit (passe QA 0.8.1-1).
 export const documentTitlePlaceholder: PlaceholderFunction = ({ node, pos }) =>
   pos === 0 && node.type.name === "heading" && node.attrs.level === 1
-    ? "Untitled"
+    ? t`Untitled`
     : "";
 
 export function extractSectionHeadings(content: JSONContent): string[] {

@@ -200,6 +200,38 @@ async fn purge_in_transaction(
     Ok(outcome)
 }
 
+/// Issue du VACUUM unique de la 0.8.1.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "snake_case")]
+pub enum SecureVacuumOutcome {
+    AlreadyDone,
+    Done,
+    Busy,
+}
+
+/// VACUUM unique après la purge des anciennes suppressions (voir
+/// `syntheo_db_app::secure_vacuum_once`). Journal : issue et durée.
+pub async fn secure_vacuum_once(pool: &SqlitePool) -> Result<SecureVacuumOutcome, String> {
+    let started = std::time::Instant::now();
+    let outcome = syntheo_db_app::secure_vacuum_once(pool)
+        .await
+        .map_err(|error| error.to_string())?;
+    Ok(match outcome {
+        syntheo_db_app::SecureVacuum::AlreadyDone => SecureVacuumOutcome::AlreadyDone,
+        syntheo_db_app::SecureVacuum::Done => {
+            tracing::info!(
+                elapsed_ms = started.elapsed().as_millis() as u64,
+                "secure_vacuum_done"
+            );
+            SecureVacuumOutcome::Done
+        }
+        syntheo_db_app::SecureVacuum::Busy => {
+            tracing::warn!("secure_vacuum_postponed_database_busy");
+            SecureVacuumOutcome::Busy
+        }
+    })
+}
+
 /// Sessions supprimées en attente de purge (voir
 /// `syntheo_db_app::expired_deleted_sessions`).
 pub async fn list_expired_deleted_sessions(

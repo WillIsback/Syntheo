@@ -39,6 +39,7 @@ const hoisted = vi.hoisted(() => ({
   } as LLMConnectionStatus,
   content: "",
   noteExists: true,
+  generatedAt: null as string | null,
   sessionTitle: "",
   enhancedEditorMountCount: 0,
   generate: vi.fn(),
@@ -88,7 +89,9 @@ vi.mock("~/ai/hooks", () => ({
 
 vi.mock("~/session/queries", () => ({
   useEnhancedNote: () =>
-    hoisted.noteExists ? { content: hoisted.content } : null,
+    hoisted.noteExists
+      ? { content: hoisted.content, generatedAt: hoisted.generatedAt }
+      : null,
 }));
 
 vi.mock("./config-error", () => ({
@@ -172,6 +175,7 @@ describe("Enhanced", () => {
     };
     hoisted.content = "";
     hoisted.noteExists = true;
+    hoisted.generatedAt = null;
     hoisted.sessionTitle = "";
     hoisted.enhancedEditorMountCount = 0;
     hoisted.generate.mockReset();
@@ -477,6 +481,40 @@ describe("Enhanced", () => {
     view.rerender(element());
     expect(screen.getByText("Generated summary")).not.toBeNull();
     client.clear();
+  });
+
+  // Passe QA 0.8.1-1 : note terminée sans compte rendu. L'arrêt crée la
+  // synthèse par défaut au corps vide ; l'onglet propose la génération au
+  // lieu d'un éditeur vide titré « Untitled ».
+  it.each([
+    "",
+    '{"type":"doc","content":[{"type":"heading","attrs":{"level":1}}]}',
+  ])(
+    "offers generation for an empty default summary document (%s)",
+    (content) => {
+      hoisted.content = content;
+      const client = new QueryClient();
+      render(
+        <QueryClientProvider client={client}>
+          <Enhanced sessionId="session-1" enhancedNoteId="summary:session-1" />
+        </QueryClientProvider>,
+      );
+
+      expect(
+        screen.getByRole("button", { name: "Generate the summary" }),
+      ).not.toBeNull();
+      expect(screen.queryByText("Enhanced editor")).toBeNull();
+      client.clear();
+    },
+  );
+
+  it("keeps the editor for a generated summary emptied by hand", () => {
+    hoisted.generatedAt = "2026-11-24T10:00:00.000Z";
+    render(
+      <Enhanced sessionId="session-1" enhancedNoteId="summary:session-1" />,
+    );
+
+    expect(screen.getByText("Enhanced editor")).not.toBeNull();
   });
 
   // Issue 707 : synthèse coupée par l'administration. Le bouton « Generate

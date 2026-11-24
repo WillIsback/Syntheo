@@ -65,6 +65,21 @@ pub(crate) async fn list_expired_deleted_sessions<R: tauri::Runtime>(
     deletion::list_expired_deleted_sessions(runtime.pool()).await
 }
 
+/// VACUUM unique de la 0.8.1, sous le verrou d'écriture : les écritures
+/// passées par les commandes attendent la fin au lieu d'échouer.
+#[tauri::command]
+#[specta::specta]
+pub(crate) async fn secure_vacuum_once<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+) -> Result<deletion::SecureVacuumOutcome, String> {
+    let runtime = app
+        .try_state::<tauri_plugin_db::ManagedState>()
+        .map(|state| state.inner().clone())
+        .ok_or_else(|| "database is not ready yet".to_string())?;
+    let _guard = runtime.synced_write_guard().await;
+    deletion::secure_vacuum_once(runtime.pool()).await
+}
+
 session_write_command!(
     add_session_participant,
     participants,

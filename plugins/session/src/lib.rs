@@ -27,6 +27,7 @@ fn make_specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
             commands::restore_deleted_session::<Wry>,
             commands::purge_deleted_session::<Wry>,
             commands::list_expired_deleted_sessions::<Wry>,
+            commands::secure_vacuum_once::<Wry>,
             commands::add_session_participant::<Wry>,
             commands::remove_session_participant::<Wry>,
             commands::persist_chat_session_proposal::<Wry>,

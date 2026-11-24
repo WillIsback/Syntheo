@@ -7,6 +7,7 @@ import {
   INTERRUPTED_IMPORT_CODE,
   useTranscriptionFailure,
 } from "~/session/transcription-failure";
+import { describeAudioImportError } from "~/stt/audio-import-feedback";
 import { useListener } from "~/stt/contexts";
 
 // Issue 559 : quand la transcription d'un audio importé échoue (aucune parole,
@@ -31,7 +32,10 @@ export function TranscriptionFailureNotice({
       ? t`No speech was detected in the audio.`
       : failure.code === INTERRUPTED_IMPORT_CODE
         ? t`Syntheo was closed before the import finished. Import the file again.`
-        : failure.message;
+        : // Message gardé brut dans la note (« unsupported audio codec:
+          // opus », « recording_too_long »…) : traduit à l'affichage, comme
+          // le toast de l'import (passe QA 0.8.1-1, issues 714 et 654).
+          describeAudioImportError(new Error(failure.message));
 
   const dismiss = () => {
     clearBatchSession(sessionId);

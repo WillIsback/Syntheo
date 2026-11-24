@@ -770,12 +770,123 @@ async fn a_purged_session_leaves_no_readable_bytes() {
     );
 
     assert!(!contains(&raw_database_bytes(&path), marker));
-    // La connexion rendue au pool a retrouvé son réglage.
+    // Toutes les connexions du pool gardent `secure_delete` (passe QA
+    // 0.8.1-1), y compris celle rendue par la purge.
     for _ in 0..2 {
         let value: i64 = sqlx::query_scalar("PRAGMA secure_delete")
             .fetch_one(db.pool())
             .await
             .unwrap();
-        assert_eq!(value, 0);
+        assert_eq!(value, 1);
+    }
+}
+
+// Passe QA 0.8.1-1 (issue 712) : une note restaurée par Annuler juste avant
+// la suppression d'une autre laissait une ancienne version des lignes de la
+// note supprimée (mise en pierre tombale, éditions faites sans
+// `secure_delete`) dans l'espace libre d'une page. `secure_delete` est actif
+// sur toutes les connexions : aucune version ne survit à la purge. Cinq
+// répétitions, comme la QA ; sans le réglage, le marqueur reste 3 fois sur 5.
+#[tokio::test]
+async fn a_purge_after_an_undo_leaves_no_old_row_version() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("app.db");
+    let db = Db::open(syntheo_db_core::DbOpenOptions {
+        storage: syntheo_db_core::DbStorage::Local(&path),
+        journal_mode_wal: true,
+        foreign_keys: true,
+        max_connections: Some(4),
+    })
+    .await
+    .unwrap();
+    syntheo_db_app::prepare_schema(&db).await.unwrap();
+    let pool = db.pool();
+    let note = |text: &str| {
+        format!(
+            "{{\"type\":\"doc\",\"content\":[{{\"type\":\"paragraph\",\"content\":[{{\"type\":\"text\",\"text\":\"{text}\"}}]}}]}}"
+        )
+    };
+    let insert = |id: String, title: String, body: String| async move {
+        insert_session(pool, &id, "user-1").await;
+        sqlx::query("UPDATE sessions SET title = ? WHERE id = ?")
+            .bind(title)
+            .bind(&id)
+            .execute(pool)
+            .await
+            .unwrap();
+        sqlx::query(
+            "INSERT INTO session_documents (id, session_id, kind, body) VALUES (?, ?, 'note', ?)",
+        )
+        .bind(format!("note-{id}"))
+        .bind(&id)
+        .bind(body)
+        .execute(pool)
+        .await
+        .unwrap();
+    };
+    let request = |id: &str, tombstone: &str| TombstoneSessionRequest {
+        session_id: id.to_string(),
+        tombstone: tombstone.to_string(),
+    };
+
+    for round in 0..5 {
+        let marker = format!("QA-PURGE-{round:08}");
+        let others: Vec<String> = (0..6).map(|n| format!("autre-{round}-{n}")).collect();
+        for other in &others {
+            insert(
+                other.clone(),
+                "Point".into(),
+                note("Note ordinaire de test."),
+            )
+            .await;
+        }
+        let kept = format!("restauree-{round}");
+        let deleted = format!("supprimee-{round}");
+        insert(
+            kept.clone(),
+            "Titre QA-RESTO".into(),
+            note("Corps resto QA-RESTO."),
+        )
+        .await;
+        insert(
+            deleted.clone(),
+            format!("Titre {marker}"),
+            note(&format!("Corps purge {marker} texte fictif de test.")),
+        )
+        .await;
+        for other in &others[..3] {
+            sqlx::query("UPDATE session_documents SET body = body || ' x' WHERE session_id = ?")
+                .bind(other)
+                .execute(pool)
+                .await
+                .unwrap();
+        }
+
+        let first = format!("2026-11-24T10:0{round}:00.000Z");
+        let second = format!("2026-11-24T10:0{round}:30.000Z");
+        soft_delete_session(pool, request(&kept, &first))
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            restore_deleted_session(pool, request(&kept, &first))
+                .await
+                .unwrap(),
+            RestoreDeletedSessionOutcome::Restored
+        );
+        soft_delete_session(pool, request(&deleted, &second))
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            purge_deleted_session(pool, request(&deleted, &second))
+                .await
+                .unwrap(),
+            PurgeDeletedSessionOutcome::Purged
+        );
+        assert!(
+            !contains(&raw_database_bytes(&path), &marker),
+            "ronde {round} : marqueur resté dans app.db"
+        );
     }
 }

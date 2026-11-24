@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useMemo } from "react";
 
 import {
@@ -61,6 +66,11 @@ export function useAiProvidersState(type: AiProviderType): {
     queryFn: () => loadSecureAiProviderApiKeys(providerIds, type),
     enabled: !rowsLoading,
     staleTime: Infinity,
+    // Un fournisseur ajouté (première adresse enregistrée) change la clé de
+    // la requête : sans les clés précédentes pendant le rechargement,
+    // `isReady` repassait à faux, le formulaire d'adresse se démontait et
+    // « Avancé » se refermait (passe QA 0.8.1-1, issue 719).
+    placeholderData: keepPreviousData,
   });
   const secureApiKeys = secureApiKeysQuery.data ?? EMPTY_PROVIDER_API_KEYS;
   // Consumers memoize model/transport chains on these objects, so they must

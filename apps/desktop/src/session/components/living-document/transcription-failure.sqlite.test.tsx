@@ -155,6 +155,30 @@ describe("TranscriptionFailureNotice", () => {
     expect(screen.getByRole("alert").textContent).toContain("Quota exceeded");
   });
 
+  // Passe QA 0.8.1-1 (issues 714 et 654) : le bandeau, après relance,
+  // montrait le message brut en anglais.
+  it.each([
+    [
+      "Syntheo couldn't read this file: unsupported audio codec: opus",
+      "Opus files (.ogg, .opus, .webm in Opus) are not supported yet",
+    ],
+    ["recording_too_long", "This recording is longer than 6 hours"],
+  ])(
+    "translates a refused import (%s), even after a relaunch",
+    async (raw, shown) => {
+      await recordTranscriptionFailure("session-1", new Error(raw));
+      const first = render(
+        <TranscriptionFailureNotice sessionId="session-1" />,
+      );
+      first.unmount();
+      render(<TranscriptionFailureNotice sessionId="session-1" />);
+
+      const text = screen.getByRole("alert").textContent ?? "";
+      expect(text).toContain(shown);
+      expect(text).not.toContain(raw);
+    },
+  );
+
   it("shows nothing for a note without failure, and clearing it is harmless", async () => {
     await clearTranscriptionFailure("session-1");
     render(<TranscriptionFailureNotice sessionId="session-1" />);

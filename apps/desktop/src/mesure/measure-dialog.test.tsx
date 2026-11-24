@@ -129,6 +129,7 @@ describe("MeasureDialog", () => {
     fireEvent.click(screen.getByRole("button", { name: "Measure" }));
 
     await screen.findByText(/words of content reworked per 100 generated/);
+    screen.getByText(/plus 1 word of names or acronyms corrected\./);
     expect(mocks.measure).toHaveBeenCalledWith(
       "# Résumé\n\nLe projet avance avec Martin.",
       { kind: "text", text: SENT, format: "markdown" },
@@ -310,9 +311,10 @@ describe("MeasureDialog", () => {
       groups[1].querySelector('[role="radio"]:nth-child(3)') as Element,
     );
     expect(automatic()).toEqual(["Lexical", "Content"]);
-    await screen.findByText(/Agreement: 100.0% on 1 differences/);
-    screen.getByText(/Weighted by words: 100.0% on 1 words/);
-    screen.getByText(/Artifacts: 1 differences \(2 words\)/);
+    // Accordés au nombre (passe QA 0.8.1-1 : « 1 différences », « 1 mots »).
+    await screen.findByText(/Agreement: 100.0% on 1 difference \(rule/);
+    screen.getByText(/Weighted by words: 100.0% on 1 word\./);
+    screen.getByText(/Artifacts: 1 difference \(2 words\)/);
 
     fireEvent.click(screen.getByRole("button", { name: "Copy the matrix" }));
     const copied = (mocks.copy.mock.calls as unknown as string[][])[0][0];

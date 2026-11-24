@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   deleteSessionFolder: vi.fn(),
   purgeDeletedSession: vi.fn(),
   listExpiredDeletedSessions: vi.fn(),
+  secureVacuumOnce: vi.fn(),
 }));
 
 vi.mock("@syntheo/plugin-fs-sync", () => ({
@@ -16,6 +17,7 @@ vi.mock("@syntheo/plugin-session", () => ({
   commands: {
     purgeDeletedSession: mocks.purgeDeletedSession,
     listExpiredDeletedSessions: mocks.listExpiredDeletedSessions,
+    secureVacuumOnce: mocks.secureVacuumOnce,
   },
 }));
 vi.mock("~/db", () => ({ liveQueryClient: { execute: vi.fn() } }));
@@ -44,6 +46,10 @@ beforeEach(() => {
       },
     );
   mocks.listExpiredDeletedSessions.mockReset();
+  mocks.secureVacuumOnce.mockReset().mockImplementation(async () => {
+    mocks.calls.push("vacuum");
+    return { status: "ok", data: "done" };
+  });
 });
 
 describe("finalizeSessionDeletion", () => {
@@ -96,7 +102,36 @@ describe("purgeExpiredDeletedSessions", () => {
       `purge:a:${TOMBSTONE}`,
       "folder:b",
       `purge:b:${TOMBSTONE}`,
+      "vacuum",
     ]);
+  });
+
+  // Passe QA 0.8.1-1 : VACUUM unique une fois les anciennes suppressions
+  // purgées ; un lot plein (200) le remet au lancement suivant.
+  it("postpones the one-time vacuum while a full batch remains", async () => {
+    mocks.listExpiredDeletedSessions.mockResolvedValue({
+      status: "ok",
+      data: Array.from({ length: 200 }, (_, index) => ({
+        session_id: `s${index}`,
+        tombstone: TOMBSTONE,
+      })),
+    });
+    await purgeExpiredDeletedSessions();
+    expect(mocks.secureVacuumOnce).not.toHaveBeenCalled();
+  });
+
+  it("keeps going when the database is busy for the vacuum", async () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+    mocks.listExpiredDeletedSessions.mockResolvedValue({
+      status: "ok",
+      data: [],
+    });
+    mocks.secureVacuumOnce.mockResolvedValue({ status: "ok", data: "busy" });
+    await expect(purgeExpiredDeletedSessions()).resolves.toBeUndefined();
+    expect(info).toHaveBeenCalledWith(
+      "[delete-session] one-time vacuum postponed, database busy",
+    );
+    info.mockRestore();
   });
 
   it("does nothing when no deletion is pending", async () => {
