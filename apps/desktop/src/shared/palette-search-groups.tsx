@@ -20,6 +20,7 @@ import type {
   SearchFolder,
 } from "~/search/unified/types";
 import { PALETTE_ITEM_CLASS } from "~/shared/palette-settings-group";
+import { useTabs } from "~/store/zustand/tabs";
 
 // Groupes de la palette `Ctrl+K` nourris par la recherche commune
 // (issue 501) : dossiers, notes avec leur dossier, contacts, et les actions
@@ -228,6 +229,8 @@ export function PaletteFolderActions({
 }) {
   const { t } = useLingui();
   const question = query.trim();
+  // Issue 718 : pas de chat quand la synthèse est coupée par l'administration.
+  const chatBlocked = useTabs((state) => state.chatBlocked);
 
   return (
     <CommandPrimitive.Group
@@ -238,16 +241,18 @@ export function PaletteFolderActions({
         </PaletteHeading>
       }
     >
-      <CommandPrimitive.Item
-        value="folder-action-ask"
-        onSelect={onAsk}
-        className={PALETTE_ITEM_CLASS}
-      >
-        <Sparkle className="text-muted-foreground h-4 w-4 shrink-0" />
-        <span className="truncate">
-          {question ? t`Ask the folder: “${question}”` : t`Ask the folder`}
-        </span>
-      </CommandPrimitive.Item>
+      {chatBlocked ? null : (
+        <CommandPrimitive.Item
+          value="folder-action-ask"
+          onSelect={onAsk}
+          className={PALETTE_ITEM_CLASS}
+        >
+          <Sparkle className="text-muted-foreground h-4 w-4 shrink-0" />
+          <span className="truncate">
+            {question ? t`Ask the folder: “${question}”` : t`Ask the folder`}
+          </span>
+        </CommandPrimitive.Item>
+      )}
       <CommandPrimitive.Item
         value="folder-action-new-note"
         onSelect={onNewNote}

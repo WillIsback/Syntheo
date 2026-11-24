@@ -166,6 +166,7 @@ function SummarySwitcherForNote({
             view={view}
             onSelectView={onSelectView}
             currentVersion={(versions[0]?.version ?? 0) + 1}
+            hasSummary={!!note || isGenerating || versions.length > 0}
             currentDate={formatVersionDate(note?.generatedAt, i18n.locale)}
             versions={versionOptions}
             isGenerating={isGenerating}

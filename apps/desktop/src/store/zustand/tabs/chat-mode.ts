@@ -10,10 +10,14 @@ type ChatEvent =
 
 export type ChatModeState = {
   chatMode: ChatMode;
+  // Synthèse coupée par l'administration (issue 718) : le chat ne s'ouvre
+  // plus, quelle que soit l'entrée (Ctrl+J, capsule, dossier, palette).
+  chatBlocked: boolean;
 };
 
 export type ChatModeActions = {
   transitionChatMode: (event: ChatEvent) => void;
+  setChatBlocked: (blocked: boolean) => void;
 };
 
 const computeNextChatMode = (state: ChatMode, event: ChatEvent): ChatMode => {
@@ -52,10 +56,19 @@ export const createChatModeSlice = <T extends ChatModeState>(
   get: StoreApi<T>["getState"],
 ): ChatModeState & ChatModeActions => ({
   chatMode: "FloatingClosed",
+  chatBlocked: false,
+  setChatBlocked: (blocked) => {
+    if (get().chatBlocked === blocked) return;
+    set({
+      chatBlocked: blocked,
+      ...(blocked ? { chatMode: "FloatingClosed" } : {}),
+    } as Partial<T>);
+  },
   transitionChatMode: (event) => {
     const currentMode = get().chatMode;
     const nextMode = computeNextChatMode(currentMode, event);
     if (nextMode === currentMode) return;
+    if (get().chatBlocked && nextMode !== "FloatingClosed") return;
 
     set({
       chatMode: nextMode,

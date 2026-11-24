@@ -62,7 +62,8 @@ export type CapsuleActions = {
   onCopy: () => void;
   copyDisabled?: boolean;
   onExport: () => void;
-  onAsk: () => void;
+  // Absent quand la synthèse est coupée par l'administration (issue 718).
+  onAsk?: () => void;
 };
 
 export function NoteCapsule({
@@ -181,7 +182,7 @@ function StageControls({
             >
               <Trans>Generate the summary</Trans>
             </CapsuleButton>
-          ) : (
+          ) : actions.onAsk ? (
             <CapsuleButton
               tone="primary"
               onClick={actions.onAsk}
@@ -190,7 +191,7 @@ function StageControls({
             >
               <Trans>Ask the note</Trans>
             </CapsuleButton>
-          )}
+          ) : null}
         </>
       ) : null}
     </>

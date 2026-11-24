@@ -72,6 +72,7 @@ type TabsStateSlice = Pick<
   | "onEmpty"
   | "closedTabs"
   | "chatMode"
+  | "chatBlocked"
 >;
 
 const createDefaultTabsState = (): TabsStateSlice => ({
@@ -84,6 +85,7 @@ const createDefaultTabsState = (): TabsStateSlice => ({
   onEmpty: null,
   closedTabs: [],
   chatMode: "FloatingClosed",
+  chatBlocked: false,
 });
 
 export const seedTabsStore = (

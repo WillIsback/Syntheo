@@ -353,6 +353,9 @@ function SynthesisStage(
     [handleSelectSynthesisView],
   );
   const versions = useSummaryVersions(currentNoteId);
+  // Aucune synthèse encore : pas de légende « Complété par Syntheo »
+  // (issue 719).
+  const summaryNote = useEnhancedNote(currentNoteId ?? "");
   const viewedVersion =
     view.kind === "version"
       ? versions.find((version) => version.id === view.versionId)
@@ -406,7 +409,7 @@ function SynthesisStage(
         />
         {metaActions}
       </NoteMeta>
-      <ProvenanceLegend />
+      {summaryNote || versions.length > 0 ? <ProvenanceLegend /> : null}
       {content}
     </>
   );

@@ -281,6 +281,18 @@ describe("NoteCapsule", () => {
   });
 });
 
+// Issue 718 : synthèse coupée par l'administration, « Demander à la note »
+// n'est pas proposé.
+describe("NoteCapsule without chat", () => {
+  it("hides « Ask the note » when no ask action is given", () => {
+    const actions = { ...makeActions(), onAsk: undefined };
+    render(<NoteCapsule stage="synthesis" actions={actions} os="mac" />);
+
+    expect(screen.queryByRole("button", { name: /Ask the note/ })).toBe(null);
+    expect(screen.getByRole("button", { name: "Copy" })).toBeTruthy();
+  });
+});
+
 describe("formatElapsed", () => {
   it.each([
     [0, "00:00"],

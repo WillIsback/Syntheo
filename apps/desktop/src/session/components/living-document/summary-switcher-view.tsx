@@ -83,6 +83,7 @@ export function SummarySwitcherView({
   onMenuCloseAutoFocus,
   menuOpen,
   onMenuOpenChange,
+  hasSummary = true,
 }: {
   // Élément d'ancrage du sélecteur de modèle (issue 431) : sans lui, Radix
   // n'a rien sur quoi placer le sélecteur et le laisse hors de l'écran.
@@ -112,6 +113,11 @@ export function SummarySwitcherView({
   onMenuCloseAutoFocus?: (event: Event) => void;
   menuOpen?: boolean;
   onMenuOpenChange?: (open: boolean) => void;
+  /**
+   * Aucune synthèse encore (issue 719) : ni « · v1 » ni « v1 Actuelle », qui
+   * laissaient croire qu'une synthèse existait.
+   */
+  hasSummary?: boolean;
 }) {
   const { t } = useLingui();
   const viewedVersion =
@@ -119,7 +125,8 @@ export function SummarySwitcherView({
       ? versions.find((version) => version.id === view.versionId)
       : undefined;
   const shownVersion = viewedVersion?.version ?? currentVersion;
-  const summaryLabel = t`Summary · v${shownVersion}`;
+  const summaryLabel = hasSummary ? t`Summary · v${shownVersion}` : t`Summary`;
+  const showVersions = hasSummary || versions.length > 0;
 
   return (
     <div
@@ -179,7 +186,9 @@ export function SummarySwitcherView({
           className="w-64"
           onCloseAutoFocus={onMenuCloseAutoFocus}
         >
-          <MenuSectionLabel>{t`Versions`}</MenuSectionLabel>
+          {showVersions ? (
+            <MenuSectionLabel>{t`Versions`}</MenuSectionLabel>
+          ) : null}
           <DropdownMenuRadioGroup
             value={viewedVersion ? viewedVersion.id : CURRENT_VERSION}
             onValueChange={(value) =>
@@ -190,13 +199,15 @@ export function SummarySwitcherView({
               )
             }
           >
-            <DropdownMenuRadioItem value={CURRENT_VERSION}>
-              <VersionLabel
-                version={currentVersion}
-                date={currentDate}
-                current={t`Current`}
-              />
-            </DropdownMenuRadioItem>
+            {hasSummary ? (
+              <DropdownMenuRadioItem value={CURRENT_VERSION}>
+                <VersionLabel
+                  version={currentVersion}
+                  date={currentDate}
+                  current={t`Current`}
+                />
+              </DropdownMenuRadioItem>
+            ) : null}
             {versions.map((version) => (
               <DropdownMenuRadioItem key={version.id} value={version.id}>
                 <VersionLabel version={version.version} date={version.date} />

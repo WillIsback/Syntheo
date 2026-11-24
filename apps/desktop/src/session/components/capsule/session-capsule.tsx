@@ -336,7 +336,7 @@ export function SessionCapsule({
           onCopy: copy,
           copyDisabled: markdown.length === 0,
           onExport: openExport,
-          onAsk: ask,
+          onAsk: summaryBlocked ? undefined : ask,
         }}
       />
       {exportMounted ? (

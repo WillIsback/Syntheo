@@ -331,9 +331,9 @@ describe("SttServerCard", () => {
     function disabled(elements: HTMLElement[]) {
       return elements.map((el) => (el as HTMLButtonElement).disabled);
     }
-    function expectMention() {
+    function expectMention(text = "Set by your administrator.") {
       const mention = screen.getByTestId("stt-server-managed");
-      expect(mention.textContent).toBe("Set by your administrator.");
+      expect(mention.textContent).toBe(text);
       // En tête de carte, avant l'adresse : jamais dans « Avancé » ni sous la
       // clé d'API, qu'elle ferait passer pour imposée (issue 710).
       expect(mention.closest("details")).toBeNull();
@@ -353,7 +353,7 @@ describe("SttServerCard", () => {
       mocks.connection.state = CONNECTED;
       setup();
 
-      expectMention();
+      expectMention("Set by your administrator: server address.");
       expect(addressButton().getAttribute("data-managed")).toBe("true");
       expect(addressButton().getAttribute("data-selection-managed")).toBe(
         "false",
@@ -389,7 +389,7 @@ describe("SttServerCard", () => {
       mocks.connection.state = CONNECTED;
       setup();
 
-      expectMention();
+      expectMention("Set by your administrator: server address, protocol.");
       expect(addressButton().getAttribute("data-managed")).toBe("true");
       expect(disabled(protocolRadios())).toEqual([true, true]);
       expect(disabled(modelRadios())).toEqual([false, false]);
@@ -416,7 +416,7 @@ describe("SttServerCard", () => {
       mocks.config = { current_stt_provider: "openai" };
       setup();
 
-      expectMention();
+      expectMention("Set by your administrator: server address, protocol.");
       const input = screen.getByRole("textbox", { name: "Model name" });
       expect((input as HTMLInputElement).disabled).toBe(false);
       fireEvent.change(input, { target: { value: "voxtral-mini" } });
@@ -430,7 +430,7 @@ describe("SttServerCard", () => {
       mocks.connection.state = CONNECTED;
       setup();
 
-      expectMention();
+      expectMention("Set by your administrator: protocol.");
       expect(addressButton().getAttribute("data-managed")).toBe("false");
       expect(disabled(protocolRadios())).toEqual([true, true]);
       expect(disabled(modelRadios())).toEqual([false, false]);
@@ -450,7 +450,7 @@ describe("SttServerCard", () => {
       mocks.connection.state = CONNECTED;
       setup();
 
-      expectMention();
+      expectMention("Set by your administrator: model.");
       expect(addressButton().getAttribute("data-managed")).toBe("false");
       expect(addressButton().getAttribute("data-selection-managed")).toBe(
         "true",
@@ -471,6 +471,37 @@ describe("SttServerCard", () => {
       });
     });
 
+    // Issue 719 : sans adresse saisie, le modèle imposé reste affiché, et
+    // la carte n'invite pas à tester la connexion pour choisir un modèle.
+    it("modèle seul, sans adresse : le modèle imposé est affiché, sans invitation au test", () => {
+      mocks.managed = new Set(["current_stt_model"]);
+      mocks.config = { current_stt_model: "voxtral-mini" };
+      mocks.connection.baseUrl = "";
+      try {
+        setup();
+        const input = screen.getByRole("textbox", { name: "Model name" });
+        expect((input as HTMLInputElement).value).toBe("voxtral-mini");
+        expect((input as HTMLInputElement).disabled).toBe(true);
+        expect(
+          screen.queryByText("Test the connection to list the models served."),
+        ).toBeNull();
+      } finally {
+        mocks.connection.baseUrl =
+          "https://spark.tail6cba9f.ts.net/v1/realtime";
+      }
+    });
+
+    it("tout imposé : la mention reste courte", () => {
+      mocks.managed = new Set([
+        "ai_provider:stt:openai",
+        "current_stt_provider",
+        "current_stt_model",
+      ]);
+      setup();
+
+      expectMention();
+    });
+
     it("modèle hors liste, géré : affiché dans un champ désactivé", () => {
       mocks.managed = new Set(["current_stt_model"]);
       setup();
@@ -481,7 +512,7 @@ describe("SttServerCard", () => {
       // Même aspect désactivé que le protocole imposé (issue 710).
       expect(input.className).toContain("cursor-not-allowed");
       expect(input.className).toContain("opacity-60");
-      expectMention();
+      expectMention("Set by your administrator: model.");
     });
 
     // Non-régression : les radios avaient déjà cet aspect avant le correctif

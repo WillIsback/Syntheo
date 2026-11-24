@@ -66,19 +66,23 @@ export function FolderMeetingSummaryLine({
 
 export function FolderHeaderActions({ folderPath }: { folderPath: string }) {
   const [creating, setCreating] = useState(false);
+  // Issue 718 : pas de chat quand la synthèse est coupée par l'administration.
+  const chatBlocked = useTabs((state) => state.chatBlocked);
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <Button
-        type="button"
-        size="sm"
-        variant="outline"
-        onClick={() => askFolder(folderPath)}
-      >
-        <ChatCircle className="size-3.5" />
-        <Trans>Ask the folder</Trans>
-        <Kbd aria-hidden>Ctrl J</Kbd>
-      </Button>
+      {chatBlocked ? null : (
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => askFolder(folderPath)}
+        >
+          <ChatCircle className="size-3.5" />
+          <Trans>Ask the folder</Trans>
+          <Kbd aria-hidden>Ctrl J</Kbd>
+        </Button>
+      )}
       <Button
         type="button"
         size="sm"

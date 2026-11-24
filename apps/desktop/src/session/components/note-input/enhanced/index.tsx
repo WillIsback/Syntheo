@@ -137,7 +137,8 @@ function EmptySummary({ sessionId }: { sessionId: string }) {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-4 px-6">
       <Button onClick={() => generate.generate()} disabled={generate.pending}>
-        <Trans>Generate summary</Trans>
+        {/* Même libellé que la capsule (issue 719). */}
+        <Trans>Generate the summary</Trans>
       </Button>
       {generate.error && <p role="alert">{generate.error.message}</p>}
     </div>
