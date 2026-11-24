@@ -663,6 +663,16 @@ msgstr "Argument {position}"
 msgid "Arguments"
 msgstr "Arguments"
 
+#: src/mesure/measure-dialog.tsx
+msgid "Artifact"
+msgstr "Artefact"
+
+#. placeholder {0}: matrix.artefacts
+#. placeholder {1}: matrix.artefactWords
+#: src/mesure/measure-dialog.tsx
+msgid "Artifacts: {0} differences ({1} words), left out of the agreement."
+msgstr "Artefacts : {0} différences ({1} mots), hors de l'accord."
+
 #: src/chat/components/input/index.tsx
 msgid "Ask anything"
 msgstr "Posez toutes vos questions"
@@ -2404,6 +2414,10 @@ msgstr "Aidez Syntheo à lire l'activité de la réunion"
 #: src/chat/components/body/empty.tsx
 msgid "Hi, I'm Syntheo AI. Set up a language model and I'll be ready to help."
 msgstr "Bonjour, je suis Syntheo AI. Configurez un modèle de langage et je serai en mesure de vous aider."
+
+#: src/mesure/measure-dialog.tsx
+msgid "Hidden"
+msgstr "Masquée"
 
 #: src/settings/general/notification.tsx
 msgid "Hide all notification panels, Dock alerts, and completion sounds."
@@ -5801,6 +5815,10 @@ msgstr "La transcription de l'audio a échoué."
 msgid "The audio, your notes and the API key would travel in clear text on the network. On another network, or with Tailscale stopped, another machine can answer at this address. Prefer HTTPS: tailscale serve publishes your server at https://machine.tailnet.ts.net with an automatic certificate."
 msgstr "L'audio, vos notes et la clé d'API passeraient en clair sur le réseau. Sur un autre réseau, ou Tailscale arrêté, une autre machine peut répondre à cette adresse. Préférez HTTPS : tailscale serve publie votre serveur en https://machine.tailnet.ts.net avec un certificat automatique."
 
+#: src/mesure/measure-dialog.tsx
+msgid "The automatic class appears once you have chosen yours. Choose Artifact when the difference is not a real one (a formatting or reading error)."
+msgstr "La classe automatique s'affiche une fois la vôtre choisie. Choisissez Artefact quand la différence n'en est pas une (erreur de mise en forme ou de lecture)."
+
 #: src/templates/auto-form.tsx
 msgid "The Automatic format is unavailable."
 msgstr "Le format Automatique est indisponible."
@@ -6958,6 +6976,12 @@ msgstr "webhook, URL, événements, intégration, automatisation"
 #: src/settings/search-index.ts
 msgid "Webhooks"
 msgstr "Webhooks"
+
+#. placeholder {0}: weightedAgreementPercent(matrix)?.toFixed(1)
+#. placeholder {1}: labeledWords(matrix)
+#: src/mesure/measure-dialog.tsx
+msgid "Weighted by words: {0}% on {1} words."
+msgstr "Pondéré en mots : {0} % sur {1} mots."
 
 #: src/onboarding/index.tsx
 msgid "Welcome to Syntheo"

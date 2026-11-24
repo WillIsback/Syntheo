@@ -201,6 +201,53 @@ describe("MeasureDialog", () => {
     expect(matrixParams.slice(1)).toEqual([1, 1, 0, 0, 1]);
   });
 
+  // Issue 735 : étiquetage en aveugle, et classe « artefact » hors matrice.
+  it("hides the automatic class until a class is chosen", async () => {
+    renderDialog();
+    fireEvent.change(screen.getByLabelText("Sent version"), {
+      target: { value: SENT },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Measure" }));
+    await screen.findByText("Marten");
+
+    const automatic = () =>
+      Array.from(document.querySelectorAll("[data-automatic-class]")).map(
+        (cell) => cell.textContent,
+      );
+    expect(automatic()).toEqual(["Hidden", "Hidden"]);
+
+    const groups = screen.getAllByRole("radiogroup");
+    fireEvent.click(
+      groups[0].querySelector('[role="radio"]:nth-child(2)') as Element,
+    );
+    expect(automatic()).toEqual(["Lexical", "Hidden"]);
+
+    // La seconde différence est un artefact : hors matrice, comptée à part.
+    fireEvent.click(
+      groups[1].querySelector('[role="radio"]:nth-child(3)') as Element,
+    );
+    expect(automatic()).toEqual(["Lexical", "Content"]);
+    await screen.findByText(/Agreement: 100.0% on 1 differences/);
+    screen.getByText(/Weighted by words: 100.0% on 1 words/);
+    screen.getByText(/Artifacts: 1 differences \(2 words\)/);
+
+    fireEvent.click(screen.getByRole("button", { name: "Copy the matrix" }));
+    const copied = (mocks.copy.mock.calls as unknown as string[][])[0][0];
+    expect(copied).toContain("artefacts\t1");
+    expect(copied).toContain("mots_artefacts\t2");
+    expect(copied).not.toContain("secret");
+
+    fireEvent.click(screen.getByRole("button", { name: "Save the matrix" }));
+    await screen.findByRole("button", { name: "Matrix saved" });
+    const matrixParams = (
+      mocks.executeTransaction.mock.calls as unknown as {
+        params: unknown[];
+      }[][][]
+    )[1][0][0].params;
+    // Les quatre cases seulement : l'artefact n'y figure pas.
+    expect(matrixParams.slice(1)).toEqual([1, 0, 0, 0, 1]);
+  });
+
   // Spec §2 : la version générée est le corps produit par Syntheo, avant
   // toute retouche ; à défaut (synthèse antérieure à la 0.8.0), la synthèse
   // actuelle, marquée `current`.

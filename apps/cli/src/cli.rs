@@ -71,6 +71,12 @@ pub enum Command {
         /// only) for manual calibration; never with --json
         #[arg(long, conflicts_with = "json")]
         differences: bool,
+        /// Reference sent version cleaned by hand (sections renamed like the
+        /// generated ones, parts outside the summary removed): also measures
+        /// it and prints the gap between the automatic and the reference
+        /// rates
+        #[arg(long, value_name = "FILE", conflicts_with = "differences")]
+        gold: Option<PathBuf>,
     },
 }
 

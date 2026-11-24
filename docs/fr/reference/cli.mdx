@@ -166,6 +166,14 @@ Pour vérifier le classement à la main, `--differences` liste chaque différenc
 
 Colonnes : `n`, `section` (rang de la section générée, `-` hors section), `type` (`ajout`, `suppression` ou `remplacement`), `classe_auto` (`fond` ou `lexical`), `poids` (mots), `genere`, `envoye`, puis `classe_vraie`, vide, à remplir dans un tableur. Les tabulations et retours à la ligne des extraits sont remplacés par des espaces.
 
+### Référence : `--gold`
+
+```bash
+syntheo mesure --generated generee.md --sent publiee.docx --gold publiee-nettoyee.md
+```
+
+`--gold` mesure aussi une version envoyée **nettoyée à la main** : sections renommées comme dans la version générée, parties hors synthèse (cartouche, diffusion) retirées. La sortie donne les lignes habituelles de la mesure automatique, puis celles de la référence préfixées par `gold_` (sans le détail par section), puis `delta_content_per_mille` et `delta_lexical_per_mille`, l'écart automatique moins référence. Avec `--json`, `data` contient `auto`, `gold` et les deux écarts. `--gold` refuse `--differences`.
+
 ## Aide et version
 
 ```bash

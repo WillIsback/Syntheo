@@ -23,10 +23,13 @@ pub async fn run(mut args: Args) -> Result<u8> {
         sent,
         dictionary,
         differences,
+        gold,
     } = &args.command
     {
         if *differences {
             commands::mesure::run_differences(generated, sent, dictionary.as_deref())?;
+        } else if let Some(gold) = gold {
+            commands::mesure::run_gold(generated, sent, gold, dictionary.as_deref(), args.json)?;
         } else {
             commands::mesure::run(generated, sent, dictionary.as_deref(), args.json)?;
         }
