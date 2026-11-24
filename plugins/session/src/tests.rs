@@ -5,7 +5,8 @@ use crate::{
     conflicts::{resolve_session_conflict, resolve_session_conflicts},
     creation::{CreateSessionRequest, create_session},
     deletion::{
-        RestoreDeletedSessionOutcome, TombstoneSessionRequest, restore_deleted_session,
+        PurgeDeletedSessionOutcome, RestoreDeletedSessionOutcome, TombstoneSessionRequest,
+        list_expired_deleted_sessions, purge_deleted_session, restore_deleted_session,
         soft_delete_session,
     },
     move_contents::{MoveSessionContentsRequest, move_session_contents},
@@ -178,6 +179,62 @@ async fn soft_delete_session_tombstones_children_with_one_timestamp() {
         .unwrap();
         assert_eq!(deleted_at.as_deref(), Some(tombstone), "{table}");
     }
+}
+
+// Issue 712 : après le délai d'annulation, la session supprimée est purgée
+// de la base ; une session restaurée ne l'est pas.
+#[tokio::test]
+async fn a_deleted_session_is_purged_after_the_undo_window() {
+    let db = test_db().await;
+    insert_session(db.pool(), "session-1", "user-1").await;
+    sqlx::query("INSERT INTO transcripts (id, session_id) VALUES ('t-1', 'session-1')")
+        .execute(db.pool())
+        .await
+        .unwrap();
+    let request = || TombstoneSessionRequest {
+        session_id: "session-1".to_string(),
+        tombstone: "2026-11-24T10:00:00.000Z".to_string(),
+    };
+    soft_delete_session(db.pool(), request())
+        .await
+        .unwrap()
+        .unwrap();
+
+    // Restaurée pendant le délai : rien n'est purgé.
+    restore_deleted_session(db.pool(), request()).await.unwrap();
+    assert_eq!(
+        purge_deleted_session(db.pool(), request()).await.unwrap(),
+        PurgeDeletedSessionOutcome::NotDeleted
+    );
+
+    soft_delete_session(db.pool(), request())
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        purge_deleted_session(db.pool(), request()).await.unwrap(),
+        PurgeDeletedSessionOutcome::Purged
+    );
+    for table in ["sessions", "transcripts"] {
+        let count: i64 =
+            sqlx::query_scalar(sqlx::AssertSqlSafe(format!("SELECT count(*) FROM {table}")))
+                .fetch_one(db.pool())
+                .await
+                .unwrap();
+        assert_eq!(count, 0, "{table}");
+    }
+    // Idempotente.
+    assert_eq!(
+        purge_deleted_session(db.pool(), request()).await.unwrap(),
+        PurgeDeletedSessionOutcome::NotDeleted
+    );
+    // Rien n'attend la purge au démarrage (date de départ posée maintenant).
+    assert!(
+        list_expired_deleted_sessions(db.pool())
+            .await
+            .unwrap()
+            .is_empty()
+    );
 }
 
 #[tokio::test]

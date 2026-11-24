@@ -4,6 +4,8 @@ permissions = [
   "allow-create-session",
   "allow-soft-delete-session",
   "allow-restore-deleted-session",
+  "allow-purge-deleted-session",
+  "allow-list-expired-deleted-sessions",
   "allow-add-session-participant",
   "allow-remove-session-participant",
   "allow-persist-chat-session-proposal",

@@ -134,7 +134,7 @@ function handleDeletionFailure(
   // The delete committed but main never learned about it, so its
   // finalize-time cleanup will not run. Finalize here — losing the
   // undo window beats leaving the shared link live forever.
-  void finalizeSessionDeletion(context.sessionId);
+  void finalizeSessionDeletion(context.sessionId, context.tombstone);
 }
 
 async function settleSessionDeletion(
@@ -206,7 +206,7 @@ export function useDeleteSession() {
           commit
             .then(async (deletedData) => {
               if (!deletedData) return;
-              await finalizeSessionDeletion(sessionId);
+              await finalizeSessionDeletion(sessionId, tombstone);
             })
             .catch(() => undefined);
         addDeletion(
@@ -254,7 +254,10 @@ export function useRemoteSessionDeletionUndoListener(active: boolean) {
 
       invalidateResource("sessions", payload.sessionId);
       addDeletion(payload.data, async () => {
-        await finalizeSessionDeletion(payload.sessionId);
+        await finalizeSessionDeletion(
+          payload.sessionId,
+          payload.data.tombstone,
+        );
       });
       void closeSessionNoteWindows(payload.sessionId);
     }).then((fn) => {

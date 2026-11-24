@@ -379,6 +379,18 @@
           "markdownDescription": "Denies the ensure_folder_catalog command without any pre-configured scope."
         },
         {
+          "description": "Enables the list_expired_deleted_sessions command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-list-expired-deleted-sessions",
+          "markdownDescription": "Enables the list_expired_deleted_sessions command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the list_expired_deleted_sessions command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-list-expired-deleted-sessions",
+          "markdownDescription": "Denies the list_expired_deleted_sessions command without any pre-configured scope."
+        },
+        {
           "description": "Enables the mark_session_audio_absent command without any pre-configured scope.",
           "type": "string",
           "const": "allow-mark-session-audio-absent",
@@ -425,6 +437,18 @@
           "type": "string",
           "const": "deny-persist-chat-session-proposal",
           "markdownDescription": "Denies the persist_chat_session_proposal command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the purge_deleted_session command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-purge-deleted-session",
+          "markdownDescription": "Enables the purge_deleted_session command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the purge_deleted_session command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-purge-deleted-session",
+          "markdownDescription": "Denies the purge_deleted_session command without any pre-configured scope."
         },
         {
           "description": "Enables the remove_session_participant command without any pre-configured scope.",
@@ -559,10 +583,10 @@
           "markdownDescription": "Denies the update_folder_instructions command without any pre-configured scope."
         },
         {
-          "description": "Default permissions for the plugin\n#### This default permission set includes:\n\n- `allow-create-session`\n- `allow-soft-delete-session`\n- `allow-restore-deleted-session`\n- `allow-add-session-participant`\n- `allow-remove-session-participant`\n- `allow-persist-chat-session-proposal`\n- `allow-set-session-proposal-status`\n- `allow-resolve-session-conflicts`\n- `allow-resolve-session-conflict`\n- `allow-move-session-contents`\n- `allow-catalog-note-attachment`\n- `allow-catalog-session-audio`\n- `allow-mark-session-audio-transcription-complete`\n- `allow-tombstone-session-audio`\n- `allow-mark-session-audio-absent`\n- `allow-catalog-folder-material`\n- `allow-tombstone-folder-material`\n- `allow-ensure-folder-catalog`\n- `allow-rename-folder-catalog`\n- `allow-delete-folder-catalog`\n- `allow-update-folder-instructions`\n- `allow-update-folder-icon`",
+          "description": "Default permissions for the plugin\n#### This default permission set includes:\n\n- `allow-create-session`\n- `allow-soft-delete-session`\n- `allow-restore-deleted-session`\n- `allow-purge-deleted-session`\n- `allow-list-expired-deleted-sessions`\n- `allow-add-session-participant`\n- `allow-remove-session-participant`\n- `allow-persist-chat-session-proposal`\n- `allow-set-session-proposal-status`\n- `allow-resolve-session-conflicts`\n- `allow-resolve-session-conflict`\n- `allow-move-session-contents`\n- `allow-catalog-note-attachment`\n- `allow-catalog-session-audio`\n- `allow-mark-session-audio-transcription-complete`\n- `allow-tombstone-session-audio`\n- `allow-mark-session-audio-absent`\n- `allow-catalog-folder-material`\n- `allow-tombstone-folder-material`\n- `allow-ensure-folder-catalog`\n- `allow-rename-folder-catalog`\n- `allow-delete-folder-catalog`\n- `allow-update-folder-instructions`\n- `allow-update-folder-icon`",
           "type": "string",
           "const": "default",
-          "markdownDescription": "Default permissions for the plugin\n#### This default permission set includes:\n\n- `allow-create-session`\n- `allow-soft-delete-session`\n- `allow-restore-deleted-session`\n- `allow-add-session-participant`\n- `allow-remove-session-participant`\n- `allow-persist-chat-session-proposal`\n- `allow-set-session-proposal-status`\n- `allow-resolve-session-conflicts`\n- `allow-resolve-session-conflict`\n- `allow-move-session-contents`\n- `allow-catalog-note-attachment`\n- `allow-catalog-session-audio`\n- `allow-mark-session-audio-transcription-complete`\n- `allow-tombstone-session-audio`\n- `allow-mark-session-audio-absent`\n- `allow-catalog-folder-material`\n- `allow-tombstone-folder-material`\n- `allow-ensure-folder-catalog`\n- `allow-rename-folder-catalog`\n- `allow-delete-folder-catalog`\n- `allow-update-folder-instructions`\n- `allow-update-folder-icon`"
+          "markdownDescription": "Default permissions for the plugin\n#### This default permission set includes:\n\n- `allow-create-session`\n- `allow-soft-delete-session`\n- `allow-restore-deleted-session`\n- `allow-purge-deleted-session`\n- `allow-list-expired-deleted-sessions`\n- `allow-add-session-participant`\n- `allow-remove-session-participant`\n- `allow-persist-chat-session-proposal`\n- `allow-set-session-proposal-status`\n- `allow-resolve-session-conflicts`\n- `allow-resolve-session-conflict`\n- `allow-move-session-contents`\n- `allow-catalog-note-attachment`\n- `allow-catalog-session-audio`\n- `allow-mark-session-audio-transcription-complete`\n- `allow-tombstone-session-audio`\n- `allow-mark-session-audio-absent`\n- `allow-catalog-folder-material`\n- `allow-tombstone-folder-material`\n- `allow-ensure-folder-catalog`\n- `allow-rename-folder-catalog`\n- `allow-delete-folder-catalog`\n- `allow-update-folder-instructions`\n- `allow-update-folder-icon`"
         }
       ]
     }

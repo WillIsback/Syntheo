@@ -45,6 +45,27 @@ session_write_command!(
     deletion::RestoreDeletedSessionOutcome
 );
 session_write_command!(
+    purge_deleted_session,
+    deletion,
+    purge_deleted_session,
+    deletion::TombstoneSessionRequest,
+    deletion::PurgeDeletedSessionOutcome
+);
+
+#[tauri::command]
+#[specta::specta]
+pub(crate) async fn list_expired_deleted_sessions<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+) -> Result<Vec<deletion::ExpiredDeletedSession>, String> {
+    let runtime = app
+        .try_state::<tauri_plugin_db::ManagedState>()
+        .map(|state| state.inner().clone())
+        .ok_or_else(|| "database is not ready yet".to_string())?;
+    let _guard = runtime.synced_write_guard().await;
+    deletion::list_expired_deleted_sessions(runtime.pool()).await
+}
+
+session_write_command!(
     add_session_participant,
     participants,
     add_session_participant,

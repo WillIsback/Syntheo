@@ -7,6 +7,8 @@ Default permissions for the plugin
 - `allow-create-session`
 - `allow-soft-delete-session`
 - `allow-restore-deleted-session`
+- `allow-purge-deleted-session`
+- `allow-list-expired-deleted-sessions`
 - `allow-add-session-participant`
 - `allow-remove-session-participant`
 - `allow-persist-chat-session-proposal`
@@ -221,6 +223,32 @@ Denies the ensure_folder_catalog command without any pre-configured scope.
 <tr>
 <td>
 
+`session:allow-list-expired-deleted-sessions`
+
+</td>
+<td>
+
+Enables the list_expired_deleted_sessions command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`session:deny-list-expired-deleted-sessions`
+
+</td>
+<td>
+
+Denies the list_expired_deleted_sessions command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
 `session:allow-mark-session-audio-absent`
 
 </td>
@@ -318,6 +346,32 @@ Enables the persist_chat_session_proposal command without any pre-configured sco
 <td>
 
 Denies the persist_chat_session_proposal command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`session:allow-purge-deleted-session`
+
+</td>
+<td>
+
+Enables the purge_deleted_session command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`session:deny-purge-deleted-session`
+
+</td>
+<td>
+
+Denies the purge_deleted_session command without any pre-configured scope.
 
 </td>
 </tr>
