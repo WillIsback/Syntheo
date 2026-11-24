@@ -47,7 +47,7 @@
           "primary": {
             "type": "button",
             "label": "Download",
-            "href": "https://github.com/WillIsback/Syntheo/releases/latest"
+            "href": "https://github.com/WillIsback/Syntheo/releases/latest/download/Syntheo-windows-x64-setup.exe"
           }
         },
         "footer": {
@@ -190,7 +190,7 @@
           "primary": {
             "type": "button",
             "label": "Télécharger",
-            "href": "https://github.com/WillIsback/Syntheo/releases/latest"
+            "href": "https://github.com/WillIsback/Syntheo/releases/latest/download/Syntheo-windows-x64-setup.exe"
           }
         },
         "footer": {
@@ -337,7 +337,7 @@
     "primary": {
       "type": "button",
       "label": "Download",
-      "href": "https://github.com/WillIsback/Syntheo/releases/latest"
+      "href": "https://github.com/WillIsback/Syntheo/releases/latest/download/Syntheo-windows-x64-setup.exe"
     }
   },
   "contextual": {
