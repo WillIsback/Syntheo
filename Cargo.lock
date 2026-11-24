@@ -12336,6 +12336,7 @@ dependencies = [
  "tracing",
  "tray-icon",
  "unicode-width",
+ "windows",
 ]
 
 [[package]]
