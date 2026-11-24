@@ -90,40 +90,31 @@ pub async fn purge_deleted_session(
 /// d'annulation, purge refusée puis débloquée).
 pub const DELETED_SESSION_PURGE_MARGIN: &str = "-10 minutes";
 
-/// Clé de `app_settings` : date de la première ouverture d'une version qui
-/// purge les sessions supprimées. Les pierres tombales plus anciennes
-/// (suppressions faites avant la 0.8.1) ne sont pas purgées au démarrage,
-/// en attendant une décision.
-pub const SESSION_PURGE_SINCE_KEY: &str = "session_purge_since";
+/// Ancienne clé de `app_settings` qui bornait la purge aux suppressions
+/// faites depuis la 0.8.1 (alphas de la 0.8.1). Les suppressions plus
+/// anciennes sont désormais purgées aussi (issue 712) : la clé est retirée.
+const LEGACY_SESSION_PURGE_SINCE_KEY: &str = "session_purge_since";
 
 /// Sessions supprimées en entier depuis plus de
-/// `DELETED_SESSION_PURGE_MARGIN`, et après `SESSION_PURGE_SINCE_KEY` (posée
-/// au premier appel) : (identifiant, pierre tombale), 200 au plus, des plus
-/// anciennes aux plus récentes. Les éléments supprimés un par un (document,
-/// transcription) d'une session vivante n'y figurent jamais.
+/// `DELETED_SESSION_PURGE_MARGIN`, y compris celles supprimées par une
+/// version antérieure à la 0.8.1 : (identifiant, pierre tombale), 200 au
+/// plus, des plus anciennes aux plus récentes. Les éléments supprimés un par
+/// un (document, transcription) d'une session vivante n'y figurent jamais.
 pub async fn expired_deleted_sessions(
     pool: &sqlx::SqlitePool,
 ) -> Result<Vec<(String, String)>, sqlx::Error> {
-    sqlx::query(
-        "INSERT INTO app_settings (id, value_json)
-         VALUES (?, json_quote(strftime('%Y-%m-%dT%H:%M:%fZ', 'now')))
-         ON CONFLICT(id) DO NOTHING",
-    )
-    .bind(SESSION_PURGE_SINCE_KEY)
-    .execute(pool)
-    .await?;
+    sqlx::query("DELETE FROM app_settings WHERE id = ?")
+        .bind(LEGACY_SESSION_PURGE_SINCE_KEY)
+        .execute(pool)
+        .await?;
     sqlx::query_as(
         "SELECT id, deleted_at FROM sessions
          WHERE deleted_at IS NOT NULL
            AND deleted_at < strftime('%Y-%m-%dT%H:%M:%fZ', 'now', ?)
-           AND deleted_at >= (
-             SELECT json_extract(value_json, '$') FROM app_settings WHERE id = ?
-           )
          ORDER BY deleted_at, id
          LIMIT 200",
     )
     .bind(DELETED_SESSION_PURGE_MARGIN)
-    .bind(SESSION_PURGE_SINCE_KEY)
     .fetch_all(pool)
     .await
 }

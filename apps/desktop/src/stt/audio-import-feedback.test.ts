@@ -100,6 +100,18 @@ describe("describeAudioImportError", () => {
     }
   });
 
+  // Issue 654 : plafond de durée, sur les deux protocoles.
+  it("explains a recording longer than the import cap", () => {
+    for (const raw of [
+      "recording_too_long",
+      "Syntheo couldn't read this file: recording_too_long",
+    ]) {
+      expect(describeAudioImportError(new Error(raw))).toMatch(
+        /longer than 6 hours/,
+      );
+    }
+  });
+
   // Issue 713 : un message brut du serveur reste traduit, après la règle
   // Opus.
   it("still translates a raw server error", () => {

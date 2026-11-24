@@ -134,35 +134,21 @@ async fn synced_content_keeps_the_tombstone() {
 }
 
 #[tokio::test]
-async fn only_whole_sessions_deleted_since_the_purge_began_and_past_the_margin_expire() {
+async fn only_whole_sessions_deleted_past_the_margin_expire() {
     let db = test_db().await;
-    // Premier appel : la date de départ de la purge est posée maintenant.
-    assert!(
-        expired_deleted_sessions(db.pool())
-            .await
-            .unwrap()
-            .is_empty()
-    );
-    let since: String = sqlx::query_scalar(
-        "SELECT json_extract(value_json, '$') FROM app_settings WHERE id = 'session_purge_since'",
-    )
-    .fetch_one(db.pool())
-    .await
-    .unwrap();
-    // Recule la date de départ d'une heure pour simuler l'ancienneté.
+    // Clé d'une alpha de la 0.8.1 qui bornait la purge : retirée.
     sqlx::query(
-        "UPDATE app_settings SET value_json = json_quote(strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-60 minutes')) WHERE id = 'session_purge_since'",
+        "INSERT INTO app_settings (id, value_json) VALUES ('session_purge_since', json_quote(strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-60 minutes')))",
     )
     .execute(db.pool())
     .await
     .unwrap();
-    assert!(since.ends_with('Z'));
 
     let ago = |minutes: i64| format!("-{minutes} minutes");
     for (id, offset) in [
-        ("expired", ago(30)),       // supprimée il y a 30 min : purgeable
-        ("recent", ago(2)),         // dans la marge de 10 min : pas encore
-        ("before-0.8.1", ago(120)), // avant la date de départ : gardée
+        ("expired", ago(30)), // supprimée il y a 30 min : purgeable
+        ("recent", ago(2)),   // dans la marge de 10 min : pas encore
+        ("older", ago(120)),  // plus ancienne : purgeable aussi
     ] {
         let tombstone: String =
             sqlx::query_scalar("SELECT strftime('%Y-%m-%dT%H:%M:%fZ', 'now', ?)")
@@ -184,16 +170,45 @@ async fn only_whole_sessions_deleted_since_the_purge_began_and_past_the_margin_e
 
     let expired = expired_deleted_sessions(db.pool()).await.unwrap();
     let ids: Vec<&str> = expired.iter().map(|(id, _)| id.as_str()).collect();
-    assert_eq!(ids, ["expired"]);
-    let (id, tombstone) = &expired[0];
-    assert!(matches!(
-        purge(&db, id, tombstone).await,
-        DeletedSessionPurge::Purged { .. }
-    ));
+    assert_eq!(ids, ["older", "expired"]);
+    for (id, tombstone) in &expired {
+        assert!(matches!(
+            purge(&db, id, tombstone).await,
+            DeletedSessionPurge::Purged { .. }
+        ));
+    }
+    let legacy: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM app_settings WHERE id = 'session_purge_since'")
+            .fetch_one(db.pool())
+            .await
+            .unwrap();
+    assert_eq!(legacy, 0);
     assert!(
         expired_deleted_sessions(db.pool())
             .await
             .unwrap()
             .is_empty()
     );
+}
+
+// Issue 712, point 4 : une réunion supprimée par la 0.7 ou la 0.8 (bien
+// avant la mise à jour) est purgée au démarrage comme les autres.
+#[tokio::test]
+async fn a_deletion_older_than_0_8_1_is_purged() {
+    let db = test_db().await;
+    deleted_session(&db, "deleted-in-0.7", "2026-03-02T09:00:00.000Z").await;
+
+    let expired = expired_deleted_sessions(db.pool()).await.unwrap();
+    assert_eq!(
+        expired,
+        [(
+            "deleted-in-0.7".to_string(),
+            "2026-03-02T09:00:00.000Z".to_string()
+        )]
+    );
+    assert!(matches!(
+        purge(&db, "deleted-in-0.7", "2026-03-02T09:00:00.000Z").await,
+        DeletedSessionPurge::Purged { .. }
+    ));
+    assert_eq!(remaining(&db, "deleted-in-0.7").await, 0);
 }

@@ -381,6 +381,10 @@ pub(super) fn format_user_friendly_error(error: &str) -> String {
     if error_lower.contains("unsupported audio codec: opus") {
         return "unsupported audio codec: opus".to_string();
     }
+    // Plafond de durée d'import (issue 654) : même règle.
+    if error_lower.contains(upload::RECORDING_TOO_LONG) {
+        return upload::RECORDING_TOO_LONG.to_string();
+    }
     if error_lower.contains("invalid audio")
         || error_lower.contains("unsupported format")
         || error_lower.contains("codec")
@@ -400,6 +404,14 @@ mod tests {
 
     // Issue 714 : l'erreur Opus garde sa phrase stable, traduite par
     // l'interface, au lieu du message générique sur le format.
+    #[test]
+    fn too_long_error_keeps_its_stable_phrase() {
+        assert_eq!(
+            format_user_friendly_error("Syntheo couldn't read this file: recording_too_long"),
+            "recording_too_long"
+        );
+    }
+
     #[test]
     fn opus_error_keeps_its_stable_phrase() {
         assert_eq!(

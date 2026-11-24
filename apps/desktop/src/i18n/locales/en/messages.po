@@ -6571,6 +6571,10 @@ msgstr "This note was edited on another device at the same time. The later edit 
 msgid "This proposal is out of date: the meeting changed after it was created."
 msgstr "This proposal is out of date: the meeting changed after it was created."
 
+#: src/stt/audio-import-feedback.ts
+msgid "This recording is longer than 6 hours: split it into shorter files, then import them."
+msgstr "This recording is longer than 6 hours: split it into shorter files, then import them."
+
 #: src/chat/components/session-provider.tsx
 msgid "This recording is using batch transcription, so the transcript isn't available to chat yet. Ask again after transcription finishes, or switch to a Pro model for live transcription."
 msgstr "This recording is using batch transcription, so the transcript isn't available to chat yet. Ask again after transcription finishes, or switch to a Pro model for live transcription."

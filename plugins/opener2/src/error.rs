@@ -10,4 +10,8 @@ pub enum Error {
     UrlNotAllowed,
     #[error("path not allowed: network and device paths cannot be opened")]
     PathNotAllowed,
+    /// Fichier qui peut lancer un programme (issue 654) : montré dans son
+    /// dossier, jamais ouvert. Message stable, reconnu par l'interface.
+    #[error("active_file_not_opened")]
+    ActiveFileNotOpened,
 }

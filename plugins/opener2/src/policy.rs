@@ -68,16 +68,153 @@ pub fn is_local_path(path: &str) -> bool {
 }
 
 pub(crate) fn check_openable_path(path: &str) -> Result<()> {
-    if is_local_path(path) {
-        Ok(())
-    } else {
-        Err(Error::PathNotAllowed)
+    if !is_local_path(path) {
+        return Err(Error::PathNotAllowed);
     }
+    if is_active_file(path) {
+        return Err(Error::ActiveFileNotOpened);
+    }
+    Ok(())
+}
+
+/// Extensions de fichiers qui lancent un programme ou du code quand on les
+/// ouvre avec le programme associé (exécutables, scripts, raccourcis,
+/// installeurs, images disque, documents Office à macros). Une pièce jointe
+/// venue d'une réunion ou d'un courriel ne doit jamais s'exécuter d'un clic
+/// (issue 654) : elle est montrée dans son dossier.
+const ACTIVE_EXTENSIONS: &[&str] = &[
+    // Windows : exécutables, installeurs, scripts, raccourcis.
+    "exe",
+    "com",
+    "scr",
+    "pif",
+    "cpl",
+    "msi",
+    "msp",
+    "msix",
+    "msixbundle",
+    "appx",
+    "appxbundle",
+    "appref-ms",
+    "application",
+    "gadget",
+    "bat",
+    "cmd",
+    "ps1",
+    "psm1",
+    "psd1",
+    "vbs",
+    "vbe",
+    "js",
+    "jse",
+    "wsf",
+    "wsh",
+    "wsc",
+    "hta",
+    "lnk",
+    "url",
+    "reg",
+    "inf",
+    "scf",
+    "chm",
+    "settingcontent-ms",
+    "library-ms",
+    "search-ms",
+    "diagcab",
+    "xll",
+    "iso",
+    "img",
+    "vhd",
+    "vhdx",
+    // Office avec macros.
+    "docm",
+    "dotm",
+    "xlsm",
+    "xltm",
+    "xlam",
+    "pptm",
+    "potm",
+    "ppam",
+    "ppsm",
+    "sldm",
+    // Multiplateforme et Unix.
+    "jar",
+    "py",
+    "pyw",
+    "pl",
+    "rb",
+    "sh",
+    "bash",
+    "zsh",
+    "ksh",
+    "csh",
+    "command",
+    "tool",
+    "app",
+    "pkg",
+    "dmg",
+    "run",
+    "bin",
+    "appimage",
+    "desktop",
+    "deb",
+    "rpm",
+    "flatpakref",
+];
+
+/// Le fichier, d'après son extension (sans tenir compte de la casse ni des
+/// points et espaces finaux, que Windows ignore), peut lancer un programme.
+pub fn is_active_file(path: &str) -> bool {
+    let name = path
+        .rsplit(['/', '\\'])
+        .next()
+        .unwrap_or(path)
+        .trim_end_matches(['.', ' ']);
+    let Some((stem, extension)) = name.rsplit_once('.') else {
+        return false;
+    };
+    !stem.is_empty()
+        && ACTIVE_EXTENSIONS
+            .iter()
+            .any(|active| extension.eq_ignore_ascii_case(active))
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{check_openable_path, check_openable_url};
+    use super::{check_openable_path, check_openable_url, is_active_file};
+
+    // Issue 654 : une pièce jointe qui peut lancer un programme n'est jamais
+    // ouverte, quelle que soit la casse ou un point final.
+    #[test]
+    fn active_files_are_never_opened() {
+        for path in [
+            "/vault/attachments/facture.exe",
+            r"C:\Users\me\Syntheo\setup.MSI",
+            "/vault/script.ps1",
+            "/vault/raccourci.lnk",
+            "/vault/budget.xlsm",
+            "/vault/install.sh",
+            "/vault/evil.exe.",
+            "/vault/evil.js ",
+        ] {
+            assert!(is_active_file(path), "{path}");
+            #[cfg(not(windows))]
+            assert!(matches!(
+                check_openable_path(path),
+                Err(crate::Error::ActiveFileNotOpened)
+            ));
+        }
+        for path in [
+            "/vault/compte-rendu.pdf",
+            "/vault/photo.JPG",
+            "/vault/notes.docx",
+            "/vault/archive",
+            "/vault/.exe",
+            "/vault/dossier.exe/notes.txt",
+        ] {
+            assert!(!is_active_file(path), "{path}");
+        }
+    }
 
     #[test]
     fn network_and_device_paths_are_refused() {
