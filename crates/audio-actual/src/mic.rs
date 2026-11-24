@@ -50,6 +50,18 @@ pub(crate) fn is_unusable_input_device_with_id(id: Option<&str>, name: &str) -> 
         || lower.starts_with("discard all samples")
 }
 
+/// Périphérique cpal qui suit la source d'entrée par défaut du serveur son :
+/// l'entrée par défaut elle-même, ou les PCM ALSA de routage « default »,
+/// « pulse » et « pipewire » (issue 715).
+pub(crate) fn routes_to_default_source(is_default: bool, id: Option<&str>) -> bool {
+    is_default
+        || id.is_some_and(|id| {
+            ["default", "pulse", "pipewire"]
+                .iter()
+                .any(|routing| id.eq_ignore_ascii_case(routing))
+        })
+}
+
 fn rank_input_devices(
     preferred: Option<&str>,
     default_name: Option<&str>,
@@ -373,6 +385,11 @@ impl MicInput {
         });
         let ranked =
             rank_input_devices(preferred.as_deref(), default_name.as_deref(), &listed_names);
+        // Sous Linux, l'entrée par défaut peut être le « monitor » de la sortie
+        // quand le micro disparaît : le canal micro capterait le son du poste
+        // sans le dire (issue 715). Ces périphériques sont alors écartés.
+        let default_is_monitor = syntheo_audio_device::default_input_is_monitor();
+        let mut skipped_monitor = false;
 
         let opened = if ranked.is_empty() {
             None
@@ -419,6 +436,18 @@ impl MicInput {
                 let mut devices = devices.into_iter();
                 for device in devices.by_ref() {
                     let device_id = get_device_id(&device);
+                    if default_is_monitor
+                        && routes_to_default_source(is_default, device_id.as_deref())
+                    {
+                        tracing::warn!(
+                            device_name = name,
+                            device_id = device_id.as_deref().unwrap_or_default(),
+                            "mic_default_source_is_monitor"
+                        );
+                        skipped_monitor = true;
+                        drop_quietly(device);
+                        continue;
+                    }
                     if is_unusable_input_device_with_id(
                         device_id.as_deref(),
                         &get_device_name(&device),
@@ -486,7 +515,9 @@ impl MicInput {
             }
             None => {
                 drop_quietly(host);
-                Err(if default_name.is_none() && listed_names.is_empty() {
+                Err(if skipped_monitor {
+                    crate::Error::MicDefaultIsMonitor
+                } else if default_name.is_none() && listed_names.is_empty() {
                     crate::Error::NoInputDevice
                 } else {
                     crate::Error::MicOpenFailed
@@ -730,6 +761,26 @@ impl AsyncSource for MicStream {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // Issue 715 : quand l'entrée par défaut est le monitor de la sortie, les
+    // périphériques qui la suivent sont écartés ; une carte nommée ne l'est pas.
+    #[test]
+    fn default_routing_devices_follow_the_default_source() {
+        assert!(routes_to_default_source(true, Some("hw:CARD=USB,DEV=0")));
+        for id in ["default", "pulse", "PipeWire"] {
+            assert!(routes_to_default_source(false, Some(id)), "{id}");
+        }
+        assert!(!routes_to_default_source(false, Some("hw:CARD=PCH,DEV=0")));
+        assert!(!routes_to_default_source(
+            false,
+            Some("sysdefault:CARD=PCH")
+        ));
+        assert!(!routes_to_default_source(false, None));
+        assert_eq!(
+            crate::Error::MicDefaultIsMonitor.to_string(),
+            "mic_default_is_monitor"
+        );
+    }
 
     #[test]
     fn capture_keeps_default_handoff_active_until_the_last_stream_stops() {

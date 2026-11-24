@@ -320,6 +320,23 @@ impl Drop for BluetoothInputActivation {
     }
 }
 
+/// La source d'entrée par défaut du système est le « monitor » d'une sortie
+/// (issue 715) : l'ouvrir comme micro enregistrerait le son du poste. Linux
+/// seulement ; faux ailleurs et quand le serveur son ne répond pas.
+pub fn default_input_is_monitor() -> bool {
+    #[cfg(target_os = "linux")]
+    {
+        linux::default_source_name()
+            .ok()
+            .flatten()
+            .is_some_and(|name| linux::is_monitor_source_name(&name))
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        false
+    }
+}
+
 pub fn default_input_device_name() -> Option<String> {
     backend()
         .get_default_input_device()

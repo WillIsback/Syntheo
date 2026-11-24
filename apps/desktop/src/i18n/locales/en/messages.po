@@ -3601,6 +3601,10 @@ msgstr "No meeting type found"
 msgid "No meetings yet"
 msgstr "No meetings yet"
 
+#: src/store/zustand/listener/mic-fallback.ts
+msgid "No microphone available"
+msgstr "No microphone available"
+
 #: src/settings/general/audio-settings.tsx
 msgid "No microphone detected. Plug in a microphone or check permissions."
 msgstr "No microphone detected. Plug in a microphone or check permissions."
@@ -6085,6 +6089,10 @@ msgstr "The note title"
 #: src/settings/dictation.tsx
 msgid "The one that captures your voice."
 msgstr "The one that captures your voice."
+
+#: src/store/zustand/listener/mic-fallback.ts
+msgid "The only remaining input is the computer's sound output, so it is not recorded as your microphone. Plug in a microphone or choose one in the device settings. System audio continues."
+msgstr "The only remaining input is the computer's sound output, so it is not recorded as your microphone. Plug in a microphone or choose one in the device settings. System audio continues."
 
 #: src/settings/automations/step-forms.tsx
 msgid "The only step that leaves your computer: the JSON is sent to the address below. Use an address you trust, such as n8n, Home Assistant or a home server."
