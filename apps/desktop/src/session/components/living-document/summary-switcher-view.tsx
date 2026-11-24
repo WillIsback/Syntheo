@@ -78,6 +78,7 @@ export function SummarySwitcherView({
   onChangeTemplate,
   onCopy,
   onMeasure,
+  measureOutdated = false,
   onRemove,
   onMenuCloseAutoFocus,
   menuOpen,
@@ -105,6 +106,8 @@ export function SummarySwitcherView({
   onCopy: () => void;
   /** Bêta (issue 671) : absent quand la mesure est désactivée. */
   onMeasure?: () => void;
+  /** Seules des mesures d'une règle antérieure existent (issue 734). */
+  measureOutdated?: boolean;
   onRemove: () => void;
   onMenuCloseAutoFocus?: (event: Event) => void;
   menuOpen?: boolean;
@@ -235,7 +238,14 @@ export function SummarySwitcherView({
           {onMeasure ? (
             <DropdownMenuItem disabled={!canCopy} onSelect={onMeasure}>
               <ChartBar aria-hidden="true" />
-              {t`Measure rework…`}
+              <span className="flex flex-col">
+                <span>{t`Measure rework…`}</span>
+                {measureOutdated ? (
+                  <span className="text-muted-foreground text-xs">
+                    {t`Measure again (rule updated)`}
+                  </span>
+                ) : null}
+              </span>
             </DropdownMenuItem>
           ) : null}
           {canRemove ? (

@@ -164,12 +164,15 @@ jobs:
           cargo clippy --locked --workspace --all-targets -- -D warnings
 
       # Crates portant les chantiers Syntheo : templates et prompts, schéma
-      # SQLite, adaptateurs STT, capture (règle « aucun audio sur disque »).
+      # SQLite, adaptateurs STT, capture (règle « aucun audio sur disque »),
+      # mesure de la reprise (corpus et empreinte liée à RULE_VERSION,
+      # issue 734 : une sortie changée sans nouvelle version fait échouer).
       - name: Tests Rust
         run: |
           set -euo pipefail
           cargo test --locked \
             -p template-app -p db-app -p owhisper-client -p listener-core -p storage
+          cargo test --locked -p mesure --features differences
 
   # Clippy de la cible Windows pour `audio-device` (issue 382) : aucune
   # autre CI ne compile cette crate pour Windows, et son code `cfg(windows)`

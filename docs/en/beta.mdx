@@ -37,6 +37,8 @@ The calculation is deterministic: the same texts always give the same numbers. N
 4. **Classification.** A difference is **lexical** if it is a short replacement (1 to 3 words on each side, or a pair of close words) that involves a proper name, an acronym, or a term from your dictionary: for example a misspelled person's name. Everything else is **content**, including a proper name added or removed on its own: a missing name is missing information.
 5. **Counters.** Only word counts are kept: words generated, added, deleted, replaced (content) and replaced (lexical), in total and per section. The texts are released immediately.
 
+Each measurement keeps the version of the calculation rule. When the rule changes, a summary measured only under an older rule shows "Measure again (rule updated)" in its menu, and its older measurements are not exported: only the first measurement made under the current rule counts.
+
 Two indicators follow, per 1,000 generated words:
 
 - **content rework** = (added + deleted + replaced for content) ÷ generated × 1,000. This is the main indicator;

@@ -3,6 +3,8 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 
+import { RULE_VERSION } from "@syntheo/plugin-mesure";
+
 import { buildExport, ExportError, type ExportRows } from "./export";
 
 // Contrôle de l'outil d'agrégation (issue 673) : schéma export-v1 et
@@ -58,7 +60,7 @@ function measurement(
     documentId,
     measuredAt,
     generatedSource: "original",
-    ruleVersion: 1,
+    ruleVersion: RULE_VERSION,
     aligned: true,
     headingsGenerated: 3,
     headingsMatched: 3,
@@ -501,6 +503,46 @@ describe("buildExport", () => {
         ],
       },
     ]);
+  });
+
+  // Issue 734 : une seule source pour la version de la règle, et seules les
+  // mesures faites sous la règle courante sont exportées.
+  it("writes the rule version of the Rust crate", () => {
+    expect(RULE_VERSION).toBe(2);
+    expect(buildExport(rows(), "0.8.1", NOW).rule_version).toBe(RULE_VERSION);
+  });
+
+  it("exports the first measurement at the current rule, never an older one", () => {
+    const data = rows();
+    // Mesure sous l'ancienne règle, plus tôt et plus favorable.
+    data.measurements = [
+      {
+        ...measurement("m-old", DOC, at(2)),
+        ruleVersion: RULE_VERSION - 1,
+        total: counters(28, 0, 0, 0, 0),
+      },
+      measurement("m-current", DOC, at(3)),
+      measurement("m-later", DOC, at(4)),
+    ];
+    data.sections = [
+      ...sections("m-old"),
+      ...sections("m-current"),
+      ...sections("m-later"),
+    ];
+    data.termErrors = [];
+    const exported = buildExport(data, "0.8.1", NOW);
+    expect(exported.meetings).toHaveLength(1);
+    expect(exported.meetings[0]?.total).toEqual(counters(28, 3, 2, 4, 1));
+  });
+
+  it("leaves out a generation measured only under an older rule", () => {
+    const data = rows();
+    data.measurements = data.measurements.map((m) => ({
+      ...m,
+      ruleVersion: RULE_VERSION - 1,
+    }));
+    data.termErrors = [];
+    expect(buildExport(data, "0.8.1", NOW).meetings).toHaveLength(0);
   });
 
   it("refuses to build without enrollment or with an odd app version", () => {

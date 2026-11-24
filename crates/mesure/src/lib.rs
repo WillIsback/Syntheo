@@ -1237,4 +1237,6 @@ fn proper_noun_or_acronym(token: &Token) -> bool {
 }
 
 #[cfg(test)]
+mod corpus_tests;
+#[cfg(test)]
 mod tests;
