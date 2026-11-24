@@ -15,7 +15,6 @@ import {
   getCurrentWebviewWindowLabel,
   init as initWindowsPlugin,
 } from "@syntheo/plugin-windows";
-import { useMountEffect } from "@syntheo/ui/hooks/use-mount-effect";
 
 import { AITaskWindowSyncBridge } from "./ai/task-window-sync";
 import { ensureLegacyAutomationsMigrated } from "./automations/migration";
@@ -28,6 +27,7 @@ import { routeTree } from "./routeTree.gen";
 import { EventListeners } from "./services/event-listeners";
 import { NativeMenuLocaleSync } from "./services/native-menu-locale";
 import { OnDeviceRefusalSync } from "./services/on-device-refusal-sync";
+import { StartupTasks } from "./services/startup-tasks";
 import { TaskManager } from "./services/task-manager";
 import { TrayRecordingSync } from "./services/tray-recording";
 import { useRemoteSessionDeletionUndoListener } from "./session/hooks/useDeleteSession";
@@ -108,13 +108,11 @@ function ReadyApp() {
   const theme = useConfigValue("theme") as ThemePreference;
   useRemoteSessionDeletionUndoListener(isMainWindow);
 
-  useMountEffect(() => {
-    runMainWindowStartupTasks();
-  });
-
   return (
     <AppThemeProvider>
       <AppI18nProvider>
+        {/* Sous le fournisseur : langue active avant les tâches (issue 665). */}
+        <StartupTasks run={runMainWindowStartupTasks} />
         <LocalizedDialogLabels>
           {isMainWindow ? <NativeMenuLocaleSync /> : null}
           {isMainWindow ? <DefaultTemplatesLocaleSync /> : null}
