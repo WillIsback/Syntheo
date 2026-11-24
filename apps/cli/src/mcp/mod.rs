@@ -352,10 +352,45 @@ pub async fn serve(db: Arc<syntheo_db_core::Db>) -> crate::Result<()> {
     Ok(())
 }
 
+/// Balise qui entoure tout contenu de réunion renvoyé aux agents (issue 657) :
+/// titres, notes, comptes rendus et transcriptions viennent de réunions et de
+/// fichiers importés, pas de l'utilisateur ; un agent ne doit pas suivre les
+/// instructions qui s'y trouvent.
+pub(crate) const UNTRUSTED_OPEN: &str = "<untrusted-meeting-data>";
+pub(crate) const UNTRUSTED_CLOSE: &str = "</untrusted-meeting-data>";
+
+/// Entoure `text` des délimiteurs ; une balise présente dans le contenu est
+/// neutralisée (`replacement` remplace son « < ») pour qu'il ne puisse pas
+/// fermer le bloc lui-même.
+pub(crate) fn untrusted(text: &str, replacement: &str) -> String {
+    let mut neutral = String::with_capacity(text.len());
+    let lower = text.to_ascii_lowercase();
+    let mut last = 0;
+    for (index, _) in lower.match_indices('<') {
+        let rest = &lower[index..];
+        if rest.starts_with(UNTRUSTED_OPEN.trim_end_matches('>'))
+            || rest.starts_with(UNTRUSTED_CLOSE.trim_end_matches('>'))
+        {
+            neutral.push_str(&text[last..index]);
+            neutral.push_str(replacement);
+            last = index + 1;
+        }
+    }
+    neutral.push_str(&text[last..]);
+    format!("{UNTRUSTED_OPEN}\n{neutral}\n{UNTRUSTED_CLOSE}")
+}
+
 fn structured(value: &impl Serialize) -> std::result::Result<CallToolResult, McpError> {
-    serde_json::to_value(value)
+    let mut result = serde_json::to_value(value)
         .map(CallToolResult::structured)
-        .map_err(internal_error)
+        .map_err(internal_error)?;
+    // La copie texte (celle que lisent les modèles) est délimitée ; le
+    // contenu structuré reste du JSON conforme au schéma. Dans du JSON,
+    // « \u003c » est le même caractère « < », la donnée ne change pas.
+    if let Some(value) = &result.structured_content {
+        result.content = vec![ContentBlock::text(untrusted(&value.to_string(), "\\u003c"))];
+    }
+    Ok(result)
 }
 
 fn internal_error(error: impl std::fmt::Display) -> McpError {

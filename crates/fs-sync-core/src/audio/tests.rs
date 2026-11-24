@@ -258,7 +258,7 @@ fn import_returns_the_source_path_without_copying() {
     let runtime = NoopRuntime;
     let imported = import_to_session(&runtime, "session", &source_path).unwrap();
 
-    assert_eq!(imported, source_path);
+    assert_eq!(imported, std::fs::canonicalize(&source_path).unwrap());
     assert_eq!(std::fs::read(&source_path).unwrap(), b"audio content");
     assert_eq!(std::fs::read_dir(temp.path()).unwrap().count(), 1);
 }
@@ -274,4 +274,23 @@ fn import_rejects_missing_and_empty_sources() {
     let empty = temp.path().join("empty.mp3");
     std::fs::write(&empty, b"").unwrap();
     assert!(import_to_session(&runtime, "session", &empty).is_err());
+
+    // Issue 657 : un dossier n'est pas un enregistrement.
+    assert!(import_to_session(&runtime, "session", temp.path()).is_err());
+}
+
+// Issue 657 : l'import renvoie la cible réelle d'un lien symbolique, celle
+// qui sera lue ; le worker des agents revérifie son extension.
+#[cfg(unix)]
+#[test]
+fn import_resolves_a_symlink_to_its_target() {
+    let temp = TempDir::new().unwrap();
+    let target = temp.path().join("secret.bin");
+    std::fs::write(&target, b"data").unwrap();
+    let link = temp.path().join("meeting.mp3");
+    std::os::unix::fs::symlink(&target, &link).unwrap();
+
+    let imported = import_to_session(&NoopRuntime, "session", &link).unwrap();
+
+    assert_eq!(imported, std::fs::canonicalize(&target).unwrap());
 }

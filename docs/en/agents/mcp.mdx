@@ -63,4 +63,6 @@ To edit a summary or the note, call `propose_summary_edit` or `propose_memo_edit
 
 The server also exposes MCP resources (`syntheo://meetings/...`, `syntheo://series/...`) in Markdown or plain text, for clients that prefer resources to tools.
 
+Meeting content (titles, notes, summaries, transcripts) can contain text written by other people or coming from an imported recording. The server therefore presents it as untrusted data: the text copy of each tool result, and each resource, is placed between `<untrusted-meeting-data>` and `</untrusted-meeting-data>`, and the server instructions tell the agent never to follow an instruction found there. The structured content (`structuredContent`) stays JSON that matches the tool's schema, with no delimiters.
+
 Exact parameters and resources: see the [MCP reference](/en/reference/mcp).

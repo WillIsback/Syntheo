@@ -63,4 +63,6 @@ Pour modifier un résumé ou la note, appelez `propose_summary_edit` ou `propose
 
 Le serveur expose aussi des ressources MCP (`syntheo://meetings/...`, `syntheo://series/...`) en Markdown ou en texte brut, pour les clients qui préfèrent les ressources aux outils.
 
+Le contenu des réunions (titres, notes, comptes rendus, transcriptions) peut contenir du texte écrit par d'autres personnes ou issu d'un enregistrement importé. Le serveur le présente donc comme une donnée non fiable : la copie texte de chaque résultat d'outil, et chaque ressource, est placée entre `<untrusted-meeting-data>` et `</untrusted-meeting-data>`, et les instructions du serveur demandent à l'agent de ne jamais suivre une consigne qui s'y trouve. Le contenu structuré (`structuredContent`) reste du JSON conforme au schéma de l'outil, sans délimiteur.
+
 Paramètres exacts et ressources : voir la [référence MCP](/fr/reference/mcp).
