@@ -19,7 +19,58 @@ pub(crate) async fn insert_text(target: String, text: String) -> Result<(), Stri
     if text.is_empty() || text.len() > 100_000 {
         return Err("Dictation text is empty or too long".into());
     }
+    let text = typed_text(&text);
+    if text.is_empty() {
+        return Err("Dictation text is empty or too long".into());
+    }
     crate::insertion::insert(target, text).await
+}
+
+/// Texte réellement frappé dans l'application cible (issue 657) : la frappe
+/// simulée envoie chaque caractère tel quel, si bien qu'un retour à la ligne
+/// validerait un formulaire ou une commande, et qu'un caractère de contrôle
+/// ou de direction (bidi) changerait ce qui est saisi. Ils deviennent des
+/// espaces, regroupées, sans espace au début ni à la fin.
+pub(crate) fn typed_text(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut pending_space = false;
+    for c in text.chars() {
+        if c.is_control() || is_bidi_control(c) || c.is_whitespace() {
+            pending_space = !out.is_empty();
+            continue;
+        }
+        if pending_space {
+            out.push(' ');
+            pending_space = false;
+        }
+        out.push(c);
+    }
+    out
+}
+
+fn is_bidi_control(c: char) -> bool {
+    matches!(
+        c,
+        '\u{061C}' | '\u{200E}' | '\u{200F}' | '\u{202A}'..='\u{202E}' | '\u{2066}'..='\u{2069}'
+    )
+}
+
+#[cfg(test)]
+mod typed_text_tests {
+    use super::typed_text;
+
+    // Issue 657 : ni retour à la ligne, ni tabulation, ni échappement, ni
+    // contrôle bidi ne sont frappés ; le reste du texte est gardé.
+    #[test]
+    fn control_and_bidi_characters_become_single_spaces() {
+        assert_eq!(
+            typed_text("Bonjour\r\nrm -rf\t/\u{1b}[2J fin"),
+            "Bonjour rm -rf / [2J fin"
+        );
+        assert_eq!(typed_text("abc\u{202E}fed\u{2066}"), "abc fed");
+        assert_eq!(typed_text("  \n déjà\u{00A0}vu 👍🏽 \n"), "déjà vu 👍🏽");
+        assert_eq!(typed_text("\n\t\u{200F}"), "");
+    }
 }
 
 #[tauri::command]

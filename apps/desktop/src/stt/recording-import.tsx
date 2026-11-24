@@ -18,6 +18,28 @@ const workerId = crypto.randomUUID();
 const RECORDING_IMPORT_HEARTBEAT_MS = 30_000;
 type ImportJob = { id: string; meeting_id: string; file_path: string };
 
+/** Formats acceptés pour un import demandé par un agent (même liste que la
+ * CLI, crates/agent-access/src/recording_import.rs). */
+const AGENT_RECORDING_EXTENSIONS = [
+  "wav",
+  "mp3",
+  "ogg",
+  "mp4",
+  "m4a",
+  "flac",
+  "webm",
+  "aac",
+];
+
+export function isAgentRecordingPath(path: string): boolean {
+  const name = path.split(/[\\/]/).pop() ?? "";
+  const dot = name.lastIndexOf(".");
+  return (
+    dot > 0 &&
+    AGENT_RECORDING_EXTENSIONS.includes(name.slice(dot + 1).toLowerCase())
+  );
+}
+
 async function heartbeat() {
   const vault = await settingsCommands.vaultBase();
   if (vault.status === "error") throw new Error(vault.error);
@@ -156,6 +178,11 @@ async function processImport(
       job.file_path,
     );
     if (imported.status === "error") throw new Error(imported.error);
+    // Issue 657 : le fichier réellement lu (lien symbolique résolu) doit
+    // encore être un enregistrement, comme vérifié par la CLI à la demande.
+    if (!isAgentRecordingPath(imported.data)) {
+      throw new Error("Unsupported recording format");
+    }
     phase = "transcribing";
     await update(phase);
     await runBatch(imported.data, {
