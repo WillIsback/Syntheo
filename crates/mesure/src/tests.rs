@@ -94,8 +94,10 @@ fn acronyms_mixed_tokens_and_dictionary_terms_are_lexical() {
         &Dictionary::default(),
     )
     .unwrap();
-    // « cri » → « CRI » (sigle) ; « gpt quatre » → « GPT4 » (2 → 1 mot).
-    assert_eq!(report.total, counters(11, 0, 0, 0, 3));
+    // « cri » → « CRI » (sigle). Règle v2 (issue 732) : « gpt quatre » →
+    // « GPT4 » apparie « gpt » et « GPT4 » (1 mot lexical) ; « quatre »,
+    // sans homologue, est supprimé (1 mot de fond).
+    assert_eq!(report.total, counters(11, 0, 1, 0, 2));
 
     let dictionary = Dictionary::new(["nemotron"]).unwrap();
     let report = measure(
@@ -1077,4 +1079,212 @@ Le budget du pilote est revu.
     assert_eq!(report.total.deleted, 6);
     assert_eq!(report.total.added, 0);
     assert_eq!(report.unmatched_sent_words, 0);
+}
+
+// --- Classement v2 (issue 732) -------------------------------------------
+// Noms fictifs uniquement.
+
+fn text_total(generated: &str, sent: &str, dictionary: &Dictionary) -> Counters {
+    measure(generated, Format::Text, sent, Format::Text, dictionary)
+        .unwrap()
+        .total
+}
+
+#[test]
+fn a_mixed_replacement_is_split_word_by_word() {
+    // Exemple de l'issue : le nom corrigé est lexical, le nom ajouté est du
+    // fond.
+    let total = text_total(
+        "Réunion animée par Dupond hier.",
+        "Réunion animée par Durand, Dupont hier.",
+        &Dictionary::default(),
+    );
+    assert_eq!(total, counters(5, 1, 0, 0, 1));
+    // Prénom corrigé, nom ajouté après lui.
+    let total = text_total(
+        "Validé avec Emmanuel ce matin.",
+        "Validé avec Emmanuelle Garnier ce matin.",
+        &Dictionary::default(),
+    );
+    assert_eq!(total, counters(5, 1, 0, 0, 1));
+    // Aucun mot proche : remplacement classé d'un bloc, comme en v1.
+    let total = text_total(
+        "Le budget est validé par la direction.",
+        "Le budget est validé par le comité de direction.",
+        &Dictionary::default(),
+    );
+    assert_eq!(total, counters(7, 0, 0, 3, 0));
+}
+
+#[test]
+fn corrections_around_function_words_are_counted_one_by_one() {
+    let generated = "Hier, Martin de la DSI présente le plan.";
+    let sent = "Hier, Marten de la DRH présente le plan.";
+    // Deux corrections lexicales, les mots-outils ne comptent pas.
+    assert_eq!(
+        text_total(generated, sent, &Dictionary::default()),
+        counters(8, 0, 0, 0, 2)
+    );
+    let mut found = Vec::new();
+    let prepared = prepare(generated, Format::Text, sent, Format::Text).unwrap();
+    for pair in prepared.pairs() {
+        pair.diff(&Dictionary::default(), |old, new, change| {
+            found.push((old.len(), new.len(), change));
+        });
+    }
+    assert_eq!(found.len(), 2);
+    assert!(
+        found
+            .iter()
+            .all(|(o, n, c)| *o == 1 && *n == 1 && c.lexical)
+    );
+}
+
+// Relecture de l'issue 732 : cas où une fusion par-dessus les mots-outils
+// minorait la reprise. Sans fusion, chaque différence garde ses mots.
+#[test]
+fn a_function_word_between_two_differences_never_lowers_the_count() {
+    // Le « de » de l'écart s'appariait à l'autre « de » : Rl=2, fond 0.
+    assert_eq!(
+        text_total(
+            "Voir Martin de Lyon.",
+            "Voir de Durand de Lyon.",
+            &Dictionary::default()
+        ),
+        counters(4, 2, 1, 0, 0)
+    );
+    // Écart de ponctuation seule : une suppression et un ajout, pas un
+    // remplacement d'un mot.
+    assert_eq!(
+        text_total(
+            "Le budget validé, envoi lundi.",
+            "Le budget, nouveau envoi lundi.",
+            &Dictionary::default()
+        ),
+        counters(5, 1, 1, 0, 0)
+    );
+}
+
+// Un mot-outil ne s'apparie pas à un mot voisin (« les » et « des ») : il ne
+// découpe pas une reformulation en morceaux lexicaux.
+#[test]
+fn function_words_are_never_near_pairs() {
+    let total = text_total(
+        "Le comité Durand transmettra les chiffres demain.",
+        "Le comité Durand publiera des tableaux demain.",
+        &Dictionary::default(),
+    );
+    assert_eq!(total.replaced_lexical, 0, "{total:?}");
+    assert_eq!(total.replaced_content, 3, "{total:?}");
+    let token = |text: &str| Token {
+        text: text.to_owned(),
+        key: normalize::comparison_key(text),
+        word: true,
+        sentence_start: false,
+    };
+    assert_eq!(near_words(&token("les"), &token("des")), None);
+    assert_eq!(near_words(&token("sur"), &token("sous")), None);
+    assert_eq!(near_words(&token("15h"), &token("16h")), None);
+    assert_eq!(near_words(&token("Dupond"), &token("Dupont")), Some(1));
+    assert_eq!(near_words(&token("Dupond"), &token("Durand")), Some(2));
+    assert_eq!(near_words(&token("cri"), &token("CRI")), Some(0));
+}
+
+// La paire la plus proche gagne, quel que soit l'ordre des mots.
+#[test]
+fn the_closest_word_is_paired_in_any_order() {
+    for sent in ["Signé par Durand, Dupont.", "Signé par Dupont, Durand."] {
+        let mut lexical = Vec::new();
+        let prepared = prepare("Signé par Dupond.", Format::Text, sent, Format::Text).unwrap();
+        for pair in prepared.pairs() {
+            pair.diff(&Dictionary::default(), |old, new, change| {
+                if change.kind == ChangeKind::Replaced {
+                    lexical.push((old[0].text.clone(), new[0].text.clone()));
+                }
+            });
+        }
+        assert_eq!(
+            lexical,
+            [("Dupond".to_owned(), "Dupont".to_owned())],
+            "{sent}"
+        );
+    }
+}
+
+// Coût borné : un très long mot qui change d'une lettre ne fait pas exploser
+// le temps de calcul (distance d'édition bornée).
+#[test]
+fn near_word_distance_is_bounded() {
+    let long = "a".repeat(20_000);
+    let started = std::time::Instant::now();
+    let total = text_total(
+        &format!("Mot {long}x fin."),
+        &format!("Mot {long}y fin."),
+        &Dictionary::default(),
+    );
+    assert_eq!(total.replaced_content, 1);
+    assert!(
+        started.elapsed() < std::time::Duration::from_secs(2),
+        "{:?}",
+        started.elapsed()
+    );
+}
+
+#[test]
+fn repeated_words_count_a_single_change() {
+    // Statuts répétés d'un tableau : un seul statut change.
+    let generated = "Tâche A : fait. Tâche B : fait. Tâche C : fait. Tâche D : fait.";
+    let sent = "Tâche A : fait. Tâche B : fait. Tâche C : bloqué. Tâche D : fait.";
+    assert_eq!(
+        text_total(generated, sent, &Dictionary::default()),
+        counters(12, 0, 0, 1, 0)
+    );
+    // Une ligne retirée au milieu : ses trois mots, rien d'autre.
+    let sent = "Tâche A : fait. Tâche C : fait. Tâche D : fait.";
+    assert_eq!(
+        text_total(generated, sent, &Dictionary::default()),
+        counters(12, 0, 3, 0, 0)
+    );
+}
+
+#[test]
+fn dictionary_terms_and_joins_stay_lexical() {
+    let dictionary = Dictionary::new(["Nemotron"]).unwrap();
+    // Mot coupé en deux, sans mot proche : bloc court, terme du
+    // dictionnaire, lexical.
+    assert_eq!(
+        text_total(
+            "Le modèle nemo tron répond.",
+            "Le modèle nemotron répond.",
+            &dictionary
+        ),
+        counters(5, 0, 0, 0, 2)
+    );
+    // Faute de frappe sur un mot ordinaire : 1 mot de fond.
+    assert_eq!(
+        text_total(
+            "Le calendier tient.",
+            "Le calendrier tient.",
+            &Dictionary::default()
+        ),
+        counters(3, 0, 0, 1, 0)
+    );
+}
+
+#[test]
+fn function_word_list_is_lowercase_and_unique() {
+    for word in FUNCTION_WORDS {
+        assert_eq!(*word, word.to_lowercase(), "{word}");
+        assert_eq!(*word, normalize::comparison_key(word), "{word}");
+    }
+    let mut sorted: Vec<&str> = FUNCTION_WORDS.to_vec();
+    sorted.sort_unstable();
+    sorted.dedup();
+    assert_eq!(sorted.len(), FUNCTION_WORDS.len());
+}
+
+#[test]
+fn rule_version_is_two() {
+    assert_eq!(RULE_VERSION, 2);
+    assert_eq!(run(GENERATED, GENERATED).rule_version, 2);
 }

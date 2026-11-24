@@ -99,7 +99,7 @@ const DAY_MS = 86_400_000;
 const ABANDON_WINDOW_MS = 7 * DAY_MS;
 
 /** Règle de calcul de la reprise (crate `mesure`, `RULE_VERSION`). */
-const RULE_VERSION = 1;
+const RULE_VERSION = 2;
 
 /**
  * Construit l'export à partir des lignes de la base.

@@ -33,8 +33,8 @@ The calculation is deterministic: the same texts always give the same numbers. N
 
 1. **Normalization.** Formatting is removed (headings, bullets, bold, links, whose text is kept). Spaces are merged and punctuation is split from words. HTML entities in pasted text (`&eacute;`) are decoded, and typographic variants (curly or straight apostrophes, quotes, dashes, non-breaking spaces) do not count as differences. Capitalization is kept.
 2. **Splitting into sections.** The headings of the generated version split both texts. A section is found by its heading, even a corrected one: a heading one word apart, or one that keeps half its words and half its content, between two identical headings. Heading words count like body words. A section missing on one side counts entirely as added or deleted. If fewer than half of the headings are found in the sent version, the measurement covers the whole text, and the export says so.
-3. **Word-by-word comparison.** Each difference is an addition, a deletion, or a replacement. A replacement weighs the number of words on its longer side.
-4. **Classification.** A difference is **lexical** if it is a short replacement (1 to 3 words on each side) that involves a proper name, an acronym, or a term from your dictionary: for example a misspelled person's name. Everything else is **content**, including a proper name added or removed on its own: a missing name is missing information.
+3. **Word-by-word comparison.** Each difference is an addition, a deletion, or a replacement. Inside a replacement, close words are paired one to one ("Dupond" and "Dupont", never a function word such as "les" and "des"): each pair counts as one word, and a word without a counterpart counts as added or deleted. What remains without a close word weighs the number of words on its longer side.
+4. **Classification.** A difference is **lexical** if it is a short replacement (1 to 3 words on each side, or a pair of close words) that involves a proper name, an acronym, or a term from your dictionary: for example a misspelled person's name. Everything else is **content**, including a proper name added or removed on its own: a missing name is missing information.
 5. **Counters.** Only word counts are kept: words generated, added, deleted, replaced (content) and replaced (lexical), in total and per section. The texts are released immediately.
 
 Two indicators follow, per 1,000 generated words:
@@ -129,7 +129,7 @@ You export by hand. Syntheo shows you the whole file before saving it and sends 
 | --- | --- | --- |
 | `schema_version` | Version of the export format. | `1` |
 | `app_version` | Version of Syntheo that produced the export. | `"0.8.0"` |
-| `rule_version` | Version of the rework calculation rule. | `1` |
+| `rule_version` | Version of the rework calculation rule. | `2` |
 | `rubric_version` | Version of the rubric of a future AI classification; `0` as long as it does not exist. | `0` |
 | `pseudonym` | Random pseudonym drawn at enrollment, erasable. It is derived from no data about the person or the computer. | `"p-3f9a1c0e7b2d4f6a8c1e3b5d7f9a2c4e"` |
 | `enrolled_days` | Days elapsed between enrollment and the export. | `21` |
