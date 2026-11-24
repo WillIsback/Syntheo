@@ -1,3 +1,5 @@
+import { RULE_VERSION } from "@syntheo/plugin-mesure";
+
 import { liveQueryClient } from "~/db";
 
 // Bêta, issue 672 : export pseudonymisé au schéma fermé
@@ -98,9 +100,6 @@ const DAY_MS = 86_400_000;
 /** Fenêtre du taux d'abandon (spec §4) : 7 jours après la génération. */
 const ABANDON_WINDOW_MS = 7 * DAY_MS;
 
-/** Règle de calcul de la reprise (crate `mesure`, `RULE_VERSION`). */
-const RULE_VERSION = 2;
-
 /**
  * Construit l'export à partir des lignes de la base.
  *
@@ -109,9 +108,12 @@ const RULE_VERSION = 2;
  * - Une mesure se rattache à la génération de sa synthèse en cours à sa date,
  *   si elle est encore ouverte ; une mesure sans génération notée, ou faite
  *   sur une synthèse retouchée (`current`), n'est pas exportée.
- * - Une génération mesurée donne une réunion `mN` : sa première mesure. Les
- *   réunions suivent l'ordre chronologique de ces mesures, qui sert aussi à
- *   dater l'ajout d'un terme au dictionnaire.
+ * - Une génération mesurée donne une réunion `mN` : sa première mesure à la
+ *   règle courante (`RULE_VERSION` du crate `mesure`, exposé par le plugin) ;
+ *   une mesure faite sous une règle antérieure n'est jamais exportée, même
+ *   si c'est la seule (issue 734). Les réunions suivent l'ordre
+ *   chronologique de ces mesures, qui sert aussi à dater l'ajout d'un terme
+ *   au dictionnaire.
  */
 export function buildExport(
   rows: ExportRows,
@@ -140,11 +142,14 @@ export function buildExport(
     byDocument.set(generation.documentId, list);
   }
 
-  // Première mesure de chaque génération, dans l'ordre des mesures.
+  // Première mesure à la règle courante de chaque génération, dans l'ordre
+  // des mesures : jamais la plus favorable, jamais une règle antérieure.
   type Measurement = ExportRows["measurements"][number];
   const firstMeasurement = new Map<(typeof generations)[number], Measurement>();
   for (const measurement of rows.measurements
-    .filter((m) => m.generatedSource === "original")
+    .filter(
+      (m) => m.generatedSource === "original" && m.ruleVersion === RULE_VERSION,
+    )
     .sort((a, b) => a.measuredAt.localeCompare(b.measuredAt))) {
     const candidates = byDocument.get(measurement.documentId) ?? [];
     let generation: (typeof generations)[number] | undefined;

@@ -2990,6 +2990,10 @@ msgstr "Measure"
 msgid "Measure again"
 msgstr "Measure again"
 
+#: src/session/components/living-document/summary-switcher-view.tsx
+msgid "Measure again (rule updated)"
+msgstr "Measure again (rule updated)"
+
 #: src/mesure/measure-dialog.tsx
 msgid "Measure rework"
 msgstr "Measure rework"

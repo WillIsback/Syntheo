@@ -14,6 +14,9 @@ export const commands = {
 	measureDifferences: (generated: string, sent: SentInput, dictionary: string[]) => typedError<DifferenceRow[], string>(__TAURI_INVOKE("plugin:mesure|measure_differences", { generated, sent, dictionary })),
 };
 
+/* Constants */
+export const RULE_VERSION = 2 as const;
+
 /* Types */
 export type CorrectedTermCount = {
 	hash: string,

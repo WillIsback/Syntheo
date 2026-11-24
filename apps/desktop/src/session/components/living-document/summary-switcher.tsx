@@ -10,6 +10,7 @@ import {
 
 import { recordSummaryEvent } from "~/mesure/beta";
 import { MeasureDialog } from "~/mesure/measure-dialog";
+import { useMeasurementOutdated } from "~/mesure/outdated";
 import { useEnhancedNoteActions } from "~/session/components/note-input/enhanced-actions";
 import {
   useEnhancedViewTitle,
@@ -99,6 +100,10 @@ function SummarySwitcherForNote({
     "measurement_enabled",
   ] as const);
   const pickerRequested = useRef(false);
+  const measureOutdated = useMeasurementOutdated(
+    currentNoteId,
+    Boolean(measurement_enabled),
+  );
 
   const versionOptions = useMemo(
     () =>
@@ -200,6 +205,7 @@ function SummarySwitcherForNote({
             onMeasure={
               measurement_enabled ? () => setMeasureOpen(true) : undefined
             }
+            measureOutdated={measureOutdated}
             onRemove={handleRemove}
             onMenuCloseAutoFocus={(event) => {
               // Le sélecteur de modèle prend le focus à la place du menu.

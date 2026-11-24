@@ -37,6 +37,8 @@ Le calcul est déterministe : les mêmes textes donnent toujours les mêmes nomb
 4. **Classement.** Une différence est **lexicale** si c'est un remplacement court (1 à 3 mots de chaque côté, ou une paire de mots proches) qui touche un nom propre, un sigle ou un terme de votre dictionnaire : par exemple un nom de personne mal orthographié. Tout le reste est du **fond**, y compris un nom propre ajouté ou retiré seul : un nom manquant est une information manquante.
 5. **Compteurs.** Seuls des nombres de mots sont gardés : mots générés, ajoutés, supprimés, remplacés (fond) et remplacés (lexical), au total et par section. Les textes sont libérés aussitôt.
 
+Chaque mesure garde la version de la règle de calcul. Quand la règle change, une synthèse mesurée seulement sous une ancienne règle affiche « Mesure à refaire (règle mise à jour) » dans son menu, et ses anciennes mesures ne sont pas exportées : seule compte la première mesure faite sous la règle en vigueur.
+
 Deux indicateurs en découlent, pour 1 000 mots générés :
 
 - **reprise de fond** = (ajoutés + supprimés + remplacés sur le fond) ÷ générés × 1 000. C'est l'indicateur principal ;
