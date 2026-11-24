@@ -21,7 +21,11 @@ const mocks = vi.hoisted(() => ({
   selectTemplate: vi.fn(),
   deleteEnhancedNote: vi.fn(() => Promise.resolve()),
   noNote: false,
+  noteContent: "",
 }));
+
+const SUMMARY_CONTENT =
+  '{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Décisions"}]}]}';
 
 vi.mock("~/session/queries", () => ({
   deleteEnhancedNote: mocks.deleteEnhancedNote,
@@ -30,7 +34,7 @@ vi.mock("~/session/queries", () => ({
       ? null
       : {
           id: "summary-1",
-          content: '{"type":"doc"}',
+          content: mocks.noteContent,
           generatedAt: mocks.generatedAt,
         },
   useSummaryVersions: () => mocks.versions,
@@ -97,6 +101,7 @@ describe("SummarySwitcher", () => {
     mocks.isGenerating = false;
     mocks.summaryOff = false;
     mocks.noNote = false;
+    mocks.noteContent = SUMMARY_CONTENT;
   });
 
   afterEach(() => {
@@ -244,6 +249,23 @@ describe("SummarySwitcher", () => {
     openVersionsMenu();
     expect(screen.queryAllByRole("menuitemradio")).toHaveLength(0);
     expect(screen.queryByText("Versions")).toBeNull();
+  });
+
+  // Passe QA 0.8.1-1 : l'arrêt crée un document de synthèse au corps vide ;
+  // il ne compte pas comme un compte rendu.
+  it("shows no version for an empty summary document", () => {
+    mocks.generatedAt = null;
+    for (const content of ["", '{"type":"doc","content":[]}']) {
+      mocks.noteContent = content;
+      renderSwitcher({ kind: "summary" });
+
+      expect(screen.getByRole("button", { name: "Summary" })).toBeTruthy();
+      expect(screen.queryByRole("button", { name: /Summary · v/ })).toBeNull();
+      openVersionsMenu();
+      expect(screen.queryAllByRole("menuitemradio")).toHaveLength(0);
+      expect(screen.queryByText("Current")).toBeNull();
+      cleanup();
+    }
   });
 
   it("renders nothing without a summary", () => {
