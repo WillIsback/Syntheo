@@ -15,6 +15,17 @@ describe("describeDictationError", () => {
     expect(shown).not.toContain("org.freedesktop");
   });
 
+  // Passe QA 0.8.1-2 : sous sway, create_session échoue ; le plugin renvoie
+  // le code stable portal_unavailable.
+  it.each([
+    "portal_unavailable",
+    "Portal request failed: org.freedesktop.zbus.Error: FDO error",
+  ])("explains any portal failure (%s)", (raw) => {
+    expect(describeDictationError(new Error(raw))).toBe(
+      "This desktop does not offer global shortcuts to apps (Global Shortcuts portal): dictation by shortcut is not available in this session.",
+    );
+  });
+
   it("keeps the key name of an unsupported Wayland key", () => {
     expect(
       describeDictationError(

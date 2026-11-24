@@ -152,6 +152,10 @@ msgstr "{count, plural, one {# réplique copiée} other {# répliques copiées}}
 msgid "{count, plural, one {# speaker to name} other {# speakers to name}}"
 msgstr "{count, plural, one {# intervenant à nommer} other {# intervenants à nommer}}"
 
+#: src/settings/ai/llm/labels.ts
+msgid "{count, plural, one {Connected · # model available} other {Connected · # models available}}"
+msgstr "{count, plural, one {Connecté · # modèle disponible} other {Connecté · # modèles disponibles}}"
+
 #: src/shared/ui/localized-toaster.tsx
 msgid "{count, plural, one {second} other {seconds}}"
 msgstr "{count, plural, one {seconde} other {secondes}}"
@@ -1311,11 +1315,6 @@ msgstr "Configurez votre serveur de synthèse dans les paramètres pour obtenir 
 #: src/session/components/note-input/transcript/renderer/speaker-assign.tsx
 msgid "Confirm"
 msgstr "Confirmer"
-
-#. placeholder {0}: models.length
-#: src/settings/ai/llm/server-card.tsx
-msgid "Connected · {0} models available"
-msgstr "Connecté · {0} modèles disponibles"
 
 #. placeholder {0}: state.latencyMs
 #: src/settings/ai/shared/server-card.tsx
@@ -5467,7 +5466,6 @@ msgstr "Synthèses"
 
 #: src/contacts/details-sections.tsx
 #: src/edit/tab-content.tsx
-#: src/session/components/living-document/summary-switcher-view.tsx
 #: src/session/components/note-input/header-shared.tsx
 #: src/session/components/outer-header/overflow/export-modal.tsx
 #: src/settings/automations/markdown-export-options.tsx
@@ -5481,6 +5479,11 @@ msgstr "Synthèse"
 
 #: src/session/components/outer-header/overflow/export-document.ts
 msgctxt "export section"
+msgid "Summary"
+msgstr "Synthèse"
+
+#: src/session/components/living-document/summary-switcher-view.tsx
+msgctxt "note view tab"
 msgid "Summary"
 msgstr "Synthèse"
 

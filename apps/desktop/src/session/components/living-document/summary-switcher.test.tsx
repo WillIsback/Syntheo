@@ -264,6 +264,9 @@ describe("SummarySwitcher", () => {
       openVersionsMenu();
       expect(screen.queryAllByRole("menuitemradio")).toHaveLength(0);
       expect(screen.queryByText("Current")).toBeNull();
+      // Passe QA 0.8.1-2 : rien à régénérer avant une première synthèse.
+      expect(screen.queryByText("Regenerate")).toBeNull();
+      expect(screen.queryByText(/Change template/)).toBeNull();
       cleanup();
     }
   });

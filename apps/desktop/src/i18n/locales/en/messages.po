@@ -152,6 +152,10 @@ msgstr "{count, plural, one {# reply copied} other {# replies copied}}"
 msgid "{count, plural, one {# speaker to name} other {# speakers to name}}"
 msgstr "{count, plural, one {# speaker to name} other {# speakers to name}}"
 
+#: src/settings/ai/llm/labels.ts
+msgid "{count, plural, one {Connected · # model available} other {Connected · # models available}}"
+msgstr "{count, plural, one {Connected · # model available} other {Connected · # models available}}"
+
 #: src/shared/ui/localized-toaster.tsx
 msgid "{count, plural, one {second} other {seconds}}"
 msgstr "{count, plural, one {second} other {seconds}}"
@@ -1311,11 +1315,6 @@ msgstr "Configure your summary server in Settings to get section suggestions."
 #: src/session/components/note-input/transcript/renderer/speaker-assign.tsx
 msgid "Confirm"
 msgstr "Confirm"
-
-#. placeholder {0}: models.length
-#: src/settings/ai/llm/server-card.tsx
-msgid "Connected · {0} models available"
-msgstr "Connected · {0} models available"
 
 #. placeholder {0}: state.latencyMs
 #: src/settings/ai/shared/server-card.tsx
@@ -5467,7 +5466,6 @@ msgstr "Summaries"
 
 #: src/contacts/details-sections.tsx
 #: src/edit/tab-content.tsx
-#: src/session/components/living-document/summary-switcher-view.tsx
 #: src/session/components/note-input/header-shared.tsx
 #: src/session/components/outer-header/overflow/export-modal.tsx
 #: src/settings/automations/markdown-export-options.tsx
@@ -5481,6 +5479,11 @@ msgstr "Summary"
 
 #: src/session/components/outer-header/overflow/export-document.ts
 msgctxt "export section"
+msgid "Summary"
+msgstr "Summary"
+
+#: src/session/components/living-document/summary-switcher-view.tsx
+msgctxt "note view tab"
 msgid "Summary"
 msgstr "Summary"
 

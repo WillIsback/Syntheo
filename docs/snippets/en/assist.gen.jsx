@@ -123,7 +123,6 @@ const SYN_LABELS = {
   "Command output": "Command output",
   "Complete the note with the same title": "Complete the note with the same title",
   "Configure every step before testing.": "Configure every step before testing.",
-  "Connected · {0} models available": "Connected · {0} models available",
   "Connected · {0} ms": "Connected · {0} ms",
   "Contacts": "Contacts",
   "Content": "Content",
@@ -439,6 +438,7 @@ const SYN_LABELS = {
   "{chain} · last run {relative}": "{chain} · last run {relative}",
   "{chain} · never run": "{chain} · never run",
   "{count, plural, one {# meeting} other {# meetings}}": "{count, plural, one {# meeting} other {# meetings}}",
+  "{count, plural, one {Connected · # model available} other {Connected · # models available}}": "{count, plural, one {Connected · # model available} other {Connected · # models available}}",
   "{providerName} rejected your API key": "{providerName} rejected your API key",
   "{seconds} s": "{seconds} s",
   "“{title}” ran on this note": "“{title}” ran on this note"
@@ -1794,7 +1794,7 @@ const SynSectionIntelligence = ({ focus }) => {
         <section className="syn-srv-card" aria-label={L("My server")}>
           <div className="syn-srv-head">
             <h3>{L("My server")}</h3>
-            {h(SynSrvChip, { server, connectedLabel: connected && models.length ? LF("Connected · {0} models available", { 0: models.length }) : undefined })}
+            {h(SynSrvChip, { server, connectedLabel: connected && models.length ? LP("{count, plural, one {Connected · # model available} other {Connected · # models available}}", models.length) : undefined })}
           </div>
           {h(SynSrvBanner, { server })}
           {h(SynSrvAddress, { server, label: L("Server address (OpenAI-compatible: vLLM, Ollama, llama.cpp, LM Studio)") })}

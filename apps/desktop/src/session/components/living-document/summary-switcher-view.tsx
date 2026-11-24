@@ -125,7 +125,12 @@ export function SummarySwitcherView({
       ? versions.find((version) => version.id === view.versionId)
       : undefined;
   const shownVersion = viewedVersion?.version ?? currentVersion;
-  const summaryLabel = hasSummary ? t`Summary · v${shownVersion}` : t`Summary`;
+  // Contexte propre (passe QA 0.8.1-2) : « Summary » seul est traduit
+  // « Résumé » ailleurs ; l'onglet s'appelle « Synthèse », comme « Synthèse ·
+  // vN ».
+  const summaryLabel = hasSummary
+    ? t`Summary · v${shownVersion}`
+    : t({ message: "Summary", context: "note view tab" });
   const showVersions = hasSummary || versions.length > 0;
 
   return (

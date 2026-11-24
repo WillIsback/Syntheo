@@ -122,6 +122,17 @@ function SummarySwitcherForNote({
     [note?.content],
   );
 
+  // Un corps vide jamais généré (document créé à l'arrêt) ne compte pas
+  // comme un compte rendu (passe QA 0.8.1-1).
+  const hasSummary =
+    noteMarkdown.length > 0 ||
+    !!note?.generatedAt ||
+    isGenerating ||
+    versions.length > 0;
+  // Ni « Régénérer » ni « Changer de modèle » tant qu'aucune synthèse n'a été
+  // générée (passe QA 0.8.1-2) ; la capsule propose la première génération.
+  const canRegenerate = hasSummary && !summaryOff;
+
   const regenerate = useCallback(() => {
     onSelectView({ kind: "summary" });
     void onRegenerate(null);
@@ -166,14 +177,7 @@ function SummarySwitcherForNote({
             view={view}
             onSelectView={onSelectView}
             currentVersion={(versions[0]?.version ?? 0) + 1}
-            // Un corps vide jamais généré (document créé à l'arrêt) ne
-            // compte pas comme un compte rendu (passe QA 0.8.1-1).
-            hasSummary={
-              noteMarkdown.length > 0 ||
-              !!note?.generatedAt ||
-              isGenerating ||
-              versions.length > 0
-            }
+            hasSummary={hasSummary}
             currentDate={formatVersionDate(note?.generatedAt, i18n.locale)}
             versions={versionOptions}
             isGenerating={isGenerating}
@@ -190,9 +194,9 @@ function SummarySwitcherForNote({
             canRemove={currentNoteId !== enhancedNoteIds[0]}
             // Synthèse coupée (issue 707) : ni « Régénérer » ni « Changer de
             // modèle », qui relanceraient une génération vouée à l'échec.
-            onRegenerate={summaryOff ? undefined : regenerate}
+            onRegenerate={canRegenerate ? regenerate : undefined}
             onChangeTemplate={
-              summaryOff
+              !canRegenerate
                 ? undefined
                 : () => {
                     pickerRequested.current = true;

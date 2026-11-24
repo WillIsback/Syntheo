@@ -126,7 +126,6 @@ const SYN_LABELS = {
   "Close": "Fermer",
   "Company": "Entreprise",
   "Completed by Syntheo": "Complété par Syntheo",
-  "Connected · {0} models available": "Connecté · {0} modèles disponibles",
   "Connected · {0} ms": "Connecté · {0} ms",
   "Contact options": "Options de contact",
   "Contacts": "Contacts",
@@ -438,6 +437,7 @@ const SYN_LABELS = {
   "{0, plural, one {# meeting} other {# meetings}}": "{0, plural, one {# réunion} other {# réunions}}",
   "{0, plural, one {… # other} other {… # others}}": "{0, plural, one {… # autre} other {… # autres}}",
   "{count, plural, one {# meeting} other {# meetings}}": "{count, plural, one {# réunion} other {# réunions}}",
+  "{count, plural, one {Connected · # model available} other {Connected · # models available}}": "{count, plural, one {Connecté · # modèle disponible} other {Connecté · # modèles disponibles}}",
   "{hiddenCount, plural, one {See the previous meeting} other {See the # previous meetings}}": "{hiddenCount, plural, one {Voir la réunion précédente} other {Voir les # réunions précédentes}}",
   "{pendingCount, plural, one {# meeting since} other {# meetings since}}": "{pendingCount, plural, one {# réunion depuis} other {# réunions depuis}}",
   "— Sample line written from this instruction.": "— Exemple de ligne rédigée selon cette consigne.",
@@ -1796,7 +1796,7 @@ const SynSectionIntelligence = ({ focus }) => {
         <section className="syn-srv-card" aria-label={L("My server")}>
           <div className="syn-srv-head">
             <h3>{L("My server")}</h3>
-            {h(SynSrvChip, { server, connectedLabel: connected && models.length ? LF("Connected · {0} models available", { 0: models.length }) : undefined })}
+            {h(SynSrvChip, { server, connectedLabel: connected && models.length ? LP("{count, plural, one {Connected · # model available} other {Connected · # models available}}", models.length) : undefined })}
           </div>
           {h(SynSrvBanner, { server })}
           {h(SynSrvAddress, { server, label: L("Server address (OpenAI-compatible: vLLM, Ollama, llama.cpp, LM Studio)") })}
