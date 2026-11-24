@@ -31,7 +31,7 @@ The difference between them is the **rework**: what you had to change before sen
 
 The calculation is deterministic: the same texts always give the same numbers. No AI model is involved, and nothing goes over the network.
 
-1. **Normalization.** Formatting is removed (headings, bullets, bold, links, whose text is kept). Spaces are merged and punctuation is split from words. Capitalization is kept.
+1. **Normalization.** Formatting is removed (headings, bullets, bold, links, whose text is kept). Spaces are merged and punctuation is split from words. HTML entities in pasted text (`&eacute;`) are decoded, and typographic variants (curly or straight apostrophes, quotes, dashes, non-breaking spaces) do not count as differences. Capitalization is kept.
 2. **Splitting into sections.** The headings of the generated version split both texts. A section missing on one side counts entirely as added or deleted. If fewer than half of the headings are found in the sent version, the measurement covers the whole text, and the export says so.
 3. **Word-by-word comparison.** Each difference is an addition, a deletion, or a replacement. A replacement weighs the number of words on its longer side.
 4. **Classification.** A difference is **lexical** if it is a short replacement (1 to 3 words on each side) that involves a proper name, an acronym, or a term from your dictionary: for example a misspelled person's name. Everything else is **content**, including a proper name added or removed on its own: a missing name is missing information.

@@ -8,6 +8,7 @@
 #![forbid(unsafe_code)]
 
 mod docx;
+mod entities;
 mod normalize;
 
 use std::collections::HashMap;
@@ -111,7 +112,7 @@ impl Dictionary {
             let words: Vec<String> = tokens
                 .into_iter()
                 .filter(|t| t.word)
-                .map(|t| t.text.to_lowercase())
+                .map(|t| t.key.to_lowercase())
                 .collect();
             if !words.is_empty() {
                 out.push(words);
@@ -159,7 +160,7 @@ impl Dictionary {
     /// dictionnaire. Une entrée de plusieurs mots n'est jamais suivie entière :
     /// « Jean Dupont » ajouté au dictionnaire, « Dupont » reste le même terme.
     fn corrected_terms(&self, new_words: &[&Token]) -> Vec<Vec<String>> {
-        let lower: Vec<String> = new_words.iter().map(|t| t.text.to_lowercase()).collect();
+        let lower: Vec<String> = new_words.iter().map(|t| t.key.to_lowercase()).collect();
         let mut covered = vec![false; lower.len()];
         for term in &self.terms {
             if term.len() > lower.len() {
@@ -184,7 +185,7 @@ impl Dictionary {
     }
 
     fn matches(&self, words: &[&Token]) -> bool {
-        let lower: Vec<String> = words.iter().map(|t| t.text.to_lowercase()).collect();
+        let lower: Vec<String> = words.iter().map(|t| t.key.to_lowercase()).collect();
         self.terms.iter().any(|term| {
             term.len() <= lower.len() && lower.windows(term.len()).any(|w| w == term.as_slice())
         })
@@ -637,16 +638,43 @@ impl Prepared {
 
 #[derive(Debug, Default)]
 struct Section {
-    /// Clé d'alignement : titre normalisé (casse ignorée).
+    /// Clé d'alignement : titre normalisé (`title_key`).
     title: Option<String>,
     tokens: Vec<Token>,
 }
 
+/// Clé d'un titre : clé de comparaison des mots (NFKC, repli typographique),
+/// espaces fusionnées, numérotation de tête retirée (`2.`, `1.3`, `IV.`,
+/// `b)`), deux-points ou point final retirés, casse ignorée.
 fn title_key(text: &str) -> String {
-    text.trim()
+    let folded = normalize::comparison_key(text);
+    let mut words: Vec<&str> = folded.split_whitespace().collect();
+    if words.len() > 1 && is_heading_number(words[0]) {
+        words.remove(0);
+    }
+    words
+        .join(" ")
         .trim_end_matches([':', '.'])
         .trim()
         .to_lowercase()
+}
+
+/// Numéro de titre : chiffres séparés par des points (`2`, `2.`, `1.3`,
+/// `1.3)`), chiffres romains en capitales suivis de `.` ou `)` (`IV.`), ou
+/// une lettre minuscule suivie de `)` (`b)`).
+fn is_heading_number(word: &str) -> bool {
+    let trimmed = word.trim_end_matches(['.', ')']);
+    let delimited = trimmed.len() < word.len();
+    if trimmed.is_empty() {
+        return false;
+    }
+    let decimal = trimmed
+        .split('.')
+        .all(|part| !part.is_empty() && part.chars().all(|c| c.is_ascii_digit()));
+    let roman = delimited && trimmed.chars().all(|c| "IVXLCDM".contains(c));
+    let letter =
+        word.len() == 2 && word.ends_with(')') && trimmed.chars().all(|c| c.is_ascii_lowercase());
+    decimal || roman || letter
 }
 
 /// Découpe en sections. Dans la version envoyée, une ligne identique à un
@@ -702,8 +730,10 @@ fn diff(
     dictionary: &Dictionary,
     mut visit: impl FnMut(&[Token], &[Token], Change),
 ) {
-    let old: Vec<&str> = generated.iter().map(|t| t.text.as_str()).collect();
-    let new: Vec<&str> = sent.iter().map(|t| t.text.as_str()).collect();
+    // Comparaison sur la clé normalisée (issue 729) : `’` et `'`, `‑` et `-`
+    // ne font pas deux mots différents.
+    let old: Vec<&str> = generated.iter().map(|t| t.key.as_str()).collect();
+    let new: Vec<&str> = sent.iter().map(|t| t.key.as_str()).collect();
     // Suppression et insertion adjacentes : un remplacement.
     let mut pending: Option<(std::ops::Range<usize>, std::ops::Range<usize>)> = None;
     let mut ops = capture_diff_slices(Algorithm::Myers, &old, &new);
