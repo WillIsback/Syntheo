@@ -3,6 +3,11 @@
 // web_atoms 0.2.3), triée par octets pour la recherche dichotomique. Les
 // formes historiques sans point-virgule (`&eacute`) ne sont pas reprises.
 // Ne pas modifier à la main.
+//
+// Source : HTML Living Standard, © WHATWG (Apple, Google, Mozilla,
+// Microsoft), CC BY 4.0, https://creativecommons.org/licenses/by/4.0/.
+// Modification : seules les formes avec point-virgule sont gardées, en
+// paires (nom, texte).
 
 pub(crate) static NAMED_ENTITIES: [(&str, &str); 2125] = [
     ("AElig", "\u{c6}"),

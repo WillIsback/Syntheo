@@ -248,7 +248,8 @@ pub struct SectionReport {
     /// Rôle de la section dans le modèle de compte rendu, déduit de son titre
     /// (le titre lui-même n'est jamais rendu).
     pub role: SectionRole,
-    /// Section retrouvée dans la version envoyée (même titre).
+    /// Section retrouvée dans la version envoyée : même titre, ou titre
+    /// proche entre deux titres identiques (issue 730).
     pub matched: bool,
     pub counters: Counters,
 }
@@ -358,7 +359,8 @@ pub struct Report {
     /// `true` si au moins la moitié des titres générés se retrouvent : mesure
     /// par section. Sinon, mesure globale (`sections` vide).
     pub aligned: bool,
-    /// Titres de la version générée, et combien se retrouvent dans l'envoyée.
+    /// Titres de la version générée, et combien se retrouvent dans l'envoyée
+    /// (titre identique ou proche). Les mots des titres sont comptés.
     pub headings_generated: u32,
     pub headings_matched: u32,
     pub total: Counters,
@@ -392,10 +394,10 @@ pub fn measure(
     let mut corrected = std::collections::BTreeMap::<String, u32>::new();
     for pair in prepared.pairs() {
         let mut counters = Counters {
-            generated: word_count(&pair.generated),
+            generated: pair.generated_words(),
             ..Counters::default()
         };
-        diff(&pair.generated, &pair.sent, dictionary, |_, new, change| {
+        pair.diff(dictionary, |_, new, change| {
             counters.record(change);
             if let Some(key) = &dictionary.term_key
                 && change.kind == ChangeKind::Replaced
@@ -426,7 +428,7 @@ pub fn measure(
     Ok(Report {
         rule_version: RULE_VERSION,
         aligned: prepared.aligned,
-        headings_generated: prepared.titles.len() as u32,
+        headings_generated: prepared.titles as u32,
         headings_matched: prepared.headings_matched,
         total,
         sections: reports,
@@ -500,19 +502,14 @@ pub fn differences(
             Place::Section { index, .. } => Some(index),
             Place::UnmatchedSent | Place::Global => None,
         };
-        diff(
-            &pair.generated,
-            &pair.sent,
-            dictionary,
-            |old, new, change| {
-                out.push(Difference {
-                    section,
-                    change,
-                    generated: join_tokens(old),
-                    sent: join_tokens(new),
-                })
-            },
-        );
+        pair.diff(dictionary, |old, new, change| {
+            out.push(Difference {
+                section,
+                change,
+                generated: join_tokens(old),
+                sent: join_tokens(new),
+            })
+        });
     }
     Ok(out)
 }
@@ -534,7 +531,9 @@ fn join_tokens(tokens: &[Token]) -> String {
 struct Prepared {
     generated: Vec<Section>,
     sent: Vec<Section>,
-    titles: Vec<String>,
+    /// Pour chaque section générée, le rang de sa correspondante envoyée.
+    matches: Vec<Option<usize>>,
+    titles: usize,
     aligned: bool,
     headings_matched: u32,
 }
@@ -549,10 +548,30 @@ enum Place {
     Global,
 }
 
+/// Deux textes à comparer : les titres d'abord, puis les corps, en deux diffs
+/// séparés pour qu'une retouche de titre reste une différence de titre.
 struct Pair<'a> {
     place: Place,
+    generated_title: &'a [Token],
+    sent_title: &'a [Token],
     generated: std::borrow::Cow<'a, [Token]>,
     sent: std::borrow::Cow<'a, [Token]>,
+}
+
+impl Pair<'_> {
+    fn diff(&self, dictionary: &Dictionary, mut visit: impl FnMut(&[Token], &[Token], Change)) {
+        diff(
+            self.generated_title,
+            self.sent_title,
+            dictionary,
+            &mut visit,
+        );
+        diff(&self.generated, &self.sent, dictionary, &mut visit);
+    }
+
+    fn generated_words(&self) -> u64 {
+        word_count(self.generated_title) + word_count(&self.generated)
+    }
 }
 
 fn prepare(
@@ -567,66 +586,236 @@ fn prepare(
     let generated = sections(normalize::blocks(generated, generated_format), &[])?;
     let titles: Vec<String> = generated.iter().filter_map(|s| s.title.clone()).collect();
     let sent = sections(normalize::blocks(sent, sent_format), &titles)?;
-    let headings_matched = titles
+    let matches = match_sections(&generated, &sent);
+    let headings_matched = generated
         .iter()
-        .filter(|t| sent.iter().any(|s| s.title.as_ref() == Some(*t)))
+        .zip(&matches)
+        .filter(|(section, matched)| section.title.is_some() && matched.is_some())
         .count() as u32;
     let aligned = !titles.is_empty() && headings_matched as usize * 2 >= titles.len();
     Ok(Prepared {
         generated,
         sent,
-        titles,
+        matches,
+        titles: titles.len(),
         aligned,
         headings_matched,
     })
 }
 
+/// Appariement des sections (issue 730), déterministe et sans flottant :
+///
+/// 1. la section sans titre (texte avant le premier titre) avec son
+///    homologue, et chaque titre identique (clé `title_key`) avec le sien,
+///    même hors de l'ordre ;
+/// 2. les paires exactes qui respectent l'ordre des deux textes (plus longue
+///    sous-suite croissante) servent d'ancres ; entre deux ancres, une section
+///    générée restée seule est appariée, dans l'ordre, à une section envoyée
+///    restée seule au titre proche (`title_match`).
+///
+/// Une section sans correspondante compte entièrement en suppressions ou en
+/// ajouts : on préfère manquer un appariement (reprise surestimée) qu'en
+/// inventer un (reprise minorée).
+fn match_sections(generated: &[Section], sent: &[Section]) -> Vec<Option<usize>> {
+    let mut matches: Vec<Option<usize>> = generated
+        .iter()
+        .map(|section| match &section.title {
+            Some(title) => sent.iter().position(|s| s.title.as_ref() == Some(title)),
+            None => sent.iter().position(|s| s.title.is_none()),
+        })
+        .collect();
+    let mut taken = vec![false; sent.len()];
+    for j in matches.iter().flatten() {
+        taken[*j] = true;
+    }
+    // Ancres : bornes de fenêtre, en plus du début et de la fin des textes.
+    let mut anchors: Vec<(usize, usize)> = vec![];
+    for i in increasing_subsequence(&matches) {
+        anchors.push((i, matches[i].expect("ancre appariée")));
+    }
+    let mut bounds = vec![(None, None)];
+    bounds.extend(anchors.iter().map(|&(i, j)| (Some(i), Some(j))));
+    bounds.push((None, None));
+    for window in bounds.windows(2) {
+        let ((gi, sj), (gi_end, sj_end)) = (window[0], window[1]);
+        let g_range = gi.map_or(0, |i| i + 1)..gi_end.unwrap_or(generated.len());
+        let s_range = sj.map_or(0, |j| j + 1)..sj_end.unwrap_or(sent.len());
+        let mut next_sent = s_range.start;
+        for i in g_range {
+            if matches[i].is_some() || generated[i].title.is_none() {
+                continue;
+            }
+            let best = (next_sent..s_range.end)
+                .filter(|&j| !taken[j] && sent[j].title.is_some())
+                .filter_map(|j| title_match(&generated[i], &sent[j]).map(|quality| (quality, j)))
+                // Meilleure qualité, puis la plus proche dans l'ordre.
+                .min_by_key(|&(quality, j)| (std::cmp::Reverse(quality), j));
+            if let Some((_, j)) = best {
+                matches[i] = Some(j);
+                taken[j] = true;
+                next_sent = j + 1;
+            }
+        }
+    }
+    matches
+}
+
+/// Rangs des paires qui forment la plus longue sous-suite croissante des
+/// rangs envoyés (en O(n log n), plus petit rang en cas d'égalité).
+fn increasing_subsequence(matches: &[Option<usize>]) -> Vec<usize> {
+    let pairs: Vec<(usize, usize)> = matches
+        .iter()
+        .enumerate()
+        .filter_map(|(i, j)| j.map(|j| (i, j)))
+        .collect();
+    // tails[k] : indice dans `pairs` de la fin de la meilleure sous-suite de
+    // longueur k + 1 ; previous : chaînage pour la reconstruire.
+    let mut tails: Vec<usize> = Vec::new();
+    let mut previous: Vec<Option<usize>> = vec![None; pairs.len()];
+    for (k, &(_, j)) in pairs.iter().enumerate() {
+        let at = tails.partition_point(|&t| pairs[t].1 < j);
+        previous[k] = at.checked_sub(1).map(|p| tails[p]);
+        if at == tails.len() {
+            tails.push(k);
+        } else {
+            tails[at] = k;
+        }
+    }
+    let mut out = Vec::with_capacity(tails.len());
+    let mut cursor = tails.last().copied();
+    while let Some(k) = cursor {
+        out.push(pairs[k].0);
+        cursor = previous[k];
+    }
+    out.reverse();
+    out
+}
+
+/// Qualité d'un appariement par titre proche ; `None` si les titres ne sont
+/// pas assez proches.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+enum TitleMatch {
+    /// Au moins la moitié des mots du titre le plus long en commun, et au
+    /// moins la moitié des mots de la section la plus longue en commun.
+    SharedWords { common: usize },
+    /// Même nombre de mots, un seul mot différent, à faible distance
+    /// d'édition (« Dupond » et « Dupont »).
+    OneWordEdit,
+}
+
+fn title_match(generated: &Section, sent: &Section) -> Option<TitleMatch> {
+    let (a, b) = (&generated.title_words, &sent.title_words);
+    if a.is_empty() || b.is_empty() {
+        return None;
+    }
+    if a.len() == b.len() {
+        let differing: Vec<(&String, &String)> = a.iter().zip(b).filter(|(x, y)| x != y).collect();
+        if let [(x, y)] = differing[..] {
+            let distance = edit_distance(x, y);
+            let longest = x.chars().count().max(y.chars().count());
+            if distance <= 2 && distance * 3 <= longest {
+                return Some(TitleMatch::OneWordEdit);
+            }
+        }
+    }
+    let common = common_count(a, b);
+    if common * 2 < a.len().max(b.len()) {
+        return None;
+    }
+    let (gw, sw) = (
+        content_words(&generated.tokens),
+        content_words(&sent.tokens),
+    );
+    let longest = gw.len().max(sw.len());
+    (longest > 0 && common_count(&gw, &sw) * 2 >= longest)
+        .then_some(TitleMatch::SharedWords { common })
+}
+
+/// Mots d'un corps, clé en minuscules, pour le recouvrement de contenu.
+fn content_words(tokens: &[Token]) -> Vec<String> {
+    tokens
+        .iter()
+        .filter(|t| t.word)
+        .map(|t| t.key.to_lowercase())
+        .collect()
+}
+
+/// Nombre de mots communs aux deux listes, répétitions comprises.
+fn common_count(a: &[String], b: &[String]) -> usize {
+    let mut counts: HashMap<&str, usize> = HashMap::new();
+    for word in a {
+        *counts.entry(word).or_default() += 1;
+    }
+    b.iter()
+        .filter(|word| {
+            counts.get_mut(word.as_str()).is_some_and(|n| {
+                *n > 0 && {
+                    *n -= 1;
+                    true
+                }
+            })
+        })
+        .count()
+}
+
+/// Distance de Levenshtein, en caractères.
+fn edit_distance(a: &str, b: &str) -> usize {
+    let (a, b): (Vec<char>, Vec<char>) = (a.chars().collect(), b.chars().collect());
+    let mut row: Vec<usize> = (0..=b.len()).collect();
+    for (i, ca) in a.iter().enumerate() {
+        let mut diagonal = row[0];
+        row[0] = i + 1;
+        for (j, cb) in b.iter().enumerate() {
+            let substitution = diagonal + usize::from(ca != cb);
+            diagonal = row[j + 1];
+            row[j + 1] = substitution.min(row[j] + 1).min(row[j + 1] + 1);
+        }
+    }
+    row[b.len()]
+}
+
 impl Prepared {
-    /// Paires de textes à comparer, dans l'ordre de la version générée.
+    /// Paires de textes à comparer, dans l'ordre de la version générée, puis
+    /// les sections envoyées restées seules.
     fn pairs(&self) -> Vec<Pair<'_>> {
         use std::borrow::Cow;
         if !self.aligned {
+            // Mesure globale : titres et corps à la suite, dans l'ordre.
             let all = |sections: &[Section]| -> Vec<Token> {
                 sections
                     .iter()
-                    .flat_map(|s| s.tokens.iter().cloned())
+                    .flat_map(|s| s.title_tokens.iter().chain(&s.tokens).cloned())
                     .collect()
             };
             return vec![Pair {
                 place: Place::Global,
+                generated_title: &[],
+                sent_title: &[],
                 generated: Cow::Owned(all(&self.generated)),
                 sent: Cow::Owned(all(&self.sent)),
             }];
         }
-        let sent_by_title: HashMap<&str, &Section> = self
-            .sent
-            .iter()
-            .filter_map(|s| s.title.as_deref().map(|t| (t, s)))
-            .collect();
         let mut pairs = Vec::new();
-        for (index, section) in self.generated.iter().enumerate() {
-            let counterpart = match &section.title {
-                Some(title) => sent_by_title.get(title.as_str()).copied(),
-                None => self.sent.iter().find(|s| s.title.is_none()),
-            };
+        for (index, (section, matched)) in self.generated.iter().zip(&self.matches).enumerate() {
+            let counterpart = matched.map(|j| &self.sent[j]);
             pairs.push(Pair {
                 place: Place::Section {
                     index: index as u32,
                     role: SectionRole::from_title(section.title.as_deref()),
                     matched: counterpart.is_some(),
                 },
+                generated_title: &section.title_tokens,
+                sent_title: counterpart.map_or(&[][..], |s| &s.title_tokens),
                 generated: Cow::Borrowed(&section.tokens),
                 sent: Cow::Borrowed(counterpart.map_or(&[][..], |s| &s.tokens)),
             });
         }
-        for section in &self.sent {
-            let known = match &section.title {
-                Some(title) => self.titles.contains(title),
-                None => self.generated.iter().any(|s| s.title.is_none()),
-            };
-            if !known {
+        for (j, section) in self.sent.iter().enumerate() {
+            if !self.matches.contains(&Some(j)) {
                 pairs.push(Pair {
                     place: Place::UnmatchedSent,
+                    generated_title: &[],
+                    sent_title: &section.title_tokens,
                     generated: Cow::Borrowed(&[][..]),
                     sent: Cow::Borrowed(&section.tokens),
                 });
@@ -640,6 +829,11 @@ impl Prepared {
 struct Section {
     /// Clé d'alignement : titre normalisé (`title_key`).
     title: Option<String>,
+    /// Mots du titre (clé en minuscules), pour l'appariement approché.
+    title_words: Vec<String>,
+    /// Mots et signes du titre, numérotation de tête retirée : comptés
+    /// comme ceux du corps (issue 730).
+    title_tokens: Vec<Token>,
     tokens: Vec<Token>,
 }
 
@@ -657,6 +851,19 @@ fn title_key(text: &str) -> String {
         .trim_end_matches([':', '.'])
         .trim()
         .to_lowercase()
+}
+
+/// Texte d'un titre sans sa numérotation de tête, pour le compte des mots.
+fn strip_heading_number(text: &str) -> &str {
+    let trimmed = text.trim_start();
+    match trimmed.split_once(char::is_whitespace) {
+        Some((first, rest))
+            if !rest.trim().is_empty() && is_heading_number(&normalize::comparison_key(first)) =>
+        {
+            rest
+        }
+        _ => trimmed,
+    }
 }
 
 /// Numéro de titre : chiffres séparés par des points (`2`, `2.`, `1.3`,
@@ -686,8 +893,16 @@ fn sections(blocks: Vec<Block>, known_titles: &[String]) -> Result<Vec<Section>,
     for block in blocks {
         let key = title_key(&block.text);
         if block.heading || known_titles.contains(&key) {
+            let mut title_tokens = Vec::new();
+            normalize::tokens(strip_heading_number(&block.text), &mut title_tokens);
+            count += title_tokens.len();
+            if count > MAX_TOKENS {
+                return Err(MeasureError::TooManyTokens);
+            }
             out.push(Section {
                 title: Some(key),
+                title_words: content_words(&title_tokens),
+                title_tokens,
                 tokens: Vec::new(),
             });
             continue;
@@ -704,14 +919,18 @@ fn sections(blocks: Vec<Block>, known_titles: &[String]) -> Result<Vec<Section>,
     if out[0].tokens.is_empty() {
         out.remove(0);
     }
-    // Deux sections de même titre : la seconde est fusionnée dans la première.
+    // Deux sections de même titre : la seconde, titre compris, est fusionnée
+    // dans le corps de la première.
     let mut merged: Vec<Section> = Vec::new();
     for section in out {
         match merged
             .iter_mut()
             .find(|s| s.title.is_some() && s.title == section.title)
         {
-            Some(existing) => existing.tokens.extend(section.tokens),
+            Some(existing) => {
+                existing.tokens.extend(section.title_tokens);
+                existing.tokens.extend(section.tokens);
+            }
             None => merged.push(section),
         }
     }
@@ -728,7 +947,7 @@ fn diff(
     generated: &[Token],
     sent: &[Token],
     dictionary: &Dictionary,
-    mut visit: impl FnMut(&[Token], &[Token], Change),
+    visit: &mut impl FnMut(&[Token], &[Token], Change),
 ) {
     // Comparaison sur la clé normalisée (issue 729) : `’` et `'`, `‑` et `-`
     // ne font pas deux mots différents.

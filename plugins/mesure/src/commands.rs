@@ -358,7 +358,7 @@ mod tests {
         assert_eq!(
             result.total,
             MeasureCounters {
-                generated: 28,
+                generated: 31,
                 added: 3,
                 deleted: 2,
                 replaced_content: 4,
@@ -393,7 +393,7 @@ mod tests {
         )
         .unwrap();
         assert!(result.aligned);
-        assert_eq!(result.total.generated, 28);
+        assert_eq!(result.total.generated, 31);
         assert_eq!(
             (
                 result.total.added,

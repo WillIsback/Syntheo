@@ -41,7 +41,8 @@ fn identical_texts_have_no_rework() {
     assert!(report.aligned);
     assert_eq!(report.headings_generated, 3);
     assert_eq!(report.headings_matched, 3);
-    assert_eq!(report.total, counters(28, 0, 0, 0, 0));
+    // 28 mots de corps et 3 mots de titre (issue 730 : titres comptés).
+    assert_eq!(report.total, counters(31, 0, 0, 0, 0));
     assert_eq!(report.content_per_mille, Some(0.0));
 }
 
@@ -66,19 +67,19 @@ Le projet avance bien. Le budget est validé par le comité de direction.
     assert!(report.aligned);
     // Résumé : « la » → « le comité de » : remplacement de 1 par 3 mots, sans
     // nom propre : fond, poids 3.
-    assert_eq!(report.sections[0].counters, counters(11, 0, 0, 3, 0));
+    assert_eq!(report.sections[0].counters, counters(12, 0, 0, 3, 0));
     // Décisions : « janvier » → « février » (fond, 1) ; « Martin » →
     // « Marten » (nom propre, lexical, 1) ; « Former les testeurs » ajouté (3).
-    assert_eq!(report.sections[1].counters, counters(11, 3, 0, 1, 1));
+    assert_eq!(report.sections[1].counters, counters(12, 3, 0, 1, 1));
     // Actions : « à l'équipe » supprimé (2 mots, l'élision reste un mot ; le
     // point reste).
-    assert_eq!(report.sections[2].counters, counters(6, 0, 2, 0, 0));
-    assert_eq!(report.total, counters(28, 3, 2, 4, 1));
+    assert_eq!(report.sections[2].counters, counters(7, 0, 2, 0, 0));
+    assert_eq!(report.total, counters(31, 3, 2, 4, 1));
     assert_eq!(report.unmatched_sent_words, 0);
     let fond = report.content_per_mille.unwrap();
-    assert!((fond - 9000.0 / 28.0).abs() < 1e-9, "{fond}");
+    assert!((fond - 9000.0 / 31.0).abs() < 1e-9, "{fond}");
     let lex = report.lexical_per_mille.unwrap();
-    assert!((lex - 1000.0 / 28.0).abs() < 1e-9, "{lex}");
+    assert!((lex - 1000.0 / 31.0).abs() < 1e-9, "{lex}");
 }
 
 #[test]
@@ -169,9 +170,11 @@ Calendrier serré.
     assert!(report.aligned);
     assert_eq!(report.headings_matched, 2);
     assert!(!report.sections[2].matched);
-    assert_eq!(report.sections[2].counters, counters(6, 0, 6, 0, 0));
-    assert_eq!(report.unmatched_sent_words, 2);
-    assert_eq!(report.total, counters(28, 2, 6, 0, 0));
+    // Titre compris : « Actions » supprimée (1 + 6 mots), « Risques »
+    // ajoutée (1 + 2 mots), sans appariement approché entre les deux.
+    assert_eq!(report.sections[2].counters, counters(7, 0, 7, 0, 0));
+    assert_eq!(report.unmatched_sent_words, 3);
+    assert_eq!(report.total, counters(31, 3, 7, 0, 0));
 }
 
 #[test]
@@ -188,7 +191,8 @@ fn global_measure_when_less_than_half_of_titles_match() {
     assert!(!report.aligned);
     assert_eq!(report.headings_matched, 0);
     assert!(report.sections.is_empty());
-    assert_eq!(report.total, counters(28, 0, 0, 0, 0));
+    // Les trois titres, absents du texte envoyé, comptent en suppressions.
+    assert_eq!(report.total, counters(31, 0, 3, 0, 0));
 }
 
 // Texte collé depuis un wiki : titres sans mise en forme, retrouvés par leur
@@ -206,7 +210,7 @@ fn plain_and_html_titles_are_aligned_with_generated_headings() {
     .unwrap();
     assert!(report.aligned);
     assert_eq!(report.headings_matched, 3);
-    assert_eq!(report.total, counters(28, 0, 0, 0, 0));
+    assert_eq!(report.total, counters(31, 0, 0, 0, 0));
 
     let html = "<h1>Résumé</h1><p>Le projet avance bien. Le budget est validé par la direction.</p><h2>Décisions</h2><ul><li>Lancer le pilote en janvier avec Martin.</li><li>Garder le serveur actuel.</li></ul><h2>Actions</h2><ul><li>Envoyer le compte rendu à l&#39;équipe.</li></ul>";
     let report = measure(
@@ -218,7 +222,7 @@ fn plain_and_html_titles_are_aligned_with_generated_headings() {
     )
     .unwrap();
     assert!(report.aligned);
-    assert_eq!(report.total, counters(28, 0, 0, 0, 0));
+    assert_eq!(report.total, counters(31, 0, 0, 0, 0));
 }
 
 #[test]
@@ -784,7 +788,7 @@ fn assert_no_rework(sent: &str, sent_format: Format) {
     .unwrap();
     assert!(report.aligned, "{sent}");
     assert_eq!(report.headings_matched, 3, "{sent}");
-    assert_eq!(report.total, counters(29, 0, 0, 0, 0), "{sent}");
+    assert_eq!(report.total, counters(35, 0, 0, 0, 0), "{sent}");
 }
 
 #[test]
@@ -849,7 +853,7 @@ fn the_same_edit_counts_the_same_in_every_encoding() {
     };
     // « février » → « mars » (fond), « Dubreuil » → « Dubreuille » (nom
     // propre), « avant l'été » ajouté (2 mots).
-    let expected = counters(29, 2, 0, 1, 1);
+    let expected = counters(35, 2, 0, 1, 1);
     assert_eq!(measure_html(&edited), expected);
     assert_eq!(
         measure_html(&encode_non_ascii(&edited, named_entity)),
@@ -879,4 +883,132 @@ fn heading_numbers_and_typography_are_ignored_in_titles() {
         SectionRole::from_title(Some(&title_key("3. Plan d’action"))),
         SectionRole::Actions
     );
+}
+
+// --- Appariement des sections (issue 730) ---------------------------------
+// Noms fictifs uniquement.
+
+const DEMO: &str = "# Contexte
+
+Le comité a revu le calendrier du pilote.
+
+## Démo pour l'équipe Dupond
+
+Présenter le prototype vendredi aux testeurs.
+
+## Budget
+
+Le budget reste stable cette année.
+
+## Actions
+
+- Envoyer la synthèse aux participants.
+";
+
+#[test]
+fn a_title_corrected_by_one_word_counts_one_lexical_word() {
+    let sent = DEMO.replace("équipe Dupond", "équipe Dupont");
+    let report = run(DEMO, &sent);
+    assert!(report.aligned);
+    assert_eq!(report.headings_matched, 4);
+    assert!(report.sections.iter().all(|s| s.matched));
+    assert_eq!(report.unmatched_sent_words, 0);
+    // « Dupond » → « Dupont » : nom propre, 1 mot lexical, rien d'autre.
+    assert_eq!(report.sections[1].counters.replaced_lexical, 1);
+    assert_eq!(
+        report.total,
+        Counters {
+            replaced_lexical: 1,
+            ..run(DEMO, DEMO).total
+        }
+    );
+    // Faute de frappe sur un mot ordinaire du titre : 1 mot de fond.
+    let sent = DEMO.replace("## Budget", "## Bugdet");
+    let report = run(DEMO, &sent);
+    assert!(report.sections.iter().all(|s| s.matched));
+    assert_eq!(report.total.replaced_content, 1);
+    assert_eq!(report.total.added + report.total.deleted, 0);
+}
+
+#[test]
+fn a_title_sharing_half_its_words_needs_shared_content() {
+    // Titre allongé, contenu identique : appariée, les mots ajoutés au titre
+    // comptent seuls.
+    let sent = DEMO.replace("## Budget", "## Budget prévisionnel");
+    let report = run(DEMO, &sent);
+    assert!(report.sections[2].matched);
+    assert_eq!(report.total.added, 1);
+    assert_eq!(report.total.deleted, 0);
+    // Titre proche mais contenu sans rapport : non appariée.
+    let sent = DEMO.replace(
+        "## Budget\n\nLe budget reste stable cette année.",
+        "## Budget annexe\n\nLa salle du jeudi change de bâtiment.",
+    );
+    let report = run(DEMO, &sent);
+    assert!(!report.sections[2].matched);
+    assert_eq!(report.sections[2].counters.deleted, 7);
+    assert_eq!(report.unmatched_sent_words, 9);
+}
+
+#[test]
+fn swapped_sections_stay_matched() {
+    let sent = "# Contexte
+
+Le comité a revu le calendrier du pilote.
+
+## Budget
+
+Le budget reste stable cette année.
+
+## Démo pour l'équipe Dupond
+
+Présenter le prototype vendredi aux testeurs.
+
+## Actions
+
+- Envoyer la synthèse aux participants.
+";
+    let report = run(DEMO, sent);
+    assert!(report.sections.iter().all(|s| s.matched));
+    assert_eq!(report.unmatched_sent_words, 0);
+    assert_eq!(report.total, run(DEMO, DEMO).total);
+}
+
+// Un titre proche n'est cherché qu'entre les deux titres identiques qui
+// l'encadrent : une section déplacée et retitrée ne s'apparie pas.
+#[test]
+fn near_titles_are_only_matched_between_their_anchors() {
+    let sent = "# Contexte
+
+Le comité a revu le calendrier du pilote.
+
+## Budget
+
+Le budget reste stable cette année.
+
+## Actions
+
+- Envoyer la synthèse aux participants.
+
+## Démo pour l'équipe Dupont
+
+Présenter le prototype vendredi aux testeurs.
+";
+    let report = run(DEMO, sent);
+    assert!(!report.sections[1].matched);
+    assert_eq!(report.headings_matched, 3);
+}
+
+#[test]
+fn heading_matching_helpers() {
+    assert_eq!(edit_distance("Dupond", "Dupont"), 1);
+    assert_eq!(edit_distance("", "abc"), 3);
+    assert_eq!(edit_distance("équipe", "equipe"), 1);
+    let words = |text: &str| -> Vec<String> { text.split(' ').map(str::to_owned).collect() };
+    assert_eq!(common_count(&words("a b b c"), &words("b b b d")), 2);
+    assert_eq!(
+        increasing_subsequence(&[Some(0), Some(3), None, Some(1), Some(2), Some(4)]),
+        vec![0, 3, 4, 5]
+    );
+    assert_eq!(increasing_subsequence(&[None, None]), Vec::<usize>::new());
 }
