@@ -470,7 +470,9 @@ describe("Enhanced", () => {
       </QueryClientProvider>
     );
     const view = render(element());
-    fireEvent.click(screen.getByRole("button", { name: "Generate summary" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Generate the summary" }),
+    );
     await waitFor(() => expect(hoisted.content).toBe("Generated summary"));
     view.rerender(element());
     expect(screen.getByText("Generated summary")).not.toBeNull();

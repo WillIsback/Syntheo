@@ -107,6 +107,11 @@ function ServerAddressFields({
   const [urlError, setUrlError] = useState<string | null>(null);
   const [keychainError, setKeychainError] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
+  // Enregistrement fait dans ce formulaire : « Réinitialiser ce serveur… »
+  // apparaît dès le premier enregistrement, sans attendre que la ligne
+  // relue revienne en props (issue 719).
+  const [savedHere, setSavedHere] = useState<boolean | null>(null);
+  const showReset = savedHere ?? hasSaved;
   // HTTP clair hors de cette machine (issue 646) : une adresse déjà
   // enregistrée reste acceptée (avec le rappel permanent) ; une nouvelle
   // adresse attend la confirmation avant d'être enregistrée.
@@ -152,6 +157,7 @@ function ServerAddressFields({
           base_url: baseUrl,
           api_key: value.api_key.trim(),
         });
+        setSavedHere(!!baseUrl || !!value.api_key.trim());
         setKeychainError(false);
       } catch (error) {
         if (isKeychainAccessError(error)) setKeychainError(true);
@@ -184,6 +190,7 @@ function ServerAddressFields({
         );
       }
       form.reset({ base_url: "", api_key: "" });
+      setSavedHere(false);
       setConfirmReset(false);
       setUrlError(null);
       mutation.reset();
@@ -316,7 +323,7 @@ function ServerAddressFields({
               )}
             </form.Field>
           </div>
-          {hasSaved && !managed ? (
+          {showReset && !managed ? (
             confirmReset ? (
               <div className="flex flex-wrap items-center gap-2 text-sm">
                 <span>

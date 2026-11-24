@@ -14,6 +14,7 @@ import { noteFingerprint } from "~/session/note-fingerprint";
 import type { Tab } from "~/store/zustand/tabs";
 
 const mocks = vi.hoisted(() => ({
+  noSummary: false,
   rawMounts: 0,
   enhancedContent: "## Décisions" as string | undefined,
   enhanceStatus: "success" as string,
@@ -154,23 +155,29 @@ vi.mock("~/ai/hooks", () => ({
 }));
 
 vi.mock("~/session/queries", () => ({
-  useEnhancedNote: () => ({
-    content: mocks.enhancedContent,
-    sourceNoteFingerprint: mocks.sourceNoteFingerprint,
-  }),
+  useEnhancedNote: () =>
+    mocks.noSummary
+      ? null
+      : {
+          content: mocks.enhancedContent,
+          sourceNoteFingerprint: mocks.sourceNoteFingerprint,
+        },
   useSession: () => ({ raw_md: '{"type":"doc"}' }),
-  useSummaryVersions: () => [
-    {
-      id: "version-1",
-      documentId: "note-1",
-      version: 1,
-      title: "Summary",
-      templateId: "",
-      markdown: "Ancienne synthèse",
-      generatedAt: "2026-11-08T11:05:00.000Z",
-      supersededAt: "2026-11-08T14:32:00.000Z",
-    },
-  ],
+  useSummaryVersions: () =>
+    mocks.noSummary
+      ? []
+      : [
+          {
+            id: "version-1",
+            documentId: "note-1",
+            version: 1,
+            title: "Summary",
+            templateId: "",
+            markdown: "Ancienne synthèse",
+            generatedAt: "2026-11-08T11:05:00.000Z",
+            supersededAt: "2026-11-08T14:32:00.000Z",
+          },
+        ],
   useUpdateSession: () => mocks.updateSession,
 }));
 
@@ -212,6 +219,7 @@ function makeProps(
 
 describe("LivingDocument", () => {
   beforeEach(() => {
+    mocks.noSummary = false;
     mocks.rawMounts = 0;
     mocks.enhancedContent = "## Décisions";
     mocks.enhanceStatus = "success";
@@ -304,6 +312,23 @@ describe("LivingDocument", () => {
     content: [
       { type: "paragraph", content: [{ type: "text", text: "budget ok" }] },
     ],
+  });
+
+  // Issue 719 : pas de légende « Complété par Syntheo » sans compte rendu.
+  it("shows no provenance legend before the first summary", () => {
+    mocks.noSummary = true;
+    render(
+      <LivingDocument
+        {...makeProps({
+          stage: "synthesis",
+          rawMd: notesMd,
+          editorTabs: [{ type: "enhanced", id: "note-1" }],
+          currentTab: { type: "enhanced", id: "note-1" },
+        })}
+      />,
+    );
+
+    expect(screen.queryByText("Completed by Syntheo")).toBeNull();
   });
 
   it("synthesises: one summary where the notes are colored, and the seal", () => {

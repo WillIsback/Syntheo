@@ -2290,11 +2290,8 @@ msgstr "Full Screen"
 msgid "General templates"
 msgstr "General templates"
 
-#: src/session/components/note-input/enhanced/index.tsx
-msgid "Generate summary"
-msgstr "Generate summary"
-
 #: src/session/components/capsule/index.tsx
+#: src/session/components/note-input/enhanced/index.tsx
 msgid "Generate the summary"
 msgstr "Generate the summary"
 
@@ -3259,6 +3256,10 @@ msgstr "Minimize"
 #: src/settings/automations/variable-field.tsx
 msgid "Missing output"
 msgstr "Missing output"
+
+#: src/settings/ai/stt/server-card.tsx
+msgid "model"
+msgstr "model"
 
 #: src/settings/ai/llm/server-card.tsx
 #: src/settings/ai/stt/server-card.tsx
@@ -4322,6 +4323,10 @@ msgid "Proposed summary edit"
 msgstr "Proposed summary edit"
 
 #: src/settings/ai/stt/server-card.tsx
+msgid "protocol"
+msgstr "protocol"
+
+#: src/settings/ai/stt/server-card.tsx
 #: src/settings/search-index.ts
 msgid "Protocol"
 msgstr "Protocol"
@@ -5006,6 +5011,10 @@ msgid "Sentences that come from your notes appear in green. When off, your notes
 msgstr "Sentences that come from your notes appear in green. When off, your notes are shown in a separate block."
 
 #: src/settings/ai/stt/server-card.tsx
+msgid "server address"
+msgstr "server address"
+
+#: src/settings/ai/stt/server-card.tsx
 #: src/settings/search-index.ts
 msgid "Server address"
 msgstr "Server address"
@@ -5030,6 +5039,11 @@ msgstr "Server that writes the summary"
 #: src/settings/automations/markdown-export-options.tsx
 msgid "Session title"
 msgstr "Session title"
+
+#. placeholder {0}: managedParts.join(", ")
+#: src/settings/ai/stt/server-card.tsx
+msgid "Set by your administrator: {0}."
+msgstr "Set by your administrator: {0}."
 
 #: src/session/components/note-input/enhanced/index.tsx
 #: src/settings/ai/llm/index.tsx
@@ -5426,6 +5440,7 @@ msgstr "Summaries"
 
 #: src/contacts/details-sections.tsx
 #: src/edit/tab-content.tsx
+#: src/session/components/living-document/summary-switcher-view.tsx
 #: src/session/components/note-input/header-shared.tsx
 #: src/session/components/outer-header/overflow/export-modal.tsx
 #: src/settings/automations/markdown-export-options.tsx

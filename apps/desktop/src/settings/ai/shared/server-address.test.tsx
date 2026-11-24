@@ -297,3 +297,30 @@ describe("ServerAddressForm, adresse gérée", () => {
     ).toBeTruthy();
   });
 });
+
+// Issue 719 : « Réinitialiser ce serveur… » apparaît dès le premier
+// enregistrement de l'adresse, sans aller-retour de page.
+describe("ServerAddressForm, premier enregistrement", () => {
+  beforeEach(() => {
+    mocks.saved = {};
+    mocks.mutateAsync.mockClear();
+  });
+  afterEach(cleanup);
+
+  it("propose « Réinitialiser » juste après le premier enregistrement", async () => {
+    renderForm(false, true);
+    expect(screen.queryByRole("button", { name: "Reset this server…" })).toBe(
+      null,
+    );
+
+    typeAddress("https://asr.example.com/v1");
+
+    await waitFor(
+      () =>
+        expect(
+          screen.getByRole("button", { name: "Reset this server…" }),
+        ).toBeTruthy(),
+      { timeout: 2000 },
+    );
+  });
+});

@@ -20,15 +20,19 @@ const mocks = vi.hoisted(() => ({
   summaryOff: false,
   selectTemplate: vi.fn(),
   deleteEnhancedNote: vi.fn(() => Promise.resolve()),
+  noNote: false,
 }));
 
 vi.mock("~/session/queries", () => ({
   deleteEnhancedNote: mocks.deleteEnhancedNote,
-  useEnhancedNote: () => ({
-    id: "summary-1",
-    content: '{"type":"doc"}',
-    generatedAt: mocks.generatedAt,
-  }),
+  useEnhancedNote: () =>
+    mocks.noNote
+      ? null
+      : {
+          id: "summary-1",
+          content: '{"type":"doc"}',
+          generatedAt: mocks.generatedAt,
+        },
   useSummaryVersions: () => mocks.versions,
 }));
 
@@ -92,6 +96,7 @@ describe("SummarySwitcher", () => {
     mocks.generatedAt = "2026-11-08T14:32:00.000Z";
     mocks.isGenerating = false;
     mocks.summaryOff = false;
+    mocks.noNote = false;
   });
 
   afterEach(() => {
@@ -227,6 +232,18 @@ describe("SummarySwitcher", () => {
       screen.queryByRole("menuitem", { name: "Change template…" }),
     ).toBeNull();
     expect(screen.getByRole("menuitem", { name: "Copy" })).not.toBeNull();
+  });
+
+  // Issue 719 : note sans compte rendu, ni « · v1 » ni « v1 Actuelle ».
+  it("shows no version before the first summary", () => {
+    mocks.noNote = true;
+    renderSwitcher({ kind: "summary" });
+
+    expect(screen.getByRole("button", { name: "Summary" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Summary · v/ })).toBeNull();
+    openVersionsMenu();
+    expect(screen.queryAllByRole("menuitemradio")).toHaveLength(0);
+    expect(screen.queryByText("Versions")).toBeNull();
   });
 
   it("renders nothing without a summary", () => {

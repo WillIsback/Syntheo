@@ -2290,11 +2290,8 @@ msgstr "Plein écran"
 msgid "General templates"
 msgstr "Généraux"
 
-#: src/session/components/note-input/enhanced/index.tsx
-msgid "Generate summary"
-msgstr "Générer un résumé"
-
 #: src/session/components/capsule/index.tsx
+#: src/session/components/note-input/enhanced/index.tsx
 msgid "Generate the summary"
 msgstr "Générer le compte rendu"
 
@@ -3259,6 +3256,10 @@ msgstr "Réduire"
 #: src/settings/automations/variable-field.tsx
 msgid "Missing output"
 msgstr "Sortie introuvable"
+
+#: src/settings/ai/stt/server-card.tsx
+msgid "model"
+msgstr "modèle"
 
 #: src/settings/ai/llm/server-card.tsx
 #: src/settings/ai/stt/server-card.tsx
@@ -4322,6 +4323,10 @@ msgid "Proposed summary edit"
 msgstr "Modification proposée du résumé"
 
 #: src/settings/ai/stt/server-card.tsx
+msgid "protocol"
+msgstr "protocole"
+
+#: src/settings/ai/stt/server-card.tsx
 #: src/settings/search-index.ts
 msgid "Protocol"
 msgstr "Protocole"
@@ -5006,6 +5011,10 @@ msgid "Sentences that come from your notes appear in green. When off, your notes
 msgstr "Les phrases tirées de vos notes s'affichent en vert. Désactivé, vos notes apparaissent dans un bloc séparé."
 
 #: src/settings/ai/stt/server-card.tsx
+msgid "server address"
+msgstr "adresse du serveur"
+
+#: src/settings/ai/stt/server-card.tsx
 #: src/settings/search-index.ts
 msgid "Server address"
 msgstr "Adresse du serveur"
@@ -5030,6 +5039,11 @@ msgstr "Serveur qui rédige le compte-rendu"
 #: src/settings/automations/markdown-export-options.tsx
 msgid "Session title"
 msgstr "Titre de la session"
+
+#. placeholder {0}: managedParts.join(", ")
+#: src/settings/ai/stt/server-card.tsx
+msgid "Set by your administrator: {0}."
+msgstr "Réglé par votre administrateur : {0}."
 
 #: src/session/components/note-input/enhanced/index.tsx
 #: src/settings/ai/llm/index.tsx
@@ -5426,6 +5440,7 @@ msgstr "Synthèses"
 
 #: src/contacts/details-sections.tsx
 #: src/edit/tab-content.tsx
+#: src/session/components/living-document/summary-switcher-view.tsx
 #: src/session/components/note-input/header-shared.tsx
 #: src/session/components/outer-header/overflow/export-modal.tsx
 #: src/settings/automations/markdown-export-options.tsx
