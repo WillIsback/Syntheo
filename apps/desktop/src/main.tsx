@@ -31,6 +31,7 @@ import { OnDeviceRefusalSync } from "./services/on-device-refusal-sync";
 import { TaskManager } from "./services/task-manager";
 import { TrayRecordingSync } from "./services/tray-recording";
 import { useRemoteSessionDeletionUndoListener } from "./session/hooks/useDeleteSession";
+import { purgeExpiredDeletedSessions } from "./session/queries";
 import { refreshLegacySettingsSnapshots } from "./settings/legacy-snapshots";
 import { migratePlaintextAiProviderApiKeys } from "./settings/providers";
 import { initializeApplicationSettings } from "./settings/queries";
@@ -191,6 +192,8 @@ function runMainWindowStartupTasks() {
     migratePlaintextAiProviderApiKeys,
   );
   void runStartupTask("automations_migrate", ensureLegacyAutomationsMigrated);
+  // Issue 712 : suppressions restées en suspens au dernier lancement.
+  void runStartupTask("deleted_sessions_purge", purgeExpiredDeletedSessions);
   void startRenderPerfForDevtoolsBuilds();
 }
 

@@ -142,6 +142,7 @@ async fn test_db_without_default_templates() -> Db {
 mod attachments;
 mod capture_lifecycle;
 mod consent;
+mod deleted_session_purge;
 mod drop_calendar;
 mod drop_cloud_sharing;
 mod entities;

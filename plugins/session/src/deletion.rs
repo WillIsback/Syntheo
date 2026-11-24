@@ -25,6 +25,21 @@ pub struct DeletedSessionRow {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(rename_all = "snake_case")]
+pub enum PurgeDeletedSessionOutcome {
+    Purged,
+    NotDeleted,
+    Refused,
+}
+
+/// Session supprimée en entier dont le délai de purge est écoulé.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+pub struct ExpiredDeletedSession {
+    pub session_id: String,
+    pub tombstone: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "snake_case")]
 pub enum RestoreDeletedSessionOutcome {
     Restored,
     Alive,
@@ -127,4 +142,56 @@ pub async fn restore_deleted_session(
         .map_err(|error| error.to_string())?;
 
     Ok(outcome)
+}
+
+/// Purge définitive d'une session supprimée sous `tombstone`, une fois le
+/// délai d'annulation écoulé et son dossier supprimé (issue 712). Le journal
+/// ne porte que l'identifiant et un nombre de lignes, jamais de titre ni de
+/// contenu.
+pub async fn purge_deleted_session(
+    pool: &SqlitePool,
+    request: TombstoneSessionRequest,
+) -> Result<PurgeDeletedSessionOutcome, String> {
+    let mut transaction = pool
+        .begin_with("BEGIN IMMEDIATE")
+        .await
+        .map_err(|error| error.to_string())?;
+    let outcome = syntheo_db_app::purge_deleted_session(
+        &mut transaction,
+        &request.session_id,
+        &request.tombstone,
+    )
+    .await
+    .map_err(|error| error.to_string())?;
+    transaction
+        .commit()
+        .await
+        .map_err(|error| error.to_string())?;
+    Ok(match outcome {
+        syntheo_db_app::DeletedSessionPurge::Purged { rows } => {
+            tracing::info!(session_id = %request.session_id, rows, "deleted_session_purged");
+            PurgeDeletedSessionOutcome::Purged
+        }
+        syntheo_db_app::DeletedSessionPurge::NotDeleted => PurgeDeletedSessionOutcome::NotDeleted,
+        syntheo_db_app::DeletedSessionPurge::Refused(reason) => {
+            tracing::warn!(session_id = %request.session_id, reason, "deleted_session_purge_refused");
+            PurgeDeletedSessionOutcome::Refused
+        }
+    })
+}
+
+/// Sessions supprimées en attente de purge (voir
+/// `syntheo_db_app::expired_deleted_sessions`).
+pub async fn list_expired_deleted_sessions(
+    pool: &SqlitePool,
+) -> Result<Vec<ExpiredDeletedSession>, String> {
+    Ok(syntheo_db_app::expired_deleted_sessions(pool)
+        .await
+        .map_err(|error| error.to_string())?
+        .into_iter()
+        .map(|(session_id, tombstone)| ExpiredDeletedSession {
+            session_id,
+            tombstone,
+        })
+        .collect())
 }

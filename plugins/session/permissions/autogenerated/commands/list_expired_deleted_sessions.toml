@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-list-expired-deleted-sessions"
+description = "Enables the list_expired_deleted_sessions command without any pre-configured scope."
+commands.allow = ["list_expired_deleted_sessions"]
+
+[[permission]]
+identifier = "deny-list-expired-deleted-sessions"
+description = "Denies the list_expired_deleted_sessions command without any pre-configured scope."
+commands.deny = ["list_expired_deleted_sessions"]
