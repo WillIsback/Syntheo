@@ -152,7 +152,37 @@ pub async fn purge_deleted_session(
     pool: &SqlitePool,
     request: TombstoneSessionRequest,
 ) -> Result<PurgeDeletedSessionOutcome, String> {
-    let mut transaction = pool
+    // Effacement physique : `secure_delete` sur une connexion dédiée le
+    // temps de la purge, puis point de contrôle WAL (complément de l'issue
+    // 712) ; le contenu ne reste ni dans les pages libres ni dans le journal.
+    let mut secure = syntheo_db_app::SecureDeleteConnection::acquire(pool)
+        .await
+        .map_err(|error| error.to_string())?;
+    let purged = purge_in_transaction(secure.connection(), &request).await;
+    secure.release().await;
+    let outcome = purged?;
+    if matches!(outcome, syntheo_db_app::DeletedSessionPurge::Purged { .. }) {
+        syntheo_db_app::checkpoint_wal(pool).await;
+    }
+    Ok(match outcome {
+        syntheo_db_app::DeletedSessionPurge::Purged { rows } => {
+            tracing::info!(session_id = %request.session_id, rows, "deleted_session_purged");
+            PurgeDeletedSessionOutcome::Purged
+        }
+        syntheo_db_app::DeletedSessionPurge::NotDeleted => PurgeDeletedSessionOutcome::NotDeleted,
+        syntheo_db_app::DeletedSessionPurge::Refused(reason) => {
+            tracing::warn!(session_id = %request.session_id, reason, "deleted_session_purge_refused");
+            PurgeDeletedSessionOutcome::Refused
+        }
+    })
+}
+
+async fn purge_in_transaction(
+    connection: &mut sqlx::SqliteConnection,
+    request: &TombstoneSessionRequest,
+) -> Result<syntheo_db_app::DeletedSessionPurge, String> {
+    use sqlx::Connection;
+    let mut transaction = connection
         .begin_with("BEGIN IMMEDIATE")
         .await
         .map_err(|error| error.to_string())?;
@@ -167,17 +197,7 @@ pub async fn purge_deleted_session(
         .commit()
         .await
         .map_err(|error| error.to_string())?;
-    Ok(match outcome {
-        syntheo_db_app::DeletedSessionPurge::Purged { rows } => {
-            tracing::info!(session_id = %request.session_id, rows, "deleted_session_purged");
-            PurgeDeletedSessionOutcome::Purged
-        }
-        syntheo_db_app::DeletedSessionPurge::NotDeleted => PurgeDeletedSessionOutcome::NotDeleted,
-        syntheo_db_app::DeletedSessionPurge::Refused(reason) => {
-            tracing::warn!(session_id = %request.session_id, reason, "deleted_session_purge_refused");
-            PurgeDeletedSessionOutcome::Refused
-        }
-    })
+    Ok(outcome)
 }
 
 /// Sessions supprimées en attente de purge (voir

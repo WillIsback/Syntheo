@@ -87,7 +87,19 @@ pub(crate) async fn move_to_keychain(
     if !write_to_keychain(store, id, secret).await {
         return false;
     }
-    match syntheo_db_app::set_webhook_endpoint_secret(pool, id, KEYCHAIN_MARKER).await {
+    // Réécriture de la ligne avec `secure_delete` (complément de l'issue
+    // 711) : l'ancienne valeur en clair est remise à zéro dans la page.
+    let mut secure = match syntheo_db_app::SecureDeleteConnection::acquire(pool).await {
+        Ok(secure) => secure,
+        Err(error) => {
+            tracing::warn!("[local-api] webhook {id}: secret marker not saved: {error}");
+            return false;
+        }
+    };
+    let saved =
+        syntheo_db_app::set_webhook_endpoint_secret(secure.connection(), id, KEYCHAIN_MARKER).await;
+    secure.release().await;
+    match saved {
         Ok(_) => true,
         Err(error) => {
             tracing::warn!("[local-api] webhook {id}: secret marker not saved: {error}");
@@ -117,12 +129,8 @@ pub(crate) async fn try_migrate_secrets(
     }
     // Les anciennes valeurs en clair restent dans le journal WAL jusqu'au
     // prochain point de contrôle (issue 711) : on le force aussitôt.
-    if moved > 0
-        && let Err(error) = sqlx::query("PRAGMA wal_checkpoint(TRUNCATE)")
-            .execute(pool)
-            .await
-    {
-        tracing::warn!("[local-api] WAL checkpoint after secret migration failed: {error}");
+    if moved > 0 {
+        syntheo_db_app::checkpoint_wal(pool).await;
     }
     Ok(())
 }
