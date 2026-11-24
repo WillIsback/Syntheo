@@ -145,6 +145,8 @@ vi.mock("~/session/queries", () => ({
 const failureMocks = vi.hoisted(() => ({
   recordTranscriptionFailure: vi.fn(async () => {}),
   clearTranscriptionFailure: vi.fn(async () => {}),
+  markImportPending: vi.fn(async () => {}),
+  clearImportPending: vi.fn(async () => {}),
 }));
 
 vi.mock("~/session/transcription-failure", () => failureMocks);
@@ -509,6 +511,20 @@ describe("useUploadFile", () => {
       failureMocks.clearTranscriptionFailure.mock.invocationCallOrder[0],
     ).toBeLessThan(
       failureMocks.recordTranscriptionFailure.mock.invocationCallOrder[0]!,
+    );
+    // Issue 714 : marqueur d'import en cours posé au démarrage, retiré à la
+    // fin (ici après l'échec).
+    expect(failureMocks.markImportPending).toHaveBeenCalledWith(
+      "session-1",
+      expect.anything(),
+    );
+    await waitFor(() =>
+      expect(failureMocks.clearImportPending).toHaveBeenCalledWith("session-1"),
+    );
+    expect(
+      failureMocks.markImportPending.mock.invocationCallOrder[0],
+    ).toBeLessThan(
+      failureMocks.clearImportPending.mock.invocationCallOrder[0]!,
     );
     consoleError.mockRestore();
   });

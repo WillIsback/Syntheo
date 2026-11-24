@@ -10,7 +10,7 @@ use std::time::Duration;
 
 use rodio::source::Source;
 use symphonia::core::audio::{Channels, SampleBuffer, SignalSpec};
-use symphonia::core::codecs::{CODEC_TYPE_NULL, Decoder, DecoderOptions};
+use symphonia::core::codecs::{CODEC_TYPE_NULL, CODEC_TYPE_OPUS, Decoder, DecoderOptions};
 use symphonia::core::errors::Error as SymphoniaError;
 use symphonia::core::formats::{FormatOptions, FormatReader, Track};
 use symphonia::core::io::{MediaSource, MediaSourceStream};
@@ -48,7 +48,7 @@ impl AudioDecoder {
             .format(&hint, stream, &format_options, &MetadataOptions::default())?
             .format;
 
-        let (track_id, decoder, total_duration) = format
+        let Some((track_id, decoder, total_duration)) = format
             .tracks()
             .iter()
             .filter(|track| is_audio_track(track))
@@ -58,7 +58,19 @@ impl AudioDecoder {
                     .ok()?;
                 Some((track.id, decoder, track_duration(track)))
             })
-            .ok_or(crate::Error::NoAudioTrack)?;
+        else {
+            // Piste Opus lisible par le conteneur, sans décodeur : erreur
+            // dédiée, pour un message clair avant tout envoi (issue 714).
+            let opus = format
+                .tracks()
+                .iter()
+                .any(|track| track.codec_params.codec == CODEC_TYPE_OPUS);
+            return Err(if opus {
+                crate::Error::UnsupportedOpus
+            } else {
+                crate::Error::NoAudioTrack
+            });
+        };
 
         // Format provisoire, remplacé au premier paquet décodé.
         let placeholder = SignalSpec::new(0, Channels::FRONT_LEFT);

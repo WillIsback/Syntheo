@@ -87,6 +87,28 @@ describe("describeAudioImportError", () => {
       describeAudioImportError(new Error("audio_upload_size_mismatch")),
     ).toBe("Syntheo couldn't read this file.");
   });
+
+  // Issue 714 : refus clair d'un fichier Opus, sur les deux protocoles.
+  it("explains that Opus files are not supported yet", () => {
+    for (const raw of [
+      "unsupported audio codec: opus",
+      "Syntheo couldn't read this file: unsupported audio codec: opus",
+    ]) {
+      expect(describeAudioImportError(new Error(raw))).toMatch(
+        /Opus files .* are not supported yet/,
+      );
+    }
+  });
+
+  // Issue 713 : un message brut du serveur reste traduit, après la règle
+  // Opus.
+  it("still translates a raw server error", () => {
+    expect(
+      describeAudioImportError(
+        new Error('UnexpectedStatus { status: 500, body: "x" }'),
+      ),
+    ).toMatch(/returned an error \(500\)/);
+  });
 });
 
 describe("notifyAudioImportFailed", () => {

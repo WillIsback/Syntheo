@@ -35,7 +35,9 @@ import { getEnhancerService } from "~/services/enhancer";
 import { enqueueSessionAudioOperation } from "~/session/audio-operations";
 import { useSession, useUpdateSession } from "~/session/queries";
 import {
+  clearImportPending,
   clearTranscriptionFailure,
+  markImportPending,
   recordTranscriptionFailure,
 } from "~/session/transcription-failure";
 import { type Tab, useTabs } from "~/store/zustand/tabs";
@@ -202,6 +204,7 @@ export function useUploadFile(sessionId: string) {
       importAudio: () => Promise<ImportedAudio>,
       inspectAudio: () => Promise<number | null>,
       cleanup?: () => Promise<void>,
+      fileName: string | null = null,
     ) => {
       // Vérifié avant toute écriture : un modèle temps réel seul laisse la
       // note intacte (issue 462).
@@ -219,6 +222,12 @@ export function useUploadFile(sessionId: string) {
             await clearTranscriptionFailure(sessionId).catch(
               (error: unknown) => {
                 console.error("[upload] failed to clear import failure", error);
+              },
+            );
+            // Issue 714 : marqueur qui survit à une fermeture de Syntheo.
+            await markImportPending(sessionId, fileName).catch(
+              (error: unknown) => {
+                console.error("[upload] failed to mark import pending", error);
               },
             );
           }),
@@ -277,8 +286,16 @@ export function useUploadFile(sessionId: string) {
             notifyAudioImportFailed(error);
           }),
         ),
-        // Succès, échec ou arrêt : la capsule quitte l'état « Import ».
-        Effect.ensuring(Effect.sync(() => handleImportEnded(sessionId))),
+        // Succès, échec ou arrêt : la capsule quitte l'état « Import », et le
+        // marqueur d'import en cours est retiré.
+        Effect.ensuring(
+          Effect.promise(async () => {
+            handleImportEnded(sessionId);
+            await clearImportPending(sessionId).catch((error: unknown) => {
+              console.error("[upload] failed to clear import pending", error);
+            });
+          }),
+        ),
       );
 
       void Effect.runPromise(program).catch((error) => {
@@ -373,6 +390,8 @@ export function useUploadFile(sessionId: string) {
           applyEstimatedAudioNoteDate(filePath).then(() =>
             readAudioSeconds(filePath),
           ),
+        undefined,
+        baseName(filePath),
       );
     },
     [
@@ -403,6 +422,8 @@ export function useUploadFile(sessionId: string) {
             ),
           }),
           () => applyDroppedAudioNoteDate(file, filePath),
+          undefined,
+          file.name || baseName(filePath),
         );
         return;
       }
@@ -420,6 +441,8 @@ export function useUploadFile(sessionId: string) {
             },
           }),
           () => applyDroppedAudioNoteDate(file),
+          undefined,
+          file.name || null,
         );
         return;
       }
@@ -439,6 +462,7 @@ export function useUploadFile(sessionId: string) {
             await discardAudioUpload(uploadId);
           }
         },
+        file.name || null,
       );
     },
     [
@@ -506,4 +530,8 @@ export function useUploadFile(sessionId: string) {
 function audioUploadFilePath(file: File) {
   const value = (file as { path?: unknown }).path;
   return typeof value === "string" && value.trim() ? value : null;
+}
+
+function baseName(path: string): string | null {
+  return path.split(/[\\/]/).pop() || null;
 }

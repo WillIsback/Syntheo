@@ -12,6 +12,7 @@ import {
 import { listenerStore } from "~/store/zustand/listener/instance";
 import { notifyResumedImportAbandoned } from "~/stt/audio-import-feedback";
 import { parseBatchResumeContext } from "~/stt/batch-resume-context";
+import { recoverInterruptedImports } from "~/stt/interrupted-imports";
 import { isStoppedTranscriptionError, useRunBatch } from "~/stt/useRunBatch";
 
 export function BatchTranscriptionRecovery() {
@@ -30,6 +31,16 @@ export function BatchTranscriptionRecovery() {
           return;
         }
         stop = dispose;
+        // Après la liste du natif : un import qu'il reprend n'est pas
+        // interrompu (issue 714).
+        void recoverInterruptedImports((sessionId) =>
+          Boolean(listenerStore.getState().batch[sessionId]),
+        ).catch((error) => {
+          console.error(
+            "[listener] failed to recover interrupted imports",
+            error,
+          );
+        });
       })
       .catch((error) => {
         console.error("[listener] failed to recover batch sessions", error);

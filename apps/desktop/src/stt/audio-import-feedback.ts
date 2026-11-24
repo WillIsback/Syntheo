@@ -122,6 +122,10 @@ export function describeAudioImportError(error: unknown): string {
   if (/^audio_upload_/.test(message)) {
     return t`Syntheo couldn't read this file.`;
   }
+  // Issue 714 : pas encore de décodeur Opus, refus avant tout envoi.
+  if (/unsupported audio codec: opus/i.test(message)) {
+    return t`Opus files (.ogg, .opus, .webm in Opus) are not supported yet: convert the file to MP3, M4A or WAV, then import it again.`;
+  }
   // Issue 713 : message traduit, sans adresse complète (« UnexpectedStatus
   // { status: 500, … } » et autres messages bruts du transport).
   return describeServiceError(error);
@@ -161,6 +165,32 @@ export function notifyResumedImportAbandoned({
     description: name
       ? t`The import of ${name} was abandoned: ${reason}`
       : t`The import was abandoned: ${reason}`,
+    duration: AUDIO_IMPORT_FAILED_TOAST_DURATION_MS,
+    keepDuration: true,
+    action: {
+      label: t`Open note`,
+      onClick: () =>
+        useTabs.getState().openNew({ type: "sessions", id: sessionId }),
+    },
+  });
+}
+
+/**
+ * Import interrompu par la fermeture de Syntheo (issue 714) : dit une fois au
+ * lancement suivant, avec l'invitation à réimporter le fichier.
+ */
+export function notifyImportInterrupted({
+  sessionId,
+  name,
+}: {
+  sessionId: string;
+  name: string | null;
+}) {
+  toast.error(t`Audio import interrupted`, {
+    id: `audio-import-interrupted-${sessionId}`,
+    description: name
+      ? t`Syntheo was closed before the import of ${name} finished. Import the file again.`
+      : t`Syntheo was closed before the import finished. Import the file again.`,
     duration: AUDIO_IMPORT_FAILED_TOAST_DURATION_MS,
     keepDuration: true,
     action: {

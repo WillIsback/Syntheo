@@ -376,6 +376,11 @@ pub(super) fn format_user_friendly_error(error: &str) -> String {
     {
         return "This recording is too large for the selected transcription provider. Try another provider or split the recording.".to_string();
     }
+    // Opus sans décodeur (issue 714) : message stable gardé tel quel,
+    // traduit par l'interface.
+    if error_lower.contains("unsupported audio codec: opus") {
+        return "unsupported audio codec: opus".to_string();
+    }
     if error_lower.contains("invalid audio")
         || error_lower.contains("unsupported format")
         || error_lower.contains("codec")
@@ -392,6 +397,20 @@ pub(super) fn format_user_friendly_error(error: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // Issue 714 : l'erreur Opus garde sa phrase stable, traduite par
+    // l'interface, au lieu du message générique sur le format.
+    #[test]
+    fn opus_error_keeps_its_stable_phrase() {
+        assert_eq!(
+            format_user_friendly_error("decode failed: unsupported audio codec: opus"),
+            "unsupported audio codec: opus"
+        );
+        assert_eq!(
+            format_user_friendly_error("unsupported codec flac"),
+            "The audio file format is not supported. Please try a different file."
+        );
+    }
 
     fn batch_params(provider: BatchProvider, base_url: &str) -> BatchParams {
         BatchParams {
