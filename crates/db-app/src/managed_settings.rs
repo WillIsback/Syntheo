@@ -170,6 +170,25 @@ pub async fn load_managed_policy(pool: &SqlitePool) -> Result<ManagedPolicy, sql
 /// (providers-storage.ts) : sans cette traduction, l'adresse imposée était
 /// écrite sur une ligne que personne ne lit, et les déclencheurs gardaient
 /// cette ligne-là au lieu de celle du fournisseur.
+/// Clés qui ne servent qu'à restreindre (ou qu'à l'administrateur) : une fois
+/// retirées du fichier, leur copie dans `app_settings` est effacée et le
+/// réglage revient à sa valeur par défaut (issue 717). Les choix que
+/// l'utilisateur fait lui-même dans l'interface (serveur et modèle de
+/// transcription, démarrage automatique, conservation des enregistrements)
+/// restent tels quels, de nouveau modifiables.
+const RESTRICTION_IDS: &[&str] = &[
+    "cloud_sync_enabled",
+    "automatic_updates",
+    "measurement_enabled",
+    "calibration_enabled",
+    "on_device_transcription_enabled",
+    "intelligence_disabled",
+    "current_llm_provider",
+    "current_llm_model",
+    "audio_retention",
+    "speech_models_urls",
+];
+
 fn storage_id(key: String) -> String {
     match key.strip_prefix("stt:") {
         Some(provider) => format!("ai_provider:stt:{provider}"),
@@ -208,9 +227,26 @@ pub async fn apply_managed_settings(pool: &SqlitePool) -> Result<(), sqlx::Error
     let stop_measurement =
         settings.get("measurement_enabled") == Some(&serde_json::Value::Bool(false));
     let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+    let previous: Vec<(String, String)> =
+        sqlx::query_as("SELECT id, value_json FROM managed_app_settings")
+            .fetch_all(&mut *tx)
+            .await?;
     sqlx::query("DELETE FROM managed_app_settings")
         .execute(&mut *tx)
         .await?;
+    let kept: std::collections::BTreeSet<String> =
+        settings.keys().cloned().map(storage_id).collect();
+    for (id, value) in previous {
+        // Restriction levée : la valeur imposée, si elle est encore là telle
+        // quelle, ne reste pas active sans être affichée comme gérée.
+        if !kept.contains(&id) && RESTRICTION_IDS.contains(&id.as_str()) {
+            sqlx::query("DELETE FROM app_settings WHERE id = ? AND value_json = ?")
+                .bind(&id)
+                .bind(&value)
+                .execute(&mut *tx)
+                .await?;
+        }
+    }
     for (key, value) in settings {
         let json = storage_json(&key, &value)?;
         let id = storage_id(key);
@@ -693,5 +729,72 @@ mod tests {
                 .await
                 .is_err()
         );
+    }
+
+    // Issue 717 : une restriction retirée du fichier ne reste pas active en
+    // silence ; un choix de l'utilisateur imposé puis libéré est gardé, et
+    // une valeur réécrite depuis n'est pas effacée.
+    #[tokio::test]
+    async fn a_lifted_restriction_returns_to_its_default() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("app.db");
+        let policy = dir.path().join("managed_settings.json");
+        std::fs::write(
+            &policy,
+            br#"{"schema_version":1,"settings":{"intelligence_disabled":true,"cloud_sync_enabled":false,"current_stt_model":"parakeet","save_recordings":false}}"#,
+        )
+        .unwrap();
+        let db = syntheo_db_core::Db::connect_local_plain(&path)
+            .await
+            .unwrap();
+        crate::prepare_schema(&db).await.unwrap();
+
+        std::fs::write(
+            &policy,
+            br#"{"schema_version":1,"settings":{"cloud_sync_enabled":false}}"#,
+        )
+        .unwrap();
+        apply_managed_settings(db.pool()).await.unwrap();
+        let rows: Vec<(String, String)> = sqlx::query_as(
+            "SELECT id, value_json FROM app_settings WHERE id IN ('intelligence_disabled','cloud_sync_enabled','current_stt_model','save_recordings') ORDER BY id",
+        )
+        .fetch_all(db.pool())
+        .await
+        .unwrap();
+        assert_eq!(
+            rows,
+            [
+                ("cloud_sync_enabled".into(), "false".into()),
+                ("current_stt_model".into(), "\"parakeet\"".into()),
+                ("save_recordings".into(), "false".into()),
+            ]
+        );
+        let managed: Vec<String> = sqlx::query_scalar("SELECT id FROM managed_app_settings")
+            .fetch_all(db.pool())
+            .await
+            .unwrap();
+        assert_eq!(managed, ["cloud_sync_enabled"]);
+
+        // Fichier retiré : la dernière restriction tombe ; une valeur que
+        // l'utilisateur a réécrite entre-temps n'est pas touchée.
+        std::fs::write(
+            &policy,
+            br#"{"schema_version":1,"settings":{"automatic_updates":false}}"#,
+        )
+        .unwrap();
+        apply_managed_settings(db.pool()).await.unwrap();
+        sqlx::query("INSERT INTO app_settings(id,value_json) VALUES('cloud_sync_enabled','true') ON CONFLICT(id) DO UPDATE SET value_json=excluded.value_json")
+            .execute(db.pool())
+            .await
+            .unwrap();
+        std::fs::remove_file(&policy).unwrap();
+        apply_managed_settings(db.pool()).await.unwrap();
+        let left: Vec<(String, String)> = sqlx::query_as(
+            "SELECT id, value_json FROM app_settings WHERE id IN ('automatic_updates','cloud_sync_enabled') ORDER BY id",
+        )
+        .fetch_all(db.pool())
+        .await
+        .unwrap();
+        assert_eq!(left, [("cloud_sync_enabled".into(), "true".into())]);
     }
 }
