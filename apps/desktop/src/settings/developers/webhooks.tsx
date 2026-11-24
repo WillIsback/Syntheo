@@ -3,11 +3,16 @@ import { useLingui } from "@lingui/react";
 import { Trans } from "@lingui/react/macro";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 
 import {
   commands as webhookCommands,
   type WebhookInfo,
 } from "@syntheo/plugin-local-api";
+import {
+  isCleartextRemoteUrl,
+  validateProviderRequestUrl,
+} from "@syntheo/provider-validation";
 import { Copy, Trash } from "@syntheo/ui/components/icons";
 import { Button } from "@syntheo/ui/components/ui/button";
 import { Input } from "@syntheo/ui/components/ui/input";
@@ -15,6 +20,11 @@ import { toast } from "@syntheo/ui/components/ui/toast";
 import { cn } from "@syntheo/utils";
 
 import { copyText } from "./clipboard";
+
+import {
+  CleartextConfirmation,
+  CleartextNotice,
+} from "~/settings/ai/shared/cleartext-warning";
 
 const WEBHOOKS_QUERY_KEY = ["webhooks"] as const;
 
@@ -71,6 +81,15 @@ export function WebhooksSection() {
     onError: (error) => toast.error(error.message),
   });
 
+  // HTTP clair vers ce poste ou un réseau privé (issue 703) : confirmé avant
+  // la création, comme pour un serveur d'inférence. Le HTTP public est
+  // refusé par la règle commune, ici et côté Rust.
+  const [pendingHttpUrl, setPendingHttpUrl] = useState<string | null>(null);
+  const create = (url: string) => {
+    setPendingHttpUrl(null);
+    createMutation.mutate(url);
+    form.setFieldValue("url", "");
+  };
   const form = useForm({
     defaultValues: { url: "" },
     onSubmit: ({ value }) => {
@@ -78,8 +97,11 @@ export function WebhooksSection() {
       if (!url) {
         return;
       }
-      createMutation.mutate(url);
-      form.setFieldValue("url", "");
+      if (isCleartextRemoteUrl(url) && pendingHttpUrl !== url) {
+        setPendingHttpUrl(url);
+        return;
+      }
+      create(url);
     },
   });
 
@@ -117,6 +139,16 @@ export function WebhooksSection() {
             <Trans>Add webhook</Trans>
           </Button>
         </form>
+
+        {pendingHttpUrl ? (
+          <div className="mt-3 max-w-md">
+            <CleartextConfirmation
+              subject="webhook"
+              host={hostOf(pendingHttpUrl)}
+              onConfirm={() => create(pendingHttpUrl)}
+            />
+          </div>
+        ) : null}
 
         {createdWebhook && (
           <div className="border-border bg-muted/30 mt-3 rounded-xl border p-3">
@@ -212,6 +244,13 @@ function WebhookRow({
         <span className="text-muted-foreground text-xs">
           {statusParts.join(" · ")}
         </span>
+        {blockedByAddressRule(webhook.url) ? (
+          <span className="text-destructive text-xs" data-webhook-blocked>
+            {t`Blocked: use https://, or http:// only to this computer or a private network.`}
+          </span>
+        ) : isCleartextRemoteUrl(webhook.url) ? (
+          <CleartextNotice subject="webhook" />
+        ) : null}
       </div>
       <div className="flex shrink-0 items-center gap-1">
         <Button
@@ -245,4 +284,28 @@ function WebhookRow({
       </div>
     </li>
   );
+}
+
+function hostOf(url: string): string {
+  try {
+    return new URL(url).host;
+  } catch {
+    return url;
+  }
+}
+
+/** Endpoint enregistré avant la règle d'adresse (issue 703) : il ne reçoit
+ * plus rien, la livraison est refusée côté Rust. */
+function blockedByAddressRule(url: string): boolean {
+  try {
+    // Les identifiants hérités sont masqués (`***@`) : la règle porte sur
+    // le protocole et l'hôte.
+    const parsed = new URL(url);
+    parsed.username = "";
+    parsed.password = "";
+    validateProviderRequestUrl(parsed);
+    return false;
+  } catch {
+    return true;
+  }
 }

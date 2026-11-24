@@ -107,7 +107,7 @@ L'étape envoie une requête `POST` avec le « Corps JSON » à l'« Adresse (UR
 - Syntheo ne suit pas les redirections : l'erreur indique l'adresse finale à utiliser. La requête s'arrête au bout de 15 secondes. Toute réponse hors 2xx fait échouer l'étape.
 
 <Warning>
-  Cette étape envoie le contenu de la note hors de votre ordinateur. Utilisez une adresse de confiance, de préférence en HTTPS ou sur votre réseau privé. La requête n'est pas signée et n'est pas réessayée en cas d'échec : ce sont les [webhooks des Paramètres](/fr/reference/webhooks) qui signent leurs livraisons.
+  Cette étape envoie le contenu de la note hors de votre ordinateur. Utilisez une adresse de confiance en HTTPS ; le HTTP non chiffré n'est accepté que vers ce poste ou un réseau privé, avec un rappel. La requête n'est pas signée et n'est pas réessayée en cas d'échec : ce sont les [webhooks des Paramètres](/fr/reference/webhooks) qui signent leurs livraisons.
 </Warning>
 
 ### Lancer une commande

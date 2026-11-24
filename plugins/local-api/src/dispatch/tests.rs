@@ -693,3 +693,147 @@ async fn legacy_credentials_are_masked_and_never_sent() {
         "{request}"
     );
 }
+
+// Issue 703 : même règle que les serveurs d'inférence. HTTPS, ou HTTP clair
+// seulement vers ce poste ou un réseau privé, à la création comme à chaque
+// livraison.
+#[tokio::test]
+async fn cleartext_http_is_refused_outside_local_and_private_networks() {
+    let db = syntheo_db_core::Db::connect_memory_plain().await.unwrap();
+    syntheo_db_app::prepare_schema(&db).await.unwrap();
+    for url in ["http://example.com/hook", "http://203.0.113.5/hook"] {
+        assert_eq!(
+            create_endpoint(db.pool(), &memory_secrets().1, url, &[])
+                .await
+                .unwrap_err(),
+            "unencrypted HTTP is only allowed to this machine or a private network",
+            "{url}"
+        );
+    }
+    for url in [
+        "https://example.com/hook?source=syntheo",
+        "http://127.0.0.1:5678/webhook",
+        "http://192.168.1.10/hook",
+        "http://n8n.local/hook",
+        "http://machine.tailnet.ts.net/hook",
+    ] {
+        create_endpoint(db.pool(), &memory_secrets().1, url, &[])
+            .await
+            .unwrap_or_else(|error| panic!("{url}: {error}"));
+    }
+}
+
+#[tokio::test]
+async fn a_legacy_public_http_endpoint_receives_nothing() {
+    let db = syntheo_db_core::Db::connect_memory_plain().await.unwrap();
+    syntheo_db_app::prepare_schema(&db).await.unwrap();
+    // Ligne créée par une version antérieure, sans la règle.
+    syntheo_db_app::insert_webhook_endpoint(
+        db.pool(),
+        "webhook-1",
+        "http://203.0.113.5/hook",
+        "whsec_legacy",
+        "[]",
+    )
+    .await
+    .unwrap();
+    let endpoint = syntheo_db_app::get_webhook_endpoint(db.pool(), "webhook-1")
+        .await
+        .unwrap()
+        .unwrap();
+    let outcome = deliver_once(
+        &memory_secrets().1,
+        &endpoint,
+        EVENT_TEST,
+        &Bytes::from_static(b"{}"),
+        "delivery-1",
+    )
+    .await;
+    assert!(!outcome.delivered);
+    assert_eq!(
+        outcome.status,
+        "error: unencrypted HTTP is only allowed to this machine or a private network"
+    );
+}
+
+/// Trousseau qui vérifie, au moment d'écrire, que la ligne de l'endpoint
+/// n'existe pas encore en base.
+struct WriteBeforeInsert {
+    pool: sqlx::SqlitePool,
+    handle: tokio::runtime::Handle,
+    inner: MemorySecrets,
+    rows_at_write: Mutex<Vec<i64>>,
+}
+
+impl WebhookSecretStore for WriteBeforeInsert {
+    fn read(&self, id: &str) -> Result<Option<String>, String> {
+        self.inner.read(id)
+    }
+    fn write(&self, id: &str, secret: &str) -> Result<(), String> {
+        let count: i64 = self
+            .handle
+            .block_on(
+                sqlx::query_scalar("SELECT count(*) FROM webhook_endpoints WHERE id = ?")
+                    .bind(id)
+                    .fetch_one(&self.pool),
+            )
+            .unwrap();
+        self.rows_at_write.lock().unwrap().push(count);
+        self.inner.write(id, secret)
+    }
+    fn delete(&self, id: &str) -> Result<(), String> {
+        self.inner.delete(id)
+    }
+}
+
+// Issue 711 : le secret est au trousseau avant que la ligne n'existe ; la
+// base n'a jamais contenu sa valeur.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_new_secret_never_transits_through_the_database() {
+    let db = syntheo_db_core::Db::connect_memory_plain().await.unwrap();
+    syntheo_db_app::prepare_schema(&db).await.unwrap();
+    let store = Arc::new(WriteBeforeInsert {
+        pool: db.pool().clone(),
+        handle: tokio::runtime::Handle::current(),
+        inner: MemorySecrets::default(),
+        rows_at_write: Mutex::new(Vec::new()),
+    });
+    let secrets: SharedSecretStore = store.clone();
+
+    let created = create_endpoint(db.pool(), &secrets, "https://example.com/hook", &[])
+        .await
+        .unwrap();
+
+    assert_eq!(*store.rows_at_write.lock().unwrap(), [0]);
+    let row = syntheo_db_app::get_webhook_endpoint(db.pool(), &created.info.id)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(row.secret, KEYCHAIN_MARKER);
+    assert_eq!(
+        store.inner.read(&created.info.id).unwrap().as_deref(),
+        Some(created.secret.as_str())
+    );
+}
+
+// Une insertion refusée ne laisse pas de secret orphelin au trousseau.
+#[tokio::test]
+async fn a_failed_insert_removes_the_keychain_secret() {
+    let db = syntheo_db_core::Db::connect_memory_plain().await.unwrap();
+    syntheo_db_app::prepare_schema(&db).await.unwrap();
+    sqlx::query(
+        "CREATE TRIGGER refuse_insert BEFORE INSERT ON webhook_endpoints \
+         BEGIN SELECT RAISE(ABORT, 'refused'); END",
+    )
+    .execute(db.pool())
+    .await
+    .unwrap();
+    let (memory, secrets) = memory_secrets();
+
+    assert!(
+        create_endpoint(db.pool(), &secrets, "https://example.com/hook", &[])
+            .await
+            .is_err()
+    );
+    assert!(memory.values.lock().unwrap().is_empty());
+}

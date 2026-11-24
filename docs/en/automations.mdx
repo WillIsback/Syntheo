@@ -107,7 +107,7 @@ The step sends a `POST` request with the "JSON body" to the "Address (URL)", for
 - Syntheo does not follow redirects: the error gives the final address to use. The request stops after 15 seconds. Any response outside 2xx makes the step fail.
 
 <Warning>
-  This step sends the note's content off your computer. Use a trusted address, preferably over HTTPS or on your private network. The request is not signed and is not retried on failure: it is the [webhooks in Settings](/en/reference/webhooks) that sign their deliveries.
+  This step sends the note's content off your computer. Use a trusted HTTPS address; unencrypted HTTP is only accepted to this computer or a private network, with a reminder. The request is not signed and is not retried on failure: it is the [webhooks in Settings](/en/reference/webhooks) that sign their deliveries.
 </Warning>
 
 ### Run a command

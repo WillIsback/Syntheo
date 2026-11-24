@@ -15,6 +15,7 @@ syntheo-db-core = { workspace = true }
 syntheo-specta-export = { workspace = true }
 
 [dependencies]
+owhisper-client = { workspace = true }
 syntheo-agent-access = { workspace = true }
 syntheo-db-app = { workspace = true }
 tauri-plugin-db = { workspace = true }

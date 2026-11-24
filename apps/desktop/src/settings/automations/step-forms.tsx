@@ -1,6 +1,7 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { useId } from "react";
 
+import { isCleartextRemoteUrl } from "@syntheo/provider-validation";
 import { Plus, Trash, Warning } from "@syntheo/ui/components/icons";
 import { Button } from "@syntheo/ui/components/ui/button";
 import { Input } from "@syntheo/ui/components/ui/input";
@@ -29,6 +30,7 @@ import {
   isWebhookBodyTemplateValid,
   parseWebhookUrl,
 } from "~/automations/webhook";
+import { CleartextNotice } from "~/settings/ai/shared/cleartext-warning";
 
 // Formulaires des actions (hors export Markdown, qui a le sien). Chaque champ
 // texte accepte les variables de base et les sorties des étapes précédentes.
@@ -255,8 +257,13 @@ export function WebhookForm(props: FormProps<WebhookStep>) {
         />
         {urlInvalid ? (
           <span className="text-destructive text-xs">
-            <Trans>Use an http:// or https:// address.</Trans>
+            <Trans>
+              Use an https:// address, or http:// only to this computer or a
+              private network, without a user name or password.
+            </Trans>
           </span>
+        ) : isCleartextRemoteUrl(step.url) ? (
+          <CleartextNotice subject="webhook" />
         ) : null}
       </Field>
       <Field label={t`JSON body`}>
