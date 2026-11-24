@@ -21,7 +21,13 @@ pub use normalize::Format;
 use normalize::{Block, Token};
 
 /// Version de la règle de calcul, à reporter avec chaque résultat.
-pub const RULE_VERSION: u32 = 1;
+///
+/// - 1 : version de la 0.8.0.
+/// - 2 (0.8.1) : entités HTML5 et clé de comparaison normalisée (issue
+///   729), appariement ordonné des sections et mots des titres comptés
+///   (issue 730), diff de patience, fusion par mots-outils et appariement
+///   mot à mot dans un remplacement (issue 732).
+pub const RULE_VERSION: u32 = 2;
 /// Taille maximale d'un texte (4 Mio).
 pub const MAX_INPUT_BYTES: usize = 4 * 1024 * 1024;
 /// Nombre maximal de mots et de signes d'un texte : borne le diff.
@@ -944,8 +950,55 @@ fn word_count(tokens: &[Token]) -> u64 {
     tokens.iter().filter(|t| t.word).count() as u64
 }
 
-/// Diff mot à mot (plus courte suite d'éditions, Myers) puis classement de
-/// chaque différence, transmise à `visit` avec ses deux côtés.
+/// Mots-outils français et anglais (liste fermée, en minuscules, clé de
+/// comparaison) : articles, prépositions, conjonctions, pronoms et
+/// auxiliaires courants. Un mot-outil ne forme jamais une paire de mots
+/// proches avec un autre mot (« les » et « des », « sur » et « sous ») :
+/// sinon il découperait un remplacement de fond en morceaux courts, classés
+/// lexicaux dès qu'ils touchent un nom propre (règle v2, issue 732). Les
+/// mots élidés (`l'équipe`) restent d'un seul tenant et n'y figurent pas.
+const FUNCTION_WORDS: &[&str] = &[
+    // Français.
+    "à", "au", "aux", "avec", "ce", "ces", "cet", "cette", "chez", "dans", "de", "des", "du",
+    "elle", "elles", "en", "entre", "est", "et", "il", "ils", "je", "la", "le", "les", "leur",
+    "leurs", "lui", "ma", "mais", "me", "mes", "mon", "ne", "ni", "nos", "notre", "nous", "on",
+    "ont", "ou", "où", "par", "pour", "qu", "que", "qui", "sa", "sans", "se", "ses", "son", "sont",
+    "sous", "sur", "ta", "te", "tes", "ton", "tu", "un", "une", "vers", "vos", "votre", "vous",
+    "y", // Anglais.
+    "a", "an", "and", "are", "as", "at", "be", "been", "but", "by", "for", "from", "has", "have",
+    "he", "her", "his", "i", "in", "into", "is", "it", "its", "my", "nor", "of", "or", "our",
+    "she", "so", "than", "that", "the", "their", "them", "these", "they", "this", "those", "to",
+    "was", "we", "were", "which", "who", "will", "with", "you", "your",
+];
+
+/// Au-delà de ce nombre de paires de mots (mots anciens × mots nouveaux),
+/// un remplacement n'est pas apparié mot à mot : il est classé d'un bloc,
+/// comme en v1. Borne fixe : le résultat ne dépend pas du temps de calcul.
+const MAX_PAIRING_CELLS: usize = 250_000;
+
+fn is_function_word(token: &Token) -> bool {
+    FUNCTION_WORDS.contains(&token.key.to_lowercase().as_str())
+}
+
+/// Diff mot à mot puis classement de chaque différence, transmise à `visit`
+/// avec ses deux côtés. Règle v2 (issue 732) :
+///
+/// 1. diff de patience (`Algorithm::Patience`), stable sur les mots répétés
+///    (articles, statuts d'un tableau) ;
+/// 2. dans une différence qui a des mots des deux côtés, appariement mot à
+///    mot (`pair_words`) : un mot identique ne compte pas, un mot proche
+///    (même mot à la casse près, ou à faible distance d'édition) est un
+///    remplacement d'un mot, classé seul ; le reste, entre deux paires, est
+///    classé comme en v1 (ajout, suppression ou remplacement).
+///
+/// « Dupond » → « Durand, Dupont » : « Dupond » et « Dupont » s'apparient
+/// (1 mot lexical), « Durand » est ajouté (1 mot de fond).
+///
+/// Pas de fusion de deux différences par-dessus des mots-outils : la
+/// relecture a montré qu'elle minore la reprise (le mot-outil de l'écart
+/// s'apparie à une autre occurrence, un écart de ponctuation seule fait d'un
+/// ajout et d'une suppression un remplacement), et que, rendue sûre en
+/// ancrant les mots de l'écart, elle ne change plus aucun compteur.
 fn diff(
     generated: &[Token],
     sent: &[Token],
@@ -956,53 +1009,187 @@ fn diff(
     // ne font pas deux mots différents.
     let old: Vec<&str> = generated.iter().map(|t| t.key.as_str()).collect();
     let new: Vec<&str> = sent.iter().map(|t| t.key.as_str()).collect();
-    // Suppression et insertion adjacentes : un remplacement.
-    let mut pending: Option<(std::ops::Range<usize>, std::ops::Range<usize>)> = None;
-    let mut ops = capture_diff_slices(Algorithm::Myers, &old, &new);
-    ops.push(DiffOp::Equal {
-        old_index: old.len(),
-        new_index: new.len(),
-        len: 0,
-    });
-    for op in ops {
-        match op {
+    // Différences : suppression et insertion adjacentes forment une seule
+    // différence (remplacement).
+    let mut hunks: Vec<(std::ops::Range<usize>, std::ops::Range<usize>)> = Vec::new();
+    let mut open = false;
+    for op in capture_diff_slices(Algorithm::Patience, &old, &new) {
+        let (o, n) = match op {
             DiffOp::Equal { .. } => {
-                if let Some((o, n)) = pending.take()
-                    && let Some(change) =
-                        classify(&generated[o.clone()], &sent[n.clone()], dictionary)
-                {
-                    visit(&generated[o], &sent[n], change);
-                }
+                open = false;
+                continue;
             }
             DiffOp::Delete {
                 old_index,
                 old_len,
                 new_index,
-                ..
-            } => {
-                let (o, _) = pending.get_or_insert((old_index..old_index, new_index..new_index));
-                o.end = old_index + old_len;
-            }
+            } => (old_index..old_index + old_len, new_index..new_index),
             DiffOp::Insert {
                 old_index,
                 new_index,
                 new_len,
-            } => {
-                let (_, n) = pending.get_or_insert((old_index..old_index, new_index..new_index));
-                n.end = new_index + new_len;
-            }
+            } => (old_index..old_index, new_index..new_index + new_len),
             DiffOp::Replace {
                 old_index,
                 old_len,
                 new_index,
                 new_len,
-            } => {
-                let (o, n) = pending.get_or_insert((old_index..old_index, new_index..new_index));
-                o.end = old_index + old_len;
-                n.end = new_index + new_len;
+            } => (
+                old_index..old_index + old_len,
+                new_index..new_index + new_len,
+            ),
+        };
+        match hunks.last_mut() {
+            Some(last) if open => {
+                last.0.end = o.end;
+                last.1.end = n.end;
             }
+            _ => hunks.push((o, n)),
+        }
+        open = true;
+    }
+    for (o, n) in hunks {
+        classify_hunk(&generated[o], &sent[n], dictionary, visit);
+    }
+}
+
+/// Classe une différence : appariement mot à mot, puis chaque paire proche
+/// et chaque reste entre deux paires classés séparément.
+fn classify_hunk(
+    old: &[Token],
+    new: &[Token],
+    dictionary: &Dictionary,
+    visit: &mut impl FnMut(&[Token], &[Token], Change),
+) {
+    let mut emit = |o: &[Token], n: &[Token]| {
+        if let Some(change) = classify(o, n, dictionary) {
+            visit(o, n, change);
+        }
+    };
+    let (mut prev_o, mut prev_n) = (0, 0);
+    for (i, j) in pair_words(old, new) {
+        emit(&old[prev_o..i], &new[prev_n..j]);
+        if old[i].key != new[j].key {
+            emit(&old[i..=i], &new[j..=j]);
+        }
+        (prev_o, prev_n) = (i + 1, j + 1);
+    }
+    emit(&old[prev_o..], &new[prev_n..]);
+}
+
+/// Distance d'édition entre deux mots si elle est d'au plus `MAX_NEAR_EDITS`,
+/// en temps borné : préfixe et suffixe communs retirés, puis Levenshtein sur
+/// ce qui reste, au plus `MAX_NEAR_CORE` caractères de chaque côté (au-delà,
+/// les mots ne sont pas proches). Le coût ne croît pas avec la longueur des
+/// mots (relecture de l'issue 732).
+fn near_distance(a: &[char], b: &[char]) -> Option<usize> {
+    let prefix = a.iter().zip(b).take_while(|(x, y)| x == y).count();
+    let (a, b) = (&a[prefix..], &b[prefix..]);
+    let suffix = a
+        .iter()
+        .rev()
+        .zip(b.iter().rev())
+        .take_while(|(x, y)| x == y)
+        .count();
+    let (a, b) = (&a[..a.len() - suffix], &b[..b.len() - suffix]);
+    if a.len().abs_diff(b.len()) > MAX_NEAR_EDITS || a.len().max(b.len()) > MAX_NEAR_CORE {
+        return None;
+    }
+    let distance = edit_distance(&a.iter().collect::<String>(), &b.iter().collect::<String>());
+    (distance <= MAX_NEAR_EDITS).then_some(distance)
+}
+
+/// Distance d'édition maximale entre deux mots proches.
+const MAX_NEAR_EDITS: usize = 2;
+/// Longueur maximale de la partie qui diffère entre deux mots proches.
+const MAX_NEAR_CORE: usize = 16;
+/// Longueur minimale (en caractères) du plus long de deux mots proches non
+/// identiques à la casse près : en dessous, « 15h » et « 16h », « CRI » et
+/// « CRM » restent dans le reste, classé comme en v1.
+const MIN_NEAR_LENGTH: usize = 4;
+
+/// Deux mots proches et leur distance : même clé à la casse près (distance
+/// 0), ou distance d'édition d'au plus 2 et d'au plus le tiers du mot le plus
+/// long, d'au moins 4 caractères, aucun des deux n'étant un mot-outil
+/// (« Dupond » et « Dupont », « gpt » et « GPT4 » ; pas « 15h » et « 16h »,
+/// ni « les » et « des »).
+fn near_words(a: &Token, b: &Token) -> Option<usize> {
+    let (a_key, b_key) = (a.key.to_lowercase(), b.key.to_lowercase());
+    if a_key == b_key {
+        return Some(0);
+    }
+    if is_function_word(a) || is_function_word(b) {
+        return None;
+    }
+    let (a_chars, b_chars): (Vec<char>, Vec<char>) =
+        (a_key.chars().collect(), b_key.chars().collect());
+    let longest = a_chars.len().max(b_chars.len());
+    if longest < MIN_NEAR_LENGTH {
+        return None;
+    }
+    near_distance(&a_chars, &b_chars).filter(|distance| distance * 3 <= longest)
+}
+
+/// Appariement mot à mot d'un remplacement, dans l'ordre : paires (indices
+/// de jetons) qui maximisent d'abord les mots identiques, puis les mots
+/// proches, puis minimisent la distance cumulée des paires proches (« Dupond »
+/// va avec « Dupont » plutôt qu'avec « Durand », dans tous les ordres). Vide
+/// si un côté n'a pas de mot, ou au-delà de `MAX_PAIRING_CELLS`
+/// (classement d'un bloc).
+fn pair_words(old: &[Token], new: &[Token]) -> Vec<(usize, usize)> {
+    let ow: Vec<usize> = (0..old.len()).filter(|&i| old[i].word).collect();
+    let nw: Vec<usize> = (0..new.len()).filter(|&j| new[j].word).collect();
+    if ow.is_empty() || nw.is_empty() || ow.len().saturating_mul(nw.len()) > MAX_PAIRING_CELLS {
+        return Vec::new();
+    }
+    use std::cmp::Reverse;
+    // score[i][j] : (identiques, proches, distance cumulée inversée) sur
+    // ow[..i] × nw[..j], ordre lexicographique.
+    type Score = (u32, u32, Reverse<u32>);
+    let add = |(s, t, Reverse(d)): Score, (x, y, Reverse(e)): Score| -> Score {
+        (s + x, t + y, Reverse(d + e))
+    };
+    let width = nw.len() + 1;
+    let mut score: Vec<Score> = vec![(0, 0, Reverse(0)); (ow.len() + 1) * width];
+    let at = |i: usize, j: usize| i * width + j;
+    let gain = |i: usize, j: usize| -> Option<Score> {
+        let (a, b) = (&old[ow[i]], &new[nw[j]]);
+        if a.key == b.key {
+            return Some((1, 0, Reverse(0)));
+        }
+        near_words(a, b).map(|distance| (0, 1, Reverse(distance as u32)))
+    };
+    for i in 1..=ow.len() {
+        for j in 1..=nw.len() {
+            let mut best = score[at(i - 1, j)].max(score[at(i, j - 1)]);
+            if let Some(g) = gain(i - 1, j - 1) {
+                best = best.max(add(score[at(i - 1, j - 1)], g));
+            }
+            score[at(i, j)] = best;
         }
     }
+    // Reconstruction, de la fin vers le début : la paire d'abord quand elle
+    // atteint le score, sinon le mot ancien sauté, sinon le nouveau.
+    let mut pairs = Vec::new();
+    let (mut i, mut j) = (ow.len(), nw.len());
+    while i > 0 && j > 0 {
+        let here = score[at(i, j)];
+        if let Some(g) = gain(i - 1, j - 1)
+            && add(score[at(i - 1, j - 1)], g) == here
+        {
+            pairs.push((ow[i - 1], nw[j - 1]));
+            i -= 1;
+            j -= 1;
+            continue;
+        }
+        if score[at(i - 1, j)] == here {
+            i -= 1;
+        } else {
+            j -= 1;
+        }
+    }
+    pairs.reverse();
+    pairs
 }
 
 /// Classe une différence ; `None` si elle ne touche que la ponctuation.
