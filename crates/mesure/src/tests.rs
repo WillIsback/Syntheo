@@ -1012,3 +1012,69 @@ fn heading_matching_helpers() {
     );
     assert_eq!(increasing_subsequence(&[None, None]), Vec::<usize>::new());
 }
+
+// Titres en double (issue 730, relecture) : `sections` fusionne les sections
+// de même clé de titre de chaque côté, avant l'appariement. Chaque section
+// envoyée sert donc au plus une fois, et une occurrence sans homologue compte
+// en suppressions.
+const TWO_TOPICS: &str = "# Sujet A
+
+Le comité valide le calendrier.
+
+## Décisions
+
+- Garder le prestataire actuel.
+
+# Sujet B
+
+Le budget du pilote est revu.
+
+## Décisions
+
+- Reporter la formation en mars.
+";
+
+fn prepared(generated: &str, sent: &str) -> Prepared {
+    prepare(generated, Format::Markdown, sent, Format::Markdown).unwrap()
+}
+
+fn assert_one_to_one(prepared: &Prepared) {
+    let mut used: Vec<usize> = prepared.matches.iter().flatten().copied().collect();
+    let count = used.len();
+    used.sort_unstable();
+    used.dedup();
+    assert_eq!(used.len(), count, "{:?}", prepared.matches);
+}
+
+#[test]
+fn duplicate_titles_on_both_sides_are_matched_once() {
+    let p = prepared(TWO_TOPICS, TWO_TOPICS);
+    assert_one_to_one(&p);
+    assert_eq!(p.generated.len(), 3);
+    assert_eq!(run(TWO_TOPICS, TWO_TOPICS).total.added, 0);
+    assert_eq!(run(TWO_TOPICS, TWO_TOPICS).total.deleted, 0);
+}
+
+#[test]
+fn a_duplicate_title_without_counterpart_counts_as_deleted() {
+    let sent = "# Sujet A
+
+Le comité valide le calendrier.
+
+## Décisions
+
+- Garder le prestataire actuel.
+
+# Sujet B
+
+Le budget du pilote est revu.
+";
+    let p = prepared(TWO_TOPICS, sent);
+    assert_one_to_one(&p);
+    let report = run(TWO_TOPICS, sent);
+    // Seconde « Décisions » : son titre (1 mot) et son corps (5 mots)
+    // comptent en suppressions, rien n'est apparié deux fois.
+    assert_eq!(report.total.deleted, 6);
+    assert_eq!(report.total.added, 0);
+    assert_eq!(report.unmatched_sent_words, 0);
+}

@@ -624,8 +624,11 @@ fn match_sections(generated: &[Section], sent: &[Section]) -> Vec<Option<usize>>
             None => sent.iter().position(|s| s.title.is_none()),
         })
         .collect();
+    // `sections` fusionne les titres en double de chaque côté : une section
+    // envoyée n'est jamais visée deux fois (sinon la reprise serait minorée).
     let mut taken = vec![false; sent.len()];
     for j in matches.iter().flatten() {
+        debug_assert!(!taken[*j], "section envoyée appariée deux fois");
         taken[*j] = true;
     }
     // Ancres : bornes de fenêtre, en plus du début et de la fin des textes.
