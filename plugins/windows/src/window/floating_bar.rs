@@ -494,10 +494,13 @@ mod cross_platform {
         }
 
         let (width, height) = default_size();
-        let builder = WebviewWindowBuilder::new(
+        let builder = crate::navigation::guard(
+            WebviewWindowBuilder::new(
+                app,
+                WINDOW_LABEL,
+                WebviewUrl::App("app/floating-bar".into()),
+            ),
             app,
-            WINDOW_LABEL,
-            WebviewUrl::App("app/floating-bar".into()),
         )
         .title(syntheo_brand::PRODUCT_NAME)
         .inner_size(width, height)

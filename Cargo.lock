@@ -12506,6 +12506,7 @@ dependencies = [
  "tauri",
  "tauri-nspanel",
  "tauri-plugin",
+ "tauri-plugin-opener2",
  "tauri-plugin-os",
  "tauri-plugin-window-state",
  "tauri-specta",

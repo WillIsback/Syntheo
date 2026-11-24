@@ -1,4 +1,4 @@
-export { appLinkNodeSpec } from "./app-link-spec";
+export { appLinkHttpUrl, appLinkNodeSpec } from "./app-link-spec";
 export { attachmentNodeSpec, AttachmentChipView } from "./attachment-view";
 export {
   type AttachmentResolution,

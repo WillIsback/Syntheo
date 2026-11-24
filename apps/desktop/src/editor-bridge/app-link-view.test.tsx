@@ -65,6 +65,20 @@ describe("AppLinkView", () => {
     });
   });
 
+  // Issue 655 : une pastille n'ouvre qu'une adresse http(s).
+  it.each([
+    "file:///etc/passwd",
+    "ms-msdt:/id PCWDiagnostic",
+    "javascript:alert(1)",
+  ])("n'ouvre pas une pastille vers %s", async (url) => {
+    renderAppLink({ provider: "github", kind: "issue", url });
+
+    fireEvent.click(screen.getByRole("button"));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(hoisted.openUrl).not.toHaveBeenCalled();
+  });
+
   it("affiche l'icône GitHub au lieu d'une case de ticket", () => {
     renderAppLink({
       provider: "github",

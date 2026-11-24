@@ -10,6 +10,7 @@ import {
   getAppLinkLabel,
   type AppLinkAttrs,
 } from "@syntheo/editor/app-link";
+import { appLinkHttpUrl } from "@syntheo/editor/node-views";
 import { commands as openerCommands } from "@syntheo/plugin-opener2";
 import { cn } from "@syntheo/utils";
 
@@ -213,7 +214,8 @@ export const AppLinkView = forwardRef<HTMLSpanElement, NodeViewComponentProps>(
   function AppLinkView({ nodeProps, ...htmlAttrs }, ref) {
     const attrs = nodeProps.node.attrs as AppLinkAttrs;
     const { header, subline } = getAppLinkDisplayParts(attrs);
-    const href = attrs.url;
+    // http(s) seulement (issue 655) ; Rust (opener2) refuse aussi le reste.
+    const href = appLinkHttpUrl(attrs.url);
 
     // Un lien GitHub (ticket, PR…) est un lien ordinaire : il s'ouvre dans le
     // navigateur comme les autres fournisseurs (issue 403).

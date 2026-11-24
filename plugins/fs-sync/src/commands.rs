@@ -286,12 +286,8 @@ pub(crate) async fn audio_path<R: tauri::Runtime>(
         .map(|p| p.to_string_lossy().to_string())
         .ok_or_else(|| "audio_path_not_found".to_string())?;
     // The webview plays this file through the asset protocol via
-    // `convertFileSrc`. On Linux the vault lives under `~/.local/share/...`,
-    // and Tauri's asset-protocol scope glob (`**/*` in tauri.conf.json)
-    // never matches a path with a dot-leading component there; the
-    // `$APPDATA/**` entry in the same config only covers the
-    // bundle-identifier folder, which this app does not use for its data.
-    // Allow this exact file instead of widening the static scope config.
+    // `convertFileSrc`. The static scope in tauri.conf.json is empty
+    // (issue 655): only files allowed here at runtime are served.
     app.asset_protocol_scope()
         .allow_file(&path)
         .map_err(|error| error.to_string())?;
@@ -413,12 +409,8 @@ pub(crate) async fn attachment_save<R: tauri::Runtime>(
             .map_err(|e| e.to_string())
     })?;
     // The webview previews this attachment through the asset protocol via
-    // `convertFileSrc` (see useFileUpload.ts). On Linux the vault lives
-    // under `~/.local/share/...`; Tauri's asset-protocol scope glob (`**/*`
-    // in tauri.conf.json) never matches a path with a dot-leading component
-    // there, and the `$APPDATA/**` entry only covers the bundle-identifier
-    // folder this app does not use for its data. Allow this exact file
-    // instead of widening the static scope config.
+    // `convertFileSrc` (see useFileUpload.ts). The static scope in
+    // tauri.conf.json is empty (issue 655): allow this exact file.
     scope
         .allow_file(&result.path)
         .map_err(|error| error.to_string())?;
@@ -439,7 +431,7 @@ pub(crate) async fn attachment_list<R: tauri::Runtime>(
     })?;
     // See attachment_save above: each listed attachment is fed into
     // `convertFileSrc` by useAttachmentResolver.ts, so allow every file
-    // explicitly for the same dot-leading-directory reason. An attachment
+    // explicitly, since the static scope is empty. An attachment
     // that cannot be allowed is dropped from the listing rather than
     // returned: the resolver maps a missing id to `null`, which the editor
     // handles, whereas a returned path the asset protocol refuses renders
