@@ -8,7 +8,13 @@ import { describeServiceError, errorText } from "~/shared/service-error";
 // passe par les erreurs de serveur (issue 713).
 export function describeDictationError(error: unknown): string {
   const message = errorText(error);
-  if (message.includes("Global Shortcuts portal")) {
+  // Code stable du plugin pour tout échec du portail (passe QA 0.8.1-2) ;
+  // messages bruts d'avant gardés en repli.
+  if (
+    message.trim() === "portal_unavailable" ||
+    message.includes("Global Shortcuts portal") ||
+    message.includes("Portal request failed")
+  ) {
     return t`This desktop does not offer global shortcuts to apps (Global Shortcuts portal): dictation by shortcut is not available in this session.`;
   }
   if (message.includes("Global shortcuts are unavailable")) {
