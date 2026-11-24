@@ -9,12 +9,17 @@ import { getStoredSettingValues, updateSettingValue } from "~/settings/queries";
 // la commande exacte (programme et arguments tels que saisis, variables
 // comprises) : changer un seul caractère redemande la confirmation.
 
-export type CommandLine = Pick<CommandStep, "program" | "args">;
+export type CommandLine = Pick<CommandStep, "program" | "args"> & {
+  /** Valeurs réelles de cette exécution, montrées dans la confirmation
+   * (issue 656) ; la clé d'approbation reste celle de la commande saisie. */
+  renderedArgs?: string[];
+};
 
 export type PendingCommandConfirmation = {
   key: string;
   program: string;
   args: string[];
+  renderedArgs: string[];
   workflowTitle: string;
   resolve: (approved: boolean) => void;
 };
@@ -121,6 +126,7 @@ function askUser(command: CommandLine, workflowTitle: string) {
         key: commandKey(command),
         program: command.program.trim(),
         args: command.args,
+        renderedArgs: command.renderedArgs ?? command.args,
         workflowTitle,
         resolve: settle,
       },

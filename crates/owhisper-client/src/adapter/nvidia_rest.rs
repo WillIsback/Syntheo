@@ -71,7 +71,10 @@ pub async fn nemo_speech_speaker_diarization(
     if !response.status().is_success() {
         return None;
     }
-    let body: Value = response.json().await.ok()?;
+    let body: Value =
+        super::http::json_body_with_limit(response, super::http::MAX_SMALL_BODY_BYTES)
+            .await
+            .ok()?;
     speaker_diarization_from_models(&body)
 }
 
@@ -234,7 +237,8 @@ async fn post_nemo_speech_rest(
             body: super::http::error_body(response).await,
         });
     }
-    let body: Value = response.json().await?;
+    let body: Value =
+        super::http::json_body_with_limit(response, super::http::MAX_TRANSCRIPT_BODY_BYTES).await?;
     Ok(parse_nemo_speech_transcript(&body))
 }
 

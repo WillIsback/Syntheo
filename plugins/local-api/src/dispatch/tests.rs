@@ -62,6 +62,30 @@ fn signature_matches_reference_hmac() {
     );
 }
 
+// Issue 656 : la signature v2 couvre l'horodatage et le corps, au format
+// « t=…,v1=… » ; changer l'un ou l'autre la change.
+#[test]
+fn signature_v2_covers_the_timestamp_and_the_body() {
+    let key = uuid::Uuid::new_v4().simple().to_string();
+    let body = b"{\"a\":1}";
+
+    assert_eq!(
+        super::signature_v2(&key, 1_764_000_000, body),
+        format!(
+            "t=1764000000,v1={}",
+            reference_hmac_sha256_hex(key.as_bytes(), b"1764000000.{\"a\":1}")
+        )
+    );
+    assert_ne!(
+        super::signature_v2(&key, 1_764_000_000, body),
+        super::signature_v2(&key, 1_764_000_001, body)
+    );
+    assert_ne!(
+        super::signature_v2(&key, 1_764_000_000, body),
+        super::signature_v2(&key, 1_764_000_000, b"{\"a\":2}")
+    );
+}
+
 fn reference_hmac_sha256_hex(key: &[u8], message: &[u8]) -> String {
     use sha2::Digest as _;
 

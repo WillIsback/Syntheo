@@ -75,7 +75,11 @@ pub(crate) async fn parse_response(
     provider: &str,
     response: reqwest::Response,
 ) -> Result<Response, Error> {
-    let payload: CompatibleResponse = ensure_success(response).await?.json().await?;
+    let payload: CompatibleResponse = super::http::json_body_with_limit(
+        ensure_success(response).await?,
+        super::http::MAX_TRANSCRIPT_BODY_BYTES,
+    )
+    .await?;
     Ok(convert_response(provider, payload))
 }
 

@@ -663,6 +663,10 @@ msgstr "Êtes-vous en réunion ?"
 msgid "Argument {position}"
 msgstr "Argument {position}"
 
+#: src/automations/action-runners.ts
+msgid "Argument {position} starts with \"-\" or \"@\" once its variables are filled in, so the command did not run. Attach the variable to its option, for example --file={{…}}."
+msgstr "L'argument {position} commence par « - » ou « @ » une fois ses variables remplies : la commande n'a pas été lancée. Accolez la variable à son option, par exemple --file={{…}}."
+
 #: src/automations/command-confirmation-dialog.tsx
 #: src/settings/automations/step-forms.tsx
 msgid "Arguments"
@@ -2014,6 +2018,10 @@ msgstr "Saisissez un nom de dossier valide."
 #: src/settings/ai/shared/server-card.tsx
 msgid "Enter another name"
 msgstr "Saisir un autre nom"
+
+#: src/automations/command-confirmation-dialog.tsx
+msgid "Entered as {arg}"
+msgstr "Saisi comme {arg}"
 
 #: src/mesure/beta-data.tsx
 msgid "Erase all measurements and my pseudonym"
