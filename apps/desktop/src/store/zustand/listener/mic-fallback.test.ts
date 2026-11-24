@@ -3,7 +3,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const { warning } = vi.hoisted(() => ({ warning: vi.fn() }));
 vi.mock("@syntheo/ui/components/ui/toast", () => ({ toast: { warning } }));
 
-import { getMicFallback, notifyMicFallback } from "./mic-fallback";
+import {
+  getMicFallback,
+  isMicMonitorRefusal,
+  notifyMicFallback,
+  notifyMicMonitorRefused,
+} from "./mic-fallback";
 
 describe("getMicFallback", () => {
   it.each([
@@ -41,5 +46,38 @@ describe("notifyMicFallback", () => {
     notifyMicFallback("session", "BRIO", "BRIO", () => {});
     notifyMicFallback("session", null, "Default Audio Device", () => {});
     expect(warning).not.toHaveBeenCalled();
+  });
+});
+
+// Issue 715 : l'entrée par défaut restante est le monitor de la sortie ; le
+// natif la refuse comme micro et l'interface le dit.
+describe("notifyMicMonitorRefused", () => {
+  beforeEach(() => warning.mockClear());
+
+  it("recognizes the native refusal only", () => {
+    expect(
+      isMicMonitorRefusal("audio_mic_unavailable: mic_default_is_monitor"),
+    ).toBe(true);
+    expect(isMicMonitorRefusal("audio_mic_unavailable: mic_open_failed")).toBe(
+      false,
+    );
+    expect(
+      isMicMonitorRefusal("audio_speaker_unavailable: mic_default_is_monitor"),
+    ).toBe(false);
+  });
+
+  it("says that the system output is not recorded as the microphone", () => {
+    const openSettings = vi.fn();
+    notifyMicMonitorRefused("session", openSettings);
+
+    expect(warning).toHaveBeenCalledWith(
+      "No microphone available",
+      expect.objectContaining({
+        id: "mic-monitor-session",
+        description: expect.stringContaining("not recorded as your microphone"),
+      }),
+    );
+    warning.mock.calls[0]![1].action.onClick();
+    expect(openSettings).toHaveBeenCalled();
   });
 });

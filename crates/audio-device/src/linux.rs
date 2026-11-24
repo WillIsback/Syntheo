@@ -110,6 +110,38 @@ fn wait_for_context(mainloop: &mut Mainloop, context: &Context, timeout: Duratio
     }
 }
 
+/// Source PulseAudio/PipeWire qui renvoie le son d'une sortie (« monitor ») :
+/// jamais un micro (issue 715).
+pub fn is_monitor_source_name(name: &str) -> bool {
+    name.ends_with(".monitor")
+}
+
+/// Nom de la source d'entrée par défaut du serveur son, celle vers laquelle
+/// pointent les périphériques ALSA « default », « pulse » et « pipewire ».
+pub fn default_source_name() -> Result<Option<String>, Error> {
+    let mut conn = PulseConnection::new()?;
+    conn.connect()?;
+
+    let default_source = Arc::new(Mutex::new(None::<String>));
+    let done = Arc::new(AtomicBool::new(false));
+    {
+        let default_source = default_source.clone();
+        let done = done.clone();
+        conn.mainloop.lock();
+        conn.context.introspect().get_server_info(move |info| {
+            if let Some(name) = &info.default_source_name
+                && let Ok(mut source) = default_source.lock()
+            {
+                *source = Some(name.to_string());
+            }
+            done.store(true, Ordering::Release);
+        });
+        conn.mainloop.unlock();
+    }
+    wait_for_done(&done, QUERY_TIMEOUT);
+    Ok(default_source.lock().ok().and_then(|source| source.clone()))
+}
+
 fn transport_type_from_bus(bus: Option<&str>) -> TransportType {
     match bus {
         Some(b) if b.contains("usb") => TransportType::Usb,
@@ -608,4 +640,21 @@ pub fn is_headphone_from_default_output_device() -> Option<bool> {
     mainloop.stop();
 
     result.lock().ok().and_then(|r| *r)
+}
+
+#[cfg(test)]
+mod monitor_tests {
+    use super::is_monitor_source_name;
+
+    // Issue 715 : nom de source PipeWire/PulseAudio d'un monitor de sortie.
+    #[test]
+    fn monitor_sources_are_recognized_by_name() {
+        assert!(is_monitor_source_name(
+            "alsa_output.pci-0000_00_1f.3.analog-stereo.monitor"
+        ));
+        assert!(!is_monitor_source_name(
+            "alsa_input.usb-Jabra_Evolve-00.mono-fallback"
+        ));
+        assert!(!is_monitor_source_name("bluez_input.00_11_22_33_44_55.0"));
+    }
 }
