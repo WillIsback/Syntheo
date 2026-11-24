@@ -9,6 +9,7 @@ Default permissions for the plugin
 - `allow-restore-deleted-session`
 - `allow-purge-deleted-session`
 - `allow-list-expired-deleted-sessions`
+- `allow-secure-vacuum-once`
 - `allow-add-session-participant`
 - `allow-remove-session-participant`
 - `allow-persist-chat-session-proposal`
@@ -502,6 +503,32 @@ Enables the restore_deleted_session command without any pre-configured scope.
 <td>
 
 Denies the restore_deleted_session command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`session:allow-secure-vacuum-once`
+
+</td>
+<td>
+
+Enables the secure_vacuum_once command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`session:deny-secure-vacuum-once`
+
+</td>
+<td>
+
+Denies the secure_vacuum_once command without any pre-configured scope.
 
 </td>
 </tr>
