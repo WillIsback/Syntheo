@@ -32,6 +32,7 @@ import { TaskManager } from "./services/task-manager";
 import { TrayRecordingSync } from "./services/tray-recording";
 import { useRemoteSessionDeletionUndoListener } from "./session/hooks/useDeleteSession";
 import { purgeExpiredDeletedSessions } from "./session/queries";
+import { promptLegacyCleartextUrls } from "./settings/ai/shared/cleartext-confirmations";
 import { refreshLegacySettingsSnapshots } from "./settings/legacy-snapshots";
 import { migratePlaintextAiProviderApiKeys } from "./settings/providers";
 import { initializeApplicationSettings } from "./settings/queries";
@@ -194,6 +195,8 @@ function runMainWindowStartupTasks() {
   void runStartupTask("automations_migrate", ensureLegacyAutomationsMigrated);
   // Issue 712 : suppressions restées en suspens au dernier lancement.
   void runStartupTask("deleted_sessions_purge", purgeExpiredDeletedSessions);
+  // Issue 665 : adresses HTTP clair héritées, confirmées une seule fois.
+  void runStartupTask("cleartext_legacy_prompt", promptLegacyCleartextUrls);
   void startRenderPerfForDevtoolsBuilds();
 }
 

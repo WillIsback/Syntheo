@@ -10,6 +10,7 @@ import {
 import { commands as permissions } from "@syntheo/plugin-permissions";
 import { commands as shortcuts, events } from "@syntheo/plugin-shortcut";
 import { commands as transcription } from "@syntheo/plugin-transcription";
+import { isCleartextRemoteUrl } from "@syntheo/provider-validation";
 import { toast } from "@syntheo/ui/components/ui/toast";
 import { useMountEffect } from "@syntheo/ui/hooks/use-mount-effect";
 
@@ -143,6 +144,7 @@ function ActiveDictation({
           microphone: microphone || "Default microphone",
           previewEnabled: livePreview,
           previewUnavailable: false,
+          cleartextHost: cleartextHostOf(conn.baseUrl),
           expanded: livePreview,
         });
         if (platform() === "macos") {
@@ -354,4 +356,17 @@ function ActiveDictation({
     };
   });
   return null;
+}
+
+/** Issue 665 : hôte du serveur si l'audio part en HTTP clair hors de ce
+ * poste, pour le rappel du panneau de dictée. */
+export function cleartextHostOf(
+  baseUrl: string | null | undefined,
+): string | null {
+  if (!baseUrl || !isCleartextRemoteUrl(baseUrl)) return null;
+  try {
+    return new URL(baseUrl).host;
+  } catch {
+    return null;
+  }
 }

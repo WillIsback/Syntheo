@@ -15,6 +15,11 @@ const mocks = vi.hoisted(() => ({
   mutateAsync: vi.fn(async () => undefined),
   clear: vi.fn(async () => undefined),
   setSettingValues: vi.fn(async () => undefined),
+  confirmCleartextUrl: vi.fn(async () => undefined),
+}));
+
+vi.mock("./cleartext-confirmations", () => ({
+  confirmCleartextUrl: mocks.confirmCleartextUrl,
 }));
 
 vi.mock("~/settings/providers", () => ({
@@ -102,6 +107,9 @@ describe("ServerAddressForm, HTTP clair", () => {
           api_key: "",
         }),
       );
+      // Issue 665 : la confirmation est gardée, sans nouvelle demande au
+      // lancement suivant.
+      expect(mocks.confirmCleartextUrl).toHaveBeenCalledWith(url);
       expect(screen.getByRole("note").textContent).toContain(
         "Unencrypted connection",
       );

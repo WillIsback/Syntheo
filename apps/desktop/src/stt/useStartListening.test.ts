@@ -21,6 +21,7 @@ import { takePausedSummary } from "./pause-listening";
 import {
   getBatchOnlyCaptureMessage,
   getCaptureReminderMessage,
+  getCleartextCaptureMessage,
   getNoTranscriptionProviderMessage,
   getPostCaptureAction,
   getPostCaptureRepairReasons,
@@ -662,6 +663,37 @@ describe("useStartListening", () => {
       );
       expect(m.start).toHaveBeenCalledWith(
         expect.objectContaining({ base_url: conn.baseUrl }),
+        expect.anything(),
+      );
+    });
+
+    // Issue 665 : rappel au démarrage d'une écoute vers un serveur en HTTP
+    // clair hors de ce poste ; rien vers ce poste ni en HTTPS.
+    test("reminds_of_cleartext_http_when_starting_a_meeting", async () => {
+      const conn = {
+        provider: "nvidia",
+        model: "parakeet-rnnt-streaming",
+        baseUrl: "http://10.0.0.5:9000/?provider=nvidia",
+        apiKey: "",
+      };
+      m.useSTTConnection.mockReturnValue({ conn, isLoading: false });
+      await startListening();
+      expect(m.toastWarning).toHaveBeenCalledWith(
+        getCleartextCaptureMessage(conn.baseUrl),
+        expect.objectContaining({ id: "cleartext-capture" }),
+      );
+      expect(getCleartextCaptureMessage(conn.baseUrl)).toContain(
+        "10.0.0.5:9000",
+      );
+
+      m.toastWarning.mockClear();
+      m.useSTTConnection.mockReturnValue({
+        conn: { ...conn, baseUrl: "http://localhost:9000/?provider=nvidia" },
+        isLoading: false,
+      });
+      await startListening();
+      expect(m.toastWarning).not.toHaveBeenCalledWith(
+        expect.stringContaining("Unencrypted"),
         expect.anything(),
       );
     });

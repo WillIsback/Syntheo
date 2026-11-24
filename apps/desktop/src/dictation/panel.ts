@@ -60,6 +60,7 @@ export function getDictationPanelState(): FloatingRouteState | null {
       partial: state.partial,
       previewEnabled: state.previewEnabled,
       previewUnavailable: state.previewUnavailable,
+      cleartextHost: state.cleartextHost,
     },
   };
 }

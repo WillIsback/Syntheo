@@ -1,6 +1,7 @@
 import { t } from "@lingui/core/macro";
 import { useCallback, useLayoutEffect, useRef } from "react";
 
+import { isCleartextRemoteUrl } from "@syntheo/provider-validation";
 import { toast } from "@syntheo/ui/components/ui/toast";
 
 import { useCaptureLifecycle } from "./capture-lifecycle";
@@ -48,6 +49,18 @@ import {
 // Fonctions et non constantes : le texte suit la langue active à l'affichage.
 export const getCaptureReminderMessage = () =>
   t`Remind participants that the meeting is being transcribed.`;
+
+/** Issue 665 : rappel au démarrage d'une écoute vers un serveur en HTTP
+ * clair hors de ce poste. */
+export const getCleartextCaptureMessage = (baseUrl: string) => {
+  let host = baseUrl;
+  try {
+    host = new URL(baseUrl).host;
+  } catch {
+    // Adresse illisible : affichée telle quelle.
+  }
+  return t`Unencrypted connection to ${host}: the meeting audio travels in clear text on the network.`;
+};
 
 export const getNoTranscriptionProviderMessage = () =>
   t`No transcription provider is set up. Syntheo does not keep audio: set up a transcription endpoint before recording.`;
@@ -163,6 +176,14 @@ export function useStartListeningState(
       toast.info(getCaptureReminderMessage(), {
         id: "capture-reminder",
         duration: 8000,
+      });
+    }
+    // Issue 665 : rappel au démarrage, pas seulement dans les réglages,
+    // quand l'audio part en clair vers un serveur hors de ce poste.
+    if (conn.baseUrl && isCleartextRemoteUrl(conn.baseUrl)) {
+      toast.warning(getCleartextCaptureMessage(conn.baseUrl), {
+        id: "cleartext-capture",
+        duration: 10000,
       });
     }
     // Écoute « Sur ce poste » en un seul flux (issue 686) : rappel que le son
