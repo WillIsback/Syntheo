@@ -707,3 +707,75 @@ async fn move_session_contents_rolls_back_when_note_row_count_mismatches() {
             .unwrap();
     assert_eq!(session_id, "source");
 }
+
+/// Octets bruts de la base et de son journal WAL.
+fn raw_database_bytes(path: &std::path::Path) -> Vec<u8> {
+    let mut bytes = std::fs::read(path).unwrap();
+    let wal = path.with_extension("db-wal");
+    if let Ok(more) = std::fs::read(wal) {
+        bytes.extend(more);
+    }
+    bytes
+}
+
+fn contains(haystack: &[u8], needle: &str) -> bool {
+    haystack
+        .windows(needle.len())
+        .any(|w| w == needle.as_bytes())
+}
+
+// Complément de l'issue 712 : une réunion purgée ne reste lisible ni dans
+// les pages libres du fichier ni dans le journal WAL.
+#[tokio::test]
+async fn a_purged_session_leaves_no_readable_bytes() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("app.db");
+    let db = Db::open(syntheo_db_core::DbOpenOptions {
+        storage: syntheo_db_core::DbStorage::Local(&path),
+        journal_mode_wal: true,
+        foreign_keys: true,
+        max_connections: Some(2),
+    })
+    .await
+    .unwrap();
+    syntheo_db_app::prepare_schema(&db).await.unwrap();
+    let marker = "MARQUEUR-EFFACEMENT-7Q2Z9W";
+    insert_session(db.pool(), "session-1", "user-1").await;
+    sqlx::query("UPDATE sessions SET title = ? WHERE id = 'session-1'")
+        .bind(format!("Revue {marker}"))
+        .execute(db.pool())
+        .await
+        .unwrap();
+    sqlx::query(
+        "INSERT INTO session_documents (id, session_id, kind, body) VALUES ('note-1', 'session-1', 'note', ?)",
+    )
+    .bind(format!("Notes confidentielles {marker} ").repeat(40))
+    .execute(db.pool())
+    .await
+    .unwrap();
+    syntheo_db_app::checkpoint_wal(db.pool()).await;
+    assert!(contains(&raw_database_bytes(&path), marker));
+
+    let request = || TombstoneSessionRequest {
+        session_id: "session-1".to_string(),
+        tombstone: "2026-11-24T10:00:00.000Z".to_string(),
+    };
+    soft_delete_session(db.pool(), request())
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        purge_deleted_session(db.pool(), request()).await.unwrap(),
+        PurgeDeletedSessionOutcome::Purged
+    );
+
+    assert!(!contains(&raw_database_bytes(&path), marker));
+    // La connexion rendue au pool a retrouvé son réglage.
+    for _ in 0..2 {
+        let value: i64 = sqlx::query_scalar("PRAGMA secure_delete")
+            .fetch_one(db.pool())
+            .await
+            .unwrap();
+        assert_eq!(value, 0);
+    }
+}

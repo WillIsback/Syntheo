@@ -837,3 +837,49 @@ async fn a_failed_insert_removes_the_keychain_secret() {
     );
     assert!(memory.values.lock().unwrap().is_empty());
 }
+
+// Complément de l'issue 711 : un secret hérité déplacé au trousseau ne
+// reste lisible ni dans le fichier ni dans le journal WAL.
+#[tokio::test]
+async fn a_migrated_secret_leaves_no_readable_bytes() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("app.db");
+    let db = syntheo_db_core::Db::open(syntheo_db_core::DbOpenOptions {
+        storage: syntheo_db_core::DbStorage::Local(&path),
+        journal_mode_wal: true,
+        foreign_keys: true,
+        max_connections: Some(2),
+    })
+    .await
+    .unwrap();
+    syntheo_db_app::prepare_schema(&db).await.unwrap();
+    // Secret long : un bloc libre écrase ses premiers octets, la recherche
+    // porte sur sa partie distinctive.
+    let marker = "whsec_MARQUEUR7Q2Z9W-MARQUEUR7Q2Z9W-MARQUEUR7Q2Z9W";
+    let needle = "MARQUEUR7Q2Z9W-MARQUEUR7Q2Z9W";
+    syntheo_db_app::insert_webhook_endpoint(
+        db.pool(),
+        "webhook-1",
+        "https://example.com",
+        marker,
+        "[]",
+    )
+    .await
+    .unwrap();
+    syntheo_db_app::checkpoint_wal(db.pool()).await;
+    let raw = || {
+        let mut bytes = std::fs::read(&path).unwrap();
+        if let Ok(wal) = std::fs::read(path.with_extension("db-wal")) {
+            bytes.extend(wal);
+        }
+        bytes
+    };
+    let contains = |bytes: &[u8]| bytes.windows(needle.len()).any(|w| w == needle.as_bytes());
+    assert!(contains(&raw()));
+
+    let (memory, secrets) = memory_secrets();
+    crate::webhook_secrets::migrate_secrets(&secrets, db.pool()).await;
+
+    assert_eq!(memory.read("webhook-1").unwrap().as_deref(), Some(marker));
+    assert!(!contains(&raw()));
+}
