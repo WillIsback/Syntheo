@@ -136,8 +136,8 @@ msgid "{chain} · never run"
 msgstr "{chain} · jamais exécutée"
 
 #: src/mesure/measure-dialog.tsx
-msgid "{content} words of content reworked per 100 generated, plus {lexical} words of names or acronyms corrected."
-msgstr "{content} mots de fond retouchés pour 100 mots générés, plus {lexical} mots de noms propres ou de sigles corrigés."
+msgid "{content} words of content reworked per 100 generated, plus {lexicalWords}."
+msgstr "{content} mots de fond retouchés pour 100 mots générés, plus {lexicalWords}."
 
 #: src/folders/project/folder-subfolders.tsx
 #: src/search/unified/labels.ts
@@ -168,6 +168,10 @@ msgstr "{count} de plus"
 msgid "{day} at {time}"
 msgstr "{day} à {time}"
 
+#: src/mesure/measure-dialog.tsx
+msgid "{differences, plural, one {# difference} other {# differences}}"
+msgstr "{differences, plural, one {# différence} other {# différences}}"
+
 #: src/meeting-float/overlay/bar.tsx
 msgid "{duration}, back to the note"
 msgstr "{duration}, revenir à la note"
@@ -191,6 +195,10 @@ msgstr "{hiddenCount, plural, one {Voir la réunion précédente} other {Voir le
 #: src/session/components/living-document/meeting-type-picker.tsx
 msgid "{inheritedTitle} — folder template"
 msgstr "{inheritedTitle} — modèle du dossier"
+
+#: src/mesure/measure-dialog.tsx
+msgid "{lexical, plural, one {# word of names or acronyms corrected} other {# words of names or acronyms corrected}}"
+msgstr "{lexical, plural, one {# mot de noms propres ou de sigles corrigé} other {# mots de noms propres ou de sigles corrigés}}"
 
 #: src/settings/ai/stt/language-warning.tsx
 msgid "{model} can't transcribe {languages}. Try another model or change your spoken languages."
@@ -263,6 +271,10 @@ msgstr "{title} supprimé"
 #: src/session/components/speaker-naming/speaker-card.tsx
 msgid "{turns, plural, one {# turn} other {# turns}}"
 msgstr "{turns, plural, one {# intervention} other {# interventions}}"
+
+#: src/mesure/measure-dialog.tsx
+msgid "{words, plural, one {# word} other {# words}}"
+msgstr "{words, plural, one {# mot} other {# mots}}"
 
 #: src/templates/template-form.tsx
 msgid "+ Add"
@@ -530,12 +542,9 @@ msgstr "Compétences de l'agent"
 msgid "Agreement"
 msgstr "Accord"
 
-#. placeholder {0}: agreementPercent(matrix)?.toFixed(1)
-#. placeholder {1}: labeledCount(matrix)
-#. placeholder {2}: matrix.ruleVersion
 #: src/mesure/measure-dialog.tsx
-msgid "Agreement: {0}% on {1} differences (rule {2})."
-msgstr "Accord : {0} % sur {1} différences (règle {2})."
+msgid "Agreement: {percent}% on {counted} (rule {rule})."
+msgstr "Accord : {percent} % sur {counted} (règle {rule})."
 
 #: src/contacts/details-sections.tsx
 msgid "AI-generated summary of all interactions and notes with this contact will appear here. This will synthesize key discussion points, action items, and relationship context across all meetings and notes."
@@ -676,11 +685,9 @@ msgstr "Arguments"
 msgid "Artifact"
 msgstr "Artefact"
 
-#. placeholder {0}: matrix.artefacts
-#. placeholder {1}: matrix.artefactWords
 #: src/mesure/measure-dialog.tsx
-msgid "Artifacts: {0} differences ({1} words), left out of the agreement."
-msgstr "Artefacts : {0} différences ({1} mots), hors de l'accord."
+msgid "Artifacts: {countedDifferences} ({countedWords}), left out of the agreement."
+msgstr "Artefacts : {countedDifferences} ({countedWords}), hors de l'accord."
 
 #: src/chat/components/input/index.tsx
 msgid "Ask anything"
@@ -1061,6 +1068,10 @@ msgstr "Choisissez un modèle de langage dans les Paramètres pour proposer l'or
 #: src/folders/project/folder-thread-card.tsx
 msgid "Choose a language model in Settings to write the thread."
 msgstr "Choisissez un modèle de langage dans les Paramètres pour rédiger le fil rouge."
+
+#: src/dictation/shortcut-error.ts
+msgid "Choose a shortcut with Control, Alt, Shift, or Command."
+msgstr "Choisissez un raccourci avec Contrôle, Alt, Maj ou Commande."
 
 #: src/store/zustand/listener/general-live-helpers.ts
 msgid "Choose a working audio device and retry. Audio missing during this interruption cannot be recovered."
@@ -2040,6 +2051,10 @@ msgstr "Échap"
 msgid "Esc to dismiss"
 msgstr "Échap pour fermer"
 
+#: src/dictation/shortcut-error.ts
+msgid "Escape is reserved for cancelling dictation. Choose another key."
+msgstr "Échap est réservé à l'annulation de la dictée. Choisissez une autre touche."
+
 #: src/session/components/capsule/import-progress.tsx
 msgid "Estimating…"
 msgstr "Estimation…"
@@ -2343,6 +2358,10 @@ msgstr "Soyez averti lorsqu'un résumé est prêt en arrière-plan."
 #: src/automations/action-runners.ts
 msgid "Give the vault note a title first."
 msgstr "Donnez d'abord un titre à la note du coffre."
+
+#: src/dictation/shortcut-error.ts
+msgid "Global shortcuts are not available in this desktop session: dictation by shortcut is not available."
+msgstr "Les raccourcis globaux ne sont pas disponibles dans cette session du bureau : la dictée par raccourci n'est pas disponible."
 
 #: src/settings/ai/stt/on-device-card.tsx
 msgid "Go back to the server"
@@ -5698,6 +5717,14 @@ msgid "Synthesis · disabled"
 msgstr "Synthèse · désactivée"
 
 #: src/sidebar/settings-server-status.tsx
+msgid "Synthesis · invalid address"
+msgstr "Synthèse · adresse invalide"
+
+#: src/sidebar/settings-server-status.tsx
+msgid "Synthesis · key refused"
+msgstr "Synthèse · clé refusée"
+
+#: src/sidebar/settings-server-status.tsx
 msgid "Synthesis · no server"
 msgstr "Synthèse · aucun serveur"
 
@@ -5881,6 +5908,10 @@ msgstr "Texte à corriger introuvable"
 msgid "The {0} command on your PATH opens the desktop app. Use the CLI's absolute path."
 msgstr "La commande {0} de votre PATH ouvre l'application de bureau. Utilisez le chemin absolu de la CLI."
 
+#: src/dictation/shortcut-error.ts
+msgid "The {key} key cannot be used for dictation shortcuts on Wayland. Choose another key."
+msgstr "La touche {key} ne peut pas servir de raccourci de dictée sous Wayland. Choisissez une autre touche."
+
 #: src/automations/action-runners.ts
 msgid "The address answered with the status {status}."
 msgstr "L'adresse a répondu avec le statut {status}."
@@ -5980,6 +6011,10 @@ msgstr "Les nombres n'ont pas pu être enregistrés."
 #: src/settings/ai/stt/on-device-card.tsx
 msgid "the data disk could not be checked"
 msgstr "le disque des données n'a pas pu être vérifié"
+
+#: src/dictation/shortcut-error.ts
+msgid "The dictation shortcut could not be registered: another app may already use it. Choose another shortcut."
+msgstr "Le raccourci de dictée n'a pas pu être enregistré : une autre application l'utilise peut-être. Choisissez un autre raccourci."
 
 #: src/mesure/measure-dialog.tsx
 msgid "The differences could not be listed."
@@ -6239,6 +6274,10 @@ msgstr "Le serveur transcrit avec le modèle qu'il a chargé, quel que soit le m
 msgid "The settings file managed by your organization (managed_settings.json) is invalid, so Syntheo does not start. Your existing data was left unchanged. Contact your administrator: Syntheo will start once the file is fixed."
 msgstr "Le fichier de réglages géré par votre organisation (managed_settings.json) est invalide : Syntheo ne démarre pas. Vos données n'ont pas été modifiées. Adressez-vous à votre administrateur : Syntheo démarrera une fois le fichier corrigé."
 
+#: src/dictation/shortcut-error.ts
+msgid "The shortcut was not set up in time. Try again and approve your desktop's shortcut prompt."
+msgstr "Le raccourci n'a pas été configuré à temps. Réessayez et acceptez la demande de raccourci de votre bureau."
+
 #: src/chat/components/message/tool/edit-summary.tsx
 msgid "The summary edit could not be applied."
 msgstr "La modification du résumé n'a pas pu être appliquée."
@@ -6483,9 +6522,17 @@ msgstr "Ce poste n'est pas éligible : {0}."
 msgid "This correction changes another note: {0}"
 msgstr "Cette correction modifie une autre note : {0}"
 
+#: src/dictation/shortcut-error.ts
+msgid "This desktop does not offer global shortcuts to apps (Global Shortcuts portal): dictation by shortcut is not available in this session."
+msgstr "Ce bureau n'offre pas de raccourcis globaux aux applications (portail Global Shortcuts) : la dictée par raccourci n'est pas disponible dans cette session."
+
 #: src/session/components/version-history-dialog.tsx
 msgid "This device"
 msgstr "Cet appareil"
+
+#: src/dictation/shortcut-error.ts
+msgid "This dictation shortcut is not valid. Choose another one."
+msgstr "Ce raccourci de dictée n'est pas valide. Choisissez-en un autre."
 
 #: src/session/components/living-document/summary-review.tsx
 msgid "This edit could not be saved. Try again."
@@ -6696,6 +6743,14 @@ msgstr "Transcription · vérification…"
 #: src/sidebar/settings-server-status.tsx
 msgid "Transcription · connected"
 msgstr "Transcription · connectée"
+
+#: src/sidebar/settings-server-status.tsx
+msgid "Transcription · invalid address"
+msgstr "Transcription · adresse invalide"
+
+#: src/sidebar/settings-server-status.tsx
+msgid "Transcription · key refused"
+msgstr "Transcription · clé refusée"
 
 #: src/sidebar/settings-server-status.tsx
 msgid "Transcription · no server"
@@ -6916,6 +6971,7 @@ msgstr "Injoignable"
 #: src/session/components/title-input-field.tsx
 #: src/session/late-filing.ts
 #: src/session/move-note.tsx
+#: src/session/title-content.ts
 #: src/shared/palette-search-groups.tsx
 #: src/shared/ui/resource-list/preview-header.tsx
 #: src/sidebar/toast/undo-delete-toast.tsx
@@ -7147,11 +7203,9 @@ msgstr "webhook, URL, événements, intégration, automatisation"
 msgid "Webhooks"
 msgstr "Webhooks"
 
-#. placeholder {0}: weightedAgreementPercent(matrix)?.toFixed(1)
-#. placeholder {1}: labeledWords(matrix)
 #: src/mesure/measure-dialog.tsx
-msgid "Weighted by words: {0}% on {1} words."
-msgstr "Pondéré en mots : {0} % sur {1} mots."
+msgid "Weighted by words: {percent}% on {counted}."
+msgstr "Pondéré en mots : {percent} % sur {counted}."
 
 #: src/onboarding/index.tsx
 msgid "Welcome to Syntheo"

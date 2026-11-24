@@ -25,6 +25,10 @@ import {
   CleartextConfirmation,
   CleartextNotice,
 } from "~/settings/ai/shared/cleartext-warning";
+import {
+  describeProviderCredentialError,
+  describeProviderCredentialErrorCode,
+} from "~/settings/ai/shared/provider-credential-error";
 
 const WEBHOOKS_QUERY_KEY = ["webhooks"] as const;
 
@@ -51,7 +55,7 @@ export function WebhooksSection() {
       unwrap(await webhookCommands.createWebhook(url, [])),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: WEBHOOKS_QUERY_KEY }),
-    onError: (error) => toast.error(error.message),
+    onError: (error) => toast.error(describeAddressRefusal(error.message)),
   });
   const deleteMutation = useMutation({
     mutationFn: async (id: string) =>
@@ -95,6 +99,18 @@ export function WebhooksSection() {
     onSubmit: ({ value }) => {
       const url = value.url.trim();
       if (!url) {
+        return;
+      }
+      // Adresse refusée par la règle commune (HTTP public, identifiants,
+      // adresse invalide) : refus direct et traduit, sans proposer le HTTP
+      // clair, que le Rust refuserait de toute façon (passe QA 0.8.1-1).
+      try {
+        validateProviderRequestUrl(url);
+      } catch (error) {
+        setPendingHttpUrl(null);
+        toast.error(
+          describeProviderCredentialError(error) ?? describeAddressRefusal(""),
+        );
         return;
       }
       if (isCleartextRemoteUrl(url) && pendingHttpUrl !== url) {
@@ -296,6 +312,21 @@ function hostOf(url: string): string {
 
 /** Endpoint enregistré avant la règle d'adresse (issue 703) : il ne reçoit
  * plus rien, la livraison est refusée côté Rust. */
+// Refus d'adresse renvoyé par le Rust (`owhisper_client::BaseUrlError`), en
+// anglais : traduit avec les messages de la règle commune.
+function describeAddressRefusal(message: string): string {
+  if (message.includes("unencrypted HTTP is only allowed")) {
+    return describeProviderCredentialErrorCode("https_required");
+  }
+  if (message.includes("must not contain credentials")) {
+    return describeProviderCredentialErrorCode("url_with_credentials");
+  }
+  if (!message || message.includes("invalid server address")) {
+    return describeProviderCredentialErrorCode("invalid_url");
+  }
+  return message;
+}
+
 function blockedByAddressRule(url: string): boolean {
   try {
     // Les identifiants hérités sont masqués (`***@`) : la règle porte sur

@@ -35,14 +35,21 @@ function StatusPip({ tone }: { tone: Tone }) {
   );
 }
 
+// Échec : même distinction que la pastille de la carte serveur (passe QA
+// 0.8.1-1, issue 713) ; une clé refusée n'est pas un serveur injoignable.
 function useStatusLabel(kind: ServerKind, state: ServerConnectionState) {
   const { t } = useLingui();
+  const reason = state.status === "failed" ? state.failure.reason : null;
   if (kind === "stt") {
     switch (state.status) {
       case "connected":
         return t`Transcription · connected`;
       case "failed":
-        return t`Transcription · unreachable`;
+        return reason === "unauthorized"
+          ? t`Transcription · key refused`
+          : reason === "invalid_url"
+            ? t`Transcription · invalid address`
+            : t`Transcription · unreachable`;
       case "testing":
         return t`Transcription · testing…`;
       case "untested":
@@ -55,7 +62,11 @@ function useStatusLabel(kind: ServerKind, state: ServerConnectionState) {
     case "connected":
       return t`Synthesis · connected`;
     case "failed":
-      return t`Synthesis · unreachable`;
+      return reason === "unauthorized"
+        ? t`Synthesis · key refused`
+        : reason === "invalid_url"
+          ? t`Synthesis · invalid address`
+          : t`Synthesis · unreachable`;
     case "testing":
       return t`Synthesis · testing…`;
     case "untested":

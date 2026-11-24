@@ -260,6 +260,23 @@ describe("SettingsNav", () => {
     expect(footer.textContent).toContain("Synthesis · connected");
   });
 
+  // Passe QA 0.8.1-1 (issue 713) : une clé refusée n'est pas « injoignable ».
+  it("tells a refused key and an invalid address apart from an unreachable server", () => {
+    mocks.serverStates = {
+      stt: { status: "failed", failure: { ok: false, reason: "unauthorized" } },
+      llm: {
+        status: "failed",
+        failure: { ok: false, reason: "invalid_url", message: "x" },
+      },
+    };
+    render(<SettingsNav />);
+
+    const footer = screen.getByRole("status", { name: "Server status" });
+    expect(footer.textContent).toContain("Transcription · key refused");
+    expect(footer.textContent).toContain("Synthesis · invalid address");
+    expect(footer.textContent).not.toContain("unreachable");
+  });
+
   // Issue 707 : synthèse désactivée par réglage géré (intelligence_disabled),
   // aucune sonde ne part ; le menu le dit au lieu de « non testée ».
   it("shows the synthesis as disabled when the administrator turned it off", () => {

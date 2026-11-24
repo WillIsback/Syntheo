@@ -1,3 +1,4 @@
+import { plural } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react/macro";
 import { useRef, useState } from "react";
 
@@ -373,27 +374,26 @@ export function MeasureDialog({
             {labeledCount(matrix) > 0 ? (
               <>
                 <p className="text-sm">
-                  <Trans>
-                    Agreement: {agreementPercent(matrix)?.toFixed(1)}% on{" "}
-                    {labeledCount(matrix)} differences (rule{" "}
-                    {matrix.ruleVersion}).
-                  </Trans>
+                  <AgreementLine
+                    percent={agreementPercent(matrix)?.toFixed(1) ?? ""}
+                    differences={labeledCount(matrix)}
+                    rule={matrix.ruleVersion}
+                  />
                 </p>
                 <p className="text-sm">
-                  <Trans>
-                    Weighted by words:{" "}
-                    {weightedAgreementPercent(matrix)?.toFixed(1)}% on{" "}
-                    {labeledWords(matrix)} words.
-                  </Trans>
+                  <WeightedAgreementLine
+                    percent={weightedAgreementPercent(matrix)?.toFixed(1) ?? ""}
+                    words={labeledWords(matrix)}
+                  />
                 </p>
               </>
             ) : null}
             {matrix.artefacts > 0 ? (
               <p className="text-muted-foreground text-sm">
-                <Trans>
-                  Artifacts: {matrix.artefacts} differences (
-                  {matrix.artefactWords} words), left out of the agreement.
-                </Trans>
+                <ArtefactsLine
+                  differences={matrix.artefacts}
+                  words={matrix.artefactWords}
+                />
               </p>
             ) : null}
             <div className="flex gap-2">
@@ -525,6 +525,11 @@ function MeasureSummary({
   const total = result.total;
   const content = perHundred(result.contentPerMille);
   const lexical = total.replacedLexical;
+  // Accords au singulier et au pluriel (passe QA 0.8.1-1 : « 1 mots »).
+  const lexicalWords = plural(lexical, {
+    one: "# word of names or acronyms corrected",
+    other: "# words of names or acronyms corrected",
+  });
   const reasons = (
     <ul className="list-disc pl-5 text-xs" data-measure-reasons>
       {result.statusReasons.map((reason) => (
@@ -568,8 +573,8 @@ function MeasureSummary({
       ) : null}
       <p className={cn(["text-base", doubtful && "text-muted-foreground"])}>
         <Trans>
-          {content} words of content reworked per 100 generated, plus {lexical}{" "}
-          words of names or acronyms corrected.
+          {content} words of content reworked per 100 generated, plus{" "}
+          {lexicalWords}.
         </Trans>
       </p>
       {generatedSource === "current" ? (
@@ -740,5 +745,62 @@ function CalibrationTable({
         </tbody>
       </table>
     </section>
+  );
+}
+
+// Lignes de l'accord du calibrage, accordées au nombre (passe QA 0.8.1-1 :
+// « 1 différences », « 1 mots »).
+function AgreementLine({
+  percent,
+  differences,
+  rule,
+}: {
+  percent: string;
+  differences: number;
+  rule: number | string;
+}) {
+  const counted = plural(differences, {
+    one: "# difference",
+    other: "# differences",
+  });
+  return (
+    <Trans>
+      Agreement: {percent}% on {counted} (rule {rule}).
+    </Trans>
+  );
+}
+
+function WeightedAgreementLine({
+  percent,
+  words,
+}: {
+  percent: string;
+  words: number;
+}) {
+  const counted = plural(words, { one: "# word", other: "# words" });
+  return (
+    <Trans>
+      Weighted by words: {percent}% on {counted}.
+    </Trans>
+  );
+}
+
+function ArtefactsLine({
+  differences,
+  words,
+}: {
+  differences: number;
+  words: number;
+}) {
+  const countedDifferences = plural(differences, {
+    one: "# difference",
+    other: "# differences",
+  });
+  const countedWords = plural(words, { one: "# word", other: "# words" });
+  return (
+    <Trans>
+      Artifacts: {countedDifferences} ({countedWords}), left out of the
+      agreement.
+    </Trans>
   );
 }

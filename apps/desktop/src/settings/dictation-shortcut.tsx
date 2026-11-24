@@ -8,6 +8,7 @@ import { Button } from "@syntheo/ui/components/ui/button";
 import { useMountEffect } from "@syntheo/ui/hooks/use-mount-effect";
 
 import { waitForDictationCleanup } from "~/dictation/lifecycle";
+import { describeDictationError } from "~/dictation/shortcut-error";
 import { useDictationStatus } from "~/dictation/state";
 import { setSettingValue } from "~/settings/queries";
 
@@ -148,7 +149,7 @@ export function DictationShortcut({ shortcut }: { shortcut: string }) {
       </div>
       {save.error && (
         <p role="alert" className="text-destructive text-sm">
-          {save.error.message}
+          {describeDictationError(save.error)}
         </p>
       )}
       {mac && (

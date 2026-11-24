@@ -27,6 +27,8 @@ vi.mock("@syntheo/ui/components/ui/toast", () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }));
 
+import { toast } from "@syntheo/ui/components/ui/toast";
+
 import { WebhooksSection } from "./webhooks";
 
 function renderSection() {
@@ -81,6 +83,44 @@ describe("WebhooksSection", () => {
       expect(mocks.createWebhook).toHaveBeenCalledWith(
         "http://192.168.1.10/hook",
         [],
+      ),
+    );
+  });
+
+  // Passe QA 0.8.1-1 : une adresse publique en HTTP affichait l'encart de
+  // confirmation, puis le refus du Rust en anglais.
+  it("refuses a public cleartext address directly, in a translated message", async () => {
+    renderSection();
+    fireEvent.change(
+      screen.getByPlaceholderText("https://example.com/webhooks/syntheo"),
+      { target: { value: "http://203.0.113.5/x" } },
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Add webhook" }));
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        "Use HTTPS: plain HTTP is only accepted on this computer or a private network.",
+      ),
+    );
+    expect(screen.queryByText(/Unencrypted connection/)).toBeNull();
+    expect(mocks.createWebhook).not.toHaveBeenCalled();
+  });
+
+  it("translates an address refusal from the backend", async () => {
+    mocks.createWebhook.mockResolvedValue({
+      status: "error",
+      error:
+        "unencrypted HTTP is only allowed to this machine or a private network",
+    });
+    renderSection();
+    fireEvent.change(
+      screen.getByPlaceholderText("https://example.com/webhooks/syntheo"),
+      { target: { value: "https://n8n.example.com/hook" } },
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Add webhook" }));
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        "Use HTTPS: plain HTTP is only accepted on this computer or a private network.",
       ),
     );
   });
