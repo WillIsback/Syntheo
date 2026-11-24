@@ -3,6 +3,20 @@ import type { MeasureResult } from "@syntheo/plugin-mesure";
 import { enrollmentStatement, termStatements } from "./beta";
 import type { AgreementMatrix } from "./calibration";
 
+/**
+ * Cases enregistrées d'un calibrage : les quatre cases par différence. Les
+ * artefacts et l'accord pondéré en mots restent à l'écran et dans le TSV
+ * (issue 735).
+ */
+type StoredMatrix = Pick<
+  AgreementMatrix,
+  | "ruleVersion"
+  | "autoContentTrueContent"
+  | "autoContentTrueLexical"
+  | "autoLexicalTrueContent"
+  | "autoLexicalTrueLexical"
+>;
+
 import { executeTransaction } from "~/db";
 import { enqueueDatabaseWrite } from "~/db/write-queue";
 
@@ -90,7 +104,7 @@ export function measurementStatements(
  */
 export function calibrationStatement(
   id: string,
-  matrix: AgreementMatrix,
+  matrix: StoredMatrix,
 ): Statement {
   return {
     sql: `
@@ -155,7 +169,7 @@ export function saveMeasurement(
 
 export function saveCalibration(
   id: string,
-  matrix: AgreementMatrix,
+  matrix: StoredMatrix,
 ): Promise<void> {
   return enqueueDatabaseWrite("calibration-results", async () => {
     await executeTransaction([calibrationStatement(id, matrix)]);

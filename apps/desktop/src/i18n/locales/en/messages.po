@@ -663,6 +663,16 @@ msgstr "Argument {position}"
 msgid "Arguments"
 msgstr "Arguments"
 
+#: src/mesure/measure-dialog.tsx
+msgid "Artifact"
+msgstr "Artifact"
+
+#. placeholder {0}: matrix.artefacts
+#. placeholder {1}: matrix.artefactWords
+#: src/mesure/measure-dialog.tsx
+msgid "Artifacts: {0} differences ({1} words), left out of the agreement."
+msgstr "Artifacts: {0} differences ({1} words), left out of the agreement."
+
 #: src/chat/components/input/index.tsx
 msgid "Ask anything"
 msgstr "Ask anything"
@@ -2404,6 +2414,10 @@ msgstr "Help Syntheo read meeting activity"
 #: src/chat/components/body/empty.tsx
 msgid "Hi, I'm Syntheo AI. Set up a language model and I'll be ready to help."
 msgstr "Hi, I'm Syntheo AI. Set up a language model and I'll be ready to help."
+
+#: src/mesure/measure-dialog.tsx
+msgid "Hidden"
+msgstr "Hidden"
 
 #: src/settings/general/notification.tsx
 msgid "Hide all notification panels, Dock alerts, and completion sounds."
@@ -5801,6 +5815,10 @@ msgstr "The audio transcription failed."
 msgid "The audio, your notes and the API key would travel in clear text on the network. On another network, or with Tailscale stopped, another machine can answer at this address. Prefer HTTPS: tailscale serve publishes your server at https://machine.tailnet.ts.net with an automatic certificate."
 msgstr "The audio, your notes and the API key would travel in clear text on the network. On another network, or with Tailscale stopped, another machine can answer at this address. Prefer HTTPS: tailscale serve publishes your server at https://machine.tailnet.ts.net with an automatic certificate."
 
+#: src/mesure/measure-dialog.tsx
+msgid "The automatic class appears once you have chosen yours. Choose Artifact when the difference is not a real one (a formatting or reading error)."
+msgstr "The automatic class appears once you have chosen yours. Choose Artifact when the difference is not a real one (a formatting or reading error)."
+
 #: src/templates/auto-form.tsx
 msgid "The Automatic format is unavailable."
 msgstr "The Automatic format is unavailable."
@@ -6958,6 +6976,12 @@ msgstr "webhook, URL, events, integration, automation"
 #: src/settings/search-index.ts
 msgid "Webhooks"
 msgstr "Webhooks"
+
+#. placeholder {0}: weightedAgreementPercent(matrix)?.toFixed(1)
+#. placeholder {1}: labeledWords(matrix)
+#: src/mesure/measure-dialog.tsx
+msgid "Weighted by words: {0}% on {1} words."
+msgstr "Weighted by words: {0}% on {1} words."
 
 #: src/onboarding/index.tsx
 msgid "Welcome to Syntheo"

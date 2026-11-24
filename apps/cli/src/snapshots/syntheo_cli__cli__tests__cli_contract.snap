@@ -718,13 +718,20 @@ expression: canonicalize_json(contract)
           "required": false
         },
         {
+          "flags": "--gold",
+          "help": "Reference sent version cleaned by hand (sections renamed like the generated ones, parts outside the summary removed): also measures it and prints the gap between the automatic and the reference rates",
+          "is_flag": false,
+          "required": false,
+          "value_name": "FILE"
+        },
+        {
           "flags": "-h, --help",
           "help": "Print help",
           "is_flag": false,
           "required": false
         }
       ],
-      "synopsis": "syntheo mesure <--generated> <--sent> [--dictionary] [--differences] [-h]"
+      "synopsis": "syntheo mesure <--generated> <--sent> [--dictionary] [--differences] [--gold] [-h]"
     }
   ],
   "synopsis": "syntheo [--base] [--db-path] [--json] [-h] [-V] <command>"

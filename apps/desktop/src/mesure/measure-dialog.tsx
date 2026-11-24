@@ -24,8 +24,10 @@ import {
   agreementMatrix,
   agreementPercent,
   labeledCount,
+  labeledWords,
   matrixToTsv,
   type TrueClass,
+  weightedAgreementPercent,
 } from "./calibration";
 import { saveCalibration, saveMeasurement } from "./storage";
 
@@ -363,14 +365,34 @@ export function MeasureDialog({
           />
         ) : null}
 
-        {matrix && labeledCount(matrix) > 0 ? (
+        {matrix && labeledCount(matrix) + matrix.artefacts > 0 ? (
           <section className="flex flex-col gap-2" aria-label={t`Agreement`}>
-            <p className="text-sm">
-              <Trans>
-                Agreement: {agreementPercent(matrix)?.toFixed(1)}% on{" "}
-                {labeledCount(matrix)} differences (rule {matrix.ruleVersion}).
-              </Trans>
-            </p>
+            {labeledCount(matrix) > 0 ? (
+              <>
+                <p className="text-sm">
+                  <Trans>
+                    Agreement: {agreementPercent(matrix)?.toFixed(1)}% on{" "}
+                    {labeledCount(matrix)} differences (rule{" "}
+                    {matrix.ruleVersion}).
+                  </Trans>
+                </p>
+                <p className="text-sm">
+                  <Trans>
+                    Weighted by words:{" "}
+                    {weightedAgreementPercent(matrix)?.toFixed(1)}% on{" "}
+                    {labeledWords(matrix)} words.
+                  </Trans>
+                </p>
+              </>
+            ) : null}
+            {matrix.artefacts > 0 ? (
+              <p className="text-muted-foreground text-sm">
+                <Trans>
+                  Artifacts: {matrix.artefacts} differences (
+                  {matrix.artefactWords} words), left out of the agreement.
+                </Trans>
+              </p>
+            ) : null}
             <div className="flex gap-2">
               <Button
                 type="button"
@@ -543,6 +565,13 @@ function CalibrationTable({
       <p className="text-muted-foreground text-xs">
         <Trans>These excerpts are shown only here and are never saved.</Trans>
       </p>
+      <p className="text-muted-foreground text-xs">
+        <Trans>
+          The automatic class appears once you have chosen yours. Choose
+          Artifact when the difference is not a real one (a formatting or
+          reading error).
+        </Trans>
+      </p>
       <table className="w-full text-left text-xs">
         <thead className="text-muted-foreground">
           <tr>
@@ -573,8 +602,20 @@ function CalibrationTable({
                 <td className="py-1 pr-2">{kindLabel(row)}</td>
                 <td className="py-1 pr-2">{row.generated}</td>
                 <td className="py-1 pr-2">{row.sent}</td>
-                <td className="py-1 pr-2">
-                  {row.lexical ? t`Lexical` : t`Content`}
+                <td className="py-1 pr-2" data-automatic-class>
+                  {/* Étiquetage en aveugle (issue 735) : la classe
+                      automatique n'oriente pas le choix. */}
+                  {label ? (
+                    row.lexical ? (
+                      t`Lexical`
+                    ) : (
+                      t`Content`
+                    )
+                  ) : (
+                    <span className="text-muted-foreground">
+                      <Trans>Hidden</Trans>
+                    </span>
+                  )}
                 </td>
                 <td className="py-1">
                   <div
@@ -582,23 +623,29 @@ function CalibrationTable({
                     aria-label={t`Class of difference ${index + 1}`}
                     className="flex gap-1"
                   >
-                    {(["content", "lexical"] as const).map((value) => (
-                      <button
-                        key={value}
-                        type="button"
-                        role="radio"
-                        aria-checked={label === value}
-                        className={cn([
-                          "rounded border px-2 py-0.5",
-                          label === value
-                            ? "bg-foreground text-background"
-                            : "border-border",
-                        ])}
-                        onClick={() => onLabel(index, value)}
-                      >
-                        {value === "content" ? t`Content` : t`Lexical`}
-                      </button>
-                    ))}
+                    {(["content", "lexical", "artefact"] as const).map(
+                      (value) => (
+                        <button
+                          key={value}
+                          type="button"
+                          role="radio"
+                          aria-checked={label === value}
+                          className={cn([
+                            "rounded border px-2 py-0.5",
+                            label === value
+                              ? "bg-foreground text-background"
+                              : "border-border",
+                          ])}
+                          onClick={() => onLabel(index, value)}
+                        >
+                          {value === "content"
+                            ? t`Content`
+                            : value === "lexical"
+                              ? t`Lexical`
+                              : t`Artifact`}
+                        </button>
+                      ),
+                    )}
                   </div>
                 </td>
               </tr>

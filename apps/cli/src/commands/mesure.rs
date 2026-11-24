@@ -2,6 +2,10 @@
 //! (calibrage local de la bêta). N'affiche que des nombres ; aucun texte n'est
 //! écrit sur disque. Aucun accès à la base ni au réseau.
 //!
+//! `--gold` mesure aussi une version envoyée nettoyée à la main (référence du
+//! jeu d'or, stratégie de mesure v2) et rend l'écart entre les deux taux,
+//! toujours en nombres seulement.
+//!
 //! Seule exception, demandée explicitement : `--differences` liste chaque
 //! différence avec ses extraits, sur la sortie standard seulement (jamais avec
 //! `--json`, donc jamais dans un export), pour le classement manuel de
@@ -78,6 +82,88 @@ pub fn run(generated: &Path, sent: &Path, dictionary: Option<&Path>, json: bool)
         output::emit(&human(&report));
     }
     Ok(())
+}
+
+/// Mesure automatique et mesure de référence (`--gold`) : même version
+/// générée, même dictionnaire ; l'écart est `auto − or`, en ‰.
+#[derive(Debug, serde::Serialize)]
+struct GoldComparison {
+    auto: Report,
+    gold: Report,
+    delta_content_per_mille: Option<f64>,
+    delta_lexical_per_mille: Option<f64>,
+}
+
+fn delta(auto: Option<f64>, gold: Option<f64>) -> Option<f64> {
+    Some(auto? - gold?)
+}
+
+fn compare(
+    generated: &Path,
+    sent: &Path,
+    gold: &Path,
+    dictionary: Option<&Path>,
+) -> Result<GoldComparison> {
+    let i = inputs(generated, sent, dictionary)?;
+    let (gold_text, gold_format) = load(gold, "read reference sent version")?;
+    let run = |sent: &str, format: Format| {
+        measure(
+            &i.generated,
+            i.generated_format,
+            sent,
+            format,
+            &i.dictionary,
+        )
+        .map_err(|error| Error::operation("measure", error.to_string()))
+    };
+    let auto = run(&i.sent, i.sent_format)?;
+    let gold = run(&gold_text, gold_format)?;
+    Ok(GoldComparison {
+        delta_content_per_mille: delta(auto.content_per_mille, gold.content_per_mille),
+        delta_lexical_per_mille: delta(auto.lexical_per_mille, gold.lexical_per_mille),
+        auto,
+        gold,
+    })
+}
+
+pub fn run_gold(
+    generated: &Path,
+    sent: &Path,
+    gold: &Path,
+    dictionary: Option<&Path>,
+    json: bool,
+) -> Result<()> {
+    let comparison = compare(generated, sent, gold, dictionary)?;
+    if json {
+        output::emit(&output::json("mesure", &comparison, None)?);
+    } else {
+        output::emit(&gold_human(&comparison));
+    }
+    Ok(())
+}
+
+/// Sortie de `--gold` : les lignes habituelles de la mesure automatique, puis
+/// celles de la référence préfixées par `gold_`, puis les écarts.
+fn gold_human(comparison: &GoldComparison) -> String {
+    let gold = human(&comparison.gold)
+        .lines()
+        .filter(|line| !line.starts_with("section\t"))
+        .map(|line| format!("gold_{line}"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    [
+        human(&comparison.auto),
+        gold,
+        format!(
+            "delta_content_per_mille\t{}",
+            rate(comparison.delta_content_per_mille)
+        ),
+        format!(
+            "delta_lexical_per_mille\t{}",
+            rate(comparison.delta_lexical_per_mille)
+        ),
+    ]
+    .join("\n")
 }
 
 /// Différences avec leurs extraits, en TSV sur la sortie standard, précédées
@@ -222,6 +308,55 @@ mod tests {
         assert_eq!(lines[1], "1\t0\tajout\tfond\t2\t\tMerci Alice.\t");
         assert_eq!(lines[2], "2\t0\tremplacement\tlexical\t1\tMartin\tMarten\t");
         assert!(lines.iter().all(|l| l.split('\t').count() == 8));
+    }
+
+    #[test]
+    fn gold_compares_the_automatic_and_the_reference_measure() {
+        let dir = tempfile::tempdir().unwrap();
+        let generated = dir.path().join("generee.md");
+        let sent = dir.path().join("publiee.txt");
+        let gold = dir.path().join("propre.md");
+        std::fs::write(
+            &generated,
+            "# Résumé\n\nLe projet avance avec Martin.\n\n## Actions\n\nRelancer Alice.\n",
+        )
+        .unwrap();
+        // Envoyée : cartouche ajouté, titre « Actions » retouché.
+        std::fs::write(
+            &sent,
+            "Réunion du lundi, diffusion interne\nRésumé\nLe projet avance avec Marten.\nSuites\nRelancer Alice.\n",
+        )
+        .unwrap();
+        // Référence nettoyée : cartouche retiré, titre aligné à la main.
+        std::fs::write(
+            &gold,
+            "# Résumé\n\nLe projet avance avec Marten.\n\n## Actions\n\nRelancer Alice.\n",
+        )
+        .unwrap();
+        let comparison = compare(&generated, &sent, &gold, None).unwrap();
+        assert_eq!(comparison.gold.total.replaced_lexical, 1);
+        assert_eq!(
+            comparison.gold.total.added + comparison.gold.total.deleted,
+            0
+        );
+        let gap = comparison.delta_content_per_mille.unwrap();
+        assert!(gap > 0.0, "{gap}");
+        let text = gold_human(&comparison);
+        for line in text.lines() {
+            let mut fields = line.split('\t');
+            let key = fields.next().unwrap();
+            assert!(
+                key.chars().all(|c| c.is_ascii_lowercase() || c == '_'),
+                "{line}"
+            );
+            for value in fields {
+                assert!(value == "-" || value.parse::<f64>().is_ok(), "{line}");
+            }
+        }
+        assert!(text.contains("gold_replaced_lexical\t1"));
+        assert!(text.contains("delta_content_per_mille\t"));
+        assert!(!text.contains("gold_section"));
+        assert!(!text.contains("Martin") && !text.contains("diffusion"));
     }
 
     #[test]
