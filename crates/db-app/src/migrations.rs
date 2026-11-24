@@ -133,4 +133,5 @@ pub const APP_MIGRATION_STEPS: &[MigrationStep] = &[
     migration!("20261109190000_folder_template"),
     migration!("20261122120000_summary_measurements"),
     migration!("20261122130000_beta_export"),
+    migration!("20261124120000_measurement_guards"),
 ];

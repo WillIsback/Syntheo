@@ -15,6 +15,8 @@ export const commands = {
 };
 
 /* Constants */
+export const GUARD_VERSION = 1 as const;
+
 export const RULE_VERSION = 2 as const;
 
 /* Types */
@@ -38,6 +40,15 @@ export type DifferenceRow = {
 	sent: string,
 };
 
+/**  Métriques de contrôle, des nombres seulement. */
+export type MeasureControls = {
+	generatedKeptWords: number,
+	sectionsMatchedExact: number,
+	sectionsMatchedNear: number,
+	deletedSectionWords: number,
+	residualEntities: number,
+};
+
 /**  Compteurs, en mots (`Counters` du crate `mesure`). */
 export type MeasureCounters = {
 	generated: number,
@@ -47,9 +58,13 @@ export type MeasureCounters = {
 	replacedLexical: number,
 };
 
-/**  Résultat de la mesure : des nombres et des booléens seulement. */
+/**  Résultat de la mesure : des nombres, des booléens et des codes fermés. */
 export type MeasureResult = {
 	ruleVersion: number,
+	guardVersion: number,
+	status: MeasureStatus,
+	statusReasons: StatusReason[],
+	controls: MeasureControls,
 	aligned: boolean,
 	headingsGenerated: number,
 	headingsMatched: number,
@@ -63,6 +78,13 @@ export type MeasureResult = {
 	/**  Empreintes des termes du dictionnaire au moment de la mesure. */
 	dictionaryHashes: string[],
 };
+
+/**
+ *  Statut d'une mesure (issue 733) : `refused` n'affiche aucun chiffre,
+ *  `doubtful` l'affiche grisé avec sa raison. Codes identiques à ceux de la
+ *  base et de l'export.
+ */
+export type MeasureStatus = "ok" | "doubtful" | "refused";
 
 export type SectionMeasure = {
 	index: number,
@@ -83,6 +105,9 @@ export type SentInput = { kind: "text"; text: string; format: SentFormat } |
  *  jamais de chemin (revue du lot 0.8.0, constat 1).
  */
 { kind: "docx"; base64: string };
+
+/**  Raison d'un statut (liste fermée). */
+export type StatusReason = "entity_left" | "too_few_words_kept" | "global_alignment" | "unmatched_sections";
 
 /* Tauri Specta runtime */
 async function typedError<T, E>(result: Promise<T>): Promise<{ status: "ok"; data: T } | { status: "error"; error: E }> {

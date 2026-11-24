@@ -1,3 +1,6 @@
-# Empreintes des sorties du corpus par version de la règle (voir README.md).
-# version<TAB>sha256 ; ne jamais modifier une ligne existante.
-2	e25062241bcfd477e1e895b7bbb8396ae17a49448f9b41cdf73483a9f1119225
+# Empreintes des sorties du corpus (voir README.md).
+# <genre> <version><TAB>sha256 : « rule » suit RULE_VERSION (compteurs),
+# « guard » suit GUARD_VERSION (statuts, raisons, contrôles).
+# Ne jamais modifier une ligne existante.
+rule 2	3adac98288aaf5a446512a2d2ec57ab8ce76e7d0a734ad521917b2acc4672f4b
+guard 1	3610f23d72d1cb1727627f26fcd9971b0afeb334b304d30042c0c429ca31fc80

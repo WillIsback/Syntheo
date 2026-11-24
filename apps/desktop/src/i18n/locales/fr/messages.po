@@ -42,6 +42,11 @@ msgstr "« {title} » a été lancée sur cette note"
 msgid "(default)"
 msgstr "(par défaut)"
 
+#. placeholder {0}: result.controls.sectionsMatchedNear
+#: src/mesure/measure-dialog.tsx
+msgid "(including {0} with a corrected heading)"
+msgstr "(dont {0} au titre corrigé)"
+
 #: src/mesure/measure-dialog.tsx
 msgid "(measured as a whole)"
 msgstr "(mesurée d'un seul bloc)"
@@ -1774,6 +1779,10 @@ msgstr "Documentation"
 msgid "Done"
 msgstr "Terminé"
 
+#: src/mesure/measure-dialog.tsx
+msgid "Doubtful measurement: read these numbers with care."
+msgstr "Mesure douteuse : lisez ces chiffres avec prudence."
+
 #. placeholder {0}: size(models.presentBytes)
 #. placeholder {1}: size(models.totalBytes)
 #: src/settings/ai/stt/on-device-card.tsx
@@ -2116,6 +2125,10 @@ msgstr "Impossible de copier la note"
 #: src/templates/template-sidebar.tsx
 msgid "Favorites"
 msgstr "Favoris"
+
+#: src/mesure/measure-dialog.tsx
+msgid "Fewer than half of the headings were found: the text was measured as a whole."
+msgstr "Moins de la moitié des titres ont été retrouvés : le texte a été mesuré en entier."
 
 #: src/main/windows-title-bar.tsx
 msgid "File"
@@ -2755,6 +2768,10 @@ msgstr "Sortir du dossier"
 msgid "Less than a minute remaining"
 msgstr "Moins d'une minute restante"
 
+#: src/mesure/measure-dialog.tsx
+msgid "Less than half of the generated words were found in the sent version."
+msgstr "Moins de la moitié des mots générés ont été retrouvés dans la version envoyée."
+
 #: src/automations/labels.ts
 msgid "Lets you know when the automation has finished."
 msgstr "Vous prévient quand l'automatisation a terminé."
@@ -3281,6 +3298,10 @@ msgstr "Plus d'actions"
 #: src/settings/ai/llm/index.tsx
 msgid "More effort gives finer summaries, but slower. Auto leaves it to the server."
 msgstr "Plus d'effort donne des synthèses plus fines, mais plus lentes. Auto laisse le serveur décider."
+
+#: src/mesure/measure-dialog.tsx
+msgid "More than a tenth of the generated words are in sections that were not found in the sent version."
+msgstr "Plus d'un dixième des mots générés sont dans des sections non retrouvées dans la version envoyée."
 
 #: src/settings/automations/workflow-test-panel.tsx
 msgid "most recent"
@@ -6069,6 +6090,10 @@ msgstr "Le fournisseur de transcription sélectionné"
 msgid "The sent version could not be measured: {0}"
 msgstr "La version envoyée n'a pas pu être mesurée : {0}"
 
+#: src/mesure/measure-dialog.tsx
+msgid "The sent version still contains HTML codes (such as &eacute;) that could not be read. Drop the file as .docx, or paste it as plain text."
+msgstr "La version envoyée contient encore des codes HTML (comme &eacute;) qui n'ont pas pu être lus. Déposez le fichier en .docx, ou collez-le en texte brut."
+
 #: src/settings/ai/shared/server-card.tsx
 msgid "The server answered with an error (HTTP {status}). It may still be starting: wait a minute, then test again."
 msgstr "Le serveur a répondu par une erreur (HTTP {status}). Il démarre peut-être encore : patientez une minute, puis relancez le test."
@@ -6400,6 +6425,10 @@ msgstr "Impossible de vérifier cette clé auprès du fournisseur. Vérifiez la 
 #: src/settings/ai/shared/provider-credential-error.ts
 msgid "This key could not be verified. Check your connection and try again."
 msgstr "Impossible de vérifier cette clé. Vérifiez votre connexion et réessayez."
+
+#: src/mesure/measure-dialog.tsx
+msgid "This measurement was refused: the comparison failed, so no number is shown or saved for export."
+msgstr "Cette mesure est refusée : la comparaison a échoué, aucun chiffre n'est affiché ni gardé pour l'export."
 
 #: src/session/components/living-document/after-meeting-folder-suggestion.tsx
 msgid "This meeting looks like {folderName} ({reason})"

@@ -46,7 +46,17 @@ import { fileInput, MeasureDialog } from "./measure-dialog";
 
 const SENT = "Le projet avance avec Marten et un secret confidentiel.";
 const RESULT = {
-  ruleVersion: 1,
+  ruleVersion: 2,
+  guardVersion: 1,
+  status: "ok" as "ok" | "doubtful" | "refused",
+  statusReasons: [] as string[],
+  controls: {
+    generatedKeptWords: 4,
+    sectionsMatchedExact: 1,
+    sectionsMatchedNear: 0,
+    deletedSectionWords: 0,
+    residualEntities: 0,
+  },
   aligned: true,
   headingsGenerated: 1,
   headingsMatched: 1,
@@ -134,6 +144,79 @@ describe("MeasureDialog", () => {
     }
   });
 
+  // Issue 733 : une mesure refusée n'affiche aucun chiffre ; une mesure
+  // douteuse les affiche grisés, avec la raison.
+  it("shows no number for a refused measurement", async () => {
+    mocks.config.calibration_enabled = false;
+    mocks.measure.mockResolvedValue({
+      status: "ok",
+      data: {
+        ...RESULT,
+        status: "refused",
+        statusReasons: ["entity_left"],
+        controls: { ...RESULT.controls, residualEntities: 3 },
+      },
+    });
+    renderDialog();
+    fireEvent.change(screen.getByLabelText("Sent version"), {
+      target: { value: SENT },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Measure" }));
+
+    await screen.findByText(/This measurement was refused/);
+    expect(screen.getByText(/still contains HTML codes/)).toBeTruthy();
+    expect(screen.queryByText(/words of content reworked/)).toBeNull();
+    expect(screen.queryByText("Generated words")).toBeNull();
+  });
+
+  it("does not calibrate on a refused measurement", async () => {
+    mocks.measure.mockResolvedValue({
+      status: "ok",
+      data: { ...RESULT, status: "refused", statusReasons: ["entity_left"] },
+    });
+    renderDialog();
+    fireEvent.change(screen.getByLabelText("Sent version"), {
+      target: { value: SENT },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Measure" }));
+
+    await screen.findByText(/This measurement was refused/);
+    await waitFor(() =>
+      expect(mocks.executeTransaction).toHaveBeenCalledOnce(),
+    );
+    expect(mocks.measureDifferences).not.toHaveBeenCalled();
+    expect(screen.queryByRole("radiogroup")).toBeNull();
+    expect(screen.queryByText(/Agreement:/)).toBeNull();
+  });
+
+  it("greys a doubtful measurement and says why", async () => {
+    mocks.config.calibration_enabled = false;
+    mocks.measure.mockResolvedValue({
+      status: "ok",
+      data: {
+        ...RESULT,
+        status: "doubtful",
+        statusReasons: ["unmatched_sections"],
+        controls: { ...RESULT.controls, sectionsMatchedNear: 1 },
+      },
+    });
+    renderDialog();
+    fireEvent.change(screen.getByLabelText("Sent version"), {
+      target: { value: SENT },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Measure" }));
+
+    await screen.findByText(/Doubtful measurement/);
+    expect(screen.getByText(/sections that were not found/)).toBeTruthy();
+    expect(screen.getByText(/words of content reworked/)).toBeTruthy();
+    expect(screen.getByText(/with a corrected heading/)).toBeTruthy();
+    expect(
+      document
+        .querySelector("[data-measure-result]")
+        ?.getAttribute("data-measure-status"),
+    ).toBe("doubtful");
+  });
+
   it("keeps a pasted HTML version as HTML", async () => {
     mocks.config.calibration_enabled = false;
     renderDialog();
@@ -198,7 +281,7 @@ describe("MeasureDialog", () => {
         params: unknown[];
       }[][][]
     )[1][0][0].params;
-    expect(matrixParams.slice(1)).toEqual([1, 1, 0, 0, 1]);
+    expect(matrixParams.slice(1)).toEqual([2, 1, 0, 0, 1]);
   });
 
   // Issue 735 : étiquetage en aveugle, et classe « artefact » hors matrice.
@@ -245,7 +328,7 @@ describe("MeasureDialog", () => {
       }[][][]
     )[1][0][0].params;
     // Les quatre cases seulement : l'artefact n'y figure pas.
-    expect(matrixParams.slice(1)).toEqual([1, 0, 0, 0, 1]);
+    expect(matrixParams.slice(1)).toEqual([2, 0, 0, 0, 1]);
   });
 
   // Spec §2 : la version générée est le corps produit par Syntheo, avant

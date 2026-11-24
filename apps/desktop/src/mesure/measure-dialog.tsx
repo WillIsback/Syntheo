@@ -6,6 +6,7 @@ import {
   type DifferenceRow,
   type MeasureResult,
   type SentInput,
+  type StatusReason,
 } from "@syntheo/plugin-mesure";
 import { Button } from "@syntheo/ui/components/ui/button";
 import {
@@ -225,7 +226,9 @@ export function MeasureDialog({
       setError(t`The counters could not be saved.`);
     }
     if (!current()) return;
-    if (calibration_enabled) {
+    // Mesure refusée (issue 733) : la comparaison a échoué, ses différences
+    // ne servent pas au calibrage.
+    if (calibration_enabled && measured.data.status !== "refused") {
       const listed = await mesureCommands.measureDifferences(
         generated.markdown,
         input,
@@ -352,7 +355,7 @@ export function MeasureDialog({
           <MeasureSummary result={result} generatedSource={generatedSource} />
         )}
 
-        {result && rows ? (
+        {result && rows && result.status !== "refused" ? (
           <CalibrationTable
             rows={rows}
             labels={labels}
@@ -476,7 +479,42 @@ function perHundred(perMille: number | null): string {
   return perMille === null ? "-" : (perMille / 10).toFixed(1);
 }
 
-/** Nombres bruts, jamais de score composite. */
+/** Raison d'un statut, en clair (codes fermés du crate `mesure`). */
+function StatusReasonText({ reason }: { reason: StatusReason }) {
+  switch (reason) {
+    case "entity_left":
+      return (
+        <Trans>
+          The sent version still contains HTML codes (such as &amp;eacute;) that
+          could not be read. Drop the file as .docx, or paste it as plain text.
+        </Trans>
+      );
+    case "too_few_words_kept":
+      return (
+        <Trans>
+          Less than half of the generated words were found in the sent version.
+        </Trans>
+      );
+    case "global_alignment":
+      return (
+        <Trans>
+          Fewer than half of the headings were found: the text was measured as a
+          whole.
+        </Trans>
+      );
+    case "unmatched_sections":
+      return (
+        <Trans>
+          More than a tenth of the generated words are in sections that were not
+          found in the sent version.
+        </Trans>
+      );
+  }
+}
+
+/** Nombres bruts, jamais de score composite. Garde-fous (issue 733) : une
+ * mesure refusée n'affiche aucun chiffre ; une mesure douteuse les affiche
+ * grisés, avec la raison. */
 function MeasureSummary({
   result,
   generatedSource,
@@ -487,9 +525,48 @@ function MeasureSummary({
   const total = result.total;
   const content = perHundred(result.contentPerMille);
   const lexical = total.replacedLexical;
+  const reasons = (
+    <ul className="list-disc pl-5 text-xs" data-measure-reasons>
+      {result.statusReasons.map((reason) => (
+        <li key={reason}>
+          <StatusReasonText reason={reason} />
+        </li>
+      ))}
+    </ul>
+  );
+  if (result.status === "refused") {
+    return (
+      <section
+        className="flex flex-col gap-2 text-sm"
+        data-measure-result
+        data-measure-status="refused"
+      >
+        <p className="text-base">
+          <Trans>
+            This measurement was refused: the comparison failed, so no number is
+            shown or saved for export.
+          </Trans>
+        </p>
+        {reasons}
+      </section>
+    );
+  }
+  const doubtful = result.status === "doubtful";
   return (
-    <section className="flex flex-col gap-2 text-sm" data-measure-result>
-      <p className="text-base">
+    <section
+      className="flex flex-col gap-2 text-sm"
+      data-measure-result
+      data-measure-status={result.status}
+    >
+      {doubtful ? (
+        <>
+          <p className="text-sm font-medium">
+            <Trans>Doubtful measurement: read these numbers with care.</Trans>
+          </p>
+          {reasons}
+        </>
+      ) : null}
+      <p className={cn(["text-base", doubtful && "text-muted-foreground"])}>
         <Trans>
           {content} words of content reworked per 100 generated, plus {lexical}{" "}
           words of names or acronyms corrected.
@@ -529,6 +606,15 @@ function MeasureSummary({
         </dt>
         <dd>
           {result.headingsMatched} / {result.headingsGenerated}
+          {result.controls.sectionsMatchedNear > 0 ? (
+            <>
+              {" "}
+              <Trans>
+                (including {result.controls.sectionsMatchedNear} with a
+                corrected heading)
+              </Trans>
+            </>
+          ) : null}
           {result.aligned ? null : (
             <>
               {" "}

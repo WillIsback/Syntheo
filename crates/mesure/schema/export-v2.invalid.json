@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "app_version": "0.8.0",
   "rule_version": 1,
   "rubric_version": 0,
@@ -22,6 +22,16 @@
         "replaced_content": 4,
         "replaced_lexical": 1
       },
+      "guard_version": 1,
+      "status": "ok",
+      "status_reasons": [],
+      "controls": {
+        "generated_kept_words": 22,
+        "sections_matched_exact": 3,
+        "sections_matched_near": 0,
+        "deleted_section_words": 0,
+        "residual_entities": 0
+      },
       "sections": [
         {
           "index": 0,
@@ -41,6 +51,10 @@
   ],
   "summaries": [],
   "terms": [
-    { "term": "Nemotron", "added_after": null, "errors": [] }
+    {
+      "term": "Nemotron",
+      "added_after": null,
+      "errors": []
+    }
   ]
 }

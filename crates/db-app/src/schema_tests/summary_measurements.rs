@@ -14,7 +14,7 @@ const TABLES: [&str; 7] = [
     "beta_term_errors",
 ];
 /// Seules colonnes TEXT permises, toutes contraintes par CHECK.
-const TEXT_COLUMNS: [&str; 19] = [
+const TEXT_COLUMNS: [&str; 20] = [
     "id",
     "document_id",
     "session_id",
@@ -34,6 +34,7 @@ const TEXT_COLUMNS: [&str; 19] = [
     "term_key",
     "generated_at",
     "closed_at",
+    "status",
 ];
 const ID: &str = "0b9f2c1e-4d3a-4b5c-8d7e-1f2a3b4c5d6e";
 
@@ -230,4 +231,83 @@ async fn beta_export_tables_refuse_free_text() {
         .await
         .unwrap();
     assert_eq!(terms.0, 0);
+}
+
+// Garde-fous de la mesure (issue 733) : colonnes ajoutées, nullables, codes
+// fermés. Une mesure d'avant la 0.8.1 garde NULL (statut inconnu).
+const GUARDS_MIGRATION_ID: &str = "20261124120000_measurement_guards";
+
+#[test]
+fn measurement_guards_migration_is_registered_once_and_additive() {
+    let steps: Vec<_> = APP_MIGRATION_STEPS
+        .iter()
+        .filter(|step| step.id == GUARDS_MIGRATION_ID)
+        .collect();
+    assert_eq!(steps.len(), 1);
+    assert_eq!(steps[0].scope, syntheo_db_migrate::MigrationScope::Plain);
+    let sql = steps[0].sql;
+    assert!(!sql.lines().any(|line| line.trim() == "-- breaking"));
+    // Colonnes ajoutées seulement, aucune NOT NULL : relisible par une
+    // version plus ancienne.
+    for statement in sql.split(';').map(str::trim).filter(|s| !s.is_empty()) {
+        let code: String = statement
+            .lines()
+            .filter(|line| !line.trim_start().starts_with("--"))
+            .collect::<Vec<_>>()
+            .join(" ");
+        if code.trim().is_empty() {
+            continue;
+        }
+        assert!(code.contains("ADD COLUMN"), "{code}");
+        assert!(!code.contains("NOT NULL"), "{code}");
+    }
+}
+
+#[tokio::test]
+async fn measurement_guard_columns_accept_closed_codes_only() {
+    let db = Db::connect_memory_plain().await.unwrap();
+    prepare_schema(&db).await.unwrap();
+    let base = "INSERT INTO summary_measurements (id, document_id, session_id, rule_version, aligned, headings_generated, headings_matched, generated_words, added_words, deleted_words, replaced_content, replaced_lexical, unmatched_sent_words";
+    // Mesure d'avant la 0.8.1 : colonnes de garde-fous à NULL.
+    sqlx::query(sqlx::AssertSqlSafe(format!(
+        "{base}) VALUES ('{ID}', 'doc-1', 'session-1', 1, 1, 3, 3, 28, 3, 2, 4, 1, 0)"
+    )))
+    .execute(db.pool())
+    .await
+    .unwrap();
+    let status: Option<String> =
+        sqlx::query_scalar("SELECT status FROM summary_measurements WHERE id = ?")
+            .bind(ID)
+            .fetch_one(db.pool())
+            .await
+            .unwrap();
+    assert_eq!(status, None);
+
+    let with_guards = |id: &str, status: &str, reason: i64, kept: i64| {
+        format!(
+            "{base}, guard_version, status, reason_entity_left, reason_too_few_words_kept, reason_global_alignment, reason_unmatched_sections, generated_kept_words, sections_matched_exact, sections_matched_near, deleted_section_words, residual_entities) VALUES ('{id}', 'doc-1', 'session-1', 2, 1, 3, 3, 31, 0, 0, 0, 0, 0, 1, '{status}', {reason}, 0, 0, 0, {kept}, 3, 0, 0, 0)"
+        )
+    };
+    sqlx::query(sqlx::AssertSqlSafe(with_guards(
+        "1b9f2c1e-4d3a-4b5c-8d7e-1f2a3b4c5d6e",
+        "doubtful",
+        0,
+        31,
+    )))
+    .execute(db.pool())
+    .await
+    .unwrap();
+    for (id, status, reason, kept) in [
+        ("2b9f2c1e-4d3a-4b5c-8d7e-1f2a3b4c5d6e", "texte libre", 0, 31),
+        ("3b9f2c1e-4d3a-4b5c-8d7e-1f2a3b4c5d6e", "ok", 2, 31),
+        ("4b9f2c1e-4d3a-4b5c-8d7e-1f2a3b4c5d6e", "ok", 0, -1),
+    ] {
+        assert!(
+            sqlx::query(sqlx::AssertSqlSafe(with_guards(id, status, reason, kept)))
+                .execute(db.pool())
+                .await
+                .is_err(),
+            "{status} {reason} {kept}"
+        );
+    }
 }
