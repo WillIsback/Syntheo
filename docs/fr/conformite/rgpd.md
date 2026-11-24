@@ -109,8 +109,10 @@ une suppression, l'effacement est retenté au lancement suivant.
     corps JSON composé par l'utilisateur, qui peut inclure les mêmes données,
     vers l'adresse saisie, sans signature.
   - dans les deux cas, le destinataire est l'adresse choisie par
-    l'utilisateur (`http://` ou `https://`). Contrairement aux endpoints,
-    HTTPS n'est pas exigé : préférer HTTPS ou un réseau privé.
+    l'utilisateur. Depuis la 0.8.1, même règle que pour les endpoints
+    d'inférence : HTTPS exigé, HTTP non chiffré seulement vers le poste ou
+    un réseau privé (confirmé, signalé en permanence), revalidé à chaque
+    envoi.
 - Un endpoint exploité par un tiers devient **sous-traitant de l'utilisateur**
   (art. 28 RGPD) : contrat et localisation des données à vérifier.
 - **Autres flux, hors inférence** :

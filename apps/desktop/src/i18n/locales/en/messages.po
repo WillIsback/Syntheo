@@ -868,6 +868,10 @@ msgstr "beta, measure, rework, sent version, pilot"
 msgid "Beta: measure rework"
 msgstr "Beta: measure rework"
 
+#: src/settings/developers/webhooks.tsx
+msgid "Blocked: use https://, or http:// only to this computer or a private network."
+msgstr "Blocked: use https://, or http:// only to this computer or a private network."
+
 #: src/settings/general/notification.tsx
 msgid "Bloom"
 msgstr "Bloom"
@@ -5982,6 +5986,10 @@ msgstr "The measurement could not run. Try again."
 msgid "The measurement did not complete: {0}"
 msgstr "The measurement did not complete: {0}"
 
+#: src/settings/ai/shared/cleartext-warning.tsx
+msgid "The meeting content (notes, summaries, transcript) would travel in clear text on the network. On another network, or with Tailscale stopped, another machine can answer at this address. Prefer HTTPS."
+msgstr "The meeting content (notes, summaries, transcript) would travel in clear text on the network. On another network, or with Tailscale stopped, another machine can answer at this address. Prefer HTTPS."
+
 #: src/chat/components/message/tool/move-tools.tsx
 msgid "The meeting contents could not be moved."
 msgstr "The meeting contents could not be moved."
@@ -6715,6 +6723,10 @@ msgstr "Unencrypted connection to {host}"
 msgid "Unencrypted connection: the audio, your notes and the API key travel in clear text on the network."
 msgstr "Unencrypted connection: the audio, your notes and the API key travel in clear text on the network."
 
+#: src/settings/ai/shared/cleartext-warning.tsx
+msgid "Unencrypted connection: the meeting content travels in clear text on the network."
+msgstr "Unencrypted connection: the meeting content travels in clear text on the network."
+
 #: src/session/components/note-input/transcript/renderer/speaker-participants.ts
 msgid "Unknown"
 msgstr "Unknown"
@@ -6864,8 +6876,12 @@ msgid "Use a .txt, .md, .html or .docx file."
 msgstr "Use a .txt, .md, .html or .docx file."
 
 #: src/settings/automations/step-forms.tsx
-msgid "Use an http:// or https:// address."
-msgstr "Use an http:// or https:// address."
+#~ msgid "Use an http:// or https:// address."
+#~ msgstr "Use an http:// or https:// address."
+
+#: src/settings/automations/step-forms.tsx
+msgid "Use an https:// address, or http:// only to this computer or a private network, without a user name or password."
+msgstr "Use an https:// address, or http:// only to this computer or a private network, without a user name or password."
 
 #: src/templates/auto-form.tsx
 #: src/templates/details.tsx

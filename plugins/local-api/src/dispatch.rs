@@ -165,6 +165,10 @@ pub async fn create_endpoint(
     if has_credentials(&parsed) {
         return Err("url must not contain credentials".to_string());
     }
+    // Même règle que les serveurs d'inférence (issue 703) : HTTPS, ou HTTP
+    // clair seulement vers ce poste ou un réseau privé. Le contenu complet
+    // d'une réunion ne part jamais en clair sur Internet.
+    owhisper_client::validate_provider_base_url(url).map_err(|error| error.to_string())?;
     if let Some(unknown) = events
         .iter()
         .find(|event| !KNOWN_EVENTS.contains(&event.as_str()))
@@ -368,6 +372,16 @@ async fn deliver_once(
     body: &Bytes,
     delivery_id: &str,
 ) -> DeliveryOutcome {
+    // Règle revalidée à chaque livraison (issue 703) : un endpoint enregistré
+    // par une version antérieure en HTTP public ne reçoit plus rien.
+    if let Err(error) =
+        owhisper_client::validate_provider_base_url(&without_credentials(&endpoint.url, ""))
+    {
+        return DeliveryOutcome {
+            delivered: false,
+            status: format!("error: {error}"),
+        };
+    }
     let secret = match resolve_secret(secrets, endpoint).await {
         Ok(secret) => secret,
         Err(error) => {

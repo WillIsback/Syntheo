@@ -6,7 +6,7 @@ description: "Événements de réunion signés que Syntheo envoie à un point de
 Les webhooks permettent à Syntheo d'envoyer des événements de réunion vers votre propre service. Ils sont intégrés à l'application de bureau : c'est l'application elle-même qui envoie les requêtes, sans passer par aucun serveur intermédiaire. Configurez-les dans **Paramètres → Développeurs**, section « Webhooks ».
 
 <Warning>
-  Les événements de réunion contiennent la note, les résumés, les participants, les actions à mener et le texte complet de la transcription. N'ajoutez qu'un point de terminaison de confiance, de préférence en HTTPS ou sur votre réseau privé.
+  Les événements de réunion contiennent la note, les résumés, les participants, les actions à mener et le texte complet de la transcription. N'ajoutez qu'un point de terminaison de confiance. Comme pour les serveurs d'inférence, HTTPS est exigé ; le HTTP non chiffré n'est accepté que vers ce poste ou un réseau privé, après confirmation, avec un rappel permanent.
 </Warning>
 
 Pour lire les données de réunion plutôt que de les recevoir, utilisez la [CLI](/fr/reference/cli) ou le [serveur MCP local](/fr/reference/mcp).
@@ -18,7 +18,7 @@ Pour lire les données de réunion plutôt que de les recevoir, utilisez la [CLI
 ## Ajouter un point de terminaison
 
 1. Ouvrez **Paramètres → Développeurs**.
-2. Dans la section « Webhooks », saisissez une URL commençant par `http://` ou `https://`, sans identifiants (`utilisateur:motdepasse@` est refusé), puis cliquez sur « Ajoutez un webhook ».
+2. Dans la section « Webhooks », saisissez une URL en `https://` (ou `http://` vers ce poste ou un réseau privé, à confirmer), sans identifiants (`utilisateur:motdepasse@` est refusé), puis cliquez sur « Ajoutez un webhook ». Un webhook en `http://` public enregistré par une version antérieure est marqué bloqué et ne reçoit plus rien.
 3. Copiez le secret de signature (`whsec_...`) avec « Copier ».
 4. Cliquez sur « Test » pour envoyer une livraison `webhook.test` et vérifier que votre service répond.
 

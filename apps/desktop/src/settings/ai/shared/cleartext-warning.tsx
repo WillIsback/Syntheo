@@ -35,13 +35,21 @@ function HttpsHelpLink() {
   );
 }
 
+/**
+ * Ce qui passerait en clair : l'audio, les notes et la clé d'un serveur
+ * d'inférence, ou le contenu d'une réunion envoyé à un webhook (issue 703).
+ */
+export type CleartextSubject = "server" | "webhook";
+
 /** Avant l'enregistrement : à confirmer. */
 export function CleartextConfirmation({
   host,
   onConfirm,
+  subject = "server",
 }: {
   host: string;
   onConfirm: () => void;
+  subject?: CleartextSubject;
 }) {
   return (
     <div
@@ -52,13 +60,21 @@ export function CleartextConfirmation({
         <Trans>Unencrypted connection to {host}</Trans>
       </p>
       <p className="text-muted-foreground">
-        <Trans>
-          The audio, your notes and the API key would travel in clear text on
-          the network. On another network, or with Tailscale stopped, another
-          machine can answer at this address. Prefer HTTPS: tailscale serve
-          publishes your server at https://machine.tailnet.ts.net with an
-          automatic certificate.
-        </Trans>
+        {subject === "webhook" ? (
+          <Trans>
+            The meeting content (notes, summaries, transcript) would travel in
+            clear text on the network. On another network, or with Tailscale
+            stopped, another machine can answer at this address. Prefer HTTPS.
+          </Trans>
+        ) : (
+          <Trans>
+            The audio, your notes and the API key would travel in clear text on
+            the network. On another network, or with Tailscale stopped, another
+            machine can answer at this address. Prefer HTTPS: tailscale serve
+            publishes your server at https://machine.tailnet.ts.net with an
+            automatic certificate.
+          </Trans>
+        )}
       </p>
       <div className="flex flex-wrap items-center gap-3">
         <Button type="button" size="sm" variant="outline" onClick={onConfirm}>
@@ -71,17 +87,28 @@ export function CleartextConfirmation({
 }
 
 /** Après l'enregistrement : rappel permanent sur la carte. */
-export function CleartextNotice() {
+export function CleartextNotice({
+  subject = "server",
+}: {
+  subject?: CleartextSubject;
+}) {
   return (
     <p
       role="note"
       data-cleartext-notice
       className="text-alert-foreground text-[13px]"
     >
-      <Trans>
-        Unencrypted connection: the audio, your notes and the API key travel in
-        clear text on the network.
-      </Trans>{" "}
+      {subject === "webhook" ? (
+        <Trans>
+          Unencrypted connection: the meeting content travels in clear text on
+          the network.
+        </Trans>
+      ) : (
+        <Trans>
+          Unencrypted connection: the audio, your notes and the API key travel
+          in clear text on the network.
+        </Trans>
+      )}{" "}
       <HttpsHelpLink />
     </p>
   );

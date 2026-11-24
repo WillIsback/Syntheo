@@ -693,3 +693,65 @@ async fn legacy_credentials_are_masked_and_never_sent() {
         "{request}"
     );
 }
+
+// Issue 703 : même règle que les serveurs d'inférence. HTTPS, ou HTTP clair
+// seulement vers ce poste ou un réseau privé, à la création comme à chaque
+// livraison.
+#[tokio::test]
+async fn cleartext_http_is_refused_outside_local_and_private_networks() {
+    let db = syntheo_db_core::Db::connect_memory_plain().await.unwrap();
+    syntheo_db_app::prepare_schema(&db).await.unwrap();
+    for url in ["http://example.com/hook", "http://203.0.113.5/hook"] {
+        assert_eq!(
+            create_endpoint(db.pool(), &memory_secrets().1, url, &[])
+                .await
+                .unwrap_err(),
+            "unencrypted HTTP is only allowed to this machine or a private network",
+            "{url}"
+        );
+    }
+    for url in [
+        "https://example.com/hook?source=syntheo",
+        "http://127.0.0.1:5678/webhook",
+        "http://192.168.1.10/hook",
+        "http://n8n.local/hook",
+        "http://machine.tailnet.ts.net/hook",
+    ] {
+        create_endpoint(db.pool(), &memory_secrets().1, url, &[])
+            .await
+            .unwrap_or_else(|error| panic!("{url}: {error}"));
+    }
+}
+
+#[tokio::test]
+async fn a_legacy_public_http_endpoint_receives_nothing() {
+    let db = syntheo_db_core::Db::connect_memory_plain().await.unwrap();
+    syntheo_db_app::prepare_schema(&db).await.unwrap();
+    // Ligne créée par une version antérieure, sans la règle.
+    syntheo_db_app::insert_webhook_endpoint(
+        db.pool(),
+        "webhook-1",
+        "http://203.0.113.5/hook",
+        "whsec_legacy",
+        "[]",
+    )
+    .await
+    .unwrap();
+    let endpoint = syntheo_db_app::get_webhook_endpoint(db.pool(), "webhook-1")
+        .await
+        .unwrap()
+        .unwrap();
+    let outcome = deliver_once(
+        &memory_secrets().1,
+        &endpoint,
+        EVENT_TEST,
+        &Bytes::from_static(b"{}"),
+        "delivery-1",
+    )
+    .await;
+    assert!(!outcome.delivered);
+    assert_eq!(
+        outcome.status,
+        "error: unencrypted HTTP is only allowed to this machine or a private network"
+    );
+}
