@@ -21,7 +21,8 @@
 #     Artifact Signing à empreinte figée. Il se connecte à Azure par identité
 #     fédérée (OIDC, `id-token: write` limité à ce job), sans secret client,
 #     assemble les installeurs en signant l'exécutable, le programme de
-#     désinstallation et les installeurs, puis vérifie le signataire attendu.
+#     désinstallation et les installeurs, puis vérifie le signataire attendu,
+#     y compris sur l'exécutable embarqué dans chaque installeur.
 # Voir docs/fr/desktop-installation.mdx et CONTRIBUTING.md.
 name: build-windows
 
@@ -441,19 +442,42 @@ jobs:
           # Le programme compagnon (issue 683) est signé par le même
           # signataire que syntheo.exe : contrôle bloquant comme les autres.
           # Tauri le signe sur place, dans binaries/, avant de l'embarquer.
-          $files = @(
+          $installers = @(
             Get-ChildItem apps/desktop/src-tauri/target/release/bundle/nsis/*.exe
             Get-ChildItem apps/desktop/src-tauri/target/release/bundle/msi/*.msi
-            Get-Item apps/desktop/src-tauri/target/release/syntheo.exe
-            Get-Item apps/desktop/src-tauri/binaries/syntheo-speech-x86_64-pc-windows-msvc.exe
           )
+          if ($installers.Count -ne 2) { throw "2 installeurs attendus (NSIS, MSI), $($installers.Count) trouvé(s)" }
+          $files = @($installers | ForEach-Object { @{ Label = $_.Name; Path = $_.FullName } })
+          $files += @{ Label = "binaries/syntheo-speech-x86_64-pc-windows-msvc.exe"; Path = (Resolve-Path apps/desktop/src-tauri/binaries/syntheo-speech-x86_64-pc-windows-msvc.exe).Path }
+          # syntheo.exe : pour chaque type de paquet, Tauri marque l'exécutable
+          # de son type (NSIS, MSI), le signe, l'empaquette, puis restaure sur
+          # disque l'exécutable d'origine non signé (tauri-bundler,
+          # bundle_project). target/release/syntheo.exe reste donc non signé :
+          # on vérifie l'exécutable embarqué dans chaque installeur, extrait
+          # avec 7-Zip (NSIS : syntheo.exe ; MSI : fichier d'identifiant WiX
+          # « Path », celui de l'exécutable principal dans le gabarit de Tauri).
+          $sevenZip = (Get-Command 7z -ErrorAction SilentlyContinue).Source
+          if (-not $sevenZip) { $sevenZip = Join-Path $env:ProgramFiles "7-Zip\7z.exe" }
+          if (-not (Test-Path $sevenZip)) { throw "7-Zip introuvable" }
+          foreach ($installer in $installers) {
+            $entry = if ($installer.Extension -eq ".msi") { "Path" } else { "syntheo.exe" }
+            $out = Join-Path $env:RUNNER_TEMP "embedded-$($installer.BaseName)"
+            & $sevenZip x -y "-o$out" $installer.FullName $entry | Out-Null
+            if ($LASTEXITCODE -ne 0) { throw "7-Zip : extraction de $entry depuis $($installer.Name) en échec (code $LASTEXITCODE)" }
+            if (-not (Test-Path (Join-Path $out $entry))) { throw "$entry absent de $($installer.Name)" }
+            # Extension .exe : le contrôle Authenticode choisit le format par le
+            # nom du fichier.
+            $exe = Join-Path $out "syntheo.exe"
+            if ($entry -ne "syntheo.exe") { Move-Item (Join-Path $out $entry) $exe }
+            $files += @{ Label = "syntheo.exe embarqué dans $($installer.Name)"; Path = $exe }
+          }
           $failed = $false
           foreach ($file in $files) {
-            $sig = Get-AuthenticodeSignature $file.FullName
+            $sig = Get-AuthenticodeSignature -FilePath $file.Path
             $cert = $sig.SignerCertificate
             $subject = if ($cert) { $cert.Subject } else { "aucun" }
             $issuer = if ($cert) { $cert.Issuer } else { "aucun" }
-            Write-Host "$($file.Name) : status=$($sig.Status) ; horodate=$([bool]$sig.TimeStamperCertificate) ; signataire=$subject ; émetteur=$issuer"
+            Write-Host "$($file.Label) : status=$($sig.Status) ; horodate=$([bool]$sig.TimeStamperCertificate) ; signataire=$subject ; émetteur=$issuer"
             $parts = $subject -split ',\s*'
             if (-not $cert) {
               Write-Host "  -> aucun signataire"; $failed = $true
