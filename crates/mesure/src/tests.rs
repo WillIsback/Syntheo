@@ -728,3 +728,155 @@ fn section_roles_follow_the_default_templates() {
     assert_eq!(SectionRole::from_title(Some("To-do")), SectionRole::Actions);
     assert_eq!(SectionRole::from_title(None), SectionRole::Other);
 }
+
+// --- Invariance au format et à la typographie (issue 729) -----------------
+// Noms fictifs uniquement.
+
+const RICH: &str = "# Résumé de la réunion
+
+L'équipe a présenté « le plan » — validé à 95 %… Hélène Dubreuil confirme.
+
+## Décisions
+
+- Reporter l'audit à février ; prévenir François.
+- Garder l'outil peut-être jusqu'à l'été.
+
+## Actions
+
+- Écrire à Noël Garçon (cœur du projet).
+";
+
+const RICH_HTML: &str = "<h1>Résumé de la réunion</h1><p>L'équipe a présenté « le plan » — validé à 95 %… Hélène Dubreuil confirme.</p><h2>Décisions</h2><ul><li>Reporter l'audit à février ; prévenir François.</li><li>Garder l'outil peut-être jusqu'à l'été.</li></ul><h2>Actions</h2><ul><li>Écrire à Noël Garçon (cœur du projet).</li></ul>";
+
+/// Chaque caractère non ASCII encodé par `encode` ; les balises sont en
+/// ASCII et restent intactes.
+fn encode_non_ascii(html: &str, encode: impl Fn(char) -> String) -> String {
+    html.chars()
+        .map(|c| {
+            if c.is_ascii() {
+                c.to_string()
+            } else {
+                encode(c)
+            }
+        })
+        .collect()
+}
+
+/// Entité nommée d'un caractère, la plus courte de la table HTML5.
+fn named_entity(c: char) -> String {
+    let target = c.to_string();
+    crate::entities::NAMED_ENTITIES
+        .iter()
+        .filter(|(_, value)| *value == target)
+        .map(|(name, _)| *name)
+        .min_by_key(|name| (name.len(), *name))
+        .map_or_else(|| format!("&#{};", c as u32), |name| format!("&{name};"))
+}
+
+fn assert_no_rework(sent: &str, sent_format: Format) {
+    let report = measure(
+        RICH,
+        Format::Markdown,
+        sent,
+        sent_format,
+        &Dictionary::default(),
+    )
+    .unwrap();
+    assert!(report.aligned, "{sent}");
+    assert_eq!(report.headings_matched, 3, "{sent}");
+    assert_eq!(report.total, counters(29, 0, 0, 0, 0), "{sent}");
+}
+
+#[test]
+fn utf8_named_and_numeric_entities_give_no_rework() {
+    assert_no_rework(RICH_HTML, Format::Html);
+    let named = encode_non_ascii(RICH_HTML, named_entity);
+    assert!(named.contains("&eacute;") && named.contains("&laquo;") && named.contains("&mdash;"));
+    assert_no_rework(&named, Format::Html);
+    assert_no_rework(
+        &encode_non_ascii(RICH_HTML, |c| format!("&#{};", c as u32)),
+        Format::Html,
+    );
+    assert_no_rework(
+        &encode_non_ascii(RICH_HTML, |c| format!("&#x{:X};", c as u32)),
+        Format::Html,
+    );
+    // Entités aussi dans un Markdown envoyé (CommonMark les décode).
+    assert_no_rework(&encode_non_ascii(RICH, named_entity), Format::Markdown);
+}
+
+#[test]
+fn typographic_variants_alone_give_no_rework() {
+    let markdown = "# Résumé de la réu\u{ad}nion
+
+L’équipe a présenté «\u{a0}le plan\u{a0}» – validé à 95\u{202f}%... Hélène\u{200b} Dubreuil conﬁrme.
+
+## 1. Décisions :
+
+- Reporter l‘audit à février\u{202f}; prévenir François.
+- Garder l’outil peut\u{2011}être jusqu’à l’été.
+
+## Actions
+
+- E\u{301}crire à Noël Garçon (cœur du projet).
+";
+    assert_no_rework(markdown, Format::Markdown);
+    // Collage HTML : balises en ligne au milieu d'un mot, retour à la ligne
+    // dans un titre et dans un paragraphe, `<br>` entre deux phrases.
+    let html = "<h1>Résumé de la\n  réunion</h1><p>L&rsquo;<span>équipe</span> a <b>pré</b>senté &laquo;&nbsp;le plan&nbsp;&raquo; &ndash; validé à 95&#8239;%&hellip;<br>H<i>él</i>ène Dubreuil confirme.</p><h2>\nDécisions\n</h2><ul><li>Reporter l&#146;audit à février ; prévenir Fran&shy;çois.</li><li>Garder l'outil peut&#x2011;être jusqu'à l'été.</li></ul><h2>Actions</h2><ul><li>Écrire à Noël Garçon (c&oelig;ur du projet).</li></ul>";
+    assert_no_rework(html, Format::Html);
+}
+
+// Test de sensibilité : la même retouche, encodée ou non, donne les mêmes
+// compteurs, non nuls (une normalisation qui effacerait tout passerait le
+// test d'invariance).
+#[test]
+fn the_same_edit_counts_the_same_in_every_encoding() {
+    let edited = RICH_HTML
+        .replace("février", "mars")
+        .replace("Dubreuil", "Dubreuille")
+        .replace("(cœur du projet)", "(cœur du projet, avant l'été)");
+    let measure_html = |html: &str| {
+        measure(
+            RICH,
+            Format::Markdown,
+            html,
+            Format::Html,
+            &Dictionary::default(),
+        )
+        .unwrap()
+        .total
+    };
+    // « février » → « mars » (fond), « Dubreuil » → « Dubreuille » (nom
+    // propre), « avant l'été » ajouté (2 mots).
+    let expected = counters(29, 2, 0, 1, 1);
+    assert_eq!(measure_html(&edited), expected);
+    assert_eq!(
+        measure_html(&encode_non_ascii(&edited, named_entity)),
+        expected
+    );
+    assert_eq!(
+        measure_html(&encode_non_ascii(&edited, |c| format!("&#{};", c as u32))),
+        expected
+    );
+}
+
+#[test]
+fn heading_numbers_and_typography_are_ignored_in_titles() {
+    for (title, key) in [
+        ("2. Décisions :", "décisions"),
+        ("1.3) Plan d’action", "plan d'action"),
+        ("IV. Prochaines étapes", "prochaines étapes"),
+        ("b) Risques", "risques"),
+        ("Suivi\u{a0}:", "suivi"),
+        ("2024", "2024"),
+        ("Bilan 2024", "bilan 2024"),
+        ("Vision", "vision"),
+    ] {
+        assert_eq!(title_key(title), key, "{title}");
+    }
+    assert_eq!(
+        SectionRole::from_title(Some(&title_key("3. Plan d’action"))),
+        SectionRole::Actions
+    );
+}
