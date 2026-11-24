@@ -589,9 +589,22 @@ fn prepare(
     if generated.len() > MAX_INPUT_BYTES || sent.len() > MAX_INPUT_BYTES {
         return Err(MeasureError::TooLarge);
     }
-    let generated = sections(normalize::blocks(generated, generated_format), &[])?;
+    let generated = sections(normalize::blocks(generated, generated_format), &[], false)?;
     let titles: Vec<String> = generated.iter().filter_map(|s| s.title.clone()).collect();
-    let sent = sections(normalize::blocks(sent, sent_format), &titles)?;
+    let known: Vec<KnownTitle> = generated
+        .iter()
+        .filter_map(|s| {
+            s.title.as_ref().map(|key| KnownTitle {
+                key: key.clone(),
+                words: s.title_words.clone(),
+            })
+        })
+        .collect();
+    let sent = sections(
+        normalize::blocks(sent, sent_format),
+        &known,
+        sent_format == Format::Text,
+    )?;
     let matches = match_sections(&generated, &sent);
     let headings_matched = generated
         .iter()
@@ -717,15 +730,8 @@ fn title_match(generated: &Section, sent: &Section) -> Option<TitleMatch> {
     if a.is_empty() || b.is_empty() {
         return None;
     }
-    if a.len() == b.len() {
-        let differing: Vec<(&String, &String)> = a.iter().zip(b).filter(|(x, y)| x != y).collect();
-        if let [(x, y)] = differing[..] {
-            let distance = edit_distance(x, y);
-            let longest = x.chars().count().max(y.chars().count());
-            if distance <= 2 && distance * 3 <= longest {
-                return Some(TitleMatch::OneWordEdit);
-            }
-        }
+    if one_word_edit(a, b) {
+        return Some(TitleMatch::OneWordEdit);
     }
     let common = common_count(a, b);
     if common * 2 < a.len().max(b.len()) {
@@ -738,6 +744,22 @@ fn title_match(generated: &Section, sent: &Section) -> Option<TitleMatch> {
     let longest = gw.len().max(sw.len());
     (longest > 0 && common_count(&gw, &sw) * 2 >= longest)
         .then_some(TitleMatch::SharedWords { common })
+}
+
+/// Critère (a) des titres proches : même nombre de mots, un seul mot
+/// différent, à distance d'édition d'au plus 2 et d'au plus le tiers du mot
+/// le plus long (« Dupond » et « Dupont »).
+fn one_word_edit(a: &[String], b: &[String]) -> bool {
+    if a.is_empty() || a.len() != b.len() {
+        return false;
+    }
+    let differing: Vec<(&String, &String)> = a.iter().zip(b).filter(|(x, y)| x != y).collect();
+    let [(x, y)] = differing[..] else {
+        return false;
+    };
+    let distance = edit_distance(x, y);
+    let longest = x.chars().count().max(y.chars().count());
+    distance <= 2 && distance * 3 <= longest
 }
 
 /// Mots d'un corps, clé en minuscules, pour le recouvrement de contenu.
@@ -893,15 +915,45 @@ fn is_heading_number(word: &str) -> bool {
     decimal || roman || letter
 }
 
+/// Titre de la version générée, connu au découpage de la version envoyée.
+struct KnownTitle {
+    key: String,
+    words: Vec<String>,
+}
+
 /// Découpe en sections. Dans la version envoyée, une ligne identique à un
 /// titre généré ouvre aussi une section : un texte collé depuis un wiki perd
-/// souvent la mise en forme des titres.
-fn sections(blocks: Vec<Block>, known_titles: &[String]) -> Result<Vec<Section>, MeasureError> {
+/// souvent la mise en forme des titres. Dans un texte brut (`plain`), une
+/// ligne qui remplit le critère (a) des titres proches (`one_word_edit`)
+/// face à un titre généré pas encore retrouvé en ouvre une aussi : un titre
+/// corrigé d'un mot reste un titre. Le critère (b), trop permissif pour une
+/// ligne de corps, ne s'applique pas ici.
+fn sections(
+    blocks: Vec<Block>,
+    known: &[KnownTitle],
+    plain: bool,
+) -> Result<Vec<Section>, MeasureError> {
     let mut out = vec![Section::default()];
+    let mut found = vec![false; known.len()];
     let mut count = 0usize;
     for block in blocks {
         let key = title_key(&block.text);
-        if block.heading || known_titles.contains(&key) {
+        let exact = known.iter().position(|title| title.key == key);
+        let near = (plain && !block.heading && exact.is_none())
+            .then(|| {
+                let mut tokens = Vec::new();
+                normalize::tokens(&key, &mut tokens);
+                let words = content_words(&tokens);
+                known
+                    .iter()
+                    .enumerate()
+                    .position(|(i, title)| !found[i] && one_word_edit(&title.words, &words))
+            })
+            .flatten();
+        if let Some(i) = exact.or(near) {
+            found[i] = true;
+        }
+        if block.heading || exact.is_some() || near.is_some() {
             let mut title_tokens = Vec::new();
             normalize::tokens(strip_heading_number(&block.text), &mut title_tokens);
             count += title_tokens.len();

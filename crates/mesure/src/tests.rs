@@ -1288,3 +1288,53 @@ fn rule_version_is_two() {
     assert_eq!(RULE_VERSION, 2);
     assert_eq!(run(GENERATED, GENERATED).rule_version, 2);
 }
+
+// Texte brut collé (issue 730, suite) : un titre corrigé d'un mot ouvre
+// encore sa section ; une ligne de corps qui ressemble à un titre sans le
+// critère (a) n'ouvre rien. Noms fictifs.
+#[test]
+fn a_plain_text_line_one_word_from_a_title_opens_its_section() {
+    let generated = "# Démo pour l'équipe Dupond\n\nPrésenter le prototype vendredi.\n\n## Budget\n\nLe budget reste stable.\n";
+    let sent = "Démo pour l'équipe Dupont\nPrésenter le prototype vendredi.\nBudget\nLe budget reste stable.\n";
+    let report = measure(
+        generated,
+        Format::Markdown,
+        sent,
+        Format::Text,
+        &Dictionary::default(),
+    )
+    .unwrap();
+    assert!(report.sections.iter().all(|s| s.matched), "{report:?}");
+    assert_eq!(report.total.replaced_lexical, 1);
+    assert_eq!(
+        report.total.added + report.total.deleted + report.total.replaced_content,
+        0
+    );
+
+    // Deux mots de différence : pas un titre, la ligne reste du corps.
+    let sent = "Démo pour la direction Dupont\nPrésenter le prototype vendredi.\nBudget\nLe budget reste stable.\n";
+    let report = measure(
+        generated,
+        Format::Markdown,
+        sent,
+        Format::Text,
+        &Dictionary::default(),
+    )
+    .unwrap();
+    assert!(!report.sections[0].matched);
+    assert!(report.sections[1].matched);
+
+    // Le critère (b) (moitié des mots en commun) ne s'applique pas à une
+    // ligne de corps.
+    let sent =
+        "Démo pour l'équipe\nPrésenter le prototype vendredi.\nBudget\nLe budget reste stable.\n";
+    let report = measure(
+        generated,
+        Format::Markdown,
+        sent,
+        Format::Text,
+        &Dictionary::default(),
+    )
+    .unwrap();
+    assert!(!report.sections[0].matched);
+}
