@@ -3,11 +3,46 @@ description: Installe les dépendances système Linux de Tauri (webkit2gtk, Pipe
 runs:
   using: "composite"
   steps:
+    # Cache des paquets .deb (issue 604). Un miroir apt qui passe la sonde de
+    # apt-mirror.sh peut ensuite servir à 100 ko/s : run 45180490484, 17 min
+    # pour 150 Mo, à deux minutes du garde-fou. Avec le cache, apt ne
+    # télécharge plus que les paquets mis à jour depuis le dernier passage.
+    # La clé suit l'image du runner et les listes de paquets ; une clé plus
+    # ancienne de la même image de base sert de point de départ. apt ne
+    # revérifie pas un .deb déjà présent : apt-cache-verify.sh compare chaque
+    # paquet restauré à l'empreinte des index signés et supprime les autres,
+    # pour qu'une entrée de cache altérée n'atteigne jamais dpkg (la release
+    # passe par cette action).
+    - name: Clé du cache apt
+      id: apt-cache
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "image=${ImageOS:-ubuntu}-${ImageVersion:-inconnue}" >> "$GITHUB_OUTPUT"
+        echo "dir=${RUNNER_TEMP}/apt-archives" >> "$GITHUB_OUTPUT"
+
+    - name: Cache des paquets apt
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        # Les .deb seuls : le verrou d'apt (`lock`, réservé à root) n'est pas lisible.
+        path: ${{ steps.apt-cache.outputs.dir }}/*.deb
+        key: apt-debs-${{ steps.apt-cache.outputs.image }}-${{ hashFiles('scripts/setup-linux-tauri.sh', 'scripts/setup-linux-others.sh') }}
+        restore-keys: |
+          apt-debs-${{ steps.apt-cache.outputs.image }}-
+          apt-debs-
+
     - shell: bash
+      env:
+        APT_ARCHIVES: ${{ steps.apt-cache.outputs.dir }}
       run: |
         set -euo pipefail
         sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup /usr/local/share/powershell 2> /dev/null || true
         df -h /
+        # apt télécharge dans le dossier mis en cache et y garde les paquets.
+        sudo mkdir -p "$APT_ARCHIVES/partial"
+        printf 'Dir::Cache::Archives "%s";\nAPT::Keep-Downloaded-Packages "true";\nBinary::apt-get::APT::Keep-Downloaded-Packages "true";\n' "$APT_ARCHIVES" \
+          | sudo tee /etc/apt/apt.conf.d/99-syntheo-archives > /dev/null
+        echo "Paquets repris du cache : $(find "$APT_ARCHIVES" -maxdepth 1 -name '*.deb' | wc -l)"
         # DNS publics : le DNS Azure du runner ne résout pas toujours les
         # dépôts Ubuntu (release v0.7.2 bloquée 90 min sur apt-get update).
         bash "${GITHUB_WORKSPACE}/scripts/ci/public-dns.sh"
@@ -18,5 +53,12 @@ runs:
           echo "::warning::Mesure du miroir apt en échec : miroirs inchangés"
         # Garde-fou : apt échoue en 15 min au lieu d'épuiser le job (une
         # étape d'action composite n'a pas de timeout-minutes).
+        # Index d'abord, pour contrôler les paquets du cache avant usage.
+        timeout --kill-after=30s 5m sudo apt-get -q -o Acquire::Retries=5 update > /dev/null
+        bash "${GITHUB_WORKSPACE}/scripts/ci/apt-cache-verify.sh" "$APT_ARCHIVES"
         timeout --kill-after=30s 15m bash "${GITHUB_WORKSPACE}/scripts/setup-linux-tauri.sh"
         timeout --kill-after=30s 15m bash "${GITHUB_WORKSPACE}/scripts/setup-linux-others.sh"
+        # Retire du cache les versions qui ne sont plus dans les index : il ne
+        # grossit pas d'une image à l'autre.
+        sudo apt-get autoclean -q > /dev/null
+        echo "Paquets gardés pour le cache : $(find "$APT_ARCHIVES" -maxdepth 1 -name '*.deb' | wc -l) ($(du -sh "$APT_ARCHIVES" | cut -f1))"
