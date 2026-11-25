@@ -365,7 +365,10 @@ impl<'a, R: tauri::Runtime, M: tauri::Manager<R>> Permissions<'a, R, M> {
 
     async fn check_system_audio(&self) -> Result<PermissionStatus, crate::Error> {
         #[cfg(all(target_os = "macos", feature = "private-tcc"))]
-        return check!("system_audio", syntheo_tcc::audio_capture_permission_status());
+        return check!(
+            "system_audio",
+            syntheo_tcc::audio_capture_permission_status()
+        );
 
         #[cfg(all(target_os = "macos", not(feature = "private-tcc")))]
         {

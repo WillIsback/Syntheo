@@ -145,8 +145,8 @@ fn rect_area(rect: NSRect) -> f64 {
 
 #[cfg(test)]
 mod tests {
-    use syntheo_overlay_kit::macos::geometry::ScreenGeometry;
     use objc2_core_foundation::{CGPoint, CGRect, CGSize};
+    use syntheo_overlay_kit::macos::geometry::ScreenGeometry;
 
     use super::*;
 
