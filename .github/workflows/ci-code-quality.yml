@@ -96,6 +96,30 @@ jobs:
           pnpm -F ui build
           pnpm -F desktop typecheck
 
+      # Catalogues de traduction (issue 637) : le build charge les messages.ts
+      # compilés, un catalogue périmé partirait en release sans être vu.
+      # Extraction et compilation stricte, puis aucun écart avec les fichiers
+      # commités. Sauté si rien ne change côté textes du desktop.
+      - name: Détection des chemins traduits
+        id: i18n-changes
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          if git diff --name-only "$BASE_SHA" HEAD -- 'apps/desktop/src/' 'apps/desktop/lingui.config.ts' \
+            'apps/desktop/package.json' 'pnpm-lock.yaml' '.github/workflows/ci-code-quality.yml' | grep -q .; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "Textes du desktop non modifiés : catalogues non vérifiés."
+          fi
+
+      - name: Catalogues de traduction (i18n:check)
+        if: steps.i18n-changes.outputs.run == 'true'
+        timeout-minutes: 5
+        run: pnpm -F desktop i18n:check
+
       # Contrôle Rust quasi gratuit gardé sur la PR : détecte un Cargo.lock
       # désynchronisé. Le clippy et les tests Rust complets tournent hors PR.
       - name: Intégrité du lockfile Cargo
@@ -143,6 +167,13 @@ jobs:
           cargo metadata --locked --format-version 1 > /dev/null
           echo "✅ Cargo.lock à jour."
 
+      # Formatage de tout le workspace (issue 624) : en PR, dprint ne vérifie
+      # que les fichiers modifiés, un écart hérité restait invisible. Quelques
+      # secondes, sans compilation.
+      - name: Formatage Rust (cargo fmt --all)
+        timeout-minutes: 5
+        run: cargo fmt --all -- --check
+
       # Compile le graphe complet du desktop (plugins `detect`/`importer` → ort,
       # `vad` → onnx, adaptateurs…). Un bump de dépendance cassant échoue ici :
       # `cargo metadata` ne voit que le lockfile, le clippy était alors en
@@ -163,16 +194,27 @@ jobs:
           set -euo pipefail
           cargo clippy --locked --workspace --all-targets -- -D warnings
 
-      # Crates portant les chantiers Syntheo : templates et prompts, schéma
-      # SQLite, adaptateurs STT, capture (règle « aucun audio sur disque »),
-      # mesure de la reprise (corpus et empreinte liée à RULE_VERSION,
-      # issue 734 : une sortie changée sans nouvelle version fait échouer).
+      # Tests de tout le workspace (issue 637) : la liste de cinq crates
+      # laissait sans exécution les tests de la capture, de la détection, de
+      # la transcription et de la mise à jour, compilés par clippy seulement.
+      # Mesuré dans une image Ubuntu 24.04 (dépendances de setup-linux-*.sh,
+      # ni audio ni D-Bus) : 2033 tests verts en 4 min 35, compilation
+      # comprise, sur 32 fils (Omarchy). Puis la mesure de la reprise avec sa
+      # fonctionnalité (corpus et empreinte liée à RULE_VERSION, issue 734 :
+      # une sortie changée sans nouvelle version fait échouer).
       - name: Tests Rust
+        timeout-minutes: 35
         run: |
           set -euo pipefail
-          cargo test --locked \
-            -p template-app -p db-app -p owhisper-client -p listener-core -p storage
+          cargo test --locked --workspace
           cargo test --locked -p mesure --features differences
+
+      # Liaisons TypeScript de tauri-specta (issue 637) : régénérées par les
+      # tests `export_types` des plugins et du desktop, puis comparées aux
+      # fichiers commités (plugins/*/js/bindings.gen.ts, tauri.gen.ts).
+      - name: Liaisons Tauri à jour (check-bindings)
+        timeout-minutes: 20
+        run: bash scripts/check-bindings.sh
 
   # Clippy de la cible Windows pour `audio-device` (issue 382) : aucune
   # autre CI ne compile cette crate pour Windows, et son code `cfg(windows)`
