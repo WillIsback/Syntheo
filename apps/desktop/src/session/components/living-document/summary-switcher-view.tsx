@@ -78,10 +78,12 @@ export function SummarySwitcherView({
   onChangeTemplate,
   onCopy,
   onMeasure,
+  measureOutdated = false,
   onRemove,
   onMenuCloseAutoFocus,
   menuOpen,
   onMenuOpenChange,
+  hasSummary = true,
 }: {
   // Élément d'ancrage du sélecteur de modèle (issue 431) : sans lui, Radix
   // n'a rien sur quoi placer le sélecteur et le laisse hors de l'écran.
@@ -105,10 +107,17 @@ export function SummarySwitcherView({
   onCopy: () => void;
   /** Bêta (issue 671) : absent quand la mesure est désactivée. */
   onMeasure?: () => void;
+  /** Seules des mesures d'une règle antérieure existent (issue 734). */
+  measureOutdated?: boolean;
   onRemove: () => void;
   onMenuCloseAutoFocus?: (event: Event) => void;
   menuOpen?: boolean;
   onMenuOpenChange?: (open: boolean) => void;
+  /**
+   * Aucune synthèse encore (issue 719) : ni « · v1 » ni « v1 Actuelle », qui
+   * laissaient croire qu'une synthèse existait.
+   */
+  hasSummary?: boolean;
 }) {
   const { t } = useLingui();
   const viewedVersion =
@@ -116,7 +125,13 @@ export function SummarySwitcherView({
       ? versions.find((version) => version.id === view.versionId)
       : undefined;
   const shownVersion = viewedVersion?.version ?? currentVersion;
-  const summaryLabel = t`Summary · v${shownVersion}`;
+  // Contexte propre (passe QA 0.8.1-2) : « Summary » seul est traduit
+  // « Résumé » ailleurs ; l'onglet s'appelle « Synthèse », comme « Synthèse ·
+  // vN ».
+  const summaryLabel = hasSummary
+    ? t`Summary · v${shownVersion}`
+    : t({ message: "Summary", context: "note view tab" });
+  const showVersions = hasSummary || versions.length > 0;
 
   return (
     <div
@@ -176,7 +191,9 @@ export function SummarySwitcherView({
           className="w-64"
           onCloseAutoFocus={onMenuCloseAutoFocus}
         >
-          <MenuSectionLabel>{t`Versions`}</MenuSectionLabel>
+          {showVersions ? (
+            <MenuSectionLabel>{t`Versions`}</MenuSectionLabel>
+          ) : null}
           <DropdownMenuRadioGroup
             value={viewedVersion ? viewedVersion.id : CURRENT_VERSION}
             onValueChange={(value) =>
@@ -187,13 +204,15 @@ export function SummarySwitcherView({
               )
             }
           >
-            <DropdownMenuRadioItem value={CURRENT_VERSION}>
-              <VersionLabel
-                version={currentVersion}
-                date={currentDate}
-                current={t`Current`}
-              />
-            </DropdownMenuRadioItem>
+            {hasSummary ? (
+              <DropdownMenuRadioItem value={CURRENT_VERSION}>
+                <VersionLabel
+                  version={currentVersion}
+                  date={currentDate}
+                  current={t`Current`}
+                />
+              </DropdownMenuRadioItem>
+            ) : null}
             {versions.map((version) => (
               <DropdownMenuRadioItem key={version.id} value={version.id}>
                 <VersionLabel version={version.version} date={version.date} />
@@ -235,7 +254,14 @@ export function SummarySwitcherView({
           {onMeasure ? (
             <DropdownMenuItem disabled={!canCopy} onSelect={onMeasure}>
               <ChartBar aria-hidden="true" />
-              {t`Measure rework…`}
+              <span className="flex flex-col">
+                <span>{t`Measure rework…`}</span>
+                {measureOutdated ? (
+                  <span className="text-muted-foreground text-xs">
+                    {t`Measure again (rule updated)`}
+                  </span>
+                ) : null}
+              </span>
             </DropdownMenuItem>
           ) : null}
           {canRemove ? (

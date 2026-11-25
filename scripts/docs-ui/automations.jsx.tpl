@@ -53,7 +53,14 @@ const SYN_AUTO_VARS = [["summary", "Synthèse"], ["notes", "Notes"], ["transcrip
 const synAutoOutName = (step) => step.outputName?.trim() || (step.type === "command" ? L("Command output") : SYN_AUTO_OUTPUT[step.type] === "file" ? L("Exported file") : L("Generated text"));
 const synAutoField = (...segs) => ({ segs, trail: "" });
 const synAutoFilled = (f) => f.segs.length > 0 || f.trail.trim().length > 0;
-const synAutoUrlOk = (url) => /^https?:\/\/[^\s@?]+$/.test(url.trim());
+// Même règle que l'application (issue 703) : HTTPS, ou HTTP vers ce poste ou
+// un réseau privé (approximation pour la reproduction).
+const synAutoPrivateHost = /^(localhost|127\.\d+\.\d+\.\d+|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+|100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.\d+\.\d+|[^.\s]+(\.[^.\s]+)*\.(local|ts\.net))(:\d+)?(\/|$)/;
+const synAutoUrlOk = (url) => {
+  const value = url.trim();
+  if (!/^https?:\/\/[^\s@?]+$/.test(value)) return false;
+  return value.startsWith("https://") || synAutoPrivateHost.test(value.slice("http://".length));
+};
 
 let synAutoSeq = 100;
 const synAutoNew = (type) => {
@@ -193,7 +200,7 @@ const SynAutoConfig = ({ step, set, vars }) => {
     return (
       <>
         <p className="syn-auto-note">{L("The only step that leaves your computer: the JSON is sent to the address below. Use an address you trust, such as n8n, Home Assistant or a home server.")}</p>
-        {h(SynAutoText, { label: L("Address (URL)"), value: step.url, placeholder: "http://localhost:5678/webhook/syntheo", error: step.url.trim() && !synAutoUrlOk(step.url) ? L("Use an http:// or https:// address.") : null, onChange: (url) => set({ url }) })}
+        {h(SynAutoText, { label: L("Address (URL)"), value: step.url, placeholder: "http://localhost:5678/webhook/syntheo", error: step.url.trim() && !synAutoUrlOk(step.url) ? L("Use an https:// address, or http:// only to this computer or a private network, without a user name or password.") : null, onChange: (url) => set({ url }) })}
         {v("body", L("JSON body"), { mono: true })}
         <p className="syn-muted" style={{ margin: "4px 0 0", fontSize: 12 }}>{L("Variables are inserted as JSON text, inside quotes. Redirects are not followed; the request stops after 15 seconds.")}</p>
       </>

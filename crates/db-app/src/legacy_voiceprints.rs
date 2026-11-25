@@ -20,10 +20,26 @@ const LEGACY_TABLES: [(&str, &str, &str); 2] = [
 
 /// Supprime chaque secret référencé, puis les tables. Si un secret résiste,
 /// les tables restent pour que le prochain lancement réessaie.
+///
+/// `delete_secret` est appelé dans le contexte async de l'appelant : il ne
+/// doit pas bloquer sur un runtime (le trousseau Linux le fait). Le plugin
+/// de transcription passe donc par `legacy_voiceprint_secrets`, efface les
+/// secrets hors du runtime, puis appelle `drop_legacy_voiceprint_tables`
+/// (issue 709).
 pub async fn purge_legacy_voiceprints(
     pool: &SqlitePool,
     mut delete_secret: impl FnMut(&str, &str) -> Result<(), String>,
 ) -> Result<(), String> {
+    for (scope, key) in legacy_voiceprint_secrets(pool).await? {
+        delete_secret(&scope, &key)?;
+    }
+    drop_legacy_voiceprint_tables(pool).await
+}
+
+/// Coordonnées (portée, clé) des secrets d'empreintes vocales héritées,
+/// dans l'ordre des tables.
+pub async fn legacy_voiceprint_secrets(pool: &SqlitePool) -> Result<Vec<(String, String)>, String> {
+    let mut out = Vec::new();
     for (table, select, _) in LEGACY_TABLES {
         let exists: i64 =
             sqlx::query_scalar("SELECT count(*) FROM sqlite_master WHERE type='table' AND name=?")
@@ -38,10 +54,14 @@ pub async fn purge_legacy_voiceprints(
             .fetch_all(pool)
             .await
             .map_err(|error| error.to_string())?;
-        for (scope, key) in &secrets {
-            delete_secret(scope, key)?;
-        }
+        out.extend(secrets);
     }
+    Ok(out)
+}
+
+/// Supprime les tables d'empreintes vocales héritées, une fois leurs secrets
+/// effacés.
+pub async fn drop_legacy_voiceprint_tables(pool: &SqlitePool) -> Result<(), String> {
     for (_, _, drop) in LEGACY_TABLES {
         sqlx::query(drop)
             .execute(pool)

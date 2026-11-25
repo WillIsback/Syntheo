@@ -122,9 +122,30 @@ describe("workflow editor", () => {
     });
     render(<WorkflowBuilder workflow={workflow} onChange={vi.fn()} />);
     expect(document.querySelector("[data-leaves-computer]")).toBeTruthy();
-    expect(
-      screen.getByText("Use an http:// or https:// address."),
-    ).toBeTruthy();
+    expect(screen.getByText(/Use an https:\/\/ address/)).toBeTruthy();
+  });
+
+  // Issue 703 : même règle que les serveurs d'inférence.
+  it("refuses public cleartext HTTP and flags private HTTP", () => {
+    const render1 = (url: string) =>
+      render(
+        <WorkflowBuilder
+          workflow={createEmptyWorkflow({
+            steps: [{ id: "w", type: "webhook", url, body: "{}" }],
+          })}
+          onChange={vi.fn()}
+        />,
+      );
+    const { unmount } = render1("http://example.com/hook");
+    expect(screen.getByText(/Use an https:\/\/ address/)).toBeTruthy();
+    unmount();
+    const second = render1("http://192.168.1.20:5678/webhook");
+    expect(screen.queryByText(/Use an https:\/\/ address/)).toBeNull();
+    expect(document.querySelector("[data-cleartext-notice]")).toBeTruthy();
+    second.unmount();
+    render1("https://n8n.example.com/webhook");
+    expect(document.querySelector("[data-cleartext-notice]")).toBeNull();
+    expect(screen.queryByText(/Use an https:\/\/ address/)).toBeNull();
   });
 
   it("groups the advanced actions under Advanced in the add menu", () => {
@@ -176,5 +197,26 @@ describe("command confirmation", () => {
     fireEvent.click(screen.getByRole("button", { name: "Do not run" }));
     fireEvent.click(screen.getByRole("button", { name: "Allow and run" }));
     expect(onAnswer.mock.calls).toEqual([[false], [true]]);
+  });
+
+  // Issue 656 : la fenêtre montre les valeurs réelles de cette exécution,
+  // avec l'argument tel que saisi en dessous.
+  it("shows the real values with the typed argument below", () => {
+    render(
+      <Dialog open>
+        <CommandConfirmationContent
+          pending={{
+            program: "/usr/bin/publish",
+            args: ["--file", "{{title}}.md"],
+            renderedArgs: ["--file", "Planning.md"],
+            workflowTitle: "Publish",
+          }}
+          onAnswer={vi.fn()}
+        />
+      </Dialog>,
+    );
+    expect(screen.getByText("Planning.md")).toBeTruthy();
+    expect(screen.getByText("Entered as {{title}}.md")).toBeTruthy();
+    expect(screen.queryAllByText(/Entered as --file/)).toHaveLength(0);
   });
 });

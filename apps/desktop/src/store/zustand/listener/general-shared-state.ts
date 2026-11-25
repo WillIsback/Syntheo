@@ -29,6 +29,14 @@ export type LivePause = {
   phase: "pausing" | "paused";
 };
 
+export type MainElapsedOffset = { sessionId: string; seconds: number };
+
+/** État du minuteur diffusé par la fenêtre principale (issues 353 et 716). */
+export type LiveTimingState = {
+  pause: LivePause | null;
+  offset: MainElapsedOffset | null;
+};
+
 export const TRANSCRIPTION_STALL_AMPLITUDE_THRESHOLD = 0.05;
 export const TRANSCRIPTION_STALL_AUDIBLE_SECONDS = 45;
 export const TRANSCRIPTION_FINAL_STALL_AUDIBLE_SECONDS = 90;
@@ -75,6 +83,9 @@ export type GeneralState = {
     pause: LivePause | null;
     // Durée écoutée avant la dernière reprise : le minuteur exclut les pauses.
     elapsedOffsetSeconds: number;
+    // Fenêtres secondaires (note détachée) : cumul reçu de la fenêtre
+    // principale, seule à le connaître après une reprise (issue 716).
+    mainElapsedOffset: MainElapsedOffset | null;
   };
 };
 
@@ -110,6 +121,7 @@ export const initialLiveState: LiveState = {
   triggerAppIds: null,
   pause: null,
   elapsedOffsetSeconds: 0,
+  mainElapsedOffset: null,
 };
 
 export const initialGeneralState: GeneralState = {

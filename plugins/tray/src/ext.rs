@@ -34,6 +34,11 @@ const TRAY_ID: &str = "syntheo-tray";
 static IS_RECORDING: AtomicBool = AtomicBool::new(false);
 static IS_DEGRADED: AtomicBool = AtomicBool::new(false);
 static START_DISABLED: AtomicBool = AtomicBool::new(false);
+/// Fond de la zone de notification au dernier affichage (issue 721).
+#[cfg(target_os = "windows")]
+static LIGHT_TRAY: AtomicBool = AtomicBool::new(false);
+#[cfg(target_os = "windows")]
+static THEME_WATCH: Mutex<Option<JoinHandle<()>>> = Mutex::new(None);
 static ANIMATION_TASK: Mutex<Option<JoinHandle<()>>> = Mutex::new(None);
 static MENU_BAR_TITLE: Mutex<Option<String>> = Mutex::new(None);
 static RECORDING_TITLE: Mutex<Option<String>> = Mutex::new(None);
@@ -203,6 +208,8 @@ impl<'a, M: tauri::Manager<tauri::Wry>> Tray<'a, tauri::Wry, M> {
         crate::macos_position::seed_default_position(TRAY_ID);
 
         builder.build(app)?;
+        #[cfg(target_os = "windows")]
+        Self::watch_taskbar_theme(app);
         #[cfg(target_os = "macos")]
         crate::macos_position::apply_autosave_name(app, TRAY_ID);
         #[cfg(target_os = "macos")]
@@ -366,6 +373,33 @@ impl<'a, M: tauri::Manager<tauri::Wry>> Tray<'a, tauri::Wry, M> {
             (!title.is_empty()).then(|| title.to_string())
         });
         Self::refresh_menu_bar_title(self.manager.app_handle())
+    }
+
+    /// Suit le thème de la barre des tâches à chaud (issue 721) : relu toutes
+    /// les deux secondes ; un changement redessine l'icône (l'animation
+    /// d'enregistrement suit à l'image suivante).
+    #[cfg(target_os = "windows")]
+    fn watch_taskbar_theme(app: &AppHandle<tauri::Wry>) {
+        LIGHT_TRAY.store(
+            crate::tray_icon::tray_on_light_background(),
+            Ordering::SeqCst,
+        );
+        let mut watch = THEME_WATCH.lock().unwrap();
+        if watch.is_some() {
+            return;
+        }
+        let app = app.clone();
+        *watch = Some(tauri::async_runtime::spawn(async move {
+            let mut interval = tokio::time::interval(std::time::Duration::from_secs(2));
+            loop {
+                interval.tick().await;
+                let light = crate::tray_icon::tray_on_light_background();
+                if LIGHT_TRAY.swap(light, Ordering::SeqCst) != light {
+                    tracing::info!(light, "tray_theme_changed");
+                    let _ = Self::refresh_icon(&app);
+                }
+            }
+        }));
     }
 
     pub fn set_degraded(&self, degraded: bool) -> Result<()> {

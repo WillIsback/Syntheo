@@ -42,6 +42,11 @@ msgstr "“{title}” ran on this note"
 msgid "(default)"
 msgstr "(default)"
 
+#. placeholder {0}: result.controls.sectionsMatchedNear
+#: src/mesure/measure-dialog.tsx
+msgid "(including {0} with a corrected heading)"
+msgstr "(including {0} with a corrected heading)"
+
 #: src/mesure/measure-dialog.tsx
 msgid "(measured as a whole)"
 msgstr "(measured as a whole)"
@@ -131,8 +136,8 @@ msgid "{chain} · never run"
 msgstr "{chain} · never run"
 
 #: src/mesure/measure-dialog.tsx
-msgid "{content} words of content reworked per 100 generated, plus {lexical} words of names or acronyms corrected."
-msgstr "{content} words of content reworked per 100 generated, plus {lexical} words of names or acronyms corrected."
+msgid "{content} words of content reworked per 100 generated, plus {lexicalWords}."
+msgstr "{content} words of content reworked per 100 generated, plus {lexicalWords}."
 
 #: src/folders/project/folder-subfolders.tsx
 #: src/search/unified/labels.ts
@@ -146,6 +151,10 @@ msgstr "{count, plural, one {# reply copied} other {# replies copied}}"
 #: src/session/components/speaker-naming/bar.tsx
 msgid "{count, plural, one {# speaker to name} other {# speakers to name}}"
 msgstr "{count, plural, one {# speaker to name} other {# speakers to name}}"
+
+#: src/settings/ai/llm/labels.ts
+msgid "{count, plural, one {Connected · # model available} other {Connected · # models available}}"
+msgstr "{count, plural, one {Connected · # model available} other {Connected · # models available}}"
 
 #: src/shared/ui/localized-toaster.tsx
 msgid "{count, plural, one {second} other {seconds}}"
@@ -162,6 +171,10 @@ msgstr "{count} more"
 #: src/session/components/outer-header/overflow/export-document.ts
 msgid "{day} at {time}"
 msgstr "{day} at {time}"
+
+#: src/mesure/measure-dialog.tsx
+msgid "{differences, plural, one {# difference} other {# differences}}"
+msgstr "{differences, plural, one {# difference} other {# differences}}"
 
 #: src/meeting-float/overlay/bar.tsx
 msgid "{duration}, back to the note"
@@ -186,6 +199,10 @@ msgstr "{hiddenCount, plural, one {See the previous meeting} other {See the # pr
 #: src/session/components/living-document/meeting-type-picker.tsx
 msgid "{inheritedTitle} — folder template"
 msgstr "{inheritedTitle} — folder template"
+
+#: src/mesure/measure-dialog.tsx
+msgid "{lexical, plural, one {# word of names or acronyms corrected} other {# words of names or acronyms corrected}}"
+msgstr "{lexical, plural, one {# word of names or acronyms corrected} other {# words of names or acronyms corrected}}"
 
 #: src/settings/ai/stt/language-warning.tsx
 msgid "{model} can't transcribe {languages}. Try another model or change your spoken languages."
@@ -258,6 +275,10 @@ msgstr "{title} deleted"
 #: src/session/components/speaker-naming/speaker-card.tsx
 msgid "{turns, plural, one {# turn} other {# turns}}"
 msgstr "{turns, plural, one {# turn} other {# turns}}"
+
+#: src/mesure/measure-dialog.tsx
+msgid "{words, plural, one {# word} other {# words}}"
+msgstr "{words, plural, one {# word} other {# words}}"
 
 #: src/templates/template-form.tsx
 msgid "+ Add"
@@ -525,12 +546,9 @@ msgstr "Agent skills"
 msgid "Agreement"
 msgstr "Agreement"
 
-#. placeholder {0}: agreementPercent(matrix)?.toFixed(1)
-#. placeholder {1}: labeledCount(matrix)
-#. placeholder {2}: matrix.ruleVersion
 #: src/mesure/measure-dialog.tsx
-msgid "Agreement: {0}% on {1} differences (rule {2})."
-msgstr "Agreement: {0}% on {1} differences (rule {2})."
+msgid "Agreement: {percent}% on {counted} (rule {rule})."
+msgstr "Agreement: {percent}% on {counted} (rule {rule})."
 
 #: src/contacts/details-sections.tsx
 msgid "AI-generated summary of all interactions and notes with this contact will appear here. This will synthesize key discussion points, action items, and relationship context across all meetings and notes."
@@ -658,10 +676,22 @@ msgstr "Are you in a meeting?"
 msgid "Argument {position}"
 msgstr "Argument {position}"
 
+#: src/automations/action-runners.ts
+msgid "Argument {position} starts with \"-\" or \"@\" once its variables are filled in, so the command did not run. Attach the variable to its option, for example --file={{…}}."
+msgstr "Argument {position} starts with \"-\" or \"@\" once its variables are filled in, so the command did not run. Attach the variable to its option, for example --file={{…}}."
+
 #: src/automations/command-confirmation-dialog.tsx
 #: src/settings/automations/step-forms.tsx
 msgid "Arguments"
 msgstr "Arguments"
+
+#: src/mesure/measure-dialog.tsx
+msgid "Artifact"
+msgstr "Artifact"
+
+#: src/mesure/measure-dialog.tsx
+msgid "Artifacts: {countedDifferences} ({countedWords}), left out of the agreement."
+msgstr "Artifacts: {countedDifferences} ({countedWords}), left out of the agreement."
 
 #: src/chat/components/input/index.tsx
 msgid "Ask anything"
@@ -722,6 +752,10 @@ msgstr "Audio could not be deleted"
 #: src/stt/audio-import-feedback.ts
 msgid "Audio import failed"
 msgstr "Audio import failed"
+
+#: src/stt/audio-import-feedback.ts
+msgid "Audio import interrupted"
+msgstr "Audio import interrupted"
 
 #: src/store/zustand/listener/general-live-helpers.ts
 msgid "Audio retry failed"
@@ -852,6 +886,10 @@ msgstr "beta, measure, rework, sent version, pilot"
 #: src/settings/privacy/index.tsx
 msgid "Beta: measure rework"
 msgstr "Beta: measure rework"
+
+#: src/settings/developers/webhooks.tsx
+msgid "Blocked: use https://, or http:// only to this computer or a private network."
+msgstr "Blocked: use https://, or http:// only to this computer or a private network."
 
 #: src/settings/general/notification.tsx
 msgid "Bloom"
@@ -1034,6 +1072,10 @@ msgstr "Choose a language model in Settings to propose the agenda."
 #: src/folders/project/folder-thread-card.tsx
 msgid "Choose a language model in Settings to write the thread."
 msgstr "Choose a language model in Settings to write the thread."
+
+#: src/dictation/shortcut-error.ts
+msgid "Choose a shortcut with Control, Alt, Shift, or Command."
+msgstr "Choose a shortcut with Control, Alt, Shift, or Command."
 
 #: src/store/zustand/listener/general-live-helpers.ts
 msgid "Choose a working audio device and retry. Audio missing during this interruption cannot be recovered."
@@ -1273,11 +1315,6 @@ msgstr "Configure your summary server in Settings to get section suggestions."
 #: src/session/components/note-input/transcript/renderer/speaker-assign.tsx
 msgid "Confirm"
 msgstr "Confirm"
-
-#. placeholder {0}: models.length
-#: src/settings/ai/llm/server-card.tsx
-msgid "Connected · {0} models available"
-msgstr "Connected · {0} models available"
 
 #. placeholder {0}: state.latencyMs
 #: src/settings/ai/shared/server-card.tsx
@@ -1764,6 +1801,10 @@ msgstr "Documentation"
 msgid "Done"
 msgstr "Done"
 
+#: src/mesure/measure-dialog.tsx
+msgid "Doubtful measurement: read these numbers with care."
+msgstr "Doubtful measurement: read these numbers with care."
+
 #. placeholder {0}: size(models.presentBytes)
 #. placeholder {1}: size(models.totalBytes)
 #: src/settings/ai/stt/on-device-card.tsx
@@ -1988,6 +2029,10 @@ msgstr "Enter a valid folder name."
 msgid "Enter another name"
 msgstr "Enter another name"
 
+#: src/automations/command-confirmation-dialog.tsx
+msgid "Entered as {arg}"
+msgstr "Entered as {arg}"
+
 #: src/mesure/beta-data.tsx
 msgid "Erase all measurements and my pseudonym"
 msgstr "Erase all measurements and my pseudonym"
@@ -2004,6 +2049,10 @@ msgstr "Esc"
 #: src/composer/index.tsx
 msgid "Esc to dismiss"
 msgstr "Esc to dismiss"
+
+#: src/dictation/shortcut-error.ts
+msgid "Escape is reserved for cancelling dictation. Choose another key."
+msgstr "Escape is reserved for cancelling dictation. Choose another key."
 
 #: src/session/components/capsule/import-progress.tsx
 msgid "Estimating…"
@@ -2106,6 +2155,10 @@ msgstr "Failed to copy the note"
 #: src/templates/template-sidebar.tsx
 msgid "Favorites"
 msgstr "Favorites"
+
+#: src/mesure/measure-dialog.tsx
+msgid "Fewer than half of the headings were found: the text was measured as a whole."
+msgstr "Fewer than half of the headings were found: the text was measured as a whole."
 
 #: src/main/windows-title-bar.tsx
 msgid "File"
@@ -2259,11 +2312,8 @@ msgstr "Full Screen"
 msgid "General templates"
 msgstr "General templates"
 
-#: src/session/components/note-input/enhanced/index.tsx
-msgid "Generate summary"
-msgstr "Generate summary"
-
 #: src/session/components/capsule/index.tsx
+#: src/session/components/note-input/enhanced/index.tsx
 msgid "Generate the summary"
 msgstr "Generate the summary"
 
@@ -2307,6 +2357,10 @@ msgstr "Get your attention when a summary is ready in the background."
 #: src/automations/action-runners.ts
 msgid "Give the vault note a title first."
 msgstr "Give the vault note a title first."
+
+#: src/dictation/shortcut-error.ts
+msgid "Global shortcuts are not available in this desktop session: dictation by shortcut is not available."
+msgstr "Global shortcuts are not available in this desktop session: dictation by shortcut is not available."
 
 #: src/settings/ai/stt/on-device-card.tsx
 msgid "Go back to the server"
@@ -2404,6 +2458,10 @@ msgstr "Help Syntheo read meeting activity"
 #: src/chat/components/body/empty.tsx
 msgid "Hi, I'm Syntheo AI. Set up a language model and I'll be ready to help."
 msgstr "Hi, I'm Syntheo AI. Set up a language model and I'll be ready to help."
+
+#: src/mesure/measure-dialog.tsx
+msgid "Hidden"
+msgstr "Hidden"
 
 #: src/settings/general/notification.tsx
 msgid "Hide all notification panels, Dock alerts, and completion sounds."
@@ -2636,6 +2694,10 @@ msgstr "Keep Syntheo running to use your shortcut in other apps."
 msgid "Keep this version"
 msgstr "Keep this version"
 
+#: src/settings/ai/shared/cleartext-confirmations.ts
+msgid "Keep unencrypted HTTP"
+msgstr "Keep unencrypted HTTP"
+
 #: src/settings/ai/shared/server-card.tsx
 msgid "Key refused"
 msgstr "Key refused"
@@ -2740,6 +2802,10 @@ msgstr "Leave the folder"
 #: src/stt/batch-eta.ts
 msgid "Less than a minute remaining"
 msgstr "Less than a minute remaining"
+
+#: src/mesure/measure-dialog.tsx
+msgid "Less than half of the generated words were found in the sent version."
+msgstr "Less than half of the generated words were found in the sent version."
 
 #: src/automations/labels.ts
 msgid "Lets you know when the automation has finished."
@@ -2975,6 +3041,10 @@ msgstr "Measure"
 #: src/settings/ai/stt/on-device-card.tsx
 msgid "Measure again"
 msgstr "Measure again"
+
+#: src/session/components/living-document/summary-switcher-view.tsx
+msgid "Measure again (rule updated)"
+msgstr "Measure again (rule updated)"
 
 #: src/mesure/measure-dialog.tsx
 msgid "Measure rework"
@@ -3213,6 +3283,10 @@ msgstr "Minimize"
 msgid "Missing output"
 msgstr "Missing output"
 
+#: src/settings/ai/stt/server-card.tsx
+msgid "model"
+msgstr "model"
+
 #: src/settings/ai/llm/server-card.tsx
 #: src/settings/ai/stt/server-card.tsx
 #: src/settings/search-index.ts
@@ -3263,6 +3337,10 @@ msgstr "More actions"
 #: src/settings/ai/llm/index.tsx
 msgid "More effort gives finer summaries, but slower. Auto leaves it to the server."
 msgstr "More effort gives finer summaries, but slower. Auto leaves it to the server."
+
+#: src/mesure/measure-dialog.tsx
+msgid "More than a tenth of the generated words are in sections that were not found in the sent version."
+msgstr "More than a tenth of the generated words are in sections that were not found in the sent version."
 
 #: src/settings/automations/workflow-test-panel.tsx
 msgid "most recent"
@@ -3550,6 +3628,10 @@ msgstr "No meeting type found"
 msgid "No meetings yet"
 msgstr "No meetings yet"
 
+#: src/store/zustand/listener/mic-fallback.ts
+msgid "No microphone available"
+msgstr "No microphone available"
+
 #: src/settings/general/audio-settings.tsx
 msgid "No microphone detected. Plug in a microphone or check permissions."
 msgstr "No microphone detected. Plug in a microphone or check permissions."
@@ -3673,6 +3755,11 @@ msgstr "Not enough free disk space for the models (2 GB needed)."
 #: src/settings/ai/stt/on-device-card.tsx
 msgid "not enough free memory (1.5 GB needed)"
 msgstr "not enough free memory (1.5 GB needed)"
+
+#: src/session/hooks/useGenerateSummary.ts
+#: src/shared/service-error.ts
+msgid "Not enough transcript was recorded to write a summary."
+msgstr "Not enough transcript was recorded to write a summary."
 
 #: src/services/enhancer/eligibility.ts
 msgid "Not enough words recorded ({wordCount}/{minWords} minimum)"
@@ -3922,6 +4009,10 @@ msgstr "Open permissions"
 msgid "Open points"
 msgstr "Open points"
 
+#: src/settings/ai/shared/cleartext-confirmations.ts
+msgid "Open settings"
+msgstr "Open settings"
+
 #: src/composer/index.tsx
 #: src/onboarding/final.tsx
 #: src/services/enhancer/summary-notification.ts
@@ -3990,6 +4081,10 @@ msgstr "Opens your web browser."
 #: src/services/notification-labels.ts
 msgid "Options"
 msgstr "Options"
+
+#: src/stt/audio-import-feedback.ts
+msgid "Opus files (.ogg, .opus, .webm in Opus) are not supported yet: convert the file to MP3, M4A or WAV, then import it again."
+msgstr "Opus files (.ogg, .opus, .webm in Opus) are not supported yet: convert the file to MP3, M4A or WAV, then import it again."
 
 #: src/contacts/details-organization.tsx
 msgid "Organization"
@@ -4252,6 +4347,10 @@ msgstr "Proposed edit to the summary"
 #: src/session/components/living-document/summary-review.tsx
 msgid "Proposed summary edit"
 msgstr "Proposed summary edit"
+
+#: src/settings/ai/stt/server-card.tsx
+msgid "protocol"
+msgstr "protocol"
 
 #: src/settings/ai/stt/server-card.tsx
 #: src/settings/search-index.ts
@@ -4938,6 +5037,10 @@ msgid "Sentences that come from your notes appear in green. When off, your notes
 msgstr "Sentences that come from your notes appear in green. When off, your notes are shown in a separate block."
 
 #: src/settings/ai/stt/server-card.tsx
+msgid "server address"
+msgstr "server address"
+
+#: src/settings/ai/stt/server-card.tsx
 #: src/settings/search-index.ts
 msgid "Server address"
 msgstr "Server address"
@@ -4963,6 +5066,11 @@ msgstr "Server that writes the summary"
 msgid "Session title"
 msgstr "Session title"
 
+#. placeholder {0}: managedParts.join(", ")
+#: src/settings/ai/stt/server-card.tsx
+msgid "Set by your administrator: {0}."
+msgstr "Set by your administrator: {0}."
+
 #: src/session/components/note-input/enhanced/index.tsx
 #: src/settings/ai/llm/index.tsx
 #: src/settings/ai/stt/server-card.tsx
@@ -4986,6 +5094,10 @@ msgstr "Set up a language model (an OpenAI-compatible endpoint on your infrastru
 #: src/session/components/note-input/enhanced/config-error.tsx
 msgid "Set up AI summaries"
 msgstr "Set up AI summaries"
+
+#: src/session/hooks/useGenerateSummary.ts
+msgid "Set up AI summaries first."
+msgstr "Set up AI summaries first."
 
 #: src/session/components/note-input/enhanced-actions.ts
 msgid "Set up Intelligence in Settings before regenerating this summary."
@@ -5134,6 +5246,10 @@ msgstr "Something went wrong"
 #: src/session/components/note-input/enhanced/enhance-error.tsx
 msgid "Something went wrong while generating the summary."
 msgstr "Something went wrong while generating the summary."
+
+#: src/shared/service-error.ts
+msgid "Something went wrong. Try again."
+msgstr "Something went wrong. Try again."
 
 #: src/contacts/related-notes.tsx
 #: src/contacts/shared.tsx
@@ -5367,6 +5483,11 @@ msgid "Summary"
 msgstr "Summary"
 
 #: src/session/components/living-document/summary-switcher-view.tsx
+msgctxt "note view tab"
+msgid "Summary"
+msgstr "Summary"
+
+#: src/session/components/living-document/summary-switcher-view.tsx
 msgid "Summary · v{shownVersion}"
 msgstr "Summary · v{shownVersion}"
 
@@ -5395,6 +5516,10 @@ msgstr "Summary format cannot be empty."
 #: src/session/components/note-input/enhanced/enhance-error.tsx
 msgid "Summary generation failed"
 msgstr "Summary generation failed"
+
+#: src/session/hooks/useGenerateSummary.ts
+msgid "Summary generation is not ready yet."
+msgstr "Summary generation is not ready yet."
 
 #: src/templates/template-preview.tsx
 msgid "Summary preview"
@@ -5564,6 +5689,15 @@ msgstr "Syntheo structures the summary itself, without a fixed template. Used wh
 msgid "Syntheo uses it to recognize you among the participants of your meetings, so you are not counted twice. It stays on this device."
 msgstr "Syntheo uses it to recognize you among the participants of your meetings, so you are not counted twice. It stays on this device."
 
+#: src/session/components/living-document/transcription-failure.tsx
+#: src/stt/audio-import-feedback.ts
+msgid "Syntheo was closed before the import finished. Import the file again."
+msgstr "Syntheo was closed before the import finished. Import the file again."
+
+#: src/stt/audio-import-feedback.ts
+msgid "Syntheo was closed before the import of {name} finished. Import the file again."
+msgstr "Syntheo was closed before the import of {name} finished. Import the file again."
+
 #: src/stt/auto-stop.ts
 msgid "Syntheo will stop listening in {seconds} seconds."
 msgstr "Syntheo will stop listening in {seconds} seconds."
@@ -5584,6 +5718,14 @@ msgstr "Synthesis · connected"
 #: src/sidebar/settings-server-status.tsx
 msgid "Synthesis · disabled"
 msgstr "Synthesis · disabled"
+
+#: src/sidebar/settings-server-status.tsx
+msgid "Synthesis · invalid address"
+msgstr "Synthesis · invalid address"
+
+#: src/sidebar/settings-server-status.tsx
+msgid "Synthesis · key refused"
+msgstr "Synthesis · key refused"
 
 #: src/sidebar/settings-server-status.tsx
 msgid "Synthesis · no server"
@@ -5769,6 +5911,10 @@ msgstr "Text to correct not found"
 msgid "The {0} command on your PATH opens the desktop app. Use the CLI's absolute path."
 msgstr "The {0} command on your PATH opens the desktop app. Use the CLI's absolute path."
 
+#: src/dictation/shortcut-error.ts
+msgid "The {key} key cannot be used for dictation shortcuts on Wayland. Choose another key."
+msgstr "The {key} key cannot be used for dictation shortcuts on Wayland. Choose another key."
+
 #: src/automations/action-runners.ts
 msgid "The address answered with the status {status}."
 msgstr "The address answered with the status {status}."
@@ -5800,6 +5946,10 @@ msgstr "The audio transcription failed."
 #: src/settings/ai/shared/cleartext-warning.tsx
 msgid "The audio, your notes and the API key would travel in clear text on the network. On another network, or with Tailscale stopped, another machine can answer at this address. Prefer HTTPS: tailscale serve publishes your server at https://machine.tailnet.ts.net with an automatic certificate."
 msgstr "The audio, your notes and the API key would travel in clear text on the network. On another network, or with Tailscale stopped, another machine can answer at this address. Prefer HTTPS: tailscale serve publishes your server at https://machine.tailnet.ts.net with an automatic certificate."
+
+#: src/mesure/measure-dialog.tsx
+msgid "The automatic class appears once you have chosen yours. Choose Artifact when the difference is not a real one (a formatting or reading error)."
+msgstr "The automatic class appears once you have chosen yours. Choose Artifact when the difference is not a real one (a formatting or reading error)."
 
 #: src/templates/auto-form.tsx
 msgid "The Automatic format is unavailable."
@@ -5849,6 +5999,10 @@ msgstr "The command was not confirmed, so it did not run."
 msgid "The computer is on battery or in power saving mode: plug it in or switch to performance mode, then run the test again."
 msgstr "The computer is on battery or in power saving mode: plug it in or switch to performance mode, then run the test again."
 
+#: src/shared/service-error.ts
+msgid "The connection to the server was interrupted. Try again."
+msgstr "The connection to the server was interrupted. Try again."
+
 #: src/chat/components/message/tool/session-correction.tsx
 msgid "The correction could not be applied."
 msgstr "The correction could not be applied."
@@ -5860,6 +6014,10 @@ msgstr "The counters could not be saved."
 #: src/settings/ai/stt/on-device-card.tsx
 msgid "the data disk could not be checked"
 msgstr "the data disk could not be checked"
+
+#: src/dictation/shortcut-error.ts
+msgid "The dictation shortcut could not be registered: another app may already use it. Choose another shortcut."
+msgstr "The dictation shortcut could not be registered: another app may already use it. Choose another shortcut."
 
 #: src/mesure/measure-dialog.tsx
 msgid "The differences could not be listed."
@@ -5939,6 +6097,10 @@ msgstr "The measurement could not run. Try again."
 msgid "The measurement did not complete: {0}"
 msgstr "The measurement did not complete: {0}"
 
+#: src/settings/ai/shared/cleartext-warning.tsx
+msgid "The meeting content (notes, summaries, transcript) would travel in clear text on the network. On another network, or with Tailscale stopped, another machine can answer at this address. Prefer HTTPS."
+msgstr "The meeting content (notes, summaries, transcript) would travel in clear text on the network. On another network, or with Tailscale stopped, another machine can answer at this address. Prefer HTTPS."
+
 #: src/chat/components/message/tool/move-tools.tsx
 msgid "The meeting contents could not be moved."
 msgstr "The meeting contents could not be moved."
@@ -5988,6 +6150,10 @@ msgstr "The note title"
 #: src/settings/dictation.tsx
 msgid "The one that captures your voice."
 msgstr "The one that captures your voice."
+
+#: src/store/zustand/listener/mic-fallback.ts
+msgid "The only remaining input is the computer's sound output, so it is not recorded as your microphone. Plug in a microphone or choose one in the device settings. System audio continues."
+msgstr "The only remaining input is the computer's sound output, so it is not recorded as your microphone. Plug in a microphone or choose one in the device settings. System audio continues."
 
 #: src/settings/automations/step-forms.tsx
 msgid "The only step that leaves your computer: the JSON is sent to the address below. Use an address you trust, such as n8n, Home Assistant or a home server."
@@ -6047,6 +6213,10 @@ msgstr "The selected transcription provider"
 msgid "The sent version could not be measured: {0}"
 msgstr "The sent version could not be measured: {0}"
 
+#: src/mesure/measure-dialog.tsx
+msgid "The sent version still contains HTML codes (such as &eacute;) that could not be read. Drop the file as .docx, or paste it as plain text."
+msgstr "The sent version still contains HTML codes (such as &eacute;) that could not be read. Drop the file as .docx, or paste it as plain text."
+
 #: src/settings/ai/shared/server-card.tsx
 msgid "The server answered with an error (HTTP {status}). It may still be starting: wait a minute, then test again."
 msgstr "The server answered with an error (HTTP {status}). It may still be starting: wait a minute, then test again."
@@ -6059,17 +6229,45 @@ msgstr "The server answers, but neither as an OpenAI server nor as NVIDIA NeMo-S
 msgid "The server answers, but not as an OpenAI-compatible API. Check that the address ends with /v1, then test again."
 msgstr "The server answers, but not as an OpenAI-compatible API. Check that the address ends with /v1, then test again."
 
+#: src/shared/service-error.ts
+msgid "The server could not be reached. Check that it is running and that its address in Settings is correct."
+msgstr "The server could not be reached. Check that it is running and that its address in Settings is correct."
+
+#: src/shared/service-error.ts
+msgid "The server could not process this request ({status}). Check the model and the server settings."
+msgstr "The server could not process this request ({status}). Check the model and the server settings."
+
 #: src/settings/ai/shared/server-card.tsx
 msgid "The server did not answer at {host}. Check that it is running and that you are on the right network (VPN, Tailscale), then test again."
 msgstr "The server did not answer at {host}. Check that it is running and that you are on the right network (VPN, Tailscale), then test again."
+
+#: src/shared/service-error.ts
+msgid "The server is busy or the quota is reached. Try again in a few minutes."
+msgstr "The server is busy or the quota is reached. Try again in a few minutes."
 
 #: src/settings/ai/shared/server-card.tsx
 msgid "The server refused the API key. Check it under “Advanced”, then test again."
 msgstr "The server refused the API key. Check it under “Advanced”, then test again."
 
+#: src/shared/service-error.ts
+msgid "The server refused the request. Check that the API key is allowed to use this model."
+msgstr "The server refused the request. Check that the API key is allowed to use this model."
+
+#: src/shared/service-error.ts
+msgid "The server rejected the API key. Check it in Settings."
+msgstr "The server rejected the API key. Check it in Settings."
+
+#: src/shared/service-error.ts
+msgid "The server returned an error ({status}). Try again later, or check the server logs."
+msgstr "The server returned an error ({status}). Try again later, or check the server logs."
+
 #: src/settings/ai/stt/index.tsx
 msgid "The server that turns speech into text during your meetings. Audio is never written to disk."
 msgstr "The server that turns speech into text during your meetings. Audio is never written to disk."
+
+#: src/shared/service-error.ts
+msgid "The server took too long to answer. Try again."
+msgstr "The server took too long to answer. Try again."
 
 #: src/settings/ai/stt/server-card.tsx
 msgid "The server transcribes with the model it loaded, whatever the model chosen here."
@@ -6078,6 +6276,10 @@ msgstr "The server transcribes with the model it loaded, whatever the model chos
 #: src/shared/long-load-gate.tsx
 msgid "The settings file managed by your organization (managed_settings.json) is invalid, so Syntheo does not start. Your existing data was left unchanged. Contact your administrator: Syntheo will start once the file is fixed."
 msgstr "The settings file managed by your organization (managed_settings.json) is invalid, so Syntheo does not start. Your existing data was left unchanged. Contact your administrator: Syntheo will start once the file is fixed."
+
+#: src/dictation/shortcut-error.ts
+msgid "The shortcut was not set up in time. Try again and approve your desktop's shortcut prompt."
+msgstr "The shortcut was not set up in time. Try again and approve your desktop's shortcut prompt."
 
 #: src/chat/components/message/tool/edit-summary.tsx
 msgid "The summary edit could not be applied."
@@ -6323,9 +6525,17 @@ msgstr "This computer is not eligible: {0}."
 msgid "This correction changes another note: {0}"
 msgstr "This correction changes another note: {0}"
 
+#: src/dictation/shortcut-error.ts
+msgid "This desktop does not offer global shortcuts to apps (Global Shortcuts portal): dictation by shortcut is not available in this session."
+msgstr "This desktop does not offer global shortcuts to apps (Global Shortcuts portal): dictation by shortcut is not available in this session."
+
 #: src/session/components/version-history-dialog.tsx
 msgid "This device"
 msgstr "This device"
+
+#: src/dictation/shortcut-error.ts
+msgid "This dictation shortcut is not valid. Choose another one."
+msgstr "This dictation shortcut is not valid. Choose another one."
 
 #: src/session/components/living-document/summary-review.tsx
 msgid "This edit could not be saved. Try again."
@@ -6379,6 +6589,10 @@ msgstr "This key could not be verified with the provider. Check the connection a
 msgid "This key could not be verified. Check your connection and try again."
 msgstr "This key could not be verified. Check your connection and try again."
 
+#: src/mesure/measure-dialog.tsx
+msgid "This measurement was refused: the comparison failed, so no number is shown or saved for export."
+msgstr "This measurement was refused: the comparison failed, so no number is shown or saved for export."
+
 #: src/session/components/living-document/after-meeting-folder-suggestion.tsx
 msgid "This meeting looks like {folderName} ({reason})"
 msgstr "This meeting looks like {folderName} ({reason})"
@@ -6402,6 +6616,14 @@ msgstr "This note has no summary to edit yet."
 #: src/session/components/note-conflict-banner.tsx
 msgid "This note was edited on another device at the same time. The later edit was kept."
 msgstr "This note was edited on another device at the same time. The later edit was kept."
+
+#: src/shared/service-error.ts
+msgid "This proposal is out of date: the meeting changed after it was created."
+msgstr "This proposal is out of date: the meeting changed after it was created."
+
+#: src/stt/audio-import-feedback.ts
+msgid "This recording is longer than 6 hours: split it into shorter files, then import them."
+msgstr "This recording is longer than 6 hours: split it into shorter files, then import them."
 
 #: src/chat/components/session-provider.tsx
 msgid "This recording is using batch transcription, so the transcript isn't available to chat yet. Ask again after transcription finishes, or switch to a Pro model for live transcription."
@@ -6524,6 +6746,14 @@ msgstr "Transcription · checking…"
 #: src/sidebar/settings-server-status.tsx
 msgid "Transcription · connected"
 msgstr "Transcription · connected"
+
+#: src/sidebar/settings-server-status.tsx
+msgid "Transcription · invalid address"
+msgstr "Transcription · invalid address"
+
+#: src/sidebar/settings-server-status.tsx
+msgid "Transcription · key refused"
+msgstr "Transcription · key refused"
 
 #: src/sidebar/settings-server-status.tsx
 msgid "Transcription · no server"
@@ -6656,13 +6886,29 @@ msgstr "Type a name"
 msgid "Undo"
 msgstr "Undo"
 
+#: src/meeting-float/overlay/dictation.tsx
+msgid "Unencrypted connection to {cleartextHost}: your voice travels in clear text."
+msgstr "Unencrypted connection to {cleartextHost}: your voice travels in clear text."
+
 #: src/settings/ai/shared/cleartext-warning.tsx
 msgid "Unencrypted connection to {host}"
 msgstr "Unencrypted connection to {host}"
 
+#: src/settings/ai/shared/cleartext-confirmations.ts
+msgid "Unencrypted connection to {host}: the audio, your notes and the API key travel in clear text on the network. Keep this address, or switch the server to HTTPS."
+msgstr "Unencrypted connection to {host}: the audio, your notes and the API key travel in clear text on the network. Keep this address, or switch the server to HTTPS."
+
+#: src/stt/useStartListening.ts
+msgid "Unencrypted connection to {host}: the meeting audio travels in clear text on the network."
+msgstr "Unencrypted connection to {host}: the meeting audio travels in clear text on the network."
+
 #: src/settings/ai/shared/cleartext-warning.tsx
 msgid "Unencrypted connection: the audio, your notes and the API key travel in clear text on the network."
 msgstr "Unencrypted connection: the audio, your notes and the API key travel in clear text on the network."
+
+#: src/settings/ai/shared/cleartext-warning.tsx
+msgid "Unencrypted connection: the meeting content travels in clear text on the network."
+msgstr "Unencrypted connection: the meeting content travels in clear text on the network."
 
 #: src/session/components/note-input/transcript/renderer/speaker-participants.ts
 msgid "Unknown"
@@ -6728,6 +6974,7 @@ msgstr "Unreachable"
 #: src/session/components/title-input-field.tsx
 #: src/session/late-filing.ts
 #: src/session/move-note.tsx
+#: src/session/title-content.ts
 #: src/shared/palette-search-groups.tsx
 #: src/shared/ui/resource-list/preview-header.tsx
 #: src/sidebar/toast/undo-delete-toast.tsx
@@ -6813,8 +7060,8 @@ msgid "Use a .txt, .md, .html or .docx file."
 msgstr "Use a .txt, .md, .html or .docx file."
 
 #: src/settings/automations/step-forms.tsx
-msgid "Use an http:// or https:// address."
-msgstr "Use an http:// or https:// address."
+msgid "Use an https:// address, or http:// only to this computer or a private network, without a user name or password."
+msgstr "Use an https:// address, or http:// only to this computer or a private network, without a user name or password."
 
 #: src/templates/auto-form.tsx
 #: src/templates/details.tsx
@@ -6958,6 +7205,10 @@ msgstr "webhook, URL, events, integration, automation"
 #: src/settings/search-index.ts
 msgid "Webhooks"
 msgstr "Webhooks"
+
+#: src/mesure/measure-dialog.tsx
+msgid "Weighted by words: {percent}% on {counted}."
+msgstr "Weighted by words: {percent}% on {counted}."
 
 #: src/onboarding/index.tsx
 msgid "Welcome to Syntheo"

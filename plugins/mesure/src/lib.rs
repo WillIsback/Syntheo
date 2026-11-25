@@ -25,6 +25,10 @@ fn make_specta_builder<R: tauri::Runtime>() -> tauri_specta::Builder<R> {
             commands::measure_differences::<tauri::Wry>,
         ])
         .error_handling(tauri_specta::ErrorHandlingMode::Result)
+        // Source unique de la version de la règle (issue 734) : l'interface
+        // et l'export lisent cette constante, jamais une copie.
+        .constant("RULE_VERSION", syntheo_mesure::RULE_VERSION)
+        .constant("GUARD_VERSION", syntheo_mesure::GUARD_VERSION)
 }
 
 pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {

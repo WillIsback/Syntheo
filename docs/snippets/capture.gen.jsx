@@ -103,7 +103,6 @@ const SYN_LABELS = {
   "Click here, then use your dictation shortcut.": "Cliquez ici, puis utilisez votre raccourci de dictée.",
   "Click the shortcut to record a new key combination. Press Escape to cancel.": "Cliquez sur le raccourci pour enregistrer une nouvelle combinaison de touches. Appuyez sur Échap pour annuler.",
   "Close": "Fermer",
-  "Connected · {0} models available": "Connecté · {0} modèles disponibles",
   "Connected · {0} ms": "Connecté · {0} ms",
   "Contacts": "Contacts",
   "Control listening without reopening Syntheo.": "Contrôler l'écoute sans rouvrir Syntheo.",
@@ -308,6 +307,7 @@ const SYN_LABELS = {
   "vLLM, speaches, faster-whisper-server": "vLLM, speaches, faster-whisper-server",
   "{0}% complete": "{0} % terminé",
   "{count, plural, one {# meeting} other {# meetings}}": "{count, plural, one {# réunion} other {# réunions}}",
+  "{count, plural, one {Connected · # model available} other {Connected · # models available}}": "{count, plural, one {Connecté · # modèle disponible} other {Connecté · # modèles disponibles}}",
   "{duration}, back to the note": "{duration}, revenir à la note",
   "{notice}. Open Syntheo to retry or change devices.": "{notice}. Ouvrez Syntheo pour réessayer ou changer d'appareil.",
   "~{minutes} min left": "reste ~{minutes} min",
@@ -1656,7 +1656,7 @@ const SynSectionIntelligence = ({ focus }) => {
         <section className="syn-srv-card" aria-label={L("My server")}>
           <div className="syn-srv-head">
             <h3>{L("My server")}</h3>
-            {h(SynSrvChip, { server, connectedLabel: connected && models.length ? LF("Connected · {0} models available", { 0: models.length }) : undefined })}
+            {h(SynSrvChip, { server, connectedLabel: connected && models.length ? LP("{count, plural, one {Connected · # model available} other {Connected · # models available}}", models.length) : undefined })}
           </div>
           {h(SynSrvBanner, { server })}
           {h(SynSrvAddress, { server, label: L("Server address (OpenAI-compatible: vLLM, Ollama, llama.cpp, LM Studio)") })}

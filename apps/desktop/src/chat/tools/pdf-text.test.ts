@@ -1,7 +1,7 @@
 import { deflateSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 
-import { extractPdfText, isPdfMaterial } from "./pdf-text";
+import { extractPdfText, inflateZlib, isPdfMaterial } from "./pdf-text";
 
 describe("pdf text extraction", () => {
   it("recognizes PDF materials", () => {
@@ -41,6 +41,32 @@ describe("pdf text extraction", () => {
     await expect(extractPdfText(bytes)).resolves.toBe(
       "Office hours: Friday 2pm",
     );
+  });
+
+  // Issue 654 : une bombe zlib n'est décompressée que jusqu'au plafond.
+  it("stops inflating at the cap", async () => {
+    const bomb = deflateSync(Buffer.alloc(64 * 1024 * 1024));
+    expect(bomb.length).toBeLessThan(200_000);
+
+    const inflated = await inflateZlib(new Uint8Array(bomb), 1_000_000);
+
+    expect(inflated?.length).toBe(1_000_000);
+  });
+
+  it("reads a PDF made of a zlib bomb without decompressing it all", async () => {
+    const bytes = buildPdf(`(Avant) Tj ${"0 ".repeat(20_000_000)}`);
+
+    await expect(extractPdfText(bytes)).resolves.toBe("Avant");
+  });
+
+  // Issue 654 : une parenthèse jamais fermée ne fait plus relire la fin du
+  // flux à chaque position (lecture quadratique).
+  it("stops at an unterminated string in linear time", async () => {
+    const bytes = buildPdf(`(Titre) Tj ${"(a ".repeat(200_000)}`);
+    const started = performance.now();
+
+    await expect(extractPdfText(bytes)).resolves.toBe("Titre");
+    expect(performance.now() - started).toBeLessThan(2_000);
   });
 
   it("returns null for non-PDF bytes", async () => {

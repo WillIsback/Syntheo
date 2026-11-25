@@ -243,7 +243,11 @@ describe("Run a command", () => {
     });
     const result = await runWorkflowStep(command, context());
     expect(effects.confirmCommand).toHaveBeenCalledWith(
-      { program: "/usr/bin/publish", args: ["--file", "{{step:gen}}"] },
+      {
+        program: "/usr/bin/publish",
+        args: ["--file", "{{step:gen}}"],
+        renderedArgs: ["--file", "- Alice: send the deck"],
+      },
       "Tasks to the vault",
     );
     expect(effects.runCommand).toHaveBeenCalledWith(
@@ -285,6 +289,45 @@ describe("Run a command", () => {
     });
     await expect(runWorkflowStep(command, context())).rejects.toThrow(
       "did not finish within 60 seconds",
+    );
+  });
+
+  // Issue 656 : une variable ne devient pas une option du programme.
+  it.each(["--output=/tmp/x", "-rf", "@/home/me/.ssh/id_ed25519"])(
+    "refuses a variable rendered as an option (%s), even when run dry",
+    async (value) => {
+      const injected = step("command", {
+        program: "/usr/bin/publish",
+        args: ["--file", "{{title}}"],
+      });
+      const ctx = context({ dryRun: true });
+      ctx.variables.render = async (text: string) =>
+        text === "{{title}}" ? value : text;
+      await expect(runWorkflowStep(injected, ctx)).rejects.toThrow(
+        'Argument 2 starts with "-" or "@"',
+      );
+      expect(effects.confirmCommand).not.toHaveBeenCalled();
+      expect(effects.runCommand).not.toHaveBeenCalled();
+    },
+  );
+
+  it("keeps an option typed by the user, even with a variable", async () => {
+    effects.confirmCommand.mockResolvedValue(true);
+    effects.runCommand.mockResolvedValue({
+      exit_code: 0,
+      stdout: "",
+      stderr: "",
+      timed_out: false,
+    });
+    const typed = step("command", {
+      program: "/usr/bin/publish",
+      args: ["--file={{step:gen}}", "-v"],
+    });
+    await runWorkflowStep(typed, context());
+    expect(effects.runCommand).toHaveBeenCalledWith(
+      "/usr/bin/publish",
+      ["--file=- Alice: send the deck", "-v"],
+      60,
     );
   });
 

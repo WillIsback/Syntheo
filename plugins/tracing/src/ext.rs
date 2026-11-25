@@ -387,9 +387,10 @@ macro_rules! js_init_script {
             r#"
 (function() {
     function initConsoleOverride() {
-        if (typeof window.__TAURI__ === 'undefined' || 
-            typeof window.__TAURI__.core === 'undefined' ||
-            typeof window.__TAURI__.core.invoke === 'undefined') {
+        // `withGlobalTauri` est coupé (issue 655) : l'IPC passe par
+        // `__TAURI_INTERNALS__`, toujours injecté par Tauri.
+        if (typeof window.__TAURI_INTERNALS__ === 'undefined' ||
+            typeof window.__TAURI_INTERNALS__.invoke === 'undefined') {
             setTimeout(initConsoleOverride, 10);
             return;
         }
@@ -400,7 +401,7 @@ macro_rules! js_init_script {
         const originalWarn = console.warn.bind(console);
         const originalError = console.error.bind(console);
         
-        const invoke = window.__TAURI__.core.invoke;
+        const invoke = window.__TAURI_INTERNALS__.invoke;
         // An Error only keeps its name and code: its message may quote meeting
         // content and is never logged (see `diagnostic_message`). Devtools
         // builds (feature `console-payload`) also send its message and stack.

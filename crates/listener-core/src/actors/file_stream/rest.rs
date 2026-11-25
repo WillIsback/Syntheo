@@ -17,9 +17,15 @@ use syntheo_transcript::{FinalizedWord, WordState};
 use super::{FILE_STREAM_CHANNEL, FileStreamObserver, FileStreamParams, FileStreamProgress};
 use crate::actors::SAMPLE_RATE;
 
-/// Durée d'audio par requête : 3 h de WAV 16 kHz mono font 346 Mo, sous la
-/// limite par défaut du serveur (`--max-upload-mb 512`).
-pub const MAX_REQUEST_SECS: u64 = 3 * 3600;
+/// Durée d'audio par requête : 1 h de WAV 16 kHz mono fait 115 Mo, bien sous
+/// la limite par défaut du serveur (`--max-upload-mb 512`), et sous celles
+/// d'un proxy ou d'un serveur réglé plus bas (issue 714 : une requête de 3 h,
+/// 346 Mo, était refusée en 400).
+pub const MAX_REQUEST_SECS: u64 = 3600;
+
+/// Une tranche refusée pour sa taille (400 ou 413) est recoupée en deux et
+/// renvoyée, jusqu'à cette durée ; en dessous, l'erreur part au repli.
+pub const MIN_REQUEST_SECS: u64 = 5 * 60;
 
 /// Délai accordé à une requête : le temps de l'audio, plus deux minutes. Un
 /// serveur plus lent que le temps réel ne ferait pas mieux par le flux.
@@ -68,12 +74,43 @@ pub async fn rest_file_transcription(
     transcribe_in_requests(params, speakers, samples, observer, MAX_REQUEST_SECS).await
 }
 
+/// Refus d'une requête pour sa taille : 413, ou 400 (certains serveurs et
+/// proxys répondent 400 à un corps trop gros).
+fn rejected_for_size(error: &owhisper_client::Error) -> bool {
+    use owhisper_client::Error;
+    let status = match error {
+        Error::UnexpectedStatus { status, .. } => Some(*status),
+        Error::ProviderFailure { status, .. } => *status,
+        _ => None,
+    };
+    status.is_some_and(|status| status.as_u16() == 400 || status.as_u16() == 413)
+}
+
 async fn transcribe_in_requests(
     params: &FileStreamParams,
     speakers: SpeakerBounds,
     samples: &[i16],
     observer: &dyn FileStreamObserver,
     max_request_secs: u64,
+) -> Result<(Vec<FinalizedWord>, f64), RestFileError> {
+    transcribe_in_requests_down_to(
+        params,
+        speakers,
+        samples,
+        observer,
+        max_request_secs,
+        MIN_REQUEST_SECS,
+    )
+    .await
+}
+
+async fn transcribe_in_requests_down_to(
+    params: &FileStreamParams,
+    speakers: SpeakerBounds,
+    samples: &[i16],
+    observer: &dyn FileStreamObserver,
+    max_request_secs: u64,
+    min_request_secs: u64,
 ) -> Result<(Vec<FinalizedWord>, f64), RestFileError> {
     let mut listen_params = ListenParams {
         model: Some(params.model.clone()),
@@ -111,8 +148,15 @@ async fn transcribe_in_requests(
         });
     }
 
-    for (index, chunk) in samples.chunks(chunk_len.max(1)).enumerate() {
-        let offset_secs = (index * chunk_len) as f64 / f64::from(SAMPLE_RATE);
+    let min_len = ((min_request_secs * u64::from(SAMPLE_RATE)) as usize).max(1);
+    // Tranches à envoyer, dans l'ordre : (début, longueur) en échantillons.
+    let mut pending: std::collections::VecDeque<(usize, usize)> = (0..total)
+        .step_by(chunk_len.max(1))
+        .map(|start| (start, chunk_len.max(1).min(total - start)))
+        .collect();
+    while let Some((start, len)) = pending.pop_front() {
+        let chunk = &samples[start..start + len];
+        let offset_secs = start as f64 / f64::from(SAMPLE_RATE);
         let chunk_secs = chunk.len() as f64 / f64::from(SAMPLE_RATE);
         let request = transcribe_with_nemo_speech_rest(
             &params.base_url,
@@ -122,9 +166,19 @@ async fn transcribe_in_requests(
             SAMPLE_RATE,
             request_timeout(chunk_secs),
         );
-        let transcript = cancellable(request, observer)
-            .await?
-            .map_err(|error| RestFileError::Failed(error.to_string()))?;
+        let transcript = match cancellable(request, observer).await? {
+            Ok(transcript) => transcript,
+            // Tranche trop grosse pour ce serveur : recoupée en deux,
+            // renvoyée avant de passer au flux (issue 714).
+            Err(error) if rejected_for_size(&error) && len / 2 >= min_len => {
+                tracing::warn!(len, "nemo_speech_rest_chunk_split_after_size_refusal");
+                let half = len / 2;
+                pending.push_front((start + half, len - half));
+                pending.push_front((start, half));
+                continue;
+            }
+            Err(error) => return Err(RestFileError::Failed(error.to_string())),
+        };
 
         let mut next_offset = speaker_offset;
         for word in transcript.words {
@@ -144,7 +198,7 @@ async fn transcribe_in_requests(
         }
         speaker_offset = next_offset;
 
-        let sent = (index * chunk_len + chunk.len()).min(total);
+        let sent = (start + len).min(total);
         observer.on_progress(FileStreamProgress {
             fraction: sent as f64 / total.max(1) as f64,
             preview: None,
@@ -332,6 +386,79 @@ mod tests {
             *recorder.fractions.lock().unwrap(),
             [(0.5, false), (1.0, false)]
         );
+    }
+
+    /// Corps de requête plus gros que la limite d'un serveur de test.
+    struct BodyLargerThan(usize);
+
+    impl wiremock::Match for BodyLargerThan {
+        fn matches(&self, request: &wiremock::Request) -> bool {
+            request.body.len() > self.0
+        }
+    }
+
+    // Issue 714 : une tranche refusée pour sa taille est recoupée et
+    // renvoyée, sans repli sur le flux.
+    #[tokio::test]
+    async fn a_chunk_refused_for_its_size_is_split_and_sent_again() {
+        use wiremock::matchers::method;
+        use wiremock::{Mock, MockServer, ResponseTemplate};
+
+        let server = MockServer::start().await;
+        // 2 s d'audio = 64 000 octets de PCM : refusé au-delà de 40 000.
+        Mock::given(method("POST"))
+            .and(BodyLargerThan(40_000))
+            .respond_with(ResponseTemplate::new(413).set_body_string("payload too large"))
+            .expect(1)
+            .mount(&server)
+            .await;
+        Mock::given(method("POST"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "duration": 1.0,
+                "words": [{"word": "a", "start": 0.1, "end": 0.2, "speaker": 1}]
+            })))
+            .expect(2)
+            .mount(&server)
+            .await;
+        let recorder = Recorder::default();
+        let (words, duration) = transcribe_in_requests_down_to(
+            &params(server.uri()),
+            SpeakerBounds::default(),
+            &[0; 32_000],
+            &recorder,
+            2,
+            1,
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(duration, 2.0);
+        let starts: Vec<_> = words.iter().map(|word| word.start_ms).collect();
+        assert_eq!(starts, [100, 1100]);
+    }
+
+    #[tokio::test]
+    async fn a_size_refusal_below_the_minimum_goes_to_the_fallback() {
+        use wiremock::matchers::method;
+        use wiremock::{Mock, MockServer, ResponseTemplate};
+
+        let server = MockServer::start().await;
+        Mock::given(method("POST"))
+            .respond_with(ResponseTemplate::new(400).set_body_string("too big"))
+            .expect(1)
+            .mount(&server)
+            .await;
+        let error = transcribe_in_requests_down_to(
+            &params(server.uri()),
+            SpeakerBounds::default(),
+            &[0; 16_000],
+            &Recorder::default(),
+            1,
+            1,
+        )
+        .await
+        .unwrap_err();
+        assert!(matches!(error, RestFileError::Failed(message) if message.contains("400")));
     }
 
     #[tokio::test]

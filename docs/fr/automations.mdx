@@ -107,7 +107,7 @@ L'étape envoie une requête `POST` avec le « Corps JSON » à l'« Adresse (UR
 - Syntheo ne suit pas les redirections : l'erreur indique l'adresse finale à utiliser. La requête s'arrête au bout de 15 secondes. Toute réponse hors 2xx fait échouer l'étape.
 
 <Warning>
-  Cette étape envoie le contenu de la note hors de votre ordinateur. Utilisez une adresse de confiance, de préférence en HTTPS ou sur votre réseau privé. La requête n'est pas signée et n'est pas réessayée en cas d'échec : ce sont les [webhooks des Paramètres](/fr/reference/webhooks) qui signent leurs livraisons.
+  Cette étape envoie le contenu de la note hors de votre ordinateur. Utilisez une adresse de confiance en HTTPS ; le HTTP non chiffré n'est accepté que vers ce poste ou un réseau privé, avec un rappel. La requête n'est pas signée et n'est pas réessayée en cas d'échec : ce sont les [webhooks des Paramètres](/fr/reference/webhooks) qui signent leurs livraisons.
 </Warning>
 
 ### Lancer une commande
@@ -119,7 +119,9 @@ L'étape lance un programme local avec ses arguments, par exemple un script qui 
 
 Syntheo lance le programme sans interpréteur de commandes : chaque argument est transmis tel quel. `$HOME`, `*`, `;`, `|` ou les redirections ne sont pas interprétés ; pour en avoir besoin, écrivez un script et lancez-le. L'entrée standard est fermée et l'exécution s'arrête au bout de 60 secondes. Un code de sortie différent de 0 fait échouer l'étape, avec la première ligne de l'erreur.
 
-Au premier lancement d'une commande, la fenêtre « Lancer cette commande ? » affiche le programme et chaque argument, tels qu'ils seront transmis. Cliquez sur « Autoriser et lancer » ou sur « Ne pas lancer ». Fermer la fenêtre vaut refus, et sans réponse au bout de 5 minutes, la commande n'est pas lancée. Votre accord est mémorisé pour cette commande exacte, telle que vous l'avez saisie : si vous modifiez le programme ou un argument, Syntheo vous redemande confirmation.
+Un argument dont les variables, une fois remplies, donnent une valeur qui commence par « - » suivi d'un caractère ou par « @ » fait échouer l'étape sans lancer le programme : une note ne peut pas glisser une option. Pour passer une variable comme valeur d'option, accolez-la à l'option dans le même argument, par exemple `--file={{…}}`. Une puce de liste (« - Alice : … ») reste acceptée.
+
+Au premier lancement d'une commande, la fenêtre « Lancer cette commande ? » affiche le programme et chaque argument avec sa valeur réelle pour cette exécution, et, en dessous, l'argument tel que vous l'avez saisi quand il contient des variables. Cliquez sur « Autoriser et lancer » ou sur « Ne pas lancer ». Fermer la fenêtre vaut refus, et sans réponse au bout de 5 minutes, la commande n'est pas lancée. Votre accord est mémorisé pour cette commande exacte, telle que vous l'avez saisie : si vous modifiez le programme ou un argument, Syntheo vous redemande confirmation.
 
 <Warning>
   Le programme s'exécute avec vos droits d'utilisateur. N'autorisez qu'un programme que vous connaissez. Les variables de la note (transcription, titre, texte généré) proviennent de ce qui a été dit en réunion : traitez-les dans votre script comme des données non fiables, sans les exécuter.

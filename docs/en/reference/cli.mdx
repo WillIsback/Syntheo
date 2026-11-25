@@ -134,7 +134,7 @@ Computes how much of a generated summary was reworked before it was sent or publ
 - `--generated` and `--sent`: `.md`, `.txt` or `.html` files in UTF-8 (4 MiB at most), or `.docx` (16 MiB at most, read without network or external entities). The format follows the extension.
 - `--dictionary` (optional): one term per line; a short replacement touching one of these terms counts as a lexical correction.
 
-The calculation strips formatting, splits both texts by the headings of the generated version (a line identical to a heading is enough in the sent version), compares word by word, then classifies each difference:
+The calculation strips formatting, splits both texts by the headings of the generated version (a line identical to a heading is enough in the sent version; in a `.txt` file, a line one word away from a heading not found yet is too), compares word by word, then classifies each difference:
 
 - **lexical**: replacement of 1 to 3 words by 1 to 3 words, one of which looks like a proper noun or an acronym, or is in the dictionary;
 - **content**: everything else, including a proper noun added or removed alone.
@@ -165,6 +165,14 @@ syntheo mesure --generated generated.md --sent published.txt --differences > dif
 To check the classification by hand, `--differences` lists each difference **with its excerpts**, as TSV on standard output, instead of the numbers. The command writes nothing to disk itself and refuses `--json`. A warning on standard error reminds you that the result contains excerpts of the texts: do not share it.
 
 Columns: `n`, `section` (rank of the generated section, `-` outside a section), `type` (`ajout` added, `suppression` deleted or `remplacement` replaced), `classe_auto` (`fond` content or `lexical`), `poids` (words), `genere`, `envoye`, then `classe_vraie`, empty, to fill in a spreadsheet. Tabs and line breaks in excerpts are replaced by spaces.
+
+### Reference: `--gold`
+
+```bash
+syntheo mesure --generated generated.md --sent published.docx --gold published-cleaned.md
+```
+
+`--gold` also measures a sent version **cleaned by hand**: sections renamed as in the generated version, parts outside the summary (header, distribution list) removed. The output gives the usual lines of the automatic measurement, then those of the reference prefixed with `gold_` (without the per-section detail), then `delta_content_per_mille` and `delta_lexical_per_mille`, the automatic minus reference gap. With `--json`, `data` holds `auto`, `gold` and both gaps. `--gold` refuses `--differences`.
 
 ## Help and version
 

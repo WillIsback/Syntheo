@@ -73,22 +73,33 @@ impl AudioInput {
     /// Décode en PCM 16 bits mono à `sample_rate`, **en mémoire**, pour le
     /// flux temps réel (issue 463) : même décodeur que l'import par lot.
     pub(in crate::batch) fn decode_pcm16_mono(&self, sample_rate: u32) -> Result<Vec<i16>, String> {
+        self.check_import_duration()?;
         match self {
             AudioInput::Path(path) => {
                 let source = syntheo_audio_utils::source_from_path(path)
                     .map_err(|error| error.to_string())?;
-                decode_source_pcm16_mono(source, sample_rate)
+                decode_source_pcm16_mono(source, sample_rate, MAX_IMPORT_DURATION)
             }
             AudioInput::Bytes(data) => {
                 let source = syntheo_audio_utils::source_from_bytes(Arc::clone(data))
                     .map_err(|error| error.to_string())?;
-                decode_source_pcm16_mono(source, sample_rate)
+                decode_source_pcm16_mono(source, sample_rate, MAX_IMPORT_DURATION)
             }
+        }
+    }
+
+    /// Durée annoncée par le conteneur au-delà du plafond : refus avant tout
+    /// décodage. Sans durée annoncée, le plafond est vérifié en décodant.
+    fn check_import_duration(&self) -> Result<(), String> {
+        match self.duration() {
+            Some(duration) if duration > MAX_IMPORT_DURATION => Err(RECORDING_TOO_LONG.into()),
+            _ => Ok(()),
         }
     }
 
     /// Décode et découpe en segments MP3 mono, **en mémoire**.
     fn encode_segments(&self, segment_duration: Duration) -> Result<Vec<Vec<u8>>, String> {
+        self.check_import_duration()?;
         match self {
             AudioInput::Path(path) => {
                 let source = syntheo_audio_utils::source_from_path(path)
@@ -106,30 +117,55 @@ impl AudioInput {
     }
 }
 
+/// Durée maximale d'un enregistrement importé (issue 654) : 6 h, soit environ
+/// 690 Mo d'échantillons en mémoire à 16 kHz. Au-delà, l'import est refusé
+/// au lieu d'épuiser la mémoire.
+pub const MAX_IMPORT_DURATION: Duration = Duration::from_secs(6 * 3600);
+
+/// Message stable, reconnu et traduit par l'interface.
+pub const RECORDING_TOO_LONG: &str = "recording_too_long";
+
 /// Les canaux sont mêlés en un seul flux : toutes les voix du fichier.
-fn decode_source_pcm16_mono<S: Source>(source: S, sample_rate: u32) -> Result<Vec<i16>, String> {
+/// Le plafond est vérifié pendant le décodage, et la mémoire réservée de
+/// façon faillible : un fichier sans durée annoncée ne peut pas dépasser
+/// `max_duration`.
+fn decode_source_pcm16_mono<S: Source>(
+    source: S,
+    sample_rate: u32,
+    max_duration: Duration,
+) -> Result<Vec<i16>, String> {
+    let max_samples = (max_duration.as_secs_f64() * f64::from(sample_rate)) as usize;
     let mut samples = Vec::new();
-    syntheo_audio_utils::for_each_resampled_channel_block::<_, syntheo_audio_utils::Error>(
-        source,
-        sample_rate,
-        |channels| {
-            let Some(first) = channels.first() else {
-                return Ok(());
-            };
-            let count = channels.len() as f32;
-            samples.reserve(first.len());
-            for frame in 0..first.len() {
-                let mixed = channels
-                    .iter()
-                    .map(|channel| channel.get(frame).copied().unwrap_or(0.0))
-                    .sum::<f32>()
-                    / count;
-                samples.push(syntheo_audio_utils::f32_to_i16(mixed));
-            }
-            Ok(())
-        },
-    )
-    .map_err(|error| error.to_string())?;
+    let mut too_long = false;
+    let result = syntheo_audio_utils::for_each_resampled_channel_block::<
+        _,
+        syntheo_audio_utils::Error,
+    >(source, sample_rate, |channels| {
+        let Some(first) = channels.first() else {
+            return Ok(());
+        };
+        if samples.len() + first.len() > max_samples {
+            too_long = true;
+            return Err(std::io::Error::other(RECORDING_TOO_LONG).into());
+        }
+        let count = channels.len() as f32;
+        samples
+            .try_reserve(first.len())
+            .map_err(|_| std::io::Error::other("audio_decode_out_of_memory"))?;
+        for frame in 0..first.len() {
+            let mixed = channels
+                .iter()
+                .map(|channel| channel.get(frame).copied().unwrap_or(0.0))
+                .sum::<f32>()
+                / count;
+            samples.push(syntheo_audio_utils::f32_to_i16(mixed));
+        }
+        Ok(())
+    });
+    if too_long {
+        return Err(RECORDING_TOO_LONG.into());
+    }
+    result.map_err(|error| error.to_string())?;
     Ok(samples)
 }
 
@@ -268,6 +304,21 @@ mod tests {
         let seconds = samples.len() as f64 / 16_000.0;
         assert!((seconds - 2.0).abs() < 0.05, "{seconds} s");
         assert!(samples.iter().any(|sample| sample.unsigned_abs() > 8_000));
+    }
+
+    // Issue 654 : un enregistrement plus long que le plafond est refusé
+    // pendant le décodage, même sans durée annoncée, puis d'après sa durée.
+    #[test]
+    fn decoding_stops_past_the_duration_cap() {
+        let data: Arc<[u8]> = Arc::from(sine_wav(3, 16_000).into_boxed_slice());
+        let source = syntheo_audio_utils::source_from_bytes(Arc::clone(&data)).unwrap();
+        assert_eq!(
+            decode_source_pcm16_mono(source, 16_000, Duration::from_secs(2)).unwrap_err(),
+            RECORDING_TOO_LONG
+        );
+        let source = syntheo_audio_utils::source_from_bytes(Arc::clone(&data)).unwrap();
+        assert!(decode_source_pcm16_mono(source, 16_000, Duration::from_secs(4)).is_ok());
+        assert_eq!(MAX_IMPORT_DURATION, Duration::from_secs(21_600));
     }
 
     #[test]

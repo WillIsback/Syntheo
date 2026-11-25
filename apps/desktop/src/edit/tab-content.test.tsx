@@ -127,7 +127,7 @@ describe("TabContentEdit", () => {
 
     expect(
       await screen.findByText(
-        "This proposal is stale. The meeting changed after it was created.",
+        "This proposal is out of date: the meeting changed after it was created.",
       ),
     ).toBeTruthy();
     expect(mocks.close).not.toHaveBeenCalled();

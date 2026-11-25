@@ -42,11 +42,21 @@ vi.mock("~/session/components/note-input/header-shared", () => ({
   getStoredNoteMarkdown: (content: string | undefined) => content?.trim() ?? "",
 }));
 
-import { fileInput, MeasureDialog } from "./measure-dialog";
+import { fileInput, formatOneDecimal, MeasureDialog } from "./measure-dialog";
 
 const SENT = "Le projet avance avec Marten et un secret confidentiel.";
 const RESULT = {
-  ruleVersion: 1,
+  ruleVersion: 2,
+  guardVersion: 1,
+  status: "ok" as "ok" | "doubtful" | "refused",
+  statusReasons: [] as string[],
+  controls: {
+    generatedKeptWords: 4,
+    sectionsMatchedExact: 1,
+    sectionsMatchedNear: 0,
+    deletedSectionWords: 0,
+    residualEntities: 0,
+  },
   aligned: true,
   headingsGenerated: 1,
   headingsMatched: 1,
@@ -119,6 +129,7 @@ describe("MeasureDialog", () => {
     fireEvent.click(screen.getByRole("button", { name: "Measure" }));
 
     await screen.findByText(/words of content reworked per 100 generated/);
+    screen.getByText(/plus 1 word of names or acronyms corrected\./);
     expect(mocks.measure).toHaveBeenCalledWith(
       "# Résumé\n\nLe projet avance avec Martin.",
       { kind: "text", text: SENT, format: "markdown" },
@@ -132,6 +143,79 @@ describe("MeasureDialog", () => {
     for (const leak of ["Marten", "secret", "confidentiel", "Martin"]) {
       expect(saved).not.toContain(leak);
     }
+  });
+
+  // Issue 733 : une mesure refusée n'affiche aucun chiffre ; une mesure
+  // douteuse les affiche grisés, avec la raison.
+  it("shows no number for a refused measurement", async () => {
+    mocks.config.calibration_enabled = false;
+    mocks.measure.mockResolvedValue({
+      status: "ok",
+      data: {
+        ...RESULT,
+        status: "refused",
+        statusReasons: ["entity_left"],
+        controls: { ...RESULT.controls, residualEntities: 3 },
+      },
+    });
+    renderDialog();
+    fireEvent.change(screen.getByLabelText("Sent version"), {
+      target: { value: SENT },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Measure" }));
+
+    await screen.findByText(/This measurement was refused/);
+    expect(screen.getByText(/still contains HTML codes/)).toBeTruthy();
+    expect(screen.queryByText(/words of content reworked/)).toBeNull();
+    expect(screen.queryByText("Generated words")).toBeNull();
+  });
+
+  it("does not calibrate on a refused measurement", async () => {
+    mocks.measure.mockResolvedValue({
+      status: "ok",
+      data: { ...RESULT, status: "refused", statusReasons: ["entity_left"] },
+    });
+    renderDialog();
+    fireEvent.change(screen.getByLabelText("Sent version"), {
+      target: { value: SENT },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Measure" }));
+
+    await screen.findByText(/This measurement was refused/);
+    await waitFor(() =>
+      expect(mocks.executeTransaction).toHaveBeenCalledOnce(),
+    );
+    expect(mocks.measureDifferences).not.toHaveBeenCalled();
+    expect(screen.queryByRole("radiogroup")).toBeNull();
+    expect(screen.queryByText(/Agreement:/)).toBeNull();
+  });
+
+  it("greys a doubtful measurement and says why", async () => {
+    mocks.config.calibration_enabled = false;
+    mocks.measure.mockResolvedValue({
+      status: "ok",
+      data: {
+        ...RESULT,
+        status: "doubtful",
+        statusReasons: ["unmatched_sections"],
+        controls: { ...RESULT.controls, sectionsMatchedNear: 1 },
+      },
+    });
+    renderDialog();
+    fireEvent.change(screen.getByLabelText("Sent version"), {
+      target: { value: SENT },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Measure" }));
+
+    await screen.findByText(/Doubtful measurement/);
+    expect(screen.getByText(/sections that were not found/)).toBeTruthy();
+    expect(screen.getByText(/words of content reworked/)).toBeTruthy();
+    expect(screen.getByText(/with a corrected heading/)).toBeTruthy();
+    expect(
+      document
+        .querySelector("[data-measure-result]")
+        ?.getAttribute("data-measure-status"),
+    ).toBe("doubtful");
   });
 
   it("keeps a pasted HTML version as HTML", async () => {
@@ -198,7 +282,55 @@ describe("MeasureDialog", () => {
         params: unknown[];
       }[][][]
     )[1][0][0].params;
-    expect(matrixParams.slice(1)).toEqual([1, 1, 0, 0, 1]);
+    expect(matrixParams.slice(1)).toEqual([2, 1, 0, 0, 1]);
+  });
+
+  // Issue 735 : étiquetage en aveugle, et classe « artefact » hors matrice.
+  it("hides the automatic class until a class is chosen", async () => {
+    renderDialog();
+    fireEvent.change(screen.getByLabelText("Sent version"), {
+      target: { value: SENT },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Measure" }));
+    await screen.findByText("Marten");
+
+    const automatic = () =>
+      Array.from(document.querySelectorAll("[data-automatic-class]")).map(
+        (cell) => cell.textContent,
+      );
+    expect(automatic()).toEqual(["Hidden", "Hidden"]);
+
+    const groups = screen.getAllByRole("radiogroup");
+    fireEvent.click(
+      groups[0].querySelector('[role="radio"]:nth-child(2)') as Element,
+    );
+    expect(automatic()).toEqual(["Lexical", "Hidden"]);
+
+    // La seconde différence est un artefact : hors matrice, comptée à part.
+    fireEvent.click(
+      groups[1].querySelector('[role="radio"]:nth-child(3)') as Element,
+    );
+    expect(automatic()).toEqual(["Lexical", "Content"]);
+    // Accordés au nombre (passe QA 0.8.1-1 : « 1 différences », « 1 mots »).
+    await screen.findByText(/Agreement: 100.0% on 1 difference \(rule/);
+    screen.getByText(/Weighted by words: 100.0% on 1 word\./);
+    screen.getByText(/Artifacts: 1 difference \(2 words\)/);
+
+    fireEvent.click(screen.getByRole("button", { name: "Copy the matrix" }));
+    const copied = (mocks.copy.mock.calls as unknown as string[][])[0][0];
+    expect(copied).toContain("artefacts\t1");
+    expect(copied).toContain("mots_artefacts\t2");
+    expect(copied).not.toContain("secret");
+
+    fireEvent.click(screen.getByRole("button", { name: "Save the matrix" }));
+    await screen.findByRole("button", { name: "Matrix saved" });
+    const matrixParams = (
+      mocks.executeTransaction.mock.calls as unknown as {
+        params: unknown[];
+      }[][][]
+    )[1][0][0].params;
+    // Les quatre cases seulement : l'artefact n'y figure pas.
+    expect(matrixParams.slice(1)).toEqual([2, 0, 0, 0, 1]);
   });
 
   // Spec §2 : la version générée est le corps produit par Syntheo, avant
@@ -357,5 +489,16 @@ describe("fileInput", () => {
       ok: false,
       reason: "type",
     });
+  });
+});
+
+// Passe QA 0.8.1-2 : décimales au format de la langue de l'interface, à
+// l'affichage seulement.
+describe("formatOneDecimal", () => {
+  it("uses the comma in French and the point in English", () => {
+    expect(formatOneDecimal(0.5, "fr")).toBe("0,5");
+    expect(formatOneDecimal(100, "fr")).toBe("100,0");
+    expect(formatOneDecimal(9.25, "en")).toBe("9.3");
+    expect(formatOneDecimal(null, "fr")).toBe("-");
   });
 });

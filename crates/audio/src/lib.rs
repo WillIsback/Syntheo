@@ -10,6 +10,10 @@ pub enum Error {
     NoInputDevice,
     #[error("mic_open_failed")]
     MicOpenFailed,
+    /// Seule l'entrée par défaut restait, et c'est le « monitor » d'une
+    /// sortie : refusée comme micro (issue 715).
+    #[error("mic_default_is_monitor")]
+    MicDefaultIsMonitor,
     #[error("mic_stream_setup_failed")]
     MicStreamSetupFailed,
     #[error("microphone capture initialization failed: {0}")]

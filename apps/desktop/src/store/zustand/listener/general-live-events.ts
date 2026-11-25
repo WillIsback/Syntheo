@@ -31,7 +31,11 @@ import {
   updateLiveProgress,
 } from "./general-shared";
 import { flushLiveTranscriptBatches } from "./live-transcript-batch";
-import { notifyMicFallback } from "./mic-fallback";
+import {
+  isMicMonitorRefusal,
+  notifyMicFallback,
+  notifyMicMonitorRefused,
+} from "./mic-fallback";
 
 import {
   startSpeakerContextCapture,
@@ -360,11 +364,23 @@ export const createSessionEventHandlers = <T extends LiveStore>(
         });
       else if (payload.error === "audio_mic_ready")
         observeSpeakerMicrophone(targetSessionId, { available: true });
-      else if (payload.error.startsWith("audio_mic_unavailable"))
+      else if (payload.error.startsWith("audio_mic_unavailable")) {
         observeSpeakerMicrophone(targetSessionId, {
           device: null,
           available: false,
         });
+        if (isMicMonitorRefusal(payload.error))
+          notifyMicMonitorRefused(
+            targetSessionId,
+            () =>
+              void openMicrophoneSettings().catch((error) =>
+                console.error(
+                  "[listener] opening device settings failed",
+                  error,
+                ),
+              ),
+          );
+      }
       return;
     }
 

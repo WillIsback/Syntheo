@@ -13,7 +13,8 @@ tauri-plugin = { workspace = true, features = ["build"] }
 
 [dev-dependencies]
 syntheo-specta-export = { workspace = true }
-tokio = { workspace = true, features = ["macros"] }
+tempfile = { workspace = true }
+tokio = { workspace = true, features = ["macros", "rt"] }
 
 [dependencies]
 syntheo-language = { workspace = true, features = ["detect"] }

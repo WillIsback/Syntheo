@@ -11913,6 +11913,7 @@ dependencies = [
  "db-app",
  "db-core",
  "hmac 0.13.0",
+ "owhisper-client",
  "reqwest 0.13.5",
  "same-file",
  "serde",
@@ -12155,7 +12156,9 @@ dependencies = [
  "tauri-plugin",
  "tauri-plugin-db",
  "tauri-specta",
+ "tempfile",
  "tokio",
+ "tracing",
  "uuid",
 ]
 
@@ -12333,6 +12336,7 @@ dependencies = [
  "tracing",
  "tray-icon",
  "unicode-width",
+ "windows",
 ]
 
 [[package]]
@@ -12348,6 +12352,7 @@ dependencies = [
  "tauri-plugin",
  "tauri-plugin-settings",
  "tauri-specta",
+ "tempfile",
  "thiserror 2.0.21",
  "tokio",
  "tracing",
@@ -12501,6 +12506,7 @@ dependencies = [
  "tauri",
  "tauri-nspanel",
  "tauri-plugin",
+ "tauri-plugin-opener2",
  "tauri-plugin-os",
  "tauri-plugin-window-state",
  "tauri-specta",

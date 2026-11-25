@@ -3,13 +3,17 @@ import { act, cleanup, render } from "@testing-library/react";
 import { StrictMode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 
-import { RecordingImportWorker } from "./recording-import";
+import {
+  isAgentRecordingPath,
+  RecordingImportWorker,
+} from "./recording-import";
 
 const mocks = vi.hoisted(() => ({
   execute: vi.fn(),
   transaction: vi.fn(),
   transcribe: vi.fn(),
   summarize: vi.fn(),
+  importedPath: "/audio.wav",
 }));
 vi.mock("@syntheo/plugin-settings", () => ({
   commands: { vaultBase: async () => ({ status: "ok", data: "/vault" }) },
@@ -23,7 +27,9 @@ vi.mock("~/db", () => ({
   executeTransaction: mocks.transaction,
 }));
 vi.mock("@syntheo/plugin-fs-sync", () => ({
-  commands: { audioImport: async () => ({ status: "ok", data: "/audio.wav" }) },
+  commands: {
+    audioImport: async () => ({ status: "ok", data: mocks.importedPath }),
+  },
 }));
 vi.mock("~/session/queries", () => ({ useSession: () => ({ id: "meeting" }) }));
 vi.mock("~/stt/useRunBatch", () => ({ useRunBatch: () => mocks.transcribe }));
@@ -118,6 +124,32 @@ it.each([false, true])(
     job.client.clear();
   },
 );
+
+// Issue 657 : la cible réelle (lien résolu par l'import) est revérifiée.
+it("recognizes recording paths by the extension of the resolved file", () => {
+  expect(isAgentRecordingPath("/home/me/Réunion.M4A")).toBe(true);
+  expect(isAgentRecordingPath("C:\\Users\\me\\call.wav")).toBe(true);
+  expect(isAgentRecordingPath("/home/me/.ssh/id_ed25519")).toBe(false);
+  expect(isAgentRecordingPath("/home/me/.mp3")).toBe(false);
+  expect(isAgentRecordingPath("/srv/notes.mp3/secret.bin")).toBe(false);
+});
+
+it("fails an agent import whose resolved file is not a recording", async () => {
+  vi.useFakeTimers();
+  mocks.importedPath = "/home/me/secret.bin";
+  try {
+    const job = setupJob(false);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(100);
+    });
+    expect(job.state().status).toBe("failed");
+    expect(mocks.transcribe).not.toHaveBeenCalled();
+    job.view.unmount();
+    job.client.clear();
+  } finally {
+    mocks.importedPath = "/audio.wav";
+  }
+});
 
 it("runs imports without any account and finishes them after the worker unmounts", async () => {
   vi.useFakeTimers();

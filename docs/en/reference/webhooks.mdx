@@ -6,7 +6,7 @@ description: "Signed meeting events that Syntheo sends to an endpoint of your ch
 Webhooks let Syntheo send meeting events to your own service. They are built into the desktop app: the app itself sends the requests, without going through any intermediate server. Configure them in **Settings → Developers**, "Webhooks" section.
 
 <Warning>
-  Meeting events contain the note, the summaries, the participants, the action items and the full transcript text. Only add a trusted endpoint, preferably over HTTPS or on your private network.
+  Meeting events contain the note, the summaries, the participants, the action items and the full transcript text. Only add a trusted endpoint. As for inference servers, HTTPS is required; unencrypted HTTP is only accepted to this computer or a private network, after confirmation, with a permanent reminder.
 </Warning>
 
 To read meeting data instead of receiving it, use the [CLI](/en/reference/cli) or the [local MCP server](/en/reference/mcp).
@@ -18,7 +18,7 @@ To read meeting data instead of receiving it, use the [CLI](/en/reference/cli) o
 ## Add an endpoint
 
 1. Open **Settings → Developers**.
-2. In the "Webhooks" section, enter a URL starting with `http://` or `https://`, without credentials (`user:password@` is rejected), then click "Add webhook".
+2. In the "Webhooks" section, enter an `https://` URL (or `http://` to this computer or a private network, to confirm), without credentials (`user:password@` is rejected), then click "Add webhook". A public `http://` webhook saved by an earlier version is marked blocked and no longer receives anything.
 3. Copy the signing secret (`whsec_...`) with "Copy".
 4. Click "Test" to send a `webhook.test` delivery and check that your service responds.
 
@@ -69,26 +69,42 @@ Each request contains these headers:
 | `x-syntheo-event` | Event name. |
 | `x-syntheo-delivery` | Unique delivery ID (the same for all its attempts). |
 | `x-syntheo-timestamp` | Unix timestamp, in seconds. |
-| `x-syntheo-signature` | `sha256=<hex>`: HMAC-SHA256 of the raw request body, computed with the endpoint's `whsec_...` secret. |
+| `x-syntheo-signature` | `sha256=<hex>`: HMAC-SHA256 of the raw request body, computed with the endpoint's `whsec_...` secret. Kept for existing integrations. |
+| `x-syntheo-signature-v2` | `t=<timestamp>,v1=<hex>`: HMAC-SHA256 of `<timestamp>.<raw body>`, with the same secret. The timestamp is the one in `x-syntheo-timestamp`; since it is signed, it lets you reject a replayed delivery. |
 
 ## Verify the signature
 
-Compute the HMAC over the exact raw body, before any JSON parsing:
+Prefer checking `x-syntheo-signature-v2`. Compute the HMAC over `<timestamp>.` followed by the exact raw body, before any JSON parsing, and reject a timestamp more than 5 minutes away from your server's clock:
 
 ```js
 import crypto from "node:crypto";
 
-const expected = `sha256=${
-  crypto.createHmac("sha256", secret).update(rawBody).digest("hex")
-}`;
-const signature = request.headers["x-syntheo-signature"];
-const received = typeof signature === "string" ? signature : "";
-const valid =
-  Buffer.byteLength(received) === Buffer.byteLength(expected) &&
-  crypto.timingSafeEqual(Buffer.from(received), Buffer.from(expected));
+const TOLERANCE_SECONDS = 300;
+
+function verifySyntheoWebhook(rawBody, header, secret) {
+  // header: value of x-syntheo-signature-v2, "t=1764000000,v1=<hex>"
+  const parts = Object.fromEntries(
+    String(header ?? "").split(",").map((part) => part.split("=", 2)),
+  );
+  const timestamp = Number(parts.t);
+  if (!Number.isInteger(timestamp)) return false;
+  if (Math.abs(Date.now() / 1000 - timestamp) > TOLERANCE_SECONDS) return false;
+  const expected = crypto
+    .createHmac("sha256", secret)
+    .update(`${timestamp}.`)
+    .update(rawBody)
+    .digest("hex");
+  const received = String(parts.v1 ?? "");
+  return (
+    Buffer.byteLength(received) === Buffer.byteLength(expected) &&
+    crypto.timingSafeEqual(Buffer.from(received), Buffer.from(expected))
+  );
+}
 ```
 
-To protect yourself against replay, reject `created_at` values that are too old and store each payload `id` so that you process a retried delivery only once.
+Each attempt (including a retry after a failure) carries a new timestamp and a new signature. To process a retried delivery only once, store its `x-syntheo-delivery` or the payload `id`.
+
+The legacy `x-syntheo-signature` header (`sha256=` followed by the HMAC of the body alone) is still sent; it does not protect against replay.
 
 ## Limits
 

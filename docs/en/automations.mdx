@@ -107,7 +107,7 @@ The step sends a `POST` request with the "JSON body" to the "Address (URL)", for
 - Syntheo does not follow redirects: the error gives the final address to use. The request stops after 15 seconds. Any response outside 2xx makes the step fail.
 
 <Warning>
-  This step sends the note's content off your computer. Use a trusted address, preferably over HTTPS or on your private network. The request is not signed and is not retried on failure: it is the [webhooks in Settings](/en/reference/webhooks) that sign their deliveries.
+  This step sends the note's content off your computer. Use a trusted HTTPS address; unencrypted HTTP is only accepted to this computer or a private network, with a reminder. The request is not signed and is not retried on failure: it is the [webhooks in Settings](/en/reference/webhooks) that sign their deliveries.
 </Warning>
 
 ### Run a command
@@ -119,7 +119,9 @@ The step runs a local program with its arguments, for example a script that publ
 
 Syntheo runs the program without a shell: each argument is passed as is. `$HOME`, `*`, `;`, `|` or redirections are not interpreted; if you need them, write a script and run it. Standard input is closed and execution stops after 60 seconds. An exit code other than 0 makes the step fail, with the first line of the error.
 
-The first time a command runs, the "Run this command?" window shows the program and each argument, exactly as they will be passed. Click "Allow and run" or "Do not run". Closing the window counts as a refusal, and with no answer after 5 minutes, the command is not run. Your consent is remembered for this exact command, as you typed it: if you change the program or an argument, Syntheo asks you to confirm again.
+An argument whose variables, once filled in, give a value that starts with "-" followed by a character or with "@" makes the step fail without running the program: a note cannot slip in an option. To pass a variable as an option value, attach it to the option in the same argument, for example `--file={{…}}`. A list bullet ("- Alice: …") is still accepted.
+
+The first time a command runs, the "Run this command?" window shows the program and each argument with its real value for this run, and, below it, the argument as you typed it when it contains variables. Click "Allow and run" or "Do not run". Closing the window counts as a refusal, and with no answer after 5 minutes, the command is not run. Your consent is remembered for this exact command, as you typed it: if you change the program or an argument, Syntheo asks you to confirm again.
 
 <Warning>
   The program runs with your user rights. Only allow a program you know. The note variables (transcript, title, generated text) come from what was said in the meeting: treat them in your script as untrusted data, without executing them.

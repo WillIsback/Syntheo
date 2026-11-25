@@ -229,3 +229,21 @@ fn audio_only_files_still_decode_every_sample() {
         }
     }
 }
+
+// Issue 714 : OGG/Opus et WebM/Opus donnent une erreur dédiée, reconnue par
+// l'interface, plutôt que « no decodable audio track ».
+#[test]
+fn opus_files_report_an_unsupported_codec() {
+    for name in ["sine-opus.ogg", "sine-opus.webm"] {
+        let path = format!("{}/tests/data/{name}", env!("CARGO_MANIFEST_DIR"));
+        let error = source_from_path(&path).err().expect(name);
+        assert!(
+            matches!(error, crate::Error::UnsupportedOpus),
+            "{name}: {error}"
+        );
+        let error = source_from_bytes(std::fs::read(&path).unwrap())
+            .err()
+            .expect(name);
+        assert_eq!(error.to_string(), "unsupported audio codec: opus", "{name}");
+    }
+}

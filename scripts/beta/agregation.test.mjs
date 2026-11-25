@@ -49,15 +49,17 @@ const counters = (generated, added = 0, deleted = 0, rc = 0, rl = 0) => ({
   replaced_lexical: rl,
 });
 
-// Réunion de 1 000 mots générés : `fond` mots de reprise de fond, dont
-// `decisionAdds` ajoutés dans une section Décisions de 200 mots.
+// Réunion de 1 000 mots générés : `fond` mots de reprise de fond, tous des
+// ajouts (les mots générés restent retrouvés, la mesure n'est pas refusée
+// par les garde-fous), dont `decisionAdds` dans une section Décisions de
+// 200 mots.
 function meeting(
   i,
   { fond = 0, decisionAdds = 0, lexical = 0, sections = true },
 ) {
-  const deleted = fond - decisionAdds;
+  const added = fond - decisionAdds;
   const decisions = counters(200, decisionAdds, 0, 0, 0);
-  const other = counters(800, 0, deleted, 0, lexical);
+  const other = counters(800, added, 0, 0, lexical);
   return {
     meeting: `m${i + 1}`,
     summary: `s${i + 1}`,
@@ -67,7 +69,17 @@ function meeting(
     headings_generated: 2,
     headings_matched: sections ? 2 : 0,
     unmatched_sent_words: 0,
-    total: counters(1000, decisionAdds, deleted, 0, lexical),
+    total: counters(1000, fond, 0, 0, lexical),
+    guard_version: 1,
+    status: sections ? "ok" : "doubtful",
+    status_reasons: sections ? [] : ["global_alignment"],
+    controls: {
+      generated_kept_words: 1000 - lexical,
+      sections_matched_exact: sections ? 2 : 0,
+      sections_matched_near: 0,
+      deleted_section_words: 0,
+      residual_entities: 0,
+    },
     sections: sections
       ? [
           { index: 0, role: "other", matched: true, counters: other },
@@ -109,9 +121,9 @@ function tester(n, fonds, options = {}) {
     });
   }
   return {
-    schema_version: 1,
-    app_version: "0.8.0",
-    rule_version: 1,
+    schema_version: 2,
+    app_version: "0.8.1",
+    rule_version: 2,
     rubric_version: 0,
     pseudonym: pseudonym(n),
     enrolled_days: enrolled,
@@ -134,10 +146,127 @@ const accept = (exports) =>
 const run = (exports) => aggregate(accept(exports));
 const repeat = (value, n) => new Array(n).fill(value);
 
+// Réunion mesurée en entier (titres non retrouvés) : statut douteux, et
+// contrôles cohérents avec ses compteurs.
+const asGlobal = (m, total) =>
+  Object.assign(m, {
+    aligned: false,
+    headings_matched: 0,
+    sections: [],
+    total,
+    status: "doubtful",
+    status_reasons: ["global_alignment"],
+    controls: {
+      ...m.controls,
+      sections_matched_exact: 0,
+      generated_kept_words: Math.max(
+        0,
+        total.generated - total.deleted - total.replaced_lexical,
+      ),
+    },
+  });
+
 test("les exemples du schéma : valide accepté, invalide refusé", () => {
-  assert.ok(checkExport(readJson("export-v1.example.json")).export);
-  const invalid = checkExport(readJson("export-v1.invalid.json"));
+  assert.ok(checkExport(readJson("export-v2.example.json")).export);
+  const invalid = checkExport(readJson("export-v2.invalid.json"));
   assert.equal(invalid.refus, "hors_schema");
+});
+
+// Issue 733 : le format 1 (0.8.0) est refusé avec une raison claire.
+test("un export au format 1 est refusé comme version ancienne", () => {
+  const old = { ...tester(1, [50]), schema_version: 1 };
+  assert.deepEqual(checkExport(old), { refus: "version_ancienne" });
+});
+
+test("garde-fous : statut, raisons et contrôles cohérents", () => {
+  const base = () => tester(1, [50, 60]);
+  const withMeeting = (change) => {
+    const data = base();
+    change(data.meetings[0]);
+    return checkExport(data);
+  };
+  assert.ok(checkExport(base()).export);
+  assert.deepEqual(
+    withMeeting((m) => {
+      m.status = "doubtful";
+    }),
+    { refus: "incoherent", detail: "statut_incoherent" },
+  );
+  assert.deepEqual(
+    withMeeting((m) => {
+      m.controls.residual_entities = 1;
+    }),
+    { refus: "incoherent", detail: "controles_incoherents" },
+  );
+  assert.deepEqual(
+    withMeeting((m) => {
+      m.controls.sections_matched_near = 1;
+    }),
+    { refus: "incoherent", detail: "controles_incoherents" },
+  );
+  // Une mesure refusée n'est jamais exportée : le statut est hors schéma.
+  assert.equal(
+    withMeeting((m) => {
+      m.status = "refused";
+    }).refus,
+    "hors_schema",
+  );
+  assert.equal(
+    withMeeting((m) => {
+      m.status = "doubtful";
+      m.status_reasons = ["global_alignment", "global_alignment"];
+    }).detail,
+    "uniqueItems",
+  );
+});
+
+test("garde-fous : le statut est recalculé à partir des contrôles", () => {
+  const variant = (change) => {
+    const data = tester(1, [50, 60]);
+    change(data.meetings[0]);
+    return checkExport(data);
+  };
+  // Mesure globale déclarée « ok » : la raison manque.
+  assert.equal(
+    variant((m) => {
+      m.aligned = false;
+      m.headings_matched = 0;
+      m.sections = [];
+      m.controls.sections_matched_exact = 0;
+    }).detail,
+    "statut_incoherent",
+  );
+  // Moins de 50 % de mots retrouvés : la mesure aurait été refusée.
+  assert.equal(
+    variant((m) => {
+      m.controls.generated_kept_words = 100;
+    }).detail,
+    "statut_incoherent",
+  );
+  // Plus de 10 % des mots dans des sections non retrouvées, déclaré « ok ».
+  assert.equal(
+    variant((m) => {
+      m.controls.deleted_section_words = 200;
+    }).detail,
+    "statut_incoherent",
+  );
+  // Version des garde-fous inconnue de l'outil.
+  assert.equal(
+    variant((m) => {
+      m.guard_version = 2;
+    }).detail,
+    "garde_fous_inconnus",
+  );
+});
+
+test("le rapport compte les réunions douteuses", () => {
+  const doubtful = tester(1, [50, 60]);
+  doubtful.meetings[1].status = "doubtful";
+  doubtful.meetings[1].status_reasons = ["unmatched_sections"];
+  doubtful.meetings[1].controls.deleted_section_words = 200;
+  const result = run([doubtful, tester(2, [50])]);
+  assert.equal(result.reunions_douteuses, 1);
+  assert.match(renderMarkdown(result), /statut douteux \(garde-fous\) : 1/);
 });
 
 test("le validateur refuse un mot-clé de schéma qu'il ne connaît pas", () => {
@@ -562,12 +691,7 @@ test("refuse un terme avec plus d'erreurs que de mots remplacés en lexical", ()
 
 test("refuse une réunion sans mot généré qui aurait des remplacements", () => {
   const data = tester(1, repeat(50, 5));
-  Object.assign(data.meetings[0], {
-    aligned: false,
-    headings_matched: 0,
-    sections: [],
-    total: counters(0, 0, 0, 0, 1),
-  });
+  asGlobal(data.meetings[0], counters(0, 0, 0, 0, 1));
   assert.deepEqual(checkExport(data), {
     refus: "incoherent",
     detail: "compteurs_incoherents",
@@ -585,12 +709,7 @@ test("dictionnaire : les réunions à 0 mot généré ne comptent pas dans les f
     ],
   });
   for (const i of [0, 1, 6]) {
-    Object.assign(data.meetings[i], {
-      aligned: false,
-      headings_matched: 0,
-      sections: [],
-      total: counters(0),
-    });
+    asGlobal(data.meetings[i], counters(0));
   }
   assert.ok(checkExport(data).export);
   const { terms, excluded } = dictionaryTerms(data);
@@ -614,12 +733,7 @@ test("l'arrondi affiché ne contredit jamais le verdict au seuil", () => {
   );
   // Un testeur à 100,04 ‰ : 2 501 mots repris sur 25 000.
   for (const m of exports[0].meetings) {
-    Object.assign(m, {
-      aligned: false,
-      headings_matched: 0,
-      sections: [],
-      total: counters(25000, 0, 2501),
-    });
+    asGlobal(m, counters(25000, 0, 2501));
   }
   const result = run(exports);
   assert.equal(result.verdict.code, "zone_grise");

@@ -26,6 +26,36 @@ fn create_index_writer(index: &Index) -> tantivy::Result<tantivy::IndexWriter> {
     )
 }
 
+/// Une suppression tantivy n'est qu'une marque jusqu'à la fusion du segment.
+/// Fusionne seulement les segments qui portent des suppressions, puis retire
+/// les fichiers devenus inutiles : le texte d'un document retiré ne reste
+/// plus sur le disque. Coût proportionnel à ces segments (un document par
+/// réunion, contact ou organisation) ; une erreur est journalisée, jamais
+/// remontée.
+async fn purge_deleted_documents(index: &Index, writer: &mut tantivy::IndexWriter) {
+    let segments: Vec<tantivy::index::SegmentId> = match index.searchable_segment_metas() {
+        Ok(metas) => metas
+            .iter()
+            .filter(|meta| meta.has_deletes())
+            .map(|meta| meta.id())
+            .collect(),
+        Err(error) => {
+            tracing::warn!(%error, "search_index_segments_unreadable");
+            return;
+        }
+    };
+    if segments.is_empty() {
+        return;
+    }
+    if let Err(error) = writer.merge(&segments).await {
+        tracing::warn!(%error, "search_index_merge_failed");
+        return;
+    }
+    if let Err(error) = writer.garbage_collect_files().await {
+        tracing::warn!(%error, "search_index_garbage_collect_failed");
+    }
+}
+
 pub fn detect_language(text: &str) -> syntheo_language::Language {
     syntheo_language::detect(text)
 }
@@ -514,6 +544,12 @@ impl<'a, R: tauri::Runtime, M: tauri::Manager<R>> Tantivy<'a, R, M> {
         }
 
         writer.commit()?;
+        // Retrait d'une entité (réunion supprimée, contact…) : sa marque de
+        // suppression devient un effacement physique (complément de l'issue
+        // 712).
+        if removed_count > 0 {
+            purge_deleted_documents(&collection_index.index, writer).await;
+        }
 
         tracing::debug!(
             updated_count,
@@ -556,6 +592,55 @@ mod tests {
         let lang = detect_language(text);
         let tokenizer_name = get_tokenizer_name_for_language(&lang);
         assert_eq!(tokenizer_name, "lang_en");
+    }
+
+    // Complément de l'issue 712 : après un retrait, plus aucun segment ne
+    // garde de document marqué supprimé, et l'ancien segment a disparu du
+    // disque.
+    #[tokio::test]
+    async fn removed_documents_are_physically_dropped() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut builder = Schema::builder();
+        let id = builder.add_text_field("id", tantivy::schema::STRING | STORED);
+        let content = builder.add_text_field("content", TEXT | STORED);
+        let index = Index::create_in_dir(dir.path(), builder.build()).unwrap();
+        let mut writer = create_index_writer(&index).unwrap();
+        for (key, text) in [
+            ("a", "réunion conservée"),
+            ("b", "MARQUEURSECRET réunion retirée"),
+        ] {
+            let mut doc = TantivyDocument::new();
+            doc.add_text(id, key);
+            doc.add_text(content, text);
+            writer.add_document(doc).unwrap();
+        }
+        writer.commit().unwrap();
+        let before: std::collections::BTreeSet<_> = std::fs::read_dir(dir.path())
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name())
+            .collect();
+
+        writer.delete_term(Term::from_field_text(id, "b"));
+        writer.commit().unwrap();
+        assert!(
+            index
+                .searchable_segment_metas()
+                .unwrap()
+                .iter()
+                .any(|m| m.has_deletes())
+        );
+
+        purge_deleted_documents(&index, &mut writer).await;
+
+        let metas = index.searchable_segment_metas().unwrap();
+        assert!(metas.iter().all(|m| !m.has_deletes()));
+        assert_eq!(metas.iter().map(|m| m.num_docs()).sum::<u32>(), 1);
+        let after: std::collections::BTreeSet<_> = std::fs::read_dir(dir.path())
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name())
+            .collect();
+        // Les fichiers de l'ancien segment sont supprimés.
+        assert!(before.iter().any(|name| !after.contains(name)));
     }
 
     #[test]

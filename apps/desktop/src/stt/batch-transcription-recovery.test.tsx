@@ -29,8 +29,16 @@ vi.mock("~/store/zustand/listener/general-batch", () => ({
 
 vi.mock("~/store/zustand/listener/instance", () => ({
   listenerStore: {
-    getState: () => ({ handleBatchFailed: mocks.handleBatchFailed }),
+    getState: () => ({
+      handleBatchFailed: mocks.handleBatchFailed,
+      batch: { "session-1": {} },
+    }),
   },
+}));
+
+const interrupted = vi.hoisted(() => ({ recover: vi.fn(async () => {}) }));
+vi.mock("~/stt/interrupted-imports", () => ({
+  recoverInterruptedImports: interrupted.recover,
 }));
 
 vi.mock("~/store/zustand/tabs", () => ({
@@ -103,6 +111,19 @@ describe("BatchTranscriptionRecovery", () => {
       type: "sessions",
       id: "session-1",
     });
+  });
+
+  // Issue 714 : après la liste du natif, les imports interrompus sont
+  // repérés ; une session que le natif reprend n'en fait pas partie.
+  test("looks for interrupted imports after the native recovery", async () => {
+    mocks.runBatch.mockResolvedValue(undefined);
+    render(<BatchTranscriptionRecovery />);
+    await waitFor(() => expect(interrupted.recover).toHaveBeenCalledOnce());
+    const [isStillRunning] = interrupted.recover.mock.calls[0] as unknown as [
+      (id: string) => boolean,
+    ];
+    expect(isStillRunning("session-1")).toBe(true);
+    expect(isStillRunning("other")).toBe(false);
   });
 
   test("keeps quiet when the user stopped the resumed import", async () => {

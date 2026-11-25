@@ -19,7 +19,7 @@ import {
 } from "./general-live";
 import {
   type GeneralState,
-  type LivePause,
+  type LiveTimingState,
   type SessionMode,
   getLiveStartBlockReason,
   initialGeneralState,
@@ -55,7 +55,7 @@ export type GeneralActions = {
   // pas en pause (ou encore en cours de mise en pause).
   takePausedSession: (sessionId: string) => boolean;
   // Fenêtres secondaires : état de pause tenu par la fenêtre principale.
-  syncPauseState: (pause: LivePause | null) => void;
+  syncPauseState: (timing: LiveTimingState) => void;
   attachLiveSession: (
     sessionId: string,
     options?: {
@@ -160,9 +160,15 @@ export const createGeneralSlice = <
     });
     return true;
   },
-  syncPauseState: (pause) => {
+  syncPauseState: ({ pause, offset }) => {
     setLiveState(set, (live) => {
       live.pause = pause;
+      live.mainElapsedOffset = offset;
+      // Écoute déjà active ici : le cumul de la fenêtre principale remplace
+      // celui reconstruit localement (issue 716).
+      if (offset && live.sessionId === offset.sessionId) {
+        live.elapsedOffsetSeconds = offset.seconds;
+      }
     });
   },
   attachLiveSession: async (sessionId, options) => {

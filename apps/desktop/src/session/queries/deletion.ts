@@ -129,21 +129,81 @@ export async function restoreDeletedSession(
   throw new Error(`Session ${data.session.id} was never soft-deleted`);
 }
 
+/**
+ * Fin de suppression, une fois le délai d'annulation écoulé (issue 712) :
+ * dossier de la session (pièces jointes comprises) d'abord, puis purge
+ * définitive en base, seulement si la session porte encore `tombstone`.
+ * L'ordre compte : si le dossier résiste, la pierre tombale reste et le
+ * balayage du démarrage réessaiera ; une base purgée avec un dossier encore
+ * présent laisserait un dossier orphelin. Journaux : identifiant seulement.
+ */
 export async function finalizeSessionDeletion(
   sessionId: string,
+  tombstone: string,
 ): Promise<void> {
   try {
     const result = await fsSyncCommands.deleteSessionFolder(sessionId);
-    if (result.status !== "error") return;
-    console.error("[delete-session] failed to delete session folder", {
-      sessionId,
-      error: result.error,
-    });
+    if (result.status === "error") {
+      console.error("[delete-session] failed to delete session folder", {
+        sessionId,
+        error: result.error,
+      });
+      return;
+    }
   } catch (error) {
     console.error("[delete-session] failed to delete session folder", {
       sessionId,
       error,
     });
+    return;
+  }
+  try {
+    const result = await commands.purgeDeletedSession({
+      session_id: sessionId,
+      tombstone,
+    });
+    if (result.status === "error") {
+      console.error("[delete-session] failed to purge session", {
+        sessionId,
+        error: result.error,
+      });
+    } else if (result.data === "refused") {
+      console.warn("[delete-session] purge refused, tombstone kept", {
+        sessionId,
+      });
+    }
+  } catch (error) {
+    console.error("[delete-session] failed to purge session", {
+      sessionId,
+      error,
+    });
+  }
+}
+
+/** Taille d'un lot de `listExpiredDeletedSessions` (côté Rust). */
+const EXPIRED_DELETED_SESSIONS_BATCH = 200;
+
+/**
+ * Au démarrage : termine les suppressions restées en suspens (fermeture
+ * brutale pendant le délai d'annulation, purge refusée puis débloquée), y
+ * compris celles d'une version antérieure. Seules les sessions supprimées
+ * en entier depuis plus de 10 minutes sont concernées. Une fois tout purgé,
+ * VACUUM unique de la 0.8.1 (passe QA 0.8.1-1) : il efface les anciennes
+ * versions de lignes laissées par les versions précédentes. Un lot plein
+ * remet le VACUUM au lancement suivant, après la suite de la purge.
+ */
+export async function purgeExpiredDeletedSessions(): Promise<void> {
+  const result = await commands.listExpiredDeletedSessions();
+  if (result.status === "error") throw new Error(result.error);
+  for (const { session_id, tombstone } of result.data) {
+    await finalizeSessionDeletion(session_id, tombstone);
+  }
+  if (result.data.length >= EXPIRED_DELETED_SESSIONS_BATCH) return;
+  const vacuum = await commands.secureVacuumOnce();
+  if (vacuum.status === "error") {
+    console.warn("[delete-session] one-time vacuum failed", vacuum.error);
+  } else if (vacuum.data === "busy") {
+    console.info("[delete-session] one-time vacuum postponed, database busy");
   }
 }
 

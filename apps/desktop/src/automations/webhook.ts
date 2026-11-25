@@ -1,6 +1,10 @@
+import { validateProviderRequestUrl } from "@syntheo/provider-validation";
+
 // Étape « Envoyer vers une adresse » : la seule étape qui sort de la machine.
 // L'adresse est choisie par l'utilisateur (n8n, Home Assistant, serveur
-// maison) ; elle doit être en http ou https, sans identifiants dans l'URL.
+// maison). Même règle que les serveurs d'inférence (issue 703) : HTTPS, ou
+// HTTP clair seulement vers ce poste ou un réseau privé, sans identifiants
+// dans l'URL.
 
 export const DEFAULT_WEBHOOK_BODY = `{
   "title": "{{title}}",
@@ -18,14 +22,8 @@ export function parseWebhookUrl(value: string): URL | null {
     return null;
   }
   try {
-    const url = new URL(trimmed);
-    if (url.protocol !== "http:" && url.protocol !== "https:") {
-      return null;
-    }
-    if (!url.hostname || url.username || url.password) {
-      return null;
-    }
-    return url;
+    const url = validateProviderRequestUrl(trimmed);
+    return url.hostname ? url : null;
   } catch {
     return null;
   }

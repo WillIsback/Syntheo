@@ -29,6 +29,23 @@ describe("Chat Mode", () => {
     },
   );
 
+  // Issue 718 : synthèse coupée par l'administration, le chat ne s'ouvre
+  // plus ; un chat ouvert se ferme.
+  test("a blocked chat never opens and closes when blocked", () => {
+    useTabs.getState().transitionChatMode({ type: "OPEN_RIGHT_PANEL" });
+    useTabs.getState().setChatBlocked(true);
+    expect(useTabs.getState().chatMode).toBe("FloatingClosed");
+
+    for (const type of ["OPEN", "OPEN_RIGHT_PANEL", "TOGGLE"] as const) {
+      useTabs.getState().transitionChatMode({ type });
+      expect(useTabs.getState().chatMode).toBe("FloatingClosed");
+    }
+
+    useTabs.getState().setChatBlocked(false);
+    useTabs.getState().transitionChatMode({ type: "TOGGLE" });
+    expect(useTabs.getState().chatMode).toBe("FloatingOpen");
+  });
+
   test("closing non-chat tab does not affect mode", () => {
     const session = createSessionTab();
     useTabs.getState().openNew(session);

@@ -1,7 +1,13 @@
+import {
+  type MeasureStatus,
+  RULE_VERSION,
+  type StatusReason,
+} from "@syntheo/plugin-mesure";
+
 import { liveQueryClient } from "~/db";
 
 // Bêta, issue 672 : export pseudonymisé au schéma fermé
-// `crates/mesure/schema/export-v1.json`. Des compteurs, des index locaux (mN,
+// `crates/mesure/schema/export-v2.json` (issue 733 : statut et contrôles). Des compteurs, des index locaux (mN,
 // sN, tN), des rôles de section et des jours comptés depuis l'inscription ;
 // aucune date réelle, aucun texte, aucun identifiant interne.
 
@@ -19,6 +25,11 @@ export type ExportRows = {
     headingsMatched: number;
     unmatchedSentWords: number;
     total: Counters;
+    /** Garde-fous (issue 733) ; `null` pour une mesure d'avant la 0.8.1. */
+    guardVersion: number | null;
+    status: MeasureStatus | null;
+    statusReasons: StatusReason[];
+    controls: Controls | null;
   }[];
   sections: {
     measurementId: string;
@@ -53,8 +64,16 @@ type Counters = {
   replaced_lexical: number;
 };
 
+type Controls = {
+  generated_kept_words: number;
+  sections_matched_exact: number;
+  sections_matched_near: number;
+  deleted_section_words: number;
+  residual_entities: number;
+};
+
 type BetaExport = {
-  schema_version: 1;
+  schema_version: 2;
   app_version: string;
   rule_version: number;
   rubric_version: 0;
@@ -70,6 +89,10 @@ type BetaExport = {
     headings_matched: number;
     unmatched_sent_words: number;
     total: Counters;
+    guard_version: number;
+    status: "ok" | "doubtful";
+    status_reasons: StatusReason[];
+    controls: Controls;
     sections: {
       index: number;
       role: "decisions" | "actions" | "other";
@@ -98,9 +121,6 @@ const DAY_MS = 86_400_000;
 /** Fenêtre du taux d'abandon (spec §4) : 7 jours après la génération. */
 const ABANDON_WINDOW_MS = 7 * DAY_MS;
 
-/** Règle de calcul de la reprise (crate `mesure`, `RULE_VERSION`). */
-const RULE_VERSION = 1;
-
 /**
  * Construit l'export à partir des lignes de la base.
  *
@@ -109,9 +129,16 @@ const RULE_VERSION = 1;
  * - Une mesure se rattache à la génération de sa synthèse en cours à sa date,
  *   si elle est encore ouverte ; une mesure sans génération notée, ou faite
  *   sur une synthèse retouchée (`current`), n'est pas exportée.
- * - Une génération mesurée donne une réunion `mN` : sa première mesure. Les
- *   réunions suivent l'ordre chronologique de ces mesures, qui sert aussi à
- *   dater l'ajout d'un terme au dictionnaire.
+ * - Une génération mesurée donne une réunion `mN` : sa première mesure à la
+ *   règle courante (`RULE_VERSION` du crate `mesure`, exposé par le plugin)
+ *   et non refusée ; une mesure faite sous une règle antérieure n'est jamais
+ *   exportée, même si c'est la seule (issue 734), ni une mesure refusée par
+ *   les garde-fous (issue 733). Une mesure douteuse est exportée avec son
+ *   statut et ses raisons. Pour l'abandon, toute mesure de la synthèse
+ *   d'origine compte comme un usage, quels que soient sa règle et son
+ *   statut. Les réunions suivent l'ordre
+ *   chronologique de ces mesures, qui sert aussi à dater l'ajout d'un terme
+ *   au dictionnaire.
  */
 export function buildExport(
   rows: ExportRows,
@@ -140,15 +167,12 @@ export function buildExport(
     byDocument.set(generation.documentId, list);
   }
 
-  // Première mesure de chaque génération, dans l'ordre des mesures.
+  // Génération ouverte de la synthèse mesurée, à la date de la mesure.
   type Measurement = ExportRows["measurements"][number];
-  const firstMeasurement = new Map<(typeof generations)[number], Measurement>();
-  for (const measurement of rows.measurements
-    .filter((m) => m.generatedSource === "original")
-    .sort((a, b) => a.measuredAt.localeCompare(b.measuredAt))) {
-    const candidates = byDocument.get(measurement.documentId) ?? [];
-    let generation: (typeof generations)[number] | undefined;
-    for (const candidate of candidates) {
+  type Generation = (typeof generations)[number];
+  const generationOf = (measurement: Measurement): Generation | undefined => {
+    let generation: Generation | undefined;
+    for (const candidate of byDocument.get(measurement.documentId) ?? []) {
       if (candidate.generatedAt <= measurement.measuredAt)
         generation = candidate;
     }
@@ -156,7 +180,27 @@ export function buildExport(
       generation &&
       (generation.closedAt === null ||
         measurement.measuredAt < generation.closedAt);
-    if (generation && open && !firstMeasurement.has(generation)) {
+    return open ? generation : undefined;
+  };
+  const chronological = rows.measurements
+    .filter((m) => m.generatedSource === "original")
+    .sort((a, b) => a.measuredAt.localeCompare(b.measuredAt));
+  // Usage (abandon) : première mesure de chaque génération, toute règle et
+  // tout statut confondus.
+  const firstUse = new Map<Generation, Measurement>();
+  // Export : première mesure à la règle courante et non refusée, dans
+  // l'ordre des mesures ; jamais la plus favorable.
+  const firstMeasurement = new Map<Generation, Measurement>();
+  for (const measurement of chronological) {
+    const generation = generationOf(measurement);
+    if (!generation) continue;
+    if (!firstUse.has(generation)) firstUse.set(generation, measurement);
+    const exportable =
+      measurement.ruleVersion === RULE_VERSION &&
+      measurement.controls !== null &&
+      measurement.guardVersion !== null &&
+      (measurement.status === "ok" || measurement.status === "doubtful");
+    if (exportable && !firstMeasurement.has(generation)) {
       firstMeasurement.set(generation, measurement);
     }
   }
@@ -172,7 +216,7 @@ export function buildExport(
     (g) =>
       g.closedAt === null ||
       Date.parse(g.closedAt) - Date.parse(g.generatedAt) >= ABANDON_WINDOW_MS ||
-      firstMeasurement.has(g) ||
+      firstUse.has(g) ||
       usedBefore(g.exportedAt, g) ||
       usedBefore(g.sharedAt, g),
   );
@@ -192,6 +236,10 @@ export function buildExport(
     headings_matched: m.headingsMatched,
     unmatched_sent_words: m.unmatchedSentWords,
     total: m.total,
+    guard_version: m.guardVersion as number,
+    status: m.status as "ok" | "doubtful",
+    status_reasons: m.statusReasons,
+    controls: m.controls as Controls,
     sections: rows.sections
       .filter((s) => s.measurementId === m.id)
       .sort((a, b) => a.index - b.index)
@@ -211,7 +259,7 @@ export function buildExport(
       (g.closedAt === null || at < g.closedAt)
         ? day(at)
         : null;
-    const measurement = firstMeasurement.get(g);
+    const measurement = firstUse.get(g);
     return {
       summary: summaryIndex.get(g) as string,
       generated_day: day(g.generatedAt),
@@ -251,7 +299,7 @@ export function buildExport(
     });
 
   return {
-    schema_version: 1,
+    schema_version: 2,
     app_version: appVersion,
     rule_version: RULE_VERSION,
     rubric_version: 0,
@@ -308,12 +356,27 @@ export async function loadExportRows(): Promise<ExportRows> {
       headings_generated: number;
       headings_matched: number;
       unmatched_sent_words: number;
+      guard_version: number | null;
+      status: MeasureStatus | null;
+      reason_entity_left: number | null;
+      reason_too_few_words_kept: number | null;
+      reason_global_alignment: number | null;
+      reason_unmatched_sections: number | null;
+      generated_kept_words: number | null;
+      sections_matched_exact: number | null;
+      sections_matched_near: number | null;
+      deleted_section_words: number | null;
+      residual_entities: number | null;
     }
   >(
     `SELECT id, document_id, measured_at, rule_version, aligned,
             headings_generated, headings_matched, unmatched_sent_words,
             generated_words, added_words, deleted_words, replaced_content,
-            replaced_lexical, generated_source
+            replaced_lexical, generated_source, guard_version, status,
+            reason_entity_left, reason_too_few_words_kept,
+            reason_global_alignment, reason_unmatched_sections,
+            generated_kept_words, sections_matched_exact,
+            sections_matched_near, deleted_section_words, residual_entities
      FROM summary_measurements
      WHERE measured_at >= ?`,
     [enrollment.enrolled_at],
@@ -371,6 +434,32 @@ export async function loadExportRows(): Promise<ExportRows> {
       headingsMatched: m.headings_matched,
       unmatchedSentWords: m.unmatched_sent_words,
       total: counters(m),
+      guardVersion: m.guard_version,
+      status: m.status,
+      statusReasons: (
+        [
+          ["entity_left", m.reason_entity_left],
+          ["too_few_words_kept", m.reason_too_few_words_kept],
+          ["global_alignment", m.reason_global_alignment],
+          ["unmatched_sections", m.reason_unmatched_sections],
+        ] as const
+      )
+        .filter(([, flag]) => flag === 1)
+        .map(([code]) => code),
+      controls:
+        m.generated_kept_words === null ||
+        m.sections_matched_exact === null ||
+        m.sections_matched_near === null ||
+        m.deleted_section_words === null ||
+        m.residual_entities === null
+          ? null
+          : {
+              generated_kept_words: m.generated_kept_words,
+              sections_matched_exact: m.sections_matched_exact,
+              sections_matched_near: m.sections_matched_near,
+              deleted_section_words: m.deleted_section_words,
+              residual_entities: m.residual_entities,
+            },
     })),
     sections: sections.map((s) => ({
       measurementId: s.measurement_id,

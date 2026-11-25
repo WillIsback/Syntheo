@@ -1,7 +1,7 @@
 # Agrégation des exports de mesure de la bêta
 
 Outil local, sans réseau ni dépendance, qui agrège un dossier d'exports de
-mesure (`crates/mesure/schema/export-v1.json`) en une synthèse lisible : reprise
+mesure (`crates/mesure/schema/export-v2.json`) en une synthèse lisible : reprise
 de fond par testeur, verdict selon les seuils pré-enregistrés, taux d'abandon,
 garde-fou des sections Décisions et Actions, effet du dictionnaire avec groupe
 témoin.
@@ -16,6 +16,10 @@ node --test scripts/beta/                                          # tests (expo
 
 Seuls les fichiers `*.json` placés directement dans le dossier sont lus. Le code
 de sortie vaut 0 même si des fichiers sont refusés ; 2 en cas d'usage incorrect.
+
+Les réunions au statut `doubtful` (garde-fous de la mesure, version
+`guard_version`) sont agrégées comme les autres ; leur nombre est indiqué en tête
+du rapport. Une mesure refusée n'est jamais dans un export.
 
 ## Seuils
 
@@ -35,6 +39,9 @@ l'agrégation des autres :
   nommé, périphérique, socket), écarté avant toute ouverture ;
 - fichier de plus de 2 Mio (contrôlé avant lecture, puis pendant la lecture) ;
 - UTF-8 ou JSON invalide ;
+- export au format 1 (Syntheo 0.8.0, règle de calcul 1, sans garde-fous) : refusé
+  comme « version ancienne », avec la consigne de refaire l'export avec Syntheo
+  0.8.1 ou plus récent ;
 - export hors schéma : objet avec un champ en trop, chaîne hors motif ou hors
   liste fermée, nombre hors bornes, tableau trop long ; seul le mot-clé du
   schéma en cause est indiqué ;
@@ -45,7 +52,12 @@ l'agrégation des autres :
   titres retrouvés plus nombreux que les titres générés, total différent de la
   somme des sections, réunion sans mot généré qui aurait des mots supprimés ou
   remplacés, terme avec plus d'erreurs dans une réunion que celle-ci n'a de
-  mots remplacés en correction lexicale (`replaced_lexical`) ;
+  mots remplacés en correction lexicale (`replaced_lexical`), statut ou raisons qui ne découlent pas des contrôles selon les seuils de la
+  version des garde-fous (`guard_version`, recalculés par l'outil), version des
+  garde-fous inconnue de l'outil, mesure qui aurait dû être refusée, contrôles
+  incompatibles avec les compteurs (sections retrouvées exactement et de façon
+  approchée dont la somme diffère des titres retrouvés, mots retrouvés et
+  supprimés au-delà des mots générés, entité restante) ;
 - au-delà de 1 000 fichiers.
 
 Un nom de fichier n'est recopié dans le rapport que s'il est fait de lettres

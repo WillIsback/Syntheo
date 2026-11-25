@@ -41,7 +41,8 @@ fn identical_texts_have_no_rework() {
     assert!(report.aligned);
     assert_eq!(report.headings_generated, 3);
     assert_eq!(report.headings_matched, 3);
-    assert_eq!(report.total, counters(28, 0, 0, 0, 0));
+    // 28 mots de corps et 3 mots de titre (issue 730 : titres comptés).
+    assert_eq!(report.total, counters(31, 0, 0, 0, 0));
     assert_eq!(report.content_per_mille, Some(0.0));
 }
 
@@ -66,19 +67,19 @@ Le projet avance bien. Le budget est validé par le comité de direction.
     assert!(report.aligned);
     // Résumé : « la » → « le comité de » : remplacement de 1 par 3 mots, sans
     // nom propre : fond, poids 3.
-    assert_eq!(report.sections[0].counters, counters(11, 0, 0, 3, 0));
+    assert_eq!(report.sections[0].counters, counters(12, 0, 0, 3, 0));
     // Décisions : « janvier » → « février » (fond, 1) ; « Martin » →
     // « Marten » (nom propre, lexical, 1) ; « Former les testeurs » ajouté (3).
-    assert_eq!(report.sections[1].counters, counters(11, 3, 0, 1, 1));
+    assert_eq!(report.sections[1].counters, counters(12, 3, 0, 1, 1));
     // Actions : « à l'équipe » supprimé (2 mots, l'élision reste un mot ; le
     // point reste).
-    assert_eq!(report.sections[2].counters, counters(6, 0, 2, 0, 0));
-    assert_eq!(report.total, counters(28, 3, 2, 4, 1));
+    assert_eq!(report.sections[2].counters, counters(7, 0, 2, 0, 0));
+    assert_eq!(report.total, counters(31, 3, 2, 4, 1));
     assert_eq!(report.unmatched_sent_words, 0);
     let fond = report.content_per_mille.unwrap();
-    assert!((fond - 9000.0 / 28.0).abs() < 1e-9, "{fond}");
+    assert!((fond - 9000.0 / 31.0).abs() < 1e-9, "{fond}");
     let lex = report.lexical_per_mille.unwrap();
-    assert!((lex - 1000.0 / 28.0).abs() < 1e-9, "{lex}");
+    assert!((lex - 1000.0 / 31.0).abs() < 1e-9, "{lex}");
 }
 
 #[test]
@@ -93,8 +94,10 @@ fn acronyms_mixed_tokens_and_dictionary_terms_are_lexical() {
         &Dictionary::default(),
     )
     .unwrap();
-    // « cri » → « CRI » (sigle) ; « gpt quatre » → « GPT4 » (2 → 1 mot).
-    assert_eq!(report.total, counters(11, 0, 0, 0, 3));
+    // « cri » → « CRI » (sigle). Règle v2 (issue 732) : « gpt quatre » →
+    // « GPT4 » apparie « gpt » et « GPT4 » (1 mot lexical) ; « quatre »,
+    // sans homologue, est supprimé (1 mot de fond).
+    assert_eq!(report.total, counters(11, 0, 1, 0, 2));
 
     let dictionary = Dictionary::new(["nemotron"]).unwrap();
     let report = measure(
@@ -169,9 +172,11 @@ Calendrier serré.
     assert!(report.aligned);
     assert_eq!(report.headings_matched, 2);
     assert!(!report.sections[2].matched);
-    assert_eq!(report.sections[2].counters, counters(6, 0, 6, 0, 0));
-    assert_eq!(report.unmatched_sent_words, 2);
-    assert_eq!(report.total, counters(28, 2, 6, 0, 0));
+    // Titre compris : « Actions » supprimée (1 + 6 mots), « Risques »
+    // ajoutée (1 + 2 mots), sans appariement approché entre les deux.
+    assert_eq!(report.sections[2].counters, counters(7, 0, 7, 0, 0));
+    assert_eq!(report.unmatched_sent_words, 3);
+    assert_eq!(report.total, counters(31, 3, 7, 0, 0));
 }
 
 #[test]
@@ -188,7 +193,8 @@ fn global_measure_when_less_than_half_of_titles_match() {
     assert!(!report.aligned);
     assert_eq!(report.headings_matched, 0);
     assert!(report.sections.is_empty());
-    assert_eq!(report.total, counters(28, 0, 0, 0, 0));
+    // Les trois titres, absents du texte envoyé, comptent en suppressions.
+    assert_eq!(report.total, counters(31, 0, 3, 0, 0));
 }
 
 // Texte collé depuis un wiki : titres sans mise en forme, retrouvés par leur
@@ -206,7 +212,7 @@ fn plain_and_html_titles_are_aligned_with_generated_headings() {
     .unwrap();
     assert!(report.aligned);
     assert_eq!(report.headings_matched, 3);
-    assert_eq!(report.total, counters(28, 0, 0, 0, 0));
+    assert_eq!(report.total, counters(31, 0, 0, 0, 0));
 
     let html = "<h1>Résumé</h1><p>Le projet avance bien. Le budget est validé par la direction.</p><h2>Décisions</h2><ul><li>Lancer le pilote en janvier avec Martin.</li><li>Garder le serveur actuel.</li></ul><h2>Actions</h2><ul><li>Envoyer le compte rendu à l&#39;équipe.</li></ul>";
     let report = measure(
@@ -218,7 +224,7 @@ fn plain_and_html_titles_are_aligned_with_generated_headings() {
     )
     .unwrap();
     assert!(report.aligned);
-    assert_eq!(report.total, counters(28, 0, 0, 0, 0));
+    assert_eq!(report.total, counters(31, 0, 0, 0, 0));
 }
 
 #[test]
@@ -269,7 +275,21 @@ fn report_contains_no_free_text() {
                         .all(|c| c.is_ascii_digit() || ('a'..='f').contains(&c));
                 let role = path.ends_with(".role")
                     && ["decisions", "actions", "other"].contains(&s.as_str());
-                assert!(hash || role, "chaîne dans le rapport à {path} : {s:?}");
+                // Codes fermés des garde-fous (issue 733).
+                let status =
+                    path == "$.status" && ["ok", "doubtful", "refused"].contains(&s.as_str());
+                let reason = path.starts_with("$.status_reasons[")
+                    && [
+                        "entity_left",
+                        "too_few_words_kept",
+                        "global_alignment",
+                        "unmatched_sections",
+                    ]
+                    .contains(&s.as_str());
+                assert!(
+                    hash || role || status || reason,
+                    "chaîne dans le rapport à {path} : {s:?}"
+                );
             }
             serde_json::Value::Array(items) => {
                 for (i, item) in items.iter().enumerate() {
@@ -428,7 +448,7 @@ fn only_the_cli_and_the_calibration_plugin_enable_differences() {
     }
 }
 
-// Contrat d'export de la bêta (issue 672), `schema/export-v1.json` : tout
+// Contrat d'export de la bêta (issue 672), `schema/export-v2.json` : tout
 // objet est fermé et toute chaîne a un motif, une liste fermée ou une
 // constante. Un champ libre ajouté au schéma fait échouer ce test.
 #[test]
@@ -474,14 +494,47 @@ fn export_schema_is_closed_and_has_no_free_string() {
         }
     }
     let schema: serde_json::Value =
-        serde_json::from_str(include_str!("../schema/export-v1.json")).unwrap();
-    assert_eq!(schema["properties"]["schema_version"]["const"], 1);
+        serde_json::from_str(include_str!("../schema/export-v2.json")).unwrap();
+    assert_eq!(schema["properties"]["schema_version"]["const"], 2);
     walk(&schema, "$");
+    // Garde-fous (issue 733) : codes du schéma identiques à ceux du crate ;
+    // une mesure refusée n'est pas exportable.
+    let meeting = &schema["$defs"]["meeting"]["properties"];
+    assert_eq!(
+        meeting["status"]["enum"],
+        serde_json::json!(["ok", "doubtful"])
+    );
+    assert_eq!(
+        meeting["status_reasons"]["items"]["enum"],
+        serde_json::json!(["global_alignment", "unmatched_sections"])
+    );
+    let controls = serde_json::to_value(Controls::default()).unwrap();
+    let mut crate_keys: Vec<&String> = controls.as_object().unwrap().keys().collect();
+    let mut schema_keys: Vec<&String> = schema["$defs"]["controls"]["properties"]
+        .as_object()
+        .unwrap()
+        .keys()
+        .collect();
+    crate_keys.sort();
+    schema_keys.sort();
+    assert_eq!(crate_keys, schema_keys);
+    for reason in ["global_alignment", "unmatched_sections"] {
+        assert!(
+            serde_json::to_value([
+                StatusReason::GlobalAlignment,
+                StatusReason::UnmatchedSections
+            ])
+            .unwrap()
+            .as_array()
+            .unwrap()
+            .contains(&serde_json::json!(reason))
+        );
+    }
     // Les exemples restent du JSON valide (leur validation par le schéma est
     // faite par l'outil d'agrégation, issue 673).
     for example in [
-        include_str!("../schema/export-v1.example.json"),
-        include_str!("../schema/export-v1.invalid.json"),
+        include_str!("../schema/export-v2.example.json"),
+        include_str!("../schema/export-v2.invalid.json"),
     ] {
         serde_json::from_str::<serde_json::Value>(example).unwrap();
     }
@@ -727,4 +780,760 @@ fn section_roles_follow_the_default_templates() {
     );
     assert_eq!(SectionRole::from_title(Some("To-do")), SectionRole::Actions);
     assert_eq!(SectionRole::from_title(None), SectionRole::Other);
+}
+
+// --- Invariance au format et à la typographie (issue 729) -----------------
+// Noms fictifs uniquement.
+
+const RICH: &str = "# Résumé de la réunion
+
+L'équipe a présenté « le plan » — validé à 95 %… Hélène Dubreuil confirme.
+
+## Décisions
+
+- Reporter l'audit à février ; prévenir François.
+- Garder l'outil peut-être jusqu'à l'été.
+
+## Actions
+
+- Écrire à Noël Garçon (cœur du projet).
+";
+
+const RICH_HTML: &str = "<h1>Résumé de la réunion</h1><p>L'équipe a présenté « le plan » — validé à 95 %… Hélène Dubreuil confirme.</p><h2>Décisions</h2><ul><li>Reporter l'audit à février ; prévenir François.</li><li>Garder l'outil peut-être jusqu'à l'été.</li></ul><h2>Actions</h2><ul><li>Écrire à Noël Garçon (cœur du projet).</li></ul>";
+
+/// Chaque caractère non ASCII encodé par `encode` ; les balises sont en
+/// ASCII et restent intactes.
+fn encode_non_ascii(html: &str, encode: impl Fn(char) -> String) -> String {
+    html.chars()
+        .map(|c| {
+            if c.is_ascii() {
+                c.to_string()
+            } else {
+                encode(c)
+            }
+        })
+        .collect()
+}
+
+/// Entité nommée d'un caractère, la plus courte de la table HTML5.
+fn named_entity(c: char) -> String {
+    let target = c.to_string();
+    crate::entities::NAMED_ENTITIES
+        .iter()
+        .filter(|(_, value)| *value == target)
+        .map(|(name, _)| *name)
+        .min_by_key(|name| (name.len(), *name))
+        .map_or_else(|| format!("&#{};", c as u32), |name| format!("&{name};"))
+}
+
+fn assert_no_rework(sent: &str, sent_format: Format) {
+    let report = measure(
+        RICH,
+        Format::Markdown,
+        sent,
+        sent_format,
+        &Dictionary::default(),
+    )
+    .unwrap();
+    assert!(report.aligned, "{sent}");
+    assert_eq!(report.headings_matched, 3, "{sent}");
+    assert_eq!(report.total, counters(35, 0, 0, 0, 0), "{sent}");
+}
+
+#[test]
+fn utf8_named_and_numeric_entities_give_no_rework() {
+    assert_no_rework(RICH_HTML, Format::Html);
+    let named = encode_non_ascii(RICH_HTML, named_entity);
+    assert!(named.contains("&eacute;") && named.contains("&laquo;") && named.contains("&mdash;"));
+    assert_no_rework(&named, Format::Html);
+    assert_no_rework(
+        &encode_non_ascii(RICH_HTML, |c| format!("&#{};", c as u32)),
+        Format::Html,
+    );
+    assert_no_rework(
+        &encode_non_ascii(RICH_HTML, |c| format!("&#x{:X};", c as u32)),
+        Format::Html,
+    );
+    // Entités aussi dans un Markdown envoyé (CommonMark les décode).
+    assert_no_rework(&encode_non_ascii(RICH, named_entity), Format::Markdown);
+}
+
+#[test]
+fn typographic_variants_alone_give_no_rework() {
+    let markdown = "# Résumé de la réu\u{ad}nion
+
+L’équipe a présenté «\u{a0}le plan\u{a0}» – validé à 95\u{202f}%... Hélène\u{200b} Dubreuil conﬁrme.
+
+## 1. Décisions :
+
+- Reporter l‘audit à février\u{202f}; prévenir François.
+- Garder l’outil peut\u{2011}être jusqu’à l’été.
+
+## Actions
+
+- E\u{301}crire à Noël Garçon (cœur du projet).
+";
+    assert_no_rework(markdown, Format::Markdown);
+    // Collage HTML : balises en ligne au milieu d'un mot, retour à la ligne
+    // dans un titre et dans un paragraphe, `<br>` entre deux phrases.
+    let html = "<h1>Résumé de la\n  réunion</h1><p>L&rsquo;<span>équipe</span> a <b>pré</b>senté &laquo;&nbsp;le plan&nbsp;&raquo; &ndash; validé à 95&#8239;%&hellip;<br>H<i>él</i>ène Dubreuil confirme.</p><h2>\nDécisions\n</h2><ul><li>Reporter l&#146;audit à février ; prévenir Fran&shy;çois.</li><li>Garder l'outil peut&#x2011;être jusqu'à l'été.</li></ul><h2>Actions</h2><ul><li>Écrire à Noël Garçon (c&oelig;ur du projet).</li></ul>";
+    assert_no_rework(html, Format::Html);
+}
+
+// Test de sensibilité : la même retouche, encodée ou non, donne les mêmes
+// compteurs, non nuls (une normalisation qui effacerait tout passerait le
+// test d'invariance).
+#[test]
+fn the_same_edit_counts_the_same_in_every_encoding() {
+    let edited = RICH_HTML
+        .replace("février", "mars")
+        .replace("Dubreuil", "Dubreuille")
+        .replace("(cœur du projet)", "(cœur du projet, avant l'été)");
+    let measure_html = |html: &str| {
+        measure(
+            RICH,
+            Format::Markdown,
+            html,
+            Format::Html,
+            &Dictionary::default(),
+        )
+        .unwrap()
+        .total
+    };
+    // « février » → « mars » (fond), « Dubreuil » → « Dubreuille » (nom
+    // propre), « avant l'été » ajouté (2 mots).
+    let expected = counters(35, 2, 0, 1, 1);
+    assert_eq!(measure_html(&edited), expected);
+    assert_eq!(
+        measure_html(&encode_non_ascii(&edited, named_entity)),
+        expected
+    );
+    assert_eq!(
+        measure_html(&encode_non_ascii(&edited, |c| format!("&#{};", c as u32))),
+        expected
+    );
+}
+
+#[test]
+fn heading_numbers_and_typography_are_ignored_in_titles() {
+    for (title, key) in [
+        ("2. Décisions :", "décisions"),
+        ("1.3) Plan d’action", "plan d'action"),
+        ("IV. Prochaines étapes", "prochaines étapes"),
+        ("b) Risques", "risques"),
+        ("Suivi\u{a0}:", "suivi"),
+        ("2024", "2024"),
+        ("Bilan 2024", "bilan 2024"),
+        ("Vision", "vision"),
+    ] {
+        assert_eq!(title_key(title), key, "{title}");
+    }
+    assert_eq!(
+        SectionRole::from_title(Some(&title_key("3. Plan d’action"))),
+        SectionRole::Actions
+    );
+}
+
+// --- Appariement des sections (issue 730) ---------------------------------
+// Noms fictifs uniquement.
+
+const DEMO: &str = "# Contexte
+
+Le comité a revu le calendrier du pilote.
+
+## Démo pour l'équipe Dupond
+
+Présenter le prototype vendredi aux testeurs.
+
+## Budget
+
+Le budget reste stable cette année.
+
+## Actions
+
+- Envoyer la synthèse aux participants.
+";
+
+#[test]
+fn a_title_corrected_by_one_word_counts_one_lexical_word() {
+    let sent = DEMO.replace("équipe Dupond", "équipe Dupont");
+    let report = run(DEMO, &sent);
+    assert!(report.aligned);
+    assert_eq!(report.headings_matched, 4);
+    assert!(report.sections.iter().all(|s| s.matched));
+    assert_eq!(report.unmatched_sent_words, 0);
+    // « Dupond » → « Dupont » : nom propre, 1 mot lexical, rien d'autre.
+    assert_eq!(report.sections[1].counters.replaced_lexical, 1);
+    assert_eq!(
+        report.total,
+        Counters {
+            replaced_lexical: 1,
+            ..run(DEMO, DEMO).total
+        }
+    );
+    // Faute de frappe sur un mot ordinaire du titre : 1 mot de fond.
+    let sent = DEMO.replace("## Budget", "## Bugdet");
+    let report = run(DEMO, &sent);
+    assert!(report.sections.iter().all(|s| s.matched));
+    assert_eq!(report.total.replaced_content, 1);
+    assert_eq!(report.total.added + report.total.deleted, 0);
+}
+
+#[test]
+fn a_title_sharing_half_its_words_needs_shared_content() {
+    // Titre allongé, contenu identique : appariée, les mots ajoutés au titre
+    // comptent seuls.
+    let sent = DEMO.replace("## Budget", "## Budget prévisionnel");
+    let report = run(DEMO, &sent);
+    assert!(report.sections[2].matched);
+    assert_eq!(report.total.added, 1);
+    assert_eq!(report.total.deleted, 0);
+    // Titre proche mais contenu sans rapport : non appariée.
+    let sent = DEMO.replace(
+        "## Budget\n\nLe budget reste stable cette année.",
+        "## Budget annexe\n\nLa salle du jeudi change de bâtiment.",
+    );
+    let report = run(DEMO, &sent);
+    assert!(!report.sections[2].matched);
+    assert_eq!(report.sections[2].counters.deleted, 7);
+    assert_eq!(report.unmatched_sent_words, 9);
+}
+
+#[test]
+fn swapped_sections_stay_matched() {
+    let sent = "# Contexte
+
+Le comité a revu le calendrier du pilote.
+
+## Budget
+
+Le budget reste stable cette année.
+
+## Démo pour l'équipe Dupond
+
+Présenter le prototype vendredi aux testeurs.
+
+## Actions
+
+- Envoyer la synthèse aux participants.
+";
+    let report = run(DEMO, sent);
+    assert!(report.sections.iter().all(|s| s.matched));
+    assert_eq!(report.unmatched_sent_words, 0);
+    assert_eq!(report.total, run(DEMO, DEMO).total);
+}
+
+// Un titre proche n'est cherché qu'entre les deux titres identiques qui
+// l'encadrent : une section déplacée et retitrée ne s'apparie pas.
+#[test]
+fn near_titles_are_only_matched_between_their_anchors() {
+    let sent = "# Contexte
+
+Le comité a revu le calendrier du pilote.
+
+## Budget
+
+Le budget reste stable cette année.
+
+## Actions
+
+- Envoyer la synthèse aux participants.
+
+## Démo pour l'équipe Dupont
+
+Présenter le prototype vendredi aux testeurs.
+";
+    let report = run(DEMO, sent);
+    assert!(!report.sections[1].matched);
+    assert_eq!(report.headings_matched, 3);
+}
+
+#[test]
+fn heading_matching_helpers() {
+    assert_eq!(edit_distance("Dupond", "Dupont"), 1);
+    assert_eq!(edit_distance("", "abc"), 3);
+    assert_eq!(edit_distance("équipe", "equipe"), 1);
+    let words = |text: &str| -> Vec<String> { text.split(' ').map(str::to_owned).collect() };
+    assert_eq!(common_count(&words("a b b c"), &words("b b b d")), 2);
+    assert_eq!(
+        increasing_subsequence(&[Some(0), Some(3), None, Some(1), Some(2), Some(4)]),
+        vec![0, 3, 4, 5]
+    );
+    assert_eq!(increasing_subsequence(&[None, None]), Vec::<usize>::new());
+}
+
+// Titres en double (issue 730, relecture) : `sections` fusionne les sections
+// de même clé de titre de chaque côté, avant l'appariement. Chaque section
+// envoyée sert donc au plus une fois, et une occurrence sans homologue compte
+// en suppressions.
+const TWO_TOPICS: &str = "# Sujet A
+
+Le comité valide le calendrier.
+
+## Décisions
+
+- Garder le prestataire actuel.
+
+# Sujet B
+
+Le budget du pilote est revu.
+
+## Décisions
+
+- Reporter la formation en mars.
+";
+
+fn prepared(generated: &str, sent: &str) -> Prepared {
+    prepare(generated, Format::Markdown, sent, Format::Markdown).unwrap()
+}
+
+fn assert_one_to_one(prepared: &Prepared) {
+    let mut used: Vec<usize> = prepared.matches.iter().flatten().copied().collect();
+    let count = used.len();
+    used.sort_unstable();
+    used.dedup();
+    assert_eq!(used.len(), count, "{:?}", prepared.matches);
+}
+
+#[test]
+fn duplicate_titles_on_both_sides_are_matched_once() {
+    let p = prepared(TWO_TOPICS, TWO_TOPICS);
+    assert_one_to_one(&p);
+    assert_eq!(p.generated.len(), 3);
+    assert_eq!(run(TWO_TOPICS, TWO_TOPICS).total.added, 0);
+    assert_eq!(run(TWO_TOPICS, TWO_TOPICS).total.deleted, 0);
+}
+
+#[test]
+fn a_duplicate_title_without_counterpart_counts_as_deleted() {
+    let sent = "# Sujet A
+
+Le comité valide le calendrier.
+
+## Décisions
+
+- Garder le prestataire actuel.
+
+# Sujet B
+
+Le budget du pilote est revu.
+";
+    let p = prepared(TWO_TOPICS, sent);
+    assert_one_to_one(&p);
+    let report = run(TWO_TOPICS, sent);
+    // Seconde « Décisions » : son titre (1 mot) et son corps (5 mots)
+    // comptent en suppressions, rien n'est apparié deux fois.
+    assert_eq!(report.total.deleted, 6);
+    assert_eq!(report.total.added, 0);
+    assert_eq!(report.unmatched_sent_words, 0);
+}
+
+// --- Classement v2 (issue 732) -------------------------------------------
+// Noms fictifs uniquement.
+
+fn text_total(generated: &str, sent: &str, dictionary: &Dictionary) -> Counters {
+    measure(generated, Format::Text, sent, Format::Text, dictionary)
+        .unwrap()
+        .total
+}
+
+#[test]
+fn a_mixed_replacement_is_split_word_by_word() {
+    // Exemple de l'issue : le nom corrigé est lexical, le nom ajouté est du
+    // fond.
+    let total = text_total(
+        "Réunion animée par Dupond hier.",
+        "Réunion animée par Durand, Dupont hier.",
+        &Dictionary::default(),
+    );
+    assert_eq!(total, counters(5, 1, 0, 0, 1));
+    // Prénom corrigé, nom ajouté après lui.
+    let total = text_total(
+        "Validé avec Emmanuel ce matin.",
+        "Validé avec Emmanuelle Garnier ce matin.",
+        &Dictionary::default(),
+    );
+    assert_eq!(total, counters(5, 1, 0, 0, 1));
+    // Aucun mot proche : remplacement classé d'un bloc, comme en v1.
+    let total = text_total(
+        "Le budget est validé par la direction.",
+        "Le budget est validé par le comité de direction.",
+        &Dictionary::default(),
+    );
+    assert_eq!(total, counters(7, 0, 0, 3, 0));
+}
+
+#[test]
+fn corrections_around_function_words_are_counted_one_by_one() {
+    let generated = "Hier, Martin de la DSI présente le plan.";
+    let sent = "Hier, Marten de la DRH présente le plan.";
+    // Deux corrections lexicales, les mots-outils ne comptent pas.
+    assert_eq!(
+        text_total(generated, sent, &Dictionary::default()),
+        counters(8, 0, 0, 0, 2)
+    );
+    let mut found = Vec::new();
+    let prepared = prepare(generated, Format::Text, sent, Format::Text).unwrap();
+    for pair in prepared.pairs() {
+        pair.diff(&Dictionary::default(), |old, new, change| {
+            found.push((old.len(), new.len(), change));
+        });
+    }
+    assert_eq!(found.len(), 2);
+    assert!(
+        found
+            .iter()
+            .all(|(o, n, c)| *o == 1 && *n == 1 && c.lexical)
+    );
+}
+
+// Relecture de l'issue 732 : cas où une fusion par-dessus les mots-outils
+// minorait la reprise. Sans fusion, chaque différence garde ses mots.
+#[test]
+fn a_function_word_between_two_differences_never_lowers_the_count() {
+    // Le « de » de l'écart s'appariait à l'autre « de » : Rl=2, fond 0.
+    assert_eq!(
+        text_total(
+            "Voir Martin de Lyon.",
+            "Voir de Durand de Lyon.",
+            &Dictionary::default()
+        ),
+        counters(4, 2, 1, 0, 0)
+    );
+    // Écart de ponctuation seule : une suppression et un ajout, pas un
+    // remplacement d'un mot.
+    assert_eq!(
+        text_total(
+            "Le budget validé, envoi lundi.",
+            "Le budget, nouveau envoi lundi.",
+            &Dictionary::default()
+        ),
+        counters(5, 1, 1, 0, 0)
+    );
+}
+
+// Un mot-outil ne s'apparie pas à un mot voisin (« les » et « des ») : il ne
+// découpe pas une reformulation en morceaux lexicaux.
+#[test]
+fn function_words_are_never_near_pairs() {
+    let total = text_total(
+        "Le comité Durand transmettra les chiffres demain.",
+        "Le comité Durand publiera des tableaux demain.",
+        &Dictionary::default(),
+    );
+    assert_eq!(total.replaced_lexical, 0, "{total:?}");
+    assert_eq!(total.replaced_content, 3, "{total:?}");
+    let token = |text: &str| Token {
+        text: text.to_owned(),
+        key: normalize::comparison_key(text),
+        word: true,
+        sentence_start: false,
+    };
+    assert_eq!(near_words(&token("les"), &token("des")), None);
+    assert_eq!(near_words(&token("sur"), &token("sous")), None);
+    assert_eq!(near_words(&token("15h"), &token("16h")), None);
+    assert_eq!(near_words(&token("Dupond"), &token("Dupont")), Some(1));
+    assert_eq!(near_words(&token("Dupond"), &token("Durand")), Some(2));
+    assert_eq!(near_words(&token("cri"), &token("CRI")), Some(0));
+}
+
+// La paire la plus proche gagne, quel que soit l'ordre des mots.
+#[test]
+fn the_closest_word_is_paired_in_any_order() {
+    for sent in ["Signé par Durand, Dupont.", "Signé par Dupont, Durand."] {
+        let mut lexical = Vec::new();
+        let prepared = prepare("Signé par Dupond.", Format::Text, sent, Format::Text).unwrap();
+        for pair in prepared.pairs() {
+            pair.diff(&Dictionary::default(), |old, new, change| {
+                if change.kind == ChangeKind::Replaced {
+                    lexical.push((old[0].text.clone(), new[0].text.clone()));
+                }
+            });
+        }
+        assert_eq!(
+            lexical,
+            [("Dupond".to_owned(), "Dupont".to_owned())],
+            "{sent}"
+        );
+    }
+}
+
+// Coût borné : un très long mot qui change d'une lettre ne fait pas exploser
+// le temps de calcul (distance d'édition bornée).
+#[test]
+fn near_word_distance_is_bounded() {
+    let long = "a".repeat(20_000);
+    let started = std::time::Instant::now();
+    let total = text_total(
+        &format!("Mot {long}x fin."),
+        &format!("Mot {long}y fin."),
+        &Dictionary::default(),
+    );
+    assert_eq!(total.replaced_content, 1);
+    assert!(
+        started.elapsed() < std::time::Duration::from_secs(2),
+        "{:?}",
+        started.elapsed()
+    );
+}
+
+#[test]
+fn repeated_words_count_a_single_change() {
+    // Statuts répétés d'un tableau : un seul statut change.
+    let generated = "Tâche A : fait. Tâche B : fait. Tâche C : fait. Tâche D : fait.";
+    let sent = "Tâche A : fait. Tâche B : fait. Tâche C : bloqué. Tâche D : fait.";
+    assert_eq!(
+        text_total(generated, sent, &Dictionary::default()),
+        counters(12, 0, 0, 1, 0)
+    );
+    // Une ligne retirée au milieu : ses trois mots, rien d'autre.
+    let sent = "Tâche A : fait. Tâche C : fait. Tâche D : fait.";
+    assert_eq!(
+        text_total(generated, sent, &Dictionary::default()),
+        counters(12, 0, 3, 0, 0)
+    );
+}
+
+#[test]
+fn dictionary_terms_and_joins_stay_lexical() {
+    let dictionary = Dictionary::new(["Nemotron"]).unwrap();
+    // Mot coupé en deux, sans mot proche : bloc court, terme du
+    // dictionnaire, lexical.
+    assert_eq!(
+        text_total(
+            "Le modèle nemo tron répond.",
+            "Le modèle nemotron répond.",
+            &dictionary
+        ),
+        counters(5, 0, 0, 0, 2)
+    );
+    // Faute de frappe sur un mot ordinaire : 1 mot de fond.
+    assert_eq!(
+        text_total(
+            "Le calendier tient.",
+            "Le calendrier tient.",
+            &Dictionary::default()
+        ),
+        counters(3, 0, 0, 1, 0)
+    );
+}
+
+#[test]
+fn function_word_list_is_lowercase_and_unique() {
+    for word in FUNCTION_WORDS {
+        assert_eq!(*word, word.to_lowercase(), "{word}");
+        assert_eq!(*word, normalize::comparison_key(word), "{word}");
+    }
+    let mut sorted: Vec<&str> = FUNCTION_WORDS.to_vec();
+    sorted.sort_unstable();
+    sorted.dedup();
+    assert_eq!(sorted.len(), FUNCTION_WORDS.len());
+}
+
+#[test]
+fn rule_version_is_two() {
+    assert_eq!(RULE_VERSION, 2);
+    assert_eq!(run(GENERATED, GENERATED).rule_version, 2);
+}
+
+// Texte brut collé (issue 730, suite) : un titre corrigé d'un mot ouvre
+// encore sa section ; une ligne de corps qui ressemble à un titre sans le
+// critère (a) n'ouvre rien. Noms fictifs.
+#[test]
+fn a_plain_text_line_one_word_from_a_title_opens_its_section() {
+    let generated = "# Démo pour l'équipe Dupond\n\nPrésenter le prototype vendredi.\n\n## Budget\n\nLe budget reste stable.\n";
+    let sent = "Démo pour l'équipe Dupont\nPrésenter le prototype vendredi.\nBudget\nLe budget reste stable.\n";
+    let report = measure(
+        generated,
+        Format::Markdown,
+        sent,
+        Format::Text,
+        &Dictionary::default(),
+    )
+    .unwrap();
+    assert!(report.sections.iter().all(|s| s.matched), "{report:?}");
+    assert_eq!(report.total.replaced_lexical, 1);
+    assert_eq!(
+        report.total.added + report.total.deleted + report.total.replaced_content,
+        0
+    );
+
+    // Deux mots de différence : pas un titre, la ligne reste du corps.
+    let sent = "Démo pour la direction Dupont\nPrésenter le prototype vendredi.\nBudget\nLe budget reste stable.\n";
+    let report = measure(
+        generated,
+        Format::Markdown,
+        sent,
+        Format::Text,
+        &Dictionary::default(),
+    )
+    .unwrap();
+    assert!(!report.sections[0].matched);
+    assert!(report.sections[1].matched);
+
+    // Le critère (b) (moitié des mots en commun) ne s'applique pas à une
+    // ligne de corps.
+    let sent =
+        "Démo pour l'équipe\nPrésenter le prototype vendredi.\nBudget\nLe budget reste stable.\n";
+    let report = measure(
+        generated,
+        Format::Markdown,
+        sent,
+        Format::Text,
+        &Dictionary::default(),
+    )
+    .unwrap();
+    assert!(!report.sections[0].matched);
+}
+
+// --- Garde-fous (issue 733) ------------------------------------------------
+// Noms fictifs uniquement.
+
+fn html_report(sent: &str) -> Report {
+    measure(
+        GENERATED,
+        Format::Markdown,
+        sent,
+        Format::Html,
+        &Dictionary::default(),
+    )
+    .unwrap()
+}
+
+// Collage encodé deux fois (`&amp;eacute;`) : après décodage, le texte
+// montre encore `&eacute;`, comme la page d'origine. La lecture a échoué.
+#[test]
+fn a_paste_with_undecoded_entities_is_refused() {
+    let sent = "<h1>R&eacute;sum&eacute;</h1><p>Le projet avance bien. Le budget est valid&eacute; par la direction.</p><h2>D&eacute;cisions</h2><ul><li>Lancer le pilote en janvier avec Martin.</li><li>Garder le serveur actuel.</li></ul><h2>Actions</h2><ul><li>Envoyer le compte rendu &agrave; l&amp;rsquo;&amp;eacute;quipe.</li></ul>";
+    let report = html_report(sent);
+    assert_eq!(report.controls.residual_entities, 2);
+    assert_eq!(report.status, MeasureStatus::Refused);
+    assert_eq!(report.status_reasons, [StatusReason::EntityLeft]);
+}
+
+#[test]
+fn too_few_words_kept_is_refused() {
+    let report = run(
+        GENERATED,
+        "# Résumé\n\nTout a été réécrit autrement.\n\n## Décisions\n\nRien ne reste.\n\n## Actions\n\nAucune phrase commune.\n",
+    );
+    assert!(report.controls.generated_kept_words * 2 < report.total.generated);
+    assert_eq!(report.status, MeasureStatus::Refused);
+    assert_eq!(report.status_reasons, [StatusReason::TooFewWordsKept]);
+}
+
+#[test]
+fn global_alignment_and_missing_sections_are_doubtful() {
+    // Texte sans titres : mesure globale.
+    let sent = "Le projet avance bien. Le budget est validé par la direction. Lancer le pilote en janvier avec Martin. Garder le serveur actuel. Envoyer le compte rendu à l'équipe.";
+    let report = measure(
+        GENERATED,
+        Format::Markdown,
+        sent,
+        Format::Text,
+        &Dictionary::default(),
+    )
+    .unwrap();
+    assert_eq!(report.status, MeasureStatus::Doubtful);
+    assert_eq!(report.status_reasons, [StatusReason::GlobalAlignment]);
+    // Section « Actions » absente : 7 mots sur 31, plus de 10 %.
+    let sent = "# Résumé\n\nLe projet avance bien. Le budget est validé par la direction.\n\n## Décisions\n\n- Lancer le pilote en janvier avec Martin.\n- Garder le serveur actuel.\n";
+    let report = run(GENERATED, sent);
+    assert_eq!(report.controls.deleted_section_words, 7);
+    assert_eq!(report.status, MeasureStatus::Doubtful);
+    assert_eq!(report.status_reasons, [StatusReason::UnmatchedSections]);
+}
+
+#[test]
+fn a_near_title_is_reported_and_an_identical_text_is_ok() {
+    let report = run(GENERATED, GENERATED);
+    assert_eq!(report.status, MeasureStatus::Ok);
+    assert_eq!(report.guard_version, GUARD_VERSION);
+    assert_eq!(report.controls.generated_kept_words, report.total.generated);
+    assert_eq!(report.controls.sections_matched_exact, 3);
+    assert_eq!(report.controls.sections_matched_near, 0);
+    let report = run(GENERATED, &GENERATED.replace("## Actions", "## Action"));
+    assert_eq!(report.controls.sections_matched_exact, 2);
+    assert_eq!(report.controls.sections_matched_near, 1);
+    assert_eq!(report.status, MeasureStatus::Ok);
+}
+
+#[test]
+fn guard_thresholds_use_integers_at_the_boundary() {
+    let controls = |kept, deleted| Controls {
+        generated_kept_words: kept,
+        deleted_section_words: deleted,
+        ..Controls::default()
+    };
+    // Exactement 50 % retrouvés : pas refusé ; exactement 10 % non
+    // retrouvés : pas douteux.
+    assert_eq!(guard(100, true, &controls(50, 10)).0, MeasureStatus::Ok);
+    assert_eq!(guard(100, true, &controls(49, 0)).0, MeasureStatus::Refused);
+    assert_eq!(
+        guard(100, true, &controls(100, 11)).0,
+        MeasureStatus::Doubtful
+    );
+    assert_eq!(guard(0, true, &controls(0, 0)).0, MeasureStatus::Ok);
+}
+
+#[test]
+fn residual_entities_are_counted_in_linear_time() {
+    // Entités connues et références numériques seulement : `&foo;` ou
+    // `R&D;` ne sont pas des entités.
+    assert_eq!(
+        normalize::residual_entities("a &foo; b &#12; &nbsp; &#xZ; & ; &1x; &abc R&D;"),
+        2
+    );
+    let started = std::time::Instant::now();
+    assert_eq!(normalize::residual_entities(&"&".repeat(1_000_000)), 0);
+    assert_eq!(normalize::residual_entities(&"&a".repeat(500_000)), 0);
+    assert!(started.elapsed() < std::time::Duration::from_secs(2));
+}
+
+// Relecture de l'issue 733 : une entité citée volontairement des deux côtés
+// ne fait pas refuser la mesure ; une section retitrée garde ses mots
+// retrouvés (douteux au plus, jamais refusé pour cela).
+#[test]
+fn quoted_entities_and_renamed_sections_are_not_refused() {
+    for (text, format) in [
+        (
+            "# Note\n\nRemplacez &amp;nbsp; par une espace.\n",
+            Format::Markdown,
+        ),
+        ("# Note\n\n```\nTom &amp; Jerry\n```\n", Format::Markdown),
+        (
+            "<h1>Note</h1><p>Remplacez &amp;nbsp; par une espace.</p>",
+            Format::Html,
+        ),
+        ("Note\nQ&A; demain, R&D; ensuite.\n", Format::Text),
+    ] {
+        let report = measure(text, format, text, format, &Dictionary::default()).unwrap();
+        assert_eq!(report.controls.residual_entities, 0, "{text}");
+        assert!(
+            !report.status_reasons.contains(&StatusReason::EntityLeft),
+            "{text}"
+        );
+        assert_ne!(report.status, MeasureStatus::Refused, "{text}");
+    }
+    let generated = "# Compte rendu\n\n## Participants\n\nHélène, Bastien.\n\n## Points abordés\n\nLe prestataire livre la deuxième version du portail et les tests d'accessibilité commencent la semaine prochaine avec les équipes des trois sites, puis un bilan sera présenté au comité de pilotage du mois suivant avec les premiers résultats et les difficultés rencontrées.\n\n## Décisions\n\nGarder le prestataire.\n\n## Actions\n\nEnvoyer le compte rendu.\n";
+    let sent = generated.replace("## Points abordés", "## Discussion");
+    let report = run(generated, &sent);
+    assert!(report.controls.generated_kept_words + 2 >= report.total.generated);
+    assert_eq!(report.status, MeasureStatus::Doubtful);
+    assert_eq!(report.status_reasons, [StatusReason::UnmatchedSections]);
+}
+
+// L'outil d'agrégation recalcule le statut avec ses propres seuils : ils
+// doivent rester ceux du crate pour la version courante des garde-fous.
+#[test]
+fn aggregation_tool_uses_the_crate_guard_thresholds() {
+    // Espaces et retours à la ligne fusionnés : indépendant du formatage.
+    let tool: String = include_str!("../../../scripts/beta/agregation.mjs")
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
+    let line = format!(
+        "{GUARD_VERSION}: {{ mots_retrouves_min_pourcent: {MIN_KEPT_PERCENT}, sections_non_retrouvees_max_pourcent: {MAX_UNMATCHED_PERCENT}, }}"
+    );
+    assert!(tool.contains(&line), "{line}");
 }

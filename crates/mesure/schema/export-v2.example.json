@@ -1,7 +1,7 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "app_version": "0.8.0",
-  "rule_version": 1,
+  "rule_version": 2,
   "rubric_version": 0,
   "pseudonym": "p-3f9a1c0e7b2d4f6a8c1e3b5d7f9a2c4e",
   "enrolled_days": 21,
@@ -21,6 +21,16 @@
         "deleted": 2,
         "replaced_content": 4,
         "replaced_lexical": 1
+      },
+      "guard_version": 1,
+      "status": "ok",
+      "status_reasons": [],
+      "controls": {
+        "generated_kept_words": 22,
+        "sections_matched_exact": 3,
+        "sections_matched_near": 0,
+        "deleted_section_words": 0,
+        "residual_entities": 0
       },
       "sections": [
         {
@@ -63,14 +73,31 @@
     }
   ],
   "summaries": [
-    { "summary": "s1", "generated_day": 2, "measured": 2, "exported": null, "shared": 3 },
-    { "summary": "s2", "generated_day": 5, "measured": null, "exported": null, "shared": null }
+    {
+      "summary": "s1",
+      "generated_day": 2,
+      "measured": 2,
+      "exported": null,
+      "shared": 3
+    },
+    {
+      "summary": "s2",
+      "generated_day": 5,
+      "measured": null,
+      "exported": null,
+      "shared": null
+    }
   ],
   "terms": [
     {
       "term": "t1",
       "added_after": "m1",
-      "errors": [{ "meeting": "m1", "count": 1 }]
+      "errors": [
+        {
+          "meeting": "m1",
+          "count": 1
+        }
+      ]
     }
   ]
 }

@@ -10,6 +10,7 @@ export {
   finalizeSessionDeletion,
   isSessionDeleted,
   isSessionEmpty,
+  purgeExpiredDeletedSessions,
   restoreDeletedSession,
   softDeleteSession,
 } from "./queries/deletion";

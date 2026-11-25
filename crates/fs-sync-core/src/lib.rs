@@ -1,3 +1,4 @@
+mod mark_of_the_web;
 #[cfg(test)]
 mod test_fixtures;
 
@@ -195,6 +196,7 @@ impl FsSyncCore {
         let safe_filename = sanitize_filename(filename)?;
         let (file_path, final_filename) =
             write_unique_file(&attachments_dir, &safe_filename, data)?;
+        mark_of_the_web::mark(&file_path);
 
         Ok(AttachmentSaveResult {
             path: file_path.to_string_lossy().to_string(),
@@ -233,6 +235,7 @@ impl FsSyncCore {
 
         let safe_filename = sanitize_filename(filename)?;
         let (file_path, final_filename) = write_unique_file(&materials_dir, &safe_filename, data)?;
+        mark_of_the_web::mark(&file_path);
 
         Ok(AttachmentSaveResult {
             path: file_path.to_string_lossy().to_string(),

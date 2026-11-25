@@ -31,11 +31,15 @@ The difference between them is the **rework**: what you had to change before sen
 
 The calculation is deterministic: the same texts always give the same numbers. No AI model is involved, and nothing goes over the network.
 
-1. **Normalization.** Formatting is removed (headings, bullets, bold, links, whose text is kept). Spaces are merged and punctuation is split from words. Capitalization is kept.
-2. **Splitting into sections.** The headings of the generated version split both texts. A section missing on one side counts entirely as added or deleted. If fewer than half of the headings are found in the sent version, the measurement covers the whole text, and the export says so.
-3. **Word-by-word comparison.** Each difference is an addition, a deletion, or a replacement. A replacement weighs the number of words on its longer side.
-4. **Classification.** A difference is **lexical** if it is a short replacement (1 to 3 words on each side) that involves a proper name, an acronym, or a term from your dictionary: for example a misspelled person's name. Everything else is **content**, including a proper name added or removed on its own: a missing name is missing information.
+1. **Normalization.** Formatting is removed (headings, bullets, bold, links, whose text is kept). Spaces are merged and punctuation is split from words. HTML entities in pasted text (`&eacute;`) are decoded, and typographic variants (curly or straight apostrophes, quotes, dashes, non-breaking spaces) do not count as differences. Capitalization is kept.
+2. **Splitting into sections.** The headings of the generated version split both texts. A section is found by its heading, even a corrected one: a heading one word apart, or one that keeps half its words and half its content, between two identical headings. Heading words count like body words. A section missing on one side counts entirely as added or deleted. If fewer than half of the headings are found in the sent version, the measurement covers the whole text, and the export says so.
+3. **Word-by-word comparison.** Each difference is an addition, a deletion, or a replacement. Inside a replacement, close words are paired one to one ("Dupond" and "Dupont", never a function word such as "les" and "des"): each pair counts as one word, and a word without a counterpart counts as added or deleted. What remains without a close word weighs the number of words on its longer side.
+4. **Classification.** A difference is **lexical** if it is a short replacement (1 to 3 words on each side, or a pair of close words) that involves a proper name, an acronym, or a term from your dictionary: for example a misspelled person's name. Everything else is **content**, including a proper name added or removed on its own: a missing name is missing information.
 5. **Counters.** Only word counts are kept: words generated, added, deleted, replaced (content) and replaced (lexical), in total and per section. The texts are released immediately.
+
+Each measurement keeps the version of the calculation rule. When the rule changes, a summary measured only under an older rule shows "Measure again (rule updated)" in its menu, and its older measurements are not exported: only the first measurement made under the current rule counts.
+
+Safeguards also judge each measurement, with provisional thresholds, to be tuned later on a set of reference meeting reports. A measurement is **refused**, with no number shown or exported, if an HTML code stays unreadable in the sent version or if fewer than half of the generated words are found in it. It is **doubtful**, numbers greyed out and reason shown, if fewer than half of the headings are found or if more than 10% of the generated words are in sections that were not found.
 
 Two indicators follow, per 1,000 generated words:
 
@@ -53,7 +57,7 @@ The lexical or content classification relies on a simple rule that can be wrong.
 Two settings, off by default, are in **Settings → Advanced → Privacy**:
 
 - **Measure rework of summaries** adds the "Measure rework…" action to the summary menu. You paste or drop the sent version; only numbers are kept on your computer, never text.
-- **Calibration mode** is used to check the classification: after a measurement, it lists each difference so you can classify it by hand. Excerpts stay on screen; only the agreement counts are kept.
+- **Calibration mode** is used to check the classification: after a measurement, it lists each difference so you can classify it by hand (content, lexical or artifact), without seeing the automatic class before your choice. Excerpts stay on screen; only the agreement counts are kept.
 
 Below these settings, two buttons:
 
@@ -127,13 +131,13 @@ You export by hand. Syntheo shows you the whole file before saving it and sends 
 
 | Field | Meaning | Example |
 | --- | --- | --- |
-| `schema_version` | Version of the export format. | `1` |
-| `app_version` | Version of Syntheo that produced the export. | `"0.8.0"` |
-| `rule_version` | Version of the rework calculation rule. | `1` |
+| `schema_version` | Version of the export format. An export in format 1 (Syntheo 0.8.0) is no longer accepted by the aggregation tool. | `2` |
+| `app_version` | Version of Syntheo that produced the export. | `"0.8.1"` |
+| `rule_version` | Version of the rework calculation rule. | `2` |
 | `rubric_version` | Version of the rubric of a future AI classification; `0` as long as it does not exist. | `0` |
 | `pseudonym` | Random pseudonym drawn at enrollment, erasable. It is derived from no data about the person or the computer. | `"p-3f9a1c0e7b2d4f6a8c1e3b5d7f9a2c4e"` |
 | `enrolled_days` | Days elapsed between enrollment and the export. | `21` |
-| `meetings` | One entry per measured summary (see below). | |
+| `meetings` | One entry per measured summary: its first measurement made under the current rule and not refused (see below). | |
 | `summaries` | One entry per generated summary, measured or not, for the abandonment rate: a summary with no measurement, export, or share within 7 days of being generated counts as abandoned. | |
 | `terms` | One entry per term tracked for the dictionary study. | |
 
@@ -149,6 +153,10 @@ You export by hand. Syntheo shows you the whole file before saving it and sends 
 | `headings_generated`, `headings_matched` | Number of headings in the generated version, and how many are found in the sent version. | `3`, `3` |
 | `unmatched_sent_words` | Words in sections of the sent version that are missing from the generated version. | `0` |
 | `total` | Counters for the whole meeting (see below). | |
+| `guard_version` | Version of the safeguards that gave the status. | `1` |
+| `status` | `ok`, or `doubtful` if the measurement is doubtful. A refused measurement is never exported. | `"ok"` |
+| `status_reasons` | Reasons for a doubtful status: `global_alignment` (fewer than half of the headings found, measured on the whole text) or `unmatched_sections` (more than 10% of the generated words in sections that were not found). Empty if `ok`. | `[]` |
+| `controls` | Control metrics, numbers only: `generated_kept_words` (generated words found unchanged), `sections_matched_exact` and `sections_matched_near` (sections found by an identical or a close heading), `deleted_section_words` (words of the generated sections not found), `residual_entities` (always `0` in an export). | `{"generated_kept_words": 22, …}` |
 | `sections` | For each section: `index` (its rank), `role` (`decisions` or `actions` according to the summary template, `other` otherwise), `matched` (found or not) and `counters` (its counters, see below). Never its heading. | `{"index": 1, "role": "decisions", "matched": true, "counters": {…}}` |
 
 **Counters (`total` and each section's `counters`)**

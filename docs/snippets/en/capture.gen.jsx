@@ -103,7 +103,6 @@ const SYN_LABELS = {
   "Click here, then use your dictation shortcut.": "Click here, then use your dictation shortcut.",
   "Click the shortcut to record a new key combination. Press Escape to cancel.": "Click the shortcut to record a new key combination. Press Escape to cancel.",
   "Close": "Close",
-  "Connected · {0} models available": "Connected · {0} models available",
   "Connected · {0} ms": "Connected · {0} ms",
   "Contacts": "Contacts",
   "Control listening without reopening Syntheo.": "Control listening without reopening Syntheo.",
@@ -308,6 +307,7 @@ const SYN_LABELS = {
   "vLLM, speaches, faster-whisper-server": "vLLM, speaches, faster-whisper-server",
   "{0}% complete": "{0}% complete",
   "{count, plural, one {# meeting} other {# meetings}}": "{count, plural, one {# meeting} other {# meetings}}",
+  "{count, plural, one {Connected · # model available} other {Connected · # models available}}": "{count, plural, one {Connected · # model available} other {Connected · # models available}}",
   "{duration}, back to the note": "{duration}, back to the note",
   "{notice}. Open Syntheo to retry or change devices.": "{notice}. Open Syntheo to retry or change devices.",
   "~{minutes} min left": "~{minutes} min left",
@@ -1656,7 +1656,7 @@ const SynSectionIntelligence = ({ focus }) => {
         <section className="syn-srv-card" aria-label={L("My server")}>
           <div className="syn-srv-head">
             <h3>{L("My server")}</h3>
-            {h(SynSrvChip, { server, connectedLabel: connected && models.length ? LF("Connected · {0} models available", { 0: models.length }) : undefined })}
+            {h(SynSrvChip, { server, connectedLabel: connected && models.length ? LP("{count, plural, one {Connected · # model available} other {Connected · # models available}}", models.length) : undefined })}
           </div>
           {h(SynSrvBanner, { server })}
           {h(SynSrvAddress, { server, label: L("Server address (OpenAI-compatible: vLLM, Ollama, llama.cpp, LM Studio)") })}

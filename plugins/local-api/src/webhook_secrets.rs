@@ -60,22 +60,46 @@ pub(crate) async fn resolve_secret(
         .ok_or_else(|| "webhook secret missing from the system keychain".to_string())
 }
 
+/// Écrit le secret d'un endpoint au trousseau. Renvoie `false` (avec un
+/// avertissement) si le trousseau est indisponible.
+pub(crate) async fn write_to_keychain(store: &SharedSecretStore, id: &str, secret: &str) -> bool {
+    let (key, value) = (id.to_string(), secret.to_string());
+    match blocking(store, move |store| store.write(&key, &value)).await {
+        Ok(()) => true,
+        Err(error) => {
+            tracing::warn!(
+                "[local-api] webhook {id}: system keychain unavailable, secret kept in the database: {error}"
+            );
+            false
+        }
+    }
+}
+
 /// Déplace le secret d'un endpoint vers le trousseau, puis remplace la valeur
-/// en base par le marqueur. Renvoie `false` si le secret reste en base.
+/// en base par le marqueur : la base n'est touchée qu'après une écriture
+/// réussie au trousseau. Renvoie `false` si le secret reste en base.
 pub(crate) async fn move_to_keychain(
     store: &SharedSecretStore,
     pool: &SqlitePool,
     id: &str,
     secret: &str,
 ) -> bool {
-    let (key, value) = (id.to_string(), secret.to_string());
-    if let Err(error) = blocking(store, move |store| store.write(&key, &value)).await {
-        tracing::warn!(
-            "[local-api] webhook {id}: system keychain unavailable, secret kept in the database: {error}"
-        );
+    if !write_to_keychain(store, id, secret).await {
         return false;
     }
-    match syntheo_db_app::set_webhook_endpoint_secret(pool, id, KEYCHAIN_MARKER).await {
+    // Réécriture de la ligne avec `secure_delete` (complément de l'issue
+    // 711) : l'ancienne valeur en clair est remise à zéro dans la page.
+    let mut secure = match syntheo_db_app::SecureDeleteConnection::acquire(pool).await {
+        Ok(secure) => secure,
+        Err(error) => {
+            tracing::warn!("[local-api] webhook {id}: secret marker not saved: {error}");
+            return false;
+        }
+    };
+    let saved =
+        syntheo_db_app::set_webhook_endpoint_secret(secure.connection(), id, KEYCHAIN_MARKER).await;
+    secure.release().await;
+    match saved {
         Ok(_) => true,
         Err(error) => {
             tracing::warn!("[local-api] webhook {id}: secret marker not saved: {error}");
@@ -95,10 +119,18 @@ pub(crate) async fn try_migrate_secrets(
     pool: &SqlitePool,
 ) -> Result<(), sqlx::Error> {
     let endpoints = syntheo_db_app::list_webhook_endpoints(pool).await?;
+    let mut moved = 0;
     for endpoint in endpoints {
-        if endpoint.secret != KEYCHAIN_MARKER {
-            move_to_keychain(store, pool, &endpoint.id, &endpoint.secret).await;
+        if endpoint.secret != KEYCHAIN_MARKER
+            && move_to_keychain(store, pool, &endpoint.id, &endpoint.secret).await
+        {
+            moved += 1;
         }
+    }
+    // Les anciennes valeurs en clair restent dans le journal WAL jusqu'au
+    // prochain point de contrôle (issue 711) : on le force aussitôt.
+    if moved > 0 {
+        syntheo_db_app::checkpoint_wal(pool).await;
     }
     Ok(())
 }

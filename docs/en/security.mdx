@@ -60,7 +60,12 @@ Three medium-severity residual risks are identified, each with its countermeasur
 - **Windows installer signing**: its isolation in the release pipeline still needs strengthening. Countermeasure: check the checksums and provenance attestation of installers before deploying them.
 - **Plain HTTP toward a private server**: still possible after confirmation. Countermeasure: HTTPS servers only.
 
-The low or informational findings still open concern: handling of imported files and attachments, hardening the interface beyond the CSP, network exchanges and automations, agent access (CLI and MCP) and dictation, and removal of unused code. Each is tracked in a public issue.
+Version 0.8.1 addresses the low or informational findings on imported files and attachments, the interface beyond the CSP, network exchanges and automations, agent access (CLI and MCP) and dictation. Unused code has been removed. A few follow-ups remain planned, each in a public issue:
+
+- interface capabilities split per window ([#741](https://github.com/WillIsback/Syntheo/issues/741));
+- native confirmation, on the app side, before an automation runs a program ([#742](https://github.com/WillIsback/Syntheo/issues/742));
+- in-app approval of a recording import requested by an agent ([#743](https://github.com/WillIsback/Syntheo/issues/743)), and an imported file opened only once ([#744](https://github.com/WillIsback/Syntheo/issues/744));
+- PDF reading in an isolated process and streaming of imported audio ([#745](https://github.com/WillIsback/Syntheo/issues/745)).
 
 ### Recommendations for organizations deploying Syntheo
 
@@ -113,17 +118,21 @@ Plain HTTP on a local network can be read by anyone with access to it, and the s
 
 Notes and transcripts are stored in plain text in the local database. Turn on disk encryption and session locking.
 
+An attachment that can run a program (executable, script, shortcut, installer, disk image, Office document with macros) is never opened with a click: Syntheo shows it in its folder. Attached PDFs are read with size and time limits, and an imported recording cannot exceed 6 hours. On Windows, each saved attachment gets the "downloaded from the internet" mark: SmartScreen and Office Protected View treat it as a received file.
+
+Syntheo's windows only show the app: a link dropped on a window does not replace it with a web page, and a link that asks for a new window opens in your browser.
+
 On Windows, **Settings → Advanced → Privacy** → "Lock app" requires Windows Hello (face, PIN or password) when Syntheo opens. On Linux, this option is not available: the page shows "Device authentication is not available on this computer.".
 
 ## Enterprise deployment
 
-An administrator can enforce some settings by placing a `managed_settings.json` file in the data folder, next to `app.db`. The settings it sets can no longer be changed in the app. An invalid file prevents Syntheo from starting.
+An administrator can enforce some settings by placing a `managed_settings.json` file in the data folder, next to `app.db`. The settings it sets can no longer be changed in the app. An invalid file prevents Syntheo from starting. The file is read again at each launch: a restriction removed from the file (or the file deleted) returns to its default value at the next launch; a server, a model or a recording choice that was enforced and then released stays as it is, editable again.
 
 The settings most useful to an IT department:
 
-- **Transcription server enforced over HTTPS**: `stt:openai` or `stt:nvidia`, with `current_stt_provider` and `current_stt_model`. The address must use `https://`: the file does not accept plain HTTP, even to a private network. In **Settings › My servers › Transcription**, the "My server" card then shows the mention "Set by your administrator." and locks only what the file sets: the address, with no input field and no "Reset this server…", when `stt:<id>` sets it; the protocol when `current_stt_provider` is set; the model when `current_stt_model` is. Everything else works as usual: without `current_stt_model`, the model is picked from the list. "Test connection" stays available, and the API key, which the file leaves empty, can still be entered under "Advanced". See [Switch your server to HTTPS](/en/ai-setup#switch-your-server-to-https).
+- **Transcription server enforced over HTTPS**: `stt:openai` or `stt:nvidia`, with `current_stt_provider` and `current_stt_model`. The address must use `https://`: the file does not accept plain HTTP, even to a private network. In **Settings › My servers › Transcription**, the "My server" card then shows the mention "Set by your administrator", followed by what is enforced (for example "Set by your administrator: model.") when the file does not set everything, and locks only what the file sets: the address, with no input field and no "Reset this server…", when `stt:<id>` sets it; the protocol when `current_stt_provider` is set; the model when `current_stt_model` is, shown even before an address is entered. Everything else works as usual: without `current_stt_model`, the model is picked from the list. "Test connection" stays available, and the API key, which the file leaves empty, can still be entered under "Advanced". See [Switch your server to HTTPS](/en/ai-setup#switch-your-server-to-https).
 - **No update check at startup**: `automatic_updates` set to `false`. Syntheo no longer contacts GitHub at launch, and the "Check for updates at startup" switch in **Settings › Profile** is disabled with the mention "Set by your administrator.". A manual check is still possible from that section and from the notification area. See [Update](/en/desktop-installation#update).
-- **No language model**: `intelligence_disabled` set to `true`, with `current_llm_provider` and `current_llm_model` set to `""`. No request is sent to an LLM server: no summary and no chat, and the **Settings › Synthesis** page shows "Set by your administrator." without querying the server; a recording import requested by an agent (CLI or MCP, `import_recording`) is refused. Transcription stays available.
+- **No language model**: `intelligence_disabled` set to `true`, with `current_llm_provider` and `current_llm_model` set to `""`. No request is sent to an LLM server: no summary and no chat ("Ask the note", "Ask the folder" and `Ctrl+J` are no longer offered), and the **Settings › Synthesis** page shows "Set by your administrator." without querying the server; a recording import requested by an agent (CLI or MCP, `import_recording`) is refused. Transcription stays available.
 
 ```json
 {

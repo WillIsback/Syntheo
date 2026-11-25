@@ -15,6 +15,11 @@ const mocks = vi.hoisted(() => ({
   mutateAsync: vi.fn(async () => undefined),
   clear: vi.fn(async () => undefined),
   setSettingValues: vi.fn(async () => undefined),
+  confirmCleartextUrl: vi.fn(async () => undefined),
+}));
+
+vi.mock("./cleartext-confirmations", () => ({
+  confirmCleartextUrl: mocks.confirmCleartextUrl,
 }));
 
 vi.mock("~/settings/providers", () => ({
@@ -102,6 +107,9 @@ describe("ServerAddressForm, HTTP clair", () => {
           api_key: "",
         }),
       );
+      // Issue 665 : la confirmation est gardée, sans nouvelle demande au
+      // lancement suivant.
+      expect(mocks.confirmCleartextUrl).toHaveBeenCalledWith(url);
       expect(screen.getByRole("note").textContent).toContain(
         "Unencrypted connection",
       );
@@ -287,5 +295,32 @@ describe("ServerAddressForm, adresse gérée", () => {
     expect(
       screen.getByRole("button", { name: "Reset this server…" }),
     ).toBeTruthy();
+  });
+});
+
+// Issue 719 : « Réinitialiser ce serveur… » apparaît dès le premier
+// enregistrement de l'adresse, sans aller-retour de page.
+describe("ServerAddressForm, premier enregistrement", () => {
+  beforeEach(() => {
+    mocks.saved = {};
+    mocks.mutateAsync.mockClear();
+  });
+  afterEach(cleanup);
+
+  it("propose « Réinitialiser » juste après le premier enregistrement", async () => {
+    renderForm(false, true);
+    expect(screen.queryByRole("button", { name: "Reset this server…" })).toBe(
+      null,
+    );
+
+    typeAddress("https://asr.example.com/v1");
+
+    await waitFor(
+      () =>
+        expect(
+          screen.getByRole("button", { name: "Reset this server…" }),
+        ).toBeTruthy(),
+      { timeout: 2000 },
+    );
   });
 });

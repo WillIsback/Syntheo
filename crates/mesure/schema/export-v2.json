@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/WillIsback/Syntheo/crates/mesure/schema/export-v1.json",
-  "title": "Syntheo — export de mesure de la bêta, version 1",
+  "$id": "https://github.com/WillIsback/Syntheo/crates/mesure/schema/export-v2.json",
+  "title": "Syntheo — export de mesure de la bêta, version 2",
   "description": "Fichier qu'un testeur exporte à la main (spec de mesure, §5) : des compteurs, des identifiants de forme contrôlée et des jours relatifs. Aucune chaîne libre : toute chaîne a un motif ou une liste fermée. Tout objet est fermé (additionalProperties: false).",
   "type": "object",
   "additionalProperties": false,
@@ -18,8 +18,8 @@
   ],
   "properties": {
     "schema_version": {
-      "description": "Version de ce schéma.",
-      "const": 1
+      "description": "Version de ce schéma. La version 2 (Syntheo 0.8.1, issue 733) ajoute à chaque réunion le statut des garde-fous, ses raisons et les métriques de contrôle.",
+      "const": 2
     },
     "app_version": {
       "description": "Version de Syntheo qui a produit l'export (0.8.0, 0.8.0-3).",
@@ -48,22 +48,28 @@
       "$ref": "#/$defs/day"
     },
     "meetings": {
-      "description": "Une entrée par synthèse mesurée, dans l'ordre des mesures.",
+      "description": "Une entrée par synthèse mesurée, dans l'ordre des mesures : sa première mesure à la règle courante et non refusée par les garde-fous.",
       "type": "array",
       "maxItems": 2000,
-      "items": { "$ref": "#/$defs/meeting" }
+      "items": {
+        "$ref": "#/$defs/meeting"
+      }
     },
     "summaries": {
       "description": "Synthèses générées, mesurées ou non, pour le taux d'abandon (§4 : sans export, partage ni mesure dans les 7 jours).",
       "type": "array",
       "maxItems": 5000,
-      "items": { "$ref": "#/$defs/summary" }
+      "items": {
+        "$ref": "#/$defs/summary"
+      }
     },
     "terms": {
       "description": "Suivi des termes corrigés (§3), désignés par un index local opaque ; la correspondance avec le terme reste sur le poste.",
       "type": "array",
       "maxItems": 5000,
-      "items": { "$ref": "#/$defs/term" }
+      "items": {
+        "$ref": "#/$defs/term"
+      }
     }
   },
   "$defs": {
@@ -103,18 +109,33 @@
         "replaced_lexical"
       ],
       "properties": {
-        "generated": { "$ref": "#/$defs/count" },
-        "added": { "$ref": "#/$defs/count" },
-        "deleted": { "$ref": "#/$defs/count" },
-        "replaced_content": { "$ref": "#/$defs/count" },
-        "replaced_lexical": { "$ref": "#/$defs/count" }
+        "generated": {
+          "$ref": "#/$defs/count"
+        },
+        "added": {
+          "$ref": "#/$defs/count"
+        },
+        "deleted": {
+          "$ref": "#/$defs/count"
+        },
+        "replaced_content": {
+          "$ref": "#/$defs/count"
+        },
+        "replaced_lexical": {
+          "$ref": "#/$defs/count"
+        }
       }
     },
     "section": {
       "description": "Section de la synthèse générée, désignée par son rang et par son rôle dans le modèle, jamais par son titre.",
       "type": "object",
       "additionalProperties": false,
-      "required": ["index", "role", "matched", "counters"],
+      "required": [
+        "index",
+        "role",
+        "matched",
+        "counters"
+      ],
       "properties": {
         "index": {
           "type": "integer",
@@ -123,10 +144,18 @@
         },
         "role": {
           "description": "Rôle de la section dans le modèle de compte rendu, pour le garde-fou §4 (Décisions, Actions).",
-          "enum": ["decisions", "actions", "other"]
+          "enum": [
+            "decisions",
+            "actions",
+            "other"
+          ]
         },
-        "matched": { "type": "boolean" },
-        "counters": { "$ref": "#/$defs/counters" }
+        "matched": {
+          "type": "boolean"
+        },
+        "counters": {
+          "$ref": "#/$defs/counters"
+        }
       }
     },
     "meeting": {
@@ -142,64 +171,157 @@
         "headings_matched",
         "unmatched_sent_words",
         "total",
+        "guard_version",
+        "status",
+        "status_reasons",
+        "controls",
         "sections"
       ],
       "properties": {
-        "meeting": { "$ref": "#/$defs/meeting_id" },
-        "summary": { "$ref": "#/$defs/summary_id" },
+        "meeting": {
+          "$ref": "#/$defs/meeting_id"
+        },
+        "summary": {
+          "$ref": "#/$defs/summary_id"
+        },
         "day": {
           "description": "Jour de la mesure, depuis l'inscription.",
           "$ref": "#/$defs/day"
         },
         "mode": {
           "description": "Voie d'obtention de la version envoyée (§2) : collage ou dépôt, ou mode correction (phase « ensuite »).",
-          "enum": ["paste", "correction"]
+          "enum": [
+            "paste",
+            "correction"
+          ]
         },
-        "aligned": { "type": "boolean" },
-        "headings_generated": { "$ref": "#/$defs/count" },
-        "headings_matched": { "$ref": "#/$defs/count" },
-        "unmatched_sent_words": { "$ref": "#/$defs/count" },
-        "total": { "$ref": "#/$defs/counters" },
+        "aligned": {
+          "type": "boolean"
+        },
+        "headings_generated": {
+          "$ref": "#/$defs/count"
+        },
+        "headings_matched": {
+          "$ref": "#/$defs/count"
+        },
+        "unmatched_sent_words": {
+          "$ref": "#/$defs/count"
+        },
+        "total": {
+          "$ref": "#/$defs/counters"
+        },
+        "guard_version": {
+          "description": "Version des garde-fous (crate mesure, GUARD_VERSION) qui ont donné le statut.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000
+        },
+        "status": {
+          "description": "Statut de la mesure. Une mesure refusée n'est jamais exportée ; une mesure douteuse l'est, avec ses raisons.",
+          "enum": [
+            "ok",
+            "doubtful"
+          ]
+        },
+        "status_reasons": {
+          "description": "Raisons du statut douteux (vide si ok).",
+          "type": "array",
+          "maxItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "global_alignment",
+              "unmatched_sections"
+            ]
+          }
+        },
+        "controls": {
+          "$ref": "#/$defs/controls"
+        },
         "sections": {
           "type": "array",
           "maxItems": 200,
-          "items": { "$ref": "#/$defs/section" }
+          "items": {
+            "$ref": "#/$defs/section"
+          }
         }
       }
     },
     "summary": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["summary", "generated_day", "measured", "exported", "shared"],
+      "required": [
+        "summary",
+        "generated_day",
+        "measured",
+        "exported",
+        "shared"
+      ],
       "properties": {
-        "summary": { "$ref": "#/$defs/summary_id" },
+        "summary": {
+          "$ref": "#/$defs/summary_id"
+        },
         "generated_day": {
           "description": "Jour de génération, depuis l'inscription.",
           "$ref": "#/$defs/day"
         },
         "measured": {
           "description": "Jour de la première mesure, ou null.",
-          "oneOf": [{ "$ref": "#/$defs/day" }, { "type": "null" }]
+          "oneOf": [
+            {
+              "$ref": "#/$defs/day"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "exported": {
           "description": "Jour du premier export de la note, ou null.",
-          "oneOf": [{ "$ref": "#/$defs/day" }, { "type": "null" }]
+          "oneOf": [
+            {
+              "$ref": "#/$defs/day"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "shared": {
           "description": "Jour du premier partage (copie, webhook), ou null.",
-          "oneOf": [{ "$ref": "#/$defs/day" }, { "type": "null" }]
+          "oneOf": [
+            {
+              "$ref": "#/$defs/day"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       }
     },
     "term": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["term", "added_after", "errors"],
+      "required": [
+        "term",
+        "added_after",
+        "errors"
+      ],
       "properties": {
-        "term": { "$ref": "#/$defs/term_id" },
+        "term": {
+          "$ref": "#/$defs/term_id"
+        },
         "added_after": {
           "description": "Réunion mesurée après laquelle le terme a été ajouté au dictionnaire, ou null s'il ne l'a pas été.",
-          "oneOf": [{ "$ref": "#/$defs/meeting_id" }, { "type": "null" }]
+          "oneOf": [
+            {
+              "$ref": "#/$defs/meeting_id"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "errors": {
           "description": "Erreurs du terme (remplacements lexicaux) par réunion mesurée ; une réunion absente vaut 0. Le taux pour 1 000 mots se calcule avec total.generated de la réunion.",
@@ -208,12 +330,53 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["meeting", "count"],
+            "required": [
+              "meeting",
+              "count"
+            ],
             "properties": {
-              "meeting": { "$ref": "#/$defs/meeting_id" },
-              "count": { "$ref": "#/$defs/count" }
+              "meeting": {
+                "$ref": "#/$defs/meeting_id"
+              },
+              "count": {
+                "$ref": "#/$defs/count"
+              }
             }
           }
+        }
+      }
+    },
+    "controls": {
+      "description": "Métriques de contrôle de la mesure (issue 733), des nombres seulement.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "generated_kept_words",
+        "sections_matched_exact",
+        "sections_matched_near",
+        "deleted_section_words",
+        "residual_entities"
+      ],
+      "properties": {
+        "generated_kept_words": {
+          "description": "Mots générés retrouvés tels quels dans la version envoyée.",
+          "$ref": "#/$defs/count"
+        },
+        "sections_matched_exact": {
+          "description": "Sections titrées retrouvées par un titre identique.",
+          "$ref": "#/$defs/count"
+        },
+        "sections_matched_near": {
+          "description": "Sections titrées retrouvées par un titre proche.",
+          "$ref": "#/$defs/count"
+        },
+        "deleted_section_words": {
+          "description": "Mots (titre compris) des sections générées sans homologue.",
+          "$ref": "#/$defs/count"
+        },
+        "residual_entities": {
+          "description": "Entités HTML restées après décodage ; toujours 0 dans un export, une mesure qui en contient étant refusée.",
+          "$ref": "#/$defs/count"
         }
       }
     }

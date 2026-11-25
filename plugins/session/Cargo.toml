@@ -13,6 +13,7 @@ tauri-plugin = { workspace = true, features = ["build"] }
 
 [dev-dependencies]
 syntheo-specta-export = { workspace = true }
+tempfile = { workspace = true }
 tokio = { workspace = true, features = ["macros", "rt"] }
 
 [dependencies]
@@ -26,4 +27,5 @@ sqlx = { workspace = true, features = ["runtime-tokio", "sqlite", "sqlite-unbund
 specta = { workspace = true, features = ["serde_json"] }
 tauri = { workspace = true }
 tauri-specta = { workspace = true, features = ["derive", "typescript"] }
+tracing = { workspace = true }
 uuid = { workspace = true, features = ["v4"] }

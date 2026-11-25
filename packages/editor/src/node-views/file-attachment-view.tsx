@@ -135,11 +135,7 @@ export const FileAttachmentView = forwardRef<
             console.error("[editor] failed to open attachment link", error),
           );
       } else {
-        void openerCommands
-          .openPath(path)
-          .catch((error) =>
-            console.error("[editor] failed to open attachment file", error),
-          );
+        void openAttachmentFile(path);
       }
     }
   };
@@ -212,3 +208,25 @@ export const FileAttachmentView = forwardRef<
     </div>
   );
 });
+
+/**
+ * Ouvre une pièce jointe avec le programme associé. Une pièce jointe qui peut
+ * lancer un programme (exécutable, script, raccourci, document à macros) est
+ * refusée par opener2 et montrée dans son dossier à la place (issue 654).
+ */
+export async function openAttachmentFile(path: string): Promise<void> {
+  try {
+    const opened = await openerCommands.openPath(path);
+    if (opened.status === "ok") return;
+    if (opened.error.includes("active_file_not_opened")) {
+      const revealed = await openerCommands.revealItemInDir(path);
+      if (revealed.status === "error") {
+        console.error("[editor] failed to show attachment", revealed.error);
+      }
+      return;
+    }
+    console.error("[editor] failed to open attachment file", opened.error);
+  } catch (error) {
+    console.error("[editor] failed to open attachment file", error);
+  }
+}

@@ -3,11 +3,16 @@ import { useLingui } from "@lingui/react";
 import { Trans } from "@lingui/react/macro";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 
 import {
   commands as webhookCommands,
   type WebhookInfo,
 } from "@syntheo/plugin-local-api";
+import {
+  isCleartextRemoteUrl,
+  validateProviderRequestUrl,
+} from "@syntheo/provider-validation";
 import { Copy, Trash } from "@syntheo/ui/components/icons";
 import { Button } from "@syntheo/ui/components/ui/button";
 import { Input } from "@syntheo/ui/components/ui/input";
@@ -15,6 +20,15 @@ import { toast } from "@syntheo/ui/components/ui/toast";
 import { cn } from "@syntheo/utils";
 
 import { copyText } from "./clipboard";
+
+import {
+  CleartextConfirmation,
+  CleartextNotice,
+} from "~/settings/ai/shared/cleartext-warning";
+import {
+  describeProviderCredentialError,
+  describeProviderCredentialErrorCode,
+} from "~/settings/ai/shared/provider-credential-error";
 
 const WEBHOOKS_QUERY_KEY = ["webhooks"] as const;
 
@@ -41,7 +55,7 @@ export function WebhooksSection() {
       unwrap(await webhookCommands.createWebhook(url, [])),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: WEBHOOKS_QUERY_KEY }),
-    onError: (error) => toast.error(error.message),
+    onError: (error) => toast.error(describeAddressRefusal(error.message)),
   });
   const deleteMutation = useMutation({
     mutationFn: async (id: string) =>
@@ -71,6 +85,15 @@ export function WebhooksSection() {
     onError: (error) => toast.error(error.message),
   });
 
+  // HTTP clair vers ce poste ou un réseau privé (issue 703) : confirmé avant
+  // la création, comme pour un serveur d'inférence. Le HTTP public est
+  // refusé par la règle commune, ici et côté Rust.
+  const [pendingHttpUrl, setPendingHttpUrl] = useState<string | null>(null);
+  const create = (url: string) => {
+    setPendingHttpUrl(null);
+    createMutation.mutate(url);
+    form.setFieldValue("url", "");
+  };
   const form = useForm({
     defaultValues: { url: "" },
     onSubmit: ({ value }) => {
@@ -78,8 +101,23 @@ export function WebhooksSection() {
       if (!url) {
         return;
       }
-      createMutation.mutate(url);
-      form.setFieldValue("url", "");
+      // Adresse refusée par la règle commune (HTTP public, identifiants,
+      // adresse invalide) : refus direct et traduit, sans proposer le HTTP
+      // clair, que le Rust refuserait de toute façon (passe QA 0.8.1-1).
+      try {
+        validateProviderRequestUrl(url);
+      } catch (error) {
+        setPendingHttpUrl(null);
+        toast.error(
+          describeProviderCredentialError(error) ?? describeAddressRefusal(""),
+        );
+        return;
+      }
+      if (isCleartextRemoteUrl(url) && pendingHttpUrl !== url) {
+        setPendingHttpUrl(url);
+        return;
+      }
+      create(url);
     },
   });
 
@@ -117,6 +155,16 @@ export function WebhooksSection() {
             <Trans>Add webhook</Trans>
           </Button>
         </form>
+
+        {pendingHttpUrl ? (
+          <div className="mt-3 max-w-md">
+            <CleartextConfirmation
+              subject="webhook"
+              host={hostOf(pendingHttpUrl)}
+              onConfirm={() => create(pendingHttpUrl)}
+            />
+          </div>
+        ) : null}
 
         {createdWebhook && (
           <div className="border-border bg-muted/30 mt-3 rounded-xl border p-3">
@@ -212,6 +260,13 @@ function WebhookRow({
         <span className="text-muted-foreground text-xs">
           {statusParts.join(" · ")}
         </span>
+        {blockedByAddressRule(webhook.url) ? (
+          <span className="text-destructive text-xs" data-webhook-blocked>
+            {t`Blocked: use https://, or http:// only to this computer or a private network.`}
+          </span>
+        ) : isCleartextRemoteUrl(webhook.url) ? (
+          <CleartextNotice subject="webhook" />
+        ) : null}
       </div>
       <div className="flex shrink-0 items-center gap-1">
         <Button
@@ -245,4 +300,43 @@ function WebhookRow({
       </div>
     </li>
   );
+}
+
+function hostOf(url: string): string {
+  try {
+    return new URL(url).host;
+  } catch {
+    return url;
+  }
+}
+
+/** Endpoint enregistré avant la règle d'adresse (issue 703) : il ne reçoit
+ * plus rien, la livraison est refusée côté Rust. */
+// Refus d'adresse renvoyé par le Rust (`owhisper_client::BaseUrlError`), en
+// anglais : traduit avec les messages de la règle commune.
+function describeAddressRefusal(message: string): string {
+  if (message.includes("unencrypted HTTP is only allowed")) {
+    return describeProviderCredentialErrorCode("https_required");
+  }
+  if (message.includes("must not contain credentials")) {
+    return describeProviderCredentialErrorCode("url_with_credentials");
+  }
+  if (!message || message.includes("invalid server address")) {
+    return describeProviderCredentialErrorCode("invalid_url");
+  }
+  return message;
+}
+
+function blockedByAddressRule(url: string): boolean {
+  try {
+    // Les identifiants hérités sont masqués (`***@`) : la règle porte sur
+    // le protocole et l'hôte.
+    const parsed = new URL(url);
+    parsed.username = "";
+    parsed.password = "";
+    validateProviderRequestUrl(parsed);
+    return false;
+  } catch {
+    return true;
+  }
 }

@@ -15,7 +15,6 @@ import {
   getCurrentWebviewWindowLabel,
   init as initWindowsPlugin,
 } from "@syntheo/plugin-windows";
-import { useMountEffect } from "@syntheo/ui/hooks/use-mount-effect";
 
 import { AITaskWindowSyncBridge } from "./ai/task-window-sync";
 import { ensureLegacyAutomationsMigrated } from "./automations/migration";
@@ -28,9 +27,12 @@ import { routeTree } from "./routeTree.gen";
 import { EventListeners } from "./services/event-listeners";
 import { NativeMenuLocaleSync } from "./services/native-menu-locale";
 import { OnDeviceRefusalSync } from "./services/on-device-refusal-sync";
+import { StartupTasks } from "./services/startup-tasks";
 import { TaskManager } from "./services/task-manager";
 import { TrayRecordingSync } from "./services/tray-recording";
 import { useRemoteSessionDeletionUndoListener } from "./session/hooks/useDeleteSession";
+import { purgeExpiredDeletedSessions } from "./session/queries";
+import { promptLegacyCleartextUrls } from "./settings/ai/shared/cleartext-confirmations";
 import { refreshLegacySettingsSnapshots } from "./settings/legacy-snapshots";
 import { migratePlaintextAiProviderApiKeys } from "./settings/providers";
 import { initializeApplicationSettings } from "./settings/queries";
@@ -106,13 +108,11 @@ function ReadyApp() {
   const theme = useConfigValue("theme") as ThemePreference;
   useRemoteSessionDeletionUndoListener(isMainWindow);
 
-  useMountEffect(() => {
-    runMainWindowStartupTasks();
-  });
-
   return (
     <AppThemeProvider>
       <AppI18nProvider>
+        {/* Sous le fournisseur : langue active avant les tâches (issue 665). */}
+        <StartupTasks run={runMainWindowStartupTasks} />
         <LocalizedDialogLabels>
           {isMainWindow ? <NativeMenuLocaleSync /> : null}
           {isMainWindow ? <DefaultTemplatesLocaleSync /> : null}
@@ -191,6 +191,10 @@ function runMainWindowStartupTasks() {
     migratePlaintextAiProviderApiKeys,
   );
   void runStartupTask("automations_migrate", ensureLegacyAutomationsMigrated);
+  // Issue 712 : suppressions restées en suspens au dernier lancement.
+  void runStartupTask("deleted_sessions_purge", purgeExpiredDeletedSessions);
+  // Issue 665 : adresses HTTP clair héritées, confirmées une seule fois.
+  void runStartupTask("cleartext_legacy_prompt", promptLegacyCleartextUrls);
   void startRenderPerfForDevtoolsBuilds();
 }
 

@@ -196,8 +196,16 @@ async fn connect_with_options(
     })
 }
 
+/// Réglages de chaque connexion, posés dès son ouverture. `secure_delete`
+/// (issue 712, passe QA 0.8.1-1) : SQLite réécrit à zéro l'espace libéré par
+/// toute suppression ou réécriture de ligne. Sans lui, une édition ou une
+/// mise en pierre tombale laisse l'ancienne version de la ligne dans
+/// l'espace libre de sa page, que la purge d'une réunion supprimée ne
+/// touche pas.
 fn apply_internal_connect_policy(connect_options: SqliteConnectOptions) -> SqliteConnectOptions {
-    connect_options.busy_timeout(SQLITE_BUSY_TIMEOUT)
+    connect_options
+        .busy_timeout(SQLITE_BUSY_TIMEOUT)
+        .pragma("secure_delete", "ON")
 }
 
 fn apply_internal_pool_policy(pool_options: SqlitePoolOptions) -> SqlitePoolOptions {

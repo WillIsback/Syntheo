@@ -390,6 +390,44 @@ describe("SQLite AI providers", () => {
     );
   });
 
+  // Passe QA 0.8.1-1 (issue 719) : la première adresse enregistrée ajoute un
+  // fournisseur ; l'état reste prêt pendant le rechargement des clés, sans
+  // quoi le formulaire se démontait et « Avancé » se refermait.
+  it("stays ready while the keys of a newly added provider load", async () => {
+    let rows: Array<{ id: string; value_json: string }> = [];
+    mocks.useLiveQuery.mockImplementation(() => ({
+      data: rows,
+      isLoading: false,
+    }));
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const wrapper = ({ children }: { children: ReactNode }) =>
+      createElement(QueryClientProvider, { client: queryClient }, children);
+    const { result, rerender } = renderHook(() => useAiProvidersState("llm"), {
+      wrapper,
+    });
+    await waitFor(() => expect(result.current.isReady).toBe(true));
+
+    mocks.getSecret.mockImplementation(() => new Promise(() => {}));
+    rows = [
+      {
+        id: "ai_provider:llm:custom",
+        value_json: JSON.stringify({
+          type: "llm",
+          base_url: "https://llm.invalid/v1",
+          api_key: "",
+        }),
+      },
+    ];
+    rerender();
+
+    expect(result.current.isReady).toBe(true);
+    expect(result.current.providers["llm:custom"]?.base_url).toBe(
+      "https://llm.invalid/v1",
+    );
+  });
+
   it("uses direct provider rows over imported legacy configuration", () => {
     const providers = parseAiProviders(
       [

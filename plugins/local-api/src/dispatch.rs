@@ -6,7 +6,8 @@ use sha2::Sha256;
 use sqlx::SqlitePool;
 
 use crate::webhook_secrets::{
-    SharedSecretStore, migrate_secrets, move_to_keychain, resolve_secret,
+    KEYCHAIN_MARKER, SharedSecretStore, delete_secret, migrate_secrets, resolve_secret,
+    write_to_keychain,
 };
 
 pub const EVENT_MEETING_COMPLETED: &str = "meeting.completed";
@@ -98,6 +99,17 @@ pub fn sign_payload(secret: &str, body: &str) -> String {
     sign_payload_bytes(secret, body.as_bytes())
 }
 
+/// En-tête `x-syntheo-signature-v2` (issue 656) : `t=<horodatage>,v1=<HMAC>`
+/// où le HMAC-SHA256 couvre `<horodatage>.<corps>`. L'horodatage étant
+/// signé, un récepteur peut refuser une livraison rejouée hors de sa
+/// fenêtre (5 minutes conseillées). L'en-tête historique
+/// `x-syntheo-signature`, sur le corps seul, reste envoyé.
+pub(crate) fn signature_v2(secret: &str, timestamp: i64, body: &[u8]) -> String {
+    let mut message = format!("{timestamp}.").into_bytes();
+    message.extend_from_slice(body);
+    format!("t={timestamp},v1={}", sign_payload_bytes(secret, &message))
+}
+
 fn sign_payload_bytes(secret: &str, body: &[u8]) -> String {
     let mut mac = <Hmac<Sha256> as KeyInit>::new_from_slice(secret.as_bytes())
         .expect("hmac accepts keys of any length");
@@ -165,6 +177,10 @@ pub async fn create_endpoint(
     if has_credentials(&parsed) {
         return Err("url must not contain credentials".to_string());
     }
+    // Même règle que les serveurs d'inférence (issue 703) : HTTPS, ou HTTP
+    // clair seulement vers ce poste ou un réseau privé. Le contenu complet
+    // d'une réunion ne part jamais en clair sur Internet.
+    owhisper_client::validate_provider_base_url(url).map_err(|error| error.to_string())?;
     if let Some(unknown) = events
         .iter()
         .find(|event| !KNOWN_EVENTS.contains(&event.as_str()))
@@ -185,25 +201,28 @@ pub async fn create_endpoint(
     }
 
     let events_json = serde_json::to_string(events).map_err(|error| error.to_string())?;
+    let id = uuid::Uuid::new_v4().to_string();
     let secret = syntheo_db_app::generate_webhook_secret();
-    let row = syntheo_db_app::insert_webhook_endpoint(
-        pool,
-        &uuid::Uuid::new_v4().to_string(),
-        url,
-        &secret,
-        &events_json,
-    )
-    .await
-    .map_err(|error| error.to_string())?;
-    // Secret affiché une fois à l'utilisateur, puis gardé dans le trousseau.
-    let row = if move_to_keychain(secrets, pool, &row.id, &secret).await {
-        syntheo_db_app::get_webhook_endpoint(pool, &row.id)
-            .await
-            .map_err(|error| error.to_string())?
-            .unwrap_or(row)
+    // Secret affiché une fois à l'utilisateur, écrit au trousseau AVANT la
+    // ligne en base (issue 711) : il ne transite jamais en clair par app.db
+    // ni par son journal WAL. Sans trousseau (Linux sans Secret Service), il
+    // reste en base, comme avant, avec un avertissement journalisé.
+    let in_keychain = write_to_keychain(secrets, &id, &secret).await;
+    let stored = if in_keychain {
+        KEYCHAIN_MARKER
     } else {
-        row
+        secret.as_str()
     };
+    let row =
+        match syntheo_db_app::insert_webhook_endpoint(pool, &id, url, stored, &events_json).await {
+            Ok(row) => row,
+            Err(error) => {
+                if in_keychain {
+                    delete_secret(secrets, &id).await;
+                }
+                return Err(error.to_string());
+            }
+        };
 
     Ok(crate::CreatedWebhook {
         info: crate::WebhookInfo::from(row),
@@ -368,6 +387,16 @@ async fn deliver_once(
     body: &Bytes,
     delivery_id: &str,
 ) -> DeliveryOutcome {
+    // Règle revalidée à chaque livraison (issue 703) : un endpoint enregistré
+    // par une version antérieure en HTTP public ne reçoit plus rien.
+    if let Err(error) =
+        owhisper_client::validate_provider_base_url(&without_credentials(&endpoint.url, ""))
+    {
+        return DeliveryOutcome {
+            delivered: false,
+            status: format!("error: {error}"),
+        };
+    }
     let secret = match resolve_secret(secrets, endpoint).await {
         Ok(secret) => secret,
         Err(error) => {
@@ -397,18 +426,20 @@ async fn deliver_once(
 
     // Lignes créées avant le refus des identifiants : ils ne partent plus en
     // Basic (reqwest les reprendrait de l'URL).
+    let timestamp = chrono::Utc::now().timestamp();
     let response = client
         .post(without_credentials(&endpoint.url, ""))
         .header("content-type", "application/json")
         .header("x-syntheo-event", event)
         .header("x-syntheo-delivery", delivery_id)
-        .header(
-            "x-syntheo-timestamp",
-            chrono::Utc::now().timestamp().to_string(),
-        )
+        .header("x-syntheo-timestamp", timestamp.to_string())
         .header(
             "x-syntheo-signature",
             format!("sha256={}", sign_payload_bytes(&secret, body.as_ref())),
+        )
+        .header(
+            "x-syntheo-signature-v2",
+            signature_v2(&secret, timestamp, body.as_ref()),
         )
         .body(body.clone())
         .send()

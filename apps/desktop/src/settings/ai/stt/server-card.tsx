@@ -65,11 +65,25 @@ export function SttServerCard() {
     ...(modelManaged ? {} : { current_stt_model: model }),
   });
 
-  const model =
-    current_stt_provider === providerId &&
-    isConfiguredSttModel(current_stt_provider, current_stt_model)
+  // Modèle imposé : affiché tel quel, même sans adresse ni fournisseur
+  // enregistré (issue 719).
+  const model = modelManaged
+    ? (current_stt_model ?? "")
+    : current_stt_provider === providerId &&
+        isConfiguredSttModel(current_stt_provider, current_stt_model)
       ? (current_stt_model ?? "")
       : "";
+  // Ce qui est imposé, dit en tête de carte (issue 719) : « Réglé par votre
+  // administrateur. » seul laissait croire que tout le serveur l'était.
+  const managedParts = [
+    addressManaged ? t`server address` : null,
+    providerManaged ? t`protocol` : null,
+    modelManaged ? t`model` : null,
+  ].filter((part): part is string => part !== null);
+  const managedMention =
+    managedParts.length === 3
+      ? t`Set by your administrator.`
+      : t`Set by your administrator: ${managedParts.join(", ")}.`;
 
   const protocols: Record<Protocol, { label: string; hint: string }> = {
     openai: {
@@ -168,7 +182,7 @@ export function SttServerCard() {
           data-testid="stt-server-managed"
           className="text-muted-foreground -mt-1.5 text-[13px]"
         >
-          <Trans>Set by your administrator.</Trans>
+          {managedMention}
         </p>
       ) : null}
       {persistDefault ? (
@@ -273,7 +287,7 @@ export function SttServerCard() {
           </p>
         ) : null}
       </div>
-      {baseUrl ? (
+      {baseUrl || modelManaged ? (
         <div data-setting-id="stt-model">
           <ModelRadioList
             key={providerId}
@@ -287,7 +301,7 @@ export function SttServerCard() {
             footer={
               providerId === "nvidia"
                 ? t`The server transcribes with the model it loaded, whatever the model chosen here.`
-                : state.status === "connected"
+                : state.status === "connected" || modelManaged
                   ? undefined
                   : t`Test the connection to list the models served.`
             }

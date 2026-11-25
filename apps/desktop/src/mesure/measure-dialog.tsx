@@ -1,3 +1,4 @@
+import { plural } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react/macro";
 import { useRef, useState } from "react";
 
@@ -6,6 +7,7 @@ import {
   type DifferenceRow,
   type MeasureResult,
   type SentInput,
+  type StatusReason,
 } from "@syntheo/plugin-mesure";
 import { Button } from "@syntheo/ui/components/ui/button";
 import {
@@ -24,8 +26,10 @@ import {
   agreementMatrix,
   agreementPercent,
   labeledCount,
+  labeledWords,
   matrixToTsv,
   type TrueClass,
+  weightedAgreementPercent,
 } from "./calibration";
 import { saveCalibration, saveMeasurement } from "./storage";
 
@@ -145,7 +149,7 @@ export function MeasureDialog({
   documentId: string;
   summaryMarkdown: string;
 }) {
-  const { t } = useLingui();
+  const { t, i18n } = useLingui();
   const { calibration_enabled, personalization_dictionary_terms } =
     useConfigValues([
       "calibration_enabled",
@@ -223,7 +227,9 @@ export function MeasureDialog({
       setError(t`The counters could not be saved.`);
     }
     if (!current()) return;
-    if (calibration_enabled) {
+    // Mesure refusée (issue 733) : la comparaison a échoué, ses différences
+    // ne servent pas au calibrage.
+    if (calibration_enabled && measured.data.status !== "refused") {
       const listed = await mesureCommands.measureDifferences(
         generated.markdown,
         input,
@@ -350,7 +356,7 @@ export function MeasureDialog({
           <MeasureSummary result={result} generatedSource={generatedSource} />
         )}
 
-        {result && rows ? (
+        {result && rows && result.status !== "refused" ? (
           <CalibrationTable
             rows={rows}
             labels={labels}
@@ -363,14 +369,39 @@ export function MeasureDialog({
           />
         ) : null}
 
-        {matrix && labeledCount(matrix) > 0 ? (
+        {matrix && labeledCount(matrix) + matrix.artefacts > 0 ? (
           <section className="flex flex-col gap-2" aria-label={t`Agreement`}>
-            <p className="text-sm">
-              <Trans>
-                Agreement: {agreementPercent(matrix)?.toFixed(1)}% on{" "}
-                {labeledCount(matrix)} differences (rule {matrix.ruleVersion}).
-              </Trans>
-            </p>
+            {labeledCount(matrix) > 0 ? (
+              <>
+                <p className="text-sm">
+                  <AgreementLine
+                    percent={formatOneDecimal(
+                      agreementPercent(matrix),
+                      i18n.locale,
+                    )}
+                    differences={labeledCount(matrix)}
+                    rule={matrix.ruleVersion}
+                  />
+                </p>
+                <p className="text-sm">
+                  <WeightedAgreementLine
+                    percent={formatOneDecimal(
+                      weightedAgreementPercent(matrix),
+                      i18n.locale,
+                    )}
+                    words={labeledWords(matrix)}
+                  />
+                </p>
+              </>
+            ) : null}
+            {matrix.artefacts > 0 ? (
+              <p className="text-muted-foreground text-sm">
+                <ArtefactsLine
+                  differences={matrix.artefacts}
+                  words={matrix.artefactWords}
+                />
+              </p>
+            ) : null}
             <div className="flex gap-2">
               <Button
                 type="button"
@@ -450,11 +481,62 @@ export function MeasureDialog({
   );
 }
 
-function perHundred(perMille: number | null): string {
-  return perMille === null ? "-" : (perMille / 10).toFixed(1);
+/**
+ * Nombre à une décimale, au format de la langue de l'interface (« 0,5 » en
+ * français ; passe QA 0.8.1-2). Affichage seulement : le TSV copié et
+ * l'export gardent le point.
+ */
+export function formatOneDecimal(
+  value: number | null | undefined,
+  locale: string,
+): string {
+  if (value === null || value === undefined) return "-";
+  return new Intl.NumberFormat(locale, {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  }).format(value);
 }
 
-/** Nombres bruts, jamais de score composite. */
+function perHundred(perMille: number | null, locale: string): string {
+  return formatOneDecimal(perMille === null ? null : perMille / 10, locale);
+}
+
+/** Raison d'un statut, en clair (codes fermés du crate `mesure`). */
+function StatusReasonText({ reason }: { reason: StatusReason }) {
+  switch (reason) {
+    case "entity_left":
+      return (
+        <Trans>
+          The sent version still contains HTML codes (such as &amp;eacute;) that
+          could not be read. Drop the file as .docx, or paste it as plain text.
+        </Trans>
+      );
+    case "too_few_words_kept":
+      return (
+        <Trans>
+          Less than half of the generated words were found in the sent version.
+        </Trans>
+      );
+    case "global_alignment":
+      return (
+        <Trans>
+          Fewer than half of the headings were found: the text was measured as a
+          whole.
+        </Trans>
+      );
+    case "unmatched_sections":
+      return (
+        <Trans>
+          More than a tenth of the generated words are in sections that were not
+          found in the sent version.
+        </Trans>
+      );
+  }
+}
+
+/** Nombres bruts, jamais de score composite. Garde-fous (issue 733) : une
+ * mesure refusée n'affiche aucun chiffre ; une mesure douteuse les affiche
+ * grisés, avec la raison. */
 function MeasureSummary({
   result,
   generatedSource,
@@ -462,15 +544,60 @@ function MeasureSummary({
   result: MeasureResult;
   generatedSource: "original" | "current";
 }) {
+  const { i18n } = useLingui();
   const total = result.total;
-  const content = perHundred(result.contentPerMille);
+  const content = perHundred(result.contentPerMille, i18n.locale);
   const lexical = total.replacedLexical;
+  // Accords au singulier et au pluriel (passe QA 0.8.1-1 : « 1 mots »).
+  const lexicalWords = plural(lexical, {
+    one: "# word of names or acronyms corrected",
+    other: "# words of names or acronyms corrected",
+  });
+  const reasons = (
+    <ul className="list-disc pl-5 text-xs" data-measure-reasons>
+      {result.statusReasons.map((reason) => (
+        <li key={reason}>
+          <StatusReasonText reason={reason} />
+        </li>
+      ))}
+    </ul>
+  );
+  if (result.status === "refused") {
+    return (
+      <section
+        className="flex flex-col gap-2 text-sm"
+        data-measure-result
+        data-measure-status="refused"
+      >
+        <p className="text-base">
+          <Trans>
+            This measurement was refused: the comparison failed, so no number is
+            shown or saved for export.
+          </Trans>
+        </p>
+        {reasons}
+      </section>
+    );
+  }
+  const doubtful = result.status === "doubtful";
   return (
-    <section className="flex flex-col gap-2 text-sm" data-measure-result>
-      <p className="text-base">
+    <section
+      className="flex flex-col gap-2 text-sm"
+      data-measure-result
+      data-measure-status={result.status}
+    >
+      {doubtful ? (
+        <>
+          <p className="text-sm font-medium">
+            <Trans>Doubtful measurement: read these numbers with care.</Trans>
+          </p>
+          {reasons}
+        </>
+      ) : null}
+      <p className={cn(["text-base", doubtful && "text-muted-foreground"])}>
         <Trans>
-          {content} words of content reworked per 100 generated, plus {lexical}{" "}
-          words of names or acronyms corrected.
+          {content} words of content reworked per 100 generated, plus{" "}
+          {lexicalWords}.
         </Trans>
       </p>
       {generatedSource === "current" ? (
@@ -507,6 +634,15 @@ function MeasureSummary({
         </dt>
         <dd>
           {result.headingsMatched} / {result.headingsGenerated}
+          {result.controls.sectionsMatchedNear > 0 ? (
+            <>
+              {" "}
+              <Trans>
+                (including {result.controls.sectionsMatchedNear} with a
+                corrected heading)
+              </Trans>
+            </>
+          ) : null}
           {result.aligned ? null : (
             <>
               {" "}
@@ -543,6 +679,13 @@ function CalibrationTable({
       <p className="text-muted-foreground text-xs">
         <Trans>These excerpts are shown only here and are never saved.</Trans>
       </p>
+      <p className="text-muted-foreground text-xs">
+        <Trans>
+          The automatic class appears once you have chosen yours. Choose
+          Artifact when the difference is not a real one (a formatting or
+          reading error).
+        </Trans>
+      </p>
       <table className="w-full text-left text-xs">
         <thead className="text-muted-foreground">
           <tr>
@@ -573,8 +716,20 @@ function CalibrationTable({
                 <td className="py-1 pr-2">{kindLabel(row)}</td>
                 <td className="py-1 pr-2">{row.generated}</td>
                 <td className="py-1 pr-2">{row.sent}</td>
-                <td className="py-1 pr-2">
-                  {row.lexical ? t`Lexical` : t`Content`}
+                <td className="py-1 pr-2" data-automatic-class>
+                  {/* Étiquetage en aveugle (issue 735) : la classe
+                      automatique n'oriente pas le choix. */}
+                  {label ? (
+                    row.lexical ? (
+                      t`Lexical`
+                    ) : (
+                      t`Content`
+                    )
+                  ) : (
+                    <span className="text-muted-foreground">
+                      <Trans>Hidden</Trans>
+                    </span>
+                  )}
                 </td>
                 <td className="py-1">
                   <div
@@ -582,23 +737,29 @@ function CalibrationTable({
                     aria-label={t`Class of difference ${index + 1}`}
                     className="flex gap-1"
                   >
-                    {(["content", "lexical"] as const).map((value) => (
-                      <button
-                        key={value}
-                        type="button"
-                        role="radio"
-                        aria-checked={label === value}
-                        className={cn([
-                          "rounded border px-2 py-0.5",
-                          label === value
-                            ? "bg-foreground text-background"
-                            : "border-border",
-                        ])}
-                        onClick={() => onLabel(index, value)}
-                      >
-                        {value === "content" ? t`Content` : t`Lexical`}
-                      </button>
-                    ))}
+                    {(["content", "lexical", "artefact"] as const).map(
+                      (value) => (
+                        <button
+                          key={value}
+                          type="button"
+                          role="radio"
+                          aria-checked={label === value}
+                          className={cn([
+                            "rounded border px-2 py-0.5",
+                            label === value
+                              ? "bg-foreground text-background"
+                              : "border-border",
+                          ])}
+                          onClick={() => onLabel(index, value)}
+                        >
+                          {value === "content"
+                            ? t`Content`
+                            : value === "lexical"
+                              ? t`Lexical`
+                              : t`Artifact`}
+                        </button>
+                      ),
+                    )}
                   </div>
                 </td>
               </tr>
@@ -607,5 +768,62 @@ function CalibrationTable({
         </tbody>
       </table>
     </section>
+  );
+}
+
+// Lignes de l'accord du calibrage, accordées au nombre (passe QA 0.8.1-1 :
+// « 1 différences », « 1 mots »).
+function AgreementLine({
+  percent,
+  differences,
+  rule,
+}: {
+  percent: string;
+  differences: number;
+  rule: number | string;
+}) {
+  const counted = plural(differences, {
+    one: "# difference",
+    other: "# differences",
+  });
+  return (
+    <Trans>
+      Agreement: {percent}% on {counted} (rule {rule}).
+    </Trans>
+  );
+}
+
+function WeightedAgreementLine({
+  percent,
+  words,
+}: {
+  percent: string;
+  words: number;
+}) {
+  const counted = plural(words, { one: "# word", other: "# words" });
+  return (
+    <Trans>
+      Weighted by words: {percent}% on {counted}.
+    </Trans>
+  );
+}
+
+function ArtefactsLine({
+  differences,
+  words,
+}: {
+  differences: number;
+  words: number;
+}) {
+  const countedDifferences = plural(differences, {
+    one: "# difference",
+    other: "# differences",
+  });
+  const countedWords = plural(words, { one: "# word", other: "# words" });
+  return (
+    <Trans>
+      Artifacts: {countedDifferences} ({countedWords}), left out of the
+      agreement.
+    </Trans>
   );
 }

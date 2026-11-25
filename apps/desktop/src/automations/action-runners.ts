@@ -192,14 +192,28 @@ export async function runCommandStep(
     throw new Error(t`Choose the program to run first.`);
   }
   const args = await Promise.all(step.args.map((arg) => variables.render(arg)));
+  // Issue 656 : une variable (titre, contenu d'une note) ne peut pas devenir
+  // une option du programme. Une valeur rendue qui ressemble à une option
+  // (« -x », « @fichier ») est refusée, sauf si l'argument saisi commence
+  // déjà ainsi (« --file={{…}} »).
+  const injected = args.findIndex(
+    (arg, index) => isOptionLike(arg) && !isOptionLike(step.args[index] ?? ""),
+  );
+  if (injected >= 0) {
+    const position = injected + 1;
+    throw new Error(
+      t`Argument ${position} starts with "-" or "@" once its variables are filled in, so the command did not run. Attach the variable to its option, for example --file={{…}}.`,
+    );
+  }
   if (dryRun) {
     return { detail: t`Would run ${program}` };
   }
   const effects = stepEffects();
   // La confirmation porte sur la commande telle que saisie (variables
   // comprises) : le chemin du fichier exporté change d'une note à l'autre.
+  // La fenêtre montre aussi les valeurs réelles de cette exécution.
   const approved = await effects.confirmCommand(
-    { program, args: step.args },
+    { program, args: step.args, renderedArgs: args },
     workflowTitle,
   );
   if (!approved) {
@@ -231,6 +245,13 @@ function rejectOnAbort(signal: AbortSignal): Promise<never> {
       once: true,
     });
   });
+}
+
+// Lu comme une option ou comme « lire ce fichier » par la plupart des
+// programmes : « -x », « --out=… », « @fichier ». Une puce de liste
+// (« - Alice : … », fréquente dans un compte rendu généré) reste acceptée.
+function isOptionLike(value: string): boolean {
+  return /^-\S/u.test(value) || value.startsWith("@");
 }
 
 function firstLine(text: string): string {

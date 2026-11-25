@@ -17,6 +17,8 @@ export const useDictationStatus = create<{
   partial: string;
   previewEnabled: boolean;
   previewUnavailable: boolean;
+  /** Issue 665 : hôte en HTTP clair hors de ce poste, sinon `null`. */
+  cleartextHost: string | null;
   expanded: boolean;
   cancel: (() => void) | null;
   finish: (() => void) | null;
@@ -35,6 +37,7 @@ export const useDictationStatus = create<{
   partial: "",
   previewEnabled: false,
   previewUnavailable: false,
+  cleartextHost: null,
   expanded: false,
   cancel: null,
   finish: null,

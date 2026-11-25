@@ -13,6 +13,23 @@ pub(crate) fn capture_stop_session_predicate() -> String {
     )
 }
 
+/// Contenu de la session qui appartient à un protocole de synchronisation :
+/// pièce jointe cloud (clé d'objet ou intention de synchronisation) ou
+/// réplique e2ee. Sa suppression relève de ce protocole, pas d'une purge
+/// locale. `None` si tout est local.
+async fn synced_content(
+    tx: &mut Transaction<'_, Sqlite>,
+    id: &str,
+) -> Result<Option<&'static str>, sqlx::Error> {
+    let cloud_attachment: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM session_attachments WHERE session_id=? AND (cloud_object_key<>'' OR cloud_sync_enabled=1))").bind(id).fetch_one(&mut **tx).await?;
+    if cloud_attachment {
+        return Ok(Some("cloud attachment"));
+    }
+    let replicas: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM e2ee_local_state WHERE (table_name='sessions' AND row_id=?) OR (table_name='transcripts' AND row_id IN (SELECT id FROM transcripts WHERE session_id=?)) OR (table_name='session_documents' AND row_id IN (SELECT id FROM session_documents WHERE session_id=?)) OR (table_name='session_attachments' AND row_id IN (SELECT id FROM session_attachments WHERE session_id=?)))")
+        .bind(id).bind(id).bind(id).bind(id).fetch_one(&mut **tx).await?;
+    Ok(replicas.then_some("e2ee replica"))
+}
+
 /// Physical local deletion after the caller has locked the database and
 /// verified the exported snapshot. Refuse replicas and cloud content;
 /// their deletion requires the owning sync protocol rather than a local purge.
@@ -21,27 +38,108 @@ pub async fn purge_local_session(
     id: &str,
 ) -> Result<(), sqlx::Error> {
     let cloud_disabled: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM app_settings WHERE id='cloud_sync_enabled' AND value_json='false')").fetch_one(&mut **tx).await?;
-    let cloud_attachment: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM session_attachments WHERE session_id=? AND cloud_object_key<>'')").bind(id).fetch_one(&mut **tx).await?;
-    let replicas: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM e2ee_local_state WHERE (table_name='sessions' AND row_id=?) OR (table_name='transcripts' AND row_id IN (SELECT id FROM transcripts WHERE session_id=?)) OR (table_name='session_documents' AND row_id IN (SELECT id FROM session_documents WHERE session_id=?)) OR (table_name='session_attachments' AND row_id IN (SELECT id FROM session_attachments WHERE session_id=?)))")
-        .bind(id).bind(id).bind(id).bind(id).fetch_one(&mut **tx).await?;
-    if !cloud_disabled || cloud_attachment || replicas {
+    if !cloud_disabled || synced_content(tx, id).await?.is_some() {
         return Err(sqlx::Error::Protocol(
             "local purge requires unsynced local content".into(),
         ));
     }
+    purge_session_rows(tx, id).await.map(|_| ())
+}
+
+/// Issue d'une purge de session supprimée.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DeletedSessionPurge {
+    /// Lignes supprimées, session comprise.
+    Purged { rows: u64 },
+    /// Rien à faire : session absente (déjà purgée), vivante (restaurée), ou
+    /// supprimée sous une autre pierre tombale. Une seconde passe aboutit ici.
+    NotDeleted,
+    /// Contenu synchronisé (`synced_content`) : la pierre tombale reste.
+    Refused(&'static str),
+}
+
+/// Purge définitive d'une session supprimée en entier, une fois le délai
+/// d'annulation écoulé (issue 712) : seulement si `sessions.deleted_at` vaut
+/// `tombstone`. Même parcours que `purge_local_session` (CLI `meetings
+/// delete`). Le réglage hérité `cloud_sync_enabled` n'est pas lu : Syntheo
+/// n'a aucun transport de synchronisation ; seul un contenu synchronisé
+/// concret (pièce jointe cloud, réplique e2ee) bloque la purge.
+pub async fn purge_deleted_session(
+    tx: &mut Transaction<'_, Sqlite>,
+    id: &str,
+    tombstone: &str,
+) -> Result<DeletedSessionPurge, sqlx::Error> {
+    let deleted_at: Option<Option<String>> =
+        sqlx::query_scalar("SELECT deleted_at FROM sessions WHERE id=?")
+            .bind(id)
+            .fetch_optional(&mut **tx)
+            .await?;
+    if deleted_at.flatten().as_deref() != Some(tombstone) {
+        return Ok(DeletedSessionPurge::NotDeleted);
+    }
+    if let Some(reason) = synced_content(tx, id).await? {
+        return Ok(DeletedSessionPurge::Refused(reason));
+    }
+    Ok(DeletedSessionPurge::Purged {
+        rows: purge_session_rows(tx, id).await?,
+    })
+}
+
+/// Délai après lequel une session supprimée est purgée au démarrage, s'il
+/// reste une pierre tombale (fermeture brutale pendant le délai
+/// d'annulation, purge refusée puis débloquée).
+pub const DELETED_SESSION_PURGE_MARGIN: &str = "-10 minutes";
+
+/// Ancienne clé de `app_settings` qui bornait la purge aux suppressions
+/// faites depuis la 0.8.1 (alphas de la 0.8.1). Les suppressions plus
+/// anciennes sont désormais purgées aussi (issue 712) : la clé est retirée.
+const LEGACY_SESSION_PURGE_SINCE_KEY: &str = "session_purge_since";
+
+/// Sessions supprimées en entier depuis plus de
+/// `DELETED_SESSION_PURGE_MARGIN`, y compris celles supprimées par une
+/// version antérieure à la 0.8.1 : (identifiant, pierre tombale), 200 au
+/// plus, des plus anciennes aux plus récentes. Les éléments supprimés un par
+/// un (document, transcription) d'une session vivante n'y figurent jamais.
+pub async fn expired_deleted_sessions(
+    pool: &sqlx::SqlitePool,
+) -> Result<Vec<(String, String)>, sqlx::Error> {
+    sqlx::query("DELETE FROM app_settings WHERE id = ?")
+        .bind(LEGACY_SESSION_PURGE_SINCE_KEY)
+        .execute(pool)
+        .await?;
+    sqlx::query_as(
+        "SELECT id, deleted_at FROM sessions
+         WHERE deleted_at IS NOT NULL
+           AND deleted_at < strftime('%Y-%m-%dT%H:%M:%fZ', 'now', ?)
+         ORDER BY deleted_at, id
+         LIMIT 200",
+    )
+    .bind(DELETED_SESSION_PURGE_MARGIN)
+    .fetch_all(pool)
+    .await
+}
+
+/// Suppression physique de tout ce qui appartient à la session, dans la
+/// transaction de l'appelant ; rend le nombre de lignes supprimées.
+async fn purge_session_rows(
+    tx: &mut Transaction<'_, Sqlite>,
+    id: &str,
+) -> Result<u64, sqlx::Error> {
+    let mut rows = 0;
     // Resolve exact owners while transcript rows still exist. Prefix matching
     // would include another session whose ID contains this ID plus a colon.
-    sqlx::query(sqlx::AssertSqlSafe(format!(
+    rows += sqlx::query(sqlx::AssertSqlSafe(format!(
         "DELETE FROM app_settings WHERE ({})",
         capture_stop_session_predicate()
     )))
     .bind(id)
     .execute(&mut **tx)
-    .await?;
+    .await?
+    .rows_affected();
     // Live partials are keyed by transcript, not session. Removing only the
     // final transcript would leave the original words in this journal.
-    sqlx::query("DELETE FROM transcript_live_state WHERE transcript_id IN (SELECT id FROM transcripts WHERE session_id=?)")
-        .bind(id).execute(&mut **tx).await?;
+    rows += sqlx::query("DELETE FROM transcript_live_state WHERE transcript_id IN (SELECT id FROM transcripts WHERE session_id=?)")
+        .bind(id).execute(&mut **tx).await?.rows_affected();
     // Only names enumerated by SQLite and quoted as identifiers are used.
     // This includes document history, proposals and local attachment jobs.
     let tables: Vec<String> = sqlx::query_scalar(
@@ -58,22 +156,25 @@ pub async fn purge_local_session(
             .iter()
             .any(|r| r.get::<String, _>("name") == "session_id")
         {
-            sqlx::query(sqlx::AssertSqlSafe(format!(
+            rows += sqlx::query(sqlx::AssertSqlSafe(format!(
                 "DELETE FROM {quoted} WHERE session_id=?"
             )))
             .bind(id)
             .execute(&mut **tx)
-            .await?;
+            .await?
+            .rows_affected();
         }
     }
-    sqlx::query("DELETE FROM entity_mentions WHERE (source_type='session' AND source_id=?) OR (target_type='session' AND target_id=?)").bind(id).bind(id).execute(&mut **tx).await?;
-    sqlx::query("DELETE FROM app_settings WHERE id=?")
+    rows += sqlx::query("DELETE FROM entity_mentions WHERE (source_type='session' AND source_id=?) OR (target_type='session' AND target_id=?)").bind(id).bind(id).execute(&mut **tx).await?.rows_affected();
+    rows += sqlx::query("DELETE FROM app_settings WHERE id=?")
         .bind(format!("auto_enhance_pending:{id}"))
         .execute(&mut **tx)
-        .await?;
-    sqlx::query("DELETE FROM sessions WHERE id=?")
+        .await?
+        .rows_affected();
+    rows += sqlx::query("DELETE FROM sessions WHERE id=?")
         .bind(id)
         .execute(&mut **tx)
-        .await?;
-    Ok(())
+        .await?
+        .rows_affected();
+    Ok(rows)
 }

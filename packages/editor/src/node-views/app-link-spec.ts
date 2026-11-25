@@ -2,6 +2,22 @@ import type { NodeSpec } from "prosemirror-model";
 
 import { getAppLinkLabel, type AppLinkAttrs } from "../app-link";
 
+/**
+ * Adresse d'une pastille d'application : http(s) seulement (issue 655). Une
+ * pastille collée depuis du HTML ne garde pas un autre schéma.
+ */
+export function appLinkHttpUrl(value: unknown): string | null {
+  if (typeof value !== "string" || !value) return null;
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:"
+      ? url.href
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 export const appLinkNodeSpec: NodeSpec = {
   group: "inline",
   inline: true,
@@ -35,7 +51,7 @@ export const appLinkNodeSpec: NodeSpec = {
         return {
           provider: el.getAttribute("data-provider") ?? "github",
           kind: el.getAttribute("data-kind"),
-          url: el.getAttribute("data-url"),
+          url: appLinkHttpUrl(el.getAttribute("data-url")),
           owner: el.getAttribute("data-owner"),
           repo: el.getAttribute("data-repo"),
           number: numberAttr ? Number(numberAttr) : null,

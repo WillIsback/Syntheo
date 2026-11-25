@@ -322,3 +322,68 @@ describe("pause de l'écoute", () => {
     expect(store.getState().takePausedSession("session-1")).toBe(false);
   });
 });
+
+// Issue 716 : la note détachée reçoit le cumul de la fenêtre principale ; elle
+// ne le reconstruit plus seule depuis sa pause locale.
+describe("minuteur d'une fenêtre secondaire", () => {
+  const intervalId = 1 as unknown as Parameters<typeof markLiveActive>[2];
+
+  beforeEach(() => {
+    store = createListenerStore();
+  });
+
+  function nativeActive(sessionId: string, seconds: number) {
+    store.setState((state) =>
+      mutate(state, (draft) => {
+        markLiveActive(draft.live, sessionId, intervalId, true, true, null);
+        draft.live.seconds = seconds;
+      }),
+    );
+  }
+
+  test("une note ouverte après une reprise part du cumul", () => {
+    store.getState().syncPauseState({
+      pause: null,
+      offset: { sessionId: "s1", seconds: 331 },
+    });
+    nativeActive("s1", 10);
+
+    expect(getListeningElapsedSeconds(store.getState().live, "s1")).toBe(341);
+  });
+
+  test("le cumul reçu pendant l'écoute remplace celui de la fenêtre", () => {
+    nativeActive("s1", 10);
+    store.getState().syncPauseState({
+      pause: null,
+      offset: { sessionId: "s1", seconds: 331 },
+    });
+
+    expect(getListeningElapsedSeconds(store.getState().live, "s1")).toBe(341);
+  });
+
+  test("la fin de pause reçue avant la reprise native garde le cumul", () => {
+    store.getState().syncPauseState({
+      pause: { sessionId: "s1", elapsedSeconds: 331, phase: "paused" },
+      offset: null,
+    });
+    // La fenêtre principale reprend : pause retirée, cumul diffusé, avant
+    // l'événement natif « active » de cette fenêtre.
+    store.getState().syncPauseState({
+      pause: null,
+      offset: { sessionId: "s1", seconds: 331 },
+    });
+    nativeActive("s1", 3);
+
+    expect(getListeningElapsedSeconds(store.getState().live, "s1")).toBe(334);
+  });
+
+  test("le cumul d'une autre session est ignoré", () => {
+    store.getState().syncPauseState({
+      pause: null,
+      offset: { sessionId: "s0", seconds: 331 },
+    });
+    nativeActive("s1", 7);
+
+    expect(getListeningElapsedSeconds(store.getState().live, "s1")).toBe(7);
+  });
+});

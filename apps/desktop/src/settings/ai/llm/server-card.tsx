@@ -5,6 +5,7 @@ import { providerCredentialIdentity } from "@syntheo/provider-validation";
 import { cn } from "@syntheo/utils";
 
 import { useConnectionHealth } from "./health";
+import { connectedModelsLabel } from "./labels";
 import { getPreferredProviderModel } from "./selection";
 import { LLM_BASE_URL_PLACEHOLDER } from "./shared";
 
@@ -71,7 +72,7 @@ export function LlmServerCard() {
   const health = useConnectionHealth();
   const connectedLabel =
     state.status === "connected" && models.length > 0
-      ? t`Connected · ${models.length} models available`
+      ? connectedModelsLabel(models.length)
       : undefined;
 
   const chooseModel = (next: string) => {

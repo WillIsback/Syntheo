@@ -67,6 +67,14 @@ L'architecture actuelle est décrite dans
   `mobile-bridge`, `updater-core`, etc.) ;
 - templates Syntheo, templates traduits en français, générateur de templates.
 
+## Données tierces
+
+- `crates/mesure/src/entities.rs` : table des entités nommées de HTML5, tirée
+  de la spécification HTML Living Standard (<https://html.spec.whatwg.org/entities.json>),
+  © WHATWG (Apple, Google, Mozilla, Microsoft), sous licence
+  [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Seules les formes
+  avec point-virgule sont reprises.
+
 ## Correctifs portés depuis Anarlog
 
 Chaque correctif repris manuellement d'une version ultérieure d'Anarlog est listé

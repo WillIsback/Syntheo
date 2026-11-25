@@ -174,7 +174,12 @@ async fn do_transcribe_file(
 
     let status = response.status();
     if status.is_success() {
-        let openai_response: CreateTranscriptionResponse = response.json().await?;
+        let openai_response: CreateTranscriptionResponse =
+            crate::adapter::http::json_body_with_limit(
+                response,
+                crate::adapter::http::MAX_TRANSCRIPT_BODY_BYTES,
+            )
+            .await?;
         Ok(convert_response(openai_response))
     } else {
         Err(Error::UnexpectedStatus {

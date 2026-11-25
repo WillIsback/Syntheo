@@ -25,6 +25,21 @@ pub struct DeletedSessionRow {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(rename_all = "snake_case")]
+pub enum PurgeDeletedSessionOutcome {
+    Purged,
+    NotDeleted,
+    Refused,
+}
+
+/// Session supprimée en entier dont le délai de purge est écoulé.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+pub struct ExpiredDeletedSession {
+    pub session_id: String,
+    pub tombstone: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "snake_case")]
 pub enum RestoreDeletedSessionOutcome {
     Restored,
     Alive,
@@ -127,4 +142,108 @@ pub async fn restore_deleted_session(
         .map_err(|error| error.to_string())?;
 
     Ok(outcome)
+}
+
+/// Purge définitive d'une session supprimée sous `tombstone`, une fois le
+/// délai d'annulation écoulé et son dossier supprimé (issue 712). Le journal
+/// ne porte que l'identifiant et un nombre de lignes, jamais de titre ni de
+/// contenu.
+pub async fn purge_deleted_session(
+    pool: &SqlitePool,
+    request: TombstoneSessionRequest,
+) -> Result<PurgeDeletedSessionOutcome, String> {
+    // Effacement physique : `secure_delete` sur une connexion dédiée le
+    // temps de la purge, puis point de contrôle WAL (complément de l'issue
+    // 712) ; le contenu ne reste ni dans les pages libres ni dans le journal.
+    let mut secure = syntheo_db_app::SecureDeleteConnection::acquire(pool)
+        .await
+        .map_err(|error| error.to_string())?;
+    let purged = purge_in_transaction(secure.connection(), &request).await;
+    secure.release().await;
+    let outcome = purged?;
+    if matches!(outcome, syntheo_db_app::DeletedSessionPurge::Purged { .. }) {
+        syntheo_db_app::checkpoint_wal(pool).await;
+    }
+    Ok(match outcome {
+        syntheo_db_app::DeletedSessionPurge::Purged { rows } => {
+            tracing::info!(session_id = %request.session_id, rows, "deleted_session_purged");
+            PurgeDeletedSessionOutcome::Purged
+        }
+        syntheo_db_app::DeletedSessionPurge::NotDeleted => PurgeDeletedSessionOutcome::NotDeleted,
+        syntheo_db_app::DeletedSessionPurge::Refused(reason) => {
+            tracing::warn!(session_id = %request.session_id, reason, "deleted_session_purge_refused");
+            PurgeDeletedSessionOutcome::Refused
+        }
+    })
+}
+
+async fn purge_in_transaction(
+    connection: &mut sqlx::SqliteConnection,
+    request: &TombstoneSessionRequest,
+) -> Result<syntheo_db_app::DeletedSessionPurge, String> {
+    use sqlx::Connection;
+    let mut transaction = connection
+        .begin_with("BEGIN IMMEDIATE")
+        .await
+        .map_err(|error| error.to_string())?;
+    let outcome = syntheo_db_app::purge_deleted_session(
+        &mut transaction,
+        &request.session_id,
+        &request.tombstone,
+    )
+    .await
+    .map_err(|error| error.to_string())?;
+    transaction
+        .commit()
+        .await
+        .map_err(|error| error.to_string())?;
+    Ok(outcome)
+}
+
+/// Issue du VACUUM unique de la 0.8.1.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "snake_case")]
+pub enum SecureVacuumOutcome {
+    AlreadyDone,
+    Done,
+    Busy,
+}
+
+/// VACUUM unique après la purge des anciennes suppressions (voir
+/// `syntheo_db_app::secure_vacuum_once`). Journal : issue et durée.
+pub async fn secure_vacuum_once(pool: &SqlitePool) -> Result<SecureVacuumOutcome, String> {
+    let started = std::time::Instant::now();
+    let outcome = syntheo_db_app::secure_vacuum_once(pool)
+        .await
+        .map_err(|error| error.to_string())?;
+    Ok(match outcome {
+        syntheo_db_app::SecureVacuum::AlreadyDone => SecureVacuumOutcome::AlreadyDone,
+        syntheo_db_app::SecureVacuum::Done => {
+            tracing::info!(
+                elapsed_ms = started.elapsed().as_millis() as u64,
+                "secure_vacuum_done"
+            );
+            SecureVacuumOutcome::Done
+        }
+        syntheo_db_app::SecureVacuum::Busy => {
+            tracing::warn!("secure_vacuum_postponed_database_busy");
+            SecureVacuumOutcome::Busy
+        }
+    })
+}
+
+/// Sessions supprimées en attente de purge (voir
+/// `syntheo_db_app::expired_deleted_sessions`).
+pub async fn list_expired_deleted_sessions(
+    pool: &SqlitePool,
+) -> Result<Vec<ExpiredDeletedSession>, String> {
+    Ok(syntheo_db_app::expired_deleted_sessions(pool)
+        .await
+        .map_err(|error| error.to_string())?
+        .into_iter()
+        .map(|(session_id, tombstone)| ExpiredDeletedSession {
+            session_id,
+            tombstone,
+        })
+        .collect())
 }

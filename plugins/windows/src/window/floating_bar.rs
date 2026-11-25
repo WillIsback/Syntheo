@@ -59,6 +59,10 @@ pub struct FloatingDictationState {
     pub partial: String,
     pub preview_enabled: bool,
     pub preview_unavailable: bool,
+    /// Hôte du serveur de transcription quand l'audio part en HTTP clair
+    /// hors de ce poste (issue 665) : rappel affiché dans le panneau.
+    #[serde(default)]
+    pub cleartext_host: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
@@ -490,10 +494,13 @@ mod cross_platform {
         }
 
         let (width, height) = default_size();
-        let builder = WebviewWindowBuilder::new(
+        let builder = crate::navigation::guard(
+            WebviewWindowBuilder::new(
+                app,
+                WINDOW_LABEL,
+                WebviewUrl::App("app/floating-bar".into()),
+            ),
             app,
-            WINDOW_LABEL,
-            WebviewUrl::App("app/floating-bar".into()),
         )
         .title(syntheo_brand::PRODUCT_NAME)
         .inner_size(width, height)

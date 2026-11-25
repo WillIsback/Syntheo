@@ -45,6 +45,7 @@ specta = { workspace = true, features = ["serde_json"] }
 tauri = { workspace = true }
 tauri-specta = { workspace = true, features = ["derive", "typescript"] }
 
+tauri-plugin-opener2 = { workspace = true }
 tauri-plugin-os = { workspace = true }
 tauri-plugin-window-state = { workspace = true }
 

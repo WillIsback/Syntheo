@@ -14,7 +14,7 @@
     "frontendDist": "../dist"
   },
   "app": {
-    "withGlobalTauri": true,
+    "withGlobalTauri": false,
     "macOSPrivateApi": false,
     "security": {
       "dangerousDisableAssetCspModification": ["style-src"],
@@ -48,10 +48,7 @@
       },
       "assetProtocol": {
         "enable": true,
-        "scope": [
-          "**/*",
-          "$APPDATA/**"
-        ]
+        "scope": []
       }
     }
   },
@@ -114,6 +111,9 @@
     }
   },
   "plugins": {
+    "http": {
+      "scopeRedirects": true
+    },
     "deep-link": {
       "desktop": {
         "schemes": [

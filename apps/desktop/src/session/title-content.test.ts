@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { i18n } from "@lingui/core";
+import { afterEach, describe, expect, it } from "vitest";
 
 import { schema } from "@syntheo/editor/note";
 
@@ -12,6 +13,24 @@ import {
 } from "./title-content";
 
 describe("documentTitlePlaceholder", () => {
+  afterEach(() => {
+    i18n.activate("en");
+  });
+
+  // Passe QA 0.8.1-1 : « Untitled » restait en anglais en français.
+  it("translates the title placeholder", async () => {
+    const { createI18n } = await import("~/i18n/catalogs");
+    await createI18n("fr");
+    expect(
+      documentTitlePlaceholder({
+        node: schema.node("heading", { level: 1 }),
+        pos: 0,
+        hasAnchor: true,
+        isEmptyDoc: false,
+      }),
+    ).toBe("Sans titre");
+  });
+
   it("shows Untitled only for the document title block", () => {
     expect(
       documentTitlePlaceholder({

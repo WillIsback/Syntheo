@@ -55,11 +55,47 @@ pub struct SectionMeasure {
     pub counters: MeasureCounters,
 }
 
-/// Résultat de la mesure : des nombres et des booléens seulement.
+/// Statut d'une mesure (issue 733) : `refused` n'affiche aucun chiffre,
+/// `doubtful` l'affiche grisé avec sa raison. Codes identiques à ceux de la
+/// base et de l'export.
+#[derive(Debug, Clone, Copy, Serialize, specta::Type, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum MeasureStatus {
+    Ok,
+    Doubtful,
+    Refused,
+}
+
+/// Raison d'un statut (liste fermée).
+#[derive(Debug, Clone, Copy, Serialize, specta::Type, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum StatusReason {
+    EntityLeft,
+    TooFewWordsKept,
+    GlobalAlignment,
+    UnmatchedSections,
+}
+
+/// Métriques de contrôle, des nombres seulement.
+#[derive(Debug, Clone, Copy, Serialize, specta::Type, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct MeasureControls {
+    pub generated_kept_words: u32,
+    pub sections_matched_exact: u32,
+    pub sections_matched_near: u32,
+    pub deleted_section_words: u32,
+    pub residual_entities: u32,
+}
+
+/// Résultat de la mesure : des nombres, des booléens et des codes fermés.
 #[derive(Debug, Clone, Serialize, specta::Type, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct MeasureResult {
     pub rule_version: u32,
+    pub guard_version: u32,
+    pub status: MeasureStatus,
+    pub status_reasons: Vec<StatusReason>,
+    pub controls: MeasureControls,
     pub aligned: bool,
     pub headings_generated: u32,
     pub headings_matched: u32,
@@ -184,6 +220,29 @@ pub(crate) fn run_measure(
     .map_err(error)?;
     Ok(MeasureResult {
         rule_version: report.rule_version,
+        guard_version: report.guard_version,
+        status: match report.status {
+            syntheo_mesure::MeasureStatus::Ok => MeasureStatus::Ok,
+            syntheo_mesure::MeasureStatus::Doubtful => MeasureStatus::Doubtful,
+            syntheo_mesure::MeasureStatus::Refused => MeasureStatus::Refused,
+        },
+        status_reasons: report
+            .status_reasons
+            .iter()
+            .map(|reason| match reason {
+                syntheo_mesure::StatusReason::EntityLeft => StatusReason::EntityLeft,
+                syntheo_mesure::StatusReason::TooFewWordsKept => StatusReason::TooFewWordsKept,
+                syntheo_mesure::StatusReason::GlobalAlignment => StatusReason::GlobalAlignment,
+                syntheo_mesure::StatusReason::UnmatchedSections => StatusReason::UnmatchedSections,
+            })
+            .collect(),
+        controls: MeasureControls {
+            generated_kept_words: n(report.controls.generated_kept_words),
+            sections_matched_exact: report.controls.sections_matched_exact,
+            sections_matched_near: report.controls.sections_matched_near,
+            deleted_section_words: n(report.controls.deleted_section_words),
+            residual_entities: report.controls.residual_entities,
+        },
         aligned: report.aligned,
         headings_generated: report.headings_generated,
         headings_matched: report.headings_matched,
@@ -358,7 +417,7 @@ mod tests {
         assert_eq!(
             result.total,
             MeasureCounters {
-                generated: 28,
+                generated: 31,
                 added: 3,
                 deleted: 2,
                 replaced_content: 4,
@@ -393,7 +452,7 @@ mod tests {
         )
         .unwrap();
         assert!(result.aligned);
-        assert_eq!(result.total.generated, 28);
+        assert_eq!(result.total.generated, 31);
         assert_eq!(
             (
                 result.total.added,
@@ -442,7 +501,18 @@ mod tests {
                         && s.chars()
                             .all(|c| c.is_ascii_digit() || ('a'..='f').contains(&c));
                     let role = ["decisions", "actions", "other"].contains(&s.as_str());
-                    assert!(hash || role, "chaîne dans le résultat : {s:?}");
+                    // Codes fermés des garde-fous (issue 733).
+                    let code = [
+                        "ok",
+                        "doubtful",
+                        "refused",
+                        "entity_left",
+                        "too_few_words_kept",
+                        "global_alignment",
+                        "unmatched_sections",
+                    ]
+                    .contains(&s.as_str());
+                    assert!(hash || role || code, "chaîne dans le résultat : {s:?}");
                 }
                 serde_json::Value::Array(items) => items.iter().for_each(walk),
                 serde_json::Value::Object(map) => map.values().for_each(walk),

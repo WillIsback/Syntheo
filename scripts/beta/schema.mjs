@@ -1,7 +1,7 @@
 // Validateur JSON Schema minimal pour l'export de mesure (issue 673).
 //
 // Il ne couvre que les mots-clés effectivement utilisés par
-// crates/mesure/schema/export-v1.json. Un mot-clé inconnu dans le schéma fait
+// crates/mesure/schema/export-v2.json. Un mot-clé inconnu dans le schéma fait
 // échouer la compilation : si le schéma évolue, ce validateur refuse de
 // travailler plutôt que d'ignorer une contrainte en silence.
 //
@@ -23,6 +23,7 @@ const KEYWORDS = new Set([
   "minimum",
   "maximum",
   "maxItems",
+  "uniqueItems",
   "items",
   "oneOf",
 ]);
@@ -103,6 +104,19 @@ export function compileSchema(root) {
       checks.push((value) =>
         !Array.isArray(value) || value.length <= max ? null : "maxItems",
       );
+    }
+    if (node.uniqueItems !== undefined) {
+      if (node.uniqueItems !== true) fail("uniqueItems");
+      checks.push((value) => {
+        if (!Array.isArray(value)) return null;
+        const seen = new Set();
+        for (const item of value) {
+          if (typeof item === "object" && item !== null) return "uniqueItems";
+          if (seen.has(item)) return "uniqueItems";
+          seen.add(item);
+        }
+        return null;
+      });
     }
     if (node.items !== undefined) {
       const item = compile(node.items);

@@ -8,6 +8,13 @@ export const commands = {
 	createSession: (request: CreateSessionRequest) => typedError<string, string>(__TAURI_INVOKE("plugin:session|create_session", { request })),
 	softDeleteSession: (request: TombstoneSessionRequest) => typedError<DeletedSessionRow | null, string>(__TAURI_INVOKE("plugin:session|soft_delete_session", { request })),
 	restoreDeletedSession: (request: TombstoneSessionRequest) => typedError<RestoreDeletedSessionOutcome, string>(__TAURI_INVOKE("plugin:session|restore_deleted_session", { request })),
+	purgeDeletedSession: (request: TombstoneSessionRequest) => typedError<PurgeDeletedSessionOutcome, string>(__TAURI_INVOKE("plugin:session|purge_deleted_session", { request })),
+	listExpiredDeletedSessions: () => typedError<ExpiredDeletedSession[], string>(__TAURI_INVOKE("plugin:session|list_expired_deleted_sessions")),
+	/**
+	 *  VACUUM unique de la 0.8.1, sous le verrou d'écriture : les écritures
+	 *  passées par les commandes attendent la fin au lieu d'échouer.
+	 */
+	secureVacuumOnce: () => typedError<SecureVacuumOutcome, string>(__TAURI_INVOKE("plugin:session|secure_vacuum_once")),
 	addSessionParticipant: (request: AddSessionParticipantRequest) => typedError<null, string>(__TAURI_INVOKE("plugin:session|add_session_participant", { request })),
 	removeSessionParticipant: (request: RemoveSessionParticipantRequest) => typedError<null, string>(__TAURI_INVOKE("plugin:session|remove_session_participant", { request })),
 	persistChatSessionProposal: (request: PersistChatSessionProposalRequest) => typedError<null, string>(__TAURI_INVOKE("plugin:session|persist_chat_session_proposal", { request })),
@@ -84,6 +91,12 @@ export type EnsureFolderCatalogRequest = {
 	paths: string[],
 };
 
+/**  Session supprimée en entier dont le délai de purge est écoulé. */
+export type ExpiredDeletedSession = {
+	session_id: string,
+	tombstone: string,
+};
+
 export type MoveSessionContentsRequest = {
 	source_session_id: string,
 	target_session_id: string,
@@ -103,6 +116,8 @@ export type PersistChatSessionProposalRequest = {
 	source: string,
 };
 
+export type PurgeDeletedSessionOutcome = "purged" | "not_deleted" | "refused";
+
 export type RemoveSessionParticipantRequest = {
 	mapping_id: string,
 };
@@ -121,6 +136,9 @@ export type ResolveSessionConflictsRequest = {
 };
 
 export type RestoreDeletedSessionOutcome = "restored" | "alive" | "not_deleted";
+
+/**  Issue du VACUUM unique de la 0.8.1. */
+export type SecureVacuumOutcome = "already_done" | "done" | "busy";
 
 export type SessionAudioRequest = {
 	session_id: string,

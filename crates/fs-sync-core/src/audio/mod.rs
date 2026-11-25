@@ -215,11 +215,11 @@ pub fn import_to_session(
 
     let result = validate_import_source(source_path);
     match result {
-        Ok(()) => {
+        Ok(resolved) => {
             runtime.emit(AudioImportEvent::Completed {
                 session_id: session_id.to_string(),
             });
-            Ok(source_path.to_path_buf())
+            Ok(resolved)
         }
         Err(error) => {
             runtime.emit(AudioImportEvent::Failed {
@@ -231,15 +231,20 @@ pub fn import_to_session(
     }
 }
 
-fn validate_import_source(source_path: &Path) -> std::io::Result<()> {
-    let metadata = std::fs::metadata(source_path)?;
+/// Revalidation au moment de l'import (issue 657) : le chemin est résolu
+/// (liens symboliques suivis) et doit mener à un fichier régulier non vide.
+/// Le chemin résolu est celui qui est lu ensuite : un lien remplacé entre la
+/// demande et la transcription ne redirige plus la lecture.
+fn validate_import_source(source_path: &Path) -> std::io::Result<PathBuf> {
+    let resolved = std::fs::canonicalize(source_path)?;
+    let metadata = std::fs::metadata(&resolved)?;
     if !metadata.is_file() || metadata.len() == 0 {
         return Err(std::io::Error::new(
             std::io::ErrorKind::InvalidInput,
             "audio_source_must_be_a_nonempty_file",
         ));
     }
-    Ok(())
+    Ok(resolved)
 }
 
 fn system_time_to_iso(time: std::time::SystemTime) -> String {

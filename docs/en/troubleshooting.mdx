@@ -109,6 +109,7 @@ Then check the "Audio" section of the "Meetings" screen:
       pactl list short sources
       ```
 
+    - If the microphone disappears during listening (headset unplugged) and the only remaining input is the monitor of an output, Syntheo does not record it as the microphone: "No microphone available" appears, the banner shows "Microphone unavailable. System audio continues", and only the computer's sound is transcribed until you plug in a microphone or choose one.
     - If the microphone does not appear, check that it is not muted or assigned to another sound card, for example with `pavucontrol`.
     - If audio works in other apps but not in Syntheo, note the distribution, the desktop environment, and the Syntheo version for the report.
   </Tab>

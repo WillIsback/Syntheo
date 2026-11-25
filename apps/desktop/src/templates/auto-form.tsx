@@ -22,6 +22,7 @@ import { AutoFormatExamplesDialog } from "./auto-format-examples-dialog";
 
 import { setSettingValue } from "~/settings/queries";
 import { useConfigValue } from "~/shared/config";
+import { describeServiceError } from "~/shared/service-error";
 
 const AUTO_FORMAT_TOKENS = [] as const;
 const LEGACY_CUSTOM_INSTRUCTIONS_PREAMBLE =
@@ -100,7 +101,7 @@ export function AutoFormatForm({
       await setSettingValue("auto_summary_prompt", stored);
       return stored;
     },
-    onError: (error) => toast.error(error.message),
+    onError: (error) => toast.error(describeServiceError(error)),
   });
 
   const form = useForm({

@@ -98,6 +98,19 @@ export const Enhanced = forwardRef<
       return <ConfigError />;
     }
 
+    // Synthèse par défaut jamais générée, au corps vide (document créé à
+    // l'arrêt, écoute terminée sans compte rendu) : même proposition qu'en
+    // son absence, pas un éditeur vide sous un titre « Sans titre » (passe QA
+    // 0.8.1-1). Une synthèse générée puis vidée à la main garde l'éditeur.
+    if (
+      !hasContent &&
+      !showStreaming &&
+      !enhancedNote.generatedAt &&
+      enhancedNoteId === defaultSummaryDocumentId(sessionId)
+    ) {
+      return <EmptySummary sessionId={sessionId} />;
+    }
+
     if (showStreaming) {
       return (
         <StreamingView
@@ -137,7 +150,8 @@ function EmptySummary({ sessionId }: { sessionId: string }) {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-4 px-6">
       <Button onClick={() => generate.generate()} disabled={generate.pending}>
-        <Trans>Generate summary</Trans>
+        {/* Même libellé que la capsule (issue 719). */}
+        <Trans>Generate the summary</Trans>
       </Button>
       {generate.error && <p role="alert">{generate.error.message}</p>}
     </div>

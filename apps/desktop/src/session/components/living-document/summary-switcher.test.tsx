@@ -20,15 +20,23 @@ const mocks = vi.hoisted(() => ({
   summaryOff: false,
   selectTemplate: vi.fn(),
   deleteEnhancedNote: vi.fn(() => Promise.resolve()),
+  noNote: false,
+  noteContent: "",
 }));
+
+const SUMMARY_CONTENT =
+  '{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Décisions"}]}]}';
 
 vi.mock("~/session/queries", () => ({
   deleteEnhancedNote: mocks.deleteEnhancedNote,
-  useEnhancedNote: () => ({
-    id: "summary-1",
-    content: '{"type":"doc"}',
-    generatedAt: mocks.generatedAt,
-  }),
+  useEnhancedNote: () =>
+    mocks.noNote
+      ? null
+      : {
+          id: "summary-1",
+          content: mocks.noteContent,
+          generatedAt: mocks.generatedAt,
+        },
   useSummaryVersions: () => mocks.versions,
 }));
 
@@ -92,6 +100,8 @@ describe("SummarySwitcher", () => {
     mocks.generatedAt = "2026-11-08T14:32:00.000Z";
     mocks.isGenerating = false;
     mocks.summaryOff = false;
+    mocks.noNote = false;
+    mocks.noteContent = SUMMARY_CONTENT;
   });
 
   afterEach(() => {
@@ -227,6 +237,38 @@ describe("SummarySwitcher", () => {
       screen.queryByRole("menuitem", { name: "Change template…" }),
     ).toBeNull();
     expect(screen.getByRole("menuitem", { name: "Copy" })).not.toBeNull();
+  });
+
+  // Issue 719 : note sans compte rendu, ni « · v1 » ni « v1 Actuelle ».
+  it("shows no version before the first summary", () => {
+    mocks.noNote = true;
+    renderSwitcher({ kind: "summary" });
+
+    expect(screen.getByRole("button", { name: "Summary" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Summary · v/ })).toBeNull();
+    openVersionsMenu();
+    expect(screen.queryAllByRole("menuitemradio")).toHaveLength(0);
+    expect(screen.queryByText("Versions")).toBeNull();
+  });
+
+  // Passe QA 0.8.1-1 : l'arrêt crée un document de synthèse au corps vide ;
+  // il ne compte pas comme un compte rendu.
+  it("shows no version for an empty summary document", () => {
+    mocks.generatedAt = null;
+    for (const content of ["", '{"type":"doc","content":[]}']) {
+      mocks.noteContent = content;
+      renderSwitcher({ kind: "summary" });
+
+      expect(screen.getByRole("button", { name: "Summary" })).toBeTruthy();
+      expect(screen.queryByRole("button", { name: /Summary · v/ })).toBeNull();
+      openVersionsMenu();
+      expect(screen.queryAllByRole("menuitemradio")).toHaveLength(0);
+      expect(screen.queryByText("Current")).toBeNull();
+      // Passe QA 0.8.1-2 : rien à régénérer avant une première synthèse.
+      expect(screen.queryByText("Regenerate")).toBeNull();
+      expect(screen.queryByText(/Change template/)).toBeNull();
+      cleanup();
+    }
   });
 
   it("renders nothing without a summary", () => {

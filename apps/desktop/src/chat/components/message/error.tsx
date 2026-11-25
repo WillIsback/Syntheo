@@ -9,6 +9,7 @@ import {
 import { ActionButton, MessageBubble, MessageContainer } from "./shared";
 
 import { documentationUrl } from "~/shared/documentation";
+import { describeServiceError } from "~/shared/service-error";
 
 // Pas d'application web hébergée : l'aide renvoie à la documentation publique,
 // dans la langue de l'interface (l'ancre suit le titre de la page traduite).
@@ -58,7 +59,9 @@ export function ErrorMessage({
   return (
     <MessageContainer align="start">
       <MessageBubble variant="error" withActionButton={!!onRetry}>
-        <p className="text-sm">{message}</p>
+        <p className="text-sm">
+          {showContextLengthHelp ? message : describeServiceError(error)}
+        </p>
         {showContextLengthHelp && (
           <button
             onClick={handleOpenFaq}

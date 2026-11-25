@@ -145,6 +145,11 @@ export type FloatingDictationState = {
 	partial: string,
 	previewEnabled: boolean,
 	previewUnavailable: boolean,
+	/**
+	 *  Hôte du serveur de transcription quand l'audio part en HTTP clair
+	 *  hors de ce poste (issue 665) : rappel affiché dans le panneau.
+	 */
+	cleartextHost?: string | null,
 };
 
 export type FloatingTranscriptBubble = {

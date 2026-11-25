@@ -10,6 +10,10 @@ pub enum Error {
     Symphonia(#[from] symphonia::core::errors::Error),
     #[error("no decodable audio track")]
     NoAudioTrack,
+    /// Piste Opus (OGG, WebM) : symphonia 0.5 n'a pas de décodeur Opus
+    /// (issue 714). Message stable, reconnu par l'interface.
+    #[error("unsupported audio codec: opus")]
+    UnsupportedOpus,
     #[error(transparent)]
     Resampler(#[from] syntheo_resampler::Error),
     #[error(transparent)]
