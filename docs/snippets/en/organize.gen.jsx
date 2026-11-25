@@ -12,7 +12,6 @@
 // Feuilles de style propres à un modèle : const SYN_CSS_NOM = `…` (préfixe
 // .syn-), ajoutées automatiquement à {h(SynStyle)}.
 
-const SYN_VERSION = "0.7.0";
 const SYN_LOCALE = "en-US";
 const SYN_LIGHT = {
   "background": "hsl(50 43% 97%)",
@@ -634,7 +633,7 @@ const SynToolbar = ({ markers, setMarkers, onReset }) => (
   <div className="syn-bar">
     <span className="syn-badge">
       {h(SynIcon, { name: I("Play"), size: 14 })}
-      Interactive replica · Syntheo {SYN_VERSION}
+      Interactive replica · Syntheo
     </span>
     <span className="syn-bar-actions">
       {setMarkers ? (

@@ -1,5 +1,4 @@
 {
-  "version": "0.7.0",
   "shared": [
     "core.jsx.tpl",
     "note.jsx.tpl",
