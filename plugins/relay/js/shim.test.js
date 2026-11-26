@@ -166,7 +166,8 @@ for (const [outcome, settle, expected] of [
 // de l'amorçage. Il est gardé pour ce port, retiré de la barre d'adresse et
 // présenté en sous-protocole WebSocket.
 test("the session secret from the bootstrap fragment opens the socket", () => {
-  const secret = "0123456789abcdef0123456789abcdef";
+  // Valeur de test à faible entropie (gitleaks : generic-api-key).
+  const secret = "a".repeat(32);
   const stored = new Map();
   const replaced = [];
   const relay = loadShim({
@@ -187,7 +188,7 @@ test("the session secret from the bootstrap fragment opens the socket", () => {
 });
 
 test("a reloaded page reuses the session secret of this port", () => {
-  const secret = "fedcba9876543210fedcba9876543210";
+  const secret = "b".repeat(32);
   const relay = loadShim({
     sessionStorage: {
       getItem: (key) => (key === "syntheo-relay-session" ? secret : null),
