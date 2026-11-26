@@ -239,6 +239,8 @@ describe("OnDeviceCard", () => {
     expect(alert.textContent).toMatch(/no connection to the download server/);
     expect(alert.textContent).toMatch(/current models are kept/);
     expect(alert.textContent).not.toMatch(/resumes where it stopped/);
+    // Une seule phrase, un seul deux-points (issue 783).
+    expect(alert.textContent?.split(":")).toHaveLength(2);
   });
 
   it("promises a resume when the failed download left a partial file", async () => {

@@ -1846,8 +1846,8 @@ msgid "Download the update"
 msgstr "Download the update"
 
 #: src/stt/on-device.ts
-msgid "Downloading the models is not available: install them from a folder."
-msgstr "Downloading the models is not available: install them from a folder."
+msgid "Downloading the models is not available. Install them from a folder."
+msgstr "Downloading the models is not available. Install them from a folder."
 
 #. placeholder {0}: formatBytes(progress?.downloaded ?? 0, i18n.locale)
 #: src/settings/general/update-section.tsx
@@ -3609,12 +3609,12 @@ msgid "No component matches"
 msgstr "No component matches"
 
 #: src/stt/on-device.ts
-msgid "No connection to the download server: nothing was downloaded and the current models are kept. Try again once connected."
-msgstr "No connection to the download server: nothing was downloaded and the current models are kept. Try again once connected."
+msgid "No connection to the download server. Nothing was downloaded and the current models are kept. Try again once connected."
+msgstr "No connection to the download server. Nothing was downloaded and the current models are kept. Try again once connected."
 
 #: src/stt/on-device.ts
-msgid "No connection to the download server: nothing was downloaded. Try again once connected."
-msgstr "No connection to the download server: nothing was downloaded. Try again once connected."
+msgid "No connection to the download server. Nothing was downloaded. Try again once connected."
+msgstr "No connection to the download server. Nothing was downloaded. Try again once connected."
 
 #: src/session/components/version-history-dialog.tsx
 msgid "No earlier versions yet."
@@ -6254,8 +6254,8 @@ msgid "The models are not installed or are incomplete."
 msgstr "The models are not installed or are incomplete."
 
 #: src/stt/on-device.ts
-msgid "The models could not be downloaded (network or server). Try again: the download resumes where it stopped."
-msgstr "The models could not be downloaded (network or server). Try again: the download resumes where it stopped."
+msgid "The models could not be downloaded (network or server). Try again, the download resumes where it stopped."
+msgstr "The models could not be downloaded (network or server). Try again, the download resumes where it stopped."
 
 #: src/stt/on-device.ts
 msgid "The models could not be downloaded (network or server). Try again."
