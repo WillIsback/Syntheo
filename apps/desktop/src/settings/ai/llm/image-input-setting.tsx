@@ -1,6 +1,5 @@
 import { useLingui } from "@lingui/react/macro";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
 
 import { providerCredentialIdentity } from "@syntheo/provider-validation";
 import { cn } from "@syntheo/utils";
@@ -16,7 +15,7 @@ import {
   probeImageInput,
   withImageInputEntry,
 } from "~/settings/ai/shared/image-input";
-import { updateSettingValue } from "~/settings/queries";
+import { updateSettingValue, useSettingsReady } from "~/settings/queries";
 import { useConfigValue } from "~/shared/config";
 
 // « Le modèle lit les images » (issue 754), dans la carte « Mon serveur » de
@@ -62,6 +61,7 @@ export function ImageInputSetting({
   connected: boolean;
 }) {
   const { t, i18n } = useLingui();
+  const settingsReady = useSettingsReady();
   const stored = useConfigValue("llm_image_input");
   const key = imageInputKey(baseUrl, model);
   const entry = parseImageInputSettings(stored)[key];
@@ -71,6 +71,13 @@ export function ImageInputSetting({
   const persist = (detected: ImageInputDetection) =>
     saveImageInput(key, (current) => ({ ...current, detected }));
 
+  // La détection ne part qu'une fois les réglages lus (issue 769) : au
+  // premier rendu, le réglage vaut encore « {} » (choix Automatique, rien de
+  // gardé), et la sonde partait à chaque ouverture de la page, même avec un
+  // résultat gardé ou un choix forcé. Un résultat net est gardé par serveur
+  // et modèle ; une réponse ambiguë reste en cache pour la session, sans
+  // nouvelle sonde à chaque visite. Seuls un autre serveur, un autre modèle
+  // ou « Tester avec une image » la refont.
   const detection = useQuery({
     queryKey: [
       "llm-image-input",
@@ -78,17 +85,19 @@ export function ImageInputSetting({
       model,
       providerCredentialIdentity({ provider: "custom", baseUrl, apiKey }),
     ],
-    queryFn: () => detectImageInput({ baseUrl, apiKey, model }),
-    enabled: connected && choice === "auto" && !entry?.detected,
+    queryFn: async () => {
+      const result = await detectImageInput({ baseUrl, apiKey, model });
+      // Résultat net seulement : sans réponse claire, rien n'est gardé et le
+      // nom du modèle sert de repli.
+      if (result) await persist(result);
+      return result;
+    },
+    enabled:
+      settingsReady && connected && choice === "auto" && !entry?.detected,
     retry: false,
     staleTime: Number.POSITIVE_INFINITY,
-    gcTime: 0,
+    gcTime: Number.POSITIVE_INFINITY,
   });
-  // Résultat net seulement : sans réponse claire, rien n'est gardé et le nom
-  // du modèle sert de repli.
-  useEffect(() => {
-    if (detection.data) void persist(detection.data);
-  }, [detection.data]);
 
   const testing = useMutation({
     mutationFn: () => probeImageInput({ baseUrl, apiKey, model }),

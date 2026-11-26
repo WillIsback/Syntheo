@@ -15,17 +15,20 @@ import { ImageInputSetting } from "./image-input-setting";
 
 const mocks = vi.hoisted(() => ({
   stored: "{}",
+  ready: true,
   detect: vi.fn(),
   probe: vi.fn(),
   updateSettingValue: vi.fn(),
 }));
 
+// Avant la lecture des réglages, le stockage rend la valeur par défaut.
 vi.mock("~/shared/config", () => ({
-  useConfigValue: () => mocks.stored,
+  useConfigValue: () => (mocks.ready ? mocks.stored : "{}"),
 }));
 
 vi.mock("~/settings/queries", () => ({
   updateSettingValue: mocks.updateSettingValue,
+  useSettingsReady: () => mocks.ready,
 }));
 
 vi.mock("~/settings/ai/shared/image-input", async (importOriginal) => ({
@@ -42,6 +45,7 @@ const KEY = `${BASE}|${MODEL}`;
 
 beforeEach(() => {
   mocks.stored = "{}";
+  mocks.ready = true;
   mocks.detect.mockReset();
   mocks.probe.mockReset();
   mocks.updateSettingValue.mockReset();
@@ -230,4 +234,64 @@ it("keeps the stored result when the model answers beside the test image", async
     "The server accepted the test image, but the model did not describe it: it may not read images. Choose Yes or No to decide.",
   );
   expect(JSON.parse(mocks.stored)[KEY]).toEqual({ detected });
+});
+
+// Issue 769 : à l'ouverture de la page, les réglages ne sont pas encore lus
+// au premier rendu. La détection attend leur lecture, puis réutilise le
+// résultat gardé ; un choix forcé n'en lance aucune.
+it.each([
+  [
+    "a kept detection",
+    {
+      detected: {
+        reads: true,
+        source: "probe",
+        checkedAt: "2026-11-26T10:00:00.000Z",
+      },
+    },
+  ],
+  ["a forced Yes", { choice: "yes" }],
+  ["a forced No", { choice: "no" }],
+])("does not probe again when the page opens with %s", async (_, entry) => {
+  mocks.stored = JSON.stringify({ [KEY]: entry });
+  mocks.ready = false;
+  mocks.detect.mockResolvedValue(null);
+  const client = new QueryClient();
+  const view = render(
+    <QueryClientProvider client={client}>
+      <ImageInputSetting baseUrl={BASE} apiKey="" model={MODEL} connected />
+    </QueryClientProvider>,
+  );
+
+  mocks.ready = true;
+  view.rerender(
+    <QueryClientProvider client={client}>
+      <ImageInputSetting baseUrl={BASE} apiKey="" model={MODEL} connected />
+    </QueryClientProvider>,
+  );
+  await new Promise((resolve) => setTimeout(resolve, 20));
+
+  expect(mocks.detect).not.toHaveBeenCalled();
+  expect(JSON.parse(mocks.stored)[KEY]).toEqual(entry);
+});
+
+it("does not probe again on a second visit after an unclear answer", async () => {
+  mocks.detect.mockResolvedValue(null);
+  const client = new QueryClient();
+  const open = () =>
+    render(
+      <QueryClientProvider client={client}>
+        <ImageInputSetting baseUrl={BASE} apiKey="" model={MODEL} connected />
+      </QueryClientProvider>,
+    );
+
+  const first = open();
+  await waitFor(() => expect(mocks.detect).toHaveBeenCalledTimes(1));
+  first.unmount();
+  // Le temps que la page soit fermée puis rouverte.
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  open();
+  await new Promise((resolve) => setTimeout(resolve, 20));
+
+  expect(mocks.detect).toHaveBeenCalledTimes(1);
 });
