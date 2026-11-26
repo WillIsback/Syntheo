@@ -56,12 +56,13 @@ export function AppToast({
   const hasTimer = Number.isFinite(toast.durationMs);
   const hasDetails = hasTimer || toast.description !== undefined;
   const remainingSeconds = Math.max(0, Math.ceil(toast.remainingMs / 1_000));
-  const secondaryAction =
-    toast.secondaryAction ??
-    (toast.closeButton && toast.dismissible
+  // « Fermer » reste présent sur tout toast fermable, même avec des actions :
+  // un toast persistant ne doit jamais couvrir la capsule sans issue (issue 778).
+  const dismissAction: AppToastAction | undefined =
+    toast.closeButton && toast.dismissible
       ? { label: labels.dismiss, onClick: () => {} }
-      : undefined);
-  const actions = [toast.action, secondaryAction].filter(
+      : undefined;
+  const actions = [toast.action, toast.secondaryAction, dismissAction].filter(
     (action): action is AppToastAction => action !== undefined,
   );
   const stackedBehind = stacked && stackDepth > 0;
@@ -249,7 +250,7 @@ export function AppToast({
           <div
             data-slot="app-toast-actions"
             className={cn([
-              "flex items-center gap-2",
+              "flex flex-wrap items-center gap-2",
               compact ? "px-2.5 pb-2.5" : "px-4 pb-3",
             ])}
           >
