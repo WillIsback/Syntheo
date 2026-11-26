@@ -1,29 +1,53 @@
 ---
 title: "Roadmap"
-description: "The next planned changes for Syntheo."
+description: "What Syntheo has shipped and the next planned versions."
 icon: "map"
 ---
 
-Syntheo is under construction (beta). This page lists the planned work, with no committed dates. The current state of the product is described in [Architecture](/en/architecture).
+Syntheo is under construction (beta). This page shows the product's main milestones: those already shipped and those to come, with no committed dates. The current state of the product is described in [Architecture](/en/architecture).
 
 Whatever form the product takes, the principles stay the same: inference only on the servers you choose, no audio kept, no required account, and no telemetry.
 
-## Planned work
-
 <Steps>
-  <Step title="CLI">
-    A command-line interface distributed with the app, to browse and use your meetings from a terminal or an agent. Today, the CLI is built from source: see [Install the CLI](/en/installation).
+  <Step title="0.7.0 · Projects, common thread and folders · shipped">
+    Meetings are organised in project folders, with a common thread that links the meetings on one topic and prepares the next one. See [Folders](/en/folders) and the [0.7.0 release notes](https://github.com/WillIsback/Syntheo/releases/tag/v0.7.0).
   </Step>
-  <Step title="REST API">
-    A REST API to integrate Syntheo with your tools and automations.
+  <Step title="0.8.0 · Native on-device transcription · shipped">
+    A transcription program shipped with the app transcribes meetings directly on the computer, with no server, when the machine allows it. See [On-device transcription](/en/on-device-transcription) and the [0.8.0 release notes](https://github.com/WillIsback/Syntheo/releases/tag/v0.8.0).
   </Step>
-  <Step title="Mobile version">
-    A mobile app.
+  <Step title="0.9.0 · Drawing mode and images · next version">
+    During the meeting, a Drawing mode opens a whiteboard-style surface in the note: pen, shapes, arrows, text. You sketch a diagram, a layout or an idea by hand, without trying to make it pretty.
+
+    When the summary is generated, the language model reads this sketch and the images pasted in the note, then redraws them cleanly in the final summary. The original sketch stays attached and viewable, and the redrawn diagram is marked "to check". This needs a vision-capable model on your summary server.
   </Step>
-  <Step title="Web version">
-    A version you can use from a browser.
+  <Step title="1.0.0 · Synchronised mobile version">
+    A mobile app synchronised with the computer: record a call from your phone while taking the note on your computer, both linked to the same meeting.
   </Step>
 </Steps>
+
+## 0.9.0 preview
+
+Working mockups, shown in French: the final interface may change.
+
+<Frame caption="While listening, the drawing opens in the note, next to the transcript. The capsule gets a pen button.">
+  <img className="block dark:hidden" src="/images/roadmap/ecouter-dessin-light.webp" alt="Note being recorded with a hand-drawn sketch and the drawing toolbar" />
+  <img className="hidden dark:block" src="/images/roadmap/ecouter-dessin-dark.webp" alt="Note being recorded with a hand-drawn sketch and the drawing toolbar" />
+</Frame>
+
+<Frame caption="The / command inserts a drawing at the cursor, like an image or a list.">
+  <img className="block dark:hidden" src="/images/roadmap/inserer-dessin-light.webp" alt="Command menu open with the Drawing entry" />
+  <img className="hidden dark:block" src="/images/roadmap/inserer-dessin-dark.webp" alt="Command menu open with the Drawing entry" />
+</Frame>
+
+<Frame caption="In the summary, the diagram is redrawn cleanly and marked &quot;to check&quot;, with the original sketch one click away.">
+  <img className="block dark:hidden" src="/images/roadmap/synthese-schema-light.webp" alt="Summary containing a diagram redrawn from the sketch" />
+  <img className="hidden dark:block" src="/images/roadmap/synthese-schema-dark.webp" alt="Summary containing a diagram redrawn from the sketch" />
+</Frame>
+
+<Frame caption="A setting tells whether the summary model reads images, with an image test.">
+  <img className="block dark:hidden" src="/images/roadmap/reglage-vision-light.webp" alt="Summary server card with the image reading setting" />
+  <img className="hidden dark:block" src="/images/roadmap/reglage-vision-dark.webp" alt="Summary server card with the image reading setting" />
+</Frame>
 
 ## Suggest an idea
 
