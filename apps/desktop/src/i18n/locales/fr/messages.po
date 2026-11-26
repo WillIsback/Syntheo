@@ -7216,7 +7216,6 @@ msgstr "à jour jusqu'au {coveredDate}"
 msgid "Update"
 msgstr "Mettre à jour"
 
-#: src/settings/ai/stt/language-warning.tsx
 #: src/settings/ai/stt/on-device-card.tsx
 #: src/sidebar/toast/registry.tsx
 #: src/stt/useStartListening.ts

@@ -7216,7 +7216,6 @@ msgstr "up to date as of {coveredDate}"
 msgid "Update"
 msgstr "Update"
 
-#: src/settings/ai/stt/language-warning.tsx
 #: src/settings/ai/stt/on-device-card.tsx
 #: src/sidebar/toast/registry.tsx
 #: src/stt/useStartListening.ts
