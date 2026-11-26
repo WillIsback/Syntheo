@@ -1,5 +1,5 @@
 use super::types::{FinalizedWord, PartialWord, RawWord, WordState};
-use super::words::{dedup, finalize_words, stitch, to_partial};
+use super::words::{Junction, dedup, finalize_words, stitch, to_partial};
 
 pub(super) const MAX_PARTIAL_WORDS: usize = 512;
 pub(super) const MAX_PARTIAL_TEXT_BYTES: usize = 128 * 1024;
@@ -11,6 +11,8 @@ pub(super) struct ChannelState {
     resume_boundary: i64,
     held: Option<RawWord>,
     partials: Vec<RawWord>,
+    /// Fin du texte livré, comparée au début d'un flux rouvert (issue 629).
+    junction: Junction,
 }
 
 impl ChannelState {
@@ -21,6 +23,7 @@ impl ChannelState {
             resume_boundary: 0,
             held: None,
             partials: Vec::new(),
+            junction: Junction::default(),
         }
     }
 
@@ -36,6 +39,8 @@ impl ChannelState {
             self.watermark = self.watermark.max(end_ms);
         }
         self.resume_boundary = self.watermark;
+        self.junction.remember(&delivered);
+        self.junction.open(self.resume_boundary);
         delivered
     }
 
@@ -52,6 +57,7 @@ impl ChannelState {
         stitch_final_words: bool,
     ) -> Vec<FinalizedWord> {
         let new_words = dedup(words, self.watermark, self.resume_boundary);
+        let new_words = self.junction.trim(new_words, true);
         if new_words.is_empty() {
             return vec![];
         }
@@ -83,7 +89,9 @@ impl ChannelState {
             to_finalize.extend(new_words);
         }
 
-        finalize_words(to_finalize, state)
+        let finalized = finalize_words(to_finalize, state);
+        self.junction.remember(&finalized);
+        finalized
     }
 
     /// Update the partial buffer with a simple time-range replacement.
@@ -101,6 +109,7 @@ impl ChannelState {
             self.watermark.max(self.partial_watermark),
             self.resume_boundary,
         );
+        let words = self.junction.trim(words, false);
         if words.is_empty() {
             return vec![];
         }
@@ -157,7 +166,9 @@ impl ChannelState {
             overflow_count = self.overflow_prefix_len();
         }
 
-        finalize_words(emitted, WordState::Final)
+        let finalized = finalize_words(emitted, WordState::Final);
+        self.junction.remember(&finalized);
+        finalized
     }
 
     /// Drain remaining state at session end.
