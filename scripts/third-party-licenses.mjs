@@ -12,7 +12,15 @@
 
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import {
+  closeSync,
+  existsSync,
+  fstatSync,
+  openSync,
+  readdirSync,
+  readFileSync,
+  readSync,
+} from "node:fs";
 import { join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -24,7 +32,7 @@ const MAX_FILES_PER_COMPONENT = 6;
 
 /** Fichiers de licence d'un dossier, triés, bornés. */
 export function readLicenseFiles(dir) {
-  if (!dir || !existsSync(dir)) return [];
+  if (!dir) return [];
   let names;
   try {
     names = readdirSync(dir);
@@ -36,17 +44,41 @@ export function readLicenseFiles(dir) {
     .sort()
     .slice(0, MAX_FILES_PER_COMPONENT)
     .flatMap((name) => {
-      const path = join(dir, name);
-      try {
-        if (!statSync(path).isFile() || statSync(path).size > MAX_TEXT_BYTES) {
-          return [];
-        }
-        const text = readFileSync(path, "utf8").replace(/\r\n/g, "\n").trim();
-        return text ? [text] : [];
-      } catch {
-        return [];
-      }
+      const text = readTextFile(join(dir, name));
+      return text ? [text] : [];
     });
+}
+
+/**
+ * Texte d'un fichier régulier d'au plus MAX_TEXT_BYTES, ou null. Le contrôle
+ * et la lecture passent par le même descripteur (issue 780, CodeQL
+ * js/file-system-race) : le chemin n'est ouvert qu'une fois.
+ */
+export function readTextFile(path) {
+  let fd;
+  try {
+    fd = openSync(path, "r");
+  } catch {
+    return null;
+  }
+  try {
+    const stat = fstatSync(fd);
+    if (!stat.isFile() || stat.size > MAX_TEXT_BYTES) return null;
+    // Un octet de plus que la limite : un fichier qui grandit est refusé.
+    const buffer = Buffer.alloc(MAX_TEXT_BYTES + 1);
+    let length = 0;
+    while (length < buffer.length) {
+      const read = readSync(fd, buffer, length, buffer.length - length, null);
+      if (read === 0) break;
+      length += read;
+    }
+    if (length > MAX_TEXT_BYTES) return null;
+    return buffer.toString("utf8", 0, length).replace(/\r\n/g, "\n").trim();
+  } catch {
+    return null;
+  } finally {
+    closeSync(fd);
+  }
 }
 
 /**
@@ -116,15 +148,24 @@ export function packagesFromPnpm(report) {
   return out;
 }
 
+/** Contenu d'un fichier, ou null s'il n'existe pas (une seule ouverture). */
+function readOptional(path) {
+  try {
+    return readFileSync(path, "utf8");
+  } catch (error) {
+    if (error?.code === "ENOENT") return null;
+    throw error;
+  }
+}
+
 /** ONNX Runtime et modèles de la transcription sur le poste. */
 export function speechComponents(root = ROOT) {
   const chain = join(root, "apps/speech/supply-chain");
   const out = [];
   const ortTable = join(chain, "ort.tsv");
-  if (existsSync(ortTable)) {
-    const version = /@(\d+\.\d+\.\d+)\//.exec(
-      readFileSync(ortTable, "utf8"),
-    )?.[1];
+  const ortText = readOptional(ortTable);
+  if (ortText != null) {
+    const version = /@(\d+\.\d+\.\d+)\//.exec(ortText)?.[1];
     out.push({
       kind: "native",
       name: "ONNX Runtime",
@@ -136,8 +177,9 @@ export function speechComponents(root = ROOT) {
     });
   }
   const models = join(root, "apps/speech/models/models.json");
-  if (existsSync(models)) {
-    const manifest = JSON.parse(readFileSync(models, "utf8"));
+  const modelsText = readOptional(models);
+  if (modelsText != null) {
+    const manifest = JSON.parse(modelsText);
     for (const origin of manifest.source?.origin ?? []) {
       out.push({
         kind: "model",
@@ -275,14 +317,10 @@ export function buildThirdPartyLicenses(sources = {}) {
       return { ...component, texts: indices };
     });
 
-  const license = (name) =>
-    existsSync(join(root, name))
-      ? readFileSync(join(root, name), "utf8").trim()
-      : "";
   return {
     syntheo: {
       license: "MIT",
-      text: license("LICENSE"),
+      text: readTextFile(join(root, "LICENSE")) ?? "",
       origin: {
         project: "Anarlog",
         url: "https://github.com/fastrepl/anarlog",
@@ -296,9 +334,7 @@ export function buildThirdPartyLicenses(sources = {}) {
 }
 
 function readNamed(dir, name) {
-  const path = dir && join(dir, name);
-  if (!path || !existsSync(path)) return [];
-  const text = readFileSync(path, "utf8").replace(/\r\n/g, "\n").trim();
+  const text = dir ? readTextFile(join(dir, name)) : null;
   return text ? [text] : [];
 }
 

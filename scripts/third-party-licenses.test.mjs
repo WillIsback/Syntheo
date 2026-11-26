@@ -11,6 +11,7 @@ import {
   packagesFromPnpm,
   pnpmCommand,
   readLicenseFiles,
+  readTextFile,
 } from "./third-party-licenses.mjs";
 
 // Issue 747 : génération de la page des licences, sur des données simulées.
@@ -117,6 +118,20 @@ test("reads license, copying and notice files only", () => {
     "MIT text",
   ]);
   assert.deepEqual(readLicenseFiles(join(root, "missing")), []);
+});
+
+// Issue 780 (CodeQL js/file-system-race) : contrôle et lecture par le même
+// descripteur ; dossiers, fichiers absents ou trop gros refusés.
+test("reads a license file through one descriptor, bounded", () => {
+  const root = mkdtempSync(join(tmpdir(), "licenses-"));
+  writeFileSync(join(root, "LICENSE"), "  MIT\r\ntext  \r\n");
+  writeFileSync(join(root, "LICENSE-BIG"), "x".repeat(128 * 1024 + 1));
+  mkdirSync(join(root, "LICENSES"));
+  assert.equal(readTextFile(join(root, "LICENSE")), "MIT\ntext");
+  assert.equal(readTextFile(join(root, "LICENSE-BIG")), null);
+  assert.equal(readTextFile(join(root, "LICENSES")), null);
+  assert.equal(readTextFile(join(root, "missing")), null);
+  assert.deepEqual(readLicenseFiles(root), ["MIT\ntext"]);
 });
 
 test("keeps each identical license text once", () => {
