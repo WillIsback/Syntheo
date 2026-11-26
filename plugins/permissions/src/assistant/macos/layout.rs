@@ -1,7 +1,7 @@
+use objc2_foundation::NSRect;
 use syntheo_overlay_kit::layout::{
     Alignment, Anchor, Dimension, LayoutNode, LayoutSpec, OverlayChild,
 };
-use objc2_foundation::NSRect;
 
 use syntheo_overlay_kit::macos::support::rect;
 

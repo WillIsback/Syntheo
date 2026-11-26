@@ -356,7 +356,6 @@ export async function generate(root = process.cwd()) {
         }
         output = output.replace(pattern, () => value);
       };
-      fill("VERSION", json(config.version));
       fill("LOCALE", json(locale));
       fill("TOKENS_LIGHT", json(tokens.light));
       fill("TOKENS_DARK", json(tokens.dark));

@@ -70,10 +70,11 @@ The script downloads the latest release's AppImage into `~/.local/bin`, checks
 its SHA256 checksum, saves it as `Syntheo.AppImage` and creates the `syntheo`
 link. Reinstalling replaces the previous version.
 
-To **try a specific release** (any published version):
+To **try a specific release**, replace `vX.Y.Z` with a tag from the
+[Releases](https://github.com/WillIsback/Syntheo/releases) page:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/WillIsback/Syntheo/main/scripts/install.sh | bash -s -- --version v0.7.0
+curl -fsSL https://raw.githubusercontent.com/WillIsback/Syntheo/main/scripts/install.sh | bash -s -- --version vX.Y.Z
 ```
 
 > On **Arch / Omarchy**, the AppImage needs FUSE 2: `sudo pacman -S fuse2`.
@@ -105,10 +106,11 @@ binary builds its reputation.
 irm https://raw.githubusercontent.com/WillIsback/Syntheo/main/scripts/install.ps1 | iex
 ```
 
-To **install a specific release**:
+To **install a specific release**, replace `vX.Y.Z` with a tag from the
+[Releases](https://github.com/WillIsback/Syntheo/releases) page:
 
 ```powershell
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/WillIsback/Syntheo/main/scripts/install.ps1))) -Version v0.7.0
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/WillIsback/Syntheo/main/scripts/install.ps1))) -Version vX.Y.Z
 ```
 
 ### Packages

@@ -198,7 +198,7 @@ export const DataFlows = ({ activity = "listen" }) => {
     <figure className="syn-root syn-figure not-prose">
       {h(SynStyle)}
       <div className="syn-bar">
-        <span className="syn-badge">{h(SynIcon, { name: I("ShieldCheck"), size: 14 })}Schéma interactif · Syntheo {SYN_VERSION}</span>
+        <span className="syn-badge">{h(SynIcon, { name: I("ShieldCheck"), size: 14 })}Schéma interactif · Syntheo</span>
         <span className="syn-bar-actions">Choisissez une activité.</span>
       </div>
       <div role="radiogroup" aria-label="Activité" style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>

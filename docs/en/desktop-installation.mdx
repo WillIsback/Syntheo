@@ -30,7 +30,7 @@ The script downloads the AppImage of the latest release, checks its SHA256 sum, 
 
 Useful options:
 
-- `--version v0.4.0` installs a specific version.
+- `--version vX.Y.Z` installs a specific version: replace `vX.Y.Z` with a tag from the [Releases](https://github.com/WillIsback/Syntheo/releases) page.
 - `--deb` downloads the `.deb` package instead of the AppImage.
 - `--to <folder>` changes the installation folder (`~/.local/bin` by default).
 
@@ -83,10 +83,10 @@ The installer and the `.msi` are **signed** (Azure Artifact Signing): Windows at
 irm https://raw.githubusercontent.com/WillIsback/Syntheo/main/scripts/install.ps1 | iex
 ```
 
-The script downloads the installer of the latest release, checks its SHA256 sum against `SHA256SUMS-windows`, and installs it silently (per user, without elevation). For a specific version:
+The script downloads the installer of the latest release, checks its SHA256 sum against `SHA256SUMS-windows`, and installs it silently (per user, without elevation). For a specific version, replace `vX.Y.Z` with a tag from the [Releases](https://github.com/WillIsback/Syntheo/releases) page:
 
 ```powershell
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/WillIsback/Syntheo/main/scripts/install.ps1))) -Version v0.4.0
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/WillIsback/Syntheo/main/scripts/install.ps1))) -Version vX.Y.Z
 ```
 
 ### MSI

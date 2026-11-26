@@ -1,10 +1,10 @@
 use std::cell::RefCell;
 use std::time::{Duration, Instant};
 
-use syntheo_overlay_kit::macos::timer::RepeatingTimer;
 use objc2::rc::Retained;
 use objc2_app_kit::{NSPanel, NSWorkspace};
 use objc2_foundation::{MainThreadMarker, NSString, NSURL};
+use syntheo_overlay_kit::macos::timer::RepeatingTimer;
 
 use syntheo_overlay_kit::macos::main_thread::run_on_main_thread;
 
