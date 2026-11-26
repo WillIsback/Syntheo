@@ -58,7 +58,7 @@ describe("automation texts in French", () => {
     expect(t`Run a command`).toBe("Lancer une commande");
     expect(t`Advanced`).toBe("Avancé");
     expect(t`Generated text`).toBe("Texte généré");
-    expect(t`Run this command?`).toBe("Lancer cette commande ?");
+    expect(t`Run this command?`).toBe("Lancer cette commande\u00a0?");
     expect(
       t`No local model is configured. Choose one in Settings › Synthesis.`,
     ).toBe(
@@ -73,7 +73,7 @@ describe("automation texts in French", () => {
       "Simuler les étapes à effet réel",
     );
     expect(t`This is a real test: these steps really act.`).toBe(
-      "C'est un test réel : ces étapes agissent vraiment.",
+      "C'est un test réel\u00a0: ces étapes agissent vraiment.",
     );
     expect(t`The next steps were not run.`).toBe(
       "Les étapes suivantes n'ont pas été lancées.",

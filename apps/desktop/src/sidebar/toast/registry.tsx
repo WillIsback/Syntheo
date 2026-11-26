@@ -83,7 +83,10 @@ export function createToastRegistry({
           label: t`Add`,
           onClick: onOpenSTTSettings,
         },
-        lifecycle: { type: "condition-bound" },
+        // Issue 778 : à 910×600, il recouvrait « Commencer l'écoute ». Fermé
+        // pour cette session seulement, comme la demande de modèle de langage
+        // (issue 632) ; l'onglet Transcription le dit aussi.
+        lifecycle: { type: "persistent", dismissal: "session" },
       },
       condition: () => !hasUsableSttConfigured && !isAiTranscriptionTabActive,
     },
@@ -110,7 +113,8 @@ export function createToastRegistry({
           label: t`Open`,
           onClick: onOpenSTTSettings,
         },
-        lifecycle: { type: "condition-bound" },
+        // Issue 778 : tout toast persistant se ferme pour la session.
+        lifecycle: { type: "persistent", dismissal: "session" },
       },
       condition: () => onDeviceNotReady && !isAiTranscriptionTabActive,
     },

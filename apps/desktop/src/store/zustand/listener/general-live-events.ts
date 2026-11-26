@@ -17,6 +17,7 @@ import {
   createLiveSecondsInterval,
   createSessionTranscriptBatcher,
   dispatchMeetingCompleted,
+  forgetDismissedCaptureWarning,
   notifyCaptureWarning,
   openMicrophoneSettings,
 } from "./general-live-helpers";
@@ -63,8 +64,10 @@ export const createSessionEventHandlers = <T extends LiveStore>(
     // s'appuie sur la transcription complète : aucun mot ne reste en attente.
     flushLiveTranscriptBatches();
 
-    if (payload.type === "stopped")
+    if (payload.type === "stopped") {
       toast.dismiss(`audio-capture-${targetSessionId}`);
+      forgetDismissedCaptureWarning(targetSessionId);
+    }
     if (payload.type === "started") {
       startSpeakerContextCapture(targetSessionId);
       const currentLive = get().live;

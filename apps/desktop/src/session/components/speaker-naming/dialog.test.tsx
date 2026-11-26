@@ -232,7 +232,9 @@ describe("SpeakerNamingDialog", () => {
       }),
     );
     expect(await screen.findByText("Assigned to Marie Dupont")).not.toBeNull();
-    expect(useSpeakerNamingStore.getState().named["session-1"]).toBe(true);
+    expect(useSpeakerNamingStore.getState().named["session-1"]).toEqual(
+      expect.any(Number),
+    );
     // Entrée valide et passe au locuteur suivant, sans le pré-remplir.
     await waitFor(() => expect(document.activeElement).toBe(inputs()[1]));
     expect(inputs()[1]!.value).toBe("");

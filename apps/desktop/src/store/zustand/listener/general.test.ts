@@ -1967,6 +1967,59 @@ describe("General Listener Slice", () => {
       warning.mockRestore();
     });
 
+    // Issue 778 : à 910×600, l'alerte couvrait « Terminer » dans la capsule.
+    test("lets the no-audio warning be closed until the warning changes", async () => {
+      const handler = await startAndGetStatusHandler();
+      const warning = vi
+        .spyOn(toast, "warning")
+        .mockImplementation(() => "warning");
+      handler?.({ payload: audioError("audio_capture_unavailable") });
+      await vi.waitFor(() => expect(warning).toHaveBeenCalledTimes(1));
+      const options = warning.mock.calls[0]?.[1] as {
+        closeButton?: boolean;
+        dismissible?: boolean;
+        onDismiss: () => void;
+      };
+      expect(options.closeButton).not.toBe(false);
+      expect(options.dismissible).not.toBe(false);
+
+      options.onDismiss();
+      handler?.({ payload: audioError("audio_capture_unavailable") });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(warning).toHaveBeenCalledTimes(1);
+
+      // Un autre avertissement revient, même après la fermeture du premier.
+      handler?.({ payload: audioError("audio_capture_ready") });
+      handler?.({ payload: audioError("audio_mic_unavailable") });
+      await vi.waitFor(() => expect(warning).toHaveBeenCalledTimes(2));
+      expect(warning.mock.calls[1]?.[0]).not.toBe("No audio is being captured");
+
+      warning.mockRestore();
+    });
+
+    // Issue 778 : la fermeture vaut pour une écoute ; la suivante le remontre.
+    test("shows a closed no-audio warning again in the next listening session", async () => {
+      const lifecycle = captureListener(listenCaptureLifecycleMock, {
+        persistent: true,
+      });
+      const warning = vi
+        .spyOn(toast, "warning")
+        .mockImplementation(() => "warning");
+      const first = await startAndGetStatusHandler();
+      first?.({ payload: audioError("audio_capture_unavailable") });
+      await vi.waitFor(() => expect(warning).toHaveBeenCalledTimes(1));
+      const options = warning.mock.calls[0]?.[1] as { onDismiss: () => void };
+      options.onDismiss();
+
+      lifecycle.emit(stopped());
+      const second = await startAndGetStatusHandler();
+      second?.({ payload: audioError("audio_capture_unavailable") });
+      await vi.waitFor(() => expect(warning).toHaveBeenCalledTimes(2));
+      expect(warning.mock.calls[1]?.[0]).toBe(warning.mock.calls[0]?.[0]);
+
+      warning.mockRestore();
+    });
+
     test("keeps storage failures in shared live state without stopping capture", async () => {
       const handler = await startAndGetStatusHandler();
       handler?.({ payload: audioError("audio_storage_backpressure") });

@@ -215,15 +215,30 @@ export const openMicrophoneSettings = async () => {
   useTabs.getState().openNew({ type: "settings", state: { tab: "meetings" } });
 };
 
+// Avertissement de capture fermé par l'utilisateur, par session (issue 778) :
+// à 910×600 il couvrait « Terminer » dans la capsule. Il ne revient qu'avec un
+// autre avertissement ; la capsule reste en état d'erreur en attendant.
+const dismissedCaptureWarnings = new Map<string, string>();
+
+// Fin de l'écoute : la fermeture ne vaut que pour cette écoute. Une nouvelle
+// écoute de la même note montre de nouveau l'avertissement (issue 778). Pas au
+// « started », qui revient aussi quand le flux se reconnecte tout seul.
+export const forgetDismissedCaptureWarning = (sessionId: string) => {
+  dismissedCaptureWarnings.delete(sessionId);
+};
+
 export const notifyCaptureWarning = <T extends GeneralState>(
   get: StoreApi<T>["getState"],
   targetSessionId: string,
 ) => {
   const warning = getCaptureWarning(get().live);
   if (!warning) {
+    dismissedCaptureWarnings.delete(targetSessionId);
     toast.dismiss(`audio-capture-${targetSessionId}`);
     return;
   }
+  if (dismissedCaptureWarnings.get(targetSessionId) === warning) return;
+  dismissedCaptureWarnings.delete(targetSessionId);
 
   showCaptureWarning(get, targetSessionId, warning, false);
   // Sans aucune entrée audio (PC ou VM sans micro), « choisissez un
@@ -234,7 +249,8 @@ export const notifyCaptureWarning = <T extends GeneralState>(
       if (
         result.status === "ok" &&
         result.data.length === 0 &&
-        getCaptureWarning(get().live) === warning
+        getCaptureWarning(get().live) === warning &&
+        dismissedCaptureWarnings.get(targetSessionId) !== warning
       )
         showCaptureWarning(get, targetSessionId, warning, true);
     })
@@ -252,8 +268,7 @@ const showCaptureWarning = <T extends GeneralState>(
   toast.warning(warning, {
     id: `audio-capture-${targetSessionId}`,
     duration: Infinity,
-    dismissible: false,
-    closeButton: false,
+    onDismiss: () => dismissedCaptureWarnings.set(targetSessionId, warning),
     description: noMicrophone
       ? t`No microphone detected. Plug in a microphone, then retry. Audio missing during this interruption cannot be recovered.`
       : t`Choose a working audio device and retry. Audio missing during this interruption cannot be recovered.`,

@@ -26,14 +26,33 @@ function showToast(
 }
 
 describe("sidebar toast registry", () => {
-  it("requires missing-stt setup even if it was dismissed previously", () => {
-    const toast = showToast(
-      { hasSttConfigured: false },
-      (toast) => toast.id === "missing-stt",
-    );
+  // Issue 778 : à 910×600, la demande de fournisseur recouvrait
+  // « Commencer l'écoute » sans pouvoir être fermée. Tous les toasts du
+  // registre se ferment désormais pour la session.
+  it("lets every registry toast be closed for the session", () => {
+    const params: RegistryParams = {
+      ...baseParams,
+      availableUpdate: "0.8.2",
+      hasLLMConfigured: false,
+      hasSttConfigured: false,
+      onDeviceNotReady: true,
+    };
+    for (const entry of createToastRegistry(params)) {
+      expect(entry.toast.lifecycle).toMatchObject({
+        type: "persistent",
+        dismissal: "session",
+      });
+    }
+  });
 
-    expect(toast?.id).toBe("missing-stt");
-    expect(toast?.lifecycle).toEqual({ type: "condition-bound" });
+  it("hides the missing-stt notice once closed for the session", () => {
+    expect(showToast({ hasSttConfigured: false })?.id).toBe("missing-stt");
+    expect(
+      showToast(
+        { hasSttConfigured: false },
+        (toast) => toast.id === "missing-stt",
+      ),
+    ).toBeNull();
   });
 
   // Issue 632 : la demande de modèle de langage se ferme pour la session
