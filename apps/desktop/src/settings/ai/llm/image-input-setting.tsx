@@ -10,8 +10,10 @@ import {
   detectImageInput,
   type ImageInputChoice,
   type ImageInputDetection,
+  type ImageProbeResult,
   imageInputKey,
   parseImageInputSettings,
+  probeImageInput,
   withImageInputEntry,
 } from "~/settings/ai/shared/image-input";
 import { updateSettingValue } from "~/settings/queries";
@@ -20,7 +22,10 @@ import { useConfigValue } from "~/shared/config";
 // « Le modèle lit les images » (issue 754), dans la carte « Mon serveur » de
 // la synthèse. Automatique interroge le serveur une fois par adresse et par
 // modèle (métadonnées, puis requête avec l'image de test) et garde le
-// résultat ; « Tester avec une image » refait la vérification.
+// résultat ; « Tester avec une image » envoie toujours l'image de test et
+// garde sa réponse quand elle est nette (issue 771). Le texte distingue ce
+// que le serveur annonce (métadonnées) de ce que le modèle a montré en
+// recevant l'image (envoi réel).
 
 const CHOICES: ImageInputChoice[] = ["auto", "yes", "no"];
 
@@ -86,9 +91,9 @@ export function ImageInputSetting({
   }, [detection.data]);
 
   const testing = useMutation({
-    mutationFn: () => detectImageInput({ baseUrl, apiKey, model }),
+    mutationFn: () => probeImageInput({ baseUrl, apiKey, model }),
     onSuccess: (result) => {
-      if (result) void persist(result);
+      if (result.status !== "unclear") void persist(result.detection);
     },
   });
 
@@ -109,31 +114,41 @@ export function ImageInputSetting({
     help = t`The note's images are never attached.`;
   } else if (detection.isFetching) {
     help = t`Checking whether the model reads images…`;
-  } else if (entry?.detected?.reads) {
-    help = t`Reads images (checked on ${date(entry.detected.checkedAt)}).`;
   } else if (entry?.detected) {
-    help = t`Does not read images (checked on ${date(entry.detected.checkedAt)}). Choose Yes if your server serves the vision part of the model.`;
+    const checkedOn = date(entry.detected.checkedAt);
+    if (entry.detected.source === "metadata") {
+      help = entry.detected.reads
+        ? t`Announced by the server: the model reads images (checked on ${checkedOn}).`
+        : t`Announced by the server: the model does not read images (checked on ${checkedOn}). Choose Yes if your server serves the vision part of the model.`;
+    } else {
+      help = entry.detected.reads
+        ? t`The model accepted the test image and described it (checked on ${checkedOn}).`
+        : t`The server refused the test image (checked on ${checkedOn}). Choose Yes if your server serves the vision part of the model.`;
+    }
   } else if (decision.reads) {
     help = t`The server could not be checked: going by its name, “${model}” reads images.`;
   } else {
     help = t`The server could not be checked and “${model}” is not recognized: its images are not attached. Choose Yes if your server serves the vision part of the model.`;
   }
 
-  let testResult: { ok: boolean; text: string } | null = null;
-  if (testing.isSuccess) {
-    testResult =
-      testing.data === null
-        ? {
-            ok: false,
-            text: t`The server did not give a clear answer. Try again later.`,
-          }
-        : testing.data.reads
-          ? {
-              ok: true,
-              text: t`The model accepted the test image (two shapes and an arrow).`,
-            }
-          : { ok: false, text: t`The model does not accept images.` };
-  }
+  const testResultText = (result: ImageProbeResult): string => {
+    if (result.status === "reads") {
+      return t`The model accepted the test image: it saw the blue disc.`;
+    }
+    if (result.status === "refused") {
+      return t`The server refused the test image: the model does not read images.`;
+    }
+    if (result.reason === "unrelated") {
+      return t`The server accepted the test image, but the model did not describe it: it may not read images. Choose Yes or No to decide.`;
+    }
+    return t`The server did not give a clear answer. Try again later.`;
+  };
+  const testResult = testing.isSuccess
+    ? {
+        ok: testing.data.status === "reads",
+        text: testResultText(testing.data),
+      }
+    : null;
 
   return (
     <div

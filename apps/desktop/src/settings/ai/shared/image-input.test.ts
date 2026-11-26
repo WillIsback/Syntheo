@@ -4,8 +4,10 @@ import {
   decideImageInput,
   detectImageInput,
   IMAGE_INPUT_PROBE_PNG,
+  IMAGE_INPUT_PROBE_QUESTION,
   imageInputKey,
   parseImageInputSettings,
+  probeImageInput,
   withImageInputEntry,
 } from "./image-input";
 
@@ -37,11 +39,14 @@ const detect = (
 
 const CHAT = "http://gpu.exemple.fr:8000/v1/chat/completions";
 
+/** Réponse OpenAI-compatible d'un modèle à la question de la sonde. */
+const answer = (message: Record<string, unknown>) =>
+  new Response(JSON.stringify({ choices: [{ message }] }), { status: 200 });
+
 describe("detectImageInput, probe with the test image", () => {
-  it("reads images when the server answers the image request (2xx)", async () => {
+  it("reads images when the model names the colour of the disc", async () => {
     const { fetcher, calls } = server({
-      [CHAT]: () =>
-        new Response(JSON.stringify({ choices: [] }), { status: 200 }),
+      [CHAT]: () => answer({ role: "assistant", content: "Blue." }),
     });
 
     await expect(detect(fetcher)).resolves.toEqual({
@@ -52,13 +57,16 @@ describe("detectImageInput, probe with the test image", () => {
     const probe = calls.find((call) => call.url === CHAT);
     const body = JSON.parse(String(probe?.init.body));
     expect(body.model).toBe("qwen3.8-flash");
-    expect(body.max_tokens).toBe(1);
+    expect(body.max_tokens).toBe(64);
+    // Pas de température imposée : certains modèles qui raisonnent la
+    // refusent ou la fixent eux-mêmes.
+    expect(body).not.toHaveProperty("temperature");
     // Seule l'image de test embarquée part : aucune donnée de l'utilisateur.
     expect(body.messages).toEqual([
       {
         role: "user",
         content: [
-          { type: "text", text: "Reply with OK." },
+          { type: "text", text: IMAGE_INPUT_PROBE_QUESTION },
           {
             type: "image_url",
             image_url: {
@@ -131,6 +139,142 @@ describe("detectImageInput, probe with the test image", () => {
         probeTimeoutMs: 5,
       }),
     ).resolves.toBeNull();
+  });
+});
+
+// Issue 771 : une réponse 2xx ne suffit pas, le modèle doit avoir vu
+// l'image. Les cas ambigus ne concluent pas.
+describe("probeImageInput, always sends the test image", () => {
+  const probe = (
+    fetcher: (url: string, init: RequestInit) => Promise<Response>,
+  ) => probeImageInput(SERVER, { fetcher, now: () => NOW });
+
+  it("sends the image even when the server publishes metadata", async () => {
+    const { fetcher, calls } = server({
+      "http://gpu.exemple.fr:8000/api/show": () =>
+        new Response(JSON.stringify({ capabilities: ["vision"] })),
+      [CHAT]: () => answer({ content: "blue" }),
+    });
+
+    await expect(probe(fetcher)).resolves.toEqual({
+      status: "reads",
+      detection: { reads: true, source: "probe", checkedAt: NOW.toISOString() },
+    });
+    expect(calls.map((call) => call.url)).toEqual([CHAT]);
+  });
+
+  it("accepts the answer found in the reasoning of a thinking model", async () => {
+    const { fetcher } = server({
+      [CHAT]: () =>
+        answer({
+          content: "",
+          reasoning_content: "The image shows a blue circle, an arrow and",
+        }),
+    });
+
+    await expect(probe(fetcher)).resolves.toMatchObject({ status: "reads" });
+  });
+
+  it("reads the reasoning of a thinking model given as text parts", async () => {
+    const { fetcher } = server({
+      [CHAT]: () =>
+        answer({
+          content: [{ type: "text", text: "  " }],
+          reasoning: [{ type: "text", text: "A blue disc on white." }],
+        }),
+    });
+
+    await expect(probe(fetcher)).resolves.toMatchObject({ status: "reads" });
+  });
+
+  it("reports an explicit refusal of the image", async () => {
+    const { fetcher } = server({
+      [CHAT]: () =>
+        new Response(
+          '{"error":{"message":"qwen3.8-flash is not a multimodal model"}}',
+          { status: 400 },
+        ),
+    });
+
+    await expect(probe(fetcher)).resolves.toEqual({
+      status: "refused",
+      detection: {
+        reads: false,
+        source: "probe",
+        checkedAt: NOW.toISOString(),
+      },
+    });
+  });
+
+  it.each<[string, Route, string]>([
+    [
+      "an answer about something else",
+      () => answer({ content: "OK" }),
+      "unrelated",
+    ],
+    ["the wrong colour", () => answer({ content: "Red." }), "unrelated"],
+    [
+      "a model that says it sees no image",
+      () => answer({ content: "I cannot see any image." }),
+      "unrelated",
+    ],
+    ...[
+      "I cannot see any image, but it might be blue.",
+      "I can't see the picture; my guess is blue.",
+      "I don't see an image. Blue?",
+      "There is no image attached, so: blue.",
+      "I am not able to view images. Blue.",
+      "Je ne vois pas d'image, mais je dirais bleu.",
+      "Je ne peux pas voir l'image : bleu ?",
+      "Il n'y a pas d'image ; peut-être bleue.",
+    ].map((content): [string, Route, string] => [
+      `a model that says it sees no image but guesses: ${content}`,
+      () => answer({ content }),
+      "unrelated",
+    ]),
+    [
+      "a final answer that contradicts the reasoning",
+      () => answer({ content: "Red.", reasoning_content: "Maybe blue…" }),
+      "unrelated",
+    ],
+    ["an empty answer", () => answer({ content: "" }), "no-answer"],
+    [
+      "no choice",
+      () => new Response(JSON.stringify({ choices: [] }), { status: 200 }),
+      "no-answer",
+    ],
+    ["a body that is not JSON", () => new Response("OK"), "no-answer"],
+    [
+      "a server error",
+      () => new Response("Internal Server Error", { status: 500 }),
+      "error",
+    ],
+    [
+      "a refused key",
+      () => new Response('{"error":"invalid api key"}', { status: 401 }),
+      "error",
+    ],
+  ])("does not conclude on %s", async (_, respond, reason) => {
+    const { fetcher } = server({ [CHAT]: respond });
+
+    await expect(probe(fetcher)).resolves.toEqual({
+      status: "unclear",
+      reason,
+    });
+    // Automatique ne garde rien non plus : le nom du modèle tranche.
+    const again = server({ [CHAT]: respond });
+    await expect(detect(again.fetcher)).resolves.toBeNull();
+  });
+
+  it("reports an unreachable server", async () => {
+    const { fetcher } = server({
+      [CHAT]: () => Promise.reject(new TypeError("Failed to fetch")),
+    });
+
+    await expect(probe(fetcher)).resolves.toEqual({
+      status: "unclear",
+      reason: "unreachable",
+    });
   });
 });
 

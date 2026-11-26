@@ -622,6 +622,14 @@ msgstr "Analyzing structure..."
 msgid "Animals & Nature"
 msgstr "Animals & Nature"
 
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "Announced by the server: the model does not read images (checked on {checkedOn}). Choose Yes if your server serves the vision part of the model."
+msgstr "Announced by the server: the model does not read images (checked on {checkedOn}). Choose Yes if your server serves the vision part of the model."
+
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "Announced by the server: the model reads images (checked on {checkedOn})."
+msgstr "Announced by the server: the model reads images (checked on {checkedOn})."
+
 #: src/contacts/details-sections.tsx
 msgid "Another contact shares the same name or email. Merge them to consolidate all related notes and information."
 msgstr "Another contact shares the same name or email. Merge them to consolidate all related notes and information."
@@ -1804,11 +1812,6 @@ msgstr "Dock, app switcher, icon"
 #: src/main/windows-title-bar.tsx
 msgid "Documentation"
 msgstr "Documentation"
-
-#. placeholder {0}: date(entry.detected.checkedAt)
-#: src/settings/ai/llm/image-input-setting.tsx
-msgid "Does not read images (checked on {0}). Choose Yes if your server serves the vision part of the model."
-msgstr "Does not read images (checked on {0}). Choose Yes if your server serves the vision part of the model."
 
 #: src/session/components/living-document/transcript-margin.tsx
 #: src/session/components/speaker-naming/dialog.tsx
@@ -4412,11 +4415,6 @@ msgstr "Read meeting controls and visible chat."
 msgid "Read what each speaker said, then say who it is. Tab moves to the next speaker, Enter confirms."
 msgstr "Read what each speaker said, then say who it is. Tab moves to the next speaker, Enter confirms."
 
-#. placeholder {0}: date(entry.detected.checkedAt)
-#: src/settings/ai/llm/image-input-setting.tsx
-msgid "Reads images (checked on {0})."
-msgstr "Reads images (checked on {0})."
-
 #: src/settings/general/update-section.tsx
 msgid "Reads the latest version on GitHub. Nothing is installed without your action."
 msgstr "Reads the latest version on GitHub. Nothing is installed without your action."
@@ -6206,12 +6204,12 @@ msgid "The microphone and system audio are muted: nothing is being transcribed."
 msgstr "The microphone and system audio are muted: nothing is being transcribed."
 
 #: src/settings/ai/llm/image-input-setting.tsx
-msgid "The model accepted the test image (two shapes and an arrow)."
-msgstr "The model accepted the test image (two shapes and an arrow)."
+msgid "The model accepted the test image and described it (checked on {checkedOn})."
+msgstr "The model accepted the test image and described it (checked on {checkedOn})."
 
 #: src/settings/ai/llm/image-input-setting.tsx
-msgid "The model does not accept images."
-msgstr "The model does not accept images."
+msgid "The model accepted the test image: it saw the blue disc."
+msgstr "The model accepted the test image: it saw the blue disc."
 
 #: src/settings/ai/llm/image-input-setting.tsx
 msgid "The model reads images"
@@ -6325,6 +6323,10 @@ msgstr "The sent version could not be measured: {0}"
 msgid "The sent version still contains HTML codes (such as &eacute;) that could not be read. Drop the file as .docx, or paste it as plain text."
 msgstr "The sent version still contains HTML codes (such as &eacute;) that could not be read. Drop the file as .docx, or paste it as plain text."
 
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "The server accepted the test image, but the model did not describe it: it may not read images. Choose Yes or No to decide."
+msgstr "The server accepted the test image, but the model did not describe it: it may not read images. Choose Yes or No to decide."
+
 #: src/settings/ai/shared/server-card.tsx
 msgid "The server answered with an error (HTTP {status}). It may still be starting: wait a minute, then test again."
 msgstr "The server answered with an error (HTTP {status}). It may still be starting: wait a minute, then test again."
@@ -6372,6 +6374,14 @@ msgstr "The server refused the API key. Check it under “Advanced”, then test
 #: src/shared/service-error.ts
 msgid "The server refused the request. Check that the API key is allowed to use this model."
 msgstr "The server refused the request. Check that the API key is allowed to use this model."
+
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "The server refused the test image (checked on {checkedOn}). Choose Yes if your server serves the vision part of the model."
+msgstr "The server refused the test image (checked on {checkedOn}). Choose Yes if your server serves the vision part of the model."
+
+#: src/settings/ai/llm/image-input-setting.tsx
+msgid "The server refused the test image: the model does not read images."
+msgstr "The server refused the test image: the model does not read images."
 
 #: src/shared/service-error.ts
 msgid "The server rejected the API key. Check it in Settings."

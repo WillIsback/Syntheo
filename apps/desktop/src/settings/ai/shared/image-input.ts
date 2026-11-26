@@ -7,8 +7,10 @@ import { providerFetch } from "~/ai/provider-fetch";
 // métadonnées quand il en publie, sinon par une requête minimale qui joint
 // une petite image de test embarquée. Le résultat est gardé par adresse de
 // serveur et par modèle, et relu à chaque génération : aucune sonde par
-// synthèse. Sans réponse nette (réseau, délai, erreur du serveur), le nom du
-// modèle tranche, comme avant. Oui et Non forcent le choix.
+// synthèse. Sans réponse nette (réseau, délai, erreur du serveur, réponse
+// ambiguë), le nom du modèle tranche, comme avant. Oui et Non forcent le
+// choix. « Tester avec une image » envoie toujours l'image de test, même
+// quand le serveur publie des métadonnées (issue 771).
 // La sonde ne part que vers le serveur configuré, et n'envoie aucune donnée
 // de l'utilisateur : seulement l'image de test ci-dessous.
 
@@ -29,7 +31,11 @@ export type ImageInputEntry = {
 
 export type ImageInputSettings = Record<string, ImageInputEntry>;
 
-/** Image de test (96×64 : un disque bleu, une flèche, un carré orange). */
+/**
+ * Image de test (96×64, fond blanc : un disque bleu, une flèche noire, un
+ * carré orange). La sonde demande la couleur du disque : seule une réponse
+ * « bleu » prouve que le modèle a vu l'image.
+ */
 export const IMAGE_INPUT_PROBE_PNG =
   "iVBORw0KGgoAAAANSUhEUgAAAGAAAABACAIAAABqVuVZAAAA1ElEQVR42u3ZyQ0CMQwF0CnCdzqjDgqjJtoAxAkhzR7GmeR9pYE8KYvt4SmTGRAAAgQIECBAgAAJIECAAAECBAiQAAKUDHS53qvaxuMWRdYuoDfK2OodaIKmEqZMoIU6uUZpQKt0Eo1ygDbo/MMoImoE2qxT3Cg+ATQDNG10NNBOnbJG8RVAM0BjRqcHiqIBtJrpUKAiOj9GTQE5Yi5pz3yfQH7SSo2WitV6qnn9IB1FPemue9KmGi3MxUxWAQECBAiQAAIECBAgQIAACSBAgAABOkFefLuufJxwqGAAAAAASUVORK5CYII=";
 
@@ -138,26 +144,58 @@ type DetectOptions = {
   probeTimeoutMs?: number;
 };
 
+/** Question posée avec l'image de test ; la réponse attendue est « blue ». */
+export const IMAGE_INPUT_PROBE_QUESTION =
+  "What color is the circle in this image? Answer with one word.";
+/** Assez de place pour un modèle qui raisonne avant de répondre. */
+const PROBE_MAX_TOKENS = 64;
+const PROBE_EXPECTED_RE = /\b(?:blue|bleue?)\b/i;
 /**
- * Le modèle lit-il les images ? `null` quand rien n'a répondu nettement :
- * l'appelant garde alors le repli sur le nom du modèle.
+ * Le modèle dit ne pas voir d'image : même s'il cite le bleu ensuite (« I
+ * cannot see any image, but it might be blue »), il devine, et la réponse
+ * ne prouve pas que l'image a été lue.
  */
-export async function detectImageInput(
-  {
-    baseUrl,
-    apiKey,
-    model,
-  }: { baseUrl: string; apiKey: string; model: string },
+const PROBE_NO_IMAGE_RE =
+  /\b(?:can ?not|can['’]t|could(?: not|n['’]t)|do(?:es)?(?: not|n['’]t)|unable to|not able to) (?:see|view|access|read|open|process|perceive|look at)\b|\bno (?:image|picture|attachment|visual)|\bpas d['’](?:image|illustration)|\bne (?:vois|distingue) (?:pas|aucune?|rien)\b|\bje ne peux pas (?:voir|lire|afficher|ouvrir)\b|\bn['’]arrive pas à (?:voir|lire)\b|\baucune image\b/i;
+
+/**
+ * Pourquoi l'envoi de l'image de test ne tranche pas :
+ * - `unreachable` : pas de réponse (réseau, délai dépassé) ;
+ * - `error` : erreur du serveur sans refus explicite de l'image (clé
+ *   refusée, 5xx, 4xx d'une autre nature) ;
+ * - `no-answer` : le serveur accepte la requête (2xx) mais ne renvoie aucun
+ *   texte lisible (corps non JSON, `choices` vide, réponse vide ou coupée
+ *   avant la fin du raisonnement) : rien ne dit que l'image a été lue ;
+ * - `unrelated` : le serveur accepte la requête et le modèle répond, mais
+ *   pas la couleur du disque, ou dit ne pas voir d'image même s'il devine
+ *   ensuite « bleu ». Une passerelle peut retirer l'image sans le
+ *   dire, ou un modèle texte répondre au hasard : la requête acceptée ne
+ *   prouve pas que l'image a été lue.
+ * Dans ces cas rien n'est gardé : le nom du modèle sert de repli, et Oui ou
+ * Non reste au choix de l'utilisateur.
+ */
+export type ImageProbeUnclearReason =
+  | "unreachable"
+  | "error"
+  | "no-answer"
+  | "unrelated";
+
+export type ImageProbeResult =
+  | { status: "reads"; detection: ImageInputDetection }
+  | { status: "refused"; detection: ImageInputDetection }
+  | { status: "unclear"; reason: ImageProbeUnclearReason };
+
+type ServerTarget = { baseUrl: string; apiKey: string; model: string };
+
+function prepare(
+  { baseUrl, apiKey, model }: ServerTarget,
   {
     fetcher = providerFetch as Fetcher,
     signal,
     now = () => new Date(),
-    metadataTimeoutMs = METADATA_TIMEOUT_MS,
-    probeTimeoutMs = PROBE_TIMEOUT_MS,
-  }: DetectOptions = {},
-): Promise<ImageInputDetection | null> {
+  }: DetectOptions,
+) {
   const base = baseUrl.trim().replace(/\/+$/, "");
-  if (!base || !model.trim()) return null;
   const headers: Record<string, string> = apiKey.trim()
     ? { Authorization: `Bearer ${apiKey.trim()}` }
     : {};
@@ -169,7 +207,26 @@ export async function detectImageInput(
       timeoutMs,
       signal,
     );
-  const at = () => now().toISOString();
+  return {
+    base,
+    model: model.trim(),
+    send,
+    at: () => now().toISOString(),
+  };
+}
+
+/**
+ * Automatique : le modèle lit-il les images ? Les métadonnées du serveur
+ * d'abord, sinon l'envoi de l'image de test. `null` quand rien n'a répondu
+ * nettement : l'appelant garde alors le repli sur le nom du modèle.
+ */
+export async function detectImageInput(
+  server: ServerTarget,
+  options: DetectOptions = {},
+): Promise<ImageInputDetection | null> {
+  const { base, model, send, at } = prepare(server, options);
+  if (!base || !model) return null;
+  const metadataTimeoutMs = options.metadataTimeoutMs ?? METADATA_TIMEOUT_MS;
 
   const fromMetadata = await readMetadata(base, model, (url, init) =>
     send(url, init, metadataTimeoutMs),
@@ -178,6 +235,26 @@ export async function detectImageInput(
     return { reads: fromMetadata, source: "metadata", checkedAt: at() };
   }
 
+  const probed = await probeImageInput(server, options);
+  return probed.status === "unclear" ? null : probed.detection;
+}
+
+/**
+ * « Tester avec une image » : envoie toujours l'image de test, sans lire les
+ * métadonnées, et ne conclut que sur la réponse du modèle (issue 771).
+ */
+export async function probeImageInput(
+  server: ServerTarget,
+  options: DetectOptions = {},
+): Promise<ImageProbeResult> {
+  const { base, model, send, at } = prepare(server, options);
+  if (!base || !model) return { status: "unclear", reason: "unreachable" };
+  const detection = (reads: boolean): ImageInputDetection => ({
+    reads,
+    source: "probe",
+    checkedAt: at(),
+  });
+
   const response = await send(
     `${base}/chat/completions`,
     {
@@ -185,13 +262,15 @@ export async function detectImageInput(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         model,
-        max_tokens: 1,
+        // Pas de `temperature` : certains modèles qui raisonnent la refusent
+        // ou imposent la leur, et la réponse attendue n'en dépend pas.
+        max_tokens: PROBE_MAX_TOKENS,
         stream: false,
         messages: [
           {
             role: "user",
             content: [
-              { type: "text", text: "Reply with OK." },
+              { type: "text", text: IMAGE_INPUT_PROBE_QUESTION },
               {
                 type: "image_url",
                 image_url: {
@@ -203,15 +282,58 @@ export async function detectImageInput(
         ],
       }),
     },
-    probeTimeoutMs,
+    options.probeTimeoutMs ?? PROBE_TIMEOUT_MS,
   );
-  if (!response) return null;
-  if (response.ok) return { reads: true, source: "probe", checkedAt: at() };
+  if (!response) return { status: "unclear", reason: "unreachable" };
+
   const body = await response.text().catch(() => "");
-  if (IMAGE_REFUSAL_RE.test(body)) {
-    return { reads: false, source: "probe", checkedAt: at() };
+  if (!response.ok) {
+    return IMAGE_REFUSAL_RE.test(body)
+      ? { status: "refused", detection: detection(false) }
+      : { status: "unclear", reason: "error" };
   }
-  return null;
+  const answer = probeAnswerText(body);
+  if (!answer.trim()) return { status: "unclear", reason: "no-answer" };
+  return PROBE_EXPECTED_RE.test(answer) && !PROBE_NO_IMAGE_RE.test(answer)
+    ? { status: "reads", detection: detection(true) }
+    : { status: "unclear", reason: "unrelated" };
+}
+
+/**
+ * Texte de la réponse : le contenu du message. Le raisonnement que certains
+ * serveurs renvoient à part (`reasoning_content`, `reasoning`) n'est lu que
+ * si le contenu est vide, pour un modèle coupé avant sa réponse finale : un
+ * raisonnement qui envisage « bleu » ne doit pas l'emporter sur une réponse
+ * finale qui dit autre chose.
+ */
+function probeAnswerText(body: string): string {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(body);
+  } catch {
+    return "";
+  }
+  const message = (
+    parsed as { choices?: Array<{ message?: Record<string, unknown> }> } | null
+  )?.choices?.[0]?.message;
+  if (!message) return "";
+  const text = (value: unknown): string => {
+    if (typeof value === "string") return value;
+    if (!Array.isArray(value)) return "";
+    return value
+      .map((part) => (part as { text?: unknown } | null)?.text)
+      .filter((part): part is string => typeof part === "string")
+      .join("\n");
+  };
+  for (const field of [
+    message.content,
+    message.reasoning_content,
+    message.reasoning,
+  ]) {
+    const found = text(field);
+    if (found.trim()) return found;
+  }
+  return "";
 }
 
 /**
