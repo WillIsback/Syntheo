@@ -3593,6 +3593,10 @@ msgstr "No changelog available for this version."
 msgid "No community templates available"
 msgstr "No community templates available"
 
+#: src/settings/general/third-party-licenses.tsx
+msgid "No component matches"
+msgstr "No component matches"
+
 #: src/session/components/version-history-dialog.tsx
 msgid "No earlier versions yet."
 msgstr "No earlier versions yet."

@@ -109,6 +109,26 @@ it("says when a package ships no license file", async () => {
   await screen.findByText(/ships no license file/);
 });
 
+// Issue 774 : licence en mots entiers, nom par début de segment, et un
+// message quand rien ne correspond.
+it("filters by whole license identifier and name segment", async () => {
+  openLicenses();
+  await screen.findByText("serde");
+
+  fireEvent.change(screen.getByRole("searchbox"), {
+    target: { value: "mit" },
+  });
+  await screen.findByText("Rust crates (2)");
+  expect(screen.getByText("npm packages (1)")).toBeTruthy();
+  expect(screen.queryByText("Models (1)")).toBeNull();
+
+  fireEvent.change(screen.getByRole("searchbox"), {
+    target: { value: "sp" },
+  });
+  await screen.findByText("No component matches");
+  expect(screen.queryByText("dasp")).toBeNull();
+});
+
 it("filters by component name or license", async () => {
   openLicenses();
   await screen.findByText("serde");

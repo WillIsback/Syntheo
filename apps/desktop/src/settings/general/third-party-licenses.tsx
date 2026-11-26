@@ -15,6 +15,7 @@ import type {
   ThirdPartyComponent,
   ThirdPartyLicenses,
 } from "../../../../../scripts/third-party-licenses.mjs";
+import { componentMatches } from "./third-party-licenses-search";
 
 // Page des licences (issue 747), Paramètres › Profil › À propos. Les données
 // sont générées au build (Cargo.lock, pnpm-lock.yaml, modèles) et chargées
@@ -67,6 +68,11 @@ function LicensesDialogContent() {
   });
   const [search, setSearch] = useState("");
   const query = useDeferredValue(search.trim().toLowerCase());
+  const matches = licenses.data
+    ? licenses.data.components.filter((component) =>
+        componentMatches(component, query),
+      )
+    : [];
   const groups: Record<Kind, string> = {
     native: t`Native components`,
     model: t`Models`,
@@ -123,13 +129,14 @@ function LicensesDialogContent() {
               </p>
               <LicenseText text={licenses.data.syntheo.text} />
             </details>
+            {matches.length === 0 ? (
+              <p className="text-muted-foreground text-sm" role="status">
+                <Trans>No component matches</Trans>
+              </p>
+            ) : null}
             {KINDS.map((kind) => {
-              const items = licenses.data.components.filter(
-                (component) =>
-                  component.kind === kind &&
-                  (!query ||
-                    component.name.toLowerCase().includes(query) ||
-                    component.license.toLowerCase().includes(query)),
+              const items = matches.filter(
+                (component) => component.kind === kind,
               );
               if (items.length === 0) return null;
               return (

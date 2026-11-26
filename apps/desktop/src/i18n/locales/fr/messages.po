@@ -3593,6 +3593,10 @@ msgstr "Aucun journal des modifications disponible pour cette version."
 msgid "No community templates available"
 msgstr "Aucun modèle communautaire disponible"
 
+#: src/settings/general/third-party-licenses.tsx
+msgid "No component matches"
+msgstr "Aucun composant ne correspond"
+
 #: src/session/components/version-history-dialog.tsx
 msgid "No earlier versions yet."
 msgstr "Aucune version antérieure pour le moment."
