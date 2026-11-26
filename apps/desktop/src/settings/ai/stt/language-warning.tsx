@@ -16,7 +16,6 @@ import {
   getBaseLanguageDisplayName,
   isAutoMainLanguage,
 } from "~/settings/general/language";
-import { requestSettingFocus } from "~/settings/setting-focus";
 import { useConfigValues } from "~/shared/config";
 import {
   isConfiguredSttModel,
@@ -71,19 +70,12 @@ export function TranscriptionLanguageWarningToast() {
   const health = useConnectionHealth();
   const warning = useTranscriptionLanguageWarning(health);
 
-  // Modèles « Sur ce poste » d'une autre version (issue 763) : l'avertissement
-  // le dit et mène au bouton « Mettre à jour les modèles » de la carte. Il
-  // disparaît avec la mise à jour ; une fermeture n'est pas retenue.
-  if (health.onDeviceUnavailable === "models_update" && health.message) {
-    return (
-      <TranscriptionLanguageWarningToastLifecycle
-        key="on-device-models-update"
-        description={health.message}
-        actionLabel={t`Update the models`}
-        onAction={() => requestSettingFocus("stt-on-device-module")}
-      />
-    );
-  }
+  // Modèles « Sur ce poste » d'une autre version : pas de toast ici. Cette
+  // page affiche déjà l'encart de la carte « Sur ce poste », avec « Mettre à
+  // jour les modèles » ; le toast le répétait et masquait l'encart dans une
+  // petite fenêtre (issue 782). La barre d'état et le toast latéral le disent
+  // ailleurs (issue 763).
+  if (health.onDeviceUnavailable === "models_update") return null;
 
   if (!warning || isTranscriptionLanguageWarningDismissed(warning.key)) {
     return null;
@@ -116,16 +108,13 @@ function TranscriptionLanguageWarningToastLifecycle({
   warningKey,
   description,
   actionLabel,
-  onAction,
 }: {
-  // Clé retenue à la fermeture ; sans clé, la fermeture n'est pas retenue.
-  warningKey?: string;
+  warningKey: string;
   description: string;
   actionLabel: string;
-  onAction?: () => void;
 }) {
   useMountEffect(() => {
-    let shouldRememberDismissal = !!warningKey;
+    let shouldRememberDismissal = true;
     toast.warning(description, {
       id: TRANSCRIPTION_LANGUAGE_WARNING_TOAST_ID,
       duration: Infinity,
@@ -134,15 +123,12 @@ function TranscriptionLanguageWarningToastLifecycle({
         label: actionLabel,
         onClick: () => {
           shouldRememberDismissal = false;
-          if (warningKey) {
-            rememberDismissedTranscriptionLanguageWarning(warningKey);
-          }
-          onAction?.();
+          rememberDismissedTranscriptionLanguageWarning(warningKey);
           clearTranscriptionLanguageWarningToast();
         },
       },
       onDismiss: () => {
-        if (shouldRememberDismissal && warningKey) {
+        if (shouldRememberDismissal) {
           rememberDismissedTranscriptionLanguageWarning(warningKey);
         }
       },

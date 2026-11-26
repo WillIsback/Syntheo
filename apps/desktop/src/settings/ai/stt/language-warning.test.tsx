@@ -25,8 +25,6 @@ vi.mock("@syntheo/ui/components/ui/toast", () => ({
 
 import { TranscriptionLanguageWarningToast } from "./language-warning";
 
-import { useSettingFocus } from "~/settings/setting-focus";
-
 function renderWarning() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -42,35 +40,27 @@ describe("TranscriptionLanguageWarningToast", () => {
   beforeEach(() => {
     mocks.toastWarning.mockReset();
     mocks.toastDismiss.mockReset();
-    useSettingFocus.getState().clear();
     localStorage.clear();
   });
   afterEach(cleanup);
 
-  // Issue 763 : l'état « mise à jour requise » calculé par health.tsx est
-  // affiché, avec l'action qui mène à « Mettre à jour les modèles ».
-  it("shows the models update with the update action", () => {
+  // Issue 782 : sur Paramètres › Transcription, l'encart de la carte « Sur ce
+  // poste » dit déjà que les modèles doivent être mis à jour, avec son
+  // bouton ; un toast le répétait et le masquait dans une petite fenêtre.
+  it("shows no toast for the models update, the card already says it", () => {
     mocks.health = {
       status: "error",
       message:
         "The transcription models of this computer need an update. Update them or go back to the server in Settings › Transcription.",
       onDeviceUnavailable: "models_update",
     };
+    const view = renderWarning();
+    expect(mocks.toastWarning).not.toHaveBeenCalled();
+
+    // Aller-retour vers une autre page de réglages : toujours rien.
+    view.unmount();
     renderWarning();
-
-    expect(mocks.toastWarning).toHaveBeenCalledOnce();
-    const [description, options] = mocks.toastWarning.mock.lastCall!;
-    expect(description).toContain("need an update");
-    expect(options.action.label).toBe("Update the models");
-
-    options.action.onClick();
-    expect(useSettingFocus.getState().pending).toBe("stt-on-device-module");
-    // Une fermeture n'est pas retenue : l'avertissement revient tant que les
-    // modèles ne sont pas à jour.
-    options.onDismiss();
-    expect(
-      localStorage.getItem("syntheo:dismissed-transcription-language-warnings"),
-    ).toBeNull();
+    expect(mocks.toastWarning).not.toHaveBeenCalled();
   });
 
   it("stays silent for other on-device states", () => {

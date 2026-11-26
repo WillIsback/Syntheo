@@ -188,6 +188,9 @@ export function downloadLeftover(
  * il s'est arrêté » seulement s'il existe un téléchargement partiel
  * (issue 764).
  */
+// Ces messages s'insèrent après le deux-points d'une phrase composée
+// (« Les modèles n'ont pas été installés : … ») : ils n'en contiennent
+// jamais eux-mêmes (issue 783).
 export function describeOnDeviceError(
   code: string,
   leftover?: DownloadLeftover,
@@ -218,15 +221,15 @@ export function describeOnDeviceError(
     case "not_enough_disk":
       return t`Not enough free disk space for the models (2 GB needed).`;
     case "no_download_source":
-      return t`Downloading the models is not available: install them from a folder.`;
+      return t`Downloading the models is not available. Install them from a folder.`;
     case "network":
       switch (leftover) {
         case "partial":
-          return t`The models could not be downloaded (network or server). Try again: the download resumes where it stopped.`;
+          return t`The models could not be downloaded (network or server). Try again, the download resumes where it stopped.`;
         case "nothing_models_kept":
-          return t`No connection to the download server: nothing was downloaded and the current models are kept. Try again once connected.`;
+          return t`No connection to the download server. Nothing was downloaded and the current models are kept. Try again once connected.`;
         case "nothing":
-          return t`No connection to the download server: nothing was downloaded. Try again once connected.`;
+          return t`No connection to the download server. Nothing was downloaded. Try again once connected.`;
         default:
           return t`The models could not be downloaded (network or server). Try again.`;
       }

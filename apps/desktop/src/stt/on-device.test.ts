@@ -224,7 +224,7 @@ describe("describeOnDeviceError after a failed download", () => {
       }),
     ).toBe("nothing");
     const none = describeOnDeviceError("network", "nothing");
-    expect(none).toMatch(/nothing was downloaded/);
+    expect(none).toMatch(/nothing was downloaded/i);
     expect(none).not.toMatch(/current models|resumes/);
   });
 
@@ -250,9 +250,53 @@ describe("describeOnDeviceError after a failed download", () => {
     );
   });
 
+  // Issue 783 : ces messages s'insèrent après le deux-points de « Les modèles
+  // n'ont pas été installés : … » ; ils n'en contiennent pas eux-mêmes.
+  it("never contains a colon of its own", () => {
+    const codes = [
+      "capture_in_progress",
+      "disabled",
+      "unsafe_path",
+      "running",
+      "installing",
+      "companion_missing",
+      "companion_altered",
+      "models_missing",
+      "models_altered",
+      "models_not_found",
+      "models_mismatch",
+      "not_enough_disk",
+      "no_download_source",
+      "network",
+      "cancelled",
+      "measuring",
+      "invalid",
+      "crashing",
+      "execution_blocked",
+      "no_commissioning_audio",
+      "measure_failed",
+      "io",
+      "unknown_code",
+    ];
+    const leftovers = [
+      undefined,
+      "partial",
+      "nothing",
+      "nothing_models_kept",
+    ] as const;
+    for (const code of codes) {
+      for (const leftover of leftovers) {
+        expect(
+          describeOnDeviceError(code, leftover),
+          `${code} ${leftover}`,
+        ).not.toContain(":");
+      }
+    }
+  });
+
   it("claims nothing when the state cannot be read", () => {
     expect(downloadLeftover(oldModels, undefined)).toBeUndefined();
     const message = describeOnDeviceError("network");
-    expect(message).not.toMatch(/resumes|nothing was downloaded/);
+    expect(message).not.toMatch(/resumes|nothing was downloaded/i);
   });
 });
