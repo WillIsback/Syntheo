@@ -6355,6 +6355,10 @@ msgstr "The transcription models ({0}) are not installed yet."
 msgid "The transcription models of this computer are not installed. Install them or go back to the server in Settings › Transcription."
 msgstr "The transcription models of this computer are not installed. Install them or go back to the server in Settings › Transcription."
 
+#: src/settings/ai/stt/health.tsx
+msgid "The transcription models of this computer need an update. Update them or go back to the server in Settings › Transcription."
+msgstr "The transcription models of this computer need an update. Update them or go back to the server in Settings › Transcription."
+
 #: src/stt/live-transcript-interrupted.ts
 msgid "the transcription module of this computer could not be authenticated"
 msgstr "the transcription module of this computer could not be authenticated"
@@ -6513,6 +6517,10 @@ msgstr "This computer is chosen for transcription, but it has not been measured 
 #: src/settings/ai/stt/on-device-card.tsx
 msgid "This computer is chosen for transcription, but its models are not installed: live transcription is paused."
 msgstr "This computer is chosen for transcription, but its models are not installed: live transcription is paused."
+
+#: src/settings/ai/stt/on-device-card.tsx
+msgid "This computer is chosen for transcription, but its models need an update: live transcription is paused."
+msgstr "This computer is chosen for transcription, but its models need an update: live transcription is paused."
 
 #. placeholder {0}: describeOnDeviceErrorAfterColon(refusal)
 #: src/settings/ai/stt/on-device-card.tsx

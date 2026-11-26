@@ -3,7 +3,7 @@ import { t } from "@lingui/core/macro";
 import { usesDeferredProviderAuthentication } from "@syntheo/provider-validation";
 
 import { useConfigValues } from "~/shared/config";
-import { useOnDeviceStatus } from "~/stt/on-device";
+import { isModelsUpdate, useOnDeviceStatus } from "~/stt/on-device";
 import { useSTTConnection } from "~/stt/useSTTConnection";
 
 type HealthStatus = {
@@ -26,9 +26,11 @@ export function useConnectionHealth(): HealthStatus {
     if (stt_on_device && onDevice.data?.allowed) {
       return {
         status: "error",
-        message: onDevice.data.companion
-          ? t`The transcription models of this computer are not installed. Install them or go back to the server in Settings › Transcription.`
-          : t`This version of Syntheo does not include transcription on this computer. Go back to the server in Settings › Transcription.`,
+        message: !onDevice.data.companion
+          ? t`This version of Syntheo does not include transcription on this computer. Go back to the server in Settings › Transcription.`
+          : isModelsUpdate(onDevice.data.models)
+            ? t`The transcription models of this computer need an update. Update them or go back to the server in Settings › Transcription.`
+            : t`The transcription models of this computer are not installed. Install them or go back to the server in Settings › Transcription.`,
       };
     }
     return { status: "error", message: "Provider not configured." };
