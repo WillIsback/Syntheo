@@ -5336,6 +5336,11 @@ msgstr "son, bip, sonnerie, volume, audio"
 msgid "sound, speakers, participants, access, authorize"
 msgstr "son, haut-parleurs, participants, accès, autoriser"
 
+#. placeholder {0}: licenses.data.syntheo.repository
+#: src/settings/general/third-party-licenses.tsx
+msgid "Source code: {0}"
+msgstr "Code source : {0}"
+
 #: src/session/components/note-input/enhanced/enhance-error.tsx
 msgid "Source: {provider} (AI model provider)"
 msgstr "Source: {provider} (fournisseur de modèle d'IA)"
@@ -7052,6 +7057,11 @@ msgstr "Connexion non chiffrée : le contenu de la réunion passe en clair sur l
 #: src/session/components/note-input/transcript/renderer/speaker-participants.ts
 msgid "Unknown"
 msgstr "Inconnu"
+
+#: src/settings/general/third-party-licenses.tsx
+msgctxt "license"
+msgid "Unknown"
+msgstr "Inconnue"
 
 #: src/session/components/outer-header/metadata/date.tsx
 msgid "Unknown date"

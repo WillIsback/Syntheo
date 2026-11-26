@@ -65,14 +65,20 @@ export function nameMatches(name: string, query: string): boolean {
   return false;
 }
 
-/** Filtre d'un composant : par nom ou par licence. */
+/**
+ * Filtre d'un composant : par nom ou par licence. `licenseLabel` est le
+ * libellé affiché quand il diffère de l'identifiant (licence inconnue,
+ * traduite : issue 775).
+ */
 export function componentMatches(
   component: { name: string; license: string },
   query: string,
+  licenseLabel: string = component.license,
 ): boolean {
   if (!query) return true;
   return (
     nameMatches(component.name, query) ||
-    licenseMatches(component.license, query)
+    licenseMatches(component.license, query) ||
+    (licenseLabel !== component.license && licenseMatches(licenseLabel, query))
   );
 }

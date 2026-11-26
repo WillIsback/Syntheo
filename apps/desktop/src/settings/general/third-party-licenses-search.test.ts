@@ -80,4 +80,11 @@ describe("license search", () => {
         .map((component) => component.name),
     ).toEqual(["cssparser"]);
   });
+
+  // Issue 775 : une licence inconnue se trouve par son libellé traduit.
+  it("matches an unknown license by its translated label", () => {
+    const khroma = { name: "khroma", license: "NOASSERTION" };
+    expect(componentMatches(khroma, "inconnue", "Inconnue")).toBe(true);
+    expect(componentMatches(khroma, "inconnue")).toBe(false);
+  });
 });

@@ -5336,6 +5336,11 @@ msgstr "sound, beep, ring, volume, audio"
 msgid "sound, speakers, participants, access, authorize"
 msgstr "sound, speakers, participants, access, authorize"
 
+#. placeholder {0}: licenses.data.syntheo.repository
+#: src/settings/general/third-party-licenses.tsx
+msgid "Source code: {0}"
+msgstr "Source code: {0}"
+
 #: src/session/components/note-input/enhanced/enhance-error.tsx
 msgid "Source: {provider} (AI model provider)"
 msgstr "Source: {provider} (AI model provider)"
@@ -7050,6 +7055,11 @@ msgid "Unencrypted connection: the meeting content travels in clear text on the 
 msgstr "Unencrypted connection: the meeting content travels in clear text on the network."
 
 #: src/session/components/note-input/transcript/renderer/speaker-participants.ts
+msgid "Unknown"
+msgstr "Unknown"
+
+#: src/settings/general/third-party-licenses.tsx
+msgctxt "license"
 msgid "Unknown"
 msgstr "Unknown"
 

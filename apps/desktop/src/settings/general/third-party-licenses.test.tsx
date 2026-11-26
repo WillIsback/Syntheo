@@ -14,6 +14,7 @@ vi.mock("virtual:third-party-licenses", () => ({
   default: {
     syntheo: {
       license: "MIT",
+      repository: "https://exemple.fr/syntheo",
       text: "MIT License\n\nCopyright (c) Syntheo",
       origin: {
         project: "Anarlog",
@@ -37,6 +38,14 @@ vi.mock("virtual:third-party-licenses", () => ({
         name: "dasp",
         version: "0.11.0",
         license: "MIT OR Apache-2.0",
+        url: null,
+        texts: [],
+      },
+      {
+        kind: "npm",
+        name: "khroma",
+        version: "2.1.0",
+        license: "NOASSERTION",
         url: null,
         texts: [],
       },
@@ -76,7 +85,7 @@ it("lists the third-party components by kind, with version and license", async (
   openLicenses();
 
   await screen.findByText("Rust crates (2)");
-  expect(screen.getByText("npm packages (1)")).toBeTruthy();
+  expect(screen.getByText("npm packages (2)")).toBeTruthy();
   expect(screen.getByText("Models (1)")).toBeTruthy();
   expect(screen.getByText("serde")).toBeTruthy();
   expect(screen.getByText("1.0.228")).toBeTruthy();
@@ -167,4 +176,26 @@ it("names the origin project in the Syntheo license block", async () => {
   await screen.findByText(
     /Syntheo is derived from Anarlog \(https:\/\/github\.com\/fastrepl\/anarlog\)/,
   );
+});
+
+// Issue 775 : une licence inconnue s'affiche traduite et se trouve par son
+// libellé ; le bloc Syntheo donne l'URL du dépôt.
+it("translates an unknown license and finds it by its label", async () => {
+  openLicenses();
+  await screen.findByText("khroma");
+  expect(screen.queryByText("NOASSERTION")).toBeNull();
+  const row = screen.getByText("khroma").closest("summary") as HTMLElement;
+  expect(row.textContent).toContain("Unknown");
+
+  fireEvent.change(screen.getByRole("searchbox"), {
+    target: { value: "unknown" },
+  });
+  await screen.findByText("npm packages (1)");
+  expect(screen.getByText("khroma")).toBeTruthy();
+  expect(screen.queryByText("react")).toBeNull();
+});
+
+it("gives the repository of Syntheo", async () => {
+  openLicenses();
+  await screen.findByText("Source code: https://exemple.fr/syntheo");
 });

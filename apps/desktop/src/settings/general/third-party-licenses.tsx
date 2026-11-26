@@ -22,6 +22,13 @@ import { componentMatches } from "./third-party-licenses-search";
 // seulement à l'ouverture : aucune requête réseau.
 
 type Kind = ThirdPartyComponent["kind"];
+
+/**
+ * Licence ni déclarée ni reconnue dans son texte : marqueur stable des
+ * données (UNKNOWN_LICENSE de scripts/third-party-licenses.mjs), traduit ici
+ * (issue 775). Le script n'est pas importé : il lit le disque.
+ */
+export const UNKNOWN_LICENSE = "NOASSERTION";
 const KINDS: Kind[] = ["native", "model", "crate", "npm"];
 
 async function loadLicenses(): Promise<ThirdPartyLicenses> {
@@ -68,9 +75,12 @@ function LicensesDialogContent() {
   });
   const [search, setSearch] = useState("");
   const query = useDeferredValue(search.trim().toLowerCase());
+  const unknownLicense = t({ message: "Unknown", context: "license" });
+  const licenseLabel = (license: string) =>
+    license === UNKNOWN_LICENSE ? unknownLicense : license;
   const matches = licenses.data
     ? licenses.data.components.filter((component) =>
-        componentMatches(component, query),
+        componentMatches(component, query, licenseLabel(component.license)),
       )
     : [];
   const groups: Record<Kind, string> = {
@@ -127,6 +137,9 @@ function LicensesDialogContent() {
                   {licenses.data.syntheo.origin.license} license.
                 </Trans>
               </p>
+              <p className="text-muted-foreground mt-2 break-all">
+                <Trans>Source code: {licenses.data.syntheo.repository}</Trans>
+              </p>
               <LicenseText text={licenses.data.syntheo.text} />
             </details>
             {matches.length === 0 ? (
@@ -149,6 +162,7 @@ function LicensesDialogContent() {
                       <ComponentRow
                         key={`${component.name}@${component.version}`}
                         component={component}
+                        license={licenseLabel(component.license)}
                         texts={licenses.data.texts}
                       />
                     ))}
@@ -165,9 +179,11 @@ function LicensesDialogContent() {
 
 function ComponentRow({
   component,
+  license,
   texts,
 }: {
   component: ThirdPartyComponent;
+  license: string;
   texts: string[];
 }) {
   // Le texte ne se rend qu'à l'ouverture : plus de deux mille composants.
@@ -178,9 +194,7 @@ function ComponentRow({
         <summary className="flex cursor-pointer flex-wrap items-baseline gap-x-2">
           <span className="font-medium">{component.name}</span>
           <span className="text-muted-foreground">{component.version}</span>
-          <span className="text-muted-foreground ml-auto">
-            {component.license}
-          </span>
+          <span className="text-muted-foreground ml-auto">{license}</span>
         </summary>
         {open ? (
           <div className="mt-2 flex flex-col gap-2">
