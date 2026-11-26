@@ -130,6 +130,7 @@ async function transformArgs(
     settingsValues,
     transcriptTexts,
   );
+  localizeAnonymousSpeakers(transcripts, language);
   const templateSectionCount = template?.sections.length ?? 0;
   const policyResult = await templateCommands.summaryLengthPolicy({
     transcript_texts: transcriptTexts,
@@ -172,6 +173,32 @@ async function loadTemplate(templateId: string | undefined) {
   } catch (error) {
     console.error("[enhance] failed to load template", error);
     return null;
+  }
+}
+
+/** Libellé du rendu pour un locuteur sans nom (`crates/transcript/src/label.rs`). */
+const ANONYMOUS_SPEAKER = /^Speaker (\d+|[ABC])$/;
+
+/**
+ * Le modèle reçoit les locuteurs anonymes dans la langue de la synthèse
+ * (issue 699) : la transcription affiche « Locuteur 4 » en français, la
+ * synthèse ne doit pas citer « Speaker 4 ». Les noms et « You » ne changent
+ * pas ; les données gardent « Speaker N ».
+ */
+function localizeAnonymousSpeakers(
+  transcripts: Transcript[],
+  language: string,
+): void {
+  if (!language.toLowerCase().startsWith("fr")) {
+    return;
+  }
+  for (const transcript of transcripts) {
+    for (const segment of transcript.segments) {
+      const number = ANONYMOUS_SPEAKER.exec(segment.speaker ?? "")?.[1];
+      if (number) {
+        segment.speaker = `Locuteur ${number}`;
+      }
+    }
   }
 }
 
