@@ -844,7 +844,7 @@ export function render(map, lang, meta, tokens) {
 // widget, rendu dans le navigateur, ne leur donne pas.
 export function renderBlock(map, lang, meta) {
   const t = TEXT[lang];
-  const cell = (v) => String(v).replace(/\|/g, "\\|");
+  const cell = (v) => String(v).replace(/\\/g, "\\\\").replace(/\|/g, "\\|");
   const top = (list, key) =>
     list
       .slice(0, 3)
