@@ -4054,7 +4054,7 @@ const SYN_FLOW_ACTS = [
   ["listen", "Écoute d'une réunion", "stt", "L'audio de la capture : micro et son système.", "Pendant la transcription"],
   ["dictation", "Dictée", "stt", "L'audio de la dictée, produit en mémoire.", "Pendant la transcription"],
   ["import", "Import d'un fichier audio", "stt", "L'audio du fichier, lu à son emplacement d'origine, sans copie.", "Pendant la transcription"],
-  ["summary", "Synthèse, chat", "llm", "Le texte utile à la tâche : transcription, notes, consignes du modèle de synthèse, question du chat.", "Synthèse, chat, « Proposer des sections », fil rouge et ordre du jour d'un dossier, étape « Générer » d'une automatisation"],
+  ["summary", "Synthèse, chat", "llm", "Le texte utile à la tâche : transcription, notes, consignes du modèle de synthèse, question du chat. Pour la synthèse, les images collées dans la note (10 au plus, réduites), si le modèle lit les images.", "Synthèse, chat, « Proposer des sections », fil rouge et ordre du jour d'un dossier, étape « Générer » d'une automatisation"],
   ["webhooks", "Webhooks des Paramètres", "hooks", "Les événements de réunion (note, synthèses, participants, transcription).", "À chaque événement, si vous avez ajouté un point de terminaison"],
   ["auto", "Étape webhook d'une automatisation", "auto", "Le contenu que vous y placez.", "Quand l'automatisation s'exécute"],
 ];
