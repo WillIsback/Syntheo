@@ -13,6 +13,15 @@ pub const RECORDING_FRAMES: &[&[u8]] = &[
     include_bytes!("../icons/tray_recording_2.png"),
 ];
 
+/// Les mêmes images recolorées pour un panneau clair (issue 739), écrites
+/// une fois au build : sous Linux, l'animation les lie telles quelles, sans
+/// réencoder de PNG. Égales à `for_light_background` des originales (test).
+pub const DARK_RECORDING_FRAMES_PNG: &[&[u8]] = &[
+    include_bytes!("../icons/tray_recording_0_dark.png"),
+    include_bytes!("../icons/tray_recording_1_dark.png"),
+    include_bytes!("../icons/tray_recording_2_dark.png"),
+];
+
 static DECODED_RECORDING_FRAMES: OnceLock<Vec<Image<'static>>> = OnceLock::new();
 static DARK_RECORDING_FRAMES: OnceLock<Vec<Image<'static>>> = OnceLock::new();
 
@@ -54,14 +63,19 @@ pub fn for_light_background(image: &Image<'_>) -> Image<'static> {
 }
 
 /// Zone de notification sur fond clair : sous Windows, barre des tâches en
-/// thème clair (`SystemUsesLightTheme`, distinct du thème des applications).
-/// Ailleurs, l'icône blanche est gardée (macOS : icône « modèle »).
+/// thème clair (`SystemUsesLightTheme`, distinct du thème des applications) ;
+/// sous Linux, schéma clair du portail hors GNOME (issue 739). Sous macOS,
+/// l'icône blanche est gardée (icône « modèle »).
 pub fn tray_on_light_background() -> bool {
     #[cfg(target_os = "windows")]
     {
         windows_taskbar_is_light()
     }
-    #[cfg(not(target_os = "windows"))]
+    #[cfg(target_os = "linux")]
+    {
+        crate::linux_theme::is_light()
+    }
+    #[cfg(not(any(target_os = "windows", target_os = "linux")))]
     {
         false
     }
@@ -156,6 +170,21 @@ mod tests {
             wrapped.rgba().as_ptr(),
             recording_frame(0).unwrap().rgba().as_ptr()
         );
+    }
+
+    // Issue 739 : les images d'enregistrement pour panneau clair, écrites au
+    // build, sont exactement la recoloration du code ; l'animation Linux les
+    // affiche sans réencoder.
+    #[test]
+    fn baked_dark_recording_frames_match_the_recoloring() {
+        assert_eq!(DARK_RECORDING_FRAMES_PNG.len(), RECORDING_FRAMES.len());
+        for (original, dark) in RECORDING_FRAMES.iter().zip(DARK_RECORDING_FRAMES_PNG) {
+            let expected = for_light_background(&Image::from_bytes(original).unwrap());
+            let baked = Image::from_bytes(dark).unwrap();
+            assert_eq!(baked.width(), expected.width());
+            assert_eq!(baked.height(), expected.height());
+            assert_eq!(baked.rgba(), expected.rgba());
+        }
     }
 
     // Issue 721 : sur un fond clair, le blanc devient gris foncé, la

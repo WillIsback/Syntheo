@@ -37,6 +37,8 @@ tracing = { workspace = true }
 unicode-width = { workspace = true }
 
 [target.'cfg(target_os = "linux")'.dependencies]
+ashpd = { workspace = true, features = ["tokio", "settings"] }
+futures-util = { workspace = true }
 libloading = { workspace = true }
 tray-icon = { version = "0.25.1", default-features = false, features = ["libappindicator"] }
 
