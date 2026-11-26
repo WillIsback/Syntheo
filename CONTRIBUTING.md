@@ -164,11 +164,12 @@ bash scripts/build-alpha.sh --from . --fast --quick 0.7.1-4  # en plus, profil R
 > **WebKitGTK et Wayland.** En mode natif, l'AppImage embarque le WebKitGTK de
 > la machine. Celui d'Arch (2.54 et plus) plante au démarrage sous Wayland avec
 > un GPU NVIDIA : « Error 71 (Erreur de protocole) dispatching to Wayland
-> display », rendu dmabuf (issue 555). D'où le conteneur par défaut. En fin de
-> build, si une session Wayland est ouverte, le script lance l'AppImage une
-> vingtaine de secondes dans un profil jetable (HOME temporaire, bus D-Bus
-> séparé) : en cas d'échec, il s'arrête avec le code 3 et indique le journal.
-> `ALPHA_SMOKE_TEST=0` saute cet essai.
+> display », rendu dmabuf (issue 555). D'où le conteneur par défaut. Sur
+> demande (`ALPHA_SMOKE_TEST=1`), en fin de build et si une session Wayland est
+> ouverte, le script lance l'AppImage une vingtaine de secondes dans un profil
+> jetable (HOME temporaire, bus D-Bus séparé) : en cas d'échec, il s'arrête avec
+> le code 3 et indique le journal. Par défaut, il ne lance rien dans la session
+> graphique.
 >
 > En mode natif, la version de Node est contrôlée contre `engines.node` de
 > `package.json` : sous la plus petite version majeure de la plage, le build
