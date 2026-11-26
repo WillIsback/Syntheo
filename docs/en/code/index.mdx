@@ -26,6 +26,9 @@ claude mcp add --transport http syntheo-docs https://docs.syntheo.studio/mcp
   <Card title="Doc ↔ code mapping" href="/en/code/doc-map">
     For each user page, the sources that determine its content.
   </Card>
+  <Card title="Interactive code map" href="/en/code/carte">
+    The code zones, their size and their dependencies, from the CodeGraph index.
+  </Card>
   <Card title="Desktop app" href="/en/code/desktop">
     `apps/desktop`: React interface and native Tauri core.
   </Card>
@@ -50,4 +53,5 @@ claude mcp add --transport http syntheo-docs https://docs.syntheo.studio/mcp
 
 - A pull request that adds, renames or removes a crate, a plugin, a package or a top-level module updates the page for its area.
 - A pull request that changes a visible behavior checks [Doc ↔ code mapping](/en/code/doc-map) and updates the affected user pages.
+- The pull request of every minor or major release regenerates the [interactive map](/en/code/carte) last, from a clean tree: `codegraph index`, then `node scripts/code-map.mjs` (with `--version vX.Y.Z` in the release pull request). `node scripts/code-map.mjs --check` then checks that it is up to date.
 - Only describe what is present in the code. The writing rules in `docs/AGENTS.md` apply.
