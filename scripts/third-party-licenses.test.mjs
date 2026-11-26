@@ -9,6 +9,7 @@ import {
   checkThirdPartyLicenses,
   cratesFromMetadata,
   packagesFromPnpm,
+  pnpmCommand,
   readLicenseFiles,
 } from "./third-party-licenses.mjs";
 
@@ -191,4 +192,43 @@ test("the build check refuses an empty or incomplete list", () => {
     models: 1,
     texts: 0,
   });
+});
+
+// Alpha 0.8.2-1 : sous Windows, `pnpm` est un script `pnpm.cmd` qu'execFileSync
+// ne lance pas sans shell. Pendant `pnpm build`, node lance le script de pnpm
+// désigné par npm_execpath ; sinon le shell n'est pris que sous Windows.
+test("launches pnpm through node when npm_execpath names its script", () => {
+  const command = pnpmCommand({
+    execPath: "C:\\node\\node.exe",
+    npmExecPath: "C:\\pnpm\\bin\\pnpm.cjs",
+    platform: "win32",
+    exists: () => true,
+  });
+  assert.deepEqual(command, {
+    file: "C:\\node\\node.exe",
+    args: ["C:\\pnpm\\bin\\pnpm.cjs", "licenses", "list", "--prod", "--json"],
+    shell: false,
+  });
+});
+
+test("falls back to pnpm, through a shell on Windows only", () => {
+  for (const [npmExecPath, exists] of [
+    [undefined, () => true],
+    ["C:\\pnpm\\pnpm.exe", () => true],
+    ["C:\\pnpm\\bin\\pnpm.cjs", () => false],
+  ]) {
+    assert.deepEqual(
+      pnpmCommand({ execPath: "node", npmExecPath, platform: "win32", exists }),
+      {
+        file: "pnpm",
+        args: ["licenses", "list", "--prod", "--json"],
+        shell: true,
+      },
+      String(npmExecPath),
+    );
+  }
+  assert.equal(
+    pnpmCommand({ npmExecPath: undefined, platform: "linux" }).shell,
+    false,
+  );
 });
