@@ -101,7 +101,11 @@ export function createToastRegistry({
           label: t`Add`,
           onClick: onOpenLLMSettings,
         },
-        lifecycle: { type: "condition-bound" },
+        // Issue 632 : dans une fenêtre étroite, il recouvrait la capsule et le
+        // bouton Export sans pouvoir être écarté. Fermé pour cette session :
+        // il revient au prochain lancement tant qu'aucun modèle n'est ajouté ;
+        // l'onglet Synthèse le dit aussi (« Configurez les synthèses par IA »).
+        lifecycle: { type: "persistent", dismissal: "session" },
       },
       condition: () =>
         hasUsableSttConfigured &&

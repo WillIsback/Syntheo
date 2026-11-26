@@ -5,6 +5,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -264,6 +265,27 @@ describe("OnDeviceCard", () => {
     expect(screen.queryByText(/partly installed/)).toBeNull();
     fireEvent.click(screen.getByText("Update the models"));
     await waitFor(() => expect(mocks.download).toHaveBeenCalled());
+  });
+
+  // Issue 698 : source choisie, modèles d'une version précédente. L'encart
+  // dit « mise à jour », comme la carte, pas « modèles non installés ».
+  it("says the models need an update in the paused-transcription alert", async () => {
+    mocks.status = {
+      ...mocks.status,
+      models: {
+        kind: "partial",
+        presentBytes: 409_549,
+        totalBytes: 1_066_110_000,
+        resumable: false,
+      },
+    };
+    mocks.config = { stt_on_device: true };
+    setup();
+    const alert = await screen.findByTestId("on-device-missing");
+    expect(alert.textContent).toMatch(/its models need an update/);
+    expect(alert.textContent).not.toMatch(/not installed/);
+    expect(within(alert).getByText("Update the models")).toBeTruthy();
+    expect(within(alert).queryByText("Download the models")).toBeNull();
   });
 
   it("never shows a non-empty remaining size as 0 MB", async () => {

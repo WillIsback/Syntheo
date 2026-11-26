@@ -7,7 +7,6 @@ import {
   type Probe,
   type Profile,
   type Refusal,
-  type OnDeviceModels,
 } from "@syntheo/plugin-transcription";
 import { CircleNotch } from "@syntheo/ui/components/icons";
 import { cn } from "@syntheo/utils";
@@ -23,6 +22,7 @@ import {
   downloadOnDeviceModels,
   installOnDeviceModelsFromFolder,
   isEligible,
+  isModelsUpdate,
   ON_DEVICE_COMMISSIONING_QUERY_KEY,
   ON_DEVICE_STATUS_QUERY_KEY,
   runOnDeviceCommissioning,
@@ -34,17 +34,6 @@ import {
 // Carte « Sur ce poste » (issues 683 et 685) : sonde du poste, modèles du
 // programme compagnon livré avec l'application, mise en service, choix de la
 // source. Masquée quand l'organisation interdit la source.
-
-/**
- * Modèles d'une autre version en place (QA 0.8.0-4) : fichiers gardés sans
- * téléchargement interrompu ; le reste est à télécharger, ce n'est pas une
- * reprise.
- */
-function isModelsUpdate(models: OnDeviceModels): boolean {
-  return (
-    models.kind === "partial" && !models.resumable && models.presentBytes > 0
-  );
-}
 
 function useLabels() {
   const { t } = useLingui();
@@ -538,6 +527,13 @@ export function OnDeviceCard() {
                 This computer is chosen for transcription, but it has not been
                 measured or is too slow: live transcription is paused.
               </Trans>
+            ) : isModelsUpdate(models) ? (
+              // Issue 698 : modèles d'une version précédente, même formulation
+              // que la carte (mise à jour disponible).
+              <Trans>
+                This computer is chosen for transcription, but its models need
+                an update: live transcription is paused.
+              </Trans>
             ) : (
               <Trans>
                 This computer is chosen for transcription, but its models are
@@ -562,7 +558,11 @@ export function OnDeviceCard() {
                 onClick={() => downloading.mutate()}
                 className="border-border hover:bg-muted rounded-md border px-2.5 py-1 disabled:opacity-60"
               >
-                <Trans>Download the models</Trans>
+                {isModelsUpdate(models) ? (
+                  <Trans>Update the models</Trans>
+                ) : (
+                  <Trans>Download the models</Trans>
+                )}
               </button>
             ) : companion ? (
               <button

@@ -3,9 +3,22 @@ import { useQuery } from "@tanstack/react-query";
 
 import {
   commands as transcriptionCommands,
+  type OnDeviceModels,
   type OnDeviceStatus,
   type Probe,
 } from "@syntheo/plugin-transcription";
+
+/**
+ * Modèles d'une autre version en place (QA 0.8.0-4) : fichiers gardés sans
+ * téléchargement interrompu ; le reste est à télécharger, ce n'est pas une
+ * reprise. La carte, son encart et l'état de la transcription le disent de la
+ * même façon : une mise à jour (issue 698).
+ */
+export function isModelsUpdate(models: OnDeviceModels): boolean {
+  return (
+    models.kind === "partial" && !models.resumable && models.presentBytes > 0
+  );
+}
 
 // Source « Sur ce poste » (issues 684 et 685) : adresse interne réservée,
 // résolue par l'application au lancement du module ; jamais une adresse

@@ -192,6 +192,33 @@ describe("ToastNotifications", () => {
     },
   );
 
+  // Issue 632 : dans une fenêtre étroite, la notification recouvrait la
+  // capsule et le bouton Export sans pouvoir être fermée. Elle a maintenant
+  // un bouton de fermeture et ne revient pas pendant la session.
+  it("lets the language model notice be closed for the session", () => {
+    mocks.config.current_llm_provider = "";
+    mocks.config.current_llm_model = "";
+
+    const view = render(<ToastNotifications />);
+    act(() => vi.advanceTimersByTime(500));
+
+    const call = mocks.message.mock.calls.find(
+      (args) => args[0] === "Language model needed",
+    );
+    expect(call?.[1]).toMatchObject({ closeButton: true, dismissible: true });
+
+    act(() => call?.[1].onDismiss());
+    mocks.message.mockClear();
+    view.rerender(<ToastNotifications />);
+    act(() => vi.advanceTimersByTime(500));
+
+    expect(
+      mocks.message.mock.calls.some(
+        (args) => args[0] === "Language model needed",
+      ),
+    ).toBe(false);
+  });
+
   // QA de 0.8.0-2 (William) : seule la transcription sur ce poste, prête.
   it("asks for no transcription provider when this computer is ready", () => {
     mocks.config.current_stt_provider = null;
