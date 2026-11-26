@@ -147,7 +147,8 @@
                 "group": "Knowledge graph",
                 "pages": [
                   "en/code/index",
-                  "en/code/doc-map"
+                  "en/code/doc-map",
+                  "en/code/carte"
                 ]
               },
               {
@@ -290,7 +291,8 @@
                 "group": "Knowledge graph",
                 "pages": [
                   "fr/code/index",
-                  "fr/code/doc-map"
+                  "fr/code/doc-map",
+                  "fr/code/carte"
                 ]
               },
               {

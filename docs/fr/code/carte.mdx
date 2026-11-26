@@ -1,0 +1,11 @@
+---
+title: "Carte interactive du code"
+description: "Les zones de la code base, leur taille et leurs dépendances, générées depuis l'index CodeGraph."
+mode: "wide"
+---
+
+import { CodeMap } from "/snippets/code-map.gen.jsx";
+
+Cette carte montre chaque zone du code (applications, plugins, crates, paquets) sous la forme d'un disque dont la taille suit le nombre de lignes de code, hors tests et fichiers générés ; un trait relie deux zones quand l'une appelle, importe, référence ou instancie l'autre assez souvent. Survolez une zone pour allumer ses voisines, cliquez-la pour voir ses dépendances principales et la page de documentation qui la cite dans la [correspondance doc ↔ code](/fr/code/doc-map). Les données viennent de l'index local CodeGraph et du découpage en zones de `scripts/menage-lignes.mjs` ; l'en-tête de la carte indique la version, la date et le commit mesurés. La carte est régénérée à chaque version mineure ou majeure avec `node scripts/code-map.mjs`, après `codegraph index`.
+
+<CodeMap />

@@ -1,0 +1,11 @@
+---
+title: "Interactive code map"
+description: "The codebase zones, their size and their dependencies, generated from the CodeGraph index."
+mode: "wide"
+---
+
+import { CodeMap } from "/snippets/en/code-map.gen.jsx";
+
+This map shows each zone of the code (apps, plugins, crates, packages) as a disc sized by its lines of code, excluding tests and generated files; a line joins two zones when one calls, imports, references, or instantiates the other often enough. Hover a zone to light up its neighbors, and click it to see its main dependencies and the documentation page that cites it in the [doc ↔ code mapping](/en/code/doc-map). The data comes from the local CodeGraph index and the zone split of `scripts/menage-lignes.mjs`; the map header shows the measured version, date, and commit. The map is regenerated for every minor or major release with `node scripts/code-map.mjs`, after `codegraph index`.
+
+<CodeMap />

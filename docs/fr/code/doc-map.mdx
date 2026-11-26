@@ -5,12 +5,18 @@ description: "Pour chaque page utilisateur, les sources du code qui en détermin
 
 Cette page relie chaque page de la documentation aux sources qui en déterminent le contenu. Quand vous modifiez une de ces sources, relisez les pages correspondantes et mettez-les à jour dans la même pull request.
 
+Pour une vue d'ensemble des zones et de leurs dépendances, ouvrez la [carte interactive du code](/fr/code/carte).
+
 <Note>
   Les tests de `apps/cli/src/cli.rs` et `apps/cli/src/mcp/tests.rs` comparent le contrat de la CLI et du serveur MCP à `docs/fr/reference/cli.mdx`, `docs/fr/reference/mcp.mdx` et `skills/syntheo/references/`. Une modification de ce contrat sans mise à jour de la documentation fait échouer la CI.
 </Note>
 
 <Note>
   Les reproductions interactives de l'app (`docs/snippets/*.gen.jsx` en français, `docs/snippets/en/*.gen.jsx` en anglais, générées par `scripts/sync-docs-ui.mjs` depuis `scripts/docs-ui/*.jsx.tpl` et, pour le texte anglais propre aux modèles, `scripts/docs-ui/en.json`) reprennent les couleurs de `packages/design-system/src/tokens.css`, les libellés de `apps/desktop/src/i18n/locales/fr/messages.po` et `en/messages.po`, et les icônes de `packages/ui/src/components/icons-*.tsx`. Un changement de couleur, de libellé ou d'icône est repris en relançant le script ; un libellé supprimé fait échouer `apps/desktop/src/docs-ui.test.ts`. Quand la structure d'un écran change, mettez à jour le modèle indiqué dans [Reproductions interactives](#reproductions-interactives).
+</Note>
+
+<Note>
+  La carte interactive (`docs/snippets/code-map.gen.jsx` en français, `docs/snippets/en/code-map.gen.jsx` en anglais) est générée par `scripts/code-map.mjs` depuis l'index local CodeGraph (`.codegraph/codegraph.db`, absent en CI) et le découpage en zones de `scripts/menage-lignes.mjs`. Ses liens vers la documentation reprennent la première page de ce tableau qui cite chaque zone. Régénérez-la dans la pull request de chaque version mineure ou majeure : `codegraph index`, puis `node scripts/code-map.mjs`.
 </Note>
 
 ## Prise en main
