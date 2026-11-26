@@ -37,7 +37,7 @@ static START_DISABLED: AtomicBool = AtomicBool::new(false);
 /// Fond de la zone de notification au dernier affichage (issue 721).
 #[cfg(target_os = "windows")]
 static LIGHT_TRAY: AtomicBool = AtomicBool::new(false);
-#[cfg(target_os = "windows")]
+#[cfg(any(target_os = "windows", target_os = "linux"))]
 static THEME_WATCH: Mutex<Option<JoinHandle<()>>> = Mutex::new(None);
 static ANIMATION_TASK: Mutex<Option<JoinHandle<()>>> = Mutex::new(None);
 static MENU_BAR_TITLE: Mutex<Option<String>> = Mutex::new(None);
@@ -208,7 +208,7 @@ impl<'a, M: tauri::Manager<tauri::Wry>> Tray<'a, tauri::Wry, M> {
         crate::macos_position::seed_default_position(TRAY_ID);
 
         builder.build(app)?;
-        #[cfg(target_os = "windows")]
+        #[cfg(any(target_os = "windows", target_os = "linux"))]
         Self::watch_taskbar_theme(app);
         #[cfg(target_os = "macos")]
         crate::macos_position::apply_autosave_name(app, TRAY_ID);
@@ -399,6 +399,24 @@ impl<'a, M: tauri::Manager<tauri::Wry>> Tray<'a, tauri::Wry, M> {
                     let _ = Self::refresh_icon(&app);
                 }
             }
+        }));
+    }
+
+    /// Suit le schéma de couleurs du portail freedesktop (issue 739) : lu au
+    /// démarrage, puis par le signal `SettingChanged`, sans interrogation ;
+    /// un changement du fond du panneau redessine l'icône.
+    #[cfg(target_os = "linux")]
+    fn watch_taskbar_theme(app: &AppHandle<tauri::Wry>) {
+        let mut watch = THEME_WATCH.lock().unwrap();
+        if watch.is_some() {
+            return;
+        }
+        let app = app.clone();
+        *watch = Some(tauri::async_runtime::spawn(async move {
+            crate::linux_theme::watch(|| {
+                let _ = Self::refresh_icon(&app);
+            })
+            .await;
         }));
     }
 
