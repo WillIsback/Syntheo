@@ -4054,7 +4054,7 @@ const SYN_FLOW_ACTS = [
   ["listen", "Listening to a meeting", "stt", "The captured audio: microphone and system sound.", "During transcription"],
   ["dictation", "Dictation", "stt", "The dictation audio, produced in memory.", "During transcription"],
   ["import", "Importing an audio file", "stt", "The file's audio, read from its original location, without a copy.", "During transcription"],
-  ["summary", "Summary, chat", "llm", "The text the task needs: transcript, notes, summary template instructions, chat question.", "Summary, chat, “Suggest sections”, a folder's running thread and agenda, an automation's “Generate” step"],
+  ["summary", "Summary, chat", "llm", "The text the task needs: transcript, notes, summary template instructions, chat question. For the summary, the images pasted in the note (10 at most, downscaled), if the model reads images.", "Summary, chat, “Suggest sections”, a folder's running thread and agenda, an automation's “Generate” step"],
   ["webhooks", "Webhooks in Settings", "hooks", "Meeting events (note, summaries, participants, transcript).", "On each event, if you added an endpoint"],
   ["auto", "An automation's webhook step", "auto", "The content you put in it.", "When the automation runs"],
 ];

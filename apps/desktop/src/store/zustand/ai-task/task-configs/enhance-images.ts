@@ -35,6 +35,19 @@ export async function collectEnhanceImageContext(
   const references = Array.isArray(rawContent)
     ? rawContent.flatMap(collectImageReferences)
     : collectImageReferences(rawContent);
+  const images = await collectEnhanceImages(sessionId, references);
+  return images.map(({ image }) => image);
+}
+
+/**
+ * Images jointes à la requête, dans l'ordre des références, chacune avec
+ * l'indice de sa référence : l'appelant numérote ainsi, dans le texte, les
+ * images réellement jointes (issue 750).
+ */
+export async function collectEnhanceImages(
+  sessionId: string,
+  references: ImageReference[],
+): Promise<Array<{ index: number; image: EnhanceImageContext }>> {
   const candidateRefs = getCandidateImageReferences(references);
   const images: Array<{ index: number; image: EnhanceImageContext }> = [];
   let totalImageBytes = 0;
@@ -233,8 +246,8 @@ function prioritizeImageReferences(
 
 function sortImageContexts(
   images: Array<{ index: number; image: EnhanceImageContext }>,
-): EnhanceImageContext[] {
-  return images.sort((a, b) => a.index - b.index).map(({ image }) => image);
+): Array<{ index: number; image: EnhanceImageContext }> {
+  return images.sort((a, b) => a.index - b.index);
 }
 
 function toDataUrl(image: EnhanceImageContext): string {
