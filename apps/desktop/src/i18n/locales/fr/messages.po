@@ -3604,6 +3604,10 @@ msgstr "Aucun journal des modifications disponible pour cette version."
 msgid "No community templates available"
 msgstr "Aucun modèle communautaire disponible"
 
+#: src/settings/general/third-party-licenses.tsx
+msgid "No component matches"
+msgstr "Aucun composant ne correspond"
+
 #: src/stt/on-device.ts
 msgid "No connection to the download server: nothing was downloaded and the current models are kept. Try again once connected."
 msgstr "Aucune connexion au serveur de téléchargement : rien n'a été téléchargé et les modèles actuels sont conservés. Réessayez une fois la connexion rétablie."
@@ -5352,6 +5356,11 @@ msgstr "son, bip, sonnerie, volume, audio"
 msgid "sound, speakers, participants, access, authorize"
 msgstr "son, haut-parleurs, participants, accès, autoriser"
 
+#. placeholder {0}: licenses.data.syntheo.repository
+#: src/settings/general/third-party-licenses.tsx
+msgid "Source code: {0}"
+msgstr "Code source : {0}"
+
 #: src/session/components/note-input/enhanced/enhance-error.tsx
 msgid "Source: {provider} (AI model provider)"
 msgstr "Source: {provider} (fournisseur de modèle d'IA)"
@@ -5714,13 +5723,12 @@ msgstr "Syntheo n'a pas pu lire ce fichier."
 msgid "Syntheo doesn't have microphone access"
 msgstr "Syntheo n'a pas accès au micro"
 
-#. placeholder {0}: licenses.data.syntheo.origin.project
-#. placeholder {1}: licenses.data.syntheo.origin.url
-#. placeholder {2}: licenses.data.syntheo.origin.holder
-#. placeholder {3}: licenses.data.syntheo.origin.license
+#. placeholder {0}: licenses.data.syntheo.origin.url
+#. placeholder {1}: licenses.data.syntheo.origin.holder
+#. placeholder {2}: licenses.data.syntheo.origin.license
 #: src/settings/general/third-party-licenses.tsx
-msgid "Syntheo is derived from {0} ({1}), by {2}, under the {3} license."
-msgstr "Syntheo est dérivé de {0} ({1}), de {2}, sous licence {3}."
+msgid "Syntheo is derived from Anarlog ({0}), by {1}, under the {2} license."
+msgstr "Syntheo est dérivé d'Anarlog ({0}), de {1}, sous licence {2}."
 
 #: src/lock/gate.tsx
 msgid "Syntheo is Locked"
@@ -7098,6 +7106,11 @@ msgstr "Connexion non chiffrée : le contenu de la réunion passe en clair sur l
 #: src/session/components/note-input/transcript/renderer/speaker-participants.ts
 msgid "Unknown"
 msgstr "Inconnu"
+
+#: src/settings/general/third-party-licenses.tsx
+msgctxt "license"
+msgid "Unknown"
+msgstr "Inconnue"
 
 #: src/session/components/outer-header/metadata/date.tsx
 msgid "Unknown date"

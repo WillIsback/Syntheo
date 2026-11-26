@@ -1,8 +1,12 @@
+import { i18n } from "@lingui/core";
+import { t } from "@lingui/core/macro";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { AboutSection } from "./third-party-licenses";
+
+import { messages as frMessages } from "~/i18n/locales/fr/messages";
 
 // Issue 747 : la page des licences, sur des données simulées (la liste réelle
 // est générée au build par le plugin Vite).
@@ -10,6 +14,7 @@ vi.mock("virtual:third-party-licenses", () => ({
   default: {
     syntheo: {
       license: "MIT",
+      repository: "https://exemple.fr/syntheo",
       text: "MIT License\n\nCopyright (c) Syntheo",
       origin: {
         project: "Anarlog",
@@ -33,6 +38,14 @@ vi.mock("virtual:third-party-licenses", () => ({
         name: "dasp",
         version: "0.11.0",
         license: "MIT OR Apache-2.0",
+        url: null,
+        texts: [],
+      },
+      {
+        kind: "npm",
+        name: "khroma",
+        version: "2.1.0",
+        license: "NOASSERTION",
         url: null,
         texts: [],
       },
@@ -72,7 +85,7 @@ it("lists the third-party components by kind, with version and license", async (
   openLicenses();
 
   await screen.findByText("Rust crates (2)");
-  expect(screen.getByText("npm packages (1)")).toBeTruthy();
+  expect(screen.getByText("npm packages (2)")).toBeTruthy();
   expect(screen.getByText("Models (1)")).toBeTruthy();
   expect(screen.getByText("serde")).toBeTruthy();
   expect(screen.getByText("1.0.228")).toBeTruthy();
@@ -105,6 +118,26 @@ it("says when a package ships no license file", async () => {
   await screen.findByText(/ships no license file/);
 });
 
+// Issue 774 : licence en mots entiers, nom par début de segment, et un
+// message quand rien ne correspond.
+it("filters by whole license identifier and name segment", async () => {
+  openLicenses();
+  await screen.findByText("serde");
+
+  fireEvent.change(screen.getByRole("searchbox"), {
+    target: { value: "mit" },
+  });
+  await screen.findByText("Rust crates (2)");
+  expect(screen.getByText("npm packages (1)")).toBeTruthy();
+  expect(screen.queryByText("Models (1)")).toBeNull();
+
+  fireEvent.change(screen.getByRole("searchbox"), {
+    target: { value: "sp" },
+  });
+  await screen.findByText("No component matches");
+  expect(screen.queryByText("dasp")).toBeNull();
+});
+
 it("filters by component name or license", async () => {
   openLicenses();
   await screen.findByText("serde");
@@ -116,4 +149,53 @@ it("filters by component name or license", async () => {
   await screen.findByText("Models (1)");
   expect(screen.queryByText("serde")).toBeNull();
   expect(screen.queryByText("react")).toBeNull();
+});
+
+// Issue 777 : « dérivé d'Anarlog », avec élision, dans le catalogue français.
+it("elides « de » before Anarlog in French", () => {
+  const origin = {
+    url: "https://github.com/fastrepl/anarlog",
+    holder: "Fastrepl, Inc.",
+    license: "MIT",
+  };
+  i18n.load("fr", frMessages);
+  i18n.activate("fr");
+  try {
+    expect(
+      t`Syntheo is derived from Anarlog (${origin.url}), by ${origin.holder}, under the ${origin.license} license.`,
+    ).toBe(
+      "Syntheo est dérivé d'Anarlog (https://github.com/fastrepl/anarlog), de Fastrepl, Inc., sous licence MIT.",
+    );
+  } finally {
+    i18n.activate("en");
+  }
+});
+
+it("names the origin project in the Syntheo license block", async () => {
+  openLicenses();
+  await screen.findByText(
+    /Syntheo is derived from Anarlog \(https:\/\/github\.com\/fastrepl\/anarlog\)/,
+  );
+});
+
+// Issue 775 : une licence inconnue s'affiche traduite et se trouve par son
+// libellé ; le bloc Syntheo donne l'URL du dépôt.
+it("translates an unknown license and finds it by its label", async () => {
+  openLicenses();
+  await screen.findByText("khroma");
+  expect(screen.queryByText("NOASSERTION")).toBeNull();
+  const row = screen.getByText("khroma").closest("summary") as HTMLElement;
+  expect(row.textContent).toContain("Unknown");
+
+  fireEvent.change(screen.getByRole("searchbox"), {
+    target: { value: "unknown" },
+  });
+  await screen.findByText("npm packages (1)");
+  expect(screen.getByText("khroma")).toBeTruthy();
+  expect(screen.queryByText("react")).toBeNull();
+});
+
+it("gives the repository of Syntheo", async () => {
+  openLicenses();
+  await screen.findByText("Source code: https://exemple.fr/syntheo");
 });

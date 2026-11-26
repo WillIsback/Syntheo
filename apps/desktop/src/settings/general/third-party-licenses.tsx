@@ -15,12 +15,20 @@ import type {
   ThirdPartyComponent,
   ThirdPartyLicenses,
 } from "../../../../../scripts/third-party-licenses.mjs";
+import { componentMatches } from "./third-party-licenses-search";
 
 // Page des licences (issue 747), Paramètres › Profil › À propos. Les données
 // sont générées au build (Cargo.lock, pnpm-lock.yaml, modèles) et chargées
 // seulement à l'ouverture : aucune requête réseau.
 
 type Kind = ThirdPartyComponent["kind"];
+
+/**
+ * Licence ni déclarée ni reconnue dans son texte : marqueur stable des
+ * données (UNKNOWN_LICENSE de scripts/third-party-licenses.mjs), traduit ici
+ * (issue 775). Le script n'est pas importé : il lit le disque.
+ */
+export const UNKNOWN_LICENSE = "NOASSERTION";
 const KINDS: Kind[] = ["native", "model", "crate", "npm"];
 
 async function loadLicenses(): Promise<ThirdPartyLicenses> {
@@ -67,6 +75,14 @@ function LicensesDialogContent() {
   });
   const [search, setSearch] = useState("");
   const query = useDeferredValue(search.trim().toLowerCase());
+  const unknownLicense = t({ message: "Unknown", context: "license" });
+  const licenseLabel = (license: string) =>
+    license === UNKNOWN_LICENSE ? unknownLicense : license;
+  const matches = licenses.data
+    ? licenses.data.components.filter((component) =>
+        componentMatches(component, query, licenseLabel(component.license)),
+      )
+    : [];
   const groups: Record<Kind, string> = {
     native: t`Native components`,
     model: t`Models`,
@@ -112,22 +128,28 @@ function LicensesDialogContent() {
                 <Trans>Syntheo license (MIT) and origin of the code</Trans>
               </summary>
               <p className="text-muted-foreground mt-2">
+                {/* Nom du projet d'origine écrit en toutes lettres : le
+                    français élide « de » devant une voyelle (issue 777). */}
                 <Trans>
-                  Syntheo is derived from {licenses.data.syntheo.origin.project}{" "}
-                  ({licenses.data.syntheo.origin.url}), by{" "}
+                  Syntheo is derived from Anarlog (
+                  {licenses.data.syntheo.origin.url}), by{" "}
                   {licenses.data.syntheo.origin.holder}, under the{" "}
                   {licenses.data.syntheo.origin.license} license.
                 </Trans>
               </p>
+              <p className="text-muted-foreground mt-2 break-all">
+                <Trans>Source code: {licenses.data.syntheo.repository}</Trans>
+              </p>
               <LicenseText text={licenses.data.syntheo.text} />
             </details>
+            {matches.length === 0 ? (
+              <p className="text-muted-foreground text-sm" role="status">
+                <Trans>No component matches</Trans>
+              </p>
+            ) : null}
             {KINDS.map((kind) => {
-              const items = licenses.data.components.filter(
-                (component) =>
-                  component.kind === kind &&
-                  (!query ||
-                    component.name.toLowerCase().includes(query) ||
-                    component.license.toLowerCase().includes(query)),
+              const items = matches.filter(
+                (component) => component.kind === kind,
               );
               if (items.length === 0) return null;
               return (
@@ -140,6 +162,7 @@ function LicensesDialogContent() {
                       <ComponentRow
                         key={`${component.name}@${component.version}`}
                         component={component}
+                        license={licenseLabel(component.license)}
                         texts={licenses.data.texts}
                       />
                     ))}
@@ -156,9 +179,11 @@ function LicensesDialogContent() {
 
 function ComponentRow({
   component,
+  license,
   texts,
 }: {
   component: ThirdPartyComponent;
+  license: string;
   texts: string[];
 }) {
   // Le texte ne se rend qu'à l'ouverture : plus de deux mille composants.
@@ -169,9 +194,7 @@ function ComponentRow({
         <summary className="flex cursor-pointer flex-wrap items-baseline gap-x-2">
           <span className="font-medium">{component.name}</span>
           <span className="text-muted-foreground">{component.version}</span>
-          <span className="text-muted-foreground ml-auto">
-            {component.license}
-          </span>
+          <span className="text-muted-foreground ml-auto">{license}</span>
         </summary>
         {open ? (
           <div className="mt-2 flex flex-col gap-2">
