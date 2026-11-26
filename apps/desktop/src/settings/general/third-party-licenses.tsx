@@ -112,9 +112,11 @@ function LicensesDialogContent() {
                 <Trans>Syntheo license (MIT) and origin of the code</Trans>
               </summary>
               <p className="text-muted-foreground mt-2">
+                {/* Nom du projet d'origine écrit en toutes lettres : le
+                    français élide « de » devant une voyelle (issue 777). */}
                 <Trans>
-                  Syntheo is derived from {licenses.data.syntheo.origin.project}{" "}
-                  ({licenses.data.syntheo.origin.url}), by{" "}
+                  Syntheo is derived from Anarlog (
+                  {licenses.data.syntheo.origin.url}), by{" "}
                   {licenses.data.syntheo.origin.holder}, under the{" "}
                   {licenses.data.syntheo.origin.license} license.
                 </Trans>

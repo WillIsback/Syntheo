@@ -5694,13 +5694,12 @@ msgstr "Syntheo n'a pas pu lire ce fichier."
 msgid "Syntheo doesn't have microphone access"
 msgstr "Syntheo n'a pas accès au micro"
 
-#. placeholder {0}: licenses.data.syntheo.origin.project
-#. placeholder {1}: licenses.data.syntheo.origin.url
-#. placeholder {2}: licenses.data.syntheo.origin.holder
-#. placeholder {3}: licenses.data.syntheo.origin.license
+#. placeholder {0}: licenses.data.syntheo.origin.url
+#. placeholder {1}: licenses.data.syntheo.origin.holder
+#. placeholder {2}: licenses.data.syntheo.origin.license
 #: src/settings/general/third-party-licenses.tsx
-msgid "Syntheo is derived from {0} ({1}), by {2}, under the {3} license."
-msgstr "Syntheo est dérivé de {0} ({1}), de {2}, sous licence {3}."
+msgid "Syntheo is derived from Anarlog ({0}), by {1}, under the {2} license."
+msgstr "Syntheo est dérivé d'Anarlog ({0}), de {1}, sous licence {2}."
 
 #: src/lock/gate.tsx
 msgid "Syntheo is Locked"

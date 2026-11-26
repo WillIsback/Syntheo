@@ -1,8 +1,12 @@
+import { i18n } from "@lingui/core";
+import { t } from "@lingui/core/macro";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { AboutSection } from "./third-party-licenses";
+
+import { messages as frMessages } from "~/i18n/locales/fr/messages";
 
 // Issue 747 : la page des licences, sur des données simulées (la liste réelle
 // est générée au build par le plugin Vite).
@@ -116,4 +120,31 @@ it("filters by component name or license", async () => {
   await screen.findByText("Models (1)");
   expect(screen.queryByText("serde")).toBeNull();
   expect(screen.queryByText("react")).toBeNull();
+});
+
+// Issue 777 : « dérivé d'Anarlog », avec élision, dans le catalogue français.
+it("elides « de » before Anarlog in French", () => {
+  const origin = {
+    url: "https://github.com/fastrepl/anarlog",
+    holder: "Fastrepl, Inc.",
+    license: "MIT",
+  };
+  i18n.load("fr", frMessages);
+  i18n.activate("fr");
+  try {
+    expect(
+      t`Syntheo is derived from Anarlog (${origin.url}), by ${origin.holder}, under the ${origin.license} license.`,
+    ).toBe(
+      "Syntheo est dérivé d'Anarlog (https://github.com/fastrepl/anarlog), de Fastrepl, Inc., sous licence MIT.",
+    );
+  } finally {
+    i18n.activate("en");
+  }
+});
+
+it("names the origin project in the Syntheo license block", async () => {
+  openLicenses();
+  await screen.findByText(
+    /Syntheo is derived from Anarlog \(https:\/\/github\.com\/fastrepl\/anarlog\)/,
+  );
 });
