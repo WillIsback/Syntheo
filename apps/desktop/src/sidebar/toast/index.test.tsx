@@ -337,6 +337,36 @@ describe("ToastNotifications", () => {
     expect(descriptions).toContain("Transcription provider needed");
   });
 
+  // Issue 778 : à 910×600, « Fournisseur de transcription requis » couvrait
+  // « Commencer l'écoute ». Il se ferme pour la session, même si une ancienne
+  // version l'avait rangé parmi les toasts fermés pour toujours.
+  it("lets the transcription provider notice be closed for the session", () => {
+    mocks.config.current_stt_provider = null;
+    mocks.config.current_stt_model = null;
+    mocks.config.stt_on_device = false;
+    mocks.dismissedToastIds.add("missing-stt");
+
+    const view = render(<ToastNotifications />);
+    act(() => vi.advanceTimersByTime(500));
+
+    const call = mocks.message.mock.calls.find(
+      (args) => args[0] === "Transcription provider needed",
+    );
+    expect(call?.[1]).toMatchObject({ closeButton: true, dismissible: true });
+
+    act(() => call?.[1].onDismiss());
+    mocks.message.mockClear();
+    view.rerender(<ToastNotifications />);
+    act(() => vi.advanceTimersByTime(500));
+
+    expect(
+      mocks.message.mock.calls.some(
+        (args) => args[0] === "Transcription provider needed",
+      ),
+    ).toBe(false);
+    expect(mocks.dismissToast).not.toHaveBeenCalled();
+  });
+
   afterEach(() => {
     cleanup();
     vi.unstubAllGlobals();
