@@ -222,6 +222,107 @@ it("numbers only the images actually attached", async () => {
   ).toHaveLength(1);
 });
 
+// Issue 770 : une image en bloc, entre deux paragraphes, garde son repère
+// sur sa propre ligne au lieu de le coller au paragraphe suivant.
+it("puts the reference of a block image on its own line", async () => {
+  const note = {
+    type: "doc",
+    content: [
+      {
+        type: "paragraph",
+        content: [{ type: "text", text: "Schéma de l'architecture :" }],
+      },
+      { type: "image", attrs: { attachmentId: "schema-1" } },
+      {
+        type: "paragraph",
+        content: [{ type: "text", text: "Suite : validé en séance." }],
+      },
+    ],
+  };
+  const snapshot = await mocks.loadSessionContentSnapshot();
+  mocks.loadSessionContentSnapshot.mockResolvedValue({
+    ...snapshot,
+    rawContent: JSON.stringify(note),
+    rawMarkdown: json2md(note),
+  });
+
+  const withImage = await generate("gpt-4o");
+  expect(withImage.args.postMeetingMemo).toBe(
+    "Schéma de l'architecture :\n\n[Image 1]\n\nSuite : validé en séance.",
+  );
+
+  const withoutImage = await generate("gpt-3.5-turbo");
+  expect(withoutImage.args.postMeetingMemo).toBe(
+    "Schéma de l'architecture :\n\n[Image]\n\nSuite : validé en séance.",
+  );
+});
+
+// Issue 770 : même règle pour une image en bloc dans une citation ou un
+// élément de liste : le repère est sur sa propre ligne, rien n'y est collé.
+it.each([
+  [
+    "a blockquote",
+    {
+      type: "blockquote",
+      content: [
+        {
+          type: "paragraph",
+          content: [{ type: "text", text: "Avant l'image." }],
+        },
+        { type: "image", attrs: { attachmentId: "schema-1" } },
+        {
+          type: "paragraph",
+          content: [{ type: "text", text: "Après l'image." }],
+        },
+      ],
+    },
+  ],
+  [
+    "a list item",
+    {
+      type: "bulletList",
+      content: [
+        {
+          type: "listItem",
+          content: [
+            {
+              type: "paragraph",
+              content: [{ type: "text", text: "Avant l'image." }],
+            },
+            { type: "image", attrs: { attachmentId: "schema-1" } },
+            {
+              type: "paragraph",
+              content: [{ type: "text", text: "Après l'image." }],
+            },
+          ],
+        },
+      ],
+    },
+  ],
+])(
+  "puts the reference of a block image in %s on its own line",
+  async (_, block) => {
+    const note = { type: "doc", content: [block] };
+    const snapshot = await mocks.loadSessionContentSnapshot();
+    mocks.loadSessionContentSnapshot.mockResolvedValue({
+      ...snapshot,
+      rawContent: JSON.stringify(note),
+      rawMarkdown: json2md(note),
+    });
+
+    const memo = (await generate("gpt-4o")).args.postMeetingMemo as string;
+    const lines = memo.split("\n");
+    const marker = lines.find((line) => line.includes("[Image 1]"));
+    expect(marker).toBeDefined();
+    // Seul le marqueur de bloc (« > », « - ») précède le repère.
+    expect(marker).toMatch(/^[>\-*\s]*\[Image 1\]$/);
+    expect(memo).not.toMatch(/\[Image 1\]\S/);
+    expect(memo).not.toMatch(/\S\[Image 1\]/);
+    expect(memo).toContain("Avant l'image.");
+    expect(memo).toContain("Après l'image.");
+  },
+);
+
 // Issue 754 : le réglage « Le modèle lit les images » du serveur et du modèle
 // choisis tranche, quel que soit le nom du modèle.
 const imageInput = (model: string, entry: Record<string, unknown>) =>

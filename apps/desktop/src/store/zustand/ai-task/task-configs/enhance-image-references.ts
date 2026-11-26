@@ -88,12 +88,17 @@ function collectJsonImageReferences(node: unknown): ImageReference[] {
   return references;
 }
 
+/** Blocs de texte : une image y est en ligne, au fil du texte. */
+const TEXTBLOCK_TYPES = new Set(["paragraph", "heading"]);
+
 /**
  * Copie du contenu JSON de la note où chaque image devient un texte lisible
  * (issue 750) : `label(position)` reçoit la position de l'image dans la note
  * (0, 1…), dans l'ordre de `collectImageReferences`. Sans ce remplacement, le
  * Markdown de la note porte `![]( "char-editor-width=80")` : l'image jointe par
- * identifiant n'a pas d'adresse.
+ * identifiant n'a pas d'adresse. Une image en bloc (hors d'un paragraphe ou
+ * d'un titre) devient un paragraphe : un simple texte entre deux blocs serait
+ * collé au paragraphe suivant dans le Markdown (issue 770).
  */
 export function replaceNoteImages(
   doc: unknown,
@@ -101,21 +106,27 @@ export function replaceNoteImages(
 ): unknown {
   let position = 0;
 
-  function visit(value: unknown): unknown {
+  function visit(value: unknown, parentType: unknown): unknown {
     if (!value || typeof value !== "object") {
       return value;
     }
     const node = value as NoteJsonNode;
     if (isNoteImageNode(node)) {
-      return { type: "text", text: label(position++) };
+      const text = { type: "text", text: label(position++) };
+      return typeof parentType === "string" && TEXTBLOCK_TYPES.has(parentType)
+        ? text
+        : { type: "paragraph", content: [text] };
     }
     if (!Array.isArray(node.content)) {
       return node;
     }
-    return { ...node, content: node.content.map(visit) };
+    return {
+      ...node,
+      content: node.content.map((child) => visit(child, node.type)),
+    };
   }
 
-  return visit(doc);
+  return visit(doc, undefined);
 }
 
 function collectMarkdownImageReferences(markdown: string): ImageReference[] {
