@@ -23,7 +23,8 @@ const MAX_ENTRIES: usize = 10_000;
 const DOCUMENT: &str = "word/document.xml";
 
 /// Texte d'un `.docx`, en HTML simple : `<h1>` pour un paragraphe de style
-/// titre (Heading, Titre, Title), `<p>` sinon ; texte échappé.
+/// titre (Heading, Titre, Title), `<p>` sinon, `<table>` pour un tableau
+/// (cellules fusionnées dépliées) ; texte échappé.
 pub fn docx_to_html(bytes: &[u8]) -> Result<String, MeasureError> {
     if bytes.len() > MAX_DOCX_BYTES {
         return Err(MeasureError::TooLarge);
@@ -103,6 +104,68 @@ fn read_entry(zip: &[u8], wanted: &str) -> Result<Vec<u8>, MeasureError> {
     Err(bad())
 }
 
+/// Nombre maximal de colonnes couvertes par une cellule (`w:gridSpan`) : Word
+/// n'en permet pas plus de 63.
+const MAX_GRID_SPAN: usize = 64;
+
+/// Tableau Word en cours de lecture (issue 731). Chaque rangée devient une
+/// rangée HTML sans fusion, une valeur par colonne de la grille, comme le
+/// tableau Markdown généré : une cellule fusionnée verticalement
+/// (`w:vMerge`) reprend la valeur de la rangée du dessus, une cellule
+/// fusionnée horizontalement (`w:gridSpan`) est répétée sur chaque colonne.
+#[derive(Default)]
+struct Table {
+    /// Profondeur des `w:tbl` : un tableau imbriqué dans une cellule n'est
+    /// lu que comme du texte de cette cellule.
+    depth: usize,
+    row: Vec<String>,
+    previous_row: Vec<String>,
+    cell: String,
+    span: usize,
+    continues: bool,
+    /// Caractères encore recopiables par `w:vMerge` : une petite cellule
+    /// continuée sur des milliers de rangées ne fait pas exploser la sortie.
+    copy_budget: usize,
+}
+
+impl Table {
+    fn start_cell(&mut self) {
+        self.cell.clear();
+        self.span = 1;
+        self.continues = false;
+    }
+
+    fn end_cell(&mut self) {
+        let value = if self.continues {
+            let above = self
+                .previous_row
+                .get(self.row.len())
+                .cloned()
+                .unwrap_or_default();
+            if above.len() <= self.copy_budget {
+                self.copy_budget -= above.len();
+                above
+            } else {
+                String::new()
+            }
+        } else {
+            self.cell.split_whitespace().collect::<Vec<_>>().join(" ")
+        };
+        for _ in 0..self.span {
+            self.row.push(value.clone());
+        }
+    }
+
+    fn end_row(&mut self, html: &mut String) {
+        html.push_str("<tr>");
+        for value in &self.row {
+            html.push_str(&format!("<td>{}</td>", escape(value)));
+        }
+        html.push_str("</tr>\n");
+        self.previous_row = std::mem::take(&mut self.row);
+    }
+}
+
 /// Balayage linéaire du XML de WordprocessingML.
 fn xml_to_html(xml: &str) -> Result<String, MeasureError> {
     if xml.contains("<!DOCTYPE") || xml.contains("<!ENTITY") {
@@ -112,9 +175,16 @@ fn xml_to_html(xml: &str) -> Result<String, MeasureError> {
     let mut paragraph = String::new();
     let mut heading = false;
     let mut in_text = false;
+    // Contenu de repli (`mc:Fallback`) : il double le contenu choisi
+    // (`mc:Choice`) pour les anciens lecteurs, on ne le lit pas.
+    let mut fallback_depth = 0usize;
+    let mut table = Table {
+        copy_budget: xml.len(),
+        ..Table::default()
+    };
     let mut rest = xml;
     while let Some(lt) = rest.find('<') {
-        if in_text {
+        if in_text && fallback_depth == 0 {
             paragraph.push_str(&decode(&rest[..lt])?);
         }
         let gt = rest[lt..].find('>').ok_or(MeasureError::InvalidDocument)? + lt;
@@ -127,10 +197,25 @@ fn xml_to_html(xml: &str) -> Result<String, MeasureError> {
             .split(|c: char| c.is_whitespace() || c == '/')
             .next()
             .unwrap_or("");
+        if name == "mc:Fallback" && !self_closing {
+            fallback_depth = if closing {
+                fallback_depth.saturating_sub(1)
+            } else {
+                fallback_depth + 1
+            };
+            continue;
+        }
+        if fallback_depth > 0 {
+            continue;
+        }
         match name {
             "w:p" if closing => {
                 let text = paragraph.trim();
-                if !text.is_empty() {
+                if table.depth > 0 {
+                    // Paragraphe d'une cellule : jamais un titre de section.
+                    table.cell.push(' ');
+                    table.cell.push_str(text);
+                } else if !text.is_empty() {
                     let tag = if heading { "h1" } else { "p" };
                     html.push_str(&format!("<{tag}>{}</{tag}>\n", escape(text)));
                 }
@@ -148,6 +233,48 @@ fn xml_to_html(xml: &str) -> Result<String, MeasureError> {
             }
             "w:t" => in_text = !closing && !self_closing,
             "w:tab" | "w:br" | "w:cr" => paragraph.push(' '),
+            "w:noBreakHyphen" => paragraph.push('-'),
+            "w:tbl" if !self_closing => {
+                if closing {
+                    table.depth = table.depth.saturating_sub(1);
+                    if table.depth == 0 {
+                        html.push_str("</table>\n");
+                    }
+                } else {
+                    table.depth += 1;
+                    if table.depth == 1 {
+                        table.row.clear();
+                        table.previous_row.clear();
+                        html.push_str("<table>\n");
+                    }
+                }
+            }
+            "w:tr" if table.depth == 1 && !self_closing => {
+                if closing {
+                    table.end_row(&mut html);
+                } else {
+                    table.row.clear();
+                }
+            }
+            "w:tc" if table.depth == 1 && !self_closing => {
+                if closing {
+                    table.end_cell();
+                } else {
+                    table.start_cell();
+                }
+            }
+            "w:tr" | "w:tc" if table.depth > 1 => table.cell.push(' '),
+            "w:gridSpan" if table.depth == 1 => {
+                table.span = attribute(tag, "w:val")
+                    .and_then(|v| v.parse::<usize>().ok())
+                    .unwrap_or(1)
+                    .clamp(1, MAX_GRID_SPAN);
+            }
+            "w:vMerge" if table.depth == 1 => {
+                // Sans valeur, ou `continue` : suite de la cellule du dessus ;
+                // `restart` : première cellule de la fusion.
+                table.continues = attribute(tag, "w:val").is_none_or(|v| v == "continue");
+            }
             _ => {}
         }
     }
@@ -272,6 +399,109 @@ pub(crate) mod tests {
                 "<h1>Résumé</h1>\n<p>Le projet avance &amp; le budget &lt;tient&gt;.</p>\n<h1>Décisions</h1>\n"
             );
         }
+    }
+
+    fn tables_xml(body: &str) -> String {
+        format!(
+            r#"<?xml version="1.0"?><w:document xmlns:w="w" xmlns:mc="mc"><w:body>{body}</w:body></w:document>"#
+        )
+    }
+
+    fn cell(properties: &str, style: &str, text: &str) -> String {
+        let style = if style.is_empty() {
+            String::new()
+        } else {
+            format!(r#"<w:pPr><w:pStyle w:val="{style}"/></w:pPr>"#)
+        };
+        format!(
+            r#"<w:tc><w:tcPr>{properties}</w:tcPr><w:p>{style}<w:r><w:t>{text}</w:t></w:r></w:p></w:tc>"#
+        )
+    }
+
+    // Issue 731 : les cellules fusionnées sont recopiées dans chaque rangée
+    // et chaque colonne couvertes ; une cellule de style titre n'ouvre pas de
+    // section.
+    #[test]
+    fn merged_table_cells_are_repeated_in_every_row_and_column() {
+        let rows = [
+            [
+                cell("", "Heading1", "Action"),
+                cell("", "Heading1", "Qui"),
+                cell("", "Heading1", "Quand"),
+            ]
+            .concat(),
+            [
+                cell("", "", "Commander"),
+                cell(r#"<w:vMerge w:val="restart"/>"#, "", "Rémi"),
+                cell(r#"<w:vMerge w:val="restart"/>"#, "", "lundi"),
+            ]
+            .concat(),
+            [
+                cell("", "", "Valider"),
+                cell("<w:vMerge/>", "", ""),
+                cell(r#"<w:vMerge w:val="continue"/>"#, "", ""),
+            ]
+            .concat(),
+            [
+                cell("", "", "Planifier"),
+                cell(r#"<w:gridSpan w:val="2"/>"#, "", "À confirmer"),
+            ]
+            .concat(),
+        ];
+        let body: String = rows.iter().map(|r| format!("<w:tr>{r}</w:tr>")).collect();
+        let html = xml_to_html(&tables_xml(&format!("<w:tbl>{body}</w:tbl>"))).unwrap();
+        assert_eq!(
+            html,
+            "<table>\n\
+             <tr><td>Action</td><td>Qui</td><td>Quand</td></tr>\n\
+             <tr><td>Commander</td><td>Rémi</td><td>lundi</td></tr>\n\
+             <tr><td>Valider</td><td>Rémi</td><td>lundi</td></tr>\n\
+             <tr><td>Planifier</td><td>À confirmer</td><td>À confirmer</td></tr>\n\
+             </table>\n"
+        );
+    }
+
+    #[test]
+    fn a_nested_table_is_read_as_text_of_its_cell() {
+        let inner = format!(
+            "<w:tbl><w:tr>{}{}</w:tr></w:tbl>",
+            cell("", "", "a"),
+            cell("", "", "b")
+        );
+        let outer = format!(
+            "<w:tbl><w:tr><w:tc><w:p><w:r><w:t>avant</w:t></w:r></w:p>{inner}</w:tc>{}</w:tr></w:tbl>",
+            cell("", "", "c")
+        );
+        assert_eq!(
+            xml_to_html(&tables_xml(&outer)).unwrap(),
+            "<table>\n<tr><td>avant a b</td><td>c</td></tr>\n</table>\n"
+        );
+    }
+
+    #[test]
+    fn fallback_content_is_skipped_and_non_breaking_hyphens_are_kept() {
+        let body = r#"<w:p><w:r><w:t>Jean</w:t></w:r><w:r><w:noBreakHyphen/></w:r><w:r><w:t>Paul</w:t></w:r><mc:AlternateContent><mc:Choice Requires="wps"><w:r><w:t xml:space="preserve"> signe</w:t></w:r></mc:Choice><mc:Fallback><w:r><w:t xml:space="preserve"> signe</w:t></w:r></mc:Fallback></mc:AlternateContent></w:p>"#;
+        assert_eq!(
+            xml_to_html(&tables_xml(body)).unwrap(),
+            "<p>Jean-Paul signe</p>\n"
+        );
+    }
+
+    // Une petite cellule continuée sur un très grand nombre de rangées ne
+    // fait pas exploser la sortie : les copies s'arrêtent au budget.
+    #[test]
+    fn vertical_merge_copies_are_bounded() {
+        let big = "x".repeat(10_000);
+        let mut body = format!(
+            "<w:tbl><w:tr>{}</w:tr>",
+            cell(r#"<w:vMerge w:val="restart"/>"#, "", &big)
+        );
+        let continued = format!("<w:tr>{}</w:tr>", cell("<w:vMerge/>", "", ""));
+        body.push_str(&continued.repeat(1000));
+        body.push_str("</w:tbl>");
+        let xml = tables_xml(&body);
+        let html = xml_to_html(&xml).unwrap();
+        assert!(html.len() < 2 * xml.len() + big.len(), "{}", html.len());
     }
 
     #[test]
