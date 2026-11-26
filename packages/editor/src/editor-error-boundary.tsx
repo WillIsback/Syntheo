@@ -15,8 +15,10 @@ export type EditorErrorTexts = {
   reload: string;
 };
 
+// Le repli ne parle pas d'enregistrement : le paquet ignore si une écoute
+// est en cours (issue 766), c'est l'application qui le précise.
 const DEFAULT_EDITOR_ERROR_TEXTS: EditorErrorTexts = {
-  failed: "The editor failed to render. Your recording is still running.",
+  failed: "The editor failed to render. Reload it to try again.",
   reload: "Reload editor",
 };
 

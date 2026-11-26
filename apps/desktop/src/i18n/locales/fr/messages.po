@@ -6108,6 +6108,10 @@ msgid "The download was interrupted. Try again."
 msgstr "Le téléchargement a été interrompu. Réessayez."
 
 #: src/shared/ui/localized-dialog-labels.tsx
+msgid "The editor failed to render. Reload it to try again."
+msgstr "L'éditeur n'a pas pu s'afficher. Rechargez-le pour réessayer."
+
+#: src/shared/ui/localized-dialog-labels.tsx
 msgid "The editor failed to render. Your recording is still running."
 msgstr "L'éditeur n'a pas pu s'afficher. L'enregistrement continue."
 
