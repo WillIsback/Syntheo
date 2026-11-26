@@ -295,3 +295,104 @@ it("does not probe again on a second visit after an unclear answer", async () =>
 
   expect(mocks.detect).toHaveBeenCalledTimes(1);
 });
+
+// Issue 768 : une demande de « Tester la connexion » faite sous un choix
+// forcé ne relance pas la sonde au retour sur Automatique quand un résultat
+// est gardé.
+it("ignores a connection test made while the choice was forced", async () => {
+  const detected = {
+    reads: true,
+    source: "probe",
+    checkedAt: "2026-11-26T10:00:00.000Z",
+  };
+  mocks.stored = JSON.stringify({ [KEY]: { choice: "yes", detected } });
+  mocks.detect.mockResolvedValue(null);
+  const client = new QueryClient();
+  const tree = (recheck: number) => (
+    <QueryClientProvider client={client}>
+      <ImageInputSetting
+        baseUrl={BASE}
+        apiKey=""
+        model={MODEL}
+        connected
+        recheck={recheck}
+      />
+    </QueryClientProvider>
+  );
+  const view = render(tree(0));
+
+  view.rerender(tree(1));
+  fireEvent.click(screen.getByRole("radio", { name: "Automatic" }));
+  await waitFor(() =>
+    expect(JSON.parse(mocks.stored)[KEY]?.choice).toBe("auto"),
+  );
+  view.rerender(tree(1));
+  await new Promise((resolve) => setTimeout(resolve, 20));
+
+  expect(mocks.detect).not.toHaveBeenCalled();
+  expect(
+    screen.getByText(/^The model accepted the test image and described it/),
+  ).toBeTruthy();
+
+  // Une demande faite sous Automatique relance bien la détection.
+  view.rerender(tree(2));
+  await waitFor(() => expect(mocks.detect).toHaveBeenCalledTimes(1));
+});
+
+// Deux clics rapprochés sur « Tester la connexion » : seule la détection la
+// plus récente écrit son résultat, même si l'ancienne répond après.
+it("keeps only the latest detection after two quick connection tests", async () => {
+  const older = {
+    reads: false,
+    source: "probe",
+    checkedAt: "2026-11-26T11:00:00.000Z",
+  };
+  const latest = {
+    reads: true,
+    source: "metadata",
+    checkedAt: "2026-11-26T11:00:01.000Z",
+  };
+  mocks.stored = JSON.stringify({
+    [KEY]: {
+      detected: {
+        reads: true,
+        source: "probe",
+        checkedAt: "2026-11-26T10:00:00.000Z",
+      },
+    },
+  });
+  let answerOlder: (value: unknown) => void = () => {};
+  mocks.detect
+    .mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          answerOlder = resolve;
+        }),
+    )
+    .mockResolvedValueOnce(latest);
+  const client = new QueryClient();
+  const tree = (recheck: number) => (
+    <QueryClientProvider client={client}>
+      <ImageInputSetting
+        baseUrl={BASE}
+        apiKey=""
+        model={MODEL}
+        connected
+        recheck={recheck}
+      />
+    </QueryClientProvider>
+  );
+  const view = render(tree(0));
+
+  view.rerender(tree(1));
+  await waitFor(() => expect(mocks.detect).toHaveBeenCalledTimes(1));
+  view.rerender(tree(2));
+  await waitFor(() =>
+    expect(JSON.parse(mocks.stored)[KEY].detected).toEqual(latest),
+  );
+  answerOlder(older);
+  await new Promise((resolve) => setTimeout(resolve, 20));
+
+  expect(mocks.detect).toHaveBeenCalledTimes(2);
+  expect(JSON.parse(mocks.stored)[KEY].detected).toEqual(latest);
+});

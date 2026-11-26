@@ -1,14 +1,12 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 
 import { providerCredentialIdentity } from "@syntheo/provider-validation";
 import { cn } from "@syntheo/utils";
 
 import { useConnectionHealth } from "./health";
-import {
-  forgetImageInputDetection,
-  ImageInputSetting,
-} from "./image-input-setting";
+import { ImageInputSetting } from "./image-input-setting";
 import { connectedModelsLabel } from "./labels";
 import { getPreferredProviderModel } from "./selection";
 import { LLM_BASE_URL_PLACEHOLDER } from "./shared";
@@ -17,6 +15,7 @@ import {
   normalizeReasoningEffort,
   type ReasoningEffort,
 } from "~/ai/reasoning-effort";
+import { imageInputKey } from "~/settings/ai/shared/image-input";
 import { removeNonStreamingModels } from "~/settings/ai/shared/list-common";
 import { listCustomModels } from "~/settings/ai/shared/list-openai";
 import { PersistAiSelection } from "~/settings/ai/shared/persist-selection";
@@ -74,6 +73,13 @@ export function LlmServerCard() {
     (current_llm_provider !== PROVIDER_ID || (!model && !!defaultModel));
 
   const health = useConnectionHealth();
+  // Demande de nouvelle détection des images, pour le serveur et le modèle
+  // testés seulement (issue 768).
+  const [imageRecheck, setImageRecheck] = useState<{
+    key: string;
+    count: number;
+  } | null>(null);
+  const imageKey = imageInputKey(baseUrl, model);
   const connectedLabel =
     state.status === "connected" && models.length > 0
       ? connectedModelsLabel(models.length)
@@ -127,8 +133,16 @@ export function LlmServerCard() {
           testing={state.status === "testing"}
           onTest={() => {
             // Le test de connexion refait aussi la détection des images
-            // (issue 754) : le serveur a pu changer de modèle servi.
-            if (model) void forgetImageInputDetection(baseUrl, model);
+            // (issue 754) : le serveur a pu changer de modèle servi. Le
+            // résultat gardé reste en place jusqu'à une réponse nette ; il
+            // était effacé sans être refait, et la synthèse suivante partait
+            // sans image (issue 768).
+            if (model) {
+              setImageRecheck((current) => ({
+                key: imageKey,
+                count: current?.key === imageKey ? current.count + 1 : 1,
+              }));
+            }
             connection.test();
           }}
           isCurrentProvider={current_llm_provider === PROVIDER_ID}
@@ -155,6 +169,7 @@ export function LlmServerCard() {
           apiKey={apiKey}
           model={model}
           connected={state.status === "connected"}
+          recheck={imageRecheck?.key === imageKey ? imageRecheck.count : 0}
         />
       ) : null}
       {model && state.status === "connected" && health.status === "error" ? (

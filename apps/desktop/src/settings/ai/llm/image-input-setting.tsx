@@ -1,5 +1,6 @@
 import { useLingui } from "@lingui/react/macro";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
 
 import { providerCredentialIdentity } from "@syntheo/provider-validation";
 import { cn } from "@syntheo/utils";
@@ -39,26 +40,23 @@ function saveImageInput(
   });
 }
 
-/** Oublie la détection gardée : la prochaine vue de la carte la refait. */
-export function forgetImageInputDetection(
-  baseUrl: string,
-  model: string,
-): Promise<unknown> {
-  return saveImageInput(imageInputKey(baseUrl, model), ({ choice }) =>
-    choice ? { choice } : {},
-  );
-}
-
 export function ImageInputSetting({
   baseUrl,
   apiKey,
   model,
   connected,
+  recheck = 0,
 }: {
   baseUrl: string;
   apiKey: string;
   model: string;
   connected: boolean;
+  /**
+   * Incrémenté par « Tester la connexion » (issue 768) : la détection est
+   * refaite une fois la connexion rétablie, sans effacer le résultat gardé.
+   * Seul un résultat net le remplace ; un choix forcé n'est jamais touché.
+   */
+  recheck?: number;
 }) {
   const { t, i18n } = useLingui();
   const settingsReady = useSettingsReady();
@@ -71,29 +69,66 @@ export function ImageInputSetting({
   const persist = (detected: ImageInputDetection) =>
     saveImageInput(key, (current) => ({ ...current, detected }));
 
+  // Une demande de « Tester la connexion » ne compte que si le choix est
+  // Automatique au moment du clic : un clic fait sous Oui ou Non ne doit pas
+  // relancer la sonde plus tard, au retour sur Automatique, quand un
+  // résultat est gardé. La dernière demande vue est retenue par serveur et
+  // modèle ; seule celle acceptée sert à la détection.
+  const [seenRecheck, setSeenRecheck] = useState({ key, recheck });
+  const [acceptedRecheck, setAcceptedRecheck] = useState<{
+    key: string;
+    count: number;
+  } | null>(null);
+  if (seenRecheck.key !== key || seenRecheck.recheck !== recheck) {
+    setSeenRecheck({ key, recheck });
+    if (recheck > 0 && settingsReady && choice === "auto") {
+      setAcceptedRecheck({ key, count: recheck });
+    }
+  }
+  const effectiveRecheck =
+    acceptedRecheck?.key === key ? acceptedRecheck.count : 0;
+  // Dernière détection demandée : deux clics rapprochés sur « Tester la
+  // connexion » lancent deux détections, et seule la plus récente peut
+  // écrire son résultat ; une réponse plus ancienne arrivée après est
+  // ignorée.
+  const latestRecheck = useRef<Record<string, number>>({});
+  useEffect(() => {
+    latestRecheck.current[key] = effectiveRecheck;
+  }, [key, effectiveRecheck]);
+  const isLatestRecheck = (requested: number) =>
+    requested >= (latestRecheck.current[key] ?? requested);
+
   // La détection ne part qu'une fois les réglages lus (issue 769) : au
   // premier rendu, le réglage vaut encore « {} » (choix Automatique, rien de
   // gardé), et la sonde partait à chaque ouverture de la page, même avec un
   // résultat gardé ou un choix forcé. Un résultat net est gardé par serveur
   // et modèle ; une réponse ambiguë reste en cache pour la session, sans
   // nouvelle sonde à chaque visite. Seuls un autre serveur, un autre modèle
-  // ou « Tester avec une image » la refont.
+  // « Tester la connexion » ou « Tester avec une image » la refont.
   const detection = useQuery({
     queryKey: [
       "llm-image-input",
       baseUrl,
       model,
       providerCredentialIdentity({ provider: "custom", baseUrl, apiKey }),
+      effectiveRecheck,
     ],
     queryFn: async () => {
+      const requested = effectiveRecheck;
       const result = await detectImageInput({ baseUrl, apiKey, model });
       // Résultat net seulement : sans réponse claire, rien n'est gardé et le
-      // nom du modèle sert de repli.
-      if (result) await persist(result);
+      // nom du modèle sert de repli. Une détection dépassée par une demande
+      // plus récente n'écrit rien.
+      if (result && isLatestRecheck(requested)) {
+        await persist(result);
+      }
       return result;
     },
     enabled:
-      settingsReady && connected && choice === "auto" && !entry?.detected,
+      settingsReady &&
+      connected &&
+      choice === "auto" &&
+      (!entry?.detected || effectiveRecheck > 0),
     retry: false,
     staleTime: Number.POSITIVE_INFINITY,
     gcTime: Number.POSITIVE_INFINITY,
