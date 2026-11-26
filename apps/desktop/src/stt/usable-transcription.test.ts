@@ -120,6 +120,53 @@ describe("resolveUsableTranscription", () => {
     }
   });
 
+  // Issue 763 : modèles d'une autre version, l'état dit la mise à jour.
+  it("flags a models update when the models come from another version", () => {
+    const update: OnDeviceStatus = {
+      ...ready,
+      models: {
+        kind: "partial",
+        presentBytes: 5,
+        totalBytes: 10,
+        resumable: false,
+      },
+    };
+    expect(
+      resolveUsableTranscription({
+        serverConfigured: true,
+        onDeviceChosen: true,
+        onDeviceStatus: update,
+        commissionedProfile: "two_streams",
+      }),
+    ).toMatchObject({
+      usable: false,
+      onDeviceNotReady: true,
+      onDeviceModelsUpdate: true,
+    });
+    for (const status of [
+      { ...ready, models: { kind: "missing", totalBytes: 1 } },
+      {
+        ...ready,
+        models: {
+          kind: "partial",
+          presentBytes: 5,
+          totalBytes: 10,
+          resumable: true,
+        },
+      },
+      ready,
+    ] as OnDeviceStatus[]) {
+      expect(
+        resolveUsableTranscription({
+          serverConfigured: false,
+          onDeviceChosen: true,
+          onDeviceStatus: status,
+          commissionedProfile: null,
+        }).onDeviceModelsUpdate,
+      ).toBe(false);
+    }
+  });
+
   it("ignores this computer when the organization forbids it", () => {
     expect(
       resolveUsableTranscription({

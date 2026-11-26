@@ -77,6 +77,23 @@ describe("focusSetting", () => {
     ).toBe(true);
   });
 
+  // Issue 763 : « Sur ce poste » interdit par le réglage géré, la carte des
+  // modèles n'est pas affichée ; l'arrivée cible la carte du serveur.
+  it("cible le serveur quand la carte des modèles « Sur ce poste » est masquée", () => {
+    const root = mount(
+      `<div data-setting-id="stt-server"><input aria-label="Adresse" /></div>`,
+    );
+
+    expect(focusSetting(root, "stt-on-device-module")).toBe(true);
+
+    expect(document.activeElement).toBe(root.querySelector("input"));
+    expect(
+      root
+        .querySelector("[data-setting-id='stt-server']")
+        ?.hasAttribute("data-setting-highlight"),
+    ).toBe(true);
+  });
+
   it("attend que le réglage soit affiché", () => {
     const root = mount(`<p>Chargement…</p>`);
 

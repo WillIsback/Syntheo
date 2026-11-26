@@ -31,6 +31,7 @@ import {
   useStartListeningState,
 } from "./useStartListening";
 
+import { useSettingFocus } from "~/settings/setting-focus";
 import { playCompletionSound } from "~/shared/completion-sound";
 import { listenerStore } from "~/store/zustand/listener/instance";
 import { useLiveTitle } from "~/store/zustand/live-title";
@@ -632,6 +633,37 @@ describe("useStartListening", () => {
         type: "settings",
         state: { tab: "transcription" },
       });
+    });
+
+    // Issue 763 : « Sur ce poste » choisi avec des modèles d'une autre
+    // version : le toast mène à la mise à jour des modèles, pas à la
+    // configuration d'un endpoint.
+    test("on_device_models_update_points_to_the_update_not_a_provider", async () => {
+      m.useSTTConnection.mockReturnValue({
+        conn: null,
+        onDeviceUnavailable: "models_update",
+      });
+      await startListening();
+
+      expect(m.start).not.toHaveBeenCalled();
+      expect(m.toastError).not.toHaveBeenCalledWith(
+        getNoTranscriptionProviderMessage(),
+        expect.anything(),
+      );
+      const [message, options] = m.toastError.mock.lastCall ?? [];
+      expect(message).toContain("need an update");
+      expect(message).not.toMatch(/endpoint|provider/i);
+      expect(options).toMatchObject({
+        id: "recording-without-transcription",
+        action: { label: "Update the models" },
+      });
+      options.action.onClick();
+      expect(useSettingFocus.getState().pending).toBe("stt-on-device-module");
+      expect(m.openNew).toHaveBeenCalledWith({
+        type: "settings",
+        state: { tab: "transcription" },
+      });
+      useSettingFocus.getState().clear();
     });
 
     // Issue 515 : la reprise depuis la pastille passe par un composant monté à

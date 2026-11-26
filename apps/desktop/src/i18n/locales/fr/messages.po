@@ -2629,9 +2629,17 @@ msgstr "Commande d'installation copiée"
 msgid "Install from a folder…"
 msgstr "Installer depuis un dossier…"
 
+#: src/stt/useStartListening.ts
+msgid "Install the models"
+msgstr "Installer les modèles"
+
 #: src/settings/developers/skills.tsx
 msgid "Install to all agents"
 msgstr "Installer pour tous les agents"
+
+#: src/stt/on-device.ts
+msgid "Installation cancelled."
+msgstr "Installation annulée."
 
 #: src/stt/on-device.ts
 msgid "Installation cancelled. A download resumes where it stopped."
@@ -3596,6 +3604,14 @@ msgstr "Aucun journal des modifications disponible pour cette version."
 msgid "No community templates available"
 msgstr "Aucun modèle communautaire disponible"
 
+#: src/stt/on-device.ts
+msgid "No connection to the download server: nothing was downloaded and the current models are kept. Try again once connected."
+msgstr "Aucune connexion au serveur de téléchargement : rien n'a été téléchargé et les modèles actuels sont conservés. Réessayez une fois la connexion rétablie."
+
+#: src/stt/on-device.ts
+msgid "No connection to the download server: nothing was downloaded. Try again once connected."
+msgstr "Aucune connexion au serveur de téléchargement : rien n'a été téléchargé. Réessayez une fois la connexion rétablie."
+
 #: src/session/components/version-history-dialog.tsx
 msgid "No earlier versions yet."
 msgstr "Aucune version antérieure pour le moment."
@@ -3963,8 +3979,13 @@ msgid "On Linux (Wayland or X11)"
 msgstr "Sur Linux (Wayland ou X11)"
 
 #: src/settings/ai/stt/on-device-card.tsx
+#: src/settings/search-index.ts
 msgid "On this computer"
 msgstr "Sur ce poste"
+
+#: src/settings/search-index.ts
+msgid "on this computer, offline, models, download, update, install"
+msgstr "sur ce poste, hors ligne, modèles, téléchargement, mise à jour, installation"
 
 #: src/settings/dictation.tsx
 msgid "On Wayland, approve the shortcuts in your desktop's prompt. Use Control + Alt + Escape to cancel. On X11, press Escape to cancel. The target app must expose an editable accessibility field."
@@ -3995,6 +4016,7 @@ msgstr "Seuls les serveurs compatibles OpenAI hébergés chez vous sont pris en 
 #: src/session/move-note.tsx
 #: src/shared/open-note-dialog.tsx
 #: src/sidebar/toast/registry.tsx
+#: src/stt/useStartListening.ts
 msgid "Open"
 msgstr "Ouvrir"
 
@@ -6223,7 +6245,12 @@ msgstr "Les modèles ne sont pas installés ou sont incomplets."
 msgid "The models could not be downloaded (network or server). Try again: the download resumes where it stopped."
 msgstr "Les modèles n'ont pas pu être téléchargés (réseau ou serveur). Réessayez : le téléchargement reprend là où il s'est arrêté."
 
+#: src/stt/on-device.ts
+msgid "The models could not be downloaded (network or server). Try again."
+msgstr "Les modèles n'ont pas pu être téléchargés (réseau ou serveur). Réessayez."
+
 #. placeholder {0}: describeOnDeviceErrorAfterColon(e.message)
+#. placeholder {0}: describeOnDeviceErrorAfterColon(e.message, leftover)
 #: src/settings/ai/stt/on-device-card.tsx
 msgid "The models were not installed: {0}"
 msgstr "Les modèles n'ont pas été installés : {0}"
@@ -6473,11 +6500,15 @@ msgstr "La transcription est encore en cours d'écriture."
 msgid "The transcription models ({0}) are not installed yet."
 msgstr "Les modèles de transcription ({0}) ne sont pas encore installés."
 
-#: src/settings/ai/stt/health.tsx
+#: src/stt/on-device.ts
 msgid "The transcription models of this computer are not installed. Install them or go back to the server in Settings › Transcription."
 msgstr "Les modèles de transcription de ce poste ne sont pas installés. Installez-les ou revenez au serveur dans Paramètres › Transcription."
 
-#: src/settings/ai/stt/health.tsx
+#: src/sidebar/toast/registry.tsx
+msgid "The transcription models of this computer need an update"
+msgstr "Les modèles de transcription de ce poste doivent être mis à jour"
+
+#: src/stt/on-device.ts
 msgid "The transcription models of this computer need an update. Update them or go back to the server in Settings › Transcription."
 msgstr "Les modèles de transcription de ce poste doivent être mis à jour. Mettez-les à jour ou revenez au serveur dans Paramètres › Transcription."
 
@@ -6795,7 +6826,7 @@ msgstr "Cette version de Syntheo n'inclut pas la transcription sur le poste, ou 
 msgid "This version of Syntheo does not include transcription on this computer."
 msgstr "Cette version de Syntheo n'inclut pas la transcription sur le poste."
 
-#: src/settings/ai/stt/health.tsx
+#: src/stt/on-device.ts
 msgid "This version of Syntheo does not include transcription on this computer. Go back to the server in Settings › Transcription."
 msgstr "Cette version de Syntheo n'inclut pas la transcription sur le poste. Revenez au serveur dans Paramètres › Transcription."
 
@@ -6902,6 +6933,10 @@ msgid "Transcription · key refused"
 msgstr "Transcription · clé refusée"
 
 #: src/sidebar/settings-server-status.tsx
+msgid "Transcription · models need an update"
+msgstr "Transcription · modèles à mettre à jour"
+
+#: src/sidebar/settings-server-status.tsx
 msgid "Transcription · no server"
 msgstr "Transcription · aucun serveur"
 
@@ -6940,6 +6975,10 @@ msgstr "Transcription interrompue {gaps}"
 #: src/settings/search-index.ts
 msgid "transcription model, Whisper, Nemotron, speech recognition"
 msgstr "modèle de transcription, Whisper, Nemotron, reconnaissance vocale"
+
+#: src/settings/search-index.ts
+msgid "Transcription models"
+msgstr "Modèles de transcription"
 
 #: src/settings/ai/stt/on-device-card.tsx
 msgid "Transcription on this computer is disabled by your administrator; transcription now goes through the server."
@@ -7160,7 +7199,10 @@ msgstr "à jour jusqu'au {coveredDate}"
 msgid "Update"
 msgstr "Mettre à jour"
 
+#: src/settings/ai/stt/language-warning.tsx
 #: src/settings/ai/stt/on-device-card.tsx
+#: src/sidebar/toast/registry.tsx
+#: src/stt/useStartListening.ts
 msgid "Update the models"
 msgstr "Mettre à jour les modèles"
 

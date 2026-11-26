@@ -56,6 +56,39 @@ describe("sidebar toast registry", () => {
     ).toBeNull();
   });
 
+  // Issue 763 : modèles « Sur ce poste » d'une autre version.
+  it("offers the models update instead of a generic not-ready notice", () => {
+    const onUpdateOnDeviceModels = vi.fn();
+    const toast = showToast({
+      onDeviceNotReady: true,
+      onDeviceModelsUpdate: true,
+      onUpdateOnDeviceModels,
+    });
+
+    expect(toast?.id).toBe("on-device-models-update");
+    expect(toast?.description).toBe(
+      "The transcription models of this computer need an update",
+    );
+    expect(toast?.primaryAction?.label).toBe("Update the models");
+    expect(toast?.lifecycle).toEqual({
+      type: "persistent",
+      dismissal: "session",
+    });
+    void toast?.primaryAction?.onClick();
+    expect(onUpdateOnDeviceModels).toHaveBeenCalledOnce();
+
+    expect(showToast({ onDeviceNotReady: true })?.id).toBe(
+      "on-device-not-ready",
+    );
+    expect(
+      showToast({
+        onDeviceNotReady: true,
+        onDeviceModelsUpdate: true,
+        isAiTranscriptionTabActive: true,
+      }),
+    ).toBeNull();
+  });
+
   it("never shows sign-in or upgrade prompts (no account)", () => {
     // Fully configured on-prem providers: nothing to promote.
     expect(showToast()).toBeNull();

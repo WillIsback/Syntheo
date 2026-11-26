@@ -22,6 +22,7 @@ export function useCaptureLifecycle(sessionId: string) {
   const participantHumanIds = useSessionParticipantHumanIds(sessionId);
   const {
     conn,
+    onDeviceUnavailable,
     isReady: connectionReady,
     isLoading: connectionLoading,
   } = useSTTConnection();
@@ -97,6 +98,7 @@ export function useCaptureLifecycle(sessionId: string) {
     connectionLoading,
     connectionReady,
     createCaptureLifecycle,
+    onDeviceUnavailable,
     session,
     setStopMeetingChatCapture,
     stopMeetingChatTasks,

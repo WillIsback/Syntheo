@@ -7,7 +7,11 @@ import { useAiProvidersState } from "~/settings/providers";
 import { useSettingsReady } from "~/settings/queries";
 import { useConfigValues } from "~/shared/config";
 import { getDefaultSttModel } from "~/stt/model-selection";
-import { ON_DEVICE_BASE_URL, useOnDeviceStatus } from "~/stt/on-device";
+import {
+  ON_DEVICE_BASE_URL,
+  onDeviceUnavailability,
+  useOnDeviceStatus,
+} from "~/stt/on-device";
 
 /**
  * Source « Sur ce poste » choisie : connexion au module local, ou aucune si
@@ -98,8 +102,17 @@ export const useSTTConnection = () => {
     return local === undefined ? serverConnection : local;
   }, [serverConnection, stt_on_device, onDevice.data]);
 
+  // « Sur ce poste » choisi mais module absent (`conn` null) : la raison, pour
+  // que le démarrage d'une écoute ne parle pas d'un fournisseur manquant
+  // (issue 763).
+  const onDeviceUnavailable =
+    !!stt_on_device && onDevice.data?.allowed
+      ? onDeviceUnavailability(onDevice.data)
+      : null;
+
   return {
     conn: connection,
+    onDeviceUnavailable,
     serverConn: serverConnection,
     isReady: settingsReady && connection !== null && providerConfigReady,
     // Réglages ou fournisseurs encore en chargement : `conn` null ne veut pas

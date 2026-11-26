@@ -1,9 +1,10 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   commands as transcriptionCommands,
+  type OnDeviceModels,
   type Probe,
   type Profile,
   type Refusal,
@@ -18,7 +19,9 @@ import { useConfigValues } from "~/shared/config";
 import {
   describeOnDeviceError,
   describeOnDeviceErrorAfterColon,
+  downloadLeftover,
   launchRefusal,
+  loadOnDeviceStatus,
   downloadOnDeviceModels,
   installOnDeviceModelsFromFolder,
   isEligible,
@@ -205,11 +208,39 @@ export function OnDeviceCard() {
     }
     void refresh();
   };
-  const installError = (e: Error) => {
+  // Issue 764 : l'état relu après l'échec, comparé à celui d'avant l'essai,
+  // dit si un téléchargement partiel reprendra ; hors ligne avant tout
+  // octet, le message ne promet pas de reprise. Le message neutre s'affiche
+  // tout de suite, puis il est précisé quand l'état relu arrive, sauf si un
+  // nouvel essai a commencé entre-temps.
+  const installAttempt = useRef(0);
+  const installError = (e: Error, before?: OnDeviceModels) => {
+    const attempt = installAttempt.current;
     setError(
       t`The models were not installed: ${describeOnDeviceErrorAfterColon(e.message)}`,
     );
-    void refresh();
+    void queryClient
+      .fetchQuery({
+        queryKey: ON_DEVICE_STATUS_QUERY_KEY,
+        queryFn: loadOnDeviceStatus,
+        staleTime: 0,
+      })
+      .then(
+        (fresh) => fresh.models,
+        () => undefined,
+      )
+      .then((after) => {
+        const leftover = downloadLeftover(before, after);
+        if (!leftover || attempt !== installAttempt.current) return;
+        setError(
+          t`The models were not installed: ${describeOnDeviceErrorAfterColon(e.message, leftover)}`,
+        );
+      });
+  };
+  const startInstall = () => {
+    installAttempt.current += 1;
+    setNotice(null);
+    return { before: status.data?.models };
   };
   // Fin d'une installation lancée ici : l'avancement est oublié aussitôt
   // (l'hôte l'a déjà effacé), sans attendre la lecture suivante.
@@ -221,17 +252,19 @@ export function OnDeviceCard() {
   };
   const downloading = useMutation({
     mutationFn: downloadOnDeviceModels,
-    onMutate: () => setNotice(null),
+    onMutate: startInstall,
     onSettled: forgetInstallProgress,
     onSuccess: afterInstall,
-    onError: installError,
+    onError: (e: Error, _variables, context) =>
+      installError(e, context?.before),
   });
   const fromFolder = useMutation({
     mutationFn: installOnDeviceModelsFromFolder,
-    onMutate: () => setNotice(null),
+    onMutate: startInstall,
     onSettled: forgetInstallProgress,
     onSuccess: afterInstall,
-    onError: installError,
+    onError: (e: Error, _variables, context) =>
+      installError(e, context?.before),
   });
   // Installation depuis un dossier : la commande attend d'abord le choix du
   // dossier ; l'installation ne commence (et l'hôte ne rend un avancement)

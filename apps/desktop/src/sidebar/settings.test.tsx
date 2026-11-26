@@ -343,6 +343,59 @@ describe("SettingsNav", () => {
     );
   });
 
+  // Issue 763 : modèles d'une autre version, l'état dit la mise à jour.
+  it("says the models need an update when they come from another version", () => {
+    mocks.config = {
+      current_stt_provider: null,
+      current_stt_model: null,
+      stt_on_device: true,
+    };
+    mocks.serverStates.stt = { status: "unconfigured" };
+    mocks.onDevice = {
+      allowed: true,
+      companion: true,
+      models: {
+        kind: "partial",
+        presentBytes: 5,
+        totalBytes: 10,
+        resumable: false,
+      },
+      downloadable: true,
+    };
+    mocks.commissioning = null;
+    render(<SettingsNav />);
+
+    const footer = screen.getByRole("status", { name: "Server status" });
+    expect(footer.textContent).toContain(
+      "Transcription · models need an update",
+    );
+    expect(footer.textContent).not.toContain("not ready");
+
+    // La ligne mène à « Mettre à jour les modèles », comme le toast.
+    useSettingFocus.getState().clear();
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Transcription · models need an update",
+      }),
+    );
+    expect(useSettingFocus.getState().pending).toBe("stt-on-device-module");
+    expect(openedSettingsTab()).toEqual({ tab: "transcription" });
+
+    // Hors des paramètres : un nouvel onglet Paramètres › Transcription.
+    cleanup();
+    mocks.currentTab = null;
+    render(<SettingsNav />);
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Transcription · models need an update",
+      }),
+    );
+    expect(mocks.openNew).toHaveBeenCalledWith({
+      type: "settings",
+      state: { tab: "transcription" },
+    });
+  });
+
   // Revue de 8d988afd : même avec un serveur configuré, la case cochée
   // décide.
   it("keeps this computer not ready even with a configured server", () => {

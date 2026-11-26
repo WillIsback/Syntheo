@@ -21,6 +21,10 @@ type ToastRegistryParams = {
   // « Sur ce poste » choisi mais pas prêt (modèles absents, poste non
   // mesuré) : l'écoute est en pause, un serveur n'y changerait rien.
   onDeviceNotReady?: boolean;
+  // Pas prêt parce que ses modèles viennent d'une autre version (issue 763) :
+  // le toast propose la mise à jour.
+  onDeviceModelsUpdate?: boolean;
+  onUpdateOnDeviceModels?: () => void;
   isAiTranscriptionTabActive: boolean;
   isAiIntelligenceTabActive: boolean;
   onOpenLLMSettings: () => void;
@@ -40,6 +44,8 @@ export function createToastRegistry({
   llmManagedOff = false,
   hasSttConfigured,
   onDeviceNotReady = false,
+  onDeviceModelsUpdate = false,
+  onUpdateOnDeviceModels,
   isAiTranscriptionTabActive,
   isAiIntelligenceTabActive,
   onOpenLLMSettings,
@@ -80,6 +86,21 @@ export function createToastRegistry({
         lifecycle: { type: "condition-bound" },
       },
       condition: () => !hasUsableSttConfigured && !isAiTranscriptionTabActive,
+    },
+    {
+      toast: {
+        id: "on-device-models-update",
+        description: t`The transcription models of this computer need an update`,
+        primaryAction: {
+          label: t`Update the models`,
+          onClick: onUpdateOnDeviceModels ?? onOpenSTTSettings,
+        },
+        // Fermable pour la session : un toast persistant ne doit pas masquer
+        // la capsule dans une petite fenêtre (issue 778).
+        lifecycle: { type: "persistent", dismissal: "session" },
+      },
+      condition: () =>
+        onDeviceNotReady && onDeviceModelsUpdate && !isAiTranscriptionTabActive,
     },
     {
       toast: {
