@@ -30,7 +30,12 @@ import {
 } from "~/session/content-queries";
 import { noteFingerprint } from "~/session/note-fingerprint";
 import { formatSessionSourceAppsContext } from "~/session/source-apps";
-import { modelSupportsImageInput } from "~/settings/ai/shared/model-capabilities";
+import {
+  decideImageInput,
+  imageInputKey,
+  parseImageInputSettings,
+} from "~/settings/ai/shared/image-input";
+import { getStoredAiProvider } from "~/settings/providers";
 import type { SettingValues } from "~/settings/schema";
 import { parseDictionaryTermsJson } from "~/stt/keywords";
 import {
@@ -76,10 +81,7 @@ async function transformArgs(
   const noteImages = await collectNoteImages(
     sessionId,
     snapshot,
-    modelSupportsImageInput(
-      getOptionalSettingsValue(settingsValues, "current_llm_provider"),
-      getOptionalSettingsValue(settingsValues, "current_llm_model"),
-    ),
+    await modelReadsImages(settingsValues),
   );
   const sessionContext = getSessionContext(
     snapshot,
@@ -248,10 +250,34 @@ function getFormatOverride(
 
 function getOptionalSettingsValue(
   settingsValues: SettingValues,
-  valueId: "current_llm_provider" | "current_llm_model",
+  valueId: "current_llm_provider" | "current_llm_model" | "llm_image_input",
 ): string | undefined {
   const value = settingsValues[valueId];
   return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
+/**
+ * Le modèle de synthèse reçoit-il les images (issue 754) ? Le réglage
+ * « Le modèle lit les images » du serveur et du modèle choisis : Oui, Non, ou
+ * Automatique (résultat de la détection gardé, sinon le nom du modèle).
+ */
+async function modelReadsImages(
+  settingsValues: SettingValues,
+): Promise<boolean> {
+  const provider = getOptionalSettingsValue(
+    settingsValues,
+    "current_llm_provider",
+  );
+  const model = getOptionalSettingsValue(settingsValues, "current_llm_model");
+  if (!provider || !model) return false;
+  const baseUrl = String(
+    (await getStoredAiProvider("llm", provider).catch(() => undefined))
+      ?.base_url ?? "",
+  );
+  const entry = parseImageInputSettings(
+    getOptionalSettingsValue(settingsValues, "llm_image_input"),
+  )[imageInputKey(baseUrl, model)];
+  return decideImageInput(entry, model).reads;
 }
 
 /**

@@ -341,6 +341,14 @@ export const SETTING_DEFINITIONS = {
     path: ["ai", "current_llm_reasoning_effort"],
     default: "default" as string,
   },
+  // « Le modèle lit les images » (issue 754) : par adresse de serveur et
+  // modèle, le choix (Automatique, Oui, Non) et le résultat de la détection.
+  // JSON, voir settings/ai/shared/image-input.ts.
+  llm_image_input: {
+    type: "string",
+    path: ["ai", "llm_image_input"],
+    default: "{}" as string,
+  },
   current_stt_provider: {
     type: "string",
     path: ["ai", "current_stt_provider"],

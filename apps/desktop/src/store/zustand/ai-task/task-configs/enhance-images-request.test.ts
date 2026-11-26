@@ -25,6 +25,12 @@ vi.mock("@syntheo/plugin-fs-sync", () => ({
   },
 }));
 
+vi.mock("~/settings/providers", () => ({
+  getStoredAiProvider: vi
+    .fn()
+    .mockResolvedValue({ base_url: "http://gpu.exemple.fr:8000/v1" }),
+}));
+
 vi.mock("~/session/content-queries", () => ({
   loadSessionContentSnapshot: mocks.loadSessionContentSnapshot,
 }));
@@ -134,13 +140,14 @@ beforeEach(() => {
   }));
 });
 
-async function generate(model: string) {
+async function generate(model: string, imageInput = "{}") {
   const args = await enhanceTransform.transformArgs(
     { sessionId: "session-1", enhancedNoteId: "note-1" },
     {
       ai_language: "fr",
-      current_llm_provider: "openai",
+      current_llm_provider: "custom",
       current_llm_model: model,
+      llm_image_input: imageInput,
     },
   );
   for await (const _ of enhanceWorkflow.executeWorkflow!({
@@ -213,4 +220,49 @@ it("numbers only the images actually attached", async () => {
       (part: { type: string }) => part.type === "file",
     ),
   ).toHaveLength(1);
+});
+
+// Issue 754 : le réglage « Le modèle lit les images » du serveur et du modèle
+// choisis tranche, quel que soit le nom du modèle.
+const imageInput = (model: string, entry: Record<string, unknown>) =>
+  JSON.stringify({ [`http://gpu.exemple.fr:8000/v1|${model}`]: entry });
+
+it("sends the image when the setting says Yes, whatever the model name", async () => {
+  const { request } = await generate(
+    "qwen3.8-flash",
+    imageInput("qwen3.8-flash", { choice: "yes" }),
+  );
+
+  expect(mocks.attachmentRead).toHaveBeenCalledWith("session-1", "schema-1");
+  expect(
+    request.messages[0].content.some(
+      (part: { type: string }) => part.type === "file",
+    ),
+  ).toBe(true);
+});
+
+it("sends the image when Automatic detected that the model reads images", async () => {
+  const { request } = await generate(
+    "qwen3.8-flash",
+    imageInput("qwen3.8-flash", {
+      detected: {
+        reads: true,
+        source: "probe",
+        checkedAt: "2026-11-26T10:00:00.000Z",
+      },
+    }),
+  );
+
+  expect(request.messages[0].content).toHaveLength(2);
+});
+
+it("sends no image when the setting says No, even for a vision model", async () => {
+  const { args, request } = await generate(
+    "gpt-4o",
+    imageInput("gpt-4o", { choice: "no" }),
+  );
+
+  expect(mocks.attachmentRead).not.toHaveBeenCalled();
+  expect(request.messages).toBeUndefined();
+  expect(args.postMeetingMemo).toContain("[Image]");
 });

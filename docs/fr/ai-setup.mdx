@@ -151,6 +151,9 @@ La dictée dans d'autres applications utilise le même serveur de transcription 
   <Step title="Tester la connexion et choisir le modèle">
     Cliquez sur « Tester la connexion ». Syntheo lit la liste dans `/v1/models` : seuls les modèles chargés par votre serveur apparaissent. Cliquez sur le modèle à utiliser.
   </Step>
+  <Step title="Vérifier si le modèle lit les images">
+    « Le modèle lit les images » décide si les images collées dans la note sont jointes à la génération de la synthèse. En « Automatique », Syntheo le demande à votre serveur, une fois par adresse et par modèle, au test de connexion et quand vous changez de modèle : il lit d'abord ce que le serveur publie (Ollama, LM Studio, llama.cpp server), sinon il envoie une requête minimale avec une petite image de test fournie par Syntheo. Le texte sous le choix dit le résultat, par exemple « Lit les images (vérifié le 26 nov. 2026) ». Si le serveur ne répond pas clairement, Syntheo se fie au nom du modèle. « Oui » et « Non » imposent le choix, par exemple si votre serveur sert la partie vision d'un modèle que la vérification ne reconnaît pas. « Tester avec une image » refait la vérification et affiche sa réponse.
+  </Step>
   <Step title="Régler l'effort de raisonnement (facultatif)">
     « Effort de raisonnement » propose « Auto », « Faible », « Moyen » et « Élevé ». « Auto » laisse le serveur décider. Plus d'effort donne des synthèses plus fines, mais plus lentes. Les autres valeurs ne servent qu'avec un modèle qui sait raisonner et un serveur qui accepte ce paramètre.
   </Step>
@@ -174,7 +177,7 @@ Un administrateur peut imposer une adresse HTTPS à tous les postes avec `manage
 ## Ce qui transite vers vos serveurs
 
 - Le **serveur de transcription** reçoit l'audio de la capture, de la dictée ou du fichier importé, au fil de l'eau. Syntheo n'écrit pas cet audio sur le disque.
-- Le **serveur LLM** reçoit le texte nécessaire à la tâche : transcription, notes, consignes du modèle de synthèse, question posée dans le chat.
+- Le **serveur LLM** reçoit le texte nécessaire à la tâche : transcription, notes, consignes du modèle de synthèse, question posée dans le chat. Pour la synthèse, il reçoit aussi les images collées dans la note si le modèle lit les images. Pour le vérifier, Syntheo lui envoie seulement une image de test qu'il fournit lui-même, jamais une de vos images.
 - Aucun en-tête n'identifie votre appareil. Syntheo ne contacte aucun autre service d'inférence et ne bascule jamais vers un service tiers si votre serveur ne répond pas : il affiche une erreur.
 
 Les clés API sont rangées dans le trousseau du système, jamais en clair dans la base locale. Détails dans [Données et confidentialité](/fr/data-and-privacy).
